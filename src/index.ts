@@ -5,9 +5,19 @@ export function healthcheck(): string {
 }
 
 export {
+  asPassCommandError,
+  emitPassFromWorkspace,
+  inferPassIntent,
+  PassCommandError
+} from "./core/agent/pass.js";
+export {
   BubbleCreateError,
   createBubble
 } from "./core/bubble/createBubble.js";
+export {
+  resolveBubbleFromWorkspaceCwd,
+  WorkspaceResolutionError
+} from "./core/bubble/workspaceResolution.js";
 export { getBubblePaths } from "./core/bubble/paths.js";
 export { createInitialBubbleState } from "./core/state/initialState.js";
 export { runCli } from "./cli/index.js";
@@ -23,6 +33,11 @@ export {
   parseBubbleCreateCommandOptions,
   runBubbleCreateCommand
 } from "./cli/commands/bubble/create.js";
+export {
+  getPassHelpText,
+  parsePassCommandOptions,
+  runPassCommand
+} from "./cli/commands/agent/pass.js";
 export {
   TOML_PARSER_LIMITATIONS,
   renderBubbleConfigToml,
@@ -110,11 +125,23 @@ export {
   protocolParticipants
 } from "./types/protocol.js";
 export type {
+  EmitPassInput,
+  EmitPassResult
+} from "./core/agent/pass.js";
+export type {
+  ResolvedBubbleWorkspace
+} from "./core/bubble/workspaceResolution.js";
+export type {
   BubbleCreateInput,
   BubbleCreateResult,
   ResolvedTaskInput
 } from "./core/bubble/createBubble.js";
 export type { BubblePaths } from "./core/bubble/paths.js";
+export type {
+  ParsedPassCommandOptions,
+  PassHelpCommandOptions,
+  PassCommandOptions
+} from "./cli/commands/agent/pass.js";
 export type {
   BubbleCreateCommandOptions
 } from "./cli/commands/bubble/create.js";
