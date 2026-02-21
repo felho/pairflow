@@ -5,6 +5,13 @@ export function healthcheck(): string {
 }
 
 export {
+  BubbleCreateError,
+  createBubble
+} from "./core/bubble/createBubble.js";
+export { getBubblePaths } from "./core/bubble/paths.js";
+export { createInitialBubbleState } from "./core/state/initialState.js";
+export { runCli } from "./cli/index.js";
+export {
   DEFAULT_COMMIT_REQUIRES_APPROVAL,
   DEFAULT_MAX_ROUNDS,
   DEFAULT_QUALITY_MODE,
@@ -12,7 +19,13 @@ export {
   DEFAULT_WORK_MODE
 } from "./config/defaults.js";
 export {
+  getBubbleCreateHelpText,
+  parseBubbleCreateCommandOptions,
+  runBubbleCreateCommand
+} from "./cli/commands/bubble/create.js";
+export {
   TOML_PARSER_LIMITATIONS,
+  renderBubbleConfigToml,
   assertValidBubbleConfig,
   parseBubbleConfigToml,
   parseToml,
@@ -61,6 +74,15 @@ export {
   protocolMessageTypes,
   protocolParticipants
 } from "./types/protocol.js";
+export type {
+  BubbleCreateInput,
+  BubbleCreateResult,
+  ResolvedTaskInput
+} from "./core/bubble/createBubble.js";
+export type { BubblePaths } from "./core/bubble/paths.js";
+export type {
+  BubbleCreateCommandOptions
+} from "./cli/commands/bubble/create.js";
 export type {
   BubbleAgentsConfig,
   BubbleCommandsConfig,

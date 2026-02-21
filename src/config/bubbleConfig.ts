@@ -515,3 +515,66 @@ export function parseWatchdogTimeoutMinutes(input: unknown): number {
 
   return input;
 }
+
+function tomlString(value: string): string {
+  return JSON.stringify(value);
+}
+
+function normalizeTomlLines(lines: Array<string | undefined>): string[] {
+  const normalized: string[] = [];
+  for (const line of lines) {
+    if (line === undefined) {
+      continue;
+    }
+
+    if (line.length === 0) {
+      if (normalized.length === 0 || normalized[normalized.length - 1] === "") {
+        continue;
+      }
+    }
+
+    normalized.push(line);
+  }
+
+  while (normalized.length > 0 && normalized[normalized.length - 1] === "") {
+    normalized.pop();
+  }
+
+  return normalized;
+}
+
+export function renderBubbleConfigToml(config: BubbleConfig): string {
+  const lines: Array<string | undefined> = [
+    `id = ${tomlString(config.id)}`,
+    `repo_path = ${tomlString(config.repo_path)}`,
+    `base_branch = ${tomlString(config.base_branch)}`,
+    `bubble_branch = ${tomlString(config.bubble_branch)}`,
+    `work_mode = ${tomlString(config.work_mode)}`,
+    `quality_mode = ${tomlString(config.quality_mode)}`,
+    `watchdog_timeout_minutes = ${config.watchdog_timeout_minutes}`,
+    `max_rounds = ${config.max_rounds}`,
+    `commit_requires_approval = ${config.commit_requires_approval}`,
+    config.open_command
+      ? `open_command = ${tomlString(config.open_command)}`
+      : undefined,
+    "",
+    "[agents]",
+    `implementer = ${tomlString(config.agents.implementer)}`,
+    `reviewer = ${tomlString(config.agents.reviewer)}`,
+    "",
+    "[commands]",
+    `test = ${tomlString(config.commands.test)}`,
+    `typecheck = ${tomlString(config.commands.typecheck)}`,
+    "",
+    "[notifications]",
+    `enabled = ${config.notifications.enabled}`,
+    config.notifications.waiting_human_sound
+      ? `waiting_human_sound = ${tomlString(config.notifications.waiting_human_sound)}`
+      : undefined,
+    config.notifications.converged_sound
+      ? `converged_sound = ${tomlString(config.notifications.converged_sound)}`
+      : undefined
+  ];
+
+  return `${normalizeTomlLines(lines).join("\n")}\n`;
+}

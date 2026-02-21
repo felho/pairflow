@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseBubbleConfigToml,
   parseToml,
+  renderBubbleConfigToml,
   validateBubbleConfig
 } from "../../src/config/bubbleConfig.js";
 
@@ -100,6 +101,63 @@ describe("bubble config schema", () => {
       return;
     }
     expect(result.errors.some((error) => error.path === "agents")).toBe(true);
+  });
+
+  it("renders and re-parses bubble TOML", () => {
+    const rendered = renderBubbleConfigToml({
+      id: "b_test_01",
+      repo_path: "/tmp/repo",
+      base_branch: "main",
+      bubble_branch: "bubble/b_test_01",
+      work_mode: "worktree",
+      quality_mode: "strict",
+      watchdog_timeout_minutes: 5,
+      max_rounds: 8,
+      commit_requires_approval: true,
+      open_command: "cursor {{worktree_path}}",
+      agents: {
+        implementer: "codex",
+        reviewer: "claude"
+      },
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      },
+      notifications: {
+        enabled: true
+      }
+    });
+
+    const reparsed = parseBubbleConfigToml(rendered);
+    expect(reparsed.id).toBe("b_test_01");
+    expect(reparsed.commands.typecheck).toBe("pnpm typecheck");
+  });
+
+  it("does not emit duplicate blank lines when open_command is omitted", () => {
+    const rendered = renderBubbleConfigToml({
+      id: "b_test_01",
+      repo_path: "/tmp/repo",
+      base_branch: "main",
+      bubble_branch: "bubble/b_test_01",
+      work_mode: "worktree",
+      quality_mode: "strict",
+      watchdog_timeout_minutes: 5,
+      max_rounds: 8,
+      commit_requires_approval: true,
+      agents: {
+        implementer: "codex",
+        reviewer: "claude"
+      },
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      },
+      notifications: {
+        enabled: true
+      }
+    });
+
+    expect(rendered.includes("\n\n\n")).toBe(false);
   });
 });
 
