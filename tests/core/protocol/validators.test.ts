@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { validateProtocolEnvelope } from "../../src/core/protocol/validators.js";
+import { validateProtocolEnvelope } from "../../../src/core/protocol/validators.js";
 
 describe("protocol envelope schema", () => {
   it("accepts PASS envelope with optional intent and findings", () => {

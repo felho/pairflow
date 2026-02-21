@@ -4,9 +4,9 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createBubble } from "../../src/core/bubble/createBubble.js";
-import { parseBubbleConfigToml } from "../../src/config/bubbleConfig.js";
-import { validateBubbleStateSnapshot } from "../../src/core/state/stateSchema.js";
+import { createBubble } from "../../../src/core/bubble/createBubble.js";
+import { parseBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
+import { validateBubbleStateSnapshot } from "../../../src/core/state/stateSchema.js";
 
 const tempDirs: string[] = [];
 
@@ -154,7 +154,7 @@ describe("createBubble", () => {
         taskFile: taskFilePath,
         cwd: repoPath
       })
-    ).rejects.toThrow(/exactly one of task text or task file path/u);
+    ).rejects.toThrow(/either task text or task file path, not both/u);
   });
 
   it("rejects repository paths that are not git repositories", async () => {

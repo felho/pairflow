@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseEnvelopeLine,
   serializeEnvelopeLine
-} from "../../src/core/protocol/envelope.js";
+} from "../../../src/core/protocol/envelope.js";
 
 describe("protocol NDJSON helpers", () => {
   it("serializes and parses a valid envelope line", () => {

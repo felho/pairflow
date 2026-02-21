@@ -62,7 +62,7 @@ async function ensureRepoPathIsGitRepo(repoPath: string): Promise<void> {
   let repoStats;
   try {
     repoStats = await stat(repoPath);
-  } catch (error) {
+  } catch {
     throw new BubbleCreateError(
       `Repository path does not exist: ${repoPath}`
     );
@@ -235,22 +235,40 @@ export async function createBubble(input: BubbleCreateInput): Promise<BubbleCrea
   await ensureBubbleDoesNotExist(paths.bubbleDir);
 
   const bubbleBranch = `bubble/${input.id}`;
-  const task = await resolveTaskInput({
-    task: input.task,
-    taskFile: input.taskFile,
+  const taskResolveInput: { cwd: string; task?: string; taskFile?: string } = {
     cwd: input.cwd ?? process.cwd()
-  });
-  const config = buildBubbleConfig({
+  };
+  if (input.task !== undefined) {
+    taskResolveInput.task = input.task;
+  }
+  if (input.taskFile !== undefined) {
+    taskResolveInput.taskFile = input.taskFile;
+  }
+  const task = await resolveTaskInput(taskResolveInput);
+
+  const bubbleConfigInput: Parameters<typeof buildBubbleConfig>[0] = {
     id: input.id,
     repoPath,
     baseBranch,
-    bubbleBranch,
-    implementer: input.implementer,
-    reviewer: input.reviewer,
-    testCommand: input.testCommand,
-    typecheckCommand: input.typecheckCommand,
-    openCommand: input.openCommand
-  });
+    bubbleBranch
+  };
+  if (input.implementer !== undefined) {
+    bubbleConfigInput.implementer = input.implementer;
+  }
+  if (input.reviewer !== undefined) {
+    bubbleConfigInput.reviewer = input.reviewer;
+  }
+  if (input.testCommand !== undefined) {
+    bubbleConfigInput.testCommand = input.testCommand;
+  }
+  if (input.typecheckCommand !== undefined) {
+    bubbleConfigInput.typecheckCommand = input.typecheckCommand;
+  }
+  if (input.openCommand !== undefined) {
+    bubbleConfigInput.openCommand = input.openCommand;
+  }
+
+  const config = buildBubbleConfig(bubbleConfigInput);
 
   const state = assertValidBubbleStateSnapshot(createInitialBubbleState(input.id));
 

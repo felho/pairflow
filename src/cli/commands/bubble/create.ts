@@ -57,13 +57,23 @@ export function parseBubbleCreateCommandOptions(
   });
 
   const options: BubbleCreateCommandOptions = {
-    id: parsed.values.id,
-    repo: parsed.values.repo,
-    base: parsed.values.base,
-    task: parsed.values.task,
-    taskFile: parsed.values["task-file"],
     help: parsed.values.help ?? false
   };
+  if (parsed.values.id !== undefined) {
+    options.id = parsed.values.id;
+  }
+  if (parsed.values.repo !== undefined) {
+    options.repo = parsed.values.repo;
+  }
+  if (parsed.values.base !== undefined) {
+    options.base = parsed.values.base;
+  }
+  if (parsed.values.task !== undefined) {
+    options.task = parsed.values.task;
+  }
+  if (parsed.values["task-file"] !== undefined) {
+    options.taskFile = parsed.values["task-file"];
+  }
 
   if (options.help) {
     return options;
@@ -114,8 +124,8 @@ export async function runBubbleCreateCommand(
     id: options.id as string,
     repoPath: options.repo as string,
     baseBranch: options.base as string,
-    task: options.task,
-    taskFile: options.taskFile,
+    ...(options.task !== undefined ? { task: options.task } : {}),
+    ...(options.taskFile !== undefined ? { taskFile: options.taskFile } : {}),
     cwd
   });
 }

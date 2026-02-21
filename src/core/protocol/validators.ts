@@ -110,14 +110,17 @@ function validateFindings(
         title
       };
 
-      if (detail !== undefined) {
-        finding.detail = detail as string;
+      if (isNonEmptyString(detail)) {
+        finding.detail = detail;
       }
-      if (code !== undefined) {
-        finding.code = code as string;
+      if (isNonEmptyString(code)) {
+        finding.code = code;
       }
-      if (refs !== undefined) {
-        finding.refs = refs as string[];
+      if (
+        Array.isArray(refs) &&
+        refs.every((value) => isNonEmptyString(value))
+      ) {
+        finding.refs = refs;
       }
 
       findings.push(finding);

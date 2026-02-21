@@ -457,7 +457,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
   }
 
   const validatedNotifications: BubbleConfig["notifications"] = {
-    enabled: notificationsEnabled as boolean
+    enabled: notificationsEnabled
   };
   if (waitingHumanSound !== undefined) {
     validatedNotifications.waiting_human_sound = waitingHumanSound;

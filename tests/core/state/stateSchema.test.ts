@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { validateBubbleStateSnapshot } from "../../src/core/state/stateSchema.js";
+import { validateBubbleStateSnapshot } from "../../../src/core/state/stateSchema.js";
 
 describe("state schema", () => {
   it("accepts RUNNING state with active turn tracking", () => {
