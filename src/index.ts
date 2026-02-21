@@ -69,6 +69,19 @@ export {
   cleanupWorktreeWorkspace
 } from "./core/workspace/worktreeManager.js";
 export {
+  allocateNextProtocolSequence,
+  formatProtocolEnvelopeId,
+  TranscriptSequenceError
+} from "./core/protocol/sequenceAllocator.js";
+export {
+  appendProtocolEnvelope,
+  ProtocolTranscriptError,
+  ProtocolTranscriptLockError,
+  ProtocolTranscriptValidationError,
+  readTranscriptEnvelopesOrThrow,
+  readTranscriptEnvelopes
+} from "./core/protocol/transcriptStore.js";
+export {
   assertValidProtocolEnvelope,
   validateProtocolEnvelope
 } from "./core/protocol/validators.js";
@@ -130,6 +143,16 @@ export type {
   WorktreeBootstrapResult
 } from "./core/workspace/worktreeManager.js";
 export type { Finding, FindingSeverity } from "./types/findings.js";
+export type {
+  ProtocolSequenceAllocationOptions,
+  ProtocolSequenceAllocation
+} from "./core/protocol/sequenceAllocator.js";
+export type {
+  AppendProtocolEnvelopeInput,
+  AppendProtocolEnvelopeResult,
+  ReadTranscriptOptions,
+  ProtocolEnvelopeDraft
+} from "./core/protocol/transcriptStore.js";
 export type {
   ApprovalDecision,
   PassIntent,

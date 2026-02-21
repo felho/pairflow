@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
-import { open, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { readFile, rename, rm, writeFile } from "node:fs/promises";
 
 import { assertValidBubbleStateSnapshot } from "./stateSchema.js";
+import { FileLockTimeoutError, withFileLock } from "../util/fileLock.js";
 import type { BubbleLifecycleState, BubbleStateSnapshot } from "../../types/bubble.js";
 
 export interface LoadedStateSnapshot {
@@ -60,47 +61,28 @@ async function atomicWriteState(
   }
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
-
 async function withStateWriteLock<T>(
   statePath: string,
   timeoutMs: number,
   task: () => Promise<T>
 ): Promise<T> {
   const lockPath = `${statePath}.lock`;
-  const startedAt = Date.now();
-  const pollMs = 25;
-
-  while (true) {
-    let lockHandle;
-    try {
-      lockHandle = await open(lockPath, "wx");
-    } catch (error) {
-      const typedError = error as NodeJS.ErrnoException;
-      if (typedError.code !== "EEXIST") {
-        throw error;
-      }
-
-      if (Date.now() - startedAt >= timeoutMs) {
-        throw new StateStoreConflictError(
-          `Could not acquire state write lock: ${lockPath}`
-        );
-      }
-
-      await delay(pollMs);
-      continue;
+  try {
+    return await withFileLock(
+      {
+        lockPath,
+        timeoutMs
+      },
+      task
+    );
+  } catch (error) {
+    if (error instanceof FileLockTimeoutError) {
+      throw new StateStoreConflictError(
+        `Could not acquire state write lock: ${lockPath}`
+      );
     }
 
-    try {
-      return await task();
-    } finally {
-      await lockHandle.close().catch(() => undefined);
-      await rm(lockPath, { force: true }).catch(() => undefined);
-    }
+    throw error;
   }
 }
 
