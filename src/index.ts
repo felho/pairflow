@@ -47,6 +47,20 @@ export {
   validateBubbleStateSnapshot
 } from "./core/state/stateSchema.js";
 export {
+  StateStoreConflictError,
+  createStateSnapshot,
+  readStateSnapshot,
+  writeStateSnapshot
+} from "./core/state/stateStore.js";
+export { applyStateTransition } from "./core/state/machine.js";
+export {
+  assertTransitionAllowed,
+  canTransition,
+  getAllowedTransitions,
+  isActiveState,
+  isFinalState
+} from "./core/state/transitions.js";
+export {
   assertValidProtocolEnvelope,
   validateProtocolEnvelope
 } from "./core/protocol/validators.js";
@@ -96,6 +110,11 @@ export type {
   RoundRoleHistoryEntry,
   WorkMode
 } from "./types/bubble.js";
+export type { StateTransitionInput } from "./core/state/machine.js";
+export type {
+  LoadedStateSnapshot,
+  WriteStateSnapshotOptions
+} from "./core/state/stateStore.js";
 export type { Finding, FindingSeverity } from "./types/findings.js";
 export type {
   ApprovalDecision,
