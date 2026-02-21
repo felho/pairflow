@@ -1,5 +1,4 @@
-import { access, mkdir, readFile, stat, writeFile } from "node:fs/promises";
-import { constants as fsConstants } from "node:fs";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { renderBubbleConfigToml, assertValidBubbleConfig } from "../../config/bubbleConfig.js";
@@ -13,6 +12,7 @@ import { getBubblePaths, type BubblePaths } from "./paths.js";
 import { createInitialBubbleState } from "../state/initialState.js";
 import { assertValidBubbleStateSnapshot } from "../state/stateSchema.js";
 import { isNonEmptyString } from "../validation.js";
+import { GitRepositoryError, assertGitRepository } from "../workspace/git.js";
 import type { AgentName, BubbleConfig, BubbleStateSnapshot } from "../../types/bubble.js";
 
 export interface BubbleCreateInput {
@@ -59,40 +59,26 @@ function validateBubbleId(id: string): void {
 }
 
 async function ensureRepoPathIsGitRepo(repoPath: string): Promise<void> {
-  let repoStats;
   try {
-    repoStats = await stat(repoPath);
-  } catch {
-    throw new BubbleCreateError(
-      `Repository path does not exist: ${repoPath}`
-    );
-  }
-
-  if (!repoStats.isDirectory()) {
-    throw new BubbleCreateError(
-      `Repository path is not a directory: ${repoPath}`
-    );
-  }
-
-  const hasDotGit = await access(resolve(repoPath, ".git"), fsConstants.F_OK)
-    .then(() => true)
-    .catch(() => false);
-  const looksLikeBareRepo = await Promise.all([
-    access(resolve(repoPath, "HEAD"), fsConstants.F_OK)
-      .then(() => true)
-      .catch(() => false),
-    access(resolve(repoPath, "objects"), fsConstants.F_OK)
-      .then(() => true)
-      .catch(() => false),
-    access(resolve(repoPath, "refs"), fsConstants.F_OK)
-      .then(() => true)
-      .catch(() => false)
-  ]).then(([hasHead, hasObjects, hasRefs]) => hasHead && hasObjects && hasRefs);
-
-  if (!hasDotGit && !looksLikeBareRepo) {
-    throw new BubbleCreateError(
-      `Repository path does not look like a git repository: ${repoPath}`
-    );
+    await assertGitRepository(repoPath);
+  } catch (error) {
+    const typedError = error as NodeJS.ErrnoException;
+    if (typedError.code === "ENOENT") {
+      throw new BubbleCreateError(
+        `Repository path does not exist: ${repoPath}`
+      );
+    }
+    if (typedError.code === "ENOTDIR") {
+      throw new BubbleCreateError(
+        `Repository path is not a directory: ${repoPath}`
+      );
+    }
+    if (error instanceof GitRepositoryError) {
+      throw new BubbleCreateError(
+        `Repository path does not look like a git repository: ${repoPath}`
+      );
+    }
+    throw error;
   }
 }
 
@@ -196,7 +182,7 @@ function renderTaskArtifact(task: ResolvedTaskInput): string {
 
 async function ensureBubbleDoesNotExist(bubbleDir: string): Promise<void> {
   try {
-    await access(bubbleDir, fsConstants.F_OK);
+    await stat(bubbleDir);
     throw new BubbleCreateError(`Bubble already exists: ${bubbleDir}`);
   } catch (error) {
     const typedError = error as NodeJS.ErrnoException;

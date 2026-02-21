@@ -61,6 +61,14 @@ export {
   isFinalState
 } from "./core/state/transitions.js";
 export {
+  GitCommandError,
+  WorkspaceCleanupError,
+  WorkspaceBootstrapError,
+  WorkspaceError,
+  bootstrapWorktreeWorkspace,
+  cleanupWorktreeWorkspace
+} from "./core/workspace/worktreeManager.js";
+export {
   assertValidProtocolEnvelope,
   validateProtocolEnvelope
 } from "./core/protocol/validators.js";
@@ -115,6 +123,12 @@ export type {
   LoadedStateSnapshot,
   WriteStateSnapshotOptions
 } from "./core/state/stateStore.js";
+export type {
+  WorktreeCleanupInput,
+  WorktreeCleanupResult,
+  WorktreeBootstrapInput,
+  WorktreeBootstrapResult
+} from "./core/workspace/worktreeManager.js";
 export type { Finding, FindingSeverity } from "./types/findings.js";
 export type {
   ApprovalDecision,

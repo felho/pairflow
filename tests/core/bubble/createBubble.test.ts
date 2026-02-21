@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -7,13 +7,14 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { parseBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { validateBubbleStateSnapshot } from "../../../src/core/state/stateSchema.js";
+import { initGitRepository } from "../../helpers/git.js";
 
 const tempDirs: string[] = [];
 
 async function createTempRepo(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "pairflow-bubble-create-"));
   tempDirs.push(root);
-  await mkdir(join(root, ".git"));
+  await initGitRepository(root);
   return root;
 }
 
