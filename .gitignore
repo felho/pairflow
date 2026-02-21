@@ -1,0 +1,10 @@
+node_modules/
+.pnpm-store/
+dist/
+coverage/
+*.log
+.pairflow/
+.pairflow-worktrees/
+.env
+.env.*
+!.env.example
