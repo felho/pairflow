@@ -1,11 +1,15 @@
-import { readdir, readFile, realpath } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { parseBubbleConfigToml } from "../../config/bubbleConfig.js";
 import { readStateSnapshot } from "../state/stateStore.js";
 import { readRuntimeSessionsRegistry } from "../runtime/sessionsRegistry.js";
-import { runGit } from "../workspace/git.js";
 import { getBubblePaths } from "./paths.js";
+import {
+  normalizeRepoPath,
+  RepoResolutionError,
+  resolveRepoPath
+} from "./repoResolution.js";
 import type { BubbleLifecycleState } from "../../types/bubble.js";
 import type { RuntimeSessionRecord } from "../runtime/sessionsRegistry.js";
 
@@ -73,34 +77,6 @@ function createZeroCounts(): BubbleListStateCounts {
   };
 }
 
-async function normalizePath(path: string): Promise<string> {
-  return realpath(path).catch(() => resolve(path));
-}
-
-async function resolveRepoPath(input: BubbleListInput): Promise<string> {
-  if (input.repoPath !== undefined) {
-    return normalizePath(resolve(input.repoPath));
-  }
-
-  const cwd = resolve(input.cwd ?? process.cwd());
-  const result = await runGit(["rev-parse", "--show-toplevel"], {
-    cwd,
-    allowFailure: true
-  });
-  if (result.exitCode !== 0) {
-    throw new BubbleListError(
-      `Could not resolve repository root from cwd: ${cwd}`
-    );
-  }
-
-  const raw = result.stdout.trim();
-  if (raw.length === 0) {
-    throw new BubbleListError(`Git repository root is empty for cwd: ${cwd}`);
-  }
-
-  return normalizePath(resolve(cwd, raw));
-}
-
 async function listBubbleIds(repoPath: string): Promise<string[]> {
   const root = join(repoPath, ".pairflow", "bubbles");
   const entries = await readdir(root, { withFileTypes: true }).catch(
@@ -119,13 +95,21 @@ async function listBubbleIds(repoPath: string): Promise<string[]> {
 }
 
 export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleListView> {
-  const repoPath = await resolveRepoPath(input);
+  let repoPath: string;
+  try {
+    repoPath = await resolveRepoPath(input);
+  } catch (error) {
+    if (error instanceof RepoResolutionError) {
+      throw new BubbleListError(error.message);
+    }
+    throw error;
+  }
   const bubbleIds = await listBubbleIds(repoPath);
   const sessionsPath = join(repoPath, ".pairflow", "runtime", "sessions.json");
   const sessions = await readRuntimeSessionsRegistry(sessionsPath, {
     allowMissing: true
   });
-  const normalizedRepoPath = await normalizePath(repoPath);
+  const normalizedRepoPath = await normalizeRepoPath(repoPath);
 
   const bubbles: BubbleListEntry[] = [];
   const byState = createZeroCounts();
@@ -159,7 +143,7 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
       );
     }
 
-    const normalizedConfigRepoPath = await normalizePath(resolve(config.repo_path));
+    const normalizedConfigRepoPath = await normalizeRepoPath(resolve(config.repo_path));
     if (normalizedConfigRepoPath !== normalizedRepoPath) {
       throw new BubbleListError(
         `Bubble ${bubbleId} belongs to different repository path: ${config.repo_path}`

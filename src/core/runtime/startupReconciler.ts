@@ -1,6 +1,10 @@
-import { readdir, realpath } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { readdir } from "node:fs/promises";
+import { join } from "node:path";
 
+import {
+  RepoResolutionError,
+  resolveRepoPath
+} from "../bubble/repoResolution.js";
 import { readStateSnapshot } from "../state/stateStore.js";
 import { isFinalState } from "../state/transitions.js";
 import {
@@ -8,7 +12,6 @@ import {
   removeRuntimeSessions,
   type RuntimeSessionsRegistry
 } from "./sessionsRegistry.js";
-import { runGit } from "../workspace/git.js";
 
 export type RuntimeSessionStaleReason =
   | "missing_bubble"
@@ -41,34 +44,6 @@ export class StartupReconcilerError extends Error {
     super(message);
     this.name = "StartupReconcilerError";
   }
-}
-
-async function normalizePath(path: string): Promise<string> {
-  return realpath(path).catch(() => resolve(path));
-}
-
-async function resolveRepoPath(input: ReconcileRuntimeSessionsInput): Promise<string> {
-  if (input.repoPath !== undefined) {
-    return normalizePath(resolve(input.repoPath));
-  }
-
-  const cwd = resolve(input.cwd ?? process.cwd());
-  const result = await runGit(["rev-parse", "--show-toplevel"], {
-    cwd,
-    allowFailure: true
-  });
-  if (result.exitCode !== 0) {
-    throw new StartupReconcilerError(
-      `Could not resolve repository root from cwd: ${cwd}`
-    );
-  }
-
-  const raw = result.stdout.trim();
-  if (raw.length === 0) {
-    throw new StartupReconcilerError(`Git repository root is empty for cwd: ${cwd}`);
-  }
-
-  return normalizePath(resolve(cwd, raw));
 }
 
 async function listBubbleIdSet(repoPath: string): Promise<Set<string>> {
@@ -115,7 +90,18 @@ function countRegistryEntries(registry: RuntimeSessionsRegistry): number {
 export async function reconcileRuntimeSessions(
   input: ReconcileRuntimeSessionsInput = {}
 ): Promise<ReconcileRuntimeSessionsReport> {
-  const repoPath = await resolveRepoPath(input);
+  let repoPath: string;
+  try {
+    repoPath = await resolveRepoPath({
+      repoPath: input.repoPath,
+      cwd: input.cwd
+    });
+  } catch (error) {
+    if (error instanceof RepoResolutionError) {
+      throw new StartupReconcilerError(error.message);
+    }
+    throw error;
+  }
   const bubbleIdSet = await listBubbleIdSet(repoPath);
   const sessionsPath = join(repoPath, ".pairflow", "runtime", "sessions.json");
   const registry = await readRuntimeSessionsRegistry(sessionsPath, {
