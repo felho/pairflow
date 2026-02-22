@@ -66,8 +66,10 @@ describe("appendProtocolEnvelope", () => {
 
     expect(first.sequence).toBe(1);
     expect(first.envelope.id).toBe("msg_20260221_001");
+    expect(first.mirrorWriteFailures).toEqual([]);
     expect(second.sequence).toBe(2);
     expect(second.envelope.id).toBe("msg_20260221_002");
+    expect(second.mirrorWriteFailures).toEqual([]);
 
     const transcript = await readTranscriptEnvelopes(transcriptPath);
     expect(transcript).toHaveLength(2);
@@ -103,6 +105,56 @@ describe("appendProtocolEnvelope", () => {
         envelope: createDraft()
       })
     ).rejects.toBeInstanceOf(ProtocolTranscriptValidationError);
+  });
+
+  it("writes configured mirror files under the same lock scope", async () => {
+    const root = await createTempRoot();
+    const transcriptPath = join(root, "transcript.ndjson");
+    const inboxPath = join(root, "inbox.ndjson");
+    const lockPath = join(root, "b_protocol_01.lock");
+    const now = new Date("2026-02-21T12:00:00.000Z");
+
+    const appended = await appendProtocolEnvelope({
+      transcriptPath,
+      mirrorPaths: [inboxPath],
+      lockPath,
+      envelope: createDraft(),
+      now
+    });
+
+    expect(appended.sequence).toBe(1);
+    expect(appended.mirrorWriteFailures).toEqual([]);
+
+    const transcript = await readTranscriptEnvelopes(transcriptPath);
+    const inbox = await readTranscriptEnvelopes(inboxPath);
+
+    expect(transcript).toHaveLength(1);
+    expect(inbox).toHaveLength(1);
+    expect(transcript[0]?.id).toBe(inbox[0]?.id);
+    expect(inbox[0]?.type).toBe("PASS");
+  });
+
+  it("does not fail when mirror write fails after transcript append", async () => {
+    const root = await createTempRoot();
+    const transcriptPath = join(root, "transcript.ndjson");
+    const lockPath = join(root, "b_protocol_01.lock");
+    const now = new Date("2026-02-21T12:00:00.000Z");
+
+    const appended = await appendProtocolEnvelope({
+      transcriptPath,
+      mirrorPaths: [root],
+      lockPath,
+      envelope: createDraft(),
+      now
+    });
+
+    expect(appended.sequence).toBe(1);
+    expect(appended.mirrorWriteFailures).toHaveLength(1);
+    expect(appended.mirrorWriteFailures[0]?.path).toBe(root);
+
+    const transcript = await readTranscriptEnvelopes(transcriptPath);
+    expect(transcript).toHaveLength(1);
+    expect(transcript[0]?.id).toBe("msg_20260221_001");
   });
 
   it("keeps strict monotonic ids under concurrent appends", async () => {

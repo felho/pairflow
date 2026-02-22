@@ -5,6 +5,7 @@ import {
   type AppendProtocolEnvelopeResult
 } from "../protocol/transcriptStore.js";
 import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
+import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
 import {
   resolveBubbleFromWorkspaceCwd,
   WorkspaceResolutionError
@@ -51,20 +52,6 @@ export function inferPassIntent(activeRole: AgentRole): PassIntent {
   }
 
   return "fix_request";
-}
-
-function requireNonEmptySummary(summary: string): string {
-  const normalized = summary.trim();
-  if (normalized.length === 0) {
-    throw new PassCommandError("PASS summary cannot be empty.");
-  }
-  return normalized;
-}
-
-function normalizeRefs(refs: readonly string[]): string[] {
-  const normalized = refs.map((ref) => ref.trim()).filter((ref) => ref.length > 0);
-  const unique = [...new Set(normalized)];
-  return unique;
 }
 
 function resolveHandoff(
@@ -150,8 +137,12 @@ function mapAppendResult(result: AppendProtocolEnvelopeResult): Pick<EmitPassRes
 export async function emitPassFromWorkspace(input: EmitPassInput): Promise<EmitPassResult> {
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
-  const summary = requireNonEmptySummary(input.summary);
-  const refs = normalizeRefs(input.refs ?? []);
+  const summary = requireNonEmptyString(
+    input.summary,
+    "PASS summary",
+    (message) => new PassCommandError(message)
+  );
+  const refs = normalizeStringList(input.refs ?? []);
 
   const resolved = await resolveBubbleFromWorkspaceCwd(input.cwd);
 

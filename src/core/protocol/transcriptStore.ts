@@ -24,15 +24,23 @@ export interface ProtocolEnvelopeDraft {
 
 export interface AppendProtocolEnvelopeInput {
   transcriptPath: string;
+  mirrorPaths?: string[];
   lockPath: string;
   envelope: ProtocolEnvelopeDraft;
   now?: Date;
   lockTimeoutMs?: number;
 }
 
+export interface ProtocolMirrorWriteFailure {
+  path: string;
+  message: string;
+  code?: string;
+}
+
 export interface AppendProtocolEnvelopeResult {
   envelope: ProtocolEnvelope;
   sequence: number;
+  mirrorWriteFailures: ProtocolMirrorWriteFailure[];
 }
 
 export interface ReadTranscriptOptions {
@@ -189,6 +197,25 @@ function mapTranscriptProcessingError(error: unknown): never {
   throw error;
 }
 
+function toMirrorWriteFailure(
+  mirrorPath: string,
+  error: unknown
+): ProtocolMirrorWriteFailure {
+  if (error instanceof Error) {
+    const typedError = error as NodeJS.ErrnoException;
+    return {
+      path: mirrorPath,
+      message: error.message,
+      ...(typedError.code !== undefined ? { code: typedError.code } : {})
+    };
+  }
+
+  return {
+    path: mirrorPath,
+    message: String(error)
+  };
+}
+
 export async function appendProtocolEnvelope(
   input: AppendProtocolEnvelopeInput
 ): Promise<AppendProtocolEnvelopeResult> {
@@ -224,12 +251,22 @@ export async function appendProtocolEnvelope(
         const allocation = allocateNextProtocolSequence(existing, now);
         const envelope = buildValidatedEnvelope(input.envelope, allocation.messageId, now);
         const line = serializeEnvelopeLine(envelope);
+        const mirrorWriteFailures: ProtocolMirrorWriteFailure[] = [];
 
         await appendFile(input.transcriptPath, line, { encoding: "utf8" });
+        for (const mirrorPath of input.mirrorPaths ?? []) {
+          try {
+            await ensureDirForFile(mirrorPath);
+            await appendFile(mirrorPath, line, { encoding: "utf8" });
+          } catch (error) {
+            mirrorWriteFailures.push(toMirrorWriteFailure(mirrorPath, error));
+          }
+        }
 
         return {
           envelope,
-          sequence: allocation.sequence
+          sequence: allocation.sequence,
+          mirrorWriteFailures
         };
       }
     );

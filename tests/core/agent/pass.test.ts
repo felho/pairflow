@@ -10,6 +10,7 @@ import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/s
 import { bootstrapWorktreeWorkspace } from "../../../src/core/workspace/worktreeManager.js";
 import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
 import { initGitRepository } from "../../helpers/git.js";
+import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
 const tempDirs: string[] = [];
 
@@ -18,52 +19,6 @@ async function createTempRepo(): Promise<string> {
   tempDirs.push(root);
   await initGitRepository(root);
   return root;
-}
-
-async function setupRunningBubble(repoPath: string, bubbleId: string) {
-  const created = await createBubble({
-    id: bubbleId,
-    repoPath,
-    baseBranch: "main",
-    task: "Implement pass flow",
-    cwd: repoPath
-  });
-
-  await bootstrapWorktreeWorkspace({
-    repoPath,
-    baseBranch: "main",
-    bubbleBranch: created.config.bubble_branch,
-    worktreePath: created.paths.worktreePath
-  });
-
-  const loaded = await readStateSnapshot(created.paths.statePath);
-  const startedAt = "2026-02-21T12:00:00.000Z";
-  await writeStateSnapshot(
-    created.paths.statePath,
-    {
-      ...loaded.state,
-      state: "RUNNING",
-      round: 1,
-      active_agent: created.config.agents.implementer,
-      active_role: "implementer",
-      active_since: startedAt,
-      last_command_at: startedAt,
-      round_role_history: [
-        {
-          round: 1,
-          implementer: created.config.agents.implementer,
-          reviewer: created.config.agents.reviewer,
-          switched_at: startedAt
-        }
-      ]
-    },
-    {
-      expectedFingerprint: loaded.fingerprint,
-      expectedState: "CREATED"
-    }
-  );
-
-  return created;
 }
 
 afterEach(async () => {
@@ -77,7 +32,11 @@ afterEach(async () => {
 describe("emitPassFromWorkspace", () => {
   it("writes PASS envelope and switches active role with inferred intent", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubble(repoPath, "b_pass_01");
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_01",
+      task: "Implement pass flow"
+    });
     const now = new Date("2026-02-21T12:05:00.000Z");
 
     const result = await emitPassFromWorkspace({
@@ -108,7 +67,11 @@ describe("emitPassFromWorkspace", () => {
 
   it("uses explicit intent override", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubble(repoPath, "b_pass_02");
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_02",
+      task: "Implement pass flow"
+    });
 
     const result = await emitPassFromWorkspace({
       summary: "Please continue",
@@ -123,7 +86,11 @@ describe("emitPassFromWorkspace", () => {
 
   it("increments round when reviewer passes back to implementer", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubble(repoPath, "b_pass_03");
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_03",
+      task: "Implement pass flow"
+    });
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     await writeStateSnapshot(
@@ -189,7 +156,11 @@ describe("emitPassFromWorkspace", () => {
 
   it("rejects RUNNING state when round is invalid", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubble(repoPath, "b_pass_05");
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_05",
+      task: "Implement pass flow"
+    });
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     await writeStateSnapshot(

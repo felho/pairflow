@@ -5,11 +5,20 @@ export function healthcheck(): string {
 }
 
 export {
+  asAskHumanCommandError,
+  emitAskHumanFromWorkspace,
+  AskHumanCommandError
+} from "./core/agent/askHuman.js";
+export {
   asPassCommandError,
   emitPassFromWorkspace,
   inferPassIntent,
   PassCommandError
 } from "./core/agent/pass.js";
+export {
+  BubbleLookupError,
+  resolveBubbleById
+} from "./core/bubble/bubbleLookup.js";
 export {
   BubbleCreateError,
   createBubble
@@ -29,10 +38,25 @@ export {
   DEFAULT_WORK_MODE
 } from "./config/defaults.js";
 export {
+  asHumanReplyCommandError,
+  emitHumanReply,
+  HumanReplyCommandError
+} from "./core/human/reply.js";
+export {
+  getAskHumanHelpText,
+  parseAskHumanCommandOptions,
+  runAskHumanCommand
+} from "./cli/commands/agent/askHuman.js";
+export {
   getBubbleCreateHelpText,
   parseBubbleCreateCommandOptions,
   runBubbleCreateCommand
 } from "./cli/commands/bubble/create.js";
+export {
+  getBubbleReplyHelpText,
+  parseBubbleReplyCommandOptions,
+  runBubbleReplyCommand
+} from "./cli/commands/bubble/reply.js";
 export {
   getPassHelpText,
   parsePassCommandOptions,
@@ -125,9 +149,16 @@ export {
   protocolParticipants
 } from "./types/protocol.js";
 export type {
+  EmitAskHumanInput,
+  EmitAskHumanResult
+} from "./core/agent/askHuman.js";
+export type {
   EmitPassInput,
   EmitPassResult
 } from "./core/agent/pass.js";
+export type {
+  ResolvedBubbleById
+} from "./core/bubble/bubbleLookup.js";
 export type {
   ResolvedBubbleWorkspace
 } from "./core/bubble/workspaceResolution.js";
@@ -138,10 +169,20 @@ export type {
 } from "./core/bubble/createBubble.js";
 export type { BubblePaths } from "./core/bubble/paths.js";
 export type {
+  AskHumanCommandOptions,
+  AskHumanHelpCommandOptions,
+  ParsedAskHumanCommandOptions
+} from "./cli/commands/agent/askHuman.js";
+export type {
   ParsedPassCommandOptions,
   PassHelpCommandOptions,
   PassCommandOptions
 } from "./cli/commands/agent/pass.js";
+export type {
+  BubbleReplyCommandOptions,
+  BubbleReplyHelpCommandOptions,
+  ParsedBubbleReplyCommandOptions
+} from "./cli/commands/bubble/reply.js";
 export type {
   BubbleCreateCommandOptions
 } from "./cli/commands/bubble/create.js";
@@ -177,9 +218,14 @@ export type {
 export type {
   AppendProtocolEnvelopeInput,
   AppendProtocolEnvelopeResult,
+  ProtocolMirrorWriteFailure,
   ReadTranscriptOptions,
   ProtocolEnvelopeDraft
 } from "./core/protocol/transcriptStore.js";
+export type {
+  EmitHumanReplyInput,
+  EmitHumanReplyResult
+} from "./core/human/reply.js";
 export type {
   ApprovalDecision,
   PassIntent,

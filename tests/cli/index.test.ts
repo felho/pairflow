@@ -29,4 +29,25 @@ describe("runCli", () => {
     expect(exitCode).toBe(0);
     expect(stdoutSpy).toHaveBeenCalled();
   });
+
+  it("supports top-level ask-human help", async () => {
+    const exitCode = await runCli(["ask-human", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+  });
+
+  it("supports agent ask-human namespace", async () => {
+    const exitCode = await runCli(["agent", "ask-human", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+  });
+
+  it("supports bubble reply help", async () => {
+    const exitCode = await runCli(["bubble", "reply", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+  });
 });
