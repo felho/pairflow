@@ -186,9 +186,17 @@ export {
   buildBubbleTmuxSessionName,
   launchBubbleTmuxSession,
   runTmux,
+  terminateBubbleTmuxSession,
   TmuxCommandError,
   TmuxSessionExistsError
 } from "./core/runtime/tmuxManager.js";
+export {
+  readRuntimeSessionsRegistry,
+  removeRuntimeSession,
+  RuntimeSessionsRegistryError,
+  RuntimeSessionsRegistryLockError,
+  upsertRuntimeSession
+} from "./core/runtime/sessionsRegistry.js";
 export {
   computeWatchdogStatus
 } from "./core/runtime/watchdog.js";
@@ -337,10 +345,19 @@ export type {
 export type {
   LaunchBubbleTmuxSessionInput,
   LaunchBubbleTmuxSessionResult,
+  TerminateBubbleTmuxSessionInput,
+  TerminateBubbleTmuxSessionResult,
   TmuxRunOptions,
   TmuxRunResult,
   TmuxRunner
 } from "./core/runtime/tmuxManager.js";
+export type {
+  ReadRuntimeSessionsOptions,
+  RemoveRuntimeSessionInput,
+  RuntimeSessionRecord,
+  RuntimeSessionsRegistry,
+  UpsertRuntimeSessionInput
+} from "./core/runtime/sessionsRegistry.js";
 export type {
   WatchdogStatus
 } from "./core/runtime/watchdog.js";

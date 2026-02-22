@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildBubbleTmuxSessionName,
   launchBubbleTmuxSession,
+  terminateBubbleTmuxSession,
   TmuxSessionExistsError,
   type TmuxRunResult,
   type TmuxRunner
@@ -81,5 +82,47 @@ describe("launchBubbleTmuxSession", () => {
         runner
       })
     ).rejects.toBeInstanceOf(TmuxSessionExistsError);
+  });
+});
+
+describe("terminateBubbleTmuxSession", () => {
+  it("kills an existing session and reports existed=true", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args) => {
+      calls.push(args);
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await terminateBubbleTmuxSession({
+      bubbleId: "b_start_04",
+      runner
+    });
+
+    expect(result.sessionName).toBe("pf-b_start_04");
+    expect(result.existed).toBe(true);
+    expect(calls).toEqual([["kill-session", "-t", "pf-b_start_04"]]);
+  });
+
+  it("treats missing sessions as non-fatal cleanup result", async () => {
+    const runner: TmuxRunner = () =>
+      Promise.resolve({
+        stdout: "",
+        stderr: "can't find session: pf-missing",
+        exitCode: 1
+      });
+
+    const result = await terminateBubbleTmuxSession({
+      sessionName: "pf-missing",
+      runner
+    });
+
+    expect(result).toEqual({
+      sessionName: "pf-missing",
+      existed: false
+    });
   });
 });

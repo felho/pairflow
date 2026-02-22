@@ -64,6 +64,11 @@ describe("startBubble", () => {
     });
 
     const calls: string[] = [];
+    const upserts: Array<{
+      bubbleId: string;
+      session: string;
+      worktreePath: string;
+    }> = [];
     const result = await startBubble(
       {
         bubbleId: created.bubbleId,
@@ -83,6 +88,20 @@ describe("startBubble", () => {
         launchBubbleTmuxSession: () => {
           calls.push("launch");
           return Promise.resolve({ sessionName: "pf-b_start_01" });
+        },
+        upsertRuntimeSession: (input) => {
+          upserts.push({
+            bubbleId: input.bubbleId,
+            session: input.tmuxSessionName,
+            worktreePath: input.worktreePath
+          });
+          return Promise.resolve({
+            bubbleId: input.bubbleId,
+            repoPath: input.repoPath,
+            worktreePath: input.worktreePath,
+            tmuxSessionName: input.tmuxSessionName,
+            updatedAt: "2026-02-22T13:00:00.000Z"
+          });
         }
       }
     );
@@ -93,9 +112,84 @@ describe("startBubble", () => {
     expect(result.state.active_agent).toBe("codex");
     expect(result.state.active_role).toBe("implementer");
     expect(result.state.round).toBe(1);
+    expect(upserts).toEqual([
+      {
+        bubbleId: created.bubbleId,
+        session: "pf-b_start_01",
+        worktreePath: created.paths.worktreePath
+      }
+    ]);
 
     const loaded = await readStateSnapshot(created.paths.statePath);
     expect(loaded.state.state).toBe("RUNNING");
+  });
+
+  it("rolls back runtime artifacts when runtime session registration fails", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_021",
+      repoPath,
+      baseBranch: "main",
+      task: "Start bubble task",
+      cwd: repoPath
+    });
+
+    let cleanupCalled = false;
+    const removedSessions: string[] = [];
+    const terminatedSessions: string[] = [];
+
+    await expect(
+      startBubble(
+        {
+          bubbleId: created.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-02-22T13:11:00.000Z")
+        },
+        {
+          bootstrapWorktreeWorkspace: () =>
+            Promise.resolve({
+              repoPath,
+              baseRef: "refs/heads/main",
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            }),
+          launchBubbleTmuxSession: () =>
+            Promise.resolve({ sessionName: "pf-b_start_021" }),
+          upsertRuntimeSession: () =>
+            Promise.reject(new Error("sessions registry unavailable")),
+          removeRuntimeSession: (input) => {
+            removedSessions.push(input.bubbleId);
+            return Promise.resolve(true);
+          },
+          terminateBubbleTmuxSession: (input) => {
+            if (input.sessionName !== undefined) {
+              terminatedSessions.push(input.sessionName);
+            }
+            return Promise.resolve({
+              sessionName: input.sessionName ?? "unknown",
+              existed: true
+            });
+          },
+          cleanupWorktreeWorkspace: () => {
+            cleanupCalled = true;
+            return Promise.resolve({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath,
+              removedBranch: true,
+              removedWorktree: true
+            });
+          }
+        }
+      )
+    ).rejects.toBeInstanceOf(StartBubbleError);
+
+    expect(cleanupCalled).toBe(true);
+    expect(removedSessions).toEqual([created.bubbleId]);
+    expect(terminatedSessions).toEqual(["pf-b_start_021"]);
+
+    const loaded = await readStateSnapshot(created.paths.statePath);
+    expect(loaded.state.state).toBe("FAILED");
   });
 
   it("marks bubble FAILED when tmux launch fails", async () => {

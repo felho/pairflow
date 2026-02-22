@@ -30,6 +30,17 @@ export interface LaunchBubbleTmuxSessionResult {
   sessionName: string;
 }
 
+export interface TerminateBubbleTmuxSessionInput {
+  bubbleId?: string;
+  sessionName?: string;
+  runner?: TmuxRunner;
+}
+
+export interface TerminateBubbleTmuxSessionResult {
+  sessionName: string;
+  existed: boolean;
+}
+
 export class TmuxCommandError extends Error {
   public readonly args: string[];
   public readonly exitCode: number;
@@ -173,4 +184,53 @@ export async function launchBubbleTmuxSession(
   return {
     sessionName
   };
+}
+
+function isTmuxMissingSessionError(output: string): boolean {
+  const normalized = output.toLowerCase();
+  return (
+    normalized.includes("can't find session") ||
+    normalized.includes("no server running")
+  );
+}
+
+export async function terminateBubbleTmuxSession(
+  input: TerminateBubbleTmuxSessionInput
+): Promise<TerminateBubbleTmuxSessionResult> {
+  const runner = input.runner ?? runTmux;
+  const sessionName =
+    input.sessionName ?? (input.bubbleId !== undefined
+      ? buildBubbleTmuxSessionName(input.bubbleId)
+      : undefined);
+
+  if (sessionName === undefined) {
+    throw new Error(
+      "terminateBubbleTmuxSession requires either sessionName or bubbleId."
+    );
+  }
+
+  const result = await runner(["kill-session", "-t", sessionName], {
+    allowFailure: true
+  });
+
+  if (result.exitCode === 0) {
+    return {
+      sessionName,
+      existed: true
+    };
+  }
+
+  const combinedOutput = `${result.stderr}\n${result.stdout}`;
+  if (isTmuxMissingSessionError(combinedOutput)) {
+    return {
+      sessionName,
+      existed: false
+    };
+  }
+
+  throw new TmuxCommandError(
+    ["kill-session", "-t", sessionName],
+    result.exitCode,
+    result.stderr
+  );
 }

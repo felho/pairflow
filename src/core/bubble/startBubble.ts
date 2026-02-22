@@ -6,7 +6,18 @@ import {
   cleanupWorktreeWorkspace,
   WorkspaceBootstrapError
 } from "../workspace/worktreeManager.js";
-import { launchBubbleTmuxSession, TmuxCommandError, TmuxSessionExistsError } from "../runtime/tmuxManager.js";
+import {
+  launchBubbleTmuxSession,
+  terminateBubbleTmuxSession,
+  TmuxCommandError,
+  TmuxSessionExistsError
+} from "../runtime/tmuxManager.js";
+import {
+  removeRuntimeSession,
+  RuntimeSessionsRegistryError,
+  RuntimeSessionsRegistryLockError,
+  upsertRuntimeSession
+} from "../runtime/sessionsRegistry.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
 
 export interface StartBubbleInput {
@@ -27,6 +38,9 @@ export interface StartBubbleDependencies {
   bootstrapWorktreeWorkspace?: typeof bootstrapWorktreeWorkspace;
   cleanupWorktreeWorkspace?: typeof cleanupWorktreeWorkspace;
   launchBubbleTmuxSession?: typeof launchBubbleTmuxSession;
+  terminateBubbleTmuxSession?: typeof terminateBubbleTmuxSession;
+  upsertRuntimeSession?: typeof upsertRuntimeSession;
+  removeRuntimeSession?: typeof removeRuntimeSession;
 }
 
 export class StartBubbleError extends Error {
@@ -65,6 +79,10 @@ export async function startBubble(
   const bootstrap = dependencies.bootstrapWorktreeWorkspace ?? bootstrapWorktreeWorkspace;
   const cleanup = dependencies.cleanupWorktreeWorkspace ?? cleanupWorktreeWorkspace;
   const launchTmux = dependencies.launchBubbleTmuxSession ?? launchBubbleTmuxSession;
+  const terminateTmux =
+    dependencies.terminateBubbleTmuxSession ?? terminateBubbleTmuxSession;
+  const upsertSession = dependencies.upsertRuntimeSession ?? upsertRuntimeSession;
+  const removeSession = dependencies.removeRuntimeSession ?? removeRuntimeSession;
 
   const resolved = await resolveBubbleById({
     bubbleId: input.bubbleId,
@@ -95,6 +113,7 @@ export async function startBubble(
   );
 
   let workspaceBootstrapped = false;
+  let tmuxSessionName: string | null = null;
   try {
     await bootstrap({
       repoPath: resolved.repoPath,
@@ -116,6 +135,16 @@ export async function startBubble(
         resolved.bubbleConfig.agents.reviewer,
         resolved.bubbleId
       )
+    });
+    tmuxSessionName = tmux.sessionName;
+
+    await upsertSession({
+      sessionsPath: resolved.bubblePaths.sessionsPath,
+      bubbleId: resolved.bubbleId,
+      repoPath: resolved.repoPath,
+      worktreePath: resolved.bubblePaths.worktreePath,
+      tmuxSessionName: tmux.sessionName,
+      now
     });
 
     const running = applyStateTransition(preparing, {
@@ -145,6 +174,16 @@ export async function startBubble(
       worktreePath: resolved.bubblePaths.worktreePath
     };
   } catch (error) {
+    if (tmuxSessionName !== null) {
+      await removeSession({
+        sessionsPath: resolved.bubblePaths.sessionsPath,
+        bubbleId: resolved.bubbleId
+      }).catch(() => undefined);
+      await terminateTmux({
+        sessionName: tmuxSessionName
+      }).catch(() => undefined);
+    }
+
     if (workspaceBootstrapped) {
       await cleanup({
         repoPath: resolved.repoPath,
@@ -180,6 +219,12 @@ export function asStartBubbleError(error: unknown): never {
     throw new StartBubbleError(error.message);
   }
   if (error instanceof TmuxCommandError || error instanceof TmuxSessionExistsError) {
+    throw new StartBubbleError(error.message);
+  }
+  if (
+    error instanceof RuntimeSessionsRegistryError ||
+    error instanceof RuntimeSessionsRegistryLockError
+  ) {
     throw new StartBubbleError(error.message);
   }
   if (error instanceof Error) {
