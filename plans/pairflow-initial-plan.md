@@ -56,6 +56,7 @@ Ticket status:
 32. Ticket 32: Completed (multi-bubble isolation integration coverage added: concurrent `pass` and `ask-human` operations verified to remain transcript/inbox/state isolated per bubble).
 33. Ticket 33: Completed (5-bubble parallel smoke integration coverage added to verify concurrent pass handling, per-bubble transcript/state isolation, and aggregate RUNNING visibility via `bubble list`).
 34. Ticket 34: Completed (runtime reconcile stale detection broadened to pre-runtime states so orphaned session ownership no longer blocks restart/start; added integration test covering guard-fail -> reconcile -> successful restart).
+35. Ticket 35: Completed (`bubble list` runtime session accounting aligned with reconcile semantics: sessions on non-runtime bubble states now counted as stale (not registered), with dedicated integration coverage).
 
 ## Milestone 1: Phase 1 Single-Bubble MVP (CLI-First, Strict Mode)
 

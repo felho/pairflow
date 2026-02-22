@@ -77,6 +77,14 @@ function createZeroCounts(): BubbleListStateCounts {
   };
 }
 
+const runtimeSessionExpectedStates = new Set<BubbleLifecycleState>([
+  "RUNNING",
+  "WAITING_HUMAN",
+  "READY_FOR_APPROVAL",
+  "APPROVED_FOR_COMMIT",
+  "COMMITTED"
+]);
+
 async function listBubbleIds(repoPath: string): Promise<string[]> {
   const root = join(repoPath, ".pairflow", "bubbles");
   const entries = await readdir(root, { withFileTypes: true }).catch(
@@ -114,6 +122,7 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
   const bubbles: BubbleListEntry[] = [];
   const byState = createZeroCounts();
   let runtimeRegistered = 0;
+  let staleForNonRuntimeStates = 0;
 
   for (const bubbleId of bubbleIds) {
     const bubbleTomlPath = join(
@@ -152,7 +161,11 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
 
     const runtimeSession = sessions[bubbleId] ?? null;
     if (runtimeSession !== null) {
-      runtimeRegistered += 1;
+      if (runtimeSessionExpectedStates.has(stateLoaded.state.state)) {
+        runtimeRegistered += 1;
+      } else {
+        staleForNonRuntimeStates += 1;
+      }
     }
 
     byState[stateLoaded.state.state] += 1;
@@ -171,9 +184,10 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
   }
 
   const bubbleIdSet = new Set(bubbleIds);
-  const stale = Object.keys(sessions).filter(
+  const staleMissingBubble = Object.keys(sessions).filter(
     (bubbleId) => !bubbleIdSet.has(bubbleId)
   ).length;
+  const stale = staleMissingBubble + staleForNonRuntimeStates;
 
   return {
     repoPath,

@@ -106,4 +106,31 @@ describe("listBubbles", () => {
     const dir = await createTempDir();
     await expect(listBubbles({ cwd: dir })).rejects.toBeInstanceOf(BubbleListError);
   });
+
+  it("counts runtime session on non-runtime state bubble as stale", async () => {
+    const repoPath = await createTempRepo();
+    const createdBubble = await createBubble({
+      id: "b_list_04",
+      repoPath,
+      baseBranch: "main",
+      task: "Created with stale session",
+      cwd: repoPath
+    });
+
+    await upsertRuntimeSession({
+      sessionsPath: createdBubble.paths.sessionsPath,
+      bubbleId: createdBubble.bubbleId,
+      repoPath,
+      worktreePath: createdBubble.paths.worktreePath,
+      tmuxSessionName: "pf-b_list_04",
+      now: new Date("2026-02-22T18:30:00.000Z")
+    });
+
+    const listed = await listBubbles({ repoPath });
+    expect(listed.total).toBe(1);
+    expect(listed.byState.CREATED).toBe(1);
+    expect(listed.runtimeSessions.registered).toBe(0);
+    expect(listed.runtimeSessions.stale).toBe(1);
+    expect(listed.bubbles[0]?.runtimeSession?.tmuxSessionName).toBe("pf-b_list_04");
+  });
 });
