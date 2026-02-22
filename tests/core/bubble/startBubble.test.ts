@@ -309,6 +309,7 @@ describe("startBubble", () => {
           now: new Date("2026-02-22T20:01:00.000Z")
         },
         {
+          isTmuxSessionAlive: () => Promise.resolve(true),
           bootstrapWorktreeWorkspace: () => {
             bootstrapCalled = true;
             return Promise.resolve({
@@ -325,5 +326,51 @@ describe("startBubble", () => {
     expect(bootstrapCalled).toBe(false);
     const loaded = await readStateSnapshot(created.paths.statePath);
     expect(loaded.state.state).toBe("CREATED");
+  });
+
+  it("removes stale runtime session registration when tmux session is missing", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_05",
+      repoPath,
+      baseBranch: "main",
+      task: "Start bubble task",
+      cwd: repoPath
+    });
+
+    await upsertRuntimeSession({
+      sessionsPath: created.paths.sessionsPath,
+      bubbleId: created.bubbleId,
+      repoPath,
+      worktreePath: created.paths.worktreePath,
+      tmuxSessionName: "pf-b_start_05-stale",
+      now: new Date("2026-02-22T20:10:00.000Z")
+    });
+
+    const result = await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T20:11:00.000Z")
+      },
+      {
+        isTmuxSessionAlive: () => Promise.resolve(false),
+        bootstrapWorktreeWorkspace: () =>
+          Promise.resolve({
+            repoPath,
+            baseRef: "refs/heads/main",
+            bubbleBranch: created.config.bubble_branch,
+            worktreePath: created.paths.worktreePath
+          }),
+        launchBubbleTmuxSession: () =>
+          Promise.resolve({ sessionName: "pf-b_start_05" })
+      }
+    );
+
+    expect(result.tmuxSessionName).toBe("pf-b_start_05");
+    expect(result.state.state).toBe("RUNNING");
+
+    const loaded = await readStateSnapshot(created.paths.statePath);
+    expect(loaded.state.state).toBe("RUNNING");
   });
 });

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
-import { startBubble, StartBubbleError } from "../../../src/core/bubble/startBubble.js";
+import { startBubble } from "../../../src/core/bubble/startBubble.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
 import {
@@ -189,7 +189,7 @@ describe("reconcileRuntimeSessions", () => {
     expect(report.sessionsAfter).toBe(0);
   });
 
-  it("removes stale pre-runtime session and unblocks subsequent start", async () => {
+  it("removes stale pre-runtime session and keeps start unblocked", async () => {
     const repoPath = await createTempRepo();
     const bubble = await createBubble({
       id: "b_reconcile_04",
@@ -208,41 +208,17 @@ describe("reconcileRuntimeSessions", () => {
       now: new Date("2026-02-22T19:20:00.000Z")
     });
 
-    let bootstrapCalled = false;
-    await expect(
-      startBubble(
-        {
-          bubbleId: bubble.bubbleId,
-          cwd: repoPath,
-          now: new Date("2026-02-22T19:21:00.000Z")
-        },
-        {
-          bootstrapWorktreeWorkspace: () => {
-            bootstrapCalled = true;
-            return Promise.resolve({
-              repoPath,
-              baseRef: "refs/heads/main",
-              bubbleBranch: bubble.config.bubble_branch,
-              worktreePath: bubble.paths.worktreePath
-            });
-          },
-          launchBubbleTmuxSession: () =>
-            Promise.resolve({ sessionName: "pf-b_reconcile_04" })
-        }
-      )
-    ).rejects.toBeInstanceOf(StartBubbleError);
-    expect(bootstrapCalled).toBe(false);
-
     const report = await reconcileRuntimeSessions({ repoPath });
     expect(report.actions.some((action) => action.reason === "non_runtime_state")).toBe(
       true
     );
 
+    let bootstrapCalled = false;
     const started = await startBubble(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
-        now: new Date("2026-02-22T19:22:00.000Z")
+        now: new Date("2026-02-22T19:21:00.000Z")
       },
       {
         bootstrapWorktreeWorkspace: () => {
