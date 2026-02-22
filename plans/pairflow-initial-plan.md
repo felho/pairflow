@@ -13,6 +13,26 @@ Planning constraints applied:
 6. `state.json` tracks `active_agent`, `active_role`, and `round_role_history` (plus timestamps/liveness fields).
 7. `watchdog_timeout_minutes` defaults to `5` via `bubble.toml`.
 
+## Execution Status
+
+Last updated: 2026-02-22
+
+Tracking rule:
+1. Update this section when a ticket is completed (same PR/commit that lands the ticket).
+2. Keep ticket numbering aligned with the implementation order below.
+
+Ticket status:
+1. Ticket 01: Completed (`strict` TS scaffold, lint/typecheck/test baseline).
+2. Ticket 02: Completed (config/state/protocol schema validation layer).
+3. Ticket 03: Completed (bubble create bootstrap + CLI hardening).
+4. Ticket 04: Completed (state machine transitions + guarded state store).
+5. Ticket 05: Completed (worktree bootstrap, git consistency, cleanup API).
+6. Ticket 06: Completed (transcript store, shared file locking, sequence allocation hardening).
+7. Ticket 07: Completed (`pass` command workflow + workspace resolution + CLI routing).
+8. Ticket 08: Completed (`ask-human` + `bubble reply` workflow and state/protocol integration).
+9. Ticket 09: Pending (`converged` validator + approval gating).
+10. Ticket 10: Pending (tmux launcher + watchdog + status pane + commit gate final path).
+
 ## Milestone 1: Phase 1 Single-Bubble MVP (CLI-First, Strict Mode)
 
 ### Objective
