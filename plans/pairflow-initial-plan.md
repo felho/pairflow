@@ -36,6 +36,7 @@ Ticket status:
 12. Ticket 12: Completed (multi-bubble status aggregation via `pairflow bubble list` + runtime session visibility).
 13. Ticket 13: Completed (startup/runtime reconcile command for stale session detection + cleanup).
 14. Ticket 14: Completed (batch runtime session removal API + single-lock reconcile cleanup path).
+15. Ticket 15: Completed (start-time runtime session ownership guard to prevent duplicate/orphaned starts).
 
 ## Milestone 1: Phase 1 Single-Bubble MVP (CLI-First, Strict Mode)
 

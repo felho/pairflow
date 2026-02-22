@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { readStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { startBubble, StartBubbleError } from "../../../src/core/bubble/startBubble.js";
+import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
 import { initGitRepository } from "../../helpers/git.js";
 
 const tempDirs: string[] = [];
@@ -275,5 +276,51 @@ describe("startBubble", () => {
       throw new Error("Expected status command to be captured.");
     }
     await assertBashParses(statusCommand);
+  });
+
+  it("rejects start when runtime session is already registered for bubble", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_04",
+      repoPath,
+      baseBranch: "main",
+      task: "Start bubble task",
+      cwd: repoPath
+    });
+
+    await upsertRuntimeSession({
+      sessionsPath: created.paths.sessionsPath,
+      bubbleId: created.bubbleId,
+      repoPath,
+      worktreePath: created.paths.worktreePath,
+      tmuxSessionName: "pf-b_start_04",
+      now: new Date("2026-02-22T20:00:00.000Z")
+    });
+
+    let bootstrapCalled = false;
+    await expect(
+      startBubble(
+        {
+          bubbleId: created.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-02-22T20:01:00.000Z")
+        },
+        {
+          bootstrapWorktreeWorkspace: () => {
+            bootstrapCalled = true;
+            return Promise.resolve({
+              repoPath,
+              baseRef: "refs/heads/main",
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            });
+          }
+        }
+      )
+    ).rejects.toThrow(/Runtime session already registered/u);
+
+    expect(bootstrapCalled).toBe(false);
+    const loaded = await readStateSnapshot(created.paths.statePath);
+    expect(loaded.state.state).toBe("CREATED");
   });
 });

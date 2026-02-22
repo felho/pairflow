@@ -13,6 +13,7 @@ import {
   TmuxSessionExistsError
 } from "../runtime/tmuxManager.js";
 import {
+  readRuntimeSessionsRegistry,
   removeRuntimeSession,
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError,
@@ -39,6 +40,7 @@ export interface StartBubbleDependencies {
   cleanupWorktreeWorkspace?: typeof cleanupWorktreeWorkspace;
   launchBubbleTmuxSession?: typeof launchBubbleTmuxSession;
   terminateBubbleTmuxSession?: typeof terminateBubbleTmuxSession;
+  readRuntimeSessionsRegistry?: typeof readRuntimeSessionsRegistry;
   upsertRuntimeSession?: typeof upsertRuntimeSession;
   removeRuntimeSession?: typeof removeRuntimeSession;
 }
@@ -81,6 +83,8 @@ export async function startBubble(
   const launchTmux = dependencies.launchBubbleTmuxSession ?? launchBubbleTmuxSession;
   const terminateTmux =
     dependencies.terminateBubbleTmuxSession ?? terminateBubbleTmuxSession;
+  const readSessionsRegistry =
+    dependencies.readRuntimeSessionsRegistry ?? readRuntimeSessionsRegistry;
   const upsertSession = dependencies.upsertRuntimeSession ?? upsertRuntimeSession;
   const removeSession = dependencies.removeRuntimeSession ?? removeRuntimeSession;
 
@@ -96,6 +100,16 @@ export async function startBubble(
   if (loadedState.state.state !== "CREATED") {
     throw new StartBubbleError(
       `bubble start requires state CREATED (current: ${loadedState.state.state}).`
+    );
+  }
+
+  const sessions = await readSessionsRegistry(resolved.bubblePaths.sessionsPath, {
+    allowMissing: true
+  });
+  const existingSession = sessions[resolved.bubbleId];
+  if (existingSession !== undefined) {
+    throw new StartBubbleError(
+      `Runtime session already registered for bubble ${resolved.bubbleId}: ${existingSession.tmuxSessionName}. Run bubble reconcile or clean up the stale session before starting again.`
     );
   }
 
