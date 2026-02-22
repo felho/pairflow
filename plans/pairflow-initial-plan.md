@@ -54,6 +54,7 @@ Ticket status:
 30. Ticket 30: Completed (bubble subcommand routing converted from long `if` chain to registry-based dispatch in `cli/index.ts`, keeping output/behavior unchanged while improving scalability).
 31. Ticket 31: Completed (CLI unknown-command support list now generated from routing registries, eliminating manual drift risk as commands grow).
 32. Ticket 32: Completed (multi-bubble isolation integration coverage added: concurrent `pass` and `ask-human` operations verified to remain transcript/inbox/state isolated per bubble).
+33. Ticket 33: Completed (5-bubble parallel smoke integration coverage added to verify concurrent pass handling, per-bubble transcript/state isolation, and aggregate RUNNING visibility via `bubble list`).
 
 ## Milestone 1: Phase 1 Single-Bubble MVP (CLI-First, Strict Mode)
 
