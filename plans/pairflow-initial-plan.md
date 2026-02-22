@@ -60,6 +60,10 @@ Ticket status:
 36. Ticket 36: Completed (runtime reconcile now validates tmux session liveness for runtime states and removes orphaned registry entries (`missing_tmux_session`), with deterministic probe-injection test coverage).
 37. Ticket 37: Completed (`bubble start` now self-heals stale runtime-session ownership by probing existing tmux session liveness: if registry entry exists but tmux session is gone, stale ownership is removed and start proceeds; if session is alive, start remains rejected with explicit ownership guidance).
 38. Ticket 38: Completed (runtime session ownership claim is now atomic via `claimRuntimeSession` lock-guarded check+insert, and `bubble start` switched from read/upsert TOCTOU flow to atomic ownership acquisition with stale-session retry semantics and updated concurrency-focused tests).
+39. Ticket 39: Completed (`bubble start` now supports crash/restart reattach for runtime states (`RUNNING`/`WAITING_HUMAN`/`READY_FOR_APPROVAL`/`APPROVED_FOR_COMMIT`/`COMMITTED`) by relaunching tmux without workspace re-bootstrap, while preserving strict CREATED-only bootstrap flow and failure isolation semantics).
+40. Ticket 40: Completed (restart-recovery integration coverage added: stale runtime ownership (`missing_tmux_session`) is reconciled, then `bubble start` reattaches tmux from persisted runtime state and re-registers runtime session ownership).
+41. Ticket 41: Completed (contention/collision hardening coverage added: concurrent `claimRuntimeSession` race test verifies single-winner ownership under lock, and tmux long-id near-collision test verifies hashed session-name uniqueness under 32-char limit).
+42. Ticket 42: Completed (5-bubble parallel soak integration coverage added for repeated mixed traffic (`PASS`, `HUMAN_QUESTION`, `HUMAN_REPLY`, `PASS`) to validate no transcript/inbox/state cross-contamination under sustained concurrent operations).
 
 ## Milestone 1: Phase 1 Single-Bubble MVP (CLI-First, Strict Mode)
 

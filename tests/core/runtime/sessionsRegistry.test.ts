@@ -58,6 +58,36 @@ describe("sessionsRegistry", () => {
     expect(second.record.tmuxSessionName).toBe("pf-b_sessions_claim");
   });
 
+  it("allows only one winner across concurrent ownership claims", async () => {
+    const root = await createTempDir();
+    const sessionsPath = join(root, "runtime", "sessions.json");
+
+    const attempts = await Promise.all(
+      Array.from({ length: 8 }, (_, index) =>
+        claimRuntimeSession({
+          sessionsPath,
+          bubbleId: "b_sessions_race",
+          repoPath: "/repo/path",
+          worktreePath: "/repo/.pairflow-worktrees/b_sessions_race",
+          tmuxSessionName: `pf-b_sessions_race-${index}`,
+          now: new Date(`2026-02-22T16:00:0${index}.000Z`)
+        })
+      )
+    );
+
+    const winners = attempts.filter((result) => result.claimed);
+    expect(winners).toHaveLength(1);
+
+    const registry = await readRuntimeSessionsRegistry(sessionsPath, {
+      allowMissing: false
+    });
+    const persisted = registry.b_sessions_race;
+    expect(persisted).toBeDefined();
+    expect(attempts.every((attempt) => attempt.record.tmuxSessionName === persisted?.tmuxSessionName)).toBe(
+      true
+    );
+  });
+
   it("upserts and removes runtime sessions with persisted JSON state", async () => {
     const root = await createTempDir();
     const sessionsPath = join(root, "runtime", "sessions.json");

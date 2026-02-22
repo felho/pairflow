@@ -24,6 +24,7 @@ export function getBubbleStartHelpText(): string {
   return [
     "Usage:",
     "  pairflow bubble start --id <id> [--repo <path>]",
+    "  Starts CREATED bubbles or reattaches runtime-state bubbles after restart.",
     "",
     "Options:",
     "  --id <id>             Bubble id",

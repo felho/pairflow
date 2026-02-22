@@ -10,6 +10,7 @@ import { readStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { startBubble, StartBubbleError } from "../../../src/core/bubble/startBubble.js";
 import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
 import { initGitRepository } from "../../helpers/git.js";
+import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
 const tempDirs: string[] = [];
 
@@ -287,6 +288,67 @@ describe("startBubble", () => {
     expect(statusCommand).toContain("pairflow bubble status --id");
     expect(statusCommand).not.toContain("--json");
     await assertBashParses(statusCommand);
+  });
+
+  it("resumes tmux session from RUNNING state without workspace bootstrap", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_01",
+      task: "Resume bubble"
+    });
+
+    let bootstrapCalled = false;
+    const result = await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-23T09:00:00.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () => {
+          bootstrapCalled = true;
+          return Promise.resolve({
+            repoPath,
+            baseRef: "refs/heads/main",
+            bubbleBranch: bubble.config.bubble_branch,
+            worktreePath: bubble.paths.worktreePath
+          });
+        },
+        launchBubbleTmuxSession: () =>
+          Promise.resolve({ sessionName: "pf-b_start_resume_01" })
+      }
+    );
+
+    expect(bootstrapCalled).toBe(false);
+    expect(result.state.state).toBe("RUNNING");
+    expect(result.state.last_command_at).toBe("2026-02-23T09:00:00.000Z");
+  });
+
+  it("keeps runtime state unchanged when resume tmux launch fails", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_02",
+      task: "Resume bubble failure"
+    });
+
+    await expect(
+      startBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-02-23T09:10:00.000Z")
+        },
+        {
+          launchBubbleTmuxSession: () =>
+            Promise.reject(new Error("tmux unavailable for resume"))
+        }
+      )
+    ).rejects.toBeInstanceOf(StartBubbleError);
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    expect(loaded.state.state).toBe("RUNNING");
   });
 
   it("rejects start when runtime session is already registered for bubble", async () => {

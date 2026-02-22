@@ -22,6 +22,17 @@ describe("buildBubbleTmuxSessionName", () => {
     expect(sessionName.length).toBeLessThanOrEqual(32);
     expect(sessionName.startsWith("pf-")).toBe(true);
   });
+
+  it("keeps long near-collision ids unique via hash suffix", () => {
+    const idA = "b_very_long_bubble_id_that_exceeds_tmux_session_name_limits_alpha";
+    const idB = "b_very_long_bubble_id_that_exceeds_tmux_session_name_limits_beta";
+    const nameA = buildBubbleTmuxSessionName(idA);
+    const nameB = buildBubbleTmuxSessionName(idB);
+
+    expect(nameA).not.toBe(nameB);
+    expect(nameA.length).toBeLessThanOrEqual(32);
+    expect(nameB.length).toBeLessThanOrEqual(32);
+  });
 });
 
 describe("launchBubbleTmuxSession", () => {

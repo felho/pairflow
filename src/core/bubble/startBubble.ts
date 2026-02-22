@@ -84,6 +84,14 @@ function buildAgentCommand(agentName: "codex" | "claude", bubbleId: string): str
   return `bash -lc ${shellQuote(script)}`;
 }
 
+const resumableRuntimeStates = new Set([
+  "RUNNING",
+  "WAITING_HUMAN",
+  "READY_FOR_APPROVAL",
+  "APPROVED_FOR_COMMIT",
+  "COMMITTED"
+]);
+
 export async function startBubble(
   input: StartBubbleInput,
   dependencies: StartBubbleDependencies = {}
@@ -107,9 +115,16 @@ export async function startBubble(
   const nowIso = now.toISOString();
 
   const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
-  if (loadedState.state.state !== "CREATED") {
+  const currentState = loadedState.state.state;
+  const startMode =
+    currentState === "CREATED"
+      ? "fresh"
+      : resumableRuntimeStates.has(currentState)
+      ? "resume"
+      : null;
+  if (startMode === null) {
     throw new StartBubbleError(
-      `bubble start requires state CREATED (current: ${loadedState.state.state}).`
+      `bubble start requires state CREATED or resumable runtime state (current: ${currentState}).`
     );
   }
 
@@ -159,69 +174,98 @@ export async function startBubble(
     );
   }
 
-  const preparing = applyStateTransition(loadedState.state, {
-    to: "PREPARING_WORKSPACE",
-    lastCommandAt: nowIso
-  });
-  const preparingWritten = await writeStateSnapshot(
-    resolved.bubblePaths.statePath,
-    preparing,
-    {
-      expectedFingerprint: loadedState.fingerprint,
-      expectedState: "CREATED"
-    }
-  );
-
   let workspaceBootstrapped = false;
   let tmuxSessionName: string | null = null;
+  let preparingState: BubbleStateSnapshot | null = null;
   try {
-    await bootstrap({
-      repoPath: resolved.repoPath,
-      baseBranch: resolved.bubbleConfig.base_branch,
-      bubbleBranch: resolved.bubbleConfig.bubble_branch,
-      worktreePath: resolved.bubblePaths.worktreePath
-    });
-    workspaceBootstrapped = true;
+    let written;
+    if (startMode === "fresh") {
+      const preparing = applyStateTransition(loadedState.state, {
+        to: "PREPARING_WORKSPACE",
+        lastCommandAt: nowIso
+      });
+      preparingState = preparing;
+      const preparingWritten = await writeStateSnapshot(
+        resolved.bubblePaths.statePath,
+        preparing,
+        {
+          expectedFingerprint: loadedState.fingerprint,
+          expectedState: "CREATED"
+        }
+      );
 
-    const tmux = await launchTmux({
-      bubbleId: resolved.bubbleId,
-      worktreePath: resolved.bubblePaths.worktreePath,
-      statusCommand: buildStatusPaneCommand(resolved.bubbleId, resolved.repoPath),
-      implementerCommand: buildAgentCommand(
-        resolved.bubbleConfig.agents.implementer,
-        resolved.bubbleId
-      ),
-      reviewerCommand: buildAgentCommand(
-        resolved.bubbleConfig.agents.reviewer,
-        resolved.bubbleId
-      )
-    });
-    tmuxSessionName = tmux.sessionName;
+      await bootstrap({
+        repoPath: resolved.repoPath,
+        baseBranch: resolved.bubbleConfig.base_branch,
+        bubbleBranch: resolved.bubbleConfig.bubble_branch,
+        worktreePath: resolved.bubblePaths.worktreePath
+      });
+      workspaceBootstrapped = true;
 
-    const running = applyStateTransition(preparing, {
-      to: "RUNNING",
-      round: 1,
-      activeAgent: resolved.bubbleConfig.agents.implementer,
-      activeRole: "implementer",
-      activeSince: nowIso,
-      lastCommandAt: nowIso,
-      appendRoundRoleEntry: {
+      const tmux = await launchTmux({
+        bubbleId: resolved.bubbleId,
+        worktreePath: resolved.bubblePaths.worktreePath,
+        statusCommand: buildStatusPaneCommand(resolved.bubbleId, resolved.repoPath),
+        implementerCommand: buildAgentCommand(
+          resolved.bubbleConfig.agents.implementer,
+          resolved.bubbleId
+        ),
+        reviewerCommand: buildAgentCommand(
+          resolved.bubbleConfig.agents.reviewer,
+          resolved.bubbleId
+        )
+      });
+      tmuxSessionName = tmux.sessionName;
+
+      const running = applyStateTransition(preparing, {
+        to: "RUNNING",
         round: 1,
-        implementer: resolved.bubbleConfig.agents.implementer,
-        reviewer: resolved.bubbleConfig.agents.reviewer,
-        switched_at: nowIso
-      }
-    });
+        activeAgent: resolved.bubbleConfig.agents.implementer,
+        activeRole: "implementer",
+        activeSince: nowIso,
+        lastCommandAt: nowIso,
+        appendRoundRoleEntry: {
+          round: 1,
+          implementer: resolved.bubbleConfig.agents.implementer,
+          reviewer: resolved.bubbleConfig.agents.reviewer,
+          switched_at: nowIso
+        }
+      });
 
-    const written = await writeStateSnapshot(resolved.bubblePaths.statePath, running, {
-      expectedFingerprint: preparingWritten.fingerprint,
-      expectedState: "PREPARING_WORKSPACE"
-    });
+      written = await writeStateSnapshot(resolved.bubblePaths.statePath, running, {
+        expectedFingerprint: preparingWritten.fingerprint,
+        expectedState: "PREPARING_WORKSPACE"
+      });
+    } else {
+      const tmux = await launchTmux({
+        bubbleId: resolved.bubbleId,
+        worktreePath: resolved.bubblePaths.worktreePath,
+        statusCommand: buildStatusPaneCommand(resolved.bubbleId, resolved.repoPath),
+        implementerCommand: buildAgentCommand(
+          resolved.bubbleConfig.agents.implementer,
+          resolved.bubbleId
+        ),
+        reviewerCommand: buildAgentCommand(
+          resolved.bubbleConfig.agents.reviewer,
+          resolved.bubbleId
+        )
+      });
+      tmuxSessionName = tmux.sessionName;
+
+      const resumed = {
+        ...loadedState.state,
+        last_command_at: nowIso
+      };
+      written = await writeStateSnapshot(resolved.bubblePaths.statePath, resumed, {
+        expectedFingerprint: loadedState.fingerprint,
+        expectedState: loadedState.state.state
+      });
+    }
 
     return {
       bubbleId: resolved.bubbleId,
       state: written.state,
-      tmuxSessionName: tmux.sessionName,
+      tmuxSessionName: tmuxSessionName ?? expectedTmuxSessionName,
       worktreePath: resolved.bubblePaths.worktreePath
     };
   } catch (error) {
@@ -237,7 +281,7 @@ export async function startBubble(
       }).catch(() => undefined);
     }
 
-    if (workspaceBootstrapped) {
+    if (startMode === "fresh" && workspaceBootstrapped) {
       await cleanup({
         repoPath: resolved.repoPath,
         bubbleBranch: resolved.bubbleConfig.bubble_branch,
@@ -245,16 +289,18 @@ export async function startBubble(
       }).catch(() => undefined);
     }
 
-    const failed = applyStateTransition(preparing, {
-      to: "FAILED",
-      activeAgent: null,
-      activeRole: null,
-      activeSince: null,
-      lastCommandAt: nowIso
-    });
-    await writeStateSnapshot(resolved.bubblePaths.statePath, failed, {
-      expectedState: "PREPARING_WORKSPACE"
-    }).catch(() => undefined);
+    if (startMode === "fresh" && preparingState !== null) {
+      const failed = applyStateTransition(preparingState, {
+        to: "FAILED",
+        activeAgent: null,
+        activeRole: null,
+        activeSince: null,
+        lastCommandAt: nowIso
+      });
+      await writeStateSnapshot(resolved.bubblePaths.statePath, failed, {
+        expectedState: "PREPARING_WORKSPACE"
+      }).catch(() => undefined);
+    }
 
     const message = error instanceof Error ? error.message : String(error);
     throw new StartBubbleError(`Failed to start bubble ${resolved.bubbleId}: ${message}`);
