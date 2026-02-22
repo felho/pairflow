@@ -47,7 +47,7 @@ describe("emitPassFromWorkspace", () => {
     });
 
     expect(result.bubbleId).toBe("b_pass_01");
-    expect(result.sequence).toBe(1);
+    expect(result.sequence).toBe(2);
     expect(result.inferredIntent).toBe(true);
     expect(result.envelope.type).toBe("PASS");
     expect(result.envelope.round).toBe(1);
@@ -56,7 +56,10 @@ describe("emitPassFromWorkspace", () => {
     expect(result.envelope.payload.pass_intent).toBe("review");
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
-    expect(transcript).toHaveLength(1);
+    expect(transcript.map((entry) => entry.type)).toEqual([
+      "TASK",
+      "PASS"
+    ]);
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     expect(loaded.state.active_agent).toBe("claude");

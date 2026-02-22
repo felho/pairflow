@@ -1,5 +1,5 @@
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 
 import { renderBubbleConfigToml, assertValidBubbleConfig } from "../../config/bubbleConfig.js";
 import {
@@ -11,6 +11,7 @@ import {
 import { getBubblePaths, type BubblePaths } from "./paths.js";
 import { createInitialBubbleState } from "../state/initialState.js";
 import { assertValidBubbleStateSnapshot } from "../state/stateSchema.js";
+import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
 import { isNonEmptyString } from "../validation.js";
 import { GitRepositoryError, assertGitRepository } from "../workspace/git.js";
 import type { AgentName, BubbleConfig, BubbleStateSnapshot } from "../../types/bubble.js";
@@ -283,6 +284,35 @@ export async function createBubble(input: BubbleCreateInput): Promise<BubbleCrea
     flag: "wx"
   });
   await ensureRuntimeSessionFile(paths.sessionsPath);
+
+  try {
+    await appendProtocolEnvelope({
+      transcriptPath: paths.transcriptPath,
+      lockPath: join(paths.locksDir, `${input.id}.lock`),
+      envelope: {
+        bubble_id: input.id,
+        sender: "orchestrator",
+        recipient: config.agents.implementer,
+        type: "TASK",
+        round: state.round,
+        payload: {
+          summary: task.content,
+          metadata: {
+            source: task.source,
+            ...(task.sourcePath !== undefined
+              ? { source_path: task.sourcePath }
+              : {})
+          }
+        },
+        refs: [paths.taskArtifactPath]
+      }
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new BubbleCreateError(
+      `Failed to append initial TASK envelope for bubble ${input.id}. Root error: ${reason}`
+    );
+  }
 
   return {
     bubbleId: input.id,

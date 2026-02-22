@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { parseBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
+import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
 import { validateBubbleStateSnapshot } from "../../../src/core/state/stateSchema.js";
 import { initGitRepository } from "../../helpers/git.js";
 
@@ -64,6 +65,17 @@ describe("createBubble", () => {
     await stat(result.paths.inboxPath);
     await stat(result.paths.taskArtifactPath);
     await stat(result.paths.sessionsPath);
+
+    const transcript = await readTranscriptEnvelopes(result.paths.transcriptPath);
+    expect(transcript).toHaveLength(1);
+    expect(transcript[0]?.type).toBe("TASK");
+    expect(transcript[0]?.sender).toBe("orchestrator");
+    expect(transcript[0]?.recipient).toBe(result.config.agents.implementer);
+    expect(transcript[0]?.payload.summary).toBe("Implement feature X");
+    expect(transcript[0]?.refs).toEqual([result.paths.taskArtifactPath]);
+
+    const inbox = await readTranscriptEnvelopes(result.paths.inboxPath);
+    expect(inbox).toHaveLength(0);
   });
 
   it("uses task file content when taskFile input is provided", async () => {

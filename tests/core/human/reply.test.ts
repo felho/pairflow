@@ -58,7 +58,7 @@ describe("emitHumanReply", () => {
       now
     });
 
-    expect(result.sequence).toBe(2);
+    expect(result.sequence).toBe(3);
     expect(result.envelope.type).toBe("HUMAN_REPLY");
     expect(result.envelope.sender).toBe("human");
     expect(result.envelope.recipient).toBe("codex");
@@ -72,6 +72,7 @@ describe("emitHumanReply", () => {
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
     expect(transcript.map((entry) => entry.type)).toEqual([
+      "TASK",
       "HUMAN_QUESTION",
       "HUMAN_REPLY"
     ]);

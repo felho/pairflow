@@ -46,7 +46,7 @@ describe("emitAskHumanFromWorkspace", () => {
       now
     });
 
-    expect(result.sequence).toBe(1);
+    expect(result.sequence).toBe(2);
     expect(result.envelope.type).toBe("HUMAN_QUESTION");
     expect(result.envelope.sender).toBe("codex");
     expect(result.envelope.recipient).toBe("human");
@@ -59,8 +59,10 @@ describe("emitAskHumanFromWorkspace", () => {
     expect(state.state.last_command_at).toBe(now.toISOString());
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
-    expect(transcript).toHaveLength(1);
-    expect(transcript[0]?.type).toBe("HUMAN_QUESTION");
+    expect(transcript.map((entry) => entry.type)).toEqual([
+      "TASK",
+      "HUMAN_QUESTION"
+    ]);
 
     const inbox = await readTranscriptEnvelopes(bubble.paths.inboxPath);
     expect(inbox).toHaveLength(1);

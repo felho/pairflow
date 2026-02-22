@@ -76,6 +76,7 @@ describe("emitConvergedFromWorkspace", () => {
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
     expect(transcript.map((entry) => entry.type)).toEqual([
+      "TASK",
       "PASS",
       "PASS",
       "PASS",
