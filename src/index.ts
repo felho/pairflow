@@ -215,6 +215,7 @@ export {
 export {
   readRuntimeSessionsRegistry,
   removeRuntimeSession,
+  removeRuntimeSessions,
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError,
   upsertRuntimeSession
@@ -397,6 +398,8 @@ export type {
 } from "./core/runtime/tmuxManager.js";
 export type {
   ReadRuntimeSessionsOptions,
+  RemoveRuntimeSessionsInput,
+  RemoveRuntimeSessionsResult,
   RemoveRuntimeSessionInput,
   RuntimeSessionRecord,
   RuntimeSessionsRegistry,

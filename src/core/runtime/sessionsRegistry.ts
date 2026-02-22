@@ -34,6 +34,17 @@ export interface RemoveRuntimeSessionInput {
   lockTimeoutMs?: number;
 }
 
+export interface RemoveRuntimeSessionsInput {
+  sessionsPath: string;
+  bubbleIds: string[];
+  lockTimeoutMs?: number;
+}
+
+export interface RemoveRuntimeSessionsResult {
+  removedBubbleIds: string[];
+  missingBubbleIds: string[];
+}
+
 export class RuntimeSessionsRegistryError extends Error {
   public constructor(message: string) {
     super(message);
@@ -226,6 +237,27 @@ export async function upsertRuntimeSession(
 export async function removeRuntimeSession(
   input: RemoveRuntimeSessionInput
 ): Promise<boolean> {
+  const result = await removeRuntimeSessions({
+    sessionsPath: input.sessionsPath,
+    bubbleIds: [input.bubbleId],
+    ...(input.lockTimeoutMs !== undefined
+      ? { lockTimeoutMs: input.lockTimeoutMs }
+      : {})
+  });
+  return result.removedBubbleIds.length > 0;
+}
+
+export async function removeRuntimeSessions(
+  input: RemoveRuntimeSessionsInput
+): Promise<RemoveRuntimeSessionsResult> {
+  const normalizedBubbleIds = Array.from(
+    new Set(
+      input.bubbleIds.map((bubbleId) =>
+        requireNonEmptyString(bubbleId, "bubbleId")
+      )
+    )
+  );
+
   return withSessionsLock(
     input.sessionsPath,
     input.lockTimeoutMs ?? 5_000,
@@ -233,14 +265,27 @@ export async function removeRuntimeSession(
       const registry = await readRuntimeSessionsRegistry(input.sessionsPath, {
         allowMissing: true
       });
-      const bubbleId = requireNonEmptyString(input.bubbleId, "bubbleId");
-      const existed = Object.hasOwn(registry, bubbleId);
-      if (existed) {
-        delete registry[bubbleId];
+
+      const removedBubbleIds: string[] = [];
+      const missingBubbleIds: string[] = [];
+
+      for (const bubbleId of normalizedBubbleIds) {
+        if (Object.hasOwn(registry, bubbleId)) {
+          delete registry[bubbleId];
+          removedBubbleIds.push(bubbleId);
+        } else {
+          missingBubbleIds.push(bubbleId);
+        }
       }
 
-      await atomicWriteRegistry(input.sessionsPath, registry);
-      return existed;
+      if (removedBubbleIds.length > 0) {
+        await atomicWriteRegistry(input.sessionsPath, registry);
+      }
+
+      return {
+        removedBubbleIds,
+        missingBubbleIds
+      };
     }
   );
 }

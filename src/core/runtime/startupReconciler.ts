@@ -5,7 +5,7 @@ import { readStateSnapshot } from "../state/stateStore.js";
 import { isFinalState } from "../state/transitions.js";
 import {
   readRuntimeSessionsRegistry,
-  removeRuntimeSession,
+  removeRuntimeSessions,
   type RuntimeSessionsRegistry
 } from "./sessionsRegistry.js";
 import { runGit } from "../workspace/git.js";
@@ -125,7 +125,7 @@ export async function reconcileRuntimeSessions(
   const dryRun = input.dryRun ?? false;
 
   const actions: ReconcileRuntimeSessionsAction[] = [];
-  let removedCount = 0;
+  const staleBubbleIds: string[] = [];
 
   for (const bubbleId of Object.keys(registry).sort((a, b) => a.localeCompare(b))) {
     const reason = await resolveStaleReason(repoPath, bubbleId, bubbleIdSet);
@@ -133,19 +133,26 @@ export async function reconcileRuntimeSessions(
       continue;
     }
 
-    if (!dryRun) {
-      await removeRuntimeSession({
-        sessionsPath,
-        bubbleId
-      });
-      removedCount += 1;
-    }
-
     actions.push({
       bubbleId,
       reason,
-      removed: !dryRun
+      removed: false
     });
+    staleBubbleIds.push(bubbleId);
+  }
+
+  let removedCount = 0;
+  if (!dryRun && staleBubbleIds.length > 0) {
+    const result = await removeRuntimeSessions({
+      sessionsPath,
+      bubbleIds: staleBubbleIds
+    });
+    const removedSet = new Set(result.removedBubbleIds);
+    removedCount = result.removedBubbleIds.length;
+
+    for (const action of actions) {
+      action.removed = removedSet.has(action.bubbleId);
+    }
   }
 
   return {

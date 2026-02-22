@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   readRuntimeSessionsRegistry,
   removeRuntimeSession,
+  removeRuntimeSessions,
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError,
   upsertRuntimeSession
@@ -92,5 +93,40 @@ describe("sessionsRegistry", () => {
     ).rejects.toBeInstanceOf(RuntimeSessionsRegistryLockError);
 
     await handle.close();
+  });
+
+  it("removes multiple sessions in one batch with dedupe and missing tracking", async () => {
+    const root = await createTempDir();
+    const sessionsPath = join(root, "runtime", "sessions.json");
+
+    await upsertRuntimeSession({
+      sessionsPath,
+      bubbleId: "b_sessions_10",
+      repoPath: "/repo/path",
+      worktreePath: "/repo/.pairflow-worktrees/b_sessions_10",
+      tmuxSessionName: "pf-b_sessions_10",
+      now: new Date("2026-02-22T16:10:00.000Z")
+    });
+    await upsertRuntimeSession({
+      sessionsPath,
+      bubbleId: "b_sessions_11",
+      repoPath: "/repo/path",
+      worktreePath: "/repo/.pairflow-worktrees/b_sessions_11",
+      tmuxSessionName: "pf-b_sessions_11",
+      now: new Date("2026-02-22T16:10:01.000Z")
+    });
+
+    const result = await removeRuntimeSessions({
+      sessionsPath,
+      bubbleIds: ["b_sessions_10", "b_sessions_10", "b_missing", "b_sessions_11"]
+    });
+
+    expect(result.removedBubbleIds.sort()).toEqual(["b_sessions_10", "b_sessions_11"]);
+    expect(result.missingBubbleIds).toEqual(["b_missing"]);
+
+    const registry = await readRuntimeSessionsRegistry(sessionsPath, {
+      allowMissing: false
+    });
+    expect(registry).toEqual({});
   });
 });
