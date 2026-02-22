@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
+import { startBubble, StartBubbleError } from "../../../src/core/bubble/startBubble.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
 import {
@@ -16,6 +17,7 @@ import {
   upsertRuntimeSession
 } from "../../../src/core/runtime/sessionsRegistry.js";
 import { initGitRepository } from "../../helpers/git.js";
+import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
 const tempDirs: string[] = [];
 
@@ -43,12 +45,10 @@ afterEach(async () => {
 describe("reconcileRuntimeSessions", () => {
   it("detects and removes stale sessions for missing bubble and final-state bubble", async () => {
     const repoPath = await createTempRepo();
-    const bubbleActive = await createBubble({
-      id: "b_reconcile_01",
+    const bubbleActive = await setupRunningBubbleFixture({
       repoPath,
-      baseBranch: "main",
-      task: "Active bubble",
-      cwd: repoPath
+      bubbleId: "b_reconcile_01",
+      task: "Active bubble"
     });
     const bubbleFinal = await createBubble({
       id: "b_reconcile_02",
@@ -153,5 +153,79 @@ describe("reconcileRuntimeSessions", () => {
     await expect(
       reconcileRuntimeSessions({ cwd: dir })
     ).rejects.toBeInstanceOf(StartupReconcilerError);
+  });
+
+  it("removes stale pre-runtime session and unblocks subsequent start", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_reconcile_04",
+      repoPath,
+      baseBranch: "main",
+      task: "Stale pre-runtime session",
+      cwd: repoPath
+    });
+
+    await upsertRuntimeSession({
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      tmuxSessionName: "pf-b_reconcile_04",
+      now: new Date("2026-02-22T19:20:00.000Z")
+    });
+
+    let bootstrapCalled = false;
+    await expect(
+      startBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-02-22T19:21:00.000Z")
+        },
+        {
+          bootstrapWorktreeWorkspace: () => {
+            bootstrapCalled = true;
+            return Promise.resolve({
+              repoPath,
+              baseRef: "refs/heads/main",
+              bubbleBranch: bubble.config.bubble_branch,
+              worktreePath: bubble.paths.worktreePath
+            });
+          },
+          launchBubbleTmuxSession: () =>
+            Promise.resolve({ sessionName: "pf-b_reconcile_04" })
+        }
+      )
+    ).rejects.toBeInstanceOf(StartBubbleError);
+    expect(bootstrapCalled).toBe(false);
+
+    const report = await reconcileRuntimeSessions({ repoPath });
+    expect(report.actions.some((action) => action.reason === "non_runtime_state")).toBe(
+      true
+    );
+
+    const started = await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T19:22:00.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () => {
+          bootstrapCalled = true;
+          return Promise.resolve({
+            repoPath,
+            baseRef: "refs/heads/main",
+            bubbleBranch: bubble.config.bubble_branch,
+            worktreePath: bubble.paths.worktreePath
+          });
+        },
+        launchBubbleTmuxSession: () =>
+          Promise.resolve({ sessionName: "pf-b_reconcile_04" })
+      }
+    );
+
+    expect(started.state.state).toBe("RUNNING");
+    expect(bootstrapCalled).toBe(true);
   });
 });

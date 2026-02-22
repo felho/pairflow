@@ -16,6 +16,7 @@ import {
 export type RuntimeSessionStaleReason =
   | "missing_bubble"
   | "final_state"
+  | "non_runtime_state"
   | "invalid_state";
 
 export interface ReconcileRuntimeSessionsInput {
@@ -45,6 +46,14 @@ export class StartupReconcilerError extends Error {
     this.name = "StartupReconcilerError";
   }
 }
+
+const runtimeSessionExpectedStates = new Set([
+  "RUNNING",
+  "WAITING_HUMAN",
+  "READY_FOR_APPROVAL",
+  "APPROVED_FOR_COMMIT",
+  "COMMITTED"
+]);
 
 async function listBubbleIdSet(repoPath: string): Promise<Set<string>> {
   const bubblesRoot = join(repoPath, ".pairflow", "bubbles");
@@ -76,6 +85,9 @@ async function resolveStaleReason(
     const loaded = await readStateSnapshot(statePath);
     if (isFinalState(loaded.state.state)) {
       return "final_state";
+    }
+    if (!runtimeSessionExpectedStates.has(loaded.state.state)) {
+      return "non_runtime_state";
     }
     return null;
   } catch {
