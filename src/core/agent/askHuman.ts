@@ -8,6 +8,7 @@ import {
   resolveBubbleFromWorkspaceCwd,
   WorkspaceResolutionError
 } from "../bubble/workspaceResolution.js";
+import { emitBubbleNotification } from "../runtime/notifications.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 
@@ -105,6 +106,9 @@ export async function emitAskHumanFromWorkspace(
       `HUMAN_QUESTION ${appended.envelope.id} was appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`
     );
   }
+
+  // Optional UX signal; never block protocol/state progression on notification failure.
+  void emitBubbleNotification(resolved.bubbleConfig, "waiting-human");
 
   return {
     bubbleId: resolved.bubbleId,

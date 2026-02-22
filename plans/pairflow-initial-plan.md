@@ -44,6 +44,7 @@ Ticket status:
 20. Ticket 20: Completed (`bubble inbox` command with unresolved blocking-item projection and JSON/text rendering).
 21. Ticket 21: Completed (initial orchestrator `TASK` envelope emitted during bubble creation, with transcript/test alignment updates).
 22. Ticket 22: Completed (`orchestra` compatibility alias wrapper for agent-facing commands via dedicated CLI entrypoint/bin).
+23. Ticket 23: Completed (optional runtime sound-notification engine for `waiting-human` and `converged` events, wired as non-blocking side effects).
 
 ## Milestone 1: Phase 1 Single-Bubble MVP (CLI-First, Strict Mode)
 

@@ -265,6 +265,10 @@ export {
   upsertRuntimeSession
 } from "./core/runtime/sessionsRegistry.js";
 export {
+  emitBubbleNotification,
+  playSoundWithAfplay
+} from "./core/runtime/notifications.js";
+export {
   computeWatchdogStatus
 } from "./core/runtime/watchdog.js";
 export {
@@ -493,6 +497,13 @@ export type {
   RuntimeSessionsRegistry,
   UpsertRuntimeSessionInput
 } from "./core/runtime/sessionsRegistry.js";
+export type {
+  BubbleNotificationDependencies,
+  BubbleNotificationKind,
+  BubbleNotificationResult,
+  NotificationPathExists,
+  NotificationSoundPlayer
+} from "./core/runtime/notifications.js";
 export type {
   WatchdogStatus
 } from "./core/runtime/watchdog.js";
