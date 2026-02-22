@@ -25,6 +25,12 @@ import {
   runBubbleReplyCommand
 } from "./commands/bubble/reply.js";
 import {
+  getBubbleListHelpText,
+  parseBubbleListCommandOptions,
+  renderBubbleListText,
+  runBubbleListCommand
+} from "./commands/bubble/list.js";
+import {
   getBubbleRequestReworkHelpText,
   runBubbleRequestReworkCommand
 } from "./commands/bubble/requestRework.js";
@@ -149,6 +155,27 @@ async function handleBubbleStatusCommand(args: string[]): Promise<number> {
   return 0;
 }
 
+async function handleBubbleListCommand(args: string[]): Promise<number> {
+  const parsed = parseBubbleListCommandOptions(args);
+  if (parsed.help) {
+    process.stdout.write(`${getBubbleListHelpText()}\n`);
+    return 0;
+  }
+
+  const result = await runBubbleListCommand(parsed);
+  if (result === null) {
+    process.stdout.write(`${getBubbleListHelpText()}\n`);
+    return 0;
+  }
+
+  if (parsed.json) {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  } else {
+    process.stdout.write(`${renderBubbleListText(result)}\n`);
+  }
+  return 0;
+}
+
 async function handleBubbleCommitCommand(args: string[]): Promise<number> {
   const result = await runBubbleCommitCommand(args);
   if (result === null) {
@@ -215,6 +242,10 @@ export async function runCli(argv: string[]): Promise<number> {
     return handleBubbleStatusCommand(rest);
   }
 
+  if (command === "bubble" && subcommand === "list") {
+    return handleBubbleListCommand(rest);
+  }
+
   if (command === "bubble" && subcommand === "reply") {
     return handleBubbleReplyCommand(rest);
   }
@@ -232,7 +263,7 @@ export async function runCli(argv: string[]): Promise<number> {
   }
 
   process.stderr.write(
-    "Unknown command. Supported: bubble create, bubble start, bubble status, bubble reply, bubble commit, bubble approve, bubble request-rework, pass, ask-human, converged, agent pass, agent ask-human, agent converged\n"
+    "Unknown command. Supported: bubble create, bubble start, bubble status, bubble list, bubble reply, bubble commit, bubble approve, bubble request-rework, pass, ask-human, converged, agent pass, agent ask-human, agent converged\n"
   );
   return 1;
 }

@@ -39,6 +39,11 @@ export {
   startBubble
 } from "./core/bubble/startBubble.js";
 export {
+  asBubbleListError,
+  BubbleListError,
+  listBubbles
+} from "./core/bubble/listBubbles.js";
+export {
   asBubbleStatusError,
   BubbleStatusError,
   getBubbleStatus
@@ -104,6 +109,12 @@ export {
   parseBubbleStartCommandOptions,
   runBubbleStartCommand
 } from "./cli/commands/bubble/start.js";
+export {
+  getBubbleListHelpText,
+  parseBubbleListCommandOptions,
+  renderBubbleListText,
+  runBubbleListCommand
+} from "./cli/commands/bubble/list.js";
 export {
   getBubbleStatusHelpText,
   parseBubbleStatusCommandOptions,
@@ -253,6 +264,12 @@ export type {
   StartBubbleResult
 } from "./core/bubble/startBubble.js";
 export type {
+  BubbleListInput,
+  BubbleListEntry,
+  BubbleListStateCounts,
+  BubbleListView
+} from "./core/bubble/listBubbles.js";
+export type {
   BubbleStatusInput,
   BubbleStatusView
 } from "./core/bubble/statusBubble.js";
@@ -300,6 +317,11 @@ export type {
   BubbleStartHelpCommandOptions,
   ParsedBubbleStartCommandOptions
 } from "./cli/commands/bubble/start.js";
+export type {
+  BubbleListCommandOptions,
+  BubbleListHelpCommandOptions,
+  ParsedBubbleListCommandOptions
+} from "./cli/commands/bubble/list.js";
 export type {
   BubbleStatusCommandOptions,
   BubbleStatusHelpCommandOptions,

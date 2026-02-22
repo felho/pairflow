@@ -65,6 +65,13 @@ describe("runCli", () => {
     expect(stdoutSpy).toHaveBeenCalled();
   });
 
+  it("supports bubble list help", async () => {
+    const exitCode = await runCli(["bubble", "list", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+  });
+
   it("supports bubble commit help", async () => {
     const exitCode = await runCli(["bubble", "commit", "--help"]);
 

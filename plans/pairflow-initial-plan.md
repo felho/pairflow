@@ -33,6 +33,7 @@ Ticket status:
 9. Ticket 09: Completed (`converged` validator + approval gating).
 10. Ticket 10: Completed (tmux launcher + watchdog status/countdown + commit gate command path).
 11. Ticket 11: Completed (atomic runtime sessions registry + start-time registration/rollback wiring).
+12. Ticket 12: Completed (multi-bubble status aggregation via `pairflow bubble list` + runtime session visibility).
 
 ## Milestone 1: Phase 1 Single-Bubble MVP (CLI-First, Strict Mode)
 
