@@ -11,11 +11,11 @@ import type { ApprovalDecision, ProtocolEnvelope } from "../../types/protocol.js
 export interface EmitApprovalDecisionInput {
   bubbleId: string;
   decision: ApprovalDecision;
-  message?: string;
-  refs?: string[];
-  repoPath?: string;
-  cwd?: string;
-  now?: Date;
+  message?: string | undefined;
+  refs?: string[] | undefined;
+  repoPath?: string | undefined;
+  cwd?: string | undefined;
+  now?: Date | undefined;
 }
 
 export interface EmitApprovalDecisionResult {
@@ -27,19 +27,19 @@ export interface EmitApprovalDecisionResult {
 
 export interface EmitApproveInput {
   bubbleId: string;
-  refs?: string[];
-  repoPath?: string;
-  cwd?: string;
-  now?: Date;
+  refs?: string[] | undefined;
+  repoPath?: string | undefined;
+  cwd?: string | undefined;
+  now?: Date | undefined;
 }
 
 export interface EmitRequestReworkInput {
   bubbleId: string;
   message: string;
-  refs?: string[];
-  repoPath?: string;
-  cwd?: string;
-  now?: Date;
+  refs?: string[] | undefined;
+  repoPath?: string | undefined;
+  cwd?: string | undefined;
+  now?: Date | undefined;
 }
 
 export class ApprovalCommandError extends Error {
@@ -174,10 +174,10 @@ export async function emitApprove(
   return emitApprovalDecision({
     bubbleId: input.bubbleId,
     decision: "approve",
-    ...(input.refs !== undefined ? { refs: input.refs } : {}),
-    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
-    ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
-    ...(input.now !== undefined ? { now: input.now } : {})
+    refs: input.refs,
+    repoPath: input.repoPath,
+    cwd: input.cwd,
+    now: input.now
   });
 }
 
@@ -188,10 +188,10 @@ export async function emitRequestRework(
     bubbleId: input.bubbleId,
     decision: "revise",
     message: input.message,
-    ...(input.refs !== undefined ? { refs: input.refs } : {}),
-    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
-    ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
-    ...(input.now !== undefined ? { now: input.now } : {})
+    refs: input.refs,
+    repoPath: input.repoPath,
+    cwd: input.cwd,
+    now: input.now
   });
 }
 

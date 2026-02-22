@@ -1,5 +1,6 @@
 import type { AgentName, RoundRoleHistoryEntry } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
+import { isRecord } from "../validation.js";
 
 export interface ConvergencePolicyInput {
   currentRound: number;
@@ -15,10 +16,19 @@ export interface ConvergencePolicyResult {
 }
 
 function hasBlockingFindings(envelope: ProtocolEnvelope): boolean {
-  const findings = envelope.payload.findings ?? [];
-  return findings.some(
-    (finding) => finding.severity === "P0" || finding.severity === "P1"
-  );
+  const findings = envelope.payload.findings;
+  if (!Array.isArray(findings)) {
+    return false;
+  }
+
+  return findings.some((finding) => {
+    if (!isRecord(finding)) {
+      return false;
+    }
+
+    const severity = finding.severity;
+    return severity === "P0" || severity === "P1";
+  });
 }
 
 function hasUnresolvedHumanQuestion(transcript: ProtocolEnvelope[]): boolean {

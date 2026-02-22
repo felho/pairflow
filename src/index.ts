@@ -140,6 +140,7 @@ export {
   TranscriptSequenceError
 } from "./core/protocol/sequenceAllocator.js";
 export {
+  appendProtocolEnvelopes,
   appendProtocolEnvelope,
   ProtocolTranscriptError,
   ProtocolTranscriptLockError,
@@ -269,8 +270,11 @@ export type {
   ConvergencePolicyResult
 } from "./core/convergence/policy.js";
 export type {
+  AppendProtocolEnvelopeBatchEntry,
   AppendProtocolEnvelopeInput,
   AppendProtocolEnvelopeResult,
+  AppendProtocolEnvelopesInput,
+  AppendProtocolEnvelopesResult,
   ProtocolMirrorWriteFailure,
   ReadTranscriptOptions,
   ProtocolEnvelopeDraft

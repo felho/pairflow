@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   appendProtocolEnvelope,
+  appendProtocolEnvelopes,
   ProtocolTranscriptLockError,
   ProtocolTranscriptValidationError,
   readTranscriptEnvelopesOrThrow,
@@ -132,6 +133,58 @@ describe("appendProtocolEnvelope", () => {
     expect(inbox).toHaveLength(1);
     expect(transcript[0]?.id).toBe(inbox[0]?.id);
     expect(inbox[0]?.type).toBe("PASS");
+  });
+
+  it("appends a batch atomically under one lock cycle", async () => {
+    const root = await createTempRoot();
+    const transcriptPath = join(root, "transcript.ndjson");
+    const inboxPath = join(root, "inbox.ndjson");
+    const lockPath = join(root, "b_protocol_01.lock");
+    const now = new Date("2026-02-21T12:00:00.000Z");
+
+    const appended = await appendProtocolEnvelopes({
+      transcriptPath,
+      lockPath,
+      now,
+      entries: [
+        {
+          envelope: createDraft({
+            sender: "claude",
+            recipient: "orchestrator",
+            type: "CONVERGENCE",
+            payload: {
+              summary: "Converged."
+            }
+          })
+        },
+        {
+          envelope: createDraft({
+            sender: "orchestrator",
+            recipient: "human",
+            type: "APPROVAL_REQUEST",
+            payload: {
+              summary: "Please approve."
+            }
+          }),
+          mirrorPaths: [inboxPath]
+        }
+      ]
+    });
+
+    expect(appended.entries).toHaveLength(2);
+    expect(appended.entries[0]?.sequence).toBe(1);
+    expect(appended.entries[1]?.sequence).toBe(2);
+    expect(appended.entries[0]?.mirrorWriteFailures).toEqual([]);
+    expect(appended.entries[1]?.mirrorWriteFailures).toEqual([]);
+
+    const transcript = await readTranscriptEnvelopes(transcriptPath);
+    const inbox = await readTranscriptEnvelopes(inboxPath);
+
+    expect(transcript.map((entry) => entry.type)).toEqual([
+      "CONVERGENCE",
+      "APPROVAL_REQUEST"
+    ]);
+    expect(inbox.map((entry) => entry.type)).toEqual(["APPROVAL_REQUEST"]);
   });
 
   it("does not fail when mirror write fails after transcript append", async () => {

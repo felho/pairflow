@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { appendProtocolEnvelope, readTranscriptEnvelopes } from "../protocol/transcriptStore.js";
+import { appendProtocolEnvelopes, readTranscriptEnvelopes } from "../protocol/transcriptStore.js";
 import { applyStateTransition } from "../state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import { validateConvergencePolicy } from "../convergence/policy.js";
@@ -107,40 +107,49 @@ export async function emitConvergedFromWorkspace(
   }
 
   const lockPath = join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`);
-  const convergence = await appendProtocolEnvelope({
+  // Keep CONVERGENCE + APPROVAL_REQUEST contiguous in transcript by appending
+  // them in one lock-guarded batch write.
+  const appended = await appendProtocolEnvelopes({
     transcriptPath: resolved.bubblePaths.transcriptPath,
     lockPath,
     now,
-    envelope: {
-      bubble_id: resolved.bubbleId,
-      sender: reviewer,
-      recipient: "orchestrator",
-      type: "CONVERGENCE",
-      round: state.round,
-      payload: {
-        summary
+    entries: [
+      {
+        envelope: {
+          bubble_id: resolved.bubbleId,
+          sender: reviewer,
+          recipient: "orchestrator",
+          type: "CONVERGENCE",
+          round: state.round,
+          payload: {
+            summary
+          },
+          refs
+        }
       },
-      refs
-    }
+      {
+        envelope: {
+          bubble_id: resolved.bubbleId,
+          sender: "orchestrator",
+          recipient: "human",
+          type: "APPROVAL_REQUEST",
+          round: state.round,
+          payload: {
+            summary
+          },
+          refs
+        },
+        mirrorPaths: [resolved.bubblePaths.inboxPath]
+      }
+    ]
   });
-
-  const approvalRequest = await appendProtocolEnvelope({
-    transcriptPath: resolved.bubblePaths.transcriptPath,
-    mirrorPaths: [resolved.bubblePaths.inboxPath],
-    lockPath,
-    now,
-    envelope: {
-      bubble_id: resolved.bubbleId,
-      sender: "orchestrator",
-      recipient: "human",
-      type: "APPROVAL_REQUEST",
-      round: state.round,
-      payload: {
-        summary
-      },
-      refs
-    }
-  });
+  const convergence = appended.entries[0];
+  const approvalRequest = appended.entries[1];
+  if (convergence === undefined || approvalRequest === undefined) {
+    throw new ConvergedCommandError(
+      "Converged append batch did not return expected envelopes."
+    );
+  }
 
   const nextState = applyStateTransition(state, {
     to: "READY_FOR_APPROVAL",
