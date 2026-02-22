@@ -13,6 +13,10 @@ import {
   runBubbleApproveCommand
 } from "./commands/bubble/approve.js";
 import {
+  getBubbleCommitHelpText,
+  runBubbleCommitCommand
+} from "./commands/bubble/commit.js";
+import {
   getBubbleCreateHelpText,
   runBubbleCreateCommand
 } from "./commands/bubble/create.js";
@@ -24,6 +28,16 @@ import {
   getBubbleRequestReworkHelpText,
   runBubbleRequestReworkCommand
 } from "./commands/bubble/requestRework.js";
+import {
+  getBubbleStartHelpText,
+  runBubbleStartCommand
+} from "./commands/bubble/start.js";
+import {
+  getBubbleStatusHelpText,
+  parseBubbleStatusCommandOptions,
+  renderBubbleStatusText,
+  runBubbleStatusCommand
+} from "./commands/bubble/status.js";
 import {
   getPassHelpText,
   runPassCommand
@@ -101,6 +115,53 @@ async function handleBubbleRequestReworkCommand(args: string[]): Promise<number>
   return 0;
 }
 
+async function handleBubbleStartCommand(args: string[]): Promise<number> {
+  const result = await runBubbleStartCommand(args);
+  if (result === null) {
+    process.stdout.write(`${getBubbleStartHelpText()}\n`);
+    return 0;
+  }
+
+  process.stdout.write(
+    `Started bubble ${result.bubbleId}: session ${result.tmuxSessionName}, worktree ${result.worktreePath}\n`
+  );
+  return 0;
+}
+
+async function handleBubbleStatusCommand(args: string[]): Promise<number> {
+  const parsed = parseBubbleStatusCommandOptions(args);
+  if (parsed.help) {
+    process.stdout.write(`${getBubbleStatusHelpText()}\n`);
+    return 0;
+  }
+
+  const result = await runBubbleStatusCommand(parsed);
+  if (result === null) {
+    process.stdout.write(`${getBubbleStatusHelpText()}\n`);
+    return 0;
+  }
+
+  if (parsed.json) {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  } else {
+    process.stdout.write(`${renderBubbleStatusText(result)}\n`);
+  }
+  return 0;
+}
+
+async function handleBubbleCommitCommand(args: string[]): Promise<number> {
+  const result = await runBubbleCommitCommand(args);
+  if (result === null) {
+    process.stdout.write(`${getBubbleCommitHelpText()}\n`);
+    return 0;
+  }
+
+  process.stdout.write(
+    `Committed bubble ${result.bubbleId}: ${result.commitSha} (${result.stagedFiles.length} files), DONE_PACKAGE ${result.envelope.id}\n`
+  );
+  return 0;
+}
+
 export async function runCli(argv: string[]): Promise<number> {
   const [command, subcommand, ...rest] = argv;
 
@@ -146,8 +207,20 @@ export async function runCli(argv: string[]): Promise<number> {
     return 0;
   }
 
+  if (command === "bubble" && subcommand === "start") {
+    return handleBubbleStartCommand(rest);
+  }
+
+  if (command === "bubble" && subcommand === "status") {
+    return handleBubbleStatusCommand(rest);
+  }
+
   if (command === "bubble" && subcommand === "reply") {
     return handleBubbleReplyCommand(rest);
+  }
+
+  if (command === "bubble" && subcommand === "commit") {
+    return handleBubbleCommitCommand(rest);
   }
 
   if (command === "bubble" && subcommand === "approve") {
@@ -159,7 +232,7 @@ export async function runCli(argv: string[]): Promise<number> {
   }
 
   process.stderr.write(
-    "Unknown command. Supported: bubble create, bubble reply, bubble approve, bubble request-rework, pass, ask-human, converged, agent pass, agent ask-human, agent converged\n"
+    "Unknown command. Supported: bubble create, bubble start, bubble status, bubble reply, bubble commit, bubble approve, bubble request-rework, pass, ask-human, converged, agent pass, agent ask-human, agent converged\n"
   );
   return 1;
 }

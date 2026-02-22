@@ -25,9 +25,24 @@ export {
   resolveBubbleById
 } from "./core/bubble/bubbleLookup.js";
 export {
+  asBubbleCommitError,
+  BubbleCommitError,
+  commitBubble
+} from "./core/bubble/commitBubble.js";
+export {
   BubbleCreateError,
   createBubble
 } from "./core/bubble/createBubble.js";
+export {
+  asStartBubbleError,
+  StartBubbleError,
+  startBubble
+} from "./core/bubble/startBubble.js";
+export {
+  asBubbleStatusError,
+  BubbleStatusError,
+  getBubbleStatus
+} from "./core/bubble/statusBubble.js";
 export {
   resolveBubbleFromWorkspaceCwd,
   WorkspaceResolutionError
@@ -70,6 +85,11 @@ export {
   runBubbleApproveCommand
 } from "./cli/commands/bubble/approve.js";
 export {
+  getBubbleCommitHelpText,
+  parseBubbleCommitCommandOptions,
+  runBubbleCommitCommand
+} from "./cli/commands/bubble/commit.js";
+export {
   getBubbleCreateHelpText,
   parseBubbleCreateCommandOptions,
   runBubbleCreateCommand
@@ -79,6 +99,17 @@ export {
   parseBubbleReplyCommandOptions,
   runBubbleReplyCommand
 } from "./cli/commands/bubble/reply.js";
+export {
+  getBubbleStartHelpText,
+  parseBubbleStartCommandOptions,
+  runBubbleStartCommand
+} from "./cli/commands/bubble/start.js";
+export {
+  getBubbleStatusHelpText,
+  parseBubbleStatusCommandOptions,
+  renderBubbleStatusText,
+  runBubbleStatusCommand
+} from "./cli/commands/bubble/status.js";
 export {
   getBubbleRequestReworkHelpText,
   parseBubbleRequestReworkCommandOptions,
@@ -152,6 +183,16 @@ export {
   validateConvergencePolicy
 } from "./core/convergence/policy.js";
 export {
+  buildBubbleTmuxSessionName,
+  launchBubbleTmuxSession,
+  runTmux,
+  TmuxCommandError,
+  TmuxSessionExistsError
+} from "./core/runtime/tmuxManager.js";
+export {
+  computeWatchdogStatus
+} from "./core/runtime/watchdog.js";
+export {
   assertValidProtocolEnvelope,
   validateProtocolEnvelope
 } from "./core/protocol/validators.js";
@@ -192,8 +233,21 @@ export type {
   EmitPassResult
 } from "./core/agent/pass.js";
 export type {
+  CommitBubbleInput,
+  CommitBubbleResult
+} from "./core/bubble/commitBubble.js";
+export type {
   ResolvedBubbleById
 } from "./core/bubble/bubbleLookup.js";
+export type {
+  StartBubbleDependencies,
+  StartBubbleInput,
+  StartBubbleResult
+} from "./core/bubble/startBubble.js";
+export type {
+  BubbleStatusInput,
+  BubbleStatusView
+} from "./core/bubble/statusBubble.js";
 export type {
   ResolvedBubbleWorkspace
 } from "./core/bubble/workspaceResolution.js";
@@ -224,10 +278,25 @@ export type {
   ParsedBubbleApproveCommandOptions
 } from "./cli/commands/bubble/approve.js";
 export type {
+  BubbleCommitCommandOptions,
+  BubbleCommitHelpCommandOptions,
+  ParsedBubbleCommitCommandOptions
+} from "./cli/commands/bubble/commit.js";
+export type {
   BubbleReplyCommandOptions,
   BubbleReplyHelpCommandOptions,
   ParsedBubbleReplyCommandOptions
 } from "./cli/commands/bubble/reply.js";
+export type {
+  BubbleStartCommandOptions,
+  BubbleStartHelpCommandOptions,
+  ParsedBubbleStartCommandOptions
+} from "./cli/commands/bubble/start.js";
+export type {
+  BubbleStatusCommandOptions,
+  BubbleStatusHelpCommandOptions,
+  ParsedBubbleStatusCommandOptions
+} from "./cli/commands/bubble/status.js";
 export type {
   BubbleRequestReworkCommandOptions,
   BubbleRequestReworkHelpCommandOptions,
@@ -265,6 +334,16 @@ export type {
   ProtocolSequenceAllocationOptions,
   ProtocolSequenceAllocation
 } from "./core/protocol/sequenceAllocator.js";
+export type {
+  LaunchBubbleTmuxSessionInput,
+  LaunchBubbleTmuxSessionResult,
+  TmuxRunOptions,
+  TmuxRunResult,
+  TmuxRunner
+} from "./core/runtime/tmuxManager.js";
+export type {
+  WatchdogStatus
+} from "./core/runtime/watchdog.js";
 export type {
   ConvergencePolicyInput,
   ConvergencePolicyResult

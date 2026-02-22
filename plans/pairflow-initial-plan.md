@@ -31,7 +31,7 @@ Ticket status:
 7. Ticket 07: Completed (`pass` command workflow + workspace resolution + CLI routing).
 8. Ticket 08: Completed (`ask-human` + `bubble reply` workflow and state/protocol integration).
 9. Ticket 09: Completed (`converged` validator + approval gating).
-10. Ticket 10: Pending (tmux launcher + watchdog + status pane + commit gate final path).
+10. Ticket 10: Completed (tmux launcher + watchdog status/countdown + commit gate command path).
 
 ## Milestone 1: Phase 1 Single-Bubble MVP (CLI-First, Strict Mode)
 

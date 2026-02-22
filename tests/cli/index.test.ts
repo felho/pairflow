@@ -51,6 +51,27 @@ describe("runCli", () => {
     expect(stdoutSpy).toHaveBeenCalled();
   });
 
+  it("supports bubble start help", async () => {
+    const exitCode = await runCli(["bubble", "start", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+  });
+
+  it("supports bubble status help", async () => {
+    const exitCode = await runCli(["bubble", "status", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+  });
+
+  it("supports bubble commit help", async () => {
+    const exitCode = await runCli(["bubble", "commit", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+  });
+
   it("supports top-level converged help", async () => {
     const exitCode = await runCli(["converged", "--help"]);
 
