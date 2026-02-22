@@ -115,6 +115,23 @@ async function handleConvergedCommand(args: string[]): Promise<number> {
   return 0;
 }
 
+type AgentCommandName = "pass" | "ask-human" | "converged";
+
+function resolveAgentCommandArgs(
+  command: string | undefined,
+  subcommand: string | undefined,
+  rest: string[],
+  expected: AgentCommandName
+): string[] | null {
+  if (command === expected) {
+    return [subcommand, ...rest].filter((part) => part !== undefined);
+  }
+  if (command === "agent" && subcommand === expected) {
+    return rest;
+  }
+  return null;
+}
+
 async function handleBubbleReplyCommand(args: string[]): Promise<number> {
   const result = await runBubbleReplyCommand(args);
   if (result === null) {
@@ -325,34 +342,29 @@ async function handleBubbleInboxCommand(args: string[]): Promise<number> {
 export async function runCli(argv: string[]): Promise<number> {
   const [command, subcommand, ...rest] = argv;
 
-  if (command === "pass") {
-    return handlePassCommand(
-      [subcommand, ...rest].filter((part) => part !== undefined)
-    );
+  const passArgs = resolveAgentCommandArgs(command, subcommand, rest, "pass");
+  if (passArgs !== null) {
+    return handlePassCommand(passArgs);
   }
 
-  if (command === "agent" && subcommand === "pass") {
-    return handlePassCommand(rest);
+  const askHumanArgs = resolveAgentCommandArgs(
+    command,
+    subcommand,
+    rest,
+    "ask-human"
+  );
+  if (askHumanArgs !== null) {
+    return handleAskHumanCommand(askHumanArgs);
   }
 
-  if (command === "ask-human") {
-    return handleAskHumanCommand(
-      [subcommand, ...rest].filter((part) => part !== undefined)
-    );
-  }
-
-  if (command === "agent" && subcommand === "ask-human") {
-    return handleAskHumanCommand(rest);
-  }
-
-  if (command === "converged") {
-    return handleConvergedCommand(
-      [subcommand, ...rest].filter((part) => part !== undefined)
-    );
-  }
-
-  if (command === "agent" && subcommand === "converged") {
-    return handleConvergedCommand(rest);
+  const convergedArgs = resolveAgentCommandArgs(
+    command,
+    subcommand,
+    rest,
+    "converged"
+  );
+  if (convergedArgs !== null) {
+    return handleConvergedCommand(convergedArgs);
   }
 
   if (command === "bubble" && subcommand === "create") {

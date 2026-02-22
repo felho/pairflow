@@ -148,4 +148,11 @@ describe("runCli", () => {
     expect(exitCode).toBe(0);
     expect(stdoutSpy).toHaveBeenCalled();
   });
+
+  it("rejects unknown agent namespace command", async () => {
+    const exitCode = await runCli(["agent", "unknown"]);
+
+    expect(exitCode).toBe(1);
+    expect(stderrSpy).toHaveBeenCalled();
+  });
 });
