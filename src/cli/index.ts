@@ -69,6 +69,12 @@ import {
   runBubbleStatusCommand
 } from "./commands/bubble/status.js";
 import {
+  getBubbleWatchdogHelpText,
+  parseBubbleWatchdogCommandOptions,
+  renderBubbleWatchdogText,
+  runBubbleWatchdogCommand
+} from "./commands/bubble/watchdog.js";
+import {
   getPassHelpText,
   runPassCommand
 } from "./commands/agent/pass.js";
@@ -218,6 +224,27 @@ async function handleBubbleStatusCommand(args: string[]): Promise<number> {
   return 0;
 }
 
+async function handleBubbleWatchdogCommand(args: string[]): Promise<number> {
+  const parsed = parseBubbleWatchdogCommandOptions(args);
+  if (parsed.help) {
+    process.stdout.write(`${getBubbleWatchdogHelpText()}\n`);
+    return 0;
+  }
+
+  const result = await runBubbleWatchdogCommand(parsed);
+  if (result === null) {
+    process.stdout.write(`${getBubbleWatchdogHelpText()}\n`);
+    return 0;
+  }
+
+  if (parsed.json) {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  } else {
+    process.stdout.write(`${renderBubbleWatchdogText(result)}\n`);
+  }
+  return 0;
+}
+
 async function handleBubbleListCommand(args: string[]): Promise<number> {
   const parsed = parseBubbleListCommandOptions(args);
   if (parsed.help) {
@@ -360,6 +387,10 @@ export async function runCli(argv: string[]): Promise<number> {
     return handleBubbleStatusCommand(rest);
   }
 
+  if (command === "bubble" && subcommand === "watchdog") {
+    return handleBubbleWatchdogCommand(rest);
+  }
+
   if (command === "bubble" && subcommand === "inbox") {
     return handleBubbleInboxCommand(rest);
   }
@@ -389,7 +420,7 @@ export async function runCli(argv: string[]): Promise<number> {
   }
 
   process.stderr.write(
-    "Unknown command. Supported: bubble create, bubble start, bubble open, bubble stop, bubble resume, bubble status, bubble inbox, bubble list, bubble reconcile, bubble reply, bubble commit, bubble approve, bubble request-rework, pass, ask-human, converged, agent pass, agent ask-human, agent converged\n"
+    "Unknown command. Supported: bubble create, bubble start, bubble open, bubble stop, bubble resume, bubble status, bubble watchdog, bubble inbox, bubble list, bubble reconcile, bubble reply, bubble commit, bubble approve, bubble request-rework, pass, ask-human, converged, agent pass, agent ask-human, agent converged\n"
   );
   return 1;
 }

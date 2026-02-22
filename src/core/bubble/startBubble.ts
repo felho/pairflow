@@ -57,8 +57,9 @@ function shellQuote(value: string): string {
 }
 
 function buildStatusPaneCommand(bubbleId: string, repoPath: string): string {
+  const watchdogCommand = `pairflow bubble watchdog --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)} >/dev/null 2>&1 || true`;
   const statusCommand = `pairflow bubble status --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)}`;
-  const loopScript = `while true; do clear; ${statusCommand}; sleep 2; done`;
+  const loopScript = `while true; do clear; ${watchdogCommand}; ${statusCommand}; sleep 2; done`;
   return `bash -lc ${shellQuote(loopScript)}`;
 }
 

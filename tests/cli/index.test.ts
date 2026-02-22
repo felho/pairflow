@@ -86,6 +86,13 @@ describe("runCli", () => {
     expect(stdoutSpy).toHaveBeenCalled();
   });
 
+  it("supports bubble watchdog help", async () => {
+    const exitCode = await runCli(["bubble", "watchdog", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+  });
+
   it("supports bubble inbox help", async () => {
     const exitCode = await runCli(["bubble", "inbox", "--help"]);
 

@@ -76,6 +76,11 @@ export {
   getBubbleStatus
 } from "./core/bubble/statusBubble.js";
 export {
+  asBubbleWatchdogError,
+  BubbleWatchdogError,
+  runBubbleWatchdog
+} from "./core/bubble/watchdogBubble.js";
+export {
   resolveBubbleFromWorkspaceCwd,
   WorkspaceResolutionError
 } from "./core/bubble/workspaceResolution.js";
@@ -176,6 +181,12 @@ export {
   renderBubbleStatusText,
   runBubbleStatusCommand
 } from "./cli/commands/bubble/status.js";
+export {
+  getBubbleWatchdogHelpText,
+  parseBubbleWatchdogCommandOptions,
+  renderBubbleWatchdogText,
+  runBubbleWatchdogCommand
+} from "./cli/commands/bubble/watchdog.js";
 export {
   getBubbleRequestReworkHelpText,
   parseBubbleRequestReworkCommandOptions,
@@ -367,6 +378,11 @@ export type {
   BubbleStatusView
 } from "./core/bubble/statusBubble.js";
 export type {
+  BubbleWatchdogInput,
+  BubbleWatchdogNoopReason,
+  BubbleWatchdogResult
+} from "./core/bubble/watchdogBubble.js";
+export type {
   ResolvedBubbleWorkspace
 } from "./core/bubble/workspaceResolution.js";
 export type {
@@ -445,6 +461,11 @@ export type {
   BubbleStatusHelpCommandOptions,
   ParsedBubbleStatusCommandOptions
 } from "./cli/commands/bubble/status.js";
+export type {
+  BubbleWatchdogCommandOptions,
+  BubbleWatchdogHelpCommandOptions,
+  ParsedBubbleWatchdogCommandOptions
+} from "./cli/commands/bubble/watchdog.js";
 export type {
   BubbleRequestReworkCommandOptions,
   BubbleRequestReworkHelpCommandOptions,

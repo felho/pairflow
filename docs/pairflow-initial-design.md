@@ -260,6 +260,7 @@ Human/operator commands:
 9. `pairflow bubble open --id <id>` (opens external editor at worktree path)
 10. `pairflow bubble stop --id <id>`
 11. `pairflow bubble resume --id <id>` (operator resumes ping-pong after intervention)
+12. `pairflow bubble watchdog --id <id>` (runs timeout check and escalates to `WAITING_HUMAN` when idle timeout is exceeded)
 
 Agent-facing commands (invoked from inside agent sessions):
 1. `pairflow pass --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>]`
@@ -289,6 +290,7 @@ Rules:
 4. Any pane can receive direct human input; operator uses `pairflow bubble resume --id <id>` to return to ping-pong mode.
 5. Optional sound notifications are supported for `waiting-human` and `converged` events (configurable on/off and sound file).
 6. Status watcher must display `active_agent`, `active_since`, and watchdog countdown for escalation visibility.
+7. Watchdog escalation action is materialized as orchestrator-emitted `HUMAN_QUESTION` and state transition `RUNNING -> WAITING_HUMAN`.
 
 ## Git Workflow Rules
 1. Create bubble branch from selected base branch.

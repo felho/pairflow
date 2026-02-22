@@ -275,6 +275,7 @@ describe("startBubble", () => {
     if (statusCommand === undefined) {
       throw new Error("Expected status command to be captured.");
     }
+    expect(statusCommand).toContain("pairflow bubble watchdog --id");
     expect(statusCommand).toContain("pairflow bubble status --id");
     expect(statusCommand).not.toContain("--json");
     await assertBashParses(statusCommand);
