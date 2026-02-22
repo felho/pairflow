@@ -1,5 +1,6 @@
 import { readRuntimeSessionsRegistry } from "./sessionsRegistry.js";
 import { runTmux, type TmuxRunner } from "./tmuxManager.js";
+import { shellQuote } from "../util/shellQuote.js";
 import type { BubbleConfig } from "../../types/bubble.js";
 import type { ProtocolEnvelope, ProtocolParticipant } from "../../types/protocol.js";
 
@@ -25,10 +26,6 @@ export interface EmitTmuxDeliveryNotificationResult {
   targetPaneIndex?: number;
   message: string;
   reason?: TmuxDeliveryFailureReason;
-}
-
-function shellQuote(value: string): string {
-  return `'${value.replace(/'/gu, "'\\''")}'`;
 }
 
 function resolveTargetPaneIndex(

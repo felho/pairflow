@@ -3,6 +3,7 @@ import { access } from "node:fs/promises";
 import { spawn } from "node:child_process";
 
 import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
+import { shellQuote } from "../util/shellQuote.js";
 
 const worktreePathPlaceholder = "{{worktree_path}}";
 const defaultOpenCommandTemplate = `cursor ${worktreePathPlaceholder}`;
@@ -45,10 +46,6 @@ export class OpenBubbleError extends Error {
     super(message);
     this.name = "OpenBubbleError";
   }
-}
-
-function shellQuote(value: string): string {
-  return `'${value.replace(/'/gu, "'\\''")}'`;
 }
 
 function renderOpenCommand(

@@ -49,6 +49,7 @@ Ticket status:
 25. Ticket 25: Completed (tmux delivery notifications for `bubble reply` and approval decisions to keep human-side protocol actions visible in tmux panes as non-blocking side effects).
 26. Ticket 26: Completed (status-pane watchdog escalation surfacing: switched tmux status loop to human-readable `bubble status` output and added explicit escalation line when watchdog timeout is exceeded).
 27. Ticket 27: Completed (active watchdog escalation trigger: added `bubble watchdog` core/CLI path to emit orchestrator `HUMAN_QUESTION` + transition `RUNNING -> WAITING_HUMAN` on timeout, and wired status pane loop to execute it continuously).
+28. Ticket 28: Completed (shared `shellQuote` utility extracted and adopted by start/open/tmux-delivery modules to remove duplicated shell-escaping logic).
 
 ## Milestone 1: Phase 1 Single-Bubble MVP (CLI-First, Strict Mode)
 

@@ -1,6 +1,7 @@
 import { applyStateTransition } from "../state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
+import { shellQuote } from "../util/shellQuote.js";
 import {
   bootstrapWorktreeWorkspace,
   cleanupWorktreeWorkspace,
@@ -50,10 +51,6 @@ export class StartBubbleError extends Error {
     super(message);
     this.name = "StartBubbleError";
   }
-}
-
-function shellQuote(value: string): string {
-  return `'${value.replace(/'/gu, "'\\''")}'`;
 }
 
 function buildStatusPaneCommand(bubbleId: string, repoPath: string): string {
