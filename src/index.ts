@@ -30,6 +30,12 @@ export {
   commitBubble
 } from "./core/bubble/commitBubble.js";
 export {
+  asOpenBubbleError,
+  executeOpenCommand,
+  openBubble,
+  OpenBubbleError
+} from "./core/bubble/openBubble.js";
+export {
   BubbleCreateError,
   createBubble
 } from "./core/bubble/createBubble.js";
@@ -109,6 +115,11 @@ export {
   parseBubbleCreateCommandOptions,
   runBubbleCreateCommand
 } from "./cli/commands/bubble/create.js";
+export {
+  getBubbleOpenHelpText,
+  parseBubbleOpenCommandOptions,
+  runBubbleOpenCommand
+} from "./cli/commands/bubble/open.js";
 export {
   getBubbleReplyHelpText,
   parseBubbleReplyCommandOptions,
@@ -281,6 +292,14 @@ export type {
   ResolvedBubbleById
 } from "./core/bubble/bubbleLookup.js";
 export type {
+  OpenBubbleDependencies,
+  OpenBubbleInput,
+  OpenBubbleResult,
+  OpenCommandExecutionInput,
+  OpenCommandExecutionResult,
+  OpenCommandExecutor
+} from "./core/bubble/openBubble.js";
+export type {
   StartBubbleDependencies,
   StartBubbleInput,
   StartBubbleResult
@@ -340,6 +359,11 @@ export type {
   BubbleCommitHelpCommandOptions,
   ParsedBubbleCommitCommandOptions
 } from "./cli/commands/bubble/commit.js";
+export type {
+  BubbleOpenCommandOptions,
+  BubbleOpenHelpCommandOptions,
+  ParsedBubbleOpenCommandOptions
+} from "./cli/commands/bubble/open.js";
 export type {
   BubbleReplyCommandOptions,
   BubbleReplyHelpCommandOptions,

@@ -39,6 +39,7 @@ Ticket status:
 15. Ticket 15: Completed (start-time runtime session ownership guard to prevent duplicate/orphaned starts).
 16. Ticket 16: Completed (shared repo-resolution helper extracted and adopted by list/reconcile flows).
 17. Ticket 17: Completed (`bubble stop` command for controlled runtime teardown and `CANCELLED` transition).
+18. Ticket 18: Completed (`bubble open` command with `open_command` interpolation and robust execution error surfacing).
 
 ## Milestone 1: Phase 1 Single-Bubble MVP (CLI-First, Strict Mode)
 
