@@ -29,6 +29,10 @@ import {
   runBubbleOpenCommand
 } from "./commands/bubble/open.js";
 import {
+  getBubbleResumeHelpText,
+  runBubbleResumeCommand
+} from "./commands/bubble/resume.js";
+import {
   getBubbleReconcileHelpText,
   parseBubbleReconcileCommandOptions,
   renderBubbleReconcileText,
@@ -157,6 +161,19 @@ async function handleBubbleOpenCommand(args: string[]): Promise<number> {
 
   process.stdout.write(
     `Opened bubble ${result.bubbleId}: worktree ${result.worktreePath}\n`
+  );
+  return 0;
+}
+
+async function handleBubbleResumeCommand(args: string[]): Promise<number> {
+  const result = await runBubbleResumeCommand(args);
+  if (result === null) {
+    process.stdout.write(`${getBubbleResumeHelpText()}\n`);
+    return 0;
+  }
+
+  process.stdout.write(
+    `Resumed bubble ${result.bubbleId}: ${result.envelope.id} -> ${result.envelope.recipient}\n`
   );
   return 0;
 }
@@ -307,6 +324,10 @@ export async function runCli(argv: string[]): Promise<number> {
     return handleBubbleStopCommand(rest);
   }
 
+  if (command === "bubble" && subcommand === "resume") {
+    return handleBubbleResumeCommand(rest);
+  }
+
   if (command === "bubble" && subcommand === "status") {
     return handleBubbleStatusCommand(rest);
   }
@@ -336,7 +357,7 @@ export async function runCli(argv: string[]): Promise<number> {
   }
 
   process.stderr.write(
-    "Unknown command. Supported: bubble create, bubble start, bubble open, bubble stop, bubble status, bubble list, bubble reconcile, bubble reply, bubble commit, bubble approve, bubble request-rework, pass, ask-human, converged, agent pass, agent ask-human, agent converged\n"
+    "Unknown command. Supported: bubble create, bubble start, bubble open, bubble stop, bubble resume, bubble status, bubble list, bubble reconcile, bubble reply, bubble commit, bubble approve, bubble request-rework, pass, ask-human, converged, agent pass, agent ask-human, agent converged\n"
   );
   return 1;
 }

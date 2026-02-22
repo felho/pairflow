@@ -36,6 +36,12 @@ export {
   OpenBubbleError
 } from "./core/bubble/openBubble.js";
 export {
+  asResumeBubbleError,
+  DEFAULT_RESUME_MESSAGE,
+  ResumeBubbleError,
+  resumeBubble
+} from "./core/bubble/resumeBubble.js";
+export {
   BubbleCreateError,
   createBubble
 } from "./core/bubble/createBubble.js";
@@ -120,6 +126,11 @@ export {
   parseBubbleOpenCommandOptions,
   runBubbleOpenCommand
 } from "./cli/commands/bubble/open.js";
+export {
+  getBubbleResumeHelpText,
+  parseBubbleResumeCommandOptions,
+  runBubbleResumeCommand
+} from "./cli/commands/bubble/resume.js";
 export {
   getBubbleReplyHelpText,
   parseBubbleReplyCommandOptions,
@@ -300,6 +311,11 @@ export type {
   OpenCommandExecutor
 } from "./core/bubble/openBubble.js";
 export type {
+  ResumeBubbleDependencies,
+  ResumeBubbleInput,
+  ResumeBubbleResult
+} from "./core/bubble/resumeBubble.js";
+export type {
   StartBubbleDependencies,
   StartBubbleInput,
   StartBubbleResult
@@ -364,6 +380,11 @@ export type {
   BubbleOpenHelpCommandOptions,
   ParsedBubbleOpenCommandOptions
 } from "./cli/commands/bubble/open.js";
+export type {
+  BubbleResumeCommandOptions,
+  BubbleResumeHelpCommandOptions,
+  ParsedBubbleResumeCommandOptions
+} from "./cli/commands/bubble/resume.js";
 export type {
   BubbleReplyCommandOptions,
   BubbleReplyHelpCommandOptions,
