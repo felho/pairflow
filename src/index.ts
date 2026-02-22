@@ -82,6 +82,7 @@ export {
 export { getBubblePaths } from "./core/bubble/paths.js";
 export { createInitialBubbleState } from "./core/state/initialState.js";
 export { runCli } from "./cli/index.js";
+export { getOrchestraHelpText, runOrchestraCli } from "./cli/orchestra.js";
 export {
   DEFAULT_COMMIT_REQUIRES_APPROVAL,
   DEFAULT_MAX_ROUNDS,
