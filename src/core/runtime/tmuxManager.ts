@@ -23,6 +23,8 @@ export interface LaunchBubbleTmuxSessionInput {
   statusCommand: string;
   implementerCommand: string;
   reviewerCommand: string;
+  implementerBootstrapMessage?: string;
+  reviewerBootstrapMessage?: string;
   runner?: TmuxRunner;
 }
 
@@ -180,6 +182,36 @@ export async function launchBubbleTmuxSession(
     `${sessionName}:0`,
     "tiled"
   ]);
+  if ((input.implementerBootstrapMessage?.trim().length ?? 0) > 0) {
+    await runner([
+      "send-keys",
+      "-t",
+      `${sessionName}:0.1`,
+      "-l",
+      input.implementerBootstrapMessage as string
+    ]);
+    await runner([
+      "send-keys",
+      "-t",
+      `${sessionName}:0.1`,
+      "Enter"
+    ]);
+  }
+  if ((input.reviewerBootstrapMessage?.trim().length ?? 0) > 0) {
+    await runner([
+      "send-keys",
+      "-t",
+      `${sessionName}:0.2`,
+      "-l",
+      input.reviewerBootstrapMessage as string
+    ]);
+    await runner([
+      "send-keys",
+      "-t",
+      `${sessionName}:0.2`,
+      "Enter"
+    ]);
+  }
 
   return {
     sessionName

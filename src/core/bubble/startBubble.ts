@@ -84,6 +84,28 @@ function buildAgentCommand(agentName: "codex" | "claude", bubbleId: string): str
   return `bash -lc ${shellQuote(script)}`;
 }
 
+function buildAgentProtocolBootstrapMessage(input: {
+  bubbleId: string;
+  role: "implementer" | "reviewer";
+  repoPath: string;
+  worktreePath: string;
+  taskArtifactPath: string;
+}): string {
+  const roleAction =
+    input.role === "implementer"
+      ? "Implement changes, then hand off with `pairflow pass --summary`."
+      : "Review changes, then either `pairflow pass --summary` or `pairflow converged --summary`.";
+  return [
+    `[pairflow] bubble=${input.bubbleId} role=${input.role} started.`,
+    roleAction,
+    "Protocol is mandatory: use `pairflow pass`, `pairflow ask-human`, `pairflow converged` only for handoff/escalation.",
+    "Never edit transcript/inbox/state files manually.",
+    `Repo: ${input.repoPath}`,
+    `Worktree: ${input.worktreePath}`,
+    `Task reference: ${input.taskArtifactPath}`
+  ].join(" ");
+}
+
 const resumableRuntimeStates = new Set([
   "RUNNING",
   "WAITING_HUMAN",
@@ -213,7 +235,21 @@ export async function startBubble(
         reviewerCommand: buildAgentCommand(
           resolved.bubbleConfig.agents.reviewer,
           resolved.bubbleId
-        )
+        ),
+        implementerBootstrapMessage: buildAgentProtocolBootstrapMessage({
+          bubbleId: resolved.bubbleId,
+          role: "implementer",
+          repoPath: resolved.repoPath,
+          worktreePath: resolved.bubblePaths.worktreePath,
+          taskArtifactPath: resolved.bubblePaths.taskArtifactPath
+        }),
+        reviewerBootstrapMessage: buildAgentProtocolBootstrapMessage({
+          bubbleId: resolved.bubbleId,
+          role: "reviewer",
+          repoPath: resolved.repoPath,
+          worktreePath: resolved.bubblePaths.worktreePath,
+          taskArtifactPath: resolved.bubblePaths.taskArtifactPath
+        })
       });
       tmuxSessionName = tmux.sessionName;
 
@@ -248,7 +284,21 @@ export async function startBubble(
         reviewerCommand: buildAgentCommand(
           resolved.bubbleConfig.agents.reviewer,
           resolved.bubbleId
-        )
+        ),
+        implementerBootstrapMessage: buildAgentProtocolBootstrapMessage({
+          bubbleId: resolved.bubbleId,
+          role: "implementer",
+          repoPath: resolved.repoPath,
+          worktreePath: resolved.bubblePaths.worktreePath,
+          taskArtifactPath: resolved.bubblePaths.taskArtifactPath
+        }),
+        reviewerBootstrapMessage: buildAgentProtocolBootstrapMessage({
+          bubbleId: resolved.bubbleId,
+          role: "reviewer",
+          repoPath: resolved.repoPath,
+          worktreePath: resolved.bubblePaths.worktreePath,
+          taskArtifactPath: resolved.bubblePaths.taskArtifactPath
+        })
       });
       tmuxSessionName = tmux.sessionName;
 

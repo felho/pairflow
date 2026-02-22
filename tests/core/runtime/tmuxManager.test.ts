@@ -75,6 +75,67 @@ describe("launchBubbleTmuxSession", () => {
     expect(calls[0]?.allowFailure).toBe(true);
   });
 
+  it("injects protocol bootstrap messages to agent panes when provided", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args: string[]) => {
+      calls.push(args);
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: args[0] === "has-session" ? 1 : 0
+      });
+    };
+
+    await launchBubbleTmuxSession({
+      bubbleId: "b_start_bootstrap",
+      worktreePath: "/tmp/worktree",
+      statusCommand: "status",
+      implementerCommand: "codex",
+      reviewerCommand: "claude",
+      implementerBootstrapMessage: "implementer protocol message",
+      reviewerBootstrapMessage: "reviewer protocol message",
+      runner
+    });
+
+    expect(calls.map((call) => call[0])).toEqual([
+      "has-session",
+      "new-session",
+      "split-window",
+      "split-window",
+      "select-layout",
+      "send-keys",
+      "send-keys",
+      "send-keys",
+      "send-keys"
+    ]);
+    expect(calls[5]).toEqual([
+      "send-keys",
+      "-t",
+      "pf-b_start_bootstrap:0.1",
+      "-l",
+      "implementer protocol message"
+    ]);
+    expect(calls[6]).toEqual([
+      "send-keys",
+      "-t",
+      "pf-b_start_bootstrap:0.1",
+      "Enter"
+    ]);
+    expect(calls[7]).toEqual([
+      "send-keys",
+      "-t",
+      "pf-b_start_bootstrap:0.2",
+      "-l",
+      "reviewer protocol message"
+    ]);
+    expect(calls[8]).toEqual([
+      "send-keys",
+      "-t",
+      "pf-b_start_bootstrap:0.2",
+      "Enter"
+    ]);
+  });
+
   it("fails when session already exists", async () => {
     const runner: TmuxRunner = (args) =>
       Promise.resolve({

@@ -27,7 +27,7 @@ Bubbles are fully isolated from each other — you can run multiple bubbles in p
 
 ### How does the flow work?
 
-Pairflow does **not** autonomously drive conversations between agents. Instead, the agents use protocol commands (`pass`, `ask-human`, `converged`) to advance the flow. Think of Pairflow as the referee + record-keeper, not the player.
+Pairflow does **not** autonomously decide technical content between agents. Instead, agents advance the flow through protocol commands (`pass`, `ask-human`, `converged`). Pairflow acts as the referee + state/protocol engine, and injects an initial protocol briefing into agent panes at bubble start.
 
 ```
 ┌──────────┐    pass     ┌──────────┐    pass     ┌──────────┐
@@ -135,8 +135,8 @@ pairflow bubble start --id feat_login --repo /path/to/myapp
 
 At this point, a tmux session `pf-feat_login` opens with:
 - **Pane 0**: Status loop (auto-refreshes state + watchdog)
-- **Pane 1**: Implementer agent (codex) — ready to work
-- **Pane 2**: Reviewer agent (claude) — waiting for handoff
+- **Pane 1**: Implementer agent (codex) — receives auto protocol briefing
+- **Pane 2**: Reviewer agent (claude) — receives auto protocol briefing
 
 ```bash
 # 3. Implementer finishes first pass, hands off to reviewer
@@ -425,8 +425,8 @@ Aliases: `pairflow agent pass/ask-human/converged` or `orchestra pass/ask-human/
 ## What is NOT in scope
 
 - This is **not** a web UI (Phase 3 will add a thin UI layer)
-- This is **not** an autonomous agent framework — agents must explicitly call protocol commands
-- `bubble start` does **not** send PASS/ASK/CONVERGED messages by itself — it only sets up the runtime environment
+- This is **not** a fully autonomous agent framework — agents still must explicitly call protocol commands
+- `bubble start` sets up runtime + injects protocol briefing, but does not auto-produce PASS/ASK/CONVERGED events
 
 ---
 
@@ -456,9 +456,9 @@ pairflow bubble reconcile --repo <repo>
 pairflow bubble start --id <id> --repo <repo>
 ```
 
-### No automatic agent communication
+### Agent ignores protocol
 
-This is expected. The flow advances through explicit protocol commands (`pass`, `ask-human`, `converged`). Pairflow is the orchestrator, not the driver.
+Pairflow now injects startup protocol instructions into both agent panes, but agents must still call protocol commands explicitly. If they drift, use `bubble status`, `bubble inbox`, and watchdog escalation to recover, then continue via `pass` / `ask-human` / `converged`.
 
 ---
 

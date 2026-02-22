@@ -291,6 +291,7 @@ Rules:
 5. Optional sound notifications are supported for `waiting-human` and `converged` events (configurable on/off and sound file).
 6. Status watcher must display `active_agent`, `active_since`, and watchdog countdown for escalation visibility.
 7. Watchdog escalation action is materialized as orchestrator-emitted `HUMAN_QUESTION` and state transition `RUNNING -> WAITING_HUMAN`.
+8. Bubble start injects an initial protocol briefing into implementer/reviewer panes (role, required command set, task/worktree references); this improves protocol adherence but does not emit protocol envelopes automatically.
 
 ## Git Workflow Rules
 1. Create bubble branch from selected base branch.
@@ -358,7 +359,7 @@ Acceptance:
 
 ## Risks and Mitigations
 1. Agent protocol bypass (agent does not call `pairflow` commands).
-   - Mitigation: prompt hardening + liveness watchdog escalation if no protocol command arrives within timeout.
+   - Mitigation: startup pane briefing + liveness watchdog escalation if no protocol command arrives within timeout.
 2. Infinite critique loops.
    - Mitigation: `max_rounds`, tie-break policies, human escalation.
 3. Agent drift from task scope.

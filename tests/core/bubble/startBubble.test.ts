@@ -87,8 +87,16 @@ describe("startBubble", () => {
             worktreePath: created.paths.worktreePath
           });
         },
-        launchBubbleTmuxSession: () => {
+        launchBubbleTmuxSession: (input) => {
           calls.push("launch");
+          expect(input.implementerBootstrapMessage).toContain("Protocol is mandatory");
+          expect(input.implementerBootstrapMessage).toContain(
+            created.paths.taskArtifactPath
+          );
+          expect(input.reviewerBootstrapMessage).toContain("Protocol is mandatory");
+          expect(input.reviewerBootstrapMessage).toContain(
+            created.paths.taskArtifactPath
+          );
           return Promise.resolve({ sessionName: "pf-b_start_01" });
         },
         claimRuntimeSession: (input) => {
@@ -315,8 +323,11 @@ describe("startBubble", () => {
             worktreePath: bubble.paths.worktreePath
           });
         },
-        launchBubbleTmuxSession: () =>
-          Promise.resolve({ sessionName: "pf-b_start_resume_01" })
+        launchBubbleTmuxSession: (input) => {
+          expect(input.implementerBootstrapMessage).toContain("role=implementer");
+          expect(input.reviewerBootstrapMessage).toContain("role=reviewer");
+          return Promise.resolve({ sessionName: "pf-b_start_resume_01" });
+        }
       }
     );
 
