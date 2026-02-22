@@ -28,7 +28,7 @@ const directedTransitions: ReadonlyMap<BubbleLifecycleState, ReadonlySet<BubbleL
     ["PREPARING_WORKSPACE", new Set(["RUNNING"])],
     ["RUNNING", new Set(["WAITING_HUMAN", "READY_FOR_APPROVAL"])],
     ["WAITING_HUMAN", new Set(["RUNNING"])],
-    ["READY_FOR_APPROVAL", new Set(["APPROVED_FOR_COMMIT"])],
+    ["READY_FOR_APPROVAL", new Set(["RUNNING", "APPROVED_FOR_COMMIT"])],
     ["APPROVED_FOR_COMMIT", new Set(["COMMITTED"])],
     ["COMMITTED", new Set(["DONE"])],
     ["DONE", new Set()],

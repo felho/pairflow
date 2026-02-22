@@ -5,6 +5,14 @@ import {
   runAskHumanCommand
 } from "./commands/agent/askHuman.js";
 import {
+  getConvergedHelpText,
+  runConvergedCommand
+} from "./commands/agent/converged.js";
+import {
+  getBubbleApproveHelpText,
+  runBubbleApproveCommand
+} from "./commands/bubble/approve.js";
+import {
   getBubbleCreateHelpText,
   runBubbleCreateCommand
 } from "./commands/bubble/create.js";
@@ -12,6 +20,10 @@ import {
   getBubbleReplyHelpText,
   runBubbleReplyCommand
 } from "./commands/bubble/reply.js";
+import {
+  getBubbleRequestReworkHelpText,
+  runBubbleRequestReworkCommand
+} from "./commands/bubble/requestRework.js";
 import {
   getPassHelpText,
   runPassCommand
@@ -41,6 +53,18 @@ async function handleAskHumanCommand(args: string[]): Promise<number> {
   return 0;
 }
 
+async function handleConvergedCommand(args: string[]): Promise<number> {
+  const result = await runConvergedCommand(args);
+  if (result === null) {
+    process.stdout.write(`${getConvergedHelpText()}\n`);
+    return 0;
+  }
+  process.stdout.write(
+    `CONVERGENCE recorded for ${result.bubbleId}: ${result.convergenceEnvelope.id}; approval requested: ${result.approvalRequestEnvelope.id}\n`
+  );
+  return 0;
+}
+
 async function handleBubbleReplyCommand(args: string[]): Promise<number> {
   const result = await runBubbleReplyCommand(args);
   if (result === null) {
@@ -49,6 +73,30 @@ async function handleBubbleReplyCommand(args: string[]): Promise<number> {
   }
   process.stdout.write(
     `HUMAN_REPLY recorded for ${result.bubbleId}: ${result.envelope.id} -> ${result.envelope.recipient}\n`
+  );
+  return 0;
+}
+
+async function handleBubbleApproveCommand(args: string[]): Promise<number> {
+  const result = await runBubbleApproveCommand(args);
+  if (result === null) {
+    process.stdout.write(`${getBubbleApproveHelpText()}\n`);
+    return 0;
+  }
+  process.stdout.write(
+    `APPROVAL_DECISION recorded for ${result.bubbleId}: ${result.envelope.id} -> approve\n`
+  );
+  return 0;
+}
+
+async function handleBubbleRequestReworkCommand(args: string[]): Promise<number> {
+  const result = await runBubbleRequestReworkCommand(args);
+  if (result === null) {
+    process.stdout.write(`${getBubbleRequestReworkHelpText()}\n`);
+    return 0;
+  }
+  process.stdout.write(
+    `APPROVAL_DECISION recorded for ${result.bubbleId}: ${result.envelope.id} -> revise\n`
   );
   return 0;
 }
@@ -76,6 +124,16 @@ export async function runCli(argv: string[]): Promise<number> {
     return handleAskHumanCommand(rest);
   }
 
+  if (command === "converged") {
+    return handleConvergedCommand(
+      [subcommand, ...rest].filter((part) => part !== undefined)
+    );
+  }
+
+  if (command === "agent" && subcommand === "converged") {
+    return handleConvergedCommand(rest);
+  }
+
   if (command === "bubble" && subcommand === "create") {
     const result = await runBubbleCreateCommand(rest);
     if (result === null) {
@@ -92,8 +150,16 @@ export async function runCli(argv: string[]): Promise<number> {
     return handleBubbleReplyCommand(rest);
   }
 
+  if (command === "bubble" && subcommand === "approve") {
+    return handleBubbleApproveCommand(rest);
+  }
+
+  if (command === "bubble" && subcommand === "request-rework") {
+    return handleBubbleRequestReworkCommand(rest);
+  }
+
   process.stderr.write(
-    "Unknown command. Supported: bubble create, bubble reply, pass, ask-human, agent pass, agent ask-human\n"
+    "Unknown command. Supported: bubble create, bubble reply, bubble approve, bubble request-rework, pass, ask-human, converged, agent pass, agent ask-human, agent converged\n"
   );
   return 1;
 }

@@ -82,9 +82,10 @@ Allowed transitions:
 3. `WAITING_HUMAN -> RUNNING` after human reply
 4. `RUNNING -> READY_FOR_APPROVAL` on convergence criteria pass
 5. `READY_FOR_APPROVAL -> APPROVED_FOR_COMMIT` on explicit user approval
-6. `APPROVED_FOR_COMMIT -> COMMITTED -> DONE`
-7. Any active state -> `FAILED` on unrecoverable errors
-8. Any non-final state -> `CANCELLED` on user stop
+6. `READY_FOR_APPROVAL -> RUNNING` on explicit rework decision (`APPROVAL_DECISION=revise|reject`)
+7. `APPROVED_FOR_COMMIT -> COMMITTED -> DONE`
+8. Any active state -> `FAILED` on unrecoverable errors
+9. Any non-final state -> `CANCELLED` on user stop
 
 RUNNING turn tracking (required):
 1. `state.json` must track `active_agent` (`claude` | `codex`) and `active_since` timestamp.

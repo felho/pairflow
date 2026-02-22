@@ -30,7 +30,7 @@ Ticket status:
 6. Ticket 06: Completed (transcript store, shared file locking, sequence allocation hardening).
 7. Ticket 07: Completed (`pass` command workflow + workspace resolution + CLI routing).
 8. Ticket 08: Completed (`ask-human` + `bubble reply` workflow and state/protocol integration).
-9. Ticket 09: Pending (`converged` validator + approval gating).
+9. Ticket 09: Completed (`converged` validator + approval gating).
 10. Ticket 10: Pending (tmux launcher + watchdog + status pane + commit gate final path).
 
 ## Milestone 1: Phase 1 Single-Bubble MVP (CLI-First, Strict Mode)

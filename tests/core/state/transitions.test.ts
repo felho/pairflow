@@ -14,6 +14,7 @@ describe("state transitions", () => {
     expect(canTransition("RUNNING", "WAITING_HUMAN")).toBe(true);
     expect(canTransition("RUNNING", "READY_FOR_APPROVAL")).toBe(true);
     expect(canTransition("WAITING_HUMAN", "RUNNING")).toBe(true);
+    expect(canTransition("READY_FOR_APPROVAL", "RUNNING")).toBe(true);
     expect(canTransition("READY_FOR_APPROVAL", "APPROVED_FOR_COMMIT")).toBe(true);
     expect(canTransition("APPROVED_FOR_COMMIT", "COMMITTED")).toBe(true);
     expect(canTransition("COMMITTED", "DONE")).toBe(true);

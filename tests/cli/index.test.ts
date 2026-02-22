@@ -50,4 +50,32 @@ describe("runCli", () => {
     expect(exitCode).toBe(0);
     expect(stdoutSpy).toHaveBeenCalled();
   });
+
+  it("supports top-level converged help", async () => {
+    const exitCode = await runCli(["converged", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+  });
+
+  it("supports agent converged namespace", async () => {
+    const exitCode = await runCli(["agent", "converged", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+  });
+
+  it("supports bubble approve help", async () => {
+    const exitCode = await runCli(["bubble", "approve", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+  });
+
+  it("supports bubble request-rework help", async () => {
+    const exitCode = await runCli(["bubble", "request-rework", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+  });
 });

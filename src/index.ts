@@ -10,6 +10,11 @@ export {
   AskHumanCommandError
 } from "./core/agent/askHuman.js";
 export {
+  asConvergedCommandError,
+  emitConvergedFromWorkspace,
+  ConvergedCommandError
+} from "./core/agent/converged.js";
+export {
   asPassCommandError,
   emitPassFromWorkspace,
   inferPassIntent,
@@ -38,6 +43,13 @@ export {
   DEFAULT_WORK_MODE
 } from "./config/defaults.js";
 export {
+  asApprovalCommandError,
+  ApprovalCommandError,
+  emitApprovalDecision,
+  emitApprove,
+  emitRequestRework
+} from "./core/human/approval.js";
+export {
   asHumanReplyCommandError,
   emitHumanReply,
   HumanReplyCommandError
@@ -48,6 +60,16 @@ export {
   runAskHumanCommand
 } from "./cli/commands/agent/askHuman.js";
 export {
+  getConvergedHelpText,
+  parseConvergedCommandOptions,
+  runConvergedCommand
+} from "./cli/commands/agent/converged.js";
+export {
+  getBubbleApproveHelpText,
+  parseBubbleApproveCommandOptions,
+  runBubbleApproveCommand
+} from "./cli/commands/bubble/approve.js";
+export {
   getBubbleCreateHelpText,
   parseBubbleCreateCommandOptions,
   runBubbleCreateCommand
@@ -57,6 +79,11 @@ export {
   parseBubbleReplyCommandOptions,
   runBubbleReplyCommand
 } from "./cli/commands/bubble/reply.js";
+export {
+  getBubbleRequestReworkHelpText,
+  parseBubbleRequestReworkCommandOptions,
+  runBubbleRequestReworkCommand
+} from "./cli/commands/bubble/requestRework.js";
 export {
   getPassHelpText,
   parsePassCommandOptions,
@@ -121,6 +148,9 @@ export {
   readTranscriptEnvelopes
 } from "./core/protocol/transcriptStore.js";
 export {
+  validateConvergencePolicy
+} from "./core/convergence/policy.js";
+export {
   assertValidProtocolEnvelope,
   validateProtocolEnvelope
 } from "./core/protocol/validators.js";
@@ -153,6 +183,10 @@ export type {
   EmitAskHumanResult
 } from "./core/agent/askHuman.js";
 export type {
+  EmitConvergedInput,
+  EmitConvergedResult
+} from "./core/agent/converged.js";
+export type {
   EmitPassInput,
   EmitPassResult
 } from "./core/agent/pass.js";
@@ -174,15 +208,30 @@ export type {
   ParsedAskHumanCommandOptions
 } from "./cli/commands/agent/askHuman.js";
 export type {
+  ConvergedCommandOptions,
+  ConvergedHelpCommandOptions,
+  ParsedConvergedCommandOptions
+} from "./cli/commands/agent/converged.js";
+export type {
   ParsedPassCommandOptions,
   PassHelpCommandOptions,
   PassCommandOptions
 } from "./cli/commands/agent/pass.js";
 export type {
+  BubbleApproveCommandOptions,
+  BubbleApproveHelpCommandOptions,
+  ParsedBubbleApproveCommandOptions
+} from "./cli/commands/bubble/approve.js";
+export type {
   BubbleReplyCommandOptions,
   BubbleReplyHelpCommandOptions,
   ParsedBubbleReplyCommandOptions
 } from "./cli/commands/bubble/reply.js";
+export type {
+  BubbleRequestReworkCommandOptions,
+  BubbleRequestReworkHelpCommandOptions,
+  ParsedBubbleRequestReworkCommandOptions
+} from "./cli/commands/bubble/requestRework.js";
 export type {
   BubbleCreateCommandOptions
 } from "./cli/commands/bubble/create.js";
@@ -216,12 +265,22 @@ export type {
   ProtocolSequenceAllocation
 } from "./core/protocol/sequenceAllocator.js";
 export type {
+  ConvergencePolicyInput,
+  ConvergencePolicyResult
+} from "./core/convergence/policy.js";
+export type {
   AppendProtocolEnvelopeInput,
   AppendProtocolEnvelopeResult,
   ProtocolMirrorWriteFailure,
   ReadTranscriptOptions,
   ProtocolEnvelopeDraft
 } from "./core/protocol/transcriptStore.js";
+export type {
+  EmitApprovalDecisionInput,
+  EmitApprovalDecisionResult,
+  EmitApproveInput,
+  EmitRequestReworkInput
+} from "./core/human/approval.js";
 export type {
   EmitHumanReplyInput,
   EmitHumanReplyResult
