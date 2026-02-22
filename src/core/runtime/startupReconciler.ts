@@ -12,17 +12,22 @@ import {
   removeRuntimeSessions,
   type RuntimeSessionsRegistry
 } from "./sessionsRegistry.js";
+import { runTmux } from "./tmuxManager.js";
 
 export type RuntimeSessionStaleReason =
   | "missing_bubble"
   | "final_state"
   | "non_runtime_state"
+  | "missing_tmux_session"
   | "invalid_state";
+
+export type TmuxSessionLivenessProbe = (sessionName: string) => Promise<boolean>;
 
 export interface ReconcileRuntimeSessionsInput {
   repoPath?: string | undefined;
   cwd?: string | undefined;
   dryRun?: boolean | undefined;
+  isTmuxSessionAlive?: TmuxSessionLivenessProbe | undefined;
 }
 
 export interface ReconcileRuntimeSessionsAction {
@@ -55,6 +60,19 @@ const runtimeSessionExpectedStates = new Set([
   "COMMITTED"
 ]);
 
+const isTmuxSessionAliveDefault: TmuxSessionLivenessProbe = async (
+  sessionName: string
+): Promise<boolean> => {
+  try {
+    const result = await runTmux(["has-session", "-t", sessionName], {
+      allowFailure: true
+    });
+    return result.exitCode === 0;
+  } catch {
+    return false;
+  }
+};
+
 async function listBubbleIdSet(repoPath: string): Promise<Set<string>> {
   const bubblesRoot = join(repoPath, ".pairflow", "bubbles");
   const entries = await readdir(bubblesRoot, { withFileTypes: true }).catch(
@@ -74,7 +92,9 @@ async function listBubbleIdSet(repoPath: string): Promise<Set<string>> {
 async function resolveStaleReason(
   repoPath: string,
   bubbleId: string,
-  bubbleIdSet: Set<string>
+  bubbleIdSet: Set<string>,
+  tmuxSessionName: string,
+  isTmuxSessionAlive: TmuxSessionLivenessProbe
 ): Promise<RuntimeSessionStaleReason | null> {
   if (!bubbleIdSet.has(bubbleId)) {
     return "missing_bubble";
@@ -88,6 +108,10 @@ async function resolveStaleReason(
     }
     if (!runtimeSessionExpectedStates.has(loaded.state.state)) {
       return "non_runtime_state";
+    }
+    const tmuxSessionAlive = await isTmuxSessionAlive(tmuxSessionName);
+    if (!tmuxSessionAlive) {
+      return "missing_tmux_session";
     }
     return null;
   } catch {
@@ -116,6 +140,7 @@ export async function reconcileRuntimeSessions(
   }
   const bubbleIdSet = await listBubbleIdSet(repoPath);
   const sessionsPath = join(repoPath, ".pairflow", "runtime", "sessions.json");
+  const isTmuxSessionAlive = input.isTmuxSessionAlive ?? isTmuxSessionAliveDefault;
   const registry = await readRuntimeSessionsRegistry(sessionsPath, {
     allowMissing: true
   });
@@ -126,7 +151,18 @@ export async function reconcileRuntimeSessions(
   const staleBubbleIds: string[] = [];
 
   for (const bubbleId of Object.keys(registry).sort((a, b) => a.localeCompare(b))) {
-    const reason = await resolveStaleReason(repoPath, bubbleId, bubbleIdSet);
+    const session = registry[bubbleId];
+    if (session === undefined) {
+      continue;
+    }
+
+    const reason = await resolveStaleReason(
+      repoPath,
+      bubbleId,
+      bubbleIdSet,
+      session.tmuxSessionName,
+      isTmuxSessionAlive
+    );
     if (reason === null) {
       continue;
     }

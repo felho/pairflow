@@ -98,7 +98,9 @@ describe("reconcileRuntimeSessions", () => {
 
     const preview = await reconcileRuntimeSessions({
       repoPath,
-      dryRun: true
+      dryRun: true,
+      isTmuxSessionAlive: (sessionName) =>
+        Promise.resolve(sessionName === "pf-b_reconcile_01")
     });
     expect(preview.staleCandidates).toBe(2);
     expect(preview.sessionsBefore).toBe(3);
@@ -109,7 +111,9 @@ describe("reconcileRuntimeSessions", () => {
     ]);
 
     const applied = await reconcileRuntimeSessions({
-      repoPath
+      repoPath,
+      isTmuxSessionAlive: (sessionName) =>
+        Promise.resolve(sessionName === "pf-b_reconcile_01")
     });
     expect(applied.staleCandidates).toBe(2);
     expect(applied.sessionsBefore).toBe(3);
@@ -142,7 +146,10 @@ describe("reconcileRuntimeSessions", () => {
       now: new Date("2026-02-22T19:10:00.000Z")
     });
 
-    const report = await reconcileRuntimeSessions({ repoPath });
+    const report = await reconcileRuntimeSessions({
+      repoPath,
+      isTmuxSessionAlive: () => Promise.resolve(true)
+    });
     expect(report.staleCandidates).toBe(1);
     expect(report.actions[0]?.reason).toBe("invalid_state");
     expect(report.sessionsAfter).toBe(0);
@@ -153,6 +160,33 @@ describe("reconcileRuntimeSessions", () => {
     await expect(
       reconcileRuntimeSessions({ cwd: dir })
     ).rejects.toBeInstanceOf(StartupReconcilerError);
+  });
+
+  it("treats missing tmux session as stale for runtime states", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_reconcile_05",
+      task: "Runtime stale by missing tmux"
+    });
+
+    await upsertRuntimeSession({
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      tmuxSessionName: "pf-b_reconcile_05",
+      now: new Date("2026-02-22T19:30:00.000Z")
+    });
+
+    const report = await reconcileRuntimeSessions({
+      repoPath,
+      isTmuxSessionAlive: () => Promise.resolve(false)
+    });
+    expect(report.staleCandidates).toBe(1);
+    expect(report.actions[0]?.reason).toBe("missing_tmux_session");
+    expect(report.actions[0]?.removed).toBe(true);
+    expect(report.sessionsAfter).toBe(0);
   });
 
   it("removes stale pre-runtime session and unblocks subsequent start", async () => {
