@@ -155,4 +155,20 @@ describe("runCli", () => {
     expect(exitCode).toBe(1);
     expect(stderrSpy).toHaveBeenCalled();
   });
+
+  it("rejects unknown bubble subcommand", async () => {
+    const exitCode = await runCli(["bubble", "unknown"]);
+
+    expect(exitCode).toBe(1);
+    expect(stderrSpy).toHaveBeenCalled();
+  });
+
+  it("prints registry-backed unknown command support list", async () => {
+    const exitCode = await runCli(["unknown"]);
+
+    expect(exitCode).toBe(1);
+    const errorText = stderrSpy.mock.calls.map((call) => call[0]).join("");
+    expect(errorText).toContain("bubble watchdog");
+    expect(errorText).toContain("agent converged");
+  });
 });

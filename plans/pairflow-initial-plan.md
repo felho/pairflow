@@ -51,6 +51,8 @@ Ticket status:
 27. Ticket 27: Completed (active watchdog escalation trigger: added `bubble watchdog` core/CLI path to emit orchestrator `HUMAN_QUESTION` + transition `RUNNING -> WAITING_HUMAN` on timeout, and wired status pane loop to execute it continuously).
 28. Ticket 28: Completed (shared `shellQuote` utility extracted and adopted by start/open/tmux-delivery modules to remove duplicated shell-escaping logic).
 29. Ticket 29: Completed (CLI routing deduplicated for `pass`/`ask-human`/`converged` across top-level and `agent` namespace via shared argument resolver helper).
+30. Ticket 30: Completed (bubble subcommand routing converted from long `if` chain to registry-based dispatch in `cli/index.ts`, keeping output/behavior unchanged while improving scalability).
+31. Ticket 31: Completed (CLI unknown-command support list now generated from routing registries, eliminating manual drift risk as commands grow).
 
 ## Milestone 1: Phase 1 Single-Bubble MVP (CLI-First, Strict Mode)
 

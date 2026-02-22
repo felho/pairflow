@@ -116,6 +116,7 @@ async function handleConvergedCommand(args: string[]): Promise<number> {
 }
 
 type AgentCommandName = "pass" | "ask-human" | "converged";
+const agentCommandNames = ["pass", "ask-human", "converged"] as const;
 
 function resolveAgentCommandArgs(
   command: string | undefined,
@@ -140,6 +141,18 @@ async function handleBubbleReplyCommand(args: string[]): Promise<number> {
   }
   process.stdout.write(
     `HUMAN_REPLY recorded for ${result.bubbleId}: ${result.envelope.id} -> ${result.envelope.recipient}\n`
+  );
+  return 0;
+}
+
+async function handleBubbleCreateCommand(args: string[]): Promise<number> {
+  const result = await runBubbleCreateCommand(args);
+  if (result === null) {
+    process.stdout.write(`${getBubbleCreateHelpText()}\n`);
+    return 0;
+  }
+  process.stdout.write(
+    `Created bubble ${result.bubbleId} at ${result.paths.bubbleDir}\n`
   );
   return 0;
 }
@@ -339,6 +352,40 @@ async function handleBubbleInboxCommand(args: string[]): Promise<number> {
   return 0;
 }
 
+const bubbleSubcommandHandlers: Readonly<
+  Record<string, (args: string[]) => Promise<number>>
+> = {
+  create: handleBubbleCreateCommand,
+  start: handleBubbleStartCommand,
+  open: handleBubbleOpenCommand,
+  stop: handleBubbleStopCommand,
+  resume: handleBubbleResumeCommand,
+  status: handleBubbleStatusCommand,
+  watchdog: handleBubbleWatchdogCommand,
+  inbox: handleBubbleInboxCommand,
+  list: handleBubbleListCommand,
+  reconcile: handleBubbleReconcileCommand,
+  reply: handleBubbleReplyCommand,
+  commit: handleBubbleCommitCommand,
+  approve: handleBubbleApproveCommand,
+  "request-rework": handleBubbleRequestReworkCommand
+};
+
+function buildSupportedCommandsText(): string {
+  const bubbleCommands = Object.keys(bubbleSubcommandHandlers).map(
+    (subcommand) => `bubble ${subcommand}`
+  );
+  const topLevelAgentCommands = [...agentCommandNames];
+  const namespacedAgentCommands = agentCommandNames.map(
+    (commandName) => `agent ${commandName}`
+  );
+  return [
+    ...bubbleCommands,
+    ...topLevelAgentCommands,
+    ...namespacedAgentCommands
+  ].join(", ");
+}
+
 export async function runCli(argv: string[]): Promise<number> {
   const [command, subcommand, ...rest] = argv;
 
@@ -367,72 +414,15 @@ export async function runCli(argv: string[]): Promise<number> {
     return handleConvergedCommand(convergedArgs);
   }
 
-  if (command === "bubble" && subcommand === "create") {
-    const result = await runBubbleCreateCommand(rest);
-    if (result === null) {
-      process.stdout.write(`${getBubbleCreateHelpText()}\n`);
-      return 0;
+  if (command === "bubble" && subcommand !== undefined) {
+    const bubbleHandler = bubbleSubcommandHandlers[subcommand];
+    if (bubbleHandler !== undefined) {
+      return bubbleHandler(rest);
     }
-    process.stdout.write(
-      `Created bubble ${result.bubbleId} at ${result.paths.bubbleDir}\n`
-    );
-    return 0;
-  }
-
-  if (command === "bubble" && subcommand === "start") {
-    return handleBubbleStartCommand(rest);
-  }
-
-  if (command === "bubble" && subcommand === "open") {
-    return handleBubbleOpenCommand(rest);
-  }
-
-  if (command === "bubble" && subcommand === "stop") {
-    return handleBubbleStopCommand(rest);
-  }
-
-  if (command === "bubble" && subcommand === "resume") {
-    return handleBubbleResumeCommand(rest);
-  }
-
-  if (command === "bubble" && subcommand === "status") {
-    return handleBubbleStatusCommand(rest);
-  }
-
-  if (command === "bubble" && subcommand === "watchdog") {
-    return handleBubbleWatchdogCommand(rest);
-  }
-
-  if (command === "bubble" && subcommand === "inbox") {
-    return handleBubbleInboxCommand(rest);
-  }
-
-  if (command === "bubble" && subcommand === "list") {
-    return handleBubbleListCommand(rest);
-  }
-
-  if (command === "bubble" && subcommand === "reconcile") {
-    return handleBubbleReconcileCommand(rest);
-  }
-
-  if (command === "bubble" && subcommand === "reply") {
-    return handleBubbleReplyCommand(rest);
-  }
-
-  if (command === "bubble" && subcommand === "commit") {
-    return handleBubbleCommitCommand(rest);
-  }
-
-  if (command === "bubble" && subcommand === "approve") {
-    return handleBubbleApproveCommand(rest);
-  }
-
-  if (command === "bubble" && subcommand === "request-rework") {
-    return handleBubbleRequestReworkCommand(rest);
   }
 
   process.stderr.write(
-    "Unknown command. Supported: bubble create, bubble start, bubble open, bubble stop, bubble resume, bubble status, bubble watchdog, bubble inbox, bubble list, bubble reconcile, bubble reply, bubble commit, bubble approve, bubble request-rework, pass, ask-human, converged, agent pass, agent ask-human, agent converged\n"
+    `Unknown command. Supported: ${buildSupportedCommandsText()}\n`
   );
   return 1;
 }
