@@ -25,6 +25,12 @@ import {
   runBubbleReplyCommand
 } from "./commands/bubble/reply.js";
 import {
+  getBubbleReconcileHelpText,
+  parseBubbleReconcileCommandOptions,
+  renderBubbleReconcileText,
+  runBubbleReconcileCommand
+} from "./commands/bubble/reconcile.js";
+import {
   getBubbleListHelpText,
   parseBubbleListCommandOptions,
   renderBubbleListText,
@@ -176,6 +182,27 @@ async function handleBubbleListCommand(args: string[]): Promise<number> {
   return 0;
 }
 
+async function handleBubbleReconcileCommand(args: string[]): Promise<number> {
+  const parsed = parseBubbleReconcileCommandOptions(args);
+  if (parsed.help) {
+    process.stdout.write(`${getBubbleReconcileHelpText()}\n`);
+    return 0;
+  }
+
+  const result = await runBubbleReconcileCommand(parsed);
+  if (result === null) {
+    process.stdout.write(`${getBubbleReconcileHelpText()}\n`);
+    return 0;
+  }
+
+  if (parsed.json) {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  } else {
+    process.stdout.write(`${renderBubbleReconcileText(result)}\n`);
+  }
+  return 0;
+}
+
 async function handleBubbleCommitCommand(args: string[]): Promise<number> {
   const result = await runBubbleCommitCommand(args);
   if (result === null) {
@@ -246,6 +273,10 @@ export async function runCli(argv: string[]): Promise<number> {
     return handleBubbleListCommand(rest);
   }
 
+  if (command === "bubble" && subcommand === "reconcile") {
+    return handleBubbleReconcileCommand(rest);
+  }
+
   if (command === "bubble" && subcommand === "reply") {
     return handleBubbleReplyCommand(rest);
   }
@@ -263,7 +294,7 @@ export async function runCli(argv: string[]): Promise<number> {
   }
 
   process.stderr.write(
-    "Unknown command. Supported: bubble create, bubble start, bubble status, bubble list, bubble reply, bubble commit, bubble approve, bubble request-rework, pass, ask-human, converged, agent pass, agent ask-human, agent converged\n"
+    "Unknown command. Supported: bubble create, bubble start, bubble status, bubble list, bubble reconcile, bubble reply, bubble commit, bubble approve, bubble request-rework, pass, ask-human, converged, agent pass, agent ask-human, agent converged\n"
   );
   return 1;
 }

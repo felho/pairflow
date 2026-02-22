@@ -34,6 +34,7 @@ Ticket status:
 10. Ticket 10: Completed (tmux launcher + watchdog status/countdown + commit gate command path).
 11. Ticket 11: Completed (atomic runtime sessions registry + start-time registration/rollback wiring).
 12. Ticket 12: Completed (multi-bubble status aggregation via `pairflow bubble list` + runtime session visibility).
+13. Ticket 13: Completed (startup/runtime reconcile command for stale session detection + cleanup).
 
 ## Milestone 1: Phase 1 Single-Bubble MVP (CLI-First, Strict Mode)
 

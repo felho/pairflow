@@ -44,6 +44,11 @@ export {
   listBubbles
 } from "./core/bubble/listBubbles.js";
 export {
+  asStartupReconcilerError,
+  reconcileRuntimeSessions,
+  StartupReconcilerError
+} from "./core/runtime/startupReconciler.js";
+export {
   asBubbleStatusError,
   BubbleStatusError,
   getBubbleStatus
@@ -115,6 +120,12 @@ export {
   renderBubbleListText,
   runBubbleListCommand
 } from "./cli/commands/bubble/list.js";
+export {
+  getBubbleReconcileHelpText,
+  parseBubbleReconcileCommandOptions,
+  renderBubbleReconcileText,
+  runBubbleReconcileCommand
+} from "./cli/commands/bubble/reconcile.js";
 export {
   getBubbleStatusHelpText,
   parseBubbleStatusCommandOptions,
@@ -270,6 +281,12 @@ export type {
   BubbleListView
 } from "./core/bubble/listBubbles.js";
 export type {
+  ReconcileRuntimeSessionsAction,
+  ReconcileRuntimeSessionsInput,
+  ReconcileRuntimeSessionsReport,
+  RuntimeSessionStaleReason
+} from "./core/runtime/startupReconciler.js";
+export type {
   BubbleStatusInput,
   BubbleStatusView
 } from "./core/bubble/statusBubble.js";
@@ -322,6 +339,11 @@ export type {
   BubbleListHelpCommandOptions,
   ParsedBubbleListCommandOptions
 } from "./cli/commands/bubble/list.js";
+export type {
+  BubbleReconcileCommandOptions,
+  BubbleReconcileHelpCommandOptions,
+  ParsedBubbleReconcileCommandOptions
+} from "./cli/commands/bubble/reconcile.js";
 export type {
   BubbleStatusCommandOptions,
   BubbleStatusHelpCommandOptions,
