@@ -4,6 +4,7 @@ import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
 import { applyStateTransition } from "../state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import { BubbleLookupError, resolveBubbleById } from "../bubble/bubbleLookup.js";
+import { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
 import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
 import type { AgentName, BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ApprovalDecision, ProtocolEnvelope } from "../../types/protocol.js";
@@ -159,6 +160,17 @@ export async function emitApprovalDecision(
       `APPROVAL_DECISION ${appended.envelope.id} was appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`
     );
   }
+
+  // Optional UX signal; never block protocol/state progression on notification failure.
+  void emitTmuxDeliveryNotification({
+    bubbleId: resolved.bubbleId,
+    bubbleConfig: resolved.bubbleConfig,
+    sessionsPath: resolved.bubblePaths.sessionsPath,
+    envelope: appended.envelope,
+    ...(appended.envelope.refs[0] !== undefined
+      ? { messageRef: appended.envelope.refs[0] }
+      : {})
+  });
 
   return {
     bubbleId: resolved.bubbleId,

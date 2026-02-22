@@ -269,6 +269,9 @@ export {
   playSoundWithAfplay
 } from "./core/runtime/notifications.js";
 export {
+  emitTmuxDeliveryNotification
+} from "./core/runtime/tmuxDelivery.js";
+export {
   computeWatchdogStatus
 } from "./core/runtime/watchdog.js";
 export {
@@ -504,6 +507,11 @@ export type {
   NotificationPathExists,
   NotificationSoundPlayer
 } from "./core/runtime/notifications.js";
+export type {
+  EmitTmuxDeliveryNotificationInput,
+  EmitTmuxDeliveryNotificationResult,
+  TmuxDeliveryFailureReason
+} from "./core/runtime/tmuxDelivery.js";
 export type {
   WatchdogStatus
 } from "./core/runtime/watchdog.js";

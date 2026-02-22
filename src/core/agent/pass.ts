@@ -10,6 +10,7 @@ import {
   resolveBubbleFromWorkspaceCwd,
   WorkspaceResolutionError
 } from "../bubble/workspaceResolution.js";
+import { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
 import { isPassIntent, type PassIntent, type ProtocolEnvelope } from "../../types/protocol.js";
 import type { AgentName, AgentRole, BubbleStateSnapshot, RoundRoleHistoryEntry } from "../../types/bubble.js";
 
@@ -207,6 +208,17 @@ export async function emitPassFromWorkspace(input: EmitPassInput): Promise<EmitP
   }
 
   const mapped = mapAppendResult(appendResult);
+
+  // Optional UX signal; never block protocol/state progression on notification failure.
+  void emitTmuxDeliveryNotification({
+    bubbleId: resolved.bubbleId,
+    bubbleConfig: resolved.bubbleConfig,
+    sessionsPath: resolved.bubblePaths.sessionsPath,
+    envelope: mapped.envelope,
+    ...(mapped.envelope.refs[0] !== undefined
+      ? { messageRef: mapped.envelope.refs[0] }
+      : {})
+  });
 
   return {
     bubbleId: resolved.bubbleId,

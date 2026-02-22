@@ -10,6 +10,7 @@ import {
   WorkspaceResolutionError
 } from "../bubble/workspaceResolution.js";
 import { emitBubbleNotification } from "../runtime/notifications.js";
+import { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
 import type { AgentName, BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 
@@ -169,6 +170,17 @@ export async function emitConvergedFromWorkspace(
       `CONVERGENCE ${convergence.envelope.id} and APPROVAL_REQUEST ${approvalRequest.envelope.id} were appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`
     );
   }
+
+  // Optional UX signal; never block protocol/state progression on notification failure.
+  void emitTmuxDeliveryNotification({
+    bubbleId: resolved.bubbleId,
+    bubbleConfig: resolved.bubbleConfig,
+    sessionsPath: resolved.bubblePaths.sessionsPath,
+    envelope: approvalRequest.envelope,
+    ...(approvalRequest.envelope.refs[0] !== undefined
+      ? { messageRef: approvalRequest.envelope.refs[0] }
+      : {})
+  });
 
   // Optional UX signal; never block protocol/state progression on notification failure.
   void emitBubbleNotification(resolved.bubbleConfig, "converged");
