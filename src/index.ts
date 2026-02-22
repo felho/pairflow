@@ -49,6 +49,11 @@ export {
   StartupReconcilerError
 } from "./core/runtime/startupReconciler.js";
 export {
+  asStopBubbleError,
+  StopBubbleError,
+  stopBubble
+} from "./core/bubble/stopBubble.js";
+export {
   asBubbleStatusError,
   BubbleStatusError,
   getBubbleStatus
@@ -126,6 +131,11 @@ export {
   renderBubbleReconcileText,
   runBubbleReconcileCommand
 } from "./cli/commands/bubble/reconcile.js";
+export {
+  getBubbleStopHelpText,
+  parseBubbleStopCommandOptions,
+  runBubbleStopCommand
+} from "./cli/commands/bubble/stop.js";
 export {
   getBubbleStatusHelpText,
   parseBubbleStatusCommandOptions,
@@ -276,6 +286,11 @@ export type {
   StartBubbleResult
 } from "./core/bubble/startBubble.js";
 export type {
+  StopBubbleDependencies,
+  StopBubbleInput,
+  StopBubbleResult
+} from "./core/bubble/stopBubble.js";
+export type {
   BubbleListInput,
   BubbleListEntry,
   BubbleListStateCounts,
@@ -335,6 +350,11 @@ export type {
   BubbleStartHelpCommandOptions,
   ParsedBubbleStartCommandOptions
 } from "./cli/commands/bubble/start.js";
+export type {
+  BubbleStopCommandOptions,
+  BubbleStopHelpCommandOptions,
+  ParsedBubbleStopCommandOptions
+} from "./cli/commands/bubble/stop.js";
 export type {
   BubbleListCommandOptions,
   BubbleListHelpCommandOptions,

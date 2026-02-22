@@ -45,6 +45,10 @@ import {
   runBubbleStartCommand
 } from "./commands/bubble/start.js";
 import {
+  getBubbleStopHelpText,
+  runBubbleStopCommand
+} from "./commands/bubble/stop.js";
+import {
   getBubbleStatusHelpText,
   parseBubbleStatusCommandOptions,
   renderBubbleStatusText,
@@ -136,6 +140,19 @@ async function handleBubbleStartCommand(args: string[]): Promise<number> {
 
   process.stdout.write(
     `Started bubble ${result.bubbleId}: session ${result.tmuxSessionName}, worktree ${result.worktreePath}\n`
+  );
+  return 0;
+}
+
+async function handleBubbleStopCommand(args: string[]): Promise<number> {
+  const result = await runBubbleStopCommand(args);
+  if (result === null) {
+    process.stdout.write(`${getBubbleStopHelpText()}\n`);
+    return 0;
+  }
+
+  process.stdout.write(
+    `Stopped bubble ${result.bubbleId}: state=${result.state.state}, session=${result.tmuxSessionName}, tmuxExisted=${result.tmuxSessionExisted ? "yes" : "no"}, runtimeSessionRemoved=${result.runtimeSessionRemoved ? "yes" : "no"}\n`
   );
   return 0;
 }
@@ -265,6 +282,10 @@ export async function runCli(argv: string[]): Promise<number> {
     return handleBubbleStartCommand(rest);
   }
 
+  if (command === "bubble" && subcommand === "stop") {
+    return handleBubbleStopCommand(rest);
+  }
+
   if (command === "bubble" && subcommand === "status") {
     return handleBubbleStatusCommand(rest);
   }
@@ -294,7 +315,7 @@ export async function runCli(argv: string[]): Promise<number> {
   }
 
   process.stderr.write(
-    "Unknown command. Supported: bubble create, bubble start, bubble status, bubble list, bubble reconcile, bubble reply, bubble commit, bubble approve, bubble request-rework, pass, ask-human, converged, agent pass, agent ask-human, agent converged\n"
+    "Unknown command. Supported: bubble create, bubble start, bubble stop, bubble status, bubble list, bubble reconcile, bubble reply, bubble commit, bubble approve, bubble request-rework, pass, ask-human, converged, agent pass, agent ask-human, agent converged\n"
   );
   return 1;
 }
