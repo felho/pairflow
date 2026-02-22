@@ -59,6 +59,7 @@ Ticket status:
 35. Ticket 35: Completed (`bubble list` runtime session accounting aligned with reconcile semantics: sessions on non-runtime bubble states now counted as stale (not registered), with dedicated integration coverage).
 36. Ticket 36: Completed (runtime reconcile now validates tmux session liveness for runtime states and removes orphaned registry entries (`missing_tmux_session`), with deterministic probe-injection test coverage).
 37. Ticket 37: Completed (`bubble start` now self-heals stale runtime-session ownership by probing existing tmux session liveness: if registry entry exists but tmux session is gone, stale ownership is removed and start proceeds; if session is alive, start remains rejected with explicit ownership guidance).
+38. Ticket 38: Completed (runtime session ownership claim is now atomic via `claimRuntimeSession` lock-guarded check+insert, and `bubble start` switched from read/upsert TOCTOU flow to atomic ownership acquisition with stale-session retry semantics and updated concurrency-focused tests).
 
 ## Milestone 1: Phase 1 Single-Bubble MVP (CLI-First, Strict Mode)
 

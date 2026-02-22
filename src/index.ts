@@ -268,6 +268,7 @@ export {
   TmuxSessionExistsError
 } from "./core/runtime/tmuxManager.js";
 export {
+  claimRuntimeSession,
   readRuntimeSessionsRegistry,
   removeRuntimeSession,
   removeRuntimeSessions,
@@ -513,6 +514,8 @@ export type {
   TmuxRunner
 } from "./core/runtime/tmuxManager.js";
 export type {
+  ClaimRuntimeSessionInput,
+  ClaimRuntimeSessionResult,
   ReadRuntimeSessionsOptions,
   RemoveRuntimeSessionsInput,
   RemoveRuntimeSessionsResult,

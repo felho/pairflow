@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  claimRuntimeSession,
   readRuntimeSessionsRegistry,
   removeRuntimeSession,
   removeRuntimeSessions,
@@ -30,6 +31,33 @@ afterEach(async () => {
 });
 
 describe("sessionsRegistry", () => {
+  it("atomically claims session ownership only when missing", async () => {
+    const root = await createTempDir();
+    const sessionsPath = join(root, "runtime", "sessions.json");
+
+    const first = await claimRuntimeSession({
+      sessionsPath,
+      bubbleId: "b_sessions_claim",
+      repoPath: "/repo/path",
+      worktreePath: "/repo/.pairflow-worktrees/b_sessions_claim",
+      tmuxSessionName: "pf-b_sessions_claim",
+      now: new Date("2026-02-22T16:00:00.000Z")
+    });
+    expect(first.claimed).toBe(true);
+    expect(first.record.tmuxSessionName).toBe("pf-b_sessions_claim");
+
+    const second = await claimRuntimeSession({
+      sessionsPath,
+      bubbleId: "b_sessions_claim",
+      repoPath: "/repo/path",
+      worktreePath: "/repo/.pairflow-worktrees/b_sessions_claim",
+      tmuxSessionName: "pf-b_sessions_claim_new",
+      now: new Date("2026-02-22T16:00:05.000Z")
+    });
+    expect(second.claimed).toBe(false);
+    expect(second.record.tmuxSessionName).toBe("pf-b_sessions_claim");
+  });
+
   it("upserts and removes runtime sessions with persisted JSON state", async () => {
     const root = await createTempDir();
     const sessionsPath = join(root, "runtime", "sessions.json");

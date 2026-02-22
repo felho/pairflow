@@ -8,6 +8,7 @@ import {
   WorkspaceBootstrapError
 } from "../workspace/worktreeManager.js";
 import {
+  buildBubbleTmuxSessionName,
   launchBubbleTmuxSession,
   runTmux,
   terminateBubbleTmuxSession,
@@ -15,11 +16,10 @@ import {
   TmuxSessionExistsError
 } from "../runtime/tmuxManager.js";
 import {
-  readRuntimeSessionsRegistry,
+  claimRuntimeSession,
   removeRuntimeSession,
   RuntimeSessionsRegistryError,
-  RuntimeSessionsRegistryLockError,
-  upsertRuntimeSession
+  RuntimeSessionsRegistryLockError
 } from "../runtime/sessionsRegistry.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
 
@@ -43,8 +43,7 @@ export interface StartBubbleDependencies {
   launchBubbleTmuxSession?: typeof launchBubbleTmuxSession;
   terminateBubbleTmuxSession?: typeof terminateBubbleTmuxSession;
   isTmuxSessionAlive?: ((sessionName: string) => Promise<boolean>) | undefined;
-  readRuntimeSessionsRegistry?: typeof readRuntimeSessionsRegistry;
-  upsertRuntimeSession?: typeof upsertRuntimeSession;
+  claimRuntimeSession?: typeof claimRuntimeSession;
   removeRuntimeSession?: typeof removeRuntimeSession;
 }
 
@@ -96,9 +95,7 @@ export async function startBubble(
     dependencies.terminateBubbleTmuxSession ?? terminateBubbleTmuxSession;
   const isTmuxSessionAlive =
     dependencies.isTmuxSessionAlive ?? isTmuxSessionAliveDefault;
-  const readSessionsRegistry =
-    dependencies.readRuntimeSessionsRegistry ?? readRuntimeSessionsRegistry;
-  const upsertSession = dependencies.upsertRuntimeSession ?? upsertRuntimeSession;
+  const claimSession = dependencies.claimRuntimeSession ?? claimRuntimeSession;
   const removeSession = dependencies.removeRuntimeSession ?? removeRuntimeSession;
 
   const resolved = await resolveBubbleById({
@@ -116,30 +113,49 @@ export async function startBubble(
     );
   }
 
-  const sessions = await readSessionsRegistry(resolved.bubblePaths.sessionsPath, {
-    allowMissing: true
-  });
-  const existingSession = sessions[resolved.bubbleId];
-  if (existingSession !== undefined) {
-    const sessionAlive = await isTmuxSessionAlive(existingSession.tmuxSessionName);
-    if (!sessionAlive) {
-      await removeSession({
-        sessionsPath: resolved.bubblePaths.sessionsPath,
-        bubbleId: resolved.bubbleId
-      });
-    } else {
-      throw new StartBubbleError(
-        `Runtime session already registered for bubble ${resolved.bubbleId}: ${existingSession.tmuxSessionName}. Run bubble reconcile or clean up the stale session before starting again.`
-      );
-    }
-  }
+  const expectedTmuxSessionName = buildBubbleTmuxSessionName(resolved.bubbleId);
+  let ownershipClaimed = false;
+  try {
+    const firstClaim = await claimSession({
+      sessionsPath: resolved.bubblePaths.sessionsPath,
+      bubbleId: resolved.bubbleId,
+      repoPath: resolved.repoPath,
+      worktreePath: resolved.bubblePaths.worktreePath,
+      tmuxSessionName: expectedTmuxSessionName,
+      now
+    });
+    ownershipClaimed = firstClaim.claimed;
+    if (!ownershipClaimed) {
+      const sessionAlive = await isTmuxSessionAlive(firstClaim.record.tmuxSessionName);
+      if (!sessionAlive) {
+        await removeSession({
+          sessionsPath: resolved.bubblePaths.sessionsPath,
+          bubbleId: resolved.bubbleId
+        });
+        const retryClaim = await claimSession({
+          sessionsPath: resolved.bubblePaths.sessionsPath,
+          bubbleId: resolved.bubbleId,
+          repoPath: resolved.repoPath,
+          worktreePath: resolved.bubblePaths.worktreePath,
+          tmuxSessionName: expectedTmuxSessionName,
+          now
+        });
+        ownershipClaimed = retryClaim.claimed;
+      }
 
-  const refreshedSessions = await readSessionsRegistry(resolved.bubblePaths.sessionsPath, {
-    allowMissing: true
-  });
-  if (refreshedSessions[resolved.bubbleId] !== undefined) {
+      if (!ownershipClaimed) {
+        throw new StartBubbleError(
+          `Runtime session already registered for bubble ${resolved.bubbleId}: ${firstClaim.record.tmuxSessionName}. Run bubble reconcile or clean up the stale session before starting again.`
+        );
+      }
+    }
+  } catch (error) {
+    if (error instanceof StartBubbleError) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : String(error);
     throw new StartBubbleError(
-      `Runtime session already registered for bubble ${resolved.bubbleId}. Run bubble reconcile or clean up the stale session before starting again.`
+      `Failed to acquire runtime session ownership for bubble ${resolved.bubbleId}: ${message}`
     );
   }
 
@@ -182,15 +198,6 @@ export async function startBubble(
     });
     tmuxSessionName = tmux.sessionName;
 
-    await upsertSession({
-      sessionsPath: resolved.bubblePaths.sessionsPath,
-      bubbleId: resolved.bubbleId,
-      repoPath: resolved.repoPath,
-      worktreePath: resolved.bubblePaths.worktreePath,
-      tmuxSessionName: tmux.sessionName,
-      now
-    });
-
     const running = applyStateTransition(preparing, {
       to: "RUNNING",
       round: 1,
@@ -219,12 +226,14 @@ export async function startBubble(
     };
   } catch (error) {
     if (tmuxSessionName !== null) {
+      await terminateTmux({
+        sessionName: tmuxSessionName
+      }).catch(() => undefined);
+    }
+    if (ownershipClaimed) {
       await removeSession({
         sessionsPath: resolved.bubblePaths.sessionsPath,
         bubbleId: resolved.bubbleId
-      }).catch(() => undefined);
-      await terminateTmux({
-        sessionName: tmuxSessionName
       }).catch(() => undefined);
     }
 

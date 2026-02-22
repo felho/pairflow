@@ -28,6 +28,21 @@ export interface UpsertRuntimeSessionInput {
   lockTimeoutMs?: number;
 }
 
+export interface ClaimRuntimeSessionInput {
+  sessionsPath: string;
+  bubbleId: string;
+  repoPath: string;
+  worktreePath: string;
+  tmuxSessionName: string;
+  now?: Date;
+  lockTimeoutMs?: number;
+}
+
+export interface ClaimRuntimeSessionResult {
+  claimed: boolean;
+  record: RuntimeSessionRecord;
+}
+
 export interface RemoveRuntimeSessionInput {
   sessionsPath: string;
   bubbleId: string;
@@ -146,6 +161,22 @@ function serializeRegistry(registry: RuntimeSessionsRegistry): string {
   return `${JSON.stringify(Object.fromEntries(orderedEntries), null, 2)}\n`;
 }
 
+function buildSessionRecord(input: {
+  bubbleId: string;
+  repoPath: string;
+  worktreePath: string;
+  tmuxSessionName: string;
+  now?: Date | undefined;
+}): RuntimeSessionRecord {
+  return {
+    bubbleId: requireNonEmptyString(input.bubbleId, "bubbleId"),
+    repoPath: requireNonEmptyString(input.repoPath, "repoPath"),
+    worktreePath: requireNonEmptyString(input.worktreePath, "worktreePath"),
+    tmuxSessionName: requireNonEmptyString(input.tmuxSessionName, "tmuxSessionName"),
+    updatedAt: (input.now ?? new Date()).toISOString()
+  };
+}
+
 async function atomicWriteRegistry(
   sessionsPath: string,
   registry: RuntimeSessionsRegistry
@@ -218,18 +249,42 @@ export async function upsertRuntimeSession(
       const registry = await readRuntimeSessionsRegistry(input.sessionsPath, {
         allowMissing: true
       });
-      const updatedAt = (input.now ?? new Date()).toISOString();
-      const nextRecord: RuntimeSessionRecord = {
-        bubbleId: requireNonEmptyString(input.bubbleId, "bubbleId"),
-        repoPath: requireNonEmptyString(input.repoPath, "repoPath"),
-        worktreePath: requireNonEmptyString(input.worktreePath, "worktreePath"),
-        tmuxSessionName: requireNonEmptyString(input.tmuxSessionName, "tmuxSessionName"),
-        updatedAt
-      };
+      const nextRecord = buildSessionRecord(input);
 
       registry[nextRecord.bubbleId] = nextRecord;
       await atomicWriteRegistry(input.sessionsPath, registry);
       return nextRecord;
+    }
+  );
+}
+
+export async function claimRuntimeSession(
+  input: ClaimRuntimeSessionInput
+): Promise<ClaimRuntimeSessionResult> {
+  return withSessionsLock(
+    input.sessionsPath,
+    input.lockTimeoutMs ?? 5_000,
+    async () => {
+      const registry = await readRuntimeSessionsRegistry(input.sessionsPath, {
+        allowMissing: true
+      });
+
+      const bubbleId = requireNonEmptyString(input.bubbleId, "bubbleId");
+      const existing = registry[bubbleId];
+      if (existing !== undefined) {
+        return {
+          claimed: false,
+          record: existing
+        };
+      }
+
+      const nextRecord = buildSessionRecord(input);
+      registry[nextRecord.bubbleId] = nextRecord;
+      await atomicWriteRegistry(input.sessionsPath, registry);
+      return {
+        claimed: true,
+        record: nextRecord
+      };
     }
   );
 }
