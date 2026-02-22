@@ -47,6 +47,7 @@ Ticket status:
 23. Ticket 23: Completed (optional runtime sound-notification engine for `waiting-human` and `converged` events, wired as non-blocking side effects).
 24. Ticket 24: Completed (tmux delivery notifications for `pass`/`ask-human`/`converged` via runtime session registry and recipient-pane routing with non-blocking failure handling).
 25. Ticket 25: Completed (tmux delivery notifications for `bubble reply` and approval decisions to keep human-side protocol actions visible in tmux panes as non-blocking side effects).
+26. Ticket 26: Completed (status-pane watchdog escalation surfacing: switched tmux status loop to human-readable `bubble status` output and added explicit escalation line when watchdog timeout is exceeded).
 
 ## Milestone 1: Phase 1 Single-Bubble MVP (CLI-First, Strict Mode)
 

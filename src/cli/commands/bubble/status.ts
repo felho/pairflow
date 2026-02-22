@@ -86,6 +86,12 @@ export function renderBubbleStatusText(status: BubbleStatusView): string {
     `Transcript: messages=${status.transcript.totalMessages}, last=${status.transcript.lastMessageType ?? "-"} @ ${status.transcript.lastMessageTs ?? "-"}`
   ];
 
+  if (status.watchdog.monitored && status.watchdog.expired) {
+    lines.push(
+      `Escalation: watchdog timeout exceeded for active agent ${status.watchdog.monitoredAgent ?? "-"} (deadline ${status.watchdog.deadlineTimestamp ?? "-"})`
+    );
+  }
+
   return lines.join("\n");
 }
 
