@@ -17,6 +17,12 @@ import {
   runBubbleCommitCommand
 } from "./commands/bubble/commit.js";
 import {
+  getBubbleInboxHelpText,
+  parseBubbleInboxCommandOptions,
+  renderBubbleInboxText,
+  runBubbleInboxCommand
+} from "./commands/bubble/inbox.js";
+import {
   getBubbleCreateHelpText,
   runBubbleCreateCommand
 } from "./commands/bubble/create.js";
@@ -267,6 +273,28 @@ async function handleBubbleCommitCommand(args: string[]): Promise<number> {
   return 0;
 }
 
+async function handleBubbleInboxCommand(args: string[]): Promise<number> {
+  const parsed = parseBubbleInboxCommandOptions(args);
+  if (parsed.help) {
+    process.stdout.write(`${getBubbleInboxHelpText()}\n`);
+    return 0;
+  }
+
+  const result = await runBubbleInboxCommand(parsed);
+  if (result === null) {
+    process.stdout.write(`${getBubbleInboxHelpText()}\n`);
+    return 0;
+  }
+
+  if (parsed.json) {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  } else {
+    process.stdout.write(`${renderBubbleInboxText(result)}\n`);
+  }
+
+  return 0;
+}
+
 export async function runCli(argv: string[]): Promise<number> {
   const [command, subcommand, ...rest] = argv;
 
@@ -332,6 +360,10 @@ export async function runCli(argv: string[]): Promise<number> {
     return handleBubbleStatusCommand(rest);
   }
 
+  if (command === "bubble" && subcommand === "inbox") {
+    return handleBubbleInboxCommand(rest);
+  }
+
   if (command === "bubble" && subcommand === "list") {
     return handleBubbleListCommand(rest);
   }
@@ -357,7 +389,7 @@ export async function runCli(argv: string[]): Promise<number> {
   }
 
   process.stderr.write(
-    "Unknown command. Supported: bubble create, bubble start, bubble open, bubble stop, bubble resume, bubble status, bubble list, bubble reconcile, bubble reply, bubble commit, bubble approve, bubble request-rework, pass, ask-human, converged, agent pass, agent ask-human, agent converged\n"
+    "Unknown command. Supported: bubble create, bubble start, bubble open, bubble stop, bubble resume, bubble status, bubble inbox, bubble list, bubble reconcile, bubble reply, bubble commit, bubble approve, bubble request-rework, pass, ask-human, converged, agent pass, agent ask-human, agent converged\n"
   );
   return 1;
 }

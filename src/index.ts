@@ -25,6 +25,11 @@ export {
   resolveBubbleById
 } from "./core/bubble/bubbleLookup.js";
 export {
+  asBubbleInboxError,
+  BubbleInboxError,
+  getBubbleInbox
+} from "./core/bubble/inboxBubble.js";
+export {
   asBubbleCommitError,
   BubbleCommitError,
   commitBubble
@@ -116,6 +121,12 @@ export {
   parseBubbleCommitCommandOptions,
   runBubbleCommitCommand
 } from "./cli/commands/bubble/commit.js";
+export {
+  getBubbleInboxHelpText,
+  parseBubbleInboxCommandOptions,
+  renderBubbleInboxText,
+  runBubbleInboxCommand
+} from "./cli/commands/bubble/inbox.js";
 export {
   getBubbleCreateHelpText,
   parseBubbleCreateCommandOptions,
@@ -296,6 +307,12 @@ export type {
   EmitPassResult
 } from "./core/agent/pass.js";
 export type {
+  BubbleInboxInput,
+  BubbleInboxView,
+  PendingInboxItem,
+  PendingInboxItemType
+} from "./core/bubble/inboxBubble.js";
+export type {
   CommitBubbleInput,
   CommitBubbleResult
 } from "./core/bubble/commitBubble.js";
@@ -385,6 +402,11 @@ export type {
   BubbleResumeHelpCommandOptions,
   ParsedBubbleResumeCommandOptions
 } from "./cli/commands/bubble/resume.js";
+export type {
+  BubbleInboxCommandOptions,
+  BubbleInboxHelpCommandOptions,
+  ParsedBubbleInboxCommandOptions
+} from "./cli/commands/bubble/inbox.js";
 export type {
   BubbleReplyCommandOptions,
   BubbleReplyHelpCommandOptions,
