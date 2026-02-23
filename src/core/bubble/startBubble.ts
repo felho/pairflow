@@ -95,6 +95,18 @@ function buildAgentProtocolBootstrapMessage(input: {
   ].join(" ");
 }
 
+function buildImplementerKickoffMessage(input: {
+  taskArtifactPath: string;
+}): string {
+  return [
+    "[pairflow kickoff] Start implementation now.",
+    `Read task: ${input.taskArtifactPath}.`,
+    "Implement in this worktree and run relevant tests/typecheck before handoff.",
+    "When done, run `pairflow pass --summary \"<what changed + validation>\"`.",
+    "Use `pairflow ask-human --question \"...\"` only for blockers."
+  ].join(" ");
+}
+
 const resumableRuntimeStates = new Set([
   "RUNNING",
   "WAITING_HUMAN",
@@ -238,6 +250,9 @@ export async function startBubble(
           role: "reviewer",
           repoPath: resolved.repoPath,
           worktreePath: resolved.bubblePaths.worktreePath,
+          taskArtifactPath: resolved.bubblePaths.taskArtifactPath
+        }),
+        implementerKickoffMessage: buildImplementerKickoffMessage({
           taskArtifactPath: resolved.bubblePaths.taskArtifactPath
         })
       });

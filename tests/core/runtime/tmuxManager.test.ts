@@ -119,6 +119,7 @@ describe("launchBubbleTmuxSession", () => {
       reviewerCommand: "claude",
       implementerBootstrapMessage: "implementer protocol message",
       reviewerBootstrapMessage: "reviewer protocol message",
+      implementerKickoffMessage: "implementer kickoff message",
       runner
     });
 
@@ -128,6 +129,8 @@ describe("launchBubbleTmuxSession", () => {
       "split-window",
       "split-window",
       "select-layout",
+      "send-keys",
+      "send-keys",
       "send-keys",
       "send-keys",
       "send-keys",
@@ -157,6 +160,19 @@ describe("launchBubbleTmuxSession", () => {
       "send-keys",
       "-t",
       "pf-b_start_bootstrap:0.2",
+      "Enter"
+    ]);
+    expect(calls[9]).toEqual([
+      "send-keys",
+      "-t",
+      "pf-b_start_bootstrap:0.1",
+      "-l",
+      "implementer kickoff message"
+    ]);
+    expect(calls[10]).toEqual([
+      "send-keys",
+      "-t",
+      "pf-b_start_bootstrap:0.1",
       "Enter"
     ]);
   });

@@ -112,6 +112,15 @@ describe("startBubble", () => {
           expect(input.reviewerBootstrapMessage).toContain(
             created.paths.taskArtifactPath
           );
+          expect(input.implementerKickoffMessage).toContain(
+            "[pairflow kickoff] Start implementation now."
+          );
+          expect(input.implementerKickoffMessage).toContain(
+            created.paths.taskArtifactPath
+          );
+          expect(input.implementerKickoffMessage).toContain(
+            "pairflow pass --summary"
+          );
           return Promise.resolve({ sessionName: "pf-b_start_01" });
         },
         claimRuntimeSession: (input) => {
@@ -355,6 +364,7 @@ describe("startBubble", () => {
         launchBubbleTmuxSession: (input) => {
           expect(input.implementerBootstrapMessage).toContain("role=implementer");
           expect(input.reviewerBootstrapMessage).toContain("role=reviewer");
+          expect(input.implementerKickoffMessage).toBeUndefined();
           return Promise.resolve({ sessionName: "pf-b_start_resume_01" });
         }
       }

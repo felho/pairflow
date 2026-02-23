@@ -299,7 +299,7 @@ Rules:
 5. Optional sound notifications are supported for `waiting-human` and `converged` events (configurable on/off and sound file).
 6. Status watcher must display `active_agent`, `active_since`, and watchdog countdown for escalation visibility.
 7. Watchdog escalation action is materialized as orchestrator-emitted `HUMAN_QUESTION` and state transition `RUNNING -> WAITING_HUMAN`.
-8. Bubble start injects an initial protocol briefing into implementer/reviewer panes (role, required command set, task/worktree references); this improves protocol adherence but does not emit protocol envelopes automatically.
+8. Bubble start injects an initial protocol briefing into implementer/reviewer panes (role, required command set, task/worktree references), and sends an implementer kickoff prompt so the first coding round starts automatically; this improves protocol adherence but does not emit protocol envelopes automatically.
 9. When `reviewer_context_mode = "fresh"`, each implementer -> reviewer `PASS` triggers reviewer pane process respawn so each review round starts from clean agent context.
 
 ## Git Workflow Rules

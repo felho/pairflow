@@ -27,7 +27,7 @@ Bubbles are fully isolated from each other — you can run multiple bubbles in p
 
 ### How does the flow work?
 
-Pairflow does **not** autonomously decide technical content between agents. Instead, agents advance the flow through protocol commands (`pass`, `ask-human`, `converged`). Pairflow acts as the referee + state/protocol engine, and injects an initial protocol briefing into agent panes at bubble start.
+Pairflow does **not** autonomously decide technical content between agents. Instead, agents advance the flow through protocol commands (`pass`, `ask-human`, `converged`). Pairflow acts as the referee + state/protocol engine, injects an initial protocol briefing into agent panes at bubble start, and auto-sends an initial kickoff prompt to the implementer pane.
 
 ```
 ┌──────────┐    pass     ┌──────────┐    pass     ┌──────────┐
@@ -135,7 +135,7 @@ pairflow bubble start --id feat_login --repo /path/to/myapp
 
 At this point, a tmux session `pf-feat_login` opens with:
 - **Pane 0**: Status loop (auto-refreshes state + watchdog)
-- **Pane 1**: Implementer agent (codex) — receives auto protocol briefing
+- **Pane 1**: Implementer agent (codex) — receives auto protocol briefing + kickoff prompt
 - **Pane 2**: Reviewer agent (claude) — receives auto protocol briefing
 
 By default, reviewer context mode is **fresh**: when the implementer hands off (`PASS` to reviewer), Pairflow respawns the reviewer pane process so each review round starts from a clean session context.

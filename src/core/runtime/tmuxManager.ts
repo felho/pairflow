@@ -25,6 +25,7 @@ export interface LaunchBubbleTmuxSessionInput {
   reviewerCommand: string;
   implementerBootstrapMessage?: string;
   reviewerBootstrapMessage?: string;
+  implementerKickoffMessage?: string;
   runner?: TmuxRunner;
 }
 
@@ -190,48 +191,30 @@ export async function launchBubbleTmuxSession(
     `${sessionName}:0`,
     "even-vertical"
   ]);
-  if ((input.implementerBootstrapMessage?.trim().length ?? 0) > 0) {
-    const writeMessageResult = await runner([
-      "send-keys",
-      "-t",
-      `${sessionName}:0.1`,
-      "-l",
-      input.implementerBootstrapMessage as string
-    ], {
+  const sendPaneMessage = async (
+    targetPane: string,
+    message: string | undefined
+  ): Promise<void> => {
+    if ((message?.trim().length ?? 0) === 0) {
+      return;
+    }
+
+    const writeMessageResult = await runner(
+      ["send-keys", "-t", targetPane, "-l", message as string],
+      { allowFailure: true }
+    );
+    if (writeMessageResult.exitCode !== 0) {
+      return;
+    }
+
+    await runner(["send-keys", "-t", targetPane, "Enter"], {
       allowFailure: true
     });
-    if (writeMessageResult.exitCode === 0) {
-      await runner([
-        "send-keys",
-        "-t",
-        `${sessionName}:0.1`,
-        "Enter"
-      ], {
-        allowFailure: true
-      });
-    }
-  }
-  if ((input.reviewerBootstrapMessage?.trim().length ?? 0) > 0) {
-    const writeMessageResult = await runner([
-      "send-keys",
-      "-t",
-      `${sessionName}:0.2`,
-      "-l",
-      input.reviewerBootstrapMessage as string
-    ], {
-      allowFailure: true
-    });
-    if (writeMessageResult.exitCode === 0) {
-      await runner([
-        "send-keys",
-        "-t",
-        `${sessionName}:0.2`,
-        "Enter"
-      ], {
-        allowFailure: true
-      });
-    }
-  }
+  };
+
+  await sendPaneMessage(`${sessionName}:0.1`, input.implementerBootstrapMessage);
+  await sendPaneMessage(`${sessionName}:0.2`, input.reviewerBootstrapMessage);
+  await sendPaneMessage(`${sessionName}:0.1`, input.implementerKickoffMessage);
 
   return {
     sessionName
