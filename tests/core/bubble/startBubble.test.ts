@@ -95,9 +95,15 @@ describe("startBubble", () => {
           reviewerCommand = input.reviewerCommand;
           expect(input.implementerBootstrapMessage).toContain("Protocol is mandatory");
           expect(input.implementerBootstrapMessage).toContain(
+            "Implement changes, then hand off with `pairflow pass --summary`."
+          );
+          expect(input.implementerBootstrapMessage).toContain(
             created.paths.taskArtifactPath
           );
           expect(input.reviewerBootstrapMessage).toContain("Protocol is mandatory");
+          expect(input.reviewerBootstrapMessage).toContain(
+            "Stand by first. Wait for implementer handoff (`PASS` event)"
+          );
           expect(input.reviewerBootstrapMessage).toContain(
             created.paths.taskArtifactPath
           );

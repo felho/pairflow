@@ -1,6 +1,5 @@
 import { readRuntimeSessionsRegistry } from "./sessionsRegistry.js";
 import { runTmux, type TmuxRunner } from "./tmuxManager.js";
-import { shellQuote } from "../util/shellQuote.js";
 import type { BubbleConfig } from "../../types/bubble.js";
 import type { ProtocolEnvelope, ProtocolParticipant } from "../../types/protocol.js";
 
@@ -46,9 +45,44 @@ function resolveTargetPaneIndex(
 
 function buildDeliveryMessage(
   envelope: ProtocolEnvelope,
-  messageRef: string
+  messageRef: string,
+  bubbleConfig: BubbleConfig,
+  worktreePath?: string
 ): string {
-  return `[pairflow] r${envelope.round} ${envelope.type} ${envelope.sender}->${envelope.recipient} ${messageRef}`;
+  const recipientRole =
+    envelope.recipient === bubbleConfig.agents.implementer
+      ? "implementer"
+      : envelope.recipient === bubbleConfig.agents.reviewer
+      ? "reviewer"
+      : envelope.recipient;
+  const worktreeHint =
+    worktreePath === undefined
+      ? "Run pairflow commands from the bubble worktree root."
+      : `Run pairflow commands from worktree: ${worktreePath}.`;
+
+  let action = "Continue protocol from this event.";
+  if (recipientRole === "implementer") {
+    if (envelope.type === "PASS") {
+      action =
+        "Reviewer feedback received. Implement fixes, then hand off with `pairflow pass --summary`.";
+    } else if (envelope.type === "HUMAN_REPLY") {
+      action =
+        "Human response received. Continue implementation using this input, then hand off with `pairflow pass --summary`.";
+    }
+  } else if (recipientRole === "reviewer") {
+    if (envelope.type === "PASS") {
+      action =
+        "Implementer handoff received. Review changes now, then run `pairflow pass --summary` for feedback or `pairflow converged --summary` if clean.";
+    } else if (envelope.type === "HUMAN_REPLY") {
+      action =
+        "Human response received. Continue review workflow from this update.";
+    }
+  } else if (recipientRole === "human" || recipientRole === "orchestrator") {
+    action = "Check inbox/status and continue human orchestration flow.";
+  }
+
+  // Prefix as shell comment so if a pane is in plain bash fallback, this line remains harmless.
+  return `# [pairflow] r${envelope.round} ${envelope.type} ${envelope.sender}->${envelope.recipient} ref=${messageRef}. Action: ${action} ${worktreeHint}`;
 }
 
 export async function emitTmuxDeliveryNotification(
@@ -56,16 +90,23 @@ export async function emitTmuxDeliveryNotification(
 ): Promise<EmitTmuxDeliveryNotificationResult> {
   const messageRef =
     input.messageRef ?? input.envelope.refs[0] ?? `transcript.ndjson#${input.envelope.id}`;
-  const message = buildDeliveryMessage(input.envelope, messageRef);
   const readSessions = input.readSessionsRegistry ?? readRuntimeSessionsRegistry;
 
   let sessionName: string | undefined;
+  let worktreePath: string | undefined;
   try {
     const sessions = await readSessions(input.sessionsPath, {
       allowMissing: true
     });
-    sessionName = sessions[input.bubbleId]?.tmuxSessionName;
+    const record = sessions[input.bubbleId];
+    sessionName = record?.tmuxSessionName;
+    worktreePath = record?.worktreePath;
   } catch {
+    const message = buildDeliveryMessage(
+      input.envelope,
+      messageRef,
+      input.bubbleConfig
+    );
     return {
       delivered: false,
       message,
@@ -74,6 +115,11 @@ export async function emitTmuxDeliveryNotification(
   }
 
   if (sessionName === undefined) {
+    const message = buildDeliveryMessage(
+      input.envelope,
+      messageRef,
+      input.bubbleConfig
+    );
     return {
       delivered: false,
       message,
@@ -86,6 +132,12 @@ export async function emitTmuxDeliveryNotification(
     input.bubbleConfig
   );
   if (targetPaneIndex === undefined) {
+    const message = buildDeliveryMessage(
+      input.envelope,
+      messageRef,
+      input.bubbleConfig,
+      worktreePath
+    );
     return {
       delivered: false,
       sessionName,
@@ -95,11 +147,16 @@ export async function emitTmuxDeliveryNotification(
   }
 
   const targetPane = `${sessionName}:0.${targetPaneIndex}`;
-  const command = `printf '%s\\n' ${shellQuote(message)}`;
+  const message = buildDeliveryMessage(
+    input.envelope,
+    messageRef,
+    input.bubbleConfig,
+    worktreePath
+  );
   const runner = input.runner ?? runTmux;
 
   try {
-    await runner(["send-keys", "-t", targetPane, "-l", command]);
+    await runner(["send-keys", "-t", targetPane, "-l", message]);
     await runner(["send-keys", "-t", targetPane, "Enter"]);
   } catch {
     return {

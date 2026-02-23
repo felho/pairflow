@@ -98,7 +98,7 @@ function buildAgentProtocolBootstrapMessage(input: {
   const roleAction =
     input.role === "implementer"
       ? "Implement changes, then hand off with `pairflow pass --summary`."
-      : "Review changes, then either `pairflow pass --summary` or `pairflow converged --summary`.";
+      : "Stand by first. Wait for implementer handoff (`PASS` event), then review and run `pairflow pass --summary` or `pairflow converged --summary`.";
   return [
     `[pairflow] bubble=${input.bubbleId} role=${input.role} started.`,
     roleAction,

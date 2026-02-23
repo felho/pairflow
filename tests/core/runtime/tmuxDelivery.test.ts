@@ -87,8 +87,16 @@ describe("emitTmuxDeliveryNotification", () => {
       "-t",
       "pf-b_delivery_01:0.2",
       "-l",
-      expect.stringContaining("[pairflow] r1 PASS codex->claude artifact://handoff.md")
+      expect.stringContaining(
+        "# [pairflow] r1 PASS codex->claude ref=artifact://handoff.md."
+      )
     ]);
+    expect(calls[0]?.[4]).toContain(
+      "Action: Implementer handoff received. Review changes now"
+    );
+    expect(calls[0]?.[4]).toContain(
+      "Run pairflow commands from worktree: /tmp/worktree."
+    );
     expect(calls[1]).toEqual([
       "send-keys",
       "-t",
@@ -146,11 +154,16 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: () => Promise.resolve({})
     });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       delivered: false,
-      message: "[pairflow] r1 PASS codex->claude artifact://handoff.md",
       reason: "no_runtime_session"
     });
+    expect(result.message).toContain(
+      "# [pairflow] r1 PASS codex->claude ref=artifact://handoff.md."
+    );
+    expect(result.message).toContain(
+      "Run pairflow commands from the bubble worktree root."
+    );
     expect(calls).toHaveLength(0);
   });
 
@@ -163,11 +176,16 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: async () => Promise.reject(new Error("invalid json"))
     });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       delivered: false,
-      message: "[pairflow] r1 PASS codex->claude artifact://handoff.md",
       reason: "registry_read_failed"
     });
+    expect(result.message).toContain(
+      "# [pairflow] r1 PASS codex->claude ref=artifact://handoff.md."
+    );
+    expect(result.message).toContain(
+      "Run pairflow commands from the bubble worktree root."
+    );
   });
 
   it("returns tmux_send_failed when tmux command fails", async () => {
@@ -182,12 +200,17 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       delivered: false,
       sessionName: "pf-b_delivery_01",
       targetPaneIndex: 2,
-      message: "[pairflow] r1 PASS codex->claude artifact://handoff.md",
       reason: "tmux_send_failed"
     });
+    expect(result.message).toContain(
+      "# [pairflow] r1 PASS codex->claude ref=artifact://handoff.md."
+    );
+    expect(result.message).toContain(
+      "Run pairflow commands from worktree: /tmp/worktree."
+    );
   });
 });
