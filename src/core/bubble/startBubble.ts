@@ -83,7 +83,7 @@ function buildAgentProtocolBootstrapMessage(input: {
   const roleAction =
     input.role === "implementer"
       ? "Implement changes, then hand off with `pairflow pass --summary`."
-      : "Stand by first. Wait for implementer handoff (`PASS` event), then review and run `pairflow pass --summary ... --finding P1:...` (repeatable) or `pairflow pass --summary ... --no-findings`; run `pairflow converged --summary` only when clean.";
+      : "Stand by first. Wait for implementer handoff (`PASS` event), then run a fresh review (`/review` in Claude Code). If findings remain, run `pairflow pass --summary ... --finding P1:...` (repeatable); if clean, run `pairflow pass --summary ... --no-findings` then `pairflow converged --summary`. Execute pairflow commands directly from this worktree (do not ask for confirmation first).";
   return [
     `[pairflow] bubble=${input.bubbleId} role=${input.role} started.`,
     roleAction,

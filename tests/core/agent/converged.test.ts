@@ -56,6 +56,40 @@ afterEach(async () => {
 });
 
 describe("emitConvergedFromWorkspace", () => {
+  it("emits approval wait notifications to human + implementer + reviewer panes", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupConvergedCandidateBubble(repoPath, "b_converged_notify_01");
+    const recipients: string[] = [];
+
+    await emitConvergedFromWorkspace(
+      {
+        summary: "Ready for approval.",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-22T09:04:00.000Z")
+      },
+      {
+        emitTmuxDeliveryNotification: (input) => {
+          recipients.push(input.envelope.recipient);
+          return Promise.resolve({
+            delivered: true,
+            sessionName: "pf-b_converged_notify_01",
+            message: "ok"
+          });
+        },
+        emitBubbleNotification: () =>
+          Promise.resolve({
+            kind: "converged",
+            attempted: false,
+            delivered: false,
+            soundPath: null,
+            reason: "disabled"
+          })
+      }
+    );
+
+    expect(recipients).toEqual(["human", "codex", "claude"]);
+  });
+
   it("writes CONVERGENCE + APPROVAL_REQUEST and moves RUNNING -> READY_FOR_APPROVAL", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupConvergedCandidateBubble(repoPath, "b_converged_01");

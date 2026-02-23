@@ -21,6 +21,11 @@ export interface EmitConvergedInput {
   now?: Date;
 }
 
+export interface EmitConvergedDependencies {
+  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
+  emitBubbleNotification?: typeof emitBubbleNotification;
+}
+
 export interface EmitConvergedResult {
   bubbleId: string;
   convergenceSequence: number;
@@ -73,7 +78,8 @@ function assertReviewerContext(
 }
 
 export async function emitConvergedFromWorkspace(
-  input: EmitConvergedInput
+  input: EmitConvergedInput,
+  dependencies: EmitConvergedDependencies = {}
 ): Promise<EmitConvergedResult> {
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
@@ -171,8 +177,13 @@ export async function emitConvergedFromWorkspace(
     );
   }
 
+  const emitDelivery =
+    dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
+  const emitNotification =
+    dependencies.emitBubbleNotification ?? emitBubbleNotification;
+
   // Optional UX signal; never block protocol/state progression on notification failure.
-  void emitTmuxDeliveryNotification({
+  void emitDelivery({
     bubbleId: resolved.bubbleId,
     bubbleConfig: resolved.bubbleConfig,
     sessionsPath: resolved.bubblePaths.sessionsPath,
@@ -182,8 +193,33 @@ export async function emitConvergedFromWorkspace(
       : {})
   });
 
+  // Notify both agent panes to stop active work while waiting for human decision.
+  const approvalRef =
+    approvalRequest.envelope.refs[0] ??
+    `transcript.ndjson#${approvalRequest.envelope.id}`;
+  void emitDelivery({
+    bubbleId: resolved.bubbleId,
+    bubbleConfig: resolved.bubbleConfig,
+    sessionsPath: resolved.bubblePaths.sessionsPath,
+    envelope: {
+      ...approvalRequest.envelope,
+      recipient: implementer
+    },
+    messageRef: approvalRef
+  });
+  void emitDelivery({
+    bubbleId: resolved.bubbleId,
+    bubbleConfig: resolved.bubbleConfig,
+    sessionsPath: resolved.bubblePaths.sessionsPath,
+    envelope: {
+      ...approvalRequest.envelope,
+      recipient: reviewer
+    },
+    messageRef: approvalRef
+  });
+
   // Optional UX signal; never block protocol/state progression on notification failure.
-  void emitBubbleNotification(resolved.bubbleConfig, "converged");
+  void emitNotification(resolved.bubbleConfig, "converged");
 
   return {
     bubbleId: resolved.bubbleId,

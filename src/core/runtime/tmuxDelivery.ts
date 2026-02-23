@@ -64,18 +64,24 @@ function buildDeliveryMessage(
   if (recipientRole === "implementer") {
     if (envelope.type === "PASS") {
       action =
-        "Reviewer feedback received. Implement fixes, then hand off with `pairflow pass --summary`.";
+        "Reviewer feedback received. Implement fixes, then hand off with `pairflow pass --summary` directly (no confirmation prompt).";
     } else if (envelope.type === "HUMAN_REPLY") {
       action =
-        "Human response received. Continue implementation using this input, then hand off with `pairflow pass --summary`.";
+        "Human response received. Continue implementation using this input, then hand off with `pairflow pass --summary` directly.";
+    } else if (envelope.type === "APPROVAL_REQUEST") {
+      action =
+        "Bubble is READY_FOR_APPROVAL. Stop coding and wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now.";
     }
   } else if (recipientRole === "reviewer") {
     if (envelope.type === "PASS") {
       action =
-        "Implementer handoff received. Review changes now, then run `pairflow pass --summary ... --finding P1:...` (repeatable) or `pairflow pass --summary ... --no-findings`; run `pairflow converged --summary` only when clean.";
+        "Implementer handoff received. Run a fresh review now (`/review` in Claude Code), then run `pairflow pass --summary ... --finding P1:...` (repeatable) or `pairflow pass --summary ... --no-findings`; run `pairflow converged --summary` only when clean. Execute pairflow commands directly (no confirmation prompt).";
     } else if (envelope.type === "HUMAN_REPLY") {
       action =
         "Human response received. Continue review workflow from this update.";
+    } else if (envelope.type === "APPROVAL_REQUEST") {
+      action =
+        "Bubble is READY_FOR_APPROVAL. Review is complete; wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now.";
     }
   } else if (recipientRole === "human" || recipientRole === "orchestrator") {
     action = "Check inbox/status and continue human orchestration flow.";

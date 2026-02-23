@@ -93,7 +93,10 @@ describe("emitTmuxDeliveryNotification", () => {
       )
     ]);
     expect(calls[0]?.[4]).toContain(
-      "Action: Implementer handoff received. Review changes now"
+      "Action: Implementer handoff received. Run a fresh review now"
+    );
+    expect(calls[0]?.[4]).toContain(
+      "Execute pairflow commands directly (no confirmation prompt)"
     );
     expect(calls[0]?.[4]).toContain(
       "Run pairflow commands from worktree: /tmp/worktree."
@@ -133,6 +136,70 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(result.delivered).toBe(true);
     expect(result.targetPaneIndex).toBe(0);
     expect(calls[0]?.[2]).toBe("pf-b_delivery_01:0.0");
+  });
+
+  it("routes approval-wait notification to implementer pane with stop instruction", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        sender: "orchestrator",
+        recipient: "codex",
+        type: "APPROVAL_REQUEST"
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result.delivered).toBe(true);
+    expect(result.targetPaneIndex).toBe(1);
+    expect(calls[0]?.[2]).toBe("pf-b_delivery_01:0.1");
+    expect(calls[0]?.[4]).toContain(
+      "Bubble is READY_FOR_APPROVAL. Stop coding and wait for human decision"
+    );
+  });
+
+  it("routes approval-wait notification to reviewer pane with hold instruction", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        sender: "orchestrator",
+        recipient: "claude",
+        type: "APPROVAL_REQUEST"
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result.delivered).toBe(true);
+    expect(result.targetPaneIndex).toBe(2);
+    expect(calls[0]?.[2]).toBe("pf-b_delivery_01:0.2");
+    expect(calls[0]?.[4]).toContain(
+      "Bubble is READY_FOR_APPROVAL. Review is complete; wait for human decision"
+    );
   });
 
   it("returns no_runtime_session when registry has no entry", async () => {

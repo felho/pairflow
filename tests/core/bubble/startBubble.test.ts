@@ -110,6 +110,12 @@ describe("startBubble", () => {
             "Stand by first. Wait for implementer handoff (`PASS` event)"
           );
           expect(input.reviewerBootstrapMessage).toContain(
+            "run a fresh review (`/review` in Claude Code)"
+          );
+          expect(input.reviewerBootstrapMessage).toContain(
+            "Execute pairflow commands directly from this worktree"
+          );
+          expect(input.reviewerBootstrapMessage).toContain(
             created.paths.taskArtifactPath
           );
           expect(input.implementerKickoffMessage).toContain(
