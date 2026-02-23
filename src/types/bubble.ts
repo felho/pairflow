@@ -33,6 +33,10 @@ export const reviewerContextModes = ["fresh", "persistent"] as const;
 
 export type ReviewerContextMode = (typeof reviewerContextModes)[number];
 
+export const localOverlayModes = ["symlink", "copy"] as const;
+
+export type LocalOverlayMode = (typeof localOverlayModes)[number];
+
 export interface BubbleAgentsConfig {
   implementer: AgentName;
   reviewer: AgentName;
@@ -47,6 +51,12 @@ export interface BubbleNotificationsConfig {
   enabled: boolean;
   waiting_human_sound?: string;
   converged_sound?: string;
+}
+
+export interface BubbleLocalOverlayConfig {
+  enabled: boolean;
+  mode: LocalOverlayMode;
+  entries: string[];
 }
 
 export interface BubbleConfig {
@@ -64,6 +74,7 @@ export interface BubbleConfig {
   agents: BubbleAgentsConfig;
   commands: BubbleCommandsConfig;
   notifications: BubbleNotificationsConfig;
+  local_overlay?: BubbleLocalOverlayConfig;
 }
 
 export interface RoundRoleHistoryEntry {
@@ -123,5 +134,12 @@ export function isReviewerContextMode(
   return (
     typeof value === "string" &&
     (reviewerContextModes as readonly string[]).includes(value)
+  );
+}
+
+export function isLocalOverlayMode(value: unknown): value is LocalOverlayMode {
+  return (
+    typeof value === "string" &&
+    (localOverlayModes as readonly string[]).includes(value)
   );
 }

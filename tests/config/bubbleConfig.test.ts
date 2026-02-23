@@ -30,6 +30,14 @@ describe("bubble config schema", () => {
     expect(config.watchdog_timeout_minutes).toBe(5);
     expect(config.work_mode).toBe("worktree");
     expect(config.notifications.enabled).toBe(true);
+    expect(config.local_overlay?.enabled).toBe(true);
+    expect(config.local_overlay?.mode).toBe("symlink");
+    expect(config.local_overlay?.entries).toEqual([
+      ".claude",
+      ".mcp.json",
+      ".env.local",
+      ".env.production"
+    ]);
   });
 
   it("rejects unsupported quality mode", () => {
@@ -94,6 +102,82 @@ describe("bubble config schema", () => {
     }
     expect(
       result.errors.some((error) => error.path === "reviewer_context_mode")
+    ).toBe(true);
+  });
+
+  it("rejects unsupported local overlay mode", () => {
+    const result = validateBubbleConfig({
+      id: "b_test_01",
+      repo_path: "/tmp/repo",
+      base_branch: "main",
+      bubble_branch: "bubble/b_test_01",
+      work_mode: "worktree",
+      quality_mode: "strict",
+      reviewer_context_mode: "fresh",
+      watchdog_timeout_minutes: 5,
+      max_rounds: 8,
+      commit_requires_approval: true,
+      agents: {
+        implementer: "codex",
+        reviewer: "claude"
+      },
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      },
+      notifications: {
+        enabled: true
+      },
+      local_overlay: {
+        enabled: true,
+        mode: "hardlink",
+        entries: [".claude"]
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors.some((error) => error.path === "local_overlay.mode")).toBe(true);
+  });
+
+  it("rejects unsafe local overlay entries", () => {
+    const result = validateBubbleConfig({
+      id: "b_test_01",
+      repo_path: "/tmp/repo",
+      base_branch: "main",
+      bubble_branch: "bubble/b_test_01",
+      work_mode: "worktree",
+      quality_mode: "strict",
+      reviewer_context_mode: "fresh",
+      watchdog_timeout_minutes: 5,
+      max_rounds: 8,
+      commit_requires_approval: true,
+      agents: {
+        implementer: "codex",
+        reviewer: "claude"
+      },
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      },
+      notifications: {
+        enabled: true
+      },
+      local_overlay: {
+        enabled: true,
+        mode: "symlink",
+        entries: ["../.env.local"]
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some((error) => error.path === "local_overlay.entries")
     ).toBe(true);
   });
 
@@ -162,12 +246,19 @@ describe("bubble config schema", () => {
       },
       notifications: {
         enabled: true
+      },
+      local_overlay: {
+        enabled: true,
+        mode: "copy",
+        entries: [".claude", ".env.local"]
       }
     });
 
     const reparsed = parseBubbleConfigToml(rendered);
     expect(reparsed.id).toBe("b_test_01");
     expect(reparsed.commands.typecheck).toBe("pnpm typecheck");
+    expect(reparsed.local_overlay?.mode).toBe("copy");
+    expect(reparsed.local_overlay?.entries).toEqual([".claude", ".env.local"]);
   });
 
   it("does not emit duplicate blank lines when open_command is omitted", () => {

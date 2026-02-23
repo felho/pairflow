@@ -209,7 +209,8 @@ export async function startBubble(
         repoPath: resolved.repoPath,
         baseBranch: resolved.bubbleConfig.base_branch,
         bubbleBranch: resolved.bubbleConfig.bubble_branch,
-        worktreePath: resolved.bubblePaths.worktreePath
+        worktreePath: resolved.bubblePaths.worktreePath,
+        localOverlay: resolved.bubbleConfig.local_overlay
       });
       workspaceBootstrapped = true;
 

@@ -245,9 +245,15 @@ typecheck = "cd 05_finder && npx tsc --noEmit"
 enabled = true
 waiting_human_sound = "/System/Library/Sounds/Ping.aiff"
 converged_sound = "/System/Library/Sounds/Glass.aiff"
+
+[local_overlay]
+enabled = true
+mode = "symlink" # symlink|copy
+entries = [".claude", ".mcp.json", ".env.local", ".env.production"]
 ```
 
 Note: `balanced` quality mode is intentionally out of MVP scope to avoid undefined policy behavior.
+Note: local overlay entries are synced at worktree bootstrap; missing sources are skipped and existing worktree targets are not overwritten.
 
 ## CLI Surface (MVP)
 Human/operator commands:

@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, readlink, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -118,6 +118,75 @@ describe("bootstrapWorktreeWorkspace", () => {
         worktreePath
       })
     ).rejects.toThrow(/Path already exists/u);
+  });
+
+  it("syncs default local overlay entries as symlinks when sources exist", async () => {
+    const repoPath = await createGitRepo();
+    const worktreePath = await createWorktreePath("b_overlay_default");
+    await mkdir(join(repoPath, ".claude"), { recursive: true });
+    await writeFile(join(repoPath, ".claude", "settings.json"), "{\"ok\":true}\n", "utf8");
+    await writeFile(join(repoPath, ".env.local"), "A=1\n", "utf8");
+
+    await bootstrapWorktreeWorkspace({
+      repoPath,
+      baseBranch: "main",
+      bubbleBranch: "bubble/b_overlay_default",
+      worktreePath
+    });
+
+    const claudeStats = await lstat(join(worktreePath, ".claude"));
+    expect(claudeStats.isSymbolicLink()).toBe(true);
+    expect(await readlink(join(worktreePath, ".claude"))).toBe(
+      join(repoPath, ".claude")
+    );
+
+    const envStats = await lstat(join(worktreePath, ".env.local"));
+    expect(envStats.isSymbolicLink()).toBe(true);
+    expect(await readFile(join(worktreePath, ".env.local"), "utf8")).toBe("A=1\n");
+  });
+
+  it("supports copy mode for local overlay entries", async () => {
+    const repoPath = await createGitRepo();
+    const worktreePath = await createWorktreePath("b_overlay_copy");
+    await writeFile(join(repoPath, ".env.local"), "A=copy\n", "utf8");
+
+    await bootstrapWorktreeWorkspace({
+      repoPath,
+      baseBranch: "main",
+      bubbleBranch: "bubble/b_overlay_copy",
+      worktreePath,
+      localOverlay: {
+        enabled: true,
+        mode: "copy",
+        entries: [".env.local"]
+      }
+    });
+
+    const envStats = await lstat(join(worktreePath, ".env.local"));
+    expect(envStats.isSymbolicLink()).toBe(false);
+    expect(await readFile(join(worktreePath, ".env.local"), "utf8")).toBe("A=copy\n");
+  });
+
+  it("does not overwrite existing worktree files during local overlay sync", async () => {
+    const repoPath = await createGitRepo();
+    const worktreePath = await createWorktreePath("b_overlay_existing");
+
+    await bootstrapWorktreeWorkspace({
+      repoPath,
+      baseBranch: "main",
+      bubbleBranch: "bubble/b_overlay_existing",
+      worktreePath,
+      localOverlay: {
+        enabled: true,
+        mode: "symlink",
+        entries: ["README.md"]
+      }
+    });
+
+    const readmePath = join(worktreePath, "README.md");
+    const readmeStats = await lstat(readmePath);
+    expect(readmeStats.isSymbolicLink()).toBe(false);
+    expect(await readFile(readmePath, "utf8")).toBe("# Pairflow\n");
   });
 });
 

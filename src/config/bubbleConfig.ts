@@ -10,6 +10,9 @@ import {
 } from "../core/validation.js";
 import {
   DEFAULT_COMMIT_REQUIRES_APPROVAL,
+  DEFAULT_LOCAL_OVERLAY_ENABLED,
+  DEFAULT_LOCAL_OVERLAY_ENTRIES,
+  DEFAULT_LOCAL_OVERLAY_MODE,
   DEFAULT_MAX_ROUNDS,
   DEFAULT_QUALITY_MODE,
   DEFAULT_REVIEWER_CONTEXT_MODE,
@@ -18,6 +21,7 @@ import {
 } from "./defaults.js";
 import {
   isAgentName,
+  isLocalOverlayMode,
   isQualityMode,
   isReviewerContextMode,
   isWorkMode,
@@ -321,6 +325,50 @@ function readObject(
   return value;
 }
 
+function readStringArray(
+  source: Record<string, unknown>,
+  key: string,
+  path: string,
+  errors: ValidationError[],
+  required: boolean
+): string[] | undefined {
+  const value = source[key];
+  if (value === undefined) {
+    if (required) {
+      errors.push({ path, message: "Missing required field" });
+    }
+    return undefined;
+  }
+
+  if (!Array.isArray(value)) {
+    errors.push({ path, message: "Must be an array of non-empty strings" });
+    return undefined;
+  }
+
+  const result: string[] = [];
+  value.forEach((item, index) => {
+    if (!isNonEmptyString(item)) {
+      errors.push({
+        path: `${path}[${index}]`,
+        message: "Must be a non-empty string"
+      });
+      return;
+    }
+    result.push(item.trim());
+  });
+
+  return result;
+}
+
+function isSafeLocalOverlayEntry(value: string): boolean {
+  const normalized = value.replaceAll("\\", "/");
+  if (normalized.startsWith("/") || normalized.includes("//")) {
+    return false;
+  }
+  const segments = normalized.split("/");
+  return segments.every((segment) => segment.length > 0 && segment !== ".." && segment !== ".");
+}
+
 export function validateBubbleConfig(input: unknown): ValidationResult<BubbleConfig> {
   const errors: ValidationError[] = [];
   if (!isRecord(input)) {
@@ -400,6 +448,13 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     errors,
     false
   );
+  const localOverlay = readObject(
+    input,
+    "local_overlay",
+    "local_overlay",
+    errors,
+    false
+  );
 
   const implementer = agents
     ? readString(agents, "implementer", "agents.implementer", errors, true)
@@ -463,6 +518,50 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
       )
     : undefined;
 
+  const localOverlayEnabled = localOverlay
+    ? (readBoolean(
+        localOverlay,
+        "enabled",
+        "local_overlay.enabled",
+        errors,
+        false
+      ) ?? DEFAULT_LOCAL_OVERLAY_ENABLED)
+    : DEFAULT_LOCAL_OVERLAY_ENABLED;
+  const localOverlayModeCandidate =
+    localOverlay?.mode ?? DEFAULT_LOCAL_OVERLAY_MODE;
+  if (!isLocalOverlayMode(localOverlayModeCandidate)) {
+    errors.push({
+      path: "local_overlay.mode",
+      message: "Must be one of: symlink, copy"
+    });
+  }
+  const localOverlayMode = isLocalOverlayMode(localOverlayModeCandidate)
+    ? localOverlayModeCandidate
+    : DEFAULT_LOCAL_OVERLAY_MODE;
+
+  const localOverlayEntriesInput = localOverlay
+    ? readStringArray(
+        localOverlay,
+        "entries",
+        "local_overlay.entries",
+        errors,
+        false
+      )
+    : undefined;
+  const localOverlayEntries =
+    localOverlayEntriesInput === undefined
+      ? [...DEFAULT_LOCAL_OVERLAY_ENTRIES]
+      : localOverlayEntriesInput;
+  for (const entry of localOverlayEntries) {
+    if (!isSafeLocalOverlayEntry(entry)) {
+      errors.push({
+        path: "local_overlay.entries",
+        message:
+          "Entries must be normalized relative paths without '.'/'..' segments"
+      });
+    }
+  }
+
   if (errors.length > 0) {
     return validationFail(errors);
   }
@@ -497,7 +596,12 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
       test: testCommand as string,
       typecheck: typecheckCommand as string
     },
-    notifications: validatedNotifications
+    notifications: validatedNotifications,
+    local_overlay: {
+      enabled: localOverlayEnabled,
+      mode: localOverlayMode,
+      entries: localOverlayEntries
+    }
   };
 
   if (openCommand !== undefined) {
@@ -533,6 +637,10 @@ function tomlString(value: string): string {
   return JSON.stringify(value);
 }
 
+function tomlStringArray(values: string[]): string {
+  return `[${values.map((value) => tomlString(value)).join(", ")}]`;
+}
+
 function normalizeTomlLines(lines: Array<string | undefined>): string[] {
   const normalized: string[] = [];
   for (const line of lines) {
@@ -557,6 +665,11 @@ function normalizeTomlLines(lines: Array<string | undefined>): string[] {
 }
 
 export function renderBubbleConfigToml(config: BubbleConfig): string {
+  const localOverlay = config.local_overlay ?? {
+    enabled: DEFAULT_LOCAL_OVERLAY_ENABLED,
+    mode: DEFAULT_LOCAL_OVERLAY_MODE,
+    entries: [...DEFAULT_LOCAL_OVERLAY_ENTRIES]
+  };
   const lines: Array<string | undefined> = [
     `id = ${tomlString(config.id)}`,
     `repo_path = ${tomlString(config.repo_path)}`,
@@ -587,7 +700,12 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
       : undefined,
     config.notifications.converged_sound
       ? `converged_sound = ${tomlString(config.notifications.converged_sound)}`
-      : undefined
+      : undefined,
+    "",
+    "[local_overlay]",
+    `enabled = ${localOverlay.enabled}`,
+    `mode = ${tomlString(localOverlay.mode)}`,
+    `entries = ${tomlStringArray(localOverlay.entries)}`
   ];
 
   return `${normalizeTomlLines(lines).join("\n")}\n`;

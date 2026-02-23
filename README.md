@@ -427,6 +427,35 @@ Aliases: `pairflow agent pass/ask-human/converged` or `orchestra pass/ask-human/
   # Git worktree — agents work here, isolated from main repo
 ```
 
+### Local environment parity in worktrees
+
+By default, `bubble start` mirrors selected local (non-git) files from the main repo into the bubble worktree so agent panes get the same local setup (MCP/editor/env files).
+
+Default behavior:
+
+- Enabled by default
+- Mode: `symlink`
+- Entries:
+  - `.claude`
+  - `.mcp.json`
+  - `.env.local`
+  - `.env.production`
+
+This is controlled by `[local_overlay]` in `bubble.toml`:
+
+```toml
+[local_overlay]
+enabled = true
+mode = "symlink" # symlink|copy
+entries = [".claude", ".mcp.json", ".env.local", ".env.production"]
+```
+
+Rules:
+
+- Missing source entries are skipped silently.
+- Existing files in worktree are never overwritten.
+- Entries must be normalized relative paths (no absolute path, no `.`/`..` traversal).
+
 ## What is NOT in scope
 
 - This is **not** a web UI (Phase 3 will add a thin UI layer)

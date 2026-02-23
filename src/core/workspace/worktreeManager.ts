@@ -1,5 +1,5 @@
-import { mkdir, realpath, stat } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { cp, lstat, mkdir, realpath, stat, symlink } from "node:fs/promises";
+import { dirname, isAbsolute, resolve } from "node:path";
 
 import {
   GitRepositoryError,
@@ -8,6 +8,12 @@ import {
   refExists,
   runGit
 } from "./git.js";
+import {
+  DEFAULT_LOCAL_OVERLAY_ENABLED,
+  DEFAULT_LOCAL_OVERLAY_ENTRIES,
+  DEFAULT_LOCAL_OVERLAY_MODE
+} from "../../config/defaults.js";
+import type { LocalOverlayMode } from "../../types/bubble.js";
 
 export { GitCommandError } from "./git.js";
 
@@ -37,6 +43,7 @@ export interface WorktreeBootstrapInput {
   baseBranch: string;
   bubbleBranch: string;
   worktreePath: string;
+  localOverlay?: LocalOverlayConfig | undefined;
 }
 
 export interface WorktreeBootstrapResult {
@@ -58,6 +65,12 @@ export interface WorktreeCleanupResult {
   worktreePath: string;
   removedWorktree: boolean;
   removedBranch: boolean;
+}
+
+export interface LocalOverlayConfig {
+  enabled: boolean;
+  mode: LocalOverlayMode;
+  entries: string[];
 }
 
 async function assertGitRepositoryForBootstrap(repoPath: string): Promise<void> {
@@ -117,6 +130,102 @@ async function assertPathDoesNotExist(path: string): Promise<void> {
   }
 }
 
+function resolveLocalOverlayConfig(
+  input: LocalOverlayConfig | undefined
+): LocalOverlayConfig {
+  if (input === undefined) {
+    return {
+      enabled: DEFAULT_LOCAL_OVERLAY_ENABLED,
+      mode: DEFAULT_LOCAL_OVERLAY_MODE,
+      entries: [...DEFAULT_LOCAL_OVERLAY_ENTRIES]
+    };
+  }
+
+  return {
+    enabled: input.enabled,
+    mode: input.mode,
+    entries: [...input.entries]
+  };
+}
+
+function assertLocalOverlayEntry(entry: string): void {
+  if (entry.trim().length === 0) {
+    throw new WorkspaceBootstrapError("Local overlay entry cannot be empty.");
+  }
+
+  if (isAbsolute(entry)) {
+    throw new WorkspaceBootstrapError(
+      `Local overlay entry must be a relative path: ${entry}`
+    );
+  }
+
+  const normalized = entry.replaceAll("\\", "/");
+  if (normalized.includes("//")) {
+    throw new WorkspaceBootstrapError(
+      `Local overlay entry must be normalized: ${entry}`
+    );
+  }
+
+  const segments = normalized.split("/");
+  if (segments.some((segment) => segment === "." || segment === ".." || segment.length === 0)) {
+    throw new WorkspaceBootstrapError(
+      `Local overlay entry cannot contain '.'/'..' segments: ${entry}`
+    );
+  }
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await lstat(path);
+    return true;
+  } catch (error) {
+    const typedError = error as NodeJS.ErrnoException;
+    if (typedError.code === "ENOENT") {
+      return false;
+    }
+    throw error;
+  }
+}
+
+async function syncLocalOverlayEntries(input: {
+  repoPath: string;
+  worktreePath: string;
+  config: LocalOverlayConfig | undefined;
+}): Promise<void> {
+  const localOverlay = resolveLocalOverlayConfig(input.config);
+  if (!localOverlay.enabled) {
+    return;
+  }
+
+  for (const entry of localOverlay.entries) {
+    assertLocalOverlayEntry(entry);
+
+    const sourcePath = resolve(input.repoPath, entry);
+    const targetPath = resolve(input.worktreePath, entry);
+
+    if (!(await pathExists(sourcePath))) {
+      continue;
+    }
+
+    if (await pathExists(targetPath)) {
+      continue;
+    }
+
+    await mkdir(dirname(targetPath), { recursive: true });
+    if (localOverlay.mode === "copy") {
+      const sourceStats = await lstat(sourcePath);
+      await cp(sourcePath, targetPath, {
+        recursive: sourceStats.isDirectory(),
+        errorOnExist: true,
+        force: false
+      });
+      continue;
+    }
+
+    await symlink(sourcePath, targetPath);
+  }
+}
+
 async function isWorktreeRegistered(repoPath: string, worktreePath: string): Promise<boolean> {
   const normalizedWorktreePath = await realpath(worktreePath).catch(() => resolve(worktreePath));
   const listedWorktrees = await runGit(["worktree", "list", "--porcelain"], {
@@ -164,7 +273,16 @@ export async function bootstrapWorktreeWorkspace(
     await runGit(["worktree", "add", worktreePath, input.bubbleBranch], {
       cwd: repoPath
     });
+    await syncLocalOverlayEntries({
+      repoPath,
+      worktreePath,
+      config: input.localOverlay
+    });
   } catch (error) {
+    await runGit(["worktree", "remove", "--force", worktreePath], {
+      cwd: repoPath,
+      allowFailure: true
+    });
     await runGit(["branch", "-D", input.bubbleBranch], {
       cwd: repoPath,
       allowFailure: true

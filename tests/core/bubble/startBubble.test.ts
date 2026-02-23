@@ -80,8 +80,13 @@ describe("startBubble", () => {
         now: new Date("2026-02-22T13:00:00.000Z")
       },
       {
-        bootstrapWorktreeWorkspace: () => {
+        bootstrapWorktreeWorkspace: (bootstrapInput) => {
           calls.push("bootstrap");
+          expect(bootstrapInput.localOverlay).toEqual({
+            enabled: true,
+            mode: "symlink",
+            entries: [".claude", ".mcp.json", ".env.local", ".env.production"]
+          });
           return Promise.resolve({
             repoPath,
             baseRef: "refs/heads/main",
