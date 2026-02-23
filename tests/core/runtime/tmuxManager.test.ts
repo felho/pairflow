@@ -73,6 +73,30 @@ describe("launchBubbleTmuxSession", () => {
       "select-layout"
     ]);
     expect(calls[0]?.allowFailure).toBe(true);
+    expect(calls[2]?.args).toEqual([
+      "split-window",
+      "-v",
+      "-t",
+      "pf-b_start_01:0.0",
+      "-c",
+      "/tmp/worktree",
+      "codex"
+    ]);
+    expect(calls[3]?.args).toEqual([
+      "split-window",
+      "-v",
+      "-t",
+      "pf-b_start_01:0.1",
+      "-c",
+      "/tmp/worktree",
+      "claude"
+    ]);
+    expect(calls[4]?.args).toEqual([
+      "select-layout",
+      "-t",
+      "pf-b_start_01:0",
+      "even-vertical"
+    ]);
   });
 
   it("injects protocol bootstrap messages to agent panes when provided", async () => {
@@ -134,6 +158,55 @@ describe("launchBubbleTmuxSession", () => {
       "pf-b_start_bootstrap:0.2",
       "Enter"
     ]);
+  });
+
+  it("keeps start non-blocking when bootstrap send-keys enter fails", async () => {
+    const calls: Array<{ args: string[]; allowFailure: boolean }> = [];
+    const runner: TmuxRunner = (
+      args: string[],
+      options = {}
+    ): Promise<TmuxRunResult> => {
+      calls.push({
+        args,
+        allowFailure: options.allowFailure ?? false
+      });
+      if (
+        args[0] === "send-keys" &&
+        args[2] === "pf-b_start_bootstrap_fail:0.1" &&
+        args[3] === "Enter"
+      ) {
+        return Promise.resolve({
+          stdout: "",
+          stderr: "can't find pane: 1",
+          exitCode: 1
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: args[0] === "has-session" ? 1 : 0
+      });
+    };
+
+    const result = await launchBubbleTmuxSession({
+      bubbleId: "b_start_bootstrap_fail",
+      worktreePath: "/tmp/worktree",
+      statusCommand: "status",
+      implementerCommand: "codex",
+      reviewerCommand: "claude",
+      implementerBootstrapMessage: "implementer protocol message",
+      reviewerBootstrapMessage: "reviewer protocol message",
+      runner
+    });
+
+    expect(result.sessionName).toBe("pf-b_start_bootstrap_fail");
+    const failedEnter = calls.find(
+      (call) =>
+        call.args[0] === "send-keys" &&
+        call.args[2] === "pf-b_start_bootstrap_fail:0.1" &&
+        call.args[3] === "Enter"
+    );
+    expect(failedEnter?.allowFailure).toBe(true);
   });
 
   it("fails when session already exists", async () => {

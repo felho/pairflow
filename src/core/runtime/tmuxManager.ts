@@ -160,7 +160,7 @@ export async function launchBubbleTmuxSession(
   ]);
   await runner([
     "split-window",
-    "-h",
+    "-v",
     "-t",
     `${sessionName}:0.0`,
     "-c",
@@ -180,37 +180,49 @@ export async function launchBubbleTmuxSession(
     "select-layout",
     "-t",
     `${sessionName}:0`,
-    "tiled"
+    "even-vertical"
   ]);
   if ((input.implementerBootstrapMessage?.trim().length ?? 0) > 0) {
-    await runner([
+    const writeMessageResult = await runner([
       "send-keys",
       "-t",
       `${sessionName}:0.1`,
       "-l",
       input.implementerBootstrapMessage as string
-    ]);
-    await runner([
-      "send-keys",
-      "-t",
-      `${sessionName}:0.1`,
-      "Enter"
-    ]);
+    ], {
+      allowFailure: true
+    });
+    if (writeMessageResult.exitCode === 0) {
+      await runner([
+        "send-keys",
+        "-t",
+        `${sessionName}:0.1`,
+        "Enter"
+      ], {
+        allowFailure: true
+      });
+    }
   }
   if ((input.reviewerBootstrapMessage?.trim().length ?? 0) > 0) {
-    await runner([
+    const writeMessageResult = await runner([
       "send-keys",
       "-t",
       `${sessionName}:0.2`,
       "-l",
       input.reviewerBootstrapMessage as string
-    ]);
-    await runner([
-      "send-keys",
-      "-t",
-      `${sessionName}:0.2`,
-      "Enter"
-    ]);
+    ], {
+      allowFailure: true
+    });
+    if (writeMessageResult.exitCode === 0) {
+      await runner([
+        "send-keys",
+        "-t",
+        `${sessionName}:0.2`,
+        "Enter"
+      ], {
+        allowFailure: true
+      });
+    }
   }
 
   return {

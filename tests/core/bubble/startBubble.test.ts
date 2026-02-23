@@ -66,6 +66,8 @@ describe("startBubble", () => {
     });
 
     const calls: string[] = [];
+    let implementerCommand: string | undefined;
+    let reviewerCommand: string | undefined;
     const claims: Array<{
       bubbleId: string;
       session: string;
@@ -89,6 +91,8 @@ describe("startBubble", () => {
         },
         launchBubbleTmuxSession: (input) => {
           calls.push("launch");
+          implementerCommand = input.implementerCommand;
+          reviewerCommand = input.reviewerCommand;
           expect(input.implementerBootstrapMessage).toContain("Protocol is mandatory");
           expect(input.implementerBootstrapMessage).toContain(
             created.paths.taskArtifactPath
@@ -135,6 +139,20 @@ describe("startBubble", () => {
 
     const loaded = await readStateSnapshot(created.paths.statePath);
     expect(loaded.state.state).toBe("RUNNING");
+
+    if (implementerCommand === undefined || reviewerCommand === undefined) {
+      throw new Error("Expected agent commands to be captured.");
+    }
+    expect(implementerCommand).toContain("Dropping to interactive shell");
+    expect(reviewerCommand).toContain("Dropping to interactive shell");
+    expect(implementerCommand).toContain("set +e");
+    expect(reviewerCommand).toContain("set +e");
+    expect(implementerCommand).toContain("exec bash -i");
+    expect(reviewerCommand).toContain("exec bash -i");
+    expect(implementerCommand).not.toContain("then;");
+    expect(reviewerCommand).not.toContain("then;");
+    await assertBashParses(implementerCommand);
+    await assertBashParses(reviewerCommand);
   });
 
   it("fails before bootstrap when runtime session ownership claim fails", async () => {

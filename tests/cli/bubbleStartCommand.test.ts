@@ -22,12 +22,30 @@ describe("parseBubbleStartCommandOptions", () => {
 
     expect(parsed.id).toBe("b_start_01");
     expect(parsed.repo).toBe("/tmp/repo");
+    expect(parsed.attach).toBe(false);
+  });
+
+  it("parses --attach flag", () => {
+    const parsed = parseBubbleStartCommandOptions([
+      "--id",
+      "b_start_02",
+      "--attach"
+    ]);
+
+    expect(parsed.help).toBe(false);
+    if (parsed.help) {
+      throw new Error("Expected validated bubble start options");
+    }
+
+    expect(parsed.id).toBe("b_start_02");
+    expect(parsed.attach).toBe(true);
   });
 
   it("supports help", () => {
     const parsed = parseBubbleStartCommandOptions(["--help"]);
     expect(parsed.help).toBe(true);
     expect(getBubbleStartHelpText()).toContain("pairflow bubble start");
+    expect(getBubbleStartHelpText()).toContain("--attach");
   });
 
   it("requires --id", () => {
