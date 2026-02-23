@@ -162,10 +162,15 @@ pairflow converged --summary "All review criteria met, code is clean"
 pairflow bubble approve --id feat_login --repo /path/to/myapp
 #    → State becomes APPROVED_FOR_COMMIT
 
-# 8. Prepare the done package and commit
-#    (in the worktree, stage your files and create done-package.md)
-pairflow bubble commit --id feat_login --repo /path/to/myapp
+# 8. Commit
+#    Fast path: auto-stage worktree changes + auto-generate done-package if missing
+pairflow bubble commit --id feat_login --repo /path/to/myapp --auto
 #    → State becomes DONE
+
+#    Strict/manual path (if you prefer full manual control):
+#    - stage files yourself
+#    - write .pairflow/bubbles/<id>/artifacts/done-package.md
+#    - run pairflow bubble commit without --auto
 ```
 
 ### Scenario 2: Agent asks a question (human intervention)

@@ -125,6 +125,9 @@ describe("startBubble", () => {
             created.paths.taskArtifactPath
           );
           expect(input.implementerKickoffMessage).toContain(
+            join(created.paths.artifactsDir, "done-package.md")
+          );
+          expect(input.implementerKickoffMessage).toContain(
             "pairflow pass --summary"
           );
           return Promise.resolve({ sessionName: "pf-b_start_01" });

@@ -15,6 +15,7 @@ describe("parseBubbleCommitCommandOptions", () => {
       "/tmp/repo",
       "--message",
       "feat: finalize",
+      "--auto",
       "--ref",
       "artifact://done-package.md"
     ]);
@@ -27,6 +28,7 @@ describe("parseBubbleCommitCommandOptions", () => {
     expect(parsed.id).toBe("b_commit_01");
     expect(parsed.repo).toBe("/tmp/repo");
     expect(parsed.message).toBe("feat: finalize");
+    expect(parsed.auto).toBe(true);
     expect(parsed.refs).toEqual(["artifact://done-package.md"]);
   });
 

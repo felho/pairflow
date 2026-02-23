@@ -3,6 +3,7 @@ import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
 import { shellQuote } from "../util/shellQuote.js";
 import { buildAgentCommand } from "../runtime/agentCommand.js";
+import { join } from "node:path";
 import {
   bootstrapWorktreeWorkspace,
   cleanupWorktreeWorkspace,
@@ -97,11 +98,14 @@ function buildAgentProtocolBootstrapMessage(input: {
 
 function buildImplementerKickoffMessage(input: {
   taskArtifactPath: string;
+  donePackagePath: string;
 }): string {
   return [
     "[pairflow kickoff] Start implementation now.",
     `Read task: ${input.taskArtifactPath}.`,
     "Implement in this worktree and run relevant tests/typecheck before handoff.",
+    `Keep done package updated at: ${input.donePackagePath}.`,
+    "Done package should summarize changes + validation results for final commit handoff.",
     "When done, run `pairflow pass --summary \"<what changed + validation>\"`.",
     "Use `pairflow ask-human --question \"...\"` only for blockers."
   ].join(" ");
@@ -253,7 +257,8 @@ export async function startBubble(
           taskArtifactPath: resolved.bubblePaths.taskArtifactPath
         }),
         implementerKickoffMessage: buildImplementerKickoffMessage({
-          taskArtifactPath: resolved.bubblePaths.taskArtifactPath
+          taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+          donePackagePath: join(resolved.bubblePaths.artifactsDir, "done-package.md")
         })
       });
       tmuxSessionName = tmux.sessionName;

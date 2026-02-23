@@ -11,6 +11,7 @@ export interface BubbleCommitCommandOptions {
   refs: string[];
   repo?: string;
   message?: string;
+  auto: boolean;
   help: false;
 }
 
@@ -26,17 +27,19 @@ export type ParsedBubbleCommitCommandOptions =
 export function getBubbleCommitHelpText(): string {
   return [
     "Usage:",
-    '  pairflow bubble commit --id <id> [--repo <path>] [--message "<text>"] [--ref <artifact-path>]...',
+    '  pairflow bubble commit --id <id> [--repo <path>] [--message "<text>"] [--ref <artifact-path>]... [--auto]',
     "",
     "Options:",
     "  --id <id>             Bubble id",
     "  --repo <path>         Optional repository path (defaults to cwd ancestry lookup)",
     "  --message <text>      Optional git commit message override",
     "  --ref <path>          Optional artifact reference (repeatable)",
+    "  --auto                Auto-stage all worktree changes and auto-generate done-package when missing/empty",
     "  -h, --help            Show this help",
     "",
     "Notes:",
-    "  Requires READY done-package at artifacts/done-package.md and state APPROVED_FOR_COMMIT."
+    "  Requires state APPROVED_FOR_COMMIT.",
+    "  Without --auto, commit expects staged files + non-empty artifacts/done-package.md."
   ].join("\n");
 }
 
@@ -54,6 +57,9 @@ export function parseBubbleCommitCommandOptions(
       },
       message: {
         type: "string"
+      },
+      auto: {
+        type: "boolean"
       },
       ref: {
         type: "string",
@@ -86,6 +92,7 @@ export function parseBubbleCommitCommandOptions(
     refs,
     ...(parsed.values.repo !== undefined ? { repo: parsed.values.repo } : {}),
     ...(parsed.values.message !== undefined ? { message: parsed.values.message } : {}),
+    auto: parsed.values.auto ?? false,
     help: false
   };
 }
@@ -105,6 +112,7 @@ export async function runBubbleCommitCommand(
       refs: options.refs,
       repoPath: options.repo,
       message: options.message,
+      auto: options.auto,
       cwd
     });
   } catch (error) {
