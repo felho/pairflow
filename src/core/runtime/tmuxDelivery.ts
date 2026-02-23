@@ -9,6 +9,7 @@ export interface EmitTmuxDeliveryNotificationInput {
   sessionsPath: string;
   envelope: ProtocolEnvelope;
   messageRef?: string;
+  initialDelayMs?: number;
   runner?: TmuxRunner;
   readSessionsRegistry?: typeof readRuntimeSessionsRegistry;
 }
@@ -91,6 +92,26 @@ function buildDeliveryMessage(
   return `# [pairflow] r${envelope.round} ${envelope.type} ${envelope.sender}->${envelope.recipient} ref=${messageRef}. Action: ${action} ${worktreeHint}`;
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolvePromise) => {
+    setTimeout(resolvePromise, ms);
+  });
+}
+
+async function submitPaneInput(
+  runner: TmuxRunner,
+  targetPane: string
+): Promise<void> {
+  // Some CLIs/tmux combinations occasionally miss a single Enter keystroke.
+  // Send a short submit-key sequence for reliability.
+  await runner(["send-keys", "-t", targetPane, "Enter"], {
+    allowFailure: true
+  });
+  await runner(["send-keys", "-t", targetPane, "C-m"], {
+    allowFailure: true
+  });
+}
+
 export async function emitTmuxDeliveryNotification(
   input: EmitTmuxDeliveryNotificationInput
 ): Promise<EmitTmuxDeliveryNotificationResult> {
@@ -162,8 +183,11 @@ export async function emitTmuxDeliveryNotification(
   const runner = input.runner ?? runTmux;
 
   try {
+    if ((input.initialDelayMs ?? 0) > 0) {
+      await sleep(input.initialDelayMs as number);
+    }
     await runner(["send-keys", "-t", targetPane, "-l", message]);
-    await runner(["send-keys", "-t", targetPane, "Enter"]);
+    await submitPaneInput(runner, targetPane);
   } catch {
     return {
       delivered: false,

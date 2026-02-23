@@ -134,6 +134,9 @@ describe("launchBubbleTmuxSession", () => {
       "send-keys",
       "send-keys",
       "send-keys",
+      "send-keys",
+      "send-keys",
+      "send-keys",
       "send-keys"
     ]);
     expect(calls[5]).toEqual([
@@ -152,28 +155,46 @@ describe("launchBubbleTmuxSession", () => {
     expect(calls[7]).toEqual([
       "send-keys",
       "-t",
-      "pf-b_start_bootstrap:0.2",
-      "-l",
-      "reviewer protocol message"
+      "pf-b_start_bootstrap:0.1",
+      "C-m"
     ]);
     expect(calls[8]).toEqual([
       "send-keys",
       "-t",
       "pf-b_start_bootstrap:0.2",
-      "Enter"
+      "-l",
+      "reviewer protocol message"
     ]);
     expect(calls[9]).toEqual([
+      "send-keys",
+      "-t",
+      "pf-b_start_bootstrap:0.2",
+      "Enter"
+    ]);
+    expect(calls[10]).toEqual([
+      "send-keys",
+      "-t",
+      "pf-b_start_bootstrap:0.2",
+      "C-m"
+    ]);
+    expect(calls[11]).toEqual([
       "send-keys",
       "-t",
       "pf-b_start_bootstrap:0.1",
       "-l",
       "implementer kickoff message"
     ]);
-    expect(calls[10]).toEqual([
+    expect(calls[12]).toEqual([
       "send-keys",
       "-t",
       "pf-b_start_bootstrap:0.1",
       "Enter"
+    ]);
+    expect(calls[13]).toEqual([
+      "send-keys",
+      "-t",
+      "pf-b_start_bootstrap:0.1",
+      "C-m"
     ]);
   });
 
@@ -190,7 +211,7 @@ describe("launchBubbleTmuxSession", () => {
       if (
         args[0] === "send-keys" &&
         args[2] === "pf-b_start_bootstrap_fail:0.1" &&
-        args[3] === "Enter"
+        (args[3] === "Enter" || args[3] === "C-m")
       ) {
         return Promise.resolve({
           stdout: "",
@@ -224,6 +245,13 @@ describe("launchBubbleTmuxSession", () => {
         call.args[3] === "Enter"
     );
     expect(failedEnter?.allowFailure).toBe(true);
+    const failedSubmitFallback = calls.find(
+      (call) =>
+        call.args[0] === "send-keys" &&
+        call.args[2] === "pf-b_start_bootstrap_fail:0.1" &&
+        call.args[3] === "C-m"
+    );
+    expect(failedSubmitFallback?.allowFailure).toBe(true);
   });
 
   it("fails when session already exists", async () => {

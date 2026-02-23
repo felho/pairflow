@@ -107,6 +107,12 @@ describe("emitTmuxDeliveryNotification", () => {
       "pf-b_delivery_01:0.2",
       "Enter"
     ]);
+    expect(calls[2]).toEqual([
+      "send-keys",
+      "-t",
+      "pf-b_delivery_01:0.2",
+      "C-m"
+    ]);
   });
 
   it("routes human recipient notifications to status pane", async () => {
@@ -136,6 +142,7 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(result.delivered).toBe(true);
     expect(result.targetPaneIndex).toBe(0);
     expect(calls[0]?.[2]).toBe("pf-b_delivery_01:0.0");
+    expect(calls[2]?.[3]).toBe("C-m");
   });
 
   it("routes approval-wait notification to implementer pane with stop instruction", async () => {
@@ -165,6 +172,7 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(result.delivered).toBe(true);
     expect(result.targetPaneIndex).toBe(1);
     expect(calls[0]?.[2]).toBe("pf-b_delivery_01:0.1");
+    expect(calls[2]?.[3]).toBe("C-m");
     expect(calls[0]?.[4]).toContain(
       "Bubble is READY_FOR_APPROVAL. Stop coding and wait for human decision"
     );
@@ -197,6 +205,7 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(result.delivered).toBe(true);
     expect(result.targetPaneIndex).toBe(2);
     expect(calls[0]?.[2]).toBe("pf-b_delivery_01:0.2");
+    expect(calls[2]?.[3]).toBe("C-m");
     expect(calls[0]?.[4]).toContain(
       "Bubble is READY_FOR_APPROVAL. Review is complete; wait for human decision"
     );

@@ -246,16 +246,21 @@ export async function emitPassFromWorkspace(
 
   const refreshReviewer =
     dependencies.refreshReviewerContext ?? refreshReviewerContext;
+  let deliveryInitialDelayMs: number | undefined;
   if (
     handoff.senderRole === "implementer" &&
     resolved.bubbleConfig.reviewer_context_mode === "fresh"
   ) {
     // Best effort only; protocol/state progression must not fail if tmux refresh fails.
-    await refreshReviewer({
+    const refreshResult = await refreshReviewer({
       bubbleId: resolved.bubbleId,
       bubbleConfig: resolved.bubbleConfig,
       sessionsPath: resolved.bubblePaths.sessionsPath
     }).catch(() => undefined);
+    if (refreshResult?.refreshed === true) {
+      // Give the respawned reviewer CLI a short warm-up before delivery injection.
+      deliveryInitialDelayMs = 300;
+    }
   }
 
   const emitDelivery =
@@ -266,6 +271,7 @@ export async function emitPassFromWorkspace(
     bubbleConfig: resolved.bubbleConfig,
     sessionsPath: resolved.bubblePaths.sessionsPath,
     envelope: mapped.envelope,
+    ...(deliveryInitialDelayMs !== undefined ? { initialDelayMs: deliveryInitialDelayMs } : {}),
     ...(mapped.envelope.refs[0] !== undefined
       ? { messageRef: mapped.envelope.refs[0] }
       : {})

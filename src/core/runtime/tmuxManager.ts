@@ -210,6 +210,9 @@ export async function launchBubbleTmuxSession(
     await runner(["send-keys", "-t", targetPane, "Enter"], {
       allowFailure: true
     });
+    await runner(["send-keys", "-t", targetPane, "C-m"], {
+      allowFailure: true
+    });
   };
 
   await sendPaneMessage(`${sessionName}:0.1`, input.implementerBootstrapMessage);
