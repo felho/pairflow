@@ -64,6 +64,14 @@ describe("emitTmuxDeliveryNotification", () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
       calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md. Action: Implementer handoff received.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
       return Promise.resolve({
         stdout: "",
         stderr: "",
@@ -77,41 +85,61 @@ describe("emitTmuxDeliveryNotification", () => {
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
       envelope: createEnvelope(),
       runner,
-      readSessionsRegistry: () => Promise.resolve(createRegistry())
+      readSessionsRegistry: () => Promise.resolve(createRegistry()),
+      deliveryAttempts: 2
     });
 
     expect(result.delivered).toBe(true);
     expect(result.sessionName).toBe("pf-b_delivery_01");
     expect(result.targetPaneIndex).toBe(2);
-    expect(calls[0]).toEqual([
+    expect(calls).toContainEqual([
       "send-keys",
       "-t",
       "pf-b_delivery_01:0.2",
       "-l",
       expect.stringContaining(
-        "# [pairflow] r1 PASS codex->claude ref=artifact://handoff.md."
+        "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."
       )
     ]);
-    expect(calls[0]?.[4]).toContain(
+    const messageCall = calls.find(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.2" &&
+        call[3] === "-l" &&
+        call[4]?.includes("# [pairflow] r1 PASS codex->claude")
+    );
+    expect(messageCall?.[4]).toContain(
       "Action: Implementer handoff received. Run a fresh review now"
     );
-    expect(calls[0]?.[4]).toContain(
+    expect(messageCall?.[4]).toContain(
       "Execute pairflow commands directly (no confirmation prompt)"
     );
-    expect(calls[0]?.[4]).toContain(
+    expect(messageCall?.[4]).toContain(
       "Run pairflow commands from worktree: /tmp/worktree."
     );
-    expect(calls[1]).toEqual([
+    expect(calls).toContainEqual([
+      "send-keys",
+      "-t",
+      "pf-b_delivery_01:0.2",
+      "-l",
+      "\r"
+    ]);
+    expect(calls).toContainEqual([
       "send-keys",
       "-t",
       "pf-b_delivery_01:0.2",
       "Enter"
     ]);
-    expect(calls[2]).toEqual([
+    expect(calls).toContainEqual([
       "send-keys",
       "-t",
       "pf-b_delivery_01:0.2",
       "C-m"
+    ]);
+    expect(calls).toContainEqual([
+      "capture-pane",
+      "-pt",
+      "pf-b_delivery_01:0.2"
     ]);
   });
 
@@ -119,6 +147,14 @@ describe("emitTmuxDeliveryNotification", () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
       calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r1 HUMAN_QUESTION claude->human msg=msg_20260222_101 ref=artifact://handoff.md.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
       return Promise.resolve({
         stdout: "",
         stderr: "",
@@ -141,14 +177,31 @@ describe("emitTmuxDeliveryNotification", () => {
 
     expect(result.delivered).toBe(true);
     expect(result.targetPaneIndex).toBe(0);
-    expect(calls[0]?.[2]).toBe("pf-b_delivery_01:0.0");
-    expect(calls[2]?.[3]).toBe("C-m");
+    const toStatusPane = calls.find(
+      (call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.0"
+    );
+    expect(toStatusPane).toBeDefined();
+    expect(calls).toContainEqual([
+      "send-keys",
+      "-t",
+      "pf-b_delivery_01:0.0",
+      "C-m"
+    ]);
+    expect(calls.some((call) => call[0] === "capture-pane")).toBe(true);
   });
 
   it("routes approval-wait notification to implementer pane with stop instruction", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
       calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r1 APPROVAL_REQUEST orchestrator->codex msg=msg_20260222_101 ref=artifact://handoff.md.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
       return Promise.resolve({
         stdout: "",
         stderr: "",
@@ -171,9 +224,24 @@ describe("emitTmuxDeliveryNotification", () => {
 
     expect(result.delivered).toBe(true);
     expect(result.targetPaneIndex).toBe(1);
-    expect(calls[0]?.[2]).toBe("pf-b_delivery_01:0.1");
-    expect(calls[2]?.[3]).toBe("C-m");
-    expect(calls[0]?.[4]).toContain(
+    expect(
+      calls.some((call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.1")
+    ).toBe(true);
+    expect(calls).toContainEqual([
+      "send-keys",
+      "-t",
+      "pf-b_delivery_01:0.1",
+      "C-m"
+    ]);
+    expect(calls.some((call) => call[0] === "capture-pane")).toBe(true);
+    const approvalCall = calls.find(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.1" &&
+        call[3] === "-l" &&
+        call[4]?.includes("APPROVAL_REQUEST")
+    );
+    expect(approvalCall?.[4]).toContain(
       "Bubble is READY_FOR_APPROVAL. Stop coding and wait for human decision"
     );
   });
@@ -182,6 +250,14 @@ describe("emitTmuxDeliveryNotification", () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
       calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r1 APPROVAL_REQUEST orchestrator->claude msg=msg_20260222_101 ref=artifact://handoff.md.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
       return Promise.resolve({
         stdout: "",
         stderr: "",
@@ -204,9 +280,24 @@ describe("emitTmuxDeliveryNotification", () => {
 
     expect(result.delivered).toBe(true);
     expect(result.targetPaneIndex).toBe(2);
-    expect(calls[0]?.[2]).toBe("pf-b_delivery_01:0.2");
-    expect(calls[2]?.[3]).toBe("C-m");
-    expect(calls[0]?.[4]).toContain(
+    expect(
+      calls.some((call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.2")
+    ).toBe(true);
+    expect(calls).toContainEqual([
+      "send-keys",
+      "-t",
+      "pf-b_delivery_01:0.2",
+      "C-m"
+    ]);
+    expect(calls.some((call) => call[0] === "capture-pane")).toBe(true);
+    const approvalCall = calls.find(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.2" &&
+        call[3] === "-l" &&
+        call[4]?.includes("APPROVAL_REQUEST")
+    );
+    expect(approvalCall?.[4]).toContain(
       "Bubble is READY_FOR_APPROVAL. Review is complete; wait for human decision"
     );
   });
@@ -236,7 +327,7 @@ describe("emitTmuxDeliveryNotification", () => {
       reason: "no_runtime_session"
     });
     expect(result.message).toContain(
-      "# [pairflow] r1 PASS codex->claude ref=artifact://handoff.md."
+      "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."
     );
     expect(result.message).toContain(
       "Run pairflow commands from the bubble worktree root."
@@ -258,7 +349,7 @@ describe("emitTmuxDeliveryNotification", () => {
       reason: "registry_read_failed"
     });
     expect(result.message).toContain(
-      "# [pairflow] r1 PASS codex->claude ref=artifact://handoff.md."
+      "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."
     );
     expect(result.message).toContain(
       "Run pairflow commands from the bubble worktree root."
@@ -274,7 +365,8 @@ describe("emitTmuxDeliveryNotification", () => {
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
       envelope: createEnvelope(),
       runner,
-      readSessionsRegistry: () => Promise.resolve(createRegistry())
+      readSessionsRegistry: () => Promise.resolve(createRegistry()),
+      deliveryAttempts: 2
     });
 
     expect(result).toMatchObject({
@@ -284,10 +376,87 @@ describe("emitTmuxDeliveryNotification", () => {
       reason: "tmux_send_failed"
     });
     expect(result.message).toContain(
-      "# [pairflow] r1 PASS codex->claude ref=artifact://handoff.md."
+      "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."
     );
     expect(result.message).toContain(
       "Run pairflow commands from worktree: /tmp/worktree."
     );
+  });
+
+  it("retries delivery when handoff marker is not visible after first submit", async () => {
+    const calls: string[][] = [];
+    let captureCount = 0;
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        captureCount += 1;
+        return Promise.resolve({
+          stdout:
+            captureCount >= 3
+              ? "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."
+              : "",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope(),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry()),
+      deliveryAttempts: 2
+    });
+
+    expect(result.delivered).toBe(true);
+    const submitCalls = calls.filter(
+      (call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.2"
+    );
+    // one message write + submit(3) + submit(3) across two attempts
+    expect(submitCalls.length).toBe(7);
+    const captureCalls = calls.filter((call) => call[0] === "capture-pane");
+    expect(captureCalls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("returns delivery_unconfirmed when marker never appears", async () => {
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout: "",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope(),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry()),
+      deliveryAttempts: 2
+    });
+
+    expect(result).toMatchObject({
+      delivered: false,
+      reason: "delivery_unconfirmed",
+      sessionName: "pf-b_delivery_01",
+      targetPaneIndex: 2
+    });
   });
 });

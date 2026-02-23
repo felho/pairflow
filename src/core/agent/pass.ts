@@ -259,7 +259,7 @@ export async function emitPassFromWorkspace(
     }).catch(() => undefined);
     if (refreshResult?.refreshed === true) {
       // Give the respawned reviewer CLI a short warm-up before delivery injection.
-      deliveryInitialDelayMs = 300;
+      deliveryInitialDelayMs = 1500;
     }
   }
 

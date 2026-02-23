@@ -108,7 +108,12 @@ describe("startBubble", () => {
           expect(input.reviewerBootstrapMessage).toContain(
             created.paths.taskArtifactPath
           );
-          expect(input.implementerKickoffMessage).toBeUndefined();
+          expect(input.implementerKickoffMessage).toContain(
+            `bubble=${created.bubbleId} kickoff`
+          );
+          expect(input.implementerKickoffMessage).toContain(
+            created.paths.taskArtifactPath
+          );
           return Promise.resolve({ sessionName: "pf-b_start_01" });
         },
         claimRuntimeSession: (input) => {

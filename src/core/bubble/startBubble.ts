@@ -111,6 +111,18 @@ function buildReviewerStartupPrompt(input: {
   ].join(" ");
 }
 
+function buildImplementerKickoffMessage(input: {
+  bubbleId: string;
+  taskArtifactPath: string;
+}): string {
+  return [
+    `# [pairflow] bubble=${input.bubbleId} kickoff.`,
+    `Read task file now: ${input.taskArtifactPath}.`,
+    "Start implementation immediately in this worktree.",
+    "When done with tests/typecheck, hand off with `pairflow pass --summary \"<what changed + validation>\"`."
+  ].join(" ");
+}
+
 const resumableRuntimeStates = new Set([
   "RUNNING",
   "WAITING_HUMAN",
@@ -254,6 +266,10 @@ export async function startBubble(
             worktreePath: resolved.bubblePaths.worktreePath,
             taskArtifactPath: resolved.bubblePaths.taskArtifactPath
           })
+        }),
+        implementerKickoffMessage: buildImplementerKickoffMessage({
+          bubbleId: resolved.bubbleId,
+          taskArtifactPath: resolved.bubblePaths.taskArtifactPath
         }),
         implementerBootstrapMessage: [
           `[pairflow] bubble=${resolved.bubbleId} role=implementer started.`,

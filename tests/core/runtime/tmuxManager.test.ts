@@ -123,74 +123,96 @@ describe("launchBubbleTmuxSession", () => {
       runner
     });
 
-    expect(calls.map((call) => call[0])).toEqual([
+    expect(calls.slice(0, 5).map((call) => call[0])).toEqual([
       "has-session",
       "new-session",
       "split-window",
       "split-window",
-      "select-layout",
-      "send-keys",
-      "send-keys",
-      "send-keys",
-      "send-keys",
-      "send-keys",
-      "send-keys",
-      "send-keys",
-      "send-keys",
-      "send-keys"
+      "select-layout"
     ]);
-    expect(calls[5]).toEqual([
+    expect(calls).toContainEqual([
+      "capture-pane",
+      "-pt",
+      "pf-b_start_bootstrap:0.1"
+    ]);
+    expect(calls).toContainEqual([
+      "capture-pane",
+      "-pt",
+      "pf-b_start_bootstrap:0.2"
+    ]);
+    expect(calls).toContainEqual([
       "send-keys",
       "-t",
       "pf-b_start_bootstrap:0.1",
       "-l",
       "implementer protocol message"
     ]);
-    expect(calls[6]).toEqual([
+    expect(calls).toContainEqual([
+      "send-keys",
+      "-t",
+      "pf-b_start_bootstrap:0.1",
+      "-l",
+      "\r"
+    ]);
+    expect(calls).toContainEqual([
       "send-keys",
       "-t",
       "pf-b_start_bootstrap:0.1",
       "Enter"
     ]);
-    expect(calls[7]).toEqual([
+    expect(calls).toContainEqual([
       "send-keys",
       "-t",
       "pf-b_start_bootstrap:0.1",
       "C-m"
     ]);
-    expect(calls[8]).toEqual([
+    expect(calls).toContainEqual([
       "send-keys",
       "-t",
       "pf-b_start_bootstrap:0.2",
       "-l",
       "reviewer protocol message"
     ]);
-    expect(calls[9]).toEqual([
+    expect(calls).toContainEqual([
+      "send-keys",
+      "-t",
+      "pf-b_start_bootstrap:0.2",
+      "-l",
+      "\r"
+    ]);
+    expect(calls).toContainEqual([
       "send-keys",
       "-t",
       "pf-b_start_bootstrap:0.2",
       "Enter"
     ]);
-    expect(calls[10]).toEqual([
+    expect(calls).toContainEqual([
       "send-keys",
       "-t",
       "pf-b_start_bootstrap:0.2",
       "C-m"
     ]);
-    expect(calls[11]).toEqual([
+    expect(calls).toContainEqual([
       "send-keys",
       "-t",
       "pf-b_start_bootstrap:0.1",
       "-l",
       "implementer kickoff message"
     ]);
-    expect(calls[12]).toEqual([
+    expect(calls).toContainEqual([
+      "send-keys",
+      "-t",
+      "pf-b_start_bootstrap:0.1",
+      "-l",
+      "\r"
+    ]);
+    expect(calls).toContainEqual([
       "send-keys",
       "-t",
       "pf-b_start_bootstrap:0.1",
       "Enter"
     ]);
-    expect(calls[13]).toEqual([
+    expect(calls).toContainEqual([
       "send-keys",
       "-t",
       "pf-b_start_bootstrap:0.1",
@@ -211,7 +233,7 @@ describe("launchBubbleTmuxSession", () => {
       if (
         args[0] === "send-keys" &&
         args[2] === "pf-b_start_bootstrap_fail:0.1" &&
-        (args[3] === "Enter" || args[3] === "C-m")
+        (args[3] === "Enter" || args[3] === "C-m" || (args[3] === "-l" && args[4] === "\r"))
       ) {
         return Promise.resolve({
           stdout: "",
@@ -245,6 +267,14 @@ describe("launchBubbleTmuxSession", () => {
         call.args[3] === "Enter"
     );
     expect(failedEnter?.allowFailure).toBe(true);
+    const failedLiteralReturn = calls.find(
+      (call) =>
+        call.args[0] === "send-keys" &&
+        call.args[2] === "pf-b_start_bootstrap_fail:0.1" &&
+        call.args[3] === "-l" &&
+        call.args[4] === "\r"
+    );
+    expect(failedLiteralReturn?.allowFailure).toBe(true);
     const failedSubmitFallback = calls.find(
       (call) =>
         call.args[0] === "send-keys" &&

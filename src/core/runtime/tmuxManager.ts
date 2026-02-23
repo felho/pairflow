@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
+import { maybeAcceptClaudeTrustPrompt, submitTmuxPaneInput } from "./tmuxInput.js";
 
 export interface TmuxRunResult {
   stdout: string;
@@ -199,6 +200,10 @@ export async function launchBubbleTmuxSession(
       return;
     }
 
+    // Claude can pause on first-use trust prompt for each worktree.
+    // Best effort auto-accept keeps startup fully non-interactive.
+    await maybeAcceptClaudeTrustPrompt(runner, targetPane).catch(() => undefined);
+
     const writeMessageResult = await runner(
       ["send-keys", "-t", targetPane, "-l", message as string],
       { allowFailure: true }
@@ -207,12 +212,7 @@ export async function launchBubbleTmuxSession(
       return;
     }
 
-    await runner(["send-keys", "-t", targetPane, "Enter"], {
-      allowFailure: true
-    });
-    await runner(["send-keys", "-t", targetPane, "C-m"], {
-      allowFailure: true
-    });
+    await submitTmuxPaneInput(runner, targetPane);
   };
 
   await sendPaneMessage(`${sessionName}:0.1`, input.implementerBootstrapMessage);

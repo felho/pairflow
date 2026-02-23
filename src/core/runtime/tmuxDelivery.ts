@@ -1,5 +1,6 @@
 import { readRuntimeSessionsRegistry } from "./sessionsRegistry.js";
 import { runTmux, type TmuxRunner } from "./tmuxManager.js";
+import { maybeAcceptClaudeTrustPrompt, submitTmuxPaneInput } from "./tmuxInput.js";
 import type { BubbleConfig } from "../../types/bubble.js";
 import type { ProtocolEnvelope, ProtocolParticipant } from "../../types/protocol.js";
 
@@ -10,6 +11,7 @@ export interface EmitTmuxDeliveryNotificationInput {
   envelope: ProtocolEnvelope;
   messageRef?: string;
   initialDelayMs?: number;
+  deliveryAttempts?: number;
   runner?: TmuxRunner;
   readSessionsRegistry?: typeof readRuntimeSessionsRegistry;
 }
@@ -18,6 +20,7 @@ export type TmuxDeliveryFailureReason =
   | "no_runtime_session"
   | "unsupported_recipient"
   | "registry_read_failed"
+  | "delivery_unconfirmed"
   | "tmux_send_failed";
 
 export interface EmitTmuxDeliveryNotificationResult {
@@ -89,7 +92,7 @@ function buildDeliveryMessage(
   }
 
   // Prefix as shell comment so if a pane is in plain bash fallback, this line remains harmless.
-  return `# [pairflow] r${envelope.round} ${envelope.type} ${envelope.sender}->${envelope.recipient} ref=${messageRef}. Action: ${action} ${worktreeHint}`;
+  return `# [pairflow] r${envelope.round} ${envelope.type} ${envelope.sender}->${envelope.recipient} msg=${envelope.id} ref=${messageRef}. Action: ${action} ${worktreeHint}`;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -98,18 +101,18 @@ function sleep(ms: number): Promise<void> {
   });
 }
 
-async function submitPaneInput(
+async function paneContainsMarker(
   runner: TmuxRunner,
-  targetPane: string
-): Promise<void> {
-  // Some CLIs/tmux combinations occasionally miss a single Enter keystroke.
-  // Send a short submit-key sequence for reliability.
-  await runner(["send-keys", "-t", targetPane, "Enter"], {
+  targetPane: string,
+  marker: string
+): Promise<boolean> {
+  const capture = await runner(["capture-pane", "-pt", targetPane], {
     allowFailure: true
   });
-  await runner(["send-keys", "-t", targetPane, "C-m"], {
-    allowFailure: true
-  });
+  if (capture.exitCode !== 0) {
+    return false;
+  }
+  return capture.stdout.includes(marker);
 }
 
 export async function emitTmuxDeliveryNotification(
@@ -186,8 +189,32 @@ export async function emitTmuxDeliveryNotification(
     if ((input.initialDelayMs ?? 0) > 0) {
       await sleep(input.initialDelayMs as number);
     }
+    const attempts = Math.max(1, input.deliveryAttempts ?? 3);
+    let confirmed = false;
+    await maybeAcceptClaudeTrustPrompt(runner, targetPane).catch(() => undefined);
     await runner(["send-keys", "-t", targetPane, "-l", message]);
-    await submitPaneInput(runner, targetPane);
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      await submitTmuxPaneInput(runner, targetPane);
+
+      // Allow UI flush then verify the handoff marker is actually visible.
+      await sleep(800);
+      if (await paneContainsMarker(runner, targetPane, input.envelope.id)) {
+        confirmed = true;
+        break;
+      }
+      if (attempt < attempts - 1) {
+        await sleep(900);
+      }
+    }
+    if (!confirmed) {
+      return {
+        delivered: false,
+        sessionName,
+        targetPaneIndex,
+        message,
+        reason: "delivery_unconfirmed"
+      };
+    }
   } catch {
     return {
       delivered: false,
