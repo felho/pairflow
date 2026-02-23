@@ -138,13 +138,17 @@ At this point, a tmux session `pf-feat_login` opens with:
 - **Pane 1**: Implementer agent (codex) — receives auto protocol briefing
 - **Pane 2**: Reviewer agent (claude) — receives auto protocol briefing
 
+By default, reviewer context mode is **fresh**: when the implementer hands off (`PASS` to reviewer), Pairflow respawns the reviewer pane process so each review round starts from a clean session context.
+
 ```bash
 # 3. Implementer finishes first pass, hands off to reviewer
 #    (run FROM the worktree directory — bubble is auto-detected from CWD)
 pairflow pass --summary "Login form implemented with email regex validation"
 
 # 4. Reviewer reviews and sends feedback back
-pairflow pass --summary "Missing: password strength indicator, error messages not i18n-ready"
+pairflow pass --summary "Missing: password strength indicator, error messages not i18n-ready" \
+  --finding "P1:Password strength indicator missing" \
+  --finding "P2:i18n error keys missing"
 
 # 5. Implementer fixes issues, hands off again
 pairflow pass --summary "Added password strength meter and i18n error keys"
@@ -323,8 +327,9 @@ The reviewer can only call `converged` when specific conditions are met:
 
 1. The active role must be `reviewer`
 2. At least 2 rounds of implementer↔reviewer exchange must have happened
-3. The reviewer's last review must not contain P0/P1 severity findings
-4. No unanswered `HUMAN_QUESTION` may be pending
+3. The reviewer's last `PASS` must declare findings explicitly (`--finding` or `--no-findings`)
+4. The reviewer's last review must not contain P0/P1 severity findings
+5. No unanswered `HUMAN_QUESTION` may be pending
 
 This prevents premature convergence — the agents must actually iterate.
 
@@ -392,7 +397,7 @@ These commands don't require `--id` or `--repo` — they detect the bubble from 
 
 | Command | Description |
 |---------|-------------|
-| `pass --summary <text> [--ref <path>]... [--intent <task\|review\|fix_request>]` | Hand off to the other agent |
+| `pass --summary <text> [--ref <path>]... [--intent <task\|review\|fix_request>] [--finding <P0\|P1\|P2\|P3:Title>]... [--no-findings]` | Hand off to the other agent (reviewer must declare findings explicitly) |
 | `ask-human --question <text> [--ref <path>]...` | Ask the human a question |
 | `converged --summary <text> [--ref <path>]...` | Signal convergence (reviewer only) |
 

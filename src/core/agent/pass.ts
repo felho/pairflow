@@ -12,12 +12,16 @@ import {
 } from "../bubble/workspaceResolution.js";
 import { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
 import { isPassIntent, type PassIntent, type ProtocolEnvelope } from "../../types/protocol.js";
+import type { Finding } from "../../types/findings.js";
 import type { AgentName, AgentRole, BubbleStateSnapshot, RoundRoleHistoryEntry } from "../../types/bubble.js";
+import { refreshReviewerContext } from "../runtime/reviewerContext.js";
 
 export interface EmitPassInput {
   summary: string;
   refs?: string[];
   intent?: PassIntent;
+  findings?: Finding[];
+  noFindings?: boolean;
   cwd?: string;
   now?: Date;
 }
@@ -28,6 +32,11 @@ export interface EmitPassResult {
   envelope: ProtocolEnvelope;
   state: BubbleStateSnapshot;
   inferredIntent: boolean;
+}
+
+export interface EmitPassDependencies {
+  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
+  refreshReviewerContext?: typeof refreshReviewerContext;
 }
 
 interface ResolvedHandoff {
@@ -135,7 +144,10 @@ function mapAppendResult(result: AppendProtocolEnvelopeResult): Pick<EmitPassRes
   };
 }
 
-export async function emitPassFromWorkspace(input: EmitPassInput): Promise<EmitPassResult> {
+export async function emitPassFromWorkspace(
+  input: EmitPassInput,
+  dependencies: EmitPassDependencies = {}
+): Promise<EmitPassResult> {
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
   const summary = requireNonEmptyString(
@@ -144,6 +156,9 @@ export async function emitPassFromWorkspace(input: EmitPassInput): Promise<EmitP
     (message) => new PassCommandError(message)
   );
   const refs = normalizeStringList(input.refs ?? []);
+  const findings = input.findings ?? [];
+  const hasFindings = findings.length > 0;
+  const noFindings = input.noFindings ?? false;
 
   const resolved = await resolveBubbleFromWorkspaceCwd(input.cwd);
 
@@ -157,6 +172,23 @@ export async function emitPassFromWorkspace(input: EmitPassInput): Promise<EmitP
   const intent = input.intent ?? inferPassIntent(handoff.senderRole);
   if (!isPassIntent(intent)) {
     throw new PassCommandError(`Invalid pass intent: ${String(intent)}`);
+  }
+
+  if (handoff.senderRole === "reviewer") {
+    if (hasFindings && noFindings) {
+      throw new PassCommandError(
+        "Reviewer PASS cannot use both --finding and --no-findings."
+      );
+    }
+    if (!hasFindings && !noFindings) {
+      throw new PassCommandError(
+        "Reviewer PASS requires explicit findings declaration: use --finding <P0|P1|P2|P3:Title> (repeatable) or --no-findings."
+      );
+    }
+  } else if (hasFindings || noFindings) {
+    throw new PassCommandError(
+      "Implementer PASS does not accept findings flags; findings are reviewer-only."
+    );
   }
 
   const lockPath = join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`);
@@ -173,7 +205,10 @@ export async function emitPassFromWorkspace(input: EmitPassInput): Promise<EmitP
       round: handoff.envelopeRound,
       payload: {
         summary,
-        pass_intent: intent
+        pass_intent: intent,
+        ...(handoff.senderRole === "reviewer"
+          ? { findings: hasFindings ? findings : [] }
+          : {})
       },
       refs
     }
@@ -209,8 +244,24 @@ export async function emitPassFromWorkspace(input: EmitPassInput): Promise<EmitP
 
   const mapped = mapAppendResult(appendResult);
 
+  const refreshReviewer =
+    dependencies.refreshReviewerContext ?? refreshReviewerContext;
+  if (
+    handoff.senderRole === "implementer" &&
+    resolved.bubbleConfig.reviewer_context_mode === "fresh"
+  ) {
+    // Best effort only; protocol/state progression must not fail if tmux refresh fails.
+    await refreshReviewer({
+      bubbleId: resolved.bubbleId,
+      bubbleConfig: resolved.bubbleConfig,
+      sessionsPath: resolved.bubblePaths.sessionsPath
+    }).catch(() => undefined);
+  }
+
+  const emitDelivery =
+    dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
   // Optional UX signal; never block protocol/state progression on notification failure.
-  void emitTmuxDeliveryNotification({
+  void emitDelivery({
     bubbleId: resolved.bubbleId,
     bubbleConfig: resolved.bubbleConfig,
     sessionsPath: resolved.bubblePaths.sessionsPath,

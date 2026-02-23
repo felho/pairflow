@@ -29,6 +29,10 @@ export const qualityModes = ["strict"] as const;
 
 export type QualityMode = (typeof qualityModes)[number];
 
+export const reviewerContextModes = ["fresh", "persistent"] as const;
+
+export type ReviewerContextMode = (typeof reviewerContextModes)[number];
+
 export interface BubbleAgentsConfig {
   implementer: AgentName;
   reviewer: AgentName;
@@ -52,6 +56,7 @@ export interface BubbleConfig {
   bubble_branch: string;
   work_mode: WorkMode;
   quality_mode: QualityMode;
+  reviewer_context_mode: ReviewerContextMode;
   watchdog_timeout_minutes: number;
   max_rounds: number;
   commit_requires_approval: boolean;
@@ -109,5 +114,14 @@ export function isWorkMode(value: unknown): value is WorkMode {
 export function isQualityMode(value: unknown): value is QualityMode {
   return (
     typeof value === "string" && (qualityModes as readonly string[]).includes(value)
+  );
+}
+
+export function isReviewerContextMode(
+  value: unknown
+): value is ReviewerContextMode {
+  return (
+    typeof value === "string" &&
+    (reviewerContextModes as readonly string[]).includes(value)
   );
 }

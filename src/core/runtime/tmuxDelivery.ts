@@ -72,7 +72,7 @@ function buildDeliveryMessage(
   } else if (recipientRole === "reviewer") {
     if (envelope.type === "PASS") {
       action =
-        "Implementer handoff received. Review changes now, then run `pairflow pass --summary` for feedback or `pairflow converged --summary` if clean.";
+        "Implementer handoff received. Review changes now, then run `pairflow pass --summary ... --finding P1:...` (repeatable) or `pairflow pass --summary ... --no-findings`; run `pairflow converged --summary` only when clean.";
     } else if (envelope.type === "HUMAN_REPLY") {
       action =
         "Human response received. Continue review workflow from this update.";

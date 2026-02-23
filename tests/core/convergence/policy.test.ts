@@ -23,7 +23,7 @@ function createPassEnvelope(
 }
 
 describe("validateConvergencePolicy", () => {
-  it("handles malformed findings payload safely", () => {
+  it("rejects malformed findings payload on previous reviewer PASS", () => {
     const transcript = [
       createPassEnvelope({
         payload: {
@@ -54,7 +54,44 @@ describe("validateConvergencePolicy", () => {
       transcript
     });
 
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
+    expect(
+      result.errors.some((error) => error.includes("invalid findings payload"))
+    ).toBe(true);
+  });
+
+  it("requires explicit findings declaration on previous reviewer PASS", () => {
+    const result = validateConvergencePolicy({
+      currentRound: 2,
+      reviewer: "claude",
+      implementer: "codex",
+      roundRoleHistory: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T11:59:00.000Z"
+        },
+        {
+          round: 2,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:01:00.000Z"
+        }
+      ],
+      transcript: [
+        createPassEnvelope({
+          payload: {
+            summary: "Review pass without findings"
+          }
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(
+      result.errors.some((error) => error.includes("declare findings explicitly"))
+    ).toBe(true);
   });
 
   it("flags blocking findings when previous reviewer PASS has P1", () => {

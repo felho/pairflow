@@ -171,11 +171,12 @@ Required message types:
 Type assignment rules:
 1. `pairflow pass` always emits `PASS` in MVP (no required type choice for agents).
 2. Optional `--intent <task|review|fix_request>` may be provided; if omitted, CLI infers `payload.pass_intent` from active role.
-3. Review findings and severity tags (`P0`-`P3`) are carried in `PASS.payload.findings[]`.
-4. `pairflow ask-human` always emits `HUMAN_QUESTION`.
-5. `pairflow bubble reply` always emits `HUMAN_REPLY`.
-6. `pairflow converged` always emits `CONVERGENCE` only after policy validation.
-7. Agents never infer/write envelope types directly; type is validated and persisted by CLI.
+3. Reviewer-origin `pairflow pass` must explicitly declare findings via `--finding` (repeatable) or `--no-findings`; this is persisted as `PASS.payload.findings[]` (possibly empty).
+4. Implementer-origin `pairflow pass` does not carry findings payload.
+5. `pairflow ask-human` always emits `HUMAN_QUESTION`.
+6. `pairflow bubble reply` always emits `HUMAN_REPLY`.
+7. `pairflow converged` always emits `CONVERGENCE` only after policy validation.
+8. Agents never infer/write envelope types directly; type is validated and persisted by CLI.
 
 Transport and UX rules:
 1. Canonical record is always `transcript.ndjson` (machine-readable source of truth).
@@ -226,6 +227,7 @@ base_branch = "main"
 bubble_branch = "bubble/b_legal_search_01"
 work_mode = "worktree" # worktree|clone
 quality_mode = "strict" # MVP: strict only
+reviewer_context_mode = "fresh" # fresh|persistent (default: fresh)
 watchdog_timeout_minutes = 5
 max_rounds = 8
 commit_requires_approval = true
@@ -263,7 +265,7 @@ Human/operator commands:
 12. `pairflow bubble watchdog --id <id>` (runs timeout check and escalates to `WAITING_HUMAN` when idle timeout is exceeded)
 
 Agent-facing commands (invoked from inside agent sessions):
-1. `pairflow pass --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>]`
+1. `pairflow pass --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>] [--finding <P0|P1|P2|P3:Title>]... [--no-findings]`
 2. `pairflow ask-human --question "<text>"`
 3. `pairflow converged --summary "<text>"`
 
@@ -292,6 +294,7 @@ Rules:
 6. Status watcher must display `active_agent`, `active_since`, and watchdog countdown for escalation visibility.
 7. Watchdog escalation action is materialized as orchestrator-emitted `HUMAN_QUESTION` and state transition `RUNNING -> WAITING_HUMAN`.
 8. Bubble start injects an initial protocol briefing into implementer/reviewer panes (role, required command set, task/worktree references); this improves protocol adherence but does not emit protocol envelopes automatically.
+9. When `reviewer_context_mode = "fresh"`, each implementer -> reviewer `PASS` triggers reviewer pane process respawn so each review round starts from clean agent context.
 
 ## Git Workflow Rules
 1. Create bubble branch from selected base branch.

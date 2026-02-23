@@ -5,6 +5,7 @@ import { renderBubbleConfigToml, assertValidBubbleConfig } from "../../config/bu
 import {
   DEFAULT_MAX_ROUNDS,
   DEFAULT_QUALITY_MODE,
+  DEFAULT_REVIEWER_CONTEXT_MODE,
   DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
   DEFAULT_WORK_MODE
 } from "../../config/defaults.js";
@@ -154,6 +155,7 @@ function buildBubbleConfig(input: {
     bubble_branch: input.bubbleBranch,
     work_mode: DEFAULT_WORK_MODE,
     quality_mode: DEFAULT_QUALITY_MODE,
+    reviewer_context_mode: DEFAULT_REVIEWER_CONTEXT_MODE,
     watchdog_timeout_minutes: DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
     max_rounds: DEFAULT_MAX_ROUNDS,
     commit_requires_approval: true,

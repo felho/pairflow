@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildBubbleTmuxSessionName,
   launchBubbleTmuxSession,
+  respawnTmuxPaneCommand,
   terminateBubbleTmuxSession,
   TmuxSessionExistsError,
   type TmuxRunResult,
@@ -269,5 +270,39 @@ describe("terminateBubbleTmuxSession", () => {
       sessionName: "pf-missing",
       existed: false
     });
+  });
+});
+
+describe("respawnTmuxPaneCommand", () => {
+  it("respawns target pane command with kill flag", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args) => {
+      calls.push(args);
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    await respawnTmuxPaneCommand({
+      sessionName: "pf-b_start_01",
+      paneIndex: 2,
+      cwd: "/tmp/worktree",
+      command: "claude",
+      runner
+    });
+
+    expect(calls).toEqual([
+      [
+        "respawn-pane",
+        "-k",
+        "-t",
+        "pf-b_start_01:0.2",
+        "-c",
+        "/tmp/worktree",
+        "claude"
+      ]
+    ]);
   });
 });

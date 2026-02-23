@@ -12,9 +12,10 @@ function createConfig(overrides: Partial<BubbleConfig> = {}): BubbleConfig {
     repo_path: "/tmp/repo",
     base_branch: "main",
     bubble_branch: "bubble/b_notify_01",
-    work_mode: "worktree",
-    quality_mode: "strict",
-    watchdog_timeout_minutes: 5,
+  work_mode: "worktree",
+  quality_mode: "strict",
+  reviewer_context_mode: "fresh",
+  watchdog_timeout_minutes: 5,
     max_rounds: 8,
     commit_requires_approval: true,
     agents: {

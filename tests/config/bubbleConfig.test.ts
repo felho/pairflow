@@ -26,6 +26,7 @@ describe("bubble config schema", () => {
   it("parses valid TOML and applies defaults", () => {
     const config = parseBubbleConfigToml(baseToml);
     expect(config.quality_mode).toBe("strict");
+    expect(config.reviewer_context_mode).toBe("fresh");
     expect(config.watchdog_timeout_minutes).toBe(5);
     expect(config.work_mode).toBe("worktree");
     expect(config.notifications.enabled).toBe(true);
@@ -62,6 +63,40 @@ describe("bubble config schema", () => {
     expect(result.errors.some((error) => error.path === "quality_mode")).toBe(true);
   });
 
+  it("rejects unsupported reviewer context mode", () => {
+    const result = validateBubbleConfig({
+      id: "b_test_01",
+      repo_path: "/tmp/repo",
+      base_branch: "main",
+      bubble_branch: "bubble/b_test_01",
+      work_mode: "worktree",
+      quality_mode: "strict",
+      reviewer_context_mode: "sticky",
+      watchdog_timeout_minutes: 5,
+      max_rounds: 8,
+      commit_requires_approval: true,
+      agents: {
+        implementer: "codex",
+        reviewer: "claude"
+      },
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      },
+      notifications: {
+        enabled: true
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some((error) => error.path === "reviewer_context_mode")
+    ).toBe(true);
+  });
+
   it("rejects missing required fields", () => {
     const result = validateBubbleConfig({
       id: "b_test_01"
@@ -83,6 +118,7 @@ describe("bubble config schema", () => {
       bubble_branch: "bubble/b_test_01",
       work_mode: "worktree",
       quality_mode: "strict",
+      reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
       commit_requires_approval: true,
@@ -111,6 +147,7 @@ describe("bubble config schema", () => {
       bubble_branch: "bubble/b_test_01",
       work_mode: "worktree",
       quality_mode: "strict",
+      reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
       commit_requires_approval: true,
@@ -141,6 +178,7 @@ describe("bubble config schema", () => {
       bubble_branch: "bubble/b_test_01",
       work_mode: "worktree",
       quality_mode: "strict",
+      reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
       commit_requires_approval: true,

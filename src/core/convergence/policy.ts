@@ -1,4 +1,5 @@
 import type { AgentName, RoundRoleHistoryEntry } from "../../types/bubble.js";
+import { isFindingSeverity } from "../../types/findings.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 import { isRecord } from "../validation.js";
 
@@ -15,20 +16,40 @@ export interface ConvergencePolicyResult {
   errors: string[];
 }
 
-function hasBlockingFindings(envelope: ProtocolEnvelope): boolean {
+function getReviewerFindingsStatus(envelope: ProtocolEnvelope): {
+  missing: boolean;
+  invalid: boolean;
+  hasBlocking: boolean;
+} {
   const findings = envelope.payload.findings;
   if (!Array.isArray(findings)) {
-    return false;
+    return {
+      missing: true,
+      invalid: false,
+      hasBlocking: false
+    };
   }
 
-  return findings.some((finding) => {
+  let invalid = false;
+  const hasBlocking = findings.some((finding) => {
     if (!isRecord(finding)) {
+      invalid = true;
       return false;
     }
 
     const severity = finding.severity;
+    if (!isFindingSeverity(severity)) {
+      invalid = true;
+      return false;
+    }
     return severity === "P0" || severity === "P1";
   });
+
+  return {
+    missing: false,
+    invalid,
+    hasBlocking
+  };
 }
 
 function hasUnresolvedHumanQuestion(transcript: ProtocolEnvelope[]): boolean {
@@ -94,10 +115,21 @@ export function validateConvergencePolicy(
     errors.push(
       "Convergence requires a previous reviewer PASS from the prior round."
     );
-  } else if (hasBlockingFindings(previousReviewerPass)) {
-    errors.push(
-      "Convergence blocked: previous reviewer PASS still contains open P0/P1 findings."
-    );
+  } else {
+    const findingsStatus = getReviewerFindingsStatus(previousReviewerPass);
+    if (findingsStatus.missing) {
+      errors.push(
+        "Convergence requires previous reviewer PASS to declare findings explicitly (use --finding or --no-findings)."
+      );
+    } else if (findingsStatus.invalid) {
+      errors.push(
+        "Convergence blocked: previous reviewer PASS has invalid findings payload."
+      );
+    } else if (findingsStatus.hasBlocking) {
+      errors.push(
+        "Convergence blocked: previous reviewer PASS still contains open P0/P1 findings."
+      );
+    }
   }
 
   if (hasUnresolvedHumanQuestion(input.transcript)) {

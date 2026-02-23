@@ -15,7 +15,9 @@ describe("parsePassCommandOptions", () => {
       "--ref",
       "artifact://tests/1.txt",
       "--intent",
-      "review"
+      "review",
+      "--finding",
+      "P1:Missing test"
     ]);
 
     expect(options.help).toBe(false);
@@ -28,6 +30,12 @@ describe("parsePassCommandOptions", () => {
       "artifact://tests/1.txt"
     ]);
     expect(options.intent).toBe("review");
+    expect(options.findings).toEqual([
+      {
+        severity: "P1",
+        title: "Missing test"
+      }
+    ]);
   });
 
   it("rejects invalid intent", () => {
@@ -41,6 +49,27 @@ describe("parsePassCommandOptions", () => {
 
     const helpOptions = parsePassCommandOptions(["--help"]);
     expect(helpOptions.help).toBe(true);
+  });
+
+  it("parses explicit no-findings flag", () => {
+    const options = parsePassCommandOptions([
+      "--summary",
+      "review clean",
+      "--no-findings"
+    ]);
+
+    expect(options.help).toBe(false);
+    if (options.help) {
+      throw new Error("Expected validated pass options");
+    }
+    expect(options.noFindings).toBe(true);
+    expect(options.findings).toEqual([]);
+  });
+
+  it("rejects invalid finding format", () => {
+    expect(() =>
+      parsePassCommandOptions(["--summary", "handoff", "--finding", "bad-format"])
+    ).toThrow(/Invalid --finding format/u);
   });
 });
 

@@ -38,6 +38,7 @@ async function setupApprovedBubble(repoPath: string, bubbleId: string) {
   });
   await emitPassFromWorkspace({
     summary: "Review pass 1 clean",
+    noFindings: true,
     cwd: bubble.paths.worktreePath,
     now: new Date("2026-02-22T15:01:00.000Z")
   });

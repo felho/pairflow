@@ -13,6 +13,7 @@ const baseConfig: BubbleConfig = {
   bubble_branch: "pf/b_delivery_01",
   work_mode: "worktree",
   quality_mode: "strict",
+  reviewer_context_mode: "fresh",
   watchdog_timeout_minutes: 5,
   max_rounds: 8,
   commit_requires_approval: true,

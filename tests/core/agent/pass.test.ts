@@ -116,6 +116,12 @@ describe("emitPassFromWorkspace", () => {
     const now = new Date("2026-02-21T12:07:00.000Z");
     const result = await emitPassFromWorkspace({
       summary: "Found issues to fix",
+      findings: [
+        {
+          severity: "P2",
+          title: "Improve null checks"
+        }
+      ],
       cwd: bubble.paths.worktreePath,
       now
     });
@@ -130,6 +136,121 @@ describe("emitPassFromWorkspace", () => {
     expect(updated.state.active_agent).toBe("codex");
     expect(updated.state.active_role).toBe("implementer");
     expect(updated.state.round_role_history.some((entry) => entry.round === 2)).toBe(true);
+  });
+
+  it("requires explicit findings declaration for reviewer PASS", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_06",
+      task: "Implement pass flow"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Review done",
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/requires explicit findings declaration/u);
+  });
+
+  it("writes empty findings array when reviewer declares no findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_07",
+      task: "Implement pass flow"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Review clean",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:07:00.000Z")
+    });
+
+    expect(result.envelope.payload.findings).toEqual([]);
+  });
+
+  it("rejects findings flags on implementer PASS", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_08",
+      task: "Implement pass flow"
+    });
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Implementation done",
+        noFindings: true,
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/Implementer PASS does not accept findings flags/u);
+  });
+
+  it("refreshes reviewer pane on implementer PASS when reviewer context mode is fresh", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_09",
+      task: "Implement pass flow"
+    });
+
+    const refreshCalls: Array<{ bubbleId: string }> = [];
+    await emitPassFromWorkspace(
+      {
+        summary: "Implementation complete",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:05:00.000Z")
+      },
+      {
+        refreshReviewerContext: ({ bubbleId }) => {
+          refreshCalls.push({ bubbleId });
+          return Promise.resolve({
+            refreshed: true
+          });
+        }
+      }
+    );
+
+    expect(refreshCalls).toEqual([{ bubbleId: "b_pass_09" }]);
   });
 
   it("rejects pass when bubble is not running", async () => {

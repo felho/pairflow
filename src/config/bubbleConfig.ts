@@ -12,12 +12,14 @@ import {
   DEFAULT_COMMIT_REQUIRES_APPROVAL,
   DEFAULT_MAX_ROUNDS,
   DEFAULT_QUALITY_MODE,
+  DEFAULT_REVIEWER_CONTEXT_MODE,
   DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
   DEFAULT_WORK_MODE
 } from "./defaults.js";
 import {
   isAgentName,
   isQualityMode,
+  isReviewerContextMode,
   isWorkMode,
   type BubbleConfig
 } from "../types/bubble.js";
@@ -352,6 +354,15 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     });
   }
 
+  const reviewerContextMode =
+    input.reviewer_context_mode ?? DEFAULT_REVIEWER_CONTEXT_MODE;
+  if (!isReviewerContextMode(reviewerContextMode)) {
+    errors.push({
+      path: "reviewer_context_mode",
+      message: "Must be one of: fresh, persistent"
+    });
+  }
+
   const watchdogTimeoutMinutes =
     input.watchdog_timeout_minutes ?? DEFAULT_WATCHDOG_TIMEOUT_MINUTES;
   if (!isInteger(watchdogTimeoutMinutes) || watchdogTimeoutMinutes <= 0) {
@@ -473,6 +484,8 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     bubble_branch: bubbleBranch as string,
     work_mode: workMode as BubbleConfig["work_mode"],
     quality_mode: qualityMode as BubbleConfig["quality_mode"],
+    reviewer_context_mode:
+      reviewerContextMode as BubbleConfig["reviewer_context_mode"],
     watchdog_timeout_minutes: watchdogTimeoutMinutes as number,
     max_rounds: maxRounds as number,
     commit_requires_approval: commitRequiresApproval as boolean,
@@ -551,6 +564,7 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
     `bubble_branch = ${tomlString(config.bubble_branch)}`,
     `work_mode = ${tomlString(config.work_mode)}`,
     `quality_mode = ${tomlString(config.quality_mode)}`,
+    `reviewer_context_mode = ${tomlString(config.reviewer_context_mode)}`,
     `watchdog_timeout_minutes = ${config.watchdog_timeout_minutes}`,
     `max_rounds = ${config.max_rounds}`,
     `commit_requires_approval = ${config.commit_requires_approval}`,

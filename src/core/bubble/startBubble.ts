@@ -2,6 +2,7 @@ import { applyStateTransition } from "../state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
 import { shellQuote } from "../util/shellQuote.js";
+import { buildAgentCommand } from "../runtime/agentCommand.js";
 import {
   bootstrapWorktreeWorkspace,
   cleanupWorktreeWorkspace,
@@ -72,22 +73,6 @@ function buildStatusPaneCommand(bubbleId: string, repoPath: string): string {
   return `bash -lc ${shellQuote(loopScript)}`;
 }
 
-function buildAgentCommand(agentName: "codex" | "claude", bubbleId: string): string {
-  const missingBinaryMessage = `${agentName} CLI not found in PATH for bubble ${bubbleId}. Install it or configure agent command mapping.`;
-  const script = [
-    "set +e",
-    `if command -v ${agentName} >/dev/null 2>&1; then`,
-    `  ${agentName}`,
-    "  agent_exit_code=$?",
-    `  printf '%s\\n' "${agentName} exited (code $agent_exit_code). Dropping to interactive shell."`,
-    "  exec bash -i",
-    "fi",
-    `printf '%s\\n' ${shellQuote(missingBinaryMessage)}`,
-    "exec bash -i"
-  ].join("\n");
-  return `bash -lc ${shellQuote(script)}`;
-}
-
 function buildAgentProtocolBootstrapMessage(input: {
   bubbleId: string;
   role: "implementer" | "reviewer";
@@ -98,7 +83,7 @@ function buildAgentProtocolBootstrapMessage(input: {
   const roleAction =
     input.role === "implementer"
       ? "Implement changes, then hand off with `pairflow pass --summary`."
-      : "Stand by first. Wait for implementer handoff (`PASS` event), then review and run `pairflow pass --summary` or `pairflow converged --summary`.";
+      : "Stand by first. Wait for implementer handoff (`PASS` event), then review and run `pairflow pass --summary ... --finding P1:...` (repeatable) or `pairflow pass --summary ... --no-findings`; run `pairflow converged --summary` only when clean.";
   return [
     `[pairflow] bubble=${input.bubbleId} role=${input.role} started.`,
     roleAction,

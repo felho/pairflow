@@ -6,11 +6,14 @@ import {
   type EmitPassResult
 } from "../../../core/agent/pass.js";
 import { isPassIntent, type PassIntent } from "../../../types/protocol.js";
+import { isFindingSeverity, type Finding } from "../../../types/findings.js";
 
 export interface PassCommandOptions {
   summary: string;
   refs: string[];
   intent?: PassIntent;
+  findings: Finding[];
+  noFindings: boolean;
   help: false;
 }
 
@@ -24,14 +27,42 @@ export type ParsedPassCommandOptions = PassCommandOptions | PassHelpCommandOptio
 export function getPassHelpText(): string {
   return [
     "Usage:",
-    '  pairflow pass --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>]',
+    '  pairflow pass --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>] [--finding <P0|P1|P2|P3:Title>]... [--no-findings]',
     "",
     "Options:",
     "  --summary <text>      Required handoff summary",
     "  --ref <path>          Optional artifact reference (repeatable)",
     "  --intent <value>      Optional intent override: task|review|fix_request",
+    "  --finding <value>     Reviewer finding, format: P0|P1|P2|P3:Title (repeatable)",
+    "  --no-findings         Reviewer explicit clean pass (no open findings)",
     "  -h, --help            Show this help"
   ].join("\n");
+}
+
+function parseFinding(raw: string): Finding {
+  const trimmed = raw.trim();
+  const separatorIndex = trimmed.indexOf(":");
+  if (separatorIndex <= 0 || separatorIndex === trimmed.length - 1) {
+    throw new Error(
+      "Invalid --finding format. Use: <P0|P1|P2|P3:Title>."
+    );
+  }
+
+  const severity = trimmed.slice(0, separatorIndex).trim();
+  const title = trimmed.slice(separatorIndex + 1).trim();
+  if (!isFindingSeverity(severity)) {
+    throw new Error(
+      "Invalid --finding severity. Use one of: P0, P1, P2, P3."
+    );
+  }
+  if (title.length === 0) {
+    throw new Error("Invalid --finding title. Title cannot be empty.");
+  }
+
+  return {
+    severity,
+    title
+  };
 }
 
 export function parsePassCommandOptions(args: string[]): ParsedPassCommandOptions {
@@ -48,6 +79,13 @@ export function parsePassCommandOptions(args: string[]): ParsedPassCommandOption
       intent: {
         type: "string"
       },
+      finding: {
+        type: "string",
+        multiple: true
+      },
+      "no-findings": {
+        type: "boolean"
+      },
       help: {
         type: "boolean",
         short: "h"
@@ -58,6 +96,9 @@ export function parsePassCommandOptions(args: string[]): ParsedPassCommandOption
   });
 
   const refs = parsed.values.ref ?? [];
+  const findingsRaw = parsed.values.finding ?? [];
+  const findings = findingsRaw.map(parseFinding);
+  const noFindings = parsed.values["no-findings"] ?? false;
   const help = parsed.values.help ?? false;
 
   if (help) {
@@ -75,6 +116,8 @@ export function parsePassCommandOptions(args: string[]): ParsedPassCommandOption
   const options: PassCommandOptions = {
     summary,
     refs,
+    findings,
+    noFindings,
     help: false
   };
 
@@ -104,6 +147,8 @@ export async function runPassCommand(
       summary: options.summary,
       refs: options.refs,
       ...(options.intent !== undefined ? { intent: options.intent } : {}),
+      ...(options.findings.length > 0 ? { findings: options.findings } : {}),
+      ...(options.noFindings ? { noFindings: true } : {}),
       cwd
     });
   } catch (error) {

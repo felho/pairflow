@@ -65,6 +65,7 @@ Ticket status:
 41. Ticket 41: Completed (contention/collision hardening coverage added: concurrent `claimRuntimeSession` race test verifies single-winner ownership under lock, and tmux long-id near-collision test verifies hashed session-name uniqueness under 32-char limit).
 42. Ticket 42: Completed (5-bubble parallel soak integration coverage added for repeated mixed traffic (`PASS`, `HUMAN_QUESTION`, `HUMAN_REPLY`, `PASS`) to validate no transcript/inbox/state cross-contamination under sustained concurrent operations).
 43. Ticket 43: Completed (`bubble start` now injects role-specific protocol bootstrap briefings into implementer/reviewer tmux panes to reinforce required `pass`/`ask-human`/`converged` command usage, with unit coverage for pane-targeted delivery and start-flow wiring).
+44. Ticket 44: Completed (review handoff hardening: added `reviewer_context_mode` bubble config with default `fresh`, reviewer-pane fresh-context respawn on implementer->reviewer PASS, and explicit reviewer findings declaration contract via `pass --finding ...` / `--no-findings` with convergence-policy enforcement).
 
 ## Milestone 1: Phase 1 Single-Bubble MVP (CLI-First, Strict Mode)
 

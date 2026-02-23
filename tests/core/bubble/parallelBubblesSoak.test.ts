@@ -61,6 +61,7 @@ describe("parallel bubbles soak", () => {
         });
         await emitPassFromWorkspace({
           summary: `pass-2 ${bubble.bubbleId}`,
+          noFindings: true,
           cwd: bubble.paths.worktreePath,
           now: new Date(`2026-02-23T12:01:${secondOffset}.000Z`)
         });

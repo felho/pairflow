@@ -43,6 +43,14 @@ export interface TerminateBubbleTmuxSessionResult {
   existed: boolean;
 }
 
+export interface RespawnTmuxPaneCommandInput {
+  sessionName: string;
+  paneIndex: number;
+  cwd: string;
+  command: string;
+  runner?: TmuxRunner;
+}
+
 export class TmuxCommandError extends Error {
   public readonly args: string[];
   public readonly exitCode: number;
@@ -277,4 +285,20 @@ export async function terminateBubbleTmuxSession(
     result.exitCode,
     result.stderr
   );
+}
+
+export async function respawnTmuxPaneCommand(
+  input: RespawnTmuxPaneCommandInput
+): Promise<void> {
+  const runner = input.runner ?? runTmux;
+  const targetPane = `${input.sessionName}:0.${input.paneIndex}`;
+  await runner([
+    "respawn-pane",
+    "-k",
+    "-t",
+    targetPane,
+    "-c",
+    input.cwd,
+    input.command
+  ]);
 }
