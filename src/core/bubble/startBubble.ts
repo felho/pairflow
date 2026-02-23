@@ -74,40 +74,40 @@ function buildStatusPaneCommand(bubbleId: string, repoPath: string): string {
   return `bash -lc ${shellQuote(loopScript)}`;
 }
 
-function buildAgentProtocolBootstrapMessage(input: {
+function buildImplementerStartupPrompt(input: {
   bubbleId: string;
-  role: "implementer" | "reviewer";
   repoPath: string;
   worktreePath: string;
-  taskArtifactPath: string;
-}): string {
-  const roleAction =
-    input.role === "implementer"
-      ? "Implement changes, then hand off with `pairflow pass --summary`."
-      : "Stand by first. Wait for implementer handoff (`PASS` event), then run a fresh review (`/review` in Claude Code). If findings remain, run `pairflow pass --summary ... --finding P1:...` (repeatable); if clean, run `pairflow pass --summary ... --no-findings` then `pairflow converged --summary`. Execute pairflow commands directly from this worktree (do not ask for confirmation first).";
-  return [
-    `[pairflow] bubble=${input.bubbleId} role=${input.role} started.`,
-    roleAction,
-    "Protocol is mandatory: use `pairflow pass`, `pairflow ask-human`, `pairflow converged` only for handoff/escalation.",
-    "Never edit transcript/inbox/state files manually.",
-    `Repo: ${input.repoPath}`,
-    `Worktree: ${input.worktreePath}`,
-    `Task reference: ${input.taskArtifactPath}`
-  ].join(" ");
-}
-
-function buildImplementerKickoffMessage(input: {
   taskArtifactPath: string;
   donePackagePath: string;
 }): string {
   return [
-    "[pairflow kickoff] Start implementation now.",
+    `Pairflow implementer start for bubble ${input.bubbleId}.`,
     `Read task: ${input.taskArtifactPath}.`,
     "Implement in this worktree and run relevant tests/typecheck before handoff.",
     `Keep done package updated at: ${input.donePackagePath}.`,
     "Done package should summarize changes + validation results for final commit handoff.",
+    `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`,
     "When done, run `pairflow pass --summary \"<what changed + validation>\"`.",
     "Use `pairflow ask-human --question \"...\"` only for blockers."
+  ].join(" ");
+}
+
+function buildReviewerStartupPrompt(input: {
+  bubbleId: string;
+  repoPath: string;
+  worktreePath: string;
+  taskArtifactPath: string;
+}): string {
+  return [
+    `Pairflow reviewer start for bubble ${input.bubbleId}.`,
+    "Stand by first. Do not start reviewing until implementer handoff (`PASS`) arrives.",
+    "When PASS arrives, run a fresh review (`/review` in Claude Code).",
+    "If findings remain, run `pairflow pass --summary ... --finding P1:...` (repeatable).",
+    "If clean, run `pairflow pass --summary ... --no-findings` then `pairflow converged --summary`.",
+    "Execute pairflow commands directly from this worktree (do not ask for confirmation first).",
+    "Never edit transcript/inbox/state files manually.",
+    `Repo: ${input.repoPath}. Worktree: ${input.worktreePath}. Task: ${input.taskArtifactPath}.`
   ].join(" ");
 }
 
@@ -234,32 +234,43 @@ export async function startBubble(
         bubbleId: resolved.bubbleId,
         worktreePath: resolved.bubblePaths.worktreePath,
         statusCommand: buildStatusPaneCommand(resolved.bubbleId, resolved.repoPath),
-        implementerCommand: buildAgentCommand(
-          resolved.bubbleConfig.agents.implementer,
-          resolved.bubbleId
-        ),
-        reviewerCommand: buildAgentCommand(
-          resolved.bubbleConfig.agents.reviewer,
-          resolved.bubbleId
-        ),
-        implementerBootstrapMessage: buildAgentProtocolBootstrapMessage({
+        implementerCommand: buildAgentCommand({
+          agentName: resolved.bubbleConfig.agents.implementer,
           bubbleId: resolved.bubbleId,
-          role: "implementer",
-          repoPath: resolved.repoPath,
-          worktreePath: resolved.bubblePaths.worktreePath,
-          taskArtifactPath: resolved.bubblePaths.taskArtifactPath
+          startupPrompt: buildImplementerStartupPrompt({
+            bubbleId: resolved.bubbleId,
+            repoPath: resolved.repoPath,
+            worktreePath: resolved.bubblePaths.worktreePath,
+            taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+            donePackagePath: join(resolved.bubblePaths.artifactsDir, "done-package.md")
+          })
         }),
-        reviewerBootstrapMessage: buildAgentProtocolBootstrapMessage({
+        reviewerCommand: buildAgentCommand({
+          agentName: resolved.bubbleConfig.agents.reviewer,
           bubbleId: resolved.bubbleId,
-          role: "reviewer",
-          repoPath: resolved.repoPath,
-          worktreePath: resolved.bubblePaths.worktreePath,
-          taskArtifactPath: resolved.bubblePaths.taskArtifactPath
+          startupPrompt: buildReviewerStartupPrompt({
+            bubbleId: resolved.bubbleId,
+            repoPath: resolved.repoPath,
+            worktreePath: resolved.bubblePaths.worktreePath,
+            taskArtifactPath: resolved.bubblePaths.taskArtifactPath
+          })
         }),
-        implementerKickoffMessage: buildImplementerKickoffMessage({
-          taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
-          donePackagePath: join(resolved.bubblePaths.artifactsDir, "done-package.md")
-        })
+        implementerBootstrapMessage: [
+          `[pairflow] bubble=${resolved.bubbleId} role=implementer started.`,
+          "Protocol is mandatory: use `pairflow pass`, `pairflow ask-human`, `pairflow converged` only for handoff/escalation.",
+          "Never edit transcript/inbox/state files manually.",
+          `Repo: ${resolved.repoPath}`,
+          `Worktree: ${resolved.bubblePaths.worktreePath}`,
+          `Task reference: ${resolved.bubblePaths.taskArtifactPath}`
+        ].join(" "),
+        reviewerBootstrapMessage: [
+          `[pairflow] bubble=${resolved.bubbleId} role=reviewer started.`,
+          "Protocol is mandatory: use `pairflow pass`, `pairflow ask-human`, `pairflow converged` only for handoff/escalation.",
+          "Never edit transcript/inbox/state files manually.",
+          `Repo: ${resolved.repoPath}`,
+          `Worktree: ${resolved.bubblePaths.worktreePath}`,
+          `Task reference: ${resolved.bubblePaths.taskArtifactPath}`
+        ].join(" ")
       });
       tmuxSessionName = tmux.sessionName;
 
@@ -287,27 +298,13 @@ export async function startBubble(
         bubbleId: resolved.bubbleId,
         worktreePath: resolved.bubblePaths.worktreePath,
         statusCommand: buildStatusPaneCommand(resolved.bubbleId, resolved.repoPath),
-        implementerCommand: buildAgentCommand(
-          resolved.bubbleConfig.agents.implementer,
-          resolved.bubbleId
-        ),
-        reviewerCommand: buildAgentCommand(
-          resolved.bubbleConfig.agents.reviewer,
-          resolved.bubbleId
-        ),
-        implementerBootstrapMessage: buildAgentProtocolBootstrapMessage({
-          bubbleId: resolved.bubbleId,
-          role: "implementer",
-          repoPath: resolved.repoPath,
-          worktreePath: resolved.bubblePaths.worktreePath,
-          taskArtifactPath: resolved.bubblePaths.taskArtifactPath
+        implementerCommand: buildAgentCommand({
+          agentName: resolved.bubbleConfig.agents.implementer,
+          bubbleId: resolved.bubbleId
         }),
-        reviewerBootstrapMessage: buildAgentProtocolBootstrapMessage({
-          bubbleId: resolved.bubbleId,
-          role: "reviewer",
-          repoPath: resolved.repoPath,
-          worktreePath: resolved.bubblePaths.worktreePath,
-          taskArtifactPath: resolved.bubblePaths.taskArtifactPath
+        reviewerCommand: buildAgentCommand({
+          agentName: resolved.bubbleConfig.agents.reviewer,
+          bubbleId: resolved.bubbleId
         })
       });
       tmuxSessionName = tmux.sessionName;

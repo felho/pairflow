@@ -99,37 +99,16 @@ describe("startBubble", () => {
           implementerCommand = input.implementerCommand;
           reviewerCommand = input.reviewerCommand;
           expect(input.implementerBootstrapMessage).toContain("Protocol is mandatory");
-          expect(input.implementerBootstrapMessage).toContain(
-            "Implement changes, then hand off with `pairflow pass --summary`."
-          );
+          expect(input.implementerBootstrapMessage).toContain("role=implementer");
           expect(input.implementerBootstrapMessage).toContain(
             created.paths.taskArtifactPath
           );
           expect(input.reviewerBootstrapMessage).toContain("Protocol is mandatory");
-          expect(input.reviewerBootstrapMessage).toContain(
-            "Stand by first. Wait for implementer handoff (`PASS` event)"
-          );
-          expect(input.reviewerBootstrapMessage).toContain(
-            "run a fresh review (`/review` in Claude Code)"
-          );
-          expect(input.reviewerBootstrapMessage).toContain(
-            "Execute pairflow commands directly from this worktree"
-          );
+          expect(input.reviewerBootstrapMessage).toContain("role=reviewer");
           expect(input.reviewerBootstrapMessage).toContain(
             created.paths.taskArtifactPath
           );
-          expect(input.implementerKickoffMessage).toContain(
-            "[pairflow kickoff] Start implementation now."
-          );
-          expect(input.implementerKickoffMessage).toContain(
-            created.paths.taskArtifactPath
-          );
-          expect(input.implementerKickoffMessage).toContain(
-            join(created.paths.artifactsDir, "done-package.md")
-          );
-          expect(input.implementerKickoffMessage).toContain(
-            "pairflow pass --summary"
-          );
+          expect(input.implementerKickoffMessage).toBeUndefined();
           return Promise.resolve({ sessionName: "pf-b_start_01" });
         },
         claimRuntimeSession: (input) => {
@@ -178,6 +157,19 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain("set +e");
     expect(implementerCommand).toContain("exec bash -i");
     expect(reviewerCommand).toContain("exec bash -i");
+    expect(implementerCommand).toContain("codex");
+    expect(implementerCommand).toContain("--dangerously-bypass-approvals-and-sandbox");
+    expect(implementerCommand).toContain("Pairflow implementer start");
+    expect(implementerCommand).toContain(created.paths.taskArtifactPath);
+    expect(implementerCommand).toContain(
+      join(created.paths.artifactsDir, "done-package.md")
+    );
+    expect(reviewerCommand).toContain("claude");
+    expect(reviewerCommand).toContain("--dangerously-skip-permissions");
+    expect(reviewerCommand).toContain("--permission-mode");
+    expect(reviewerCommand).toContain("bypassPermissions");
+    expect(reviewerCommand).toContain("Pairflow reviewer start");
+    expect(reviewerCommand).toContain("Stand by first. Do not start reviewing");
     expect(implementerCommand).not.toContain("then;");
     expect(reviewerCommand).not.toContain("then;");
     await assertBashParses(implementerCommand);
@@ -371,9 +363,13 @@ describe("startBubble", () => {
           });
         },
         launchBubbleTmuxSession: (input) => {
-          expect(input.implementerBootstrapMessage).toContain("role=implementer");
-          expect(input.reviewerBootstrapMessage).toContain("role=reviewer");
+          expect(input.implementerBootstrapMessage).toBeUndefined();
+          expect(input.reviewerBootstrapMessage).toBeUndefined();
           expect(input.implementerKickoffMessage).toBeUndefined();
+          expect(input.implementerCommand).toContain(
+            "--dangerously-bypass-approvals-and-sandbox"
+          );
+          expect(input.reviewerCommand).toContain("--dangerously-skip-permissions");
           return Promise.resolve({ sessionName: "pf-b_start_resume_01" });
         }
       }

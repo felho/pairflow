@@ -50,10 +50,10 @@ export async function refreshReviewerContext(
   }
 
   const runner = input.runner ?? runTmux;
-  const reviewerCommand = buildAgentCommand(
-    input.bubbleConfig.agents.reviewer,
-    input.bubbleId
-  );
+  const reviewerCommand = buildAgentCommand({
+    agentName: input.bubbleConfig.agents.reviewer,
+    bubbleId: input.bubbleId
+  });
 
   try {
     await respawnTmuxPaneCommand({
