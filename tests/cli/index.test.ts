@@ -121,6 +121,13 @@ describe("runCli", () => {
     expect(stdoutSpy).toHaveBeenCalled();
   });
 
+  it("supports bubble merge help", async () => {
+    const exitCode = await runCli(["bubble", "merge", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+  });
+
   it("supports top-level converged help", async () => {
     const exitCode = await runCli(["converged", "--help"]);
 

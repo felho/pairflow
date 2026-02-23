@@ -171,6 +171,11 @@ pairflow bubble commit --id feat_login --repo /path/to/myapp --auto
 #    - stage files yourself
 #    - write .pairflow/bubbles/<id>/artifacts/done-package.md
 #    - run pairflow bubble commit without --auto
+
+# 9. Merge + cleanup
+#    Merge bubble branch into base branch and clean runtime/worktree artifacts.
+#    Add --push/--delete-remote if you also want remote updates.
+pairflow bubble merge --id feat_login --repo /path/to/myapp --push --delete-remote
 ```
 
 ### Scenario 2: Agent asks a question (human intervention)

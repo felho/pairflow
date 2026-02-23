@@ -35,6 +35,11 @@ export {
   commitBubble
 } from "./core/bubble/commitBubble.js";
 export {
+  asBubbleMergeError,
+  BubbleMergeError,
+  mergeBubble
+} from "./core/bubble/mergeBubble.js";
+export {
   asOpenBubbleError,
   executeOpenCommand,
   openBubble,
@@ -127,6 +132,11 @@ export {
   parseBubbleCommitCommandOptions,
   runBubbleCommitCommand
 } from "./cli/commands/bubble/commit.js";
+export {
+  getBubbleMergeHelpText,
+  parseBubbleMergeCommandOptions,
+  runBubbleMergeCommand
+} from "./cli/commands/bubble/merge.js";
 export {
   getBubbleInboxHelpText,
   parseBubbleInboxCommandOptions,
@@ -337,6 +347,10 @@ export type {
   CommitBubbleResult
 } from "./core/bubble/commitBubble.js";
 export type {
+  MergeBubbleInput,
+  MergeBubbleResult
+} from "./core/bubble/mergeBubble.js";
+export type {
   ResolvedBubbleById
 } from "./core/bubble/bubbleLookup.js";
 export type {
@@ -417,6 +431,11 @@ export type {
   BubbleCommitHelpCommandOptions,
   ParsedBubbleCommitCommandOptions
 } from "./cli/commands/bubble/commit.js";
+export type {
+  BubbleMergeCommandOptions,
+  BubbleMergeHelpCommandOptions,
+  ParsedBubbleMergeCommandOptions
+} from "./cli/commands/bubble/merge.js";
 export type {
   BubbleOpenCommandOptions,
   BubbleOpenHelpCommandOptions,

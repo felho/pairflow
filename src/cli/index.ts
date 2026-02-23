@@ -51,6 +51,10 @@ import {
   runBubbleListCommand
 } from "./commands/bubble/list.js";
 import {
+  getBubbleMergeHelpText,
+  runBubbleMergeCommand
+} from "./commands/bubble/merge.js";
+import {
   getBubbleRequestReworkHelpText,
   runBubbleRequestReworkCommand
 } from "./commands/bubble/requestRework.js";
@@ -330,6 +334,19 @@ async function handleBubbleCommitCommand(args: string[]): Promise<number> {
   return 0;
 }
 
+async function handleBubbleMergeCommand(args: string[]): Promise<number> {
+  const result = await runBubbleMergeCommand(args);
+  if (result === null) {
+    process.stdout.write(`${getBubbleMergeHelpText()}\n`);
+    return 0;
+  }
+
+  process.stdout.write(
+    `Merged bubble ${result.bubbleId}: ${result.bubbleBranch} -> ${result.baseBranch} @ ${result.mergeCommitSha}; pushed=${result.pushedBaseBranch ? "yes" : "no"}, remoteDeleted=${result.deletedRemoteBranch ? "yes" : "no"}, tmuxExisted=${result.tmuxSessionExisted ? "yes" : "no"}, runtimeSessionRemoved=${result.runtimeSessionRemoved ? "yes" : "no"}, worktreeRemoved=${result.removedWorktree ? "yes" : "no"}, branchRemoved=${result.removedBubbleBranch ? "yes" : "no"}\n`
+  );
+  return 0;
+}
+
 async function handleBubbleInboxCommand(args: string[]): Promise<number> {
   const parsed = parseBubbleInboxCommandOptions(args);
   if (parsed.help) {
@@ -367,6 +384,7 @@ const bubbleSubcommandHandlers: Readonly<
   reconcile: handleBubbleReconcileCommand,
   reply: handleBubbleReplyCommand,
   commit: handleBubbleCommitCommand,
+  merge: handleBubbleMergeCommand,
   approve: handleBubbleApproveCommand,
   "request-rework": handleBubbleRequestReworkCommand
 };
