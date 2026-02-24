@@ -139,6 +139,17 @@
     box-shadow: 0 0 40px rgba(0,0,0,0.5);
   }
 
+  .bubble.failed {
+    border-color: #ef4444;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.12);
+  }
+
+  .bubble.cancelled {
+    border-style: dashed;
+    border-color: #64748b;
+    opacity: 0.7;
+  }
+
   /* ── Bubble Compact ── */
   .bubble-compact {
     padding: 16px;
@@ -184,6 +195,8 @@
   }
 
   .led-blue { background: #3b82f6; box-shadow: 0 0 6px #3b82f6; }
+  .led-cyan { background: #06b6d4; box-shadow: 0 0 6px #06b6d4; }
+  .led-teal { background: #14b8a6; box-shadow: 0 0 6px #14b8a6; }
   .led-amber { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; animation: ledPulse 1.5s ease-in-out infinite; }
   .led-green { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
   .led-gray { background: #555; }
@@ -490,9 +503,16 @@
   <div class="header-left">
     <span class="logo"><span class="logo-icon">&#x2B21;</span> Pairflow</span>
     <div class="header-stats">
+      <span class="header-stat"><span class="led led-gray" style="width:5px;height:5px"></span> 1 created</span>
+      <span class="header-stat"><span class="led led-cyan" style="width:5px;height:5px"></span> 1 preparing</span>
       <span class="header-stat"><span class="led led-blue" style="width:5px;height:5px"></span> 3 running</span>
       <span class="header-stat"><span class="led led-amber" style="width:5px;height:5px"></span> 1 waiting</span>
       <span class="header-stat"><span class="led led-green" style="width:5px;height:5px"></span> 1 ready</span>
+      <span class="header-stat"><span class="led led-green" style="width:5px;height:5px"></span> 1 approved</span>
+      <span class="header-stat"><span class="led led-teal" style="width:5px;height:5px"></span> 1 committed</span>
+      <span class="header-stat"><span class="led led-gray" style="width:5px;height:5px"></span> 1 done</span>
+      <span class="header-stat"><span class="led led-red" style="width:5px;height:5px"></span> 1 failed</span>
+      <span class="header-stat"><span class="led led-gray" style="width:5px;height:5px"></span> 1 cancelled</span>
     </div>
   </div>
   <div class="header-right">
@@ -502,7 +522,7 @@
       <span class="repo-pill">bob</span>
       <span class="repo-pill">finder</span>
     </div>
-    <button class="btn-small">+ repo</button>
+    <button class="btn-small">repo scope</button>
   </div>
 </div>
 
@@ -519,7 +539,7 @@
     <div class="bubble-compact">
       <div class="bubble-header">
         <span class="bubble-id">impl-resume-context</span>
-        <span class="state-badge"><span class="led led-amber"></span> WAITING</span>
+        <span class="state-badge"><span class="led led-amber"></span> WAITING_HUMAN</span>
       </div>
       <div class="bubble-summary">"How should fallback summary handle corrupt NDJSON?"</div>
       <div class="bubble-meta">
@@ -600,9 +620,99 @@
         <span class="bubble-id">fix-login-bug</span>
         <span class="state-badge"><span class="led led-gray"></span> DONE</span>
       </div>
-      <div class="bubble-summary">Completed — merged to main</div>
+      <div class="bubble-summary">Committed. Ready to merge (merge includes cleanup).</div>
       <div class="bubble-meta">
         <span class="bubble-repo">bob</span>
+        <span class="round-badge">R2</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bubble 7: FAILED (compact) -->
+  <div class="bubble failed" id="b7" style="left: 380px; top: 370px; width: 250px; height: 110px;" onclick="toggleExpand('b7')">
+    <div class="bubble-compact">
+      <div class="bubble-header">
+        <span class="bubble-id">sync-schema-step</span>
+        <span class="state-badge"><span class="led led-red"></span> FAILED</span>
+      </div>
+      <div class="bubble-summary">Merge conflict during worktree bootstrap. Manual intervention needed.</div>
+      <div class="bubble-meta">
+        <span class="bubble-repo">pairflow</span>
+        <span class="round-badge">R0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bubble 8: CANCELLED (compact) -->
+  <div class="bubble cancelled" id="b8" style="left: 920px; top: 210px; width: 220px; height: 100px;" onclick="toggleExpand('b8')">
+    <div class="bubble-compact">
+      <div class="bubble-header">
+        <span class="bubble-id">cleanup-prompts</span>
+        <span class="state-badge"><span class="led led-gray"></span> CANCELLED</span>
+      </div>
+      <div class="bubble-summary">Stopped by operator before completion.</div>
+      <div class="bubble-meta">
+        <span class="bubble-repo">pairflow</span>
+        <span class="round-badge">R1</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bubble 9: CREATED (compact) -->
+  <div class="bubble" id="b9" style="left: 920px; top: 330px; width: 220px; height: 100px;" onclick="toggleExpand('b9')">
+    <div class="bubble-compact">
+      <div class="bubble-header">
+        <span class="bubble-id">doc-sections-pass</span>
+        <span class="state-badge"><span class="led led-gray"></span> CREATED</span>
+      </div>
+      <div class="bubble-summary">Task created. Awaiting `bubble start`.</div>
+      <div class="bubble-meta">
+        <span class="bubble-repo">pairflow</span>
+        <span class="round-badge">R0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bubble 10: PREPARING_WORKSPACE (compact) -->
+  <div class="bubble" id="b10" style="left: 920px; top: 450px; width: 220px; height: 100px;" onclick="toggleExpand('b10')">
+    <div class="bubble-compact">
+      <div class="bubble-header">
+        <span class="bubble-id">auth-refactor</span>
+        <span class="state-badge"><span class="led led-cyan"></span> PREPARING</span>
+      </div>
+      <div class="bubble-summary">Bootstrapping branch/worktree and tmux session.</div>
+      <div class="bubble-meta">
+        <span class="bubble-repo">bob</span>
+        <span class="round-badge">R0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bubble 11: APPROVED_FOR_COMMIT (compact) -->
+  <div class="bubble" id="b11" style="left: 640px; top: 330px; width: 260px; height: 110px;" onclick="toggleExpand('b11')">
+    <div class="bubble-compact">
+      <div class="bubble-header">
+        <span class="bubble-id">ui-copy-cleanup</span>
+        <span class="state-badge"><span class="led led-green"></span> APPROVED_FOR_COMMIT</span>
+      </div>
+      <div class="bubble-summary">Approved by human. Commit step is now unblocked.</div>
+      <div class="bubble-meta">
+        <span class="bubble-repo">pairflow</span>
+        <span class="round-badge">R3</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bubble 12: COMMITTED (compact) -->
+  <div class="bubble" id="b12" style="left: 640px; top: 455px; width: 260px; height: 95px;" onclick="toggleExpand('b12')">
+    <div class="bubble-compact">
+      <div class="bubble-header">
+        <span class="bubble-id">review-guidance</span>
+        <span class="state-badge"><span class="led led-teal"></span> COMMITTED</span>
+      </div>
+      <div class="bubble-summary">Commit recorded; transitioning toward DONE.</div>
+      <div class="bubble-meta">
+        <span class="bubble-repo">finder</span>
         <span class="round-badge">R2</span>
       </div>
     </div>
@@ -624,10 +734,11 @@
 
       <div class="bubble-actions">
         <button class="action-btn primary">Approve</button>
-        <button class="action-btn warn">Rework</button>
-        <button class="action-btn external">Attach impl</button>
-        <button class="action-btn external">Attach rev</button>
+        <button class="action-btn warn">Rework (msg)</button>
+        <button class="action-btn external">Copy attach impl</button>
+        <button class="action-btn external">Copy attach rev</button>
         <button class="action-btn external">Open in Cursor</button>
+        <button class="action-btn">Stop</button>
       </div>
 
       <div class="timeline">
@@ -751,9 +862,11 @@
       </div>
 
       <div class="bubble-actions">
-        <button class="action-btn warn external">Answer in Terminal</button>
-        <button class="action-btn external">Attach impl</button>
+        <button class="action-btn warn">Reply (msg)</button>
+        <button class="action-btn">Resume (default)</button>
+        <button class="action-btn external">Copy attach impl</button>
         <button class="action-btn external">Open in Cursor</button>
+        <button class="action-btn">Stop</button>
       </div>
 
       <div class="timeline">
