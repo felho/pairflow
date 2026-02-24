@@ -27,7 +27,7 @@ describe("bubble config schema", () => {
     const config = parseBubbleConfigToml(baseToml);
     expect(config.quality_mode).toBe("strict");
     expect(config.reviewer_context_mode).toBe("fresh");
-    expect(config.watchdog_timeout_minutes).toBe(5);
+    expect(config.watchdog_timeout_minutes).toBe(10);
     expect(config.work_mode).toBe("worktree");
     expect(config.notifications.enabled).toBe(true);
     expect(config.local_overlay?.enabled).toBe(true);

@@ -102,7 +102,9 @@ function buildReviewerStartupPrompt(input: {
   return [
     `Pairflow reviewer start for bubble ${input.bubbleId}.`,
     "Stand by first. Do not start reviewing until implementer handoff (`PASS`) arrives.",
-    "When PASS arrives, run a fresh review (`/review` in Claude Code).",
+    "When PASS arrives, run a fresh review.",
+    "IMPORTANT: If a `feature-dev:code-reviewer` agent is available (check with /help or Task tool), use it for the review — it provides higher-quality, structured code review than manual inspection.",
+    "If the agent is not available, fall back to manual review (`/review` in Claude Code).",
     "If findings remain, run `pairflow pass --summary ... --finding P1:...` (repeatable).",
     "If clean, run `pairflow pass --summary ... --no-findings` then `pairflow converged --summary`.",
     "Execute pairflow commands directly from this worktree (do not ask for confirmation first).",

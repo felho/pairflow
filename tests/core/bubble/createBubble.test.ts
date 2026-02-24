@@ -47,7 +47,7 @@ describe("createBubble", () => {
 
     expect(result.paths.repoPath).toBe(repoPath);
     expect(result.state.state).toBe("CREATED");
-    expect(result.config.watchdog_timeout_minutes).toBe(5);
+    expect(result.config.watchdog_timeout_minutes).toBe(10);
     expect(result.config.quality_mode).toBe("strict");
 
     const bubbleToml = await readFile(result.paths.bubbleTomlPath, "utf8");

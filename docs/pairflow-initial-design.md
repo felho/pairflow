@@ -92,7 +92,7 @@ RUNNING turn tracking (required):
 2. `state.json` must track round-role metadata: `active_role` (`implementer` | `reviewer`) and `round_role_history`.
 3. The status pane shows high-level state, active turn owner, and active role.
 4. Liveness watchdog uses `active_agent` context for escalation when no `pairflow` command arrives within configured timeout.
-5. Timeout is configured by `watchdog_timeout_minutes` in `bubble.toml` (default: `5`).
+5. Timeout is configured by `watchdog_timeout_minutes` in `bubble.toml` (default: `10`).
 
 ## Convergence Policy (Quality-First)
 Each loop round:
@@ -228,7 +228,7 @@ bubble_branch = "bubble/b_legal_search_01"
 work_mode = "worktree" # worktree|clone
 quality_mode = "strict" # MVP: strict only
 reviewer_context_mode = "fresh" # fresh|persistent (default: fresh)
-watchdog_timeout_minutes = 5
+watchdog_timeout_minutes = 10
 max_rounds = 8
 commit_requires_approval = true
 open_command = "cursor {{worktree_path}}"
