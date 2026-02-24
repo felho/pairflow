@@ -40,7 +40,7 @@ export default function App(): JSX.Element {
   const refreshExpandedBubble = useBubbleStore((state) => state.refreshExpandedBubble);
   const runBubbleAction = useBubbleStore((state) => state.runBubbleAction);
   const clearActionFeedback = useBubbleStore((state) => state.clearActionFeedback);
-  const visibleBubbles = useBubbleStore(selectVisibleBubbles);
+  const visibleBubbles = useBubbleStore(useShallow(selectVisibleBubbles));
   const counts = useBubbleStore(useShallow(selectStateCounts));
   const selectedBubble = selectedBubbleId !== null ? (bubblesById[selectedBubbleId] ?? null) : null;
 
