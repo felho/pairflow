@@ -140,6 +140,7 @@ describe("launchBubbleTmuxSession", () => {
       "-pt",
       "pf-b_start_bootstrap:0.2"
     ]);
+    // Text and Enter are separate send-keys calls (ink TUI requirement).
     expect(calls).toContainEqual([
       "send-keys",
       "-t",
@@ -193,8 +194,7 @@ describe("launchBubbleTmuxSession", () => {
       });
       if (
         args[0] === "send-keys" &&
-        args[2] === "pf-b_start_bootstrap_fail:0.1" &&
-        (args[3] === "Enter" || args[3] === "C-m" || (args[3] === "-l" && args[4] === "\r"))
+        args[2] === "pf-b_start_bootstrap_fail:0.1"
       ) {
         return Promise.resolve({
           stdout: "",
@@ -221,28 +221,16 @@ describe("launchBubbleTmuxSession", () => {
     });
 
     expect(result.sessionName).toBe("pf-b_start_bootstrap_fail");
-    const failedEnter = calls.find(
+    // Both the literal message send and the Enter send use allowFailure.
+    const failedSends = calls.filter(
       (call) =>
         call.args[0] === "send-keys" &&
-        call.args[2] === "pf-b_start_bootstrap_fail:0.1" &&
-        call.args[3] === "Enter"
+        call.args[2] === "pf-b_start_bootstrap_fail:0.1"
     );
-    expect(failedEnter?.allowFailure).toBe(true);
-    const failedLiteralReturn = calls.find(
-      (call) =>
-        call.args[0] === "send-keys" &&
-        call.args[2] === "pf-b_start_bootstrap_fail:0.1" &&
-        call.args[3] === "-l" &&
-        call.args[4] === "\r"
-    );
-    expect(failedLiteralReturn?.allowFailure).toBe(true);
-    const failedSubmitFallback = calls.find(
-      (call) =>
-        call.args[0] === "send-keys" &&
-        call.args[2] === "pf-b_start_bootstrap_fail:0.1" &&
-        call.args[3] === "C-m"
-    );
-    expect(failedSubmitFallback?.allowFailure).toBe(true);
+    expect(failedSends.length).toBeGreaterThan(0);
+    for (const send of failedSends) {
+      expect(send.allowFailure).toBe(true);
+    }
   });
 
   it("fails when session already exists", async () => {

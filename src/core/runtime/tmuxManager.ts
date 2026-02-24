@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
-import { maybeAcceptClaudeTrustPrompt, submitTmuxPaneInput } from "./tmuxInput.js";
+import { maybeAcceptClaudeTrustPrompt, sendAndSubmitTmuxPaneMessage } from "./tmuxInput.js";
 
 export interface TmuxRunResult {
   stdout: string;
@@ -204,15 +204,7 @@ export async function launchBubbleTmuxSession(
     // Best effort auto-accept keeps startup fully non-interactive.
     await maybeAcceptClaudeTrustPrompt(runner, targetPane).catch(() => undefined);
 
-    const writeMessageResult = await runner(
-      ["send-keys", "-t", targetPane, "-l", message as string],
-      { allowFailure: true }
-    );
-    if (writeMessageResult.exitCode !== 0) {
-      return;
-    }
-
-    await submitTmuxPaneInput(runner, targetPane);
+    await sendAndSubmitTmuxPaneMessage(runner, targetPane, message as string);
   };
 
   await sendPaneMessage(`${sessionName}:0.1`, input.implementerBootstrapMessage);

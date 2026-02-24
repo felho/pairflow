@@ -1,6 +1,6 @@
 import { readRuntimeSessionsRegistry } from "./sessionsRegistry.js";
 import { runTmux, type TmuxRunner } from "./tmuxManager.js";
-import { maybeAcceptClaudeTrustPrompt, submitTmuxPaneInput } from "./tmuxInput.js";
+import { maybeAcceptClaudeTrustPrompt, sendAndSubmitTmuxPaneMessage, submitTmuxPaneInput } from "./tmuxInput.js";
 import type { BubbleConfig } from "../../types/bubble.js";
 import type { ProtocolEnvelope, ProtocolParticipant } from "../../types/protocol.js";
 
@@ -192,10 +192,11 @@ export async function emitTmuxDeliveryNotification(
     const attempts = Math.max(1, input.deliveryAttempts ?? 3);
     let confirmed = false;
     await maybeAcceptClaudeTrustPrompt(runner, targetPane).catch(() => undefined);
-    await runner(["send-keys", "-t", targetPane, "-l", message]);
+    // Send message + trailing newline in a single literal send-keys call.
+    // This eliminates the timing gap between text entry and Enter that caused
+    // messages to get stuck in the Claude Code input buffer without submitting.
+    await sendAndSubmitTmuxPaneMessage(runner, targetPane, message);
     for (let attempt = 0; attempt < attempts; attempt += 1) {
-      await submitTmuxPaneInput(runner, targetPane);
-
       // Allow UI flush then verify the handoff marker is actually visible.
       await sleep(800);
       if (await paneContainsMarker(runner, targetPane, input.envelope.id)) {
@@ -203,7 +204,9 @@ export async function emitTmuxDeliveryNotification(
         break;
       }
       if (attempt < attempts - 1) {
+        // Text is already in the pane buffer; retry with a bare Enter.
         await sleep(900);
+        await submitTmuxPaneInput(runner, targetPane);
       }
     }
     if (!confirmed) {

@@ -117,6 +117,8 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(messageCall?.[4]).toContain(
       "Run pairflow commands from worktree: /tmp/worktree."
     );
+    // Message must NOT embed CR/LF — Enter is sent as a separate tmux command.
+    expect(messageCall?.[4]).not.toMatch(/[\r\n]$/);
     expect(calls).toContainEqual([
       "send-keys",
       "-t",
@@ -407,7 +409,7 @@ describe("emitTmuxDeliveryNotification", () => {
     const submitCalls = calls.filter(
       (call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.2"
     );
-    // one message write + submit(1) + submit(1) across two attempts
+    // one message write + Enter (initial) + Enter (retry) = 3 send-keys calls
     expect(submitCalls.length).toBe(3);
     const captureCalls = calls.filter((call) => call[0] === "capture-pane");
     expect(captureCalls.length).toBeGreaterThanOrEqual(2);
