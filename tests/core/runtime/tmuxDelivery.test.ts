@@ -415,6 +415,66 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(captureCalls.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("detects marker stuck in input buffer and retries Enter", async () => {
+    const calls: string[][] = [];
+    let captureCount = 0;
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        captureCount += 1;
+        if (captureCount <= 2) {
+          // Marker appears after the > prompt — stuck in input buffer.
+          return Promise.resolve({
+            stdout: [
+              "Claude Code is ready.",
+              "",
+              "> # [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."
+            ].join("\n"),
+            stderr: "",
+            exitCode: 0
+          });
+        }
+        // After retry Enter, marker moves to output area (before prompt).
+        return Promise.resolve({
+          stdout: [
+            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md.",
+            "",
+            ">"
+          ].join("\n"),
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope(),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry()),
+      deliveryAttempts: 3
+    });
+
+    expect(result.delivered).toBe(true);
+    // Verify retry Enter was sent after detecting stuck_in_input.
+    const enterRetries = calls.filter(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.2" &&
+        call[3] === "Enter" &&
+        call.length === 4
+    );
+    // Initial Enter (from sendAndSubmitTmuxPaneMessage) + at least one retry Enter.
+    expect(enterRetries.length).toBeGreaterThanOrEqual(2);
+  });
+
   it("returns delivery_unconfirmed when marker never appears", async () => {
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
       if (args[0] === "capture-pane") {

@@ -101,18 +101,63 @@ function sleep(ms: number): Promise<void> {
   });
 }
 
-async function paneContainsMarker(
+type MarkerStatus = "submitted" | "stuck_in_input" | "not_found";
+
+/**
+ * Check whether a delivery marker appears in a tmux pane's visible content.
+ *
+ * `capture-pane -p` returns both the output area AND the current input buffer.
+ * If the marker only appears after the last `>` prompt indicator, the message
+ * is still sitting in the input buffer (Enter didn't submit).  We distinguish:
+ *
+ * - "submitted":       marker found in the output area (before the prompt)
+ * - "stuck_in_input":  marker found only after the last `>` prompt line
+ * - "not_found":       marker not present at all
+ */
+async function checkMarkerStatus(
   runner: TmuxRunner,
   targetPane: string,
   marker: string
-): Promise<boolean> {
+): Promise<MarkerStatus> {
   const capture = await runner(["capture-pane", "-pt", targetPane], {
     allowFailure: true
   });
   if (capture.exitCode !== 0) {
-    return false;
+    return "not_found";
   }
-  return capture.stdout.includes(marker);
+  const output = capture.stdout;
+  if (!output.includes(marker)) {
+    return "not_found";
+  }
+
+  // Find the last prompt line.  Claude Code renders `>` (or `❯`) at the start
+  // of its input area.  Everything after that line is the current input buffer.
+  const lines = output.split("\n");
+  const lastPromptIdx = findLastIndex(
+    lines,
+    (l) => /^\s*[>❯]/.test(l)
+  );
+  if (lastPromptIdx < 0) {
+    // No prompt visible — marker is in output area.
+    return "submitted";
+  }
+
+  const beforePrompt = lines.slice(0, lastPromptIdx).join("\n");
+  if (beforePrompt.includes(marker)) {
+    return "submitted";
+  }
+
+  // Marker only appears in/after the prompt line → stuck in input buffer.
+  return "stuck_in_input";
+}
+
+function findLastIndex(arr: string[], predicate: (item: string) => boolean): number {
+  for (let i = arr.length - 1; i >= 0; i--) {
+    if (predicate(arr[i]!)) {
+      return i;
+    }
+  }
+  return -1;
 }
 
 export async function emitTmuxDeliveryNotification(
@@ -197,14 +242,15 @@ export async function emitTmuxDeliveryNotification(
     // messages to get stuck in the Claude Code input buffer without submitting.
     await sendAndSubmitTmuxPaneMessage(runner, targetPane, message);
     for (let attempt = 0; attempt < attempts; attempt += 1) {
-      // Allow UI flush then verify the handoff marker is actually visible.
+      // Allow UI flush then check where the marker appears.
       await sleep(800);
-      if (await paneContainsMarker(runner, targetPane, input.envelope.id)) {
+      const status = await checkMarkerStatus(runner, targetPane, input.envelope.id);
+      if (status === "submitted") {
         confirmed = true;
         break;
       }
       if (attempt < attempts - 1) {
-        // Text is already in the pane buffer; retry with a bare Enter.
+        // "stuck_in_input" or "not_found" — retry with a bare Enter.
         await sleep(900);
         await submitTmuxPaneInput(runner, targetPane);
       }
