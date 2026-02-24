@@ -7,13 +7,14 @@ import {
   type BubbleStoreDependencies
 } from "./useBubbleStore";
 import type { PairflowApiClient } from "../lib/api";
+import { PairflowApiError } from "../lib/api";
 import type {
   BubblePosition,
   ConnectionStatus,
   UiEvent,
   UiRepoSummary
 } from "../lib/types";
-import { bubbleSummary, repoSummary } from "../test/fixtures";
+import { bubbleDetail, bubbleSummary, repoSummary } from "../test/fixtures";
 
 class MemoryStorage {
   private readonly records = new Map<string, string>();
@@ -48,6 +49,30 @@ function createDeferred<T>(): {
   };
 }
 
+function createApiStub(overrides: Partial<PairflowApiClient>): PairflowApiClient {
+  return {
+    getRepos: vi.fn(async () => []),
+    getBubbles: vi.fn(async (repoPath: string) => ({
+      repo: repoSummary(repoPath),
+      bubbles: []
+    })),
+    getBubble: vi.fn(async (repoPath: string, bubbleId: string) =>
+      bubbleDetail({ bubbleId, repoPath })
+    ),
+    getBubbleTimeline: vi.fn(async () => []),
+    startBubble: vi.fn(async () => ({})),
+    approveBubble: vi.fn(async () => ({})),
+    requestRework: vi.fn(async () => ({})),
+    replyBubble: vi.fn(async () => ({})),
+    resumeBubble: vi.fn(async () => ({})),
+    commitBubble: vi.fn(async () => ({})),
+    mergeBubble: vi.fn(async () => ({})),
+    openBubble: vi.fn(async () => ({})),
+    stopBubble: vi.fn(async () => ({})),
+    ...overrides
+  };
+}
+
 describe("createBubbleStore", () => {
   it("loads initial data, tracks runtime session presence, and applies stream events", async () => {
     const repos = ["/repo-a", "/repo-b"];
@@ -75,10 +100,10 @@ describe("createBubbleStore", () => {
         };
       });
 
-    const api: PairflowApiClient = {
+    const api = createApiStub({
       getRepos: vi.fn(async () => repos),
       getBubbles
-    };
+    });
 
     let emitEvent: (event: UiEvent) => void = () => undefined;
     let emitStatus: (status: ConnectionStatus) => void = () => undefined;
@@ -161,13 +186,13 @@ describe("createBubbleStore", () => {
       repoPath: "/repo-b"
     });
 
-    const api: PairflowApiClient = {
+    const api = createApiStub({
       getRepos: vi.fn(async () => ["/repo-a", "/repo-b"]),
       getBubbles: vi.fn(async (repoPath: string) => ({
         repo: repoSummary(repoPath),
         bubbles: repoPath === "/repo-a" ? [bubbleA] : [bubbleB]
       }))
-    };
+    });
 
     let emitEvent: (event: UiEvent) => void = () => undefined;
 
@@ -207,13 +232,13 @@ describe("createBubbleStore", () => {
   it("persists positions only when explicitly committed", () => {
     const storage = new MemoryStorage();
     const store = createBubbleStore({
-      api: {
+      api: createApiStub({
         getRepos: vi.fn(async () => []),
         getBubbles: vi.fn(async () => ({
           repo: repoSummary("/repo-a"),
           bubbles: []
         }))
-      },
+      }),
       storage,
       createEventsClient: () => ({
         start: () => undefined,
@@ -241,13 +266,13 @@ describe("createBubbleStore", () => {
   it("does not share count object instances across separate stores", async () => {
     const createStoreWithRunningBubble = () =>
       createBubbleStore({
-        api: {
+        api: createApiStub({
           getRepos: vi.fn(async () => ["/repo-a"]),
           getBubbles: vi.fn(async () => ({
             repo: repoSummary("/repo-a"),
             bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
           }))
-        },
+        }),
         createEventsClient: () => ({
           start: () => undefined,
           stop: () => undefined,
@@ -274,7 +299,7 @@ describe("createBubbleStore", () => {
       bubbles: ReturnType<typeof bubbleSummary>[];
     }>();
 
-    const api: PairflowApiClient = {
+    const api = createApiStub({
       getRepos: vi.fn(async () => ["/repo-a", "/repo-b"]),
       getBubbles: vi
         .fn()
@@ -287,7 +312,7 @@ describe("createBubbleStore", () => {
           bubbles: []
         })
         .mockImplementationOnce(async () => deferredRepoLoad.promise)
-    };
+    });
 
     const store = createBubbleStore({
       api,
@@ -317,7 +342,7 @@ describe("createBubbleStore", () => {
     const firstRepos = createDeferred<string[]>();
     const secondRepos = createDeferred<string[]>();
 
-    const api: PairflowApiClient = {
+    const api = createApiStub({
       getRepos: vi
         .fn<() => Promise<string[]>>()
         .mockImplementationOnce(async () => firstRepos.promise)
@@ -331,7 +356,7 @@ describe("createBubbleStore", () => {
           })
         ]
       }))
-    };
+    });
 
     const store = createBubbleStore({
       api,
@@ -356,5 +381,60 @@ describe("createBubbleStore", () => {
 
     expect(store.getState().repos).toEqual(["/repo-b"]);
     expect(Object.keys(store.getState().bubblesById)).toEqual(["b-b"]);
+  });
+
+  it("refetches bubble state and sets retry hint after 409 action conflict", async () => {
+    const getBubbles = vi
+      .fn()
+      .mockResolvedValueOnce({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a", state: "RUNNING" })]
+      })
+      .mockResolvedValueOnce({
+        repo: repoSummary("/repo-a"),
+        bubbles: [
+          bubbleSummary({
+            bubbleId: "b-a",
+            repoPath: "/repo-a",
+            state: "WAITING_HUMAN"
+          })
+        ]
+      });
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      openBubble: vi.fn(async () => {
+        throw new PairflowApiError({
+          message: "state changed",
+          status: 409,
+          code: "conflict"
+        });
+      })
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+
+    await expect(
+      store.getState().runBubbleAction({
+        bubbleId: "b-a",
+        action: "open"
+      })
+    ).rejects.toBeInstanceOf(PairflowApiError);
+
+    expect(getBubbles).toHaveBeenCalledTimes(2);
+    expect(store.getState().bubblesById["b-a"]?.state).toBe("WAITING_HUMAN");
+    expect(store.getState().actionRetryHintById["b-a"]).toContain(
+      "State changed in CLI/UI"
+    );
   });
 });

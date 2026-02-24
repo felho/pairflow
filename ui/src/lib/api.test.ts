@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { createApiClient, PairflowApiError } from "./api";
-import { bubbleSummary, repoSummary } from "../test/fixtures";
+import { bubbleDetail, bubbleSummary, repoSummary, timelineEntry } from "../test/fixtures";
 
 describe("createApiClient", () => {
   it("loads repositories and bubbles", async () => {
@@ -89,5 +89,89 @@ describe("createApiClient", () => {
       code: "unknown",
       message: "API request failed: 502"
     });
+  });
+
+  it("calls detail/timeline endpoints and posts action payloads", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ bubble: bubbleDetail({ bubbleId: "b-a", repoPath: "/repo-a" }) }), {
+          status: 200
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            bubbleId: "b-a",
+            repoPath: "/repo-a",
+            timeline: [timelineEntry()]
+          }),
+          { status: 200 }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ result: { bubbleId: "b-a", state: "RUNNING" } }), {
+          status: 200
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ result: { bubbleId: "b-a", commitSha: "abc123" } }), {
+          status: 200
+        })
+      );
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createApiClient();
+    await expect(client.getBubble("/repo-a", "b-a")).resolves.toMatchObject({
+      bubbleId: "b-a",
+      repoPath: "/repo-a"
+    });
+    await expect(client.getBubbleTimeline("/repo-a", "b-a")).resolves.toHaveLength(1);
+    await expect(client.startBubble("/repo-a", "b-a")).resolves.toMatchObject({
+      bubbleId: "b-a",
+      state: "RUNNING"
+    });
+    await expect(
+      client.commitBubble("/repo-a", "b-a", {
+        auto: true,
+        refs: ["artifacts/done-package.md"]
+      })
+    ).resolves.toMatchObject({
+      bubbleId: "b-a",
+      commitSha: "abc123"
+    });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "/api/bubbles/b-a?repo=%2Frepo-a",
+      undefined
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/bubbles/b-a/timeline?repo=%2Frepo-a",
+      undefined
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      "/api/bubbles/b-a/start?repo=%2Frepo-a",
+      {
+        method: "POST"
+      }
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      4,
+      "/api/bubbles/b-a/commit?repo=%2Frepo-a",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          auto: true,
+          refs: ["artifacts/done-package.md"]
+        }),
+        headers: {
+          "content-type": "application/json"
+        }
+      }
+    );
   });
 });

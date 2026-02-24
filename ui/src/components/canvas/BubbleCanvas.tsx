@@ -96,9 +96,11 @@ interface DragState {
 interface BubbleCardProps {
   bubble: BubbleCardModel;
   position: BubblePosition;
+  selected: boolean;
   onPositionChange(position: BubblePosition): void;
   onPositionCommit(): void;
   onDragStateChange(dragging: boolean): void;
+  onOpen(): void;
 }
 
 function formatStateLabel(state: BubbleLifecycleState): string {
@@ -159,7 +161,8 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
         "absolute w-[248px] rounded-xl border p-3 shadow-lg transition-shadow",
         visual.border,
         visual.cardTone,
-        dragging ? "cursor-grabbing shadow-cyan-300/15" : "cursor-grab"
+        dragging ? "cursor-grabbing shadow-cyan-300/15" : "cursor-grab",
+        props.selected ? "ring-2 ring-cyan-300/70" : ""
       )}
       style={{
         left: props.position.x,
@@ -263,6 +266,18 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
               : "No runtime"}
         </span>
       </div>
+
+      <div className="mt-3 flex justify-end">
+        <button
+          type="button"
+          className="rounded-md border border-slate-600 bg-slate-900/70 px-2 py-1 text-[11px] text-slate-100 hover:border-cyan-300/70 hover:text-cyan-100"
+          onClick={() => {
+            props.onOpen();
+          }}
+        >
+          Details
+        </button>
+      </div>
     </article>
   );
 }
@@ -280,8 +295,10 @@ function defaultPosition(index: number): BubblePosition {
 export interface BubbleCanvasProps {
   bubbles: BubbleCardModel[];
   positions: Record<string, BubblePosition>;
+  selectedBubbleId?: string | null;
   onPositionChange(bubbleId: string, position: BubblePosition): void;
   onPositionCommit(): void;
+  onBubbleSelect?(bubbleId: string): void;
 }
 
 export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
@@ -309,6 +326,7 @@ export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
           key={entry.bubble.bubbleId}
           bubble={entry.bubble}
           position={entry.position}
+          selected={props.selectedBubbleId === entry.bubble.bubbleId}
           onPositionChange={(position) => {
             props.onPositionChange(entry.bubble.bubbleId, position);
           }}
@@ -330,6 +348,9 @@ export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
               delete next[entry.bubble.bubbleId];
               return next;
             });
+          }}
+          onOpen={() => {
+            props.onBubbleSelect?.(entry.bubble.bubbleId);
           }}
         />
       ))}

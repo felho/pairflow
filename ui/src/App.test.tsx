@@ -12,15 +12,30 @@ vi.mock("./state/useBubbleStore", async () => {
     connectionStatus: "connected",
     isLoading: false,
     error: "Sample error",
+    selectedBubbleId: null,
     positions: {
       "b-1": {
         x: 20,
         y: 24
       }
     },
+    bubbleDetails: {},
+    bubbleTimelines: {},
+    detailLoadingById: {},
+    timelineLoadingById: {},
+    detailErrorById: {},
+    timelineErrorById: {},
+    actionLoadingById: {},
+    actionErrorById: {},
+    actionRetryHintById: {},
+    actionFailureById: {},
     toggleRepo: async () => undefined,
     setPosition: () => undefined,
     persistPositions: () => undefined,
+    selectBubble: async () => undefined,
+    refreshExpandedBubble: async () => undefined,
+    runBubbleAction: async () => undefined,
+    clearActionFeedback: () => undefined,
     bubblesById: {
       "b-1": fixtures.bubbleCard({
         bubbleId: "b-1",

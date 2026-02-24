@@ -1,23 +1,31 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
 import { useStore } from "zustand";
 
-import { createApiClient, type PairflowApiClient } from "../lib/api";
+import {
+  createApiClient,
+  PairflowApiError,
+  type PairflowApiClient
+} from "../lib/api";
 import {
   createRealtimeEventsClient,
   type RealtimeEventsClient,
   type RealtimeEventsClientInput
 } from "../lib/events";
-import {
-  emptyStateCounts,
-  type BubbleCardModel,
-  type BubblePosition,
-  type ConnectionStatus,
-  type UiBubbleSummary,
-  type UiEvent,
-  type UiRepoSummary,
-  type UiSnapshotEvent,
-  type UiStateCounts
+import type {
+  BubbleActionKind,
+  BubbleCardModel,
+  BubblePosition,
+  CommitActionInput,
+  ConnectionStatus,
+  MergeActionInput,
+  UiBubbleDetail,
+  UiBubbleSummary,
+  UiRepoSummary,
+  UiSnapshotEvent,
+  UiStateCounts,
+  UiTimelineEntry
 } from "../lib/types";
+import { emptyStateCounts } from "../lib/types";
 
 const positionsStorageKey = "pairflow.ui.canvas.positions.v1";
 
@@ -31,6 +39,16 @@ interface RepoBubblesPayload {
   bubbles: UiBubbleSummary[];
 }
 
+export interface RunBubbleActionInput {
+  bubbleId: string;
+  action: BubbleActionKind;
+  message?: string;
+  refs?: string[];
+  auto?: boolean;
+  push?: boolean;
+  deleteRemote?: boolean;
+}
+
 export interface BubbleStoreState {
   repos: string[];
   selectedRepos: string[];
@@ -41,11 +59,26 @@ export interface BubbleStoreState {
   connectionStatus: ConnectionStatus;
   isLoading: boolean;
   error: string | null;
+  selectedBubbleId: string | null;
+  bubbleDetails: Record<string, UiBubbleDetail>;
+  bubbleTimelines: Record<string, UiTimelineEntry[]>;
+  detailLoadingById: Record<string, boolean>;
+  timelineLoadingById: Record<string, boolean>;
+  detailErrorById: Record<string, string>;
+  timelineErrorById: Record<string, string>;
+  actionLoadingById: Record<string, boolean>;
+  actionErrorById: Record<string, string>;
+  actionRetryHintById: Record<string, string>;
+  actionFailureById: Record<string, BubbleActionKind>;
   initialize(): Promise<void>;
   toggleRepo(repoPath: string): Promise<void>;
   setPosition(bubbleId: string, position: BubblePosition): void;
   persistPositions(): void;
   stopRealtime(): void;
+  selectBubble(bubbleId: string | null): Promise<void>;
+  refreshExpandedBubble(bubbleId: string): Promise<void>;
+  runBubbleAction(input: RunBubbleActionInput): Promise<void>;
+  clearActionFeedback(bubbleId: string): void;
 }
 
 export interface BubbleStoreDependencies {
@@ -64,6 +97,10 @@ function toBubbleCardModel(bubble: UiBubbleSummary): BubbleCardModel {
     ...bubble,
     hasRuntimeSession: bubble.runtimeSession !== null
   };
+}
+
+function toBubbleCardModelFromDetail(detail: UiBubbleDetail): BubbleCardModel {
+  return toBubbleCardModel(detail);
 }
 
 function getStorageFromWindow(): StorageLike | null {
@@ -215,11 +252,102 @@ function prunePositions(
   return changed ? next : currentPositions;
 }
 
+function pruneRecordByBubbleIds<T>(
+  current: Record<string, T>,
+  bubbles: Record<string, BubbleCardModel>
+): Record<string, T> {
+  const next = { ...current };
+  let changed = false;
+  for (const key of Object.keys(next)) {
+    if (bubbles[key] !== undefined) {
+      continue;
+    }
+    delete next[key];
+    changed = true;
+  }
+  return changed ? next : current;
+}
+
 async function fetchRepoPayloads(
   api: PairflowApiClient,
   repos: string[]
 ): Promise<RepoBubblesPayload[]> {
   return Promise.all(repos.map((repoPath) => api.getBubbles(repoPath)));
+}
+
+async function performBubbleAction(
+  api: PairflowApiClient,
+  bubble: BubbleCardModel,
+  input: RunBubbleActionInput
+): Promise<void> {
+  switch (input.action) {
+    case "start":
+      await api.startBubble(bubble.repoPath, bubble.bubbleId);
+      return;
+    case "approve":
+      await api.approveBubble(bubble.repoPath, bubble.bubbleId, {
+        ...(input.refs !== undefined ? { refs: input.refs } : {})
+      });
+      return;
+    case "request-rework": {
+      const message = input.message?.trim() ?? "";
+      if (message.length === 0) {
+        throw new Error("Request rework requires a message.");
+      }
+      await api.requestRework(bubble.repoPath, bubble.bubbleId, {
+        message,
+        ...(input.refs !== undefined ? { refs: input.refs } : {})
+      });
+      return;
+    }
+    case "reply": {
+      const message = input.message?.trim() ?? "";
+      if (message.length === 0) {
+        throw new Error("Reply requires a message.");
+      }
+      await api.replyBubble(bubble.repoPath, bubble.bubbleId, {
+        message,
+        ...(input.refs !== undefined ? { refs: input.refs } : {})
+      });
+      return;
+    }
+    case "resume":
+      await api.resumeBubble(bubble.repoPath, bubble.bubbleId);
+      return;
+    case "commit": {
+      const commitInput: CommitActionInput = {
+        auto: input.auto ?? true,
+        ...(input.message !== undefined && input.message.trim().length > 0
+          ? { message: input.message.trim() }
+          : {}),
+        ...(input.refs !== undefined && input.refs.length > 0
+          ? { refs: input.refs }
+          : {})
+      };
+      await api.commitBubble(bubble.repoPath, bubble.bubbleId, commitInput);
+      return;
+    }
+    case "merge": {
+      const mergeInput: MergeActionInput = {
+        ...(input.push !== undefined ? { push: input.push } : {}),
+        ...(input.deleteRemote !== undefined
+          ? { deleteRemote: input.deleteRemote }
+          : {})
+      };
+      await api.mergeBubble(bubble.repoPath, bubble.bubbleId, mergeInput);
+      return;
+    }
+    case "open":
+      await api.openBubble(bubble.repoPath, bubble.bubbleId);
+      return;
+    case "stop":
+      await api.stopBubble(bubble.repoPath, bubble.bubbleId);
+      return;
+    default: {
+      const _exhaustive: never = input.action;
+      throw new Error(`Unsupported action: ${_exhaustive as string}`);
+    }
+  }
 }
 
 export function createBubbleStore(
@@ -234,55 +362,23 @@ export function createBubbleStore(
   let latestInitializeId = 0;
 
   const store = createStore<BubbleStoreState>((set, get) => {
-    const applyEvent = (event: UiEvent): void => {
-      set((state) => {
-        switch (event.type) {
-          case "snapshot": {
-            const repoSummaries = { ...state.repoSummaries };
-            for (const repo of event.repos) {
-              repoSummaries[repo.repoPath] = repo;
-            }
-
-            const bubblesById = mergeSnapshot(state.bubblesById, event);
-            const positions = prunePositions(state.positions, bubblesById);
-            return {
-              repoSummaries,
-              bubblesById,
-              positions
-            };
-          }
-          case "bubble.updated": {
-            const bubblesById = {
-              ...state.bubblesById,
-              [event.bubbleId]: toBubbleCardModel(event.bubble)
-            };
-            return {
-              bubblesById
-            };
-          }
-          case "bubble.removed": {
-            const bubblesById = removeBubble(state.bubblesById, event.bubbleId);
-            const positions = prunePositions(state.positions, bubblesById);
-            return {
-              bubblesById,
-              positions
-            };
-          }
-          case "repo.updated": {
-            return {
-              repoSummaries: {
-                ...state.repoSummaries,
-                [event.repo.repoPath]: event.repo
-              }
-            };
-          }
-          default: {
-            return {};
-          }
+    const syncExpandedFromSummary = (
+      details: Record<string, UiBubbleDetail>,
+      bubblesById: Record<string, BubbleCardModel>
+    ): Record<string, UiBubbleDetail> => {
+      const next = { ...details };
+      for (const [bubbleId, detail] of Object.entries(next)) {
+        const bubble = bubblesById[bubbleId];
+        if (bubble === undefined) {
+          delete next[bubbleId];
+          continue;
         }
-      });
-
-      writePositions(storage, get().positions);
+        next[bubbleId] = {
+          ...detail,
+          ...bubble
+        };
+      }
+      return next;
     };
 
     const refreshRepos = async (repos: string[]): Promise<void> => {
@@ -302,16 +398,113 @@ export function createBubbleStore(
         }
 
         const positions = prunePositions(state.positions, bubblesById);
+        const bubbleDetails = syncExpandedFromSummary(state.bubbleDetails, bubblesById);
 
         return {
           bubblesById,
           repoSummaries,
           loadedRepos,
-          positions
+          positions,
+          bubbleDetails,
+          bubbleTimelines: pruneRecordByBubbleIds(state.bubbleTimelines, bubblesById),
+          detailLoadingById: pruneRecordByBubbleIds(state.detailLoadingById, bubblesById),
+          timelineLoadingById: pruneRecordByBubbleIds(state.timelineLoadingById, bubblesById),
+          detailErrorById: pruneRecordByBubbleIds(state.detailErrorById, bubblesById),
+          timelineErrorById: pruneRecordByBubbleIds(state.timelineErrorById, bubblesById),
+          actionLoadingById: pruneRecordByBubbleIds(state.actionLoadingById, bubblesById),
+          actionErrorById: pruneRecordByBubbleIds(state.actionErrorById, bubblesById),
+          actionRetryHintById: pruneRecordByBubbleIds(state.actionRetryHintById, bubblesById),
+          actionFailureById: pruneRecordByBubbleIds(state.actionFailureById, bubblesById),
+          selectedBubbleId:
+            state.selectedBubbleId !== null && bubblesById[state.selectedBubbleId] === undefined
+              ? null
+              : state.selectedBubbleId
         };
       });
 
       writePositions(storage, get().positions);
+    };
+
+    const refreshExpandedBubble = async (bubbleId: string): Promise<void> => {
+      const bubble = get().bubblesById[bubbleId];
+      if (bubble === undefined) {
+        return;
+      }
+
+      set((state) => ({
+        detailLoadingById: {
+          ...state.detailLoadingById,
+          [bubbleId]: true
+        },
+        timelineLoadingById: {
+          ...state.timelineLoadingById,
+          [bubbleId]: true
+        },
+        detailErrorById: (() => {
+          const next = { ...state.detailErrorById };
+          delete next[bubbleId];
+          return next;
+        })(),
+        timelineErrorById: (() => {
+          const next = { ...state.timelineErrorById };
+          delete next[bubbleId];
+          return next;
+        })()
+      }));
+
+      const [detailResult, timelineResult] = await Promise.allSettled([
+        api.getBubble(bubble.repoPath, bubbleId),
+        api.getBubbleTimeline(bubble.repoPath, bubbleId)
+      ]);
+
+      set((state) => {
+        const detailLoadingById = { ...state.detailLoadingById };
+        const timelineLoadingById = { ...state.timelineLoadingById };
+        delete detailLoadingById[bubbleId];
+        delete timelineLoadingById[bubbleId];
+
+        const next: Partial<BubbleStoreState> = {
+          detailLoadingById,
+          timelineLoadingById
+        };
+
+        if (detailResult.status === "fulfilled") {
+          const detail = detailResult.value;
+          next.bubbleDetails = {
+            ...state.bubbleDetails,
+            [bubbleId]: detail
+          };
+          next.bubblesById = {
+            ...state.bubblesById,
+            [bubbleId]: toBubbleCardModelFromDetail(detail)
+          };
+          const detailErrorById = { ...state.detailErrorById };
+          delete detailErrorById[bubbleId];
+          next.detailErrorById = detailErrorById;
+        } else {
+          next.detailErrorById = {
+            ...state.detailErrorById,
+            [bubbleId]: asMessage(detailResult.reason)
+          };
+        }
+
+        if (timelineResult.status === "fulfilled") {
+          next.bubbleTimelines = {
+            ...state.bubbleTimelines,
+            [bubbleId]: timelineResult.value
+          };
+          const timelineErrorById = { ...state.timelineErrorById };
+          delete timelineErrorById[bubbleId];
+          next.timelineErrorById = timelineErrorById;
+        } else {
+          next.timelineErrorById = {
+            ...state.timelineErrorById,
+            [bubbleId]: asMessage(timelineResult.reason)
+          };
+        }
+
+        return next;
+      });
     };
 
     const ensureEventsClient = (): RealtimeEventsClient => {
@@ -321,7 +514,169 @@ export function createBubbleStore(
 
       eventsClient = createEventsClient({
         getRepos: () => get().selectedRepos,
-        onEvent: applyEvent,
+        onEvent: (event) => {
+          set((state) => {
+            switch (event.type) {
+              case "snapshot": {
+                const repoSummaries = { ...state.repoSummaries };
+                for (const repo of event.repos) {
+                  repoSummaries[repo.repoPath] = repo;
+                }
+
+                const bubblesById = mergeSnapshot(state.bubblesById, event);
+                const positions = prunePositions(state.positions, bubblesById);
+                const bubbleDetails = syncExpandedFromSummary(
+                  state.bubbleDetails,
+                  bubblesById
+                );
+                return {
+                  repoSummaries,
+                  bubblesById,
+                  positions,
+                  bubbleDetails,
+                  bubbleTimelines: pruneRecordByBubbleIds(
+                    state.bubbleTimelines,
+                    bubblesById
+                  ),
+                  detailLoadingById: pruneRecordByBubbleIds(
+                    state.detailLoadingById,
+                    bubblesById
+                  ),
+                  timelineLoadingById: pruneRecordByBubbleIds(
+                    state.timelineLoadingById,
+                    bubblesById
+                  ),
+                  detailErrorById: pruneRecordByBubbleIds(
+                    state.detailErrorById,
+                    bubblesById
+                  ),
+                  timelineErrorById: pruneRecordByBubbleIds(
+                    state.timelineErrorById,
+                    bubblesById
+                  ),
+                  actionLoadingById: pruneRecordByBubbleIds(
+                    state.actionLoadingById,
+                    bubblesById
+                  ),
+                  actionErrorById: pruneRecordByBubbleIds(
+                    state.actionErrorById,
+                    bubblesById
+                  ),
+                  actionRetryHintById: pruneRecordByBubbleIds(
+                    state.actionRetryHintById,
+                    bubblesById
+                  ),
+                  actionFailureById: pruneRecordByBubbleIds(
+                    state.actionFailureById,
+                    bubblesById
+                  ),
+                  selectedBubbleId:
+                    state.selectedBubbleId !== null &&
+                    bubblesById[state.selectedBubbleId] === undefined
+                      ? null
+                      : state.selectedBubbleId
+                };
+              }
+              case "bubble.updated": {
+                const bubblesById = {
+                  ...state.bubblesById,
+                  [event.bubbleId]: toBubbleCardModel(event.bubble)
+                };
+                const existingDetail = state.bubbleDetails[event.bubbleId];
+                const bubbleDetails =
+                  existingDetail === undefined
+                    ? state.bubbleDetails
+                    : {
+                        ...state.bubbleDetails,
+                        [event.bubbleId]: {
+                          ...existingDetail,
+                          ...event.bubble
+                        }
+                      };
+                return {
+                  bubblesById,
+                  bubbleDetails
+                };
+              }
+              case "bubble.removed": {
+                const bubblesById = removeBubble(state.bubblesById, event.bubbleId);
+                const positions = prunePositions(state.positions, bubblesById);
+                return {
+                  bubblesById,
+                  positions,
+                  bubbleDetails: pruneRecordByBubbleIds(state.bubbleDetails, bubblesById),
+                  bubbleTimelines: pruneRecordByBubbleIds(state.bubbleTimelines, bubblesById),
+                  detailLoadingById: pruneRecordByBubbleIds(
+                    state.detailLoadingById,
+                    bubblesById
+                  ),
+                  timelineLoadingById: pruneRecordByBubbleIds(
+                    state.timelineLoadingById,
+                    bubblesById
+                  ),
+                  detailErrorById: pruneRecordByBubbleIds(
+                    state.detailErrorById,
+                    bubblesById
+                  ),
+                  timelineErrorById: pruneRecordByBubbleIds(
+                    state.timelineErrorById,
+                    bubblesById
+                  ),
+                  actionLoadingById: pruneRecordByBubbleIds(
+                    state.actionLoadingById,
+                    bubblesById
+                  ),
+                  actionErrorById: pruneRecordByBubbleIds(
+                    state.actionErrorById,
+                    bubblesById
+                  ),
+                  actionRetryHintById: pruneRecordByBubbleIds(
+                    state.actionRetryHintById,
+                    bubblesById
+                  ),
+                  actionFailureById: pruneRecordByBubbleIds(
+                    state.actionFailureById,
+                    bubblesById
+                  ),
+                  selectedBubbleId:
+                    state.selectedBubbleId === event.bubbleId
+                      ? null
+                      : state.selectedBubbleId
+                };
+              }
+              case "repo.updated": {
+                return {
+                  repoSummaries: {
+                    ...state.repoSummaries,
+                    [event.repo.repoPath]: event.repo
+                  }
+                };
+              }
+              default: {
+                return {};
+              }
+            }
+          });
+
+          writePositions(storage, get().positions);
+
+          const selectedBubbleId = get().selectedBubbleId;
+          if (selectedBubbleId === null) {
+            return;
+          }
+          if (event.type === "bubble.updated" && event.bubbleId === selectedBubbleId) {
+            void refreshExpandedBubble(selectedBubbleId);
+            return;
+          }
+          if (event.type === "snapshot" && get().bubblesById[selectedBubbleId] !== undefined) {
+            const hasSelected = event.bubbles.some(
+              (bubble) => bubble.bubbleId === selectedBubbleId
+            );
+            if (hasSelected) {
+              void refreshExpandedBubble(selectedBubbleId);
+            }
+          }
+        },
         onStatus: (status) => {
           set({ connectionStatus: status });
         },
@@ -353,6 +708,17 @@ export function createBubbleStore(
       connectionStatus: "idle",
       isLoading: false,
       error: null,
+      selectedBubbleId: null,
+      bubbleDetails: {},
+      bubbleTimelines: {},
+      detailLoadingById: {},
+      timelineLoadingById: {},
+      detailErrorById: {},
+      timelineErrorById: {},
+      actionLoadingById: {},
+      actionErrorById: {},
+      actionRetryHintById: {},
+      actionFailureById: {},
 
       async initialize(): Promise<void> {
         const initializeId = latestInitializeId + 1;
@@ -388,7 +754,7 @@ export function createBubbleStore(
 
           const positions = prunePositions(get().positions, bubblesById);
 
-          set({
+          set((state) => ({
             repos,
             selectedRepos,
             bubblesById,
@@ -396,8 +762,25 @@ export function createBubbleStore(
             loadedRepos,
             positions,
             isLoading: false,
-            error: null
-          });
+            error: null,
+            selectedBubbleId:
+              state.selectedBubbleId !== null && bubblesById[state.selectedBubbleId] === undefined
+                ? null
+                : state.selectedBubbleId,
+            bubbleDetails: syncExpandedFromSummary(state.bubbleDetails, bubblesById),
+            bubbleTimelines: pruneRecordByBubbleIds(state.bubbleTimelines, bubblesById),
+            detailLoadingById: pruneRecordByBubbleIds(state.detailLoadingById, bubblesById),
+            timelineLoadingById: pruneRecordByBubbleIds(state.timelineLoadingById, bubblesById),
+            detailErrorById: pruneRecordByBubbleIds(state.detailErrorById, bubblesById),
+            timelineErrorById: pruneRecordByBubbleIds(state.timelineErrorById, bubblesById),
+            actionLoadingById: pruneRecordByBubbleIds(state.actionLoadingById, bubblesById),
+            actionErrorById: pruneRecordByBubbleIds(state.actionErrorById, bubblesById),
+            actionRetryHintById: pruneRecordByBubbleIds(
+              state.actionRetryHintById,
+              bubblesById
+            ),
+            actionFailureById: pruneRecordByBubbleIds(state.actionFailureById, bubblesById)
+          }));
 
           writePositions(storage, positions);
 
@@ -459,6 +842,132 @@ export function createBubbleStore(
           eventsClient.stop();
           eventsClient = null;
         }
+      },
+
+      async selectBubble(bubbleId: string | null): Promise<void> {
+        if (bubbleId === null) {
+          set({ selectedBubbleId: null });
+          return;
+        }
+
+        if (get().bubblesById[bubbleId] === undefined) {
+          set({ selectedBubbleId: null });
+          return;
+        }
+
+        set({ selectedBubbleId: bubbleId });
+        await refreshExpandedBubble(bubbleId);
+      },
+
+      async refreshExpandedBubble(bubbleId: string): Promise<void> {
+        await refreshExpandedBubble(bubbleId);
+      },
+
+      async runBubbleAction(inputValue: RunBubbleActionInput): Promise<void> {
+        const state = get();
+        const bubble = state.bubblesById[inputValue.bubbleId];
+        if (bubble === undefined) {
+          throw new Error(`Bubble not found in UI store: ${inputValue.bubbleId}`);
+        }
+
+        set((current) => {
+          const actionLoadingById = {
+            ...current.actionLoadingById,
+            [bubble.bubbleId]: true
+          };
+          const actionErrorById = { ...current.actionErrorById };
+          const actionRetryHintById = { ...current.actionRetryHintById };
+          const actionFailureById = { ...current.actionFailureById };
+          delete actionErrorById[bubble.bubbleId];
+          delete actionRetryHintById[bubble.bubbleId];
+          delete actionFailureById[bubble.bubbleId];
+          return {
+            actionLoadingById,
+            actionErrorById,
+            actionRetryHintById,
+            actionFailureById
+          };
+        });
+
+        try {
+          await performBubbleAction(api, bubble, inputValue);
+          await refreshRepos([bubble.repoPath]);
+          if (get().selectedBubbleId === bubble.bubbleId) {
+            await refreshExpandedBubble(bubble.bubbleId);
+          }
+        } catch (error) {
+          const message = asMessage(error);
+          let retryHint: string | null = null;
+
+          if (error instanceof PairflowApiError && error.status === 409) {
+            retryHint =
+              "State changed in CLI/UI. Latest state was refetched. Review state, then retry.";
+            try {
+              await refreshRepos([bubble.repoPath]);
+              if (get().selectedBubbleId === bubble.bubbleId) {
+                await refreshExpandedBubble(bubble.bubbleId);
+              }
+            } catch {
+              // Ignore secondary refresh failure and preserve original action error.
+            }
+          }
+
+          set((current) => {
+            const actionErrorById = {
+              ...current.actionErrorById,
+              [bubble.bubbleId]: message
+            };
+            const actionFailureById = {
+              ...current.actionFailureById,
+              [bubble.bubbleId]: inputValue.action
+            };
+
+            if (retryHint === null) {
+              const nextRetryHints = { ...current.actionRetryHintById };
+              delete nextRetryHints[bubble.bubbleId];
+              return {
+                actionErrorById,
+                actionFailureById,
+                actionRetryHintById: nextRetryHints
+              };
+            }
+
+            return {
+              actionErrorById,
+              actionFailureById,
+              actionRetryHintById: {
+                ...current.actionRetryHintById,
+                [bubble.bubbleId]: retryHint
+              }
+            };
+          });
+
+          throw error;
+        } finally {
+          set((current) => {
+            const actionLoadingById = { ...current.actionLoadingById };
+            delete actionLoadingById[bubble.bubbleId];
+            return {
+              actionLoadingById
+            };
+          });
+        }
+      },
+
+      clearActionFeedback(bubbleId: string): void {
+        set((state) => {
+          const actionErrorById = { ...state.actionErrorById };
+          const actionRetryHintById = { ...state.actionRetryHintById };
+          const actionFailureById = { ...state.actionFailureById };
+          delete actionErrorById[bubbleId];
+          delete actionRetryHintById[bubbleId];
+          delete actionFailureById[bubbleId];
+          return {
+            actionErrorById,
+            actionRetryHintById,
+            actionFailureById
+          };
+        });
       }
     };
   });

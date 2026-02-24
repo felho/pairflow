@@ -1,7 +1,11 @@
 import type {
+  CommitActionInput,
+  MergeActionInput,
   UiApiErrorBody,
+  UiBubbleDetail,
   UiBubbleSummary,
-  UiRepoSummary
+  UiRepoSummary,
+  UiTimelineEntry
 } from "./types";
 
 interface ReposResponse {
@@ -13,9 +17,54 @@ interface BubblesResponse {
   bubbles: UiBubbleSummary[];
 }
 
+interface BubbleDetailResponse {
+  bubble: UiBubbleDetail;
+}
+
+interface BubbleTimelineResponse {
+  bubbleId: string;
+  repoPath: string;
+  timeline: UiTimelineEntry[];
+}
+
+interface BubbleActionResponse {
+  result: Record<string, unknown>;
+}
+
 export interface PairflowApiClient {
   getRepos(): Promise<string[]>;
   getBubbles(repoPath: string): Promise<BubblesResponse>;
+  getBubble(repoPath: string, bubbleId: string): Promise<UiBubbleDetail>;
+  getBubbleTimeline(repoPath: string, bubbleId: string): Promise<UiTimelineEntry[]>;
+  startBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>>;
+  approveBubble(
+    repoPath: string,
+    bubbleId: string,
+    input?: { refs?: string[] }
+  ): Promise<Record<string, unknown>>;
+  requestRework(
+    repoPath: string,
+    bubbleId: string,
+    input: { message: string; refs?: string[] }
+  ): Promise<Record<string, unknown>>;
+  replyBubble(
+    repoPath: string,
+    bubbleId: string,
+    input: { message: string; refs?: string[] }
+  ): Promise<Record<string, unknown>>;
+  resumeBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>>;
+  commitBubble(
+    repoPath: string,
+    bubbleId: string,
+    input: CommitActionInput
+  ): Promise<Record<string, unknown>>;
+  mergeBubble(
+    repoPath: string,
+    bubbleId: string,
+    input: MergeActionInput
+  ): Promise<Record<string, unknown>>;
+  openBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>>;
+  stopBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>>;
 }
 
 export class PairflowApiError extends Error {
@@ -53,6 +102,44 @@ function parseJson(raw: string): unknown | undefined {
   } catch {
     return undefined;
   }
+}
+
+function bubbleQuery(repoPath: string): string {
+  return new URLSearchParams({ repo: repoPath }).toString();
+}
+
+function bubbleUrl(baseUrl: string, repoPath: string, bubbleId: string, action?: string): string {
+  const encodedBubbleId = encodeURIComponent(bubbleId);
+  const query = bubbleQuery(repoPath);
+  const actionPath = action === undefined ? "" : `/${action}`;
+  return toAbsoluteUrl(
+    baseUrl,
+    `/api/bubbles/${encodedBubbleId}${actionPath}?${query}`
+  );
+}
+
+async function postBubbleAction(
+  baseUrl: string,
+  repoPath: string,
+  bubbleId: string,
+  action: string,
+  body?: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const payload = await requestJson<BubbleActionResponse>(
+    bubbleUrl(baseUrl, repoPath, bubbleId, action),
+    {
+      method: "POST",
+      ...(body === undefined
+        ? {}
+        : {
+            body: JSON.stringify(body),
+            headers: {
+              "content-type": "application/json"
+            }
+          })
+    }
+  );
+  return payload.result;
 }
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -97,10 +184,98 @@ export function createApiClient(baseUrl: string = ""): PairflowApiClient {
     },
 
     async getBubbles(repoPath: string): Promise<BubblesResponse> {
-      const query = new URLSearchParams({ repo: repoPath });
       return requestJson<BubblesResponse>(
-        toAbsoluteUrl(baseUrl, `/api/bubbles?${query.toString()}`)
+        toAbsoluteUrl(baseUrl, `/api/bubbles?${bubbleQuery(repoPath)}`)
       );
+    },
+
+    async getBubble(repoPath: string, bubbleId: string): Promise<UiBubbleDetail> {
+      const payload = await requestJson<BubbleDetailResponse>(
+        bubbleUrl(baseUrl, repoPath, bubbleId)
+      );
+      return payload.bubble;
+    },
+
+    async getBubbleTimeline(
+      repoPath: string,
+      bubbleId: string
+    ): Promise<UiTimelineEntry[]> {
+      const payload = await requestJson<BubbleTimelineResponse>(
+        bubbleUrl(baseUrl, repoPath, bubbleId, "timeline")
+      );
+      return payload.timeline;
+    },
+
+    async startBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>> {
+      return postBubbleAction(baseUrl, repoPath, bubbleId, "start");
+    },
+
+    async approveBubble(
+      repoPath: string,
+      bubbleId: string,
+      input?: { refs?: string[] }
+    ): Promise<Record<string, unknown>> {
+      const refs = input?.refs;
+      return postBubbleAction(baseUrl, repoPath, bubbleId, "approve", refs === undefined ? undefined : { refs });
+    },
+
+    async requestRework(
+      repoPath: string,
+      bubbleId: string,
+      input: { message: string; refs?: string[] }
+    ): Promise<Record<string, unknown>> {
+      return postBubbleAction(baseUrl, repoPath, bubbleId, "request-rework", {
+        message: input.message,
+        ...(input.refs !== undefined ? { refs: input.refs } : {})
+      });
+    },
+
+    async replyBubble(
+      repoPath: string,
+      bubbleId: string,
+      input: { message: string; refs?: string[] }
+    ): Promise<Record<string, unknown>> {
+      return postBubbleAction(baseUrl, repoPath, bubbleId, "reply", {
+        message: input.message,
+        ...(input.refs !== undefined ? { refs: input.refs } : {})
+      });
+    },
+
+    async resumeBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>> {
+      return postBubbleAction(baseUrl, repoPath, bubbleId, "resume");
+    },
+
+    async commitBubble(
+      repoPath: string,
+      bubbleId: string,
+      input: CommitActionInput
+    ): Promise<Record<string, unknown>> {
+      return postBubbleAction(baseUrl, repoPath, bubbleId, "commit", {
+        auto: input.auto,
+        ...(input.message !== undefined ? { message: input.message } : {}),
+        ...(input.refs !== undefined ? { refs: input.refs } : {})
+      });
+    },
+
+    async mergeBubble(
+      repoPath: string,
+      bubbleId: string,
+      input: MergeActionInput
+    ): Promise<Record<string, unknown>> {
+      return postBubbleAction(baseUrl, repoPath, bubbleId, "merge", {
+        ...(input.push !== undefined ? { push: input.push } : {}),
+        ...(input.deleteRemote !== undefined
+          ? { deleteRemote: input.deleteRemote }
+          : {})
+      });
+    },
+
+    async openBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>> {
+      return postBubbleAction(baseUrl, repoPath, bubbleId, "open");
+    },
+
+    async stopBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>> {
+      return postBubbleAction(baseUrl, repoPath, bubbleId, "stop");
     }
   };
 }

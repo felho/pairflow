@@ -1,8 +1,10 @@
 import type {
   BubbleCardModel,
+  UiBubbleDetail,
   UiBubbleSummary,
   UiRepoSummary,
-  UiStateCounts
+  UiStateCounts,
+  UiTimelineEntry
 } from "../lib/types";
 
 export function stateCounts(overrides: Partial<UiStateCounts> = {}): UiStateCounts {
@@ -82,5 +84,72 @@ export function bubbleCard(input: {
   return {
     ...bubble,
     hasRuntimeSession: bubble.runtimeSession !== null
+  };
+}
+
+export function bubbleDetail(input: {
+  bubbleId: string;
+  repoPath: string;
+  state?: UiBubbleSummary["state"];
+  runtimeSession?: UiBubbleSummary["runtimeSession"];
+  stale?: boolean;
+}): UiBubbleDetail {
+  const summary = bubbleSummary(input);
+  return {
+    ...summary,
+    watchdog: {
+      monitored: true,
+      monitoredAgent: summary.activeAgent,
+      timeoutMinutes: 20,
+      referenceTimestamp: summary.lastCommandAt,
+      deadlineTimestamp: "2026-02-24T12:20:00.000Z",
+      remainingSeconds: 960,
+      expired: false
+    },
+    pendingInboxItems: {
+      humanQuestions: 1,
+      approvalRequests: 0,
+      total: 1
+    },
+    inbox: {
+      pending: {
+        humanQuestions: 1,
+        approvalRequests: 0,
+        total: 1
+      },
+      items: [
+        {
+          envelopeId: "env-1",
+          type: "HUMAN_QUESTION",
+          ts: "2026-02-24T12:01:00.000Z",
+          round: 3,
+          sender: "human",
+          summary: "Need confirmation",
+          refs: []
+        }
+      ]
+    },
+    transcript: {
+      totalMessages: 7,
+      lastMessageType: "HUMAN_QUESTION",
+      lastMessageTs: "2026-02-24T12:01:00.000Z",
+      lastMessageId: "env-1"
+    }
+  };
+}
+
+export function timelineEntry(overrides: Partial<UiTimelineEntry> = {}): UiTimelineEntry {
+  return {
+    id: "env-1",
+    ts: "2026-02-24T12:01:00.000Z",
+    round: 3,
+    type: "HUMAN_QUESTION",
+    sender: "human",
+    recipient: "codex",
+    payload: {
+      question: "Can you proceed?"
+    },
+    refs: [],
+    ...overrides
   };
 }

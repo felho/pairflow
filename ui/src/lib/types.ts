@@ -12,6 +12,30 @@ export const bubbleLifecycleStates = [
 ] as const;
 
 export type BubbleLifecycleState = (typeof bubbleLifecycleStates)[number];
+export const protocolMessageTypes = [
+  "TASK",
+  "PASS",
+  "HUMAN_QUESTION",
+  "HUMAN_REPLY",
+  "CONVERGENCE",
+  "APPROVAL_REQUEST",
+  "APPROVAL_DECISION",
+  "DONE_PACKAGE"
+] as const;
+export type ProtocolMessageType = (typeof protocolMessageTypes)[number];
+
+export const bubbleActionKinds = [
+  "start",
+  "approve",
+  "request-rework",
+  "reply",
+  "resume",
+  "commit",
+  "merge",
+  "open",
+  "stop"
+] as const;
+export type BubbleActionKind = (typeof bubbleActionKinds)[number];
 
 export interface UiStateCounts {
   CREATED: number;
@@ -38,6 +62,46 @@ export interface UiRuntimeHealth {
   expected: boolean;
   present: boolean;
   stale: boolean;
+}
+
+export interface UiPendingInboxCounts {
+  humanQuestions: number;
+  approvalRequests: number;
+  total: number;
+}
+
+export type UiPendingInboxItemType = "HUMAN_QUESTION" | "APPROVAL_REQUEST";
+
+export interface UiBubbleInboxItem {
+  envelopeId: string;
+  type: UiPendingInboxItemType;
+  ts: string;
+  round: number;
+  sender: string;
+  summary: string;
+  refs: string[];
+}
+
+export interface UiBubbleInbox {
+  pending: UiPendingInboxCounts;
+  items: UiBubbleInboxItem[];
+}
+
+export interface UiBubbleWatchdog {
+  monitored: boolean;
+  monitoredAgent: string | null;
+  timeoutMinutes: number;
+  referenceTimestamp: string | null;
+  deadlineTimestamp: string | null;
+  remainingSeconds: number | null;
+  expired: boolean;
+}
+
+export interface UiBubbleTranscriptSummary {
+  totalMessages: number;
+  lastMessageType: ProtocolMessageType | null;
+  lastMessageTs: string | null;
+  lastMessageId: string | null;
 }
 
 export interface UiBubbleSummary {
@@ -70,6 +134,24 @@ export interface UiApiErrorBody {
     message: string;
     details?: Record<string, unknown>;
   };
+}
+
+export interface UiBubbleDetail extends UiBubbleSummary {
+  watchdog: UiBubbleWatchdog;
+  pendingInboxItems: UiPendingInboxCounts;
+  inbox: UiBubbleInbox;
+  transcript: UiBubbleTranscriptSummary;
+}
+
+export interface UiTimelineEntry {
+  id: string;
+  ts: string;
+  round: number;
+  type: ProtocolMessageType;
+  sender: string;
+  recipient: string;
+  payload: Record<string, unknown>;
+  refs: string[];
 }
 
 export interface UiEventBase {
@@ -114,6 +196,17 @@ export type ConnectionStatus = "idle" | "connecting" | "connected" | "fallback";
 
 export interface BubbleCardModel extends UiBubbleSummary {
   hasRuntimeSession: boolean;
+}
+
+export interface CommitActionInput {
+  auto: boolean;
+  message?: string;
+  refs?: string[];
+}
+
+export interface MergeActionInput {
+  push?: boolean;
+  deleteRemote?: boolean;
 }
 
 export interface BubblePosition {
