@@ -261,7 +261,6 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
       {props.actionError !== null &&
       props.actionFailure !== "commit" &&
       props.actionFailure !== "merge" &&
-      props.actionFailure !== "open" &&
       props.actionFailure !== modalAction ? (
         <div className="mt-2 rounded border border-rose-500/60 bg-rose-950/35 px-2 py-1 text-xs text-rose-200">
           {props.actionError}

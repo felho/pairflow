@@ -1029,8 +1029,14 @@ export function createBubbleStore(
           let retryHint: string | null = null;
 
           if (error instanceof PairflowApiError && error.status === 409) {
-            retryHint =
-              "State changed in CLI/UI. Latest state was refetched. Review state, then retry.";
+            if (inputValue.action === "open") {
+              // Open is not a state-changing action; show the actual error message
+              // instead of the generic "state changed" retry hint.
+              retryHint = null;
+            } else {
+              retryHint =
+                "State changed in CLI/UI. Latest state was refetched. Review state, then retry.";
+            }
             try {
               await refreshRepos([bubble.repoPath]);
               if (get().expandedBubbleIds.includes(bubble.bubbleId)) {
