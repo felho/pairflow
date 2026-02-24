@@ -100,7 +100,7 @@ describe("launchBubbleTmuxSession", () => {
     ]);
   });
 
-  it("injects protocol bootstrap messages to agent panes when provided", async () => {
+  it("sends kickoff message to implementer pane when provided", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args: string[]) => {
       calls.push(args);
@@ -112,13 +112,11 @@ describe("launchBubbleTmuxSession", () => {
     };
 
     await launchBubbleTmuxSession({
-      bubbleId: "b_start_bootstrap",
+      bubbleId: "b_start_kickoff",
       worktreePath: "/tmp/worktree",
       statusCommand: "status",
       implementerCommand: "codex",
       reviewerCommand: "claude",
-      implementerBootstrapMessage: "implementer protocol message",
-      reviewerBootstrapMessage: "reviewer protocol message",
       implementerKickoffMessage: "implementer kickoff message",
       runner
     });
@@ -130,59 +128,34 @@ describe("launchBubbleTmuxSession", () => {
       "split-window",
       "select-layout"
     ]);
+    // Trust prompt check before kickoff.
     expect(calls).toContainEqual([
       "capture-pane",
       "-pt",
-      "pf-b_start_bootstrap:0.1"
-    ]);
-    expect(calls).toContainEqual([
-      "capture-pane",
-      "-pt",
-      "pf-b_start_bootstrap:0.2"
+      "pf-b_start_kickoff:0.1"
     ]);
     // Text and Enter are separate send-keys calls (ink TUI requirement).
     expect(calls).toContainEqual([
       "send-keys",
       "-t",
-      "pf-b_start_bootstrap:0.1",
-      "-l",
-      "implementer protocol message"
-    ]);
-    expect(calls).toContainEqual([
-      "send-keys",
-      "-t",
-      "pf-b_start_bootstrap:0.1",
-      "Enter"
-    ]);
-    expect(calls).toContainEqual([
-      "send-keys",
-      "-t",
-      "pf-b_start_bootstrap:0.2",
-      "-l",
-      "reviewer protocol message"
-    ]);
-    expect(calls).toContainEqual([
-      "send-keys",
-      "-t",
-      "pf-b_start_bootstrap:0.2",
-      "Enter"
-    ]);
-    expect(calls).toContainEqual([
-      "send-keys",
-      "-t",
-      "pf-b_start_bootstrap:0.1",
+      "pf-b_start_kickoff:0.1",
       "-l",
       "implementer kickoff message"
     ]);
     expect(calls).toContainEqual([
       "send-keys",
       "-t",
-      "pf-b_start_bootstrap:0.1",
+      "pf-b_start_kickoff:0.1",
       "Enter"
     ]);
+    // No bootstrap messages sent to reviewer pane.
+    const reviewerSendKeys = calls.filter(
+      (call) => call[0] === "send-keys" && call[2] === "pf-b_start_kickoff:0.2"
+    );
+    expect(reviewerSendKeys).toHaveLength(0);
   });
 
-  it("keeps start non-blocking when bootstrap send-keys enter fails", async () => {
+  it("keeps start non-blocking when kickoff send-keys fails", async () => {
     const calls: Array<{ args: string[]; allowFailure: boolean }> = [];
     const runner: TmuxRunner = (
       args: string[],
@@ -194,7 +167,7 @@ describe("launchBubbleTmuxSession", () => {
       });
       if (
         args[0] === "send-keys" &&
-        args[2] === "pf-b_start_bootstrap_fail:0.1"
+        args[2] === "pf-b_start_kickoff_fail:0.1"
       ) {
         return Promise.resolve({
           stdout: "",
@@ -210,22 +183,21 @@ describe("launchBubbleTmuxSession", () => {
     };
 
     const result = await launchBubbleTmuxSession({
-      bubbleId: "b_start_bootstrap_fail",
+      bubbleId: "b_start_kickoff_fail",
       worktreePath: "/tmp/worktree",
       statusCommand: "status",
       implementerCommand: "codex",
       reviewerCommand: "claude",
-      implementerBootstrapMessage: "implementer protocol message",
-      reviewerBootstrapMessage: "reviewer protocol message",
+      implementerKickoffMessage: "kickoff message",
       runner
     });
 
-    expect(result.sessionName).toBe("pf-b_start_bootstrap_fail");
+    expect(result.sessionName).toBe("pf-b_start_kickoff_fail");
     // Both the literal message send and the Enter send use allowFailure.
     const failedSends = calls.filter(
       (call) =>
         call.args[0] === "send-keys" &&
-        call.args[2] === "pf-b_start_bootstrap_fail:0.1"
+        call.args[2] === "pf-b_start_kickoff_fail:0.1"
     );
     expect(failedSends.length).toBeGreaterThan(0);
     for (const send of failedSends) {

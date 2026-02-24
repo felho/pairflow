@@ -98,16 +98,9 @@ describe("startBubble", () => {
           calls.push("launch");
           implementerCommand = input.implementerCommand;
           reviewerCommand = input.reviewerCommand;
-          expect(input.implementerBootstrapMessage).toContain("Protocol is mandatory");
-          expect(input.implementerBootstrapMessage).toContain("role=implementer");
-          expect(input.implementerBootstrapMessage).toContain(
-            created.paths.taskArtifactPath
-          );
-          expect(input.reviewerBootstrapMessage).toContain("Protocol is mandatory");
-          expect(input.reviewerBootstrapMessage).toContain("role=reviewer");
-          expect(input.reviewerBootstrapMessage).toContain(
-            created.paths.taskArtifactPath
-          );
+          // Bootstrap messages removed — startup prompts are embedded in agent commands.
+          expect(input.implementerBootstrapMessage).toBeUndefined();
+          expect(input.reviewerBootstrapMessage).toBeUndefined();
           expect(input.implementerKickoffMessage).toContain(
             `bubble=${created.bubbleId} kickoff`
           );

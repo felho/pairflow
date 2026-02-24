@@ -270,23 +270,7 @@ export async function startBubble(
         implementerKickoffMessage: buildImplementerKickoffMessage({
           bubbleId: resolved.bubbleId,
           taskArtifactPath: resolved.bubblePaths.taskArtifactPath
-        }),
-        implementerBootstrapMessage: [
-          `[pairflow] bubble=${resolved.bubbleId} role=implementer started.`,
-          "Protocol is mandatory: use `pairflow pass`, `pairflow ask-human`, `pairflow converged` only for handoff/escalation.",
-          "Never edit transcript/inbox/state files manually.",
-          `Repo: ${resolved.repoPath}`,
-          `Worktree: ${resolved.bubblePaths.worktreePath}`,
-          `Task reference: ${resolved.bubblePaths.taskArtifactPath}`
-        ].join(" "),
-        reviewerBootstrapMessage: [
-          `[pairflow] bubble=${resolved.bubbleId} role=reviewer started.`,
-          "Protocol is mandatory: use `pairflow pass`, `pairflow ask-human`, `pairflow converged` only for handoff/escalation.",
-          "Never edit transcript/inbox/state files manually.",
-          `Repo: ${resolved.repoPath}`,
-          `Worktree: ${resolved.bubblePaths.worktreePath}`,
-          `Task reference: ${resolved.bubblePaths.taskArtifactPath}`
-        ].join(" ")
+        })
       });
       tmuxSessionName = tmux.sessionName;
 
