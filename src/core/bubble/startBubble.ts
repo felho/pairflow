@@ -67,10 +67,11 @@ async function isTmuxSessionAliveDefault(sessionName: string): Promise<boolean> 
   }
 }
 
-function buildStatusPaneCommand(bubbleId: string, repoPath: string): string {
+function buildStatusPaneCommand(bubbleId: string, repoPath: string, worktreePath: string): string {
   const watchdogCommand = `pairflow bubble watchdog --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)} >/dev/null 2>&1 || true`;
   const statusCommand = `pairflow bubble status --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)}`;
-  const loopScript = `while true; do clear; ${watchdogCommand}; ${statusCommand}; sleep 2; done`;
+  const echoWorktree = `echo ${shellQuote(worktreePath)}`;
+  const loopScript = `while true; do clear; ${watchdogCommand}; ${statusCommand}; ${echoWorktree}; sleep 2; done`;
   return `bash -lc ${shellQuote(loopScript)}`;
 }
 
@@ -247,7 +248,7 @@ export async function startBubble(
       const tmux = await launchTmux({
         bubbleId: resolved.bubbleId,
         worktreePath: resolved.bubblePaths.worktreePath,
-        statusCommand: buildStatusPaneCommand(resolved.bubbleId, resolved.repoPath),
+        statusCommand: buildStatusPaneCommand(resolved.bubbleId, resolved.repoPath, resolved.bubblePaths.worktreePath),
         implementerCommand: buildAgentCommand({
           agentName: resolved.bubbleConfig.agents.implementer,
           bubbleId: resolved.bubbleId,
@@ -299,7 +300,7 @@ export async function startBubble(
       const tmux = await launchTmux({
         bubbleId: resolved.bubbleId,
         worktreePath: resolved.bubblePaths.worktreePath,
-        statusCommand: buildStatusPaneCommand(resolved.bubbleId, resolved.repoPath),
+        statusCommand: buildStatusPaneCommand(resolved.bubbleId, resolved.repoPath, resolved.bubblePaths.worktreePath),
         implementerCommand: buildAgentCommand({
           agentName: resolved.bubbleConfig.agents.implementer,
           bubbleId: resolved.bubbleId
