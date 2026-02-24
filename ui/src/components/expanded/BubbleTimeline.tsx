@@ -24,6 +24,59 @@ function payloadSummary(entry: UiTimelineEntry): string {
   return "(no summary payload)";
 }
 
+interface FindingTag {
+  severity: string;
+  style: string;
+}
+
+const findingStyles: Record<string, string> = {
+  P0: "border-red-500/20 bg-red-500/10 text-red-500",
+  P1: "border-red-500/20 bg-red-500/10 text-red-500",
+  P2: "border-amber-500/20 bg-amber-500/10 text-amber-500",
+  P3: "border-slate-500/20 bg-slate-500/10 text-slate-400"
+};
+
+function extractFindingTags(entry: UiTimelineEntry): FindingTag[] {
+  const findings = entry.payload.findings;
+  if (!Array.isArray(findings)) {
+    return [];
+  }
+  const seen = new Set<string>();
+  const tags: FindingTag[] = [];
+  for (const finding of findings) {
+    const severity = typeof finding === "object" && finding !== null && "severity" in finding
+      ? String(finding.severity)
+      : null;
+    if (severity !== null && !seen.has(severity)) {
+      seen.add(severity);
+      tags.push({
+        severity,
+        style: findingStyles[severity] ?? "border-slate-500/20 bg-slate-500/10 text-slate-400"
+      });
+    }
+  }
+  return tags;
+}
+
+function isCleanPass(entry: UiTimelineEntry): boolean {
+  if (entry.type !== "PASS") {
+    return false;
+  }
+  const passIntent = entry.payload.pass_intent;
+  if (passIntent === "no_findings") {
+    return true;
+  }
+  const findings = entry.payload.findings;
+  if (Array.isArray(findings) && findings.length === 0) {
+    return true;
+  }
+  return false;
+}
+
+function isBlockedEntry(entry: UiTimelineEntry): boolean {
+  return entry.type === "HUMAN_QUESTION";
+}
+
 function formatTime(timestamp: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) {
@@ -90,6 +143,10 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
         <div className="flex-1 overflow-y-auto pr-1">
           {props.entries.map((entry) => {
             const role = resolveRole(entry);
+            const isConvergence = entry.type === "CONVERGENCE";
+            const blocked = isBlockedEntry(entry);
+            const findingTags = extractFindingTags(entry);
+            const cleanPass = isCleanPass(entry);
             return (
               <div
                 key={entry.id}
@@ -104,11 +161,34 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
                   {roleIcons[role]}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="font-medium text-[#aaa]">
-                    {entry.sender}{" "}
-                    <span className="text-[#555]">({role === "system" ? "system" : role === "human" ? "human" : role === "review" ? "reviewer" : "implementer"})</span>
+                  {isConvergence ? (
+                    <div className="font-semibold text-emerald-500">CONVERGENCE</div>
+                  ) : blocked ? (
+                    <div className="font-medium text-amber-500">
+                      {entry.sender} &mdash; blocked
+                    </div>
+                  ) : (
+                    <div className="font-medium text-[#aaa]">
+                      {entry.sender}{" "}
+                      <span className="text-[#555]">({role === "system" ? "system" : role === "human" ? "human" : role === "review" ? "reviewer" : "implementer"})</span>
+                    </div>
+                  )}
+                  <div className="leading-relaxed text-[#666]">
+                    {payloadSummary(entry)}
+                    {findingTags.map((tag) => (
+                      <span
+                        key={tag.severity}
+                        className={`ml-1 inline-block rounded px-1 text-[9px] font-semibold leading-tight border ${tag.style}`}
+                      >
+                        {tag.severity}
+                      </span>
+                    ))}
+                    {cleanPass ? (
+                      <span className="ml-1 inline-block rounded border border-emerald-500/20 bg-emerald-500/10 px-1 text-[9px] font-semibold leading-tight text-emerald-500">
+                        &#x2713; clean
+                      </span>
+                    ) : null}
                   </div>
-                  <div className="leading-relaxed text-[#666]">{payloadSummary(entry)}</div>
                 </div>
                 <span className="flex-shrink-0 pt-px font-mono text-[9px] text-[#444]">
                   {formatTime(entry.ts)}
