@@ -208,6 +208,11 @@ export {
   runPassCommand
 } from "./cli/commands/agent/pass.js";
 export {
+  getUiServerHelpText,
+  parseUiServerCommandOptions,
+  runUiServerCommand
+} from "./cli/commands/ui/server.js";
+export {
   TOML_PARSER_LIMITATIONS,
   renderBubbleConfigToml,
   assertValidBubbleConfig,
@@ -230,6 +235,14 @@ export {
   assertValidBubbleStateSnapshot,
   validateBubbleStateSnapshot
 } from "./core/state/stateSchema.js";
+export type {
+  UiApiErrorBody,
+  UiBubbleDetail,
+  UiBubbleSummary,
+  UiEvent,
+  UiRepoSummary,
+  UiTimelineEntry
+} from "./types/ui.js";
 export {
   StateStoreConflictError,
   createStateSnapshot,
@@ -257,6 +270,7 @@ export {
   formatProtocolEnvelopeId,
   TranscriptSequenceError
 } from "./core/protocol/sequenceAllocator.js";
+export { startUiServer } from "./core/ui/server.js";
 export {
   appendProtocolEnvelopes,
   appendProtocolEnvelope,

@@ -82,6 +82,10 @@ import {
   getPassHelpText,
   runPassCommand
 } from "./commands/agent/pass.js";
+import {
+  getUiServerHelpText,
+  runUiServerCommand
+} from "./commands/ui/server.js";
 
 async function handlePassCommand(args: string[]): Promise<number> {
   const result = await runPassCommand(args);
@@ -116,6 +120,44 @@ async function handleConvergedCommand(args: string[]): Promise<number> {
   process.stdout.write(
     `CONVERGENCE recorded for ${result.bubbleId}: ${result.convergenceEnvelope.id}; approval requested: ${result.approvalRequestEnvelope.id}\n`
   );
+  return 0;
+}
+
+function waitForShutdownSignal(closeServer: () => Promise<void>): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    let closing = false;
+
+    const cleanup = (): void => {
+      process.off("SIGINT", onSignal);
+      process.off("SIGTERM", onSignal);
+    };
+
+    const onSignal = (): void => {
+      if (closing) {
+        return;
+      }
+      closing = true;
+      cleanup();
+      void closeServer().then(resolve, reject);
+    };
+
+    process.on("SIGINT", onSignal);
+    process.on("SIGTERM", onSignal);
+  });
+}
+
+async function handleUiCommand(args: string[]): Promise<number> {
+  const result = await runUiServerCommand(args);
+  if (result === null) {
+    process.stdout.write(`${getUiServerHelpText()}\n`);
+    return 0;
+  }
+
+  process.stdout.write(`Pairflow UI server listening on ${result.url}\n`);
+  process.stdout.write(`Scoped repositories: ${result.repoScope.repos.join(", ")}\n`);
+  await waitForShutdownSignal(async () => {
+    await result.close();
+  });
   return 0;
 }
 
@@ -398,6 +440,7 @@ function buildSupportedCommandsText(): string {
     (commandName) => `agent ${commandName}`
   );
   return [
+    "ui",
     ...bubbleCommands,
     ...topLevelAgentCommands,
     ...namespacedAgentCommands
@@ -430,6 +473,10 @@ export async function runCli(argv: string[]): Promise<number> {
   );
   if (convergedArgs !== null) {
     return handleConvergedCommand(convergedArgs);
+  }
+
+  if (command === "ui") {
+    return handleUiCommand([subcommand, ...rest].filter((part) => part !== undefined));
   }
 
   if (command === "bubble" && subcommand !== undefined) {
