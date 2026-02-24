@@ -41,12 +41,13 @@ User: "create a bubble --id my-custom-name --task-file plans/tasks/resume.md"
 ```
 User: "the bubble review-ui-prd is done, full cleanup"
 → Invokes CleanBubble workflow
-→ Approves, commits, kills tmux, merges, removes worktree + branch
+→ pairflow bubble approve → pairflow bubble commit --auto → pairflow bubble merge
+→ CLI handles all state transitions and cleanup (tmux, worktree, branch)
 ```
 
 **Example 4: Approve and merge**
 ```
 User: "approve and merge the sync-prd-mockup bubble"
 → Invokes CleanBubble workflow
-→ Same full cleanup flow
+→ Same flow — uses pairflow CLI commands (never raw git/tmux)
 ```
