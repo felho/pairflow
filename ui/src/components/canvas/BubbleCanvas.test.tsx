@@ -38,7 +38,8 @@ describe("BubbleCanvas", () => {
       top: "60px"
     });
     expect(screen.getByRole("main")).toHaveStyle({
-      minHeight: "560px"
+      minHeight: "560px",
+      minWidth: "312px"
     });
     expect(onPositionChange).not.toHaveBeenCalled();
     expect(onPositionCommit).not.toHaveBeenCalled();

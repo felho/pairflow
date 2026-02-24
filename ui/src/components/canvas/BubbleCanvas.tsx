@@ -248,6 +248,7 @@ function defaultPosition(index: number): BubblePosition {
   };
 }
 
+const expandedCardWidth = 480;
 const expandedCardHeight = 520;
 
 export interface BubbleCanvasProps {
@@ -273,18 +274,21 @@ export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
     }));
   }, [props.bubbles, props.positions]);
 
-  const canvasHeight = useMemo(() => {
-    const maxBottom = positioned.reduce((max, entry) => {
+  const canvasDimensions = useMemo(() => {
+    let maxBottom = 560;
+    let maxRight = 0;
+    for (const entry of positioned) {
       const isExpanded = expandedSet.has(entry.bubble.bubbleId);
+      const width = isExpanded ? expandedCardWidth : cardWidth;
       const height = isExpanded ? expandedCardHeight : cardHeight;
-      const bottom = entry.position.y + height + 24;
-      return Math.max(max, bottom);
-    }, 560);
-    return maxBottom;
+      maxBottom = Math.max(maxBottom, entry.position.y + height + 24);
+      maxRight = Math.max(maxRight, entry.position.x + width + 24);
+    }
+    return { minHeight: maxBottom, minWidth: maxRight };
   }, [positioned, expandedSet]);
 
   return (
-    <main className="relative overflow-auto px-4 pb-6 pt-4" style={{ minHeight: canvasHeight }}>
+    <main className="relative overflow-auto px-4 pb-6 pt-4" style={canvasDimensions}>
       {positioned.map((entry) => {
         const isExpanded = expandedSet.has(entry.bubble.bubbleId);
 
