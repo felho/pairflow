@@ -71,7 +71,8 @@ describe("launchBubbleTmuxSession", () => {
       "new-session",
       "split-window",
       "split-window",
-      "select-layout"
+      "select-layout",
+      "resize-pane"
     ]);
     expect(calls[0]?.allowFailure).toBe(true);
     expect(calls[2]?.args).toEqual([
@@ -98,6 +99,13 @@ describe("launchBubbleTmuxSession", () => {
       "pf-b_start_01:0",
       "even-vertical"
     ]);
+    expect(calls[5]?.args).toEqual([
+      "resize-pane",
+      "-t",
+      "pf-b_start_01:0.0",
+      "-y",
+      "7"
+    ]);
   });
 
   it("sends kickoff message to implementer pane when provided", async () => {
@@ -121,12 +129,13 @@ describe("launchBubbleTmuxSession", () => {
       runner
     });
 
-    expect(calls.slice(0, 5).map((call) => call[0])).toEqual([
+    expect(calls.slice(0, 6).map((call) => call[0])).toEqual([
       "has-session",
       "new-session",
       "split-window",
       "split-window",
-      "select-layout"
+      "select-layout",
+      "resize-pane"
     ]);
     // Trust prompt check before kickoff.
     expect(calls).toContainEqual([

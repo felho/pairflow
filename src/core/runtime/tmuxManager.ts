@@ -186,11 +186,20 @@ export async function launchBubbleTmuxSession(
     input.worktreePath,
     input.reviewerCommand
   ]);
+  // Status/orchestrator pane gets a fixed 7-line height; the remaining
+  // vertical space is split equally between implementer and reviewer.
   await runner([
     "select-layout",
     "-t",
     `${sessionName}:0`,
     "even-vertical"
+  ]);
+  await runner([
+    "resize-pane",
+    "-t",
+    `${sessionName}:0.0`,
+    "-y",
+    "7"
   ]);
   const sendPaneMessage = async (
     targetPane: string,
