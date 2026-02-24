@@ -6,19 +6,39 @@ function sleep(ms: number): Promise<void> {
   });
 }
 
+export interface SubmitTmuxPaneInputOptions {
+  beforeSubmitMs?: number;
+}
+
 export async function submitTmuxPaneInput(
   runner: TmuxRunner,
-  targetPane: string
+  targetPane: string,
+  options: SubmitTmuxPaneInputOptions = {}
 ): Promise<void> {
-  // Codex/Claude TUI reliably submit on literal carriage return in tmux.
+  const beforeSubmitMs = options.beforeSubmitMs ?? 300;
+  if (beforeSubmitMs > 0) {
+    await sleep(beforeSubmitMs);
+  }
+
+  // Primary strategy mirrors the known-good hook behavior:
+  // send message text first, then submit with Enter after a short delay.
+  const enterResult = await runner(["send-keys", "-t", targetPane, "Enter"], {
+    allowFailure: true
+  });
+
+  if (enterResult.exitCode === 0) {
+    return;
+  }
+
+  // Fallbacks only when Enter key dispatch itself fails at tmux level.
+  const carriageResult = await runner(["send-keys", "-t", targetPane, "C-m"], {
+    allowFailure: true
+  });
+  if (carriageResult.exitCode === 0) {
+    return;
+  }
+
   await runner(["send-keys", "-t", targetPane, "-l", "\r"], {
-    allowFailure: true
-  });
-  // Keep legacy key-based submits as fallbacks for non-TUI pane processes.
-  await runner(["send-keys", "-t", targetPane, "Enter"], {
-    allowFailure: true
-  });
-  await runner(["send-keys", "-t", targetPane, "C-m"], {
     allowFailure: true
   });
 }

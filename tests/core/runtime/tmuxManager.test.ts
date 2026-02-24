@@ -151,20 +151,7 @@ describe("launchBubbleTmuxSession", () => {
       "send-keys",
       "-t",
       "pf-b_start_bootstrap:0.1",
-      "-l",
-      "\r"
-    ]);
-    expect(calls).toContainEqual([
-      "send-keys",
-      "-t",
-      "pf-b_start_bootstrap:0.1",
       "Enter"
-    ]);
-    expect(calls).toContainEqual([
-      "send-keys",
-      "-t",
-      "pf-b_start_bootstrap:0.1",
-      "C-m"
     ]);
     expect(calls).toContainEqual([
       "send-keys",
@@ -177,20 +164,7 @@ describe("launchBubbleTmuxSession", () => {
       "send-keys",
       "-t",
       "pf-b_start_bootstrap:0.2",
-      "-l",
-      "\r"
-    ]);
-    expect(calls).toContainEqual([
-      "send-keys",
-      "-t",
-      "pf-b_start_bootstrap:0.2",
       "Enter"
-    ]);
-    expect(calls).toContainEqual([
-      "send-keys",
-      "-t",
-      "pf-b_start_bootstrap:0.2",
-      "C-m"
     ]);
     expect(calls).toContainEqual([
       "send-keys",
@@ -203,20 +177,7 @@ describe("launchBubbleTmuxSession", () => {
       "send-keys",
       "-t",
       "pf-b_start_bootstrap:0.1",
-      "-l",
-      "\r"
-    ]);
-    expect(calls).toContainEqual([
-      "send-keys",
-      "-t",
-      "pf-b_start_bootstrap:0.1",
       "Enter"
-    ]);
-    expect(calls).toContainEqual([
-      "send-keys",
-      "-t",
-      "pf-b_start_bootstrap:0.1",
-      "C-m"
     ]);
   });
 

@@ -121,20 +121,7 @@ describe("emitTmuxDeliveryNotification", () => {
       "send-keys",
       "-t",
       "pf-b_delivery_01:0.2",
-      "-l",
-      "\r"
-    ]);
-    expect(calls).toContainEqual([
-      "send-keys",
-      "-t",
-      "pf-b_delivery_01:0.2",
       "Enter"
-    ]);
-    expect(calls).toContainEqual([
-      "send-keys",
-      "-t",
-      "pf-b_delivery_01:0.2",
-      "C-m"
     ]);
     expect(calls).toContainEqual([
       "capture-pane",
@@ -185,7 +172,7 @@ describe("emitTmuxDeliveryNotification", () => {
       "send-keys",
       "-t",
       "pf-b_delivery_01:0.0",
-      "C-m"
+      "Enter"
     ]);
     expect(calls.some((call) => call[0] === "capture-pane")).toBe(true);
   });
@@ -231,7 +218,7 @@ describe("emitTmuxDeliveryNotification", () => {
       "send-keys",
       "-t",
       "pf-b_delivery_01:0.1",
-      "C-m"
+      "Enter"
     ]);
     expect(calls.some((call) => call[0] === "capture-pane")).toBe(true);
     const approvalCall = calls.find(
@@ -287,7 +274,7 @@ describe("emitTmuxDeliveryNotification", () => {
       "send-keys",
       "-t",
       "pf-b_delivery_01:0.2",
-      "C-m"
+      "Enter"
     ]);
     expect(calls.some((call) => call[0] === "capture-pane")).toBe(true);
     const approvalCall = calls.find(
@@ -420,8 +407,8 @@ describe("emitTmuxDeliveryNotification", () => {
     const submitCalls = calls.filter(
       (call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.2"
     );
-    // one message write + submit(3) + submit(3) across two attempts
-    expect(submitCalls.length).toBe(7);
+    // one message write + submit(1) + submit(1) across two attempts
+    expect(submitCalls.length).toBe(3);
     const captureCalls = calls.filter((call) => call[0] === "capture-pane");
     expect(captureCalls.length).toBeGreaterThanOrEqual(2);
   });
