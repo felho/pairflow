@@ -30,12 +30,18 @@ type ModalAction = "request-rework" | "reply";
 function buttonTone(action: BubbleActionKind): string {
   switch (action) {
     case "stop":
-      return "border-rose-500/70 bg-rose-500/15 text-rose-100";
+      return "border-rose-500/70 bg-rose-500/[0.08] text-rose-400";
+    case "approve":
+      return "border-emerald-500/70 bg-emerald-500/[0.08] text-emerald-500";
     case "commit":
     case "merge":
-      return "border-emerald-400/70 bg-emerald-400/15 text-emerald-100";
+      return "border-emerald-400/70 bg-emerald-400/[0.08] text-emerald-400";
+    case "request-rework":
+      return "border-amber-500/70 bg-amber-500/[0.08] text-amber-500";
+    case "reply":
+      return "border-amber-500/70 bg-amber-500/[0.08] text-amber-500";
     default:
-      return "border-cyan-300/70 bg-cyan-300/15 text-cyan-100";
+      return "border-[#333] bg-[#1a1a1a] text-[#aaa] hover:border-[#555] hover:text-white";
   }
 }
 
@@ -131,9 +137,8 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
   };
 
   return (
-    <section className="rounded-xl border border-slate-700 bg-slate-900/65 p-3">
-      <h3 className="font-display text-sm font-semibold text-slate-100">Actions</h3>
-      <div className="mt-2 flex flex-wrap gap-2">
+    <div>
+      <div className="flex flex-wrap gap-1.5">
         {availableActions.map((action) => {
           const openCommit = action === "commit";
           const openMerge = action === "merge";
@@ -143,7 +148,7 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
             <button
               key={action}
               type="button"
-              className={`rounded-md border px-2.5 py-1.5 text-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 ${buttonTone(action)}`}
+              className={`rounded-lg border px-2.5 py-1 text-[10px] transition hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-60 ${buttonTone(action)}`}
               onClick={() => {
                 if (openCommit) {
                   setShowCommitForm((value) => !value);
@@ -171,7 +176,7 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
         {props.attach.visible ? (
           <button
             type="button"
-            className="rounded-md border border-amber-300/70 bg-amber-300/15 px-2.5 py-1.5 text-sm text-amber-100 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg border border-[#333] bg-[#1a1a1a] px-2.5 py-1 text-[10px] text-[#aaa] transition hover:border-[#555] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
             disabled={!props.attach.enabled || props.isSubmitting}
             onClick={() => {
               setAttachFeedback(null);
@@ -262,6 +267,6 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
           {props.actionError}
         </div>
       ) : null}
-    </section>
+    </div>
   );
 }

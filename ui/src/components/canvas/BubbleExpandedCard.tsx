@@ -114,21 +114,22 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
   return (
     <article
       className={cn(
-        "absolute w-[480px] rounded-[20px] border bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] p-4 transition-shadow",
+        "absolute flex w-[500px] flex-col overflow-hidden rounded-[20px] border bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] transition-shadow",
         visual.border,
         visual.cardTone,
-        dragging ? "z-40 cursor-grabbing" : "z-30"
+        dragging ? "z-40" : "z-30"
       )}
       style={{
         left: props.position.x,
-        top: props.position.y
+        top: props.position.y,
+        maxHeight: 520
       }}
       data-bubble-id={props.bubble.bubbleId}
       data-expanded
     >
       {/* Header — drag handle */}
       <div
-        className={cn("mb-3 flex items-center justify-between", dragging ? "cursor-grabbing" : "cursor-grab")}
+        className={cn("flex items-center justify-between px-4 pt-4 pb-3", dragging ? "cursor-grabbing" : "cursor-grab")}
         onMouseDown={(event) => {
           if (event.button !== 0) {
             return;
@@ -158,67 +159,45 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
           <span className="text-[14px] font-semibold tracking-wide text-white">
             {props.bubble.bubbleId}
           </span>
-          <span className="font-mono text-[10px] text-[#666]">
+          <span className="font-mono text-[10px] text-[#555]">
             {repoLabel(props.bubble.repoPath)} · R{props.bubble.round}
           </span>
+        </div>
+        <div className="flex items-center gap-2">
           <span className="flex items-center gap-1.5">
             <span className={cn("inline-block h-[7px] w-[7px] rounded-full", visual.led)} />
             <span className={cn("text-[10px] font-medium tracking-wide", visual.stateText)}>
               {formatStateLabel(props.bubble.state)}
             </span>
           </span>
-        </div>
-        <div className="flex items-center gap-1">
           <button
             type="button"
-            className="rounded-md px-1.5 py-0.5 text-[11px] text-[#888] hover:bg-[#333] hover:text-white"
-            onClick={(event) => {
-              event.stopPropagation();
-              props.onRefresh();
-            }}
-          >
-            Refresh
-          </button>
-          <button
-            type="button"
-            className="rounded-md px-1.5 py-0.5 text-[11px] text-[#888] hover:bg-[#333] hover:text-white"
+            className="flex h-5 w-5 items-center justify-center rounded-full border border-[#333] bg-[#1a1a1a] text-[10px] text-[#666] hover:border-[#555] hover:text-white"
             onClick={(event) => {
               event.stopPropagation();
               props.onClose();
             }}
             aria-label="Close expanded card"
           >
-            ✕
+            &times;
           </button>
         </div>
       </div>
 
       {/* Question card (WAITING_HUMAN only) */}
       {pendingQuestion !== null ? (
-        <div className="mb-3 rounded-lg border border-amber-500/60 bg-amber-950/25 px-3 py-2">
-          <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-amber-400">
-            Question from {pendingQuestion.sender}
+        <div className="mx-4 mb-2.5 rounded-[10px] border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2.5">
+          <div className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-amber-500">
+            &#x2753; Question from {pendingQuestion.sender}
           </div>
-          <div className="text-xs leading-relaxed text-amber-100">
+          <div className="text-[11px] leading-relaxed text-[#ccc]">
             {pendingQuestion.summary}
           </div>
         </div>
       ) : null}
 
-      {/* Approval package (READY_FOR_APPROVAL only) */}
-      {props.bubble.state === "READY_FOR_APPROVAL" && props.detail !== null ? (
-        <div className="mb-3 rounded-lg border border-emerald-500/60 bg-emerald-950/25 px-3 py-2">
-          <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-emerald-400">
-            Ready for Approval
-          </div>
-          <div className="text-xs leading-relaxed text-emerald-100">
-            Reviewer found no issues. Review and approve to proceed.
-          </div>
-        </div>
-      ) : null}
-
       {/* Action buttons */}
-      <div className="mb-3">
+      <div className="mb-2.5 px-4">
         <ActionBar
           bubble={props.bubble}
           attach={attach}
@@ -235,11 +214,25 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
       </div>
 
       {/* Timeline */}
-      <BubbleTimeline
-        entries={props.timeline}
-        isLoading={props.timelineLoading}
-        error={props.timelineError}
-      />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4">
+        <BubbleTimeline
+          entries={props.timeline}
+          isLoading={props.timelineLoading}
+          error={props.timelineError}
+        />
+      </div>
+
+      {/* Approval package (READY_FOR_APPROVAL only) */}
+      {props.bubble.state === "READY_FOR_APPROVAL" && props.detail !== null ? (
+        <div className="mx-4 mb-4 rounded-[10px] border border-emerald-500/15 bg-emerald-500/[0.05] px-3 py-2.5">
+          <div className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-emerald-500">
+            Approval Package
+          </div>
+          <div className="text-[10px] leading-relaxed text-[#888]">
+            Reviewer found no issues. Review and approve to proceed.
+          </div>
+        </div>
+      ) : null}
     </article>
   );
 }

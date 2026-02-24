@@ -1,4 +1,4 @@
-import type { UiTimelineEntry } from "../../lib/types";
+import type { ProtocolMessageType, UiTimelineEntry } from "../../lib/types";
 
 function payloadSummary(entry: UiTimelineEntry): string {
   const summary = entry.payload.summary;
@@ -24,12 +24,43 @@ function payloadSummary(entry: UiTimelineEntry): string {
   return "(no summary payload)";
 }
 
-function formatTimestamp(timestamp: string): string {
+function formatTime(timestamp: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) {
     return timestamp;
   }
-  return date.toLocaleString();
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+type RoleKind = "impl" | "review" | "human" | "system";
+
+const roleStyles: Record<RoleKind, string> = {
+  impl: "border-blue-500/30 bg-blue-500/15 text-blue-500",
+  review: "border-purple-500/30 bg-purple-500/15 text-purple-500",
+  human: "border-amber-500/30 bg-amber-500/15 text-amber-500",
+  system: "border-emerald-500/30 bg-emerald-500/15 text-emerald-500"
+};
+
+const roleIcons: Record<RoleKind, string> = {
+  impl: "\u25B6",
+  review: "\u25C6",
+  human: "?",
+  system: "\u25CB"
+};
+
+function resolveRole(entry: UiTimelineEntry): RoleKind {
+  const type: ProtocolMessageType = entry.type;
+  if (type === "HUMAN_QUESTION" || type === "HUMAN_REPLY") {
+    return "human";
+  }
+  if (type === "CONVERGENCE" || type === "DONE_PACKAGE") {
+    return "system";
+  }
+  const sender = entry.sender.toLowerCase();
+  if (sender.includes("review") || sender.includes("claude")) {
+    return "review";
+  }
+  return "impl";
 }
 
 export interface BubbleTimelineProps {
@@ -40,42 +71,53 @@ export interface BubbleTimelineProps {
 
 export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
   return (
-    <section className="rounded-xl border border-slate-700 bg-slate-900/65 p-3">
-      <h3 className="font-display text-sm font-semibold text-slate-100">Timeline</h3>
-
+    <div className="flex flex-1 flex-col overflow-hidden">
       {props.isLoading ? (
-        <div className="mt-2 text-xs text-slate-300">Loading timeline...</div>
+        <div className="py-2 text-[10px] text-[#666]">Loading timeline...</div>
       ) : null}
 
       {props.error !== null ? (
-        <div className="mt-2 rounded border border-rose-500/60 bg-rose-950/35 px-2 py-1 text-xs text-rose-200">
+        <div className="rounded border border-rose-500/60 bg-rose-950/35 px-2 py-1 text-[10px] text-rose-200">
           Failed to load timeline: {props.error}
         </div>
       ) : null}
 
       {!props.isLoading && props.error === null && props.entries !== null && props.entries.length === 0 ? (
-        <div className="mt-2 text-xs text-slate-400">No timeline entries yet.</div>
+        <div className="py-2 text-[10px] text-[#555]">No timeline entries yet.</div>
       ) : null}
 
       {!props.isLoading && props.error === null && props.entries !== null && props.entries.length > 0 ? (
-        <ol className="mt-2 max-h-72 space-y-2 overflow-auto pr-1">
-          {props.entries.map((entry) => (
-            <li key={entry.id} className="rounded-md border border-slate-700/80 bg-slate-950/65 p-2">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
-                <span className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-slate-200">{entry.type}</span>
-                <span>
-                  {entry.sender}
-                  {" -> "}
-                  {entry.recipient}
+        <div className="flex-1 overflow-y-auto pr-1">
+          {props.entries.map((entry) => {
+            const role = resolveRole(entry);
+            return (
+              <div
+                key={entry.id}
+                className="flex items-start gap-2.5 border-b border-[#1a1a1a] py-2 text-[10px] last:border-b-0"
+              >
+                <span className="min-w-[20px] pt-px font-mono text-[9px] text-[#555]">
+                  R{entry.round}
                 </span>
-                <span className="text-slate-500">round {entry.round}</span>
+                <span
+                  className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border text-[8px] ${roleStyles[role]}`}
+                >
+                  {roleIcons[role]}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium text-[#aaa]">
+                    {entry.sender}{" "}
+                    <span className="text-[#555]">({role === "system" ? "system" : role === "human" ? "human" : role === "review" ? "reviewer" : "implementer"})</span>
+                  </div>
+                  <div className="leading-relaxed text-[#666]">{payloadSummary(entry)}</div>
+                </div>
+                <span className="flex-shrink-0 pt-px font-mono text-[9px] text-[#444]">
+                  {formatTime(entry.ts)}
+                </span>
               </div>
-              <div className="mt-1 text-xs text-slate-100">{payloadSummary(entry)}</div>
-              <div className="mt-1 text-[11px] text-slate-500">{formatTimestamp(entry.ts)}</div>
-            </li>
-          ))}
-        </ol>
+            );
+          })}
+        </div>
       ) : null}
-    </section>
+    </div>
   );
 }
