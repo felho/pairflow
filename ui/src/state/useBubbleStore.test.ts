@@ -437,4 +437,170 @@ describe("createBubbleStore", () => {
       "State changed in CLI/UI"
     );
   });
+
+  it("toggleBubbleExpanded expands and fetches detail, collapseBubble removes from list", async () => {
+    const detail = bubbleDetail({ bubbleId: "b-a", repoPath: "/repo-a" });
+    const timeline = [
+      {
+        id: "env-1",
+        ts: "2026-02-24T12:01:00.000Z",
+        round: 3,
+        type: "HUMAN_QUESTION" as const,
+        sender: "human",
+        recipient: "codex",
+        payload: { question: "Can you proceed?" },
+        refs: []
+      }
+    ];
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+      })),
+      getBubble: vi.fn(async () => detail),
+      getBubbleTimeline: vi.fn(async () => timeline)
+    });
+
+    const storage = new MemoryStorage();
+    const store = createBubbleStore({
+      api,
+      storage,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+
+    // Initially no expanded bubbles
+    expect(store.getState().expandedBubbleIds).toEqual([]);
+
+    // Toggle expand
+    await store.getState().toggleBubbleExpanded("b-a");
+    expect(store.getState().expandedBubbleIds).toEqual(["b-a"]);
+    expect(store.getState().bubbleDetails["b-a"]).toBeDefined();
+    expect(store.getState().bubbleTimelines["b-a"]).toEqual(timeline);
+
+    // Persisted to storage
+    expect(
+      JSON.parse(storage.getItem("pairflow.ui.canvas.expandedIds.v1") ?? "[]")
+    ).toEqual(["b-a"]);
+
+    // Collapse
+    store.getState().collapseBubble("b-a");
+    expect(store.getState().expandedBubbleIds).toEqual([]);
+    expect(
+      JSON.parse(storage.getItem("pairflow.ui.canvas.expandedIds.v1") ?? "[]")
+    ).toEqual([]);
+  });
+
+  it("toggleBubbleExpanded collapses when already expanded", async () => {
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+      }))
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+
+    await store.getState().toggleBubbleExpanded("b-a");
+    expect(store.getState().expandedBubbleIds).toEqual(["b-a"]);
+
+    // Toggle again to collapse
+    await store.getState().toggleBubbleExpanded("b-a");
+    expect(store.getState().expandedBubbleIds).toEqual([]);
+  });
+
+  it("expandedPositions are persisted and pruned with bubbles", async () => {
+    const storage = new MemoryStorage();
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+      }))
+    });
+
+    let emitEvent: (event: UiEvent) => void = () => undefined;
+    const store = createBubbleStore({
+      api,
+      storage,
+      createEventsClient: (input) => {
+        emitEvent = input.onEvent;
+        return {
+          start: () => undefined,
+          stop: () => undefined,
+          refresh: () => undefined
+        };
+      }
+    });
+
+    await store.getState().initialize();
+
+    store.getState().setExpandedPosition("b-a", { x: 100, y: 200 });
+    store.getState().persistExpandedPositions();
+
+    expect(
+      JSON.parse(storage.getItem("pairflow.ui.canvas.expandedPositions.v1") ?? "{}")
+    ).toEqual({ "b-a": { x: 100, y: 200 } });
+
+    // Remove bubble — expanded positions should be pruned
+    emitEvent({
+      id: 10,
+      ts: "2026-02-24T12:10:00.000Z",
+      type: "bubble.removed",
+      repoPath: "/repo-a",
+      bubbleId: "b-a"
+    });
+
+    expect(store.getState().expandedPositions).toEqual({});
+  });
+
+  it("restores expandedBubbleIds from localStorage on startup", async () => {
+    const storage = new MemoryStorage();
+    storage.setItem("pairflow.ui.canvas.expandedIds.v1", JSON.stringify(["b-a"]));
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+      }))
+    });
+
+    const store = createBubbleStore({
+      api,
+      storage,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    // Before initialize, the IDs are already loaded from storage
+    expect(store.getState().expandedBubbleIds).toEqual(["b-a"]);
+
+    // After initialize, the bubble exists so it survives pruning
+    await store.getState().initialize();
+    expect(store.getState().expandedBubbleIds).toEqual(["b-a"]);
+
+    // Detail was fetched for the expanded bubble
+    expect(api.getBubble).toHaveBeenCalledWith("/repo-a", "b-a");
+  });
 });

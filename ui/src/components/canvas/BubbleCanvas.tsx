@@ -6,6 +6,8 @@ import type {
   BubblePosition
 } from "../../lib/types";
 import { cn } from "../../lib/utils";
+import { ConnectedBubbleExpandedCard } from "./ConnectedBubbleExpandedCard";
+import { stateVisuals } from "./stateVisuals";
 
 const cardWidth = 248;
 const cardHeight = 156;
@@ -13,76 +15,6 @@ const xGap = 26;
 const yGap = 22;
 const startX = 22;
 const startY = 22;
-
-interface StateVisual {
-  led: string;
-  border: string;
-  cardTone: string;
-  stateText: string;
-}
-
-const stateVisuals: Record<BubbleLifecycleState, StateVisual> = {
-  CREATED: {
-    led: "bg-sky-300",
-    border: "border-slate-500/80",
-    cardTone: "bg-slate-900/95",
-    stateText: "text-sky-200"
-  },
-  PREPARING_WORKSPACE: {
-    led: "bg-cyan-300 animate-soft-pulse",
-    border: "border-cyan-500/80",
-    cardTone: "bg-cyan-950/35",
-    stateText: "text-cyan-200"
-  },
-  RUNNING: {
-    led: "bg-blue-400 animate-soft-pulse",
-    border: "border-blue-500/80",
-    cardTone: "bg-blue-950/30",
-    stateText: "text-blue-200"
-  },
-  WAITING_HUMAN: {
-    led: "bg-amber-400 animate-attention-pulse",
-    border: "border-amber-400/85 shadow-[0_0_0_1px_rgba(251,191,36,.35)]",
-    cardTone: "bg-amber-950/30",
-    stateText: "text-amber-200"
-  },
-  READY_FOR_APPROVAL: {
-    led: "bg-emerald-400",
-    border: "border-emerald-400/90 shadow-[0_0_0_1px_rgba(16,185,129,.35)]",
-    cardTone: "bg-emerald-950/30",
-    stateText: "text-emerald-200"
-  },
-  APPROVED_FOR_COMMIT: {
-    led: "bg-lime-400",
-    border: "border-lime-500/80",
-    cardTone: "bg-lime-950/30",
-    stateText: "text-lime-200"
-  },
-  COMMITTED: {
-    led: "bg-teal-300 animate-soft-pulse",
-    border: "border-teal-500/85",
-    cardTone: "bg-teal-950/35",
-    stateText: "text-teal-200"
-  },
-  DONE: {
-    led: "bg-slate-500",
-    border: "border-slate-700/80",
-    cardTone: "bg-slate-900/75 opacity-80",
-    stateText: "text-slate-300"
-  },
-  FAILED: {
-    led: "bg-rose-400",
-    border: "border-rose-500/90 shadow-[0_0_0_1px_rgba(251,113,133,.4)]",
-    cardTone: "bg-rose-950/35",
-    stateText: "text-rose-200"
-  },
-  CANCELLED: {
-    led: "bg-slate-400",
-    border: "border-slate-500 border-dashed",
-    cardTone: "bg-slate-900/70",
-    stateText: "text-slate-300"
-  }
-};
 
 interface DragState {
   originX: number;
@@ -96,7 +28,6 @@ interface DragState {
 interface BubbleCardProps {
   bubble: BubbleCardModel;
   position: BubblePosition;
-  selected: boolean;
   onPositionChange(position: BubblePosition): void;
   onPositionCommit(): void;
   onDragStateChange(dragging: boolean): void;
@@ -107,9 +38,15 @@ function formatStateLabel(state: BubbleLifecycleState): string {
   return state.replaceAll("_", " ");
 }
 
+function repoLabel(repoPath: string): string {
+  const parts = repoPath.split(/[\\/]/u).filter((part) => part.length > 0);
+  return parts[parts.length - 1] ?? repoPath;
+}
+
 function BubbleCard(props: BubbleCardProps): JSX.Element {
   const [dragging, setDragging] = useState(false);
   const dragRef = useRef<DragState | null>(null);
+  const didDragRef = useRef(false);
   const onPositionChangeRef = useRef(props.onPositionChange);
   const onPositionCommitRef = useRef(props.onPositionCommit);
   const onDragStateChangeRef = useRef(props.onDragStateChange);
@@ -126,6 +63,7 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
       if (dragState === null) {
         return;
       }
+      didDragRef.current = true;
       onPositionChangeRef.current({
         x: Math.max(0, dragState.originX + (clientX - dragState.startX)),
         y: Math.max(0, dragState.originY + (clientY - dragState.startY))
@@ -158,17 +96,21 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
   return (
     <article
       className={cn(
-        "absolute w-[248px] rounded-xl border p-3 shadow-lg transition-shadow",
+        "absolute w-[260px] rounded-[20px] border bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] p-4 transition-shadow",
         visual.border,
         visual.cardTone,
-        dragging ? "cursor-grabbing shadow-cyan-300/15" : "cursor-grab",
-        props.selected ? "ring-2 ring-cyan-300/70" : ""
+        dragging ? "cursor-grabbing" : "cursor-grab"
       )}
       style={{
         left: props.position.x,
         top: props.position.y
       }}
       data-bubble-id={props.bubble.bubbleId}
+      onClick={() => {
+        if (!didDragRef.current) {
+          props.onOpen();
+        }
+      }}
     >
       <button
         type="button"
@@ -179,6 +121,7 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
             return;
           }
           event.preventDefault();
+          didDragRef.current = false;
           const nextState: DragState = {
             originX: props.position.x,
             originY: props.position.y,
@@ -239,44 +182,57 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
           props.onPositionCommit();
         }}
       >
-        <span className="font-display text-sm font-semibold tracking-wide text-slate-50">
+        <span className="text-[13px] font-semibold tracking-wide text-white">
           {props.bubble.bubbleId}
         </span>
-        <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", visual.stateText)}>
-          {formatStateLabel(props.bubble.state)}
+        <span className="flex items-center gap-1.5">
+          <span className={cn("inline-block h-[7px] w-[7px] rounded-full", visual.led)} />
+          <span className={cn("text-[10px] font-medium tracking-wide", visual.stateText)}>
+            {formatStateLabel(props.bubble.state)}
+          </span>
         </span>
       </button>
 
-      <div className="mb-2 flex items-center justify-between text-xs text-slate-300">
-        <span className="truncate" title={props.bubble.repoPath}>
-          {props.bubble.repoPath}
-        </span>
-        <span className={cn("h-2.5 w-2.5 rounded-full", visual.led)} />
+      <div className="mb-2 text-[11px] leading-relaxed text-[#888]">
+        {props.bubble.runtime.stale
+          ? "Stale runtime — may need manual intervention."
+          : props.bubble.state === "RUNNING"
+            ? `${props.bubble.activeRole ?? "agent"} working`
+            : props.bubble.state === "READY_FOR_APPROVAL"
+              ? "Reviewer found no issues. Ready for approval."
+              : props.bubble.state === "WAITING_HUMAN"
+                ? "Waiting for human input."
+                : props.bubble.state === "DONE"
+                  ? "Committed. Ready to merge."
+                  : props.bubble.state === "FAILED"
+                    ? "Failed — manual intervention needed."
+                    : props.bubble.state === "CANCELLED"
+                      ? "Stopped by operator before completion."
+                      : props.bubble.state === "APPROVED_FOR_COMMIT"
+                        ? "Approved by human. Commit step is now unblocked."
+                        : props.bubble.state === "COMMITTED"
+                          ? "Commit recorded; transitioning toward DONE."
+                          : props.bubble.state === "PREPARING_WORKSPACE"
+                            ? "Bootstrapping branch/worktree and tmux session."
+                            : "Task created. Awaiting start."}
       </div>
 
-      <div className="grid grid-cols-2 gap-1 text-[11px] text-slate-300">
-        <span>Round {props.bubble.round}</span>
-        <span className="truncate text-right">{props.bubble.activeAgent ?? "idle"}</span>
-        <span className="truncate text-slate-400">{props.bubble.activeRole ?? "no role"}</span>
-        <span className={cn("text-right", props.bubble.runtime.stale ? "text-amber-300" : "text-slate-400")}>
-          {props.bubble.runtime.stale
-            ? "Stale runtime"
-            : props.bubble.hasRuntimeSession
-              ? "Runtime active"
-              : "No runtime"}
+      <div className="mt-auto flex items-center gap-2 font-mono text-[9px] text-[#555]">
+        <span className="truncate">{repoLabel(props.bubble.repoPath)}</span>
+        <span className="rounded-md border border-[#333] bg-[#1a1a1a] px-1.5 py-px">
+          R{props.bubble.round}
         </span>
-      </div>
-
-      <div className="mt-3 flex justify-end">
-        <button
-          type="button"
-          className="rounded-md border border-slate-600 bg-slate-900/70 px-2 py-1 text-[11px] text-slate-100 hover:border-cyan-300/70 hover:text-cyan-100"
-          onClick={() => {
-            props.onOpen();
-          }}
-        >
-          Details
-        </button>
+        {props.bubble.activeAgent !== null ? (
+          <span className="flex items-center gap-1">
+            <span
+              className={cn(
+                "inline-block h-1 w-1 rounded-full animate-soft-pulse",
+                props.bubble.activeAgent === "codex" ? "bg-blue-400" : "bg-purple-400"
+              )}
+            />
+            {props.bubble.activeAgent}
+          </span>
+        ) : null}
       </div>
     </article>
   );
@@ -292,17 +248,23 @@ function defaultPosition(index: number): BubblePosition {
   };
 }
 
+const expandedCardHeight = 520;
+
 export interface BubbleCanvasProps {
   bubbles: BubbleCardModel[];
   positions: Record<string, BubblePosition>;
-  selectedBubbleId?: string | null;
+  expandedBubbleIds: string[];
   onPositionChange(bubbleId: string, position: BubblePosition): void;
   onPositionCommit(): void;
-  onBubbleSelect?(bubbleId: string): void;
+  onToggleExpand(bubbleId: string): void;
 }
 
 export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
   const [draggingIds, setDraggingIds] = useState<Record<string, boolean>>({});
+  const expandedSet = useMemo(
+    () => new Set(props.expandedBubbleIds),
+    [props.expandedBubbleIds]
+  );
 
   const positioned = useMemo(() => {
     return props.bubbles.map((bubble, index) => ({
@@ -313,47 +275,61 @@ export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
 
   const canvasHeight = useMemo(() => {
     const maxBottom = positioned.reduce((max, entry) => {
-      const bottom = entry.position.y + cardHeight + 24;
+      const isExpanded = expandedSet.has(entry.bubble.bubbleId);
+      const height = isExpanded ? expandedCardHeight : cardHeight;
+      const bottom = entry.position.y + height + 24;
       return Math.max(max, bottom);
     }, 560);
     return maxBottom;
-  }, [positioned]);
+  }, [positioned, expandedSet]);
 
   return (
     <main className="relative overflow-auto px-4 pb-6 pt-4" style={{ minHeight: canvasHeight }}>
-      {positioned.map((entry) => (
-        <BubbleCard
-          key={entry.bubble.bubbleId}
-          bubble={entry.bubble}
-          position={entry.position}
-          selected={props.selectedBubbleId === entry.bubble.bubbleId}
-          onPositionChange={(position) => {
-            props.onPositionChange(entry.bubble.bubbleId, position);
-          }}
-          onPositionCommit={() => {
-            props.onPositionCommit();
-          }}
-          onDragStateChange={(dragging) => {
-            setDraggingIds((current) => {
-              if (dragging) {
-                return {
-                  ...current,
-                  [entry.bubble.bubbleId]: true
-                };
-              }
-              if (current[entry.bubble.bubbleId] === undefined) {
-                return current;
-              }
-              const next = { ...current };
-              delete next[entry.bubble.bubbleId];
-              return next;
-            });
-          }}
-          onOpen={() => {
-            props.onBubbleSelect?.(entry.bubble.bubbleId);
-          }}
-        />
-      ))}
+      {positioned.map((entry) => {
+        const isExpanded = expandedSet.has(entry.bubble.bubbleId);
+
+        if (isExpanded) {
+          return (
+            <ConnectedBubbleExpandedCard
+              key={entry.bubble.bubbleId}
+              bubbleId={entry.bubble.bubbleId}
+            />
+          );
+        }
+
+        return (
+          <BubbleCard
+            key={entry.bubble.bubbleId}
+            bubble={entry.bubble}
+            position={entry.position}
+            onPositionChange={(position) => {
+              props.onPositionChange(entry.bubble.bubbleId, position);
+            }}
+            onPositionCommit={() => {
+              props.onPositionCommit();
+            }}
+            onDragStateChange={(dragging) => {
+              setDraggingIds((current) => {
+                if (dragging) {
+                  return {
+                    ...current,
+                    [entry.bubble.bubbleId]: true
+                  };
+                }
+                if (current[entry.bubble.bubbleId] === undefined) {
+                  return current;
+                }
+                const next = { ...current };
+                delete next[entry.bubble.bubbleId];
+                return next;
+              });
+            }}
+            onOpen={() => {
+              props.onToggleExpand(entry.bubble.bubbleId);
+            }}
+          />
+        );
+      })}
       {positioned.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-700 bg-slate-900/50 p-8 text-sm text-slate-400">
           No bubbles in current repo filter.

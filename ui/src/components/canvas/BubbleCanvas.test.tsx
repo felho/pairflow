@@ -24,12 +24,14 @@ describe("BubbleCanvas", () => {
             y: 60
           }
         }}
+        expandedBubbleIds={[]}
         onPositionChange={onPositionChange}
         onPositionCommit={onPositionCommit}
+        onToggleExpand={() => undefined}
       />
     );
 
-    expect(screen.getByText("Stale runtime")).toBeInTheDocument();
+    expect(screen.getByText(/Stale runtime/u)).toBeInTheDocument();
 
     expect(screen.getByRole("article")).toHaveStyle({
       left: "40px",
@@ -53,8 +55,10 @@ describe("BubbleCanvas", () => {
           })
         ]}
         positions={{}}
+        expandedBubbleIds={[]}
         onPositionChange={() => undefined}
         onPositionCommit={onPositionCommit}
+        onToggleExpand={() => undefined}
       />
     );
 
@@ -95,8 +99,10 @@ describe("BubbleCanvas", () => {
             y: 60
           }
         }}
+        expandedBubbleIds={[]}
         onPositionChange={onPositionChange}
         onPositionCommit={onPositionCommit}
+        onToggleExpand={() => undefined}
       />
     );
 
@@ -120,8 +126,10 @@ describe("BubbleCanvas", () => {
           })
         ]}
         positions={{}}
+        expandedBubbleIds={[]}
         onPositionChange={() => undefined}
         onPositionCommit={onPositionCommit}
+        onToggleExpand={() => undefined}
       />
     );
 
@@ -139,8 +147,10 @@ describe("BubbleCanvas", () => {
       <BubbleCanvas
         bubbles={[]}
         positions={{}}
+        expandedBubbleIds={[]}
         onPositionChange={() => undefined}
         onPositionCommit={() => undefined}
+        onToggleExpand={() => undefined}
       />
     );
 

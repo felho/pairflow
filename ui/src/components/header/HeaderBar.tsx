@@ -1,14 +1,31 @@
-import type { ConnectionStatus, UiStateCounts } from "../../lib/types";
+import type { BubbleLifecycleState, ConnectionStatus, UiStateCounts } from "../../lib/types";
 import { cn } from "../../lib/utils";
 
-const primaryStates: Array<keyof UiStateCounts> = [
+const allStates: Array<keyof UiStateCounts> = [
+  "CREATED",
+  "PREPARING_WORKSPACE",
   "RUNNING",
   "WAITING_HUMAN",
   "READY_FOR_APPROVAL",
   "APPROVED_FOR_COMMIT",
+  "COMMITTED",
+  "DONE",
   "FAILED",
-  "DONE"
+  "CANCELLED"
 ];
+
+const stateLedColor: Record<BubbleLifecycleState, string> = {
+  CREATED: "bg-sky-300/80",
+  PREPARING_WORKSPACE: "bg-cyan-400",
+  RUNNING: "bg-blue-400",
+  WAITING_HUMAN: "bg-amber-400 animate-attention-pulse",
+  READY_FOR_APPROVAL: "bg-emerald-400",
+  APPROVED_FOR_COMMIT: "bg-emerald-400",
+  COMMITTED: "bg-teal-300 animate-soft-pulse",
+  DONE: "bg-slate-500",
+  FAILED: "bg-rose-400",
+  CANCELLED: "bg-slate-400"
+};
 
 function statusLabel(status: ConnectionStatus): string {
   switch (status) {
@@ -25,10 +42,10 @@ function statusLabel(status: ConnectionStatus): string {
   }
 }
 
-function statusTone(status: ConnectionStatus): string {
+function statusDotClass(status: ConnectionStatus): string {
   switch (status) {
     case "connected":
-      return "bg-emerald-500";
+      return "bg-emerald-500 shadow-[0_0_6px_#22c55e]";
     case "connecting":
       return "bg-amber-400";
     case "fallback":
@@ -54,54 +71,51 @@ function repoLabel(repoPath: string): string {
 }
 
 export function HeaderBar(props: HeaderBarProps): JSX.Element {
-  const total = Object.values(props.counts).reduce(
-    (sum, value) => sum + value,
-    0
-  );
-
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-700/80 bg-slate-950/85 px-4 pb-4 pt-3 backdrop-blur">
-      <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-slate-300">
-        <div className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/90 px-3 py-1">
-          <span className={cn("h-2.5 w-2.5 rounded-full", statusTone(props.connectionStatus))} />
-          <span>{statusLabel(props.connectionStatus)}</span>
+    <header className="sticky top-0 z-40 flex h-12 items-center justify-between border-b border-[#333] bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] px-5">
+      <div className="flex items-center gap-3">
+        <span className="text-[15px] font-bold tracking-wide">
+          <span className="text-blue-500">⬡</span> Pairflow
+        </span>
+        <div className="flex items-center gap-4 text-[11px] text-[#888]">
+          {allStates.map((state) => (
+            <span key={state} className="flex items-center gap-1.5">
+              <span className={cn("inline-block h-[5px] w-[5px] rounded-full", stateLedColor[state])} />
+              {state.replaceAll("_", " ")} {props.counts[state]}
+            </span>
+          ))}
         </div>
-        <div className="rounded-full border border-slate-700 bg-slate-900/90 px-3 py-1 font-medium text-slate-100">
-          Total bubbles: {total}
-        </div>
-        {primaryStates.map((state) => (
-          <div
-            key={state}
-            className="rounded-full border border-slate-700 bg-slate-900/90 px-3 py-1"
-          >
-            {state.replaceAll("_", " ")}: {props.counts[state]}
-          </div>
-        ))}
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {props.repos.map((repoPath) => {
-          const selected = props.selectedRepos.includes(repoPath);
-          return (
-            <button
-              key={repoPath}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => {
-                props.onToggleRepo(repoPath);
-              }}
-              className={cn(
-                "rounded-full border px-3 py-1 text-xs transition",
-                selected
-                  ? "border-cyan-300 bg-cyan-300/20 text-cyan-100"
-                  : "border-slate-700 bg-slate-900/60 text-slate-300 hover:border-slate-500 hover:text-slate-100"
-              )}
-              title={repoPath}
-            >
-              {repoLabel(repoPath)}
-            </button>
-          );
-        })}
+      <div className="flex items-center gap-3">
+        <span className="flex items-center gap-1.5 rounded-[10px] border border-[#2c2c2c] bg-[#131313] px-2 py-1 text-[10px] text-[#8f8f8f]">
+          <span className={cn("inline-block h-1.5 w-1.5 rounded-full", statusDotClass(props.connectionStatus))} />
+          {statusLabel(props.connectionStatus)}
+        </span>
+        <div className="flex gap-1.5">
+          {props.repos.map((repoPath) => {
+            const selected = props.selectedRepos.includes(repoPath);
+            return (
+              <button
+                key={repoPath}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => {
+                  props.onToggleRepo(repoPath);
+                }}
+                className={cn(
+                  "rounded-[10px] border px-2 py-0.5 text-[10px] transition",
+                  selected
+                    ? "border-blue-500 bg-blue-500/10 text-blue-500"
+                    : "border-[#333] bg-[#1a1a1a] text-[#aaa] hover:border-[#555] hover:text-white"
+                )}
+                title={repoPath}
+              >
+                {repoLabel(repoPath)}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </header>
   );

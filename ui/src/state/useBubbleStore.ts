@@ -28,6 +28,8 @@ import type {
 import { emptyStateCounts } from "../lib/types";
 
 const positionsStorageKey = "pairflow.ui.canvas.positions.v1";
+const expandedIdsStorageKey = "pairflow.ui.canvas.expandedIds.v1";
+const expandedPositionsStorageKey = "pairflow.ui.canvas.expandedPositions.v1";
 
 interface StorageLike {
   getItem(key: string): string | null;
@@ -59,7 +61,8 @@ export interface BubbleStoreState {
   connectionStatus: ConnectionStatus;
   isLoading: boolean;
   error: string | null;
-  selectedBubbleId: string | null;
+  expandedBubbleIds: string[];
+  expandedPositions: Record<string, BubblePosition>;
   bubbleDetails: Record<string, UiBubbleDetail>;
   bubbleTimelines: Record<string, UiTimelineEntry[]>;
   detailLoadingById: Record<string, boolean>;
@@ -74,8 +77,11 @@ export interface BubbleStoreState {
   toggleRepo(repoPath: string): Promise<void>;
   setPosition(bubbleId: string, position: BubblePosition): void;
   persistPositions(): void;
+  setExpandedPosition(bubbleId: string, position: BubblePosition): void;
+  persistExpandedPositions(): void;
   stopRealtime(): void;
-  selectBubble(bubbleId: string | null): Promise<void>;
+  toggleBubbleExpanded(bubbleId: string): Promise<void>;
+  collapseBubble(bubbleId: string): void;
   refreshExpandedBubble(bubbleId: string): Promise<void>;
   runBubbleAction(input: RunBubbleActionInput): Promise<void>;
   clearActionFeedback(bubbleId: string): void;
@@ -174,6 +180,84 @@ function writePositions(
 
   try {
     storage.setItem(positionsStorageKey, JSON.stringify(positions));
+  } catch {
+    return;
+  }
+}
+
+function readExpandedIds(storage: StorageLike | null): string[] {
+  if (storage === null) {
+    return [];
+  }
+  try {
+    const raw = storage.getItem(expandedIdsStorageKey);
+    if (raw === null || raw.trim().length === 0) {
+      return [];
+    }
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.filter((item): item is string => typeof item === "string");
+  } catch {
+    return [];
+  }
+}
+
+function writeExpandedIds(storage: StorageLike | null, ids: string[]): void {
+  if (storage === null) {
+    return;
+  }
+  try {
+    storage.setItem(expandedIdsStorageKey, JSON.stringify(ids));
+  } catch {
+    return;
+  }
+}
+
+function readExpandedPositions(storage: StorageLike | null): Record<string, BubblePosition> {
+  if (storage === null) {
+    return {};
+  }
+  try {
+    const raw = storage.getItem(expandedPositionsStorageKey);
+    if (raw === null || raw.trim().length === 0) {
+      return {};
+    }
+    const parsed = JSON.parse(raw) as unknown;
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      return {};
+    }
+    const result: Record<string, BubblePosition> = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (typeof value !== "object" || value === null || Array.isArray(value)) {
+        continue;
+      }
+      const x = (value as { x?: unknown }).x;
+      const y = (value as { y?: unknown }).y;
+      if (typeof x !== "number" || typeof y !== "number") {
+        continue;
+      }
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        continue;
+      }
+      result[key] = { x, y };
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+function writeExpandedPositions(
+  storage: StorageLike | null,
+  positions: Record<string, BubblePosition>
+): void {
+  if (storage === null) {
+    return;
+  }
+  try {
+    storage.setItem(expandedPositionsStorageKey, JSON.stringify(positions));
   } catch {
     return;
   }
@@ -415,14 +499,16 @@ export function createBubbleStore(
           actionErrorById: pruneRecordByBubbleIds(state.actionErrorById, bubblesById),
           actionRetryHintById: pruneRecordByBubbleIds(state.actionRetryHintById, bubblesById),
           actionFailureById: pruneRecordByBubbleIds(state.actionFailureById, bubblesById),
-          selectedBubbleId:
-            state.selectedBubbleId !== null && bubblesById[state.selectedBubbleId] === undefined
-              ? null
-              : state.selectedBubbleId
+          expandedBubbleIds: state.expandedBubbleIds.filter(
+            (id) => bubblesById[id] !== undefined
+          ),
+          expandedPositions: prunePositions(state.expandedPositions, bubblesById)
         };
       });
 
       writePositions(storage, get().positions);
+      writeExpandedIds(storage, get().expandedBubbleIds);
+      writeExpandedPositions(storage, get().expandedPositions);
     };
 
     const refreshExpandedBubble = async (bubbleId: string): Promise<void> => {
@@ -570,11 +656,10 @@ export function createBubbleStore(
                     state.actionFailureById,
                     bubblesById
                   ),
-                  selectedBubbleId:
-                    state.selectedBubbleId !== null &&
-                    bubblesById[state.selectedBubbleId] === undefined
-                      ? null
-                      : state.selectedBubbleId
+                  expandedBubbleIds: state.expandedBubbleIds.filter(
+                    (id) => bubblesById[id] !== undefined
+                  ),
+                  expandedPositions: prunePositions(state.expandedPositions, bubblesById)
                 };
               }
               case "bubble.updated": {
@@ -638,10 +723,10 @@ export function createBubbleStore(
                     state.actionFailureById,
                     bubblesById
                   ),
-                  selectedBubbleId:
-                    state.selectedBubbleId === event.bubbleId
-                      ? null
-                      : state.selectedBubbleId
+                  expandedBubbleIds: state.expandedBubbleIds.filter(
+                    (id) => id !== event.bubbleId
+                  ),
+                  expandedPositions: prunePositions(state.expandedPositions, bubblesById)
                 };
               }
               case "repo.updated": {
@@ -659,21 +744,28 @@ export function createBubbleStore(
           });
 
           writePositions(storage, get().positions);
+          writeExpandedIds(storage, get().expandedBubbleIds);
+          writeExpandedPositions(storage, get().expandedPositions);
 
-          const selectedBubbleId = get().selectedBubbleId;
-          if (selectedBubbleId === null) {
+          const expandedIds = get().expandedBubbleIds;
+          if (expandedIds.length === 0) {
             return;
           }
-          if (event.type === "bubble.updated" && event.bubbleId === selectedBubbleId) {
-            void refreshExpandedBubble(selectedBubbleId);
+          if (event.type === "bubble.updated" && expandedIds.includes(event.bubbleId)) {
+            void refreshExpandedBubble(event.bubbleId);
             return;
           }
-          if (event.type === "snapshot" && get().bubblesById[selectedBubbleId] !== undefined) {
-            const hasSelected = event.bubbles.some(
-              (bubble) => bubble.bubbleId === selectedBubbleId
-            );
-            if (hasSelected) {
-              void refreshExpandedBubble(selectedBubbleId);
+          if (event.type === "snapshot") {
+            for (const expandedId of expandedIds) {
+              if (get().bubblesById[expandedId] === undefined) {
+                continue;
+              }
+              const inSnapshot = event.bubbles.some(
+                (bubble) => bubble.bubbleId === expandedId
+              );
+              if (inSnapshot) {
+                void refreshExpandedBubble(expandedId);
+              }
             }
           }
         },
@@ -708,7 +800,8 @@ export function createBubbleStore(
       connectionStatus: "idle",
       isLoading: false,
       error: null,
-      selectedBubbleId: null,
+      expandedBubbleIds: readExpandedIds(storage),
+      expandedPositions: readExpandedPositions(storage),
       bubbleDetails: {},
       bubbleTimelines: {},
       detailLoadingById: {},
@@ -763,10 +856,10 @@ export function createBubbleStore(
             positions,
             isLoading: false,
             error: null,
-            selectedBubbleId:
-              state.selectedBubbleId !== null && bubblesById[state.selectedBubbleId] === undefined
-                ? null
-                : state.selectedBubbleId,
+            expandedBubbleIds: state.expandedBubbleIds.filter(
+              (id) => bubblesById[id] !== undefined
+            ),
+            expandedPositions: prunePositions(state.expandedPositions, bubblesById),
             bubbleDetails: syncExpandedFromSummary(state.bubbleDetails, bubblesById),
             bubbleTimelines: pruneRecordByBubbleIds(state.bubbleTimelines, bubblesById),
             detailLoadingById: pruneRecordByBubbleIds(state.detailLoadingById, bubblesById),
@@ -783,6 +876,14 @@ export function createBubbleStore(
           }));
 
           writePositions(storage, positions);
+          writeExpandedIds(storage, get().expandedBubbleIds);
+          writeExpandedPositions(storage, get().expandedPositions);
+
+          // Re-fetch details for any expanded bubbles that survived pruning
+          const expandedIds = get().expandedBubbleIds;
+          for (const expandedId of expandedIds) {
+            void refreshExpandedBubble(expandedId);
+          }
 
           const client = ensureEventsClient();
           client.start();
@@ -836,6 +937,19 @@ export function createBubbleStore(
         writePositions(storage, get().positions);
       },
 
+      setExpandedPosition(bubbleId: string, position: BubblePosition): void {
+        set((state) => ({
+          expandedPositions: {
+            ...state.expandedPositions,
+            [bubbleId]: position
+          }
+        }));
+      },
+
+      persistExpandedPositions(): void {
+        writeExpandedPositions(storage, get().expandedPositions);
+      },
+
       stopRealtime(): void {
         latestInitializeId += 1;
         if (eventsClient !== null) {
@@ -844,19 +958,34 @@ export function createBubbleStore(
         }
       },
 
-      async selectBubble(bubbleId: string | null): Promise<void> {
-        if (bubbleId === null) {
-          set({ selectedBubbleId: null });
+      async toggleBubbleExpanded(bubbleId: string): Promise<void> {
+        const state = get();
+        if (state.expandedBubbleIds.includes(bubbleId)) {
+          // Collapse
+          set({
+            expandedBubbleIds: state.expandedBubbleIds.filter((id) => id !== bubbleId)
+          });
+          writeExpandedIds(storage, get().expandedBubbleIds);
           return;
         }
 
-        if (get().bubblesById[bubbleId] === undefined) {
-          set({ selectedBubbleId: null });
+        if (state.bubblesById[bubbleId] === undefined) {
           return;
         }
 
-        set({ selectedBubbleId: bubbleId });
+        // Expand
+        set({
+          expandedBubbleIds: [...state.expandedBubbleIds, bubbleId]
+        });
+        writeExpandedIds(storage, get().expandedBubbleIds);
         await refreshExpandedBubble(bubbleId);
+      },
+
+      collapseBubble(bubbleId: string): void {
+        set((state) => ({
+          expandedBubbleIds: state.expandedBubbleIds.filter((id) => id !== bubbleId)
+        }));
+        writeExpandedIds(storage, get().expandedBubbleIds);
       },
 
       async refreshExpandedBubble(bubbleId: string): Promise<void> {
@@ -892,7 +1021,7 @@ export function createBubbleStore(
         try {
           await performBubbleAction(api, bubble, inputValue);
           await refreshRepos([bubble.repoPath]);
-          if (get().selectedBubbleId === bubble.bubbleId) {
+          if (get().expandedBubbleIds.includes(bubble.bubbleId)) {
             await refreshExpandedBubble(bubble.bubbleId);
           }
         } catch (error) {
@@ -904,7 +1033,7 @@ export function createBubbleStore(
               "State changed in CLI/UI. Latest state was refetched. Review state, then retry.";
             try {
               await refreshRepos([bubble.repoPath]);
-              if (get().selectedBubbleId === bubble.bubbleId) {
+              if (get().expandedBubbleIds.includes(bubble.bubbleId)) {
                 await refreshExpandedBubble(bubble.bubbleId);
               }
             } catch {

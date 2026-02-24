@@ -21,7 +21,8 @@ describe("HeaderBar", () => {
     );
 
     expect(screen.getByText("SSE connected")).toBeInTheDocument();
-    expect(screen.getByText("Total bubbles: 3")).toBeInTheDocument();
+    expect(screen.getByText(/RUNNING 2/u)).toBeInTheDocument();
+    expect(screen.getByText(/WAITING HUMAN 1/u)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "repo-a" })).toHaveAttribute(
       "aria-pressed",
       "true"

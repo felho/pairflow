@@ -12,7 +12,8 @@ vi.mock("./state/useBubbleStore", async () => {
     connectionStatus: "connected",
     isLoading: false,
     error: "Sample error",
-    selectedBubbleId: null,
+    expandedBubbleIds: [],
+    expandedPositions: {},
     positions: {
       "b-1": {
         x: 20,
@@ -32,7 +33,10 @@ vi.mock("./state/useBubbleStore", async () => {
     toggleRepo: async () => undefined,
     setPosition: () => undefined,
     persistPositions: () => undefined,
-    selectBubble: async () => undefined,
+    setExpandedPosition: () => undefined,
+    persistExpandedPositions: () => undefined,
+    toggleBubbleExpanded: async () => undefined,
+    collapseBubble: () => undefined,
     refreshExpandedBubble: async () => undefined,
     runBubbleAction: async () => undefined,
     clearActionFeedback: () => undefined,
@@ -68,7 +72,7 @@ describe("App", () => {
     const { unmount } = render(<App />);
 
     expect(screen.getByText("Sample error")).toBeInTheDocument();
-    expect(screen.getByText("Total bubbles: 1")).toBeInTheDocument();
+    expect(screen.getByText(/RUNNING 1/u)).toBeInTheDocument();
     expect(screen.getByText("b-1")).toBeInTheDocument();
 
     expect(initialize).toHaveBeenCalledTimes(1);
