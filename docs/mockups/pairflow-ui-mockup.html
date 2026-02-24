@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pairflow UI Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: linear-gradient(135deg, #0a0a0a 0%, #111 50%, #0a0a0a 100%);
+    color: #fff;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  .header {
+    height: 48px;
+    background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);
+    border-bottom: 1px solid #333;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  .logo-icon {
+    color: #3b82f6;
+  }
+
+  .header-stats {
+    display: flex;
+    gap: 16px;
+    font-size: 11px;
+    color: #888;
+  }
+
+  .header-stat {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .repo-pills {
+    display: flex;
+    gap: 6px;
+  }
+
+  .repo-pill {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    border: 1px solid #333;
+    background: #1a1a1a;
+    color: #aaa;
+    cursor: pointer;
+  }
+
+  .repo-pill.active {
+    border-color: #3b82f6;
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  .btn-small {
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 10px;
+    border: 1px solid #333;
+    background: #1a1a1a;
+    color: #666;
+    cursor: pointer;
+  }
+
+  /* ── Canvas Area ── */
+  .canvas {
+    position: fixed;
+    top: 48px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+  }
+
+  /* ── Bubble ── */
+  .bubble {
+    position: absolute;
+    border-radius: 20px;
+    border: 1px solid #333;
+    background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);
+    cursor: grab;
+    transition: box-shadow 0.3s, border-color 0.3s, width 0.4s, height 0.4s;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  .bubble:hover {
+    border-color: #444;
+    box-shadow: 0 0 20px rgba(255,255,255,0.03);
+  }
+
+  .bubble.attention {
+    border-color: #f59e0b;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.15);
+    animation: attentionPulse 2s ease-in-out infinite;
+  }
+
+  .bubble.approval {
+    border-color: #22c55e;
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.15);
+  }
+
+  .bubble.expanded {
+    z-index: 50;
+    border-color: #555;
+    box-shadow: 0 0 40px rgba(0,0,0,0.5);
+  }
+
+  /* ── Bubble Compact ── */
+  .bubble-compact {
+    padding: 16px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .bubble-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .bubble-id {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  .bubble-repo {
+    font-size: 9px;
+    color: #666;
+    font-family: monospace;
+    letter-spacing: 0.5px;
+  }
+
+  .state-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+
+  .led {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .led-blue { background: #3b82f6; box-shadow: 0 0 6px #3b82f6; }
+  .led-amber { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; animation: ledPulse 1.5s ease-in-out infinite; }
+  .led-green { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+  .led-gray { background: #555; }
+  .led-red { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+  .led-purple { background: #a855f7; box-shadow: 0 0 6px #a855f7; }
+
+  .bubble-summary {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.4;
+  }
+
+  .bubble-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 9px;
+    color: #555;
+    font-family: monospace;
+    margin-top: auto;
+  }
+
+  .round-badge {
+    padding: 1px 5px;
+    border-radius: 6px;
+    border: 1px solid #333;
+    background: #1a1a1a;
+  }
+
+  .agent-indicator {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .agent-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    animation: agentWork 1.5s ease-in-out infinite;
+  }
+
+  /* ── Bubble Expanded ── */
+  .bubble-expanded {
+    padding: 16px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .bubble-expanded .bubble-header {
+    margin-bottom: 4px;
+  }
+
+  .bubble-actions {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  .action-btn {
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background: #1a1a1a;
+    color: #aaa;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .action-btn:hover {
+    border-color: #555;
+    color: #fff;
+  }
+
+  .action-btn.primary {
+    border-color: #22c55e;
+    color: #22c55e;
+    background: rgba(34, 197, 94, 0.08);
+  }
+
+  .action-btn.primary:hover {
+    background: rgba(34, 197, 94, 0.15);
+  }
+
+  .action-btn.warn {
+    border-color: #f59e0b;
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.08);
+  }
+
+  .action-btn.external::after {
+    content: ' \2197';
+    font-size: 8px;
+  }
+
+  /* ── Timeline ── */
+  .timeline {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding-right: 4px;
+  }
+
+  .timeline::-webkit-scrollbar {
+    width: 3px;
+  }
+
+  .timeline::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .timeline::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 3px;
+  }
+
+  .timeline-entry {
+    display: flex;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #1a1a1a;
+    font-size: 10px;
+  }
+
+  .timeline-entry:last-child {
+    border-bottom: none;
+  }
+
+  .timeline-round {
+    font-family: monospace;
+    color: #555;
+    min-width: 20px;
+    font-size: 9px;
+    padding-top: 1px;
+  }
+
+  .timeline-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    flex-shrink: 0;
+  }
+
+  .timeline-icon.impl {
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #3b82f6;
+  }
+
+  .timeline-icon.review {
+    background: rgba(168, 85, 247, 0.15);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    color: #a855f7;
+  }
+
+  .timeline-icon.human {
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #f59e0b;
+  }
+
+  .timeline-icon.system {
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #22c55e;
+  }
+
+  .timeline-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .timeline-sender {
+    color: #aaa;
+    font-weight: 500;
+    margin-bottom: 2px;
+  }
+
+  .timeline-text {
+    color: #666;
+    line-height: 1.4;
+  }
+
+  .timeline-time {
+    font-family: monospace;
+    color: #444;
+    font-size: 9px;
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+
+  .finding-tag {
+    display: inline-block;
+    font-size: 9px;
+    padding: 0px 4px;
+    border-radius: 4px;
+    margin-left: 4px;
+    font-weight: 600;
+  }
+
+  .finding-p1 {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+
+  .finding-p2 {
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+  }
+
+  .finding-clean {
+    color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+  }
+
+  /* ── Question Card ── */
+  .question-card {
+    background: rgba(245, 158, 11, 0.05);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    font-size: 11px;
+  }
+
+  .question-card .q-label {
+    color: #f59e0b;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .question-card .q-text {
+    color: #ccc;
+    line-height: 1.4;
+  }
+
+  /* ── Close button ── */
+  .close-btn {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid #333;
+    background: #1a1a1a;
+    color: #666;
+    font-size: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .close-btn:hover {
+    border-color: #555;
+    color: #fff;
+  }
+
+  /* ── Animations ── */
+  @keyframes attentionPulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.15); }
+    50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.25); }
+  }
+
+  @keyframes ledPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  @keyframes agentWork {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(0.7); }
+  }
+
+  /* ── Connecting lines (subtle) ── */
+  .repo-group-label {
+    position: absolute;
+    font-size: 9px;
+    color: #333;
+    font-family: monospace;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <span class="logo"><span class="logo-icon">&#x2B21;</span> Pairflow</span>
+    <div class="header-stats">
+      <span class="header-stat"><span class="led led-blue" style="width:5px;height:5px"></span> 3 running</span>
+      <span class="header-stat"><span class="led led-amber" style="width:5px;height:5px"></span> 1 waiting</span>
+      <span class="header-stat"><span class="led led-green" style="width:5px;height:5px"></span> 1 ready</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="repo-pills">
+      <span class="repo-pill active">all</span>
+      <span class="repo-pill">pairflow</span>
+      <span class="repo-pill">bob</span>
+      <span class="repo-pill">finder</span>
+    </div>
+    <button class="btn-small">+ repo</button>
+  </div>
+</div>
+
+<!-- Canvas -->
+<div class="canvas" id="canvas">
+
+  <!-- Subtle repo group labels -->
+  <span class="repo-group-label" style="left: 140px; top: 24px;">bob</span>
+  <span class="repo-group-label" style="left: 680px; top: 24px;">pairflow</span>
+  <span class="repo-group-label" style="left: 140px; top: 340px;">finder</span>
+
+  <!-- Bubble 1: WAITING_HUMAN (compact) -->
+  <div class="bubble attention" id="b1" style="left: 640px; top: 50px; width: 280px; height: 130px;" onclick="toggleExpand('b1')">
+    <div class="bubble-compact">
+      <div class="bubble-header">
+        <span class="bubble-id">impl-resume-context</span>
+        <span class="state-badge"><span class="led led-amber"></span> WAITING</span>
+      </div>
+      <div class="bubble-summary">"How should fallback summary handle corrupt NDJSON?"</div>
+      <div class="bubble-meta">
+        <span class="bubble-repo">pairflow</span>
+        <span class="round-badge">R2</span>
+        <span class="agent-indicator"><span class="agent-dot" style="background:#3b82f6"></span> codex</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bubble 2: READY_FOR_APPROVAL (compact) -->
+  <div class="bubble approval" id="b2" style="left: 100px; top: 50px; width: 260px; height: 120px;" onclick="toggleExpand('b2')">
+    <div class="bubble-compact">
+      <div class="bubble-header">
+        <span class="bubble-id">fix-auth-token</span>
+        <span class="state-badge"><span class="led led-green"></span> APPROVAL</span>
+      </div>
+      <div class="bubble-summary">Reviewer found no issues. Ready for approval.</div>
+      <div class="bubble-meta">
+        <span class="bubble-repo">bob</span>
+        <span class="round-badge">R4</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bubble 3: RUNNING (compact) -->
+  <div class="bubble" id="b3" style="left: 100px; top: 200px; width: 240px; height: 110px;" onclick="toggleExpand('b3')">
+    <div class="bubble-compact">
+      <div class="bubble-header">
+        <span class="bubble-id">add-search-filters</span>
+        <span class="state-badge"><span class="led led-blue"></span> RUNNING</span>
+      </div>
+      <div class="bubble-summary">implementer working since 3m ago</div>
+      <div class="bubble-meta">
+        <span class="bubble-repo">bob</span>
+        <span class="round-badge">R1</span>
+        <span class="agent-indicator"><span class="agent-dot" style="background:#3b82f6"></span> codex</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bubble 4: RUNNING (compact) -->
+  <div class="bubble" id="b4" style="left: 370px; top: 130px; width: 240px; height: 110px;" onclick="toggleExpand('b4')">
+    <div class="bubble-compact">
+      <div class="bubble-header">
+        <span class="bubble-id">update-api-docs</span>
+        <span class="state-badge"><span class="led led-blue"></span> RUNNING</span>
+      </div>
+      <div class="bubble-summary">reviewer checking since 1m ago</div>
+      <div class="bubble-meta">
+        <span class="bubble-repo">bob</span>
+        <span class="round-badge">R3</span>
+        <span class="agent-indicator"><span class="agent-dot" style="background:#a855f7"></span> claude</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bubble 5: RUNNING (compact) -->
+  <div class="bubble" id="b5" style="left: 100px; top: 370px; width: 250px; height: 110px;" onclick="toggleExpand('b5')">
+    <div class="bubble-compact">
+      <div class="bubble-header">
+        <span class="bubble-id">refactor-db-queries</span>
+        <span class="state-badge"><span class="led led-blue"></span> RUNNING</span>
+      </div>
+      <div class="bubble-summary">implementer working since 5m ago</div>
+      <div class="bubble-meta">
+        <span class="bubble-repo">finder</span>
+        <span class="round-badge">R2</span>
+        <span class="agent-indicator"><span class="agent-dot" style="background:#3b82f6"></span> codex</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bubble 6: DONE (compact, faded) -->
+  <div class="bubble" id="b6" style="left: 640px; top: 210px; width: 220px; height: 100px; opacity: 0.4;" onclick="toggleExpand('b6')">
+    <div class="bubble-compact">
+      <div class="bubble-header">
+        <span class="bubble-id">fix-login-bug</span>
+        <span class="state-badge"><span class="led led-gray"></span> DONE</span>
+      </div>
+      <div class="bubble-summary">Completed — merged to main</div>
+      <div class="bubble-meta">
+        <span class="bubble-repo">bob</span>
+        <span class="round-badge">R2</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bubble 2 EXPANDED (hidden by default, shown on click) -->
+  <div class="bubble approval expanded" id="b2-expanded" style="left: 60px; top: 30px; width: 500px; height: 520px; display: none;">
+    <div class="bubble-expanded">
+      <div class="bubble-header" style="margin-bottom: 8px;">
+        <div>
+          <span class="bubble-id">fix-auth-token</span>
+          <span class="bubble-repo" style="margin-left: 8px;">bob &middot; main &middot; R4</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="state-badge"><span class="led led-green"></span> READY FOR APPROVAL</span>
+          <button class="close-btn" onclick="event.stopPropagation();closeExpanded('b2');">&times;</button>
+        </div>
+      </div>
+
+      <div class="bubble-actions">
+        <button class="action-btn primary">Approve</button>
+        <button class="action-btn warn">Rework</button>
+        <button class="action-btn external">Attach impl</button>
+        <button class="action-btn external">Attach rev</button>
+        <button class="action-btn external">Open in Cursor</button>
+      </div>
+
+      <div class="timeline">
+        <div class="timeline-entry">
+          <span class="timeline-round">R1</span>
+          <span class="timeline-icon impl">&#x25B6;</span>
+          <div class="timeline-body">
+            <div class="timeline-sender">codex <span style="color:#555">(implementer)</span></div>
+            <div class="timeline-text">Implemented token refresh logic. Tests pass, typecheck clean.</div>
+          </div>
+          <span class="timeline-time">14:01</span>
+        </div>
+
+        <div class="timeline-entry">
+          <span class="timeline-round">R1</span>
+          <span class="timeline-icon review">&#x25C6;</span>
+          <div class="timeline-body">
+            <div class="timeline-sender">claude <span style="color:#555">(reviewer)</span></div>
+            <div class="timeline-text">Race condition in concurrent refresh. Missing retry logic.
+              <span class="finding-tag finding-p1">P1</span>
+              <span class="finding-tag finding-p2">P2</span>
+            </div>
+          </div>
+          <span class="timeline-time">14:04</span>
+        </div>
+
+        <div class="timeline-entry">
+          <span class="timeline-round">R2</span>
+          <span class="timeline-icon impl">&#x25B6;</span>
+          <div class="timeline-body">
+            <div class="timeline-sender">codex <span style="color:#555">(implementer)</span></div>
+            <div class="timeline-text">Fixed race with mutex lock. Added retry with exponential backoff.</div>
+          </div>
+          <span class="timeline-time">14:08</span>
+        </div>
+
+        <div class="timeline-entry">
+          <span class="timeline-round">R2</span>
+          <span class="timeline-icon review">&#x25C6;</span>
+          <div class="timeline-body">
+            <div class="timeline-sender">claude <span style="color:#555">(reviewer)</span></div>
+            <div class="timeline-text">Backoff max should be configurable.
+              <span class="finding-tag finding-p2">P2</span>
+            </div>
+          </div>
+          <span class="timeline-time">14:11</span>
+        </div>
+
+        <div class="timeline-entry">
+          <span class="timeline-round">R3</span>
+          <span class="timeline-icon impl">&#x25B6;</span>
+          <div class="timeline-body">
+            <div class="timeline-sender">codex <span style="color:#555">(implementer)</span></div>
+            <div class="timeline-text">Made backoff configurable via env var. All tests green.</div>
+          </div>
+          <span class="timeline-time">14:14</span>
+        </div>
+
+        <div class="timeline-entry">
+          <span class="timeline-round">R3</span>
+          <span class="timeline-icon review">&#x25C6;</span>
+          <div class="timeline-body">
+            <div class="timeline-sender">claude <span style="color:#555">(reviewer)</span></div>
+            <div class="timeline-text">Clean pass. All prior issues resolved.
+              <span class="finding-tag finding-clean">&#x2713; clean</span>
+            </div>
+          </div>
+          <span class="timeline-time">14:17</span>
+        </div>
+
+        <div class="timeline-entry">
+          <span class="timeline-round">R4</span>
+          <span class="timeline-icon review">&#x25C6;</span>
+          <div class="timeline-body">
+            <div class="timeline-sender">codex <span style="color:#555">(reviewer &mdash; alternated)</span></div>
+            <div class="timeline-text">Confirmed. Code quality good, tests comprehensive.
+              <span class="finding-tag finding-clean">&#x2713; clean</span>
+            </div>
+          </div>
+          <span class="timeline-time">14:20</span>
+        </div>
+
+        <div class="timeline-entry">
+          <span class="timeline-round"></span>
+          <span class="timeline-icon system">&#x2B21;</span>
+          <div class="timeline-body">
+            <div class="timeline-sender" style="color:#22c55e">CONVERGENCE</div>
+            <div class="timeline-text">Two clean passes with reviewer alternation. Ready for approval.</div>
+          </div>
+          <span class="timeline-time">14:20</span>
+        </div>
+
+        <div style="margin-top: 8px; padding: 10px 12px; background: rgba(34,197,94,0.05); border: 1px solid rgba(34,197,94,0.15); border-radius: 10px;">
+          <div style="font-size:9px; color:#22c55e; font-weight:600; letter-spacing:0.5px; margin-bottom:4px;">APPROVAL PACKAGE</div>
+          <div style="font-size:10px; color:#888; line-height:1.5;">
+            <strong style="color:#aaa">Changed:</strong> src/auth/refresh.ts, src/auth/refresh.test.ts, .env.example<br>
+            <strong style="color:#aaa">Commit:</strong> "Add token refresh with mutex lock and retry backoff"
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bubble 1 EXPANDED (WAITING_HUMAN with question) -->
+  <div class="bubble attention expanded" id="b1-expanded" style="left: 540px; top: 30px; width: 460px; height: 420px; display: none;">
+    <div class="bubble-expanded">
+      <div class="bubble-header" style="margin-bottom: 8px;">
+        <div>
+          <span class="bubble-id">impl-resume-context</span>
+          <span class="bubble-repo" style="margin-left: 8px;">pairflow &middot; main &middot; R2</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="state-badge"><span class="led led-amber"></span> WAITING HUMAN</span>
+          <button class="close-btn" onclick="event.stopPropagation();closeExpanded('b1');">&times;</button>
+        </div>
+      </div>
+
+      <div class="question-card">
+        <div class="q-label">&#x2753; QUESTION FROM CODEX &middot; 14:22</div>
+        <div class="q-text">How should the fallback summary handle corrupt NDJSON lines?<br>Options: (a) skip and note in summary, (b) stop parsing and return partial, (c) fail with error.</div>
+      </div>
+
+      <div class="bubble-actions">
+        <button class="action-btn warn external">Answer in Terminal</button>
+        <button class="action-btn external">Attach impl</button>
+        <button class="action-btn external">Open in Cursor</button>
+      </div>
+
+      <div class="timeline">
+        <div class="timeline-entry">
+          <span class="timeline-round">R1</span>
+          <span class="timeline-icon impl">&#x25B6;</span>
+          <div class="timeline-body">
+            <div class="timeline-sender">codex <span style="color:#555">(implementer)</span></div>
+            <div class="timeline-text">Added resumeSummary.ts with transcript parsing and summary builder.</div>
+          </div>
+          <span class="timeline-time">14:15</span>
+        </div>
+
+        <div class="timeline-entry">
+          <span class="timeline-round">R1</span>
+          <span class="timeline-icon review">&#x25C6;</span>
+          <div class="timeline-body">
+            <div class="timeline-sender">claude <span style="color:#555">(reviewer)</span></div>
+            <div class="timeline-text">No fallback for corrupt lines. Summary too verbose.
+              <span class="finding-tag finding-p1">P1</span>
+              <span class="finding-tag finding-p2">P2</span>
+            </div>
+          </div>
+          <span class="timeline-time">14:19</span>
+        </div>
+
+        <div class="timeline-entry">
+          <span class="timeline-round">R2</span>
+          <span class="timeline-icon human">&#x2753;</span>
+          <div class="timeline-body">
+            <div class="timeline-sender" style="color:#f59e0b">codex &mdash; blocked</div>
+            <div class="timeline-text">Waiting for human answer on NDJSON fallback strategy.</div>
+          </div>
+          <span class="timeline-time">14:22</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Simple expand/collapse toggle
+  function toggleExpand(id) {
+    const expandedEl = document.getElementById(id + '-expanded');
+    const compactEl = document.getElementById(id);
+    if (!expandedEl) return;
+
+    if (expandedEl.style.display === 'none') {
+      compactEl.style.display = 'none';
+      expandedEl.style.display = 'block';
+    }
+  }
+
+  function closeExpanded(id) {
+    const expandedEl = document.getElementById(id + '-expanded');
+    const compactEl = document.getElementById(id);
+    if (!expandedEl) return;
+
+    expandedEl.style.display = 'none';
+    compactEl.style.display = 'block';
+  }
+
+  // Basic drag functionality
+  let dragTarget = null;
+  let dragOffset = { x: 0, y: 0 };
+
+  document.querySelectorAll('.bubble').forEach(bubble => {
+    bubble.addEventListener('mousedown', (e) => {
+      if (e.target.closest('.action-btn, .close-btn')) return;
+      dragTarget = bubble;
+      const rect = bubble.getBoundingClientRect();
+      dragOffset.x = e.clientX - rect.left;
+      dragOffset.y = e.clientY - rect.top;
+      bubble.style.cursor = 'grabbing';
+      bubble.style.zIndex = '60';
+    });
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!dragTarget) return;
+    const canvasRect = document.getElementById('canvas').getBoundingClientRect();
+    dragTarget.style.left = (e.clientX - canvasRect.left - dragOffset.x) + 'px';
+    dragTarget.style.top = (e.clientY - canvasRect.top - dragOffset.y) + 'px';
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (dragTarget) {
+      dragTarget.style.cursor = 'grab';
+      if (!dragTarget.classList.contains('expanded')) {
+        dragTarget.style.zIndex = '';
+      }
+      dragTarget = null;
+    }
+  });
+</script>
+
+</body>
+</html>
