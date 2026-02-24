@@ -79,7 +79,7 @@ function buildDeliveryMessage(
   } else if (recipientRole === "reviewer") {
     if (envelope.type === "PASS") {
       action =
-        "Implementer handoff received. Run a fresh review now (`/review` in Claude Code), then run `pairflow pass --summary ... --finding P1:...` (repeatable) or `pairflow pass --summary ... --no-findings`; run `pairflow converged --summary` only when clean. Execute pairflow commands directly (no confirmation prompt).";
+        "Implementer handoff received. Run a fresh review now. IMPORTANT: Use the `feature-dev:code-reviewer` agent (via Task tool) for the review — it provides higher-quality, structured analysis than manual inspection. Fall back to `/review` only if the agent is unavailable. Then run `pairflow pass --summary ... --finding P1:...` (repeatable) or `pairflow pass --summary ... --no-findings`; run `pairflow converged --summary` only when clean. Execute pairflow commands directly (no confirmation prompt).";
     } else if (envelope.type === "HUMAN_REPLY") {
       action =
         "Human response received. Continue review workflow from this update.";
