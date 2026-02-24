@@ -99,7 +99,7 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
         "absolute w-[260px] rounded-[20px] border bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] p-4 transition-shadow",
         visual.border,
         visual.cardTone,
-        dragging ? "cursor-grabbing" : "cursor-grab"
+        dragging ? "cursor-grabbing" : "cursor-default"
       )}
       style={{
         left: props.position.x,
@@ -115,7 +115,7 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
       <button
         type="button"
         aria-label={`Bubble ${props.bubble.bubbleId} drag handle`}
-        className="mb-2 flex w-full items-center justify-between"
+        className={cn("mb-2 flex w-full items-center justify-between", dragging ? "cursor-grabbing" : "cursor-grab")}
         onMouseDown={(event) => {
           if (event.button !== 0) {
             return;
