@@ -735,8 +735,7 @@
       <div class="bubble-actions">
         <button class="action-btn primary">Approve</button>
         <button class="action-btn warn">Rework (msg)</button>
-        <button class="action-btn external">Copy attach impl</button>
-        <button class="action-btn external">Copy attach rev</button>
+        <button class="action-btn external" onclick="event.stopPropagation();navigator.clipboard.writeText('tmux attach -t pf-fix-auth-token')">Attach &#x2398;</button>
         <button class="action-btn external">Open in Cursor</button>
         <button class="action-btn">Stop</button>
       </div>
@@ -864,7 +863,7 @@
       <div class="bubble-actions">
         <button class="action-btn warn">Reply (msg)</button>
         <button class="action-btn">Resume (default)</button>
-        <button class="action-btn external">Copy attach impl</button>
+        <button class="action-btn external" onclick="event.stopPropagation();navigator.clipboard.writeText('tmux attach -t pf-impl-resume-context')">Attach &#x2398;</button>
         <button class="action-btn external">Open in Cursor</button>
         <button class="action-btn">Stop</button>
       </div>

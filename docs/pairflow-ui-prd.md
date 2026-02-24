@@ -64,7 +64,7 @@ Priority order:
 4. `reply` requires message text.
 5. `commit` transitions through `COMMITTED` to `DONE`; `COMMITTED` is usually short-lived.
 6. `merge` already performs cleanup (tmux/session/worktree/branch). There is no separate `cleanup` command.
-7. There is no existing `attach-implementer` / `attach-reviewer` CLI command.
+7. Attach means attaching to the whole tmux session (`tmux attach -t pf-<id>`), not individual panes. There is no per-pane attach CLI command.
 8. Canonical truth remains file-backed (`state.json`, `transcript.ndjson`, `inbox.ndjson`, runtime session registry).
 9. Transcript reader tolerates partial trailing NDJSON line; UI must not hard-fail on this.
 10. `open` means invoking the same behavior as `pairflow bubble open` (`open_command` + `{{worktree_path}}` interpolation); UI should surface command errors directly.
@@ -128,7 +128,7 @@ These decisions were previously captured and remain relevant for V1 implementati
 Notes:
 1. `Request Rework` and `Reply` open a required message modal.
 2. Merge panel text must explicitly say: "Merge includes runtime/worktree cleanup."
-3. Attach buttons in V1 are "Copy tmux command" affordances, not direct pane-launch automation.
+3. Attach in V1 is a single button that copies `tmux attach -t pf-<bubble-id>` to the clipboard. The operator pastes it into any terminal. Direct terminal launch is deferred.
 
 ## API/Backend Contract (thin layer over existing core)
 
@@ -190,7 +190,7 @@ The HTML mockup is directionally good, but V1 fidelity requires:
 1. Include all lifecycle states in visual examples (not only running/waiting/approval/done).
 2. Replace "Cleanup" as standalone step with "Merge (includes cleanup)".
 3. Mark message-required actions (`request-rework`, `reply`) explicitly.
-4. Replace direct attach assumptions with copyable tmux attach commands in V1.
+4. Attach button copies full tmux command (`tmux attach -t pf-<id>`) to clipboard.
 
 ## Success criteria
 
