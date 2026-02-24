@@ -5,6 +5,10 @@ import { shellQuote } from "../util/shellQuote.js";
 import { buildAgentCommand } from "../runtime/agentCommand.js";
 import { join } from "node:path";
 import {
+  buildResumeTranscriptSummary,
+  buildResumeTranscriptSummaryFallback
+} from "../protocol/resumeSummary.js";
+import {
   bootstrapWorktreeWorkspace,
   cleanupWorktreeWorkspace,
   WorkspaceBootstrapError
@@ -47,6 +51,7 @@ export interface StartBubbleDependencies {
   isTmuxSessionAlive?: ((sessionName: string) => Promise<boolean>) | undefined;
   claimRuntimeSession?: typeof claimRuntimeSession;
   removeRuntimeSession?: typeof removeRuntimeSession;
+  buildResumeTranscriptSummary?: typeof buildResumeTranscriptSummary;
 }
 
 export class StartBubbleError extends Error {
@@ -126,6 +131,149 @@ function buildImplementerKickoffMessage(input: {
   ].join(" ");
 }
 
+function formatResumeStateValue(value: string | number | null): string {
+  return value === null ? "none" : String(value);
+}
+
+function buildResumeContextLine(state: BubbleStateSnapshot): string {
+  return [
+    `state=${state.state}`,
+    `round=${state.round}`,
+    `active_agent=${formatResumeStateValue(state.active_agent)}`,
+    `active_role=${formatResumeStateValue(state.active_role)}`
+  ].join(", ");
+}
+
+function buildResumeImplementerStartupPrompt(input: {
+  bubbleId: string;
+  repoPath: string;
+  worktreePath: string;
+  taskArtifactPath: string;
+  donePackagePath: string;
+  state: BubbleStateSnapshot;
+  transcriptSummary: string;
+  kickoffDiagnostic?: string;
+}): string {
+  const roleInstruction =
+    input.state.state === "RUNNING" && input.state.active_role === "implementer"
+      ? "You are currently active. Continue implementation now."
+      : "Continue implementation when you become active; otherwise stand by.";
+  const lines = [
+    `Pairflow implementer resume for bubble ${input.bubbleId}.`,
+    `Task: ${input.taskArtifactPath}.`,
+    `Done package: ${input.donePackagePath}.`,
+    `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`,
+    `State snapshot: ${buildResumeContextLine(input.state)}.`,
+    `Transcript context: ${input.transcriptSummary}`,
+    roleInstruction
+  ];
+  if ((input.kickoffDiagnostic?.trim().length ?? 0) > 0) {
+    lines.push(`Kickoff diagnostic: ${input.kickoffDiagnostic}`);
+  }
+  return lines.join(" ");
+}
+
+function buildResumeReviewerStartupPrompt(input: {
+  bubbleId: string;
+  repoPath: string;
+  worktreePath: string;
+  taskArtifactPath: string;
+  state: BubbleStateSnapshot;
+  transcriptSummary: string;
+  kickoffDiagnostic?: string;
+}): string {
+  const roleInstruction =
+    input.state.state === "RUNNING" && input.state.active_role === "reviewer"
+      ? "You are currently active. Continue review now."
+      : "Stand by unless you are active or receive a handoff.";
+  const lines = [
+    `Pairflow reviewer resume for bubble ${input.bubbleId}.`,
+    `Task: ${input.taskArtifactPath}.`,
+    `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`,
+    `State snapshot: ${buildResumeContextLine(input.state)}.`,
+    `Transcript context: ${input.transcriptSummary}`,
+    roleInstruction
+  ];
+  if ((input.kickoffDiagnostic?.trim().length ?? 0) > 0) {
+    lines.push(`Kickoff diagnostic: ${input.kickoffDiagnostic}`);
+  }
+  return lines.join(" ");
+}
+
+function buildResumeImplementerKickoffMessage(input: {
+  bubbleId: string;
+  taskArtifactPath: string;
+  round: number;
+}): string {
+  return [
+    `# [pairflow] bubble=${input.bubbleId} resume kickoff (implementer).`,
+    `State is RUNNING at round ${input.round}.`,
+    `Re-open task context: ${input.taskArtifactPath}.`,
+    "Continue active implementation and hand off with `pairflow pass --summary \"<what changed + validation>\"` when ready."
+  ].join(" ");
+}
+
+function buildResumeReviewerKickoffMessage(input: {
+  bubbleId: string;
+  round: number;
+}): string {
+  return [
+    `# [pairflow] bubble=${input.bubbleId} resume kickoff (reviewer).`,
+    `State is RUNNING at round ${input.round}.`,
+    "Continue active review. Use `pairflow pass --summary ... --finding ...` or `--no-findings` as appropriate."
+  ].join(" ");
+}
+
+function resolveResumeKickoffMessages(input: {
+  bubbleId: string;
+  taskArtifactPath: string;
+  state: BubbleStateSnapshot;
+  implementerAgent: string;
+  reviewerAgent: string;
+}): {
+  implementerKickoffMessage?: string;
+  reviewerKickoffMessage?: string;
+  kickoffDiagnostic?: string;
+} {
+  if (input.state.state !== "RUNNING") {
+    return {};
+  }
+
+  if (
+    input.state.active_role === "implementer" &&
+    input.state.active_agent === input.implementerAgent
+  ) {
+    return {
+      implementerKickoffMessage: buildResumeImplementerKickoffMessage({
+        bubbleId: input.bubbleId,
+        taskArtifactPath: input.taskArtifactPath,
+        round: input.state.round
+      })
+    };
+  }
+
+  if (
+    input.state.active_role === "reviewer" &&
+    input.state.active_agent === input.reviewerAgent
+  ) {
+    return {
+      reviewerKickoffMessage: buildResumeReviewerKickoffMessage({
+        bubbleId: input.bubbleId,
+        round: input.state.round
+      })
+    };
+  }
+
+  return {
+    kickoffDiagnostic: [
+      "RUNNING state active context is inconsistent;",
+      `active_role=${formatResumeStateValue(input.state.active_role)},`,
+      `active_agent=${formatResumeStateValue(input.state.active_agent)}.`,
+      "No kickoff was sent; continue using status pane + transcript/state context."
+    ].join(" ")
+  };
+}
+
 const resumableRuntimeStates = new Set([
   "RUNNING",
   "WAITING_HUMAN",
@@ -147,6 +295,8 @@ export async function startBubble(
     dependencies.isTmuxSessionAlive ?? isTmuxSessionAliveDefault;
   const claimSession = dependencies.claimRuntimeSession ?? claimRuntimeSession;
   const removeSession = dependencies.removeRuntimeSession ?? removeRuntimeSession;
+  const buildResumeSummary =
+    dependencies.buildResumeTranscriptSummary ?? buildResumeTranscriptSummary;
 
   const resolved = await resolveBubbleById({
     bubbleId: input.bubbleId,
@@ -171,6 +321,7 @@ export async function startBubble(
   }
 
   const expectedTmuxSessionName = buildBubbleTmuxSessionName(resolved.bubbleId);
+  const donePackagePath = join(resolved.bubblePaths.artifactsDir, "done-package.md");
   let ownershipClaimed = false;
   try {
     const firstClaim = await claimSession({
@@ -257,7 +408,7 @@ export async function startBubble(
             repoPath: resolved.repoPath,
             worktreePath: resolved.bubblePaths.worktreePath,
             taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
-            donePackagePath: join(resolved.bubblePaths.artifactsDir, "done-package.md")
+            donePackagePath
           })
         }),
         reviewerCommand: buildAgentCommand({
@@ -297,18 +448,56 @@ export async function startBubble(
         expectedState: "PREPARING_WORKSPACE"
       });
     } else {
+      let transcriptSummary: string;
+      try {
+        transcriptSummary = await buildResumeSummary({
+          transcriptPath: resolved.bubblePaths.transcriptPath
+        });
+      } catch (error) {
+        transcriptSummary = buildResumeTranscriptSummaryFallback(error);
+      }
+
+      const resumeKickoffResolution = resolveResumeKickoffMessages({
+        bubbleId: resolved.bubbleId,
+        taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+        state: loadedState.state,
+        implementerAgent: resolved.bubbleConfig.agents.implementer,
+        reviewerAgent: resolved.bubbleConfig.agents.reviewer
+      });
+      const { kickoffDiagnostic, ...resumeKickoffMessages } = resumeKickoffResolution;
+
       const tmux = await launchTmux({
         bubbleId: resolved.bubbleId,
         worktreePath: resolved.bubblePaths.worktreePath,
         statusCommand: buildStatusPaneCommand(resolved.bubbleId, resolved.repoPath, resolved.bubblePaths.worktreePath),
         implementerCommand: buildAgentCommand({
           agentName: resolved.bubbleConfig.agents.implementer,
-          bubbleId: resolved.bubbleId
+          bubbleId: resolved.bubbleId,
+          startupPrompt: buildResumeImplementerStartupPrompt({
+            bubbleId: resolved.bubbleId,
+            repoPath: resolved.repoPath,
+            worktreePath: resolved.bubblePaths.worktreePath,
+            taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+            donePackagePath,
+            state: loadedState.state,
+            transcriptSummary,
+            ...(kickoffDiagnostic !== undefined ? { kickoffDiagnostic } : {})
+          })
         }),
         reviewerCommand: buildAgentCommand({
           agentName: resolved.bubbleConfig.agents.reviewer,
-          bubbleId: resolved.bubbleId
-        })
+          bubbleId: resolved.bubbleId,
+          startupPrompt: buildResumeReviewerStartupPrompt({
+            bubbleId: resolved.bubbleId,
+            repoPath: resolved.repoPath,
+            worktreePath: resolved.bubblePaths.worktreePath,
+            taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+            state: loadedState.state,
+            transcriptSummary,
+            ...(kickoffDiagnostic !== undefined ? { kickoffDiagnostic } : {})
+          })
+        }),
+        ...resumeKickoffMessages
       });
       tmuxSessionName = tmux.sessionName;
 

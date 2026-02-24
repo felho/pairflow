@@ -6,9 +6,10 @@ import { spawn } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
-import { readStateSnapshot } from "../../../src/core/state/stateStore.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { startBubble, StartBubbleError } from "../../../src/core/bubble/startBubble.js";
 import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
+import type { BubbleStateSnapshot } from "../../../src/types/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -44,6 +45,21 @@ async function assertBashParses(command: string): Promise<void> {
       resolvePromise();
     });
   });
+}
+
+async function updateBubbleState(
+  statePath: string,
+  updater: (current: BubbleStateSnapshot) => BubbleStateSnapshot
+): Promise<void> {
+  const loaded = await readStateSnapshot(statePath);
+  await writeStateSnapshot(
+    statePath,
+    updater(loaded.state),
+    {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: loaded.state.state
+    }
+  );
 }
 
 afterEach(async () => {
@@ -335,7 +351,7 @@ describe("startBubble", () => {
     await assertBashParses(statusCommand);
   });
 
-  it("resumes tmux session from RUNNING state without workspace bootstrap", async () => {
+  it("resumes RUNNING bubble with resume prompts and active implementer kickoff", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -344,6 +360,7 @@ describe("startBubble", () => {
     });
 
     let bootstrapCalled = false;
+    let summaryPath: string | undefined;
     const result = await startBubble(
       {
         bubbleId: bubble.bubbleId,
@@ -360,22 +377,177 @@ describe("startBubble", () => {
             worktreePath: bubble.paths.worktreePath
           });
         },
+        buildResumeTranscriptSummary: (input) => {
+          summaryPath = input.transcriptPath;
+          return Promise.resolve("resume-summary: messages=3");
+        },
         launchBubbleTmuxSession: (input) => {
           expect(input.implementerBootstrapMessage).toBeUndefined();
           expect(input.reviewerBootstrapMessage).toBeUndefined();
-          expect(input.implementerKickoffMessage).toBeUndefined();
+          expect(input.implementerKickoffMessage).toContain("resume kickoff (implementer)");
+          expect(input.reviewerKickoffMessage).toBeUndefined();
           expect(input.implementerCommand).toContain(
             "--dangerously-bypass-approvals-and-sandbox"
           );
+          expect(input.implementerCommand).toContain("Pairflow implementer resume");
+          expect(input.implementerCommand).toContain("resume-summary: messages=3");
           expect(input.reviewerCommand).toContain("--dangerously-skip-permissions");
+          expect(input.reviewerCommand).toContain("Pairflow reviewer resume");
+          expect(input.reviewerCommand).toContain("resume-summary: messages=3");
           return Promise.resolve({ sessionName: "pf-b_start_resume_01" });
         }
       }
     );
 
     expect(bootstrapCalled).toBe(false);
+    expect(summaryPath).toBe(bubble.paths.transcriptPath);
     expect(result.state.state).toBe("RUNNING");
     expect(result.state.last_command_at).toBe("2026-02-23T09:00:00.000Z");
+  });
+
+  it("routes resume kickoff to reviewer when reviewer is active in RUNNING", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_03",
+      task: "Resume reviewer active"
+    });
+
+    await updateBubbleState(bubble.paths.statePath, (current) => ({
+      ...current,
+      active_agent: bubble.config.agents.reviewer,
+      active_role: "reviewer"
+    }));
+
+    await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-23T09:05:00.000Z")
+      },
+      {
+        buildResumeTranscriptSummary: () =>
+          Promise.resolve("resume-summary: reviewer-active"),
+        launchBubbleTmuxSession: (input) => {
+          expect(input.implementerKickoffMessage).toBeUndefined();
+          expect(input.reviewerKickoffMessage).toContain("resume kickoff (reviewer)");
+          return Promise.resolve({ sessionName: "pf-b_start_resume_03" });
+        }
+      }
+    );
+  });
+
+  it("skips resume kickoff when RUNNING active role/agent context is inconsistent", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_04",
+      task: "Resume invalid active context"
+    });
+
+    await updateBubbleState(bubble.paths.statePath, (current) => ({
+      ...current,
+      active_agent: bubble.config.agents.implementer,
+      active_role: "reviewer"
+    }));
+
+    await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-23T09:06:00.000Z")
+      },
+      {
+        buildResumeTranscriptSummary: () =>
+          Promise.resolve("resume-summary: inconsistent-active"),
+        launchBubbleTmuxSession: (input) => {
+          expect(input.implementerKickoffMessage).toBeUndefined();
+          expect(input.reviewerKickoffMessage).toBeUndefined();
+          expect(input.implementerCommand).toContain("resume-summary: inconsistent-active");
+          expect(input.reviewerCommand).toContain("resume-summary: inconsistent-active");
+          expect(input.implementerCommand).toContain(
+            "Kickoff diagnostic: RUNNING state active context is inconsistent;"
+          );
+          expect(input.reviewerCommand).toContain("No kickoff was sent");
+          return Promise.resolve({ sessionName: "pf-b_start_resume_04" });
+        }
+      }
+    );
+  });
+
+  it("does not send kickoff for resumable non-RUNNING states", async () => {
+    const repoPath = await createTempRepo();
+    const resumableStates = [
+      "WAITING_HUMAN",
+      "READY_FOR_APPROVAL",
+      "APPROVED_FOR_COMMIT",
+      "COMMITTED"
+    ] as const;
+
+    for (const stateValue of resumableStates) {
+      const bubble = await setupRunningBubbleFixture({
+        repoPath,
+        bubbleId: `b_start_resume_state_${stateValue.toLowerCase()}`,
+        task: `Resume ${stateValue}`
+      });
+
+      await updateBubbleState(bubble.paths.statePath, (current) => ({
+        ...current,
+        state: stateValue
+      }));
+
+      await startBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-02-23T09:07:00.000Z")
+        },
+        {
+          buildResumeTranscriptSummary: () =>
+            Promise.resolve(`resume-summary: state=${stateValue}`),
+          launchBubbleTmuxSession: (input) => {
+            expect(input.implementerKickoffMessage).toBeUndefined();
+            expect(input.reviewerKickoffMessage).toBeUndefined();
+            expect(input.implementerCommand).toContain(`state=${stateValue}`);
+            expect(input.reviewerCommand).toContain(`state=${stateValue}`);
+            return Promise.resolve({
+              sessionName: `pf-b_start_resume_state_${stateValue.toLowerCase()}`
+            });
+          }
+        }
+      );
+    }
+  });
+
+  it("keeps resume start robust when injected summary builder throws", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_05",
+      task: "Resume summary fallback"
+    });
+
+    const result = await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-23T09:08:00.000Z")
+      },
+      {
+        buildResumeTranscriptSummary: () => {
+          throw new Error("summary dependency failed");
+        },
+        launchBubbleTmuxSession: (input) => {
+          expect(input.implementerCommand).toContain(
+            "Resume transcript summary unavailable."
+          );
+          expect(input.reviewerCommand).toContain("reason=summary dependency failed");
+          return Promise.resolve({ sessionName: "pf-b_start_resume_05" });
+        }
+      }
+    );
+
+    expect(result.state.state).toBe("RUNNING");
   });
 
   it("keeps runtime state unchanged when resume tmux launch fails", async () => {

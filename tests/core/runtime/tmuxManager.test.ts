@@ -160,6 +160,54 @@ describe("launchBubbleTmuxSession", () => {
     expect(reviewerSendKeys).toHaveLength(0);
   });
 
+  it("sends kickoff message to reviewer pane when provided", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args: string[]) => {
+      calls.push(args);
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: args[0] === "has-session" ? 1 : 0
+      });
+    };
+
+    await launchBubbleTmuxSession({
+      bubbleId: "b_start_kickoff_reviewer",
+      worktreePath: "/tmp/worktree",
+      statusCommand: "status",
+      implementerCommand: "codex",
+      reviewerCommand: "claude",
+      reviewerKickoffMessage: "reviewer kickoff message",
+      runner
+    });
+
+    expect(calls).toContainEqual([
+      "capture-pane",
+      "-pt",
+      "pf-b_start_kickoff_reviewer:0.2"
+    ]);
+    expect(calls).toContainEqual([
+      "send-keys",
+      "-t",
+      "pf-b_start_kickoff_reviewer:0.2",
+      "-l",
+      "reviewer kickoff message"
+    ]);
+    expect(calls).toContainEqual([
+      "send-keys",
+      "-t",
+      "pf-b_start_kickoff_reviewer:0.2",
+      "Enter"
+    ]);
+
+    const implementerSendKeys = calls.filter(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_start_kickoff_reviewer:0.1"
+    );
+    expect(implementerSendKeys).toHaveLength(0);
+  });
+
   it("keeps start non-blocking when kickoff send-keys fails", async () => {
     const calls: Array<{ args: string[]; allowFailure: boolean }> = [];
     const runner: TmuxRunner = (

@@ -27,6 +27,7 @@ export interface LaunchBubbleTmuxSessionInput {
   implementerBootstrapMessage?: string;
   reviewerBootstrapMessage?: string;
   implementerKickoffMessage?: string;
+  reviewerKickoffMessage?: string;
   runner?: TmuxRunner;
 }
 
@@ -217,6 +218,7 @@ export async function launchBubbleTmuxSession(
   await sendPaneMessage(`${sessionName}:0.1`, input.implementerBootstrapMessage);
   await sendPaneMessage(`${sessionName}:0.2`, input.reviewerBootstrapMessage);
   await sendPaneMessage(`${sessionName}:0.1`, input.implementerKickoffMessage);
+  await sendPaneMessage(`${sessionName}:0.2`, input.reviewerKickoffMessage);
 
   return {
     sessionName
