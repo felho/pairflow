@@ -35,7 +35,7 @@ export default function App(): JSX.Element {
   }, [store]);
 
   return (
-    <div className="min-h-screen text-white">
+    <div className="flex min-h-screen flex-col text-white">
       <HeaderBar
         counts={counts}
         repos={repos}

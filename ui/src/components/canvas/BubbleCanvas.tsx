@@ -288,7 +288,7 @@ export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
   }, [positioned, expandedSet]);
 
   return (
-    <main className="relative overflow-auto px-4 pb-6 pt-4" style={canvasDimensions}>
+    <main className="relative flex-1 overflow-auto px-4 pb-6 pt-4" style={canvasDimensions}>
       {positioned.map((entry) => {
         const isExpanded = expandedSet.has(entry.bubble.bubbleId);
 
