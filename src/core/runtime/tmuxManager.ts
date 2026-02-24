@@ -168,6 +168,7 @@ export async function launchBubbleTmuxSession(
     input.worktreePath,
     input.statusCommand
   ]);
+  // Split status pane to create implementer pane.
   await runner([
     "split-window",
     "-v",
@@ -177,29 +178,26 @@ export async function launchBubbleTmuxSession(
     input.worktreePath,
     input.implementerCommand
   ]);
-  await runner([
-    "split-window",
-    "-v",
-    "-t",
-    `${sessionName}:0.1`,
-    "-c",
-    input.worktreePath,
-    input.reviewerCommand
-  ]);
-  // Status/orchestrator pane gets a fixed 7-line height; the remaining
-  // vertical space is split equally between implementer and reviewer.
-  await runner([
-    "select-layout",
-    "-t",
-    `${sessionName}:0`,
-    "even-vertical"
-  ]);
+  // Fix status pane to 9 lines BEFORE splitting for reviewer, so the
+  // subsequent 50/50 split divides the remaining space equally.
   await runner([
     "resize-pane",
     "-t",
     `${sessionName}:0.0`,
     "-y",
-    "7"
+    "9"
+  ]);
+  // Split implementer pane in half for reviewer — both get equal space.
+  await runner([
+    "split-window",
+    "-v",
+    "-t",
+    `${sessionName}:0.1`,
+    "-p",
+    "50",
+    "-c",
+    input.worktreePath,
+    input.reviewerCommand
   ]);
   const sendPaneMessage = async (
     targetPane: string,

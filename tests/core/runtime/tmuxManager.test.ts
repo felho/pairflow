@@ -70,9 +70,8 @@ describe("launchBubbleTmuxSession", () => {
       "has-session",
       "new-session",
       "split-window",
-      "split-window",
-      "select-layout",
-      "resize-pane"
+      "resize-pane",
+      "split-window"
     ]);
     expect(calls[0]?.allowFailure).toBe(true);
     expect(calls[2]?.args).toEqual([
@@ -84,27 +83,25 @@ describe("launchBubbleTmuxSession", () => {
       "/tmp/worktree",
       "codex"
     ]);
+    // Status pane fixed to 9 lines before reviewer split.
     expect(calls[3]?.args).toEqual([
-      "split-window",
-      "-v",
-      "-t",
-      "pf-b_start_01:0.1",
-      "-c",
-      "/tmp/worktree",
-      "claude"
-    ]);
-    expect(calls[4]?.args).toEqual([
-      "select-layout",
-      "-t",
-      "pf-b_start_01:0",
-      "even-vertical"
-    ]);
-    expect(calls[5]?.args).toEqual([
       "resize-pane",
       "-t",
       "pf-b_start_01:0.0",
       "-y",
-      "7"
+      "9"
+    ]);
+    // Reviewer split uses -p 50 to divide remaining space equally.
+    expect(calls[4]?.args).toEqual([
+      "split-window",
+      "-v",
+      "-t",
+      "pf-b_start_01:0.1",
+      "-p",
+      "50",
+      "-c",
+      "/tmp/worktree",
+      "claude"
     ]);
   });
 
@@ -129,13 +126,12 @@ describe("launchBubbleTmuxSession", () => {
       runner
     });
 
-    expect(calls.slice(0, 6).map((call) => call[0])).toEqual([
+    expect(calls.slice(0, 5).map((call) => call[0])).toEqual([
       "has-session",
       "new-session",
       "split-window",
-      "split-window",
-      "select-layout",
-      "resize-pane"
+      "resize-pane",
+      "split-window"
     ]);
     // Trust prompt check before kickoff.
     expect(calls).toContainEqual([
