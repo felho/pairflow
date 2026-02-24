@@ -95,6 +95,31 @@
     cursor: pointer;
   }
 
+  .status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: #8f8f8f;
+    padding: 4px 8px;
+    border-radius: 10px;
+    border: 1px solid #2c2c2c;
+    background: #131313;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #4b5563;
+  }
+
+  .status-dot.live {
+    background: #22c55e;
+    box-shadow: 0 0 6px #22c55e;
+    animation: ledPulse 1.5s ease-in-out infinite;
+  }
+
   /* ── Canvas Area ── */
   .canvas {
     position: fixed;
@@ -150,6 +175,10 @@
     opacity: 0.7;
   }
 
+  .bubble.preparing {
+    animation: preparePulse 2.2s ease-in-out infinite;
+  }
+
   /* ── Bubble Compact ── */
   .bubble-compact {
     padding: 16px;
@@ -200,8 +229,11 @@
   .led-amber { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; animation: ledPulse 1.5s ease-in-out infinite; }
   .led-green { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
   .led-gray { background: #555; }
+  .led-grayblue { background: #94a3b8; box-shadow: 0 0 6px rgba(148, 163, 184, 0.4); }
+  .led-slate { background: #64748b; box-shadow: 0 0 6px rgba(100, 116, 139, 0.45); }
   .led-red { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
   .led-purple { background: #a855f7; box-shadow: 0 0 6px #a855f7; }
+  .led-teal-pulse { animation: ledPulse 1.2s ease-in-out infinite; }
 
   .bubble-summary {
     font-size: 11px;
@@ -289,11 +321,6 @@
     border-color: #f59e0b;
     color: #f59e0b;
     background: rgba(245, 158, 11, 0.08);
-  }
-
-  .action-btn.external::after {
-    content: ' \2197';
-    font-size: 8px;
   }
 
   /* ── Timeline ── */
@@ -484,6 +511,11 @@
     50% { opacity: 0.3; transform: scale(0.7); }
   }
 
+  @keyframes preparePulse {
+    0%, 100% { box-shadow: 0 0 12px rgba(6, 182, 212, 0.05); }
+    50% { box-shadow: 0 0 22px rgba(6, 182, 212, 0.14); }
+  }
+
   /* ── Connecting lines (subtle) ── */
   .repo-group-label {
     position: absolute;
@@ -494,6 +526,56 @@
     text-transform: uppercase;
     pointer-events: none;
   }
+
+  .matrix-panel {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    width: 420px;
+    border-radius: 12px;
+    border: 1px solid #2d2d2d;
+    background: rgba(12, 12, 12, 0.95);
+    backdrop-filter: blur(5px);
+    padding: 10px 12px;
+    z-index: 20;
+  }
+
+  .matrix-title {
+    font-size: 10px;
+    letter-spacing: 0.6px;
+    color: #c8c8c8;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .matrix-row {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 10px;
+    font-size: 10px;
+    line-height: 1.4;
+    padding: 3px 0;
+    border-bottom: 1px solid #1b1b1b;
+  }
+
+  .matrix-row:last-child {
+    border-bottom: none;
+  }
+
+  .matrix-state {
+    color: #d0d0d0;
+    font-family: monospace;
+  }
+
+  .matrix-actions {
+    color: #8f8f8f;
+  }
+
+  .matrix-note {
+    margin-top: 8px;
+    font-size: 10px;
+    color: #7f7f7f;
+  }
 </style>
 </head>
 <body>
@@ -503,19 +585,20 @@
   <div class="header-left">
     <span class="logo"><span class="logo-icon">&#x2B21;</span> Pairflow</span>
     <div class="header-stats">
-      <span class="header-stat"><span class="led led-gray" style="width:5px;height:5px"></span> 1 created</span>
-      <span class="header-stat"><span class="led led-cyan" style="width:5px;height:5px"></span> 1 preparing</span>
-      <span class="header-stat"><span class="led led-blue" style="width:5px;height:5px"></span> 3 running</span>
-      <span class="header-stat"><span class="led led-amber" style="width:5px;height:5px"></span> 1 waiting</span>
-      <span class="header-stat"><span class="led led-green" style="width:5px;height:5px"></span> 1 ready</span>
-      <span class="header-stat"><span class="led led-green" style="width:5px;height:5px"></span> 1 approved</span>
-      <span class="header-stat"><span class="led led-teal" style="width:5px;height:5px"></span> 1 committed</span>
-      <span class="header-stat"><span class="led led-gray" style="width:5px;height:5px"></span> 1 done</span>
-      <span class="header-stat"><span class="led led-red" style="width:5px;height:5px"></span> 1 failed</span>
-      <span class="header-stat"><span class="led led-gray" style="width:5px;height:5px"></span> 1 cancelled</span>
+      <span class="header-stat"><span class="led led-grayblue" style="width:5px;height:5px"></span> CREATED 1</span>
+      <span class="header-stat"><span class="led led-cyan" style="width:5px;height:5px"></span> PREPARING_WORKSPACE 1</span>
+      <span class="header-stat"><span class="led led-blue" style="width:5px;height:5px"></span> RUNNING 3</span>
+      <span class="header-stat"><span class="led led-amber" style="width:5px;height:5px"></span> WAITING_HUMAN 1</span>
+      <span class="header-stat"><span class="led led-green" style="width:5px;height:5px"></span> READY_FOR_APPROVAL 1</span>
+      <span class="header-stat"><span class="led led-green" style="width:5px;height:5px"></span> APPROVED_FOR_COMMIT 1</span>
+      <span class="header-stat"><span class="led led-teal led-teal-pulse" style="width:5px;height:5px"></span> COMMITTED 1</span>
+      <span class="header-stat"><span class="led led-gray" style="width:5px;height:5px"></span> DONE 1</span>
+      <span class="header-stat"><span class="led led-red" style="width:5px;height:5px"></span> FAILED 1</span>
+      <span class="header-stat"><span class="led led-slate" style="width:5px;height:5px"></span> CANCELLED 1</span>
     </div>
   </div>
   <div class="header-right">
+    <span class="status-indicator"><span class="status-dot live"></span> SSE connected</span>
     <div class="repo-pills">
       <span class="repo-pill active">all</span>
       <span class="repo-pill">pairflow</span>
@@ -555,7 +638,7 @@
     <div class="bubble-compact">
       <div class="bubble-header">
         <span class="bubble-id">fix-auth-token</span>
-        <span class="state-badge"><span class="led led-green"></span> APPROVAL</span>
+        <span class="state-badge"><span class="led led-green"></span> READY_FOR_APPROVAL</span>
       </div>
       <div class="bubble-summary">Reviewer found no issues. Ready for approval.</div>
       <div class="bubble-meta">
@@ -620,7 +703,7 @@
         <span class="bubble-id">fix-login-bug</span>
         <span class="state-badge"><span class="led led-gray"></span> DONE</span>
       </div>
-      <div class="bubble-summary">Committed. Ready to merge (merge includes cleanup).</div>
+      <div class="bubble-summary">Committed. Ready to merge. Merge includes runtime/worktree cleanup.</div>
       <div class="bubble-meta">
         <span class="bubble-repo">bob</span>
         <span class="round-badge">R2</span>
@@ -648,7 +731,7 @@
     <div class="bubble-compact">
       <div class="bubble-header">
         <span class="bubble-id">cleanup-prompts</span>
-        <span class="state-badge"><span class="led led-gray"></span> CANCELLED</span>
+        <span class="state-badge"><span class="led led-slate"></span> CANCELLED</span>
       </div>
       <div class="bubble-summary">Stopped by operator before completion.</div>
       <div class="bubble-meta">
@@ -663,7 +746,7 @@
     <div class="bubble-compact">
       <div class="bubble-header">
         <span class="bubble-id">doc-sections-pass</span>
-        <span class="state-badge"><span class="led led-gray"></span> CREATED</span>
+        <span class="state-badge"><span class="led led-grayblue"></span> CREATED</span>
       </div>
       <div class="bubble-summary">Task created. Awaiting `bubble start`.</div>
       <div class="bubble-meta">
@@ -674,11 +757,11 @@
   </div>
 
   <!-- Bubble 10: PREPARING_WORKSPACE (compact) -->
-  <div class="bubble" id="b10" style="left: 920px; top: 450px; width: 220px; height: 100px;" onclick="toggleExpand('b10')">
+  <div class="bubble preparing" id="b10" style="left: 920px; top: 450px; width: 220px; height: 100px;" onclick="toggleExpand('b10')">
     <div class="bubble-compact">
       <div class="bubble-header">
         <span class="bubble-id">auth-refactor</span>
-        <span class="state-badge"><span class="led led-cyan"></span> PREPARING</span>
+        <span class="state-badge"><span class="led led-cyan"></span> PREPARING_WORKSPACE</span>
       </div>
       <div class="bubble-summary">Bootstrapping branch/worktree and tmux session.</div>
       <div class="bubble-meta">
@@ -708,7 +791,7 @@
     <div class="bubble-compact">
       <div class="bubble-header">
         <span class="bubble-id">review-guidance</span>
-        <span class="state-badge"><span class="led led-teal"></span> COMMITTED</span>
+        <span class="state-badge"><span class="led led-teal led-teal-pulse"></span> COMMITTED</span>
       </div>
       <div class="bubble-summary">Commit recorded; transitioning toward DONE.</div>
       <div class="bubble-meta">
@@ -727,16 +810,16 @@
           <span class="bubble-repo" style="margin-left: 8px;">bob &middot; main &middot; R4</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span class="state-badge"><span class="led led-green"></span> READY FOR APPROVAL</span>
+          <span class="state-badge"><span class="led led-green"></span> READY_FOR_APPROVAL</span>
           <button class="close-btn" onclick="event.stopPropagation();closeExpanded('b2');">&times;</button>
         </div>
       </div>
 
       <div class="bubble-actions">
         <button class="action-btn primary">Approve</button>
-        <button class="action-btn warn">Rework (msg)</button>
-        <button class="action-btn external" onclick="event.stopPropagation();navigator.clipboard.writeText('tmux attach -t pf-fix-auth-token')">Attach &#x2398;</button>
-        <button class="action-btn external">Open in Cursor</button>
+        <button class="action-btn warn">Request Rework (message required)</button>
+        <button class="action-btn" onclick="event.stopPropagation();navigator.clipboard.writeText('tmux attach -t pf-fix-auth-token')">Attach (copy command)</button>
+        <button class="action-btn">Open</button>
         <button class="action-btn">Stop</button>
       </div>
 
@@ -850,7 +933,7 @@
           <span class="bubble-repo" style="margin-left: 8px;">pairflow &middot; main &middot; R2</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span class="state-badge"><span class="led led-amber"></span> WAITING HUMAN</span>
+          <span class="state-badge"><span class="led led-amber"></span> WAITING_HUMAN</span>
           <button class="close-btn" onclick="event.stopPropagation();closeExpanded('b1');">&times;</button>
         </div>
       </div>
@@ -861,10 +944,10 @@
       </div>
 
       <div class="bubble-actions">
-        <button class="action-btn warn">Reply (msg)</button>
-        <button class="action-btn">Resume (default)</button>
-        <button class="action-btn external" onclick="event.stopPropagation();navigator.clipboard.writeText('tmux attach -t pf-impl-resume-context')">Attach &#x2398;</button>
-        <button class="action-btn external">Open in Cursor</button>
+        <button class="action-btn warn">Reply (message required)</button>
+        <button class="action-btn">Resume</button>
+        <button class="action-btn" onclick="event.stopPropagation();navigator.clipboard.writeText('tmux attach -t pf-impl-resume-context')">Attach (copy command)</button>
+        <button class="action-btn">Open</button>
         <button class="action-btn">Stop</button>
       </div>
 
@@ -903,6 +986,21 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <div class="matrix-panel">
+    <div class="matrix-title">Action Availability Matrix (PRD-aligned)</div>
+    <div class="matrix-row"><span class="matrix-state">CREATED</span><span class="matrix-actions">Start, Stop</span></div>
+    <div class="matrix-row"><span class="matrix-state">PREPARING_WORKSPACE</span><span class="matrix-actions">Stop</span></div>
+    <div class="matrix-row"><span class="matrix-state">RUNNING</span><span class="matrix-actions">Open, Stop</span></div>
+    <div class="matrix-row"><span class="matrix-state">WAITING_HUMAN</span><span class="matrix-actions">Reply (message required), Resume, Open, Stop</span></div>
+    <div class="matrix-row"><span class="matrix-state">READY_FOR_APPROVAL</span><span class="matrix-actions">Approve, Request Rework (message required), Open, Stop</span></div>
+    <div class="matrix-row"><span class="matrix-state">APPROVED_FOR_COMMIT</span><span class="matrix-actions">Commit, Open, Stop</span></div>
+    <div class="matrix-row"><span class="matrix-state">COMMITTED</span><span class="matrix-actions">Open, Stop</span></div>
+    <div class="matrix-row"><span class="matrix-state">DONE</span><span class="matrix-actions">Merge (includes runtime/worktree cleanup), Open</span></div>
+    <div class="matrix-row"><span class="matrix-state">FAILED</span><span class="matrix-actions">Open</span></div>
+    <div class="matrix-row"><span class="matrix-state">CANCELLED</span><span class="matrix-actions">Open</span></div>
+    <div class="matrix-note">Attach in V1 is a single button that copies <code>tmux attach -t pf-&lt;bubble-id&gt;</code>.</div>
   </div>
 
 </div>
