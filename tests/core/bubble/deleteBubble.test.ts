@@ -105,6 +105,49 @@ describe("deleteBubble", () => {
     });
   });
 
+  it("deletes without confirmation when only runtime session exists", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_delete_rt_only",
+      repoPath,
+      baseBranch: "main",
+      task: "Delete task",
+      cwd: repoPath
+    });
+
+    await upsertRuntimeSession({
+      sessionsPath: join(repoPath, ".pairflow", "runtime", "sessions.json"),
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: "/tmp/fake-worktree",
+      tmuxSessionName: "pf-b_delete_rt_only",
+      now: new Date("2026-02-25T10:00:00.000Z")
+    });
+
+    const result = await deleteBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath
+      },
+      {
+        runTmux: vi.fn(() => Promise.resolve({
+          stdout: "",
+          stderr: "no session",
+          exitCode: 1
+        })),
+        removeRuntimeSession: vi.fn(async () => true)
+      }
+    );
+
+    expect(result.deleted).toBe(true);
+    expect(result.requiresConfirmation).toBe(false);
+    expect(result.artifacts.runtimeSession.exists).toBe(true);
+    expect(result.artifacts.worktree.exists).toBe(false);
+    expect(result.artifacts.tmux.exists).toBe(false);
+    expect(result.artifacts.branch.exists).toBe(false);
+    expect(result.runtimeSessionRemoved).toBe(true);
+  });
+
   it("requires confirmation when external artifacts exist and force is false", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({

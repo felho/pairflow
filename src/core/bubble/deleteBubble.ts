@@ -164,7 +164,6 @@ export async function deleteBubble(
   const hasExternalArtifacts =
     artifacts.worktree.exists ||
     artifacts.tmux.exists ||
-    artifacts.runtimeSession.exists ||
     artifacts.branch.exists;
 
   if (hasExternalArtifacts && input.force !== true) {
