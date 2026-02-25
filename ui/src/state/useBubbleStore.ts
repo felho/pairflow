@@ -6,6 +6,7 @@ import {
   PairflowApiError,
   type PairflowApiClient
 } from "../lib/api";
+import { defaultPosition } from "../lib/canvasLayout";
 import {
   createRealtimeEventsClient,
   type RealtimeEventsClient,
@@ -344,6 +345,28 @@ function prunePositions(
   return changed ? next : currentPositions;
 }
 
+function fillDefaultPositions(
+  positions: Record<string, BubblePosition>,
+  bubbles: Record<string, BubbleCardModel>,
+  selectedRepos: Set<string>
+): Record<string, BubblePosition> {
+  const visible = Object.values(bubbles)
+    .filter((bubble) => selectedRepos.has(bubble.repoPath))
+    .sort((left, right) => left.bubbleId.localeCompare(right.bubbleId));
+
+  let changed = false;
+  const next = { ...positions };
+
+  for (const [index, bubble] of visible.entries()) {
+    if (next[bubble.bubbleId] === undefined) {
+      next[bubble.bubbleId] = defaultPosition(index);
+      changed = true;
+    }
+  }
+
+  return changed ? next : positions;
+}
+
 function pruneRecordByBubbleIds<T>(
   current: Record<string, T>,
   bubbles: Record<string, BubbleCardModel>
@@ -496,7 +519,12 @@ export function createBubbleStore(
           loadedRepos[payload.repo.repoPath] = true;
         }
 
-        const positions = prunePositions(state.positions, bubblesById);
+        const pruned = prunePositions(state.positions, bubblesById);
+        const positions = fillDefaultPositions(
+          pruned,
+          bubblesById,
+          new Set(state.selectedRepos)
+        );
         const bubbleDetails = syncExpandedFromSummary(state.bubbleDetails, bubblesById);
 
         return {
@@ -625,7 +653,11 @@ export function createBubbleStore(
                 }
 
                 const bubblesById = mergeSnapshot(state.bubblesById, event);
-                const positions = prunePositions(state.positions, bubblesById);
+                const positions = fillDefaultPositions(
+                  prunePositions(state.positions, bubblesById),
+                  bubblesById,
+                  new Set(state.selectedRepos)
+                );
                 const bubbleDetails = syncExpandedFromSummary(
                   state.bubbleDetails,
                   bubblesById
@@ -700,7 +732,11 @@ export function createBubbleStore(
               }
               case "bubble.removed": {
                 const bubblesById = removeBubble(state.bubblesById, event.bubbleId);
-                const positions = prunePositions(state.positions, bubblesById);
+                const positions = fillDefaultPositions(
+                  prunePositions(state.positions, bubblesById),
+                  bubblesById,
+                  new Set(state.selectedRepos)
+                );
                 return {
                   bubblesById,
                   positions,
@@ -860,7 +896,11 @@ export function createBubbleStore(
             }
           }
 
-          const positions = prunePositions(get().positions, bubblesById);
+          const positions = fillDefaultPositions(
+            prunePositions(get().positions, bubblesById),
+            bubblesById,
+            new Set(selectedRepos)
+          );
 
           set((state) => ({
             repos,

@@ -7,17 +7,19 @@ import type {
   BubbleLifecycleState,
   BubblePosition
 } from "../../lib/types";
+import {
+  cardHeight,
+  cardWidth,
+  defaultPosition,
+  startX,
+  startY,
+  xGap,
+  yGap
+} from "../../lib/canvasLayout";
 import { cn } from "../../lib/utils";
 import { ConnectedBubbleExpandedCard } from "./ConnectedBubbleExpandedCard";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { stateVisuals } from "./stateVisuals";
-
-const cardWidth = 248;
-const cardHeight = 156;
-const xGap = 26;
-const yGap = 22;
-const startX = 22;
-const startY = 22;
 
 interface DragState {
   originX: number;
@@ -271,16 +273,6 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
       </button>
     </article>
   );
-}
-
-function defaultPosition(index: number): BubblePosition {
-  const columns = 4;
-  const column = index % columns;
-  const row = Math.floor(index / columns);
-  return {
-    x: startX + column * (cardWidth + xGap),
-    y: startY + row * (cardHeight + yGap)
-  };
 }
 
 const expandedCardWidth = 480;

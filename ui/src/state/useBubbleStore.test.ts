@@ -196,6 +196,51 @@ describe("createBubbleStore", () => {
     expect(counts.RUNNING).toBe(1);
   });
 
+  it("adds newly created bubbles from realtime update events without manual refresh", async () => {
+    const existingBubble = bubbleSummary({ bubbleId: "b-existing", repoPath: "/repo-a" });
+    const createdBubble = bubbleSummary({ bubbleId: "b-created", repoPath: "/repo-a" });
+    const getBubbles = vi.fn(async () => ({
+      repo: repoSummary("/repo-a"),
+      bubbles: [existingBubble]
+    }));
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles
+    });
+
+    let emitEvent: (event: UiEvent) => void = () => undefined;
+    const store = createBubbleStore({
+      api,
+      createEventsClient: (input) => {
+        emitEvent = input.onEvent;
+        return {
+          start: () => undefined,
+          stop: () => undefined,
+          refresh: () => undefined
+        };
+      }
+    });
+
+    await store.getState().initialize();
+
+    emitEvent({
+      id: 30,
+      ts: "2026-02-24T12:30:00.000Z",
+      type: "bubble.updated",
+      repoPath: "/repo-a",
+      bubbleId: "b-created",
+      bubble: createdBubble
+    });
+
+    expect(selectVisibleBubbles(store.getState()).map((bubble) => bubble.bubbleId)).toEqual([
+      "b-created",
+      "b-existing"
+    ]);
+    expect(selectStateCounts(store.getState()).RUNNING).toBe(2);
+    expect(getBubbles).toHaveBeenCalledTimes(1);
+  });
+
   it("applies snapshot events by replacing only scoped repos", async () => {
     const bubbleA = bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" });
     const bubbleB = bubbleSummary({
