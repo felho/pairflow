@@ -23,11 +23,13 @@ export interface RealtimeEventsClientInput {
   poll: (repos: string[]) => Promise<void>;
   pollingIntervalMs?: number;
   maxReconnectMs?: number;
+  staleThresholdMs?: number;
   eventSourceFactory?: EventSourceFactory;
 }
 
 const defaultPollingIntervalMs = 3_000;
 const defaultMaxReconnectMs = 5_000;
+const defaultStaleThresholdMs = 45_000;
 
 function toEventsUrl(baseUrl: string, repos: string[]): string {
   const params = new URLSearchParams();
@@ -95,6 +97,7 @@ export function createRealtimeEventsClient(
 ): RealtimeEventsClient {
   const pollingIntervalMs = input.pollingIntervalMs ?? defaultPollingIntervalMs;
   const maxReconnectMs = input.maxReconnectMs ?? defaultMaxReconnectMs;
+  const staleThresholdMs = input.staleThresholdMs ?? defaultStaleThresholdMs;
   const createEventSource: EventSourceFactory =
     input.eventSourceFactory ?? ((url: string) => new EventSource(url));
 
@@ -102,6 +105,8 @@ export function createRealtimeEventsClient(
   let reconnectAttempt = 0;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let pollingTimer: ReturnType<typeof setInterval> | null = null;
+  let stalenessTimer: ReturnType<typeof setInterval> | null = null;
+  let lastEventTime = 0;
   let eventSource: EventSourceLike | null = null;
   const eventListeners: Array<{
     type: string;
@@ -120,6 +125,31 @@ export function createRealtimeEventsClient(
       clearInterval(pollingTimer);
       pollingTimer = null;
     }
+  };
+
+  const clearStalenessTimer = (): void => {
+    if (stalenessTimer !== null) {
+      clearInterval(stalenessTimer);
+      stalenessTimer = null;
+    }
+  };
+
+  const touchLastEvent = (): void => {
+    lastEventTime = Date.now();
+  };
+
+  const startStalenessTimer = (): void => {
+    clearStalenessTimer();
+    touchLastEvent();
+    stalenessTimer = setInterval(() => {
+      if (lastEventTime > 0 && Date.now() - lastEventTime >= staleThresholdMs) {
+        input.onStatus("stale");
+        detachEventSource();
+        clearStalenessTimer();
+        ensurePollingFallback();
+        scheduleReconnect();
+      }
+    }, staleThresholdMs);
   };
 
   const detachEventSource = (): void => {
@@ -208,12 +238,29 @@ export function createRealtimeEventsClient(
       reconnectAttempt = 0;
       stopPollingFallback();
       input.onStatus("connected");
+      startStalenessTimer();
     });
-    addListener("snapshot", handleMessageEvent);
-    addListener("bubble.updated", handleMessageEvent);
-    addListener("bubble.removed", handleMessageEvent);
-    addListener("repo.updated", handleMessageEvent);
+    addListener("heartbeat", () => {
+      touchLastEvent();
+    });
+    addListener("snapshot", (event) => {
+      touchLastEvent();
+      handleMessageEvent(event);
+    });
+    addListener("bubble.updated", (event) => {
+      touchLastEvent();
+      handleMessageEvent(event);
+    });
+    addListener("bubble.removed", (event) => {
+      touchLastEvent();
+      handleMessageEvent(event);
+    });
+    addListener("repo.updated", (event) => {
+      touchLastEvent();
+      handleMessageEvent(event);
+    });
     addListener("error", () => {
+      clearStalenessTimer();
       detachEventSource();
       ensurePollingFallback();
       scheduleReconnect();
@@ -233,6 +280,7 @@ export function createRealtimeEventsClient(
     stop(): void {
       closed = true;
       clearReconnectTimer();
+      clearStalenessTimer();
       stopPollingFallback();
       detachEventSource();
       input.onStatus("idle");

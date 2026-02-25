@@ -442,6 +442,32 @@ describe("UI SSE events", () => {
     }
   });
 
+  it("sends heartbeat as named SSE event instead of comment", async () => {
+    const fixture = await createRepoFixture();
+    const assetsDir = await createAssetsFixture();
+    const server = await startServer({
+      repoPath: fixture.repoPath,
+      assetsDir,
+      keepAliveIntervalMs: 50
+    });
+
+    const client = await SseClient.connect({
+      url: `${server.url}/api/events?repo=${encodeURIComponent(fixture.repoPath)}`
+    });
+
+    try {
+      await client.nextEvent(); // connected
+      await client.nextEvent(); // snapshot
+
+      const heartbeat = await client.nextEvent(3_000);
+      expect(heartbeat.event).toBe("heartbeat");
+      expect(heartbeat.data).toBeNull();
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  });
+
   it("emits bubble.removed immediately after successful API delete", async () => {
     const fixture = await createRepoFixture();
     const assetsDir = await createAssetsFixture();

@@ -138,6 +138,112 @@ describe("createRealtimeEventsClient", () => {
     expect(onEvent).not.toHaveBeenCalled();
   });
 
+  it("heartbeat events reset staleness timer", async () => {
+    const onStatus = vi.fn();
+    const poll = vi.fn().mockResolvedValue(undefined);
+
+    const client = createRealtimeEventsClient({
+      getRepos: () => ["/repo-a"],
+      onEvent: () => undefined,
+      onStatus,
+      poll,
+      staleThresholdMs: 1_000,
+      eventSourceFactory: (url) => new MockEventSource(url)
+    });
+
+    client.start();
+    const stream = MockEventSource.instances[0];
+    if (stream === undefined) {
+      throw new Error("Missing mocked event source instance");
+    }
+    stream.emit("open");
+    expect(onStatus).toHaveBeenCalledWith("connected");
+
+    // Advance 800ms (under threshold), send heartbeat
+    await vi.advanceTimersByTimeAsync(800);
+    stream.emit("heartbeat");
+
+    // Advance another 800ms — still under threshold since heartbeat reset timer
+    await vi.advanceTimersByTimeAsync(800);
+    expect(onStatus).not.toHaveBeenCalledWith("stale");
+
+    client.stop();
+  });
+
+  it("staleness timeout triggers reconnect and polling fallback", async () => {
+    const onStatus = vi.fn();
+    const poll = vi.fn().mockResolvedValue(undefined);
+
+    const client = createRealtimeEventsClient({
+      getRepos: () => ["/repo-a"],
+      onEvent: () => undefined,
+      onStatus,
+      poll,
+      staleThresholdMs: 1_000,
+      eventSourceFactory: (url) => new MockEventSource(url)
+    });
+
+    client.start();
+    const stream = MockEventSource.instances[0];
+    if (stream === undefined) {
+      throw new Error("Missing mocked event source instance");
+    }
+    stream.emit("open");
+    onStatus.mockClear();
+
+    // Advance past the stale threshold
+    await vi.advanceTimersByTimeAsync(1_001);
+
+    expect(onStatus).toHaveBeenCalledWith("stale");
+    expect(onStatus).toHaveBeenCalledWith("fallback");
+    expect(poll).toHaveBeenCalled();
+
+    // A reconnect should be scheduled
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(MockEventSource.instances.length).toBe(2);
+
+    client.stop();
+  });
+
+  it("data events also reset staleness timer", async () => {
+    const onEvent = vi.fn();
+    const onStatus = vi.fn();
+    const poll = vi.fn().mockResolvedValue(undefined);
+
+    const client = createRealtimeEventsClient({
+      getRepos: () => ["/repo-a"],
+      onEvent,
+      onStatus,
+      poll,
+      staleThresholdMs: 1_000,
+      eventSourceFactory: (url) => new MockEventSource(url)
+    });
+
+    client.start();
+    const stream = MockEventSource.instances[0];
+    if (stream === undefined) {
+      throw new Error("Missing mocked event source instance");
+    }
+    stream.emit("open");
+
+    // Advance 800ms, send a real event
+    await vi.advanceTimersByTimeAsync(800);
+    stream.emit("bubble.updated", {
+      id: 1,
+      ts: "2026-02-24T12:00:00.000Z",
+      type: "bubble.updated",
+      repoPath: "/repo-a",
+      bubbleId: "b-1",
+      bubble: bubbleSummary({ bubbleId: "b-1", repoPath: "/repo-a" })
+    });
+
+    // Advance another 800ms — should not be stale
+    await vi.advanceTimersByTimeAsync(800);
+    expect(onStatus).not.toHaveBeenCalledWith("stale");
+
+    client.stop();
+  });
+
   it("reports polling fallback failures", async () => {
     const onStatus = vi.fn();
     const onPollingError = vi.fn();

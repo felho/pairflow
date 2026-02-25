@@ -226,7 +226,7 @@ export type UiEvent =
   | UiRepoUpdatedEvent
   | UiSnapshotEvent;
 
-export type ConnectionStatus = "idle" | "connecting" | "connected" | "fallback";
+export type ConnectionStatus = "idle" | "connecting" | "connected" | "stale" | "fallback";
 
 export interface BubbleCardModel extends UiBubbleSummary {
   hasRuntimeSession: boolean;

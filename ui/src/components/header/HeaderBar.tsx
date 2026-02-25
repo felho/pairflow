@@ -33,6 +33,8 @@ function statusLabel(status: ConnectionStatus): string {
       return "SSE connected";
     case "connecting":
       return "Reconnecting...";
+    case "stale":
+      return "Connection stale";
     case "fallback":
       return "Polling fallback";
     case "idle":
@@ -48,6 +50,8 @@ function statusDotClass(status: ConnectionStatus): string {
       return "bg-emerald-500 shadow-[0_0_6px_#22c55e]";
     case "connecting":
       return "bg-amber-400";
+    case "stale":
+      return "bg-amber-400 animate-pulse";
     case "fallback":
       return "bg-orange-500";
     case "idle":

@@ -631,7 +631,7 @@ export function createUiRouter(input: CreateUiRouterInput): UiRouter {
         return;
       }
       try {
-        res.write(": keepalive\n\n");
+        res.write("event: heartbeat\ndata: \n\n");
       } catch {
         cleanup();
       }
