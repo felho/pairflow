@@ -135,6 +135,10 @@ export interface UiRepoUpdatedEvent extends UiEventBase {
   repo: UiRepoSummary;
 }
 
+export interface UiRepoRemovedEvent extends UiEventBase {
+  type: "repo.removed";
+}
+
 export interface UiSnapshotEvent {
   id: number;
   ts: string;
@@ -147,6 +151,7 @@ export type UiEvent =
   | UiBubbleUpdatedEvent
   | UiBubbleRemovedEvent
   | UiRepoUpdatedEvent
+  | UiRepoRemovedEvent
   | UiSnapshotEvent;
 
 export function mapPendingInboxItems(items: PendingInboxItem[]): UiBubbleInboxItem[] {

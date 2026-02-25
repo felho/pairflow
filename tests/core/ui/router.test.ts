@@ -123,8 +123,9 @@ describe("createUiRouter delete action", () => {
   it("responds before refreshNow resolves", async () => {
     const repoPath = "/tmp/pairflow-ui-router-delete-repo";
     const refreshDeferred = createDeferred<void>();
-    const refreshNow = vi.fn(async () => refreshDeferred.promise);
-    const deleteBubble = vi.fn(async () => ({
+    const refreshNow = vi.fn(() => refreshDeferred.promise);
+    const deleteBubble = vi.fn(() =>
+      Promise.resolve({
       bubbleId: "b-router-delete-01",
       deleted: true,
       requiresConfirmation: false,
@@ -150,11 +151,12 @@ describe("createUiRouter delete action", () => {
       runtimeSessionRemoved: false,
       removedWorktree: false,
       removedBubbleBranch: false
-    }));
+      })
+    );
 
     const scope: UiRepoScope = {
       repos: [repoPath],
-      has: async (value: string) => value === repoPath
+      has: (value: string) => Promise.resolve(value === repoPath)
     };
     const events: UiEventsBroker = {
       subscribe: () => () => undefined,
@@ -166,7 +168,9 @@ describe("createUiRouter delete action", () => {
         bubbles: []
       }),
       refreshNow,
-      close: async () => undefined
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
     };
 
     const router = createUiRouter({
@@ -208,10 +212,9 @@ describe("createUiRouter delete action", () => {
   it("logs refreshNow failures after successful delete response", async () => {
     const repoPath = "/tmp/pairflow-ui-router-delete-repo";
     const refreshError = new Error("refresh failed");
-    const refreshNow = vi.fn(async () => {
-      throw refreshError;
-    });
-    const deleteBubble = vi.fn(async () => ({
+    const refreshNow = vi.fn(() => Promise.reject(refreshError));
+    const deleteBubble = vi.fn(() =>
+      Promise.resolve({
       bubbleId: "b-router-delete-err-01",
       deleted: true,
       requiresConfirmation: false,
@@ -237,14 +240,15 @@ describe("createUiRouter delete action", () => {
       runtimeSessionRemoved: false,
       removedWorktree: false,
       removedBubbleBranch: false
-    }));
+      })
+    );
     const consoleErrorSpy = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
 
     const scope: UiRepoScope = {
       repos: [repoPath],
-      has: async (value: string) => value === repoPath
+      has: (value: string) => Promise.resolve(value === repoPath)
     };
     const events: UiEventsBroker = {
       subscribe: () => () => undefined,
@@ -256,7 +260,9 @@ describe("createUiRouter delete action", () => {
         bubbles: []
       }),
       refreshNow,
-      close: async () => undefined
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
     };
 
     const router = createUiRouter({
@@ -293,8 +299,9 @@ describe("createUiRouter delete action", () => {
 
   it("returns HTTP 202 confirmation payload without refreshing events when delete is not executed", async () => {
     const repoPath = "/tmp/pairflow-ui-router-delete-repo";
-    const refreshNow = vi.fn(async () => undefined);
-    const deleteBubble = vi.fn(async () => ({
+    const refreshNow = vi.fn(() => Promise.resolve(undefined));
+    const deleteBubble = vi.fn(() =>
+      Promise.resolve({
       bubbleId: "b-router-delete-02",
       deleted: false,
       requiresConfirmation: true,
@@ -320,11 +327,12 @@ describe("createUiRouter delete action", () => {
       runtimeSessionRemoved: false,
       removedWorktree: false,
       removedBubbleBranch: false
-    }));
+      })
+    );
 
     const scope: UiRepoScope = {
       repos: [repoPath],
-      has: async (value: string) => value === repoPath
+      has: (value: string) => Promise.resolve(value === repoPath)
     };
     const events: UiEventsBroker = {
       subscribe: () => () => undefined,
@@ -336,7 +344,9 @@ describe("createUiRouter delete action", () => {
         bubbles: []
       }),
       refreshNow,
-      close: async () => undefined
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
     };
 
     const router = createUiRouter({

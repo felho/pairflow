@@ -10,6 +10,7 @@ import { normalizeRepoPath } from "../../../src/core/bubble/repoResolution.js";
 import { emitHumanReply } from "../../../src/core/human/reply.js";
 import { startUiServer, type UiServerHandle } from "../../../src/core/ui/server.js";
 import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
+import { registerRepoInRegistry } from "../../../src/core/repo/registry.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -237,6 +238,11 @@ async function createAssetsFixture(): Promise<string> {
   return assetsDir;
 }
 
+async function createRegistryPath(): Promise<string> {
+  const root = await createTempDir("pairflow-ui-events-registry-");
+  return join(root, "repos.json");
+}
+
 async function startServer(input: {
   repoPath: string;
   assetsDir: string;
@@ -244,8 +250,14 @@ async function startServer(input: {
   pollIntervalMs?: number | undefined;
   debounceMs?: number | undefined;
 }): Promise<UiServerHandle> {
+  const registryPath = await createRegistryPath();
+  await registerRepoInRegistry({
+    repoPath: input.repoPath,
+    registryPath
+  });
   return startUiServer({
     repoPaths: [input.repoPath],
+    repoRegistryPath: registryPath,
     assetsDir: input.assetsDir,
     host: "127.0.0.1",
     port: 0,

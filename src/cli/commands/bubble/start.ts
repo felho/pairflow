@@ -1,11 +1,15 @@
 import { parseArgs } from "node:util";
 import { spawn } from "node:child_process";
+import { realpath } from "node:fs/promises";
+import { resolve as resolvePath } from "node:path";
 
 import {
   asStartBubbleError,
   startBubble,
   type StartBubbleResult
 } from "../../../core/bubble/startBubble.js";
+import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import { registerRepoInRegistry } from "../../../core/repo/registry.js";
 
 export interface BubbleStartCommandOptions {
   id: string;
@@ -21,6 +25,15 @@ export interface BubbleStartHelpCommandOptions {
 export type ParsedBubbleStartCommandOptions =
   | BubbleStartCommandOptions
   | BubbleStartHelpCommandOptions;
+
+export interface BubbleStartCommandDependencies {
+  startBubble?: typeof startBubble;
+  resolveBubbleById?: typeof resolveBubbleById;
+  registerRepoInRegistry?: typeof registerRepoInRegistry;
+  reportRegistryRegistrationWarning?:
+    | ((message: string) => void)
+    | undefined;
+}
 
 export function getBubbleStartHelpText(): string {
   return [
@@ -103,17 +116,57 @@ async function runTmuxAttach(sessionName: string): Promise<void> {
 
 export async function runBubbleStartCommand(
   args: string[],
-  cwd: string = process.cwd()
+  cwd: string = process.cwd(),
+  dependencies: BubbleStartCommandDependencies = {}
 ): Promise<StartBubbleResult | null> {
   const options = parseBubbleStartCommandOptions(args);
   if (options.help) {
     return null;
   }
 
+  const resolveBubble =
+    dependencies.resolveBubbleById ?? resolveBubbleById;
+  const register = dependencies.registerRepoInRegistry ?? registerRepoInRegistry;
+  const runStartBubble = dependencies.startBubble ?? startBubble;
+  const reportWarning =
+    dependencies.reportRegistryRegistrationWarning ??
+    ((message: string) => {
+      process.stderr.write(`${message}\n`);
+    });
+
   try {
-    const result = await startBubble({
+    const resolvedBubble = await resolveBubble({
       bubbleId: options.id,
-      repoPath: options.repo,
+      ...(options.repo !== undefined ? { repoPath: options.repo } : {}),
+      cwd
+    });
+    const resolvedBubbleRepoPath = resolvePath(cwd, resolvedBubble.repoPath);
+    const canonicalBubbleRepoPath = await realpath(resolvedBubbleRepoPath).catch(
+      (error: NodeJS.ErrnoException) => {
+        const reason = error instanceof Error ? error.message : String(error);
+        reportWarning(
+          `Pairflow warning: skipping repository auto-registration for bubble start (${resolvedBubbleRepoPath}) because canonical path resolution failed: ${reason}`
+        );
+        return null;
+      }
+    );
+    if (canonicalBubbleRepoPath !== null) {
+      try {
+        await register({
+          repoPath: canonicalBubbleRepoPath
+        });
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        reportWarning(
+          `Pairflow warning: failed to auto-register repository for bubble start (${canonicalBubbleRepoPath}): ${reason}`
+        );
+      }
+    }
+    const repoPathForStart = canonicalBubbleRepoPath ?? resolvedBubbleRepoPath;
+
+    const result = await runStartBubble({
+      bubbleId: options.id,
+      repoPath: repoPathForStart,
       cwd
     });
     if (options.attach) {

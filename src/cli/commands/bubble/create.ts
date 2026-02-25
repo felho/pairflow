@@ -1,6 +1,8 @@
 import { parseArgs } from "node:util";
+import { resolve } from "node:path";
 
 import { createBubble, type BubbleCreateResult } from "../../../core/bubble/createBubble.js";
+import { registerRepoInRegistry } from "../../../core/repo/registry.js";
 
 export interface BubbleCreateCommandOptions {
   id?: string;
@@ -9,6 +11,14 @@ export interface BubbleCreateCommandOptions {
   task?: string;
   taskFile?: string;
   help: boolean;
+}
+
+export interface BubbleCreateCommandDependencies {
+  createBubble?: typeof createBubble;
+  registerRepoInRegistry?: typeof registerRepoInRegistry;
+  reportRegistryRegistrationWarning?:
+    | ((message: string) => void)
+    | undefined;
 }
 
 export function getBubbleCreateHelpText(): string {
@@ -113,19 +123,40 @@ export function parseBubbleCreateCommandOptions(
 
 export async function runBubbleCreateCommand(
   args: string[],
-  cwd: string = process.cwd()
+  cwd: string = process.cwd(),
+  dependencies: BubbleCreateCommandDependencies = {}
 ): Promise<BubbleCreateResult | null> {
   const options = parseBubbleCreateCommandOptions(args);
   if (options.help) {
     return null;
   }
 
-  return createBubble({
+  const repoPath = resolve(cwd, options.repo as string);
+  const register = dependencies.registerRepoInRegistry ?? registerRepoInRegistry;
+  const reportWarning =
+    dependencies.reportRegistryRegistrationWarning ??
+    ((message: string) => {
+      process.stderr.write(`${message}\n`);
+    });
+
+  const create = dependencies.createBubble ?? createBubble;
+  const created = await create({
     id: options.id as string,
-    repoPath: options.repo as string,
+    repoPath,
     baseBranch: options.base as string,
     ...(options.task !== undefined ? { task: options.task } : {}),
     ...(options.taskFile !== undefined ? { taskFile: options.taskFile } : {}),
     cwd
   });
+  try {
+    await register({
+      repoPath
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    reportWarning(
+      `Pairflow warning: failed to auto-register repository for bubble create (${repoPath}): ${reason}`
+    );
+  }
+  return created;
 }

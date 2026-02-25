@@ -90,6 +90,20 @@ import {
   getUiServerHelpText,
   runUiServerCommand
 } from "./commands/ui/server.js";
+import {
+  getRepoAddHelpText,
+  runRepoAddCommand
+} from "./commands/repo/add.js";
+import {
+  getRepoListHelpText,
+  parseRepoListCommandOptions,
+  renderRepoListText,
+  runRepoListCommand
+} from "./commands/repo/list.js";
+import {
+  getRepoRemoveHelpText,
+  runRepoRemoveCommand
+} from "./commands/repo/remove.js";
 
 async function handlePassCommand(args: string[]): Promise<number> {
   const result = await runPassCommand(args);
@@ -162,6 +176,53 @@ async function handleUiCommand(args: string[]): Promise<number> {
   await waitForShutdownSignal(async () => {
     await result.close();
   });
+  return 0;
+}
+
+async function handleRepoAddCommand(args: string[]): Promise<number> {
+  const result = await runRepoAddCommand(args);
+  if (result === null) {
+    process.stdout.write(`${getRepoAddHelpText()}\n`);
+    return 0;
+  }
+  if (result.added) {
+    process.stdout.write(`Registered repository: ${result.entry.repoPath}\n`);
+  } else {
+    process.stdout.write(
+      `Repository already registered: ${result.entry.repoPath}\n`
+    );
+  }
+  return 0;
+}
+
+async function handleRepoRemoveCommand(args: string[]): Promise<number> {
+  const result = await runRepoRemoveCommand(args);
+  if (result === null) {
+    process.stdout.write(`${getRepoRemoveHelpText()}\n`);
+    return 0;
+  }
+  if (result.removed) {
+    process.stdout.write(`Removed repository: ${result.repoPath}\n`);
+  } else {
+    process.stdout.write(`Repository was not registered: ${result.repoPath}\n`);
+  }
+  return 0;
+}
+
+async function handleRepoListCommand(args: string[]): Promise<number> {
+  const parsed = parseRepoListCommandOptions(args);
+  if (parsed.help) {
+    process.stdout.write(`${getRepoListHelpText()}\n`);
+    return 0;
+  }
+
+  const result = await runRepoListCommand(parsed);
+
+  if (parsed.json) {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  } else {
+    process.stdout.write(`${renderRepoListText(result)}\n`);
+  }
   return 0;
 }
 
@@ -495,9 +556,20 @@ const bubbleSubcommandHandlers: Readonly<
   "request-rework": handleBubbleRequestReworkCommand
 };
 
+const repoSubcommandHandlers: Readonly<
+  Record<string, (args: string[]) => Promise<number>>
+> = {
+  add: handleRepoAddCommand,
+  remove: handleRepoRemoveCommand,
+  list: handleRepoListCommand
+};
+
 function buildSupportedCommandsText(): string {
   const bubbleCommands = Object.keys(bubbleSubcommandHandlers).map(
     (subcommand) => `bubble ${subcommand}`
+  );
+  const repoCommands = Object.keys(repoSubcommandHandlers).map(
+    (subcommand) => `repo ${subcommand}`
   );
   const topLevelAgentCommands = [...agentCommandNames];
   const namespacedAgentCommands = agentCommandNames.map(
@@ -506,6 +578,7 @@ function buildSupportedCommandsText(): string {
   return [
     "ui",
     ...bubbleCommands,
+    ...repoCommands,
     ...topLevelAgentCommands,
     ...namespacedAgentCommands
   ].join(", ");
@@ -547,6 +620,13 @@ export async function runCli(argv: string[]): Promise<number> {
     const bubbleHandler = bubbleSubcommandHandlers[subcommand];
     if (bubbleHandler !== undefined) {
       return bubbleHandler(rest);
+    }
+  }
+
+  if (command === "repo" && subcommand !== undefined) {
+    const repoHandler = repoSubcommandHandlers[subcommand];
+    if (repoHandler !== undefined) {
+      return repoHandler(rest);
     }
   }
 

@@ -187,6 +187,15 @@ describe("runCli", () => {
     expect(output).toContain("pairflow ui");
   });
 
+  it("supports repo list help", async () => {
+    const exitCode = await runCli(["repo", "list", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+    const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+    expect(output).toContain("pairflow repo list");
+  });
+
   it("rejects unknown agent namespace command", async () => {
     const exitCode = await runCli(["agent", "unknown"]);
 
@@ -208,6 +217,7 @@ describe("runCli", () => {
     const errorText = stderrSpy.mock.calls.map((call) => call[0]).join("");
     expect(errorText).toContain("ui");
     expect(errorText).toContain("bubble watchdog");
+    expect(errorText).toContain("repo list");
     expect(errorText).toContain("agent converged");
   });
 

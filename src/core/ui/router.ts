@@ -393,6 +393,7 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
 }
 
 export function createUiRouter(input: CreateUiRouterInput): UiRouter {
+  const routerCwd = resolve(input.cwd ?? process.cwd());
   const keepAliveIntervalMs = input.keepAliveIntervalMs ?? 15_000;
   const dependencies: UiRouterDependencies = {
     listBubbles: input.dependencies?.listBubbles ?? listBubbles,
@@ -425,7 +426,8 @@ export function createUiRouter(input: CreateUiRouterInput): UiRouter {
       return await resolveScopedRepoPath({
         scope: input.repoScope,
         repoParam,
-        requireExplicitWhenMultiRepo: options.requireExplicitWhenMultiRepo
+        requireExplicitWhenMultiRepo: options.requireExplicitWhenMultiRepo,
+        cwd: routerCwd
       });
     } catch (error) {
       if (error instanceof UiRepoScopeError) {
@@ -534,7 +536,8 @@ export function createUiRouter(input: CreateUiRouterInput): UiRouter {
           const resolved = await resolveScopedRepoPath({
             scope: input.repoScope,
             repoParam: repoPath,
-            requireExplicitWhenMultiRepo: false
+            requireExplicitWhenMultiRepo: false,
+            cwd: routerCwd
           });
           repos.push(resolved);
         } catch (error) {

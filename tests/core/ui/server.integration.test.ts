@@ -7,12 +7,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { getBubblePaths } from "../../../src/core/bubble/paths.js";
 import { normalizeRepoPath } from "../../../src/core/bubble/repoResolution.js";
 import { emitAskHumanFromWorkspace } from "../../../src/core/agent/askHuman.js";
+import { registerRepoInRegistry } from "../../../src/core/repo/registry.js";
 import {
   startUiServer,
   type StartUiServerInput,
   type UiServerHandle
 } from "../../../src/core/ui/server.js";
 import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
+import type { UiEventsBroker } from "../../../src/core/ui/events.js";
+import type { UiRepoScope } from "../../../src/core/ui/repoScope.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -73,13 +76,80 @@ async function createAssetsFixture(): Promise<string> {
   return assetsDir;
 }
 
+async function createRegistryPath(): Promise<string> {
+  const root = await createTempDir("pairflow-ui-server-registry-");
+  return join(root, "repos.json");
+}
+
+async function waitFor(
+  predicate: () => Promise<boolean>,
+  timeoutMs: number = 5_000
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await predicate()) {
+      return;
+    }
+    await new Promise((resolve) => {
+      setTimeout(resolve, 40);
+    });
+  }
+  throw new Error(`Timed out after ${timeoutMs}ms waiting for condition.`);
+}
+
+async function nudgeRegistryUntil(
+  input: {
+    registryPath: string;
+    started: () => boolean;
+  },
+  timeoutMs: number = 4_000
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  let attempt = 0;
+  while (Date.now() < deadline) {
+    if (input.started()) {
+      return;
+    }
+    const repoPath = `/tmp/nudge-sync-${attempt}-long-registry-signature`;
+    const addedAt = new Date(1_700_000_000_000 + attempt).toISOString();
+    attempt += 1;
+    await writeFile(
+      input.registryPath,
+      `${JSON.stringify(
+        {
+          version: 1,
+          repos: [
+            {
+              repoPath,
+              addedAt
+            }
+          ]
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
+    await new Promise((resolve) => {
+      setTimeout(resolve, 180);
+    });
+  }
+  throw new Error(`Timed out after ${timeoutMs}ms waiting for sync start.`);
+}
+
 async function startServer(input: {
   repoPath: string;
   assetsDir: string;
   routerDependencies?: StartUiServerInput["routerDependencies"];
 }): Promise<UiServerHandle> {
+  const registryPath = await createRegistryPath();
+  await registerRepoInRegistry({
+    repoPath: input.repoPath,
+    registryPath
+  });
   return startUiServer({
     repoPaths: [input.repoPath],
+    repoRegistryPath: registryPath,
     assetsDir: input.assetsDir,
     host: "127.0.0.1",
     port: 0,
@@ -196,6 +266,125 @@ describe("UI server integration", () => {
       });
       const timelineEntries = (timeline.body as { timeline: unknown[] }).timeline;
       expect(timelineEntries.length).toBeGreaterThan(0);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("uses repo registry defaults when no --repo scope is provided", async () => {
+    const fixture = await createRepoFixture();
+    const assetsDir = await createAssetsFixture();
+    const registryPath = await createRegistryPath();
+    await registerRepoInRegistry({
+      repoPath: fixture.repoPath,
+      registryPath
+    });
+
+    const server = await startUiServer({
+      repoRegistryPath: registryPath,
+      assetsDir,
+      host: "127.0.0.1",
+      port: 0,
+      pollIntervalMs: 75,
+      debounceMs: 10
+    });
+
+    try {
+      const repos = await requestJson(server.url, "/api/repos");
+      expect(repos.status).toBe(200);
+      expect(repos.body).toEqual({
+        repos: [await normalizeRepoPath(fixture.repoPath)]
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("starts with empty repo registry and returns empty /api/repos", async () => {
+    const assetsDir = await createAssetsFixture();
+    const registryPath = await createRegistryPath();
+
+    const server = await startUiServer({
+      repoRegistryPath: registryPath,
+      assetsDir,
+      host: "127.0.0.1",
+      port: 0,
+      pollIntervalMs: 75,
+      debounceMs: 10
+    });
+
+    try {
+      const repos = await requestJson(server.url, "/api/repos");
+      expect(repos.status).toBe(200);
+      expect(repos.body).toEqual({
+        repos: []
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("hot-reloads repos when registry file changes", async () => {
+    const fixtureA = await createRepoFixture();
+    const fixtureB = await createRepoFixture();
+    const assetsDir = await createAssetsFixture();
+    const registryPath = await createRegistryPath();
+    await registerRepoInRegistry({
+      repoPath: fixtureA.repoPath,
+      registryPath
+    });
+    const normalizedRepoA = await normalizeRepoPath(fixtureA.repoPath);
+    const normalizedRepoB = await normalizeRepoPath(fixtureB.repoPath);
+
+    const server = await startUiServer({
+      repoRegistryPath: registryPath,
+      assetsDir,
+      host: "127.0.0.1",
+      port: 0,
+      pollIntervalMs: 75,
+      debounceMs: 10
+    });
+
+    try {
+      const before = await requestJson(server.url, "/api/repos");
+      expect(before.status).toBe(200);
+      expect(before.body).toEqual({
+        repos: [normalizedRepoA]
+      });
+
+      await registerRepoInRegistry({
+        repoPath: fixtureB.repoPath,
+        registryPath
+      });
+
+      await waitFor(async () => {
+        const repos = await requestJson(server.url, "/api/repos");
+        if (repos.status !== 200) {
+          return false;
+        }
+        const body = repos.body as { repos?: string[] };
+        return (
+          Array.isArray(body.repos) &&
+          body.repos.includes(normalizedRepoA) &&
+          body.repos.includes(normalizedRepoB)
+        );
+      });
+
+      const list = await requestJson(
+        server.url,
+        `/api/bubbles?repo=${encodeURIComponent(fixtureB.repoPath)}`
+      );
+      expect(list.status).toBe(200);
+      expect(list.body).toMatchObject({
+        repo: {
+          repoPath: normalizedRepoB
+        },
+        bubbles: [
+          {
+            bubbleId: fixtureB.bubbleId
+          }
+        ]
+      });
     } finally {
       await server.close();
     }
@@ -537,6 +726,490 @@ describe("UI server integration", () => {
       expect(response.status).toBe(500);
       expect(body).toBe("Internal server error\n");
     } finally {
+      await server.close();
+    }
+  });
+
+  it("does not run queued registry sync after close starts", async () => {
+    const assetsDir = await createAssetsFixture();
+    const registryPath = await createRegistryPath();
+    await writeFile(
+      registryPath,
+      `${JSON.stringify({ version: 1, repos: [] }, null, 2)}\n`,
+      "utf8"
+    );
+
+    let firstSyncStartedObserved = false;
+    let resolveFirstSyncStarted!: () => void;
+    const firstSyncStarted = new Promise<void>((resolve) => {
+      resolveFirstSyncStarted = () => {
+        firstSyncStartedObserved = true;
+        resolve();
+      };
+    });
+    let syncCalls = 0;
+    let allowFirstSyncToFinish!: () => void;
+    const firstSyncGate = new Promise<void>((resolve) => {
+      allowFirstSyncToFinish = resolve;
+    });
+
+    const fakeScope: UiRepoScope = {
+      repos: [],
+      registryPath,
+      has: () => Promise.resolve(false),
+      async refreshFromRegistry() {
+        syncCalls += 1;
+        if (syncCalls === 1) {
+          resolveFirstSyncStarted();
+          await firstSyncGate;
+        }
+        return {
+          changed: false,
+          added: [],
+          removed: [],
+          repos: []
+        };
+      }
+    };
+    const fakeEvents: UiEventsBroker = {
+      subscribe: () => () => undefined,
+      getSnapshot: () => ({
+        id: 0,
+        ts: new Date().toISOString(),
+        type: "snapshot",
+        repos: [],
+        bubbles: []
+      }),
+      refreshNow: () => Promise.resolve(undefined),
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
+    };
+
+    const server = await startUiServer({
+      repoRegistryPath: registryPath,
+      assetsDir,
+      host: "127.0.0.1",
+      port: 0,
+      dependencies: {
+        resolveUiRepoScope: () => Promise.resolve(fakeScope),
+        createUiEventsBroker: () => Promise.resolve(fakeEvents)
+      }
+    });
+
+    try {
+      await nudgeRegistryUntil({
+        registryPath,
+        started: () => firstSyncStartedObserved
+      });
+      await firstSyncStarted;
+
+      for (let index = 0; index < 4; index += 1) {
+        await writeFile(
+          registryPath,
+          `${JSON.stringify(
+            {
+              version: 1,
+              repos: [
+                {
+                  repoPath: `/tmp/repo-${index}-long-signature-path`,
+                  addedAt: "2026-02-25T00:00:01.000Z"
+                }
+              ]
+            },
+            null,
+            2
+          )}\n`,
+          "utf8"
+        );
+        await new Promise((resolve) => {
+          setTimeout(resolve, 30);
+        });
+      }
+      await new Promise((resolve) => {
+        setTimeout(resolve, 220);
+      });
+
+      const closePromise = server.close();
+      let closed = false;
+      void closePromise.then(() => {
+        closed = true;
+      });
+
+      await new Promise((resolve) => {
+        setTimeout(resolve, 120);
+      });
+      expect(closed).toBe(false);
+
+      allowFirstSyncToFinish();
+      await closePromise;
+      expect(syncCalls).toBe(1);
+    } finally {
+      allowFirstSyncToFinish();
+    }
+  });
+
+  it("waits for queued sync chain already in progress when close starts", async () => {
+    const assetsDir = await createAssetsFixture();
+    const registryPath = await createRegistryPath();
+    await writeFile(
+      registryPath,
+      `${JSON.stringify({ version: 1, repos: [] }, null, 2)}\n`,
+      "utf8"
+    );
+
+    let firstSyncStartedObserved = false;
+    let resolveFirstSyncStarted!: () => void;
+    const firstSyncStarted = new Promise<void>((resolve) => {
+      resolveFirstSyncStarted = () => {
+        firstSyncStartedObserved = true;
+        resolve();
+      };
+    });
+    let resolveSecondSyncStarted!: () => void;
+    const secondSyncStarted = new Promise<void>((resolve) => {
+      resolveSecondSyncStarted = resolve;
+    });
+
+    let syncCalls = 0;
+    let allowFirstSyncToFinish!: () => void;
+    const firstSyncGate = new Promise<void>((resolve) => {
+      allowFirstSyncToFinish = resolve;
+    });
+    let allowSecondSyncToFinish!: () => void;
+    const secondSyncGate = new Promise<void>((resolve) => {
+      allowSecondSyncToFinish = resolve;
+    });
+
+    const fakeScope: UiRepoScope = {
+      repos: [],
+      registryPath,
+      has: () => Promise.resolve(false),
+      async refreshFromRegistry() {
+        syncCalls += 1;
+        if (syncCalls === 1) {
+          resolveFirstSyncStarted();
+          await firstSyncGate;
+        }
+        if (syncCalls === 2) {
+          resolveSecondSyncStarted();
+          await secondSyncGate;
+        }
+        return {
+          changed: false,
+          added: [],
+          removed: [],
+          repos: []
+        };
+      }
+    };
+    const fakeEvents: UiEventsBroker = {
+      subscribe: () => () => undefined,
+      getSnapshot: () => ({
+        id: 0,
+        ts: new Date().toISOString(),
+        type: "snapshot",
+        repos: [],
+        bubbles: []
+      }),
+      refreshNow: () => Promise.resolve(undefined),
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
+    };
+
+    const server = await startUiServer({
+      repoRegistryPath: registryPath,
+      assetsDir,
+      host: "127.0.0.1",
+      port: 0,
+      dependencies: {
+        resolveUiRepoScope: () => Promise.resolve(fakeScope),
+        createUiEventsBroker: () => Promise.resolve(fakeEvents)
+      }
+    });
+
+    try {
+      await nudgeRegistryUntil({
+        registryPath,
+        started: () => firstSyncStartedObserved
+      });
+      await firstSyncStarted;
+
+      await writeFile(
+        registryPath,
+        `${JSON.stringify({ version: 1, repos: [{ repoPath: "/tmp/b", addedAt: "2026-02-25T00:00:01.000Z" }] }, null, 2)}\n`,
+        "utf8"
+      );
+      await new Promise((resolve) => {
+        setTimeout(resolve, 220);
+      });
+
+      allowFirstSyncToFinish();
+      await secondSyncStarted;
+
+      const closePromise = server.close();
+      let closed = false;
+      void closePromise.then(() => {
+        closed = true;
+      });
+
+      await new Promise((resolve) => {
+        setTimeout(resolve, 120);
+      });
+      expect(closed).toBe(false);
+
+      allowSecondSyncToFinish();
+      await closePromise;
+      expect(syncCalls).toBe(2);
+    } finally {
+      allowFirstSyncToFinish();
+      allowSecondSyncToFinish();
+    }
+  });
+
+  it("continues applying add diffs when remove diff handling fails", async () => {
+    const assetsDir = await createAssetsFixture();
+    const registryPath = await createRegistryPath();
+    await writeFile(
+      registryPath,
+      `${JSON.stringify({ version: 1, repos: [] }, null, 2)}\n`,
+      "utf8"
+    );
+
+    let syncCallCount = 0;
+    const addCalls: string[] = [];
+
+    const fakeScope: UiRepoScope = {
+      repos: [],
+      registryPath,
+      has: () => Promise.resolve(false),
+      refreshFromRegistry() {
+        syncCallCount += 1;
+        if (syncCallCount === 1) {
+          return Promise.resolve({
+            changed: true,
+            removed: ["/tmp/remove-failure"],
+            added: ["/tmp/add-still-runs"],
+            repos: []
+          });
+        }
+        return Promise.resolve({
+          changed: false,
+          removed: [],
+          added: [],
+          repos: []
+        });
+      }
+    };
+    const fakeEvents: UiEventsBroker = {
+      subscribe: () => () => undefined,
+      getSnapshot: () => ({
+        id: 0,
+        ts: new Date().toISOString(),
+        type: "snapshot",
+        repos: [],
+        bubbles: []
+      }),
+      refreshNow: () => Promise.resolve(undefined),
+      addRepo: (repoPath) => {
+        addCalls.push(repoPath);
+        return Promise.resolve(true);
+      },
+      removeRepo: () =>
+        Promise.reject(new Error("simulated remove failure in sync")),
+      close: () => Promise.resolve(undefined)
+    };
+
+    const server = await startUiServer({
+      repoRegistryPath: registryPath,
+      assetsDir,
+      host: "127.0.0.1",
+      port: 0,
+      dependencies: {
+        resolveUiRepoScope: () => Promise.resolve(fakeScope),
+        createUiEventsBroker: () => Promise.resolve(fakeEvents)
+      }
+    });
+
+    try {
+      await writeFile(
+        registryPath,
+        `${JSON.stringify({ version: 1, repos: [{ repoPath: "/tmp/x", addedAt: "2026-02-25T00:00:02.000Z" }] }, null, 2)}\n`,
+        "utf8"
+      );
+
+      await waitFor(() => Promise.resolve(addCalls.includes("/tmp/add-still-runs")));
+      expect(addCalls).toContain("/tmp/add-still-runs");
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("retries refresh when refreshFromRegistry throws transiently", async () => {
+    const assetsDir = await createAssetsFixture();
+    const registryPath = await createRegistryPath();
+    await writeFile(
+      registryPath,
+      `${JSON.stringify({ version: 1, repos: [] }, null, 2)}\n`,
+      "utf8"
+    );
+
+    let syncCalls = 0;
+    const fakeScope: UiRepoScope = {
+      repos: [],
+      registryPath,
+      has: () => Promise.resolve(false),
+      refreshFromRegistry() {
+        syncCalls += 1;
+        if (syncCalls === 1) {
+          return Promise.reject(new Error("transient refresh error"));
+        }
+        return Promise.resolve({
+          changed: false,
+          added: [],
+          removed: [],
+          repos: []
+        });
+      }
+    };
+    const fakeEvents: UiEventsBroker = {
+      subscribe: () => () => undefined,
+      getSnapshot: () => ({
+        id: 0,
+        ts: new Date().toISOString(),
+        type: "snapshot",
+        repos: [],
+        bubbles: []
+      }),
+      refreshNow: () => Promise.resolve(undefined),
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
+    };
+
+    const server = await startUiServer({
+      repoRegistryPath: registryPath,
+      assetsDir,
+      host: "127.0.0.1",
+      port: 0,
+      dependencies: {
+        resolveUiRepoScope: () => Promise.resolve(fakeScope),
+        createUiEventsBroker: () => Promise.resolve(fakeEvents)
+      }
+    });
+
+    try {
+      await nudgeRegistryUntil({
+        registryPath,
+        started: () => syncCalls >= 2
+      });
+      expect(syncCalls).toBeGreaterThanOrEqual(2);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("coalesces multiple waiters on the same in-flight sync into one follow-up run", async () => {
+    const assetsDir = await createAssetsFixture();
+    const registryPath = await createRegistryPath();
+    await writeFile(
+      registryPath,
+      `${JSON.stringify({ version: 1, repos: [] }, null, 2)}\n`,
+      "utf8"
+    );
+
+    let firstSyncStartedObserved = false;
+    let resolveFirstSyncStarted!: () => void;
+    const firstSyncStarted = new Promise<void>((resolve) => {
+      resolveFirstSyncStarted = () => {
+        firstSyncStartedObserved = true;
+        resolve();
+      };
+    });
+    let allowFirstSyncToFinish!: () => void;
+    const firstSyncGate = new Promise<void>((resolve) => {
+      allowFirstSyncToFinish = resolve;
+    });
+
+    let syncCalls = 0;
+    const fakeScope: UiRepoScope = {
+      repos: [],
+      registryPath,
+      has: () => Promise.resolve(false),
+      async refreshFromRegistry() {
+        syncCalls += 1;
+        if (syncCalls === 1) {
+          resolveFirstSyncStarted();
+          await firstSyncGate;
+        }
+        return {
+          changed: false,
+          added: [],
+          removed: [],
+          repos: []
+        };
+      }
+    };
+    const fakeEvents: UiEventsBroker = {
+      subscribe: () => () => undefined,
+      getSnapshot: () => ({
+        id: 0,
+        ts: new Date().toISOString(),
+        type: "snapshot",
+        repos: [],
+        bubbles: []
+      }),
+      refreshNow: () => Promise.resolve(undefined),
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
+    };
+
+    const server = await startUiServer({
+      repoRegistryPath: registryPath,
+      assetsDir,
+      host: "127.0.0.1",
+      port: 0,
+      dependencies: {
+        resolveUiRepoScope: () => Promise.resolve(fakeScope),
+        createUiEventsBroker: () => Promise.resolve(fakeEvents)
+      }
+    });
+
+    try {
+      await nudgeRegistryUntil({
+        registryPath,
+        started: () => firstSyncStartedObserved
+      });
+      await firstSyncStarted;
+
+      await writeFile(
+        registryPath,
+        `${JSON.stringify({ version: 1, repos: [{ repoPath: "/tmp/b", addedAt: "2026-02-25T00:00:01.000Z" }] }, null, 2)}\n`,
+        "utf8"
+      );
+      await new Promise((resolve) => {
+        setTimeout(resolve, 220);
+      });
+
+      await writeFile(
+        registryPath,
+        `${JSON.stringify({ version: 1, repos: [{ repoPath: "/tmp/c", addedAt: "2026-02-25T00:00:02.000Z" }] }, null, 2)}\n`,
+        "utf8"
+      );
+      await new Promise((resolve) => {
+        setTimeout(resolve, 220);
+      });
+
+      allowFirstSyncToFinish();
+      await waitFor(() => Promise.resolve(syncCalls >= 2));
+      await new Promise((resolve) => {
+        setTimeout(resolve, 250);
+      });
+      expect(syncCalls).toBe(2);
+    } finally {
+      allowFirstSyncToFinish();
       await server.close();
     }
   });

@@ -223,6 +223,22 @@ export {
   runUiServerCommand
 } from "./cli/commands/ui/server.js";
 export {
+  getRepoAddHelpText,
+  parseRepoAddCommandOptions,
+  runRepoAddCommand
+} from "./cli/commands/repo/add.js";
+export {
+  getRepoListHelpText,
+  parseRepoListCommandOptions,
+  renderRepoListText,
+  runRepoListCommand
+} from "./cli/commands/repo/list.js";
+export {
+  getRepoRemoveHelpText,
+  parseRepoRemoveCommandOptions,
+  runRepoRemoveCommand
+} from "./cli/commands/repo/remove.js";
+export {
   TOML_PARSER_LIMITATIONS,
   renderBubbleConfigToml,
   assertValidBubbleConfig,
@@ -317,6 +333,14 @@ export {
 export {
   emitTmuxDeliveryNotification
 } from "./core/runtime/tmuxDelivery.js";
+export {
+  readRepoRegistry,
+  registerRepoInRegistry,
+  removeRepoFromRegistry,
+  resolveRepoRegistryPath,
+  RepoRegistryError,
+  RepoRegistryLockError
+} from "./core/repo/registry.js";
 export {
   computeWatchdogStatus
 } from "./core/runtime/watchdog.js";
@@ -574,6 +598,15 @@ export type {
   NotificationPathExists,
   NotificationSoundPlayer
 } from "./core/runtime/notifications.js";
+export type {
+  ReadRepoRegistryInput,
+  ReadRepoRegistryResult,
+  RegisterRepoInput,
+  RegisterRepoResult,
+  RemoveRepoInput,
+  RemoveRepoResult,
+  RepoRegistryEntry
+} from "./core/repo/registry.js";
 export type {
   EmitTmuxDeliveryNotificationInput,
   EmitTmuxDeliveryNotificationResult,

@@ -1,6 +1,6 @@
-import { watch, type FSWatcher } from "node:fs";
+import { realpathSync, watch, type FSWatcher } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 import { getBubblePaths } from "../bubble/paths.js";
 import {
@@ -13,6 +13,7 @@ import type {
   UiBubbleSummary,
   UiBubbleUpdatedEvent,
   UiEvent,
+  UiRepoRemovedEvent,
   UiRepoSummary,
   UiRepoUpdatedEvent,
   UiSnapshotEvent
@@ -64,6 +65,8 @@ export interface UiEventsBroker {
   ): () => void;
   getSnapshot(input?: UiEventsSubscriptionInput): UiSnapshotEvent;
   refreshNow(): Promise<void>;
+  addRepo(repoPath: string): Promise<boolean>;
+  removeRepo(repoPath: string): Promise<boolean>;
   close(): Promise<void>;
 }
 
@@ -79,6 +82,15 @@ interface RepoDiff {
 const defaultPollIntervalMs = 2_000;
 const defaultDebounceMs = 150;
 const defaultHistoryLimit = 512;
+
+function normalizeRepoPathForQueue(repoPath: string): string {
+  const resolvedRepoPath = resolve(repoPath);
+  try {
+    return realpathSync(resolvedRepoPath);
+  } catch {
+    return resolvedRepoPath;
+  }
+}
 
 async function listBubbleIds(repoPath: string): Promise<string[]> {
   const bubblesDir = join(repoPath, ".pairflow", "bubbles");
@@ -184,11 +196,19 @@ class UiEventsBrokerImpl implements UiEventsBroker {
   private readonly pollIntervalMs: number;
   private readonly debounceMs: number;
   private readonly historyLimit: number;
-  private readonly repos: string[];
+  private repos: string[];
   private readonly snapshots = new Map<string, RepoSnapshot>();
   private readonly listeners = new Map<number, UiEventsListener>();
   private readonly watchers = new Map<string, FSWatcher>();
   private readonly history: UiEvent[] = [];
+  private readonly repoOperationQueues = new Map<string, Promise<void>>();
+  private readonly repoOperationInFlight = new Map<
+    string,
+    {
+      kind: "add" | "remove";
+      promise: Promise<boolean>;
+    }
+  >();
   private nextListenerId = 1;
   private nextEventId = 1;
   private pollTimer: NodeJS.Timeout | null = null;
@@ -205,6 +225,60 @@ class UiEventsBrokerImpl implements UiEventsBroker {
     this.pollIntervalMs = input.pollIntervalMs ?? defaultPollIntervalMs;
     this.debounceMs = input.debounceMs ?? defaultDebounceMs;
     this.historyLimit = input.historyLimit ?? defaultHistoryLimit;
+  }
+
+  public async addRepo(repoPath: string): Promise<boolean> {
+    if (this.closed) {
+      return false;
+    }
+
+    const normalized = normalizeRepoPathForQueue(repoPath);
+    const inFlight = this.repoOperationInFlight.get(normalized);
+    if (inFlight?.kind === "add") {
+      return inFlight.promise;
+    }
+
+    const pending = this.enqueueRepoOperation(normalized, () =>
+      this.addRepoInternal(normalized)
+    );
+    const operationKind = "add" as const;
+    this.repoOperationInFlight.set(normalized, {
+      kind: operationKind,
+      promise: pending
+    });
+    return pending.finally(() => {
+      const active = this.repoOperationInFlight.get(normalized);
+      if (active?.promise === pending && active.kind === operationKind) {
+        this.repoOperationInFlight.delete(normalized);
+      }
+    });
+  }
+
+  public async removeRepo(repoPath: string): Promise<boolean> {
+    if (this.closed) {
+      return false;
+    }
+
+    const normalized = normalizeRepoPathForQueue(repoPath);
+    const inFlight = this.repoOperationInFlight.get(normalized);
+    if (inFlight?.kind === "remove") {
+      return inFlight.promise;
+    }
+
+    const pending = this.enqueueRepoOperation(normalized, () =>
+      this.removeRepoInternal(normalized)
+    );
+    const operationKind = "remove" as const;
+    this.repoOperationInFlight.set(normalized, {
+      kind: operationKind,
+      promise: pending
+    });
+    return pending.finally(() => {
+      const active = this.repoOperationInFlight.get(normalized);
+      if (active?.promise === pending && active.kind === operationKind) {
+        this.repoOperationInFlight.delete(normalized);
+      }
+    });
   }
 
   public async start(): Promise<void> {
@@ -315,6 +389,73 @@ class UiEventsBrokerImpl implements UiEventsBroker {
 
   public async refreshNow(): Promise<void> {
     await this.scanAll(true);
+  }
+
+  private async addRepoInternal(normalized: string): Promise<boolean> {
+    if (this.closed) {
+      return false;
+    }
+    if (this.repos.includes(normalized)) {
+      return false;
+    }
+
+    this.repos = [...this.repos, normalized].sort((left, right) =>
+      left.localeCompare(right)
+    );
+    const diff = await this.scanRepo(normalized, true);
+    await this.refreshWatchers();
+    this.notify(this.nextRepoEvent(normalized, diff.repo));
+    for (const event of diff.changed) {
+      this.notify(event);
+    }
+    return true;
+  }
+
+  private enqueueRepoOperation(
+    normalized: string,
+    task: () => Promise<boolean>
+  ): Promise<boolean> {
+    const previous = this.repoOperationQueues.get(normalized) ?? Promise.resolve();
+    const result = previous
+      .catch(() => undefined)
+      .then(task);
+    const queueTail = result.then(
+      () => undefined,
+      () => undefined
+    );
+    this.repoOperationQueues.set(normalized, queueTail);
+    void queueTail.finally(() => {
+      if (this.repoOperationQueues.get(normalized) === queueTail) {
+        this.repoOperationQueues.delete(normalized);
+      }
+    });
+    return result;
+  }
+
+  private async removeRepoInternal(normalized: string): Promise<boolean> {
+    if (this.closed) {
+      return false;
+    }
+    if (!this.repos.includes(normalized)) {
+      return false;
+    }
+
+    this.repos = this.repos.filter((candidate) => candidate !== normalized);
+    const previous = this.snapshots.get(normalized);
+    this.snapshots.delete(normalized);
+    const removedBubbleIds =
+      previous === undefined
+        ? []
+        : [...previous.bubbles.keys()].sort((left, right) =>
+            left.localeCompare(right)
+          );
+
+    await this.refreshWatchers();
+    for (const bubbleId of removedBubbleIds) {
+      this.notify(this.nextBubbleRemovedEvent(normalized, bubbleId));
+    }
+    this.notify(this.nextRepoRemovedEvent(normalized));
+    return true;
   }
 
   private notify(event: UiEvent): void {
@@ -430,6 +571,17 @@ class UiEventsBrokerImpl implements UiEventsBroker {
     };
   }
 
+  private nextRepoRemovedEvent(repoPath: string): UiRepoRemovedEvent {
+    const id = this.nextEventId;
+    this.nextEventId += 1;
+    return {
+      id,
+      ts: new Date().toISOString(),
+      type: "repo.removed",
+      repoPath
+    };
+  }
+
   private async scanRepo(repoPath: string, emitEvents: boolean): Promise<RepoDiff> {
     const view: BubbleListView = await listBubbles({
       repoPath
@@ -449,10 +601,10 @@ class UiEventsBrokerImpl implements UiEventsBroker {
         fingerprint
       });
 
-      if (!emitEvents || previous === undefined) {
+      if (!emitEvents) {
         continue;
       }
-      const previousBubble = previous.bubbles.get(summary.bubbleId);
+      const previousBubble = previous?.bubbles.get(summary.bubbleId);
       if (
         previousBubble === undefined ||
         previousBubble.fingerprint !== fingerprint

@@ -1,7 +1,7 @@
-import { constants as fsConstants } from "node:fs";
+import { constants as fsConstants, watch, type FSWatcher } from "node:fs";
 import { createServer, type Server } from "node:http";
-import { access, readFile } from "node:fs/promises";
-import { dirname, extname, join, resolve } from "node:path";
+import { access, readFile, stat } from "node:fs/promises";
+import { basename, dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createUiEventsBroker, type UiEventsBroker } from "./events.js";
@@ -21,6 +21,7 @@ const defaultPort = 4173;
 
 export interface StartUiServerInput {
   repoPaths?: string[] | undefined;
+  repoRegistryPath?: string | undefined;
   cwd?: string | undefined;
   host?: string | undefined;
   port?: number | undefined;
@@ -29,6 +30,12 @@ export interface StartUiServerInput {
   debounceMs?: number | undefined;
   keepAliveIntervalMs?: number | undefined;
   routerDependencies?: CreateUiRouterInput["dependencies"] | undefined;
+  dependencies?:
+    | {
+        resolveUiRepoScope?: typeof resolveUiRepoScope;
+        createUiEventsBroker?: typeof createUiEventsBroker;
+      }
+    | undefined;
 }
 
 export interface UiServerHandle {
@@ -69,6 +76,17 @@ async function pathExists(path: string): Promise<boolean> {
   return access(path, fsConstants.F_OK)
     .then(() => true)
     .catch(() => false);
+}
+
+async function fileSignature(path: string): Promise<string> {
+  return stat(path)
+    .then((info) => `${info.mtimeMs}:${info.size}`)
+    .catch((error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") {
+        return "missing";
+      }
+      throw error;
+    });
 }
 
 async function findAssetsDirFromCwd(cwd: string): Promise<string | null> {
@@ -180,9 +198,16 @@ export async function startUiServer(
   const host = input.host ?? defaultHost;
   const requestedPort = input.port ?? defaultPort;
 
-  const repoScope = await resolveUiRepoScope({
+  const resolveScope = input.dependencies?.resolveUiRepoScope ?? resolveUiRepoScope;
+  const createEventsBroker =
+    input.dependencies?.createUiEventsBroker ?? createUiEventsBroker;
+
+  const repoScope = await resolveScope({
     repoPaths: input.repoPaths,
-    cwd
+    cwd,
+    ...(input.repoRegistryPath !== undefined
+      ? { registryPath: input.repoRegistryPath }
+      : {})
   });
 
   const assetsDir = await resolveAssetsDir({
@@ -190,7 +215,7 @@ export async function startUiServer(
     ...(input.assetsDir !== undefined ? { explicitAssetsDir: input.assetsDir } : {})
   });
 
-  const events: UiEventsBroker = await createUiEventsBroker({
+  const events: UiEventsBroker = await createEventsBroker({
     repos: repoScope.repos,
     ...(input.pollIntervalMs !== undefined
       ? { pollIntervalMs: input.pollIntervalMs }
@@ -208,6 +233,160 @@ export async function startUiServer(
       ? { dependencies: input.routerDependencies }
       : {})
   });
+
+  let registryWatcher: FSWatcher | null = null;
+  let registryWatchDebounceTimer: NodeJS.Timeout | null = null;
+  let registrySyncClosing = false;
+  let registrySyncPromise: Promise<void> | null = null;
+  let registrySyncRequestedVersion = 0;
+  let registrySyncAppliedVersion = 0;
+  let lastRegistrySignature: string | null = null;
+
+  const runRegistrySyncLoop = async (
+    refreshFromRegistry: () => ReturnType<
+      NonNullable<UiRepoScope["refreshFromRegistry"]>
+    >
+  ): Promise<void> => {
+    while (
+      !registrySyncClosing &&
+      registrySyncAppliedVersion < registrySyncRequestedVersion
+    ) {
+      const requestVersion = registrySyncRequestedVersion;
+      let refreshed = false;
+      try {
+        const diff = await refreshFromRegistry();
+        refreshed = true;
+        for (const removed of diff.removed) {
+          try {
+            await events.removeRepo(removed);
+          } catch (error) {
+            const reason = error instanceof Error ? error.message : String(error);
+            process.stderr.write(
+              `UI repo scope remove sync error (${removed}): ${reason}\n`
+            );
+          }
+        }
+        for (const added of diff.added) {
+          try {
+            await events.addRepo(added);
+          } catch (error) {
+            const reason = error instanceof Error ? error.message : String(error);
+            process.stderr.write(
+              `UI repo scope add sync error (${added}): ${reason}\n`
+            );
+          }
+        }
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        process.stderr.write(`UI repo scope refresh error: ${reason}\n`);
+      }
+      if (refreshed) {
+        registrySyncAppliedVersion = requestVersion;
+        continue;
+      }
+      await new Promise<void>((resolvePromise) => {
+        setTimeout(resolvePromise, 120);
+      });
+    }
+  };
+
+  const syncRepoScopeFromRegistry = async (): Promise<void> => {
+    if (registrySyncClosing) {
+      return;
+    }
+    if (repoScope.refreshFromRegistry === undefined) {
+      return;
+    }
+    const requestVersion = registrySyncRequestedVersion + 1;
+    registrySyncRequestedVersion = requestVersion;
+    const refreshFromRegistry = (): ReturnType<
+      NonNullable<UiRepoScope["refreshFromRegistry"]>
+    > => repoScope.refreshFromRegistry!();
+
+    while (!registrySyncClosing) {
+      const inFlight = registrySyncPromise;
+      if (inFlight !== null) {
+        await inFlight;
+        if (
+          registrySyncClosing ||
+          registrySyncAppliedVersion >= requestVersion
+        ) {
+          return;
+        }
+        continue;
+      }
+
+      const chainPromise = runRegistrySyncLoop(refreshFromRegistry);
+      registrySyncPromise = chainPromise;
+      try {
+        await chainPromise;
+      } finally {
+        if (registrySyncPromise === chainPromise) {
+          registrySyncPromise = null;
+        }
+      }
+      return;
+    }
+  };
+
+  const repoRegistryPath = repoScope.registryPath;
+  if (repoRegistryPath !== undefined && repoScope.refreshFromRegistry !== undefined) {
+    const registryDir = dirname(repoRegistryPath);
+    const registryFileName = basename(repoRegistryPath);
+    lastRegistrySignature = await fileSignature(repoRegistryPath).catch(
+      () => null
+    );
+
+    const scheduleRegistryRefresh = (): void => {
+      if (registrySyncClosing) {
+        return;
+      }
+      if (registryWatchDebounceTimer !== null) {
+        clearTimeout(registryWatchDebounceTimer);
+      }
+      registryWatchDebounceTimer = setTimeout(() => {
+        registryWatchDebounceTimer = null;
+        void (async () => {
+          if (registrySyncClosing) {
+            return;
+          }
+          const nextSignature = await fileSignature(repoRegistryPath).catch(
+            () => null
+          );
+          if (registrySyncClosing) {
+            return;
+          }
+          if (nextSignature === lastRegistrySignature) {
+            return;
+          }
+          lastRegistrySignature = nextSignature;
+          await syncRepoScopeFromRegistry();
+        })();
+      }, 120);
+    };
+
+    try {
+      registryWatcher = watch(registryDir, (_eventType, fileName) => {
+        // macOS can emit null/empty fileName for directory-level changes.
+        // We still schedule refresh; file-signature gating suppresses no-op work.
+        if (
+          fileName !== null &&
+          fileName.length > 0 &&
+          fileName !== registryFileName
+        ) {
+          return;
+        }
+        scheduleRegistryRefresh();
+      });
+      registryWatcher.on("error", (error) => {
+        const reason = error instanceof Error ? error.message : String(error);
+        process.stderr.write(`UI repo registry watch error: ${reason}\n`);
+      });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`UI repo registry watch setup failed: ${reason}\n`);
+    }
+  }
 
   const server = createServer((req, res) => {
     void (async () => {
@@ -274,6 +453,18 @@ export async function startUiServer(
     repoScope,
     assetsDir,
     async close(): Promise<void> {
+      registrySyncClosing = true;
+      if (registryWatchDebounceTimer !== null) {
+        clearTimeout(registryWatchDebounceTimer);
+        registryWatchDebounceTimer = null;
+      }
+      if (registryWatcher !== null) {
+        registryWatcher.close();
+        registryWatcher = null;
+      }
+      if (registrySyncPromise !== null) {
+        await registrySyncPromise;
+      }
       await closeServer(server);
       await events.close();
     }

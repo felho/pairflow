@@ -32,7 +32,7 @@ export function getUiServerHelpText(): string {
     "  pairflow ui [--repo <path>]... [--host <host>] [--port <port>] [--assets-dir <path>]",
     "",
     "Options:",
-    "  --repo <path>         Repository scope path (repeatable). Defaults to git top-level from cwd.",
+    "  --repo <path>         Registry filter path (repeatable). Defaults to all repos in ~/.pairflow/repos.json.",
     "  --host <host>         Listening host (default: 127.0.0.1)",
     "  --port <port>         Listening port (default: 4173)",
     "  --assets-dir <path>   UI build output directory containing index.html",
