@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ProtocolMessageType, UiTimelineEntry } from "../../lib/types";
 
 function payloadSummary(entry: UiTimelineEntry): string {
@@ -125,6 +125,7 @@ export interface BubbleTimelineProps {
 
 export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [compact, setCompact] = useState(true);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -133,8 +134,22 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
     }
   }, [props.entries]);
 
+  const hasEntries = !props.isLoading && props.error === null && props.entries !== null && props.entries.length > 0;
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
+      {hasEntries ? (
+        <div className="flex items-center justify-end pb-1">
+          <button
+            type="button"
+            onClick={() => setCompact((v) => !v)}
+            className="text-[9px] text-[#555] hover:text-[#888] transition-colors"
+          >
+            {compact ? "Expand all" : "Collapse all"}
+          </button>
+        </div>
+      ) : null}
+
       {props.isLoading ? (
         <div className="py-2 text-[10px] text-[#666]">Loading timeline...</div>
       ) : null}
@@ -149,7 +164,7 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
         <div className="py-2 text-[10px] text-[#555]">No timeline entries yet.</div>
       ) : null}
 
-      {!props.isLoading && props.error === null && props.entries !== null && props.entries.length > 0 ? (
+      {hasEntries && props.entries !== null ? (
         <div ref={scrollRef} className="flex-1 overflow-y-auto pr-1">
           {props.entries.map((entry) => {
             const role = resolveRole(entry);
@@ -183,22 +198,26 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
                       <span className="text-[#555]">({role === "system" ? "system" : role === "human" ? "human" : role === "review" ? "reviewer" : "implementer"})</span>
                     </div>
                   )}
-                  <div className="leading-relaxed text-[#666]">
+                  <div className={`leading-relaxed text-[#666]${compact ? " line-clamp-1" : ""}`}>
                     {payloadSummary(entry)}
-                    {findingTags.map((tag) => (
-                      <span
-                        key={tag.severity}
-                        className={`ml-1 inline-block rounded px-1 text-[9px] font-semibold leading-tight border ${tag.style}`}
-                      >
-                        {tag.severity}
-                      </span>
-                    ))}
-                    {cleanPass ? (
-                      <span className="ml-1 inline-block rounded border border-emerald-500/20 bg-emerald-500/10 px-1 text-[9px] font-semibold leading-tight text-emerald-500">
-                        &#x2713; clean
-                      </span>
-                    ) : null}
                   </div>
+                  {(findingTags.length > 0 || cleanPass) ? (
+                    <div className="mt-0.5 flex flex-wrap gap-1">
+                      {findingTags.map((tag) => (
+                        <span
+                          key={tag.severity}
+                          className={`inline-block rounded px-1 text-[9px] font-semibold leading-tight border ${tag.style}`}
+                        >
+                          {tag.severity}
+                        </span>
+                      ))}
+                      {cleanPass ? (
+                        <span className="inline-block rounded border border-emerald-500/20 bg-emerald-500/10 px-1 text-[9px] font-semibold leading-tight text-emerald-500">
+                          &#x2713; clean
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
                 <span className="flex-shrink-0 pt-px font-mono text-[9px] text-[#444]">
                   {formatTime(entry.ts)}
