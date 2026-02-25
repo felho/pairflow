@@ -17,6 +17,7 @@ import { resumeBubble } from "../bubble/resumeBubble.js";
 import { commitBubble } from "../bubble/commitBubble.js";
 import { mergeBubble } from "../bubble/mergeBubble.js";
 import { openBubble } from "../bubble/openBubble.js";
+import { attachBubble } from "../bubble/attachBubble.js";
 import { stopBubble } from "../bubble/stopBubble.js";
 import type { BubbleLifecycleState } from "../../types/bubble.js";
 import type {
@@ -70,6 +71,7 @@ interface UiRouterDependencies {
   commitBubble: typeof commitBubble;
   mergeBubble: typeof mergeBubble;
   openBubble: typeof openBubble;
+  attachBubble: typeof attachBubble;
   stopBubble: typeof stopBubble;
 }
 
@@ -390,6 +392,7 @@ export function createUiRouter(input: CreateUiRouterInput): UiRouter {
     commitBubble: input.dependencies?.commitBubble ?? commitBubble,
     mergeBubble: input.dependencies?.mergeBubble ?? mergeBubble,
     openBubble: input.dependencies?.openBubble ?? openBubble,
+    attachBubble: input.dependencies?.attachBubble ?? attachBubble,
     stopBubble: input.dependencies?.stopBubble ?? stopBubble
   };
 
@@ -795,6 +798,15 @@ export function createUiRouter(input: CreateUiRouterInput): UiRouter {
                 }
                 case "open": {
                   const result = await dependencies.openBubble({
+                    bubbleId,
+                    repoPath,
+                    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+                  });
+                  sendJson(res, 200, { result });
+                  return true;
+                }
+                case "attach": {
+                  const result = await dependencies.attachBubble({
                     bubbleId,
                     repoPath,
                     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})

@@ -15,6 +15,7 @@ const actionLabels: Record<BubbleActionKind, string> = {
   commit: "Commit",
   merge: "Merge",
   open: "Open",
+  attach: "Attach",
   stop: "Stop"
 };
 
@@ -53,7 +54,7 @@ describe("ActionBar", () => {
           retryHint={null}
           actionFailure={null}
           onAction={onAction}
-          onAttach={vi.fn(async () => undefined)}
+
           onClearFeedback={vi.fn()}
         />
       );
@@ -93,7 +94,7 @@ describe("ActionBar", () => {
         retryHint={null}
         actionFailure={null}
         onAction={onAction}
-        onAttach={vi.fn(async () => undefined)}
+
         onClearFeedback={vi.fn()}
       />
     );
@@ -136,7 +137,7 @@ describe("ActionBar", () => {
         retryHint={null}
         actionFailure={null}
         onAction={onAction}
-        onAttach={vi.fn(async () => undefined)}
+
         onClearFeedback={vi.fn()}
       />
     );
@@ -151,9 +152,9 @@ describe("ActionBar", () => {
     });
   });
 
-  it("copies exact attach command", async () => {
+  it("calls onAction with attach action when Attach button clicked", async () => {
     const user = userEvent.setup();
-    const onAttach = vi.fn(async () => undefined);
+    const onAction = vi.fn(async () => undefined);
 
     render(
       <ActionBar
@@ -172,15 +173,17 @@ describe("ActionBar", () => {
         actionError={null}
         retryHint={null}
         actionFailure={null}
-        onAction={vi.fn(async () => undefined)}
-        onAttach={onAttach}
+        onAction={onAction}
         onClearFeedback={vi.fn()}
       />
     );
 
     await user.click(screen.getByRole("button", { name: "Attach" }));
 
-    expect(onAttach).toHaveBeenCalledWith("tmux attach -t pf-b-run");
-    expect(screen.getByText("Attach command copied to clipboard.")).toBeInTheDocument();
+    expect(onAction).toHaveBeenCalledWith({
+      bubbleId: "b-run",
+      action: "attach"
+    });
+    expect(screen.getByText("Opening Warp terminal...")).toBeInTheDocument();
   });
 });

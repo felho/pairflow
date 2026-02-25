@@ -68,6 +68,7 @@ function createApiStub(overrides: Partial<PairflowApiClient>): PairflowApiClient
     commitBubble: vi.fn(async () => ({})),
     mergeBubble: vi.fn(async () => ({})),
     openBubble: vi.fn(async () => ({})),
+    attachBubble: vi.fn(async () => ({})),
     stopBubble: vi.fn(async () => ({})),
     ...overrides
   };
@@ -404,7 +405,7 @@ describe("createBubbleStore", () => {
     const api = createApiStub({
       getRepos: vi.fn(async () => ["/repo-a"]),
       getBubbles,
-      openBubble: vi.fn(async () => {
+      startBubble: vi.fn(async () => {
         throw new PairflowApiError({
           message: "state changed",
           status: 409,
@@ -427,7 +428,7 @@ describe("createBubbleStore", () => {
     await expect(
       store.getState().runBubbleAction({
         bubbleId: "b-a",
-        action: "open"
+        action: "start"
       })
     ).rejects.toBeInstanceOf(PairflowApiError);
 

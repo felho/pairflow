@@ -424,6 +424,9 @@ async function performBubbleAction(
     case "open":
       await api.openBubble(bubble.repoPath, bubble.bubbleId);
       return;
+    case "attach":
+      await api.attachBubble(bubble.repoPath, bubble.bubbleId);
+      return;
     case "stop":
       await api.stopBubble(bubble.repoPath, bubble.bubbleId);
       return;
@@ -1029,9 +1032,9 @@ export function createBubbleStore(
           let retryHint: string | null = null;
 
           if (error instanceof PairflowApiError && error.status === 409) {
-            if (inputValue.action === "open") {
-              // Open is not a state-changing action; show the actual error message
-              // instead of the generic "state changed" retry hint.
+            if (inputValue.action === "open" || inputValue.action === "attach") {
+              // Open/attach are not state-changing actions; show the actual error
+              // message instead of the generic "state changed" retry hint.
               retryHint = null;
             } else {
               retryHint =

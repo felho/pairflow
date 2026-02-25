@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getAttachAvailability } from "../../lib/attachAvailability";
-import { copyToClipboard } from "../../lib/clipboard";
 import type {
   BubbleActionKind,
   BubbleCardModel,
@@ -206,9 +205,6 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
           retryHint={props.actionRetryHint}
           actionFailure={props.actionFailure}
           onAction={props.onAction}
-          onAttach={async (command) => {
-            await copyToClipboard(command);
-          }}
           onClearFeedback={props.onClearActionFeedback}
         />
       </div>

@@ -22,6 +22,7 @@ const actionLabels: Record<BubbleActionKind, string> = {
   commit: "Commit",
   merge: "Merge",
   open: "Open",
+  attach: "Attach",
   stop: "Stop"
 };
 
@@ -53,7 +54,6 @@ export interface ActionBarProps {
   retryHint: string | null;
   actionFailure: BubbleActionKind | null;
   onAction(input: RunBubbleActionInput): Promise<void>;
-  onAttach(command: string): Promise<void>;
   onClearFeedback(): void;
 }
 
@@ -180,15 +180,17 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
             disabled={!props.attach.enabled || props.isSubmitting}
             onClick={() => {
               setAttachFeedback(null);
+              props.onClearFeedback();
               void props
-                .onAttach(props.attach.command)
-                .then(() => {
-                  setAttachFeedback("Attach command copied to clipboard.");
+                .onAction({
+                  bubbleId: props.bubble.bubbleId,
+                  action: "attach"
                 })
-                .catch((error: unknown) => {
-                  setAttachFeedback(
-                    error instanceof Error ? error.message : String(error)
-                  );
+                .then(() => {
+                  setAttachFeedback("Opening Warp terminal...");
+                })
+                .catch(() => {
+                  // Error is displayed by the generic actionError handler.
                 });
             }}
           >

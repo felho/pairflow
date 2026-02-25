@@ -33,6 +33,7 @@ export const bubbleActionKinds = [
   "commit",
   "merge",
   "open",
+  "attach",
   "stop"
 ] as const;
 export type BubbleActionKind = (typeof bubbleActionKinds)[number];
