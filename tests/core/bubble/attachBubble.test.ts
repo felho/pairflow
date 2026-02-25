@@ -77,13 +77,13 @@ describe("attachBubble", () => {
     expect(result.bubbleId).toBe(resolved.bubbleId);
     expect(result.tmuxSessionName).toBe("pf-b_attach_01");
 
-    expect(capturedYamlPath).toBe("/tmp/pairflow-attach-b_attach_01.yaml");
-    expect(capturedYamlContent).toContain("tmux attach -t pf-b_attach_01");
+    expect(capturedYamlPath).toMatch(/\.warp\/launch_configurations\/pf-b_attach_01\.yaml$/u);
+    expect(capturedYamlContent).toContain('exec: "tmux attach -t pf-b_attach_01"');
     expect(capturedYamlContent).toContain(`cwd: "${resolved.repoPath}"`);
     expect(capturedYamlContent).toContain('name: "pf-b_attach_01"');
 
     expect(capturedCommand).toEqual({
-      command: `open "warp://launch//tmp/pairflow-attach-b_attach_01.yaml"`,
+      command: `open "warp://launch/pf-b_attach_01"`,
       cwd: resolved.repoPath
     });
   });

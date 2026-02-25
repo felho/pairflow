@@ -1,4 +1,6 @@
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { spawn } from "node:child_process";
 
 import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
@@ -58,7 +60,7 @@ function buildWarpLaunchYaml(
     "      - layout:",
     `          cwd: "${cwd}"`,
     "          commands:",
-    `            - "tmux attach -t ${sessionName}"`,
+    `            - exec: "tmux attach -t ${sessionName}"`,
     ""
   ].join("\n");
 }
@@ -142,11 +144,13 @@ export async function attachBubble(
 
   const cwd = resolved.repoPath;
   const yamlContent = buildWarpLaunchYaml(tmuxSessionName, cwd);
-  const yamlPath = `/tmp/pairflow-attach-${resolved.bubbleId}.yaml`;
+  const launchConfigDir = join(homedir(), ".warp", "launch_configurations");
+  await mkdir(launchConfigDir, { recursive: true });
+  const yamlPath = join(launchConfigDir, `${tmuxSessionName}.yaml`);
 
   await writeYaml(yamlPath, yamlContent);
 
-  const command = `open "warp://launch/${yamlPath}"`;
+  const command = `open "warp://launch/${tmuxSessionName}"`;
   const runCommand = dependencies.executeAttachCommand ?? executeAttachCommand;
   const executed = await runCommand({
     command,
