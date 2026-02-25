@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { ProtocolMessageType, UiTimelineEntry } from "../../lib/types";
 
 function payloadSummary(entry: UiTimelineEntry): string {
@@ -123,6 +124,15 @@ export interface BubbleTimelineProps {
 }
 
 export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [props.entries]);
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       {props.isLoading ? (
@@ -140,7 +150,7 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
       ) : null}
 
       {!props.isLoading && props.error === null && props.entries !== null && props.entries.length > 0 ? (
-        <div className="flex-1 overflow-y-auto pr-1">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto pr-1">
           {props.entries.map((entry) => {
             const role = resolveRole(entry);
             const isConvergence = entry.type === "CONVERGENCE";
