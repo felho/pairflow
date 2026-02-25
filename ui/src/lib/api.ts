@@ -1,4 +1,5 @@
 import type {
+  BubbleDeleteResult,
   CommitActionInput,
   MergeActionInput,
   UiApiErrorBody,
@@ -25,10 +26,6 @@ interface BubbleTimelineResponse {
   bubbleId: string;
   repoPath: string;
   timeline: UiTimelineEntry[];
-}
-
-interface BubbleActionResponse {
-  result: Record<string, unknown>;
 }
 
 export interface PairflowApiClient {
@@ -66,6 +63,11 @@ export interface PairflowApiClient {
   openBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>>;
   attachBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>>;
   stopBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>>;
+  deleteBubble(
+    repoPath: string,
+    bubbleId: string,
+    input?: { force?: boolean }
+  ): Promise<BubbleDeleteResult>;
 }
 
 export class PairflowApiError extends Error {
@@ -119,14 +121,14 @@ function bubbleUrl(baseUrl: string, repoPath: string, bubbleId: string, action?:
   );
 }
 
-async function postBubbleAction(
+async function postBubbleAction<T>(
   baseUrl: string,
   repoPath: string,
   bubbleId: string,
   action: string,
   body?: Record<string, unknown>
-): Promise<Record<string, unknown>> {
-  const payload = await requestJson<BubbleActionResponse>(
+): Promise<T> {
+  const payload = await requestJson<{ result: T }>(
     bubbleUrl(baseUrl, repoPath, bubbleId, action),
     {
       method: "POST",
@@ -281,6 +283,21 @@ export function createApiClient(baseUrl: string = ""): PairflowApiClient {
 
     async stopBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>> {
       return postBubbleAction(baseUrl, repoPath, bubbleId, "stop");
+    },
+
+    async deleteBubble(
+      repoPath: string,
+      bubbleId: string,
+      input?: { force?: boolean }
+    ): Promise<BubbleDeleteResult> {
+      // Backend returns 202 when deletion needs confirmation; requestJson accepts any 2xx.
+      return postBubbleAction<BubbleDeleteResult>(
+        baseUrl,
+        repoPath,
+        bubbleId,
+        "delete",
+        input?.force === true ? { force: true } : undefined
+      );
     }
   };
 }

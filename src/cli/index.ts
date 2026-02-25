@@ -67,6 +67,10 @@ import {
   runBubbleStopCommand
 } from "./commands/bubble/stop.js";
 import {
+  getBubbleDeleteHelpText,
+  runBubbleDeleteCommand
+} from "./commands/bubble/delete.js";
+import {
   getBubbleStatusHelpText,
   parseBubbleStatusCommandOptions,
   renderBubbleStatusText,
@@ -279,6 +283,65 @@ async function handleBubbleStopCommand(args: string[]): Promise<number> {
   return 0;
 }
 
+function formatDeleteArtifactsText(input: {
+  worktreeExists: boolean;
+  worktreePath: string;
+  tmuxSessionExists: boolean;
+  tmuxSessionName: string;
+  runtimeSessionExists: boolean;
+  branchExists: boolean;
+  branchName: string;
+}): string {
+  const lines: string[] = [];
+  if (input.worktreeExists) {
+    lines.push(`  worktree: ${input.worktreePath}`);
+  }
+  if (input.tmuxSessionExists) {
+    lines.push(`  tmux session: ${input.tmuxSessionName}`);
+  }
+  if (input.runtimeSessionExists) {
+    lines.push("  runtime session entry: present");
+  }
+  if (input.branchExists) {
+    lines.push(`  branch: ${input.branchName}`);
+  }
+  return lines.join("\n");
+}
+
+async function handleBubbleDeleteCommand(args: string[]): Promise<number> {
+  try {
+    const result = await runBubbleDeleteCommand(args);
+    if (result === null) {
+      process.stdout.write(`${getBubbleDeleteHelpText()}\n`);
+      return 0;
+    }
+
+    if (result.requiresConfirmation) {
+      process.stdout.write(
+        `Delete confirmation required for ${result.bubbleId}.\n${formatDeleteArtifactsText({
+          worktreeExists: result.artifacts.worktree.exists,
+          worktreePath: result.artifacts.worktree.path,
+          tmuxSessionExists: result.artifacts.tmux.exists,
+          tmuxSessionName: result.artifacts.tmux.sessionName,
+          runtimeSessionExists: result.artifacts.runtimeSession.exists,
+          branchExists: result.artifacts.branch.exists,
+          branchName: result.artifacts.branch.name
+        })}\nRe-run with --force to remove external artifacts and delete bubble.\n`
+      );
+      return 2;
+    }
+
+    process.stdout.write(
+      `Deleted bubble ${result.bubbleId}: tmuxTerminated=${result.tmuxSessionTerminated ? "yes" : "no"}, runtimeSessionRemoved=${result.runtimeSessionRemoved ? "yes" : "no"}, worktreeRemoved=${result.removedWorktree ? "yes" : "no"}, branchRemoved=${result.removedBubbleBranch ? "yes" : "no"}\n`
+    );
+    return 0;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`${message}\n`);
+    return 1;
+  }
+}
+
 async function handleBubbleStatusCommand(args: string[]): Promise<number> {
   const parsed = parseBubbleStatusCommandOptions(args);
   if (parsed.help) {
@@ -418,6 +481,7 @@ const bubbleSubcommandHandlers: Readonly<
   start: handleBubbleStartCommand,
   open: handleBubbleOpenCommand,
   stop: handleBubbleStopCommand,
+  delete: handleBubbleDeleteCommand,
   resume: handleBubbleResumeCommand,
   status: handleBubbleStatusCommand,
   watchdog: handleBubbleWatchdogCommand,

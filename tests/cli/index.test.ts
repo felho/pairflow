@@ -1,14 +1,29 @@
+import { mkdtemp, rm, writeFile, chmod } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import { runCli } from "../../src/cli/index.js";
+import { setupRunningBubbleFixture } from "../helpers/bubble.js";
+import { initGitRepository } from "../helpers/git.js";
 
 describe("runCli", () => {
   const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  const tempDirs: string[] = [];
 
-  afterEach(() => {
+  afterEach(async () => {
     stdoutSpy.mockClear();
     stderrSpy.mockClear();
+    await Promise.all(
+      tempDirs.splice(0).map((path) =>
+        rm(path, {
+          recursive: true,
+          force: true
+        })
+      )
+    );
   });
 
   afterAll(() => {
@@ -67,6 +82,13 @@ describe("runCli", () => {
 
   it("supports bubble stop help", async () => {
     const exitCode = await runCli(["bubble", "stop", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+  });
+
+  it("supports bubble delete help", async () => {
+    const exitCode = await runCli(["bubble", "delete", "--help"]);
 
     expect(exitCode).toBe(0);
     expect(stdoutSpy).toHaveBeenCalled();
@@ -187,5 +209,51 @@ describe("runCli", () => {
     expect(errorText).toContain("ui");
     expect(errorText).toContain("bubble watchdog");
     expect(errorText).toContain("agent converged");
+  });
+
+  it("returns non-zero for bubble delete when confirmation is required", async () => {
+    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-delete-"));
+    tempDirs.push(repoPath);
+    await initGitRepository(repoPath);
+
+    const bubble = await setupRunningBubbleFixture({
+      bubbleId: "b_delete_cli_01",
+      repoPath,
+      task: "Delete CLI confirmation test"
+    });
+
+    const binDir = await mkdtemp(join(tmpdir(), "pairflow-cli-delete-bin-"));
+    tempDirs.push(binDir);
+    const tmuxPath = join(binDir, "tmux");
+    await writeFile(
+      tmuxPath,
+      "#!/bin/sh\nexit 1\n",
+      "utf8"
+    );
+    await chmod(tmuxPath, 0o755);
+
+    const originalPath = process.env.PATH;
+    process.env.PATH = `${binDir}${process.platform === "win32" ? ";" : ":"}${originalPath ?? ""}`;
+    try {
+      const exitCode = await runCli([
+        "bubble",
+        "delete",
+        "--id",
+        bubble.bubbleId,
+        "--repo",
+        repoPath
+      ]);
+
+      expect(exitCode).toBe(2);
+      const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+      expect(output).toContain("Delete confirmation required");
+      expect(output).toContain(`worktree: ${bubble.paths.worktreePath}`);
+      expect(output).toContain(`branch: ${bubble.config.bubble_branch}`);
+      expect(output).not.toContain("tmux session:");
+      expect(output).not.toContain("runtime session entry:");
+      expect(output).toContain("Re-run with --force");
+    } finally {
+      process.env.PATH = originalPath;
+    }
   });
 });

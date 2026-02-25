@@ -76,6 +76,11 @@ export {
   stopBubble
 } from "./core/bubble/stopBubble.js";
 export {
+  asDeleteBubbleError,
+  DeleteBubbleError,
+  deleteBubble
+} from "./core/bubble/deleteBubble.js";
+export {
   asBubbleStatusError,
   BubbleStatusError,
   getBubbleStatus
@@ -185,6 +190,11 @@ export {
   parseBubbleStopCommandOptions,
   runBubbleStopCommand
 } from "./cli/commands/bubble/stop.js";
+export {
+  getBubbleDeleteHelpText,
+  parseBubbleDeleteCommandOptions,
+  runBubbleDeleteCommand
+} from "./cli/commands/bubble/delete.js";
 export {
   getBubbleStatusHelpText,
   parseBubbleStatusCommandOptions,

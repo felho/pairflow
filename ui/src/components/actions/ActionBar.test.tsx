@@ -6,7 +6,7 @@ import { ActionBar } from "./ActionBar";
 import { bubbleCard } from "../../test/fixtures";
 import type { BubbleActionKind, BubbleLifecycleState } from "../../lib/types";
 
-const actionLabels: Record<BubbleActionKind, string> = {
+const actionLabels: Record<Exclude<BubbleActionKind, "delete">, string> = {
   start: "Start",
   approve: "Approve",
   "request-rework": "Request Rework",
@@ -34,7 +34,9 @@ const expectedMatrix: Record<BubbleLifecycleState, BubbleActionKind[]> = {
 
 describe("ActionBar", () => {
   it("renders only matrix-allowed actions for each lifecycle state", () => {
-    const allActions = Object.keys(actionLabels) as BubbleActionKind[];
+    const allActions = Object.keys(actionLabels) as Array<
+      Exclude<BubbleActionKind, "delete">
+    >;
 
     for (const [state, expectedActions] of Object.entries(expectedMatrix) as Array<
       [BubbleLifecycleState, BubbleActionKind[]]

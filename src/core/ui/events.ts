@@ -1,5 +1,5 @@
-import { constants as fsConstants, watch, type FSWatcher } from "node:fs";
-import { access, readdir, stat } from "node:fs/promises";
+import { watch, type FSWatcher } from "node:fs";
+import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 
 import { getBubblePaths } from "../bubble/paths.js";
@@ -21,6 +21,7 @@ import {
   presentBubbleSummaryFromListEntry,
   presentRepoSummary
 } from "./presenters/bubblePresenter.js";
+import { pathExists } from "../util/pathExists.js";
 
 interface BubbleFingerprintSnapshot {
   summary: UiBubbleSummary;
@@ -62,6 +63,7 @@ export interface UiEventsBroker {
     callback: (event: UiEvent) => void
   ): () => void;
   getSnapshot(input?: UiEventsSubscriptionInput): UiSnapshotEvent;
+  refreshNow(): Promise<void>;
   close(): Promise<void>;
 }
 
@@ -77,12 +79,6 @@ interface RepoDiff {
 const defaultPollIntervalMs = 2_000;
 const defaultDebounceMs = 150;
 const defaultHistoryLimit = 512;
-
-async function pathExists(path: string): Promise<boolean> {
-  return access(path, fsConstants.F_OK)
-    .then(() => true)
-    .catch(() => false);
-}
 
 async function listBubbleIds(repoPath: string): Promise<string[]> {
   const bubblesDir = join(repoPath, ".pairflow", "bubbles");
@@ -315,6 +311,10 @@ class UiEventsBrokerImpl implements UiEventsBroker {
         this.closeWaiters.push(resolve);
       });
     }
+  }
+
+  public async refreshNow(): Promise<void> {
+    await this.scanAll(true);
   }
 
   private notify(event: UiEvent): void {

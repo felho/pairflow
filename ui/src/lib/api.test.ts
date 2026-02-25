@@ -118,6 +118,40 @@ describe("createApiClient", () => {
         new Response(JSON.stringify({ result: { bubbleId: "b-a", commitSha: "abc123" } }), {
           status: 200
         })
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            result: {
+              bubbleId: "b-a",
+              deleted: false,
+              requiresConfirmation: true,
+              artifacts: {
+                worktree: {
+                  exists: true,
+                  path: "/tmp/worktrees/b-a"
+                },
+                tmux: {
+                  exists: true,
+                  sessionName: "pf-b-a"
+                },
+                runtimeSession: {
+                  exists: true,
+                  sessionName: "pf-b-a"
+                },
+                branch: {
+                  exists: true,
+                  name: "pairflow/bubble/b-a"
+                }
+              },
+              tmuxSessionTerminated: false,
+              runtimeSessionRemoved: false,
+              removedWorktree: false,
+              removedBubbleBranch: false
+            }
+          }),
+          { status: 200 }
+        )
       );
 
     vi.stubGlobal("fetch", fetchMock);
@@ -140,6 +174,14 @@ describe("createApiClient", () => {
     ).resolves.toMatchObject({
       bubbleId: "b-a",
       commitSha: "abc123"
+    });
+    await expect(
+      client.deleteBubble("/repo-a", "b-a", {
+        force: true
+      })
+    ).resolves.toMatchObject({
+      bubbleId: "b-a",
+      requiresConfirmation: true
     });
 
     expect(fetchMock).toHaveBeenNthCalledWith(
@@ -173,5 +215,120 @@ describe("createApiClient", () => {
         }
       }
     );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      5,
+      "/api/bubbles/b-a/delete?repo=%2Frepo-a",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          force: true
+        }),
+        headers: {
+          "content-type": "application/json"
+        }
+      }
+    );
+  });
+
+  it("posts delete without body when force is omitted or false", async () => {
+    const deleteResult = {
+      result: {
+        bubbleId: "b-a",
+        deleted: false,
+        requiresConfirmation: true,
+        artifacts: {
+          worktree: {
+            exists: true,
+            path: "/tmp/worktrees/b-a"
+          },
+          tmux: {
+            exists: false,
+            sessionName: "pf-b-a"
+          },
+          runtimeSession: {
+            exists: false,
+            sessionName: null
+          },
+          branch: {
+            exists: true,
+            name: "pairflow/bubble/b-a"
+          }
+        },
+        tmuxSessionTerminated: false,
+        runtimeSessionRemoved: false,
+        removedWorktree: false,
+        removedBubbleBranch: false
+      }
+    };
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(deleteResult), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(deleteResult), { status: 200 }));
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createApiClient();
+    await client.deleteBubble("/repo-a", "b-a");
+    await client.deleteBubble("/repo-a", "b-a", { force: false });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "/api/bubbles/b-a/delete?repo=%2Frepo-a",
+      {
+        method: "POST"
+      }
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/bubbles/b-a/delete?repo=%2Frepo-a",
+      {
+        method: "POST"
+      }
+    );
+  });
+
+  it("accepts HTTP 202 for confirmation-required delete responses", async () => {
+    const deleteResult = {
+      result: {
+        bubbleId: "b-a",
+        deleted: false,
+        requiresConfirmation: true,
+        artifacts: {
+          worktree: {
+            exists: true,
+            path: "/tmp/worktrees/b-a"
+          },
+          tmux: {
+            exists: true,
+            sessionName: "pf-b-a"
+          },
+          runtimeSession: {
+            exists: true,
+            sessionName: "pf-b-a"
+          },
+          branch: {
+            exists: true,
+            name: "pairflow/bubble/b-a"
+          }
+        },
+        tmuxSessionTerminated: false,
+        runtimeSessionRemoved: false,
+        removedWorktree: false,
+        removedBubbleBranch: false
+      }
+    };
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(deleteResult), { status: 202 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createApiClient();
+    await expect(client.deleteBubble("/repo-a", "b-a")).resolves.toMatchObject({
+      bubbleId: "b-a",
+      deleted: false,
+      requiresConfirmation: true
+    });
   });
 });

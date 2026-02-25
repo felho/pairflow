@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 
 import { BubbleCanvas } from "./components/canvas/BubbleCanvas";
@@ -24,8 +24,14 @@ export default function App(): JSX.Element {
   const setPosition = useBubbleStore((state) => state.setPosition);
   const persistPositions = useBubbleStore((state) => state.persistPositions);
   const toggleBubbleExpanded = useBubbleStore((state) => state.toggleBubbleExpanded);
+  const deleteBubble = useBubbleStore((state) => state.deleteBubble);
   const visibleBubbles = useBubbleStore(useShallow(selectVisibleBubbles));
   const counts = useBubbleStore(useShallow(selectStateCounts));
+  const handleDelete = useCallback(
+    (bubbleId: string, force?: boolean, repoPath?: string) =>
+      deleteBubble(bubbleId, force, repoPath),
+    [deleteBubble]
+  );
 
   useEffect(() => {
     void store.getState().initialize();
@@ -69,6 +75,7 @@ export default function App(): JSX.Element {
         onToggleExpand={(bubbleId) => {
           void toggleBubbleExpanded(bubbleId);
         }}
+        onDelete={handleDelete}
       />
     </div>
   );

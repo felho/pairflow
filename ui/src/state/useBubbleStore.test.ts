@@ -9,6 +9,7 @@ import {
 import type { PairflowApiClient } from "../lib/api";
 import { PairflowApiError } from "../lib/api";
 import type {
+  BubbleDeleteResult,
   BubblePosition,
   ConnectionStatus,
   UiEvent,
@@ -70,6 +71,21 @@ function createApiStub(overrides: Partial<PairflowApiClient>): PairflowApiClient
     openBubble: vi.fn(async () => ({})),
     attachBubble: vi.fn(async () => ({})),
     stopBubble: vi.fn(async () => ({})),
+    deleteBubble: vi.fn(async () => ({
+      bubbleId: "unknown",
+      deleted: true,
+      requiresConfirmation: false,
+      artifacts: {
+        worktree: { exists: false, path: "" },
+        tmux: { exists: false, sessionName: "" },
+        runtimeSession: { exists: false, sessionName: null },
+        branch: { exists: false, name: "" }
+      },
+      tmuxSessionTerminated: false,
+      runtimeSessionRemoved: false,
+      removedWorktree: false,
+      removedBubbleBranch: false
+    } satisfies BubbleDeleteResult)),
     ...overrides
   };
 }
@@ -439,6 +455,209 @@ describe("createBubbleStore", () => {
     );
   });
 
+  it("returns confirmation artifacts for delete without force", async () => {
+    const deleteResult: BubbleDeleteResult = {
+      bubbleId: "b-a",
+      deleted: false,
+      requiresConfirmation: true,
+      artifacts: {
+        worktree: {
+          exists: true,
+          path: "/tmp/worktree-b-a"
+        },
+        tmux: {
+          exists: true,
+          sessionName: "pf-b-a"
+        },
+        runtimeSession: {
+          exists: true,
+          sessionName: "pf-b-a"
+        },
+        branch: {
+          exists: true,
+          name: "pairflow/bubble/b-a"
+        }
+      },
+      tmuxSessionTerminated: false,
+      runtimeSessionRemoved: false,
+      removedWorktree: false,
+      removedBubbleBranch: false
+    };
+    const getBubbles = vi.fn(async () => ({
+      repo: repoSummary("/repo-a"),
+      bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+    }));
+
+    const deleteDeferred = createDeferred<BubbleDeleteResult>();
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      deleteBubble: vi.fn(async () => deleteDeferred.promise)
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+    const deletePromise = store.getState().deleteBubble("b-a");
+    expect(store.getState().actionLoadingById["b-a"]).toBe(true);
+    deleteDeferred.resolve(deleteResult);
+    const result = await deletePromise;
+
+    expect(result).toEqual(deleteResult);
+    expect(store.getState().bubblesById["b-a"]).toBeDefined();
+    expect(store.getState().actionLoadingById["b-a"]).toBeUndefined();
+    expect(api.deleteBubble).toHaveBeenCalledWith("/repo-a", "b-a", undefined);
+    expect(getBubbles).toHaveBeenCalledTimes(1);
+  });
+
+  it("refreshes repo and clears loading after successful delete", async () => {
+    const getBubbles = vi
+      .fn()
+      .mockResolvedValueOnce({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+      })
+      .mockResolvedValueOnce({
+        repo: repoSummary("/repo-a"),
+        bubbles: []
+      });
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      deleteBubble: vi.fn(async () => ({
+        bubbleId: "b-a",
+        deleted: true,
+        requiresConfirmation: false,
+        artifacts: {
+          worktree: {
+            exists: true,
+            path: "/tmp/worktree-b-a"
+          },
+          tmux: {
+            exists: false,
+            sessionName: "pf-b-a"
+          },
+          runtimeSession: {
+            exists: false,
+            sessionName: null
+          },
+          branch: {
+            exists: true,
+            name: "pairflow/bubble/b-a"
+          }
+        },
+        tmuxSessionTerminated: false,
+        runtimeSessionRemoved: false,
+        removedWorktree: true,
+        removedBubbleBranch: true
+      }))
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+    const deletePromise = store.getState().deleteBubble("b-a");
+    expect(store.getState().actionLoadingById["b-a"]).toBe(true);
+    const result = await deletePromise;
+
+    expect(result.deleted).toBe(true);
+    expect(store.getState().bubblesById["b-a"]).toBeUndefined();
+    expect(store.getState().actionLoadingById["b-a"]).toBeUndefined();
+    expect(api.deleteBubble).toHaveBeenCalledWith("/repo-a", "b-a", undefined);
+    expect(getBubbles).toHaveBeenCalledTimes(2);
+  });
+
+  it("clears loading and records delete action errors", async () => {
+    const deleteError = new Error("Delete failed");
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+      })),
+      deleteBubble: vi.fn(async () => {
+        throw deleteError;
+      })
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+    store.setState({
+      actionErrorById: { "b-a": "Previous error" },
+      actionRetryHintById: { "b-a": "Previous retry hint" },
+      actionFailureById: { "b-a": "start" }
+    });
+
+    const deletePromise = store.getState().deleteBubble("b-a");
+
+    expect(store.getState().actionLoadingById["b-a"]).toBe(true);
+    expect(store.getState().actionErrorById["b-a"]).toBeUndefined();
+    expect(store.getState().actionRetryHintById["b-a"]).toBeUndefined();
+    expect(store.getState().actionFailureById["b-a"]).toBeUndefined();
+
+    await expect(deletePromise).rejects.toThrow("Delete failed");
+
+    expect(store.getState().actionLoadingById["b-a"]).toBeUndefined();
+    expect(store.getState().actionErrorById["b-a"]).toBe("Delete failed");
+    expect(store.getState().actionRetryHintById["b-a"]).toBeUndefined();
+    expect(store.getState().actionFailureById["b-a"]).toBe("delete");
+  });
+
+  it("records delete error metadata and clears loading for force delete failures", async () => {
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+      })),
+      deleteBubble: vi.fn(async () => {
+        throw new Error("Force delete failed");
+      })
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+
+    await expect(store.getState().deleteBubble("b-a", true)).rejects.toThrow(
+      "Force delete failed"
+    );
+
+    expect(store.getState().actionLoadingById["b-a"]).toBeUndefined();
+    expect(store.getState().actionErrorById["b-a"]).toBe("Force delete failed");
+    expect(store.getState().actionFailureById["b-a"]).toBe("delete");
+  });
+
   it("toggleBubbleExpanded expands and fetches detail, collapseBubble removes from list", async () => {
     const detail = bubbleDetail({ bubbleId: "b-a", repoPath: "/repo-a" });
     const timeline = [
@@ -603,5 +822,295 @@ describe("createBubbleStore", () => {
 
     // Detail was fetched for the expanded bubble
     expect(api.getBubble).toHaveBeenCalledWith("/repo-a", "b-a");
+  });
+});
+
+describe("deleteBubble store method", () => {
+  it("calls refreshRepos when delete result is deleted=true", async () => {
+    const getBubbles = vi
+      .fn()
+      .mockResolvedValueOnce({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+      })
+      .mockResolvedValueOnce({
+        repo: repoSummary("/repo-a"),
+        bubbles: []
+      });
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      deleteBubble: vi.fn(async () => ({
+        bubbleId: "b-a",
+        deleted: true,
+        requiresConfirmation: false,
+        artifacts: {
+          worktree: {
+            exists: false,
+            path: "/tmp/worktree-b-a"
+          },
+          tmux: {
+            exists: false,
+            sessionName: "pf-b-a"
+          },
+          runtimeSession: {
+            exists: false,
+            sessionName: null
+          },
+          branch: {
+            exists: false,
+            name: "pairflow/bubble/b-a"
+          }
+        },
+        tmuxSessionTerminated: false,
+        runtimeSessionRemoved: false,
+        removedWorktree: true,
+        removedBubbleBranch: true
+      }))
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+    await store.getState().initialize();
+
+    const result = await store.getState().deleteBubble("b-a");
+
+    expect(result.deleted).toBe(true);
+    expect(api.deleteBubble).toHaveBeenCalledWith("/repo-a", "b-a", undefined);
+    expect(getBubbles).toHaveBeenCalledTimes(2);
+    expect(store.getState().bubblesById["b-a"]).toBeUndefined();
+    expect(store.getState().actionLoadingById["b-a"]).toBeUndefined();
+  });
+
+  it("treats refresh failure after successful delete as non-fatal", async () => {
+    const getBubbles = vi
+      .fn()
+      .mockResolvedValueOnce({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+      })
+      .mockRejectedValueOnce(new Error("Refresh failed"));
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      deleteBubble: vi.fn(async () => ({
+        bubbleId: "b-a",
+        deleted: true,
+        requiresConfirmation: false,
+        artifacts: {
+          worktree: {
+            exists: false,
+            path: "/tmp/worktree-b-a"
+          },
+          tmux: {
+            exists: false,
+            sessionName: "pf-b-a"
+          },
+          runtimeSession: {
+            exists: false,
+            sessionName: null
+          },
+          branch: {
+            exists: false,
+            name: "pairflow/bubble/b-a"
+          }
+        },
+        tmuxSessionTerminated: false,
+        runtimeSessionRemoved: false,
+        removedWorktree: true,
+        removedBubbleBranch: true
+      }))
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+    await store.getState().initialize();
+
+    await expect(store.getState().deleteBubble("b-a")).resolves.toMatchObject({
+      deleted: true
+    });
+
+    expect(api.deleteBubble).toHaveBeenCalledWith("/repo-a", "b-a", undefined);
+    expect(getBubbles).toHaveBeenCalledTimes(2);
+    expect(store.getState().actionErrorById["b-a"]).toBeUndefined();
+    expect(store.getState().actionFailureById["b-a"]).toBeUndefined();
+    expect(store.getState().actionLoadingById["b-a"]).toBeUndefined();
+  });
+
+  it("does not call refreshRepos when delete requires confirmation", async () => {
+    const getBubbles = vi.fn(async () => ({
+      repo: repoSummary("/repo-a"),
+      bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+    }));
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      deleteBubble: vi.fn(async () => ({
+        bubbleId: "b-a",
+        deleted: false,
+        requiresConfirmation: true,
+        artifacts: {
+          worktree: {
+            exists: true,
+            path: "/tmp/worktree-b-a"
+          },
+          tmux: {
+            exists: true,
+            sessionName: "pf-b-a"
+          },
+          runtimeSession: {
+            exists: true,
+            sessionName: "pf-b-a"
+          },
+          branch: {
+            exists: true,
+            name: "pairflow/bubble/b-a"
+          }
+        },
+        tmuxSessionTerminated: false,
+        runtimeSessionRemoved: false,
+        removedWorktree: false,
+        removedBubbleBranch: false
+      }))
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+    await store.getState().initialize();
+
+    const result = await store.getState().deleteBubble("b-a");
+
+    expect(result.requiresConfirmation).toBe(true);
+    expect(result.deleted).toBe(false);
+    expect(getBubbles).toHaveBeenCalledTimes(1);
+    expect(store.getState().bubblesById["b-a"]).toBeDefined();
+    expect(store.getState().actionLoadingById["b-a"]).toBeUndefined();
+  });
+
+  it("records actionErrorById/actionFailureById on delete error", async () => {
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+      })),
+      deleteBubble: vi.fn(async () => {
+        throw new Error("Delete failed");
+      })
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+    await store.getState().initialize();
+
+    await expect(store.getState().deleteBubble("b-a")).rejects.toThrow("Delete failed");
+
+    expect(store.getState().actionLoadingById["b-a"]).toBeUndefined();
+    expect(store.getState().actionErrorById["b-a"]).toBe("Delete failed");
+    expect(store.getState().actionFailureById["b-a"]).toBe("delete");
+    expect(store.getState().actionRetryHintById["b-a"]).toBeUndefined();
+  });
+
+  it("uses repoPath override when bubble is removed before confirm delete", async () => {
+    const getBubbles = vi
+      .fn()
+      .mockResolvedValueOnce({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+      })
+      .mockResolvedValueOnce({
+        repo: repoSummary("/repo-a"),
+        bubbles: []
+      });
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      deleteBubble: vi.fn(async () => ({
+        bubbleId: "b-a",
+        deleted: true,
+        requiresConfirmation: false,
+        artifacts: {
+          worktree: {
+            exists: false,
+            path: "/tmp/worktree-b-a"
+          },
+          tmux: {
+            exists: false,
+            sessionName: "pf-b-a"
+          },
+          runtimeSession: {
+            exists: false,
+            sessionName: null
+          },
+          branch: {
+            exists: false,
+            name: "pairflow/bubble/b-a"
+          }
+        },
+        tmuxSessionTerminated: false,
+        runtimeSessionRemoved: false,
+        removedWorktree: true,
+        removedBubbleBranch: true
+      }))
+    });
+
+    let emitEvent: (event: UiEvent) => void = () => undefined;
+    const store = createBubbleStore({
+      api,
+      createEventsClient: (input) => {
+        emitEvent = input.onEvent;
+        return {
+          start: () => undefined,
+          stop: () => undefined,
+          refresh: () => undefined
+        };
+      }
+    });
+    await store.getState().initialize();
+
+    emitEvent({
+      id: 100,
+      ts: "2026-02-25T11:20:00.000Z",
+      type: "bubble.removed",
+      repoPath: "/repo-a",
+      bubbleId: "b-a"
+    });
+
+    await expect(
+      store.getState().deleteBubble("b-a", true, "/repo-a")
+    ).resolves.toMatchObject({
+      deleted: true
+    });
+
+    expect(api.deleteBubble).toHaveBeenCalledWith("/repo-a", "b-a", { force: true });
+    expect(getBubbles).toHaveBeenCalledTimes(2);
   });
 });

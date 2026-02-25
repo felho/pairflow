@@ -30,6 +30,17 @@ function isWaitingHumanBubbleUpdatedEventData(value: unknown): boolean {
   return (bubble as { state?: unknown }).state === "WAITING_HUMAN";
 }
 
+function isRunningBubbleUpdatedEventData(value: unknown): boolean {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const bubble = (value as { bubble?: unknown }).bubble;
+  if (typeof bubble !== "object" || bubble === null || Array.isArray(bubble)) {
+    return false;
+  }
+  return (bubble as { state?: unknown }).state === "RUNNING";
+}
+
 class SseClient {
   private readonly controller: AbortController;
   private readonly queue: ParsedSseEvent[] = [];
@@ -230,14 +241,16 @@ async function startServer(input: {
   repoPath: string;
   assetsDir: string;
   keepAliveIntervalMs?: number | undefined;
+  pollIntervalMs?: number | undefined;
+  debounceMs?: number | undefined;
 }): Promise<UiServerHandle> {
   return startUiServer({
     repoPaths: [input.repoPath],
     assetsDir: input.assetsDir,
     host: "127.0.0.1",
     port: 0,
-    pollIntervalMs: 40,
-    debounceMs: 10,
+    pollIntervalMs: input.pollIntervalMs ?? 40,
+    debounceMs: input.debounceMs ?? 10,
     ...(input.keepAliveIntervalMs !== undefined
       ? { keepAliveIntervalMs: input.keepAliveIntervalMs }
       : {})
@@ -286,7 +299,7 @@ describe("UI SSE events", () => {
       let updated: ParsedSseEvent | null = null;
       for (let attempt = 0; attempt < 6; attempt += 1) {
         const next = await client.nextEvent(3_000);
-        if (next.event === "bubble.updated") {
+        if (next.event === "bubble.updated" && isRunningBubbleUpdatedEventData(next.data)) {
           updated = next;
           break;
         }
@@ -425,6 +438,60 @@ describe("UI SSE events", () => {
       expect(payload).not.toBeNull();
       expect(Array.isArray((payload as { repos?: unknown }).repos)).toBe(true);
     } finally {
+      await server.close();
+    }
+  });
+
+  it("emits bubble.removed immediately after successful API delete", async () => {
+    const fixture = await createRepoFixture();
+    const assetsDir = await createAssetsFixture();
+    const server = await startServer({
+      repoPath: fixture.repoPath,
+      assetsDir,
+      pollIntervalMs: 60_000,
+      debounceMs: 60_000
+    });
+
+    const client = await SseClient.connect({
+      url: `${server.url}/api/events?repo=${encodeURIComponent(fixture.repoPath)}`
+    });
+
+    try {
+      await client.nextEvent();
+      await client.nextEvent();
+
+      const response = await fetch(
+        `${server.url}/api/bubbles/${fixture.bubbleId}/delete?repo=${encodeURIComponent(fixture.repoPath)}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            force: true
+          })
+        }
+      );
+      expect(response.status).toBe(200);
+
+      let removed: ParsedSseEvent | null = null;
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        const next = await client.nextEvent(3_000);
+        if (
+          next.event === "bubble.removed" &&
+          typeof next.data === "object" &&
+          next.data !== null &&
+          !Array.isArray(next.data) &&
+          (next.data as { bubbleId?: unknown }).bubbleId === fixture.bubbleId
+        ) {
+          removed = next;
+          break;
+        }
+      }
+
+      expect(removed).not.toBeNull();
+    } finally {
+      await client.close();
       await server.close();
     }
   });

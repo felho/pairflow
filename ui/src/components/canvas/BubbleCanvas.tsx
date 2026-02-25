@@ -2,11 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   BubbleCardModel,
+  BubbleDeleteArtifacts,
+  BubbleDeleteResult,
   BubbleLifecycleState,
   BubblePosition
 } from "../../lib/types";
 import { cn } from "../../lib/utils";
 import { ConnectedBubbleExpandedCard } from "./ConnectedBubbleExpandedCard";
+import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { stateVisuals } from "./stateVisuals";
 
 const cardWidth = 248;
@@ -32,6 +35,8 @@ interface BubbleCardProps {
   onPositionCommit(): void;
   onDragStateChange(dragging: boolean): void;
   onOpen(): void;
+  onDelete(trigger: HTMLButtonElement): void;
+  deleteDisabled: boolean;
 }
 
 function formatStateLabel(state: BubbleLifecycleState): string {
@@ -41,6 +46,10 @@ function formatStateLabel(state: BubbleLifecycleState): string {
 function repoLabel(repoPath: string): string {
   const parts = repoPath.split(/[\\/]/u).filter((part) => part.length > 0);
   return parts[parts.length - 1] ?? repoPath;
+}
+
+function asMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function BubbleCard(props: BubbleCardProps): JSX.Element {
@@ -234,6 +243,32 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
           </span>
         ) : null}
       </div>
+
+      <button
+        type="button"
+        aria-label={`Delete bubble ${props.bubble.bubbleId}`}
+        className="absolute bottom-3 right-3 rounded border border-transparent p-1 text-[#555] transition hover:text-rose-400 disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={(event) => {
+          event.stopPropagation();
+          props.onDelete(event.currentTarget);
+        }}
+        disabled={props.deleteDisabled}
+      >
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          className="h-3.5 w-3.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        >
+          <path d="M4 7h16" />
+          <path d="M9 7V5h6v2" />
+          <path d="M7 7l1 12h8l1-12" />
+          <path d="M10 11v5" />
+          <path d="M14 11v5" />
+        </svg>
+      </button>
     </article>
   );
 }
@@ -258,10 +293,26 @@ export interface BubbleCanvasProps {
   onPositionChange(bubbleId: string, position: BubblePosition): void;
   onPositionCommit(): void;
   onToggleExpand(bubbleId: string): void;
+  onDelete(
+    bubbleId: string,
+    force?: boolean,
+    repoPath?: string
+  ): Promise<BubbleDeleteResult>;
 }
 
 export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
   const [draggingIds, setDraggingIds] = useState<Record<string, boolean>>({});
+  const [deleteTarget, setDeleteTarget] = useState<{
+    bubbleId: string;
+    repoPath: string;
+    artifacts: BubbleDeleteArtifacts;
+  } | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const deleteInFlightRef = useRef(false);
+  const confirmInFlightRef = useRef(false);
+  const canvasContentRef = useRef<HTMLDivElement | null>(null);
   const expandedSet = useMemo(
     () => new Set(props.expandedBubbleIds),
     [props.expandedBubbleIds]
@@ -287,61 +338,212 @@ export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
     return { minHeight: maxBottom, minWidth: maxRight };
   }, [positioned, expandedSet]);
 
+  const restoreDeleteTriggerFocus = useCallback(() => {
+    const trigger = deleteTriggerRef.current;
+    if (trigger === null) {
+      return;
+    }
+    setTimeout(() => {
+      if (trigger.isConnected && !trigger.disabled) {
+        trigger.focus();
+      }
+    }, 0);
+  }, []);
+
+  const requestDelete = useCallback(
+    async (bubbleId: string, repoPath: string, trigger: HTMLButtonElement) => {
+      if (deleteInFlightRef.current || deleteTarget !== null) {
+        return;
+      }
+      deleteInFlightRef.current = true;
+      deleteTriggerRef.current = trigger;
+      setDeleteError(null);
+      setDeleteSubmitting(true);
+      try {
+        const result = await props.onDelete(bubbleId, undefined, repoPath);
+        if (result.requiresConfirmation) {
+          setDeleteTarget({
+            bubbleId,
+            repoPath,
+            artifacts: result.artifacts
+          });
+          return;
+        }
+        if (!result.deleted) {
+          setDeleteError("Delete did not complete. Please retry.");
+          return;
+        }
+        setDeleteTarget(null);
+      } catch (error) {
+        setDeleteError(asMessage(error));
+      } finally {
+        deleteInFlightRef.current = false;
+        setDeleteSubmitting(false);
+      }
+    },
+    [deleteTarget, props.onDelete]
+  );
+
+  const confirmDelete = useCallback(async () => {
+    const target = deleteTarget;
+    if (target === null || confirmInFlightRef.current) {
+      return;
+    }
+    confirmInFlightRef.current = true;
+    setDeleteError(null);
+    setDeleteSubmitting(true);
+    try {
+      const result = await props.onDelete(target.bubbleId, true, target.repoPath);
+      if (!result.deleted && result.requiresConfirmation) {
+        setDeleteTarget({
+          bubbleId: target.bubbleId,
+          repoPath: target.repoPath,
+          artifacts: result.artifacts
+        });
+        setDeleteError(
+          "Force delete still requires confirmation. Please retry or refresh."
+        );
+        setDeleteSubmitting(false);
+        return;
+      }
+      if (!result.deleted) {
+        setDeleteError("Delete did not complete. Please retry.");
+        setDeleteSubmitting(false);
+        return;
+      }
+      setDeleteTarget(null);
+      setDeleteSubmitting(false);
+      restoreDeleteTriggerFocus();
+    } catch (error) {
+      setDeleteError(asMessage(error));
+      setDeleteSubmitting(false);
+    } finally {
+      confirmInFlightRef.current = false;
+    }
+  }, [deleteTarget, props.onDelete, restoreDeleteTriggerFocus]);
+
+  useEffect(() => {
+    if (deleteTarget === null) {
+      return;
+    }
+    const bubbleStillExists = props.bubbles.some(
+      (bubble) => bubble.bubbleId === deleteTarget.bubbleId
+    );
+    if (bubbleStillExists) {
+      return;
+    }
+    setDeleteTarget(null);
+    setDeleteError(null);
+  }, [deleteTarget, props.bubbles]);
+
+  useEffect(() => {
+    const content = canvasContentRef.current;
+    if (content === null) {
+      return;
+    }
+    content.inert = deleteTarget !== null;
+    return () => {
+      content.inert = false;
+    };
+  }, [deleteTarget]);
+
   return (
     <main className="relative flex-1 overflow-auto px-4 pb-6 pt-4" style={canvasDimensions}>
-      {positioned.map((entry) => {
-        const isExpanded = expandedSet.has(entry.bubble.bubbleId);
+      <div ref={canvasContentRef} data-testid="canvas-content">
+        {positioned.map((entry) => {
+          const isExpanded = expandedSet.has(entry.bubble.bubbleId);
 
-        if (isExpanded) {
+          if (isExpanded) {
+            return (
+              <ConnectedBubbleExpandedCard
+                key={entry.bubble.bubbleId}
+                bubbleId={entry.bubble.bubbleId}
+              />
+            );
+          }
+
           return (
-            <ConnectedBubbleExpandedCard
+            <BubbleCard
               key={entry.bubble.bubbleId}
-              bubbleId={entry.bubble.bubbleId}
+              bubble={entry.bubble}
+              position={entry.position}
+              onPositionChange={(position) => {
+                props.onPositionChange(entry.bubble.bubbleId, position);
+              }}
+              onPositionCommit={() => {
+                props.onPositionCommit();
+              }}
+              onDragStateChange={(dragging) => {
+                setDraggingIds((current) => {
+                  if (dragging) {
+                    return {
+                      ...current,
+                      [entry.bubble.bubbleId]: true
+                    };
+                  }
+                  if (current[entry.bubble.bubbleId] === undefined) {
+                    return current;
+                  }
+                  const next = { ...current };
+                  delete next[entry.bubble.bubbleId];
+                  return next;
+                });
+              }}
+              onOpen={() => {
+                props.onToggleExpand(entry.bubble.bubbleId);
+              }}
+              onDelete={(trigger) => {
+                void requestDelete(
+                  entry.bubble.bubbleId,
+                  entry.bubble.repoPath,
+                  trigger
+                );
+              }}
+              deleteDisabled={deleteSubmitting || deleteTarget !== null}
             />
           );
-        }
-
-        return (
-          <BubbleCard
-            key={entry.bubble.bubbleId}
-            bubble={entry.bubble}
-            position={entry.position}
-            onPositionChange={(position) => {
-              props.onPositionChange(entry.bubble.bubbleId, position);
-            }}
-            onPositionCommit={() => {
-              props.onPositionCommit();
-            }}
-            onDragStateChange={(dragging) => {
-              setDraggingIds((current) => {
-                if (dragging) {
-                  return {
-                    ...current,
-                    [entry.bubble.bubbleId]: true
-                  };
-                }
-                if (current[entry.bubble.bubbleId] === undefined) {
-                  return current;
-                }
-                const next = { ...current };
-                delete next[entry.bubble.bubbleId];
-                return next;
-              });
-            }}
-            onOpen={() => {
-              props.onToggleExpand(entry.bubble.bubbleId);
-            }}
-          />
-        );
-      })}
-      {positioned.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-700 bg-slate-900/50 p-8 text-sm text-slate-400">
-          No bubbles in current repo filter.
+        })}
+        {positioned.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-700 bg-slate-900/50 p-8 text-sm text-slate-400">
+            No bubbles in current repo filter.
+          </div>
+        ) : null}
+        <div className="sr-only" aria-live="polite">
+          {Object.values(draggingIds).some(Boolean) ? "Dragging bubble" : "Canvas ready"}
         </div>
-      ) : null}
-      <div className="sr-only" aria-live="polite">
-        {Object.values(draggingIds).some(Boolean) ? "Dragging bubble" : "Canvas ready"}
+        {deleteTarget === null && deleteError !== null ? (
+          <div
+            role="alert"
+            className="absolute left-4 top-4 flex items-center gap-3 rounded border border-rose-500/60 bg-rose-950/40 px-3 py-2 text-xs text-rose-200"
+          >
+            <span>{deleteError}</span>
+            <button
+              type="button"
+              className="rounded border border-rose-400/60 px-2 py-0.5 font-semibold text-rose-100 hover:border-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
+              onClick={() => {
+                setDeleteError(null);
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        ) : null}
       </div>
+      <DeleteConfirmDialog
+        open={deleteTarget !== null}
+        bubbleId={deleteTarget?.bubbleId ?? null}
+        artifacts={deleteTarget?.artifacts ?? null}
+        isSubmitting={deleteSubmitting}
+        error={deleteError}
+        onCancel={() => {
+          setDeleteTarget(null);
+          setDeleteError(null);
+          restoreDeleteTriggerFocus();
+        }}
+        onConfirm={() => {
+          void confirmDelete();
+        }}
+      />
     </main>
   );
 }

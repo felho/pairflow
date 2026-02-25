@@ -1,6 +1,4 @@
-import { constants as fsConstants } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { access } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 
 import { getBubbleInbox } from "../bubble/inboxBubble.js";
@@ -19,6 +17,7 @@ import { mergeBubble } from "../bubble/mergeBubble.js";
 import { openBubble } from "../bubble/openBubble.js";
 import { attachBubble } from "../bubble/attachBubble.js";
 import { stopBubble } from "../bubble/stopBubble.js";
+import { deleteBubble } from "../bubble/deleteBubble.js";
 import type { BubbleLifecycleState } from "../../types/bubble.js";
 import type {
   UiApiErrorBody,
@@ -37,6 +36,7 @@ import {
   type UiRepoScope,
   resolveScopedRepoPath
 } from "./repoScope.js";
+import { pathExists } from "../util/pathExists.js";
 
 const jsonContentType = "application/json; charset=utf-8";
 const sseContentType = "text/event-stream; charset=utf-8";
@@ -73,6 +73,7 @@ interface UiRouterDependencies {
   openBubble: typeof openBubble;
   attachBubble: typeof attachBubble;
   stopBubble: typeof stopBubble;
+  deleteBubble: typeof deleteBubble;
 }
 
 export interface CreateUiRouterInput {
@@ -336,6 +337,30 @@ function parseMergeBody(body: unknown): {
   };
 }
 
+function parseDeleteBody(body: unknown): {
+  force?: boolean | undefined;
+} {
+  if (body === undefined) {
+    return {};
+  }
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    throwApiError(
+      badRequest("Delete request body must be a JSON object when provided.")
+    );
+  }
+
+  const forceValue = (body as { force?: unknown }).force;
+  if (forceValue !== undefined && typeof forceValue !== "boolean") {
+    throwApiError(
+      badRequest("Delete field `force` must be a boolean when provided.")
+    );
+  }
+
+  return {
+    ...(forceValue !== undefined ? { force: forceValue } : {})
+  };
+}
+
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
   let total = 0;
@@ -367,12 +392,6 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   }
 }
 
-async function fileExists(path: string): Promise<boolean> {
-  return access(path, fsConstants.F_OK)
-    .then(() => true)
-    .catch(() => false);
-}
-
 export function createUiRouter(input: CreateUiRouterInput): UiRouter {
   const keepAliveIntervalMs = input.keepAliveIntervalMs ?? 15_000;
   const dependencies: UiRouterDependencies = {
@@ -393,7 +412,8 @@ export function createUiRouter(input: CreateUiRouterInput): UiRouter {
     mergeBubble: input.dependencies?.mergeBubble ?? mergeBubble,
     openBubble: input.dependencies?.openBubble ?? openBubble,
     attachBubble: input.dependencies?.attachBubble ?? attachBubble,
-    stopBubble: input.dependencies?.stopBubble ?? stopBubble
+    stopBubble: input.dependencies?.stopBubble ?? stopBubble,
+    deleteBubble: input.dependencies?.deleteBubble ?? deleteBubble
   };
 
   async function resolveRepoFromUrl(
@@ -823,6 +843,30 @@ export function createUiRouter(input: CreateUiRouterInput): UiRouter {
                   sendJson(res, 200, { result });
                   return true;
                 }
+                case "delete": {
+                  const deleteInput = parseDeleteBody(body);
+                  const result = await dependencies.deleteBubble({
+                    bubbleId,
+                    repoPath,
+                    ...(deleteInput.force !== undefined
+                      ? { force: deleteInput.force }
+                      : {}),
+                    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+                  });
+                  // 202 signals a valid "confirmation required" outcome.
+                  const status =
+                    result.requiresConfirmation && !result.deleted ? 202 : 200;
+                  sendJson(res, status, { result });
+                  if (result.deleted) {
+                    void input.events.refreshNow().catch((error: unknown) => {
+                      console.error(
+                        "Failed to refresh UI events after bubble delete",
+                        error
+                      );
+                    });
+                  }
+                  return true;
+                }
                 default:
                   throwApiError(badRequest(`Unsupported bubble action: ${action}`));
               }
@@ -897,7 +941,7 @@ export async function resolveStaticAssetPath(input: {
     };
   }
 
-  if (await fileExists(candidatePath)) {
+  if (await pathExists(candidatePath)) {
     return {
       type: "file",
       path: candidatePath

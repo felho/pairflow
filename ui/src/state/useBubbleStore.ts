@@ -14,6 +14,7 @@ import {
 import type {
   BubbleActionKind,
   BubbleCardModel,
+  BubbleDeleteResult,
   BubblePosition,
   CommitActionInput,
   ConnectionStatus,
@@ -84,6 +85,13 @@ export interface BubbleStoreState {
   collapseBubble(bubbleId: string): void;
   refreshExpandedBubble(bubbleId: string): Promise<void>;
   runBubbleAction(input: RunBubbleActionInput): Promise<void>;
+  // repoPathOverride is required for confirm-phase deletes when the bubble was
+  // concurrently removed from bubblesById by realtime events.
+  deleteBubble(
+    bubbleId: string,
+    force?: boolean,
+    repoPathOverride?: string
+  ): Promise<BubbleDeleteResult>;
   clearActionFeedback(bubbleId: string): void;
 }
 
@@ -430,6 +438,10 @@ async function performBubbleAction(
     case "stop":
       await api.stopBubble(bubble.repoPath, bubble.bubbleId);
       return;
+    case "delete":
+      throw new Error(
+        "Delete action requires two-phase confirmation and must use deleteBubble()."
+      );
     default: {
       const _exhaustive: never = input.action;
       throw new Error(`Unsupported action: ${_exhaustive as string}`);
@@ -1085,6 +1097,82 @@ export function createBubbleStore(
           set((current) => {
             const actionLoadingById = { ...current.actionLoadingById };
             delete actionLoadingById[bubble.bubbleId];
+            return {
+              actionLoadingById
+            };
+          });
+        }
+      },
+
+      async deleteBubble(
+        bubbleId: string,
+        force?: boolean,
+        repoPathOverride?: string
+      ): Promise<BubbleDeleteResult> {
+        const state = get();
+        const bubble = state.bubblesById[bubbleId];
+        const repoPath = bubble?.repoPath ?? repoPathOverride;
+        if (repoPath === undefined) {
+          throw new Error(
+            `Bubble not found in UI store: ${bubbleId}. Provide repoPathOverride for confirm-phase delete retries.`
+          );
+        }
+
+        set((current) => {
+          const actionLoadingById = {
+            ...current.actionLoadingById,
+            [bubbleId]: true
+          };
+          const actionErrorById = { ...current.actionErrorById };
+          const actionRetryHintById = { ...current.actionRetryHintById };
+          const actionFailureById = { ...current.actionFailureById };
+          delete actionErrorById[bubbleId];
+          delete actionRetryHintById[bubbleId];
+          delete actionFailureById[bubbleId];
+          return {
+            actionLoadingById,
+            actionErrorById,
+            actionRetryHintById,
+            actionFailureById
+          };
+        });
+
+        try {
+          const result = await api.deleteBubble(
+            repoPath,
+            bubbleId,
+            force === true ? { force: true } : undefined
+          );
+          if (result.deleted) {
+            try {
+              await refreshRepos([repoPath]);
+            } catch {
+              // Refresh failures after successful delete are non-fatal.
+            }
+          }
+          return result;
+        } catch (error) {
+          const message = asMessage(error);
+          set((current) => ({
+            actionErrorById: {
+              ...current.actionErrorById,
+              [bubbleId]: message
+            },
+            actionFailureById: {
+              ...current.actionFailureById,
+              [bubbleId]: "delete"
+            },
+            actionRetryHintById: (() => {
+              const next = { ...current.actionRetryHintById };
+              delete next[bubbleId];
+              return next;
+            })()
+          }));
+          throw error;
+        } finally {
+          set((current) => {
+            const actionLoadingById = { ...current.actionLoadingById };
+            delete actionLoadingById[bubbleId];
             return {
               actionLoadingById
             };

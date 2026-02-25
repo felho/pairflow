@@ -236,6 +236,35 @@ describe("UI server integration", () => {
         state: "CANCELLED"
       })
     );
+    const deleteBubbleMock = vi.fn(() =>
+      Promise.resolve({
+        bubbleId: fixture.bubbleId,
+        deleted: true,
+        requiresConfirmation: false,
+        artifacts: {
+          worktree: {
+            exists: false,
+            path: "/tmp/worktree"
+          },
+          tmux: {
+            exists: false,
+            sessionName: "pf-bubble"
+          },
+          runtimeSession: {
+            exists: false,
+            sessionName: null
+          },
+          branch: {
+            exists: false,
+            name: "pairflow/bubble/branch"
+          }
+        },
+        tmuxSessionTerminated: false,
+        runtimeSessionRemoved: false,
+        removedWorktree: false,
+        removedBubbleBranch: false
+      })
+    );
     const resumeBubbleMock = vi.fn(() =>
       Promise.resolve({
         bubbleId: fixture.bubbleId
@@ -268,6 +297,7 @@ describe("UI server integration", () => {
         mergeBubble: mergeBubbleMock,
         openBubble: openBubbleMock,
         stopBubble: stopBubbleMock,
+        deleteBubble: deleteBubbleMock,
         resumeBubble: resumeBubbleMock,
         emitRequestRework: emitRequestReworkMock,
         emitHumanReply: emitHumanReplyMock,
@@ -388,6 +418,37 @@ describe("UI server integration", () => {
       );
       expect(stop.status).toBe(200);
       expect(stopBubbleMock).toHaveBeenCalledTimes(1);
+
+      const deleteInvalid = await requestJson(
+        server.url,
+        `/api/bubbles/${fixture.bubbleId}/delete?repo=${encodeURIComponent(fixture.repoPath)}`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            force: "yes"
+          })
+        }
+      );
+      expect(deleteInvalid.status).toBe(400);
+
+      const deleted = await requestJson(
+        server.url,
+        `/api/bubbles/${fixture.bubbleId}/delete?repo=${encodeURIComponent(fixture.repoPath)}`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            force: true
+          })
+        }
+      );
+      expect(deleted.status).toBe(200);
+      expect(deleteBubbleMock).toHaveBeenCalledTimes(1);
+      expect(deleteBubbleMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bubbleId: fixture.bubbleId,
+          force: true
+        })
+      );
 
       const resume = await requestJson(
         server.url,

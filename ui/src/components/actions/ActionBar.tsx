@@ -13,7 +13,7 @@ import { CommitForm } from "./CommitForm";
 import { MergePanel } from "./MergePanel";
 import { MessageModal } from "./MessageModal";
 
-const actionLabels: Record<BubbleActionKind, string> = {
+const actionLabels: Partial<Record<BubbleActionKind, string>> = {
   start: "Start",
   approve: "Approve",
   "request-rework": "Request Rework",
@@ -143,6 +143,10 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
           const openCommit = action === "commit";
           const openMerge = action === "merge";
           const needsModal = action === "request-rework" || action === "reply";
+          const label = actionLabels[action];
+          if (label === undefined) {
+            return null;
+          }
 
           return (
             <button
@@ -168,7 +172,7 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
               }}
               disabled={props.isSubmitting}
             >
-              {actionLabels[action]}
+              {label}
             </button>
           );
         })}
@@ -260,9 +264,12 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
         </div>
       ) : null}
 
+      {/* Delete errors are surfaced from BubbleCanvas (where delete is triggered today).
+      Keep delete excluded here to avoid duplicate/conflicting banners. */}
       {props.actionError !== null &&
       props.actionFailure !== "commit" &&
       props.actionFailure !== "merge" &&
+      props.actionFailure !== "delete" &&
       props.actionFailure !== modalAction ? (
         <div className="mt-2 rounded border border-rose-500/60 bg-rose-950/35 px-2 py-1 text-xs text-rose-200">
           {props.actionError}
