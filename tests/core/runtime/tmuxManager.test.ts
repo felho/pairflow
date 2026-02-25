@@ -69,12 +69,28 @@ describe("launchBubbleTmuxSession", () => {
     expect(calls.map((call) => call.args[0])).toEqual([
       "has-session",
       "new-session",
+      "set-environment",
+      "set-environment",
       "split-window",
       "resize-pane",
       "split-window"
     ]);
-    expect(calls[0]?.allowFailure).toBe(true);
+    // Unset CLAUDECODE from server global env and session env.
     expect(calls[2]?.args).toEqual([
+      "set-environment",
+      "-g",
+      "-u",
+      "CLAUDECODE"
+    ]);
+    expect(calls[3]?.args).toEqual([
+      "set-environment",
+      "-t",
+      "pf-b_start_01",
+      "-u",
+      "CLAUDECODE"
+    ]);
+    expect(calls[0]?.allowFailure).toBe(true);
+    expect(calls[4]?.args).toEqual([
       "split-window",
       "-v",
       "-t",
@@ -84,7 +100,7 @@ describe("launchBubbleTmuxSession", () => {
       "codex"
     ]);
     // Status pane fixed to 9 lines before reviewer split.
-    expect(calls[3]?.args).toEqual([
+    expect(calls[5]?.args).toEqual([
       "resize-pane",
       "-t",
       "pf-b_start_01:0.0",
@@ -92,7 +108,7 @@ describe("launchBubbleTmuxSession", () => {
       "9"
     ]);
     // Reviewer split uses -p 50 to divide remaining space equally.
-    expect(calls[4]?.args).toEqual([
+    expect(calls[6]?.args).toEqual([
       "split-window",
       "-v",
       "-t",
@@ -126,9 +142,11 @@ describe("launchBubbleTmuxSession", () => {
       runner
     });
 
-    expect(calls.slice(0, 5).map((call) => call[0])).toEqual([
+    expect(calls.slice(0, 7).map((call) => call[0])).toEqual([
       "has-session",
       "new-session",
+      "set-environment",
+      "set-environment",
       "split-window",
       "resize-pane",
       "split-window"
