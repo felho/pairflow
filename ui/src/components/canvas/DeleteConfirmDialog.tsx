@@ -2,6 +2,21 @@ import { useEffect, useRef } from "react";
 
 import type { BubbleDeleteArtifacts } from "../../lib/types";
 
+function ArtifactRow(props: {
+  exists: boolean;
+  label: string;
+  detail: string | null;
+}): JSX.Element {
+  return (
+    <div className={props.exists ? "text-rose-300" : "text-slate-600"}>
+      <span>{props.exists ? "\u2022 " : "\u2713 "}{props.label}{props.exists ? "" : " (clean)"}</span>
+      {props.detail !== null ? (
+        <span className="ml-1 text-slate-500">({props.detail})</span>
+      ) : null}
+    </div>
+  );
+}
+
 export interface DeleteConfirmDialogProps {
   open: boolean;
   bubbleId: string | null;
@@ -108,22 +123,30 @@ export function DeleteConfirmDialog(
           Delete Bubble {props.bubbleId}?
         </h3>
         <p id={descriptionId} className="mt-1 text-sm text-slate-300">
-          External artifacts were found. Confirm force delete to remove them.
+          Review remaining artifacts. Force delete will remove all highlighted items.
         </p>
 
-        <div className="mt-3 rounded-md border border-slate-700 bg-slate-950/70 p-3 font-mono text-xs text-slate-300">
-          {props.artifacts.worktree.exists ? (
-            <div>worktree: {props.artifacts.worktree.path}</div>
-          ) : null}
-          {props.artifacts.tmux.exists ? (
-            <div>tmux session: {props.artifacts.tmux.sessionName}</div>
-          ) : null}
-          {props.artifacts.branch.exists ? (
-            <div>branch: {props.artifacts.branch.name}</div>
-          ) : null}
-          {props.artifacts.runtimeSession.exists ? (
-            <div>runtime session entry: present</div>
-          ) : null}
+        <div className="mt-3 rounded-md border border-slate-700 bg-slate-950/70 p-3 font-mono text-xs leading-relaxed">
+          <ArtifactRow
+            exists={props.artifacts.worktree.exists}
+            label="worktree"
+            detail={props.artifacts.worktree.path}
+          />
+          <ArtifactRow
+            exists={props.artifacts.tmux.exists}
+            label="tmux session"
+            detail={props.artifacts.tmux.sessionName}
+          />
+          <ArtifactRow
+            exists={props.artifacts.branch.exists}
+            label="branch"
+            detail={props.artifacts.branch.name}
+          />
+          <ArtifactRow
+            exists={props.artifacts.runtimeSession.exists}
+            label="runtime session"
+            detail={props.artifacts.runtimeSession.sessionName}
+          />
         </div>
 
         {props.error !== null ? (
