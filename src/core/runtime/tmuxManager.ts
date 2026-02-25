@@ -111,8 +111,11 @@ export const runTmux: TmuxRunner = async (
   options: TmuxRunOptions = {}
 ): Promise<TmuxRunResult> =>
   new Promise((resolvePromise, rejectPromise) => {
+    const env = { ...process.env };
+    delete env.CLAUDECODE;
     const child = spawn("tmux", args, {
       cwd: options.cwd,
+      env,
       stdio: ["ignore", "pipe", "pipe"]
     });
 
