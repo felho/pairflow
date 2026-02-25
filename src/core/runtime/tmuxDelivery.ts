@@ -2,6 +2,7 @@ import { readRuntimeSessionsRegistry } from "./sessionsRegistry.js";
 import { runTmux, type TmuxRunner } from "./tmuxManager.js";
 import { maybeAcceptClaudeTrustPrompt, sendAndSubmitTmuxPaneMessage, submitTmuxPaneInput } from "./tmuxInput.js";
 import type { BubbleConfig } from "../../types/bubble.js";
+import type { AgentName } from "../../types/bubble.js";
 import type { ProtocolEnvelope, ProtocolParticipant } from "../../types/protocol.js";
 
 export interface EmitTmuxDeliveryNotificationInput {
@@ -280,4 +281,91 @@ export async function emitTmuxDeliveryNotification(
     targetPaneIndex,
     message
   };
+}
+
+// ---------------------------------------------------------------------------
+// Stuck-input retry — called periodically by the watchdog loop
+// ---------------------------------------------------------------------------
+
+export interface RetryStuckAgentInputOptions {
+  bubbleId: string;
+  bubbleConfig: BubbleConfig;
+  sessionsPath: string;
+  activeAgent: AgentName;
+  runner?: TmuxRunner;
+  readSessionsRegistry?: typeof readRuntimeSessionsRegistry;
+}
+
+export interface RetryStuckAgentInputResult {
+  retried: boolean;
+  reason?: "no_session" | "no_pane" | "not_stuck" | "pane_read_failed";
+}
+
+/**
+ * Check whether the active agent's tmux pane has a pairflow message stuck
+ * in its input buffer (text visible after the prompt but not submitted).
+ * If so, press Enter to unstick it.
+ *
+ * Designed to be called from the watchdog loop (every ~2 s) as a
+ * best-effort safety net for delivery failures.
+ */
+export async function retryStuckAgentInput(
+  options: RetryStuckAgentInputOptions
+): Promise<RetryStuckAgentInputResult> {
+  const runner = options.runner ?? runTmux;
+  const readSessions = options.readSessionsRegistry ?? readRuntimeSessionsRegistry;
+
+  let sessionName: string | undefined;
+  try {
+    const sessions = await readSessions(options.sessionsPath, {
+      allowMissing: true
+    });
+    sessionName = sessions[options.bubbleId]?.tmuxSessionName;
+  } catch {
+    return { retried: false, reason: "no_session" };
+  }
+
+  if (sessionName === undefined) {
+    return { retried: false, reason: "no_session" };
+  }
+
+  const paneIndex = resolveTargetPaneIndex(
+    options.activeAgent,
+    options.bubbleConfig
+  );
+  if (paneIndex === undefined) {
+    return { retried: false, reason: "no_pane" };
+  }
+
+  const targetPane = `${sessionName}:0.${paneIndex}`;
+  const capture = await runner(["capture-pane", "-pt", targetPane], {
+    allowFailure: true
+  });
+  if (capture.exitCode !== 0) {
+    return { retried: false, reason: "pane_read_failed" };
+  }
+
+  const output = capture.stdout;
+  if (!output.includes("[pairflow]")) {
+    return { retried: false, reason: "not_stuck" };
+  }
+
+  // Check if the [pairflow] marker is stuck in the input buffer
+  // (after the last prompt line) rather than in the output area.
+  const lines = output.split("\n");
+  const lastPromptIdx = findLastIndex(lines, (l) => /^\s*[>❯]/.test(l));
+  if (lastPromptIdx < 0) {
+    // No prompt visible — marker is in output area, not stuck.
+    return { retried: false, reason: "not_stuck" };
+  }
+
+  const beforePrompt = lines.slice(0, lastPromptIdx).join("\n");
+  if (beforePrompt.includes("[pairflow]")) {
+    // Marker is in the output area — already submitted.
+    return { retried: false, reason: "not_stuck" };
+  }
+
+  // Marker only appears after the prompt → stuck in input buffer.
+  await submitTmuxPaneInput(runner, targetPane);
+  return { retried: true };
 }

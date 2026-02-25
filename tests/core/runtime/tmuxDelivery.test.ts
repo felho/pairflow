@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { emitTmuxDeliveryNotification } from "../../../src/core/runtime/tmuxDelivery.js";
+import { emitTmuxDeliveryNotification, retryStuckAgentInput } from "../../../src/core/runtime/tmuxDelivery.js";
 import type { RuntimeSessionsRegistry } from "../../../src/core/runtime/sessionsRegistry.js";
 import type { TmuxRunResult, TmuxRunner } from "../../../src/core/runtime/tmuxManager.js";
 import type { BubbleConfig } from "../../../src/types/bubble.js";
@@ -507,5 +507,151 @@ describe("emitTmuxDeliveryNotification", () => {
       sessionName: "pf-b_delivery_01",
       targetPaneIndex: 2
     });
+  });
+});
+
+describe("retryStuckAgentInput", () => {
+  it("sends Enter when pairflow marker is stuck in input buffer", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout: [
+            "Claude Code is ready.",
+            "",
+            "❯ # [pairflow] r1 PASS codex->claude msg=msg_123 ref=handoff.md."
+          ].join("\n"),
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({ stdout: "", stderr: "", exitCode: 0 });
+    };
+
+    const result = await retryStuckAgentInput({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/sessions.json",
+      activeAgent: "claude",
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result.retried).toBe(true);
+    expect(calls).toContainEqual([
+      "send-keys",
+      "-t",
+      "pf-b_delivery_01:0.2",
+      "Enter"
+    ]);
+  });
+
+  it("does not retry when marker is in output area (already submitted)", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout: [
+            "# [pairflow] r1 PASS codex->claude msg=msg_123 ref=handoff.md.",
+            "Processing...",
+            "❯"
+          ].join("\n"),
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({ stdout: "", stderr: "", exitCode: 0 });
+    };
+
+    const result = await retryStuckAgentInput({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/sessions.json",
+      activeAgent: "claude",
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result).toMatchObject({ retried: false, reason: "not_stuck" });
+    const enterCalls = calls.filter((c) => c[0] === "send-keys" && c[3] === "Enter");
+    expect(enterCalls).toHaveLength(0);
+  });
+
+  it("does not retry when no pairflow marker is present", async () => {
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout: "❯ hello world",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({ stdout: "", stderr: "", exitCode: 0 });
+    };
+
+    const result = await retryStuckAgentInput({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/sessions.json",
+      activeAgent: "claude",
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result).toMatchObject({ retried: false, reason: "not_stuck" });
+  });
+
+  it("returns no_session when sessions registry is empty", async () => {
+    const result = await retryStuckAgentInput({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/sessions.json",
+      activeAgent: "claude",
+      readSessionsRegistry: () => Promise.resolve({})
+    });
+
+    expect(result).toMatchObject({ retried: false, reason: "no_session" });
+  });
+
+  it("routes implementer agent to pane 1", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout: [
+            "",
+            "❯ # [pairflow] r1 TASK orchestrator->codex msg=msg_123 ref=task.md."
+          ].join("\n"),
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({ stdout: "", stderr: "", exitCode: 0 });
+    };
+
+    const result = await retryStuckAgentInput({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/sessions.json",
+      activeAgent: "codex",
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result.retried).toBe(true);
+    expect(calls).toContainEqual([
+      "capture-pane",
+      "-pt",
+      "pf-b_delivery_01:0.1"
+    ]);
+    expect(calls).toContainEqual([
+      "send-keys",
+      "-t",
+      "pf-b_delivery_01:0.1",
+      "Enter"
+    ]);
   });
 });

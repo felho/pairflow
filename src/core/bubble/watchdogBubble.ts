@@ -6,7 +6,7 @@ import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import { computeWatchdogStatus } from "../runtime/watchdog.js";
 import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
 import { emitBubbleNotification } from "../runtime/notifications.js";
-import { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
+import { emitTmuxDeliveryNotification, retryStuckAgentInput } from "../runtime/tmuxDelivery.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 
@@ -29,6 +29,7 @@ export interface BubbleWatchdogResult {
   state: BubbleStateSnapshot;
   envelope?: ProtocolEnvelope | undefined;
   sequence?: number | undefined;
+  stuckRetried?: boolean | undefined;
 }
 
 export class BubbleWatchdogError extends Error {
@@ -75,11 +76,26 @@ export async function runBubbleWatchdog(
   }
 
   if (!watchdog.expired) {
+    // Best-effort: if a pairflow message is stuck in the active agent's
+    // input buffer (Enter didn't register during delivery), retry it now.
+    let stuckRetried: boolean | undefined;
+    if (state.state === "RUNNING" && state.active_agent !== null) {
+      const retryResult = await retryStuckAgentInput({
+        bubbleId: resolved.bubbleId,
+        bubbleConfig: resolved.bubbleConfig,
+        sessionsPath: resolved.bubblePaths.sessionsPath,
+        activeAgent: state.active_agent
+      }).catch(() => undefined);
+      if (retryResult?.retried) {
+        stuckRetried = true;
+      }
+    }
     return {
       bubbleId: resolved.bubbleId,
       escalated: false,
       reason: "not_expired",
-      state
+      state,
+      stuckRetried
     };
   }
 

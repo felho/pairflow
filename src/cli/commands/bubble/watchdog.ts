@@ -82,7 +82,8 @@ export function renderBubbleWatchdogText(result: BubbleWatchdogResult): string {
   if (result.escalated) {
     return `Watchdog escalated for ${result.bubbleId}: ${result.envelope?.id ?? "unknown"} -> WAITING_HUMAN`;
   }
-  return `Watchdog check for ${result.bubbleId}: no escalation (${result.reason})`;
+  const suffix = result.stuckRetried === true ? " [stuck input retried]" : "";
+  return `Watchdog check for ${result.bubbleId}: no escalation (${result.reason})${suffix}`;
 }
 
 export async function runBubbleWatchdogCommand(
