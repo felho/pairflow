@@ -210,6 +210,32 @@ export async function launchBubbleTmuxSession(
     input.worktreePath,
     input.reviewerCommand
   ]);
+  // Re-fix status pane after the second split — the split may have
+  // redistributed vertical space away from the initial 9-line resize.
+  await runner([
+    "resize-pane",
+    "-t",
+    `${sessionName}:0.0`,
+    "-y",
+    "9"
+  ]);
+  // Keep the status pane fixed at 9 lines when the terminal is resized.
+  // We use client-resized (fires when the terminal window changes size)
+  // instead of after-resize-pane (which would recurse on its own resize).
+  // The hook fixes pane 0 to 9 lines, then splits the remaining height
+  // equally between panes 1 and 2 (2 separator lines for 3 panes).
+  // Keep the status pane fixed at 9 lines when the terminal window is resized.
+  // client-resized fires when the terminal emulator window changes size.
+  // #{window_height} is expanded by tmux before passing to run-shell.
+  // All resize logic runs inside a single run-shell to avoid spawn quoting issues.
+  const s = sessionName;
+  await runner([
+    "set-hook",
+    "-t",
+    s,
+    "client-resized",
+    `run-shell "tmux resize-pane -t ${s}:0.0 -y 9; REMAIN=\\$((#{window_height} - 11)); tmux resize-pane -t ${s}:0.1 -y \\$((REMAIN / 2))"`
+  ]);
   const sendPaneMessage = async (
     targetPane: string,
     message: string | undefined

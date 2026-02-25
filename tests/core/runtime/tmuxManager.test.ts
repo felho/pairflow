@@ -73,7 +73,9 @@ describe("launchBubbleTmuxSession", () => {
       "set-environment",
       "split-window",
       "resize-pane",
-      "split-window"
+      "split-window",
+      "resize-pane",
+      "set-hook"
     ]);
     // Unset CLAUDECODE from server global env and session env.
     expect(calls[2]?.args).toEqual([
@@ -142,14 +144,16 @@ describe("launchBubbleTmuxSession", () => {
       runner
     });
 
-    expect(calls.slice(0, 7).map((call) => call[0])).toEqual([
+    expect(calls.slice(0, 9).map((call) => call[0])).toEqual([
       "has-session",
       "new-session",
       "set-environment",
       "set-environment",
       "split-window",
       "resize-pane",
-      "split-window"
+      "split-window",
+      "resize-pane",
+      "set-hook"
     ]);
     // Trust prompt check before kickoff.
     expect(calls).toContainEqual([
