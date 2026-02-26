@@ -49,11 +49,13 @@ describe("createBubble", () => {
     expect(result.state.state).toBe("CREATED");
     expect(result.config.watchdog_timeout_minutes).toBe(10);
     expect(result.config.quality_mode).toBe("strict");
+    expect(result.config.review_artifact_type).toBe("auto");
 
     const bubbleToml = await readFile(result.paths.bubbleTomlPath, "utf8");
     const reparsedConfig = parseBubbleConfigToml(bubbleToml);
     expect(reparsedConfig.id).toBe("b_create_01");
     expect(reparsedConfig.notifications.enabled).toBe(true);
+    expect(reparsedConfig.review_artifact_type).toBe("auto");
 
     const stateRaw = JSON.parse(
       await readFile(result.paths.statePath, "utf8")
@@ -95,6 +97,65 @@ describe("createBubble", () => {
     const taskArtifact = await readFile(result.paths.taskArtifactPath, "utf8");
     expect(taskArtifact).toContain("Source: file");
     expect(taskArtifact).toContain("Task from file");
+  });
+
+  it("infers document review artifact type for doc-centric task files", async () => {
+    const repoPath = await createTempRepo();
+    const taskFilePath = join(repoPath, "task.md");
+    await writeFile(
+      taskFilePath,
+      [
+        "# Task: Update review-loop document",
+        "",
+        "This is a document-only task file iteration.",
+        "Focus on docs/ and markdown quality."
+      ].join("\n"),
+      "utf8"
+    );
+
+    const result = await createBubble({
+      id: "b_create_doc_01",
+      repoPath,
+      baseBranch: "main",
+      taskFile: taskFilePath,
+      cwd: repoPath
+    });
+
+    expect(result.config.review_artifact_type).toBe("document");
+    const bubbleToml = await readFile(result.paths.bubbleTomlPath, "utf8");
+    expect(parseBubbleConfigToml(bubbleToml).review_artifact_type).toBe(
+      "document"
+    );
+  });
+
+  it("infers code review artifact type for code-centric tasks", async () => {
+    const repoPath = await createTempRepo();
+
+    const result = await createBubble({
+      id: "b_create_code_01",
+      repoPath,
+      baseBranch: "main",
+      task: "Implement TypeScript changes in src/ and tests/ for API bug fix.",
+      cwd: repoPath
+    });
+
+    expect(result.config.review_artifact_type).toBe("code");
+  });
+
+  it("returns auto when document/code inference scores are tied", async () => {
+    const repoPath = await createTempRepo();
+
+    const result = await createBubble({
+      id: "b_create_auto_tie_01",
+      repoPath,
+      baseBranch: "main",
+      task: "Review document consistency and API naming.",
+      cwd: repoPath
+    });
+
+    // "document" contributes +1 and "api" contributes +1, so this is a
+    // deliberately ambiguous/tied signal and should stay in auto mode.
+    expect(result.config.review_artifact_type).toBe("auto");
   });
 
   it("treats --task input as inline text even when same-named file exists", async () => {

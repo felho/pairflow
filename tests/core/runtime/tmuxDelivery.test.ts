@@ -13,6 +13,7 @@ const baseConfig: BubbleConfig = {
   bubble_branch: "pf/b_delivery_01",
   work_mode: "worktree",
   quality_mode: "strict",
+  review_artifact_type: "auto",
   reviewer_context_mode: "fresh",
   watchdog_timeout_minutes: 5,
   max_rounds: 8,
@@ -130,6 +131,48 @@ describe("emitTmuxDeliveryNotification", () => {
       "-pt",
       "pf-b_delivery_01:0.2"
     ]);
+  });
+
+  it("uses document-focused reviewer guidance when review artifact type is document", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: {
+        ...baseConfig,
+        review_artifact_type: "document"
+      },
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope(),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    const messageCall = calls.find(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.2" &&
+        call[3] === "-l" &&
+        call[4]?.includes("# [pairflow] r1 PASS codex->claude")
+    );
+    expect(messageCall?.[4]).toContain("document/task artifacts");
+    expect(messageCall?.[4]).toContain("Do not force `feature-dev:code-reviewer`");
   });
 
   it("routes human recipient notifications to status pane", async () => {

@@ -11,6 +11,7 @@ const baseConfig: BubbleConfig = {
   bubble_branch: "bubble/b_reviewer_ctx_01",
   work_mode: "worktree",
   quality_mode: "strict",
+  review_artifact_type: "auto",
   reviewer_context_mode: "fresh",
   watchdog_timeout_minutes: 5,
   max_rounds: 8,

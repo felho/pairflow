@@ -26,6 +26,7 @@ describe("bubble config schema", () => {
   it("parses valid TOML and applies defaults", () => {
     const config = parseBubbleConfigToml(baseToml);
     expect(config.quality_mode).toBe("strict");
+    expect(config.review_artifact_type).toBe("auto");
     expect(config.reviewer_context_mode).toBe("fresh");
     expect(config.watchdog_timeout_minutes).toBe(10);
     expect(config.work_mode).toBe("worktree");
@@ -105,6 +106,41 @@ describe("bubble config schema", () => {
     ).toBe(true);
   });
 
+  it("rejects unsupported review artifact type", () => {
+    const result = validateBubbleConfig({
+      id: "b_test_01",
+      repo_path: "/tmp/repo",
+      base_branch: "main",
+      bubble_branch: "bubble/b_test_01",
+      work_mode: "worktree",
+      quality_mode: "strict",
+      review_artifact_type: "slides",
+      reviewer_context_mode: "fresh",
+      watchdog_timeout_minutes: 5,
+      max_rounds: 8,
+      commit_requires_approval: true,
+      agents: {
+        implementer: "codex",
+        reviewer: "claude"
+      },
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      },
+      notifications: {
+        enabled: true
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some((error) => error.path === "review_artifact_type")
+    ).toBe(true);
+  });
+
   it("rejects unsupported local overlay mode", () => {
     const result = validateBubbleConfig({
       id: "b_test_01",
@@ -113,6 +149,7 @@ describe("bubble config schema", () => {
       bubble_branch: "bubble/b_test_01",
       work_mode: "worktree",
       quality_mode: "strict",
+      review_artifact_type: "auto",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
@@ -150,6 +187,7 @@ describe("bubble config schema", () => {
       bubble_branch: "bubble/b_test_01",
       work_mode: "worktree",
       quality_mode: "strict",
+      review_artifact_type: "auto",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
@@ -202,6 +240,7 @@ describe("bubble config schema", () => {
       bubble_branch: "bubble/b_test_01",
       work_mode: "worktree",
       quality_mode: "strict",
+      review_artifact_type: "auto",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
@@ -231,6 +270,7 @@ describe("bubble config schema", () => {
       bubble_branch: "bubble/b_test_01",
       work_mode: "worktree",
       quality_mode: "strict",
+      review_artifact_type: "auto",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
@@ -269,6 +309,7 @@ describe("bubble config schema", () => {
       bubble_branch: "bubble/b_test_01",
       work_mode: "worktree",
       quality_mode: "strict",
+      review_artifact_type: "auto",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,

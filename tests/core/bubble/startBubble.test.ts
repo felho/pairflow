@@ -190,6 +190,54 @@ describe("startBubble", () => {
     await assertBashParses(reviewerCommand);
   });
 
+  it("injects document-focused reviewer guidance for doc-centric bubbles", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_doc_01",
+      repoPath,
+      baseBranch: "main",
+      task: "Document-only task file iteration for docs/ markdown and PRD clarity.",
+      cwd: repoPath
+    });
+
+    let reviewerCommand: string | undefined;
+    await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T13:00:00.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () =>
+          Promise.resolve({
+            repoPath,
+            baseRef: "refs/heads/main",
+            bubbleBranch: created.config.bubble_branch,
+            worktreePath: created.paths.worktreePath
+          }),
+        launchBubbleTmuxSession: (input) => {
+          reviewerCommand = input.reviewerCommand;
+          return Promise.resolve({ sessionName: "pf-b_start_doc_01" });
+        },
+        claimRuntimeSession: (input) =>
+          Promise.resolve({
+            claimed: true,
+            record: {
+              bubbleId: input.bubbleId,
+              repoPath: input.repoPath,
+              worktreePath: input.worktreePath,
+              tmuxSessionName: input.tmuxSessionName,
+              updatedAt: "2026-02-22T13:00:00.000Z"
+            }
+          })
+      }
+    );
+
+    expect(created.config.review_artifact_type).toBe("document");
+    expect(reviewerCommand).toContain("document/task artifacts");
+    expect(reviewerCommand).toContain("Do not force `feature-dev:code-reviewer`");
+  });
+
   it("fails before bootstrap when runtime session ownership claim fails", async () => {
     const repoPath = await createTempRepo();
     const created = await createBubble({

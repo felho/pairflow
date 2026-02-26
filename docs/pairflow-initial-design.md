@@ -227,6 +227,7 @@ base_branch = "main"
 bubble_branch = "bubble/b_legal_search_01"
 work_mode = "worktree" # worktree|clone
 quality_mode = "strict" # MVP: strict only
+review_artifact_type = "auto" # auto|code|document (review guidance mode)
 reviewer_context_mode = "fresh" # fresh|persistent (default: fresh)
 watchdog_timeout_minutes = 10
 max_rounds = 8

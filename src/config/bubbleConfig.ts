@@ -15,6 +15,7 @@ import {
   DEFAULT_LOCAL_OVERLAY_MODE,
   DEFAULT_MAX_ROUNDS,
   DEFAULT_QUALITY_MODE,
+  DEFAULT_REVIEW_ARTIFACT_TYPE,
   DEFAULT_REVIEWER_CONTEXT_MODE,
   DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
   DEFAULT_WORK_MODE
@@ -23,6 +24,7 @@ import {
   isAgentName,
   isLocalOverlayMode,
   isQualityMode,
+  isReviewArtifactType,
   isReviewerContextMode,
   isWorkMode,
   type BubbleConfig
@@ -402,6 +404,15 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     });
   }
 
+  const reviewArtifactType =
+    input.review_artifact_type ?? DEFAULT_REVIEW_ARTIFACT_TYPE;
+  if (!isReviewArtifactType(reviewArtifactType)) {
+    errors.push({
+      path: "review_artifact_type",
+      message: "Must be one of: auto, code, document"
+    });
+  }
+
   const reviewerContextMode =
     input.reviewer_context_mode ?? DEFAULT_REVIEWER_CONTEXT_MODE;
   if (!isReviewerContextMode(reviewerContextMode)) {
@@ -583,6 +594,8 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     bubble_branch: bubbleBranch as string,
     work_mode: workMode as BubbleConfig["work_mode"],
     quality_mode: qualityMode as BubbleConfig["quality_mode"],
+    review_artifact_type:
+      reviewArtifactType as BubbleConfig["review_artifact_type"],
     reviewer_context_mode:
       reviewerContextMode as BubbleConfig["reviewer_context_mode"],
     watchdog_timeout_minutes: watchdogTimeoutMinutes as number,
@@ -677,6 +690,7 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
     `bubble_branch = ${tomlString(config.bubble_branch)}`,
     `work_mode = ${tomlString(config.work_mode)}`,
     `quality_mode = ${tomlString(config.quality_mode)}`,
+    `review_artifact_type = ${tomlString(config.review_artifact_type)}`,
     `reviewer_context_mode = ${tomlString(config.reviewer_context_mode)}`,
     `watchdog_timeout_minutes = ${config.watchdog_timeout_minutes}`,
     `max_rounds = ${config.max_rounds}`,

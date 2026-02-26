@@ -15,6 +15,7 @@ function createResolvedBubbleFixture(input: {
     bubble_branch: `bubble/${input.bubbleId}`,
     work_mode: "worktree",
     quality_mode: "strict",
+    review_artifact_type: "auto",
     reviewer_context_mode: "fresh",
     watchdog_timeout_minutes: 5,
     max_rounds: 8,

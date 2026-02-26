@@ -33,6 +33,10 @@ export const reviewerContextModes = ["fresh", "persistent"] as const;
 
 export type ReviewerContextMode = (typeof reviewerContextModes)[number];
 
+export const reviewArtifactTypes = ["auto", "code", "document"] as const;
+
+export type ReviewArtifactType = (typeof reviewArtifactTypes)[number];
+
 export const localOverlayModes = ["symlink", "copy"] as const;
 
 export type LocalOverlayMode = (typeof localOverlayModes)[number];
@@ -66,6 +70,7 @@ export interface BubbleConfig {
   bubble_branch: string;
   work_mode: WorkMode;
   quality_mode: QualityMode;
+  review_artifact_type: ReviewArtifactType;
   reviewer_context_mode: ReviewerContextMode;
   watchdog_timeout_minutes: number;
   max_rounds: number;
@@ -134,6 +139,13 @@ export function isReviewerContextMode(
   return (
     typeof value === "string" &&
     (reviewerContextModes as readonly string[]).includes(value)
+  );
+}
+
+export function isReviewArtifactType(value: unknown): value is ReviewArtifactType {
+  return (
+    typeof value === "string" &&
+    (reviewArtifactTypes as readonly string[]).includes(value)
   );
 }
 

@@ -5,6 +5,7 @@ import { renderBubbleConfigToml, assertValidBubbleConfig } from "../../config/bu
 import {
   DEFAULT_MAX_ROUNDS,
   DEFAULT_QUALITY_MODE,
+  DEFAULT_REVIEW_ARTIFACT_TYPE,
   DEFAULT_REVIEWER_CONTEXT_MODE,
   DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
   DEFAULT_WORK_MODE
@@ -15,7 +16,12 @@ import { assertValidBubbleStateSnapshot } from "../state/stateSchema.js";
 import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
 import { isNonEmptyString } from "../validation.js";
 import { GitRepositoryError, assertGitRepository } from "../workspace/git.js";
-import type { AgentName, BubbleConfig, BubbleStateSnapshot } from "../../types/bubble.js";
+import type {
+  AgentName,
+  BubbleConfig,
+  BubbleStateSnapshot,
+  ReviewArtifactType
+} from "../../types/bubble.js";
 
 export interface BubbleCreateInput {
   id: string;
@@ -142,6 +148,7 @@ function buildBubbleConfig(input: {
   repoPath: string;
   baseBranch: string;
   bubbleBranch: string;
+  reviewArtifactType: ReviewArtifactType;
   implementer?: AgentName;
   reviewer?: AgentName;
   testCommand?: string;
@@ -155,6 +162,7 @@ function buildBubbleConfig(input: {
     bubble_branch: input.bubbleBranch,
     work_mode: DEFAULT_WORK_MODE,
     quality_mode: DEFAULT_QUALITY_MODE,
+    review_artifact_type: input.reviewArtifactType,
     reviewer_context_mode: DEFAULT_REVIEWER_CONTEXT_MODE,
     watchdog_timeout_minutes: DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
     max_rounds: DEFAULT_MAX_ROUNDS,
@@ -172,6 +180,62 @@ function buildBubbleConfig(input: {
       enabled: true
     }
   });
+}
+
+function inferReviewArtifactType(task: ResolvedTaskInput): ReviewArtifactType {
+  const text = task.content.toLowerCase();
+  const sourcePath = task.sourcePath?.toLowerCase() ?? "";
+
+  let documentScore = 0;
+  let codeScore = 0;
+
+  // Intentional bias: markdown/text task files default toward document review.
+  // We still require a >=2 lead before forcing "document" or "code"; near-ties
+  // fall back to "auto".
+  if (sourcePath.endsWith(".md") || sourcePath.endsWith(".txt")) {
+    documentScore += 1;
+  }
+  if (sourcePath.endsWith(".ts") || sourcePath.endsWith(".tsx") || sourcePath.endsWith(".js")) {
+    codeScore += 2;
+  }
+
+  const documentPatterns = [
+    /\bprd\b/u,
+    /\bdocument(?:ation)?\b/u,
+    /\btask file\b/u,
+    /\bmarkdown\b/u,
+    /\bdocs?\//u,
+    /\bdocument[- ]only\b/u
+  ];
+  const codePatterns = [
+    /\bsrc\//u,
+    /\btests\//u,
+    /\btypescript\b/u,
+    /\bimplement(?:ation)?\b/u,
+    /\brefactor\b/u,
+    /\bbug\b/u,
+    /\bapi\b/u
+  ];
+
+  for (const pattern of documentPatterns) {
+    if (pattern.test(text)) {
+      documentScore += 1;
+    }
+  }
+  for (const pattern of codePatterns) {
+    if (pattern.test(text)) {
+      codeScore += 1;
+    }
+  }
+
+  if (documentScore >= codeScore + 2) {
+    return "document";
+  }
+  if (codeScore >= documentScore + 2) {
+    return "code";
+  }
+
+  return DEFAULT_REVIEW_ARTIFACT_TYPE;
 }
 
 function renderTaskArtifact(task: ResolvedTaskInput): string {
@@ -239,7 +303,8 @@ export async function createBubble(input: BubbleCreateInput): Promise<BubbleCrea
     id: input.id,
     repoPath,
     baseBranch,
-    bubbleBranch
+    bubbleBranch,
+    reviewArtifactType: inferReviewArtifactType(task)
   };
   if (input.implementer !== undefined) {
     bubbleConfigInput.implementer = input.implementer;

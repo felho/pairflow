@@ -27,7 +27,8 @@ import {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
 } from "../runtime/sessionsRegistry.js";
-import type { BubbleStateSnapshot } from "../../types/bubble.js";
+import { buildReviewerAgentSelectionGuidance } from "../runtime/reviewerGuidance.js";
+import type { BubbleStateSnapshot, ReviewArtifactType } from "../../types/bubble.js";
 
 export interface StartBubbleInput {
   bubbleId: string;
@@ -104,13 +105,13 @@ function buildReviewerStartupPrompt(input: {
   repoPath: string;
   worktreePath: string;
   taskArtifactPath: string;
+  reviewArtifactType: ReviewArtifactType;
 }): string {
   return [
     `Pairflow reviewer start for bubble ${input.bubbleId}.`,
     "Stand by first. Do not start reviewing until implementer handoff (`PASS`) arrives.",
     "When PASS arrives, run a fresh review.",
-    "IMPORTANT: If a `feature-dev:code-reviewer` agent is available (check with /help or Task tool), use it for the review — it provides higher-quality, structured code review than manual inspection.",
-    "If the agent is not available, fall back to manual review (`/review` in Claude Code).",
+    buildReviewerAgentSelectionGuidance(input.reviewArtifactType),
     "If findings remain, run `pairflow pass --summary ... --finding P1:...` (repeatable).",
     "If clean, run `pairflow pass --summary ... --no-findings` then `pairflow converged --summary`.",
     "Execute pairflow commands directly from this worktree (do not ask for confirmation first).",
@@ -181,6 +182,7 @@ function buildResumeReviewerStartupPrompt(input: {
   state: BubbleStateSnapshot;
   transcriptSummary: string;
   kickoffDiagnostic?: string;
+  reviewArtifactType: ReviewArtifactType;
 }): string {
   const roleInstruction =
     input.state.state === "RUNNING" && input.state.active_role === "reviewer"
@@ -192,6 +194,7 @@ function buildResumeReviewerStartupPrompt(input: {
     `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`,
     `State snapshot: ${buildResumeContextLine(input.state)}.`,
     `Transcript context: ${input.transcriptSummary}`,
+    buildReviewerAgentSelectionGuidance(input.reviewArtifactType),
     roleInstruction
   ];
   if ((input.kickoffDiagnostic?.trim().length ?? 0) > 0) {
@@ -418,7 +421,8 @@ export async function startBubble(
             bubbleId: resolved.bubbleId,
             repoPath: resolved.repoPath,
             worktreePath: resolved.bubblePaths.worktreePath,
-            taskArtifactPath: resolved.bubblePaths.taskArtifactPath
+            taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+            reviewArtifactType: resolved.bubbleConfig.review_artifact_type
           })
         }),
         implementerKickoffMessage: buildImplementerKickoffMessage({
@@ -494,6 +498,7 @@ export async function startBubble(
             taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
             state: loadedState.state,
             transcriptSummary,
+            reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
             ...(kickoffDiagnostic !== undefined ? { kickoffDiagnostic } : {})
           })
         }),
