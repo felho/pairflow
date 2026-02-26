@@ -43,6 +43,34 @@ In the Codex or Claude Code chat I will use both in English (works better with d
 
 ---
 
+## Bubble Workflow Guardrails
+
+Ezek kötelező működési szabályok bubble életciklusnál, hogy elkerüljük a rebase/merge instabil állapotokat.
+
+1. **Bubble indítás előtti pre-flight**
+   - `main` branchen indulj, tiszta worktree-vel (`git status` clean).
+   - Nem lehet folyamatban merge/rebase/cherry-pick.
+   - Ha a bubble input egy task fájl, akkor azt indítás előtt commitolni kell `main`-re, vagy kizárólag bubble branchen létrehozni. Ugyanazon path ne maradjon untracked `main`-en.
+
+2. **Párhuzamos módosítás tiltás**
+   - Bubble futása közben `main`-en ne módosítsd ugyanazokat a fájlokat, amiket a bubble branch is érint.
+   - Ha mégis szükséges, előbb egyeztetés és explicit merge stratégia kell.
+
+3. **Kötelező zárási sorrend**
+   - `bubble approve` -> `bubble commit` -> `bubble merge` -> push.
+   - A merge után kötelező ellenőrzés: branch tiszta, nincs rebase/merge state.
+
+4. **Pull/Push biztonsági policy (repo-local)**
+   - Alapértelmezett: `pull.rebase=false`, `branch.main.rebase=false`, `pull.ff=only`.
+   - Automatikus pull-rebase flow kerülendő, mert bubble merge commitoknál ismétlődő konfliktust okozhat.
+
+5. **Incidens recovery protokoll**
+   - Ha `git status` szerint rebase fut: állj meg, ne resolve-olj reflexből.
+   - Először állapotdiagnosztika (`git status`, `git reflog`, `git ls-files -u`), majd userrel egyeztetett döntés.
+   - Alapértelmezett javaslat: indokolatlan/árva rebase esetén `git rebase --abort`, majd tiszta állapotból folytatás.
+
+---
+
 ## Blocker & Escalation Policy
 
 1. **Escalation-first kritikus parancsoknál**
