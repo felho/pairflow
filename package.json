@@ -25,7 +25,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "pnpm lint && pnpm typecheck && pnpm test"
+    "check": "pnpm lint && pnpm typecheck && pnpm test",
+    "dev:ui": "lsof -ti :4173 | xargs kill 2>/dev/null; pnpm build && pairflow ui"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
