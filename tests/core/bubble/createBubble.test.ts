@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { parseBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
@@ -11,6 +11,7 @@ import { validateBubbleStateSnapshot } from "../../../src/core/state/stateSchema
 import { initGitRepository } from "../../helpers/git.js";
 
 const tempDirs: string[] = [];
+const initialMetricsRoot = process.env.PAIRFLOW_METRICS_EVENTS_ROOT;
 
 async function createTempRepo(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "pairflow-bubble-create-"));
@@ -26,11 +27,22 @@ async function createTempDir(): Promise<string> {
 }
 
 afterEach(async () => {
+  if (initialMetricsRoot === undefined) {
+    delete process.env.PAIRFLOW_METRICS_EVENTS_ROOT;
+  } else {
+    process.env.PAIRFLOW_METRICS_EVENTS_ROOT = initialMetricsRoot;
+  }
+
   await Promise.all(
     tempDirs.splice(0).map((path) =>
       rm(path, { recursive: true, force: true })
     )
   );
+});
+
+beforeEach(async () => {
+  const metricsRoot = await createTempDir();
+  process.env.PAIRFLOW_METRICS_EVENTS_ROOT = metricsRoot;
 });
 
 describe("createBubble", () => {
@@ -50,12 +62,18 @@ describe("createBubble", () => {
     expect(result.config.watchdog_timeout_minutes).toBe(10);
     expect(result.config.quality_mode).toBe("strict");
     expect(result.config.review_artifact_type).toBe("auto");
+    expect(result.config.bubble_instance_id).toMatch(
+      /^bi_[A-Za-z0-9_-]{10,}$/u
+    );
 
     const bubbleToml = await readFile(result.paths.bubbleTomlPath, "utf8");
     const reparsedConfig = parseBubbleConfigToml(bubbleToml);
     expect(reparsedConfig.id).toBe("b_create_01");
     expect(reparsedConfig.notifications.enabled).toBe(true);
     expect(reparsedConfig.review_artifact_type).toBe("auto");
+    expect(reparsedConfig.bubble_instance_id).toBe(
+      result.config.bubble_instance_id
+    );
 
     const stateRaw = JSON.parse(
       await readFile(result.paths.statePath, "utf8")
@@ -78,6 +96,24 @@ describe("createBubble", () => {
 
     const inbox = await readTranscriptEnvelopes(result.paths.inboxPath);
     expect(inbox).toHaveLength(0);
+  });
+
+  it("supports injectable creation timestamp", async () => {
+    const repoPath = await createTempRepo();
+    const now = new Date("2026-02-26T22:00:00.000Z");
+
+    const result = await createBubble({
+      id: "b_create_01_now",
+      repoPath,
+      baseBranch: "main",
+      task: "Timestamp deterministic test",
+      cwd: repoPath,
+      now
+    });
+
+    expect(result.state.state).toBe("CREATED");
+    const transcript = await readTranscriptEnvelopes(result.paths.transcriptPath);
+    expect(transcript[0]?.ts).toBe(now.toISOString());
   });
 
   it("uses task file content when taskFile input is provided", async () => {

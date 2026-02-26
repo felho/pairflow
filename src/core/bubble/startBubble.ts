@@ -28,6 +28,8 @@ import {
   RuntimeSessionsRegistryLockError
 } from "../runtime/sessionsRegistry.js";
 import { buildReviewerAgentSelectionGuidance } from "../runtime/reviewerGuidance.js";
+import { ensureBubbleInstanceIdForMutation } from "./bubbleInstanceId.js";
+import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import type { BubbleStateSnapshot, ReviewArtifactType } from "../../types/bubble.js";
 
 export interface StartBubbleInput {
@@ -308,6 +310,14 @@ export async function startBubble(
   });
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
+  const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
+    bubbleId: resolved.bubbleId,
+    repoPath: resolved.repoPath,
+    bubblePaths: resolved.bubblePaths,
+    bubbleConfig: resolved.bubbleConfig,
+    now
+  });
+  resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
 
   const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
   const currentState = loadedState.state.state;
@@ -516,10 +526,27 @@ export async function startBubble(
       });
     }
 
+    const resolvedTmuxSessionName = tmuxSessionName ?? expectedTmuxSessionName;
+    await emitBubbleLifecycleEventBestEffort({
+      repoPath: resolved.repoPath,
+      bubbleId: resolved.bubbleId,
+      bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+      eventType: "bubble_started",
+      round: written.state.round > 0 ? written.state.round : null,
+      actorRole: "orchestrator",
+      metadata: {
+        start_mode: startMode,
+        state: written.state.state,
+        tmux_session_name: resolvedTmuxSessionName,
+        worktree_path: resolved.bubblePaths.worktreePath
+      },
+      now
+    });
+
     return {
       bubbleId: resolved.bubbleId,
       state: written.state,
-      tmuxSessionName: tmuxSessionName ?? expectedTmuxSessionName,
+      tmuxSessionName: resolvedTmuxSessionName,
       worktreePath: resolved.bubblePaths.worktreePath
     };
   } catch (error) {

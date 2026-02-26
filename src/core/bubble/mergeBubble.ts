@@ -16,6 +16,8 @@ import {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
 } from "../runtime/sessionsRegistry.js";
+import { ensureBubbleInstanceIdForMutation } from "./bubbleInstanceId.js";
+import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 
 export interface MergeBubbleInput {
   bubbleId: string;
@@ -145,6 +147,14 @@ export async function mergeBubble(
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
   });
+  const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
+    bubbleId: resolved.bubbleId,
+    repoPath: resolved.repoPath,
+    bubblePaths: resolved.bubblePaths,
+    bubbleConfig: resolved.bubbleConfig,
+    now
+  });
+  resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
   const loaded = await readStateSnapshot(resolved.bubblePaths.statePath);
   if (loaded.state.state !== "DONE") {
     throw new BubbleMergeError(
@@ -254,6 +264,25 @@ export async function mergeBubble(
       expectedState: "DONE"
     }
   );
+
+  await emitBubbleLifecycleEventBestEffort({
+    repoPath: resolved.repoPath,
+    bubbleId: resolved.bubbleId,
+    bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+    eventType: "bubble_merged",
+    round: loaded.state.round > 0 ? loaded.state.round : null,
+    actorRole: "orchestrator",
+    metadata: {
+      base_branch: baseBranch,
+      bubble_branch: bubbleBranch,
+      merge_commit_sha: mergeCommitSha,
+      pushed_base_branch: pushedBaseBranch,
+      deleted_remote_branch: deletedRemoteBranch,
+      removed_worktree: workspaceCleanup.removedWorktree,
+      removed_bubble_branch: workspaceCleanup.removedBranch
+    },
+    now
+  });
 
   return {
     bubbleId: resolved.bubbleId,

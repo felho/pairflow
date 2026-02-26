@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const rmMock = vi.hoisted(() => vi.fn());
+const rmMock = vi.hoisted(() => vi.fn(() => Promise.resolve(undefined)));
 
-vi.mock("node:fs/promises", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:fs/promises")>();
+vi.mock("node:fs/promises", async () => {
+  const actual = await vi.importActual("node:fs/promises");
   return {
-    ...actual,
+    ...(actual as Record<string, unknown>),
     rm: rmMock
   };
 });
@@ -17,34 +17,35 @@ import {
 
 function buildDependencies(): DeleteBubbleDependencies {
   const resolveBubbleById: NonNullable<DeleteBubbleDependencies["resolveBubbleById"]> =
-    async () =>
-      ({
+    () =>
+      Promise.resolve({
         bubbleId: "b-delete-rm-01",
         repoPath: "/tmp/repo",
         bubbleConfig: {
+          bubble_instance_id: "bi_00m8f7w14k_2f03e8b8e4f24d17ac12",
           bubble_branch: "pairflow/bubble/b-delete-rm-01"
         },
         bubblePaths: {
+          bubbleTomlPath: "/tmp/bubble-dir/bubble.toml",
+          locksDir: "/tmp/repo/.pairflow/locks",
           worktreePath: "/tmp/worktree",
           sessionsPath: "/tmp/sessions.json",
           bubbleDir: "/tmp/bubble-dir",
           statePath: "/tmp/state.json"
         }
-      }) as Awaited<
-        ReturnType<
-          NonNullable<DeleteBubbleDependencies["resolveBubbleById"]>
-        >
+      }) as ReturnType<
+        NonNullable<DeleteBubbleDependencies["resolveBubbleById"]>
       >;
 
   return {
     resolveBubbleById,
-    branchExists: vi.fn(async () => false),
-    runTmux: vi.fn(async () => ({
+    branchExists: vi.fn(() => Promise.resolve(false)),
+    runTmux: vi.fn(() => Promise.resolve({
       stdout: "",
       stderr: "no session",
       exitCode: 1
     })),
-    readRuntimeSessionsRegistry: vi.fn(async () => ({}))
+    readRuntimeSessionsRegistry: vi.fn(() => Promise.resolve({}))
   };
 }
 

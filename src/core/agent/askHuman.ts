@@ -10,6 +10,8 @@ import {
 } from "../bubble/workspaceResolution.js";
 import { emitBubbleNotification } from "../runtime/notifications.js";
 import { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
+import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
+import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 
@@ -48,6 +50,14 @@ export async function emitAskHumanFromWorkspace(
   const refs = normalizeStringList(input.refs ?? []);
 
   const resolved = await resolveBubbleFromWorkspaceCwd(input.cwd);
+  const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
+    bubbleId: resolved.bubbleId,
+    repoPath: resolved.repoPath,
+    bubblePaths: resolved.bubblePaths,
+    bubbleConfig: resolved.bubbleConfig,
+    now
+  });
+  resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
 
   const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
   const state = loadedState.state;
@@ -121,6 +131,21 @@ export async function emitAskHumanFromWorkspace(
 
   // Optional UX signal; never block protocol/state progression on notification failure.
   void emitBubbleNotification(resolved.bubbleConfig, "waiting-human");
+
+  await emitBubbleLifecycleEventBestEffort({
+    repoPath: resolved.repoPath,
+    bubbleId: resolved.bubbleId,
+    bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+    eventType: "bubble_asked_human",
+    round: state.round,
+    actorRole: state.active_role,
+    metadata: {
+      sender: state.active_agent,
+      refs_count: refs.length,
+      question_length: Array.from(question).length
+    },
+    now
+  });
 
   return {
     bubbleId: resolved.bubbleId,
