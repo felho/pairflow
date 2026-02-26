@@ -24,6 +24,8 @@ import {
 import { readStateSnapshot } from "../state/stateStore.js";
 import { stopBubble, StopBubbleError } from "./stopBubble.js";
 import { pathExists } from "../util/pathExists.js";
+import { ensureBubbleInstanceIdForMutation } from "./bubbleInstanceId.js";
+import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 
 export type {
   DeleteBubbleArtifacts,
@@ -35,6 +37,7 @@ export interface DeleteBubbleInput {
   repoPath?: string | undefined;
   cwd?: string | undefined;
   force?: boolean | undefined;
+  now?: Date | undefined;
 }
 
 export interface DeleteBubbleDependencies {
@@ -95,6 +98,7 @@ export async function deleteBubble(
   input: DeleteBubbleInput,
   dependencies: DeleteBubbleDependencies = {}
 ): Promise<DeleteBubbleResult> {
+  const now = input.now ?? new Date();
   const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
   const checkBranchExists = dependencies.branchExists ?? branchExists;
   const runTmuxCommand = dependencies.runTmux ?? runTmux;
@@ -179,10 +183,21 @@ export async function deleteBubble(
     };
   }
 
+  const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
+    bubbleId: resolved.bubbleId,
+    repoPath: resolved.repoPath,
+    bubblePaths: resolved.bubblePaths,
+    bubbleConfig: resolved.bubbleConfig,
+    now
+  });
+  resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
+
   let requiresPreDeleteStop = false;
+  let metricsRound: number | null = null;
   try {
     const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
     requiresPreDeleteStop = preDeleteStopStateByLifecycle[loadedState.state.state];
+    metricsRound = loadedState.state.round > 0 ? loadedState.state.round : null;
   } catch {
     // Force-delete should still clean up corrupted bubbles when state.json is missing
     // or invalid, so we fall back to direct artifact cleanup.
@@ -232,6 +247,27 @@ export async function deleteBubble(
   }
 
   await removeBubbleDirectory(resolved.bubblePaths.bubbleDir);
+
+  await emitBubbleLifecycleEventBestEffort({
+    repoPath: resolved.repoPath,
+    bubbleId: resolved.bubbleId,
+    bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+    eventType: "bubble_deleted",
+    round: metricsRound,
+    actorRole: "orchestrator",
+    metadata: {
+      force: input.force === true,
+      tmux_session_terminated: tmuxSessionTerminated,
+      runtime_session_removed: runtimeSessionRemoved,
+      removed_worktree: removedWorktree,
+      removed_bubble_branch: removedBubbleBranch,
+      had_worktree: artifacts.worktree.exists,
+      had_tmux_session: artifacts.tmux.exists,
+      had_runtime_session: artifacts.runtimeSession.exists,
+      had_branch: artifacts.branch.exists
+    },
+    now
+  });
 
   return {
     bubbleId: resolved.bubbleId,

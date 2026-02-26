@@ -265,6 +265,7 @@ describe("bubble config schema", () => {
   it("renders and re-parses bubble TOML", () => {
     const rendered = renderBubbleConfigToml({
       id: "b_test_01",
+      bubble_instance_id: "bi_00m8f7w14k_2f03e8b8e4f24d17ac12",
       repo_path: "/tmp/repo",
       base_branch: "main",
       bubble_branch: "bubble/b_test_01",
@@ -296,9 +297,48 @@ describe("bubble config schema", () => {
 
     const reparsed = parseBubbleConfigToml(rendered);
     expect(reparsed.id).toBe("b_test_01");
+    expect(reparsed.bubble_instance_id).toBe(
+      "bi_00m8f7w14k_2f03e8b8e4f24d17ac12"
+    );
     expect(reparsed.commands.typecheck).toBe("pnpm typecheck");
     expect(reparsed.local_overlay?.mode).toBe("copy");
     expect(reparsed.local_overlay?.entries).toEqual([".claude", ".env.local"]);
+  });
+
+  it("rejects invalid bubble_instance_id format", () => {
+    const result = validateBubbleConfig({
+      id: "b_test_01",
+      bubble_instance_id: "x",
+      repo_path: "/tmp/repo",
+      base_branch: "main",
+      bubble_branch: "bubble/b_test_01",
+      work_mode: "worktree",
+      quality_mode: "strict",
+      review_artifact_type: "auto",
+      reviewer_context_mode: "fresh",
+      watchdog_timeout_minutes: 5,
+      max_rounds: 8,
+      commit_requires_approval: true,
+      agents: {
+        implementer: "codex",
+        reviewer: "claude"
+      },
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      },
+      notifications: {
+        enabled: true
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some((error) => error.path === "bubble_instance_id")
+    ).toBe(true);
   });
 
   it("does not emit duplicate blank lines when open_command is omitted", () => {

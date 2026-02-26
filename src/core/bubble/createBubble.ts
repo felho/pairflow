@@ -16,6 +16,8 @@ import { assertValidBubbleStateSnapshot } from "../state/stateSchema.js";
 import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
 import { isNonEmptyString } from "../validation.js";
 import { GitRepositoryError, assertGitRepository } from "../workspace/git.js";
+import { generateBubbleInstanceId } from "./bubbleInstanceId.js";
+import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import type {
   AgentName,
   BubbleConfig,
@@ -30,6 +32,7 @@ export interface BubbleCreateInput {
   task?: string;
   taskFile?: string;
   cwd?: string;
+  now?: Date;
   implementer?: AgentName;
   reviewer?: AgentName;
   testCommand?: string;
@@ -145,6 +148,7 @@ async function resolveTaskInput(input: {
 
 function buildBubbleConfig(input: {
   id: string;
+  bubbleInstanceId: string;
   repoPath: string;
   baseBranch: string;
   bubbleBranch: string;
@@ -157,6 +161,7 @@ function buildBubbleConfig(input: {
 }): BubbleConfig {
   return assertValidBubbleConfig({
     id: input.id,
+    bubble_instance_id: input.bubbleInstanceId,
     repo_path: input.repoPath,
     base_branch: input.baseBranch,
     bubble_branch: input.bubbleBranch,
@@ -280,6 +285,7 @@ async function ensureRuntimeSessionFile(sessionsPath: string): Promise<void> {
 
 export async function createBubble(input: BubbleCreateInput): Promise<BubbleCreateResult> {
   validateBubbleId(input.id);
+  const createdAt = input.now ?? new Date();
 
   const repoPath = resolve(input.repoPath);
   await ensureRepoPathIsGitRepo(repoPath);
@@ -306,6 +312,7 @@ export async function createBubble(input: BubbleCreateInput): Promise<BubbleCrea
 
   const bubbleConfigInput: Parameters<typeof buildBubbleConfig>[0] = {
     id: input.id,
+    bubbleInstanceId: generateBubbleInstanceId(createdAt),
     repoPath,
     baseBranch,
     bubbleBranch,
@@ -361,6 +368,7 @@ export async function createBubble(input: BubbleCreateInput): Promise<BubbleCrea
     await appendProtocolEnvelope({
       transcriptPath: paths.transcriptPath,
       lockPath: join(paths.locksDir, `${input.id}.lock`),
+      now: createdAt,
       envelope: {
         bubble_id: input.id,
         sender: "orchestrator",
@@ -385,6 +393,22 @@ export async function createBubble(input: BubbleCreateInput): Promise<BubbleCrea
       `Failed to append initial TASK envelope for bubble ${input.id}. Root error: ${reason}`
     );
   }
+
+  await emitBubbleLifecycleEventBestEffort({
+    repoPath,
+    bubbleId: input.id,
+    bubbleInstanceId: bubbleConfigInput.bubbleInstanceId,
+    eventType: "bubble_created",
+    round: null,
+    actorRole: "orchestrator",
+    metadata: {
+      base_branch: config.base_branch,
+      bubble_branch: config.bubble_branch,
+      review_artifact_type: config.review_artifact_type,
+      task_source: task.source
+    },
+    now: createdAt
+  });
 
   return {
     bubbleId: input.id,

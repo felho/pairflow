@@ -378,6 +378,23 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
   }
 
   const id = readString(input, "id", "id", errors, true);
+  const bubbleInstanceId = readString(
+    input,
+    "bubble_instance_id",
+    "bubble_instance_id",
+    errors,
+    false
+  );
+  if (
+    bubbleInstanceId !== undefined &&
+    !/^[A-Za-z0-9][A-Za-z0-9_-]{9,127}$/u.test(bubbleInstanceId)
+  ) {
+    errors.push({
+      path: "bubble_instance_id",
+      message:
+        "Must be 10-128 chars and contain only letters, digits, '_' or '-'"
+    });
+  }
   const repoPath = readString(input, "repo_path", "repo_path", errors, true);
   const baseBranch = readString(input, "base_branch", "base_branch", errors, true);
   const bubbleBranch = readString(
@@ -589,6 +606,9 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
 
   const validatedConfig: BubbleConfig = {
     id: id as string,
+    ...(bubbleInstanceId !== undefined
+      ? { bubble_instance_id: bubbleInstanceId }
+      : {}),
     repo_path: repoPath as string,
     base_branch: baseBranch as string,
     bubble_branch: bubbleBranch as string,
@@ -685,6 +705,9 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
   };
   const lines: Array<string | undefined> = [
     `id = ${tomlString(config.id)}`,
+    config.bubble_instance_id
+      ? `bubble_instance_id = ${tomlString(config.bubble_instance_id)}`
+      : undefined,
     `repo_path = ${tomlString(config.repo_path)}`,
     `base_branch = ${tomlString(config.base_branch)}`,
     `bubble_branch = ${tomlString(config.bubble_branch)}`,

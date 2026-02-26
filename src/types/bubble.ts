@@ -65,6 +65,7 @@ export interface BubbleLocalOverlayConfig {
 
 export interface BubbleConfig {
   id: string;
+  bubble_instance_id?: string;
   repo_path: string;
   base_branch: string;
   bubble_branch: string;

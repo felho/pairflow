@@ -10,6 +10,8 @@ import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import { runGit, GitCommandError } from "../workspace/git.js";
 import { normalizeStringList } from "../util/normalize.js";
 import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
+import { ensureBubbleInstanceIdForMutation } from "./bubbleInstanceId.js";
+import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 
@@ -245,6 +247,14 @@ export async function commitBubble(
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
   });
+  const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
+    bubbleId: resolved.bubbleId,
+    repoPath: resolved.repoPath,
+    bubblePaths: resolved.bubblePaths,
+    bubbleConfig: resolved.bubbleConfig,
+    now
+  });
+  resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
   const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
   const state = loadedState.state;
 
@@ -351,6 +361,24 @@ export async function commitBubble(
       `DONE_PACKAGE ${appended.envelope.id} was appended and git commit ${commitSha} completed, but DONE transition failed after COMMITTED state persisted. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`
     );
   }
+
+  await emitBubbleLifecycleEventBestEffort({
+    repoPath: resolved.repoPath,
+    bubbleId: resolved.bubbleId,
+    bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+    eventType: "bubble_committed",
+    round: state.round,
+    actorRole: "orchestrator",
+    metadata: {
+      commit_sha: commitSha,
+      commit_message: commitMessage,
+      staged_file_count: stagedFiles.length,
+      done_package_path: donePackagePath,
+      auto,
+      refs_count: envelopeRefs.length
+    },
+    now
+  });
 
   return {
     bubbleId: resolved.bubbleId,

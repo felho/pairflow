@@ -6,6 +6,8 @@ import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import { BubbleLookupError, resolveBubbleById } from "../bubble/bubbleLookup.js";
 import { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
 import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
+import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
+import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 
@@ -47,6 +49,14 @@ export async function emitHumanReply(input: EmitHumanReplyInput): Promise<EmitHu
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
   });
+  const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
+    bubbleId: resolved.bubbleId,
+    repoPath: resolved.repoPath,
+    bubblePaths: resolved.bubblePaths,
+    bubbleConfig: resolved.bubbleConfig,
+    now
+  });
+  resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
 
   const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
   const state = loadedState.state;
@@ -116,6 +126,21 @@ export async function emitHumanReply(input: EmitHumanReplyInput): Promise<EmitHu
     ...(appended.envelope.refs[0] !== undefined
       ? { messageRef: appended.envelope.refs[0] }
       : {})
+  });
+
+  await emitBubbleLifecycleEventBestEffort({
+    repoPath: resolved.repoPath,
+    bubbleId: resolved.bubbleId,
+    bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+    eventType: "bubble_replied",
+    round: state.round,
+    actorRole: "human",
+    metadata: {
+      recipient: state.active_agent,
+      refs_count: refs.length,
+      message_length: Array.from(message).length
+    },
+    now
   });
 
   return {

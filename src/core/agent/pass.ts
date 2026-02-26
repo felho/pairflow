@@ -11,6 +11,8 @@ import {
   WorkspaceResolutionError
 } from "../bubble/workspaceResolution.js";
 import { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
+import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
+import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import { isPassIntent, type PassIntent, type ProtocolEnvelope } from "../../types/protocol.js";
 import type { Finding } from "../../types/findings.js";
 import type { AgentName, AgentRole, BubbleStateSnapshot, RoundRoleHistoryEntry } from "../../types/bubble.js";
@@ -144,6 +146,41 @@ function mapAppendResult(result: AppendProtocolEnvelopeResult): Pick<EmitPassRes
   };
 }
 
+function buildFindingCounts(findings: Finding[]): {
+  p0: number;
+  p1: number;
+  p2: number;
+  p3: number;
+} {
+  const counts = {
+    p0: 0,
+    p1: 0,
+    p2: 0,
+    p3: 0
+  };
+
+  for (const finding of findings) {
+    switch (finding.severity) {
+      case "P0":
+        counts.p0 += 1;
+        break;
+      case "P1":
+        counts.p1 += 1;
+        break;
+      case "P2":
+        counts.p2 += 1;
+        break;
+      case "P3":
+        counts.p3 += 1;
+        break;
+      default:
+        break;
+    }
+  }
+
+  return counts;
+}
+
 export async function emitPassFromWorkspace(
   input: EmitPassInput,
   dependencies: EmitPassDependencies = {}
@@ -161,6 +198,14 @@ export async function emitPassFromWorkspace(
   const noFindings = input.noFindings ?? false;
 
   const resolved = await resolveBubbleFromWorkspaceCwd(input.cwd);
+  const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
+    bubbleId: resolved.bubbleId,
+    repoPath: resolved.repoPath,
+    bubblePaths: resolved.bubblePaths,
+    bubbleConfig: resolved.bubbleConfig,
+    now
+  });
+  resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
 
   const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
   const state = loadedState.state;
@@ -275,6 +320,27 @@ export async function emitPassFromWorkspace(
     ...(mapped.envelope.refs[0] !== undefined
       ? { messageRef: mapped.envelope.refs[0] }
       : {})
+  });
+
+  await emitBubbleLifecycleEventBestEffort({
+    repoPath: resolved.repoPath,
+    bubbleId: resolved.bubbleId,
+    bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+    eventType: "bubble_passed",
+    round: handoff.envelopeRound,
+    actorRole: handoff.senderRole,
+    metadata: {
+      pass_intent: intent,
+      inferred_intent: inferredIntent,
+      sender: handoff.senderAgent,
+      recipient: handoff.recipientAgent,
+      recipient_role: handoff.recipientRole,
+      refs_count: refs.length,
+      has_findings: hasFindings,
+      no_findings: noFindings,
+      ...buildFindingCounts(findings)
+    },
+    now
   });
 
   return {

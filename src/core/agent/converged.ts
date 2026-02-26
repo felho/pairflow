@@ -11,6 +11,8 @@ import {
 } from "../bubble/workspaceResolution.js";
 import { emitBubbleNotification } from "../runtime/notifications.js";
 import { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
+import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
+import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import type { AgentName, BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 
@@ -91,6 +93,14 @@ export async function emitConvergedFromWorkspace(
   const refs = normalizeStringList(input.refs ?? []);
 
   const resolved = await resolveBubbleFromWorkspaceCwd(input.cwd);
+  const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
+    bubbleId: resolved.bubbleId,
+    repoPath: resolved.repoPath,
+    bubblePaths: resolved.bubblePaths,
+    bubbleConfig: resolved.bubbleConfig,
+    now
+  });
+  resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
   const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
   const state = loadedState.state;
 
@@ -220,6 +230,22 @@ export async function emitConvergedFromWorkspace(
 
   // Optional UX signal; never block protocol/state progression on notification failure.
   void emitNotification(resolved.bubbleConfig, "converged");
+
+  await emitBubbleLifecycleEventBestEffort({
+    repoPath: resolved.repoPath,
+    bubbleId: resolved.bubbleId,
+    bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+    eventType: "bubble_converged",
+    round: state.round,
+    actorRole: "reviewer",
+    metadata: {
+      refs_count: refs.length,
+      summary_length: Array.from(summary).length,
+      convergence_envelope_id: convergence.envelope.id,
+      approval_request_envelope_id: approvalRequest.envelope.id
+    },
+    now
+  });
 
   return {
     bubbleId: resolved.bubbleId,

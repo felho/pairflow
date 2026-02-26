@@ -6,6 +6,8 @@ import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import { BubbleLookupError, resolveBubbleById } from "../bubble/bubbleLookup.js";
 import { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
 import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
+import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
+import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import type { AgentName, BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ApprovalDecision, ProtocolEnvelope } from "../../types/protocol.js";
 
@@ -101,6 +103,14 @@ export async function emitApprovalDecision(
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
   });
+  const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
+    bubbleId: resolved.bubbleId,
+    repoPath: resolved.repoPath,
+    bubblePaths: resolved.bubblePaths,
+    bubbleConfig: resolved.bubbleConfig,
+    now
+  });
+  resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
   const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
   const state = loadedState.state;
 
@@ -170,6 +180,26 @@ export async function emitApprovalDecision(
     ...(appended.envelope.refs[0] !== undefined
       ? { messageRef: appended.envelope.refs[0] }
       : {})
+  });
+
+  await emitBubbleLifecycleEventBestEffort({
+    repoPath: resolved.repoPath,
+    bubbleId: resolved.bubbleId,
+    bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+    eventType:
+      input.decision === "approve"
+        ? "bubble_approved"
+        : "bubble_rework_requested",
+    round: state.round,
+    actorRole: "human",
+    metadata: {
+      decision: input.decision,
+      refs_count: refs.length,
+      has_message: message !== undefined,
+      message_length:
+        message === undefined ? 0 : Array.from(message).length
+    },
+    now
   });
 
   return {
