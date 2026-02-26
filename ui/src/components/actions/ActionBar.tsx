@@ -61,7 +61,6 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
   const [modalAction, setModalAction] = useState<ModalAction | null>(null);
   const [showCommitForm, setShowCommitForm] = useState(false);
   const [showMergePanel, setShowMergePanel] = useState(false);
-  const [attachFeedback, setAttachFeedback] = useState<string | null>(null);
 
   const availableActions = useMemo(
     () => getAvailableActionsForState(props.bubble.state),
@@ -183,15 +182,11 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
             className="rounded-lg border border-[#333] bg-[#1a1a1a] px-2.5 py-1 text-[10px] text-[#aaa] transition hover:border-[#555] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
             disabled={!props.attach.enabled || props.isSubmitting}
             onClick={() => {
-              setAttachFeedback(null);
               props.onClearFeedback();
               void props
                 .onAction({
                   bubbleId: props.bubble.bubbleId,
                   action: "attach"
-                })
-                .then(() => {
-                  setAttachFeedback("Opening Warp terminal...");
                 })
                 .catch(() => {
                   // Error is displayed by the generic actionError handler.
@@ -254,9 +249,6 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
         <p className="mt-2 text-xs text-amber-300">{props.attach.hint}</p>
       ) : null}
 
-      {attachFeedback !== null ? (
-        <p className="mt-2 text-xs text-cyan-200">{attachFeedback}</p>
-      ) : null}
 
       {props.retryHint !== null ? (
         <div className="mt-2 rounded border border-amber-500/60 bg-amber-950/35 px-2 py-1 text-xs text-amber-200">

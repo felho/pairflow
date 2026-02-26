@@ -186,6 +186,6 @@ describe("ActionBar", () => {
       bubbleId: "b-run",
       action: "attach"
     });
-    expect(screen.getByText("Opening Warp terminal...")).toBeInTheDocument();
+    expect(screen.queryByText("Opening Warp terminal...")).not.toBeInTheDocument();
   });
 });
