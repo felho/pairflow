@@ -1,5 +1,9 @@
 # Pairflow Agent Guidelines
 
+## Language
+
+In the Codex or Claude Code chat I will use both in English (works better with dictation app) and Hungarian. If not stated otherwise, ALWAYS answer in Hungarian.
+
 ## Scope
 
 - These rules apply only to this repository (`pairflow`).
