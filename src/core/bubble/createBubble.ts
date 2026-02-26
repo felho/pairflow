@@ -195,7 +195,12 @@ function inferReviewArtifactType(task: ResolvedTaskInput): ReviewArtifactType {
   if (sourcePath.endsWith(".md") || sourcePath.endsWith(".txt")) {
     documentScore += 1;
   }
-  if (sourcePath.endsWith(".ts") || sourcePath.endsWith(".tsx") || sourcePath.endsWith(".js")) {
+  if (
+    sourcePath.endsWith(".ts") ||
+    sourcePath.endsWith(".tsx") ||
+    sourcePath.endsWith(".js") ||
+    sourcePath.endsWith(".py")
+  ) {
     codeScore += 2;
   }
 
