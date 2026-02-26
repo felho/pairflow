@@ -115,7 +115,6 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
       className={cn(
         "absolute flex w-[500px] flex-col overflow-hidden rounded-[20px] border bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] transition-shadow",
         visual.border,
-        visual.cardTone,
         dragging ? "z-40" : "z-30"
       )}
       style={{
