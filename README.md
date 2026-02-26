@@ -68,23 +68,17 @@ Optional but recommended:
 ## Installation
 
 ```bash
-git clone <repo-url> && cd pairflow
-pnpm install
-pnpm build
+git clone https://github.com/felho/pairflow.git && cd pairflow
+./scripts/install.sh
 ```
 
-Development mode (zsh-safe):
+The installer checks prerequisites, installs dependencies, builds, links `pairflow` globally, and runs a smoke test. See [INSTALL.md](./INSTALL.md) for details and manual fallback steps.
+
+Development mode (zsh-safe, no global install):
 
 ```bash
 PF=(node /path/to/pairflow/dist/cli/index.js)
 "${PF[@]}" bubble list --help
-```
-
-Global install (adds `pairflow` to PATH):
-
-```bash
-pnpm link --global
-pairflow bubble list --help
 ```
 
 ## Quick start (5 minutes)
