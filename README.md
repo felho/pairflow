@@ -8,9 +8,9 @@ Pairflow is a **CLI-first bubble orchestrator** for local git repositories. It r
 
 - Phase 1 (single bubble MVP): done
 - Phase 2 (multi-bubble reliability): done
-- Phase 3 (thin UI): not yet implemented
+- Phase 3 (web UI): done
 
-Stable CLI + runtime + parallel multi-bubble usage is available.
+Stable CLI + runtime + parallel multi-bubble usage + web dashboard are available.
 
 ## Key concepts
 
@@ -63,6 +63,7 @@ Optional but recommended:
 
 - `cursor` (default editor for `bubble open`)
 - `codex` and `claude` binaries in PATH (for tmux agent panes)
+- [Warp](https://www.warp.dev/) terminal (for `bubble attach` — opens tmux session in a Warp tab)
 
 ## Installation
 
@@ -237,7 +238,7 @@ pairflow bubble start --id refactor   --repo .
 pairflow bubble list --repo . --json
 ```
 
-Each bubble runs in its own tmux session. Use `tmux attach -t pf-feat_login` to switch between them.
+Each bubble runs in its own tmux session. Use `tmux attach -t pf-feat_login` to switch between them, or use the web UI for a visual overview of all bubbles across repos.
 
 ### Scenario 5: Monitoring and checking status
 
@@ -253,7 +254,33 @@ pairflow bubble inbox --id feat_login --repo .
 
 # Open the bubble's worktree in your editor
 pairflow bubble open --id feat_login --repo .
+
+# Attach to the bubble's tmux session in Warp terminal
+pairflow bubble attach --id feat_login --repo .
 ```
+
+### Scenario 5b: Using the web UI
+
+The web UI provides a real-time canvas dashboard for monitoring and managing all bubbles across repos.
+
+```bash
+# Start the web UI (default: http://127.0.0.1:4173)
+pairflow ui
+
+# Serve bubbles from specific repos only
+pairflow ui --repo /path/to/myapp --repo /path/to/other
+
+# Custom host/port
+pairflow ui --host 0.0.0.0 --port 8080
+```
+
+The dashboard shows:
+- **Bubble cards** on a draggable canvas — one card per bubble with state, round count, and active agent
+- **Expandable detail view** — click a card to see its timeline, findings, and available actions
+- **Action buttons** — Start, Approve, Reply, Commit, Merge, Attach, Stop — all available inline based on bubble state
+- **State counters** in the header — at-a-glance overview of how many bubbles are in each lifecycle state
+- **Repo filter** — toggle visibility per repo when managing multiple repositories
+- **Real-time updates** via SSE (Server-Sent Events) with automatic polling fallback
 
 ### Scenario 6: Crash recovery and restart
 
@@ -279,6 +306,10 @@ The restart is safe because:
 ```bash
 # Graceful stop — kills tmux, sets state to CANCELLED
 pairflow bubble stop --id feat_login --repo .
+
+# Delete a bubble entirely (worktree, branch, runtime, config)
+pairflow bubble delete --id feat_login --repo .          # dry-run: shows what would be deleted
+pairflow bubble delete --id feat_login --repo . --force  # actually deletes everything
 ```
 
 ### Scenario 8: Using a PRD or design doc as input
@@ -389,8 +420,10 @@ Any non-final state ─→ CANCELLED (via bubble stop)
 | `bubble create --id <id> --repo <path> --base <branch> (--task <text> \| --task-file <path>)` | Initialize a new bubble |
 | `bubble start --id <id> [--repo <path>]` | Start or restart a bubble (worktree + tmux) |
 | `bubble stop --id <id> [--repo <path>]` | Stop and cancel a bubble |
+| `bubble delete --id <id> [--repo <path>] [--force]` | Delete a bubble (dry-run by default, `--force` to confirm) |
 | `bubble resume --id <id> [--repo <path>]` | Resume from WAITING_HUMAN with default reply |
 | `bubble open --id <id> [--repo <path>]` | Open worktree in editor |
+| `bubble attach --id <id> [--repo <path>]` | Attach to bubble's tmux session in Warp terminal |
 | `bubble status --id <id> [--repo <path>] [--json]` | Show current state |
 | `bubble list [--repo <path>] [--json]` | List all bubbles |
 | `bubble inbox --id <id> [--repo <path>] [--json]` | Show pending human actions |
@@ -398,8 +431,27 @@ Any non-final state ─→ CANCELLED (via bubble stop)
 | `bubble approve --id <id> [--repo <path>] [--ref <path>]...` | Approve for commit |
 | `bubble request-rework --id <id> --message <text> [--repo <path>] [--ref <path>]...` | Send back for rework |
 | `bubble commit --id <id> [--repo <path>] [--message <text>] [--ref <path>]...` | Commit and finalize |
+| `bubble merge --id <id> [--repo <path>] [--push] [--delete-remote]` | Merge bubble branch and clean up |
 | `bubble reconcile [--repo <path>] [--dry-run] [--json]` | Clean up stale sessions |
 | `bubble watchdog --id <id> [--repo <path>] [--json]` | Check for stuck agents |
+
+### Repo registry
+
+Manage a list of repositories for the web UI to aggregate bubbles across multiple repos.
+
+| Command | Description |
+|---------|-------------|
+| `repo add <path> [--label <text>]` | Register a repo |
+| `repo remove <path>` | Unregister a repo |
+| `repo list [--json]` | List registered repos |
+
+The registry is stored at `~/.pairflow/repos.json` (override with `PAIRFLOW_REPO_REGISTRY_PATH` env var). When `pairflow ui` is started without `--repo` flags, it loads bubbles from all registered repos.
+
+### Web UI
+
+| Command | Description |
+|---------|-------------|
+| `ui [--repo <path>]... [--host <host>] [--port <port>]` | Start the web dashboard (default: `http://127.0.0.1:4173`) |
 
 ### Agent-facing commands (auto-detected from CWD)
 
@@ -468,7 +520,6 @@ Rules:
 
 ## What is NOT in scope
 
-- This is **not** a web UI (Phase 3 will add a thin UI layer)
 - This is **not** a fully autonomous agent framework — agents still must explicitly call protocol commands
 - `bubble start` sets up runtime + injects protocol briefing, but does not auto-produce PASS/ASK/CONVERGED events
 
@@ -513,12 +564,11 @@ pnpm lint       # ESLint
 pnpm typecheck  # TypeScript
 pnpm test       # Vitest
 pnpm check      # All of the above
+pnpm dev:ui     # Rebuild CLI + restart web UI server on port 4173
 ```
 
 ## Roadmap
 
-**Phase 3 — Thin UI:**
-- Bubble list with state badges
-- Timeline view
-- Inbox panel
-- Diff / changed files view
+- Diff / changed files view in the web UI
+- Inline inbox panel for human questions
+- Notification system for state transitions
