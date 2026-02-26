@@ -548,6 +548,115 @@ This bubble is the strongest evidence for combining **task-level acceptance crit
 | **Approve with notes** | R3+ P2-only rounds become terminal | R3+ P2-only rounds become terminal |
 | **Severity guidelines** | Smoke test findings → P3 after R3 | Same |
 
+## 9. Execution Plan for Loop Optimization (Top 3 First)
+
+This section captures the current implementation strategy so it can be executed incrementally without losing context.
+
+Companion design document for durable measurement/storage:
+- `docs/bubble-metrics-archive-strategy.md`
+
+### Top 3 Priorities (Current)
+
+1. **Approve with notes** (`APPROVE_WITH_NOTES` behavior)
+2. **Severity + scope calibration** (reduce P2 inflation and out-of-scope fix loops)
+3. **Task-level acceptance criteria boundary** (explicit "done" contract)
+
+### Practical Adjustment from Feasibility Review
+
+The priority order remains, but rollout should be phased by complexity:
+
+- **Prompt-first now:** #1 and #2 (plus a round-based severity gate in prompt)
+- **Minimal code next:** add durable mechanics (`suggestions.md`, gate config)
+- **Schema/policy enforcement later:** hard acceptance-criteria validation
+
+This preserves fast impact while avoiding premature architecture churn.
+
+### Phase 0 (Immediate, Prompt-Only Changes)
+
+No protocol/schema change required:
+
+1. Add explicit severity rubric (`P1` runtime/safety critical, `P2` functional gap, `P3` cosmetic/cleanup) to reviewer startup + handoff instructions.
+2. Add strict scope rule: out-of-scope observations are informational notes, not fix-request findings.
+3. Add decision rule: if no `P1`, reviewer should converge with notes instead of requesting rework.
+4. Add round-based severity gate instruction (default `N=3`): after round `N`, only `P1` should trigger new fix loops; `P2/P3` become notes.
+
+Expected effect: immediate reduction in low-value refinement rounds, especially on P2-heavy bubbles.
+
+### Phase 1 (Low/Medium Code Additions)
+
+Implement durable support for prompt behavior:
+
+1. **Convergence with notes plumbing**
+   - Allow reviewer to attach structured suggestions on convergence.
+   - Emit `artifacts/suggestions.md` and reference it from convergence flow.
+2. **Configurable severity gate**
+   - Add `severity_gate_round` to `bubble.toml` (default `3`).
+   - Use it as policy input rather than only prompt guidance.
+3. **Reviewer message templates**
+   - Centralize rubric/scope/gate text to keep startup/resume/handoff consistent.
+
+### Phase 2 (Contract Enforcement)
+
+Make acceptance criteria a hard boundary rather than advisory:
+
+1. Require explicit acceptance criteria in task input (or normalized task contract artifact).
+2. Require reviewer findings to map to acceptance criteria or explicit risk category.
+3. Gate convergence on acceptance-criteria status (satisfied / waived by human).
+
+This is intentionally later because it changes task schema and validation behavior.
+
+### Concrete Repository Touchpoints
+
+Likely files for phased implementation:
+
+- Reviewer instruction surfaces:
+  - `src/core/bubble/startBubble.ts`
+  - `src/core/runtime/tmuxDelivery.ts`
+- Pass/converged behavior:
+  - `src/cli/commands/agent/pass.ts`
+  - `src/core/agent/pass.ts`
+  - `src/cli/commands/agent/converged.ts`
+  - `src/core/agent/converged.ts`
+- Config + defaults:
+  - `src/types/bubble.ts`
+  - `src/config/defaults.ts`
+  - `src/config/bubbleConfig.ts`
+- Policy checks:
+  - `src/core/convergence/policy.ts`
+- Task contract boundary:
+  - `src/core/bubble/createBubble.ts`
+- Spec/docs:
+  - `docs/pairflow-initial-design.md`
+
+### Experiment Framework (Start Here)
+
+Run each phase as a controlled experiment across multiple bubbles.
+
+Primary metrics:
+
+1. `rounds_to_converge` (median + p90)
+2. `% rounds with only P2/P3 findings`
+3. `review_cycle_time_minutes`
+
+Quality guardrails:
+
+1. `escaped_P1_after_converged` (must not increase)
+2. `human_forced_intervention_rate`
+3. `false_convergence_count` (converged then reopened)
+
+Suggested rollout:
+
+1. Baseline on next 5 bubbles (current behavior)
+2. Enable Phase 0 prompt rules on next 5 bubbles
+3. Add Phase 1 mechanics on next 5 bubbles
+4. Compare round/time reduction while checking guardrails
+
+### Claim Calibration
+
+- The "~50% round reduction" estimate is credible for `delete-bubble`-like P2-heavy loops.
+- Treat it as **bubble-class-specific** until validated on a wider sample.
+- For P1-heavy bubbles (like `repo-registry-prd`), expect smaller but still meaningful gains.
+
 ## Open Questions
 
 - Should the parallel agent count be configurable per bubble (e.g., quality_mode: strict → 3 agents, normal → 1)?
