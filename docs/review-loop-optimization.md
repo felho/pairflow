@@ -422,6 +422,132 @@ This is the strongest evidence for the **"good enough" threshold** optimization.
 
 The delete-bubble is an extreme case that validates all four optimization proposals simultaneously. The single highest-impact change would be **approve with notes** — it alone would have cut the bubble nearly in half. Combined with severity guidelines, the bubble likely converges in 16-18 rounds without human intervention.
 
+### 7. Task-Level Acceptance Criteria as Reviewer Scope Boundary
+
+The reviewer currently has no definition of "done" beyond "I can't find more issues." This means its stopping condition is subjective and expands naturally — there's always *something* to flag.
+
+**Fix:** Require every task description to include explicit acceptance criteria. The reviewer prompt should reference these criteria as the **primary** measure of completion, not finding count.
+
+Example from the installer bubble task:
+```
+Acceptance: script runs successfully on a fresh clone, installs pairflow,
+smoke test passes. Shell best practices (set -euo pipefail, quoting) are
+sufficient — do not optimize for exotic edge cases like Yarn Berry,
+corepack bootstrap, or multi-package-manager detection.
+```
+
+**How it works:**
+- Reviewer checks: "Does the implementation satisfy the acceptance criteria?" → If yes, remaining P2/P3s go to suggestions.md, not to fix_request.
+- This gives the reviewer an explicit permission to stop, which it currently lacks.
+- Acceptance criteria also constrain scope creep — the reviewer can't escalate "what about Yarn support?" to P1 when the task explicitly scopes to pnpm only.
+
+**Expected impact:** Prevents the installer bubble pattern where the reviewer kept finding new edge cases (corepack, Yarn Berry, multi-lockfile) in a task that only needed pnpm support. Also prevents the delete-bubble pattern where the reviewer expanded scope to accessibility, memoization, and type re-exports beyond the task's functional requirements.
+
+### 8. Round-Based Severity Gate
+
+Complementary to "approve with notes" (#2): introduce an explicit severity gate tied to round number.
+
+**Rule:** After round N (e.g., N=3), only P1 findings trigger a new fix+review cycle. P2/P3 findings are logged to `suggestions.md` and the reviewer issues `converged`.
+
+This is different from #2 ("approve with notes after N consecutive P2-only rounds") because:
+- It's **proactive** — doesn't wait for a streak of P2-only rounds, applies immediately after round N
+- It acknowledges that the first 2-3 rounds catch the structural issues; after that, diminishing returns set in
+- It's simple to implement — a single round counter check in the reviewer prompt
+
+**Configurable:** `bubble.toml` could specify `severity_gate_round = 3` (default), overridable for high-stakes bubbles (`severity_gate_round = 8`).
+
+**Expected impact on past bubbles:**
+| Bubble | Actual rounds | With gate at round 3 |
+|--------|--------------|---------------------|
+| installer (v1, 22 rounds) | 22 | ~5-6 (P1s mostly in R1-R2) |
+| installer (v2, 10+ rounds) | 10+ | ~4-5 (P1s in R1-R2, rest P2) |
+| delete-bubble | 36 | ~12-15 (P1s scattered but most by R6) |
+| repo-registry-prd | 19 | ~10-12 (complex P1s through R8) |
+
+## Evidence from installer Bubble
+
+### Overview
+
+| Metric | Value |
+|--------|-------|
+| **Bubble** | `installer` (2nd attempt — 1st attempt killed at round 22) |
+| **1st attempt rounds** | 22 (killed by user) |
+| **2nd attempt rounds** | 10+ (still running at time of analysis) |
+| **Duration (1st attempt)** | ~1.75 hours (12:54 – 14:35) |
+| **Human intervention** | User killed bubble and restarted with simpler constraints |
+| **Root cause** | Over-engineering + infinite nitpick spiral |
+
+### Task
+
+Create `scripts/install.sh` — a shell installer that runs after `git clone` to set up pairflow (install deps, build, link CLI, init `.pairflow/`, smoke test).
+
+### 1st Attempt — Over-Engineering Spiral (22 rounds)
+
+The original task description said "install dependencies — `npm install` (or detect package manager)" which the implementer interpreted as "support all package managers." The result after 22 rounds:
+
+- **780+ line bash script** with:
+  - Full pnpm/npm/yarn/yarn-berry detection and support
+  - Custom semver parser in inline Node.js (caret, tilde, range, OR `||` alternatives)
+  - Corepack bootstrap logic
+  - Symlink-safe directory resolution
+  - Multi-lockfile precedence rules
+  - sessions.json backup-with-validation
+
+All this for a project that uses pnpm exclusively and has a `pnpm-lock.yaml`.
+
+**Zero commits in 22 rounds** — the reviewer kept finding new edge cases in every round (corepack permissions, Yarn Berry compat, npm determinism, semver zero-major bugs, etc.) because the implementation surface was so large.
+
+### 2nd Attempt — Constrained Task (10+ rounds)
+
+Task was rewritten with explicit constraints:
+- "**pnpm only.** Do NOT support npm, yarn, or any other package manager."
+- "**No custom semver parser.** Simple major version check, ~3 lines max."
+- "**Keep it short.** The entire script should be under 80 lines."
+
+This produced a focused implementation, but the reviewer **still couldn't converge** after 10 rounds due to the nitpick spiral:
+
+### Nitpick Spiral — Smoke Test Theme Across 6+ Rounds
+
+The reviewer circled the same topic (smoke test approach) from different angles every round:
+
+| Round | Smoke test finding |
+|-------|-------------------|
+| R5 | Fallback smoke test via `node dist/cli/index.js` silently succeeds when pairflow not on PATH |
+| R6 | Smoke test uses `--help` which always exits 0; use a command that exercises real runtime |
+| R7 | Smoke test runs `bubble list --repo .` against source repo — passes vacuously |
+| R8 | Smoke test uses `--help` exit code which is framework-dependent; use `--version` or grep |
+| R9 | Smoke test grep pattern `^Usage:` is brittle, coupled to Commander.js help format |
+
+Each round proposed a different "better" approach, the implementer adopted it, and the next round found a problem with the new approach. This is a textbook **bikeshedding loop** on a low-stakes detail.
+
+### Findings Quality Assessment
+
+**Genuinely useful (rounds 1-3):**
+- R1 P1: `chmod +x` missing on install.sh — real bug, fresh clone would fail
+- R2 P1: `.pairflow/` init inside source repo is redundant (pairflow creates lazily)
+- R2 P2: Node version check crashes on non-numeric input (nvm shim warnings)
+- R6 P2: Linux `apt install nodejs` hint installs v12/v18, not v22
+
+**Diminishing returns (rounds 4+):**
+- R4 P2: pnpm version not validated (legitimate but low-risk)
+- R5-R9: Smoke test approach debated endlessly (see table above)
+- R7-R9: README/INSTALL.md minor inconsistencies (P2 rated, should be P3)
+
+### Key Insight — Constraint Quality Determines Loop Length
+
+The 1st attempt (vague constraints, 22 rounds) vs 2nd attempt (tight constraints, 10+ rounds) demonstrates that **task-level acceptance criteria directly affect convergence speed**. But even tight constraints don't prevent the nitpick spiral — the reviewer will always find P2s to debate.
+
+This bubble is the strongest evidence for combining **task-level acceptance criteria** (#7) with a **round-based severity gate** (#8): the acceptance criteria prevent over-engineering, and the severity gate prevents the P2 bikeshedding spiral.
+
+### Optimizations That Would Have Helped
+
+| Optimization | Impact on 1st attempt (22 rounds) | Impact on 2nd attempt (10+ rounds) |
+|---|---|---|
+| **Task-level acceptance criteria** | Prevents multi-PM support entirely → ~60% less code → fewer finding targets | Already applied (constraints in task) |
+| **Round-based severity gate (N=3)** | Converges at ~4-5 rounds (P1s in R1-R2 only) | Converges at ~4-5 rounds |
+| **Approve with notes** | R3+ P2-only rounds become terminal | R3+ P2-only rounds become terminal |
+| **Severity guidelines** | Smoke test findings → P3 after R3 | Same |
+
 ## Open Questions
 
 - Should the parallel agent count be configurable per bubble (e.g., quality_mode: strict → 3 agents, normal → 1)?
