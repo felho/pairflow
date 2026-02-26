@@ -38,7 +38,13 @@ echo "Building Pairflow..."
 pnpm build
 
 echo "Linking pairflow globally..."
-pnpm link --global
+if ! pnpm link --global 2>/dev/null; then
+  echo "Setting up pnpm global bin directory..."
+  SHELL="${SHELL:-/bin/bash}" pnpm setup >/dev/null 2>&1 || true
+  export PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"
+  export PATH="$PNPM_HOME:$PATH"
+  pnpm link --global
+fi
 
 if ! command -v pairflow >/dev/null 2>&1; then
   echo "Warning: pairflow is not on PATH after global link." >&2
