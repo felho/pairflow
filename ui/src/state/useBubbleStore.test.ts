@@ -791,7 +791,7 @@ describe("createBubbleStore", () => {
     expect(store.getState().expandedBubbleIds).toEqual([]);
   });
 
-  it("expandedPositions are persisted and pruned with bubbles", async () => {
+  it("uses single shared position for both collapsed and expanded cards", async () => {
     const storage = new MemoryStorage();
     const api = createApiStub({
       getRepos: vi.fn(async () => ["/repo-a"]),
@@ -801,39 +801,34 @@ describe("createBubbleStore", () => {
       }))
     });
 
-    let emitEvent: (event: UiEvent) => void = () => undefined;
     const store = createBubbleStore({
       api,
       storage,
-      createEventsClient: (input) => {
-        emitEvent = input.onEvent;
-        return {
-          start: () => undefined,
-          stop: () => undefined,
-          refresh: () => undefined
-        };
-      }
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
     });
 
     await store.getState().initialize();
 
-    store.getState().setExpandedPosition("b-a", { x: 100, y: 200 });
-    store.getState().persistExpandedPositions();
+    // Set position while collapsed
+    store.getState().setPosition("b-a", { x: 100, y: 200 });
+    store.getState().persistPositions();
 
-    expect(
-      JSON.parse(storage.getItem("pairflow.ui.canvas.expandedPositions.v1") ?? "{}")
-    ).toEqual({ "b-a": { x: 100, y: 200 } });
+    // Expand the bubble
+    await store.getState().toggleBubbleExpanded("b-a");
 
-    // Remove bubble — expanded positions should be pruned
-    emitEvent({
-      id: 10,
-      ts: "2026-02-24T12:10:00.000Z",
-      type: "bubble.removed",
-      repoPath: "/repo-a",
-      bubbleId: "b-a"
-    });
+    // Position should be the same — single store, no separate expanded positions
+    expect(store.getState().positions["b-a"]).toEqual({ x: 100, y: 200 });
 
-    expect(store.getState().expandedPositions).toEqual({});
+    // Move while expanded — updates the same positions store
+    store.getState().setPosition("b-a", { x: 300, y: 400 });
+
+    // Collapse — position stays where we last moved it
+    store.getState().collapseBubble("b-a");
+    expect(store.getState().positions["b-a"]).toEqual({ x: 300, y: 400 });
   });
 
   it("restores expandedBubbleIds from localStorage on startup", async () => {

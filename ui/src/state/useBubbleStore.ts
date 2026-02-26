@@ -31,7 +31,6 @@ import { emptyStateCounts } from "../lib/types";
 
 const positionsStorageKey = "pairflow.ui.canvas.positions.v1";
 const expandedIdsStorageKey = "pairflow.ui.canvas.expandedIds.v1";
-const expandedPositionsStorageKey = "pairflow.ui.canvas.expandedPositions.v1";
 
 interface StorageLike {
   getItem(key: string): string | null;
@@ -64,7 +63,6 @@ export interface BubbleStoreState {
   isLoading: boolean;
   error: string | null;
   expandedBubbleIds: string[];
-  expandedPositions: Record<string, BubblePosition>;
   bubbleDetails: Record<string, UiBubbleDetail>;
   bubbleTimelines: Record<string, UiTimelineEntry[]>;
   detailLoadingById: Record<string, boolean>;
@@ -79,8 +77,6 @@ export interface BubbleStoreState {
   toggleRepo(repoPath: string): Promise<void>;
   setPosition(bubbleId: string, position: BubblePosition): void;
   persistPositions(): void;
-  setExpandedPosition(bubbleId: string, position: BubblePosition): void;
-  persistExpandedPositions(): void;
   stopRealtime(): void;
   toggleBubbleExpanded(bubbleId: string): Promise<void>;
   collapseBubble(bubbleId: string): void;
@@ -224,53 +220,6 @@ function writeExpandedIds(storage: StorageLike | null, ids: string[]): void {
   }
 }
 
-function readExpandedPositions(storage: StorageLike | null): Record<string, BubblePosition> {
-  if (storage === null) {
-    return {};
-  }
-  try {
-    const raw = storage.getItem(expandedPositionsStorageKey);
-    if (raw === null || raw.trim().length === 0) {
-      return {};
-    }
-    const parsed = JSON.parse(raw) as unknown;
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-      return {};
-    }
-    const result: Record<string, BubblePosition> = {};
-    for (const [key, value] of Object.entries(parsed)) {
-      if (typeof value !== "object" || value === null || Array.isArray(value)) {
-        continue;
-      }
-      const x = (value as { x?: unknown }).x;
-      const y = (value as { y?: unknown }).y;
-      if (typeof x !== "number" || typeof y !== "number") {
-        continue;
-      }
-      if (!Number.isFinite(x) || !Number.isFinite(y)) {
-        continue;
-      }
-      result[key] = { x, y };
-    }
-    return result;
-  } catch {
-    return {};
-  }
-}
-
-function writeExpandedPositions(
-  storage: StorageLike | null,
-  positions: Record<string, BubblePosition>
-): void {
-  if (storage === null) {
-    return;
-  }
-  try {
-    storage.setItem(expandedPositionsStorageKey, JSON.stringify(positions));
-  } catch {
-    return;
-  }
-}
 
 function mergeRepoPayloads(
   currentBubbles: Record<string, BubbleCardModel>,
@@ -544,14 +493,12 @@ export function createBubbleStore(
           actionFailureById: pruneRecordByBubbleIds(state.actionFailureById, bubblesById),
           expandedBubbleIds: state.expandedBubbleIds.filter(
             (id) => bubblesById[id] !== undefined
-          ),
-          expandedPositions: prunePositions(state.expandedPositions, bubblesById)
+          )
         };
       });
 
       writePositions(storage, get().positions);
       writeExpandedIds(storage, get().expandedBubbleIds);
-      writeExpandedPositions(storage, get().expandedPositions);
     };
 
     const refreshExpandedBubble = async (bubbleId: string): Promise<void> => {
@@ -705,8 +652,7 @@ export function createBubbleStore(
                   ),
                   expandedBubbleIds: state.expandedBubbleIds.filter(
                     (id) => bubblesById[id] !== undefined
-                  ),
-                  expandedPositions: prunePositions(state.expandedPositions, bubblesById)
+                  )
                 };
               }
               case "bubble.updated": {
@@ -776,8 +722,7 @@ export function createBubbleStore(
                   ),
                   expandedBubbleIds: state.expandedBubbleIds.filter(
                     (id) => id !== event.bubbleId
-                  ),
-                  expandedPositions: prunePositions(state.expandedPositions, bubblesById)
+                  )
                 };
               }
               case "repo.updated": {
@@ -796,7 +741,6 @@ export function createBubbleStore(
 
           writePositions(storage, get().positions);
           writeExpandedIds(storage, get().expandedBubbleIds);
-          writeExpandedPositions(storage, get().expandedPositions);
 
           const expandedIds = get().expandedBubbleIds;
           if (expandedIds.length === 0) {
@@ -852,7 +796,6 @@ export function createBubbleStore(
       isLoading: false,
       error: null,
       expandedBubbleIds: readExpandedIds(storage),
-      expandedPositions: readExpandedPositions(storage),
       bubbleDetails: {},
       bubbleTimelines: {},
       detailLoadingById: {},
@@ -914,7 +857,6 @@ export function createBubbleStore(
             expandedBubbleIds: state.expandedBubbleIds.filter(
               (id) => bubblesById[id] !== undefined
             ),
-            expandedPositions: prunePositions(state.expandedPositions, bubblesById),
             bubbleDetails: syncExpandedFromSummary(state.bubbleDetails, bubblesById),
             bubbleTimelines: pruneRecordByBubbleIds(state.bubbleTimelines, bubblesById),
             detailLoadingById: pruneRecordByBubbleIds(state.detailLoadingById, bubblesById),
@@ -932,7 +874,6 @@ export function createBubbleStore(
 
           writePositions(storage, positions);
           writeExpandedIds(storage, get().expandedBubbleIds);
-          writeExpandedPositions(storage, get().expandedPositions);
 
           // Re-fetch details for any expanded bubbles that survived pruning
           const expandedIds = get().expandedBubbleIds;
@@ -990,19 +931,6 @@ export function createBubbleStore(
 
       persistPositions(): void {
         writePositions(storage, get().positions);
-      },
-
-      setExpandedPosition(bubbleId: string, position: BubblePosition): void {
-        set((state) => ({
-          expandedPositions: {
-            ...state.expandedPositions,
-            [bubbleId]: position
-          }
-        }));
-      },
-
-      persistExpandedPositions(): void {
-        writeExpandedPositions(storage, get().expandedPositions);
       },
 
       stopRealtime(): void {

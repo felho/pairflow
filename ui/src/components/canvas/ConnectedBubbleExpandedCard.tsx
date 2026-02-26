@@ -17,10 +17,7 @@ export function ConnectedBubbleExpandedCard(
   const timeline = useBubbleStore(
     (state) => state.bubbleTimelines[props.bubbleId] ?? null
   );
-  const expandedPosition = useBubbleStore(
-    (state) => state.expandedPositions[props.bubbleId]
-  );
-  const collapsedPosition = useBubbleStore(
+  const position = useBubbleStore(
     (state) => state.positions[props.bubbleId]
   );
   const detailLoading = useBubbleStore(
@@ -48,12 +45,8 @@ export function ConnectedBubbleExpandedCard(
     (state) => state.actionFailureById[props.bubbleId] ?? null
   );
   const collapseBubble = useBubbleStore((state) => state.collapseBubble);
-  const setExpandedPosition = useBubbleStore(
-    (state) => state.setExpandedPosition
-  );
-  const persistExpandedPositions = useBubbleStore(
-    (state) => state.persistExpandedPositions
-  );
+  const setPosition = useBubbleStore((state) => state.setPosition);
+  const persistPositions = useBubbleStore((state) => state.persistPositions);
   const refreshExpandedBubble = useBubbleStore(
     (state) => state.refreshExpandedBubble
   );
@@ -66,14 +59,14 @@ export function ConnectedBubbleExpandedCard(
     return null;
   }
 
-  const position = expandedPosition ?? collapsedPosition ?? { x: 22, y: 22 };
+  const resolvedPosition = position ?? { x: 22, y: 22 };
 
   return (
     <BubbleExpandedCard
       bubble={bubble}
       detail={detail}
       timeline={timeline}
-      position={position}
+      position={resolvedPosition}
       detailLoading={detailLoading}
       timelineLoading={timelineLoading}
       detailError={detailError}
@@ -83,10 +76,10 @@ export function ConnectedBubbleExpandedCard(
       actionRetryHint={actionRetryHint}
       actionFailure={actionFailure}
       onPositionChange={(pos) => {
-        setExpandedPosition(props.bubbleId, pos);
+        setPosition(props.bubbleId, pos);
       }}
       onPositionCommit={() => {
-        persistExpandedPositions();
+        persistPositions();
       }}
       onClose={() => {
         collapseBubble(props.bubbleId);

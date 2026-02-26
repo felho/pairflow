@@ -13,7 +13,6 @@ vi.mock("./state/useBubbleStore", async () => {
     isLoading: false,
     error: "Sample error",
     expandedBubbleIds: [],
-    expandedPositions: {},
     positions: {
       "b-1": {
         x: 20,
@@ -33,8 +32,6 @@ vi.mock("./state/useBubbleStore", async () => {
     toggleRepo: async () => undefined,
     setPosition: () => undefined,
     persistPositions: () => undefined,
-    setExpandedPosition: () => undefined,
-    persistExpandedPositions: () => undefined,
     toggleBubbleExpanded: async () => undefined,
     collapseBubble: () => undefined,
     refreshExpandedBubble: async () => undefined,
