@@ -1,4 +1,6 @@
 import { rm } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 import type { DeleteBubbleArtifacts, DeleteBubbleResult } from "../../contracts/deleteBubble.js";
 import type { BubbleLifecycleState } from "../../types/bubble.js";
@@ -26,6 +28,14 @@ import { stopBubble, StopBubbleError } from "./stopBubble.js";
 import { pathExists } from "../util/pathExists.js";
 import { ensureBubbleInstanceIdForMutation } from "./bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
+import {
+  createArchiveSnapshot,
+  type CreateArchiveSnapshotInput
+} from "../archive/archiveSnapshot.js";
+import {
+  upsertDeletedArchiveIndexEntry,
+  type UpsertDeletedArchiveIndexEntryInput
+} from "../archive/archiveIndex.js";
 
 export type {
   DeleteBubbleArtifacts,
@@ -37,6 +47,7 @@ export interface DeleteBubbleInput {
   repoPath?: string | undefined;
   cwd?: string | undefined;
   force?: boolean | undefined;
+  archiveRootPath?: string | undefined;
   now?: Date | undefined;
 }
 
@@ -50,6 +61,12 @@ export interface DeleteBubbleDependencies {
   cleanupWorktreeWorkspace?: typeof cleanupWorktreeWorkspace;
   removeBubbleDirectory?: ((path: string) => Promise<void>) | undefined;
   stopBubble?: typeof stopBubble;
+  createArchiveSnapshot?:
+    | ((input: CreateArchiveSnapshotInput) => Promise<{ archivePath: string }>)
+    | undefined;
+  upsertDeletedArchiveIndexEntry?:
+    | ((input: UpsertDeletedArchiveIndexEntryInput) => Promise<unknown>)
+    | undefined;
 }
 
 export class DeleteBubbleError extends Error {
@@ -57,6 +74,44 @@ export class DeleteBubbleError extends Error {
     super(message);
     this.name = "DeleteBubbleError";
   }
+}
+
+function inferCreatedAtFromBubbleInstanceId(
+  bubbleInstanceId: string
+): string | null {
+  const segments = bubbleInstanceId.split("_");
+  if (segments.length < 3 || segments[0] !== "bi") {
+    return null;
+  }
+
+  const encodedTimestamp = segments[1];
+  if (encodedTimestamp === undefined || !/^[0-9a-z]+$/u.test(encodedTimestamp)) {
+    return null;
+  }
+
+  const timestampMs = Number.parseInt(encodedTimestamp, 36);
+  if (!Number.isSafeInteger(timestampMs) || timestampMs < 0) {
+    return null;
+  }
+
+  const createdAt = new Date(timestampMs);
+  if (Number.isNaN(createdAt.getTime())) {
+    return null;
+  }
+
+  return createdAt.toISOString();
+}
+
+function formatDeleteStepError(input: {
+  bubbleId: string;
+  bubbleInstanceId: string;
+  step: "snapshot" | "index" | "worktree-cleanup" | "remove-active";
+  error: unknown;
+}): DeleteBubbleError {
+  const reason = input.error instanceof Error ? input.error.message : String(input.error);
+  return new DeleteBubbleError(
+    `Delete failed: bubble_id=${input.bubbleId} bubble_instance_id=${input.bubbleInstanceId} step=${input.step} reason=${reason}`
+  );
 }
 
 async function isTmuxSessionAlive(
@@ -126,6 +181,10 @@ export async function deleteBubble(
       }
     });
   const stop = dependencies.stopBubble ?? stopBubble;
+  const archiveSnapshot = dependencies.createArchiveSnapshot ?? createArchiveSnapshot;
+  const upsertArchiveIndexEntry =
+    dependencies.upsertDeletedArchiveIndexEntry ?? upsertDeletedArchiveIndexEntry;
+  const archiveLocksDir = join(homedir(), ".pairflow", "locks");
 
   const resolved = await resolveBubble({
     bubbleId: input.bubbleId,
@@ -234,19 +293,85 @@ export async function deleteBubble(
     });
   }
 
+  const createdAtFromMetadata = inferCreatedAtFromBubbleInstanceId(
+    bubbleIdentity.bubbleInstanceId
+  );
+  let archivePath: string;
+  try {
+    const snapshot = await archiveSnapshot({
+      repoPath: resolved.repoPath,
+      bubbleId: resolved.bubbleId,
+      bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+      bubbleDir: resolved.bubblePaths.bubbleDir,
+      locksDir: archiveLocksDir,
+      ...(input.archiveRootPath !== undefined
+        ? { archiveRootPath: input.archiveRootPath }
+        : {}),
+      now
+    });
+    archivePath = snapshot.archivePath;
+  } catch (error) {
+    throw formatDeleteStepError({
+      bubbleId: resolved.bubbleId,
+      bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+      step: "snapshot",
+      error
+    });
+  }
+
+  try {
+    await upsertArchiveIndexEntry({
+      repoPath: resolved.repoPath,
+      bubbleId: resolved.bubbleId,
+      bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+      archivePath,
+      locksDir: archiveLocksDir,
+      createdAt: createdAtFromMetadata,
+      ...(input.archiveRootPath !== undefined
+        ? { archiveRootPath: input.archiveRootPath }
+        : {}),
+      now
+    });
+  } catch (error) {
+    throw formatDeleteStepError({
+      bubbleId: resolved.bubbleId,
+      bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+      step: "index",
+      error
+    });
+  }
+
   let removedWorktree = false;
   let removedBubbleBranch = false;
   if (artifacts.worktree.exists || artifacts.branch.exists) {
-    const cleanupResult = await cleanup({
-      repoPath: resolved.repoPath,
-      bubbleBranch: resolved.bubbleConfig.bubble_branch,
-      worktreePath: resolved.bubblePaths.worktreePath
-    });
-    removedWorktree = cleanupResult.removedWorktree;
-    removedBubbleBranch = cleanupResult.removedBranch;
+    try {
+      const cleanupResult = await cleanup({
+        repoPath: resolved.repoPath,
+        bubbleBranch: resolved.bubbleConfig.bubble_branch,
+        worktreePath: resolved.bubblePaths.worktreePath
+      });
+      removedWorktree = cleanupResult.removedWorktree;
+      removedBubbleBranch = cleanupResult.removedBranch;
+    } catch (error) {
+      throw formatDeleteStepError({
+        bubbleId: resolved.bubbleId,
+        bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+        step: "worktree-cleanup",
+        error
+      });
+    }
   }
 
-  await removeBubbleDirectory(resolved.bubblePaths.bubbleDir);
+  try {
+    await removeBubbleDirectory(resolved.bubblePaths.bubbleDir);
+  } catch (error) {
+    throw formatDeleteStepError({
+      bubbleId: resolved.bubbleId,
+      bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+      step: "remove-active",
+      error
+    });
+  }
 
   await emitBubbleLifecycleEventBestEffort({
     repoPath: resolved.repoPath,
