@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { BubbleCanvas } from "./BubbleCanvas";
+import { bubbleDimensions } from "../../lib/canvasLayout";
 import { bubbleCard } from "../../test/fixtures";
 
 function deletedResult(bubbleId: string) {
@@ -82,6 +83,7 @@ describe("BubbleCanvas", () => {
   it("renders cards with mapped runtime status and persisted position", () => {
     const onPositionChange = vi.fn();
     const onPositionCommit = vi.fn();
+    const collapsedDimensions = bubbleDimensions(false);
 
     render(
       <BubbleCanvas
@@ -110,11 +112,13 @@ describe("BubbleCanvas", () => {
 
     expect(screen.getByRole("article")).toHaveStyle({
       left: "40px",
-      top: "60px"
+      top: "60px",
+      width: `${collapsedDimensions.width}px`,
+      height: `${collapsedDimensions.height}px`
     });
     expect(screen.getByRole("main")).toHaveStyle({
       minHeight: "560px",
-      minWidth: "312px"
+      minWidth: `${40 + collapsedDimensions.width + 24}px`
     });
     expect(onPositionChange).not.toHaveBeenCalled();
     expect(onPositionCommit).not.toHaveBeenCalled();

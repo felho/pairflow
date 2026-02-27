@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  bubbleDimensions,
   cardHeight,
   defaultPosition,
   expandedCardHeight,
@@ -59,8 +60,8 @@ describe("resolveNonOverlappingPosition", () => {
     const desired = defaultPosition(1);
     const blocker = defaultPosition(2);
     // Boundary arithmetic with current constants:
-    // desired collapsed right edge = 296 + 248 = 544
-    // blocker padded left edge = (570 - xGap) = 544
+    // desired collapsed right edge = 308 + 260 = 568
+    // blocker padded left edge = (594 - xGap) = 568
     // so collapsed candidate is exactly non-overlapping at the boundary.
 
     const collapsedNewPosition = resolveNonOverlappingPosition(
@@ -78,5 +79,23 @@ describe("resolveNonOverlappingPosition", () => {
 
     expect(expandedNewPosition.x).toBe(desired.x);
     expect(expandedNewPosition.y).toBe(startY + cardHeight + yGap);
+  });
+
+  it("places a new bubble outside an expanded blocker footprint", () => {
+    const expandedBlocker = {
+      position: defaultPosition(0),
+      expanded: true
+    };
+    const desired = defaultPosition(1);
+
+    const resolved = resolveNonOverlappingPosition(
+      desired,
+      [expandedBlocker],
+      false
+    );
+
+    const blockerBottom =
+      expandedBlocker.position.y + bubbleDimensions(expandedBlocker.expanded).height;
+    expect(resolved.y).toBeGreaterThanOrEqual(blockerBottom + yGap);
   });
 });
