@@ -45,7 +45,13 @@ function buildDependencies(): DeleteBubbleDependencies {
       stderr: "no session",
       exitCode: 1
     })),
-    readRuntimeSessionsRegistry: vi.fn(() => Promise.resolve({}))
+    readRuntimeSessionsRegistry: vi.fn(() => Promise.resolve({})),
+    createArchiveSnapshot: vi.fn(() =>
+      Promise.resolve({
+        archivePath: "/tmp/archive/bi_00m8f7w14k_2f03e8b8e4f24d17ac12"
+      })
+    ),
+    upsertDeletedArchiveIndexEntry: vi.fn(() => Promise.resolve({}))
   };
 }
 

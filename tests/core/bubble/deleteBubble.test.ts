@@ -1,9 +1,11 @@
-import { mkdtemp, rm, stat } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
+import { resolveArchivePaths } from "../../../src/core/archive/archivePaths.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import {
   deleteBubble,
@@ -18,26 +20,56 @@ import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../../src/core/state/stateStore.js";
+import type { ArchiveIndexDocument } from "../../../src/types/archive.js";
 import { branchExists } from "../../../src/core/workspace/git.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
 const tempDirs: string[] = [];
+const initialArchiveRoot = process.env.PAIRFLOW_ARCHIVE_ROOT;
 
-async function createTempRepo(prefix = "pairflow-delete-bubble-"): Promise<string> {
+async function createTempDir(prefix: string): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), prefix));
   tempDirs.push(root);
+  return root;
+}
+
+async function createTempRepo(prefix = "pairflow-delete-bubble-"): Promise<string> {
+  const root = await createTempDir(prefix);
   await initGitRepository(root);
   return root;
 }
 
+beforeEach(async () => {
+  process.env.PAIRFLOW_ARCHIVE_ROOT = await createTempDir("pairflow-archive-root-");
+});
+
 afterEach(async () => {
+  if (initialArchiveRoot === undefined) {
+    delete process.env.PAIRFLOW_ARCHIVE_ROOT;
+  } else {
+    process.env.PAIRFLOW_ARCHIVE_ROOT = initialArchiveRoot;
+  }
+
   await Promise.all(
     tempDirs.splice(0).map((path) =>
       rm(path, { recursive: true, force: true })
     )
   );
 });
+
+async function readArchiveIndexFromRepo(
+  repoPath: string
+): Promise<ArchiveIndexDocument> {
+  const archiveRootPath = process.env.PAIRFLOW_ARCHIVE_ROOT as string;
+  const paths = await resolveArchivePaths({
+    repoPath,
+    bubbleInstanceId: "bi_archive_index_probe",
+    archiveRootPath
+  });
+
+  return JSON.parse(await readFile(paths.archiveIndexPath, "utf8")) as ArchiveIndexDocument;
+}
 
 describe("deleteBubble", () => {
   it("throws when tmux has-session fails with unexpected exit code", async () => {
@@ -100,9 +132,68 @@ describe("deleteBubble", () => {
     expect(result.artifacts.worktree.exists).toBe(false);
     expect(result.artifacts.branch.exists).toBe(false);
 
+    const archivePaths = await resolveArchivePaths({
+      repoPath,
+      bubbleInstanceId: bubble.config.bubble_instance_id as string,
+      archiveRootPath: process.env.PAIRFLOW_ARCHIVE_ROOT
+    });
+    await expect(stat(archivePaths.bubbleInstanceArchivePath)).resolves.toBeDefined();
+    const manifest = JSON.parse(
+      await readFile(
+        join(archivePaths.bubbleInstanceArchivePath, "archive-manifest.json"),
+        "utf8"
+      )
+    ) as { bubble_instance_id: string; bubble_id: string };
+    expect(manifest).toMatchObject({
+      bubble_instance_id: bubble.config.bubble_instance_id,
+      bubble_id: bubble.bubbleId
+    });
+    const index = await readArchiveIndexFromRepo(repoPath);
+    expect(
+      index.entries.filter(
+        (entry) => entry.bubble_instance_id === bubble.config.bubble_instance_id
+      )
+    ).toHaveLength(1);
+    expect(index.entries[0]?.status).toBe("deleted");
+
     await expect(stat(bubble.paths.bubbleDir)).rejects.toMatchObject({
       code: "ENOENT"
     });
+  });
+
+  it("fills archive index created_at from bubble metadata when available", async () => {
+    const repoPath = await createTempRepo();
+    const createdAt = new Date("2026-02-26T12:00:00.000Z");
+    const bubble = await createBubble({
+      id: "b_delete_created_at_01",
+      repoPath,
+      baseBranch: "main",
+      task: "Delete task created_at metadata",
+      cwd: repoPath,
+      now: createdAt
+    });
+
+    await deleteBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath
+      },
+      {
+        runTmux: vi.fn(() =>
+          Promise.resolve({
+            stdout: "",
+            stderr: "no session",
+            exitCode: 1
+          })
+        )
+      }
+    );
+
+    const index = await readArchiveIndexFromRepo(repoPath);
+    const entry = index.entries.find(
+      (item) => item.bubble_instance_id === bubble.config.bubble_instance_id
+    );
+    expect(entry?.created_at).toBe(createdAt.toISOString());
   });
 
   it("deletes without confirmation when only runtime session exists", async () => {
@@ -456,14 +547,28 @@ describe("deleteBubble", () => {
           removeBubbleDirectory
         }
       )
-    ).rejects.toThrow("workspace cleanup failed");
+    ).rejects.toThrow(/step=worktree-cleanup.*workspace cleanup failed/u);
 
     expect(cleanupWorktreeWorkspace).toHaveBeenCalledTimes(1);
     expect(removeBubbleDirectory).not.toHaveBeenCalled();
+    const bubbleInstanceId = bubble.config.bubble_instance_id as string;
+    const archivePaths = await resolveArchivePaths({
+      repoPath,
+      bubbleInstanceId,
+      archiveRootPath: process.env.PAIRFLOW_ARCHIVE_ROOT
+    });
+    await expect(stat(archivePaths.bubbleInstanceArchivePath)).resolves.toBeDefined();
+    const index = await readArchiveIndexFromRepo(repoPath);
+    expect(
+      index.entries.some(
+        (entry) =>
+          entry.bubble_instance_id === bubbleInstanceId && entry.status === "deleted"
+      )
+    ).toBe(true);
     await expect(stat(bubble.paths.bubbleDir)).resolves.toBeDefined();
   });
 
-  it("force deletes corrupted bubble when state snapshot is missing", async () => {
+  it("fails delete when required archive source state.json is missing", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -472,11 +577,187 @@ describe("deleteBubble", () => {
     });
     await rm(bubble.paths.statePath, { force: true });
 
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          force: true
+        },
+        {
+          runTmux: vi.fn(() =>
+            Promise.resolve({
+              stdout: "",
+              stderr: "no session",
+              exitCode: 1
+            })
+          )
+        }
+      )
+    ).rejects.toThrow(/step=snapshot/u);
+
+    await expect(stat(bubble.paths.bubbleDir)).resolves.toBeDefined();
+  });
+
+  it("keeps active bubble directory when archive snapshot step fails", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_delete_archive_snapshot_fail_01",
+      repoPath,
+      baseBranch: "main",
+      task: "Delete with snapshot failure",
+      cwd: repoPath
+    });
+    const removeBubbleDirectory = vi.fn(async () => undefined);
+    const cleanupWorktreeWorkspace = vi.fn(() =>
+      Promise.resolve({
+        repoPath,
+        bubbleBranch: bubble.config.bubble_branch,
+        worktreePath: bubble.paths.worktreePath,
+        removedWorktree: false,
+        removedBranch: false
+      })
+    );
+
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          runTmux: vi.fn(() =>
+            Promise.resolve({
+              stdout: "",
+              stderr: "no session",
+              exitCode: 1
+            })
+          ),
+          createArchiveSnapshot: vi.fn(async () => {
+            throw new Error("snapshot failed");
+          }),
+          cleanupWorktreeWorkspace,
+          removeBubbleDirectory
+        }
+      )
+    ).rejects.toThrow(/step=snapshot/u);
+
+    expect(cleanupWorktreeWorkspace).not.toHaveBeenCalled();
+    expect(removeBubbleDirectory).not.toHaveBeenCalled();
+    await expect(stat(bubble.paths.bubbleDir)).resolves.toBeDefined();
+  });
+
+  it("keeps active bubble directory when archive index step fails", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_delete_archive_index_fail_01",
+      repoPath,
+      baseBranch: "main",
+      task: "Delete with index failure",
+      cwd: repoPath
+    });
+    const removeBubbleDirectory = vi.fn(async () => undefined);
+
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          runTmux: vi.fn(() =>
+            Promise.resolve({
+              stdout: "",
+              stderr: "no session",
+              exitCode: 1
+            })
+          ),
+          createArchiveSnapshot: vi.fn(async () => ({
+            archivePath: "/tmp/pairflow/archive/fake"
+          })),
+          upsertDeletedArchiveIndexEntry: vi.fn(async () => {
+            throw new Error("index failed");
+          }),
+          removeBubbleDirectory
+        }
+      )
+    ).rejects.toThrow(/step=index/u);
+
+    expect(removeBubbleDirectory).not.toHaveBeenCalled();
+    await expect(stat(bubble.paths.bubbleDir)).resolves.toBeDefined();
+  });
+
+  it("preserves archive and index when remove-active fails", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_delete_remove_active_fail_01",
+      repoPath,
+      baseBranch: "main",
+      task: "Delete with remove failure",
+      cwd: repoPath
+    });
+    const removeBubbleDirectory = vi.fn(async () => {
+      throw new Error("permission denied");
+    });
+
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          runTmux: vi.fn(() =>
+            Promise.resolve({
+              stdout: "",
+              stderr: "no session",
+              exitCode: 1
+            })
+          ),
+          removeBubbleDirectory
+        }
+      )
+    ).rejects.toThrow(/step=remove-active/u);
+
+    const bubbleInstanceId = bubble.config.bubble_instance_id as string;
+    const archivePaths = await resolveArchivePaths({
+      repoPath,
+      bubbleInstanceId,
+      archiveRootPath: process.env.PAIRFLOW_ARCHIVE_ROOT
+    });
+    await expect(stat(archivePaths.bubbleInstanceArchivePath)).resolves.toBeDefined();
+    const index = await readArchiveIndexFromRepo(repoPath);
+    expect(
+      index.entries.some(
+        (entry) =>
+          entry.bubble_instance_id === bubbleInstanceId && entry.status === "deleted"
+      )
+    ).toBe(true);
+    await expect(stat(bubble.paths.bubbleDir)).resolves.toBeDefined();
+  });
+
+  it("backfills legacy bubble_instance_id before archive path resolution", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_delete_legacy_backfill_01",
+      repoPath,
+      baseBranch: "main",
+      task: "Legacy delete backfill",
+      cwd: repoPath
+    });
+    const current = parseBubbleConfigToml(await readFile(bubble.paths.bubbleTomlPath, "utf8"));
+    const legacy = { ...current };
+    delete legacy.bubble_instance_id;
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml(legacy),
+      "utf8"
+    );
+
     const result = await deleteBubble(
       {
         bubbleId: bubble.bubbleId,
-        cwd: repoPath,
-        force: true
+        cwd: repoPath
       },
       {
         runTmux: vi.fn(() =>
@@ -490,15 +771,182 @@ describe("deleteBubble", () => {
     );
 
     expect(result.deleted).toBe(true);
-    expect(result.requiresConfirmation).toBe(false);
-    expect(result.removedWorktree).toBe(true);
-    expect(result.removedBubbleBranch).toBe(true);
+    const index = await readArchiveIndexFromRepo(repoPath);
+    const entry = index.entries.find((item) => item.bubble_id === bubble.bubbleId);
+    expect(entry).toBeDefined();
+    const bubbleInstanceId = entry?.bubble_instance_id as string;
+    expect(bubbleInstanceId).toMatch(/^bi_[A-Za-z0-9_-]{10,}$/u);
+    const archivePaths = await resolveArchivePaths({
+      repoPath,
+      bubbleInstanceId,
+      archiveRootPath: process.env.PAIRFLOW_ARCHIVE_ROOT
+    });
+    await expect(stat(archivePaths.bubbleInstanceArchivePath)).resolves.toBeDefined();
+  });
+
+  it("retries delete idempotently after a prior remove-active failure", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_delete_retry_01",
+      repoPath,
+      baseBranch: "main",
+      task: "Retry delete after remove failure",
+      cwd: repoPath
+    });
+    const bubbleInstanceId = bubble.config.bubble_instance_id as string;
+    const removeBubbleDirectory = vi.fn(async () => {
+      throw new Error("simulated remove failure");
+    });
+
+    await expect(
+      deleteBubble(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath
+        },
+        {
+          runTmux: vi.fn(() =>
+            Promise.resolve({
+              stdout: "",
+              stderr: "no session",
+              exitCode: 1
+            })
+          ),
+          removeBubbleDirectory
+        }
+      )
+    ).rejects.toThrow(/step=remove-active/u);
+
+    const retried = await deleteBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath
+      },
+      {
+        runTmux: vi.fn(() =>
+          Promise.resolve({
+            stdout: "",
+            stderr: "no session",
+            exitCode: 1
+          })
+        )
+      }
+    );
+
+    expect(retried.deleted).toBe(true);
     await expect(stat(bubble.paths.bubbleDir)).rejects.toMatchObject({
       code: "ENOENT"
     });
-    await expect(stat(bubble.paths.worktreePath)).rejects.toMatchObject({
-      code: "ENOENT"
+
+    const archivePaths = await resolveArchivePaths({
+      repoPath,
+      bubbleInstanceId,
+      archiveRootPath: process.env.PAIRFLOW_ARCHIVE_ROOT
     });
-    await expect(branchExists(repoPath, bubble.config.bubble_branch)).resolves.toBe(false);
+    const archiveNames = await readdir(archivePaths.repoArchiveRootPath);
+    expect(
+      archiveNames.filter((name) => name === bubbleInstanceId)
+    ).toHaveLength(1);
+    expect(
+      archiveNames.some((name) => name.startsWith(`.tmp-${bubbleInstanceId}-`))
+    ).toBe(false);
+    const index = await readArchiveIndexFromRepo(repoPath);
+    expect(
+      index.entries.filter((entry) => entry.bubble_instance_id === bubbleInstanceId)
+    ).toHaveLength(1);
+  });
+
+  it("handles concurrent delete attempts without duplicate archive index entries", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_delete_concurrent_01",
+      repoPath,
+      baseBranch: "main",
+      task: "Concurrent delete",
+      cwd: repoPath
+    });
+    const bubbleInstanceId = bubble.config.bubble_instance_id as string;
+
+    const results = await Promise.allSettled(
+      Array.from({ length: 5 }, () =>
+        deleteBubble(
+          {
+            bubbleId: bubble.bubbleId,
+            cwd: repoPath
+          },
+          {
+            runTmux: vi.fn(() =>
+              Promise.resolve({
+                stdout: "",
+                stderr: "no session",
+                exitCode: 1
+              })
+            )
+          }
+        )
+      )
+    );
+
+    expect(results.every((result) => result.status === "fulfilled")).toBe(true);
+
+    const archivePaths = await resolveArchivePaths({
+      repoPath,
+      bubbleInstanceId,
+      archiveRootPath: process.env.PAIRFLOW_ARCHIVE_ROOT
+    });
+    await expect(stat(archivePaths.bubbleInstanceArchivePath)).resolves.toBeDefined();
+    const index = await readArchiveIndexFromRepo(repoPath);
+    expect(
+      index.entries.filter((entry) => entry.bubble_instance_id === bubbleInstanceId)
+    ).toHaveLength(1);
+  });
+
+  it("forwards archiveRootPath and uses global archive locks path", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_delete_archive_root_01",
+      repoPath,
+      baseBranch: "main",
+      task: "Delete with explicit archive root",
+      cwd: repoPath
+    });
+    const archiveRootPath = "/tmp/pairflow-custom-archive-root";
+    const archiveLocksDir = join(homedir(), ".pairflow", "locks");
+    const createArchiveSnapshotMock = vi.fn(async () => ({
+      archivePath: "/tmp/pairflow-custom-archive-root/fake-instance"
+    }));
+    const upsertArchiveIndexMock = vi.fn(async () => ({}));
+
+    await deleteBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        archiveRootPath
+      },
+      {
+        runTmux: vi.fn(() =>
+          Promise.resolve({
+            stdout: "",
+            stderr: "no session",
+            exitCode: 1
+          })
+        ),
+        createArchiveSnapshot: createArchiveSnapshotMock,
+        upsertDeletedArchiveIndexEntry: upsertArchiveIndexMock
+      }
+    );
+
+    expect(createArchiveSnapshotMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        archiveRootPath,
+        locksDir: archiveLocksDir
+      })
+    );
+    expect(upsertArchiveIndexMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        archiveRootPath,
+        locksDir: archiveLocksDir
+      })
+    );
   });
 });
