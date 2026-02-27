@@ -129,6 +129,7 @@ describe("emitPassFromWorkspace", () => {
     expect(result.envelope.sender).toBe("claude");
     expect(result.envelope.recipient).toBe("codex");
     expect(result.envelope.round).toBe(1);
+    expect(result.inferredIntent).toBe(true);
     expect(result.envelope.payload.pass_intent).toBe("fix_request");
 
     const updated = await readStateSnapshot(bubble.paths.statePath);
@@ -205,7 +206,247 @@ describe("emitPassFromWorkspace", () => {
       now: new Date("2026-02-21T12:07:00.000Z")
     });
 
+    expect(result.inferredIntent).toBe(true);
+    expect(result.envelope.payload.pass_intent).toBe("review");
     expect(result.envelope.payload.findings).toEqual([]);
+  });
+
+  it("rejects reviewer fix_request intent when --no-findings is declared", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_10",
+      task: "Implement pass flow"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Review clean",
+        noFindings: true,
+        intent: "fix_request",
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/--no-findings cannot use intent=fix_request/u);
+  });
+
+  it("rejects reviewer review intent when findings are declared", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_11",
+      task: "Implement pass flow"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Review has findings",
+        findings: [
+          {
+            severity: "P1",
+            title: "Blocking issue"
+          }
+        ],
+        intent: "review",
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/findings cannot use intent=review/u);
+  });
+
+  it("accepts reviewer explicit review intent with --no-findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_12",
+      task: "Implement pass flow"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Review clean explicit intent",
+      noFindings: true,
+      intent: "review",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:07:00.000Z")
+    });
+
+    expect(result.inferredIntent).toBe(false);
+    expect(result.envelope.payload.pass_intent).toBe("review");
+    expect(result.envelope.payload.findings).toEqual([]);
+  });
+
+  it("accepts reviewer explicit fix_request intent with findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_13",
+      task: "Implement pass flow"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const findings = [
+      {
+        severity: "P2" as const,
+        title: "Needs follow-up"
+      }
+    ];
+    const result = await emitPassFromWorkspace({
+      summary: "Review findings explicit intent",
+      findings,
+      intent: "fix_request",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:07:00.000Z")
+    });
+
+    expect(result.inferredIntent).toBe(false);
+    expect(result.envelope.payload.pass_intent).toBe("fix_request");
+    expect(result.envelope.payload.findings).toEqual(findings);
+  });
+
+  it("rejects reviewer task intent with --no-findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_14",
+      task: "Implement pass flow"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Reviewer should not use task intent",
+        noFindings: true,
+        intent: "task",
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/Reviewer PASS cannot use intent=task/u);
+  });
+
+  it("rejects reviewer task intent with explicit findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_15",
+      task: "Implement pass flow"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Reviewer should not use task intent",
+        findings: [
+          {
+            severity: "P2",
+            title: "Needs follow-up"
+          }
+        ],
+        intent: "task",
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/Reviewer PASS cannot use intent=task/u);
   });
 
   it("rejects findings flags on implementer PASS", async () => {
