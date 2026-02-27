@@ -30,6 +30,12 @@ import {
 import { buildReviewerAgentSelectionGuidance } from "../runtime/reviewerGuidance.js";
 import { ensureBubbleInstanceIdForMutation } from "./bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
+import {
+  buildReviewerDecisionMatrixReminder,
+  formatReviewerTestExecutionDirective,
+  resolveReviewerTestEvidenceArtifactPath,
+  resolveReviewerTestExecutionDirective
+} from "../reviewer/testEvidence.js";
 import type { BubbleStateSnapshot, ReviewArtifactType } from "../../types/bubble.js";
 
 export interface StartBubbleInput {
@@ -113,6 +119,8 @@ function buildReviewerStartupPrompt(input: {
     `Pairflow reviewer start for bubble ${input.bubbleId}.`,
     "Stand by first. Do not start reviewing until implementer handoff (`PASS`) arrives.",
     "When PASS arrives, run a fresh review.",
+    "When PASS arrives, follow the orchestrator test-evidence skip/run directive for test execution.",
+    buildReviewerDecisionMatrixReminder(),
     buildReviewerAgentSelectionGuidance(input.reviewArtifactType),
     "If findings remain, run `pairflow pass --summary ... --finding P1:...` (repeatable).",
     "If clean, run `pairflow pass --summary ... --no-findings` then `pairflow converged --summary`.",
@@ -185,6 +193,7 @@ function buildResumeReviewerStartupPrompt(input: {
   transcriptSummary: string;
   kickoffDiagnostic?: string;
   reviewArtifactType: ReviewArtifactType;
+  reviewerTestDirectiveLine?: string;
 }): string {
   const roleInstruction =
     input.state.state === "RUNNING" && input.state.active_role === "reviewer"
@@ -196,6 +205,11 @@ function buildResumeReviewerStartupPrompt(input: {
     `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`,
     `State snapshot: ${buildResumeContextLine(input.state)}.`,
     `Transcript context: ${input.transcriptSummary}`,
+    "Follow orchestrator test-evidence skip/run directive for test execution.",
+    buildReviewerDecisionMatrixReminder(),
+    ...(input.reviewerTestDirectiveLine !== undefined
+      ? [`Current directive: ${input.reviewerTestDirectiveLine}`]
+      : []),
     buildReviewerAgentSelectionGuidance(input.reviewArtifactType),
     roleInstruction
   ];
@@ -221,10 +235,14 @@ function buildResumeImplementerKickoffMessage(input: {
 function buildResumeReviewerKickoffMessage(input: {
   bubbleId: string;
   round: number;
+  reviewerTestDirectiveLine?: string;
 }): string {
   return [
     `# [pairflow] bubble=${input.bubbleId} resume kickoff (reviewer).`,
     `State is RUNNING at round ${input.round}.`,
+    ...(input.reviewerTestDirectiveLine !== undefined
+      ? [`Test directive: ${input.reviewerTestDirectiveLine}`]
+      : []),
     "Continue active review. Use `pairflow pass --summary ... --finding ...` or `--no-findings` as appropriate."
   ].join(" ");
 }
@@ -235,6 +253,7 @@ function resolveResumeKickoffMessages(input: {
   state: BubbleStateSnapshot;
   implementerAgent: string;
   reviewerAgent: string;
+  reviewerTestDirectiveLine?: string;
 }): {
   implementerKickoffMessage?: string;
   reviewerKickoffMessage?: string;
@@ -264,7 +283,10 @@ function resolveResumeKickoffMessages(input: {
     return {
       reviewerKickoffMessage: buildResumeReviewerKickoffMessage({
         bubbleId: input.bubbleId,
-        round: input.state.round
+        round: input.state.round,
+        ...(input.reviewerTestDirectiveLine !== undefined
+          ? { reviewerTestDirectiveLine: input.reviewerTestDirectiveLine }
+          : {})
       })
     };
   }
@@ -471,12 +493,31 @@ export async function startBubble(
         transcriptSummary = buildResumeTranscriptSummaryFallback(error);
       }
 
+      const shouldInjectReviewerDirective =
+        loadedState.state.state === "RUNNING" &&
+        loadedState.state.active_role === "reviewer" &&
+        loadedState.state.active_agent === resolved.bubbleConfig.agents.reviewer;
+
+      const reviewerTestDirectiveLine = shouldInjectReviewerDirective
+        ? await resolveReviewerTestExecutionDirective({
+            artifactPath: resolveReviewerTestEvidenceArtifactPath(
+              resolved.bubblePaths.artifactsDir
+            ),
+            worktreePath: resolved.bubblePaths.worktreePath
+          })
+            .then((directive) => formatReviewerTestExecutionDirective(directive))
+            .catch(() => undefined)
+        : undefined;
+
       const resumeKickoffResolution = resolveResumeKickoffMessages({
         bubbleId: resolved.bubbleId,
         taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
         state: loadedState.state,
         implementerAgent: resolved.bubbleConfig.agents.implementer,
-        reviewerAgent: resolved.bubbleConfig.agents.reviewer
+        reviewerAgent: resolved.bubbleConfig.agents.reviewer,
+        ...(reviewerTestDirectiveLine !== undefined
+          ? { reviewerTestDirectiveLine }
+          : {})
       });
       const { kickoffDiagnostic, ...resumeKickoffMessages } = resumeKickoffResolution;
 
@@ -509,6 +550,9 @@ export async function startBubble(
             state: loadedState.state,
             transcriptSummary,
             reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
+            ...(reviewerTestDirectiveLine !== undefined
+              ? { reviewerTestDirectiveLine }
+              : {}),
             ...(kickoffDiagnostic !== undefined ? { kickoffDiagnostic } : {})
           })
         }),

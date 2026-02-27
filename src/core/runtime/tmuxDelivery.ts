@@ -2,6 +2,10 @@ import { readRuntimeSessionsRegistry } from "./sessionsRegistry.js";
 import { runTmux, type TmuxRunner } from "./tmuxManager.js";
 import { maybeAcceptClaudeTrustPrompt, sendAndSubmitTmuxPaneMessage, submitTmuxPaneInput } from "./tmuxInput.js";
 import { buildReviewerAgentSelectionGuidance } from "./reviewerGuidance.js";
+import {
+  formatReviewerTestExecutionDirective,
+  type ReviewerTestExecutionDirective
+} from "../reviewer/testEvidence.js";
 import type { BubbleConfig } from "../../types/bubble.js";
 import type { AgentName } from "../../types/bubble.js";
 import type { ProtocolEnvelope, ProtocolParticipant } from "../../types/protocol.js";
@@ -11,6 +15,7 @@ export interface EmitTmuxDeliveryNotificationInput {
   bubbleConfig: BubbleConfig;
   sessionsPath: string;
   envelope: ProtocolEnvelope;
+  reviewerTestDirective?: ReviewerTestExecutionDirective;
   messageRef?: string;
   initialDelayMs?: number;
   deliveryAttempts?: number;
@@ -53,7 +58,8 @@ function buildDeliveryMessage(
   envelope: ProtocolEnvelope,
   messageRef: string,
   bubbleConfig: BubbleConfig,
-  worktreePath?: string
+  worktreePath?: string,
+  reviewerTestDirective?: ReviewerTestExecutionDirective
 ): string {
   const recipientRole =
     envelope.recipient === bubbleConfig.agents.implementer
@@ -80,10 +86,14 @@ function buildDeliveryMessage(
     }
   } else if (recipientRole === "reviewer") {
     if (envelope.type === "PASS") {
+      const testDirective =
+        reviewerTestDirective === undefined
+          ? "Run required checks before final judgment. Reason: reviewer test verification directive was unavailable."
+          : formatReviewerTestExecutionDirective(reviewerTestDirective);
       action =
         `Implementer handoff received. Run a fresh review now. ${buildReviewerAgentSelectionGuidance(
           bubbleConfig.review_artifact_type
-        )} Then run \`pairflow pass --summary ... --finding P1:...\` (repeatable) or \`pairflow pass --summary ... --no-findings\`; run \`pairflow converged --summary\` only when clean. Execute pairflow commands directly (no confirmation prompt).`;
+        )} ${testDirective} Then run \`pairflow pass --summary ... --finding P1:...\` (repeatable) or \`pairflow pass --summary ... --no-findings\`; run \`pairflow converged --summary\` only when clean. Execute pairflow commands directly (no confirmation prompt).`;
     } else if (envelope.type === "HUMAN_REPLY") {
       action =
         "Human response received. Continue review workflow from this update.";
@@ -184,7 +194,9 @@ export async function emitTmuxDeliveryNotification(
     const message = buildDeliveryMessage(
       input.envelope,
       messageRef,
-      input.bubbleConfig
+      input.bubbleConfig,
+      undefined,
+      input.reviewerTestDirective
     );
     return {
       delivered: false,
@@ -197,7 +209,9 @@ export async function emitTmuxDeliveryNotification(
     const message = buildDeliveryMessage(
       input.envelope,
       messageRef,
-      input.bubbleConfig
+      input.bubbleConfig,
+      undefined,
+      input.reviewerTestDirective
     );
     return {
       delivered: false,
@@ -215,7 +229,8 @@ export async function emitTmuxDeliveryNotification(
       input.envelope,
       messageRef,
       input.bubbleConfig,
-      worktreePath
+      worktreePath,
+      input.reviewerTestDirective
     );
     return {
       delivered: false,
@@ -230,7 +245,8 @@ export async function emitTmuxDeliveryNotification(
     input.envelope,
     messageRef,
     input.bubbleConfig,
-    worktreePath
+    worktreePath,
+    input.reviewerTestDirective
   );
   const runner = input.runner ?? runTmux;
 

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { emitTmuxDeliveryNotification, retryStuckAgentInput } from "../../../src/core/runtime/tmuxDelivery.js";
 import type { RuntimeSessionsRegistry } from "../../../src/core/runtime/sessionsRegistry.js";
 import type { TmuxRunResult, TmuxRunner } from "../../../src/core/runtime/tmuxManager.js";
+import type { ReviewerTestExecutionDirective } from "../../../src/core/reviewer/testEvidence.js";
 import type { BubbleConfig } from "../../../src/types/bubble.js";
 import type { ProtocolEnvelope } from "../../../src/types/protocol.js";
 
@@ -80,11 +81,19 @@ describe("emitTmuxDeliveryNotification", () => {
       });
     };
 
+    const reviewerTestDirective: ReviewerTestExecutionDirective = {
+      skip_full_rerun: true,
+      reason_code: "no_trigger",
+      reason_detail: "Evidence is verified, fresh, and complete.",
+      verification_status: "trusted"
+    };
+
     const result = await emitTmuxDeliveryNotification({
       bubbleId: "b_delivery_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
       envelope: createEnvelope(),
+      reviewerTestDirective,
       runner,
       readSessionsRegistry: () => Promise.resolve(createRegistry()),
       deliveryAttempts: 2
@@ -111,6 +120,9 @@ describe("emitTmuxDeliveryNotification", () => {
     );
     expect(messageCall?.[4]).toContain(
       "Action: Implementer handoff received. Run a fresh review now"
+    );
+    expect(messageCall?.[4]).toContain(
+      "Implementer test evidence has been orchestrator-verified. Do not re-run full tests unless a trigger from the decision matrix applies."
     );
     expect(messageCall?.[4]).toContain(
       "Execute pairflow commands directly (no confirmation prompt)"
