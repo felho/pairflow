@@ -548,6 +548,35 @@ This bubble is the strongest evidence for combining **task-level acceptance crit
 | **Approve with notes** | R3+ P2-only rounds become terminal | R3+ P2-only rounds become terminal |
 | **Severity guidelines** | Smoke test findings → P3 after R3 | Same |
 
+## Evidence from reviewer-pass-intent-consistency-01 Bubble
+
+**Date:** 2026-02-27  
+**Context:** Small-scope fix for reviewer `pass_intent` / findings consistency still expanded to 6+ rounds.
+
+### What This Bubble Added Beyond Existing Evidence
+
+1. **Protocol-invariant gap produced loop noise**
+   - A "clean review" message was emitted with `findings: []` but `pass_intent: "fix_request"`.
+   - This is semantically contradictory and created an extra handoff cycle without real work.
+   - Implication: enforce a hard invariant in `pass` handling: clean review must not use `fix_request`.
+
+2. **Role-intent domain mismatch was real, not theoretical**
+   - Reviewer path initially allowed `intent=task`, which is outside reviewer handoff semantics.
+   - Implication: explicitly enforce role-scoped intent matrix (reviewer: `review|fix_request`; implementer: `review|task` where applicable).
+
+3. **Finding direction flip-flop can create unnecessary rounds**
+   - The reviewer asked to narrow a defensive guard in one round, then later asked to widen it again.
+   - No new behavioral evidence was introduced between these direction changes.
+   - Implication: add reviewer guidance to avoid contradictory follow-up findings unless new evidence is provided.
+
+4. **Severity calibration drift appeared even in a simple change**
+   - Some early findings were framed as high severity despite being maintainability/clarity-level concerns.
+   - Implication: severity rubric needs concrete examples for "non-blocking code quality" to keep P1 reserved for correctness/runtime risk.
+
+### Why This Matters
+
+This bubble confirms that long loops are not only caused by complex code paths. They also come from protocol-semantic inconsistencies and unstable reviewer guidance. Prompt improvements alone help, but guardrails in `pass` validation are required to prevent this class of churn.
+
 ## 9. Execution Plan for Loop Optimization (Top 3 First)
 
 This section captures the current implementation strategy so it can be executed incrementally without losing context.
