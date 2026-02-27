@@ -8,7 +8,7 @@ import {
 } from "./useBubbleStore";
 import type { PairflowApiClient } from "../lib/api";
 import { PairflowApiError } from "../lib/api";
-import { defaultPosition, expandedCardHeight, startY, yGap } from "../lib/canvasLayout";
+import { defaultPosition } from "../lib/canvasLayout";
 import type {
   BubbleDeleteResult,
   BubblePosition,
@@ -242,7 +242,7 @@ describe("createBubbleStore", () => {
     expect(getBubbles).toHaveBeenCalledTimes(1);
   });
 
-  it("positions a realtime-created bubble below expanded predecessors", async () => {
+  it("positions a realtime-created bubble in the same row when right slot is available", async () => {
     const bubble1 = bubbleSummary({ bubbleId: "b-1", repoPath: "/repo-a" });
     const bubble2 = bubbleSummary({ bubbleId: "b-2", repoPath: "/repo-a" });
     const bubble3 = bubbleSummary({ bubbleId: "b-3", repoPath: "/repo-a" });
@@ -282,11 +282,7 @@ describe("createBubbleStore", () => {
       bubble: bubble5
     });
 
-    const defaultRowTwoSlot = defaultPosition(4);
-    expect(store.getState().positions["b-5"]).toEqual({
-      x: defaultRowTwoSlot.x,
-      y: startY + expandedCardHeight + yGap
-    });
+    expect(store.getState().positions["b-5"]).toEqual(defaultPosition(6));
   });
 
   it("keeps default position when expanded bubbles do not block the new slot", async () => {

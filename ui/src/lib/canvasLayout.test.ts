@@ -23,7 +23,7 @@ describe("resolveNonOverlappingPosition", () => {
     expect(position).toEqual(desired);
   });
 
-  it("moves the next-row bubble below an expanded predecessor", () => {
+  it("prefers the same-row right slot before moving down", () => {
     const desired = defaultPosition(4);
 
     const position = resolveNonOverlappingPosition(
@@ -32,8 +32,7 @@ describe("resolveNonOverlappingPosition", () => {
       false
     );
 
-    expect(position.x).toBe(desired.x);
-    expect(position.y).toBe(startY + expandedCardHeight + yGap);
+    expect(position).toEqual(defaultPosition(6));
   });
 
   it("treats expanded predecessor width as blocking adjacent columns", () => {
@@ -52,11 +51,23 @@ describe("resolveNonOverlappingPosition", () => {
       false
     );
 
-    expect(expandedPosition.x).toBe(desired.x);
-    expect(expandedPosition.y).toBe(startY + expandedCardHeight + yGap);
+    expect(expandedPosition).toEqual(defaultPosition(6));
   });
 
-  it("pushes expanded new bubble below a collapsed blocker when width overlaps", () => {
+  it("moves down only when no right-side slot is available", () => {
+    const desired = defaultPosition(7);
+
+    const position = resolveNonOverlappingPosition(
+      desired,
+      [{ position: defaultPosition(3), expanded: true }],
+      false
+    );
+
+    expect(position.x).toBe(desired.x);
+    expect(position.y).toBe(startY + expandedCardHeight + yGap);
+  });
+
+  it("prefers a same-row right slot for expanded new bubble when available", () => {
     const desired = defaultPosition(1);
     const blocker = defaultPosition(2);
     // Boundary arithmetic with current constants:
@@ -77,8 +88,7 @@ describe("resolveNonOverlappingPosition", () => {
       true
     );
 
-    expect(expandedNewPosition.x).toBe(desired.x);
-    expect(expandedNewPosition.y).toBe(startY + cardHeight + yGap);
+    expect(expandedNewPosition).toEqual(defaultPosition(3));
   });
 
   it("places a new bubble outside an expanded blocker footprint", () => {
@@ -94,8 +104,9 @@ describe("resolveNonOverlappingPosition", () => {
       false
     );
 
+    expect(resolved).toEqual(defaultPosition(2));
     const blockerBottom =
       expandedBlocker.position.y + bubbleDimensions(expandedBlocker.expanded).height;
-    expect(resolved.y).toBeGreaterThanOrEqual(blockerBottom + yGap);
+    expect(resolved.y + bubbleDimensions(false).height).toBeLessThanOrEqual(blockerBottom + yGap);
   });
 });
