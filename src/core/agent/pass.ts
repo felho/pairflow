@@ -17,6 +17,13 @@ import { isPassIntent, type PassIntent, type ProtocolEnvelope } from "../../type
 import type { Finding } from "../../types/findings.js";
 import type { AgentName, AgentRole, BubbleStateSnapshot, RoundRoleHistoryEntry } from "../../types/bubble.js";
 import { refreshReviewerContext } from "../runtime/reviewerContext.js";
+import {
+  resolveReviewerTestEvidenceArtifactPath,
+  resolveReviewerTestExecutionDirectiveFromArtifact,
+  type ReviewerTestExecutionDirective,
+  verifyImplementerTestEvidence,
+  writeReviewerTestEvidenceArtifact
+} from "../reviewer/testEvidence.js";
 
 export interface EmitPassInput {
   summary: string;
@@ -326,6 +333,46 @@ export async function emitPassFromWorkspace(
 
   const mapped = mapAppendResult(appendResult);
 
+  let reviewerTestDirective: ReviewerTestExecutionDirective | undefined;
+  if (handoff.senderRole === "implementer") {
+    let implementerDirective: ReviewerTestExecutionDirective | undefined
+    const evidenceArtifactPath = resolveReviewerTestEvidenceArtifactPath(
+      resolved.bubblePaths.artifactsDir
+    );
+
+    const evidenceArtifact = await verifyImplementerTestEvidence({
+      bubbleId: resolved.bubbleId,
+      bubbleConfig: resolved.bubbleConfig,
+      envelope: mapped.envelope,
+      worktreePath: resolved.bubblePaths.worktreePath,
+      repoPath: resolved.repoPath,
+      now
+    }).catch(() => undefined);
+
+    if (evidenceArtifact !== undefined) {
+      const artifactWriteSucceeded = await writeReviewerTestEvidenceArtifact(
+        evidenceArtifactPath,
+        evidenceArtifact
+      )
+        .then(() => true)
+        .catch(() => false);
+      if (artifactWriteSucceeded) {
+        implementerDirective = await resolveReviewerTestExecutionDirectiveFromArtifact({
+          artifact: evidenceArtifact,
+          worktreePath: resolved.bubblePaths.worktreePath
+        }).catch(() => undefined);
+      }
+    }
+
+    reviewerTestDirective = implementerDirective ?? {
+      skip_full_rerun: false,
+      reason_code: "evidence_unverifiable",
+      reason_detail:
+        "Failed to resolve reviewer test directive due to verification runtime error.",
+      verification_status: "untrusted"
+    };
+  }
+
   const refreshReviewer =
     dependencies.refreshReviewerContext ?? refreshReviewerContext;
   let deliveryInitialDelayMs: number | undefined;
@@ -353,6 +400,7 @@ export async function emitPassFromWorkspace(
     bubbleConfig: resolved.bubbleConfig,
     sessionsPath: resolved.bubblePaths.sessionsPath,
     envelope: mapped.envelope,
+    ...(reviewerTestDirective !== undefined ? { reviewerTestDirective } : {}),
     ...(deliveryInitialDelayMs !== undefined ? { initialDelayMs: deliveryInitialDelayMs } : {}),
     ...(mapped.envelope.refs[0] !== undefined
       ? { messageRef: mapped.envelope.refs[0] }
@@ -375,6 +423,16 @@ export async function emitPassFromWorkspace(
       refs_count: refs.length,
       has_findings: hasFindings,
       no_findings: noFindings,
+      ...(reviewerTestDirective !== undefined
+        ? {
+            reviewer_test_evidence_decision: reviewerTestDirective.skip_full_rerun
+              ? "skip_full_rerun"
+              : "run_checks",
+            reviewer_test_evidence_reason_code: reviewerTestDirective.reason_code,
+            reviewer_test_evidence_verification_status:
+              reviewerTestDirective.verification_status
+          }
+        : {}),
       ...buildFindingCounts(findings)
     },
     now

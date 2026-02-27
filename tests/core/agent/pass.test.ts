@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -327,6 +327,59 @@ describe("emitPassFromWorkspace", () => {
     expect(result.envelope.payload.findings).toEqual([]);
   });
 
+  it("does not attach reviewer test directive metadata on reviewer PASS", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_18",
+      task: "Implement pass flow"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    let capturedDirective:
+      | {
+          skip_full_rerun: boolean;
+          reason_code: string;
+        }
+      | undefined;
+    await emitPassFromWorkspace(
+      {
+        summary: "Review complete",
+        noFindings: true,
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:07:00.000Z")
+      },
+      {
+        emitTmuxDeliveryNotification: (input) => {
+          capturedDirective = input.reviewerTestDirective;
+          return Promise.resolve({
+            delivered: true,
+            message: "ok"
+          });
+        }
+      }
+    );
+
+    expect(capturedDirective).toBeUndefined();
+  });
+
   it("accepts reviewer explicit fix_request intent with findings", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -492,6 +545,95 @@ describe("emitPassFromWorkspace", () => {
     );
 
     expect(refreshCalls).toEqual([{ bubbleId: "b_pass_09" }]);
+  });
+
+  it("writes reviewer test-evidence verification artifact for implementer PASS", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_16",
+      task: "Implement pass flow"
+    });
+
+    const evidenceLogPath = join(
+      bubble.paths.worktreePath,
+      "evidence.log"
+    );
+    await writeFile(
+      evidenceLogPath,
+      "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n",
+      "utf8"
+    );
+
+    await emitPassFromWorkspace({
+      summary: "Validation complete",
+      refs: [evidenceLogPath],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:05:00.000Z")
+    });
+
+    const rawArtifact = await readFile(
+      join(bubble.paths.artifactsDir, "reviewer-test-verification.json"),
+      "utf8"
+    );
+    const artifact = JSON.parse(rawArtifact) as {
+      status: string;
+      decision: string;
+      reason_code: string;
+    };
+
+    expect(artifact.status).toBe("trusted");
+    expect(artifact.decision).toBe("skip_full_rerun");
+    expect(artifact.reason_code).toBe("no_trigger");
+  });
+
+  it("falls back to run_checks reviewer directive when artifact write fails", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_17",
+      task: "Implement pass flow"
+    });
+
+    await rm(bubble.paths.artifactsDir, { recursive: true, force: true });
+    await writeFile(bubble.paths.artifactsDir, "blocked", "utf8");
+
+    const evidenceLogPath = join(
+      bubble.paths.worktreePath,
+      "evidence.log"
+    );
+    await writeFile(
+      evidenceLogPath,
+      "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n",
+      "utf8"
+    );
+
+    let capturedDirective:
+      | {
+          skip_full_rerun: boolean;
+          reason_code: string;
+        }
+      | undefined;
+    await emitPassFromWorkspace(
+      {
+        summary: "Validation complete",
+        refs: [evidenceLogPath],
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:05:00.000Z")
+      },
+      {
+        emitTmuxDeliveryNotification: (input) => {
+          capturedDirective = input.reviewerTestDirective;
+          return Promise.resolve({
+            delivered: true,
+            message: "ok"
+          });
+        }
+      }
+    );
+
+    expect(capturedDirective?.skip_full_rerun).toBe(false);
+    expect(capturedDirective?.reason_code).toBe("evidence_unverifiable");
   });
 
   it("rejects pass when bubble is not running", async () => {

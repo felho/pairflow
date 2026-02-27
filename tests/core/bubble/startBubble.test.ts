@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
@@ -9,6 +9,11 @@ import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { startBubble, StartBubbleError } from "../../../src/core/bubble/startBubble.js";
 import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
+import {
+  resolveReviewerTestEvidenceArtifactPath,
+  verifyImplementerTestEvidence,
+  writeReviewerTestEvidenceArtifact
+} from "../../../src/core/reviewer/testEvidence.js";
 import type { BubbleStateSnapshot } from "../../../src/types/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -480,6 +485,133 @@ describe("startBubble", () => {
           expect(input.implementerKickoffMessage).toBeUndefined();
           expect(input.reviewerKickoffMessage).toContain("resume kickoff (reviewer)");
           return Promise.resolve({ sessionName: "pf-b_start_resume_03" });
+        }
+      }
+    );
+  });
+
+  it("includes reviewer test directive line in reviewer resume startup prompt when evidence is verified", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_06",
+      task: "Resume reviewer directive"
+    });
+
+    const evidenceLogPath = join(
+      bubble.paths.worktreePath,
+      "evidence.log"
+    );
+    await writeFile(
+      evidenceLogPath,
+      "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n",
+      "utf8"
+    );
+
+    const evidence = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      envelope: {
+        id: "msg_resume_dir_01",
+        ts: "2026-02-27T21:20:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Validation complete"
+        },
+        refs: [evidenceLogPath]
+      },
+      worktreePath: bubble.paths.worktreePath,
+      repoPath
+    });
+    await writeReviewerTestEvidenceArtifact(
+      resolveReviewerTestEvidenceArtifactPath(bubble.paths.artifactsDir),
+      evidence
+    );
+    await updateBubbleState(bubble.paths.statePath, (current) => ({
+      ...current,
+      active_agent: bubble.config.agents.reviewer,
+      active_role: "reviewer"
+    }));
+
+    await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-27T21:21:00.000Z")
+      },
+      {
+        buildResumeTranscriptSummary: () =>
+          Promise.resolve("resume-summary: reviewer-directive"),
+        launchBubbleTmuxSession: (input) => {
+          expect(input.reviewerCommand).toContain("Current directive:");
+          expect(input.reviewerCommand).toContain(
+            "Implementer test evidence has been orchestrator-verified."
+          );
+          return Promise.resolve({ sessionName: "pf-b_start_resume_06" });
+        }
+      }
+    );
+  });
+
+  it("does not inject reviewer directive line when implementer is active on resume", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_07",
+      task: "Resume implementer active"
+    });
+
+    const evidenceLogPath = join(
+      bubble.paths.worktreePath,
+      "evidence.log"
+    );
+    await writeFile(
+      evidenceLogPath,
+      "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n",
+      "utf8"
+    );
+
+    const evidence = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      envelope: {
+        id: "msg_resume_dir_02",
+        ts: "2026-02-27T21:30:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Validation complete"
+        },
+        refs: [evidenceLogPath]
+      },
+      worktreePath: bubble.paths.worktreePath,
+      repoPath
+    });
+    await writeReviewerTestEvidenceArtifact(
+      resolveReviewerTestEvidenceArtifactPath(bubble.paths.artifactsDir),
+      evidence
+    );
+
+    await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-27T21:31:00.000Z")
+      },
+      {
+        buildResumeTranscriptSummary: () =>
+          Promise.resolve("resume-summary: implementer-active"),
+        launchBubbleTmuxSession: (input) => {
+          expect(input.reviewerCommand).not.toContain("Current directive:");
+          expect(input.reviewerKickoffMessage).toBeUndefined();
+          return Promise.resolve({ sessionName: "pf-b_start_resume_07" });
         }
       }
     );
