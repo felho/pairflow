@@ -7,6 +7,7 @@ import { isInteger, isIsoTimestamp, isNonEmptyString, isRecord } from "../valida
 import { FileLockTimeoutError, withFileLock } from "../util/fileLock.js";
 
 const defaultLockTimeoutMs = 5_000;
+const defaultStaleLockRecoveryAfterMs = 1_000;
 const metricsEventsRootEnvVar = "PAIRFLOW_METRICS_EVENTS_ROOT";
 
 export interface ResolveMetricsShardPathInput {
@@ -37,6 +38,8 @@ export interface AppendMetricsEventInput {
   event: PairflowMetricsEvent;
   rootPath?: string;
   lockTimeoutMs?: number;
+  // Metrics-layer name; forwarded to withFileLock's staleAfterMs option.
+  staleLockRecoveryAfterMs?: number | null;
 }
 
 export interface AppendMetricsEventResult {
@@ -196,10 +199,18 @@ export async function appendMetricsEvent(
   });
 
   try {
+    const staleLockRecoveryAfterMs =
+      input.staleLockRecoveryAfterMs === undefined
+        ? defaultStaleLockRecoveryAfterMs
+        : input.staleLockRecoveryAfterMs;
+
     await withFileLock(
       {
         lockPath: shardPath.lockPath,
         timeoutMs: input.lockTimeoutMs ?? defaultLockTimeoutMs,
+        ...(staleLockRecoveryAfterMs !== null
+          ? { staleAfterMs: staleLockRecoveryAfterMs }
+          : {}),
         ensureParentDir: true
       },
       async () => {

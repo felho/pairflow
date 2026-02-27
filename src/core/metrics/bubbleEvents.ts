@@ -17,6 +17,7 @@ export interface EmitBubbleLifecycleEventInput {
   actorRole: MetricsActorRole;
   metadata: Record<string, unknown>;
   lockTimeoutMs?: number;
+  staleLockRecoveryAfterMs?: number | null;
   now?: Date;
 }
 
@@ -30,6 +31,7 @@ function defaultWarningReporter(message: string): void {
 }
 
 const defaultBestEffortLockTimeoutMs = 150;
+const defaultBestEffortStaleLockRecoveryAfterMs = 100;
 // Flush threshold for dedupe keys; once reached we reset the cache and keep warning visibility.
 const reportedWarningKeyFlushThreshold = 512;
 const reportedWarningKeys = new Set<string>();
@@ -55,6 +57,9 @@ export async function emitBubbleLifecycleEvent(
     }),
     ...(input.lockTimeoutMs !== undefined
       ? { lockTimeoutMs: input.lockTimeoutMs }
+      : {}),
+    ...(input.staleLockRecoveryAfterMs !== undefined
+      ? { staleLockRecoveryAfterMs: input.staleLockRecoveryAfterMs }
       : {})
   });
 }
@@ -64,11 +69,18 @@ export async function emitBubbleLifecycleEventBestEffort(
 ): Promise<void> {
   const reportWarning = input.reportWarning ?? defaultWarningReporter;
   const lockTimeoutMs = input.lockTimeoutMs ?? defaultBestEffortLockTimeoutMs;
+  // Best-effort always forwards staleLockRecoveryAfterMs explicitly so this
+  // layer's default (100ms) overrides appendMetricsEvent's deeper default.
+  const staleLockRecoveryAfterMs =
+    input.staleLockRecoveryAfterMs === undefined
+      ? defaultBestEffortStaleLockRecoveryAfterMs
+      : input.staleLockRecoveryAfterMs;
 
   try {
     await emitBubbleLifecycleEvent({
       ...input,
-      lockTimeoutMs
+      lockTimeoutMs,
+      staleLockRecoveryAfterMs
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
