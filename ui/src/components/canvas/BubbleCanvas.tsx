@@ -8,15 +8,8 @@ import type {
   BubblePosition
 } from "../../lib/types";
 import {
-  cardHeight,
-  cardWidth,
+  bubbleDimensions,
   defaultPosition,
-  expandedCardHeight,
-  expandedCardWidth,
-  startX,
-  startY,
-  xGap,
-  yGap
 } from "../../lib/canvasLayout";
 import { cn } from "../../lib/utils";
 import { ConnectedBubbleExpandedCard } from "./ConnectedBubbleExpandedCard";
@@ -63,6 +56,7 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
   const onPositionChangeRef = useRef(props.onPositionChange);
   const onPositionCommitRef = useRef(props.onPositionCommit);
   const onDragStateChangeRef = useRef(props.onDragStateChange);
+  const collapsedDimensions = bubbleDimensions(false);
 
   useEffect(() => {
     onPositionChangeRef.current = props.onPositionChange;
@@ -109,14 +103,16 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
   return (
     <article
       className={cn(
-        "absolute w-[260px] rounded-[20px] border bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] p-4 transition-shadow",
+        "absolute rounded-[20px] border bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] p-4 transition-shadow",
         visual.border,
         visual.cardTone,
         dragging ? "cursor-grabbing" : "cursor-default"
       )}
       style={{
         left: props.position.x,
-        top: props.position.y
+        top: props.position.y,
+        width: collapsedDimensions.width,
+        height: collapsedDimensions.height
       }}
       data-bubble-id={props.bubble.bubbleId}
       onClick={() => {
@@ -321,10 +317,9 @@ export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
     let maxRight = 0;
     for (const entry of positioned) {
       const isExpanded = expandedSet.has(entry.bubble.bubbleId);
-      const width = isExpanded ? expandedCardWidth : cardWidth;
-      const height = isExpanded ? expandedCardHeight : cardHeight;
-      maxBottom = Math.max(maxBottom, entry.position.y + height + 24);
-      maxRight = Math.max(maxRight, entry.position.x + width + 24);
+      const dimensions = bubbleDimensions(isExpanded);
+      maxBottom = Math.max(maxBottom, entry.position.y + dimensions.height + 24);
+      maxRight = Math.max(maxRight, entry.position.x + dimensions.width + 24);
     }
     return { minHeight: maxBottom, minWidth: maxRight };
   }, [positioned, expandedSet]);

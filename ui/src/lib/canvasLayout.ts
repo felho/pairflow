@@ -1,9 +1,18 @@
 import type { BubblePosition } from "./types";
 
-export const cardWidth = 248;
-export const cardHeight = 156;
-export const expandedCardWidth = 480;
-export const expandedCardHeight = 520;
+export const collapsedCardDimensions = {
+  width: 260,
+  height: 156
+} as const;
+
+export const expandedCardDimensions = {
+  width: 500,
+  height: 520
+} as const;
+
+export const cardWidth = collapsedCardDimensions.width;
+export const cardHeight = collapsedCardDimensions.height;
+export const expandedCardHeight = expandedCardDimensions.height;
 export const xGap = 26;
 export const yGap = 22;
 export const startX = 22;
@@ -28,10 +37,7 @@ export function bubbleDimensions(expanded: boolean): {
   width: number;
   height: number;
 } {
-  return {
-    width: expanded ? expandedCardWidth : cardWidth,
-    height: expanded ? expandedCardHeight : cardHeight
-  };
+  return expanded ? expandedCardDimensions : collapsedCardDimensions;
 }
 
 export function resolveNonOverlappingPosition(
