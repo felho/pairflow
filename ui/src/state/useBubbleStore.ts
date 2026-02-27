@@ -6,7 +6,7 @@ import {
   PairflowApiError,
   type PairflowApiClient
 } from "../lib/api";
-import { defaultPosition } from "../lib/canvasLayout";
+import { defaultPosition, resolveNonOverlappingPosition } from "../lib/canvasLayout";
 import {
   createRealtimeEventsClient,
   type RealtimeEventsClient,
@@ -297,8 +297,10 @@ function prunePositions(
 function fillDefaultPositions(
   positions: Record<string, BubblePosition>,
   bubbles: Record<string, BubbleCardModel>,
-  selectedRepos: Set<string>
+  selectedRepos: Set<string>,
+  expandedBubbleIds: readonly string[]
 ): Record<string, BubblePosition> {
+  const expandedSet = new Set(expandedBubbleIds);
   const visible = Object.values(bubbles)
     .filter((bubble) => selectedRepos.has(bubble.repoPath))
     .sort((left, right) => left.bubbleId.localeCompare(right.bubbleId));
@@ -308,7 +310,28 @@ function fillDefaultPositions(
 
   for (const [index, bubble] of visible.entries()) {
     if (next[bubble.bubbleId] === undefined) {
-      next[bubble.bubbleId] = defaultPosition(index);
+      const occupied: {
+        position: BubblePosition;
+        expanded: boolean;
+      }[] = [];
+      for (const candidate of visible) {
+        if (candidate.bubbleId === bubble.bubbleId) {
+          continue;
+        }
+        const candidatePosition = next[candidate.bubbleId];
+        if (candidatePosition === undefined) {
+          continue;
+        }
+        occupied.push({
+          position: candidatePosition,
+          expanded: expandedSet.has(candidate.bubbleId)
+        });
+      }
+      next[bubble.bubbleId] = resolveNonOverlappingPosition(
+        defaultPosition(index),
+        occupied,
+        expandedSet.has(bubble.bubbleId)
+      );
       changed = true;
     }
   }
@@ -472,7 +495,8 @@ export function createBubbleStore(
         const positions = fillDefaultPositions(
           pruned,
           bubblesById,
-          new Set(state.selectedRepos)
+          new Set(state.selectedRepos),
+          state.expandedBubbleIds
         );
         const bubbleDetails = syncExpandedFromSummary(state.bubbleDetails, bubblesById);
 
@@ -603,7 +627,8 @@ export function createBubbleStore(
                 const positions = fillDefaultPositions(
                   prunePositions(state.positions, bubblesById),
                   bubblesById,
-                  new Set(state.selectedRepos)
+                  new Set(state.selectedRepos),
+                  state.expandedBubbleIds
                 );
                 const bubbleDetails = syncExpandedFromSummary(
                   state.bubbleDetails,
@@ -660,6 +685,12 @@ export function createBubbleStore(
                   ...state.bubblesById,
                   [event.bubbleId]: toBubbleCardModel(event.bubble)
                 };
+                const positions = fillDefaultPositions(
+                  prunePositions(state.positions, bubblesById),
+                  bubblesById,
+                  new Set(state.selectedRepos),
+                  state.expandedBubbleIds
+                );
                 const existingDetail = state.bubbleDetails[event.bubbleId];
                 const bubbleDetails =
                   existingDetail === undefined
@@ -673,6 +704,7 @@ export function createBubbleStore(
                       };
                 return {
                   bubblesById,
+                  positions,
                   bubbleDetails
                 };
               }
@@ -681,7 +713,8 @@ export function createBubbleStore(
                 const positions = fillDefaultPositions(
                   prunePositions(state.positions, bubblesById),
                   bubblesById,
-                  new Set(state.selectedRepos)
+                  new Set(state.selectedRepos),
+                  state.expandedBubbleIds
                 );
                 return {
                   bubblesById,
@@ -842,7 +875,8 @@ export function createBubbleStore(
           const positions = fillDefaultPositions(
             prunePositions(get().positions, bubblesById),
             bubblesById,
-            new Set(selectedRepos)
+            new Set(selectedRepos),
+            get().expandedBubbleIds
           );
 
           set((state) => ({
@@ -944,7 +978,7 @@ export function createBubbleStore(
       async toggleBubbleExpanded(bubbleId: string): Promise<void> {
         const state = get();
         if (state.expandedBubbleIds.includes(bubbleId)) {
-          // Collapse
+          // Collapse only toggles the display mode. Existing card coordinates stay fixed.
           set({
             expandedBubbleIds: state.expandedBubbleIds.filter((id) => id !== bubbleId)
           });
@@ -956,7 +990,8 @@ export function createBubbleStore(
           return;
         }
 
-        // Expand
+        // Expand only toggles the display mode. We intentionally do not reflow already
+        // positioned cards here, because users may have manually arranged the canvas.
         set({
           expandedBubbleIds: [...state.expandedBubbleIds, bubbleId]
         });

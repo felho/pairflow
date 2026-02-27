@@ -11,6 +11,8 @@ import {
   cardHeight,
   cardWidth,
   defaultPosition,
+  expandedCardHeight,
+  expandedCardWidth,
   startX,
   startY,
   xGap,
@@ -274,9 +276,6 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
     </article>
   );
 }
-
-const expandedCardWidth = 480;
-const expandedCardHeight = 520;
 
 export interface BubbleCanvasProps {
   bubbles: BubbleCardModel[];

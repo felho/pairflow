@@ -8,6 +8,7 @@ import {
 } from "./useBubbleStore";
 import type { PairflowApiClient } from "../lib/api";
 import { PairflowApiError } from "../lib/api";
+import { defaultPosition, expandedCardHeight, startY, yGap } from "../lib/canvasLayout";
 import type {
   BubbleDeleteResult,
   BubblePosition,
@@ -239,6 +240,98 @@ describe("createBubbleStore", () => {
     ]);
     expect(selectStateCounts(store.getState()).RUNNING).toBe(2);
     expect(getBubbles).toHaveBeenCalledTimes(1);
+  });
+
+  it("positions a realtime-created bubble below expanded predecessors", async () => {
+    const bubble1 = bubbleSummary({ bubbleId: "b-1", repoPath: "/repo-a" });
+    const bubble2 = bubbleSummary({ bubbleId: "b-2", repoPath: "/repo-a" });
+    const bubble3 = bubbleSummary({ bubbleId: "b-3", repoPath: "/repo-a" });
+    const bubble4 = bubbleSummary({ bubbleId: "b-4", repoPath: "/repo-a" });
+    const bubble5 = bubbleSummary({ bubbleId: "b-5", repoPath: "/repo-a" });
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubble1, bubble2, bubble3, bubble4]
+      }))
+    });
+
+    let emitEvent: (event: UiEvent) => void = () => undefined;
+    const store = createBubbleStore({
+      api,
+      createEventsClient: (input) => {
+        emitEvent = input.onEvent;
+        return {
+          start: () => undefined,
+          stop: () => undefined,
+          refresh: () => undefined
+        };
+      }
+    });
+
+    await store.getState().initialize();
+    await store.getState().toggleBubbleExpanded("b-1");
+
+    emitEvent({
+      id: 31,
+      ts: "2026-02-24T12:31:00.000Z",
+      type: "bubble.updated",
+      repoPath: "/repo-a",
+      bubbleId: "b-5",
+      bubble: bubble5
+    });
+
+    const defaultRowTwoSlot = defaultPosition(4);
+    expect(store.getState().positions["b-5"]).toEqual({
+      x: defaultRowTwoSlot.x,
+      y: startY + expandedCardHeight + yGap
+    });
+  });
+
+  it("keeps default position when expanded bubbles do not block the new slot", async () => {
+    const bubble1 = bubbleSummary({ bubbleId: "b-1", repoPath: "/repo-a" });
+    const bubble2 = bubbleSummary({ bubbleId: "b-2", repoPath: "/repo-a" });
+    const bubble3 = bubbleSummary({ bubbleId: "b-3", repoPath: "/repo-a" });
+    const bubble4 = bubbleSummary({ bubbleId: "b-4", repoPath: "/repo-a" });
+    const bubble5 = bubbleSummary({ bubbleId: "b-5", repoPath: "/repo-a" });
+    const bubble6 = bubbleSummary({ bubbleId: "b-6", repoPath: "/repo-a" });
+    const bubble7 = bubbleSummary({ bubbleId: "b-7", repoPath: "/repo-a" });
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubble1, bubble2, bubble3, bubble4, bubble5, bubble6]
+      }))
+    });
+
+    let emitEvent: (event: UiEvent) => void = () => undefined;
+    const store = createBubbleStore({
+      api,
+      createEventsClient: (input) => {
+        emitEvent = input.onEvent;
+        return {
+          start: () => undefined,
+          stop: () => undefined,
+          refresh: () => undefined
+        };
+      }
+    });
+
+    await store.getState().initialize();
+    await store.getState().toggleBubbleExpanded("b-1");
+
+    emitEvent({
+      id: 32,
+      ts: "2026-02-24T12:32:00.000Z",
+      type: "bubble.updated",
+      repoPath: "/repo-a",
+      bubbleId: "b-7",
+      bubble: bubble7
+    });
+
+    expect(store.getState().positions["b-7"]).toEqual(defaultPosition(6));
   });
 
   it("applies snapshot events by replacing only scoped repos", async () => {
