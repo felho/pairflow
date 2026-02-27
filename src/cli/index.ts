@@ -104,6 +104,10 @@ import {
   getRepoRemoveHelpText,
   runRepoRemoveCommand
 } from "./commands/repo/remove.js";
+import {
+  getMetricsReportHelpText,
+  runMetricsReportCommand
+} from "./commands/metrics/report.js";
 
 async function handlePassCommand(args: string[]): Promise<number> {
   const result = await runPassCommand(args);
@@ -224,6 +228,23 @@ async function handleRepoListCommand(args: string[]): Promise<number> {
     process.stdout.write(`${renderRepoListText(result)}\n`);
   }
   return 0;
+}
+
+async function handleMetricsReportCommand(args: string[]): Promise<number> {
+  try {
+    const result = await runMetricsReportCommand(args);
+    if (result === null) {
+      process.stdout.write(`${getMetricsReportHelpText()}\n`);
+      return 0;
+    }
+
+    process.stdout.write(`${result.output}\n`);
+    return 0;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`${message}\n`);
+    return 1;
+  }
 }
 
 type AgentCommandName = "pass" | "ask-human" | "converged";
@@ -564,12 +585,21 @@ const repoSubcommandHandlers: Readonly<
   list: handleRepoListCommand
 };
 
+const metricsSubcommandHandlers: Readonly<
+  Record<string, (args: string[]) => Promise<number>>
+> = {
+  report: handleMetricsReportCommand
+};
+
 function buildSupportedCommandsText(): string {
   const bubbleCommands = Object.keys(bubbleSubcommandHandlers).map(
     (subcommand) => `bubble ${subcommand}`
   );
   const repoCommands = Object.keys(repoSubcommandHandlers).map(
     (subcommand) => `repo ${subcommand}`
+  );
+  const metricsCommands = Object.keys(metricsSubcommandHandlers).map(
+    (subcommand) => `metrics ${subcommand}`
   );
   const topLevelAgentCommands = [...agentCommandNames];
   const namespacedAgentCommands = agentCommandNames.map(
@@ -579,6 +609,7 @@ function buildSupportedCommandsText(): string {
     "ui",
     ...bubbleCommands,
     ...repoCommands,
+    ...metricsCommands,
     ...topLevelAgentCommands,
     ...namespacedAgentCommands
   ].join(", ");
@@ -627,6 +658,13 @@ export async function runCli(argv: string[]): Promise<number> {
     const repoHandler = repoSubcommandHandlers[subcommand];
     if (repoHandler !== undefined) {
       return repoHandler(rest);
+    }
+  }
+
+  if (command === "metrics" && subcommand !== undefined) {
+    const metricsHandler = metricsSubcommandHandlers[subcommand];
+    if (metricsHandler !== undefined) {
+      return metricsHandler(rest);
     }
   }
 

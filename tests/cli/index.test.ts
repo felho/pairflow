@@ -196,6 +196,15 @@ describe("runCli", () => {
     expect(output).toContain("pairflow repo list");
   });
 
+  it("supports metrics report help", async () => {
+    const exitCode = await runCli(["metrics", "report", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+    const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+    expect(output).toContain("pairflow metrics report");
+  });
+
   it("rejects unknown agent namespace command", async () => {
     const exitCode = await runCli(["agent", "unknown"]);
 
@@ -210,6 +219,20 @@ describe("runCli", () => {
     expect(stderrSpy).toHaveBeenCalled();
   });
 
+  it("returns non-zero for invalid metrics date range", async () => {
+    const exitCode = await runCli([
+      "metrics",
+      "report",
+      "--from",
+      "2026-03-01",
+      "--to",
+      "2026-02-01"
+    ]);
+
+    expect(exitCode).toBe(1);
+    expect(stderrSpy).toHaveBeenCalled();
+  });
+
   it("prints registry-backed unknown command support list", async () => {
     const exitCode = await runCli(["unknown"]);
 
@@ -218,6 +241,7 @@ describe("runCli", () => {
     expect(errorText).toContain("ui");
     expect(errorText).toContain("bubble watchdog");
     expect(errorText).toContain("repo list");
+    expect(errorText).toContain("metrics report");
     expect(errorText).toContain("agent converged");
   });
 
