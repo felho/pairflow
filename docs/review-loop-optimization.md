@@ -657,6 +657,68 @@ Suggested rollout:
 - Treat it as **bubble-class-specific** until validated on a wider sample.
 - For P1-heavy bubbles (like `repo-registry-prd`), expect smaller but still meaningful gains.
 
+## 10. New Learnings from Phase 1-3 Rollout (2026-02-27)
+
+Recent Phase 1-3 implementation bubbles add a different failure mode than the earlier evidence set.
+
+### What Is New Compared to Earlier Evidence
+
+Earlier bubbles mainly showed:
+1. Severity inflation (P3/P2 treated as mandatory fixes)
+2. Rediscovery loops due fresh reviewer context
+3. Scope drift
+
+The `metrics-lock-recovery-01` bubble shows an additional pattern:
+1. **Quality-bar ratchet loop** — many rounds with mostly new, non-duplicated hardening findings (not the same finding rediscovered)
+2. **Late-stage P1 churn** — correctness-level findings can still appear late, but often as edge-case timing/timeout semantics around already-good core logic
+
+This means not all long loops are caused by "amnesia." Some are caused by continuously raising quality expectations after the core bug is already fixed.
+
+### Evidence Snapshot: `metrics-lock-recovery-01`
+
+| Metric | Value |
+|---|---|
+| State at analysis | RUNNING, round 15 |
+| Reviewer passes analyzed | 14 |
+| Findings total | 39 (11 P1 + 23 P2 + 5 P3) |
+| Repeated finding titles | 0 (all unique titles) |
+| Implementer independent validation | `pnpm typecheck` pass + targeted stale-lock suite pass (`20/20`) |
+
+Interpretation:
+1. Review quality is high (real technical concerns), but the loop shows diminishing returns after core correctness stabilizes.
+2. Round count alone is not enough; we need to distinguish "new critical defect discovery" from "incremental hardening."
+
+### Additional Process Controls Suggested
+
+1. **Late-round P1 evidence rule**
+   - After round `N` (suggested `N=8`), any new `P1` should include one of:
+     - concrete failing test, or
+     - deterministic reproduction steps
+   - Without this, downgrade to `P2` note by default.
+
+2. **Convergence gate for hardening tails**
+   - If round `>= 10`, and:
+     - independent checks pass (`typecheck` + targeted tests), and
+     - no new reproducible `P1` appears in last 2 rounds,
+   - then converge and move remaining `P2/P3` to follow-up notes.
+
+3. **Independent verifier checkpoint**
+   - Add a lightweight orchestrator verification checkpoint for long loops (for example every 3 rounds after round 8).
+   - Purpose: separate objective breakage from reviewer preference refinement.
+
+4. **Data-plane reliability as optimization prerequisite**
+   - The same rollout exposed stale metrics lock behavior (`events-YYYY-MM.ndjson.lock` left behind), causing metrics write warnings.
+   - If telemetry is intermittently blocked, optimization experiments become hard to trust.
+   - Recommendation: track metrics-write warning rate as a data-quality metric in experiment reporting.
+
+### Why This Matters for "Just Converge?" Decisions
+
+A practical decision heuristic for human intervention in long loops:
+1. Is there a new reproducible `P1` with failing proof? If yes, continue.
+2. If not, and independent checks are green, converge and record residual items as follow-ups.
+
+This keeps safety high while preventing open-ended hardening cycles.
+
 ## Open Questions
 
 - Should the parallel agent count be configurable per bubble (e.g., quality_mode: strict → 3 agents, normal → 1)?
