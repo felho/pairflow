@@ -66,6 +66,21 @@ export function inferPassIntent(activeRole: AgentRole): PassIntent {
   return "fix_request";
 }
 
+function inferReviewerPassIntent(
+  hasFindings: boolean,
+  noFindings: boolean
+): PassIntent {
+  // Defensive invariant guard for both invalid combinations. Upstream reviewer
+  // validation rejects these earlier, but this keeps inference self-contained.
+  if (hasFindings === noFindings) {
+    throw new PassCommandError(
+      "Reviewer PASS intent inference invariant violated: expected exactly one of findings or --no-findings."
+    );
+  }
+
+  return noFindings ? "review" : "fix_request";
+}
+
 function resolveHandoff(
   state: BubbleStateSnapshot,
   implementer: AgentName,
@@ -213,12 +228,6 @@ export async function emitPassFromWorkspace(
   const { implementer, reviewer } = resolved.bubbleConfig.agents;
   const handoff = resolveHandoff(state, implementer, reviewer, nowIso);
 
-  const inferredIntent = input.intent === undefined;
-  const intent = input.intent ?? inferPassIntent(handoff.senderRole);
-  if (!isPassIntent(intent)) {
-    throw new PassCommandError(`Invalid pass intent: ${String(intent)}`);
-  }
-
   if (handoff.senderRole === "reviewer") {
     if (hasFindings && noFindings) {
       throw new PassCommandError(
@@ -234,6 +243,34 @@ export async function emitPassFromWorkspace(
     throw new PassCommandError(
       "Implementer PASS does not accept findings flags; findings are reviewer-only."
     );
+  }
+
+  const inferredIntent = input.intent === undefined;
+  const intent = input.intent
+    ?? (handoff.senderRole === "reviewer"
+      ? inferReviewerPassIntent(hasFindings, noFindings)
+      : inferPassIntent(handoff.senderRole));
+  if (!isPassIntent(intent)) {
+    throw new PassCommandError(`Invalid pass intent: ${String(intent)}`);
+  }
+  if (handoff.senderRole === "reviewer") {
+    // `intent=task` remains implementer-only by design; reviewer handoff
+    // semantics are constrained to `review`/`fix_request` with findings flags.
+    if (intent === "task") {
+      throw new PassCommandError(
+        "Reviewer PASS cannot use intent=task."
+      );
+    }
+    if (noFindings && intent === "fix_request") {
+      throw new PassCommandError(
+        "Reviewer PASS with --no-findings cannot use intent=fix_request."
+      );
+    }
+    if (hasFindings && intent === "review") {
+      throw new PassCommandError(
+        "Reviewer PASS with findings cannot use intent=review."
+      );
+    }
   }
 
   const lockPath = join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`);
