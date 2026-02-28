@@ -4,6 +4,9 @@
 **Status:** Active tracker — ideas + implementation progress
 **Context:** Analysis of `repo-registry-prd` bubble (13 rounds, 14 P1 + 25 P2 + 4 P3 findings) and `delete-bubble` bubble (36 rounds, ~4 hours, human intervention required to converge)
 
+Canonical severity policy:
+- `docs/reviewer-severity-ontology.md`
+
 ## Problem Statement
 
 The reviewer produces high-quality findings (real bugs, race conditions, event ordering issues), but the review loop generates unnecessary rounds due to:
@@ -19,7 +22,7 @@ The reviewer produces high-quality findings (real bugs, race conditions, event o
 
 | # | Optimization | Status | Notes |
 |---|---|---|---|
-| 1 | Severity guidelines in reviewer prompt | In progress | Prompt guidance improved, but full severity-calibration rollout is not finalized. |
+| 1 | Severity guidelines in reviewer prompt | In progress | Canonical ontology moved to `docs/reviewer-severity-ontology.md`; prompt/policy rollout remains. |
 | 2 | Approve with notes | Not implemented | Still tracked as high-priority next step. |
 | 3 | Parallel review agents | Not implemented | Architectural/coordination change, deferred. |
 | 4 | Deep exploration for P1 findings | Not implemented | Process proposal only so far. |
