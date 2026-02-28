@@ -1,17 +1,19 @@
 ---
 description: Propose a practical plan to bootstrap trusted test/typecheck evidence in the current project
-argument-hint: [--repo <path>] [--depth quick|full]
+argument-hint: [<repo-path>] [quick|full]
 allowed-tools: Bash, Read, Glob, AskUserQuestion
 ---
 
 # Bootstrap Evidence
 
+## Purpose
+
 Creates an implementation-ready plan for adding trusted validation evidence to a project, so Pairflow reviewer loops can safely skip unnecessary re-runs when evidence is strong.
 
 ## Variables
 
-REPO_PATH: extracted from `--repo` argument, or git top-level from cwd
-DEPTH: extracted from `--depth`, default `quick`
+REPO_PATH: $1 or git top-level from cwd if not provided
+DEPTH: $2 or "quick" if not provided
 
 ## Instructions
 
@@ -19,19 +21,28 @@ DEPTH: extracted from `--depth`, default `quick`
 - Focus on minimum viable improvements that fit the project's current tooling.
 - Prefer reusing existing project commands (`lint`, `typecheck`, `test`, `check`) over adding Pairflow-specific custom commands.
 - Include explicit guidance for how implementer handoff should attach evidence via `--ref`.
+- If DEPTH is `quick`, inspect only `package.json` scripts and top-level config. If `full`, also scan CI workflows, Makefile targets, and helper scripts.
+
+## Relevant Files
+
+- `references/evidence-example-pairflow.md` — Minimal evidence pattern reference for proposing structure
 
 ## Workflow
 
-### 1. Discover Current Validation Surface
+### 1. Validate Input
+
+- If REPO_PATH cannot be resolved (e.g., `git rev-parse --show-toplevel` fails) → STOP with "Error: not inside a git repository at {REPO_PATH}"
+
+### 2. Discover Current Validation Surface
 
 1. Resolve REPO_PATH (`git rev-parse --show-toplevel` if needed).
 2. Inspect available project validation commands:
    - `package.json` scripts
-   - `Makefile` targets
-   - CI helper scripts (`scripts/`, `tools/`, `.github/workflows/`)
+   - `Makefile` targets (if DEPTH is `full`)
+   - CI helper scripts (`scripts/`, `tools/`, `.github/workflows/`) (if DEPTH is `full`)
 3. Identify which commands are currently used as quality gates (lint/typecheck/test).
 
-### 2. Evaluate Evidence Readiness
+### 3. Evaluate Evidence Readiness
 
 For each required command, check whether current behavior already provides:
 
@@ -45,7 +56,7 @@ Classify each command as:
 - `partially-ready`
 - `missing`
 
-### 3. Propose Minimal Upgrade Path
+### 4. Propose Minimal Upgrade Path
 
 Produce 2-3 concrete options, ordered by effort:
 
@@ -59,13 +70,21 @@ For each option include:
 2. Required script/prompt/doc updates.
 3. Tradeoff (speed, reliability, maintenance overhead).
 
-### 4. Output a Project-Specific First Iteration Plan
+### 5. Generate Report
 
-Return:
+Compile findings into the Report format below.
 
-1. A short "why this matters for Pairflow loop speed/quality" context.
-2. A step-by-step first iteration (max 7 steps).
-3. A sample implementer handoff command with refs, for example:
+### 6. Optional Follow-up
+
+- If user requests implementation → recommend creating a dedicated task file first, then continue with CreateBubble workflow for execution.
+
+## Report
+
+After completing the analysis, present:
+
+1. **Why this matters** — short context on Pairflow loop speed/quality impact.
+2. **First iteration plan** — step-by-step (max 7 steps).
+3. **Sample handoff command** with refs:
 
 ```bash
 pairflow pass --summary "Validation complete: lint/typecheck/test" \
@@ -74,16 +93,4 @@ pairflow pass --summary "Validation complete: lint/typecheck/test" \
   --ref .pairflow/evidence/test.log
 ```
 
-4. A validation checklist (how to confirm evidence is trusted and usable).
-
-### 5. Optional Follow-up
-
-If the user asks for implementation next:
-
-1. Recommend creating a dedicated task file first.
-2. Then continue with CreateBubble workflow for execution.
-
-## Reference
-
-Use `references/evidence-example-pairflow.md` as a minimal pattern reference when proposing structure.
-
+4. **Validation checklist** — how to confirm evidence is trusted and usable.
