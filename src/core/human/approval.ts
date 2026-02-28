@@ -11,6 +11,10 @@ import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import type { AgentName, BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ApprovalDecision, ProtocolEnvelope } from "../../types/protocol.js";
 
+export interface EmitApprovalDecisionDependencies {
+  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
+}
+
 export interface EmitApprovalDecisionInput {
   bubbleId: string;
   decision: ApprovalDecision;
@@ -84,7 +88,8 @@ function resolveNextState(
 }
 
 export async function emitApprovalDecision(
-  input: EmitApprovalDecisionInput
+  input: EmitApprovalDecisionInput,
+  dependencies: EmitApprovalDecisionDependencies = {}
 ): Promise<EmitApprovalDecisionResult> {
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
@@ -171,8 +176,11 @@ export async function emitApprovalDecision(
     );
   }
 
+  const emitDelivery =
+    dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
+
   // Optional UX signal; never block protocol/state progression on notification failure.
-  void emitTmuxDeliveryNotification({
+  void emitDelivery({
     bubbleId: resolved.bubbleId,
     bubbleConfig: resolved.bubbleConfig,
     sessionsPath: resolved.bubblePaths.sessionsPath,
@@ -181,6 +189,22 @@ export async function emitApprovalDecision(
       ? { messageRef: appended.envelope.refs[0] }
       : {})
   });
+  if (input.decision === "revise") {
+    const decisionMessageRef =
+      appended.envelope.refs[0] ?? `transcript.ndjson#${appended.envelope.id}`;
+    // Rework requests must reach the implementer pane explicitly, otherwise
+    // a READY_FOR_APPROVAL -> RUNNING transition can remain invisible in practice.
+    void emitDelivery({
+      bubbleId: resolved.bubbleId,
+      bubbleConfig: resolved.bubbleConfig,
+      sessionsPath: resolved.bubblePaths.sessionsPath,
+      envelope: {
+        ...appended.envelope,
+        recipient: resolved.bubbleConfig.agents.implementer
+      },
+      messageRef: decisionMessageRef
+    });
+  }
 
   await emitBubbleLifecycleEventBestEffort({
     repoPath: resolved.repoPath,
@@ -211,7 +235,8 @@ export async function emitApprovalDecision(
 }
 
 export async function emitApprove(
-  input: EmitApproveInput
+  input: EmitApproveInput,
+  dependencies: EmitApprovalDecisionDependencies = {}
 ): Promise<EmitApprovalDecisionResult> {
   return emitApprovalDecision({
     bubbleId: input.bubbleId,
@@ -220,11 +245,12 @@ export async function emitApprove(
     repoPath: input.repoPath,
     cwd: input.cwd,
     now: input.now
-  });
+  }, dependencies);
 }
 
 export async function emitRequestRework(
-  input: EmitRequestReworkInput
+  input: EmitRequestReworkInput,
+  dependencies: EmitApprovalDecisionDependencies = {}
 ): Promise<EmitApprovalDecisionResult> {
   return emitApprovalDecision({
     bubbleId: input.bubbleId,
@@ -234,7 +260,7 @@ export async function emitRequestRework(
     repoPath: input.repoPath,
     cwd: input.cwd,
     now: input.now
-  });
+  }, dependencies);
 }
 
 export function asApprovalCommandError(error: unknown): never {

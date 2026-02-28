@@ -80,6 +80,17 @@ function buildDeliveryMessage(
     } else if (envelope.type === "HUMAN_REPLY") {
       action =
         "Human response received. Continue implementation using this input, then hand off with `pairflow pass --summary` directly. Include available `.pairflow/evidence/*.log` refs on PASS.";
+    } else if (envelope.type === "APPROVAL_DECISION") {
+      if (envelope.payload.decision === "revise") {
+        action =
+          "Human requested rework. Continue implementation now and address the requested changes, then hand off with `pairflow pass --summary` directly. Include available `.pairflow/evidence/*.log` refs on PASS.";
+      } else if (envelope.payload.decision === "approve") {
+        action =
+          "Human approved this bubble. Wait for commit/merge flow and do not continue new implementation in this round.";
+      } else {
+        action =
+          "Human approval decision received. Continue according to current bubble state/inbox.";
+      }
     } else if (envelope.type === "APPROVAL_REQUEST") {
       action =
         "Bubble is READY_FOR_APPROVAL. Stop coding and wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now.";

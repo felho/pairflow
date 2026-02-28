@@ -290,6 +290,62 @@ describe("emitTmuxDeliveryNotification", () => {
     );
   });
 
+  it("routes rework approval decision to implementer pane with rework instruction", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r2 APPROVAL_DECISION human->codex msg=msg_20260222_101 ref=transcript.ndjson#msg_20260222_101.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        sender: "human",
+        recipient: "codex",
+        type: "APPROVAL_DECISION",
+        round: 2,
+        payload: {
+          decision: "revise",
+          message: "Please address reviewer findings."
+        }
+      }),
+      messageRef: "transcript.ndjson#msg_20260222_101",
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result.delivered).toBe(true);
+    expect(result.targetPaneIndex).toBe(1);
+    const approvalCall = calls.find(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.1" &&
+        call[3] === "-l" &&
+        call[4]?.includes("APPROVAL_DECISION human->codex")
+    );
+    expect(approvalCall?.[4]).toContain("Human requested rework.");
+    expect(calls).toContainEqual([
+      "send-keys",
+      "-t",
+      "pf-b_delivery_01:0.1",
+      "Enter"
+    ]);
+  });
+
   it("routes approval-wait notification to reviewer pane with hold instruction", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {

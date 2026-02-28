@@ -95,13 +95,37 @@ describe("approval decisions", () => {
   it("writes APPROVAL_DECISION=revise and resumes RUNNING on implementer", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupReadyForApprovalBubble(repoPath, "b_approval_02");
+    const deliveries: Array<{
+      recipient: string;
+      messageRef?: string;
+      type: string;
+      decision?: unknown;
+    }> = [];
 
-    const result = await emitRequestRework({
-      bubbleId: bubble.bubbleId,
-      message: "Please tighten validation and add edge-case tests.",
-      cwd: repoPath,
-      now: new Date("2026-02-22T12:05:00.000Z")
-    });
+    const result = await emitRequestRework(
+      {
+        bubbleId: bubble.bubbleId,
+        message: "Please tighten validation and add edge-case tests.",
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:05:00.000Z")
+      },
+      {
+        emitTmuxDeliveryNotification: (input) => {
+          deliveries.push({
+            recipient: input.envelope.recipient,
+            type: input.envelope.type,
+            decision: input.envelope.payload.decision,
+            ...(input.messageRef !== undefined
+              ? { messageRef: input.messageRef }
+              : {})
+          });
+          return Promise.resolve({
+            delivered: true,
+            message: "ok"
+          });
+        }
+      }
+    );
 
     expect(result.envelope.type).toBe("APPROVAL_DECISION");
     expect(result.envelope.payload.decision).toBe("revise");
@@ -113,6 +137,15 @@ describe("approval decisions", () => {
     expect(result.state.round_role_history.some((entry) => entry.round === 3)).toBe(
       true
     );
+    expect(deliveries.map((delivery) => delivery.recipient)).toEqual([
+      "orchestrator",
+      bubble.config.agents.implementer
+    ]);
+    expect(deliveries[1]).toMatchObject({
+      type: "APPROVAL_DECISION",
+      decision: "revise",
+      messageRef: `transcript.ndjson#${result.envelope.id}`
+    });
   });
 
   it("rejects decision when bubble is not READY_FOR_APPROVAL", async () => {
