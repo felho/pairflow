@@ -138,7 +138,10 @@ By default, reviewer context mode is **fresh**: when the implementer hands off (
 ```bash
 # 3. Implementer finishes first pass, hands off to reviewer
 #    (run FROM the worktree directory — bubble is auto-detected from CWD)
-pairflow pass --summary "Login form implemented with email regex validation"
+pairflow pass --summary "Login form implemented with email regex validation; validation run: lint/typecheck/test" \
+  --ref .pairflow/evidence/lint.log \
+  --ref .pairflow/evidence/typecheck.log \
+  --ref .pairflow/evidence/test.log
 
 # 4. Reviewer reviews and sends feedback back
 pairflow pass --summary "Missing: password strength indicator, error messages not i18n-ready" \
@@ -146,7 +149,13 @@ pairflow pass --summary "Missing: password strength indicator, error messages no
   --finding "P2:i18n error keys missing"
 
 # 5. Implementer fixes issues, hands off again
-pairflow pass --summary "Added password strength meter and i18n error keys"
+pairflow pass --summary "Added password strength meter and i18n error keys; reran lint/typecheck/test" \
+  --ref .pairflow/evidence/lint.log \
+  --ref .pairflow/evidence/typecheck.log \
+  --ref .pairflow/evidence/test.log
+
+# If only a subset of checks was intentionally run, attach refs for those
+# commands and state skipped checks explicitly in the summary.
 
 # 6. Reviewer is satisfied — signals convergence
 pairflow converged --summary "All review criteria met, code is clean"

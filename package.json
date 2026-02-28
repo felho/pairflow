@@ -21,9 +21,9 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint .",
-    "test": "vitest run",
+    "typecheck": "bash ./scripts/run-evidence.sh .pairflow/evidence/typecheck.log \"pnpm typecheck\" -- pnpm exec tsc --noEmit",
+    "lint": "bash ./scripts/run-evidence.sh .pairflow/evidence/lint.log \"pnpm lint\" -- pnpm exec eslint .",
+    "test": "bash ./scripts/run-evidence.sh .pairflow/evidence/test.log \"pnpm test\" -- pnpm exec vitest run",
     "test:watch": "vitest",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
     "dev:ui": "lsof -ti :4173 | xargs kill 2>/dev/null; pnpm build && pairflow ui"

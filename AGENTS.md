@@ -37,6 +37,13 @@ In the Codex or Claude Code chat I will use both in English (works better with d
 - Run lint, typecheck, and tests relevant to changed code.
 - If any check is skipped, state it explicitly in the summary.
 
+## Evidence Handoff (Implementer)
+
+- Run validation through the evidence-producing scripts (`pnpm lint`, `pnpm typecheck`, `pnpm test`, or `pnpm check`) so logs are written under `.pairflow/evidence/`.
+- Implementer `pairflow pass` handoff must include available evidence logs via `--ref`.
+- If only a subset of validation commands ran, attach refs for what ran and explicitly state what was intentionally not executed.
+- Missing expected evidence logs should be treated as incomplete validation packaging.
+
 ## Session Close
 
 - Add a short progress update to the repository progress note (if present) or commit message context.
