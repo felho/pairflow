@@ -1,6 +1,6 @@
 ---
 name: UsePairflow
-description: Manage pairflow bubble lifecycle. USE WHEN create bubble OR start bubble OR bubble cleanup OR bubble done OR approve and merge OR full cleanup.
+description: Manage pairflow bubble lifecycle and evidence-bootstrap planning. USE WHEN create bubble OR start bubble OR bubble cleanup OR bubble done OR approve and merge OR full cleanup OR bootstrap evidence.
 ---
 
 # UsePairflow
@@ -13,6 +13,7 @@ Manages the pairflow bubble lifecycle — from creation through approval to clea
 |----------|---------|------|
 | **CreateBubble** | "create bubble", "start bubble", "kick off bubble" | `Workflows/CreateBubble.md` |
 | **CleanBubble** | "bubble done", "bubble cleanup", "full cleanup", "approve and merge" | `Workflows/CleanBubble.md` |
+| **BootstrapEvidence** | "bootstrap evidence", "evidence plan", "how to generate evidence logs", "trusted test evidence" | `Workflows/BootstrapEvidence.md` |
 
 ## Context
 
@@ -50,4 +51,12 @@ User: "the bubble review-ui-prd is done, full cleanup"
 User: "approve and merge the sync-prd-mockup bubble"
 → Invokes CleanBubble workflow
 → Same flow — uses pairflow CLI commands (never raw git/tmux)
+```
+
+**Example 5: Bootstrap evidence for a project**
+```
+User: "bootstrap evidence for this repo"
+→ Invokes BootstrapEvidence workflow
+→ Inspects project validation commands and handoff pattern
+→ Returns a short implementation plan for trusted evidence logs + --ref usage
 ```
