@@ -217,7 +217,7 @@ If the converged result isn't good enough, you can send it back.
 pairflow bubble request-rework --id feat_login --repo /path/to/myapp \
   --message "The validation logic doesn't handle unicode emails. Fix that first."
 #    → State goes back to RUNNING
-#    → Agents resume the iteration cycle
+#    → Implementer receives explicit rework notification and continues the next round
 ```
 
 The agents will do another round, and the reviewer can converge again when ready.
@@ -310,10 +310,15 @@ The restart is safe because:
 # Graceful stop — kills tmux, sets state to CANCELLED
 pairflow bubble stop --id feat_login --repo .
 
-# Delete a bubble entirely (worktree, branch, runtime, config)
-pairflow bubble delete --id feat_login --repo .          # dry-run: shows what would be deleted
-pairflow bubble delete --id feat_login --repo . --force  # actually deletes everything
+# Delete a bubble (with confirmation gate when external artifacts exist)
+pairflow bubble delete --id feat_login --repo .          # reports artifacts, may exit with code 2
+pairflow bubble delete --id feat_login --repo . --force  # performs delete
 ```
+
+Delete behavior notes:
+- When external artifacts exist (worktree/tmux/branch), `bubble delete` requires explicit `--force`.
+- Forced delete snapshots bubble metadata into the archive before removing active bubble artifacts.
+- Archive root defaults to `~/.pairflow/archive` (override: `PAIRFLOW_ARCHIVE_ROOT`).
 
 ### Scenario 8: Using a PRD or design doc as input
 
@@ -345,6 +350,25 @@ pairflow bubble create --id feat_login \
 ```
 
 The task content is stored in `.pairflow/bubbles/<id>/artifacts/task.md` and included in the initial `TASK` protocol message that the implementer receives.
+Task files are also used to infer review guidance mode: `.md/.txt` are document-leaning, `.ts/.tsx/.js/.py` are code-leaning, otherwise Pairflow falls back to `auto`.
+
+### Scenario 9: Generating a metrics report
+
+```bash
+# Full report for a date range (table output)
+pairflow metrics report --from 2026-02-01 --to 2026-02-28
+
+# Repo-filtered report
+pairflow metrics report --from 2026-02-01 --to 2026-02-28 --repo /path/to/myapp
+
+# JSON output (for ad-hoc analysis)
+pairflow metrics report --from 2026-02-01 --to 2026-02-28 --format json
+```
+
+Notes:
+- Date bounds accept `YYYY-MM-DD` or ISO UTC timestamps.
+- Metrics shards are read from `~/.pairflow/metrics/events` by default (override: `PAIRFLOW_METRICS_EVENTS_ROOT`).
+- Report includes archive context from `~/.pairflow/archive/index.json` (override: `PAIRFLOW_ARCHIVE_ROOT`).
 
 ---
 
@@ -423,7 +447,7 @@ Any non-final state ─→ CANCELLED (via bubble stop)
 | `bubble create --id <id> --repo <path> --base <branch> (--task <text> \| --task-file <path>)` | Initialize a new bubble |
 | `bubble start --id <id> [--repo <path>]` | Start or restart a bubble (worktree + tmux) |
 | `bubble stop --id <id> [--repo <path>]` | Stop and cancel a bubble |
-| `bubble delete --id <id> [--repo <path>] [--force]` | Delete a bubble (dry-run by default, `--force` to confirm) |
+| `bubble delete --id <id> [--repo <path>] [--force]` | Delete a bubble; without `--force` it reports external artifacts and exits with confirmation-required status |
 | `bubble resume --id <id> [--repo <path>]` | Resume from WAITING_HUMAN with default reply |
 | `bubble open --id <id> [--repo <path>]` | Open worktree in editor |
 | `bubble attach --id <id> [--repo <path>]` | Attach to bubble's tmux session in Warp terminal |
@@ -455,6 +479,12 @@ The registry is stored at `~/.pairflow/repos.json` (override with `PAIRFLOW_REPO
 | Command | Description |
 |---------|-------------|
 | `ui [--repo <path>]... [--host <host>] [--port <port>]` | Start the web dashboard (default: `http://127.0.0.1:4173`) |
+
+### Metrics
+
+| Command | Description |
+|---------|-------------|
+| `metrics report --from <date> --to <date> [--repo <path>] [--format table\|json]` | Generate loop-quality and throughput metrics from local event shards |
 
 ### Agent-facing commands (auto-detected from CWD)
 
@@ -490,7 +520,23 @@ Aliases: `pairflow agent pass/ask-human/converged` or `orchestra pass/ask-human/
 
 <repo-parent>/.pairflow-worktrees/<repo-name>/<bubble-id>/
   # Git worktree — agents work here, isolated from main repo
+
+~/.pairflow/
+  metrics/events/YYYY/MM/
+    events-YYYY-MM.ndjson  # Global metrics event shards
+  archive/
+    index.json              # Global archive index (deleted bubble metadata)
+    <repo-key>/<bubble-instance-id>/
+      bubble.toml
+      state.json
+      transcript.ndjson
+      inbox.ndjson
+      artifacts/task.md
 ```
+
+Path overrides:
+- `PAIRFLOW_METRICS_EVENTS_ROOT` overrides metrics shard root (`~/.pairflow/metrics/events`).
+- `PAIRFLOW_ARCHIVE_ROOT` overrides archive root (`~/.pairflow/archive`).
 
 ### Local environment parity in worktrees
 
@@ -569,6 +615,8 @@ pnpm test       # Vitest
 pnpm check      # All of the above
 pnpm dev:ui     # Rebuild CLI + restart web UI server on port 4173
 ```
+
+Validation commands write evidence logs to `.pairflow/evidence/` (lint/typecheck/test), which can be attached in `pairflow pass --ref ...`.
 
 ## Roadmap
 
