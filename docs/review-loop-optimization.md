@@ -1,7 +1,7 @@
 # Review Loop Optimization Ideas
 
 **Date:** 2026-02-25
-**Status:** Draft — ideas collection
+**Status:** Active tracker — ideas + implementation progress
 **Context:** Analysis of `repo-registry-prd` bubble (13 rounds, 14 P1 + 25 P2 + 4 P3 findings) and `delete-bubble` bubble (36 rounds, ~4 hours, human intervention required to converge)
 
 ## Problem Statement
@@ -14,6 +14,19 @@ The reviewer produces high-quality findings (real bugs, race conditions, event o
 4. **No "good enough" exit** — no mechanism to approve with minor notes; every finding requires a fix round
 
 ## Proposed Optimizations
+
+### Implementation Progress Tracker (as of 2026-02-28)
+
+| # | Optimization | Status | Notes |
+|---|---|---|---|
+| 1 | Severity guidelines in reviewer prompt | In progress | Prompt guidance improved, but full severity-calibration rollout is not finalized. |
+| 2 | Approve with notes | Not implemented | Still tracked as high-priority next step. |
+| 3 | Parallel review agents | Not implemented | Architectural/coordination change, deferred. |
+| 4 | Deep exploration for P1 findings | Not implemented | Process proposal only so far. |
+| 5 | Combined flow | Not implemented | Depends on #1-#4. |
+| 6 | Skip redundant reviewer test runs | Implemented | Orchestrator verifies implementer evidence and emits reviewer skip/run directive. |
+| 7 | Task-level acceptance criteria boundary | In progress | Used operationally in tasking; hard enforcement not implemented yet. |
+| 8 | Round-based severity gate | In progress (prompt-level) | Discussed/partially guided in prompts; no strict policy gate yet. |
 
 ### 1. Severity Guidelines in Reviewer Prompt
 
@@ -221,6 +234,15 @@ This is pure redundancy — it doesn't improve quality, only adds latency and co
 **Edge case:** If the reviewer suspects a test gap (e.g., "this code path has no test"), they should request a **new test** in their findings, not re-run existing tests.
 
 **Expected impact:** Saves ~30-60 seconds per review round (test execution time), and frees up reviewer context for actual code analysis.
+
+**Implementation status (2026-02-28):** ✅ Implemented in core flow.
+
+Implemented behavior:
+1. On implementer `PASS`, the orchestrator verifies test/typecheck evidence (summary + `--ref` artifacts) and writes reviewer verification artifact.
+2. Reviewer startup/resume/handoff guidance now includes an orchestrator skip/run test directive.
+3. If evidence is trusted and fresh, directive is `skip_full_rerun`; otherwise reviewer is instructed to run checks.
+4. Decision matrix still allows reviewer-triggered re-run for risk scenarios (e.g., high-risk domains, stale/untrusted evidence, scope-shifting changes).
+5. Repository-level evidence autolog support is added (validation scripts generate `.pairflow/evidence/*.log` for `--ref` handoff).
 
 ## Session Archaeology — How to Find Bubble Sessions
 
