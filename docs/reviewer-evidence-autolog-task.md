@@ -24,7 +24,7 @@ Do **not** add new Pairflow product command for this step.
 
 Instead:
 
-1. Reuse existing project scripts (`typecheck`, `test`, optionally `check`).
+1. Reuse existing project scripts (`typecheck`, `test`, `lint`, `check`).
 2. Make these scripts emit stable evidence logs under `.pairflow/evidence/`.
 3. Ensure implementer workflow uses these scripts as the default validation path.
 4. Require passing generated evidence logs as `--ref` in `pairflow pass`.
@@ -39,14 +39,26 @@ Update project scripts so that running validation also writes logs:
 
 1. `.pairflow/evidence/typecheck.log`
 2. `.pairflow/evidence/test.log`
+3. `.pairflow/evidence/lint.log` (when running `pnpm lint` directly or via `pnpm check`)
 
 Requirements:
 
 1. Include explicit command header and explicit exit marker in each log.
-2. Preserve normal terminal output (do not hide test/typecheck output from the user).
-3. Keep existing script names usable (`pnpm typecheck`, `pnpm test`, `pnpm check`).
+2. Header must include minimum freshness metadata fields: UTC timestamp, git commit SHA, and command string.
+3. Exit marker must include explicit exit code (for example `PAIRFLOW_EVIDENCE_EXIT=<code>`).
+4. Preserve normal terminal output (do not hide lint/test/typecheck output from the user); use `tee` (or shell-equivalent) so output remains visible while writing logs.
+5. Wrapper examples should retain true command failure semantics (`set -o pipefail` or equivalent) so piped logging does not mask non-zero exits.
+6. Keep existing script names usable (`pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm check`).
 
-### 2. Implementer guidance in AGENTS.md
+### 2. Evidence artifact lifecycle and git policy
+
+Treat generated evidence logs as ephemeral runtime artifacts:
+
+1. Explicitly gitignore `.pairflow/evidence/*.log`.
+2. Keep `.pairflow/evidence/` available locally for writing logs (for example with a tracked placeholder like `.gitkeep`, if needed).
+3. Do not require committing log contents as part of normal task changes.
+
+### 3. Implementer guidance in AGENTS.md
 
 Add explicit rule in `AGENTS.md`:
 
@@ -57,16 +69,18 @@ Target handoff pattern:
 
 ```bash
 pairflow pass --summary "..." \
+  --ref .pairflow/evidence/lint.log \
   --ref .pairflow/evidence/typecheck.log \
   --ref .pairflow/evidence/test.log
 ```
 
-### 3. Prompt-level reinforcement
+### 4. Prompt-level reinforcement
 
 Update implementer startup/resume handoff guidance so it explicitly states:
 
 1. If evidence logs exist, include them as `--ref` on PASS.
-2. Missing evidence logs should be treated as incomplete validation packaging.
+2. Missing expected evidence logs should be treated as incomplete validation packaging.
+3. When only a subset of validation commands ran, attach refs for the commands that actually ran and state what was intentionally not executed.
 
 Note: this is prompt wording and workflow guidance, not new protocol fields.
 
@@ -80,17 +94,22 @@ Note: this is prompt wording and workflow guidance, not new protocol fields.
 
 1. Running `pnpm typecheck` generates/upgrades `.pairflow/evidence/typecheck.log`.
 2. Running `pnpm test` generates/upgrades `.pairflow/evidence/test.log`.
-3. Script output remains visible in terminal (developer UX preserved).
-4. `AGENTS.md` clearly requires attaching evidence refs in implementer PASS handoff.
-5. Implementer prompt text includes evidence-ref reminder.
-6. Documentation/examples in repo reflect the new expected handoff pattern.
+3. Running `pnpm lint` (or `pnpm check`) generates/upgrades `.pairflow/evidence/lint.log`.
+4. Each generated log includes timestamp, commit SHA, command header, and explicit exit code marker.
+5. Script output remains visible in terminal (developer UX preserved).
+6. `.pairflow/evidence/*.log` is explicitly gitignored as ephemeral evidence output.
+7. `AGENTS.md` clearly requires attaching available evidence refs in implementer PASS handoff.
+8. Implementer prompt text includes evidence-ref reminder.
+9. Documentation/examples in repo reflect the new expected handoff pattern (including lint ref when present).
 
 ## Validation Plan
 
-1. Run `pnpm typecheck` and verify evidence log content includes explicit success marker.
-2. Run `pnpm test` and verify evidence log content includes explicit success marker.
-3. Create a sample implementer-style PASS with refs and confirm verifier marks trusted when inputs are valid.
-4. Confirm fallback behavior still works when refs are omitted (safety unchanged).
+1. Run `pnpm typecheck` and verify `typecheck.log` contains header metadata + explicit exit marker.
+2. Run `pnpm test` and verify `test.log` contains header metadata + explicit exit marker.
+3. Run `pnpm lint` (or `pnpm check`) and verify `lint.log` contains header metadata + explicit exit marker.
+4. Confirm terminal output remains visible during logging (tee behavior).
+5. Create a sample implementer-style PASS with refs and confirm verifier marks trusted when inputs are valid.
+6. Confirm fallback behavior still works when refs are omitted (safety unchanged).
 
 ## Risks and Mitigations
 
@@ -108,4 +127,3 @@ If this minimal approach still leaves too much manual handling:
 1. introduce a generic evidence-provider interface contract,
 2. keep Pairflow agnostic by only consuming standardized outputs,
 3. avoid embedding project-specific command semantics in Pairflow core.
-
