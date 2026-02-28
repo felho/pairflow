@@ -76,10 +76,10 @@ function buildDeliveryMessage(
   if (recipientRole === "implementer") {
     if (envelope.type === "PASS") {
       action =
-        "Reviewer feedback received. Implement fixes, then hand off with `pairflow pass --summary` directly (no confirmation prompt).";
+        "Reviewer feedback received. Implement fixes, then hand off with `pairflow pass --summary` directly (no confirmation prompt). If `.pairflow/evidence/*.log` files exist, include them as `--ref` (lint/typecheck/test). If only a subset ran, attach refs for that subset and state what was intentionally not executed.";
     } else if (envelope.type === "HUMAN_REPLY") {
       action =
-        "Human response received. Continue implementation using this input, then hand off with `pairflow pass --summary` directly.";
+        "Human response received. Continue implementation using this input, then hand off with `pairflow pass --summary` directly. Include available `.pairflow/evidence/*.log` refs on PASS.";
     } else if (envelope.type === "APPROVAL_REQUEST") {
       action =
         "Bubble is READY_FOR_APPROVAL. Stop coding and wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now.";

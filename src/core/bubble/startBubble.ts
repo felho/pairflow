@@ -96,14 +96,16 @@ function buildImplementerStartupPrompt(input: {
   taskArtifactPath: string;
   donePackagePath: string;
 }): string {
+  const evidenceHandoffGuidance = buildImplementerEvidenceHandoffGuidance();
   return [
     `Pairflow implementer start for bubble ${input.bubbleId}.`,
     `Read task: ${input.taskArtifactPath}.`,
-    "Implement in this worktree and run relevant tests/typecheck before handoff.",
+    "Implement in this worktree and run relevant validation before handoff.",
+    evidenceHandoffGuidance,
     `Keep done package updated at: ${input.donePackagePath}.`,
     "Done package should summarize changes + validation results for final commit handoff.",
     `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`,
-    "When done, run `pairflow pass --summary \"<what changed + validation>\"`.",
+    "When done, run `pairflow pass --summary \"<what changed + validation>\"` with available evidence `--ref` attachments.",
     "Use `pairflow ask-human --question \"...\"` only for blockers."
   ].join(" ");
 }
@@ -138,7 +140,17 @@ function buildImplementerKickoffMessage(input: {
     `# [pairflow] bubble=${input.bubbleId} kickoff.`,
     `Read task file now: ${input.taskArtifactPath}.`,
     "Start implementation immediately in this worktree.",
-    "When done with tests/typecheck, hand off with `pairflow pass --summary \"<what changed + validation>\"`."
+    buildImplementerEvidenceHandoffGuidance(),
+    "When done with validation, hand off with `pairflow pass --summary \"<what changed + validation>\"` and include available evidence `--ref` log paths."
+  ].join(" ");
+}
+
+function buildImplementerEvidenceHandoffGuidance(): string {
+  return [
+    "Run validation via `pnpm lint`, `pnpm typecheck`, `pnpm test`, or `pnpm check` so evidence logs are written to `.pairflow/evidence/`.",
+    "If evidence logs exist, include them as `--ref` when running `pairflow pass`.",
+    "If only a subset of validation commands ran, attach refs for the commands that actually ran and state what was intentionally not executed.",
+    "Missing expected evidence logs should be treated as incomplete validation packaging."
   ].join(" ");
 }
 
@@ -165,6 +177,7 @@ function buildResumeImplementerStartupPrompt(input: {
   transcriptSummary: string;
   kickoffDiagnostic?: string;
 }): string {
+  const evidenceHandoffGuidance = buildImplementerEvidenceHandoffGuidance();
   const roleInstruction =
     input.state.state === "RUNNING" && input.state.active_role === "implementer"
       ? "You are currently active. Continue implementation now."
@@ -176,6 +189,7 @@ function buildResumeImplementerStartupPrompt(input: {
     `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`,
     `State snapshot: ${buildResumeContextLine(input.state)}.`,
     `Transcript context: ${input.transcriptSummary}`,
+    evidenceHandoffGuidance,
     roleInstruction
   ];
   if ((input.kickoffDiagnostic?.trim().length ?? 0) > 0) {
@@ -228,7 +242,8 @@ function buildResumeImplementerKickoffMessage(input: {
     `# [pairflow] bubble=${input.bubbleId} resume kickoff (implementer).`,
     `State is RUNNING at round ${input.round}.`,
     `Re-open task context: ${input.taskArtifactPath}.`,
-    "Continue active implementation and hand off with `pairflow pass --summary \"<what changed + validation>\"` when ready."
+    buildImplementerEvidenceHandoffGuidance(),
+    "Continue active implementation and hand off with `pairflow pass --summary \"<what changed + validation>\"` plus available evidence `--ref` logs when ready."
   ].join(" ");
 }
 
