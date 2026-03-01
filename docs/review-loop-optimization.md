@@ -22,7 +22,7 @@ The reviewer produces high-quality findings (real bugs, race conditions, event o
 
 | # | Optimization | Status | Notes |
 |---|---|---|---|
-| 1 | Severity guidelines in reviewer prompt | In progress | Canonical ontology moved to `docs/reviewer-severity-ontology.md`; prompt/policy rollout remains. |
+| 1 | Severity guidelines in reviewer prompt | Implemented (Phase 1) | Runtime now injects ontology reminder in reviewer startup/resume/handoff guidance, and reviewer `P1` findings require evidence refs on PASS. |
 | 2 | Approve with notes | Not implemented | Still tracked as high-priority next step. |
 | 3 | Parallel review agents | Not implemented | Architectural/coordination change, deferred. |
 | 4 | Deep exploration for P1 findings | Not implemented | Process proposal only so far. |

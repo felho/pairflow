@@ -2,6 +2,7 @@ import { readRuntimeSessionsRegistry } from "./sessionsRegistry.js";
 import { runTmux, type TmuxRunner } from "./tmuxManager.js";
 import { maybeAcceptClaudeTrustPrompt, sendAndSubmitTmuxPaneMessage, submitTmuxPaneInput } from "./tmuxInput.js";
 import { buildReviewerAgentSelectionGuidance } from "./reviewerGuidance.js";
+import { buildReviewerSeverityOntologyReminder } from "./reviewerSeverityOntology.js";
 import {
   formatReviewerTestExecutionDirective,
   type ReviewerTestExecutionDirective
@@ -104,7 +105,7 @@ function buildDeliveryMessage(
       action =
         `Implementer handoff received. Run a fresh review now. ${buildReviewerAgentSelectionGuidance(
           bubbleConfig.review_artifact_type
-        )} ${testDirective} Then run \`pairflow pass --summary ... --finding P1:...\` (repeatable) or \`pairflow pass --summary ... --no-findings\`; run \`pairflow converged --summary\` only when clean. Execute pairflow commands directly (no confirmation prompt).`;
+        )} ${buildReviewerSeverityOntologyReminder({ includeFullOntology: false })} ${testDirective} Then run \`pairflow pass --summary ... --finding 'P1:...|artifact://...'\` (repeatable; for P0/P1 include finding-level refs) or \`pairflow pass --summary ... --no-findings\`; run \`pairflow converged --summary\` only when clean. Execute pairflow commands directly (no confirmation prompt).`;
     } else if (envelope.type === "HUMAN_REPLY") {
       action =
         "Human response received. Continue review workflow from this update.";

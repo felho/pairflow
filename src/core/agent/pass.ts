@@ -77,11 +77,15 @@ function inferReviewerPassIntent(
   hasFindings: boolean,
   noFindings: boolean
 ): PassIntent {
-  // Defensive invariant guard for both invalid combinations. Upstream reviewer
-  // validation rejects these earlier, but this keeps inference self-contained.
-  if (hasFindings === noFindings) {
+  if (hasFindings && noFindings) {
     throw new PassCommandError(
-      "Reviewer PASS intent inference invariant violated: expected exactly one of findings or --no-findings."
+      "Reviewer PASS cannot use both --finding and --no-findings."
+    );
+  }
+
+  if (!hasFindings && !noFindings) {
+    throw new PassCommandError(
+      "Reviewer PASS requires explicit findings declaration: use --finding <P0|P1|P2|P3:Title[|ref1,ref2]> (repeatable) or --no-findings."
     );
   }
 
@@ -203,6 +207,39 @@ function buildFindingCounts(findings: Finding[]): {
   return counts;
 }
 
+function isBlockerSeverity(severity: Finding["severity"]): boolean {
+  return severity === "P0" || severity === "P1";
+}
+
+function normalizeFindingRefs(findings: Finding[]): Finding[] {
+  return findings.map((finding) => {
+    const normalizedFindingRefs = normalizeStringList(finding.refs ?? []);
+
+    if (normalizedFindingRefs.length > 0) {
+      return {
+        ...finding,
+        refs: normalizedFindingRefs
+      };
+    }
+
+    if (finding.refs !== undefined) {
+      const withoutRefs: Finding = { ...finding };
+      delete withoutRefs.refs;
+      return withoutRefs;
+    }
+
+    return finding;
+  });
+}
+
+function listBlockerFindingsMissingRefs(findings: Finding[]): Finding[] {
+  return findings.filter(
+    (finding) =>
+      isBlockerSeverity(finding.severity) &&
+      normalizeStringList(finding.refs ?? []).length === 0
+  );
+}
+
 export async function emitPassFromWorkspace(
   input: EmitPassInput,
   dependencies: EmitPassDependencies = {}
@@ -215,7 +252,7 @@ export async function emitPassFromWorkspace(
     (message) => new PassCommandError(message)
   );
   const refs = normalizeStringList(input.refs ?? []);
-  const findings = input.findings ?? [];
+  const findings = normalizeFindingRefs(input.findings ?? []);
   const hasFindings = findings.length > 0;
   const noFindings = input.noFindings ?? false;
 
@@ -234,16 +271,15 @@ export async function emitPassFromWorkspace(
 
   const { implementer, reviewer } = resolved.bubbleConfig.agents;
   const handoff = resolveHandoff(state, implementer, reviewer, nowIso);
+  const inferredReviewerIntent =
+    handoff.senderRole === "reviewer"
+      ? inferReviewerPassIntent(hasFindings, noFindings)
+      : undefined;
 
   if (handoff.senderRole === "reviewer") {
-    if (hasFindings && noFindings) {
+    if (listBlockerFindingsMissingRefs(findings).length > 0) {
       throw new PassCommandError(
-        "Reviewer PASS cannot use both --finding and --no-findings."
-      );
-    }
-    if (!hasFindings && !noFindings) {
-      throw new PassCommandError(
-        "Reviewer PASS requires explicit findings declaration: use --finding <P0|P1|P2|P3:Title> (repeatable) or --no-findings."
+        "Reviewer PASS with P0/P1 findings requires explicit finding-level evidence refs (finding.refs). Provide per-finding refs via --finding <P0|P1:Title|ref1,ref2>. Envelope --ref artifacts do not satisfy blocker evidence binding."
       );
     }
   } else if (hasFindings || noFindings) {
@@ -255,7 +291,7 @@ export async function emitPassFromWorkspace(
   const inferredIntent = input.intent === undefined;
   const intent = input.intent
     ?? (handoff.senderRole === "reviewer"
-      ? inferReviewerPassIntent(hasFindings, noFindings)
+      ? inferredReviewerIntent
       : inferPassIntent(handoff.senderRole));
   if (!isPassIntent(intent)) {
     throw new PassCommandError(`Invalid pass intent: ${String(intent)}`);

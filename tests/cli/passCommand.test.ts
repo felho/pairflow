@@ -6,7 +6,7 @@ import {
 } from "../../src/cli/commands/agent/pass.js";
 
 describe("parsePassCommandOptions", () => {
-  it("parses summary, refs and intent", () => {
+  it("parses summary, envelope refs, intent and finding-level refs", () => {
     const options = parsePassCommandOptions([
       "--summary",
       "handoff",
@@ -17,7 +17,7 @@ describe("parsePassCommandOptions", () => {
       "--intent",
       "review",
       "--finding",
-      "P1:Missing test"
+      "P1:Missing test|artifact://review/failure.log,artifact://review/repro.md"
     ]);
 
     expect(options.help).toBe(false);
@@ -33,7 +33,31 @@ describe("parsePassCommandOptions", () => {
     expect(options.findings).toEqual([
       {
         severity: "P1",
-        title: "Missing test"
+        title: "Missing test",
+        refs: [
+          "artifact://review/failure.log",
+          "artifact://review/repro.md"
+        ]
+      }
+    ]);
+  });
+
+  it("keeps backward compatibility for findings without inline refs", () => {
+    const options = parsePassCommandOptions([
+      "--summary",
+      "handoff",
+      "--finding",
+      "P2:Minor cleanup"
+    ]);
+
+    expect(options.help).toBe(false);
+    if (options.help) {
+      throw new Error("Expected validated pass options");
+    }
+    expect(options.findings).toEqual([
+      {
+        severity: "P2",
+        title: "Minor cleanup"
       }
     ]);
   });
@@ -70,6 +94,60 @@ describe("parsePassCommandOptions", () => {
     expect(() =>
       parsePassCommandOptions(["--summary", "handoff", "--finding", "bad-format"])
     ).toThrow(/Invalid --finding format/u);
+  });
+
+  it("rejects invalid finding refs format", () => {
+    expect(() =>
+      parsePassCommandOptions([
+        "--summary",
+        "handoff",
+        "--finding",
+        "P1:Missing test|artifact://ok,,artifact://also-ok"
+      ])
+    ).toThrow(/Invalid --finding refs/u);
+  });
+
+  it("rejects trailing finding refs separator with explicit message", () => {
+    expect(() =>
+      parsePassCommandOptions([
+        "--summary",
+        "handoff",
+        "--finding",
+        "P1:Missing test|"
+      ])
+    ).toThrow(/trailing `\|` without refs/u);
+  });
+
+  it("supports escaped commas inside a single finding ref", () => {
+    const options = parsePassCommandOptions([
+      "--summary",
+      "handoff",
+      "--finding",
+      "P1:Missing test|artifact://review/failure\\,segment.log"
+    ]);
+
+    expect(options.help).toBe(false);
+    if (options.help) {
+      throw new Error("Expected validated pass options");
+    }
+    expect(options.findings).toEqual([
+      {
+        severity: "P1",
+        title: "Missing test",
+        refs: ["artifact://review/failure,segment.log"]
+      }
+    ]);
+  });
+
+  it("rejects ambiguous comma-split refs that are not structured paths or URIs", () => {
+    expect(() =>
+      parsePassCommandOptions([
+        "--summary",
+        "handoff",
+        "--finding",
+        "P1:Missing test|artifact://review/failure.log,segment.log"
+      ])
+    ).toThrow(/single ref contains a comma/u);
   });
 });
 

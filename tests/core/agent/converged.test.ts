@@ -275,7 +275,8 @@ describe("emitConvergedFromWorkspace", () => {
           findings: [
             {
               severity: "P1",
-              title: "Data race risk"
+              title: "Data race risk",
+              refs: ["artifact://review/data-race-proof.md"]
             }
           ]
         },

@@ -27,13 +27,14 @@ export type ParsedPassCommandOptions = PassCommandOptions | PassHelpCommandOptio
 export function getPassHelpText(): string {
   return [
     "Usage:",
-    '  pairflow pass --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>] [--finding <P0|P1|P2|P3:Title>]... [--no-findings]',
+    '  pairflow pass --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>] [--finding <P0|P1|P2|P3:Title[|ref1,ref2]>]... [--no-findings]',
     "",
     "Options:",
     "  --summary <text>      Required handoff summary",
-    "  --ref <path>          Optional artifact reference (repeatable)",
+    "  --ref <path>          Optional artifact reference (repeatable; does not satisfy P0/P1 finding evidence binding by itself)",
     "  --intent <value>      Optional intent override: task|review|fix_request",
-    "  --finding <value>     Reviewer finding, format: P0|P1|P2|P3:Title (repeatable)",
+    "  --finding <value>     Reviewer finding, format: P0|P1|P2|P3:Title[|ref1,ref2] (repeatable; P0/P1 require refs)",
+    "                        If a single ref contains a comma, escape it as \\,.",
     "  --no-findings         Reviewer explicit clean pass (no open findings)",
     "  -h, --help            Show this help"
   ].join("\n");
@@ -44,12 +45,17 @@ function parseFinding(raw: string): Finding {
   const separatorIndex = trimmed.indexOf(":");
   if (separatorIndex <= 0 || separatorIndex === trimmed.length - 1) {
     throw new Error(
-      "Invalid --finding format. Use: <P0|P1|P2|P3:Title>."
+      "Invalid --finding format. Use: <P0|P1|P2|P3:Title[|ref1,ref2]>. Note: `|` is reserved as the finding refs separator."
     );
   }
 
   const severity = trimmed.slice(0, separatorIndex).trim();
-  const title = trimmed.slice(separatorIndex + 1).trim();
+  const findingBody = trimmed.slice(separatorIndex + 1).trim();
+  const refsSeparatorIndex = findingBody.indexOf("|");
+  const title =
+    refsSeparatorIndex === -1
+      ? findingBody
+      : findingBody.slice(0, refsSeparatorIndex).trim();
   if (!isFindingSeverity(severity)) {
     throw new Error(
       "Invalid --finding severity. Use one of: P0, P1, P2, P3."
@@ -59,10 +65,84 @@ function parseFinding(raw: string): Finding {
     throw new Error("Invalid --finding title. Title cannot be empty.");
   }
 
+  if (refsSeparatorIndex === -1) {
+    return {
+      severity,
+      title
+    };
+  }
+
+  const rawRefs = findingBody.slice(refsSeparatorIndex + 1).trim();
+  if (rawRefs.length === 0) {
+    throw new Error(
+      "Invalid --finding refs: trailing `|` without refs. Provide at least one ref after `|` or remove it. Format: <P0|P1|P2|P3:Title|ref1,ref2>."
+    );
+  }
+
+  const refs = splitFindingRefs(rawRefs);
+  if (refs.some((value) => value.length === 0)) {
+    throw new Error(
+      "Invalid --finding refs. Refs must be non-empty comma-separated values. Note: `|` is reserved as the finding refs separator."
+    );
+  }
+  if (refs.length > 1 && refs.some((value) => !isLikelyStructuredRef(value))) {
+    throw new Error(
+      "Invalid --finding refs. Multiple refs must each be path-like (`./`, `../`, `/`, `~/`, or include `/`) or URI-like (`scheme://...`). If a single ref contains a comma, escape it as `\\,`."
+    );
+  }
+
   return {
     severity,
-    title
+    title,
+    refs
   };
+}
+
+function splitFindingRefs(rawRefs: string): string[] {
+  const refs: string[] = [];
+  let buffer = "";
+  let escapeNext = false;
+
+  for (const char of rawRefs) {
+    if (escapeNext) {
+      if (char === "," || char === "\\") {
+        buffer += char;
+      } else {
+        buffer += `\\${char}`;
+      }
+      escapeNext = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      escapeNext = true;
+      continue;
+    }
+    if (char === ",") {
+      refs.push(buffer.trim());
+      buffer = "";
+      continue;
+    }
+
+    buffer += char;
+  }
+
+  if (escapeNext) {
+    buffer += "\\";
+  }
+  refs.push(buffer.trim());
+  return refs;
+}
+
+function isLikelyStructuredRef(value: string): boolean {
+  return (
+    value.includes("://")
+    || value.startsWith("./")
+    || value.startsWith("../")
+    || value.startsWith("/")
+    || value.startsWith("~/")
+    || value.includes("/")
+  );
 }
 
 export function parsePassCommandOptions(args: string[]): ParsedPassCommandOptions {

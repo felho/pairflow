@@ -4,7 +4,13 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["dist/**", "node_modules/**", "eslint.config.mjs"]
+    ignores: [
+      "dist/**",
+      "node_modules/**",
+      "eslint.config.mjs",
+      "scripts/generate-reviewer-severity-ontology.mjs",
+      "src/core/runtime/reviewerSeverityOntology.generated.ts"
+    ]
   },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,

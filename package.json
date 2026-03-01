@@ -20,12 +20,13 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "typecheck": "bash ./scripts/run-evidence.sh .pairflow/evidence/typecheck.log \"pnpm typecheck\" -- pnpm exec tsc --noEmit",
-    "lint": "bash ./scripts/run-evidence.sh .pairflow/evidence/lint.log \"pnpm lint\" -- pnpm exec eslint .",
-    "test": "bash ./scripts/run-evidence.sh .pairflow/evidence/test.log \"pnpm test\" -- pnpm exec vitest run",
+    "codegen:reviewer-ontology": "node ./scripts/generate-reviewer-severity-ontology.mjs",
+    "build": "pnpm codegen:reviewer-ontology && tsc -p tsconfig.build.json",
+    "typecheck": "bash ./scripts/run-evidence.sh .pairflow/evidence/typecheck.log \"pnpm typecheck\" -- bash -lc \"pnpm codegen:reviewer-ontology && pnpm exec tsc --noEmit\"",
+    "lint": "bash ./scripts/run-evidence.sh .pairflow/evidence/lint.log \"pnpm lint\" -- bash -lc \"pnpm codegen:reviewer-ontology && pnpm exec eslint .\"",
+    "test": "bash ./scripts/run-evidence.sh .pairflow/evidence/test.log \"pnpm test\" -- bash -lc \"pnpm codegen:reviewer-ontology && pnpm exec vitest run\"",
     "test:watch": "vitest",
-    "check": "pnpm lint && pnpm typecheck && pnpm test",
+    "check": "pnpm codegen:reviewer-ontology && pnpm lint && pnpm typecheck && pnpm test",
     "dev:ui": "lsof -ti :4173 | xargs kill 2>/dev/null; pnpm build && pairflow ui"
   },
   "devDependencies": {

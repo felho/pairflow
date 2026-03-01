@@ -211,6 +211,282 @@ describe("emitPassFromWorkspace", () => {
     expect(result.envelope.payload.findings).toEqual([]);
   });
 
+  it("rejects reviewer P1 findings without finding-level evidence refs", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_19",
+      task: "Implement pass flow"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Blocking issue found",
+        findings: [
+          {
+            severity: "P1",
+            title: "Race condition"
+          }
+        ],
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/P0\/P1 findings requires explicit finding-level evidence refs/u);
+  });
+
+  it("rejects reviewer P0 findings without finding-level evidence refs", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_22",
+      task: "Implement pass flow"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Critical blocker found",
+        findings: [
+          {
+            severity: "P0",
+            title: "Data loss risk"
+          }
+        ],
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/P0\/P1 findings requires explicit finding-level evidence refs/u);
+  });
+
+  it("accepts reviewer P1 findings with explicit finding-level refs", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_20",
+      task: "Implement pass flow"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Blocking issue found",
+      findings: [
+        {
+          severity: "P1",
+          title: "Race condition",
+          refs: ["artifact://review/p1-proof.md"]
+        }
+      ],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:07:00.000Z")
+    });
+
+    expect(result.inferredIntent).toBe(true);
+    expect(result.envelope.payload.pass_intent).toBe("fix_request");
+    expect(result.envelope.payload.findings).toEqual([
+      {
+        severity: "P1",
+        title: "Race condition",
+        refs: ["artifact://review/p1-proof.md"]
+      }
+    ]);
+  });
+
+  it("rejects blocker findings when only envelope refs are provided", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_23",
+      task: "Implement pass flow"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Blocking findings with envelope refs only",
+        findings: [
+          {
+            severity: "P1",
+            title: "Race condition"
+          },
+          {
+            severity: "P0",
+            title: "Data loss risk"
+          }
+        ],
+        refs: ["artifact://review/blocker-proof.md"],
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/P0\/P1 findings requires explicit finding-level evidence refs/u);
+  });
+
+  it("rejects mixed blocker findings when one finding is missing refs and no envelope refs are present", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_24",
+      task: "Implement pass flow"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Mixed blocker evidence",
+        findings: [
+          {
+            severity: "P1",
+            title: "Race condition",
+            refs: ["artifact://review/p1-proof.md"]
+          },
+          {
+            severity: "P0",
+            title: "Data loss risk"
+          }
+        ],
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/P0\/P1 findings requires explicit finding-level evidence refs/u);
+  });
+
+  it("accepts reviewer P2/P3 findings without refs", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_21",
+      task: "Implement pass flow"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Non-blocking findings only",
+      findings: [
+        {
+          severity: "P2",
+          title: "Missing edge-case test"
+        },
+        {
+          severity: "P3",
+          title: "Naming cleanup"
+        }
+      ],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:07:00.000Z")
+    });
+
+    expect(result.inferredIntent).toBe(true);
+    expect(result.envelope.payload.pass_intent).toBe("fix_request");
+    expect(result.envelope.payload.findings).toEqual([
+      {
+        severity: "P2",
+        title: "Missing edge-case test"
+      },
+      {
+        severity: "P3",
+        title: "Naming cleanup"
+      }
+    ]);
+  });
+
   it("rejects reviewer fix_request intent when --no-findings is declared", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -279,7 +555,8 @@ describe("emitPassFromWorkspace", () => {
         findings: [
           {
             severity: "P1",
-            title: "Blocking issue"
+            title: "Blocking issue",
+            refs: ["artifact://review/p1-proof.md"]
           }
         ],
         intent: "review",

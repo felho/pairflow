@@ -194,6 +194,44 @@ function validatePayloadByType(
         message: "PASS payload requires non-empty summary"
       });
     }
+
+    if (Array.isArray(payload.findings)) {
+      payload.findings.forEach((entry, index) => {
+        if (!isRecord(entry)) {
+          return;
+        }
+
+        if (entry.severity !== "P0" && entry.severity !== "P1") {
+          return;
+        }
+
+        const findingRefs = entry.refs;
+        if (
+          findingRefs !== undefined &&
+          !(
+            Array.isArray(findingRefs) &&
+            findingRefs.every((value) => isNonEmptyString(value))
+          )
+        ) {
+          // refs schema validation already reports this path; avoid duplicate errors.
+          return;
+        }
+
+        const hasFindingRefs =
+          Array.isArray(findingRefs) &&
+          findingRefs.length > 0 &&
+          findingRefs.every((value) => isNonEmptyString(value));
+
+        if (!hasFindingRefs) {
+          errors.push({
+            path: `payload.findings[${index}].refs`,
+            message:
+              "P0/P1 findings require explicit finding-level refs; envelope refs are not a blocker-evidence fallback"
+          });
+        }
+      });
+    }
+
     return validatedPayload;
   }
 

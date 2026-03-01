@@ -121,11 +121,20 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(messageCall?.[4]).toContain(
       "Action: Implementer handoff received. Run a fresh review now"
     );
+    expect(messageCall?.[4]).toContain("Severity Ontology v1 reminder");
+    expect(messageCall?.[4]).not.toContain("Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)");
+    expect(messageCall?.[4]).toContain("Blocker severities (`P0/P1`) require concrete evidence");
+    expect(messageCall?.[4]).toContain("Without blocker-grade evidence (`P0/P1`), downgrade to `P2` by default");
+    expect(messageCall?.[4]).toContain("Cosmetic/comment-only findings are `P3`");
+    expect(messageCall?.[4]).toContain("Out-of-scope observations should be notes (`P3`)");
     expect(messageCall?.[4]).toContain(
       "Implementer test evidence has been orchestrator-verified. Do not re-run full tests unless a trigger from the decision matrix applies."
     );
     expect(messageCall?.[4]).toContain(
       "Execute pairflow commands directly (no confirmation prompt)"
+    );
+    expect(messageCall?.[4]).toContain(
+      "--finding 'P1:...|artifact://...'"
     );
     expect(messageCall?.[4]).toContain(
       "Run pairflow commands from worktree: /tmp/worktree."

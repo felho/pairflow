@@ -28,6 +28,7 @@ import {
   RuntimeSessionsRegistryLockError
 } from "../runtime/sessionsRegistry.js";
 import { buildReviewerAgentSelectionGuidance } from "../runtime/reviewerGuidance.js";
+import { buildReviewerSeverityOntologyReminder } from "../runtime/reviewerSeverityOntology.js";
 import { ensureBubbleInstanceIdForMutation } from "./bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import {
@@ -122,9 +123,10 @@ function buildReviewerStartupPrompt(input: {
     "Stand by first. Do not start reviewing until implementer handoff (`PASS`) arrives.",
     "When PASS arrives, run a fresh review.",
     "When PASS arrives, follow the orchestrator test-evidence skip/run directive for test execution.",
+    buildReviewerSeverityOntologyReminder({ includeFullOntology: true }),
     buildReviewerDecisionMatrixReminder(),
     buildReviewerAgentSelectionGuidance(input.reviewArtifactType),
-    "If findings remain, run `pairflow pass --summary ... --finding P1:...` (repeatable).",
+    "If findings remain, run `pairflow pass --summary ... --finding 'P1:...|artifact://...'` (repeatable; for P0/P1 include finding-level refs).",
     "If clean, run `pairflow pass --summary ... --no-findings` then `pairflow converged --summary`.",
     "Execute pairflow commands directly from this worktree (do not ask for confirmation first).",
     "Never edit transcript/inbox/state files manually.",
@@ -220,6 +222,7 @@ function buildResumeReviewerStartupPrompt(input: {
     `State snapshot: ${buildResumeContextLine(input.state)}.`,
     `Transcript context: ${input.transcriptSummary}`,
     "Follow orchestrator test-evidence skip/run directive for test execution.",
+    buildReviewerSeverityOntologyReminder({ includeFullOntology: true }),
     buildReviewerDecisionMatrixReminder(),
     ...(input.reviewerTestDirectiveLine !== undefined
       ? [`Current directive: ${input.reviewerTestDirectiveLine}`]

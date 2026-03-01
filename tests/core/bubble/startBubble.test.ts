@@ -189,6 +189,15 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain("bypassPermissions");
     expect(reviewerCommand).toContain("Pairflow reviewer start");
     expect(reviewerCommand).toContain("Stand by first. Do not start reviewing");
+    expect(reviewerCommand).toContain("Severity Ontology v1 reminder");
+    expect(reviewerCommand).toContain("Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)");
+    expect(reviewerCommand).toContain("Blocker severities (`P0/P1`) require concrete evidence");
+    expect(reviewerCommand).toContain("Without blocker-grade evidence (`P0/P1`), downgrade to `P2` by default");
+    expect(reviewerCommand).toContain("Cosmetic/comment-only findings are `P3`");
+    expect(reviewerCommand).toContain("Out-of-scope observations should be notes (`P3`)");
+    expect(reviewerCommand).toMatch(
+      /--finding [^`]*'P1:\.\.\.\|artifact:\/\/\.\.\.'/
+    );
     expect(implementerCommand).not.toContain("then;");
     expect(reviewerCommand).not.toContain("then;");
     await assertBashParses(implementerCommand);
@@ -447,6 +456,10 @@ describe("startBubble", () => {
           expect(input.reviewerCommand).toContain("--dangerously-skip-permissions");
           expect(input.reviewerCommand).toContain("Pairflow reviewer resume");
           expect(input.reviewerCommand).toContain("resume-summary: messages=3");
+          expect(input.reviewerCommand).toContain("Severity Ontology v1 reminder");
+          expect(input.reviewerCommand).toContain("Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)");
+          expect(input.reviewerCommand).toContain("Blocker severities (`P0/P1`) require concrete evidence");
+          expect(input.reviewerCommand).toContain("Without blocker-grade evidence (`P0/P1`), downgrade to `P2` by default");
           return Promise.resolve({ sessionName: "pf-b_start_resume_01" });
         }
       }

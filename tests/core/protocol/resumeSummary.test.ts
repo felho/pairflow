@@ -111,7 +111,8 @@ describe("buildResumeTranscriptSummary", () => {
           findings: [
             {
               severity: "P1",
-              title: "Missing guard in resume flow"
+              title: "Missing guard in resume flow",
+              refs: ["artifact://review/resume-guard-proof.md"]
             },
             {
               severity: "P2",

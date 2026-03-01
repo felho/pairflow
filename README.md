@@ -52,6 +52,28 @@ At any point, agents can call `ask-human` to pause the flow and ask for your inp
 | **Reviewer** | `claude` | Reviews the implementation, requests fixes or converges |
 | **Human** (you) | — | Answers questions, approves/rejects, commits |
 
+## Reviewer Ontology Source (Build vs Runtime)
+
+Pairflow assumes a local repository context during development/build where
+`docs/reviewer-severity-ontology.md` is available.
+
+Reviewer ontology reminder content is sourced as:
+
+1. Canonical source markdown: full `docs/reviewer-severity-ontology.md`.
+2. Runtime reminder subset block in that doc between:
+   - `<!-- pairflow:runtime-reminder:start -->`
+   - `<!-- pairflow:runtime-reminder:end -->`
+3. Build/codegen step (`pnpm codegen:reviewer-ontology`) embeds both:
+   - full canonical ontology markdown
+   - runtime reminder text derived from the marker block
+   into `src/core/runtime/reviewerSeverityOntology.generated.ts`.
+4. Runtime prompt helper (`src/core/runtime/reviewerSeverityOntology.ts`)
+   consumes generated constants, so runtime delivery does not require reading
+   markdown files from disk.
+
+When ontology policy text changes, run `pnpm codegen:reviewer-ontology` (or
+`pnpm build`) to refresh the embedded module.
+
 ## Prerequisites
 
 - Node.js `>= 22`
@@ -145,8 +167,14 @@ pairflow pass --summary "Login form implemented with email regex validation; val
 
 # 4. Reviewer reviews and sends feedback back
 pairflow pass --summary "Missing: password strength indicator, error messages not i18n-ready" \
-  --finding "P1:Password strength indicator missing" \
+  --finding "P1:Password strength indicator missing|artifact://review/password-strength-proof.md" \
   --finding "P2:i18n error keys missing"
+
+# For blocker findings (P0/P1), prefer inline finding refs:
+# --finding "P1:Title|ref1,ref2"
+# If a single ref contains a comma, escape it as \, inside the --finding value.
+# Strict rule: envelope-level --ref values are optional generic artifacts only;
+# they do not satisfy blocker finding evidence binding.
 
 # 5. Implementer fixes issues, hands off again
 pairflow pass --summary "Added password strength meter and i18n error keys; reran lint/typecheck/test" \
