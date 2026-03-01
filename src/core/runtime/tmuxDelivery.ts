@@ -112,7 +112,7 @@ function buildDeliveryMessage(
       action =
         `Implementer handoff received. Run a fresh review now. ${buildReviewerAgentSelectionGuidance(
           bubbleConfig.review_artifact_type
-        )} ${buildReviewerSeverityOntologyReminder({ includeFullOntology: useFullReviewerPolicyContext })} ${testDirective} Then run \`pairflow pass --summary ... --finding 'P1:...|artifact://...'\` (repeatable; for P0/P1 include finding-level refs) or \`pairflow pass --summary ... --no-findings\`; run \`pairflow converged --summary\` only when clean. Execute pairflow commands directly (no confirmation prompt).`;
+        )} ${buildReviewerSeverityOntologyReminder({ includeFullOntology: useFullReviewerPolicyContext })} ${testDirective} If findings remain, run \`pairflow pass --summary ... --finding 'P1:...|artifact://...'\` (repeatable; for P0/P1 include finding-level refs). If clean, run \`pairflow converged --summary\` directly (do not run \`pairflow pass --no-findings\` first). Execute pairflow commands directly (no confirmation prompt).`;
     } else if (envelope.type === "HUMAN_REPLY") {
       action =
         "Human response received. Continue review workflow from this update.";

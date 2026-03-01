@@ -127,7 +127,7 @@ function buildReviewerStartupPrompt(input: {
     buildReviewerDecisionMatrixReminder(),
     buildReviewerAgentSelectionGuidance(input.reviewArtifactType),
     "If findings remain, run `pairflow pass --summary ... --finding 'P1:...|artifact://...'` (repeatable; for P0/P1 include finding-level refs).",
-    "If clean, run `pairflow pass --summary ... --no-findings` then `pairflow converged --summary`.",
+    "If clean, run `pairflow converged --summary` directly (do not run `pairflow pass --no-findings` first).",
     "Execute pairflow commands directly from this worktree (do not ask for confirmation first).",
     "Never edit transcript/inbox/state files manually.",
     `Repo: ${input.repoPath}. Worktree: ${input.worktreePath}. Task: ${input.taskArtifactPath}.`
@@ -261,7 +261,7 @@ function buildResumeReviewerKickoffMessage(input: {
     ...(input.reviewerTestDirectiveLine !== undefined
       ? [`Test directive: ${input.reviewerTestDirectiveLine}`]
       : []),
-    "Continue active review. Use `pairflow pass --summary ... --finding ...` or `--no-findings` as appropriate."
+    "Continue active review. If findings remain, run `pairflow pass --summary ... --finding ...`; if clean, run `pairflow converged --summary` directly (do not run `pairflow pass --no-findings` first)."
   ].join(" ");
 }
 

@@ -142,6 +142,12 @@ describe("emitTmuxDeliveryNotification", () => {
       "--finding 'P1:...|artifact://...'"
     );
     expect(messageCall?.[4]).toContain(
+      "If clean, run `pairflow converged --summary` directly"
+    );
+    expect(messageCall?.[4]).toContain(
+      "do not run `pairflow pass --no-findings` first"
+    );
+    expect(messageCall?.[4]).toContain(
       "Run pairflow commands from worktree: /tmp/worktree."
     );
     // Message must NOT embed CR/LF — Enter is sent as a separate tmux command.

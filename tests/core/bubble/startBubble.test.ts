@@ -198,6 +198,12 @@ describe("startBubble", () => {
     expect(reviewerCommand).toMatch(
       /--finding [^`]*'P1:\.\.\.\|artifact:\/\/\.\.\.'/
     );
+    expect(reviewerCommand).toContain(
+      "If clean, run `pairflow converged --summary` directly"
+    );
+    expect(reviewerCommand).toContain(
+      "do not run `pairflow pass --no-findings` first"
+    );
     expect(implementerCommand).not.toContain("then;");
     expect(reviewerCommand).not.toContain("then;");
     await assertBashParses(implementerCommand);
