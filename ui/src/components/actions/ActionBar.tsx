@@ -28,6 +28,16 @@ const actionLabels: Partial<Record<BubbleActionKind, string>> = {
 
 type ModalAction = "request-rework" | "reply";
 
+function resolveActionLabel(
+  bubbleState: BubbleCardModel["state"],
+  action: BubbleActionKind
+): string | undefined {
+  if (action === "request-rework" && bubbleState === "WAITING_HUMAN") {
+    return "Queue Rework";
+  }
+  return actionLabels[action];
+}
+
 function buttonTone(action: BubbleActionKind): string {
   switch (action) {
     case "stop":
@@ -142,7 +152,7 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
           const openCommit = action === "commit";
           const openMerge = action === "merge";
           const needsModal = action === "request-rework" || action === "reply";
-          const label = actionLabels[action];
+          const label = resolveActionLabel(props.bubble.state, action);
           if (label === undefined) {
             return null;
           }
@@ -227,13 +237,27 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
       {modalAction !== null ? (
         <MessageModal
           open
-          title={modalAction === "reply" ? "Reply to Bubble" : "Request Rework"}
+          title={
+            modalAction === "reply"
+              ? "Reply to Bubble"
+              : props.bubble.state === "WAITING_HUMAN"
+              ? "Queue Rework Intent"
+              : "Request Rework"
+          }
           description={
             modalAction === "reply"
-              ? "Reply message is required before submitting."
+              ? "Reply message is required before submitting. Reply does not guarantee rework."
+              : props.bubble.state === "WAITING_HUMAN"
+              ? "Rework message is required. This queues deterministic rework for orchestrator consumption; plain reply does not guarantee rework."
               : "Rework message is required before submitting."
           }
-          submitLabel={modalAction === "reply" ? "Send Reply" : "Send Rework"}
+          submitLabel={
+            modalAction === "reply"
+              ? "Send Reply"
+              : props.bubble.state === "WAITING_HUMAN"
+              ? "Queue Rework"
+              : "Send Rework"
+          }
           isSubmitting={props.isSubmitting}
           actionError={
             props.actionFailure === modalAction ? props.actionError : null

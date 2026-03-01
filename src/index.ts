@@ -548,10 +548,12 @@ export type {
   BubbleConfig,
   BubbleLifecycleState,
   BubbleNotificationsConfig,
+  BubbleReworkIntentRecord,
   BubbleStateSnapshot,
   AgentName,
   AgentRole,
   QualityMode,
+  ReworkIntentStatus,
   RoundRoleHistoryEntry,
   WorkMode
 } from "./types/bubble.js";
@@ -633,7 +635,10 @@ export type {
   EmitApprovalDecisionInput,
   EmitApprovalDecisionResult,
   EmitApproveInput,
-  EmitRequestReworkInput
+  EmitRequestReworkInput,
+  EmitRequestReworkImmediateResult,
+  EmitRequestReworkQueuedResult,
+  EmitRequestReworkResult
 } from "./core/human/approval.js";
 export type {
   EmitHumanReplyInput,

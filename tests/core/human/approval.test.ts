@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { emitConvergedFromWorkspace } from "../../../src/core/agent/converged.js";
+import { emitAskHumanFromWorkspace } from "../../../src/core/agent/askHuman.js";
 import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
 import {
   emitApprove,
@@ -127,6 +128,10 @@ describe("approval decisions", () => {
       }
     );
 
+    expect(result.mode).toBe("immediate");
+    if (result.mode !== "immediate") {
+      throw new Error("Expected immediate rework decision result.");
+    }
     expect(result.envelope.type).toBe("APPROVAL_DECISION");
     expect(result.envelope.payload.decision).toBe("revise");
     expect(result.envelope.payload.message).toContain("tighten validation");
@@ -146,6 +151,91 @@ describe("approval decisions", () => {
       decision: "revise",
       messageRef: `transcript.ndjson#${result.envelope.id}`
     });
+  });
+
+  it("queues deferred rework intent while WAITING_HUMAN", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_approval_waiting_01",
+      task: "Queue deferred rework"
+    });
+
+    await emitAskHumanFromWorkspace({
+      question: "Need human clarification before continuing.",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T12:10:00.000Z")
+    });
+
+    const result = await emitRequestRework({
+      bubbleId: bubble.bubbleId,
+      message: "Please restart implementation with stricter acceptance tests.",
+      cwd: repoPath,
+      now: new Date("2026-02-22T12:11:00.000Z")
+    });
+
+    expect(result.mode).toBe("queued");
+    if (result.mode !== "queued") {
+      throw new Error("Expected queued rework intent result.");
+    }
+
+    expect(result.intentId).toMatch(/^intent_/u);
+    expect(result.state.state).toBe("WAITING_HUMAN");
+    expect(result.state.pending_rework_intent).toMatchObject({
+      intent_id: result.intentId,
+      status: "pending",
+      requested_by: "human:request-rework"
+    });
+    expect(result.state.rework_intent_history).toEqual([]);
+  });
+
+  it("supersedes prior pending deferred rework intent with latest-write-wins", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_approval_waiting_02",
+      task: "Supersede deferred rework intents"
+    });
+
+    await emitAskHumanFromWorkspace({
+      question: "Need operator decision before proceeding.",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T12:20:00.000Z")
+    });
+
+    const first = await emitRequestRework({
+      bubbleId: bubble.bubbleId,
+      message: "First queued rework intent.",
+      cwd: repoPath,
+      now: new Date("2026-02-22T12:21:00.000Z")
+    });
+    const second = await emitRequestRework({
+      bubbleId: bubble.bubbleId,
+      message: "Second queued rework intent should supersede first.",
+      cwd: repoPath,
+      now: new Date("2026-02-22T12:22:00.000Z")
+    });
+
+    expect(first.mode).toBe("queued");
+    expect(second.mode).toBe("queued");
+    if (first.mode !== "queued" || second.mode !== "queued") {
+      throw new Error("Expected queued deferred rework results.");
+    }
+
+    expect(second.supersededIntentId).toBe(first.intentId);
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    expect(loaded.state.pending_rework_intent).toMatchObject({
+      intent_id: second.intentId,
+      status: "pending"
+    });
+    expect(loaded.state.rework_intent_history).toContainEqual(
+      expect.objectContaining({
+        intent_id: first.intentId,
+        status: "superseded",
+        superseded_by_intent_id: second.intentId
+      })
+    );
   });
 
   it("rejects decision when bubble is not READY_FOR_APPROVAL", async () => {
@@ -171,6 +261,16 @@ describe("approval decisions", () => {
         cwd: repoPath
       })
     ).rejects.toBeInstanceOf(ApprovalCommandError);
+
+    await expect(
+      emitRequestRework({
+        bubbleId: bubble.bubbleId,
+        message: "Cannot queue from CREATED state.",
+        cwd: repoPath
+      })
+    ).rejects.toThrow(
+      "bubble request-rework can only be used while bubble is READY_FOR_APPROVAL or WAITING_HUMAN"
+    );
   });
 
   it("updates last_command_at when approving", async () => {

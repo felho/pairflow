@@ -55,7 +55,8 @@ Priority order:
    - `CREATED`, `PREPARING_WORKSPACE`, `RUNNING`, `WAITING_HUMAN`, `READY_FOR_APPROVAL`, `APPROVED_FOR_COMMIT`, `COMMITTED`, `DONE`, `FAILED`, `CANCELLED`.
 2. Action preconditions are strict:
    - `start`: `CREATED` (fresh start) or resumable runtime states when recovering runtime.
-   - `approve` / `request-rework`: only in `READY_FOR_APPROVAL`.
+   - `approve`: only in `READY_FOR_APPROVAL`.
+   - `request-rework`: immediate in `READY_FOR_APPROVAL`; queued deterministic intent in `WAITING_HUMAN`.
    - `reply` / `resume`: only in `WAITING_HUMAN`.
    - `commit`: only in `APPROVED_FOR_COMMIT`.
    - `merge`: only in `DONE`.
@@ -117,7 +118,7 @@ These decisions were previously captured and remain relevant for V1 implementati
 | CREATED | Start, Stop |
 | PREPARING_WORKSPACE | Stop |
 | RUNNING | Open, Stop |
-| WAITING_HUMAN | Reply, Resume, Open, Stop |
+| WAITING_HUMAN | Queue Rework, Reply, Resume, Open, Stop |
 | READY_FOR_APPROVAL | Approve, Request Rework, Open, Stop |
 | APPROVED_FOR_COMMIT | Commit, Open, Stop |
 | COMMITTED | Open, Stop |
@@ -127,8 +128,9 @@ These decisions were previously captured and remain relevant for V1 implementati
 
 Notes:
 1. `Request Rework` and `Reply` open a required message modal.
-2. Merge panel text must explicitly say: "Merge includes runtime/worktree cleanup."
-3. Attach in V1 is a single button that copies `tmux attach -t pf-<bubble-id>` to the clipboard. The operator pastes it into any terminal. Direct terminal launch is deferred.
+2. In `WAITING_HUMAN`, `Queue Rework` must be clearly distinct from `Reply`; UI copy must state that `Reply` does not guarantee rework.
+3. Merge panel text must explicitly say: "Merge includes runtime/worktree cleanup."
+4. Attach in V1 is a single button that copies `tmux attach -t pf-<bubble-id>` to the clipboard. The operator pastes it into any terminal. Direct terminal launch is deferred.
 
 ## API/Backend Contract (thin layer over existing core)
 

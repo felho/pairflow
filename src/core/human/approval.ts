@@ -8,6 +8,7 @@ import { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
 import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
 import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
+import { queueDeferredReworkIntent } from "./reworkIntent.js";
 import type { AgentName, BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ApprovalDecision, ProtocolEnvelope } from "../../types/protocol.js";
 
@@ -48,6 +49,22 @@ export interface EmitRequestReworkInput {
   cwd?: string | undefined;
   now?: Date | undefined;
 }
+
+export interface EmitRequestReworkImmediateResult extends EmitApprovalDecisionResult {
+  mode: "immediate";
+}
+
+export interface EmitRequestReworkQueuedResult {
+  mode: "queued";
+  bubbleId: string;
+  intentId: string;
+  state: BubbleStateSnapshot;
+  supersededIntentId?: string;
+}
+
+export type EmitRequestReworkResult =
+  | EmitRequestReworkImmediateResult
+  | EmitRequestReworkQueuedResult;
 
 export class ApprovalCommandError extends Error {
   public constructor(message: string) {
@@ -251,16 +268,123 @@ export async function emitApprove(
 export async function emitRequestRework(
   input: EmitRequestReworkInput,
   dependencies: EmitApprovalDecisionDependencies = {}
-): Promise<EmitApprovalDecisionResult> {
-  return emitApprovalDecision({
+): Promise<EmitRequestReworkResult> {
+  const message = requireNonEmptyString(
+    input.message,
+    "Rework request message",
+    (value) => new ApprovalCommandError(value)
+  );
+  const now = input.now ?? new Date();
+  const refs = normalizeStringList(input.refs ?? []);
+
+  const resolved = await resolveBubbleById({
     bubbleId: input.bubbleId,
-    decision: "revise",
-    message: input.message,
-    refs: input.refs,
-    repoPath: input.repoPath,
-    cwd: input.cwd,
-    now: input.now
-  }, dependencies);
+    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
+    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+  });
+  const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
+  const state = loadedState.state;
+
+  if (state.state === "READY_FOR_APPROVAL") {
+    const immediate = await emitApprovalDecision(
+      {
+        bubbleId: input.bubbleId,
+        decision: "revise",
+        message,
+        refs,
+        repoPath: input.repoPath,
+        cwd: input.cwd,
+        now
+      },
+      dependencies
+    );
+    return {
+      ...immediate,
+      mode: "immediate"
+    };
+  }
+
+  if (state.state !== "WAITING_HUMAN") {
+    throw new ApprovalCommandError(
+      `bubble request-rework can only be used while bubble is READY_FOR_APPROVAL or WAITING_HUMAN (current: ${state.state}).`
+    );
+  }
+
+  const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
+    bubbleId: resolved.bubbleId,
+    repoPath: resolved.repoPath,
+    bubblePaths: resolved.bubblePaths,
+    bubbleConfig: resolved.bubbleConfig,
+    now
+  });
+  resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
+
+  const queued = queueDeferredReworkIntent({
+    state,
+    message,
+    requestedBy: "human:request-rework",
+    now
+  });
+
+  let written;
+  try {
+    written = await writeStateSnapshot(resolved.bubblePaths.statePath, queued.state, {
+      expectedFingerprint: loadedState.fingerprint,
+      expectedState: "WAITING_HUMAN"
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new ApprovalCommandError(
+      `Deferred rework intent ${queued.intent.intent_id} was queued in-memory but state update failed. Root error: ${reason}`
+    );
+  }
+
+  await emitBubbleLifecycleEventBestEffort({
+    repoPath: resolved.repoPath,
+    bubbleId: resolved.bubbleId,
+    bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+    eventType: "rework_intent_queued",
+    round: state.round,
+    actorRole: "human",
+    metadata: {
+      intent_id: queued.intent.intent_id,
+      requested_by: queued.intent.requested_by,
+      requested_at: queued.intent.requested_at,
+      state_at_request: state.state,
+      refs_count: refs.length,
+      message_length: Array.from(message).length
+    },
+    now
+  });
+
+  if (queued.supersededIntentId !== undefined) {
+    await emitBubbleLifecycleEventBestEffort({
+      repoPath: resolved.repoPath,
+      bubbleId: resolved.bubbleId,
+      bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+      eventType: "rework_intent_superseded",
+      round: state.round,
+      actorRole: "human",
+      metadata: {
+        intent_id: queued.supersededIntentId,
+        superseded_by_intent_id: queued.intent.intent_id,
+        requested_by: queued.intent.requested_by,
+        requested_at: queued.intent.requested_at,
+        state_at_request: state.state
+      },
+      now
+    });
+  }
+
+  return {
+    mode: "queued",
+    bubbleId: resolved.bubbleId,
+    intentId: queued.intent.intent_id,
+    ...(queued.supersededIntentId !== undefined
+      ? { supersededIntentId: queued.supersededIntentId }
+      : {}),
+    state: written.state
+  };
 }
 
 export function asApprovalCommandError(error: unknown): never {

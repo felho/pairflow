@@ -82,6 +82,12 @@ export function renderBubbleWatchdogText(result: BubbleWatchdogResult): string {
   if (result.escalated) {
     return `Watchdog escalated for ${result.bubbleId}: ${result.envelope?.id ?? "unknown"} -> WAITING_HUMAN`;
   }
+  if (result.reason === "rework_intent_applied") {
+    return `Watchdog check for ${result.bubbleId}: pending rework intent ${result.intentId ?? "unknown"} applied and routed to implementer`;
+  }
+  if (result.reason === "rework_delivery_failed") {
+    return `Watchdog check for ${result.bubbleId}: pending rework intent delivery failed (${result.intentId ?? "unknown"}). ${result.deliveryError ?? "Retry after fixing runtime session health."}`;
+  }
   const suffix = result.stuckRetried === true ? " [stuck input retried]" : "";
   return `Watchdog check for ${result.bubbleId}: no escalation (${result.reason})${suffix}`;
 }

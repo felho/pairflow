@@ -7,6 +7,9 @@ import { computeWatchdogStatus } from "../runtime/watchdog.js";
 import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
 import { emitBubbleNotification } from "../runtime/notifications.js";
 import { emitTmuxDeliveryNotification, retryStuckAgentInput } from "../runtime/tmuxDelivery.js";
+import { ensureBubbleInstanceIdForMutation } from "./bubbleInstanceId.js";
+import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
+import { applyDeferredReworkIntent } from "../human/reworkIntent.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 
@@ -20,7 +23,9 @@ export interface BubbleWatchdogInput {
 export type BubbleWatchdogNoopReason =
   | "not_monitored"
   | "not_expired"
-  | "state_not_running";
+  | "state_not_running"
+  | "rework_intent_applied"
+  | "rework_delivery_failed";
 
 export interface BubbleWatchdogResult {
   bubbleId: string;
@@ -30,6 +35,8 @@ export interface BubbleWatchdogResult {
   envelope?: ProtocolEnvelope | undefined;
   sequence?: number | undefined;
   stuckRetried?: boolean | undefined;
+  intentId?: string | undefined;
+  deliveryError?: string | undefined;
 }
 
 export class BubbleWatchdogError extends Error {
@@ -60,6 +67,110 @@ export async function runBubbleWatchdog(
   });
   const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
   const state = loadedState.state;
+
+  if (state.state === "WAITING_HUMAN") {
+    const pendingIntent = state.pending_rework_intent ?? null;
+    if (pendingIntent !== null && pendingIntent.status === "pending") {
+      const deliveryEnvelope: ProtocolEnvelope = {
+        id: pendingIntent.intent_id,
+        ts: nowIso,
+        bubble_id: resolved.bubbleId,
+        sender: "human",
+        recipient: resolved.bubbleConfig.agents.implementer,
+        type: "APPROVAL_DECISION",
+        round: state.round,
+        payload: {
+          decision: "revise",
+          message: pendingIntent.message
+        },
+        refs: [`rework-intent://${pendingIntent.intent_id}`]
+      };
+
+      const delivery = await emitTmuxDeliveryNotification({
+        bubbleId: resolved.bubbleId,
+        bubbleConfig: resolved.bubbleConfig,
+        sessionsPath: resolved.bubblePaths.sessionsPath,
+        envelope: deliveryEnvelope,
+        messageRef: `rework-intent://${pendingIntent.intent_id}`
+      });
+
+      if (!delivery.delivered) {
+        return {
+          bubbleId: resolved.bubbleId,
+          escalated: false,
+          reason: "rework_delivery_failed",
+          state,
+          intentId: pendingIntent.intent_id,
+          deliveryError: `Pending rework intent delivery was not confirmed (reason: ${delivery.reason ?? "unknown"}). Ensure runtime session is healthy, then rerun watchdog.`
+        };
+      }
+
+      const appliedTransition = applyDeferredReworkIntent({
+        state,
+        implementer: resolved.bubbleConfig.agents.implementer,
+        reviewer: resolved.bubbleConfig.agents.reviewer,
+        now
+      });
+      if (appliedTransition === null) {
+        return {
+          bubbleId: resolved.bubbleId,
+          escalated: false,
+          reason: "not_monitored",
+          state
+        };
+      }
+
+      const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
+        bubbleId: resolved.bubbleId,
+        repoPath: resolved.repoPath,
+        bubblePaths: resolved.bubblePaths,
+        bubbleConfig: resolved.bubbleConfig,
+        now
+      });
+      resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
+
+      let written;
+      try {
+        written = await writeStateSnapshot(
+          resolved.bubblePaths.statePath,
+          appliedTransition.state,
+          {
+            expectedFingerprint: loadedState.fingerprint,
+            expectedState: "WAITING_HUMAN"
+          }
+        );
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        throw new BubbleWatchdogError(
+          `Pending rework intent ${pendingIntent.intent_id} delivery succeeded but state update failed. Root error: ${reason}`
+        );
+      }
+
+      await emitBubbleLifecycleEventBestEffort({
+        repoPath: resolved.repoPath,
+        bubbleId: resolved.bubbleId,
+        bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+        eventType: "rework_intent_applied",
+        round: state.round,
+        actorRole: "orchestrator",
+        metadata: {
+          intent_id: appliedTransition.intent.intent_id,
+          requested_by: appliedTransition.intent.requested_by,
+          requested_at: appliedTransition.intent.requested_at,
+          state_at_request: "WAITING_HUMAN"
+        },
+        now
+      });
+
+      return {
+        bubbleId: resolved.bubbleId,
+        escalated: false,
+        reason: "rework_intent_applied",
+        state: written.state,
+        intentId: appliedTransition.intent.intent_id
+      };
+    }
+  }
 
   const watchdog = computeWatchdogStatus(
     state,
