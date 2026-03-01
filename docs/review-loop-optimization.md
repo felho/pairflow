@@ -30,6 +30,7 @@ The reviewer produces high-quality findings (real bugs, race conditions, event o
 | 6 | Skip redundant reviewer test runs | Implemented | Orchestrator verifies implementer evidence and emits reviewer skip/run directive. |
 | 7 | Task-level acceptance criteria boundary | In progress | Used operationally in tasking; hard enforcement not implemented yet. |
 | 8 | Round-based severity gate | In progress (prompt-level) | Discussed/partially guided in prompts; no strict policy gate yet. |
+| 9 | Issue-class expansion scan | Not implemented | New idea: when reviewer finds one instance of a recurring issue class, run a focused secondary scan for sibling occurrences in the same change surface. |
 
 Recent control-plane improvement:
 1. `bubble request-rework` now supports deterministic deferred intent queueing in `WAITING_HUMAN` (latest-write-wins supersede policy, runtime apply after confirmed implementer delivery).
@@ -617,6 +618,55 @@ Companion design document for durable measurement/storage:
 1. **Approve with notes** (`APPROVE_WITH_NOTES` behavior)
 2. **Severity + scope calibration** (reduce P2 inflation and out-of-scope fix loops)
 3. **Task-level acceptance criteria boundary** (explicit "done" contract)
+
+## 10. Issue-Class Expansion Scan (New)
+
+**Motivation:** A frequent loop pattern is not pure rediscovery of the exact same finding, but discovery of **sibling instances of the same issue class** across rounds (e.g., race-condition family, missing symmetry guards, timeout/cancellation handling variants).
+
+Example pattern:
+1. Round N: reviewer finds one race condition in path A.
+2. Round N+1: reviewer finds similar race condition in path B.
+3. Round N+2: reviewer finds the same class in path C.
+
+This produces long loops even when each individual finding is valid.
+
+Phase-1 task file for implementation planning:
+- `plans/tasks/reviewer-scout-and-class-expansion-phase1.md`
+
+### Proposed mechanism
+
+When reviewer emits a finding with class-like signature, orchestrator triggers a focused follow-up scan before next handoff:
+
+1. Detect issue class from finding text + metadata (`race`, `timeout`, `lifecycle symmetry`, `idempotency`, etc.).
+2. Build a narrow scan scope from changed files and closely related call-sites.
+3. Run one short "class expansion" pass (same reviewer or helper subagent) with explicit prompt:
+   - "Enumerate sibling occurrences of this issue class in-scope."
+   - "Return concrete locations only; no stylistic notes."
+4. Merge results into a single consolidated reviewer package.
+
+### Guardrails
+
+1. Trigger only for high-signal classes (start with concurrency/lifecycle classes).
+2. Limit to one expansion pass per class per round (avoid branching explosion).
+3. Hard token/time budget for expansion pass.
+4. Only in changed files + direct neighbors (avoid repo-wide fishing).
+
+### Expected impact
+
+1. Fewer incremental rounds caused by class-by-class rediscovery.
+2. Better "fix once, fix family" behavior for race/lifecycle issues.
+3. Lower chance of late-round P1/P2 surprises from sibling locations.
+
+### Minimal Phase-1 implementation sketch
+
+1. Add `finding_class` inference helper in reviewer/orchestrator pipeline.
+2. Add optional `class_expansion_request` event in transcript metadata.
+3. Add one helper prompt template for expansion pass.
+4. Aggregate expansion findings into reviewer summary under one grouped heading.
+5. Track metrics:
+   - `class_expansion_triggered_count`
+   - `sibling_findings_found_count`
+   - `rounds_saved_estimate` (post-hoc)
 
 ### Practical Adjustment from Feasibility Review
 
