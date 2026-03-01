@@ -4,6 +4,10 @@ import { maybeAcceptClaudeTrustPrompt, sendAndSubmitTmuxPaneMessage, submitTmuxP
 import { buildReviewerAgentSelectionGuidance } from "./reviewerGuidance.js";
 import { buildReviewerSeverityOntologyReminder } from "./reviewerSeverityOntology.js";
 import {
+  buildReviewerPassOutputContractGuidance,
+  buildReviewerScoutExpansionWorkflowGuidance
+} from "./reviewerScoutExpansionGuidance.js";
+import {
   buildReviewerDecisionMatrixReminder,
   formatReviewerTestExecutionDirective,
   type ReviewerTestExecutionDirective
@@ -116,7 +120,7 @@ function buildDeliveryMessage(
       action =
         `Implementer handoff received. Run a fresh review now. ${buildReviewerAgentSelectionGuidance(
           bubbleConfig.review_artifact_type
-        )} ${buildReviewerSeverityOntologyReminder({ includeFullOntology: useFullReviewerPolicyContext })} ${testDirective} ${convergenceInstruction} Execute pairflow commands directly (no confirmation prompt).`;
+        )} ${buildReviewerSeverityOntologyReminder({ includeFullOntology: useFullReviewerPolicyContext })} ${testDirective} ${buildReviewerScoutExpansionWorkflowGuidance()} ${buildReviewerPassOutputContractGuidance()} ${convergenceInstruction} Execute pairflow commands directly (no confirmation prompt).`;
     } else if (envelope.type === "HUMAN_REPLY") {
       action =
         "Human response received. Continue review workflow from this update.";
