@@ -4,6 +4,7 @@ import { maybeAcceptClaudeTrustPrompt, sendAndSubmitTmuxPaneMessage, submitTmuxP
 import { buildReviewerAgentSelectionGuidance } from "./reviewerGuidance.js";
 import { buildReviewerSeverityOntologyReminder } from "./reviewerSeverityOntology.js";
 import {
+  buildReviewerDecisionMatrixReminder,
   formatReviewerTestExecutionDirective,
   type ReviewerTestExecutionDirective
 } from "../reviewer/testEvidence.js";
@@ -98,14 +99,20 @@ function buildDeliveryMessage(
     }
   } else if (recipientRole === "reviewer") {
     if (envelope.type === "PASS") {
+      const useFullReviewerPolicyContext = bubbleConfig.reviewer_context_mode === "fresh";
       const testDirective =
         reviewerTestDirective === undefined
-          ? "Run required checks before final judgment. Reason: reviewer test verification directive was unavailable."
+          ? [
+              "Run required checks before final judgment. Reason: reviewer test verification directive was unavailable.",
+              ...(useFullReviewerPolicyContext
+                ? [buildReviewerDecisionMatrixReminder()]
+                : [])
+            ].join(" ")
           : formatReviewerTestExecutionDirective(reviewerTestDirective);
       action =
         `Implementer handoff received. Run a fresh review now. ${buildReviewerAgentSelectionGuidance(
           bubbleConfig.review_artifact_type
-        )} ${buildReviewerSeverityOntologyReminder({ includeFullOntology: false })} ${testDirective} Then run \`pairflow pass --summary ... --finding 'P1:...|artifact://...'\` (repeatable; for P0/P1 include finding-level refs) or \`pairflow pass --summary ... --no-findings\`; run \`pairflow converged --summary\` only when clean. Execute pairflow commands directly (no confirmation prompt).`;
+        )} ${buildReviewerSeverityOntologyReminder({ includeFullOntology: useFullReviewerPolicyContext })} ${testDirective} Then run \`pairflow pass --summary ... --finding 'P1:...|artifact://...'\` (repeatable; for P0/P1 include finding-level refs) or \`pairflow pass --summary ... --no-findings\`; run \`pairflow converged --summary\` only when clean. Execute pairflow commands directly (no confirmation prompt).`;
     } else if (envelope.type === "HUMAN_REPLY") {
       action =
         "Human response received. Continue review workflow from this update.";

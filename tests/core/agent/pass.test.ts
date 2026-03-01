@@ -824,6 +824,99 @@ describe("emitPassFromWorkspace", () => {
     expect(refreshCalls).toEqual([{ bubbleId: "b_pass_09" }]);
   });
 
+  it("refreshes and re-delivers reviewer context on every implementer PASS round in fresh mode", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_25",
+      task: "Implement pass flow"
+    });
+
+    const refreshCalls: Array<{ bubbleId: string }> = [];
+    const deliveryCalls: Array<{
+      sender: string;
+      recipient: string;
+      round: number;
+      initialDelayMs?: number;
+    }> = [];
+    const dependencies = {
+      refreshReviewerContext: ({ bubbleId }: { bubbleId: string }) => {
+        refreshCalls.push({ bubbleId });
+        return Promise.resolve({
+          refreshed: true
+        });
+      },
+      emitTmuxDeliveryNotification: (input: {
+        envelope: { sender: string; recipient: string; round: number };
+        initialDelayMs?: number;
+      }) => {
+        deliveryCalls.push({
+          sender: input.envelope.sender,
+          recipient: input.envelope.recipient,
+          round: input.envelope.round,
+          ...(input.initialDelayMs !== undefined
+            ? { initialDelayMs: input.initialDelayMs }
+            : {})
+        });
+        return Promise.resolve({
+          delivered: true,
+          message: "ok"
+        });
+      }
+    };
+
+    await emitPassFromWorkspace(
+      {
+        summary: "Implementer handoff round 1",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:05:00.000Z")
+      },
+      dependencies
+    );
+
+    await emitPassFromWorkspace(
+      {
+        summary: "Reviewer clean round 1",
+        noFindings: true,
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:06:00.000Z")
+      },
+      dependencies
+    );
+
+    await emitPassFromWorkspace(
+      {
+        summary: "Implementer handoff round 2",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:07:00.000Z")
+      },
+      dependencies
+    );
+
+    expect(refreshCalls).toEqual([
+      { bubbleId: "b_pass_25" },
+      { bubbleId: "b_pass_25" }
+    ]);
+
+    const implementerToReviewerDeliveries = deliveryCalls.filter(
+      (call) => call.sender === "codex" && call.recipient === "claude"
+    );
+    expect(implementerToReviewerDeliveries).toEqual([
+      {
+        sender: "codex",
+        recipient: "claude",
+        round: 1,
+        initialDelayMs: 1500
+      },
+      {
+        sender: "codex",
+        recipient: "claude",
+        round: 2,
+        initialDelayMs: 1500
+      }
+    ]);
+  });
+
   it("writes reviewer test-evidence verification artifact for implementer PASS", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
