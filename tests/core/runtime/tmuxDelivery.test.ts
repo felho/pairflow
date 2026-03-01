@@ -15,7 +15,7 @@ const baseConfig: BubbleConfig = {
   work_mode: "worktree",
   quality_mode: "strict",
   review_artifact_type: "auto",
-  reviewer_context_mode: "fresh",
+  reviewer_context_mode: "persistent",
   watchdog_timeout_minutes: 5,
   max_rounds: 8,
   commit_requires_approval: true,
@@ -62,7 +62,7 @@ function createRegistry(): RuntimeSessionsRegistry {
 }
 
 describe("emitTmuxDeliveryNotification", () => {
-  it("routes PASS delivery to recipient agent pane", async () => {
+  it("routes PASS delivery to recipient agent pane with full ontology in fresh mode", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
       calls.push(args);
@@ -90,7 +90,10 @@ describe("emitTmuxDeliveryNotification", () => {
 
     const result = await emitTmuxDeliveryNotification({
       bubbleId: "b_delivery_01",
-      bubbleConfig: baseConfig,
+      bubbleConfig: {
+        ...baseConfig,
+        reviewer_context_mode: "fresh"
+      },
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
       envelope: createEnvelope(),
       reviewerTestDirective,
@@ -122,7 +125,9 @@ describe("emitTmuxDeliveryNotification", () => {
       "Action: Implementer handoff received. Run a fresh review now"
     );
     expect(messageCall?.[4]).toContain("Severity Ontology v1 reminder");
-    expect(messageCall?.[4]).not.toContain("Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)");
+    expect(messageCall?.[4]).toContain(
+      "Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)"
+    );
     expect(messageCall?.[4]).toContain("Blocker severities (`P0/P1`) require concrete evidence");
     expect(messageCall?.[4]).toContain("Without blocker-grade evidence (`P0/P1`), downgrade to `P2` by default");
     expect(messageCall?.[4]).toContain("Cosmetic/comment-only findings are `P3`");
@@ -152,6 +157,179 @@ describe("emitTmuxDeliveryNotification", () => {
       "-pt",
       "pf-b_delivery_01:0.2"
     ]);
+  });
+
+  it("keeps concise ontology reminder in persistent reviewer context mode", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md. Action: Implementer handoff received.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: {
+        ...baseConfig,
+        reviewer_context_mode: "persistent"
+      },
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope(),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    const messageCall = calls.find(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.2" &&
+        call[3] === "-l" &&
+        call[4]?.includes("# [pairflow] r1 PASS codex->claude")
+    );
+
+    expect(messageCall?.[4]).toContain("Severity Ontology v1 reminder");
+    expect(messageCall?.[4]).not.toContain(
+      "Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)"
+    );
+  });
+
+  it("re-injects full ontology on every fresh-mode reviewer handoff round with directive", async () => {
+    const calls: string[][] = [];
+    let lastDeliveryMessage = "";
+    const reviewerTestDirective: ReviewerTestExecutionDirective = {
+      skip_full_rerun: true,
+      reason_code: "no_trigger",
+      reason_detail: "Evidence is verified, fresh, and complete.",
+      verification_status: "trusted"
+    };
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "send-keys" && args[3] === "-l") {
+        lastDeliveryMessage = args[4] ?? "";
+      }
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout: lastDeliveryMessage,
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: {
+        ...baseConfig,
+        reviewer_context_mode: "fresh"
+      },
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        id: "msg_20260222_101",
+        round: 1
+      }),
+      reviewerTestDirective,
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: {
+        ...baseConfig,
+        reviewer_context_mode: "fresh"
+      },
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        id: "msg_20260222_102",
+        round: 2
+      }),
+      reviewerTestDirective,
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    const reviewerMessages = calls.filter(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.2" &&
+        call[3] === "-l" &&
+        call[4]?.includes("PASS codex->claude")
+    );
+    expect(reviewerMessages).toHaveLength(2);
+    for (const messageCall of reviewerMessages) {
+      expect(messageCall[4]).toContain("Severity Ontology v1 reminder");
+      expect(messageCall[4]).toContain(
+        "Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)"
+      );
+      expect(messageCall[4]).toContain(
+        "Implementer test evidence has been orchestrator-verified. Do not re-run full tests unless a trigger from the decision matrix applies."
+      );
+    }
+  });
+
+  it("injects decision matrix reminder in fresh mode when reviewer test directive is unavailable", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md. Action: Implementer handoff received.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: {
+        ...baseConfig,
+        reviewer_context_mode: "fresh"
+      },
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope(),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    const messageCall = calls.find(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.2" &&
+        call[3] === "-l" &&
+        call[4]?.includes("# [pairflow] r1 PASS codex->claude")
+    );
+    expect(messageCall?.[4]).toContain(
+      "Run required checks before final judgment. Reason: reviewer test verification directive was unavailable."
+    );
+    expect(messageCall?.[4]).toContain(
+      "Decision matrix triggers that still require tests:"
+    );
+    expect(messageCall?.[4]).toContain(
+      "Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)"
+    );
   });
 
   it("uses document-focused reviewer guidance when review artifact type is document", async () => {
