@@ -1,16 +1,10 @@
 # Pairflow
 
-Pairflow is a **CLI-first bubble orchestrator** for local git repositories. It runs an isolated implementer/reviewer iteration loop with human gates, a validated state machine, and an append-only protocol transcript.
+Pairflow is a **CLI-first orchestrator** for local git repositories, built around **bubbles** (isolated units of work with their own worktree, tmux session, state machine, and transcript). It runs an implementer/reviewer iteration loop with human gates and append-only protocol history.
 
 **The core idea:** you define a task, Pairflow creates an isolated workspace (git worktree + tmux session), and two AI agents — an implementer and a reviewer — iterate on the solution. You stay in control through explicit approval gates and can intervene at any point.
 
-## Current status
-
-- Phase 1 (single bubble MVP): done
-- Phase 2 (multi-bubble reliability): done
-- Phase 3 (web UI): done
-
-Stable CLI + runtime + parallel multi-bubble usage + web dashboard are available.
+Pairflow also provides a unified web UI to oversee all active bubbles in one place, then quickly drill into a specific bubble by opening its worktree in your editor (`pairflow bubble open`) or attaching to its tmux session (`pairflow bubble attach`).
 
 ## Start Here (New Developer Path)
 
