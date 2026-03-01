@@ -109,10 +109,14 @@ function buildDeliveryMessage(
                 : [])
             ].join(" ")
           : formatReviewerTestExecutionDirective(reviewerTestDirective);
+      const convergenceInstruction =
+        envelope.round <= 1
+          ? "Round 1 guardrail: do not run `pairflow converged`. If clean, hand off with `pairflow pass --summary ... --no-findings`; if findings remain, use `pairflow pass --summary ... --finding ...`."
+          : "If findings remain, run `pairflow pass --summary ... --finding 'P1:...|artifact://...'` (repeatable; for P0/P1 include finding-level refs). If clean, run `pairflow converged --summary` directly (do not run `pairflow pass --no-findings` first).";
       action =
         `Implementer handoff received. Run a fresh review now. ${buildReviewerAgentSelectionGuidance(
           bubbleConfig.review_artifact_type
-        )} ${buildReviewerSeverityOntologyReminder({ includeFullOntology: useFullReviewerPolicyContext })} ${testDirective} If findings remain, run \`pairflow pass --summary ... --finding 'P1:...|artifact://...'\` (repeatable; for P0/P1 include finding-level refs). If clean, run \`pairflow converged --summary\` directly (do not run \`pairflow pass --no-findings\` first). Execute pairflow commands directly (no confirmation prompt).`;
+        )} ${buildReviewerSeverityOntologyReminder({ includeFullOntology: useFullReviewerPolicyContext })} ${testDirective} ${convergenceInstruction} Execute pairflow commands directly (no confirmation prompt).`;
     } else if (envelope.type === "HUMAN_REPLY") {
       action =
         "Human response received. Continue review workflow from this update.";

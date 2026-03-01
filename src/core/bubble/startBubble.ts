@@ -127,7 +127,8 @@ function buildReviewerStartupPrompt(input: {
     buildReviewerDecisionMatrixReminder(),
     buildReviewerAgentSelectionGuidance(input.reviewArtifactType),
     "If findings remain, run `pairflow pass --summary ... --finding 'P1:...|artifact://...'` (repeatable; for P0/P1 include finding-level refs).",
-    "If clean, run `pairflow converged --summary` directly (do not run `pairflow pass --no-findings` first).",
+    "Round 1 guardrail: do not run `pairflow converged` in round 1. In round 1, always hand off with `pairflow pass` and explicit findings declaration (`--finding` or `--no-findings`).",
+    "From round 2 onward, if clean, run `pairflow converged --summary` directly (do not run `pairflow pass --no-findings` first).",
     "Execute pairflow commands directly from this worktree (do not ask for confirmation first).",
     "Never edit transcript/inbox/state files manually.",
     `Repo: ${input.repoPath}. Worktree: ${input.worktreePath}. Task: ${input.taskArtifactPath}.`
@@ -228,6 +229,8 @@ function buildResumeReviewerStartupPrompt(input: {
       ? [`Current directive: ${input.reviewerTestDirectiveLine}`]
       : []),
     buildReviewerAgentSelectionGuidance(input.reviewArtifactType),
+    "Round 1 guardrail: do not run `pairflow converged` in round 1. In round 1, always hand off with `pairflow pass` and explicit findings declaration (`--finding` or `--no-findings`).",
+    "From round 2 onward, if clean, run `pairflow converged --summary` directly (do not run `pairflow pass --no-findings` first).",
     roleInstruction
   ];
   if ((input.kickoffDiagnostic?.trim().length ?? 0) > 0) {
@@ -255,13 +258,17 @@ function buildResumeReviewerKickoffMessage(input: {
   round: number;
   reviewerTestDirectiveLine?: string;
 }): string {
+  const roundActionLine =
+    input.round <= 1
+      ? "Round 1 guardrail: do not run `pairflow converged`. If clean, hand off with `pairflow pass --summary ... --no-findings`; if findings remain, use `pairflow pass --summary ... --finding ...`."
+      : "Continue active review. If findings remain, run `pairflow pass --summary ... --finding ...`; if clean, run `pairflow converged --summary` directly (do not run `pairflow pass --no-findings` first).";
   return [
     `# [pairflow] bubble=${input.bubbleId} resume kickoff (reviewer).`,
     `State is RUNNING at round ${input.round}.`,
     ...(input.reviewerTestDirectiveLine !== undefined
       ? [`Test directive: ${input.reviewerTestDirectiveLine}`]
       : []),
-    "Continue active review. If findings remain, run `pairflow pass --summary ... --finding ...`; if clean, run `pairflow converged --summary` directly (do not run `pairflow pass --no-findings` first)."
+    roundActionLine
   ].join(" ");
 }
 

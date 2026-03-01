@@ -199,7 +199,10 @@ describe("startBubble", () => {
       /--finding [^`]*'P1:\.\.\.\|artifact:\/\/\.\.\.'/
     );
     expect(reviewerCommand).toContain(
-      "If clean, run `pairflow converged --summary` directly"
+      "Round 1 guardrail: do not run `pairflow converged` in round 1"
+    );
+    expect(reviewerCommand).toContain(
+      "From round 2 onward, if clean, run `pairflow converged --summary` directly"
     );
     expect(reviewerCommand).toContain(
       "do not run `pairflow pass --no-findings` first"
@@ -466,6 +469,9 @@ describe("startBubble", () => {
           expect(input.reviewerCommand).toContain("Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)");
           expect(input.reviewerCommand).toContain("Blocker severities (`P0/P1`) require concrete evidence");
           expect(input.reviewerCommand).toContain("Without blocker-grade evidence (`P0/P1`), downgrade to `P2` by default");
+          expect(input.reviewerCommand).toContain(
+            "Round 1 guardrail: do not run `pairflow converged` in round 1"
+          );
           return Promise.resolve({ sessionName: "pf-b_start_resume_01" });
         }
       }
@@ -503,6 +509,9 @@ describe("startBubble", () => {
         launchBubbleTmuxSession: (input) => {
           expect(input.implementerKickoffMessage).toBeUndefined();
           expect(input.reviewerKickoffMessage).toContain("resume kickoff (reviewer)");
+          expect(input.reviewerKickoffMessage).toContain(
+            "Round 1 guardrail: do not run `pairflow converged`"
+          );
           return Promise.resolve({ sessionName: "pf-b_start_resume_03" });
         }
       }

@@ -139,13 +139,13 @@ describe("emitTmuxDeliveryNotification", () => {
       "Execute pairflow commands directly (no confirmation prompt)"
     );
     expect(messageCall?.[4]).toContain(
-      "--finding 'P1:...|artifact://...'"
+      "`pairflow pass --summary ... --finding ...`"
     );
     expect(messageCall?.[4]).toContain(
-      "If clean, run `pairflow converged --summary` directly"
+      "Round 1 guardrail: do not run `pairflow converged`"
     );
     expect(messageCall?.[4]).toContain(
-      "do not run `pairflow pass --no-findings` first"
+      "`pairflow pass --summary ... --no-findings`"
     );
     expect(messageCall?.[4]).toContain(
       "Run pairflow commands from worktree: /tmp/worktree."
@@ -207,6 +207,55 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(messageCall?.[4]).toContain("Severity Ontology v1 reminder");
     expect(messageCall?.[4]).not.toContain(
       "Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)"
+    );
+  });
+
+  it("allows converged guidance for reviewer handoff from round 2", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r2 PASS codex->claude msg=msg_20260222_102 ref=artifact://handoff.md. Action: Implementer handoff received.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: {
+        ...baseConfig,
+        reviewer_context_mode: "fresh"
+      },
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        id: "msg_20260222_102",
+        round: 2
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    const messageCall = calls.find(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.2" &&
+        call[3] === "-l" &&
+        call[4]?.includes("# [pairflow] r2 PASS codex->claude")
+    );
+    expect(messageCall?.[4]).toContain(
+      "If clean, run `pairflow converged --summary` directly"
+    );
+    expect(messageCall?.[4]).toContain(
+      "do not run `pairflow pass --no-findings` first"
     );
   });
 
