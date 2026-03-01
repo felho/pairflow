@@ -2,151 +2,156 @@
 
 ## Goal
 
-Reduce review rounds by making each reviewer round do more useful work:
+Reduce avoidable review rounds by increasing finding coverage per reviewer round while keeping implementation risk low.
 
-1. collect more initial findings (parallel scout review),
-2. expand issue-class findings to sibling occurrences (class expansion),
-3. do this first at **prompt level**, without deterministic orchestrator routing.
+Primary outcomes:
+1. Reviewer performs limited parallel scout discovery before final PASS output.
+2. Issue-class findings are expanded to sibling occurrences in the same local change surface.
+3. Entire rollout is prompt-level only (no orchestrator/state/protocol behavior change).
 
-## Context
+## Problem Context
 
-A frequent loop pattern is:
+Observed loop inefficiency:
+1. Round N identifies one instance of an issue class.
+2. Round N+1 and N+2 discover sibling instances of the same class.
+3. Convergence is delayed by incremental rediscovery instead of consolidated review.
 
-1. Round N finds one instance of an issue type.
-2. Round N+1 finds another sibling instance of the same type.
-3. Round N+2 finds one more sibling instance.
-
-This is especially common for race/lifecycle/timeout/symmetry families and causes unnecessary round inflation.
+This pattern is common for race/lifecycle/timeout/concurrency families.
 
 ## Scope Boundaries
 
 ### In Scope (Required)
 
-1. Extend reviewer prompt and handoff guidance so each reviewer round includes:
-   - `N` parallel scout scans (default: `N=2`),
-   - main-reviewer deduplication and severity calibration,
-   - targeted class expansion scans for issue-class findings.
-2. Define one consistent, structured reviewer PASS output format (required sections).
-3. Define limits and budgets (scope + time/token guardrails).
-4. Update documentation while keeping loop-optimization tracker continuity.
+1. Update reviewer prompt guidance so each reviewer round follows a 4-step flow:
+   - parallel scout scan,
+   - deduplicate + classify,
+   - conditional class expansion,
+   - final consolidation.
+2. Define prompt-level default limits and budgets:
+   - `max_scout_agents = 2`,
+   - `max_class_expansions_per_round = 2`,
+   - `scout_budget = short`,
+   - `expansion_budget = short`.
+3. Define one required reviewer PASS output contract (fixed section set + required finding fields).
+4. Keep tracker continuity in `docs/review-loop-optimization.md` (status note for Phase 1 experiment).
+5. Add/adjust tests that verify prompt guidance contains the new workflow and guardrails.
 
-### Out of Scope (Phase 1)
+### Out of Scope (Do Not Implement in This Task)
 
-1. Orchestrator-side automatic subagent spawning.
-2. New runtime state-machine states.
-3. Mandatory backend schema validation for PASS payloads.
-4. Full multi-agent architecture redesign.
+1. Orchestrator-side automatic subagent spawning/routing.
+2. Any new state-machine state/transition or runtime gate.
+3. Any protocol/schema hard validation requirement for reviewer PASS payloads.
+4. Any CLI surface change (new commands/flags) for this feature.
+5. Full multi-agent architecture redesign.
+
+## Hard Constraints
+
+1. Prompt-level behavior only: existing runtime command semantics must remain unchanged.
+2. Expansion scope must be local:
+   - changed files,
+   - directly related call-sites only.
+3. Repo-wide exploration is explicitly forbidden.
+4. If class detection is uncertain, classify as `one_off` (false-positive protection).
 
 ## Reviewer Round Execution Model (Phase 1)
 
-### Step A: Parallel Scout Scan
+### Step 1: Parallel Scout Scan
 
-1. Reviewer runs `N` independent scout scans over the same diff/scope.
-2. Each scout may output only:
-   - concrete, location-backed findings,
-   - no style-only or preference-only advice.
+1. Reviewer runs up to `N=2` scout scans over the same diff scope.
+2. Scout output may include only concrete, location-backed findings.
+3. Style-only/preference-only feedback is excluded from scout findings.
 
-Default prompt-level config:
-1. `max_scout_agents = 2`
-2. `scout_budget = short`
+### Step 2: Main Reviewer Deduplicate + Classify
 
-### Step B: Main Reviewer Dedup + Classify
-
-1. Main reviewer merges scout findings.
-2. Dedup rule:
-   - same root cause + same/overlapping location => one finding.
+1. Merge scout findings into one working set.
+2. Deduplicate by root cause + overlapping location.
 3. Classify each finding:
-   - `one_off`
-   - `issue_class` (`race_condition`, `lifecycle_symmetry`, `timeout_cancellation`, `idempotency`, `concurrency_guard`, `other`)
+   - `one_off`, or
+   - `issue_class` in:
+     - `race_condition`,
+     - `lifecycle_symmetry`,
+     - `timeout_cancellation`,
+     - `idempotency`,
+     - `concurrency_guard`,
+     - `other`.
 
-### Step C: Class Expansion (Conditional)
+### Step 3: Issue-Class Expansion (Conditional)
 
 1. Run only for `issue_class` findings.
-2. Use narrow scope only:
-   - changed files,
-   - directly related call-sites.
-3. Expansion objective:
-   - enumerate sibling occurrences of the same class.
-4. Limits:
-   - `max_class_expansions_per_round = 2`
-   - `expansion_budget = short`
+2. At most one expansion run per class per round.
+3. Enumerate sibling occurrences within narrow scope.
+4. Stop at round limits/budget limits.
 
-### Step D: Final Consolidation
+### Step 4: Final Consolidation
 
-1. Main reviewer deduplicates again.
-2. Calibrate severity against ontology.
-3. Produce one final finding package for PASS.
+1. Deduplicate again across primary + expansion findings.
+2. Calibrate severity using existing severity ontology guidance.
+3. Produce one final reviewer PASS package using the required contract.
 
-## Required Reviewer Output Contract (Prompt-Level)
+## Required Reviewer PASS Output Contract
 
-Reviewer PASS summary must include these sections:
-
+Every reviewer PASS summary must include exactly these sections:
 1. `Scout Coverage`
-   - how many scouts were run (`N`)
-   - short scope description
 2. `Deduplicated Findings`
-   - final finding list with severity
 3. `Issue-Class Expansions`
-   - per class: primary finding + sibling locations
 4. `Residual Risk / Notes`
-   - short non-blocking notes
 
-Minimum fields per finding (textual or semi-structured):
-
+Minimum fields for each finding entry:
 1. `title`
 2. `severity`
-3. `class` (`one_off` or issue class)
+3. `class` (`one_off` or one issue class)
 4. `locations` (at least one concrete location)
 5. `evidence` (short rationale)
-6. `expansion_siblings` (for class findings; may be empty)
+6. `expansion_siblings` (empty array/list allowed when none)
 
-## Guardrails
+If no issue-class finding exists, `Issue-Class Expansions` must still be present and explicitly marked empty.
 
-1. Expansion should run only for high-signal classes (initial set: race/lifecycle/timeout/concurrency).
-2. No repo-wide expansion scans.
-3. Max 1 expansion run per finding class per round.
-4. If class match is uncertain, default to `one_off` (false-positive protection).
+## Suggested Touchpoints
 
-## Suggested Prompt Touchpoints
+1. `src/core/bubble/startBubble.ts` (reviewer startup/resume prompt content).
+2. `src/core/runtime/tmuxDelivery.ts` (reviewer handoff reminder content).
+3. Optional: shared prompt helper/template module to avoid duplicated wording.
+4. `docs/review-loop-optimization.md` tracker row for issue-class expansion status.
 
-1. `src/core/bubble/startBubble.ts`
-   - extend reviewer startup prompt with Phase 1 workflow block
-2. `src/core/runtime/tmuxDelivery.ts`
-   - extend reviewer handoff reminder with compact workflow reminder
-3. (optional) extract reviewer guidance into dedicated helper/template module
+## Acceptance Criteria (Binary, Testable)
 
-## Acceptance Criteria (Binary)
+1. Reviewer startup/resume/handoff guidance documents the exact 4-step Phase 1 flow.
+2. Prompt guidance states defaults:
+   - `max_scout_agents=2`,
+   - `max_class_expansions_per_round=2`,
+   - narrow-scope-only rule.
+3. Prompt guidance explicitly forbids repo-wide expansion scans.
+4. Prompt guidance includes the required four-section reviewer PASS contract.
+5. Prompt guidance includes all required per-finding fields (`title`, `severity`, `class`, `locations`, `evidence`, `expansion_siblings`).
+6. Prompt/unit tests assert presence of the new workflow and guardrail strings.
+7. Manual smoke run shows reviewer PASS output with:
+   - populated `Deduplicated Findings`,
+   - `Issue-Class Expansions` section present (populated or explicitly empty).
+8. If smoke run contains at least one issue-class finding, PASS output includes at least one expansion sibling location.
+9. `docs/review-loop-optimization.md` reflects Phase 1 prompt-level progress for issue-class expansion.
+10. No runtime/state/protocol behavior changes are introduced by this task.
 
-1. Reviewer startup/resume/handoff prompts explicitly include the 4-step Phase 1 workflow (Scout -> Dedup/Classify -> Expansion -> Consolidate).
-2. Prompt includes explicit defaults: `max_scout_agents=2`, `max_class_expansions_per_round=2`, narrow-scope rule.
-3. Prompt explicitly forbids repo-wide expansion scans.
-4. Required reviewer output contract sections are documented and present in prompt guidance.
-5. In at least one end-to-end bubble test, reviewer PASS actually contains:
-   - deduplicated finding list,
-   - at least one class expansion block (when issue-class finding exists).
-6. No runtime/state-machine regression (prompt-level change only).
+## Validation Plan
 
-## Test / Validation Plan
-
-1. Prompt snapshot/unit-style check:
-   - reviewer startup prompt contains new workflow key lines.
-2. Manual smoke (1 bubble):
-   - use a task likely to produce issue-class findings.
-   - verify reviewer output follows contract.
-3. Control:
-   - if no class finding exists, expansion block may be empty, but structure must still be present.
+1. Prompt content tests:
+   - assert startup/resume/handoff prompt strings include the 4-step workflow and limits.
+2. Manual smoke (single bubble likely to produce issue-class findings):
+   - capture reviewer PASS artifact,
+   - verify contract section presence and field completeness.
+3. Control case:
+   - when no issue-class finding exists, expansions section remains mandatory but empty.
+4. Regression sanity:
+   - verify no CLI/state-machine/protocol test changes are required beyond prompt guidance updates.
 
 ## Deliverables
 
-1. Updated reviewer prompt guidance (startup + handoff).
-2. Documented output contract.
-3. Short note in loop optimization tracker that Phase 1 prompt-level experiment started.
-4. Validation note from first smoke run.
+1. Updated reviewer prompt guidance (startup/resume/handoff surfaces).
+2. Required reviewer PASS output contract text in prompts/docs.
+3. Tracker update in `docs/review-loop-optimization.md` for Phase 1 status.
+4. Validation note from first smoke run (artifact reference).
 
-## Follow-up (Phase 2 Candidate)
+## Follow-up (Phase 2 Candidate, Not in This Task)
 
-If Phase 1 is promising but adherence variance is high:
-
-1. orchestrator-side class detection,
-2. deterministic subagent routing,
-3. aggregation and enforcement before reviewer PASS.
+1. Deterministic orchestrator-side scout/expansion routing.
+2. Structured aggregation before reviewer PASS emission.
+3. Optional schema-level validation/enforcement for reviewer finding payloads.
