@@ -1,93 +1,133 @@
 ---
-description: Create a pairflow bubble and output start command
+description: Create and start a pairflow bubble safely from clean base state
 argument-hint: [--id <name>] [--task-file <path>] [--task <text>] [--repo <path>] [--base <branch>] [--print]
 allowed-tools: Bash, Read, Glob, AskUserQuestion
 ---
 
 # Create Bubble
 
-Creates a pairflow bubble and outputs the start command for the user to run.
+## Purpose
+
+Create a new bubble from task file or inline task with explicit pre-flight checks, deterministic ID generation, and collision-safe creation/start behavior.
 
 ## Variables
 
-BUBBLE_ID: extracted from `--id` argument (optional — auto-generated if not provided)
-TASK_FILE: extracted from `--task-file` argument (absolute path)
-TASK_TEXT: extracted from `--task` argument (inline text)
-REPO_PATH: extracted from `--repo` argument, or git top-level from cwd
-BASE_BRANCH: extracted from `--base` argument, default `main`
+BUBBLE_ID: extracted from `--id` argument (optional)
+TASK_FILE: extracted from `--task-file` argument (optional)
+TASK_TEXT: extracted from `--task` argument (optional)
+REPO_PATH: extracted from `--repo`, or `git rev-parse --show-toplevel`
+BASE_BRANCH: extracted from `--base`, default `main`
 PRINT_ONLY: `true` if `--print` flag is present, default `false`
 
 ## Instructions
 
-- Either TASK_FILE or TASK_TEXT must be provided. If neither, search `plans/tasks/` for a matching file and suggest it.
-- If TASK_FILE is a relative path, resolve it against the current working directory.
-- Always use absolute paths in all commands.
-- By default, **run the create command** automatically and **print the start command** for the user.
-- If PRINT_ONLY is `true`, print both commands without running either.
+- Always use absolute paths in generated commands.
+- Exactly one task source is expected (`TASK_FILE` or `TASK_TEXT`).
+- If both are missing, search `plans/tasks/` and ask the user which task file to use.
+- Default behavior: execute `create` and `start`.
+- Print-only behavior (`--print`): print commands but run nothing.
+- Pre-flight before create/start:
+  - Base repo worktree must be clean (`git status --short` empty).
+  - No active merge/rebase/cherry-pick state.
+  - If task file already exists in repo and is intended input, it should be committed on base branch before bubble start.
+- If pre-flight fails: STOP and report exact blocker.
 
 ## Workflow
 
-### 1. Resolve Inputs
+### 1. Resolve repo path
 
-- Resolve REPO_PATH: run `git rev-parse --show-toplevel` if not provided.
+- Resolve REPO_PATH from `--repo` or `git rev-parse --show-toplevel`.
+- Convert REPO_PATH to absolute path.
 
-### 2. Resolve Task Source
+### 2. Resolve task source
 
-- If TASK_FILE provided → verify it exists, resolve to absolute path.
-- If TASK_TEXT provided → use as inline task.
-- If neither provided → search `plans/tasks/` for files and ask the user which to use.
+- If TASK_FILE is provided:
+  - Resolve to absolute path.
+  - Verify file exists.
+- If TASK_TEXT is provided:
+  - Use inline text.
+- If neither TASK_FILE nor TASK_TEXT is provided:
+  - Search `plans/tasks/` for candidate task files.
+  - If candidates exist, ask the user to choose one.
+  - If no candidates, STOP and report that task input is missing.
+- If both TASK_FILE and TASK_TEXT are provided, STOP and ask for exactly one source.
 
-### 3. Generate Bubble ID
+### 3. Generate bubble id
 
-- If BUBBLE_ID was provided via `--id` → use it as-is, skip to collision check.
-- If BUBBLE_ID was NOT provided → derive it from the task source:
-  - **From TASK_FILE**: take the filename without extension, convert to kebab-case. Example: `ui-phase1-server.md` → `ui-phase1-server`
-  - **From TASK_TEXT**: take the first 3-4 meaningful words, convert to kebab-case, max 30 characters. Strip filler words (the, a, an, for, to, and, of). Example: `"Implement the resume context feature"` → `impl-resume-context`
+- If `--id` is provided, use it as-is.
+- Else derive deterministic kebab-case id from task source:
+  - From TASK_FILE: filename without extension.
+  - From TASK_TEXT: first 3-4 meaningful words, remove filler words (`the`, `a`, `an`, `for`, `to`, `and`, `of`), max 30 chars.
+  - Example: `ui-phase1-server.md` -> `ui-phase1-server`
+  - Example: `Implement the resume context feature` -> `impl-resume-context`
 
-### 4. Check for Collision
+### 4. Check id collision
 
-- Run `pairflow bubble list --repo <REPO_PATH>` and check if any existing bubble ID matches BUBBLE_ID.
-- If collision found → append `-2` to the ID. Check again. If still collides, try `-3`, etc.
-- Report the final BUBBLE_ID to the user before proceeding.
+- Run:
+  ```bash
+  pairflow bubble list --repo <REPO_PATH>
+  ```
+- If collision found, append suffix: `-2`, `-3`, ... until free.
 
-### 5. Create Bubble
+### 5. Pre-flight checks
 
-- If PRINT_ONLY is `true` → skip to step 6.
-- Run the create command:
+- Verify clean worktree:
+  ```bash
+  git -C <REPO_PATH> status --short
+  ```
+  Must be empty.
+- Verify no active merge/rebase/cherry-pick in REPO_PATH.
 
+### 6. Build commands
+
+Task file create:
 ```bash
 pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --task-file <TASK_FILE>
 ```
 
-Or with inline task:
-
+Inline task create:
 ```bash
 pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --task "<TASK_TEXT>"
 ```
 
-- If the command fails → STOP and report the error.
-
-### 6. Output Start Command
-
-Print the start command for the user to copy and run:
-
-```
+Start:
+```bash
 pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
 ```
 
-If PRINT_ONLY is `true`, also print the create command from step 5.
+### 7. Execute or print
+
+- If PRINT_ONLY is `true`:
+  - Print create + start commands.
+  - Do not run commands.
+- Else:
+  - Run `pairflow bubble create ...`
+  - Then run `pairflow bubble start ...`
+  - If `start` fails with repo-lookup mismatch, retry from repo root cwd and recheck status json.
+
+### 8. Verify state after start
+
+Run:
+```bash
+pairflow bubble status --id <BUBBLE_ID> --json
+```
+
+- If state is still `CREATED` immediately after start, wait briefly and poll once more.
 
 ## Report
 
-**Default mode (create executed):**
+Default mode (create/start executed):
 ```
-Bubble <BUBBLE_ID> created.
+Bubble <BUBBLE_ID> created and started.
 
-Start:
+Start session:
 pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
+
+Current state: <STATE>
+Active agent: <AGENT or none>
 ```
 
-**Print-only mode (task file):**
+Print-only mode (task file):
 ```
 Commands ready:
 
@@ -98,7 +138,7 @@ pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> 
 pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
 ```
 
-**Print-only mode (inline task):**
+Print-only mode (inline task):
 ```
 Commands ready:
 
@@ -111,4 +151,4 @@ pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
 
 ## STOP
 
-Do NOT run the start command. Do NOT proceed beyond the report.
+Do not run cleanup/finalization commands from this workflow.
