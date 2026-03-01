@@ -1,142 +1,179 @@
-# Task: Deterministic Rework Intent from WAITING_HUMAN (Phase 1)
+# Task: Deterministic Rework Intent from `WAITING_HUMAN` (Phase 1)
 
 ## Goal
 
-Allow users to start rework deterministically even when bubble state is `WAITING_HUMAN`, without relying on reviewer cooperation or intent forwarding.
+Enable deterministic rework initiation when a bubble is in `WAITING_HUMAN`, without relying on reviewer relay behavior.
 
-Primary outcome:
-1. Rework request can be captured as explicit control-plane intent outside `READY_FOR_APPROVAL`.
-2. Orchestrator applies that intent predictably and routes work to implementer.
-3. Full audit trail exists for who requested rework, when, and how it was consumed.
+Primary outcomes:
+1. Human can issue explicit rework intent in `WAITING_HUMAN`.
+2. Runtime persists and consumes that intent deterministically.
+3. Next actionable handoff routes to implementer without reviewer mediation.
+4. Intent lifecycle is fully auditable (`queued`, `applied`, `superseded`).
 
-## Context
+## First-Round Delivery Expectation (For This Task Execution)
 
-In the current lifecycle, `pairflow bubble request-rework` is valid only in `READY_FOR_APPROVAL`.
+1. Implementer first pass should be fast and task-file focused (no code changes), then hand off to reviewer for critique of task quality.
+2. Reviewer feedback must be applied in the same task file before final handoff.
+3. Review comments that are out of this task scope should be logged as notes, not expanded into extra implementation scope.
 
-Real session issue observed:
-1. Bubble was in `WAITING_HUMAN` (likely due to watchdog or runtime pause).
-2. User intent was clear: start rework.
-3. Direct rework command was blocked by state rule.
-4. Only available path was `bubble reply` to reviewer, hoping reviewer forwards intent.
-5. That path is non-deterministic and can create loop churn or deadlock-like behavior.
+## Problem Statement
 
-This limitation should be removed with an explicit and safe state-machine extension.
+Current behavior blocks `pairflow bubble request-rework` outside `READY_FOR_APPROVAL`.
+In real sessions, this can dead-end rework when bubble state is `WAITING_HUMAN`, forcing `bubble reply` as an indirect and non-deterministic workaround.
+
+This task introduces a minimal state-machine extension so rework intent can be captured and reliably consumed from `WAITING_HUMAN`.
 
 ## Scope Boundaries
 
 ### In Scope (Required)
 
-1. **New pending rework intent model**
-   - Add bubble-level pending rework intent (control-plane data), including:
-     - message
-     - requester identity/source
-     - timestamp
-     - unique intent id
-     - status (`pending` / `applied` / `superseded`)
+1. **Pending rework intent model (single-slot)**
+   - Add a bubble-level `pending_rework_intent` record with:
+     - `intent_id` (unique id)
+     - `message`
+     - `requested_by` (actor identity/source)
+     - `requested_at` (timestamp)
+     - `status` (`pending` | `applied` | `superseded`)
+     - optional `superseded_by_intent_id`
 
-2. **CLI surface for deferred rework**
-   - Extend `pairflow bubble request-rework` (or add sibling command) to support deferred intent from `WAITING_HUMAN`.
-   - Command must return explicit confirmation that intent is queued (not immediately executed as approval-state transition).
+2. **CLI support in `WAITING_HUMAN`**
+   - `pairflow bubble request-rework` must accept `WAITING_HUMAN` and queue deferred intent.
+   - CLI must explicitly say this was queued (not immediately executed rework transition).
 
-3. **Orchestrator intent consumption**
-   - On scheduler/loop tick, if pending rework intent exists:
-     - next actionable handoff must route to implementer
-     - reviewer should not be required to relay intent
-   - Mark intent as `applied` only when delivery to implementer is confirmed.
+3. **Deterministic duplicate policy (required)**
+   - Policy: **latest-write-wins for pending deferred rework**.
+   - If a pending deferred intent exists and a new deferred request arrives:
+     - old pending intent becomes `superseded`
+     - new intent becomes the only `pending` intent
+     - emit `intent_superseded` event with old/new ids
 
-4. **State-machine and protocol updates**
-   - Update state/transition documentation and runtime invariants.
-   - Ensure this does not break existing `READY_FOR_APPROVAL -> request-rework` path.
+4. **Runtime intent consumption + routing**
+   - On scheduler tick, if `pending_rework_intent.status == pending`:
+     - route next actionable handoff to implementer
+     - reviewer relay is not required
+   - Mark intent `applied` only after successful implementer-delivery confirmation.
+   - If delivery fails, keep intent `pending` and surface actionable error.
 
-5. **Observability and audit trail**
-   - Emit event(s) for:
-     - intent queued
-     - intent applied
-     - intent superseded (if replaced)
-   - Include enough metadata for postmortem and metrics.
+5. **State-machine and protocol update**
+   - Document allowed `request-rework` semantics by state:
+     - `READY_FOR_APPROVAL`: existing immediate flow remains valid
+     - `WAITING_HUMAN`: queue deferred rework intent
+     - all other states: reject with explicit state error
+   - Preserve backward compatibility for existing `READY_FOR_APPROVAL` behavior.
 
-6. **UI/UX behavior**
-   - In `WAITING_HUMAN`, expose clear action wording for deterministic rework path.
-   - Avoid implying that plain `reply` is equivalent to guaranteed rework.
+6. **Auditability / observability**
+   - Emit events for:
+     - `rework_intent_queued`
+     - `rework_intent_applied`
+     - `rework_intent_superseded`
+   - Include at least: `bubble_id`, `intent_id`, `requested_by`, `requested_at`, `state_at_request`.
 
-7. **Tests**
-   - Add tests for queue/apply/supersede flow and actor routing behavior.
+7. **UI/UX copy requirements**
+   - In `WAITING_HUMAN`, deterministic rework action must be clearly distinct from plain `reply`.
+   - UI text must not imply `reply` guarantees rework.
 
-### In Scope (Optional, if low risk)
+8. **Tests**
+   - Add tests covering queue/apply/supersede behavior, error retention semantics, and actor routing.
 
-1. Support deferred rework capture from `RUNNING` as well, with identical semantics.
+### In Scope (Optional, low risk only)
 
-### Out of Scope (Do Not Implement in This Task)
+1. Same deferred-intent semantics for `RUNNING`.
 
-1. General intent queue for arbitrary command types (only rework intent now).
-2. Multi-intent prioritization across different categories.
-3. UI redesign beyond minimal control exposure.
-4. Reviewer prompt-level workaround policies as primary solution.
+### Out of Scope
 
-## Design Requirements
+1. Multi-command generic intent queue.
+2. Priority arbitration across intent categories.
+3. Large UI redesign.
+4. Reviewer-prompt workaround as primary rework path.
 
-1. **Deterministic routing**
-   - Rework initiation must not depend on reviewer initiative.
+## Required State-Machine Semantics
 
-2. **Backward compatibility**
-   - Existing `request-rework` behavior in `READY_FOR_APPROVAL` remains valid and unchanged.
+### Command Semantics Matrix
 
-3. **Idempotency and conflict handling**
-   - Duplicate rework submissions should be deterministic (`replace latest` or explicit conflict policy).
+| Current State | `bubble request-rework` behavior |
+| --- | --- |
+| `READY_FOR_APPROVAL` | Execute existing immediate rework behavior (no regression). |
+| `WAITING_HUMAN` | Persist deferred rework intent as `pending`; do not require reviewer relay. |
+| any other state | Reject with explicit invalid-state error (state included in message). |
 
-4. **Safe failure semantics**
-   - If intent cannot be applied, system must preserve pending status and surface actionable error.
+### Runtime Invariants
 
-5. **Traceability**
-   - Every queued/applied/superseded intent must be visible in logs/events.
+1. At most one `pending` deferred rework intent can exist at any time.
+2. `superseded` intents are immutable history records.
+3. `applied` transition is allowed only after implementer-delivery confirmation.
+4. Failed apply attempts never silently drop pending intent.
+
+## CLI UX Contract (Required)
+
+### Successful deferred queue in `WAITING_HUMAN`
+
+`pairflow bubble request-rework --id <bubble-id> --message "<text>"`
+
+CLI output requirements:
+1. Explicit `queued` status wording.
+2. Returned `intent_id`.
+3. Clarification that execution is deferred and will be consumed by orchestrator.
+
+### Duplicate deferred request
+
+1. Must indicate prior pending intent was superseded.
+2. Must return both `superseded_intent_id` and new `intent_id`.
+
+### Invalid state
+
+1. Must print state-aware error: command not allowed in `<state>`.
+2. Must not mutate pending intent data.
 
 ## Suggested Implementation Touchpoints
 
-1. Runtime/orchestrator:
-   - `src/core/bubble/*`
-   - `src/core/runtime/*`
-   - scheduler/loop actor-selection logic
-
-2. CLI command handling:
-   - `src/cli/commands/bubble/*`
-   - rework command validators and state gates
-
-3. Protocol/state schema:
-   - bubble state model + serialized runtime state
-
-4. UI layer:
-   - action availability + label in `WAITING_HUMAN`
-
-5. Docs:
+1. `src/core/bubble/*` (state and command flow)
+2. `src/core/runtime/*` (scheduler/actor routing + apply confirmation)
+3. `src/cli/commands/bubble/*` (`request-rework` gating + output contract)
+4. protocol/state schema definitions and persistence
+5. docs:
    - `docs/review-loop-optimization.md`
-   - relevant protocol/state docs
+   - relevant state/protocol docs
 
-## Acceptance Criteria (Binary, Testable)
+## Acceptance Criteria (Binary)
 
-1. When bubble is `WAITING_HUMAN`, user can issue deterministic rework request via supported CLI path.
-2. CLI confirms queued deferred intent with explicit status and intent id.
-3. Orchestrator consumes pending rework intent and routes next actionable step to implementer.
-4. Rework is applied without requiring reviewer to manually forward intent.
-5. Existing `READY_FOR_APPROVAL` rework flow still works unchanged.
-6. Duplicate deferred rework requests follow documented deterministic policy.
-7. Audit events are emitted for queued/applied/superseded lifecycle with metadata.
-8. UI clearly differentiates deterministic rework action from plain `reply` in `WAITING_HUMAN`.
-9. Documentation is updated to reflect new state-machine behavior.
+1. In `WAITING_HUMAN`, `pairflow bubble request-rework` succeeds and records deferred intent with `pending` status and unique `intent_id`.
+2. CLI success output in `WAITING_HUMAN` explicitly states queued/deferred semantics and includes `intent_id`.
+3. In `READY_FOR_APPROVAL`, existing immediate rework behavior remains unchanged (regression coverage required).
+4. In unsupported states, command fails with explicit invalid-state message and does not mutate intent store.
+5. Scheduler consumes pending deferred intent and routes next actionable handoff to implementer without reviewer relay.
+6. Intent is marked `applied` only after implementer-delivery confirmation; failed delivery retains `pending`.
+7. Duplicate deferred requests in `WAITING_HUMAN` follow latest-write-wins: prior pending becomes `superseded`, new one becomes sole `pending`.
+8. `rework_intent_queued`, `rework_intent_applied`, `rework_intent_superseded` events are emitted with required metadata.
+9. `WAITING_HUMAN` UI text/action clearly separates deterministic rework from plain `reply` semantics.
+10. State-machine/protocol documentation is updated and matches implemented behavior.
 
-## Test Mapping
+## Test Mapping (Acceptance -> Test)
 
-1. AC1/AC2 -> CLI integration test for deferred request in `WAITING_HUMAN`.
-2. AC3/AC4 -> orchestrator test for next-actor override to implementer.
-3. AC5 -> regression test for current approval-state rework path.
-4. AC6 -> duplicate request behavior test.
-5. AC7 -> event emission/assertion tests.
-6. AC8 -> UI behavior/unit test (or integration snapshot).
-7. AC9 -> docs update verification.
+1. AC1/AC2 -> CLI integration test: deferred queue path in `WAITING_HUMAN` asserts persisted pending intent + output contract.
+2. AC3 -> regression test: `READY_FOR_APPROVAL` request-rework path unchanged.
+3. AC4 -> state-gate test: unsupported state returns explicit error and no persistence change.
+4. AC5 -> orchestrator routing test: pending intent causes next actionable handoff to implementer.
+5. AC6 -> apply-confirmation test: applied only after delivery confirmation; delivery failure keeps pending.
+6. AC7 -> duplicate-intent test: latest-write-wins supersede metadata and sole pending invariant.
+7. AC8 -> event-emission test: queued/applied/superseded events with metadata assertions.
+8. AC9 -> UI unit/integration test: `WAITING_HUMAN` action text distinguishes rework vs reply.
+9. AC10 -> docs consistency check (or snapshot) ensuring protocol/state docs reflect matrix + invariants.
 
 ## Deliverables
 
-1. Deferred rework intent capability from `WAITING_HUMAN`.
-2. Deterministic orchestrator handling and actor routing.
-3. Audit/event instrumentation for intent lifecycle.
-4. Regression and new tests for lifecycle correctness.
-5. Documentation updates and rollout notes.
+1. Updated runtime + CLI behavior for deferred deterministic rework from `WAITING_HUMAN`.
+2. Single-slot deferred rework intent persistence with explicit supersede policy.
+3. Deterministic runtime consumption and implementer routing.
+4. Event instrumentation for queued/applied/superseded lifecycle.
+5. Test coverage mapped to all acceptance criteria.
+6. Updated protocol/state documentation.
+
+## Changelog (Task-File Refinement)
+
+1. Added explicit first-round workflow expectation (quick reviewer critique then feedback application).
+2. Replaced ambiguous duplicate handling with deterministic latest-write-wins policy.
+3. Added strict state-semantics matrix for `request-rework` across `READY_FOR_APPROVAL` / `WAITING_HUMAN` / other states.
+4. Added runtime invariants for pending/applied/superseded lifecycle.
+5. Made CLI UX contract concrete (queued wording, ids, invalid-state behavior).
+6. Tightened acceptance criteria into binary assertions with one-to-one test mapping.
+7. Added explicit delivery-failure retention semantics (`pending` preserved until confirmed apply).
