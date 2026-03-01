@@ -25,6 +25,38 @@ A **bubble** is an isolated unit of work. Each bubble gets:
 
 Bubbles are fully isolated from each other — you can run multiple bubbles in parallel on the same repo.
 
+### Archive scope on bubble delete
+
+When you run `pairflow bubble delete`, Pairflow creates a **core archive snapshot** first, then removes the active bubble directory/worktree runtime artifacts.  
+Important: this is **not** a full copy of the entire bubble directory/worktree.
+
+Current snapshot scope:
+
+```text
+.pairflow/bubbles/<bubble-id>/
+├── bubble.toml                    [archived]
+├── state.json                     [archived]
+├── transcript.ndjson              [archived]
+├── inbox.ndjson                   [archived]
+└── artifacts/
+    ├── task.md                    [archived]
+    ├── done-package.md            [not archived]
+    ├── reviewer-test-verification.json [not archived]
+    └── messages/                  [not archived]
+```
+
+Also **not archived**:
+
+- worktree contents (`.pairflow-worktrees/...`)
+- git branch/history metadata
+- tmux/runtime session artifacts
+- repo-level evidence logs (`.pairflow/evidence/*`)
+
+Archive destination:
+
+- `~/.pairflow/archive/<repo-key>/<bubble-instance-id>/`
+- `~/.pairflow/archive/index.json` is updated with lifecycle metadata
+
 ### How does the flow work?
 
 Pairflow does **not** autonomously decide technical content between agents. Instead, agents advance the flow through protocol commands (`pass`, `ask-human`, `converged`). Pairflow acts as the referee + state/protocol engine, injects an initial protocol briefing into agent panes at bubble start, and auto-sends an initial kickoff prompt to the implementer pane.
