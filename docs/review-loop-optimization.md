@@ -30,7 +30,7 @@ The reviewer produces high-quality findings (real bugs, race conditions, event o
 | 6 | Skip redundant reviewer test runs | Implemented | Orchestrator verifies implementer evidence and emits reviewer skip/run directive. |
 | 7 | Task-level acceptance criteria boundary | In progress | Used operationally in tasking; hard enforcement not implemented yet. |
 | 8 | Round-based severity gate | In progress (prompt-level) | Discussed/partially guided in prompts; no strict policy gate yet. |
-| 9 | Issue-class expansion scan | Not implemented | New idea: when reviewer finds one instance of a recurring issue class, run a focused secondary scan for sibling occurrences in the same change surface. |
+| 9 | Issue-class expansion scan | Implemented (Phase 1 prompt-level experiment) | Reviewer startup/resume/handoff guidance now enforces scout -> dedupe/classify -> conditional class expansion -> consolidation, with local-scope guardrails and required PASS output contract. Runtime/orchestrator automation remains out of scope. |
 
 Recent control-plane improvement:
 1. `bubble request-rework` now supports deterministic deferred intent queueing in `WAITING_HUMAN` (latest-write-wins supersede policy, runtime apply after confirmed implementer delivery).
@@ -632,6 +632,12 @@ This produces long loops even when each individual finding is valid.
 
 Phase-1 task file for implementation planning:
 - `plans/tasks/reviewer-scout-and-class-expansion-phase1.md`
+
+Phase-1 prompt-level status update (2026-03-01):
+1. Implemented in reviewer startup/resume/handoff prompt guidance.
+2. Defaults documented in prompt: `max_scout_agents=2`, `max_scout_candidates_per_agent=8`, `max_class_expansions_per_round=2`, `max_expansion_siblings_per_class=5`.
+3. Guardrails documented in prompt: changed-files + directly related call-sites only, repo-wide expansion forbidden.
+4. Required reviewer PASS contract is now explicitly documented in prompt.
 
 ### Proposed mechanism
 

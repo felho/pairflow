@@ -135,6 +135,24 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(messageCall?.[4]).toContain(
       "Implementer test evidence has been orchestrator-verified. Do not re-run full tests unless a trigger from the decision matrix applies."
     );
+    expect(messageCall?.[4]).toContain("Phase 1 reviewer round flow (prompt-level only):");
+    expect(messageCall?.[4]).toContain("`Parallel Scout Scan`");
+    expect(messageCall?.[4]).toContain("`max_scout_agents=2`");
+    expect(messageCall?.[4]).toContain("`max_scout_candidates_per_agent=8`");
+    expect(messageCall?.[4]).toContain("`max_class_expansions_per_round=2`");
+    expect(messageCall?.[4]).toContain("`max_expansion_siblings_per_class=5`");
+    expect(messageCall?.[4]).toContain("Stop rules: stop expansion immediately when no new concrete locations are found");
+    expect(messageCall?.[4]).toContain("repo-wide expansion scans are forbidden");
+    expect(messageCall?.[4]).toContain("Required reviewer PASS output contract (machine-checkable)");
+    expect(messageCall?.[4]).toContain("`Scout Coverage`");
+    expect(messageCall?.[4]).toContain("`Deduplicated Findings`");
+    expect(messageCall?.[4]).toContain("`Issue-Class Expansions`");
+    expect(messageCall?.[4]).toContain("`Residual Risk / Notes`");
+    expect(messageCall?.[4]).toContain("`scouts_executed`, `scope_covered`, `guardrail_confirmation`, `raw_candidates_count`, `deduplicated_count`");
+    expect(messageCall?.[4]).toContain("`title`, `severity`, `class`, `locations`, `evidence`, `expansion_siblings`");
+    expect(messageCall?.[4]).toContain("`class`, `source_finding_title`, `scan_scope`, `siblings`, `stop_reason`");
+    expect(messageCall?.[4]).toContain("`Deduplicated Findings: []`");
+    expect(messageCall?.[4]).toContain("`Issue-Class Expansions: []`");
     expect(messageCall?.[4]).toContain(
       "Execute pairflow commands directly (no confirmation prompt)"
     );
@@ -382,6 +400,8 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(messageCall?.[4]).toContain(
       "Decision matrix triggers that still require tests:"
     );
+    expect(messageCall?.[4]).toContain("Phase 1 reviewer round flow (prompt-level only):");
+    expect(messageCall?.[4]).toContain("Required reviewer PASS output contract (machine-checkable)");
     expect(messageCall?.[4]).toContain(
       "Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)"
     );

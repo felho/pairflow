@@ -29,6 +29,10 @@ import {
 } from "../runtime/sessionsRegistry.js";
 import { buildReviewerAgentSelectionGuidance } from "../runtime/reviewerGuidance.js";
 import { buildReviewerSeverityOntologyReminder } from "../runtime/reviewerSeverityOntology.js";
+import {
+  buildReviewerPassOutputContractGuidance,
+  buildReviewerScoutExpansionWorkflowGuidance
+} from "../runtime/reviewerScoutExpansionGuidance.js";
 import { ensureBubbleInstanceIdForMutation } from "./bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import {
@@ -126,6 +130,8 @@ function buildReviewerStartupPrompt(input: {
     buildReviewerSeverityOntologyReminder({ includeFullOntology: true }),
     buildReviewerDecisionMatrixReminder(),
     buildReviewerAgentSelectionGuidance(input.reviewArtifactType),
+    buildReviewerScoutExpansionWorkflowGuidance(),
+    buildReviewerPassOutputContractGuidance(),
     "If findings remain, run `pairflow pass --summary ... --finding 'P1:...|artifact://...'` (repeatable; for P0/P1 include finding-level refs).",
     "Round 1 guardrail: do not run `pairflow converged` in round 1. In round 1, always hand off with `pairflow pass` and explicit findings declaration (`--finding` or `--no-findings`).",
     "From round 2 onward, if clean, run `pairflow converged --summary` directly (do not run `pairflow pass --no-findings` first).",
@@ -229,6 +235,8 @@ function buildResumeReviewerStartupPrompt(input: {
       ? [`Current directive: ${input.reviewerTestDirectiveLine}`]
       : []),
     buildReviewerAgentSelectionGuidance(input.reviewArtifactType),
+    buildReviewerScoutExpansionWorkflowGuidance(),
+    buildReviewerPassOutputContractGuidance(),
     "Round 1 guardrail: do not run `pairflow converged` in round 1. In round 1, always hand off with `pairflow pass` and explicit findings declaration (`--finding` or `--no-findings`).",
     "From round 2 onward, if clean, run `pairflow converged --summary` directly (do not run `pairflow pass --no-findings` first).",
     roleInstruction

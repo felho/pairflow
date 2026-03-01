@@ -195,6 +195,25 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain("Without blocker-grade evidence (`P0/P1`), downgrade to `P2` by default");
     expect(reviewerCommand).toContain("Cosmetic/comment-only findings are `P3`");
     expect(reviewerCommand).toContain("Out-of-scope observations should be notes (`P3`)");
+    expect(reviewerCommand).toContain("Phase 1 reviewer round flow (prompt-level only):");
+    expect(reviewerCommand).toContain("`Parallel Scout Scan`");
+    expect(reviewerCommand).toContain("`max_scout_agents=2`");
+    expect(reviewerCommand).toContain("`max_scout_candidates_per_agent=8`");
+    expect(reviewerCommand).toContain("`max_class_expansions_per_round=2`");
+    expect(reviewerCommand).toContain("`max_expansion_siblings_per_class=5`");
+    expect(reviewerCommand).toContain("Stop rules: stop expansion immediately when no new concrete locations are found");
+    expect(reviewerCommand).toContain("repo-wide expansion scans are forbidden");
+    expect(reviewerCommand).toContain("If class detection is uncertain, classify as `one_off`");
+    expect(reviewerCommand).toContain("Required reviewer PASS output contract (machine-checkable)");
+    expect(reviewerCommand).toContain("`Scout Coverage`");
+    expect(reviewerCommand).toContain("`Deduplicated Findings`");
+    expect(reviewerCommand).toContain("`Issue-Class Expansions`");
+    expect(reviewerCommand).toContain("`Residual Risk / Notes`");
+    expect(reviewerCommand).toContain("`scouts_executed`, `scope_covered`, `guardrail_confirmation`, `raw_candidates_count`, `deduplicated_count`");
+    expect(reviewerCommand).toContain("`title`, `severity`, `class`, `locations`, `evidence`, `expansion_siblings`");
+    expect(reviewerCommand).toContain("`class`, `source_finding_title`, `scan_scope`, `siblings`, `stop_reason`");
+    expect(reviewerCommand).toContain("`Deduplicated Findings: []`");
+    expect(reviewerCommand).toContain("`Issue-Class Expansions: []`");
     expect(reviewerCommand).toMatch(
       /--finding [^`]*'P1:\.\.\.\|artifact:\/\/\.\.\.'/
     );
@@ -469,6 +488,27 @@ describe("startBubble", () => {
           expect(input.reviewerCommand).toContain("Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)");
           expect(input.reviewerCommand).toContain("Blocker severities (`P0/P1`) require concrete evidence");
           expect(input.reviewerCommand).toContain("Without blocker-grade evidence (`P0/P1`), downgrade to `P2` by default");
+          expect(input.reviewerCommand).toContain(
+            "Phase 1 reviewer round flow (prompt-level only):"
+          );
+          expect(input.reviewerCommand).toContain("`Parallel Scout Scan`");
+          expect(input.reviewerCommand).toContain("`max_scout_agents=2`");
+          expect(input.reviewerCommand).toContain(
+            "`max_scout_candidates_per_agent=8`"
+          );
+          expect(input.reviewerCommand).toContain("`max_class_expansions_per_round=2`");
+          expect(input.reviewerCommand).toContain(
+            "`max_expansion_siblings_per_class=5`"
+          );
+          expect(input.reviewerCommand).toContain(
+            "Stop rules: stop expansion immediately when no new concrete locations are found"
+          );
+          expect(input.reviewerCommand).toContain("repo-wide expansion scans are forbidden");
+          expect(input.reviewerCommand).toContain(
+            "Required reviewer PASS output contract (machine-checkable)"
+          );
+          expect(input.reviewerCommand).toContain("`Issue-Class Expansions`");
+          expect(input.reviewerCommand).toContain("`Residual Risk / Notes`");
           expect(input.reviewerCommand).toContain(
             "Round 1 guardrail: do not run `pairflow converged` in round 1"
           );
