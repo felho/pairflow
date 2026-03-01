@@ -12,6 +12,18 @@ Pairflow is a **CLI-first bubble orchestrator** for local git repositories. It r
 
 Stable CLI + runtime + parallel multi-bubble usage + web dashboard are available.
 
+## Start Here (New Developer Path)
+
+If you are new to Pairflow, read in this order:
+
+1. [Key concepts](#key-concepts)
+2. [Prerequisites](#prerequisites)
+3. [Installation](#installation)
+4. [Quick start (5 minutes)](#quick-start-5-minutes)
+5. [Daily workflow cheat sheet](#daily-workflow-cheat-sheet)
+
+Then use [Scenarios](#scenarios-using-pairflow-step-by-step) as needed.
+
 ## Key concepts
 
 ### What is a bubble?
@@ -24,38 +36,6 @@ A **bubble** is an isolated unit of work. Each bubble gets:
 - Its own **NDJSON transcript** recording every protocol message
 
 Bubbles are fully isolated from each other — you can run multiple bubbles in parallel on the same repo.
-
-### Archive scope on bubble delete
-
-When you run `pairflow bubble delete`, Pairflow creates a **core archive snapshot** first, then removes the active bubble directory/worktree runtime artifacts.  
-Important: this is **not** a full copy of the entire bubble directory/worktree.
-
-Current snapshot scope:
-
-```text
-.pairflow/bubbles/<bubble-id>/
-├── bubble.toml                    [archived]
-├── state.json                     [archived]
-├── transcript.ndjson              [archived]
-├── inbox.ndjson                   [archived]
-└── artifacts/
-    ├── task.md                    [archived]
-    ├── done-package.md            [not archived]
-    ├── reviewer-test-verification.json [not archived]
-    └── messages/                  [not archived]
-```
-
-Also **not archived**:
-
-- worktree contents (`.pairflow-worktrees/...`)
-- git branch/history metadata
-- tmux/runtime session artifacts
-- repo-level evidence logs (`.pairflow/evidence/*`)
-
-Archive destination:
-
-- `~/.pairflow/archive/<repo-key>/<bubble-instance-id>/`
-- `~/.pairflow/archive/index.json` is updated with lifecycle metadata
 
 ### How does the flow work?
 
@@ -83,28 +63,6 @@ At any point, agents can call `ask-human` to pause the flow and ask for your inp
 | **Implementer** | `codex` | Writes code based on the task description |
 | **Reviewer** | `claude` | Reviews the implementation, requests fixes or converges |
 | **Human** (you) | — | Answers questions, approves/rejects, commits |
-
-## Reviewer Ontology Source (Build vs Runtime)
-
-Pairflow assumes a local repository context during development/build where
-`docs/reviewer-severity-ontology.md` is available.
-
-Reviewer ontology reminder content is sourced as:
-
-1. Canonical source markdown: full `docs/reviewer-severity-ontology.md`.
-2. Runtime reminder subset block in that doc between:
-   - `<!-- pairflow:runtime-reminder:start -->`
-   - `<!-- pairflow:runtime-reminder:end -->`
-3. Build/codegen step (`pnpm codegen:reviewer-ontology`) embeds both:
-   - full canonical ontology markdown
-   - runtime reminder text derived from the marker block
-   into `src/core/runtime/reviewerSeverityOntology.generated.ts`.
-4. Runtime prompt helper (`src/core/runtime/reviewerSeverityOntology.ts`)
-   consumes generated constants, so runtime delivery does not require reading
-   markdown files from disk.
-
-When ontology policy text changes, run `pnpm codegen:reviewer-ontology` (or
-`pnpm build`) to refresh the embedded module.
 
 ## Prerequisites
 
@@ -158,6 +116,38 @@ pairflow bubble status --id my_first --repo "$TEST_REPO" --json
 ```
 
 This opens a tmux session with 3 panes. The agents can now start working.
+
+---
+
+## Daily workflow cheat sheet
+
+```bash
+# Create + start
+pairflow bubble create --id <id> --repo <repo> --base main --task "<task>"
+pairflow bubble start --id <id> --repo <repo>
+
+# Monitor
+pairflow bubble status --id <id> --repo <repo> --json
+pairflow bubble inbox --id <id> --repo <repo>
+pairflow bubble list --repo <repo>
+
+# Human decisions
+pairflow bubble reply --id <id> --repo <repo> --message "<answer>"
+pairflow bubble approve --id <id> --repo <repo>
+pairflow bubble request-rework --id <id> --repo <repo> --message "<rework>"
+
+# Finalize
+pairflow bubble commit --id <id> --repo <repo> --auto
+pairflow bubble merge --id <id> --repo <repo> --push --delete-remote
+```
+
+Agent-side commands from the bubble worktree:
+
+```bash
+pairflow pass --summary "<handoff>" [--ref ...] [--finding ... | --no-findings]
+pairflow ask-human --question "<question>" [--ref ...]
+pairflow converged --summary "<convergence summary>" [--ref ...]
+```
 
 ---
 
@@ -322,7 +312,7 @@ pairflow bubble open --id feat_login --repo .
 pairflow bubble attach --id feat_login --repo .
 ```
 
-### Scenario 5b: Using the web UI
+### Scenario 6: Using the web UI
 
 The web UI provides a real-time canvas dashboard for monitoring and managing all bubbles across repos.
 
@@ -345,7 +335,7 @@ The dashboard shows:
 - **Repo filter** — toggle visibility per repo when managing multiple repositories
 - **Real-time updates** via SSE (Server-Sent Events) with automatic polling fallback
 
-### Scenario 6: Crash recovery and restart
+### Scenario 7: Crash recovery and restart
 
 If your machine reboots, tmux dies, or something goes wrong:
 
@@ -364,7 +354,7 @@ The restart is safe because:
 - Worktree is preserved on disk
 - `bubble start` detects an existing bubble in a runtime state and reattaches instead of bootstrapping from scratch
 
-### Scenario 7: Stopping or cancelling a bubble
+### Scenario 8: Stopping or cancelling a bubble
 
 ```bash
 # Graceful stop — kills tmux, sets state to CANCELLED
@@ -380,7 +370,7 @@ Delete behavior notes:
 - Forced delete snapshots bubble metadata into the archive before removing active bubble artifacts.
 - Archive root defaults to `~/.pairflow/archive` (override: `PAIRFLOW_ARCHIVE_ROOT`).
 
-### Scenario 8: Using a PRD or design doc as input
+### Scenario 9: Using a PRD or design doc as input
 
 For larger features, write a detailed spec and pass it as the task file:
 
@@ -412,7 +402,7 @@ pairflow bubble create --id feat_login \
 The task content is stored in `.pairflow/bubbles/<id>/artifacts/task.md` and included in the initial `TASK` protocol message that the implementer receives.
 Task files are also used to infer review guidance mode: `.md/.txt` are document-leaning, `.ts/.tsx/.js/.py` are code-leaning, otherwise Pairflow falls back to `auto`.
 
-### Scenario 9: Generating a metrics report
+### Scenario 10: Generating a metrics report
 
 ```bash
 # Full report for a date range (table output)
@@ -626,6 +616,62 @@ Rules:
 - Missing source entries are skipped silently.
 - Existing files in worktree are never overwritten.
 - Entries must be normalized relative paths (no absolute path, no `.`/`..` traversal).
+
+## Advanced internals
+
+### Archive scope on bubble delete
+
+When you run `pairflow bubble delete`, Pairflow creates a **core archive snapshot** first, then removes the active bubble directory/worktree runtime artifacts.  
+Important: this is **not** a full copy of the entire bubble directory/worktree.
+
+Current snapshot scope:
+
+```text
+.pairflow/bubbles/<bubble-id>/
+├── bubble.toml                    [archived]
+├── state.json                     [archived]
+├── transcript.ndjson              [archived]
+├── inbox.ndjson                   [archived]
+└── artifacts/
+    ├── task.md                    [archived]
+    ├── done-package.md            [not archived]
+    ├── reviewer-test-verification.json [not archived]
+    └── messages/                  [not archived]
+```
+
+Also **not archived**:
+
+- worktree contents (`.pairflow-worktrees/...`)
+- git branch/history metadata
+- tmux/runtime session artifacts
+- repo-level evidence logs (`.pairflow/evidence/*`)
+
+Archive destination:
+
+- `~/.pairflow/archive/<repo-key>/<bubble-instance-id>/`
+- `~/.pairflow/archive/index.json` is updated with lifecycle metadata
+
+### Reviewer ontology source (build vs runtime)
+
+Pairflow assumes a local repository context during development/build where
+`docs/reviewer-severity-ontology.md` is available.
+
+Reviewer ontology reminder content is sourced as:
+
+1. Canonical source markdown: full `docs/reviewer-severity-ontology.md`.
+2. Runtime reminder subset block in that doc between:
+   - `<!-- pairflow:runtime-reminder:start -->`
+   - `<!-- pairflow:runtime-reminder:end -->`
+3. Build/codegen step (`pnpm codegen:reviewer-ontology`) embeds both:
+   - full canonical ontology markdown
+   - runtime reminder text derived from the marker block
+   into `src/core/runtime/reviewerSeverityOntology.generated.ts`.
+4. Runtime prompt helper (`src/core/runtime/reviewerSeverityOntology.ts`)
+   consumes generated constants, so runtime delivery does not require reading
+   markdown files from disk.
+
+When ontology policy text changes, run `pnpm codegen:reviewer-ontology` (or
+`pnpm build`) to refresh the embedded module.
 
 ## What is NOT in scope
 
