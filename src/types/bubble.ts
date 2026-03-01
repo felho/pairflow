@@ -90,6 +90,23 @@ export interface RoundRoleHistoryEntry {
   switched_at: string;
 }
 
+export const reworkIntentStatuses = [
+  "pending",
+  "applied",
+  "superseded"
+] as const;
+
+export type ReworkIntentStatus = (typeof reworkIntentStatuses)[number];
+
+export interface BubbleReworkIntentRecord {
+  intent_id: string;
+  message: string;
+  requested_by: string;
+  requested_at: string;
+  status: ReworkIntentStatus;
+  superseded_by_intent_id?: string;
+}
+
 export interface BubbleStateSnapshot {
   bubble_id: string;
   state: BubbleLifecycleState;
@@ -99,6 +116,8 @@ export interface BubbleStateSnapshot {
   active_role: AgentRole | null;
   round_role_history: RoundRoleHistoryEntry[];
   last_command_at: string | null;
+  pending_rework_intent?: BubbleReworkIntentRecord | null;
+  rework_intent_history?: BubbleReworkIntentRecord[];
 }
 
 export function isAgentName(value: unknown): value is AgentName {
@@ -154,5 +173,12 @@ export function isLocalOverlayMode(value: unknown): value is LocalOverlayMode {
   return (
     typeof value === "string" &&
     (localOverlayModes as readonly string[]).includes(value)
+  );
+}
+
+export function isReworkIntentStatus(value: unknown): value is ReworkIntentStatus {
+  return (
+    typeof value === "string" &&
+    (reworkIntentStatuses as readonly string[]).includes(value)
   );
 }

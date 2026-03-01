@@ -9,6 +9,8 @@ export function createInitialBubbleState(bubbleId: string): BubbleStateSnapshot 
     active_since: null,
     active_role: null,
     round_role_history: [],
-    last_command_at: null
+    last_command_at: null,
+    pending_rework_intent: null,
+    rework_intent_history: []
   };
 }

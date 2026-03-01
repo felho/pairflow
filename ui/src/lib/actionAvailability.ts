@@ -4,7 +4,7 @@ const actionAvailabilityMatrix: Record<BubbleLifecycleState, readonly BubbleActi
   CREATED: ["start", "stop"],
   PREPARING_WORKSPACE: ["stop"],
   RUNNING: ["open", "stop"],
-  WAITING_HUMAN: ["reply", "resume", "open", "stop"],
+  WAITING_HUMAN: ["request-rework", "reply", "resume", "open", "stop"],
   READY_FOR_APPROVAL: ["approve", "request-rework", "open", "stop"],
   APPROVED_FOR_COMMIT: ["commit", "open", "stop"],
   COMMITTED: ["open", "stop"],

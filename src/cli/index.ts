@@ -307,8 +307,19 @@ async function handleBubbleRequestReworkCommand(args: string[]): Promise<number>
     process.stdout.write(`${getBubbleRequestReworkHelpText()}\n`);
     return 0;
   }
+  if (result.mode === "immediate") {
+    process.stdout.write(
+      `APPROVAL_DECISION recorded for ${result.bubbleId}: ${result.envelope.id} -> revise\n`
+    );
+    return 0;
+  }
+
+  const supersededPart =
+    result.supersededIntentId === undefined
+      ? ""
+      : ` superseded_intent_id=${result.supersededIntentId}.`;
   process.stdout.write(
-    `APPROVAL_DECISION recorded for ${result.bubbleId}: ${result.envelope.id} -> revise\n`
+    `Rework intent queued for ${result.bubbleId}: intent_id=${result.intentId}.${supersededPart} Execution is deferred; orchestrator will consume this intent and route the next actionable handoff to the implementer.\n`
   );
   return 0;
 }

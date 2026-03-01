@@ -944,12 +944,14 @@
       </div>
 
       <div class="bubble-actions">
+        <button class="action-btn warn">Queue Rework (message required)</button>
         <button class="action-btn warn">Reply (message required)</button>
         <button class="action-btn">Resume</button>
         <button class="action-btn" onclick="event.stopPropagation();navigator.clipboard.writeText('tmux attach -t pf-impl-resume-context')">Attach (copy command)</button>
         <button class="action-btn">Open</button>
         <button class="action-btn">Stop</button>
       </div>
+      <div style="margin-top:8px;font-size:11px;color:#f59e0b;">Reply sends a plain human response and does not guarantee rework. Use Queue Rework for deterministic rework intent.</div>
 
       <div class="timeline">
         <div class="timeline-entry">
@@ -993,7 +995,7 @@
     <div class="matrix-row"><span class="matrix-state">CREATED</span><span class="matrix-actions">Start, Stop</span></div>
     <div class="matrix-row"><span class="matrix-state">PREPARING_WORKSPACE</span><span class="matrix-actions">Stop</span></div>
     <div class="matrix-row"><span class="matrix-state">RUNNING</span><span class="matrix-actions">Open, Stop</span></div>
-    <div class="matrix-row"><span class="matrix-state">WAITING_HUMAN</span><span class="matrix-actions">Reply (message required), Resume, Open, Stop</span></div>
+    <div class="matrix-row"><span class="matrix-state">WAITING_HUMAN</span><span class="matrix-actions">Queue Rework (message required), Reply (message required), Resume, Open, Stop</span></div>
     <div class="matrix-row"><span class="matrix-state">READY_FOR_APPROVAL</span><span class="matrix-actions">Approve, Request Rework (message required), Open, Stop</span></div>
     <div class="matrix-row"><span class="matrix-state">APPROVED_FOR_COMMIT</span><span class="matrix-actions">Commit, Open, Stop</span></div>
     <div class="matrix-row"><span class="matrix-state">COMMITTED</span><span class="matrix-actions">Open, Stop</span></div>

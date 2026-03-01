@@ -3,7 +3,7 @@ import { parseArgs } from "node:util";
 import {
   asApprovalCommandError,
   emitRequestRework,
-  type EmitApprovalDecisionResult
+  type EmitRequestReworkResult
 } from "../../../core/human/approval.js";
 
 export interface BubbleRequestReworkCommandOptions {
@@ -99,7 +99,7 @@ export function parseBubbleRequestReworkCommandOptions(
 export async function runBubbleRequestReworkCommand(
   args: string[],
   cwd: string = process.cwd()
-): Promise<EmitApprovalDecisionResult | null> {
+): Promise<EmitRequestReworkResult | null> {
   const options = parseBubbleRequestReworkCommandOptions(args);
   if (options.help) {
     return null;

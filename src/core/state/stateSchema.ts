@@ -13,6 +13,8 @@ import {
   isAgentName,
   isAgentRole,
   isBubbleLifecycleState,
+  isReworkIntentStatus,
+  type BubbleReworkIntentRecord,
   type BubbleStateSnapshot,
   type RoundRoleHistoryEntry
 } from "../../types/bubble.js";
@@ -89,6 +91,103 @@ function validateRoundRoleEntry(
     implementer,
     reviewer,
     switched_at: switchedAt
+  };
+}
+
+function validateReworkIntentRecord(
+  input: unknown,
+  pathPrefix: string,
+  errors: ValidationError[]
+): BubbleReworkIntentRecord | undefined {
+  if (!isRecord(input)) {
+    errors.push({
+      path: pathPrefix,
+      message: "Must be an object"
+    });
+    return undefined;
+  }
+
+  const intentId = input.intent_id;
+  if (!isNonEmptyString(intentId)) {
+    errors.push({
+      path: `${pathPrefix}.intent_id`,
+      message: "Must be a non-empty string"
+    });
+  }
+
+  const message = input.message;
+  if (!isNonEmptyString(message)) {
+    errors.push({
+      path: `${pathPrefix}.message`,
+      message: "Must be a non-empty string"
+    });
+  }
+
+  const requestedBy = input.requested_by;
+  if (!isNonEmptyString(requestedBy)) {
+    errors.push({
+      path: `${pathPrefix}.requested_by`,
+      message: "Must be a non-empty string"
+    });
+  }
+
+  const requestedAt = input.requested_at;
+  if (!isIsoTimestamp(requestedAt)) {
+    errors.push({
+      path: `${pathPrefix}.requested_at`,
+      message: "Must be a valid ISO timestamp"
+    });
+  }
+
+  const status = input.status;
+  if (!isReworkIntentStatus(status)) {
+    errors.push({
+      path: `${pathPrefix}.status`,
+      message: "Must be one of: pending, applied, superseded"
+    });
+  }
+
+  const supersededByIntentId = input.superseded_by_intent_id;
+  if (
+    supersededByIntentId !== undefined &&
+    !isNonEmptyString(supersededByIntentId)
+  ) {
+    errors.push({
+      path: `${pathPrefix}.superseded_by_intent_id`,
+      message: "Must be a non-empty string when provided"
+    });
+  }
+
+  if (
+    isReworkIntentStatus(status) &&
+    status !== "superseded" &&
+    supersededByIntentId !== undefined
+  ) {
+    errors.push({
+      path: `${pathPrefix}.superseded_by_intent_id`,
+      message: "Only superseded intents may define superseded_by_intent_id"
+    });
+  }
+
+  if (
+    !isNonEmptyString(intentId) ||
+    !isNonEmptyString(message) ||
+    !isNonEmptyString(requestedBy) ||
+    !isIsoTimestamp(requestedAt) ||
+    !isReworkIntentStatus(status)
+  ) {
+    return undefined;
+  }
+
+  return {
+    intent_id: intentId,
+    message,
+    requested_by: requestedBy,
+    requested_at: requestedAt,
+    status,
+    ...(isNonEmptyString(supersededByIntentId)
+      ? { superseded_by_intent_id: supersededByIntentId }
+      : {})
   };
 }
 
@@ -174,6 +273,73 @@ export function validateBubbleStateSnapshot(
     });
   }
 
+  const pendingReworkIntentRaw = input.pending_rework_intent;
+  let pendingReworkIntent: BubbleReworkIntentRecord | null = null;
+  if (pendingReworkIntentRaw === undefined || pendingReworkIntentRaw === null) {
+    pendingReworkIntent = null;
+  } else {
+    const validated = validateReworkIntentRecord(
+      pendingReworkIntentRaw,
+      "pending_rework_intent",
+      errors
+    );
+    if (validated !== undefined) {
+      pendingReworkIntent = validated;
+    }
+  }
+
+  if (
+    pendingReworkIntent !== null &&
+    pendingReworkIntent.status !== "pending"
+  ) {
+    errors.push({
+      path: "pending_rework_intent.status",
+      message: "pending_rework_intent must have status=pending"
+    });
+  }
+
+  const reworkIntentHistoryRaw = input.rework_intent_history;
+  const reworkIntentHistory: BubbleReworkIntentRecord[] = [];
+  if (reworkIntentHistoryRaw === undefined) {
+    // Default to empty history for backward-compatible state files.
+  } else if (!Array.isArray(reworkIntentHistoryRaw)) {
+    errors.push({
+      path: "rework_intent_history",
+      message: "Must be an array"
+    });
+  } else {
+    reworkIntentHistoryRaw.forEach((entry, index) => {
+      const path = `rework_intent_history[${index}]`;
+      const validated = validateReworkIntentRecord(entry, path, errors);
+      if (validated === undefined) {
+        return;
+      }
+      if (validated.status === "pending") {
+        errors.push({
+          path: `${path}.status`,
+          message: "History intents cannot use status=pending"
+        });
+        return;
+      }
+      reworkIntentHistory.push(validated);
+    });
+  }
+
+  const knownIntentIds = new Set<string>();
+  if (pendingReworkIntent !== null) {
+    knownIntentIds.add(pendingReworkIntent.intent_id);
+  }
+  for (const intent of reworkIntentHistory) {
+    if (knownIntentIds.has(intent.intent_id)) {
+      errors.push({
+        path: "rework_intent_history",
+        message: `Duplicate rework intent id: ${intent.intent_id}`
+      });
+      continue;
+    }
+    knownIntentIds.add(intent.intent_id);
+  }
+
   const hasAnyActiveField =
     activeAgent !== null || activeRole !== null || activeSince !== null;
   const hasAllActiveFields =
@@ -207,7 +373,9 @@ export function validateBubbleStateSnapshot(
     active_since: activeSince as BubbleStateSnapshot["active_since"],
     active_role: activeRole as BubbleStateSnapshot["active_role"],
     round_role_history: roundRoleHistory,
-    last_command_at: lastCommandAt as BubbleStateSnapshot["last_command_at"]
+    last_command_at: lastCommandAt as BubbleStateSnapshot["last_command_at"],
+    pending_rework_intent: pendingReworkIntent,
+    rework_intent_history: reworkIntentHistory
   });
 }
 

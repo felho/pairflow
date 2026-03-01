@@ -31,6 +31,9 @@ The reviewer produces high-quality findings (real bugs, race conditions, event o
 | 7 | Task-level acceptance criteria boundary | In progress | Used operationally in tasking; hard enforcement not implemented yet. |
 | 8 | Round-based severity gate | In progress (prompt-level) | Discussed/partially guided in prompts; no strict policy gate yet. |
 
+Recent control-plane improvement:
+1. `bubble request-rework` now supports deterministic deferred intent queueing in `WAITING_HUMAN` (latest-write-wins supersede policy, runtime apply after confirmed implementer delivery).
+
 ### 1. Severity Guidelines in Reviewer Prompt
 
 Provide explicit severity definitions to reduce misclassification:

@@ -19,11 +19,21 @@ const actionLabels: Record<Exclude<BubbleActionKind, "delete">, string> = {
   stop: "Stop"
 };
 
+function resolveActionLabelForState(
+  state: BubbleLifecycleState,
+  action: Exclude<BubbleActionKind, "delete">
+): string {
+  if (state === "WAITING_HUMAN" && action === "request-rework") {
+    return "Queue Rework";
+  }
+  return actionLabels[action];
+}
+
 const expectedMatrix: Record<BubbleLifecycleState, BubbleActionKind[]> = {
   CREATED: ["start", "stop"],
   PREPARING_WORKSPACE: ["stop"],
   RUNNING: ["open", "stop"],
-  WAITING_HUMAN: ["reply", "resume", "open", "stop"],
+  WAITING_HUMAN: ["request-rework", "reply", "resume", "open", "stop"],
   READY_FOR_APPROVAL: ["approve", "request-rework", "open", "stop"],
   APPROVED_FOR_COMMIT: ["commit", "open", "stop"],
   COMMITTED: ["open", "stop"],
@@ -62,7 +72,9 @@ describe("ActionBar", () => {
       );
 
       for (const action of allActions) {
-        const button = screen.queryByRole("button", { name: actionLabels[action] });
+        const button = screen.queryByRole("button", {
+          name: resolveActionLabelForState(state, action)
+        });
         if (expectedActions.includes(action)) {
           expect(button).toBeInTheDocument();
         } else {
@@ -115,6 +127,45 @@ describe("ActionBar", () => {
       action: "request-rework",
       message: "Please update tests"
     });
+  });
+
+  it("explains that waiting-human rework is queued and distinct from reply", async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn(async () => undefined);
+
+    render(
+      <ActionBar
+        bubble={bubbleCard({
+          bubbleId: "b-waiting",
+          repoPath: "/repo-a",
+          state: "WAITING_HUMAN"
+        })}
+        attach={{
+          visible: false,
+          enabled: false,
+          command: "tmux attach -t pf-b-waiting",
+          hint: null
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={onAction}
+        onClearFeedback={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Queue Rework" }));
+    expect(
+      screen.getByText(
+        "Rework message is required. This queues deterministic rework for orchestrator consumption; plain reply does not guarantee rework."
+      )
+    ).toBeInTheDocument();
+    const queueButtons = screen.getAllByRole("button", { name: "Queue Rework" });
+    await user.click(queueButtons[1]!);
+
+    expect(screen.getByText("Message is required.")).toBeInTheDocument();
+    expect(onAction).not.toHaveBeenCalled();
   });
 
   it("submits commit form with default auto=true", async () => {
