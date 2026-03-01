@@ -27,6 +27,15 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 2. Use the command that matches current state. Never guess.
 3. Prefer Pairflow lifecycle commands over raw git/tmux when state progression is normal.
 4. If bubble has valuable unmerged work but lifecycle state blocks normal flow (for example `CANCELLED`), switch to explicit recovery workflow.
+5. Treat workflow boundaries as strict contracts: do only what the selected workflow is for.
+
+## Workflow Scope Contract
+
+- `CreateBubble` is **lifecycle-only**:
+  - Allowed: pre-flight checks, `pairflow bubble create`, `pairflow bubble start`, `pairflow bubble status`.
+  - Not allowed: reading/implementing/reviewing the feature/task content after bubble start.
+- If the user asks only to start/create a bubble, stop immediately after reporting the started state.
+- Any task execution inside the bubble must be a separate, explicit follow-up request.
 
 ## State-to-Action Map
 

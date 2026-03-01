@@ -31,6 +31,7 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
   - No active merge/rebase/cherry-pick state.
   - If task file already exists in repo and is intended input, it should be committed on base branch before bubble start.
 - If pre-flight fails: STOP and report exact blocker.
+- Guardrail: this workflow must not execute task work (no implementation/review/testing/file edits related to task content).
 
 ## Workflow
 
@@ -81,16 +82,19 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
 ### 6. Build commands
 
 Task file create:
+
 ```bash
 pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --task-file <TASK_FILE>
 ```
 
 Inline task create:
+
 ```bash
 pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --task "<TASK_TEXT>"
 ```
 
 Start:
+
 ```bash
 pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
 ```
@@ -108,15 +112,23 @@ pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
 ### 8. Verify state after start
 
 Run:
+
 ```bash
 pairflow bubble status --id <BUBBLE_ID> --json
 ```
 
 - If state is still `CREATED` immediately after start, wait briefly and poll once more.
 
+### 9. Hard stop after lifecycle actions
+
+- After reporting create/start/status result, STOP.
+- Do not run any non-pairflow commands except the pre-flight checks in this workflow.
+- If user intent was start/create only, this stop is mandatory even if task context is already available.
+
 ## Report
 
 Default mode (create/start executed):
+
 ```
 Bubble <BUBBLE_ID> created and started.
 
@@ -125,9 +137,12 @@ pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
 
 Current state: <STATE>
 Active agent: <AGENT or none>
+
+Stopped after bubble start (no task execution in CreateBubble workflow).
 ```
 
 Print-only mode (task file):
+
 ```
 Commands ready:
 
@@ -139,6 +154,7 @@ pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
 ```
 
 Print-only mode (inline task):
+
 ```
 Commands ready:
 
@@ -152,3 +168,4 @@ pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
 ## STOP
 
 Do not run cleanup/finalization commands from this workflow.
+Do not start implementing/reviewing the bubble task from this workflow.
