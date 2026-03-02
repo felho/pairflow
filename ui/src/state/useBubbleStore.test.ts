@@ -1,4 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { copyToClipboardMock } = vi.hoisted(() => ({
+  copyToClipboardMock: vi.fn<(text: string) => Promise<void>>()
+}));
+
+vi.mock("../lib/clipboard", () => ({
+  copyToClipboard: copyToClipboardMock
+}));
 
 import {
   createBubbleStore,
@@ -70,7 +78,12 @@ function createApiStub(overrides: Partial<PairflowApiClient>): PairflowApiClient
     commitBubble: vi.fn(async () => ({})),
     mergeBubble: vi.fn(async () => ({})),
     openBubble: vi.fn(async () => ({})),
-    attachBubble: vi.fn(async () => ({})),
+    attachBubble: vi.fn(async () => ({
+      bubbleId: "unknown",
+      tmuxSessionName: "pf-unknown",
+      launcherRequested: "auto",
+      launcherUsed: "terminal"
+    })),
     stopBubble: vi.fn(async () => ({})),
     deleteBubble: vi.fn(async () => ({
       bubbleId: "unknown",
@@ -92,6 +105,11 @@ function createApiStub(overrides: Partial<PairflowApiClient>): PairflowApiClient
 }
 
 describe("createBubbleStore", () => {
+  beforeEach(() => {
+    copyToClipboardMock.mockReset();
+    copyToClipboardMock.mockResolvedValue(undefined);
+  });
+
   it("loads initial data, tracks runtime session presence, and applies stream events", async () => {
     const repos = ["/repo-a", "/repo-b"];
     const bubbleA = bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" });
@@ -649,6 +667,99 @@ describe("createBubbleStore", () => {
     expect(store.getState().actionLoadingById["b-a"]).toBeUndefined();
     expect(api.deleteBubble).toHaveBeenCalledWith("/repo-a", "b-a", undefined);
     expect(getBubbles).toHaveBeenCalledTimes(1);
+  });
+
+  it("copies attach command when launcher resolves to copy", async () => {
+    const getBubbles = vi
+      .fn()
+      .mockResolvedValueOnce({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+      })
+      .mockResolvedValueOnce({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+      });
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      attachBubble: vi.fn(async () => ({
+        bubbleId: "b-a",
+        tmuxSessionName: "pf-b-a",
+        launcherRequested: "copy",
+        launcherUsed: "copy",
+        attachCommand: "tmux attach -t pf-b-a"
+      }))
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+    await store.getState().runBubbleAction({
+      bubbleId: "b-a",
+      action: "attach"
+    });
+
+    expect(copyToClipboardMock).toHaveBeenCalledTimes(1);
+    expect(copyToClipboardMock).toHaveBeenCalledWith("tmux attach -t pf-b-a");
+    expect(store.getState().actionErrorById["b-a"]).toBeUndefined();
+  });
+
+  it("surfaces actionable error when attach copy-to-clipboard fails", async () => {
+    copyToClipboardMock.mockRejectedValue(new Error("Clipboard permission denied"));
+
+    const getBubbles = vi
+      .fn()
+      .mockResolvedValueOnce({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+      })
+      .mockResolvedValueOnce({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+      });
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      attachBubble: vi.fn(async () => ({
+        bubbleId: "b-a",
+        tmuxSessionName: "pf-b-a",
+        launcherRequested: "copy",
+        launcherUsed: "copy",
+        attachCommand: "tmux attach -t pf-b-a"
+      }))
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+
+    await expect(
+      store.getState().runBubbleAction({
+        bubbleId: "b-a",
+        action: "attach"
+      })
+    ).rejects.toThrow(/Attach command copy failed/u);
+
+    expect(store.getState().actionErrorById["b-a"]).toContain(
+      "Run manually: tmux attach -t pf-b-a"
+    );
   });
 
   it("refreshes repo and clears loading after successful delete", async () => {

@@ -243,6 +243,14 @@ export interface MergeActionInput {
   deleteRemote?: boolean;
 }
 
+export interface AttachActionResult {
+  bubbleId: string;
+  tmuxSessionName: string;
+  launcherRequested: string;
+  launcherUsed: string;
+  attachCommand?: string;
+}
+
 export interface BubblePosition {
   x: number;
   y: number;

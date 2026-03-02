@@ -6,6 +6,7 @@ import {
   PairflowApiError,
   type PairflowApiClient
 } from "../lib/api";
+import { copyToClipboard } from "../lib/clipboard";
 import { defaultPosition, resolveNonOverlappingPosition } from "../lib/canvasLayout";
 import {
   createRealtimeEventsClient,
@@ -14,6 +15,7 @@ import {
 } from "../lib/events";
 import type {
   BubbleActionKind,
+  AttachActionResult,
   BubbleCardModel,
   BubbleDeleteResult,
   BubblePosition,
@@ -101,6 +103,17 @@ export interface BubbleStoreDependencies {
 
 function asMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function resolveAttachCopyCommand(result: AttachActionResult): string | null {
+  if (result.launcherUsed !== "copy") {
+    return null;
+  }
+  const candidate = result.attachCommand?.trim();
+  if (candidate === undefined || candidate.length === 0) {
+    return null;
+  }
+  return candidate;
 }
 
 function toBubbleCardModel(bubble: UiBubbleSummary): BubbleCardModel {
@@ -428,7 +441,22 @@ async function performBubbleAction(
       await api.openBubble(bubble.repoPath, bubble.bubbleId);
       return;
     case "attach":
-      await api.attachBubble(bubble.repoPath, bubble.bubbleId);
+      {
+        const attachResult = await api.attachBubble(
+          bubble.repoPath,
+          bubble.bubbleId
+        );
+        const copyCommand = resolveAttachCopyCommand(attachResult);
+        if (copyCommand !== null) {
+          try {
+            await copyToClipboard(copyCommand);
+          } catch (error) {
+            throw new Error(
+              `Attach command copy failed. Run manually: ${copyCommand}. Reason: ${asMessage(error)}`
+            );
+          }
+        }
+      }
       return;
     case "stop":
       await api.stopBubble(bubble.repoPath, bubble.bubbleId);

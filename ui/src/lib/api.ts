@@ -1,4 +1,5 @@
 import type {
+  AttachActionResult,
   BubbleDeleteResult,
   CommitActionInput,
   MergeActionInput,
@@ -61,7 +62,7 @@ export interface PairflowApiClient {
     input: MergeActionInput
   ): Promise<Record<string, unknown>>;
   openBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>>;
-  attachBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>>;
+  attachBubble(repoPath: string, bubbleId: string): Promise<AttachActionResult>;
   stopBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>>;
   deleteBubble(
     repoPath: string,
@@ -277,8 +278,13 @@ export function createApiClient(baseUrl: string = ""): PairflowApiClient {
       return postBubbleAction(baseUrl, repoPath, bubbleId, "open");
     },
 
-    async attachBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>> {
-      return postBubbleAction(baseUrl, repoPath, bubbleId, "attach");
+    async attachBubble(repoPath: string, bubbleId: string): Promise<AttachActionResult> {
+      return postBubbleAction<AttachActionResult>(
+        baseUrl,
+        repoPath,
+        bubbleId,
+        "attach"
+      );
     },
 
     async stopBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>> {
