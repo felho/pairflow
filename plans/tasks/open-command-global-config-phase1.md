@@ -73,6 +73,10 @@ Rendering semantics:
 2. If template does not contain placeholder, append quoted worktree path to the end.
 3. Empty template is invalid and must raise `OpenBubbleError`.
 
+Quoting semantics:
+1. "Quoted worktree path" means shell-safe argument rendering that preserves the full path as one argument.
+2. Paths with spaces and shell-significant characters must remain a single path argument after rendering.
+
 ## Error Semantics
 
 1. Worktree missing -> existing `OpenBubbleError` behavior unchanged.
@@ -123,7 +127,8 @@ Rationale: avoid silent editor-launch misconfiguration.
 2. Implement global config schema changes in `src/config/pairflowConfig.ts`.
 3. Add `openBubble` precedence tests (bubble override -> global -> built-in default), then implement precedence/error mapping.
 4. Add `createBubble` persistence tests for explicit-vs-default behavior, then implement persistence change.
-5. Update docs last, after behavior/tests are stable.
+5. Update/create affected fixtures that previously assumed default `open_command` persistence.
+6. Update docs last, after behavior/tests are stable.
 
 ## Acceptance Criteria (Binary)
 
@@ -141,30 +146,33 @@ Rationale: avoid silent editor-launch misconfiguration.
 
 ### Rendering + Error Criteria
 
-7. Placeholder interpolation works for globally provided command template.
-8. Placeholder-less global command appends quoted worktree path.
-9. Missing global config file (`ENOENT`) does not fail open; fallback chain continues.
-10. Invalid global config schema/parse causes explicit `OpenBubbleError`.
-11. Non-schema global config load error causes explicit `OpenBubbleError`.
+7. Placeholder interpolation works for command templates sourced from bubble-level and global-level config.
+8. All `{{worktree_path}}` occurrences are replaced when present multiple times in a template.
+9. Placeholder-less command appends quoted worktree path.
+10. Rendered command preserves path-with-spaces as one argument.
+11. Missing global config file (`ENOENT`) does not fail open; fallback chain continues.
+12. Invalid global config schema/parse causes explicit `OpenBubbleError`.
+13. Non-schema global config load error causes explicit `OpenBubbleError`.
 
 ### Persistence + Docs Criteria
 
-12. New bubbles do not persist `open_command` by default unless explicitly supplied.
-13. README reflects precedence and global config usage.
+14. New bubbles do not persist `open_command` by default unless explicitly supplied.
+15. New bubbles persist `open_command` when explicitly supplied in create input.
+16. README reflects precedence and global config usage with one concrete config example.
 
 ### Optional Edge-Case ACs (Nice-to-have in this phase, required in follow-up if deferred)
 
-14. Non-existent executable in resolved open command returns explicit, actionable `OpenBubbleError`.
-15. Empty global config file is handled deterministically (either valid as empty config or explicit parse error, per parser contract), with test coverage.
+17. Non-existent executable in resolved open command returns explicit, actionable `OpenBubbleError`.
+18. Empty global config file is handled deterministically (either valid as empty config or explicit parse error, per parser contract), with test coverage.
 
 ## Test Mapping (Acceptance -> Test)
 
 1. AC1-AC2 -> `tests/config/pairflowConfig.test.ts`
 2. AC3 -> `tests/config/bubbleConfig.test.ts`
-3. AC4-AC11 -> `tests/core/bubble/openBubble.test.ts`
-4. AC12 -> `tests/core/bubble/createBubble.test.ts` (explicit assert: default not persisted unless input explicitly sets it)
-5. AC13 -> docs review checklist item in done package
-6. AC14-AC15 (optional) -> `tests/core/bubble/openBubble.test.ts` and/or `tests/config/pairflowConfig.test.ts`
+3. AC4-AC13 -> `tests/core/bubble/openBubble.test.ts`
+4. AC14-AC15 -> `tests/core/bubble/createBubble.test.ts` (explicit asserts: default not persisted; explicitly provided value persisted)
+5. AC16 -> README diff checklist item in done package (include exact section/header touched)
+6. AC17-AC18 (optional) -> `tests/core/bubble/openBubble.test.ts` and/or `tests/config/pairflowConfig.test.ts`
 
 ## Validation Plan
 
@@ -172,10 +180,12 @@ Rationale: avoid silent editor-launch misconfiguration.
 2. Targeted tests:
    - `tests/config/pairflowConfig.test.ts`
    - `tests/core/bubble/openBubble.test.ts`
-   - any create/config tests touched by AC12
+   - `tests/core/bubble/createBubble.test.ts` (or nearest create-bubble coverage file) for AC14-AC15
 3. Optional manual smoke:
    - set global `open_command` to `open -a "Visual Studio Code" {{worktree_path}}`
    - run `pairflow bubble open` on a bubble without bubble-level override
+4. Test harness note:
+   - For AC11-AC13, tests should control global config lookup deterministically (mock/stub `loadPairflowGlobalConfig` or inject HOME/config path in test setup) to avoid host-machine coupling.
 
 ## Deliverables
 
