@@ -20,17 +20,20 @@ function getReviewerFindingsStatus(envelope: ProtocolEnvelope): {
   missing: boolean;
   invalid: boolean;
   hasBlocking: boolean;
+  hasP2: boolean;
 } {
   const findings = envelope.payload.findings;
   if (!Array.isArray(findings)) {
     return {
       missing: true,
       invalid: false,
-      hasBlocking: false
+      hasBlocking: false,
+      hasP2: false
     };
   }
 
   let invalid = false;
+  let hasP2 = false;
   const hasBlocking = findings.some((finding) => {
     if (!isRecord(finding)) {
       invalid = true;
@@ -42,13 +45,17 @@ function getReviewerFindingsStatus(envelope: ProtocolEnvelope): {
       invalid = true;
       return false;
     }
+    if (severity === "P2") {
+      hasP2 = true;
+    }
     return severity === "P0" || severity === "P1";
   });
 
   return {
     missing: false,
     invalid,
-    hasBlocking
+    hasBlocking,
+    hasP2
   };
 }
 
@@ -128,6 +135,10 @@ export function validateConvergencePolicy(
     } else if (findingsStatus.hasBlocking) {
       errors.push(
         "Convergence blocked: previous reviewer PASS still contains open P0/P1 findings."
+      );
+    } else if (input.currentRound <= 3 && findingsStatus.hasP2) {
+      errors.push(
+        "Convergence blocked through round 3 when the last reviewer PASS contains P2 findings. Continue iterations and converge from round 4 or later."
       );
     }
   }

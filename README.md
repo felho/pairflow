@@ -457,7 +457,10 @@ The reviewer can only call `converged` when specific conditions are met:
 2. At least 2 rounds of implementer↔reviewer exchange must have happened
 3. The reviewer's last `PASS` must declare findings explicitly (`--finding` or `--no-findings`)
 4. The reviewer's last review must not contain P0/P1 severity findings
-5. No unanswered `HUMAN_QUESTION` may be pending
+5. Round-sensitive P2 gate:
+   - Round 2-3: convergence is blocked if the last reviewer `PASS` contains P2 findings
+   - Round 4+: convergence is allowed again (P0/P1 block still applies)
+6. No unanswered `HUMAN_QUESTION` may be pending
 
 This prevents premature convergence — the agents must actually iterate.
 

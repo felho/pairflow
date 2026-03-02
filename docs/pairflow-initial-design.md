@@ -107,9 +107,12 @@ Each loop round:
 
 Convergence criteria (MVP):
 1. Two consecutive review passes with no open `P0/P1`.
-2. Test command set for bubble completed (or explicitly marked "not available").
-3. Explanation pack generated (what changed, why, risks, manual test plan).
-4. No unresolved human questions.
+2. Round-sensitive `P2` gate on convergence:
+   - round 2-3: convergence blocked if the last reviewer pass contains `P2`
+   - round 4+: convergence allowed again (`P0/P1` block still applies)
+3. Test command set for bubble completed (or explicitly marked "not available").
+4. Explanation pack generated (what changed, why, risks, manual test plan).
+5. No unresolved human questions.
 
 Convergence command policy:
 1. `pairflow converged` may be invoked only by the agent currently assigned as reviewer for that round.
@@ -138,8 +141,11 @@ Required checks:
 
 PRD/PRV convergence criteria:
 1. Two consecutive review passes with no open `P0/P1`.
-2. All required document checks passed or explicitly waived by user.
-3. Human comprehension gate approved.
+2. Round-sensitive `P2` gate on convergence:
+   - round 2-3: convergence blocked if the last reviewer pass contains `P2`
+   - round 4+: convergence allowed again (`P0/P1` block still applies)
+3. All required document checks passed or explicitly waived by user.
+4. Human comprehension gate approved.
 
 ## Agent Message Protocol (Text Envelope)
 Transport format: NDJSON (`one JSON object per line`).
