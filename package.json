@@ -27,6 +27,10 @@
     "test": "bash ./scripts/run-evidence.sh .pairflow/evidence/test.log \"pnpm test\" -- bash -lc \"pnpm codegen:reviewer-ontology && pnpm exec vitest run\"",
     "test:watch": "vitest",
     "check": "pnpm codegen:reviewer-ontology && pnpm lint && pnpm typecheck && pnpm test",
+    "ui:start": "bash ./scripts/ui-server.sh start",
+    "ui:stop": "bash ./scripts/ui-server.sh stop",
+    "ui:restart": "bash ./scripts/ui-server.sh restart",
+    "ui:status": "bash ./scripts/ui-server.sh status",
     "dev:ui": "lsof -ti :4173 | xargs kill 2>/dev/null; pnpm build && pairflow ui"
   },
   "devDependencies": {

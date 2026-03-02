@@ -486,6 +486,17 @@ pairflow ui --repo /path/to/myapp --repo /path/to/other
 pairflow ui --host 0.0.0.0 --port 8080
 ```
 
+Managed local UI server commands (tmux-based, recommended for daily use):
+
+```bash
+pnpm ui:start
+pnpm ui:status
+pnpm ui:restart
+pnpm ui:stop
+```
+
+These helpers run the UI in a dedicated tmux session (`pf-ui-server` by default), which is more stable than ad-hoc background processes.
+
 The dashboard shows:
 - **Bubble cards** on a draggable canvas — one card per bubble with state, round count, and active agent
 - **Expandable detail view** — click a card to see its timeline, findings, and available actions
