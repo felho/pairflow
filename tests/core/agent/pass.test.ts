@@ -917,6 +917,79 @@ describe("emitPassFromWorkspace", () => {
     ]);
   });
 
+  it("retries reviewer delivery once with longer warm-up when first delivery is unconfirmed", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_26",
+      task: "Implement pass flow"
+    });
+
+    const deliveryCalls: Array<{
+      round: number;
+      initialDelayMs?: number;
+      deliveryAttempts?: number;
+    }> = [];
+
+    let callCount = 0;
+    const result = await emitPassFromWorkspace(
+      {
+        summary: "Implementer handoff with retry",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:05:00.000Z")
+      },
+      {
+        refreshReviewerContext: () =>
+          Promise.resolve({
+            refreshed: true
+          }),
+        emitTmuxDeliveryNotification: (input: {
+          envelope: { round: number };
+          initialDelayMs?: number;
+          deliveryAttempts?: number;
+        }) => {
+          deliveryCalls.push({
+            round: input.envelope.round,
+            ...(input.initialDelayMs !== undefined
+              ? { initialDelayMs: input.initialDelayMs }
+              : {}),
+            ...(input.deliveryAttempts !== undefined
+              ? { deliveryAttempts: input.deliveryAttempts }
+              : {})
+          });
+          callCount += 1;
+          if (callCount === 1) {
+            return Promise.resolve({
+              delivered: false,
+              message: "unconfirmed",
+              reason: "delivery_unconfirmed"
+            });
+          }
+          return Promise.resolve({
+            delivered: true,
+            message: "ok"
+          });
+        }
+      }
+    );
+
+    expect(deliveryCalls).toEqual([
+      {
+        round: 1,
+        initialDelayMs: 1500
+      },
+      {
+        round: 1,
+        initialDelayMs: 5000,
+        deliveryAttempts: 6
+      }
+    ]);
+    expect(result.delivery).toEqual({
+      delivered: true,
+      retried: true
+    });
+  });
+
   it("writes reviewer test-evidence verification artifact for implementer PASS", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({

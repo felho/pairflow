@@ -118,6 +118,11 @@ async function handlePassCommand(args: string[]): Promise<number> {
   process.stdout.write(
     `PASS recorded for ${result.bubbleId}: ${result.envelope.id} -> ${result.envelope.recipient}\n`
   );
+  if (result.delivery !== undefined && !result.delivery.delivered) {
+    process.stderr.write(
+      `Warning: handoff delivery to active pane was not confirmed (reason: ${result.delivery.reason ?? "unknown"}${result.delivery.retried ? ", retried" : ""}). Use \`pairflow bubble status --id ${result.bubbleId}\` and \`pairflow bubble resume --id ${result.bubbleId}\` if the next agent did not start.\n`
+    );
+  }
   return 0;
 }
 

@@ -41,6 +41,11 @@ export interface EmitPassResult {
   envelope: ProtocolEnvelope;
   state: BubbleStateSnapshot;
   inferredIntent: boolean;
+  delivery?: {
+    delivered: boolean;
+    reason?: string;
+    retried: boolean;
+  };
 }
 
 export interface EmitPassDependencies {
@@ -430,8 +435,7 @@ export async function emitPassFromWorkspace(
 
   const emitDelivery =
     dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
-  // Optional UX signal; never block protocol/state progression on notification failure.
-  void emitDelivery({
+  const deliveryInput = {
     bubbleId: resolved.bubbleId,
     bubbleConfig: resolved.bubbleConfig,
     sessionsPath: resolved.bubblePaths.sessionsPath,
@@ -441,7 +445,26 @@ export async function emitPassFromWorkspace(
     ...(mapped.envelope.refs[0] !== undefined
       ? { messageRef: mapped.envelope.refs[0] }
       : {})
-  });
+  };
+  let deliveryResult = await emitDelivery(deliveryInput).catch(() => undefined);
+  let deliveryRetried = false;
+  const shouldRetryDelivery =
+    handoff.senderRole === "implementer"
+    && handoff.recipientRole === "reviewer"
+    && (
+      deliveryResult?.reason === "delivery_unconfirmed"
+      || deliveryResult?.reason === "tmux_send_failed"
+    );
+  if (shouldRetryDelivery) {
+    deliveryRetried = true;
+    deliveryResult = await emitDelivery({
+      ...deliveryInput,
+      // Respawned reviewer CLIs can take a few seconds to become input-ready.
+      // Retry once with a longer warm-up window before giving up.
+      initialDelayMs: 5000,
+      deliveryAttempts: 6
+    }).catch(() => deliveryResult);
+  }
 
   await emitBubbleLifecycleEventBestEffort({
     repoPath: resolved.repoPath,
@@ -479,7 +502,18 @@ export async function emitPassFromWorkspace(
     sequence: mapped.sequence,
     envelope: mapped.envelope,
     state: written.state,
-    inferredIntent
+    inferredIntent,
+    ...(deliveryResult !== undefined
+      ? {
+          delivery: {
+            delivered: deliveryResult.delivered,
+            ...(deliveryResult.reason !== undefined
+              ? { reason: deliveryResult.reason }
+              : {}),
+            retried: deliveryRetried
+          }
+        }
+      : {})
   };
 }
 
