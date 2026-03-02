@@ -226,13 +226,18 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
                             : "Task created. Awaiting start."}
       </div>
 
-      <div className="mt-auto flex items-center gap-2 font-mono text-[9px] text-[#555]">
-        <span className="truncate">{repoLabel(props.bubble.repoPath)}</span>
+      <div className="mt-auto flex items-center gap-2 font-mono text-[9px]">
+        <span
+          className="max-w-[96px] truncate rounded-[9px] border border-blue-500 bg-[#171717] px-2 py-0.5 text-blue-500"
+          title={props.bubble.repoPath}
+        >
+          {repoLabel(props.bubble.repoPath)}
+        </span>
         <span className="rounded-md border border-[#333] bg-[#1a1a1a] px-1.5 py-px">
           R{props.bubble.round}
         </span>
         {props.bubble.activeAgent !== null ? (
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1 text-[#555]">
             <span
               className={cn(
                 "inline-block h-1 w-1 rounded-full animate-soft-pulse",

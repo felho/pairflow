@@ -162,8 +162,14 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
           <span className="text-[14px] font-semibold tracking-wide text-white">
             {props.bubble.bubbleId}
           </span>
-          <span className="font-mono text-[10px] text-[#555]">
-            {repoLabel(props.bubble.repoPath)} · R{props.bubble.round}
+          <span
+            className="max-w-[130px] truncate rounded-[9px] border border-blue-500 bg-[#171717] px-2 py-0.5 font-mono text-[10px] text-blue-500"
+            title={props.bubble.repoPath}
+          >
+            {repoLabel(props.bubble.repoPath)}
+          </span>
+          <span className="rounded-md border border-[#333] bg-[#1a1a1a] px-1.5 py-px font-mono text-[10px] text-[#666]">
+            R{props.bubble.round}
           </span>
         </div>
         <div className="flex items-center gap-2">
