@@ -158,10 +158,10 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
           document.addEventListener("mouseup", nextState.onUp);
         }}
       >
+        <span className="text-[14px] font-semibold tracking-wide text-white">
+          {props.bubble.bubbleId}
+        </span>
         <div className="flex items-center gap-2">
-          <span className="text-[14px] font-semibold tracking-wide text-white">
-            {props.bubble.bubbleId}
-          </span>
           <span
             className="max-w-[130px] truncate rounded-[9px] border border-blue-500 bg-[#171717] px-2 py-0.5 font-mono text-[10px] text-blue-500"
             title={props.bubble.repoPath}
@@ -171,8 +171,6 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
           <span className="rounded-md border border-[#333] bg-[#1a1a1a] px-1.5 py-px font-mono text-[10px] text-[#666]">
             R{props.bubble.round}
           </span>
-        </div>
-        <div className="flex items-center gap-2">
           <span className="flex items-center gap-1.5">
             <span className={cn("inline-block h-[7px] w-[7px] rounded-full", visual.led)} />
             <span className={cn("text-[10px] font-medium tracking-wide", visual.stateText)}>
