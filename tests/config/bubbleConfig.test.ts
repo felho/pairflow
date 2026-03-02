@@ -413,6 +413,32 @@ typecheck = "pnpm typecheck"
     expect(parsed.open_command).toBe("cursor --reuse-window {{worktree_path}}");
   });
 
+  it("rejects empty or whitespace open_command when explicitly set", () => {
+    const result = validateBubbleConfig({
+      id: "b_test_open_command_invalid",
+      repo_path: "/tmp/repo",
+      base_branch: "main",
+      bubble_branch: "bubble/b_test_open_command_invalid",
+      open_command: "   ",
+      agents: {
+        implementer: "codex",
+        reviewer: "claude"
+      },
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors.some((error) => error.path === "open_command")).toBe(
+      true
+    );
+  });
+
   it("rejects invalid bubble_instance_id format", () => {
     const result = validateBubbleConfig({
       id: "b_test_01",
