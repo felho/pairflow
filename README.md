@@ -182,14 +182,14 @@ This opens a tmux session with 3 panes. The agents can now start working.
 
 ## How we use Pairflow in practice (agent + UI first)
 
-Pairflow is used primarily through:
+### Pairflow is used primarily through
 
 1. Your coding agent (for example, Codex or Claude Code), which runs Pairflow CLI commands in the background
 2. The web UI (operational overview + human decision points)
 
 The CLI is still the protocol/API surface, but day-to-day usage is typically agent-driven. In current usage, bubble creation/start is usually initiated by the coding agent via CLI, while the UI is used mainly for visibility and control.
 
-Typical practical workflow:
+### Typical practical workflow
 
 1. **Discuss intent with your coding agent**
 - You describe a bug/feature/plan change in chat.
@@ -219,7 +219,14 @@ Typical practical workflow:
 7. **Use the UI + agent for anomaly handling**
 - If something looks off (for example unusually high round count or repetitive findings), ask your coding agent to inspect transcript/log quality and recommend action (targeted rework, stronger instruction, or controlled convergence guidance).
 
-Common real-world use cases:
+### One practical setup (how I use Pairflow)
+
+- I usually run one VSCode window per active project and operate coding agents in integrated terminals.
+- VSCode Source Control (Git) view provides a fast overview of active branches and changed files while bubbles run.
+- This complements Pairflow: the UI shows lifecycle/protocol state, while Source Control shows actual code/doc deltas.
+- During approval review, you can inspect diffs directly, ask clarifying questions, and issue immediate `request-rework` if output quality or intent alignment is off.
+
+### Common real-world use cases
 
 1. **Parallel delivery across repositories**
 - Keep multiple bubbles active at once, while the UI provides one consolidated view of states and next required human action.
