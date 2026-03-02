@@ -195,16 +195,16 @@ Typical practical workflow:
 - You describe a bug/feature/plan change in chat.
 - The agent helps shape scope and expected outcome.
 
-2. **Create or refine a task file**
-- For substantial changes, ask the agent to prepare a task file first.
-- Run a dedicated docs-only task-file refinement bubble to improve clarity/acceptance criteria before implementation.
+2. **Choose the entry mode by change size**
+- For small/trivial changes, start an implementation bubble directly with inline task text.
+- For substantial changes, first create a task file and run a dedicated docs-only task-file refinement bubble.
 
-3. **Review the refinement with your preferred agent**
+3. **If you used task-file refinement, review that artifact first**
 - Ask for deep review mode and detailed explanation.
 - Request rework if needed, then re-review until the task file is solid.
 
 4. **Run implementation bubble**
-- Start a new bubble from the refined task file (or inline task text for smaller fixes).
+- Start a new implementation bubble from the refined task file (or from inline task text for the trivial path).
 - Implementer/reviewer loop runs in tmux-backed worktree context.
 
 5. **Human-gated review and rework cycle**
