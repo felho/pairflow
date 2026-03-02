@@ -30,6 +30,7 @@ describe("bubble config schema", () => {
     expect(config.reviewer_context_mode).toBe("fresh");
     expect(config.watchdog_timeout_minutes).toBe(10);
     expect(config.work_mode).toBe("worktree");
+    expect(config.attach_launcher).toBe("auto");
     expect(config.notifications.enabled).toBe(true);
     expect(config.local_overlay?.enabled).toBe(true);
     expect(config.local_overlay?.mode).toBe("symlink");
@@ -52,6 +53,7 @@ describe("bubble config schema", () => {
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
       commit_requires_approval: true,
+      attach_launcher: "auto",
       agents: {
         implementer: "codex",
         reviewer: "claude"
@@ -119,6 +121,7 @@ describe("bubble config schema", () => {
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
       commit_requires_approval: true,
+      attach_launcher: "auto",
       agents: {
         implementer: "codex",
         reviewer: "claude"
@@ -154,6 +157,7 @@ describe("bubble config schema", () => {
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
       commit_requires_approval: true,
+      attach_launcher: "auto",
       agents: {
         implementer: "codex",
         reviewer: "claude"
@@ -179,6 +183,87 @@ describe("bubble config schema", () => {
     expect(result.errors.some((error) => error.path === "local_overlay.mode")).toBe(true);
   });
 
+  it("accepts supported attach launcher values", () => {
+    const supportedValues = [
+      "auto",
+      "warp",
+      "iterm2",
+      "terminal",
+      "ghostty",
+      "copy"
+    ];
+
+    for (const value of supportedValues) {
+      const result = validateBubbleConfig({
+        id: "b_test_01",
+        repo_path: "/tmp/repo",
+        base_branch: "main",
+        bubble_branch: "bubble/b_test_01",
+        work_mode: "worktree",
+        quality_mode: "strict",
+        review_artifact_type: "auto",
+        reviewer_context_mode: "fresh",
+        watchdog_timeout_minutes: 5,
+        max_rounds: 8,
+        commit_requires_approval: true,
+        attach_launcher: value,
+        agents: {
+          implementer: "codex",
+          reviewer: "claude"
+        },
+        commands: {
+          test: "pnpm test",
+          typecheck: "pnpm typecheck"
+        },
+        notifications: {
+          enabled: true
+        }
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) {
+        continue;
+      }
+      expect(result.value.attach_launcher).toBe(value);
+    }
+  });
+
+  it("rejects unsupported attach launcher values", () => {
+    const result = validateBubbleConfig({
+      id: "b_test_01",
+      repo_path: "/tmp/repo",
+      base_branch: "main",
+      bubble_branch: "bubble/b_test_01",
+      work_mode: "worktree",
+      quality_mode: "strict",
+      review_artifact_type: "auto",
+      reviewer_context_mode: "fresh",
+      watchdog_timeout_minutes: 5,
+      max_rounds: 8,
+      commit_requires_approval: true,
+      attach_launcher: "wezterm",
+      agents: {
+        implementer: "codex",
+        reviewer: "claude"
+      },
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      },
+      notifications: {
+        enabled: true
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors.some((error) => error.path === "attach_launcher")).toBe(
+      true
+    );
+  });
+
   it("rejects unsafe local overlay entries", () => {
     const result = validateBubbleConfig({
       id: "b_test_01",
@@ -192,6 +277,7 @@ describe("bubble config schema", () => {
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
       commit_requires_approval: true,
+      attach_launcher: "auto",
       agents: {
         implementer: "codex",
         reviewer: "claude"
@@ -276,6 +362,7 @@ describe("bubble config schema", () => {
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
       commit_requires_approval: true,
+      attach_launcher: "ghostty",
       open_command: "cursor {{worktree_path}}",
       agents: {
         implementer: "codex",
@@ -301,8 +388,29 @@ describe("bubble config schema", () => {
       "bi_00m8f7w14k_2f03e8b8e4f24d17ac12"
     );
     expect(reparsed.commands.typecheck).toBe("pnpm typecheck");
+    expect(reparsed.attach_launcher).toBe("ghostty");
     expect(reparsed.local_overlay?.mode).toBe("copy");
     expect(reparsed.local_overlay?.entries).toEqual([".claude", ".env.local"]);
+  });
+
+  it("parses explicit open_command from TOML input", () => {
+    const parsed = parseBubbleConfigToml(`
+id = "b_test_open_command"
+repo_path = "/tmp/repo"
+base_branch = "main"
+bubble_branch = "bubble/b_test_open_command"
+open_command = "cursor --reuse-window {{worktree_path}}"
+
+[agents]
+implementer = "codex"
+reviewer = "claude"
+
+[commands]
+test = "pnpm test"
+typecheck = "pnpm typecheck"
+`);
+
+    expect(parsed.open_command).toBe("cursor --reuse-window {{worktree_path}}");
   });
 
   it("rejects invalid bubble_instance_id format", () => {
@@ -319,6 +427,7 @@ describe("bubble config schema", () => {
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
       commit_requires_approval: true,
+      attach_launcher: "auto",
       agents: {
         implementer: "codex",
         reviewer: "claude"
@@ -354,6 +463,7 @@ describe("bubble config schema", () => {
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
       commit_requires_approval: true,
+      attach_launcher: "auto",
       agents: {
         implementer: "codex",
         reviewer: "claude"

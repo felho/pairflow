@@ -9,6 +9,7 @@ import {
   type ValidationResult
 } from "../core/validation.js";
 import {
+  DEFAULT_ATTACH_LAUNCHER,
   DEFAULT_COMMIT_REQUIRES_APPROVAL,
   DEFAULT_LOCAL_OVERLAY_ENABLED,
   DEFAULT_LOCAL_OVERLAY_ENTRIES,
@@ -22,6 +23,7 @@ import {
 } from "./defaults.js";
 import {
   isAgentName,
+  isAttachLauncher,
   isLocalOverlayMode,
   isQualityMode,
   isReviewArtifactType,
@@ -465,6 +467,14 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     });
   }
 
+  const attachLauncher = input.attach_launcher ?? DEFAULT_ATTACH_LAUNCHER;
+  if (!isAttachLauncher(attachLauncher)) {
+    errors.push({
+      path: "attach_launcher",
+      message: "Must be one of: auto, warp, iterm2, terminal, ghostty, copy"
+    });
+  }
+
   const openCommand = readString(input, "open_command", "open_command", errors, false);
 
   const agents = readObject(input, "agents", "agents", errors, true);
@@ -621,6 +631,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     watchdog_timeout_minutes: watchdogTimeoutMinutes as number,
     max_rounds: maxRounds as number,
     commit_requires_approval: commitRequiresApproval as boolean,
+    attach_launcher: attachLauncher as BubbleConfig["attach_launcher"],
     agents: {
       implementer: implementer as "codex" | "claude",
       reviewer: reviewer as "codex" | "claude"
@@ -718,6 +729,7 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
     `watchdog_timeout_minutes = ${config.watchdog_timeout_minutes}`,
     `max_rounds = ${config.max_rounds}`,
     `commit_requires_approval = ${config.commit_requires_approval}`,
+    `attach_launcher = ${tomlString(config.attach_launcher)}`,
     config.open_command
       ? `open_command = ${tomlString(config.open_command)}`
       : undefined,

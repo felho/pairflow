@@ -15,7 +15,7 @@ import { resumeBubble } from "../bubble/resumeBubble.js";
 import { commitBubble } from "../bubble/commitBubble.js";
 import { mergeBubble } from "../bubble/mergeBubble.js";
 import { openBubble } from "../bubble/openBubble.js";
-import { attachBubble } from "../bubble/attachBubble.js";
+import { attachBubble, AttachBubbleError } from "../bubble/attachBubble.js";
 import { stopBubble } from "../bubble/stopBubble.js";
 import { deleteBubble } from "../bubble/deleteBubble.js";
 import type { BubbleLifecycleState } from "../../types/bubble.js";
@@ -146,13 +146,17 @@ function conflict(message: string, details?: Record<string, unknown>): UiApiErro
   };
 }
 
-function internalError(message: string): UiApiError {
+function internalError(
+  message: string,
+  details?: Record<string, unknown>
+): UiApiError {
   return {
     status: 500,
     body: {
       error: {
         code: "internal_error",
-        message
+        message,
+        ...(details !== undefined ? { details } : {})
       }
     }
   };
@@ -516,6 +520,31 @@ export function createUiRouter(input: CreateUiRouterInput): UiRouter {
         currentState: currentBubble?.state ?? parsedState ?? null,
         ...(currentBubble !== null ? { bubble: currentBubble } : {})
       });
+    }
+
+    if (
+      inputValue.error instanceof AttachBubbleError &&
+      inputValue.error.launcher !== undefined &&
+      inputValue.error.failureClass !== undefined
+    ) {
+      const details = {
+        bubbleId: inputValue.bubbleId,
+        repoPath: inputValue.repoPath,
+        launcher: inputValue.error.launcher,
+        failureClass: inputValue.error.failureClass,
+        ...(inputValue.error.stdoutExcerpt !== undefined
+          ? { stdoutExcerpt: inputValue.error.stdoutExcerpt }
+          : {}),
+        ...(inputValue.error.stderrExcerpt !== undefined
+          ? { stderrExcerpt: inputValue.error.stderrExcerpt }
+          : {})
+      };
+
+      if (inputValue.error.failureClass === "launcher_unavailable") {
+        return badRequest(message, details);
+      }
+
+      return internalError(message, details);
     }
 
     return internalError(message);

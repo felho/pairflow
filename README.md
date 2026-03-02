@@ -85,7 +85,7 @@ Optional but recommended:
 
 - `cursor` (default editor for `bubble open`)
 - `codex` and `claude` binaries in PATH (for tmux agent panes)
-- [Warp](https://www.warp.dev/) terminal (for `bubble attach` — opens tmux session in a Warp tab)
+- One of these macOS terminals for `bubble attach`: [iTerm2](https://iterm2.com/), [Ghostty](https://ghostty.org/), [Warp](https://www.warp.dev/), or Terminal.app (`auto` mode falls back to `copy` when no GUI launcher is available)
 
 ## Installation
 
@@ -318,7 +318,7 @@ pairflow bubble inbox --id feat_login --repo .
 # Open the bubble's worktree in your editor
 pairflow bubble open --id feat_login --repo .
 
-# Attach to the bubble's tmux session in Warp terminal
+# Attach to the bubble's tmux session (uses configured launcher)
 pairflow bubble attach --id feat_login --repo .
 ```
 
@@ -513,7 +513,7 @@ Any non-final state ─→ CANCELLED (via bubble stop)
 | `bubble delete --id <id> [--repo <path>] [--force]` | Delete a bubble; without `--force` it reports external artifacts and exits with confirmation-required status |
 | `bubble resume --id <id> [--repo <path>]` | Resume from WAITING_HUMAN with default reply |
 | `bubble open --id <id> [--repo <path>]` | Open worktree in editor |
-| `bubble attach --id <id> [--repo <path>]` | Attach to bubble's tmux session in Warp terminal |
+| `bubble attach --id <id> [--repo <path>]` | Attach to bubble's tmux session via configured macOS launcher (`auto|warp|iterm2|terminal|ghostty|copy`) |
 | `bubble status --id <id> [--repo <path>] [--json]` | Show current state |
 | `bubble list [--repo <path>] [--json]` | List all bubbles |
 | `bubble inbox --id <id> [--repo <path>] [--json]` | Show pending human actions |
@@ -629,6 +629,20 @@ Rules:
 - Missing source entries are skipped silently.
 - Existing files in worktree are never overwritten.
 - Entries must be normalized relative paths (no absolute path, no `.`/`..` traversal).
+
+### Attach launcher selection (macOS)
+
+`bubble attach` uses `attach_launcher` from `bubble.toml`:
+
+```toml
+attach_launcher = "auto" # auto|warp|iterm2|terminal|ghostty|copy
+```
+
+Behavior:
+
+- `auto` probes GUI launchers in deterministic order: `iterm2 -> ghostty -> warp -> terminal`, then falls back to `copy`.
+- Explicit GUI launchers (`warp|iterm2|terminal|ghostty`) do not silently switch to another GUI launcher.
+- `copy` does not open a terminal app; it returns the tmux attach command.
 
 ## Advanced internals
 

@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createUiRouter, resolveStaticAssetPath } from "../../../src/core/ui/router.js";
+import { AttachBubbleError } from "../../../src/core/bubble/attachBubble.js";
 import type { UiEventsBroker } from "../../../src/core/ui/events.js";
 import type { UiRepoScope } from "../../../src/core/ui/repoScope.js";
 
@@ -373,6 +374,144 @@ describe("createUiRouter delete action", () => {
       expect(payload.result.deleted).toBe(false);
       expect(payload.result.requiresConfirmation).toBe(true);
       expect(refreshNow).not.toHaveBeenCalled();
+    } finally {
+      await server.close();
+    }
+  });
+});
+
+describe("createUiRouter attach action", () => {
+  it("maps launcher_unavailable attach errors to HTTP 400 with launcher details", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-attach-repo";
+    const attachBubble = vi.fn(() =>
+      Promise.reject(
+        new AttachBubbleError("Attach launcher 'iterm2' is unavailable on this host.", {
+          launcher: "iterm2",
+          failureClass: "launcher_unavailable",
+          stderrExcerpt: "Unable to find application named \"iTerm\""
+        })
+      )
+    );
+
+    const scope: UiRepoScope = {
+      repos: [repoPath],
+      has: (value: string) => Promise.resolve(value === repoPath)
+    };
+    const events: UiEventsBroker = {
+      subscribe: () => () => undefined,
+      getSnapshot: () => ({
+        id: 1,
+        ts: "2026-02-25T00:00:00.000Z",
+        type: "snapshot",
+        repos: [],
+        bubbles: []
+      }),
+      refreshNow: () => Promise.resolve(undefined),
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
+    };
+
+    const router = createUiRouter({
+      repoScope: scope,
+      events,
+      dependencies: {
+        attachBubble
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-attach-01/attach?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST"
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(400);
+      expect(payload.error.code).toBe("bad_request");
+      expect(payload.error.details).toMatchObject({
+        bubbleId: "b-router-attach-01",
+        repoPath,
+        launcher: "iterm2",
+        failureClass: "launcher_unavailable",
+        stderrExcerpt: "Unable to find application named \"iTerm\""
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("maps launcher_launch_failed attach errors to HTTP 500 with launcher details", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-attach-repo";
+    const attachBubble = vi.fn(() =>
+      Promise.reject(
+        new AttachBubbleError("Attach launcher 'warp' failed with launcher_launch_failed.", {
+          launcher: "warp",
+          failureClass: "launcher_launch_failed",
+          stderrExcerpt: "URI launch failed"
+        })
+      )
+    );
+
+    const scope: UiRepoScope = {
+      repos: [repoPath],
+      has: (value: string) => Promise.resolve(value === repoPath)
+    };
+    const events: UiEventsBroker = {
+      subscribe: () => () => undefined,
+      getSnapshot: () => ({
+        id: 1,
+        ts: "2026-02-25T00:00:00.000Z",
+        type: "snapshot",
+        repos: [],
+        bubbles: []
+      }),
+      refreshNow: () => Promise.resolve(undefined),
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
+    };
+
+    const router = createUiRouter({
+      repoScope: scope,
+      events,
+      dependencies: {
+        attachBubble
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-attach-02/attach?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST"
+        }
+      );
+      const payload = (await response.json()) as {
+        error: {
+          code: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      expect(response.status).toBe(500);
+      expect(payload.error.code).toBe("internal_error");
+      expect(payload.error.details).toMatchObject({
+        bubbleId: "b-router-attach-02",
+        repoPath,
+        launcher: "warp",
+        failureClass: "launcher_launch_failed",
+        stderrExcerpt: "URI launch failed"
+      });
     } finally {
       await server.close();
     }
