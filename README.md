@@ -131,7 +131,9 @@ Optional but recommended:
 - `codex` and `claude` binaries in PATH (for tmux agent panes)
 - One of these macOS terminals for `bubble attach`: [iTerm2](https://iterm2.com/), [Ghostty](https://ghostty.org/), [Warp](https://www.warp.dev/), or Terminal.app (`auto` mode falls back to `copy` when no GUI launcher is available)
 
-## Installation
+## Installation (Core CLI + optional UsePairflow skill)
+
+### 1) Install core Pairflow CLI
 
 ```bash
 git clone https://github.com/felho/pairflow.git && cd pairflow
@@ -140,7 +142,9 @@ git clone https://github.com/felho/pairflow.git && cd pairflow
 
 The installer checks prerequisites, installs dependencies, builds, links `pairflow` globally, and runs a smoke test. See [INSTALL.md](./INSTALL.md) for details and manual fallback steps.
 
-Recommended (if you operate Pairflow through Claude Code):
+### 2) (Optional) Install the UsePairflow skill for your coding agent
+
+Recommended if you operate Pairflow through Claude Code:
 
 1. Open this file in your coding-agent chat:
    - `.claude/skills/UsePairflow/INSTALL.md`
