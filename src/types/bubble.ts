@@ -87,7 +87,7 @@ export interface BubbleConfig {
   watchdog_timeout_minutes: number;
   max_rounds: number;
   commit_requires_approval: boolean;
-  attach_launcher: AttachLauncher;
+  attach_launcher?: AttachLauncher;
   open_command?: string;
   agents: BubbleAgentsConfig;
   commands: BubbleCommandsConfig;

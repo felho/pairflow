@@ -45,7 +45,7 @@ Priority order:
 3. In-browser git diff viewer.
 4. Auth/multi-user access (localhost single operator only).
 5. Mobile-focused UI.
-6. Global auto-discovery config such as `~/.pairflow/config.toml` in V1.
+6. Broad global auto-discovery config in V1 (except `attach_launcher`, which is now supported via `~/.pairflow/config.toml`).
 7. Cross-platform automated "attach pane in external terminal" launcher in V1.
 8. Bubble creation from UI (`bubble create`) in V1.
 

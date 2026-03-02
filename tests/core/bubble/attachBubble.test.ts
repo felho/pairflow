@@ -4,6 +4,7 @@ import { getBubblePaths } from "../../../src/core/bubble/paths.js";
 import {
   attachBubble
 } from "../../../src/core/bubble/attachBubble.js";
+import { SchemaValidationError } from "../../../src/core/validation.js";
 import type {
   AttachBubbleError,
   LauncherAvailabilityInput
@@ -27,7 +28,9 @@ function createResolvedBubbleFixture(input: {
     watchdog_timeout_minutes: 5,
     max_rounds: 8,
     commit_requires_approval: true,
-    attach_launcher: input.attachLauncher ?? "auto",
+    ...(input.attachLauncher !== undefined
+      ? { attach_launcher: input.attachLauncher }
+      : {}),
     agents: {
       implementer: "codex",
       reviewer: "claude"
@@ -591,6 +594,112 @@ describe("attachBubble", () => {
     expect(executeAttachCommand).not.toHaveBeenCalled();
   });
 
+  it("prefers bubble attach launcher override over global config", async () => {
+    const resolved = createResolvedBubbleFixture({
+      bubbleId: "b_attach_bubble_override",
+      repoPath: "/tmp/pairflow-attach-bubble-override",
+      attachLauncher: "terminal"
+    });
+
+    const loadPairflowGlobalConfig = vi.fn(() =>
+      Promise.resolve({ attach_launcher: "copy" as const })
+    );
+    const result = await attachBubble(
+      {
+        bubbleId: resolved.bubbleId,
+        repoPath: resolved.repoPath
+      },
+      {
+        resolveBubbleById: () => Promise.resolve(resolved),
+        checkTmuxSessionExists: () => Promise.resolve(true),
+        checkLauncherAvailability: createAvailabilityChecker(
+          { terminal: true },
+          []
+        ),
+        executeAttachCommand: () =>
+          Promise.resolve({ exitCode: 0, stdout: "", stderr: "" }),
+        loadPairflowGlobalConfig
+      }
+    );
+
+    expect(result.launcherRequested).toBe("terminal");
+    expect(result.launcherUsed).toBe("terminal");
+    expect(loadPairflowGlobalConfig).not.toHaveBeenCalled();
+  });
+
+  it("uses global attach launcher when bubble override is not set", async () => {
+    const resolved = createResolvedBubbleFixture({
+      bubbleId: "b_attach_global_fallback",
+      repoPath: "/tmp/pairflow-attach-global-fallback"
+    });
+
+    const checkLauncherAvailability = vi.fn(() => Promise.resolve(true));
+    const executeAttachCommand = vi.fn(() =>
+      Promise.resolve({ exitCode: 0, stdout: "", stderr: "" })
+    );
+
+    const result = await attachBubble(
+      {
+        bubbleId: resolved.bubbleId,
+        repoPath: resolved.repoPath
+      },
+      {
+        resolveBubbleById: () => Promise.resolve(resolved),
+        checkTmuxSessionExists: () => Promise.resolve(true),
+        checkLauncherAvailability,
+        executeAttachCommand,
+        loadPairflowGlobalConfig: () =>
+          Promise.resolve({ attach_launcher: "copy" })
+      }
+    );
+
+    expect(result.launcherRequested).toBe("copy");
+    expect(result.launcherUsed).toBe("copy");
+    expect(result.attachCommand).toBe(
+      "tmux attach -t 'pf-b_attach_global_fallback'"
+    );
+    expect(checkLauncherAvailability).not.toHaveBeenCalled();
+    expect(executeAttachCommand).not.toHaveBeenCalled();
+  });
+
+  it("falls back to auto when neither bubble nor global attach launcher is set", async () => {
+    const resolved = createResolvedBubbleFixture({
+      bubbleId: "b_attach_auto_default",
+      repoPath: "/tmp/pairflow-attach-auto-default"
+    });
+
+    const availabilityCalls: LauncherAvailabilityInput["launcher"][] = [];
+    const executeAttachCommand = vi.fn(() =>
+      Promise.resolve({ exitCode: 0, stdout: "", stderr: "" })
+    );
+
+    const result = await attachBubble(
+      {
+        bubbleId: resolved.bubbleId,
+        repoPath: resolved.repoPath
+      },
+      {
+        resolveBubbleById: () => Promise.resolve(resolved),
+        checkTmuxSessionExists: () => Promise.resolve(true),
+        checkLauncherAvailability: createAvailabilityChecker(
+          {
+            iterm2: false,
+            ghostty: false,
+            warp: false,
+            terminal: false
+          },
+          availabilityCalls
+        ),
+        executeAttachCommand,
+        loadPairflowGlobalConfig: () => Promise.resolve({})
+      }
+    );
+
+    expect(result.launcherRequested).toBe("auto");
+    expect(result.launcherUsed).toBe("copy");
+    expect(availabilityCalls).toEqual(["iterm2", "ghostty", "warp", "terminal"]);
+  });
+
   it("auto evaluates candidates in deterministic order and picks first success", async () => {
     const resolved = createResolvedBubbleFixture({
       bubbleId: "b_attach_auto_order",
@@ -828,19 +937,48 @@ describe("attachBubble", () => {
     expect(executeAttachCommand).toHaveBeenCalledTimes(1);
   });
 
-  it("rejects when resolved bubble config has invalid attach_launcher at runtime", async () => {
+  it("falls back to auto when global config is invalid SchemaValidationError", async () => {
     const resolved = createResolvedBubbleFixture({
-      bubbleId: "b_attach_invalid_launcher",
-      repoPath: "/tmp/pairflow-attach-invalid-launcher",
-      attachLauncher: "auto"
+      bubbleId: "b_attach_global_config_invalid_schema",
+      repoPath: "/tmp/pairflow-attach-global-config-invalid-schema"
     });
-    const invalidResolved = {
-      ...resolved,
-      bubbleConfig: {
-        ...resolved.bubbleConfig,
-        attach_launcher: "wezterm"
-      } as unknown as BubbleConfig
-    };
+
+    const availabilityCalls: LauncherAvailabilityInput["launcher"][] = [];
+    const result = await attachBubble(
+      {
+        bubbleId: resolved.bubbleId,
+        repoPath: resolved.repoPath
+      },
+      {
+        resolveBubbleById: () => Promise.resolve(resolved),
+        checkTmuxSessionExists: () => Promise.resolve(true),
+        checkLauncherAvailability: createAvailabilityChecker(
+          {
+            iterm2: false,
+            ghostty: false,
+            warp: false,
+            terminal: false
+          },
+          availabilityCalls
+        ),
+        loadPairflowGlobalConfig: () => {
+          throw new SchemaValidationError("Invalid Pairflow global config", [
+            { path: "attach_launcher", message: "invalid" }
+          ]);
+        }
+      }
+    );
+
+    expect(result.launcherRequested).toBe("auto");
+    expect(result.launcherUsed).toBe("copy");
+    expect(availabilityCalls).toEqual(["iterm2", "ghostty", "warp", "terminal"]);
+  });
+
+  it("wraps non-schema global config load failures as AttachBubbleError", async () => {
+    const resolved = createResolvedBubbleFixture({
+      bubbleId: "b_attach_global_config_error",
+      repoPath: "/tmp/pairflow-attach-global-config-error"
+    });
 
     await expect(
       attachBubble(
@@ -849,11 +987,14 @@ describe("attachBubble", () => {
           repoPath: resolved.repoPath
         },
         {
-          resolveBubbleById: () => Promise.resolve(invalidResolved),
-          checkTmuxSessionExists: () => Promise.resolve(true)
+          resolveBubbleById: () => Promise.resolve(resolved),
+          checkTmuxSessionExists: () => Promise.resolve(true),
+          loadPairflowGlobalConfig: () => {
+            throw new Error("Invalid Pairflow global config");
+          }
         }
       )
-    ).rejects.toThrow(/Invalid attach_launcher value/u);
+    ).rejects.toThrow(/Failed to load global Pairflow config/u);
   });
 
   it("rejects when tmux session does not exist", async () => {

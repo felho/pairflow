@@ -19,7 +19,6 @@ function createConfig(overrides: Partial<BubbleConfig> = {}): BubbleConfig {
     watchdog_timeout_minutes: 5,
     max_rounds: 8,
     commit_requires_approval: true,
-    attach_launcher: "auto",
     agents: {
       implementer: "codex",
       reviewer: "claude"
@@ -37,8 +36,7 @@ function createConfig(overrides: Partial<BubbleConfig> = {}): BubbleConfig {
 
   return {
     ...base,
-    ...overrides,
-    attach_launcher: overrides.attach_launcher ?? base.attach_launcher
+    ...overrides
   };
 }
 
