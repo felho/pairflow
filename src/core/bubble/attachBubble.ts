@@ -415,12 +415,14 @@ function buildItermLaunchScript(shellAttachCommand: string): string {
     "try",
     `  tell application "${primaryName}"`,
     "    activate",
-    `    create window with default profile command "${escapedAttachCommand}"`,
+    "    set newWindow to (create window with default profile)",
+    `    tell current session of newWindow to write text "${escapedAttachCommand}"`,
     "  end tell",
     "on error",
     `  tell application "${fallbackName}"`,
     "    activate",
-    `    create window with default profile command "${escapedAttachCommand}"`,
+    "    set newWindow to (create window with default profile)",
+    `    tell current session of newWindow to write text "${escapedAttachCommand}"`,
     "  end tell",
     "end try"
   ].join("\n");
