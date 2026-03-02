@@ -409,22 +409,14 @@ function buildCheckLauncherAvailabilityDefault(
 
 function buildItermLaunchScript(shellAttachCommand: string): string {
   const escapedAttachCommand = escapeAppleScriptString(shellAttachCommand);
-  const [primaryName, fallbackName] = itermApplicationNames;
+  const scriptApplicationName = "iTerm";
 
   return [
-    "try",
-    `  tell application "${primaryName}"`,
-    "    activate",
-    "    set newWindow to (create window with default profile)",
-    `    tell current session of newWindow to write text "${escapedAttachCommand}"`,
-    "  end tell",
-    "on error",
-    `  tell application "${fallbackName}"`,
-    "    activate",
-    "    set newWindow to (create window with default profile)",
-    `    tell current session of newWindow to write text "${escapedAttachCommand}"`,
-    "  end tell",
-    "end try"
+    `tell application "${scriptApplicationName}"`,
+    "  activate",
+    "  create window with default profile",
+    `  tell current session of current window to write text "${escapedAttachCommand}"`,
+    "end tell"
   ].join("\n");
 }
 

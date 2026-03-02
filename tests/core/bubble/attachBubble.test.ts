@@ -225,11 +225,7 @@ describe("attachBubble", () => {
     if (launchScriptCommand === undefined) {
       return;
     }
-    expect(launchScriptCommand).toContain('tell application "iTerm2"');
     expect(launchScriptCommand).toContain('tell application "iTerm"');
-    expect(launchScriptCommand.indexOf('tell application "iTerm2"')).toBeLessThan(
-      launchScriptCommand.indexOf('tell application "iTerm"')
-    );
   });
 
   it("uses iTerm2 launcher when explicitly requested", async () => {
@@ -270,7 +266,7 @@ describe("attachBubble", () => {
     expect(result.launcherUsed).toBe("iterm2");
     expect(availabilityCalls).toEqual(["iterm2"]);
     expect(executeAttachCommand).toHaveBeenCalledTimes(1);
-    expect(executedCommand).toContain('tell application "iTerm2"');
+    expect(executedCommand).toContain('tell application "iTerm"');
   });
 
   it("uses Terminal launcher when explicitly requested", async () => {
@@ -685,7 +681,7 @@ describe("attachBubble", () => {
 
     const availabilityCalls: LauncherAvailabilityInput["launcher"][] = [];
     const executeAttachCommand = vi.fn((input: { command: string }) => {
-      if (input.command.includes('tell application "iTerm2"')) {
+      if (input.command.includes('tell application "iTerm"')) {
         return Promise.resolve({
           exitCode: 1,
           stdout: "",
