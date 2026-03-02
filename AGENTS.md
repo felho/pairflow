@@ -1,14 +1,3 @@
-# Pairflow Agent Guidelines
-
-## Language
-
-In the Codex or Claude Code chat I will use both in English (works better with dictation app) and Hungarian. If not stated otherwise, ALWAYS answer in Hungarian.
-
-## Scope
-
-- These rules apply only to this repository (`pairflow`).
-- Focus on building the Pairflow orchestrator tool.
-
 ## Priorities
 
 1. Output quality and robustness first.
@@ -37,13 +26,6 @@ In the Codex or Claude Code chat I will use both in English (works better with d
 - Run lint, typecheck, and tests relevant to changed code.
 - If any check is skipped, state it explicitly in the summary.
 
-## Evidence Handoff (Implementer)
-
-- Run validation through the evidence-producing scripts (`pnpm lint`, `pnpm typecheck`, `pnpm test`, or `pnpm check`) so logs are written under `.pairflow/evidence/`.
-- Implementer `pairflow pass` handoff must include available evidence logs via `--ref`.
-- If only a subset of validation commands ran, attach refs for what ran and explicitly state what was intentionally not executed.
-- Missing expected evidence logs should be treated as incomplete validation packaging.
-
 ## Session Close
 
 - Add a short progress update to the repository progress note (if present) or commit message context.
@@ -52,51 +34,51 @@ In the Codex or Claude Code chat I will use both in English (works better with d
 
 ## Bubble Workflow Guardrails
 
-Ezek kötelező működési szabályok bubble életciklusnál, hogy elkerüljük a rebase/merge instabil állapotokat.
+These are mandatory operating rules for bubble lifecycle handling to avoid rebase/merge instability.
 
-1. **Bubble indítás előtti pre-flight**
-   - `main` branchen indulj, tiszta worktree-vel (`git status` clean).
-   - Nem lehet folyamatban merge/rebase/cherry-pick.
-   - Ha a bubble input egy task fájl, akkor azt indítás előtt commitolni kell `main`-re, vagy kizárólag bubble branchen létrehozni. Ugyanazon path ne maradjon untracked `main`-en.
+1. **Pre-flight before bubble start**
+   - Start from the `main` branch with a clean worktree (`git status` clean).
+   - No merge/rebase/cherry-pick operation may be in progress.
+   - If the bubble input is a task file, commit it to `main` before starting, or create it only on the bubble branch. Do not leave the same path untracked on `main`.
 
-2. **Párhuzamos módosítás tiltás**
-   - Bubble futása közben `main`-en ne módosítsd ugyanazokat a fájlokat, amiket a bubble branch is érint.
-   - Ha mégis szükséges, előbb egyeztetés és explicit merge stratégia kell.
+2. **No parallel conflicting edits**
+   - While a bubble is running, do not modify on `main` the same files that are touched by the bubble branch.
+   - If this is unavoidable, align first and use an explicit merge strategy.
 
-3. **Kötelező zárási sorrend**
+3. **Mandatory close order**
    - `bubble approve` -> `bubble commit` -> `bubble merge` -> push.
-   - A merge után kötelező ellenőrzés: branch tiszta, nincs rebase/merge state.
+   - Mandatory post-merge check: clean branch and no rebase/merge state.
 
-4. **Pull/Push biztonsági policy (repo-local)**
-   - Alapértelmezett: `pull.rebase=false`, `branch.main.rebase=false`, `pull.ff=only`.
-   - Automatikus pull-rebase flow kerülendő, mert bubble merge commitoknál ismétlődő konfliktust okozhat.
+4. **Pull/Push safety policy (repo-local)**
+   - Defaults: `pull.rebase=false`, `branch.main.rebase=false`, `pull.ff=only`.
+   - Avoid automatic pull-rebase flow because it can cause repeated conflicts with bubble merge commits.
 
-5. **Incidens recovery protokoll**
-   - Ha `git status` szerint rebase fut: állj meg, ne resolve-olj reflexből.
-   - Először állapotdiagnosztika (`git status`, `git reflog`, `git ls-files -u`), majd userrel egyeztetett döntés.
-   - Alapértelmezett javaslat: indokolatlan/árva rebase esetén `git rebase --abort`, majd tiszta állapotból folytatás.
+5. **Incident recovery protocol**
+   - If `git status` shows an active rebase: stop and do not resolve reflexively.
+   - First run state diagnostics (`git status`, `git reflog`, `git ls-files -u`), then decide with the user.
+   - Default recommendation: for unjustified/orphaned rebase, run `git rebase --abort`, then continue from a clean state.
 
 ---
 
 ## Blocker & Escalation Policy
 
-1. **Escalation-first kritikus parancsoknál**
-   - Ha egy szükséges parancs sandbox/permission miatt elbukik, az első lépés az escalation kérés.
-   - Nem szabad csendben alternatív megoldásra váltani user döntés nélkül.
+1. **Escalation-first on critical commands**
+   - If a required command fails because of sandbox/permission constraints, the first step is to request escalation.
+   - Do not silently switch to an alternative without user decision.
 
 2. **No silent downgrade**
-   - Ha a fallback stack- vagy minőségváltást jelent (pl. TypeScript teszt helyett JavaScript, más toolchain), meg kell állni és jóváhagyást kérni.
-   - Automatikus fallback csak akkor mehet, ha ekvivalens minőséget és viselkedést ad.
+   - If fallback implies stack or quality change (for example JavaScript instead of TypeScript tests, different toolchain), stop and request approval.
+   - Automatic fallback is allowed only when quality and behavior are equivalent.
 
 3. **Git history safety gate**
-   - `git reset`, `rebase`, `cherry-pick`, `revert` csak explicit user jóváhagyással.
-   - History-átírás előtt kötelező biztonsági pont (pl. reflog referencia / rövid mentési terv) és utána állapotellenőrzés.
+   - `git reset`, `rebase`, `cherry-pick`, `revert` only with explicit user approval.
+   - Before history rewrite, include a mandatory safety checkpoint (for example reflog reference / short backup plan), then verify state afterward.
 
 4. **Pre-commit scope check**
-   - Commit előtt kötelező ellenőrizni a stage-elt fájllistát.
-   - Ha a stage-ben a kért scope-on kívüli fájl is van, commit előtt egyeztetni kell.
+   - Before commit, always verify the staged file list.
+   - If staged files include anything outside requested scope, align before committing.
 
 5. **Blocker decision checkpoint**
-   - Elakadásnál röviden fel kell kínálni a döntést:
-     - A) escalation és az eredeti megközelítés folytatása (ajánlott)
-     - B) fallback, explicit tradeoff leírással
+   - When blocked, briefly offer the decision:
+     - A) escalation and continue the original approach (recommended)
+     - B) fallback with explicit tradeoff description
