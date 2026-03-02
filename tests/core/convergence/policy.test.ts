@@ -174,6 +174,76 @@ describe("validateConvergencePolicy", () => {
     ).toBe(true);
   });
 
+  it("rejects convergence when previous reviewer PASS summary reports positive findings counts but findings payload is empty", () => {
+    const result = validateConvergencePolicy({
+      currentRound: 2,
+      reviewer: "claude",
+      implementer: "codex",
+      roundRoleHistory: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T11:59:00.000Z"
+        },
+        {
+          round: 2,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:01:00.000Z"
+        }
+      ],
+      transcript: [
+        createPassEnvelope({
+          payload: {
+            summary: "R1 reviewer PASS. 6 findings (0 P0, 0 P1, 5 P2, 1 P3).",
+            findings: []
+          }
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(
+      result.errors.some((error) =>
+        error.includes("summary reports positive finding counts")
+      )
+    ).toBe(true);
+  });
+
+  it("allows convergence when previous reviewer PASS explicitly reports zero findings with empty findings payload", () => {
+    const result = validateConvergencePolicy({
+      currentRound: 2,
+      reviewer: "claude",
+      implementer: "codex",
+      roundRoleHistory: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T11:59:00.000Z"
+        },
+        {
+          round: 2,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:01:00.000Z"
+        }
+      ],
+      transcript: [
+        createPassEnvelope({
+          payload: {
+            summary: "R1 reviewer PASS. 0 findings (0 P0, 0 P1, 0 P2, 0 P3).",
+            findings: []
+          }
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
   it("blocks convergence in round 3 when previous reviewer PASS has P2 findings", () => {
     const result = validateConvergencePolicy({
       currentRound: 3,

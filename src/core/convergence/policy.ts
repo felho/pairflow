@@ -19,6 +19,7 @@ export interface ConvergencePolicyResult {
 function getReviewerFindingsStatus(envelope: ProtocolEnvelope): {
   missing: boolean;
   invalid: boolean;
+  findingCount: number;
   hasBlocking: boolean;
   hasP2: boolean;
 } {
@@ -27,6 +28,7 @@ function getReviewerFindingsStatus(envelope: ProtocolEnvelope): {
     return {
       missing: true,
       invalid: false,
+      findingCount: 0,
       hasBlocking: false,
       hasP2: false
     };
@@ -54,8 +56,64 @@ function getReviewerFindingsStatus(envelope: ProtocolEnvelope): {
   return {
     missing: false,
     invalid,
+    findingCount: findings.length,
     hasBlocking,
     hasP2
+  };
+}
+
+function parseSummarySeverityCounts(summary: string | undefined): {
+  hasFindingsWord: boolean;
+  p0: number;
+  p1: number;
+  p2: number;
+  p3: number;
+  hasAnyPositiveCount: boolean;
+} {
+  if (summary === undefined) {
+    return {
+      hasFindingsWord: false,
+      p0: 0,
+      p1: 0,
+      p2: 0,
+      p3: 0,
+      hasAnyPositiveCount: false
+    };
+  }
+
+  const counts = {
+    p0: 0,
+    p1: 0,
+    p2: 0,
+    p3: 0
+  };
+  const pattern = /(\d+)\s*(?:[x×]\s*)?P([0-3])\b/giu;
+  for (const match of summary.matchAll(pattern)) {
+    const rawCount = Number.parseInt(match[1] ?? "", 10);
+    if (!Number.isFinite(rawCount)) {
+      continue;
+    }
+    const normalizedCount = Math.max(0, rawCount);
+    const severity = match[2];
+    if (severity === "0") {
+      counts.p0 += normalizedCount;
+    } else if (severity === "1") {
+      counts.p1 += normalizedCount;
+    } else if (severity === "2") {
+      counts.p2 += normalizedCount;
+    } else if (severity === "3") {
+      counts.p3 += normalizedCount;
+    }
+  }
+
+  return {
+    hasFindingsWord: /\bfindings?\b/iu.test(summary),
+    p0: counts.p0,
+    p1: counts.p1,
+    p2: counts.p2,
+    p3: counts.p3,
+    hasAnyPositiveCount:
+      counts.p0 + counts.p1 + counts.p2 + counts.p3 > 0
   };
 }
 
@@ -124,6 +182,9 @@ export function validateConvergencePolicy(
     );
   } else {
     const findingsStatus = getReviewerFindingsStatus(previousReviewerPass);
+    const summaryCounts = parseSummarySeverityCounts(
+      previousReviewerPass.payload.summary
+    );
     if (findingsStatus.missing) {
       errors.push(
         "Convergence requires previous reviewer PASS to declare findings explicitly (use --finding or --no-findings)."
@@ -131,6 +192,14 @@ export function validateConvergencePolicy(
     } else if (findingsStatus.invalid) {
       errors.push(
         "Convergence blocked: previous reviewer PASS has invalid findings payload."
+      );
+    } else if (
+      findingsStatus.findingCount === 0 &&
+      summaryCounts.hasFindingsWord &&
+      summaryCounts.hasAnyPositiveCount
+    ) {
+      errors.push(
+        "Convergence blocked: previous reviewer PASS summary reports positive finding counts but payload.findings is empty. Use structured --finding entries instead of summary-only findings."
       );
     } else if (findingsStatus.hasBlocking) {
       errors.push(
