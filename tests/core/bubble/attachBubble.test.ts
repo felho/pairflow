@@ -312,6 +312,11 @@ describe("attachBubble", () => {
     expect(availabilityCalls).toEqual(["terminal"]);
     expect(executeAttachCommand).toHaveBeenCalledTimes(1);
     expect(executedCommand).toContain('tell application "Terminal"');
+    expect(executedCommand.indexOf("do script")).toBeGreaterThan(-1);
+    expect(executedCommand.indexOf("activate")).toBeGreaterThan(-1);
+    expect(executedCommand.indexOf("do script")).toBeLessThan(
+      executedCommand.indexOf("activate")
+    );
   });
 
   it("escapes AppleScript control characters in launcher command payloads", async () => {

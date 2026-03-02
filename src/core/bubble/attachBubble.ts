@@ -478,8 +478,8 @@ async function launchWithTerminal(context: AttachLaunchContext): Promise<void> {
   );
   const script = [
     'tell application "Terminal"',
-    "  activate",
     `  do script "${escapeAppleScriptString(shellAttachCommand)}"`,
+    "  activate",
     "end tell"
   ].join("\n");
 
