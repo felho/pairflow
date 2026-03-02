@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { getBubblePaths } from "../../../src/core/bubble/paths.js";
 import { openBubble } from "../../../src/core/bubble/openBubble.js";
@@ -21,6 +21,7 @@ function createResolvedBubbleFixture(input: {
     watchdog_timeout_minutes: 5,
     max_rounds: 8,
     commit_requires_approval: true,
+    attach_launcher: "auto",
     ...(input.openCommand !== undefined ? { open_command: input.openCommand } : {}),
     agents: {
       implementer: "codex",
@@ -117,6 +118,10 @@ describe("openBubble", () => {
       repoPath: "/tmp/pairflow-open-03"
     });
 
+    const assertWorktreeExists = vi.fn(() =>
+      Promise.reject(new Error("worktree missing"))
+    );
+
     await expect(
       openBubble(
         {
@@ -124,10 +129,14 @@ describe("openBubble", () => {
           repoPath: resolved.repoPath
         },
         {
-          resolveBubbleById: () => Promise.resolve(resolved)
+          resolveBubbleById: () => Promise.resolve(resolved),
+          assertWorktreeExists
         }
       )
     ).rejects.toThrow(/worktree/i);
+    expect(assertWorktreeExists).toHaveBeenCalledWith(
+      resolved.bubblePaths.worktreePath
+    );
   });
 
   it("surfaces open command failure details", async () => {

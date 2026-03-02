@@ -19,6 +19,7 @@ const baseConfig: BubbleConfig = {
   watchdog_timeout_minutes: 5,
   max_rounds: 8,
   commit_requires_approval: true,
+  attach_launcher: "auto",
   agents: {
     implementer: "codex",
     reviewer: "claude"

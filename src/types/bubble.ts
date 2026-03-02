@@ -41,6 +41,17 @@ export const localOverlayModes = ["symlink", "copy"] as const;
 
 export type LocalOverlayMode = (typeof localOverlayModes)[number];
 
+export const attachLaunchers = [
+  "auto",
+  "warp",
+  "iterm2",
+  "terminal",
+  "ghostty",
+  "copy"
+] as const;
+
+export type AttachLauncher = (typeof attachLaunchers)[number];
+
 export interface BubbleAgentsConfig {
   implementer: AgentName;
   reviewer: AgentName;
@@ -76,6 +87,7 @@ export interface BubbleConfig {
   watchdog_timeout_minutes: number;
   max_rounds: number;
   commit_requires_approval: boolean;
+  attach_launcher: AttachLauncher;
   open_command?: string;
   agents: BubbleAgentsConfig;
   commands: BubbleCommandsConfig;
@@ -173,6 +185,13 @@ export function isLocalOverlayMode(value: unknown): value is LocalOverlayMode {
   return (
     typeof value === "string" &&
     (localOverlayModes as readonly string[]).includes(value)
+  );
+}
+
+export function isAttachLauncher(value: unknown): value is AttachLauncher {
+  return (
+    typeof value === "string" &&
+    (attachLaunchers as readonly string[]).includes(value)
   );
 }
 

@@ -7,7 +7,7 @@ import {
 import type { BubbleConfig } from "../../../src/types/bubble.js";
 
 function createConfig(overrides: Partial<BubbleConfig> = {}): BubbleConfig {
-  return {
+  const base: BubbleConfig = {
     id: "b_notify_01",
     repo_path: "/tmp/repo",
     base_branch: "main",
@@ -19,6 +19,7 @@ function createConfig(overrides: Partial<BubbleConfig> = {}): BubbleConfig {
     watchdog_timeout_minutes: 5,
     max_rounds: 8,
     commit_requires_approval: true,
+    attach_launcher: "auto",
     agents: {
       implementer: "codex",
       reviewer: "claude"
@@ -31,8 +32,13 @@ function createConfig(overrides: Partial<BubbleConfig> = {}): BubbleConfig {
       enabled: true,
       waiting_human_sound: "/tmp/sounds/waiting.aiff",
       converged_sound: "/tmp/sounds/converged.aiff"
-    },
-    ...overrides
+    }
+  };
+
+  return {
+    ...base,
+    ...overrides,
+    attach_launcher: overrides.attach_launcher ?? base.attach_launcher
   };
 }
 
