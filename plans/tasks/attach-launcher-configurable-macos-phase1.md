@@ -2,205 +2,189 @@
 
 ## Goal
 
-Make bubble attach behavior configurable and robust across commonly used macOS terminals, instead of being Warp-only.
+Make bubble attach behavior configurable across commonly used macOS terminals instead of Warp-only behavior.
 
 Primary outcomes:
-1. Users can choose a supported terminal launcher for `attach` behavior.
-2. `attach` works even when Warp is not installed.
-3. A deterministic fallback path exists when preferred launchers are unavailable.
-4. Behavior is explicit and testable (no hidden launcher assumptions).
+1. `attach` launcher is user-configurable.
+2. `attach` works when Warp is not installed.
+3. `auto` resolution and fallback behavior are deterministic.
+4. Acceptance criteria are binary and directly testable.
 
-## Problem Context
+## Hard Constraints
 
-Current `attach` implementation is Warp-specific (`warp://launch/...` + Warp launch YAML).
-This creates friction for teams using iTerm2, Ghostty, or Terminal.app.
+1. Keep this work macOS-only for Phase 1.
+2. Keep bubble lifecycle/state-machine behavior unchanged.
+3. Do not add Linux/Windows launcher support in this phase.
+4. Do not add arbitrary user-defined launcher scripts/templates in this phase.
 
-Observed issues:
-1. Warp is not universally installed.
-2. Different teams use different terminal defaults.
-3. A hard-coded launcher does not scale for broader adoption.
-
-## Research Summary (Feasibility)
-
-### 1. Warp
-- Supports launch configurations via YAML under `~/.warp/launch_configurations/`.
-- Supports URI launch `warp://launch/<config>`.
-- Feasible and already used by current implementation.
-
-### 2. iTerm2
-- Supports AppleScript automation for opening windows/tabs with explicit command.
-- Example capability: `create window with default profile command "..."`.
-- Feasible via `osascript`.
-
-### 3. Terminal.app
-- Supports AppleScript `do script "..."`.
-- Feasible via `osascript`.
-
-### 4. Ghostty
-- On macOS, the `ghostty` binary commonly acts as helper CLI; app launch should use app bundle launch semantics.
-- Feasible path is launching Ghostty.app with command args (best-effort; treat as experimental in Phase 1).
-
-## Scope Boundaries
+## Scope
 
 ### In Scope (Required)
 
-1. Add attach launcher configuration to bubble config schema:
+1. Add bubble config field:
    - `attach_launcher = "auto" | "warp" | "iterm2" | "terminal" | "ghostty" | "copy"`
-2. Implement launcher profile resolution in `attachBubble` with deterministic rules.
-3. Implement support profiles for:
-   - `warp` (existing behavior, retained),
-   - `iterm2`,
-   - `terminal`,
-   - `ghostty` (best-effort, explicit status),
-   - `copy` (no app launch; return/copy `tmux attach` command).
-4. Implement `auto` mode with explicit detection/fallback order.
-5. Keep current attach API route behavior working; no runtime state machine change.
-6. Update docs to remove Warp-only assumption and describe launcher selection.
-7. Add tests for config validation + launcher resolution + failure modes.
+2. Add launcher resolver behavior to `attachBubble`.
+3. Keep existing Warp attach path supported.
+4. Add profiles for `iterm2`, `terminal`, `ghostty` (best-effort), and `copy`.
+5. Define deterministic `auto` behavior with explicit fallback semantics.
+6. Keep attach API route compatibility while returning launcher metadata.
+7. Add tests for config validation, resolver behavior, and launcher failure paths.
+8. Update docs to remove Warp-only assumption.
 
-### In Scope (Optional, low risk)
+### In Scope (Optional)
 
-1. Add `attach_mode = "tab" | "window"` for launchers that support mode distinctions.
+1. `attach_mode = "tab" | "window"` for launchers that support it.
 
 ### Out of Scope
 
 1. Linux/Windows launcher support.
-2. Arbitrary user-defined launcher scripts/templates in Phase 1.
-3. Per-pane tmux attach (still session-level attach).
-4. UI redesign beyond exposing launcher result metadata.
+2. Per-user launcher command templates.
+3. Per-pane tmux attach behavior.
+4. UI redesign beyond launcher result metadata.
 
-## Proposed Config Model
+## Config Contract
 
-Add optional top-level bubble config fields:
-1. `attach_launcher` (default: `auto`)
-2. (optional) `attach_mode` (default: launcher-specific)
+1. Add optional bubble config field `attach_launcher`.
+2. Default: `attach_launcher = auto`.
+3. Supported values (exact): `auto`, `warp`, `iterm2`, `terminal`, `ghostty`, `copy`.
+4. Unknown values must fail validation (no silent coercion).
+5. Optional: `attach_mode` with launcher-specific applicability.
 
-If fields are omitted, behavior remains backward-compatible via `auto` resolution.
+## Supported Launcher Matrix (Phase 1)
 
-## Launcher Semantics
+| Launcher | Phase 1 status | Availability check | Launch method | Eligible in `auto` | Behavior when explicitly requested but unavailable |
+| --- | --- | --- | --- | --- | --- |
+| `warp` | Required | Warp app/URI launch capability detectable on host | Write Warp launch YAML + open `warp://launch/<config>` | Yes | Return explicit `launcher_unavailable` error (no switch to other GUI launcher) |
+| `iterm2` | Required | iTerm2 app/scriptability detectable on host | `osascript` opening window/tab with attach command | Yes | Return explicit `launcher_unavailable` error |
+| `terminal` | Required | Terminal.app/scriptability detectable on host | `osascript` + `do script` attach command | Yes | Return explicit `launcher_unavailable` error |
+| `ghostty` | Required (best-effort) | Ghostty app presence/invocation detectable on host | Launch Ghostty app with attach command args | Yes | Return explicit `launcher_unavailable` or launcher-specific failure |
+| `copy` | Required | Always available | Do not launch GUI; return/copy attach command | Auto terminal fallback target | N/A (always available) |
 
-### Common command objective
-All launchers must execute:
+## Common Attach Command Contract
+
+All launcher profiles must target this command:
 `tmux attach -t <session_name>`
 
-with repo path as working directory where applicable.
+When the launcher supports working directory control, use bubble repo path before attach.
 
-### Launcher profiles
-1. `warp`
-   - Write launch YAML under `~/.warp/launch_configurations/<session>.yaml`.
-   - Open with `warp://launch/<session>`.
+## Resolver Semantics (Normative)
 
-2. `iterm2`
-   - Use AppleScript to open window/tab and run:
-     `cd <repo> && tmux attach -t <session>`
+### Explicit Launcher (`warp`/`iterm2`/`terminal`/`ghostty`/`copy`)
 
-3. `terminal`
-   - Use AppleScript `do script` with:
-     `cd <repo>; tmux attach -t <session>`
+1. If launcher is `copy`, do not launch any app; return attach command metadata.
+2. For non-`copy` launchers:
+   - If availability check fails: return `launcher_unavailable` error naming requested launcher.
+   - If launch attempt fails after availability passed: return `launcher_launch_failed` error naming requested launcher.
+3. Explicit launcher mode must not silently switch to a different GUI launcher.
 
-4. `ghostty` (Phase 1 best-effort)
-   - Launch Ghostty.app with args to execute shell command that attaches tmux.
-   - If Ghostty launch invocation fails, surface explicit launcher-specific error.
+### `auto` Launcher
 
-5. `copy`
-   - Do not open terminal app.
-   - Return and/or copy to clipboard:
-     `tmux attach -t <session>`
+Deterministic candidate order:
+1. `iterm2`
+2. `ghostty`
+3. `warp`
+4. `terminal`
+5. `copy` (terminal fallback target)
 
-## Auto Resolution Rules (Required)
+Failure-class intent (for resolver behavior):
+1. `launcher_unavailable`: launcher is not present/not scriptable on host (or availability probe was stale and launch immediately confirms unavailable).
+2. `launcher_launch_failed`: launcher is available, launch was attempted, but attach launch command failed.
 
-When `attach_launcher = auto`:
-1. Detect available launchers from supported set.
-2. Apply deterministic order:
-   - `iterm2` -> `ghostty` -> `warp` -> `terminal` -> `copy`
-3. First available launcher is selected.
-4. If no GUI launcher is available, fallback to `copy`.
+Resolution rules:
+1. Evaluate candidates in listed order.
+2. If candidate availability check fails, continue to next candidate.
+3. For first available GUI candidate, attempt launch.
+4. If launch succeeds, return success with that launcher.
+5. If launch returns `launcher_unavailable`, treat candidate as unavailable and continue to next candidate.
+6. If launch fails with `launcher_launch_failed`, stop and return failure (no silent fallback).
+7. If no GUI candidate succeeds, return `copy` result with attach command.
 
-For explicit launcher (`warp`, `iterm2`, `terminal`, `ghostty`, `copy`):
-1. Do not silently switch to another GUI launcher.
-2. If unavailable/fails, return clear actionable error.
+## Response and Error Contract
 
-## Error/UX Contract
+Attach success payload must include:
+1. `bubbleId`
+2. `tmuxSessionName`
+3. `launcherRequested`
+4. `launcherUsed`
 
-1. Attach success response must include:
-   - `bubbleId`,
-   - `tmuxSessionName`,
-   - `launcherUsed`.
-2. For `copy` mode, response must include the generated attach command.
-3. Failure messages must name failing launcher and include raw stderr/stdout excerpt when available.
+Additional payload rules:
+1. If `launcherUsed = copy`, include `attachCommand`.
+2. No additional auto-resolution marker is required beyond `launcherRequested=auto` plus concrete `launcherUsed`.
+
+Error payload rules:
+1. Must include failing launcher id.
+2. Must include failure class (`launcher_unavailable` or `launcher_launch_failed`).
+3. Include stderr/stdout excerpt when available.
 
 ## Suggested Implementation Touchpoints
 
 1. `src/types/bubble.ts`
-   - Add attach launcher/mode config types.
+   - Add attach launcher config types.
 2. `src/config/bubbleConfig.ts`
-   - Parse/validate/render new config fields.
+   - Parse/validate new config fields and defaults.
 3. `src/core/bubble/createBubble.ts`
-   - Set default attach config values for newly created bubbles.
+   - Persist default attach config in new bubbles.
 4. `src/core/bubble/attachBubble.ts`
-   - Replace Warp-only logic with launcher resolver + profile executors.
+   - Add resolver + launcher profile executors.
 5. `src/core/ui/router.ts`
-   - Keep API compatibility; include launcher metadata in response.
+   - Preserve route compatibility and expose launcher metadata.
 6. Tests:
    - `tests/core/bubble/attachBubble.test.ts`
    - config tests under `tests/config/*`
 7. Docs:
-   - `README.md` attach usage/prerequisites.
+   - `README.md` attach behavior/prerequisites.
 
-## Acceptance Criteria (Binary, Testable)
+## Acceptance Criteria (Binary)
 
-1. Bubble config accepts and round-trips `attach_launcher` values: `auto|warp|iterm2|terminal|ghostty|copy`.
-2. `attach_launcher=warp` preserves existing Warp launch behavior.
-3. `attach_launcher=iterm2` launches iTerm2 command path (mock-verified).
-4. `attach_launcher=terminal` launches Terminal.app command path (mock-verified).
-5. `attach_launcher=ghostty` executes Ghostty launch path and returns explicit error when unavailable.
-6. `attach_launcher=copy` returns/copies `tmux attach -t <session>` without GUI launch.
-7. `attach_launcher=auto` follows documented deterministic order and chooses first available profile.
-8. Explicit launcher mode does not silently fallback to another GUI launcher.
-9. Response payload includes `launcherUsed`; in copy mode includes attach command.
-10. README no longer states Warp-only attach behavior.
+1. Config validation accepts exactly: `auto|warp|iterm2|terminal|ghostty|copy` for `attach_launcher`.
+2. Unknown `attach_launcher` values fail config validation.
+3. `attach_launcher=warp` uses Warp profile path and never calls other launcher profiles.
+4. `attach_launcher=iterm2` uses iTerm2 profile path and never calls other launcher profiles.
+5. `attach_launcher=terminal` uses Terminal profile path and never calls other launcher profiles.
+6. `attach_launcher=ghostty` uses Ghostty profile path and returns explicit failure class when unavailable/fails.
+7. `attach_launcher=copy` returns `attachCommand` and does not invoke GUI launch commands.
+8. `attach_launcher=auto` evaluates candidates in order: `iterm2 -> ghostty -> warp -> terminal -> copy`.
+9. In `auto`, unavailable candidates are skipped; the first successful candidate becomes `launcherUsed`.
+10. In `auto`, `launcher_launch_failed` for an available GUI candidate stops resolution and returns failure.
+11. Success payload includes `bubbleId`, `tmuxSessionName`, `launcherRequested`, `launcherUsed`.
+12. If `launcherUsed=copy`, success payload includes `attachCommand`.
+13. Error payload includes failing launcher id and failure class.
+14. README no longer describes attach as Warp-only.
 
 ## Test Mapping (Acceptance -> Test)
 
-1. AC1 -> config parse/render validation tests.
-2. AC2 -> attach unit test for Warp profile.
-3. AC3 -> attach unit test for iTerm2 profile.
-4. AC4 -> attach unit test for Terminal profile.
-5. AC5 -> attach unit test for Ghostty unavailable/failure behavior.
-6. AC6 -> attach unit test for copy mode response.
-7. AC7 -> auto resolver table-driven tests (availability matrix).
-8. AC8 -> explicit mode failure test (no implicit profile switch).
-9. AC9 -> API/unit assertion on result shape.
-10. AC10 -> docs snapshot/text assertion or manual docs review checklist.
+1. AC1-AC2 -> config parse/validation tests for accepted and rejected enum values.
+2. AC3-AC7 -> explicit launcher unit tests (one profile per test) with negative assertions for cross-profile fallback.
+3. AC8-AC10 -> table-driven auto resolver tests across availability/failure matrices.
+4. AC11-AC13 -> response/error shape assertions in attach unit/API tests.
+5. AC14 -> docs assertion or explicit docs review checklist item in PR.
 
 ## Validation Plan
 
-1. Unit tests for launcher resolver/profile builders.
-2. macOS smoke checks (manual):
-   - at least one successful attach path (`Terminal` or installed preferred terminal),
-   - one unavailable-launcher failure path,
-   - copy fallback path.
-3. Regression checks:
-   - no state/protocol behavior changes,
-   - existing bubble lifecycle unchanged.
+1. Unit tests for launcher resolver and profile executors.
+2. Manual macOS smoke checks:
+   - one successful GUI attach path,
+   - one `launcher_unavailable` failure path,
+   - one `copy` fallback path.
+3. Regression check: no bubble state/protocol behavior changes.
 
 ## Deliverables
 
 1. Configurable attach launcher in bubble config.
-2. Supported launcher profiles: Warp, iTerm2, Terminal, Ghostty(best-effort), Copy.
-3. Deterministic `auto` fallback behavior.
+2. Launcher profiles for Warp, iTerm2, Terminal, Ghostty(best-effort), and Copy.
+3. Deterministic `auto` selection/fallback behavior.
 4. Updated tests and docs.
 
-## References (Research)
+## References
 
 1. Warp Launch Configurations:
    - https://docs.warp.dev/features/sessions/launch-configurations
 2. Warp URI scheme (`warp://launch/...`):
    - https://docs.warp.dev/terminal/more-features/uri-scheme
-3. iTerm2 scripting / AppleScript command launch:
+3. iTerm2 scripting:
    - https://iterm2.com/3.0/documentation-scripting.html
    - https://iterm2.com/documentation-one-page.html
-4. Apple Terminal scripting basics:
+4. Apple Terminal scripting:
    - https://support.apple.com/guide/terminal/trml1003/mac
 5. Ghostty macOS helper CLI context:
    - https://github.com/ghostty-org/ghostty/discussions/5462
