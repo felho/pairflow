@@ -142,6 +142,10 @@ git clone https://github.com/felho/pairflow.git && cd pairflow
 
 The installer checks prerequisites, installs dependencies, builds, links `pairflow` globally, and runs a smoke test. See [INSTALL.md](./INSTALL.md) for details and manual fallback steps.
 
+After installation, you can configure both:
+- terminal launcher for `bubble attach` (see [Attach launcher selection (macOS)](#attach-launcher-selection-macos))
+- editor command for `bubble open` (see [Open command selection (`bubble open`)](#open-command-selection-bubble-open))
+
 ### 2) (Optional) Install the UsePairflow skill for your coding agent
 
 Recommended if you operate Pairflow through Claude Code:
