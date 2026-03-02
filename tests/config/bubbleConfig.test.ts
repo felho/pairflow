@@ -30,7 +30,7 @@ describe("bubble config schema", () => {
     expect(config.reviewer_context_mode).toBe("fresh");
     expect(config.watchdog_timeout_minutes).toBe(10);
     expect(config.work_mode).toBe("worktree");
-    expect(config.attach_launcher).toBe("auto");
+    expect(config.attach_launcher).toBeUndefined();
     expect(config.notifications.enabled).toBe(true);
     expect(config.local_overlay?.enabled).toBe(true);
     expect(config.local_overlay?.mode).toBe("symlink");
@@ -478,6 +478,40 @@ typecheck = "pnpm typecheck"
     });
 
     expect(rendered.includes("\n\n\n")).toBe(false);
+  });
+
+  it("omits attach_launcher when no bubble override is configured", () => {
+    const rendered = renderBubbleConfigToml({
+      id: "b_test_01",
+      repo_path: "/tmp/repo",
+      base_branch: "main",
+      bubble_branch: "bubble/b_test_01",
+      work_mode: "worktree",
+      quality_mode: "strict",
+      review_artifact_type: "auto",
+      reviewer_context_mode: "fresh",
+      watchdog_timeout_minutes: 5,
+      max_rounds: 8,
+      commit_requires_approval: true,
+      agents: {
+        implementer: "codex",
+        reviewer: "claude"
+      },
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      },
+      notifications: {
+        enabled: true
+      }
+    });
+
+    expect(rendered).not.toContain("attach_launcher =");
+    expect(rendered).toContain(
+      '# attach_launcher unset; attach uses ~/.pairflow/config.toml, then "auto"'
+    );
+    const reparsed = parseBubbleConfigToml(rendered);
+    expect(reparsed.attach_launcher).toBeUndefined();
   });
 });
 

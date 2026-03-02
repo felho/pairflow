@@ -585,6 +585,7 @@ Aliases: `pairflow agent pass/ask-human/converged` or `orchestra pass/ask-human/
   # Git worktree — agents work here, isolated from main repo
 
 ~/.pairflow/
+  config.toml               # Global Pairflow user config (optional)
   metrics/events/YYYY/MM/
     events-YYYY-MM.ndjson  # Global metrics event shards
   archive/
@@ -632,10 +633,22 @@ Rules:
 
 ### Attach launcher selection (macOS)
 
-`bubble attach` uses `attach_launcher` from `bubble.toml`:
+`bubble attach` resolves launcher with this priority:
+
+1. `attach_launcher` in bubble `bubble.toml` (only when explicitly set)
+2. `attach_launcher` in global `~/.pairflow/config.toml` (if set)
+3. `"auto"` default
+
+Bubble-level override in `bubble.toml`:
 
 ```toml
 attach_launcher = "auto" # auto|warp|iterm2|terminal|ghostty|copy
+```
+
+Global default in `~/.pairflow/config.toml`:
+
+```toml
+attach_launcher = "iterm2" # auto|warp|iterm2|terminal|ghostty|copy
 ```
 
 Behavior:

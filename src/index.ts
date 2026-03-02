@@ -248,6 +248,13 @@ export {
   validateBubbleConfig
 } from "./config/bubbleConfig.js";
 export {
+  assertValidPairflowGlobalConfig,
+  loadPairflowGlobalConfig,
+  parsePairflowGlobalConfigToml,
+  resolvePairflowGlobalConfigPath,
+  validatePairflowGlobalConfig
+} from "./config/pairflowConfig.js";
+export {
   SchemaValidationError,
   assertValidation,
   isInteger,

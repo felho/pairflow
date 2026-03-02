@@ -3,7 +3,13 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { spawn } from "node:child_process";
 
-import { isAttachLauncher, type AttachLauncher } from "../../types/bubble.js";
+import { SchemaValidationError } from "../../core/validation.js";
+import { DEFAULT_ATTACH_LAUNCHER } from "../../config/defaults.js";
+import {
+  loadPairflowGlobalConfig,
+  type PairflowGlobalConfig
+} from "../../config/pairflowConfig.js";
+import type { AttachLauncher } from "../../types/bubble.js";
 import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
 import { buildBubbleTmuxSessionName } from "../runtime/tmuxManager.js";
 import { shellQuote } from "../util/shellQuote.js";
@@ -76,6 +82,7 @@ export interface AttachBubbleDependencies {
   checkTmuxSessionExists?: TmuxSessionChecker;
   writeYamlFile?: (path: string, content: string) => Promise<void>;
   checkLauncherAvailability?: LauncherAvailabilityChecker;
+  loadPairflowGlobalConfig?: () => Promise<PairflowGlobalConfig>;
 }
 
 interface AttachBubbleErrorOptions {
@@ -645,6 +652,9 @@ export async function attachBubble(
   const checkLauncherAvailability =
     dependencies.checkLauncherAvailability ??
     buildCheckLauncherAvailabilityDefault(runCommand);
+  const loadGlobalConfig =
+    dependencies.loadPairflowGlobalConfig ??
+    loadPairflowGlobalConfig;
 
   const resolved = await resolveBubble({
     bubbleId: input.bubbleId,
@@ -660,14 +670,26 @@ export async function attachBubble(
     );
   }
 
-  const launcherCandidate: unknown = resolved.bubbleConfig.attach_launcher;
-  if (!isAttachLauncher(launcherCandidate)) {
-    throw new AttachBubbleError(
-      `Invalid attach_launcher value in bubble config for '${resolved.bubbleId}'.`
-    );
+  let globalAttachLauncher: AttachLauncher | undefined;
+  if (resolved.bubbleConfig.attach_launcher === undefined) {
+    try {
+      globalAttachLauncher = (await loadGlobalConfig()).attach_launcher;
+    } catch (error) {
+      if (error instanceof SchemaValidationError) {
+        globalAttachLauncher = undefined;
+      } else {
+        const reason = error instanceof Error ? error.message : String(error);
+        throw new AttachBubbleError(
+          `Failed to load global Pairflow config for '${resolved.bubbleId}': ${reason}`
+        );
+      }
+    }
   }
 
-  const launcherRequested = launcherCandidate;
+  const launcherRequested =
+    resolved.bubbleConfig.attach_launcher ??
+    globalAttachLauncher ??
+    DEFAULT_ATTACH_LAUNCHER;
   const attachCommand = buildAttachCommand(tmuxSessionName);
   const launcherResolution = await resolveAttachLauncher(
     launcherRequested,
