@@ -58,6 +58,7 @@ open_command = "code --reuse-window {{worktree_path}}"
 
 - `open_command` remains optional.
 - If omitted, global config can take effect.
+- If present, it must be a non-empty, non-whitespace string.
 
 ## Resolution Semantics (Normative)
 
@@ -83,6 +84,17 @@ Rendering semantics:
 
 Rationale: avoid silent editor-launch misconfiguration.
 
+## Risk Notes
+
+1. TOML/parser contract drift:
+   - `open_command` validation must remain aligned between parse + type surfaces to avoid silently accepting empty values.
+2. `createBubble` default-writing change:
+   - Stopping default persistence can affect assumptions in tests/fixtures that currently expect `open_command` always present.
+3. Error UX regression risk:
+   - New `OpenBubbleError` mapping for global config failures must preserve actionable messages (parse vs IO vs command exit) and avoid ambiguous failures.
+4. Built-in default command coupling:
+   - `cursor {{worktree_path}}` remains hardcoded in phase 1; centralization/refactor of default source is explicitly out of scope for this phase.
+
 ## Implementation Touchpoints
 
 1. `src/config/pairflowConfig.ts`
@@ -105,27 +117,54 @@ Rationale: avoid silent editor-launch misconfiguration.
    - `README.md` open behavior/config section update.
    - Mention precedence and global config example.
 
+## Recommended Implementation Sequence (TDD)
+
+1. Add/adjust config schema tests first (`pairflowConfig`) for global `open_command` validation and error cases.
+2. Implement global config schema changes in `src/config/pairflowConfig.ts`.
+3. Add `openBubble` precedence tests (bubble override -> global -> built-in default), then implement precedence/error mapping.
+4. Add `createBubble` persistence tests for explicit-vs-default behavior, then implement persistence change.
+5. Update docs last, after behavior/tests are stable.
+
 ## Acceptance Criteria (Binary)
+
+### Validation Criteria
 
 1. Global config validation accepts non-empty string `open_command`.
 2. Global config validation rejects empty/whitespace `open_command`.
-3. `openBubble` prefers bubble `open_command` over global and does not call global loader when bubble override exists.
-4. `openBubble` uses global `open_command` when bubble override is unset.
-5. `openBubble` falls back to built-in default when neither bubble nor global `open_command` is set.
-6. Placeholder interpolation works for globally provided command template.
-7. Placeholder-less global command appends quoted worktree path.
-8. Missing global config file (`ENOENT`) does not fail open; fallback chain continues.
-9. Invalid global config schema/parse causes explicit `OpenBubbleError`.
-10. Non-schema global config load error causes explicit `OpenBubbleError`.
-11. New bubbles do not persist `open_command` by default unless explicitly supplied.
-12. README reflects precedence and global config usage.
+3. Bubble `open_command` validation rejects empty/whitespace value when explicitly set in `bubble.toml`.
+
+### Precedence Criteria
+
+4. `openBubble` prefers bubble `open_command` over global `open_command` when both are present.
+5. `openBubble` uses global `open_command` when bubble override is unset.
+6. `openBubble` falls back to built-in default (`cursor {{worktree_path}}`) when neither bubble nor global `open_command` is set.
+
+### Rendering + Error Criteria
+
+7. Placeholder interpolation works for globally provided command template.
+8. Placeholder-less global command appends quoted worktree path.
+9. Missing global config file (`ENOENT`) does not fail open; fallback chain continues.
+10. Invalid global config schema/parse causes explicit `OpenBubbleError`.
+11. Non-schema global config load error causes explicit `OpenBubbleError`.
+
+### Persistence + Docs Criteria
+
+12. New bubbles do not persist `open_command` by default unless explicitly supplied.
+13. README reflects precedence and global config usage.
+
+### Optional Edge-Case ACs (Nice-to-have in this phase, required in follow-up if deferred)
+
+14. Non-existent executable in resolved open command returns explicit, actionable `OpenBubbleError`.
+15. Empty global config file is handled deterministically (either valid as empty config or explicit parse error, per parser contract), with test coverage.
 
 ## Test Mapping (Acceptance -> Test)
 
 1. AC1-AC2 -> `tests/config/pairflowConfig.test.ts`
-2. AC3-AC10 -> `tests/core/bubble/openBubble.test.ts`
-3. AC11 -> `tests/config/bubbleConfig.test.ts` and/or `tests/core/bubble/createBubble.test.ts`
-4. AC12 -> docs review checklist item in done package
+2. AC3 -> `tests/config/bubbleConfig.test.ts`
+3. AC4-AC11 -> `tests/core/bubble/openBubble.test.ts`
+4. AC12 -> `tests/core/bubble/createBubble.test.ts` (explicit assert: default not persisted unless input explicitly sets it)
+5. AC13 -> docs review checklist item in done package
+6. AC14-AC15 (optional) -> `tests/core/bubble/openBubble.test.ts` and/or `tests/config/pairflowConfig.test.ts`
 
 ## Validation Plan
 
@@ -133,7 +172,7 @@ Rationale: avoid silent editor-launch misconfiguration.
 2. Targeted tests:
    - `tests/config/pairflowConfig.test.ts`
    - `tests/core/bubble/openBubble.test.ts`
-   - any create/config tests touched by AC11
+   - any create/config tests touched by AC12
 3. Optional manual smoke:
    - set global `open_command` to `open -a "Visual Studio Code" {{worktree_path}}`
    - run `pairflow bubble open` on a bubble without bubble-level override
@@ -144,4 +183,3 @@ Rationale: avoid silent editor-launch misconfiguration.
 2. Deterministic open-command precedence logic.
 3. Updated tests proving precedence + error semantics.
 4. Updated documentation.
-
