@@ -137,6 +137,7 @@ describe("emitTmuxDeliveryNotification", () => {
     );
     expect(messageCall?.[4]).toContain("Phase 1 reviewer round flow (prompt-level only):");
     expect(messageCall?.[4]).toContain("`Parallel Scout Scan`");
+    expect(messageCall?.[4]).toContain("`required_scout_agents=2`");
     expect(messageCall?.[4]).toContain("`max_scout_agents=2`");
     expect(messageCall?.[4]).toContain("`max_scout_candidates_per_agent=8`");
     expect(messageCall?.[4]).toContain("`max_class_expansions_per_round=2`");

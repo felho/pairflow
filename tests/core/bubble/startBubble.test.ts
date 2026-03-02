@@ -197,6 +197,7 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain("Out-of-scope observations should be notes (`P3`)");
     expect(reviewerCommand).toContain("Phase 1 reviewer round flow (prompt-level only):");
     expect(reviewerCommand).toContain("`Parallel Scout Scan`");
+    expect(reviewerCommand).toContain("`required_scout_agents=2`");
     expect(reviewerCommand).toContain("`max_scout_agents=2`");
     expect(reviewerCommand).toContain("`max_scout_candidates_per_agent=8`");
     expect(reviewerCommand).toContain("`max_class_expansions_per_round=2`");
@@ -492,6 +493,7 @@ describe("startBubble", () => {
             "Phase 1 reviewer round flow (prompt-level only):"
           );
           expect(input.reviewerCommand).toContain("`Parallel Scout Scan`");
+          expect(input.reviewerCommand).toContain("`required_scout_agents=2`");
           expect(input.reviewerCommand).toContain("`max_scout_agents=2`");
           expect(input.reviewerCommand).toContain(
             "`max_scout_candidates_per_agent=8`"

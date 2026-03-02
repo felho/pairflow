@@ -1,7 +1,7 @@
 export function buildReviewerScoutExpansionWorkflowGuidance(): string {
   return [
     "Phase 1 reviewer round flow (prompt-level only):",
-    "1) `Parallel Scout Scan`: run up to `max_scout_agents=2` scout scans on the same local diff scope with explicit cap `max_scout_candidates_per_agent=8`; include only concrete location-backed findings, exclude style/preference-only notes.",
+    "1) `Parallel Scout Scan`: must run exactly `required_scout_agents=2` scout scans on the same local diff scope (`max_scout_agents=2` hard cap) with explicit cap `max_scout_candidates_per_agent=8`; include only concrete location-backed findings, exclude style/preference-only notes.",
     "2) `Deduplicate + Classify`: merge scout findings, deduplicate by root cause + overlapping location, then classify each finding as `one_off` or issue class (`race_condition`, `lifecycle_symmetry`, `timeout_cancellation`, `idempotency`, `concurrency_guard`, `other`). If class detection is uncertain, classify as `one_off`.",
     "3) `Issue-Class Expansion` (conditional): run only for issue-class findings, at most one expansion run per class per round, with `max_class_expansions_per_round=2` and explicit cap `max_expansion_siblings_per_class=5`. Expansion scope is limited to changed files + directly related call-sites; repo-wide expansion scans are forbidden.",
     "Stop rules: stop expansion immediately when no new concrete locations are found; also stop when class/round caps are reached.",
