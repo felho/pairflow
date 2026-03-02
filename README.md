@@ -22,6 +22,34 @@ Two concrete triggers led to building it:
 - Across multiple repositories and active agent sessions, it was easy to lose track of what was in progress.
 - Pairflow provides one visual control surface (CLI + web UI) to see active work, status, and next required human action.
 
+## Design Principles
+
+1. **Agent-first architecture**
+- The primary “user” of Pairflow is the coding agent itself.
+- Interfaces and workflows are designed so agents can drive the system directly and reliably.
+
+2. **Deterministic orchestration over non-deterministic agents**
+- Pairflow keeps lifecycle control deterministic (states, transitions, gates), while implementation/review remains LLM-driven.
+- The state machine is the primary source of truth: every lifecycle step is state-bound, with no implicit workflow jumps.
+- We prioritize robustness over raw speed: slower but consistent and recoverable flow is preferred over fragile automation.
+- Handoffs are explicit and evidence-aware (`summary` + `ref` attachments), so decisions stay inspectable instead of implicit.
+- The protocol trail (transcript, inbox, state, archive) is designed for post-hoc audit and recovery.
+
+3. **Use real coding agents, not reimplemented agent runtimes**
+- Pairflow does not build a replacement coding agent runtime on top of SDK abstractions.
+- It intentionally leverages real coding agents (for example, Claude Code and Codex) with their native strengths.
+- Pairflow is the orchestration layer around them.
+
+4. **Tmux as the execution substrate**
+- Runtime execution is tmux-based because it is both human- and agent-friendly.
+- Sessions/panes are easy to inspect, capture, and replay.
+- Manual intervention is always possible by attaching directly to running sessions.
+
+5. **Operator control and graceful intervention**
+- The system is not black-box automation.
+- The operator can take over quickly when ambiguity, edge cases, or failures happen.
+- Automation is there to reduce coordination overhead, not to remove human control.
+
 ## Start Here (New Developer Path)
 
 If you are new to Pairflow, read in this order:
