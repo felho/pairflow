@@ -23,6 +23,14 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
 
 - Always use absolute paths in generated commands.
 - Exactly one task source is expected (`TASK_FILE` or `TASK_TEXT`).
+- Intent guardrail (critical):
+  - If user intent is **plan/doc review or update** (e.g. "review this plan", "validate and update plan", "align task file"), default to inline `TASK_TEXT` that explicitly states:
+    - docs-only scope
+    - allowed paths (`@progress/*`, optional `@docs/*`)
+    - forbidden scope (no product code implementation)
+  - In this case, do **not** pass raw `--task-file` content as the only task definition.
+  - Include the referenced plan path inside `TASK_TEXT` as input material.
+- If intent is ambiguous between implementation vs plan/doc review, STOP and ask one explicit clarification question before create/start.
 - If both are missing, search `plans/tasks/` and ask the user which task file to use.
 - Default behavior: execute `create` and `start`.
 - Print-only behavior (`--print`): print commands but run nothing.
@@ -45,6 +53,7 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
 - If TASK_FILE is provided:
   - Resolve to absolute path.
   - Verify file exists.
+  - If intent is plan/doc review/update, transform to inline `TASK_TEXT` with explicit docs-only constraints and use that for bubble create.
 - If TASK_TEXT is provided:
   - Use inline text.
 - If neither TASK_FILE nor TASK_TEXT is provided:
