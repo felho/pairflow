@@ -1,0 +1,147 @@
+# Task: Global Editor Open Command Config with Bubble Override (Phase 1)
+
+## Goal
+
+Make `pairflow bubble open` editor launching configurable at global user level, while still allowing per-bubble override.
+
+Primary outcomes:
+1. Editor open behavior can be configured once globally.
+2. Bubble-level `open_command` can override global behavior when explicitly set.
+3. Resolution order is deterministic and documented.
+4. Behavior is fully test-covered with binary acceptance criteria.
+
+## Hard Constraints
+
+1. Keep this phase focused on open-command configuration only.
+2. Do not change lifecycle/state-machine behavior.
+3. Do not introduce project-specific editor integrations.
+4. **No backward compatibility requirement for old bubble metadata behavior** (old bubbles are typically deleted; migration shims are not required in this phase).
+
+## Scope
+
+### In Scope (Required)
+
+1. Extend global Pairflow config (`~/.pairflow/config.toml`) with optional:
+   - `open_command = "..."`
+2. Keep bubble config `open_command` as optional override.
+3. Implement deterministic open command resolution:
+   - bubble `open_command` (if set) -> global `open_command` (if set) -> built-in default.
+4. Preserve existing `{{worktree_path}}` interpolation behavior.
+5. Keep placeholder-less command behavior (append quoted worktree path).
+6. Update docs/README with precedence and examples.
+7. Add tests for precedence, validation, and failure paths.
+
+### Out of Scope
+
+1. Multi-platform editor profile matrix (iTerm/VSCode/etc.) similar to attach launcher.
+2. UI redesign.
+3. Runtime editor auto-detection heuristics beyond default fallback.
+4. Migration tooling for legacy bubble configs.
+
+## Config Contract
+
+### Global config (`~/.pairflow/config.toml`)
+
+- Add optional key:
+  - `open_command: string`
+- Validation:
+  - must be a string
+  - must not be empty/whitespace-only after trim
+
+Example:
+
+```toml
+open_command = "code --reuse-window {{worktree_path}}"
+```
+
+### Bubble config (`bubble.toml`)
+
+- `open_command` remains optional.
+- If omitted, global config can take effect.
+
+## Resolution Semantics (Normative)
+
+`pairflow bubble open` resolves `commandTemplate` in this order:
+
+1. `bubble.bubbleConfig.open_command` when explicitly set.
+2. `loadPairflowGlobalConfig().open_command` when set.
+3. Built-in default: `cursor {{worktree_path}}`.
+
+Rendering semantics:
+1. If template contains `{{worktree_path}}`, replace all occurrences with quoted worktree path.
+2. If template does not contain placeholder, append quoted worktree path to the end.
+3. Empty template is invalid and must raise `OpenBubbleError`.
+
+## Error Semantics
+
+1. Worktree missing -> existing `OpenBubbleError` behavior unchanged.
+2. Open command exit code non-zero -> existing `OpenBubbleError` behavior unchanged.
+3. Global config load failure behavior:
+   - `ENOENT` (missing global config) -> treat as unset and continue fallback chain.
+   - schema/parse invalid global config -> fail with explicit `OpenBubbleError` (do not silently ignore malformed `open_command`).
+   - non-schema IO errors (e.g. `EACCES`) -> fail with explicit `OpenBubbleError`.
+
+Rationale: avoid silent editor-launch misconfiguration.
+
+## Implementation Touchpoints
+
+1. `src/config/pairflowConfig.ts`
+   - Add `open_command?: string` to `PairflowGlobalConfig`.
+   - Add parse/validation rules.
+   - Ensure validation rejects empty/whitespace open command.
+
+2. `src/core/bubble/openBubble.ts`
+   - Add dependency for global config loader (`loadPairflowGlobalConfig`).
+   - Implement precedence resolution and explicit error mapping.
+
+3. `src/core/bubble/createBubble.ts`
+   - Stop force-writing default `open_command` into new bubble configs.
+   - Only persist `open_command` when explicitly provided in input.
+
+4. `src/config/bubbleConfig.ts`
+   - Keep optional `open_command` behavior consistent in parse/render.
+
+5. Docs
+   - `README.md` open behavior/config section update.
+   - Mention precedence and global config example.
+
+## Acceptance Criteria (Binary)
+
+1. Global config validation accepts non-empty string `open_command`.
+2. Global config validation rejects empty/whitespace `open_command`.
+3. `openBubble` prefers bubble `open_command` over global and does not call global loader when bubble override exists.
+4. `openBubble` uses global `open_command` when bubble override is unset.
+5. `openBubble` falls back to built-in default when neither bubble nor global `open_command` is set.
+6. Placeholder interpolation works for globally provided command template.
+7. Placeholder-less global command appends quoted worktree path.
+8. Missing global config file (`ENOENT`) does not fail open; fallback chain continues.
+9. Invalid global config schema/parse causes explicit `OpenBubbleError`.
+10. Non-schema global config load error causes explicit `OpenBubbleError`.
+11. New bubbles do not persist `open_command` by default unless explicitly supplied.
+12. README reflects precedence and global config usage.
+
+## Test Mapping (Acceptance -> Test)
+
+1. AC1-AC2 -> `tests/config/pairflowConfig.test.ts`
+2. AC3-AC10 -> `tests/core/bubble/openBubble.test.ts`
+3. AC11 -> `tests/config/bubbleConfig.test.ts` and/or `tests/core/bubble/createBubble.test.ts`
+4. AC12 -> docs review checklist item in done package
+
+## Validation Plan
+
+1. `pnpm typecheck`
+2. Targeted tests:
+   - `tests/config/pairflowConfig.test.ts`
+   - `tests/core/bubble/openBubble.test.ts`
+   - any create/config tests touched by AC11
+3. Optional manual smoke:
+   - set global `open_command` to `open -a "Visual Studio Code" {{worktree_path}}`
+   - run `pairflow bubble open` on a bubble without bubble-level override
+
+## Deliverables
+
+1. Global `open_command` support in `~/.pairflow/config.toml`.
+2. Deterministic open-command precedence logic.
+3. Updated tests proving precedence + error semantics.
+4. Updated documentation.
+
