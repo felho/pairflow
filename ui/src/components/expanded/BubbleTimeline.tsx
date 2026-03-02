@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { ProtocolMessageType, UiTimelineEntry } from "../../lib/types";
 
 function payloadSummary(entry: UiTimelineEntry): string {
@@ -121,11 +121,12 @@ export interface BubbleTimelineProps {
   entries: UiTimelineEntry[] | null;
   isLoading: boolean;
   error: string | null;
+  compact: boolean;
 }
 
 export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [compact, setCompact] = useState(true);
+  const compact = props.compact;
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -138,18 +139,6 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      {hasEntries ? (
-        <div className="flex items-center justify-end pb-1">
-          <button
-            type="button"
-            onClick={() => setCompact((v) => !v)}
-            className="text-[9px] text-[#555] hover:text-[#888] transition-colors"
-          >
-            {compact ? "Expand all" : "Collapse all"}
-          </button>
-        </div>
-      ) : null}
-
       {props.isLoading ? (
         <div className="py-2 text-[10px] text-[#666]">Loading timeline...</div>
       ) : null}
@@ -175,7 +164,7 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
             return (
               <div
                 key={entry.id}
-                className="flex items-start gap-2.5 border-b border-[#1a1a1a] py-2 text-[10px] last:border-b-0"
+                className="flex items-start gap-2.5 border-b border-[#1a1a1a] py-1 text-[10px] last:border-b-0"
               >
                 <span className="min-w-[20px] pt-px font-mono text-[9px] text-[#555]">
                   R{entry.round}
@@ -186,38 +175,38 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
                   {roleIcons[role]}
                 </span>
                 <div className="min-w-0 flex-1">
-                  {isConvergence ? (
-                    <div className="font-semibold text-emerald-500">CONVERGENCE</div>
-                  ) : blocked ? (
-                    <div className="font-medium text-amber-500">
-                      {entry.sender} &mdash; blocked
-                    </div>
-                  ) : (
-                    <div className="font-medium text-[#aaa]">
-                      {entry.sender}{" "}
-                      <span className="text-[#555]">({role === "system" ? "system" : role === "human" ? "human" : role === "review" ? "reviewer" : "implementer"})</span>
+                  <div className="flex items-center gap-1.5">
+                    {isConvergence ? (
+                      <span className="font-semibold text-emerald-500">CONVERGENCE</span>
+                    ) : blocked ? (
+                      <span className="font-medium text-amber-500">
+                        {entry.sender} &mdash; blocked
+                      </span>
+                    ) : (
+                      <span className="font-medium text-[#aaa]">
+                        {entry.sender}{" "}
+                        <span className="text-[#555]">({role === "system" ? "system" : role === "human" ? "human" : role === "review" ? "reviewer" : "implementer"})</span>
+                      </span>
+                    )}
+                    {findingTags.map((tag) => (
+                      <span
+                        key={tag.severity}
+                        className={`inline-block rounded px-1 text-[9px] font-semibold leading-tight border ${tag.style}`}
+                      >
+                        {tag.severity}
+                      </span>
+                    ))}
+                    {cleanPass ? (
+                      <span className="inline-block rounded border border-emerald-500/20 bg-emerald-500/10 px-1 text-[9px] font-semibold leading-tight text-emerald-500">
+                        &#x2713; clean
+                      </span>
+                    ) : null}
+                  </div>
+                  {compact ? null : (
+                    <div className="leading-relaxed text-[#666]">
+                      {payloadSummary(entry)}
                     </div>
                   )}
-                  <div className={`leading-relaxed text-[#666]${compact ? " line-clamp-1" : ""}`}>
-                    {payloadSummary(entry)}
-                  </div>
-                  {(findingTags.length > 0 || cleanPass) ? (
-                    <div className="mt-0.5 flex flex-wrap gap-1">
-                      {findingTags.map((tag) => (
-                        <span
-                          key={tag.severity}
-                          className={`inline-block rounded px-1 text-[9px] font-semibold leading-tight border ${tag.style}`}
-                        >
-                          {tag.severity}
-                        </span>
-                      ))}
-                      {cleanPass ? (
-                        <span className="inline-block rounded border border-emerald-500/20 bg-emerald-500/10 px-1 text-[9px] font-semibold leading-tight text-emerald-500">
-                          &#x2713; clean
-                        </span>
-                      ) : null}
-                    </div>
-                  ) : null}
                 </div>
                 <span className="flex-shrink-0 pt-px font-mono text-[9px] text-[#444]">
                   {formatTime(entry.ts)}

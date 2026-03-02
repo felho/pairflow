@@ -6,8 +6,8 @@ export const collapsedCardDimensions = {
 } as const;
 
 export const expandedCardDimensions = {
-  width: 500,
-  height: 520
+  width: 320,
+  height: 320
 } as const;
 
 export const cardWidth = collapsedCardDimensions.width;

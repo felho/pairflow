@@ -107,6 +107,8 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
     runtime: props.bubble.runtime
   });
 
+  const [timelineCompact, setTimelineCompact] = useState(true);
+
   const pendingQuestion =
     props.bubble.state === "WAITING_HUMAN" && props.detail !== null
       ? props.detail.inbox.items.find((item) => item.type === "HUMAN_QUESTION") ?? null
@@ -132,7 +134,7 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
     >
       {/* Header — drag handle */}
       <div
-        className={cn("flex items-center justify-between px-4 pt-4 pb-3", dragging ? "cursor-grabbing" : "cursor-grab")}
+        className={cn("flex flex-col px-4 pt-4 pb-3", dragging ? "cursor-grabbing" : "cursor-grab")}
         onMouseDown={(event) => {
           if (event.button !== 0) {
             return;
@@ -158,24 +160,9 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
           document.addEventListener("mouseup", nextState.onUp);
         }}
       >
-        <span className="text-[14px] font-semibold tracking-wide text-white">
-          {props.bubble.bubbleId}
-        </span>
-        <div className="flex items-center gap-2">
-          <span
-            className="max-w-[130px] truncate rounded-[9px] border border-blue-500 bg-[#171717] px-2 py-0.5 font-mono text-[10px] text-blue-500"
-            title={props.bubble.repoPath}
-          >
-            {repoLabel(props.bubble.repoPath)}
-          </span>
-          <span className="rounded-md border border-[#333] bg-[#1a1a1a] px-1.5 py-px font-mono text-[10px] text-[#666]">
-            R{props.bubble.round}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className={cn("inline-block h-[7px] w-[7px] rounded-full", visual.led)} />
-            <span className={cn("text-[10px] font-medium tracking-wide", visual.stateText)}>
-              {formatStateLabel(props.bubble.state)}
-            </span>
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] font-semibold tracking-wide text-white">
+            {props.bubble.bubbleId}
           </span>
           <button
             type="button"
@@ -188,6 +175,23 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
           >
             &times;
           </button>
+        </div>
+        <div className="mt-1.5 flex items-center gap-2">
+          <span
+            className="max-w-[130px] truncate rounded-[9px] border border-blue-500 bg-[#171717] px-2 py-0.5 font-mono text-[10px] text-blue-500"
+            title={props.bubble.repoPath}
+          >
+            {repoLabel(props.bubble.repoPath)}
+          </span>
+          <span className="rounded-md border border-[#333] bg-[#1a1a1a] px-1.5 py-px font-mono text-[9px]">
+            R{props.bubble.round}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className={cn("inline-block h-[7px] w-[7px] rounded-full", visual.led)} />
+            <span className={cn("text-[10px] font-medium tracking-wide", visual.stateText)}>
+              {formatStateLabel(props.bubble.state)}
+            </span>
+          </span>
         </div>
       </div>
 
@@ -203,18 +207,29 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
         </div>
       ) : null}
 
-      {/* Action buttons */}
+      {/* Action buttons + timeline toggle */}
       <div className="mb-2.5 px-4">
-        <ActionBar
-          bubble={props.bubble}
-          attach={attach}
-          isSubmitting={props.actionLoading}
-          actionError={props.actionError}
-          retryHint={props.actionRetryHint}
-          actionFailure={props.actionFailure}
-          onAction={props.onAction}
-          onClearFeedback={props.onClearActionFeedback}
-        />
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <ActionBar
+              bubble={props.bubble}
+              attach={attach}
+              isSubmitting={props.actionLoading}
+              actionError={props.actionError}
+              retryHint={props.actionRetryHint}
+              actionFailure={props.actionFailure}
+              onAction={props.onAction}
+              onClearFeedback={props.onClearActionFeedback}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setTimelineCompact((v) => !v)}
+            className="ml-2 flex-shrink-0 text-[9px] text-[#555] hover:text-[#888] transition-colors"
+          >
+            {timelineCompact ? "Show messages" : "Hide messages"}
+          </button>
+        </div>
       </div>
 
       {/* Timeline */}
@@ -223,6 +238,7 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
           entries={props.timeline}
           isLoading={props.timelineLoading}
           error={props.timelineError}
+          compact={timelineCompact}
         />
       </div>
 
