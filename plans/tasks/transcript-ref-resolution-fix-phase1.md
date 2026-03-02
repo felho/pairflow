@@ -46,6 +46,10 @@ Out of scope:
 
 Potential touchpoints:
 - `src/core/runtime/tmuxDelivery.ts`
+- `src/core/agent/askHuman.ts` (HUMAN_QUESTION delivery call site; fallback transcript ref default is resolved in `tmuxDelivery.ts`)
+- `src/core/bubble/watchdogBubble.ts` (watchdog escalation delivery path; fallback-ref-relevant call path for escalated notifications)
+- `src/core/agent/converged.ts` (approval request fallback-ref construction)
+- `src/core/human/approval.ts` (approval decision fallback-ref construction)
 - `src/core/agent/pass.ts`
 - `src/core/human/reply.ts`
 - Any helper that builds `messageRef` defaults
@@ -56,16 +60,22 @@ Prefer centralizing fallback-ref generation in one utility to avoid drift betwee
 
 1. PASS delivery message contains a resolvable transcript ref path (not relative-only fallback).
 2. HUMAN_REPLY delivery message contains a resolvable transcript ref path (not relative-only fallback).
-3. No delivery path emits `ref=transcript.ndjson#...` without path prefix.
-4. Existing behavior with explicit envelope refs remains unchanged.
-5. Targeted tests assert new ref format and pass.
+3. HUMAN_QUESTION delivery message contains a resolvable transcript ref path when fallback refs are used.
+4. APPROVAL_REQUEST and APPROVAL_DECISION delivery messages contain resolvable transcript ref paths when fallback refs are used.
+5. No delivery path emits `ref=transcript.ndjson#...` without path prefix.
+6. Existing behavior with explicit envelope refs remains unchanged.
+7. Targeted tests assert new ref format and pass.
 
 ## Test Plan
 
 1. Update/add tests in:
    - `tests/core/runtime/tmuxDelivery.test.ts`
-   - `tests/core/agent/pass.test.ts` (if needed for messageRef plumb-through)
-   - `tests/core/human/reply.test.ts` (if delivery ref assertion exists/needed)
+   - `tests/core/agent/askHuman.test.ts` (required: HUMAN_QUESTION delivery/messageRef fallback-ref assertions aligned to AC3)
+   - `tests/core/bubble/watchdogBubble.test.ts` (required: watchdog escalation delivery/messageRef behavior, including fallback-ref semantics where applicable)
+   - `tests/core/agent/pass.test.ts` (required: PASS delivery/messageRef fallback-ref assertions aligned to AC1)
+   - `tests/core/agent/converged.test.ts` (required: APPROVAL_REQUEST delivery/messageRef fallback-ref assertions aligned to AC4)
+   - `tests/core/human/approval.test.ts` (required: APPROVAL_DECISION delivery/messageRef fallback-ref assertions aligned to AC4)
+   - `tests/core/human/reply.test.ts` (required: HUMAN_REPLY delivery/messageRef fallback-ref assertions aligned to AC2)
 2. Run targeted tests for changed suites.
 3. Run typecheck and build.
 
