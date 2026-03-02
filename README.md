@@ -230,6 +230,31 @@ The CLI is still the protocol/API surface, but day-to-day usage is typically age
 - This complements Pairflow: the UI shows lifecycle/protocol state, while Source Control shows actual code/doc deltas.
 - During approval review, you can inspect diffs directly, ask clarifying questions, and issue immediate `request-rework` if output quality or intent alignment is off.
 
+### Git pull/rebase policy (important with Pairflow)
+
+Bubble lifecycle closes through merge commits and stateful cleanup (`approve -> commit -> merge`).  
+Repository configs that auto-enable pull-rebase often create repeated conflict/rebase loops in this flow.
+
+Not recommended for Pairflow operation:
+
+- Global or repo-local `pull.rebase=true`
+- `branch.main.rebase=true`
+- Auto pull-rebase workflows as default behavior
+
+Recommended repo-local baseline:
+
+```bash
+git config --local pull.rebase false
+git config --local branch.main.rebase false
+git config --local pull.ff only
+```
+
+Why this matters:
+
+- Pairflow bubble merges are easier to reason about in merge-first mode.
+- It avoids accidental rebase states during bubble close/reopen operations.
+- It reduces repeated merge-conflict loops caused by implicit rebase pulls.
+
 ### Common real-world use cases
 
 1. **Parallel delivery across repositories**
