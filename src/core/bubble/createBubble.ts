@@ -172,7 +172,9 @@ function buildBubbleConfig(input: {
     watchdog_timeout_minutes: DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
     max_rounds: DEFAULT_MAX_ROUNDS,
     commit_requires_approval: true,
-    open_command: input.openCommand ?? "cursor {{worktree_path}}",
+    ...(input.openCommand !== undefined
+      ? { open_command: input.openCommand }
+      : {}),
     agents: {
       implementer: input.implementer ?? "codex",
       reviewer: input.reviewer ?? "claude"

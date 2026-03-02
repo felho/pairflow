@@ -781,6 +781,31 @@ Behavior:
 - Explicit GUI launchers (`warp|iterm2|terminal|ghostty`) do not silently switch to another GUI launcher.
 - `copy` does not open a terminal app; it returns the tmux attach command.
 
+### Open command selection (`bubble open`)
+
+`bubble open` resolves editor launch command with this priority:
+
+1. `open_command` in bubble `bubble.toml` (only when explicitly set)
+2. `open_command` in global `~/.pairflow/config.toml` (if set)
+3. Built-in default: `cursor {{worktree_path}}`
+
+Global default in `~/.pairflow/config.toml`:
+
+```toml
+open_command = "code --reuse-window {{worktree_path}}"
+```
+
+Bubble-level override in `bubble.toml`:
+
+```toml
+open_command = "cursor --reuse-window {{worktree_path}}"
+```
+
+Rendering rules:
+
+- If template contains `{{worktree_path}}`, all occurrences are replaced.
+- If template has no placeholder, Pairflow appends shell-quoted worktree path.
+
 ## Advanced internals
 
 ### Archive scope on bubble delete

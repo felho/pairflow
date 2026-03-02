@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   SchemaValidationError,
   assertValidation,
+  isNonEmptyString,
   isRecord,
   validationFail,
   validationOk,
@@ -15,6 +16,7 @@ import { isAttachLauncher, type AttachLauncher } from "../types/bubble.js";
 
 export interface PairflowGlobalConfig {
   attach_launcher?: AttachLauncher;
+  open_command?: string;
 }
 
 function splitTomlList(value: string): string[] {
@@ -222,6 +224,18 @@ export function validatePairflowGlobalConfig(
     });
   }
 
+  const openCommand = input.open_command;
+  const validatedOpenCommand = isNonEmptyString(openCommand)
+    ? openCommand
+    : undefined;
+
+  if (openCommand !== undefined && validatedOpenCommand === undefined) {
+    errors.push({
+      path: "open_command",
+      message: "Must be a non-empty string"
+    });
+  }
+
   if (errors.length > 0) {
     return validationFail(errors);
   }
@@ -229,6 +243,9 @@ export function validatePairflowGlobalConfig(
   return validationOk({
     ...(validatedAttachLauncher !== undefined
       ? { attach_launcher: validatedAttachLauncher }
+      : {}),
+    ...(validatedOpenCommand !== undefined
+      ? { open_command: validatedOpenCommand }
       : {})
   });
 }

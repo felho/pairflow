@@ -31,7 +31,7 @@ export function getBubbleOpenHelpText(): string {
     "  -h, --help            Show this help",
     "",
     "Notes:",
-    "  Executes bubble.toml open_command with {{worktree_path}} interpolation."
+    "  Uses bubble open_command, then ~/.pairflow/config.toml open_command, then default cursor {{worktree_path}}."
   ].join("\n");
 }
 

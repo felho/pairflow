@@ -98,6 +98,46 @@ describe("createBubble", () => {
     expect(inbox).toHaveLength(0);
   });
 
+  it("does not persist open_command by default when create input omits it", async () => {
+    const repoPath = await createTempRepo();
+
+    const result = await createBubble({
+      id: "b_create_no_open_default",
+      repoPath,
+      baseBranch: "main",
+      task: "No explicit open command",
+      cwd: repoPath
+    });
+
+    expect(result.config.open_command).toBeUndefined();
+    const bubbleToml = await readFile(result.paths.bubbleTomlPath, "utf8");
+    expect(bubbleToml).not.toContain("open_command =");
+    const reparsedConfig = parseBubbleConfigToml(bubbleToml);
+    expect(reparsedConfig.open_command).toBeUndefined();
+  });
+
+  it("persists open_command when explicitly provided in create input", async () => {
+    const repoPath = await createTempRepo();
+    const openCommand = "code --reuse-window {{worktree_path}}";
+
+    const result = await createBubble({
+      id: "b_create_with_open_command",
+      repoPath,
+      baseBranch: "main",
+      task: "Explicit open command",
+      cwd: repoPath,
+      openCommand
+    });
+
+    expect(result.config.open_command).toBe(openCommand);
+    const bubbleToml = await readFile(result.paths.bubbleTomlPath, "utf8");
+    expect(bubbleToml).toContain(
+      'open_command = "code --reuse-window {{worktree_path}}"'
+    );
+    const reparsedConfig = parseBubbleConfigToml(bubbleToml);
+    expect(reparsedConfig.open_command).toBe(openCommand);
+  });
+
   it("supports injectable creation timestamp", async () => {
     const repoPath = await createTempRepo();
     const now = new Date("2026-02-26T22:00:00.000Z");

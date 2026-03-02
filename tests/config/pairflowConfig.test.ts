@@ -36,6 +36,14 @@ attach_launcher = "warp"
     expect(parsed.attach_launcher).toBe("warp");
   });
 
+  it("parses open_command when provided", () => {
+    const parsed = parsePairflowGlobalConfigToml(`
+open_command = "code --reuse-window {{worktree_path}}"
+`);
+
+    expect(parsed.open_command).toBe("code --reuse-window {{worktree_path}}");
+  });
+
   it("parses empty config when attach_launcher is omitted", () => {
     const parsed = parsePairflowGlobalConfigToml(`
 # empty config
@@ -58,6 +66,20 @@ attach_launcher = "warp"
     );
   });
 
+  it("rejects empty or whitespace global open_command values", () => {
+    const result = validatePairflowGlobalConfig({
+      open_command: "   "
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors.some((error) => error.path === "open_command")).toBe(
+      true
+    );
+  });
+
   it("loads empty config when file does not exist", async () => {
     const dir = await createTempDir();
     const path = join(dir, "config.toml");
@@ -69,10 +91,17 @@ attach_launcher = "warp"
   it("loads and parses config.toml from provided path", async () => {
     const dir = await createTempDir();
     const path = join(dir, "config.toml");
-    await writeFile(path, 'attach_launcher = "copy"\n', "utf8");
+    await writeFile(
+      path,
+      'attach_launcher = "copy"\nopen_command = "cursor {{worktree_path}}"\n',
+      "utf8"
+    );
 
     const loaded = await loadPairflowGlobalConfig(path);
-    expect(loaded).toEqual({ attach_launcher: "copy" });
+    expect(loaded).toEqual({
+      attach_launcher: "copy",
+      open_command: "cursor {{worktree_path}}"
+    });
   });
 
   it("resolves default global config path under ~/.pairflow/config.toml", () => {

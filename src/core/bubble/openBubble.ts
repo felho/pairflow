@@ -2,6 +2,8 @@ import { constants as fsConstants } from "node:fs";
 import { access } from "node:fs/promises";
 import { spawn } from "node:child_process";
 
+import { loadPairflowGlobalConfig } from "../../config/pairflowConfig.js";
+import { SchemaValidationError } from "../validation.js";
 import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
 import { shellQuote } from "../util/shellQuote.js";
 
@@ -39,6 +41,7 @@ export interface OpenBubbleDependencies {
   executeOpenCommand?: OpenCommandExecutor;
   resolveBubbleById?: typeof resolveBubbleById;
   assertWorktreeExists?: (worktreePath: string) => Promise<void>;
+  loadPairflowGlobalConfig?: () => ReturnType<typeof loadPairflowGlobalConfig>;
 }
 
 export class OpenBubbleError extends Error {
@@ -112,6 +115,36 @@ async function assertWorktreeExistsDefault(worktreePath: string): Promise<void> 
   );
 }
 
+async function resolveOpenCommandTemplate(input: {
+  bubbleId: string;
+  bubbleOpenCommand: string | undefined;
+  loadPairflowGlobalConfig: () => ReturnType<typeof loadPairflowGlobalConfig>;
+}): Promise<string> {
+  if (input.bubbleOpenCommand !== undefined) {
+    return input.bubbleOpenCommand;
+  }
+
+  try {
+    const globalConfig = await input.loadPairflowGlobalConfig();
+    if (globalConfig.open_command !== undefined) {
+      return globalConfig.open_command;
+    }
+  } catch (error) {
+    if (error instanceof SchemaValidationError) {
+      throw new OpenBubbleError(
+        `Invalid global Pairflow config while opening bubble '${input.bubbleId}': ${error.message}`
+      );
+    }
+
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new OpenBubbleError(
+      `Failed to load global Pairflow config while opening bubble '${input.bubbleId}': ${reason}`
+    );
+  }
+
+  return defaultOpenCommandTemplate;
+}
+
 export async function openBubble(
   input: OpenBubbleInput,
   dependencies: OpenBubbleDependencies = {}
@@ -119,6 +152,9 @@ export async function openBubble(
   const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
   const assertWorktreeExists =
     dependencies.assertWorktreeExists ?? assertWorktreeExistsDefault;
+  const loadGlobalConfig =
+    dependencies.loadPairflowGlobalConfig ??
+    loadPairflowGlobalConfig;
 
   const resolved = await resolveBubble({
     bubbleId: input.bubbleId,
@@ -129,8 +165,11 @@ export async function openBubble(
   const worktreePath = resolved.bubblePaths.worktreePath;
   await assertWorktreeExists(worktreePath);
 
-  const commandTemplate =
-    resolved.bubbleConfig.open_command ?? defaultOpenCommandTemplate;
+  const commandTemplate = await resolveOpenCommandTemplate({
+    bubbleId: resolved.bubbleId,
+    bubbleOpenCommand: resolved.bubbleConfig.open_command,
+    loadPairflowGlobalConfig: loadGlobalConfig
+  });
   const command = renderOpenCommand(commandTemplate, worktreePath);
   const runCommand = dependencies.executeOpenCommand ?? executeOpenCommand;
   const executed = await runCommand({
