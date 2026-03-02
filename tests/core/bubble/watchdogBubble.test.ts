@@ -183,6 +183,68 @@ describe("runBubbleWatchdog", () => {
     });
   });
 
+  it("preserves rework-intent ref through resolver->delivery handoff", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_rework_03",
+      task: "Resolver-based rework intent delivery ref"
+    });
+
+    await emitAskHumanFromWorkspace({
+      question: "Need operator confirmation.",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T12:21:00.000Z")
+    });
+
+    const queued = await emitRequestRework({
+      bubbleId: bubble.bubbleId,
+      message: "Queue resolver-backed rework intent delivery.",
+      cwd: repoPath,
+      now: new Date("2026-02-22T12:22:00.000Z")
+    });
+    expect(queued.mode).toBe("queued");
+    if (queued.mode !== "queued") {
+      throw new Error("Expected queued deferred rework result.");
+    }
+
+    const capturedRefPairs: Array<{ messageRef: string; envelopeRef: string }> = [];
+    const result = await runBubbleWatchdog(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:23:00.000Z")
+      },
+      {
+        emitTmuxDeliveryNotification: (input) => {
+          if (input.messageRef === undefined) {
+            throw new Error("Expected messageRef for deferred rework-intent delivery.");
+          }
+          const envelopeRef = input.envelope.refs[0];
+          if (envelopeRef === undefined) {
+            throw new Error("Expected envelope refs[0] for deferred rework-intent delivery.");
+          }
+          capturedRefPairs.push({
+            messageRef: input.messageRef,
+            envelopeRef
+          });
+          return Promise.resolve({
+            delivered: true,
+            message: "ok"
+          });
+        }
+      }
+    );
+
+    expect(result.reason).toBe("rework_intent_applied");
+    expect(capturedRefPairs).toEqual([
+      {
+        messageRef: `rework-intent://${queued.intentId}`,
+        envelopeRef: `rework-intent://${queued.intentId}`
+      }
+    ]);
+  });
+
   it("escalates expired RUNNING watchdog to HUMAN_QUESTION + WAITING_HUMAN", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -191,11 +253,30 @@ describe("runBubbleWatchdog", () => {
       task: "Watchdog escalation task",
       startedAt: "2026-02-22T12:00:00.000Z"
     });
+    const deliveryRefs: string[] = [];
 
     const result = await runBubbleWatchdog({
       bubbleId: bubble.bubbleId,
       cwd: repoPath,
       now: new Date("2026-02-22T12:12:00.000Z")
+    }, {
+      emitTmuxDeliveryNotification: (input) => {
+        if (input.messageRef !== undefined) {
+          deliveryRefs.push(input.messageRef);
+        }
+        return Promise.resolve({
+          delivered: true,
+          message: "ok"
+        });
+      },
+      emitBubbleNotification: () =>
+        Promise.resolve({
+          kind: "waiting-human",
+          attempted: false,
+          delivered: false,
+          soundPath: null,
+          reason: "disabled"
+        })
     });
 
     expect(result.escalated).toBe(true);
@@ -210,6 +291,11 @@ describe("runBubbleWatchdog", () => {
 
     const inbox = await readTranscriptEnvelopes(bubble.paths.inboxPath);
     expect(inbox.at(-1)?.type).toBe("HUMAN_QUESTION");
+
+    expect(deliveryRefs).toEqual([
+      `${bubble.paths.transcriptPath}#${result.envelope?.id}`
+    ]);
+    expect(deliveryRefs[0]?.startsWith("transcript.ndjson#")).toBe(false);
   });
 
   it("returns no-op when watchdog has not expired", async () => {

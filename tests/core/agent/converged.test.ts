@@ -59,9 +59,12 @@ describe("emitConvergedFromWorkspace", () => {
   it("emits approval wait notifications to human + implementer + reviewer panes", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupConvergedCandidateBubble(repoPath, "b_converged_notify_01");
-    const recipients: string[] = [];
+    const deliveries: Array<{
+      recipient: string;
+      messageRef?: string;
+    }> = [];
 
-    await emitConvergedFromWorkspace(
+    const result = await emitConvergedFromWorkspace(
       {
         summary: "Ready for approval.",
         cwd: bubble.paths.worktreePath,
@@ -69,7 +72,12 @@ describe("emitConvergedFromWorkspace", () => {
       },
       {
         emitTmuxDeliveryNotification: (input) => {
-          recipients.push(input.envelope.recipient);
+          deliveries.push({
+            recipient: input.envelope.recipient,
+            ...(input.messageRef !== undefined
+              ? { messageRef: input.messageRef }
+              : {})
+          });
           return Promise.resolve({
             delivered: true,
             sessionName: "pf-b_converged_notify_01",
@@ -87,7 +95,18 @@ describe("emitConvergedFromWorkspace", () => {
       }
     );
 
-    expect(recipients).toEqual(["human", "codex", "claude"]);
+    expect(deliveries.map((delivery) => delivery.recipient)).toEqual([
+      "human",
+      "codex",
+      "claude"
+    ]);
+    const expectedRef = `${bubble.paths.transcriptPath}#${result.approvalRequestEnvelope.id}`;
+    expect(deliveries.map((delivery) => delivery.messageRef)).toEqual([
+      expectedRef,
+      expectedRef,
+      expectedRef
+    ]);
+    expect(deliveries[0]?.messageRef?.startsWith("transcript.ndjson#")).toBe(false);
   });
 
   it("writes CONVERGENCE + APPROVAL_REQUEST and moves RUNNING -> READY_FOR_APPROVAL", async () => {

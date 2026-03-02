@@ -87,6 +87,40 @@ describe("emitPassFromWorkspace", () => {
     expect(result.envelope.payload.pass_intent).toBe("task");
   });
 
+  it("emits absolute transcript fallback messageRef for PASS delivery", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_27",
+      task: "Verify pass fallback messageRef"
+    });
+
+    const deliveryRefs: string[] = [];
+    const result = await emitPassFromWorkspace(
+      {
+        summary: "Implementation complete",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:05:00.000Z")
+      },
+      {
+        emitTmuxDeliveryNotification: (input) => {
+          if (input.messageRef !== undefined) {
+            deliveryRefs.push(input.messageRef);
+          }
+          return Promise.resolve({
+            delivered: true,
+            message: "ok"
+          });
+        }
+      }
+    );
+
+    expect(deliveryRefs).toEqual([
+      `${bubble.paths.transcriptPath}#${result.envelope.id}`
+    ]);
+    expect(deliveryRefs[0]?.startsWith("transcript.ndjson#")).toBe(false);
+  });
+
   it("increments round when reviewer passes back to implementer", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({

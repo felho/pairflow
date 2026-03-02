@@ -1,3 +1,5 @@
+import { basename, dirname, join } from "node:path";
+
 import { readRuntimeSessionsRegistry } from "./sessionsRegistry.js";
 import { runTmux, type TmuxRunner } from "./tmuxManager.js";
 import { maybeAcceptClaudeTrustPrompt, sendAndSubmitTmuxPaneMessage, submitTmuxPaneInput } from "./tmuxInput.js";
@@ -27,6 +29,13 @@ export interface EmitTmuxDeliveryNotificationInput {
   deliveryAttempts?: number;
   runner?: TmuxRunner;
   readSessionsRegistry?: typeof readRuntimeSessionsRegistry;
+}
+
+export interface ResolveDeliveryMessageRefInput {
+  bubbleId: string;
+  sessionsPath: string;
+  envelope: ProtocolEnvelope;
+  messageRef?: string;
 }
 
 export type TmuxDeliveryFailureReason =
@@ -136,6 +145,36 @@ function buildDeliveryMessage(
   return `# [pairflow] r${envelope.round} ${envelope.type} ${envelope.sender}->${envelope.recipient} msg=${envelope.id} ref=${messageRef}. Action: ${action} ${worktreeHint}`;
 }
 
+export function buildTranscriptFallbackRef(
+  bubbleId: string,
+  sessionsPath: string,
+  messageId: string
+): string {
+  const pairflowDir = resolvePairflowDirFromSessionsPath(sessionsPath);
+  const transcriptPath = join(pairflowDir, "bubbles", bubbleId, "transcript.ndjson");
+  return `${transcriptPath}#${messageId}`;
+}
+
+function resolvePairflowDirFromSessionsPath(sessionsPath: string): string {
+  const match = /^(.*[\\/]\.pairflow)(?:[\\/]|$)/u.exec(sessionsPath);
+  if (match?.[1] !== undefined) {
+    return match[1];
+  }
+  const runtimeDir = dirname(sessionsPath);
+  if (basename(runtimeDir) === "runtime") {
+    return join(dirname(runtimeDir), ".pairflow");
+  }
+  return join(runtimeDir, ".pairflow");
+}
+
+export function resolveDeliveryMessageRef(input: ResolveDeliveryMessageRefInput): string {
+  return (
+    input.messageRef ??
+    input.envelope.refs[0] ??
+    buildTranscriptFallbackRef(input.bubbleId, input.sessionsPath, input.envelope.id)
+  );
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolvePromise) => {
     setTimeout(resolvePromise, ms);
@@ -205,7 +244,12 @@ export async function emitTmuxDeliveryNotification(
   input: EmitTmuxDeliveryNotificationInput
 ): Promise<EmitTmuxDeliveryNotificationResult> {
   const messageRef =
-    input.messageRef ?? input.envelope.refs[0] ?? `transcript.ndjson#${input.envelope.id}`;
+    input.messageRef ??
+    resolveDeliveryMessageRef({
+      bubbleId: input.bubbleId,
+      sessionsPath: input.sessionsPath,
+      envelope: input.envelope
+    });
   const readSessions = input.readSessionsRegistry ?? readRuntimeSessionsRegistry;
 
   let sessionName: string | undefined;
