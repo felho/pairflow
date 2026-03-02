@@ -80,16 +80,30 @@ Bubbles are fully isolated from each other — you can run multiple bubbles in p
 Pairflow does **not** autonomously decide technical content between agents. Instead, agents advance the flow through protocol commands (`pass`, `ask-human`, `converged`). Pairflow acts as the referee + state/protocol engine, injects an initial protocol briefing into agent panes at bubble start, and auto-sends an initial kickoff prompt to the implementer pane.
 
 ```
-┌──────────┐    pass     ┌──────────┐    pass     ┌──────────┐
-│Implementer│ ────────→  │ Reviewer  │ ────────→  │Implementer│  ...
-└──────────┘             └──────────┘             └──────────┘
-                              │
-                              │ converged
-                              ▼
-                         ┌──────────┐   approve   ┌──────────┐
-                         │  Human   │ ────────→   │  Commit   │
-                         │ approval │             │  & Done   │
-                         └──────────┘             └──────────┘
+┌──────────┐    pass     ┌──────────┐    pass     ┌──────────┐          ┌──────────┐
+│Implementer│ ────────→  │ Reviewer  │ ────────→  │Implementer│ ··· ──→ │ Reviewer  │
+└──────────┘             └──────────┘             └──────────┘          └──────────┘
+     ▲                                                                       │
+     │                                                            converged  │
+     │                        ┌──────────────────────────────────────────────┘
+     │                        ▼
+     │                   ┌────────────────┐
+     │                   │ Human approval │
+     │                   └───────┬────────┘
+     │                           │
+     │              ┌────────────┴────────────┐
+     │              ▼                         ▼
+     │    ┌─────────────────────┐      ┌──────────────────┐
+     └────┤ 1) Send back rework │      │ 2) Approve       │
+          │ bubble request-     │      │ bubble approve   │
+          │ rework --message    │      │                  │
+          └─────────────────────┘      └────────┬─────────┘
+                                                │
+                                                ▼
+                                          ┌──────────┐
+                                          │ Commit   │
+                                          │ & Done   │
+                                          └──────────┘
 ```
 
 At any point, agents can call `ask-human` to pause the flow and ask for your input.
@@ -100,7 +114,7 @@ At any point, agents can call `ask-human` to pause the flow and ask for your inp
 |------|---------------|--------------|
 | **Implementer** | `codex` | Writes code based on the task description |
 | **Reviewer** | `claude` | Reviews the implementation, requests fixes or converges |
-| **Human** (you) | — | Answers questions, approves/rejects, commits |
+| **Human** (you) | — | Answers questions, approves or sends back rework, commits |
 
 ## Prerequisites
 
