@@ -6,7 +6,11 @@ import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import { computeWatchdogStatus } from "../runtime/watchdog.js";
 import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
 import { emitBubbleNotification } from "../runtime/notifications.js";
-import { emitTmuxDeliveryNotification, retryStuckAgentInput } from "../runtime/tmuxDelivery.js";
+import {
+  emitTmuxDeliveryNotification,
+  resolveDeliveryMessageRef,
+  retryStuckAgentInput
+} from "../runtime/tmuxDelivery.js";
 import { ensureBubbleInstanceIdForMutation } from "./bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import { applyDeferredReworkIntent } from "../human/reworkIntent.js";
@@ -18,6 +22,11 @@ export interface BubbleWatchdogInput {
   repoPath?: string | undefined;
   cwd?: string | undefined;
   now?: Date | undefined;
+}
+
+export interface BubbleWatchdogDependencies {
+  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
+  emitBubbleNotification?: typeof emitBubbleNotification;
 }
 
 export type BubbleWatchdogNoopReason =
@@ -55,7 +64,8 @@ function buildEscalationQuestion(
 }
 
 export async function runBubbleWatchdog(
-  input: BubbleWatchdogInput
+  input: BubbleWatchdogInput,
+  dependencies: BubbleWatchdogDependencies = {}
 ): Promise<BubbleWatchdogResult> {
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
@@ -67,6 +77,10 @@ export async function runBubbleWatchdog(
   });
   const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
   const state = loadedState.state;
+  const emitDelivery =
+    dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
+  const emitNotification =
+    dependencies.emitBubbleNotification ?? emitBubbleNotification;
 
   if (state.state === "WAITING_HUMAN") {
     const pendingIntent = state.pending_rework_intent ?? null;
@@ -86,12 +100,16 @@ export async function runBubbleWatchdog(
         refs: [`rework-intent://${pendingIntent.intent_id}`]
       };
 
-      const delivery = await emitTmuxDeliveryNotification({
+      const delivery = await emitDelivery({
         bubbleId: resolved.bubbleId,
         bubbleConfig: resolved.bubbleConfig,
         sessionsPath: resolved.bubblePaths.sessionsPath,
         envelope: deliveryEnvelope,
-        messageRef: `rework-intent://${pendingIntent.intent_id}`
+        messageRef: resolveDeliveryMessageRef({
+          bubbleId: resolved.bubbleId,
+          sessionsPath: resolved.bubblePaths.sessionsPath,
+          envelope: deliveryEnvelope
+        })
       });
 
       if (!delivery.delivered) {
@@ -270,14 +288,19 @@ export async function runBubbleWatchdog(
   }
 
   // Optional UX signal; never block protocol/state progression on notification failure.
-  void emitTmuxDeliveryNotification({
+  void emitDelivery({
     bubbleId: resolved.bubbleId,
     bubbleConfig: resolved.bubbleConfig,
     sessionsPath: resolved.bubblePaths.sessionsPath,
-    envelope: appended.envelope
+    envelope: appended.envelope,
+    messageRef: resolveDeliveryMessageRef({
+      bubbleId: resolved.bubbleId,
+      sessionsPath: resolved.bubblePaths.sessionsPath,
+      envelope: appended.envelope
+    })
   });
   // Optional UX signal; never block protocol/state progression on notification failure.
-  void emitBubbleNotification(resolved.bubbleConfig, "waiting-human");
+  void emitNotification(resolved.bubbleConfig, "waiting-human");
 
   return {
     bubbleId: resolved.bubbleId,

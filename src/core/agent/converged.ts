@@ -10,7 +10,10 @@ import {
   WorkspaceResolutionError
 } from "../bubble/workspaceResolution.js";
 import { emitBubbleNotification } from "../runtime/notifications.js";
-import { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
+import {
+  emitTmuxDeliveryNotification,
+  resolveDeliveryMessageRef
+} from "../runtime/tmuxDelivery.js";
 import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import type { AgentName, BubbleStateSnapshot } from "../../types/bubble.js";
@@ -191,6 +194,11 @@ export async function emitConvergedFromWorkspace(
     dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
   const emitNotification =
     dependencies.emitBubbleNotification ?? emitBubbleNotification;
+  const approvalRef = resolveDeliveryMessageRef({
+    bubbleId: resolved.bubbleId,
+    sessionsPath: resolved.bubblePaths.sessionsPath,
+    envelope: approvalRequest.envelope
+  });
 
   // Optional UX signal; never block protocol/state progression on notification failure.
   void emitDelivery({
@@ -198,15 +206,10 @@ export async function emitConvergedFromWorkspace(
     bubbleConfig: resolved.bubbleConfig,
     sessionsPath: resolved.bubblePaths.sessionsPath,
     envelope: approvalRequest.envelope,
-    ...(approvalRequest.envelope.refs[0] !== undefined
-      ? { messageRef: approvalRequest.envelope.refs[0] }
-      : {})
+    messageRef: approvalRef
   });
 
   // Notify both agent panes to stop active work while waiting for human decision.
-  const approvalRef =
-    approvalRequest.envelope.refs[0] ??
-    `transcript.ndjson#${approvalRequest.envelope.id}`;
   void emitDelivery({
     bubbleId: resolved.bubbleId,
     bubbleConfig: resolved.bubbleConfig,

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { emitTmuxDeliveryNotification, retryStuckAgentInput } from "../../../src/core/runtime/tmuxDelivery.js";
+import {
+  buildTranscriptFallbackRef,
+  emitTmuxDeliveryNotification,
+  resolveDeliveryMessageRef,
+  retryStuckAgentInput
+} from "../../../src/core/runtime/tmuxDelivery.js";
 import type { RuntimeSessionsRegistry } from "../../../src/core/runtime/sessionsRegistry.js";
 import type { TmuxRunResult, TmuxRunner } from "../../../src/core/runtime/tmuxManager.js";
 import type { ReviewerTestExecutionDirective } from "../../../src/core/reviewer/testEvidence.js";
@@ -555,13 +560,17 @@ describe("emitTmuxDeliveryNotification", () => {
   });
 
   it("routes rework approval decision to implementer pane with rework instruction", async () => {
+    const reworkRef = buildTranscriptFallbackRef(
+      "b_delivery_01",
+      "/tmp/repo/.pairflow/runtime/sessions.json",
+      "msg_20260222_101"
+    );
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
       calls.push(args);
       if (args[0] === "capture-pane") {
         return Promise.resolve({
-          stdout:
-            "# [pairflow] r2 APPROVAL_DECISION human->codex msg=msg_20260222_101 ref=transcript.ndjson#msg_20260222_101.",
+          stdout: `# [pairflow] r2 APPROVAL_DECISION human->codex msg=msg_20260222_101 ref=${reworkRef}.`,
           stderr: "",
           exitCode: 0
         });
@@ -587,7 +596,7 @@ describe("emitTmuxDeliveryNotification", () => {
           message: "Please address reviewer findings."
         }
       }),
-      messageRef: "transcript.ndjson#msg_20260222_101",
+      messageRef: reworkRef,
       runner,
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
@@ -608,6 +617,94 @@ describe("emitTmuxDeliveryNotification", () => {
       "pf-b_delivery_01:0.1",
       "Enter"
     ]);
+  });
+
+  it("uses absolute transcript path fallback ref when envelope has no refs", async () => {
+    const fallbackRef = buildTranscriptFallbackRef(
+      "b_delivery_01",
+      "/tmp/repo/.pairflow/runtime/sessions.json",
+      "msg_20260222_101"
+    );
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout: `# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=${fallbackRef}.`,
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        refs: []
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result.delivered).toBe(true);
+    const messageCall = calls.find(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.2" &&
+        call[3] === "-l" &&
+        call[4]?.includes("# [pairflow] r1 PASS codex->claude")
+    );
+    expect(messageCall?.[4]).toContain(`ref=${fallbackRef}.`);
+    expect(messageCall?.[4]).not.toContain("ref=transcript.ndjson#");
+  });
+
+  it("uses envelope refs[0] when explicit messageRef is not provided", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://priority-source.md.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        refs: ["artifact://priority-source.md"]
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result.delivered).toBe(true);
+    const messageCall = calls.find(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.2" &&
+        call[3] === "-l" &&
+        call[4]?.includes("# [pairflow] r1 PASS codex->claude")
+    );
+    expect(messageCall?.[4]).toContain("ref=artifact://priority-source.md.");
+    expect(messageCall?.[4]).not.toContain("/.pairflow/bubbles/b_delivery_01/transcript.ndjson#");
   });
 
   it("routes approval-wait notification to reviewer pane with hold instruction", async () => {
@@ -882,6 +979,81 @@ describe("emitTmuxDeliveryNotification", () => {
       sessionName: "pf-b_delivery_01",
       targetPaneIndex: 2
     });
+  });
+});
+
+describe("resolveDeliveryMessageRef", () => {
+  it("applies messageRef -> envelope.ref -> transcript fallback priority in order", () => {
+    const envelopeWithRef = createEnvelope({
+      refs: ["artifact://primary.md"]
+    });
+    const envelopeWithoutRef = createEnvelope({
+      refs: []
+    });
+    const sessionsPath = "/tmp/repo/.pairflow/runtime/sessions.json";
+
+    expect(
+      resolveDeliveryMessageRef({
+        bubbleId: "b_delivery_01",
+        sessionsPath,
+        envelope: envelopeWithRef,
+        messageRef: "manual://override"
+      })
+    ).toBe("manual://override");
+
+    expect(
+      resolveDeliveryMessageRef({
+        bubbleId: "b_delivery_01",
+        sessionsPath,
+        envelope: envelopeWithRef
+      })
+    ).toBe("artifact://primary.md");
+
+    expect(
+      resolveDeliveryMessageRef({
+        bubbleId: "b_delivery_01",
+        sessionsPath,
+        envelope: envelopeWithoutRef
+      })
+    ).toBe("/tmp/repo/.pairflow/bubbles/b_delivery_01/transcript.ndjson#msg_20260222_101");
+  });
+});
+
+describe("buildTranscriptFallbackRef", () => {
+  it("resolves .pairflow directory via marker lookup, not fixed dirname depth", () => {
+    const ref = buildTranscriptFallbackRef(
+      "b_delivery_01",
+      "/tmp/repo/.pairflow/runtime/nested/sessions.json",
+      "msg_20260222_101"
+    );
+
+    expect(ref).toBe(
+      "/tmp/repo/.pairflow/bubbles/b_delivery_01/transcript.ndjson#msg_20260222_101"
+    );
+  });
+
+  it("falls back to repo/.pairflow when sessions path lacks explicit .pairflow segment", () => {
+    const ref = buildTranscriptFallbackRef(
+      "b_delivery_01",
+      "/tmp/repo/runtime/sessions.json",
+      "msg_20260222_101"
+    );
+
+    expect(ref).toBe(
+      "/tmp/repo/.pairflow/bubbles/b_delivery_01/transcript.ndjson#msg_20260222_101"
+    );
+  });
+
+  it("does not mis-detect .pairflow-worktrees as .pairflow root", () => {
+    const ref = buildTranscriptFallbackRef(
+      "b_delivery_01",
+      "/Users/felho/dev/.pairflow-worktrees/pairflow/transcript-ref-resolution-fix-implementation-01/.pairflow/runtime/sessions.json",
+      "msg_20260222_101"
+    );
+
+    expect(ref).toBe(
+      "/Users/felho/dev/.pairflow-worktrees/pairflow/transcript-ref-resolution-fix-implementation-01/.pairflow/bubbles/b_delivery_01/transcript.ndjson#msg_20260222_101"
+    );
   });
 });
 

@@ -10,7 +10,10 @@ import {
   resolveBubbleFromWorkspaceCwd,
   WorkspaceResolutionError
 } from "../bubble/workspaceResolution.js";
-import { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
+import {
+  emitTmuxDeliveryNotification,
+  resolveDeliveryMessageRef
+} from "../runtime/tmuxDelivery.js";
 import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import { isPassIntent, type PassIntent, type ProtocolEnvelope } from "../../types/protocol.js";
@@ -440,11 +443,13 @@ export async function emitPassFromWorkspace(
     bubbleConfig: resolved.bubbleConfig,
     sessionsPath: resolved.bubblePaths.sessionsPath,
     envelope: mapped.envelope,
+    messageRef: resolveDeliveryMessageRef({
+      bubbleId: resolved.bubbleId,
+      sessionsPath: resolved.bubblePaths.sessionsPath,
+      envelope: mapped.envelope
+    }),
     ...(reviewerTestDirective !== undefined ? { reviewerTestDirective } : {}),
-    ...(deliveryInitialDelayMs !== undefined ? { initialDelayMs: deliveryInitialDelayMs } : {}),
-    ...(mapped.envelope.refs[0] !== undefined
-      ? { messageRef: mapped.envelope.refs[0] }
-      : {})
+    ...(deliveryInitialDelayMs !== undefined ? { initialDelayMs: deliveryInitialDelayMs } : {})
   };
   let deliveryResult = await emitDelivery(deliveryInput).catch(() => undefined);
   let deliveryRetried = false;

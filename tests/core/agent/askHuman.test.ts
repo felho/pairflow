@@ -69,6 +69,49 @@ describe("emitAskHumanFromWorkspace", () => {
     expect(inbox[0]?.type).toBe("HUMAN_QUESTION");
   });
 
+  it("emits absolute transcript fallback messageRef for HUMAN_QUESTION delivery", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_ask_human_03",
+      task: "Need delivery fallback ref"
+    });
+
+    const deliveryRefs: string[] = [];
+    const result = await emitAskHumanFromWorkspace(
+      {
+        question: "Need operator input",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:11:00.000Z")
+      },
+      {
+        emitTmuxDeliveryNotification: (input) => {
+          if (input.messageRef === undefined) {
+            throw new Error("Expected messageRef for HUMAN_QUESTION delivery.");
+          }
+          deliveryRefs.push(input.messageRef);
+          return Promise.resolve({
+            delivered: true,
+            message: "ok"
+          });
+        },
+        emitBubbleNotification: () =>
+          Promise.resolve({
+            kind: "waiting-human",
+            attempted: false,
+            delivered: false,
+            soundPath: null,
+            reason: "disabled"
+          })
+      }
+    );
+
+    expect(deliveryRefs).toEqual([
+      `${bubble.paths.transcriptPath}#${result.envelope.id}`
+    ]);
+    expect(deliveryRefs[0]?.startsWith("transcript.ndjson#")).toBe(false);
+  });
+
   it("rejects when bubble is not RUNNING", async () => {
     const repoPath = await createTempRepo();
     const bubble = await createBubble({

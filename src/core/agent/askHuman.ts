@@ -9,7 +9,10 @@ import {
   WorkspaceResolutionError
 } from "../bubble/workspaceResolution.js";
 import { emitBubbleNotification } from "../runtime/notifications.js";
-import { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
+import {
+  emitTmuxDeliveryNotification,
+  resolveDeliveryMessageRef
+} from "../runtime/tmuxDelivery.js";
 import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
@@ -30,6 +33,11 @@ export interface EmitAskHumanResult {
   inferredRecipient: "human";
 }
 
+export interface EmitAskHumanDependencies {
+  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
+  emitBubbleNotification?: typeof emitBubbleNotification;
+}
+
 export class AskHumanCommandError extends Error {
   public constructor(message: string) {
     super(message);
@@ -38,7 +46,8 @@ export class AskHumanCommandError extends Error {
 }
 
 export async function emitAskHumanFromWorkspace(
-  input: EmitAskHumanInput
+  input: EmitAskHumanInput,
+  dependencies: EmitAskHumanDependencies = {}
 ): Promise<EmitAskHumanResult> {
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
@@ -118,19 +127,27 @@ export async function emitAskHumanFromWorkspace(
     );
   }
 
+  const emitDelivery =
+    dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
+  const emitNotification =
+    dependencies.emitBubbleNotification ?? emitBubbleNotification;
+  const messageRef = resolveDeliveryMessageRef({
+    bubbleId: resolved.bubbleId,
+    sessionsPath: resolved.bubblePaths.sessionsPath,
+    envelope: appended.envelope
+  });
+
   // Optional UX signal; never block protocol/state progression on notification failure.
-  void emitTmuxDeliveryNotification({
+  void emitDelivery({
     bubbleId: resolved.bubbleId,
     bubbleConfig: resolved.bubbleConfig,
     sessionsPath: resolved.bubblePaths.sessionsPath,
     envelope: appended.envelope,
-    ...(appended.envelope.refs[0] !== undefined
-      ? { messageRef: appended.envelope.refs[0] }
-      : {})
+    messageRef
   });
 
   // Optional UX signal; never block protocol/state progression on notification failure.
-  void emitBubbleNotification(resolved.bubbleConfig, "waiting-human");
+  void emitNotification(resolved.bubbleConfig, "waiting-human");
 
   await emitBubbleLifecycleEventBestEffort({
     repoPath: resolved.repoPath,

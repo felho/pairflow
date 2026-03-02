@@ -84,6 +84,37 @@ describe("emitHumanReply", () => {
     ]);
   });
 
+  it("emits absolute transcript fallback messageRef for HUMAN_REPLY delivery", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupWaitingHumanBubble(repoPath, "b_human_reply_03");
+
+    const deliveryRefs: string[] = [];
+    const result = await emitHumanReply(
+      {
+        bubbleId: bubble.bubbleId,
+        message: "Proceed with compatibility mode.",
+        cwd: repoPath,
+        now: new Date("2026-02-21T12:09:00.000Z")
+      },
+      {
+        emitTmuxDeliveryNotification: (input) => {
+          if (input.messageRef !== undefined) {
+            deliveryRefs.push(input.messageRef);
+          }
+          return Promise.resolve({
+            delivered: true,
+            message: "ok"
+          });
+        }
+      }
+    );
+
+    expect(deliveryRefs).toEqual([
+      `${bubble.paths.transcriptPath}#${result.envelope.id}`
+    ]);
+    expect(deliveryRefs[0]?.startsWith("transcript.ndjson#")).toBe(false);
+  });
+
   it("rejects reply when bubble is not WAITING_HUMAN", async () => {
     const repoPath = await createTempRepo();
     const bubble = await createBubble({

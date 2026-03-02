@@ -93,6 +93,49 @@ describe("approval decisions", () => {
     ]);
   });
 
+  it("emits absolute transcript messageRef for APPROVAL_DECISION=approve delivery", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupReadyForApprovalBubble(repoPath, "b_approval_05");
+    const deliveries: Array<{
+      recipient: string;
+      type: string;
+      messageRef: string;
+    }> = [];
+
+    const result = await emitApprove(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:05:00.000Z")
+      },
+      {
+        emitTmuxDeliveryNotification: (input) => {
+          if (input.messageRef === undefined) {
+            throw new Error("Expected messageRef for approval delivery.");
+          }
+          deliveries.push({
+            recipient: input.envelope.recipient,
+            type: input.envelope.type,
+            messageRef: input.messageRef
+          });
+          return Promise.resolve({
+            delivered: true,
+            message: "ok"
+          });
+        }
+      }
+    );
+
+    const expectedRef = `${bubble.paths.transcriptPath}#${result.envelope.id}`;
+    expect(deliveries).toEqual([
+      {
+        recipient: "orchestrator",
+        type: "APPROVAL_DECISION",
+        messageRef: expectedRef
+      }
+    ]);
+  });
+
   it("writes APPROVAL_DECISION=revise and resumes RUNNING on implementer", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupReadyForApprovalBubble(repoPath, "b_approval_02");
@@ -146,10 +189,18 @@ describe("approval decisions", () => {
       "orchestrator",
       bubble.config.agents.implementer
     ]);
-    expect(deliveries[1]).toMatchObject({
+    const expectedRef = `${bubble.paths.transcriptPath}#${result.envelope.id}`;
+    expect(deliveries[0]).toMatchObject({
+      recipient: "orchestrator",
       type: "APPROVAL_DECISION",
       decision: "revise",
-      messageRef: `transcript.ndjson#${result.envelope.id}`
+      messageRef: expectedRef
+    });
+    expect(deliveries[1]).toMatchObject({
+      recipient: bubble.config.agents.implementer,
+      type: "APPROVAL_DECISION",
+      decision: "revise",
+      messageRef: expectedRef
     });
   });
 
