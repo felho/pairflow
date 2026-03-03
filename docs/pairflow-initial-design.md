@@ -120,6 +120,22 @@ Convergence command policy:
 3. Validation must include reviewer-role alternation evidence (`round_role_history`) per policy.
 4. If criteria are not met, CLI rejects the command and logs a protocol warning in `transcript.ndjson`.
 
+## Accuracy-Critical Reviewer Verification (Phase 1)
+When `accuracy_critical=true` in `bubble.toml`:
+1. Bubble creation requires persisted reviewer guidance in `artifacts/reviewer-brief.md`.
+2. Reviewer PASS must attach a `--ref` whose basename is exactly `review-verification-input.json`.
+3. Reviewer verification input must validate against schema `review_verification_v1`.
+4. On valid reviewer PASS, orchestrator normalizes and atomically writes `artifacts/review-verification.json`.
+5. Reviewer PASS is rejected if verification input is missing, unreadable, invalid JSON, or schema-invalid.
+6. Cross-check is enforced:
+   - `overall=fail` is allowed only with reviewer `fix_request` + open findings.
+   - `overall=pass` is allowed only for clean reviewer handoff (`review` + no findings).
+7. `pairflow converged` is blocked unless latest persisted reviewer verification is `pass`.
+8. `pairflow bubble status --json` exposes:
+   - `accuracy_critical`
+   - `last_review_verification` (`pass|fail|missing|invalid`)
+   - `failing_gates`
+
 ## Document Quality Gate (PRD/PRV Bubbles)
 For PRD/PRV work units, "tests" are document validation gates instead of code execution.
 

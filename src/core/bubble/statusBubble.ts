@@ -2,6 +2,7 @@ import { readTranscriptEnvelopes } from "../protocol/transcriptStore.js";
 import { readStateSnapshot } from "../state/stateStore.js";
 import { computeWatchdogStatus, type WatchdogStatus } from "../runtime/watchdog.js";
 import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
+import { readReviewVerificationArtifactStatus, type ReviewVerificationState } from "../reviewer/reviewVerification.js";
 import type { BubbleLifecycleState } from "../../types/bubble.js";
 import type { ProtocolEnvelope, ProtocolMessageType } from "../../types/protocol.js";
 
@@ -34,6 +35,9 @@ export interface BubbleStatusView {
     lastMessageTs: string | null;
     lastMessageId: string | null;
   };
+  accuracy_critical: boolean;
+  last_review_verification: ReviewVerificationState;
+  failing_gates: string[];
 }
 
 export class BubbleStatusError extends Error {
@@ -94,6 +98,20 @@ export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleS
   const lastMessage = transcript[transcript.length - 1] ?? null;
   const pendingQuestions = countPendingHumanQuestions(inbox);
   const pendingApprovals = countPendingApprovalRequests(inbox);
+  const accuracyCritical = resolved.bubbleConfig.accuracy_critical === true;
+  const verification = accuracyCritical
+    ? await readReviewVerificationArtifactStatus(
+      resolved.bubblePaths.reviewVerificationArtifactPath,
+      {
+        expectedRound: state.round,
+        expectedReviewer: resolved.bubbleConfig.agents.reviewer
+      }
+    )
+    : { status: "missing" as const };
+  const failingGates: string[] = [];
+  if (accuracyCritical && verification.status !== "pass") {
+    failingGates.push(`accuracy_critical.review_verification.${verification.status}`);
+  }
 
   return {
     bubbleId: resolved.bubbleId,
@@ -120,7 +138,10 @@ export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleS
       lastMessageType: lastMessage?.type ?? null,
       lastMessageTs: lastMessage?.ts ?? null,
       lastMessageId: lastMessage?.id ?? null
-    }
+    },
+    accuracy_critical: accuracyCritical,
+    last_review_verification: accuracyCritical ? verification.status : "missing",
+    failing_gates: failingGates
   };
 }
 

@@ -41,6 +41,10 @@ import {
   resolveReviewerTestEvidenceArtifactPath,
   resolveReviewerTestExecutionDirective
 } from "../reviewer/testEvidence.js";
+import {
+  formatReviewerBriefPrompt,
+  readReviewerBriefArtifact
+} from "../reviewer/reviewerBrief.js";
 import type { BubbleStateSnapshot, ReviewArtifactType } from "../../types/bubble.js";
 
 export interface StartBubbleInput {
@@ -121,6 +125,7 @@ function buildReviewerStartupPrompt(input: {
   worktreePath: string;
   taskArtifactPath: string;
   reviewArtifactType: ReviewArtifactType;
+  reviewerBriefText?: string;
 }): string {
   return [
     `Pairflow reviewer start for bubble ${input.bubbleId}.`,
@@ -132,6 +137,9 @@ function buildReviewerStartupPrompt(input: {
     buildReviewerAgentSelectionGuidance(input.reviewArtifactType),
     buildReviewerScoutExpansionWorkflowGuidance(),
     buildReviewerPassOutputContractGuidance(),
+    ...(input.reviewerBriefText !== undefined
+      ? [formatReviewerBriefPrompt(input.reviewerBriefText)]
+      : []),
     "If findings remain, run `pairflow pass --summary ... --finding 'P1:...|artifact://...'` (repeatable; for P0/P1 include finding-level refs).",
     "Round 1 guardrail: do not run `pairflow converged` in round 1. In round 1, always hand off with `pairflow pass` and explicit findings declaration (`--finding` or `--no-findings`).",
     "From round 2 onward, if clean, run `pairflow converged --summary` directly (do not run `pairflow pass --no-findings` first).",
@@ -217,6 +225,7 @@ function buildResumeReviewerStartupPrompt(input: {
   kickoffDiagnostic?: string;
   reviewArtifactType: ReviewArtifactType;
   reviewerTestDirectiveLine?: string;
+  reviewerBriefText?: string;
 }): string {
   const roleInstruction =
     input.state.state === "RUNNING" && input.state.active_role === "reviewer"
@@ -237,6 +246,9 @@ function buildResumeReviewerStartupPrompt(input: {
     buildReviewerAgentSelectionGuidance(input.reviewArtifactType),
     buildReviewerScoutExpansionWorkflowGuidance(),
     buildReviewerPassOutputContractGuidance(),
+    ...(input.reviewerBriefText !== undefined
+      ? [formatReviewerBriefPrompt(input.reviewerBriefText)]
+      : []),
     "Round 1 guardrail: do not run `pairflow converged` in round 1. In round 1, always hand off with `pairflow pass` and explicit findings declaration (`--finding` or `--no-findings`).",
     "From round 2 onward, if clean, run `pairflow converged --summary` directly (do not run `pairflow pass --no-findings` first).",
     roleInstruction
@@ -373,6 +385,9 @@ export async function startBubble(
     now
   });
   resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
+  const reviewerBriefText = await readReviewerBriefArtifact(
+    resolved.bubblePaths.reviewerBriefArtifactPath
+  );
 
   const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
   const currentState = loadedState.state.state;
@@ -487,7 +502,8 @@ export async function startBubble(
             repoPath: resolved.repoPath,
             worktreePath: resolved.bubblePaths.worktreePath,
             taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
-            reviewArtifactType: resolved.bubbleConfig.review_artifact_type
+            reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
+            ...(reviewerBriefText !== undefined ? { reviewerBriefText } : {})
           })
         }),
         implementerKickoffMessage: buildImplementerKickoffMessage({
@@ -586,6 +602,7 @@ export async function startBubble(
             ...(reviewerTestDirectiveLine !== undefined
               ? { reviewerTestDirectiveLine }
               : {}),
+            ...(reviewerBriefText !== undefined ? { reviewerBriefText } : {}),
             ...(kickoffDiagnostic !== undefined ? { kickoffDiagnostic } : {})
           })
         }),

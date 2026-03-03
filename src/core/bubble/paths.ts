@@ -12,6 +12,8 @@ export interface BubblePaths {
   artifactsDir: string;
   messageArtifactsDir: string;
   taskArtifactPath: string;
+  reviewerBriefArtifactPath: string;
+  reviewVerificationArtifactPath: string;
   locksDir: string;
   runtimeDir: string;
   sessionsPath: string;
@@ -49,6 +51,8 @@ export function getBubblePaths(repoPathInput: string, bubbleId: string): BubbleP
     artifactsDir,
     messageArtifactsDir,
     taskArtifactPath: join(artifactsDir, "task.md"),
+    reviewerBriefArtifactPath: join(artifactsDir, "reviewer-brief.md"),
+    reviewVerificationArtifactPath: join(artifactsDir, "review-verification.json"),
     locksDir,
     runtimeDir,
     sessionsPath: join(runtimeDir, "sessions.json"),

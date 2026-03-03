@@ -27,6 +27,17 @@ import {
   verifyImplementerTestEvidence,
   writeReviewerTestEvidenceArtifact
 } from "../reviewer/testEvidence.js";
+import {
+  createReviewVerificationArtifact,
+  type ReviewVerificationInputResolution,
+  resolveReviewVerificationInputFromRefs,
+  ReviewVerificationError,
+  writeReviewVerificationArtifactAtomic
+} from "../reviewer/reviewVerification.js";
+import {
+  formatReviewerBriefPrompt,
+  readReviewerBriefArtifact
+} from "../reviewer/reviewerBrief.js";
 
 export interface EmitPassInput {
   summary: string;
@@ -248,6 +259,52 @@ function listBlockerFindingsMissingRefs(findings: Finding[]): Finding[] {
   );
 }
 
+function validateReviewerVerificationConsistency(input: {
+  payloadOverall: "pass" | "fail";
+  intent: PassIntent;
+  hasFindings: boolean;
+}): void {
+  if (
+    input.payloadOverall === "fail"
+    && (input.intent !== "fix_request" || !input.hasFindings)
+  ) {
+    throw new PassCommandError(
+      "Accuracy-critical reviewer PASS with overall=fail requires intent=fix_request and open findings."
+    );
+  }
+  if (
+    input.payloadOverall === "pass"
+    && (input.intent !== "review" || input.hasFindings)
+  ) {
+    throw new PassCommandError(
+      "Accuracy-critical reviewer PASS with overall=pass requires clean handoff (intent=review and no findings)."
+    );
+  }
+}
+
+async function resolveReviewerVerification(input: {
+  accuracyCritical: boolean;
+  senderRole: AgentRole;
+  refs: string[];
+  worktreePath: string;
+}): Promise<ReviewVerificationInputResolution | undefined> {
+  if (!input.accuracyCritical || input.senderRole !== "reviewer") {
+    return undefined;
+  }
+
+  try {
+    return await resolveReviewVerificationInputFromRefs({
+      refs: input.refs,
+      worktreePath: input.worktreePath
+    });
+  } catch (error) {
+    if (error instanceof ReviewVerificationError) {
+      throw new PassCommandError(error.message);
+    }
+    throw error;
+  }
+}
+
 export async function emitPassFromWorkspace(
   input: EmitPassInput,
   dependencies: EmitPassDependencies = {}
@@ -324,6 +381,21 @@ export async function emitPassFromWorkspace(
     }
   }
 
+  const accuracyCritical = resolved.bubbleConfig.accuracy_critical === true;
+  const reviewerVerification = await resolveReviewerVerification({
+    accuracyCritical,
+    senderRole: handoff.senderRole,
+    refs,
+    worktreePath: resolved.bubblePaths.worktreePath
+  });
+  if (reviewerVerification !== undefined) {
+    validateReviewerVerificationConsistency({
+      payloadOverall: reviewerVerification.payload.overall,
+      intent,
+      hasFindings
+    });
+  }
+
   const lockPath = join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`);
 
   const appendResult = await appendProtocolEnvelope({
@@ -346,6 +418,30 @@ export async function emitPassFromWorkspace(
       refs
     }
   });
+
+  const mapped = mapAppendResult(appendResult);
+
+  if (reviewerVerification !== undefined) {
+    const verificationArtifact = createReviewVerificationArtifact({
+      payload: reviewerVerification.payload,
+      inputRef: reviewerVerification.inputRef,
+      bubbleId: resolved.bubbleId,
+      round: handoff.nextRound,
+      reviewer: handoff.senderAgent,
+      generatedAt: nowIso
+    });
+    try {
+      await writeReviewVerificationArtifactAtomic(
+        resolved.bubblePaths.reviewVerificationArtifactPath,
+        verificationArtifact
+      );
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      throw new PassCommandError(
+        `PASS ${mapped.envelope.id} was appended but review-verification artifact write failed before state transition. State remains unchanged and transcript is canonical; recover via state reconciliation from transcript tail after fixing artifact path/input. Root error: ${reason}`
+      );
+    }
+  }
 
   const nextState: BubbleStateSnapshot = {
     ...state,
@@ -374,8 +470,6 @@ export async function emitPassFromWorkspace(
       `PASS ${appendResult.envelope.id} was appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`
     );
   }
-
-  const mapped = mapAppendResult(appendResult);
 
   let reviewerTestDirective: ReviewerTestExecutionDirective | undefined;
   if (handoff.senderRole === "implementer") {
@@ -417,6 +511,10 @@ export async function emitPassFromWorkspace(
     };
   }
 
+  const reviewerBriefText = await readReviewerBriefArtifact(
+    resolved.bubblePaths.reviewerBriefArtifactPath
+  );
+
   const refreshReviewer =
     dependencies.refreshReviewerContext ?? refreshReviewerContext;
   let deliveryInitialDelayMs: number | undefined;
@@ -428,7 +526,10 @@ export async function emitPassFromWorkspace(
     const refreshResult = await refreshReviewer({
       bubbleId: resolved.bubbleId,
       bubbleConfig: resolved.bubbleConfig,
-      sessionsPath: resolved.bubblePaths.sessionsPath
+      sessionsPath: resolved.bubblePaths.sessionsPath,
+      ...(reviewerBriefText !== undefined
+        ? { reviewerStartupPrompt: formatReviewerBriefPrompt(reviewerBriefText) }
+        : {})
     }).catch(() => undefined);
     if (refreshResult?.refreshed === true) {
       // Give the respawned reviewer CLI a short warm-up before delivery injection.
@@ -449,6 +550,7 @@ export async function emitPassFromWorkspace(
       envelope: mapped.envelope
     }),
     ...(reviewerTestDirective !== undefined ? { reviewerTestDirective } : {}),
+    ...(reviewerBriefText !== undefined ? { reviewerBrief: reviewerBriefText } : {}),
     ...(deliveryInitialDelayMs !== undefined ? { initialDelayMs: deliveryInitialDelayMs } : {})
   };
   let deliveryResult = await emitDelivery(deliveryInput).catch(() => undefined);

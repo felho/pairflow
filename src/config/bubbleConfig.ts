@@ -467,6 +467,14 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     });
   }
 
+  const accuracyCritical = input.accuracy_critical ?? false;
+  if (typeof accuracyCritical !== "boolean") {
+    errors.push({
+      path: "accuracy_critical",
+      message: "Must be a boolean"
+    });
+  }
+
   const attachLauncher = input.attach_launcher;
   if (attachLauncher !== undefined && !isAttachLauncher(attachLauncher)) {
     errors.push({
@@ -631,6 +639,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     watchdog_timeout_minutes: watchdogTimeoutMinutes as number,
     max_rounds: maxRounds as number,
     commit_requires_approval: commitRequiresApproval as boolean,
+    accuracy_critical: accuracyCritical as boolean,
     ...(attachLauncher !== undefined
       ? { attach_launcher: attachLauncher as AttachLauncher }
       : {}),
@@ -731,6 +740,7 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
     `watchdog_timeout_minutes = ${config.watchdog_timeout_minutes}`,
     `max_rounds = ${config.max_rounds}`,
     `commit_requires_approval = ${config.commit_requires_approval}`,
+    `accuracy_critical = ${config.accuracy_critical === true}`,
     config.attach_launcher !== undefined
       ? `attach_launcher = ${tomlString(config.attach_launcher)}`
       : '# attach_launcher unset; attach uses ~/.pairflow/config.toml, then "auto"',

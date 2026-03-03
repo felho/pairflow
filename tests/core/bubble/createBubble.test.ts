@@ -85,6 +85,9 @@ describe("createBubble", () => {
     await stat(result.paths.inboxPath);
     await stat(result.paths.taskArtifactPath);
     await stat(result.paths.sessionsPath);
+    await expect(stat(result.paths.reviewerBriefArtifactPath)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
 
     const transcript = await readTranscriptEnvelopes(result.paths.transcriptPath);
     expect(transcript).toHaveLength(1);
@@ -173,6 +176,78 @@ describe("createBubble", () => {
     const taskArtifact = await readFile(result.paths.taskArtifactPath, "utf8");
     expect(taskArtifact).toContain("Source: file");
     expect(taskArtifact).toContain("Task from file");
+  });
+
+  it("persists reviewer brief artifact from inline input", async () => {
+    const repoPath = await createTempRepo();
+
+    const result = await createBubble({
+      id: "b_create_reviewer_brief_inline",
+      repoPath,
+      baseBranch: "main",
+      task: "Task",
+      reviewerBrief: "Validate all claims with evidence refs.",
+      cwd: repoPath
+    });
+
+    const briefArtifact = await readFile(result.paths.reviewerBriefArtifactPath, "utf8");
+    expect(briefArtifact).toContain("Validate all claims with evidence refs.");
+  });
+
+  it("persists reviewer brief artifact from file input", async () => {
+    const repoPath = await createTempRepo();
+    const reviewerBriefFilePath = join(repoPath, "reviewer-brief.md");
+    await writeFile(
+      reviewerBriefFilePath,
+      "Use deterministic verification payload.",
+      "utf8"
+    );
+
+    const result = await createBubble({
+      id: "b_create_reviewer_brief_file",
+      repoPath,
+      baseBranch: "main",
+      task: "Task",
+      reviewerBriefFile: reviewerBriefFilePath,
+      cwd: repoPath
+    });
+
+    const briefArtifact = await readFile(result.paths.reviewerBriefArtifactPath, "utf8");
+    expect(briefArtifact).toContain("Use deterministic verification payload.");
+  });
+
+  it("rejects accuracy-critical bubble creation without reviewer brief input", async () => {
+    const repoPath = await createTempRepo();
+
+    await expect(
+      createBubble({
+        id: "b_create_accuracy_critical_missing_brief",
+        repoPath,
+        baseBranch: "main",
+        task: "Task",
+        accuracyCritical: true,
+        cwd: repoPath
+      })
+    ).rejects.toThrow(/accuracy-critical bubbles require reviewer brief input/u);
+  });
+
+  it("rejects reviewer brief inline+file input together regardless of accuracy mode", async () => {
+    const repoPath = await createTempRepo();
+    const reviewerBriefFilePath = join(repoPath, "reviewer-brief.md");
+    await writeFile(reviewerBriefFilePath, "Brief", "utf8");
+
+    await expect(
+      createBubble({
+        id: "b_create_reviewer_brief_both",
+        repoPath,
+        baseBranch: "main",
+        task: "Task",
+        reviewerBrief: "Inline",
+        reviewerBriefFile: reviewerBriefFilePath,
+        accuracyCritical: false,
+        cwd: repoPath
+      })
+    ).rejects.toThrow(/either reviewer brief text or reviewer brief file path, not both/u);
   });
 
   it("infers document review artifact type for doc-centric task files", async () => {

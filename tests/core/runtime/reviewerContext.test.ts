@@ -46,6 +46,7 @@ describe("refreshReviewerContext", () => {
       bubbleId: "b_reviewer_ctx_01",
       bubbleConfig: baseConfig,
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      reviewerStartupPrompt: "Reviewer brief (persisted artifact `reviewer-brief.md`): Verify each claim.",
       runner,
       readSessionsRegistry: () =>
         Promise.resolve({
@@ -64,6 +65,9 @@ describe("refreshReviewerContext", () => {
     });
     expect(calls[0]?.[0]).toBe("respawn-pane");
     expect(calls[0]?.[3]).toBe("pf-b_reviewer_ctx_01:0.2");
+    expect(calls[0]?.join(" ")).toContain(
+      "Reviewer brief (persisted artifact `reviewer-brief.md`): Verify each claim."
+    );
   });
 
   it("returns no_runtime_session when runtime session is missing", async () => {

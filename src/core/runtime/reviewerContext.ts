@@ -7,6 +7,7 @@ export interface RefreshReviewerContextInput {
   bubbleId: string;
   bubbleConfig: BubbleConfig;
   sessionsPath: string;
+  reviewerStartupPrompt?: string;
   runner?: TmuxRunner;
   readSessionsRegistry?: typeof readRuntimeSessionsRegistry;
 }
@@ -52,7 +53,8 @@ export async function refreshReviewerContext(
   const runner = input.runner ?? runTmux;
   const reviewerCommand = buildAgentCommand({
     agentName: input.bubbleConfig.agents.reviewer,
-    bubbleId: input.bubbleId
+    bubbleId: input.bubbleId,
+    startupPrompt: input.reviewerStartupPrompt
   });
 
   try {

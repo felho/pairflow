@@ -103,6 +103,7 @@ describe("emitTmuxDeliveryNotification", () => {
       sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
       envelope: createEnvelope(),
       reviewerTestDirective,
+      reviewerBrief: "Verify factual claims against cited sources.",
       runner,
       readSessionsRegistry: () => Promise.resolve(createRegistry()),
       deliveryAttempts: 2
@@ -162,6 +163,9 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(messageCall?.[4]).toContain("`Issue-Class Expansions: []`");
     expect(messageCall?.[4]).toContain(
       "Execute pairflow commands directly (no confirmation prompt)"
+    );
+    expect(messageCall?.[4]).toContain(
+      "Reviewer brief reminder (from reviewer-brief.md): Verify factual claims against cited sources."
     );
     expect(messageCall?.[4]).toContain(
       "`pairflow pass --summary ... --finding ...`"
@@ -232,6 +236,9 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(messageCall?.[4]).toContain("Severity Ontology v1 reminder");
     expect(messageCall?.[4]).not.toContain(
       "Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)"
+    );
+    expect(messageCall?.[4]).not.toContain(
+      "Reviewer brief reminder (from reviewer-brief.md):"
     );
   });
 

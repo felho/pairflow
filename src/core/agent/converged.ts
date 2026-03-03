@@ -16,6 +16,7 @@ import {
 } from "../runtime/tmuxDelivery.js";
 import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
+import { readReviewVerificationArtifactStatus } from "../reviewer/reviewVerification.js";
 import type { AgentName, BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 
@@ -125,6 +126,21 @@ export async function emitConvergedFromWorkspace(
     throw new ConvergedCommandError(
       `Convergence validation failed: ${policy.errors.join(" ")}`
     );
+  }
+
+  if (resolved.bubbleConfig.accuracy_critical === true) {
+    const verification = await readReviewVerificationArtifactStatus(
+      resolved.bubblePaths.reviewVerificationArtifactPath,
+      {
+        expectedRound: state.round,
+        expectedReviewer: reviewer
+      }
+    );
+    if (verification.status !== "pass") {
+      throw new ConvergedCommandError(
+        `Convergence validation failed: accuracy-critical review verification must be pass (current: ${verification.status}).`
+      );
+    }
   }
 
   const lockPath = join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`);
