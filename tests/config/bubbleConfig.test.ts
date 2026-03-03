@@ -28,7 +28,7 @@ describe("bubble config schema", () => {
     expect(config.quality_mode).toBe("strict");
     expect(config.review_artifact_type).toBe("auto");
     expect(config.reviewer_context_mode).toBe("fresh");
-    expect(config.watchdog_timeout_minutes).toBe(10);
+    expect(config.watchdog_timeout_minutes).toBe(20);
     expect(config.work_mode).toBe("worktree");
     expect(config.attach_launcher).toBeUndefined();
     expect(config.notifications.enabled).toBe(true);

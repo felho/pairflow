@@ -258,7 +258,7 @@ describe("runBubbleWatchdog", () => {
     const result = await runBubbleWatchdog({
       bubbleId: bubble.bubbleId,
       cwd: repoPath,
-      now: new Date("2026-02-22T12:12:00.000Z")
+      now: new Date("2026-02-22T12:22:00.000Z")
     }, {
       emitTmuxDeliveryNotification: (input) => {
         if (input.messageRef !== undefined) {
