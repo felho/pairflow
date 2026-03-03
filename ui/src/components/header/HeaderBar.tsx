@@ -54,13 +54,13 @@ export function HeaderBar(props: HeaderBarProps): JSX.Element {
         <span className="text-[15px] font-bold tracking-wide">
           <span className="text-blue-500">⬡</span> Pairflow
         </span>
-      </div>
-
-      <div className="flex items-center gap-3">
         <span className="flex items-center gap-1.5 rounded-[10px] border border-[#2c2c2c] bg-[#131313] px-2 py-1 text-[10px] text-[#8f8f8f]">
           <span className={cn("inline-block h-1.5 w-1.5 rounded-full", statusDotClass(props.connectionStatus))} />
           {statusLabel(props.connectionStatus)}
         </span>
+      </div>
+
+      <div className="flex items-center gap-3">
         <div className="flex gap-1.5">
           {props.repos.map((repoPath) => {
             const selected = props.selectedRepos.includes(repoPath);

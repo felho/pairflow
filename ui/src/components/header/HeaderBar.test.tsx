@@ -20,6 +20,10 @@ describe("HeaderBar", () => {
 
     expect(screen.getByText("Pairflow")).toBeInTheDocument();
     expect(screen.getByText("SSE connected")).toBeInTheDocument();
+    expect(
+      screen.getByText("Pairflow").compareDocumentPosition(screen.getByText("SSE connected")) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "repo-a" })).toHaveAttribute(
       "aria-pressed",
       "true"
