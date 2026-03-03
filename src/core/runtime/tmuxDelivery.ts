@@ -14,6 +14,7 @@ import {
   formatReviewerTestExecutionDirective,
   type ReviewerTestExecutionDirective
 } from "../reviewer/testEvidence.js";
+import { formatReviewerBriefDeliveryReminder } from "../reviewer/reviewerBrief.js";
 import type { BubbleConfig } from "../../types/bubble.js";
 import type { AgentName } from "../../types/bubble.js";
 import type { ProtocolEnvelope, ProtocolParticipant } from "../../types/protocol.js";
@@ -24,6 +25,7 @@ export interface EmitTmuxDeliveryNotificationInput {
   sessionsPath: string;
   envelope: ProtocolEnvelope;
   reviewerTestDirective?: ReviewerTestExecutionDirective;
+  reviewerBrief?: string;
   messageRef?: string;
   initialDelayMs?: number;
   deliveryAttempts?: number;
@@ -74,7 +76,8 @@ function buildDeliveryMessage(
   messageRef: string,
   bubbleConfig: BubbleConfig,
   worktreePath?: string,
-  reviewerTestDirective?: ReviewerTestExecutionDirective
+  reviewerTestDirective?: ReviewerTestExecutionDirective,
+  reviewerBrief?: string
 ): string {
   const recipientRole =
     envelope.recipient === bubbleConfig.agents.implementer
@@ -129,7 +132,7 @@ function buildDeliveryMessage(
       action =
         `Implementer handoff received. Run a fresh review now. ${buildReviewerAgentSelectionGuidance(
           bubbleConfig.review_artifact_type
-        )} ${buildReviewerSeverityOntologyReminder({ includeFullOntology: useFullReviewerPolicyContext })} ${testDirective} ${buildReviewerScoutExpansionWorkflowGuidance()} ${buildReviewerPassOutputContractGuidance()} ${convergenceInstruction} Execute pairflow commands directly (no confirmation prompt).`;
+        )} ${buildReviewerSeverityOntologyReminder({ includeFullOntology: useFullReviewerPolicyContext })} ${testDirective} ${buildReviewerScoutExpansionWorkflowGuidance()} ${buildReviewerPassOutputContractGuidance()} ${convergenceInstruction} ${reviewerBrief !== undefined ? formatReviewerBriefDeliveryReminder(reviewerBrief) : ""} Execute pairflow commands directly (no confirmation prompt).`;
     } else if (envelope.type === "HUMAN_REPLY") {
       action =
         "Human response received. Continue review workflow from this update.";
@@ -267,7 +270,8 @@ export async function emitTmuxDeliveryNotification(
       messageRef,
       input.bubbleConfig,
       undefined,
-      input.reviewerTestDirective
+      input.reviewerTestDirective,
+      input.reviewerBrief
     );
     return {
       delivered: false,
@@ -282,7 +286,8 @@ export async function emitTmuxDeliveryNotification(
       messageRef,
       input.bubbleConfig,
       undefined,
-      input.reviewerTestDirective
+      input.reviewerTestDirective,
+      input.reviewerBrief
     );
     return {
       delivered: false,
@@ -301,7 +306,8 @@ export async function emitTmuxDeliveryNotification(
       messageRef,
       input.bubbleConfig,
       worktreePath,
-      input.reviewerTestDirective
+      input.reviewerTestDirective,
+      input.reviewerBrief
     );
     return {
       delivered: false,
@@ -317,7 +323,8 @@ export async function emitTmuxDeliveryNotification(
     messageRef,
     input.bubbleConfig,
     worktreePath,
-    input.reviewerTestDirective
+    input.reviewerTestDirective,
+    input.reviewerBrief
   );
   const runner = input.runner ?? runTmux;
 

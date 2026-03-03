@@ -21,6 +21,26 @@ async function createTempRepo(): Promise<string> {
   return root;
 }
 
+async function setReviewerActive(worktreeStatePath: string, reviewerAgent: "codex" | "claude"): Promise<void> {
+  const loaded = await readStateSnapshot(worktreeStatePath);
+  await writeStateSnapshot(
+    worktreeStatePath,
+    {
+      ...loaded.state,
+      state: "RUNNING",
+      round: 1,
+      active_agent: reviewerAgent,
+      active_role: "reviewer",
+      active_since: "2026-02-21T12:06:00.000Z",
+      last_command_at: "2026-02-21T12:06:00.000Z"
+    },
+    {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "RUNNING"
+    }
+  );
+}
+
 afterEach(async () => {
   await Promise.all(
     tempDirs.splice(0).map((path) =>
@@ -835,10 +855,11 @@ describe("emitPassFromWorkspace", () => {
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_pass_09",
-      task: "Implement pass flow"
+      task: "Implement pass flow",
+      reviewerBrief: "Respawn must rehydrate reviewer brief."
     });
 
-    const refreshCalls: Array<{ bubbleId: string }> = [];
+    const refreshCalls: Array<{ bubbleId: string; reviewerStartupPrompt?: string }> = [];
     await emitPassFromWorkspace(
       {
         summary: "Implementation complete",
@@ -846,8 +867,13 @@ describe("emitPassFromWorkspace", () => {
         now: new Date("2026-02-21T12:05:00.000Z")
       },
       {
-        refreshReviewerContext: ({ bubbleId }) => {
-          refreshCalls.push({ bubbleId });
+        refreshReviewerContext: ({ bubbleId, reviewerStartupPrompt }) => {
+          refreshCalls.push({
+            bubbleId,
+            ...(reviewerStartupPrompt !== undefined
+              ? { reviewerStartupPrompt }
+              : {})
+          });
           return Promise.resolve({
             refreshed: true
           });
@@ -855,7 +881,11 @@ describe("emitPassFromWorkspace", () => {
       }
     );
 
-    expect(refreshCalls).toEqual([{ bubbleId: "b_pass_09" }]);
+    expect(refreshCalls).toHaveLength(1);
+    expect(refreshCalls[0]?.bubbleId).toBe("b_pass_09");
+    expect(refreshCalls[0]?.reviewerStartupPrompt).toContain(
+      "Reviewer brief (persisted artifact `reviewer-brief.md`):\nRespawn must rehydrate reviewer brief."
+    );
   });
 
   it("refreshes and re-delivers reviewer context on every implementer PASS round in fresh mode", async () => {
@@ -1111,6 +1141,337 @@ describe("emitPassFromWorkspace", () => {
 
     expect(capturedDirective?.skip_full_rerun).toBe(false);
     expect(capturedDirective?.reason_code).toBe("evidence_unverifiable");
+  });
+
+  it("rejects accuracy-critical reviewer PASS when verification ref is missing", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_acc_01",
+      task: "Accuracy-critical pass",
+      accuracyCritical: true,
+      reviewerBrief: "Require verification payload."
+    });
+    await setReviewerActive(bubble.paths.statePath, bubble.config.agents.reviewer);
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Review clean",
+        noFindings: true,
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/requires a --ref to review-verification-input.json/u);
+  });
+
+  it("rejects accuracy-critical reviewer PASS when verification basename does not match", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_acc_02",
+      task: "Accuracy-critical pass",
+      accuracyCritical: true,
+      reviewerBrief: "Require verification payload."
+    });
+    await setReviewerActive(bubble.paths.statePath, bubble.config.agents.reviewer);
+
+    const wrongFile = join(bubble.paths.worktreePath, "verification.json");
+    await writeFile(wrongFile, "{\"schema\":\"review_verification_v1\"}", "utf8");
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Review clean",
+        noFindings: true,
+        refs: [wrongFile],
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/requires a --ref to review-verification-input.json/u);
+  });
+
+  it("rejects accuracy-critical reviewer PASS on invalid verification payload JSON", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_acc_03",
+      task: "Accuracy-critical pass",
+      accuracyCritical: true,
+      reviewerBrief: "Require verification payload."
+    });
+    await setReviewerActive(bubble.paths.statePath, bubble.config.agents.reviewer);
+
+    const verificationInput = join(
+      bubble.paths.worktreePath,
+      "review-verification-input.json"
+    );
+    await writeFile(verificationInput, "{ not-json", "utf8");
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Review clean",
+        noFindings: true,
+        refs: [verificationInput],
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/Invalid JSON in review-verification-input.json/u);
+  });
+
+  it("rejects accuracy-critical reviewer PASS on schema mismatch and invalid overall-intent mapping", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_acc_04",
+      task: "Accuracy-critical pass",
+      accuracyCritical: true,
+      reviewerBrief: "Require verification payload."
+    });
+    await setReviewerActive(bubble.paths.statePath, bubble.config.agents.reviewer);
+
+    const verificationInput = join(
+      bubble.paths.worktreePath,
+      "review-verification-input.json"
+    );
+    await writeFile(
+      verificationInput,
+      JSON.stringify({
+        schema: "wrong_schema",
+        overall: "pass",
+        claims: [
+          {
+            claim_id: "C1",
+            status: "verified",
+            evidence_refs: ["src/x.ts:1"]
+          }
+        ]
+      }),
+      "utf8"
+    );
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Review clean",
+        noFindings: true,
+        refs: [verificationInput],
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/Invalid review_verification_v1 payload/u);
+
+    await writeFile(
+      verificationInput,
+      JSON.stringify({
+        schema: "review_verification_v1",
+        overall: "fail",
+        claims: [
+          {
+            claim_id: "C1",
+            status: "mismatch",
+            evidence_refs: ["src/x.ts:1"]
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Review clean",
+        noFindings: true,
+        refs: [verificationInput],
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/overall=fail requires intent=fix_request and open findings/u);
+
+    await writeFile(
+      verificationInput,
+      JSON.stringify({
+        schema: "review_verification_v1",
+        overall: "pass",
+        claims: [
+          {
+            claim_id: "C1",
+            status: "verified",
+            evidence_refs: ["src/x.ts:1"]
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Review found issue",
+        findings: [
+          {
+            severity: "P2",
+            title: "Needs changes"
+          }
+        ],
+        refs: [verificationInput],
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/overall=pass requires clean handoff/u);
+  });
+
+  it("writes deterministic review-verification artifact and overwrites on later successful reviewer pass", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_acc_05",
+      task: "Accuracy-critical pass",
+      accuracyCritical: true,
+      reviewerBrief: "Require verification payload."
+    });
+    await setReviewerActive(bubble.paths.statePath, bubble.config.agents.reviewer);
+
+    const verificationInput = join(
+      bubble.paths.worktreePath,
+      "review-verification-input.json"
+    );
+    await writeFile(
+      verificationInput,
+      JSON.stringify({
+        schema: "review_verification_v1",
+        overall: "fail",
+        claims: [
+          {
+            claim_id: "C1",
+            status: "mismatch",
+            evidence_refs: ["src/a.ts:10"]
+          }
+        ]
+      }),
+      "utf8"
+    );
+
+    await emitPassFromWorkspace({
+      summary: "Need fixes",
+      findings: [
+        {
+          severity: "P2",
+          title: "Incorrect claim"
+        }
+      ],
+      refs: [verificationInput],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:10:00.000Z")
+    });
+
+    const firstArtifactRaw = await readFile(
+      bubble.paths.reviewVerificationArtifactPath,
+      "utf8"
+    );
+    const firstArtifact = JSON.parse(firstArtifactRaw) as {
+      schema: string;
+      overall: string;
+      input_ref: string;
+      meta: {
+        round: number;
+      };
+      validation: {
+        status: string;
+        errors: unknown[];
+      };
+    };
+    expect(firstArtifact.schema).toBe("review_verification_v1");
+    expect(firstArtifact.overall).toBe("fail");
+    expect(firstArtifact.input_ref).toBe("review-verification-input.json");
+    expect(firstArtifact.meta.round).toBe(2);
+    expect(firstArtifact.validation).toEqual({
+      status: "valid",
+      errors: []
+    });
+
+    await emitPassFromWorkspace({
+      summary: "Implemented fixes",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:11:00.000Z")
+    });
+
+    await writeFile(
+      verificationInput,
+      JSON.stringify({
+        schema: "review_verification_v1",
+        overall: "pass",
+        claims: [
+          {
+            claim_id: "C1",
+            status: "verified",
+            evidence_refs: ["src/a.ts:18"]
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await emitPassFromWorkspace({
+      summary: "Review clean",
+      noFindings: true,
+      refs: [verificationInput],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:12:00.000Z")
+    });
+
+    const secondArtifactRaw = await readFile(
+      bubble.paths.reviewVerificationArtifactPath,
+      "utf8"
+    );
+    const secondArtifact = JSON.parse(secondArtifactRaw) as {
+      overall: string;
+      claims: Array<{ evidence_refs?: string[] }>;
+      meta: {
+        round: number;
+      };
+    };
+    expect(secondArtifact.overall).toBe("pass");
+    expect(secondArtifact.meta.round).toBe(3);
+    expect(secondArtifact.claims[0]?.evidence_refs).toEqual(["src/a.ts:18"]);
+  });
+
+  it("keeps state unchanged when appended accuracy-critical reviewer PASS cannot write verification artifact", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_acc_06",
+      task: "Accuracy-critical pass",
+      accuracyCritical: true,
+      reviewerBrief: "Require verification payload."
+    });
+    await setReviewerActive(bubble.paths.statePath, bubble.config.agents.reviewer);
+
+    const verificationInput = join(
+      bubble.paths.worktreePath,
+      "review-verification-input.json"
+    );
+    await writeFile(
+      verificationInput,
+      JSON.stringify({
+        schema: "review_verification_v1",
+        overall: "pass",
+        claims: [
+          {
+            claim_id: "C1",
+            status: "verified",
+            evidence_refs: ["src/a.ts:42"]
+          }
+        ]
+      }),
+      "utf8"
+    );
+
+    await rm(bubble.paths.artifactsDir, { recursive: true, force: true });
+    await writeFile(bubble.paths.artifactsDir, "blocked", "utf8");
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Review clean",
+        noFindings: true,
+        refs: [verificationInput],
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/review-verification artifact write failed before state transition/u);
+
+    const stateAfter = await readStateSnapshot(bubble.paths.statePath);
+    expect(stateAfter.state.active_role).toBe("reviewer");
+    expect(stateAfter.state.active_agent).toBe(bubble.config.agents.reviewer);
+    expect(stateAfter.state.round).toBe(1);
+
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcript[transcript.length - 1]?.type).toBe("PASS");
   });
 
   it("rejects pass when bubble is not running", async () => {

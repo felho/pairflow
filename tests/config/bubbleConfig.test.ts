@@ -32,6 +32,7 @@ describe("bubble config schema", () => {
     expect(config.work_mode).toBe("worktree");
     expect(config.attach_launcher).toBeUndefined();
     expect(config.notifications.enabled).toBe(true);
+    expect(config.accuracy_critical).toBe(false);
     expect(config.local_overlay?.enabled).toBe(true);
     expect(config.local_overlay?.mode).toBe("symlink");
     expect(config.local_overlay?.entries).toEqual([
@@ -262,6 +263,28 @@ describe("bubble config schema", () => {
     expect(result.errors.some((error) => error.path === "attach_launcher")).toBe(
       true
     );
+  });
+
+  it("parses and renders accuracy_critical=true", () => {
+    const config = parseBubbleConfigToml(`
+id = "b_test_critical_01"
+repo_path = "/tmp/repo"
+base_branch = "main"
+bubble_branch = "bubble/b_test_critical_01"
+accuracy_critical = true
+
+[agents]
+implementer = "codex"
+reviewer = "claude"
+
+[commands]
+test = "pnpm test"
+typecheck = "pnpm typecheck"
+`);
+
+    expect(config.accuracy_critical).toBe(true);
+    const rendered = renderBubbleConfigToml(config);
+    expect(rendered).toContain("accuracy_critical = true");
   });
 
   it("rejects unsafe local overlay entries", () => {

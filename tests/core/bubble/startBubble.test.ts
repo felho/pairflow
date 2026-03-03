@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
@@ -188,6 +188,9 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain("--permission-mode");
     expect(reviewerCommand).toContain("bypassPermissions");
     expect(reviewerCommand).toContain("Pairflow reviewer start");
+    expect(reviewerCommand).not.toContain(
+      "Reviewer brief (persisted artifact `reviewer-brief.md`)"
+    );
     expect(reviewerCommand).toContain("Stand by first. Do not start reviewing");
     expect(reviewerCommand).toContain("Severity Ontology v1 reminder");
     expect(reviewerCommand).toContain("Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)");
@@ -279,6 +282,105 @@ describe("startBubble", () => {
     expect(created.config.review_artifact_type).toBe("document");
     expect(reviewerCommand).toContain("document/task artifacts");
     expect(reviewerCommand).toContain("Do not force `feature-dev:code-reviewer`");
+  });
+
+  it("injects persisted reviewer brief into reviewer startup prompt", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_reviewer_brief_01",
+      repoPath,
+      baseBranch: "main",
+      task: "Accuracy-critical reviewer brief startup injection",
+      reviewerBrief: "Always verify each claim against concrete source refs.",
+      cwd: repoPath
+    });
+
+    let reviewerCommand: string | undefined;
+    await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T13:00:00.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () =>
+          Promise.resolve({
+            repoPath,
+            baseRef: "refs/heads/main",
+            bubbleBranch: created.config.bubble_branch,
+            worktreePath: created.paths.worktreePath
+          }),
+        launchBubbleTmuxSession: (input) => {
+          reviewerCommand = input.reviewerCommand;
+          return Promise.resolve({ sessionName: "pf-b_start_reviewer_brief_01" });
+        },
+        claimRuntimeSession: (input) =>
+          Promise.resolve({
+            claimed: true,
+            record: {
+              bubbleId: input.bubbleId,
+              repoPath: input.repoPath,
+              worktreePath: input.worktreePath,
+              tmuxSessionName: input.tmuxSessionName,
+              updatedAt: "2026-02-22T13:00:00.000Z"
+            }
+          })
+      }
+    );
+
+    expect(reviewerCommand).toContain("Reviewer brief (persisted artifact `reviewer-brief.md`)");
+    expect(reviewerCommand).toContain("Always verify each claim against concrete source refs.");
+  });
+
+  it("continues startup when reviewer brief artifact is unreadable", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_reviewer_brief_unreadable_01",
+      repoPath,
+      baseBranch: "main",
+      task: "Startup should tolerate unreadable optional reviewer brief artifact.",
+      cwd: repoPath
+    });
+
+    await mkdir(created.paths.reviewerBriefArtifactPath, { recursive: true });
+
+    let reviewerCommand: string | undefined;
+    const result = await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T13:00:00.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () =>
+          Promise.resolve({
+            repoPath,
+            baseRef: "refs/heads/main",
+            bubbleBranch: created.config.bubble_branch,
+            worktreePath: created.paths.worktreePath
+          }),
+        launchBubbleTmuxSession: (input) => {
+          reviewerCommand = input.reviewerCommand;
+          return Promise.resolve({ sessionName: "pf-b_start_reviewer_brief_unreadable_01" });
+        },
+        claimRuntimeSession: (input) =>
+          Promise.resolve({
+            claimed: true,
+            record: {
+              bubbleId: input.bubbleId,
+              repoPath: input.repoPath,
+              worktreePath: input.worktreePath,
+              tmuxSessionName: input.tmuxSessionName,
+              updatedAt: "2026-02-22T13:00:00.000Z"
+            }
+          })
+      }
+    );
+
+    expect(result.state.state).toBe("RUNNING");
+    expect(reviewerCommand).not.toContain(
+      "Reviewer brief (persisted artifact `reviewer-brief.md`)"
+    );
   });
 
   it("fails before bootstrap when runtime session ownership claim fails", async () => {
@@ -447,7 +549,8 @@ describe("startBubble", () => {
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_start_resume_01",
-      task: "Resume bubble"
+      task: "Resume bubble",
+      reviewerBrief: "Resume must keep reviewer brief context."
     });
 
     let bootstrapCalled = false;
@@ -485,6 +588,12 @@ describe("startBubble", () => {
           expect(input.reviewerCommand).toContain("--dangerously-skip-permissions");
           expect(input.reviewerCommand).toContain("Pairflow reviewer resume");
           expect(input.reviewerCommand).toContain("resume-summary: messages=3");
+          expect(input.reviewerCommand).toContain(
+            "Resume must keep reviewer brief context."
+          );
+          expect(input.reviewerCommand).toContain(
+            "Treat this reviewer brief as mandatory review context."
+          );
           expect(input.reviewerCommand).toContain("Severity Ontology v1 reminder");
           expect(input.reviewerCommand).toContain("Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)");
           expect(input.reviewerCommand).toContain("Blocker severities (`P0/P1`) require concrete evidence");

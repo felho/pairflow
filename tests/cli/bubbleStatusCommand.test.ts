@@ -80,6 +80,9 @@ describe("renderBubbleStatusText", () => {
         lastMessageTs: "2026-02-22T12:05:00.000Z",
         lastMessageId: "msg_20260222_003"
       },
+      accuracy_critical: false,
+      last_review_verification: "missing",
+      failing_gates: [],
       ...partial
     };
   }

@@ -83,7 +83,10 @@ export function renderBubbleStatusText(status: BubbleStatusView): string {
     `Last command: ${status.lastCommandAt ?? "-"}`,
     `Watchdog: ${status.watchdog.monitored ? "on" : "off"} timeout=${status.watchdog.timeoutMinutes}m remaining=${status.watchdog.remainingSeconds ?? "-"}s expired=${status.watchdog.expired ? "yes" : "no"}`,
     `Inbox pending: questions=${status.pendingInboxItems.humanQuestions}, approvals=${status.pendingInboxItems.approvalRequests}, total=${status.pendingInboxItems.total}`,
-    `Transcript: messages=${status.transcript.totalMessages}, last=${status.transcript.lastMessageType ?? "-"} @ ${status.transcript.lastMessageTs ?? "-"}`
+    `Transcript: messages=${status.transcript.totalMessages}, last=${status.transcript.lastMessageType ?? "-"} @ ${status.transcript.lastMessageTs ?? "-"}`,
+    `Accuracy critical: ${status.accuracy_critical ? "yes" : "no"}`,
+    `Last review verification: ${status.last_review_verification}`,
+    `Failing gates: ${status.failing_gates.length > 0 ? status.failing_gates.join(", ") : "-"}`
   ];
 
   if (status.watchdog.monitored && status.watchdog.expired) {

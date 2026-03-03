@@ -7,6 +7,8 @@ export interface SetupRunningBubbleFixtureInput {
   repoPath: string;
   task: string;
   startedAt?: string;
+  reviewerBrief?: string;
+  accuracyCritical?: boolean;
 }
 
 export async function setupRunningBubbleFixture(
@@ -17,6 +19,10 @@ export async function setupRunningBubbleFixture(
     repoPath: input.repoPath,
     baseBranch: "main",
     task: input.task,
+    ...(input.reviewerBrief !== undefined
+      ? { reviewerBrief: input.reviewerBrief }
+      : {}),
+    ...(input.accuracyCritical === true ? { accuracyCritical: true } : {}),
     cwd: input.repoPath
   });
 

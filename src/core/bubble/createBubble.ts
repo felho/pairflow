@@ -31,6 +31,9 @@ export interface BubbleCreateInput {
   baseBranch: string;
   task?: string;
   taskFile?: string;
+  reviewerBrief?: string;
+  reviewerBriefFile?: string;
+  accuracyCritical?: boolean;
   cwd?: string;
   now?: Date;
   implementer?: AgentName;
@@ -52,6 +55,7 @@ export interface BubbleCreateResult {
   config: BubbleConfig;
   state: BubbleStateSnapshot;
   task: ResolvedTaskInput;
+  reviewerBrief?: ResolvedTaskInput;
 }
 
 export class BubbleCreateError extends Error {
@@ -146,12 +150,76 @@ async function resolveTaskInput(input: {
   };
 }
 
+async function resolveReviewerBriefInput(input: {
+  reviewerBrief?: string;
+  reviewerBriefFile?: string;
+  accuracyCritical: boolean;
+  cwd: string;
+}): Promise<ResolvedTaskInput | undefined> {
+  const hasReviewerBriefText = isNonEmptyString(input.reviewerBrief);
+  const hasReviewerBriefFile = isNonEmptyString(input.reviewerBriefFile);
+  if (hasReviewerBriefText && hasReviewerBriefFile) {
+    throw new BubbleCreateError(
+      "Provide either reviewer brief text or reviewer brief file path, not both."
+    );
+  }
+
+  if (input.accuracyCritical && !hasReviewerBriefText && !hasReviewerBriefFile) {
+    throw new BubbleCreateError(
+      "accuracy-critical bubbles require reviewer brief input (--reviewer-brief or --reviewer-brief-file)."
+    );
+  }
+
+  if (!hasReviewerBriefText && !hasReviewerBriefFile) {
+    return undefined;
+  }
+
+  if (hasReviewerBriefFile) {
+    const candidatePath = resolve(input.cwd, input.reviewerBriefFile as string);
+    const briefStats = await stat(candidatePath).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") {
+        throw new BubbleCreateError(
+          `Reviewer brief file does not exist: ${candidatePath}`
+        );
+      }
+      throw error;
+    });
+    if (!briefStats.isFile()) {
+      throw new BubbleCreateError(
+        `Reviewer brief path is not a file: ${candidatePath}`
+      );
+    }
+
+    const content = await readFile(candidatePath, "utf8");
+    if (content.trim().length === 0) {
+      throw new BubbleCreateError(`Reviewer brief file is empty: ${candidatePath}`);
+    }
+
+    return {
+      content: content.trimEnd(),
+      source: "file",
+      sourcePath: candidatePath
+    };
+  }
+
+  const reviewerBriefText = (input.reviewerBrief as string).trim();
+  if (reviewerBriefText.length === 0) {
+    throw new BubbleCreateError("Reviewer brief cannot be empty.");
+  }
+
+  return {
+    content: reviewerBriefText,
+    source: "inline"
+  };
+}
+
 function buildBubbleConfig(input: {
   id: string;
   bubbleInstanceId: string;
   repoPath: string;
   baseBranch: string;
   bubbleBranch: string;
+  accuracyCritical: boolean;
   reviewArtifactType: ReviewArtifactType;
   implementer?: AgentName;
   reviewer?: AgentName;
@@ -172,6 +240,7 @@ function buildBubbleConfig(input: {
     watchdog_timeout_minutes: DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
     max_rounds: DEFAULT_MAX_ROUNDS,
     commit_requires_approval: true,
+    accuracy_critical: input.accuracyCritical,
     ...(input.openCommand !== undefined
       ? { open_command: input.openCommand }
       : {}),
@@ -311,6 +380,17 @@ export async function createBubble(input: BubbleCreateInput): Promise<BubbleCrea
     taskResolveInput.taskFile = input.taskFile;
   }
   const task = await resolveTaskInput(taskResolveInput);
+  const accuracyCritical = input.accuracyCritical === true;
+  const reviewerBrief = await resolveReviewerBriefInput({
+    ...(input.reviewerBrief !== undefined
+      ? { reviewerBrief: input.reviewerBrief }
+      : {}),
+    ...(input.reviewerBriefFile !== undefined
+      ? { reviewerBriefFile: input.reviewerBriefFile }
+      : {}),
+    accuracyCritical,
+    cwd: input.cwd ?? process.cwd()
+  });
 
   const bubbleConfigInput: Parameters<typeof buildBubbleConfig>[0] = {
     id: input.id,
@@ -318,6 +398,7 @@ export async function createBubble(input: BubbleCreateInput): Promise<BubbleCrea
     repoPath,
     baseBranch,
     bubbleBranch,
+    accuracyCritical,
     reviewArtifactType: inferReviewArtifactType(task)
   };
   if (input.implementer !== undefined) {
@@ -364,6 +445,12 @@ export async function createBubble(input: BubbleCreateInput): Promise<BubbleCrea
     encoding: "utf8",
     flag: "wx"
   });
+  if (reviewerBrief !== undefined) {
+    await writeFile(paths.reviewerBriefArtifactPath, `${reviewerBrief.content}\n`, {
+      encoding: "utf8",
+      flag: "wx"
+    });
+  }
   await ensureRuntimeSessionFile(paths.sessionsPath);
 
   try {
@@ -417,6 +504,7 @@ export async function createBubble(input: BubbleCreateInput): Promise<BubbleCrea
     paths,
     config,
     state,
-    task
+    task,
+    ...(reviewerBrief !== undefined ? { reviewerBrief } : {})
   };
 }

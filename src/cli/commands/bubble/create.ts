@@ -10,6 +10,9 @@ export interface BubbleCreateCommandOptions {
   base?: string;
   task?: string;
   taskFile?: string;
+  reviewerBrief?: string;
+  reviewerBriefFile?: string;
+  accuracyCritical?: boolean;
   help: boolean;
 }
 
@@ -32,6 +35,9 @@ export function getBubbleCreateHelpText(): string {
     "  --base <branch>       Base branch",
     "  --task <text>         Inline task text",
     "  --task-file <path>    Task input from file",
+    "  --reviewer-brief <text>      Optional inline reviewer brief",
+    "  --reviewer-brief-file <path> Optional reviewer brief from file",
+    "  --accuracy-critical          Enforce reviewer verification payload gate",
     "  -h, --help            Show this help"
   ].join("\n");
 }
@@ -56,6 +62,15 @@ export function parseBubbleCreateCommandOptions(
       },
       "task-file": {
         type: "string"
+      },
+      "reviewer-brief": {
+        type: "string"
+      },
+      "reviewer-brief-file": {
+        type: "string"
+      },
+      "accuracy-critical": {
+        type: "boolean"
       },
       help: {
         type: "boolean",
@@ -84,6 +99,15 @@ export function parseBubbleCreateCommandOptions(
   if (parsed.values["task-file"] !== undefined) {
     options.taskFile = parsed.values["task-file"];
   }
+  if (parsed.values["reviewer-brief"] !== undefined) {
+    options.reviewerBrief = parsed.values["reviewer-brief"];
+  }
+  if (parsed.values["reviewer-brief-file"] !== undefined) {
+    options.reviewerBriefFile = parsed.values["reviewer-brief-file"];
+  }
+  if (parsed.values["accuracy-critical"] !== undefined) {
+    options.accuracyCritical = parsed.values["accuracy-critical"];
+  }
 
   if (options.help) {
     return options;
@@ -107,6 +131,19 @@ export function parseBubbleCreateCommandOptions(
   }
   if (hasTask && hasTaskFile) {
     throw new Error("Use only one task input: --task or --task-file.");
+  }
+
+  const hasReviewerBrief = options.reviewerBrief !== undefined;
+  const hasReviewerBriefFile = options.reviewerBriefFile !== undefined;
+  if (hasReviewerBrief && hasReviewerBriefFile) {
+    throw new Error(
+      "Use only one reviewer brief input: --reviewer-brief or --reviewer-brief-file."
+    );
+  }
+  if ((options.accuracyCritical ?? false) && !hasReviewerBrief && !hasReviewerBriefFile) {
+    throw new Error(
+      "--accuracy-critical requires reviewer brief input via --reviewer-brief or --reviewer-brief-file."
+    );
   }
 
   if (missing.length > 0) {
@@ -146,6 +183,13 @@ export async function runBubbleCreateCommand(
     baseBranch: options.base as string,
     ...(options.task !== undefined ? { task: options.task } : {}),
     ...(options.taskFile !== undefined ? { taskFile: options.taskFile } : {}),
+    ...(options.reviewerBrief !== undefined
+      ? { reviewerBrief: options.reviewerBrief }
+      : {}),
+    ...(options.reviewerBriefFile !== undefined
+      ? { reviewerBriefFile: options.reviewerBriefFile }
+      : {}),
+    ...(options.accuracyCritical === true ? { accuracyCritical: true } : {}),
     cwd
   });
   try {

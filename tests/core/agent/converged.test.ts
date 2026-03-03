@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -140,6 +140,323 @@ describe("emitConvergedFromWorkspace", () => {
 
     const inbox = await readTranscriptEnvelopes(bubble.paths.inboxPath);
     expect(inbox.map((entry) => entry.type)).toEqual(["APPROVAL_REQUEST"]);
+  });
+
+  it("blocks convergence in accuracy-critical bubbles when latest review verification is missing", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_converged_acc_01",
+      task: "Implement + review",
+      accuracyCritical: true,
+      reviewerBrief: "Require verification input."
+    });
+
+    await emitPassFromWorkspace({
+      summary: "Implementation pass 1",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:01:00.000Z")
+    });
+    const verificationInput = join(
+      bubble.paths.worktreePath,
+      "review-verification-input.json"
+    );
+    await writeFile(
+      verificationInput,
+      JSON.stringify({
+        schema: "review_verification_v1",
+        overall: "pass",
+        claims: [
+          {
+            claim_id: "C1",
+            status: "verified",
+            evidence_refs: ["src/a.ts:1"]
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await emitPassFromWorkspace({
+      summary: "Review pass 1 clean",
+      noFindings: true,
+      refs: [verificationInput],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:02:00.000Z")
+    });
+    await emitPassFromWorkspace({
+      summary: "Implementation pass 2",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:03:00.000Z")
+    });
+    await rm(bubble.paths.reviewVerificationArtifactPath, { force: true });
+
+    await expect(
+      emitConvergedFromWorkspace({
+        summary: "Should fail",
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/accuracy-critical review verification must be pass \(current: missing\)/u);
+  });
+
+  it("allows convergence in accuracy-critical bubbles when latest review verification is pass", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_converged_acc_02",
+      task: "Implement + review",
+      accuracyCritical: true,
+      reviewerBrief: "Require verification input."
+    });
+
+    const verificationInput = join(
+      bubble.paths.worktreePath,
+      "review-verification-input.json"
+    );
+
+    await emitPassFromWorkspace({
+      summary: "Implementation pass 1",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:01:00.000Z")
+    });
+    await writeFile(
+      verificationInput,
+      JSON.stringify({
+        schema: "review_verification_v1",
+        overall: "pass",
+        claims: [
+          {
+            claim_id: "C1",
+            status: "verified",
+            evidence_refs: ["src/a.ts:1"]
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await emitPassFromWorkspace({
+      summary: "Review pass 1 clean",
+      noFindings: true,
+      refs: [verificationInput],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:02:00.000Z")
+    });
+    await emitPassFromWorkspace({
+      summary: "Implementation pass 2",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:03:00.000Z")
+    });
+
+    const result = await emitConvergedFromWorkspace({
+      summary: "Ready for approval.",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:04:00.000Z")
+    });
+
+    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+  });
+
+  it("blocks convergence in accuracy-critical bubbles when latest review verification artifact is from a stale round", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_converged_acc_02_stale",
+      task: "Implement + review",
+      accuracyCritical: true,
+      reviewerBrief: "Require verification input."
+    });
+
+    const verificationInput = join(
+      bubble.paths.worktreePath,
+      "review-verification-input.json"
+    );
+
+    await emitPassFromWorkspace({
+      summary: "Implementation pass 1",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:01:00.000Z")
+    });
+    await writeFile(
+      verificationInput,
+      JSON.stringify({
+        schema: "review_verification_v1",
+        overall: "pass",
+        claims: [
+          {
+            claim_id: "C1",
+            status: "verified",
+            evidence_refs: ["src/a.ts:1"]
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await emitPassFromWorkspace({
+      summary: "Review pass 1 clean",
+      noFindings: true,
+      refs: [verificationInput],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:02:00.000Z")
+    });
+    await emitPassFromWorkspace({
+      summary: "Implementation pass 2",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:03:00.000Z")
+    });
+    await writeFile(
+      bubble.paths.reviewVerificationArtifactPath,
+      `${JSON.stringify(
+        {
+          schema: "review_verification_v1",
+          overall: "pass",
+          claims: [
+            {
+              claim_id: "C1",
+              status: "verified",
+              evidence_refs: ["src/a.ts:1"]
+            }
+          ],
+          input_ref: "review-verification-input.json",
+          meta: {
+            bubble_id: bubble.bubbleId,
+            round: 1,
+            reviewer: bubble.config.agents.reviewer,
+            generated_at: "2026-02-22T09:03:30.000Z"
+          },
+          validation: {
+            status: "valid",
+            errors: []
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
+
+    await expect(
+      emitConvergedFromWorkspace({
+        summary: "Should fail because artifact is stale for round 2",
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/accuracy-critical review verification must be pass \(current: invalid\)/u);
+  });
+
+  it("blocks convergence in accuracy-critical bubbles when latest review verification is fail", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_converged_acc_03",
+      task: "Implement + review",
+      accuracyCritical: true,
+      reviewerBrief: "Require verification input."
+    });
+
+    const verificationInput = join(
+      bubble.paths.worktreePath,
+      "review-verification-input.json"
+    );
+
+    await emitPassFromWorkspace({
+      summary: "Implementation pass 1",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:01:00.000Z")
+    });
+    await writeFile(
+      verificationInput,
+      JSON.stringify({
+        schema: "review_verification_v1",
+        overall: "fail",
+        claims: [
+          {
+            claim_id: "C1",
+            status: "mismatch",
+            evidence_refs: ["src/a.ts:1"]
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await emitPassFromWorkspace({
+      summary: "Review found mismatch",
+      findings: [
+        {
+          severity: "P3",
+          title: "Mismatch"
+        }
+      ],
+      refs: [verificationInput],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:02:00.000Z")
+    });
+    await emitPassFromWorkspace({
+      summary: "Implementation pass 2",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:03:00.000Z")
+    });
+
+    await expect(
+      emitConvergedFromWorkspace({
+        summary: "Should fail",
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/accuracy-critical review verification must be pass \(current: fail\)/u);
+  });
+
+  it("blocks convergence in accuracy-critical bubbles when latest review verification artifact is invalid", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_converged_acc_04",
+      task: "Implement + review",
+      accuracyCritical: true,
+      reviewerBrief: "Require verification input."
+    });
+
+    const verificationInput = join(
+      bubble.paths.worktreePath,
+      "review-verification-input.json"
+    );
+
+    await emitPassFromWorkspace({
+      summary: "Implementation pass 1",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:01:00.000Z")
+    });
+    await writeFile(
+      verificationInput,
+      JSON.stringify({
+        schema: "review_verification_v1",
+        overall: "pass",
+        claims: [
+          {
+            claim_id: "C1",
+            status: "verified",
+            evidence_refs: ["src/a.ts:1"]
+          }
+        ]
+      }),
+      "utf8"
+    );
+    await emitPassFromWorkspace({
+      summary: "Review clean",
+      noFindings: true,
+      refs: [verificationInput],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:02:00.000Z")
+    });
+    await emitPassFromWorkspace({
+      summary: "Implementation pass 2",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:03:00.000Z")
+    });
+    await writeFile(bubble.paths.reviewVerificationArtifactPath, "{invalid", "utf8");
+
+    await expect(
+      emitConvergedFromWorkspace({
+        summary: "Should fail",
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/accuracy-critical review verification must be pass \(current: invalid\)/u);
   });
 
   it("rejects when active role is not reviewer", async () => {

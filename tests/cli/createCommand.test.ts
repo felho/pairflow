@@ -57,6 +57,25 @@ describe("parseBubbleCreateCommandOptions", () => {
     expect(parsed.taskFile).toBe("/tmp/task.md");
   });
 
+  it("parses reviewer brief and accuracy-critical flags", () => {
+    const parsed = parseBubbleCreateCommandOptions([
+      "--id",
+      "b_create_01",
+      "--repo",
+      "/tmp/repo",
+      "--base",
+      "main",
+      "--task",
+      "Implement X",
+      "--reviewer-brief",
+      "Verify all claims against source",
+      "--accuracy-critical"
+    ]);
+
+    expect(parsed.reviewerBrief).toBe("Verify all claims against source");
+    expect(parsed.accuracyCritical).toBe(true);
+  });
+
   it("supports help flag", () => {
     const parsed = parseBubbleCreateCommandOptions(["--help"]);
     expect(parsed.help).toBe(true);
@@ -104,6 +123,41 @@ describe("parseBubbleCreateCommandOptions", () => {
         "/tmp/task.md"
       ])
     ).toThrow(/Use only one task input/u);
+  });
+
+  it("throws when both reviewer brief input forms are provided", () => {
+    expect(() =>
+      parseBubbleCreateCommandOptions([
+        "--id",
+        "b_create_01",
+        "--repo",
+        "/tmp/repo",
+        "--base",
+        "main",
+        "--task",
+        "Implement X",
+        "--reviewer-brief",
+        "inline",
+        "--reviewer-brief-file",
+        "/tmp/reviewer-brief.md"
+      ])
+    ).toThrow(/Use only one reviewer brief input/u);
+  });
+
+  it("throws when accuracy-critical is set without reviewer brief", () => {
+    expect(() =>
+      parseBubbleCreateCommandOptions([
+        "--id",
+        "b_create_01",
+        "--repo",
+        "/tmp/repo",
+        "--base",
+        "main",
+        "--task",
+        "Implement X",
+        "--accuracy-critical"
+      ])
+    ).toThrow(/requires reviewer brief input/u);
   });
 
   it("auto-registers repo after creating bubble", async () => {
