@@ -1,5 +1,13 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const { copyToClipboardMock } = vi.hoisted(() => ({
+  copyToClipboardMock: vi.fn<(text: string) => Promise<void>>()
+}));
+
+vi.mock("../../lib/clipboard", () => ({
+  copyToClipboard: copyToClipboardMock
+}));
 
 import { BubbleCanvas } from "./BubbleCanvas";
 import { bubbleDimensions } from "../../lib/canvasLayout";
@@ -80,6 +88,15 @@ function createDeferred<T>(): {
 }
 
 describe("BubbleCanvas", () => {
+  beforeEach(() => {
+    copyToClipboardMock.mockReset();
+    copyToClipboardMock.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("renders cards with mapped runtime status and persisted position", () => {
     const onPositionChange = vi.fn();
     const onPositionCommit = vi.fn();
@@ -241,6 +258,364 @@ describe("BubbleCanvas", () => {
     expect(screen.getByText("No bubbles in current repo filter.")).toBeInTheDocument();
   });
 
+  it("keeps single-click bubble opening on bubble id label", () => {
+    vi.useFakeTimers();
+    const onToggleExpand = vi.fn();
+    render(
+      <BubbleCanvas
+        bubbles={[
+          bubbleCard({
+            bubbleId: "b-1",
+            repoPath: "/repo-a"
+          })
+        ]}
+        positions={{}}
+        expandedBubbleIds={[]}
+        onPositionChange={() => undefined}
+        onPositionCommit={() => undefined}
+        onToggleExpand={onToggleExpand}
+        onDelete={(bubbleId) => Promise.resolve(deletedResult(bubbleId))}
+      />
+    );
+
+    fireEvent.click(screen.getByText("b-1"));
+    expect(onToggleExpand).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(240);
+    expect(onToggleExpand).toHaveBeenCalledTimes(1);
+    expect(onToggleExpand).toHaveBeenCalledWith("b-1");
+  });
+
+  it("keeps single-click bubble opening on bubble name label", () => {
+    vi.useFakeTimers();
+    const onToggleExpand = vi.fn();
+    render(
+      <BubbleCanvas
+        bubbles={[
+          bubbleCard({
+            bubbleId: "b-1",
+            repoPath: "/repo-a"
+          })
+        ]}
+        positions={{}}
+        expandedBubbleIds={[]}
+        onPositionChange={() => undefined}
+        onPositionCommit={() => undefined}
+        onToggleExpand={onToggleExpand}
+        onDelete={(bubbleId) => Promise.resolve(deletedResult(bubbleId))}
+      />
+    );
+
+    fireEvent.click(screen.getByText("repo-a"));
+    expect(onToggleExpand).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(240);
+    expect(onToggleExpand).toHaveBeenCalledTimes(1);
+    expect(onToggleExpand).toHaveBeenCalledWith("b-1");
+  });
+
+  it("opens immediately when clicking non-copy card content", () => {
+    const onToggleExpand = vi.fn();
+    render(
+      <BubbleCanvas
+        bubbles={[
+          bubbleCard({
+            bubbleId: "b-1",
+            repoPath: "/repo-a"
+          })
+        ]}
+        positions={{}}
+        expandedBubbleIds={[]}
+        onPositionChange={() => undefined}
+        onPositionCommit={() => undefined}
+        onToggleExpand={onToggleExpand}
+        onDelete={(bubbleId) => Promise.resolve(deletedResult(bubbleId))}
+      />
+    );
+
+    fireEvent.click(screen.getByText("implementer working"));
+
+    expect(onToggleExpand).toHaveBeenCalledTimes(1);
+    expect(onToggleExpand).toHaveBeenCalledWith("b-1");
+  });
+
+  it("copies bubble id on double click of bubble id label", () => {
+    vi.useFakeTimers();
+    const onToggleExpand = vi.fn();
+    render(
+      <BubbleCanvas
+        bubbles={[
+          bubbleCard({
+            bubbleId: "b-1",
+            repoPath: "/repo-a"
+          })
+        ]}
+        positions={{}}
+        expandedBubbleIds={[]}
+        onPositionChange={() => undefined}
+        onPositionCommit={() => undefined}
+        onToggleExpand={onToggleExpand}
+        onDelete={(bubbleId) => Promise.resolve(deletedResult(bubbleId))}
+      />
+    );
+
+    const idLabel = screen.getByText("b-1");
+    fireEvent.click(idLabel, { detail: 1 });
+    fireEvent.doubleClick(idLabel, { detail: 2 });
+    vi.advanceTimersByTime(240);
+
+    expect(copyToClipboardMock).toHaveBeenCalledTimes(1);
+    expect(copyToClipboardMock).toHaveBeenCalledWith("b-1");
+    expect(onToggleExpand).not.toHaveBeenCalled();
+  });
+
+  it("cancels pending single-click open when follow-up click has detail 2", () => {
+    vi.useFakeTimers();
+    const onToggleExpand = vi.fn();
+    render(
+      <BubbleCanvas
+        bubbles={[
+          bubbleCard({
+            bubbleId: "b-1",
+            repoPath: "/repo-a"
+          })
+        ]}
+        positions={{}}
+        expandedBubbleIds={[]}
+        onPositionChange={() => undefined}
+        onPositionCommit={() => undefined}
+        onToggleExpand={onToggleExpand}
+        onDelete={(bubbleId) => Promise.resolve(deletedResult(bubbleId))}
+      />
+    );
+
+    const idLabel = screen.getByText("b-1");
+    fireEvent.click(idLabel, { detail: 1 });
+    fireEvent.click(idLabel, { detail: 2 });
+    vi.advanceTimersByTime(240);
+
+    expect(onToggleExpand).not.toHaveBeenCalled();
+    expect(copyToClipboardMock).not.toHaveBeenCalled();
+  });
+
+  it("shows actionable feedback when clipboard copy fails", async () => {
+    const onToggleExpand = vi.fn();
+    copyToClipboardMock.mockRejectedValueOnce(
+      new Error("Clipboard permission denied")
+    );
+
+    render(
+      <BubbleCanvas
+        bubbles={[
+          bubbleCard({
+            bubbleId: "b-1",
+            repoPath: "/repo-a"
+          })
+        ]}
+        positions={{}}
+        expandedBubbleIds={[]}
+        onPositionChange={() => undefined}
+        onPositionCommit={() => undefined}
+        onToggleExpand={onToggleExpand}
+        onDelete={(bubbleId) => Promise.resolve(deletedResult(bubbleId))}
+      />
+    );
+
+    const idLabel = screen.getByText("b-1");
+    fireEvent.click(idLabel, { detail: 1 });
+    fireEvent.doubleClick(idLabel, { detail: 2 });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "Copy bubble ID failed (b-1): Clipboard permission denied"
+        )
+      ).toBeInTheDocument();
+    });
+    expect(onToggleExpand).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss copy error" }));
+    expect(
+      screen.queryByText("Copy bubble ID failed (b-1): Clipboard permission denied")
+    ).not.toBeInTheDocument();
+  });
+
+  it("clears copy error after a later successful copy for the same bubble", async () => {
+    copyToClipboardMock
+      .mockRejectedValueOnce(new Error("Clipboard permission denied"))
+      .mockResolvedValueOnce(undefined);
+
+    render(
+      <BubbleCanvas
+        bubbles={[
+          bubbleCard({
+            bubbleId: "b-1",
+            repoPath: "/repo-a"
+          })
+        ]}
+        positions={{}}
+        expandedBubbleIds={[]}
+        onPositionChange={() => undefined}
+        onPositionCommit={() => undefined}
+        onToggleExpand={() => undefined}
+        onDelete={(bubbleId) => Promise.resolve(deletedResult(bubbleId))}
+      />
+    );
+
+    const idLabel = screen.getByText("b-1");
+    fireEvent.click(idLabel, { detail: 1 });
+    fireEvent.doubleClick(idLabel, { detail: 2 });
+    await waitFor(() => {
+      expect(
+        screen.getByText("Copy bubble ID failed (b-1): Clipboard permission denied")
+      ).toBeInTheDocument();
+    });
+
+    const nameLabel = screen.getByText("repo-a");
+    fireEvent.click(nameLabel, { detail: 1 });
+    fireEvent.doubleClick(nameLabel, { detail: 2 });
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText("Copy bubble ID failed (b-1): Clipboard permission denied")
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("keeps bubble A copy error visible when bubble B copy succeeds", async () => {
+    copyToClipboardMock
+      .mockRejectedValueOnce(new Error("Clipboard permission denied"))
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(undefined);
+
+    render(
+      <BubbleCanvas
+        bubbles={[
+          bubbleCard({
+            bubbleId: "b-1",
+            repoPath: "/repo-a"
+          }),
+          bubbleCard({
+            bubbleId: "b-2",
+            repoPath: "/repo-b"
+          })
+        ]}
+        positions={{}}
+        expandedBubbleIds={[]}
+        onPositionChange={() => undefined}
+        onPositionCommit={() => undefined}
+        onToggleExpand={() => undefined}
+        onDelete={(bubbleId) => Promise.resolve(deletedResult(bubbleId))}
+      />
+    );
+
+    const bubbleAIdLabel = screen.getByText("b-1");
+    fireEvent.click(bubbleAIdLabel, { detail: 1 });
+    fireEvent.doubleClick(bubbleAIdLabel, { detail: 2 });
+    await waitFor(() => {
+      expect(
+        screen.getByText("Copy bubble ID failed (b-1): Clipboard permission denied")
+      ).toBeInTheDocument();
+    });
+
+    const bubbleBIdLabel = screen.getByText("b-2");
+    fireEvent.click(bubbleBIdLabel, { detail: 1 });
+    fireEvent.doubleClick(bubbleBIdLabel, { detail: 2 });
+    await waitFor(() => {
+      expect(copyToClipboardMock).toHaveBeenCalledTimes(2);
+    });
+    expect(
+      screen.getByText("Copy bubble ID failed (b-1): Clipboard permission denied")
+    ).toBeInTheDocument();
+
+    fireEvent.click(bubbleAIdLabel, { detail: 1 });
+    fireEvent.doubleClick(bubbleAIdLabel, { detail: 2 });
+    await waitFor(() => {
+      expect(
+        screen.queryByText("Copy bubble ID failed (b-1): Clipboard permission denied")
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("copies bubble id on double click of bubble name label", () => {
+    vi.useFakeTimers();
+    const onToggleExpand = vi.fn();
+    render(
+      <BubbleCanvas
+        bubbles={[
+          bubbleCard({
+            bubbleId: "b-1",
+            repoPath: "/repo-a"
+          })
+        ]}
+        positions={{}}
+        expandedBubbleIds={[]}
+        onPositionChange={() => undefined}
+        onPositionCommit={() => undefined}
+        onToggleExpand={onToggleExpand}
+        onDelete={(bubbleId) => Promise.resolve(deletedResult(bubbleId))}
+      />
+    );
+
+    const nameLabel = screen.getByText("repo-a");
+    fireEvent.click(nameLabel, { detail: 1 });
+    fireEvent.doubleClick(nameLabel, { detail: 2 });
+    vi.advanceTimersByTime(240);
+
+    expect(copyToClipboardMock).toHaveBeenCalledTimes(1);
+    expect(copyToClipboardMock).toHaveBeenCalledWith("b-1");
+    expect(onToggleExpand).not.toHaveBeenCalled();
+  });
+
+  it("clears copy error when bubble disappears from canvas", async () => {
+    copyToClipboardMock.mockRejectedValueOnce(
+      new Error("Clipboard permission denied")
+    );
+    const view = render(
+      <BubbleCanvas
+        bubbles={[
+          bubbleCard({
+            bubbleId: "b-1",
+            repoPath: "/repo-a"
+          })
+        ]}
+        positions={{}}
+        expandedBubbleIds={[]}
+        onPositionChange={() => undefined}
+        onPositionCommit={() => undefined}
+        onToggleExpand={() => undefined}
+        onDelete={(bubbleId) => Promise.resolve(deletedResult(bubbleId))}
+      />
+    );
+
+    const idLabel = screen.getByText("b-1");
+    fireEvent.click(idLabel, { detail: 1 });
+    fireEvent.doubleClick(idLabel, { detail: 2 });
+    await waitFor(() => {
+      expect(
+        screen.getByText("Copy bubble ID failed (b-1): Clipboard permission denied")
+      ).toBeInTheDocument();
+    });
+
+    view.rerender(
+      <BubbleCanvas
+        bubbles={[]}
+        positions={{}}
+        expandedBubbleIds={[]}
+        onPositionChange={() => undefined}
+        onPositionCommit={() => undefined}
+        onToggleExpand={() => undefined}
+        onDelete={(bubbleId) => Promise.resolve(deletedResult(bubbleId))}
+      />
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText("Copy bubble ID failed (b-1): Clipboard permission denied")
+      ).not.toBeInTheDocument();
+    });
+  });
+
   it("invokes delete from trash icon without toggling expansion", async () => {
     const onDelete = vi.fn((bubbleId: string) =>
       Promise.resolve(deletedResult(bubbleId))
@@ -306,9 +681,7 @@ describe("BubbleCanvas", () => {
   });
 
   it("allows dismissing delete error overlay", async () => {
-    const onDelete = vi.fn(async () => {
-      throw new Error("Delete failed");
-    });
+    const onDelete = vi.fn(() => Promise.reject(new Error("Delete failed")));
 
     render(
       <BubbleCanvas
@@ -369,7 +742,7 @@ describe("BubbleCanvas", () => {
     await waitFor(() => {
       expect(screen.getByText("Delete Bubble b-1?")).toBeInTheDocument();
     });
-    expect((screen.getByTestId("canvas-content") as HTMLDivElement).inert).toBe(true);
+    expect(screen.getByTestId("canvas-content").inert).toBe(true);
     expect(screen.getByRole("button", { name: "Delete bubble b-2" })).toBeDisabled();
 
     fireEvent.click(screen.getByRole("button", { name: "Delete bubble b-2" }));
@@ -380,7 +753,7 @@ describe("BubbleCanvas", () => {
     await waitFor(() => {
       expect(onDelete).toHaveBeenNthCalledWith(2, "b-1", true, "/repo-a");
     });
-    expect((screen.getByTestId("canvas-content") as HTMLDivElement).inert).toBe(false);
+    expect(screen.getByTestId("canvas-content").inert).toBe(false);
   });
 
   it("ignores repeated force-confirm clicks while confirmation delete is in flight", async () => {
@@ -525,13 +898,13 @@ describe("BubbleCanvas", () => {
     await waitFor(() => {
       expect(screen.getByText("Delete Bubble b-1?")).toBeInTheDocument();
     });
-    expect((screen.getByTestId("canvas-content") as HTMLDivElement).inert).toBe(true);
+    expect(screen.getByTestId("canvas-content").inert).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() => {
       expect(deleteButton).toHaveFocus();
     });
-    expect((screen.getByTestId("canvas-content") as HTMLDivElement).inert).toBe(false);
+    expect(screen.getByTestId("canvas-content").inert).toBe(false);
   });
 
   it("dismisses delete confirmation when target bubble disappears from canvas", async () => {
