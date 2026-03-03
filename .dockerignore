@@ -1,0 +1,11 @@
+.git
+.gitignore
+.pairflow
+.pnpm-store
+node_modules
+ui/node_modules
+dist
+ui/dist
+coverage
+*.log
+.DS_Store

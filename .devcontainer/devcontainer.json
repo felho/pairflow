@@ -1,0 +1,20 @@
+{
+  "name": "pairflow-dev",
+  "build": {
+    "context": "..",
+    "dockerfile": "../Dockerfile",
+    "target": "dev"
+  },
+  "remoteUser": "node",
+  "forwardPorts": [4173],
+  "postCreateCommand": "bash -lc 'pnpm install --frozen-lockfile && pnpm --dir ui install --frozen-lockfile && mkdir -p ~/.pairflow && if [ ! -f ~/.pairflow/config.toml ]; then printf \"attach_launcher = \\\"copy\\\"\\nopen_command = \\\"echo {{worktree_path}}\\\"\\n\" > ~/.pairflow/config.toml; fi'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-vscode.vscode-typescript-next"
+      ]
+    }
+  }
+}

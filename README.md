@@ -131,6 +131,23 @@ Optional but recommended:
 - `codex` and `claude` binaries in PATH (for tmux agent panes)
 - One of these macOS terminals for `bubble attach`: [iTerm2](https://iterm2.com/), [Ghostty](https://ghostty.org/), [Warp](https://www.warp.dev/), or Terminal.app (`auto` mode falls back to `copy` when no GUI launcher is available)
 
+## Containerized Development (No Local Node/pnpm)
+
+If you want to contribute without installing Node.js/pnpm on the host:
+
+```bash
+# Run full CI checks in a container
+docker build --target ci -t pairflow-ci .
+
+# Open an interactive development shell
+docker build --target dev -t pairflow-dev .
+docker run --rm -it -v "$PWD":/workspace -w /workspace pairflow-dev bash
+```
+
+For VS Code/Codespaces, use `.devcontainer/devcontainer.json` ("Reopen in Container").
+
+Important: for full Pairflow runtime operations (`bubble attach`, `bubble open`, host terminal/editor integration), host-native installation is still the recommended path.
+
 ## Installation (Core CLI + optional UsePairflow skill)
 
 ### 1) Install core Pairflow CLI
