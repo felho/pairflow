@@ -37,7 +37,11 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
 - Pre-flight before create/start:
   - Base repo worktree must be clean (`git status --short` empty).
   - No active merge/rebase/cherry-pick state.
-  - If task file already exists in repo and is intended input, it should be committed on base branch before bubble start.
+  - If task file is inside repo and is intended input, it MUST already be committed on base branch before bubble start.
+  - This is a hard gate. If not committed, STOP and do not create/start.
+  - Offer explicit decision checkpoint:
+    - A) commit task file first (recommended), then continue
+    - B) explicitly switch to inline `--task` snapshot (only if user approves this downgrade)
 - If pre-flight fails: STOP and report exact blocker.
 - Guardrail: this workflow must not execute task work (no implementation/review/testing/file edits related to task content).
 
@@ -87,6 +91,21 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
   ```
   Must be empty.
 - Verify no active merge/rebase/cherry-pick in REPO_PATH.
+- If `TASK_FILE` is provided and resolves inside `<REPO_PATH>`:
+  - Verify it is tracked:
+    ```bash
+    git -C <REPO_PATH> ls-files --error-unmatch <TASK_FILE_REL_TO_REPO>
+    ```
+  - Verify no unstaged/staged diff vs `HEAD`:
+    ```bash
+    git -C <REPO_PATH> diff --quiet HEAD -- <TASK_FILE_REL_TO_REPO>
+    git -C <REPO_PATH> diff --cached --quiet -- <TASK_FILE_REL_TO_REPO>
+    ```
+  - If any check fails: STOP with blocker + decision checkpoint (A commit first / B explicit inline snapshot fallback).
+- Capture and report the verified base commit SHA:
+  ```bash
+  git -C <REPO_PATH> rev-parse HEAD
+  ```
 
 ### 6. Build commands
 
@@ -117,6 +136,7 @@ pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
   - Run `pairflow bubble create ...`
   - Then run `pairflow bubble start ...`
   - If `start` fails with repo-lookup mismatch, retry from repo root cwd and recheck status json.
+  - Never auto-downgrade from `--task-file` to inline `--task` unless user explicitly approves.
 
 ### 8. Verify state after start
 
@@ -144,6 +164,8 @@ Bubble <BUBBLE_ID> created and started.
 Start session:
 pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
 
+Task source: <inline|task-file>
+Verified base HEAD: <COMMIT_SHA>
 Current state: <STATE>
 Active agent: <AGENT or none>
 
