@@ -29,6 +29,16 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 4. If bubble has valuable unmerged work but lifecycle state blocks normal flow (for example `CANCELLED`), switch to explicit recovery workflow.
 5. Treat workflow boundaries as strict contracts: do only what the selected workflow is for.
 
+## Execution Modes (Mandatory)
+
+- Default execution mode for bubble-scoped requests is `bubble_autonomous`.
+- `bubble_autonomous` mode:
+  - Allowed: Pairflow lifecycle/protocol actions (`bubble ...`, `pass`, `ask-human`, `converged`) and state diagnostics.
+  - Forbidden: direct feature implementation via manual file edits/tests as the primary execution path.
+- `manual_assist` mode is allowed only with explicit user opt-in.
+- Never silently switch from `bubble_autonomous` to `manual_assist`.
+- If intent is ambiguous between modes, ask exactly one explicit clarification question before editing files.
+
 ## Workflow Scope Contract
 
 - `CreateBubble` is **lifecycle-only**:
@@ -36,6 +46,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
   - Not allowed: reading/implementing/reviewing the feature/task content after bubble start.
 - If the user asks only to start/create a bubble, stop immediately after reporting the started state.
 - Any task execution inside the bubble must be a separate, explicit follow-up request.
+- In `bubble_autonomous` mode, follow-up handling remains lifecycle/protocol-driven; do not replace it with direct edits.
 
 ## State-to-Action Map
 
@@ -53,6 +64,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
   - Start from clean `main` worktree.
   - Ensure no ongoing merge/rebase/cherry-pick.
   - If task file exists on `main`, commit it before bubble start.
+- While a bubble is running, parallel direct commits on `main` are allowed only for file-disjoint scope (no overlap with the bubble's touched files).
 - After `bubble start`, status may be briefly stale. Poll status once more before deciding it failed.
 - If `--repo` lookup behaves unexpectedly, retry from repo root cwd and verify with `status --json`.
 - Never start a second bubble for the same change while the first bubble still has unmerged code, unless intentionally abandoning and archiving that work.

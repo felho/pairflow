@@ -23,6 +23,8 @@ MESSAGE: extracted from `--message` argument (optional)
 - Never run `approve` while bubble is `RUNNING` or `WAITING_HUMAN`.
 - Prefer explicit, targeted human messages; avoid vague replies.
 - Re-check state after every state-changing command.
+- Default mode is `bubble_autonomous`: do not perform direct implementation edits from this workflow.
+- Switch to `manual_assist` only on explicit user request; never switch silently.
 
 ## Error Messages
 
@@ -45,7 +47,7 @@ pairflow bubble inbox --id <BUBBLE_ID> --repo <REPO_PATH>
 ```
 
 3. Apply state-specific intervention.
-- If state is `RUNNING` -> do not approve/rework; report next actor should continue loop (`pass` / `converged`) and stop intervention.
+- If state is `RUNNING` -> do not approve/rework and do not perform direct implementation edits; report next actor should continue loop (`pass` / `converged`) and stop intervention.
 - If state is `WAITING_HUMAN` and `MESSAGE` is empty -> STOP and report: `"Error: WAITING_HUMAN requires --message <text> for bubble reply."`
 - If state is `WAITING_HUMAN` and `MESSAGE` is present -> run:
   ```bash

@@ -44,6 +44,7 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
     - B) explicitly switch to inline `--task` snapshot (only if user approves this downgrade)
 - If pre-flight fails: STOP and report exact blocker.
 - Guardrail: this workflow must not execute task work (no implementation/review/testing/file edits related to task content).
+- Post-start default mode is `bubble_autonomous` unless user explicitly requests `manual_assist`.
 
 ## Workflow
 
@@ -153,6 +154,7 @@ pairflow bubble status --id <BUBBLE_ID> --json
 - After reporting create/start/status result, STOP.
 - Do not run any non-pairflow commands except the pre-flight checks in this workflow.
 - If user intent was start/create only, this stop is mandatory even if task context is already available.
+- Do not begin direct implementation from this workflow, even in the bubble worktree.
 
 ## Report
 
