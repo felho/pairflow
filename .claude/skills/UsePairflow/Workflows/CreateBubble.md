@@ -38,8 +38,10 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
   - Base repo worktree must be clean (`git status --short` empty).
   - No active merge/rebase/cherry-pick state.
   - If task file is inside repo and is intended input, it MUST already be committed on base branch before bubble start.
-  - This is a hard gate. If not committed, STOP and do not create/start.
-  - Offer explicit decision checkpoint:
+  - Exception: if the only blocker is this selected task file being uncommitted (new or modified), auto-commit only that task file and continue without asking approval.
+  - This exception applies for both docs-only refinement and implementation starts when the selected task source is that file.
+  - If there is any additional dirty file or blocker, keep hard gate behavior: STOP and do not create/start.
+  - In hard gate mode, offer explicit decision checkpoint:
     - A) commit task file first (recommended), then continue
     - B) explicitly switch to inline `--task` snapshot (only if user approves this downgrade)
 - If pre-flight fails: STOP and report exact blocker.
@@ -102,7 +104,15 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
     git -C <REPO_PATH> diff --quiet HEAD -- <TASK_FILE_REL_TO_REPO>
     git -C <REPO_PATH> diff --cached --quiet -- <TASK_FILE_REL_TO_REPO>
     ```
-  - If any check fails: STOP with blocker + decision checkpoint (A commit first / B explicit inline snapshot fallback).
+  - If checks fail, run narrow exception check:
+    - Inspect `git -C <REPO_PATH> status --short`.
+    - If and only if all changes are confined to `<TASK_FILE_REL_TO_REPO>` and no other blockers exist, run:
+      ```bash
+      git -C <REPO_PATH> add -- <TASK_FILE_REL_TO_REPO>
+      git -C <REPO_PATH> commit -m "pairflow: commit task file for bubble start"
+      ```
+    - Continue pre-flight after successful commit.
+    - If any other file is dirty, STOP with blocker + decision checkpoint (A commit first / B explicit inline snapshot fallback).
 - Capture and report the verified base commit SHA:
   ```bash
   git -C <REPO_PATH> rev-parse HEAD

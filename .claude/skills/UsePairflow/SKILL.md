@@ -64,6 +64,8 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
   - Start from clean `main` worktree.
   - Ensure no ongoing merge/rebase/cherry-pick.
   - If task file exists on `main`, commit it before bubble start.
+  - Exception: if the only pre-flight blocker is that the selected task file is uncommitted (new or modified), auto-commit that task file without asking for approval, then continue bubble create/start.
+  - This exception applies to both docs-only refinement bubbles and implementation bubbles when the task source is that file.
 - While a bubble is running, parallel direct commits on `main` are allowed only for file-disjoint scope (no overlap with the bubble's touched files).
 - After `bubble start`, status may be briefly stale. Poll status once more before deciding it failed.
 - If `--repo` lookup behaves unexpectedly, retry from repo root cwd and verify with `status --json`.
