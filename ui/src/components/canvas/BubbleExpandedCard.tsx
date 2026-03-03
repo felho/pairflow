@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getAttachAvailability } from "../../lib/attachAvailability";
+import { copyToClipboard } from "../../lib/clipboard";
 import type {
   BubbleActionKind,
   BubbleCardModel,
@@ -34,6 +35,10 @@ function repoLabel(repoPath: string): string {
   return parts[parts.length - 1] ?? repoPath;
 }
 
+function asMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export interface BubbleExpandedCardProps {
   bubble: BubbleCardModel;
   detail: UiBubbleDetail | null;
@@ -57,6 +62,7 @@ export interface BubbleExpandedCardProps {
 
 export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element {
   const [dragging, setDragging] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const onPositionChangeRef = useRef(props.onPositionChange);
   const onPositionCommitRef = useRef(props.onPositionCommit);
@@ -108,6 +114,17 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
   });
 
   const [timelineCompact, setTimelineCompact] = useState(true);
+
+  const copyBubbleId = useCallback(async () => {
+    try {
+      await copyToClipboard(props.bubble.bubbleId);
+      setCopyError(null);
+    } catch (error) {
+      setCopyError(
+        `Copy bubble ID failed (${props.bubble.bubbleId}): ${asMessage(error)}`
+      );
+    }
+  }, [props.bubble.bubbleId]);
 
   const pendingQuestion =
     props.bubble.state === "WAITING_HUMAN" && props.detail !== null
@@ -161,7 +178,13 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
         }}
       >
         <div className="flex items-center justify-between">
-          <span className="text-[12px] font-semibold tracking-wide text-white">
+          <span
+            className="select-none text-[12px] font-semibold tracking-wide text-white"
+            onDoubleClick={(event) => {
+              event.stopPropagation();
+              void copyBubbleId();
+            }}
+          >
             {props.bubble.bubbleId}
           </span>
           <button
@@ -178,8 +201,12 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
         </div>
         <div className="mt-1.5 flex items-center gap-2">
           <span
-            className="max-w-[130px] truncate rounded-[9px] border border-blue-500 bg-[#171717] px-2 py-0.5 font-mono text-[10px] text-blue-500"
+            className="max-w-[130px] select-none truncate rounded-[9px] border border-blue-500 bg-[#171717] px-2 py-0.5 font-mono text-[10px] text-blue-500"
             title={props.bubble.repoPath}
+            onDoubleClick={(event) => {
+              event.stopPropagation();
+              void copyBubbleId();
+            }}
           >
             {repoLabel(props.bubble.repoPath)}
           </span>
@@ -194,6 +221,21 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
           </span>
         </div>
       </div>
+
+      {copyError !== null ? (
+        <div className="mx-4 mb-2 rounded-[10px] border border-amber-500/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-100">
+          <div>{copyError}</div>
+          <button
+            type="button"
+            className="mt-2 rounded border border-amber-300/70 px-2 py-0.5 font-semibold text-amber-50 hover:border-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+            onClick={() => {
+              setCopyError(null);
+            }}
+          >
+            Dismiss copy error
+          </button>
+        </div>
+      ) : null}
 
       {/* Question card (WAITING_HUMAN only) */}
       {pendingQuestion !== null ? (
