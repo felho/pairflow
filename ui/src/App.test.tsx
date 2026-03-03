@@ -53,8 +53,7 @@ vi.mock("./state/useBubbleStore", async () => {
         stopRealtime
       })
     }),
-    selectVisibleBubbles: (value: typeof state) => Object.values(value.bubblesById),
-    selectStateCounts: () => fixtures.stateCounts({ RUNNING: 1 })
+    selectVisibleBubbles: (value: typeof state) => Object.values(value.bubblesById)
   };
 });
 
@@ -69,7 +68,7 @@ describe("App", () => {
     const { unmount } = render(<App />);
 
     expect(screen.getByText("Sample error")).toBeInTheDocument();
-    expect(screen.getByText(/RUNNING 1/u)).toBeInTheDocument();
+    expect(screen.getByText("Pairflow")).toBeInTheDocument();
     expect(screen.getByText("b-1")).toBeInTheDocument();
 
     expect(initialize).toHaveBeenCalledTimes(1);

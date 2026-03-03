@@ -26,10 +26,8 @@ import type {
   UiBubbleSummary,
   UiRepoSummary,
   UiSnapshotEvent,
-  UiStateCounts,
   UiTimelineEntry
 } from "../lib/types";
-import { emptyStateCounts } from "../lib/types";
 
 const positionsStorageKey = "pairflow.ui.canvas.positions.v1";
 const expandedIdsStorageKey = "pairflow.ui.canvas.expandedIds.v1";
@@ -1247,13 +1245,4 @@ export function selectVisibleBubbles(state: BubbleStoreState): BubbleCardModel[]
   return Object.values(state.bubblesById)
     .filter((bubble) => selected.has(bubble.repoPath))
     .sort((left, right) => left.bubbleId.localeCompare(right.bubbleId));
-}
-
-export function selectStateCounts(state: BubbleStoreState): UiStateCounts {
-  const visibleBubbles = selectVisibleBubbles(state);
-  const counts = emptyStateCounts();
-  for (const bubble of visibleBubbles) {
-    counts[bubble.state] += 1;
-  }
-  return counts;
 }
