@@ -7,6 +7,7 @@ import type {
   BubbleLifecycleState,
   BubblePosition
 } from "../../lib/types";
+import { copyToClipboard } from "../../lib/clipboard";
 import {
   bubbleDimensions,
   defaultPosition,
@@ -28,11 +29,13 @@ interface DragState {
 interface BubbleCardProps {
   bubble: BubbleCardModel;
   position: BubblePosition;
-  onPositionChange(position: BubblePosition): void;
-  onPositionCommit(): void;
-  onDragStateChange(dragging: boolean): void;
-  onOpen(): void;
-  onDelete(trigger: HTMLButtonElement): void;
+  onPositionChange: (position: BubblePosition) => void;
+  onPositionCommit: () => void;
+  onDragStateChange: (dragging: boolean) => void;
+  onCopySuccess: (bubbleId: string) => void;
+  onCopyError: (message: string) => void;
+  onOpen: () => void;
+  onDelete: (trigger: HTMLButtonElement) => void;
   deleteDisabled: boolean;
 }
 
@@ -49,20 +52,43 @@ function asMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function isCopyBubbleIdTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+  return target.closest("[data-copy-bubble-id-target='true']") !== null;
+}
+
 function BubbleCard(props: BubbleCardProps): JSX.Element {
   const [dragging, setDragging] = useState(false);
   const dragRef = useRef<DragState | null>(null);
   const didDragRef = useRef(false);
+  const openTimeoutIdRef = useRef<number | null>(null);
   const onPositionChangeRef = useRef(props.onPositionChange);
   const onPositionCommitRef = useRef(props.onPositionCommit);
   const onDragStateChangeRef = useRef(props.onDragStateChange);
+  const onOpenRef = useRef(props.onOpen);
   const collapsedDimensions = bubbleDimensions(false);
 
   useEffect(() => {
     onPositionChangeRef.current = props.onPositionChange;
     onPositionCommitRef.current = props.onPositionCommit;
     onDragStateChangeRef.current = props.onDragStateChange;
-  }, [props.onPositionChange, props.onPositionCommit, props.onDragStateChange]);
+    onOpenRef.current = props.onOpen;
+  }, [
+    props.onPositionChange,
+    props.onPositionCommit,
+    props.onDragStateChange,
+    props.onOpen
+  ]);
+
+  const clearPendingOpen = useCallback(() => {
+    if (openTimeoutIdRef.current === null) {
+      return;
+    }
+    window.clearTimeout(openTimeoutIdRef.current);
+    openTimeoutIdRef.current = null;
+  }, []);
 
   const applyDragPosition = useCallback(
     (clientX: number, clientY: number) => {
@@ -98,6 +124,29 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
     };
   }, [stopDrag]);
 
+  useEffect(() => {
+    return () => {
+      clearPendingOpen();
+    };
+  }, [clearPendingOpen]);
+
+  const copyBubbleId = useCallback(async () => {
+    clearPendingOpen();
+    try {
+      await copyToClipboard(props.bubble.bubbleId);
+      props.onCopySuccess(props.bubble.bubbleId);
+    } catch (error) {
+      props.onCopyError(
+        `Copy bubble ID failed (${props.bubble.bubbleId}): ${asMessage(error)}`
+      );
+    }
+  }, [
+    clearPendingOpen,
+    props.bubble.bubbleId,
+    props.onCopyError,
+    props.onCopySuccess
+  ]);
+
   const visual = stateVisuals[props.bubble.state];
 
   return (
@@ -115,9 +164,19 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
         height: collapsedDimensions.height
       }}
       data-bubble-id={props.bubble.bubbleId}
-      onClick={() => {
+      onClick={(event) => {
         if (!didDragRef.current) {
-          props.onOpen();
+          if (isCopyBubbleIdTarget(event.target)) {
+            clearPendingOpen();
+            if (event.detail <= 1) {
+              openTimeoutIdRef.current = window.setTimeout(() => {
+                openTimeoutIdRef.current = null;
+                onOpenRef.current();
+              }, 240);
+            }
+            return;
+          }
+          onOpenRef.current();
         }
       }}
     >
@@ -191,7 +250,14 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
           props.onPositionCommit();
         }}
       >
-        <span className="text-[13px] font-semibold tracking-wide text-white">
+        <span
+          className="select-none text-[13px] font-semibold tracking-wide text-white"
+          data-copy-bubble-id-target="true"
+          onDoubleClick={(event) => {
+            event.stopPropagation();
+            void copyBubbleId();
+          }}
+        >
           {props.bubble.bubbleId}
         </span>
         <span className="flex items-center gap-1.5">
@@ -228,8 +294,13 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
 
       <div className="mt-auto flex items-center gap-2 font-mono text-[9px]">
         <span
-          className="max-w-[96px] truncate rounded-[9px] border border-blue-500 bg-[#171717] px-2 py-0.5 text-blue-500"
+          className="max-w-[96px] select-none truncate rounded-[9px] border border-blue-500 bg-[#171717] px-2 py-0.5 text-blue-500"
           title={props.bubble.repoPath}
+          data-copy-bubble-id-target="true"
+          onDoubleClick={(event) => {
+            event.stopPropagation();
+            void copyBubbleId();
+          }}
         >
           {repoLabel(props.bubble.repoPath)}
         </span>
@@ -282,14 +353,14 @@ export interface BubbleCanvasProps {
   bubbles: BubbleCardModel[];
   positions: Record<string, BubblePosition>;
   expandedBubbleIds: string[];
-  onPositionChange(bubbleId: string, position: BubblePosition): void;
-  onPositionCommit(): void;
-  onToggleExpand(bubbleId: string): void;
-  onDelete(
+  onPositionChange: (bubbleId: string, position: BubblePosition) => void;
+  onPositionCommit: () => void;
+  onToggleExpand: (bubbleId: string) => void;
+  onDelete: (
     bubbleId: string,
     force?: boolean,
     repoPath?: string
-  ): Promise<BubbleDeleteResult>;
+  ) => Promise<BubbleDeleteResult>;
 }
 
 export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
@@ -301,6 +372,10 @@ export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
   } | null>(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [copyError, setCopyError] = useState<{
+    bubbleId: string;
+    message: string;
+  } | null>(null);
   const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
   const deleteInFlightRef = useRef(false);
   const confirmInFlightRef = useRef(false);
@@ -428,6 +503,19 @@ export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
   }, [deleteTarget, props.bubbles]);
 
   useEffect(() => {
+    if (copyError === null) {
+      return;
+    }
+    const bubbleStillExists = props.bubbles.some(
+      (bubble) => bubble.bubbleId === copyError.bubbleId
+    );
+    if (bubbleStillExists) {
+      return;
+    }
+    setCopyError(null);
+  }, [copyError, props.bubbles]);
+
+  useEffect(() => {
     const content = canvasContentRef.current;
     if (content === null) {
       return;
@@ -480,6 +568,20 @@ export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
                   return next;
                 });
               }}
+              onCopyError={(message) => {
+                setCopyError({
+                  bubbleId: entry.bubble.bubbleId,
+                  message
+                });
+              }}
+              onCopySuccess={(bubbleId) => {
+                setCopyError((current) => {
+                  if (current === null || current.bubbleId !== bubbleId) {
+                    return current;
+                  }
+                  return null;
+                });
+              }}
               onOpen={() => {
                 props.onToggleExpand(entry.bubble.bubbleId);
               }}
@@ -516,6 +618,23 @@ export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
               }}
             >
               Dismiss
+            </button>
+          </div>
+        ) : null}
+        {copyError !== null ? (
+          <div
+            role="alert"
+            className="absolute left-4 top-16 flex items-center gap-3 rounded border border-amber-500/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-100"
+          >
+            <span>{copyError.message}</span>
+            <button
+              type="button"
+              className="rounded border border-amber-300/70 px-2 py-0.5 font-semibold text-amber-50 hover:border-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+              onClick={() => {
+                setCopyError(null);
+              }}
+            >
+              Dismiss copy error
             </button>
           </div>
         ) : null}
