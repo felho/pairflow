@@ -7,6 +7,9 @@
 Canonical severity policy:
 - `docs/reviewer-severity-ontology.md`
 
+Terminology mapping (historical -> current):
+- "Approve with notes" / `APPROVE_WITH_NOTES` references in this tracker map to `pairflow converged --summary ...` + notes artifact flow.
+
 ## Problem Statement
 
 The reviewer produces high-quality findings (real bugs, race conditions, event ordering issues), but the review loop generates unnecessary rounds due to:
@@ -14,7 +17,7 @@ The reviewer produces high-quality findings (real bugs, race conditions, event o
 1. **P2 inflation** — cosmetic/comment findings rated P2, triggering full fix+review cycles for near-zero value
 2. **Incremental P1 discovery** — the same underlying issue (e.g., shutdown race) found across 4 rounds, one aspect at a time
 3. **Out-of-scope findings** — reviewer flags issues unrelated to the PRD (e.g., unrelated UI regression, accessibility)
-4. **No "good enough" exit** — no mechanism to approve with minor notes; every finding requires a fix round
+4. **No "good enough" exit** — no mechanism to converge with minor notes; every finding requires a fix round
 
 ## Proposed Optimizations
 
@@ -23,7 +26,7 @@ The reviewer produces high-quality findings (real bugs, race conditions, event o
 | # | Optimization | Status | Notes |
 |---|---|---|---|
 | 1 | Severity guidelines in reviewer prompt | Implemented (Phase 1) | Runtime now injects ontology reminder in reviewer startup/resume/handoff guidance, and reviewer `P1` findings require evidence refs on PASS. |
-| 2 | Approve with notes | Not implemented | Still tracked as high-priority next step. |
+| 2 | Converge with notes | Not implemented | Still tracked as high-priority next step. |
 | 3 | Parallel review agents | Not implemented | Architectural/coordination change, deferred. |
 | 4 | Deep exploration for P1 findings | Not implemented | Process proposal only so far. |
 | 5 | Combined flow | Not implemented | Depends on #1-#4. |
@@ -41,6 +44,7 @@ Provide explicit severity definitions to reduce misclassification:
 
 | Severity | Definition | Examples |
 |----------|-----------|----------|
+| **P0** | Critical blocker-level correctness/safety/runtime risk (highest urgency) | Confirmed destructive behavior, deterministic corruption, critical security exposure |
 | **P1** | Data loss, crash, security vulnerability, race condition affecting production | Concurrent calls produce duplicate events; close() doesn't drain in-flight work |
 | **P2** | Logical error, broken API contract, missing test for **functional** gap | Dead code path that misleads readers; no test for failure path that has specific handling |
 | **P3** | Cosmetic, comment, naming, style, minor inconsistency | "Add clarifying comment"; type not re-exported; naming asymmetry |
@@ -49,15 +53,15 @@ Provide explicit severity definitions to reduce misclassification:
 
 **Expected impact:** Eliminates rounds like R9 (4 findings, 3 were "add comment" → full round for cosmetics).
 
-### 2. "Good Enough" Threshold — Approve with Notes
+### 2. "Good Enough" Threshold — Converge with Notes
 
-When a review round finds **only P2/P3 issues and no P1**, the reviewer can issue `APPROVE_WITH_NOTES` instead of `fix_request`:
+When a review round finds **only P2/P3 issues and no P0/P1**, the reviewer should use a "converged with notes" path (`pairflow converged --summary ...` + suggestions artifact) instead of `fix_request`:
 
 - P2/P3 findings go into a `suggestions.md` artifact
 - Implementer can optionally address them
 - The bubble can proceed toward completion
 
-**Alternative:** After N consecutive rounds without P1 (e.g., N=2), auto-approve. This prevents infinite P2-refinement spirals.
+**Alternative:** After N consecutive rounds without P0/P1 (e.g., N=2), auto-approve. This prevents infinite P2-refinement spirals.
 
 **Expected impact:** Could have shortened the repo-registry bubble by 2-3 rounds (R7 onward had mostly P2s).
 
@@ -110,15 +114,15 @@ The optimized review flow per round:
    - Filters: P3s go to suggestions.md, not to fix_request
 
 3. DEEP EXPLORE (conditional)
-   For each P1 finding:
+   For each blocker finding (`P0/P1`):
    - Dedicated exploration agent traces all related code paths
    - Expands the finding to cover full surface area
    - Adds concrete fix suggestion
 
 4. DECISION
-   If P1 findings exist → PASS with fix_request (P1s + P2s)
-   If only P2 findings → APPROVE_WITH_NOTES (P2s in suggestions.md)
-   If only P3 or clean → APPROVE
+   If `P0/P1` findings exist → PASS with fix_request (blockers + P2s)
+   If only P2/P3 findings exist → `pairflow converged --summary ...` + suggestions.md notes (same converged command path)
+   If clean (no findings) → `pairflow converged --summary ...`
 ```
 
 ### Trade-offs
@@ -139,7 +143,7 @@ The optimized review flow per round:
 |--------|-------|
 | **Rounds** | 18 review rounds + 1 final convergence = 19 sessions |
 | **Duration** | ~2.5 hours (19:23 – 21:56) |
-| **Total findings** | ~72 (27 P1 + 38 P2 + 6 P3 + 1 P4) |
+| **Total findings** | ~72 (27 P1 + 38 P2 + 7 P3; includes one legacy low-severity item previously tagged P4) |
 | **Human intervention** | None — converged naturally at R18/R19 |
 | **Implementer tokens** | ~63M (97.6% cache hit) |
 | **Tests at convergence** | 418 passing |
@@ -190,20 +194,20 @@ The reviewer rated the same pattern differently depending on where it appeared:
 | Round type | Rounds | Count |
 |---|---|---|
 | Has P1 findings | R1, R2, R4, R5, R6, R8, R10, R11, R12, R13, R14, R15, R16, R18 | 14 |
-| P2/P3 only (no P1) | R3, R7, R9, R17 | 4 |
+| P2/P3 only (no P0/P1) | R3, R7, R9, R17 | 4 |
 | Clean (convergence) | R19 | 1 |
 
-**4 out of 19 rounds had no P1 findings.** With "approve with notes", these 4 would have been terminal.
+**4 out of 19 rounds had no P0/P1 findings.** With "converge with notes", these 4 would have been terminal.
 
 ### Rounds Avoidable with Optimizations
 
 | Round | What happened | Optimization that helps |
 |-------|--------------|----------------------|
-| R9 | 4 findings, all "add comment" level | Severity guidelines → P3, approve with notes |
+| R9 | 4 findings, all "add comment" level | Severity guidelines → P3, converge with notes |
 | R10-R12 | Shutdown race rediscovered from new angles | Deep exploration in R8 finds all aspects |
 | R11 | Out-of-scope BubbleTimeline.tsx flagged as P2 | Scope rule drops it |
 | R7 | addRepo concurrency guard rated P2, later removeRepo rated P1 | Parallel agents + orchestrator catches asymmetry |
-| R3, R17 | P2-only rounds with no runtime-impacting bugs | Approve with notes |
+| R3, R17 | P2-only rounds with no runtime-impacting bugs | Converge with notes |
 | R14-R15 | Concurrency aspects of same add/remove pattern | Deep exploration in R8 covers all aspects |
 
 ### Projected Impact of Proposed Optimizations
@@ -211,7 +215,7 @@ The reviewer rated the same pattern differently depending on where it appeared:
 | Optimization | Estimated rounds saved | How |
 |---|---|---|
 | **Severity guidelines** | 2-3 | R9 findings → P3, R7 types → P3 |
-| **Approve with notes** | 3-4 | R3, R7, R9, R17 become terminal |
+| **Converge with notes** | 3-4 | R3, R7, R9, R17 become terminal |
 | **Deep exploration for P1s** | 3-4 | Shutdown race (4→1 round), concurrency (5→2 rounds) |
 | **Scope rule** | 1 | R11 BubbleTimeline.tsx dropped |
 | **Combined (conservative)** | ~5-6 | 19 → ~13 rounds |
@@ -228,7 +232,7 @@ The reviewer rated the same pattern differently depending on where it appeared:
 | False convergences | 0 | 3 |
 | Estimated saveable rounds | 5-6 (26%) | 18-20 (50%) |
 
-The repo-registry bubble had genuinely complex P1 issues (race conditions, event ordering) in most rounds, making it harder to optimize. The delete-bubble's problem was different — the reviewer kept finding cosmetic issues and couldn't stop. **"Approve with notes" has 2x more impact on P2-heavy bubbles like delete-bubble.**
+The repo-registry bubble had genuinely complex P1 issues (race conditions, event ordering) in most rounds, making it harder to optimize. The delete-bubble's problem was different — the reviewer kept finding cosmetic issues and couldn't stop. **"Converge with notes" has 2x more impact on P2-heavy bubbles like delete-bubble.**
 
 ### 6. Skip Redundant Test Runs in Reviewer
 
@@ -432,24 +436,24 @@ This is the strongest evidence for the **"good enough" threshold** optimization.
 | Round type | Rounds | Count |
 |---|---|---|
 | Has P1 findings | R1, R2, R4, R5, R6, R8, R11, R13, R16, R17, R21, R25, R27, R31, R33, R34 | 16 |
-| P2/P3 only (no P1) | R9, R10, R12, R14, R15, R19, R20, R22, R23, R24, R26, R28, R29, R30, R35 | 15 |
+| P2/P3 only (no P0/P1) | R9, R10, R12, R14, R15, R19, R20, R22, R23, R24, R26, R28, R29, R30, R35 | 15 |
 | Clean (0 findings) | R3, R7, R18, R32, R36 | 5 |
 
-**15 out of 36 rounds had no P1 findings.** With "approve with notes", all 15 would have been terminal — the bubble would have converged in ~16-21 rounds instead of 36.
+**15 out of 36 rounds had no P0/P1 findings.** With "converge with notes", all 15 would have been terminal — the bubble would have converged in ~16-21 rounds instead of 36.
 
 ### Projected Impact of Proposed Optimizations
 
 | Optimization | Estimated rounds saved | How |
 |---|---|---|
 | **Severity guidelines** | 8-10 | P3-level findings don't trigger fix cycles |
-| **Approve with notes** | 10-15 | 15 P2/P3-only rounds become terminal |
+| **Converge with notes** | 10-15 | 15 P2/P3-only rounds become terminal |
 | **Deep exploration for P1s** | 4-6 | Accessibility (4 rounds), exit codes (4 rounds), closures (2 rounds) found comprehensively in round 1 |
 | **Prior-finding context** | 6-8 | 6 recurring patterns (23 findings) discovered once instead of 2-5x each |
 | **Combined (conservative)** | ~18-20 | 36 → ~16-18 rounds |
 
 ### Key Takeaway
 
-The delete-bubble is an extreme case that validates all four optimization proposals simultaneously. The single highest-impact change would be **approve with notes** — it alone would have cut the bubble nearly in half. Combined with severity guidelines, the bubble likely converges in 16-18 rounds without human intervention.
+The delete-bubble is an extreme case that validates all four optimization proposals simultaneously. The single highest-impact change would be **converge with notes** — it alone would have cut the bubble nearly in half. Combined with severity guidelines, the bubble likely converges in 16-18 rounds without human intervention.
 
 ### 7. Task-Level Acceptance Criteria as Reviewer Scope Boundary
 
@@ -474,19 +478,19 @@ corepack bootstrap, or multi-package-manager detection.
 
 ### 8. Round-Based Severity Gate
 
-Complementary to "approve with notes" (#2): introduce an explicit severity gate tied to round number.
+Complementary to "converge with notes" (#2): introduce an explicit severity gate tied to round number.
 
-**Rule:** After round N (e.g., N=3), only P1 findings trigger a new fix+review cycle. P2/P3 findings are logged to `suggestions.md` and the reviewer issues `converged`.
+**Rule:** From round N onward (for example `N=4`, i.e. `round >= N`), only blocker findings (`P0/P1`) trigger a new fix+review cycle. P2/P3 findings are logged to `suggestions.md` and the reviewer issues `converged`.
 
-This is different from #2 ("approve with notes after N consecutive P2-only rounds") because:
-- It's **proactive** — doesn't wait for a streak of P2-only rounds, applies immediately after round N
-- It acknowledges that the first 2-3 rounds catch the structural issues; after that, diminishing returns set in
+This is different from #2 ("converge with notes after N consecutive P2-only rounds") because:
+- It's **proactive** — doesn't wait for a streak of P2-only rounds, and applies from round `N` onward (`round >= N`)
+- It acknowledges that the first few rounds (typically 2-3 in historical samples) catch the structural issues; after that, diminishing returns set in
 - It's simple to implement — a single round counter check in the reviewer prompt
 
-**Configurable:** `bubble.toml` could specify `severity_gate_round = 3` (default), overridable for high-stakes bubbles (`severity_gate_round = 8`).
+**Configurable:** `bubble.toml` could specify `severity_gate_round = 4` (default), overridable for high-stakes bubbles (`severity_gate_round = 8`).
 
 **Expected impact on past bubbles:**
-| Bubble | Actual rounds | With gate at round 3 |
+| Bubble | Actual rounds | With gate at round 4 |
 |--------|--------------|---------------------|
 | installer (v1, 22 rounds) | 22 | ~5-6 (P1s mostly in R1-R2) |
 | installer (v2, 10+ rounds) | 10+ | ~4-5 (P1s in R1-R2, rest P2) |
@@ -573,8 +577,8 @@ This bubble is the strongest evidence for combining **task-level acceptance crit
 | Optimization | Impact on 1st attempt (22 rounds) | Impact on 2nd attempt (10+ rounds) |
 |---|---|---|
 | **Task-level acceptance criteria** | Prevents multi-PM support entirely → ~60% less code → fewer finding targets | Already applied (constraints in task) |
-| **Round-based severity gate (N=3)** | Converges at ~4-5 rounds (P1s in R1-R2 only) | Converges at ~4-5 rounds |
-| **Approve with notes** | R3+ P2-only rounds become terminal | R3+ P2-only rounds become terminal |
+| **Round-based severity gate (N=4)** | Converges at ~4-5 rounds (P1s in R1-R2 only) | Converges at ~4-5 rounds |
+| **Converge with notes** | R3+ P2-only rounds become terminal | R3+ P2-only rounds become terminal |
 | **Severity guidelines** | Smoke test findings → P3 after R3 | Same |
 
 ## Evidence from reviewer-pass-intent-consistency-01 Bubble
@@ -615,7 +619,7 @@ Companion design document for durable measurement/storage:
 
 ### Top 3 Priorities (Current)
 
-1. **Approve with notes** (`APPROVE_WITH_NOTES` behavior)
+1. **Converge with notes** (`pairflow converged` + notes behavior)
 2. **Severity + scope calibration** (reduce P2 inflation and out-of-scope fix loops)
 3. **Task-level acceptance criteria boundary** (explicit "done" contract)
 
@@ -690,8 +694,8 @@ No protocol/schema change required:
 
 1. Add explicit severity rubric (`P1` runtime/safety critical, `P2` functional gap, `P3` cosmetic/cleanup) to reviewer startup + handoff instructions.
 2. Add strict scope rule: out-of-scope observations are informational notes, not fix-request findings.
-3. Add decision rule: if no `P1`, reviewer should converge with notes instead of requesting rework.
-4. Add round-based severity gate instruction (default `N=3`): after round `N`, only `P1` should trigger new fix loops; `P2/P3` become notes.
+3. Add decision rule with round qualifier: when `round >= severity_gate_round` and no `P0/P1` exists, reviewer should converge with notes instead of requesting rework (pre-gate rounds keep normal fix-loop behavior).
+4. Add round-based severity gate instruction (default `N=4`): after round `N`, only `P0/P1` should trigger new fix loops; `P2/P3` become notes.
 
 Expected effect: immediate reduction in low-value refinement rounds, especially on P2-heavy bubbles.
 
@@ -703,7 +707,7 @@ Implement durable support for prompt behavior:
    - Allow reviewer to attach structured suggestions on convergence.
    - Emit `artifacts/suggestions.md` and reference it from convergence flow.
 2. **Configurable severity gate**
-   - Add `severity_gate_round` to `bubble.toml` (default `3`).
+   - Add `severity_gate_round` to `bubble.toml` (default `4`).
    - Use it as policy input rather than only prompt guidance.
 3. **Reviewer message templates**
    - Centralize rubric/scope/gate text to keep startup/resume/handoff consistent.
