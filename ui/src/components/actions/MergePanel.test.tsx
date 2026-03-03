@@ -7,7 +7,7 @@ import { MergePanel } from "./MergePanel";
 describe("MergePanel", () => {
   it("shows cleanup copy and submits merge options", async () => {
     const user = userEvent.setup();
-    const onSubmit = vi.fn(async () => undefined);
+    const onSubmit = vi.fn(() => Promise.resolve(undefined));
 
     render(
       <MergePanel

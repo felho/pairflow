@@ -119,7 +119,7 @@ describe("createRealtimeEventsClient", () => {
       getRepos: () => ["/repo-a"],
       onEvent,
       onStatus,
-      poll: async () => undefined,
+      poll: () => Promise.resolve(undefined),
       eventSourceFactory: (url) => new MockEventSource(url)
     });
 

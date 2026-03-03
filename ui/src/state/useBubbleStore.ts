@@ -73,23 +73,23 @@ export interface BubbleStoreState {
   actionErrorById: Record<string, string>;
   actionRetryHintById: Record<string, string>;
   actionFailureById: Record<string, BubbleActionKind>;
-  initialize(): Promise<void>;
-  toggleRepo(repoPath: string): Promise<void>;
-  setPosition(bubbleId: string, position: BubblePosition): void;
-  persistPositions(): void;
-  stopRealtime(): void;
-  toggleBubbleExpanded(bubbleId: string): Promise<void>;
-  collapseBubble(bubbleId: string): void;
-  refreshExpandedBubble(bubbleId: string): Promise<void>;
-  runBubbleAction(input: RunBubbleActionInput): Promise<void>;
+  initialize: () => Promise<void>;
+  toggleRepo: (repoPath: string) => Promise<void>;
+  setPosition: (bubbleId: string, position: BubblePosition) => void;
+  persistPositions: () => void;
+  stopRealtime: () => void;
+  toggleBubbleExpanded: (bubbleId: string) => Promise<void>;
+  collapseBubble: (bubbleId: string) => void;
+  refreshExpandedBubble: (bubbleId: string) => Promise<void>;
+  runBubbleAction: (input: RunBubbleActionInput) => Promise<void>;
   // repoPathOverride is required for confirm-phase deletes when the bubble was
   // concurrently removed from bubblesById by realtime events.
-  deleteBubble(
+  deleteBubble: (
     bubbleId: string,
     force?: boolean,
     repoPathOverride?: string
-  ): Promise<BubbleDeleteResult>;
-  clearActionFeedback(bubbleId: string): void;
+  ) => Promise<BubbleDeleteResult>;
+  clearActionFeedback: (bubbleId: string) => void;
 }
 
 export interface BubbleStoreDependencies {

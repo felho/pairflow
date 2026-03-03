@@ -21,7 +21,7 @@ describe("runCli bubble delete confirmation exit code", () => {
   });
 
   it("returns exit code 2 when delete requires confirmation", async () => {
-    const runBubbleDeleteCommand = vi.fn(async () => ({
+    const runBubbleDeleteCommand = vi.fn(() => Promise.resolve({
       bubbleId: "b_delete_cli_confirm_01",
       deleted: false,
       requiresConfirmation: true,
@@ -80,7 +80,7 @@ describe("runCli bubble delete confirmation exit code", () => {
   });
 
   it("returns exit code 1 and writes stderr when delete command throws", async () => {
-    const runBubbleDeleteCommand = vi.fn(async () => {
+    const runBubbleDeleteCommand = vi.fn(() => {
       throw new Error("delete failed");
     });
 

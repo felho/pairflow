@@ -3,6 +3,15 @@ import { describe, expect, it, vi } from "vitest";
 import { createApiClient, PairflowApiError } from "./api";
 import { bubbleDetail, bubbleSummary, repoSummary, timelineEntry } from "../test/fixtures";
 
+async function captureError(action: () => Promise<unknown>): Promise<unknown> {
+  try {
+    await action();
+    return null;
+  } catch (error) {
+    return error;
+  }
+}
+
 describe("createApiClient", () => {
   it("loads repositories and bubbles", async () => {
     const fetchMock = vi
@@ -59,7 +68,7 @@ describe("createApiClient", () => {
 
     const client = createApiClient();
 
-    const error = await client.getRepos().catch((reason) => reason);
+    const error = await captureError(() => client.getRepos());
     expect(error).toBeInstanceOf(PairflowApiError);
     expect(error).toMatchObject({
       name: "PairflowApiError",
@@ -81,7 +90,7 @@ describe("createApiClient", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const client = createApiClient();
-    const error = await client.getRepos().catch((reason) => reason);
+    const error = await captureError(() => client.getRepos());
 
     expect(error).toBeInstanceOf(PairflowApiError);
     expect(error).toMatchObject({

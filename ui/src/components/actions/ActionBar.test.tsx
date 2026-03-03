@@ -51,7 +51,7 @@ describe("ActionBar", () => {
     for (const [state, expectedActions] of Object.entries(expectedMatrix) as Array<
       [BubbleLifecycleState, BubbleActionKind[]]
     >) {
-      const onAction = vi.fn(async () => undefined);
+      const onAction = vi.fn(() => Promise.resolve(undefined));
       const { unmount } = render(
         <ActionBar
           bubble={bubbleCard({ bubbleId: `b-${state.toLowerCase()}`, repoPath: "/repo-a", state })}
@@ -88,7 +88,7 @@ describe("ActionBar", () => {
 
   it("requires message for request-rework modal", async () => {
     const user = userEvent.setup();
-    const onAction = vi.fn(async () => undefined);
+    const onAction = vi.fn(() => Promise.resolve(undefined));
 
     render(
       <ActionBar
@@ -131,7 +131,7 @@ describe("ActionBar", () => {
 
   it("explains that waiting-human rework is queued and distinct from reply", async () => {
     const user = userEvent.setup();
-    const onAction = vi.fn(async () => undefined);
+    const onAction = vi.fn(() => Promise.resolve(undefined));
 
     render(
       <ActionBar
@@ -170,7 +170,7 @@ describe("ActionBar", () => {
 
   it("submits commit form with default auto=true", async () => {
     const user = userEvent.setup();
-    const onAction = vi.fn(async () => undefined);
+    const onAction = vi.fn(() => Promise.resolve(undefined));
 
     render(
       <ActionBar
@@ -207,7 +207,7 @@ describe("ActionBar", () => {
 
   it("calls onAction with attach action when Attach button clicked", async () => {
     const user = userEvent.setup();
-    const onAction = vi.fn(async () => undefined);
+    const onAction = vi.fn(() => Promise.resolve(undefined));
 
     render(
       <ActionBar

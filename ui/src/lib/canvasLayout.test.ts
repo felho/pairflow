@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   bubbleDimensions,
-  cardHeight,
   defaultPosition,
   expandedCardHeight,
   resolveNonOverlappingPosition,

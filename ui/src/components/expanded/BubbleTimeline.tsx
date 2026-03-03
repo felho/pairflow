@@ -45,16 +45,22 @@ function extractFindingTags(entry: UiTimelineEntry): FindingTag[] {
   const seen = new Set<string>();
   const tags: FindingTag[] = [];
   for (const finding of findings) {
-    const severity = typeof finding === "object" && finding !== null && "severity" in finding
-      ? String(finding.severity)
-      : null;
-    if (severity !== null && !seen.has(severity)) {
-      seen.add(severity);
-      tags.push({
-        severity,
-        style: findingStyles[severity] ?? "border-slate-500/20 bg-slate-500/10 text-slate-400"
-      });
+    if (typeof finding !== "object" || finding === null) {
+      continue;
     }
+    const severityValue = (finding as { severity?: unknown }).severity;
+    if (typeof severityValue !== "string") {
+      continue;
+    }
+    const severity = severityValue;
+    if (seen.has(severity)) {
+      continue;
+    }
+    seen.add(severity);
+    tags.push({
+      severity,
+      style: findingStyles[severity] ?? "border-slate-500/20 bg-slate-500/10 text-slate-400"
+    });
   }
   return tags;
 }

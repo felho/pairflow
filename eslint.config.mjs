@@ -6,8 +6,10 @@ export default tseslint.config(
   {
     ignores: [
       "dist/**",
+      "ui/dist/**",
       "node_modules/**",
       "eslint.config.mjs",
+      "ui/postcss.config.js",
       "scripts/generate-reviewer-severity-ontology.mjs",
       "src/core/runtime/reviewerSeverityOntology.generated.ts"
     ]
@@ -27,6 +29,12 @@ export default tseslint.config(
     rules: {
       "@typescript-eslint/consistent-type-imports": "error",
       "@typescript-eslint/no-floating-promises": "error"
+    }
+  },
+  {
+    files: ["**/*.test.ts", "**/*.test.tsx"],
+    rules: {
+      "@typescript-eslint/require-await": "off"
     }
   }
 );

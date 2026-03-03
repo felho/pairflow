@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const initialize = vi.fn(async () => undefined);
+const initialize = vi.fn(() => Promise.resolve(undefined));
 const stopRealtime = vi.fn(() => undefined);
 
 vi.mock("./state/useBubbleStore", async () => {

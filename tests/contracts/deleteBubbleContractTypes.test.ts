@@ -9,7 +9,9 @@ import type {
   BubbleDeleteResult
 } from "../../ui/src/lib/types.js";
 
-type AssertAssignable<Source, Target extends Source> = true;
+type AssertAssignable<Source, Target extends Source> = [Target] extends [never]
+  ? false
+  : true;
 
 const backendArtifactsAssignableToUi: AssertAssignable<
   DeleteBubbleArtifacts,

@@ -96,15 +96,15 @@ export function renderRepoListText(view: RepoListView): string {
 
 export async function runRepoListCommand(
   args: RepoListCommandOptions,
-  input?: RunRepoListCommandInput | undefined
+  input?: RunRepoListCommandInput
 ): Promise<RepoListView>;
 export async function runRepoListCommand(
   args: RepoListHelpCommandOptions,
-  input?: RunRepoListCommandInput | undefined
+  input?: RunRepoListCommandInput
 ): Promise<null>;
 export async function runRepoListCommand(
   args: string[],
-  input?: RunRepoListCommandInput | undefined
+  input?: RunRepoListCommandInput
 ): Promise<RepoListView | null>;
 export async function runRepoListCommand(
   args: string[] | ParsedRepoListCommandOptions,

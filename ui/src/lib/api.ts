@@ -30,45 +30,63 @@ interface BubbleTimelineResponse {
 }
 
 export interface PairflowApiClient {
-  getRepos(): Promise<string[]>;
-  getBubbles(repoPath: string): Promise<BubblesResponse>;
-  getBubble(repoPath: string, bubbleId: string): Promise<UiBubbleDetail>;
-  getBubbleTimeline(repoPath: string, bubbleId: string): Promise<UiTimelineEntry[]>;
-  startBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>>;
-  approveBubble(
+  getRepos: () => Promise<string[]>;
+  getBubbles: (repoPath: string) => Promise<BubblesResponse>;
+  getBubble: (repoPath: string, bubbleId: string) => Promise<UiBubbleDetail>;
+  getBubbleTimeline: (
+    repoPath: string,
+    bubbleId: string
+  ) => Promise<UiTimelineEntry[]>;
+  startBubble: (
+    repoPath: string,
+    bubbleId: string
+  ) => Promise<Record<string, unknown>>;
+  approveBubble: (
     repoPath: string,
     bubbleId: string,
     input?: { refs?: string[] }
-  ): Promise<Record<string, unknown>>;
-  requestRework(
+  ) => Promise<Record<string, unknown>>;
+  requestRework: (
     repoPath: string,
     bubbleId: string,
     input: { message: string; refs?: string[] }
-  ): Promise<Record<string, unknown>>;
-  replyBubble(
+  ) => Promise<Record<string, unknown>>;
+  replyBubble: (
     repoPath: string,
     bubbleId: string,
     input: { message: string; refs?: string[] }
-  ): Promise<Record<string, unknown>>;
-  resumeBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>>;
-  commitBubble(
+  ) => Promise<Record<string, unknown>>;
+  resumeBubble: (
+    repoPath: string,
+    bubbleId: string
+  ) => Promise<Record<string, unknown>>;
+  commitBubble: (
     repoPath: string,
     bubbleId: string,
     input: CommitActionInput
-  ): Promise<Record<string, unknown>>;
-  mergeBubble(
+  ) => Promise<Record<string, unknown>>;
+  mergeBubble: (
     repoPath: string,
     bubbleId: string,
     input: MergeActionInput
-  ): Promise<Record<string, unknown>>;
-  openBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>>;
-  attachBubble(repoPath: string, bubbleId: string): Promise<AttachActionResult>;
-  stopBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>>;
-  deleteBubble(
+  ) => Promise<Record<string, unknown>>;
+  openBubble: (
+    repoPath: string,
+    bubbleId: string
+  ) => Promise<Record<string, unknown>>;
+  attachBubble: (
+    repoPath: string,
+    bubbleId: string
+  ) => Promise<AttachActionResult>;
+  stopBubble: (
+    repoPath: string,
+    bubbleId: string
+  ) => Promise<Record<string, unknown>>;
+  deleteBubble: (
     repoPath: string,
     bubbleId: string,
     input?: { force?: boolean }
-  ): Promise<BubbleDeleteResult>;
+  ) => Promise<BubbleDeleteResult>;
 }
 
 export class PairflowApiError extends Error {
@@ -97,7 +115,7 @@ function toAbsoluteUrl(baseUrl: string, path: string): string {
   return `${baseUrl.replace(/\/$/u, "")}${path}`;
 }
 
-function parseJson(raw: string): unknown | undefined {
+function parseJson(raw: string): unknown {
   if (raw.length === 0) {
     return {};
   }
@@ -163,7 +181,7 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
       status: response.status,
       ...(payload?.code !== undefined ? { code: payload.code } : {}),
       ...(payload?.details !== undefined && typeof payload.details === "object"
-        ? { details: payload.details as Record<string, unknown> }
+        ? { details: payload.details }
         : {})
     });
   }

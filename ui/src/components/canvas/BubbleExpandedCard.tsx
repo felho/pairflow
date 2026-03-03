@@ -52,12 +52,12 @@ export interface BubbleExpandedCardProps {
   actionError: string | null;
   actionRetryHint: string | null;
   actionFailure: BubbleActionKind | null;
-  onPositionChange(position: BubblePosition): void;
-  onPositionCommit(): void;
-  onClose(): void;
-  onRefresh(): void;
-  onAction(input: RunBubbleActionInput): Promise<void>;
-  onClearActionFeedback(): void;
+  onPositionChange: (position: BubblePosition) => void;
+  onPositionCommit: () => void;
+  onClose: () => void;
+  onRefresh: () => void;
+  onAction: (input: RunBubbleActionInput) => Promise<void>;
+  onClearActionFeedback: () => void;
 }
 
 export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element {
