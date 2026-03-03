@@ -3,31 +3,25 @@ import type {
   UiBubbleDetail,
   UiBubbleSummary,
   UiRepoSummary,
-  UiStateCounts,
   UiTimelineEntry
 } from "../lib/types";
-
-export function stateCounts(overrides: Partial<UiStateCounts> = {}): UiStateCounts {
-  return {
-    CREATED: 0,
-    PREPARING_WORKSPACE: 0,
-    RUNNING: 0,
-    WAITING_HUMAN: 0,
-    READY_FOR_APPROVAL: 0,
-    APPROVED_FOR_COMMIT: 0,
-    COMMITTED: 0,
-    DONE: 0,
-    FAILED: 0,
-    CANCELLED: 0,
-    ...overrides
-  };
-}
 
 export function repoSummary(repoPath: string): UiRepoSummary {
   return {
     repoPath,
     total: 1,
-    byState: stateCounts({ RUNNING: 1 }),
+    byState: {
+      CREATED: 0,
+      PREPARING_WORKSPACE: 0,
+      RUNNING: 1,
+      WAITING_HUMAN: 0,
+      READY_FOR_APPROVAL: 0,
+      APPROVED_FOR_COMMIT: 0,
+      COMMITTED: 0,
+      DONE: 0,
+      FAILED: 0,
+      CANCELLED: 0
+    },
     runtimeSessions: {
       registered: 1,
       stale: 0

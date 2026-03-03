@@ -4,7 +4,6 @@ import { useShallow } from "zustand/react/shallow";
 import { BubbleCanvas } from "./components/canvas/BubbleCanvas";
 import { HeaderBar } from "./components/header/HeaderBar";
 import {
-  selectStateCounts,
   selectVisibleBubbles,
   useBubbleStore,
   useBubbleStoreApi
@@ -26,7 +25,6 @@ export default function App(): JSX.Element {
   const toggleBubbleExpanded = useBubbleStore((state) => state.toggleBubbleExpanded);
   const deleteBubble = useBubbleStore((state) => state.deleteBubble);
   const visibleBubbles = useBubbleStore(useShallow(selectVisibleBubbles));
-  const counts = useBubbleStore(useShallow(selectStateCounts));
   const handleDelete = useCallback(
     (bubbleId: string, force?: boolean, repoPath?: string) =>
       deleteBubble(bubbleId, force, repoPath),
@@ -43,7 +41,6 @@ export default function App(): JSX.Element {
   return (
     <div className="flex min-h-screen flex-col text-white">
       <HeaderBar
-        counts={counts}
         repos={repos}
         selectedRepos={selectedRepos}
         connectionStatus={connectionStatus}

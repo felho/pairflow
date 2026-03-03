@@ -71,19 +71,6 @@ export interface BubbleDeleteResult {
   removedBubbleBranch: boolean;
 }
 
-export interface UiStateCounts {
-  CREATED: number;
-  PREPARING_WORKSPACE: number;
-  RUNNING: number;
-  WAITING_HUMAN: number;
-  READY_FOR_APPROVAL: number;
-  APPROVED_FOR_COMMIT: number;
-  COMMITTED: number;
-  DONE: number;
-  FAILED: number;
-  CANCELLED: number;
-}
-
 export interface RuntimeSessionRecord {
   bubbleId: string;
   repoPath: string;
@@ -155,7 +142,18 @@ export interface UiBubbleSummary {
 export interface UiRepoSummary {
   repoPath: string;
   total: number;
-  byState: UiStateCounts;
+  byState: {
+    CREATED: number;
+    PREPARING_WORKSPACE: number;
+    RUNNING: number;
+    WAITING_HUMAN: number;
+    READY_FOR_APPROVAL: number;
+    APPROVED_FOR_COMMIT: number;
+    COMMITTED: number;
+    DONE: number;
+    FAILED: number;
+    CANCELLED: number;
+  };
   runtimeSessions: {
     registered: number;
     stale: number;
@@ -254,19 +252,4 @@ export interface AttachActionResult {
 export interface BubblePosition {
   x: number;
   y: number;
-}
-
-export function emptyStateCounts(): UiStateCounts {
-  return {
-    CREATED: 0,
-    PREPARING_WORKSPACE: 0,
-    RUNNING: 0,
-    WAITING_HUMAN: 0,
-    READY_FOR_APPROVAL: 0,
-    APPROVED_FOR_COMMIT: 0,
-    COMMITTED: 0,
-    DONE: 0,
-    FAILED: 0,
-    CANCELLED: 0
-  };
 }

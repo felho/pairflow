@@ -1,31 +1,5 @@
-import type { BubbleLifecycleState, ConnectionStatus, UiStateCounts } from "../../lib/types";
+import type { ConnectionStatus } from "../../lib/types";
 import { cn } from "../../lib/utils";
-
-const allStates: Array<keyof UiStateCounts> = [
-  "CREATED",
-  "PREPARING_WORKSPACE",
-  "RUNNING",
-  "WAITING_HUMAN",
-  "READY_FOR_APPROVAL",
-  "APPROVED_FOR_COMMIT",
-  "COMMITTED",
-  "DONE",
-  "FAILED",
-  "CANCELLED"
-];
-
-const stateLedColor: Record<BubbleLifecycleState, string> = {
-  CREATED: "bg-sky-300/80",
-  PREPARING_WORKSPACE: "bg-cyan-400",
-  RUNNING: "bg-blue-400",
-  WAITING_HUMAN: "bg-amber-400 animate-attention-pulse",
-  READY_FOR_APPROVAL: "bg-emerald-400",
-  APPROVED_FOR_COMMIT: "bg-emerald-400",
-  COMMITTED: "bg-teal-300 animate-soft-pulse",
-  DONE: "bg-slate-500",
-  FAILED: "bg-rose-400",
-  CANCELLED: "bg-slate-400"
-};
 
 function statusLabel(status: ConnectionStatus): string {
   switch (status) {
@@ -62,7 +36,6 @@ function statusDotClass(status: ConnectionStatus): string {
 }
 
 export interface HeaderBarProps {
-  counts: UiStateCounts;
   repos: string[];
   selectedRepos: string[];
   connectionStatus: ConnectionStatus;
@@ -81,14 +54,6 @@ export function HeaderBar(props: HeaderBarProps): JSX.Element {
         <span className="text-[15px] font-bold tracking-wide">
           <span className="text-blue-500">⬡</span> Pairflow
         </span>
-        <div className="flex items-center gap-4 text-[11px] text-[#888]">
-          {allStates.map((state) => (
-            <span key={state} className="flex items-center gap-1.5">
-              <span className={cn("inline-block h-[5px] w-[5px] rounded-full", stateLedColor[state])} />
-              {state.replaceAll("_", " ")} {props.counts[state]}
-            </span>
-          ))}
-        </div>
       </div>
 
       <div className="flex items-center gap-3">

@@ -10,7 +10,6 @@ vi.mock("../lib/clipboard", () => ({
 
 import {
   createBubbleStore,
-  selectStateCounts,
   selectVisibleBubbles,
   type BubbleStoreDependencies
 } from "./useBubbleStore";
@@ -210,9 +209,6 @@ describe("createBubbleStore", () => {
     await store.getState().toggleRepo("/repo-b");
     expect(store.getState().selectedRepos).toEqual(["/repo-a"]);
     expect(client.refresh).toHaveBeenCalledTimes(1);
-
-    const counts = selectStateCounts(store.getState());
-    expect(counts.RUNNING).toBe(1);
   });
 
   it("adds newly created bubbles from realtime update events without manual refresh", async () => {
@@ -256,7 +252,6 @@ describe("createBubbleStore", () => {
       "b-created",
       "b-existing"
     ]);
-    expect(selectStateCounts(store.getState()).RUNNING).toBe(2);
     expect(getBubbles).toHaveBeenCalledTimes(1);
   });
 
@@ -430,36 +425,6 @@ describe("createBubbleStore", () => {
     expect(JSON.parse(storage.getItem("pairflow.ui.canvas.positions.v1") ?? "{}")).toEqual({
       "b-1": position
     });
-  });
-
-  it("does not share count object instances across separate stores", async () => {
-    const createStoreWithRunningBubble = () =>
-      createBubbleStore({
-        api: createApiStub({
-          getRepos: vi.fn(async () => ["/repo-a"]),
-          getBubbles: vi.fn(async () => ({
-            repo: repoSummary("/repo-a"),
-            bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
-          }))
-        }),
-        createEventsClient: () => ({
-          start: () => undefined,
-          stop: () => undefined,
-          refresh: () => undefined
-        })
-      });
-
-    const storeA = createStoreWithRunningBubble();
-    const storeB = createStoreWithRunningBubble();
-
-    await storeA.getState().initialize();
-    await storeB.getState().initialize();
-
-    const countsA = selectStateCounts(storeA.getState());
-    const countsB = selectStateCounts(storeB.getState());
-
-    expect(countsA).toEqual(countsB);
-    expect(countsA).not.toBe(countsB);
   });
 
   it("clears stale error immediately when toggling repo", async () => {
