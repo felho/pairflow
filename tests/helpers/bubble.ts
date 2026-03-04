@@ -1,6 +1,10 @@
+import { writeFile } from "node:fs/promises";
+
+import { renderBubbleConfigToml } from "../../src/config/bubbleConfig.js";
 import { createBubble, type BubbleCreateResult } from "../../src/core/bubble/createBubble.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../src/core/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../src/core/workspace/worktreeManager.js";
+import type { ReviewArtifactType } from "../../src/types/bubble.js";
 
 export interface SetupRunningBubbleFixtureInput {
   bubbleId: string;
@@ -9,12 +13,11 @@ export interface SetupRunningBubbleFixtureInput {
   startedAt?: string;
   reviewerBrief?: string;
   accuracyCritical?: boolean;
+  reviewArtifactType?: ReviewArtifactType;
 }
 
-export async function setupRunningBubbleFixture(
-  input: SetupRunningBubbleFixtureInput
-): Promise<BubbleCreateResult> {
-  const created = await createBubble({
+export async function setupRunningBubbleFixture(input: SetupRunningBubbleFixtureInput): Promise<BubbleCreateResult> {
+  let created = await createBubble({
     id: input.bubbleId,
     repoPath: input.repoPath,
     baseBranch: "main",
@@ -25,6 +28,22 @@ export async function setupRunningBubbleFixture(
     ...(input.accuracyCritical === true ? { accuracyCritical: true } : {}),
     cwd: input.repoPath
   });
+
+  if (input.reviewArtifactType !== undefined) {
+    const overriddenConfig = {
+      ...created.config,
+      review_artifact_type: input.reviewArtifactType
+    };
+    await writeFile(
+      created.paths.bubbleTomlPath,
+      renderBubbleConfigToml(overriddenConfig),
+      "utf8"
+    );
+    created = {
+      ...created,
+      config: overriddenConfig
+    };
+  }
 
   await bootstrapWorktreeWorkspace({
     repoPath: input.repoPath,

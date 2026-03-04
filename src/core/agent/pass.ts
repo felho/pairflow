@@ -497,18 +497,28 @@ export async function emitPassFromWorkspace(
       if (artifactWriteSucceeded) {
         implementerDirective = await resolveReviewerTestExecutionDirectiveFromArtifact({
           artifact: evidenceArtifact,
-          worktreePath: resolved.bubblePaths.worktreePath
+          worktreePath: resolved.bubblePaths.worktreePath,
+          reviewArtifactType: resolved.bubbleConfig.review_artifact_type
         }).catch(() => undefined);
       }
     }
 
-    reviewerTestDirective = implementerDirective ?? {
-      skip_full_rerun: false,
-      reason_code: "evidence_unverifiable",
-      reason_detail:
-        "Failed to resolve reviewer test directive due to verification runtime error.",
-      verification_status: "untrusted"
-    };
+    reviewerTestDirective =
+      implementerDirective ??
+      (resolved.bubbleConfig.review_artifact_type === "document"
+        ? {
+            skip_full_rerun: true,
+            reason_code: "no_trigger",
+            reason_detail: "docs-only scope, runtime checks not required",
+            verification_status: "trusted"
+          }
+        : {
+            skip_full_rerun: false,
+            reason_code: "evidence_unverifiable",
+            reason_detail:
+              "Failed to resolve reviewer test directive due to verification runtime error.",
+            verification_status: "untrusted"
+          });
   }
 
   const reviewerBriefText = await readReviewerBriefArtifact(

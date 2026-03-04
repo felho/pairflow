@@ -104,8 +104,11 @@ function buildImplementerStartupPrompt(input: {
   worktreePath: string;
   taskArtifactPath: string;
   donePackagePath: string;
+  reviewArtifactType: ReviewArtifactType;
 }): string {
-  const evidenceHandoffGuidance = buildImplementerEvidenceHandoffGuidance();
+  const evidenceHandoffGuidance = buildImplementerEvidenceHandoffGuidance(
+    input.reviewArtifactType
+  );
   return [
     `Pairflow implementer start for bubble ${input.bubbleId}.`,
     `Read task: ${input.taskArtifactPath}.`,
@@ -152,17 +155,28 @@ function buildReviewerStartupPrompt(input: {
 function buildImplementerKickoffMessage(input: {
   bubbleId: string;
   taskArtifactPath: string;
+  reviewArtifactType: ReviewArtifactType;
 }): string {
   return [
     `# [pairflow] bubble=${input.bubbleId} kickoff.`,
     `Read task file now: ${input.taskArtifactPath}.`,
     "Start implementation immediately in this worktree.",
-    buildImplementerEvidenceHandoffGuidance(),
+    buildImplementerEvidenceHandoffGuidance(input.reviewArtifactType),
     "When done with validation, hand off with `pairflow pass --summary \"<what changed + validation>\"` and include available evidence `--ref` log paths."
   ].join(" ");
 }
 
-function buildImplementerEvidenceHandoffGuidance(): string {
+function buildImplementerEvidenceHandoffGuidance(
+  reviewArtifactType: ReviewArtifactType
+): string {
+  if (reviewArtifactType === "document") {
+    return [
+      "This bubble is docs-only (`review_artifact_type=document`), so runtime checks are not required in this round.",
+      "If you still run validation (for example `pnpm lint`, `pnpm typecheck`, `pnpm test`, or `pnpm check`), make sure evidence logs are written to `.pairflow/evidence/` and attach them as `--ref` on `pairflow pass`.",
+      "In your PASS summary, explicitly state which runtime checks were intentionally not executed for docs-only scope."
+    ].join(" ");
+  }
+
   return [
     "Run validation via `pnpm lint`, `pnpm typecheck`, `pnpm test`, or `pnpm check` so evidence logs are written to `.pairflow/evidence/`.",
     "If evidence logs exist, include them as `--ref` when running `pairflow pass`.",
@@ -190,11 +204,14 @@ function buildResumeImplementerStartupPrompt(input: {
   worktreePath: string;
   taskArtifactPath: string;
   donePackagePath: string;
+  reviewArtifactType: ReviewArtifactType;
   state: BubbleStateSnapshot;
   transcriptSummary: string;
   kickoffDiagnostic?: string;
 }): string {
-  const evidenceHandoffGuidance = buildImplementerEvidenceHandoffGuidance();
+  const evidenceHandoffGuidance = buildImplementerEvidenceHandoffGuidance(
+    input.reviewArtifactType
+  );
   const roleInstruction =
     input.state.state === "RUNNING" && input.state.active_role === "implementer"
       ? "You are currently active. Continue implementation now."
@@ -263,12 +280,13 @@ function buildResumeImplementerKickoffMessage(input: {
   bubbleId: string;
   taskArtifactPath: string;
   round: number;
+  reviewArtifactType: ReviewArtifactType;
 }): string {
   return [
     `# [pairflow] bubble=${input.bubbleId} resume kickoff (implementer).`,
     `State is RUNNING at round ${input.round}.`,
     `Re-open task context: ${input.taskArtifactPath}.`,
-    buildImplementerEvidenceHandoffGuidance(),
+    buildImplementerEvidenceHandoffGuidance(input.reviewArtifactType),
     "Continue active implementation and hand off with `pairflow pass --summary \"<what changed + validation>\"` plus available evidence `--ref` logs when ready."
   ].join(" ");
 }
@@ -295,6 +313,7 @@ function buildResumeReviewerKickoffMessage(input: {
 function resolveResumeKickoffMessages(input: {
   bubbleId: string;
   taskArtifactPath: string;
+  reviewArtifactType: ReviewArtifactType;
   state: BubbleStateSnapshot;
   implementerAgent: string;
   reviewerAgent: string;
@@ -316,7 +335,8 @@ function resolveResumeKickoffMessages(input: {
       implementerKickoffMessage: buildResumeImplementerKickoffMessage({
         bubbleId: input.bubbleId,
         taskArtifactPath: input.taskArtifactPath,
-        round: input.state.round
+        round: input.state.round,
+        reviewArtifactType: input.reviewArtifactType
       })
     };
   }
@@ -491,7 +511,8 @@ export async function startBubble(
             repoPath: resolved.repoPath,
             worktreePath: resolved.bubblePaths.worktreePath,
             taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
-            donePackagePath
+            donePackagePath,
+            reviewArtifactType: resolved.bubbleConfig.review_artifact_type
           })
         }),
         reviewerCommand: buildAgentCommand({
@@ -508,7 +529,8 @@ export async function startBubble(
         }),
         implementerKickoffMessage: buildImplementerKickoffMessage({
           bubbleId: resolved.bubbleId,
-          taskArtifactPath: resolved.bubblePaths.taskArtifactPath
+          taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+          reviewArtifactType: resolved.bubbleConfig.review_artifact_type
         })
       });
       tmuxSessionName = tmux.sessionName;
@@ -552,7 +574,8 @@ export async function startBubble(
             artifactPath: resolveReviewerTestEvidenceArtifactPath(
               resolved.bubblePaths.artifactsDir
             ),
-            worktreePath: resolved.bubblePaths.worktreePath
+            worktreePath: resolved.bubblePaths.worktreePath,
+            reviewArtifactType: resolved.bubbleConfig.review_artifact_type
           })
             .then((directive) => formatReviewerTestExecutionDirective(directive))
             .catch(() => undefined)
@@ -561,6 +584,7 @@ export async function startBubble(
       const resumeKickoffResolution = resolveResumeKickoffMessages({
         bubbleId: resolved.bubbleId,
         taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+        reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
         state: loadedState.state,
         implementerAgent: resolved.bubbleConfig.agents.implementer,
         reviewerAgent: resolved.bubbleConfig.agents.reviewer,
@@ -583,6 +607,7 @@ export async function startBubble(
             worktreePath: resolved.bubblePaths.worktreePath,
             taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
             donePackagePath,
+            reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
             state: loadedState.state,
             transcriptSummary,
             ...(kickoffDiagnostic !== undefined ? { kickoffDiagnostic } : {})

@@ -20,6 +20,16 @@ Default behavior should change to:
 Reviewer instruction text should explicitly include:
 "Implementer test evidence has been orchestrator-verified. Do not re-run full tests unless a trigger from the decision matrix applies."
 
+## Temporary Docs-Only Policy (Phase 1)
+
+This repository currently applies a temporary exception for docs-only bubbles:
+
+1. If `review_artifact_type = "document"`, runtime checks are not required for that round.
+2. Docs-only reviewer directive should default to `skip_full_rerun` with reason detail:
+   "docs-only scope, runtime checks not required".
+3. Any docs-only runtime checks that still run are optional evidence (attach as refs when available).
+4. `review_artifact_type = "code"` and `review_artifact_type = "auto"` remain strict (no implicit exemption).
+
 ## Decision Matrix: When Reviewer Must Still Run Tests
 
 | Condition | Evidence State | Reviewer Action |

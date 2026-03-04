@@ -183,6 +183,9 @@ describe("startBubble", () => {
     expect(implementerCommand).toContain(
       join(created.paths.artifactsDir, "done-package.md")
     );
+    expect(implementerCommand).toContain(
+      "Run validation via `pnpm lint`, `pnpm typecheck`, `pnpm test`, or `pnpm check`"
+    );
     expect(reviewerCommand).toContain("claude");
     expect(reviewerCommand).toContain("--dangerously-skip-permissions");
     expect(reviewerCommand).toContain("--permission-mode");
@@ -246,6 +249,8 @@ describe("startBubble", () => {
       cwd: repoPath
     });
 
+    let implementerCommand: string | undefined;
+    let implementerKickoffMessage: string | undefined;
     let reviewerCommand: string | undefined;
     await startBubble(
       {
@@ -262,6 +267,8 @@ describe("startBubble", () => {
             worktreePath: created.paths.worktreePath
           }),
         launchBubbleTmuxSession: (input) => {
+          implementerCommand = input.implementerCommand;
+          implementerKickoffMessage = input.implementerKickoffMessage;
           reviewerCommand = input.reviewerCommand;
           return Promise.resolve({ sessionName: "pf-b_start_doc_01" });
         },
@@ -280,8 +287,23 @@ describe("startBubble", () => {
     );
 
     expect(created.config.review_artifact_type).toBe("document");
+    expect(implementerCommand).toContain(
+      "runtime checks are not required in this round"
+    );
+    expect(implementerCommand).toContain(
+      "explicitly state which runtime checks were intentionally not executed for docs-only scope"
+    );
+    expect(implementerCommand).not.toContain(
+      "Missing expected evidence logs should be treated as incomplete validation packaging."
+    );
+    expect(implementerKickoffMessage).toContain(
+      "runtime checks are not required in this round"
+    );
     expect(reviewerCommand).toContain("document/task artifacts");
     expect(reviewerCommand).toContain("Do not force `feature-dev:code-reviewer`");
+    expect(reviewerCommand).toContain(
+      "Runtime checks are not required for document-only scope."
+    );
   });
 
   it("injects persisted reviewer brief into reviewer startup prompt", async () => {
@@ -634,6 +656,47 @@ describe("startBubble", () => {
     expect(result.state.last_command_at).toBe("2026-02-23T09:00:00.000Z");
   });
 
+  it("uses docs-only runtime evidence guidance in resume implementer prompts", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_docs_01",
+      task: "Docs-only resume bubble",
+      reviewArtifactType: "document"
+    });
+
+    await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-23T09:03:00.000Z")
+      },
+      {
+        buildResumeTranscriptSummary: () =>
+          Promise.resolve("resume-summary: docs-only"),
+        launchBubbleTmuxSession: (input) => {
+          expect(input.implementerCommand).toContain(
+            "runtime checks are not required in this round"
+          );
+          expect(input.implementerCommand).toContain(
+            "explicitly state which runtime checks were intentionally not executed for docs-only scope"
+          );
+          expect(input.implementerKickoffMessage).toContain(
+            "runtime checks are not required in this round"
+          );
+          expect(input.implementerCommand).not.toContain(
+            "Missing expected evidence logs should be treated as incomplete validation packaging."
+          );
+          expect(input.reviewerCommand).toContain(
+            "Runtime checks are not required for document-only scope."
+          );
+          expect(input.reviewerCommand).toContain("Stand by unless you are active or receive a handoff.");
+          return Promise.resolve({ sessionName: "pf-b_start_resume_docs_01" });
+        }
+      }
+    );
+  });
+
   it("routes resume kickoff to reviewer when reviewer is active in RUNNING", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -731,6 +794,66 @@ describe("startBubble", () => {
             "Implementer test evidence has been orchestrator-verified."
           );
           return Promise.resolve({ sessionName: "pf-b_start_resume_06" });
+        }
+      }
+    );
+  });
+
+  it("includes docs-only reviewer directive line on resume when reviewer is active", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_doc_review_01",
+      task: "Resume reviewer directive docs-only",
+      reviewArtifactType: "document"
+    });
+
+    const evidence = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      envelope: {
+        id: "msg_resume_dir_doc_01",
+        ts: "2026-02-27T22:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Docs-only validation not required"
+        },
+        refs: []
+      },
+      worktreePath: bubble.paths.worktreePath,
+      repoPath
+    });
+    await writeReviewerTestEvidenceArtifact(
+      resolveReviewerTestEvidenceArtifactPath(bubble.paths.artifactsDir),
+      evidence
+    );
+    await writeFile(join(bubble.paths.worktreePath, "post-evidence-doc-change.md"), "x\n", "utf8");
+    await updateBubbleState(bubble.paths.statePath, (current) => ({
+      ...current,
+      active_agent: bubble.config.agents.reviewer,
+      active_role: "reviewer"
+    }));
+
+    await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-27T22:01:00.000Z")
+      },
+      {
+        buildResumeTranscriptSummary: () =>
+          Promise.resolve("resume-summary: reviewer-doc-directive"),
+        launchBubbleTmuxSession: (input) => {
+          expect(input.reviewerCommand).toContain("Current directive:");
+          expect(input.reviewerCommand).toContain(
+            "docs-only scope, runtime checks not required"
+          );
+          expect(input.reviewerKickoffMessage).toContain("resume kickoff (reviewer)");
+          return Promise.resolve({ sessionName: "pf-b_start_resume_doc_review_01" });
         }
       }
     );
