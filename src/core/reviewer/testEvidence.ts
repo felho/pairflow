@@ -3,7 +3,7 @@ import { mkdir, readFile, realpath, writeFile } from "node:fs/promises"
 import { dirname, isAbsolute, join, relative, resolve } from "node:path"
 
 import { runGit } from "../workspace/git.js"
-import type { BubbleConfig } from "../../types/bubble.js"
+import type { BubbleConfig, ReviewArtifactType } from "../../types/bubble.js"
 import type { ProtocolEnvelope } from "../../types/protocol.js"
 
 export const reviewerTestEvidenceSchemaVersion = 1 as const
@@ -75,6 +75,7 @@ export interface VerifyImplementerTestEvidenceInput {
 export interface ResolveReviewerTestExecutionDirectiveInput {
   artifactPath: string;
   worktreePath: string;
+  reviewArtifactType?: ReviewArtifactType;
 }
 
 interface EvidenceSource {
@@ -100,6 +101,7 @@ interface WorktreeFingerprint {
 }
 
 const maxRefSourceChars = 60_000
+const docsOnlyRuntimeChecksNotRequiredDetail = "docs-only scope, runtime checks not required"
 
 function isPathInside(parentPath: string, childPath: string): boolean {
   const rel = relative(resolve(parentPath), resolve(childPath))
@@ -420,6 +422,17 @@ function summarizeReason(reasonCode: ReviewerTestReasonCode, detail: string): st
   }
 }
 
+function createDocsOnlySkipDirective(
+  detail: string = docsOnlyRuntimeChecksNotRequiredDetail
+): ReviewerTestExecutionDirective {
+  return {
+    skip_full_rerun: true,
+    reason_code: "no_trigger",
+    reason_detail: summarizeReason("no_trigger", detail),
+    verification_status: "trusted"
+  }
+}
+
 function classifyEvidence(input: {
   commandEvidence: ReviewerTestCommandEvidence[];
   requiredCommands: string[];
@@ -504,6 +517,28 @@ export async function verifyImplementerTestEvidence(
   input: VerifyImplementerTestEvidenceInput
 ): Promise<ReviewerTestEvidenceArtifact> {
   const now = input.now ?? new Date()
+  if (input.bubbleConfig.review_artifact_type === "document") {
+    return {
+      schema_version: reviewerTestEvidenceSchemaVersion,
+      bubble_id: input.bubbleId,
+      pass_envelope_id: input.envelope.id,
+      pass_ts: input.envelope.ts,
+      round: input.envelope.round,
+      verified_at: now.toISOString(),
+      status: "trusted",
+      decision: "skip_full_rerun",
+      reason_code: "no_trigger",
+      reason_detail: "docs-only scope, runtime checks not required",
+      required_commands: [],
+      command_evidence: [],
+      git: {
+        commit_sha: null,
+        status_hash: null,
+        dirty: null
+      }
+    }
+  }
+
   const requiredCommands = normalizeRequiredCommands(input.bubbleConfig)
   const sources = await loadEvidenceSources({
     summary: input.envelope.payload.summary ?? "",
@@ -638,6 +673,24 @@ function compareFingerprint(
   }
 }
 
+function isDocsOnlyCompatibilityArtifact(artifact: ReviewerTestEvidenceArtifact): boolean {
+  const reasonDetail = artifact.reason_detail.trim()
+  const hasDocsOnlyDiscriminator =
+    /(?:docs-only|document-only)\s+scope/iu.test(reasonDetail)
+
+  return (
+    artifact.status === "trusted" &&
+    artifact.decision === "skip_full_rerun" &&
+    artifact.reason_code === "no_trigger" &&
+    hasDocsOnlyDiscriminator &&
+    artifact.required_commands.length === 0 &&
+    artifact.command_evidence.length === 0 &&
+    artifact.git.commit_sha === null &&
+    artifact.git.status_hash === null &&
+    artifact.git.dirty === null
+  )
+}
+
 export async function resolveReviewerTestExecutionDirective(
   input: ResolveReviewerTestExecutionDirectiveInput
 ): Promise<ReviewerTestExecutionDirective> {
@@ -645,6 +698,10 @@ export async function resolveReviewerTestExecutionDirective(
   try {
     artifact = await readReviewerTestEvidenceArtifact(input.artifactPath)
   } catch (error: unknown) {
+    if (input.reviewArtifactType === "document") {
+      return createDocsOnlySkipDirective()
+    }
+
     const readFailureDetail =
       error instanceof Error && error.message.trim().length > 0
         ? `Reviewer test verification artifact read failed: ${error.message}`
@@ -658,6 +715,10 @@ export async function resolveReviewerTestExecutionDirective(
   }
 
   if (artifact === undefined) {
+    if (input.reviewArtifactType === "document") {
+      return createDocsOnlySkipDirective()
+    }
+
     return {
       skip_full_rerun: false,
       reason_code: "evidence_missing",
@@ -671,21 +732,44 @@ export async function resolveReviewerTestExecutionDirective(
 
   return resolveReviewerTestExecutionDirectiveFromArtifact({
     artifact,
-    worktreePath: input.worktreePath
+    worktreePath: input.worktreePath,
+    ...(input.reviewArtifactType !== undefined
+      ? { reviewArtifactType: input.reviewArtifactType }
+      : {})
   })
 }
 
 export async function resolveReviewerTestExecutionDirectiveFromArtifact(input: {
   artifact: ReviewerTestEvidenceArtifact;
   worktreePath: string;
+  reviewArtifactType?: ReviewArtifactType;
 }): Promise<ReviewerTestExecutionDirective> {
   if (input.artifact.status !== "trusted") {
+    if (input.reviewArtifactType === "document") {
+      return createDocsOnlySkipDirective(
+        input.artifact.reason_detail.trim().length > 0
+          ? input.artifact.reason_detail
+          : docsOnlyRuntimeChecksNotRequiredDetail
+      )
+    }
+
     return {
       skip_full_rerun: false,
       reason_code: input.artifact.reason_code,
       reason_detail: summarizeReason(input.artifact.reason_code, input.artifact.reason_detail),
       verification_status: "untrusted"
     }
+  }
+
+  const docsOnlyCompatibilityMatch =
+    input.reviewArtifactType === undefined &&
+    isDocsOnlyCompatibilityArtifact(input.artifact)
+  if (input.reviewArtifactType === "document" || docsOnlyCompatibilityMatch) {
+    return createDocsOnlySkipDirective(
+      input.artifact.reason_detail.trim().length > 0
+        ? input.artifact.reason_detail
+        : docsOnlyRuntimeChecksNotRequiredDetail
+    )
   }
 
   const current = await readWorktreeFingerprint(input.worktreePath)

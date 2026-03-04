@@ -1094,12 +1094,85 @@ describe("emitPassFromWorkspace", () => {
     expect(artifact.reason_code).toBe("no_trigger");
   });
 
+  it("writes trusted docs-only reviewer artifact and skip directive for document PASS", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_16_docs",
+      task: "Document-only pass flow",
+      reviewArtifactType: "document"
+    });
+
+    let capturedDirective:
+      | {
+          skip_full_rerun: boolean;
+          reason_code: string;
+          reason_detail: string;
+          verification_status: string;
+        }
+      | undefined;
+    await emitPassFromWorkspace(
+      {
+        summary: "Docs-only scope update",
+        refs: [],
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:05:00.000Z")
+      },
+      {
+        emitTmuxDeliveryNotification: (input) => {
+          capturedDirective = input.reviewerTestDirective;
+          return Promise.resolve({
+            delivered: true,
+            message: "ok"
+          });
+        }
+      }
+    );
+
+    const rawArtifact = await readFile(
+      join(bubble.paths.artifactsDir, "reviewer-test-verification.json"),
+      "utf8"
+    );
+    const artifact = JSON.parse(rawArtifact) as {
+      status: string;
+      decision: string;
+      reason_code: string;
+      reason_detail: string;
+      required_commands: string[];
+      command_evidence: unknown[];
+      git: {
+        commit_sha: string | null;
+        status_hash: string | null;
+        dirty: boolean | null;
+      };
+    };
+
+    expect(artifact.status).toBe("trusted");
+    expect(artifact.decision).toBe("skip_full_rerun");
+    expect(artifact.reason_code).toBe("no_trigger");
+    expect(artifact.reason_detail).toContain("docs-only scope, runtime checks not required");
+    expect(artifact.required_commands).toEqual([]);
+    expect(artifact.command_evidence).toEqual([]);
+    expect(artifact.git).toEqual({
+      commit_sha: null,
+      status_hash: null,
+      dirty: null
+    });
+    expect(capturedDirective?.skip_full_rerun).toBe(true);
+    expect(capturedDirective?.reason_code).toBe("no_trigger");
+    expect(capturedDirective?.verification_status).toBe("trusted");
+    expect(capturedDirective?.reason_detail).toContain(
+      "docs-only scope, runtime checks not required"
+    );
+  });
+
   it("falls back to run_checks reviewer directive when artifact write fails", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_pass_17",
-      task: "Implement pass flow"
+      task: "Implement pass flow",
+      reviewArtifactType: "auto"
     });
 
     await rm(bubble.paths.artifactsDir, { recursive: true, force: true });
@@ -1119,6 +1192,8 @@ describe("emitPassFromWorkspace", () => {
       | {
           skip_full_rerun: boolean;
           reason_code: string;
+          reason_detail: string;
+          verification_status: string;
         }
       | undefined;
     await emitPassFromWorkspace(
@@ -1141,6 +1216,56 @@ describe("emitPassFromWorkspace", () => {
 
     expect(capturedDirective?.skip_full_rerun).toBe(false);
     expect(capturedDirective?.reason_code).toBe("evidence_unverifiable");
+    expect(capturedDirective?.reason_detail).toContain(
+      "Failed to resolve reviewer test directive due to verification runtime error."
+    );
+    expect(capturedDirective?.verification_status).toBe("untrusted");
+  });
+
+  it("falls back to docs-only skip directive when artifact write fails in document scope", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_17_docs",
+      task: "Docs-only pass flow",
+      reviewArtifactType: "document"
+    });
+
+    await rm(bubble.paths.artifactsDir, { recursive: true, force: true });
+    await writeFile(bubble.paths.artifactsDir, "blocked", "utf8");
+
+    let capturedDirective:
+      | {
+          skip_full_rerun: boolean;
+          reason_code: string;
+          reason_detail: string;
+          verification_status: string;
+        }
+      | undefined;
+    await emitPassFromWorkspace(
+      {
+        summary: "Docs-only change complete",
+        refs: [],
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:05:00.000Z")
+      },
+      {
+        emitTmuxDeliveryNotification: (input) => {
+          capturedDirective = input.reviewerTestDirective;
+          return Promise.resolve({
+            delivered: true,
+            message: "ok"
+          });
+        }
+      }
+    );
+
+    expect(capturedDirective?.skip_full_rerun).toBe(true);
+    expect(capturedDirective?.reason_code).toBe("no_trigger");
+    expect(capturedDirective?.verification_status).toBe("trusted");
+    expect(capturedDirective?.reason_detail).toContain(
+      "docs-only scope, runtime checks not required"
+    );
   });
 
   it("rejects accuracy-critical reviewer PASS when verification ref is missing", async () => {

@@ -8,11 +8,13 @@ import {
   readReviewerTestEvidenceArtifact,
   resolveReviewerTestEvidenceArtifactPath,
   resolveReviewerTestExecutionDirective,
+  resolveReviewerTestExecutionDirectiveFromArtifact,
   verifyImplementerTestEvidence,
   writeReviewerTestEvidenceArtifact
 } from "../../../src/core/reviewer/testEvidence.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
+import type { BubbleConfig, ReviewArtifactType } from "../../../src/types/bubble.js";
 
 const tempDirs: string[] = [];
 
@@ -32,6 +34,275 @@ afterEach(async () => {
 });
 
 describe("reviewer test evidence verification", () => {
+  it("short-circuits docs-only verification without requiring runtime evidence", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_docs_01",
+      task: "Docs-only task",
+      reviewArtifactType: "document"
+    });
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_docs_001",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Docs-only update complete"
+        },
+        refs: []
+      }
+    });
+
+    expect(artifact.status).toBe("trusted");
+    expect(artifact.decision).toBe("skip_full_rerun");
+    expect(artifact.reason_code).toBe("no_trigger");
+    expect(artifact.reason_detail).toBe("docs-only scope, runtime checks not required");
+    expect(artifact.required_commands).toEqual([]);
+    expect(artifact.command_evidence).toEqual([]);
+    expect(artifact.git).toEqual({
+      commit_sha: null,
+      status_hash: null,
+      dirty: null
+    });
+  });
+
+  it("keeps docs-only resolver output trusted without freshness checks", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_docs_02",
+      task: "Docs-only task",
+      reviewArtifactType: "document"
+    });
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_docs_002",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Docs-only update complete"
+        },
+        refs: []
+      }
+    });
+
+    const explicitDirective = await resolveReviewerTestExecutionDirectiveFromArtifact({
+      artifact,
+      worktreePath: bubble.paths.worktreePath,
+      reviewArtifactType: "document"
+    });
+    expect(explicitDirective.skip_full_rerun).toBe(true);
+    expect(explicitDirective.reason_code).toBe("no_trigger");
+    expect(explicitDirective.verification_status).toBe("trusted");
+    expect(explicitDirective.reason_detail).toContain(
+      "docs-only scope, runtime checks not required"
+    );
+
+    const compatibilityDirective = await resolveReviewerTestExecutionDirectiveFromArtifact({
+      artifact,
+      worktreePath: bubble.paths.worktreePath
+    });
+    expect(compatibilityDirective.skip_full_rerun).toBe(true);
+    expect(compatibilityDirective.reason_code).toBe("no_trigger");
+    expect(compatibilityDirective.verification_status).toBe("trusted");
+  });
+
+  it("bypasses freshness check for docs-only directives even after worktree changes", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_docs_03",
+      task: "Docs-only task",
+      reviewArtifactType: "document"
+    });
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_docs_003",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Docs-only update complete"
+        },
+        refs: []
+      }
+    });
+
+    await writeFile(join(bubble.paths.worktreePath, "docs-only-change.txt"), "x\n", "utf8");
+
+    const explicitDirective = await resolveReviewerTestExecutionDirectiveFromArtifact({
+      artifact,
+      worktreePath: bubble.paths.worktreePath,
+      reviewArtifactType: "document"
+    });
+    expect(explicitDirective.skip_full_rerun).toBe(true);
+    expect(explicitDirective.reason_code).toBe("no_trigger");
+    expect(explicitDirective.verification_status).toBe("trusted");
+
+    const compatibilityDirective = await resolveReviewerTestExecutionDirectiveFromArtifact({
+      artifact,
+      worktreePath: bubble.paths.worktreePath
+    });
+    expect(compatibilityDirective.skip_full_rerun).toBe(true);
+    expect(compatibilityDirective.reason_code).toBe("no_trigger");
+    expect(compatibilityDirective.verification_status).toBe("trusted");
+  });
+
+  it("keeps strict behavior for explicit code review_artifact_type", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_code_01",
+      task: "Code task",
+      reviewArtifactType: "code"
+    });
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_code_001",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Implementation finished"
+        },
+        refs: []
+      }
+    });
+
+    expect(artifact.status).toBe("untrusted");
+    expect(artifact.reason_code).toBe("evidence_missing");
+  });
+
+  it("keeps strict behavior for explicit auto review_artifact_type", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_auto_01",
+      task: "Auto task",
+      reviewArtifactType: "auto"
+    });
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_auto_001",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Implementation finished"
+        },
+        refs: []
+      }
+    });
+
+    expect(artifact.status).toBe("untrusted");
+    expect(artifact.reason_code).toBe("evidence_missing");
+  });
+
+  it("keeps strict behavior when review_artifact_type is missing or invalid", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_invalid_01",
+      task: "Invalid type task",
+      reviewArtifactType: "code"
+    });
+
+    const missingTypeConfig = {
+      ...bubble.config,
+      review_artifact_type: undefined as unknown as ReviewArtifactType
+    } satisfies BubbleConfig;
+    const missingTypeArtifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: missingTypeConfig,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_invalid_001",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Implementation finished"
+        },
+        refs: []
+      }
+    });
+    expect(missingTypeArtifact.status).toBe("untrusted");
+    expect(missingTypeArtifact.reason_code).toBe("evidence_missing");
+
+    const invalidTypeConfig = {
+      ...bubble.config,
+      review_artifact_type: "invalid" as unknown as ReviewArtifactType
+    } satisfies BubbleConfig;
+    const invalidTypeArtifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: invalidTypeConfig,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_invalid_002",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Implementation finished"
+        },
+        refs: []
+      }
+    });
+    expect(invalidTypeArtifact.status).toBe("untrusted");
+    expect(invalidTypeArtifact.reason_code).toBe("evidence_missing");
+  });
+
   it("marks evidence trusted when required commands include explicit success markers", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -524,6 +795,227 @@ describe("reviewer test evidence verification", () => {
 
     expect(directive.skip_full_rerun).toBe(false);
     expect(directive.reason_code).toBe("evidence_stale");
+  });
+
+  it("resolves docs-only directive as skip_full_rerun through wrapper API", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_docs_wrapper_01",
+      task: "Docs-only wrapper resolver coverage",
+      reviewArtifactType: "document"
+    });
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_docs_wrap_001",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Docs-only update complete"
+        },
+        refs: []
+      }
+    });
+    const artifactPath = resolveReviewerTestEvidenceArtifactPath(
+      bubble.paths.artifactsDir
+    );
+    await writeReviewerTestEvidenceArtifact(artifactPath, artifact);
+
+    await writeFile(join(bubble.paths.worktreePath, "docs-wrapper-change.txt"), "x\n", "utf8");
+
+    const directive = await resolveReviewerTestExecutionDirective({
+      artifactPath,
+      worktreePath: bubble.paths.worktreePath,
+      reviewArtifactType: "document"
+    });
+
+    expect(directive.skip_full_rerun).toBe(true);
+    expect(directive.reason_code).toBe("no_trigger");
+    expect(directive.reason_detail).toContain(
+      "docs-only scope, runtime checks not required"
+    );
+    expect(directive.verification_status).toBe("trusted");
+  });
+
+  it("returns docs-only skip directive when artifact is missing through wrapper API", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_docs_wrapper_02",
+      task: "Docs-only wrapper missing artifact coverage",
+      reviewArtifactType: "document"
+    });
+
+    const directive = await resolveReviewerTestExecutionDirective({
+      artifactPath: join(bubble.paths.artifactsDir, "missing-reviewer-evidence.json"),
+      worktreePath: bubble.paths.worktreePath,
+      reviewArtifactType: "document"
+    });
+
+    expect(directive.skip_full_rerun).toBe(true);
+    expect(directive.reason_code).toBe("no_trigger");
+    expect(directive.reason_detail).toContain(
+      "docs-only scope, runtime checks not required"
+    );
+    expect(directive.verification_status).toBe("trusted");
+  });
+
+  it("keeps strict missing-artifact behavior for code and auto wrapper inputs", async () => {
+    const repoPath = await createTempRepo();
+
+    for (const reviewArtifactType of ["code", "auto"] as const) {
+      const bubble = await setupRunningBubbleFixture({
+        repoPath,
+        bubbleId: `b_test_evidence_wrapper_missing_${reviewArtifactType}`,
+        task: `Wrapper missing artifact strict behavior ${reviewArtifactType}`,
+        reviewArtifactType
+      });
+
+      const directive = await resolveReviewerTestExecutionDirective({
+        artifactPath: join(bubble.paths.artifactsDir, "missing-reviewer-evidence.json"),
+        worktreePath: bubble.paths.worktreePath,
+        reviewArtifactType
+      });
+
+      expect(directive.skip_full_rerun).toBe(false);
+      expect(directive.reason_code).toBe("evidence_missing");
+      expect(directive.verification_status).toBe("missing");
+      expect(directive.reason_detail).toContain(
+        "No reviewer test verification artifact found for the latest implementer handoff."
+      );
+    }
+  });
+
+  it("returns docs-only skip directive when artifact read fails through wrapper API", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_docs_wrapper_03",
+      task: "Docs-only wrapper read-failure coverage",
+      reviewArtifactType: "document"
+    });
+
+    const directive = await resolveReviewerTestExecutionDirective({
+      artifactPath: bubble.paths.artifactsDir,
+      worktreePath: bubble.paths.worktreePath,
+      reviewArtifactType: "document"
+    });
+
+    expect(directive.skip_full_rerun).toBe(true);
+    expect(directive.reason_code).toBe("no_trigger");
+    expect(directive.reason_detail).toContain(
+      "docs-only scope, runtime checks not required"
+    );
+    expect(directive.verification_status).toBe("trusted");
+  });
+
+  it("overrides untrusted artifact to docs-only skip when reviewArtifactType is document", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_docs_untrusted_01",
+      task: "Docs-only untrusted artifact override",
+      reviewArtifactType: "document"
+    });
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_docs_untrusted_001",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Docs-only update complete"
+        },
+        refs: []
+      }
+    });
+
+    const untrustedArtifact = {
+      ...artifact,
+      status: "untrusted" as const,
+      decision: "run_checks" as const,
+      reason_code: "evidence_unverifiable" as const,
+      reason_detail: "Manually marked untrusted for branch coverage."
+    };
+
+    const directive = await resolveReviewerTestExecutionDirectiveFromArtifact({
+      artifact: untrustedArtifact,
+      worktreePath: bubble.paths.worktreePath,
+      reviewArtifactType: "document"
+    });
+
+    expect(directive.skip_full_rerun).toBe(true);
+    expect(directive.reason_code).toBe("no_trigger");
+    expect(directive.verification_status).toBe("trusted");
+  });
+
+  it("does not trigger compatibility skip for partial docs-like artifacts", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_docs_compat_negative_01",
+      task: "Docs-only compatibility negative coverage",
+      reviewArtifactType: "document"
+    });
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_docs_compat_negative_001",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Docs-only update complete"
+        },
+        refs: []
+      }
+    });
+
+    const reasonMismatchDirective = await resolveReviewerTestExecutionDirectiveFromArtifact({
+      artifact: {
+        ...artifact,
+        reason_detail: "Evidence is verified, fresh, and complete."
+      },
+      worktreePath: bubble.paths.worktreePath
+    });
+    expect(reasonMismatchDirective.skip_full_rerun).toBe(false);
+    expect(reasonMismatchDirective.reason_code).toBe("evidence_stale");
+    expect(reasonMismatchDirective.verification_status).toBe("untrusted");
+
+    const requiredCommandsMismatchDirective = await resolveReviewerTestExecutionDirectiveFromArtifact({
+      artifact: {
+        ...artifact,
+        required_commands: ["pnpm test"]
+      },
+      worktreePath: bubble.paths.worktreePath
+    });
+    expect(requiredCommandsMismatchDirective.skip_full_rerun).toBe(false);
+    expect(requiredCommandsMismatchDirective.reason_code).toBe("evidence_stale");
+    expect(requiredCommandsMismatchDirective.verification_status).toBe("untrusted");
   });
 
   it("returns undefined for invalid JSON artifact content", async () => {

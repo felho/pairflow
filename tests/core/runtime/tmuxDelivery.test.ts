@@ -194,6 +194,65 @@ describe("emitTmuxDeliveryNotification", () => {
     ]);
   });
 
+  it("renders docs-only skip directive reason without extra tmux formatting changes", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md. Action: Implementer handoff received.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const reviewerTestDirective: ReviewerTestExecutionDirective = {
+      skip_full_rerun: true,
+      reason_code: "no_trigger",
+      reason_detail: "docs-only scope, runtime checks not required",
+      verification_status: "trusted"
+    };
+
+    await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: {
+        ...baseConfig,
+        review_artifact_type: "document",
+        reviewer_context_mode: "fresh"
+      },
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope(),
+      reviewerTestDirective,
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry()),
+      deliveryAttempts: 2
+    });
+
+    const messageCall = calls.find(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.2" &&
+        call[3] === "-l" &&
+        call[4]?.includes("# [pairflow] r1 PASS codex->claude")
+    );
+    expect(messageCall?.[4]).toContain(
+      "Implementer test evidence has been orchestrator-verified."
+    );
+    expect(messageCall?.[4]).toContain(
+      "Do not re-run full tests unless a trigger from the decision matrix applies."
+    );
+    expect(messageCall?.[4]).toContain(
+      "Reason: docs-only scope, runtime checks not required"
+    );
+  });
+
   it("keeps concise ontology reminder in persistent reviewer context mode", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
