@@ -1,9 +1,15 @@
 # Docs-Only Issues Priority + Rollout Plan (2026-03-04)
 
 ## Status
-- Date: 2026-03-04
+- Date: 2026-03-05
 - Owner: felho
-- State: Planned
+- State: In Progress
+
+## Progress Snapshot (2026-03-05)
+
+1. Completed: P0/1 (`doc-only-temporary-disable-runtime-checks-phase1.md`) merged on 2026-03-04 via `c24c20f` (`bubble/doc-only-runtime-checks-phase1-impl`) and `7eaf70e` (merge to `main`).
+2. Next active item: P0/2 (`doc-only-summary-verifier-consistency-gate-phase1.md`) to remove summary-vs-verifier contradiction.
+3. Not started: P1/1 evidence source whitelist, P1/2 operational decision matrix rollout, P2/1 claim-based validation architecture.
 
 ## Objective
 
@@ -38,7 +44,7 @@ Rationale:
 
 ## Recommended Execution Sequence
 
-### Step 1 (Now)
+### Step 1 (Completed on 2026-03-04)
 
 1. Implement P0/1: docs-only runtime check requirement temporary disable.
 2. Add explicit docs-only summary wording standard.
@@ -47,7 +53,7 @@ Exit criteria:
 1. Docs-only bubble check hiány miatt nem áll meg.
 2. Nincs kötelező test/typecheck expectation docs-only módban.
 
-### Step 2 (Immediately after Step 1)
+### Step 2 (Next)
 
 1. Implement P0/2: summary-verifier consistency hard gate.
 2. Add regression tests for prior mismatch pattern.
@@ -100,4 +106,3 @@ Exit criteria:
 1. Docs-only approval előtti átlag round szám csökkenése.
 2. Summary-vs-verifier mismatch count -> near zero.
 3. Evidence-related rework ratio csökkenése docs-only bubble-ökben.
-
