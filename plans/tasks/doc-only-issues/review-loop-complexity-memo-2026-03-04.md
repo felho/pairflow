@@ -1,3 +1,200 @@
+# Programterv: Review Loop Stabilization es LLM-Ready Doc Workflow
+
+Datum: 2026-03-04  
+Statusz: draft, implementation-oriented  
+Tulajdonos: Pairflow docs+runtime
+
+Referenciak:
+- kapcsolodo context: `docs/pairflow-evidence-governance-context-2026-03-03.md`
+- aktualis doc-only task: `plans/tasks/doc-only-issues/doc-only-temporary-disable-runtime-checks-phase1.md`
+- severity policy: `docs/reviewer-severity-ontology.md`
+- convergence policy baseline: `docs/pairflow-initial-design.md`
+
+## 1) Cel (mi valtozik)
+
+A cel egy olyan szabvanyositott dokumentacios + review rendszer bevezetese, amely:
+1. magas biztonsaggal implementalhato specifikaciot ad LLM-nek,
+2. megallitja a vegtelen finomitasi loopokat,
+3. rugalmas marad kulonbozo projektstilusok mellett,
+4. Pairflow oldalon gate-ekkel kikentheto.
+
+## 2) Kivant vegallapot (target operating model)
+
+1. Artefakt-lanc nagyobb munkanal: `PRD -> Plan -> Task(ok)`.
+2. Kisebb munka (bugfix/small task): egyetlen task file is eleg (`prd_ref: null`, `plan_ref: null`).
+3. Minden implementacios task file kozos belso szerkezete: `L0 Policy`, `L1 Change Contract`, `L2 Implementation Notes`.
+4. Csak `L1` blocker talalat blokkolhat implementaciot.
+5. Review komment csak cimezve ervenyes: `priority (P0..P3)`, `timing (required-now|later-hardening)`, `layer (L1|L2)`, `evidence`.
+6. `Round cap`: max 2 L1 hardening kor.
+7. 2. kor utan uj `required-now` csak evidence-backed `P0/P1` lehet.
+8. `Spec Lock`: ha minden `P0/P1 + required-now` zart, task allapot `IMPLEMENTABLE`.
+
+## 3) Scope
+
+### In scope
+1. Doc workflow szabvanyok (`PRD/Plan/Task` struktura, hivatkozasok, L0/L1/L2 szabalyok).
+2. Review governance (`required-now/later-hardening`, P0/P1 evidence policy illesztes).
+3. Pairflow runtime gate-ek terve (advisory -> required-docs -> required-all rollout).
+4. Skill oldali dokumentum-letrehozasi es triage workflow.
+
+### Out of scope
+1. Teljes uj severity ontology redesign.
+2. Projekt-specifikus stilusok teljes homogenizalasa.
+3. Azonnali hard-fail enforcement minden bubble-re pilot nelkul.
+
+## 4) Megvalositas: 4 workstream
+
+### WS-A: Doc Contract es sablonok (docs layer)
+
+Feladatok:
+1. Egységes workflow leiras: szerepkorok, sorrend, parancsok, szcenariok.
+2. Uj sablonok: `PRD`, `Plan`, `Task`, reviewer snippet.
+3. Task template kotelezo blokkokkal (`L0/L1/L2`, review control, spec lock).
+4. Hivatkozasi modell formalizalasa:
+   - Plan -> PRD
+   - Task -> Plan + PRD (ha van)
+   - small tasknel `null` referencia engedelyezett.
+
+Kimenet:
+1. `docs/llm-doc-workflow-v1.md`
+2. `.claude/skills/CreatePairflowSpec/Templates/prd-template.md`
+3. `.claude/skills/CreatePairflowSpec/Templates/plan-template.md`
+4. `.claude/skills/CreatePairflowSpec/Templates/task-template.md`
+5. Inline reviewer guideline snippet ebben a dokumentumban (`## 10`).
+
+### WS-B: Pairflow core gate-ek (runtime layer)
+
+Feladatok:
+1. Task contract parser/validator (minimal machine-readable frontmatter mezok).
+2. Review finding validator:
+   - kotelezo fieldek (`priority`, `timing`, `layer`, `evidence`),
+   - evidence policy illesztes `P0/P1` esetben.
+3. Round gate implementacio:
+   - `round <= 2`: normal flow,
+   - `round > 2`: uj `required-now` csak evidence-backed `P0/P1`.
+4. Spec lock allapot szamitas:
+   - open finding set alapjan `IMPLEMENTABLE` jelzes.
+5. `pairflow bubble status --json` bovites:
+   - `failing_gates`,
+   - `spec_lock_state`,
+   - `round_gate_state`.
+
+Kimenet:
+1. Runtime gate logika + status JSON mezok.
+2. Tesztek gate decision branch-ekre.
+3. Dokumentalt gate hiba-uzenetek.
+
+### WS-C: Skill workflow (authoring layer)
+
+Feladatok:
+1. Uj skill a dokumentumirasi folyamathoz (repo-stilus kompatibilisen).
+2. Kotelezo kerdesfa:
+   - bugfix vs small feature vs large feature vs new app,
+   - artefakt-szukseglet meghatarozasa.
+3. L1 checklist-vezetes (contract boundaries kitoltes).
+4. Review feedback triage:
+   - `L1 blocker` vs `L2 later-hardening`.
+5. Hardening backlog automatikus kigyujtes.
+
+Kimenet:
+1. Skill utmutato + promptflow.
+2. Standard output format task-file updatehez.
+
+### WS-D: Rollout es meres (adoption layer)
+
+Feladatok:
+1. Rollout modok:
+   - Phase 1: `advisory`,
+   - Phase 2: `required-docs`,
+   - Phase 3: `required-all`.
+2. Pilot bubble sorozat:
+   - 1 bugfix,
+   - 1 small feature,
+   - 1 docs-only hardening task.
+3. Metrikak gyujtese es baseline osszehasonlitas.
+
+Kimenet:
+1. Pilot report.
+2. Gate tuning javaslat.
+
+## 5) Fazos utemterv
+
+### Phase 0 (azonnal)
+1. Doc workflow + templatek bevezetese.
+2. Reviewer snippet publikalsa.
+
+### Phase 1
+1. Runtime advisory validator bekotese (warning only).
+2. Skill prototipus doksi-generalashoz.
+3. 2-3 pilot task futtatasa.
+
+### Phase 2
+1. Required-docs mode bekapcsolasa doc-only/task bubblekre.
+2. Status JSON gate mezok aktivalasa.
+3. Regresszio + usability feedback kor.
+
+### Phase 3
+1. Required-all mode (fokozatosan, repo-szintu kapcsoloval).
+2. Stabilizalas, false-blocker csokkentes.
+
+## 6) Elfogadasi kriteriumok (Done)
+
+1. Uj taskok >=90%-a megfelel a task contractnak (`L0/L1/L2` + frontmatter ref policy).
+2. Review findingek >=95%-a tartalmaz kotelezo cimkezest.
+3. Atlagos review korok szama csokken legalabb 25%-kal docs-heavy taskoknal.
+4. Nincs novekedes az escaped blocker aranyban (`P0/P1`).
+5. 2. kor utani uj `required-now` pontok 100%-a evidence-backed `P0/P1`.
+
+## 7) Kockazatok es mitigacio
+
+1. Kockazat: tul merev gate, lassul a munka.
+   - Mitigacio: advisory rollout, fokozatos hard gate.
+2. Kockazat: projekt-specifikus formatum utkozik a templatekkel.
+   - Mitigacio: minimal machine-readable contract, szoveges stilus szabad.
+3. Kockazat: severity inflation (`P2` -> `P1`) a gate megkerulesere.
+   - Mitigacio: evidence kotelezettseg + ontology enforcement.
+4. Kockazat: skill es runtime szabaly elcsuszik.
+   - Mitigacio: egy kozos canonical policy source es verziozas.
+
+## 8) Dontesek (rogzites)
+
+1. 2. kor utani kivetel nem csak `P0`, hanem `P0/P1` lehet, de csak bizonyitekkal.
+2. Task hivatkozzon direktben Planra es PRD-re (ha letezik mindketto).
+3. Kis, onallo valtozasnal 1 task-file eleg.
+4. `L2` nem blokkol implementaciot; backlogba megy.
+5. Kulon `escape hatch` (split/revert mechanika) most nem kerul bevezetese.
+   Kiveteles helyzetben a meglevo human intervention folyamat hasznalhato.
+
+## 9) Kovetkezo konkret lepesek
+
+1. A sablonokat kiserleti modban alkalmazzuk 2 uj taskon.
+2. Keszuljon kulon implementacios task a WS-B runtime gate-ekre.
+3. Keszuljon kulon implementacios task a WS-C skill workflowra.
+4. 1 het pilot utan meres + policy finomitas.
+
+## 10) Inline reviewer guidelines (temporary)
+
+```md
+## Reviewer Guidelines (L0/L1/L2)
+
+Purpose: keep review high-signal and stop infinite refinement loops.
+
+1. Tag each finding with:
+   - `priority`: `P0|P1|P2|P3`
+   - `timing`: `required-now|later-hardening`
+   - `layer`: `L1|L2`
+   - `evidence`: repro/failing-output/code-path proof
+2. Blockers are only `P0/P1 + required-now + L1`.
+3. `P2/P3` and `L2` items default to `later-hardening`.
+4. Max 2 L1 hardening rounds.
+5. After round 2, new `required-now` only for evidence-backed `P0/P1`.
+6. Spec lock when all `P0/P1 + required-now` are closed (`IMPLEMENTABLE`).
+```
+
+---
+
+## Reference: Eredeti memo (valtozatlan tartalom)
+
 # Memo: Review Korok, Komplexitas, es Kontrollalt Spec Irasi Mod
 
 Datum: 2026-03-04  
@@ -12,7 +209,7 @@ Az utobbi tobb review korben nem a fo termekelv volt vitas, hanem az implementac
 - guard beszurasi pont,
 - fallback path es reason code/detail,
 - input/output type szerzodes,
-- teszt matrix es negatv esetek,
+- teszt matrix es negativ esetek,
 - import forrasok es sorrendi tisztazas.
 
 Ez tipikus "spec hardening" minta: a minoseg javul, de minden uj pontositas ujabb ellenorizheto feluletet nyit meg.
