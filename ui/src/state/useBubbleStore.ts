@@ -31,6 +31,7 @@ import type {
 
 const positionsStorageKey = "pairflow.ui.canvas.positions.v1";
 const expandedIdsStorageKey = "pairflow.ui.canvas.expandedIds.v1";
+const pollingRefreshErrorPrefix = "Polling refresh failed:";
 
 interface StorageLike {
   getItem(key: string): string | null;
@@ -101,6 +102,13 @@ export interface BubbleStoreDependencies {
 
 function asMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function clearPollingRefreshError(error: string | null): string | null {
+  if (error === null) {
+    return null;
+  }
+  return error.startsWith(pollingRefreshErrorPrefix) ? null : error;
 }
 
 function resolveAttachCopyCommand(result: AttachActionResult): string | null {
@@ -824,11 +832,16 @@ export function createBubbleStore(
           }
         },
         onStatus: (status) => {
-          set({ connectionStatus: status });
+          set((state) => ({
+            connectionStatus: status,
+            ...(status === "connected"
+              ? { error: clearPollingRefreshError(state.error) }
+              : {})
+          }));
         },
         onPollingError: (error) => {
           set({
-            error: `Polling refresh failed: ${asMessage(error)}`
+            error: `${pollingRefreshErrorPrefix} ${asMessage(error)}`
           });
         },
         poll: async (repos) => {
@@ -836,6 +849,9 @@ export function createBubbleStore(
             return;
           }
           await refreshRepos(repos);
+          set((state) => ({
+            error: clearPollingRefreshError(state.error)
+          }));
         },
         ...(dependencies.pollingIntervalMs !== undefined
           ? { pollingIntervalMs: dependencies.pollingIntervalMs }

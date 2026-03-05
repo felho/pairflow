@@ -472,6 +472,74 @@ describe("createBubbleStore", () => {
     await togglePromise;
   });
 
+  it("clears polling refresh error when SSE reconnects", async () => {
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+      }))
+    });
+
+    let emitStatus: (status: ConnectionStatus) => void = () => undefined;
+    let emitPollingError: (error: unknown) => void = () => undefined;
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: (input) => {
+        emitStatus = input.onStatus;
+        emitPollingError = input.onPollingError ?? (() => undefined);
+        return {
+          start: () => undefined,
+          stop: () => undefined,
+          refresh: () => undefined
+        };
+      }
+    });
+
+    await store.getState().initialize();
+
+    emitPollingError(new Error("Load failed"));
+    expect(store.getState().error).toBe("Polling refresh failed: Load failed");
+
+    emitStatus("connected");
+    expect(store.getState().error).toBeNull();
+  });
+
+  it("clears polling refresh error after a successful polling refresh", async () => {
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+      }))
+    });
+
+    let runPoll: (repos: string[]) => Promise<void> = async () => undefined;
+    let emitPollingError: (error: unknown) => void = () => undefined;
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: (input) => {
+        runPoll = input.poll;
+        emitPollingError = input.onPollingError ?? (() => undefined);
+        return {
+          start: () => undefined,
+          stop: () => undefined,
+          refresh: () => undefined
+        };
+      }
+    });
+
+    await store.getState().initialize();
+
+    emitPollingError(new Error("Load failed"));
+    expect(store.getState().error).toBe("Polling refresh failed: Load failed");
+
+    await runPoll(["/repo-a"]);
+    expect(store.getState().error).toBeNull();
+  });
+
   it("ignores stale initialize completion when a newer initialize starts", async () => {
     const firstRepos = createDeferred<string[]>();
     const secondRepos = createDeferred<string[]>();
