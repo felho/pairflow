@@ -132,8 +132,9 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
 
   const copyBubbleId = useCallback(async () => {
     clearPendingOpen();
+    const bubbleReviewPrompt = `${props.bubble.bubbleId}: review the bubble, deep mode, be very verbose`;
     try {
-      await copyToClipboard(props.bubble.bubbleId);
+      await copyToClipboard(bubbleReviewPrompt);
       props.onCopySuccess(props.bubble.bubbleId);
     } catch (error) {
       props.onCopyError(

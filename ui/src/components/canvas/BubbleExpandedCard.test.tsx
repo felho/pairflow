@@ -45,6 +45,9 @@ function renderExpandedCard(): void {
 }
 
 describe("BubbleExpandedCard", () => {
+  const bubbleReviewPrompt =
+    "b-expanded-1: review the bubble, deep mode, be very verbose";
+
   beforeEach(() => {
     copyToClipboardMock.mockReset();
     copyToClipboardMock.mockResolvedValue(undefined);
@@ -63,25 +66,25 @@ describe("BubbleExpandedCard", () => {
     });
   });
 
-  it("copies bubble id on double click of expanded bubble id label", async () => {
+  it("copies bubble review prompt on double click of expanded bubble id label", async () => {
     renderExpandedCard();
 
     fireEvent.doubleClick(screen.getByText("b-expanded-1"));
 
     await waitFor(() => {
       expect(copyToClipboardMock).toHaveBeenCalledTimes(1);
-      expect(copyToClipboardMock).toHaveBeenCalledWith("b-expanded-1");
+      expect(copyToClipboardMock).toHaveBeenCalledWith(bubbleReviewPrompt);
     });
   });
 
-  it("copies bubble id on double click of expanded repo label", async () => {
+  it("copies bubble review prompt on double click of expanded repo label", async () => {
     renderExpandedCard();
 
     fireEvent.doubleClick(screen.getByText("repo-a"));
 
     await waitFor(() => {
       expect(copyToClipboardMock).toHaveBeenCalledTimes(1);
-      expect(copyToClipboardMock).toHaveBeenCalledWith("b-expanded-1");
+      expect(copyToClipboardMock).toHaveBeenCalledWith(bubbleReviewPrompt);
     });
   });
 

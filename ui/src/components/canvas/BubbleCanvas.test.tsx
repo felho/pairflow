@@ -88,6 +88,8 @@ function createDeferred<T>(): {
 }
 
 describe("BubbleCanvas", () => {
+  const bubbleReviewPrompt = "b-1: review the bubble, deep mode, be very verbose";
+
   beforeEach(() => {
     copyToClipboardMock.mockReset();
     copyToClipboardMock.mockResolvedValue(undefined);
@@ -339,7 +341,7 @@ describe("BubbleCanvas", () => {
     expect(onToggleExpand).toHaveBeenCalledWith("b-1");
   });
 
-  it("copies bubble id on double click of bubble id label", () => {
+  it("copies bubble review prompt on double click of bubble id label", () => {
     vi.useFakeTimers();
     const onToggleExpand = vi.fn();
     render(
@@ -365,7 +367,7 @@ describe("BubbleCanvas", () => {
     vi.advanceTimersByTime(240);
 
     expect(copyToClipboardMock).toHaveBeenCalledTimes(1);
-    expect(copyToClipboardMock).toHaveBeenCalledWith("b-1");
+    expect(copyToClipboardMock).toHaveBeenCalledWith(bubbleReviewPrompt);
     expect(onToggleExpand).not.toHaveBeenCalled();
   });
 
@@ -537,7 +539,7 @@ describe("BubbleCanvas", () => {
     });
   });
 
-  it("copies bubble id on double click of bubble name label", () => {
+  it("copies bubble review prompt on double click of bubble name label", () => {
     vi.useFakeTimers();
     const onToggleExpand = vi.fn();
     render(
@@ -563,7 +565,7 @@ describe("BubbleCanvas", () => {
     vi.advanceTimersByTime(240);
 
     expect(copyToClipboardMock).toHaveBeenCalledTimes(1);
-    expect(copyToClipboardMock).toHaveBeenCalledWith("b-1");
+    expect(copyToClipboardMock).toHaveBeenCalledWith(bubbleReviewPrompt);
     expect(onToggleExpand).not.toHaveBeenCalled();
   });
 
