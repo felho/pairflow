@@ -3,6 +3,8 @@ import { join, resolve } from "node:path";
 
 import { renderBubbleConfigToml, assertValidBubbleConfig } from "../../config/bubbleConfig.js";
 import {
+  DEFAULT_DOC_CONTRACT_GATE_MODE,
+  DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER,
   DEFAULT_MAX_ROUNDS,
   DEFAULT_QUALITY_MODE,
   DEFAULT_REVIEW_ARTIFACT_TYPE,
@@ -18,6 +20,12 @@ import { isNonEmptyString } from "../validation.js";
 import { GitRepositoryError, assertGitRepository } from "../workspace/git.js";
 import { generateBubbleInstanceId } from "./bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
+import {
+  createDocContractGateArtifact,
+  isDocContractGateScopeActive,
+  resolveDocContractGateArtifactPath,
+  writeDocContractGateArtifact
+} from "../gates/docContractGates.js";
 import type {
   AgentName,
   BubbleConfig,
@@ -254,6 +262,10 @@ function buildBubbleConfig(input: {
     },
     notifications: {
       enabled: true
+    },
+    doc_contract_gates: {
+      mode: DEFAULT_DOC_CONTRACT_GATE_MODE,
+      round_gate_applies_after: DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER
     }
   });
 }
@@ -445,6 +457,20 @@ export async function createBubble(input: BubbleCreateInput): Promise<BubbleCrea
     encoding: "utf8",
     flag: "wx"
   });
+  if (
+    isDocContractGateScopeActive({
+      reviewArtifactType: config.review_artifact_type
+    })
+  ) {
+    await writeDocContractGateArtifact(
+      resolveDocContractGateArtifactPath(paths.artifactsDir),
+      createDocContractGateArtifact({
+        now: createdAt,
+        bubbleConfig: config,
+        taskContent: task.content
+      })
+    ).catch(() => undefined);
+  }
   if (reviewerBrief !== undefined) {
     await writeFile(paths.reviewerBriefArtifactPath, `${reviewerBrief.content}\n`, {
       encoding: "utf8",

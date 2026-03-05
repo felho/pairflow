@@ -37,6 +37,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
+      reviewArtifactType: "auto",
       roundRoleHistory: [
         {
           round: 1,
@@ -65,6 +66,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
+      reviewArtifactType: "auto",
       roundRoleHistory: [
         {
           round: 1,
@@ -99,6 +101,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
+      reviewArtifactType: "auto",
       roundRoleHistory: [
         {
           round: 1,
@@ -132,11 +135,52 @@ describe("validateConvergencePolicy", () => {
     expect(result.errors.some((error) => error.includes("open P0/P1"))).toBe(true);
   });
 
-  it("blocks convergence in round 2 when previous reviewer PASS has P2 findings", () => {
+  it("keeps non-document blocking on canonical P1 even when effective_priority is downgraded", () => {
     const result = validateConvergencePolicy({
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
+      reviewArtifactType: "auto",
+      roundRoleHistory: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T11:59:00.000Z"
+        },
+        {
+          round: 2,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:01:00.000Z"
+        }
+      ],
+      transcript: [
+        createPassEnvelope({
+          payload: {
+            summary: "Non-doc canonical blocker with downgraded effective priority",
+            findings: [
+              {
+                priority: "P1",
+                effective_priority: "P2",
+                title: "Must still block in non-doc scope"
+              }
+            ]
+          }
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((error) => error.includes("open P0/P1"))).toBe(true);
+  });
+
+  it("allows convergence in round 2 when previous reviewer PASS has only P2 findings", () => {
+    const result = validateConvergencePolicy({
+      currentRound: 2,
+      reviewer: "claude",
+      implementer: "codex",
+      reviewArtifactType: "auto",
       roundRoleHistory: [
         {
           round: 1,
@@ -166,12 +210,8 @@ describe("validateConvergencePolicy", () => {
       ]
     });
 
-    expect(result.ok).toBe(false);
-    expect(
-      result.errors.some((error) =>
-        error.includes("Convergence blocked through round 3")
-      )
-    ).toBe(true);
+    expect(result.ok).toBe(true);
+    expect(result.errors).toHaveLength(0);
   });
 
   it("rejects convergence when previous reviewer PASS summary reports positive findings counts but findings payload is empty", () => {
@@ -179,6 +219,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
+      reviewArtifactType: "auto",
       roundRoleHistory: [
         {
           round: 1,
@@ -216,6 +257,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
+      reviewArtifactType: "auto",
       roundRoleHistory: [
         {
           round: 1,
@@ -244,11 +286,12 @@ describe("validateConvergencePolicy", () => {
     expect(result.errors).toHaveLength(0);
   });
 
-  it("blocks convergence in round 3 when previous reviewer PASS has P2 findings", () => {
+  it("allows convergence in round 3 when previous reviewer PASS has only P2 findings", () => {
     const result = validateConvergencePolicy({
       currentRound: 3,
       reviewer: "claude",
       implementer: "codex",
+      reviewArtifactType: "auto",
       roundRoleHistory: [
         {
           round: 1,
@@ -285,12 +328,8 @@ describe("validateConvergencePolicy", () => {
       ]
     });
 
-    expect(result.ok).toBe(false);
-    expect(
-      result.errors.some((error) =>
-        error.includes("Convergence blocked through round 3")
-      )
-    ).toBe(true);
+    expect(result.ok).toBe(true);
+    expect(result.errors).toHaveLength(0);
   });
 
   it("allows convergence from round 4 onward even when previous reviewer PASS has P2 findings", () => {
@@ -298,6 +337,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 4,
       reviewer: "claude",
       implementer: "codex",
+      reviewArtifactType: "auto",
       roundRoleHistory: [
         {
           round: 1,
@@ -333,6 +373,128 @@ describe("validateConvergencePolicy", () => {
               {
                 severity: "P2",
                 title: "Still non-blocking"
+              }
+            ]
+          }
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it("keeps document-scope blocker criteria strict when timing/layer are missing", () => {
+    const result = validateConvergencePolicy({
+      currentRound: 2,
+      reviewer: "claude",
+      implementer: "codex",
+      reviewArtifactType: "document",
+      roundRoleHistory: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T11:59:00.000Z"
+        },
+        {
+          round: 2,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:01:00.000Z"
+        }
+      ],
+      transcript: [
+        createPassEnvelope({
+          payload: {
+            summary: "Document-scope finding without strict blocker qualifiers",
+            findings: [
+              {
+                severity: "P1",
+                title: "Needs follow-up"
+              }
+            ]
+          }
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it("blocks convergence in document scope only for strict P1 + required-now + L1", () => {
+    const result = validateConvergencePolicy({
+      currentRound: 2,
+      reviewer: "claude",
+      implementer: "codex",
+      reviewArtifactType: "document",
+      roundRoleHistory: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T11:59:00.000Z"
+        },
+        {
+          round: 2,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:01:00.000Z"
+        }
+      ],
+      transcript: [
+        createPassEnvelope({
+          payload: {
+            summary: "Document-scope strict blocker qualifiers present",
+            findings: [
+              {
+                severity: "P1",
+                timing: "required-now",
+                layer: "L1",
+                title: "Strict document blocker"
+              }
+            ]
+          }
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((error) => error.includes("open P0/P1"))).toBe(true);
+  });
+
+  it("does not block in document scope when effective_priority downgrades strict P1 blocker to P2", () => {
+    const result = validateConvergencePolicy({
+      currentRound: 2,
+      reviewer: "claude",
+      implementer: "codex",
+      reviewArtifactType: "document",
+      roundRoleHistory: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T11:59:00.000Z"
+        },
+        {
+          round: 2,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:01:00.000Z"
+        }
+      ],
+      transcript: [
+        createPassEnvelope({
+          payload: {
+            summary: "Document-scope downgraded blocker signal",
+            findings: [
+              {
+                priority: "P1",
+                effective_priority: "P2",
+                timing: "required-now",
+                layer: "L1",
+                title: "Downgraded strict blocker"
               }
             ]
           }

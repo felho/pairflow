@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { parseBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
+import { resolveDocContractGateArtifactPath } from "../../../src/core/gates/docContractGates.js";
 import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
 import { validateBubbleStateSnapshot } from "../../../src/core/state/stateSchema.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -62,6 +63,8 @@ describe("createBubble", () => {
     expect(result.config.watchdog_timeout_minutes).toBe(20);
     expect(result.config.quality_mode).toBe("strict");
     expect(result.config.review_artifact_type).toBe("auto");
+    expect(result.config.doc_contract_gates.mode).toBe("advisory");
+    expect(result.config.doc_contract_gates.round_gate_applies_after).toBe(2);
     expect(result.config.bubble_instance_id).toMatch(
       /^bi_[A-Za-z0-9_-]{10,}$/u
     );
@@ -71,6 +74,8 @@ describe("createBubble", () => {
     expect(reparsedConfig.id).toBe("b_create_01");
     expect(reparsedConfig.notifications.enabled).toBe(true);
     expect(reparsedConfig.review_artifact_type).toBe("auto");
+    expect(reparsedConfig.doc_contract_gates.mode).toBe("advisory");
+    expect(reparsedConfig.doc_contract_gates.round_gate_applies_after).toBe(2);
     expect(reparsedConfig.bubble_instance_id).toBe(
       result.config.bubble_instance_id
     );
@@ -307,6 +312,25 @@ describe("createBubble", () => {
     // "document" contributes +1 and "api" contributes +1, so this is a
     // deliberately ambiguous/tied signal and should stay in auto mode.
     expect(result.config.review_artifact_type).toBe("auto");
+  });
+
+  it("does not write doc-gate artifact for non-document bubbles", async () => {
+    const repoPath = await createTempRepo();
+
+    const result = await createBubble({
+      id: "b_create_non_doc_no_gate_artifact_01",
+      repoPath,
+      baseBranch: "main",
+      task: "Implement TypeScript changes in src/ and tests/ for API bug fix.",
+      cwd: repoPath
+    });
+
+    expect(result.config.review_artifact_type).toBe("code");
+    await expect(
+      stat(resolveDocContractGateArtifactPath(result.paths.artifactsDir))
+    ).rejects.toMatchObject({
+      code: "ENOENT"
+    });
   });
 
   it("treats --task input as inline text even when same-named file exists", async () => {

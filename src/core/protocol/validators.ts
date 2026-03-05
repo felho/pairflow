@@ -9,7 +9,14 @@ import {
   type ValidationError,
   type ValidationResult
 } from "../validation.js";
-import { isFindingSeverity, type Finding } from "../../types/findings.js";
+import {
+  isFindingLayer,
+  isFindingPriority,
+  isFindingSeverity,
+  isFindingTiming,
+  resolveFindingPriority,
+  type Finding
+} from "../../types/findings.js";
 import {
   isApprovalDecision,
   isPassIntent,
@@ -52,11 +59,35 @@ function validateFindings(
       return;
     }
 
+    const priority = entry.priority;
     const severity = entry.severity;
-    if (!isFindingSeverity(severity)) {
+    const effectivePriority = entry.effective_priority;
+    const resolvedPriority = resolveFindingPriority({
+      priority: isFindingPriority(priority) ? priority : undefined,
+      severity: isFindingSeverity(severity) ? severity : undefined
+    });
+    if (priority !== undefined && !isFindingPriority(priority)) {
+      errors.push({
+        path: `${findingPath}.priority`,
+        message: "Must be one of: P0, P1, P2, P3"
+      });
+    }
+    if (severity !== undefined && !isFindingSeverity(severity)) {
       errors.push({
         path: `${findingPath}.severity`,
         message: "Must be one of: P0, P1, P2, P3"
+      });
+    }
+    if (effectivePriority !== undefined && !isFindingPriority(effectivePriority)) {
+      errors.push({
+        path: `${findingPath}.effective_priority`,
+        message: "Must be one of: P0, P1, P2, P3 when provided"
+      });
+    }
+    if (resolvedPriority === undefined) {
+      errors.push({
+        path: `${findingPath}.priority`,
+        message: "Missing canonical priority (provide priority or severity alias)"
       });
     }
 
@@ -97,16 +128,50 @@ function validateFindings(
       });
     }
 
+    const timing = entry.timing;
+    if (!(timing === undefined || isFindingTiming(timing))) {
+      errors.push({
+        path: `${findingPath}.timing`,
+        message: "Must be one of: required-now, later-hardening when provided"
+      });
+    }
+
+    const layer = entry.layer;
+    if (!(layer === undefined || isFindingLayer(layer))) {
+      errors.push({
+        path: `${findingPath}.layer`,
+        message: "Must be one of: L0, L1, L2 when provided"
+      });
+    }
+
+    const evidence = entry.evidence;
+    const evidenceValid =
+      evidence === undefined
+      || isNonEmptyString(evidence)
+      || (Array.isArray(evidence) && evidence.every((value) => isNonEmptyString(value)));
+    if (!evidenceValid) {
+      errors.push({
+        path: `${findingPath}.evidence`,
+        message: "Must be a non-empty string or array of non-empty strings when provided"
+      });
+    }
+
     if (
-      isFindingSeverity(severity) &&
+      resolvedPriority !== undefined &&
       isNonEmptyString(title) &&
       (detail === undefined || isNonEmptyString(detail)) &&
       (code === undefined || isNonEmptyString(code)) &&
       (refs === undefined ||
-        (Array.isArray(refs) && refs.every((value) => isNonEmptyString(value))))
+        (Array.isArray(refs) && refs.every((value) => isNonEmptyString(value)))) &&
+      (timing === undefined || isFindingTiming(timing)) &&
+      (layer === undefined || isFindingLayer(layer)) &&
+      evidenceValid
     ) {
       const finding: Finding = {
-        severity,
+        priority: resolvedPriority,
+        ...(severity !== undefined && isFindingSeverity(severity)
+          ? { severity }
+          : {}),
         title
       };
 
@@ -121,6 +186,23 @@ function validateFindings(
         refs.every((value) => isNonEmptyString(value))
       ) {
         finding.refs = refs;
+      }
+      if (isFindingTiming(timing)) {
+        finding.timing = timing;
+      }
+      if (isFindingLayer(layer)) {
+        finding.layer = layer;
+      }
+      if (isNonEmptyString(evidence)) {
+        finding.evidence = evidence;
+      } else if (
+        Array.isArray(evidence)
+        && evidence.every((value) => isNonEmptyString(value))
+      ) {
+        finding.evidence = evidence;
+      }
+      if (isFindingPriority(effectivePriority)) {
+        finding.effective_priority = effectivePriority;
       }
 
       findings.push(finding);
@@ -192,43 +274,6 @@ function validatePayloadByType(
       errors.push({
         path: "payload.summary",
         message: "PASS payload requires non-empty summary"
-      });
-    }
-
-    if (Array.isArray(payload.findings)) {
-      payload.findings.forEach((entry, index) => {
-        if (!isRecord(entry)) {
-          return;
-        }
-
-        if (entry.severity !== "P0" && entry.severity !== "P1") {
-          return;
-        }
-
-        const findingRefs = entry.refs;
-        if (
-          findingRefs !== undefined &&
-          !(
-            Array.isArray(findingRefs) &&
-            findingRefs.every((value) => isNonEmptyString(value))
-          )
-        ) {
-          // refs schema validation already reports this path; avoid duplicate errors.
-          return;
-        }
-
-        const hasFindingRefs =
-          Array.isArray(findingRefs) &&
-          findingRefs.length > 0 &&
-          findingRefs.every((value) => isNonEmptyString(value));
-
-        if (!hasFindingRefs) {
-          errors.push({
-            path: `payload.findings[${index}].refs`,
-            message:
-              "P0/P1 findings require explicit finding-level refs; envelope refs are not a blocker-evidence fallback"
-          });
-        }
       });
     }
 

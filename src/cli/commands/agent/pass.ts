@@ -33,7 +33,7 @@ export function getPassHelpText(): string {
     "  --summary <text>      Required handoff summary",
     "  --ref <path>          Optional artifact reference (repeatable; does not satisfy P0/P1 finding evidence binding by itself)",
     "  --intent <value>      Optional intent override: task|review|fix_request",
-    "  --finding <value>     Reviewer finding, format: P0|P1|P2|P3:Title[|ref1,ref2] (repeatable; P0/P1 require refs)",
+    "  --finding <value>     Reviewer finding, format: P0|P1|P2|P3:Title[|ref1,ref2] (repeatable)",
     "                        If a single ref contains a comma, escape it as \\,.",
     "  --no-findings         Reviewer explicit clean pass (no open findings)",
     "  -h, --help            Show this help"
@@ -67,6 +67,7 @@ function parseFinding(raw: string): Finding {
 
   if (refsSeparatorIndex === -1) {
     return {
+      priority: severity,
       severity,
       title
     };
@@ -92,6 +93,7 @@ function parseFinding(raw: string): Finding {
   }
 
   return {
+    priority: severity,
     severity,
     title,
     refs

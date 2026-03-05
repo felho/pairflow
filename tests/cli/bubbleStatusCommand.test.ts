@@ -83,6 +83,16 @@ describe("renderBubbleStatusText", () => {
       accuracy_critical: false,
       last_review_verification: "missing",
       failing_gates: [],
+      spec_lock_state: {
+        state: "IMPLEMENTABLE",
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      round_gate_state: {
+        applies: false,
+        violated: false,
+        round: 2
+      },
       ...partial
     };
   }
@@ -109,5 +119,38 @@ describe("renderBubbleStatusText", () => {
   it("omits escalation line when watchdog has not expired", () => {
     const rendered = renderBubbleStatusText(createStatusView({}));
     expect(rendered).not.toContain("Escalation:");
+  });
+
+  it("renders non-default gate diagnostics in status text", () => {
+    const rendered = renderBubbleStatusText(
+      createStatusView({
+        failing_gates: [
+          {
+            gate_id: "review_round.policy",
+            reason_code: "ROUND_GATE_WARNING",
+            message: "Round gate violated",
+            priority: "P2",
+            timing: "later-hardening",
+            layer: "L1",
+            signal_level: "warning"
+          }
+        ],
+        spec_lock_state: {
+          state: "LOCKED",
+          open_blocker_count: 2,
+          open_required_now_count: 3
+        },
+        round_gate_state: {
+          applies: true,
+          violated: true,
+          round: 4,
+          reason_code: "ROUND_GATE_WARNING"
+        }
+      })
+    );
+
+    expect(rendered).toContain("Failing gates: ROUND_GATE_WARNING");
+    expect(rendered).toContain("Spec lock: LOCKED (blockers=2, required_now=3)");
+    expect(rendered).toContain("Round gate: applies=yes violated=yes round=4 reason=ROUND_GATE_WARNING");
   });
 });

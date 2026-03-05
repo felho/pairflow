@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import {
@@ -18,7 +19,13 @@ import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import { isPassIntent, type PassIntent, type ProtocolEnvelope } from "../../types/protocol.js";
 import type { Finding } from "../../types/findings.js";
-import type { AgentName, AgentRole, BubbleStateSnapshot, RoundRoleHistoryEntry } from "../../types/bubble.js";
+import type {
+  AgentName,
+  AgentRole,
+  BubbleFailingGate,
+  BubbleStateSnapshot,
+  RoundRoleHistoryEntry
+} from "../../types/bubble.js";
 import { refreshReviewerContext } from "../runtime/reviewerContext.js";
 import {
   resolveReviewerTestEvidenceArtifactPath,
@@ -38,6 +45,17 @@ import {
   formatReviewerBriefPrompt,
   readReviewerBriefArtifact
 } from "../reviewer/reviewerBrief.js";
+import {
+  createDocContractGateArtifact,
+  type DocContractGateArtifact,
+  evaluateReviewerGateWarnings,
+  isDocContractGateScopeActive,
+  mergeArtifactWithReviewerEvaluation,
+  readDocContractGateArtifact,
+  resolveDocContractGateArtifactPath,
+  writeDocContractGateArtifact
+} from "../gates/docContractGates.js";
+import { resolveFindingPriority } from "../../types/findings.js";
 
 export interface EmitPassInput {
   summary: string;
@@ -205,7 +223,13 @@ function buildFindingCounts(findings: Finding[]): {
   };
 
   for (const finding of findings) {
-    switch (finding.severity) {
+    const priority = resolveFindingPriority({
+      priority: finding.effective_priority ?? finding.priority,
+      ...(finding.effective_priority === undefined
+        ? { severity: finding.severity }
+        : {})
+    });
+    switch (priority) {
       case "P0":
         counts.p0 += 1;
         break;
@@ -224,10 +248,6 @@ function buildFindingCounts(findings: Finding[]): {
   }
 
   return counts;
-}
-
-function isBlockerSeverity(severity: Finding["severity"]): boolean {
-  return severity === "P0" || severity === "P1";
 }
 
 function normalizeFindingRefs(findings: Finding[]): Finding[] {
@@ -251,14 +271,6 @@ function normalizeFindingRefs(findings: Finding[]): Finding[] {
   });
 }
 
-function listBlockerFindingsMissingRefs(findings: Finding[]): Finding[] {
-  return findings.filter(
-    (finding) =>
-      isBlockerSeverity(finding.severity) &&
-      normalizeStringList(finding.refs ?? []).length === 0
-  );
-}
-
 function validateReviewerVerificationConsistency(input: {
   payloadOverall: "pass" | "fail";
   intent: PassIntent;
@@ -280,6 +292,32 @@ function validateReviewerVerificationConsistency(input: {
       "Accuracy-critical reviewer PASS with overall=pass requires clean handoff (intent=review and no findings)."
     );
   }
+}
+
+function createDocGateReadFailureWarning(input: {
+  artifactPath: string;
+  reason: string;
+}): BubbleFailingGate {
+  return {
+    gate_id: "review.serialization",
+    reason_code: "STATUS_GATE_SERIALIZATION_WARNING",
+    message:
+      `Doc gate artifact could not be read during reviewer PASS; preserving advisory fail-open with reset gate baseline. reason=${input.reason}`,
+    priority: "P2",
+    timing: "later-hardening",
+    layer: "L1",
+    signal_level: "warning",
+    evidence_refs: [input.artifactPath]
+  };
+}
+
+function extractTaskContentFromTaskArtifact(taskArtifactContent: string): string {
+  const match = /^# Bubble Task\r?\n\r?\nSource: [^\n]*\r?\n\r?\n([\s\S]*)$/u
+    .exec(taskArtifactContent);
+  if (match?.[1] !== undefined) {
+    return match[1].trimEnd();
+  }
+  return taskArtifactContent;
 }
 
 async function resolveReviewerVerification(input: {
@@ -341,13 +379,7 @@ export async function emitPassFromWorkspace(
       ? inferReviewerPassIntent(hasFindings, noFindings)
       : undefined;
 
-  if (handoff.senderRole === "reviewer") {
-    if (listBlockerFindingsMissingRefs(findings).length > 0) {
-      throw new PassCommandError(
-        "Reviewer PASS with P0/P1 findings requires explicit finding-level evidence refs (finding.refs). Provide per-finding refs via --finding <P0|P1:Title|ref1,ref2>. Envelope --ref artifacts do not satisfy blocker evidence binding."
-      );
-    }
-  } else if (hasFindings || noFindings) {
+  if (handoff.senderRole !== "reviewer" && (hasFindings || noFindings)) {
     throw new PassCommandError(
       "Implementer PASS does not accept findings flags; findings are reviewer-only."
     );
@@ -396,6 +428,28 @@ export async function emitPassFromWorkspace(
     });
   }
 
+  let reviewerGateEvaluation:
+    | ReturnType<typeof evaluateReviewerGateWarnings>
+    | undefined;
+  let docGateArtifactWriteFailureReason: string | undefined;
+  const docGateScopeActive =
+    handoff.senderRole === "reviewer"
+    && isDocContractGateScopeActive({
+      reviewArtifactType: resolved.bubbleConfig.review_artifact_type
+    });
+  const findingsForPayload: Finding[] =
+    docGateScopeActive && hasFindings
+      ? (() => {
+        reviewerGateEvaluation = evaluateReviewerGateWarnings({
+          round: handoff.envelopeRound,
+          findings,
+          roundGateAppliesAfter:
+            resolved.bubbleConfig.doc_contract_gates.round_gate_applies_after
+        });
+        return reviewerGateEvaluation.normalizedFindings;
+      })()
+      : findings;
+
   const lockPath = join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`);
 
   const appendResult = await appendProtocolEnvelope({
@@ -412,7 +466,7 @@ export async function emitPassFromWorkspace(
         summary,
         pass_intent: intent,
         ...(handoff.senderRole === "reviewer"
-          ? { findings: hasFindings ? findings : [] }
+          ? { findings: hasFindings ? findingsForPayload : [] }
           : {})
       },
       refs
@@ -469,6 +523,73 @@ export async function emitPassFromWorkspace(
     throw new PassCommandError(
       `PASS ${appendResult.envelope.id} was appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`
     );
+  }
+
+  if (docGateScopeActive) {
+    const gateArtifactPath = resolveDocContractGateArtifactPath(
+      resolved.bubblePaths.artifactsDir
+    );
+    let baseArtifact: DocContractGateArtifact | undefined;
+    let gateReadWarning: BubbleFailingGate | undefined;
+    try {
+      baseArtifact = await readDocContractGateArtifact(gateArtifactPath);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      gateReadWarning = createDocGateReadFailureWarning({
+        artifactPath: gateArtifactPath,
+        reason
+      });
+    }
+    let fallbackArtifact: DocContractGateArtifact | undefined;
+    if (baseArtifact === undefined) {
+      fallbackArtifact = createDocContractGateArtifact({
+        now,
+        bubbleConfig: resolved.bubbleConfig,
+        taskContent: ""
+      });
+      const taskArtifactContent = await readFile(
+        resolved.bubblePaths.taskArtifactPath,
+        "utf8"
+      ).catch(() => undefined);
+      if (taskArtifactContent !== undefined) {
+        fallbackArtifact.task_warnings = createDocContractGateArtifact({
+          now,
+          bubbleConfig: resolved.bubbleConfig,
+          taskContent: extractTaskContentFromTaskArtifact(taskArtifactContent)
+        }).task_warnings;
+      }
+      if (gateReadWarning !== undefined) {
+        fallbackArtifact.config_warnings = [
+          ...fallbackArtifact.config_warnings,
+          gateReadWarning
+        ];
+      }
+    }
+    const reviewEvaluation =
+      reviewerGateEvaluation
+      ?? evaluateReviewerGateWarnings({
+        round: handoff.envelopeRound,
+        findings: [],
+        roundGateAppliesAfter:
+          resolved.bubbleConfig.doc_contract_gates.round_gate_applies_after
+      });
+    const artifactForMerge = baseArtifact ?? fallbackArtifact;
+    if (artifactForMerge === undefined) {
+      throw new PassCommandError(
+        "Doc gate artifact fallback invariant violated during reviewer PASS."
+      );
+    }
+    const nextArtifact = mergeArtifactWithReviewerEvaluation({
+      now,
+      artifact: artifactForMerge,
+      reviewerEvaluation: reviewEvaluation
+    });
+    try {
+      await writeDocContractGateArtifact(gateArtifactPath, nextArtifact);
+    } catch (error) {
+      docGateArtifactWriteFailureReason =
+        error instanceof Error ? error.message : String(error);
+    }
   }
 
   let reviewerTestDirective: ReviewerTestExecutionDirective | undefined;
@@ -609,7 +730,16 @@ export async function emitPassFromWorkspace(
               reviewerTestDirective.verification_status
           }
         : {}),
-      ...buildFindingCounts(findings)
+      ...buildFindingCounts(
+        handoff.senderRole === "reviewer" ? findingsForPayload : findings
+      ),
+      ...(docGateArtifactWriteFailureReason !== undefined
+        ? {
+            doc_gate_artifact_write_failed: true,
+            doc_gate_artifact_write_failure_reason:
+              docGateArtifactWriteFailureReason
+          }
+        : {})
     },
     now
   });

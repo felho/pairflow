@@ -3,7 +3,18 @@ import { readStateSnapshot } from "../state/stateStore.js";
 import { computeWatchdogStatus, type WatchdogStatus } from "../runtime/watchdog.js";
 import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
 import { readReviewVerificationArtifactStatus, type ReviewVerificationState } from "../reviewer/reviewVerification.js";
-import type { BubbleLifecycleState } from "../../types/bubble.js";
+import {
+  collectFailingGatesFromArtifact,
+  isDocContractGateScopeActive,
+  readDocContractGateArtifact,
+  resolveDocContractGateArtifactPath
+} from "../gates/docContractGates.js";
+import type {
+  BubbleFailingGate,
+  BubbleLifecycleState,
+  BubbleRoundGateState,
+  BubbleSpecLockState
+} from "../../types/bubble.js";
 import type { ProtocolEnvelope, ProtocolMessageType } from "../../types/protocol.js";
 
 export interface BubbleStatusInput {
@@ -37,7 +48,9 @@ export interface BubbleStatusView {
   };
   accuracy_critical: boolean;
   last_review_verification: ReviewVerificationState;
-  failing_gates: string[];
+  failing_gates: BubbleFailingGate[];
+  spec_lock_state: BubbleSpecLockState;
+  round_gate_state: BubbleRoundGateState;
 }
 
 export class BubbleStatusError extends Error {
@@ -108,9 +121,59 @@ export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleS
       }
     )
     : { status: "missing" as const };
-  const failingGates: string[] = [];
+  const defaultSpecLockState: BubbleSpecLockState = {
+    state: "IMPLEMENTABLE",
+    open_blocker_count: 0,
+    open_required_now_count: 0
+  };
+  const defaultRoundGateState: BubbleRoundGateState = {
+    applies: false,
+    violated: false,
+    round: state.round
+  };
+  let failingGates: BubbleFailingGate[] = [];
+  let specLockState = defaultSpecLockState;
+  let roundGateState = defaultRoundGateState;
+  const docGateScopeActive = isDocContractGateScopeActive({
+    reviewArtifactType: resolved.bubbleConfig.review_artifact_type
+  });
+  if (docGateScopeActive) {
+    try {
+      const gateArtifact = await readDocContractGateArtifact(
+        resolveDocContractGateArtifactPath(resolved.bubblePaths.artifactsDir)
+      );
+      if (gateArtifact !== undefined) {
+        failingGates = collectFailingGatesFromArtifact(gateArtifact);
+        specLockState = gateArtifact.spec_lock_state;
+        roundGateState = gateArtifact.round_gate_state;
+      }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      failingGates.push({
+        gate_id: "status.serialization",
+        reason_code: "STATUS_GATE_SERIALIZATION_WARNING",
+        message: `Status gate artifact parse failed; using fallback defaults. ${reason}`,
+        priority: "P2",
+        timing: "later-hardening",
+        layer: "L1",
+        signal_level: "warning"
+      });
+    }
+  }
+
   if (accuracyCritical && verification.status !== "pass") {
-    failingGates.push(`accuracy_critical.review_verification.${verification.status}`);
+    failingGates = [
+      ...failingGates,
+      {
+        gate_id: "accuracy_critical.review_verification",
+        reason_code: `ACCURACY_CRITICAL_REVIEW_VERIFICATION_${verification.status.toUpperCase()}`,
+        message: `Accuracy-critical review verification status is ${verification.status}.`,
+        priority: "P1",
+        timing: "required-now",
+        layer: "L1",
+        signal_level: "warning"
+      }
+    ];
   }
 
   return {
@@ -141,7 +204,9 @@ export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleS
     },
     accuracy_critical: accuracyCritical,
     last_review_verification: accuracyCritical ? verification.status : "missing",
-    failing_gates: failingGates
+    failing_gates: failingGates,
+    spec_lock_state: specLockState,
+    round_gate_state: roundGateState
   };
 }
 
