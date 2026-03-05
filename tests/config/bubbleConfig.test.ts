@@ -41,6 +41,73 @@ describe("bubble config schema", () => {
       ".env.local",
       ".env.production"
     ]);
+    expect(config.doc_contract_gates.mode).toBe("advisory");
+    expect(config.doc_contract_gates.round_gate_applies_after).toBe(2);
+  });
+
+  it("applies doc_contract_gates defaults when section is omitted", () => {
+    const config = parseBubbleConfigToml(baseToml);
+    expect(config.doc_contract_gates).toEqual({
+      mode: "advisory",
+      round_gate_applies_after: 2
+    });
+  });
+
+  it("keeps deterministic defaults and emits parse_warning for invalid doc_contract_gates values", () => {
+    const config = parseBubbleConfigToml(`${baseToml}
+[doc_contract_gates]
+mode = "blocking"
+round_gate_applies_after = -1
+`);
+
+    expect(config.doc_contract_gates.mode).toBe("advisory");
+    expect(config.doc_contract_gates.round_gate_applies_after).toBe(2);
+    expect(config.doc_contract_gates.parse_warning).toContain("doc_contract_gates.mode");
+    expect(config.doc_contract_gates.parse_warning).toContain("round_gate_applies_after");
+  });
+
+  it("serializes and restores doc_contract_gates.parse_warning through TOML roundtrip", () => {
+    const rendered = renderBubbleConfigToml({
+      id: "b_test_parse_warning_roundtrip_01",
+      repo_path: "/tmp/repo",
+      base_branch: "main",
+      bubble_branch: "bubble/b_test_parse_warning_roundtrip_01",
+      work_mode: "worktree",
+      quality_mode: "strict",
+      review_artifact_type: "auto",
+      reviewer_context_mode: "fresh",
+      watchdog_timeout_minutes: 20,
+      max_rounds: 8,
+      commit_requires_approval: true,
+      accuracy_critical: false,
+      agents: {
+        implementer: "codex",
+        reviewer: "claude"
+      },
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      },
+      notifications: {
+        enabled: true
+      },
+      local_overlay: {
+        enabled: true,
+        mode: "symlink",
+        entries: [".claude"]
+      },
+      doc_contract_gates: {
+        mode: "advisory",
+        round_gate_applies_after: 2,
+        parse_warning: "doc_contract_gates.mode invalid; fallback applied."
+      }
+    });
+
+    expect(rendered).toContain("parse_warning = ");
+    const reparsed = parseBubbleConfigToml(rendered);
+    expect(reparsed.doc_contract_gates.parse_warning).toContain(
+      "doc_contract_gates.mode invalid"
+    );
   });
 
   it("rejects unsupported quality mode", () => {
@@ -65,6 +132,10 @@ describe("bubble config schema", () => {
       },
       notifications: {
         enabled: true
+      },
+      doc_contract_gates: {
+        mode: "advisory",
+        round_gate_applies_after: 2
       }
     });
 
@@ -97,6 +168,10 @@ describe("bubble config schema", () => {
       },
       notifications: {
         enabled: true
+      },
+      doc_contract_gates: {
+        mode: "advisory",
+        round_gate_applies_after: 2
       }
     });
 
@@ -133,6 +208,10 @@ describe("bubble config schema", () => {
       },
       notifications: {
         enabled: true
+      },
+      doc_contract_gates: {
+        mode: "advisory",
+        round_gate_applies_after: 2
       }
     });
 
@@ -398,6 +477,10 @@ typecheck = "pnpm typecheck"
       notifications: {
         enabled: true
       },
+      doc_contract_gates: {
+        mode: "advisory",
+        round_gate_applies_after: 2
+      },
       local_overlay: {
         enabled: true,
         mode: "copy",
@@ -487,6 +570,10 @@ typecheck = "pnpm typecheck"
       },
       notifications: {
         enabled: true
+      },
+      doc_contract_gates: {
+        mode: "advisory",
+        round_gate_applies_after: 2
       }
     });
 
@@ -523,6 +610,10 @@ typecheck = "pnpm typecheck"
       },
       notifications: {
         enabled: true
+      },
+      doc_contract_gates: {
+        mode: "advisory",
+        round_gate_applies_after: 2
       }
     });
 
@@ -552,6 +643,10 @@ typecheck = "pnpm typecheck"
       },
       notifications: {
         enabled: true
+      },
+      doc_contract_gates: {
+        mode: "advisory",
+        round_gate_applies_after: 2
       }
     });
 

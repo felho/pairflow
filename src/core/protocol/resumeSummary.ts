@@ -1,5 +1,6 @@
 import { readTranscriptEnvelopes } from "./transcriptStore.js";
 import type { Finding } from "../../types/findings.js";
+import { resolveFindingPriority } from "../../types/findings.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 
 const MAX_SUMMARY_CHARS = 3_800;
@@ -69,7 +70,7 @@ function extractPayloadExcerpt(envelope: ProtocolEnvelope): string {
 }
 
 function formatFinding(finding: Finding): string {
-  return `${finding.severity}:${truncateText(compactWhitespace(finding.title), 64)}`;
+  return `${resolveFindingPriority(finding) ?? "P2"}:${truncateText(compactWhitespace(finding.title), 64)}`;
 }
 
 function formatPassEvent(envelope: ProtocolEnvelope): string {

@@ -31,7 +31,7 @@ describe("protocol envelope schema", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("rejects PASS envelope when blocker finding has no finding refs and envelope refs are empty", () => {
+  it("accepts PASS envelope when blocker finding has no finding refs and envelope refs are empty", () => {
     const result = validateProtocolEnvelope({
       id: "msg_001b",
       ts: "2026-02-21T12:34:56.000Z",
@@ -52,13 +52,81 @@ describe("protocol envelope schema", () => {
       refs: []
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) {
+    expect(result.ok).toBe(true);
+  });
+
+  it("preserves provided severity alias value when canonical priority is also present", () => {
+    const result = validateProtocolEnvelope({
+      id: "msg_001_priority_severity_distinction",
+      ts: "2026-02-21T12:34:56.000Z",
+      bubble_id: "b_test_01",
+      sender: "claude",
+      recipient: "codex",
+      type: "PASS",
+      round: 1,
+      payload: {
+        summary: "Priority/severity distinction check",
+        findings: [
+          {
+            priority: "P1",
+            severity: "P2",
+            title: "Canonical priority wins; alias preserved"
+          }
+        ]
+      },
+      refs: []
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
       return;
     }
-    expect(
-      result.errors.some((error) => error.path === "payload.findings[0].refs")
-    ).toBe(true);
+    expect(result.value.payload.findings).toEqual([
+      {
+        priority: "P1",
+        severity: "P2",
+        title: "Canonical priority wins; alias preserved"
+      }
+    ]);
+  });
+
+  it("preserves effective_priority when provided as a valid priority", () => {
+    const result = validateProtocolEnvelope({
+      id: "msg_001_effective_priority",
+      ts: "2026-02-21T12:34:56.000Z",
+      bubble_id: "b_test_01",
+      sender: "claude",
+      recipient: "codex",
+      type: "PASS",
+      round: 1,
+      payload: {
+        summary: "Effective priority preservation check",
+        findings: [
+          {
+            priority: "P1",
+            effective_priority: "P2",
+            timing: "required-now",
+            layer: "L1",
+            title: "Downgraded blocker signal"
+          }
+        ]
+      },
+      refs: []
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.value.payload.findings).toEqual([
+      {
+        priority: "P1",
+        effective_priority: "P2",
+        timing: "required-now",
+        layer: "L1",
+        title: "Downgraded blocker signal"
+      }
+    ]);
   });
 
   it("accepts PASS envelope when blocker finding uses explicit finding refs", () => {
@@ -86,7 +154,7 @@ describe("protocol envelope schema", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("rejects PASS envelope when blocker finding omits finding refs even if envelope refs exist", () => {
+  it("accepts PASS envelope when blocker finding omits finding refs even if envelope refs exist", () => {
     const result = validateProtocolEnvelope({
       id: "msg_001d",
       ts: "2026-02-21T12:34:56.000Z",
@@ -107,16 +175,10 @@ describe("protocol envelope schema", () => {
       refs: ["artifact://review/blocker-proof.md"]
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) {
-      return;
-    }
-    expect(
-      result.errors.some((error) => error.path === "payload.findings[0].refs")
-    ).toBe(true);
+    expect(result.ok).toBe(true);
   });
 
-  it("rejects PASS envelope mismatch when one blocker finding misses refs and no envelope refs exist", () => {
+  it("accepts PASS envelope when one blocker finding misses refs and no envelope refs exist", () => {
     const result = validateProtocolEnvelope({
       id: "msg_001e",
       ts: "2026-02-21T12:34:56.000Z",
@@ -142,13 +204,7 @@ describe("protocol envelope schema", () => {
       refs: []
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) {
-      return;
-    }
-    expect(
-      result.errors.some((error) => error.path === "payload.findings[1].refs")
-    ).toBe(true);
+    expect(result.ok).toBe(true);
   });
 
   it("does not duplicate blocker refs errors when finding refs already fail schema validation", () => {
@@ -218,7 +274,7 @@ describe("protocol envelope schema", () => {
     expect(refsErrors[0]?.message).toMatch(/array of non-empty strings/u);
   });
 
-  it("still enforces blocker refs when finding title is invalid", () => {
+  it("reports finding title validation error even without blocker refs enforcement", () => {
     const result = validateProtocolEnvelope({
       id: "msg_001g",
       ts: "2026-02-21T12:34:56.000Z",
@@ -245,9 +301,6 @@ describe("protocol envelope schema", () => {
     }
     expect(
       result.errors.some((error) => error.path === "payload.findings[0].title")
-    ).toBe(true);
-    expect(
-      result.errors.some((error) => error.path === "payload.findings[0].refs")
     ).toBe(true);
   });
 
@@ -280,6 +333,78 @@ describe("protocol envelope schema", () => {
       result.errors.some((error) =>
         error.path.includes("payload.findings[0].severity")
       )
+    ).toBe(true);
+  });
+
+  it("rejects findings that omit canonical priority and severity alias", () => {
+    const result = validateProtocolEnvelope({
+      id: "msg_001_missing_priority",
+      ts: "2026-02-21T12:34:56.000Z",
+      bubble_id: "b_test_01",
+      sender: "claude",
+      recipient: "codex",
+      type: "PASS",
+      round: 1,
+      payload: {
+        summary: "Missing canonical priority",
+        findings: [
+          {
+            title: "Priority missing"
+          }
+        ]
+      },
+      refs: []
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some((error) => error.path === "payload.findings[0].priority")
+    ).toBe(true);
+  });
+
+  it("rejects invalid timing/layer/evidence/effective_priority finding fields", () => {
+    const result = validateProtocolEnvelope({
+      id: "msg_001_invalid_extended_fields",
+      ts: "2026-02-21T12:34:56.000Z",
+      bubble_id: "b_test_01",
+      sender: "claude",
+      recipient: "codex",
+      type: "PASS",
+      round: 1,
+      payload: {
+        summary: "Invalid finding extension fields",
+        findings: [
+          {
+            priority: "P2",
+            effective_priority: "P4",
+            timing: "urgent",
+            layer: "L9",
+            evidence: [""],
+            title: "Invalid extension fields"
+          }
+        ]
+      },
+      refs: []
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some((error) => error.path === "payload.findings[0].effective_priority")
+    ).toBe(true);
+    expect(
+      result.errors.some((error) => error.path === "payload.findings[0].timing")
+    ).toBe(true);
+    expect(
+      result.errors.some((error) => error.path === "payload.findings[0].layer")
+    ).toBe(true);
+    expect(
+      result.errors.some((error) => error.path === "payload.findings[0].evidence")
     ).toBe(true);
   });
 

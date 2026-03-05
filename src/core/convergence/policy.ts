@@ -1,5 +1,13 @@
-import type { AgentName, RoundRoleHistoryEntry } from "../../types/bubble.js";
-import { isFindingSeverity } from "../../types/findings.js";
+import type {
+  AgentName,
+  ReviewArtifactType,
+  RoundRoleHistoryEntry
+} from "../../types/bubble.js";
+import {
+  isFindingLayer,
+  isFindingTiming,
+  resolveFindingPriority
+} from "../../types/findings.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 import { isRecord } from "../validation.js";
 
@@ -7,6 +15,7 @@ export interface ConvergencePolicyInput {
   currentRound: number;
   reviewer: AgentName;
   implementer: AgentName;
+  reviewArtifactType: ReviewArtifactType;
   roundRoleHistory: RoundRoleHistoryEntry[];
   transcript: ProtocolEnvelope[];
 }
@@ -16,12 +25,16 @@ export interface ConvergencePolicyResult {
   errors: string[];
 }
 
-function getReviewerFindingsStatus(envelope: ProtocolEnvelope): {
+function getReviewerFindingsStatus(
+  envelope: ProtocolEnvelope,
+  input: {
+    reviewArtifactType: ReviewArtifactType;
+  }
+): {
   missing: boolean;
   invalid: boolean;
   findingCount: number;
   hasBlocking: boolean;
-  hasP2: boolean;
 } {
   const findings = envelope.payload.findings;
   if (!Array.isArray(findings)) {
@@ -29,36 +42,52 @@ function getReviewerFindingsStatus(envelope: ProtocolEnvelope): {
       missing: true,
       invalid: false,
       findingCount: 0,
-      hasBlocking: false,
-      hasP2: false
+      hasBlocking: false
     };
   }
 
   let invalid = false;
-  let hasP2 = false;
+  const docsScope = input.reviewArtifactType === "document";
   const hasBlocking = findings.some((finding) => {
     if (!isRecord(finding)) {
       invalid = true;
       return false;
     }
 
-    const severity = finding.severity;
-    if (!isFindingSeverity(severity)) {
+    const priority = resolveFindingPriority({
+      priority: finding.priority,
+      severity: finding.severity
+    });
+    if (priority === undefined) {
       invalid = true;
       return false;
     }
-    if (severity === "P2") {
-      hasP2 = true;
+
+    const effectivePriority =
+      resolveFindingPriority({
+        priority: finding.effective_priority,
+        severity: undefined
+      }) ?? priority;
+    const timing = isFindingTiming(finding.timing) ? finding.timing : "later-hardening";
+    const layer = isFindingLayer(finding.layer) ? finding.layer : undefined;
+
+    const blockingPriority = docsScope ? effectivePriority : priority;
+    if (blockingPriority !== "P0" && blockingPriority !== "P1") {
+      return false;
     }
-    return severity === "P0" || severity === "P1";
+    if (!docsScope) {
+      // Legacy/non-doc behavior: any canonical P0/P1 finding is blocking.
+      return true;
+    }
+    // Docs scope uses doc-contract blocker boundary.
+    return timing === "required-now" && layer === "L1";
   });
 
   return {
     missing: false,
     invalid,
     findingCount: findings.length,
-    hasBlocking,
-    hasP2
+    hasBlocking
   };
 }
 
@@ -181,7 +210,9 @@ export function validateConvergencePolicy(
       "Convergence requires a previous reviewer PASS from the prior round."
     );
   } else {
-    const findingsStatus = getReviewerFindingsStatus(previousReviewerPass);
+    const findingsStatus = getReviewerFindingsStatus(previousReviewerPass, {
+      reviewArtifactType: input.reviewArtifactType
+    });
     const summaryCounts = parseSummarySeverityCounts(
       previousReviewerPass.payload.summary
     );
@@ -204,10 +235,6 @@ export function validateConvergencePolicy(
     } else if (findingsStatus.hasBlocking) {
       errors.push(
         "Convergence blocked: previous reviewer PASS still contains open P0/P1 findings."
-      );
-    } else if (input.currentRound <= 3 && findingsStatus.hasP2) {
-      errors.push(
-        "Convergence blocked through round 3 when the last reviewer PASS contains P2 findings. Continue iterations and converge from round 4 or later."
       );
     }
   }

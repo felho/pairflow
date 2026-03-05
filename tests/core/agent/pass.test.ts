@@ -9,6 +9,12 @@ import { emitPassFromWorkspace, PassCommandError } from "../../../src/core/agent
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/core/workspace/worktreeManager.js";
 import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
+import {
+  createDocContractGateArtifact,
+  readDocContractGateArtifact,
+  resolveDocContractGateArtifactPath,
+  writeDocContractGateArtifact
+} from "../../../src/core/gates/docContractGates.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -265,7 +271,7 @@ describe("emitPassFromWorkspace", () => {
     expect(result.envelope.payload.findings).toEqual([]);
   });
 
-  it("rejects reviewer P1 findings without finding-level evidence refs", async () => {
+  it("accepts reviewer P1 findings without finding-level evidence refs in advisory mode", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -291,21 +297,27 @@ describe("emitPassFromWorkspace", () => {
       }
     );
 
-    await expect(
-      emitPassFromWorkspace({
-        summary: "Blocking issue found",
-        findings: [
-          {
-            severity: "P1",
-            title: "Race condition"
-          }
-        ],
-        cwd: bubble.paths.worktreePath
-      })
-    ).rejects.toThrow(/P0\/P1 findings requires explicit finding-level evidence refs/u);
+    const result = await emitPassFromWorkspace({
+      summary: "Blocking issue found",
+      findings: [
+        {
+          severity: "P1",
+          title: "Race condition"
+        }
+      ],
+      cwd: bubble.paths.worktreePath
+    });
+
+    expect(result.envelope.payload.findings).toEqual([
+      {
+        priority: "P1",
+        severity: "P1",
+        title: "Race condition"
+      }
+    ]);
   });
 
-  it("rejects reviewer P0 findings without finding-level evidence refs", async () => {
+  it("accepts reviewer P0 findings without finding-level evidence refs in advisory mode", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -331,18 +343,24 @@ describe("emitPassFromWorkspace", () => {
       }
     );
 
-    await expect(
-      emitPassFromWorkspace({
-        summary: "Critical blocker found",
-        findings: [
-          {
-            severity: "P0",
-            title: "Data loss risk"
-          }
-        ],
-        cwd: bubble.paths.worktreePath
-      })
-    ).rejects.toThrow(/P0\/P1 findings requires explicit finding-level evidence refs/u);
+    const result = await emitPassFromWorkspace({
+      summary: "Critical blocker found",
+      findings: [
+        {
+          severity: "P0",
+          title: "Data loss risk"
+        }
+      ],
+      cwd: bubble.paths.worktreePath
+    });
+
+    expect(result.envelope.payload.findings).toEqual([
+      {
+        priority: "P0",
+        severity: "P0",
+        title: "Data loss risk"
+      }
+    ]);
   });
 
   it("accepts reviewer P1 findings with explicit finding-level refs", async () => {
@@ -388,6 +406,7 @@ describe("emitPassFromWorkspace", () => {
     expect(result.envelope.payload.pass_intent).toBe("fix_request");
     expect(result.envelope.payload.findings).toEqual([
       {
+        priority: "P1",
         severity: "P1",
         title: "Race condition",
         refs: ["artifact://review/p1-proof.md"]
@@ -395,7 +414,7 @@ describe("emitPassFromWorkspace", () => {
     ]);
   });
 
-  it("rejects blocker findings when only envelope refs are provided", async () => {
+  it("accepts blocker findings when only envelope refs are provided (advisory downgrade)", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -421,26 +440,37 @@ describe("emitPassFromWorkspace", () => {
       }
     );
 
-    await expect(
-      emitPassFromWorkspace({
-        summary: "Blocking findings with envelope refs only",
-        findings: [
-          {
-            severity: "P1",
-            title: "Race condition"
-          },
-          {
-            severity: "P0",
-            title: "Data loss risk"
-          }
-        ],
-        refs: ["artifact://review/blocker-proof.md"],
-        cwd: bubble.paths.worktreePath
-      })
-    ).rejects.toThrow(/P0\/P1 findings requires explicit finding-level evidence refs/u);
+    const result = await emitPassFromWorkspace({
+      summary: "Blocking findings with envelope refs only",
+      findings: [
+        {
+          severity: "P1",
+          title: "Race condition"
+        },
+        {
+          severity: "P0",
+          title: "Data loss risk"
+        }
+      ],
+      refs: ["artifact://review/blocker-proof.md"],
+      cwd: bubble.paths.worktreePath
+    });
+
+    expect(result.envelope.payload.findings).toEqual([
+      {
+        priority: "P1",
+        severity: "P1",
+        title: "Race condition"
+      },
+      {
+        priority: "P0",
+        severity: "P0",
+        title: "Data loss risk"
+      }
+    ]);
   });
 
-  it("rejects mixed blocker findings when one finding is missing refs and no envelope refs are present", async () => {
+  it("accepts mixed blocker findings when one finding is missing refs and marks downgrade", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -466,23 +496,35 @@ describe("emitPassFromWorkspace", () => {
       }
     );
 
-    await expect(
-      emitPassFromWorkspace({
-        summary: "Mixed blocker evidence",
-        findings: [
-          {
-            severity: "P1",
-            title: "Race condition",
-            refs: ["artifact://review/p1-proof.md"]
-          },
-          {
-            severity: "P0",
-            title: "Data loss risk"
-          }
-        ],
-        cwd: bubble.paths.worktreePath
-      })
-    ).rejects.toThrow(/P0\/P1 findings requires explicit finding-level evidence refs/u);
+    const result = await emitPassFromWorkspace({
+      summary: "Mixed blocker evidence",
+      findings: [
+        {
+          severity: "P1",
+          title: "Race condition",
+          refs: ["artifact://review/p1-proof.md"]
+        },
+        {
+          severity: "P0",
+          title: "Data loss risk"
+        }
+      ],
+      cwd: bubble.paths.worktreePath
+    });
+
+    expect(result.envelope.payload.findings).toEqual([
+      {
+        priority: "P1",
+        severity: "P1",
+        title: "Race condition",
+        refs: ["artifact://review/p1-proof.md"]
+      },
+      {
+        priority: "P0",
+        severity: "P0",
+        title: "Data loss risk"
+      }
+    ]);
   });
 
   it("accepts reviewer P2/P3 findings without refs", async () => {
@@ -531,14 +573,690 @@ describe("emitPassFromWorkspace", () => {
     expect(result.envelope.payload.pass_intent).toBe("fix_request");
     expect(result.envelope.payload.findings).toEqual([
       {
+        priority: "P2",
         severity: "P2",
         title: "Missing edge-case test"
       },
       {
+        priority: "P3",
         severity: "P3",
         title: "Naming cleanup"
       }
     ]);
+  });
+
+  it("keeps non-document reviewer findings unchanged at round>2 without doc-gate rewrites", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_scope_non_doc_01",
+      task: "Compatibility scope test",
+      reviewArtifactType: "auto"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 3,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:16:00.000Z",
+        last_command_at: "2026-02-21T12:16:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Non-doc scope findings",
+      findings: [
+        {
+          priority: "P2",
+          timing: "required-now",
+          layer: "L1",
+          evidence: "src/example.ts:10",
+          title: "Should remain required-now in non-doc scope"
+        }
+      ],
+      cwd: bubble.paths.worktreePath
+    });
+
+    expect(result.envelope.payload.findings).toEqual([
+      {
+        priority: "P2",
+        timing: "required-now",
+        layer: "L1",
+        evidence: "src/example.ts:10",
+        title: "Should remain required-now in non-doc scope"
+      }
+    ]);
+
+    const artifact = await readDocContractGateArtifact(
+      resolveDocContractGateArtifactPath(bubble.paths.artifactsDir)
+    );
+    expect(artifact).toBeUndefined();
+  });
+
+  it("keeps doc-gate auto-demote active for document scope at round>2", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_scope_doc_01",
+      task: "Document scope gate test",
+      reviewArtifactType: "document"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 3,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:17:00.000Z",
+        last_command_at: "2026-02-21T12:17:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Doc scope findings",
+      findings: [
+        {
+          priority: "P2",
+          timing: "required-now",
+          layer: "L1",
+          evidence: "docs/spec.md:12",
+          title: "Document finding that should auto-demote"
+        }
+      ],
+      cwd: bubble.paths.worktreePath
+    });
+
+    expect(result.envelope.payload.findings).toEqual([
+      {
+        priority: "P2",
+        timing: "later-hardening",
+        layer: "L1",
+        evidence: "docs/spec.md:12",
+        title: "Document finding that should auto-demote"
+      }
+    ]);
+
+    const artifact = await readDocContractGateArtifact(
+      resolveDocContractGateArtifactPath(bubble.paths.artifactsDir)
+    );
+    expect(artifact?.round_gate_state.violated).toBe(true);
+    const reasonCodes = artifact?.review_warnings.map((entry) => entry.reason_code) ?? [];
+    expect(reasonCodes).toContain("ROUND_GATE_AUTODEMOTE");
+    expect(reasonCodes).toContain("ROUND_GATE_WARNING");
+
+    const roundWarning = artifact?.review_warnings.find(
+      (entry) => entry.reason_code === "ROUND_GATE_WARNING"
+    );
+    expect(roundWarning).toMatchObject({
+      priority: "P2",
+      timing: "later-hardening"
+    });
+  });
+
+  it("persists document-scope gate artifact state for reviewer --no-findings PASS", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_scope_doc_no_findings_01",
+      task: "Document scope no-findings gate state test",
+      reviewArtifactType: "document"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 3,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:18:00.000Z",
+        last_command_at: "2026-02-21T12:18:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const gateArtifactPath = resolveDocContractGateArtifactPath(bubble.paths.artifactsDir);
+    const staleArtifact = createDocContractGateArtifact({
+      now: new Date("2026-02-21T12:17:00.000Z"),
+      bubbleConfig: bubble.config,
+      taskContent: "Document scope seeded warning state"
+    });
+    staleArtifact.review_warnings = [
+      {
+        gate_id: "review_round.policy",
+        reason_code: "ROUND_GATE_WARNING",
+        message: "stale round warning to be replaced",
+        priority: "P2",
+        timing: "later-hardening",
+        layer: "L1",
+        signal_level: "warning"
+      }
+    ];
+    staleArtifact.finding_evaluations = [
+      {
+        finding_key: "r2:f0",
+        priority: "P1",
+        effective_priority: "P2",
+        timing: "required-now",
+        effective_timing: "later-hardening",
+        layer: "L1"
+      }
+    ];
+    staleArtifact.round_gate_state = {
+      applies: true,
+      violated: true,
+      round: 2,
+      reason_code: "ROUND_GATE_WARNING"
+    };
+    staleArtifact.spec_lock_state = {
+      state: "LOCKED",
+      open_blocker_count: 1,
+      open_required_now_count: 1
+    };
+    await writeDocContractGateArtifact(gateArtifactPath, staleArtifact);
+
+    const result = await emitPassFromWorkspace({
+      summary: "Document scope no findings",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath
+    });
+
+    expect(result.envelope.payload.findings).toEqual([]);
+    const artifact = await readDocContractGateArtifact(gateArtifactPath);
+    expect(artifact).toBeDefined();
+    expect(artifact?.review_warnings).toEqual([]);
+    expect(artifact?.finding_evaluations).toEqual([]);
+    expect(artifact?.round_gate_state).toEqual({
+      applies: true,
+      violated: false,
+      round: 3
+    });
+    expect(artifact?.spec_lock_state).toEqual({
+      state: "IMPLEMENTABLE",
+      open_blocker_count: 0,
+      open_required_now_count: 0
+    });
+  });
+
+  it("persists spec-lock asymmetry when required-now findings are non-blocking", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_scope_doc_spec_lock_asymmetry_01",
+      task: "Document scope spec lock asymmetry test",
+      reviewArtifactType: "document"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 2,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:18:30.000Z",
+        last_command_at: "2026-02-21T12:18:30.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await emitPassFromWorkspace({
+      summary: "Document scope non-blocking required-now finding",
+      findings: [
+        {
+          priority: "P2",
+          timing: "required-now",
+          layer: "L1",
+          evidence: "docs/spec.md:40",
+          title: "Required-now advisory follow-up"
+        }
+      ],
+      cwd: bubble.paths.worktreePath
+    });
+
+    const artifact = await readDocContractGateArtifact(
+      resolveDocContractGateArtifactPath(bubble.paths.artifactsDir)
+    );
+    expect(artifact?.spec_lock_state).toEqual({
+      state: "IMPLEMENTABLE",
+      open_blocker_count: 0,
+      open_required_now_count: 1
+    });
+  });
+
+  it("persists LOCKED spec-lock state in document scope when blocker criteria are satisfied", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_scope_doc_spec_lock_locked_01",
+      task: "Document scope strict blocker lock test",
+      reviewArtifactType: "document"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 2,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:18:40.000Z",
+        last_command_at: "2026-02-21T12:18:40.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Document scope blocker finding should keep lock",
+      findings: [
+        {
+          priority: "P1",
+          timing: "required-now",
+          layer: "L1",
+          evidence: "docs/spec.md:90",
+          title: "Strict blocker with evidence"
+        }
+      ],
+      cwd: bubble.paths.worktreePath
+    });
+
+    expect(result.envelope.payload.findings).toEqual([
+      {
+        priority: "P1",
+        timing: "required-now",
+        layer: "L1",
+        evidence: "docs/spec.md:90",
+        title: "Strict blocker with evidence"
+      }
+    ]);
+
+    const artifact = await readDocContractGateArtifact(
+      resolveDocContractGateArtifactPath(bubble.paths.artifactsDir)
+    );
+    expect(artifact?.spec_lock_state).toEqual({
+      state: "LOCKED",
+      open_blocker_count: 1,
+      open_required_now_count: 1
+    });
+  });
+
+  it("downgrades document-scope required-now P1 without L1 layer to auditable non-blocker state", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_scope_doc_missing_layer_blocker_01",
+      task: "Document scope missing layer blocker downgrade",
+      reviewArtifactType: "document"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 2,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:18:45.000Z",
+        last_command_at: "2026-02-21T12:18:45.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Document scope missing layer blocker",
+      findings: [
+        {
+          priority: "P1",
+          timing: "required-now",
+          evidence: "docs/spec.md:55",
+          title: "Declared blocker without explicit L1 layer"
+        }
+      ],
+      cwd: bubble.paths.worktreePath
+    });
+
+    expect(result.envelope.payload.findings).toEqual([
+      {
+        priority: "P1",
+        timing: "required-now",
+        evidence: "docs/spec.md:55",
+        title: "Declared blocker without explicit L1 layer",
+        effective_priority: "P2"
+      }
+    ]);
+
+    const artifact = await readDocContractGateArtifact(
+      resolveDocContractGateArtifactPath(bubble.paths.artifactsDir)
+    );
+    expect(artifact?.spec_lock_state).toEqual({
+      state: "IMPLEMENTABLE",
+      open_blocker_count: 0,
+      open_required_now_count: 1
+    });
+    expect(artifact?.finding_evaluations[0]).toMatchObject({
+      priority: "P1",
+      effective_priority: "P2",
+      timing: "required-now",
+      effective_timing: "required-now"
+    });
+    expect(
+      artifact?.review_warnings.some(
+        (entry) =>
+          entry.reason_code === "REVIEW_SCHEMA_WARNING"
+          && entry.effective_priority === "P2"
+      )
+    ).toBe(true);
+  });
+
+  it("uses effective priority from normalized reviewer payload for bubble_passed finding-count metrics", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_scope_doc_metrics_01",
+      task: "Document scope metrics consistency",
+      reviewArtifactType: "document"
+    });
+    const metricsRoot = await mkdtemp(join(tmpdir(), "pairflow-pass-metrics-"));
+    tempDirs.push(metricsRoot);
+    const previousMetricsRoot = process.env.PAIRFLOW_METRICS_EVENTS_ROOT;
+    process.env.PAIRFLOW_METRICS_EVENTS_ROOT = metricsRoot;
+
+    try {
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          state: "RUNNING",
+          round: 3,
+          active_agent: bubble.config.agents.reviewer,
+          active_role: "reviewer",
+          active_since: "2026-02-21T12:19:00.000Z",
+          last_command_at: "2026-02-21T12:19:00.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "RUNNING"
+        }
+      );
+
+      const result = await emitPassFromWorkspace({
+        summary: "Document scope metrics consistency",
+        findings: [
+          {
+            title: "Declared blocker without evidence should be counted by effective priority",
+            priority: "P1",
+            timing: "required-now",
+            layer: "L1",
+            detail: "No finding-level evidence attached."
+          }
+        ],
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:20:00.000Z")
+      });
+
+      expect(result.envelope.payload.findings).toEqual([
+        {
+          title: "Declared blocker without evidence should be counted by effective priority",
+          priority: "P1",
+          timing: "later-hardening",
+          layer: "L1",
+          detail: "No finding-level evidence attached.",
+          effective_priority: "P2"
+        }
+      ]);
+
+      const shardRaw = await readFile(
+        join(metricsRoot, "2026", "02", "events-2026-02.ndjson"),
+        "utf8"
+      );
+      const events = shardRaw
+        .split(/\r?\n/u)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .map((line) => JSON.parse(line) as {
+          event_type: string;
+          metadata: {
+            p0?: number;
+            p1?: number;
+            p2?: number;
+            p3?: number;
+          };
+        });
+      const passEvent = [...events]
+        .reverse()
+        .find((event) => event.event_type === "bubble_passed");
+      expect(passEvent?.metadata.p0).toBe(0);
+      expect(passEvent?.metadata.p1).toBe(0);
+      expect(passEvent?.metadata.p2).toBe(1);
+      expect(passEvent?.metadata.p3).toBe(0);
+    } finally {
+      if (previousMetricsRoot === undefined) {
+        delete process.env.PAIRFLOW_METRICS_EVENTS_ROOT;
+      } else {
+        process.env.PAIRFLOW_METRICS_EVENTS_ROOT = previousMetricsRoot;
+      }
+    }
+  });
+
+  it("persists advisory parse warning marker when existing doc gate artifact is corrupt", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_scope_doc_corrupt_artifact_01",
+      task: "Document scope corrupt artifact fallback",
+      reviewArtifactType: "document"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 3,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:21:00.000Z",
+        last_command_at: "2026-02-21T12:21:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const gateArtifactPath = resolveDocContractGateArtifactPath(
+      bubble.paths.artifactsDir
+    );
+    await writeFile(gateArtifactPath, "{invalid-json", "utf8");
+
+    await emitPassFromWorkspace({
+      summary: "Document scope clean pass after corrupt gate artifact",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:22:00.000Z")
+    });
+
+    const artifact = await readDocContractGateArtifact(gateArtifactPath);
+    expect(
+      artifact?.config_warnings.some(
+        (entry) =>
+          entry.reason_code === "STATUS_GATE_SERIALIZATION_WARNING"
+          && entry.gate_id === "review.serialization"
+      )
+    ).toBe(true);
+  });
+
+  it("preserves task warnings when doc gate artifact is missing before reviewer PASS", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_scope_doc_missing_artifact_01",
+      task: `---
+artifact_type: task
+artifact_id: task_missing_phase1_fields
+status: draft
+phase: phase1
+prd_ref: null
+plan_ref: plans/tasks/example.md
+system_context_ref: docs/pairflow-initial-design.md
+---
+
+## L0 - Policy
+
+present
+
+## L1 - Change Contract
+
+present`,
+      reviewArtifactType: "document"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 3,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:21:30.000Z",
+        last_command_at: "2026-02-21T12:21:30.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const gateArtifactPath = resolveDocContractGateArtifactPath(
+      bubble.paths.artifactsDir
+    );
+    await rm(gateArtifactPath, { force: true });
+
+    await emitPassFromWorkspace({
+      summary: "Document scope no findings after missing gate artifact",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:22:30.000Z")
+    });
+
+    const artifact = await readDocContractGateArtifact(gateArtifactPath);
+    expect(
+      artifact?.task_warnings.some(
+        (entry) => entry.reason_code === "DOC_CONTRACT_PARSE_WARNING"
+      )
+    ).toBe(true);
+  });
+
+  it("records auditable metrics marker when doc gate artifact write fails in document scope", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_scope_doc_write_fail_01",
+      task: "Document scope write failure audit trail",
+      reviewArtifactType: "document"
+    });
+    const metricsRoot = await mkdtemp(join(tmpdir(), "pairflow-pass-metrics-"));
+    tempDirs.push(metricsRoot);
+    const previousMetricsRoot = process.env.PAIRFLOW_METRICS_EVENTS_ROOT;
+    process.env.PAIRFLOW_METRICS_EVENTS_ROOT = metricsRoot;
+
+    try {
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          state: "RUNNING",
+          round: 3,
+          active_agent: bubble.config.agents.reviewer,
+          active_role: "reviewer",
+          active_since: "2026-02-21T12:23:00.000Z",
+          last_command_at: "2026-02-21T12:23:00.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "RUNNING"
+        }
+      );
+
+      await rm(bubble.paths.artifactsDir, { recursive: true, force: true });
+      await writeFile(bubble.paths.artifactsDir, "blocked", "utf8");
+
+      await emitPassFromWorkspace({
+        summary: "Document scope pass with forced gate artifact write failure",
+        noFindings: true,
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:24:00.000Z")
+      });
+
+      const shardRaw = await readFile(
+        join(metricsRoot, "2026", "02", "events-2026-02.ndjson"),
+        "utf8"
+      );
+      const events = shardRaw
+        .split(/\r?\n/u)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .map((line) => JSON.parse(line) as {
+          event_type: string;
+          metadata: {
+            doc_gate_artifact_write_failed?: boolean;
+            doc_gate_artifact_write_failure_reason?: string;
+          };
+        });
+      const passEvent = [...events]
+        .reverse()
+        .find((event) => event.event_type === "bubble_passed");
+      expect(passEvent?.metadata.doc_gate_artifact_write_failed).toBe(true);
+      expect(passEvent?.metadata.doc_gate_artifact_write_failure_reason).toMatch(/\S/u);
+    } finally {
+      if (previousMetricsRoot === undefined) {
+        delete process.env.PAIRFLOW_METRICS_EVENTS_ROOT;
+      } else {
+        process.env.PAIRFLOW_METRICS_EVENTS_ROOT = previousMetricsRoot;
+      }
+    }
   });
 
   it("rejects reviewer fix_request intent when --no-findings is declared", async () => {
@@ -753,7 +1471,13 @@ describe("emitPassFromWorkspace", () => {
 
     expect(result.inferredIntent).toBe(false);
     expect(result.envelope.payload.pass_intent).toBe("fix_request");
-    expect(result.envelope.payload.findings).toEqual(findings);
+    expect(result.envelope.payload.findings).toEqual([
+      {
+        priority: "P2",
+        severity: "P2",
+        title: "Needs follow-up"
+      }
+    ]);
   });
 
   it("rejects reviewer task intent with --no-findings", async () => {

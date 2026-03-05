@@ -1,3 +1,9 @@
+import type {
+  FindingLayer,
+  FindingPriority,
+  FindingTiming
+} from "./findings.js";
+
 export const agentNames = ["codex", "claude"] as const;
 
 export type AgentName = (typeof agentNames)[number];
@@ -41,6 +47,23 @@ export const localOverlayModes = ["symlink", "copy"] as const;
 
 export type LocalOverlayMode = (typeof localOverlayModes)[number];
 
+export const docContractGateModes = ["advisory"] as const;
+
+export type DocContractGateMode = (typeof docContractGateModes)[number];
+
+export const gateSignalLevels = ["warning", "info"] as const;
+
+export type GateSignalLevel = (typeof gateSignalLevels)[number];
+
+export type GateReasonCode =
+  | "DOC_CONTRACT_PARSE_WARNING"
+  | "REVIEW_SCHEMA_WARNING"
+  | "BLOCKER_EVIDENCE_WARNING"
+  | "ROUND_GATE_WARNING"
+  | "ROUND_GATE_AUTODEMOTE"
+  | "STATUS_GATE_SERIALIZATION_WARNING"
+  | "GATE_CONFIG_PARSE_WARNING";
+
 export const attachLaunchers = [
   "auto",
   "warp",
@@ -74,6 +97,37 @@ export interface BubbleLocalOverlayConfig {
   entries: string[];
 }
 
+export interface BubbleDocContractGatesConfig {
+  mode: DocContractGateMode;
+  round_gate_applies_after: number;
+  parse_warning?: string;
+}
+
+export interface BubbleFailingGate {
+  gate_id: string;
+  reason_code: GateReasonCode | (string & {});
+  message: string;
+  priority: FindingPriority;
+  timing: FindingTiming;
+  layer?: FindingLayer;
+  evidence_refs?: string[];
+  signal_level?: GateSignalLevel;
+  effective_priority?: FindingPriority;
+}
+
+export interface BubbleSpecLockState {
+  state: "LOCKED" | "IMPLEMENTABLE";
+  open_blocker_count: number;
+  open_required_now_count: number;
+}
+
+export interface BubbleRoundGateState {
+  applies: boolean;
+  violated: boolean;
+  round: number;
+  reason_code?: string;
+}
+
 export interface BubbleConfig {
   id: string;
   bubble_instance_id?: string;
@@ -94,6 +148,7 @@ export interface BubbleConfig {
   commands: BubbleCommandsConfig;
   notifications: BubbleNotificationsConfig;
   local_overlay?: BubbleLocalOverlayConfig;
+  doc_contract_gates: BubbleDocContractGatesConfig;
 }
 
 export interface RoundRoleHistoryEntry {
@@ -193,6 +248,13 @@ export function isAttachLauncher(value: unknown): value is AttachLauncher {
   return (
     typeof value === "string" &&
     (attachLaunchers as readonly string[]).includes(value)
+  );
+}
+
+export function isDocContractGateMode(value: unknown): value is DocContractGateMode {
+  return (
+    typeof value === "string"
+    && (docContractGateModes as readonly string[]).includes(value)
   );
 }
 

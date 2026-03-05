@@ -27,7 +27,17 @@ import {
   summaryVerifierConsistencyGateSchemaVersion,
   writeSummaryVerifierConsistencyGateArtifact
 } from "../reviewer/summaryVerifierConsistencyGate.js";
-import type { AgentName, BubbleStateSnapshot } from "../../types/bubble.js";
+import {
+  isDocContractGateScopeActive,
+  readDocContractGateArtifact,
+  resolveDocContractGateArtifactPath
+} from "../gates/docContractGates.js";
+import type {
+  AgentName,
+  BubbleRoundGateState,
+  BubbleSpecLockState,
+  BubbleStateSnapshot
+} from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 
 export interface EmitConvergedInput {
@@ -129,6 +139,7 @@ export async function emitConvergedFromWorkspace(
     currentRound: state.round,
     reviewer,
     implementer,
+    reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
     roundRoleHistory: state.round_role_history,
     transcript
   });
@@ -137,6 +148,39 @@ export async function emitConvergedFromWorkspace(
       `Convergence validation failed: ${policy.errors.join(" ")}`
     );
   }
+
+  const docGateScopeActive = isDocContractGateScopeActive({
+    reviewArtifactType: resolved.bubbleConfig.review_artifact_type
+  });
+  const defaultSpecLockState: BubbleSpecLockState = {
+    state: "IMPLEMENTABLE" as const,
+    open_blocker_count: 0,
+    open_required_now_count: 0
+  };
+  const defaultRoundGateState: BubbleRoundGateState = {
+    applies: false,
+    violated: false,
+    round: state.round
+  };
+  let gateArtifact: Awaited<ReturnType<typeof readDocContractGateArtifact>> | undefined;
+  let docGateArtifactReadFailureReason: string | undefined;
+  if (docGateScopeActive) {
+    try {
+      gateArtifact = await readDocContractGateArtifact(
+        resolveDocContractGateArtifactPath(resolved.bubblePaths.artifactsDir)
+      );
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      docGateArtifactReadFailureReason = reason;
+      gateArtifact = undefined;
+    }
+  }
+  const specLockState = docGateScopeActive
+    ? gateArtifact?.spec_lock_state ?? defaultSpecLockState
+    : defaultSpecLockState;
+  const roundGateState = docGateScopeActive
+    ? gateArtifact?.round_gate_state ?? defaultRoundGateState
+    : defaultRoundGateState;
 
   if (resolved.bubbleConfig.accuracy_critical === true) {
     const verification = await readReviewVerificationArtifactStatus(
@@ -321,10 +365,24 @@ export async function emitConvergedFromWorkspace(
         summaryVerifierGateDecision.verifier_status,
       summary_verifier_gate_matched_claim_triggers:
         JSON.stringify(summaryVerifierGateDecision.matched_claim_triggers),
+      spec_lock_state: specLockState.state,
+      spec_lock_open_blocker_count: specLockState.open_blocker_count,
+      spec_lock_open_required_now_count: specLockState.open_required_now_count,
+      round_gate_applies: roundGateState.applies,
+      round_gate_violated: roundGateState.violated,
+      ...(roundGateState.reason_code !== undefined
+        ? { round_gate_reason_code: roundGateState.reason_code }
+        : {}),
       ...(summaryVerifierGateDecision.verifier_origin_reason !== undefined
         ? {
             summary_verifier_gate_verifier_origin_reason:
               summaryVerifierGateDecision.verifier_origin_reason
+          }
+        : {}),
+      ...(docGateArtifactReadFailureReason !== undefined
+        ? {
+            doc_gate_artifact_read_failed: true,
+            doc_gate_artifact_read_failure_reason: docGateArtifactReadFailureReason
           }
         : {})
     },

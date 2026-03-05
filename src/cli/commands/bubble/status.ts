@@ -76,6 +76,12 @@ export function parseBubbleStatusCommandOptions(
 }
 
 export function renderBubbleStatusText(status: BubbleStatusView): string {
+  const failingGateSummary =
+    status.failing_gates.length > 0
+      ? status.failing_gates
+        .map((gate) => `${gate.reason_code}`)
+        .join(", ")
+      : "-";
   const lines: string[] = [
     `Bubble: ${status.bubbleId}`,
     `State: ${status.state} (round ${status.round})`,
@@ -86,7 +92,9 @@ export function renderBubbleStatusText(status: BubbleStatusView): string {
     `Transcript: messages=${status.transcript.totalMessages}, last=${status.transcript.lastMessageType ?? "-"} @ ${status.transcript.lastMessageTs ?? "-"}`,
     `Accuracy critical: ${status.accuracy_critical ? "yes" : "no"}`,
     `Last review verification: ${status.last_review_verification}`,
-    `Failing gates: ${status.failing_gates.length > 0 ? status.failing_gates.join(", ") : "-"}`
+    `Failing gates: ${failingGateSummary}`,
+    `Spec lock: ${status.spec_lock_state.state} (blockers=${status.spec_lock_state.open_blocker_count}, required_now=${status.spec_lock_state.open_required_now_count})`,
+    `Round gate: applies=${status.round_gate_state.applies ? "yes" : "no"} violated=${status.round_gate_state.violated ? "yes" : "no"} round=${status.round_gate_state.round}${status.round_gate_state.reason_code ? ` reason=${status.round_gate_state.reason_code}` : ""}`
   ];
 
   if (status.watchdog.monitored && status.watchdog.expired) {

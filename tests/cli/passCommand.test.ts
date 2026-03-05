@@ -32,6 +32,7 @@ describe("parsePassCommandOptions", () => {
     expect(options.intent).toBe("review");
     expect(options.findings).toEqual([
       {
+        priority: "P1",
         severity: "P1",
         title: "Missing test",
         refs: [
@@ -56,6 +57,7 @@ describe("parsePassCommandOptions", () => {
     }
     expect(options.findings).toEqual([
       {
+        priority: "P2",
         severity: "P2",
         title: "Minor cleanup"
       }
@@ -132,6 +134,7 @@ describe("parsePassCommandOptions", () => {
     }
     expect(options.findings).toEqual([
       {
+        priority: "P1",
         severity: "P1",
         title: "Missing test",
         refs: ["artifact://review/failure,segment.log"]

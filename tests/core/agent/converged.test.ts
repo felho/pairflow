@@ -10,6 +10,7 @@ import { readTranscriptEnvelopes, appendProtocolEnvelope } from "../../../src/co
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { resolveReviewerTestEvidenceArtifactPath } from "../../../src/core/reviewer/testEvidence.js";
 import { resolveSummaryVerifierConsistencyGateArtifactPath } from "../../../src/core/reviewer/summaryVerifierConsistencyGate.js";
+import { resolveDocContractGateArtifactPath } from "../../../src/core/gates/docContractGates.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -22,11 +23,20 @@ async function createTempRepo(): Promise<string> {
   return root;
 }
 
-async function setupConvergedCandidateBubble(repoPath: string, bubbleId: string) {
+async function setupConvergedCandidateBubble(
+  repoPath: string,
+  bubbleId: string,
+  options?: {
+    reviewArtifactType?: "auto" | "document";
+  }
+) {
   const bubble = await setupRunningBubbleFixture({
     repoPath,
     bubbleId,
-    task: "Implement + review"
+    task: "Implement + review",
+    ...(options?.reviewArtifactType !== undefined
+      ? { reviewArtifactType: options.reviewArtifactType }
+      : {})
   });
 
   await emitPassFromWorkspace({
@@ -300,6 +310,110 @@ describe("emitConvergedFromWorkspace", () => {
     expect(gateArtifact.claim_classes_detected).toBe("none");
     expect(gateArtifact.matched_claim_triggers).toEqual([]);
     expect(gateArtifact).not.toHaveProperty("verifier_origin_reason");
+  });
+
+  it("does not fail-close convergence in advisory mode when persisted spec lock state is stale LOCKED", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupConvergedCandidateBubble(
+      repoPath,
+      "b_converged_spec_lock_advisory_01",
+      {
+        reviewArtifactType: "document"
+      }
+    );
+    const gateArtifactPath = resolveDocContractGateArtifactPath(bubble.paths.artifactsDir);
+    await writeFile(
+      gateArtifactPath,
+      JSON.stringify(
+        {
+          schema_version: 1,
+          updated_at: "2026-03-05T12:45:00.000Z",
+          task_warnings: [],
+          config_warnings: [],
+          review_warnings: [],
+          finding_evaluations: [],
+          round_gate_state: {
+            applies: false,
+            violated: false,
+            round: 2
+          },
+          spec_lock_state: {
+            state: "LOCKED",
+            open_blocker_count: 0,
+            open_required_now_count: 1
+          }
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const result = await emitConvergedFromWorkspace({
+      summary: "Converge despite stale lock in advisory mode.",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:04:00.000Z")
+    });
+
+    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+  });
+
+  it("records auditable metadata when doc-gate artifact is unreadable during docs-scope convergence", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupConvergedCandidateBubble(
+      repoPath,
+      "b_converged_doc_gate_read_warning_01",
+      {
+        reviewArtifactType: "document"
+      }
+    );
+    await writeFile(
+      resolveDocContractGateArtifactPath(bubble.paths.artifactsDir),
+      "{invalid-json",
+      "utf8"
+    );
+    const metricsRoot = await mkdtemp(join(tmpdir(), "pairflow-converged-metrics-"));
+    tempDirs.push(metricsRoot);
+    const previousMetricsRoot = process.env.PAIRFLOW_METRICS_EVENTS_ROOT;
+    process.env.PAIRFLOW_METRICS_EVENTS_ROOT = metricsRoot;
+
+    try {
+      await emitConvergedFromWorkspace({
+        summary: "Docs-only convergence with unreadable gate artifact.",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-22T09:06:00.000Z")
+      });
+
+      const shardRaw = await readFile(
+        join(metricsRoot, "2026", "02", "events-2026-02.ndjson"),
+        "utf8"
+      );
+      const events = shardRaw
+        .split(/\r?\n/u)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .map((line) => JSON.parse(line) as {
+          event_type: string;
+          metadata: {
+            doc_gate_artifact_read_failed?: boolean;
+            doc_gate_artifact_read_failure_reason?: string;
+          };
+        });
+      const convergedEvent = [...events]
+        .reverse()
+        .find((event) => event.event_type === "bubble_converged");
+
+      expect(convergedEvent?.metadata.doc_gate_artifact_read_failed).toBe(true);
+      expect(convergedEvent?.metadata.doc_gate_artifact_read_failure_reason).toContain(
+        "Invalid JSON in doc contract gate artifact"
+      );
+    } finally {
+      if (previousMetricsRoot === undefined) {
+        delete process.env.PAIRFLOW_METRICS_EVENTS_ROOT;
+      } else {
+        process.env.PAIRFLOW_METRICS_EVENTS_ROOT = previousMetricsRoot;
+      }
+    }
   });
 
   it("blocks convergence in accuracy-critical bubbles when latest review verification is missing", async () => {
@@ -772,6 +886,8 @@ describe("emitConvergedFromWorkspace", () => {
             {
               severity: "P1",
               title: "Data race risk",
+              timing: "required-now",
+              layer: "L1",
               refs: ["artifact://review/data-race-proof.md"]
             }
           ]
@@ -788,7 +904,50 @@ describe("emitConvergedFromWorkspace", () => {
     ).rejects.toThrow(/open P0\/P1 findings/u);
   });
 
-  it("rejects in round 3 when previous reviewer PASS has P2 findings", async () => {
+  it("keeps non-document convergence blocking semantics unchanged after reviewer PASS", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_converged_scope_non_doc_01",
+      task: "Scope compatibility",
+      reviewArtifactType: "auto"
+    });
+
+    await emitPassFromWorkspace({
+      summary: "Implementation handoff",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T11:21:00.000Z")
+    });
+    await emitPassFromWorkspace({
+      summary: "Reviewer found blocking issue",
+      findings: [
+        {
+          priority: "P1",
+          effective_priority: "P2",
+          timing: "required-now",
+          layer: "L1",
+          title: "Non-doc blocker without evidence should stay blocking"
+        }
+      ],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T11:22:00.000Z")
+    });
+    await emitPassFromWorkspace({
+      summary: "Implementation follow-up",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T11:23:00.000Z")
+    });
+
+    await expect(
+      emitConvergedFromWorkspace({
+        summary: "Should still block in non-doc scope",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-22T11:24:00.000Z")
+      })
+    ).rejects.toThrow(/open P0\/P1 findings/u);
+  });
+
+  it("allows in round 3 when previous reviewer PASS has only P2 findings", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -874,15 +1033,14 @@ describe("emitConvergedFromWorkspace", () => {
       }
     });
 
-    await expect(
-      emitConvergedFromWorkspace({
-        summary: "Should fail in round 3 because previous round had P2",
-        cwd: bubble.paths.worktreePath
-      })
-    ).rejects.toThrow(/Convergence blocked through round 3/u);
+    const result = await emitConvergedFromWorkspace({
+      summary: "Round 3 convergence with non-blocking findings",
+      cwd: bubble.paths.worktreePath
+    });
+    expect(result.state.state).toBe("READY_FOR_APPROVAL");
   });
 
-  it("rejects in round 2 when previous reviewer PASS has P2 findings", async () => {
+  it("allows in round 2 when previous reviewer PASS has only P2 findings", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -962,11 +1120,10 @@ describe("emitConvergedFromWorkspace", () => {
       }
     });
 
-    await expect(
-      emitConvergedFromWorkspace({
-        summary: "Should fail in round 2 because previous round had P2",
-        cwd: bubble.paths.worktreePath
-      })
-    ).rejects.toThrow(/Convergence blocked through round 3/u);
+    const result = await emitConvergedFromWorkspace({
+      summary: "Round 2 convergence with non-blocking findings",
+      cwd: bubble.paths.worktreePath
+    });
+    expect(result.state.state).toBe("READY_FOR_APPROVAL");
   });
 });
