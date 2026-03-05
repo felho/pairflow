@@ -17,6 +17,16 @@ import {
 import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import { readReviewVerificationArtifactStatus } from "../reviewer/reviewVerification.js";
+import {
+  resolveReviewerTestEvidenceArtifactPath,
+  resolveReviewerTestExecutionDirective
+} from "../reviewer/testEvidence.js";
+import {
+  evaluateSummaryVerifierConsistencyGate,
+  resolveSummaryVerifierConsistencyGateArtifactPath,
+  summaryVerifierConsistencyGateSchemaVersion,
+  writeSummaryVerifierConsistencyGateArtifact
+} from "../reviewer/summaryVerifierConsistencyGate.js";
 import type { AgentName, BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 
@@ -143,6 +153,47 @@ export async function emitConvergedFromWorkspace(
     }
   }
 
+  const reviewerTestDirective = await resolveReviewerTestExecutionDirective({
+    artifactPath: resolveReviewerTestEvidenceArtifactPath(resolved.bubblePaths.artifactsDir),
+    worktreePath: resolved.bubblePaths.worktreePath
+  }).catch(() => ({
+    skip_full_rerun: false,
+    reason_code: "evidence_unverifiable" as const,
+    reason_detail:
+      "Failed to resolve reviewer test directive due to verification runtime error.",
+    verification_status: "untrusted" as const
+  }));
+  const summaryVerifierGateDecision = evaluateSummaryVerifierConsistencyGate({
+    summary,
+    reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
+    verifierStatus: reviewerTestDirective.verification_status,
+    ...(reviewerTestDirective.verification_status === "trusted"
+      ? {}
+      : { verifierOriginReason: reviewerTestDirective.reason_code })
+  });
+  const summaryVerifierGateArtifactPath = resolveSummaryVerifierConsistencyGateArtifactPath(
+    resolved.bubblePaths.artifactsDir
+  );
+  try {
+    await writeSummaryVerifierConsistencyGateArtifact(summaryVerifierGateArtifactPath, {
+      schema_version: summaryVerifierConsistencyGateSchemaVersion,
+      bubble_id: resolved.bubbleId,
+      round: state.round,
+      evaluated_at: nowIso,
+      ...summaryVerifierGateDecision
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new ConvergedCommandError(
+      `Convergence validation failed: summary/verifier consistency gate audit write failed. Root error: ${reason}`
+    );
+  }
+  if (summaryVerifierGateDecision.gate_decision === "block") {
+    throw new ConvergedCommandError(
+      `Convergence validation failed: docs-only summary/verifier consistency gate blocked approval summary (reason_code=${summaryVerifierGateDecision.reason_code}, claim_classes_detected=${summaryVerifierGateDecision.claim_classes_detected}, verifier_status=${summaryVerifierGateDecision.verifier_status}, verifier_origin_reason=${summaryVerifierGateDecision.verifier_origin_reason ?? "unknown"}).`
+    );
+  }
+
   const lockPath = join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`);
   // Keep CONVERGENCE + APPROVAL_REQUEST contiguous in transcript by appending
   // them in one lock-guarded batch write.
@@ -261,7 +312,21 @@ export async function emitConvergedFromWorkspace(
       refs_count: refs.length,
       summary_length: Array.from(summary).length,
       convergence_envelope_id: convergence.envelope.id,
-      approval_request_envelope_id: approvalRequest.envelope.id
+      approval_request_envelope_id: approvalRequest.envelope.id,
+      summary_verifier_gate_decision: summaryVerifierGateDecision.gate_decision,
+      summary_verifier_gate_reason_code: summaryVerifierGateDecision.reason_code,
+      summary_verifier_gate_claim_classes_detected:
+        summaryVerifierGateDecision.claim_classes_detected,
+      summary_verifier_gate_verifier_status:
+        summaryVerifierGateDecision.verifier_status,
+      summary_verifier_gate_matched_claim_triggers:
+        JSON.stringify(summaryVerifierGateDecision.matched_claim_triggers),
+      ...(summaryVerifierGateDecision.verifier_origin_reason !== undefined
+        ? {
+            summary_verifier_gate_verifier_origin_reason:
+              summaryVerifierGateDecision.verifier_origin_reason
+          }
+        : {})
     },
     now
   });

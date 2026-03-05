@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -8,6 +8,8 @@ import { emitConvergedFromWorkspace, ConvergedCommandError } from "../../../src/
 import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
 import { readTranscriptEnvelopes, appendProtocolEnvelope } from "../../../src/core/protocol/transcriptStore.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
+import { resolveReviewerTestEvidenceArtifactPath } from "../../../src/core/reviewer/testEvidence.js";
+import { resolveSummaryVerifierConsistencyGateArtifactPath } from "../../../src/core/reviewer/summaryVerifierConsistencyGate.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -140,6 +142,164 @@ describe("emitConvergedFromWorkspace", () => {
 
     const inbox = await readTranscriptEnvelopes(bubble.paths.inboxPath);
     expect(inbox.map((entry) => entry.type)).toEqual(["APPROVAL_REQUEST"]);
+  });
+
+  it("blocks docs-only convergence when summary has runtime claims and verifier is untrusted", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_converged_docs_gate_01",
+      task: "Docs only round",
+      reviewArtifactType: "document"
+    });
+
+    await emitPassFromWorkspace({
+      summary: "Documentation update handoff.",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:01:00.000Z")
+    });
+    await emitPassFromWorkspace({
+      summary: "Review pass 1 clean",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:02:00.000Z")
+    });
+    await emitPassFromWorkspace({
+      summary: "Documentation update handoff 2.",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:03:00.000Z")
+    });
+
+    await rm(resolveReviewerTestEvidenceArtifactPath(bubble.paths.artifactsDir), {
+      force: true
+    });
+
+    await expect(
+      emitConvergedFromWorkspace({
+        summary: "tests pass, typecheck clean, lint clean.",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-22T09:04:00.000Z")
+      })
+    ).rejects.toThrow(/summary\/verifier consistency gate blocked approval summary/u);
+
+    const gateArtifactPath = resolveSummaryVerifierConsistencyGateArtifactPath(
+      bubble.paths.artifactsDir
+    );
+    const gateArtifactRaw = await readFile(gateArtifactPath, "utf8");
+    const gateArtifact = JSON.parse(gateArtifactRaw) as {
+      gate_decision: string;
+      reason_code: string;
+      review_artifact_type: string;
+      verifier_status: string;
+      claim_classes_detected: string;
+      matched_claim_triggers: string[];
+      verifier_origin_reason?: string;
+    };
+
+    expect(gateArtifact.gate_decision).toBe("block");
+    expect(gateArtifact.reason_code).toBe("summary_verifier_mismatch");
+    expect(gateArtifact.review_artifact_type).toBe("document");
+    expect(gateArtifact.verifier_status).toBe("untrusted");
+    expect(gateArtifact.claim_classes_detected).toBe("test,typecheck,lint");
+    expect(gateArtifact.matched_claim_triggers).toEqual([
+      "tests pass",
+      "typecheck clean",
+      "lint clean"
+    ]);
+    expect(gateArtifact.verifier_origin_reason).toBe("evidence_missing");
+    expect(gateArtifact).not.toHaveProperty("reason_detail");
+  });
+
+  it("allows docs-only convergence with claim-free summary even when verifier is untrusted", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_converged_docs_gate_02",
+      task: "Docs only round",
+      reviewArtifactType: "document"
+    });
+
+    await emitPassFromWorkspace({
+      summary: "Documentation update handoff.",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:01:00.000Z")
+    });
+    await emitPassFromWorkspace({
+      summary: "Review pass 1 clean",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:02:00.000Z")
+    });
+    await emitPassFromWorkspace({
+      summary: "Documentation update handoff 2.",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:03:00.000Z")
+    });
+
+    await rm(resolveReviewerTestEvidenceArtifactPath(bubble.paths.artifactsDir), {
+      force: true
+    });
+
+    const result = await emitConvergedFromWorkspace({
+      summary: "Runtime checks not required for docs-only scope.",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:04:00.000Z")
+    });
+
+    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    const gateArtifactPath = resolveSummaryVerifierConsistencyGateArtifactPath(
+      bubble.paths.artifactsDir
+    );
+    const gateArtifactRaw = await readFile(gateArtifactPath, "utf8");
+    const gateArtifact = JSON.parse(gateArtifactRaw) as {
+      gate_decision: string;
+      reason_code: string;
+      verifier_status: string;
+      claim_classes_detected: string;
+      matched_claim_triggers: string[];
+    };
+
+    expect(gateArtifact.gate_decision).toBe("allow");
+    expect(gateArtifact.reason_code).toBe("no_claim_in_docs_only");
+    expect(gateArtifact.verifier_status).toBe("untrusted");
+    expect(gateArtifact.claim_classes_detected).toBe("none");
+    expect(gateArtifact.matched_claim_triggers).toEqual([]);
+    expect(gateArtifact).not.toHaveProperty("verifier_origin_reason");
+  });
+
+  it("keeps non-docs convergence as not_applicable even with runtime-claim summary", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupConvergedCandidateBubble(repoPath, "b_converged_docs_gate_03");
+
+    await rm(resolveReviewerTestEvidenceArtifactPath(bubble.paths.artifactsDir), {
+      force: true
+    });
+
+    const result = await emitConvergedFromWorkspace({
+      summary: "tests pass and typecheck clean.",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T09:04:00.000Z")
+    });
+
+    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    const gateArtifactPath = resolveSummaryVerifierConsistencyGateArtifactPath(
+      bubble.paths.artifactsDir
+    );
+    const gateArtifactRaw = await readFile(gateArtifactPath, "utf8");
+    const gateArtifact = JSON.parse(gateArtifactRaw) as {
+      gate_decision: string;
+      reason_code: string;
+      review_artifact_type: string;
+      claim_classes_detected: string;
+      matched_claim_triggers: string[];
+    };
+
+    expect(gateArtifact.gate_decision).toBe("not_applicable");
+    expect(gateArtifact.reason_code).toBe("not_applicable_non_docs");
+    expect(gateArtifact.review_artifact_type).toBe("auto");
+    expect(gateArtifact.claim_classes_detected).toBe("none");
+    expect(gateArtifact.matched_claim_triggers).toEqual([]);
+    expect(gateArtifact).not.toHaveProperty("verifier_origin_reason");
   });
 
   it("blocks convergence in accuracy-critical bubbles when latest review verification is missing", async () => {
