@@ -16,6 +16,7 @@ Right now, the scope boundary between docs-specific logic and system-wide logic 
 ## v2 intention (high level)
 
 We want a model that is both simpler and more flexible:
+
 - clearer terms and boundaries,
 - easier-to-follow decision paths,
 - less duplicated policy logic across commands,
@@ -25,3 +26,9 @@ We want a model that is both simpler and more flexible:
 
 No architecture migration is planned in this note right now.
 This is a reminder to run a focused Architecture v2 design pass immediately after the current doc-contract-gates implementation is closed.
+
+## Ideas
+
+So we need to think about how the V2 architecture should enable us to configure the v1 version of Pairflow and any other workflow.
+Another idea is that we need to think about that. Right now, we have this idea that we have the current reviewer, and there is a review I'm doing right now manually. In many cases, that manual review is just kind of accepting what the coding agents suggest from a rework perspective, usually. The new version should enable adding additional steps as well.
+Another idea that I heard was that there was an interesting case when I think it was an entropic engineer defined a huge task. When the coding agent was confused, based on blame, it figured out which engineer wrote a specific code, and it reached out on Slack to get the answer. I like this idea, and I was thinking it would be very nice that, for example, if the agent needs help, then that can be a state transition into "I need help" mode. That mode can trigger a subworkflow where, for example, he tries to reach out to me on Slack and say, "Hey, can you please ask for me just this question?" so then I can go back and continue the work or something like that. I think enabling this would be just super super cool. And of course the medium is not important here, because I can imagine that the same workflow could happen, for example, that I trigger the whole process, for example, on Github as a Github issue. Whenever the agent needs some information, he just adds a comment and mentions me, and if I answered that comment, then that answer is sent to the workflow. So this is kinda, so we need to think through this, but it's kind of like right now. Now we have this CLI-based core, and that would mean that when the workflow is running, it is possible to interact with it from different communication channels. The message goes through the workflow, the current instance of the workflow, and it can figure out how to deal with that piece of information.
