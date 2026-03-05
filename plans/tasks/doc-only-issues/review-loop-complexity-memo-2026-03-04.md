@@ -10,6 +10,17 @@ Referenciak:
 - severity policy: `docs/reviewer-severity-ontology.md`
 - convergence policy baseline: `docs/pairflow-initial-design.md`
 
+## Active Scope Snapshot (quick view)
+
+Fut most (in scope):
+1. Doc workflow es task contract (`L0/L1/L2`, frontmatter policy).
+2. Pairflow doc-contract gate-ek advisory modban.
+3. Skill alapu PRD/Plan/Task authoring workflow.
+4. Rollout/pilot es meres (Phase 1 -> Phase 2 elokeszites).
+
+Parkolva (out of current initiative scope):
+1. Pairflow Architecture v2 redesign (`docs/pairflow-architecture-v2-note.md`).
+
 ## 1) Cel (mi valtozik)
 
 A cel egy olyan szabvanyositott dokumentacios + review rendszer bevezetese, amely:
@@ -41,6 +52,7 @@ A cel egy olyan szabvanyositott dokumentacios + review rendszer bevezetese, amel
 1. Teljes uj severity ontology redesign.
 2. Projekt-specifikus stilusok teljes homogenizalasa.
 3. Azonnali hard-fail enforcement minden bubble-re pilot nelkul.
+4. Pairflow Architecture v2 redesign (kulon initiative, nem resze ennek a programnak).
 
 ## 4) Megvalositas: 4 workstream
 
@@ -164,6 +176,8 @@ Kimenet:
 4. `L2` nem blokkol implementaciot; backlogba megy.
 5. Kulon `escape hatch` (split/revert mechanika) most nem kerul bevezetese.
    Kiveteles helyzetben a meglevo human intervention folyamat hasznalhato.
+6. Az `architecture v2` tema kikerult ennek a projektnek a scope-jabol.
+   Ez kulon, kesobbi tervezesi initiative-kent kezelendo.
 
 ## 9) Kovetkezo konkret lepesek
 

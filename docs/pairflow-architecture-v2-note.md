@@ -1,6 +1,6 @@
 # Pairflow Architecture v2 Note
 
-Status: draft note  
+Status: parking lot (out of current initiative scope)  
 Date: 2026-03-05
 
 ## Why this note exists
@@ -24,8 +24,9 @@ We want a model that is both simpler and more flexible:
 
 ## Timing
 
-No architecture migration is planned in this note right now.
-This is a reminder to run a focused Architecture v2 design pass immediately after the current doc-contract-gates implementation is closed.
+Architecture v2 is not part of the current review-loop/doc-contract-gates initiative.
+No architecture migration is planned from this note in the current project.
+If resumed later, it should run as a separate initiative with dedicated scope and milestones.
 
 ## Ideas
 
