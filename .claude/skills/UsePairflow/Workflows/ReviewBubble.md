@@ -25,6 +25,9 @@ MESSAGE: extracted from `--message` (required when `DECIDE=rework`)
 - Include evidence summary and distinguish hard evidence from soft statements.
 - For rework, message must be specific, evidence-backed, actionable, and verifiable.
 - If state is not `READY_FOR_APPROVAL`, do review-only output and do not execute decision commands.
+- Review flowban **ne** futtasd automatikusan a `pairflow bubble open` parancsot.
+- A `pairflow bubble open` editor launchot indit (pl. Cursor), ezert csak akkor hasznald, ha a user ezt explicit keri.
+- Worktree elereshez a `pairflow bubble status --json` `worktreePath` mezot hasznald, es ezen a path-on dolgozz kozvetlen `git -C`/file read parancsokkal.
 
 ## Error Messages
 
@@ -50,7 +53,7 @@ pairflow bubble inbox --id <BUBBLE_ID> --repo <REPO_PATH>
 ```
 
 3. Gather review context from worktree.
-- Read bubble worktree path/branch from status metadata.
+- Read bubble worktree path/branch from status metadata (without `bubble open`).
 - Collect changed files and diff summary:
   ```bash
   git -C <BUBBLE_WORKTREE> status --short
