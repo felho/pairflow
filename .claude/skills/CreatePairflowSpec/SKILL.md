@@ -15,6 +15,32 @@ Create and refine Pairflow specification artifacts that are implementable by LLM
 | **CreatePlan** | "create plan", "new implementation plan", "phase plan" | `Workflows/CreatePlan.md` |
 | **CreateTask** | "create task", "task file", "task spec", "l0 l1 l2" | `Workflows/CreateTask.md` |
 
+## Mandatory Work-Type Triage
+
+Before choosing the workflow output shape, classify the request:
+
+| Work Type | Minimum Artifacts | Policy |
+|-----------|-------------------|--------|
+| bugfix | Task only allowed | `prd_ref: null`, `plan_ref: null` is acceptable. |
+| docs-only | Task only allowed | `prd_ref: null`, `plan_ref: null` is acceptable. |
+| small feature | Task only by default | Plan is required if contract-boundary override is triggered. |
+| large feature | PRD -> Plan -> Task | Task should reference both PRD and Plan. |
+| new app / greenfield | PRD -> Plan -> Task(s) | Start from PRD, then Plan, then Task split. |
+
+## Contract-Boundary Override (Mandatory)
+
+If any of the following is true, apply contract-boundary override:
+1. DB schema contract changes (new table/column/index/constraint, migration).
+2. Public API/interface contract changes (request/response, status semantics).
+3. Event/message payload contract changes.
+4. Auth/permission model changes.
+5. Config/env contract changes required for runtime behavior.
+
+Override policy:
+1. Minimum artifact chain becomes `Plan -> Task` (task-only is not allowed).
+2. `plan_ref` must not be `null`.
+3. L1 must explicitly capture the changed interface contract and test coverage.
+
 ## Core Principles
 
 1. Context-first: load known context before asking questions.
@@ -30,6 +56,9 @@ Create and refine Pairflow specification artifacts that are implementable by LLM
 2. `target_files` must not contradict L1 call-site matrix.
 3. Every L1 section must be either filled or explicitly marked `N/A`.
 4. Do not force all L1 items to `P1`; assign severity based on evidence.
+5. Every refined Task output must include a standard `Hardening Backlog` section for non-blocking (`later-hardening`) items.
+6. If contract-boundary override is triggered, `plan_ref` is mandatory and L1 contract rows for impacted boundaries are mandatory.
+7. L1 must explicitly include: required vs optional fields, exact entry signatures, pure-by-default side-effect rule, and dependency-failure fallback where applicable.
 
 ## Templates and References
 

@@ -33,20 +33,25 @@ owners:
 
 1. <default-safe behavior>
 
+### Contract Boundary / Blast Radius
+
+1. `contract_boundary_override`: `yes|no`
+2. If `yes`, list impacted contracts (DB/API/event/auth/config) and keep `plan_ref` non-null.
+
 ## L1 - Change Contract
 
 ### 1) Call-site Matrix
 
-| ID | File | Function/Entry | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
-|---|---|---|---|---|---|---|---|
-| CS1 | <path> | <name> | <point> | <behavior> | P1 | required-now | <proof> |
+| ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
+|---|---|---|---|---|---|---|---|---|
+| CS1 | <path> | <name> | <sig> | <point> | <behavior> | P1 | required-now | <proof> |
 
 ### 2) Data and Interface Contract
 
-| Contract | Current | Target | Compatibility | Priority | Timing |
-|---|---|---|---|---|---|
-| Input type | <text> | <text> | non-breaking | P1 | required-now |
-| Output type | <text> | <text> | non-breaking | P1 | required-now |
+| Contract | Current | Target | Required Fields | Optional Fields | Compatibility | Priority | Timing |
+|---|---|---|---|---|---|---|---|
+| Input type/schema | <text> | <text> | <fields> | <fields> | non-breaking | P1 | required-now |
+| Output type/schema | <text> | <text> | <fields> | <fields> | non-breaking | P1 | required-now |
 
 ### 3) Side Effects Contract
 
@@ -54,11 +59,14 @@ owners:
 |---|---|---|---|---|---|
 | DB/Event/FS/Network | <text> | <text> | <text> | P1 | required-now |
 
+Constraint: if no allowed side effects are listed above, implementation must be pure.
+
 ### 4) Error and Fallback Contract
 
-| Trigger | Behavior (`throw|result|fallback`) | Reason Code | Log Level | Priority | Timing |
-|---|---|---|---|---|---|
-| <condition> | <behavior> | <code> | <level> | P1 | required-now |
+| Trigger | Dependency (if any) | Behavior (`throw|result|fallback`) | Fallback Value/Action | Reason Code | Log Level | Priority | Timing |
+|---|---|---|---|---|---|---|---|
+| <condition> | <dep-or-N/A> | <behavior> | <fallback> | <code> | <level> | P1 | required-now |
+| dependency failure | <service/db/api> | fallback | <safe default> | DEPENDENCY_FAIL | warn | P1 | required-now |
 
 ### 5) Dependency Constraints
 
@@ -79,12 +87,21 @@ owners:
 1. [later-hardening] <non-blocking detail>
 2. [later-hardening] <non-blocking detail>
 
+## Hardening Backlog (Optional)
+
+Use this section to track non-blocking review items (`later-hardening`) that should not prevent implementation.
+
+| ID | Item | Layer | Priority | Timing | Source | Proposed Action |
+|---|---|---|---|---|---|---|
+| H1 | <item> | L2 | P2 | later-hardening | <review round/ref> | <drop or open follow-up task> |
+
 ## Review Control
 
 1. Every finding must include: `priority`, `timing`, `layer`, `evidence`.
 2. Max 2 L1 hardening rounds.
 3. After round 2, new `required-now` is allowed only for evidence-backed `P0/P1`.
 4. Items outside L1 blocker scope must be tagged `later-hardening`.
+5. If `contract_boundary_override=yes`, `plan_ref` is mandatory and must align with L1 contract rows.
 
 ## Spec Lock
 

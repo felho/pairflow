@@ -14,4 +14,10 @@ L1 categories:
 5. Dependency constraints
 6. Test matrix
 
+Required clarifications inside L1:
+1. Mark required vs optional fields for changed input/output contracts.
+2. Record exact public entry signature for each changed call-site.
+3. Pure-by-default rule: if allowed side effects are not listed, implementation is pure.
+4. If dependencies exist, include explicit dependency-failure fallback behavior.
+
 Any item not crossing these boundaries should default to `later-hardening`.

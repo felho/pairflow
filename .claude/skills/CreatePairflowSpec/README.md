@@ -23,6 +23,9 @@ Teams often have enough context already, but lose time in long interviews or end
 2. L2 notes are optional and non-blocking.
 3. `P0/P1` requires evidence; otherwise downgrade.
 4. `target_files` is required for code-generation context loading.
+5. Work type determines minimum artifact chain (`task-only` vs `PRD -> Plan -> Task`).
+6. `later-hardening` items are emitted in a standard Hardening Backlog block.
+7. Contract-boundary override forces at least `Plan -> Task` even for small features.
 
 ## Directory layout
 

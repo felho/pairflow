@@ -20,6 +20,11 @@ Default topology for medium/large work:
 Small standalone change (bugfix/small task):
 1. One task file only, with `prd_ref: null` and `plan_ref: null`.
 
+Contract-boundary override (mandatory):
+1. If the change modifies DB/API/event/auth/config contract, task-only is not enough.
+2. Minimum chain becomes `Plan -> Task` (`plan_ref` must be non-null).
+3. For large/new-app scope, keep `PRD -> Plan -> Task`.
+
 ## Required Frontmatter Contract
 
 Every task file must contain:
@@ -111,7 +116,9 @@ pairflow bubble merge --id <id> --repo <abs_repo_path>
 
 ### B) Small feature in existing system
 
-1. Create PRD-lite + one plan + one or two tasks.
+1. Check contract-boundary override first:
+   - if no contract/interface change: one task file is enough.
+   - if contract/interface change exists: create one plan + one or two tasks.
 2. Commit docs on `main`.
 3. Start bubble per task.
 4. Close each bubble independently.
@@ -135,4 +142,3 @@ pairflow bubble merge --id <id> --repo <abs_repo_path>
 1. Phase 1 (`advisory`): check and warn only.
 2. Phase 2 (`required-docs`): hard-gate doc-only/task bubbles.
 3. Phase 3 (`required-all`): enforce on all bubbles.
-
