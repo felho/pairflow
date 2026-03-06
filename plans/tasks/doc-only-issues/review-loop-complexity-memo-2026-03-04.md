@@ -1,7 +1,7 @@
 # Programterv: Review Loop Stabilization es LLM-Ready Doc Workflow
 
 Datum: 2026-03-04  
-Statusz: draft, implementation-oriented  
+Statusz: in-progress (WS-A/WS-B/WS-C delivered, WS-D pending)  
 Tulajdonos: Pairflow docs+runtime
 
 Referenciak:
@@ -98,6 +98,8 @@ Kimenet:
 
 ### WS-C: Skill workflow (authoring layer)
 
+Statusz: delivered (2026-03-06)
+
 Feladatok:
 1. Uj skill a dokumentumirasi folyamathoz (repo-stilus kompatibilisen).
 2. Kotelezo kerdesfa:
@@ -111,6 +113,12 @@ Feladatok:
 Kimenet:
 1. Skill utmutato + promptflow.
 2. Standard output format task-file updatehez.
+3. Contract-boundary override policy (`contract_boundary_override`) bekotve.
+4. L1 explicitites hardening bekotve:
+   - required vs optional fields,
+   - exact entry signature,
+   - pure-by-default side-effect szabaly,
+   - dependency-failure fallback szabaly.
 
 ### WS-D: Rollout es meres (adoption layer)
 
@@ -182,9 +190,9 @@ Kimenet:
 ## 9) Kovetkezo konkret lepesek
 
 1. A sablonokat kiserleti modban alkalmazzuk 2 uj taskon.
-2. Keszuljon kulon implementacios task a WS-B runtime gate-ekre.
-3. Keszuljon kulon implementacios task a WS-C skill workflowra.
-4. 1 het pilot utan meres + policy finomitas.
+2. 1 het pilot utan meres + policy finomitas (WS-D).
+3. Keszuljon kulon implementacios task a Phase 2 `required-docs` enforce-ra.
+4. A memo statusz/done kriteriumok frissitese pilot eredmenyek alapjan.
 
 ## 10) Inline reviewer guidelines (temporary)
 
