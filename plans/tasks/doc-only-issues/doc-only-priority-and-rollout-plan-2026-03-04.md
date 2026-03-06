@@ -1,15 +1,16 @@
 # Docs-Only Issues Priority + Rollout Plan (2026-03-04)
 
 ## Status
-- Date: 2026-03-05
+- Date: 2026-03-06
 - Owner: felho
 - State: In Progress
 
-## Progress Snapshot (2026-03-05)
+## Progress Snapshot (2026-03-06)
 
 1. Completed: P0/1 (`doc-only-temporary-disable-runtime-checks-phase1.md`) merged on 2026-03-04 via `c24c20f` (`bubble/doc-only-runtime-checks-phase1-impl`) and `7eaf70e` (merge to `main`).
-2. Next active item: P0/2 (`doc-only-summary-verifier-consistency-gate-phase1.md`) to remove summary-vs-verifier contradiction.
-3. Not started: P1/1 evidence source whitelist, P1/2 operational decision matrix rollout, P2/1 claim-based validation architecture.
+2. Completed: P0/2 (`doc-only-summary-verifier-consistency-gate-phase1.md`) merged via `f631ecd` + `3b7f68d`.
+3. Next active item: P1/1 (`doc-only-evidence-source-whitelist-phase1.md`) using the new L0/L1/L2 contract workflow.
+4. Not started: P1/2 operational decision matrix rollout, P2/1 claim-based validation architecture.
 
 ## Objective
 
@@ -53,7 +54,7 @@ Exit criteria:
 1. Docs-only bubble check hiány miatt nem áll meg.
 2. Nincs kötelező test/typecheck expectation docs-only módban.
 
-### Step 2 (Next)
+### Step 2 (Completed)
 
 1. Implement P0/2: summary-verifier consistency hard gate.
 2. Add regression tests for prior mismatch pattern.
@@ -62,7 +63,7 @@ Exit criteria:
 1. Nem mehet ki clean validation claim, ha verifier státusz nem kompatibilis.
 2. Approval ping-pong mismatch incidensek megszűnnek.
 
-### Step 3 (Same sprint, can run partly parallel with Step 2)
+### Step 3 (Next)
 
 1. Implement P1/1: evidence source whitelist.
 2. Update docs about accepted evidence ref patterns.
