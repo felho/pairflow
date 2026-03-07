@@ -33,6 +33,8 @@ describe("reviewer scout expansion diff-scope guardrails", () => {
     expect(guidance).toMatch(historyLogAnchor);
     expect(guidance).toMatch(worktreeAnchor);
     expect(guidance).toMatch(fallbackAnchor);
+    expect(guidance).toContain("final reviewer output package");
+    expect(guidance).not.toContain("final reviewer PASS package");
     expect(guidance).not.toContain(
       "For summary scope claims, do not use `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`)."
     );
@@ -44,6 +46,12 @@ describe("reviewer scout expansion diff-scope guardrails", () => {
   it("narrows scope_covered to current worktree changes only in PASS contract guidance", () => {
     const guidance = buildReviewerPassOutputContractGuidance();
 
+    expect(guidance).toContain(
+      "Required reviewer output contract (machine-checkable)"
+    );
+    expect(guidance).not.toContain(
+      "Required reviewer PASS output contract (machine-checkable)"
+    );
     expect(guidance).toContain(
       "`Scout Coverage.scope_covered` must describe current worktree changes only"
     );

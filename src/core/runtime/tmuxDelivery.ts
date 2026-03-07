@@ -10,6 +10,13 @@ import {
   buildReviewerScoutExpansionWorkflowGuidance
 } from "./reviewerScoutExpansionGuidance.js";
 import {
+  reviewerCommandGateBlockerUnchanged,
+  reviewerCommandGateRound1,
+  reviewerCommandGateRound2Clean,
+  reviewerCommandGateRound2CleanPassForbidden,
+  reviewerCommandGateRound2Findings
+} from "./reviewerCommandGateGuidance.js";
+import {
   buildReviewerDecisionMatrixReminder,
   formatReviewerTestExecutionDirective,
   type ReviewerTestExecutionDirective
@@ -127,8 +134,8 @@ function buildDeliveryMessage(
           : formatReviewerTestExecutionDirective(reviewerTestDirective);
       const convergenceInstruction =
         envelope.round <= 1
-          ? "Round 1 guardrail: do not run `pairflow converged`. If clean, hand off with `pairflow pass --summary ... --no-findings`; if findings remain, use `pairflow pass --summary ... --finding ...`."
-          : "If findings remain, run `pairflow pass --summary ... --finding 'P1:...|artifact://...'` (repeatable; for P0/P1 include finding-level refs). If clean, run `pairflow converged --summary` directly (do not run `pairflow pass --no-findings` first).";
+          ? `${reviewerCommandGateRound1} ${reviewerCommandGateBlockerUnchanged} Round 1 guardrail: do not run \`pairflow converged\`. If clean, hand off with \`pairflow pass --summary ... --no-findings\`; if findings remain, use \`pairflow pass --summary ... --finding ...\`.`
+          : `${reviewerCommandGateRound2Clean} ${reviewerCommandGateRound2CleanPassForbidden} ${reviewerCommandGateRound2Findings} ${reviewerCommandGateBlockerUnchanged} If findings remain, run \`pairflow pass --summary ... --finding 'P1:...|artifact://...'\` (repeatable; for P0/P1 include finding-level refs). If clean, run \`pairflow converged --summary\` directly (do not run \`pairflow pass --no-findings\` first).`;
       action =
         `Implementer handoff received. Run a fresh review now. ${buildReviewerAgentSelectionGuidance(
           bubbleConfig.review_artifact_type

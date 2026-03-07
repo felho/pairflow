@@ -177,8 +177,8 @@ Constraint: if no allowed side effects are listed above, implementation must be 
 
 | ID | Scope | Check Type | Assertion | Evidence |
 |---|---|---|---|---|
-| RC1 | scope boundary / policy | manual doc review-check | AC3 akkor teljesul, ha a dokumentum explicit kimondja: blocker policy nem bovul ebben a taskban, es ez Out of Scope-ban is konzisztens | `plans/tasks/reviewer-clean-pass-command-gate-prompt-hardening-bugfix-phase1.md` |
-| RC2 | metadata consistency | manual doc review-check | AC7 akkor teljesul, ha frontmatter `status: implementable` es Spec Lock `IMPLEMENTABLE` gate ugyanarra az allapotra utal | `plans/tasks/reviewer-clean-pass-command-gate-prompt-hardening-bugfix-phase1.md` |
+| RC1 | scope boundary / policy | manual doc review-check | AC3 akkor teljesul, ha a dokumentum explicit kimondja: blocker policy nem bovul ebben a taskban, es ez Out of Scope-ban is konzisztens | `plans/archive/tasks/reviewer-clean-pass-command-gate-prompt-hardening-bugfix-phase1.md` |
+| RC2 | metadata consistency | manual doc review-check | AC7 akkor teljesul, ha frontmatter `status: implementable` es Spec Lock `IMPLEMENTABLE` gate ugyanarra az allapotra utal | `plans/archive/tasks/reviewer-clean-pass-command-gate-prompt-hardening-bugfix-phase1.md` |
 
 ### 9) AC <-> Check <-> Spec Lock Mapping
 

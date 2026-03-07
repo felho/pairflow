@@ -33,6 +33,13 @@ import {
   buildReviewerPassOutputContractGuidance,
   buildReviewerScoutExpansionWorkflowGuidance
 } from "../runtime/reviewerScoutExpansionGuidance.js";
+import {
+  reviewerCommandGateBlockerUnchanged,
+  reviewerCommandGateRound1,
+  reviewerCommandGateRound2Clean,
+  reviewerCommandGateRound2CleanPassForbidden,
+  reviewerCommandGateRound2Findings
+} from "../runtime/reviewerCommandGateGuidance.js";
 import { ensureBubbleInstanceIdForMutation } from "./bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import {
@@ -144,6 +151,10 @@ function buildReviewerStartupPrompt(input: {
       ? [formatReviewerBriefPrompt(input.reviewerBriefText)]
       : []),
     "If findings remain, run `pairflow pass --summary ... --finding 'P1:...|artifact://...'` (repeatable; for P0/P1 include finding-level refs).",
+    reviewerCommandGateRound1,
+    reviewerCommandGateRound2Clean,
+    reviewerCommandGateRound2CleanPassForbidden,
+    reviewerCommandGateBlockerUnchanged,
     "Round 1 guardrail: do not run `pairflow converged` in round 1. In round 1, always hand off with `pairflow pass` and explicit findings declaration (`--finding` or `--no-findings`).",
     "From round 2 onward, if clean, run `pairflow converged --summary` directly (do not run `pairflow pass --no-findings` first).",
     "Execute pairflow commands directly from this worktree (do not ask for confirmation first).",
@@ -266,6 +277,10 @@ function buildResumeReviewerStartupPrompt(input: {
     ...(input.reviewerBriefText !== undefined
       ? [formatReviewerBriefPrompt(input.reviewerBriefText)]
       : []),
+    reviewerCommandGateRound1,
+    reviewerCommandGateRound2Clean,
+    reviewerCommandGateRound2CleanPassForbidden,
+    reviewerCommandGateBlockerUnchanged,
     "Round 1 guardrail: do not run `pairflow converged` in round 1. In round 1, always hand off with `pairflow pass` and explicit findings declaration (`--finding` or `--no-findings`).",
     "From round 2 onward, if clean, run `pairflow converged --summary` directly (do not run `pairflow pass --no-findings` first).",
     roleInstruction
@@ -298,8 +313,8 @@ function buildResumeReviewerKickoffMessage(input: {
 }): string {
   const roundActionLine =
     input.round <= 1
-      ? "Round 1 guardrail: do not run `pairflow converged`. If clean, hand off with `pairflow pass --summary ... --no-findings`; if findings remain, use `pairflow pass --summary ... --finding ...`."
-      : "Continue active review. If findings remain, run `pairflow pass --summary ... --finding ...`; if clean, run `pairflow converged --summary` directly (do not run `pairflow pass --no-findings` first).";
+      ? `${reviewerCommandGateRound1} ${reviewerCommandGateBlockerUnchanged} Round 1 guardrail: do not run \`pairflow converged\`. If clean, hand off with \`pairflow pass --summary ... --no-findings\`; if findings remain, use \`pairflow pass --summary ... --finding ...\`.`
+      : `${reviewerCommandGateRound2Clean} ${reviewerCommandGateRound2CleanPassForbidden} ${reviewerCommandGateRound2Findings} ${reviewerCommandGateBlockerUnchanged} Continue active review. If findings remain, run \`pairflow pass --summary ... --finding ...\`; if clean, run \`pairflow converged --summary\` directly (do not run \`pairflow pass --no-findings\` first).`;
   return [
     `# [pairflow] bubble=${input.bubbleId} resume kickoff (reviewer).`,
     `State is RUNNING at round ${input.round}.`,

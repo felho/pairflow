@@ -240,7 +240,7 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain("Stop rules: stop expansion immediately when no new concrete locations are found");
     expect(reviewerCommand).toContain("repo-wide expansion scans are forbidden");
     expect(reviewerCommand).toContain("If class detection is uncertain, classify as `one_off`");
-    expect(reviewerCommand).toContain("Required reviewer PASS output contract (machine-checkable)");
+    expect(reviewerCommand).toContain("Required reviewer output contract (machine-checkable)");
     expect(reviewerCommand).toContain("`Scout Coverage`");
     expect(reviewerCommand).toContain("`Deduplicated Findings`");
     expect(reviewerCommand).toContain("`Issue-Class Expansions`");
@@ -270,6 +270,18 @@ describe("startBubble", () => {
     );
     expect(reviewerCommand).toContain(
       "Round 1 guardrail: do not run `pairflow converged` in round 1"
+    );
+    expect(reviewerCommand).toContain(
+      "If review round is 1: do not use `pairflow converged`; use `pairflow pass`."
+    );
+    expect(reviewerCommand).toContain(
+      "If review round is 2 or higher and you have no findings: use `pairflow converged`."
+    );
+    expect(reviewerCommand).toContain(
+      "Do not use `pairflow pass --no-findings` for the clean path in round 2 or higher."
+    );
+    expect(reviewerCommand).toContain(
+      "Blocker-handling policy remains unchanged in this bugfix scope."
     );
     expect(reviewerCommand).toContain(
       "From round 2 onward, if clean, run `pairflow converged --summary` directly"
@@ -717,7 +729,7 @@ describe("startBubble", () => {
           );
           expect(input.reviewerCommand).toContain("repo-wide expansion scans are forbidden");
           expect(input.reviewerCommand).toContain(
-            "Required reviewer PASS output contract (machine-checkable)"
+            "Required reviewer output contract (machine-checkable)"
           );
           expect(input.reviewerCommand).toContain(
             "`Scout Coverage.scope_covered` must describe current worktree changes only"

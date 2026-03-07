@@ -182,7 +182,7 @@ describe("emitTmuxDeliveryNotification", () => {
     );
     expect(messageCall?.[4]).toContain("Stop rules: stop expansion immediately when no new concrete locations are found");
     expect(messageCall?.[4]).toContain("repo-wide expansion scans are forbidden");
-    expect(messageCall?.[4]).toContain("Required reviewer PASS output contract (machine-checkable)");
+    expect(messageCall?.[4]).toContain("Required reviewer output contract (machine-checkable)");
     expect(messageCall?.[4]).toContain("`Scout Coverage`");
     expect(messageCall?.[4]).toContain("`Deduplicated Findings`");
     expect(messageCall?.[4]).toContain("`Issue-Class Expansions`");
@@ -218,6 +218,12 @@ describe("emitTmuxDeliveryNotification", () => {
     );
     expect(messageCall?.[4]).toContain(
       "Round 1 guardrail: do not run `pairflow converged`"
+    );
+    expect(messageCall?.[4]).toContain(
+      "If review round is 1: do not use `pairflow converged`; use `pairflow pass`."
+    );
+    expect(messageCall?.[4]).toContain(
+      "Blocker-handling policy remains unchanged in this bugfix scope."
     );
     expect(messageCall?.[4]).toContain(
       "`pairflow pass --summary ... --no-findings`"
@@ -575,7 +581,7 @@ describe("emitTmuxDeliveryNotification", () => {
       "Decision matrix triggers that still require tests:"
     );
     expect(messageCall?.[4]).toContain("Phase 1 reviewer round flow (prompt-level only):");
-    expect(messageCall?.[4]).toContain("Required reviewer PASS output contract (machine-checkable)");
+    expect(messageCall?.[4]).toContain("Required reviewer output contract (machine-checkable)");
     expect(messageCall?.[4]).toContain(
       "same current worktree diff scope (`max_scout_agents=2` hard cap)"
     );
