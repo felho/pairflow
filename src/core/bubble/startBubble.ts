@@ -113,6 +113,7 @@ function buildImplementerStartupPrompt(input: {
     `Pairflow implementer start for bubble ${input.bubbleId}.`,
     `Read task: ${input.taskArtifactPath}.`,
     "Implement in this worktree and run relevant validation before handoff.",
+    `Execute pairflow commands from this worktree path only: ${input.worktreePath}.`,
     evidenceHandoffGuidance,
     `Keep done package updated at: ${input.donePackagePath}.`,
     "Done package should summarize changes + validation results for final commit handoff.",
@@ -220,6 +221,7 @@ function buildResumeImplementerStartupPrompt(input: {
     `Pairflow implementer resume for bubble ${input.bubbleId}.`,
     `Task: ${input.taskArtifactPath}.`,
     `Done package: ${input.donePackagePath}.`,
+    `Execute pairflow commands from this worktree path only: ${input.worktreePath}.`,
     `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`,
     `State snapshot: ${buildResumeContextLine(input.state)}.`,
     `Transcript context: ${input.transcriptSummary}`,
@@ -506,6 +508,7 @@ export async function startBubble(
         implementerCommand: buildAgentCommand({
           agentName: resolved.bubbleConfig.agents.implementer,
           bubbleId: resolved.bubbleId,
+          worktreePath: resolved.bubblePaths.worktreePath,
           startupPrompt: buildImplementerStartupPrompt({
             bubbleId: resolved.bubbleId,
             repoPath: resolved.repoPath,
@@ -518,6 +521,7 @@ export async function startBubble(
         reviewerCommand: buildAgentCommand({
           agentName: resolved.bubbleConfig.agents.reviewer,
           bubbleId: resolved.bubbleId,
+          worktreePath: resolved.bubblePaths.worktreePath,
           startupPrompt: buildReviewerStartupPrompt({
             bubbleId: resolved.bubbleId,
             repoPath: resolved.repoPath,
@@ -601,6 +605,7 @@ export async function startBubble(
         implementerCommand: buildAgentCommand({
           agentName: resolved.bubbleConfig.agents.implementer,
           bubbleId: resolved.bubbleId,
+          worktreePath: resolved.bubblePaths.worktreePath,
           startupPrompt: buildResumeImplementerStartupPrompt({
             bubbleId: resolved.bubbleId,
             repoPath: resolved.repoPath,
@@ -616,6 +621,7 @@ export async function startBubble(
         reviewerCommand: buildAgentCommand({
           agentName: resolved.bubbleConfig.agents.reviewer,
           bubbleId: resolved.bubbleId,
+          worktreePath: resolved.bubblePaths.worktreePath,
           startupPrompt: buildResumeReviewerStartupPrompt({
             bubbleId: resolved.bubbleId,
             repoPath: resolved.repoPath,

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { refreshReviewerContext } from "../../../src/core/runtime/reviewerContext.js";
 import type { BubbleConfig } from "../../../src/types/bubble.js";
 import type { TmuxRunResult, TmuxRunner } from "../../../src/core/runtime/tmuxManager.js";
+import { shellQuote } from "../../../src/core/util/shellQuote.js";
 
 const baseConfig: BubbleConfig = {
   id: "b_reviewer_ctx_01",
@@ -33,6 +34,15 @@ const baseConfig: BubbleConfig = {
     round_gate_applies_after: 2
   }
 };
+
+function extractBashLcScript(command: string): string {
+  const prefix = "bash -lc ";
+  expect(command.startsWith(prefix)).toBe(true);
+  const quotedScript = command.slice(prefix.length);
+  expect(quotedScript.startsWith("'")).toBe(true);
+  expect(quotedScript.endsWith("'")).toBe(true);
+  return quotedScript.slice(1, -1).replace(/'\\''/gu, "'");
+}
 
 describe("refreshReviewerContext", () => {
   it("respawns reviewer pane when runtime session exists", async () => {
@@ -72,6 +82,10 @@ describe("refreshReviewerContext", () => {
     expect(calls[0]?.join(" ")).toContain(
       "Reviewer brief (persisted artifact `reviewer-brief.md`): Verify each claim."
     );
+    const reviewerCommand = calls[0]?.[6];
+    expect(typeof reviewerCommand).toBe("string");
+    const script = extractBashLcScript(reviewerCommand as string);
+    expect(script).toContain(`if ! cd ${shellQuote("/tmp/worktree")}; then`);
   });
 
   it("returns no_runtime_session when runtime session is missing", async () => {

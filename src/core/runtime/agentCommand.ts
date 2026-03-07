@@ -4,6 +4,7 @@ import { shellQuote } from "../util/shellQuote.js";
 export interface BuildAgentCommandInput {
   agentName: AgentName;
   bubbleId: string;
+  worktreePath: string;
   startupPrompt?: string | undefined;
 }
 
@@ -29,10 +30,19 @@ function buildAgentLaunchCommand(
 export function buildAgentCommand(input: BuildAgentCommandInput): string {
   const agentName = input.agentName;
   const bubbleId = input.bubbleId;
+  const worktreePath = input.worktreePath.trim();
+  if (worktreePath.length === 0) {
+    throw new Error(`Worktree path is required to build agent command for bubble ${bubbleId}.`);
+  }
   const missingBinaryMessage = `${agentName} CLI not found in PATH for bubble ${bubbleId}. Install it or configure agent command mapping.`;
+  const worktreePinningMessage = `Failed to pin agent root to worktree ${worktreePath} for bubble ${bubbleId}.`;
   const launchCommand = buildAgentLaunchCommand(agentName, input.startupPrompt);
   const script = [
     "set +e",
+    `if ! cd ${shellQuote(worktreePath)}; then`,
+    `  printf '%s\\n' ${shellQuote(worktreePinningMessage)}`,
+    "  exec bash -i",
+    "fi",
     `if command -v ${agentName} >/dev/null 2>&1; then`,
     `  ${launchCommand}`,
     "  agent_exit_code=$?",
