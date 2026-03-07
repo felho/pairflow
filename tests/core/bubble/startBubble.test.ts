@@ -204,11 +204,26 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain("Out-of-scope observations should be notes (`P3`)");
     expect(reviewerCommand).toContain("Phase 1 reviewer round flow (prompt-level only):");
     expect(reviewerCommand).toContain("`Parallel Scout Scan`");
+    expect(reviewerCommand).toContain(
+      "same current worktree diff scope (`max_scout_agents=2` hard cap)"
+    );
     expect(reviewerCommand).toContain("`required_scout_agents=2`");
     expect(reviewerCommand).toContain("`max_scout_agents=2`");
     expect(reviewerCommand).toContain("`max_scout_candidates_per_agent=8`");
     expect(reviewerCommand).toContain("`max_class_expansions_per_round=2`");
     expect(reviewerCommand).toContain("`max_expansion_siblings_per_class=5`");
+    expect(reviewerCommand).toContain(
+      "Summary scope guardrail: scope statements must cover only current worktree changes."
+    );
+    expect(reviewerCommand).toContain(
+      "For summary scope claims, do not use `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`)."
+    );
+    expect(reviewerCommand).toContain(
+      "Establish scope with `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` (staged, unstaged, and untracked), or with the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`."
+    );
+    expect(reviewerCommand).toContain(
+      "If current worktree scope cannot be resolved reliably, avoid numeric file-operation claims."
+    );
     expect(reviewerCommand).toContain("Stop rules: stop expansion immediately when no new concrete locations are found");
     expect(reviewerCommand).toContain("repo-wide expansion scans are forbidden");
     expect(reviewerCommand).toContain("If class detection is uncertain, classify as `one_off`");
@@ -218,6 +233,15 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain("`Issue-Class Expansions`");
     expect(reviewerCommand).toContain("`Residual Risk / Notes`");
     expect(reviewerCommand).toContain("`scouts_executed`, `scope_covered`, `guardrail_confirmation`, `raw_candidates_count`, `deduplicated_count`");
+    expect(reviewerCommand).toContain(
+      "`Scout Coverage.scope_covered` must cover only current worktree changes"
+    );
+    expect(reviewerCommand).toContain(
+      "grounded in `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` or the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`."
+    );
+    expect(reviewerCommand).toContain(
+      "Do not justify `scope_covered` with `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`)."
+    );
     expect(reviewerCommand).toContain("`title`, `severity`, `class`, `locations`, `evidence`, `expansion_siblings`");
     expect(reviewerCommand).toContain("`class`, `source_finding_title`, `scan_scope`, `siblings`, `stop_reason`");
     expect(reviewerCommand).toContain("`Deduplicated Findings: []`");
@@ -625,6 +649,9 @@ describe("startBubble", () => {
             "Phase 1 reviewer round flow (prompt-level only):"
           );
           expect(input.reviewerCommand).toContain("`Parallel Scout Scan`");
+          expect(input.reviewerCommand).toContain(
+            "same current worktree diff scope (`max_scout_agents=2` hard cap)"
+          );
           expect(input.reviewerCommand).toContain("`required_scout_agents=2`");
           expect(input.reviewerCommand).toContain("`max_scout_agents=2`");
           expect(input.reviewerCommand).toContain(
@@ -635,11 +662,32 @@ describe("startBubble", () => {
             "`max_expansion_siblings_per_class=5`"
           );
           expect(input.reviewerCommand).toContain(
+            "Summary scope guardrail: scope statements must cover only current worktree changes."
+          );
+          expect(input.reviewerCommand).toContain(
+            "For summary scope claims, do not use `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`)."
+          );
+          expect(input.reviewerCommand).toContain(
+            "Establish scope with `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` (staged, unstaged, and untracked), or with the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`."
+          );
+          expect(input.reviewerCommand).toContain(
+            "If current worktree scope cannot be resolved reliably, avoid numeric file-operation claims."
+          );
+          expect(input.reviewerCommand).toContain(
             "Stop rules: stop expansion immediately when no new concrete locations are found"
           );
           expect(input.reviewerCommand).toContain("repo-wide expansion scans are forbidden");
           expect(input.reviewerCommand).toContain(
             "Required reviewer PASS output contract (machine-checkable)"
+          );
+          expect(input.reviewerCommand).toContain(
+            "`Scout Coverage.scope_covered` must cover only current worktree changes"
+          );
+          expect(input.reviewerCommand).toContain(
+            "grounded in `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` or the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`."
+          );
+          expect(input.reviewerCommand).toContain(
+            "Do not justify `scope_covered` with `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`)."
           );
           expect(input.reviewerCommand).toContain("`Issue-Class Expansions`");
           expect(input.reviewerCommand).toContain("`Residual Risk / Notes`");

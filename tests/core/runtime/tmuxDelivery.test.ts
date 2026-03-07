@@ -148,11 +148,26 @@ describe("emitTmuxDeliveryNotification", () => {
     );
     expect(messageCall?.[4]).toContain("Phase 1 reviewer round flow (prompt-level only):");
     expect(messageCall?.[4]).toContain("`Parallel Scout Scan`");
+    expect(messageCall?.[4]).toContain(
+      "same current worktree diff scope (`max_scout_agents=2` hard cap)"
+    );
     expect(messageCall?.[4]).toContain("`required_scout_agents=2`");
     expect(messageCall?.[4]).toContain("`max_scout_agents=2`");
     expect(messageCall?.[4]).toContain("`max_scout_candidates_per_agent=8`");
     expect(messageCall?.[4]).toContain("`max_class_expansions_per_round=2`");
     expect(messageCall?.[4]).toContain("`max_expansion_siblings_per_class=5`");
+    expect(messageCall?.[4]).toContain(
+      "Summary scope guardrail: scope statements must cover only current worktree changes."
+    );
+    expect(messageCall?.[4]).toContain(
+      "For summary scope claims, do not use `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`)."
+    );
+    expect(messageCall?.[4]).toContain(
+      "Establish scope with `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` (staged, unstaged, and untracked), or with the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`."
+    );
+    expect(messageCall?.[4]).toContain(
+      "If current worktree scope cannot be resolved reliably, avoid numeric file-operation claims."
+    );
     expect(messageCall?.[4]).toContain("Stop rules: stop expansion immediately when no new concrete locations are found");
     expect(messageCall?.[4]).toContain("repo-wide expansion scans are forbidden");
     expect(messageCall?.[4]).toContain("Required reviewer PASS output contract (machine-checkable)");
@@ -161,6 +176,15 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(messageCall?.[4]).toContain("`Issue-Class Expansions`");
     expect(messageCall?.[4]).toContain("`Residual Risk / Notes`");
     expect(messageCall?.[4]).toContain("`scouts_executed`, `scope_covered`, `guardrail_confirmation`, `raw_candidates_count`, `deduplicated_count`");
+    expect(messageCall?.[4]).toContain(
+      "`Scout Coverage.scope_covered` must cover only current worktree changes"
+    );
+    expect(messageCall?.[4]).toContain(
+      "grounded in `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` or the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`."
+    );
+    expect(messageCall?.[4]).toContain(
+      "Do not justify `scope_covered` with `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`)."
+    );
     expect(messageCall?.[4]).toContain("`title`, `severity`, `class`, `locations`, `evidence`, `expansion_siblings`");
     expect(messageCall?.[4]).toContain("`class`, `source_finding_title`, `scan_scope`, `siblings`, `stop_reason`");
     expect(messageCall?.[4]).toContain("`Deduplicated Findings: []`");
@@ -297,6 +321,28 @@ describe("emitTmuxDeliveryNotification", () => {
     );
 
     expect(messageCall?.[4]).toContain("Severity Ontology v1 reminder");
+    expect(messageCall?.[4]).toContain("Phase 1 reviewer round flow (prompt-level only):");
+    expect(messageCall?.[4]).toContain(
+      "Summary scope guardrail: scope statements must cover only current worktree changes."
+    );
+    expect(messageCall?.[4]).toContain(
+      "For summary scope claims, do not use `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`)."
+    );
+    expect(messageCall?.[4]).toContain(
+      "Establish scope with `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` (staged, unstaged, and untracked), or with the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`."
+    );
+    expect(messageCall?.[4]).toContain(
+      "If current worktree scope cannot be resolved reliably, avoid numeric file-operation claims."
+    );
+    expect(messageCall?.[4]).toContain(
+      "`Scout Coverage.scope_covered` must cover only current worktree changes"
+    );
+    expect(messageCall?.[4]).toContain(
+      "grounded in `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` or the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`."
+    );
+    expect(messageCall?.[4]).toContain(
+      "Do not justify `scope_covered` with `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`)."
+    );
     expect(messageCall?.[4]).not.toContain(
       "Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)"
     );
@@ -430,6 +476,15 @@ describe("emitTmuxDeliveryNotification", () => {
       expect(messageCall[4]).toContain(
         "Implementer test evidence has been orchestrator-verified. Do not re-run full tests unless a trigger from the decision matrix applies."
       );
+      expect(messageCall[4]).toContain(
+        "For summary scope claims, do not use `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`)."
+      );
+      expect(messageCall[4]).toContain(
+        "Establish scope with `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` (staged, unstaged, and untracked), or with the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`."
+      );
+      expect(messageCall[4]).toContain(
+        "Do not justify `scope_covered` with `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`)."
+      );
     }
   });
 
@@ -479,6 +534,30 @@ describe("emitTmuxDeliveryNotification", () => {
     );
     expect(messageCall?.[4]).toContain("Phase 1 reviewer round flow (prompt-level only):");
     expect(messageCall?.[4]).toContain("Required reviewer PASS output contract (machine-checkable)");
+    expect(messageCall?.[4]).toContain(
+      "same current worktree diff scope (`max_scout_agents=2` hard cap)"
+    );
+    expect(messageCall?.[4]).toContain(
+      "Summary scope guardrail: scope statements must cover only current worktree changes."
+    );
+    expect(messageCall?.[4]).toContain(
+      "For summary scope claims, do not use `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`)."
+    );
+    expect(messageCall?.[4]).toContain(
+      "Establish scope with `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` (staged, unstaged, and untracked), or with the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`."
+    );
+    expect(messageCall?.[4]).toContain(
+      "If current worktree scope cannot be resolved reliably, avoid numeric file-operation claims."
+    );
+    expect(messageCall?.[4]).toContain(
+      "`Scout Coverage.scope_covered` must cover only current worktree changes"
+    );
+    expect(messageCall?.[4]).toContain(
+      "grounded in `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` or the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`."
+    );
+    expect(messageCall?.[4]).toContain(
+      "Do not justify `scope_covered` with `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`)."
+    );
     expect(messageCall?.[4]).toContain(
       "Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)"
     );
