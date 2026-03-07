@@ -644,9 +644,10 @@ The reviewer can only call `converged` when specific conditions are met:
 2. At least 2 rounds of implementer↔reviewer exchange must have happened
 3. The reviewer's last `PASS` must declare findings explicitly (`--finding` or `--no-findings`)
 4. The reviewer's last review must not contain P0/P1 severity findings
-5. Round-sensitive P2 gate:
-   - Round 2-3: convergence is blocked if the last reviewer `PASS` contains P2 findings
-   - Round 4+: convergence is allowed again (P0/P1 block still applies)
+5. Blocker semantics:
+   - Non-document scope: convergence is blocked by canonical `P0/P1` findings.
+   - Document scope: only strict blockers (`effective_priority=P0|P1` + `timing=required-now` + `layer=L1`) block convergence.
+   - Doc-contract round gate (advisory) can auto-demote non-blocker `required-now` findings after the configured threshold (`doc_contract_gates.round_gate_applies_after`, default: round > 2) and reports warnings in status output.
 6. No unanswered `HUMAN_QUESTION` may be pending
 
 This prevents premature convergence — the agents must actually iterate.

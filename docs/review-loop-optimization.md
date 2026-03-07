@@ -32,7 +32,7 @@ The reviewer produces high-quality findings (real bugs, race conditions, event o
 | 5 | Combined flow | Not implemented | Depends on #1-#4. |
 | 6 | Skip redundant reviewer test runs | Implemented | Orchestrator verifies implementer evidence and emits reviewer skip/run directive. |
 | 7 | Task-level acceptance criteria boundary | In progress | Used operationally in tasking; hard enforcement not implemented yet. |
-| 8 | Round-based severity gate | In progress (prompt-level) | Discussed/partially guided in prompts; no strict policy gate yet. |
+| 8 | Round-based severity gate | Implemented (Phase 1 advisory) | Doc-contract gate now enforces advisory round-policy normalization (`ROUND_GATE_AUTODEMOTE`/`ROUND_GATE_WARNING`) with status diagnostics; hard-stop remains out of scope. |
 | 9 | Issue-class expansion scan | Implemented (Phase 1 prompt-level experiment) | Reviewer startup/resume/handoff guidance now enforces scout -> dedupe/classify -> conditional class expansion -> consolidation, with local-scope guardrails and required PASS output contract. Runtime/orchestrator automation remains out of scope. |
 
 Recent control-plane improvement:
