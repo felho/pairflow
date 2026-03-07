@@ -650,6 +650,7 @@ The reviewer can only call `converged` when specific conditions are met:
    - Document scope: only strict blockers (`effective_priority=P0|P1` + `timing=required-now` + `layer=L1`) block convergence.
    - Doc-contract round gate (advisory) can auto-demote non-blocker `required-now` findings after the configured threshold (`doc_contract_gates.round_gate_applies_after`, default: round > 2) and reports warnings in status output.
 6. No unanswered `HUMAN_QUESTION` may be pending
+7. If `accuracy_critical=true`, latest reviewer verification must be `pass`
 
 This prevents premature convergence — the agents must actually iterate.
 
@@ -696,7 +697,7 @@ Any non-final state ─→ CANCELLED (via bubble stop)
 
 | Command | Description |
 |---------|-------------|
-| `bubble create --id <id> --repo <path> --base <branch> (--task <text> \| --task-file <path>)` | Initialize a new bubble |
+| `bubble create --id <id> --repo <path> --base <branch> (--task <text> \| --task-file <path>) [--reviewer-brief <text> \| --reviewer-brief-file <path>] [--accuracy-critical]` | Initialize a new bubble |
 | `bubble start --id <id> [--repo <path>]` | Start or restart a bubble (worktree + tmux) |
 | `bubble stop --id <id> [--repo <path>]` | Stop and cancel a bubble |
 | `bubble delete --id <id> [--repo <path>] [--force]` | Delete a bubble; without `--force` it reports external artifacts and exits with confirmation-required status |
@@ -744,7 +745,7 @@ These commands don't require `--id` or `--repo` — they detect the bubble from 
 
 | Command | Description |
 |---------|-------------|
-| `pass --summary <text> [--ref <path>]... [--intent <task\|review\|fix_request>] [--finding <P0\|P1\|P2\|P3:Title>]... [--no-findings]` | Hand off to the other agent (reviewer must declare findings explicitly) |
+| `pass --summary <text> [--ref <path>]... [--intent <task\|review\|fix_request>] [--finding <P0\|P1\|P2\|P3:Title>]... [--no-findings]` | Hand off to the other agent (reviewer must declare findings explicitly; in `accuracy-critical` bubbles reviewer PASS requires `--ref` to `review-verification-input.json`) |
 | `ask-human --question <text> [--ref <path>]...` | Ask the human a question |
 | `converged --summary <text> [--ref <path>]...` | Signal convergence (reviewer only) |
 
