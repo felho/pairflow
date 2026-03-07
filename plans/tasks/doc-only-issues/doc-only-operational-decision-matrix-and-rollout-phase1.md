@@ -25,14 +25,14 @@ owners:
 
 ### Goal
 
-Definialjunk rovid, vegrehajthato es audit-kesz operational decision matrixot a docs-only validacios policyhoz, plusz egy Phase 1 rollout/rollback futasi rendet.
+Definialjunk rovid, vegrehajthato es audit-kesz operational decision matrixot a docs-only validacios policyhoz, plusz egy Phase 1 rollout/rollback futasi rendet egyertelmu gate-ekkel.
 
 ### In Scope
 
 1. Determinisztikus decision matrix docs-only es code bubble utakra.
 2. Docs-only summary standard formulak es claim szabalyok rogzitese.
-3. Rollout lepessor preconditionnel, exit criteriaval es rollback triggerrel.
-4. Minimum 3 operativ metric definialasa a koveteshez.
+3. Rollout lepessor preconditionnel, exit criteriaval, rollback triggerrel es rollback action scope-pal.
+4. Required operativ metric set definialasa a koveteshez (`docs_only_round_count_avg`, `summary_verifier_mismatch_count`, `docs_only_evidence_rework_ratio`, `false_blocker_ratio`) explicit identity szaballyal.
 5. Priority-plan dokumentum frissitese P1/2 allapotkoveteshez.
 
 ### Out of Scope
@@ -60,17 +60,18 @@ Definialjunk rovid, vegrehajthato es audit-kesz operational decision matrixot a 
 
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|---|
-| CS1 | `plans/tasks/doc-only-issues/doc-only-operational-decision-matrix-and-rollout-phase1.md` | matrix + rollout spec authoring | `defineDecisionMatrixAndRollout(context) -> markdown_contract` | teljes dokumentum | tartalmazza a 3-agas matrixot, rollout/rollback lepessorat es metric keszletet | P1 | required-now | T1, T3, T4 |
-| CS2 | `docs/llm-doc-workflow-v1.md` | docs-only summary policy wording sync | `syncDocsOnlySummaryPolicy(matrix) -> workflow_doc_delta` | docs-only workflow/guidance blokk | summary formula es claim policy a matrixszal konzisztens | P1 | required-now | T2 |
-| CS3 | `plans/tasks/doc-only-issues/doc-only-priority-and-rollout-plan-2026-03-04.md` | P1/2 state + sequence sync | `syncRolloutProgress(matrix_rollout) -> updated_plan_status` | Step 4/P1 szekciok | statusz, sorrend es ownership nyomkovetes frissul | P2 | later-hardening | T5 |
+| CS1 | `plans/tasks/doc-only-issues/doc-only-operational-decision-matrix-and-rollout-phase1.md` | matrix + rollout spec authoring | `defineDecisionMatrixAndRollout(context) -> markdown_contract` | teljes dokumentum | tartalmazza a 3-agas matrixot, rollout/rollback lepessorat es metric keszletet | P1 | required-now | T1, T3, T4, T5 |
+| CS2 | `docs/llm-doc-workflow-v1.md` | docs-only summary policy wording sync | `syncDocsOnlySummaryPolicy(matrix) -> workflow_doc_delta` | docs-only workflow/guidance blokk | summary formula es claim policy a matrixszal konzisztens | P1 | required-now | T2, T3 |
+| CS3 | `plans/tasks/doc-only-issues/doc-only-priority-and-rollout-plan-2026-03-04.md` | P1/2 state + sequence sync | `syncRolloutProgress(matrix_rollout) -> updated_plan_status` | Step 4/P1 szekciok | statusz, sorrend es ownership nyomkovetes frissul | P1 | required-now | T6 |
 
 ### 2) Data and Interface Contract
 
 | Contract | Current | Target | Required Fields | Optional Fields | Compatibility | Priority | Timing |
 |---|---|---|---|---|---|---|---|
 | Decision matrix row | rovid prose lista | auditalhato matrix schema | `scenario`, `runtime_check_requirement`, `claim_rule`, `evidence_rule`, `summary_rule` | `notes` | additive | P1 | required-now |
-| Rollout step contract | linearis lepeslista | gate-elt rollout schema | `step_id`, `preconditions`, `action`, `exit_criteria`, `rollback_trigger` | `owner`, `eta` | additive | P1 | required-now |
-| Metrics contract | 3 pont jellegu lista | merheto metric registry | `metric_id`, `definition`, `source`, `cadence`, `direction` | `target_range` | additive | P1 | required-now |
+| Rollout step contract | linearis lepeslista | gate-elt rollout schema | `step_id`, `preconditions`, `action`, `exit_criteria`, `rollback_trigger`, `rollback_action` | `owner`, `eta` | additive | P1 | required-now |
+| Baseline contract | implicit baseline hivatkozas | explicit baseline input schema | `baseline_window`, `baseline_source`, `baseline_snapshot_ts`, `baseline_owner` | `notes` | additive | P1 | required-now |
+| Metrics contract | ad-hoc lista | merheto metric registry + identity rule | `metric_id`, `definition`, `source`, `cadence`, `direction`, `identity_rule` | `target_range` | additive | P1 | required-now |
 
 ### 3) Side Effects Contract
 
@@ -87,16 +88,16 @@ Constraint: mivel nincs engedelyezett DB/Event/FS/Network side effect, a task ou
 |---|---|---|---|---|---|---|---|
 | matrix sor hianyos vagy nem determinisztikus | policy docs | fallback | hianyzo sor jelolese `TODO_BLOCKER`, rollout `hold` | MATRIX_INCOMPLETE | warn | P1 | required-now |
 | summary sablon nem konzisztens a gate policyval | workflow docs | fallback | matrix szabaly az elsoseges, summary text korrigaland | SUMMARY_POLICY_MISMATCH | warn | P1 | required-now |
-| metric adatforras atmenetileg nem elerheto | bubble status/artifacts | fallback | metric `N/A`, rollout folytathato de incident-kovetes flaggel | METRIC_SOURCE_UNAVAILABLE | info | P2 | required-now |
+| metric adatforras atmenetileg nem elerheto | bubble status/artifacts | fallback | metric `N/A`, rollout folytathato de incident-kovetes flaggel | METRIC_SOURCE_UNAVAILABLE | info | P1 | required-now |
 | dependency failure | N/A (docs-only flow) | fallback | `N/A` | N/A | info | P1 | required-now |
 
 ### 5) Dependency Constraints
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `doc-only-temporary-disable-runtime-checks-phase1.md` mint docs-only runtime requirement baseline | P2 | required-now |
-| must-use | `doc-only-summary-verifier-consistency-gate-phase1.md` mint claim-vs-verifier consistency baseline | P2 | required-now |
-| must-use | `doc-only-evidence-source-whitelist-phase1.md` mint evidence trust baseline | P2 | required-now |
+| must-use | `doc-only-temporary-disable-runtime-checks-phase1.md` mint docs-only runtime requirement baseline | P1 | required-now |
+| must-use | `doc-only-summary-verifier-consistency-gate-phase1.md` mint claim-vs-verifier consistency baseline | P1 | required-now |
+| must-use | `doc-only-evidence-source-whitelist-phase1.md` mint evidence trust baseline | P1 | required-now |
 | must-not-use | uj runtime execute policy code szabalyozas ebben a taskban | P1 | required-now |
 | must-not-use | code bubble policy valtoztatas a docs-only rollout taskban | P1 | required-now |
 
@@ -104,11 +105,12 @@ Constraint: mivel nincs engedelyezett DB/Event/FS/Network side effect, a task ou
 
 | ID | Scenario | Given | When | Then | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|
-| T1 | Decision matrix completeness | P1/2 task draft | matrix review | matrix legalabb 3 determinisztikus scenariot tartalmaz (docs-only claim-free, docs-only claimes, code bubble) | P1 | required-now | document checklist |
+| T1 | Decision matrix completeness | P1/2 task draft | matrix review | matrix legalabb 3 determinisztikus scenariot tartalmaz (docs-only claim-free, docs-only claim-es, code bubble) | P1 | required-now | document checklist |
 | T2 | Summary rule consistency | frissitett workflow docs | policy cross-check | docs-only summary formula konzisztens a matrix claim szabalyokkal | P1 | required-now | doc diff |
-| T3 | Rollout + rollback determinism | rollout szekcio | control review | minden rollout stephez van precondition + exit + rollback trigger | P1 | required-now | section review |
-| T4 | Metric baseline validity | metric szekcio | metric audit | minimum 3 metric definialt source + cadence mezovel | P1 | required-now | checklist |
-| T5 | Non-doc policy non-regression | code bubble policy refs | impact review | dokumentum explicit kimondja, hogy code bubble policy valtozatlan | P2 | later-hardening | doc diff |
+| T3 | Rollout + rollback determinism | rollout szekcio | control review | minden rollout stephez van precondition + exit + rollback trigger + rollback action, es a trigger kuszobok explicit `baseline_*` inputokra kotottek | P1 | required-now | section review |
+| T4 | Metric baseline validity | metric szekcio | metric audit | required 4 metric set definialt source + cadence mezovel, es `false_blocker_ratio := docs_only_evidence_rework_ratio` identity szabaly explicit | P1 | required-now | checklist |
+| T5 | Non-doc policy non-regression | code bubble policy refs | impact review | dokumentum explicit kimondja, hogy code bubble policy valtozatlan | P1 | required-now | doc diff |
+| T6 | Rollout plan synchronization | frissitett task matrix + rollout plan | cross-doc review | Step 4 rollout lepesek, trigger-ek es metrikak ugyanarra a source-of-truth matrixra mutatnak | P1 | required-now | doc diff |
 
 ## L2 - Implementation Notes (Optional)
 
@@ -144,5 +146,6 @@ No open non-blocking questions.
 Task allapot `IMPLEMENTABLE`, ha minden `P0/P1 + required-now` teljesul:
 1. matrix sorok determinisztikusak es audit-keszek,
 2. rollout + rollback lepesek explicit gate-ekkel definialtak,
-3. legalabb 3 metric source/cadence mezovel rogzitett,
-4. docs-only vs code bubble policy elvalasztas egyertelmu es ellentmondasmentes.
+3. required 4 metric set source/cadence mezovel rogzitett (`docs_only_round_count_avg`, `summary_verifier_mismatch_count`, `docs_only_evidence_rework_ratio`, `false_blocker_ratio`),
+4. docs-only vs code bubble policy elvalasztas egyertelmu es ellentmondasmentes,
+5. workflow + rollout plan dokumentum ugyanarra a P1/2 matrix source-of-truthra van szinkronizalva.

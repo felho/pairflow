@@ -10,7 +10,7 @@
 1. Completed: P0/1 (`doc-only-temporary-disable-runtime-checks-phase1.md`) merged on 2026-03-04 via `c24c20f` (`bubble/doc-only-runtime-checks-phase1-impl`) and `7eaf70e` (merge to `main`).
 2. Completed: P0/2 (`doc-only-summary-verifier-consistency-gate-phase1.md`) merged via `f631ecd` + `3b7f68d`.
 3. Completed: P1/1 (`doc-only-evidence-source-whitelist-phase1.md`) merged via `80c0c58` (bubble finalize) and `b71d3e3` (merge to `main`).
-4. Active item: P1/2 operational decision matrix rollout. Task spec migrated to L0/L1/L2 in `25b609a`; workflow/rollout doc synchronization in progress.
+4. Active item: P1/2 operational decision matrix rollout. Task spec migrated to L0/L1/L2 in `25b609a`; workflow/rollout source-of-truth synchronization in progress.
 5. Not started: P2/1 claim-based validation architecture.
 
 ## Objective
@@ -84,16 +84,36 @@ Actions:
    - docs-only + no runtime claim -> runtime checks not required wording,
    - docs-only + explicit runtime claim -> claim allowed only with trusted verifier + whitelisted evidence,
    - code/auto bubble -> existing policy unchanged.
-3. Start metrics collection with explicit source and cadence.
+3. Ensure workflow + rollout docs both reference the same P1/2 matrix source-of-truth task file.
+4. Start metrics collection with explicit source and weekly cadence for required set (`docs_only_round_count_avg`, `summary_verifier_mismatch_count`, `docs_only_evidence_rework_ratio`, `false_blocker_ratio`).
+5. Freeze baseline contract inputs before rollout go-live (`baseline_window`, `baseline_source`, `baseline_snapshot_ts`, `baseline_owner`).
 
 Exit criteria:
 1. Workflow doc and rollout plan both reference the same P1/2 matrix source-of-truth.
-2. Metrics registry is active (minimum one measured window recorded).
+2. Metrics registry is active (minimum one weekly measured window recorded).
 3. No policy ambiguity remains between docs-only and code/auto paths in team guidance text.
 
+Baseline contract (required before rollout-on):
+| Field | Definition |
+|---|---|
+| `baseline_window` | `2` completed, consecutive weekly observation windows immediately before rollout activation. |
+| `baseline_source` | `pairflow bubble status --json` history snapshot, reviewer artifacts + summary audit, rework decision logs + bubble decision trail. |
+| `baseline_snapshot_ts` | ISO-8601 UTC timestamp when the baseline snapshot is frozen. |
+| `baseline_owner` | Named owner accountable for baseline capture and approval (must be populated before rollout go-live). |
+
+Baseline aggregation and metric identity rule (must match workflow wording):
+1. `baseline(metric_id, baseline_window, baseline_source, baseline_snapshot_ts, baseline_owner)` = arithmetic mean of weekly metric values across the `baseline_window` completed consecutive observation windows from `baseline_source`, frozen at `baseline_snapshot_ts`, approved by `baseline_owner`.
+2. `false_blocker_ratio(window) := docs_only_evidence_rework_ratio(window)` (pure alias; no independent computation stream).
+
 Rollback triggers:
-1. Summary-verifier mismatch trend worsens in two consecutive observation windows.
-2. False-blocker ratio grows above the pre-rollout baseline.
+1. In two consecutive weekly observation windows:
+   `summary_verifier_mismatch_count(current_week) >= baseline(summary_verifier_mismatch_count, baseline_window, baseline_source, baseline_snapshot_ts, baseline_owner) + 1`.
+2. In one weekly observation window:
+   `false_blocker_ratio(current_week) >= baseline(false_blocker_ratio, baseline_window, baseline_source, baseline_snapshot_ts, baseline_owner) + 0.10`.
+
+Threshold semantics (must match workflow wording):
+1. `+1` means absolute event-count delta.
+2. `+0.10` means absolute ratio delta (`+10` percentage points), not relative percentage growth.
 
 Rollback action:
 1. Keep P0/2 consistency gate enabled.
@@ -126,6 +146,10 @@ Exit criteria:
 
 | metric_id | Definition | Source | Cadence | Target direction |
 |---|---|---|---|---|
-| docs_only_round_count_avg | Docs-only bubble-ök átlagos approval round száma | bubble status history | weekly | down |
+| docs_only_round_count_avg | Docs-only bubble-ök átlagos approval round száma | `pairflow bubble status --json` history snapshot | weekly | down |
 | summary_verifier_mismatch_count | Summary-vs-verifier mismatch események száma | reviewer artifacts + summary audit | weekly | near zero |
-| docs_only_evidence_rework_ratio | Evidence-related rework arány docs-only bubble-ökben | rework decision logs | weekly | down |
+| docs_only_evidence_rework_ratio | Evidence-related rework arány docs-only bubble-ökben | rework decision logs + bubble decision trail | weekly | down |
+| false_blocker_ratio | Phase 1 rollback control metric (operational alias of `docs_only_evidence_rework_ratio`) | rework decision logs + bubble decision trail | weekly | down |
+
+Note:
+1. This metrics table is intentionally an operational extract view (`metric_id`, `definition`, `source`, `cadence`, `target direction`) and does not duplicate the full L1 contract field schema.
