@@ -10,6 +10,14 @@ import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/s
 import { startBubble, StartBubbleError } from "../../../src/core/bubble/startBubble.js";
 import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
 import {
+  REVIEWER_COMMAND_GATE_FORBIDDEN,
+  REVIEWER_COMMAND_GATE_REQ_A,
+  REVIEWER_COMMAND_GATE_REQ_B,
+  REVIEWER_COMMAND_GATE_REQ_C,
+  REVIEWER_COMMAND_GATE_REQ_D,
+  REVIEWER_COMMAND_GATE_REQ_E
+} from "../../../src/core/runtime/reviewerCommandGateGuidance.js";
+import {
   resolveReviewerTestEvidenceArtifactPath,
   verifyImplementerTestEvidence,
   writeReviewerTestEvidenceArtifact
@@ -76,6 +84,13 @@ async function updateBubbleState(
       expectedState: loaded.state.state
     }
   );
+}
+
+function expectNoForbiddenReviewerCommandGateTokens(text: string | undefined): void {
+  expect(text).toBeDefined();
+  for (const forbiddenToken of REVIEWER_COMMAND_GATE_FORBIDDEN) {
+    expect(text).not.toContain(forbiddenToken);
+  }
 }
 
 afterEach(async () => {
@@ -289,27 +304,12 @@ describe("startBubble", () => {
     expect(reviewerCommand).toMatch(
       /--finding [^`]*'P1:\.\.\.\|artifact:\/\/\.\.\.'/
     );
-    expect(reviewerCommand).toContain(
-      "Round 1 guardrail: do not run `pairflow converged` in round 1"
-    );
-    expect(reviewerCommand).toContain(
-      "If review round is 1: do not use `pairflow converged`; use `pairflow pass`."
-    );
-    expect(reviewerCommand).toContain(
-      "If review round is 2 or higher and you have no findings: use `pairflow converged`."
-    );
-    expect(reviewerCommand).toContain(
-      "Do not use `pairflow pass --no-findings` for the clean path in round 2 or higher."
-    );
-    expect(reviewerCommand).toContain(
-      "Blocker-handling policy remains unchanged in this bugfix scope."
-    );
-    expect(reviewerCommand).toContain(
-      "From round 2 onward, if clean, run `pairflow converged --summary` directly"
-    );
-    expect(reviewerCommand).toContain(
-      "do not run `pairflow pass --no-findings` first"
-    );
+    expect(reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_A);
+    expect(reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_B);
+    expect(reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_C);
+    expect(reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+    expect(reviewerCommand).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
+    expectNoForbiddenReviewerCommandGateTokens(reviewerCommand);
     expect(implementerCommand).not.toContain("then;");
     expect(reviewerCommand).not.toContain("then;");
     await assertBashParses(implementerCommand);
@@ -780,9 +780,12 @@ describe("startBubble", () => {
           );
           expect(input.reviewerCommand).toContain("`Issue-Class Expansions`");
           expect(input.reviewerCommand).toContain("`Residual Risk / Notes`");
-          expect(input.reviewerCommand).toContain(
-            "Round 1 guardrail: do not run `pairflow converged` in round 1"
-          );
+          expect(input.reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_A);
+          expect(input.reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_B);
+          expect(input.reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_C);
+          expect(input.reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+          expect(input.reviewerCommand).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
+          expectNoForbiddenReviewerCommandGateTokens(input.reviewerCommand);
           return Promise.resolve({ sessionName: "pf-b_start_resume_01" });
         }
       }
@@ -861,13 +864,165 @@ describe("startBubble", () => {
         launchBubbleTmuxSession: (input) => {
           expect(input.implementerKickoffMessage).toBeUndefined();
           expect(input.reviewerKickoffMessage).toContain("resume kickoff (reviewer)");
-          expect(input.reviewerKickoffMessage).toContain(
-            "Round 1 guardrail: do not run `pairflow converged`"
-          );
+          expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_A);
+          expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+          expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_B);
+          expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_C);
+          expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
+          expectNoForbiddenReviewerCommandGateTokens(input.reviewerKickoffMessage);
           return Promise.resolve({ sessionName: "pf-b_start_resume_03" });
         }
       }
     );
+  });
+
+  it("injects clean-path round>=2 command gate into reviewer resume kickoff", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_r2_clean_01",
+      task: "Resume reviewer active round 2 clean"
+    });
+
+    await updateBubbleState(bubble.paths.statePath, (current) => ({
+      ...current,
+      round: 2,
+      active_agent: bubble.config.agents.reviewer,
+      active_role: "reviewer"
+    }));
+
+    await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-23T09:05:30.000Z")
+      },
+      {
+        buildResumeTranscriptSummary: () =>
+          Promise.resolve("resume-summary: reviewer-active findings=0"),
+        launchBubbleTmuxSession: (input) => {
+          expect(input.reviewerKickoffMessage).toContain("resume kickoff (reviewer)");
+          expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_B);
+          expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_C);
+          expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+          expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_A);
+          expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
+          expectNoForbiddenReviewerCommandGateTokens(input.reviewerKickoffMessage);
+          return Promise.resolve({ sessionName: "pf-b_start_resume_r2_clean_01" });
+        }
+      }
+    );
+  });
+
+  it("injects findings-path round>=2 command gate into reviewer resume kickoff", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_r2_findings_01",
+      task: "Resume reviewer active round 2 findings"
+    });
+
+    await updateBubbleState(bubble.paths.statePath, (current) => ({
+      ...current,
+      round: 2,
+      active_agent: bubble.config.agents.reviewer,
+      active_role: "reviewer"
+    }));
+
+    await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-23T09:05:40.000Z")
+      },
+      {
+        buildResumeTranscriptSummary: () =>
+          Promise.resolve("resume-summary: reviewer-active findings=2"),
+        launchBubbleTmuxSession: (input) => {
+          expect(input.reviewerKickoffMessage).toContain("resume kickoff (reviewer)");
+          expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_E);
+          expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_C);
+          expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+          expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_A);
+          expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_B);
+          expectNoForbiddenReviewerCommandGateTokens(input.reviewerKickoffMessage);
+          return Promise.resolve({ sessionName: "pf-b_start_resume_r2_findings_01" });
+        }
+      }
+    );
+  });
+
+  it("keeps shared command-gate invariants across round>=2 clean and findings resume-kickoff projections", async () => {
+    const repoPath = await createTempRepo();
+    const cleanBubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_r2_proj_clean_01",
+      task: "Resume reviewer projection clean"
+    });
+    const findingsBubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_r2_proj_findings_01",
+      task: "Resume reviewer projection findings"
+    });
+
+    await updateBubbleState(cleanBubble.paths.statePath, (current) => ({
+      ...current,
+      round: 2,
+      active_agent: cleanBubble.config.agents.reviewer,
+      active_role: "reviewer"
+    }));
+    await updateBubbleState(findingsBubble.paths.statePath, (current) => ({
+      ...current,
+      round: 2,
+      active_agent: findingsBubble.config.agents.reviewer,
+      active_role: "reviewer"
+    }));
+
+    let cleanKickoff = "";
+    let findingsKickoff = "";
+
+    await startBubble(
+      {
+        bubbleId: cleanBubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-23T09:05:50.000Z")
+      },
+      {
+        buildResumeTranscriptSummary: () =>
+          Promise.resolve("resume-summary: projection-clean findings=0"),
+        launchBubbleTmuxSession: (input) => {
+          cleanKickoff = input.reviewerKickoffMessage ?? "";
+          return Promise.resolve({ sessionName: "pf-b_start_resume_r2_proj_clean_01" });
+        }
+      }
+    );
+
+    await startBubble(
+      {
+        bubbleId: findingsBubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-23T09:05:51.000Z")
+      },
+      {
+        buildResumeTranscriptSummary: () =>
+          Promise.resolve("resume-summary: projection-findings findings=3"),
+        launchBubbleTmuxSession: (input) => {
+          findingsKickoff = input.reviewerKickoffMessage ?? "";
+          return Promise.resolve({
+            sessionName: "pf-b_start_resume_r2_proj_findings_01"
+          });
+        }
+      }
+    );
+
+    expect(cleanKickoff).toContain(REVIEWER_COMMAND_GATE_REQ_C);
+    expect(cleanKickoff).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+    expect(cleanKickoff).toContain(REVIEWER_COMMAND_GATE_REQ_B);
+    expect(cleanKickoff).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
+    expect(findingsKickoff).toContain(REVIEWER_COMMAND_GATE_REQ_C);
+    expect(findingsKickoff).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+    expect(findingsKickoff).toContain(REVIEWER_COMMAND_GATE_REQ_E);
+    expect(findingsKickoff).not.toContain(REVIEWER_COMMAND_GATE_REQ_B);
   });
 
   it("includes reviewer test directive line in reviewer resume startup prompt when evidence is verified", async () => {

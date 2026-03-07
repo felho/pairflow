@@ -34,11 +34,9 @@ import {
   buildReviewerScoutExpansionWorkflowGuidance
 } from "../runtime/reviewerScoutExpansionGuidance.js";
 import {
-  reviewerCommandGateBlockerUnchanged,
-  reviewerCommandGateRound1,
-  reviewerCommandGateRound2Clean,
-  reviewerCommandGateRound2CleanPassForbidden,
-  reviewerCommandGateRound2Findings
+  buildReviewerCanonicalCommandGateLines,
+  buildReviewerRoundCommandGateProjection,
+  type ReviewerCommandGateProjectionVariant
 } from "../runtime/reviewerCommandGateGuidance.js";
 import { ensureBubbleInstanceIdForMutation } from "./bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
@@ -152,12 +150,7 @@ function buildReviewerStartupPrompt(input: {
       ? [formatReviewerBriefPrompt(input.reviewerBriefText)]
       : []),
     "If findings remain, run `pairflow pass --summary ... --finding 'P1:...|artifact://...'` (repeatable; for P0/P1 include finding-level refs).",
-    reviewerCommandGateRound1,
-    reviewerCommandGateRound2Clean,
-    reviewerCommandGateRound2CleanPassForbidden,
-    reviewerCommandGateBlockerUnchanged,
-    "Round 1 guardrail: do not run `pairflow converged` in round 1. In round 1, always hand off with `pairflow pass` and explicit findings declaration (`--finding` or `--no-findings`).",
-    "From round 2 onward, if clean, run `pairflow converged --summary` directly (do not run `pairflow pass --no-findings` first).",
+    ...buildReviewerCanonicalCommandGateLines(),
     "Execute pairflow commands directly from this worktree (do not ask for confirmation first).",
     "Never edit transcript/inbox/state files manually.",
     `Repo: ${input.repoPath}. Worktree: ${input.worktreePath}. Task: ${input.taskArtifactPath}.`
@@ -279,18 +272,35 @@ function buildResumeReviewerStartupPrompt(input: {
     ...(input.reviewerBriefText !== undefined
       ? [formatReviewerBriefPrompt(input.reviewerBriefText)]
       : []),
-    reviewerCommandGateRound1,
-    reviewerCommandGateRound2Clean,
-    reviewerCommandGateRound2CleanPassForbidden,
-    reviewerCommandGateBlockerUnchanged,
-    "Round 1 guardrail: do not run `pairflow converged` in round 1. In round 1, always hand off with `pairflow pass` and explicit findings declaration (`--finding` or `--no-findings`).",
-    "From round 2 onward, if clean, run `pairflow converged --summary` directly (do not run `pairflow pass --no-findings` first).",
+    ...buildReviewerCanonicalCommandGateLines(),
     roleInstruction
   ];
   if ((input.kickoffDiagnostic?.trim().length ?? 0) > 0) {
     lines.push(`Kickoff diagnostic: ${input.kickoffDiagnostic}`);
   }
   return lines.join(" ");
+}
+
+function inferResumeReviewerProjectionVariant(input: {
+  round: number;
+  transcriptSummary: string;
+}): ReviewerCommandGateProjectionVariant {
+  if (input.round <= 1) {
+    return "clean";
+  }
+
+  const findingsMatches = input.transcriptSummary.match(/\bfindings=(\d+)\b/gu);
+  if (findingsMatches === null) {
+    return "clean";
+  }
+  for (const token of findingsMatches) {
+    const [, value = "0"] = token.split("=");
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return "findings";
+    }
+  }
+  return "clean";
 }
 
 function buildResumeImplementerKickoffMessage(input: {
@@ -312,18 +322,26 @@ function buildResumeReviewerKickoffMessage(input: {
   bubbleId: string;
   round: number;
   reviewerTestDirectiveLine?: string;
+  projectionVariant?: ReviewerCommandGateProjectionVariant;
 }): string {
-  const roundActionLine =
+  const roundActionLine = buildReviewerRoundCommandGateProjection({
+    round: input.round,
+    ...(input.projectionVariant !== undefined
+      ? { variant: input.projectionVariant }
+      : {})
+  });
+  const findingsDetailLine =
     input.round <= 1
-      ? `${reviewerCommandGateRound1} ${reviewerCommandGateBlockerUnchanged} Round 1 guardrail: do not run \`pairflow converged\`. If clean, hand off with \`pairflow pass --summary ... --no-findings\`; if findings remain, use \`pairflow pass --summary ... --finding ...\`.`
-      : `${reviewerCommandGateRound2Clean} ${reviewerCommandGateRound2CleanPassForbidden} ${reviewerCommandGateRound2Findings} ${reviewerCommandGateBlockerUnchanged} Continue active review. If findings remain, run \`pairflow pass --summary ... --finding ...\`; if clean, run \`pairflow converged --summary\` directly (do not run \`pairflow pass --no-findings\` first).`;
+      ? "In round 1, declare findings explicitly with `--finding` or `--no-findings` when using `pairflow pass`."
+      : "If findings remain, run `pairflow pass --summary ... --finding 'P1:...|artifact://...'` (repeatable; for P0/P1 include finding-level refs).";
   return [
     `# [pairflow] bubble=${input.bubbleId} resume kickoff (reviewer).`,
     `State is RUNNING at round ${input.round}.`,
     ...(input.reviewerTestDirectiveLine !== undefined
       ? [`Test directive: ${input.reviewerTestDirectiveLine}`]
       : []),
-    roundActionLine
+    roundActionLine,
+    findingsDetailLine
   ].join(" ");
 }
 
@@ -332,6 +350,7 @@ function resolveResumeKickoffMessages(input: {
   taskArtifactPath: string;
   reviewArtifactType: ReviewArtifactType;
   state: BubbleStateSnapshot;
+  transcriptSummary: string;
   implementerAgent: string;
   reviewerAgent: string;
   reviewerTestDirectiveLine?: string;
@@ -362,10 +381,15 @@ function resolveResumeKickoffMessages(input: {
     input.state.active_role === "reviewer" &&
     input.state.active_agent === input.reviewerAgent
   ) {
+    const projectionVariant = inferResumeReviewerProjectionVariant({
+      round: input.state.round,
+      transcriptSummary: input.transcriptSummary
+    });
     return {
       reviewerKickoffMessage: buildResumeReviewerKickoffMessage({
         bubbleId: input.bubbleId,
         round: input.state.round,
+        projectionVariant,
         ...(input.reviewerTestDirectiveLine !== undefined
           ? { reviewerTestDirectiveLine: input.reviewerTestDirectiveLine }
           : {})
@@ -605,6 +629,7 @@ export async function startBubble(
         taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
         reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
         state: loadedState.state,
+        transcriptSummary,
         implementerAgent: resolved.bubbleConfig.agents.implementer,
         reviewerAgent: resolved.bubbleConfig.agents.reviewer,
         ...(reviewerTestDirectiveLine !== undefined

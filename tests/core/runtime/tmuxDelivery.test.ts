@@ -6,6 +6,14 @@ import {
   resolveDeliveryMessageRef,
   retryStuckAgentInput
 } from "../../../src/core/runtime/tmuxDelivery.js";
+import {
+  REVIEWER_COMMAND_GATE_FORBIDDEN,
+  REVIEWER_COMMAND_GATE_REQ_A,
+  REVIEWER_COMMAND_GATE_REQ_B,
+  REVIEWER_COMMAND_GATE_REQ_C,
+  REVIEWER_COMMAND_GATE_REQ_D,
+  REVIEWER_COMMAND_GATE_REQ_E
+} from "../../../src/core/runtime/reviewerCommandGateGuidance.js";
 import type { RuntimeSessionsRegistry } from "../../../src/core/runtime/sessionsRegistry.js";
 import type { TmuxRunResult, TmuxRunner } from "../../../src/core/runtime/tmuxManager.js";
 import type { ReviewerTestExecutionDirective } from "../../../src/core/reviewer/testEvidence.js";
@@ -69,6 +77,13 @@ function createRegistry(): RuntimeSessionsRegistry {
       updatedAt: "2026-02-22T12:00:00.000Z"
     }
   };
+}
+
+function expectNoForbiddenReviewerCommandGateTokens(text: string | undefined): void {
+  expect(text).toBeDefined();
+  for (const forbiddenToken of REVIEWER_COMMAND_GATE_FORBIDDEN) {
+    expect(text).not.toContain(forbiddenToken);
+  }
 }
 
 describe("emitTmuxDeliveryNotification", () => {
@@ -213,21 +228,12 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(messageCall?.[4]).toContain(
       "Reviewer brief reminder (from reviewer-brief.md): Verify factual claims against cited sources."
     );
-    expect(messageCall?.[4]).toContain(
-      "`pairflow pass --summary ... --finding ...`"
-    );
-    expect(messageCall?.[4]).toContain(
-      "Round 1 guardrail: do not run `pairflow converged`"
-    );
-    expect(messageCall?.[4]).toContain(
-      "If review round is 1: do not use `pairflow converged`; use `pairflow pass`."
-    );
-    expect(messageCall?.[4]).toContain(
-      "Blocker-handling policy remains unchanged in this bugfix scope."
-    );
-    expect(messageCall?.[4]).toContain(
-      "`pairflow pass --summary ... --no-findings`"
-    );
+    expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_A);
+    expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+    expect(messageCall?.[4]).not.toContain(REVIEWER_COMMAND_GATE_REQ_B);
+    expect(messageCall?.[4]).not.toContain(REVIEWER_COMMAND_GATE_REQ_C);
+    expect(messageCall?.[4]).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
+    expectNoForbiddenReviewerCommandGateTokens(messageCall?.[4]);
     expect(messageCall?.[4]).toContain(
       "Run pairflow commands from worktree: /tmp/worktree."
     );
@@ -393,7 +399,7 @@ describe("emitTmuxDeliveryNotification", () => {
     );
   });
 
-  it("allows converged guidance for reviewer handoff from round 2", async () => {
+  it("injects clean-path round>=2 command gate for reviewer handoff", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
       calls.push(args);
@@ -434,12 +440,151 @@ describe("emitTmuxDeliveryNotification", () => {
         call[3] === "-l" &&
         call[4]?.includes("# [pairflow] r2 PASS codex->claude")
     );
-    expect(messageCall?.[4]).toContain(
-      "If clean, run `pairflow converged --summary` directly"
+    expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_B);
+    expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_C);
+    expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+    expect(messageCall?.[4]).not.toContain(REVIEWER_COMMAND_GATE_REQ_A);
+    expect(messageCall?.[4]).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
+    expectNoForbiddenReviewerCommandGateTokens(messageCall?.[4]);
+  });
+
+  it("injects findings-path round>=2 command gate for reviewer handoff", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r2 PASS codex->claude msg=msg_20260222_103 ref=artifact://handoff.md. Action: Implementer handoff received.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: {
+        ...baseConfig,
+        reviewer_context_mode: "fresh"
+      },
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        id: "msg_20260222_103",
+        round: 2,
+        payload: {
+          summary: "handoff with explicit findings context",
+          findings: [
+            {
+              severity: "P2",
+              title: "existing finding context"
+            }
+          ]
+        }
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    const messageCall = calls.find(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.2" &&
+        call[3] === "-l" &&
+        call[4]?.includes("# [pairflow] r2 PASS codex->claude")
     );
-    expect(messageCall?.[4]).toContain(
-      "do not run `pairflow pass --no-findings` first"
+    expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_E);
+    expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_C);
+    expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+    expect(messageCall?.[4]).not.toContain(REVIEWER_COMMAND_GATE_REQ_A);
+    expect(messageCall?.[4]).not.toContain(REVIEWER_COMMAND_GATE_REQ_B);
+    expectNoForbiddenReviewerCommandGateTokens(messageCall?.[4]);
+  });
+
+  it("keeps shared command-gate invariants across round>=2 clean and findings projections", async () => {
+    const calls: string[][] = [];
+    let lastDeliveryMessage = "";
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "send-keys" && args[3] === "-l") {
+        lastDeliveryMessage = args[4] ?? "";
+      }
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout: lastDeliveryMessage,
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: {
+        ...baseConfig,
+        reviewer_context_mode: "fresh"
+      },
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        id: "msg_20260222_104",
+        round: 2
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+    await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: {
+        ...baseConfig,
+        reviewer_context_mode: "fresh"
+      },
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        id: "msg_20260222_105",
+        round: 2,
+        payload: {
+          summary: "handoff findings branch",
+          findings: [
+            {
+              severity: "P2",
+              title: "finding"
+            }
+          ]
+        }
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    const reviewerMessages = calls.filter(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.2" &&
+        call[3] === "-l" &&
+        call[4]?.includes("PASS codex->claude")
     );
+    expect(reviewerMessages).toHaveLength(2);
+    const cleanMessage = reviewerMessages[0]?.[4] ?? "";
+    const findingsMessage = reviewerMessages[1]?.[4] ?? "";
+
+    expect(cleanMessage).toContain(REVIEWER_COMMAND_GATE_REQ_C);
+    expect(cleanMessage).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+    expect(cleanMessage).toContain(REVIEWER_COMMAND_GATE_REQ_B);
+    expect(cleanMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
+    expect(findingsMessage).toContain(REVIEWER_COMMAND_GATE_REQ_C);
+    expect(findingsMessage).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+    expect(findingsMessage).toContain(REVIEWER_COMMAND_GATE_REQ_E);
+    expect(findingsMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_B);
   });
 
   it("re-injects full ontology on every fresh-mode reviewer handoff round with directive", async () => {

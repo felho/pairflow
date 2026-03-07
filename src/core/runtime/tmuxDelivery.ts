@@ -10,11 +10,8 @@ import {
   buildReviewerScoutExpansionWorkflowGuidance
 } from "./reviewerScoutExpansionGuidance.js";
 import {
-  reviewerCommandGateBlockerUnchanged,
-  reviewerCommandGateRound1,
-  reviewerCommandGateRound2Clean,
-  reviewerCommandGateRound2CleanPassForbidden,
-  reviewerCommandGateRound2Findings
+  buildReviewerRoundCommandGateProjection,
+  type ReviewerCommandGateProjectionVariant
 } from "./reviewerCommandGateGuidance.js";
 import {
   buildReviewerDecisionMatrixReminder,
@@ -132,14 +129,22 @@ function buildDeliveryMessage(
                 : [])
             ].join(" ")
           : formatReviewerTestExecutionDirective(reviewerTestDirective);
-      const convergenceInstruction =
+      const projectionVariant: ReviewerCommandGateProjectionVariant =
+        Array.isArray(envelope.payload.findings) && envelope.payload.findings.length > 0
+          ? "findings"
+          : "clean";
+      const convergenceInstruction = buildReviewerRoundCommandGateProjection({
+        round: envelope.round,
+        variant: projectionVariant
+      });
+      const findingsDetailInstruction =
         envelope.round <= 1
-          ? `${reviewerCommandGateRound1} ${reviewerCommandGateBlockerUnchanged} Round 1 guardrail: do not run \`pairflow converged\`. If clean, hand off with \`pairflow pass --summary ... --no-findings\`; if findings remain, use \`pairflow pass --summary ... --finding ...\`.`
-          : `${reviewerCommandGateRound2Clean} ${reviewerCommandGateRound2CleanPassForbidden} ${reviewerCommandGateRound2Findings} ${reviewerCommandGateBlockerUnchanged} If findings remain, run \`pairflow pass --summary ... --finding 'P1:...|artifact://...'\` (repeatable; for P0/P1 include finding-level refs). If clean, run \`pairflow converged --summary\` directly (do not run \`pairflow pass --no-findings\` first).`;
+          ? "In round 1, declare findings explicitly with `--finding` or `--no-findings` when using `pairflow pass`."
+          : "If findings remain, run `pairflow pass --summary ... --finding 'P1:...|artifact://...'` (repeatable; for P0/P1 include finding-level refs).";
       action =
         `Implementer handoff received. Run a fresh review now. ${buildReviewerAgentSelectionGuidance(
           bubbleConfig.review_artifact_type
-        )} ${buildReviewerSeverityOntologyReminder({ includeFullOntology: useFullReviewerPolicyContext })} ${testDirective} ${buildReviewerScoutExpansionWorkflowGuidance()} ${buildReviewerPassOutputContractGuidance()} ${convergenceInstruction} ${reviewerBrief !== undefined ? formatReviewerBriefDeliveryReminder(reviewerBrief) : ""} Execute pairflow commands directly (no confirmation prompt).`;
+        )} ${buildReviewerSeverityOntologyReminder({ includeFullOntology: useFullReviewerPolicyContext })} ${testDirective} ${buildReviewerScoutExpansionWorkflowGuidance()} ${buildReviewerPassOutputContractGuidance()} ${convergenceInstruction} ${findingsDetailInstruction} ${reviewerBrief !== undefined ? formatReviewerBriefDeliveryReminder(reviewerBrief) : ""} Execute pairflow commands directly (no confirmation prompt).`;
     } else if (envelope.type === "HUMAN_REPLY") {
       action =
         "Human response received. Continue review workflow from this update.";
