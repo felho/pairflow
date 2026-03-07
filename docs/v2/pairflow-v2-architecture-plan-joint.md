@@ -10,7 +10,7 @@ Sources: claude/pairflow-v2-architecture-plan.md, codex/pairflow-v2-architecture
 
 1. **The workflow is the boss.** Agents execute steps within a workflow — they do not control the workflow. The kernel owns all state transitions.
 2. **Declare, don't hardcode.** Workflow behavior is defined in templates, not baked into the engine. v1 is just one preset.
-3. **Enforce at the boundary.** The kernel decides policy; the CLI enforces it. No agent can bypass the rules because the system sits between the agent and every action.
+3. **Enforce at the boundary.** The kernel owns policy and capability decisions; CLI, hooks, and channel adapters are enforcement adapters that relay decisions. No agent can bypass the rules because the kernel sits between the agent and every action.
 4. **Auditability by design.** Every event, decision, and artifact is traceable via provenance fields and append-only transcript.
 5. **Evolvability.** Session store, intelligence layer, and team features can be added later without migration breaks.
 
@@ -255,14 +255,16 @@ Error codes:
 **Example — CapabilityProfile matrix:**
 
 ```
-                  | RUNNING        | WAITING_HUMAN  | HELP_PENDING   | READY_FOR_APPROVAL |
-------------------+----------------+----------------+----------------+--------------------+
-implementer       | pass           | -              | -              | -                  |
-                  | ask-human      |                |                |                    |
-------------------+----------------+----------------+----------------+--------------------+
-reviewer          | pass           | -              | -              | -                  |
-                  | ask-human      |                |                |                    |
-                  | converged      |                |                |                    |
+                  | RUNNING              | WAITING_HUMAN  | HELP_PENDING   | READY_FOR_APPROVAL |
+------------------+----------------------+----------------+----------------+--------------------+
+implementer       | pass                 | -              | -              | -                  |
+                  | request-help         |                |                |                    |
+                  | request-decision     |                |                |                    |
+------------------+----------------------+----------------+----------------+--------------------+
+reviewer          | pass                 | -              | -              | -                  |
+                  | request-help         |                |                |                    |
+                  | request-decision     |                |                |                    |
+                  | converged            |                |                |                    |
 ------------------+----------------+----------------+----------------+--------------------+
 operator (human)  | reply          | reply          | reply          | approve            |
                   | stop           | stop           | stop           | request-rework     |
@@ -350,8 +352,8 @@ State Layer owns:
   - Locking (preventing concurrent state mutations)
 
 State Layer exposes:
-  - getState(instance_id) -> InstanceState
-  - setState(instance_id, new_state) -> void (compare-and-swap atomic)
+  - getState(instance_id) -> { state: InstanceState, version: uint64 }
+  - setState(instance_id, expected_version, new_state) -> { ok: true, new_version } | { ok: false, current_version }
   - appendTranscript(instance_id, entry) -> void
   - writeArtifact(instance_id, artifact) -> artifact_ref
   - readArtifact(artifact_ref) -> artifact
@@ -405,19 +407,29 @@ Executor owns:
   - Health monitoring and liveness checks
 
 Executor exposes:
+
+  Runtime plane (agent process lifecycle):
   - provision(workspace_spec) -> sandbox_handle
   - start(sandbox_handle, agent_actor, agent_config) -> process_handle
   - stop(process_handle) -> void
-  - run(sandbox_handle, command, op_id) -> run_result
   - sync(sandbox_handle, direction: push | pull) -> void
   - health(sandbox_handle) -> { status: ok | timeout | infra_error, last_active }
+
+  Control plane relay (agent -> host kernel communication):
+  - relay(sandbox_handle, event_envelope, op_id) -> relay_result
   - resume(resume_token) -> resume_result
+
+  Note: relay() is the channel through which agent CLI commands (pairflow pass,
+  pairflow converged, etc.) reach the host kernel. The executor does not interpret
+  these commands — it forwards EventEnvelopes to the kernel and returns the result.
+  This is distinct from runtime operations (start/stop/sync) which the executor
+  owns directly.
 
 Executor guarantees:
   - Agent identity survives process restarts (session-independent binding)
   - Artifacts are synced before agent starts and after agent stops
   - Health check returns status even if agent process is unresponsive
-  - Every run() call has a unique op_id; replaying the same op_id is a no-op (idempotent)
+  - Every relay() call has a unique op_id; replaying the same op_id is a no-op (idempotent)
   - resume() restores executor state from the last acknowledged op_id
 
 Executor must NEVER:
@@ -426,7 +438,7 @@ Executor must NEVER:
   - Modify workflow state directly
 
 Remote executor model (Resume Token):
-  - Every pairflow CLI command in the sandbox calls the host kernel via run(op_id)
+  - Every pairflow CLI command in the sandbox is relayed to the host kernel via relay(op_id)
   - The host kernel is the single source of truth for state
   - op_id guarantees idempotency: if the same op_id is sent twice, the host skips it
   - On disconnect, the agent blocks until the host is reachable again
@@ -434,11 +446,21 @@ Remote executor model (Resume Token):
   - The host responds with the last processed op_id; the client retries unacknowledged ops
 
 Future extension (WAL — write-ahead log):
-  - A client-side WAL can be added in front of run() calls later
-  - WAL would let the agent continue working offline, queuing run() calls locally
-  - On reconnect, the WAL replays queued calls as normal run(op_id) calls
-  - The host kernel stays unchanged — it just sees run() calls with op_ids
+  - A client-side WAL can be added in front of relay() calls later
+  - WAL would let the agent continue working offline, queuing relay() calls locally
+  - On reconnect, the WAL replays queued calls as normal relay(op_id) calls
+  - The host kernel stays unchanged — it just sees relay() calls with op_ids
   - This is a backwards-compatible addition that does not require kernel changes
+
+  WAL replay invariants (required for safe offline operation):
+  - revalidate_on_replay: every replayed op must pass capability and policy checks
+    at replay time, not just at queue time (policies may have changed while offline)
+  - op_id idempotency: replaying a previously acknowledged op_id is a no-op
+  - stale-intent rejection: if the workflow has moved to a different step or state
+    since the op was queued, the replay must fail with stale_intent error
+    (e.g., agent queued a "pass" for step implement, but workflow already moved to approval)
+  - side-effect idempotency: operations triggered by relay() (artifact writes,
+    transcript appends) must be safe to re-execute with the same op_id
 ```
 
 ### 4.9 BC-09: Kernel -> Channel (Outbound)
@@ -466,12 +488,20 @@ BOUNDARY: Kernel -> Subflow Engine
 Kernel requests:
   spawnSubflow(parent_flow_id, parent_step_id, subflow_def, trigger_context)
 
-Subflow Engine guarantees:
+Subflow Engine guarantees (all types):
   - Parent flow_id and subflow_id are linked
+  - Subflow lifecycle is tracked in transcript
+
+Blocking subflow guarantees:
+  - Parent step is paused until subflow completes or times out
   - Subflow returns via help_resolved event with validated answer payload
   - No automatic "success" return without an actual answer
-  - Parent step is paused until subflow completes or times out
   - On timeout: on_failure handler runs (typically escalate to human)
+
+Non-blocking subflow guarantees:
+  - Message is dispatched; parent continues immediately
+  - No return value — parent does not wait
+  - Delivery failure is logged but does not block parent
 
 Subflow types:
   - blocking: parent step paused until subflow returns
@@ -638,7 +668,7 @@ Embedded mini-workflows. Two variants:
 ```yaml
 subflows:
   - id: help
-    trigger: ask-human
+    trigger: request-help
     type: blocking
     steps:
       - id: route-question
@@ -768,9 +798,9 @@ template:
 
   capability_profile:
     implementer:
-      RUNNING: [pass, ask-human]
+      RUNNING: [pass, request-help, request-decision]
     reviewer:
-      RUNNING: [pass, ask-human, converged]
+      RUNNING: [pass, request-help, request-decision, converged]
     operator:
       RUNNING: [reply, stop, resume]
       WAITING_HUMAN: [reply, stop, resume]
@@ -825,11 +855,23 @@ template:
 
   subflows:
     - id: help
-      trigger: ask-human
+      trigger: request-help
       type: blocking
       steps:
         - id: route-question
           channel_priority: [tmux]
+        - id: wait-reply
+          timeout: ${watchdog_timeout_minutes}m
+        - id: inject-answer
+          action: inject_into_parent
+
+    - id: decision
+      trigger: request-decision
+      type: blocking
+      steps:
+        - id: route-decision
+          channel_priority: [tmux, slack]
+          payload: { type: yes_no, question: "${payload.question}" }
         - id: wait-reply
           timeout: ${watchdog_timeout_minutes}m
         - id: inject-answer
@@ -996,7 +1038,7 @@ The findings artifact is the contract between validate and fix. The pattern is u
 | Team / multi-user | Single user tool for now | v3 |
 | Cloud sync | Local-first principle | v3 |
 | Web UI | CLI-first, tmux sufficient | v2 Phase 3 |
-| LLM-judge gates | Needs stable policy engine first | v2.1 |
+| LLM-judge gates | Schema-supported in v2.0 (gate_type: llm-judge is valid), runtime-enabled from v2.1. Needs stable policy engine first. | v2.1 |
 
 ---
 
@@ -1050,4 +1092,4 @@ The findings artifact is the contract between validate and fix. The pattern is u
 3. **Enforcement backbone:** CLI validation (agent-agnostic); hooks are optional bonus
 4. **Quality bar:** Every boundary has explicit input/output, invariants, and error codes documented
 5. **State ownership:** Kernel is the single source of truth; remote executors use resume token + op_id for consistency; state layer is a dumb store
-6. **Remote sync:** Resume token (agent blocks on disconnect) first; WAL (agent works offline) is a future backwards-compatible extension
+6. **Remote sync:** Resume token (agent blocks on disconnect) first; WAL (agent works offline) is a future backwards-compatible extension with mandatory replay invariants (revalidation, stale-intent rejection, side-effect idempotency)
