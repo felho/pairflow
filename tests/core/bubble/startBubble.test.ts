@@ -216,13 +216,25 @@ describe("startBubble", () => {
       "Summary scope guardrail: scope statements must cover only current worktree changes."
     );
     expect(reviewerCommand).toContain(
+      "For summary scope claims, do not use branch-range diffs such as `git diff <revA>..<revB>` (including `git diff main..HEAD`)."
+    );
+    expect(reviewerCommand).not.toContain(
       "For summary scope claims, do not use `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`)."
     );
     expect(reviewerCommand).toContain(
-      "Establish scope with `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` (staged, unstaged, and untracked), or with the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`."
+      "Do not derive summary scope from history/log sources such as `git log --name-status` or `git show --name-status`."
+    );
+    expect(reviewerCommand).toContain(
+      "Establish scope from current worktree changes using `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard` (staged, unstaged, and untracked)."
     );
     expect(reviewerCommand).toContain(
       "If current worktree scope cannot be resolved reliably, avoid numeric file-operation claims."
+    );
+    expect(reviewerCommand).toMatch(/(<revA>\.\.<revB>|main\.\.HEAD)/);
+    expect(reviewerCommand).toMatch(/git\s+(log|show)\s+--name-status/);
+    expect(reviewerCommand).toMatch(/git diff --name-status/);
+    expect(reviewerCommand).toMatch(
+      /(cannot be resolved reliably|avoid numeric file-operation claims)/i
     );
     expect(reviewerCommand).toContain("Stop rules: stop expansion immediately when no new concrete locations are found");
     expect(reviewerCommand).toContain("repo-wide expansion scans are forbidden");
@@ -234,13 +246,19 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain("`Residual Risk / Notes`");
     expect(reviewerCommand).toContain("`scouts_executed`, `scope_covered`, `guardrail_confirmation`, `raw_candidates_count`, `deduplicated_count`");
     expect(reviewerCommand).toContain(
-      "`Scout Coverage.scope_covered` must cover only current worktree changes"
+      "`Scout Coverage.scope_covered` must describe current worktree changes only"
     );
     expect(reviewerCommand).toContain(
-      "grounded in `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` or the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`."
+      "grounded in `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`."
+    );
+    expect(reviewerCommand).not.toContain(
+      "`Scout Coverage.scope_covered` must cover only current worktree changes, grounded in `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` or the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`."
     );
     expect(reviewerCommand).toContain(
-      "Do not justify `scope_covered` with `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`)."
+      "Do not justify `scope_covered` with branch-range diffs such as `git diff <revA>..<revB>` (including `git diff main..HEAD`)."
+    );
+    expect(reviewerCommand).toContain(
+      "Do not justify `scope_covered` with history/log sources such as `git log --name-status` or `git show --name-status`."
     );
     expect(reviewerCommand).toContain("`title`, `severity`, `class`, `locations`, `evidence`, `expansion_siblings`");
     expect(reviewerCommand).toContain("`class`, `source_finding_title`, `scan_scope`, `siblings`, `stop_reason`");
@@ -665,13 +683,27 @@ describe("startBubble", () => {
             "Summary scope guardrail: scope statements must cover only current worktree changes."
           );
           expect(input.reviewerCommand).toContain(
+            "For summary scope claims, do not use branch-range diffs such as `git diff <revA>..<revB>` (including `git diff main..HEAD`)."
+          );
+          expect(input.reviewerCommand).not.toContain(
             "For summary scope claims, do not use `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`)."
           );
           expect(input.reviewerCommand).toContain(
-            "Establish scope with `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` (staged, unstaged, and untracked), or with the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`."
+            "Do not derive summary scope from history/log sources such as `git log --name-status` or `git show --name-status`."
+          );
+          expect(input.reviewerCommand).toContain(
+            "Establish scope from current worktree changes using `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard` (staged, unstaged, and untracked)."
           );
           expect(input.reviewerCommand).toContain(
             "If current worktree scope cannot be resolved reliably, avoid numeric file-operation claims."
+          );
+          expect(input.reviewerCommand).toMatch(/(<revA>\.\.<revB>|main\.\.HEAD)/);
+          expect(input.reviewerCommand).toMatch(
+            /git\s+(log|show)\s+--name-status/
+          );
+          expect(input.reviewerCommand).toMatch(/git diff --name-status/);
+          expect(input.reviewerCommand).toMatch(
+            /(cannot be resolved reliably|avoid numeric file-operation claims)/i
           );
           expect(input.reviewerCommand).toContain(
             "Stop rules: stop expansion immediately when no new concrete locations are found"
@@ -681,13 +713,19 @@ describe("startBubble", () => {
             "Required reviewer PASS output contract (machine-checkable)"
           );
           expect(input.reviewerCommand).toContain(
-            "`Scout Coverage.scope_covered` must cover only current worktree changes"
+            "`Scout Coverage.scope_covered` must describe current worktree changes only"
           );
           expect(input.reviewerCommand).toContain(
-            "grounded in `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` or the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`."
+            "grounded in `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`."
+          );
+          expect(input.reviewerCommand).not.toContain(
+            "`Scout Coverage.scope_covered` must cover only current worktree changes, grounded in `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` or the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`."
           );
           expect(input.reviewerCommand).toContain(
-            "Do not justify `scope_covered` with `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`)."
+            "Do not justify `scope_covered` with branch-range diffs such as `git diff <revA>..<revB>` (including `git diff main..HEAD`)."
+          );
+          expect(input.reviewerCommand).toContain(
+            "Do not justify `scope_covered` with history/log sources such as `git log --name-status` or `git show --name-status`."
           );
           expect(input.reviewerCommand).toContain("`Issue-Class Expansions`");
           expect(input.reviewerCommand).toContain("`Residual Risk / Notes`");
