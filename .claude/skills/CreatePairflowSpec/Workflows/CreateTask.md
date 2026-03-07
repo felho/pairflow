@@ -63,6 +63,9 @@ Required blockers for Task output:
    - exact function signature for changed public entry points
    - if no allowed side effects are listed, mark pure behavior
    - if dependency exists, include dependency-failure fallback row
+7. Cross-reference and token integrity must be explicit:
+   - referenced IDs must resolve to existing rows/clauses/tokens,
+   - canonical token names must be used consistently (no shorthand aliases).
 
 If blockers exist, ask only focused questions for those blockers.
 
@@ -88,6 +91,18 @@ Rules:
 3. `P0/P1` requires evidence (repro/failing output/code-path proof).
 4. If side effects are empty, mark implementation as pure.
 5. If dependency is present, dependency-failure fallback is mandatory (otherwise `N/A`).
+6. Required-now test rows should be self-contained; if a row depends on another row for shared invariants, add explicit normative dependency notation.
+
+### 5a) Consistency Gate (mandatory before L2)
+
+Run a document-level consistency gate:
+1. Build an identifier registry from declared IDs/tokens (`AC*`, `T*`, `CS*`, `SL*`, `RC*`, `REQ_*`, `FORBID_*`).
+2. Verify every cross-reference in mappings/spec-lock/test/evidence tables resolves exactly.
+3. Reject shorthand alias use where canonical token IDs exist.
+4. Detect implicit test dependency:
+   - if a required-now test row is only valid because another row carries core invariants,
+   - require explicit `depends_on` style normative note in that row.
+5. If any gate item fails, fix the document before proceeding.
 
 ### 6) L2 pass
 

@@ -49,6 +49,7 @@ Override policy:
 4. L1 is the implementation contract; L2 is optional hardening.
 5. Blocker severity is evidence-based (`P0/P1` only with concrete proof).
 6. Avoid review-loop inflation: prioritize `required-now` vs `later-hardening` tagging.
+7. Identifier discipline first: cross-reference IDs must be canonical, exact-match, and auditable.
 
 ## Minimum Contract Rules
 
@@ -59,6 +60,12 @@ Override policy:
 5. Every refined Task output must include a standard `Hardening Backlog` section for non-blocking (`later-hardening`) items.
 6. If contract-boundary override is triggered, `plan_ref` is mandatory and L1 contract rows for impacted boundaries are mandatory.
 7. L1 must explicitly include: required vs optional fields, exact entry signatures, pure-by-default side-effect rule, and dependency-failure fallback where applicable.
+8. Cross-reference integrity is mandatory:
+   - every referenced ID (`AC*`, `T*`, `CS*`, `SL*`, `RC*`, token IDs like `REQ_*`/`FORBID_*`) must exist exactly once in the same document scope,
+   - no shorthand aliases are allowed in lock/mapping rows when canonical token IDs exist.
+9. Test matrix rows must be self-contained for required-now assertions:
+   - no hidden dependency on another test row unless explicitly declared as a normative dependency note.
+10. If one row depends on another row for shared invariants, the dependency must be explicit and machine-auditable (for example: `depends_on: T2d for REQ_C/REQ_D`).
 
 ## Templates and References
 
