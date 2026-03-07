@@ -5,7 +5,12 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
-import { parseBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
+import {
+  INVALID_REVIEW_ARTIFACT_TYPE_OPTION,
+  MISSING_REVIEW_ARTIFACT_TYPE_OPTION,
+  REVIEW_ARTIFACT_TYPE_AUTO_REMOVED,
+  parseBubbleConfigToml
+} from "../../../src/config/bubbleConfig.js";
 import { resolveDocContractGateArtifactPath } from "../../../src/core/gates/docContractGates.js";
 import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
 import { validateBubbleStateSnapshot } from "../../../src/core/state/stateSchema.js";
@@ -54,6 +59,7 @@ describe("createBubble", () => {
       id: "b_create_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Implement feature X",
       cwd: repoPath
     });
@@ -62,7 +68,7 @@ describe("createBubble", () => {
     expect(result.state.state).toBe("CREATED");
     expect(result.config.watchdog_timeout_minutes).toBe(20);
     expect(result.config.quality_mode).toBe("strict");
-    expect(result.config.review_artifact_type).toBe("auto");
+    expect(result.config.review_artifact_type).toBe("code");
     expect(result.config.doc_contract_gates.mode).toBe("advisory");
     expect(result.config.doc_contract_gates.round_gate_applies_after).toBe(2);
     expect(result.config.bubble_instance_id).toMatch(
@@ -73,7 +79,7 @@ describe("createBubble", () => {
     const reparsedConfig = parseBubbleConfigToml(bubbleToml);
     expect(reparsedConfig.id).toBe("b_create_01");
     expect(reparsedConfig.notifications.enabled).toBe(true);
-    expect(reparsedConfig.review_artifact_type).toBe("auto");
+    expect(reparsedConfig.review_artifact_type).toBe("code");
     expect(reparsedConfig.doc_contract_gates.mode).toBe("advisory");
     expect(reparsedConfig.doc_contract_gates.round_gate_applies_after).toBe(2);
     expect(reparsedConfig.bubble_instance_id).toBe(
@@ -113,6 +119,7 @@ describe("createBubble", () => {
       id: "b_create_no_open_default",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "No explicit open command",
       cwd: repoPath
     });
@@ -132,6 +139,7 @@ describe("createBubble", () => {
       id: "b_create_with_open_command",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Explicit open command",
       cwd: repoPath,
       openCommand
@@ -154,6 +162,7 @@ describe("createBubble", () => {
       id: "b_create_01_now",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Timestamp deterministic test",
       cwd: repoPath,
       now
@@ -173,6 +182,7 @@ describe("createBubble", () => {
       id: "b_create_02",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       taskFile: taskFilePath,
       cwd: repoPath
     });
@@ -190,6 +200,7 @@ describe("createBubble", () => {
       id: "b_create_reviewer_brief_inline",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Task",
       reviewerBrief: "Validate all claims with evidence refs.",
       cwd: repoPath
@@ -212,6 +223,7 @@ describe("createBubble", () => {
       id: "b_create_reviewer_brief_file",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Task",
       reviewerBriefFile: reviewerBriefFilePath,
       cwd: repoPath
@@ -229,6 +241,7 @@ describe("createBubble", () => {
         id: "b_create_accuracy_critical_missing_brief",
         repoPath,
         baseBranch: "main",
+        reviewArtifactType: "code",
         task: "Task",
         accuracyCritical: true,
         cwd: repoPath
@@ -246,6 +259,7 @@ describe("createBubble", () => {
         id: "b_create_reviewer_brief_both",
         repoPath,
         baseBranch: "main",
+        reviewArtifactType: "code",
         task: "Task",
         reviewerBrief: "Inline",
         reviewerBriefFile: reviewerBriefFilePath,
@@ -255,7 +269,7 @@ describe("createBubble", () => {
     ).rejects.toThrow(/either reviewer brief text or reviewer brief file path, not both/u);
   });
 
-  it("infers document review artifact type for doc-centric task files", async () => {
+  it("persists explicit document review artifact type", async () => {
     const repoPath = await createTempRepo();
     const taskFilePath = join(repoPath, "task.md");
     await writeFile(
@@ -273,6 +287,7 @@ describe("createBubble", () => {
       id: "b_create_doc_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "document",
       taskFile: taskFilePath,
       cwd: repoPath
     });
@@ -282,15 +297,19 @@ describe("createBubble", () => {
     expect(parseBubbleConfigToml(bubbleToml).review_artifact_type).toBe(
       "document"
     );
+    await expect(
+      stat(resolveDocContractGateArtifactPath(result.paths.artifactsDir))
+    ).resolves.toBeDefined();
   });
 
-  it("infers code review artifact type for code-centric tasks", async () => {
+  it("persists explicit code review artifact type", async () => {
     const repoPath = await createTempRepo();
 
     const result = await createBubble({
       id: "b_create_code_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Implement TypeScript changes in src/ and tests/ for API bug fix.",
       cwd: repoPath
     });
@@ -298,20 +317,48 @@ describe("createBubble", () => {
     expect(result.config.review_artifact_type).toBe("code");
   });
 
-  it("returns auto when document/code inference scores are tied", async () => {
+  it("rejects missing reviewArtifactType in core contract", async () => {
     const repoPath = await createTempRepo();
 
-    const result = await createBubble({
-      id: "b_create_auto_tie_01",
-      repoPath,
-      baseBranch: "main",
-      task: "Review document consistency and API naming.",
-      cwd: repoPath
-    });
+    await expect(
+      createBubble({
+        id: "b_create_missing_review_type_01",
+        repoPath,
+        baseBranch: "main",
+        task: "Review document consistency and API naming.",
+        cwd: repoPath
+      } as unknown as Parameters<typeof createBubble>[0])
+    ).rejects.toThrow(new RegExp(`^${MISSING_REVIEW_ARTIFACT_TYPE_OPTION}:`, "u"));
+  });
 
-    // "document" contributes +1 and "api" contributes +1, so this is a
-    // deliberately ambiguous/tied signal and should stay in auto mode.
-    expect(result.config.review_artifact_type).toBe("auto");
+  it("rejects auto reviewArtifactType in core contract", async () => {
+    const repoPath = await createTempRepo();
+
+    await expect(
+      createBubble({
+        id: "b_create_auto_review_type_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "auto",
+        task: "Review document consistency and API naming.",
+        cwd: repoPath
+      } as unknown as Parameters<typeof createBubble>[0])
+    ).rejects.toThrow(new RegExp(`^${REVIEW_ARTIFACT_TYPE_AUTO_REMOVED}:`, "u"));
+  });
+
+  it("rejects invalid reviewArtifactType in core contract", async () => {
+    const repoPath = await createTempRepo();
+
+    await expect(
+      createBubble({
+        id: "b_create_invalid_review_type_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "slides",
+        task: "Review document consistency and API naming.",
+        cwd: repoPath
+      } as unknown as Parameters<typeof createBubble>[0])
+    ).rejects.toThrow(new RegExp(`^${INVALID_REVIEW_ARTIFACT_TYPE_OPTION}:`, "u"));
   });
 
   it("does not write doc-gate artifact for non-document bubbles", async () => {
@@ -321,6 +368,7 @@ describe("createBubble", () => {
       id: "b_create_non_doc_no_gate_artifact_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Implement TypeScript changes in src/ and tests/ for API bug fix.",
       cwd: repoPath
     });
@@ -342,6 +390,7 @@ describe("createBubble", () => {
       id: "b_create_021",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "fix the login bug",
       cwd: repoPath
     });
@@ -361,6 +410,7 @@ describe("createBubble", () => {
         id: "BAD",
         repoPath,
         baseBranch: "main",
+        reviewArtifactType: "code",
         task: "Task",
         cwd: repoPath
       })
@@ -374,6 +424,7 @@ describe("createBubble", () => {
       id: "b_create_03",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Task",
       cwd: repoPath
     });
@@ -383,6 +434,7 @@ describe("createBubble", () => {
         id: "b_create_03",
         repoPath,
         baseBranch: "main",
+        reviewArtifactType: "code",
         task: "Task",
         cwd: repoPath
       })
@@ -399,6 +451,7 @@ describe("createBubble", () => {
         id: "b_create_032",
         repoPath,
         baseBranch: "main",
+        reviewArtifactType: "code",
         task: "Inline task",
         taskFile: taskFilePath,
         cwd: repoPath
@@ -414,6 +467,7 @@ describe("createBubble", () => {
         id: "b_create_04",
         repoPath: nonRepoPath,
         baseBranch: "main",
+        reviewArtifactType: "code",
         task: "Task",
         cwd: nonRepoPath
       })

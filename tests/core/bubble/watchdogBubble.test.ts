@@ -327,6 +327,7 @@ describe("runBubbleWatchdog", () => {
       id: "b_watchdog_03",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Watchdog non-running task",
       cwd: repoPath
     });

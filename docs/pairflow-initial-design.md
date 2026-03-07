@@ -285,7 +285,7 @@ Note: local overlay entries are synced at worktree bootstrap; missing sources ar
 
 ## CLI Surface (MVP)
 Human/operator commands:
-1. `pairflow bubble create --id <id> --repo <path> --base <branch> --task <file-or-text>`
+1. `pairflow bubble create --id <id> --repo <path> --base <branch> --review-artifact-type <document|code> --task <file-or-text>`
 2. `pairflow bubble start --id <id>`
 3. `pairflow bubble status --id <id>`
 4. `pairflow bubble inbox --id <id>`

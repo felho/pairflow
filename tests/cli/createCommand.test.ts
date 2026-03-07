@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER,
+  INVALID_REVIEW_ARTIFACT_TYPE_OPTION,
+  MISSING_REVIEW_ARTIFACT_TYPE_OPTION,
+  REVIEW_ARTIFACT_TYPE_AUTO_REMOVED
+} from "../../src/config/bubbleConfig.js";
+import {
   type BubbleCreateCommandDependencies,
   getBubbleCreateHelpText,
   parseBubbleCreateCommandOptions,
@@ -17,6 +23,8 @@ describe("parseBubbleCreateCommandOptions", () => {
       "/tmp/repo",
       "--base",
       "main",
+      "--review-artifact-type",
+      "code",
       "--task",
       "Implement X"
     ]);
@@ -24,6 +32,7 @@ describe("parseBubbleCreateCommandOptions", () => {
     expect(parsed.id).toBe("b_create_01");
     expect(parsed.repo).toBe("/tmp/repo");
     expect(parsed.base).toBe("main");
+    expect(parsed.reviewArtifactType).toBe("code");
     expect(parsed.task).toBe("Implement X");
     expect(parsed.help).toBe(false);
   });
@@ -33,12 +42,14 @@ describe("parseBubbleCreateCommandOptions", () => {
       "--id=b_create_01",
       "--repo=/tmp/repo",
       "--base=main",
+      "--review-artifact-type=code",
       "--task=Implement X"
     ]);
 
     expect(parsed.id).toBe("b_create_01");
     expect(parsed.repo).toBe("/tmp/repo");
     expect(parsed.base).toBe("main");
+    expect(parsed.reviewArtifactType).toBe("code");
     expect(parsed.task).toBe("Implement X");
   });
 
@@ -50,11 +61,14 @@ describe("parseBubbleCreateCommandOptions", () => {
       "/tmp/repo",
       "--base",
       "main",
+      "--review-artifact-type",
+      "document",
       "--task-file",
       "/tmp/task.md"
     ]);
 
     expect(parsed.taskFile).toBe("/tmp/task.md");
+    expect(parsed.reviewArtifactType).toBe("document");
   });
 
   it("parses reviewer brief and accuracy-critical flags", () => {
@@ -65,6 +79,8 @@ describe("parseBubbleCreateCommandOptions", () => {
       "/tmp/repo",
       "--base",
       "main",
+      "--review-artifact-type",
+      "code",
       "--task",
       "Implement X",
       "--reviewer-brief",
@@ -80,6 +96,8 @@ describe("parseBubbleCreateCommandOptions", () => {
     const parsed = parseBubbleCreateCommandOptions(["--help"]);
     expect(parsed.help).toBe(true);
     expect(getBubbleCreateHelpText()).toContain("pairflow bubble create");
+    expect(getBubbleCreateHelpText()).toContain("--review-artifact-type <document|code>");
+    expect(getBubbleCreateHelpText()).not.toContain("<auto|");
   });
 
   it("throws when a required flag is missing", () => {
@@ -89,10 +107,119 @@ describe("parseBubbleCreateCommandOptions", () => {
         "b_create_01",
         "--repo",
         "/tmp/repo",
+        "--review-artifact-type",
+        "code",
         "--task",
         "Implement X"
       ])
     ).toThrow(/--base/u);
+  });
+
+  it("throws when review-artifact-type option is missing", () => {
+    expect(() =>
+      parseBubbleCreateCommandOptions([
+        "--id",
+        "b_create_01",
+        "--repo",
+        "/tmp/repo",
+        "--base",
+        "main",
+        "--task",
+        "Implement X"
+      ])
+    ).toThrow(new RegExp(`^${MISSING_REVIEW_ARTIFACT_TYPE_OPTION}:`, "u"));
+  });
+
+  it("keeps missing-option aggregation context when review-artifact-type is missing", () => {
+    expect(() =>
+      parseBubbleCreateCommandOptions([
+        "--id",
+        "b_create_01",
+        "--repo",
+        "/tmp/repo",
+        "--task",
+        "Implement X"
+      ])
+    ).toThrow(
+      new RegExp(
+        `^${MISSING_REVIEW_ARTIFACT_TYPE_OPTION}:.*Also missing: --base`,
+        "u"
+      )
+    );
+  });
+
+  it("throws dedicated reason code when auto value is provided", () => {
+    expect(() =>
+      parseBubbleCreateCommandOptions([
+        "--id",
+        "b_create_01",
+        "--repo",
+        "/tmp/repo",
+        "--base",
+        "main",
+        "--review-artifact-type",
+        "auto",
+        "--task",
+        "Implement X"
+      ])
+    ).toThrow(new RegExp(`^${REVIEW_ARTIFACT_TYPE_AUTO_REMOVED}:`, "u"));
+  });
+
+  it("keeps missing-option context when auto value is provided with other missing flags", () => {
+    expect(() =>
+      parseBubbleCreateCommandOptions([
+        "--id",
+        "b_create_01",
+        "--repo",
+        "/tmp/repo",
+        "--review-artifact-type",
+        "auto",
+        "--task",
+        "Implement X"
+      ])
+    ).toThrow(
+      new RegExp(
+        `^${REVIEW_ARTIFACT_TYPE_AUTO_REMOVED}:.*Also missing: --base`,
+        "u"
+      )
+    );
+  });
+
+  it("throws dedicated reason code when invalid value is provided", () => {
+    expect(() =>
+      parseBubbleCreateCommandOptions([
+        "--id",
+        "b_create_01",
+        "--repo",
+        "/tmp/repo",
+        "--base",
+        "main",
+        "--review-artifact-type",
+        "slides",
+        "--task",
+        "Implement X"
+      ])
+    ).toThrow(new RegExp(`^${INVALID_REVIEW_ARTIFACT_TYPE_OPTION}:`, "u"));
+  });
+
+  it("keeps missing-option context when invalid value is provided with other missing flags", () => {
+    expect(() =>
+      parseBubbleCreateCommandOptions([
+        "--id",
+        "b_create_01",
+        "--repo",
+        "/tmp/repo",
+        "--review-artifact-type",
+        "slides",
+        "--task",
+        "Implement X"
+      ])
+    ).toThrow(
+      new RegExp(
+        `^${INVALID_REVIEW_ARTIFACT_TYPE_OPTION}:.*Also missing: --base`,
+        "u"
+      )
+    );
   });
 
   it("throws when task input is missing", () => {
@@ -103,7 +230,9 @@ describe("parseBubbleCreateCommandOptions", () => {
         "--repo",
         "/tmp/repo",
         "--base",
-        "main"
+        "main",
+        "--review-artifact-type",
+        "code"
       ])
     ).toThrow(/--task or --task-file/u);
   });
@@ -116,7 +245,9 @@ describe("parseBubbleCreateCommandOptions", () => {
         "--repo",
         "/tmp/repo",
         "--base",
-        "main",
+      "main",
+      "--review-artifact-type",
+      "code",
         "--task",
         "Implement X",
         "--task-file",
@@ -133,7 +264,9 @@ describe("parseBubbleCreateCommandOptions", () => {
         "--repo",
         "/tmp/repo",
         "--base",
-        "main",
+      "main",
+      "--review-artifact-type",
+      "code",
         "--task",
         "Implement X",
         "--reviewer-brief",
@@ -152,7 +285,9 @@ describe("parseBubbleCreateCommandOptions", () => {
         "--repo",
         "/tmp/repo",
         "--base",
-        "main",
+      "main",
+      "--review-artifact-type",
+      "code",
         "--task",
         "Implement X",
         "--accuracy-critical"
@@ -194,7 +329,9 @@ describe("parseBubbleCreateCommandOptions", () => {
         "--repo",
         "/tmp/repo",
         "--base",
-        "main",
+      "main",
+      "--review-artifact-type",
+      "code",
         "--task",
         "Implement X"
       ],
@@ -208,6 +345,11 @@ describe("parseBubbleCreateCommandOptions", () => {
     expect(registerRepoInRegistry).toHaveBeenCalledWith({
       repoPath: "/tmp/repo"
     });
+    expect(createBubbleMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reviewArtifactType: "code"
+      })
+    );
     expect(createBubbleMock).toHaveBeenCalledTimes(1);
     expect(callOrder).toEqual(["create", "register"]);
   });
@@ -231,7 +373,9 @@ describe("parseBubbleCreateCommandOptions", () => {
         "--repo",
         "/tmp/repo",
         "--base",
-        "main",
+      "main",
+      "--review-artifact-type",
+      "code",
         "--task",
         "Implement resilient registration"
       ],
@@ -248,6 +392,7 @@ describe("parseBubbleCreateCommandOptions", () => {
     expect(result?.bubbleId).toBe("b_create_09");
     expect(createBubbleMock).toHaveBeenCalledTimes(1);
     expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain(DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER);
     expect(warnings[0]).toContain("failed to auto-register repository");
   });
 
@@ -274,7 +419,9 @@ describe("parseBubbleCreateCommandOptions", () => {
           "--repo",
           "/tmp/repo",
           "--base",
-          "main",
+      "main",
+      "--review-artifact-type",
+      "code",
           "--task",
           "Fail before registry write"
         ],
@@ -308,7 +455,9 @@ describe("parseBubbleCreateCommandOptions", () => {
           "--repo",
           "/tmp/repo",
           "--base",
-          "main",
+      "main",
+      "--review-artifact-type",
+      "code",
           "--task",
           "Validate stderr warning path"
         ],

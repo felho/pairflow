@@ -23,6 +23,7 @@ import {
   DEFAULT_WORK_MODE
 } from "./defaults.js";
 import {
+  isCreateReviewArtifactType,
   isAgentName,
   isAttachLauncher,
   isDocContractGateMode,
@@ -32,7 +33,8 @@ import {
   isReviewerContextMode,
   isWorkMode,
   type AttachLauncher,
-  type BubbleConfig
+  type BubbleConfig,
+  type CreateReviewArtifactType
 } from "../types/bubble.js";
 
 export const TOML_PARSER_LIMITATIONS = [
@@ -41,6 +43,59 @@ export const TOML_PARSER_LIMITATIONS = [
   "No dotted keys (a.b = \"value\")",
   "Double-quoted string escapes follow JSON.parse behavior only"
 ] as const;
+
+export const MISSING_REVIEW_ARTIFACT_TYPE_OPTION =
+  "MISSING_REVIEW_ARTIFACT_TYPE_OPTION" as const;
+export const INVALID_REVIEW_ARTIFACT_TYPE_OPTION =
+  "INVALID_REVIEW_ARTIFACT_TYPE_OPTION" as const;
+export const REVIEW_ARTIFACT_TYPE_AUTO_REMOVED =
+  "REVIEW_ARTIFACT_TYPE_AUTO_REMOVED" as const;
+export const DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER =
+  "DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER" as const;
+
+function formatCreateReviewArtifactTypeError(
+  reasonCode:
+    | typeof MISSING_REVIEW_ARTIFACT_TYPE_OPTION
+    | typeof INVALID_REVIEW_ARTIFACT_TYPE_OPTION
+    | typeof REVIEW_ARTIFACT_TYPE_AUTO_REMOVED,
+  message: string
+): string {
+  return `${reasonCode}: ${message}`;
+}
+
+export function assertCreateReviewArtifactType(
+  value: unknown
+): CreateReviewArtifactType {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(
+      formatCreateReviewArtifactTypeError(
+        MISSING_REVIEW_ARTIFACT_TYPE_OPTION,
+        "Missing required --review-artifact-type=<document|code> option."
+      )
+    );
+  }
+
+  const normalized = value.trim();
+  if (normalized === "auto") {
+    throw new Error(
+      formatCreateReviewArtifactTypeError(
+        REVIEW_ARTIFACT_TYPE_AUTO_REMOVED,
+        "The --review-artifact-type=auto value is removed. Use --review-artifact-type=<document|code>."
+      )
+    );
+  }
+
+  if (!isCreateReviewArtifactType(normalized)) {
+    throw new Error(
+      formatCreateReviewArtifactTypeError(
+        INVALID_REVIEW_ARTIFACT_TYPE_OPTION,
+        `Invalid --review-artifact-type value "${normalized}". Accepted values: document|code.`
+      )
+    );
+  }
+
+  return normalized;
+}
 
 function parseTomlValue(rawValue: string, lineNumber: number): unknown {
   const value = rawValue.trim();

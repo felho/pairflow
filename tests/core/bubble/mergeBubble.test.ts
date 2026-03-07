@@ -29,6 +29,7 @@ async function setupDoneBubble(repoPath: string, bubbleId: string) {
     id: bubbleId,
     repoPath,
     baseBranch: "main",
+    reviewArtifactType: "code",
     task: "Merge bubble test task",
     cwd: repoPath
   });
@@ -127,6 +128,7 @@ describe("mergeBubble", () => {
       id: "b_merge_02",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Merge bubble test task",
       cwd: repoPath
     });

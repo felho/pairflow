@@ -43,6 +43,10 @@ export const reviewArtifactTypes = ["auto", "code", "document"] as const;
 
 export type ReviewArtifactType = (typeof reviewArtifactTypes)[number];
 
+export const createReviewArtifactTypes = ["code", "document"] as const;
+
+export type CreateReviewArtifactType = (typeof createReviewArtifactTypes)[number];
+
 export const localOverlayModes = ["symlink", "copy"] as const;
 
 export type LocalOverlayMode = (typeof localOverlayModes)[number];
@@ -234,6 +238,15 @@ export function isReviewArtifactType(value: unknown): value is ReviewArtifactTyp
   return (
     typeof value === "string" &&
     (reviewArtifactTypes as readonly string[]).includes(value)
+  );
+}
+
+export function isCreateReviewArtifactType(
+  value: unknown
+): value is CreateReviewArtifactType {
+  return (
+    typeof value === "string"
+    && (createReviewArtifactTypes as readonly string[]).includes(value)
   );
 }
 

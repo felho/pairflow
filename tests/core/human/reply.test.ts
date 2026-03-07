@@ -121,6 +121,7 @@ describe("emitHumanReply", () => {
       id: "b_human_reply_02",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Task",
       cwd: repoPath
     });

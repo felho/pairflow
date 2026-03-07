@@ -200,6 +200,7 @@ echo "# Test" > README.md && git add . && git commit -m "init"
 
 # Create and start a bubble
 pairflow bubble create --id my_first --repo "$TEST_REPO" --base main \
+  --review-artifact-type code \
   --task "Add a hello world function to index.ts"
 pairflow bubble start --id my_first --repo "$TEST_REPO"
 
@@ -306,7 +307,7 @@ For command-level details and full end-to-end CLI flows, see [API & CLI referenc
 
 ```bash
 # Create + start
-pairflow bubble create --id <id> --repo <repo> --base main --task "<task>"
+pairflow bubble create --id <id> --repo <repo> --base main --review-artifact-type <document|code> --task "<task>"
 pairflow bubble start --id <id> --repo <repo>
 
 # Monitor
@@ -347,11 +348,13 @@ This is the simplest flow where everything goes smoothly.
 # 1. Define the task and create a bubble
 pairflow bubble create --id feat_login \
   --repo /path/to/myapp --base main \
+  --review-artifact-type code \
   --task "Implement email/password login form with client-side validation"
 
 # You can also use a file for complex task descriptions:
 pairflow bubble create --id feat_login \
   --repo /path/to/myapp --base main \
+  --review-artifact-type document \
   --task-file ./tasks/login-spec.md
 
 # 2. Start the bubble (creates worktree + tmux session)
@@ -464,9 +467,9 @@ Each bubble is fully isolated — different worktree, different tmux session, di
 
 ```bash
 # Create three bubbles for three different tasks
-pairflow bubble create --id feat_login --repo . --base main --task "Login form"
-pairflow bubble create --id fix_nav   --repo . --base main --task "Fix navbar responsive bug"
-pairflow bubble create --id refactor  --repo . --base main --task "Extract auth middleware"
+pairflow bubble create --id feat_login --repo . --base main --review-artifact-type code --task "Login form"
+pairflow bubble create --id fix_nav   --repo . --base main --review-artifact-type code --task "Fix navbar responsive bug"
+pairflow bubble create --id refactor  --repo . --base main --review-artifact-type code --task "Extract auth middleware"
 
 # Start them all
 pairflow bubble start --id feat_login --repo .
@@ -594,11 +597,12 @@ EOF
 
 pairflow bubble create --id feat_login \
   --repo /path/to/myapp --base main \
+  --review-artifact-type document \
   --task-file /tmp/login-prd.md
 ```
 
 The task content is stored in `.pairflow/bubbles/<id>/artifacts/task.md` and included in the initial `TASK` protocol message that the implementer receives.
-Task files are also used to infer review guidance mode: `.md/.txt` are document-leaning, `.ts/.tsx/.js/.py` are code-leaning, otherwise Pairflow falls back to `auto`.
+Review ownership is explicit at create time via `--review-artifact-type <document|code>`.
 
 ### Scenario 10: Generating a metrics report
 

@@ -13,7 +13,10 @@ import {
   writeReviewerTestEvidenceArtifact
 } from "../../../src/core/reviewer/testEvidence.js";
 import { initGitRepository } from "../../helpers/git.js";
-import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
+import {
+  setupRunningBubbleFixture,
+  setupRunningLegacyAutoBubbleFixture
+} from "../../helpers/bubble.js";
 import { writeEvidenceLog } from "../../helpers/evidence.js";
 import type { BubbleConfig, ReviewArtifactType } from "../../../src/types/bubble.js";
 
@@ -211,11 +214,10 @@ describe("reviewer test evidence verification", () => {
 
   it("keeps strict behavior for explicit auto review_artifact_type", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningLegacyAutoBubbleFixture({
       repoPath,
       bubbleId: "b_test_evidence_auto_01",
-      task: "Auto task",
-      reviewArtifactType: "auto"
+      task: "Auto task"
     });
 
     const artifact = await verifyImplementerTestEvidence({
@@ -1497,12 +1499,18 @@ describe("reviewer test evidence verification", () => {
     const repoPath = await createTempRepo();
 
     for (const reviewArtifactType of ["code", "auto"] as const) {
-      const bubble = await setupRunningBubbleFixture({
-        repoPath,
-        bubbleId: `b_test_evidence_wrapper_missing_${reviewArtifactType}`,
-        task: `Wrapper missing artifact strict behavior ${reviewArtifactType}`,
-        reviewArtifactType
-      });
+      const bubble = reviewArtifactType === "auto"
+        ? await setupRunningLegacyAutoBubbleFixture({
+          repoPath,
+          bubbleId: `b_test_evidence_wrapper_missing_${reviewArtifactType}`,
+          task: `Wrapper missing artifact strict behavior ${reviewArtifactType}`
+        })
+        : await setupRunningBubbleFixture({
+          repoPath,
+          bubbleId: `b_test_evidence_wrapper_missing_${reviewArtifactType}`,
+          task: `Wrapper missing artifact strict behavior ${reviewArtifactType}`,
+          reviewArtifactType
+        });
 
       const directive = await resolveReviewerTestExecutionDirective({
         artifactPath: join(bubble.paths.artifactsDir, "missing-reviewer-evidence.json"),

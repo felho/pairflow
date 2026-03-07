@@ -32,6 +32,7 @@ describe("resolveBubbleById", () => {
       id: "b_lookup_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Task",
       cwd: repoPath
     });
@@ -51,6 +52,7 @@ describe("resolveBubbleById", () => {
       id: "b_lookup_02",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Task",
       cwd: repoPath
     });
@@ -83,6 +85,7 @@ describe("resolveBubbleById", () => {
       id: "b_lookup_03",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Task",
       cwd: repoPath
     });

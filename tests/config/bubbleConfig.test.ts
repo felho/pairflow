@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  assertCreateReviewArtifactType,
+  INVALID_REVIEW_ARTIFACT_TYPE_OPTION,
+  MISSING_REVIEW_ARTIFACT_TYPE_OPTION,
   parseBubbleConfigToml,
   parseToml,
+  REVIEW_ARTIFACT_TYPE_AUTO_REMOVED,
   renderBubbleConfigToml,
   validateBubbleConfig
 } from "../../src/config/bubbleConfig.js";
@@ -222,6 +226,29 @@ round_gate_applies_after = -1
     expect(
       result.errors.some((error) => error.path === "review_artifact_type")
     ).toBe(true);
+  });
+
+  it("accepts strict create review artifact type values", () => {
+    expect(assertCreateReviewArtifactType("document")).toBe("document");
+    expect(assertCreateReviewArtifactType("code")).toBe("code");
+  });
+
+  it("rejects missing strict create review artifact type values", () => {
+    expect(() => assertCreateReviewArtifactType(undefined)).toThrow(
+      new RegExp(`^${MISSING_REVIEW_ARTIFACT_TYPE_OPTION}:`, "u")
+    );
+  });
+
+  it("rejects auto strict create review artifact type values", () => {
+    expect(() => assertCreateReviewArtifactType("auto")).toThrow(
+      new RegExp(`^${REVIEW_ARTIFACT_TYPE_AUTO_REMOVED}:`, "u")
+    );
+  });
+
+  it("rejects invalid strict create review artifact type values", () => {
+    expect(() => assertCreateReviewArtifactType("slides")).toThrow(
+      new RegExp(`^${INVALID_REVIEW_ARTIFACT_TYPE_OPTION}:`, "u")
+    );
   });
 
   it("rejects unsupported local overlay mode", () => {

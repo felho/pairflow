@@ -36,6 +36,7 @@ describe("resolveBubbleFromWorkspaceCwd", () => {
       id: "b_resolve_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Task",
       cwd: repoPath
     });
@@ -64,6 +65,7 @@ describe("resolveBubbleFromWorkspaceCwd", () => {
       id: "b_resolve_02",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Task",
       cwd: repoPath
     });

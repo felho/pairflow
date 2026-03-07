@@ -78,6 +78,7 @@ describe("deleteBubble", () => {
       id: "b_delete_tmux_err_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Delete task",
       cwd: repoPath
     });
@@ -109,6 +110,7 @@ describe("deleteBubble", () => {
       id: "b_delete_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Delete task",
       cwd: repoPath
     });
@@ -168,6 +170,7 @@ describe("deleteBubble", () => {
       id: "b_delete_created_at_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Delete task created_at metadata",
       cwd: repoPath,
       now: createdAt
@@ -202,6 +205,7 @@ describe("deleteBubble", () => {
       id: "b_delete_rt_only",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Delete task",
       cwd: repoPath
     });
@@ -605,6 +609,7 @@ describe("deleteBubble", () => {
       id: "b_delete_archive_snapshot_fail_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Delete with snapshot failure",
       cwd: repoPath
     });
@@ -653,6 +658,7 @@ describe("deleteBubble", () => {
       id: "b_delete_archive_index_fail_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Delete with index failure",
       cwd: repoPath
     });
@@ -693,6 +699,7 @@ describe("deleteBubble", () => {
       id: "b_delete_remove_active_fail_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Delete with remove failure",
       cwd: repoPath
     });
@@ -742,6 +749,7 @@ describe("deleteBubble", () => {
       id: "b_delete_legacy_backfill_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Legacy delete backfill",
       cwd: repoPath
     });
@@ -790,6 +798,7 @@ describe("deleteBubble", () => {
       id: "b_delete_retry_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Retry delete after remove failure",
       cwd: repoPath
     });
@@ -862,6 +871,7 @@ describe("deleteBubble", () => {
       id: "b_delete_concurrent_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Concurrent delete",
       cwd: repoPath
     });
@@ -907,6 +917,7 @@ describe("deleteBubble", () => {
       id: "b_delete_archive_root_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Delete with explicit archive root",
       cwd: repoPath
     });

@@ -83,6 +83,7 @@ describe("startBubble", () => {
       id: "b_start_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Start bubble task",
       cwd: repoPath
     });
@@ -270,6 +271,7 @@ describe("startBubble", () => {
       id: "b_start_doc_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "document",
       task: "Document-only task file iteration for docs/ markdown and PRD clarity.",
       cwd: repoPath
     });
@@ -337,6 +339,7 @@ describe("startBubble", () => {
       id: "b_start_reviewer_brief_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Accuracy-critical reviewer brief startup injection",
       reviewerBrief: "Always verify each claim against concrete source refs.",
       cwd: repoPath
@@ -385,6 +388,7 @@ describe("startBubble", () => {
       id: "b_start_reviewer_brief_unreadable_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Startup should tolerate unreadable optional reviewer brief artifact.",
       cwd: repoPath
     });
@@ -436,6 +440,7 @@ describe("startBubble", () => {
       id: "b_start_021",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Start bubble task",
       cwd: repoPath
     });
@@ -509,6 +514,7 @@ describe("startBubble", () => {
       id: "b_start_02",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Start bubble task",
       cwd: repoPath
     });
@@ -556,6 +562,7 @@ describe("startBubble", () => {
       id: "b_start_03",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Start bubble task",
       cwd: repoPath
     });
@@ -1105,6 +1112,7 @@ describe("startBubble", () => {
       id: "b_start_04",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Start bubble task",
       cwd: repoPath
     });
@@ -1152,6 +1160,7 @@ describe("startBubble", () => {
       id: "b_start_05",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Start bubble task",
       cwd: repoPath
     });

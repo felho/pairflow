@@ -147,6 +147,7 @@ describe("bubble_instance_id legacy migration", () => {
       id: "b_backfill_race_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Race-safe backfill",
       cwd: repoPath
     });

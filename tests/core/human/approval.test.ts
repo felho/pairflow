@@ -295,6 +295,7 @@ describe("approval decisions", () => {
       id: "b_approval_03",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Task",
       cwd: repoPath
     });
