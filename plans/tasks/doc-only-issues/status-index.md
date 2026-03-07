@@ -34,6 +34,6 @@ Primary source: `doc-only-priority-and-rollout-plan-2026-03-04.md`
 
 ## WS-D Pilot Candidate Mapping (2026-03-07)
 
-1. `bugfix` slot -> `plans/tasks/reviewer-summary-diff-scope-prompt-hardening-phase1.md` (explicitly designated as pilot bugfix test case).
+1. `bugfix` slot -> `plans/tasks/RHI/reviewer-summary-diff-scope-prompt-hardening-phase1.md` (`READY`: implemented and merged via `f22124c`, `c21b80e`, `8486970`; moved to RHI).
 2. `small feature` slot -> `plans/tasks/doc-only-issues/artifact-type-ownership-enforcement-phase1.md` (explicitly designated as pilot small-feature candidate; currently `BACKLOG`).
 3. `docs-only hardening` slot -> pending explicit designation in a follow-up update.
