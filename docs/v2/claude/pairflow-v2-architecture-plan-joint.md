@@ -404,25 +404,37 @@ Executor exposes:
   - provision(workspace_spec) -> sandbox_handle
   - start(sandbox_handle, agent_actor, agent_config) -> process_handle
   - stop(process_handle) -> void
+  - run(sandbox_handle, command, op_id) -> run_result
   - sync(sandbox_handle, direction: push | pull) -> void
   - health(sandbox_handle) -> { status: ok | timeout | infra_error, last_active }
+  - resume(resume_token) -> resume_result
 
 Executor guarantees:
   - Agent identity survives process restarts (session-independent binding)
   - Artifacts are synced before agent starts and after agent stops
   - Health check returns status even if agent process is unresponsive
+  - Every run() call has a unique op_id; replaying the same op_id is a no-op (idempotent)
+  - resume() restores executor state from the last acknowledged op_id
 
 Executor must NEVER:
   - Interpret agent output as state transitions (that goes through EventEnvelope)
   - Make policy decisions
   - Modify workflow state directly
 
-Remote executor sync model:
-  - Pairflow CLI runs inside the sandbox, writing to a local WAL (write-ahead log)
+Remote executor model (Resume Token):
+  - Every pairflow CLI command in the sandbox calls the host kernel via run(op_id)
   - The host kernel is the single source of truth for state
-  - On sync, WAL entries are forwarded to the host kernel for processing
-  - If disconnected, the agent continues working; WAL queues events
-  - On reconnect, the kernel processes queued events in order
+  - op_id guarantees idempotency: if the same op_id is sent twice, the host skips it
+  - On disconnect, the agent blocks until the host is reachable again
+  - On reconnect, the executor calls resume(resume_token) to restore position
+  - The host responds with the last processed op_id; the client retries unacknowledged ops
+
+Future extension (WAL — write-ahead log):
+  - A client-side WAL can be added in front of run() calls later
+  - WAL would let the agent continue working offline, queuing run() calls locally
+  - On reconnect, the WAL replays queued calls as normal run(op_id) calls
+  - The host kernel stays unchanged — it just sees run() calls with op_ids
+  - This is a backwards-compatible addition that does not require kernel changes
 ```
 
 ### 4.9 BC-09: Kernel -> Channel (Outbound)
@@ -983,8 +995,8 @@ The findings artifact is the contract between validate and fix. The pattern is u
 ### Phase D: Runtime Adapter Expansion
 
 1. Stabilize LocalExecutor behind the Executor interface
-2. SSH/remote executor prototype
-3. Retry/reconnect policy (WAL sync model)
+2. SSH/remote executor prototype with resume token + op_id idempotency
+3. Optional WAL layer for offline agent productivity (future, backwards-compatible)
 
 **Principle:** No big bang rewrite. The kernel is new; everything else is adapted incrementally. v1 CLI surface stays identical throughout.
 
@@ -997,7 +1009,7 @@ The findings artifact is the contract between validate and fix. The pattern is u
 | Premature complexity — building too much before validating | Phase-based rollout; contract freeze before feature expansion |
 | Policy spaghetti — rules scattered across hooks/scripts | Every new rule must be a PolicyModule; hooks only enforce, never decide |
 | Channel-specific logic leaking into core | Adapter boundary mandatory; kernel only sees EventEnvelope |
-| Remote executor inconsistency | Explicit sync/health contract; idempotent WAL replay; kernel is single source of truth |
+| Remote executor inconsistency | Resume token + op_id idempotency; kernel is single source of truth; agent blocks on disconnect (no split brain) |
 | Template validation gaps | BC-01 structural verification: unreachable steps, dangling transitions, unknown gate types all caught at load time |
 
 ---
@@ -1008,4 +1020,5 @@ The findings artifact is the contract between validate and fix. The pattern is u
 2. **First delivery target:** v1 preset runnable on v2 template engine
 3. **Enforcement backbone:** CLI validation (agent-agnostic); hooks are optional bonus
 4. **Quality bar:** Every boundary has explicit input/output, invariants, and error codes documented
-5. **State ownership:** Kernel is the single source of truth; executor syncs via WAL; state layer is a dumb store
+5. **State ownership:** Kernel is the single source of truth; remote executors use resume token + op_id for consistency; state layer is a dumb store
+6. **Remote sync:** Resume token (agent blocks on disconnect) first; WAL (agent works offline) is a future backwards-compatible extension
