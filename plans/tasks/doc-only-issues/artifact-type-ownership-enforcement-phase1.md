@@ -238,6 +238,7 @@ Minden uj bubble inditasakor kotelezo legyen explicit, keterteku dontes:
 9. `v19` (R14 required clarifications): Section 4 kiegeszitve core-layer `auto` defense-in-depth error sorral (`createBubble` input-contract throw + `REVIEW_ARTIFACT_TYPE_AUTO_REMOVED`), Data/Interface `BubbleCreate input` Current oszlop technikai realitasra igaztva (jelenlegi infer alapu path), Spec Lock explicit `AC8` gate sorral bovitve; frontmatter status `implementable`-ra allitva.
 10. `v20` (R16 verification rework): Data/Interface `CLI create options` Current oszlop valos jelenlegi create help/parse allapotra pontositva (explicit flag jelenleg nem exposed), es a core-layer `auto` defense-in-depth hibaut explicit teszt/traceability kotese megerositve `T6` + `AC3/AC8` mappinggel.
 11. `v21` (R17 reviewer fix pack): Section 5 dependency/type mechanism explicititas bovitve (`registerRepoInRegistry` fallback + create-time strict type boundary), T6 core scenario szetvalasztva kulon `missing`/`auto`/`invalid` auditalhato tesztsorokra (`T6`,`T12`,`T13`) es traceability mapping pontositva.
+12. `v22` (close-packaging): technikai docs-only no-op kor a bubble lifecycle commit precondition teljesitesehez; policy/contract valtozas nincs.
 
 ## Resolution Record
 
