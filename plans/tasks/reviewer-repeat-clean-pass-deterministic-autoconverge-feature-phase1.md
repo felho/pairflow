@@ -1,6 +1,6 @@
 ---
 artifact_type: task
-artifact_id: task_reviewer_repeat_clean_pass_deterministic_autoconverge_feature_phase1_v10
+artifact_id: task_reviewer_repeat_clean_pass_deterministic_autoconverge_feature_phase1_v13
 title: "Reviewer Repeat-Clean PASS Deterministic Auto-Converge Override (Phase 1, Docs Contract)"
 status: draft
 phase: phase1
@@ -34,11 +34,21 @@ owners:
    - E4 plain-absence besorolas explicititese es T2 case split (`absent` vs `exists-but-not-clean`),
    - T4 fail-closed assert kiegeszitese explicit non-zero command exittel,
    - opcionals P3 cleanup: `transition_decision` vs `error_decision` mezonevek egyertelmusitese, E0 priority hangolasa AC10 tonalitashoz.
-7. `v10` (current):
+7. `v10`:
    - T13-T17 Given precondition-gate explicititese (`active_role=reviewer`, `pass_intent=review`, `findings=[]`),
    - T8/T16 fixture-clarity pontositas normativ E3 esethalmazra hivatkozva,
    - traceability kozmetika: AC6 hozzarendeles kiegeszitese `T1`-gyel, CS1 evidence tuning (`T18`),
    - nevezektani clarifier: E1 row explicit `error_decision=reject` cross-ref, E4 reason-code naming note (clean-PASS hiany szemantika, explicit non-clean esetet is lefedi).
+8. `v11`:
+   - T16 overlap-fixture korrigalva: explicit egyideju E3+E4 konstrukcio (malformed most-recent candidate + determinisztikusan olvashato explicit non-clean previous reviewer `PASS`),
+   - T15 kimeneti assert erosites: append-ordering mellett explicit trigger-kimenet (`most_recent_previous_reviewer_clean_pass_envelope=true`, `trigger=true`) rogzitve.
+9. `v12`:
+   - strict most-recent-only szemantika explicititese: E3/E4 besorolas canonical most-recent previous reviewer `PASS` candidate-re kotott (L1/0#2),
+   - T16 visszaallitva pure E3 precedence/selection validaciora; non-most-recent E4 leg eltavolitva fixture/Then rationale-bol,
+   - T15 Given precondition gate-konzisztencia erosites explicit `round>=2` megkotessel.
+10. `v13` (current):
+   - AC11 es Spec Lock #6 wording igazitas a v12-es most-recent-only T16 boundary-hoz (E3+E4 overlap explicit contract-level/non-constructible boundary formaban),
+   - traceability nyelvezet konzisztencia erosites: T16 mar nem overlap-tesztkent, hanem canonical E3 selection boundary validaciokent hivatkozott.
 
 ## L0 - Policy
 
@@ -165,7 +175,8 @@ Scope clarification:
 - Ha az alap trigger-precondition gate nem teljesul (pl. active role/pass_intent/findings mismatch), a besorolas kozvetlenul E5 (generic fallback), E2/E3/E4 overlap nem alkalmazando.
 - E3 csak a L1/0#3 pontban felsorolt normativ incomplete esetekben alkalmazhato; "sima hiany" (plain absence) onmagaban nem E3.
 - Overlap isolation szabaly: ha az alap precondition gate teljesul es egyszerre igaz E2+E3 vagy E2+E4, akkor E2 nyer (predecencia szerint).
-- Ha az alap precondition gate teljesul es egyszerre igaz E3+E4 (round>=2 mellett), akkor E3 nyer (predecencia szerint).
+- Contract-level ordering note: ha canonical besorolasban E3+E4 egyszerre igazolhato lenne (round>=2 mellett), E3 nyer (predecencia szerint).
+- Most-recent-only semantics note: L1/0#2 szerint a previous reviewer clean PASS besorolas canonicalan a most-recent previous reviewer `PASS` candidate-re kotott; emiatt E3+E4 egyideju overlap egyetlen canonical candidate-en tipikusan nem konstrualhato. T16 ezt a boundary-t pure E3 selection validaciokent rogzit, non-most-recent E4 bevonas nelkul.
 - Ures transcript explicit kimenete: E4 (`PREVIOUS_REVIEWER_CLEAN_PASS_MISSING`), nem E3.
 - E4 naming note: a `..._MISSING` reason-code a clean previous reviewer `PASS` hianyat jeloli; ez plain absence es explicit non-clean previous reviewer `PASS` esetet is lefed.
 - Legacy reason-code note: `DEPENDENCY_FAIL` nem resze ennek a Phase 1 contractnak; dependency/provenance hibak a kapcsolodo runtime verifier taskokban kezeltek.
@@ -208,8 +219,8 @@ Scope clarification:
 | T12 | Trigger=false generic fallback reason explicit | trigger=false, de nem E2/E3/E4 ok miatt | `pairflow pass --no-findings` vagy evaluator fixture | explicit `REPEAT_CLEAN_TRIGGER_NOT_MET` reason code kerul kimenetre | P2 | required-now | test spec |
 | T13 | Precedence overlap: E2 + E3 | alap trigger-precondition gate teljesul (`active_role=reviewer`, `pass_intent=review`, `findings=[]`), round=1, es az E3 normativ incomplete feltetel is fennall | evaluator fut | E2 nyer, reason `AUTOCONVERGE_ROUND1_DISABLED` | P1 | required-now | test spec |
 | T14 | Precedence overlap: E2 + E4 | alap trigger-precondition gate teljesul (`active_role=reviewer`, `pass_intent=review`, `findings=[]`), round=1, es previous reviewer clean PASS missing is | evaluator fut | E2 nyer, reason `AUTOCONVERGE_ROUND1_DISABLED` | P1 | required-now | test spec |
-| T15 | Most-recent ordering determinism | alap trigger-precondition gate teljesul (`active_role=reviewer`, `pass_intent=review`, `findings=[]`), es tobb korabbi reviewer `PASS` envelope van, ahol idobelyeg-sorrend elter append sorrendtol | trigger evaluator fut | `most recent` kivalasztas transcript append sorrenddel tortenik (legnagyobb index), nem timestamp alapjan | P1 | required-now | test spec |
-| T16 | Precedence overlap: E3 + E4 | alap trigger-precondition gate teljesul (`active_role=reviewer`, `pass_intent=review`, `findings=[]`), round>=2, es egyszerre fennall egy E3 normativ incomplete eset (malformed candidate) + clean previous reviewer `PASS` deterministicen nem igazolhato | evaluator fut | E3 nyer, reason `REPEAT_CLEAN_TRIGGER_INPUT_INCOMPLETE` | P1 | required-now | test spec |
+| T15 | Most-recent ordering determinism | alap trigger-precondition gate teljesul (`active_role=reviewer`, `pass_intent=review`, `findings=[]`), `round>=2`, es ket korabbi reviewer `PASS` envelope van: append-sorrend szerint legutobbi candidate clean, mikozben timestamp szerint masik candidate tunik "ujabbnak" | trigger evaluator fut | `most recent` kivalasztas transcript append sorrenddel tortenik (legnagyobb index), nem timestamp alapjan; kimenetben `most_recent_previous_reviewer_clean_pass_envelope=true`, ezert `trigger=true` | P1 | required-now | test spec |
+| T16 | Precedence/selection boundary: E3 (most-recent-only semantics) | alap trigger-precondition gate teljesul (`active_role=reviewer`, `pass_intent=review`, `findings=[]`), round>=2, es a canonical most-recent previous reviewer `PASS` candidate payloadja malformed/parse-hibas (E3 normativ incomplete) | evaluator fut | pure E3 selection tortenik, reason `REPEAT_CLEAN_TRIGGER_INPUT_INCOMPLETE`; non-most-recent candidate-ekre epulo E4 rationale nem hasznalhato | P1 | required-now | test spec |
 | T17 | Empty transcript classification | alap trigger-precondition gate teljesul (`active_role=reviewer`, `pass_intent=review`, `findings=[]`), round>=2, defensive fixtureben transcript ures (nincs reviewer `PASS` candidate) | evaluator fut | reason `PREVIOUS_REVIEWER_CLEAN_PASS_MISSING` (E4), explicit NEM `REPEAT_CLEAN_TRIGGER_INPUT_INCOMPLETE` | P1 | required-now | test spec |
 | T18 | Trigger negative: previous reviewer `PASS` exists but not clean | reviewer active, round>=2, current clean PASS, legutobbi korabbi reviewer `PASS` envelope payloadja explicit nem-clean (`pass_intent!=review` vagy `findings` nem ures) | `pairflow pass --no-findings` | normal `PASS` path + explicit reason `PREVIOUS_REVIEWER_CLEAN_PASS_MISSING` | P1 | required-now | test spec |
 
@@ -266,7 +277,7 @@ Scope clarification:
 8. `AC8`: Incomplete transcript trigger-input esetben determinisztikus non-match es explicit reason code jelenik meg.
 9. `AC9`: Trigger=false generic fallback ag explicit `REPEAT_CLEAN_TRIGGER_NOT_MET` reason code-dal ellenorizheto.
 10. `AC10`: E0 es E1 agak explicit reason code assertionnel teszteltek (`REPEAT_CLEAN_AUTOCONVERGE_TRIGGERED`, `REPEAT_CLEAN_AUTOCONVERGE_POLICY_REJECTED`).
-11. `AC11`: Precedence overlap esetekben (E2+E3, E2+E4, E3+E4) a definialt sorrend szerinti ag nyer determinisztikusan.
+11. `AC11`: Precedence isolation determinisztikus: overlap esetekben E2+E3 es E2+E4 a definialt sorrend szerint oldodik; most-recent-only boundaryban canonical E3 selection explicit es non-most-recent E4 rationale nelkul ervenyesul.
 12. `AC12`: `most recent` ordering determinisztikusan transcript append sorrend alapjan dol el, nem timestamp alapjan.
 13. `AC13`: E2-E5 reason codeok explicit es tesztelt kimenetekkel fedettek, beleertve az ures transcript es az explicit non-clean previous reviewer `PASS` E4 klasszifikaciojat.
 
@@ -299,5 +310,5 @@ Task `IMPLEMENTABLE`, ha:
 3. mind trigger=true, mind trigger=false path canonical szerzodessel rogzitett;
 4. policy reject fail-closed, silent fallback tiltott;
 5. AC-Test es Test-AC traceability teljes, ketiranyu es egyertelmu (minden AC legalabb 1 testtel, minden test legalabb 1 AC-vel kotott);
-6. precedence overlap isolation (E2+E3, E2+E4, E3+E4) es `most recent` ordering kulcs expliciten rogzitett es tesztelt;
+6. precedence isolation (E2+E3, E2+E4) es most-recent-only canonical E3 boundary expliciten rogzitett; `most recent` ordering kulcs tesztelten determinisztikus;
 7. E2-E5 reason code lefedes explicit AC/test szerzodesben rogzitett, ures transcript edge-casekel egyutt.
