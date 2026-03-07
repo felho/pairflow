@@ -13,7 +13,13 @@ import { bubbleDimensions } from "../../lib/canvasLayout";
 import { bubbleCard } from "../../test/fixtures";
 import { BubbleExpandedCard } from "./BubbleExpandedCard";
 
-function renderExpandedCard(): void {
+interface RenderExpandedCardOverrides {
+  onPositionChange?: (position: { x: number; y: number }) => void;
+  onPositionCommit?: () => void;
+  onClose?: () => void;
+}
+
+function renderExpandedCard(overrides: RenderExpandedCardOverrides = {}): void {
   render(
     <BubbleExpandedCard
       bubble={bubbleCard({
@@ -34,9 +40,9 @@ function renderExpandedCard(): void {
       actionError={null}
       actionRetryHint={null}
       actionFailure={null}
-      onPositionChange={() => undefined}
-      onPositionCommit={() => undefined}
-      onClose={() => undefined}
+      onPositionChange={overrides.onPositionChange ?? (() => undefined)}
+      onPositionCommit={overrides.onPositionCommit ?? (() => undefined)}
+      onClose={overrides.onClose ?? (() => undefined)}
       onRefresh={() => undefined}
       onAction={vi.fn(() => Promise.resolve())}
       onClearActionFeedback={() => undefined}
@@ -110,5 +116,47 @@ describe("BubbleExpandedCard", () => {
         "Copy bubble ID failed (b-expanded-1): Clipboard permission denied"
       )
     ).not.toBeInTheDocument();
+  });
+
+  it("does not start drag from close button mousedown", () => {
+    const onPositionChange = vi.fn();
+    const onPositionCommit = vi.fn();
+    const onClose = vi.fn();
+    renderExpandedCard({
+      onPositionChange,
+      onPositionCommit,
+      onClose
+    });
+
+    const closeButton = screen.getByRole("button", { name: "Close expanded card" });
+    fireEvent.mouseDown(closeButton, { button: 0, clientX: 150, clientY: 150 });
+    fireEvent.mouseMove(document, { clientX: 4, clientY: 4 });
+    fireEvent.mouseUp(document);
+    fireEvent.click(closeButton);
+
+    expect(onPositionChange).not.toHaveBeenCalled();
+    expect(onPositionCommit).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not start drag from bubble id double-click target", async () => {
+    const onPositionChange = vi.fn();
+    const onPositionCommit = vi.fn();
+    renderExpandedCard({
+      onPositionChange,
+      onPositionCommit
+    });
+
+    const idLabel = screen.getByText("b-expanded-1");
+    fireEvent.mouseDown(idLabel, { button: 0, clientX: 140, clientY: 140 });
+    fireEvent.mouseMove(document, { clientX: 8, clientY: 8 });
+    fireEvent.mouseUp(document);
+    fireEvent.doubleClick(idLabel);
+
+    await waitFor(() => {
+      expect(copyToClipboardMock).toHaveBeenCalledTimes(1);
+    });
+    expect(onPositionChange).not.toHaveBeenCalled();
+    expect(onPositionCommit).not.toHaveBeenCalled();
   });
 });

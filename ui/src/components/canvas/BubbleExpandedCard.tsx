@@ -39,6 +39,16 @@ function asMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function isDragDisabledTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+  return (
+    target.closest("[data-drag-disabled='true']") !== null ||
+    target.closest("button, a, input, textarea, select, [role='button']") !== null
+  );
+}
+
 export interface BubbleExpandedCardProps {
   bubble: BubbleCardModel;
   detail: UiBubbleDetail | null;
@@ -157,6 +167,9 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
           if (event.button !== 0) {
             return;
           }
+          if (isDragDisabledTarget(event.target)) {
+            return;
+          }
           event.preventDefault();
           const nextState: DragState = {
             originX: props.position.x,
@@ -181,6 +194,7 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
         <div className="flex items-center justify-between">
           <span
             className="select-none text-[12px] font-semibold tracking-wide text-white"
+            data-drag-disabled="true"
             onDoubleClick={(event) => {
               event.stopPropagation();
               void copyBubbleId();
@@ -191,6 +205,11 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
           <button
             type="button"
             className="flex h-5 w-5 items-center justify-center rounded-full border border-[#333] bg-[#1a1a1a] text-[10px] text-[#666] hover:border-[#555] hover:text-white"
+            data-drag-disabled="true"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
             onClick={(event) => {
               event.stopPropagation();
               props.onClose();
@@ -204,6 +223,7 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
           <span
             className="max-w-[130px] select-none truncate rounded-[9px] border border-blue-500 bg-[#171717] px-2 py-0.5 font-mono text-[10px] text-blue-500"
             title={props.bubble.repoPath}
+            data-drag-disabled="true"
             onDoubleClick={(event) => {
               event.stopPropagation();
               void copyBubbleId();
