@@ -101,13 +101,13 @@ describe("launchBubbleTmuxSession", () => {
       "/tmp/worktree",
       "codex"
     ]);
-    // Status pane fixed to 9 lines before reviewer split.
+    // Status pane fixed to 15 lines before reviewer split.
     expect(calls[5]?.args).toEqual([
       "resize-pane",
       "-t",
       "pf-b_start_01:0.0",
       "-y",
-      "9"
+      "15"
     ]);
     // Reviewer split uses -p 50 to divide remaining space equally.
     expect(calls[6]?.args).toEqual([
