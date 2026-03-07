@@ -613,7 +613,23 @@ A gate that always requires human input.
     on_reject: cancelled
 ```
 
-### 6.5 Subflows
+### 6.5 Type: parallel-human-queue (reserved, not in v2.0)
+
+Multiple items processed in parallel, each requiring a human decision. Useful for PRD review findings where the human decides on many items concurrently instead of sequentially.
+
+```yaml
+# Reserved — not implemented in v2.0, planned for v2.1
+- id: process-findings
+  type: parallel-human-queue
+  items_from: generate-findings.output
+  per_item:
+    enrich: recommendation-agent
+    human_decision:
+      ui: decision-card
+    apply: updater-agent
+```
+
+### 6.6 Subflows
 
 Embedded mini-workflows. Two variants:
 
@@ -974,6 +990,7 @@ The findings artifact is the contract between validate and fix. The pattern is u
 |---|---|---|
 | Session management / backup | Not core workflow | After v2 stable |
 | Full SDLC orchestration (Bob scope) | Too broad | Separate initiative |
+| Parallel-human-queue step type | Reserved in step type taxonomy, not implemented yet | v2.1 |
 | Parallel-step-loop with dependency graph | Complex scheduling | v2.1 |
 | Intelligence layer (calibration, antipatterns) | Needs data first | v2.2+ |
 | Team / multi-user | Single user tool for now | v3 |
