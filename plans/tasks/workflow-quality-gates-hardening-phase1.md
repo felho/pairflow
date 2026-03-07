@@ -5,78 +5,120 @@
 - Owner: felho
 - State: Planned
 
+## Objective
+Deterministic hard gate bevezetese az implementer oldali `pairflow pass` boundary-n, hogy code bubble atadas csak sikeres projekt-validacio utan tortenhessen.
+
 ## Context
-A jelenlegi feedback loop túl későn jelezhet: implementer oldalon több fájlmódosítás után, hosszabb bubble kör végén derül ki, hogy a változás validation hibát okoz. A commit hook vagy CI erre csak másodlagos védelmi vonal, nem a legrövidebb ciklus.
+A feedback loop jelenleg tul keson jelezhet: a validation hiba gyakran csak hosszu implementacios kor utan derul ki. A CI/commit hook csak masodlagos vedelem, nem a leghamarabbi visszacsatolas.
 
 ## Problem Statement
-A Pairflow flow-ban hiányzik egy determinisztikus, rendszer-szintű hard gate azon a ponton, ahol az implementer átadja a munkát (`pairflow pass`). Emiatt az átadás megtörténhet úgy is, hogy a projekt által elvárt checkek nem zöldek.
+A Pairflow flow-ban nincs kotelezo, rendszer-szintu gate az implementer PASS ponton. Emiatt a handoff megtortenhet ugy is, hogy a projekt altal elvart ellenorzesek nem zoldok.
 
-## Goal
-Deterministic hard gate bevezetése az implementer `pairflow pass` boundary-n, ahol:
-1. a futtatandó parancsot a projekt adja meg bubble configon keresztül,
-2. sikertelen check esetén az átadás tiltott,
-3. a hibaüzenet és az artifact egyértelműen mutatja a bukás okát.
+## Scope (Required-Now)
+1. A gate primary enforcement celja: `review_artifact_type=code`.
+2. Trigger pont: implementer oldali `pairflow pass`, az envelope append elott.
+3. Kotelezo command forras: bubble config `[commands]`.
+4. Required commandok: `commands.typecheck` es `commands.test`.
+5. Vegrehajtas: determinisztikus sorrend + fail-fast.
+6. Legacy kompatibilitas: ha bubble configban `review_artifact_type=auto` fordul elo, a Phase 1 gate applicability code-equivalent (ugyanaz a PASS-gate viselkedes, mint `code` esetben).
 
-## Non-Goals (Phase 1)
-1. Nem cél pre-commit/pre-push git hookok bevezetése.
-2. Nem cél GitHub Actions vagy branch protection policy módosítása.
-3. Nem cél másodlagos, külön `converged` hard gate bevezetése.
-4. Nem cél új agent hook API-ra építeni a működést.
+## Out of Scope (Phase 1)
+1. Pre-commit/pre-push hook bevezetese.
+2. CI/branch protection policy modositas.
+3. Kulon `pairflow converged` hard gate.
+4. Reviewer PASS policy attervezese.
+5. Barmilyen product/app implementacios tartalomvaltozas e taskon kivul.
 
-## Scope
-1. Csak `review_artifact_type=code` bubble-ökre vonatkozik.
-2. Gate pont: implementer oldali `pairflow pass`.
-3. Parancsforrás: bubble config `[commands]`.
+## Behavioral Contract
 
-## Proposed Solution
+### BC1 - Applicability
+Given `review_artifact_type=code` vagy `review_artifact_type=auto` bubble es implementer actor,  
+When `pairflow pass` fut,  
+Then a hard validation kotelezoen lefut PASS append elott.
 
-### 1) PASS előtti hard validation
-`emitPassFromWorkspace` implementer ágban a rendszer futtatja a kötelező validation parancsokat még azelőtt, hogy PASS envelope transcriptbe kerülne.
+### BC2 - Command Source
+Given bubble config `[commands]`,  
+When required commandokat feloldjuk,  
+Then a rendszer kizarolag configbol szarmazo parancsokat hasznal, repo-hardcode nelkul.
 
-### 2) Projekt által definiált command contract
-A kötelező parancsokat a bubble config adja meg:
-1. `commands.typecheck`
-2. `commands.test`
+### BC3 - Execution Policy
+Given tobb required command,  
+When a gate fut,  
+Then a sorrend determinisztikus (`typecheck` -> `test`) es fail-fast.
 
-Megjegyzés: ha a projekt lintet is kötelezővé akar tenni, composite scriptet adhat meg (például `pnpm pairflow:verify`, ami lint+typecheck+test).
+### BC4 - Failure Behavior
+Given barmely required command nem sikeres,  
+When `pairflow pass` fut,  
+Then a CLI non-zero exittel leall es PASS envelope nem kerul transcriptbe.
 
-### 3) Gate behavior
-1. Ha bármelyik required command nem sikeres, a `pairflow pass` parancs hibával leáll.
-2. Sikertelen gate esetén PASS envelope nem appendelődik.
-3. Sikeres gate esetén a PASS normálisan folytatódik.
+### BC5 - Diagnostics Contract
+Given gate failure,  
+When hiba riportalasa tortenik,  
+Then az uzenet tartalmazza a hibas commandot, exit kodot, evidence/log hivatkozast es stabil, gepileg feldolgozhato reason code-ot a kovetkezo keszletbol:
+1. `pass_validation_command_failed` - required command non-zero exit.
+2. `pass_validation_command_missing` - required command hianyzik vagy ures a bubble configban.
+3. `pass_validation_execution_error` - command runner inditasi/runtime hiba (ideertve timeoutot a meglovo runner policy szerint).
 
-### 4) Determinisztikus diagnosztika
-Gate bukáskor:
-1. jól olvasható CLI hibaüzenet legyen a hibás commanddal és exit kóddal,
-2. a meglévő evidence/log vonal használható maradjon (`.pairflow/evidence/*.log`),
-3. reason code legyen stabilan géppel feldolgozható.
+### BC6 - Success Behavior
+Given minden required command sikeres,  
+When `pairflow pass` fut,  
+Then a normal PASS handoff valtozatlanul folytatodik.
 
-### 5) Docs és prompt guidance igazítás
-Implementer guidance explicit mondja ki:
-1. PASS előtt a gate automatikusan fut,
-2. bukásnál előbb javítás, utána új PASS próbálkozás,
-3. projekt-specifikus verify script használata támogatott.
+### BC7 - Non-Code Safety
+Given `review_artifact_type=document` bubble,  
+When implementer PASS fut,  
+Then ez a Phase 1 hard gate nem aktiv.
+
+### BC8 - Missing Command Safety
+Given a bubble configban barmely required command (`commands.typecheck` vagy `commands.test`) hianyzik vagy ures,  
+When implementer `pairflow pass` fut,  
+Then a command futtatasa helyett azonnali hard fail tortenik `reason_code=pass_validation_command_missing` mellett, PASS envelope append nelkul.
+
+### BC9 - Reviewer Isolation
+Given reviewer actor hajt vegre `pairflow pass` parancsot,  
+When PASS feldolgozas tortenik,  
+Then ez az implementer boundary hard gate nem valtoztatja a reviewer PASS semantics-et.
+
+## Configuration Notes
+1. Ha a projekt lintet is kotelezove akar tenni, composite verify scriptet adhat a command mezokben (pelda: `pnpm pairflow:verify`).
+2. A task nem vezet be uj command-schema elemet; csak a meglovo `[commands]` mezokre epit.
+3. Evidence infra location: repo/worktree `.pairflow/evidence/*.log` (pl. `lint.log`, `typecheck.log`, `test.log`) marad a canonical PASS `--ref` csatorna.
 
 ## Change Surface
-1. `src/core/agent/pass.ts` - implementer PASS előtti hard gate.
-2. `src/core/reviewer/testEvidence.ts` - command decision/diagnosztika összehangolás.
-3. `src/core/runtime/tmuxDelivery.ts` és kapcsolódó guidance - rövid, egyértelmű üzenetek.
-4. `tests/core/agent/pass.test.ts` - gate success/fail flow.
-5. `tests/core/reviewer/testEvidence.test.ts` - command/evidence contract regresszió.
-6. releváns docs a gate viselkedésről.
+Required:
+1. `src/core/agent/pass.ts` - implementer PASS elotti hard gate.
+2. `tests/core/agent/pass.test.ts` - success/failure/path coverage.
 
-## Acceptance Criteria
-1. Code bubble-ben implementer `pairflow pass` futáskor a required commandok determinisztikusan lefutnak.
-2. Bukó command esetén `pairflow pass` non-zero exitet ad és PASS envelope nem kerül transcriptbe.
-3. Zöld commandok esetén `pairflow pass` normál handoffot végez.
-4. A required commandok bubble configból jönnek, hardcode-olt repo-specifikus érték nélkül.
-5. Composite verify script használat dokumentált és működik.
-6. Új/érintett tesztek lefedik a pass/fail és command-forrás eseteket.
+Optional (csak ha szukseges a contract-konzisztenciahoz):
+1. `src/core/reviewer/testEvidence.ts` - kozos command/diagnosztika normalizalas.
+2. `tests/core/reviewer/testEvidence.test.ts` - regresszio.
+3. `src/core/runtime/tmuxDelivery.ts` es kapcsolodo docs - rovid guidance pontositas.
 
-## Open Decisions
-1. Több required command futtatása fail-fast vagy teljes lista futtatás legyen-e.
-2. Gate parancsfuttatás timeout policy (default és override) pontos értéke.
-3. A gate failure reason code készlet végleges nevei.
+## Acceptance Criteria (Binary)
+1. `review_artifact_type=code` es `review_artifact_type=auto` bubble-ben az implementer `pairflow pass` elott a required commandok determinisztikusan lefutnak.
+2. Elso bukasnal a futas fail-fast megall, a parancs non-zero exittel ter vissza.
+3. Gate bukasnal PASS envelope nem appendelodik a transcriptbe.
+4. Gate siker eseten a PASS handoff normalisan megtortenik.
+5. Required command forras bubble config `[commands]`; nincs repo-specifikus hardcode fallback.
+6. Failure outputban szerepel: failed command, exit code, evidence/log utvonal, es a Phase 1 reason code keszlet egy eleme (`pass_validation_command_failed|pass_validation_command_missing|pass_validation_execution_error`).
+7. `review_artifact_type=document` bubble viselkedese valtozatlan marad (Phase 1 gate nem fut).
+8. Required command hiany/ures config eseten azonnali hard fail tortenik (`pass_validation_command_missing`) envelope append nelkul.
+9. Composite verify script hasznalat dokumentalt marad (`commands.typecheck`/`commands.test` mezokon keresztul).
+10. Erintett tesztek lefedik legalabb: pass success, pass fail, command source, missing-command, auto/document scope split, reviewer-pass regression.
+
+## Test Mapping
+1. AC1/AC2/AC3/AC4 -> `tests/core/agent/pass.test.ts`
+2. AC5/AC6/AC8 -> `tests/core/agent/pass.test.ts` (+ opcionisan `tests/core/reviewer/testEvidence.test.ts`)
+3. AC7 -> regresszios eset `review_artifact_type=document` scenariora
+4. AC10 -> explicit scenario coverage: `auto` applicability, reviewer isolation, missing-command hard fail
+5. AC9 -> docs coverage (task-level command contract pelda)
+
+## Implementation Decisions (Resolved in this task)
+1. Multi-command policy: fail-fast.
+2. Command order: `typecheck` majd `test`.
+3. Timeout policy: nem vezet be uj override mechanizmust; a meglovo command runner timeout policy ervenyes.
+4. Reason code policy: a Phase 1 gate-hez kotott canonical keszlet `pass_validation_command_failed|pass_validation_command_missing|pass_validation_execution_error`.
+5. `review_artifact_type=auto` policy: Phase 1-ben code-equivalent applicability.
 
 ## Notes
-Ez a task szándékosan a Pairflow boundary enforcementre fókuszál, nem repo-level git workflow hardeningre. A commit hook/CI továbbra is opcionális, másodlagos defense-in-depth réteg maradhat külön taskban.
+Ez a task szandekosan csak PASS-boundary validation hardening. CI/hook tovabbra is opcionlis, masodlagos defense-in-depth retegek maradnak.
