@@ -1,7 +1,8 @@
 const reviewerSummaryScopeGuardrail = [
   "Scope guardrail (applies to steps 1-4): Summary scope guardrail: scope statements must cover only current worktree changes.",
-  "For summary scope claims, do not use `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`).",
-  "Establish scope with `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` (staged, unstaged, and untracked), or with the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`.",
+  "For summary scope claims, do not use branch-range diffs such as `git diff <revA>..<revB>` (including `git diff main..HEAD`).",
+  "Do not derive summary scope from history/log sources such as `git log --name-status` or `git show --name-status`.",
+  "Establish scope from current worktree changes using `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard` (staged, unstaged, and untracked).",
   "If current worktree scope cannot be resolved reliably, avoid numeric file-operation claims."
 ].join(" ");
 
@@ -21,8 +22,9 @@ export function buildReviewerPassOutputContractGuidance(): string {
   return [
     "Required reviewer PASS output contract (machine-checkable): include exactly these sections in this order: `Scout Coverage`, `Deduplicated Findings`, `Issue-Class Expansions`, `Residual Risk / Notes`.",
     "`Scout Coverage` required fields: `scouts_executed`, `scope_covered`, `guardrail_confirmation`, `raw_candidates_count`, `deduplicated_count`.",
-    "`Scout Coverage.scope_covered` must cover only current worktree changes, grounded in `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` or the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`.",
-    "Do not justify `scope_covered` with `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`).",
+    "`Scout Coverage.scope_covered` must describe current worktree changes only, grounded in `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`.",
+    "Do not justify `scope_covered` with branch-range diffs such as `git diff <revA>..<revB>` (including `git diff main..HEAD`).",
+    "Do not justify `scope_covered` with history/log sources such as `git log --name-status` or `git show --name-status`.",
     "`Deduplicated Findings` entry fields: `title`, `severity`, `class`, `locations`, `evidence`, `expansion_siblings`.",
     "`Issue-Class Expansions` entry fields: `class`, `source_finding_title`, `scan_scope`, `siblings`, `stop_reason`.",
     "`class` must be `one_off` or one issue class (`race_condition`, `lifecycle_symmetry`, `timeout_cancellation`, `idempotency`, `concurrency_guard`, `other`).",
