@@ -1,18 +1,14 @@
 ---
 artifact_type: task
-artifact_id: task_reviewer_repeat_clean_pass_deterministic_autoconverge_feature_phase1_v1
-title: "Reviewer Repeat-Clean PASS Deterministic Auto-Converge Override (Small Feature, Phase 1)"
+artifact_id: task_reviewer_repeat_clean_pass_deterministic_autoconverge_feature_phase1_v10
+title: "Reviewer Repeat-Clean PASS Deterministic Auto-Converge Override (Phase 1, Docs Contract)"
 status: draft
 phase: phase1
 target_files:
-  - src/core/agent/pass.ts
-  - src/core/agent/converged.ts
-  - src/core/convergence/policy.ts
-  - tests/core/agent/pass.test.ts
-  - tests/core/agent/converged.test.ts
-  - tests/core/bubble/orchestrationLoopSmoke.test.ts
-  - docs/pairflow-initial-design.md
-  - README.md
+  - plans/tasks/reviewer-repeat-clean-pass-deterministic-autoconverge-feature-phase1.md
+optional_alignment_files:
+  - progress/*
+  - docs/*
 prd_ref: null
 plan_ref: plans/archive/pairflow-initial-plan.md
 system_context_ref: docs/pairflow-initial-design.md
@@ -20,147 +16,288 @@ owners:
   - "felho"
 ---
 
-# Task: Reviewer Repeat-Clean PASS Deterministic Auto-Converge Override (Small Feature)
+# Task: Reviewer Repeat-Clean PASS Deterministic Auto-Converge Override (Phase 1)
+
+## Revision Log
+
+1. `v1->v4`: deterministic trigger/transition contract formalizalasa, fail-closed reject, AC/Test traceability alapozas.
+2. `v5`: note-level consistency tuning (`T9` wording, precedence scope wording, T2/T5 reason assertion).
+3. `v6`: human rework P2 closure (E0/E1 reason assertions, overlap tests, most-recent ordering key, T7 intermediate assertions).
+4. `v7`: lifecycle symmetry hardening (E3+E4 overlap, E1 throw semantics, E2-E5 reason coverage AC13, empty-transcript E4).
+5. `v8`:
+   - legacy reason-code lineage note: `DEPENDENCY_FAIL` intentionalan nem hasznalt Phase 1-ben,
+   - scope integrity note: `target_files` docs-only marad (`src/config/defaults.ts` nem scope),
+   - explicit rationale note: defense-in-depth core rows intentionally not modeled ebben a docs-only Phase 1 taskban,
+   - Open Question status note: summary-suffix kerdes tovabbra is deferred, nem ujranyitott blocker.
+6. `v9`:
+   - E3 incomplete-transcript kriteriumok normativ, explicit esethalmazzal leszurkitve,
+   - E4 plain-absence besorolas explicititese es T2 case split (`absent` vs `exists-but-not-clean`),
+   - T4 fail-closed assert kiegeszitese explicit non-zero command exittel,
+   - opcionals P3 cleanup: `transition_decision` vs `error_decision` mezonevek egyertelmusitese, E0 priority hangolasa AC10 tonalitashoz.
+7. `v10` (current):
+   - T13-T17 Given precondition-gate explicititese (`active_role=reviewer`, `pass_intent=review`, `findings=[]`),
+   - T8/T16 fixture-clarity pontositas normativ E3 esethalmazra hivatkozva,
+   - traceability kozmetika: AC6 hozzarendeles kiegeszitese `T1`-gyel, CS1 evidence tuning (`T18`),
+   - nevezektani clarifier: E1 row explicit `error_decision=reject` cross-ref, E4 reason-code naming note (clean-PASS hiany szemantika, explicit non-clean esetet is lefedi).
 
 ## L0 - Policy
 
 ### Goal
 
-Vezessen be determinisztikus runtime override-ot arra az egyertelmu drift helyzetre, amikor reviewer ismetelten clean `PASS`-t kuld round>=2-ben, es emiatt a bubble feleslegesen RUNNING-ben marad.
+Rogzitse a repeat-clean reviewer `PASS` drift helyzet deterministic, implementalhato runtime szerzodeset ugy, hogy a sikeres transition utak (`PASS` vs `CONVERGENCE`) egyertelmuek, kolcsonosen kizaroak es tesztelhetok legyenek, a reject kimenet pedig kulon hibaagkent legyen kezelve.
 
 ### In Scope
 
-1. Repeat-clean drift trigger definicio:
-   - aktiv kuldo reviewer,
-   - aktualis command `PASS` clean (`pass_intent=review`, `findings=[]`),
-   - round>=2,
-   - transcriptben a legutobbi korabbi reviewer `PASS` szinten clean.
-2. Trigger eseten a rendszer ne implementer handoffot csinaljon, hanem determinisztikusan auto-converge override-ot hajtson vegre.
-3. Auto-converge override output contract:
-   - `CONVERGENCE` + `APPROVAL_REQUEST` envelope-ek keletkeznek,
-   - bubble allapot `READY_FOR_APPROVAL`.
-4. A summary szoveg maradjon az aktualis reviewer input summary; optional suffix jelezheti az auto-override okat.
-5. Guardrail: round 1-ben soha ne tortenjen auto-converge override.
-6. Teszteles transcript/state invariansokra es policy interoperabilitasra.
-7. Docs update a determinisztikus override szabalyrol.
+1. Repeat-clean trigger formalis, zart definicioja (5 atomikus kriterium):
+   - `active_role=reviewer`
+   - aktualis command `pass_intent=review`
+   - aktualis command `findings=[]`
+   - `round>=2`
+   - transcriptben a legutobbi (most recent) korabbi reviewer `PASS` envelope clean reviewer `PASS`-nek minosul
+   Megjegyzes: a `most recent` kivalasztas determinisztikus ordering kulccsal tortenik (ld. L1 Terminology #4).
+2. Sikeres transition decision matrix explicit szerzodese:
+   - trigger=true es policy-pass -> auto-converge override ut
+   - trigger=false -> normal reviewer `PASS` handoff ut
+3. Error outcome matrix:
+   - trigger=true es policy-reject -> explicit reject kimenet (nem transition ut)
+4. Auto-converge override output contract:
+   - envelope sorrend kotelezoen `CONVERGENCE` majd `APPROVAL_REQUEST`
+   - bubble state kotelezoen `READY_FOR_APPROVAL`
+5. Fail-closed contract:
+   - trigger=true, de convergence policy reject -> command reject explicit reason code-dal
+   - silent fallback `PASS` handoffra tiltott
+6. AC es Test Matrix traceability explicit, egy-az-egyben kovetheto mappinggel.
+7. Scope guard: ez a dokumentum csak szerzodesi szintet rogzit; implementacios reszleteket nem vezet be.
 
 ### Out of Scope
 
-1. Altalanos auto-converge minden clean PASS esetre (single-clean scenario) Phase 1-ben.
-2. Uj UI workflow vagy emberi megerosites popup.
-3. Reviewer findings modell vagy severity ontology modositas.
-4. Teljes loop policy redesign.
+1. `src/*` vagy `tests/*` implementacio.
+2. Altalanos auto-converge minden clean `PASS` esetre (single-clean scenario).
+3. Uj UI workflow, human confirmation modal, vagy policy redesign.
+4. Reviewer ontology/finding modell modositas.
 
 ### Safety Defaults
 
-1. Nem repeat-clean esetben marad a jelenlegi PASS viselkedes.
-2. Ha auto-converge policy validacio megbukik, command fail legyen explicit hibaokkal; ne legyen silent fallback implementer handoffra.
-3. Trigger nelkul ne tortenjen implicit override.
-4. Transcript es state konzisztencia: vagy PASS path, vagy CONVERGENCE path fusson, kevert mellekhatas ne lehessen.
+1. Trigger nelkul nincs override.
+2. Round 1-ben nincs override.
+3. Sikeres command pontosan egy transition utat futhat: `PASS` vagy `CONVERGENCE`, kevert mellekhatas tiltott.
+4. Policy reject esetben state/transcript valtozatlan maradjon.
+5. A reject kimenet nem harmadik transition ut, hanem kulon fail-closed hibaag.
 
 ### Contract Boundary / Blast Radius
 
 1. `contract_boundary_override`: `yes`
 2. Erintett boundary-k:
-   - reviewer PASS runtime contract,
-   - convergence transition contract,
-   - transcript/state mutation contract,
-   - operator dokumentacios contract (`README`, `pairflow-initial-design`).
+   - reviewer `PASS` transition contract
+   - convergence trigger contract
+   - transcript/state mutation invariansok
+3. Docs-only guard:
+   - Allowed edit: ez a task dokumentum
+   - Optional alignment: `progress/*`, `docs/*`
+   - Forbidden: runtime/product kod valtoztatas
+4. Scope integrity note:
+   - `target_files` szandekosan docs-only; `src/config/defaults.ts` Phase 1-ben out-of-scope.
 
 ## L1 - Change Contract
 
+### 0) Terminology and Input Semantics
+
+1. `clean reviewer PASS` ebben a specifikacioban csak azt jelenti, hogy:
+   - `pass_intent=review`
+   - `findings=[]`
+2. `previous reviewer clean PASS` mindig a legutobbi (most recent) korabbi reviewer `PASS` envelope-re ertendo, es ennek payloadja megfelel az 1. pont szerinti clean reviewer PASS definicionak.
+3. `incomplete transcript` azt jelenti, hogy a legutobbi korabbi reviewer PASS allapota nem dontheto el determinisztikusan.
+   - az ures transcript NEM incomplete eset, hanem determinisztikusan `previous reviewer clean PASS missing` klasszifikacio.
+   - normativ E3 esethalmaz (kizarolagos, nem pelda-jellegu):
+     - van korabbi reviewer `PASS` candidate envelope, de a clean minositeshez szukseges payload mezo (`pass_intent` vagy `findings`) hianyzik;
+     - van korabbi reviewer `PASS` candidate envelope, de a payload strukturaja parse-hibasan/torzultan olvashato, ezert a clean minosites nem reprodukalhato;
+     - ordering szempontbol a legutobbi reviewer `PASS` candidate nem valaszthato ki determinisztikusan (append-sequence serules vagy holtverseny miatt).
+   - plain absence szabaly: ha nincs korabbi reviewer `PASS` envelope candidate, az mindig E4 (`PREVIOUS_REVIEWER_CLEAN_PASS_MISSING`), soha nem E3.
+4. `most recent` ordering key:
+   - canonical kulcs: transcript append sorrend (legnagyobb transcript index/sequence a nyero),
+   - timestamp nem hasznalhato ordering forraskent, csak informacios mezokent.
+
 ### 1) Call-site Matrix
 
-| ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
-|---|---|---|---|---|---|---|---|---|
-| CS1 | `src/core/agent/pass.ts` | `emitPassFromWorkspace` | `(input, deps?) -> Promise<EmitPassResult>` | reviewer clean PASS path, transcript append elott | Repeat-clean triggernel PASS handoff helyett auto-converge path indul | P1 | required-now | AC1, AC2, T1 |
-| CS2 | `src/core/agent/pass.ts` | repeat-clean detection helper (uj private helper) | `(transcript, reviewer, currentRound) -> { repeatClean: boolean; previousReviewerPassId?: string }` | reviewer branch | Determinisztikusan felismeri a legutobbi korabbi clean reviewer PASS-t | P1 | required-now | AC1, T2 |
-| CS3 | `src/core/agent/converged.ts` | convergence emission reuse | existing helpers | pass-bol hivhato kozos path | Auto-override ugyanazt a validacios es append szabalyt hasznalja, mint manual `converged` | P1 | required-now | AC3, AC4, T3 |
-| CS4 | `src/core/convergence/policy.ts` | policy invocation contract | `validateConvergencePolicy(input) -> result` | pass-triggered converge path | Policy ellenorzes explicit, hiba eseten nem fallbackel PASS-ra | P1 | required-now | AC4, T4 |
-| CS5 | `tests/core/agent/pass.test.ts` | pass command tests | test assertions | uj override scenariok | Repeat-clean clean PASS -> READY_FOR_APPROVAL, nincs implementer handoff PASS | P1 | required-now | AC2, AC5, T1, T2 |
-| CS6 | `tests/core/agent/converged.test.ts` | convergence parity tests | test assertions | auto es manual converged parity | Auto-path ugyanazokat a gateeket tartja, mint manual converged | P1 | required-now | AC3, T3 |
-| CS7 | `tests/core/bubble/orchestrationLoopSmoke.test.ts` | loop smoke | test assertions | e2e review loop | Repeat-clean drift eseten loop megall approval szakaszban | P1 | required-now | AC5, T5 |
-| CS8 | `docs/pairflow-initial-design.md`, `README.md` | protocol docs | `N/A` | command semantics sections | Dokumentalja a repeat-clean auto-override deterministic szabalyat | P2 | required-now | AC6, T6 |
+| ID | File | Section/Anchor | Contract Delta | Expected Result | Priority | Timing | Evidence |
+|---|---|---|---|---|---|---|---|
+| CS1 | `plans/tasks/reviewer-repeat-clean-pass-deterministic-autoconverge-feature-phase1.md` | `L0/In Scope` | trigger kriteriumok zart, formalis listaja | trigger dontes determinisztikus | P1 | required-now | AC1, T1, T2, T18 |
+| CS2 | ugyanaz | `L1/Data and Interface Contract` | `PASS` vs `CONVERGENCE` ut kolcsonosen kizaro | nincs kevert state/transcript mellekhatas | P1 | required-now | AC2, AC3, T3 |
+| CS3 | ugyanaz | `L1/Error and Fallback Contract` | fail-closed policy reject path explicit | nincs silent fallback | P1 | required-now | AC4, T4 |
+| CS4 | ugyanaz | `L1/Test Matrix` | pozitv/negativ trigger esetek teljes matrixa | tesztelheto acceptance coverage | P1 | required-now | matrix completeness checklist |
+| CS5 | ugyanaz | `L1/AC-Test Traceability` | ketiranyu AC<->T mapping | audit-kovetheto implementacios cel | P1 | required-now | traceability checklist |
+| CS6 | ugyanaz | `Spec Lock` | implementalhatosagi feltetelek zarasa | egyertelmu handoff implementaciora | P1 | required-now | review checklist |
 
 ### 2) Data and Interface Contract
 
-| Contract | Current | Target | Required Fields | Optional Fields | Compatibility | Priority | Timing |
+| Contract | Current Ambiguity | Target Contract | Required Fields | Optional Fields | Compatibility | Priority | Timing |
 |---|---|---|---|---|---|---|---|
-| Reviewer clean PASS handling | clean PASS implementer handoffot nyit | repeat-clean clean PASS auto-converge override | `pass_intent=review`, `findings=[]`, `round>=2`, previous reviewer clean PASS present | override summary suffix | targeted behavior change | P1 | required-now |
-| Transcript mutation mode | reviewer clean PASS -> `PASS` append | trigger eseten `CONVERGENCE` + `APPROVAL_REQUEST` append | canonical envelope order | optional audit ref | behavior change | P1 | required-now |
-| State transition | reviewer clean PASS -> RUNNING + implementer active | trigger eseten `READY_FOR_APPROVAL` | valid reviewer context + policy pass | optional audit metadata | behavior change | P1 | required-now |
+| Trigger evaluation | "ismetelt clean PASS" nincs formalisan zarva | `trigger=true` csak ha mind az 5 kriterium teljesul | `active_role=reviewer`, `pass_intent=review`, `findings=[]`, `round>=2`, `most_recent_previous_reviewer_clean_pass_envelope=true` | previous reviewer pass id | behavior clarification | P1 | required-now |
+| Transition selection | `PASS` es auto-converge utak keveredhetnek | command-szinten XOR: vagy normal `PASS` ut, vagy override `CONVERGENCE` ut | `transition_decision=normal_pass|auto_converge` | audit reason | behavior clarification | P1 | required-now |
+| Override output | envelope/state sorrend implicit | `CONVERGENCE` -> `APPROVAL_REQUEST`, final state `READY_FOR_APPROVAL` | canonical envelope order | summary suffix `[auto-converged:repeat-clean-pass]` | behavior clarification | P1 | required-now |
+| Normal PASS output | trigger false path nincs formalisan rogzitve | normal `PASS` handoff valtozatlan | `PASS` envelope, implementer handoff | n/a | no behavior change | P1 | required-now |
+| Policy gate | reject eset bizonytalan fallbackkel | reject -> fail-closed, no fallback | explicit reject reason code | error detail | behavior clarification | P1 | required-now |
+| Reject classification | reject konnyen harmadik transitionkent ertelmezheto | reject kulon error outcome, nem transition ut | `error_decision=reject` | reject diagnostics | behavior clarification | P1 | required-now |
 
 ### 3) Side Effects Contract
 
 | Area | Allowed | Forbidden | Notes | Priority | Timing |
 |---|---|---|---|---|---|
-| Transcript | repeat-clean triggernel convergence envelope pair append | triggeresetben plusz PASS append | ne legyen dupla/kevert append | P1 | required-now |
-| State | repeat-clean triggernel READY_FOR_APPROVAL transition | triggernel RUNNING implementer handoff | loop-stopper behavior | P1 | required-now |
-| Metrics/notifications | normal converged path szerinti jelzesek | custom ad-hoc side channel Phase 1-ben | reuse existing converge hooks | P2 | required-now |
-| Docs | README/design sync | docs/runtime drift | operator expectation fix | P2 | required-now |
+| Task spec document | trigger, transition, fail-closed, traceability explicit | ketertelmu vagy onellentmondo megfogalmazas | docs-only refinement | P1 | required-now |
+| Runtime behavior statement | PASS vs CONVERGENCE XOR contract | mixed/dupla transition allitas | implementation-neutral wording | P1 | required-now |
+| Validation traceability | AC-Test mapping explicit | AC assertion trace nelkul | reviewer/implementer handoff clarity | P1 | required-now |
+| Product code | nincs | barmilyen `src/*`, `tests/*` valtoztatas | bubble constraint | P1 | required-now |
 
 Constraint: if no allowed side effects are listed above, implementation must be pure.
 
 ### 4) Error and Fallback Contract
 
-| Trigger | Dependency (if any) | Behavior (`throw|result|fallback`) | Fallback Value/Action | Reason Code | Log Level | Priority | Timing |
-|---|---|---|---|---|---|---|---|
-| Repeat-clean trigger aktiv, de convergence policy reject | convergence policy validator | throw | command reject explicit policy hibaval, state/transcript valtozatlan | `REPEAT_CLEAN_AUTOCONVERGE_POLICY_REJECTED` | error | P1 | required-now |
-| Repeat-clean trigger nem aktiv | transcript history | result | normal PASS path | `REPEAT_CLEAN_TRIGGER_NOT_MET` | info | P2 | required-now |
-| Round=1 clean reviewer PASS | round guardrail | result | normal existing round1 path, no override | `AUTOCONVERGE_ROUND1_DISABLED` | info | P1 | required-now |
-| Previous reviewer PASS nem clean vagy nincs | transcript history | result | normal PASS path | `PREVIOUS_REVIEWER_CLEAN_PASS_MISSING` | info | P1 | required-now |
+Precedence rule a `trigger=false` agban (magasabbrol alacsonyabbra):
+1. `AUTOCONVERGE_ROUND1_DISABLED`
+2. `REPEAT_CLEAN_TRIGGER_INPUT_INCOMPLETE`
+3. `PREVIOUS_REVIEWER_CLEAN_PASS_MISSING`
+4. `REPEAT_CLEAN_TRIGGER_NOT_MET` (generic fallback, csak akkor hasznalhato, ha a fenti specifikus okok nem alkalmazhatok)
+
+Scope clarification:
+- E2/E3/E4 specifikus non-match okok, amelyek megelozik az E5 generic fallback-ot.
+- E5 csak akkor ervenyes, ha trigger=false es egyik specifikus non-match ok sem illeszkedik.
+- E2/E3/E4 precedence kizarolag akkor ertelmezett, ha az alap trigger-precondition gate mar teljesul (`active_role=reviewer`, `pass_intent=review`, `findings=[]`).
+- Ha az alap trigger-precondition gate nem teljesul (pl. active role/pass_intent/findings mismatch), a besorolas kozvetlenul E5 (generic fallback), E2/E3/E4 overlap nem alkalmazando.
+- E3 csak a L1/0#3 pontban felsorolt normativ incomplete esetekben alkalmazhato; "sima hiany" (plain absence) onmagaban nem E3.
+- Overlap isolation szabaly: ha az alap precondition gate teljesul es egyszerre igaz E2+E3 vagy E2+E4, akkor E2 nyer (predecencia szerint).
+- Ha az alap precondition gate teljesul es egyszerre igaz E3+E4 (round>=2 mellett), akkor E3 nyer (predecencia szerint).
+- Ures transcript explicit kimenete: E4 (`PREVIOUS_REVIEWER_CLEAN_PASS_MISSING`), nem E3.
+- E4 naming note: a `..._MISSING` reason-code a clean previous reviewer `PASS` hianyat jeloli; ez plain absence es explicit non-clean previous reviewer `PASS` esetet is lefed.
+- Legacy reason-code note: `DEPENDENCY_FAIL` nem resze ennek a Phase 1 contractnak; dependency/provenance hibak a kapcsolodo runtime verifier taskokban kezeltek.
+- Defense-in-depth scope note: core-layer technical guard rows szandekosan nincsenek itt modellezve, mert ez a task docs-only transition contract szintu.
+
+| ID | Trigger | Dependency (if any) | Behavior (`throw|result|fallback`) | Fallback Value/Action | Reason Code | Log Level | Priority | Timing |
+|---|---|---|---|---|---|---|---|---|
+| E0 | Trigger=true + policy pass | convergence policy validation | result | auto-converge transition (`CONVERGENCE` -> `APPROVAL_REQUEST`) | `REPEAT_CLEAN_AUTOCONVERGE_TRIGGERED` | info | P1 | required-now |
+| E1 | Trigger=true + policy reject | convergence policy validation | throw | `error_decision=reject`; no fallback, no state/transcript mutation, no transition envelope append, command exits non-zero with surfaced reason code | `REPEAT_CLEAN_AUTOCONVERGE_POLICY_REJECTED` | error | P1 | required-now |
+| E2 | Round=1 guardrail | round check | result | normal `PASS` path | `AUTOCONVERGE_ROUND1_DISABLED` | info | P1 | required-now |
+| E3 | Normativ incomplete-transcript eset (L1/0#3), ahol previous reviewer clean PASS allapot nem dontheto el | transcript integrity | result | normal `PASS` path, explicit non-match reason | `REPEAT_CLEAN_TRIGGER_INPUT_INCOMPLETE` | warn | P2 | required-now |
+| E4 | Previous reviewer clean PASS determinisztikusan missing (plain absence vagy explicit non-clean previous reviewer `PASS`) | transcript lookup | result | normal `PASS` path | `PREVIOUS_REVIEWER_CLEAN_PASS_MISSING` | info | P1 | required-now |
+| E5 | Trigger=false (generic fallback) | deterministic trigger evaluator | result | normal `PASS` path | `REPEAT_CLEAN_TRIGGER_NOT_MET` | info | P2 | required-now |
 
 ### 5) Dependency Constraints
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | existing convergence validation (`validateConvergencePolicy`) | P1 | required-now |
-| must-use | existing convergence append/state transition logic | P1 | required-now |
-| must-use | transcript mint source-of-truth previous reviewer clean PASS detektalasra | P1 | required-now |
-| must-not-use | summary text regex mint egyetlen trigger source | P1 | required-now |
-| must-not-use | trigger aktiv eseten silent fallback implementer handoffra policy rejectkor | P1 | required-now |
+| must-use | transcript mint source-of-truth previous reviewer clean PASS detektalashoz | P1 | required-now |
+| must-use | convergence policy validation az override agban | P1 | required-now |
+| must-use | canonical envelope sorrend (`CONVERGENCE` -> `APPROVAL_REQUEST`) | P1 | required-now |
+| must-not-use | summary text mint egyetlen trigger source | P1 | required-now |
+| must-not-use | trigger=true es policy reject mellett silent fallback `PASS` handoffra | P1 | required-now |
 
 ### 6) Test Matrix
 
 | ID | Scenario | Given | When | Then | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|
-| T1 | Repeat-clean override happy path | reviewer active, round>=2, current clean PASS, previous reviewer PASS clean | `pairflow pass --no-findings` | `CONVERGENCE` + `APPROVAL_REQUEST`, state `READY_FOR_APPROVAL`, nincs implementer handoff PASS | P1 | required-now | `tests/core/agent/pass.test.ts` |
-| T2 | Trigger negative: previous reviewer PASS not clean | reviewer active, round>=2, current clean PASS, previous reviewer PASS findingses | `pairflow pass --no-findings` | normal PASS behavior marad | P1 | required-now | `tests/core/agent/pass.test.ts` |
-| T3 | Auto-path policy parity manual convergeddel | azonos bubble contextban manual vs auto converge | converge path fut | gateek es append sorrend konzisztens | P1 | required-now | `tests/core/agent/converged.test.ts` |
-| T4 | Policy reject no-silent-fallback | trigger aktiv + policy explicit reject fixture | `pairflow pass --no-findings` | command fail explicit reasonnel; transcript/state valtozatlan | P1 | required-now | `tests/core/agent/pass.test.ts` |
-| T5 | E2E loop stop smoke | drift minta: ket egymast koveto clean reviewer PASS | orchestration loop smoke | bubble approval szakaszba lep felesleges uj kor helyett | P1 | required-now | `tests/core/bubble/orchestrationLoopSmoke.test.ts` |
-| T6 | Docs contract sync | README + design sections | docs review | deterministic repeat-clean override szabaly explicit | P2 | required-now | docs diff |
+| T1 | Repeat-clean override happy path | reviewer active, round>=2, current clean PASS, most recent previous reviewer PASS is clean | `pairflow pass --no-findings` | `CONVERGENCE` + `APPROVAL_REQUEST`, state `READY_FOR_APPROVAL`, no `PASS` handoff, explicit reason `REPEAT_CLEAN_AUTOCONVERGE_TRIGGERED` | P1 | required-now | test spec |
+| T2 | Trigger negative: previous reviewer `PASS` absent | reviewer active, round>=2, current clean PASS, transcriptben nincs korabbi reviewer `PASS` envelope | `pairflow pass --no-findings` | normal `PASS` path + explicit reason `PREVIOUS_REVIEWER_CLEAN_PASS_MISSING` | P1 | required-now | test spec |
+| T3 | Transition XOR invariant | trigger true/false fixtures | transition executes | observable assertion: pontosan egy transition-branch envelope sorozat appendelodik (vagy egy darab `PASS`, vagy `CONVERGENCE`->`APPROVAL_REQUEST` par), es a masik branch envelope-jei nem jelennek meg | P1 | required-now | test spec |
+| T4 | Policy reject fail-closed | trigger true + policy reject | `pairflow pass --no-findings` | explicit reject with reason `REPEAT_CLEAN_AUTOCONVERGE_POLICY_REJECTED`; command exit non-zero; no state/transcript mutation | P1 | required-now | test spec |
+| T5 | Round1 guardrail | reviewer clean PASS, round=1 | `pairflow pass --no-findings` | no override, normal `PASS` + explicit reason `AUTOCONVERGE_ROUND1_DISABLED` | P1 | required-now | test spec |
+| T6 | Envelope order determinism | trigger true fixture | transition executes | envelope order exactly `CONVERGENCE` -> `APPROVAL_REQUEST` | P1 | required-now | test spec |
+| T7 | Drift-stop smoke | round>=2 kontextusban az elso kvalifikalt clean reviewer `PASS` meg trigger=false (nincs elozo clean reviewer PASS), a kovetkezo reviewer kor is clean `PASS`, es policy-pass fennall | reviewer ket egymast koveto kvalifikalt korben `pairflow pass --no-findings` commandot ad | intermediate assert: elso kor normal `PASS` + reason `PREVIOUS_REVIEWER_CLEAN_PASS_MISSING`; vegso assert: masodik kor `CONVERGENCE` + `APPROVAL_REQUEST` + reason `REPEAT_CLEAN_AUTOCONVERGE_TRIGGERED`, loop approval szakaszba lep | P1 | required-now | test spec |
+| T8 | Incomplete transcript non-match | alap trigger-precondition gate teljesul, es az E3 normativ esethalmazbol legalabb egy eset fennall (pl. legutobbi previous reviewer `PASS` candidate payloadjabol hianyzik a `findings` mezo) | `pairflow pass --no-findings` | normal `PASS` path + explicit `REPEAT_CLEAN_TRIGGER_INPUT_INCOMPLETE` reason | P2 | required-now | test spec |
+| T9 | Trigger criterion negative: active role mismatch | round>=2, transcript complete, current active role nem reviewer | trigger evaluator fut | trigger=false, generic fallback reason `REPEAT_CLEAN_TRIGGER_NOT_MET` (E2/E3/E4 nem alkalmazando) | P2 | required-now | test spec |
+| T10 | Trigger criterion negative: `pass_intent` mismatch | round>=2, transcript complete, `pass_intent!=review` | trigger evaluator fut | trigger=false, generic fallback reason `REPEAT_CLEAN_TRIGGER_NOT_MET` (E2/E3/E4 nem alkalmazando) | P2 | required-now | test spec |
+| T11 | Trigger criterion negative: findings not empty | round>=2, transcript complete, `findings` nem ures | trigger evaluator fut | trigger=false, generic fallback reason `REPEAT_CLEAN_TRIGGER_NOT_MET` (E2/E3/E4 nem alkalmazando) | P2 | required-now | test spec |
+| T12 | Trigger=false generic fallback reason explicit | trigger=false, de nem E2/E3/E4 ok miatt | `pairflow pass --no-findings` vagy evaluator fixture | explicit `REPEAT_CLEAN_TRIGGER_NOT_MET` reason code kerul kimenetre | P2 | required-now | test spec |
+| T13 | Precedence overlap: E2 + E3 | alap trigger-precondition gate teljesul (`active_role=reviewer`, `pass_intent=review`, `findings=[]`), round=1, es az E3 normativ incomplete feltetel is fennall | evaluator fut | E2 nyer, reason `AUTOCONVERGE_ROUND1_DISABLED` | P1 | required-now | test spec |
+| T14 | Precedence overlap: E2 + E4 | alap trigger-precondition gate teljesul (`active_role=reviewer`, `pass_intent=review`, `findings=[]`), round=1, es previous reviewer clean PASS missing is | evaluator fut | E2 nyer, reason `AUTOCONVERGE_ROUND1_DISABLED` | P1 | required-now | test spec |
+| T15 | Most-recent ordering determinism | alap trigger-precondition gate teljesul (`active_role=reviewer`, `pass_intent=review`, `findings=[]`), es tobb korabbi reviewer `PASS` envelope van, ahol idobelyeg-sorrend elter append sorrendtol | trigger evaluator fut | `most recent` kivalasztas transcript append sorrenddel tortenik (legnagyobb index), nem timestamp alapjan | P1 | required-now | test spec |
+| T16 | Precedence overlap: E3 + E4 | alap trigger-precondition gate teljesul (`active_role=reviewer`, `pass_intent=review`, `findings=[]`), round>=2, es egyszerre fennall egy E3 normativ incomplete eset (malformed candidate) + clean previous reviewer `PASS` deterministicen nem igazolhato | evaluator fut | E3 nyer, reason `REPEAT_CLEAN_TRIGGER_INPUT_INCOMPLETE` | P1 | required-now | test spec |
+| T17 | Empty transcript classification | alap trigger-precondition gate teljesul (`active_role=reviewer`, `pass_intent=review`, `findings=[]`), round>=2, defensive fixtureben transcript ures (nincs reviewer `PASS` candidate) | evaluator fut | reason `PREVIOUS_REVIEWER_CLEAN_PASS_MISSING` (E4), explicit NEM `REPEAT_CLEAN_TRIGGER_INPUT_INCOMPLETE` | P1 | required-now | test spec |
+| T18 | Trigger negative: previous reviewer `PASS` exists but not clean | reviewer active, round>=2, current clean PASS, legutobbi korabbi reviewer `PASS` envelope payloadja explicit nem-clean (`pass_intent!=review` vagy `findings` nem ures) | `pairflow pass --no-findings` | normal `PASS` path + explicit reason `PREVIOUS_REVIEWER_CLEAN_PASS_MISSING` | P1 | required-now | test spec |
+
+### 7) AC-Test Traceability
+
+| Acceptance Criterion | Covered By Tests |
+|---|---|
+| AC1 | T1, T2, T5, T9, T10, T11, T18 |
+| AC2 | T1, T3 |
+| AC3 | T1, T6 |
+| AC4 | T4 |
+| AC5 | T7 |
+| AC6 | T1, T3, T4, T6 |
+| AC7 | T5 |
+| AC8 | T8 |
+| AC9 | T12 |
+| AC10 | T1, T4 |
+| AC11 | T13, T14, T16 |
+| AC12 | T15 |
+| AC13 | T2, T5, T8, T12, T16, T17, T18 |
+
+### 8) Test-AC Traceability
+
+| Test | Covers Acceptance Criteria |
+|---|---|
+| T1 | AC1, AC2, AC3, AC6, AC10 |
+| T2 | AC1, AC13 |
+| T3 | AC2, AC6 |
+| T4 | AC4, AC6, AC10 |
+| T5 | AC1, AC7, AC13 |
+| T6 | AC3, AC6 |
+| T7 | AC5 |
+| T8 | AC8, AC13 |
+| T9 | AC1 |
+| T10 | AC1 |
+| T11 | AC1 |
+| T12 | AC9, AC13 |
+| T13 | AC11 |
+| T14 | AC11 |
+| T15 | AC12 |
+| T16 | AC11, AC13 |
+| T17 | AC13 |
+| T18 | AC1, AC13 |
 
 ## Acceptance Criteria
 
-1. `AC1`: Runtime egyertelmuen felismeri a repeat-clean drift trigger mintat.
-2. `AC2`: Trigger eseten a reviewer clean PASS nem nyit uj implementer kort.
-3. `AC3`: Trigger eseten a transition path manual convergeddel policy-szinten azonos.
-4. `AC4`: Policy reject esetben nincs silent fallback PASS handoffra.
-5. `AC5`: E2E loop smoke szerint repeat-clean drift scenario approvalig fut, nem RUNNING ping-pong.
-6. `AC6`: README + design docs expliciten dokumentalja az override viselkedest.
+1. `AC1`: A repeat-clean trigger definicio zart es determinisztikus.
+2. `AC2`: Trigger=true esetben nincs implementer handoff `PASS` path.
+3. `AC3`: Trigger=true esetben canonical `CONVERGENCE` -> `APPROVAL_REQUEST` sequence fut.
+4. `AC4`: Policy reject mellett fail-closed viselkedes van, silent fallback nelkul.
+5. `AC5`: Drift scenario nem marad RUNNING ping-pongban, approvalig lep.
+6. `AC6`: `PASS` vs `CONVERGENCE` transition contract kolcsonosen kizaro es tesztelheto.
+7. `AC7`: Round1 guardrail explicit: round=1 esetben nincs auto-converge override.
+8. `AC8`: Incomplete transcript trigger-input esetben determinisztikus non-match es explicit reason code jelenik meg.
+9. `AC9`: Trigger=false generic fallback ag explicit `REPEAT_CLEAN_TRIGGER_NOT_MET` reason code-dal ellenorizheto.
+10. `AC10`: E0 es E1 agak explicit reason code assertionnel teszteltek (`REPEAT_CLEAN_AUTOCONVERGE_TRIGGERED`, `REPEAT_CLEAN_AUTOCONVERGE_POLICY_REJECTED`).
+11. `AC11`: Precedence overlap esetekben (E2+E3, E2+E4, E3+E4) a definialt sorrend szerinti ag nyer determinisztikusan.
+12. `AC12`: `most recent` ordering determinisztikusan transcript append sorrend alapjan dol el, nem timestamp alapjan.
+13. `AC13`: E2-E5 reason codeok explicit es tesztelt kimenetekkel fedettek, beleertve az ures transcript es az explicit non-clean previous reviewer `PASS` E4 klasszifikaciojat.
 
 ## L2 - Implementation Notes (Optional)
 
-1. [later-hardening] Optional config flag a repeat-clean auto-override ideiglenes ki/bekapcsolasara.
-2. [later-hardening] Metrics field: `repeat_clean_autoconverge_count` bubble reportban.
-3. [later-hardening] UI status badge: "auto-converged from repeat-clean PASS".
+1. [later-hardening] Optional runtime flag az auto-override ideiglenes ki/bekapcsolasara.
+2. [later-hardening] Audit metadata field: `repeat_clean_autoconverge_triggered=true|false`.
+3. [later-hardening] Human-readable suffix policy kotelezove teheto.
 
 ## Assumptions
 
-1. A celzott drift pattern az, amikor reviewer clean PASS utan a kovetkezo reviewer kor is clean PASS, megis RUNNING marad a bubble.
-2. Phase 1 szandekosan szuk triggerrel indul (repeat-clean), nem minden clean PASS-re.
+1. A celzott drift minta: round>=2-ben egymas utani clean reviewer `PASS` mellett bubble feleslegesen RUNNING-ben marad.
+2. Phase 1 szuk triggerrel indul, nem terjeszti ki minden clean `PASS` esetre.
 
 ## Open Questions (Non-Blocking)
 
-1. Kene-e explicit audit artifact (`artifacts/repeat-clean-autoconverge.json`) az override esemenyrol, vagy eleg a transcript envelope par?
-2. A summary-ra keruljon-e kotelezo auto-suffix (pl. "[auto-converged: repeat-clean-pass]")?
+Status note:
+- Ez a kerdes korabbi reviziokban is deferred volt; itt nem ujranyitas tortenik, hanem valtozatlan Phase 2 backlogban tartas.
+
+1. A summary suffix kotelezo legyen-e Phase 2-tol?
 
 ## Spec Lock
 
+Rationale note:
+- A gate-keszlet korabbi reviziokban bovebb es reszben redundans volt; a jelenlegi 7 gate szandekosan konszolidalt, hogy a determinisztikus contract-zarasra fokuszaljon.
+
 Task `IMPLEMENTABLE`, ha:
-1. repeat-clean trigger deterministicen definialt es tesztelt,
-2. trigger eseten auto-converge transition megtortenik implementer handoff helyett,
-3. policy reject esetben fail-closed viselkedes van,
-4. e2e smoke igazolja a drift loop megszuneset,
-5. docs/runtime command contract szinkronban van.
+1. trigger definicio zart, determinisztikus, tesztelt;
+2. sikeres transition XOR contract explicit (`PASS` xor `CONVERGENCE`), reject kulon hibaag;
+3. mind trigger=true, mind trigger=false path canonical szerzodessel rogzitett;
+4. policy reject fail-closed, silent fallback tiltott;
+5. AC-Test es Test-AC traceability teljes, ketiranyu es egyertelmu (minden AC legalabb 1 testtel, minden test legalabb 1 AC-vel kotott);
+6. precedence overlap isolation (E2+E3, E2+E4, E3+E4) es `most recent` ordering kulcs expliciten rogzitett es tesztelt;
+7. E2-E5 reason code lefedes explicit AC/test szerzodesben rogzitett, ures transcript edge-casekel egyutt.
