@@ -11,7 +11,7 @@
 2. Completed: P0/2 (`doc-only-summary-verifier-consistency-gate-phase1.md`) merged via `f631ecd` + `3b7f68d`.
 3. Completed: P1/1 (`doc-only-evidence-source-whitelist-phase1.md`) merged via `80c0c58` (bubble finalize) and `b71d3e3` (merge to `main`).
 4. Active item: P1/2 operational decision matrix rollout. Task spec migrated to L0/L1/L2 in `25b609a`; workflow/rollout source-of-truth synchronization done, baseline freeze recorded, and initial weekly measurement windows logged (`2026-W09`, `2026-W10`).
-5. Not started: P2/1 claim-based validation architecture.
+5. Parked: P2/1 claim-based validation architecture is intentionally deferred; task file removed in `c1739e7` and will be recreated only on concrete demand.
 
 ## Objective
 
@@ -39,10 +39,12 @@ Rationale:
 
 ### P2 (Target architecture)
 
-1. [doc-only-claim-based-validation-architecture-phase2.md](./doc-only-claim-based-validation-architecture-phase2.md)
+1. No active task file in this cycle (parked by explicit decision).
+2. Re-open condition: repeated docs-only runtime-claim incidents that cannot be handled by current P0/P1 controls.
 
 Rationale:
-1. Hosszabb távú, nagyobb scope; nem kell blokkolnia a gyors stabilizálást.
+1. Hosszabb távú, nagyobb scope; jelenleg nincs eleg indok az aktiv vegrehajtashoz.
+2. A mostani fokusz a P1/2 rollout stabil futtatasa es metrika-alapu validacio.
 
 ## Recommended Execution Sequence
 
@@ -131,13 +133,15 @@ Rollback action:
 2. Revert only P1/2 communication wording/routine changes.
 3. Keep evidence whitelist behavior unchanged while investigating.
 
-### Step 5 (Phase 2 planning/implementation)
+### Step 5 (Optional future Phase 2 re-open, Parked)
 
-1. Execute P2/1: claim-based validation architecture design + phased implementation.
+1. Do not execute by default in the current cycle.
+2. Re-open only if Step 4 metrics or incident review shows persistent runtime-claim gaps.
+3. If reopened, create a new task file first (fresh scope and acceptance criteria), then run design -> phased implementation.
 
 Exit criteria:
-1. Elfogadott technical design.
-2. Prioritized implementation backlog with milestones.
+1. Re-open decision is evidence-backed and documented.
+2. New task file exists with explicit scope before implementation starts.
 
 ## Dependency Map
 
@@ -145,7 +149,7 @@ Exit criteria:
 2. P0/2 depends on explicit docs-only mode behavior from P0/1.
 3. P1/1 independent, but strongest value after P0 baseline is in place.
 4. P1/2 should reflect final P0/P1 code behavior.
-5. P2/1 starts after P0/P1 stabilization to avoid moving target.
+5. P2/1 remains parked unless post-stabilization evidence justifies reopening.
 
 ## Rollback Plan (if needed)
 
