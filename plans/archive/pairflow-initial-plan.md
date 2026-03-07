@@ -11,7 +11,7 @@ Planning constraints applied:
 4. Protocol uses validated `PASS` envelopes with optional `--intent` and CLI-side inference when omitted.
 5. `pairflow converged` is reviewer-only and validated against state + transcript evidence.
 6. `state.json` tracks `active_agent`, `active_role`, and `round_role_history` (plus timestamps/liveness fields).
-7. `watchdog_timeout_minutes` defaults to `5` via `bubble.toml`.
+7. `watchdog_timeout_minutes` defaults to `20` via `bubble.toml`.
 
 ## Execution Status
 
@@ -99,7 +99,7 @@ Out:
    - question reply path (`HUMAN_REPLY`) and RUNNING resume behavior.
    - approval decision path (`APPROVAL_DECISION`) with commit gate state transitions.
 8. Implement tmux session launcher (status pane + claude pane + codex pane) and short notification delivery contract.
-9. Implement watchdog/liveness monitor keyed by `active_agent` and `watchdog_timeout_minutes` (default 5).
+9. Implement watchdog/liveness monitor keyed by `active_agent` and `watchdog_timeout_minutes` (default 20).
 10. Implement commit gate + scope check + done-package requirement, then finalize `COMMITTED -> DONE`.
 
 ### Proposed Module/File Structure
@@ -356,7 +356,7 @@ Out:
    Dependencies: none.
 2. Ticket 02: Implement config + type schemas (`bubble.toml`, `state.json`, envelope schema).
    Dependencies: Ticket 01.
-3. Ticket 03: Implement bubble filesystem bootstrap (`bubble create`) with default strict config and watchdog=5.
+3. Ticket 03: Implement bubble filesystem bootstrap (`bubble create`) with default strict config and watchdog=20.
    Dependencies: Ticket 02.
 4. Ticket 04: Implement state machine transition engine + persistence guards.
    Dependencies: Ticket 02.

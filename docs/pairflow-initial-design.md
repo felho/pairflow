@@ -1,9 +1,13 @@
 # Agent Pair Orchestrator MVP Spec (Claude Code + Codex CLI)
 
+> Historical baseline: the initial MVP scope from this spec is implemented.  
+> Last status review: 2026-03-07.  
+> For current behavior and CLI/API surface, use `README.md` as canonical.
+
 ## Status
 - Date: 2026-02-21
 - Owner: felho
-- State: Planned
+- State: Implemented (historical baseline)
 
 ## Goal
 Build a local-first orchestration tool that keeps the quality benefits of dual-agent review while removing manual relay overhead.
@@ -353,7 +357,7 @@ Approval package must contain:
 5. Suggested manual test plan.
 6. Suggested commit message.
 
-## MVP Implementation Plan
+## MVP Implementation Plan (Historical, Delivered)
 ### Phase 1: Single Bubble, CLI-first
 1. Bubble config + state machine.
 2. Worktree manager.
@@ -407,8 +411,8 @@ Acceptance:
 2. UI direction: CLI-first backend, thin web UI in Phase 3.
 3. Test policy: auto-detect + mandatory human confirmation at bubble creation; no convergence without validated test/manual-check profile.
 
-## Recommended Build Start
-Start with Phase 1 in strict mode:
+## Historical Build Start Notes
+This was the original suggested start configuration:
 1. `max_rounds=8`
 2. mandatory alternating review at least once
 3. mandatory done-package before approval
