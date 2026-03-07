@@ -1,16 +1,17 @@
 # Docs-Only Issues Priority + Rollout Plan (2026-03-04)
 
 ## Status
-- Date: 2026-03-06
+- Date: 2026-03-07
 - Owner: felho
 - State: In Progress
 
-## Progress Snapshot (2026-03-06)
+## Progress Snapshot (2026-03-07)
 
 1. Completed: P0/1 (`doc-only-temporary-disable-runtime-checks-phase1.md`) merged on 2026-03-04 via `c24c20f` (`bubble/doc-only-runtime-checks-phase1-impl`) and `7eaf70e` (merge to `main`).
 2. Completed: P0/2 (`doc-only-summary-verifier-consistency-gate-phase1.md`) merged via `f631ecd` + `3b7f68d`.
-3. Next active item: P1/1 (`doc-only-evidence-source-whitelist-phase1.md`) using the new L0/L1/L2 contract workflow.
-4. Not started: P1/2 operational decision matrix rollout, P2/1 claim-based validation architecture.
+3. Completed: P1/1 (`doc-only-evidence-source-whitelist-phase1.md`) merged via `80c0c58` (bubble finalize) and `b71d3e3` (merge to `main`).
+4. Active item: P1/2 operational decision matrix rollout. Task spec migrated to L0/L1/L2 in `25b609a`; workflow/rollout doc synchronization in progress.
+5. Not started: P2/1 claim-based validation architecture.
 
 ## Objective
 
@@ -63,7 +64,7 @@ Exit criteria:
 1. Nem mehet ki clean validation claim, ha verifier státusz nem kompatibilis.
 2. Approval ping-pong mismatch incidensek megszűnnek.
 
-### Step 3 (Next)
+### Step 3 (Completed on 2026-03-07)
 
 1. Implement P1/1: evidence source whitelist.
 2. Update docs about accepted evidence ref patterns.
@@ -72,14 +73,32 @@ Exit criteria:
 1. `done-package.md`/artifact JSON nem szolgálhat command evidence forrásként.
 2. Command verification csak dedikált evidence logokra épül.
 
-### Step 4 (After code changes are merged)
+### Step 4 (Operational rollout for P1/2, Active)
 
-1. Execute P1/2: operational decision matrix rollout and comms.
-2. Apply matrix in reviewer/orchestrator guidance and team routine.
+Reference task:
+1. [doc-only-operational-decision-matrix-and-rollout-phase1.md](./doc-only-operational-decision-matrix-and-rollout-phase1.md)
+
+Actions:
+1. Publish the operational decision matrix into workflow guidance and communicate one standard docs-only summary wording.
+2. Apply deterministic routing in team routine:
+   - docs-only + no runtime claim -> runtime checks not required wording,
+   - docs-only + explicit runtime claim -> claim allowed only with trusted verifier + whitelisted evidence,
+   - code/auto bubble -> existing policy unchanged.
+3. Start metrics collection with explicit source and cadence.
 
 Exit criteria:
-1. Dokumentált és alkalmazott docs-only decision matrix.
-2. 3 core metric mérése elindul.
+1. Workflow doc and rollout plan both reference the same P1/2 matrix source-of-truth.
+2. Metrics registry is active (minimum one measured window recorded).
+3. No policy ambiguity remains between docs-only and code/auto paths in team guidance text.
+
+Rollback triggers:
+1. Summary-verifier mismatch trend worsens in two consecutive observation windows.
+2. False-blocker ratio grows above the pre-rollout baseline.
+
+Rollback action:
+1. Keep P0/2 consistency gate enabled.
+2. Revert only P1/2 communication wording/routine changes.
+3. Keep evidence whitelist behavior unchanged while investigating.
 
 ### Step 5 (Phase 2 planning/implementation)
 
@@ -101,9 +120,12 @@ Exit criteria:
 
 1. If P0/1 causes unacceptable false-green risk, re-enable docs-only runtime requirement behind temporary feature flag.
 2. Keep P0/2 consistency gate enabled even during rollback to prevent summary-verifier contradiction.
+3. If P1/2 operational rollout introduces confusion/noise, roll back only the communication layer (matrix wording/routine), not the P0/P1 technical safety controls.
 
 ## Success Metrics
 
-1. Docs-only approval előtti átlag round szám csökkenése.
-2. Summary-vs-verifier mismatch count -> near zero.
-3. Evidence-related rework ratio csökkenése docs-only bubble-ökben.
+| metric_id | Definition | Source | Cadence | Target direction |
+|---|---|---|---|---|
+| docs_only_round_count_avg | Docs-only bubble-ök átlagos approval round száma | bubble status history | weekly | down |
+| summary_verifier_mismatch_count | Summary-vs-verifier mismatch események száma | reviewer artifacts + summary audit | weekly | near zero |
+| docs_only_evidence_rework_ratio | Evidence-related rework arány docs-only bubble-ökben | rework decision logs | weekly | down |

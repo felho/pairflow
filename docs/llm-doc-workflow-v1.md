@@ -117,6 +117,42 @@ Command verificationhez csak whitelistelt log refeket adj:
    - artifact/prose ref (`done-package.md`, `reviewer-test-verification.json`)
    - URL/protocol ref (`https://...`)
 
+## Docs-Only Operational Decision Matrix (Phase 1)
+
+Source of truth:
+1. `plans/tasks/doc-only-issues/doc-only-operational-decision-matrix-and-rollout-phase1.md`
+2. Ez a szekcio operational kivonat; konfliktus eseten a fenti task file az elsoseges.
+
+| Scenario | Runtime check requirement | Claim policy | Evidence policy | Summary wording |
+|---|---|---|---|---|
+| docs-only + no runtime claim | not required | nincs pozitiv test/typecheck/lint pass claim | nincs extra evidence requirement | kotelezo explicit docs-only formula |
+| docs-only + explicit runtime claim | required for that claim | claim csak trusted verifier mellett engedett | claimhez whitelistelt evidence ref kotelezo | claim szovegnek konzisztensnek kell lennie a verifier statusszal |
+| code/auto bubble | existing policy unchanged | existing policy applies | existing policy applies | existing policy applies |
+
+Standard docs-only no-claim wording:
+1. `docs-only scope, runtime checks not required in this round`
+
+Disallowed docs-only wording:
+1. Evidence nelkuli vagy untrusted verifier melletti pozitiv runtime pass claim (`tests pass`, `typecheck clean`, `lint clean`).
+
+## Docs-Only Rollout Gates (Phase 1 / P1-2)
+
+Preconditions:
+1. P0/1 aktiv: docs-only runtime check requirement temporary disable.
+2. P0/2 aktiv: summary-verifier consistency gate.
+3. P1/1 aktiv: evidence source whitelist.
+
+Rollout action:
+1. Operational matrix + summary wording contract publikacio.
+2. Reviewer/orchestrator kommunikacio matrix-szabaly szerinti frissitese.
+
+Exit criteria:
+1. Egyseges, determinisztikus matrix hasznalat docs-only dontesekhez.
+2. Metrika-kovetes aktiv: approval round count, mismatch count, evidence-related rework ratio.
+
+Rollback trigger:
+1. Ha mismatch vagy false-blocker trend romlik, P0/2 gate marad aktiv, es csak a rollout kommunikacios reteget allitjuk vissza ideiglenesen.
+
 ## Scenario Recipes
 
 ### A) Bugfix in existing system
@@ -155,3 +191,4 @@ Command verificationhez csak whitelistelt log refeket adj:
 1. Phase 1 (`advisory`): check and warn only.
 2. Phase 2 (`required-docs`): hard-gate doc-only/task bubbles.
 3. Phase 3 (`required-all`): enforce on all bubbles.
+4. Phase 1 docs-only operational mukodesben a fenti decision matrix es rollout gate az iranyado.
