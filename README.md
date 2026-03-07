@@ -550,6 +550,7 @@ The restart is safe because:
 - Transcript is append-only and survives crashes
 - Worktree is preserved on disk
 - `bubble start` detects an existing bubble in a runtime state and reattaches instead of bootstrapping from scratch
+- Resume start injects bounded transcript/state context into both agent panes; in `RUNNING` it sends kickoff to the currently active role pane
 
 ### Scenario 8: Stopping or cancelling a bubble
 
