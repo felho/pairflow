@@ -28,6 +28,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 3. Prefer Pairflow lifecycle commands over raw git/tmux when state progression is normal.
 4. If bubble has valuable unmerged work but lifecycle state blocks normal flow (for example `CANCELLED`), switch to explicit recovery workflow.
 5. Treat workflow boundaries as strict contracts: do only what the selected workflow is for.
+6. For any bubble message payload (`reply`, `request-rework`, `ask-human`), use shell-safe message passing. Never inline raw text containing backticks or `$` directly in `--message "..."`.
 
 ## Execution Modes (Mandatory)
 
@@ -70,6 +71,36 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 - After `bubble start`, status may be briefly stale. Poll status once more before deciding it failed.
 - If `--repo` lookup behaves unexpectedly, retry from repo root cwd and verify with `status --json`.
 - Never start a second bubble for the same change while the first bubble still has unmerged code, unless intentionally abandoning and archiving that work.
+- For message-bearing commands, always build the message via quoted heredoc, then pass as a variable. This prevents backtick/`$` shell expansion and quote breakage.
+
+### Shell-safe message pattern (mandatory)
+
+Use this pattern whenever text can contain backticks, `$`, quotes, or markdown:
+
+```bash
+msg=$(cat <<'MSG'
+Issue details:
+- Keep literal text like `previous reviewer clean PASS`
+- Keep literal text like `round>=2`
+- Keep literal text like $HOME unchanged
+MSG
+)
+pairflow bubble reply --id <id> --message "$msg"
+```
+
+Also valid for rework:
+
+```bash
+msg=$(cat <<'MSG'
+Please rework:
+- Enforce most-recent-only overlap handling
+- Add explicit round>=2 gate in Given
+MSG
+)
+pairflow bubble request-rework --id <id> --message "$msg"
+```
+
+Do not use this with untrusted inline command substitution. The quoted heredoc (`<<'MSG'`) is the default safe route.
 
 ## Examples
 
@@ -78,7 +109,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 ```
 User: "bubble stuck, timeout happened"
 -> status shows WAITING_HUMAN
--> use `pairflow bubble reply --id <id> --message "..."`
+-> build message via quoted heredoc, then `pairflow bubble reply --id <id> --message "$msg"`
 ```
 
 **Example 2: Human wants rework but bubble is not in approval state**
