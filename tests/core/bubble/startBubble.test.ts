@@ -17,6 +17,7 @@ import {
 import type { BubbleStateSnapshot } from "../../../src/types/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
+import { writeEvidenceLog } from "../../helpers/evidence.js";
 
 const tempDirs: string[] = [];
 
@@ -740,14 +741,10 @@ describe("startBubble", () => {
       task: "Resume reviewer directive"
     });
 
-    const evidenceLogPath = join(
+    const evidenceLogPath = await writeEvidenceLog(
       bubble.paths.worktreePath,
-      "evidence.log"
-    );
-    await writeFile(
-      evidenceLogPath,
+      "evidence.log",
       "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n",
-      "utf8"
     );
 
     const evidence = await verifyImplementerTestEvidence({
@@ -867,14 +864,10 @@ describe("startBubble", () => {
       task: "Resume implementer active"
     });
 
-    const evidenceLogPath = join(
+    const evidenceLogPath = await writeEvidenceLog(
       bubble.paths.worktreePath,
-      "evidence.log"
-    );
-    await writeFile(
-      evidenceLogPath,
+      "evidence.log",
       "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n",
-      "utf8"
     );
 
     const evidence = await verifyImplementerTestEvidence({

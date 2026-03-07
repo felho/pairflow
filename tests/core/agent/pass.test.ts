@@ -17,6 +17,7 @@ import {
 } from "../../../src/core/gates/docContractGates.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
+import { writeEvidenceLog } from "../../helpers/evidence.js";
 
 const tempDirs: string[] = [];
 
@@ -1786,14 +1787,10 @@ present`,
       task: "Implement pass flow"
     });
 
-    const evidenceLogPath = join(
+    const evidenceLogPath = await writeEvidenceLog(
       bubble.paths.worktreePath,
-      "evidence.log"
-    );
-    await writeFile(
-      evidenceLogPath,
+      "evidence.log",
       "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n",
-      "utf8"
     );
 
     await emitPassFromWorkspace({
@@ -1902,14 +1899,10 @@ present`,
     await rm(bubble.paths.artifactsDir, { recursive: true, force: true });
     await writeFile(bubble.paths.artifactsDir, "blocked", "utf8");
 
-    const evidenceLogPath = join(
+    const evidenceLogPath = await writeEvidenceLog(
       bubble.paths.worktreePath,
-      "evidence.log"
-    );
-    await writeFile(
-      evidenceLogPath,
+      "evidence.log",
       "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n",
-      "utf8"
     );
 
     let capturedDirective:

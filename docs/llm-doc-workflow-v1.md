@@ -104,6 +104,19 @@ pairflow bubble commit --id <id> --repo <abs_repo_path> --auto
 pairflow bubble merge --id <id> --repo <abs_repo_path>
 ```
 
+## Evidence Ref Policy (Phase 1)
+
+Command verificationhez csak whitelistelt log refeket adj:
+1. Elfogadott minta: `.pairflow/evidence/<single-segment>.log`
+2. Elfogadott minták példái:
+   - `--ref .pairflow/evidence/lint.log`
+   - `--ref /abs/path/to/worktree/.pairflow/evidence/test.log#L1`
+3. Nem elfogadott:
+   - nested path (`.pairflow/evidence/subdir/test.log`)
+   - nem `.log` kiterjesztés (`.pairflow/evidence/test.txt`)
+   - artifact/prose ref (`done-package.md`, `reviewer-test-verification.json`)
+   - URL/protocol ref (`https://...`)
+
 ## Scenario Recipes
 
 ### A) Bugfix in existing system

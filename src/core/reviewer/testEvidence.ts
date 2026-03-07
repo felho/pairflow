@@ -49,6 +49,7 @@ export interface ReviewerTestEvidenceArtifact {
   reason_detail: string;
   required_commands: string[];
   command_evidence: ReviewerTestCommandEvidence[];
+  diagnostics?: ReviewerTestEvidenceDiagnostics;
   git: {
     commit_sha: string | null;
     status_hash: string | null;
@@ -100,16 +101,182 @@ interface WorktreeFingerprint {
   ok: boolean;
 }
 
+type EvidenceSourceRejectReason =
+  | "source_not_whitelisted"
+  | "source_outside_repo_scope"
+  | "source_protocol_not_allowed"
+  | "source_canonicalization_failed"
+  | "source_duplicate_ref"
+
+interface EvidenceSourcePolicyRejectedRef {
+  input_ref: string;
+  reason: EvidenceSourceRejectReason;
+}
+
+interface EvidenceSourcePolicyDecision {
+  allowed_ref_paths: string[];
+  rejected_refs: EvidenceSourcePolicyRejectedRef[];
+  fallback_applied: boolean;
+  fallback_context?: string;
+}
+
+interface ReviewerTestEvidenceDiagnostics {
+  source_policy: {
+    allowed_ref_paths: string[];
+    rejected_refs: EvidenceSourcePolicyRejectedRef[];
+    mode_marker?: "source_policy_fallback";
+    fallback_context?: string;
+  };
+}
+
 const maxRefSourceChars = 60_000
 const docsOnlyRuntimeChecksNotRequiredDetail = "docs-only scope, runtime checks not required"
+const sourcePolicyFallbackMarker = "source_policy_fallback"
+const evidencePolicyDirPrefix = ".pairflow/evidence/"
+const forcedFallbackErrorMessage = "forced source policy fallback"
+const forcedFallbackContextMarker = "forced_fallback"
 
 function isPathInside(parentPath: string, childPath: string): boolean {
   const rel = relative(resolve(parentPath), resolve(childPath))
   return rel === "" || !rel.startsWith("..")
 }
 
-function isAllowedRefPath(path: string, worktreePath: string, repoPath: string): boolean {
-  return isPathInside(worktreePath, path) || isPathInside(repoPath, path)
+function normalizeRelativePath(pathValue: string): string {
+  return pathValue.split("\\").join("/")
+}
+
+function isWhitelistedEvidenceLogPath(
+  canonicalPath: string,
+  canonicalWorktreePath: string,
+  canonicalRepoPath: string
+): boolean {
+  const roots = [canonicalWorktreePath, canonicalRepoPath]
+  for (const root of roots) {
+    if (!isPathInside(root, canonicalPath)) {
+      continue
+    }
+
+    const rel = normalizeRelativePath(relative(root, canonicalPath))
+    if (!rel.startsWith(evidencePolicyDirPrefix)) {
+      continue
+    }
+
+    const fileName = rel.slice(evidencePolicyDirPrefix.length)
+    if (fileName.length === 0 || fileName.includes("/")) {
+      continue
+    }
+    if (!fileName.endsWith(".log")) {
+      continue
+    }
+    return true
+  }
+  return false
+}
+
+function resolveRefCandidates(refPath: string, worktreePath: string, repoPath: string): string[] {
+  if (isAbsolute(refPath)) {
+    return [resolve(refPath)]
+  }
+
+  const resolvedFromWorktree = resolve(worktreePath, refPath)
+  const resolvedFromRepo = resolve(repoPath, refPath)
+  if (resolvedFromWorktree === resolvedFromRepo) {
+    return [resolvedFromWorktree]
+  }
+  return [resolvedFromWorktree, resolvedFromRepo]
+}
+
+function pickRejectedReason(
+  reasons: Set<EvidenceSourceRejectReason>,
+  duplicateDetected: boolean
+): EvidenceSourceRejectReason {
+  if (reasons.has("source_protocol_not_allowed")) {
+    return "source_protocol_not_allowed"
+  }
+  if (reasons.has("source_canonicalization_failed")) {
+    return "source_canonicalization_failed"
+  }
+  if (reasons.has("source_outside_repo_scope")) {
+    return "source_outside_repo_scope"
+  }
+  if (reasons.has("source_not_whitelisted")) {
+    return "source_not_whitelisted"
+  }
+  if (duplicateDetected) {
+    return "source_duplicate_ref"
+  }
+  return "source_not_whitelisted"
+}
+
+function sourcePolicyDiagnosticsSuffix(input: {
+  refsCount: number;
+  decision: EvidenceSourcePolicyDecision;
+}): string {
+  const notes: string[] = []
+  if (input.refsCount === 0) {
+    notes.push("No --ref inputs were provided.")
+  } else if (
+    input.decision.allowed_ref_paths.length === 0 &&
+    input.decision.rejected_refs.length > 0
+  ) {
+    notes.push("All --ref inputs were rejected by source policy.")
+  } else if (input.decision.rejected_refs.length > 0) {
+    notes.push(`Source policy rejected ${input.decision.rejected_refs.length} --ref input(s).`)
+  }
+
+  if (input.decision.fallback_applied) {
+    if (input.decision.fallback_context !== undefined) {
+      notes.push(`${sourcePolicyFallbackMarker}(${input.decision.fallback_context})`)
+    } else {
+      notes.push(sourcePolicyFallbackMarker)
+    }
+  }
+
+  if (notes.length === 0) {
+    return ""
+  }
+  return ` ${notes.join(" ")}`
+}
+
+function formatReasonDetailWithPolicy(input: {
+  baseDetail: string;
+  refsCount: number;
+  decision: EvidenceSourcePolicyDecision;
+}): string {
+  return `${input.baseDetail}${sourcePolicyDiagnosticsSuffix({
+    refsCount: input.refsCount,
+    decision: input.decision
+  })}`.trim()
+}
+
+function buildEvidenceDiagnostics(
+  decision: EvidenceSourcePolicyDecision
+): ReviewerTestEvidenceDiagnostics {
+  return {
+    source_policy: {
+      allowed_ref_paths: [...decision.allowed_ref_paths],
+      rejected_refs: [...decision.rejected_refs],
+      ...(decision.fallback_applied
+        ? { mode_marker: sourcePolicyFallbackMarker }
+        : {}),
+      ...(decision.fallback_context !== undefined
+        ? { fallback_context: decision.fallback_context }
+        : {})
+    }
+  }
+}
+
+function formatFallbackContext(error: unknown): string | undefined {
+  if (!(error instanceof Error)) {
+    return "non_error_thrown"
+  }
+
+  const message = error.message.trim().replace(/\s+/gu, " ")
+  const descriptor = message.length > 0 ? message : error.name.trim()
+  if (descriptor.length === 0) {
+    return "unknown_error"
+  }
+  return descriptor.slice(0, 140)
 }
 
 function normalizeRequiredCommands(config: BubbleConfig): string[] {
@@ -151,43 +318,13 @@ async function readWorktreeFingerprint(worktreePath: string): Promise<WorktreeFi
   }
 }
 
-function resolveRefPath(ref: string, worktreePath: string, repoPath: string): string[] {
-  const trimmed = ref.trim()
-  if (trimmed.length === 0) {
-    return []
-  }
-
-  if (trimmed.includes("://")) {
-    return []
-  }
-
-  const hashIndex = trimmed.indexOf("#")
-  const withoutFragment = hashIndex >= 0 ? trimmed.slice(0, hashIndex) : trimmed
-  if (withoutFragment.length === 0) {
-    return []
-  }
-
-  if (isAbsolute(withoutFragment)) {
-    const absolutePath = resolve(withoutFragment)
-    return isAllowedRefPath(absolutePath, worktreePath, repoPath) ? [absolutePath] : []
-  }
-
-  const resolvedFromWorktree = resolve(worktreePath, withoutFragment)
-  const resolvedFromRepo = resolve(repoPath, withoutFragment)
-  const candidates = resolvedFromWorktree === resolvedFromRepo
-    ? [resolvedFromWorktree]
-    : [resolvedFromWorktree, resolvedFromRepo]
-  return candidates.filter((candidate) =>
-    isAllowedRefPath(candidate, worktreePath, repoPath)
-  )
-}
-
 async function loadEvidenceSources(input: {
   summary: string;
   refs: string[];
   worktreePath: string;
   repoPath: string;
-}): Promise<EvidenceSource[]> {
+  forceSourcePolicyFallback?: boolean;
+}): Promise<{ sources: EvidenceSource[]; sourcePolicyDecision: EvidenceSourcePolicyDecision }> {
   const sources: EvidenceSource[] = []
   const summary = input.summary.trim()
   if (summary.length > 0) {
@@ -198,49 +335,166 @@ async function loadEvidenceSources(input: {
     })
   }
 
-  const canonicalWorktreePath = await realpath(input.worktreePath).catch(() =>
-    resolve(input.worktreePath)
-  )
-  const canonicalRepoPath = await realpath(input.repoPath).catch(() =>
-    resolve(input.repoPath)
-  )
+  const evaluatePolicy = async (
+    canonicalWorktreePath: string,
+    canonicalRepoPath: string
+  ): Promise<{
+    refSources: EvidenceSource[];
+    allowedRefPaths: string[];
+    rejectedRefs: EvidenceSourcePolicyRejectedRef[];
+  }> => {
+    const refSources: EvidenceSource[] = []
+    const allowedRefPaths: string[] = []
+    const rejectedRefs: EvidenceSourcePolicyRejectedRef[] = []
+    const seenRefIds = new Set<string>()
 
-  const seenRefIds = new Set<string>()
-  for (const ref of input.refs) {
-    const candidates = resolveRefPath(ref, input.worktreePath, input.repoPath)
-    for (const path of candidates) {
-      const canonicalPath = await realpath(path).catch(() => undefined)
-      if (canonicalPath === undefined) {
+    for (const ref of input.refs) {
+      const trimmedRef = ref.trim()
+      const hashIndex = trimmedRef.indexOf("#")
+      const withoutFragment = hashIndex >= 0 ? trimmedRef.slice(0, hashIndex) : trimmedRef
+      if (withoutFragment.length === 0) {
+        rejectedRefs.push({
+          input_ref: ref,
+          reason: "source_not_whitelisted"
+        })
         continue
       }
 
-      if (
-        !isPathInside(canonicalWorktreePath, canonicalPath) &&
-        !isPathInside(canonicalRepoPath, canonicalPath)
-      ) {
+      if (withoutFragment.includes("://")) {
+        rejectedRefs.push({
+          input_ref: ref,
+          reason: "source_protocol_not_allowed"
+        })
         continue
       }
 
-      if (seenRefIds.has(canonicalPath)) {
-        continue
+      const candidates = resolveRefCandidates(withoutFragment, input.worktreePath, input.repoPath)
+      const canonicalizedRejectReasons = new Set<EvidenceSourceRejectReason>()
+      const unresolvedCandidateRejectReasons = new Set<EvidenceSourceRejectReason>()
+      let duplicateDetected = false
+      let accepted = false
+
+      for (const candidate of candidates) {
+        const canonicalPath = await realpath(candidate).catch(() => undefined)
+        if (canonicalPath === undefined) {
+          unresolvedCandidateRejectReasons.add("source_canonicalization_failed")
+          continue
+        }
+
+        if (
+          !isPathInside(canonicalWorktreePath, canonicalPath) &&
+          !isPathInside(canonicalRepoPath, canonicalPath)
+        ) {
+          canonicalizedRejectReasons.add("source_outside_repo_scope")
+          continue
+        }
+
+        if (
+          !isWhitelistedEvidenceLogPath(
+            canonicalPath,
+            canonicalWorktreePath,
+            canonicalRepoPath
+          )
+        ) {
+          canonicalizedRejectReasons.add("source_not_whitelisted")
+          continue
+        }
+
+        if (seenRefIds.has(canonicalPath)) {
+          duplicateDetected = true
+          continue
+        }
+
+        const content = await readFile(canonicalPath, "utf8").catch(() => undefined)
+        if (content === undefined) {
+          // Phase-1 contract maps canonicalization/read failures to the same reason code.
+          canonicalizedRejectReasons.add("source_canonicalization_failed")
+          continue
+        }
+
+        seenRefIds.add(canonicalPath)
+        allowedRefPaths.push(canonicalPath)
+        refSources.push({
+          kind: "ref",
+          id: canonicalPath,
+          text: content.slice(0, maxRefSourceChars)
+        })
+        accepted = true
+        break
       }
 
-      const content = await readFile(canonicalPath, "utf8").catch(() => undefined)
-      if (content === undefined) {
-        continue
+      if (!accepted) {
+        if (duplicateDetected && canonicalizedRejectReasons.size === 0) {
+          rejectedRefs.push({
+            input_ref: ref,
+            reason: "source_duplicate_ref"
+          })
+          continue
+        }
+        const rejectReasons = canonicalizedRejectReasons.size > 0
+          ? canonicalizedRejectReasons
+          : unresolvedCandidateRejectReasons
+        rejectedRefs.push({
+          input_ref: ref,
+          reason: pickRejectedReason(rejectReasons, duplicateDetected)
+        })
       }
+    }
 
-      seenRefIds.add(canonicalPath)
-      sources.push({
-        kind: "ref",
-        id: canonicalPath,
-        text: content.slice(0, maxRefSourceChars)
-      })
-      break
+    return {
+      refSources,
+      allowedRefPaths,
+      rejectedRefs
     }
   }
 
-  return sources
+  let sourcePolicyDecision: EvidenceSourcePolicyDecision
+  let refSources: EvidenceSource[] = []
+
+  try {
+    if (input.forceSourcePolicyFallback === true) {
+      throw new Error(forcedFallbackErrorMessage)
+    }
+
+    const canonicalWorktreePath = await realpath(input.worktreePath)
+    const canonicalRepoPath = await realpath(input.repoPath)
+    const evaluated = await evaluatePolicy(canonicalWorktreePath, canonicalRepoPath)
+    refSources = evaluated.refSources
+    sourcePolicyDecision = {
+      allowed_ref_paths: evaluated.allowedRefPaths,
+      rejected_refs: evaluated.rejectedRefs,
+      fallback_applied: false
+    }
+  } catch (error: unknown) {
+    const fallbackContext =
+      error instanceof Error && error.message === forcedFallbackErrorMessage
+        ? forcedFallbackContextMarker
+        : formatFallbackContext(error)
+
+    // Fallback mode keeps policy strict while allowing trust-anchor bootstrap by path resolution.
+    const fallbackWorktreePath = await realpath(input.worktreePath).catch(() =>
+      resolve(input.worktreePath)
+    )
+    const fallbackRepoPath = await realpath(input.repoPath).catch(() =>
+      resolve(input.repoPath)
+    )
+    const evaluated = await evaluatePolicy(fallbackWorktreePath, fallbackRepoPath)
+    refSources = evaluated.refSources
+    sourcePolicyDecision = {
+      allowed_ref_paths: evaluated.allowedRefPaths,
+      rejected_refs: evaluated.rejectedRefs,
+      fallback_applied: true,
+      ...(fallbackContext !== undefined
+        ? { fallback_context: fallbackContext }
+        : {})
+    }
+  }
+
+  sources.push(...refSources)
+  return {
+    sources,
+    sourcePolicyDecision
+  }
 }
 
 function findAllCommandMatches(command: string, sources: EvidenceSource[]): CommandMatch[] {
@@ -437,6 +691,8 @@ function classifyEvidence(input: {
   commandEvidence: ReviewerTestCommandEvidence[];
   requiredCommands: string[];
   fingerprintOk: boolean;
+  refsCount: number;
+  sourcePolicyDecision: EvidenceSourcePolicyDecision;
 }): {
   status: ReviewerTestEvidenceStatus;
   decision: ReviewerTestDecision;
@@ -448,7 +704,11 @@ function classifyEvidence(input: {
       status: "untrusted",
       decision: "run_checks",
       reasonCode: "evidence_missing",
-      reasonDetail: "Bubble config does not define required test/typecheck commands."
+      reasonDetail: formatReasonDetailWithPolicy({
+        baseDetail: "Bubble config does not define required test/typecheck commands.",
+        refsCount: input.refsCount,
+        decision: input.sourcePolicyDecision
+      })
     }
   }
 
@@ -457,7 +717,11 @@ function classifyEvidence(input: {
       status: "untrusted",
       decision: "run_checks",
       reasonCode: "evidence_unverifiable",
-      reasonDetail: "Could not bind evidence to a worktree fingerprint."
+      reasonDetail: formatReasonDetailWithPolicy({
+        baseDetail: "Could not bind evidence to a worktree fingerprint.",
+        refsCount: input.refsCount,
+        decision: input.sourcePolicyDecision
+      })
     }
   }
 
@@ -469,7 +733,11 @@ function classifyEvidence(input: {
       status: "untrusted",
       decision: "run_checks",
       reasonCode: "evidence_missing",
-      reasonDetail: `Missing command evidence: ${missingCommands.join(", ")}.`
+      reasonDetail: formatReasonDetailWithPolicy({
+        baseDetail: `Missing command evidence: ${missingCommands.join(", ")}.`,
+        refsCount: input.refsCount,
+        decision: input.sourcePolicyDecision
+      })
     }
   }
 
@@ -481,9 +749,13 @@ function classifyEvidence(input: {
       status: "untrusted",
       decision: "run_checks",
       reasonCode: "evidence_unverifiable",
-      reasonDetail: `Unverifiable command evidence: ${badCommands
-        .map((entry) => `${entry.command} (${entry.status})`)
-        .join(", ")}.`
+      reasonDetail: formatReasonDetailWithPolicy({
+        baseDetail: `Unverifiable command evidence: ${badCommands
+          .map((entry) => `${entry.command} (${entry.status})`)
+          .join(", ")}.`,
+        refsCount: input.refsCount,
+        decision: input.sourcePolicyDecision
+      })
     }
   }
 
@@ -492,8 +764,12 @@ function classifyEvidence(input: {
       status: "untrusted",
       decision: "run_checks",
       reasonCode: "evidence_unverifiable",
-      reasonDetail:
-        "Command provenance requirement not met: all required verified commands must be backed by execution log refs."
+      reasonDetail: formatReasonDetailWithPolicy({
+        baseDetail:
+          "Command provenance requirement not met: all required verified commands must be backed by execution log refs.",
+        refsCount: input.refsCount,
+        decision: input.sourcePolicyDecision
+      })
     }
   }
 
@@ -540,12 +816,17 @@ export async function verifyImplementerTestEvidence(
   }
 
   const requiredCommands = normalizeRequiredCommands(input.bubbleConfig)
-  const sources = await loadEvidenceSources({
+  const forceSourcePolicyFallback =
+    isRecord(input.envelope.payload.metadata) &&
+    input.envelope.payload.metadata["test_evidence_policy_force_fallback"] === true
+  const loadedSources = await loadEvidenceSources({
     summary: input.envelope.payload.summary ?? "",
     refs: input.envelope.refs,
     worktreePath: input.worktreePath,
-    repoPath: input.repoPath
+    repoPath: input.repoPath,
+    ...(forceSourcePolicyFallback ? { forceSourcePolicyFallback: true } : {})
   })
+  const sources = loadedSources.sources
   const matchedCommandEvidence = requiredCommands.map((command) =>
     buildCommandEvidence(command, sources)
   )
@@ -555,7 +836,9 @@ export async function verifyImplementerTestEvidence(
   const classified = classifyEvidence({
     commandEvidence,
     requiredCommands,
-    fingerprintOk: fingerprint.ok
+    fingerprintOk: fingerprint.ok,
+    refsCount: input.envelope.refs.length,
+    sourcePolicyDecision: loadedSources.sourcePolicyDecision
   })
 
   return {
@@ -571,6 +854,7 @@ export async function verifyImplementerTestEvidence(
     reason_detail: classified.reasonDetail,
     required_commands: requiredCommands,
     command_evidence: commandEvidence,
+    diagnostics: buildEvidenceDiagnostics(loadedSources.sourcePolicyDecision),
     git: {
       commit_sha: fingerprint.commitSha,
       status_hash: fingerprint.statusHash,
