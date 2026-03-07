@@ -1,7 +1,15 @@
+const reviewerSummaryScopeGuardrail = [
+  "Scope guardrail (applies to steps 1-4): Summary scope guardrail: scope statements must cover only current worktree changes.",
+  "For summary scope claims, do not use `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`).",
+  "Establish scope with `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` (staged, unstaged, and untracked), or with the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`.",
+  "If current worktree scope cannot be resolved reliably, avoid numeric file-operation claims."
+].join(" ");
+
 export function buildReviewerScoutExpansionWorkflowGuidance(): string {
   return [
     "Phase 1 reviewer round flow (prompt-level only):",
-    "1) `Parallel Scout Scan`: must run exactly `required_scout_agents=2` scout scans on the same local diff scope (`max_scout_agents=2` hard cap) with explicit cap `max_scout_candidates_per_agent=8`; include only concrete location-backed findings, exclude style/preference-only notes.",
+    "1) `Parallel Scout Scan`: must run exactly `required_scout_agents=2` scout scans on the same current worktree diff scope (`max_scout_agents=2` hard cap) with explicit cap `max_scout_candidates_per_agent=8`; include only concrete location-backed findings, exclude style/preference-only notes.",
+    reviewerSummaryScopeGuardrail,
     "2) `Deduplicate + Classify`: merge scout findings, deduplicate by root cause + overlapping location, then classify each finding as `one_off` or issue class (`race_condition`, `lifecycle_symmetry`, `timeout_cancellation`, `idempotency`, `concurrency_guard`, `other`). If class detection is uncertain, classify as `one_off`.",
     "3) `Issue-Class Expansion` (conditional): run only for issue-class findings, at most one expansion run per class per round, with `max_class_expansions_per_round=2` and explicit cap `max_expansion_siblings_per_class=5`. Expansion scope is limited to changed files + directly related call-sites; repo-wide expansion scans are forbidden.",
     "Stop rules: stop expansion immediately when no new concrete locations are found; also stop when class/round caps are reached.",
@@ -13,6 +21,8 @@ export function buildReviewerPassOutputContractGuidance(): string {
   return [
     "Required reviewer PASS output contract (machine-checkable): include exactly these sections in this order: `Scout Coverage`, `Deduplicated Findings`, `Issue-Class Expansions`, `Residual Risk / Notes`.",
     "`Scout Coverage` required fields: `scouts_executed`, `scope_covered`, `guardrail_confirmation`, `raw_candidates_count`, `deduplicated_count`.",
+    "`Scout Coverage.scope_covered` must cover only current worktree changes, grounded in `git diff HEAD --name-status` + `git ls-files --others --exclude-standard` or the combined trio `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`.",
+    "Do not justify `scope_covered` with `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`).",
     "`Deduplicated Findings` entry fields: `title`, `severity`, `class`, `locations`, `evidence`, `expansion_siblings`.",
     "`Issue-Class Expansions` entry fields: `class`, `source_finding_title`, `scan_scope`, `siblings`, `stop_reason`.",
     "`class` must be `one_off` or one issue class (`race_condition`, `lifecycle_symmetry`, `timeout_cancellation`, `idempotency`, `concurrency_guard`, `other`).",
