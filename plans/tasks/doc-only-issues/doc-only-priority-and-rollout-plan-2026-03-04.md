@@ -101,6 +101,17 @@ Baseline contract (required before rollout-on):
 | `baseline_snapshot_ts` | ISO-8601 UTC timestamp when the baseline snapshot is frozen. |
 | `baseline_owner` | Named owner accountable for baseline capture and approval (must be populated before rollout go-live). |
 
+Baseline freeze record (captured on 2026-03-07):
+1. `baseline_window=2` (`2026-W09`, `2026-W10`).
+2. `baseline_source=pairflow metrics events (review_artifact_type=document filter) + reviewer artifacts + rework decision trail`.
+3. `baseline_snapshot_ts=2026-03-07T11:29:18Z`.
+4. `baseline_owner=felho`.
+5. Frozen baseline values (arithmetic mean across `W09` and `W10`):
+   - `docs_only_round_count_avg=3.0833`
+   - `summary_verifier_mismatch_count=0`
+   - `docs_only_evidence_rework_ratio=0.0000`
+   - `false_blocker_ratio=0.0000`
+
 Baseline aggregation and metric identity rule (must match workflow wording):
 1. `baseline(metric_id, baseline_window, baseline_source, baseline_snapshot_ts, baseline_owner)` = arithmetic mean of weekly metric values across the `baseline_window` completed consecutive observation windows from `baseline_source`, frozen at `baseline_snapshot_ts`, approved by `baseline_owner`.
 2. `false_blocker_ratio(window) := docs_only_evidence_rework_ratio(window)` (pure alias; no independent computation stream).
@@ -150,6 +161,16 @@ Exit criteria:
 | summary_verifier_mismatch_count | Summary-vs-verifier mismatch események száma | reviewer artifacts + summary audit | weekly | near zero |
 | docs_only_evidence_rework_ratio | Evidence-related rework arány docs-only bubble-ökben | rework decision logs + bubble decision trail | weekly | down |
 | false_blocker_ratio | Phase 1 rollback control metric (operational alias of `docs_only_evidence_rework_ratio`) | rework decision logs + bubble decision trail | weekly | down |
+
+## Step 4 Measurement Log (Phase 1)
+
+| window_id | from_utc | to_utc | docs_only_round_count_avg | summary_verifier_mismatch_count | docs_only_evidence_rework_ratio | false_blocker_ratio | docs_only_sample_size |
+|---|---|---|---|---|---|---|---|
+| 2026-W09 | 2026-02-22T00:00:00Z | 2026-02-28T23:59:59Z | 3.5000 | 0 | 0.0000 | 0.0000 | 2 converged docs-only bubbles |
+| 2026-W10 | 2026-03-01T00:00:00Z | 2026-03-07T23:59:59Z | 2.6667 | 0 | 0.0000 | 0.0000 | 3 converged docs-only bubbles |
+
+Metric extraction note:
+1. Weekly values were calculated from Pairflow metrics event shards with `review_artifact_type=document` bubble-instance filtering, then mapped to the Phase 1 metric identity rule (`false_blocker_ratio := docs_only_evidence_rework_ratio`).
 
 Note:
 1. This metrics table is intentionally an operational extract view (`metric_id`, `definition`, `source`, `cadence`, `target direction`) and does not duplicate the full L1 contract field schema.
