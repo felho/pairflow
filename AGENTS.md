@@ -26,6 +26,21 @@
 - Run lint, typecheck, and tests relevant to changed code.
 - If any check is skipped, state it explicitly in the summary.
 
+## Skill Source-of-Truth & Sync Policy
+
+When modifying `UsePairflow` or `CreatePairflowSpec` skills:
+
+1. **Always edit the repo-local skill files first** (source of truth):
+   - `.claude/skills/UsePairflow/**`
+   - `.claude/skills/CreatePairflowSpec/**`
+2. **Do not treat `$HOME/.claude/skills` as editable source** for Pairflow changes.
+3. **Commit the repo-local skill changes** in this repository first.
+4. **Run the local skill install/sync workflow** documented in:
+   - `.claude/skills/INSTALL.md`
+   This step updates the global `~/.claude/skills` copy from repo-local source.
+5. **Commit the synced global-skill changes** in the `~/.claude` repository as a separate follow-up commit.
+6. If both agent directories are used, apply the same sync/link policy for `~/.codex/skills` via the same installer workflow.
+
 ## Session Close
 
 - Add a short progress update to the repository progress note (if present) or commit message context.
