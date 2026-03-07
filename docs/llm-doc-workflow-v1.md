@@ -125,7 +125,7 @@ Source of truth:
 
 | Scenario | Runtime check requirement | Claim policy | Evidence policy | Summary wording |
 |---|---|---|---|---|
-| docs-only + no runtime claim | not required | nincs pozitiv test/typecheck/lint pass claim | nincs extra evidence requirement | kotelezo explicit docs-only formula |
+| docs-only + no runtime claim | not required | tilos pozitiv test/typecheck/lint pass claim | nincs extra evidence requirement | kotelezo explicit docs-only formula |
 | docs-only + explicit runtime claim | required for that claim | claim csak trusted verifier mellett engedett | claimhez whitelistelt evidence ref kotelezo | claim szovegnek konzisztensnek kell lennie a verifier statusszal |
 | code/auto bubble | existing policy unchanged | existing policy applies | existing policy applies | existing policy applies |
 
@@ -142,16 +142,52 @@ Preconditions:
 2. P0/2 aktiv: summary-verifier consistency gate.
 3. P1/1 aktiv: evidence source whitelist.
 
+Baseline contract (required before rollout-on):
+| Field | Definition |
+|---|---|
+| `baseline_window` | `2` completed, consecutive weekly observation windows immediately before rollout activation. |
+| `baseline_source` | `pairflow bubble status --json` history snapshot, reviewer artifacts + summary audit, rework decision logs + bubble decision trail. |
+| `baseline_snapshot_ts` | ISO-8601 UTC timestamp when the baseline snapshot is frozen. |
+| `baseline_owner` | Named owner accountable for baseline capture and approval (must be populated before rollout go-live). |
+
+Baseline aggregation and metric identity rule (must match rollout plan wording):
+1. `baseline(metric_id, baseline_window, baseline_source, baseline_snapshot_ts, baseline_owner)` = arithmetic mean of weekly metric values across the `baseline_window` completed consecutive observation windows from `baseline_source`, frozen at `baseline_snapshot_ts`, approved by `baseline_owner`.
+2. `false_blocker_ratio(window) := docs_only_evidence_rework_ratio(window)` (pure alias; no independent computation stream).
+
 Rollout action:
 1. Operational matrix + summary wording contract publikacio.
 2. Reviewer/orchestrator kommunikacio matrix-szabaly szerinti frissitese.
+3. P1/2 rollout plan Step 4 szinkronizalasa ugyanarra a source-of-truth task dokumentumra.
+4. Metrika-kovetes inditasa explicit source + weekly cadence mellett (`docs_only_round_count_avg`, `summary_verifier_mismatch_count`, `docs_only_evidence_rework_ratio`, `false_blocker_ratio`).
+5. Freeze baseline contract inputs before rollout go-live (`baseline_window`, `baseline_source`, `baseline_snapshot_ts`, `baseline_owner`).
 
 Exit criteria:
-1. Egyseges, determinisztikus matrix hasznalat docs-only dontesekhez.
-2. Metrika-kovetes aktiv: approval round count, mismatch count, evidence-related rework ratio.
+1. Workflow doc and rollout plan both reference the same P1/2 matrix source-of-truth.
+2. Metrics registry is active (minimum one weekly measured window recorded).
+3. No policy ambiguity remains between docs-only and code/auto paths in team guidance text.
+
+Metrics source/cadence extract (intentional subset for operational quick-reference):
+| metric_id | Source | Cadence |
+|---|---|---|
+| `docs_only_round_count_avg` | `pairflow bubble status --json` history snapshot | weekly |
+| `summary_verifier_mismatch_count` | reviewer artifacts + summary audit | weekly |
+| `docs_only_evidence_rework_ratio` | rework decision logs + bubble decision trail | weekly |
+| `false_blocker_ratio` | rework decision logs + bubble decision trail (`Phase 1` operational alias: `docs_only_evidence_rework_ratio`) | weekly |
 
 Rollback trigger:
-1. Ha mismatch vagy false-blocker trend romlik, P0/2 gate marad aktiv, es csak a rollout kommunikacios reteget allitjuk vissza ideiglenesen.
+1. In two consecutive weekly observation windows:
+   `summary_verifier_mismatch_count(current_week) >= baseline(summary_verifier_mismatch_count, baseline_window, baseline_source, baseline_snapshot_ts, baseline_owner) + 1`.
+2. In one weekly observation window:
+   `false_blocker_ratio(current_week) >= baseline(false_blocker_ratio, baseline_window, baseline_source, baseline_snapshot_ts, baseline_owner) + 0.10`.
+
+Threshold semantics (must match rollout plan wording):
+1. `+1` means absolute event-count delta.
+2. `+0.10` means absolute ratio delta (`+10` percentage points), not relative percentage growth.
+
+Rollback action:
+1. Keep P0/2 consistency gate enabled.
+2. Revert only P1/2 communication wording/routine changes.
+3. Keep evidence whitelist behavior unchanged while investigating.
 
 ## Scenario Recipes
 
