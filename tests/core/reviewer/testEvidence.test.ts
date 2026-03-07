@@ -1,6 +1,6 @@
-import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -14,6 +14,7 @@ import {
 } from "../../../src/core/reviewer/testEvidence.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
+import { writeEvidenceLog } from "../../helpers/evidence.js";
 import type { BubbleConfig, ReviewArtifactType } from "../../../src/types/bubble.js";
 
 const tempDirs: string[] = [];
@@ -311,14 +312,10 @@ describe("reviewer test evidence verification", () => {
       task: "Verify test evidence"
     });
 
-    const evidenceLogPath = join(
+    const evidenceLogPath = await writeEvidenceLog(
       bubble.paths.worktreePath,
-      "evidence.log"
-    );
-    await writeFile(
-      evidenceLogPath,
+      "evidence.log",
       "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n",
-      "utf8"
     );
 
     const artifact = await verifyImplementerTestEvidence({
@@ -386,14 +383,10 @@ describe("reviewer test evidence verification", () => {
       task: "Verify false-positive handling"
     });
 
-    const evidenceLogPath = join(
+    const evidenceLogPath = await writeEvidenceLog(
       bubble.paths.worktreePath,
-      "evidence-benign.log"
-    );
-    await writeFile(
-      evidenceLogPath,
+      "evidence-benign.log",
       "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n",
-      "utf8"
     );
 
     const artifact = await verifyImplementerTestEvidence({
@@ -429,19 +422,15 @@ describe("reviewer test evidence verification", () => {
       task: "Verify exit-failure pattern precision"
     });
 
-    const evidenceLogPath = join(
+    const evidenceLogPath = await writeEvidenceLog(
       bubble.paths.worktreePath,
-      "evidence-status-code.log"
-    );
-    await writeFile(
-      evidenceLogPath,
+      "evidence-status-code.log",
       [
         "pnpm typecheck exit=0 found 0 errors",
         "pnpm test exit=0 406 tests passed",
         "telemetry note: HTTP status 503 during a non-test health probe",
         "helper module reported code: 2 in diagnostics metadata"
       ].join("\n"),
-      "utf8"
     );
 
     const artifact = await verifyImplementerTestEvidence({
@@ -514,14 +503,10 @@ describe("reviewer test evidence verification", () => {
       task: "Verify mixed provenance rejection"
     });
 
-    const typecheckLogPath = join(
+    const typecheckLogPath = await writeEvidenceLog(
       bubble.paths.worktreePath,
-      "typecheck-only.log"
-    );
-    await writeFile(
-      typecheckLogPath,
+      "typecheck-only.log",
       "pnpm typecheck exit=0 found 0 errors\n",
-      "utf8"
     );
 
     const artifact = await verifyImplementerTestEvidence({
@@ -592,7 +577,7 @@ describe("reviewer test evidence verification", () => {
     expect(artifact.reason_code).toBe("evidence_missing");
   });
 
-  it("ignores symlink refs that escape repo/worktree scope", async () => {
+  it("rejects symlink escapes under .pairflow/evidence with source_outside_repo_scope", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -609,7 +594,13 @@ describe("reviewer test evidence verification", () => {
       "utf8"
     );
 
-    const symlinkPath = join(bubble.paths.worktreePath, "outside-link.log");
+    const symlinkPath = join(
+      bubble.paths.worktreePath,
+      ".pairflow",
+      "evidence",
+      "outside-link.log"
+    );
+    await mkdir(join(symlinkPath, ".."), { recursive: true });
     await symlink(outsidePath, symlinkPath);
 
     const artifact = await verifyImplementerTestEvidence({
@@ -634,6 +625,655 @@ describe("reviewer test evidence verification", () => {
 
     expect(artifact.status).toBe("untrusted");
     expect(artifact.reason_code).toBe("evidence_missing");
+    expect(artifact.diagnostics?.source_policy.allowed_ref_paths).toEqual([]);
+    expect(artifact.diagnostics?.source_policy.rejected_refs).toEqual([
+      { input_ref: symlinkPath, reason: "source_outside_repo_scope" }
+    ]);
+    expect(
+      artifact.command_evidence.some((entry) => entry.source === "ref")
+    ).toBe(false);
+  });
+
+  it("keeps whitelist diagnostics for mixed allowed and rejected refs", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_policy_01",
+      task: "Whitelist diagnostics for mixed refs"
+    });
+
+    const allowedLogPath = await writeEvidenceLog(
+      bubble.paths.worktreePath,
+      "policy-mixed.log",
+      "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n"
+    );
+    const donePackagePath = join(
+      bubble.paths.worktreePath,
+      ".pairflow",
+      "bubbles",
+      "demo",
+      "artifacts",
+      "done-package.md"
+    );
+    await mkdir(join(donePackagePath, ".."), { recursive: true });
+    await writeFile(donePackagePath, "# done package\n", "utf8");
+    const reviewerArtifactPath = join(
+      bubble.paths.worktreePath,
+      ".pairflow",
+      "bubbles",
+      "demo",
+      "artifacts",
+      "reviewer-test-verification.json"
+    );
+    await writeFile(reviewerArtifactPath, "{ \"schema_version\": 1 }\n", "utf8");
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_policy_001",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Validation complete"
+        },
+        refs: [allowedLogPath, donePackagePath, reviewerArtifactPath]
+      }
+    });
+    const canonicalAllowedLogPath = await realpath(allowedLogPath);
+
+    expect(artifact.status).toBe("trusted");
+    expect(artifact.reason_code).toBe("no_trigger");
+    expect(artifact.diagnostics?.source_policy.allowed_ref_paths).toEqual([canonicalAllowedLogPath]);
+    expect(artifact.diagnostics?.source_policy.rejected_refs).toEqual([
+      { input_ref: donePackagePath, reason: "source_not_whitelisted" },
+      { input_ref: reviewerArtifactPath, reason: "source_not_whitelisted" }
+    ]);
+  });
+
+  it("preserves EvidenceSourcePolicyDecision fields through source filtering and classification (T12)", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_policy_12",
+      task: "Lifecycle binding coverage"
+    });
+
+    const allowedLogPath = await writeEvidenceLog(
+      bubble.paths.worktreePath,
+      "lifecycle-typecheck.log",
+      "pnpm typecheck exit=0 found 0 errors\n"
+    );
+    const outsideRoot = await mkdtemp(join(tmpdir(), "pairflow-policy-lifecycle-outside-"));
+    tempDirs.push(outsideRoot);
+    const outsidePath = join(outsideRoot, ".pairflow", "evidence", "outside.log");
+    await mkdir(join(outsidePath, ".."), { recursive: true });
+    await writeFile(outsidePath, "pnpm test exit=0 406 tests passed\n", "utf8");
+    const proseRef = join(
+      bubble.paths.worktreePath,
+      ".pairflow",
+      "bubbles",
+      "lifecycle",
+      "artifacts",
+      "done-package.md"
+    );
+    await mkdir(join(proseRef, ".."), { recursive: true });
+    await writeFile(proseRef, "# not a command log\n", "utf8");
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_policy_012",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "No verification claim."
+        },
+        refs: [allowedLogPath, outsidePath, proseRef]
+      }
+    });
+    const diagnostics = artifact.diagnostics?.source_policy;
+    const canonicalAllowedLogPath = await realpath(allowedLogPath);
+
+    expect(diagnostics).toBeDefined();
+    expect(diagnostics?.allowed_ref_paths).toEqual([canonicalAllowedLogPath]);
+    expect(diagnostics?.rejected_refs).toEqual([
+      { input_ref: outsidePath, reason: "source_outside_repo_scope" },
+      { input_ref: proseRef, reason: "source_not_whitelisted" }
+    ]);
+    expect(artifact.command_evidence.every((entry) => {
+      if (entry.source !== "ref") {
+        return true;
+      }
+      return diagnostics?.allowed_ref_paths.includes(entry.source_ref ?? "") ?? false;
+    })).toBe(true);
+    expect(artifact.reason_code).toBe("evidence_missing");
+    expect(artifact.reason_detail).toContain("Source policy rejected 2 --ref input(s).");
+  });
+
+  it("rejects protocol refs with source_protocol_not_allowed reason", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_policy_02",
+      task: "Protocol ref rejection"
+    });
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_policy_002",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "No verification claim."
+        },
+        refs: ["https://example.com/evidence.log"]
+      }
+    });
+
+    expect(artifact.reason_code).toBe("evidence_missing");
+    expect(artifact.diagnostics?.source_policy.rejected_refs).toEqual([
+      {
+        input_ref: "https://example.com/evidence.log",
+        reason: "source_protocol_not_allowed"
+      }
+    ]);
+  });
+
+  it("rejects non-log and nested evidence refs with source_not_whitelisted", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_policy_03",
+      task: "Whitelist extension and depth policy"
+    });
+
+    const wrongExtensionPath = join(
+      bubble.paths.worktreePath,
+      ".pairflow",
+      "evidence",
+      "policy.txt"
+    );
+    await mkdir(join(wrongExtensionPath, ".."), { recursive: true });
+    await writeFile(wrongExtensionPath, "pnpm test exit=0\n", "utf8");
+    const nestedPath = join(
+      bubble.paths.worktreePath,
+      ".pairflow",
+      "evidence",
+      "subdir",
+      "policy.log"
+    );
+    await mkdir(join(nestedPath, ".."), { recursive: true });
+    await writeFile(nestedPath, "pnpm test exit=0\n", "utf8");
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_policy_003",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "No verification claim."
+        },
+        refs: [wrongExtensionPath, nestedPath]
+      }
+    });
+
+    expect(artifact.reason_code).toBe("evidence_missing");
+    expect(artifact.diagnostics?.source_policy.rejected_refs).toEqual([
+      { input_ref: wrongExtensionPath, reason: "source_not_whitelisted" },
+      { input_ref: nestedPath, reason: "source_not_whitelisted" }
+    ]);
+  });
+
+  it("rejects outside refs with source_outside_repo_scope for absolute and traversal paths", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_policy_04",
+      task: "Outside-scope reason coverage"
+    });
+
+    const outsideRoot = await mkdtemp(join(tmpdir(), "pairflow-policy-outside-"));
+    tempDirs.push(outsideRoot);
+    const outsidePath = join(outsideRoot, ".pairflow", "evidence", "outside.log");
+    await mkdir(join(outsidePath, ".."), { recursive: true });
+    await writeFile(
+      outsidePath,
+      "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n",
+      "utf8"
+    );
+    const traversalRef = relative(bubble.paths.worktreePath, outsidePath);
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_policy_004",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "No verification claim."
+        },
+        refs: [outsidePath, traversalRef]
+      }
+    });
+
+    expect(artifact.reason_code).toBe("evidence_missing");
+    expect(artifact.diagnostics?.source_policy.rejected_refs).toEqual([
+      { input_ref: outsidePath, reason: "source_outside_repo_scope" },
+      { input_ref: traversalRef, reason: "source_outside_repo_scope" }
+    ]);
+  });
+
+  it("rejects canonicalization failures with source_canonicalization_failed", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_policy_05",
+      task: "Canonicalization failure policy"
+    });
+
+    const missingRefPath = join(
+      bubble.paths.worktreePath,
+      ".pairflow",
+      "evidence",
+      "missing.log"
+    );
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_policy_005",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "No verification claim."
+        },
+        refs: [missingRefPath]
+      }
+    });
+
+    expect(artifact.reason_code).toBe("evidence_missing");
+    expect(artifact.diagnostics?.source_policy.rejected_refs).toEqual([
+      { input_ref: missingRefPath, reason: "source_canonicalization_failed" }
+    ]);
+    expect(artifact.diagnostics?.source_policy.mode_marker).toBeUndefined();
+  });
+
+  it("rejects unreadable log refs with source_canonicalization_failed", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_policy_13",
+      task: "Read failure policy"
+    });
+
+    const unreadablePath = join(
+      bubble.paths.worktreePath,
+      ".pairflow",
+      "evidence",
+      "unreadable.log"
+    );
+    await mkdir(join(unreadablePath, ".."), { recursive: true });
+    await writeFile(unreadablePath, "pnpm test exit=0 406 tests passed\n", "utf8");
+    await chmod(unreadablePath, 0);
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_policy_013",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "No verification claim."
+        },
+        refs: [unreadablePath]
+      }
+    });
+
+    expect(artifact.reason_code).toBe("evidence_missing");
+    expect(artifact.diagnostics?.source_policy.rejected_refs).toEqual([
+      { input_ref: unreadablePath, reason: "source_canonicalization_failed" }
+    ]);
+  });
+
+  it("rejects fragment-only refs with source_not_whitelisted", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_policy_14",
+      task: "Fragment-only policy"
+    });
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_policy_014",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "No verification claim."
+        },
+        refs: ["#L1"]
+      }
+    });
+
+    expect(artifact.reason_code).toBe("evidence_missing");
+    expect(artifact.diagnostics?.source_policy.rejected_refs).toEqual([
+      { input_ref: "#L1", reason: "source_not_whitelisted" }
+    ]);
+  });
+
+  it("deduplicates canonical refs and keeps first-seen source", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_policy_06",
+      task: "Duplicate ref dedupe behavior"
+    });
+
+    const logPath = await writeEvidenceLog(
+      bubble.paths.worktreePath,
+      "duplicate.log",
+      "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n"
+    );
+    const duplicateRef = "./.pairflow/evidence/duplicate.log#L1";
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_policy_006",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Validation complete"
+        },
+        refs: [logPath, duplicateRef]
+      }
+    });
+    const canonicalLogPath = await realpath(logPath);
+
+    expect(artifact.status).toBe("trusted");
+    expect(artifact.reason_code).toBe("no_trigger");
+    expect(artifact.diagnostics?.source_policy.allowed_ref_paths).toEqual([canonicalLogPath]);
+    expect(artifact.diagnostics?.source_policy.rejected_refs).toEqual([
+      { input_ref: duplicateRef, reason: "source_duplicate_ref" }
+    ]);
+    expect(
+      artifact.command_evidence.every((entry) =>
+        entry.source === "ref" ? entry.source_ref === canonicalLogPath : true
+      )
+    ).toBe(true);
+  });
+
+  it("accepts relative in-scope evidence refs under .pairflow/evidence", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_policy_07",
+      task: "Relative in-scope ref allowlist"
+    });
+
+    await writeEvidenceLog(
+      bubble.paths.worktreePath,
+      "relative.log",
+      "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n"
+    );
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_policy_007",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Validation complete"
+        },
+        refs: ["./.pairflow/evidence/relative.log"]
+      }
+    });
+
+    expect(artifact.status).toBe("trusted");
+    expect(artifact.reason_code).toBe("no_trigger");
+    expect(artifact.diagnostics?.source_policy.allowed_ref_paths).toHaveLength(1);
+    expect(artifact.diagnostics?.source_policy.rejected_refs).toEqual([]);
+  });
+
+  it("classifies empty ref list as evidence_missing without fallback marker", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_policy_08",
+      task: "Empty ref list policy"
+    });
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_policy_008",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "No verification claim."
+        },
+        refs: []
+      }
+    });
+
+    expect(artifact.reason_code).toBe("evidence_missing");
+    expect(artifact.diagnostics?.source_policy.rejected_refs).toEqual([]);
+    expect(artifact.diagnostics?.source_policy.mode_marker).toBeUndefined();
+    expect(artifact.reason_detail).toContain("No --ref inputs were provided.");
+  });
+
+  it("applies strict source policy fallback marker when evaluator fails", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_policy_09",
+      task: "Forced source policy fallback"
+    });
+
+    const nestedPath = join(
+      bubble.paths.worktreePath,
+      ".pairflow",
+      "evidence",
+      "subdir",
+      "fallback.log"
+    );
+    await mkdir(join(nestedPath, ".."), { recursive: true });
+    await writeFile(
+      nestedPath,
+      "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n",
+      "utf8"
+    );
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_policy_009",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "No verification claim.",
+          metadata: {
+            test_evidence_policy_force_fallback: true
+          }
+        },
+        refs: [nestedPath]
+      }
+    });
+
+    expect(artifact.reason_code).toBe("evidence_missing");
+    expect(artifact.diagnostics?.source_policy.mode_marker).toBe("source_policy_fallback");
+    expect(artifact.diagnostics?.source_policy.fallback_context).toBe("forced_fallback");
+    expect(artifact.diagnostics?.source_policy.rejected_refs).toEqual([
+      { input_ref: nestedPath, reason: "source_not_whitelisted" }
+    ]);
+    expect(artifact.reason_detail).toContain("source_policy_fallback(forced_fallback)");
+  });
+
+  it("preserves fallback context when trust-anchor resolution triggers fallback mode", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_policy_20",
+      task: "Fallback context diagnostics"
+    });
+    const missingRepoPath = join(bubble.paths.worktreePath, "missing-repo-root");
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath: missingRepoPath,
+      envelope: {
+        id: "msg_policy_020",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "No verification claim."
+        },
+        refs: []
+      }
+    });
+
+    expect(artifact.reason_code).toBe("evidence_missing");
+    expect(artifact.diagnostics?.source_policy.mode_marker).toBe("source_policy_fallback");
+    expect(artifact.diagnostics?.source_policy.fallback_context).toBeDefined();
+    expect(artifact.reason_detail).toContain("source_policy_fallback(");
+  });
+
+  it("keeps top-level and source-policy reason namespaces separated", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_policy_10",
+      task: "Reason namespace boundary"
+    });
+
+    const donePackagePath = join(
+      bubble.paths.worktreePath,
+      ".pairflow",
+      "bubbles",
+      "namespace",
+      "artifacts",
+      "done-package.md"
+    );
+    await mkdir(join(donePackagePath, ".."), { recursive: true });
+    await writeFile(donePackagePath, "# docs\n", "utf8");
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_policy_010",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "No verification claim."
+        },
+        refs: [donePackagePath]
+      }
+    });
+
+    expect(artifact.reason_code).toBe("evidence_missing");
+    expect(artifact.diagnostics?.source_policy.rejected_refs).toEqual([
+      { input_ref: donePackagePath, reason: "source_not_whitelisted" }
+    ]);
   });
 
   it("verifies typecheck command from typecheck-specific completion marker even without pass token", async () => {
@@ -644,23 +1284,15 @@ describe("reviewer test evidence verification", () => {
       task: "Verify typecheck completion marker branch ordering"
     });
 
-    const testLogPath = join(
+    const testLogPath = await writeEvidenceLog(
       bubble.paths.worktreePath,
-      "test-run.log"
-    );
-    await writeFile(
-      testLogPath,
+      "test-run.log",
       "pnpm test exit=0 406 tests passed\n",
-      "utf8"
     );
-    const typecheckLogPath = join(
+    const typecheckLogPath = await writeEvidenceLog(
       bubble.paths.worktreePath,
-      "typecheck-run.log"
-    );
-    await writeFile(
-      typecheckLogPath,
+      "typecheck-run.log",
       "pnpm typecheck exit=0 found 0 errors\n",
-      "utf8"
     );
 
     const artifact = await verifyImplementerTestEvidence({
@@ -699,20 +1331,16 @@ describe("reviewer test evidence verification", () => {
       task: "Verify raw tsc success marker handling"
     });
 
-    const typecheckLogPath = join(
+    const typecheckLogPath = await writeEvidenceLog(
       bubble.paths.worktreePath,
-      "typecheck-watch.log"
-    );
-    await writeFile(
-      typecheckLogPath,
+      "typecheck-watch.log",
       "pnpm typecheck\nFound 0 errors. Watching for file changes.\n",
-      "utf8"
     );
-    const testLogPath = join(
+    const testLogPath = await writeEvidenceLog(
       bubble.paths.worktreePath,
-      "test-only.log"
+      "test-only.log",
+      "pnpm test exit=0 406 tests passed\n"
     );
-    await writeFile(testLogPath, "pnpm test exit=0 406 tests passed\n", "utf8");
 
     const artifact = await verifyImplementerTestEvidence({
       bubbleId: bubble.bubbleId,
@@ -751,14 +1379,10 @@ describe("reviewer test evidence verification", () => {
       task: "Verify stale evidence"
     });
 
-    const evidenceLogPath = join(
+    const evidenceLogPath = await writeEvidenceLog(
       bubble.paths.worktreePath,
-      "evidence-stale.log"
-    );
-    await writeFile(
-      evidenceLogPath,
+      "evidence-stale.log",
       "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n",
-      "utf8"
     );
 
     const artifact = await verifyImplementerTestEvidence({
