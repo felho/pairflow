@@ -148,7 +148,7 @@ For VS Code/Codespaces, use `.devcontainer/devcontainer.json` ("Reopen in Contai
 
 Important: for full Pairflow runtime operations (`bubble attach`, `bubble open`, host terminal/editor integration), host-native installation is still the recommended path.
 
-## Installation (Core CLI + optional UsePairflow skill)
+## Installation (Core CLI + optional Pairflow skills)
 
 ### 1) Install core Pairflow CLI
 
@@ -163,14 +163,18 @@ After installation, you can configure both:
 - terminal launcher for `bubble attach` (see [Attach launcher selection (macOS)](#attach-launcher-selection-macos))
 - editor command for `bubble open` (see [Open command selection (`bubble open`)](#open-command-selection-bubble-open))
 
-### 2) (Optional) Install the UsePairflow skill for your coding agent
+### 2) (Optional) Install Pairflow skills for your coding agent
 
-Recommended if you operate Pairflow through Claude Code:
+Recommended if you operate Pairflow via Claude Code or Codex:
 
 1. Open this file in your coding-agent chat:
-   - `.claude/skills/UsePairflow/INSTALL.md`
+   - `.claude/skills/INSTALL.md`
 2. Ask the agent to run it (for example: "run this install workflow").
-3. This installs/updates the `UsePairflow` skill under `~/.claude/skills/UsePairflow/`, so your agent has Pairflow lifecycle guardrails and operational workflows preloaded.
+3. Pass install params as needed:
+   - `--skills all|UsePairflow|CreatePairflowSpec`
+   - `--target-dir .claude|.codex`
+   - `--link-other true|false` (optional cross-agent symlink)
+4. This installs/updates selected skills under `~/.claude/skills/` or `~/.codex/skills/`.
 
 Development mode (zsh-safe, no global install):
 
