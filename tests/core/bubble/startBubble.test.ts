@@ -14,6 +14,7 @@ import {
   verifyImplementerTestEvidence,
   writeReviewerTestEvidenceArtifact
 } from "../../../src/core/reviewer/testEvidence.js";
+import { shellQuote } from "../../../src/core/util/shellQuote.js";
 import type { BubbleStateSnapshot } from "../../../src/types/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -51,6 +52,15 @@ async function assertBashParses(command: string): Promise<void> {
       resolvePromise();
     });
   });
+}
+
+function extractBashLcScript(command: string): string {
+  const prefix = "bash -lc ";
+  expect(command.startsWith(prefix)).toBe(true);
+  const quotedScript = command.slice(prefix.length);
+  expect(quotedScript.startsWith("'")).toBe(true);
+  expect(quotedScript.endsWith("'")).toBe(true);
+  return quotedScript.slice(1, -1).replace(/'\\''/gu, "'");
 }
 
 async function updateBubbleState(
@@ -172,10 +182,18 @@ describe("startBubble", () => {
     if (implementerCommand === undefined || reviewerCommand === undefined) {
       throw new Error("Expected agent commands to be captured.");
     }
+    const implementerScript = extractBashLcScript(implementerCommand);
+    const reviewerScript = extractBashLcScript(reviewerCommand);
     expect(implementerCommand).toContain("Dropping to interactive shell");
     expect(reviewerCommand).toContain("Dropping to interactive shell");
-    expect(implementerCommand).toContain("set +e");
-    expect(reviewerCommand).toContain("set +e");
+    expect(implementerScript).toContain("set +e");
+    expect(reviewerScript).toContain("set +e");
+    expect(implementerScript).toContain(
+      `if ! cd ${shellQuote(created.paths.worktreePath)}; then`
+    );
+    expect(reviewerScript).toContain(
+      `if ! cd ${shellQuote(created.paths.worktreePath)}; then`
+    );
     expect(implementerCommand).toContain("exec bash -i");
     expect(reviewerCommand).toContain("exec bash -i");
     expect(implementerCommand).toContain("codex");
@@ -187,6 +205,9 @@ describe("startBubble", () => {
     );
     expect(implementerCommand).toContain(
       "Run validation via `pnpm lint`, `pnpm typecheck`, `pnpm test`, or `pnpm check`"
+    );
+    expect(implementerCommand).toContain(
+      `Execute pairflow commands from this worktree path only: ${created.paths.worktreePath}.`
     );
     expect(reviewerCommand).toContain("claude");
     expect(reviewerCommand).toContain("--dangerously-skip-permissions");
@@ -660,6 +681,8 @@ describe("startBubble", () => {
           return Promise.resolve("resume-summary: messages=3");
         },
         launchBubbleTmuxSession: (input) => {
+          const implementerScript = extractBashLcScript(input.implementerCommand);
+          const reviewerScript = extractBashLcScript(input.reviewerCommand);
           expect(input.implementerBootstrapMessage).toBeUndefined();
           expect(input.reviewerBootstrapMessage).toBeUndefined();
           expect(input.implementerKickoffMessage).toContain("resume kickoff (implementer)");
@@ -667,7 +690,16 @@ describe("startBubble", () => {
           expect(input.implementerCommand).toContain(
             "--dangerously-bypass-approvals-and-sandbox"
           );
+          expect(implementerScript).toContain(
+            `if ! cd ${shellQuote(bubble.paths.worktreePath)}; then`
+          );
+          expect(reviewerScript).toContain(
+            `if ! cd ${shellQuote(bubble.paths.worktreePath)}; then`
+          );
           expect(input.implementerCommand).toContain("Pairflow implementer resume");
+          expect(input.implementerCommand).toContain(
+            `Execute pairflow commands from this worktree path only: ${bubble.paths.worktreePath}.`
+          );
           expect(input.implementerCommand).toContain("resume-summary: messages=3");
           expect(input.reviewerCommand).toContain("--dangerously-skip-permissions");
           expect(input.reviewerCommand).toContain("Pairflow reviewer resume");

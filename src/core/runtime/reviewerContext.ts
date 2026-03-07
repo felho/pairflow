@@ -54,6 +54,7 @@ export async function refreshReviewerContext(
   const reviewerCommand = buildAgentCommand({
     agentName: input.bubbleConfig.agents.reviewer,
     bubbleId: input.bubbleId,
+    worktreePath,
     startupPrompt: input.reviewerStartupPrompt
   });
 
