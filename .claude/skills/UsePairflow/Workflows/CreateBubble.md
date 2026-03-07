@@ -1,6 +1,6 @@
 ---
 description: Create and start a pairflow bubble safely from clean base state
-argument-hint: [--id <name>] [--task-file <path>] [--task <text>] [--repo <path>] [--base <branch>] [--print]
+argument-hint: [--id <name>] [--task-file <path>] [--task <text>] [--repo <path>] [--base <branch>] [--review-artifact-type <document|code>] [--print]
 allowed-tools: Bash, Read, Glob, AskUserQuestion
 ---
 
@@ -17,12 +17,14 @@ TASK_FILE: extracted from `--task-file` argument (optional)
 TASK_TEXT: extracted from `--task` argument (optional)
 REPO_PATH: extracted from `--repo`, or `git rev-parse --show-toplevel`
 BASE_BRANCH: extracted from `--base`, default `main`
+REVIEW_ARTIFACT_TYPE: extracted from `--review-artifact-type` if provided, otherwise resolved from intent
 PRINT_ONLY: `true` if `--print` flag is present, default `false`
 
 ## Instructions
 
 - Always use absolute paths in generated commands.
 - Exactly one task source is expected (`TASK_FILE` or `TASK_TEXT`).
+- `pairflow bubble create` requires explicit `--review-artifact-type <document|code>`.
 - Intent guardrail (critical):
   - If user intent is **plan/doc review or update** (e.g. "review this plan", "validate and update plan", "align task file"), default to inline `TASK_TEXT` that explicitly states:
     - docs-only scope
@@ -31,6 +33,11 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
   - In this case, do **not** pass raw `--task-file` content as the only task definition.
   - Include the referenced plan path inside `TASK_TEXT` as input material.
 - If intent is ambiguous between implementation vs plan/doc review, STOP and ask one explicit clarification question before create/start.
+- Resolve review artifact type deterministically:
+  - docs-only review/refinement/update intent -> `document`
+  - implementation/testing/runtime behavior intent -> `code`
+  - if user provides `--review-artifact-type`, validate and use it
+  - if still ambiguous, ask one explicit clarification question before create/start
 - If both are missing, search `plans/tasks/` and ask the user which task file to use.
 - Default behavior: execute `create` and `start`.
 - Print-only behavior (`--print`): print commands but run nothing.
@@ -69,7 +76,17 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
   - If no candidates, STOP and report that task input is missing.
 - If both TASK_FILE and TASK_TEXT are provided, STOP and ask for exactly one source.
 
-### 3. Generate bubble id
+### 3. Resolve review artifact type
+
+- If `REVIEW_ARTIFACT_TYPE` is provided:
+  - Validate value is exactly `document` or `code`.
+  - If invalid, STOP and report the allowed values.
+- If not provided:
+  - For plan/doc review/refinement/update intents, set `REVIEW_ARTIFACT_TYPE=document`.
+  - For implementation/testing/runtime intents, set `REVIEW_ARTIFACT_TYPE=code`.
+  - If intent remains ambiguous, STOP and ask one explicit clarification question.
+
+### 4. Generate bubble id
 
 - If `--id` is provided, use it as-is.
 - Else derive deterministic kebab-case id from task source:
@@ -78,7 +95,7 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
   - Example: `ui-phase1-server.md` -> `ui-phase1-server`
   - Example: `Implement the resume context feature` -> `impl-resume-context`
 
-### 4. Check id collision
+### 5. Check id collision
 
 - Run:
   ```bash
@@ -86,7 +103,7 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
   ```
 - If collision found, append suffix: `-2`, `-3`, ... until free.
 
-### 5. Pre-flight checks
+### 6. Pre-flight checks
 
 - Verify clean worktree:
   ```bash
@@ -118,18 +135,18 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
   git -C <REPO_PATH> rev-parse HEAD
   ```
 
-### 6. Build commands
+### 7. Build commands
 
 Task file create:
 
 ```bash
-pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --task-file <TASK_FILE>
+pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --review-artifact-type <REVIEW_ARTIFACT_TYPE> --task-file <TASK_FILE>
 ```
 
 Inline task create:
 
 ```bash
-pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --task "<TASK_TEXT>"
+pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --review-artifact-type <REVIEW_ARTIFACT_TYPE> --task "<TASK_TEXT>"
 ```
 
 Start:
@@ -138,7 +155,7 @@ Start:
 pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
 ```
 
-### 7. Execute or print
+### 8. Execute or print
 
 - If PRINT_ONLY is `true`:
   - Print create + start commands.
@@ -149,7 +166,7 @@ pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
   - If `start` fails with repo-lookup mismatch, retry from repo root cwd and recheck status json.
   - Never auto-downgrade from `--task-file` to inline `--task` unless user explicitly approves.
 
-### 8. Verify state after start
+### 9. Verify state after start
 
 Run:
 
@@ -159,7 +176,7 @@ pairflow bubble status --id <BUBBLE_ID> --json
 
 - If state is still `CREATED` immediately after start, wait briefly and poll once more.
 
-### 9. Hard stop after lifecycle actions
+### 10. Hard stop after lifecycle actions
 
 - After reporting create/start/status result, STOP.
 - Do not run any non-pairflow commands except the pre-flight checks in this workflow.
@@ -177,6 +194,7 @@ Start session:
 pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
 
 Task source: <inline|task-file>
+Review artifact type: <REVIEW_ARTIFACT_TYPE>
 Verified base HEAD: <COMMIT_SHA>
 Current state: <STATE>
 Active agent: <AGENT or none>
@@ -190,7 +208,7 @@ Print-only mode (task file):
 Commands ready:
 
 1. Create:
-pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --task-file <TASK_FILE>
+pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --review-artifact-type <REVIEW_ARTIFACT_TYPE> --task-file <TASK_FILE>
 
 2. Start:
 pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
@@ -202,7 +220,7 @@ Print-only mode (inline task):
 Commands ready:
 
 1. Create:
-pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --task "<TASK_TEXT>"
+pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --review-artifact-type <REVIEW_ARTIFACT_TYPE> --task "<TASK_TEXT>"
 
 2. Start:
 pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach

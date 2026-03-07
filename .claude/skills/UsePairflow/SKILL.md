@@ -29,6 +29,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 4. If bubble has valuable unmerged work but lifecycle state blocks normal flow (for example `CANCELLED`), switch to explicit recovery workflow.
 5. Treat workflow boundaries as strict contracts: do only what the selected workflow is for.
 6. For any bubble message payload (`reply`, `request-rework`, `ask-human`), use shell-safe message passing. Never inline raw text containing backticks or `$` directly in `--message "..."`.
+7. For bubble creation, always include `--review-artifact-type <document|code>` in `pairflow bubble create`.
 
 ## Execution Modes (Mandatory)
 
@@ -72,6 +73,11 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 - If `--repo` lookup behaves unexpectedly, retry from repo root cwd and verify with `status --json`.
 - Never start a second bubble for the same change while the first bubble still has unmerged code, unless intentionally abandoning and archiving that work.
 - For message-bearing commands, always build the message via quoted heredoc, then pass as a variable. This prevents backtick/`$` shell expansion and quote breakage.
+- Artifact type gate for create:
+  - `pairflow bubble create` requires `--review-artifact-type`.
+  - Use `document` for docs-only refinement/review/update bubbles.
+  - Use `code` for implementation/testing/runtime behavior bubbles.
+  - If intent is ambiguous, ask one explicit clarification question before create.
 
 ### Shell-safe message pattern (mandatory)
 
