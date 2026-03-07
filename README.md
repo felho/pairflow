@@ -706,7 +706,7 @@ Any non-final state ─→ CANCELLED (via bubble stop)
 | `bubble inbox --id <id> [--repo <path>] [--json]` | Show pending human actions |
 | `bubble reply --id <id> --message <text> [--repo <path>] [--ref <path>]...` | Answer a human question |
 | `bubble approve --id <id> [--repo <path>] [--ref <path>]...` | Approve for commit |
-| `bubble request-rework --id <id> --message <text> [--repo <path>] [--ref <path>]...` | Send back for rework |
+| `bubble request-rework --id <id> --message <text> [--repo <path>] [--ref <path>]...` | Send back for rework (`READY_FOR_APPROVAL`: immediate; `WAITING_HUMAN`: queues deferred deterministic rework intent) |
 | `bubble commit --id <id> [--repo <path>] [--message <text>] [--ref <path>]...` | Commit and finalize |
 | `bubble merge --id <id> [--repo <path>] [--push] [--delete-remote]` | Merge bubble branch and clean up |
 | `bubble reconcile [--repo <path>] [--dry-run] [--json]` | Clean up stale sessions |
