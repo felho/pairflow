@@ -255,20 +255,24 @@ Error codes:
 **Example — CapabilityProfile matrix:**
 
 ```
-                  | RUNNING        | WAITING_HUMAN  | READY_FOR_APPROVAL |
-------------------+----------------+----------------+--------------------+
-implementer       | pass           | -              | -                  |
-                  | ask-human      |                |                    |
-------------------+----------------+----------------+--------------------+
-reviewer          | pass           | -              | -                  |
-                  | ask-human      |                |                    |
-                  | converged      |                |                    |
-------------------+----------------+----------------+--------------------+
-operator (human)  | reply          | reply          | approve            |
-                  | stop           | stop           | request-rework     |
-                  | resume         | resume         | stop               |
-------------------+----------------+----------------+--------------------+
+                  | RUNNING        | WAITING_HUMAN  | HELP_PENDING   | READY_FOR_APPROVAL |
+------------------+----------------+----------------+----------------+--------------------+
+implementer       | pass           | -              | -              | -                  |
+                  | ask-human      |                |                |                    |
+------------------+----------------+----------------+----------------+--------------------+
+reviewer          | pass           | -              | -              | -                  |
+                  | ask-human      |                |                |                    |
+                  | converged      |                |                |                    |
+------------------+----------------+----------------+----------------+--------------------+
+operator (human)  | reply          | reply          | reply          | approve            |
+                  | stop           | stop           | stop           | request-rework     |
+                  | resume         | resume         |                | stop               |
+------------------+----------------+----------------+----------------+--------------------+
 ```
+
+HELP_PENDING is distinct from WAITING_HUMAN:
+- WAITING_HUMAN = blocked on a human gate or policy defer (kernel-initiated)
+- HELP_PENDING = agent explicitly asked for help via subflow (agent-initiated)
 
 ### 4.5 BC-05: Kernel -> Policy Engine
 
@@ -651,8 +655,10 @@ subflows:
 ```
   [*] --> CREATED
   CREATED --> RUNNING : start
-  RUNNING --> WAITING_HUMAN : human gate / help subflow
-  WAITING_HUMAN --> RUNNING : decision received / help resolved
+  RUNNING --> WAITING_HUMAN : human gate / policy defer
+  WAITING_HUMAN --> RUNNING : decision received
+  RUNNING --> HELP_PENDING : help subflow spawned
+  HELP_PENDING --> RUNNING : help resolved
   RUNNING --> READY_FOR_APPROVAL : all gates passed
   READY_FOR_APPROVAL --> RUNNING : rework requested
   READY_FOR_APPROVAL --> APPROVED : approve
@@ -660,8 +666,13 @@ subflows:
   COMMITTING --> DONE : success
   RUNNING --> FAILED : unrecoverable error
   WAITING_HUMAN --> CANCELLED : user cancel
+  HELP_PENDING --> CANCELLED : user cancel
   RUNNING --> CANCELLED : user cancel
 ```
+
+WAITING_HUMAN vs HELP_PENDING:
+- **WAITING_HUMAN**: the kernel paused the flow because a human gate or policy defer requires a decision. The agent is not active.
+- **HELP_PENDING**: the agent asked for help via a subflow. The parent step is paused, but the subflow is actively routing the question through channels. Once answered, the agent resumes exactly where it left off.
 
 ---
 
@@ -747,6 +758,7 @@ template:
     operator:
       RUNNING: [reply, stop, resume]
       WAITING_HUMAN: [reply, stop, resume]
+      HELP_PENDING: [reply, stop]
       READY_FOR_APPROVAL: [approve, request-rework, stop]
 
   steps:
