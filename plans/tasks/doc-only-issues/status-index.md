@@ -22,7 +22,7 @@ Primary source: `doc-only-priority-and-rollout-plan-2026-03-04.md`
 | `doc-only-operational-decision-matrix-and-rollout-phase1.md` | P1/2 | ACTIVE | yes (rollout/process) | Task spec is ready; source-of-truth sync done, baseline frozen, and first weekly windows (`2026-W09`, `2026-W10`) logged; rollout monitoring remains active. |
 | `P2/1 claim-based validation architecture (no active task file)` | P2/1 | PARKED | no (for now) | Task file was intentionally removed in `c1739e7`; revisit only if a concrete docs-only runtime-claim use case reappears. |
 | `doc-only-review-loop-ws-d-pilot-and-metrics-phase1.md` | WS-D pilot | NOT_STARTED | yes (pilot execution/docs) | Task is `draft`; pilot run/report still pending. |
-| `artifact-type-ownership-enforcement-phase1.md` | related hardening | BACKLOG | yes (code + policy) | Spec refined to v9 (AC12 CS-traceability + accidental root file cleanup) on 2026-03-07; task artifact status remains `draft` while queue status stays `BACKLOG` until promotion. |
+| `artifact-type-ownership-enforcement-phase1.md` | related hardening | BACKLOG | yes (code + policy) | Spec rewritten to strict explicit mode (`document|code`, no create-time `auto`) in `20390cb`; further doc-refinement is running in bubble `doc-refine-artifact-type-ownership-strict-v1`; queue status remains `BACKLOG` until promotion. |
 | `review-loop-complexity-memo-2026-03-04.md` | umbrella memo | ACTIVE | partial | Program memo says WS-A/B/C delivered, WS-D pending. |
 | `doc-only-priority-and-rollout-plan-2026-03-04.md` | control plan | ACTIVE | n/a (tracking doc) | Living status/sequence document; should be kept up to date. |
 
@@ -31,3 +31,9 @@ Primary source: `doc-only-priority-and-rollout-plan-2026-03-04.md`
 1. P1/2 operational rollout execution (matrix adoption in routine + metric collection window).
 2. WS-D pilot execution and pilot report/go-hold outcome.
 3. Artifact-type ownership enforcement if promoted from backlog to active scope.
+
+## WS-D Pilot Candidate Mapping (2026-03-07)
+
+1. `bugfix` slot -> `plans/tasks/reviewer-summary-diff-scope-prompt-hardening-phase1.md` (explicitly designated as pilot bugfix test case).
+2. `small feature` slot -> `plans/tasks/doc-only-issues/artifact-type-ownership-enforcement-phase1.md` (explicitly designated as pilot small-feature candidate; currently `BACKLOG`).
+3. `docs-only hardening` slot -> pending explicit designation in a follow-up update.
