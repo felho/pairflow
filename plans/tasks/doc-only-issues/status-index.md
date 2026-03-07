@@ -18,7 +18,7 @@ Primary source: `doc-only-priority-and-rollout-plan-2026-03-04.md`
 | `doc-only-temporary-disable-runtime-checks-phase1.md` | P0/1 | READY | no | Completed and merged (priority plan snapshot). |
 | `doc-only-summary-verifier-consistency-gate-phase1.md` | P0/2 | READY | no | Completed and merged (priority plan snapshot). |
 | `doc-only-evidence-source-whitelist-phase1.md` | P1/1 | READY | no | Completed and merged (`80c0c58`, `b71d3e3`). |
-| `doc-only-operational-decision-matrix-and-rollout-phase1.md` | P1/2 | ACTIVE | yes (rollout/process) | Task spec is ready; rollout execution and metric window tracking are still active. |
+| `doc-only-operational-decision-matrix-and-rollout-phase1.md` | P1/2 | ACTIVE | yes (rollout/process) | Task spec is ready; source-of-truth sync done, baseline frozen, and first weekly windows (`2026-W09`, `2026-W10`) logged; rollout monitoring remains active. |
 | `doc-only-claim-based-validation-architecture-phase2.md` | P2/1 | NOT_STARTED | yes (design + code) | Next architecture phase; not started in priority snapshot. |
 | `doc-only-review-loop-ws-d-pilot-and-metrics-phase1.md` | WS-D pilot | NOT_STARTED | yes (pilot execution/docs) | Task is `draft`; pilot run/report still pending. |
 | `artifact-type-ownership-enforcement-phase1.md` | related hardening | BACKLOG | yes (code + policy) | Defined task, not listed as active in current priority sequence. |
