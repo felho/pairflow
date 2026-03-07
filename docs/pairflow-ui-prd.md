@@ -85,7 +85,7 @@ These decisions were previously captured and remain relevant for V1 implementati
 ### Layout
 
 1. Header:
-   - global state counts
+   - repo scope pills
    - repo filter pills
    - reconnect indicator (SSE/polling status)
 2. Canvas:
@@ -130,7 +130,7 @@ Notes:
 1. `Request Rework` and `Reply` open a required message modal.
 2. In `WAITING_HUMAN`, `Queue Rework` must be clearly distinct from `Reply`; UI copy must state that `Reply` does not guarantee rework.
 3. Merge panel text must explicitly say: "Merge includes runtime/worktree cleanup."
-4. Attach in V1 is a single button that copies `tmux attach -t pf-<bubble-id>` to the clipboard. The operator pastes it into any terminal. Direct terminal launch is deferred.
+4. Attach in V1 delegates to backend attach behavior; when launcher resolves to `copy`, it copies `tmux attach -t pf-<bubble-id>` to clipboard.
 
 ## API/Backend Contract (thin layer over existing core)
 
@@ -192,7 +192,7 @@ The HTML mockup is directionally good, but V1 fidelity requires:
 1. Include all lifecycle states in visual examples (not only running/waiting/approval/done).
 2. Replace "Cleanup" as standalone step with "Merge (includes cleanup)".
 3. Mark message-required actions (`request-rework`, `reply`) explicitly.
-4. Attach button copies full tmux command (`tmux attach -t pf-<id>`) to clipboard.
+4. Attach button delegates to backend attach behavior and, for `copy` launcher mode, copies full tmux command (`tmux attach -t pf-<id>`).
 
 ## Success criteria
 

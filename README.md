@@ -528,7 +528,7 @@ The dashboard shows:
 - **Bubble cards** on a draggable canvas — one card per bubble with state, round count, and active agent
 - **Expandable detail view** — click a card to see its timeline, findings, and available actions
 - **Action buttons** — Start, Approve, Reply, Commit, Merge, Attach, Stop — all available inline based on bubble state
-- **State counters** in the header — at-a-glance overview of how many bubbles are in each lifecycle state
+- **Header status strip** — repo scope pills + SSE/polling connection status
 - **Repo filter** — toggle visibility per repo when managing multiple repositories
 - **Real-time updates** via SSE (Server-Sent Events) with automatic polling fallback
 
