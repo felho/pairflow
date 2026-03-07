@@ -7,8 +7,10 @@ phase: phase1
 target_files:
   - src/core/agent/pass.ts
   - src/core/bubble/startBubble.ts
+  - src/core/runtime/tmuxDelivery.ts
   - tests/core/agent/pass.test.ts
   - tests/core/bubble/startBubble.test.ts
+  - tests/core/runtime/tmuxDelivery.test.ts
 plan_ref: plans/archive/pairflow-initial-plan.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
@@ -60,6 +62,7 @@ A jelenlegi flow nem ved determinisztikusan a docs-only PASS summary-claim es a 
    - PASS envelope nem appendelodik.
 3. Stabil reason code es diagnosztika bevezetese erre a konfliktusra.
 4. Implementer docs-only prompt guidance pontositasa, hogy konfliktusos ref-csatolast ne sugalmazzon.
+   - startup/resume + runtime delivery guidance utvonalakon is.
 5. Regresszios tesztek: boundary guard + docs-only prompt wording.
 
 ### Out of Scope
@@ -92,6 +95,8 @@ A jelenlegi flow nem ved determinisztikusan a docs-only PASS summary-claim es a 
 | CS3 | `src/core/bubble/startBubble.ts` | `buildImplementerEvidenceHandoffGuidance` docs-only branch | docs-only guidance explicit conflict-prevention wording | avoid stale/runtime log attachment when checks skipped | P1 | required-now | T3 |
 | CS4 | `tests/core/agent/pass.test.ts` | implementer PASS tests | new guard regression scenarios | conflict path blocked, clean docs-only path preserved | P1 | required-now | T1, T2 |
 | CS5 | `tests/core/bubble/startBubble.test.ts` | docs-only implementer prompt assertions | guidance wording lock | docs-only prompt no longer implies unsafe log attachment in skip case | P1 | required-now | T3 |
+| CS6 | `src/core/runtime/tmuxDelivery.ts` | implementer-directed delivery action text for PASS/HUMAN_REPLY/APPROVAL_DECISION(revise) | docs-only safe guidance alignment | avoid generic "always attach .pairflow/evidence logs" wording in docs-only scope | P1 | required-now | T5 |
+| CS7 | `tests/core/runtime/tmuxDelivery.test.ts` | delivery wording assertions | docs-only delivery guard wording lock | implementer delivery text does not encourage skip+runtime-log-ref contradiction | P1 | required-now | T5 |
 
 ### 2) Data and Interface Contract
 
@@ -100,6 +105,7 @@ A jelenlegi flow nem ved determinisztikusan a docs-only PASS summary-claim es a 
 | Docs-only skip declaration | prose-only statement | parseable claim class (`runtime_checks_skipped`) | summary text marker detection | localized wording variants | additive validation | P1 | required-now |
 | Docs-only runtime log refs | currently allowed even on skip declaration | forbidden on skip declaration | conflicting ref class detection (`.pairflow/evidence/*.log`) | conflict list details | tightening for docs-only | P1 | required-now |
 | Error diagnostics | generic pass failure text | stable reason code + actionable message | `reason_code`, `conflicting_ref_count` | ref examples | additive | P1 | required-now |
+| PASS append ordering | append-first flow | guard-first flow | pre-append conflict check | diagnostic details | tightening for docs-only | P1 | required-now |
 
 ### 3) Side Effects Contract
 
@@ -107,6 +113,7 @@ A jelenlegi flow nem ved determinisztikusan a docs-only PASS summary-claim es a 
 |---|---|---|---|---|---|
 | Implementer PASS validation | docs-only summary/ref conflict hard fail | reviewer or converged path behavior change | pass-boundary only | P1 | required-now |
 | Docs-only prompt guidance | explicit safe wording | broad wording churn unrelated to evidence conflict | minimal prompt delta | P1 | required-now |
+| Docs-only runtime delivery guidance | docs-only-aware text in implementer delivery messages | generic "attach logs if exist" in docs-only skip context | keep role/state semantics unchanged | P1 | required-now |
 | Tests | targeted regressions for conflict/non-conflict | unrelated test rewrites | focused surface | P1 | required-now |
 
 Constraint: implementation must stay within the listed allowed side effects.
@@ -116,6 +123,7 @@ Constraint: implementation must stay within the listed allowed side effects.
 | Trigger | Dependency (if any) | Behavior (`throw|result|fallback`) | Fallback Value/Action | Reason Code | Audit Level | Priority | Timing |
 |---|---|---|---|---|---|---|---|
 | docs-only summary says runtime checks skipped, but runtime log refs provided | summary + refs payload | throw | block PASS, no envelope append | `DOCS_ONLY_SKIP_LOG_REF_CONFLICT` | error | P1 | required-now |
+| docs-only conflict guard evaluated after append | PASS emit pipeline ordering | forbidden | guard must run pre-append | `DOCS_ONLY_SKIP_LOG_REF_CONFLICT` | error | P1 | required-now |
 | docs-only summary says checks skipped, no runtime log refs | summary + refs payload | result | allow PASS normal path | `DOCS_ONLY_SKIP_NO_LOG_REFS` | info | P2 | required-now |
 | non-doc artifact type | bubble config | result | no new guard action | `NOT_APPLICABLE_NON_DOCS` | info | P2 | required-now |
 
@@ -137,6 +145,7 @@ Constraint: implementation must stay within the listed allowed side effects.
 | T2 | Non-conflict docs-only pass | docs-only implementer PASS summary declares skipped checks + no runtime log refs | `pairflow pass` executes | PASS continues normally | P1 | required-now | `tests/core/agent/pass.test.ts` |
 | T3 | Guidance lock | docs-only implementer startup/resume prompt build | prompt rendered | wording clearly prevents skip+runtime-log-ref conflict | P1 | required-now | `tests/core/bubble/startBubble.test.ts` |
 | T4 | Non-doc no-regression | code bubble implementer PASS | `pairflow pass` executes | no false block from docs-only guard | P2 | required-now | `tests/core/agent/pass.test.ts` |
+| T5 | Docs-only delivery guidance lock | implementer-targeted delivery text render (PASS/HUMAN_REPLY/APPROVAL_DECISION revise) in docs-only context | delivery message built | text does not instruct runtime log attachment as default when skip declaration applies | P1 | required-now | `tests/core/runtime/tmuxDelivery.test.ts` |
 
 ## Acceptance Criteria
 
@@ -147,6 +156,8 @@ Constraint: implementation must stay within the listed allowed side effects.
 5. AC5: Docs-only implementer guidance explicit konfliktus-megelozo wordinget tartalmaz.
 6. AC6: Non-doc implementer PASS path nem regresszal.
 7. AC7: A task tartalmazza az incident visszakereseshez szukseges forenzikus anchorokat (`bubble_id`, `bubble_instance_id`, `msg_*`, tmux session snapshot, transcript path).
+8. AC8: A docs-only conflict guard append elott fut; konfliktus eseten transcriptbe nem kerul uj PASS envelope.
+9. AC9: Implementer-targeted docs-only delivery guidance konzisztens a skip+no-runtime-log-ref policyval.
 
 ## L2 - Implementation Notes (Optional)
 
