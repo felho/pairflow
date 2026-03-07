@@ -339,7 +339,7 @@ Round 2 reviewer: PASS at 19:34:34 → session starting at ~19:30:57
 
 ### 2. `delete-bubble` (36 rounds, completed & deleted)
 
-- **Transcript:** DELETED (bubble was deleted via `pairflow bubble delete`, which removes the bubble directory including transcript)
+- **Transcript:** not present in active bubble path (bubble was deleted)
 - **Reviewer sessions (36):** `~/.claude/projects/-Users-felho-dev--pairflow-worktrees-pairflow-delete-bubble/*.jsonl` (33 MB total)
 - **Implementer session (1):** `~/.codex/sessions/2026/02/25/rollout-2026-02-25T09-21-18-019c93e3-61be-7fb0-b135-11596fb7c3ef.jsonl` (9.7 MB)
 - **Time span:** 08:41 – 12:36 (~4 hours, 36 rounds)
@@ -362,18 +362,18 @@ done
 
 ### Note on data preservation
 
-The `deleteBubble` function does `rm -rf` on the bubble directory, destroying the transcript, state, and config. Agent session files are NOT affected — they live in `~/.claude/projects/` and `~/.codex/sessions/` respectively, outside pairflow's control.
+At the time of this historical run, the active bubble directory was removed on delete, so transcript/state were no longer available under `.pairflow/bubbles/<id>/`.
 
-What's lost on bubble delete:
-- `transcript.ndjson` — structured protocol log (the convenient single-file view)
-- `state.json`, `bubble.toml`, `inbox.ndjson`, `artifacts/`
+Current behavior archives core bubble files before active deletion (see `README.md` archive scope), so core protocol/state artifacts are preserved under `~/.pairflow/archive/<repo-key>/<bubble-instance-id>/`.
+
+Still removed from active runtime scope on delete:
+- `.pairflow/bubbles/<bubble-id>/` active directory
+- active worktree/tmux/runtime/session artifacts
 
 What survives:
+- core archive snapshot (`bubble.toml`, `state.json`, `transcript.ndjson`, `inbox.ndjson`, optional `artifacts/task.md`)
 - All reviewer sessions (Claude Code) — full review content including findings
 - Implementer session (Codex) — full implementation history
-- These are richer than the transcript but harder to correlate without it
-
-**Future improvement:** archive transcript before deletion (e.g., to `~/.pairflow/archived_transcripts/`).
 
 ## Evidence from delete-bubble Bubble
 

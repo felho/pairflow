@@ -159,7 +159,7 @@ git clone https://github.com/felho/pairflow.git && cd pairflow
 ./scripts/install.sh
 ```
 
-The installer checks prerequisites, installs dependencies, builds, links `pairflow` globally, and runs a smoke test. See [INSTALL.md](./INSTALL.md) for details and manual fallback steps.
+The installer checks prerequisites, installs dependencies, builds, links `pairflow` globally, and runs a smoke test. See [INSTALL.md](./INSTALL.md) for details.
 
 After installation, you can configure both:
 - terminal launcher for `bubble attach` (see [Attach launcher selection (macOS)](#attach-launcher-selection-macos))

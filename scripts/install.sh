@@ -8,7 +8,7 @@ os="$(uname -s)"
 hint() {
   case "$1" in
     node) [ "$os" = "Darwin" ] && echo "Install Node.js: brew install node" || echo "Install Node.js: sudo apt install -y nodejs" ;;
-    pnpm) echo "Install pnpm: curl -fsSL https://get.pnpm.io/install.sh | sh -" ;;
+    pnpm) echo "Install pnpm: npm i -g pnpm" ;;
     git) [ "$os" = "Darwin" ] && echo "Install git: brew install git" || echo "Install git: sudo apt install -y git" ;;
     tmux) [ "$os" = "Darwin" ] && echo "Install tmux: brew install tmux" || echo "Install tmux: sudo apt install -y tmux" ;;
   esac
