@@ -54,6 +54,7 @@ describe("archive locking", () => {
       id: "b_archive_locking_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Archive locking test",
       cwd: repoPath
     });

@@ -72,6 +72,6 @@ cat <<'MSG'
 Install complete.
 Next steps:
   1) pairflow bubble list --repo . --json
-  2) pairflow bubble create --id demo --repo . --base main --task "Your task"
+  2) pairflow bubble create --id demo --repo . --base main --review-artifact-type code --task "Your task"
   3) pairflow bubble start --id demo --repo .
 MSG

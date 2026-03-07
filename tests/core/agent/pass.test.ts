@@ -16,7 +16,10 @@ import {
   writeDocContractGateArtifact
 } from "../../../src/core/gates/docContractGates.js";
 import { initGitRepository } from "../../helpers/git.js";
-import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
+import {
+  setupRunningBubbleFixture,
+  setupRunningLegacyAutoBubbleFixture
+} from "../../helpers/bubble.js";
 import { writeEvidenceLog } from "../../helpers/evidence.js";
 
 const tempDirs: string[] = [];
@@ -588,11 +591,10 @@ describe("emitPassFromWorkspace", () => {
 
   it("keeps non-document reviewer findings unchanged at round>2 without doc-gate rewrites", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningLegacyAutoBubbleFixture({
       repoPath,
       bubbleId: "b_pass_scope_non_doc_01",
-      task: "Compatibility scope test",
-      reviewArtifactType: "auto"
+      task: "Compatibility scope test"
     });
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
@@ -1889,11 +1891,10 @@ present`,
 
   it("falls back to run_checks reviewer directive when artifact write fails", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupRunningLegacyAutoBubbleFixture({
       repoPath,
       bubbleId: "b_pass_17",
-      task: "Implement pass flow",
-      reviewArtifactType: "auto"
+      task: "Implement pass flow"
     });
 
     await rm(bubble.paths.artifactsDir, { recursive: true, force: true });
@@ -2322,6 +2323,7 @@ present`,
       id: "b_pass_04",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Task",
       cwd: repoPath
     });

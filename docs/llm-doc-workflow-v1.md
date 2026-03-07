@@ -65,6 +65,7 @@ Spec lock:
 
 1. Engineer
    - creates/updates PRD/Plan/Task docs,
+   - chooses explicit bubble ownership type (`document` or `code`) at creation time,
    - commits doc artifacts on `main`,
    - starts bubble from committed task.
 2. Implementer agent
@@ -86,10 +87,13 @@ git status --short
 
 Create/start:
 ```bash
-pairflow bubble create --id <id> --repo <abs_repo_path> --base main --task-file <abs_task_path>
+pairflow bubble create --id <id> --repo <abs_repo_path> --base main --review-artifact-type <document|code> --task-file <abs_task_path>
 pairflow bubble start --id <id> --repo <abs_repo_path> --attach
 pairflow bubble status --id <id> --repo <abs_repo_path> --json
 ```
+
+`pairflow bubble create` requires `--review-artifact-type <document|code>`.
+`auto` is not available as a create-time ownership option.
 
 Human intervention:
 ```bash

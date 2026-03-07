@@ -76,6 +76,7 @@ describe("commitBubble", () => {
       id: "b_commit_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Task",
       cwd: repoPath
     });

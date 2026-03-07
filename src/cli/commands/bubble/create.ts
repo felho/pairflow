@@ -3,11 +3,18 @@ import { resolve } from "node:path";
 
 import { createBubble, type BubbleCreateResult } from "../../../core/bubble/createBubble.js";
 import { registerRepoInRegistry } from "../../../core/repo/registry.js";
+import {
+  assertCreateReviewArtifactType,
+  DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER,
+  MISSING_REVIEW_ARTIFACT_TYPE_OPTION
+} from "../../../config/bubbleConfig.js";
+import type { CreateReviewArtifactType } from "../../../types/bubble.js";
 
 export interface BubbleCreateCommandOptions {
   id?: string;
   repo?: string;
   base?: string;
+  reviewArtifactType?: CreateReviewArtifactType;
   task?: string;
   taskFile?: string;
   reviewerBrief?: string;
@@ -27,12 +34,13 @@ export interface BubbleCreateCommandDependencies {
 export function getBubbleCreateHelpText(): string {
   return [
     "Usage:",
-    "  pairflow bubble create --id <id> --repo <path> --base <branch> (--task <text> | --task-file <path>)",
+    "  pairflow bubble create --id <id> --repo <path> --base <branch> --review-artifact-type <document|code> (--task <text> | --task-file <path>)",
     "",
     "Options:",
     "  --id <id>             Bubble id (e.g. b_feature_x_01)",
     "  --repo <path>         Repository path",
     "  --base <branch>       Base branch",
+    "  --review-artifact-type <document|code>  Required explicit ownership type",
     "  --task <text>         Inline task text",
     "  --task-file <path>    Task input from file",
     "  --reviewer-brief <text>      Optional inline reviewer brief",
@@ -55,6 +63,9 @@ export function parseBubbleCreateCommandOptions(
         type: "string"
       },
       base: {
+        type: "string"
+      },
+      "review-artifact-type": {
         type: "string"
       },
       task: {
@@ -123,6 +134,21 @@ export function parseBubbleCreateCommandOptions(
   if (options.base === undefined) {
     missing.push("--base");
   }
+  const rawReviewArtifactType = parsed.values["review-artifact-type"];
+  const isReviewArtifactTypeMissing = rawReviewArtifactType === undefined;
+  let reviewArtifactTypeValidationError: string | undefined;
+  if (isReviewArtifactTypeMissing) {
+    missing.push("--review-artifact-type");
+  } else {
+    try {
+      options.reviewArtifactType = assertCreateReviewArtifactType(
+        rawReviewArtifactType
+      );
+    } catch (error) {
+      reviewArtifactTypeValidationError =
+        error instanceof Error ? error.message : String(error);
+    }
+  }
 
   const hasTask = options.task !== undefined;
   const hasTaskFile = options.taskFile !== undefined;
@@ -147,14 +173,36 @@ export function parseBubbleCreateCommandOptions(
   }
 
   if (missing.length > 0) {
+    const formatAlsoMissing = (missingOptions: string[]): string =>
+      missingOptions.length > 0
+        ? ` Also missing: ${missingOptions.join(", ")}.`
+        : "";
+
+    if (isReviewArtifactTypeMissing) {
+      const otherMissing = missing.filter(
+        (option) => option !== "--review-artifact-type"
+      );
+      throw new Error(
+        `${MISSING_REVIEW_ARTIFACT_TYPE_OPTION}: Missing required --review-artifact-type=<document|code> option.${formatAlsoMissing(otherMissing)}`
+      );
+    }
+    if (reviewArtifactTypeValidationError !== undefined) {
+      throw new Error(
+        `${reviewArtifactTypeValidationError}${formatAlsoMissing(missing)}`
+      );
+    }
     throw new Error(`Missing required options: ${missing.join(", ")}`);
+  }
+  if (reviewArtifactTypeValidationError !== undefined) {
+    throw new Error(reviewArtifactTypeValidationError);
   }
 
   return {
     ...options,
     id: options.id as string,
     repo: options.repo as string,
-    base: options.base as string
+    base: options.base as string,
+    reviewArtifactType: options.reviewArtifactType as CreateReviewArtifactType
   };
 }
 
@@ -181,6 +229,7 @@ export async function runBubbleCreateCommand(
     id: options.id as string,
     repoPath,
     baseBranch: options.base as string,
+    reviewArtifactType: options.reviewArtifactType as CreateReviewArtifactType,
     ...(options.task !== undefined ? { task: options.task } : {}),
     ...(options.taskFile !== undefined ? { taskFile: options.taskFile } : {}),
     ...(options.reviewerBrief !== undefined
@@ -199,7 +248,7 @@ export async function runBubbleCreateCommand(
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     reportWarning(
-      `Pairflow warning: failed to auto-register repository for bubble create (${repoPath}): ${reason}`
+      `${DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER}: failed to auto-register repository for bubble create (${repoPath}): ${reason}`
     );
   }
   return created;

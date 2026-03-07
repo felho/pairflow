@@ -42,6 +42,7 @@ describe("createArchiveSnapshot", () => {
       id: "b_archive_snapshot_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Archive snapshot task",
       cwd: repoPath
     });
@@ -88,6 +89,7 @@ describe("createArchiveSnapshot", () => {
       id: "b_archive_snapshot_02",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Archive without task artifact",
       cwd: repoPath
     });
@@ -117,6 +119,7 @@ describe("createArchiveSnapshot", () => {
       id: "b_archive_snapshot_03",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Archive idempotent retry",
       cwd: repoPath
     });
@@ -150,6 +153,7 @@ describe("createArchiveSnapshot", () => {
       id: "b_archive_snapshot_04",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Archive collision",
       cwd: repoPath
     });

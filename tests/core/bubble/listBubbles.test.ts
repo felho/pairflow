@@ -45,6 +45,7 @@ describe("listBubbles", () => {
       id: "b_list_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Created only",
       cwd: repoPath
     });
@@ -91,6 +92,7 @@ describe("listBubbles", () => {
       id: "b_list_03",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Cwd lookup",
       cwd: repoPath
     });
@@ -113,6 +115,7 @@ describe("listBubbles", () => {
       id: "b_list_04",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Created with stale session",
       cwd: repoPath
     });

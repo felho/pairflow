@@ -33,6 +33,7 @@ describe("getBubbleInbox", () => {
       id: "b_inbox_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Inbox task",
       cwd: repoPath
     });
@@ -166,6 +167,7 @@ describe("getBubbleInbox", () => {
       id: "b_inbox_02",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Inbox task",
       cwd: repoPath
     });

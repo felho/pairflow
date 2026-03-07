@@ -44,6 +44,7 @@ describe("bubble orchestration loop smoke", () => {
       id: "b_orch_smoke_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Validate startup path with isolated bootstrap",
       cwd: repoPath
     });

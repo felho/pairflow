@@ -1,13 +1,16 @@
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
-import { renderBubbleConfigToml, assertValidBubbleConfig } from "../../config/bubbleConfig.js";
+import {
+  assertCreateReviewArtifactType,
+  assertValidBubbleConfig,
+  renderBubbleConfigToml
+} from "../../config/bubbleConfig.js";
 import {
   DEFAULT_DOC_CONTRACT_GATE_MODE,
   DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER,
   DEFAULT_MAX_ROUNDS,
   DEFAULT_QUALITY_MODE,
-  DEFAULT_REVIEW_ARTIFACT_TYPE,
   DEFAULT_REVIEWER_CONTEXT_MODE,
   DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
   DEFAULT_WORK_MODE
@@ -30,13 +33,14 @@ import type {
   AgentName,
   BubbleConfig,
   BubbleStateSnapshot,
-  ReviewArtifactType
+  CreateReviewArtifactType
 } from "../../types/bubble.js";
 
 export interface BubbleCreateInput {
   id: string;
   repoPath: string;
   baseBranch: string;
+  reviewArtifactType: CreateReviewArtifactType;
   task?: string;
   taskFile?: string;
   reviewerBrief?: string;
@@ -228,7 +232,7 @@ function buildBubbleConfig(input: {
   baseBranch: string;
   bubbleBranch: string;
   accuracyCritical: boolean;
-  reviewArtifactType: ReviewArtifactType;
+  reviewArtifactType: CreateReviewArtifactType;
   implementer?: AgentName;
   reviewer?: AgentName;
   testCommand?: string;
@@ -270,65 +274,15 @@ function buildBubbleConfig(input: {
   });
 }
 
-function inferReviewArtifactType(task: ResolvedTaskInput): ReviewArtifactType {
-  const text = task.content.toLowerCase();
-  const sourcePath = task.sourcePath?.toLowerCase() ?? "";
-
-  let documentScore = 0;
-  let codeScore = 0;
-
-  // Intentional bias: markdown/text task files default toward document review.
-  // We still require a >=2 lead before forcing "document" or "code"; near-ties
-  // fall back to "auto".
-  if (sourcePath.endsWith(".md") || sourcePath.endsWith(".txt")) {
-    documentScore += 1;
+function resolveCreateReviewArtifactType(
+  value: unknown
+): CreateReviewArtifactType {
+  try {
+    return assertCreateReviewArtifactType(value);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new BubbleCreateError(reason);
   }
-  if (
-    sourcePath.endsWith(".ts") ||
-    sourcePath.endsWith(".tsx") ||
-    sourcePath.endsWith(".js") ||
-    sourcePath.endsWith(".py")
-  ) {
-    codeScore += 2;
-  }
-
-  const documentPatterns = [
-    /\bprd\b/u,
-    /\bdocument(?:ation)?\b/u,
-    /\btask file\b/u,
-    /\bmarkdown\b/u,
-    /\bdocs?\//u,
-    /\bdocument[- ]only\b/u
-  ];
-  const codePatterns = [
-    /\bsrc\//u,
-    /\btests\//u,
-    /\btypescript\b/u,
-    /\bimplement(?:ation)?\b/u,
-    /\brefactor\b/u,
-    /\bbug\b/u,
-    /\bapi\b/u
-  ];
-
-  for (const pattern of documentPatterns) {
-    if (pattern.test(text)) {
-      documentScore += 1;
-    }
-  }
-  for (const pattern of codePatterns) {
-    if (pattern.test(text)) {
-      codeScore += 1;
-    }
-  }
-
-  if (documentScore >= codeScore + 2) {
-    return "document";
-  }
-  if (codeScore >= documentScore + 2) {
-    return "code";
-  }
-
-  return DEFAULT_REVIEW_ARTIFACT_TYPE;
 }
 
 function renderTaskArtifact(task: ResolvedTaskInput): string {
@@ -369,6 +323,7 @@ async function ensureRuntimeSessionFile(sessionsPath: string): Promise<void> {
 export async function createBubble(input: BubbleCreateInput): Promise<BubbleCreateResult> {
   validateBubbleId(input.id);
   const createdAt = input.now ?? new Date();
+  const reviewArtifactType = resolveCreateReviewArtifactType(input.reviewArtifactType);
 
   const repoPath = resolve(input.repoPath);
   await ensureRepoPathIsGitRepo(repoPath);
@@ -411,7 +366,7 @@ export async function createBubble(input: BubbleCreateInput): Promise<BubbleCrea
     baseBranch,
     bubbleBranch,
     accuracyCritical,
-    reviewArtifactType: inferReviewArtifactType(task)
+    reviewArtifactType
   };
   if (input.implementer !== undefined) {
     bubbleConfigInput.implementer = input.implementer;

@@ -118,6 +118,7 @@ describe("emitAskHumanFromWorkspace", () => {
       id: "b_ask_human_02",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Task",
       cwd: repoPath
     });

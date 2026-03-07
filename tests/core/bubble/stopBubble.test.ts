@@ -78,6 +78,7 @@ describe("stopBubble", () => {
       id: "b_stop_02",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Task",
       cwd: repoPath
     });

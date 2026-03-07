@@ -8,7 +8,6 @@ vi.mock("../../../src/core/gates/docContractGates.js", async (importOriginal) =>
   const actual = await importOriginal();
   return {
     ...(actual as Record<string, unknown>),
-    isDocContractGateScopeActive: vi.fn(() => true),
     writeDocContractGateArtifact: vi.fn(async () => {
       throw new Error("simulated doc gate artifact write failure");
     })
@@ -45,6 +44,7 @@ describe("createBubble (doc gate artifact fail-open)", () => {
       id: "b_create_doc_gate_fail_open_01",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "document",
       task: "Document-only task: create bubble despite advisory gate artifact write failure",
       cwd: repoPath
     });

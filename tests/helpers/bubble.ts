@@ -4,7 +4,7 @@ import { renderBubbleConfigToml } from "../../src/config/bubbleConfig.js";
 import { createBubble, type BubbleCreateResult } from "../../src/core/bubble/createBubble.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../src/core/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../src/core/workspace/worktreeManager.js";
-import type { ReviewArtifactType } from "../../src/types/bubble.js";
+import type { CreateReviewArtifactType, ReviewArtifactType } from "../../src/types/bubble.js";
 
 export interface SetupRunningBubbleFixtureInput {
   bubbleId: string;
@@ -13,14 +13,23 @@ export interface SetupRunningBubbleFixtureInput {
   startedAt?: string;
   reviewerBrief?: string;
   accuracyCritical?: boolean;
-  reviewArtifactType?: ReviewArtifactType;
+  reviewArtifactType?: CreateReviewArtifactType;
 }
 
-export async function setupRunningBubbleFixture(input: SetupRunningBubbleFixtureInput): Promise<BubbleCreateResult> {
+interface SetupRunningBubbleFixtureOverrideOptions {
+  configReviewArtifactTypeOverride?: ReviewArtifactType;
+}
+
+async function setupRunningBubbleFixtureWithOverride(
+  input: SetupRunningBubbleFixtureInput,
+  options: SetupRunningBubbleFixtureOverrideOptions = {}
+): Promise<BubbleCreateResult> {
+  const createReviewArtifactType = input.reviewArtifactType ?? "code";
   let created = await createBubble({
     id: input.bubbleId,
     repoPath: input.repoPath,
     baseBranch: "main",
+    reviewArtifactType: createReviewArtifactType,
     task: input.task,
     ...(input.reviewerBrief !== undefined
       ? { reviewerBrief: input.reviewerBrief }
@@ -29,10 +38,14 @@ export async function setupRunningBubbleFixture(input: SetupRunningBubbleFixture
     cwd: input.repoPath
   });
 
-  if (input.reviewArtifactType !== undefined) {
+  const overrideReviewArtifactType = options.configReviewArtifactTypeOverride;
+  if (
+    overrideReviewArtifactType !== undefined
+    && overrideReviewArtifactType !== createReviewArtifactType
+  ) {
     const overriddenConfig = {
       ...created.config,
-      review_artifact_type: input.reviewArtifactType
+      review_artifact_type: overrideReviewArtifactType
     };
     await writeFile(
       created.paths.bubbleTomlPath,
@@ -81,4 +94,24 @@ export async function setupRunningBubbleFixture(input: SetupRunningBubbleFixture
   );
 
   return created;
+}
+
+export async function setupRunningBubbleFixture(
+  input: SetupRunningBubbleFixtureInput
+): Promise<BubbleCreateResult> {
+  return setupRunningBubbleFixtureWithOverride(input);
+}
+
+export async function setupRunningLegacyAutoBubbleFixture(
+  input: Omit<SetupRunningBubbleFixtureInput, "reviewArtifactType">
+): Promise<BubbleCreateResult> {
+  return setupRunningBubbleFixtureWithOverride(
+    {
+      ...input,
+      reviewArtifactType: "code"
+    },
+    {
+      configReviewArtifactTypeOverride: "auto"
+    }
+  );
 }

@@ -54,6 +54,7 @@ describe("reconcileRuntimeSessions", () => {
       id: "b_reconcile_02",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Final bubble",
       cwd: repoPath
     });
@@ -132,6 +133,7 @@ describe("reconcileRuntimeSessions", () => {
       id: "b_reconcile_03",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Invalid state bubble",
       cwd: repoPath
     });
@@ -195,6 +197,7 @@ describe("reconcileRuntimeSessions", () => {
       id: "b_reconcile_04",
       repoPath,
       baseBranch: "main",
+      reviewArtifactType: "code",
       task: "Stale pre-runtime session",
       cwd: repoPath
     });
