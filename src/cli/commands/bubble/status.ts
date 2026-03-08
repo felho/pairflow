@@ -111,6 +111,10 @@ function blue(input: string): string {
   return style(input, 34);
 }
 
+function white(input: string): string {
+  return style(input, 37);
+}
+
 function bold(input: string): string {
   return style(input, 1);
 }
@@ -164,6 +168,13 @@ function formatReviewVerification(value: string): string {
   return value;
 }
 
+function formatDisplayedReviewVerification(status: BubbleStatusView): string {
+  if (!status.accuracy_critical) {
+    return dim("n/a");
+  }
+  return formatReviewVerification(status.last_review_verification);
+}
+
 function formatFailingGateSummary(reasonCodes: string[]): string {
   if (reasonCodes.length === 0) {
     return dim("-");
@@ -189,14 +200,16 @@ function formatInboxSummary(input: BubbleStatusView["pendingInboxItems"]): strin
   const q = input.humanQuestions;
   const a = input.approvalRequests;
   const t = input.total;
-  const packed = `q=${q} a=${a} t=${t}`;
+  const qLabel = bold(white("questions"));
+  const aLabel = bold(white("approvals"));
+  const tLabel = bold(white("total"));
   if (t === 0) {
-    return dim(packed);
+    return `${qLabel}=${dim(String(q))} ${aLabel}=${dim(String(a))} ${tLabel}=${dim(String(t))}`;
   }
-  if (a > 0) {
-    return bold(yellow(packed));
-  }
-  return cyan(packed);
+  const qValue = q > 0 ? cyan(String(q)) : dim(String(q));
+  const aValue = a > 0 ? bold(yellow(String(a))) : dim(String(a));
+  const tValue = bold(yellow(String(t)));
+  return `${qLabel}=${qValue} ${aLabel}=${aValue} ${tLabel}=${tValue}`;
 }
 
 function formatSpecLock(
@@ -264,7 +277,7 @@ export function renderBubbleStatusTable(status: BubbleStatusView): string {
     ],
     [
       "Review",
-      `accuracy=${status.accuracy_critical ? bold(red("yes")) : green("no")} | verification=${formatReviewVerification(status.last_review_verification)} | failing=${formatFailingGateSummary(failingGateReasonCodes)}`
+      `accuracy=${status.accuracy_critical ? bold(red("yes")) : green("no")} | verification=${formatDisplayedReviewVerification(status)} | failing=${formatFailingGateSummary(failingGateReasonCodes)}`
     ],
     [
       "Gates",
@@ -308,7 +321,7 @@ export function renderBubbleStatusText(status: BubbleStatusView): string {
     `Inbox pending: questions=${status.pendingInboxItems.humanQuestions}, approvals=${status.pendingInboxItems.approvalRequests}, total=${status.pendingInboxItems.total}`,
     `Transcript: messages=${status.transcript.totalMessages}, last=${status.transcript.lastMessageType ?? "-"} @ ${status.transcript.lastMessageTs ?? "-"}`,
     `Accuracy critical: ${status.accuracy_critical ? "yes" : "no"}`,
-    `Last review verification: ${status.last_review_verification}`,
+    `Last review verification: ${status.accuracy_critical ? status.last_review_verification : "n/a"}`,
     `Failing gates: ${failingGateSummary}`,
     `Spec lock: ${status.spec_lock_state.state} (blockers=${status.spec_lock_state.open_blocker_count}, required_now=${status.spec_lock_state.open_required_now_count})`,
     `Round gate: applies=${status.round_gate_state.applies ? "yes" : "no"} violated=${status.round_gate_state.violated ? "yes" : "no"} round=${status.round_gate_state.round}${status.round_gate_state.reason_code ? ` reason=${status.round_gate_state.reason_code}` : ""}`

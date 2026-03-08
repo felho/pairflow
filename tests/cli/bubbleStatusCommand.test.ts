@@ -156,6 +156,11 @@ describe("renderBubbleStatusText", () => {
     expect(rendered).toContain("Spec lock: LOCKED (blockers=2, required_now=3)");
     expect(rendered).toContain("Round gate: applies=yes violated=yes round=4 reason=ROUND_GATE_WARNING");
   });
+
+  it("shows review verification as n/a when accuracy critical is disabled", () => {
+    const rendered = renderBubbleStatusText(createStatusView({}));
+    expect(rendered).toContain("Last review verification: n/a");
+  });
 });
 
 describe("renderBubbleStatusTable", () => {
@@ -219,6 +224,7 @@ describe("renderBubbleStatusTable", () => {
     expect(rendered).toContain("| Review");
     expect(rendered).toContain("| Gates");
     expect(rendered).toContain("| Transcript");
+    expect(rendered).toContain("verification=n/a");
     expect(rendered).not.toContain("Failing gates:");
     expect(rendered).not.toContain("Spec lock:");
     expect(rendered).not.toContain("Round gate:");
