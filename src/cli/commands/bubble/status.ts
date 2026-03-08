@@ -81,14 +81,14 @@ export function parseBubbleStatusCommandOptions(
   };
 }
 
-function style(input: string, ansiCode: number): string {
+function style(input: string, ...ansiCodes: number[]): string {
   if (!process.stdout.isTTY) {
     return input;
   }
   if (process.env.NO_COLOR !== undefined) {
     return input;
   }
-  return `\u001b[${ansiCode}m${input}\u001b[0m`;
+  return `\u001b[${ansiCodes.join(";")}m${input}\u001b[0m`;
 }
 
 function green(input: string): string {
@@ -105,6 +105,18 @@ function red(input: string): string {
 
 function cyan(input: string): string {
   return style(input, 36);
+}
+
+function blue(input: string): string {
+  return style(input, 34);
+}
+
+function bold(input: string): string {
+  return style(input, 1);
+}
+
+function dim(input: string): string {
+  return style(input, 2);
 }
 
 function stripAnsi(input: string): string {
@@ -124,14 +136,20 @@ function padRightVisible(input: string, targetLength: number): string {
 }
 
 function formatStateLabel(value: string): string {
-  if (value === "RUNNING") {
-    return green(value);
+  if (value.includes("RUNNING")) {
+    return bold(green(value));
   }
-  if (value === "WAITING_HUMAN" || value === "META_REVIEW_WAITING_HUMAN") {
-    return yellow(value);
+  if (value.includes("WAITING")) {
+    return bold(yellow(value));
   }
-  if (value === "APPROVED_FOR_COMMIT") {
-    return cyan(value);
+  if (value === "READY_FOR_APPROVAL" || value === "APPROVED_FOR_COMMIT") {
+    return bold(cyan(value));
+  }
+  if (value === "DONE" || value === "MERGED") {
+    return bold(blue(value));
+  }
+  if (value === "CANCELLED" || value === "ERROR") {
+    return bold(red(value));
   }
   return value;
 }
@@ -148,9 +166,55 @@ function formatReviewVerification(value: string): string {
 
 function formatFailingGateSummary(reasonCodes: string[]): string {
   if (reasonCodes.length === 0) {
-    return green("-");
+    return dim("-");
   }
-  return red(reasonCodes.join(", "));
+  return bold(red(reasonCodes.join(", ")));
+}
+
+function formatWatchdogRemaining(status: BubbleStatusView["watchdog"]): string {
+  const remaining = status.remainingSeconds;
+  if (remaining === null) {
+    return "-";
+  }
+  if (status.expired) {
+    return bold(red(`${remaining}s`));
+  }
+  if (remaining <= 300) {
+    return bold(yellow(`${remaining}s`));
+  }
+  return green(`${remaining}s`);
+}
+
+function formatInboxSummary(input: BubbleStatusView["pendingInboxItems"]): string {
+  const q = input.humanQuestions;
+  const a = input.approvalRequests;
+  const t = input.total;
+  const packed = `q=${q} a=${a} t=${t}`;
+  if (t === 0) {
+    return dim(packed);
+  }
+  if (a > 0) {
+    return bold(yellow(packed));
+  }
+  return cyan(packed);
+}
+
+function formatSpecLock(
+  spec: BubbleStatusView["spec_lock_state"]
+): string {
+  const state =
+    spec.state === "IMPLEMENTABLE"
+      ? bold(green(spec.state))
+      : bold(red(spec.state));
+  return `${state} b=${spec.open_blocker_count} rn=${spec.open_required_now_count}`;
+}
+
+function formatRoundGate(
+  roundGate: BubbleStatusView["round_gate_state"]
+): string {
+  const applies = roundGate.applies ? bold(yellow("yes")) : dim("no");
+  const violated = roundGate.violated ? bold(red("yes")) : green("no");
+  return `applies=${applies} violated=${violated} r=${roundGate.round}${roundGate.reason_code ? ` reason=${bold(yellow(roundGate.reason_code))}` : ""}`;
 }
 
 function renderKeyValueTable(rows: ReadonlyArray<readonly [string, string]>): string {
@@ -160,9 +224,11 @@ function renderKeyValueTable(rows: ReadonlyArray<readonly [string, string]>): st
     0
   );
 
-  const horizontal = `+-${"-".repeat(labelWidth)}-+-${"-".repeat(valueWidth)}-+`;
+  const horizontal = dim(
+    `+-${"-".repeat(labelWidth)}-+-${"-".repeat(valueWidth)}-+`
+  );
   const body = rows.map(([label, value]) => {
-    const paddedLabel = padRightVisible(label, labelWidth);
+    const paddedLabel = padRightVisible(bold(blue(label)), labelWidth);
     const paddedValue = padRightVisible(value, valueWidth);
     return `| ${paddedLabel} | ${paddedValue} |`;
   });
@@ -176,23 +242,23 @@ export function renderBubbleStatusTable(status: BubbleStatusView): string {
     ["Bubble", status.bubbleId],
     [
       "Lifecycle",
-      `${formatStateLabel(status.state)} r${status.round} | active ${status.activeAgent ?? "-"}/${status.activeRole ?? "-"} | since ${status.activeSince ?? "-"}`
+      `${formatStateLabel(status.state)} r${status.round} | active ${bold(status.activeAgent ?? "-")}/${status.activeRole ?? "-"} | since ${dim(status.activeSince ?? "-")}`
     ],
     [
       "Runtime",
-      `last ${status.lastCommandAt ?? "-"} | watchdog ${status.watchdog.monitored ? "on" : "off"} ${status.watchdog.timeoutMinutes}m rem=${status.watchdog.remainingSeconds ?? "-"}s exp=${status.watchdog.expired ? red("yes") : green("no")} | inbox q=${status.pendingInboxItems.humanQuestions} a=${status.pendingInboxItems.approvalRequests} t=${status.pendingInboxItems.total}`
+      `last ${dim(status.lastCommandAt ?? "-")} | watchdog ${status.watchdog.monitored ? green("on") : dim("off")} ${status.watchdog.timeoutMinutes}m rem=${formatWatchdogRemaining(status.watchdog)} exp=${status.watchdog.expired ? bold(red("yes")) : green("no")} | inbox ${formatInboxSummary(status.pendingInboxItems)}`
     ],
     [
       "Review",
-      `accuracy=${status.accuracy_critical ? red("yes") : green("no")} | verification=${formatReviewVerification(status.last_review_verification)} | failing=${formatFailingGateSummary(failingGateReasonCodes)}`
+      `accuracy=${status.accuracy_critical ? bold(red("yes")) : green("no")} | verification=${formatReviewVerification(status.last_review_verification)} | failing=${formatFailingGateSummary(failingGateReasonCodes)}`
     ],
     [
       "Gates",
-      `spec=${status.spec_lock_state.state === "IMPLEMENTABLE" ? green(status.spec_lock_state.state) : red(status.spec_lock_state.state)} b=${status.spec_lock_state.open_blocker_count} rn=${status.spec_lock_state.open_required_now_count} | round applies=${status.round_gate_state.applies ? green("yes") : green("no")} violated=${status.round_gate_state.violated ? red("yes") : green("no")} r=${status.round_gate_state.round}${status.round_gate_state.reason_code ? ` reason=${status.round_gate_state.reason_code}` : ""}`
+      `spec=${formatSpecLock(status.spec_lock_state)} | round ${formatRoundGate(status.round_gate_state)}`
     ],
     [
       "Transcript",
-      `messages=${status.transcript.totalMessages} | last=${status.transcript.lastMessageType ?? "-"} @ ${status.transcript.lastMessageTs ?? "-"}`
+      `messages=${bold(String(status.transcript.totalMessages))} | last=${status.transcript.lastMessageType ?? "-"} @ ${dim(status.transcript.lastMessageTs ?? "-")}`
     ]
   ];
 

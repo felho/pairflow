@@ -71,6 +71,8 @@ describe("launchBubbleTmuxSession", () => {
       "new-session",
       "set-environment",
       "set-environment",
+      "set-environment",
+      "set-environment",
       "split-window",
       "resize-pane",
       "split-window",
@@ -91,8 +93,22 @@ describe("launchBubbleTmuxSession", () => {
       "-u",
       "CLAUDECODE"
     ]);
-    expect(calls[0]?.allowFailure).toBe(true);
+    // Unset NO_COLOR from server global env and session env.
     expect(calls[4]?.args).toEqual([
+      "set-environment",
+      "-g",
+      "-u",
+      "NO_COLOR"
+    ]);
+    expect(calls[5]?.args).toEqual([
+      "set-environment",
+      "-t",
+      "pf-b_start_01",
+      "-u",
+      "NO_COLOR"
+    ]);
+    expect(calls[0]?.allowFailure).toBe(true);
+    expect(calls[6]?.args).toEqual([
       "split-window",
       "-v",
       "-t",
@@ -102,7 +118,7 @@ describe("launchBubbleTmuxSession", () => {
       "codex"
     ]);
     // Status pane fixed to 11 lines before reviewer split.
-    expect(calls[5]?.args).toEqual([
+    expect(calls[7]?.args).toEqual([
       "resize-pane",
       "-t",
       "pf-b_start_01:0.0",
@@ -110,7 +126,7 @@ describe("launchBubbleTmuxSession", () => {
       "11"
     ]);
     // Reviewer split uses -p 50 to divide remaining space equally.
-    expect(calls[6]?.args).toEqual([
+    expect(calls[8]?.args).toEqual([
       "split-window",
       "-v",
       "-t",
@@ -144,9 +160,11 @@ describe("launchBubbleTmuxSession", () => {
       runner
     });
 
-    expect(calls.slice(0, 9).map((call) => call[0])).toEqual([
+    expect(calls.slice(0, 11).map((call) => call[0])).toEqual([
       "has-session",
       "new-session",
+      "set-environment",
+      "set-environment",
       "set-environment",
       "set-environment",
       "split-window",

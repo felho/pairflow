@@ -174,13 +174,15 @@ export async function launchBubbleTmuxSession(
     input.worktreePath,
     input.statusCommand
   ]);
-  // Strip CLAUDECODE from both the tmux server global env and the session
-  // env.  The runTmux client-side delete only affects the tmux client process;
-  // panes inherit from the *server*, so we must unset it there too.  Without
-  // this, a Claude Code process running inside a pane detects the variable and
-  // exits immediately, thinking it is a nested instance.
-  await runner(["set-environment", "-g", "-u", "CLAUDECODE"]);
-  await runner(["set-environment", "-t", sessionName, "-u", "CLAUDECODE"]);
+  // Strip selected env vars from both tmux server-global and session env.
+  // The client-side env is not enough: panes inherit from the tmux server.
+  // - CLAUDECODE: prevents nested Claude Code false-positive detection.
+  // - NO_COLOR: allows status-pane ANSI colors by default in tmux.
+  const envVarsToUnset = ["CLAUDECODE", "NO_COLOR"] as const;
+  for (const variableName of envVarsToUnset) {
+    await runner(["set-environment", "-g", "-u", variableName]);
+    await runner(["set-environment", "-t", sessionName, "-u", variableName]);
+  }
   // Split status pane to create implementer pane.
   await runner([
     "split-window",
