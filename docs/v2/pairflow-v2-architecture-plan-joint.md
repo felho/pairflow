@@ -1093,3 +1093,30 @@ The findings artifact is the contract between validate and fix. The pattern is u
 4. **Quality bar:** Every boundary has explicit input/output, invariants, and error codes documented
 5. **State ownership:** Kernel is the single source of truth; remote executors use resume token + op_id for consistency; state layer is a dumb store
 6. **Remote sync:** Resume token (agent blocks on disconnect) first; WAL (agent works offline) is a future backwards-compatible extension with mandatory replay invariants (revalidation, stale-intent rejection, side-effect idempotency)
+
+---
+
+## Note: V2 Policy Internal API Opportunity
+
+As seen in v1 repeat-clean auto-converge hardening, policy behavior currently requires touching multiple low-level layers (trigger evaluation, transition execution, CLI guidance, metrics, compatibility fields). For v2, we should consider a dedicated internal Policy API to reduce cross-cutting complexity:
+
+1. **PolicyContext Builder**
+- Centralize state/transcript/config/artifact reads into one canonical policy input object.
+
+2. **PolicyEngine**
+- Pure decision layer: `context -> decision`.
+- Output should be declarative (`normal_pass | auto_converge | reject`) with reason codes and metadata, independent from IO side effects.
+
+3. **TransitionExecutor**
+- Execute the selected decision (append envelopes, write state, dispatch notifications) without re-deciding policy in execution code paths.
+
+4. **ObservabilityAdapter**
+- Emit lifecycle metrics, operator guidance, and warnings from one mapping layer to keep policy-to-observability semantics consistent.
+
+5. **CompatibilityAdapter**
+- Isolate legacy/new field dual-write and dual-read behavior (append-only schema compatibility) from core policy logic.
+
+Expected benefit:
+- Smaller blast radius for policy changes,
+- clearer test boundaries (policy unit tests vs transition integration tests),
+- less policy drift between protocol behavior, CLI messaging, and metrics.
