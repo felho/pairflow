@@ -47,8 +47,11 @@ import {
   resolveReviewerTestExecutionDirective
 } from "../reviewer/testEvidence.js";
 import {
+  formatReviewerFocusBridgeBlock,
   formatReviewerBriefPrompt,
-  readReviewerBriefArtifact
+  readReviewerBriefArtifact,
+  readReviewerFocusArtifact,
+  type ReviewerFocusExtractionResult
 } from "../reviewer/reviewerBrief.js";
 import type { BubbleStateSnapshot, ReviewArtifactType } from "../../types/bubble.js";
 
@@ -135,6 +138,7 @@ function buildReviewerStartupPrompt(input: {
   taskArtifactPath: string;
   reviewArtifactType: ReviewArtifactType;
   reviewerBriefText?: string;
+  reviewerFocus?: ReviewerFocusExtractionResult;
 }): string {
   return [
     `Pairflow reviewer start for bubble ${input.bubbleId}.`,
@@ -148,6 +152,9 @@ function buildReviewerStartupPrompt(input: {
     buildReviewerPassOutputContractGuidance(),
     ...(input.reviewerBriefText !== undefined
       ? [formatReviewerBriefPrompt(input.reviewerBriefText)]
+      : []),
+    ...(input.reviewerFocus?.status === "present"
+      ? [formatReviewerFocusBridgeBlock(input.reviewerFocus)]
       : []),
     "If findings remain, run `pairflow pass --summary ... --finding 'P1:...|artifact://...'` (repeatable; for P0/P1 include finding-level refs).",
     ...buildReviewerCanonicalCommandGateLines(),
@@ -249,6 +256,7 @@ function buildResumeReviewerStartupPrompt(input: {
   reviewArtifactType: ReviewArtifactType;
   reviewerTestDirectiveLine?: string;
   reviewerBriefText?: string;
+  reviewerFocus?: ReviewerFocusExtractionResult;
 }): string {
   const roleInstruction =
     input.state.state === "RUNNING" && input.state.active_role === "reviewer"
@@ -271,6 +279,9 @@ function buildResumeReviewerStartupPrompt(input: {
     buildReviewerPassOutputContractGuidance(),
     ...(input.reviewerBriefText !== undefined
       ? [formatReviewerBriefPrompt(input.reviewerBriefText)]
+      : []),
+    ...(input.reviewerFocus?.status === "present"
+      ? [formatReviewerFocusBridgeBlock(input.reviewerFocus)]
       : []),
     ...buildReviewerCanonicalCommandGateLines(),
     roleInstruction
@@ -448,7 +459,10 @@ export async function startBubble(
   resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
   const reviewerBriefText = await readReviewerBriefArtifact(
     resolved.bubblePaths.reviewerBriefArtifactPath
-  );
+  ).catch(() => undefined);
+  const reviewerFocus = await readReviewerFocusArtifact(
+    resolved.bubblePaths.reviewerFocusArtifactPath
+  ).catch(() => undefined);
 
   const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
   const currentState = loadedState.state.state;
@@ -567,6 +581,7 @@ export async function startBubble(
             worktreePath: resolved.bubblePaths.worktreePath,
             taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
             reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
+            ...(reviewerFocus !== undefined ? { reviewerFocus } : {}),
             ...(reviewerBriefText !== undefined ? { reviewerBriefText } : {})
           })
         }),
@@ -673,6 +688,7 @@ export async function startBubble(
             ...(reviewerTestDirectiveLine !== undefined
               ? { reviewerTestDirectiveLine }
               : {}),
+            ...(reviewerFocus !== undefined ? { reviewerFocus } : {}),
             ...(reviewerBriefText !== undefined ? { reviewerBriefText } : {}),
             ...(kickoffDiagnostic !== undefined ? { kickoffDiagnostic } : {})
           })
