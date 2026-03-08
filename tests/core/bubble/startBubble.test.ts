@@ -469,6 +469,178 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain("Always verify each claim against concrete source refs.");
   });
 
+  it("injects bridged reviewer focus block into reviewer startup prompt exactly once", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_reviewer_focus_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: [
+        "# Task",
+        "## Reviewer Focus",
+        "- Validate extraction reason-code behavior",
+        "- Keep fallback fail-open"
+      ].join("\n"),
+      cwd: repoPath
+    });
+
+    let reviewerCommand: string | undefined;
+    await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T13:00:00.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () =>
+          Promise.resolve({
+            repoPath,
+            baseRef: "refs/heads/main",
+            bubbleBranch: created.config.bubble_branch,
+            worktreePath: created.paths.worktreePath
+          }),
+        launchBubbleTmuxSession: (input) => {
+          reviewerCommand = input.reviewerCommand;
+          return Promise.resolve({ sessionName: "pf-b_start_reviewer_focus_01" });
+        },
+        claimRuntimeSession: (input) =>
+          Promise.resolve({
+            claimed: true,
+            record: {
+              bubbleId: input.bubbleId,
+              repoPath: input.repoPath,
+              worktreePath: input.worktreePath,
+              tmuxSessionName: input.tmuxSessionName,
+              updatedAt: "2026-02-22T13:00:00.000Z"
+            }
+          })
+      }
+    );
+
+    expect(reviewerCommand).toContain(
+      "Reviewer Focus (bridged from task artifact `reviewer-focus.json`):"
+    );
+    expect(reviewerCommand).toContain("- Validate extraction reason-code behavior");
+    const bridgeOccurrences =
+      reviewerCommand?.match(
+        /Reviewer Focus \(bridged from task artifact `reviewer-focus\.json`\):/gu
+      )?.length ?? 0;
+    expect(bridgeOccurrences).toBe(1);
+  });
+
+  it("does not inject reviewer focus block when extracted status is absent", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_reviewer_focus_absent_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "# Task\n## Scope\nNo focus section here.",
+      cwd: repoPath
+    });
+
+    let reviewerCommand: string | undefined;
+    await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T13:00:00.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () =>
+          Promise.resolve({
+            repoPath,
+            baseRef: "refs/heads/main",
+            bubbleBranch: created.config.bubble_branch,
+            worktreePath: created.paths.worktreePath
+          }),
+        launchBubbleTmuxSession: (input) => {
+          reviewerCommand = input.reviewerCommand;
+          return Promise.resolve({ sessionName: "pf-b_start_reviewer_focus_absent_01" });
+        },
+        claimRuntimeSession: (input) =>
+          Promise.resolve({
+            claimed: true,
+            record: {
+              bubbleId: input.bubbleId,
+              repoPath: input.repoPath,
+              worktreePath: input.worktreePath,
+              tmuxSessionName: input.tmuxSessionName,
+              updatedAt: "2026-02-22T13:00:00.000Z"
+            }
+          })
+      }
+    );
+
+    expect(reviewerCommand).not.toContain(
+      "Reviewer Focus (bridged from task artifact `reviewer-focus.json`):"
+    );
+  });
+
+  it("does not inject reviewer focus block when artifact status is invalid", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_reviewer_focus_invalid_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "# Task\n## Scope\nNo focus section here.",
+      cwd: repoPath
+    });
+
+    await writeFile(
+      created.paths.reviewerFocusArtifactPath,
+      JSON.stringify(
+        {
+          status: "invalid",
+          source: "frontmatter",
+          reason_code: "REVIEWER_FOCUS_EMPTY_FRONTMATTER"
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    let reviewerCommand: string | undefined;
+    await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T13:00:00.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () =>
+          Promise.resolve({
+            repoPath,
+            baseRef: "refs/heads/main",
+            bubbleBranch: created.config.bubble_branch,
+            worktreePath: created.paths.worktreePath
+          }),
+        launchBubbleTmuxSession: (input) => {
+          reviewerCommand = input.reviewerCommand;
+          return Promise.resolve({ sessionName: "pf-b_start_reviewer_focus_invalid_01" });
+        },
+        claimRuntimeSession: (input) =>
+          Promise.resolve({
+            claimed: true,
+            record: {
+              bubbleId: input.bubbleId,
+              repoPath: input.repoPath,
+              worktreePath: input.worktreePath,
+              tmuxSessionName: input.tmuxSessionName,
+              updatedAt: "2026-02-22T13:00:00.000Z"
+            }
+          })
+      }
+    );
+
+    expect(reviewerCommand).not.toContain(
+      "Reviewer Focus (bridged from task artifact `reviewer-focus.json`):"
+    );
+  });
+
   it("continues startup when reviewer brief artifact is unreadable", async () => {
     const repoPath = await createTempRepo();
     const created = await createBubble({
@@ -690,7 +862,14 @@ describe("startBubble", () => {
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_start_resume_01",
-      task: "Resume bubble",
+      task: [
+        "# Task",
+        "## Reviewer Focus",
+        "- Resume path should keep reviewer focus context",
+        "",
+        "## Scope",
+        "Resume bubble"
+      ].join("\n"),
       reviewerBrief: "Resume must keep reviewer brief context."
     });
 
@@ -745,6 +924,12 @@ describe("startBubble", () => {
           );
           expect(input.reviewerCommand).toContain(
             "Treat this reviewer brief as mandatory review context."
+          );
+          expect(input.reviewerCommand).toContain(
+            "Reviewer Focus (bridged from task artifact `reviewer-focus.json`):"
+          );
+          expect(input.reviewerCommand).toContain(
+            "- Resume path should keep reviewer focus context"
           );
           expect(input.reviewerCommand).toContain("Severity Ontology v1 reminder");
           expect(input.reviewerCommand).toContain("Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)");
@@ -832,6 +1017,56 @@ describe("startBubble", () => {
     expect(summaryPath).toBe(bubble.paths.transcriptPath);
     expect(result.state.state).toBe("RUNNING");
     expect(result.state.last_command_at).toBe("2026-02-23T09:00:00.000Z");
+  });
+
+  it("skips reviewer focus injection in resume mode when reviewer-focus artifact is schema-invalid", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_focus_invalid_artifact_01",
+      task: [
+        "# Task",
+        "## Reviewer Focus",
+        "- Valid focus exists in task, but artifact is tampered before resume"
+      ].join("\n")
+    });
+    await writeFile(
+      bubble.paths.reviewerFocusArtifactPath,
+      JSON.stringify({
+        status: "present",
+        source: "none",
+        focus_text: "schema-invalid artifact payload"
+      }),
+      "utf8"
+    );
+
+    let reviewerCommand: string | undefined;
+    const result = await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-23T09:02:00.000Z")
+      },
+      {
+        buildResumeTranscriptSummary: () =>
+          Promise.resolve("resume-summary: invalid-reviewer-focus-artifact"),
+        launchBubbleTmuxSession: (input) => {
+          reviewerCommand = input.reviewerCommand;
+          return Promise.resolve({
+            sessionName: "pf-b_start_resume_focus_invalid_artifact_01"
+          });
+        }
+      }
+    );
+
+    expect(result.state.state).toBe("RUNNING");
+    expect(reviewerCommand).toContain("Pairflow reviewer resume");
+    expect(reviewerCommand).toContain(
+      "resume-summary: invalid-reviewer-focus-artifact"
+    );
+    expect(reviewerCommand).not.toContain(
+      "Reviewer Focus (bridged from task artifact `reviewer-focus.json`):"
+    );
   });
 
   it("uses docs-only runtime evidence guidance in resume implementer prompts", async () => {

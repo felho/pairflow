@@ -4,7 +4,11 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createBubble } from "../../../src/core/bubble/createBubble.js";
+import {
+  createBubble,
+  extractReviewerFocus
+} from "../../../src/core/bubble/createBubble.js";
+import { getBubblePaths } from "../../../src/core/bubble/paths.js";
 import {
   INVALID_REVIEW_ARTIFACT_TYPE_OPTION,
   MISSING_REVIEW_ARTIFACT_TYPE_OPTION,
@@ -50,6 +54,23 @@ beforeEach(async () => {
   const metricsRoot = await createTempDir();
   process.env.PAIRFLOW_METRICS_EVENTS_ROOT = metricsRoot;
 });
+
+async function readMetricsEvents(at: Date): Promise<Record<string, unknown>[]> {
+  const metricsRoot = process.env.PAIRFLOW_METRICS_EVENTS_ROOT;
+  if (metricsRoot === undefined) {
+    throw new Error("PAIRFLOW_METRICS_EVENTS_ROOT is not configured.");
+  }
+  const iso = at.toISOString();
+  const year = iso.slice(0, 4);
+  const month = iso.slice(5, 7);
+  const shardPath = join(metricsRoot, year, month, `events-${year}-${month}.ndjson`);
+  const raw = await readFile(shardPath, "utf8");
+  return raw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
+}
 
 describe("createBubble", () => {
   it("creates expected bubble scaffold and default files", async () => {
@@ -98,8 +119,13 @@ describe("createBubble", () => {
     await stat(result.paths.inboxPath);
     await stat(result.paths.taskArtifactPath);
     await stat(result.paths.sessionsPath);
+    await stat(result.paths.reviewerFocusArtifactPath);
     await expect(stat(result.paths.reviewerBriefArtifactPath)).rejects.toMatchObject({
       code: "ENOENT"
+    });
+    expect(result.reviewerFocusArtifactPersist).toEqual({
+      status: "written",
+      artifactPath: result.paths.reviewerFocusArtifactPath
     });
 
     const transcript = await readTranscriptEnvelopes(result.paths.transcriptPath);
@@ -173,6 +199,119 @@ describe("createBubble", () => {
     expect(result.state.state).toBe("CREATED");
     const transcript = await readTranscriptEnvelopes(result.paths.transcriptPath);
     expect(transcript[0]?.ts).toBe(now.toISOString());
+  });
+
+  it("emits reviewer-focus diagnostics in bubble_created metrics for present extraction", async () => {
+    const repoPath = await createTempRepo();
+    const now = new Date("2026-02-27T10:00:00.000Z");
+
+    await createBubble({
+      id: "b_create_metrics_reviewer_focus_present_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "# Task\n## Reviewer Focus\n- Keep diagnostics explicit",
+      cwd: repoPath,
+      now
+    });
+
+    const events = await readMetricsEvents(now);
+    const bubbleCreated = events.find(
+      (event) =>
+        event.event_type === "bubble_created"
+        && event.bubble_id === "b_create_metrics_reviewer_focus_present_01"
+    );
+    expect(bubbleCreated).toBeDefined();
+    expect(bubbleCreated?.metadata).toMatchObject({
+      reviewer_focus_status: "present",
+      reviewer_focus_artifact_write: "written"
+    });
+  });
+
+  it("emits reviewer-focus diagnostics in bubble_created metrics for absent extraction", async () => {
+    const repoPath = await createTempRepo();
+    const now = new Date("2026-02-27T10:05:00.000Z");
+
+    await createBubble({
+      id: "b_create_metrics_reviewer_focus_absent_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "# Task\n## Scope\nNo reviewer focus section.",
+      cwd: repoPath,
+      now
+    });
+
+    const events = await readMetricsEvents(now);
+    const bubbleCreated = events.find(
+      (event) =>
+        event.event_type === "bubble_created"
+        && event.bubble_id === "b_create_metrics_reviewer_focus_absent_01"
+    );
+    expect(bubbleCreated).toBeDefined();
+    expect(bubbleCreated?.metadata).toMatchObject({
+      reviewer_focus_status: "absent",
+      reviewer_focus_artifact_write: "written"
+    });
+  });
+
+  it("keeps bubble creation fail-open when reviewer-focus artifact write fails", async () => {
+    const repoPath = await createTempRepo();
+    const bubbleId = "b_create_reviewer_focus_write_fail_01";
+    const focusArtifactPath = getBubblePaths(repoPath, bubbleId).reviewerFocusArtifactPath;
+    const now = new Date("2026-02-27T10:10:00.000Z");
+    const result = await createBubble(
+      {
+        id: bubbleId,
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "# Task\n## Reviewer Focus\n- Keep fail-open semantics",
+        cwd: repoPath,
+        now
+      },
+      {
+        writeReviewerFocusArtifact: async (path, data, options) => {
+          const pathValue =
+            typeof path === "string"
+              ? path
+              : path instanceof URL
+              ? path.pathname
+              : Buffer.isBuffer(path)
+              ? path.toString("utf8")
+              : undefined;
+          if (pathValue === focusArtifactPath) {
+            const error = new Error("permission denied") as NodeJS.ErrnoException;
+            error.code = "EACCES";
+            throw error;
+          }
+          await writeFile(path, data, options);
+        }
+      }
+    );
+
+    expect(result.state.state).toBe("CREATED");
+    expect(result.reviewerFocusArtifactPersist).toEqual({
+      status: "write_failed",
+      artifactPath: focusArtifactPath,
+      errorCode: "EACCES"
+    });
+    await expect(stat(result.paths.reviewerFocusArtifactPath)).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+
+    const events = await readMetricsEvents(now);
+    const bubbleCreated = events.find(
+      (event) =>
+        event.event_type === "bubble_created"
+        && event.bubble_id === bubbleId
+    );
+    expect(bubbleCreated).toBeDefined();
+    expect(bubbleCreated?.metadata).toMatchObject({
+      reviewer_focus_status: "present",
+      reviewer_focus_artifact_write: "write_failed",
+      reviewer_focus_artifact_write_error_code: "EACCES"
+    });
   });
 
   it("uses task file content when taskFile input is provided", async () => {
@@ -269,6 +408,428 @@ describe("createBubble", () => {
         cwd: repoPath
       })
     ).rejects.toThrow(/either reviewer brief text or reviewer brief file path, not both/u);
+  });
+
+  it("extracts reviewer focus with frontmatter precedence over section", () => {
+    const result = extractReviewerFocus(
+      [
+        "---",
+        "reviewer_focus:",
+        "  - Validate rollback safety",
+        "  - Confirm deterministic state transitions",
+        "---",
+        "## Reviewer Focus",
+        "- This should be ignored because frontmatter wins."
+      ].join("\n")
+    );
+
+    expect(result).toEqual({
+      status: "present",
+      source: "frontmatter",
+      focus_text:
+        "- Validate rollback safety\n- Confirm deterministic state transitions",
+      focus_items: [
+        "Validate rollback safety",
+        "Confirm deterministic state transitions"
+      ],
+      reason_code: "REVIEWER_FOCUS_FRONTMATTER_PRECEDENCE"
+    });
+  });
+
+  it("preserves quoted commas in inline frontmatter reviewer_focus list", () => {
+    const result = extractReviewerFocus(
+      [
+        "---",
+        "reviewer_focus: [\"alpha, beta\", \"gamma\"]",
+        "---",
+        "# Task"
+      ].join("\n")
+    );
+
+    expect(result).toEqual({
+      status: "present",
+      source: "frontmatter",
+      focus_text: "- alpha, beta\n- gamma",
+      focus_items: ["alpha, beta", "gamma"]
+    });
+  });
+
+  it("unescapes quoted inline frontmatter list values without preserving escape backslashes", () => {
+    const result = extractReviewerFocus(
+      [
+        "---",
+        "reviewer_focus: [\"alpha\\, beta\", \"quote: \\\"x\\\"\"]",
+        "---",
+        "# Task"
+      ].join("\n")
+    );
+
+    expect(result).toEqual({
+      status: "present",
+      source: "frontmatter",
+      focus_text: "- alpha, beta\n- quote: \"x\"",
+      focus_items: ["alpha, beta", "quote: \"x\""]
+    });
+  });
+
+  it("extracts reviewer focus from frontmatter literal block scalar (`|`)", () => {
+    const result = extractReviewerFocus(
+      [
+        "---",
+        "reviewer_focus: |",
+        "  Validate rollback safety.",
+        "  Keep protocol transitions deterministic.",
+        "---",
+        "# Task"
+      ].join("\n")
+    );
+
+    expect(result).toEqual({
+      status: "present",
+      source: "frontmatter",
+      focus_text: "Validate rollback safety.\nKeep protocol transitions deterministic."
+    });
+  });
+
+  it("extracts reviewer focus from frontmatter block scalar with inline indicator comment", () => {
+    const result = extractReviewerFocus(
+      [
+        "---",
+        "reviewer_focus: | # keep literal style",
+        "  Keep parse warning source precise.",
+        "  Keep diagnostics explicit.",
+        "---",
+        "# Task"
+      ].join("\n")
+    );
+
+    expect(result).toEqual({
+      status: "present",
+      source: "frontmatter",
+      focus_text: "Keep parse warning source precise.\nKeep diagnostics explicit."
+    });
+  });
+
+  it("extracts reviewer focus from frontmatter folded block scalar (`>`)", () => {
+    const result = extractReviewerFocus(
+      [
+        "---",
+        "reviewer_focus: >",
+        "  Confirm reviewer startup parity.",
+        "  Keep delivery bridge contract aligned.",
+        "---",
+        "# Task"
+      ].join("\n")
+    );
+
+    expect(result).toEqual({
+      status: "present",
+      source: "frontmatter",
+      focus_text: "Confirm reviewer startup parity.\nKeep delivery bridge contract aligned."
+    });
+  });
+
+  it("matches section heading with deterministic case and whitespace normalization", () => {
+    const result = extractReviewerFocus(
+      [
+        "# Task",
+        "##   ReViEwEr      FoCuS   ",
+        "- Keep command ordering deterministic"
+      ].join("\n")
+    );
+
+    expect(result).toEqual({
+      status: "present",
+      source: "section",
+      focus_text: "- Keep command ordering deterministic",
+      focus_items: ["Keep command ordering deterministic"]
+    });
+  });
+
+  it("extracts reviewer focus from section when frontmatter key is missing", () => {
+    const result = extractReviewerFocus(
+      [
+        "# Task",
+        "## Reviewer Focus",
+        "Use explicit reason codes for fallbacks."
+      ].join("\n")
+    );
+
+    expect(result).toEqual({
+      status: "present",
+      source: "section",
+      focus_text: "Use explicit reason codes for fallbacks."
+    });
+  });
+
+  it("keeps mixed reviewer focus section body as text without deriving focus_items", () => {
+    const result = extractReviewerFocus(
+      [
+        "# Task",
+        "## Reviewer Focus",
+        "- Keep protocol deterministic",
+        "Include one plain-text rationale line."
+      ].join("\n")
+    );
+
+    expect(result).toEqual({
+      status: "present",
+      source: "section",
+      focus_text:
+        "- Keep protocol deterministic\nInclude one plain-text rationale line."
+    });
+  });
+
+  it("keeps reviewer focus subheadings inside section body without truncation", () => {
+    const result = extractReviewerFocus(
+      [
+        "# Task",
+        "## Reviewer Focus",
+        "Keep context contiguous.",
+        "### Details",
+        "Subheading content must stay in extracted body.",
+        "## Scope",
+        "Stop here."
+      ].join("\n")
+    );
+
+    expect(result).toEqual({
+      status: "present",
+      source: "section",
+      focus_text:
+        "Keep context contiguous.\n### Details\nSubheading content must stay in extracted body."
+    });
+  });
+
+  it("returns absent status when neither frontmatter nor section provides reviewer focus", () => {
+    const result = extractReviewerFocus(
+      [
+        "# Task",
+        "## Scope",
+        "No reviewer focus section is present."
+      ].join("\n")
+    );
+
+    expect(result).toEqual({
+      status: "absent",
+      source: "none",
+      reason_code: "REVIEWER_FOCUS_ABSENT"
+    });
+  });
+
+  it("returns invalid for unsupported frontmatter reviewer_focus type", () => {
+    const result = extractReviewerFocus(
+      "# Task\n## Reviewer Focus\nFallback section should not be used.",
+      {
+        reviewer_focus: 42
+      }
+    );
+
+    expect(result).toEqual({
+      status: "invalid",
+      source: "frontmatter",
+      reason_code: "REVIEWER_FOCUS_INVALID_FRONTMATTER_TYPE"
+    });
+  });
+
+  it("returns frontmatter parse warning when opening frontmatter fence is not closed", () => {
+    const result = extractReviewerFocus(
+      [
+        "---",
+        "reviewer_focus: focus from malformed frontmatter",
+        "## Reviewer Focus",
+        "Section should not be consumed when parser fails."
+      ].join("\n")
+    );
+
+    expect(result).toEqual({
+      status: "invalid",
+      source: "frontmatter",
+      reason_code: "REVIEWER_FOCUS_FRONTMATTER_PARSE_WARNING"
+    });
+  });
+
+  it("returns frontmatter parse warning for malformed inline reviewer_focus list", () => {
+    const result = extractReviewerFocus(
+      [
+        "---",
+        "reviewer_focus: [\"alpha, beta\", \"gamma\"",
+        "---",
+        "# Task"
+      ].join("\n")
+    );
+
+    expect(result).toEqual({
+      status: "invalid",
+      source: "frontmatter",
+      reason_code: "REVIEWER_FOCUS_FRONTMATTER_PARSE_WARNING"
+    });
+  });
+
+  it("returns invalid for empty frontmatter reviewer_focus string or list", () => {
+    const emptyStringResult = extractReviewerFocus(
+      "# Task",
+      {
+        reviewer_focus: "   "
+      }
+    );
+    const emptyListResult = extractReviewerFocus(
+      "# Task",
+      {
+        reviewer_focus: ["  ", ""]
+      }
+    );
+
+    expect(emptyStringResult).toEqual({
+      status: "invalid",
+      source: "frontmatter",
+      reason_code: "REVIEWER_FOCUS_EMPTY_FRONTMATTER"
+    });
+    expect(emptyListResult).toEqual({
+      status: "invalid",
+      source: "frontmatter",
+      reason_code: "REVIEWER_FOCUS_EMPTY_FRONTMATTER"
+    });
+  });
+
+  it("returns invalid when frontmatter reviewer_focus list contains whitespace-only items", () => {
+    const result = extractReviewerFocus(
+      "# Task",
+      {
+        reviewer_focus: ["Keep deterministic flow", "   "]
+      }
+    );
+
+    expect(result).toEqual({
+      status: "invalid",
+      source: "frontmatter",
+      reason_code: "REVIEWER_FOCUS_WHITESPACE_FRONTMATTER_ITEM"
+    });
+  });
+
+  it("returns invalid for empty reviewer focus section body", () => {
+    const result = extractReviewerFocus(
+      [
+        "# Task",
+        "## Reviewer Focus",
+        "   ",
+        "## L1 - Change Contract",
+        "Body."
+      ].join("\n")
+    );
+
+    expect(result).toEqual({
+      status: "invalid",
+      source: "section",
+      reason_code: "REVIEWER_FOCUS_EMPTY_SECTION"
+    });
+  });
+
+  it("uses first reviewer focus section and records multiple-sections warning", () => {
+    const result = extractReviewerFocus(
+      [
+        "# Task",
+        "## Reviewer Focus",
+        "- First section wins",
+        "",
+        "### Reviewer Focus",
+        "- Second section exists"
+      ].join("\n")
+    );
+
+    expect(result).toEqual({
+      status: "present",
+      source: "section",
+      focus_text: "- First section wins",
+      focus_items: ["First section wins"],
+      reason_code: "REVIEWER_FOCUS_MULTIPLE_SECTIONS"
+    });
+  });
+
+  it("falls back with parse warning when unexpected extraction error occurs", () => {
+    const frontmatter = {} as Record<string, unknown>;
+    Object.defineProperty(frontmatter, "reviewer_focus", {
+      enumerable: true,
+      get() {
+        throw new Error("unexpected getter error");
+      }
+    });
+
+    const result = extractReviewerFocus(
+      "# Task\n## Reviewer Focus\nShould not crash extraction.",
+      frontmatter
+    );
+
+    expect(result).toEqual({
+      status: "invalid",
+      source: "frontmatter",
+      reason_code: "REVIEWER_FOCUS_PARSE_WARNING"
+    });
+  });
+
+  it("uses section source for parse warning when extraction fails in section path", () => {
+    const result = extractReviewerFocus(42 as unknown as string, {});
+
+    expect(result).toEqual({
+      status: "invalid",
+      source: "section",
+      reason_code: "REVIEWER_FOCUS_PARSE_WARNING"
+    });
+  });
+
+  it("persists extracted reviewer focus artifact during bubble creation", async () => {
+    const repoPath = await createTempRepo();
+
+    const result = await createBubble({
+      id: "b_create_reviewer_focus_artifact_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: [
+        "# Task",
+        "## Reviewer Focus",
+        "- Keep reviewer guidance deterministic"
+      ].join("\n"),
+      cwd: repoPath
+    });
+
+    const artifactPath = result.paths.reviewerFocusArtifactPath;
+    const artifactRaw = await readFile(artifactPath, "utf8");
+    const artifactParsed = JSON.parse(artifactRaw) as unknown;
+
+    expect(artifactParsed).toEqual(result.reviewerFocus);
+    expect(result.reviewerFocus).toEqual({
+      status: "present",
+      source: "section",
+      focus_text: "- Keep reviewer guidance deterministic",
+      focus_items: ["Keep reviewer guidance deterministic"]
+    });
+  });
+
+  it("continues bubble creation with malformed inline reviewer_focus list via fail-open parse warning", async () => {
+    const repoPath = await createTempRepo();
+
+    const result = await createBubble({
+      id: "b_create_reviewer_focus_malformed_inline_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: [
+        "---",
+        "reviewer_focus: [\"alpha, beta\", \"gamma\"",
+        "---",
+        "# Task",
+        "## L1 - Change Contract",
+        "No-op"
+      ].join("\n"),
+      cwd: repoPath
+    });
+
+    expect(result.reviewerFocus).toEqual({
+      status: "invalid",
+      source: "frontmatter",
+      reason_code: "REVIEWER_FOCUS_FRONTMATTER_PARSE_WARNING"
+    });
   });
 
   it("persists explicit document review artifact type", async () => {

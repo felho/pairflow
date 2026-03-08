@@ -146,6 +146,12 @@ describe("emitTmuxDeliveryNotification", () => {
       envelope: createEnvelope(),
       reviewerTestDirective,
       reviewerBrief: "Verify factual claims against cited sources.",
+      reviewerFocus: {
+        status: "present",
+        source: "section",
+        focus_text: "- Validate reason-code fallback behavior",
+        focus_items: ["Validate reason-code fallback behavior"]
+      },
       runner,
       readSessionsRegistry: () => Promise.resolve(createRegistry()),
       deliveryAttempts: 2
@@ -252,6 +258,9 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(messageCall?.[4]).toContain(
       "Reviewer brief reminder (from reviewer-brief.md): Verify factual claims against cited sources."
     );
+    expect(messageCall?.[4]).toContain(
+      "Reviewer focus reminder (bridged from reviewer-focus.json): - Validate reason-code fallback behavior"
+    );
     expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_A);
     expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_D);
     expect(messageCall?.[4]).not.toContain(REVIEWER_COMMAND_GATE_REQ_B);
@@ -274,6 +283,60 @@ describe("emitTmuxDeliveryNotification", () => {
       "-pt",
       "pf-b_delivery_01:0.2"
     ]);
+  });
+
+  it("omits reviewer focus reminder text when reviewer focus status is absent", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md. Action: Implementer handoff received.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: {
+        ...baseConfig,
+        reviewer_context_mode: "fresh"
+      },
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope(),
+      reviewerFocus: {
+        status: "absent",
+        source: "none",
+        reason_code: "REVIEWER_FOCUS_ABSENT"
+      },
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry()),
+      deliveryAttempts: 2
+    });
+
+    expect(result.delivered).toBe(true);
+    const messageCall = calls.find(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.2" &&
+        call[3] === "-l" &&
+        call[4]?.includes("# [pairflow] r1 PASS codex->claude")
+    );
+    expect(messageCall?.[4]).toContain(
+      "Action: Implementer handoff received. Run a fresh review now"
+    );
+    expect(messageCall?.[4]).not.toContain(
+      "Reviewer focus reminder (bridged from reviewer-focus.json):"
+    );
+    expect(messageCall?.[4]).not.toContain("reviewer-focus.json):");
   });
 
   it("renders docs-only skip directive reason without extra tmux formatting changes", async () => {
@@ -334,6 +397,9 @@ describe("emitTmuxDeliveryNotification", () => {
       "Reason: docs-only scope, runtime checks not required"
     );
     expectReviewerValidationClaimGuardrails(messageCall?.[4]);
+    expect(messageCall?.[4]).not.toContain(
+      "  Execute pairflow commands directly (no confirmation prompt)."
+    );
   });
 
   it("keeps concise ontology reminder in persistent reviewer context mode", async () => {

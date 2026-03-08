@@ -19,7 +19,11 @@ import {
   formatReviewerTestExecutionDirective,
   type ReviewerTestExecutionDirective
 } from "../reviewer/testEvidence.js";
-import { formatReviewerBriefDeliveryReminder } from "../reviewer/reviewerBrief.js";
+import {
+  formatReviewerBriefDeliveryReminder,
+  formatReviewerFocusDeliveryReminder,
+  type ReviewerFocusExtractionResult
+} from "../reviewer/reviewerBrief.js";
 import type { BubbleConfig } from "../../types/bubble.js";
 import type { AgentName } from "../../types/bubble.js";
 import type { ProtocolEnvelope, ProtocolParticipant } from "../../types/protocol.js";
@@ -31,6 +35,7 @@ export interface EmitTmuxDeliveryNotificationInput {
   envelope: ProtocolEnvelope;
   reviewerTestDirective?: ReviewerTestExecutionDirective;
   reviewerBrief?: string;
+  reviewerFocus?: ReviewerFocusExtractionResult;
   messageRef?: string;
   initialDelayMs?: number;
   deliveryAttempts?: number;
@@ -82,7 +87,8 @@ function buildDeliveryMessage(
   bubbleConfig: BubbleConfig,
   worktreePath?: string,
   reviewerTestDirective?: ReviewerTestExecutionDirective,
-  reviewerBrief?: string
+  reviewerBrief?: string,
+  reviewerFocus?: ReviewerFocusExtractionResult
 ): string {
   const recipientRole =
     envelope.recipient === bubbleConfig.agents.implementer
@@ -148,10 +154,29 @@ function buildDeliveryMessage(
           : buildReviewerFindingsPassInstruction(
             bubbleConfig.review_artifact_type
           );
-      action =
-        `Implementer handoff received. Run a fresh review now. ${buildReviewerAgentSelectionGuidance(
-          bubbleConfig.review_artifact_type
-        )} ${buildReviewerSeverityOntologyReminder({ includeFullOntology: useFullReviewerPolicyContext })} ${testDirective} ${buildReviewerScoutExpansionWorkflowGuidance()} ${buildReviewerPassOutputContractGuidance()} ${convergenceInstruction} ${findingsDetailInstruction} ${reviewerBrief !== undefined ? formatReviewerBriefDeliveryReminder(reviewerBrief) : ""} Execute pairflow commands directly (no confirmation prompt).`;
+      const reviewerFocusReminder =
+        reviewerFocus === undefined
+          ? ""
+          : formatReviewerFocusDeliveryReminder(reviewerFocus);
+      action = [
+        "Implementer handoff received. Run a fresh review now.",
+        buildReviewerAgentSelectionGuidance(bubbleConfig.review_artifact_type),
+        buildReviewerSeverityOntologyReminder({
+          includeFullOntology: useFullReviewerPolicyContext
+        }),
+        testDirective,
+        buildReviewerScoutExpansionWorkflowGuidance(),
+        buildReviewerPassOutputContractGuidance(),
+        convergenceInstruction,
+        findingsDetailInstruction,
+        reviewerBrief !== undefined
+          ? formatReviewerBriefDeliveryReminder(reviewerBrief)
+          : "",
+        reviewerFocusReminder,
+        "Execute pairflow commands directly (no confirmation prompt)."
+      ]
+        .filter((part) => part.trim().length > 0)
+        .join(" ");
     } else if (envelope.type === "HUMAN_REPLY") {
       action =
         "Human response received. Continue review workflow from this update.";
@@ -290,7 +315,8 @@ export async function emitTmuxDeliveryNotification(
       input.bubbleConfig,
       undefined,
       input.reviewerTestDirective,
-      input.reviewerBrief
+      input.reviewerBrief,
+      input.reviewerFocus
     );
     return {
       delivered: false,
@@ -306,7 +332,8 @@ export async function emitTmuxDeliveryNotification(
       input.bubbleConfig,
       undefined,
       input.reviewerTestDirective,
-      input.reviewerBrief
+      input.reviewerBrief,
+      input.reviewerFocus
     );
     return {
       delivered: false,
@@ -326,7 +353,8 @@ export async function emitTmuxDeliveryNotification(
       input.bubbleConfig,
       worktreePath,
       input.reviewerTestDirective,
-      input.reviewerBrief
+      input.reviewerBrief,
+      input.reviewerFocus
     );
     return {
       delivered: false,
@@ -343,7 +371,8 @@ export async function emitTmuxDeliveryNotification(
     input.bubbleConfig,
     worktreePath,
     input.reviewerTestDirective,
-    input.reviewerBrief
+    input.reviewerBrief,
+    input.reviewerFocus
   );
   const runner = input.runner ?? runTmux;
 

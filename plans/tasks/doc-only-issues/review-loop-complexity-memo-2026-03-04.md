@@ -1,7 +1,7 @@
 # Programterv: Review Loop Stabilization es LLM-Ready Doc Workflow
 
 Datum: 2026-03-04  
-Statusz: in-progress (WS-A/WS-B/WS-C delivered, WS-D pending)  
+Statusz: in-progress (WS-A/WS-B/WS-C delivered, WS-D pending; large-feature extension lane designated)  
 Tulajdonos: Pairflow docs+runtime
 
 Referenciak:
@@ -127,15 +127,19 @@ Feladatok:
    - Phase 1: `advisory`,
    - Phase 2: `required-docs`,
    - Phase 3: `required-all`.
-2. Pilot bubble sorozat:
+2. Core pilot bubble sorozat:
    - 1 bugfix,
    - 1 small feature,
    - 1 docs-only hardening task.
-3. Metrikak gyujtese es baseline osszehasonlitas.
+3. Large-feature extension lane process-test:
+   - anchor: `docs/meta-review-gate-prd.md`,
+   - cel: uj PRD/task kezelesi folyamat validacioja egy valos large-feature peldan.
+4. Metrikak gyujtese es baseline osszehasonlitas.
 
 Kimenet:
 1. Pilot report.
 2. Gate tuning javaslat.
+3. Large-feature extension lane rovid outcome note a pilot reportban.
 
 ## 5) Fazos utemterv
 
@@ -193,6 +197,7 @@ Kimenet:
 2. 1 het pilot utan meres + policy finomitas (WS-D).
 3. Keszuljon kulon implementacios task a Phase 2 `required-docs` enforce-ra.
 4. A memo statusz/done kriteriumok frissitese pilot eredmenyek alapjan.
+5. WS-D extension lane-ben a `docs/meta-review-gate-prd.md` process-test outcome explicit bekotese a pilot reportba.
 
 ## 10) Inline reviewer guidelines (temporary)
 
