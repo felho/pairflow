@@ -139,12 +139,60 @@ const repeatCleanMostRecentPreviousReviewerPassIsCleanMetadataKey =
   "most_recent_previous_reviewer_pass_is_clean";
 const repeatCleanMostRecentPreviousReviewerCleanPassEnvelopeLegacyMetadataKey =
   "most_recent_previous_reviewer_clean_pass_envelope";
+export const docsOnlySkipLogRefConflictReasonCode = "DOCS_ONLY_SKIP_LOG_REF_CONFLICT";
+const runtimeChecksSkippedSummaryMarkers = [
+  "runtime checks intentionally not executed",
+  "runtime checks were intentionally not executed"
+] as const;
+const runtimeEvidenceLogRefPattern = /^\.pairflow\/evidence\/[^\s]+\.log$/u;
 
 function formatRepeatCleanPolicyRejectedMessage(input: {
   subtype: RepeatCleanPolicyRejectedSubtype;
   detail: string;
 }): string {
   return `${repeatCleanAutoconvergePolicyRejectedReasonCode}: subtype=${input.subtype}; ${input.detail}`;
+}
+
+function normalizeSummaryForClaimDetection(summary: string): string {
+  return summary.toLowerCase().replace(/\s+/gu, " ").trim();
+}
+
+function resolveRuntimeChecksSkippedClaim(summary: string): boolean {
+  const normalizedSummary = normalizeSummaryForClaimDetection(summary);
+  return runtimeChecksSkippedSummaryMarkers.some((marker) =>
+    normalizedSummary.includes(marker)
+  );
+}
+
+function resolveRuntimeEvidenceLogRefs(refs: string[]): string[] {
+  return refs.filter((ref) => runtimeEvidenceLogRefPattern.test(ref));
+}
+
+function assertNoDocsOnlySkipLogRefConflict(input: {
+  senderRole: AgentRole;
+  reviewArtifactType: BubbleConfig["review_artifact_type"];
+  summary: string;
+  refs: string[];
+}): void {
+  if (input.senderRole !== "implementer") {
+    return;
+  }
+  if (input.reviewArtifactType !== "document") {
+    return;
+  }
+  if (!resolveRuntimeChecksSkippedClaim(input.summary)) {
+    return;
+  }
+
+  const conflictingRuntimeLogRefs = resolveRuntimeEvidenceLogRefs(input.refs);
+  if (conflictingRuntimeLogRefs.length < 1) {
+    return;
+  }
+
+  const examples = conflictingRuntimeLogRefs.slice(0, 3).join(", ");
+  throw new PassCommandError(
+    `${docsOnlySkipLogRefConflictReasonCode}: docs-only PASS summary declares skipped runtime checks, but runtime log refs were attached (conflicting_ref_count=${conflictingRuntimeLogRefs.length}; ref_class=.pairflow/evidence/*.log; examples=${examples}).`
+  );
 }
 
 function readBooleanMetadataValue(
@@ -610,6 +658,13 @@ export async function emitPassFromWorkspace(
       );
     }
   }
+
+  assertNoDocsOnlySkipLogRefConflict({
+    senderRole: handoff.senderRole,
+    reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
+    summary,
+    refs
+  });
 
   const accuracyCritical = resolved.bubbleConfig.accuracy_critical === true;
   const reviewerVerification = await resolveReviewerVerification({

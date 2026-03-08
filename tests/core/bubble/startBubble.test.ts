@@ -25,7 +25,10 @@ import {
 import { shellQuote } from "../../../src/core/util/shellQuote.js";
 import type { BubbleStateSnapshot } from "../../../src/types/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
-import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
+import {
+  setupRunningBubbleFixture,
+  setupRunningLegacyAutoBubbleFixture
+} from "../../helpers/bubble.js";
 import { writeEvidenceLog } from "../../helpers/evidence.js";
 
 const tempDirs: string[] = [];
@@ -243,6 +246,9 @@ describe("startBubble", () => {
     expect(implementerCommand).toContain(
       "Run validation via `pnpm lint`, `pnpm typecheck`, `pnpm test`, or `pnpm check`"
     );
+    expect(implementerCommand).not.toContain(
+      "do not attach `.pairflow/evidence/*.log` refs in the same PASS"
+    );
     expect(implementerCommand).toContain(
       `Execute pairflow commands from this worktree path only: ${created.paths.worktreePath}.`
     );
@@ -394,11 +400,17 @@ describe("startBubble", () => {
     expect(implementerCommand).toContain(
       "explicitly state which runtime checks were intentionally not executed for docs-only scope"
     );
+    expect(implementerCommand).toContain(
+      "do not attach `.pairflow/evidence/*.log` refs in the same PASS"
+    );
     expect(implementerCommand).not.toContain(
       "Missing expected evidence logs should be treated as incomplete validation packaging."
     );
     expect(implementerKickoffMessage).toContain(
       "runtime checks are not required in this round"
+    );
+    expect(implementerKickoffMessage).toContain(
+      "do not attach `.pairflow/evidence/*.log` refs in the same PASS"
     );
     expect(reviewerCommand).toContain("document/task artifacts");
     expect(reviewerCommand).toContain("Do not force `feature-dev:code-reviewer`");
@@ -847,8 +859,14 @@ describe("startBubble", () => {
           expect(input.implementerCommand).toContain(
             "explicitly state which runtime checks were intentionally not executed for docs-only scope"
           );
+          expect(input.implementerCommand).toContain(
+            "do not attach `.pairflow/evidence/*.log` refs in the same PASS"
+          );
           expect(input.implementerKickoffMessage).toContain(
             "runtime checks are not required in this round"
+          );
+          expect(input.implementerKickoffMessage).toContain(
+            "do not attach `.pairflow/evidence/*.log` refs in the same PASS"
           );
           expect(input.implementerCommand).not.toContain(
             "Missing expected evidence logs should be treated as incomplete validation packaging."
@@ -859,6 +877,36 @@ describe("startBubble", () => {
           expectReviewerValidationClaimGuardrails(input.reviewerCommand);
           expect(input.reviewerCommand).toContain("Stand by unless you are active or receive a handoff.");
           return Promise.resolve({ sessionName: "pf-b_start_resume_docs_01" });
+        }
+      }
+    );
+  });
+
+  it("does not include docs-only guard wording in resume implementer prompts for auto scope", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningLegacyAutoBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_auto_01",
+      task: "Auto resume bubble"
+    });
+
+    await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-23T09:04:00.000Z")
+      },
+      {
+        buildResumeTranscriptSummary: () =>
+          Promise.resolve("resume-summary: auto"),
+        launchBubbleTmuxSession: (input) => {
+          expect(input.implementerCommand).not.toContain(
+            "do not attach `.pairflow/evidence/*.log` refs in the same PASS"
+          );
+          expect(input.implementerKickoffMessage).not.toContain(
+            "do not attach `.pairflow/evidence/*.log` refs in the same PASS"
+          );
+          return Promise.resolve({ sessionName: "pf-b_start_resume_auto_01" });
         }
       }
     );

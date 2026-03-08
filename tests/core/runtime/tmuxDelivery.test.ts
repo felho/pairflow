@@ -998,6 +998,182 @@ describe("emitTmuxDeliveryNotification", () => {
     ]);
   });
 
+  it("adds docs-only skip/log conflict guard wording to implementer-directed delivery actions", async () => {
+    const scenarios: Array<{
+      name: string;
+      envelope: ProtocolEnvelope;
+    }> = [
+      {
+        name: "PASS",
+        envelope: createEnvelope({
+          sender: "claude",
+          recipient: "codex",
+          type: "PASS"
+        })
+      },
+      {
+        name: "HUMAN_REPLY",
+        envelope: createEnvelope({
+          sender: "human",
+          recipient: "codex",
+          type: "HUMAN_REPLY",
+          payload: {
+            question: "Need clarification",
+            message: "Proceed with docs edits"
+          }
+        })
+      },
+      {
+        name: "APPROVAL_DECISION revise",
+        envelope: createEnvelope({
+          sender: "human",
+          recipient: "codex",
+          type: "APPROVAL_DECISION",
+          payload: {
+            decision: "revise",
+            message: "Please revise"
+          }
+        })
+      }
+    ];
+
+    for (const scenario of scenarios) {
+      const calls: string[][] = [];
+      const marker = `# [pairflow] r${scenario.envelope.round} ${scenario.envelope.type} ${scenario.envelope.sender}->${scenario.envelope.recipient} msg=${scenario.envelope.id} ref=artifact://handoff.md.`;
+      const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+        calls.push(args);
+        if (args[0] === "capture-pane") {
+          return Promise.resolve({
+            stdout: marker,
+            stderr: "",
+            exitCode: 0
+          });
+        }
+        return Promise.resolve({
+          stdout: "",
+          stderr: "",
+          exitCode: 0
+        });
+      };
+
+      const result = await emitTmuxDeliveryNotification({
+        bubbleId: "b_delivery_01",
+        bubbleConfig: {
+          ...baseConfig,
+          review_artifact_type: "document"
+        },
+        sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+        envelope: scenario.envelope,
+        runner,
+        readSessionsRegistry: () => Promise.resolve(createRegistry())
+      });
+
+      expect(result.delivered).toBe(true);
+      const implementerCall = calls.find(
+        (call) =>
+          call[0] === "send-keys" &&
+          call[2] === "pf-b_delivery_01:0.1" &&
+          call[3] === "-l" &&
+          call[4]?.includes(`# [pairflow] r${scenario.envelope.round} ${scenario.envelope.type}`)
+      );
+      expect(implementerCall?.[4], scenario.name).toContain(
+        "Docs-only scope guard: if your PASS summary says `runtime checks intentionally not executed` (or `runtime checks were intentionally not executed`), do not attach `.pairflow/evidence/*.log` refs in that same PASS."
+      );
+    }
+  });
+
+  it("does not include docs-only guard wording for implementer-directed delivery in non-document scope", async () => {
+    const guardLine =
+      "Docs-only scope guard: if your PASS summary says `runtime checks intentionally not executed` (or `runtime checks were intentionally not executed`), do not attach `.pairflow/evidence/*.log` refs in that same PASS.";
+    const scenarios: Array<{
+      name: string;
+      envelope: ProtocolEnvelope;
+    }> = [
+      {
+        name: "PASS",
+        envelope: createEnvelope({
+          sender: "claude",
+          recipient: "codex",
+          type: "PASS"
+        })
+      },
+      {
+        name: "HUMAN_REPLY",
+        envelope: createEnvelope({
+          sender: "human",
+          recipient: "codex",
+          type: "HUMAN_REPLY",
+          payload: {
+            message: "Proceed with rework"
+          }
+        })
+      },
+      {
+        name: "APPROVAL_DECISION revise",
+        envelope: createEnvelope({
+          sender: "human",
+          recipient: "codex",
+          type: "APPROVAL_DECISION",
+          payload: {
+            decision: "revise",
+            message: "Please revise"
+          }
+        })
+      }
+    ];
+
+    const nonDocTypes: Array<BubbleConfig["review_artifact_type"]> = ["code", "auto"];
+
+    for (const reviewArtifactType of nonDocTypes) {
+      for (const scenario of scenarios) {
+        const calls: string[][] = [];
+        const marker = `# [pairflow] r${scenario.envelope.round} ${scenario.envelope.type} ${scenario.envelope.sender}->${scenario.envelope.recipient} msg=${scenario.envelope.id} ref=artifact://handoff.md.`;
+        const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+          calls.push(args);
+          if (args[0] === "capture-pane") {
+            return Promise.resolve({
+              stdout: marker,
+              stderr: "",
+              exitCode: 0
+            });
+          }
+          return Promise.resolve({
+            stdout: "",
+            stderr: "",
+            exitCode: 0
+          });
+        };
+
+        const result = await emitTmuxDeliveryNotification({
+          bubbleId: "b_delivery_01",
+          bubbleConfig: {
+            ...baseConfig,
+            review_artifact_type: reviewArtifactType
+          },
+          sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+          envelope: scenario.envelope,
+          runner,
+          readSessionsRegistry: () => Promise.resolve(createRegistry())
+        });
+
+        expect(result.delivered).toBe(true);
+        const implementerCall = calls.find(
+          (call) =>
+            call[0] === "send-keys" &&
+            call[2] === "pf-b_delivery_01:0.1" &&
+            call[3] === "-l" &&
+            call[4]?.includes(`# [pairflow] r${scenario.envelope.round} ${scenario.envelope.type}`)
+        );
+        expect(implementerCall?.[4], `${reviewArtifactType}:${scenario.name}`).not.toContain(
+          guardLine
+        );
+        expect(implementerCall?.[4], `${reviewArtifactType}:${scenario.name}`).not.toContain(
+          "  Run pairflow commands from worktree:"
+        );
+      }
+    }
+  }, 20000);
+
   it("uses absolute transcript path fallback ref when envelope has no refs", async () => {
     const fallbackRef = buildTranscriptFallbackRef(
       "b_delivery_01",

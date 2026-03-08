@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import {
+  docsOnlySkipLogRefConflictReasonCode,
   emitPassFromWorkspace,
   PassCommandError,
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata
@@ -2596,6 +2597,228 @@ present`,
     expect(capturedDirective?.reason_detail).toContain(
       "docs-only scope, runtime checks not required"
     );
+  });
+
+  it("blocks docs-only PASS when skipped-runtime summary marker and runtime log refs are both present", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_docs_guard_01",
+      task: "Docs-only guard conflict",
+      reviewArtifactType: "document"
+    });
+
+    const transcriptBefore = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+
+    const passPromise = emitPassFromWorkspace({
+      summary:
+        "Docs-only update complete. Runtime checks intentionally not executed for this round.",
+      refs: [".pairflow/evidence/lint.log"],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:05:00.000Z")
+    });
+
+    await expect(passPromise).rejects.toThrow(PassCommandError);
+    await expect(passPromise).rejects.toThrow(
+      new RegExp(`^${docsOnlySkipLogRefConflictReasonCode}:`, "u")
+    );
+
+    const transcriptAfter = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcriptAfter).toEqual(transcriptBefore);
+  });
+
+  it("allows docs-only PASS when skipped-runtime marker is present but runtime log refs are absent", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_docs_guard_02",
+      task: "Docs-only guard no log refs",
+      reviewArtifactType: "document"
+    });
+
+    const result = await emitPassFromWorkspace({
+      summary:
+        "Docs-only update complete. Runtime checks intentionally not executed in this round.",
+      refs: ["artifact://doc-diff.md", ".pairflow/evidence/lint.txt"],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:06:00.000Z")
+    });
+
+    expect(result.envelope.type).toBe("PASS");
+    expect(result.envelope.round).toBe(1);
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcript.map((entry) => entry.type)).toEqual(["TASK", "PASS"]);
+  });
+
+  it("does not block docs-only PASS when skip marker is missing even if runtime log refs exist", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_docs_guard_03",
+      task: "Docs-only guard partial negative",
+      reviewArtifactType: "document"
+    });
+
+    const result = await emitPassFromWorkspace({
+      summary: "Docs-only update complete. Ran lint for quick sanity.",
+      refs: [".pairflow/evidence/lint.log"],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:07:00.000Z")
+    });
+
+    expect(result.envelope.type).toBe("PASS");
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcript.map((entry) => entry.type)).toEqual(["TASK", "PASS"]);
+  });
+
+  it("does not apply docs-only skip/log guard for non-document review artifact type", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_docs_guard_04",
+      task: "Code bubble should not be blocked by docs-only guard",
+      reviewArtifactType: "code"
+    });
+
+    const result = await emitPassFromWorkspace({
+      summary:
+        "Runtime checks were intentionally not executed in this round due to environment constraints.",
+      refs: [".pairflow/evidence/lint.log"],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:08:00.000Z")
+    });
+
+    expect(result.envelope.type).toBe("PASS");
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcript.map((entry) => entry.type)).toEqual(["TASK", "PASS"]);
+  });
+
+  it("uses deterministic marker normalization and explicit runtime-log-ref regex for docs-only conflict detection", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_docs_guard_05",
+      task: "Docs-only guard deterministic marker+regex",
+      reviewArtifactType: "document"
+    });
+
+    await expect(
+      emitPassFromWorkspace({
+        summary:
+          "Docs-only update.   RUNTIME checks   were intentionally   not executed   for this round.",
+        refs: [
+          ".pairflow/evidence/lint.log",
+          ".pairflow/evidence/typecheck.log",
+          ".pairflow/evidence/test.LOG",
+          ".pairflow/evidence/test.log#tail",
+          "./.pairflow/evidence/test.log",
+          "artifact://handoff.md"
+        ],
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:09:00.000Z")
+      })
+    ).rejects.toThrow(
+      new RegExp(
+        `${docsOnlySkipLogRefConflictReasonCode}:.*conflicting_ref_count=2`,
+        "u"
+      )
+    );
+  });
+
+  it("blocks docs-only PASS for the second canonical skip marker form", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_docs_guard_06",
+      task: "Docs-only guard second marker form",
+      reviewArtifactType: "document"
+    });
+
+    await expect(
+      emitPassFromWorkspace({
+        summary:
+          "Docs-only update complete. Runtime checks were intentionally not executed for this round.",
+        refs: [".pairflow/evidence/test.log"],
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:10:00.000Z")
+      })
+    ).rejects.toThrow(
+      new RegExp(`^${docsOnlySkipLogRefConflictReasonCode}:`, "u")
+    );
+  });
+
+  it("does not apply docs-only skip/log guard for review_artifact_type auto", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningLegacyAutoBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_docs_guard_07",
+      task: "Auto artifact type bypass"
+    });
+
+    const result = await emitPassFromWorkspace({
+      summary:
+        "Runtime checks intentionally not executed in this round due to unchanged runtime surface.",
+      refs: [".pairflow/evidence/lint.log"],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:11:00.000Z")
+    });
+
+    expect(result.envelope.type).toBe("PASS");
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcript.map((entry) => entry.type)).toEqual(["TASK", "PASS"]);
+  });
+
+  it("treats ./prefix and #fragment log refs as non-runtime-log under phase-1 regex", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_docs_guard_08",
+      task: "Regex narrowness lock for phase-1",
+      reviewArtifactType: "document"
+    });
+
+    const result = await emitPassFromWorkspace({
+      summary:
+        "Docs-only update complete. Runtime checks intentionally not executed for this round.",
+      refs: [
+        "./.pairflow/evidence/lint.log",
+        ".pairflow/evidence/typecheck.log#tail",
+        "artifact://handoff.md"
+      ],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:12:00.000Z")
+    });
+
+    expect(result.envelope.type).toBe("PASS");
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcript.map((entry) => entry.type)).toEqual(["TASK", "PASS"]);
+  });
+
+  it("does not trigger docs-only skip/log conflict guard on reviewer PASS (implementer-only)", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_docs_guard_09",
+      task: "Reviewer bypass for docs-only guard",
+      reviewArtifactType: "document"
+    });
+    await setReviewerActive(bubble.paths.statePath, bubble.config.agents.reviewer);
+
+    const result = await emitPassFromWorkspace({
+      summary:
+        "Docs review complete. Runtime checks intentionally not executed for this round.",
+      refs: [".pairflow/evidence/lint.log"],
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:13:00.000Z")
+    });
+
+    expect(result.envelope.type).toBe("PASS");
+    expect(result.envelope.sender).toBe("claude");
+    expect(result.envelope.recipient).toBe("codex");
+    expect(result.envelope.payload.pass_intent).toBe("review");
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcript.map((entry) => entry.type)).toEqual(["TASK", "PASS"]);
   });
 
   it("falls back to run_checks reviewer directive when artifact write fails", async () => {

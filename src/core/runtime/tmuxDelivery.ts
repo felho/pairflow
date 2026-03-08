@@ -96,16 +96,22 @@ function buildDeliveryMessage(
 
   let action = "Continue protocol from this event.";
   if (recipientRole === "implementer") {
+    const docsOnlyRuntimeEvidenceGuardLine =
+      "Docs-only scope guard: if your PASS summary says `runtime checks intentionally not executed` (or `runtime checks were intentionally not executed`), do not attach `.pairflow/evidence/*.log` refs in that same PASS.";
+    const docsOnlyRuntimeEvidenceGuardSuffix =
+      bubbleConfig.review_artifact_type === "document"
+        ? ` ${docsOnlyRuntimeEvidenceGuardLine}`
+        : "";
     if (envelope.type === "PASS") {
       action =
-        "Reviewer feedback received. Implement fixes, then hand off with `pairflow pass --summary` directly (no confirmation prompt). If `.pairflow/evidence/*.log` files exist, include them as `--ref` (lint/typecheck/test). If only a subset ran, attach refs for that subset and state what was intentionally not executed.";
+        `Reviewer feedback received. Implement fixes, then hand off with \`pairflow pass --summary\` directly (no confirmation prompt). If \`.pairflow/evidence/*.log\` files exist, include them as \`--ref\` (lint/typecheck/test). If only a subset ran, attach refs for that subset and state what was intentionally not executed.${docsOnlyRuntimeEvidenceGuardSuffix}`;
     } else if (envelope.type === "HUMAN_REPLY") {
       action =
-        "Human response received. Continue implementation using this input, then hand off with `pairflow pass --summary` directly. Include available `.pairflow/evidence/*.log` refs on PASS.";
+        `Human response received. Continue implementation using this input, then hand off with \`pairflow pass --summary\` directly. Include available \`.pairflow/evidence/*.log\` refs on PASS.${docsOnlyRuntimeEvidenceGuardSuffix}`;
     } else if (envelope.type === "APPROVAL_DECISION") {
       if (envelope.payload.decision === "revise") {
         action =
-          "Human requested rework. Continue implementation now and address the requested changes, then hand off with `pairflow pass --summary` directly. Include available `.pairflow/evidence/*.log` refs on PASS.";
+          `Human requested rework. Continue implementation now and address the requested changes, then hand off with \`pairflow pass --summary\` directly. Include available \`.pairflow/evidence/*.log\` refs on PASS.${docsOnlyRuntimeEvidenceGuardSuffix}`;
       } else if (envelope.payload.decision === "approve") {
         action =
           "Human approved this bubble. Wait for commit/merge flow and do not continue new implementation in this round.";
