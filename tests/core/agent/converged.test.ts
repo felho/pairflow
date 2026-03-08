@@ -128,6 +128,47 @@ describe("emitConvergedFromWorkspace", () => {
       expectedRef
     ]);
     expect(deliveries[0]?.messageRef?.startsWith("transcript.ndjson#")).toBe(false);
+    expect(result.delivery).toEqual({
+      delivered: true,
+      retried: false
+    });
+  });
+
+  it("returns deterministic delivery status when any approval notification is unconfirmed", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupConvergedCandidateBubble(repoPath, "b_converged_notify_02");
+
+    const result = await emitConvergedFromWorkspace(
+      {
+        summary: "Ready for approval.",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-22T09:04:00.000Z")
+      },
+      {
+        emitTmuxDeliveryNotification: (input) => {
+          if (input.envelope.recipient === bubble.config.agents.implementer) {
+            return Promise.resolve({
+              delivered: false,
+              sessionName: "pf-b_converged_notify_02",
+              message: "not confirmed",
+              reason: "delivery_unconfirmed"
+            });
+          }
+          return Promise.resolve({
+            delivered: true,
+            sessionName: "pf-b_converged_notify_02",
+            message: "ok"
+          });
+        }
+      }
+    );
+
+    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.delivery).toEqual({
+      delivered: false,
+      reason: "delivery_unconfirmed",
+      retried: false
+    });
   });
 
   it("writes CONVERGENCE + APPROVAL_REQUEST and moves RUNNING -> READY_FOR_APPROVAL", async () => {
