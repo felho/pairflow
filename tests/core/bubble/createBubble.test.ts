@@ -87,7 +87,7 @@ describe("createBubble", () => {
 
     expect(result.paths.repoPath).toBe(repoPath);
     expect(result.state.state).toBe("CREATED");
-    expect(result.config.watchdog_timeout_minutes).toBe(20);
+    expect(result.config.watchdog_timeout_minutes).toBe(30);
     expect(result.config.quality_mode).toBe("strict");
     expect(result.config.review_artifact_type).toBe("code");
     expect(result.config.severity_gate_round).toBe(4);

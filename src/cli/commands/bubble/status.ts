@@ -217,6 +217,20 @@ function formatRoundGate(
   return `applies=${applies} violated=${violated} r=${roundGate.round}${roundGate.reason_code ? ` reason=${bold(yellow(roundGate.reason_code))}` : ""}`;
 }
 
+function formatActiveOwner(
+  activeAgent: string | null,
+  activeRole: string | null
+): string {
+  const agent = activeAgent ?? "-";
+  const role = activeRole ?? "-";
+  if (agent === "-" && role === "-") {
+    return dim("-/-");
+  }
+  const renderedAgent = agent === "-" ? "-" : bold(green(agent));
+  const renderedRole = role === "-" ? "-" : green(role);
+  return `${renderedAgent}/${renderedRole}`;
+}
+
 function renderKeyValueTable(rows: ReadonlyArray<readonly [string, string]>): string {
   const labelWidth = rows.reduce((max, [label]) => Math.max(max, label.length), 0);
   const valueWidth = rows.reduce(
@@ -242,7 +256,7 @@ export function renderBubbleStatusTable(status: BubbleStatusView): string {
     ["Bubble", status.bubbleId],
     [
       "Lifecycle",
-      `${formatStateLabel(status.state)} r${status.round} | active ${bold(status.activeAgent ?? "-")}/${status.activeRole ?? "-"} | since ${dim(status.activeSince ?? "-")}`
+      `${formatStateLabel(status.state)} r${status.round} | active ${formatActiveOwner(status.activeAgent, status.activeRole)} | since ${dim(status.activeSince ?? "-")}`
     ],
     [
       "Runtime",
