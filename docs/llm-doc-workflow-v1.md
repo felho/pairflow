@@ -45,6 +45,23 @@ Each task has one source-of-truth file with this order:
 
 Rule: only `L1` blocker items can block implementation.
 
+## Reviewer Focus Authoring Contract (Phase 1)
+
+Reviewer Focus must be authored in one canonical place so runtime bridge is deterministic:
+1. Preferred source: frontmatter `reviewer_focus`.
+2. Fallback source: first `## Reviewer Focus` or `### Reviewer Focus` section.
+3. If both are present, frontmatter wins by design.
+4. Section heading matcher is strict after heading marker removal:
+   - trim + collapse internal whitespace + case-insensitive compare to `reviewer focus`,
+   - variants like `Reviewer Focus (Optional)` and `**Reviewer Focus**` are not matched.
+5. Allowed frontmatter value forms:
+   - non-empty string,
+   - non-empty list of strings.
+6. Block-scalar frontmatter (`reviewer_focus: |` or `reviewer_focus: >`) is supported with line-preserving normalization in Phase 1 parser behavior.
+7. If frontmatter parsing fails (for example unclosed `---` fence), extraction returns invalid frontmatter parse warning and does not fall back to section parsing in that pass (fail-open, no startup bridge injection).
+8. Unexpected extraction parse warnings are represented as invalid reviewer-focus status for diagnostics, while runtime flow remains fail-open.
+9. Empty or invalid focus content is fail-open (bubble flow continues), but reviewer startup bridge is not injected for that task.
+
 ## Review Policy
 
 Every review finding must include:

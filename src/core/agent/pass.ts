@@ -45,7 +45,9 @@ import {
 } from "../reviewer/reviewVerification.js";
 import {
   formatReviewerBriefPrompt,
-  readReviewerBriefArtifact
+  formatReviewerFocusBridgeBlock,
+  readReviewerBriefArtifact,
+  readReviewerFocusArtifact
 } from "../reviewer/reviewerBrief.js";
 import {
   createDocContractGateArtifact,
@@ -1015,7 +1017,23 @@ export async function emitPassFromWorkspace(
 
   const reviewerBriefText = await readReviewerBriefArtifact(
     resolved.bubblePaths.reviewerBriefArtifactPath
-  );
+  ).catch(() => undefined);
+  const reviewerFocus = await readReviewerFocusArtifact(
+    resolved.bubblePaths.reviewerFocusArtifactPath
+  ).catch(() => undefined);
+  const reviewerStartupContextBlocks: string[] = [];
+  if (reviewerBriefText !== undefined) {
+    reviewerStartupContextBlocks.push(formatReviewerBriefPrompt(reviewerBriefText));
+  }
+  if (reviewerFocus?.status === "present") {
+    reviewerStartupContextBlocks.push(
+      formatReviewerFocusBridgeBlock(reviewerFocus)
+    );
+  }
+  const reviewerStartupPrompt =
+    reviewerStartupContextBlocks.length > 0
+      ? reviewerStartupContextBlocks.join("\n\n")
+      : undefined;
 
   const refreshReviewer =
     dependencies.refreshReviewerContext ?? refreshReviewerContext;
@@ -1029,8 +1047,8 @@ export async function emitPassFromWorkspace(
       bubbleId: resolved.bubbleId,
       bubbleConfig: resolved.bubbleConfig,
       sessionsPath: resolved.bubblePaths.sessionsPath,
-      ...(reviewerBriefText !== undefined
-        ? { reviewerStartupPrompt: formatReviewerBriefPrompt(reviewerBriefText) }
+      ...(reviewerStartupPrompt !== undefined
+        ? { reviewerStartupPrompt }
         : {})
     }).catch(() => undefined);
     if (refreshResult?.refreshed === true) {
@@ -1053,6 +1071,12 @@ export async function emitPassFromWorkspace(
     }),
     ...(reviewerTestDirective !== undefined ? { reviewerTestDirective } : {}),
     ...(reviewerBriefText !== undefined ? { reviewerBrief: reviewerBriefText } : {}),
+    ...(
+      handoff.senderRole === "implementer" &&
+      reviewerFocus?.status === "present"
+        ? { reviewerFocus }
+        : {}
+    ),
     ...(deliveryInitialDelayMs !== undefined ? { initialDelayMs: deliveryInitialDelayMs } : {})
   };
   let deliveryResult = await emitDelivery(deliveryInput).catch(() => undefined);

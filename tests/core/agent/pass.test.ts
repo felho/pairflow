@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -31,6 +31,7 @@ import {
   writeDocContractGateArtifact
 } from "../../../src/core/gates/docContractGates.js";
 import { resolveReviewerTestEvidenceArtifactPath } from "../../../src/core/reviewer/testEvidence.js";
+import type { EmitTmuxDeliveryNotificationInput } from "../../../src/core/runtime/tmuxDelivery.js";
 import { initGitRepository } from "../../helpers/git.js";
 import {
   setupRunningBubbleFixture,
@@ -2291,7 +2292,11 @@ present`,
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_pass_09",
-      task: "Implement pass flow",
+      task: [
+        "# Task",
+        "## Reviewer Focus",
+        "- Keep reviewer policy deterministic"
+      ].join("\n"),
       reviewerBrief: "Respawn must rehydrate reviewer brief."
     });
 
@@ -2322,6 +2327,201 @@ present`,
     expect(refreshCalls[0]?.reviewerStartupPrompt).toContain(
       "Reviewer brief (persisted artifact `reviewer-brief.md`):\nRespawn must rehydrate reviewer brief."
     );
+    expect(refreshCalls[0]?.reviewerStartupPrompt).toContain(
+      "Reviewer Focus (bridged from task artifact `reviewer-focus.json`):\n- Keep reviewer policy deterministic"
+    );
+  });
+
+  it("omits reviewer focus block from refresh prompt when reviewer-focus artifact is schema-invalid", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_refresh_focus_invalid_artifact_01",
+      task: [
+        "# Task",
+        "## Reviewer Focus",
+        "- Original focus should be ignored when artifact is invalid"
+      ].join("\n"),
+      reviewerBrief: "Brief should still appear in refresh prompt."
+    });
+    await writeFile(
+      bubble.paths.reviewerFocusArtifactPath,
+      JSON.stringify({
+        status: "present",
+        source: "none",
+        focus_text: "invalid payload"
+      }),
+      "utf8"
+    );
+
+    const refreshCalls: Array<{ bubbleId: string; reviewerStartupPrompt?: string }> = [];
+    await emitPassFromWorkspace(
+      {
+        summary: "Implementation complete",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:05:30.000Z")
+      },
+      {
+        refreshReviewerContext: ({ bubbleId, reviewerStartupPrompt }) => {
+          refreshCalls.push({
+            bubbleId,
+            ...(reviewerStartupPrompt !== undefined
+              ? { reviewerStartupPrompt }
+              : {})
+          });
+          return Promise.resolve({
+            refreshed: true
+          });
+        }
+      }
+    );
+
+    expect(refreshCalls).toHaveLength(1);
+    expect(refreshCalls[0]?.bubbleId).toBe("b_pass_refresh_focus_invalid_artifact_01");
+    expect(refreshCalls[0]?.reviewerStartupPrompt).toContain(
+      "Reviewer brief (persisted artifact `reviewer-brief.md`):\nBrief should still appear in refresh prompt."
+    );
+    expect(refreshCalls[0]?.reviewerStartupPrompt).not.toContain(
+      "Reviewer Focus (bridged from task artifact `reviewer-focus.json`):"
+    );
+  });
+
+  it("forwards bridged reviewer focus payload to delivery on implementer PASS", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_focus_delivery_01",
+      task: [
+        "# Task",
+        "## Reviewer Focus",
+        "- Ensure startup and handoff semantics stay aligned"
+      ].join("\n")
+    });
+
+    let deliveryReviewerFocus: EmitTmuxDeliveryNotificationInput["reviewerFocus"];
+    await emitPassFromWorkspace(
+      {
+        summary: "Implementation complete",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:05:00.000Z")
+      },
+      {
+        emitTmuxDeliveryNotification: (input: EmitTmuxDeliveryNotificationInput) => {
+          deliveryReviewerFocus = input.reviewerFocus;
+          return Promise.resolve({
+            delivered: true,
+            message: "ok"
+          });
+        }
+      }
+    );
+
+    expect(deliveryReviewerFocus).toMatchObject({
+      status: "present",
+      source: "section",
+      focus_text: "- Ensure startup and handoff semantics stay aligned"
+    });
+  });
+
+  it("does not forward reviewer focus payload to delivery when focus is non-present", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_focus_delivery_absent_01",
+      task: "# Task\n## Scope\nNo reviewer focus section."
+    });
+
+    let deliveryReviewerFocus: EmitTmuxDeliveryNotificationInput["reviewerFocus"];
+    let deliveryCallCount = 0;
+    let hasReviewerFocusField = false;
+    await emitPassFromWorkspace(
+      {
+        summary: "Implementation complete",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:05:00.000Z")
+      },
+      {
+        emitTmuxDeliveryNotification: (input: EmitTmuxDeliveryNotificationInput) => {
+          deliveryCallCount += 1;
+          hasReviewerFocusField = Object.prototype.hasOwnProperty.call(
+            input,
+            "reviewerFocus"
+          );
+          deliveryReviewerFocus = input.reviewerFocus;
+          return Promise.resolve({
+            delivered: true,
+            message: "ok"
+          });
+        }
+      }
+    );
+
+    expect(deliveryCallCount).toBe(1);
+    expect(hasReviewerFocusField).toBe(false);
+    expect(deliveryReviewerFocus).toBeUndefined();
+  });
+
+  it("does not forward reviewer focus payload on reviewer-origin PASS", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_focus_delivery_reviewer_sender_01",
+      task: "# Task\n## Reviewer Focus\n- Focus from task"
+    });
+    await setReviewerActive(
+      bubble.paths.statePath,
+      bubble.config.agents.reviewer
+    );
+
+    let hasReviewerFocusField = false;
+    await emitPassFromWorkspace(
+      {
+        summary: "Reviewer fix request",
+        findings: [
+          {
+            severity: "P2",
+            title: "Issue"
+          }
+        ],
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:06:00.000Z")
+      },
+      {
+        emitTmuxDeliveryNotification: (input: EmitTmuxDeliveryNotificationInput) => {
+          hasReviewerFocusField = Object.prototype.hasOwnProperty.call(
+            input,
+            "reviewerFocus"
+          );
+          return Promise.resolve({
+            delivered: true,
+            message: "ok"
+          });
+        }
+      }
+    );
+
+    expect(hasReviewerFocusField).toBe(false);
+  });
+
+  it("keeps PASS fail-open when optional reviewer artifacts are unreadable after state update", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_unreadable_optional_artifacts_01",
+      task: "# Task\n## Reviewer Focus\n- Focus block",
+      reviewerBrief: "Require deterministic checks."
+    });
+    await chmod(bubble.paths.reviewerBriefArtifactPath, 0o000);
+    await chmod(bubble.paths.reviewerFocusArtifactPath, 0o000);
+
+    const result = await emitPassFromWorkspace({
+      summary: "Implementation complete with unreadable optional artifacts",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:05:00.000Z")
+    });
+
+    expect(result.envelope.type).toBe("PASS");
+    expect(result.state.active_role).toBe("reviewer");
   });
 
   it("refreshes and re-delivers reviewer context on every implementer PASS round in fresh mode", async () => {
