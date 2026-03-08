@@ -134,8 +134,12 @@ async function handlePassCommand(args: string[]): Promise<number> {
         "PASS command returned auto_converge transition without autoConverged payload."
       );
     }
+    const handoffDescription =
+      result.autoConverged.approvalRequestEnvelope.type === "APPROVAL_REQUEST"
+        ? `human gate requested: ${result.autoConverged.approvalRequestEnvelope.id}`
+        : `auto rework dispatched: ${result.autoConverged.approvalRequestEnvelope.id}`;
     outputLine =
-      `AUTO-CONVERGENCE recorded for ${result.bubbleId}: ${result.autoConverged.convergenceEnvelope.id}; approval requested: ${result.autoConverged.approvalRequestEnvelope.id} (reason=${result.repeatCleanReasonCode})\n`;
+      `AUTO-CONVERGENCE recorded for ${result.bubbleId}: ${result.autoConverged.convergenceEnvelope.id}; ${handoffDescription} (reason=${result.repeatCleanReasonCode})\n`;
   } else {
     outputLine =
       `PASS recorded for ${result.bubbleId}: ${result.envelope.id} -> ${result.envelope.recipient} (reason=${result.repeatCleanReasonCode})\n`;
@@ -176,8 +180,12 @@ async function handleConvergedCommand(args: string[]): Promise<number> {
     process.stdout.write(`${getConvergedHelpText()}\n`);
     return 0;
   }
+  const handoffDescription =
+    result.approvalRequestEnvelope.type === "APPROVAL_REQUEST"
+      ? `human gate requested: ${result.approvalRequestEnvelope.id}`
+      : `auto rework dispatched: ${result.approvalRequestEnvelope.id}`;
   process.stdout.write(
-    `CONVERGENCE recorded for ${result.bubbleId}: ${result.convergenceEnvelope.id}; approval requested: ${result.approvalRequestEnvelope.id}\n`
+    `CONVERGENCE recorded for ${result.bubbleId}: ${result.convergenceEnvelope.id}; ${handoffDescription}\n`
   );
   return 0;
 }

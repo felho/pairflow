@@ -14,6 +14,8 @@ export const bubbleLifecycleStates = [
   "RUNNING",
   "WAITING_HUMAN",
   "READY_FOR_APPROVAL",
+  "META_REVIEW_RUNNING",
+  "READY_FOR_HUMAN_APPROVAL",
   "APPROVED_FOR_COMMIT",
   "COMMITTED",
   "DONE",
@@ -192,6 +194,7 @@ export type ReworkIntentStatus = (typeof reworkIntentStatuses)[number];
 export interface BubbleReworkIntentRecord {
   intent_id: string;
   message: string;
+  refs?: string[];
   requested_by: string;
   requested_at: string;
   status: ReworkIntentStatus;

@@ -1002,7 +1002,7 @@ describe("emitTmuxDeliveryNotification", () => {
         call[4]?.includes("APPROVAL_REQUEST")
     );
     expect(approvalCall?.[4]).toContain(
-      "Bubble is READY_FOR_APPROVAL. Stop coding and wait for human decision"
+      "Bubble is READY_FOR_HUMAN_APPROVAL. Stop coding and wait for human decision"
     );
   });
 
@@ -1362,7 +1362,7 @@ describe("emitTmuxDeliveryNotification", () => {
         call[4]?.includes("APPROVAL_REQUEST")
     );
     expect(approvalCall?.[4]).toContain(
-      "Bubble is READY_FOR_APPROVAL. Review is complete; wait for human decision"
+      "Bubble is READY_FOR_HUMAN_APPROVAL. Review is complete; wait for human decision"
     );
   });
 

@@ -1564,6 +1564,8 @@ describe("startBubble", () => {
     const resumableStates = [
       "WAITING_HUMAN",
       "READY_FOR_APPROVAL",
+      "META_REVIEW_RUNNING",
+      "READY_FOR_HUMAN_APPROVAL",
       "APPROVED_FOR_COMMIT",
       "COMMITTED"
     ] as const;

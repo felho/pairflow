@@ -10,6 +10,7 @@ import {
   type ValidationResult
 } from "../validation.js";
 import {
+  bubbleLifecycleStates,
   isAgentName,
   isAgentRole,
   isBubbleLifecycleState,
@@ -135,6 +136,32 @@ function validateReworkIntentRecord(
     });
   }
 
+  const refsRaw = input.refs;
+  let refs: string[] | undefined;
+  if (refsRaw !== undefined) {
+    if (!Array.isArray(refsRaw)) {
+      errors.push({
+        path: `${pathPrefix}.refs`,
+        message: "Must be an array when provided"
+      });
+    } else {
+      const parsedRefs: string[] = [];
+      refsRaw.forEach((ref, index) => {
+        if (!isNonEmptyString(ref)) {
+          errors.push({
+            path: `${pathPrefix}.refs[${index}]`,
+            message: "Must be a non-empty string"
+          });
+          return;
+        }
+        parsedRefs.push(ref);
+      });
+      if (parsedRefs.length === refsRaw.length) {
+        refs = parsedRefs;
+      }
+    }
+  }
+
   const requestedBy = input.requested_by;
   if (!isNonEmptyString(requestedBy)) {
     errors.push({
@@ -194,6 +221,7 @@ function validateReworkIntentRecord(
   return {
     intent_id: intentId,
     message,
+    ...(refs !== undefined ? { refs } : {}),
     requested_by: requestedBy,
     requested_at: requestedAt,
     status,
@@ -480,8 +508,7 @@ export function validateBubbleStateSnapshot(
   if (!isBubbleLifecycleState(state)) {
     errors.push({
       path: "state",
-      message:
-        "Must be one of: CREATED, PREPARING_WORKSPACE, RUNNING, WAITING_HUMAN, READY_FOR_APPROVAL, APPROVED_FOR_COMMIT, COMMITTED, DONE, FAILED, CANCELLED"
+      message: `Must be one of: ${bubbleLifecycleStates.join(", ")}`
     });
   }
 

@@ -31,6 +31,7 @@ describe("parseBubbleApproveCommandOptions", () => {
     const parsed = parseBubbleApproveCommandOptions(["--help"]);
     expect(parsed.help).toBe(true);
     expect(getBubbleApproveHelpText()).toContain("pairflow bubble approve");
+    expect(getBubbleApproveHelpText()).toContain("READY_FOR_HUMAN_APPROVAL");
   });
 
   it("requires --id", () => {

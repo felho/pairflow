@@ -10,6 +10,7 @@ import type {
 export interface QueueDeferredReworkIntentInput {
   state: BubbleStateSnapshot;
   message: string;
+  refs?: string[];
   requestedBy: string;
   now: Date;
 }
@@ -64,9 +65,11 @@ export function queueDeferredReworkIntent(
 ): QueueDeferredReworkIntentResult {
   const nowIso = input.now.toISOString();
   const pendingIntent = ensurePendingIntent(input.state);
+  const refs = input.refs ?? [];
   const nextIntent: BubbleReworkIntentRecord = {
     intent_id: createIntentId(),
     message: input.message,
+    ...(refs.length > 0 ? { refs: [...refs] } : {}),
     requested_by: input.requestedBy,
     requested_at: nowIso,
     status: "pending"

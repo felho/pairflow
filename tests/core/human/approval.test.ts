@@ -14,7 +14,8 @@ import {
 } from "../../../src/core/human/approval.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
-import { readStateSnapshot } from "../../../src/core/state/stateStore.js";
+import { applyStateTransition } from "../../../src/core/state/machine.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/core/workspace/worktreeManager.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -28,7 +29,7 @@ async function createTempRepo(): Promise<string> {
   return root;
 }
 
-async function setupReadyForApprovalBubble(repoPath: string, bubbleId: string) {
+async function setupReadyForHumanApprovalBubble(repoPath: string, bubbleId: string) {
   const bubble = await setupRunningBubbleFixture({
     repoPath,
     bubbleId,
@@ -71,7 +72,7 @@ afterEach(async () => {
 describe("approval decisions", () => {
   it("writes APPROVAL_DECISION=approve and transitions to APPROVED_FOR_COMMIT", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupReadyForApprovalBubble(repoPath, "b_approval_01");
+    const bubble = await setupReadyForHumanApprovalBubble(repoPath, "b_approval_01");
 
     const result = await emitApprove({
       bubbleId: bubble.bubbleId,
@@ -95,7 +96,7 @@ describe("approval decisions", () => {
 
   it("emits absolute transcript messageRef for APPROVAL_DECISION=approve delivery", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupReadyForApprovalBubble(repoPath, "b_approval_05");
+    const bubble = await setupReadyForHumanApprovalBubble(repoPath, "b_approval_05");
     const deliveries: Array<{
       recipient: string;
       type: string;
@@ -138,7 +139,7 @@ describe("approval decisions", () => {
 
   it("writes APPROVAL_DECISION=revise and resumes RUNNING on implementer", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupReadyForApprovalBubble(repoPath, "b_approval_02");
+    const bubble = await setupReadyForHumanApprovalBubble(repoPath, "b_approval_02");
     const deliveries: Array<{
       recipient: string;
       messageRef?: string;
@@ -204,6 +205,55 @@ describe("approval decisions", () => {
     });
   });
 
+  it("preserves sticky_human_gate through human rework cycle", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupReadyForHumanApprovalBubble(
+      repoPath,
+      "b_approval_sticky_01"
+    );
+    const before = await readStateSnapshot(bubble.paths.statePath);
+    expect(before.state.meta_review?.sticky_human_gate).toBe(true);
+
+    const result = await emitRequestRework({
+      bubbleId: bubble.bubbleId,
+      message: "Human requested another rework cycle.",
+      cwd: repoPath,
+      now: new Date("2026-02-22T12:05:30.000Z")
+    });
+
+    expect(result.mode).toBe("immediate");
+    if (result.mode !== "immediate") {
+      throw new Error("Expected immediate human rework result.");
+    }
+    expect(result.state.state).toBe("RUNNING");
+    expect(result.state.meta_review?.sticky_human_gate).toBe(true);
+  });
+
+  it("accepts legacy READY_FOR_APPROVAL as compatibility input path", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_approval_legacy_01",
+      task: "Legacy approval state compatibility"
+    });
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const legacyReadyState = applyStateTransition(loaded.state, {
+      to: "READY_FOR_APPROVAL",
+      lastCommandAt: "2026-02-22T12:04:00.000Z"
+    });
+    await writeStateSnapshot(bubble.paths.statePath, legacyReadyState, {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "RUNNING"
+    });
+
+    const approved = await emitApprove({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath,
+      now: new Date("2026-02-22T12:05:00.000Z")
+    });
+    expect(approved.state.state).toBe("APPROVED_FOR_COMMIT");
+  });
+
   it("queues deferred rework intent while WAITING_HUMAN", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -221,6 +271,7 @@ describe("approval decisions", () => {
     const result = await emitRequestRework({
       bubbleId: bubble.bubbleId,
       message: "Please restart implementation with stricter acceptance tests.",
+      refs: ["artifact://deferred-rework/context.md"],
       cwd: repoPath,
       now: new Date("2026-02-22T12:11:00.000Z")
     });
@@ -235,6 +286,7 @@ describe("approval decisions", () => {
     expect(result.state.pending_rework_intent).toMatchObject({
       intent_id: result.intentId,
       status: "pending",
+      refs: ["artifact://deferred-rework/context.md"],
       requested_by: "human:request-rework"
     });
     expect(result.state.rework_intent_history).toEqual([]);
@@ -257,12 +309,14 @@ describe("approval decisions", () => {
     const first = await emitRequestRework({
       bubbleId: bubble.bubbleId,
       message: "First queued rework intent.",
+      refs: ["artifact://deferred-rework/first.md"],
       cwd: repoPath,
       now: new Date("2026-02-22T12:21:00.000Z")
     });
     const second = await emitRequestRework({
       bubbleId: bubble.bubbleId,
       message: "Second queued rework intent should supersede first.",
+      refs: ["artifact://deferred-rework/second.md"],
       cwd: repoPath,
       now: new Date("2026-02-22T12:22:00.000Z")
     });
@@ -278,18 +332,20 @@ describe("approval decisions", () => {
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     expect(loaded.state.pending_rework_intent).toMatchObject({
       intent_id: second.intentId,
-      status: "pending"
+      status: "pending",
+      refs: ["artifact://deferred-rework/second.md"]
     });
     expect(loaded.state.rework_intent_history).toContainEqual(
       expect.objectContaining({
         intent_id: first.intentId,
         status: "superseded",
+        refs: ["artifact://deferred-rework/first.md"],
         superseded_by_intent_id: second.intentId
       })
     );
   });
 
-  it("rejects decision when bubble is not READY_FOR_APPROVAL", async () => {
+  it("rejects decision when bubble is not READY_FOR_HUMAN_APPROVAL", async () => {
     const repoPath = await createTempRepo();
     const bubble = await createBubble({
       id: "b_approval_03",
@@ -321,13 +377,13 @@ describe("approval decisions", () => {
         cwd: repoPath
       })
     ).rejects.toThrow(
-      "bubble request-rework can only be used while bubble is READY_FOR_APPROVAL or WAITING_HUMAN"
+      "bubble request-rework can only be used while bubble is READY_FOR_HUMAN_APPROVAL"
     );
   });
 
   it("updates last_command_at when approving", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupReadyForApprovalBubble(repoPath, "b_approval_04");
+    const bubble = await setupReadyForHumanApprovalBubble(repoPath, "b_approval_04");
     const now = new Date("2026-02-22T12:06:00.000Z");
 
     await emitApprove({

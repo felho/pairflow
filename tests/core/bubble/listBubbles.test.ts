@@ -7,6 +7,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { BubbleListError, listBubbles } from "../../../src/core/bubble/listBubbles.js";
 import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
+import { applyStateTransition } from "../../../src/core/state/machine.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -81,6 +83,8 @@ describe("listBubbles", () => {
     ]);
     expect(listed.byState.CREATED).toBe(1);
     expect(listed.byState.RUNNING).toBe(1);
+    expect(listed.byState.META_REVIEW_RUNNING).toBe(0);
+    expect(listed.byState.READY_FOR_HUMAN_APPROVAL).toBe(0);
     expect(listed.runtimeSessions.registered).toBe(1);
     expect(listed.runtimeSessions.stale).toBe(1);
     expect(listed.bubbles[1]?.runtimeSession?.tmuxSessionName).toBe("pf-b_list_02");
@@ -135,5 +139,36 @@ describe("listBubbles", () => {
     expect(listed.runtimeSessions.registered).toBe(0);
     expect(listed.runtimeSessions.stale).toBe(1);
     expect(listed.bubbles[0]?.runtimeSession?.tmuxSessionName).toBe("pf-b_list_04");
+  });
+
+  it("counts phase-2 states in byState summary", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_list_05",
+      task: "Phase-2 state count"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const readyForApproval = applyStateTransition(loaded.state, {
+      to: "READY_FOR_APPROVAL",
+      lastCommandAt: "2026-02-22T18:40:00.000Z"
+    });
+    const metaRunning = applyStateTransition(readyForApproval, {
+      to: "META_REVIEW_RUNNING",
+      lastCommandAt: "2026-02-22T18:41:00.000Z"
+    });
+    const humanGate = applyStateTransition(metaRunning, {
+      to: "READY_FOR_HUMAN_APPROVAL",
+      lastCommandAt: "2026-02-22T18:42:00.000Z"
+    });
+    await writeStateSnapshot(bubble.paths.statePath, humanGate, {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "RUNNING"
+    });
+
+    const listed = await listBubbles({ repoPath });
+    expect(listed.byState.READY_FOR_HUMAN_APPROVAL).toBe(1);
+    expect(listed.byState.META_REVIEW_RUNNING).toBe(0);
   });
 });
