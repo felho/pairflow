@@ -72,4 +72,22 @@ describe("computeWatchdogStatus", () => {
     expect(status.monitored).toBe(false);
     expect(status.remainingSeconds).toBeNull();
   });
+
+  it("treats phase-2 gate states as tracked but non-agent-monitored", () => {
+    const metaRunning = computeWatchdogStatus(
+      createState({ state: "META_REVIEW_RUNNING" }),
+      5,
+      new Date("2026-02-22T12:08:00.000Z")
+    );
+    const humanGate = computeWatchdogStatus(
+      createState({ state: "READY_FOR_HUMAN_APPROVAL" }),
+      5,
+      new Date("2026-02-22T12:08:00.000Z")
+    );
+
+    expect(metaRunning.monitored).toBe(false);
+    expect(humanGate.monitored).toBe(false);
+    expect(metaRunning.monitoredAgent).toBe("codex");
+    expect(humanGate.monitoredAgent).toBe("codex");
+  });
 });

@@ -43,6 +43,47 @@ describe("state schema", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("accepts phase-2 lifecycle states", () => {
+    const metaRunning = validateBubbleStateSnapshot({
+      bubble_id: "b_test_meta_state_01",
+      state: "META_REVIEW_RUNNING",
+      round: 2,
+      active_agent: "claude",
+      active_since: "2026-03-08T10:00:00.000Z",
+      active_role: "reviewer",
+      round_role_history: [],
+      last_command_at: "2026-03-08T10:01:00.000Z"
+    });
+    const humanGate = validateBubbleStateSnapshot({
+      bubble_id: "b_test_meta_state_02",
+      state: "READY_FOR_HUMAN_APPROVAL",
+      round: 2,
+      active_agent: "claude",
+      active_since: "2026-03-08T10:00:00.000Z",
+      active_role: "reviewer",
+      round_role_history: [],
+      last_command_at: "2026-03-08T10:01:00.000Z"
+    });
+
+    expect(metaRunning.ok).toBe(true);
+    expect(humanGate.ok).toBe(true);
+  });
+
+  it("accepts META_REVIEW_RUNNING with cleared active agent context", () => {
+    const result = validateBubbleStateSnapshot({
+      bubble_id: "b_test_meta_state_03",
+      state: "META_REVIEW_RUNNING",
+      round: 2,
+      active_agent: null,
+      active_since: null,
+      active_role: null,
+      round_role_history: [],
+      last_command_at: "2026-03-08T10:01:00.000Z"
+    });
+
+    expect(result.ok).toBe(true);
+  });
+
   it("rejects RUNNING state when active fields are missing", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_01",
@@ -124,6 +165,7 @@ describe("state schema", () => {
       pending_rework_intent: {
         intent_id: "intent_123",
         message: "Queue rework",
+        refs: ["artifact://deferred/context.md"],
         requested_by: "human:request-rework",
         requested_at: "2026-02-21T12:05:00.000Z",
         status: "pending"
@@ -132,6 +174,7 @@ describe("state schema", () => {
         {
           intent_id: "intent_100",
           message: "Old intent",
+          refs: ["artifact://deferred/old.md"],
           requested_by: "human:request-rework",
           requested_at: "2026-02-21T11:59:00.000Z",
           status: "superseded",
@@ -190,6 +233,37 @@ describe("state schema", () => {
     expect(
       result.errors.some(
         (error) => error.path === "pending_rework_intent.status"
+      )
+    ).toBe(true);
+  });
+
+  it("rejects invalid pending_rework_intent refs payload", () => {
+    const result = validateBubbleStateSnapshot({
+      bubble_id: "b_test_04b",
+      state: "WAITING_HUMAN",
+      round: 1,
+      active_agent: "codex",
+      active_since: "2026-02-21T12:00:00.000Z",
+      active_role: "implementer",
+      round_role_history: [],
+      last_command_at: "2026-02-21T12:05:00.000Z",
+      pending_rework_intent: {
+        intent_id: "intent_bad_refs",
+        message: "Bad refs payload",
+        refs: [""],
+        requested_by: "human:request-rework",
+        requested_at: "2026-02-21T12:05:00.000Z",
+        status: "pending"
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) => error.path === "pending_rework_intent.refs[0]"
       )
     ).toBe(true);
   });

@@ -36,13 +36,15 @@ describe("runCli auto-converge warning parity", () => {
       repeatCleanTrigger: true,
       mostRecentPreviousReviewerCleanPassEnvelope: true,
       autoConverged: {
+        gateRoute: "auto_rework",
         convergenceSequence: 5,
         convergenceEnvelope: {
           id: "msg_conv_1"
         },
         approvalRequestSequence: 6,
         approvalRequestEnvelope: {
-          id: "msg_appr_1"
+          id: "msg_appr_1",
+          type: "APPROVAL_DECISION"
         }
       },
       delivery: {
@@ -66,7 +68,7 @@ describe("runCli auto-converge warning parity", () => {
     const stdout = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
     const stderr = stderrSpy.mock.calls.map((call) => String(call[0])).join("");
     expect(stdout).toContain(
-      "AUTO-CONVERGENCE recorded for b_auto_01: msg_conv_1; approval requested: msg_appr_1 (reason=REPEAT_CLEAN_AUTOCONVERGE_TRIGGERED)"
+      "AUTO-CONVERGENCE recorded for b_auto_01: msg_conv_1; auto rework dispatched: msg_appr_1 (reason=REPEAT_CLEAN_AUTOCONVERGE_TRIGGERED)"
     );
     expect(stderr).toContain(
       "Warning: handoff delivery to active pane was not confirmed (reason: delivery_unconfirmed, retried)."

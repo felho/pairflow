@@ -1,8 +1,7 @@
 import { join } from "node:path";
 
-import { appendProtocolEnvelopes, readTranscriptEnvelopes } from "../protocol/transcriptStore.js";
-import { applyStateTransition } from "../state/machine.js";
-import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
+import { appendProtocolEnvelope, readTranscriptEnvelopes } from "../protocol/transcriptStore.js";
+import { readStateSnapshot } from "../state/stateStore.js";
 import { validateConvergencePolicy } from "../convergence/policy.js";
 import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
 import {
@@ -33,6 +32,11 @@ import {
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath
 } from "../gates/docContractGates.js";
+import {
+  applyMetaReviewGateOnConvergence,
+  toMetaReviewGateError,
+  type MetaReviewGateRoute
+} from "../bubble/metaReviewGate.js";
 import type {
   AgentName,
   BubbleRoundGateState,
@@ -54,12 +58,14 @@ export interface EmitConvergedInput {
 export interface EmitConvergedDependencies {
   emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
   emitBubbleNotification?: typeof emitBubbleNotification;
+  applyMetaReviewGateOnConvergence?: typeof applyMetaReviewGateOnConvergence;
 }
 
 export interface EmitConvergedResult {
   bubbleId: string;
   convergenceSequence: number;
   convergenceEnvelope: ProtocolEnvelope;
+  gateRoute: MetaReviewGateRoute;
   approvalRequestSequence: number;
   approvalRequestEnvelope: ProtocolEnvelope;
   state: BubbleStateSnapshot;
@@ -271,76 +277,41 @@ export async function emitConvergedFromWorkspace(
   }
 
   const lockPath = join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`);
-  // Keep CONVERGENCE + APPROVAL_REQUEST contiguous in transcript by appending
-  // them in one lock-guarded batch write.
-  const appended = await appendProtocolEnvelopes({
+  const convergence = await appendProtocolEnvelope({
     transcriptPath: resolved.bubblePaths.transcriptPath,
     lockPath,
     now,
-    entries: [
-      {
-        envelope: {
-          bubble_id: resolved.bubbleId,
-          sender: reviewer,
-          recipient: "orchestrator",
-          type: "CONVERGENCE",
-          round: state.round,
-          payload: {
-            summary
-          },
-          refs
-        }
+    envelope: {
+      bubble_id: resolved.bubbleId,
+      sender: reviewer,
+      recipient: "orchestrator",
+      type: "CONVERGENCE",
+      round: state.round,
+      payload: {
+        summary
       },
-      {
-        envelope: {
-          bubble_id: resolved.bubbleId,
-          sender: "orchestrator",
-          recipient: "human",
-          type: "APPROVAL_REQUEST",
-          round: state.round,
-          payload: {
-            summary
-          },
-          refs
-        },
-        mirrorPaths: [resolved.bubblePaths.inboxPath]
-      }
-    ]
+      refs
+    }
   });
-  const convergence = appended.entries[0];
-  const approvalRequest = appended.entries[1];
-  if (convergence === undefined || approvalRequest === undefined) {
-    throw new ConvergedCommandError(
-      "Converged append batch did not return expected envelopes."
-    );
-  }
-
-  const nextState = applyStateTransition(state, {
-    to: "READY_FOR_APPROVAL",
-    lastCommandAt: nowIso
+  const applyGate =
+    dependencies.applyMetaReviewGateOnConvergence ?? applyMetaReviewGateOnConvergence;
+  const gateResult = await applyGate({
+    bubbleId: resolved.bubbleId,
+    summary,
+    refs,
+    repoPath: resolved.repoPath,
+    cwd: resolved.bubblePaths.worktreePath,
+    now
   });
-
-  let written;
-  try {
-    written = await writeStateSnapshot(resolved.bubblePaths.statePath, nextState, {
-      expectedFingerprint: loadedState.fingerprint,
-      expectedState: "RUNNING"
-    });
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new ConvergedCommandError(
-      `CONVERGENCE ${convergence.envelope.id} and APPROVAL_REQUEST ${approvalRequest.envelope.id} were appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`
-    );
-  }
 
   const emitDelivery =
     dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
   const emitNotification =
     dependencies.emitBubbleNotification ?? emitBubbleNotification;
-  const approvalRef = resolveDeliveryMessageRef({
+  const gateRef = resolveDeliveryMessageRef({
     bubbleId: resolved.bubbleId,
     sessionsPath: resolved.bubblePaths.sessionsPath,
-    envelope: approvalRequest.envelope
+    envelope: gateResult.gateEnvelope
   });
 
   const emitDeliverySafe = async (
@@ -351,25 +322,31 @@ export async function emitConvergedFromWorkspace(
       bubbleConfig: resolved.bubbleConfig,
       sessionsPath: resolved.bubblePaths.sessionsPath,
       envelope,
-      messageRef: approvalRef
+      messageRef: gateRef
     }).catch(() => ({
       delivered: false,
       message: "",
       reason: "tmux_send_failed"
     }));
 
+  const recipientEnvelopes =
+    gateResult.gateEnvelope.type === "APPROVAL_REQUEST"
+      ? [
+          gateResult.gateEnvelope,
+          {
+            ...gateResult.gateEnvelope,
+            recipient: implementer
+          },
+          {
+            ...gateResult.gateEnvelope,
+            recipient: reviewer
+          }
+        ]
+      : [gateResult.gateEnvelope];
   // Optional UX signal; never block protocol/state progression on notification failure.
-  const deliveryResults = await Promise.all([
-    emitDeliverySafe(approvalRequest.envelope),
-    emitDeliverySafe({
-      ...approvalRequest.envelope,
-      recipient: implementer
-    }),
-    emitDeliverySafe({
-      ...approvalRequest.envelope,
-      recipient: reviewer
-    })
-  ]);
+  const deliveryResults = await Promise.all(
+    recipientEnvelopes.map((envelope) => emitDeliverySafe(envelope))
+  );
 
   const firstFailedDelivery = deliveryResults.find(
     (delivery) => !delivery.delivered
@@ -401,7 +378,9 @@ export async function emitConvergedFromWorkspace(
       refs_count: refs.length,
       summary_length: Array.from(summary).length,
       convergence_envelope_id: convergence.envelope.id,
-      approval_request_envelope_id: approvalRequest.envelope.id,
+      gate_handoff_envelope_id: gateResult.gateEnvelope.id,
+      gate_handoff_type: gateResult.gateEnvelope.type,
+      gate_route: gateResult.route,
       summary_verifier_gate_decision: summaryVerifierGateDecision.gate_decision,
       summary_verifier_gate_reason_code: summaryVerifierGateDecision.reason_code,
       summary_verifier_gate_claim_classes_detected:
@@ -438,9 +417,10 @@ export async function emitConvergedFromWorkspace(
     bubbleId: resolved.bubbleId,
     convergenceSequence: convergence.sequence,
     convergenceEnvelope: convergence.envelope,
-    approvalRequestSequence: approvalRequest.sequence,
-    approvalRequestEnvelope: approvalRequest.envelope,
-    state: written.state,
+    gateRoute: gateResult.route,
+    approvalRequestSequence: gateResult.gateSequence,
+    approvalRequestEnvelope: gateResult.gateEnvelope,
+    state: gateResult.state,
     delivery: convergedDelivery
   };
 }
@@ -452,6 +432,11 @@ export function asConvergedCommandError(error: unknown): never {
 
   if (error instanceof WorkspaceResolutionError) {
     throw new ConvergedCommandError(error.message);
+  }
+
+  if (error instanceof Error && error.name === "MetaReviewGateError") {
+    const gateError = toMetaReviewGateError(error);
+    throw new ConvergedCommandError(gateError.message);
   }
 
   if (error instanceof Error) {

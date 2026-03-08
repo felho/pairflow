@@ -472,7 +472,7 @@ describe("UI server integration", () => {
     const emitApproveMock = vi.fn(() =>
       Promise.reject(
         new Error(
-          "approval decision can only be used while bubble is READY_FOR_APPROVAL (current: WAITING_HUMAN)."
+          "approval decision can only be used while bubble is READY_FOR_HUMAN_APPROVAL (legacy compatibility: READY_FOR_APPROVAL) (current: WAITING_HUMAN)."
         )
       )
     );

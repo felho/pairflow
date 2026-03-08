@@ -76,6 +76,18 @@ export class ApprovalCommandError extends Error {
   }
 }
 
+const canonicalHumanApprovalState = "READY_FOR_HUMAN_APPROVAL" as const;
+const legacyHumanApprovalState = "READY_FOR_APPROVAL" as const;
+
+function isHumanApprovalState(
+  state: BubbleStateSnapshot["state"]
+): state is typeof canonicalHumanApprovalState | typeof legacyHumanApprovalState {
+  return (
+    state === canonicalHumanApprovalState ||
+    state === legacyHumanApprovalState
+  );
+}
+
 function resolveNextState(
   state: BubbleStateSnapshot,
   decision: ApprovalDecision,
@@ -139,15 +151,15 @@ export async function emitApprovalDecision(
   const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
   const state = loadedState.state;
 
-  if (state.state !== "READY_FOR_APPROVAL") {
+  if (!isHumanApprovalState(state.state)) {
     throw new ApprovalCommandError(
-      `approval decision can only be used while bubble is READY_FOR_APPROVAL (current: ${state.state}).`
+      `approval decision can only be used while bubble is ${canonicalHumanApprovalState} (legacy compatibility: ${legacyHumanApprovalState}) (current: ${state.state}).`
     );
   }
 
   if (state.round < 1) {
     throw new ApprovalCommandError(
-      `READY_FOR_APPROVAL state must have round >= 1 (found ${state.round}).`
+      `${state.state} state must have round >= 1 (found ${state.round}).`
     );
   }
 
@@ -187,7 +199,7 @@ export async function emitApprovalDecision(
   try {
     written = await writeStateSnapshot(resolved.bubblePaths.statePath, nextState, {
       expectedFingerprint: loadedState.fingerprint,
-      expectedState: "READY_FOR_APPROVAL"
+      expectedState: state.state
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
@@ -218,7 +230,7 @@ export async function emitApprovalDecision(
       envelope: appended.envelope
     });
     // Rework requests must reach the implementer pane explicitly, otherwise
-    // a READY_FOR_APPROVAL -> RUNNING transition can remain invisible in practice.
+    // a human-gate -> RUNNING transition can remain invisible in practice.
     void emitDelivery({
       bubbleId: resolved.bubbleId,
       bubbleConfig: resolved.bubbleConfig,
@@ -293,7 +305,7 @@ export async function emitRequestRework(
   const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
   const state = loadedState.state;
 
-  if (state.state === "READY_FOR_APPROVAL") {
+  if (isHumanApprovalState(state.state)) {
     const immediate = await emitApprovalDecision(
       {
         bubbleId: input.bubbleId,
@@ -314,7 +326,7 @@ export async function emitRequestRework(
 
   if (state.state !== "WAITING_HUMAN") {
     throw new ApprovalCommandError(
-      `bubble request-rework can only be used while bubble is READY_FOR_APPROVAL or WAITING_HUMAN (current: ${state.state}).`
+      `bubble request-rework can only be used while bubble is ${canonicalHumanApprovalState} (legacy compatibility: ${legacyHumanApprovalState}) or WAITING_HUMAN (current: ${state.state}).`
     );
   }
 
@@ -330,6 +342,7 @@ export async function emitRequestRework(
   const queued = queueDeferredReworkIntent({
     state,
     message,
+    refs,
     requestedBy: "human:request-rework",
     now
   });

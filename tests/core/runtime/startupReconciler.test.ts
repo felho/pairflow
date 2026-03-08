@@ -191,6 +191,45 @@ describe("reconcileRuntimeSessions", () => {
     expect(report.sessionsAfter).toBe(0);
   });
 
+  it("keeps phase-2 runtime states as non-stale when tmux session is alive", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_reconcile_06",
+      task: "Meta review running state"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const metaRunning = applyStateTransition(loaded.state, {
+      to: "READY_FOR_APPROVAL",
+      lastCommandAt: "2026-02-22T19:40:00.000Z"
+    });
+    const transitioned = applyStateTransition(metaRunning, {
+      to: "META_REVIEW_RUNNING",
+      lastCommandAt: "2026-02-22T19:41:00.000Z"
+    });
+    await writeStateSnapshot(bubble.paths.statePath, transitioned, {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "RUNNING"
+    });
+
+    await upsertRuntimeSession({
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      tmuxSessionName: "pf-b_reconcile_06",
+      now: new Date("2026-02-22T19:42:00.000Z")
+    });
+
+    const report = await reconcileRuntimeSessions({
+      repoPath,
+      isTmuxSessionAlive: () => Promise.resolve(true)
+    });
+    expect(report.staleCandidates).toBe(0);
+    expect(report.sessionsAfter).toBe(1);
+  });
+
   it("removes stale pre-runtime session and keeps start unblocked", async () => {
     const repoPath = await createTempRepo();
     const bubble = await createBubble({

@@ -78,7 +78,8 @@ import {
 } from "../../types/findings.js";
 import {
   emitConvergedFromWorkspace,
-  type EmitConvergedDependencies
+  type EmitConvergedDependencies,
+  type EmitConvergedResult
 } from "./converged.js";
 
 export interface EmitPassInput {
@@ -104,6 +105,7 @@ export interface EmitPassResult {
   repeatCleanTrigger: boolean;
   mostRecentPreviousReviewerCleanPassEnvelope: boolean;
   autoConverged?: {
+    gateRoute: EmitConvergedResult["gateRoute"];
     convergenceSequence: number;
     convergenceEnvelope: ProtocolEnvelope;
     approvalRequestSequence: number;
@@ -1049,6 +1051,7 @@ export async function emitPassFromWorkspace(
       repeatCleanTrigger: true,
       mostRecentPreviousReviewerCleanPassEnvelope: true,
       autoConverged: {
+        gateRoute: converged.gateRoute,
         convergenceSequence: converged.convergenceSequence,
         convergenceEnvelope: converged.convergenceEnvelope,
         approvalRequestSequence: converged.approvalRequestSequence,

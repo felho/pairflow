@@ -126,7 +126,7 @@ function buildDeliveryMessage(
       }
     } else if (envelope.type === "APPROVAL_REQUEST") {
       action =
-        "Bubble is READY_FOR_APPROVAL. Stop coding and wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now.";
+        "Bubble is READY_FOR_HUMAN_APPROVAL. Stop coding and wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now.";
     }
   } else if (recipientRole === "reviewer") {
     if (envelope.type === "PASS") {
@@ -182,7 +182,7 @@ function buildDeliveryMessage(
         "Human response received. Continue review workflow from this update.";
     } else if (envelope.type === "APPROVAL_REQUEST") {
       action =
-        "Bubble is READY_FOR_APPROVAL. Review is complete; wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now.";
+        "Bubble is READY_FOR_HUMAN_APPROVAL. Review is complete; wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now.";
     }
   } else if (recipientRole === "human" || recipientRole === "orchestrator") {
     action = "Check inbox/status and continue human orchestration flow.";

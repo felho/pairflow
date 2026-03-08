@@ -69,7 +69,7 @@ export function renderBubbleListText(view: BubbleListView): string {
     `Repository: ${view.repoPath}`,
     `Bubbles: total=${view.total}`,
     `Runtime sessions: registered=${view.runtimeSessions.registered}, stale=${view.runtimeSessions.stale}`,
-    `States: CREATED=${view.byState.CREATED}, PREPARING_WORKSPACE=${view.byState.PREPARING_WORKSPACE}, RUNNING=${view.byState.RUNNING}, WAITING_HUMAN=${view.byState.WAITING_HUMAN}, READY_FOR_APPROVAL=${view.byState.READY_FOR_APPROVAL}, APPROVED_FOR_COMMIT=${view.byState.APPROVED_FOR_COMMIT}, COMMITTED=${view.byState.COMMITTED}, DONE=${view.byState.DONE}, FAILED=${view.byState.FAILED}, CANCELLED=${view.byState.CANCELLED}`
+    `States: CREATED=${view.byState.CREATED}, PREPARING_WORKSPACE=${view.byState.PREPARING_WORKSPACE}, RUNNING=${view.byState.RUNNING}, WAITING_HUMAN=${view.byState.WAITING_HUMAN}, READY_FOR_APPROVAL=${view.byState.READY_FOR_APPROVAL}, META_REVIEW_RUNNING=${view.byState.META_REVIEW_RUNNING}, READY_FOR_HUMAN_APPROVAL=${view.byState.READY_FOR_HUMAN_APPROVAL}, APPROVED_FOR_COMMIT=${view.byState.APPROVED_FOR_COMMIT}, COMMITTED=${view.byState.COMMITTED}, DONE=${view.byState.DONE}, FAILED=${view.byState.FAILED}, CANCELLED=${view.byState.CANCELLED}`
   ];
 
   if (view.bubbles.length === 0) {

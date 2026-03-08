@@ -28,7 +28,17 @@ const directedTransitions: ReadonlyMap<BubbleLifecycleState, ReadonlySet<BubbleL
     ["PREPARING_WORKSPACE", new Set(["RUNNING"])],
     ["RUNNING", new Set(["WAITING_HUMAN", "READY_FOR_APPROVAL"])],
     ["WAITING_HUMAN", new Set(["RUNNING"])],
-    ["READY_FOR_APPROVAL", new Set(["RUNNING", "APPROVED_FOR_COMMIT"])],
+    [
+      "READY_FOR_APPROVAL",
+      new Set([
+        "RUNNING",
+        "APPROVED_FOR_COMMIT",
+        "META_REVIEW_RUNNING",
+        "READY_FOR_HUMAN_APPROVAL"
+      ])
+    ],
+    ["META_REVIEW_RUNNING", new Set(["RUNNING", "READY_FOR_HUMAN_APPROVAL"])],
+    ["READY_FOR_HUMAN_APPROVAL", new Set(["RUNNING", "APPROVED_FOR_COMMIT"])],
     ["APPROVED_FOR_COMMIT", new Set(["COMMITTED"])],
     ["COMMITTED", new Set(["DONE"])],
     ["DONE", new Set()],
@@ -42,6 +52,8 @@ const activeStates = new Set<BubbleLifecycleState>([
   "RUNNING",
   "WAITING_HUMAN",
   "READY_FOR_APPROVAL",
+  "META_REVIEW_RUNNING",
+  "READY_FOR_HUMAN_APPROVAL",
   "APPROVED_FOR_COMMIT",
   "COMMITTED"
 ]);

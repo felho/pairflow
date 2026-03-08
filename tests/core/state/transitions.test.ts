@@ -15,6 +15,18 @@ describe("state transitions", () => {
     expect(canTransition("RUNNING", "READY_FOR_APPROVAL")).toBe(true);
     expect(canTransition("WAITING_HUMAN", "RUNNING")).toBe(true);
     expect(canTransition("READY_FOR_APPROVAL", "RUNNING")).toBe(true);
+    expect(canTransition("READY_FOR_APPROVAL", "META_REVIEW_RUNNING")).toBe(true);
+    expect(canTransition("READY_FOR_APPROVAL", "READY_FOR_HUMAN_APPROVAL")).toBe(
+      true
+    );
+    expect(canTransition("META_REVIEW_RUNNING", "RUNNING")).toBe(true);
+    expect(canTransition("META_REVIEW_RUNNING", "READY_FOR_HUMAN_APPROVAL")).toBe(
+      true
+    );
+    expect(canTransition("READY_FOR_HUMAN_APPROVAL", "RUNNING")).toBe(true);
+    expect(canTransition("READY_FOR_HUMAN_APPROVAL", "APPROVED_FOR_COMMIT")).toBe(
+      true
+    );
     expect(canTransition("READY_FOR_APPROVAL", "APPROVED_FOR_COMMIT")).toBe(true);
     expect(canTransition("APPROVED_FOR_COMMIT", "COMMITTED")).toBe(true);
     expect(canTransition("COMMITTED", "DONE")).toBe(true);
@@ -23,6 +35,9 @@ describe("state transitions", () => {
   it("rejects invalid direct transitions", () => {
     expect(canTransition("CREATED", "RUNNING")).toBe(false);
     expect(canTransition("WAITING_HUMAN", "READY_FOR_APPROVAL")).toBe(false);
+    expect(canTransition("READY_FOR_HUMAN_APPROVAL", "META_REVIEW_RUNNING")).toBe(
+      false
+    );
     expect(canTransition("DONE", "RUNNING")).toBe(false);
     expect(canTransition("RUNNING", "RUNNING")).toBe(false);
     expect(canTransition("DONE", "DONE")).toBe(false);
@@ -31,6 +46,8 @@ describe("state transitions", () => {
   it("allows FAILED from active states and CANCELLED from non-final states", () => {
     expect(canTransition("RUNNING", "FAILED")).toBe(true);
     expect(canTransition("READY_FOR_APPROVAL", "FAILED")).toBe(true);
+    expect(canTransition("META_REVIEW_RUNNING", "FAILED")).toBe(true);
+    expect(canTransition("READY_FOR_HUMAN_APPROVAL", "FAILED")).toBe(true);
     expect(canTransition("CREATED", "CANCELLED")).toBe(true);
     expect(canTransition("WAITING_HUMAN", "CANCELLED")).toBe(true);
     expect(canTransition("DONE", "CANCELLED")).toBe(false);
@@ -43,6 +60,16 @@ describe("state transitions", () => {
     expect(allowed).toContain("READY_FOR_APPROVAL");
     expect(allowed).toContain("FAILED");
     expect(allowed).toContain("CANCELLED");
+  });
+
+  it("exposes allowed transitions for human gate states", () => {
+    const approvalReadyAllowed = getAllowedTransitions("READY_FOR_APPROVAL");
+    expect(approvalReadyAllowed).toContain("META_REVIEW_RUNNING");
+    expect(approvalReadyAllowed).toContain("READY_FOR_HUMAN_APPROVAL");
+
+    const metaReviewAllowed = getAllowedTransitions("META_REVIEW_RUNNING");
+    expect(metaReviewAllowed).toContain("RUNNING");
+    expect(metaReviewAllowed).toContain("READY_FOR_HUMAN_APPROVAL");
   });
 
   it("throws with assertTransitionAllowed when transition is invalid", () => {

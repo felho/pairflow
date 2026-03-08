@@ -36,6 +36,9 @@ describe("parseBubbleRequestReworkCommandOptions", () => {
     expect(getBubbleRequestReworkHelpText()).toContain(
       "pairflow bubble request-rework"
     );
+    expect(getBubbleRequestReworkHelpText()).toContain(
+      "READY_FOR_HUMAN_APPROVAL"
+    );
   });
 
   it("requires --id and --message", () => {

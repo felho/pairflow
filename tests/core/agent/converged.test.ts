@@ -162,6 +162,69 @@ describe("emitConvergedFromWorkspace", () => {
     });
   });
 
+  it("emits auto-rework delivery only to implementer pane", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupConvergedCandidateBubble(repoPath, "b_converged_notify_03");
+    const deliveries: string[] = [];
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+
+    const result = await emitConvergedFromWorkspace(
+      {
+        summary: "Auto rework route.",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-22T09:04:30.000Z")
+      },
+      {
+        applyMetaReviewGateOnConvergence: async () => ({
+          bubbleId: bubble.bubbleId,
+          route: "auto_rework",
+          gateSequence: 999,
+          gateEnvelope: {
+            id: "msg_auto_rework_01",
+            ts: "2026-02-22T09:04:30.000Z",
+            bubble_id: bubble.bubbleId,
+            sender: "orchestrator",
+            recipient: bubble.config.agents.implementer,
+            type: "APPROVAL_DECISION",
+            round: loaded.state.round,
+            payload: {
+              decision: "revise",
+              message: "Implement auto-rework patch.",
+              metadata: {
+                actor: "meta-review-gate"
+              }
+            },
+            refs: []
+          },
+          state: {
+            ...loaded.state,
+            state: "RUNNING",
+            round: loaded.state.round + 1,
+            active_agent: bubble.config.agents.implementer,
+            active_role: "implementer",
+            active_since: "2026-02-22T09:04:30.000Z",
+            last_command_at: "2026-02-22T09:04:30.000Z"
+          }
+        }),
+        emitTmuxDeliveryNotification: (input) => {
+          deliveries.push(input.envelope.recipient);
+          return Promise.resolve({
+            delivered: true,
+            sessionName: "pf-b_converged_notify_03",
+            message: "ok"
+          });
+        }
+      }
+    );
+
+    expect(deliveries).toEqual([bubble.config.agents.implementer]);
+    expect(result.gateRoute).toBe("auto_rework");
+    expect(result.delivery).toEqual({
+      delivered: true,
+      retried: false
+    });
+  });
+
   it("returns deterministic delivery status when any approval notification is unconfirmed", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupConvergedCandidateBubble(repoPath, "b_converged_notify_02");
@@ -191,7 +254,8 @@ describe("emitConvergedFromWorkspace", () => {
       }
     );
 
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.gateRoute).toBe("human_gate_inconclusive");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(result.delivery).toEqual({
       delivered: false,
       reason: "delivery_unconfirmed",
@@ -199,7 +263,7 @@ describe("emitConvergedFromWorkspace", () => {
     });
   });
 
-  it("writes CONVERGENCE + APPROVAL_REQUEST and moves RUNNING -> READY_FOR_APPROVAL", async () => {
+  it("writes CONVERGENCE + APPROVAL_REQUEST and moves RUNNING -> READY_FOR_HUMAN_APPROVAL", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupConvergedCandidateBubble(repoPath, "b_converged_01");
     const now = new Date("2026-02-22T09:05:00.000Z");
@@ -213,9 +277,10 @@ describe("emitConvergedFromWorkspace", () => {
 
     expect(result.bubbleId).toBe("b_converged_01");
     expect(result.convergenceEnvelope.type).toBe("CONVERGENCE");
+    expect(result.gateRoute).toBe("human_gate_inconclusive");
     expect(result.approvalRequestEnvelope.type).toBe("APPROVAL_REQUEST");
     expect(result.approvalRequestEnvelope.recipient).toBe("human");
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(result.state.last_command_at).toBe(now.toISOString());
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
@@ -306,7 +371,7 @@ describe("emitConvergedFromWorkspace", () => {
       now: new Date("2026-02-22T09:04:00.000Z")
     });
 
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     const gateArtifactPath = resolveSummaryVerifierConsistencyGateArtifactPath(
       bubble.paths.artifactsDir
     );
@@ -341,7 +406,7 @@ describe("emitConvergedFromWorkspace", () => {
       now: new Date("2026-02-22T09:04:00.000Z")
     });
 
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     const gateArtifactPath = resolveSummaryVerifierConsistencyGateArtifactPath(
       bubble.paths.artifactsDir
     );
@@ -405,7 +470,7 @@ describe("emitConvergedFromWorkspace", () => {
       now: new Date("2026-02-22T09:04:00.000Z")
     });
 
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
   });
 
   it("records auditable metadata when doc-gate artifact is unreadable during docs-scope convergence", async () => {
@@ -576,7 +641,7 @@ describe("emitConvergedFromWorkspace", () => {
       now: new Date("2026-02-22T09:04:00.000Z")
     });
 
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
   });
 
   it("blocks convergence in accuracy-critical bubbles when latest review verification artifact is from a stale round", async () => {
@@ -1011,7 +1076,7 @@ describe("emitConvergedFromWorkspace", () => {
       summary: "Round 5 reconvergence after requested rework",
       cwd: bubble.paths.worktreePath
     });
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
   });
 
   it("rejects when unresolved human question exists in transcript", async () => {
@@ -1279,7 +1344,7 @@ describe("emitConvergedFromWorkspace", () => {
       summary: "Round 3 convergence with non-blocking findings",
       cwd: bubble.paths.worktreePath
     });
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
   });
 
   it("allows in round 2 when previous reviewer PASS has only P2 findings", async () => {
@@ -1366,7 +1431,7 @@ describe("emitConvergedFromWorkspace", () => {
       summary: "Round 2 convergence with non-blocking findings",
       cwd: bubble.paths.worktreePath
     });
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
   });
 
   it("supports converged integration with non-default severity_gate_round config", async () => {
@@ -1474,6 +1539,6 @@ describe("emitConvergedFromWorkspace", () => {
       summary: "Converged with non-default gate config",
       cwd: bubble.paths.worktreePath
     });
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
   });
 });
