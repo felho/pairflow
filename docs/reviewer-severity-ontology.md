@@ -89,12 +89,14 @@ Reviewer PASS with any `P0/P1` finding must have evidence bound at finding level
 2. If a single ref contains a comma, escape it as `\,` inside the `--finding` value.
 3. Envelope-level `--ref` values are optional generic artifacts only; they do not satisfy blocker finding evidence binding.
 4. If a `P0/P1` finding has no finding-level refs, PASS is rejected.
+5. Document-scope qualifier: post-gate blocker semantics require strict finding qualifiers (`timing=required-now` + `layer=L1`). CLI `--finding` carries severity/title/refs only, so unqualified CLI `P0/P1` findings are advisory for post-gate routing.
 
 ## Decision Mapping
 
-1. Any `P0/P1` present: reviewer should request a fix cycle.
-2. Only `P2/P3`: reviewer should prefer convergence with notes (policy rollout dependent).
-3. Clean: reviewer converges.
+1. Round `< severity_gate_round` (default `4`): reviewer `pairflow pass` remains allowed (including non-blocking findings), while `pairflow converged` is still allowed when policy preconditions are met.
+2. Round `>= severity_gate_round` with blocker findings under scope policy: reviewer should request a fix cycle with `pairflow pass`.
+   Document scope blocker means `P0/P1` with strict qualifiers (`timing=required-now` + `layer=L1`).
+3. Round `>= severity_gate_round` with only non-blocking findings (`P2/P3`) or clean result: reviewer should use `pairflow converged`.
 
 ## Operational Use
 

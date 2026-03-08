@@ -35,7 +35,10 @@ describe("buildReviewerSeverityOntologyReminder", () => {
       "Reviewer Severity Ontology (v1)"
     );
     expect(reviewerSeverityOntologyFullPromptText).toContain(
-      "Any `P0/P1` present: reviewer should request a fix cycle."
+      "Round `>= severity_gate_round` with blocker findings under scope policy: reviewer should request a fix cycle with `pairflow pass`."
+    );
+    expect(reviewerSeverityOntologyFullPromptText).toContain(
+      "Document scope blocker means `P0/P1` with strict qualifiers (`timing=required-now` + `layer=L1`)."
     );
     expect(reviewerSeverityOntologyFullPromptText).not.toContain(
       "pairflow:runtime-reminder:start"

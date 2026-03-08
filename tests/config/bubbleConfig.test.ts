@@ -34,6 +34,7 @@ describe("bubble config schema", () => {
     expect(config.reviewer_context_mode).toBe("fresh");
     expect(config.watchdog_timeout_minutes).toBe(20);
     expect(config.work_mode).toBe("worktree");
+    expect(config.severity_gate_round).toBe(4);
     expect(config.attach_launcher).toBeUndefined();
     expect(config.notifications.enabled).toBe(true);
     expect(config.accuracy_critical).toBe(false);
@@ -47,6 +48,17 @@ describe("bubble config schema", () => {
     ]);
     expect(config.doc_contract_gates.mode).toBe("advisory");
     expect(config.doc_contract_gates.round_gate_applies_after).toBe(2);
+  });
+
+  it("roundtrips explicit severity_gate_round above default", () => {
+    const config = parseBubbleConfigToml(
+      baseToml.replace("\n\n[agents]", "\nseverity_gate_round = 8\n\n[agents]")
+    );
+    expect(config.severity_gate_round).toBe(8);
+
+    const rendered = renderBubbleConfigToml(config);
+    const reparsed = parseBubbleConfigToml(rendered);
+    expect(reparsed.severity_gate_round).toBe(8);
   });
 
   it("applies doc_contract_gates defaults when section is omitted", () => {
@@ -82,6 +94,7 @@ round_gate_applies_after = -1
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 20,
       max_rounds: 8,
+      severity_gate_round: 4,
       commit_requires_approval: true,
       accuracy_critical: false,
       agents: {
@@ -112,6 +125,72 @@ round_gate_applies_after = -1
     expect(reparsed.doc_contract_gates.parse_warning).toContain(
       "doc_contract_gates.mode invalid"
     );
+  });
+
+  it("rejects severity_gate_round below minimum floor", () => {
+    const result = validateBubbleConfig({
+      id: "b_test_01",
+      repo_path: "/tmp/repo",
+      base_branch: "main",
+      bubble_branch: "bubble/b_test_01",
+      severity_gate_round: 3,
+      agents: {
+        implementer: "codex",
+        reviewer: "claude"
+      },
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      },
+      notifications: {
+        enabled: true
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "severity_gate_round"
+          && error.message.includes("SEVERITY_GATE_ROUND_INVALID")
+      )
+    ).toBe(true);
+  });
+
+  it("rejects non-integer severity_gate_round", () => {
+    const result = validateBubbleConfig({
+      id: "b_test_01",
+      repo_path: "/tmp/repo",
+      base_branch: "main",
+      bubble_branch: "bubble/b_test_01",
+      severity_gate_round: 4.5,
+      agents: {
+        implementer: "codex",
+        reviewer: "claude"
+      },
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      },
+      notifications: {
+        enabled: true
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "severity_gate_round"
+          && error.message.includes("SEVERITY_GATE_ROUND_INVALID")
+      )
+    ).toBe(true);
   });
 
   it("rejects unsupported quality mode", () => {
@@ -200,6 +279,7 @@ round_gate_applies_after = -1
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
+      severity_gate_round: 4,
       commit_requires_approval: true,
       attach_launcher: "auto",
       agents: {
@@ -263,6 +343,7 @@ round_gate_applies_after = -1
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
+      severity_gate_round: 4,
       commit_requires_approval: true,
       attach_launcher: "auto",
       agents: {
@@ -347,6 +428,7 @@ round_gate_applies_after = -1
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
+      severity_gate_round: 4,
       commit_requires_approval: true,
       attach_launcher: "wezterm",
       agents: {
@@ -405,6 +487,7 @@ typecheck = "pnpm typecheck"
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
+      severity_gate_round: 4,
       commit_requires_approval: true,
       attach_launcher: "auto",
       agents: {
@@ -459,6 +542,7 @@ typecheck = "pnpm typecheck"
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
+      severity_gate_round: 4,
       commit_requires_approval: true,
       agents: {
         implementer: "codex",
@@ -490,6 +574,7 @@ typecheck = "pnpm typecheck"
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
+      severity_gate_round: 4,
       commit_requires_approval: true,
       attach_launcher: "ghostty",
       open_command: "cursor {{worktree_path}}",
@@ -585,6 +670,7 @@ typecheck = "pnpm typecheck"
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
+      severity_gate_round: 4,
       commit_requires_approval: true,
       attach_launcher: "auto",
       agents: {
@@ -625,6 +711,7 @@ typecheck = "pnpm typecheck"
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
+      severity_gate_round: 4,
       commit_requires_approval: true,
       attach_launcher: "auto",
       agents: {
@@ -659,6 +746,7 @@ typecheck = "pnpm typecheck"
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
+      severity_gate_round: 4,
       commit_requires_approval: true,
       agents: {
         implementer: "codex",

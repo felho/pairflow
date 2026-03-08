@@ -13,6 +13,7 @@ export const DEFAULT_REVIEW_ARTIFACT_TYPE: ReviewArtifactType = "auto";
 export const DEFAULT_REVIEWER_CONTEXT_MODE: ReviewerContextMode = "fresh";
 export const DEFAULT_WATCHDOG_TIMEOUT_MINUTES = 20;
 export const DEFAULT_MAX_ROUNDS = 8;
+export const DEFAULT_SEVERITY_GATE_ROUND = 4;
 export const DEFAULT_COMMIT_REQUIRES_APPROVAL = true;
 export const DEFAULT_ATTACH_LAUNCHER: AttachLauncher = "auto";
 export const DEFAULT_LOCAL_OVERLAY_ENABLED = true;

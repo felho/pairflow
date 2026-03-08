@@ -29,6 +29,8 @@ export function getConvergedHelpText(): string {
     "Options:",
     "  --summary <text>      Required convergence summary",
     "  --ref <path>          Optional artifact reference (repeatable)",
+    "                        Reviewer clean/non-blocking outcomes at/after `severity_gate_round` should use this command.",
+    "                        Doc scope note: unqualified CLI `--finding` P0/P1 entries are advisory unless strict qualifiers exist in structured findings payload.",
     "  -h, --help            Show this help"
   ].join("\n");
 }

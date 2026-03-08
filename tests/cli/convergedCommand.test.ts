@@ -28,6 +28,7 @@ describe("parseConvergedCommandOptions", () => {
     const parsed = parseConvergedCommandOptions(["--help"]);
     expect(parsed.help).toBe(true);
     expect(getConvergedHelpText()).toContain("pairflow converged");
+    expect(getConvergedHelpText()).toContain("Doc scope note");
   });
 
   it("requires --summary", () => {

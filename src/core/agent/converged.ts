@@ -46,6 +46,9 @@ export interface EmitConvergedInput {
   refs?: string[];
   cwd?: string;
   now?: Date;
+  expectedStateFingerprint?: string;
+  expectedRound?: number;
+  expectedReviewer?: AgentName;
 }
 
 export interface EmitConvergedDependencies {
@@ -132,7 +135,29 @@ export async function emitConvergedFromWorkspace(
   });
   resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
   const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
+  if (
+    input.expectedStateFingerprint !== undefined
+    && loadedState.fingerprint !== input.expectedStateFingerprint
+  ) {
+    throw new ConvergedCommandError(
+      "Convergence validation failed: AUTO_CONVERGE_STATE_STALE: state changed before converged transition."
+    );
+  }
   const state = loadedState.state;
+  if (input.expectedRound !== undefined && state.round !== input.expectedRound) {
+    throw new ConvergedCommandError(
+      `Convergence validation failed: AUTO_CONVERGE_STATE_STALE: expected round ${input.expectedRound}, got ${state.round}.`
+    );
+  }
+  if (
+    input.expectedReviewer !== undefined
+    && state.active_role === "reviewer"
+    && state.active_agent !== input.expectedReviewer
+  ) {
+    throw new ConvergedCommandError(
+      `Convergence validation failed: AUTO_CONVERGE_STATE_STALE: expected reviewer ${input.expectedReviewer}, got ${String(state.active_agent)}.`
+    );
+  }
 
   const { implementer, reviewer } = resolved.bubbleConfig.agents;
   assertReviewerContext(state, reviewer);
@@ -147,7 +172,8 @@ export async function emitConvergedFromWorkspace(
     implementer,
     reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
     roundRoleHistory: state.round_role_history,
-    transcript
+    transcript,
+    severity_gate_round: resolved.bubbleConfig.severity_gate_round
   });
   if (!policy.ok) {
     throw new ConvergedCommandError(

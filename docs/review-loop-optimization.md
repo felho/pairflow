@@ -32,7 +32,7 @@ The reviewer produces high-quality findings (real bugs, race conditions, event o
 | 5 | Combined flow | Not implemented | Depends on #1-#4. |
 | 6 | Skip redundant reviewer test runs | Implemented | Orchestrator verifies implementer evidence and emits reviewer skip/run directive. |
 | 7 | Task-level acceptance criteria boundary | In progress | Used operationally in tasking; hard enforcement not implemented yet. |
-| 8 | Round-based severity gate | Implemented (Phase 1 advisory) | Doc-contract gate now enforces advisory round-policy normalization (`ROUND_GATE_AUTODEMOTE`/`ROUND_GATE_WARNING`) with status diagnostics; hard-stop remains out of scope. |
+| 8 | Round-based severity gate | Implemented (Phase 1) | Doc-contract gate keeps advisory round-policy normalization (`ROUND_GATE_AUTODEMOTE`/`ROUND_GATE_WARNING`) with status diagnostics, and reviewer `pairflow pass` is hard-stopped post-gate for clean/non-blocking outcomes via command routing policy (`pairflow converged` required). |
 | 9 | Issue-class expansion scan | Implemented (Phase 1 prompt-level experiment) | Reviewer startup/resume/handoff guidance now enforces scout -> dedupe/classify -> conditional class expansion -> consolidation, with local-scope guardrails and required PASS output contract. Runtime/orchestrator automation remains out of scope. |
 
 Recent control-plane improvement:
@@ -481,6 +481,8 @@ corepack bootstrap, or multi-package-manager detection.
 Complementary to "converge with notes" (#2): introduce an explicit severity gate tied to round number.
 
 **Rule:** From round N onward (for example `N=4`, i.e. `round >= N`), only blocker findings (`P0/P1`) trigger a new fix+review cycle. P2/P3 findings are logged to `suggestions.md` and the reviewer issues `converged`.
+Reviewer `pairflow pass --no-findings` is also treated as post-gate clean intent and must route to `pairflow converged`.
+Document-scope qualifier: blocker semantics are strict (`P0/P1` + `timing=required-now` + `layer=L1`); unqualified CLI `--finding` entries are advisory for post-gate routing.
 
 This is different from #2 ("converge with notes after N consecutive P2-only rounds") because:
 - It's **proactive** — doesn't wait for a streak of P2-only rounds, and applies from round `N` onward (`round >= N`)

@@ -10,6 +10,7 @@ import {
   buildReviewerScoutExpansionWorkflowGuidance
 } from "./reviewerScoutExpansionGuidance.js";
 import {
+  buildReviewerFindingsPassInstruction,
   buildReviewerRoundCommandGateProjection,
   type ReviewerCommandGateProjectionVariant
 } from "./reviewerCommandGateGuidance.js";
@@ -150,7 +151,9 @@ function buildDeliveryMessage(
       const findingsDetailInstruction =
         envelope.round <= 1
           ? "In round 1, declare findings explicitly with `--finding` or `--no-findings` when using `pairflow pass`."
-          : "If findings remain, run `pairflow pass --summary ... --finding 'P1:...|artifact://...'` (repeatable; for P0/P1 include finding-level refs).";
+          : buildReviewerFindingsPassInstruction(
+            bubbleConfig.review_artifact_type
+          );
       const reviewerFocusReminder =
         reviewerFocus === undefined
           ? ""
