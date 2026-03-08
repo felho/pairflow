@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent
+} from "react";
 
 import type {
   BubbleCardModel,
@@ -57,6 +64,16 @@ function isCopyBubbleIdTarget(target: EventTarget | null): boolean {
     return false;
   }
   return target.closest("[data-copy-bubble-id-target='true']") !== null;
+}
+
+function isDragBlockedTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+  if (isCopyBubbleIdTarget(target)) {
+    return true;
+  }
+  return target.closest("[data-prevent-bubble-drag='true']") !== null;
 }
 
 function BubbleCard(props: BubbleCardProps): JSX.Element {
@@ -150,13 +167,57 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
 
   const visual = stateVisuals[props.bubble.state];
 
+  const beginDrag = useCallback(
+    (clientX: number, clientY: number) => {
+      const nextState: DragState = {
+        originX: props.position.x,
+        originY: props.position.y,
+        startX: clientX,
+        startY: clientY,
+        onMove: (pointerEvent) => {
+          applyDragPosition(pointerEvent.clientX, pointerEvent.clientY);
+        },
+        onUp: () => {
+          const dragState = dragRef.current;
+          if (dragState === null) {
+            return;
+          }
+          stopDrag();
+        }
+      };
+      dragRef.current = nextState;
+      if (!dragging) {
+        setDragging(true);
+        onDragStateChangeRef.current(true);
+      }
+      document.addEventListener("mousemove", nextState.onMove);
+      document.addEventListener("mouseup", nextState.onUp);
+    },
+    [applyDragPosition, dragging, props.position.x, props.position.y, stopDrag]
+  );
+
+  const handleCardMouseDown = useCallback(
+    (event: ReactMouseEvent<HTMLElement>) => {
+      if (event.button !== 0) {
+        return;
+      }
+      if (isDragBlockedTarget(event.target)) {
+        return;
+      }
+      event.preventDefault();
+      didDragRef.current = false;
+      beginDrag(event.clientX, event.clientY);
+    },
+    [beginDrag]
+  );
+
   return (
     <article
       className={cn(
         "absolute rounded-[20px] border bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] p-4 transition-shadow",
         visual.border,
         visual.cardTone,
-        dragging ? "cursor-grabbing" : "cursor-default"
+        dragging ? "cursor-grabbing" : "cursor-grab"
       )}
       style={{
         left: props.position.x,
@@ -165,6 +226,7 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
         height: collapsedDimensions.height
       }}
       data-bubble-id={props.bubble.bubbleId}
+      onMouseDown={handleCardMouseDown}
       onClick={(event) => {
         if (!didDragRef.current) {
           if (isCopyBubbleIdTarget(event.target)) {
@@ -185,39 +247,6 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
         type="button"
         aria-label={`Bubble ${props.bubble.bubbleId} drag handle`}
         className={cn("mb-2 flex w-full items-center justify-between", dragging ? "cursor-grabbing" : "cursor-grab")}
-        onMouseDown={(event) => {
-          if (event.button !== 0) {
-            return;
-          }
-          if (isCopyBubbleIdTarget(event.target)) {
-            return;
-          }
-          event.preventDefault();
-          didDragRef.current = false;
-          const nextState: DragState = {
-            originX: props.position.x,
-            originY: props.position.y,
-            startX: event.clientX,
-            startY: event.clientY,
-            onMove: (pointerEvent) => {
-              applyDragPosition(pointerEvent.clientX, pointerEvent.clientY);
-            },
-            onUp: () => {
-              const dragState = dragRef.current;
-              if (dragState === null) {
-                return;
-              }
-              stopDrag();
-            }
-          };
-          dragRef.current = nextState;
-          if (!dragging) {
-            setDragging(true);
-            onDragStateChangeRef.current(true);
-          }
-          document.addEventListener("mousemove", nextState.onMove);
-          document.addEventListener("mouseup", nextState.onUp);
-        }}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
@@ -326,6 +355,7 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
 
       <button
         type="button"
+        data-prevent-bubble-drag="true"
         aria-label={`Delete bubble ${props.bubble.bubbleId}`}
         className="absolute bottom-3 right-3 rounded border border-transparent p-1 text-[#555] transition hover:text-rose-400 disabled:cursor-not-allowed disabled:opacity-50"
         onClick={(event) => {

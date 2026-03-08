@@ -182,6 +182,52 @@ describe("BubbleCanvas", () => {
     expect(onPositionCommit).toHaveBeenCalledTimes(1);
   });
 
+  it("allows dragging from non-header card body content", () => {
+    const onPositionChange = vi.fn();
+    const onPositionCommit = vi.fn();
+    const onToggleExpand = vi.fn();
+    render(
+      <BubbleCanvas
+        bubbles={[
+          bubbleCard({
+            bubbleId: "b-1",
+            repoPath: "/repo-a"
+          })
+        ]}
+        positions={{
+          "b-1": {
+            x: 120,
+            y: 140
+          }
+        }}
+        expandedBubbleIds={[]}
+        onPositionChange={onPositionChange}
+        onPositionCommit={onPositionCommit}
+        onToggleExpand={onToggleExpand}
+        onDelete={(bubbleId) => Promise.resolve(deletedResult(bubbleId))}
+      />
+    );
+
+    const bodyText = screen.getByText("implementer working");
+    fireEvent.mouseDown(bodyText, {
+      button: 0,
+      clientX: 140,
+      clientY: 140
+    });
+    fireEvent.mouseMove(document, {
+      clientX: 170,
+      clientY: 190
+    });
+    fireEvent.mouseUp(document, {
+      clientX: 170,
+      clientY: 190
+    });
+
+    expect(onPositionChange).toHaveBeenCalledWith("b-1", { x: 150, y: 190 });
+    expect(onPositionCommit).toHaveBeenCalledTimes(1);
+    expect(onToggleExpand).not.toHaveBeenCalled();
+  });
+
   it("supports keyboard arrow repositioning from drag handle", () => {
     const onPositionChange = vi.fn();
     const onPositionCommit = vi.fn();
