@@ -9,11 +9,21 @@ const branchRangeAnchor = /(<revA>\.\.<revB>|main\.\.HEAD)/;
 const historyLogAnchor = /git\s+(log|show)\s+--name-status/;
 const worktreeAnchor = /git diff --name-status/;
 const fallbackAnchor = /(cannot be resolved reliably|avoid numeric file-operation claims)/i;
+const validationStatusAnchor = /(lint=<|typecheck=<|test=<)/;
 
 describe("reviewer scout expansion diff-scope guardrails", () => {
   it("hardens scout workflow guidance with forbidden sources and required worktree source", () => {
     const guidance = buildReviewerScoutExpansionWorkflowGuidance();
 
+    expect(guidance).toContain(
+      "Validation claim guardrail (applies to review output): derive validation claims from explicit evidence sources first, command-by-command for `lint`, `typecheck`, and `test`."
+    );
+    expect(guidance).toContain(
+      "Never publish aggregate validation shorthand such as `typecheck/lint pass` or `all checks pass` without command-level evidence-backed statuses."
+    );
+    expect(guidance).toContain(
+      "If evidence is missing or ambiguous for a command, report `unknown` or `not-run` for that command (never infer `pass`)."
+    );
     expect(guidance).toContain(
       "Summary scope guardrail: scope statements must cover only current worktree changes."
     );
@@ -64,9 +74,22 @@ describe("reviewer scout expansion diff-scope guardrails", () => {
     expect(guidance).toContain(
       "grounded in `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`."
     );
+    expect(guidance).toContain(
+      "`Scout Coverage` must include command-level validation statuses: `lint=<pass|failed|not-run|unknown>`, `typecheck=<pass|failed|not-run|unknown>`, `test=<pass|failed|not-run|unknown>`."
+    );
+    expect(guidance).toContain(
+      "Each validation status claim must cite an evidence source (for example evidence log path or transcript/reference anchor)."
+    );
+    expect(guidance).toContain(
+      "Forbidden aggregate shorthand without command-level evidence: `typecheck/lint pass`, `all checks pass`, or equivalent aggregate phrasing."
+    );
+    expect(guidance).toContain(
+      "If a command evidence source is missing or ambiguous, report `unknown` or `not-run` for that command and do not claim `pass`."
+    );
     expect(guidance).toMatch(branchRangeAnchor);
     expect(guidance).toMatch(historyLogAnchor);
     expect(guidance).toMatch(worktreeAnchor);
+    expect(guidance).toMatch(validationStatusAnchor);
     expect(guidance).not.toContain(
       "Do not justify `scope_covered` with `git diff main..HEAD` or any branch-range diff (`<revA>..<revB>`)."
     );
@@ -92,6 +115,8 @@ describe("reviewer scout expansion diff-scope guardrails", () => {
 
     expect(guidance).toContain("cannot be resolved reliably");
     expect(guidance).toContain("avoid numeric file-operation claims");
+    expect(guidance).toContain("unknown");
+    expect(guidance).toContain("not-run");
     expect(guidance).toMatch(fallbackAnchor);
   });
 });
