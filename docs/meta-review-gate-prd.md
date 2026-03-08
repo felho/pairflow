@@ -25,10 +25,10 @@ Core intent:
 5. When budget is exhausted, flow moves to `READY_FOR_HUMAN_APPROVAL`.
 6. `approve` is never auto-executed in MVP; final approval remains human-driven.
 7. A dedicated meta-reviewer pane runs autonomous review execution and shows live progress.
-8. Review surface has three explicit invocation modes:
-   - `autonomous-run`: Pairflow-invoked live review, lifecycle actions allowed.
-   - `manual-run`: user-invoked live review, recommendation/report only.
-   - `manual-last`: user-invoked cached-result read, no live review execution.
+8. Pairflow CLI meta-review surface has three explicit commands:
+   - `run`: Pairflow-invoked live autonomous review, lifecycle actions allowed.
+   - `status`: cached last-autonomous snapshot read (no live review execution).
+   - `last-report`: cached last-autonomous report read (no live review execution).
 9. Latest review recommendation must be readable from state/artifacts without rerun.
 10. Once bubble reaches `READY_FOR_HUMAN_APPROVAL`, it enters sticky human-gate mode for the remainder of that bubble lifecycle.
 
@@ -104,34 +104,34 @@ Pain points:
 
 Review execution engine:
 1. The review computation must reuse the existing `UsePairflow/ReviewBubble` workflow logic.
-2. `autonomous-run` and `manual-run` differ in side effects, not in review quality bar.
-3. `manual-last` does not execute a new review; it only reads persisted latest output.
+2. Pairflow CLI covers autonomous execution and cached retrieval; fresh manual deep review remains an external workflow in user Codex session.
+3. Cached retrieval commands (`status`, `last-report`) do not execute a new review; they only read persisted latest autonomous output.
 
 Boundary contract (skill vs Pairflow CLI):
 1. Skill/workflow layer is compute-only: it produces structured review output (`recommendation`, `summary`, findings, detailed report body/refs, and rework target message when applicable).
-2. Pairflow CLI is the single persistence authority: it validates and stores review outputs in Pairflow state/artifacts.
+2. Pairflow CLI is the single persistence authority for the canonical autonomous snapshot: it validates and stores only the latest autonomous review output in Pairflow state/artifacts.
 3. Pairflow CLI is the single lifecycle authority: only CLI may apply routing/state transitions (`request-rework`, human-gate routing, counters).
 4. Skill/workflow must not maintain its own independent durable `last review` storage.
-5. `manual-last` must read only Pairflow-persisted state/artifacts (no model run, no skill-local cache).
+5. Cached retrieval commands must read only Pairflow-persisted state/artifacts (no model run, no skill-local cache).
 
-| Mode | Trigger | Side Effects | Expected Output | Primary Use |
+| Command | Trigger | Side Effects | Expected Output | Primary Use |
 |---|---|---|---|---|
-| `autonomous-run` | Pairflow lifecycle trigger | Allowed (`request-rework`, state updates) | Full report + recommendation + rework target message (if `rework`) | Automated gate in production flow |
-| `manual-run` | User command | None | Full report + recommendation (+ rework target message if `rework`) | Human deep review / diagnostics |
-| `manual-last` | User command | None | Cached latest recommendation/report summary | Low-cost status retrieval in user Codex session |
+| `meta-review run` | Pairflow lifecycle trigger | Allowed (`request-rework`, state updates) | Full report + recommendation + rework target message (if `rework`) | Automated gate in production flow |
+| `meta-review status` | User command | None | Cached latest autonomous recommendation + counters | Low-cost decision/status retrieval |
+| `meta-review last-report` | User command | None | Cached latest autonomous report summary/reference | Low-cost report retrieval |
 
 Rules:
-1. Both modes share the same core evaluation methodology to avoid divergence.
-2. Only `autonomous-run` may perform lifecycle actions.
-3. `manual-run` must never mutate lifecycle state.
-4. `manual-last` must be non-generative and near-constant-cost.
+1. Pairflow CLI command set is intentionally minimal: one execute command (`run`) and two retrieval commands (`status`, `last-report`).
+2. Only `meta-review run` may perform lifecycle actions.
+3. Retrieval commands must be non-generative and near-constant-cost.
 
 Reviewer output payload contract:
-1. Every live review (`autonomous-run`, `manual-run`) must produce a detailed human-readable report artifact/body.
-2. Every live review must produce exactly one recommendation: `rework|approve|inconclusive`.
+1. Every autonomous live review (`run`) must produce a detailed human-readable report artifact/body.
+2. Every autonomous live review must produce exactly one recommendation: `rework|approve|inconclusive`.
 3. If recommendation is `rework`, output must include a targeted rework instruction payload (`rework_target_message`) suitable for implementer handoff.
 4. `rework_target_message` should be actionable and issue-linked (what to fix and why), not only a generic "please rework" text.
-5. If recommendation is `approve|inconclusive`, `rework_target_message` must be `null`.
+5. If recommendation is `approve|inconclusive`, `rework_target_message` may still be present as optional quality-improvement guidance.
+6. For `approve|inconclusive`, `rework_target_message` is informational only and must not trigger automatic lifecycle routing.
 
 ## Recommendation Contract
 
@@ -142,88 +142,83 @@ Allowed recommendation values:
 
 Routing semantics:
 1. `rework`:
-   - autonomous-run: auto `request-rework` if budget allows, using `rework_target_message`.
-   - manual-run: recommendation only.
-   - manual-last: return last stored recommendation only.
+   - run: auto `request-rework` if budget allows, using `rework_target_message`.
 2. `approve`:
    - never auto-approve in MVP; move/keep in human gate state.
+   - optional `rework_target_message` (if present) is advisory and human-consumed only.
 3. `inconclusive`:
    - route to `READY_FOR_HUMAN_APPROVAL` with explicit reason.
 
 ## Input Surface for Meta Review
 
-Required:
-1. Bubble transcript tail + round summaries.
-2. Worktree diff (`main...HEAD`) and status.
-3. Done package.
-4. Reviewer verification artifacts.
-5. Evidence logs referenced by findings/claims.
-6. Task and plan references from bubble artifacts.
-
-Optional:
-1. Cross-bubble related tasks.
-2. Source-of-truth docs for policy validation.
+1. Meta review input discovery is treated as a black-box capability of `UsePairflow/ReviewBubble`.
+2. Normal operation must not require users to pass explicit input bundles for review.
+3. If required information cannot be discovered, review must return `inconclusive`; in autonomous mode this must be persisted with diagnostics for human follow-up.
 
 ## Findings and Report Model
 
-Review still emits findings with severity and class tags. Recommendation is derived from full review outcome (not severity-only shortcut).
+Review internals are treated as a black box in this PRD.
 
-Finding classes (unchanged conceptual baseline):
-1. Evidence/governance consistency.
-2. Scope and packaging integrity.
-3. Cross-document consistency.
-4. Handoff clarity and ownership.
-5. Residual risk/readiness.
+Pairflow-facing output contract from a live review run:
+1. Decision recommendation: `rework|approve|inconclusive`.
+2. Detailed report payload/artifact for human inspection.
+3. `rework_target_message` when recommendation is `rework` (optional advisory text may exist for other recommendations).
 
-## Persistence Model (No-Rerun Retrieval)
+## Persistence Model (Last Autonomous Snapshot)
 
-Artifacts per run:
-1. `artifacts/meta-review.json`
-2. `artifacts/meta-review.md`
+Canonical persistence policy:
+1. Pairflow persists only the latest autonomous review snapshot.
+2. Each new `run` overwrites the previous snapshot.
+3. Retrieval commands read the canonical autonomous snapshot only.
 
-State fields (minimum):
-1. `meta_review.last_run_id`
-2. `meta_review.last_mode` (`autonomous-run|manual-run`)
-3. `meta_review.last_status` (`success|error|inconclusive`)
-4. `meta_review.last_recommendation` (`rework|approve|inconclusive`)
-5. `meta_review.last_summary`
-6. `meta_review.last_report_ref`
-7. `meta_review.last_rework_target_message` (nullable; required when `last_recommendation=rework`)
-8. `meta_review.last_updated_at`
-9. `meta_review.auto_rework_count`
-10. `meta_review.auto_rework_limit`
-11. `meta_review.sticky_human_gate` (bool)
+Canonical artifact/state footprint:
+1. Optional rolling artifacts: `artifacts/meta-review-last.json` and `artifacts/meta-review-last.md` (single-slot overwrite model).
+2. State fields (minimum):
+   - `meta_review.last_autonomous_run_id`
+   - `meta_review.last_autonomous_status` (`success|error|inconclusive`)
+   - `meta_review.last_autonomous_recommendation` (`rework|approve|inconclusive`)
+   - `meta_review.last_autonomous_summary`
+   - `meta_review.last_autonomous_report_ref`
+   - `meta_review.last_autonomous_rework_target_message` (nullable; required when recommendation is `rework`; optional advisory text otherwise)
+   - `meta_review.last_autonomous_updated_at`
+   - `meta_review.auto_rework_count`
+   - `meta_review.auto_rework_limit`
+   - `meta_review.sticky_human_gate` (bool)
 
-Requirement:
-1. Latest recommendation must be queryable without triggering a new review run.
-2. Persisted review payload must be session-independent and readable from any client context (tmux pane, user Codex session, CLI call).
+Requirements:
+1. Latest autonomous recommendation must be queryable without triggering a new review run.
+2. Persisted snapshot must be session-independent and readable from any client context (tmux pane, user Codex session, CLI call).
 
 ## CLI Additions (MVP)
 
-1. `pairflow bubble meta-review --id <id> --mode <autonomous-run|manual-run|manual-last> [--depth <standard|deep>]`
-   - `autonomous-run` and `manual-run` execute live review.
-   - `manual-last` returns persisted latest result only.
-   - For live modes, CLI must persist returned review output before applying any lifecycle action.
-2. `pairflow bubble meta-review-status --id <id> [--json] [--verbose]`
-   - Returns cached latest recommendation and counters only (no new run).
+1. `pairflow bubble meta-review run --id <id> [--depth <standard|deep>]`
+   - Executes live autonomous review.
+   - CLI must persist returned review output before applying any lifecycle action.
+2. `pairflow bubble meta-review status --id <id> [--json] [--verbose]`
+   - Returns cached latest autonomous recommendation snapshot and counters only (no new run).
    - Default output should be compact for quick operator checks.
-3. `pairflow bubble meta-review-report --id <id> [--last]`
-   - Prints the latest stored report reference/content summary.
+3. `pairflow bubble meta-review last-report --id <id>`
+   - Returns the latest stored report reference/content summary.
 
 Behavioral requirement:
-1. `manual-last` and `meta-review-status` must be cheap and non-generative.
-2. `manual-last` is read-only by contract: no mutation of `last_*`, counters, or lifecycle state.
+1. `meta-review status` and `meta-review last-report` must be cheap and non-generative.
+2. Retrieval commands are read-only by contract: no mutation of canonical snapshot, counters, or lifecycle state.
 
 ## Meta-Reviewer Pane Requirement
 
-1. Pairflow provides a dedicated meta-reviewer pane for autonomous review execution.
-2. Pane shows:
-   - current bubble id,
-   - current review run id,
-   - live stage/progress,
-   - final recommendation,
-   - whether auto-rework was dispatched.
-3. Pane logs are persisted as operational audit evidence.
+1. Pairflow provides a dedicated Codex worker pane (`meta-reviewer`) for autonomous review execution.
+2. The pane follows the same orchestrator handoff protocol as other worker panes (implementer/reviewer): receives work, runs its role, returns output to orchestrator.
+3. The meta-reviewer pane may be static across runs; restart-per-round behavior is not required.
+4. The pane is an execution worker, not a persistence authority; canonical persistence remains the last autonomous snapshot in Pairflow state/artifacts.
+5. Pane observability should expose current bubble id, review run id, live stage/progress, final recommendation, and whether auto-rework was dispatched.
+
+## UI Impact (PRD-level)
+
+1. UI must recognize and render the meta-review lifecycle states used by this feature (at minimum `META_REVIEW_RUNNING` and `READY_FOR_HUMAN_APPROVAL`).
+2. UI must recognize and render `meta-reviewer` as a first-class actor/role anywhere active role or timeline role is shown.
+3. Severity/finding tags should remain actor-agnostic: existing severity tag behavior (for example `P0`-`P3`) must continue to work for meta-reviewer findings when findings are present.
+4. UI should display the latest autonomous recommendation (`rework|approve|inconclusive`) from the canonical snapshot in a clearly visible bubble/detail surface.
+5. Distinct visual styling for meta-reviewer role/recommendation is optional in MVP; correctness of state/role/recommendation visibility is required.
 
 ## Approval and Human Gate Rules
 
@@ -232,14 +227,14 @@ Behavioral requirement:
 3. Override reason is mandatory and auditable.
 4. On first entry to `READY_FOR_HUMAN_APPROVAL`, set `sticky_human_gate=true`.
 5. While `sticky_human_gate=true`, new convergence must route directly to `READY_FOR_HUMAN_APPROVAL` (skip `READY_FOR_APPROVAL` + autonomous trigger).
-6. User may still invoke `manual-run` from human gate state to get a fresh recommendation before deciding `rework` or `approve`.
+6. User may still invoke manual deep review directly in user Codex session (outside Pairflow CLI) before deciding `rework` or `approve`.
 
 ## Metrics
 
 Per bubble:
 1. `meta_review_runs_total`
 2. `meta_review_duration_ms`
-3. `meta_review_last_recommendation`
+3. `meta_review_last_autonomous_recommendation`
 4. `meta_review_auto_rework_count`
 5. `meta_review_auto_rework_limit`
 6. `meta_review_reached_human_gate` (bool)
@@ -253,11 +248,11 @@ Fleet-level:
 
 ## Rollout Plan
 
-### Phase 1: Persistence + Invocation Split (`autonomous-run|manual-run|manual-last`)
+### Phase 1: Persistence + Command Split (`run|status|last-report`)
 
-1. Add review artifacts + state fields.
-2. Add `meta-review-status` and report retrieval commands.
-3. Ensure no-rerun retrieval path works end-to-end.
+1. Add rolling last-autonomous snapshot storage + state fields.
+2. Add `meta-review status` and `meta-review last-report` retrieval commands.
+3. Ensure no-rerun retrieval path works end-to-end from the last autonomous snapshot.
 
 ### Phase 2: Autonomous Rework Loop
 
@@ -269,7 +264,8 @@ Fleet-level:
 
 1. Add `READY_FOR_HUMAN_APPROVAL` state wiring.
 2. Add explicit override path for non-approve recommendations.
-3. Ship meta-reviewer pane observability and audit logging.
+3. Ship meta-reviewer pane observability.
+4. Ship UI state/role/recommendation rendering for meta-review flow.
 
 ## Acceptance Criteria
 
@@ -277,25 +273,33 @@ Fleet-level:
 2. `rework` recommendation auto-dispatches `request-rework` without human confirmation when budget allows.
 3. Auto-rework budget default is `5`, and dispatch stops automatically at limit.
 4. Final approval is never auto-executed in MVP.
-5. `manual-last` and `meta-review-status` return latest recommendation without running a new review.
-6. `autonomous-run` and `manual-run` are both supported and reuse the same review workflow logic.
+5. `meta-review status` and `meta-review last-report` return latest autonomous snapshot data without running a new review.
+6. Pairflow CLI supports `run`, `status`, and `last-report`; fresh manual deep review remains an external workflow.
 7. When budget is exhausted or review is inconclusive, bubble routes to `READY_FOR_HUMAN_APPROVAL` and sets sticky human gate.
 8. After sticky human gate is set, future convergences route directly back to `READY_FOR_HUMAN_APPROVAL`.
 9. Meta-reviewer pane exposes live review progress and final routing outcome.
-10. All automated rework/override decisions are audit-visible in artifacts/state.
+10. All automated rework decisions are reflected in current state/snapshot.
+11. UI renders `META_REVIEW_RUNNING` and `READY_FOR_HUMAN_APPROVAL` states without fallback/unknown behavior.
+12. UI renders `meta-reviewer` actor and latest autonomous recommendation from the canonical snapshot.
 
 ## Risks and Mitigations
 
 1. Risk: excessive looping from aggressive rework policy.
    - Mitigation: strict `max_auto_rework_rounds=5` budget and human gate fallback.
-2. Risk: mode drift between autonomous-run and manual-run review behavior.
-   - Mitigation: shared evaluation core and contract tests for recommendation parity.
+2. Risk: behavior drift between autonomous execution and external manual review usage patterns.
+   - Mitigation: keep both paths on the same `UsePairflow/ReviewBubble` logic source and monitor recommendation deltas in operator practice.
 3. Risk: users accidentally rerun expensive reviews just to check status.
-   - Mitigation: explicit cached `meta-review-status` command.
+   - Mitigation: explicit cached `meta-review status` and `meta-review last-report` commands.
 4. Risk: autonomous flow opacity.
-   - Mitigation: meta-reviewer pane + persisted run artifacts.
+   - Mitigation: meta-reviewer pane + persisted last autonomous snapshot.
 
-## Open Questions (Remaining)
+## Resolved Decisions (from PRD discussion)
 
-1. Should autonomous `request-rework` message include full finding list or compact summary + report link?
-2. Exact CLI UX for approval override when latest recommendation is `rework|inconclusive` (single-step vs confirm flow)?
+1. Rework handoff message channel:
+   - Autonomous routing must reuse existing `pairflow bubble request-rework --message` semantics.
+   - `rework_target_message` is passed as the canonical `--message` payload (no extra message contract required in MVP).
+   - Optional: append/include a report reference in message text for operator convenience.
+2. Approval override UX:
+   - MVP uses single-step override (no interactive confirm flow).
+   - Override requires explicit flag + non-empty reason.
+   - Practical operator flow may be natural-language via Codex; Codex maps intent to correct CLI invocation.
