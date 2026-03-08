@@ -13,11 +13,23 @@ import {
   isAgentName,
   isAgentRole,
   isBubbleLifecycleState,
+  isMetaReviewRecommendation,
+  isMetaReviewRunStatus,
   isReworkIntentStatus,
+  type BubbleMetaReviewSnapshotState,
   type BubbleReworkIntentRecord,
   type BubbleStateSnapshot,
   type RoundRoleHistoryEntry
 } from "../../types/bubble.js";
+
+function isSafeArtifactsRef(value: string): boolean {
+  return (
+    value.startsWith("artifacts/") &&
+    !value.includes("..") &&
+    !value.includes("\\") &&
+    !value.includes("\0")
+  );
+}
 
 function validateRoundRoleEntry(
   input: unknown,
@@ -191,6 +203,263 @@ function validateReworkIntentRecord(
   };
 }
 
+function validateMetaReviewSnapshot(
+  input: unknown,
+  errors: ValidationError[]
+): BubbleMetaReviewSnapshotState | undefined {
+  const pathPrefix = "meta_review";
+  const errorCountAtStart = errors.length;
+  if (!isRecord(input)) {
+    errors.push({
+      path: pathPrefix,
+      message: "Must be an object"
+    });
+    return undefined;
+  }
+
+  const lastRunId = input.last_autonomous_run_id;
+  const lastRunIdValid = lastRunId === null || isNonEmptyString(lastRunId);
+  if (!lastRunIdValid) {
+    errors.push({
+      path: `${pathPrefix}.last_autonomous_run_id`,
+      message: "Must be null or a non-empty string"
+    });
+  }
+
+  const lastStatus = input.last_autonomous_status;
+  const lastStatusValid = lastStatus === null || isMetaReviewRunStatus(lastStatus);
+  if (!lastStatusValid) {
+    errors.push({
+      path: `${pathPrefix}.last_autonomous_status`,
+      message: "Must be null or one of: success, error, inconclusive"
+    });
+  }
+
+  const lastRecommendation = input.last_autonomous_recommendation;
+  const lastRecommendationValid =
+    lastRecommendation === null || isMetaReviewRecommendation(lastRecommendation);
+  if (!lastRecommendationValid) {
+    errors.push({
+      path: `${pathPrefix}.last_autonomous_recommendation`,
+      message: "Must be null or one of: rework, approve, inconclusive"
+    });
+  }
+
+  const lastSummary = input.last_autonomous_summary;
+  const lastSummaryValid = lastSummary === null || isNonEmptyString(lastSummary);
+  if (!lastSummaryValid) {
+    errors.push({
+      path: `${pathPrefix}.last_autonomous_summary`,
+      message: "Must be null or a non-empty string"
+    });
+  }
+
+  const lastReportRef = input.last_autonomous_report_ref;
+  const lastReportRefValid = lastReportRef === null || isNonEmptyString(lastReportRef);
+  if (!lastReportRefValid) {
+    errors.push({
+      path: `${pathPrefix}.last_autonomous_report_ref`,
+      message: "Must be null or a non-empty string"
+    });
+  } else if (
+    isNonEmptyString(lastReportRef) &&
+    !isSafeArtifactsRef(lastReportRef)
+  ) {
+    errors.push({
+      path: `${pathPrefix}.last_autonomous_report_ref`,
+      message: "Must be a safe artifacts/* reference when provided"
+    });
+  }
+
+  const lastReworkMessage = input.last_autonomous_rework_target_message;
+  const lastReworkMessageIsString = typeof lastReworkMessage === "string";
+  const lastReworkMessageValid =
+    lastReworkMessage === null || isNonEmptyString(lastReworkMessage);
+  const suppressGenericReworkMessageError =
+    lastRecommendationValid &&
+    lastRecommendation === "rework" &&
+    lastReworkMessageIsString;
+  if (
+    !lastReworkMessageValid &&
+    !suppressGenericReworkMessageError
+  ) {
+    errors.push({
+      path: `${pathPrefix}.last_autonomous_rework_target_message`,
+      message: "Must be null or a non-empty string"
+    });
+  }
+
+  const lastUpdatedAt = input.last_autonomous_updated_at;
+  const lastUpdatedAtValid = lastUpdatedAt === null || isIsoTimestamp(lastUpdatedAt);
+  if (!lastUpdatedAtValid) {
+    errors.push({
+      path: `${pathPrefix}.last_autonomous_updated_at`,
+      message: "Must be null or a valid ISO timestamp"
+    });
+  }
+
+  const autoReworkCount = input.auto_rework_count;
+  const autoReworkCountValid =
+    isInteger(autoReworkCount) && autoReworkCount >= 0;
+  if (!autoReworkCountValid) {
+    errors.push({
+      path: `${pathPrefix}.auto_rework_count`,
+      message: "Must be a non-negative integer"
+    });
+  }
+
+  const autoReworkLimit = input.auto_rework_limit;
+  const autoReworkLimitValid =
+    isInteger(autoReworkLimit) && autoReworkLimit >= 1;
+  if (!autoReworkLimitValid) {
+    errors.push({
+      path: `${pathPrefix}.auto_rework_limit`,
+      message: "Must be an integer >= 1"
+    });
+  }
+
+  const stickyHumanGate = input.sticky_human_gate;
+  const stickyHumanGateValid = typeof stickyHumanGate === "boolean";
+  if (!stickyHumanGateValid) {
+    errors.push({
+      path: `${pathPrefix}.sticky_human_gate`,
+      message: "Must be a boolean"
+    });
+  }
+
+  if (
+    lastRecommendationValid &&
+    lastRecommendation === "rework" &&
+    (lastReworkMessage === null ||
+      (lastReworkMessageIsString && !isNonEmptyString(lastReworkMessage)))
+  ) {
+    errors.push({
+      path: `${pathPrefix}.last_autonomous_rework_target_message`,
+      message:
+        "Must be a non-empty string when last_autonomous_recommendation is rework"
+    });
+  }
+
+  if (lastStatusValid && lastRecommendationValid) {
+    const statusIsNull = lastStatus === null;
+    const recommendationIsNull = lastRecommendation === null;
+    if (statusIsNull !== recommendationIsNull) {
+      errors.push({
+        path: pathPrefix,
+        message:
+          "last_autonomous_status and last_autonomous_recommendation must both be null or both be set"
+      });
+    } else if (statusIsNull && recommendationIsNull) {
+      if (lastRunId !== null) {
+        errors.push({
+          path: `${pathPrefix}.last_autonomous_run_id`,
+          message:
+            "Must be null when last_autonomous_status and last_autonomous_recommendation are null"
+        });
+      }
+      if (lastReportRef !== null) {
+        errors.push({
+          path: `${pathPrefix}.last_autonomous_report_ref`,
+          message:
+            "Must be null when last_autonomous_status and last_autonomous_recommendation are null"
+        });
+      }
+      if (lastSummary !== null) {
+        errors.push({
+          path: `${pathPrefix}.last_autonomous_summary`,
+          message:
+            "Must be null when last_autonomous_status and last_autonomous_recommendation are null"
+        });
+      }
+      if (lastReworkMessage !== null) {
+        errors.push({
+          path: `${pathPrefix}.last_autonomous_rework_target_message`,
+          message:
+            "Must be null when last_autonomous_status and last_autonomous_recommendation are null"
+        });
+      }
+      if (lastUpdatedAt !== null) {
+        errors.push({
+          path: `${pathPrefix}.last_autonomous_updated_at`,
+          message:
+            "Must be null when last_autonomous_status and last_autonomous_recommendation are null"
+        });
+      }
+    } else {
+      if (!isNonEmptyString(lastRunId)) {
+        errors.push({
+          path: `${pathPrefix}.last_autonomous_run_id`,
+          message:
+            "Must be a non-empty string when last_autonomous_status and last_autonomous_recommendation are set"
+        });
+      }
+      if (!isNonEmptyString(lastReportRef)) {
+        errors.push({
+          path: `${pathPrefix}.last_autonomous_report_ref`,
+          message:
+            "Must be a non-empty string when last_autonomous_status and last_autonomous_recommendation are set"
+        });
+      }
+
+      if (
+        isMetaReviewRecommendation(lastRecommendation) &&
+        (lastRecommendation === "rework" || lastRecommendation === "approve") &&
+        lastStatus !== "success"
+      ) {
+        errors.push({
+          path: `${pathPrefix}.last_autonomous_status`,
+          message:
+            "Must be success when last_autonomous_recommendation is rework or approve"
+        });
+      }
+
+      if (
+        (lastStatus === "error" || lastStatus === "inconclusive") &&
+        lastRecommendation !== "inconclusive"
+      ) {
+        errors.push({
+          path: `${pathPrefix}.last_autonomous_recommendation`,
+          message:
+            "Must be inconclusive when last_autonomous_status is error or inconclusive"
+        });
+      }
+
+      if (!isIsoTimestamp(lastUpdatedAt)) {
+        errors.push({
+          path: `${pathPrefix}.last_autonomous_updated_at`,
+          message:
+            "Must be a valid ISO timestamp when last_autonomous_status is set"
+        });
+      }
+    }
+  }
+
+  if (errors.length > errorCountAtStart) {
+    return undefined;
+  }
+
+  return {
+    last_autonomous_run_id: lastRunId as BubbleMetaReviewSnapshotState["last_autonomous_run_id"],
+    last_autonomous_status: lastStatus as BubbleMetaReviewSnapshotState["last_autonomous_status"],
+    last_autonomous_recommendation:
+      lastRecommendation as BubbleMetaReviewSnapshotState["last_autonomous_recommendation"],
+    last_autonomous_summary:
+      lastSummary as BubbleMetaReviewSnapshotState["last_autonomous_summary"],
+    last_autonomous_report_ref:
+      lastReportRef as BubbleMetaReviewSnapshotState["last_autonomous_report_ref"],
+    last_autonomous_rework_target_message:
+      lastReworkMessage as BubbleMetaReviewSnapshotState["last_autonomous_rework_target_message"],
+    last_autonomous_updated_at:
+      lastUpdatedAt as BubbleMetaReviewSnapshotState["last_autonomous_updated_at"],
+    auto_rework_count:
+      autoReworkCount as BubbleMetaReviewSnapshotState["auto_rework_count"],
+    auto_rework_limit:
+      autoReworkLimit as BubbleMetaReviewSnapshotState["auto_rework_limit"],
+    sticky_human_gate:
+      stickyHumanGate as BubbleMetaReviewSnapshotState["sticky_human_gate"]
+  };
+}
+
 export function validateBubbleStateSnapshot(
   input: unknown
 ): ValidationResult<BubbleStateSnapshot> {
@@ -325,6 +594,12 @@ export function validateBubbleStateSnapshot(
     });
   }
 
+  let metaReview: BubbleMetaReviewSnapshotState | undefined;
+  const metaReviewRaw = input.meta_review;
+  if (metaReviewRaw !== undefined) {
+    metaReview = validateMetaReviewSnapshot(metaReviewRaw, errors);
+  }
+
   const knownIntentIds = new Set<string>();
   if (pendingReworkIntent !== null) {
     knownIntentIds.add(pendingReworkIntent.intent_id);
@@ -375,7 +650,8 @@ export function validateBubbleStateSnapshot(
     round_role_history: roundRoleHistory,
     last_command_at: lastCommandAt as BubbleStateSnapshot["last_command_at"],
     pending_rework_intent: pendingReworkIntent,
-    rework_intent_history: reworkIntentHistory
+    rework_intent_history: reworkIntentHistory,
+    ...(metaReview !== undefined ? { meta_review: metaReview } : {})
   });
 }
 

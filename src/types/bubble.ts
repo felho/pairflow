@@ -59,6 +59,24 @@ export const gateSignalLevels = ["warning", "info"] as const;
 
 export type GateSignalLevel = (typeof gateSignalLevels)[number];
 
+export const DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT = 5;
+
+export const metaReviewRunStatuses = [
+  "success",
+  "error",
+  "inconclusive"
+] as const;
+
+export type MetaReviewRunStatus = (typeof metaReviewRunStatuses)[number];
+
+export const metaReviewRecommendations = [
+  "rework",
+  "approve",
+  "inconclusive"
+] as const;
+
+export type MetaReviewRecommendation = (typeof metaReviewRecommendations)[number];
+
 export type GateReasonCode =
   | "DOC_CONTRACT_PARSE_WARNING"
   | "REVIEW_SCHEMA_WARNING"
@@ -180,6 +198,19 @@ export interface BubbleReworkIntentRecord {
   superseded_by_intent_id?: string;
 }
 
+export interface BubbleMetaReviewSnapshotState {
+  last_autonomous_run_id: string | null;
+  last_autonomous_status: MetaReviewRunStatus | null;
+  last_autonomous_recommendation: MetaReviewRecommendation | null;
+  last_autonomous_summary: string | null;
+  last_autonomous_report_ref: string | null;
+  last_autonomous_rework_target_message: string | null;
+  last_autonomous_updated_at: string | null;
+  auto_rework_count: number;
+  auto_rework_limit: number;
+  sticky_human_gate: boolean;
+}
+
 export interface BubbleStateSnapshot {
   bubble_id: string;
   state: BubbleLifecycleState;
@@ -191,6 +222,7 @@ export interface BubbleStateSnapshot {
   last_command_at: string | null;
   pending_rework_intent?: BubbleReworkIntentRecord | null;
   rework_intent_history?: BubbleReworkIntentRecord[];
+  meta_review?: BubbleMetaReviewSnapshotState;
 }
 
 export function isAgentName(value: unknown): value is AgentName {
@@ -276,5 +308,23 @@ export function isReworkIntentStatus(value: unknown): value is ReworkIntentStatu
   return (
     typeof value === "string" &&
     (reworkIntentStatuses as readonly string[]).includes(value)
+  );
+}
+
+export function isMetaReviewRunStatus(
+  value: unknown
+): value is MetaReviewRunStatus {
+  return (
+    typeof value === "string" &&
+    (metaReviewRunStatuses as readonly string[]).includes(value)
+  );
+}
+
+export function isMetaReviewRecommendation(
+  value: unknown
+): value is MetaReviewRecommendation {
+  return (
+    typeof value === "string" &&
+    (metaReviewRecommendations as readonly string[]).includes(value)
   );
 }

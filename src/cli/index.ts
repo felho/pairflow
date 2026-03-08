@@ -55,6 +55,14 @@ import {
   runBubbleMergeCommand
 } from "./commands/bubble/merge.js";
 import {
+  getBubbleMetaReviewHelpText,
+  parseBubbleMetaReviewCommandOptions,
+  renderMetaReviewLastReportText,
+  renderMetaReviewRunText,
+  renderMetaReviewStatusText,
+  runBubbleMetaReviewCommand
+} from "./commands/bubble/metaReview.js";
+import {
   getBubbleRequestReworkHelpText,
   runBubbleRequestReworkCommand
 } from "./commands/bubble/requestRework.js";
@@ -108,6 +116,10 @@ import {
   getMetricsReportHelpText,
   runMetricsReportCommand
 } from "./commands/metrics/report.js";
+import {
+  MetaReviewError,
+  toMetaReviewError
+} from "../core/bubble/metaReview.js";
 
 async function handlePassCommand(args: string[]): Promise<number> {
   const result = await runPassCommand(args);
@@ -570,6 +582,64 @@ async function handleBubbleMergeCommand(args: string[]): Promise<number> {
   return 0;
 }
 
+async function handleBubbleMetaReviewCommand(args: string[]): Promise<number> {
+  try {
+    const parsed = parseBubbleMetaReviewCommandOptions(args);
+    if (parsed.help) {
+      process.stdout.write(`${getBubbleMetaReviewHelpText()}\n`);
+      return 0;
+    }
+
+    const result = await runBubbleMetaReviewCommand(parsed);
+    if (result === null) {
+      process.stdout.write(`${getBubbleMetaReviewHelpText()}\n`);
+      return 0;
+    }
+
+    if (parsed.json) {
+      if (result.command === "run") {
+        process.stdout.write(`${JSON.stringify(result.run, null, 2)}\n`);
+        return 0;
+      }
+      if (result.command === "status") {
+        process.stdout.write(`${JSON.stringify(result.status, null, 2)}\n`);
+        return 0;
+      }
+      if (result.command === "last-report") {
+        process.stdout.write(`${JSON.stringify(result.lastReport, null, 2)}\n`);
+        return 0;
+      }
+    }
+
+    if (result.command === "run") {
+      process.stdout.write(`${renderMetaReviewRunText(result.run)}\n`);
+      return 0;
+    }
+    if (result.command === "status") {
+      process.stdout.write(
+        `${renderMetaReviewStatusText(result.status, parsed.verbose)}\n`
+      );
+      return 0;
+    }
+    if (result.command === "last-report") {
+      process.stdout.write(
+        `${renderMetaReviewLastReportText(result.lastReport, parsed.verbose)}\n`
+      );
+      return 0;
+    }
+
+    process.stderr.write("Unexpected meta-review command result.\n");
+    return 1;
+  } catch (error) {
+    const metaReviewError =
+      error instanceof MetaReviewError ? error : toMetaReviewError(error);
+    process.stderr.write(
+      `meta_review_error reason_code=${metaReviewError.reasonCode} message=${metaReviewError.message}\n`
+    );
+    return 1;
+  }
+}
+
 async function handleBubbleInboxCommand(args: string[]): Promise<number> {
   const parsed = parseBubbleInboxCommandOptions(args);
   if (parsed.help) {
@@ -609,6 +679,7 @@ const bubbleSubcommandHandlers: Readonly<
   reply: handleBubbleReplyCommand,
   commit: handleBubbleCommitCommand,
   merge: handleBubbleMergeCommand,
+  "meta-review": handleBubbleMetaReviewCommand,
   approve: handleBubbleApproveCommand,
   "request-rework": handleBubbleRequestReworkCommand
 };

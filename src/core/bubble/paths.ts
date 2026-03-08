@@ -15,6 +15,8 @@ export interface BubblePaths {
   reviewerBriefArtifactPath: string;
   reviewerFocusArtifactPath: string;
   reviewVerificationArtifactPath: string;
+  metaReviewLastJsonArtifactPath: string;
+  metaReviewLastMarkdownArtifactPath: string;
   locksDir: string;
   runtimeDir: string;
   sessionsPath: string;
@@ -55,6 +57,8 @@ export function getBubblePaths(repoPathInput: string, bubbleId: string): BubbleP
     reviewerBriefArtifactPath: join(artifactsDir, "reviewer-brief.md"),
     reviewerFocusArtifactPath: join(artifactsDir, "reviewer-focus.json"),
     reviewVerificationArtifactPath: join(artifactsDir, "review-verification.json"),
+    metaReviewLastJsonArtifactPath: join(artifactsDir, "meta-review-last.json"),
+    metaReviewLastMarkdownArtifactPath: join(artifactsDir, "meta-review-last.md"),
     locksDir,
     runtimeDir,
     sessionsPath: join(runtimeDir, "sessions.json"),

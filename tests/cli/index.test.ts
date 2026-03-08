@@ -150,6 +150,13 @@ describe("runCli", () => {
     expect(stdoutSpy).toHaveBeenCalled();
   });
 
+  it("supports bubble meta-review help", async () => {
+    const exitCode = await runCli(["bubble", "meta-review", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+  });
+
   it("supports top-level converged help", async () => {
     const exitCode = await runCli(["converged", "--help"]);
 
@@ -231,6 +238,208 @@ describe("runCli", () => {
 
     expect(exitCode).toBe(1);
     expect(stderrSpy).toHaveBeenCalled();
+  });
+
+  it("returns non-zero for invalid bubble meta-review options", async () => {
+    const exitCode = await runCli([
+      "bubble",
+      "meta-review",
+      "run",
+      "--id",
+      "b_invalid_meta_review",
+      "--depth",
+      "extreme"
+    ]);
+
+    expect(exitCode).toBe(1);
+    expect(stderrSpy).toHaveBeenCalled();
+  });
+
+  it("prints structured schema-invalid stderr format for meta-review parse errors", async () => {
+    const exitCode = await runCli([
+      "bubble",
+      "meta-review",
+      "run",
+      "--id",
+      "b_invalid_meta_review_schema",
+      "--depth",
+      "extreme"
+    ]);
+
+    expect(exitCode).toBe(1);
+    const stderrText = stderrSpy.mock.calls.map((call) => String(call[0])).join("");
+    expect(stderrText).toContain(
+      "meta_review_error reason_code=META_REVIEW_SCHEMA_INVALID message="
+    );
+  });
+
+  it("includes meta-review reason_code in stderr for typed command errors", async () => {
+    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-meta-review-"));
+    tempDirs.push(repoPath);
+    await initGitRepository(repoPath);
+
+    const exitCode = await runCli([
+      "bubble",
+      "meta-review",
+      "status",
+      "--id",
+      "b_missing_meta_review",
+      "--repo",
+      repoPath
+    ]);
+
+    expect(exitCode).toBe(1);
+    const stderrText = stderrSpy.mock.calls.map((call) => String(call[0])).join("");
+    expect(stderrText).toContain(
+      "meta_review_error reason_code=META_REVIEW_BUBBLE_LOOKUP_FAILED"
+    );
+  });
+
+  it("renders meta-review status as JSON through runCli", async () => {
+    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-meta-review-json-"));
+    tempDirs.push(repoPath);
+    await initGitRepository(repoPath);
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_review_cli_json_01",
+      task: "meta-review json status"
+    });
+
+    const exitCode = await runCli([
+      "bubble",
+      "meta-review",
+      "status",
+      "--id",
+      bubble.bubbleId,
+      "--repo",
+      repoPath,
+      "--json"
+    ]);
+
+    expect(exitCode).toBe(0);
+    const stdoutText = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+    const parsed = JSON.parse(stdoutText) as { bubbleId: string; has_run: boolean };
+    expect(parsed.bubbleId).toBe(bubble.bubbleId);
+    expect(parsed.has_run).toBe(false);
+  });
+
+  it("renders meta-review run as JSON through runCli", async () => {
+    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-meta-review-json-run-"));
+    tempDirs.push(repoPath);
+    await initGitRepository(repoPath);
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_review_cli_json_02",
+      task: "meta-review json run"
+    });
+
+    const exitCode = await runCli([
+      "bubble",
+      "meta-review",
+      "run",
+      "--id",
+      bubble.bubbleId,
+      "--repo",
+      repoPath,
+      "--json"
+    ]);
+
+    expect(exitCode).toBe(0);
+    const stdoutText = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+    const parsed = JSON.parse(stdoutText) as {
+      bubbleId: string;
+      run_id: string;
+      status: string;
+      recommendation: string;
+      report_ref: string;
+    };
+    expect(parsed.bubbleId).toBe(bubble.bubbleId);
+    expect(parsed.run_id.length).toBeGreaterThan(0);
+    expect(parsed.status).toBe("error");
+    expect(parsed.recommendation).toBe("inconclusive");
+    expect(parsed.report_ref).toBe("artifacts/meta-review-last.md");
+  });
+
+  it("renders meta-review last-report as JSON through runCli", async () => {
+    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-meta-review-json-last-"));
+    tempDirs.push(repoPath);
+    await initGitRepository(repoPath);
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_review_cli_json_03",
+      task: "meta-review json last-report"
+    });
+
+    const runExitCode = await runCli([
+      "bubble",
+      "meta-review",
+      "run",
+      "--id",
+      bubble.bubbleId,
+      "--repo",
+      repoPath
+    ]);
+    expect(runExitCode).toBe(0);
+    stdoutSpy.mockClear();
+
+    const lastReportExitCode = await runCli([
+      "bubble",
+      "meta-review",
+      "last-report",
+      "--id",
+      bubble.bubbleId,
+      "--repo",
+      repoPath,
+      "--json"
+    ]);
+
+    expect(lastReportExitCode).toBe(0);
+    const stdoutText = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+    const parsed = JSON.parse(stdoutText) as {
+      bubbleId: string;
+      has_report: boolean;
+      report_ref: string | null;
+      report_markdown: string | null;
+    };
+    expect(parsed.bubbleId).toBe(bubble.bubbleId);
+    expect(parsed.has_report).toBe(true);
+    expect(parsed.report_ref).toBe("artifacts/meta-review-last.md");
+    expect(typeof parsed.report_markdown).toBe("string");
+  });
+
+  it("renders meta-review last-report no-report JSON through runCli", async () => {
+    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-meta-review-json-last-empty-"));
+    tempDirs.push(repoPath);
+    await initGitRepository(repoPath);
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_review_cli_json_04",
+      task: "meta-review json last-report empty"
+    });
+
+    const exitCode = await runCli([
+      "bubble",
+      "meta-review",
+      "last-report",
+      "--id",
+      bubble.bubbleId,
+      "--repo",
+      repoPath,
+      "--json"
+    ]);
+
+    expect(exitCode).toBe(0);
+    const stdoutText = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+    const parsed = JSON.parse(stdoutText) as {
+      bubbleId: string;
+      has_report: boolean;
+      report_ref: string | null;
+      report_markdown: string | null;
+    };
+    expect(parsed.bubbleId).toBe(bubble.bubbleId);
+    expect(parsed.has_report).toBe(false);
+    expect(parsed.report_ref).toBeNull();
+    expect(parsed.report_markdown).toBeNull();
   });
 
   it("prints registry-backed unknown command support list", async () => {
