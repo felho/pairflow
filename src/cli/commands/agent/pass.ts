@@ -35,7 +35,9 @@ export function getPassHelpText(): string {
     "  --intent <value>      Optional intent override: task|review|fix_request",
     "  --finding <value>     Reviewer finding, format: P0|P1|P2|P3:Title[|ref1,ref2] (repeatable)",
     "                        If a single ref contains a comma, escape it as \\,.",
+    "                        Doc scope note: CLI --finding cannot encode `timing`/`layer`; unqualified P0/P1 are advisory for post-gate routing.",
     "  --no-findings         Reviewer explicit clean pass (no open findings)",
+    "                        Note: at/after `severity_gate_round`, reviewer PASS requires blocker findings under scope policy.",
     "  -h, --help            Show this help"
   ].join("\n");
 }

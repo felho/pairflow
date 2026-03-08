@@ -18,6 +18,7 @@ function createConfig(overrides: Partial<BubbleConfig> = {}): BubbleConfig {
     reviewer_context_mode: "fresh",
     watchdog_timeout_minutes: 5,
     max_rounds: 8,
+    severity_gate_round: 4,
     commit_requires_approval: true,
     agents: {
       implementer: "codex",

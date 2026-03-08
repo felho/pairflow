@@ -409,6 +409,12 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain("document/task artifacts");
     expect(reviewerCommand).toContain("Do not force `feature-dev:code-reviewer`");
     expect(reviewerCommand).toContain(
+      "Document scope: `pairflow pass` for blockers is valid only when structured findings include strict qualifiers (`timing=required-now` + `layer=L1`)."
+    );
+    expect(reviewerCommand).toContain(
+      "CLI `--finding` cannot encode these qualifiers"
+    );
+    expect(reviewerCommand).toContain(
       "Runtime checks are not required for document-only scope."
     );
     expectReviewerValidationClaimGuardrails(reviewerCommand);
@@ -985,6 +991,43 @@ describe("startBubble", () => {
           expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_B);
           expectNoForbiddenReviewerCommandGateTokens(input.reviewerKickoffMessage);
           return Promise.resolve({ sessionName: "pf-b_start_resume_r2_findings_01" });
+        }
+      }
+    );
+  });
+
+  it("defaults to findings-path projection when resume summary cannot be parsed", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_r2_parse_fallback_01",
+      task: "Resume reviewer projection parse fallback"
+    });
+
+    await updateBubbleState(bubble.paths.statePath, (current) => ({
+      ...current,
+      round: 2,
+      active_agent: bubble.config.agents.reviewer,
+      active_role: "reviewer"
+    }));
+
+    await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-23T09:05:45.000Z")
+      },
+      {
+        buildResumeTranscriptSummary: () =>
+          Promise.resolve("resume-summary: reviewer-active findings=unknown"),
+        launchBubbleTmuxSession: (input) => {
+          expect(input.reviewerKickoffMessage).toContain("resume kickoff (reviewer)");
+          expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_E);
+          expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_C);
+          expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+          expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_B);
+          expectNoForbiddenReviewerCommandGateTokens(input.reviewerKickoffMessage);
+          return Promise.resolve({ sessionName: "pf-b_start_resume_r2_parse_fallback_01" });
         }
       }
     );

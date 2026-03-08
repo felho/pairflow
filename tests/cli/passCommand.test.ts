@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getPassHelpText,
   parsePassCommandOptions,
   runPassCommand
 } from "../../src/cli/commands/agent/pass.js";
@@ -151,6 +152,12 @@ describe("parsePassCommandOptions", () => {
         "P1:Missing test|artifact://review/failure.log,segment.log"
       ])
     ).toThrow(/single ref contains a comma/u);
+  });
+
+  it("documents doc-scope blocker qualifier limits in help text", () => {
+    const help = getPassHelpText();
+    expect(help).toContain("Doc scope note");
+    expect(help).toContain("CLI --finding cannot encode `timing`/`layer`");
   });
 });
 

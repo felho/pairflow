@@ -144,6 +144,7 @@ export interface BubbleConfig {
   reviewer_context_mode: ReviewerContextMode;
   watchdog_timeout_minutes: number;
   max_rounds: number;
+  severity_gate_round: number;
   commit_requires_approval: boolean;
   accuracy_critical?: boolean;
   attach_launcher?: AttachLauncher;

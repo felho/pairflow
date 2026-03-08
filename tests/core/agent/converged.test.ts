@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { emitConvergedFromWorkspace, ConvergedCommandError } from "../../../src/core/agent/converged.js";
 import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
+import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { readTranscriptEnvelopes, appendProtocolEnvelope } from "../../../src/core/protocol/transcriptStore.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { resolveReviewerTestEvidenceArtifactPath } from "../../../src/core/reviewer/testEvidence.js";
@@ -63,6 +64,33 @@ async function setupConvergedCandidateBubble(
     summary: "Implementation pass 2",
     cwd: bubble.paths.worktreePath,
     now: new Date("2026-02-22T09:03:00.000Z")
+  });
+  await emitPassFromWorkspace({
+    summary: "Review pass 2 findings",
+    findings: [
+      {
+        severity: "P2",
+        title: "Round-2 non-blocking follow-up"
+      }
+    ],
+    cwd: bubble.paths.worktreePath,
+    now: new Date("2026-02-22T09:03:10.000Z")
+  });
+  await emitPassFromWorkspace({
+    summary: "Implementation pass 3",
+    cwd: bubble.paths.worktreePath,
+    now: new Date("2026-02-22T09:03:20.000Z")
+  });
+  await emitPassFromWorkspace({
+    summary: "Review pass 3 clean",
+    noFindings: true,
+    cwd: bubble.paths.worktreePath,
+    now: new Date("2026-02-22T09:03:30.000Z")
+  });
+  await emitPassFromWorkspace({
+    summary: "Implementation pass 4",
+    cwd: bubble.paths.worktreePath,
+    now: new Date("2026-02-22T09:03:40.000Z")
   });
 
   return bubble;
@@ -196,6 +224,10 @@ describe("emitConvergedFromWorkspace", () => {
       "PASS",
       "PASS",
       "PASS",
+      "PASS",
+      "PASS",
+      "PASS",
+      "PASS",
       "CONVERGENCE",
       "APPROVAL_REQUEST"
     ]);
@@ -206,29 +238,13 @@ describe("emitConvergedFromWorkspace", () => {
 
   it("blocks docs-only convergence when summary has runtime claims and verifier is untrusted", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupConvergedCandidateBubble(
       repoPath,
-      bubbleId: "b_converged_docs_gate_01",
-      task: "Docs only round",
-      reviewArtifactType: "document"
-    });
-
-    await emitPassFromWorkspace({
-      summary: "Documentation update handoff.",
-      cwd: bubble.paths.worktreePath,
-      now: new Date("2026-02-22T09:01:00.000Z")
-    });
-    await emitPassFromWorkspace({
-      summary: "Review pass 1 clean",
-      noFindings: true,
-      cwd: bubble.paths.worktreePath,
-      now: new Date("2026-02-22T09:02:00.000Z")
-    });
-    await emitPassFromWorkspace({
-      summary: "Documentation update handoff 2.",
-      cwd: bubble.paths.worktreePath,
-      now: new Date("2026-02-22T09:03:00.000Z")
-    });
+      "b_converged_docs_gate_01",
+      {
+        reviewArtifactType: "document"
+      }
+    );
 
     await rm(resolveReviewerTestEvidenceArtifactPath(bubble.paths.artifactsDir), {
       force: true
@@ -272,29 +288,13 @@ describe("emitConvergedFromWorkspace", () => {
 
   it("allows docs-only convergence with claim-free summary even when verifier is untrusted", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
+    const bubble = await setupConvergedCandidateBubble(
       repoPath,
-      bubbleId: "b_converged_docs_gate_02",
-      task: "Docs only round",
-      reviewArtifactType: "document"
-    });
-
-    await emitPassFromWorkspace({
-      summary: "Documentation update handoff.",
-      cwd: bubble.paths.worktreePath,
-      now: new Date("2026-02-22T09:01:00.000Z")
-    });
-    await emitPassFromWorkspace({
-      summary: "Review pass 1 clean",
-      noFindings: true,
-      cwd: bubble.paths.worktreePath,
-      now: new Date("2026-02-22T09:02:00.000Z")
-    });
-    await emitPassFromWorkspace({
-      summary: "Documentation update handoff 2.",
-      cwd: bubble.paths.worktreePath,
-      now: new Date("2026-02-22T09:03:00.000Z")
-    });
+      "b_converged_docs_gate_02",
+      {
+        reviewArtifactType: "document"
+      }
+    );
 
     await rm(resolveReviewerTestEvidenceArtifactPath(bubble.paths.artifactsDir), {
       force: true
@@ -799,6 +799,44 @@ describe("emitConvergedFromWorkspace", () => {
     ).rejects.toBeInstanceOf(ConvergedCommandError);
   });
 
+  it("rejects when expected state fingerprint does not match current state", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupConvergedCandidateBubble(
+      repoPath,
+      "b_converged_expected_fingerprint_01"
+    );
+
+    await expect(
+      emitConvergedFromWorkspace({
+        summary: "Should fail due to stale expected fingerprint",
+        cwd: bubble.paths.worktreePath,
+        expectedStateFingerprint: "stale-fingerprint"
+      })
+    ).rejects.toThrow(/AUTO_CONVERGE_STATE_STALE/u);
+  });
+
+  it("returns explicit round-1 convergence guardrail reason code", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_converged_round1_guardrail_01",
+      task: "Round-1 convergence guardrail"
+    });
+
+    await emitPassFromWorkspace({
+      summary: "Implementation pass 1",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-22T10:01:00.000Z")
+    });
+
+    await expect(
+      emitConvergedFromWorkspace({
+        summary: "Attempt converge in round 1",
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/ROUND1_CONVERGENCE_GUARDRAIL/u);
+  });
+
   it("rejects when convergence alternation evidence is missing", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -819,6 +857,161 @@ describe("emitConvergedFromWorkspace", () => {
         cwd: bubble.paths.worktreePath
       })
     ).rejects.toThrow(/alternation evidence/u);
+  });
+
+  it("rejects with explicit reason when previous reviewer PASS is missing at round>1", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_converged_missing_previous_reviewer_pass_01",
+      task: "Convergence previous reviewer PASS requirement"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 3,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-22T10:40:00.000Z",
+        last_command_at: "2026-02-22T10:40:00.000Z",
+        round_role_history: [
+          {
+            round: 1,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-02-22T10:10:00.000Z"
+          },
+          {
+            round: 2,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-02-22T10:20:00.000Z"
+          },
+          {
+            round: 3,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-02-22T10:30:00.000Z"
+          }
+        ]
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const lockPath = join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`);
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      lockPath,
+      now: new Date("2026-02-22T10:21:00.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 2,
+        payload: {
+          summary: "Implementation pass in previous round"
+        },
+        refs: []
+      }
+    });
+
+    await expect(
+      emitConvergedFromWorkspace({
+        summary: "Should fail: previous reviewer PASS is missing",
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/CONVERGENCE_PREVIOUS_REVIEWER_PASS_MISSING/u);
+  });
+
+  it("accepts prior-round reviewer CONVERGENCE as qualifying reviewer verdict", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_converged_previous_convergence_01",
+      task: "Convergence after approval rework"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 5,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-22T10:50:00.000Z",
+        last_command_at: "2026-02-22T10:50:00.000Z",
+        round_role_history: [
+          {
+            round: 1,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-02-22T10:10:00.000Z"
+          },
+          {
+            round: 2,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-02-22T10:20:00.000Z"
+          },
+          {
+            round: 3,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-02-22T10:30:00.000Z"
+          },
+          {
+            round: 4,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-02-22T10:40:00.000Z"
+          },
+          {
+            round: 5,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-02-22T10:50:00.000Z"
+          }
+        ]
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const lockPath = join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`);
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      lockPath,
+      now: new Date("2026-02-22T10:41:00.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.reviewer,
+        recipient: "orchestrator",
+        type: "CONVERGENCE",
+        round: 4,
+        payload: {
+          summary: "Round 4 converged before approval rework"
+        },
+        refs: []
+      }
+    });
+
+    const result = await emitConvergedFromWorkspace({
+      summary: "Round 5 reconvergence after requested rework",
+      cwd: bubble.paths.worktreePath
+    });
+    expect(result.state.state).toBe("READY_FOR_APPROVAL");
   });
 
   it("rejects when unresolved human question exists in transcript", async () => {
@@ -1171,6 +1364,114 @@ describe("emitConvergedFromWorkspace", () => {
 
     const result = await emitConvergedFromWorkspace({
       summary: "Round 2 convergence with non-blocking findings",
+      cwd: bubble.paths.worktreePath
+    });
+    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+  });
+
+  it("supports converged integration with non-default severity_gate_round config", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_converged_non_default_gate_01",
+      task: "Converged non-default gate integration"
+    });
+
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        severity_gate_round: 8
+      }),
+      "utf8"
+    );
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 4,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-22T11:30:00.000Z",
+        last_command_at: "2026-02-22T11:30:00.000Z",
+        round_role_history: [
+          {
+            round: 1,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-02-22T11:15:00.000Z"
+          },
+          {
+            round: 2,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-02-22T11:20:00.000Z"
+          },
+          {
+            round: 3,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-02-22T11:25:00.000Z"
+          },
+          {
+            round: 4,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-02-22T11:30:00.000Z"
+          }
+        ]
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const lockPath = join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`);
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      lockPath,
+      now: new Date("2026-02-22T11:26:00.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 3,
+        payload: {
+          summary: "Implementation pass"
+        },
+        refs: []
+      }
+    });
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      lockPath,
+      now: new Date("2026-02-22T11:27:00.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.reviewer,
+        recipient: bubble.config.agents.implementer,
+        type: "PASS",
+        round: 3,
+        payload: {
+          summary: "Review found non-blocking follow-up",
+          findings: [
+            {
+              severity: "P2",
+              title: "Non-blocking issue remains"
+            }
+          ]
+        },
+        refs: []
+      }
+    });
+
+    const result = await emitConvergedFromWorkspace({
+      summary: "Converged with non-default gate config",
       cwd: bubble.paths.worktreePath
     });
     expect(result.state.state).toBe("READY_FOR_APPROVAL");

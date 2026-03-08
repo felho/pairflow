@@ -31,6 +31,7 @@ const baseConfig: BubbleConfig = {
   reviewer_context_mode: "persistent",
   watchdog_timeout_minutes: 5,
   max_rounds: 8,
+  severity_gate_round: 4,
   commit_requires_approval: true,
   attach_launcher: "auto",
   agents: {
@@ -833,6 +834,7 @@ describe("emitTmuxDeliveryNotification", () => {
     );
     expect(messageCall?.[4]).toContain("document/task artifacts");
     expect(messageCall?.[4]).toContain("Do not force `feature-dev:code-reviewer`");
+    expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_D);
   });
 
   it("routes human recipient notifications to status pane", async () => {

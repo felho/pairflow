@@ -109,6 +109,31 @@ async function advanceToReviewerRoundTwoWithCleanHistoryAccuracyCritical(input: 
   });
 }
 
+function buildRoundRoleHistoryThroughRound(input: {
+  throughRound: number;
+  implementer: "codex" | "claude";
+  reviewer: "codex" | "claude";
+}): Array<{
+  round: number;
+  implementer: "codex" | "claude";
+  reviewer: "codex" | "claude";
+  switched_at: string;
+}> {
+  return Array.from({ length: input.throughRound }, (_, index) => {
+    const round = index + 1;
+    const switchedMinute = (round - 1) * 30;
+    const switchedHour = 10 + Math.floor(switchedMinute / 60);
+    const minute = switchedMinute % 60;
+    return {
+      round,
+      implementer: input.implementer,
+      reviewer: input.reviewer,
+      switched_at:
+        `2026-03-01T${String(switchedHour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00.000Z`
+    };
+  });
+}
+
 afterEach(async () => {
   await Promise.all(
     tempDirs.splice(0).map((path) =>
@@ -284,6 +309,70 @@ describe("emitPassFromWorkspace", () => {
     expect(updated.state.round_role_history.some((entry) => entry.round === 2)).toBe(true);
   });
 
+  it("keeps pre-gate compatibility at round 3 with P2-only findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_pre_gate_round3_p2_only_01",
+      task: "Pre-gate round 3 P2 compatibility"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 3,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-03-03T10:00:00.000Z",
+        last_command_at: "2026-03-03T10:00:00.000Z",
+        round_role_history: [
+          {
+            round: 1,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-03-03T09:00:00.000Z"
+          },
+          {
+            round: 2,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-03-03T09:20:00.000Z"
+          },
+          {
+            round: 3,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-03-03T09:40:00.000Z"
+          }
+        ]
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Pre-gate P2 finding remains allowed",
+      findings: [
+        {
+          severity: "P2",
+          title: "Non-blocking but actionable item"
+        }
+      ],
+      cwd: bubble.paths.worktreePath
+    });
+
+    expect(result.envelope.type).toBe("PASS");
+    expect(result.envelope.round).toBe(3);
+    expect(result.envelope.payload.pass_intent).toBe("fix_request");
+    expect(result.state.active_role).toBe("implementer");
+    expect(result.state.round).toBe(4);
+  });
+
   it("requires explicit findings declaration for reviewer PASS", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -315,7 +404,54 @@ describe("emitPassFromWorkspace", () => {
         summary: "Review done",
         cwd: bubble.paths.worktreePath
       })
-    ).rejects.toThrow(/requires explicit findings declaration/u);
+    ).rejects.toThrow(/FINDINGS_PAYLOAD_INVALID/u);
+  });
+
+  it("rejects malformed reviewer findings payload with explicit reason code", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_invalid_findings_payload_01",
+      task: "Invalid findings payload reject"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 2,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-03-01T12:12:00.000Z",
+        last_command_at: "2026-03-01T12:12:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const transcriptBefore = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    const stateBefore = await readStateSnapshot(bubble.paths.statePath);
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Malformed findings payload",
+        findings: [{ title: "Missing severity/priority" } as unknown as {
+          severity: "P2";
+          title: string;
+        }],
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/FINDINGS_PAYLOAD_INVALID/u);
+
+    const transcriptAfter = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcriptAfter).toEqual(transcriptBefore);
+    const stateAfter = await readStateSnapshot(bubble.paths.statePath);
+    expect(stateAfter.state).toEqual(stateBefore.state);
+    expect(stateAfter.fingerprint).toBe(stateBefore.fingerprint);
   });
 
   it("writes empty findings array when reviewer declares no findings", async () => {
@@ -358,6 +494,332 @@ describe("emitPassFromWorkspace", () => {
     expect(result.repeatCleanTrigger).toBe(false);
     expect(result.envelope.payload.pass_intent).toBe("review");
     expect(result.envelope.payload.findings).toEqual([]);
+  });
+
+  it("rejects reviewer --no-findings via pass at round>=severity_gate_round with no side effects", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_post_gate_no_findings_01",
+      task: "Post-gate no-findings reject"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 4,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-03-01T12:00:00.000Z",
+        last_command_at: "2026-03-01T12:00:00.000Z",
+        round_role_history: buildRoundRoleHistoryThroughRound({
+          throughRound: 4,
+          implementer: bubble.config.agents.implementer,
+          reviewer: bubble.config.agents.reviewer
+        })
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const transcriptBefore = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    const stateBefore = await readStateSnapshot(bubble.paths.statePath);
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Reviewer clean at post gate",
+        noFindings: true,
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/REVIEWER_PASS_NO_FINDINGS_POST_GATE/u);
+
+    const transcriptAfter = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcriptAfter).toEqual(transcriptBefore);
+    const stateAfter = await readStateSnapshot(bubble.paths.statePath);
+    expect(stateAfter.state).toEqual(stateBefore.state);
+  });
+
+  it("rejects reviewer non-blocking-only pass at round>=severity_gate_round with no side effects", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_post_gate_non_blocking_01",
+      task: "Post-gate non-blocking pass reject"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 4,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-03-01T12:05:00.000Z",
+        last_command_at: "2026-03-01T12:05:00.000Z",
+        round_role_history: buildRoundRoleHistoryThroughRound({
+          throughRound: 4,
+          implementer: bubble.config.agents.implementer,
+          reviewer: bubble.config.agents.reviewer
+        })
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const transcriptBefore = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    const stateBefore = await readStateSnapshot(bubble.paths.statePath);
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Only non-blocking findings remain",
+        findings: [
+          {
+            severity: "P2",
+            title: "Non-blocking gap"
+          },
+          {
+            severity: "P3",
+            title: "Minor cleanup"
+          }
+        ],
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/REVIEWER_PASS_NON_BLOCKING_POST_GATE/u);
+
+    const transcriptAfter = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcriptAfter).toEqual(transcriptBefore);
+    const stateAfter = await readStateSnapshot(bubble.paths.statePath);
+    expect(stateAfter.state).toEqual(stateBefore.state);
+  });
+
+  it("rejects document-scope reviewer --no-findings at gate round with no side effects", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_post_gate_doc_no_findings_01",
+      task: "Doc scope post-gate no-findings reject",
+      reviewArtifactType: "document"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 4,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-03-01T12:06:00.000Z",
+        last_command_at: "2026-03-01T12:06:00.000Z",
+        round_role_history: buildRoundRoleHistoryThroughRound({
+          throughRound: 4,
+          implementer: bubble.config.agents.implementer,
+          reviewer: bubble.config.agents.reviewer
+        })
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const transcriptBefore = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    const stateBefore = await readStateSnapshot(bubble.paths.statePath);
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Document review clean at gate round",
+        noFindings: true,
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/REVIEWER_PASS_NO_FINDINGS_POST_GATE/u);
+
+    const transcriptAfter = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcriptAfter).toEqual(transcriptBefore);
+    const stateAfter = await readStateSnapshot(bubble.paths.statePath);
+    expect(stateAfter.state).toEqual(stateBefore.state);
+    expect(stateAfter.fingerprint).toBe(stateBefore.fingerprint);
+  });
+
+  it("allows reviewer pass at round>=severity_gate_round when blocker is present", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_post_gate_blocker_01",
+      task: "Post-gate blocker pass allow"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 4,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-03-01T12:10:00.000Z",
+        last_command_at: "2026-03-01T12:10:00.000Z",
+        round_role_history: buildRoundRoleHistoryThroughRound({
+          throughRound: 4,
+          implementer: bubble.config.agents.implementer,
+          reviewer: bubble.config.agents.reviewer
+        })
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Blocker remains",
+      findings: [
+        {
+          severity: "P1",
+          title: "Must fix before converge"
+        },
+        {
+          severity: "P3",
+          title: "Minor polish"
+        }
+      ],
+      cwd: bubble.paths.worktreePath
+    });
+
+    expect(result.envelope.type).toBe("PASS");
+    expect(result.envelope.payload.pass_intent).toBe("fix_request");
+    expect(result.state.active_role).toBe("implementer");
+    expect(result.state.round).toBe(5);
+  });
+
+  it("rejects document-scope post-gate CLI-style P1 finding as non-blocking with no side effects", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_post_gate_doc_cli_blocker_01",
+      task: "Doc scope post-gate CLI blocker downgrade",
+      reviewArtifactType: "document"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 4,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-03-01T12:11:00.000Z",
+        last_command_at: "2026-03-01T12:11:00.000Z",
+        round_role_history: buildRoundRoleHistoryThroughRound({
+          throughRound: 4,
+          implementer: bubble.config.agents.implementer,
+          reviewer: bubble.config.agents.reviewer
+        })
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const transcriptBefore = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    const stateBefore = await readStateSnapshot(bubble.paths.statePath);
+
+    let rejection: unknown;
+    try {
+      await emitPassFromWorkspace({
+        summary: "Doc scope CLI-style blocker finding",
+        findings: [
+          {
+            severity: "P1",
+            title: "Declared blocker without strict qualifiers"
+          }
+        ],
+        cwd: bubble.paths.worktreePath
+      });
+    } catch (error) {
+      rejection = error;
+    }
+
+    expect(rejection).toBeInstanceOf(PassCommandError);
+    expect((rejection as Error).message).toMatch(
+      /REVIEWER_PASS_NON_BLOCKING_POST_GATE/u
+    );
+    expect((rejection as Error).message).toMatch(/Document scope qualifier/u);
+
+    const transcriptAfter = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcriptAfter).toEqual(transcriptBefore);
+    const stateAfter = await readStateSnapshot(bubble.paths.statePath);
+    expect(stateAfter.state).toEqual(stateBefore.state);
+    expect(stateAfter.fingerprint).toEqual(stateBefore.fingerprint);
+  });
+
+  it("allows document-scope post-gate pass when strict blocker qualifiers are present", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_post_gate_doc_strict_blocker_01",
+      task: "Doc scope post-gate strict blocker pass allow",
+      reviewArtifactType: "document"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 4,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-03-01T12:12:00.000Z",
+        last_command_at: "2026-03-01T12:12:00.000Z",
+        round_role_history: buildRoundRoleHistoryThroughRound({
+          throughRound: 4,
+          implementer: bubble.config.agents.implementer,
+          reviewer: bubble.config.agents.reviewer
+        })
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Doc scope strict blocker remains",
+      findings: [
+        {
+          priority: "P1",
+          timing: "required-now",
+          layer: "L1",
+          title: "Strict document-scope blocker"
+        },
+        {
+          severity: "P3",
+          title: "Minor doc cleanup"
+        }
+      ],
+      cwd: bubble.paths.worktreePath
+    });
+
+    expect(result.envelope.type).toBe("PASS");
+    expect(result.envelope.payload.pass_intent).toBe("fix_request");
+    expect(result.state.active_role).toBe("implementer");
+    expect(result.state.round).toBe(5);
   });
 
   it("classifies round>=2 reviewer clean PASS without previous reviewer PASS as missing", async () => {

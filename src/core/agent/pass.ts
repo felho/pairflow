@@ -8,6 +8,7 @@ import {
 } from "../protocol/transcriptStore.js";
 import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
+import { isRecord } from "../validation.js";
 import {
   resolveBubbleFromWorkspaceCwd,
   WorkspaceResolutionError
@@ -57,7 +58,10 @@ import {
   resolveDocContractGateArtifactPath,
   writeDocContractGateArtifact
 } from "../gates/docContractGates.js";
-import { validateConvergencePolicy } from "../convergence/policy.js";
+import {
+  evaluateReviewerFindingsAggregate,
+  validateConvergencePolicy
+} from "../convergence/policy.js";
 import {
   evaluateRepeatCleanAutoconvergeTrigger,
   repeatCleanAutoconvergePolicyRejectedReasonCode,
@@ -65,7 +69,11 @@ import {
   type RepeatCleanAutoconvergeReasonCode,
   type RepeatCleanAutoconvergeReasonDetail
 } from "../convergence/repeatCleanAutoconverge.js";
-import { resolveFindingPriority } from "../../types/findings.js";
+import {
+  isFindingLayer,
+  isFindingTiming,
+  resolveFindingPriority
+} from "../../types/findings.js";
 import {
   emitConvergedFromWorkspace,
   type EmitConvergedDependencies
@@ -147,6 +155,16 @@ const docsOnlyRuntimeChecksSkippedMarkers = [
 const docsOnlyRuntimeLogRefPattern = /^\.pairflow\/evidence\/[^\s]+\.log$/u;
 const docsOnlyRuntimeLogRefPatternText =
   docsOnlyRuntimeLogRefPattern.source.replaceAll("\\/", "/");
+const reviewerPassNonBlockingPostGateReasonCode =
+  "REVIEWER_PASS_NON_BLOCKING_POST_GATE";
+const reviewerPassNoFindingsPostGateReasonCode =
+  "REVIEWER_PASS_NO_FINDINGS_POST_GATE";
+const findingsPayloadInvalidReasonCode = "FINDINGS_PAYLOAD_INVALID";
+
+interface NormalizedReviewerFindingsPayload {
+  findings: Finding[];
+  invalid: boolean;
+}
 
 function formatRepeatCleanPolicyRejectedMessage(input: {
   subtype: RepeatCleanPolicyRejectedSubtype;
@@ -282,7 +300,7 @@ function inferReviewerPassIntent(
 
   if (!hasFindings && !noFindings) {
     throw new PassCommandError(
-      "Reviewer PASS requires explicit findings declaration: use --finding <P0|P1|P2|P3:Title[|ref1,ref2]> (repeatable) or --no-findings."
+      `${findingsPayloadInvalidReasonCode}: Reviewer PASS requires explicit findings declaration: use --finding <P0|P1|P2|P3:Title[|ref1,ref2]> (repeatable) or --no-findings.`
     );
   }
 
@@ -410,25 +428,200 @@ function buildFindingCounts(findings: Finding[]): {
   return counts;
 }
 
-function normalizeFindingRefs(findings: Finding[]): Finding[] {
-  return findings.map((finding) => {
+function normalizeReviewerFindingsPayload(
+  findings: unknown
+): NormalizedReviewerFindingsPayload {
+  if (!Array.isArray(findings)) {
+    return {
+      findings: [],
+      invalid: findings !== undefined
+    };
+  }
+
+  const normalized: Finding[] = [];
+  let invalid = false;
+  for (const finding of findings) {
+    if (!isRecord(finding)) {
+      invalid = true;
+      continue;
+    }
+
+    if (typeof finding.title !== "string" || finding.title.trim().length === 0) {
+      invalid = true;
+      continue;
+    }
+
+    const priority = resolveFindingPriority({
+      priority: finding.priority,
+      severity: finding.severity
+    });
+    if (priority === undefined) {
+      invalid = true;
+      continue;
+    }
+
+    if (finding.refs !== undefined && !Array.isArray(finding.refs)) {
+      invalid = true;
+      continue;
+    }
+
     const normalizedFindingRefs = normalizeStringList(finding.refs ?? []);
+    if (
+      Array.isArray(finding.refs)
+      && finding.refs.length > 0
+      && normalizedFindingRefs.length === 0
+    ) {
+      invalid = true;
+      continue;
+    }
+
+    const normalizedPriority = resolveFindingPriority({
+      priority: finding.priority,
+      severity: undefined
+    });
+    const normalizedSeverity = resolveFindingPriority({
+      priority: undefined,
+      severity: finding.severity
+    });
+    const normalizedFinding: Finding = {
+      title: finding.title.trim()
+    };
+    if (normalizedPriority !== undefined) {
+      normalizedFinding.priority = normalizedPriority;
+    }
+    if (normalizedSeverity !== undefined) {
+      normalizedFinding.severity = normalizedSeverity;
+    }
+    if (normalizedPriority === undefined && normalizedSeverity !== undefined) {
+      normalizedFinding.priority = normalizedSeverity;
+    }
+    if (typeof finding.detail === "string" && finding.detail.trim().length > 0) {
+      normalizedFinding.detail = finding.detail;
+    }
+    if (typeof finding.code === "string" && finding.code.trim().length > 0) {
+      normalizedFinding.code = finding.code;
+    }
+    if (isFindingTiming(finding.timing)) {
+      normalizedFinding.timing = finding.timing;
+    }
+    if (isFindingLayer(finding.layer)) {
+      normalizedFinding.layer = finding.layer;
+    }
+    const effectivePriority =
+      resolveFindingPriority({
+        priority: finding.effective_priority,
+        severity: undefined
+      });
+    if (effectivePriority !== undefined) {
+      normalizedFinding.effective_priority = effectivePriority;
+    }
+    if (typeof finding.evidence === "string") {
+      normalizedFinding.evidence = finding.evidence;
+    } else if (Array.isArray(finding.evidence)) {
+      normalizedFinding.evidence = normalizeStringList(finding.evidence);
+    }
 
     if (normalizedFindingRefs.length > 0) {
-      return {
-        ...finding,
-        refs: normalizedFindingRefs
-      };
+      normalizedFinding.refs = normalizedFindingRefs;
+    } else {
+      delete normalizedFinding.refs;
     }
 
-    if (finding.refs !== undefined) {
-      const withoutRefs: Finding = { ...finding };
-      delete withoutRefs.refs;
-      return withoutRefs;
-    }
+    normalized.push(normalizedFinding);
+  }
 
-    return finding;
+  return {
+    findings: normalized,
+    invalid
+  };
+}
+
+function buildPostGateConvergedGuidance(input: {
+  round: number;
+  severityGateRound: number;
+}): string {
+  return `Use \`pairflow converged --summary "..."\` instead (round ${input.round} >= severity_gate_round ${input.severityGateRound}).`;
+}
+
+function validateReviewerPassGate(input: {
+  round: number;
+  noFindings: boolean;
+  findings: Finding[];
+  findingsPayloadInvalid: boolean;
+  reviewArtifactType: BubbleConfig["review_artifact_type"];
+  severityGateRound: number;
+}): void {
+  const postGate = input.round >= input.severityGateRound;
+  const invalidPayloadGuidance = postGate
+    ? `Provide structured findings with severity/title (and optional refs), or use \`pairflow converged --summary "..."\` for clean/non-blocking outcomes. ${buildPostGateConvergedGuidance({
+      round: input.round,
+      severityGateRound: input.severityGateRound
+    })}`
+    : "Provide structured findings with severity/title (and optional refs) or use --no-findings explicitly for a clean review.";
+  if (postGate && input.noFindings) {
+    throw new PassCommandError(
+      `${reviewerPassNoFindingsPostGateReasonCode}: Reviewer PASS with --no-findings is not allowed after severity gate. ${buildPostGateConvergedGuidance({
+        round: input.round,
+        severityGateRound: input.severityGateRound
+      })}`
+    );
+  }
+
+  if (input.findingsPayloadInvalid) {
+    throw new PassCommandError(
+      `${findingsPayloadInvalidReasonCode}: Reviewer PASS findings payload is invalid. ${invalidPayloadGuidance}`
+    );
+  }
+
+  if (input.findings.length === 0 && !input.noFindings) {
+    if (postGate) {
+      throw new PassCommandError(
+        `${findingsPayloadInvalidReasonCode}: Reviewer PASS requires explicit structured findings in post-gate rounds. ${buildPostGateConvergedGuidance({
+          round: input.round,
+          severityGateRound: input.severityGateRound
+        })}`
+      );
+    }
+    throw new PassCommandError(
+      `${findingsPayloadInvalidReasonCode}: Reviewer PASS requires explicit findings declaration: use --finding <P0|P1|P2|P3:Title[|ref1,ref2]> (repeatable) or --no-findings.`
+    );
+  }
+
+  if (!postGate) {
+    return;
+  }
+
+  const aggregate = evaluateReviewerFindingsAggregate({
+    findings: input.findings,
+    reviewArtifactType: input.reviewArtifactType
   });
+  if (aggregate.invalid) {
+    throw new PassCommandError(
+      `${findingsPayloadInvalidReasonCode}: Reviewer PASS findings payload is invalid. ${invalidPayloadGuidance}`
+    );
+  }
+  if (aggregate.hasBlocking) {
+    return;
+  }
+
+  const p3Only = aggregate.p3 > 0 && aggregate.p0 === 0 && aggregate.p1 === 0 && aggregate.p2 === 0;
+  const hasDeclaredCanonicalBlocker = input.findings.some((finding) => {
+    const priority = resolveFindingPriority({
+      priority: finding.priority,
+      severity: finding.severity
+    });
+    return priority === "P0" || priority === "P1";
+  });
+  const docScopeQualifierNote =
+    input.reviewArtifactType === "document" && hasDeclaredCanonicalBlocker
+      ? " Document scope qualifier: blocker findings require strict `timing=required-now` + `layer=L1`; CLI `--finding` cannot encode these qualifiers, so unqualified `P0/P1` entries are treated as non-blocking."
+      : "";
+  throw new PassCommandError(
+    `${reviewerPassNonBlockingPostGateReasonCode}: Reviewer PASS is not allowed after severity gate when no blocker findings remain${p3Only ? " (P3-only finding set)." : "."}${docScopeQualifierNote} ${buildPostGateConvergedGuidance({
+      round: input.round,
+      severityGateRound: input.severityGateRound
+    })}`
+  );
 }
 
 function validateReviewerVerificationConsistency(input: {
@@ -599,7 +792,8 @@ export async function emitPassFromWorkspace(
     (message) => new PassCommandError(message)
   );
   const refs = normalizeStringList(input.refs ?? []);
-  const findings = normalizeFindingRefs(input.findings ?? []);
+  const normalizedFindings = normalizeReviewerFindingsPayload(input.findings);
+  const findings = normalizedFindings.findings;
   const hasFindings = findings.length > 0;
   const noFindings = input.noFindings ?? false;
 
@@ -618,6 +812,16 @@ export async function emitPassFromWorkspace(
 
   const { implementer, reviewer } = resolved.bubbleConfig.agents;
   const handoff = resolveHandoff(state, implementer, reviewer, nowIso);
+  if (handoff.senderRole === "reviewer") {
+    validateReviewerPassGate({
+      round: handoff.envelopeRound,
+      noFindings,
+      findings,
+      findingsPayloadInvalid: normalizedFindings.invalid,
+      reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
+      severityGateRound: resolved.bubbleConfig.severity_gate_round
+    });
+  }
   const inferredReviewerIntent =
     handoff.senderRole === "reviewer"
       ? inferReviewerPassIntent(hasFindings, noFindings)
@@ -699,13 +903,27 @@ export async function emitPassFromWorkspace(
       implementer,
       reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
       roundRoleHistory: state.round_role_history,
-      transcript
+      transcript,
+      severity_gate_round: resolved.bubbleConfig.severity_gate_round
     });
     if (!policyResult.ok) {
       throw new PassCommandError(
         formatRepeatCleanPolicyRejectedMessage({
           subtype: "policy_gate_rejected",
           detail: policyResult.errors.join(" ")
+        })
+      );
+    }
+
+    const stateBeforeAutoConvergeSideEffects = await readStateSnapshot(
+      resolved.bubblePaths.statePath
+    );
+    if (stateBeforeAutoConvergeSideEffects.fingerprint !== loadedState.fingerprint) {
+      throw new PassCommandError(
+        formatRepeatCleanPolicyRejectedMessage({
+          subtype: "policy_gate_rejected",
+          detail:
+            "AUTO_CONVERGE_STATE_STALE: state changed between repeat-clean evaluation and convergence transition."
         })
       );
     }
@@ -743,7 +961,10 @@ export async function emitPassFromWorkspace(
           summary,
           refs,
           cwd: resolved.bubblePaths.worktreePath,
-          now
+          now,
+          expectedStateFingerprint: stateBeforeAutoConvergeSideEffects.fingerprint,
+          expectedRound: handoff.envelopeRound,
+          expectedReviewer: reviewer
         },
         {
           ...(dependencies.emitTmuxDeliveryNotification !== undefined
@@ -764,6 +985,7 @@ export async function emitPassFromWorkspace(
       );
     }
 
+    const autoConvergeFindings = findings;
     let autoConvergeDocGateArtifactWriteFailureReason: string | undefined;
     if (handoff.senderRole === "reviewer") {
       autoConvergeDocGateArtifactWriteFailureReason = await updateReviewerDocGateArtifact({
@@ -772,7 +994,7 @@ export async function emitPassFromWorkspace(
         artifactsDir: resolved.bubblePaths.artifactsDir,
         taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
         round: handoff.envelopeRound,
-        findings: []
+        findings: autoConvergeFindings
       });
     }
 
@@ -800,7 +1022,7 @@ export async function emitPassFromWorkspace(
           mostRecentPreviousReviewerCleanPassEnvelope:
             repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope
         }),
-        ...buildFindingCounts([]),
+        ...buildFindingCounts(autoConvergeFindings),
         ...(autoConvergeDocGateArtifactWriteFailureReason !== undefined
           ? {
               doc_gate_artifact_write_failed: true,

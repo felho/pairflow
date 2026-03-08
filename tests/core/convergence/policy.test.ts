@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { validateConvergencePolicy } from "../../../src/core/convergence/policy.js";
+import {
+  evaluateReviewerFindingsAggregate,
+  validateConvergencePolicy
+} from "../../../src/core/convergence/policy.js";
 import type { ProtocolEnvelope } from "../../../src/types/protocol.js";
 
 function createPassEnvelope(
@@ -16,6 +19,25 @@ function createPassEnvelope(
     round: 1,
     payload: {
       summary: "Review pass."
+    },
+    refs: [],
+    ...partial
+  };
+}
+
+function createConvergenceEnvelope(
+  partial: Partial<ProtocolEnvelope>
+): ProtocolEnvelope {
+  return {
+    id: "msg_20260222_002",
+    ts: "2026-02-22T12:04:00.000Z",
+    bubble_id: "b_policy_01",
+    sender: "claude",
+    recipient: "orchestrator",
+    type: "CONVERGENCE",
+    round: 4,
+    payload: {
+      summary: "Ready for approval."
     },
     refs: [],
     ...partial
@@ -38,6 +60,7 @@ describe("validateConvergencePolicy", () => {
       reviewer: "claude",
       implementer: "codex",
       reviewArtifactType: "auto",
+      severity_gate_round: 4,
       roundRoleHistory: [
         {
           round: 1,
@@ -56,9 +79,32 @@ describe("validateConvergencePolicy", () => {
     });
 
     expect(result.ok).toBe(false);
+    expect(result.errors).toHaveLength(1);
     expect(
       result.errors.some((error) => error.includes("invalid findings payload"))
     ).toBe(true);
+  });
+
+  it("downgrades document-scope P0 finding to non-blocking when strict blocker qualifiers are missing", () => {
+    const aggregate = evaluateReviewerFindingsAggregate({
+      reviewArtifactType: "document",
+      findings: [
+        {
+          severity: "P0",
+          title: "Doc-scope declared blocker without required-now timing",
+          timing: "later-hardening",
+          layer: "L1"
+        }
+      ]
+    });
+
+    expect(aggregate.invalid).toBe(false);
+    expect(aggregate.p0).toBe(0);
+    expect(aggregate.p1).toBe(0);
+    expect(aggregate.p2).toBe(1);
+    expect(aggregate.p3).toBe(0);
+    expect(aggregate.hasBlocking).toBe(false);
+    expect(aggregate.hasNonBlocking).toBe(true);
   });
 
   it("requires explicit findings declaration on previous reviewer PASS", () => {
@@ -67,6 +113,7 @@ describe("validateConvergencePolicy", () => {
       reviewer: "claude",
       implementer: "codex",
       reviewArtifactType: "auto",
+      severity_gate_round: 4,
       roundRoleHistory: [
         {
           round: 1,
@@ -102,6 +149,7 @@ describe("validateConvergencePolicy", () => {
       reviewer: "claude",
       implementer: "codex",
       reviewArtifactType: "auto",
+      severity_gate_round: 4,
       roundRoleHistory: [
         {
           round: 1,
@@ -141,6 +189,7 @@ describe("validateConvergencePolicy", () => {
       reviewer: "claude",
       implementer: "codex",
       reviewArtifactType: "auto",
+      severity_gate_round: 4,
       roundRoleHistory: [
         {
           round: 1,
@@ -181,6 +230,7 @@ describe("validateConvergencePolicy", () => {
       reviewer: "claude",
       implementer: "codex",
       reviewArtifactType: "auto",
+      severity_gate_round: 4,
       roundRoleHistory: [
         {
           round: 1,
@@ -220,6 +270,7 @@ describe("validateConvergencePolicy", () => {
       reviewer: "claude",
       implementer: "codex",
       reviewArtifactType: "auto",
+      severity_gate_round: 4,
       roundRoleHistory: [
         {
           round: 1,
@@ -254,10 +305,11 @@ describe("validateConvergencePolicy", () => {
 
   it("allows convergence when previous reviewer PASS explicitly reports zero findings with empty findings payload", () => {
     const result = validateConvergencePolicy({
-      currentRound: 2,
+      currentRound: 4,
       reviewer: "claude",
       implementer: "codex",
       reviewArtifactType: "auto",
+      severity_gate_round: 4,
       roundRoleHistory: [
         {
           round: 1,
@@ -270,12 +322,25 @@ describe("validateConvergencePolicy", () => {
           implementer: "codex",
           reviewer: "claude",
           switched_at: "2026-02-22T12:01:00.000Z"
+        },
+        {
+          round: 3,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:03:00.000Z"
+        },
+        {
+          round: 4,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:05:00.000Z"
         }
       ],
       transcript: [
         createPassEnvelope({
+          round: 3,
           payload: {
-            summary: "R1 reviewer PASS. 0 findings (0 P0, 0 P1, 0 P2, 0 P3).",
+            summary: "R3 reviewer PASS. 0 findings (0 P0, 0 P1, 0 P2, 0 P3).",
             findings: []
           }
         })
@@ -292,6 +357,7 @@ describe("validateConvergencePolicy", () => {
       reviewer: "claude",
       implementer: "codex",
       reviewArtifactType: "auto",
+      severity_gate_round: 4,
       roundRoleHistory: [
         {
           round: 1,
@@ -332,12 +398,13 @@ describe("validateConvergencePolicy", () => {
     expect(result.errors).toHaveLength(0);
   });
 
-  it("allows convergence from round 4 onward even when previous reviewer PASS has P2 findings", () => {
+  it("allows convergence in round 4 when previous reviewer PASS has only P2 findings", () => {
     const result = validateConvergencePolicy({
       currentRound: 4,
       reviewer: "claude",
       implementer: "codex",
       reviewArtifactType: "auto",
+      severity_gate_round: 4,
       roundRoleHistory: [
         {
           round: 1,
@@ -384,12 +451,13 @@ describe("validateConvergencePolicy", () => {
     expect(result.errors).toHaveLength(0);
   });
 
-  it("keeps document-scope blocker criteria strict when timing/layer are missing", () => {
+  it("accepts previous-round reviewer CONVERGENCE as a qualifying reviewer verdict", () => {
     const result = validateConvergencePolicy({
-      currentRound: 2,
+      currentRound: 5,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "document",
+      reviewArtifactType: "auto",
+      severity_gate_round: 4,
       roundRoleHistory: [
         {
           round: 1,
@@ -402,10 +470,73 @@ describe("validateConvergencePolicy", () => {
           implementer: "codex",
           reviewer: "claude",
           switched_at: "2026-02-22T12:01:00.000Z"
+        },
+        {
+          round: 3,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:03:00.000Z"
+        },
+        {
+          round: 4,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:05:00.000Z"
+        },
+        {
+          round: 5,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:07:00.000Z"
+        }
+      ],
+      transcript: [
+        createConvergenceEnvelope({
+          round: 4
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it("keeps document-scope blocker criteria strict when timing/layer are missing", () => {
+    const result = validateConvergencePolicy({
+      currentRound: 4,
+      reviewer: "claude",
+      implementer: "codex",
+      reviewArtifactType: "document",
+      severity_gate_round: 4,
+      roundRoleHistory: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T11:59:00.000Z"
+        },
+        {
+          round: 2,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:01:00.000Z"
+        },
+        {
+          round: 3,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:03:00.000Z"
+        },
+        {
+          round: 4,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:05:00.000Z"
         }
       ],
       transcript: [
         createPassEnvelope({
+          round: 3,
           payload: {
             summary: "Document-scope finding without strict blocker qualifiers",
             findings: [
@@ -425,10 +556,11 @@ describe("validateConvergencePolicy", () => {
 
   it("blocks convergence in document scope only for strict P1 + required-now + L1", () => {
     const result = validateConvergencePolicy({
-      currentRound: 2,
+      currentRound: 4,
       reviewer: "claude",
       implementer: "codex",
       reviewArtifactType: "document",
+      severity_gate_round: 4,
       roundRoleHistory: [
         {
           round: 1,
@@ -441,10 +573,23 @@ describe("validateConvergencePolicy", () => {
           implementer: "codex",
           reviewer: "claude",
           switched_at: "2026-02-22T12:01:00.000Z"
+        },
+        {
+          round: 3,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:03:00.000Z"
+        },
+        {
+          round: 4,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:05:00.000Z"
         }
       ],
       transcript: [
         createPassEnvelope({
+          round: 3,
           payload: {
             summary: "Document-scope strict blocker qualifiers present",
             findings: [
@@ -466,10 +611,11 @@ describe("validateConvergencePolicy", () => {
 
   it("does not block in document scope when effective_priority downgrades strict P1 blocker to P2", () => {
     const result = validateConvergencePolicy({
-      currentRound: 2,
+      currentRound: 4,
       reviewer: "claude",
       implementer: "codex",
       reviewArtifactType: "document",
+      severity_gate_round: 4,
       roundRoleHistory: [
         {
           round: 1,
@@ -482,10 +628,23 @@ describe("validateConvergencePolicy", () => {
           implementer: "codex",
           reviewer: "claude",
           switched_at: "2026-02-22T12:01:00.000Z"
+        },
+        {
+          round: 3,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:03:00.000Z"
+        },
+        {
+          round: 4,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:05:00.000Z"
         }
       ],
       transcript: [
         createPassEnvelope({
+          round: 3,
           payload: {
             summary: "Document-scope downgraded blocker signal",
             findings: [
@@ -504,5 +663,111 @@ describe("validateConvergencePolicy", () => {
 
     expect(result.ok).toBe(true);
     expect(result.errors).toHaveLength(0);
+  });
+
+  it("returns explicit round-1 guardrail error code when convergence is requested in round 1", () => {
+    const result = validateConvergencePolicy({
+      currentRound: 1,
+      reviewer: "claude",
+      implementer: "codex",
+      reviewArtifactType: "auto",
+      severity_gate_round: 4,
+      roundRoleHistory: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T11:59:00.000Z"
+        }
+      ],
+      transcript: []
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toHaveLength(3);
+    expect(result.errors[0]).toContain("ROUND1_CONVERGENCE_GUARDRAIL");
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        "Convergence requires reviewer-role alternation evidence across at least two rounds.",
+        "CONVERGENCE_PREVIOUS_REVIEWER_PASS_MISSING: Convergence requires a previous reviewer PASS or CONVERGENCE verdict from the prior round."
+      ])
+    );
+  });
+
+  it("returns explicit previous reviewer pass missing reason code", () => {
+    const result = validateConvergencePolicy({
+      currentRound: 3,
+      reviewer: "claude",
+      implementer: "codex",
+      reviewArtifactType: "auto",
+      severity_gate_round: 4,
+      roundRoleHistory: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T11:59:00.000Z"
+        },
+        {
+          round: 2,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:01:00.000Z"
+        },
+        {
+          round: 3,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:03:00.000Z"
+        }
+      ],
+      transcript: []
+    });
+
+    expect(result.ok).toBe(false);
+    expect(
+      result.errors.some((error) =>
+        error.includes("CONVERGENCE_PREVIOUS_REVIEWER_PASS_MISSING")
+      )
+    ).toBe(true);
+  });
+
+  it("rejects invalid severity_gate_round policy input", () => {
+    const result = validateConvergencePolicy({
+      currentRound: 2,
+      reviewer: "claude",
+      implementer: "codex",
+      reviewArtifactType: "auto",
+      severity_gate_round: 3,
+      roundRoleHistory: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T11:59:00.000Z"
+        },
+        {
+          round: 2,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:01:00.000Z"
+        }
+      ],
+      transcript: [
+        createPassEnvelope({
+          payload: {
+            summary: "R1 reviewer PASS. 0 findings.",
+            findings: []
+          }
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(
+      result.errors.some((error) =>
+        error.includes("SEVERITY_GATE_ROUND_INVALID")
+      )
+    ).toBe(true);
   });
 });

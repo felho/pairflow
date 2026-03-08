@@ -19,6 +19,7 @@ import {
   DEFAULT_QUALITY_MODE,
   DEFAULT_REVIEW_ARTIFACT_TYPE,
   DEFAULT_REVIEWER_CONTEXT_MODE,
+  DEFAULT_SEVERITY_GATE_ROUND,
   DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
   DEFAULT_WORK_MODE
 } from "./defaults.js";
@@ -52,6 +53,8 @@ export const REVIEW_ARTIFACT_TYPE_AUTO_REMOVED =
   "REVIEW_ARTIFACT_TYPE_AUTO_REMOVED" as const;
 export const DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER =
   "DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER" as const;
+export const SEVERITY_GATE_ROUND_INVALID =
+  "SEVERITY_GATE_ROUND_INVALID" as const;
 
 function formatCreateReviewArtifactTypeError(
   reasonCode:
@@ -537,6 +540,15 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     });
   }
 
+  const severityGateRound =
+    input.severity_gate_round ?? DEFAULT_SEVERITY_GATE_ROUND;
+  if (!isInteger(severityGateRound) || severityGateRound < 4) {
+    errors.push({
+      path: "severity_gate_round",
+      message: `${SEVERITY_GATE_ROUND_INVALID}: Must be an integer >= 4`
+    });
+  }
+
   const commitRequiresApproval =
     input.commit_requires_approval ?? DEFAULT_COMMIT_REQUIRES_APPROVAL;
   if (typeof commitRequiresApproval !== "boolean") {
@@ -758,6 +770,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
       reviewerContextMode as BubbleConfig["reviewer_context_mode"],
     watchdog_timeout_minutes: watchdogTimeoutMinutes as number,
     max_rounds: maxRounds as number,
+    severity_gate_round: severityGateRound as number,
     commit_requires_approval: commitRequiresApproval as boolean,
     accuracy_critical: accuracyCritical as boolean,
     ...(attachLauncher !== undefined
@@ -874,6 +887,7 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
     `reviewer_context_mode = ${tomlString(config.reviewer_context_mode)}`,
     `watchdog_timeout_minutes = ${config.watchdog_timeout_minutes}`,
     `max_rounds = ${config.max_rounds}`,
+    `severity_gate_round = ${config.severity_gate_round}`,
     `commit_requires_approval = ${config.commit_requires_approval}`,
     `accuracy_critical = ${config.accuracy_critical === true}`,
     config.attach_launcher !== undefined

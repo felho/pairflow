@@ -12,6 +12,7 @@ import {
   DEFAULT_MAX_ROUNDS,
   DEFAULT_QUALITY_MODE,
   DEFAULT_REVIEWER_CONTEXT_MODE,
+  DEFAULT_SEVERITY_GATE_ROUND,
   DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
   DEFAULT_WORK_MODE
 } from "../../config/defaults.js";
@@ -251,6 +252,7 @@ function buildBubbleConfig(input: {
     reviewer_context_mode: DEFAULT_REVIEWER_CONTEXT_MODE,
     watchdog_timeout_minutes: DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
     max_rounds: DEFAULT_MAX_ROUNDS,
+    severity_gate_round: DEFAULT_SEVERITY_GATE_ROUND,
     commit_requires_approval: true,
     accuracy_critical: input.accuracyCritical,
     ...(input.openCommand !== undefined

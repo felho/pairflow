@@ -69,6 +69,7 @@ describe("createBubble", () => {
     expect(result.config.watchdog_timeout_minutes).toBe(20);
     expect(result.config.quality_mode).toBe("strict");
     expect(result.config.review_artifact_type).toBe("code");
+    expect(result.config.severity_gate_round).toBe(4);
     expect(result.config.doc_contract_gates.mode).toBe("advisory");
     expect(result.config.doc_contract_gates.round_gate_applies_after).toBe(2);
     expect(result.config.bubble_instance_id).toMatch(
@@ -80,6 +81,7 @@ describe("createBubble", () => {
     expect(reparsedConfig.id).toBe("b_create_01");
     expect(reparsedConfig.notifications.enabled).toBe(true);
     expect(reparsedConfig.review_artifact_type).toBe("code");
+    expect(reparsedConfig.severity_gate_round).toBe(4);
     expect(reparsedConfig.doc_contract_gates.mode).toBe("advisory");
     expect(reparsedConfig.doc_contract_gates.round_gate_applies_after).toBe(2);
     expect(reparsedConfig.bubble_instance_id).toBe(

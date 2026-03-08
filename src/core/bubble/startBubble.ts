@@ -35,6 +35,7 @@ import {
 } from "../runtime/reviewerScoutExpansionGuidance.js";
 import {
   buildReviewerCanonicalCommandGateLines,
+  buildReviewerFindingsPassInstruction,
   buildReviewerRoundCommandGateProjection,
   type ReviewerCommandGateProjectionVariant
 } from "../runtime/reviewerCommandGateGuidance.js";
@@ -149,7 +150,7 @@ function buildReviewerStartupPrompt(input: {
     ...(input.reviewerBriefText !== undefined
       ? [formatReviewerBriefPrompt(input.reviewerBriefText)]
       : []),
-    "If findings remain, run `pairflow pass --summary ... --finding 'P1:...|artifact://...'` (repeatable; for P0/P1 include finding-level refs).",
+    buildReviewerFindingsPassInstruction(input.reviewArtifactType),
     ...buildReviewerCanonicalCommandGateLines(),
     "Execute pairflow commands directly from this worktree (do not ask for confirmation first).",
     "Never edit transcript/inbox/state files manually.",
@@ -292,12 +293,15 @@ function inferResumeReviewerProjectionVariant(input: {
 
   const findingsMatches = input.transcriptSummary.match(/\bfindings=(\d+)\b/gu);
   if (findingsMatches === null) {
-    return "clean";
+    return "findings";
   }
   for (const token of findingsMatches) {
     const [, value = "0"] = token.split("=");
     const parsed = Number.parseInt(value, 10);
-    if (Number.isFinite(parsed) && parsed > 0) {
+    if (!Number.isFinite(parsed)) {
+      return "findings";
+    }
+    if (parsed > 0) {
       return "findings";
     }
   }
@@ -322,6 +326,7 @@ function buildResumeImplementerKickoffMessage(input: {
 function buildResumeReviewerKickoffMessage(input: {
   bubbleId: string;
   round: number;
+  reviewArtifactType: ReviewArtifactType;
   reviewerTestDirectiveLine?: string;
   projectionVariant?: ReviewerCommandGateProjectionVariant;
 }): string {
@@ -334,7 +339,7 @@ function buildResumeReviewerKickoffMessage(input: {
   const findingsDetailLine =
     input.round <= 1
       ? "In round 1, declare findings explicitly with `--finding` or `--no-findings` when using `pairflow pass`."
-      : "If findings remain, run `pairflow pass --summary ... --finding 'P1:...|artifact://...'` (repeatable; for P0/P1 include finding-level refs).";
+      : buildReviewerFindingsPassInstruction(input.reviewArtifactType);
   return [
     `# [pairflow] bubble=${input.bubbleId} resume kickoff (reviewer).`,
     `State is RUNNING at round ${input.round}.`,
@@ -390,6 +395,7 @@ function resolveResumeKickoffMessages(input: {
       reviewerKickoffMessage: buildResumeReviewerKickoffMessage({
         bubbleId: input.bubbleId,
         round: input.state.round,
+        reviewArtifactType: input.reviewArtifactType,
         projectionVariant,
         ...(input.reviewerTestDirectiveLine !== undefined
           ? { reviewerTestDirectiveLine: input.reviewerTestDirectiveLine }
