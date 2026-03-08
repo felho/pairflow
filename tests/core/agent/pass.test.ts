@@ -1,20 +1,36 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
-import { emitPassFromWorkspace, PassCommandError } from "../../../src/core/agent/pass.js";
+import {
+  emitPassFromWorkspace,
+  PassCommandError,
+  resolveMostRecentPreviousReviewerPassIsCleanFromMetadata
+} from "../../../src/core/agent/pass.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/core/workspace/worktreeManager.js";
-import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
+import {
+  appendProtocolEnvelope,
+  readTranscriptEnvelopes
+} from "../../../src/core/protocol/transcriptStore.js";
+import {
+  repeatCleanAutoconvergeTriggeredReasonCode,
+  repeatCleanAutoconvergePolicyRejectedReasonCode,
+  repeatCleanPreviousMissingReasonCode,
+  repeatCleanPreviousNotCleanReasonCode,
+  repeatCleanRound1DisabledReasonCode,
+  repeatCleanTriggerNotMetReasonCode
+} from "../../../src/core/convergence/repeatCleanAutoconverge.js";
 import {
   createDocContractGateArtifact,
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath,
   writeDocContractGateArtifact
 } from "../../../src/core/gates/docContractGates.js";
+import { resolveReviewerTestEvidenceArtifactPath } from "../../../src/core/reviewer/testEvidence.js";
 import { initGitRepository } from "../../helpers/git.js";
 import {
   setupRunningBubbleFixture,
@@ -51,6 +67,48 @@ async function setReviewerActive(worktreeStatePath: string, reviewerAgent: "code
   );
 }
 
+async function advanceToReviewerRoundTwoWithCleanHistory(worktreePath: string): Promise<void> {
+  await emitPassFromWorkspace({
+    summary: "Implementer handoff round 1",
+    cwd: worktreePath,
+    now: new Date("2026-03-01T10:01:00.000Z")
+  });
+  await emitPassFromWorkspace({
+    summary: "Reviewer clean handoff round 1",
+    noFindings: true,
+    cwd: worktreePath,
+    now: new Date("2026-03-01T10:02:00.000Z")
+  });
+  await emitPassFromWorkspace({
+    summary: "Implementer handoff round 2",
+    cwd: worktreePath,
+    now: new Date("2026-03-01T10:03:00.000Z")
+  });
+}
+
+async function advanceToReviewerRoundTwoWithCleanHistoryAccuracyCritical(input: {
+  worktreePath: string;
+  reviewerVerificationInputPath: string;
+}): Promise<void> {
+  await emitPassFromWorkspace({
+    summary: "Implementer handoff round 1",
+    cwd: input.worktreePath,
+    now: new Date("2026-03-01T10:01:00.000Z")
+  });
+  await emitPassFromWorkspace({
+    summary: "Reviewer clean handoff round 1",
+    noFindings: true,
+    refs: [input.reviewerVerificationInputPath],
+    cwd: input.worktreePath,
+    now: new Date("2026-03-01T10:02:00.000Z")
+  });
+  await emitPassFromWorkspace({
+    summary: "Implementer handoff round 2",
+    cwd: input.worktreePath,
+    now: new Date("2026-03-01T10:03:00.000Z")
+  });
+}
+
 afterEach(async () => {
   await Promise.all(
     tempDirs.splice(0).map((path) =>
@@ -60,6 +118,23 @@ afterEach(async () => {
 });
 
 describe("emitPassFromWorkspace", () => {
+  it("resolves canonical repeat-clean metadata key and falls back to deprecated legacy key", () => {
+    expect(
+      resolveMostRecentPreviousReviewerPassIsCleanFromMetadata({
+        most_recent_previous_reviewer_pass_is_clean: false,
+        most_recent_previous_reviewer_clean_pass_envelope: true
+      })
+    ).toBe(false);
+    expect(
+      resolveMostRecentPreviousReviewerPassIsCleanFromMetadata({
+        most_recent_previous_reviewer_clean_pass_envelope: true
+      })
+    ).toBe(true);
+    expect(
+      resolveMostRecentPreviousReviewerPassIsCleanFromMetadata(undefined)
+    ).toBeUndefined();
+  });
+
   it("writes PASS envelope and switches active role with inferred intent", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -78,12 +153,18 @@ describe("emitPassFromWorkspace", () => {
 
     expect(result.bubbleId).toBe("b_pass_01");
     expect(result.sequence).toBe(2);
+    expect(result.resultEnvelopeKind).toBe("pass");
     expect(result.inferredIntent).toBe(true);
     expect(result.envelope.type).toBe("PASS");
     expect(result.envelope.round).toBe(1);
     expect(result.envelope.sender).toBe("codex");
     expect(result.envelope.recipient).toBe("claude");
     expect(result.envelope.payload.pass_intent).toBe("review");
+    expect(result.transitionDecision).toBe("normal_pass");
+    expect(result.repeatCleanReasonCode).toBe(repeatCleanTriggerNotMetReasonCode);
+    expect(result.repeatCleanReasonDetail).toBe("base_precondition_not_met");
+    expect(result.repeatCleanTrigger).toBe(false);
+    expect(result.mostRecentPreviousReviewerCleanPassEnvelope).toBe(false);
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
     expect(transcript.map((entry) => entry.type)).toEqual([
@@ -271,8 +352,636 @@ describe("emitPassFromWorkspace", () => {
     });
 
     expect(result.inferredIntent).toBe(true);
+    expect(result.transitionDecision).toBe("normal_pass");
+    expect(result.repeatCleanReasonCode).toBe(repeatCleanRound1DisabledReasonCode);
+    expect(result.repeatCleanReasonDetail).toBe("round_gate_disabled");
+    expect(result.repeatCleanTrigger).toBe(false);
     expect(result.envelope.payload.pass_intent).toBe("review");
     expect(result.envelope.payload.findings).toEqual([]);
+  });
+
+  it("classifies round>=2 reviewer clean PASS without previous reviewer PASS as missing", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_repeat_clean_missing_01",
+      task: "Repeat-clean reason classification"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 2,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-03-01T11:00:00.000Z",
+        last_command_at: "2026-03-01T11:00:00.000Z",
+        round_role_history: [
+          {
+            round: 1,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-03-01T10:00:00.000Z"
+          },
+          {
+            round: 2,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-03-01T10:30:00.000Z"
+          }
+        ]
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Reviewer clean without previous reviewer pass",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-03-01T11:01:00.000Z")
+    });
+
+    expect(result.transitionDecision).toBe("normal_pass");
+    expect(result.repeatCleanTrigger).toBe(false);
+    expect(result.repeatCleanReasonCode).toBe(repeatCleanPreviousMissingReasonCode);
+    expect(result.repeatCleanReasonDetail).toBe("previous_reviewer_pass_absent");
+    expect(result.state.state).toBe("RUNNING");
+    expect(result.state.active_role).toBe("implementer");
+    expect(result.envelope.payload.metadata).toEqual({
+      transition_decision: "normal_pass",
+      reason_code: repeatCleanPreviousMissingReasonCode,
+      reason_detail: "previous_reviewer_pass_absent",
+      trigger: false,
+      most_recent_previous_reviewer_pass_is_clean: false,
+      most_recent_previous_reviewer_clean_pass_envelope: false
+    });
+  });
+
+  it("classifies round>=2 reviewer clean PASS with previous non-clean reviewer PASS using distinct reason code", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_repeat_clean_not_clean_01",
+      task: "Repeat-clean not-clean classification"
+    });
+
+    await emitPassFromWorkspace({
+      summary: "Implementer handoff round 1",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-03-01T10:01:00.000Z")
+    });
+    await emitPassFromWorkspace({
+      summary: "Reviewer found issues",
+      findings: [
+        {
+          severity: "P2",
+          title: "Needs changes"
+        }
+      ],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-03-01T10:02:00.000Z")
+    });
+    await emitPassFromWorkspace({
+      summary: "Implementer handoff round 2",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-03-01T10:03:00.000Z")
+    });
+
+    const result = await emitPassFromWorkspace({
+      summary: "Reviewer clean after prior non-clean pass",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-03-01T10:04:00.000Z")
+    });
+
+    expect(result.transitionDecision).toBe("normal_pass");
+    expect(result.repeatCleanTrigger).toBe(false);
+    expect(result.repeatCleanReasonCode).toBe(repeatCleanPreviousNotCleanReasonCode);
+    expect(result.repeatCleanReasonDetail).toBe("previous_reviewer_pass_not_clean");
+    expect(result.envelope.payload.metadata).toEqual({
+      transition_decision: "normal_pass",
+      reason_code: repeatCleanPreviousNotCleanReasonCode,
+      reason_detail: "previous_reviewer_pass_not_clean",
+      trigger: false,
+      most_recent_previous_reviewer_pass_is_clean: false,
+      most_recent_previous_reviewer_clean_pass_envelope: false
+    });
+  });
+
+  it("auto-converges deterministic repeat-clean reviewer PASS in round>=2", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_repeat_clean_autoconverge_01",
+      task: "Repeat-clean deterministic auto-converge"
+    });
+    await advanceToReviewerRoundTwoWithCleanHistory(bubble.paths.worktreePath);
+
+    const result = await emitPassFromWorkspace({
+      summary: "Reviewer clean handoff round 2",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-03-01T10:04:00.000Z")
+    });
+
+    expect(result.transitionDecision).toBe("auto_converge");
+    expect(result.resultEnvelopeKind).toBe("convergence");
+    expect(result.repeatCleanTrigger).toBe(true);
+    expect(result.repeatCleanReasonCode).toBe(
+      repeatCleanAutoconvergeTriggeredReasonCode
+    );
+    expect(result.repeatCleanReasonDetail).toBe("previous_reviewer_pass_clean");
+    expect(result.autoConverged).toBeDefined();
+    expect(result.autoConverged?.convergenceEnvelope.type).toBe("CONVERGENCE");
+    expect(result.autoConverged?.approvalRequestEnvelope.type).toBe("APPROVAL_REQUEST");
+    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcript.map((entry) => entry.type)).toEqual([
+      "TASK",
+      "PASS",
+      "PASS",
+      "PASS",
+      "CONVERGENCE",
+      "APPROVAL_REQUEST"
+    ]);
+  });
+
+  it("emits bubble_passed lifecycle metric for auto-converge PASS with explicit transition metadata", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_repeat_clean_autoconverge_metrics_01",
+      task: "Repeat-clean auto-converge pass lifecycle metrics"
+    });
+    await advanceToReviewerRoundTwoWithCleanHistory(bubble.paths.worktreePath);
+
+    const metricsRoot = await mkdtemp(join(tmpdir(), "pairflow-pass-metrics-"));
+    tempDirs.push(metricsRoot);
+    const previousMetricsRoot = process.env.PAIRFLOW_METRICS_EVENTS_ROOT;
+    process.env.PAIRFLOW_METRICS_EVENTS_ROOT = metricsRoot;
+
+    try {
+      await emitPassFromWorkspace({
+        summary: "Reviewer clean handoff round 2",
+        noFindings: true,
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-03-01T10:04:00.000Z")
+      });
+
+      const shardRaw = await readFile(
+        join(metricsRoot, "2026", "03", "events-2026-03.ndjson"),
+        "utf8"
+      );
+      const events = shardRaw
+        .split(/\r?\n/u)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .map((line) => JSON.parse(line) as {
+          event_type: string;
+          metadata: {
+            transition_decision?: string;
+            repeat_clean_trigger?: boolean;
+            repeat_clean_reason_code?: string;
+            most_recent_previous_reviewer_pass_is_clean?: boolean;
+            most_recent_previous_reviewer_clean_pass_envelope?: boolean;
+          };
+        });
+      const passEvent = [...events]
+        .reverse()
+        .find((event) => event.event_type === "bubble_passed");
+      expect(passEvent).toBeDefined();
+      expect(passEvent?.metadata.transition_decision).toBe("auto_converge");
+      expect(passEvent?.metadata.repeat_clean_trigger).toBe(true);
+      expect(passEvent?.metadata.repeat_clean_reason_code).toBe(
+        repeatCleanAutoconvergeTriggeredReasonCode
+      );
+      expect(passEvent?.metadata.most_recent_previous_reviewer_pass_is_clean).toBe(
+        true
+      );
+      expect(
+        passEvent?.metadata.most_recent_previous_reviewer_clean_pass_envelope
+      ).toBe(true);
+
+      const convergedEvent = [...events]
+        .reverse()
+        .find((event) => event.event_type === "bubble_converged");
+      expect(convergedEvent).toBeDefined();
+    } finally {
+      if (previousMetricsRoot === undefined) {
+        delete process.env.PAIRFLOW_METRICS_EVENTS_ROOT;
+      } else {
+        process.env.PAIRFLOW_METRICS_EVENTS_ROOT = previousMetricsRoot;
+      }
+    }
+  });
+
+  it("updates document-scope reviewer doc-gate artifact in the same round during auto-converge", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_repeat_clean_autoconverge_doc_gate_01",
+      task: "Repeat-clean deterministic auto-converge (doc scope)",
+      reviewArtifactType: "document"
+    });
+    await advanceToReviewerRoundTwoWithCleanHistory(bubble.paths.worktreePath);
+
+    const gateArtifactPath = resolveDocContractGateArtifactPath(bubble.paths.artifactsDir);
+    const staleArtifact = createDocContractGateArtifact({
+      now: new Date("2026-03-01T10:03:30.000Z"),
+      bubbleConfig: bubble.config,
+      taskContent: "stale"
+    });
+    staleArtifact.review_warnings = [
+      {
+        gate_id: "review_round.policy",
+        reason_code: "ROUND_GATE_WARNING",
+        message: "stale warning",
+        priority: "P2",
+        timing: "later-hardening",
+        layer: "L1",
+        signal_level: "warning"
+      }
+    ];
+    staleArtifact.finding_evaluations = [
+      {
+        finding_key: "r1:f1",
+        priority: "P1",
+        effective_priority: "P2",
+        timing: "required-now",
+        effective_timing: "later-hardening",
+        layer: "L1"
+      }
+    ];
+    staleArtifact.round_gate_state = {
+      applies: true,
+      violated: true,
+      round: 1,
+      reason_code: "ROUND_GATE_WARNING"
+    };
+    staleArtifact.spec_lock_state = {
+      state: "LOCKED",
+      open_blocker_count: 1,
+      open_required_now_count: 1
+    };
+    await writeDocContractGateArtifact(gateArtifactPath, staleArtifact);
+
+    const now = new Date("2026-03-01T10:04:00.000Z");
+    const result = await emitPassFromWorkspace({
+      summary: "Doc-only clean round 2",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now
+    });
+
+    expect(result.transitionDecision).toBe("auto_converge");
+    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+
+    const artifact = await readDocContractGateArtifact(gateArtifactPath);
+    expect(artifact?.updated_at).toBe(now.toISOString());
+    expect(artifact?.review_warnings).toEqual([]);
+    expect(artifact?.finding_evaluations).toEqual([]);
+    expect(artifact?.round_gate_state).toEqual({
+      applies: false,
+      violated: false,
+      round: 2
+    });
+    expect(artifact?.spec_lock_state).toEqual({
+      state: "IMPLEMENTABLE",
+      open_blocker_count: 0,
+      open_required_now_count: 0
+    });
+  });
+
+  it("propagates auto-converge delivery status when approval notifications are unconfirmed", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_repeat_clean_delivery_01",
+      task: "Repeat-clean delivery propagation"
+    });
+    await advanceToReviewerRoundTwoWithCleanHistory(bubble.paths.worktreePath);
+
+    const deliveryRecipients: string[] = [];
+    const result = await emitPassFromWorkspace(
+      {
+        summary: "Reviewer clean handoff round 2",
+        noFindings: true,
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-03-01T10:04:00.000Z")
+      },
+      {
+        emitTmuxDeliveryNotification: async (input) => {
+          deliveryRecipients.push(String(input.envelope.recipient));
+          if (input.envelope.recipient === "human") {
+            return {
+              delivered: false,
+              message: "not confirmed",
+              reason: "delivery_unconfirmed"
+            };
+          }
+          return {
+            delivered: true,
+            message: "ok"
+          };
+        }
+      }
+    );
+
+    expect(result.transitionDecision).toBe("auto_converge");
+    expect(result.delivery).toEqual({
+      delivered: false,
+      reason: "delivery_unconfirmed",
+      retried: false
+    });
+    expect(deliveryRecipients).toEqual([
+      "human",
+      bubble.config.agents.implementer,
+      bubble.config.agents.reviewer
+    ]);
+  });
+
+  it("surfaces auto-converge doc-gate artifact write failure reason in result metadata", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_repeat_clean_doc_gate_write_warning_01",
+      task: "Repeat-clean doc gate write warning",
+      reviewArtifactType: "document"
+    });
+    await advanceToReviewerRoundTwoWithCleanHistory(bubble.paths.worktreePath);
+
+    const gateArtifactPath = resolveDocContractGateArtifactPath(bubble.paths.artifactsDir);
+    await rm(gateArtifactPath, { recursive: true, force: true });
+    await mkdir(gateArtifactPath, { recursive: true });
+
+    const result = await emitPassFromWorkspace({
+      summary: "Reviewer clean handoff round 2",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-03-01T10:04:00.000Z")
+    });
+
+    expect(result.transitionDecision).toBe("auto_converge");
+    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.docGateArtifactWriteFailureReason).toContain("EISDIR");
+  });
+
+  it("fail-closes with explicit reason when repeat-clean trigger is true but convergence policy rejects", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_repeat_clean_policy_reject_01",
+      task: "Repeat-clean policy reject"
+    });
+    await advanceToReviewerRoundTwoWithCleanHistory(bubble.paths.worktreePath);
+
+    const lockPath = join(
+      bubble.paths.locksDir,
+      `${bubble.bubbleId}.lock`
+    );
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      lockPath,
+      now: new Date("2026-03-01T10:03:30.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.reviewer,
+        recipient: "human",
+        type: "HUMAN_QUESTION",
+        round: 2,
+        payload: {
+          question: "Need clarification before approval?"
+        },
+        refs: []
+      }
+    });
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Reviewer clean handoff round 2",
+        noFindings: true,
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-03-01T10:04:00.000Z")
+      })
+    ).rejects.toThrow(
+      new RegExp(
+        `${repeatCleanAutoconvergePolicyRejectedReasonCode}: subtype=policy_gate_rejected;`,
+        "u"
+      )
+    );
+
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcript.map((entry) => entry.type)).toEqual([
+      "TASK",
+      "PASS",
+      "PASS",
+      "PASS",
+      "HUMAN_QUESTION"
+    ]);
+
+    const state = await readStateSnapshot(bubble.paths.statePath);
+    expect(state.state.state).toBe("RUNNING");
+    expect(state.state.round).toBe(2);
+    expect(state.state.active_role).toBe("reviewer");
+  });
+
+  it("wraps auto-converge downstream rejection with explicit fail-closed reason code", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_repeat_clean_policy_reject_02",
+      task: "Repeat-clean downstream rejection",
+      reviewArtifactType: "document"
+    });
+    await advanceToReviewerRoundTwoWithCleanHistory(bubble.paths.worktreePath);
+    await rm(resolveReviewerTestEvidenceArtifactPath(bubble.paths.artifactsDir), {
+      force: true
+    });
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "tests pass, typecheck clean, lint clean.",
+        noFindings: true,
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-03-01T10:04:00.000Z")
+      })
+    ).rejects.toThrow(
+      new RegExp(
+        `^${repeatCleanAutoconvergePolicyRejectedReasonCode}: subtype=downstream_converged_rejected; Convergence validation failed`,
+        "u"
+      )
+    );
+
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcript.map((entry) => entry.type)).toEqual([
+      "TASK",
+      "PASS",
+      "PASS",
+      "PASS"
+    ]);
+    const state = await readStateSnapshot(bubble.paths.statePath);
+    expect(state.state.state).toBe("RUNNING");
+    expect(state.state.round).toBe(2);
+    expect(state.state.active_role).toBe("reviewer");
+  });
+
+  it("uses explicit review_verification_write_failed subtype when auto-converge verification artifact write fails", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_repeat_clean_policy_reject_03",
+      task: "Repeat-clean verification write failure",
+      accuracyCritical: true,
+      reviewerBrief: "Accuracy-critical verification input required."
+    });
+
+    const verificationInput = join(
+      bubble.paths.worktreePath,
+      "review-verification-input.json"
+    );
+    await writeFile(
+      verificationInput,
+      JSON.stringify({
+        schema: "review_verification_v1",
+        overall: "pass",
+        claims: [
+          {
+            claim_id: "C1",
+            status: "verified",
+            evidence_refs: ["src/a.ts:1"]
+          }
+        ]
+      }),
+      "utf8"
+    );
+
+    await advanceToReviewerRoundTwoWithCleanHistoryAccuracyCritical({
+      worktreePath: bubble.paths.worktreePath,
+      reviewerVerificationInputPath: verificationInput
+    });
+
+    await rm(bubble.paths.artifactsDir, { recursive: true, force: true });
+    await writeFile(bubble.paths.artifactsDir, "blocked", "utf8");
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Reviewer clean handoff round 2",
+        noFindings: true,
+        refs: [verificationInput],
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-03-01T10:04:00.000Z")
+      })
+    ).rejects.toThrow(
+      new RegExp(
+        `${repeatCleanAutoconvergePolicyRejectedReasonCode}: subtype=review_verification_write_failed;`,
+        "u"
+      )
+    );
+
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcript.map((entry) => entry.type)).toEqual([
+      "TASK",
+      "PASS",
+      "PASS",
+      "PASS"
+    ]);
+    const state = await readStateSnapshot(bubble.paths.statePath);
+    expect(state.state.state).toBe("RUNNING");
+    expect(state.state.round).toBe(2);
+    expect(state.state.active_role).toBe("reviewer");
+  });
+
+  it("auto-converges in accuracy-critical mode when verification input is valid/pass", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_repeat_clean_acc_happy_01",
+      task: "Repeat-clean accuracy-critical auto-converge",
+      accuracyCritical: true,
+      reviewerBrief: "Accuracy-critical verification input required."
+    });
+
+    const verificationInput = join(
+      bubble.paths.worktreePath,
+      "review-verification-input.json"
+    );
+    await writeFile(
+      verificationInput,
+      JSON.stringify({
+        schema: "review_verification_v1",
+        overall: "pass",
+        claims: [
+          {
+            claim_id: "C1",
+            status: "verified",
+            evidence_refs: ["src/a.ts:18"]
+          }
+        ]
+      }),
+      "utf8"
+    );
+
+    await advanceToReviewerRoundTwoWithCleanHistoryAccuracyCritical({
+      worktreePath: bubble.paths.worktreePath,
+      reviewerVerificationInputPath: verificationInput
+    });
+
+    const result = await emitPassFromWorkspace({
+      summary: "Reviewer clean handoff round 2",
+      noFindings: true,
+      refs: [verificationInput],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-03-01T10:04:00.000Z")
+    });
+
+    expect(result.transitionDecision).toBe("auto_converge");
+    expect(result.repeatCleanTrigger).toBe(true);
+    expect(result.repeatCleanReasonCode).toBe(
+      repeatCleanAutoconvergeTriggeredReasonCode
+    );
+    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcript.map((entry) => entry.type)).toEqual([
+      "TASK",
+      "PASS",
+      "PASS",
+      "PASS",
+      "CONVERGENCE",
+      "APPROVAL_REQUEST"
+    ]);
+
+    const verificationArtifactRaw = await readFile(
+      bubble.paths.reviewVerificationArtifactPath,
+      "utf8"
+    );
+    const verificationArtifact = JSON.parse(verificationArtifactRaw) as {
+      schema: string;
+      overall: string;
+      input_ref: string;
+      meta: {
+        round: number;
+      };
+      validation: {
+        status: string;
+        errors: unknown[];
+      };
+    };
+    expect(verificationArtifact.schema).toBe("review_verification_v1");
+    expect(verificationArtifact.overall).toBe("pass");
+    expect(verificationArtifact.input_ref).toBe("review-verification-input.json");
+    expect(verificationArtifact.meta.round).toBe(2);
+    expect(verificationArtifact.validation).toEqual({
+      status: "valid",
+      errors: []
+    });
   });
 
   it("accepts reviewer P1 findings without finding-level evidence refs in advisory mode", async () => {

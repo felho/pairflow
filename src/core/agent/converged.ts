@@ -12,7 +12,8 @@ import {
 import { emitBubbleNotification } from "../runtime/notifications.js";
 import {
   emitTmuxDeliveryNotification,
-  resolveDeliveryMessageRef
+  resolveDeliveryMessageRef,
+  type EmitTmuxDeliveryNotificationResult
 } from "../runtime/tmuxDelivery.js";
 import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
@@ -59,6 +60,11 @@ export interface EmitConvergedResult {
   approvalRequestSequence: number;
   approvalRequestEnvelope: ProtocolEnvelope;
   state: BubbleStateSnapshot;
+  delivery?: {
+    delivered: boolean;
+    reason?: string;
+    retried: boolean;
+  };
 }
 
 export class ConvergedCommandError extends Error {
@@ -311,36 +317,49 @@ export async function emitConvergedFromWorkspace(
     envelope: approvalRequest.envelope
   });
 
-  // Optional UX signal; never block protocol/state progression on notification failure.
-  void emitDelivery({
-    bubbleId: resolved.bubbleId,
-    bubbleConfig: resolved.bubbleConfig,
-    sessionsPath: resolved.bubblePaths.sessionsPath,
-    envelope: approvalRequest.envelope,
-    messageRef: approvalRef
-  });
+  const emitDeliverySafe = async (
+    envelope: ProtocolEnvelope
+  ): Promise<EmitTmuxDeliveryNotificationResult> =>
+    emitDelivery({
+      bubbleId: resolved.bubbleId,
+      bubbleConfig: resolved.bubbleConfig,
+      sessionsPath: resolved.bubblePaths.sessionsPath,
+      envelope,
+      messageRef: approvalRef
+    }).catch(() => ({
+      delivered: false,
+      message: "",
+      reason: "tmux_send_failed"
+    }));
 
-  // Notify both agent panes to stop active work while waiting for human decision.
-  void emitDelivery({
-    bubbleId: resolved.bubbleId,
-    bubbleConfig: resolved.bubbleConfig,
-    sessionsPath: resolved.bubblePaths.sessionsPath,
-    envelope: {
+  // Optional UX signal; never block protocol/state progression on notification failure.
+  const deliveryResults = await Promise.all([
+    emitDeliverySafe(approvalRequest.envelope),
+    emitDeliverySafe({
       ...approvalRequest.envelope,
       recipient: implementer
-    },
-    messageRef: approvalRef
-  });
-  void emitDelivery({
-    bubbleId: resolved.bubbleId,
-    bubbleConfig: resolved.bubbleConfig,
-    sessionsPath: resolved.bubblePaths.sessionsPath,
-    envelope: {
+    }),
+    emitDeliverySafe({
       ...approvalRequest.envelope,
       recipient: reviewer
-    },
-    messageRef: approvalRef
-  });
+    })
+  ]);
+
+  const firstFailedDelivery = deliveryResults.find(
+    (delivery) => !delivery.delivered
+  );
+  const convergedDelivery = firstFailedDelivery === undefined
+    ? {
+        delivered: true,
+        retried: false
+      }
+    : {
+        delivered: false,
+        ...(firstFailedDelivery.reason !== undefined
+          ? { reason: firstFailedDelivery.reason }
+          : {}),
+        retried: false
+      };
 
   // Optional UX signal; never block protocol/state progression on notification failure.
   void emitNotification(resolved.bubbleConfig, "converged");
@@ -395,7 +414,8 @@ export async function emitConvergedFromWorkspace(
     convergenceEnvelope: convergence.envelope,
     approvalRequestSequence: approvalRequest.sequence,
     approvalRequestEnvelope: approvalRequest.envelope,
-    state: written.state
+    state: written.state,
+    delivery: convergedDelivery
   };
 }
 

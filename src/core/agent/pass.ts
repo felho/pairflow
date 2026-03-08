@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import {
   appendProtocolEnvelope,
+  readTranscriptEnvelopes,
   type AppendProtocolEnvelopeResult
 } from "../protocol/transcriptStore.js";
 import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
@@ -22,6 +23,7 @@ import type { Finding } from "../../types/findings.js";
 import type {
   AgentName,
   AgentRole,
+  BubbleConfig,
   BubbleFailingGate,
   BubbleStateSnapshot,
   RoundRoleHistoryEntry
@@ -55,7 +57,19 @@ import {
   resolveDocContractGateArtifactPath,
   writeDocContractGateArtifact
 } from "../gates/docContractGates.js";
+import { validateConvergencePolicy } from "../convergence/policy.js";
+import {
+  evaluateRepeatCleanAutoconvergeTrigger,
+  repeatCleanAutoconvergePolicyRejectedReasonCode,
+  repeatCleanAutoconvergeTriggeredReasonCode,
+  type RepeatCleanAutoconvergeReasonCode,
+  type RepeatCleanAutoconvergeReasonDetail
+} from "../convergence/repeatCleanAutoconverge.js";
 import { resolveFindingPriority } from "../../types/findings.js";
+import {
+  emitConvergedFromWorkspace,
+  type EmitConvergedDependencies
+} from "./converged.js";
 
 export interface EmitPassInput {
   summary: string;
@@ -71,17 +85,31 @@ export interface EmitPassResult {
   bubbleId: string;
   sequence: number;
   envelope: ProtocolEnvelope;
+  resultEnvelopeKind: "pass" | "convergence";
   state: BubbleStateSnapshot;
   inferredIntent: boolean;
+  transitionDecision: "normal_pass" | "auto_converge";
+  repeatCleanReasonCode: RepeatCleanAutoconvergeReasonCode;
+  repeatCleanReasonDetail: RepeatCleanAutoconvergeReasonDetail;
+  repeatCleanTrigger: boolean;
+  mostRecentPreviousReviewerCleanPassEnvelope: boolean;
+  autoConverged?: {
+    convergenceSequence: number;
+    convergenceEnvelope: ProtocolEnvelope;
+    approvalRequestSequence: number;
+    approvalRequestEnvelope: ProtocolEnvelope;
+  };
   delivery?: {
     delivered: boolean;
     reason?: string;
     retried: boolean;
   };
+  docGateArtifactWriteFailureReason?: string;
 }
 
 export interface EmitPassDependencies {
   emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
+  emitBubbleNotification?: EmitConvergedDependencies["emitBubbleNotification"];
   refreshReviewerContext?: typeof refreshReviewerContext;
 }
 
@@ -100,6 +128,92 @@ export class PassCommandError extends Error {
     super(message);
     this.name = "PassCommandError";
   }
+}
+
+type RepeatCleanPolicyRejectedSubtype =
+  | "policy_gate_rejected"
+  | "review_verification_write_failed"
+  | "downstream_converged_rejected";
+
+const repeatCleanMostRecentPreviousReviewerPassIsCleanMetadataKey =
+  "most_recent_previous_reviewer_pass_is_clean";
+const repeatCleanMostRecentPreviousReviewerCleanPassEnvelopeLegacyMetadataKey =
+  "most_recent_previous_reviewer_clean_pass_envelope";
+
+function formatRepeatCleanPolicyRejectedMessage(input: {
+  subtype: RepeatCleanPolicyRejectedSubtype;
+  detail: string;
+}): string {
+  return `${repeatCleanAutoconvergePolicyRejectedReasonCode}: subtype=${input.subtype}; ${input.detail}`;
+}
+
+function readBooleanMetadataValue(
+  metadata: Record<string, unknown>,
+  key: string
+): boolean | undefined {
+  const value = metadata[key];
+  return typeof value === "boolean" ? value : undefined;
+}
+
+// Canonical reader for repeat-clean most-recent previous reviewer PASS cleanliness.
+// Deprecated key is retained for backward compatibility with existing append-only transcripts.
+export function resolveMostRecentPreviousReviewerPassIsCleanFromMetadata(
+  metadata: Record<string, unknown> | undefined
+): boolean | undefined {
+  if (metadata === undefined) {
+    return undefined;
+  }
+  const canonical = readBooleanMetadataValue(
+    metadata,
+    repeatCleanMostRecentPreviousReviewerPassIsCleanMetadataKey
+  );
+  if (canonical !== undefined) {
+    return canonical;
+  }
+  return readBooleanMetadataValue(
+    metadata,
+    repeatCleanMostRecentPreviousReviewerCleanPassEnvelopeLegacyMetadataKey
+  );
+}
+
+function buildRepeatCleanPassPayloadMetadata(input: {
+  transitionDecision: "normal_pass" | "auto_converge";
+  reasonCode: RepeatCleanAutoconvergeReasonCode;
+  reasonDetail: RepeatCleanAutoconvergeReasonDetail;
+  trigger: boolean;
+  mostRecentPreviousReviewerCleanPassEnvelope: boolean;
+}): Record<string, unknown> {
+  return {
+    transition_decision: input.transitionDecision,
+    reason_code: input.reasonCode,
+    reason_detail: input.reasonDetail,
+    trigger: input.trigger,
+    [repeatCleanMostRecentPreviousReviewerPassIsCleanMetadataKey]:
+      input.mostRecentPreviousReviewerCleanPassEnvelope,
+    // Deprecated alias, retained for append-only transcript backward compatibility.
+    [repeatCleanMostRecentPreviousReviewerCleanPassEnvelopeLegacyMetadataKey]:
+      input.mostRecentPreviousReviewerCleanPassEnvelope
+  };
+}
+
+function buildRepeatCleanLifecycleMetadata(input: {
+  transitionDecision: "normal_pass" | "auto_converge";
+  reasonCode: RepeatCleanAutoconvergeReasonCode;
+  reasonDetail: RepeatCleanAutoconvergeReasonDetail;
+  trigger: boolean;
+  mostRecentPreviousReviewerCleanPassEnvelope: boolean;
+}): Record<string, unknown> {
+  return {
+    transition_decision: input.transitionDecision,
+    repeat_clean_trigger: input.trigger,
+    repeat_clean_reason_code: input.reasonCode,
+    repeat_clean_reason_detail: input.reasonDetail,
+    [repeatCleanMostRecentPreviousReviewerPassIsCleanMetadataKey]:
+      input.mostRecentPreviousReviewerCleanPassEnvelope,
+    // Deprecated alias, retained for metrics reader backward compatibility.
+    [repeatCleanMostRecentPreviousReviewerCleanPassEnvelopeLegacyMetadataKey]:
+      input.mostRecentPreviousReviewerCleanPassEnvelope
+  };
 }
 
 export function inferPassIntent(activeRole: AgentRole): PassIntent {
@@ -343,6 +457,90 @@ async function resolveReviewerVerification(input: {
   }
 }
 
+async function updateReviewerDocGateArtifact(input: {
+  now: Date;
+  bubbleConfig: BubbleConfig;
+  artifactsDir: string;
+  taskArtifactPath: string;
+  round: number;
+  findings: Finding[];
+  reviewerEvaluation?: ReturnType<typeof evaluateReviewerGateWarnings>;
+}): Promise<string | undefined> {
+  if (
+    !isDocContractGateScopeActive({
+      reviewArtifactType: input.bubbleConfig.review_artifact_type
+    })
+  ) {
+    return undefined;
+  }
+
+  const gateArtifactPath = resolveDocContractGateArtifactPath(
+    input.artifactsDir
+  );
+  let baseArtifact: DocContractGateArtifact | undefined;
+  let gateReadWarning: BubbleFailingGate | undefined;
+  try {
+    baseArtifact = await readDocContractGateArtifact(gateArtifactPath);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    gateReadWarning = createDocGateReadFailureWarning({
+      artifactPath: gateArtifactPath,
+      reason
+    });
+  }
+  let fallbackArtifact: DocContractGateArtifact | undefined;
+  if (baseArtifact === undefined) {
+    fallbackArtifact = createDocContractGateArtifact({
+      now: input.now,
+      bubbleConfig: input.bubbleConfig,
+      taskContent: ""
+    });
+    const taskArtifactContent = await readFile(
+      input.taskArtifactPath,
+      "utf8"
+    ).catch(() => undefined);
+    if (taskArtifactContent !== undefined) {
+      fallbackArtifact.task_warnings = createDocContractGateArtifact({
+        now: input.now,
+        bubbleConfig: input.bubbleConfig,
+        taskContent: extractTaskContentFromTaskArtifact(taskArtifactContent)
+      }).task_warnings;
+    }
+    if (gateReadWarning !== undefined) {
+      fallbackArtifact.config_warnings = [
+        ...fallbackArtifact.config_warnings,
+        gateReadWarning
+      ];
+    }
+  }
+  const reviewEvaluation =
+    input.reviewerEvaluation
+    ?? evaluateReviewerGateWarnings({
+      round: input.round,
+      findings: input.findings,
+      roundGateAppliesAfter:
+        input.bubbleConfig.doc_contract_gates.round_gate_applies_after
+    });
+  const artifactForMerge = baseArtifact ?? fallbackArtifact;
+  if (artifactForMerge === undefined) {
+    throw new PassCommandError(
+      "Doc gate artifact fallback invariant violated during reviewer PASS."
+    );
+  }
+  const nextArtifact = mergeArtifactWithReviewerEvaluation({
+    now: input.now,
+    artifact: artifactForMerge,
+    reviewerEvaluation: reviewEvaluation
+  });
+  try {
+    await writeDocContractGateArtifact(gateArtifactPath, nextArtifact);
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+
+  return undefined;
+}
+
 export async function emitPassFromWorkspace(
   input: EmitPassInput,
   dependencies: EmitPassDependencies = {}
@@ -428,6 +626,171 @@ export async function emitPassFromWorkspace(
     });
   }
 
+  const transcript = await readTranscriptEnvelopes(resolved.bubblePaths.transcriptPath, {
+    allowMissing: true,
+    toleratePartialFinalLine: true
+  });
+  const repeatCleanTrigger = evaluateRepeatCleanAutoconvergeTrigger({
+    activeRole: handoff.senderRole,
+    passIntent: intent,
+    hasFindings,
+    round: handoff.envelopeRound,
+    reviewer,
+    implementer,
+    transcript
+  });
+  if (repeatCleanTrigger.trigger) {
+    const policyResult = validateConvergencePolicy({
+      currentRound: handoff.envelopeRound,
+      reviewer,
+      implementer,
+      reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
+      roundRoleHistory: state.round_role_history,
+      transcript
+    });
+    if (!policyResult.ok) {
+      throw new PassCommandError(
+        formatRepeatCleanPolicyRejectedMessage({
+          subtype: "policy_gate_rejected",
+          detail: policyResult.errors.join(" ")
+        })
+      );
+    }
+
+    if (reviewerVerification !== undefined) {
+      const verificationArtifact = createReviewVerificationArtifact({
+        payload: reviewerVerification.payload,
+        inputRef: reviewerVerification.inputRef,
+        bubbleId: resolved.bubbleId,
+        round: handoff.envelopeRound,
+        reviewer: handoff.senderAgent,
+        generatedAt: nowIso
+      });
+      try {
+        await writeReviewVerificationArtifactAtomic(
+          resolved.bubblePaths.reviewVerificationArtifactPath,
+          verificationArtifact
+        );
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        throw new PassCommandError(
+          formatRepeatCleanPolicyRejectedMessage({
+            subtype: "review_verification_write_failed",
+            detail:
+              `review-verification artifact write failed before convergence transition. Root error: ${reason}`
+          })
+        );
+      }
+    }
+
+    let converged;
+    try {
+      converged = await emitConvergedFromWorkspace(
+        {
+          summary,
+          refs,
+          cwd: resolved.bubblePaths.worktreePath,
+          now
+        },
+        {
+          ...(dependencies.emitTmuxDeliveryNotification !== undefined
+            ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
+            : {}),
+          ...(dependencies.emitBubbleNotification !== undefined
+            ? { emitBubbleNotification: dependencies.emitBubbleNotification }
+            : {})
+        }
+      );
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      throw new PassCommandError(
+        formatRepeatCleanPolicyRejectedMessage({
+          subtype: "downstream_converged_rejected",
+          detail: reason
+        })
+      );
+    }
+
+    let autoConvergeDocGateArtifactWriteFailureReason: string | undefined;
+    if (handoff.senderRole === "reviewer") {
+      autoConvergeDocGateArtifactWriteFailureReason = await updateReviewerDocGateArtifact({
+        now,
+        bubbleConfig: resolved.bubbleConfig,
+        artifactsDir: resolved.bubblePaths.artifactsDir,
+        taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+        round: handoff.envelopeRound,
+        findings: []
+      });
+    }
+
+    await emitBubbleLifecycleEventBestEffort({
+      repoPath: resolved.repoPath,
+      bubbleId: resolved.bubbleId,
+      bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+      eventType: "bubble_passed",
+      round: handoff.envelopeRound,
+      actorRole: handoff.senderRole,
+      metadata: {
+        pass_intent: intent,
+        inferred_intent: inferredIntent,
+        sender: handoff.senderAgent,
+        recipient: "human",
+        recipient_role: "human",
+        refs_count: refs.length,
+        has_findings: hasFindings,
+        no_findings: noFindings,
+        ...buildRepeatCleanLifecycleMetadata({
+          transitionDecision: "auto_converge",
+          reasonCode: repeatCleanTrigger.reasonCode,
+          reasonDetail: repeatCleanTrigger.reasonDetail,
+          trigger: repeatCleanTrigger.trigger,
+          mostRecentPreviousReviewerCleanPassEnvelope:
+            repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope
+        }),
+        ...buildFindingCounts([]),
+        ...(autoConvergeDocGateArtifactWriteFailureReason !== undefined
+          ? {
+              doc_gate_artifact_write_failed: true,
+              doc_gate_artifact_write_failure_reason:
+                autoConvergeDocGateArtifactWriteFailureReason
+            }
+          : {})
+      },
+      now
+    });
+
+    return {
+      bubbleId: resolved.bubbleId,
+      sequence: converged.convergenceSequence,
+      envelope: converged.convergenceEnvelope,
+      resultEnvelopeKind: "convergence",
+      state: converged.state,
+      inferredIntent,
+      transitionDecision: "auto_converge",
+      repeatCleanReasonCode: repeatCleanAutoconvergeTriggeredReasonCode,
+      repeatCleanReasonDetail: repeatCleanTrigger.reasonDetail,
+      repeatCleanTrigger: true,
+      mostRecentPreviousReviewerCleanPassEnvelope: true,
+      autoConverged: {
+        convergenceSequence: converged.convergenceSequence,
+        convergenceEnvelope: converged.convergenceEnvelope,
+        approvalRequestSequence: converged.approvalRequestSequence,
+        approvalRequestEnvelope: converged.approvalRequestEnvelope
+      },
+      ...(converged.delivery !== undefined
+        ? {
+            delivery: converged.delivery
+          }
+        : {}),
+      ...(autoConvergeDocGateArtifactWriteFailureReason !== undefined
+        ? {
+            docGateArtifactWriteFailureReason:
+              autoConvergeDocGateArtifactWriteFailureReason
+          }
+        : {})
+    };
+  }
+
   let reviewerGateEvaluation:
     | ReturnType<typeof evaluateReviewerGateWarnings>
     | undefined;
@@ -465,6 +828,14 @@ export async function emitPassFromWorkspace(
       payload: {
         summary,
         pass_intent: intent,
+        metadata: buildRepeatCleanPassPayloadMetadata({
+          transitionDecision: "normal_pass",
+          reasonCode: repeatCleanTrigger.reasonCode,
+          reasonDetail: repeatCleanTrigger.reasonDetail,
+          trigger: repeatCleanTrigger.trigger,
+          mostRecentPreviousReviewerCleanPassEnvelope:
+            repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope
+        }),
         ...(handoff.senderRole === "reviewer"
           ? { findings: hasFindings ? findingsForPayload : [] }
           : {})
@@ -526,70 +897,17 @@ export async function emitPassFromWorkspace(
   }
 
   if (docGateScopeActive) {
-    const gateArtifactPath = resolveDocContractGateArtifactPath(
-      resolved.bubblePaths.artifactsDir
-    );
-    let baseArtifact: DocContractGateArtifact | undefined;
-    let gateReadWarning: BubbleFailingGate | undefined;
-    try {
-      baseArtifact = await readDocContractGateArtifact(gateArtifactPath);
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      gateReadWarning = createDocGateReadFailureWarning({
-        artifactPath: gateArtifactPath,
-        reason
-      });
-    }
-    let fallbackArtifact: DocContractGateArtifact | undefined;
-    if (baseArtifact === undefined) {
-      fallbackArtifact = createDocContractGateArtifact({
-        now,
-        bubbleConfig: resolved.bubbleConfig,
-        taskContent: ""
-      });
-      const taskArtifactContent = await readFile(
-        resolved.bubblePaths.taskArtifactPath,
-        "utf8"
-      ).catch(() => undefined);
-      if (taskArtifactContent !== undefined) {
-        fallbackArtifact.task_warnings = createDocContractGateArtifact({
-          now,
-          bubbleConfig: resolved.bubbleConfig,
-          taskContent: extractTaskContentFromTaskArtifact(taskArtifactContent)
-        }).task_warnings;
-      }
-      if (gateReadWarning !== undefined) {
-        fallbackArtifact.config_warnings = [
-          ...fallbackArtifact.config_warnings,
-          gateReadWarning
-        ];
-      }
-    }
-    const reviewEvaluation =
-      reviewerGateEvaluation
-      ?? evaluateReviewerGateWarnings({
-        round: handoff.envelopeRound,
-        findings: [],
-        roundGateAppliesAfter:
-          resolved.bubbleConfig.doc_contract_gates.round_gate_applies_after
-      });
-    const artifactForMerge = baseArtifact ?? fallbackArtifact;
-    if (artifactForMerge === undefined) {
-      throw new PassCommandError(
-        "Doc gate artifact fallback invariant violated during reviewer PASS."
-      );
-    }
-    const nextArtifact = mergeArtifactWithReviewerEvaluation({
+    docGateArtifactWriteFailureReason = await updateReviewerDocGateArtifact({
       now,
-      artifact: artifactForMerge,
-      reviewerEvaluation: reviewEvaluation
+      bubbleConfig: resolved.bubbleConfig,
+      artifactsDir: resolved.bubblePaths.artifactsDir,
+      taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+      round: handoff.envelopeRound,
+      findings: hasFindings ? findings : [],
+      ...(reviewerGateEvaluation !== undefined
+        ? { reviewerEvaluation: reviewerGateEvaluation }
+        : {})
     });
-    try {
-      await writeDocContractGateArtifact(gateArtifactPath, nextArtifact);
-    } catch (error) {
-      docGateArtifactWriteFailureReason =
-        error instanceof Error ? error.message : String(error);
-    }
   }
 
   let reviewerTestDirective: ReviewerTestExecutionDirective | undefined;
@@ -720,6 +1038,14 @@ export async function emitPassFromWorkspace(
       refs_count: refs.length,
       has_findings: hasFindings,
       no_findings: noFindings,
+      ...buildRepeatCleanLifecycleMetadata({
+        transitionDecision: "normal_pass",
+        reasonCode: repeatCleanTrigger.reasonCode,
+        reasonDetail: repeatCleanTrigger.reasonDetail,
+        trigger: repeatCleanTrigger.trigger,
+        mostRecentPreviousReviewerCleanPassEnvelope:
+          repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope
+      }),
       ...(reviewerTestDirective !== undefined
         ? {
             reviewer_test_evidence_decision: reviewerTestDirective.skip_full_rerun
@@ -740,16 +1066,27 @@ export async function emitPassFromWorkspace(
               docGateArtifactWriteFailureReason
           }
         : {})
-    },
+      },
     now
   });
+
+  const mostRecentPreviousReviewerCleanPassEnvelope =
+    resolveMostRecentPreviousReviewerPassIsCleanFromMetadata(
+      mapped.envelope.payload.metadata
+    ) ?? repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope;
 
   return {
     bubbleId: resolved.bubbleId,
     sequence: mapped.sequence,
     envelope: mapped.envelope,
+    resultEnvelopeKind: "pass",
     state: written.state,
     inferredIntent,
+    transitionDecision: "normal_pass",
+    repeatCleanReasonCode: repeatCleanTrigger.reasonCode,
+    repeatCleanReasonDetail: repeatCleanTrigger.reasonDetail,
+    repeatCleanTrigger: repeatCleanTrigger.trigger,
+    mostRecentPreviousReviewerCleanPassEnvelope,
     ...(deliveryResult !== undefined
       ? {
           delivery: {
@@ -759,6 +1096,11 @@ export async function emitPassFromWorkspace(
               : {}),
             retried: deliveryRetried
           }
+        }
+      : {}),
+    ...(docGateArtifactWriteFailureReason !== undefined
+      ? {
+          docGateArtifactWriteFailureReason
         }
       : {})
   };

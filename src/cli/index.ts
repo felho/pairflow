@@ -115,12 +115,32 @@ async function handlePassCommand(args: string[]): Promise<number> {
     process.stdout.write(`${getPassHelpText()}\n`);
     return 0;
   }
-  process.stdout.write(
-    `PASS recorded for ${result.bubbleId}: ${result.envelope.id} -> ${result.envelope.recipient}\n`
-  );
+  let outputLine: string;
+  if (result.transitionDecision === "auto_converge") {
+    if (result.autoConverged === undefined) {
+      throw new Error(
+        "PASS command returned auto_converge transition without autoConverged payload."
+      );
+    }
+    outputLine =
+      `AUTO-CONVERGENCE recorded for ${result.bubbleId}: ${result.autoConverged.convergenceEnvelope.id}; approval requested: ${result.autoConverged.approvalRequestEnvelope.id} (reason=${result.repeatCleanReasonCode})\n`;
+  } else {
+    outputLine =
+      `PASS recorded for ${result.bubbleId}: ${result.envelope.id} -> ${result.envelope.recipient} (reason=${result.repeatCleanReasonCode})\n`;
+  }
+  process.stdout.write(outputLine);
   if (result.delivery !== undefined && !result.delivery.delivered) {
+    const guidance =
+      result.transitionDecision === "auto_converge"
+        ? `Use \`pairflow bubble status --id ${result.bubbleId}\` to inspect approval state, then \`pairflow bubble approve --id ${result.bubbleId}\`, \`pairflow bubble request-rework --id ${result.bubbleId}\`, or \`pairflow bubble reply --id ${result.bubbleId}\` as appropriate.`
+        : `Use \`pairflow bubble status --id ${result.bubbleId}\` and \`pairflow bubble resume --id ${result.bubbleId}\` if the next agent did not start.`;
     process.stderr.write(
-      `Warning: handoff delivery to active pane was not confirmed (reason: ${result.delivery.reason ?? "unknown"}${result.delivery.retried ? ", retried" : ""}). Use \`pairflow bubble status --id ${result.bubbleId}\` and \`pairflow bubble resume --id ${result.bubbleId}\` if the next agent did not start.\n`
+      `Warning: handoff delivery to active pane was not confirmed (reason: ${result.delivery.reason ?? "unknown"}${result.delivery.retried ? ", retried" : ""}). ${guidance}\n`
+    );
+  }
+  if (result.docGateArtifactWriteFailureReason !== undefined) {
+    process.stderr.write(
+      `Warning: reviewer doc-gate artifact update failed during PASS handling (reason: ${result.docGateArtifactWriteFailureReason}).\n`
     );
   }
   return 0;
