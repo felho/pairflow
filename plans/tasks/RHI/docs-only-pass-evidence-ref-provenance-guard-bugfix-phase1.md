@@ -53,10 +53,27 @@ Szuntesse meg azt a docs-only handoff inkonzisztenciat, amikor az implementer PA
 
 A jelenlegi flow nem ved determinisztikusan a docs-only PASS summary-claim es a csatolt evidence refek kozotti ellentmondas ellen. Emiatt audit-zajos, potencialisan felrevezeto handoff allhat elo.
 
+### Determinisztikus Definiciok (Phase 1)
+
+1. `docs_only_context` igaz, ha a bubble `review_artifact_type=document`.
+2. `runtime_checks_skipped_claim` igaz, ha a summary normalizalt (kisbetusitett + whitespace-collapsed) szovege tartalmazza valamelyik canonical markert:
+   - `runtime checks intentionally not executed`
+   - `runtime checks were intentionally not executed`
+   - Phase 1 marker scope: csak a fenti canonical angol markerlista (lokalizalt markerbovites out-of-scope, lasd L2#4).
+3. `runtime_log_ref` minden olyan ref, ami illeszkedik a mintara: `^\\.pairflow/evidence/[^\\s]+\\.log$`.
+   - Jelentes: runtime-check evidence log osztaly; nem minden `--ref`, csak a fenti regex-szel matchelo log ref.
+4. `docs_only_skip_log_ref_conflict` akkor igaz, ha:
+   - `docs_only_context=true`
+   - `runtime_checks_skipped_claim=true`
+   - legalabb 1 db `runtime_log_ref` jelen van
+5. A konfliktus-ellenorzes futasi sorrendje kotott:
+   - PASS envelope append elott
+   - barmilyen transcript append vagy handoff side-effect elott
+
 ### In Scope
 
 1. Implementer PASS boundary guard docs-only bubblekre:
-   - ha a PASS summary docs-only skip deklaraciot tartalmaz (runtime checks intentionally not executed), runtime evidence log ref csatolasa tiltott.
+   - ha a PASS summary docs-only skip deklaraciot tartalmaz (`runtime_checks_skipped_claim=true`), runtime evidence log ref csatolasa tiltott.
 2. Determinisztikus hard-fail viselkedes ilyen konfliktus esetere:
    - PASS command non-zero exit.
    - PASS envelope nem appendelodik.
@@ -90,11 +107,11 @@ A jelenlegi flow nem ved determinisztikusan a docs-only PASS summary-claim es a 
 
 | ID | File | Function/Entry | Contract Delta | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|
-| CS1 | `src/core/agent/pass.ts` | implementer PASS path before envelope append | docs-only summary/ref consistency hard guard | skip-deklaracio + runtime log ref -> hard fail + no append | P1 | required-now | T1, T2 |
-| CS2 | `src/core/agent/pass.ts` | PASS error surface | stable reason code + clear diagnostics | command, reason code, conflicting ref class surfaced | P1 | required-now | T1 |
-| CS3 | `src/core/bubble/startBubble.ts` | `buildImplementerEvidenceHandoffGuidance` docs-only branch | docs-only guidance explicit conflict-prevention wording | avoid stale/runtime log attachment when checks skipped | P1 | required-now | T3 |
-| CS4 | `tests/core/agent/pass.test.ts` | implementer PASS tests | new guard regression scenarios | conflict path blocked, clean docs-only path preserved | P1 | required-now | T1, T2 |
-| CS5 | `tests/core/bubble/startBubble.test.ts` | docs-only implementer prompt assertions | guidance wording lock | docs-only prompt no longer implies unsafe log attachment in skip case | P1 | required-now | T3 |
+| CS1 | `src/core/agent/pass.ts` | implementer PASS path before envelope append | docs-only summary/ref consistency hard guard | csak akkor hard-fail + no-append, ha `docs_only_context=true` + `runtime_checks_skipped_claim=true` + `runtime_log_ref_count>=1`; minden reszfeltetel-hiany eseten nincs konfliktusblokk | P1 | required-now | T1, T2, T3, T4, T6 |
+| CS2 | `src/core/agent/pass.ts` | PASS error surface | stable reason code + clear diagnostics | command, reason code, conflicting ref class surfaced | P1 | required-now | T1, T7 |
+| CS3 | `src/core/bubble/startBubble.ts` | `buildImplementerEvidenceHandoffGuidance` docs-only branch | docs-only guidance explicit conflict-prevention wording | avoid stale/runtime log attachment when checks skipped | P1 | required-now | T9 |
+| CS4 | `tests/core/agent/pass.test.ts` | implementer PASS tests | new guard regression scenarios | conflict path blocked, clean docs-only path preserved + partial-condition negatives + ordering + reason code lock | P1 | required-now | T1, T2, T3, T4, T6, T7, T8 |
+| CS5 | `tests/core/bubble/startBubble.test.ts` | docs-only implementer prompt assertions | guidance wording lock | docs-only prompt no longer implies unsafe log attachment in skip case | P1 | required-now | T9 |
 | CS6 | `src/core/runtime/tmuxDelivery.ts` | implementer-directed delivery action text for PASS/HUMAN_REPLY/APPROVAL_DECISION(revise) | docs-only safe guidance alignment | avoid generic "always attach .pairflow/evidence logs" wording in docs-only scope | P1 | required-now | T5 |
 | CS7 | `tests/core/runtime/tmuxDelivery.test.ts` | delivery wording assertions | docs-only delivery guard wording lock | implementer delivery text does not encourage skip+runtime-log-ref contradiction | P1 | required-now | T5 |
 
@@ -102,10 +119,10 @@ A jelenlegi flow nem ved determinisztikusan a docs-only PASS summary-claim es a 
 
 | Contract | Current | Target | Required Fields | Optional Fields | Compatibility | Priority | Timing |
 |---|---|---|---|---|---|---|---|
-| Docs-only skip declaration | prose-only statement | parseable claim class (`runtime_checks_skipped`) | summary text marker detection | localized wording variants | additive validation | P1 | required-now |
-| Docs-only runtime log refs | currently allowed even on skip declaration | forbidden on skip declaration | conflicting ref class detection (`.pairflow/evidence/*.log`) | conflict list details | tightening for docs-only | P1 | required-now |
+| Docs-only skip declaration | prose-only statement | parseable claim class (`runtime_checks_skipped_claim`) | normalized summary + canonical marker detection | future localized marker set | additive validation | P1 | required-now |
+| Docs-only runtime log refs | currently allowed even on skip declaration | forbidden on skip declaration | conflicting ref class detection (`^\\.pairflow/evidence/[^\\s]+\\.log$`) | conflict list details | tightening for docs-only | P1 | required-now |
 | Error diagnostics | generic pass failure text | stable reason code + actionable message | `reason_code`, `conflicting_ref_count` | ref examples | additive | P1 | required-now |
-| PASS append ordering | append-first flow | guard-first flow | pre-append conflict check | diagnostic details | tightening for docs-only | P1 | required-now |
+| PASS append ordering | append-first flow | guard-first flow | pre-append conflict check before any transcript/handoff side-effect | diagnostic details | tightening for docs-only | P1 | required-now |
 
 ### 3) Side Effects Contract
 
@@ -141,11 +158,15 @@ Constraint: implementation must stay within the listed allowed side effects.
 
 | ID | Scenario | Given | When | Then | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|
-| T1 | Conflict hard-fail | docs-only implementer PASS summary declares skipped checks + refs include `.pairflow/evidence/*.log` | `pairflow pass` executes | command fails non-zero, reason code `DOCS_ONLY_SKIP_LOG_REF_CONFLICT`, no PASS envelope append | P1 | required-now | `tests/core/agent/pass.test.ts` |
-| T2 | Non-conflict docs-only pass | docs-only implementer PASS summary declares skipped checks + no runtime log refs | `pairflow pass` executes | PASS continues normally | P1 | required-now | `tests/core/agent/pass.test.ts` |
-| T3 | Guidance lock | docs-only implementer startup/resume prompt build | prompt rendered | wording clearly prevents skip+runtime-log-ref conflict | P1 | required-now | `tests/core/bubble/startBubble.test.ts` |
-| T4 | Non-doc no-regression | code bubble implementer PASS | `pairflow pass` executes | no false block from docs-only guard | P2 | required-now | `tests/core/agent/pass.test.ts` |
+| T1 | Conflict hard-fail | `review_artifact_type=document` + `runtime_checks_skipped_claim=true` + legalabb 1 db `runtime_log_ref` | `pairflow pass` executes | command fails non-zero, reason code `DOCS_ONLY_SKIP_LOG_REF_CONFLICT`, no PASS envelope append | P1 | required-now | `tests/core/agent/pass.test.ts` |
+| T2 | Non-conflict docs-only pass (missing runtime_log_ref) | `review_artifact_type=document` + `runtime_checks_skipped_claim=true` + nincs `runtime_log_ref` | `pairflow pass` executes | PASS continues normally (no conflict throw) | P1 | required-now | `tests/core/agent/pass.test.ts` |
+| T3 | Partial-condition negative A (missing skip claim) | `review_artifact_type=document` + `runtime_checks_skipped_claim=false` + van `runtime_log_ref` | `pairflow pass` executes | nincs docs-only skip/ref konfliktusblokk | P1 | required-now | `tests/core/agent/pass.test.ts` |
+| T4 | Partial-condition negative B (missing docs-only context) | `review_artifact_type=code` + `runtime_checks_skipped_claim=true` + van `runtime_log_ref` | `pairflow pass` executes | nincs docs-only skip/ref konfliktusblokk | P1 | required-now | `tests/core/agent/pass.test.ts` |
 | T5 | Docs-only delivery guidance lock | implementer-targeted delivery text render (PASS/HUMAN_REPLY/APPROVAL_DECISION revise) in docs-only context | delivery message built | text does not instruct runtime log attachment as default when skip declaration applies | P1 | required-now | `tests/core/runtime/tmuxDelivery.test.ts` |
+| T6 | Guard ordering lock (pre-append) | T1 konfliktus allapot | `pairflow pass` executes | conflict guard az append elott fut; transcript/PASS envelope append side-effect nem tortenik meg | P1 | required-now | `tests/core/agent/pass.test.ts` |
+| T7 | Reason code stability lock | T1 konfliktus allapot | `pairflow pass` executes | surfaced reason code pontosan `DOCS_ONLY_SKIP_LOG_REF_CONFLICT` | P1 | required-now | `tests/core/agent/pass.test.ts` |
+| T8 | AC10 deterministic marker+regex lock | docs-only summary marker normalizacios variansok + vegyes ref lista (matchelo/nem matchelo) | `pairflow pass` executes | `runtime_checks_skipped_claim` es `runtime_log_ref` osztalyozas explicit marker + explicit regex alapjan determinisztikus | P1 | required-now | `tests/core/agent/pass.test.ts` |
+| T9 | Guidance lock (startup/resume prompt) | docs-only implementer startup/resume prompt build | prompt rendered | wording clearly prevents skip+runtime-log-ref conflict | P1 | required-now | `tests/core/bubble/startBubble.test.ts` |
 
 ## Acceptance Criteria
 
@@ -158,12 +179,14 @@ Constraint: implementation must stay within the listed allowed side effects.
 7. AC7: A task tartalmazza az incident visszakereseshez szukseges forenzikus anchorokat (`bubble_id`, `bubble_instance_id`, `msg_*`, tmux session snapshot, transcript path).
 8. AC8: A docs-only conflict guard append elott fut; konfliktus eseten transcriptbe nem kerul uj PASS envelope.
 9. AC9: Implementer-targeted docs-only delivery guidance konzisztens a skip+no-runtime-log-ref policyval.
+10. AC10: A skip-claim detektalas es runtime-log-ref klasszifikacio deterministicusan, explicit marker + explicit regex alapjan tortenik.
 
 ## L2 - Implementation Notes (Optional)
 
 1. [later-hardening] Structured PASS summary field (pl. `runtime_checks_executed=true|false`) bevezetese, hogy a skip-claim parse ne pusztan szovegre epuljon.
 2. [later-hardening] Ref provenance timestamp/hash ellenorzes (same-round generation proof).
 3. [later-hardening] Auto-remediation opcio: konfliktus eseten log refek automatikus eldobasa hard-fail helyett (explicit policy dontessel).
+4. [later-hardening] Canonical markerlista lokalizacios bovitese (pl. hu/en marker set) explicit versionelessel.
 
 ## Assumptions
 
