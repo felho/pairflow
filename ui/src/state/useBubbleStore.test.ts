@@ -211,7 +211,7 @@ describe("createBubbleStore", () => {
     expect(client.refresh).toHaveBeenCalledTimes(1);
   });
 
-  it("adds newly created bubbles from realtime update events without manual refresh", async () => {
+  it("adds and auto-expands newly created bubbles from realtime update events", async () => {
     const existingBubble = bubbleSummary({ bubbleId: "b-existing", repoPath: "/repo-a" });
     const createdBubble = bubbleSummary({ bubbleId: "b-created", repoPath: "/repo-a" });
     const getBubbles = vi.fn(async () => ({
@@ -252,6 +252,7 @@ describe("createBubbleStore", () => {
       "b-created",
       "b-existing"
     ]);
+    expect(store.getState().expandedBubbleIds).toEqual(["b-created"]);
     expect(getBubbles).toHaveBeenCalledTimes(1);
   });
 

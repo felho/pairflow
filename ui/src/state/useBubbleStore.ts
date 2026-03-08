@@ -283,6 +283,27 @@ function mergeSnapshot(
   return next;
 }
 
+function syncExpandedBubbleIds(
+  expandedBubbleIds: string[],
+  previousBubbles: Record<string, BubbleCardModel>,
+  nextBubbles: Record<string, BubbleCardModel>
+): string[] {
+  const nextExpanded = expandedBubbleIds.filter((id) => nextBubbles[id] !== undefined);
+  const expandedSet = new Set(nextExpanded);
+  let changed = nextExpanded.length !== expandedBubbleIds.length;
+
+  for (const bubbleId of Object.keys(nextBubbles)) {
+    if (previousBubbles[bubbleId] !== undefined || expandedSet.has(bubbleId)) {
+      continue;
+    }
+    nextExpanded.push(bubbleId);
+    expandedSet.add(bubbleId);
+    changed = true;
+  }
+
+  return changed ? nextExpanded : expandedBubbleIds;
+}
+
 function removeBubble(
   currentBubbles: Record<string, BubbleCardModel>,
   bubbleId: string
@@ -517,6 +538,11 @@ export function createBubbleStore(
 
       set((state) => {
         const bubblesById = mergeRepoPayloads(state.bubblesById, repos, payloads);
+        const expandedBubbleIds = syncExpandedBubbleIds(
+          state.expandedBubbleIds,
+          state.bubblesById,
+          bubblesById
+        );
         const repoSummaries = { ...state.repoSummaries };
         const loadedRepos = { ...state.loadedRepos };
 
@@ -530,7 +556,7 @@ export function createBubbleStore(
           pruned,
           bubblesById,
           new Set(state.selectedRepos),
-          state.expandedBubbleIds
+          expandedBubbleIds
         );
         const bubbleDetails = syncExpandedFromSummary(state.bubbleDetails, bubblesById);
 
@@ -549,9 +575,7 @@ export function createBubbleStore(
           actionErrorById: pruneRecordByBubbleIds(state.actionErrorById, bubblesById),
           actionRetryHintById: pruneRecordByBubbleIds(state.actionRetryHintById, bubblesById),
           actionFailureById: pruneRecordByBubbleIds(state.actionFailureById, bubblesById),
-          expandedBubbleIds: state.expandedBubbleIds.filter(
-            (id) => bubblesById[id] !== undefined
-          )
+          expandedBubbleIds
         };
       });
 
@@ -658,11 +682,16 @@ export function createBubbleStore(
                 }
 
                 const bubblesById = mergeSnapshot(state.bubblesById, event);
+                const expandedBubbleIds = syncExpandedBubbleIds(
+                  state.expandedBubbleIds,
+                  state.bubblesById,
+                  bubblesById
+                );
                 const positions = fillDefaultPositions(
                   prunePositions(state.positions, bubblesById),
                   bubblesById,
                   new Set(state.selectedRepos),
-                  state.expandedBubbleIds
+                  expandedBubbleIds
                 );
                 const bubbleDetails = syncExpandedFromSummary(
                   state.bubbleDetails,
@@ -709,9 +738,7 @@ export function createBubbleStore(
                     state.actionFailureById,
                     bubblesById
                   ),
-                  expandedBubbleIds: state.expandedBubbleIds.filter(
-                    (id) => bubblesById[id] !== undefined
-                  )
+                  expandedBubbleIds
                 };
               }
               case "bubble.updated": {
@@ -719,11 +746,16 @@ export function createBubbleStore(
                   ...state.bubblesById,
                   [event.bubbleId]: toBubbleCardModel(event.bubble)
                 };
+                const expandedBubbleIds = syncExpandedBubbleIds(
+                  state.expandedBubbleIds,
+                  state.bubblesById,
+                  bubblesById
+                );
                 const positions = fillDefaultPositions(
                   prunePositions(state.positions, bubblesById),
                   bubblesById,
                   new Set(state.selectedRepos),
-                  state.expandedBubbleIds
+                  expandedBubbleIds
                 );
                 const existingDetail = state.bubbleDetails[event.bubbleId];
                 const bubbleDetails =
@@ -739,7 +771,8 @@ export function createBubbleStore(
                 return {
                   bubblesById,
                   positions,
-                  bubbleDetails
+                  bubbleDetails,
+                  expandedBubbleIds
                 };
               }
               case "bubble.removed": {
