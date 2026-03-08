@@ -371,6 +371,40 @@ describe("BubbleCanvas", () => {
     expect(onToggleExpand).not.toHaveBeenCalled();
   });
 
+  it("does not start drag from bubble id double-click target", () => {
+    const onPositionChange = vi.fn();
+    const onPositionCommit = vi.fn();
+    render(
+      <BubbleCanvas
+        bubbles={[
+          bubbleCard({
+            bubbleId: "b-1",
+            repoPath: "/repo-a"
+          })
+        ]}
+        positions={{
+          "b-1": {
+            x: 120,
+            y: 140
+          }
+        }}
+        expandedBubbleIds={[]}
+        onPositionChange={onPositionChange}
+        onPositionCommit={onPositionCommit}
+        onToggleExpand={() => undefined}
+        onDelete={(bubbleId) => Promise.resolve(deletedResult(bubbleId))}
+      />
+    );
+
+    const idLabel = screen.getByText("b-1");
+    fireEvent.mouseDown(idLabel, { button: 0, clientX: 140, clientY: 140 });
+    fireEvent.mouseMove(document, { clientX: 8, clientY: 8 });
+    fireEvent.mouseUp(document);
+
+    expect(onPositionChange).not.toHaveBeenCalled();
+    expect(onPositionCommit).not.toHaveBeenCalled();
+  });
+
   it("cancels pending single-click open when follow-up click has detail 2", () => {
     vi.useFakeTimers();
     const onToggleExpand = vi.fn();

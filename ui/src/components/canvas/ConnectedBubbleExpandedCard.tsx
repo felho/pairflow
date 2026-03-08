@@ -1,8 +1,10 @@
 import { useBubbleStore } from "../../state/useBubbleStore";
+import type { BubblePosition } from "../../lib/types";
 import { BubbleExpandedCard } from "./BubbleExpandedCard";
 
 export interface ConnectedBubbleExpandedCardProps {
   bubbleId: string;
+  fallbackPosition: BubblePosition;
 }
 
 export function ConnectedBubbleExpandedCard(
@@ -59,7 +61,7 @@ export function ConnectedBubbleExpandedCard(
     return null;
   }
 
-  const resolvedPosition = position ?? { x: 22, y: 22 };
+  const resolvedPosition = position ?? props.fallbackPosition;
 
   return (
     <BubbleExpandedCard

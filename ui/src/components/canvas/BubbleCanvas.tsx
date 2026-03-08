@@ -189,6 +189,9 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
           if (event.button !== 0) {
             return;
           }
+          if (isCopyBubbleIdTarget(event.target)) {
+            return;
+          }
           event.preventDefault();
           didDragRef.current = false;
           const nextState: DragState = {
@@ -538,6 +541,7 @@ export function BubbleCanvas(props: BubbleCanvasProps): JSX.Element {
               <ConnectedBubbleExpandedCard
                 key={entry.bubble.bubbleId}
                 bubbleId={entry.bubble.bubbleId}
+                fallbackPosition={entry.position}
               />
             );
           }
