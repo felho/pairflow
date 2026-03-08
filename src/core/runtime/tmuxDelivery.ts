@@ -96,16 +96,20 @@ function buildDeliveryMessage(
 
   let action = "Continue protocol from this event.";
   if (recipientRole === "implementer") {
+    const docsOnly = bubbleConfig.review_artifact_type === "document";
     if (envelope.type === "PASS") {
-      action =
-        "Reviewer feedback received. Implement fixes, then hand off with `pairflow pass --summary` directly (no confirmation prompt). If `.pairflow/evidence/*.log` files exist, include them as `--ref` (lint/typecheck/test). If only a subset ran, attach refs for that subset and state what was intentionally not executed.";
+      action = docsOnly
+        ? "Reviewer feedback received. Implement fixes, then hand off with `pairflow pass --summary` directly (no confirmation prompt). Docs-only scope: choose one mode and keep it consistent in the same PASS. Mode A (skip-claim): summary says runtime checks were intentionally not executed -> attach no `.pairflow/evidence/*.log` refs. Mode B (checks executed): attach refs only for commands actually run and do not claim checks were intentionally not executed."
+        : "Reviewer feedback received. Implement fixes, then hand off with `pairflow pass --summary` directly (no confirmation prompt). If `.pairflow/evidence/*.log` files exist, include them as `--ref` (lint/typecheck/test). If only a subset ran, attach refs for that subset and state what was intentionally not executed.";
     } else if (envelope.type === "HUMAN_REPLY") {
-      action =
-        "Human response received. Continue implementation using this input, then hand off with `pairflow pass --summary` directly. Include available `.pairflow/evidence/*.log` refs on PASS.";
+      action = docsOnly
+        ? "Human response received. Continue implementation using this input, then hand off with `pairflow pass --summary` directly. Docs-only scope: keep summary and refs consistent; skip-claim means no `.pairflow/evidence/*.log` refs in that PASS."
+        : "Human response received. Continue implementation using this input, then hand off with `pairflow pass --summary` directly. Include available `.pairflow/evidence/*.log` refs on PASS.";
     } else if (envelope.type === "APPROVAL_DECISION") {
       if (envelope.payload.decision === "revise") {
-        action =
-          "Human requested rework. Continue implementation now and address the requested changes, then hand off with `pairflow pass --summary` directly. Include available `.pairflow/evidence/*.log` refs on PASS.";
+        action = docsOnly
+          ? "Human requested rework. Continue implementation now and address the requested changes, then hand off with `pairflow pass --summary` directly. Docs-only scope: keep summary and refs consistent; skip-claim means no `.pairflow/evidence/*.log` refs in that PASS."
+          : "Human requested rework. Continue implementation now and address the requested changes, then hand off with `pairflow pass --summary` directly. Include available `.pairflow/evidence/*.log` refs on PASS.";
       } else if (envelope.payload.decision === "approve") {
         action =
           "Human approved this bubble. Wait for commit/merge flow and do not continue new implementation in this round.";

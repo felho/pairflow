@@ -2598,6 +2598,256 @@ present`,
     );
   });
 
+  it("rejects docs-only implementer PASS when skip claim is combined with runtime log refs", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_docs_skip_ref_conflict_01",
+      task: "Docs-only pass conflict guard",
+      reviewArtifactType: "document"
+    });
+    const beforeTranscript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Runtime checks intentionally not executed in this docs-only round.",
+        refs: [
+          ".pairflow/evidence/lint.log",
+          ".pairflow/evidence/typecheck.log"
+        ],
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:05:00.000Z")
+      })
+    ).rejects.toThrow(/^DOCS_ONLY_SKIP_LOG_REF_CONFLICT:/u);
+
+    const afterTranscript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(afterTranscript).toHaveLength(beforeTranscript.length);
+    expect(afterTranscript.map((entry) => entry.type)).toEqual(["TASK"]);
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    expect(loaded.state.active_role).toBe("implementer");
+    expect(loaded.state.active_agent).toBe(bubble.config.agents.implementer);
+    expect(loaded.state.round).toBe(1);
+  });
+
+  it("surfaces stable docs-only conflict reason diagnostics with deterministic marker+regex classification", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_docs_skip_ref_conflict_02",
+      task: "Docs-only reason code lock",
+      reviewArtifactType: "document"
+    });
+
+    try {
+      await emitPassFromWorkspace({
+        summary: "Runtime   checks   WERE intentionally   not executed in docs-only scope.",
+        refs: [
+          "artifact://handoff.md",
+          ".pairflow/evidence/lint.log",
+          ".pairflow/evidence/test.log.bak",
+          ".pairflow/evidence/with space.log"
+        ],
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:05:30.000Z")
+      });
+      throw new Error("expected docs-only conflict to throw");
+    } catch (error) {
+      expect(error).toBeInstanceOf(PassCommandError);
+      const message = error instanceof Error ? error.message : String(error);
+      expect(message).toContain("reason_code=DOCS_ONLY_SKIP_LOG_REF_CONFLICT");
+      expect(message).toContain("conflicting_ref_count=1");
+      expect(message).toContain("ref_class=runtime_log_ref");
+      expect(message).toContain("ref_pattern=^\\.pairflow/evidence/[^\\s]+\\.log$");
+    }
+  });
+
+  it("treats subdirectory .log refs as runtime logs and excludes double-extension refs", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_docs_skip_regex_boundary_02",
+      task: "Docs-only regex boundary for subdirectory and double-extension refs",
+      reviewArtifactType: "document"
+    });
+
+    try {
+      await emitPassFromWorkspace({
+        summary: "Runtime checks intentionally not executed for docs-only scope.",
+        refs: [
+          ".pairflow/evidence/subdir/lint.log",
+          ".pairflow/evidence/lint.log.bak"
+        ],
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:05:35.000Z")
+      });
+      throw new Error("expected docs-only conflict to throw");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      expect(message).toContain("reason_code=DOCS_ONLY_SKIP_LOG_REF_CONFLICT");
+      expect(message).toContain("conflicting_ref_count=1");
+      expect(message).toContain("example_refs=.pairflow/evidence/subdir/lint.log");
+      expect(message).not.toContain(".pairflow/evidence/lint.log.bak");
+    }
+  });
+
+  it("allows docs-only implementer skip-claim PASS when refs are omitted (empty baseline path)", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_docs_skip_no_refs_omitted_01",
+      task: "Docs-only skip-claim baseline with omitted refs",
+      reviewArtifactType: "document"
+    });
+
+    const result = await emitPassFromWorkspace({
+      summary: "Runtime checks intentionally not executed in this docs-only round.",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:05:45.000Z")
+    });
+
+    expect(result.resultEnvelopeKind).toBe("pass");
+    expect(result.envelope.refs).toEqual([]);
+  });
+
+  it("caps docs-only conflict example_refs diagnostics to the first three runtime refs", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_docs_skip_example_refs_cap_01",
+      task: "Docs-only conflict example_refs slice cap",
+      reviewArtifactType: "document"
+    });
+
+    const refs = [
+      ".pairflow/evidence/lint.log",
+      ".pairflow/evidence/typecheck.log",
+      ".pairflow/evidence/test.log",
+      ".pairflow/evidence/extra.log"
+    ];
+    try {
+      await emitPassFromWorkspace({
+        summary: "Runtime checks intentionally not executed in this docs-only round.",
+        refs,
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:05:55.000Z")
+      });
+      throw new Error("expected docs-only conflict to throw");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      expect(message).toContain("conflicting_ref_count=4");
+      expect(message).toContain(
+        "example_refs=.pairflow/evidence/lint.log,.pairflow/evidence/typecheck.log,.pairflow/evidence/test.log"
+      );
+      expect(message).not.toContain(".pairflow/evidence/extra.log");
+    }
+  });
+
+  it("treats space-containing .log refs as non-runtime-log boundary under docs-only guard regex", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_docs_skip_space_boundary_01",
+      task: "Docs-only regex boundary for space-containing log refs",
+      reviewArtifactType: "document"
+    });
+
+    const result = await emitPassFromWorkspace({
+      summary: "Runtime checks intentionally not executed for docs-only scope.",
+      refs: [".pairflow/evidence/with space.log"],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:05:40.000Z")
+    });
+
+    expect(result.resultEnvelopeKind).toBe("pass");
+    expect(result.envelope.refs).toEqual([".pairflow/evidence/with space.log"]);
+  });
+
+  it("does not apply docs-only skip/log conflict guard to reviewer PASS (implementer-only guard bypass)", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_docs_skip_reviewer_bypass_01",
+      task: "Reviewer-role bypass regression for docs-only skip/log guard",
+      reviewArtifactType: "document"
+    });
+    await setReviewerActive(bubble.paths.statePath, bubble.config.agents.reviewer);
+
+    const result = await emitPassFromWorkspace({
+      summary: "Runtime checks intentionally not executed in this docs-only review pass.",
+      refs: [".pairflow/evidence/lint.log"],
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:05:50.000Z")
+    });
+
+    expect(result.resultEnvelopeKind).toBe("pass");
+    expect(result.envelope.sender).toBe(bubble.config.agents.reviewer);
+    expect(result.envelope.payload.pass_intent).toBe("review");
+    expect(result.envelope.refs).toEqual([".pairflow/evidence/lint.log"]);
+  });
+
+  it("allows docs-only implementer PASS when skip claim has no runtime log refs", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_docs_skip_no_logs_01",
+      task: "Docs-only pass without runtime log refs",
+      reviewArtifactType: "document"
+    });
+
+    const result = await emitPassFromWorkspace({
+      summary: "Runtime checks were intentionally not executed due to docs-only scope.",
+      refs: ["artifact://handoff.md"],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:06:00.000Z")
+    });
+
+    expect(result.resultEnvelopeKind).toBe("pass");
+    expect(result.envelope.payload.pass_intent).toBe("review");
+    expect(result.envelope.refs).toEqual(["artifact://handoff.md"]);
+  });
+
+  it("does not block docs-only implementer PASS when skip marker is absent", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_docs_skip_negative_01",
+      task: "Docs-only pass marker negative",
+      reviewArtifactType: "document"
+    });
+
+    const result = await emitPassFromWorkspace({
+      summary: "Validation status captured for docs update.",
+      refs: [".pairflow/evidence/lint.log"],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:06:30.000Z")
+    });
+
+    expect(result.resultEnvelopeKind).toBe("pass");
+    expect(result.envelope.refs).toEqual([".pairflow/evidence/lint.log"]);
+  });
+
+  it("does not apply docs-only skip/log conflict guard to non-document bubbles", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_docs_skip_negative_02",
+      task: "Code bubble should ignore docs-only skip/log guard",
+      reviewArtifactType: "code"
+    });
+
+    const result = await emitPassFromWorkspace({
+      summary: "Runtime checks intentionally not executed in this round.",
+      refs: [".pairflow/evidence/lint.log"],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:07:00.000Z")
+    });
+
+    expect(result.resultEnvelopeKind).toBe("pass");
+    expect(result.envelope.refs).toEqual([".pairflow/evidence/lint.log"]);
+  });
+
   it("falls back to run_checks reviewer directive when artifact write fails", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningLegacyAutoBubbleFixture({
