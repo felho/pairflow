@@ -9,6 +9,9 @@ const reviewerSummaryScopeGuardrail = [
 export function buildReviewerScoutExpansionWorkflowGuidance(): string {
   return [
     "Phase 1 reviewer round flow (prompt-level only):",
+    "Validation claim guardrail (applies to review output): derive validation claims from explicit evidence sources first, command-by-command for `lint`, `typecheck`, and `test`.",
+    "Never publish aggregate validation shorthand such as `typecheck/lint pass` or `all checks pass` without command-level evidence-backed statuses.",
+    "If evidence is missing or ambiguous for a command, report `unknown` or `not-run` for that command (never infer `pass`).",
     "1) `Parallel Scout Scan`: must run exactly `required_scout_agents=2` scout scans on the same current worktree diff scope (`max_scout_agents=2` hard cap) with explicit cap `max_scout_candidates_per_agent=8`; include only concrete location-backed findings, exclude style/preference-only notes.",
     reviewerSummaryScopeGuardrail,
     "2) `Deduplicate + Classify`: merge scout findings, deduplicate by root cause + overlapping location, then classify each finding as `one_off` or issue class (`race_condition`, `lifecycle_symmetry`, `timeout_cancellation`, `idempotency`, `concurrency_guard`, `other`). If class detection is uncertain, classify as `one_off`.",
@@ -22,6 +25,10 @@ export function buildReviewerPassOutputContractGuidance(): string {
   return [
     "Required reviewer output contract (machine-checkable): include exactly these sections in this order: `Scout Coverage`, `Deduplicated Findings`, `Issue-Class Expansions`, `Residual Risk / Notes`.",
     "`Scout Coverage` required fields: `scouts_executed`, `scope_covered`, `guardrail_confirmation`, `raw_candidates_count`, `deduplicated_count`.",
+    "`Scout Coverage` must include command-level validation statuses: `lint=<pass|failed|not-run|unknown>`, `typecheck=<pass|failed|not-run|unknown>`, `test=<pass|failed|not-run|unknown>`.",
+    "Each validation status claim must cite an evidence source (for example evidence log path or transcript/reference anchor).",
+    "Forbidden aggregate shorthand without command-level evidence: `typecheck/lint pass`, `all checks pass`, or equivalent aggregate phrasing.",
+    "If a command evidence source is missing or ambiguous, report `unknown` or `not-run` for that command and do not claim `pass`.",
     "`Scout Coverage.scope_covered` must describe current worktree changes only, grounded in `git diff --name-status` + `git diff --cached --name-status` + `git ls-files --others --exclude-standard`.",
     "Do not justify `scope_covered` with branch-range diffs such as `git diff <revA>..<revB>` (including `git diff main..HEAD`).",
     "Do not justify `scope_covered` with history/log sources such as `git log --name-status` or `git show --name-status`.",

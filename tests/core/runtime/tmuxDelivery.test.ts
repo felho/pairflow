@@ -86,6 +86,28 @@ function expectNoForbiddenReviewerCommandGateTokens(text: string | undefined): v
   }
 }
 
+function expectReviewerValidationClaimGuardrails(text: string | undefined): void {
+  expect(text).toBeDefined();
+  expect(text).toContain(
+    "Validation claim guardrail (applies to review output): derive validation claims from explicit evidence sources first, command-by-command for `lint`, `typecheck`, and `test`."
+  );
+  expect(text).toContain(
+    "Never publish aggregate validation shorthand such as `typecheck/lint pass` or `all checks pass` without command-level evidence-backed statuses."
+  );
+  expect(text).toContain(
+    "`Scout Coverage` must include command-level validation statuses: `lint=<pass|failed|not-run|unknown>`, `typecheck=<pass|failed|not-run|unknown>`, `test=<pass|failed|not-run|unknown>`."
+  );
+  expect(text).toContain(
+    "Each validation status claim must cite an evidence source (for example evidence log path or transcript/reference anchor)."
+  );
+  expect(text).toContain(
+    "Forbidden aggregate shorthand without command-level evidence: `typecheck/lint pass`, `all checks pass`, or equivalent aggregate phrasing."
+  );
+  expect(text).toContain(
+    "If a command evidence source is missing or ambiguous, report `unknown` or `not-run` for that command and do not claim `pass`."
+  );
+}
+
 describe("emitTmuxDeliveryNotification", () => {
   it("routes PASS delivery to recipient agent pane with full ontology in fresh mode", async () => {
     const calls: string[][] = [];
@@ -222,6 +244,7 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(messageCall?.[4]).toContain("`class`, `source_finding_title`, `scan_scope`, `siblings`, `stop_reason`");
     expect(messageCall?.[4]).toContain("`Deduplicated Findings: []`");
     expect(messageCall?.[4]).toContain("`Issue-Class Expansions: []`");
+    expectReviewerValidationClaimGuardrails(messageCall?.[4]);
     expect(messageCall?.[4]).toContain(
       "Execute pairflow commands directly (no confirmation prompt)"
     );
@@ -309,6 +332,7 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(messageCall?.[4]).toContain(
       "Reason: docs-only scope, runtime checks not required"
     );
+    expectReviewerValidationClaimGuardrails(messageCall?.[4]);
   });
 
   it("keeps concise ontology reminder in persistent reviewer context mode", async () => {
@@ -763,6 +787,7 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(messageCall?.[4]).toContain(
       "Do not justify `scope_covered` with history/log sources such as `git log --name-status` or `git show --name-status`."
     );
+    expectReviewerValidationClaimGuardrails(messageCall?.[4]);
     expect(messageCall?.[4]).toContain(
       "Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)"
     );

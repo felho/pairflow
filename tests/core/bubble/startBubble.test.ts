@@ -93,6 +93,28 @@ function expectNoForbiddenReviewerCommandGateTokens(text: string | undefined): v
   }
 }
 
+function expectReviewerValidationClaimGuardrails(text: string | undefined): void {
+  expect(text).toBeDefined();
+  expect(text).toContain(
+    "Validation claim guardrail (applies to review output): derive validation claims from explicit evidence sources first, command-by-command for `lint`, `typecheck`, and `test`."
+  );
+  expect(text).toContain(
+    "Never publish aggregate validation shorthand such as `typecheck/lint pass` or `all checks pass` without command-level evidence-backed statuses."
+  );
+  expect(text).toContain(
+    "`Scout Coverage` must include command-level validation statuses: `lint=<pass|failed|not-run|unknown>`, `typecheck=<pass|failed|not-run|unknown>`, `test=<pass|failed|not-run|unknown>`."
+  );
+  expect(text).toContain(
+    "Each validation status claim must cite an evidence source (for example evidence log path or transcript/reference anchor)."
+  );
+  expect(text).toContain(
+    "Forbidden aggregate shorthand without command-level evidence: `typecheck/lint pass`, `all checks pass`, or equivalent aggregate phrasing."
+  );
+  expect(text).toContain(
+    "If a command evidence source is missing or ambiguous, report `unknown` or `not-run` for that command and do not claim `pass`."
+  );
+}
+
 afterEach(async () => {
   await Promise.all(
     tempDirs.splice(0).map((path) =>
@@ -301,6 +323,7 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain("`class`, `source_finding_title`, `scan_scope`, `siblings`, `stop_reason`");
     expect(reviewerCommand).toContain("`Deduplicated Findings: []`");
     expect(reviewerCommand).toContain("`Issue-Class Expansions: []`");
+    expectReviewerValidationClaimGuardrails(reviewerCommand);
     expect(reviewerCommand).toMatch(
       /--finding [^`]*'P1:\.\.\.\|artifact:\/\/\.\.\.'/
     );
@@ -382,6 +405,7 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain(
       "Runtime checks are not required for document-only scope."
     );
+    expectReviewerValidationClaimGuardrails(reviewerCommand);
   });
 
   it("injects persisted reviewer brief into reviewer startup prompt", async () => {
@@ -780,6 +804,7 @@ describe("startBubble", () => {
           );
           expect(input.reviewerCommand).toContain("`Issue-Class Expansions`");
           expect(input.reviewerCommand).toContain("`Residual Risk / Notes`");
+          expectReviewerValidationClaimGuardrails(input.reviewerCommand);
           expect(input.reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_A);
           expect(input.reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_B);
           expect(input.reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_C);
@@ -831,6 +856,7 @@ describe("startBubble", () => {
           expect(input.reviewerCommand).toContain(
             "Runtime checks are not required for document-only scope."
           );
+          expectReviewerValidationClaimGuardrails(input.reviewerCommand);
           expect(input.reviewerCommand).toContain("Stand by unless you are active or receive a handoff.");
           return Promise.resolve({ sessionName: "pf-b_start_resume_docs_01" });
         }
@@ -1141,6 +1167,7 @@ describe("startBubble", () => {
           expect(input.reviewerCommand).toContain(
             "docs-only scope, runtime checks not required"
           );
+          expectReviewerValidationClaimGuardrails(input.reviewerCommand);
           expect(input.reviewerKickoffMessage).toContain("resume kickoff (reviewer)");
           return Promise.resolve({ sessionName: "pf-b_start_resume_doc_review_01" });
         }
