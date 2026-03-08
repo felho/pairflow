@@ -246,7 +246,7 @@ export function renderBubbleStatusTable(status: BubbleStatusView): string {
     ],
     [
       "Runtime",
-      `last ${dim(status.lastCommandAt ?? "-")} | watchdog ${status.watchdog.monitored ? green("on") : dim("off")} ${status.watchdog.timeoutMinutes}m rem=${formatWatchdogRemaining(status.watchdog)} exp=${status.watchdog.expired ? bold(red("yes")) : green("no")} | inbox ${formatInboxSummary(status.pendingInboxItems)}`
+      `last ${dim(status.lastCommandAt ?? "-")} | watchdog ${status.watchdog.monitored ? green("on") : dim("off")} ${status.watchdog.timeoutMinutes}m rem=${formatWatchdogRemaining(status.watchdog)} exp=${status.watchdog.expired ? bold(red("yes")) : green("no")}`
     ],
     [
       "Review",
@@ -259,6 +259,10 @@ export function renderBubbleStatusTable(status: BubbleStatusView): string {
     [
       "Transcript",
       `messages=${bold(String(status.transcript.totalMessages))} | last=${status.transcript.lastMessageType ?? "-"} @ ${dim(status.transcript.lastMessageTs ?? "-")}`
+    ],
+    [
+      "Inbox",
+      formatInboxSummary(status.pendingInboxItems)
     ]
   ];
 

@@ -215,6 +215,7 @@ describe("renderBubbleStatusTable", () => {
     expect(rendered).toContain("| Bubble");
     expect(rendered).toContain("| Lifecycle");
     expect(rendered).toContain("| Runtime");
+    expect(rendered).toContain("| Inbox");
     expect(rendered).toContain("| Review");
     expect(rendered).toContain("| Gates");
     expect(rendered).toContain("| Transcript");
