@@ -30,6 +30,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 5. Treat workflow boundaries as strict contracts: do only what the selected workflow is for.
 6. For any bubble message payload (`reply`, `request-rework`, `ask-human`), use shell-safe message passing. Never inline raw text containing backticks or `$` directly in `--message "..."`.
 7. For bubble creation, always include `--review-artifact-type <document|code>` in `pairflow bubble create`.
+8. For implementation bubbles (`review_artifact_type=code`), `CloseBubble` includes mandatory post-merge completion: README/docs/progress check + required updates + task archival under `plans/archive/tasks/` with mirrored relative path.
 
 ## Execution Modes (Mandatory)
 
@@ -78,6 +79,9 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
   - Use `document` for docs-only refinement/review/update bubbles.
   - Use `code` for implementation/testing/runtime behavior bubbles.
   - If intent is ambiguous, ask one explicit clarification question before create.
+- CloseBubble post-merge completion for `code` bubbles:
+  - Determine whether `README.md`, relevant `docs/`, or progress tracker files must be updated based on merged behavior changes, then apply required updates.
+  - Archive the completed task from `plans/tasks/...` into `plans/archive/tasks/...` while preserving subdirectory structure (`plans/tasks/FOO/x.md` -> `plans/archive/tasks/FOO/x.md`).
 
 ### Shell-safe message pattern (mandatory)
 
