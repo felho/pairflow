@@ -1,5 +1,5 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 
@@ -854,6 +854,15 @@ describe("startBubble", () => {
     expect(statusCommand).toContain("pairflow bubble watchdog --id");
     expect(statusCommand).toContain("pairflow bubble status --id");
     expect(statusCommand).not.toContain("--json");
+    const homePath = homedir();
+    const expectedDisplayWorktreePath =
+      created.paths.worktreePath === homePath
+        ? "~"
+        : created.paths.worktreePath.startsWith(`${homePath}/`)
+          ? `~${created.paths.worktreePath.slice(homePath.length)}`
+          : created.paths.worktreePath;
+    const statusScript = extractBashLcScript(statusCommand);
+    expect(statusScript).toContain(`echo ${shellQuote(expectedDisplayWorktreePath)}`);
     await assertBashParses(statusCommand);
   });
 

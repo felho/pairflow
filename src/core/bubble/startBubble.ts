@@ -4,6 +4,7 @@ import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
 import { shellQuote } from "../util/shellQuote.js";
 import { buildAgentCommand } from "../runtime/agentCommand.js";
 import { join } from "node:path";
+import { homedir } from "node:os";
 import {
   buildResumeTranscriptSummary,
   buildResumeTranscriptSummaryFallback
@@ -100,11 +101,29 @@ async function isTmuxSessionAliveDefault(sessionName: string): Promise<boolean> 
 }
 
 function buildStatusPaneCommand(bubbleId: string, repoPath: string, worktreePath: string): string {
+  const displayWorktreePath = formatStatusPaneWorktreePath(worktreePath);
   const watchdogCommand = `pairflow bubble watchdog --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)} >/dev/null 2>&1 || true`;
   const statusCommand = `pairflow bubble status --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)}`;
-  const echoWorktree = `echo ${shellQuote(worktreePath)}`;
+  const echoWorktree = `echo ${shellQuote(displayWorktreePath)}`;
   const loopScript = `while true; do clear; ${watchdogCommand}; ${statusCommand}; ${echoWorktree}; sleep 2; done`;
   return `bash -lc ${shellQuote(loopScript)}`;
+}
+
+function formatStatusPaneWorktreePath(worktreePath: string): string {
+  const homePath = homedir();
+  if (homePath.length === 0) {
+    return worktreePath;
+  }
+  if (worktreePath === homePath) {
+    return "~";
+  }
+  if (
+    worktreePath.startsWith(`${homePath}/`) ||
+    worktreePath.startsWith(`${homePath}\\`)
+  ) {
+    return `~${worktreePath.slice(homePath.length)}`;
+  }
+  return worktreePath;
 }
 
 function buildImplementerStartupPrompt(input: {
