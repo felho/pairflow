@@ -155,7 +155,7 @@ export async function launchBubbleTmuxSession(
 ): Promise<LaunchBubbleTmuxSessionResult> {
   const runner = input.runner ?? runTmux;
   const sessionName = buildBubbleTmuxSessionName(input.bubbleId);
-  const statusPaneHeight = 15;
+  const statusPaneHeight = 11;
   const tmuxPaneSeparators = 2;
 
   const hasSession = await runner(["has-session", "-t", sessionName], {
@@ -191,7 +191,7 @@ export async function launchBubbleTmuxSession(
     input.worktreePath,
     input.implementerCommand
   ]);
-  // Fix status pane to 15 lines BEFORE splitting for reviewer, so the
+  // Fix status pane to 11 lines BEFORE splitting for reviewer, so the
   // subsequent 50/50 split divides the remaining space equally.
   await runner([
     "resize-pane",
@@ -213,7 +213,7 @@ export async function launchBubbleTmuxSession(
     input.reviewerCommand
   ]);
   // Re-fix status pane after the second split — the split may have
-  // redistributed vertical space away from the initial 15-line resize.
+  // redistributed vertical space away from the initial 11-line resize.
   await runner([
     "resize-pane",
     "-t",
@@ -221,12 +221,12 @@ export async function launchBubbleTmuxSession(
     "-y",
     String(statusPaneHeight)
   ]);
-  // Keep the status pane fixed at 15 lines when the terminal is resized.
+  // Keep the status pane fixed at 11 lines when the terminal is resized.
   // We use client-resized (fires when the terminal window changes size)
   // instead of after-resize-pane (which would recurse on its own resize).
-  // The hook fixes pane 0 to 15 lines, then splits the remaining height
+  // The hook fixes pane 0 to 11 lines, then splits the remaining height
   // equally between panes 1 and 2 (2 separator lines for 3 panes).
-  // Keep the status pane fixed at 15 lines when the terminal window is resized.
+  // Keep the status pane fixed at 11 lines when the terminal window is resized.
   // client-resized fires when the terminal emulator window changes size.
   // #{window_height} is expanded by tmux before passing to run-shell.
   // All resize logic runs inside a single run-shell to avoid spawn quoting issues.

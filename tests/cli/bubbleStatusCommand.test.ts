@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   getBubbleStatusHelpText,
   parseBubbleStatusCommandOptions,
+  renderBubbleStatusTable,
   renderBubbleStatusText,
   runBubbleStatusCommand
 } from "../../src/cli/commands/bubble/status.js";
@@ -15,7 +16,8 @@ describe("parseBubbleStatusCommandOptions", () => {
       "b_status_01",
       "--repo",
       "/tmp/repo",
-      "--json"
+      "--json",
+      "--table"
     ]);
 
     expect(parsed.help).toBe(false);
@@ -26,6 +28,7 @@ describe("parseBubbleStatusCommandOptions", () => {
     expect(parsed.id).toBe("b_status_01");
     expect(parsed.repo).toBe("/tmp/repo");
     expect(parsed.json).toBe(true);
+    expect(parsed.table).toBe(true);
   });
 
   it("supports help", () => {
@@ -152,5 +155,90 @@ describe("renderBubbleStatusText", () => {
     expect(rendered).toContain("Failing gates: ROUND_GATE_WARNING");
     expect(rendered).toContain("Spec lock: LOCKED (blockers=2, required_now=3)");
     expect(rendered).toContain("Round gate: applies=yes violated=yes round=4 reason=ROUND_GATE_WARNING");
+  });
+});
+
+describe("renderBubbleStatusTable", () => {
+  function createStatusView(
+    partial: Partial<BubbleStatusView>
+  ): BubbleStatusView {
+    return {
+      bubbleId: "b_status_render_01",
+      repoPath: "/tmp/repo",
+      worktreePath: "/tmp/worktree",
+      state: "RUNNING",
+      round: 5,
+      activeAgent: "codex",
+      activeRole: "implementer",
+      activeSince: "2026-03-08T21:29:15.948Z",
+      lastCommandAt: "2026-03-08T21:29:15.948Z",
+      watchdog: {
+        monitored: true,
+        monitoredAgent: "codex",
+        timeoutMinutes: 20,
+        referenceTimestamp: "2026-03-08T21:29:15.948Z",
+        deadlineTimestamp: "2026-03-08T21:49:15.948Z",
+        remainingSeconds: 1075,
+        expired: false
+      },
+      pendingInboxItems: {
+        humanQuestions: 0,
+        approvalRequests: 0,
+        total: 0
+      },
+      transcript: {
+        totalMessages: 13,
+        lastMessageType: "APPROVAL_DECISION",
+        lastMessageTs: "2026-03-08T21:29:15.948Z",
+        lastMessageId: "msg_20260308_013"
+      },
+      accuracy_critical: false,
+      last_review_verification: "missing",
+      failing_gates: [],
+      spec_lock_state: {
+        state: "IMPLEMENTABLE",
+        open_blocker_count: 0,
+        open_required_now_count: 0
+      },
+      round_gate_state: {
+        applies: false,
+        violated: false,
+        round: 5
+      },
+      ...partial
+    };
+  }
+
+  it("renders compact grouped sections", () => {
+    const rendered = renderBubbleStatusTable(createStatusView({}));
+
+    expect(rendered).toContain("| Bubble");
+    expect(rendered).toContain("| Lifecycle");
+    expect(rendered).toContain("| Runtime");
+    expect(rendered).toContain("| Review");
+    expect(rendered).toContain("| Gates");
+    expect(rendered).toContain("| Transcript");
+    expect(rendered).not.toContain("Failing gates:");
+    expect(rendered).not.toContain("Spec lock:");
+    expect(rendered).not.toContain("Round gate:");
+  });
+
+  it("adds escalation section when watchdog is expired", () => {
+    const rendered = renderBubbleStatusTable(
+      createStatusView({
+        watchdog: {
+          monitored: true,
+          monitoredAgent: "codex",
+          timeoutMinutes: 20,
+          referenceTimestamp: "2026-03-08T21:29:15.948Z",
+          deadlineTimestamp: "2026-03-08T21:49:15.948Z",
+          remainingSeconds: 0,
+          expired: true
+        }
+      })
+    );
+
+    expect(rendered).toContain("| Escalation");
+    expect(rendered).toContain("timeout for codex");
   });
 });

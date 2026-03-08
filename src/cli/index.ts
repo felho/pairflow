@@ -81,7 +81,7 @@ import {
 import {
   getBubbleStatusHelpText,
   parseBubbleStatusCommandOptions,
-  renderBubbleStatusText,
+  renderBubbleStatusTable,
   runBubbleStatusCommand
 } from "./commands/bubble/status.js";
 import {
@@ -488,7 +488,7 @@ async function handleBubbleStatusCommand(args: string[]): Promise<number> {
   if (parsed.json) {
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } else {
-    process.stdout.write(`${renderBubbleStatusText(result)}\n`);
+    process.stdout.write(`${renderBubbleStatusTable(result)}\n`);
   }
   return 0;
 }

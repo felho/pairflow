@@ -1,4 +1,4 @@
-import { parseArgs } from "node:util";
+import { parseArgs, stripVTControlCharacters } from "node:util";
 
 import {
   asBubbleStatusError,
@@ -10,6 +10,7 @@ export interface BubbleStatusCommandOptions {
   id: string;
   repo?: string;
   json: boolean;
+  table: boolean;
   help: false;
 }
 
@@ -24,12 +25,13 @@ export type ParsedBubbleStatusCommandOptions =
 export function getBubbleStatusHelpText(): string {
   return [
     "Usage:",
-    "  pairflow bubble status --id <id> [--repo <path>] [--json]",
+    "  pairflow bubble status --id <id> [--repo <path>] [--json] [--table]",
     "",
     "Options:",
     "  --id <id>             Bubble id",
     "  --repo <path>         Optional repository path (defaults to cwd ancestry lookup)",
     "  --json                Print structured JSON output",
+    "  --table               Print compact table output (default)",
     "  -h, --help            Show this help"
   ].join("\n");
 }
@@ -47,6 +49,9 @@ export function parseBubbleStatusCommandOptions(
         type: "string"
       },
       json: {
+        type: "boolean"
+      },
+      table: {
         type: "boolean"
       },
       help: {
@@ -71,8 +76,136 @@ export function parseBubbleStatusCommandOptions(
     id,
     ...(parsed.values.repo !== undefined ? { repo: parsed.values.repo } : {}),
     json: parsed.values.json ?? false,
+    table: parsed.values.table ?? false,
     help: false
   };
+}
+
+function style(input: string, ansiCode: number): string {
+  if (!process.stdout.isTTY) {
+    return input;
+  }
+  if (process.env.NO_COLOR !== undefined) {
+    return input;
+  }
+  return `\u001b[${ansiCode}m${input}\u001b[0m`;
+}
+
+function green(input: string): string {
+  return style(input, 32);
+}
+
+function yellow(input: string): string {
+  return style(input, 33);
+}
+
+function red(input: string): string {
+  return style(input, 31);
+}
+
+function cyan(input: string): string {
+  return style(input, 36);
+}
+
+function stripAnsi(input: string): string {
+  return stripVTControlCharacters(input);
+}
+
+function visibleLength(input: string): number {
+  return stripAnsi(input).length;
+}
+
+function padRightVisible(input: string, targetLength: number): string {
+  const missing = targetLength - visibleLength(input);
+  if (missing <= 0) {
+    return input;
+  }
+  return `${input}${" ".repeat(missing)}`;
+}
+
+function formatStateLabel(value: string): string {
+  if (value === "RUNNING") {
+    return green(value);
+  }
+  if (value === "WAITING_HUMAN" || value === "META_REVIEW_WAITING_HUMAN") {
+    return yellow(value);
+  }
+  if (value === "APPROVED_FOR_COMMIT") {
+    return cyan(value);
+  }
+  return value;
+}
+
+function formatReviewVerification(value: string): string {
+  if (value === "verified") {
+    return green(value);
+  }
+  if (value === "missing") {
+    return yellow(value);
+  }
+  return value;
+}
+
+function formatFailingGateSummary(reasonCodes: string[]): string {
+  if (reasonCodes.length === 0) {
+    return green("-");
+  }
+  return red(reasonCodes.join(", "));
+}
+
+function renderKeyValueTable(rows: ReadonlyArray<readonly [string, string]>): string {
+  const labelWidth = rows.reduce((max, [label]) => Math.max(max, label.length), 0);
+  const valueWidth = rows.reduce(
+    (max, [, value]) => Math.max(max, visibleLength(value)),
+    0
+  );
+
+  const horizontal = `+-${"-".repeat(labelWidth)}-+-${"-".repeat(valueWidth)}-+`;
+  const body = rows.map(([label, value]) => {
+    const paddedLabel = padRightVisible(label, labelWidth);
+    const paddedValue = padRightVisible(value, valueWidth);
+    return `| ${paddedLabel} | ${paddedValue} |`;
+  });
+
+  return [horizontal, ...body, horizontal].join("\n");
+}
+
+export function renderBubbleStatusTable(status: BubbleStatusView): string {
+  const failingGateReasonCodes = status.failing_gates.map((gate) => gate.reason_code);
+  const rows: Array<readonly [string, string]> = [
+    ["Bubble", status.bubbleId],
+    [
+      "Lifecycle",
+      `${formatStateLabel(status.state)} r${status.round} | active ${status.activeAgent ?? "-"}/${status.activeRole ?? "-"} | since ${status.activeSince ?? "-"}`
+    ],
+    [
+      "Runtime",
+      `last ${status.lastCommandAt ?? "-"} | watchdog ${status.watchdog.monitored ? "on" : "off"} ${status.watchdog.timeoutMinutes}m rem=${status.watchdog.remainingSeconds ?? "-"}s exp=${status.watchdog.expired ? red("yes") : green("no")} | inbox q=${status.pendingInboxItems.humanQuestions} a=${status.pendingInboxItems.approvalRequests} t=${status.pendingInboxItems.total}`
+    ],
+    [
+      "Review",
+      `accuracy=${status.accuracy_critical ? red("yes") : green("no")} | verification=${formatReviewVerification(status.last_review_verification)} | failing=${formatFailingGateSummary(failingGateReasonCodes)}`
+    ],
+    [
+      "Gates",
+      `spec=${status.spec_lock_state.state === "IMPLEMENTABLE" ? green(status.spec_lock_state.state) : red(status.spec_lock_state.state)} b=${status.spec_lock_state.open_blocker_count} rn=${status.spec_lock_state.open_required_now_count} | round applies=${status.round_gate_state.applies ? green("yes") : green("no")} violated=${status.round_gate_state.violated ? red("yes") : green("no")} r=${status.round_gate_state.round}${status.round_gate_state.reason_code ? ` reason=${status.round_gate_state.reason_code}` : ""}`
+    ],
+    [
+      "Transcript",
+      `messages=${status.transcript.totalMessages} | last=${status.transcript.lastMessageType ?? "-"} @ ${status.transcript.lastMessageTs ?? "-"}`
+    ]
+  ];
+
+  if (status.watchdog.monitored && status.watchdog.expired) {
+    rows.push([
+      "Escalation",
+      red(
+        `timeout for ${status.watchdog.monitoredAgent ?? "-"} (deadline ${status.watchdog.deadlineTimestamp ?? "-"})`
+      )
+    ]);
+  }
+
+  return renderKeyValueTable(rows);
 }
 
 export function renderBubbleStatusText(status: BubbleStatusView): string {
