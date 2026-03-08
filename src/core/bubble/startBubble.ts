@@ -177,8 +177,9 @@ function buildImplementerEvidenceHandoffGuidance(
   if (reviewArtifactType === "document") {
     return [
       "This bubble is docs-only (`review_artifact_type=document`), so runtime checks are not required in this round.",
-      "If you still run validation (for example `pnpm lint`, `pnpm typecheck`, `pnpm test`, or `pnpm check`), make sure evidence logs are written to `.pairflow/evidence/` and attach them as `--ref` on `pairflow pass`.",
-      "In your PASS summary, explicitly state which runtime checks were intentionally not executed for docs-only scope."
+      "Docs-only scope: choose one mode and keep it consistent in the same PASS.",
+      "Mode A (skip-claim): summary says runtime checks were intentionally not executed -> attach no `.pairflow/evidence/*.log` refs.",
+      "Mode B (checks executed): if you run validation (for example `pnpm lint`, `pnpm typecheck`, `pnpm test`, or `pnpm check`), make sure evidence logs are written to `.pairflow/evidence/`, attach only refs for commands you actually ran, and do not claim checks were intentionally not executed."
     ].join(" ");
   }
 

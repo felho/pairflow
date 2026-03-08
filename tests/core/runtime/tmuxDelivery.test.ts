@@ -998,6 +998,162 @@ describe("emitTmuxDeliveryNotification", () => {
     ]);
   });
 
+  it("uses docs-only implementer guidance that avoids skip-claim and runtime-log-ref contradiction", async () => {
+    async function deliverToImplementer(
+      envelope: ProtocolEnvelope
+    ): Promise<string | undefined> {
+      const calls: string[][] = [];
+      const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+        calls.push(args);
+        if (args[0] === "capture-pane") {
+          return Promise.resolve({
+            stdout: `# [pairflow] r${envelope.round} ${envelope.type} ${envelope.sender}->${envelope.recipient} msg=${envelope.id} ref=artifact://handoff.md.`,
+            stderr: "",
+            exitCode: 0
+          });
+        }
+        return Promise.resolve({
+          stdout: "",
+          stderr: "",
+          exitCode: 0
+        });
+      };
+
+      await emitTmuxDeliveryNotification({
+        bubbleId: "b_delivery_01",
+        bubbleConfig: {
+          ...baseConfig,
+          review_artifact_type: "document"
+        },
+        sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+        envelope,
+        runner,
+        readSessionsRegistry: () => Promise.resolve(createRegistry())
+      });
+
+      return calls.find(
+        (call) =>
+          call[0] === "send-keys" &&
+          call[2] === "pf-b_delivery_01:0.1" &&
+          call[3] === "-l" &&
+          call[4]?.includes(`${envelope.type} ${envelope.sender}->${envelope.recipient}`)
+      )?.[4];
+    }
+
+    const passMessage = await deliverToImplementer(
+      createEnvelope({
+        sender: "claude",
+        recipient: "codex",
+        type: "PASS",
+        payload: {
+          summary: "Fix request from reviewer"
+        }
+      })
+    );
+    expect(passMessage).toContain(
+      "Docs-only scope: choose one mode and keep it consistent in the same PASS."
+    );
+    expect(passMessage).toContain(
+      "Mode A (skip-claim): summary says runtime checks were intentionally not executed -> attach no `.pairflow/evidence/*.log` refs."
+    );
+    expect(passMessage).toContain(
+      "Mode B (checks executed): attach refs only for commands actually run and do not claim checks were intentionally not executed."
+    );
+    expect(passMessage).not.toContain(
+      "If `.pairflow/evidence/*.log` files exist, include them as `--ref`"
+    );
+
+    const humanReplyMessage = await deliverToImplementer(
+      createEnvelope({
+        sender: "human",
+        recipient: "codex",
+        type: "HUMAN_REPLY",
+        payload: {
+          message: "Please clarify section 2."
+        }
+      })
+    );
+    expect(humanReplyMessage).toContain(
+      "Docs-only scope: keep summary and refs consistent; skip-claim means no `.pairflow/evidence/*.log` refs in that PASS."
+    );
+    expect(humanReplyMessage).not.toContain(
+      "Include available `.pairflow/evidence/*.log` refs on PASS."
+    );
+
+    const reworkMessage = await deliverToImplementer(
+      createEnvelope({
+        sender: "human",
+        recipient: "codex",
+        type: "APPROVAL_DECISION",
+        payload: {
+          decision: "revise",
+          message: "Please revise the docs update."
+        }
+      })
+    );
+    expect(reworkMessage).toContain(
+      "Docs-only scope: keep summary and refs consistent; skip-claim means no `.pairflow/evidence/*.log` refs in that PASS."
+    );
+    expect(reworkMessage).not.toContain(
+      "Include available `.pairflow/evidence/*.log` refs on PASS."
+    );
+  });
+
+  it("keeps non-document implementer delivery guidance free of docs-only mode text", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r1 PASS claude->codex msg=msg_20260222_101 ref=artifact://handoff.md.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: {
+        ...baseConfig,
+        review_artifact_type: "code"
+      },
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        sender: "claude",
+        recipient: "codex",
+        type: "PASS",
+        payload: {
+          summary: "Please apply reviewer fixes."
+        }
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result.delivered).toBe(true);
+    const passToImplementerCall = calls.find(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.1" &&
+        call[3] === "-l" &&
+        call[4]?.includes("PASS claude->codex")
+    );
+    expect(passToImplementerCall?.[4]).toContain(
+      "If `.pairflow/evidence/*.log` files exist, include them as `--ref` (lint/typecheck/test)."
+    );
+    expect(passToImplementerCall?.[4]).not.toContain(
+      "Docs-only scope: choose one mode and keep it consistent in the same PASS."
+    );
+    expect(passToImplementerCall?.[4]).not.toContain("Mode A (skip-claim)");
+  });
+
   it("uses absolute transcript path fallback ref when envelope has no refs", async () => {
     const fallbackRef = buildTranscriptFallbackRef(
       "b_delivery_01",

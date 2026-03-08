@@ -392,7 +392,13 @@ describe("startBubble", () => {
       "runtime checks are not required in this round"
     );
     expect(implementerCommand).toContain(
-      "explicitly state which runtime checks were intentionally not executed for docs-only scope"
+      "Docs-only scope: choose one mode and keep it consistent in the same PASS."
+    );
+    expect(implementerCommand).toContain(
+      "Mode A (skip-claim): summary says runtime checks were intentionally not executed -> attach no `.pairflow/evidence/*.log` refs."
+    );
+    expect(implementerCommand).toContain(
+      "Mode B (checks executed): if you run validation"
     );
     expect(implementerCommand).not.toContain(
       "Missing expected evidence logs should be treated as incomplete validation packaging."
@@ -845,7 +851,13 @@ describe("startBubble", () => {
             "runtime checks are not required in this round"
           );
           expect(input.implementerCommand).toContain(
-            "explicitly state which runtime checks were intentionally not executed for docs-only scope"
+            "Docs-only scope: choose one mode and keep it consistent in the same PASS."
+          );
+          expect(input.implementerCommand).toContain(
+            "Mode A (skip-claim): summary says runtime checks were intentionally not executed -> attach no `.pairflow/evidence/*.log` refs."
+          );
+          expect(input.implementerCommand).toContain(
+            "Mode B (checks executed): if you run validation"
           );
           expect(input.implementerKickoffMessage).toContain(
             "runtime checks are not required in this round"

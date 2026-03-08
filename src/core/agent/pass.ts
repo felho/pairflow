@@ -139,6 +139,14 @@ const repeatCleanMostRecentPreviousReviewerPassIsCleanMetadataKey =
   "most_recent_previous_reviewer_pass_is_clean";
 const repeatCleanMostRecentPreviousReviewerCleanPassEnvelopeLegacyMetadataKey =
   "most_recent_previous_reviewer_clean_pass_envelope";
+const docsOnlySkipLogRefConflictReasonCode = "DOCS_ONLY_SKIP_LOG_REF_CONFLICT";
+const docsOnlyRuntimeChecksSkippedMarkers = [
+  "runtime checks intentionally not executed",
+  "runtime checks were intentionally not executed"
+];
+const docsOnlyRuntimeLogRefPattern = /^\.pairflow\/evidence\/[^\s]+\.log$/u;
+const docsOnlyRuntimeLogRefPatternText =
+  docsOnlyRuntimeLogRefPattern.source.replaceAll("\\/", "/");
 
 function formatRepeatCleanPolicyRejectedMessage(input: {
   subtype: RepeatCleanPolicyRejectedSubtype;
@@ -153,6 +161,44 @@ function readBooleanMetadataValue(
 ): boolean | undefined {
   const value = metadata[key];
   return typeof value === "boolean" ? value : undefined;
+}
+
+function normalizePassSummaryForMarkerScan(summary: string): string {
+  return summary.toLowerCase().replace(/\s+/gu, " ").trim();
+}
+
+function hasRuntimeChecksSkippedClaim(summary: string): boolean {
+  const normalized = normalizePassSummaryForMarkerScan(summary);
+  return docsOnlyRuntimeChecksSkippedMarkers.some((marker) =>
+    normalized.includes(marker)
+  );
+}
+
+function collectRuntimeLogRefs(refs: string[]): string[] {
+  return refs.filter((ref) => docsOnlyRuntimeLogRefPattern.test(ref));
+}
+
+function assertNoDocsOnlySkipLogRefConflict(input: {
+  reviewArtifactType: BubbleConfig["review_artifact_type"];
+  senderRole: AgentRole;
+  summary: string;
+  refs: string[];
+}): void {
+  if (input.senderRole !== "implementer" || input.reviewArtifactType !== "document") {
+    return;
+  }
+  if (!hasRuntimeChecksSkippedClaim(input.summary)) {
+    return;
+  }
+  const conflictingRefs = collectRuntimeLogRefs(input.refs);
+  if (conflictingRefs.length === 0) {
+    return;
+  }
+  const sampledRefs = conflictingRefs.slice(0, 3).join(",");
+  const sampleSuffix = `; example_refs=${sampledRefs}`;
+  throw new PassCommandError(
+    `${docsOnlySkipLogRefConflictReasonCode}: reason_code=${docsOnlySkipLogRefConflictReasonCode}; conflicting_ref_count=${conflictingRefs.length}; ref_class=runtime_log_ref; ref_pattern=${docsOnlyRuntimeLogRefPatternText}${sampleSuffix}. Remove runtime log refs or update the summary claim.`
+  );
 }
 
 // Canonical reader for repeat-clean most-recent previous reviewer PASS cleanliness.
@@ -610,6 +656,13 @@ export async function emitPassFromWorkspace(
       );
     }
   }
+
+  assertNoDocsOnlySkipLogRefConflict({
+    reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
+    senderRole: handoff.senderRole,
+    summary,
+    refs
+  });
 
   const accuracyCritical = resolved.bubbleConfig.accuracy_critical === true;
   const reviewerVerification = await resolveReviewerVerification({
