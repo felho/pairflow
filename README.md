@@ -143,10 +143,25 @@ docker build --target ci -t pairflow-ci .
 
 # Open an interactive development shell
 docker build --target dev -t pairflow-dev .
-docker run --rm -it -v "$PWD":/workspace -w /workspace pairflow-dev bash
+docker run --rm -it \
+  --mount type=bind,src="$PWD",target=/workspace \
+  --mount type=volume,src=pairflow-node_modules,target=/workspace/node_modules \
+  --mount type=volume,src=pairflow-ui-node_modules,target=/workspace/ui/node_modules \
+  -w /workspace \
+  pairflow-dev bash
 ```
 
 For VS Code/Codespaces, use `.devcontainer/devcontainer.json` ("Reopen in Container").
+
+Important for macOS/Linux mixed workflows:
+1. Do not run container-side `pnpm install` against host-mounted `node_modules`.
+2. Keep `node_modules` and `ui/node_modules` on container volumes (as above), otherwise Linux optional binaries can overwrite host-native dependencies.
+3. If this already happened, repair on host with:
+
+```bash
+pnpm install --frozen-lockfile --force
+pnpm --dir ui install --frozen-lockfile --force
+```
 
 Important: for full Pairflow runtime operations (`bubble attach`, `bubble open`, host terminal/editor integration), host-native installation is still the recommended path.
 
