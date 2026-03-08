@@ -267,7 +267,8 @@ function isTmuxMissingSessionError(output: string): boolean {
   const normalized = output.toLowerCase();
   return (
     normalized.includes("can't find session") ||
-    normalized.includes("no server running")
+    normalized.includes("no server running") ||
+    normalized.includes("no current target")
   );
 }
 

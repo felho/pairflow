@@ -341,6 +341,25 @@ describe("terminateBubbleTmuxSession", () => {
       existed: false
     });
   });
+
+  it("treats `no current target` as non-fatal missing session signal", async () => {
+    const runner: TmuxRunner = () =>
+      Promise.resolve({
+        stdout: "",
+        stderr: "no current target",
+        exitCode: 1
+      });
+
+    const result = await terminateBubbleTmuxSession({
+      sessionName: "pf-missing",
+      runner
+    });
+
+    expect(result).toEqual({
+      sessionName: "pf-missing",
+      existed: false
+    });
+  });
 });
 
 describe("respawnTmuxPaneCommand", () => {
