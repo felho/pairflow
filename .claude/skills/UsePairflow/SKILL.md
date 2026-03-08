@@ -31,6 +31,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 6. For any bubble message payload (`reply`, `request-rework`, `ask-human`), use shell-safe message passing. Never inline raw text containing backticks or `$` directly in `--message "..."`.
 7. For bubble creation, always include `--review-artifact-type <document|code>` in `pairflow bubble create`.
 8. For implementation bubbles (`review_artifact_type=code`), `CloseBubble` includes mandatory post-merge completion: README/docs/progress check + required updates + task archival under `plans/archive/tasks/` with mirrored relative path.
+9. In `ReviewBubble` outputs, every finding must include source label: `[Bubble]` (from bubble transcript/tool output) or `[Sajat]`/`[Saját]` (independent Codex finding).
 
 ## Execution Modes (Mandatory)
 
@@ -135,6 +136,7 @@ If state is WAITING_HUMAN or RUNNING:
 ```
 Use ReviewBubble (deep mode default)
 -> file-by-file changes
+-> findings labeled by origin (`[Bubble]`, `[Sajat]`/`[Saját]`)
 -> validation evidence summary
 -> explicit approve/rework recommendation
 ```

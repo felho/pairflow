@@ -23,6 +23,10 @@ MESSAGE: extracted from `--message` (required when `DECIDE=rework`)
 - Default to `deep` explanation unless user explicitly asks short format.
 - Always inspect state before any approval/rework command.
 - Include evidence summary and distinguish hard evidence from soft statements.
+- In the findings section, label every item by origin:
+  - `[Bubble]` when the issue comes from bubble transcript/tool output.
+  - `[Sajat]`/`[Saját]` when it is an independent Codex finding from direct audit.
+- Never present unlabeled findings in review output.
 - For rework, message must be specific, evidence-backed, actionable, and verifiable.
 - If state is not `READY_FOR_APPROVAL`, do review-only output and do not execute decision commands.
 - Review flowban **ne** futtasd automatikusan a `pairflow bubble open` parancsot.
@@ -64,16 +68,18 @@ pairflow bubble inbox --id <BUBBLE_ID> --repo <REPO_PATH>
   - `<BUBBLE_WORKTREE>/.pairflow/evidence/typecheck.log`
   - `<BUBBLE_WORKTREE>/.pairflow/evidence/test.log`
 - Read transcript tail for latest reviewer findings and convergence context.
+- Build a short candidate finding list from transcript-origin items (`[Bubble]`) before independent code audit (`[Sajat]`/`[Saját]`) so final reporting can clearly separate sources.
 
 4. Build review narrative.
 - If `MODE=deep`, include:
   1. Goal and scope.
   2. High-level solution.
   3. File-by-file rationale.
-  4. Behavior/risk and tradeoffs.
-  5. Validation and evidence quality.
-  6. Residual risks/open questions.
-  7. Recommendation (`approve` or `rework`) with reason.
+  4. Findings (explicitly labeled `[Bubble]` or `[Sajat]`/`[Saját]`).
+  5. Behavior/risk and tradeoffs.
+  6. Validation and evidence quality.
+  7. Residual risks/open questions.
+  8. Recommendation (`approve` or `rework`) with reason.
 - If `MODE=standard`, provide concise version of the same structure.
 
 5. Optionally execute decision.
@@ -101,11 +107,16 @@ Review summary:
 - State snapshot: <STATE_BEFORE>
 - Mode: <MODE>
 - Change summary: <SUMMARY>
+- Findings (labeled): <[Bubble]/[Sajat] list>
 - Validation/evidence: <HARD+SOFT SUMMARY>
 - Recommendation: <APPROVE/REWORK + WHY>
 - Decision executed: <none/approve/rework>
 - Post-decision state: <STATE_AFTER or n/a>
 ```
+
+Finding label example:
+- `[Bubble][P2] reviewer transcript reports duplicate guard check in close flow`
+- `[Saját][P2] independent code audit found missing state gate in review command path`
 
 ## STOP
 
