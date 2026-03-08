@@ -701,7 +701,7 @@ Any non-final state ─→ CANCELLED (via bubble stop)
 
 | Command | Description |
 |---------|-------------|
-| `bubble create --id <id> --repo <path> --base <branch> (--task <text> \| --task-file <path>) [--reviewer-brief <text> \| --reviewer-brief-file <path>] [--accuracy-critical]` | Initialize a new bubble |
+| `bubble create --id <id> --repo <path> --base <branch> --review-artifact-type <document\|code> (--task <text> \| --task-file <path>) [--reviewer-brief <text> \| --reviewer-brief-file <path>] [--accuracy-critical]` | Initialize a new bubble |
 | `bubble start --id <id> [--repo <path>]` | Start or restart a bubble (worktree + tmux) |
 | `bubble stop --id <id> [--repo <path>]` | Stop and cancel a bubble |
 | `bubble delete --id <id> [--repo <path>] [--force]` | Delete a bubble; without `--force` it reports external artifacts and exits with confirmation-required status |
