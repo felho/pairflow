@@ -1,6 +1,9 @@
 import { join } from "node:path";
 
-import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
+import {
+  appendProtocolEnvelope,
+  readTranscriptEnvelopes
+} from "../protocol/transcriptStore.js";
 import { applyStateTransition } from "../state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import { BubbleLookupError, resolveBubbleById } from "../bubble/bubbleLookup.js";
@@ -12,7 +15,11 @@ import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js
 import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import { queueDeferredReworkIntent } from "./reworkIntent.js";
-import type { AgentName, BubbleStateSnapshot } from "../../types/bubble.js";
+import type {
+  AgentName,
+  BubbleStateSnapshot,
+  MetaReviewRecommendation
+} from "../../types/bubble.js";
 import type { ApprovalDecision, ProtocolEnvelope } from "../../types/protocol.js";
 
 export interface EmitApprovalDecisionDependencies {
@@ -22,6 +29,8 @@ export interface EmitApprovalDecisionDependencies {
 export interface EmitApprovalDecisionInput {
   bubbleId: string;
   decision: ApprovalDecision;
+  overrideNonApprove?: boolean | undefined;
+  overrideReason?: string | undefined;
   message?: string | undefined;
   refs?: string[] | undefined;
   repoPath?: string | undefined;
@@ -38,6 +47,8 @@ export interface EmitApprovalDecisionResult {
 
 export interface EmitApproveInput {
   bubbleId: string;
+  overrideNonApprove?: boolean | undefined;
+  overrideReason?: string | undefined;
   refs?: string[] | undefined;
   repoPath?: string | undefined;
   cwd?: string | undefined;
@@ -78,6 +89,17 @@ export class ApprovalCommandError extends Error {
 
 const canonicalHumanApprovalState = "READY_FOR_HUMAN_APPROVAL" as const;
 const legacyHumanApprovalState = "READY_FOR_APPROVAL" as const;
+const approvalOverrideRequiredReasonCode = "APPROVAL_OVERRIDE_REQUIRED";
+const approvalOverrideReasonRequiredReasonCode =
+  "APPROVAL_OVERRIDE_REASON_REQUIRED";
+const approvalRecommendationUnavailableReasonCode =
+  "APPROVAL_RECOMMENDATION_UNAVAILABLE";
+const metaReviewRunFailedSummaryPrefix = "META_REVIEW_GATE_RUN_FAILED:";
+
+interface ApprovalTranscriptContext {
+  latestRoundApprovalRequest?: ProtocolEnvelope;
+  hasRunFailedApprovalRequestHistory: boolean;
+}
 
 function isHumanApprovalState(
   state: BubbleStateSnapshot["state"]
@@ -119,6 +141,120 @@ function resolveNextState(
   });
 }
 
+function resolveLatestApprovalRecommendation(
+  state: BubbleStateSnapshot,
+  context?: ApprovalTranscriptContext
+): MetaReviewRecommendation {
+  if (
+    state.state === legacyHumanApprovalState &&
+    state.meta_review === undefined
+  ) {
+    // Legacy compatibility path: bubbles created before Phase 3 may not have
+    // meta_review snapshot data yet. Preserve prior READY_FOR_APPROVAL behavior.
+    return "approve";
+  }
+  const recommendation = state.meta_review?.last_autonomous_recommendation ?? null;
+  if (
+    recommendation === "approve" ||
+    recommendation === "rework" ||
+    recommendation === "inconclusive"
+  ) {
+    return recommendation;
+  }
+  if (
+    state.state === canonicalHumanApprovalState &&
+    state.meta_review?.sticky_human_gate === true &&
+    context !== undefined &&
+    (
+      isRunFailedApprovalRequest(context.latestRoundApprovalRequest) ||
+      context.hasRunFailedApprovalRequestHistory
+    )
+  ) {
+    return "inconclusive";
+  }
+  throw new ApprovalCommandError(
+    `${approvalRecommendationUnavailableReasonCode}: latest autonomous recommendation is unavailable at approval time.`
+  );
+}
+
+function isHumanApprovalRequest(envelope: ProtocolEnvelope): boolean {
+  return (
+    envelope.type === "APPROVAL_REQUEST" &&
+    envelope.sender === "orchestrator" &&
+    envelope.recipient === "human"
+  );
+}
+
+function isRunFailedApprovalRequest(
+  approvalRequest: ProtocolEnvelope | undefined
+): boolean {
+  if (approvalRequest === undefined || !isHumanApprovalRequest(approvalRequest)) {
+    return false;
+  }
+  const summary = approvalRequest.payload.summary;
+  return (
+    typeof summary === "string" &&
+    summary.startsWith(metaReviewRunFailedSummaryPrefix)
+  );
+}
+
+async function readApprovalTranscriptContext(
+  transcriptPath: string,
+  round: number
+): Promise<ApprovalTranscriptContext> {
+  const transcript = await readTranscriptEnvelopes(transcriptPath, {
+    allowMissing: true
+  });
+  let latestRoundApprovalRequest: ProtocolEnvelope | undefined;
+  let hasRunFailedApprovalRequestHistory = false;
+  for (let index = transcript.length - 1; index >= 0; index -= 1) {
+    const envelope = transcript[index];
+    if (envelope === undefined || !isHumanApprovalRequest(envelope)) {
+      continue;
+    }
+    if (
+      latestRoundApprovalRequest === undefined &&
+      envelope.round === round
+    ) {
+      latestRoundApprovalRequest = envelope;
+    }
+    const summary = envelope.payload.summary;
+    if (
+      typeof summary === "string" &&
+      summary.startsWith(metaReviewRunFailedSummaryPrefix)
+    ) {
+      hasRunFailedApprovalRequestHistory = true;
+    }
+    if (
+      latestRoundApprovalRequest !== undefined &&
+      hasRunFailedApprovalRequestHistory
+    ) {
+      break;
+    }
+  }
+  return {
+    ...(latestRoundApprovalRequest !== undefined
+      ? { latestRoundApprovalRequest }
+      : {}),
+    hasRunFailedApprovalRequestHistory
+  }
+}
+
+function validateAndNormalizeOverrideReason(
+  reason: string | undefined
+): string | undefined {
+  if (reason === undefined) {
+    return undefined;
+  }
+  const trimmed = reason.trim();
+  if (trimmed.length === 0) {
+    throw new ApprovalCommandError(
+      `${approvalOverrideReasonRequiredReasonCode}: --override-reason must be non-empty after trimming whitespace.`
+    );
+  }
+  return trimmed;
+}
+
 export async function emitApprovalDecision(
   input: EmitApprovalDecisionInput,
   dependencies: EmitApprovalDecisionDependencies = {}
@@ -126,6 +262,7 @@ export async function emitApprovalDecision(
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
   const refs = normalizeStringList(input.refs ?? []);
+  const overrideReason = validateAndNormalizeOverrideReason(input.overrideReason);
   const message =
     input.message === undefined
       ? undefined
@@ -167,8 +304,41 @@ export async function emitApprovalDecision(
   const envelopePayload: ProtocolEnvelope["payload"] = {
     decision: input.decision
   };
+  const envelopeMetadata: Record<string, unknown> = {};
+  if (input.decision === "approve") {
+    const approvalTranscriptContext =
+      state.state === canonicalHumanApprovalState
+        ? await readApprovalTranscriptContext(
+            resolved.bubblePaths.transcriptPath,
+            state.round
+          )
+        : undefined;
+    const recommendationAtDecision = resolveLatestApprovalRecommendation(
+      state,
+      approvalTranscriptContext
+    );
+    envelopeMetadata.recommendation_at_decision = recommendationAtDecision;
+
+    if (recommendationAtDecision !== "approve") {
+      if (input.overrideNonApprove !== true) {
+        throw new ApprovalCommandError(
+          `${approvalOverrideRequiredReasonCode}: approval requires --override-non-approve when latest recommendation is ${recommendationAtDecision}.`
+        );
+      }
+      if (overrideReason === undefined) {
+        throw new ApprovalCommandError(
+          `${approvalOverrideReasonRequiredReasonCode}: approval override requires --override-reason when latest recommendation is ${recommendationAtDecision}.`
+        );
+      }
+      envelopeMetadata.override_non_approve = true;
+      envelopeMetadata.override_reason = overrideReason;
+    }
+  }
   if (message !== undefined) {
     envelopePayload.message = message;
+  }
+  if (Object.keys(envelopeMetadata).length > 0) {
+    envelopePayload.metadata = envelopeMetadata;
   }
 
   const appended = await appendProtocolEnvelope({
@@ -278,6 +448,8 @@ export async function emitApprove(
   return emitApprovalDecision({
     bubbleId: input.bubbleId,
     decision: "approve",
+    overrideNonApprove: input.overrideNonApprove,
+    overrideReason: input.overrideReason,
     refs: input.refs,
     repoPath: input.repoPath,
     cwd: input.cwd,

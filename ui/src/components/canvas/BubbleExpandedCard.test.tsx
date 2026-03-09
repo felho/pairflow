@@ -10,13 +10,15 @@ vi.mock("../../lib/clipboard", () => ({
 }));
 
 import { bubbleDimensions } from "../../lib/canvasLayout";
-import { bubbleCard } from "../../test/fixtures";
+import { bubbleCard, bubbleDetail } from "../../test/fixtures";
 import { BubbleExpandedCard } from "./BubbleExpandedCard";
 
 interface RenderExpandedCardOverrides {
   onPositionChange?: (position: { x: number; y: number }) => void;
   onPositionCommit?: () => void;
   onClose?: () => void;
+  detail?: ReturnType<typeof bubbleDetail> | null;
+  bubbleState?: "READY_FOR_APPROVAL" | "READY_FOR_HUMAN_APPROVAL";
 }
 
 function renderExpandedCard(overrides: RenderExpandedCardOverrides = {}): void {
@@ -24,9 +26,12 @@ function renderExpandedCard(overrides: RenderExpandedCardOverrides = {}): void {
     <BubbleExpandedCard
       bubble={bubbleCard({
         bubbleId: "b-expanded-1",
-        repoPath: "/repo-a"
+        repoPath: "/repo-a",
+        ...(overrides.bubbleState !== undefined
+          ? { state: overrides.bubbleState }
+          : {})
       })}
-      detail={null}
+      detail={overrides.detail ?? null}
       timeline={null}
       position={{
         x: 72,
@@ -70,6 +75,22 @@ describe("BubbleExpandedCard", () => {
       width: `${expandedDimensions.width}px`,
       height: `${expandedDimensions.height}px`
     });
+  });
+
+  it("shows meta-review actor and latest recommendation in detail surface", () => {
+    renderExpandedCard({
+      bubbleState: "READY_FOR_HUMAN_APPROVAL",
+      detail: bubbleDetail({
+        bubbleId: "b-expanded-1",
+        repoPath: "/repo-a",
+        state: "READY_FOR_HUMAN_APPROVAL"
+      })
+    });
+
+    expect(screen.getByText("Meta Review")).toBeInTheDocument();
+    expect(screen.getByText("Actor: meta-reviewer")).toBeInTheDocument();
+    expect(screen.getByText("Latest recommendation: approve")).toBeInTheDocument();
+    expect(screen.getByText("Approval Package")).toBeInTheDocument();
   });
 
   it("copies bubble review prompt on double click of expanded bubble id label", async () => {

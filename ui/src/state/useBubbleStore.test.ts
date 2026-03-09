@@ -256,6 +256,60 @@ describe("createBubbleStore", () => {
     expect(getBubbles).toHaveBeenCalledTimes(1);
   });
 
+  it("fills deterministic meta-review defaults when incoming payload misses metaReview", async () => {
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: []
+      }))
+    });
+
+    let emitEvent: (event: UiEvent) => void = () => undefined;
+    const store = createBubbleStore({
+      api,
+      createEventsClient: (input) => {
+        emitEvent = input.onEvent;
+        return {
+          start: () => undefined,
+          stop: () => undefined,
+          refresh: () => undefined
+        };
+      }
+    });
+
+    await store.getState().initialize();
+
+    const legacyBubble = bubbleSummary({
+      bubbleId: "b-legacy-payload",
+      repoPath: "/repo-a"
+    });
+    const legacyWithoutMetaReview = {
+      ...legacyBubble
+    } as unknown as Record<string, unknown>;
+    delete legacyWithoutMetaReview.metaReview;
+
+    emitEvent({
+      id: 40,
+      ts: "2026-02-24T12:40:00.000Z",
+      type: "bubble.updated",
+      repoPath: "/repo-a",
+      bubbleId: "b-legacy-payload",
+      bubble: legacyWithoutMetaReview as unknown as typeof legacyBubble
+    });
+
+    expect(
+      store.getState().bubblesById["b-legacy-payload"]?.metaReview
+    ).toEqual({
+      actor: "meta-reviewer",
+      latestRecommendation: null,
+      latestStatus: null,
+      latestSummary: null,
+      latestReportRef: null,
+      latestUpdatedAt: null
+    });
+  });
+
   it("positions a realtime-created bubble in the same row when right slot is available", async () => {
     const bubble1 = bubbleSummary({ bubbleId: "b-1", repoPath: "/repo-a" });
     const bubble2 = bubbleSummary({ bubbleId: "b-2", repoPath: "/repo-a" });
@@ -639,6 +693,46 @@ describe("createBubbleStore", () => {
     expect(store.getState().actionRetryHintById["b-a"]).toContain(
       "State changed in CLI/UI"
     );
+  });
+
+  it("passes approve override fields through to API", async () => {
+    const getBubbles = vi.fn(async () => ({
+      repo: repoSummary("/repo-a"),
+      bubbles: [bubbleSummary({ bubbleId: "b-a", repoPath: "/repo-a" })]
+    }));
+    const approveBubble = vi.fn(async () => ({}));
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      approveBubble
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+
+    await store.getState().runBubbleAction({
+      bubbleId: "b-a",
+      action: "approve",
+      refs: ["artifact://evidence/review.md"],
+      overrideNonApprove: true,
+      overrideReason: "Human override after manual validation."
+    });
+
+    expect(approveBubble).toHaveBeenCalledWith("/repo-a", "b-a", {
+      refs: ["artifact://evidence/review.md"],
+      overrideNonApprove: true,
+      overrideReason: "Human override after manual validation."
+    });
+    expect(getBubbles).toHaveBeenCalledTimes(2);
   });
 
   it("returns confirmation artifacts for delete without force", async () => {

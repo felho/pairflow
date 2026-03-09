@@ -2,6 +2,13 @@ import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
 import { maybeAcceptClaudeTrustPrompt, sendAndSubmitTmuxPaneMessage } from "./tmuxInput.js";
 
+export const runtimePaneIndices = {
+  status: 0,
+  implementer: 1,
+  reviewer: 2,
+  metaReviewer: 2
+} as const;
+
 export interface TmuxRunResult {
   stdout: string;
   stderr: string;

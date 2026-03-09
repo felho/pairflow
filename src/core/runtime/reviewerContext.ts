@@ -1,6 +1,11 @@
 import { type BubbleConfig } from "../../types/bubble.js";
 import { readRuntimeSessionsRegistry } from "./sessionsRegistry.js";
-import { respawnTmuxPaneCommand, runTmux, type TmuxRunner } from "./tmuxManager.js";
+import {
+  respawnTmuxPaneCommand,
+  runTmux,
+  runtimePaneIndices,
+  type TmuxRunner
+} from "./tmuxManager.js";
 import { buildAgentCommand } from "./agentCommand.js";
 
 export interface RefreshReviewerContextInput {
@@ -61,7 +66,7 @@ export async function refreshReviewerContext(
   try {
     await respawnTmuxPaneCommand({
       sessionName,
-      paneIndex: 2,
+      paneIndex: runtimePaneIndices.reviewer,
       cwd: worktreePath,
       command: reviewerCommand,
       runner

@@ -3,6 +3,10 @@ import type {
   BubbleLifecycleState
 } from "./bubble.js";
 import type {
+  MetaReviewRecommendation,
+  MetaReviewRunStatus
+} from "./bubble.js";
+import type {
   PendingInboxItem,
   PendingInboxItemType
 } from "../core/bubble/inboxBubble.js";
@@ -30,6 +34,15 @@ export interface UiRuntimeHealth {
   stale: boolean;
 }
 
+export interface UiBubbleMetaReviewSummary {
+  actor: "meta-reviewer";
+  latestRecommendation: MetaReviewRecommendation | null;
+  latestStatus: MetaReviewRunStatus | null;
+  latestSummary: string | null;
+  latestReportRef: string | null;
+  latestUpdatedAt: string | null;
+}
+
 export interface UiBubbleSummary {
   bubbleId: string;
   repoPath: string;
@@ -42,6 +55,7 @@ export interface UiBubbleSummary {
   lastCommandAt: string | null;
   runtimeSession: RuntimeSessionRecord | null;
   runtime: UiRuntimeHealth;
+  metaReview: UiBubbleMetaReviewSummary;
 }
 
 export interface UiPendingInboxCounts {

@@ -1,7 +1,7 @@
 import { basename, dirname, join } from "node:path";
 
 import { readRuntimeSessionsRegistry } from "./sessionsRegistry.js";
-import { runTmux, type TmuxRunner } from "./tmuxManager.js";
+import { runTmux, runtimePaneIndices, type TmuxRunner } from "./tmuxManager.js";
 import { maybeAcceptClaudeTrustPrompt, sendAndSubmitTmuxPaneMessage, submitTmuxPaneInput } from "./tmuxInput.js";
 import { buildReviewerAgentSelectionGuidance } from "./reviewerGuidance.js";
 import { buildReviewerSeverityOntologyReminder } from "./reviewerSeverityOntology.js";
@@ -66,19 +66,28 @@ export interface EmitTmuxDeliveryNotificationResult {
 }
 
 function resolveTargetPaneIndex(
-  recipient: ProtocolParticipant,
+  recipient: ProtocolParticipant | "meta-reviewer",
   bubbleConfig: BubbleConfig
 ): number | undefined {
   if (recipient === bubbleConfig.agents.implementer) {
-    return 1;
+    return runtimePaneIndices.implementer;
   }
-  if (recipient === bubbleConfig.agents.reviewer) {
-    return 2;
+  if (recipient === bubbleConfig.agents.reviewer || recipient === "meta-reviewer") {
+    return runtimePaneIndices.metaReviewer;
   }
   if (recipient === "human" || recipient === "orchestrator") {
-    return 0;
+    return runtimePaneIndices.status;
   }
   return undefined;
+}
+
+function resolvePayloadActor(envelope: ProtocolEnvelope): string | null {
+  const metadata = envelope.payload.metadata;
+  if (typeof metadata !== "object" || metadata === null) {
+    return null;
+  }
+  const actor = (metadata as { actor?: unknown }).actor;
+  return typeof actor === "string" && actor.trim().length > 0 ? actor : null;
 }
 
 function buildDeliveryMessage(
@@ -96,6 +105,7 @@ function buildDeliveryMessage(
       : envelope.recipient === bubbleConfig.agents.reviewer
       ? "reviewer"
       : envelope.recipient;
+  const actorLabel = resolvePayloadActor(envelope);
   const worktreeHint =
     worktreePath === undefined
       ? "Run pairflow commands from the bubble worktree root."
@@ -126,7 +136,9 @@ function buildDeliveryMessage(
       }
     } else if (envelope.type === "APPROVAL_REQUEST") {
       action =
-        "Bubble is READY_FOR_HUMAN_APPROVAL. Stop coding and wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now.";
+        actorLabel === "meta-reviewer"
+          ? "Bubble is READY_FOR_HUMAN_APPROVAL after meta-reviewer gate. Stop coding and wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now."
+          : "Bubble is READY_FOR_HUMAN_APPROVAL. Stop coding and wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now.";
     }
   } else if (recipientRole === "reviewer") {
     if (envelope.type === "PASS") {
@@ -182,7 +194,9 @@ function buildDeliveryMessage(
         "Human response received. Continue review workflow from this update.";
     } else if (envelope.type === "APPROVAL_REQUEST") {
       action =
-        "Bubble is READY_FOR_HUMAN_APPROVAL. Review is complete; wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now.";
+        actorLabel === "meta-reviewer"
+          ? "Meta-reviewer gate reached READY_FOR_HUMAN_APPROVAL. Wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now."
+          : "Bubble is READY_FOR_HUMAN_APPROVAL. Review is complete; wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now.";
     }
   } else if (recipientRole === "human" || recipientRole === "orchestrator") {
     action = "Check inbox/status and continue human orchestration flow.";

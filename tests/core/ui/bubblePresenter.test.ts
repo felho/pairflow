@@ -39,6 +39,14 @@ describe("bubblePresenter", () => {
       activeRole: "implementer",
       activeSince: "2026-02-24T12:00:00.000Z",
       lastCommandAt: "2026-02-24T12:00:30.000Z",
+      metaReview: {
+        actor: "meta-reviewer",
+        latestRecommendation: "approve",
+        latestStatus: "success",
+        latestSummary: "Autonomous review clean.",
+        latestReportRef: "artifacts/meta-review-last.md",
+        latestUpdatedAt: "2026-02-24T12:00:30.000Z"
+      },
       runtimeSession: {
         bubbleId: "b_attach_01",
         repoPath: "/tmp/repo",
@@ -51,5 +59,9 @@ describe("bubblePresenter", () => {
     expect(presented.runtime.present).toBe(true);
     expect(presented.runtime.stale).toBe(false);
     expect(presented.runtimeSession?.tmuxSessionName).toBe("pf-b_attach_01");
+    expect(presented.metaReview).toMatchObject({
+      actor: "meta-reviewer",
+      latestRecommendation: "approve"
+    });
   });
 });

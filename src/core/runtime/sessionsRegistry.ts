@@ -3,6 +3,15 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import { FileLockTimeoutError, withFileLock } from "../util/fileLock.js";
+import { runtimePaneIndices } from "./tmuxManager.js";
+
+export interface RuntimeMetaReviewerPaneBinding {
+  role: "meta-reviewer";
+  paneIndex: number;
+  active: boolean;
+  runId: string | null;
+  updatedAt: string;
+}
 
 export interface RuntimeSessionRecord {
   bubbleId: string;
@@ -10,6 +19,7 @@ export interface RuntimeSessionRecord {
   worktreePath: string;
   tmuxSessionName: string;
   updatedAt: string;
+  metaReviewerPane?: RuntimeMetaReviewerPaneBinding;
 }
 
 export type RuntimeSessionsRegistry = Record<string, RuntimeSessionRecord>;
@@ -41,6 +51,21 @@ export interface ClaimRuntimeSessionInput {
 export interface ClaimRuntimeSessionResult {
   claimed: boolean;
   record: RuntimeSessionRecord;
+}
+
+export interface SetMetaReviewerPaneBindingInput {
+  sessionsPath: string;
+  bubbleId: string;
+  active: boolean;
+  runId?: string | null;
+  now?: Date;
+  lockTimeoutMs?: number;
+}
+
+export interface SetMetaReviewerPaneBindingResult {
+  updated: boolean;
+  reason?: "no_runtime_session" | "shared_runtime_pane";
+  record?: RuntimeSessionRecord;
 }
 
 export interface RemoveRuntimeSessionInput {
@@ -110,6 +135,10 @@ function parseSessionRecord(
     "runtime session tmuxSessionName"
   );
   const updatedAt = requireNonEmptyString(value.updatedAt, "runtime session updatedAt");
+  const metaReviewerPane = parseMetaReviewerPaneBinding(
+    value.metaReviewerPane,
+    bubbleIdFromKey
+  );
 
   if (bubbleId !== bubbleIdFromKey) {
     throw new RuntimeSessionsRegistryError(
@@ -122,6 +151,81 @@ function parseSessionRecord(
     repoPath,
     worktreePath,
     tmuxSessionName,
+    updatedAt,
+    ...(metaReviewerPane !== undefined ? { metaReviewerPane } : {})
+  };
+}
+
+function normalizeOptionalRunId(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (typeof value !== "string") {
+    throw new RuntimeSessionsRegistryError(
+      "runtime session metaReviewerPane.runId must be a string or null."
+    );
+  }
+  const trimmed = value.trim();
+  return trimmed.length === 0 ? null : trimmed;
+}
+
+function hasSharedRuntimePaneCollision(): boolean {
+  const metaReviewerPaneIndex = Number(runtimePaneIndices.metaReviewer);
+  const statusPaneIndex = Number(runtimePaneIndices.status);
+  const implementerPaneIndex = Number(runtimePaneIndices.implementer);
+  return (
+    metaReviewerPaneIndex === statusPaneIndex ||
+    metaReviewerPaneIndex === implementerPaneIndex
+  );
+}
+
+function parseMetaReviewerPaneBinding(
+  value: unknown,
+  bubbleId: string
+): RuntimeMetaReviewerPaneBinding | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!isRecord(value)) {
+    throw new RuntimeSessionsRegistryError(
+      `Invalid runtime meta-reviewer pane binding for bubble ${bubbleId}.`
+    );
+  }
+  const role = requireNonEmptyString(
+    value.role,
+    "runtime session metaReviewerPane.role"
+  );
+  if (role !== "meta-reviewer") {
+    throw new RuntimeSessionsRegistryError(
+      `runtime session metaReviewerPane.role must be "meta-reviewer" (found ${role}).`
+    );
+  }
+  const paneIndexValue = value.paneIndex;
+  if (
+    typeof paneIndexValue !== "number" ||
+    !Number.isInteger(paneIndexValue) ||
+    paneIndexValue < 0
+  ) {
+    throw new RuntimeSessionsRegistryError(
+      "runtime session metaReviewerPane.paneIndex must be a non-negative integer."
+    );
+  }
+  const activeValue = value.active;
+  if (typeof activeValue !== "boolean") {
+    throw new RuntimeSessionsRegistryError(
+      "runtime session metaReviewerPane.active must be a boolean."
+    );
+  }
+  const updatedAt = requireNonEmptyString(
+    value.updatedAt,
+    "runtime session metaReviewerPane.updatedAt"
+  );
+  const runId = normalizeOptionalRunId(value.runId);
+  return {
+    role: "meta-reviewer",
+    paneIndex: paneIndexValue,
+    active: activeValue,
+    runId,
     updatedAt
   };
 }
@@ -166,6 +270,7 @@ function buildSessionRecord(input: {
   repoPath: string;
   worktreePath: string;
   tmuxSessionName: string;
+  metaReviewerPane?: RuntimeMetaReviewerPaneBinding;
   now?: Date | undefined;
 }): RuntimeSessionRecord {
   return {
@@ -173,7 +278,10 @@ function buildSessionRecord(input: {
     repoPath: requireNonEmptyString(input.repoPath, "repoPath"),
     worktreePath: requireNonEmptyString(input.worktreePath, "worktreePath"),
     tmuxSessionName: requireNonEmptyString(input.tmuxSessionName, "tmuxSessionName"),
-    updatedAt: (input.now ?? new Date()).toISOString()
+    updatedAt: (input.now ?? new Date()).toISOString(),
+    ...(input.metaReviewerPane !== undefined
+      ? { metaReviewerPane: input.metaReviewerPane }
+      : {})
   };
 }
 
@@ -300,6 +408,60 @@ export async function removeRuntimeSession(
       : {})
   });
   return result.removedBubbleIds.length > 0;
+}
+
+export async function setMetaReviewerPaneBinding(
+  input: SetMetaReviewerPaneBindingInput
+): Promise<SetMetaReviewerPaneBindingResult> {
+  return withSessionsLock(
+    input.sessionsPath,
+    input.lockTimeoutMs ?? 5_000,
+    async () => {
+      const registry = await readRuntimeSessionsRegistry(input.sessionsPath, {
+        allowMissing: true
+      });
+      const bubbleId = requireNonEmptyString(input.bubbleId, "bubbleId");
+      const existing = registry[bubbleId];
+      if (existing === undefined) {
+        return {
+          updated: false,
+          reason: "no_runtime_session"
+        };
+      }
+      if (hasSharedRuntimePaneCollision()) {
+        return {
+          updated: false,
+          reason: "shared_runtime_pane"
+        };
+      }
+
+      const nowIso = (input.now ?? new Date()).toISOString();
+      const requestedRunId = normalizeOptionalRunId(input.runId);
+      const runId =
+        requestedRunId ??
+        existing.metaReviewerPane?.runId ??
+        null;
+      const metaReviewerPane: RuntimeMetaReviewerPaneBinding = {
+        role: "meta-reviewer",
+        paneIndex: runtimePaneIndices.metaReviewer,
+        active: input.active,
+        runId,
+        updatedAt: nowIso
+      };
+
+      const nextRecord: RuntimeSessionRecord = {
+        ...existing,
+        updatedAt: nowIso,
+        metaReviewerPane
+      };
+      registry[bubbleId] = nextRecord;
+      await atomicWriteRegistry(input.sessionsPath, registry);
+      return {
+        updated: true,
+        record: nextRecord
+      };
+    }
+  );
 }
 
 export async function removeRuntimeSessions(

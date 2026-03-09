@@ -83,6 +83,14 @@ describe("renderBubbleStatusText", () => {
         lastMessageTs: "2026-02-22T12:05:00.000Z",
         lastMessageId: "msg_20260222_003"
       },
+      metaReview: {
+        actor: "meta-reviewer",
+        latestRecommendation: "inconclusive",
+        latestStatus: "inconclusive",
+        latestSummary: "No deterministic recommendation.",
+        latestReportRef: "artifacts/meta-review-last.md",
+        latestUpdatedAt: "2026-02-22T12:04:59.000Z"
+      },
       accuracy_critical: false,
       last_review_verification: "missing",
       failing_gates: [],
@@ -191,6 +199,14 @@ describe("renderBubbleStatusTable", () => {
         lastMessageType: "APPROVAL_DECISION",
         lastMessageTs: "2026-03-08T21:29:15.948Z",
         lastMessageId: "msg_20260308_013"
+      },
+      metaReview: {
+        actor: "meta-reviewer",
+        latestRecommendation: "approve",
+        latestStatus: "success",
+        latestSummary: "Autonomous recommendation approve.",
+        latestReportRef: "artifacts/meta-review-last.md",
+        latestUpdatedAt: "2026-03-08T21:29:00.000Z"
       },
       accuracy_critical: false,
       last_review_verification: "missing",

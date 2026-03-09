@@ -12,6 +12,10 @@ import {
   emitRequestRework,
   ApprovalCommandError
 } from "../../../src/core/human/approval.js";
+import {
+  applyMetaReviewGateOnConvergence,
+  MetaReviewGateError
+} from "../../../src/core/bubble/metaReviewGate.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
@@ -70,18 +74,38 @@ afterEach(async () => {
 });
 
 describe("approval decisions", () => {
-  it("writes APPROVAL_DECISION=approve and transitions to APPROVED_FOR_COMMIT", async () => {
+  it("rejects approve decision when non-approve recommendation lacks override", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupReadyForHumanApprovalBubble(repoPath, "b_approval_00");
+
+    await expect(
+      emitApprove({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:05:00.000Z")
+      })
+    ).rejects.toThrow(/APPROVAL_OVERRIDE_REQUIRED/u);
+  });
+
+  it("writes APPROVAL_DECISION=approve with override metadata and transitions to APPROVED_FOR_COMMIT", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupReadyForHumanApprovalBubble(repoPath, "b_approval_01");
 
     const result = await emitApprove({
       bubbleId: bubble.bubbleId,
+      overrideNonApprove: true,
+      overrideReason: "Human verified blocker context manually.",
       cwd: repoPath,
       now: new Date("2026-02-22T12:05:00.000Z")
     });
 
     expect(result.envelope.type).toBe("APPROVAL_DECISION");
     expect(result.envelope.payload.decision).toBe("approve");
+    expect(result.envelope.payload.metadata).toMatchObject({
+      recommendation_at_decision: "inconclusive",
+      override_non_approve: true,
+      override_reason: "Human verified blocker context manually."
+    });
     expect(result.state.state).toBe("APPROVED_FOR_COMMIT");
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
@@ -92,6 +116,21 @@ describe("approval decisions", () => {
       "APPROVAL_REQUEST",
       "APPROVAL_DECISION"
     ]);
+  });
+
+  it("requires non-empty override reason when override flag is set", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupReadyForHumanApprovalBubble(repoPath, "b_approval_01b");
+
+    await expect(
+      emitApprove({
+        bubbleId: bubble.bubbleId,
+        overrideNonApprove: true,
+        overrideReason: "   ",
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:05:00.000Z")
+      })
+    ).rejects.toThrow(/APPROVAL_OVERRIDE_REASON_REQUIRED/u);
   });
 
   it("emits absolute transcript messageRef for APPROVAL_DECISION=approve delivery", async () => {
@@ -106,6 +145,8 @@ describe("approval decisions", () => {
     const result = await emitApprove(
       {
         bubbleId: bubble.bubbleId,
+        overrideNonApprove: true,
+        overrideReason: "Human override for audit delivery coverage.",
         cwd: repoPath,
         now: new Date("2026-02-22T12:05:00.000Z")
       },
@@ -241,7 +282,9 @@ describe("approval decisions", () => {
       to: "READY_FOR_APPROVAL",
       lastCommandAt: "2026-02-22T12:04:00.000Z"
     });
-    await writeStateSnapshot(bubble.paths.statePath, legacyReadyState, {
+    const legacyStateWithoutMetaReview = { ...legacyReadyState };
+    delete legacyStateWithoutMetaReview.meta_review;
+    await writeStateSnapshot(bubble.paths.statePath, legacyStateWithoutMetaReview, {
       expectedFingerprint: loaded.fingerprint,
       expectedState: "RUNNING"
     });
@@ -252,6 +295,225 @@ describe("approval decisions", () => {
       now: new Date("2026-02-22T12:05:00.000Z")
     });
     expect(approved.state.state).toBe("APPROVED_FOR_COMMIT");
+  });
+
+  it("fails closed when recommendation lookup is unavailable", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupReadyForHumanApprovalBubble(
+      repoPath,
+      "b_approval_missing_recommendation"
+    );
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    if (loaded.state.meta_review === undefined) {
+      throw new Error("Expected meta_review snapshot to exist.");
+    }
+    const missingRecommendationState = {
+      ...loaded.state,
+      meta_review: {
+        ...loaded.state.meta_review,
+        last_autonomous_status: null,
+        last_autonomous_recommendation: null,
+        last_autonomous_summary: null,
+        last_autonomous_report_ref: null,
+        last_autonomous_run_id: null,
+        last_autonomous_updated_at: null,
+        last_autonomous_rework_target_message: null
+      }
+    };
+    await writeStateSnapshot(bubble.paths.statePath, missingRecommendationState, {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "READY_FOR_HUMAN_APPROVAL"
+    });
+
+    await expect(
+      emitApprove({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:05:00.000Z")
+      })
+    ).rejects.toThrow(/APPROVAL_RECOMMENDATION_UNAVAILABLE/u);
+  });
+
+  it("supports override-based approve after human_gate_run_failed fallback", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_approval_run_failed_fallback_01",
+      task: "Human gate run failed fallback"
+    });
+
+    await applyMetaReviewGateOnConvergence(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        summary: "Converged.",
+        now: new Date("2026-03-08T11:50:00.000Z")
+      },
+      {
+        runMetaReview: async () => {
+          throw new MetaReviewGateError(
+            "META_REVIEW_GATE_RUN_FAILED",
+            "simulated runner invocation failure"
+          );
+        }
+      }
+    );
+
+    await expect(
+      emitApprove({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-03-08T11:51:00.000Z")
+      })
+    ).rejects.toThrow(/APPROVAL_OVERRIDE_REQUIRED/u);
+
+    const approved = await emitApprove({
+      bubbleId: bubble.bubbleId,
+      overrideNonApprove: true,
+      overrideReason: "Gate runner failed; human reviewed and approved manually.",
+      cwd: repoPath,
+      now: new Date("2026-03-08T11:52:00.000Z")
+    });
+    expect(approved.state.state).toBe("APPROVED_FOR_COMMIT");
+    expect(approved.envelope.payload.metadata).toMatchObject({
+      recommendation_at_decision: "inconclusive",
+      override_non_approve: true,
+      override_reason: "Gate runner failed; human reviewed and approved manually."
+    });
+  });
+
+  it("keeps override path available after run-failed -> revise -> sticky-bypass cycle", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_approval_run_failed_sticky_cycle_01",
+      task: "Human gate run-failed sticky cycle"
+    });
+
+    await applyMetaReviewGateOnConvergence(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        summary: "Converged first time.",
+        now: new Date("2026-03-08T12:00:00.000Z")
+      },
+      {
+        runMetaReview: async () => {
+          throw new MetaReviewGateError(
+            "META_REVIEW_GATE_RUN_FAILED",
+            "simulated runner invocation failure"
+          );
+        }
+      }
+    );
+
+    const afterFailedGate = await readStateSnapshot(bubble.paths.statePath);
+    if (afterFailedGate.state.meta_review === undefined) {
+      throw new Error("Expected meta_review snapshot after run-failed gate.");
+    }
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...afterFailedGate.state,
+        meta_review: {
+          ...afterFailedGate.state.meta_review,
+          last_autonomous_status: null,
+          last_autonomous_recommendation: null,
+          last_autonomous_summary: null,
+          last_autonomous_run_id: null,
+          last_autonomous_report_ref: null,
+          last_autonomous_updated_at: null,
+          last_autonomous_rework_target_message: null
+        }
+      },
+      {
+        expectedFingerprint: afterFailedGate.fingerprint,
+        expectedState: "READY_FOR_HUMAN_APPROVAL"
+      }
+    );
+
+    const revised = await emitRequestRework({
+      bubbleId: bubble.bubbleId,
+      message: "Need one more implementation cycle.",
+      cwd: repoPath,
+      now: new Date("2026-03-08T12:01:00.000Z")
+    });
+    expect(revised.mode).toBe("immediate");
+    if (revised.mode !== "immediate") {
+      throw new Error("Expected immediate revise result.");
+    }
+    expect(revised.state.state).toBe("RUNNING");
+
+    const stickyBypass = await applyMetaReviewGateOnConvergence({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged after revise.",
+      now: new Date("2026-03-08T12:02:00.000Z")
+    });
+    expect(stickyBypass.route).toBe("human_gate_sticky_bypass");
+    expect(stickyBypass.gateEnvelope.payload.summary).toBe("Converged after revise.");
+
+    await expect(
+      emitApprove({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-03-08T12:03:00.000Z")
+      })
+    ).rejects.toThrow(/APPROVAL_OVERRIDE_REQUIRED/u);
+
+    const approved = await emitApprove({
+      bubbleId: bubble.bubbleId,
+      overrideNonApprove: true,
+      overrideReason: "Run-failed lineage requires human override after sticky bypass.",
+      cwd: repoPath,
+      now: new Date("2026-03-08T12:04:00.000Z")
+    });
+    expect(approved.state.state).toBe("APPROVED_FOR_COMMIT");
+    expect(approved.envelope.payload.metadata).toMatchObject({
+      recommendation_at_decision: "inconclusive",
+      override_non_approve: true
+    });
+  });
+
+  it("does not require override when latest recommendation is approve", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupReadyForHumanApprovalBubble(
+      repoPath,
+      "b_approval_recommendation_approve"
+    );
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    if (loaded.state.meta_review === undefined) {
+      throw new Error("Expected meta_review snapshot to exist.");
+    }
+    const approveRecommendationState = {
+      ...loaded.state,
+      meta_review: {
+        ...loaded.state.meta_review,
+        last_autonomous_status: "success" as const,
+        last_autonomous_recommendation: "approve" as const,
+        last_autonomous_summary: "Autonomous gate approved.",
+        last_autonomous_report_ref: "artifacts/meta-review-last.md",
+        last_autonomous_run_id: "run_approve_path_01",
+        last_autonomous_updated_at: "2026-02-22T12:04:59.000Z"
+      }
+    };
+    await writeStateSnapshot(bubble.paths.statePath, approveRecommendationState, {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "READY_FOR_HUMAN_APPROVAL"
+    });
+
+    const result = await emitApprove({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath,
+      now: new Date("2026-02-22T12:05:00.000Z")
+    });
+
+    expect(result.state.state).toBe("APPROVED_FOR_COMMIT");
+    expect(result.envelope.payload.metadata).toMatchObject({
+      recommendation_at_decision: "approve"
+    });
   });
 
   it("queues deferred rework intent while WAITING_HUMAN", async () => {
@@ -388,6 +650,8 @@ describe("approval decisions", () => {
 
     await emitApprove({
       bubbleId: bubble.bubbleId,
+      overrideNonApprove: true,
+      overrideReason: "Approval timestamp coverage.",
       cwd: repoPath,
       now
     });

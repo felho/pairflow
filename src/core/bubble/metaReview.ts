@@ -75,7 +75,8 @@ export interface MetaReviewLastReportView {
 export interface MetaReviewRunWarning {
   reason_code:
     | "META_REVIEW_RUNNER_ERROR"
-    | "META_REVIEW_ARTIFACT_WRITE_WARNING";
+    | "META_REVIEW_ARTIFACT_WRITE_WARNING"
+    | "META_REVIEWER_PANE_UNAVAILABLE";
   message: string;
 }
 

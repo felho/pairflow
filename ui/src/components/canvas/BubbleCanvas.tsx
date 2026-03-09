@@ -306,8 +306,12 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
           ? "Stale runtime — may need manual intervention."
           : props.bubble.state === "RUNNING"
             ? `${props.bubble.activeRole ?? "agent"} working`
+            : props.bubble.state === "META_REVIEW_RUNNING"
+              ? "meta-reviewer running autonomous gate analysis."
             : props.bubble.state === "READY_FOR_APPROVAL"
               ? "Reviewer found no issues. Ready for approval."
+              : props.bubble.state === "READY_FOR_HUMAN_APPROVAL"
+                ? `Waiting for human decision after meta-reviewer recommendation (${props.bubble.metaReview.latestRecommendation ?? "unknown"}).`
               : props.bubble.state === "WAITING_HUMAN"
                 ? "Waiting for human input."
                 : props.bubble.state === "DONE"

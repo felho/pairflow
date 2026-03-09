@@ -44,7 +44,11 @@ export interface PairflowApiClient {
   approveBubble: (
     repoPath: string,
     bubbleId: string,
-    input?: { refs?: string[] }
+    input?: {
+      refs?: string[];
+      overrideNonApprove?: boolean;
+      overrideReason?: string;
+    }
   ) => Promise<Record<string, unknown>>;
   requestRework: (
     repoPath: string,
@@ -235,10 +239,28 @@ export function createApiClient(baseUrl: string = ""): PairflowApiClient {
     async approveBubble(
       repoPath: string,
       bubbleId: string,
-      input?: { refs?: string[] }
+      input?: {
+        refs?: string[];
+        overrideNonApprove?: boolean;
+        overrideReason?: string;
+      }
     ): Promise<Record<string, unknown>> {
       const refs = input?.refs;
-      return postBubbleAction(baseUrl, repoPath, bubbleId, "approve", refs === undefined ? undefined : { refs });
+      return postBubbleAction(
+        baseUrl,
+        repoPath,
+        bubbleId,
+        "approve",
+        {
+          ...(refs !== undefined ? { refs } : {}),
+          ...(input?.overrideNonApprove !== undefined
+            ? { overrideNonApprove: input.overrideNonApprove }
+            : {}),
+          ...(input?.overrideReason !== undefined
+            ? { overrideReason: input.overrideReason }
+            : {})
+        }
+      );
     },
 
     async requestRework(

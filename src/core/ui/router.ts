@@ -278,6 +278,47 @@ function parseOptionalRefs(body: unknown): string[] {
   return ensureStringArray(refs, "refs");
 }
 
+function parseApproveBody(body: unknown): {
+  refs: string[];
+  overrideNonApprove: boolean;
+  overrideReason?: string | undefined;
+} {
+  const refs = parseOptionalRefs(body);
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return {
+      refs,
+      overrideNonApprove: false
+    };
+  }
+  const typedBody = body as Record<string, unknown>;
+  const overrideNonApproveValue = typedBody.overrideNonApprove;
+  const overrideReasonValue = typedBody.overrideReason;
+  if (
+    overrideNonApproveValue !== undefined &&
+    typeof overrideNonApproveValue !== "boolean"
+  ) {
+    throwApiError(
+      badRequest("Field `overrideNonApprove` must be a boolean when provided.")
+    );
+  }
+  if (
+    overrideReasonValue !== undefined &&
+    typeof overrideReasonValue !== "string"
+  ) {
+    throwApiError(
+      badRequest("Field `overrideReason` must be a string when provided.")
+    );
+  }
+
+  return {
+    refs,
+    overrideNonApprove: overrideNonApproveValue ?? false,
+    ...(overrideReasonValue !== undefined
+      ? { overrideReason: overrideReasonValue }
+      : {})
+  };
+}
+
 function parseCommitBody(body: unknown): {
   auto: boolean;
   message?: string | undefined;
@@ -772,10 +813,14 @@ export function createUiRouter(input: CreateUiRouterInput): UiRouter {
                   return true;
                 }
                 case "approve": {
-                  const refs = parseOptionalRefs(body);
+                  const approveInput = parseApproveBody(body);
                   const result = await dependencies.emitApprove({
                     bubbleId,
-                    ...(refs.length > 0 ? { refs } : {}),
+                    ...(approveInput.refs.length > 0 ? { refs: approveInput.refs } : {}),
+                    overrideNonApprove: approveInput.overrideNonApprove,
+                    ...(approveInput.overrideReason !== undefined
+                      ? { overrideReason: approveInput.overrideReason }
+                      : {}),
                     repoPath,
                     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
                   });

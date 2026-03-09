@@ -13,6 +13,7 @@ import {
   runBubbleMetaReviewCommand
 } from "../../src/cli/commands/bubble/metaReview.js";
 import { MetaReviewError } from "../../src/core/bubble/metaReview.js";
+import { readStateSnapshot } from "../../src/core/state/stateStore.js";
 import { initGitRepository } from "../helpers/git.js";
 import { setupRunningBubbleFixture } from "../helpers/bubble.js";
 
@@ -276,6 +277,65 @@ describe("runBubbleMetaReviewCommand", () => {
     ).rejects.toMatchObject({
       reasonCode: "META_REVIEW_SCHEMA_INVALID"
     });
+  });
+
+  it("keeps status/last-report output shapes stable without state mutation", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_cli_shape_01",
+      task: "CLI shape stability"
+    });
+
+    const before = await readStateSnapshot(bubble.paths.statePath);
+    const statusResult = await runBubbleMetaReviewCommand([
+      "status",
+      "--id",
+      bubble.bubbleId,
+      "--repo",
+      repoPath
+    ]);
+    const reportResult = await runBubbleMetaReviewCommand([
+      "last-report",
+      "--id",
+      bubble.bubbleId,
+      "--repo",
+      repoPath
+    ]);
+    const after = await readStateSnapshot(bubble.paths.statePath);
+
+    expect(before.fingerprint).toBe(after.fingerprint);
+    expect(statusResult?.command).toBe("status");
+    if (statusResult?.command !== "status") {
+      throw new Error("Expected status command result.");
+    }
+    expect(Object.keys(statusResult.status).sort()).toEqual([
+      "auto_rework_count",
+      "auto_rework_limit",
+      "bubbleId",
+      "has_run",
+      "last_autonomous_recommendation",
+      "last_autonomous_report_ref",
+      "last_autonomous_rework_target_message",
+      "last_autonomous_run_id",
+      "last_autonomous_status",
+      "last_autonomous_summary",
+      "last_autonomous_updated_at",
+      "sticky_human_gate"
+    ]);
+
+    expect(reportResult?.command).toBe("last-report");
+    if (reportResult?.command !== "last-report") {
+      throw new Error("Expected last-report command result.");
+    }
+    expect(Object.keys(reportResult.lastReport).sort()).toEqual([
+      "bubbleId",
+      "has_report",
+      "report_markdown",
+      "report_ref",
+      "summary",
+      "updated_at"
+    ]);
   });
 });
 

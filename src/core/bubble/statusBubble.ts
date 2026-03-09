@@ -12,6 +12,8 @@ import {
 import type {
   BubbleFailingGate,
   BubbleLifecycleState,
+  MetaReviewRecommendation,
+  MetaReviewRunStatus,
   BubbleRoundGateState,
   BubbleSpecLockState
 } from "../../types/bubble.js";
@@ -45,6 +47,14 @@ export interface BubbleStatusView {
     lastMessageType: ProtocolMessageType | null;
     lastMessageTs: string | null;
     lastMessageId: string | null;
+  };
+  metaReview: {
+    actor: "meta-reviewer";
+    latestRecommendation: MetaReviewRecommendation | null;
+    latestStatus: MetaReviewRunStatus | null;
+    latestSummary: string | null;
+    latestReportRef: string | null;
+    latestUpdatedAt: string | null;
   };
   accuracy_critical: boolean;
   last_review_verification: ReviewVerificationState;
@@ -201,6 +211,14 @@ export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleS
       lastMessageType: lastMessage?.type ?? null,
       lastMessageTs: lastMessage?.ts ?? null,
       lastMessageId: lastMessage?.id ?? null
+    },
+    metaReview: {
+      actor: "meta-reviewer",
+      latestRecommendation: state.meta_review?.last_autonomous_recommendation ?? null,
+      latestStatus: state.meta_review?.last_autonomous_status ?? null,
+      latestSummary: state.meta_review?.last_autonomous_summary ?? null,
+      latestReportRef: state.meta_review?.last_autonomous_report_ref ?? null,
+      latestUpdatedAt: state.meta_review?.last_autonomous_updated_at ?? null
     },
     accuracy_critical: accuracyCritical,
     last_review_verification: accuracyCritical ? verification.status : "missing",

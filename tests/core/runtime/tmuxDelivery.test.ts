@@ -110,6 +110,62 @@ function expectReviewerValidationClaimGuardrails(text: string | undefined): void
 }
 
 describe("emitTmuxDeliveryNotification", () => {
+  it("mentions meta-reviewer gate context for approval requests tagged with actor metadata", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r2 APPROVAL_REQUEST orchestrator->codex msg=msg_20260222_102 ref=artifact://approval.md. Action: Bubble is READY_FOR_HUMAN_APPROVAL after meta-reviewer gate.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        id: "msg_20260222_102",
+        type: "APPROVAL_REQUEST",
+        sender: "orchestrator",
+        recipient: "codex",
+        round: 2,
+        payload: {
+          summary: "Waiting for human decision",
+          metadata: {
+            actor: "meta-reviewer",
+            latest_recommendation: "inconclusive"
+          }
+        },
+        refs: ["artifact://approval.md"]
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry()),
+      deliveryAttempts: 2
+    });
+
+    expect(result.delivered).toBe(true);
+    const messageCall = calls.find(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.1" &&
+        call[3] === "-l" &&
+        call[4]?.includes("# [pairflow] r2 APPROVAL_REQUEST orchestrator->codex")
+    );
+    expect(messageCall?.[4]).toContain(
+      "READY_FOR_HUMAN_APPROVAL after meta-reviewer gate"
+    );
+  });
+
   it("routes PASS delivery to recipient agent pane with full ontology in fresh mode", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {

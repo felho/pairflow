@@ -327,7 +327,13 @@ export function validateConvergencePolicy(
       errors.push(
         "Convergence blocked: previous reviewer PASS summary reports positive finding counts but payload.findings is empty. Use structured --finding entries instead of summary-only findings."
       );
-    } else if (findingsAggregate.hasBlocking) {
+    } else if (
+      findingsAggregate.hasBlocking
+      && (
+        input.currentRound < input.severity_gate_round
+        || input.reviewArtifactType === "document"
+      )
+    ) {
       errors.push(
         "Convergence blocked: previous reviewer PASS still contains open P0/P1 findings."
       );
