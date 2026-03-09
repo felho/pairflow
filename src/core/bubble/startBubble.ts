@@ -255,6 +255,23 @@ function buildImplementerStartupPrompt(input: {
   ].join(" ");
 }
 
+function buildMetaReviewerStartupPrompt(input: {
+  bubbleId: string;
+  repoPath: string;
+  worktreePath: string;
+  taskArtifactPath: string;
+}): string {
+  return [
+    `Pairflow meta-reviewer start for bubble ${input.bubbleId}.`,
+    "This is a dedicated static worker pane for autonomous meta-review tasks.",
+    "Stay idle until orchestration signals a meta-review run.",
+    "Do not modify transcript/inbox/state files manually.",
+    buildPairflowCommandGuidance(input.worktreePath),
+    `Task: ${input.taskArtifactPath}.`,
+    `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`
+  ].join(" ");
+}
+
 function buildReviewerStartupPrompt(input: {
   bubbleId: string;
   repoPath: string;
@@ -388,6 +405,31 @@ function buildResumeImplementerStartupPrompt(input: {
     `Transcript context: ${input.transcriptSummary}`,
     evidenceHandoffGuidance,
     roleInstruction
+  ];
+  if ((input.kickoffDiagnostic?.trim().length ?? 0) > 0) {
+    lines.push(`Kickoff diagnostic: ${input.kickoffDiagnostic}`);
+  }
+  return lines.join(" ");
+}
+
+function buildResumeMetaReviewerStartupPrompt(input: {
+  bubbleId: string;
+  repoPath: string;
+  worktreePath: string;
+  taskArtifactPath: string;
+  state: BubbleStateSnapshot;
+  transcriptSummary: string;
+  kickoffDiagnostic?: string;
+}): string {
+  const lines = [
+    `Pairflow meta-reviewer resume for bubble ${input.bubbleId}.`,
+    "This pane is static across rounds; do not restart unless explicitly instructed.",
+    "Stay idle until orchestration signals a meta-review run.",
+    buildPairflowCommandGuidance(input.worktreePath),
+    `Task: ${input.taskArtifactPath}.`,
+    `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`,
+    `State snapshot: ${buildResumeContextLine(input.state)}.`,
+    `Transcript context: ${input.transcriptSummary}`
   ];
   if ((input.kickoffDiagnostic?.trim().length ?? 0) > 0) {
     lines.push(`Kickoff diagnostic: ${input.kickoffDiagnostic}`);
@@ -592,6 +634,7 @@ const resumableRuntimeStates = new Set([
   "WAITING_HUMAN",
   "READY_FOR_APPROVAL",
   "META_REVIEW_RUNNING",
+  "META_REVIEW_FAILED",
   "READY_FOR_HUMAN_APPROVAL",
   "APPROVED_FOR_COMMIT",
   "COMMITTED"
@@ -769,6 +812,17 @@ export async function startBubble(
             ...(reviewerBriefText !== undefined ? { reviewerBriefText } : {})
           })
         }),
+        metaReviewerCommand: buildAgentCommand({
+          agentName: "codex",
+          bubbleId: resolved.bubbleId,
+          worktreePath: resolved.bubblePaths.worktreePath,
+          startupPrompt: buildMetaReviewerStartupPrompt({
+            bubbleId: resolved.bubbleId,
+            repoPath: resolved.repoPath,
+            worktreePath: resolved.bubblePaths.worktreePath,
+            taskArtifactPath: resolved.bubblePaths.taskArtifactPath
+          })
+        }),
         implementerKickoffMessage: buildImplementerKickoffMessage({
           bubbleId: resolved.bubbleId,
           worktreePath: resolved.bubblePaths.worktreePath,
@@ -876,6 +930,20 @@ export async function startBubble(
               : {}),
             ...(reviewerFocus !== undefined ? { reviewerFocus } : {}),
             ...(reviewerBriefText !== undefined ? { reviewerBriefText } : {}),
+            ...(kickoffDiagnostic !== undefined ? { kickoffDiagnostic } : {})
+          })
+        }),
+        metaReviewerCommand: buildAgentCommand({
+          agentName: "codex",
+          bubbleId: resolved.bubbleId,
+          worktreePath: resolved.bubblePaths.worktreePath,
+          startupPrompt: buildResumeMetaReviewerStartupPrompt({
+            bubbleId: resolved.bubbleId,
+            repoPath: resolved.repoPath,
+            worktreePath: resolved.bubblePaths.worktreePath,
+            taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+            state: loadedState.state,
+            transcriptSummary,
             ...(kickoffDiagnostic !== undefined ? { kickoffDiagnostic } : {})
           })
         }),

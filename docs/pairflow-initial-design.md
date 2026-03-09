@@ -74,23 +74,32 @@ Bubble-level states:
 3. `RUNNING`
 4. `WAITING_HUMAN`
 5. `READY_FOR_APPROVAL`
-6. `APPROVED_FOR_COMMIT`
-7. `COMMITTED`
-8. `DONE`
-9. `FAILED`
-10. `CANCELLED`
+6. `META_REVIEW_RUNNING`
+7. `META_REVIEW_FAILED`
+8. `READY_FOR_HUMAN_APPROVAL`
+9. `APPROVED_FOR_COMMIT`
+10. `COMMITTED`
+11. `DONE`
+12. `FAILED`
+13. `CANCELLED`
 
 Allowed transitions:
 1. `CREATED -> PREPARING_WORKSPACE -> RUNNING`
 2. `RUNNING -> WAITING_HUMAN` when either agent emits `HUMAN_QUESTION`
 3. `WAITING_HUMAN -> RUNNING` after human reply
-4. `RUNNING -> READY_FOR_APPROVAL` on convergence criteria pass
-5. `READY_FOR_APPROVAL -> APPROVED_FOR_COMMIT` on explicit user approval
-6. `READY_FOR_APPROVAL -> RUNNING` on explicit immediate rework decision (`APPROVAL_DECISION=revise|reject`)
-7. `WAITING_HUMAN` supports deferred deterministic rework intent queue; scheduler consumes pending intent and routes next actionable handoff to implementer (`WAITING_HUMAN -> RUNNING`) without reviewer relay
-8. `APPROVED_FOR_COMMIT -> COMMITTED -> DONE`
-9. Any active state -> `FAILED` on unrecoverable errors
-10. Any non-final state -> `CANCELLED` on user stop
+4. `RUNNING -> READY_FOR_APPROVAL` on reviewer convergence criteria pass
+5. `READY_FOR_APPROVAL -> META_REVIEW_RUNNING` when autonomous meta-review gate starts
+6. `META_REVIEW_RUNNING -> RUNNING` on autonomous rework dispatch
+7. `META_REVIEW_RUNNING -> READY_FOR_HUMAN_APPROVAL` on successful gate run that requires human decision (approve/inconclusive/budget exhausted/sticky bypass)
+8. `META_REVIEW_RUNNING -> META_REVIEW_FAILED` on meta-review runner execution failure
+9. `READY_FOR_HUMAN_APPROVAL -> APPROVED_FOR_COMMIT` on explicit user approval
+10. `READY_FOR_HUMAN_APPROVAL -> RUNNING` on explicit immediate rework decision (`APPROVAL_DECISION=revise|reject`)
+11. `META_REVIEW_FAILED -> APPROVED_FOR_COMMIT` on explicit user approval with override
+12. `META_REVIEW_FAILED -> RUNNING` on explicit immediate rework decision (`APPROVAL_DECISION=revise|reject`)
+13. `WAITING_HUMAN` supports deferred deterministic rework intent queue; scheduler consumes pending intent and routes next actionable handoff to implementer (`WAITING_HUMAN -> RUNNING`) without reviewer relay
+14. `APPROVED_FOR_COMMIT -> COMMITTED -> DONE`
+15. Any active state -> `FAILED` on unrecoverable errors
+16. Any non-final state -> `CANCELLED` on user stop
 
 RUNNING turn tracking (required):
 1. `state.json` must track `active_agent` (`claude` | `codex`) and `active_since` timestamp.

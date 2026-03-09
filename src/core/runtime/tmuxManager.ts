@@ -6,7 +6,7 @@ export const runtimePaneIndices = {
   status: 0,
   implementer: 1,
   reviewer: 2,
-  metaReviewer: 2
+  metaReviewer: 3
 } as const;
 
 export interface TmuxRunResult {
@@ -31,10 +31,13 @@ export interface LaunchBubbleTmuxSessionInput {
   statusCommand: string;
   implementerCommand: string;
   reviewerCommand: string;
+  metaReviewerCommand?: string;
   implementerBootstrapMessage?: string;
   reviewerBootstrapMessage?: string;
+  metaReviewerBootstrapMessage?: string;
   implementerKickoffMessage?: string;
   reviewerKickoffMessage?: string;
+  metaReviewerKickoffMessage?: string;
   runner?: TmuxRunner;
 }
 
@@ -173,7 +176,8 @@ export async function launchBubbleTmuxSession(
   const runner = input.runner ?? runTmux;
   const sessionName = buildBubbleTmuxSessionName(input.bubbleId);
   const statusPaneHeight = 12;
-  const tmuxPaneSeparators = 2;
+  const tmuxPaneSeparators = 3;
+  const metaReviewerCommand = input.metaReviewerCommand ?? input.reviewerCommand;
 
   const hasSession = await runner(["has-session", "-t", sessionName], {
     allowFailure: true
@@ -192,7 +196,7 @@ export async function launchBubbleTmuxSession(
     input.statusCommand
   ]);
   // Keep pane indices stable even if one startup command exits unexpectedly.
-  // Runtime routing depends on fixed 0/1/2 pane positions.
+  // Runtime routing depends on fixed 0/1/2/3 pane positions.
   await runner([
     "set-option",
     "-t",
@@ -234,7 +238,7 @@ export async function launchBubbleTmuxSession(
     "-y",
     String(statusPaneHeight)
   ]);
-  // Split implementer pane in half for reviewer — both get equal space.
+  // Split implementer pane in half for reviewer.
   const reviewerSplitCommand = [
     "split-window",
     "-v",
@@ -251,6 +255,26 @@ export async function launchBubbleTmuxSession(
   ];
   const reviewerSplit = await runner(reviewerSplitCommand);
   const reviewerPaneId = parseTmuxPaneId(reviewerSplit.stdout, reviewerSplitCommand);
+  // Split reviewer pane in half for dedicated meta-reviewer pane.
+  const metaReviewerSplitCommand = [
+    "split-window",
+    "-v",
+    "-P",
+    "-F",
+    "#{pane_id}",
+    "-t",
+    reviewerPaneId,
+    "-p",
+    "50",
+    "-c",
+    input.worktreePath,
+    metaReviewerCommand
+  ];
+  const metaReviewerSplit = await runner(metaReviewerSplitCommand);
+  const metaReviewerPaneId = parseTmuxPaneId(
+    metaReviewerSplit.stdout,
+    metaReviewerSplitCommand
+  );
   // Re-fix status pane after the second split — the split may have
   // redistributed vertical space away from the initial 12-line resize.
   await runner([
@@ -263,20 +287,29 @@ export async function launchBubbleTmuxSession(
   // Keep the status pane fixed at 12 lines when the terminal is resized.
   // We use client-resized (fires when the terminal window changes size)
   // instead of after-resize-pane (which would recurse on its own resize).
-  // The hook fixes pane 0 to 12 lines, then splits the remaining height
-  // equally between panes 1 and 2 (2 separator lines for 3 panes).
+  // The hook fixes pane 0 to 12 lines, then keeps panes 1/2/3 balanced.
   // Keep the status pane fixed at 12 lines when the terminal window is resized.
   // client-resized fires when the terminal emulator window changes size.
   // #{window_height} is expanded by tmux before passing to run-shell.
   // All resize logic runs inside a single run-shell to avoid spawn quoting issues.
+  const layoutScript = [
+    `tmux resize-pane -t ${statusPane} -y ${statusPaneHeight} 2>/dev/null || true`,
+    `REMAIN=\\$((#{window_height} - ${statusPaneHeight + tmuxPaneSeparators}))`,
+    "if [ \\$REMAIN -lt 3 ]; then REMAIN=3; fi",
+    "ROW=\\$((REMAIN / 3))",
+    "if [ \\$ROW -lt 1 ]; then ROW=1; fi",
+    `tmux resize-pane -t ${implementerPaneId} -y \\$ROW 2>/dev/null || true`,
+    `tmux resize-pane -t ${reviewerPaneId} -y \\$ROW 2>/dev/null || true`
+  ].join("; ");
   const s = sessionName;
   await runner([
     "set-hook",
     "-t",
     s,
     "client-resized",
-    `run-shell "tmux resize-pane -t ${statusPane} -y ${statusPaneHeight} 2>/dev/null || true; REMAIN=\\$((#{window_height} - ${statusPaneHeight + tmuxPaneSeparators})); tmux resize-pane -t ${implementerPaneId} -y \\$((REMAIN / 2)) 2>/dev/null || true"`
+    `run-shell "${layoutScript}"`
   ]);
+  await runner(["run-shell", layoutScript]);
   const sendPaneMessage = async (
     targetPane: string,
     message: string | undefined
@@ -294,8 +327,10 @@ export async function launchBubbleTmuxSession(
 
   await sendPaneMessage(implementerPaneId, input.implementerBootstrapMessage);
   await sendPaneMessage(reviewerPaneId, input.reviewerBootstrapMessage);
+  await sendPaneMessage(metaReviewerPaneId, input.metaReviewerBootstrapMessage);
   await sendPaneMessage(implementerPaneId, input.implementerKickoffMessage);
   await sendPaneMessage(reviewerPaneId, input.reviewerKickoffMessage);
+  await sendPaneMessage(metaReviewerPaneId, input.metaReviewerKickoffMessage);
 
   return {
     sessionName

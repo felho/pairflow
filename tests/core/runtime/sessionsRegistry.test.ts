@@ -146,7 +146,7 @@ describe("sessionsRegistry", () => {
     expect(started.updated).toBe(true);
     expect(started.record?.metaReviewerPane).toEqual({
       role: "meta-reviewer",
-      paneIndex: 2,
+      paneIndex: runtimePaneIndices.metaReviewer,
       active: true,
       runId: "run_meta_01",
       updatedAt: "2026-02-22T16:05:05.000Z"
@@ -161,7 +161,7 @@ describe("sessionsRegistry", () => {
     expect(stopped.updated).toBe(true);
     expect(stopped.record?.metaReviewerPane).toMatchObject({
       role: "meta-reviewer",
-      paneIndex: 2,
+      paneIndex: runtimePaneIndices.metaReviewer,
       active: false,
       runId: "run_meta_01"
     });

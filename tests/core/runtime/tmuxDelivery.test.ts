@@ -162,7 +162,7 @@ describe("emitTmuxDeliveryNotification", () => {
         call[4]?.includes("# [pairflow] r2 APPROVAL_REQUEST orchestrator->codex")
     );
     expect(messageCall?.[4]).toContain(
-      "READY_FOR_HUMAN_APPROVAL after meta-reviewer gate"
+      "Meta-reviewer requested human gate decision"
     );
   });
 

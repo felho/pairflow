@@ -52,11 +52,11 @@ Priority order:
 ## Current Core Constraints (must be reflected in UI)
 
 1. Bubble states are fixed:
-   - `CREATED`, `PREPARING_WORKSPACE`, `RUNNING`, `WAITING_HUMAN`, `READY_FOR_APPROVAL`, `APPROVED_FOR_COMMIT`, `COMMITTED`, `DONE`, `FAILED`, `CANCELLED`.
+   - `CREATED`, `PREPARING_WORKSPACE`, `RUNNING`, `WAITING_HUMAN`, `READY_FOR_APPROVAL`, `META_REVIEW_RUNNING`, `META_REVIEW_FAILED`, `READY_FOR_HUMAN_APPROVAL`, `APPROVED_FOR_COMMIT`, `COMMITTED`, `DONE`, `FAILED`, `CANCELLED`.
 2. Action preconditions are strict:
    - `start`: `CREATED` (fresh start) or resumable runtime states when recovering runtime.
-   - `approve`: only in `READY_FOR_APPROVAL`.
-   - `request-rework`: immediate in `READY_FOR_APPROVAL`; queued deterministic intent in `WAITING_HUMAN`.
+   - `approve`: only in `READY_FOR_HUMAN_APPROVAL` and `META_REVIEW_FAILED` (legacy compatibility accepts `READY_FOR_APPROVAL`).
+   - `request-rework`: immediate in `READY_FOR_HUMAN_APPROVAL` and `META_REVIEW_FAILED` (legacy compatibility accepts `READY_FOR_APPROVAL`); queued deterministic intent in `WAITING_HUMAN`.
    - `reply` / `resume`: only in `WAITING_HUMAN`.
    - `commit`: only in `APPROVED_FOR_COMMIT`.
    - `merge`: only in `DONE`.
@@ -104,7 +104,10 @@ These decisions were previously captured and remain relevant for V1 implementati
 | PREPARING_WORKSPACE | Cyan | Default | Subtle pulse | Bootstrapping |
 | RUNNING | Blue | Default | Agent activity dot | Agent currently active |
 | WAITING_HUMAN | Amber | Amber glow | Attention pulse | Human response needed |
-| READY_FOR_APPROVAL | Green | Green glow | Stable | Human decision needed |
+| READY_FOR_APPROVAL | Cyan | Default | Stable | Reviewer converged; meta-review gate starting |
+| META_REVIEW_RUNNING | Cyan | Cyan glow | Subtle pulse | Meta-review autonomous gate running |
+| META_REVIEW_FAILED | Red | Red glow | Stable | Meta-review failed; human override required |
+| READY_FOR_HUMAN_APPROVAL | Green | Green glow | Stable | Human decision needed |
 | APPROVED_FOR_COMMIT | Green | Default | None | Commit now |
 | COMMITTED | Teal | Default | Brief pulse | Transitioning to DONE |
 | DONE | Gray | Default | Faded | Ready for merge or historical |
@@ -119,7 +122,10 @@ These decisions were previously captured and remain relevant for V1 implementati
 | PREPARING_WORKSPACE | Stop |
 | RUNNING | Open, Stop |
 | WAITING_HUMAN | Queue Rework, Reply, Resume, Open, Stop |
-| READY_FOR_APPROVAL | Approve, Request Rework, Open, Stop |
+| READY_FOR_APPROVAL | Open, Stop |
+| META_REVIEW_RUNNING | Open, Stop |
+| META_REVIEW_FAILED | Approve, Request Rework, Open, Stop |
+| READY_FOR_HUMAN_APPROVAL | Approve, Request Rework, Open, Stop |
 | APPROVED_FOR_COMMIT | Commit, Open, Stop |
 | COMMITTED | Open, Stop |
 | DONE | Merge, Open |
@@ -197,7 +203,7 @@ The HTML mockup is directionally good, but V1 fidelity requires:
 ## Success criteria
 
 1. Operator sees all active bubbles for selected repos in one browser tab.
-2. Operator can clear `WAITING_HUMAN` / `READY_FOR_APPROVAL` blockers without terminal context switching.
+2. Operator can clear `WAITING_HUMAN` / `READY_FOR_HUMAN_APPROVAL` / `META_REVIEW_FAILED` blockers without terminal context switching.
 3. End-to-end action latency from seeing blocker to sending action is under 10 seconds for typical flows.
 4. UI and CLI remain behaviorally equivalent because both delegate to shared core logic.
 

@@ -14,12 +14,16 @@ function buildSplitPaneStdout(args: string[]): string {
   if (args[0] !== "split-window") {
     return "";
   }
-  const command = args.at(-1);
-  if (command === "codex") {
+  const targetIndex = args.indexOf("-t");
+  const target = targetIndex >= 0 ? args[targetIndex + 1] : undefined;
+  if (target?.endsWith(":0.0")) {
     return "%11\n";
   }
-  if (command === "claude") {
+  if (target === "%11") {
     return "%12\n";
+  }
+  if (target === "%12") {
+    return "%13\n";
   }
   return "%99\n";
 }
@@ -51,7 +55,7 @@ describe("buildBubbleTmuxSessionName", () => {
 });
 
 describe("launchBubbleTmuxSession", () => {
-  it("creates a 3-pane session layout", async () => {
+  it("creates a 4-pane session layout", async () => {
     const calls: Array<{ args: string[]; allowFailure: boolean }> = [];
 
     const runner: TmuxRunner = (
@@ -91,8 +95,10 @@ describe("launchBubbleTmuxSession", () => {
       "split-window",
       "resize-pane",
       "split-window",
+      "split-window",
       "resize-pane",
-      "set-hook"
+      "set-hook",
+      "run-shell"
     ]);
     expect(calls[2]?.args).toEqual([
       "set-option",
@@ -150,7 +156,7 @@ describe("launchBubbleTmuxSession", () => {
       "-y",
       "12"
     ]);
-    // Reviewer split uses -p 50 to divide remaining space equally.
+    // Reviewer split uses -p 50 inside implementer pane.
     expect(calls[9]?.args).toEqual([
       "split-window",
       "-v",
@@ -165,13 +171,30 @@ describe("launchBubbleTmuxSession", () => {
       "/tmp/worktree",
       "claude"
     ]);
-    expect(calls[11]?.args).toEqual([
+    // Meta-reviewer split uses dedicated pane after reviewer.
+    expect(calls[10]?.args).toEqual([
+      "split-window",
+      "-v",
+      "-P",
+      "-F",
+      "#{pane_id}",
+      "-t",
+      "%12",
+      "-p",
+      "50",
+      "-c",
+      "/tmp/worktree",
+      "claude"
+    ]);
+    expect(calls[12]?.args?.slice(0, 4)).toEqual([
       "set-hook",
       "-t",
       "pf-b_start_01",
-      "client-resized",
-      "run-shell \"tmux resize-pane -t pf-b_start_01:0.0 -y 12 2>/dev/null || true; REMAIN=\\$((#{window_height} - 14)); tmux resize-pane -t %11 -y \\$((REMAIN / 2)) 2>/dev/null || true\""
+      "client-resized"
     ]);
+    expect(calls[12]?.args?.[4]).toContain("REMAIN=\\$((#{window_height} - 15))");
+    expect(calls[12]?.args?.[4]).toContain("tmux resize-pane -t %11 -y \\$ROW");
+    expect(calls[12]?.args?.[4]).toContain("tmux resize-pane -t %12 -y \\$ROW");
   });
 
   it("sends kickoff message to implementer pane when provided", async () => {
@@ -195,7 +218,7 @@ describe("launchBubbleTmuxSession", () => {
       runner
     });
 
-    expect(calls.slice(0, 12).map((call) => call[0])).toEqual([
+    expect(calls.slice(0, 14).map((call) => call[0])).toEqual([
       "has-session",
       "new-session",
       "set-option",
@@ -206,8 +229,10 @@ describe("launchBubbleTmuxSession", () => {
       "split-window",
       "resize-pane",
       "split-window",
+      "split-window",
       "resize-pane",
-      "set-hook"
+      "set-hook",
+      "run-shell"
     ]);
     // Trust prompt check before kickoff.
     expect(calls).toContainEqual([

@@ -153,6 +153,9 @@ function formatStateLabel(value: string): string {
   ) {
     return bold(cyan(value));
   }
+  if (value === "META_REVIEW_FAILED") {
+    return bold(red(value));
+  }
   if (value === "DONE" || value === "MERGED") {
     return bold(blue(value));
   }

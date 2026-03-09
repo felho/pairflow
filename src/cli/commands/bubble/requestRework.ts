@@ -33,7 +33,7 @@ export function getBubbleRequestReworkHelpText(): string {
     "  --message <text>      Required rework request message",
     "  --repo <path>         Optional repository path (defaults to cwd ancestry lookup)",
     "  --ref <path>          Optional artifact reference (repeatable)",
-    "  Note: immediate rework uses READY_FOR_HUMAN_APPROVAL (legacy READY_FOR_APPROVAL remains compatible).",
+    "  Note: immediate rework uses READY_FOR_HUMAN_APPROVAL or META_REVIEW_FAILED (legacy READY_FOR_APPROVAL remains compatible).",
     "  -h, --help            Show this help"
   ].join("\n");
 }

@@ -145,6 +145,7 @@ describe("startBubble", () => {
     const calls: string[] = [];
     let implementerCommand: string | undefined;
     let reviewerCommand: string | undefined;
+    let metaReviewerCommand: string | undefined;
     const claims: Array<{
       bubbleId: string;
       session: string;
@@ -175,6 +176,7 @@ describe("startBubble", () => {
           calls.push("launch");
           implementerCommand = input.implementerCommand;
           reviewerCommand = input.reviewerCommand;
+          metaReviewerCommand = input.metaReviewerCommand;
           // Bootstrap messages removed — startup prompts are embedded in agent commands.
           expect(input.implementerBootstrapMessage).toBeUndefined();
           expect(input.reviewerBootstrapMessage).toBeUndefined();
@@ -223,11 +225,16 @@ describe("startBubble", () => {
     const loaded = await readStateSnapshot(created.paths.statePath);
     expect(loaded.state.state).toBe("RUNNING");
 
-    if (implementerCommand === undefined || reviewerCommand === undefined) {
+    if (
+      implementerCommand === undefined ||
+      reviewerCommand === undefined ||
+      metaReviewerCommand === undefined
+    ) {
       throw new Error("Expected agent commands to be captured.");
     }
     const implementerScript = extractBashLcScript(implementerCommand);
     const reviewerScript = extractBashLcScript(reviewerCommand);
+    const metaReviewerScript = extractBashLcScript(metaReviewerCommand);
     expect(implementerCommand).toContain("Dropping to interactive shell");
     expect(reviewerCommand).toContain("Dropping to interactive shell");
     expect(implementerScript).toContain("set +e");
@@ -236,6 +243,9 @@ describe("startBubble", () => {
       `if ! cd ${shellQuote(created.paths.worktreePath)}; then`
     );
     expect(reviewerScript).toContain(
+      `if ! cd ${shellQuote(created.paths.worktreePath)}; then`
+    );
+    expect(metaReviewerScript).toContain(
       `if ! cd ${shellQuote(created.paths.worktreePath)}; then`
     );
     expect(implementerCommand).toContain("exec bash -i");
@@ -278,6 +288,12 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain("`max_scout_candidates_per_agent=8`");
     expect(reviewerCommand).toContain("`max_class_expansions_per_round=2`");
     expect(reviewerCommand).toContain("`max_expansion_siblings_per_class=5`");
+    expect(metaReviewerCommand).toContain("codex");
+    expect(metaReviewerCommand).toContain(
+      "--dangerously-bypass-approvals-and-sandbox"
+    );
+    expect(metaReviewerCommand).toContain("Pairflow meta-reviewer start");
+    expect(metaReviewerCommand).toContain(created.paths.taskArtifactPath);
     expect(reviewerCommand).toContain(
       "Summary scope guardrail: scope statements must cover only current worktree changes."
     );

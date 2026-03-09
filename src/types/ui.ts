@@ -20,6 +20,7 @@ export interface UiBubbleStateCounts {
   WAITING_HUMAN: number;
   READY_FOR_APPROVAL: number;
   META_REVIEW_RUNNING: number;
+  META_REVIEW_FAILED: number;
   READY_FOR_HUMAN_APPROVAL: number;
   APPROVED_FOR_COMMIT: number;
   COMMITTED: number;

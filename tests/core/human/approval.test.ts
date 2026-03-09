@@ -440,7 +440,7 @@ describe("approval decisions", () => {
       },
       {
         expectedFingerprint: afterFailedGate.fingerprint,
-        expectedState: "READY_FOR_APPROVAL"
+        expectedState: "META_REVIEW_FAILED"
       }
     );
 
@@ -463,7 +463,7 @@ describe("approval decisions", () => {
       now: new Date("2026-03-08T12:02:00.000Z")
     });
     expect(rerunFailedGate.route).toBe("human_gate_run_failed");
-    expect(rerunFailedGate.state.state).toBe("READY_FOR_APPROVAL");
+    expect(rerunFailedGate.state.state).toBe("META_REVIEW_FAILED");
     expect(rerunFailedGate.state.meta_review?.sticky_human_gate).toBe(false);
     expect(rerunFailedGate.gateEnvelope.payload.summary).toContain(
       "Meta-review runner failure"

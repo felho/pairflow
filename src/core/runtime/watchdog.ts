@@ -15,6 +15,7 @@ const watchdogTrackedStates = new Set<BubbleLifecycleState>([
   "WAITING_HUMAN",
   "READY_FOR_APPROVAL",
   "META_REVIEW_RUNNING",
+  "META_REVIEW_FAILED",
   "READY_FOR_HUMAN_APPROVAL",
   "APPROVED_FOR_COMMIT",
   "COMMITTED"
@@ -22,6 +23,7 @@ const watchdogTrackedStates = new Set<BubbleLifecycleState>([
 
 const watchdogNonAgentMonitoredStates = new Set<BubbleLifecycleState>([
   "META_REVIEW_RUNNING",
+  "META_REVIEW_FAILED",
   "READY_FOR_HUMAN_APPROVAL"
 ]);
 

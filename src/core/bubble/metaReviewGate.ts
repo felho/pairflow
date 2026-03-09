@@ -184,7 +184,10 @@ async function appendHumanApprovalRequest(input: {
 function transitionToGateState(input: {
   current: BubbleStateSnapshot;
   nowIso: string;
-  targetState: "READY_FOR_HUMAN_APPROVAL" | "READY_FOR_APPROVAL";
+  targetState:
+    | "READY_FOR_HUMAN_APPROVAL"
+    | "READY_FOR_APPROVAL"
+    | "META_REVIEW_FAILED";
   stickyHumanGate: boolean;
   fallbackRecommendation?: MetaReviewRecommendation;
   fallbackSummary?: string;
@@ -274,7 +277,10 @@ async function persistHumanGateRoute(input: {
   route: MetaReviewGateRoute;
   metaReviewRun?: MetaReviewRunResult;
   fallbackRecommendation?: MetaReviewRecommendation;
-  targetState?: "READY_FOR_HUMAN_APPROVAL" | "READY_FOR_APPROVAL";
+  targetState?:
+    | "READY_FOR_HUMAN_APPROVAL"
+    | "READY_FOR_APPROVAL"
+    | "META_REVIEW_FAILED";
   stickyHumanGate?: boolean;
 }): Promise<MetaReviewGateResult> {
   const targetState = input.targetState ?? "READY_FOR_HUMAN_APPROVAL";
@@ -522,7 +528,7 @@ export async function applyMetaReviewGateOnConvergence(
       expectedState: "META_REVIEW_RUNNING",
       route: "human_gate_run_failed",
       fallbackRecommendation: "inconclusive",
-      targetState: "READY_FOR_APPROVAL",
+      targetState: "META_REVIEW_FAILED",
       stickyHumanGate: false
     });
   }
@@ -563,7 +569,7 @@ export async function applyMetaReviewGateOnConvergence(
       expectedState: "META_REVIEW_RUNNING",
       route: "human_gate_run_failed",
       metaReviewRun: runResult,
-      targetState: "READY_FOR_APPROVAL",
+      targetState: "META_REVIEW_FAILED",
       stickyHumanGate: false
     });
   }

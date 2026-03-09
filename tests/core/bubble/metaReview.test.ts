@@ -4,7 +4,6 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
 import { getBubblePaths } from "../../../src/core/bubble/paths.js";
 import {
   MetaReviewError,
@@ -30,23 +29,6 @@ async function createTempRepo(): Promise<string> {
   tempDirs.push(root);
   await initGitRepository(root);
   return root;
-}
-
-async function withMetaReviewRunnerMode<T>(
-  mode: "heuristic" | "unavailable",
-  task: () => Promise<T>
-): Promise<T> {
-  const previous = process.env.PAIRFLOW_META_REVIEW_RUNNER_MODE;
-  process.env.PAIRFLOW_META_REVIEW_RUNNER_MODE = mode;
-  try {
-    return await task();
-  } finally {
-    if (previous === undefined) {
-      delete process.env.PAIRFLOW_META_REVIEW_RUNNER_MODE;
-    } else {
-      process.env.PAIRFLOW_META_REVIEW_RUNNER_MODE = previous;
-    }
-  }
 }
 
 afterEach(async () => {
@@ -172,89 +154,29 @@ describe("meta-review run", () => {
     );
   });
 
-  it("uses built-in heuristic runner in heuristic mode for clean reviewer PASS", async () => {
+  it("uses adapter-unavailable fail-safe when no live runner dependency is provided", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
-      bubbleId: "b_meta_run_heuristic_approve",
-      task: "Meta run heuristic approve"
+      bubbleId: "b_meta_run_default_unavailable",
+      task: "Meta run default unavailable"
     });
 
-    await emitPassFromWorkspace({
-      summary: "Implementation pass",
-      cwd: bubble.paths.worktreePath,
-      now: new Date("2026-03-08T11:04:00.000Z")
-    });
-    await emitPassFromWorkspace({
-      summary: "Review pass clean",
-      noFindings: true,
-      cwd: bubble.paths.worktreePath,
-      now: new Date("2026-03-08T11:05:00.000Z")
-    });
-
-    const result = await withMetaReviewRunnerMode("heuristic", () =>
-      runMetaReview(
-        {
-          bubbleId: bubble.bubbleId,
-          repoPath
-        },
-        {
-          randomUUID: () => "run_meta_heuristic_approve",
-          now: new Date("2026-03-08T11:06:00.000Z")
-        }
-      )
+    const result = await runMetaReview(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath
+      },
+      {
+        randomUUID: () => "run_meta_default_unavailable",
+        now: new Date("2026-03-08T11:06:00.000Z")
+      }
     );
 
-    expect(result.status).toBe("success");
-    expect(result.recommendation).toBe("approve");
-    expect(result.warnings).toEqual([]);
-    expect(result.summary).toContain("approves");
-  });
-
-  it("uses built-in heuristic runner in heuristic mode for blocking reviewer findings", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_meta_run_heuristic_rework",
-      task: "Meta run heuristic rework"
-    });
-
-    await emitPassFromWorkspace({
-      summary: "Implementation pass",
-      cwd: bubble.paths.worktreePath,
-      now: new Date("2026-03-08T11:14:00.000Z")
-    });
-    await emitPassFromWorkspace({
-      summary: "Review pass with blocker",
-      findings: [
-        {
-          priority: "P1",
-          title: "State transition bug remains in approval branch"
-        }
-      ],
-      cwd: bubble.paths.worktreePath,
-      now: new Date("2026-03-08T11:15:00.000Z")
-    });
-
-    const result = await withMetaReviewRunnerMode("heuristic", () =>
-      runMetaReview(
-        {
-          bubbleId: bubble.bubbleId,
-          repoPath
-        },
-        {
-          randomUUID: () => "run_meta_heuristic_rework",
-          now: new Date("2026-03-08T11:16:00.000Z")
-        }
-      )
-    );
-
-    expect(result.status).toBe("success");
-    expect(result.recommendation).toBe("rework");
-    expect(result.rework_target_message).toContain(
-      "State transition bug remains in approval branch"
-    );
-    expect(result.warnings).toEqual([]);
+    expect(result.status).toBe("error");
+    expect(result.recommendation).toBe("inconclusive");
+    expect(result.summary).toContain("adapter is unavailable");
+    expect(result.warnings.some((entry) => entry.reason_code === "META_REVIEW_RUNNER_ERROR")).toBe(true);
   });
 
   it("preserves structured MetaReviewError details when live runner fails", async () => {

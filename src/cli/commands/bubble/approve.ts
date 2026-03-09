@@ -37,7 +37,7 @@ export function getBubbleApproveHelpText(): string {
     "                        Required with --override-non-approve; must be non-empty after trimming",
     "  --repo <path>         Optional repository path (defaults to cwd ancestry lookup)",
     "  --ref <path>          Optional artifact reference (repeatable)",
-    "  Note: approval is accepted from READY_FOR_HUMAN_APPROVAL (legacy READY_FOR_APPROVAL remains compatible).",
+    "  Note: approval is accepted from READY_FOR_HUMAN_APPROVAL or META_REVIEW_FAILED (legacy READY_FOR_APPROVAL remains compatible).",
     "  -h, --help            Show this help"
   ].join("\n");
 }

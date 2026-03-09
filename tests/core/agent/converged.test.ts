@@ -255,7 +255,7 @@ describe("emitConvergedFromWorkspace", () => {
     );
 
     expect(result.gateRoute).toBe("human_gate_run_failed");
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
     expect(result.delivery).toEqual({
       delivered: false,
       reason: "delivery_unconfirmed",
@@ -280,7 +280,7 @@ describe("emitConvergedFromWorkspace", () => {
     expect(result.gateRoute).toBe("human_gate_run_failed");
     expect(result.approvalRequestEnvelope.type).toBe("APPROVAL_REQUEST");
     expect(result.approvalRequestEnvelope.recipient).toBe("human");
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
     expect(result.state.last_command_at).toBe(now.toISOString());
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
@@ -371,7 +371,7 @@ describe("emitConvergedFromWorkspace", () => {
       now: new Date("2026-02-22T09:04:00.000Z")
     });
 
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
     const gateArtifactPath = resolveSummaryVerifierConsistencyGateArtifactPath(
       bubble.paths.artifactsDir
     );
@@ -406,7 +406,7 @@ describe("emitConvergedFromWorkspace", () => {
       now: new Date("2026-02-22T09:04:00.000Z")
     });
 
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
     const gateArtifactPath = resolveSummaryVerifierConsistencyGateArtifactPath(
       bubble.paths.artifactsDir
     );
@@ -470,7 +470,7 @@ describe("emitConvergedFromWorkspace", () => {
       now: new Date("2026-02-22T09:04:00.000Z")
     });
 
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
   });
 
   it("records auditable metadata when doc-gate artifact is unreadable during docs-scope convergence", async () => {
@@ -641,7 +641,7 @@ describe("emitConvergedFromWorkspace", () => {
       now: new Date("2026-02-22T09:04:00.000Z")
     });
 
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
   });
 
   it("blocks convergence in accuracy-critical bubbles when latest review verification artifact is from a stale round", async () => {
@@ -1076,7 +1076,7 @@ describe("emitConvergedFromWorkspace", () => {
       summary: "Round 5 reconvergence after requested rework",
       cwd: bubble.paths.worktreePath
     });
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
   });
 
   it("rejects when unresolved human question exists in transcript", async () => {
@@ -1308,7 +1308,7 @@ describe("emitConvergedFromWorkspace", () => {
       summary: "Round 4 converged after blocker fix",
       cwd: bubble.paths.worktreePath
     });
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
   });
 
   it("keeps non-document convergence blocking semantics unchanged after reviewer PASS", async () => {
@@ -1443,7 +1443,7 @@ describe("emitConvergedFromWorkspace", () => {
       summary: "Round 3 convergence with non-blocking findings",
       cwd: bubble.paths.worktreePath
     });
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
   });
 
   it("allows in round 2 when previous reviewer PASS has only P2 findings", async () => {
@@ -1530,7 +1530,7 @@ describe("emitConvergedFromWorkspace", () => {
       summary: "Round 2 convergence with non-blocking findings",
       cwd: bubble.paths.worktreePath
     });
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
   });
 
   it("supports converged integration with non-default severity_gate_round config", async () => {
@@ -1638,6 +1638,6 @@ describe("emitConvergedFromWorkspace", () => {
       summary: "Converged with non-default gate config",
       cwd: bubble.paths.worktreePath
     });
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
   });
 });

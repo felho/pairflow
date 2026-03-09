@@ -89,6 +89,7 @@ export class ApprovalCommandError extends Error {
 
 const canonicalHumanApprovalState = "READY_FOR_HUMAN_APPROVAL" as const;
 const legacyHumanApprovalState = "READY_FOR_APPROVAL" as const;
+const metaReviewFailedHumanState = "META_REVIEW_FAILED" as const;
 const approvalOverrideRequiredReasonCode = "APPROVAL_OVERRIDE_REQUIRED";
 const approvalOverrideReasonRequiredReasonCode =
   "APPROVAL_OVERRIDE_REASON_REQUIRED";
@@ -103,10 +104,14 @@ interface ApprovalTranscriptContext {
 
 function isHumanApprovalState(
   state: BubbleStateSnapshot["state"]
-): state is typeof canonicalHumanApprovalState | typeof legacyHumanApprovalState {
+): state is
+  | typeof canonicalHumanApprovalState
+  | typeof legacyHumanApprovalState
+  | typeof metaReviewFailedHumanState {
   return (
     state === canonicalHumanApprovalState ||
-    state === legacyHumanApprovalState
+    state === legacyHumanApprovalState ||
+    state === metaReviewFailedHumanState
   );
 }
 
@@ -160,6 +165,9 @@ function resolveLatestApprovalRecommendation(
     recommendation === "inconclusive"
   ) {
     return recommendation;
+  }
+  if (state.state === metaReviewFailedHumanState) {
+    return "inconclusive";
   }
   if (
     state.state === canonicalHumanApprovalState &&
@@ -290,7 +298,7 @@ export async function emitApprovalDecision(
 
   if (!isHumanApprovalState(state.state)) {
     throw new ApprovalCommandError(
-      `approval decision can only be used while bubble is ${canonicalHumanApprovalState} (legacy compatibility: ${legacyHumanApprovalState}) (current: ${state.state}).`
+      `approval decision can only be used while bubble is ${canonicalHumanApprovalState} or ${metaReviewFailedHumanState} (legacy compatibility: ${legacyHumanApprovalState}) (current: ${state.state}).`
     );
   }
 
@@ -498,7 +506,7 @@ export async function emitRequestRework(
 
   if (state.state !== "WAITING_HUMAN") {
     throw new ApprovalCommandError(
-      `bubble request-rework can only be used while bubble is ${canonicalHumanApprovalState} (legacy compatibility: ${legacyHumanApprovalState}) or WAITING_HUMAN (current: ${state.state}).`
+      `bubble request-rework can only be used while bubble is ${canonicalHumanApprovalState}, ${metaReviewFailedHumanState} (legacy compatibility: ${legacyHumanApprovalState}) or WAITING_HUMAN (current: ${state.state}).`
     );
   }
 

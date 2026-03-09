@@ -143,6 +143,7 @@ const preDeleteStopStateByLifecycle: Readonly<
   WAITING_HUMAN: true,
   READY_FOR_APPROVAL: true,
   META_REVIEW_RUNNING: true,
+  META_REVIEW_FAILED: true,
   READY_FOR_HUMAN_APPROVAL: true,
   APPROVED_FOR_COMMIT: true,
   COMMITTED: false,

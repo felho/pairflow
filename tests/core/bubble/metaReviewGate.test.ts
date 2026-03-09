@@ -267,7 +267,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
     expect(result.state.meta_review?.sticky_human_gate).toBe(true);
   });
 
-  it("keeps bubble in READY_FOR_APPROVAL when meta-review run returns error status", async () => {
+  it("routes bubble to META_REVIEW_FAILED when meta-review run returns error status", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -294,7 +294,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
 
     expect(result.route).toBe("human_gate_run_failed");
     expect(result.gateEnvelope.type).toBe("APPROVAL_REQUEST");
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
     expect(result.state.meta_review?.sticky_human_gate).toBe(false);
     expect(result.state.meta_review?.last_autonomous_status).toBe("error");
     expect(result.state.meta_review?.last_autonomous_recommendation).toBe(
@@ -567,7 +567,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
     expect(inbox.some((entry) => entry.type === "APPROVAL_DECISION")).toBe(false);
   });
 
-  it("keeps bubble in READY_FOR_APPROVAL when meta-review invocation throws", async () => {
+  it("routes bubble to META_REVIEW_FAILED when meta-review invocation throws", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -593,7 +593,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
     );
 
     expect(result.route).toBe("human_gate_run_failed");
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
     expect(result.state.meta_review).toMatchObject({
       sticky_human_gate: false,
       last_autonomous_status: "error",

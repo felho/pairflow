@@ -50,6 +50,7 @@ export interface BubbleListStateCounts {
   WAITING_HUMAN: number;
   READY_FOR_APPROVAL: number;
   META_REVIEW_RUNNING: number;
+  META_REVIEW_FAILED: number;
   READY_FOR_HUMAN_APPROVAL: number;
   APPROVED_FOR_COMMIT: number;
   COMMITTED: number;
@@ -84,6 +85,7 @@ function createZeroCounts(): BubbleListStateCounts {
     WAITING_HUMAN: 0,
     READY_FOR_APPROVAL: 0,
     META_REVIEW_RUNNING: 0,
+    META_REVIEW_FAILED: 0,
     READY_FOR_HUMAN_APPROVAL: 0,
     APPROVED_FOR_COMMIT: 0,
     COMMITTED: 0,
@@ -98,6 +100,7 @@ const runtimeSessionExpectedStates = new Set<BubbleLifecycleState>([
   "WAITING_HUMAN",
   "READY_FOR_APPROVAL",
   "META_REVIEW_RUNNING",
+  "META_REVIEW_FAILED",
   "READY_FOR_HUMAN_APPROVAL",
   "APPROVED_FOR_COMMIT",
   "COMMITTED"

@@ -73,7 +73,10 @@ function resolveTargetPaneIndex(
   if (recipient === bubbleConfig.agents.implementer) {
     return runtimePaneIndices.implementer;
   }
-  if (recipient === bubbleConfig.agents.reviewer || recipient === "meta-reviewer") {
+  if (recipient === bubbleConfig.agents.reviewer) {
+    return runtimePaneIndices.reviewer;
+  }
+  if (recipient === "meta-reviewer") {
     return runtimePaneIndices.metaReviewer;
   }
   if (recipient === "human" || recipient === "orchestrator") {
@@ -138,7 +141,7 @@ function buildDeliveryMessage(
     } else if (envelope.type === "APPROVAL_REQUEST") {
       action =
         actorLabel === "meta-reviewer"
-          ? "Bubble is READY_FOR_HUMAN_APPROVAL after meta-reviewer gate. Stop coding and wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now."
+          ? "Meta-reviewer requested human gate decision. Stop coding and wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now."
           : "Bubble is READY_FOR_HUMAN_APPROVAL. Stop coding and wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now.";
     }
   } else if (recipientRole === "reviewer") {
@@ -196,7 +199,7 @@ function buildDeliveryMessage(
     } else if (envelope.type === "APPROVAL_REQUEST") {
       action =
         actorLabel === "meta-reviewer"
-          ? "Meta-reviewer gate reached READY_FOR_HUMAN_APPROVAL. Wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now."
+          ? "Meta-reviewer requested human gate decision. Wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now."
           : "Bubble is READY_FOR_HUMAN_APPROVAL. Review is complete; wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now.";
     }
   } else if (recipientRole === "human" || recipientRole === "orchestrator") {
