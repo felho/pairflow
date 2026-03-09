@@ -141,45 +141,21 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
     props.bubble.state === "WAITING_HUMAN" && props.detail !== null
       ? props.detail.inbox.items.find((item) => item.type === "HUMAN_QUESTION") ?? null
       : null;
-  const latestRecommendation =
-    props.detail?.metaReview.latestRecommendation ??
-    props.bubble.metaReview.latestRecommendation;
-  const latestRecommendationUpdatedAt =
-    props.detail?.metaReview.latestUpdatedAt ??
-    props.bubble.metaReview.latestUpdatedAt;
-  const metaReviewActor =
-    props.detail?.metaReview.actor ??
-    props.bubble.metaReview.actor;
   const timelineExtras =
-    latestRecommendation !== null ||
-    ((props.bubble.state === "READY_FOR_APPROVAL" ||
+    (props.bubble.state === "READY_FOR_APPROVAL" ||
       props.bubble.state === "READY_FOR_HUMAN_APPROVAL") &&
-      props.detail !== null) ? (
+    props.detail !== null ? (
       <div className="space-y-2 pb-1">
-        {latestRecommendation !== null ? (
-          <div className="rounded-[10px] border border-fuchsia-500/20 bg-fuchsia-500/[0.05] px-3 py-2.5 text-[10px] leading-relaxed text-[#bdb3c7]">
-            <div className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-fuchsia-400">
-              Meta Review
-            </div>
-            <div>Actor: {metaReviewActor}</div>
-            <div>Latest recommendation: {latestRecommendation}</div>
-            <div>Updated: {latestRecommendationUpdatedAt ?? "-"}</div>
+        <div className="rounded-[10px] border border-emerald-500/15 bg-emerald-500/[0.05] px-3 py-2.5">
+          <div className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-emerald-500">
+            Approval Package
           </div>
-        ) : null}
-        {(props.bubble.state === "READY_FOR_APPROVAL" ||
-          props.bubble.state === "READY_FOR_HUMAN_APPROVAL") &&
-        props.detail !== null ? (
-          <div className="rounded-[10px] border border-emerald-500/15 bg-emerald-500/[0.05] px-3 py-2.5">
-            <div className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-emerald-500">
-              Approval Package
-            </div>
-            <div className="text-[10px] leading-relaxed text-[#888]">
-              {props.bubble.state === "READY_FOR_HUMAN_APPROVAL"
-                ? "Human gate is active after meta-reviewer. Approve or request rework."
-                : "Reviewer found no issues. Review and approve to proceed."}
-            </div>
+          <div className="text-[10px] leading-relaxed text-[#888]">
+            {props.bubble.state === "READY_FOR_HUMAN_APPROVAL"
+              ? "Human gate is active after meta-reviewer. Approve or request rework."
+              : "Reviewer found no issues. Review and approve to proceed."}
           </div>
-        ) : null}
+        </div>
       </div>
     ) : null;
   // Keep expanded cards at a fixed rendered footprint so canvas collision/layout

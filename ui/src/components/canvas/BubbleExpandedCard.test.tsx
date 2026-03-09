@@ -77,7 +77,7 @@ describe("BubbleExpandedCard", () => {
     });
   });
 
-  it("shows meta-review actor and latest recommendation in detail surface", () => {
+  it("shows approval package in detail surface without dedicated meta-review card", () => {
     renderExpandedCard({
       bubbleState: "READY_FOR_HUMAN_APPROVAL",
       detail: bubbleDetail({
@@ -87,9 +87,7 @@ describe("BubbleExpandedCard", () => {
       })
     });
 
-    expect(screen.getByText("Meta Review")).toBeInTheDocument();
-    expect(screen.getByText("Actor: meta-reviewer")).toBeInTheDocument();
-    expect(screen.getByText("Latest recommendation: approve")).toBeInTheDocument();
+    expect(screen.queryByText("Meta Review")).not.toBeInTheDocument();
     expect(screen.getByText("Approval Package")).toBeInTheDocument();
   });
 

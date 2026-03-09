@@ -1,6 +1,10 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import type { ProtocolMessageType, UiTimelineEntry } from "../../lib/types";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function payloadSummary(entry: UiTimelineEntry): string {
   const summary = entry.payload.summary;
   if (typeof summary === "string" && summary.trim().length > 0) {
@@ -26,7 +30,7 @@ function payloadSummary(entry: UiTimelineEntry): string {
 }
 
 interface FindingTag {
-  severity: string;
+  label: string;
   style: string;
 }
 
@@ -58,11 +62,38 @@ function extractFindingTags(entry: UiTimelineEntry): FindingTag[] {
     }
     seen.add(severity);
     tags.push({
-      severity,
+      label: severity,
       style: findingStyles[severity] ?? "border-slate-500/20 bg-slate-500/10 text-slate-400"
     });
   }
   return tags;
+}
+
+function extractMetaRecommendationTag(entry: UiTimelineEntry): FindingTag | null {
+  const metadata = entry.payload.metadata;
+  if (!isRecord(metadata)) {
+    return null;
+  }
+  const recommendation = metadata.latest_recommendation;
+  if (recommendation === "approve") {
+    return {
+      label: "MR approve",
+      style: "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
+    };
+  }
+  if (recommendation === "rework") {
+    return {
+      label: "MR rework",
+      style: "border-rose-500/20 bg-rose-500/10 text-rose-500"
+    };
+  }
+  if (recommendation === "inconclusive") {
+    return {
+      label: "MR inconclusive",
+      style: "border-amber-500/20 bg-amber-500/10 text-amber-500"
+    };
+  }
+  return null;
 }
 
 function isCleanPass(entry: UiTimelineEntry): boolean {
@@ -199,6 +230,7 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
             const isConvergence = entry.type === "CONVERGENCE";
             const blocked = isBlockedEntry(entry);
             const findingTags = extractFindingTags(entry);
+            const metaRecommendationTag = extractMetaRecommendationTag(entry);
             const cleanPass = isCleanPass(entry);
             return (
               <div
@@ -229,12 +261,19 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
                     )}
                     {findingTags.map((tag) => (
                       <span
-                        key={tag.severity}
+                        key={tag.label}
                         className={`inline-block rounded px-1 text-[9px] font-semibold leading-tight border ${tag.style}`}
                       >
-                        {tag.severity}
+                        {tag.label}
                       </span>
                     ))}
+                    {metaRecommendationTag !== null ? (
+                      <span
+                        className={`inline-block rounded px-1 text-[9px] font-semibold leading-tight border ${metaRecommendationTag.style}`}
+                      >
+                        {metaRecommendationTag.label}
+                      </span>
+                    ) : null}
                     {cleanPass ? (
                       <span className="inline-block rounded border border-emerald-500/20 bg-emerald-500/10 px-1 text-[9px] font-semibold leading-tight text-emerald-500">
                         &#x2713; clean
