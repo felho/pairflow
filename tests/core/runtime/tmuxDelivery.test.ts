@@ -1178,6 +1178,12 @@ describe("emitTmuxDeliveryNotification", () => {
       "Docs-only scope: choose one mode and keep it consistent in the same PASS."
     );
     expect(passMessage).toContain(
+      "Primary artifact rule (docs-only): when the task references an existing source document/task file, refine that file directly (in-place) as the main output."
+    );
+    expect(passMessage).toContain(
+      "Do not replace primary artifact refinement with a new standalone review/synthesis document unless the task explicitly requests creating a new file path."
+    );
+    expect(passMessage).toContain(
       "Mode A (skip-claim): summary says runtime checks were intentionally not executed -> attach no `.pairflow/evidence/*.log` refs."
     );
     expect(passMessage).toContain(
@@ -1200,6 +1206,9 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(humanReplyMessage).toContain(
       "Docs-only scope: keep summary and refs consistent; skip-claim means no `.pairflow/evidence/*.log` refs in that PASS."
     );
+    expect(humanReplyMessage).toContain(
+      "Primary artifact rule (docs-only): refine the referenced source task/document file directly, not only a new standalone review note."
+    );
     expect(humanReplyMessage).not.toContain(
       "Include available `.pairflow/evidence/*.log` refs on PASS."
     );
@@ -1217,6 +1226,9 @@ describe("emitTmuxDeliveryNotification", () => {
     );
     expect(reworkMessage).toContain(
       "Docs-only scope: keep summary and refs consistent; skip-claim means no `.pairflow/evidence/*.log` refs in that PASS."
+    );
+    expect(reworkMessage).toContain(
+      "Primary artifact rule (docs-only): apply the rework on the referenced source task/document file directly, not only in a new standalone review note."
     );
     expect(reworkMessage).not.toContain(
       "Include available `.pairflow/evidence/*.log` refs on PASS."

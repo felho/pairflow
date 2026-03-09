@@ -180,6 +180,9 @@ function buildReviewerStartupPrompt(input: {
   reviewerBriefText?: string;
   reviewerFocus?: ReviewerFocusExtractionResult;
 }): string {
+  const documentPrimaryArtifactGuardrail = buildDocumentPrimaryArtifactReviewerGuardrail(
+    input.reviewArtifactType
+  );
   return [
     `Pairflow reviewer start for bubble ${input.bubbleId}.`,
     "Stand by first. Do not start reviewing until implementer handoff (`PASS`) arrives.",
@@ -188,6 +191,9 @@ function buildReviewerStartupPrompt(input: {
     buildReviewerSeverityOntologyReminder({ includeFullOntology: true }),
     buildReviewerDecisionMatrixReminder(),
     buildReviewerAgentSelectionGuidance(input.reviewArtifactType),
+    ...(documentPrimaryArtifactGuardrail !== undefined
+      ? [documentPrimaryArtifactGuardrail]
+      : []),
     buildReviewerScoutExpansionWorkflowGuidance(),
     buildReviewerPassOutputContractGuidance(),
     ...(input.reviewerBriefText !== undefined
@@ -224,6 +230,8 @@ function buildImplementerEvidenceHandoffGuidance(
   if (reviewArtifactType === "document") {
     return [
       "This bubble is docs-only (`review_artifact_type=document`), so runtime checks are not required in this round.",
+      "Primary artifact rule (docs-only): when the task references an existing source document/task file, refine that file directly (in-place) as the main output.",
+      "Do not replace primary artifact refinement with a new standalone review/synthesis document unless the task explicitly requests creating a new file path.",
       "Docs-only scope: choose one mode and keep it consistent in the same PASS.",
       "Mode A (skip-claim): summary says runtime checks were intentionally not executed -> attach no `.pairflow/evidence/*.log` refs.",
       "Mode B (checks executed): if you run validation (for example `pnpm lint`, `pnpm typecheck`, `pnpm test`, or `pnpm check`), make sure evidence logs are written to `.pairflow/evidence/`, attach only refs for commands you actually ran, and do not claim checks were intentionally not executed."
@@ -235,6 +243,19 @@ function buildImplementerEvidenceHandoffGuidance(
     "If evidence logs exist, include them as `--ref` when running `pairflow pass`.",
     "If only a subset of validation commands ran, attach refs for the commands that actually ran and state what was intentionally not executed.",
     "Missing expected evidence logs should be treated as incomplete validation packaging."
+  ].join(" ");
+}
+
+function buildDocumentPrimaryArtifactReviewerGuardrail(
+  reviewArtifactType: ReviewArtifactType
+): string | undefined {
+  if (reviewArtifactType !== "document") {
+    return undefined;
+  }
+
+  return [
+    "Primary artifact review rule (docs-only): treat a PASS as out-of-scope if it only adds a new standalone review/synthesis document while the referenced source task/document file is unchanged.",
+    "In that case, request rework so the primary referenced artifact is refined directly."
   ].join(" ");
 }
 
@@ -299,6 +320,9 @@ function buildResumeReviewerStartupPrompt(input: {
   reviewerBriefText?: string;
   reviewerFocus?: ReviewerFocusExtractionResult;
 }): string {
+  const documentPrimaryArtifactGuardrail = buildDocumentPrimaryArtifactReviewerGuardrail(
+    input.reviewArtifactType
+  );
   const roleInstruction =
     input.state.state === "RUNNING" && input.state.active_role === "reviewer"
       ? "You are currently active. Continue review now."
@@ -316,6 +340,9 @@ function buildResumeReviewerStartupPrompt(input: {
       ? [`Current directive: ${input.reviewerTestDirectiveLine}`]
       : []),
     buildReviewerAgentSelectionGuidance(input.reviewArtifactType),
+    ...(documentPrimaryArtifactGuardrail !== undefined
+      ? [documentPrimaryArtifactGuardrail]
+      : []),
     buildReviewerScoutExpansionWorkflowGuidance(),
     buildReviewerPassOutputContractGuidance(),
     ...(input.reviewerBriefText !== undefined

@@ -399,6 +399,12 @@ describe("startBubble", () => {
       "runtime checks are not required in this round"
     );
     expect(implementerCommand).toContain(
+      "Primary artifact rule (docs-only): when the task references an existing source document/task file, refine that file directly (in-place) as the main output."
+    );
+    expect(implementerCommand).toContain(
+      "Do not replace primary artifact refinement with a new standalone review/synthesis document unless the task explicitly requests creating a new file path."
+    );
+    expect(implementerCommand).toContain(
       "Docs-only scope: choose one mode and keep it consistent in the same PASS."
     );
     expect(implementerCommand).toContain(
@@ -423,6 +429,12 @@ describe("startBubble", () => {
     );
     expect(reviewerCommand).toContain(
       "Runtime checks are not required for document-only scope."
+    );
+    expect(reviewerCommand).toContain(
+      "Primary artifact review rule (docs-only): treat a PASS as out-of-scope if it only adds a new standalone review/synthesis document while the referenced source task/document file is unchanged."
+    );
+    expect(reviewerCommand).toContain(
+      "In that case, request rework so the primary referenced artifact is refined directly."
     );
     expectReviewerValidationClaimGuardrails(reviewerCommand);
   });
@@ -1114,6 +1126,12 @@ describe("startBubble", () => {
             "runtime checks are not required in this round"
           );
           expect(input.implementerCommand).toContain(
+            "Primary artifact rule (docs-only): when the task references an existing source document/task file, refine that file directly (in-place) as the main output."
+          );
+          expect(input.implementerCommand).toContain(
+            "Do not replace primary artifact refinement with a new standalone review/synthesis document unless the task explicitly requests creating a new file path."
+          );
+          expect(input.implementerCommand).toContain(
             "Docs-only scope: choose one mode and keep it consistent in the same PASS."
           );
           expect(input.implementerCommand).toContain(
@@ -1130,6 +1148,12 @@ describe("startBubble", () => {
           );
           expect(input.reviewerCommand).toContain(
             "Runtime checks are not required for document-only scope."
+          );
+          expect(input.reviewerCommand).toContain(
+            "Primary artifact review rule (docs-only): treat a PASS as out-of-scope if it only adds a new standalone review/synthesis document while the referenced source task/document file is unchanged."
+          );
+          expect(input.reviewerCommand).toContain(
+            "In that case, request rework so the primary referenced artifact is refined directly."
           );
           expectReviewerValidationClaimGuardrails(input.reviewerCommand);
           expect(input.reviewerCommand).toContain("Stand by unless you are active or receive a handoff.");
