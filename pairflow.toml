@@ -1,3 +1,6 @@
+# NOTE: enforcement_mode is not fully implemented as runtime hard enforcement yet.
+# Current behavior: config is parsed/inherited, but PASS/CONVERGED hard-stop
+# enforcement is not wired to these flags yet.
 [enforcement_mode]
 all_gate = "advisory"
 docs_gate = "required"
