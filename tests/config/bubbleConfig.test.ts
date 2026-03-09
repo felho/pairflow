@@ -46,7 +46,7 @@ describe("bubble config schema", () => {
       ".env.local",
       ".env.production"
     ]);
-    expect(config.doc_contract_gates.mode).toBe("advisory");
+    expect(config.doc_contract_gates.mode).toBe("advisory-for-all-gates");
     expect(config.doc_contract_gates.round_gate_applies_after).toBe(2);
   });
 
@@ -82,9 +82,23 @@ describe("bubble config schema", () => {
   it("applies doc_contract_gates defaults when section is omitted", () => {
     const config = parseBubbleConfigToml(baseToml);
     expect(config.doc_contract_gates).toEqual({
-      mode: "advisory",
+      mode: "advisory-for-all-gates",
       round_gate_applies_after: 2
     });
+  });
+
+  it("accepts explicit required doc gate modes", () => {
+    const requiredForDocs = parseBubbleConfigToml(`${baseToml}
+[doc_contract_gates]
+mode = "required-for-doc-gates"
+`);
+    expect(requiredForDocs.doc_contract_gates.mode).toBe("required-for-doc-gates");
+
+    const requiredForAll = parseBubbleConfigToml(`${baseToml}
+[doc_contract_gates]
+mode = "required-for-all-gates"
+`);
+    expect(requiredForAll.doc_contract_gates.mode).toBe("required-for-all-gates");
   });
 
   it("keeps deterministic defaults and emits parse_warning for invalid doc_contract_gates values", () => {
@@ -94,7 +108,7 @@ mode = "blocking"
 round_gate_applies_after = -1
 `);
 
-    expect(config.doc_contract_gates.mode).toBe("advisory");
+    expect(config.doc_contract_gates.mode).toBe("advisory-for-all-gates");
     expect(config.doc_contract_gates.round_gate_applies_after).toBe(2);
     expect(config.doc_contract_gates.parse_warning).toContain("doc_contract_gates.mode");
     expect(config.doc_contract_gates.parse_warning).toContain("round_gate_applies_after");
@@ -132,7 +146,7 @@ round_gate_applies_after = -1
         entries: [".claude"]
       },
       doc_contract_gates: {
-        mode: "advisory",
+        mode: "advisory-for-all-gates",
         round_gate_applies_after: 2,
         parse_warning: "doc_contract_gates.mode invalid; fallback applied."
       }
@@ -235,7 +249,7 @@ round_gate_applies_after = -1
         enabled: true
       },
       doc_contract_gates: {
-        mode: "advisory",
+        mode: "advisory-for-all-gates",
         round_gate_applies_after: 2
       }
     });
@@ -271,7 +285,7 @@ round_gate_applies_after = -1
         enabled: true
       },
       doc_contract_gates: {
-        mode: "advisory",
+        mode: "advisory-for-all-gates",
         round_gate_applies_after: 2
       }
     });
@@ -312,7 +326,7 @@ round_gate_applies_after = -1
         enabled: true
       },
       doc_contract_gates: {
-        mode: "advisory",
+        mode: "advisory-for-all-gates",
         round_gate_applies_after: 2
       }
     });
@@ -608,7 +622,7 @@ typecheck = "pnpm typecheck"
         enabled: true
       },
       doc_contract_gates: {
-        mode: "advisory",
+        mode: "advisory-for-all-gates",
         round_gate_applies_after: 2
       },
       local_overlay: {
@@ -703,7 +717,7 @@ typecheck = "pnpm typecheck"
         enabled: true
       },
       doc_contract_gates: {
-        mode: "advisory",
+        mode: "advisory-for-all-gates",
         round_gate_applies_after: 2
       }
     });
@@ -744,7 +758,7 @@ typecheck = "pnpm typecheck"
         enabled: true
       },
       doc_contract_gates: {
-        mode: "advisory",
+        mode: "advisory-for-all-gates",
         round_gate_applies_after: 2
       }
     });
@@ -778,7 +792,7 @@ typecheck = "pnpm typecheck"
         enabled: true
       },
       doc_contract_gates: {
-        mode: "advisory",
+        mode: "advisory-for-all-gates",
         round_gate_applies_after: 2
       }
     });

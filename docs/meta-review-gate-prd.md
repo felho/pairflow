@@ -16,7 +16,7 @@
 ## WS-D Pilot Tracking Note (2026-03-09)
 
 1. WS-D pilot report linkage: `docs/review-loop-ws-d-pilot-report-2026-03.md`.
-2. Current WS-D decision for Phase 2 `required-docs` enforce: `go` (WS-D docs-workflow scope only).
+2. Current WS-D decision for Phase 2 `required-for-doc-gates` enforce: `go` (WS-D docs-workflow scope only).
 3. Meta-review rollout blockers remain tracked in a separate rollout-readiness lane (runbook/e2e validation path).
 
 ## Summary

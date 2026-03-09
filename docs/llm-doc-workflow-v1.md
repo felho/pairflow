@@ -249,7 +249,7 @@ Rollback action:
 
 ## Adoption Strategy
 
-1. Phase 1 (`advisory`): check and warn only.
-2. Phase 2 (`required-docs`): hard-gate doc-only/task bubbles.
-3. Phase 3 (`required-all`): enforce on all bubbles.
+1. Phase 1 (`advisory-for-all-gates`): check and warn only.
+2. Phase 2 (`required-for-doc-gates`): hard-gate doc-only/task bubbles.
+3. Phase 3 (`required-for-all-gates`): enforce on all bubbles.
 4. Phase 1 docs-only operational mukodesben a fenti decision matrix es rollout gate az iranyado.

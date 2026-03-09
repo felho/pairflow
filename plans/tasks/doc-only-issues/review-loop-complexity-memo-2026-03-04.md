@@ -45,7 +45,7 @@ A cel egy olyan szabvanyositott dokumentacios + review rendszer bevezetese, amel
 ### In scope
 1. Doc workflow szabvanyok (`PRD/Plan/Task` struktura, hivatkozasok, L0/L1/L2 szabalyok).
 2. Review governance (`required-now/later-hardening`, P0/P1 evidence policy illesztes).
-3. Pairflow runtime gate-ek terve (advisory -> required-docs -> required-all rollout).
+3. Pairflow runtime gate-ek terve (advisory-for-all-gates -> required-for-doc-gates -> required-for-all-gates rollout).
 4. Skill oldali dokumentum-letrehozasi es triage workflow.
 
 ### Out of scope
@@ -124,9 +124,9 @@ Kimenet:
 
 Feladatok:
 1. Rollout modok:
-   - Phase 1: `advisory`,
-   - Phase 2: `required-docs`,
-   - Phase 3: `required-all`.
+   - Phase 1: `advisory-for-all-gates`,
+   - Phase 2: `required-for-doc-gates`,
+   - Phase 3: `required-for-all-gates`.
 2. Core pilot bubble sorozat:
    - 1 bugfix,
    - 1 small feature,
@@ -144,7 +144,7 @@ Kimenet:
 WS-D pilot outcome update (2026-03-09):
 1. Pilot report kesz: `docs/review-loop-ws-d-pilot-report-2026-03.md`.
 2. Large-feature extension lane explicit linkage kesz: `docs/meta-review-gate-prd.md` <-> pilot report.
-3. Phase 2 `required-docs` enforce dontes: `go` (WS-D docs-workflow scope alapjan).
+3. Phase 2 `required-for-doc-gates` enforce dontes: `go` (WS-D docs-workflow scope alapjan).
 4. `meta_review_rollout.*` blokkolo reason code-ok kulon rollout-readiness lane-ben maradnak (nem WS-D gate input).
 
 ## 5) Fazos utemterv
@@ -200,7 +200,7 @@ WS-D pilot outcome update (2026-03-09):
 ## 9) Kovetkezo konkret lepesek
 
 1. A sablonokat kiserleti modban alkalmazzuk 2 uj taskon.
-2. Phase 2 `required-docs` enforce rollout monitorozasa scope-filtered WS-D metrikakkal.
+2. Phase 2 `required-for-doc-gates` enforce rollout monitorozasa scope-filtered WS-D metrikakkal.
 3. Meta-review rollout-readiness kulon tracken: `docs/meta-review-gate-e2e-validation.md` + runbook szerinti gate.
 4. Ha a WS-D scoped metrikakban regresszio jelenik meg, policy tuning update task nyitasa.
 

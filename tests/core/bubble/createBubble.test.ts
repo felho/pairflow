@@ -91,7 +91,7 @@ describe("createBubble", () => {
     expect(result.config.quality_mode).toBe("strict");
     expect(result.config.review_artifact_type).toBe("code");
     expect(result.config.severity_gate_round).toBe(4);
-    expect(result.config.doc_contract_gates.mode).toBe("advisory");
+    expect(result.config.doc_contract_gates.mode).toBe("advisory-for-all-gates");
     expect(result.config.doc_contract_gates.round_gate_applies_after).toBe(2);
     expect(result.config.bubble_instance_id).toMatch(
       /^bi_[A-Za-z0-9_-]{10,}$/u
@@ -103,7 +103,7 @@ describe("createBubble", () => {
     expect(reparsedConfig.notifications.enabled).toBe(true);
     expect(reparsedConfig.review_artifact_type).toBe("code");
     expect(reparsedConfig.severity_gate_round).toBe(4);
-    expect(reparsedConfig.doc_contract_gates.mode).toBe("advisory");
+    expect(reparsedConfig.doc_contract_gates.mode).toBe("advisory-for-all-gates");
     expect(reparsedConfig.doc_contract_gates.round_gate_applies_after).toBe(2);
     expect(reparsedConfig.bubble_instance_id).toBe(
       result.config.bubble_instance_id

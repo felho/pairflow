@@ -726,7 +726,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
       docContractGateMode = docContractGateModeCandidate;
     } else {
       gateConfigWarnings.push(
-        `doc_contract_gates.mode must be one of: advisory. Received ${describeUnknownValue(docContractGateModeCandidate)}.`
+        `doc_contract_gates.mode must be one of: advisory-for-all-gates, required-for-doc-gates, required-for-all-gates. Received ${describeUnknownValue(docContractGateModeCandidate)}.`
       );
     }
   }

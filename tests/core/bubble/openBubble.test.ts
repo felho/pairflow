@@ -37,7 +37,7 @@ function createResolvedBubbleFixture(input: {
       enabled: true
     },
     doc_contract_gates: {
-      mode: "advisory",
+      mode: "advisory-for-all-gates",
       round_gate_applies_after: 2
     }
   };

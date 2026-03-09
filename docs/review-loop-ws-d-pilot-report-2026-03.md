@@ -9,7 +9,7 @@ Decision: go
 
 A WS-D pilot core set es a large-feature extension lane evidence osszegyujtese megtortent.
 A nagy feature (Meta Review Gate PRD scope) implementaciosan release-elt allapotban van.
-A pilot-window `meta_review_rollout.*` jelek megjelentek, de ezek kulon feature-lane rollout-readiness jelzok, nem a WS-D docs-workflow pilot gate bemenetei, ezert a WS-D Phase 2 `required-docs` enforce dontes: `go`.
+A pilot-window `meta_review_rollout.*` jelek megjelentek, de ezek kulon feature-lane rollout-readiness jelzok, nem a WS-D docs-workflow pilot gate bemenetei, ezert a WS-D Phase 2 `required-for-doc-gates` enforce dontes: `go`.
 
 ## Pilot Set
 
@@ -87,7 +87,7 @@ Out-of-scope for WS-D decision:
 ### Decision Rationale
 
 A WS-D pilot implementacios es process-evidence oldalon teljesitett, a core pilot set zarasa blockermentes.
-A pilot-window-ben megjelent meta-review rollout blokkolo kodok ettol fuggetlen lane-hez tartoznak, ezert nem blokkoljak a WS-D docs-workflow `required-docs` phase dontest.
+A pilot-window-ben megjelent meta-review rollout blokkolo kodok ettol fuggetlen lane-hez tartoznak, ezert nem blokkoljak a WS-D docs-workflow `required-for-doc-gates` phase dontest.
 
 ## Risks
 
@@ -97,7 +97,7 @@ A pilot-window-ben megjelent meta-review rollout blokkolo kodok ettol fuggetlen 
 
 ## Next Actions
 
-1. Inditsatok kontrollalt Phase 2 `required-docs` enforce rolloutot a docs-workflow gate-re.
+1. Inditsatok kontrollalt Phase 2 `required-for-doc-gates` enforce rolloutot a docs-workflow gate-re.
 2. A meta-review lane rollout-readiness dontest kulon, runbook/e2e-validacios csatornan tartsatok.
 3. Kovessetek tovabbra is a WS-D scoped metrikakat heti bontasban a regressziojelzesek miatt.
 

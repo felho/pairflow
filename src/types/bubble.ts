@@ -54,7 +54,7 @@ export const localOverlayModes = ["symlink", "copy"] as const;
 
 export type LocalOverlayMode = (typeof localOverlayModes)[number];
 
-export const docContractGateModes = ["advisory"] as const;
+export const docContractGateModes = ["advisory-for-all-gates", "required-for-doc-gates", "required-for-all-gates"] as const;
 
 export type DocContractGateMode = (typeof docContractGateModes)[number];
 

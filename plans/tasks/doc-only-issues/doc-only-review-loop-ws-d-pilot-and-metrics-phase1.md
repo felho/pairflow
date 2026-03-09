@@ -26,7 +26,7 @@ owners:
 
 ### Goal
 
-Futtassunk 1 hetes WS-D pilotot a mar bevezetett doc workflow + gate policy mellett, es keszitsunk meresi riportot/go-no-go javaslatot a Phase 2 `required-docs` enforce donteshez.
+Futtassunk 1 hetes WS-D pilotot a mar bevezetett doc workflow + gate policy mellett, es keszitsunk meresi riportot/go-no-go javaslatot a Phase 2 `required-for-doc-gates` enforce donteshez.
 
 ### In Scope
 
@@ -38,7 +38,7 @@ Futtassunk 1 hetes WS-D pilotot a mar bevezetett doc workflow + gate policy mell
 3. Baseline vs pilot metrikak osszegyujtese es osszehasonlitasa.
 4. Egy osszefoglalo pilot report dokumentum keszitese evidence hivatkozasokkal.
 5. A master memo kovetkezo lepes es status frissitese pilot eredmeny alapjan.
-6. `go|hold` javaslat Phase 2 `required-docs` enforce-ra.
+6. `go|hold` javaslat Phase 2 `required-for-doc-gates` enforce-ra.
 
 ### Pilot Candidate Snapshot (2026-03-09)
 
@@ -52,7 +52,7 @@ Futtassunk 1 hetes WS-D pilotot a mar bevezetett doc workflow + gate policy mell
 1. Pilot report created: `docs/review-loop-ws-d-pilot-report-2026-03.md`.
 2. Core set evidence captured for bugfix, small feature, and docs-only hardening candidates.
 3. Large-feature extension lane explicitly linked in both PRD and pilot report.
-4. Phase 2 `required-docs` enforce decision for this pilot window: `go` (WS-D docs-workflow scope alapjan, meta-review rollout jelek kulon lane-ben kezelve).
+4. Phase 2 `required-for-doc-gates` enforce decision for this pilot window: `go` (WS-D docs-workflow scope alapjan, meta-review rollout jelek kulon lane-ben kezelve).
 
 ### Out of Scope
 
