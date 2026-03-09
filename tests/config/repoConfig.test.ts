@@ -28,13 +28,17 @@ afterEach(async () => {
 });
 
 describe("pairflow repo config", () => {
-  it("parses required-for-doc-gates mode", () => {
+  it("parses explicit enforcement_mode values", () => {
     const parsed = parsePairflowRepoConfigToml(`
-[doc_contract_gates]
-mode = "required-for-doc-gates"
+[enforcement_mode]
+all_gate = "advisory"
+docs_gate = "required"
 `);
 
-    expect(parsed.doc_contract_gates?.mode).toBe("required-for-doc-gates");
+    expect(parsed.enforcement_mode).toEqual({
+      all_gate: "advisory",
+      docs_gate: "required"
+    });
   });
 
   it("parses empty config as empty object", () => {
@@ -44,10 +48,10 @@ mode = "required-for-doc-gates"
     expect(parsed).toEqual({});
   });
 
-  it("rejects invalid doc gate mode", () => {
+  it("rejects invalid enforcement mode values", () => {
     const result = validatePairflowRepoConfig({
-      doc_contract_gates: {
-        mode: "blocking"
+      enforcement_mode: {
+        all_gate: "blocking"
       }
     });
 
@@ -55,7 +59,24 @@ mode = "required-for-doc-gates"
     if (result.ok) {
       return;
     }
-    expect(result.errors.some((error) => error.path === "doc_contract_gates.mode")).toBe(
+    expect(result.errors.some((error) => error.path === "enforcement_mode.all_gate")).toBe(
+      true
+    );
+  });
+
+  it("rejects contradictory required/advisory combination", () => {
+    const result = validatePairflowRepoConfig({
+      enforcement_mode: {
+        all_gate: "required",
+        docs_gate: "advisory"
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors.some((error) => error.path === "enforcement_mode.docs_gate")).toBe(
       true
     );
   });
@@ -70,14 +91,15 @@ mode = "required-for-doc-gates"
     const repoPath = await createTempDir();
     await writeFile(
       join(repoPath, "pairflow.toml"),
-      '[doc_contract_gates]\nmode = "required-for-all-gates"\n',
+      '[enforcement_mode]\nall_gate = "required"\ndocs_gate = "required"\n',
       "utf8"
     );
 
     const loaded = await loadPairflowRepoConfig(repoPath);
     expect(loaded).toEqual({
-      doc_contract_gates: {
-        mode: "required-for-all-gates"
+      enforcement_mode: {
+        all_gate: "required",
+        docs_gate: "required"
       }
     });
   });

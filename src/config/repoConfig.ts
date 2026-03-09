@@ -11,14 +11,15 @@ import {
   type ValidationResult
 } from "../core/validation.js";
 import {
-  isDocContractGateMode,
-  type DocContractGateMode
+  isGateEnforcementLevel,
+  type GateEnforcementLevel
 } from "../types/bubble.js";
 import { parseToml } from "./bubbleConfig.js";
 
 export interface PairflowRepoConfig {
-  doc_contract_gates?: {
-    mode?: DocContractGateMode;
+  enforcement_mode?: {
+    all_gate?: GateEnforcementLevel;
+    docs_gate?: GateEnforcementLevel;
   };
 }
 
@@ -39,33 +40,54 @@ export function validatePairflowRepoConfig(
     ]);
   }
 
-  const docContractGatesRaw = input.doc_contract_gates;
-  if (docContractGatesRaw === undefined) {
+  const enforcementModeRaw = input.enforcement_mode;
+  if (enforcementModeRaw === undefined) {
     return validationOk({});
   }
-  if (!isRecord(docContractGatesRaw)) {
+  if (!isRecord(enforcementModeRaw)) {
     return validationFail([
       {
-        path: "doc_contract_gates",
+        path: "enforcement_mode",
         message: "Must be an object/section"
       }
     ]);
   }
 
-  const modeRaw = docContractGatesRaw.mode;
-  let validatedMode: DocContractGateMode | undefined;
-  if (modeRaw === undefined) {
-    return validationOk({
-      doc_contract_gates: {}
-    });
+  const allGateRaw = enforcementModeRaw.all_gate;
+  let validatedAllGate: GateEnforcementLevel | undefined;
+  if (allGateRaw !== undefined) {
+    if (isGateEnforcementLevel(allGateRaw)) {
+      validatedAllGate = allGateRaw;
+    } else {
+      errors.push({
+        path: "enforcement_mode.all_gate",
+        message: "Must be one of: advisory, required"
+      });
+    }
   }
-  if (isDocContractGateMode(modeRaw)) {
-    validatedMode = modeRaw;
-  } else {
+
+  const docsGateRaw = enforcementModeRaw.docs_gate;
+  let validatedDocsGate: GateEnforcementLevel | undefined;
+  if (docsGateRaw !== undefined) {
+    if (isGateEnforcementLevel(docsGateRaw)) {
+      validatedDocsGate = docsGateRaw;
+    } else {
+      errors.push({
+        path: "enforcement_mode.docs_gate",
+        message: "Must be one of: advisory, required"
+      });
+    }
+  }
+
+  if (
+    validatedAllGate === "required"
+    && validatedDocsGate !== undefined
+    && validatedDocsGate !== "required"
+  ) {
     errors.push({
-      path: "doc_contract_gates.mode",
+      path: "enforcement_mode.docs_gate",
       message:
-        "Must be one of: advisory-for-all-gates, required-for-doc-gates, required-for-all-gates"
+        "Cannot be advisory when enforcement_mode.all_gate is required"
     });
   }
 
@@ -74,10 +96,10 @@ export function validatePairflowRepoConfig(
   }
 
   return validationOk({
-    doc_contract_gates:
-      validatedMode !== undefined
-        ? { mode: validatedMode }
-        : {}
+    enforcement_mode: {
+      ...(validatedAllGate !== undefined ? { all_gate: validatedAllGate } : {}),
+      ...(validatedDocsGate !== undefined ? { docs_gate: validatedDocsGate } : {})
+    }
   });
 }
 

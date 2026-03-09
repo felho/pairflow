@@ -8,7 +8,8 @@ import {
 } from "../../config/bubbleConfig.js";
 import { loadPairflowRepoConfig } from "../../config/repoConfig.js";
 import {
-  DEFAULT_DOC_CONTRACT_GATE_MODE,
+  DEFAULT_ENFORCEMENT_MODE_ALL_GATE,
+  DEFAULT_ENFORCEMENT_MODE_DOCS_GATE,
   DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER,
   DEFAULT_MAX_ROUNDS,
   DEFAULT_QUALITY_MODE,
@@ -39,7 +40,7 @@ import type {
   BubbleConfig,
   BubbleStateSnapshot,
   CreateReviewArtifactType,
-  DocContractGateMode
+  GateEnforcementLevel
 } from "../../types/bubble.js";
 
 export interface BubbleCreateInput {
@@ -769,8 +770,15 @@ function buildBubbleConfig(input: {
   typecheckCommand?: string;
   bootstrapCommand?: string;
   openCommand?: string;
-  docContractGateMode?: DocContractGateMode;
+  enforcementModeAllGate?: GateEnforcementLevel;
+  enforcementModeDocsGate?: GateEnforcementLevel;
 }): BubbleConfig {
+  const allGate =
+    input.enforcementModeAllGate ?? DEFAULT_ENFORCEMENT_MODE_ALL_GATE;
+  const docsGate =
+    input.enforcementModeDocsGate
+    ?? (allGate === "required" ? "required" : DEFAULT_ENFORCEMENT_MODE_DOCS_GATE);
+
   return assertValidBubbleConfig({
     id: input.id,
     bubble_instance_id: input.bubbleInstanceId,
@@ -803,8 +811,11 @@ function buildBubbleConfig(input: {
     notifications: {
       enabled: true
     },
+    enforcement_mode: {
+      all_gate: allGate,
+      docs_gate: docsGate
+    },
     doc_contract_gates: {
-      mode: input.docContractGateMode ?? DEFAULT_DOC_CONTRACT_GATE_MODE,
       round_gate_applies_after: DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER
     }
   });
@@ -888,11 +899,12 @@ export async function createBubble(
   const task = await resolveTaskInput(taskResolveInput);
   const reviewerFocus = extractReviewerFocus(task.content);
   const accuracyCritical = input.accuracyCritical === true;
-  let repoConfigDocGateMode: DocContractGateMode | undefined;
+  let repoConfigEnforcementAllGate: GateEnforcementLevel | undefined;
+  let repoConfigEnforcementDocsGate: GateEnforcementLevel | undefined;
   try {
-    repoConfigDocGateMode = (
-      await loadPairflowRepoConfig(repoPath)
-    ).doc_contract_gates?.mode;
+    const repoConfig = await loadPairflowRepoConfig(repoPath);
+    repoConfigEnforcementAllGate = repoConfig.enforcement_mode?.all_gate;
+    repoConfigEnforcementDocsGate = repoConfig.enforcement_mode?.docs_gate;
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new BubbleCreateError(
@@ -937,8 +949,11 @@ export async function createBubble(
   if (input.openCommand !== undefined) {
     bubbleConfigInput.openCommand = input.openCommand;
   }
-  if (repoConfigDocGateMode !== undefined) {
-    bubbleConfigInput.docContractGateMode = repoConfigDocGateMode;
+  if (repoConfigEnforcementAllGate !== undefined) {
+    bubbleConfigInput.enforcementModeAllGate = repoConfigEnforcementAllGate;
+  }
+  if (repoConfigEnforcementDocsGate !== undefined) {
+    bubbleConfigInput.enforcementModeDocsGate = repoConfigEnforcementDocsGate;
   }
 
   const config = buildBubbleConfig(bubbleConfigInput);

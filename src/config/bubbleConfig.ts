@@ -10,7 +10,8 @@ import {
 } from "../core/validation.js";
 import {
   DEFAULT_COMMIT_REQUIRES_APPROVAL,
-  DEFAULT_DOC_CONTRACT_GATE_MODE,
+  DEFAULT_ENFORCEMENT_MODE_ALL_GATE,
+  DEFAULT_ENFORCEMENT_MODE_DOCS_GATE,
   DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER,
   DEFAULT_LOCAL_OVERLAY_ENABLED,
   DEFAULT_LOCAL_OVERLAY_ENTRIES,
@@ -27,7 +28,7 @@ import {
   isCreateReviewArtifactType,
   isAgentName,
   isAttachLauncher,
-  isDocContractGateMode,
+  isGateEnforcementLevel,
   isLocalOverlayMode,
   isQualityMode,
   isReviewArtifactType,
@@ -36,7 +37,7 @@ import {
   type AttachLauncher,
   type BubbleConfig,
   type CreateReviewArtifactType,
-  type DocContractGateMode
+  type GateEnforcementLevel
 } from "../types/bubble.js";
 
 export const TOML_PARSER_LIMITATIONS = [
@@ -593,6 +594,13 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     errors,
     false
   );
+  const enforcementMode = readObject(
+    input,
+    "enforcement_mode",
+    "enforcement_mode",
+    errors,
+    false
+  );
   const docContractGates = readObject(
     input,
     "doc_contract_gates",
@@ -710,8 +718,50 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     }
   }
 
-  const gateConfigWarnings: string[] = [];
-  const existingGateParseWarning = docContractGates
+  const enforcementConfigWarnings: string[] = [];
+  const existingEnforcementParseWarning = enforcementMode
+    ? readString(
+        enforcementMode,
+        "parse_warning",
+        "enforcement_mode.parse_warning",
+        errors,
+        false
+      )
+    : undefined;
+  const allGateCandidate = enforcementMode?.all_gate;
+  let allGate: GateEnforcementLevel = DEFAULT_ENFORCEMENT_MODE_ALL_GATE;
+  if (allGateCandidate !== undefined) {
+    if (isGateEnforcementLevel(allGateCandidate)) {
+      allGate = allGateCandidate;
+    } else {
+      enforcementConfigWarnings.push(
+        `enforcement_mode.all_gate must be one of: advisory, required. Received ${describeUnknownValue(allGateCandidate)}.`
+      );
+    }
+  }
+  const docsGateCandidate = enforcementMode?.docs_gate;
+  let docsGate: GateEnforcementLevel =
+    allGate === "required"
+      ? "required"
+      : DEFAULT_ENFORCEMENT_MODE_DOCS_GATE;
+  if (docsGateCandidate !== undefined) {
+    if (isGateEnforcementLevel(docsGateCandidate)) {
+      docsGate = docsGateCandidate;
+    } else {
+      enforcementConfigWarnings.push(
+        `enforcement_mode.docs_gate must be one of: advisory, required. Received ${describeUnknownValue(docsGateCandidate)}.`
+      );
+    }
+  }
+  if (allGate === "required" && docsGate !== "required") {
+    enforcementConfigWarnings.push(
+      "enforcement_mode.docs_gate cannot be advisory when enforcement_mode.all_gate is required; docs_gate normalized to required."
+    );
+    docsGate = "required";
+  }
+
+  const docContractGateWarnings: string[] = [];
+  const existingDocContractGateParseWarning = docContractGates
     ? readString(
         docContractGates,
         "parse_warning",
@@ -720,25 +770,13 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
         false
       )
     : undefined;
-  const docContractGateModeCandidate = docContractGates?.mode;
-  let docContractGateMode: DocContractGateMode = DEFAULT_DOC_CONTRACT_GATE_MODE;
-  if (docContractGateModeCandidate !== undefined) {
-    if (isDocContractGateMode(docContractGateModeCandidate)) {
-      docContractGateMode = docContractGateModeCandidate;
-    } else {
-      gateConfigWarnings.push(
-        `doc_contract_gates.mode must be one of: advisory-for-all-gates, required-for-doc-gates, required-for-all-gates. Received ${describeUnknownValue(docContractGateModeCandidate)}.`
-      );
-    }
-  }
-
   const roundGateAppliesAfterCandidate = docContractGates?.round_gate_applies_after;
   let roundGateAppliesAfter = DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER;
   if (roundGateAppliesAfterCandidate !== undefined) {
     if (isInteger(roundGateAppliesAfterCandidate) && roundGateAppliesAfterCandidate >= 0) {
       roundGateAppliesAfter = roundGateAppliesAfterCandidate;
     } else {
-      gateConfigWarnings.push(
+      docContractGateWarnings.push(
         `doc_contract_gates.round_gate_applies_after must be a non-negative integer. Received ${describeUnknownValue(roundGateAppliesAfterCandidate)}.`
       );
     }
@@ -797,14 +835,31 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
       mode: localOverlayMode,
       entries: localOverlayEntries
     },
-    doc_contract_gates: {
-      mode: docContractGateMode,
-      round_gate_applies_after: roundGateAppliesAfter,
-      ...((existingGateParseWarning !== undefined || gateConfigWarnings.length > 0)
+    enforcement_mode: {
+      all_gate: allGate,
+      docs_gate: docsGate,
+      ...((existingEnforcementParseWarning !== undefined || enforcementConfigWarnings.length > 0)
         ? {
             parse_warning: [
-              existingGateParseWarning,
-              ...(gateConfigWarnings.length > 0 ? [gateConfigWarnings.join(" ")] : [])
+              existingEnforcementParseWarning,
+              ...(enforcementConfigWarnings.length > 0
+                ? [enforcementConfigWarnings.join(" ")]
+                : [])
+            ]
+              .filter((entry): entry is string => entry !== undefined)
+              .join(" ")
+          }
+        : {})
+    },
+    doc_contract_gates: {
+      round_gate_applies_after: roundGateAppliesAfter,
+      ...((existingDocContractGateParseWarning !== undefined || docContractGateWarnings.length > 0)
+        ? {
+            parse_warning: [
+              existingDocContractGateParseWarning,
+              ...(docContractGateWarnings.length > 0
+                ? [docContractGateWarnings.join(" ")]
+                : [])
             ]
               .filter((entry): entry is string => entry !== undefined)
               .join(" ")
@@ -879,6 +934,7 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
     mode: DEFAULT_LOCAL_OVERLAY_MODE,
     entries: [...DEFAULT_LOCAL_OVERLAY_ENTRIES]
   };
+  const enforcementMode = config.enforcement_mode;
   const docContractGates = config.doc_contract_gates;
   const lines: Array<string | undefined> = [
     `id = ${tomlString(config.id)}`,
@@ -929,8 +985,14 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
     `mode = ${tomlString(localOverlay.mode)}`,
     `entries = ${tomlStringArray(localOverlay.entries)}`,
     "",
+    "[enforcement_mode]",
+    `all_gate = ${tomlString(enforcementMode.all_gate)}`,
+    `docs_gate = ${tomlString(enforcementMode.docs_gate)}`,
+    enforcementMode.parse_warning !== undefined
+      ? `parse_warning = ${tomlString(enforcementMode.parse_warning)}`
+      : undefined,
+    "",
     "[doc_contract_gates]",
-    `mode = ${tomlString(docContractGates.mode)}`,
     `round_gate_applies_after = ${docContractGates.round_gate_applies_after}`,
     docContractGates.parse_warning !== undefined
       ? `parse_warning = ${tomlString(docContractGates.parse_warning)}`

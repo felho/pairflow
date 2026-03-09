@@ -45,8 +45,11 @@ const baseConfig: BubbleConfig = {
   notifications: {
     enabled: true
   },
+  enforcement_mode: {
+    all_gate: "advisory",
+    docs_gate: "advisory"
+  },
   doc_contract_gates: {
-    mode: "advisory-for-all-gates",
     round_gate_applies_after: 2
   }
 };

@@ -91,7 +91,10 @@ describe("createBubble", () => {
     expect(result.config.quality_mode).toBe("strict");
     expect(result.config.review_artifact_type).toBe("code");
     expect(result.config.severity_gate_round).toBe(4);
-    expect(result.config.doc_contract_gates.mode).toBe("advisory-for-all-gates");
+    expect(result.config.enforcement_mode).toEqual({
+      all_gate: "advisory",
+      docs_gate: "advisory"
+    });
     expect(result.config.doc_contract_gates.round_gate_applies_after).toBe(2);
     expect(result.config.bubble_instance_id).toMatch(
       /^bi_[A-Za-z0-9_-]{10,}$/u
@@ -103,7 +106,10 @@ describe("createBubble", () => {
     expect(reparsedConfig.notifications.enabled).toBe(true);
     expect(reparsedConfig.review_artifact_type).toBe("code");
     expect(reparsedConfig.severity_gate_round).toBe(4);
-    expect(reparsedConfig.doc_contract_gates.mode).toBe("advisory-for-all-gates");
+    expect(reparsedConfig.enforcement_mode).toEqual({
+      all_gate: "advisory",
+      docs_gate: "advisory"
+    });
     expect(reparsedConfig.doc_contract_gates.round_gate_applies_after).toBe(2);
     expect(reparsedConfig.bubble_instance_id).toBe(
       result.config.bubble_instance_id
@@ -144,7 +150,7 @@ describe("createBubble", () => {
     const repoPath = await createTempRepo();
     await writeFile(
       join(repoPath, "pairflow.toml"),
-      '[doc_contract_gates]\nmode = "required-for-doc-gates"\n',
+      '[enforcement_mode]\nall_gate = "advisory"\ndocs_gate = "required"\n',
       "utf8"
     );
 
@@ -157,17 +163,23 @@ describe("createBubble", () => {
       cwd: repoPath
     });
 
-    expect(result.config.doc_contract_gates.mode).toBe("required-for-doc-gates");
+    expect(result.config.enforcement_mode).toEqual({
+      all_gate: "advisory",
+      docs_gate: "required"
+    });
     const bubbleToml = await readFile(result.paths.bubbleTomlPath, "utf8");
     const reparsedConfig = parseBubbleConfigToml(bubbleToml);
-    expect(reparsedConfig.doc_contract_gates.mode).toBe("required-for-doc-gates");
+    expect(reparsedConfig.enforcement_mode).toEqual({
+      all_gate: "advisory",
+      docs_gate: "required"
+    });
   });
 
   it("fails bubble creation when repository pairflow.toml has invalid doc gate mode", async () => {
     const repoPath = await createTempRepo();
     await writeFile(
       join(repoPath, "pairflow.toml"),
-      '[doc_contract_gates]\nmode = "invalid-mode"\n',
+      '[enforcement_mode]\nall_gate = "invalid-mode"\n',
       "utf8"
     );
 
