@@ -34,7 +34,7 @@ describe("BubbleTimeline", () => {
     });
 
     expect(actorLabel).toHaveTextContent(/orchestrator\s*\(meta-reviewer\)/u);
-    expect(screen.getByText("MR rework")).toBeInTheDocument();
+    expect(screen.getByText("rework")).toBeInTheDocument();
   });
 
   it("shows empty-state text when no timeline entries exist", () => {

@@ -77,19 +77,19 @@ function extractMetaRecommendationTag(entry: UiTimelineEntry): FindingTag | null
   const recommendation = metadata.latest_recommendation;
   if (recommendation === "approve") {
     return {
-      label: "MR approve",
+      label: "approve",
       style: "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
     };
   }
   if (recommendation === "rework") {
     return {
-      label: "MR rework",
+      label: "rework",
       style: "border-rose-500/20 bg-rose-500/10 text-rose-500"
     };
   }
   if (recommendation === "inconclusive") {
     return {
-      label: "MR inconclusive",
+      label: "inconclusive",
       style: "border-amber-500/20 bg-amber-500/10 text-amber-500"
     };
   }
