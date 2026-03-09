@@ -28,7 +28,9 @@ MESSAGE: extracted from `--message` (required when `DECIDE=rework`)
   - `[Sajat]`/`[Saját]` when it is an independent Codex finding from direct audit.
 - Never present unlabeled findings in review output.
 - For rework, message must be specific, evidence-backed, actionable, and verifiable.
-- If state is not `READY_FOR_APPROVAL`, do review-only output and do not execute decision commands.
+- If state is `READY_FOR_HUMAN_APPROVAL` (or legacy `READY_FOR_APPROVAL`), load cached autonomous snapshot via `meta-review status` and `meta-review last-report` before recommendation.
+- Do not run `pairflow bubble meta-review run` from this workflow unless the user explicitly requests a fresh autonomous run.
+- If state is not `READY_FOR_HUMAN_APPROVAL` and not legacy `READY_FOR_APPROVAL`, do review-only output and do not execute decision commands.
 - Review flowban **ne** futtasd automatikusan a `pairflow bubble open` parancsot.
 - A `pairflow bubble open` editor launchot indit (pl. Cursor), ezert csak akkor hasznald, ha a user ezt explicit keri.
 - Worktree elereshez a `pairflow bubble status --json` `worktreePath` mezot hasznald, es ezen a path-on dolgozz kozvetlen `git -C`/file read parancsokkal.
@@ -39,7 +41,7 @@ MESSAGE: extracted from `--message` (required when `DECIDE=rework`)
 - Invalid mode: `"Error: mode must be deep or standard. Got: {mode}."`
 - Invalid decide value: `"Error: decide must be approve, rework, or none. Got: {decide}."`
 - Rework without message: `"Error: decide=rework requires --message with actionable rework instructions."`
-- Decision blocked by state: `"Error: approve/request-rework allowed only in READY_FOR_APPROVAL. Current state: {state}."`
+- Decision blocked by state: `"Error: approve/request-rework allowed only in READY_FOR_HUMAN_APPROVAL (legacy READY_FOR_APPROVAL). Current state: {state}."`
 
 ## Workflow
 
@@ -54,6 +56,11 @@ MESSAGE: extracted from `--message` (required when `DECIDE=rework`)
 ```bash
 pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
 pairflow bubble inbox --id <BUBBLE_ID> --repo <REPO_PATH>
+```
+- If state is `READY_FOR_HUMAN_APPROVAL` (or legacy `READY_FOR_APPROVAL`), also load latest cached autonomous results (read-only):
+```bash
+pairflow bubble meta-review status --id <BUBBLE_ID> --repo <REPO_PATH> --verbose
+pairflow bubble meta-review last-report --id <BUBBLE_ID> --repo <REPO_PATH> --verbose
 ```
 
 3. Gather review context from worktree.
@@ -84,12 +91,17 @@ pairflow bubble inbox --id <BUBBLE_ID> --repo <REPO_PATH>
 
 5. Optionally execute decision.
 - If `DECIDE=none` -> skip commands and return recommendation only.
-- If `DECIDE` is `approve` or `rework` and state is not `READY_FOR_APPROVAL` -> STOP and report: `"Error: approve/request-rework allowed only in READY_FOR_APPROVAL. Current state: {state}."`
-- If `DECIDE=approve` and state is `READY_FOR_APPROVAL` -> run:
-  ```bash
-  pairflow bubble approve --id <BUBBLE_ID> --repo <REPO_PATH>
-  ```
-- If `DECIDE=rework` and state is `READY_FOR_APPROVAL` -> run:
+- If `DECIDE` is `approve` or `rework` and state is neither `READY_FOR_HUMAN_APPROVAL` nor legacy `READY_FOR_APPROVAL` -> STOP and report: `"Error: approve/request-rework allowed only in READY_FOR_HUMAN_APPROVAL (legacy READY_FOR_APPROVAL). Current state: {state}."`
+- If `DECIDE=approve` and state is approval-ready:
+  - If latest autonomous recommendation is `approve` (or missing), run:
+    ```bash
+    pairflow bubble approve --id <BUBBLE_ID> --repo <REPO_PATH>
+    ```
+  - If latest autonomous recommendation is `rework` or `inconclusive`, run override approve:
+    ```bash
+    pairflow bubble approve --id <BUBBLE_ID> --repo <REPO_PATH> --override-non-approve --override-reason "<concise human justification>"
+    ```
+- If `DECIDE=rework` and state is approval-ready -> run:
   ```bash
   pairflow bubble request-rework --id <BUBBLE_ID> --repo <REPO_PATH> --message "<MESSAGE>"
   ```
@@ -120,4 +132,4 @@ Finding label example:
 
 ## STOP
 
-Do not execute approve/request-rework outside READY_FOR_APPROVAL.
+Do not execute approve/request-rework outside READY_FOR_HUMAN_APPROVAL (legacy READY_FOR_APPROVAL).

@@ -32,6 +32,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 7. For bubble creation, always include `--review-artifact-type <document|code>` in `pairflow bubble create`.
 8. For implementation bubbles (`review_artifact_type=code`), `CloseBubble` includes mandatory post-merge completion: README/docs/progress check + required updates + task archival under `plans/archive/tasks/` with mirrored relative path.
 9. In `ReviewBubble` outputs, every finding must include source label: `[Bubble]` (from bubble transcript/tool output) or `[Sajat]`/`[Saját]` (independent Codex finding).
+10. For `READY_FOR_HUMAN_APPROVAL`, default to loading cached autonomous results via `pairflow bubble meta-review status` and `pairflow bubble meta-review last-report`; do not trigger `meta-review run` unless explicitly requested.
 
 ## Execution Modes (Mandatory)
 
@@ -57,7 +58,8 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 - `CREATED` -> `pairflow bubble start`
 - `RUNNING` -> no approve/rework yet; use normal loop commands (`pass`, `converged`) in agent panes
 - `WAITING_HUMAN` -> use `pairflow bubble reply` (NOT `bubble request-rework`)
-- `READY_FOR_APPROVAL` -> choose `pairflow bubble approve` OR `pairflow bubble request-rework`
+- `READY_FOR_HUMAN_APPROVAL` (legacy compatible: `READY_FOR_APPROVAL`) -> choose `pairflow bubble approve` OR `pairflow bubble request-rework`
+  - If latest autonomous recommendation is `rework` or `inconclusive`, `approve` requires `--override-non-approve --override-reason "<reason>"`.
 - `APPROVED_FOR_COMMIT` -> `pairflow bubble commit --auto`
 - `DONE` -> `pairflow bubble merge`
 - `CANCELLED` with needed changes -> recovery workflow (manual git path from bubble worktree)
@@ -135,6 +137,7 @@ If state is WAITING_HUMAN or RUNNING:
 
 ```
 Use ReviewBubble (deep mode default)
+-> load cached autonomous snapshot first (`meta-review status` + `meta-review last-report`)
 -> file-by-file changes
 -> findings labeled by origin (`[Bubble]`, `[Sajat]`/`[Saját]`)
 -> validation evidence summary

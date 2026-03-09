@@ -25,8 +25,8 @@ TASK_SOURCE_PATH: absolute task source file path extracted from bubble artifact 
 - Never use raw `git merge`, `tmux kill-session`, `git worktree remove`, or `git branch -d` directly in this workflow.
 - Always check status before deciding the next step.
 - State progression reference:
-  `CREATED -> PREPARING_WORKSPACE -> RUNNING -> WAITING_HUMAN -> READY_FOR_APPROVAL -> APPROVED_FOR_COMMIT -> COMMITTED -> DONE`
-- Closure applies only when the bubble is at least `READY_FOR_APPROVAL`.
+  `CREATED -> PREPARING_WORKSPACE -> RUNNING -> WAITING_HUMAN -> META_REVIEW_RUNNING -> READY_FOR_HUMAN_APPROVAL (legacy: READY_FOR_APPROVAL) -> APPROVED_FOR_COMMIT -> COMMITTED -> DONE`
+- Closure applies only when the bubble is at least `READY_FOR_HUMAN_APPROVAL` (legacy compatible: `READY_FOR_APPROVAL`).
 - If merge conflict appears during merge, STOP immediately and report.
 - Do not pass `--push` / `--delete-remote` unless explicitly requested.
 - Raw `git commit` is allowed only for post-merge follow-up changes on `main` (README/docs/progress/task archive), not for lifecycle state transitions.
@@ -40,7 +40,8 @@ TASK_SOURCE_PATH: absolute task source file path extracted from bubble artifact 
 - If BUBBLE_ID is not provided, detect in this order:
   1. Conversation context candidate.
   2. `pairflow bubble list --repo <REPO_PATH>` and filter states in:
-     - `READY_FOR_APPROVAL`
+     - `READY_FOR_HUMAN_APPROVAL`
+     - `READY_FOR_APPROVAL` (legacy compatibility)
      - `APPROVED_FOR_COMMIT`
      - `COMMITTED`
      - `DONE`
@@ -56,6 +57,7 @@ pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
 ```
 
 - If state is `RUNNING` or `WAITING_HUMAN`, STOP and route to `InterveneBubble`.
+- If state is `META_REVIEW_RUNNING`, STOP and route to `InterveneBubble` (wait for autonomous gate completion or intervene safely).
 
 ### 3. Capture close context before merge
 
@@ -70,10 +72,19 @@ pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
 
 #### A) Approve step
 
-- If state is `READY_FOR_APPROVAL`:
-  ```bash
-  pairflow bubble approve --id <BUBBLE_ID> --repo <REPO_PATH>
-  ```
+- If state is `READY_FOR_HUMAN_APPROVAL` (or legacy `READY_FOR_APPROVAL`):
+  1. Read cached autonomous recommendation:
+     ```bash
+     pairflow bubble meta-review status --id <BUBBLE_ID> --repo <REPO_PATH> --verbose
+     ```
+  2. If recommendation is `approve` (or missing), run:
+     ```bash
+     pairflow bubble approve --id <BUBBLE_ID> --repo <REPO_PATH>
+     ```
+  3. If recommendation is `rework` or `inconclusive`, run override approve:
+     ```bash
+     pairflow bubble approve --id <BUBBLE_ID> --repo <REPO_PATH> --override-non-approve --override-reason "<concise human justification>"
+     ```
 - Else if state is already `APPROVED_FOR_COMMIT`, `COMMITTED`, or `DONE`, skip approve.
 
 #### B) Commit step

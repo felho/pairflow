@@ -19,7 +19,7 @@ MESSAGE: extracted from `--message` argument (optional)
 ## Instructions
 
 - Always read `status --json` and `inbox` before any action.
-- Never run `request-rework` outside `READY_FOR_APPROVAL`.
+- Never run `request-rework` outside `READY_FOR_HUMAN_APPROVAL` (legacy `READY_FOR_APPROVAL`).
 - Never run `approve` while bubble is `RUNNING` or `WAITING_HUMAN`.
 - Prefer explicit, targeted human messages; avoid vague replies.
 - Re-check state after every state-changing command.
@@ -30,8 +30,8 @@ MESSAGE: extracted from `--message` argument (optional)
 
 - Missing bubble id: `"Usage: InterveneBubble --id <name> [--repo <path>] [--message <text>]"`
 - Missing message for waiting-human reply: `"Error: WAITING_HUMAN requires --message <text> for bubble reply."`
-- Missing message for rework request: `"Error: request-rework in READY_FOR_APPROVAL requires --message with actionable rework instructions."`
-- Rework not allowed in state: `"Error: request-rework is allowed only in READY_FOR_APPROVAL. Current state: {state}."`
+- Missing message for rework request: `"Error: request-rework in READY_FOR_HUMAN_APPROVAL (legacy READY_FOR_APPROVAL) requires --message with actionable rework instructions."`
+- Rework not allowed in state: `"Error: request-rework is allowed only in READY_FOR_HUMAN_APPROVAL (legacy READY_FOR_APPROVAL). Current state: {state}."`
 - Unsupported state for intervention: `"Error: Intervention workflow does not handle state: {state}."`
 
 ## Workflow
@@ -45,6 +45,10 @@ MESSAGE: extracted from `--message` argument (optional)
 pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
 pairflow bubble inbox --id <BUBBLE_ID> --repo <REPO_PATH>
 ```
+- If state is `READY_FOR_HUMAN_APPROVAL` (or legacy `READY_FOR_APPROVAL`), also load cached autonomous recommendation for approve override decisions:
+```bash
+pairflow bubble meta-review status --id <BUBBLE_ID> --repo <REPO_PATH> --verbose
+```
 
 3. Apply state-specific intervention.
 - If state is `RUNNING` -> do not approve/rework and do not perform direct implementation edits; report next actor should continue loop (`pass` / `converged`) and stop intervention.
@@ -53,16 +57,21 @@ pairflow bubble inbox --id <BUBBLE_ID> --repo <REPO_PATH>
   ```bash
   pairflow bubble reply --id <BUBBLE_ID> --repo <REPO_PATH> --message "<MESSAGE>"
   ```
-- If state is `READY_FOR_APPROVAL` and user intent is explicit approve -> run:
-  ```bash
-  pairflow bubble approve --id <BUBBLE_ID> --repo <REPO_PATH>
-  ```
-- If state is `READY_FOR_APPROVAL` and user intent is explicit rework with message -> run:
+- If state is `READY_FOR_HUMAN_APPROVAL` (or legacy `READY_FOR_APPROVAL`) and user intent is explicit approve -> run:
+  - If latest autonomous recommendation is `approve` (or missing):
+    ```bash
+    pairflow bubble approve --id <BUBBLE_ID> --repo <REPO_PATH>
+    ```
+  - If latest autonomous recommendation is `rework` or `inconclusive`:
+    ```bash
+    pairflow bubble approve --id <BUBBLE_ID> --repo <REPO_PATH> --override-non-approve --override-reason "<concise human justification>"
+    ```
+- If state is `READY_FOR_HUMAN_APPROVAL` (or legacy `READY_FOR_APPROVAL`) and user intent is explicit rework with message -> run:
   ```bash
   pairflow bubble request-rework --id <BUBBLE_ID> --repo <REPO_PATH> --message "<MESSAGE>"
   ```
-- If state is `READY_FOR_APPROVAL` and rework requested without message -> STOP and report: `"Error: request-rework in READY_FOR_APPROVAL requires --message with actionable rework instructions."`
-- If state is not one of (`RUNNING`, `WAITING_HUMAN`, `READY_FOR_APPROVAL`) -> STOP and report: `"Error: Intervention workflow does not handle state: {state}."`
+- If state is `READY_FOR_HUMAN_APPROVAL` (or legacy `READY_FOR_APPROVAL`) and rework requested without message -> STOP and report: `"Error: request-rework in READY_FOR_HUMAN_APPROVAL (legacy READY_FOR_APPROVAL) requires --message with actionable rework instructions."`
+- If state is not one of (`RUNNING`, `WAITING_HUMAN`, `READY_FOR_HUMAN_APPROVAL`, `READY_FOR_APPROVAL`) -> STOP and report: `"Error: Intervention workflow does not handle state: {state}."`
 
 4. Handle watchdog-driven human questions.
 - If inbox indicates watchdog timeout / `HUMAN_QUESTION` and state is `WAITING_HUMAN` -> ensure a concise `reply` is sent, then continue.
