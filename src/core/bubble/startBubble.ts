@@ -125,7 +125,7 @@ function buildStatusPaneCommand(bubbleId: string, repoPath: string, worktreePath
     "  fi",
     "  sleep 2",
     "done"
-  ].join("; ");
+  ].join("\n");
   return `bash -lc ${shellQuote(loopScript)}`;
 }
 

@@ -38,28 +38,35 @@ async function createTempRepo(prefix: string = "pairflow-start-bubble-"): Promis
 }
 
 async function assertBashParses(command: string): Promise<void> {
-  await new Promise<void>((resolvePromise, rejectPromise) => {
-    const child = spawn("bash", ["-n", "-c", command], {
-      stdio: ["ignore", "pipe", "pipe"]
-    });
+  const assertSnippetParses = async (snippet: string): Promise<void> => {
+    await new Promise<void>((resolvePromise, rejectPromise) => {
+      const child = spawn("bash", ["-n", "-c", snippet], {
+        stdio: ["ignore", "pipe", "pipe"]
+      });
 
-    let stderr = "";
-    child.stderr.setEncoding("utf8");
-    child.stderr.on("data", (chunk: string) => {
-      stderr += chunk;
-    });
+      let stderr = "";
+      child.stderr.setEncoding("utf8");
+      child.stderr.on("data", (chunk: string) => {
+        stderr += chunk;
+      });
 
-    child.on("error", (error) => {
-      rejectPromise(error);
+      child.on("error", (error) => {
+        rejectPromise(error);
+      });
+      child.on("close", (code) => {
+        if ((code ?? 1) !== 0) {
+          rejectPromise(new Error(`bash could not parse command: ${stderr.trim()}`));
+          return;
+        }
+        resolvePromise();
+      });
     });
-    child.on("close", (code) => {
-      if ((code ?? 1) !== 0) {
-        rejectPromise(new Error(`bash could not parse command: ${stderr.trim()}`));
-        return;
-      }
-      resolvePromise();
-    });
-  });
+  };
+
+  await assertSnippetParses(command);
+  if (command.startsWith("bash -lc ")) {
+    await assertSnippetParses(extractBashLcScript(command));
+  }
 }
 
 function extractBashLcScript(command: string): string {

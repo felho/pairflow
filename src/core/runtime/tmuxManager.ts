@@ -191,6 +191,15 @@ export async function launchBubbleTmuxSession(
     input.worktreePath,
     input.statusCommand
   ]);
+  // Keep pane indices stable even if one startup command exits unexpectedly.
+  // Runtime routing depends on fixed 0/1/2 pane positions.
+  await runner([
+    "set-option",
+    "-t",
+    `${sessionName}:0`,
+    "remain-on-exit",
+    "on"
+  ]);
   // Strip selected env vars from both tmux server-global and session env.
   // The client-side env is not enough: panes inherit from the tmux server.
   // - CLAUDECODE: prevents nested Claude Code false-positive detection.

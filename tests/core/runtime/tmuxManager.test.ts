@@ -83,6 +83,7 @@ describe("launchBubbleTmuxSession", () => {
     expect(calls.map((call) => call.args[0])).toEqual([
       "has-session",
       "new-session",
+      "set-option",
       "set-environment",
       "set-environment",
       "set-environment",
@@ -93,14 +94,21 @@ describe("launchBubbleTmuxSession", () => {
       "resize-pane",
       "set-hook"
     ]);
-    // Unset CLAUDECODE from server global env and session env.
     expect(calls[2]?.args).toEqual([
+      "set-option",
+      "-t",
+      "pf-b_start_01:0",
+      "remain-on-exit",
+      "on"
+    ]);
+    // Unset CLAUDECODE from server global env and session env.
+    expect(calls[3]?.args).toEqual([
       "set-environment",
       "-g",
       "-u",
       "CLAUDECODE"
     ]);
-    expect(calls[3]?.args).toEqual([
+    expect(calls[4]?.args).toEqual([
       "set-environment",
       "-t",
       "pf-b_start_01",
@@ -108,13 +116,13 @@ describe("launchBubbleTmuxSession", () => {
       "CLAUDECODE"
     ]);
     // Unset NO_COLOR from server global env and session env.
-    expect(calls[4]?.args).toEqual([
+    expect(calls[5]?.args).toEqual([
       "set-environment",
       "-g",
       "-u",
       "NO_COLOR"
     ]);
-    expect(calls[5]?.args).toEqual([
+    expect(calls[6]?.args).toEqual([
       "set-environment",
       "-t",
       "pf-b_start_01",
@@ -122,7 +130,7 @@ describe("launchBubbleTmuxSession", () => {
       "NO_COLOR"
     ]);
     expect(calls[0]?.allowFailure).toBe(true);
-    expect(calls[6]?.args).toEqual([
+    expect(calls[7]?.args).toEqual([
       "split-window",
       "-v",
       "-P",
@@ -135,7 +143,7 @@ describe("launchBubbleTmuxSession", () => {
       "codex"
     ]);
     // Status pane fixed to 11 lines before reviewer split.
-    expect(calls[7]?.args).toEqual([
+    expect(calls[8]?.args).toEqual([
       "resize-pane",
       "-t",
       "pf-b_start_01:0.0",
@@ -143,7 +151,7 @@ describe("launchBubbleTmuxSession", () => {
       "11"
     ]);
     // Reviewer split uses -p 50 to divide remaining space equally.
-    expect(calls[8]?.args).toEqual([
+    expect(calls[9]?.args).toEqual([
       "split-window",
       "-v",
       "-P",
@@ -157,7 +165,7 @@ describe("launchBubbleTmuxSession", () => {
       "/tmp/worktree",
       "claude"
     ]);
-    expect(calls[10]?.args).toEqual([
+    expect(calls[11]?.args).toEqual([
       "set-hook",
       "-t",
       "pf-b_start_01",
@@ -187,9 +195,10 @@ describe("launchBubbleTmuxSession", () => {
       runner
     });
 
-    expect(calls.slice(0, 11).map((call) => call[0])).toEqual([
+    expect(calls.slice(0, 12).map((call) => call[0])).toEqual([
       "has-session",
       "new-session",
+      "set-option",
       "set-environment",
       "set-environment",
       "set-environment",
