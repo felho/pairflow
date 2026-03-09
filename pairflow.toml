@@ -1,0 +1,3 @@
+[enforcement_mode]
+all_gate = "advisory"
+docs_gate = "required"
