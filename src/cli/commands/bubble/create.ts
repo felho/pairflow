@@ -19,6 +19,7 @@ export interface BubbleCreateCommandOptions {
   taskFile?: string;
   reviewerBrief?: string;
   reviewerBriefFile?: string;
+  bootstrapCommand?: string;
   accuracyCritical?: boolean;
   help: boolean;
 }
@@ -43,6 +44,7 @@ export function getBubbleCreateHelpText(): string {
     "  --review-artifact-type <document|code>  Required explicit ownership type",
     "  --task <text>         Inline task text",
     "  --task-file <path>    Task input from file",
+    "  --bootstrap-command <cmd>    Optional worktree bootstrap command run by bubble start",
     "  --reviewer-brief <text>      Optional inline reviewer brief",
     "  --reviewer-brief-file <path> Optional reviewer brief from file",
     "  --accuracy-critical          Enforce reviewer verification payload gate",
@@ -80,6 +82,9 @@ export function parseBubbleCreateCommandOptions(
       "reviewer-brief-file": {
         type: "string"
       },
+      "bootstrap-command": {
+        type: "string"
+      },
       "accuracy-critical": {
         type: "boolean"
       },
@@ -115,6 +120,9 @@ export function parseBubbleCreateCommandOptions(
   }
   if (parsed.values["reviewer-brief-file"] !== undefined) {
     options.reviewerBriefFile = parsed.values["reviewer-brief-file"];
+  }
+  if (parsed.values["bootstrap-command"] !== undefined) {
+    options.bootstrapCommand = parsed.values["bootstrap-command"];
   }
   if (parsed.values["accuracy-critical"] !== undefined) {
     options.accuracyCritical = parsed.values["accuracy-critical"];
@@ -237,6 +245,9 @@ export async function runBubbleCreateCommand(
       : {}),
     ...(options.reviewerBriefFile !== undefined
       ? { reviewerBriefFile: options.reviewerBriefFile }
+      : {}),
+    ...(options.bootstrapCommand !== undefined
+      ? { bootstrapCommand: options.bootstrapCommand }
       : {}),
     ...(options.accuracyCritical === true ? { accuracyCritical: true } : {}),
     cwd

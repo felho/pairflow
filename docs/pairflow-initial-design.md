@@ -266,6 +266,7 @@ implementer = "codex"
 reviewer = "claude"
 
 [commands]
+bootstrap = "cd 05_finder && npm ci && npm run build" # optional; run during bubble start before tmux launch
 test = "cd 05_finder && npm test"
 typecheck = "cd 05_finder && npx tsc --noEmit"
 

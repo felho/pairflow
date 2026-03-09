@@ -105,6 +105,7 @@ export interface BubbleAgentsConfig {
 }
 
 export interface BubbleCommandsConfig {
+  bootstrap?: string;
   test: string;
   typecheck: string;
 }

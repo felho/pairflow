@@ -92,6 +92,27 @@ describe("parseBubbleCreateCommandOptions", () => {
     expect(parsed.accuracyCritical).toBe(true);
   });
 
+  it("parses optional bootstrap command", () => {
+    const parsed = parseBubbleCreateCommandOptions([
+      "--id",
+      "b_create_01",
+      "--repo",
+      "/tmp/repo",
+      "--base",
+      "main",
+      "--review-artifact-type",
+      "code",
+      "--task",
+      "Implement X",
+      "--bootstrap-command",
+      "pnpm install --frozen-lockfile && pnpm build"
+    ]);
+
+    expect(parsed.bootstrapCommand).toBe(
+      "pnpm install --frozen-lockfile && pnpm build"
+    );
+  });
+
   it("supports help flag", () => {
     const parsed = parseBubbleCreateCommandOptions(["--help"]);
     expect(parsed.help).toBe(true);
@@ -352,6 +373,42 @@ describe("parseBubbleCreateCommandOptions", () => {
     );
     expect(createBubbleMock).toHaveBeenCalledTimes(1);
     expect(callOrder).toEqual(["create", "register"]);
+  });
+
+  it("forwards bootstrap command to bubble creation", async () => {
+    const createBubbleResult = {
+      bubbleId: "b_create_bootstrap_01"
+    } as unknown as BubbleCreateResult;
+    const createBubbleMock: NonNullable<
+      BubbleCreateCommandDependencies["createBubble"]
+    > = vi.fn(() => Promise.resolve(createBubbleResult));
+
+    await runBubbleCreateCommand(
+      [
+        "--id",
+        "b_create_bootstrap_01",
+        "--repo",
+        "/tmp/repo",
+        "--base",
+        "main",
+        "--review-artifact-type",
+        "code",
+        "--task",
+        "Implement X",
+        "--bootstrap-command",
+        "pnpm install --frozen-lockfile && pnpm build"
+      ],
+      "/tmp",
+      {
+        createBubble: createBubbleMock
+      }
+    );
+
+    expect(createBubbleMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bootstrapCommand: "pnpm install --frozen-lockfile && pnpm build"
+      })
+    );
   });
 
   it("continues create when auto-registration fails", async () => {

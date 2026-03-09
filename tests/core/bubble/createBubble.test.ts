@@ -182,6 +182,29 @@ describe("createBubble", () => {
     expect(reparsedConfig.open_command).toBe(openCommand);
   });
 
+  it("persists commands.bootstrap when explicitly provided in create input", async () => {
+    const repoPath = await createTempRepo();
+    const bootstrapCommand = "pnpm install --frozen-lockfile && pnpm build";
+
+    const result = await createBubble({
+      id: "b_create_with_bootstrap_command",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Explicit bootstrap command",
+      cwd: repoPath,
+      bootstrapCommand
+    });
+
+    expect(result.config.commands.bootstrap).toBe(bootstrapCommand);
+    const bubbleToml = await readFile(result.paths.bubbleTomlPath, "utf8");
+    expect(bubbleToml).toContain(
+      'bootstrap = "pnpm install --frozen-lockfile && pnpm build"'
+    );
+    const reparsedConfig = parseBubbleConfigToml(bubbleToml);
+    expect(reparsedConfig.commands.bootstrap).toBe(bootstrapCommand);
+  });
+
   it("supports injectable creation timestamp", async () => {
     const repoPath = await createTempRepo();
     const now = new Date("2026-02-26T22:00:00.000Z");

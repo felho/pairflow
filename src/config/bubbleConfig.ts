@@ -633,6 +633,9 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
   const typecheckCommand = commands
     ? readString(commands, "typecheck", "commands.typecheck", errors, true)
     : undefined;
+  const bootstrapCommand = commands
+    ? readString(commands, "bootstrap", "commands.bootstrap", errors, false)
+    : undefined;
 
   const notificationsEnabled = notifications
     ? (readBoolean(
@@ -781,6 +784,9 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
       reviewer: reviewer as "codex" | "claude"
     },
     commands: {
+      ...(bootstrapCommand !== undefined
+        ? { bootstrap: bootstrapCommand }
+        : {}),
       test: testCommand as string,
       typecheck: typecheckCommand as string
     },
@@ -902,6 +908,9 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
     `reviewer = ${tomlString(config.agents.reviewer)}`,
     "",
     "[commands]",
+    config.commands.bootstrap
+      ? `bootstrap = ${tomlString(config.commands.bootstrap)}`
+      : undefined,
     `test = ${tomlString(config.commands.test)}`,
     `typecheck = ${tomlString(config.commands.typecheck)}`,
     "",

@@ -61,6 +61,24 @@ describe("bubble config schema", () => {
     expect(reparsed.severity_gate_round).toBe(8);
   });
 
+  it("parses and renders optional commands.bootstrap", () => {
+    const config = parseBubbleConfigToml(
+      `${baseToml}bootstrap = "pnpm install --frozen-lockfile && pnpm build"\n`
+    );
+    expect(config.commands.bootstrap).toBe(
+      "pnpm install --frozen-lockfile && pnpm build"
+    );
+
+    const rendered = renderBubbleConfigToml(config);
+    expect(rendered).toContain(
+      'bootstrap = "pnpm install --frozen-lockfile && pnpm build"'
+    );
+    const reparsed = parseBubbleConfigToml(rendered);
+    expect(reparsed.commands.bootstrap).toBe(
+      "pnpm install --frozen-lockfile && pnpm build"
+    );
+  });
+
   it("applies doc_contract_gates defaults when section is omitted", () => {
     const config = parseBubbleConfigToml(baseToml);
     expect(config.doc_contract_gates).toEqual({

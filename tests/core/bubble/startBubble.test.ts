@@ -346,6 +346,138 @@ describe("startBubble", () => {
     await assertBashParses(reviewerCommand);
   });
 
+  it("runs configured commands.bootstrap before tmux launch", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_bootstrap_cmd_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Run bootstrap command before tmux launch",
+      bootstrapCommand: "pnpm install --frozen-lockfile && pnpm build",
+      cwd: repoPath
+    });
+
+    const callOrder: string[] = [];
+    await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T13:00:00.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () => {
+          callOrder.push("workspace");
+          return Promise.resolve({
+            repoPath,
+            baseRef: "refs/heads/main",
+            bubbleBranch: created.config.bubble_branch,
+            worktreePath: created.paths.worktreePath
+          });
+        },
+        runWorktreeBootstrapCommand: async (input) => {
+          callOrder.push("commands.bootstrap");
+          expect(input.bubbleId).toBe(created.bubbleId);
+          expect(input.worktreePath).toBe(created.paths.worktreePath);
+          expect(input.command).toBe("pnpm install --frozen-lockfile && pnpm build");
+        },
+        launchBubbleTmuxSession: () => {
+          callOrder.push("launch");
+          return Promise.resolve({ sessionName: "pf-b_start_bootstrap_cmd_01" });
+        },
+        claimRuntimeSession: (input) =>
+          Promise.resolve({
+            claimed: true,
+            record: {
+              bubbleId: input.bubbleId,
+              repoPath: input.repoPath,
+              worktreePath: input.worktreePath,
+              tmuxSessionName: input.tmuxSessionName,
+              updatedAt: "2026-02-22T13:00:00.000Z"
+            }
+          })
+      }
+    );
+
+    expect(callOrder).toEqual(["workspace", "commands.bootstrap", "launch"]);
+  });
+
+  it("fails startup and cleans workspace when commands.bootstrap fails", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_bootstrap_cmd_fail_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Fail startup when bootstrap command fails",
+      bootstrapCommand: "pnpm install --frozen-lockfile && pnpm build",
+      cwd: repoPath
+    });
+
+    let launchCalled = false;
+    let cleanupCalled = false;
+    const removedSessions: string[] = [];
+
+    await expect(
+      startBubble(
+        {
+          bubbleId: created.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-02-22T13:00:00.000Z")
+        },
+        {
+          bootstrapWorktreeWorkspace: () =>
+            Promise.resolve({
+              repoPath,
+              baseRef: "refs/heads/main",
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            }),
+          runWorktreeBootstrapCommand: () =>
+            Promise.reject(new Error("bootstrap command failed")),
+          launchBubbleTmuxSession: () => {
+            launchCalled = true;
+            return Promise.resolve({ sessionName: "pf-b_start_bootstrap_cmd_fail_01" });
+          },
+          cleanupWorktreeWorkspace: () => {
+            cleanupCalled = true;
+            return Promise.resolve({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath,
+              removedWorktree: true,
+              removedBranch: true
+            });
+          },
+          claimRuntimeSession: (input) =>
+            Promise.resolve({
+              claimed: true,
+              record: {
+                bubbleId: input.bubbleId,
+                repoPath: input.repoPath,
+                worktreePath: input.worktreePath,
+                tmuxSessionName: input.tmuxSessionName,
+                updatedAt: "2026-02-22T13:00:00.000Z"
+              }
+            }),
+          removeRuntimeSession: (input) => {
+            removedSessions.push(input.bubbleId);
+            return Promise.resolve(true);
+          }
+        }
+      )
+    ).rejects.toThrow(
+      /Failed to start bubble b_start_bootstrap_cmd_fail_01: bootstrap command failed/u
+    );
+
+    expect(launchCalled).toBe(false);
+    expect(cleanupCalled).toBe(true);
+    expect(removedSessions).toEqual([created.bubbleId]);
+
+    const loaded = await readStateSnapshot(created.paths.statePath);
+    expect(loaded.state.state).toBe("FAILED");
+  });
+
   it("injects document-focused reviewer guidance for doc-centric bubbles", async () => {
     const repoPath = await createTempRepo();
     const created = await createBubble({

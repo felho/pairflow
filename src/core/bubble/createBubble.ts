@@ -56,6 +56,7 @@ export interface BubbleCreateInput {
   reviewer?: AgentName;
   testCommand?: string;
   typecheckCommand?: string;
+  bootstrapCommand?: string;
   openCommand?: string;
 }
 
@@ -764,6 +765,7 @@ function buildBubbleConfig(input: {
   reviewer?: AgentName;
   testCommand?: string;
   typecheckCommand?: string;
+  bootstrapCommand?: string;
   openCommand?: string;
 }): BubbleConfig {
   return assertValidBubbleConfig({
@@ -789,6 +791,9 @@ function buildBubbleConfig(input: {
       reviewer: input.reviewer ?? "claude"
     },
     commands: {
+      ...(input.bootstrapCommand !== undefined
+        ? { bootstrap: input.bootstrapCommand }
+        : {}),
       test: input.testCommand ?? "pnpm test",
       typecheck: input.typecheckCommand ?? "pnpm typecheck"
     },
@@ -911,6 +916,9 @@ export async function createBubble(
   }
   if (input.typecheckCommand !== undefined) {
     bubbleConfigInput.typecheckCommand = input.typecheckCommand;
+  }
+  if (input.bootstrapCommand !== undefined) {
+    bubbleConfigInput.bootstrapCommand = input.bootstrapCommand;
   }
   if (input.openCommand !== undefined) {
     bubbleConfigInput.openCommand = input.openCommand;

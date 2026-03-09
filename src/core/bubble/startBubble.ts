@@ -3,6 +3,7 @@ import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
 import { shellQuote } from "../util/shellQuote.js";
 import { buildAgentCommand } from "../runtime/agentCommand.js";
+import { spawn } from "node:child_process";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import {
@@ -78,6 +79,9 @@ export interface StartBubbleResult {
 export interface StartBubbleDependencies {
   bootstrapWorktreeWorkspace?: typeof bootstrapWorktreeWorkspace;
   cleanupWorktreeWorkspace?: typeof cleanupWorktreeWorkspace;
+  runWorktreeBootstrapCommand?:
+    | ((input: RunWorktreeBootstrapCommandInput) => Promise<void>)
+    | undefined;
   launchBubbleTmuxSession?: typeof launchBubbleTmuxSession;
   terminateBubbleTmuxSession?: typeof terminateBubbleTmuxSession;
   isTmuxSessionAlive?: ((sessionName: string) => Promise<boolean>) | undefined;
@@ -91,6 +95,80 @@ export class StartBubbleError extends Error {
     super(message);
     this.name = "StartBubbleError";
   }
+}
+
+interface RunWorktreeBootstrapCommandInput {
+  bubbleId: string;
+  worktreePath: string;
+  command: string;
+}
+
+function truncateCommandOutput(raw: string, maxChars: number = 1200): string {
+  const normalized = raw.trim();
+  if (normalized.length <= maxChars) {
+    return normalized;
+  }
+  return `${normalized.slice(0, maxChars)}... [truncated]`;
+}
+
+async function runWorktreeBootstrapCommandDefault(
+  input: RunWorktreeBootstrapCommandInput
+): Promise<void> {
+  const command = input.command.trim();
+  if (command.length === 0) {
+    return;
+  }
+
+  const result = await new Promise<{
+    stdout: string;
+    stderr: string;
+    exitCode: number;
+  }>((resolvePromise, rejectPromise) => {
+    const child = spawn("bash", ["-lc", command], {
+      cwd: input.worktreePath,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk: string) => {
+      stderr += chunk;
+    });
+
+    child.on("error", rejectPromise);
+    child.on("close", (exitCode) => {
+      resolvePromise({
+        stdout,
+        stderr,
+        exitCode: exitCode ?? 1
+      });
+    });
+  });
+
+  if (result.exitCode === 0) {
+    return;
+  }
+
+  const stderrSummary = truncateCommandOutput(result.stderr);
+  const stdoutSummary = truncateCommandOutput(result.stdout);
+  const details: string[] = [
+    `Configured commands.bootstrap failed for bubble ${input.bubbleId} (exit ${result.exitCode}).`,
+    `Command: ${command}`,
+    `Worktree: ${input.worktreePath}`
+  ];
+  if (stderrSummary.length > 0) {
+    details.push(`stderr: ${stderrSummary}`);
+  }
+  if (stdoutSummary.length > 0) {
+    details.push(`stdout: ${stdoutSummary}`);
+  }
+  throw new StartBubbleError(details.join(" "));
 }
 
 async function isTmuxSessionAliveDefault(sessionName: string): Promise<boolean> {
@@ -525,6 +603,8 @@ export async function startBubble(
 ): Promise<StartBubbleResult> {
   const bootstrap = dependencies.bootstrapWorktreeWorkspace ?? bootstrapWorktreeWorkspace;
   const cleanup = dependencies.cleanupWorktreeWorkspace ?? cleanupWorktreeWorkspace;
+  const runWorktreeBootstrapCommand =
+    dependencies.runWorktreeBootstrapCommand ?? runWorktreeBootstrapCommandDefault;
   const launchTmux = dependencies.launchBubbleTmuxSession ?? launchBubbleTmuxSession;
   const terminateTmux =
     dependencies.terminateBubbleTmuxSession ?? terminateBubbleTmuxSession;
@@ -646,6 +726,17 @@ export async function startBubble(
         localOverlay: resolved.bubbleConfig.local_overlay
       });
       workspaceBootstrapped = true;
+
+      if (
+        resolved.bubbleConfig.commands.bootstrap !== undefined
+        && resolved.bubbleConfig.commands.bootstrap.trim().length > 0
+      ) {
+        await runWorktreeBootstrapCommand({
+          bubbleId: resolved.bubbleId,
+          worktreePath: resolved.bubblePaths.worktreePath,
+          command: resolved.bubbleConfig.commands.bootstrap
+        });
+      }
 
       const tmux = await launchTmux({
         bubbleId: resolved.bubbleId,
