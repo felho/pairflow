@@ -104,21 +104,23 @@ function buildStatusPaneCommand(bubbleId: string, repoPath: string, worktreePath
   const displayWorktreePath = formatStatusPaneWorktreePath(worktreePath);
   const watchdogCommand = `pairflow bubble watchdog --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)} >/dev/null 2>&1 || true`;
   const statusCommand = `pairflow bubble status --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)}`;
+  const statusSignatureCommand = `pairflow bubble status --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)} --json`;
   const worktreeLine = shellQuote(displayWorktreePath);
   const loopScript = [
-    "prev_render=''",
+    "prev_signature=''",
     "printf '\\033[2J\\033[H'",
     "while true; do",
     `  ${watchdogCommand}`,
-    "  next_render=$(",
-    `    ${statusCommand}`,
+    "  next_signature=$(",
+    `    ${statusSignatureCommand}`,
     `    printf '%s\\n' ${worktreeLine}`,
     "  )",
-    "  if [ \"$next_render\" != \"$prev_render\" ]; then",
+    "  if [ \"$next_signature\" != \"$prev_signature\" ]; then",
     "    printf '\\033[H'",
-    "    printf '%s\\n' \"$next_render\"",
+    `    ${statusCommand}`,
+    `    printf '%s\\n' ${worktreeLine}`,
     "    printf '\\033[J'",
-    "    prev_render=\"$next_render\"",
+    "    prev_signature=\"$next_signature\"",
     "  fi",
     "  sleep 2",
     "done"

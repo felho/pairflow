@@ -853,7 +853,7 @@ describe("startBubble", () => {
     }
     expect(statusCommand).toContain("pairflow bubble watchdog --id");
     expect(statusCommand).toContain("pairflow bubble status --id");
-    expect(statusCommand).not.toContain("--json");
+    expect(statusCommand).toContain("--json");
     const homePath = homedir();
     const expectedDisplayWorktreePath =
       created.paths.worktreePath === homePath
@@ -863,9 +863,10 @@ describe("startBubble", () => {
           : created.paths.worktreePath;
     const statusScript = extractBashLcScript(statusCommand);
     expect(statusScript).toContain(`printf '%s\\n' ${shellQuote(expectedDisplayWorktreePath)}`);
-    expect(statusScript).toContain("prev_render=''");
-    expect(statusScript).toContain("next_render=$(");
-    expect(statusScript).toContain("if [ \"$next_render\" != \"$prev_render\" ]; then");
+    expect(statusScript).toContain("prev_signature=''");
+    expect(statusScript).toContain("next_signature=$(");
+    expect(statusScript).toContain("if [ \"$next_signature\" != \"$prev_signature\" ]; then");
+    expect(statusScript).toContain("pairflow bubble status --id");
     expect(statusScript).not.toContain("clear;");
     await assertBashParses(statusCommand);
   });
