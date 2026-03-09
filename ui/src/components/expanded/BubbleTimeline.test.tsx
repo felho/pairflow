@@ -29,9 +29,11 @@ describe("BubbleTimeline", () => {
       />
     );
 
-    expect(
-      screen.getByText(/orchestrator\s*\(meta-reviewer\)/u)
-    ).toBeInTheDocument();
+    const actorLabel = screen.getByText("orchestrator", {
+      selector: "span.font-medium"
+    });
+
+    expect(actorLabel).toHaveTextContent(/orchestrator\s*\(meta-reviewer\)/u);
   });
 
   it("shows empty-state text when no timeline entries exist", () => {
