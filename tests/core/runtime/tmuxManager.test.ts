@@ -121,7 +121,7 @@ describe("launchBubbleTmuxSession", () => {
       "-t",
       "pf-b_start_01:0",
       "pane-border-format",
-      "#{?#{==:#{pane_index},0},orchestrator/status,#{?#{==:#{pane_index},1},codex/implementer,#{?#{==:#{pane_index},2},claude/reviewer,#{?#{==:#{pane_index},3},codex/meta-reviewer,pane-#{pane_index}}}}}"
+      "#{?#{==:#{pane_index},0},orchestrator/status,#{?#{==:#{pane_index},1},[codex/implementer],#{?#{==:#{pane_index},2},claude/reviewer,#{?#{==:#{pane_index},3},codex/meta-reviewer,pane-#{pane_index}}}}}"
     ]);
     // Unset CLAUDECODE from server global env and session env.
     expect(calls[5]?.args).toEqual([
@@ -208,7 +208,10 @@ describe("launchBubbleTmuxSession", () => {
       "pf-b_start_01",
       "client-resized"
     ]);
-    expect(calls[14]?.args?.[4]).toContain("REMAIN=$((#{window_height} - 15))");
+    expect(calls[14]?.args?.[4]).toContain(
+      "WINDOW_HEIGHT=$(tmux display-message -p -t pf-b_start_01:0 '#{window_height}'"
+    );
+    expect(calls[14]?.args?.[4]).toContain("REMAIN=$((WINDOW_HEIGHT - 15))");
     expect(calls[14]?.args?.[4]).toContain("tmux resize-pane -t %11 -y $ROW");
     expect(calls[14]?.args?.[4]).toContain("tmux resize-pane -t %12 -y $ROW");
     expect(calls[14]?.args?.[4]).toContain("tmux resize-pane -t %13 -y $ROW_LAST");

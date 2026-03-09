@@ -183,7 +183,7 @@ export async function launchBubbleTmuxSession(
   const tmuxPaneSeparators = 3;
   const metaReviewerCommand = input.metaReviewerCommand ?? input.reviewerCommand;
   const statusPaneLabel = input.statusPaneLabel ?? "orchestrator/status";
-  const implementerPaneLabel = input.implementerPaneLabel ?? "codex/implementer";
+  const implementerPaneLabel = input.implementerPaneLabel ?? "[codex/implementer]";
   const reviewerPaneLabel = input.reviewerPaneLabel ?? "claude/reviewer";
   const metaReviewerPaneLabel =
     input.metaReviewerPaneLabel ?? "codex/meta-reviewer";
@@ -328,7 +328,9 @@ export async function launchBubbleTmuxSession(
   // All resize logic runs inside a single run-shell to avoid spawn quoting issues.
   const layoutScript = [
     `tmux resize-pane -t ${statusPane} -y ${statusPaneHeight} 2>/dev/null || true`,
-    `REMAIN=$((#{window_height} - ${statusPaneHeight + tmuxPaneSeparators}))`,
+    `WINDOW_HEIGHT=$(tmux display-message -p -t ${sessionName}:0 '#{window_height}' 2>/dev/null || echo 0)`,
+    "case \"$WINDOW_HEIGHT\" in ''|*[!0-9]*) WINDOW_HEIGHT=0 ;; esac",
+    `REMAIN=$((WINDOW_HEIGHT - ${statusPaneHeight + tmuxPaneSeparators}))`,
     "if [ $REMAIN -lt 3 ]; then REMAIN=3; fi",
     "ROW=$((REMAIN / 3))",
     "if [ $ROW -lt 1 ]; then ROW=1; fi",

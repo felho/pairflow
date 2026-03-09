@@ -786,7 +786,7 @@ export async function startBubble(
         worktreePath: resolved.bubblePaths.worktreePath,
         statusCommand: buildStatusPaneCommand(resolved.bubbleId, resolved.repoPath, resolved.bubblePaths.worktreePath),
         statusPaneLabel: "orchestrator/status",
-        implementerPaneLabel: `${resolved.bubbleConfig.agents.implementer}/implementer`,
+        implementerPaneLabel: `[${resolved.bubbleConfig.agents.implementer}/implementer]`,
         reviewerPaneLabel: `${resolved.bubbleConfig.agents.reviewer}/reviewer`,
         metaReviewerPaneLabel: "codex/meta-reviewer",
         implementerCommand: buildAgentCommand({
@@ -902,7 +902,7 @@ export async function startBubble(
         worktreePath: resolved.bubblePaths.worktreePath,
         statusCommand: buildStatusPaneCommand(resolved.bubbleId, resolved.repoPath, resolved.bubblePaths.worktreePath),
         statusPaneLabel: "orchestrator/status",
-        implementerPaneLabel: `${resolved.bubbleConfig.agents.implementer}/implementer`,
+        implementerPaneLabel: `[${resolved.bubbleConfig.agents.implementer}/implementer]`,
         reviewerPaneLabel: `${resolved.bubbleConfig.agents.reviewer}/reviewer`,
         metaReviewerPaneLabel: "codex/meta-reviewer",
         implementerCommand: buildAgentCommand({
