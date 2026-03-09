@@ -284,6 +284,8 @@ describe("renderBubbleStatusTable", () => {
     expect(rendered).not.toContain("Failing gates:");
     expect(rendered).not.toContain("Spec lock:");
     expect(rendered).not.toContain("Round gate:");
+    expect(rendered).toContain("03-08T21:29:15Z");
+    expect(rendered).not.toContain("2026-03-08T21:29:15.948Z");
   });
 
   it("adds escalation section when watchdog is expired", () => {

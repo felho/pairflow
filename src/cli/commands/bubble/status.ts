@@ -211,6 +211,18 @@ function formatWatchdogRemaining(status: BubbleStatusView["watchdog"]): string {
   return green(`${remaining}s`);
 }
 
+function formatTableTimestamp(value: string | null): string {
+  if (value === null) {
+    return "-";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  const iso = parsed.toISOString();
+  return iso.slice(5, 19) + "Z";
+}
+
 function formatInboxSummary(input: BubbleStatusView["pendingInboxItems"]): string {
   const q = input.humanQuestions;
   const a = input.approvalRequests;
@@ -284,11 +296,11 @@ export function renderBubbleStatusTable(status: BubbleStatusView): string {
     ["Bubble", status.bubbleId],
     [
       "Lifecycle",
-      `${formatStateLabel(status.state)} r${status.round} | active ${formatActiveOwner(status.activeAgent, status.activeRole)} | since ${dim(status.activeSince ?? "-")}`
+      `${formatStateLabel(status.state)} r${status.round} | active ${formatActiveOwner(status.activeAgent, status.activeRole)} | since ${dim(formatTableTimestamp(status.activeSince))}`
     ],
     [
       "Runtime",
-      `last ${dim(status.lastCommandAt ?? "-")} | watchdog ${status.watchdog.monitored ? green("on") : dim("off")} ${status.watchdog.timeoutMinutes}m rem=${formatWatchdogRemaining(status.watchdog)} exp=${status.watchdog.expired ? bold(red("yes")) : green("no")}`
+      `last ${dim(formatTableTimestamp(status.lastCommandAt))} | watchdog ${status.watchdog.monitored ? green("on") : dim("off")} ${status.watchdog.timeoutMinutes}m rem=${formatWatchdogRemaining(status.watchdog)} exp=${status.watchdog.expired ? bold(red("yes")) : green("no")}`
     ],
     [
       "Command path",
@@ -304,7 +316,7 @@ export function renderBubbleStatusTable(status: BubbleStatusView): string {
     ],
     [
       "Transcript",
-      `messages=${bold(String(status.transcript.totalMessages))} | last=${status.transcript.lastMessageType ?? "-"} @ ${dim(status.transcript.lastMessageTs ?? "-")}`
+      `messages=${bold(String(status.transcript.totalMessages))} | last=${status.transcript.lastMessageType ?? "-"} @ ${dim(formatTableTimestamp(status.transcript.lastMessageTs))}`
     ],
     [
       "Inbox",
@@ -316,7 +328,7 @@ export function renderBubbleStatusTable(status: BubbleStatusView): string {
     rows.push([
       "Escalation",
       red(
-        `timeout for ${status.watchdog.monitoredAgent ?? "-"} (deadline ${status.watchdog.deadlineTimestamp ?? "-"})`
+        `timeout for ${status.watchdog.monitoredAgent ?? "-"} (deadline ${formatTableTimestamp(status.watchdog.deadlineTimestamp)})`
       )
     ]);
   }
