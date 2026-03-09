@@ -10,6 +10,20 @@ import {
   type TmuxRunner
 } from "../../../src/core/runtime/tmuxManager.js";
 
+function buildSplitPaneStdout(args: string[]): string {
+  if (args[0] !== "split-window") {
+    return "";
+  }
+  const command = args.at(-1);
+  if (command === "codex") {
+    return "%11\n";
+  }
+  if (command === "claude") {
+    return "%12\n";
+  }
+  return "%99\n";
+}
+
 describe("buildBubbleTmuxSessionName", () => {
   it("normalizes unsafe characters", () => {
     const sessionName = buildBubbleTmuxSessionName("b.feature/10");
@@ -49,7 +63,7 @@ describe("launchBubbleTmuxSession", () => {
         allowFailure: options.allowFailure ?? false
       });
       return Promise.resolve({
-        stdout: "",
+        stdout: buildSplitPaneStdout(args),
         stderr: "",
         exitCode:
           args[0] === "has-session" ? 1 : 0
@@ -111,6 +125,9 @@ describe("launchBubbleTmuxSession", () => {
     expect(calls[6]?.args).toEqual([
       "split-window",
       "-v",
+      "-P",
+      "-F",
+      "#{pane_id}",
       "-t",
       "pf-b_start_01:0.0",
       "-c",
@@ -129,13 +146,23 @@ describe("launchBubbleTmuxSession", () => {
     expect(calls[8]?.args).toEqual([
       "split-window",
       "-v",
+      "-P",
+      "-F",
+      "#{pane_id}",
       "-t",
-      "pf-b_start_01:0.1",
+      "%11",
       "-p",
       "50",
       "-c",
       "/tmp/worktree",
       "claude"
+    ]);
+    expect(calls[10]?.args).toEqual([
+      "set-hook",
+      "-t",
+      "pf-b_start_01",
+      "client-resized",
+      "run-shell \"tmux resize-pane -t pf-b_start_01:0.0 -y 11 2>/dev/null || true; REMAIN=\\$((#{window_height} - 13)); tmux resize-pane -t %11 -y \\$((REMAIN / 2)) 2>/dev/null || true\""
     ]);
   });
 
@@ -144,7 +171,7 @@ describe("launchBubbleTmuxSession", () => {
     const runner: TmuxRunner = (args: string[]) => {
       calls.push(args);
       return Promise.resolve({
-        stdout: "",
+        stdout: buildSplitPaneStdout(args),
         stderr: "",
         exitCode: args[0] === "has-session" ? 1 : 0
       });
@@ -177,27 +204,27 @@ describe("launchBubbleTmuxSession", () => {
     expect(calls).toContainEqual([
       "capture-pane",
       "-pt",
-      "pf-b_start_kickoff:0.1"
+      "%11"
     ]);
     // Text and Enter are separate send-keys calls (ink TUI requirement).
     expect(calls).toContainEqual([
       "send-keys",
       "-t",
-      "pf-b_start_kickoff:0.1",
+      "%11",
       "-l",
       "implementer kickoff message"
     ]);
     expect(calls).toContainEqual([
       "send-keys",
       "-t",
-      "pf-b_start_kickoff:0.1",
+      "%11",
       "Enter"
     ]);
     // No bootstrap messages sent to reviewer pane.
-    const reviewerSendKeys = calls.filter(
-      (call) => call[0] === "send-keys" && call[2] === "pf-b_start_kickoff:0.2"
+    const reviewerSendKeysByPaneId = calls.filter(
+      (call) => call[0] === "send-keys" && call[2] === "%12"
     );
-    expect(reviewerSendKeys).toHaveLength(0);
+    expect(reviewerSendKeysByPaneId).toHaveLength(0);
   });
 
   it("sends kickoff message to reviewer pane when provided", async () => {
@@ -205,7 +232,7 @@ describe("launchBubbleTmuxSession", () => {
     const runner: TmuxRunner = (args: string[]) => {
       calls.push(args);
       return Promise.resolve({
-        stdout: "",
+        stdout: buildSplitPaneStdout(args),
         stderr: "",
         exitCode: args[0] === "has-session" ? 1 : 0
       });
@@ -224,26 +251,26 @@ describe("launchBubbleTmuxSession", () => {
     expect(calls).toContainEqual([
       "capture-pane",
       "-pt",
-      "pf-b_start_kickoff_reviewer:0.2"
+      "%12"
     ]);
     expect(calls).toContainEqual([
       "send-keys",
       "-t",
-      "pf-b_start_kickoff_reviewer:0.2",
+      "%12",
       "-l",
       "reviewer kickoff message"
     ]);
     expect(calls).toContainEqual([
       "send-keys",
       "-t",
-      "pf-b_start_kickoff_reviewer:0.2",
+      "%12",
       "Enter"
     ]);
 
     const implementerSendKeys = calls.filter(
       (call) =>
         call[0] === "send-keys" &&
-        call[2] === "pf-b_start_kickoff_reviewer:0.1"
+        call[2] === "%11"
     );
     expect(implementerSendKeys).toHaveLength(0);
   });
@@ -260,7 +287,7 @@ describe("launchBubbleTmuxSession", () => {
       });
       if (
         args[0] === "send-keys" &&
-        args[2] === "pf-b_start_kickoff_fail:0.1"
+        args[2] === "%11"
       ) {
         return Promise.resolve({
           stdout: "",
@@ -269,7 +296,7 @@ describe("launchBubbleTmuxSession", () => {
         });
       }
       return Promise.resolve({
-        stdout: "",
+        stdout: buildSplitPaneStdout(args),
         stderr: "",
         exitCode: args[0] === "has-session" ? 1 : 0
       });
@@ -290,7 +317,7 @@ describe("launchBubbleTmuxSession", () => {
     const failedSends = calls.filter(
       (call) =>
         call.args[0] === "send-keys" &&
-        call.args[2] === "pf-b_start_kickoff_fail:0.1"
+        call.args[2] === "%11"
     );
     expect(failedSends.length).toBeGreaterThan(0);
     for (const send of failedSends) {

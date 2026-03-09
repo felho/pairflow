@@ -87,6 +87,16 @@ export class TmuxSessionExistsError extends Error {
   }
 }
 
+function parseTmuxPaneId(stdout: string, command: string[]): string {
+  const paneId = stdout.trim();
+  if (!/^%[0-9]+$/u.test(paneId)) {
+    throw new Error(
+      `tmux did not return a pane id for command: tmux ${command.join(" ")} (stdout=${JSON.stringify(stdout)})`
+    );
+  }
+  return paneId;
+}
+
 function normalizeSessionComponent(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]/gu, "-").replace(/-+/gu, "-");
 }
@@ -190,43 +200,54 @@ export async function launchBubbleTmuxSession(
     await runner(["set-environment", "-g", "-u", variableName]);
     await runner(["set-environment", "-t", sessionName, "-u", variableName]);
   }
+  const statusPane = `${sessionName}:0.0`;
   // Split status pane to create implementer pane.
-  await runner([
+  const implementerSplitCommand = [
     "split-window",
     "-v",
+    "-P",
+    "-F",
+    "#{pane_id}",
     "-t",
-    `${sessionName}:0.0`,
+    statusPane,
     "-c",
     input.worktreePath,
     input.implementerCommand
-  ]);
+  ];
+  const implementerSplit = await runner(implementerSplitCommand);
+  const implementerPaneId = parseTmuxPaneId(implementerSplit.stdout, implementerSplitCommand);
   // Fix status pane to 11 lines BEFORE splitting for reviewer, so the
   // subsequent 50/50 split divides the remaining space equally.
   await runner([
     "resize-pane",
     "-t",
-    `${sessionName}:0.0`,
+    statusPane,
     "-y",
     String(statusPaneHeight)
   ]);
   // Split implementer pane in half for reviewer — both get equal space.
-  await runner([
+  const reviewerSplitCommand = [
     "split-window",
     "-v",
+    "-P",
+    "-F",
+    "#{pane_id}",
     "-t",
-    `${sessionName}:0.1`,
+    implementerPaneId,
     "-p",
     "50",
     "-c",
     input.worktreePath,
     input.reviewerCommand
-  ]);
+  ];
+  const reviewerSplit = await runner(reviewerSplitCommand);
+  const reviewerPaneId = parseTmuxPaneId(reviewerSplit.stdout, reviewerSplitCommand);
   // Re-fix status pane after the second split — the split may have
   // redistributed vertical space away from the initial 11-line resize.
   await runner([
     "resize-pane",
     "-t",
-    `${sessionName}:0.0`,
+    statusPane,
     "-y",
     String(statusPaneHeight)
   ]);
@@ -245,7 +266,7 @@ export async function launchBubbleTmuxSession(
     "-t",
     s,
     "client-resized",
-    `run-shell "tmux resize-pane -t ${s}:0.0 -y ${statusPaneHeight}; REMAIN=\\$((#{window_height} - ${statusPaneHeight + tmuxPaneSeparators})); tmux resize-pane -t ${s}:0.1 -y \\$((REMAIN / 2))"`
+    `run-shell "tmux resize-pane -t ${statusPane} -y ${statusPaneHeight} 2>/dev/null || true; REMAIN=\\$((#{window_height} - ${statusPaneHeight + tmuxPaneSeparators})); tmux resize-pane -t ${implementerPaneId} -y \\$((REMAIN / 2)) 2>/dev/null || true"`
   ]);
   const sendPaneMessage = async (
     targetPane: string,
@@ -262,10 +283,10 @@ export async function launchBubbleTmuxSession(
     await sendAndSubmitTmuxPaneMessage(runner, targetPane, message as string);
   };
 
-  await sendPaneMessage(`${sessionName}:0.1`, input.implementerBootstrapMessage);
-  await sendPaneMessage(`${sessionName}:0.2`, input.reviewerBootstrapMessage);
-  await sendPaneMessage(`${sessionName}:0.1`, input.implementerKickoffMessage);
-  await sendPaneMessage(`${sessionName}:0.2`, input.reviewerKickoffMessage);
+  await sendPaneMessage(implementerPaneId, input.implementerBootstrapMessage);
+  await sendPaneMessage(reviewerPaneId, input.reviewerBootstrapMessage);
+  await sendPaneMessage(implementerPaneId, input.implementerKickoffMessage);
+  await sendPaneMessage(reviewerPaneId, input.reviewerKickoffMessage);
 
   return {
     sessionName

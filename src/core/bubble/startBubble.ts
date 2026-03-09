@@ -107,6 +107,7 @@ function buildStatusPaneCommand(bubbleId: string, repoPath: string, worktreePath
   const statusSignatureCommand = `pairflow bubble status --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)} --json`;
   const worktreeLine = shellQuote(displayWorktreePath);
   const loopScript = [
+    "set +e",
     "prev_signature=''",
     "printf '\\033[2J\\033[H'",
     "while true; do",

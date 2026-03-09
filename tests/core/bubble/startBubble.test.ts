@@ -863,6 +863,7 @@ describe("startBubble", () => {
           : created.paths.worktreePath;
     const statusScript = extractBashLcScript(statusCommand);
     expect(statusScript).toContain(`printf '%s\\n' ${shellQuote(expectedDisplayWorktreePath)}`);
+    expect(statusScript).toContain("set +e");
     expect(statusScript).toContain("prev_signature=''");
     expect(statusScript).toContain("next_signature=$(");
     expect(statusScript).toContain("if [ \"$next_signature\" != \"$prev_signature\" ]; then");
