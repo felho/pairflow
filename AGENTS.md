@@ -78,6 +78,12 @@ These are mandatory operating rules for bubble lifecycle handling to avoid rebas
    - First run state diagnostics (`git status`, `git reflog`, `git ls-files -u`), then decide with the user.
    - Default recommendation: for unjustified/orphaned rebase, run `git rebase --abort`, then continue from a clean state.
 
+6. **Temporary bootstrap requirement (until repo-level config exists)**
+   - When creating a Pairflow bubble in this repository, always pass:
+     - `--bootstrap-command "pnpm install --frozen-lockfile && pnpm build"`
+   - Apply this to bubble creation flows by default so worktree-local CLI/runtime is initialized reliably.
+   - Remove this requirement once bootstrap is supported as repository-level configuration.
+
 ---
 
 ## Blocker & Escalation Policy
