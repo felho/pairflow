@@ -188,11 +188,11 @@ function formatFailingGateSummary(reasonCodes: string[]): string {
 
 function formatCommandPath(status: BubbleStatusView["commandPath"]): string {
   if (status.status === "worktree_local") {
-    return green(`worktree_local (${status.localEntrypoint})`);
+    return green("worktree_local");
   }
   return bold(
     red(
-      `${status.reasonCode ?? "PAIRFLOW_COMMAND_PATH_STALE"} active=${status.activeEntrypoint ?? "unknown"} expected=${status.localEntrypoint}`
+      `${status.reasonCode ?? "PAIRFLOW_COMMAND_PATH_STALE"}`
     )
   );
 }

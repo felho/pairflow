@@ -142,13 +142,13 @@ describe("launchBubbleTmuxSession", () => {
       "/tmp/worktree",
       "codex"
     ]);
-    // Status pane fixed to 11 lines before reviewer split.
+    // Status pane fixed to 12 lines before reviewer split.
     expect(calls[8]?.args).toEqual([
       "resize-pane",
       "-t",
       "pf-b_start_01:0.0",
       "-y",
-      "11"
+      "12"
     ]);
     // Reviewer split uses -p 50 to divide remaining space equally.
     expect(calls[9]?.args).toEqual([
@@ -170,7 +170,7 @@ describe("launchBubbleTmuxSession", () => {
       "-t",
       "pf-b_start_01",
       "client-resized",
-      "run-shell \"tmux resize-pane -t pf-b_start_01:0.0 -y 11 2>/dev/null || true; REMAIN=\\$((#{window_height} - 13)); tmux resize-pane -t %11 -y \\$((REMAIN / 2)) 2>/dev/null || true\""
+      "run-shell \"tmux resize-pane -t pf-b_start_01:0.0 -y 12 2>/dev/null || true; REMAIN=\\$((#{window_height} - 14)); tmux resize-pane -t %11 -y \\$((REMAIN / 2)) 2>/dev/null || true\""
     ]);
   });
 
