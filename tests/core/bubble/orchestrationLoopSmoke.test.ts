@@ -234,7 +234,7 @@ describe("bubble orchestration loop smoke", () => {
       }
     );
 
-    expect(converged.state.state).toBe("READY_FOR_APPROVAL");
+    expect(converged.state.state).toBe("META_REVIEW_FAILED");
 
     const transcript = await readTranscriptEnvelopes(loopBubble.paths.transcriptPath);
     expect(transcript.map((entry) => entry.type)).toEqual([
@@ -247,7 +247,7 @@ describe("bubble orchestration loop smoke", () => {
     ]);
 
     const loadedState = await readStateSnapshot(loopBubble.paths.statePath);
-    expect(loadedState.state.state).toBe("READY_FOR_APPROVAL");
+    expect(loadedState.state.state).toBe("META_REVIEW_FAILED");
     expect(loadedState.state.active_role).toBeNull();
     expect(loadedState.state.active_agent).toBeNull();
 

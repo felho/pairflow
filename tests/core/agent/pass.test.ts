@@ -964,7 +964,7 @@ describe("emitPassFromWorkspace", () => {
     expect(result.autoConverged?.gateRoute).toBe("human_gate_run_failed");
     expect(result.autoConverged?.convergenceEnvelope.type).toBe("CONVERGENCE");
     expect(result.autoConverged?.approvalRequestEnvelope.type).toBe("APPROVAL_REQUEST");
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
     expect(transcript.map((entry) => entry.type)).toEqual([
@@ -1105,7 +1105,7 @@ describe("emitPassFromWorkspace", () => {
     });
 
     expect(result.transitionDecision).toBe("auto_converge");
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
 
     const artifact = await readDocContractGateArtifact(gateArtifactPath);
     expect(artifact?.updated_at).toBe(now.toISOString());
@@ -1193,7 +1193,7 @@ describe("emitPassFromWorkspace", () => {
     });
 
     expect(result.transitionDecision).toBe("auto_converge");
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
     expect(result.docGateArtifactWriteFailureReason).toContain("EISDIR");
   });
 
@@ -1410,7 +1410,7 @@ describe("emitPassFromWorkspace", () => {
     expect(result.repeatCleanReasonCode).toBe(
       repeatCleanAutoconvergeTriggeredReasonCode
     );
-    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
     expect(transcript.map((entry) => entry.type)).toEqual([

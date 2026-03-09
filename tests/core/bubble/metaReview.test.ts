@@ -6,9 +6,11 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { getBubblePaths } from "../../../src/core/bubble/paths.js";
 import {
+  extractMetaReviewDelimitedBlock,
   MetaReviewError,
   getMetaReviewLastReport,
   getMetaReviewStatus,
+  parseMetaReviewRunnerOutput,
   runMetaReview,
   toMetaReviewError
 } from "../../../src/core/bubble/metaReview.js";
@@ -395,6 +397,45 @@ describe("meta-review run", () => {
     expect(loaded.state.meta_review?.last_autonomous_summary).toBe(
       "State is canonical"
     );
+  });
+});
+
+describe("meta-review runner parsing", () => {
+  it("extracts the latest delimited marker block from pane capture output", () => {
+    const begin = "PAIRFLOW_META_REVIEW_JSON_BEGIN:run_123";
+    const end = "PAIRFLOW_META_REVIEW_JSON_END:run_123";
+    const text = [
+      "noise",
+      begin,
+      "{\"recommendation\":\"inconclusive\"}",
+      end,
+      "more noise",
+      begin,
+      "{\"recommendation\":\"approve\"}",
+      end
+    ].join("\n");
+
+    const payload = extractMetaReviewDelimitedBlock({
+      text,
+      beginMarker: begin,
+      endMarker: end
+    });
+
+    expect(payload).toBe("{\"recommendation\":\"approve\"}");
+  });
+
+  it("parses pane JSON output even when string fields contain raw line breaks", () => {
+    const raw = `{"recommendation":"approve","summary":"line one
+line two","rework_target_message":null,"report_markdown":"# Report
+
+ok"}`;
+
+    const parsed = parseMetaReviewRunnerOutput(raw);
+
+    expect(parsed.recommendation).toBe("approve");
+    expect(parsed.summary).toBe("line one\nline two");
+    expect(parsed.reportMarkdown).toContain("# Report");
+    expect(parsed.reworkTargetMessage).toBeNull();
   });
 });
 
