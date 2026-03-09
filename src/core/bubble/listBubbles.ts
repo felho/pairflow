@@ -12,6 +12,10 @@ import {
 } from "./repoResolution.js";
 import type { BubbleLifecycleState } from "../../types/bubble.js";
 import type { RuntimeSessionRecord } from "../runtime/sessionsRegistry.js";
+import type {
+  MetaReviewRecommendation,
+  MetaReviewRunStatus
+} from "../../types/bubble.js";
 
 export interface BubbleListInput {
   repoPath?: string | undefined;
@@ -29,6 +33,14 @@ export interface BubbleListEntry {
   activeSince: string | null;
   lastCommandAt: string | null;
   runtimeSession: RuntimeSessionRecord | null;
+  metaReview: {
+    actor: "meta-reviewer";
+    latestRecommendation: MetaReviewRecommendation | null;
+    latestStatus: MetaReviewRunStatus | null;
+    latestSummary: string | null;
+    latestReportRef: string | null;
+    latestUpdatedAt: string | null;
+  };
 }
 
 export interface BubbleListStateCounts {
@@ -185,7 +197,18 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
       activeRole: stateLoaded.state.active_role,
       activeSince: stateLoaded.state.active_since,
       lastCommandAt: stateLoaded.state.last_command_at,
-      runtimeSession
+      runtimeSession,
+      metaReview: {
+        actor: "meta-reviewer",
+        latestRecommendation:
+          stateLoaded.state.meta_review?.last_autonomous_recommendation ?? null,
+        latestStatus: stateLoaded.state.meta_review?.last_autonomous_status ?? null,
+        latestSummary: stateLoaded.state.meta_review?.last_autonomous_summary ?? null,
+        latestReportRef:
+          stateLoaded.state.meta_review?.last_autonomous_report_ref ?? null,
+        latestUpdatedAt:
+          stateLoaded.state.meta_review?.last_autonomous_updated_at ?? null
+      }
     });
   }
 

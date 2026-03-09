@@ -92,23 +92,33 @@ function formatTime(timestamp: string): string {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-type RoleKind = "impl" | "review" | "human" | "system";
+type RoleKind = "impl" | "review" | "human" | "system" | "meta";
 
 const roleStyles: Record<RoleKind, string> = {
   impl: "border-blue-500/30 bg-blue-500/15 text-blue-500",
   review: "border-purple-500/30 bg-purple-500/15 text-purple-500",
   human: "border-amber-500/30 bg-amber-500/15 text-amber-500",
-  system: "border-emerald-500/30 bg-emerald-500/15 text-emerald-500"
+  system: "border-emerald-500/30 bg-emerald-500/15 text-emerald-500",
+  meta: "border-fuchsia-500/30 bg-fuchsia-500/15 text-fuchsia-400"
 };
 
 const roleIcons: Record<RoleKind, string> = {
   impl: "\u25B6",
   review: "\u25C6",
   human: "?",
-  system: "\u25CB"
+  system: "\u25CB",
+  meta: "\u25C9"
 };
 
 function resolveRole(entry: UiTimelineEntry): RoleKind {
+  const metadata = entry.payload.metadata;
+  const actor =
+    typeof metadata === "object" && metadata !== null
+      ? (metadata as { actor?: unknown }).actor
+      : undefined;
+  if (actor === "meta-reviewer") {
+    return "meta";
+  }
   const type: ProtocolMessageType = entry.type;
   if (type === "HUMAN_QUESTION" || type === "HUMAN_REPLY") {
     return "human";
@@ -132,35 +142,51 @@ export interface BubbleTimelineProps {
 
 export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const shouldAutoScrollRef = useRef(true);
   const compact = props.compact;
+  const showError = props.error !== null;
+  const showLoading = props.isLoading && !showError;
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) {
+    if (el !== null && shouldAutoScrollRef.current) {
       el.scrollTop = el.scrollHeight;
     }
   }, [props.entries]);
 
-  const hasEntries = !props.isLoading && props.error === null && props.entries !== null && props.entries.length > 0;
+  const hasEntries = !showLoading && !showError && props.entries !== null && props.entries.length > 0;
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      {props.isLoading ? (
+      {showLoading ? (
         <div className="py-2 text-[10px] text-[#666]">Loading timeline...</div>
       ) : null}
 
-      {props.error !== null ? (
+      {showError ? (
         <div className="rounded border border-rose-500/60 bg-rose-950/35 px-2 py-1 text-[10px] text-rose-200">
           Failed to load timeline: {props.error}
         </div>
       ) : null}
 
-      {!props.isLoading && props.error === null && props.entries !== null && props.entries.length === 0 ? (
+      {!showLoading && !showError && props.entries !== null && props.entries.length === 0 ? (
         <div className="py-2 text-[10px] text-[#555]">No timeline entries yet.</div>
       ) : null}
 
       {hasEntries && props.entries !== null ? (
-        <div ref={scrollRef} className="flex-1 overflow-y-auto pr-1">
+        <div
+          ref={scrollRef}
+          data-testid="bubble-timeline-scroll"
+          className="flex-1 overflow-y-auto pr-1"
+          onScroll={() => {
+            const el = scrollRef.current;
+            if (el === null) {
+              shouldAutoScrollRef.current = true;
+              return;
+            }
+            const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+            shouldAutoScrollRef.current = distanceFromBottom <= 24;
+          }}
+        >
           {props.entries.map((entry) => {
             const role = resolveRole(entry);
             const isConvergence = entry.type === "CONVERGENCE";
@@ -191,7 +217,7 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
                     ) : (
                       <span className="font-medium text-[#aaa]">
                         {entry.sender}{" "}
-                        <span className="text-[#555]">({role === "system" ? "system" : role === "human" ? "human" : role === "review" ? "reviewer" : "implementer"})</span>
+                        <span className="text-[#555]">({role === "system" ? "system" : role === "human" ? "human" : role === "review" ? "reviewer" : role === "meta" ? "meta-reviewer" : "implementer"})</span>
                       </span>
                     )}
                     {findingTags.map((tag) => (

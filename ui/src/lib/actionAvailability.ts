@@ -6,6 +6,8 @@ const actionAvailabilityMatrix: Record<BubbleLifecycleState, readonly BubbleActi
   RUNNING: ["open", "stop"],
   WAITING_HUMAN: ["request-rework", "reply", "resume", "open", "stop"],
   READY_FOR_APPROVAL: ["approve", "request-rework", "open", "stop"],
+  META_REVIEW_RUNNING: ["open", "stop"],
+  READY_FOR_HUMAN_APPROVAL: ["approve", "request-rework", "open", "stop"],
   APPROVED_FOR_COMMIT: ["commit", "open", "stop"],
   COMMITTED: ["open", "stop"],
   DONE: ["merge", "open"],

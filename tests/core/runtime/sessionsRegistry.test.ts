@@ -11,8 +11,10 @@ import {
   removeRuntimeSessions,
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError,
+  setMetaReviewerPaneBinding,
   upsertRuntimeSession
 } from "../../../src/core/runtime/sessionsRegistry.js";
+import { runtimePaneIndices } from "../../../src/core/runtime/tmuxManager.js";
 
 const tempDirs: string[] = [];
 
@@ -119,6 +121,105 @@ describe("sessionsRegistry", () => {
       allowMissing: false
     });
     expect(afterRemove).toEqual({});
+  });
+
+  it("tracks meta-reviewer pane binding for existing runtime sessions", async () => {
+    const root = await createTempDir();
+    const sessionsPath = join(root, "runtime", "sessions.json");
+
+    await upsertRuntimeSession({
+      sessionsPath,
+      bubbleId: "b_sessions_meta_01",
+      repoPath: "/repo/path",
+      worktreePath: "/repo/.pairflow-worktrees/b_sessions_meta_01",
+      tmuxSessionName: "pf-b_sessions_meta_01",
+      now: new Date("2026-02-22T16:05:00.000Z")
+    });
+
+    const started = await setMetaReviewerPaneBinding({
+      sessionsPath,
+      bubbleId: "b_sessions_meta_01",
+      active: true,
+      runId: "run_meta_01",
+      now: new Date("2026-02-22T16:05:05.000Z")
+    });
+    expect(started.updated).toBe(true);
+    expect(started.record?.metaReviewerPane).toEqual({
+      role: "meta-reviewer",
+      paneIndex: 2,
+      active: true,
+      runId: "run_meta_01",
+      updatedAt: "2026-02-22T16:05:05.000Z"
+    });
+
+    const stopped = await setMetaReviewerPaneBinding({
+      sessionsPath,
+      bubbleId: "b_sessions_meta_01",
+      active: false,
+      now: new Date("2026-02-22T16:05:10.000Z")
+    });
+    expect(stopped.updated).toBe(true);
+    expect(stopped.record?.metaReviewerPane).toMatchObject({
+      role: "meta-reviewer",
+      paneIndex: 2,
+      active: false,
+      runId: "run_meta_01"
+    });
+  });
+
+  it("returns no_runtime_session when binding meta-reviewer pane on missing bubble", async () => {
+    const root = await createTempDir();
+    const sessionsPath = join(root, "runtime", "sessions.json");
+
+    const result = await setMetaReviewerPaneBinding({
+      sessionsPath,
+      bubbleId: "b_sessions_meta_missing",
+      active: true,
+      runId: "run_meta_missing_01",
+      now: new Date("2026-02-22T16:06:00.000Z")
+    });
+
+    expect(result).toEqual({
+      updated: false,
+      reason: "no_runtime_session"
+    });
+  });
+
+  it("returns shared_runtime_pane when meta-reviewer pane collides with status pane", async () => {
+    const root = await createTempDir();
+    const sessionsPath = join(root, "runtime", "sessions.json");
+
+    await upsertRuntimeSession({
+      sessionsPath,
+      bubbleId: "b_sessions_meta_shared",
+      repoPath: "/repo/path",
+      worktreePath: "/repo/.pairflow-worktrees/b_sessions_meta_shared",
+      tmuxSessionName: "pf-b_sessions_meta_shared",
+      now: new Date("2026-02-22T16:07:00.000Z")
+    });
+
+    const mutablePaneIndices = runtimePaneIndices as {
+      metaReviewer: number;
+      status: number;
+    };
+    const originalMetaReviewerIndex = mutablePaneIndices.metaReviewer;
+    mutablePaneIndices.metaReviewer = mutablePaneIndices.status;
+    try {
+      const result = await setMetaReviewerPaneBinding({
+        sessionsPath,
+        bubbleId: "b_sessions_meta_shared",
+        active: true,
+        runId: "run_meta_shared",
+        now: new Date("2026-02-22T16:07:05.000Z")
+      });
+
+      expect(result).toEqual({
+        updated: false,
+        reason: "shared_runtime_pane"
+      });
+    } finally {
+      mutablePaneIndices.metaReviewer = originalMetaReviewerIndex;
+    }
   });
 
   it("fails on invalid sessions JSON content", async () => {

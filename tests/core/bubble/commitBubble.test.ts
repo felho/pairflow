@@ -54,6 +54,8 @@ async function setupApprovedBubble(repoPath: string, bubbleId: string) {
   });
   await emitApprove({
     bubbleId: bubble.bubbleId,
+    overrideNonApprove: true,
+    overrideReason: "Human override for commit-flow fixture setup.",
     cwd: repoPath,
     now: new Date("2026-02-22T15:04:00.000Z")
   });

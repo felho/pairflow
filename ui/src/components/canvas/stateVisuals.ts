@@ -38,6 +38,18 @@ export const stateVisuals: Record<BubbleLifecycleState, StateVisual> = {
     cardTone: "",
     stateText: "text-emerald-200"
   },
+  META_REVIEW_RUNNING: {
+    led: "bg-fuchsia-400 shadow-[0_0_6px_#e879f9] animate-soft-pulse",
+    border: "border-fuchsia-500 shadow-[0_0_20px_rgba(217,70,239,0.15)]",
+    cardTone: "",
+    stateText: "text-fuchsia-200"
+  },
+  READY_FOR_HUMAN_APPROVAL: {
+    led: "bg-lime-400 shadow-[0_0_6px_#a3e635]",
+    border: "border-lime-500 shadow-[0_0_20px_rgba(163,230,53,0.15)]",
+    cardTone: "",
+    stateText: "text-lime-200"
+  },
   APPROVED_FOR_COMMIT: {
     led: "bg-emerald-400 shadow-[0_0_6px_#22c55e]",
     border: "border-[#333]",

@@ -1212,6 +1212,105 @@ describe("emitConvergedFromWorkspace", () => {
     ).rejects.toThrow(/open P0\/P1 findings/u);
   });
 
+  it("allows post-gate converged when previous reviewer PASS had blocking findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_converged_post_gate_01",
+      task: "Implement"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 4,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-22T11:20:00.000Z",
+        last_command_at: "2026-02-22T11:20:00.000Z",
+        round_role_history: [
+          {
+            round: 1,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-02-22T10:50:00.000Z"
+          },
+          {
+            round: 2,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-02-22T10:55:00.000Z"
+          },
+          {
+            round: 3,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-02-22T11:00:00.000Z"
+          },
+          {
+            round: 4,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-02-22T11:05:00.000Z"
+          }
+        ]
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const lockPath = join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`);
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      lockPath,
+      now: new Date("2026-02-22T11:01:00.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 3,
+        payload: {
+          summary: "Implementation pass"
+        },
+        refs: []
+      }
+    });
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      lockPath,
+      now: new Date("2026-02-22T11:02:00.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.reviewer,
+        recipient: bubble.config.agents.implementer,
+        type: "PASS",
+        round: 3,
+        payload: {
+          summary: "Review found blocker in round 3",
+          findings: [
+            {
+              severity: "P1",
+              title: "Blocking defect fixed in round 4"
+            }
+          ]
+        },
+        refs: []
+      }
+    });
+
+    const result = await emitConvergedFromWorkspace({
+      summary: "Round 4 converged after blocker fix",
+      cwd: bubble.paths.worktreePath
+    });
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+  });
+
   it("keeps non-document convergence blocking semantics unchanged after reviewer PASS", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningLegacyAutoBubbleFixture({

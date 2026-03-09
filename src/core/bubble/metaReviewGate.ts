@@ -9,6 +9,7 @@ import {
   type LoadedStateSnapshot
 } from "../state/stateStore.js";
 import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
+import { setMetaReviewerPaneBinding } from "../runtime/sessionsRegistry.js";
 import {
   DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
   type BubbleMetaReviewSnapshotState,
@@ -53,6 +54,7 @@ export interface ApplyMetaReviewGateOnConvergenceDependencies {
   writeStateSnapshot?: typeof writeStateSnapshot;
   runMetaReview?: typeof runMetaReview;
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;
+  setMetaReviewerPaneBinding?: typeof setMetaReviewerPaneBinding;
   metaReviewDependencies?: MetaReviewDependencies;
 }
 
@@ -74,6 +76,8 @@ export class MetaReviewGateError extends Error {
     this.reasonCode = reasonCode;
   }
 }
+
+const metaReviewFallbackReportRef = "artifacts/meta-review-last.md";
 
 function normalizeMetaReviewSnapshot(
   snapshot: BubbleMetaReviewSnapshotState | undefined
@@ -150,6 +154,7 @@ async function appendHumanApprovalRequest(input: {
   round: number;
   summary: string;
   refs: string[];
+  recommendation?: MetaReviewRecommendation;
 }): Promise<AppendProtocolEnvelopeResult> {
   return input.appendEnvelope({
     transcriptPath: input.transcriptPath,
@@ -163,7 +168,13 @@ async function appendHumanApprovalRequest(input: {
       type: "APPROVAL_REQUEST",
       round: input.round,
       payload: {
-        summary: input.summary
+        summary: input.summary,
+        metadata: {
+          actor: "meta-reviewer",
+          ...(input.recommendation !== undefined
+            ? { latest_recommendation: input.recommendation }
+            : {})
+        }
       },
       refs: input.refs
     }
@@ -173,6 +184,8 @@ async function appendHumanApprovalRequest(input: {
 function transitionToHumanGate(input: {
   current: BubbleStateSnapshot;
   nowIso: string;
+  fallbackRecommendation?: MetaReviewRecommendation;
+  fallbackSummary?: string;
 }): BubbleStateSnapshot {
   const transitioned = applyStateTransition(input.current, {
     to: "READY_FOR_HUMAN_APPROVAL",
@@ -183,10 +196,30 @@ function transitionToHumanGate(input: {
   });
 
   const metaReview = normalizeMetaReviewSnapshot(transitioned.meta_review);
+  const shouldHydrateFallbackRecommendation =
+    input.fallbackRecommendation !== undefined;
+  const fallbackRunId = `run_meta_gate_fallback_${input.nowIso.replace(
+    /[-:.TZ]/gu,
+    ""
+  )}`;
   return {
     ...transitioned,
     meta_review: {
       ...metaReview,
+      ...(shouldHydrateFallbackRecommendation
+        ? {
+            last_autonomous_run_id: fallbackRunId,
+            last_autonomous_status:
+              "error",
+            last_autonomous_recommendation: input.fallbackRecommendation,
+            last_autonomous_summary:
+              input.fallbackSummary ??
+              `Meta-review gate fallback recommendation: ${input.fallbackRecommendation}.`,
+            last_autonomous_report_ref: metaReviewFallbackReportRef,
+            last_autonomous_rework_target_message: null,
+            last_autonomous_updated_at: input.nowIso
+          }
+        : {}),
       sticky_human_gate: true
     }
   };
@@ -238,10 +271,17 @@ async function persistHumanGateRoute(input: {
   expectedState: BubbleStateSnapshot["state"];
   route: MetaReviewGateRoute;
   metaReviewRun?: MetaReviewRunResult;
+  fallbackRecommendation?: MetaReviewRecommendation;
 }): Promise<MetaReviewGateResult> {
   const nextState = transitionToHumanGate({
     current: input.loaded.state,
-    nowIso: input.nowIso
+    nowIso: input.nowIso,
+    ...(input.fallbackRecommendation !== undefined
+      ? {
+          fallbackRecommendation: input.fallbackRecommendation,
+          fallbackSummary: input.summary
+        }
+      : {})
   });
 
   let written: LoadedStateSnapshot;
@@ -268,7 +308,12 @@ async function persistHumanGateRoute(input: {
       bubbleId: input.bubbleId,
       round: input.loaded.state.round,
       summary: input.summary,
-      refs: input.refs
+      refs: input.refs,
+      ...(input.metaReviewRun !== undefined
+        ? { recommendation: input.metaReviewRun.recommendation }
+        : input.fallbackRecommendation !== undefined
+          ? { recommendation: input.fallbackRecommendation }
+          : {})
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
@@ -297,6 +342,8 @@ export async function applyMetaReviewGateOnConvergence(
   const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
   const runReview = dependencies.runMetaReview ?? runMetaReview;
   const appendEnvelope = dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
+  const setMetaReviewerPane =
+    dependencies.setMetaReviewerPaneBinding ?? setMetaReviewerPaneBinding;
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
   const refs = input.refs ?? [];
@@ -385,7 +432,29 @@ export async function applyMetaReviewGateOnConvergence(
     throw toTransitionError(error);
   }
 
+  let metaReviewerPaneWarning: string | null = null;
+  const bindStart = await setMetaReviewerPane({
+    sessionsPath: resolved.bubblePaths.sessionsPath,
+    bubbleId: resolved.bubbleId,
+    active: true,
+    now
+  }).catch((error: unknown) => {
+    const reason = error instanceof Error ? error.message : String(error);
+    return {
+      updated: false,
+      reason: "no_runtime_session" as const,
+      errorMessage: reason
+    };
+  });
+  if (!bindStart.updated) {
+    const bindReason = "errorMessage" in bindStart
+      ? bindStart.errorMessage
+      : bindStart.reason ?? "unknown";
+    metaReviewerPaneWarning = `META_REVIEWER_PANE_UNAVAILABLE: ${bindReason}`;
+  }
+
   let runResult: MetaReviewRunResult | undefined;
+  let runFailureReason: string | null = null;
   try {
     runResult = await runReview(
       {
@@ -399,7 +468,33 @@ export async function applyMetaReviewGateOnConvergence(
       }
     );
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
+    runFailureReason = error instanceof Error ? error.message : String(error);
+  } finally {
+    const bindStop = await setMetaReviewerPane({
+      sessionsPath: resolved.bubblePaths.sessionsPath,
+      bubbleId: resolved.bubbleId,
+      active: false,
+      ...(runResult?.run_id !== undefined ? { runId: runResult.run_id } : {}),
+      now
+    }).catch((error: unknown) => {
+      const reason = error instanceof Error ? error.message : String(error);
+      return {
+        updated: false,
+        reason: "no_runtime_session" as const,
+        errorMessage: reason
+      };
+    });
+    if (!bindStop.updated && metaReviewerPaneWarning === null) {
+      const bindReason = "errorMessage" in bindStop
+        ? bindStop.errorMessage
+        : bindStop.reason ?? "unknown";
+      metaReviewerPaneWarning = `META_REVIEWER_PANE_UNAVAILABLE: ${bindReason}`;
+    }
+  }
+
+  if (runResult === undefined) {
+    const warningSuffix =
+      metaReviewerPaneWarning === null ? "" : `; ${metaReviewerPaneWarning}`;
     return persistHumanGateRoute({
       appendEnvelope,
       writeState,
@@ -412,12 +507,20 @@ export async function applyMetaReviewGateOnConvergence(
       bubbleId: resolved.bubbleId,
       summary: buildHumanGateSummary({
         convergenceSummary: input.summary,
-        fallbackReason: `META_REVIEW_GATE_RUN_FAILED: ${reason}`
+        fallbackReason: `META_REVIEW_GATE_RUN_FAILED: ${runFailureReason ?? "unknown"}${warningSuffix}`
       }),
       refs,
       loaded: metaReviewRunningState,
       expectedState: "META_REVIEW_RUNNING",
-      route: "human_gate_run_failed"
+      route: "human_gate_run_failed",
+      fallbackRecommendation: "inconclusive"
+    });
+  }
+
+  if (metaReviewerPaneWarning !== null) {
+    runResult.warnings.push({
+      reason_code: "META_REVIEWER_PANE_UNAVAILABLE",
+      message: metaReviewerPaneWarning
     });
   }
 
@@ -512,7 +615,9 @@ export async function applyMetaReviewGateOnConvergence(
             decision: "revise",
             message: reworkMessage,
             metadata: {
-              actor: "meta-review-gate"
+              actor: "meta-reviewer",
+              recommendation: runResult.recommendation,
+              run_id: runResult.run_id
             }
           },
           refs

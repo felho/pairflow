@@ -67,7 +67,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
     expect(result.gateEnvelope.type).toBe("APPROVAL_DECISION");
     expect(result.gateEnvelope.payload.decision).toBe("revise");
     expect(result.gateEnvelope.payload.metadata).toMatchObject({
-      actor: "meta-review-gate"
+      actor: "meta-reviewer"
     });
     expect(result.state.state).toBe("RUNNING");
     expect(result.state.round).toBe(2);
@@ -226,6 +226,10 @@ describe("applyMetaReviewGateOnConvergence", () => {
 
     expect(result.route).toBe("human_gate_approve");
     expect(result.gateEnvelope.type).toBe("APPROVAL_REQUEST");
+    expect(result.gateEnvelope.payload.metadata).toMatchObject({
+      actor: "meta-reviewer",
+      latest_recommendation: "approve"
+    });
     expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(result.state.meta_review?.sticky_human_gate).toBe(true);
   });
@@ -555,7 +559,77 @@ describe("applyMetaReviewGateOnConvergence", () => {
 
     expect(result.route).toBe("human_gate_run_failed");
     expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(result.state.meta_review).toMatchObject({
+      sticky_human_gate: true,
+      last_autonomous_status: "error",
+      last_autonomous_recommendation: "inconclusive"
+    });
     expect(result.gateEnvelope.type).toBe("APPROVAL_REQUEST");
+    expect(result.gateEnvelope.payload.metadata).toMatchObject({
+      actor: "meta-reviewer",
+      latest_recommendation: "inconclusive"
+    });
+  });
+
+  it("overwrites stale previous recommendation on run_failed fallback", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_06b",
+      task: "Run failure stale recommendation overwrite"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        meta_review: {
+          last_autonomous_run_id: "run_meta_gate_previous_ok",
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Previous run approved.",
+          last_autonomous_report_ref:
+            "artifacts/reports/meta-review/run_meta_gate_previous_ok.md",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-03-08T11:00:00.000Z",
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await applyMetaReviewGateOnConvergence(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        summary: "Converged.",
+        now: new Date("2026-03-08T11:52:00.000Z")
+      },
+      {
+        runMetaReview: async () => {
+          throw new MetaReviewGateError(
+            "META_REVIEW_GATE_RUN_FAILED",
+            "simulated runner invocation failure"
+          );
+        }
+      }
+    );
+
+    expect(result.route).toBe("human_gate_run_failed");
+    expect(result.state.meta_review).toMatchObject({
+      sticky_human_gate: true,
+      last_autonomous_status: "error",
+      last_autonomous_recommendation: "inconclusive"
+    });
+    expect(result.state.meta_review?.last_autonomous_summary).toContain(
+      "META_REVIEW_GATE_RUN_FAILED"
+    );
   });
 
   it("persists READY_FOR_HUMAN_APPROVAL before throwing when approval-request append fails", async () => {

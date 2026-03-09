@@ -48,6 +48,8 @@ export interface RunBubbleActionInput {
   action: BubbleActionKind;
   message?: string;
   refs?: string[];
+  overrideNonApprove?: boolean;
+  overrideReason?: string;
   auto?: boolean;
   push?: boolean;
   deleteRemote?: boolean;
@@ -122,10 +124,57 @@ function resolveAttachCopyCommand(result: AttachActionResult): string | null {
   return candidate;
 }
 
-function toBubbleCardModel(bubble: UiBubbleSummary): BubbleCardModel {
+function defaultMetaReviewSummary(): UiBubbleSummary["metaReview"] {
   return {
-    ...bubble,
-    hasRuntimeSession: bubble.runtimeSession !== null
+    actor: "meta-reviewer",
+    latestRecommendation: null,
+    latestStatus: null,
+    latestSummary: null,
+    latestReportRef: null,
+    latestUpdatedAt: null
+  };
+}
+
+function normalizeBubbleSummary(input: UiBubbleSummary): UiBubbleSummary {
+  const candidate = (input as Partial<UiBubbleSummary>).metaReview;
+  if (candidate === undefined || candidate === null || typeof candidate !== "object") {
+    return {
+      ...input,
+      metaReview: defaultMetaReviewSummary()
+    };
+  }
+  const meta = candidate as Partial<UiBubbleSummary["metaReview"]>;
+  const recommendation = meta.latestRecommendation;
+  const status = meta.latestStatus;
+  return {
+    ...input,
+    metaReview: {
+      actor: "meta-reviewer",
+      latestRecommendation:
+        recommendation === "approve" ||
+          recommendation === "rework" ||
+          recommendation === "inconclusive"
+          ? recommendation
+          : null,
+      latestStatus:
+        status === "success" || status === "error" || status === "inconclusive"
+          ? status
+          : null,
+      latestSummary:
+        typeof meta.latestSummary === "string" ? meta.latestSummary : null,
+      latestReportRef:
+        typeof meta.latestReportRef === "string" ? meta.latestReportRef : null,
+      latestUpdatedAt:
+        typeof meta.latestUpdatedAt === "string" ? meta.latestUpdatedAt : null
+    }
+  };
+}
+
+function toBubbleCardModel(bubble: UiBubbleSummary): BubbleCardModel {
+  const normalized = normalizeBubbleSummary(bubble);
+  return {
+    ...normalized,
+    hasRuntimeSession: normalized.runtimeSession !== null
   };
 }
 
@@ -413,7 +462,13 @@ async function performBubbleAction(
       return;
     case "approve":
       await api.approveBubble(bubble.repoPath, bubble.bubbleId, {
-        ...(input.refs !== undefined ? { refs: input.refs } : {})
+        ...(input.refs !== undefined ? { refs: input.refs } : {}),
+        ...(input.overrideNonApprove !== undefined
+          ? { overrideNonApprove: input.overrideNonApprove }
+          : {}),
+        ...(input.overrideReason !== undefined
+          ? { overrideReason: input.overrideReason }
+          : {})
       });
       return;
     case "request-rework": {

@@ -4,6 +4,8 @@ export const bubbleLifecycleStates = [
   "RUNNING",
   "WAITING_HUMAN",
   "READY_FOR_APPROVAL",
+  "META_REVIEW_RUNNING",
+  "READY_FOR_HUMAN_APPROVAL",
   "APPROVED_FOR_COMMIT",
   "COMMITTED",
   "DONE",
@@ -77,6 +79,13 @@ export interface RuntimeSessionRecord {
   worktreePath: string;
   tmuxSessionName: string;
   updatedAt: string;
+  metaReviewerPane?: {
+    role: "meta-reviewer";
+    paneIndex: number;
+    active: boolean;
+    runId: string | null;
+    updatedAt: string;
+  };
 }
 
 export interface UiRuntimeHealth {
@@ -125,6 +134,18 @@ export interface UiBubbleTranscriptSummary {
   lastMessageId: string | null;
 }
 
+export type MetaReviewRecommendation = "rework" | "approve" | "inconclusive";
+export type MetaReviewRunStatus = "success" | "error" | "inconclusive";
+
+export interface UiBubbleMetaReviewSummary {
+  actor: "meta-reviewer";
+  latestRecommendation: MetaReviewRecommendation | null;
+  latestStatus: MetaReviewRunStatus | null;
+  latestSummary: string | null;
+  latestReportRef: string | null;
+  latestUpdatedAt: string | null;
+}
+
 export interface UiBubbleSummary {
   bubbleId: string;
   repoPath: string;
@@ -137,6 +158,7 @@ export interface UiBubbleSummary {
   lastCommandAt: string | null;
   runtimeSession: RuntimeSessionRecord | null;
   runtime: UiRuntimeHealth;
+  metaReview: UiBubbleMetaReviewSummary;
 }
 
 export interface UiRepoSummary {
@@ -148,6 +170,8 @@ export interface UiRepoSummary {
     RUNNING: number;
     WAITING_HUMAN: number;
     READY_FOR_APPROVAL: number;
+    META_REVIEW_RUNNING: number;
+    READY_FOR_HUMAN_APPROVAL: number;
     APPROVED_FOR_COMMIT: number;
     COMMITTED: number;
     DONE: number;

@@ -183,6 +183,59 @@ describe("validateConvergencePolicy", () => {
     expect(result.errors.some((error) => error.includes("open P0/P1"))).toBe(true);
   });
 
+  it("allows post-gate convergence when previous reviewer PASS has P1 findings", () => {
+    const result = validateConvergencePolicy({
+      currentRound: 4,
+      reviewer: "claude",
+      implementer: "codex",
+      reviewArtifactType: "auto",
+      severity_gate_round: 4,
+      roundRoleHistory: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T11:59:00.000Z"
+        },
+        {
+          round: 2,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:01:00.000Z"
+        },
+        {
+          round: 3,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:03:00.000Z"
+        },
+        {
+          round: 4,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:05:00.000Z"
+        }
+      ],
+      transcript: [
+        createPassEnvelope({
+          round: 3,
+          payload: {
+            summary: "Round 3 reviewer PASS with blocker",
+            findings: [
+              {
+                severity: "P1",
+                title: "Gate condition fixed in round 4"
+              }
+            ]
+          }
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
   it("keeps non-document blocking on canonical P1 even when effective_priority is downgraded", () => {
     const result = validateConvergencePolicy({
       currentRound: 2,

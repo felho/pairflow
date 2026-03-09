@@ -55,7 +55,8 @@ export function presentBubbleSummaryFromListEntry(
     activeSince: entry.activeSince,
     lastCommandAt: entry.lastCommandAt,
     runtimeSession: entry.runtimeSession,
-    runtime: presentRuntimeHealth(entry.state, entry.runtimeSession)
+    runtime: presentRuntimeHealth(entry.state, entry.runtimeSession),
+    metaReview: entry.metaReview
   };
 }
 
@@ -95,6 +96,7 @@ export function presentBubbleDetail(input: {
     lastCommandAt: input.status.lastCommandAt,
     runtimeSession: input.runtimeSession,
     runtime: presentRuntimeHealth(input.status.state, input.runtimeSession),
+    metaReview: input.status.metaReview,
     watchdog: input.status.watchdog,
     pendingInboxItems: input.status.pendingInboxItems,
     inbox: {
