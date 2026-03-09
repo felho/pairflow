@@ -32,6 +32,10 @@ export interface LaunchBubbleTmuxSessionInput {
   implementerCommand: string;
   reviewerCommand: string;
   metaReviewerCommand?: string;
+  statusPaneLabel?: string;
+  implementerPaneLabel?: string;
+  reviewerPaneLabel?: string;
+  metaReviewerPaneLabel?: string;
   implementerBootstrapMessage?: string;
   reviewerBootstrapMessage?: string;
   metaReviewerBootstrapMessage?: string;
@@ -178,6 +182,11 @@ export async function launchBubbleTmuxSession(
   const statusPaneHeight = 12;
   const tmuxPaneSeparators = 3;
   const metaReviewerCommand = input.metaReviewerCommand ?? input.reviewerCommand;
+  const statusPaneLabel = input.statusPaneLabel ?? "orchestrator/status";
+  const implementerPaneLabel = input.implementerPaneLabel ?? "codex/implementer";
+  const reviewerPaneLabel = input.reviewerPaneLabel ?? "claude/reviewer";
+  const metaReviewerPaneLabel =
+    input.metaReviewerPaneLabel ?? "codex/meta-reviewer";
 
   const hasSession = await runner(["has-session", "-t", sessionName], {
     allowFailure: true
@@ -203,6 +212,31 @@ export async function launchBubbleTmuxSession(
     `${sessionName}:0`,
     "remain-on-exit",
     "on"
+  ]);
+  const paneBorderFormat = [
+    "#{?#{==:#{pane_index},0},",
+    statusPaneLabel,
+    ",#{?#{==:#{pane_index},1},",
+    implementerPaneLabel,
+    ",#{?#{==:#{pane_index},2},",
+    reviewerPaneLabel,
+    ",#{?#{==:#{pane_index},3},",
+    metaReviewerPaneLabel,
+    ",pane-#{pane_index}}}}}"
+  ].join("");
+  await runner([
+    "set-window-option",
+    "-t",
+    `${sessionName}:0`,
+    "pane-border-status",
+    "top"
+  ]);
+  await runner([
+    "set-window-option",
+    "-t",
+    `${sessionName}:0`,
+    "pane-border-format",
+    paneBorderFormat
   ]);
   // Strip selected env vars from both tmux server-global and session env.
   // The client-side env is not enough: panes inherit from the tmux server.
@@ -298,8 +332,11 @@ export async function launchBubbleTmuxSession(
     "if [ $REMAIN -lt 3 ]; then REMAIN=3; fi",
     "ROW=$((REMAIN / 3))",
     "if [ $ROW -lt 1 ]; then ROW=1; fi",
+    "ROW_LAST=$((REMAIN - (ROW * 2)))",
+    "if [ $ROW_LAST -lt 1 ]; then ROW_LAST=1; fi",
     `tmux resize-pane -t ${implementerPaneId} -y $ROW 2>/dev/null || true`,
-    `tmux resize-pane -t ${reviewerPaneId} -y $ROW 2>/dev/null || true`
+    `tmux resize-pane -t ${reviewerPaneId} -y $ROW 2>/dev/null || true`,
+    `tmux resize-pane -t ${metaReviewerPaneId} -y $ROW_LAST 2>/dev/null || true`
   ].join("; ");
   const s = sessionName;
   await runner([

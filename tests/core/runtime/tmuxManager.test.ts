@@ -88,6 +88,8 @@ describe("launchBubbleTmuxSession", () => {
       "has-session",
       "new-session",
       "set-option",
+      "set-window-option",
+      "set-window-option",
       "set-environment",
       "set-environment",
       "set-environment",
@@ -107,14 +109,28 @@ describe("launchBubbleTmuxSession", () => {
       "remain-on-exit",
       "on"
     ]);
-    // Unset CLAUDECODE from server global env and session env.
     expect(calls[3]?.args).toEqual([
+      "set-window-option",
+      "-t",
+      "pf-b_start_01:0",
+      "pane-border-status",
+      "top"
+    ]);
+    expect(calls[4]?.args).toEqual([
+      "set-window-option",
+      "-t",
+      "pf-b_start_01:0",
+      "pane-border-format",
+      "#{?#{==:#{pane_index},0},orchestrator/status,#{?#{==:#{pane_index},1},codex/implementer,#{?#{==:#{pane_index},2},claude/reviewer,#{?#{==:#{pane_index},3},codex/meta-reviewer,pane-#{pane_index}}}}}"
+    ]);
+    // Unset CLAUDECODE from server global env and session env.
+    expect(calls[5]?.args).toEqual([
       "set-environment",
       "-g",
       "-u",
       "CLAUDECODE"
     ]);
-    expect(calls[4]?.args).toEqual([
+    expect(calls[6]?.args).toEqual([
       "set-environment",
       "-t",
       "pf-b_start_01",
@@ -122,13 +138,13 @@ describe("launchBubbleTmuxSession", () => {
       "CLAUDECODE"
     ]);
     // Unset NO_COLOR from server global env and session env.
-    expect(calls[5]?.args).toEqual([
+    expect(calls[7]?.args).toEqual([
       "set-environment",
       "-g",
       "-u",
       "NO_COLOR"
     ]);
-    expect(calls[6]?.args).toEqual([
+    expect(calls[8]?.args).toEqual([
       "set-environment",
       "-t",
       "pf-b_start_01",
@@ -136,7 +152,7 @@ describe("launchBubbleTmuxSession", () => {
       "NO_COLOR"
     ]);
     expect(calls[0]?.allowFailure).toBe(true);
-    expect(calls[7]?.args).toEqual([
+    expect(calls[9]?.args).toEqual([
       "split-window",
       "-v",
       "-P",
@@ -149,7 +165,7 @@ describe("launchBubbleTmuxSession", () => {
       "codex"
     ]);
     // Status pane fixed to 12 lines before reviewer split.
-    expect(calls[8]?.args).toEqual([
+    expect(calls[10]?.args).toEqual([
       "resize-pane",
       "-t",
       "pf-b_start_01:0.0",
@@ -157,7 +173,7 @@ describe("launchBubbleTmuxSession", () => {
       "12"
     ]);
     // Reviewer split uses -p 50 inside implementer pane.
-    expect(calls[9]?.args).toEqual([
+    expect(calls[11]?.args).toEqual([
       "split-window",
       "-v",
       "-P",
@@ -172,7 +188,7 @@ describe("launchBubbleTmuxSession", () => {
       "claude"
     ]);
     // Meta-reviewer split uses dedicated pane after reviewer.
-    expect(calls[10]?.args).toEqual([
+    expect(calls[12]?.args).toEqual([
       "split-window",
       "-v",
       "-P",
@@ -186,15 +202,16 @@ describe("launchBubbleTmuxSession", () => {
       "/tmp/worktree",
       "claude"
     ]);
-    expect(calls[12]?.args?.slice(0, 4)).toEqual([
+    expect(calls[14]?.args?.slice(0, 4)).toEqual([
       "set-hook",
       "-t",
       "pf-b_start_01",
       "client-resized"
     ]);
-    expect(calls[12]?.args?.[4]).toContain("REMAIN=$((#{window_height} - 15))");
-    expect(calls[12]?.args?.[4]).toContain("tmux resize-pane -t %11 -y $ROW");
-    expect(calls[12]?.args?.[4]).toContain("tmux resize-pane -t %12 -y $ROW");
+    expect(calls[14]?.args?.[4]).toContain("REMAIN=$((#{window_height} - 15))");
+    expect(calls[14]?.args?.[4]).toContain("tmux resize-pane -t %11 -y $ROW");
+    expect(calls[14]?.args?.[4]).toContain("tmux resize-pane -t %12 -y $ROW");
+    expect(calls[14]?.args?.[4]).toContain("tmux resize-pane -t %13 -y $ROW_LAST");
   });
 
   it("sends kickoff message to implementer pane when provided", async () => {
@@ -218,10 +235,12 @@ describe("launchBubbleTmuxSession", () => {
       runner
     });
 
-    expect(calls.slice(0, 14).map((call) => call[0])).toEqual([
+    expect(calls.slice(0, 16).map((call) => call[0])).toEqual([
       "has-session",
       "new-session",
       "set-option",
+      "set-window-option",
+      "set-window-option",
       "set-environment",
       "set-environment",
       "set-environment",
