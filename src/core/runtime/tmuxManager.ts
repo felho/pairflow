@@ -179,14 +179,14 @@ export async function launchBubbleTmuxSession(
 ): Promise<LaunchBubbleTmuxSessionResult> {
   const runner = input.runner ?? runTmux;
   const sessionName = buildBubbleTmuxSessionName(input.bubbleId);
-  const statusPaneHeight = 12;
+  const statusPaneHeight = 11;
   const tmuxPaneSeparators = 3;
   const metaReviewerCommand = input.metaReviewerCommand ?? input.reviewerCommand;
-  const statusPaneLabel = input.statusPaneLabel ?? "orchestrator/status";
+  const statusPaneLabel = input.statusPaneLabel ?? "[orchestrator/status]";
   const implementerPaneLabel = input.implementerPaneLabel ?? "[codex/implementer]";
-  const reviewerPaneLabel = input.reviewerPaneLabel ?? "claude/reviewer";
+  const reviewerPaneLabel = input.reviewerPaneLabel ?? "[claude/reviewer]";
   const metaReviewerPaneLabel =
-    input.metaReviewerPaneLabel ?? "codex/meta-reviewer";
+    input.metaReviewerPaneLabel ?? "[codex/meta-reviewer]";
 
   const hasSession = await runner(["has-session", "-t", sessionName], {
     allowFailure: true
@@ -263,7 +263,7 @@ export async function launchBubbleTmuxSession(
   ];
   const implementerSplit = await runner(implementerSplitCommand);
   const implementerPaneId = parseTmuxPaneId(implementerSplit.stdout, implementerSplitCommand);
-  // Fix status pane to 12 lines BEFORE splitting for reviewer, so the
+  // Fix status pane to 11 lines BEFORE splitting for reviewer, so the
   // subsequent 50/50 split divides the remaining space equally.
   await runner([
     "resize-pane",
@@ -310,7 +310,7 @@ export async function launchBubbleTmuxSession(
     metaReviewerSplitCommand
   );
   // Re-fix status pane after the second split — the split may have
-  // redistributed vertical space away from the initial 12-line resize.
+  // redistributed vertical space away from the initial 11-line resize.
   await runner([
     "resize-pane",
     "-t",
@@ -318,11 +318,11 @@ export async function launchBubbleTmuxSession(
     "-y",
     String(statusPaneHeight)
   ]);
-  // Keep the status pane fixed at 12 lines when the terminal is resized.
+  // Keep the status pane fixed at 11 lines when the terminal is resized.
   // We use client-resized (fires when the terminal window changes size)
   // instead of after-resize-pane (which would recurse on its own resize).
-  // The hook fixes pane 0 to 12 lines, then keeps panes 1/2/3 balanced.
-  // Keep the status pane fixed at 12 lines when the terminal window is resized.
+  // The hook fixes pane 0 to 11 lines, then keeps panes 1/2/3 balanced.
+  // Keep the status pane fixed at 11 lines when the terminal window is resized.
   // client-resized fires when the terminal emulator window changes size.
   // #{window_height} is expanded by tmux before passing to run-shell.
   // All resize logic runs inside a single run-shell to avoid spawn quoting issues.
