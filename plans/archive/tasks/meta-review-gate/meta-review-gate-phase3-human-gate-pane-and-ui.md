@@ -38,7 +38,7 @@ target_files:
   - ui/src/components/expanded/BubbleTimeline.test.tsx
   - ui/src/state/useBubbleStore.test.ts
 prd_ref: docs/meta-review-gate-prd.md
-plan_ref: plans/tasks/meta-review-gate/meta-review-gate-plan-v1.md
+plan_ref: plans/archive/tasks/meta-review-gate/meta-review-gate-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
   - docs/meta-review-gate-prd.md
@@ -53,6 +53,7 @@ owners:
 
 1. `2026-03-08` (r1 fix pass): added approval-time recommendation lookup fallback contract, restored AC10 output-shape stability coverage, added explicit detail-surface actor coverage, and added request-rework preservation test/AC traceability.
 1. `2026-03-08` (docs-refine pass): promoted frontmatter to `implementable`, added deterministic override/audit and pane-label decisions, and fixed AC10 traceability with explicit read-only regression tests (`T17`, `T18`, `T19`).
+1. `2026-03-09` (post-implementation alignment): human-gate and UI contracts expanded to include `META_REVIEW_FAILED` (run-failed fail-closed state) alongside `READY_FOR_HUMAN_APPROVAL`.
 
 ## L0 - Policy
 
@@ -66,10 +67,10 @@ Complete the operator-facing and runtime-facing hardening slice after Phase 2 by
 
 ### In Scope
 
-1. Enforce human-only decision gate behavior at `READY_FOR_HUMAN_APPROVAL`.
+1. Enforce human-only decision gate behavior at `READY_FOR_HUMAN_APPROVAL` and `META_REVIEW_FAILED`.
 2. Require explicit override flag + non-empty reason when human approves while latest recommendation is not `approve`.
 3. Add runtime meta-reviewer pane orchestration/visibility for autonomous runs.
-4. Surface `META_REVIEW_RUNNING` and `READY_FOR_HUMAN_APPROVAL` in UI state rendering.
+4. Surface `META_REVIEW_RUNNING`, `META_REVIEW_FAILED`, and `READY_FOR_HUMAN_APPROVAL` in UI state rendering.
 5. Surface `meta-reviewer` actor and latest autonomous recommendation in UI detail/timeline surfaces.
 6. Keep `meta-review status` and `meta-review last-report` retrieval semantics unchanged (read-only).
 
@@ -106,7 +107,7 @@ Complete the operator-facing and runtime-facing hardening slice after Phase 2 by
 | CS3 | `src/core/runtime/tmuxDelivery.ts`, `src/core/runtime/tmuxManager.ts`, `src/core/runtime/sessionsRegistry.ts`                                                                               | meta-reviewer pane runtime wiring | runtime delivery/orchestration helpers                | meta-review run execution path      | Dedicated `meta-reviewer` pane/session visibility is available and auditable during autonomous meta-review execution                                                     | P1       | required-now | T7,T8,T9    |
 | CS4 | `src/core/ui/presenters/bubblePresenter.ts`, `src/types/ui.ts`                                                                                                                              | UI payload model                  | presenter + UI types                                  | bubble list/detail mapping          | UI API payload includes/keeps meta-review actor/state/recommendation fields needed for rendering                                                                         | P1       | required-now | T10,T11     |
 | CS5 | `ui/src/lib/types.ts`, `ui/src/state/useBubbleStore.ts`                                                                                                                                     | frontend state ingestion          | typed client model + store mapping                    | SSE/API snapshot handling           | Frontend store preserves new Phase 3 fields without lossy mapping or fallback regression                                                                                 | P1       | required-now | T11,T12     |
-| CS6 | `ui/src/components/canvas/stateVisuals.ts`, `ui/src/components/canvas/BubbleCanvas.tsx`, `ui/src/components/canvas/BubbleExpandedCard.tsx`, `ui/src/components/expanded/BubbleTimeline.tsx` | rendering layer                   | React components                                      | card/timeline visualization         | Render `META_REVIEW_RUNNING`, `READY_FOR_HUMAN_APPROVAL`, `meta-reviewer` actor, and latest recommendation clearly and deterministically across timeline/detail surfaces | P1       | required-now | T13,T14,T15,T16 |
+| CS6 | `ui/src/components/canvas/stateVisuals.ts`, `ui/src/components/canvas/BubbleCanvas.tsx`, `ui/src/components/canvas/BubbleExpandedCard.tsx`, `ui/src/components/expanded/BubbleTimeline.tsx` | rendering layer                   | React components                                      | card/timeline visualization         | Render `META_REVIEW_RUNNING`, `META_REVIEW_FAILED`, `READY_FOR_HUMAN_APPROVAL`, `meta-reviewer` actor, and latest recommendation clearly and deterministically across timeline/detail surfaces | P1       | required-now | T13,T14,T15,T16 |
 | CS7 | `src/core/human/approval.ts`, `src/cli/commands/bubble/requestRework.ts`                                                                                                                   | human rework preservation         | `emitRequestRework(...)`, `runBubbleRequestReworkCommand(...)` | human gate non-approve path    | Override policy hardening must not regress request-rework behavior from `READY_FOR_HUMAN_APPROVAL`                                                                     | P1       | required-now | T20         |
 | CS8 | tests                                                                                                                                                                                       | coverage                          | `N/A`                                                 | listed test files                   | Cover approval policy, override UX contract, pane visibility contract, UI rendering contract, request-rework preservation, and read-only regression guard              | P1       | required-now | T1-T20      |
 | CS9 | `src/core/bubble/metaReview.ts`, `src/cli/commands/bubble/metaReview.ts`                                                                                                                   | cached retrieval contract         | `getMetaReviewStatus(...)`, `getMetaReviewLastReport(...)` | read-only command boundary      | Preserve non-mutating, non-generative retrieval semantics and stable output shape for `status`/`last-report` while Phase 3 changes adjacent state/UI paths             | P1       | required-now | T17,T18,T19 |
@@ -118,7 +119,7 @@ Complete the operator-facing and runtime-facing hardening slice after Phase 2 by
 | Human approval override                | human approve path does not fully enforce recommendation-aware override in all paths | recommendation-aware policy gate             | `override_non_approve` flag and non-empty `override_reason` when latest recommendation is not `approve` | `override_reason` may be omitted only for recommendation=`approve` | behavior hardening | P1       | required-now |
 | CLI approve input shape                | limited approve options                                                              | explicit override surface                    | `--override-non-approve` and `--override-reason <text>` (or equivalent deterministic pair)              | N/A                                                                | additive           | P1       | required-now |
 | Meta-reviewer runtime actor visibility | autonomous run exists but pane/actor visibility may be partial                       | first-class meta-reviewer runtime visibility | actor/session identity + bubble binding during run                                                      | stage/progress metadata                                            | additive           | P1       | required-now |
-| UI state rendering                     | phase2 states may be partially visible by fallback                                   | explicit phase3 rendering contract           | `META_REVIEW_RUNNING`, `READY_FOR_HUMAN_APPROVAL`                                                       | styling variants are optional                                      | additive           | P1       | required-now |
+| UI state rendering                     | phase2 states may be partially visible by fallback                                   | explicit phase3 rendering contract           | `META_REVIEW_RUNNING`, `META_REVIEW_FAILED`, `READY_FOR_HUMAN_APPROVAL`                                | styling variants are optional                                      | additive           | P1       | required-now |
 | UI recommendation visibility           | recommendation available in backend snapshot                                         | recommendation shown in detail surface       | latest recommendation (`rework`/`approve`/`inconclusive`)                                               | optional report ref summary                                        | additive           | P1       | required-now |
 | Approval recommendation lookup fallback | latest recommendation is usually available from canonical snapshot                    | deterministic fail-closed contract           | approval command must reject when recommendation lookup is unavailable at decision time                  | diagnostic text for remediation                                     | additive           | P2       | required-now |
 | Read-only retrieval regression guard   | Phase 3 touches adjacent state/UI/runtime paths                                      | keep Phase 1/2 retrieval contract unchanged  | `meta-review status` and `meta-review last-report` remain non-mutating and non-generative              | output formatting details                                           | additive           | P1       | required-now |
@@ -186,14 +187,14 @@ Pane/runtime label contract (required-now):
 | T10 | Presenter includes Phase 3 fields                               | backend state with meta-review data                                  | build presenter payload                            | state/actor/recommendation fields present in UI payload                    | P1       | required-now | automated test |
 | T11 | Frontend store mapping keeps meta-review fields                 | incoming API/SSE payload                                             | store update                                       | no data loss for actor/state/recommendation values                         | P1       | required-now | automated test |
 | T12 | Store fallback behavior with missing optional fields            | partial payload                                                      | store update                                       | deterministic defaults without crashes                                     | P2       | required-now | automated test |
-| T13 | Canvas renders `META_REVIEW_RUNNING`/`READY_FOR_HUMAN_APPROVAL` | bubbles in both states                                               | render canvas                                      | clear state labels/visual mapping                                          | P1       | required-now | automated test |
+| T13 | Canvas renders `META_REVIEW_RUNNING`/`META_REVIEW_FAILED`/`READY_FOR_HUMAN_APPROVAL` | bubbles in those states                                              | render canvas                                      | clear state labels/visual mapping                                          | P1       | required-now | automated test |
 | T14 | Expanded card shows latest recommendation                       | detail payload with recommendation                                   | render expanded card                               | recommendation is visible in detail view                                   | P1       | required-now | automated test |
 | T15 | Timeline shows `meta-reviewer` actor                            | timeline entries with sender/recipient meta-reviewer                 | render timeline                                    | actor label is first-class, not unknown/fallback                           | P2       | required-now | automated test |
 | T16 | Detail surface shows `meta-reviewer` actor                      | expanded/detail payload includes meta-reviewer actor context         | render expanded card/detail surface                | actor label is visible as first-class (not unknown/fallback)               | P2       | required-now | automated test |
 | T17 | `meta-review status` remains read-only under Phase 3 wiring     | bubble has existing `meta_review` snapshot and lifecycle state       | run `pairflow bubble meta-review status --id <id>` | no lifecycle/counter/snapshot mutation and no live review execution         | P1       | required-now | automated test |
 | T18 | `meta-review last-report` remains read-only under Phase 3 wiring | bubble has existing report ref or missing report artifact            | run `pairflow bubble meta-review last-report --id <id>` | response is read-only/no-rerun and state fingerprint remains unchanged | P1       | required-now | automated test |
 | T19 | `status`/`last-report` output shape stability under Phase 3 wiring | existing snapshot/no-snapshot cases                                  | run read commands in text+json output modes        | stable output contract shape preserved with no hidden mutation              | P2       | required-now | automated test |
-| T20 | Request-rework behavior preserved from human gate               | bubble in `READY_FOR_HUMAN_APPROVAL`                                 | run `bubble request-rework` path                   | transition/message contract remains valid and unaffected by override policy | P2       | required-now | automated test |
+| T20 | Request-rework behavior preserved from human gate               | bubble in `READY_FOR_HUMAN_APPROVAL` or `META_REVIEW_FAILED`         | run `bubble request-rework` path                   | transition/message contract remains valid and unaffected by override policy | P2       | required-now | automated test |
 
 ## Acceptance Criteria (Binary)
 
@@ -203,11 +204,11 @@ Pane/runtime label contract (required-now):
 4. AC4: Recommendation=`approve` path remains approval-compatible without override.
 5. AC5: Meta-reviewer pane/session visibility is available during autonomous run execution.
 6. AC6: Pane unavailability has explicit degraded fallback and never bypasses human gate policy.
-7. AC7: UI renders `META_REVIEW_RUNNING` and `READY_FOR_HUMAN_APPROVAL` without unknown-state fallback.
+7. AC7: UI renders `META_REVIEW_RUNNING`, `META_REVIEW_FAILED`, and `READY_FOR_HUMAN_APPROVAL` without unknown-state fallback.
 8. AC8: UI renders `meta-reviewer` actor in timeline/detail surfaces.
 9. AC9: UI surfaces latest autonomous recommendation from canonical snapshot.
 10. AC10: Existing `status`/`last-report` read-only semantics and output-shape stability remain unchanged.
-11. AC11: Override hardening does not change human-gate `request-rework` behavior contract.
+11. AC11: Override hardening does not change human-gate `request-rework` behavior contract from either `READY_FOR_HUMAN_APPROVAL` or `META_REVIEW_FAILED`.
 
 ## AC-Test Traceability
 

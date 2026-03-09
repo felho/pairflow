@@ -26,7 +26,7 @@ target_files:
   - docs/meta-review-gate-rollout-runbook.md
   - docs/meta-review-gate-e2e-validation.md
 prd_ref: docs/meta-review-gate-prd.md
-plan_ref: plans/tasks/meta-review-gate/meta-review-gate-plan-v1.md
+plan_ref: plans/archive/tasks/meta-review-gate/meta-review-gate-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
   - docs/meta-review-gate-prd.md

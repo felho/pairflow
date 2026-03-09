@@ -16,7 +16,7 @@ target_files:
   - tests/cli/bubbleMetaReviewCommand.test.ts
   - tests/core/state/stateSchema.test.ts
 prd_ref: docs/meta-review-gate-prd.md
-plan_ref: plans/tasks/meta-review-gate/meta-review-gate-plan-v1.md
+plan_ref: plans/archive/tasks/meta-review-gate/meta-review-gate-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
   - docs/meta-review-gate-prd.md
@@ -26,6 +26,10 @@ owners:
 ---
 
 # Task: Meta Review Gate - Phase 1 Persistence and Command Split
+
+## Revision Log
+
+1. `v2` (2026-03-09 post-implementation alignment): clarified that the delivered runtime now prefers dedicated meta-reviewer pane execution (`pane_agent`) with deterministic fallback, while Phase 1 persistence/read-only contracts remain unchanged.
 
 ## L0 - Policy
 
@@ -84,7 +88,7 @@ Phase 1 intentionally establishes storage + command contracts first, while defer
 | CS2 | `src/core/state/initialState.ts` | initial snapshot defaults | `createInitialBubbleState(bubbleId: string) -> BubbleStateSnapshot` | New bubbles initialize deterministic `meta_review` defaults (`auto_rework_limit=5`, counters zeroed, nullable last-run fields) | P1 | required-now | T1,T2 |
 | CS3 | `src/core/state/stateSchema.ts` | runtime validation | `validateBubbleStateSnapshot(input: unknown) -> ValidationResult<BubbleStateSnapshot>` | Accept and validate new `meta_review.*` fields; keep absent `meta_review` subtree backward-compatible; reject invalid enum/value/co-occurrence types with field-level errors | P1 | required-now | T2,T3,T19,T20 |
 | CS4 | `src/core/bubble/paths.ts` | artifact path resolution | `getBubblePaths(repoPathInput: string, bubbleId: string) -> BubblePaths` | Add resolved paths for `artifacts/meta-review-last.json` and `artifacts/meta-review-last.md` | P1 | required-now | T4 |
-| CS5 | `src/core/bubble/metaReview.ts` | core service | `runMetaReview(input: MetaReviewRunInput) -> Promise<MetaReviewRunResult>` | Execute live autonomous review via adapter boundary; on adapter failure, normalize to fallback snapshot (`error/inconclusive`); perform read-before-CAS and persist canonical snapshot before any success result; update rolling artifacts (single-slot overwrite) best-effort; return structured run output | P1 | required-now | T5,T6,T7,T8,T20,T21,T22 |
+| CS5 | `src/core/bubble/metaReview.ts` | core service | `runMetaReview(input: MetaReviewRunInput) -> Promise<MetaReviewRunResult>` | Execute live autonomous review through the runner boundary (current implementation: dedicated pane-agent path preferred, deterministic fallback path retained); on runner failure, normalize to fallback snapshot (`error/inconclusive`); perform read-before-CAS and persist canonical snapshot before any success result; update rolling artifacts (single-slot overwrite) best-effort; return structured run output | P1 | required-now | T5,T6,T7,T8,T20,T21,T22 |
 | CS6 | `src/core/bubble/metaReview.ts` | cached reads | `getMetaReviewStatus(input: MetaReviewReadInput) -> Promise<MetaReviewStatusView>` and `getMetaReviewLastReport(input: MetaReviewReadInput) -> Promise<MetaReviewLastReportView>` | Read only canonical latest autonomous snapshot/report reference from state/artifacts; no live execution; apply read-time legacy normalization defaults when `meta_review` subtree is absent | P1 | required-now | T9,T10,T16,T17 |
 | CS7 | `src/cli/commands/bubble/metaReview.ts` | CLI command handler | `runBubbleMetaReviewCommand(args: string[] | BubbleMetaReviewCommandOptions, cwd?: string) -> Promise<BubbleMetaReviewCommandResult | null>` | Parse nested subcommands (`run|status|last-report`), dispatch to core service, support compact text + JSON output | P1 | required-now | T11,T12,T13,T14 |
 | CS8 | `src/cli/index.ts` | bubble subcommand registry | `bubbleSubcommandHandlers["meta-review"]` | Register `meta-review` under `pairflow bubble` command tree without regression to existing subcommands | P1 | required-now | T11,T15 |
@@ -256,3 +260,8 @@ Mark this task `IMPLEMENTABLE` when all are true:
 1. AC1-AC11 are satisfied with automated evidence.
 2. `run|status|last-report` command contracts are stable and documented in CLI help output.
 3. Read-only retrieval path is demonstrably non-generative and non-mutating.
+
+## Resolution Record
+
+1. Post-merge implementation keeps Phase 1 core contract intact: canonical snapshot persistence + read-only retrieval stayed stable.
+2. Live-run execution path was later hardened to prefer dedicated pane-agent execution, but this does not change Phase 1 persistence/read-only boundary guarantees.

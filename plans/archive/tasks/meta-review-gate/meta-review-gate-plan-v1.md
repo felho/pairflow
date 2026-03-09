@@ -2,7 +2,7 @@
 artifact_type: plan
 artifact_id: plan_meta_review_gate_v1
 title: "Meta Review Gate Implementation Plan"
-status: draft
+status: completed
 prd_ref: docs/meta-review-gate-prd.md
 owners:
   - "Pairflow Core"
@@ -29,10 +29,10 @@ Deliver the PRD-defined meta-review gate as a production Pairflow capability tha
 
 ## Task List
 
-1. `plans/tasks/meta-review-gate/meta-review-gate-phase1-persistence-and-command-split.md`
-2. `plans/tasks/meta-review-gate/meta-review-gate-phase2-autonomous-rework-loop.md`
-3. `plans/tasks/meta-review-gate/meta-review-gate-phase3-human-gate-pane-and-ui.md`
-4. `plans/tasks/meta-review-gate/meta-review-gate-phase3e-e2e-and-rollout-validation.md`
+1. `plans/archive/tasks/meta-review-gate/meta-review-gate-phase1-persistence-and-command-split.md`
+2. `plans/archive/tasks/meta-review-gate/meta-review-gate-phase2-autonomous-rework-loop.md`
+3. `plans/archive/tasks/meta-review-gate/meta-review-gate-phase3-human-gate-pane-and-ui.md`
+4. `plans/archive/tasks/meta-review-gate/meta-review-gate-phase3e-e2e-and-rollout-validation.md`
 
 ## Dependencies
 
@@ -74,3 +74,11 @@ Deliver the PRD-defined meta-review gate as a production Pairflow capability tha
 1. MVP persists only the latest autonomous snapshot (single-slot overwrite), no historical audit trail requirement.
 2. Manual live deep-review remains external to Pairflow CLI and is not part of this command surface.
 3. Default rollout starts with one depth profile per environment; depth tuning can be added later if needed.
+
+## Implementation Status (2026-03-09)
+
+1. Phase 1 delivered: canonical snapshot persistence + `meta-review run|status|last-report` split and read-only retrieval semantics.
+2. Phase 2 delivered: autonomous convergence trigger, budgeted auto-rework loop, sticky human gate routing.
+3. Phase 3 delivered: approval override policy, dedicated meta-reviewer pane/runtime visibility, UI state/actor/recommendation rendering.
+4. Phase 3e delivered: E2E + rollout validation artifacts and runbook/checklist docs.
+5. Post-delivery hardening note: autonomous run execution failures now route fail-closed to `META_REVIEW_FAILED`, while `inconclusive` remains `READY_FOR_HUMAN_APPROVAL`.
