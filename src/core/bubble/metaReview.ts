@@ -10,7 +10,13 @@ import {
   type LoadedStateSnapshot
 } from "../state/stateStore.js";
 import { SchemaValidationError, isNonEmptyString } from "../validation.js";
+import { readTranscriptEnvelopes } from "../protocol/transcriptStore.js";
 import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../types/bubble.js";
+import {
+  isFindingPriority,
+  resolveFindingPriority,
+  type Finding
+} from "../../types/findings.js";
 import type {
   BubbleMetaReviewSnapshotState,
   BubbleStateSnapshot,
@@ -35,6 +41,8 @@ export interface MetaReviewRunInput extends MetaReviewReadInput {
 export interface MetaReviewLiveRunnerInput {
   bubbleId: string;
   repoPath: string;
+  transcriptPath: string;
+  reviewerAgent: string;
   depth: MetaReviewDepth;
   state: BubbleStateSnapshot;
   now: Date;
@@ -293,8 +301,202 @@ function createMetaReviewStatusView(
   };
 }
 
-function defaultLiveRunner(): Promise<MetaReviewLiveRunnerOutput> {
-  throw new Error("Meta-review runner adapter is unavailable.");
+const metaReviewRunnerModes = ["heuristic", "unavailable"] as const;
+type MetaReviewRunnerMode = (typeof metaReviewRunnerModes)[number];
+
+function resolveMetaReviewRunnerMode(): MetaReviewRunnerMode {
+  const configuredMode = process.env.PAIRFLOW_META_REVIEW_RUNNER_MODE?.trim().toLowerCase();
+  if (
+    configuredMode !== undefined &&
+    (metaReviewRunnerModes as readonly string[]).includes(configuredMode)
+  ) {
+    return configuredMode as MetaReviewRunnerMode;
+  }
+  if (process.env.NODE_ENV === "test") {
+    return "unavailable";
+  }
+  return "heuristic";
+}
+
+function resolveMetaReviewFindingPriority(finding: Finding): string | null {
+  const effective = finding.effective_priority;
+  if (isFindingPriority(effective)) {
+    return effective;
+  }
+  const resolved = resolveFindingPriority(finding);
+  return resolved ?? null;
+}
+
+function formatFindingList(findings: Finding[]): string[] {
+  return findings.map((finding, index) => {
+    const priority = resolveMetaReviewFindingPriority(finding) ?? "Pn";
+    return `${index + 1}. [${priority}] ${finding.title}`;
+  });
+}
+
+function normalizeFindings(input: unknown): Finding[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+  return input.filter(
+    (entry): entry is Finding =>
+      typeof entry === "object" &&
+      entry !== null &&
+      isNonEmptyString((entry as { title?: unknown }).title)
+  );
+}
+
+function buildHeuristicReport(input: {
+  bubbleId: string;
+  reviewerAgent: string;
+  recommendation: MetaReviewRecommendation;
+  summary: string;
+  reviewerPassRound?: number;
+  findings: Finding[];
+}): string {
+  const lines = [
+    "# Meta Review Report",
+    "",
+    `- Bubble: ${input.bubbleId}`,
+    `- Reviewer Agent: ${input.reviewerAgent}`,
+    `- Recommendation: ${input.recommendation}`,
+    `- Source: transcript-heuristic`,
+    ...(input.reviewerPassRound !== undefined
+      ? [`- Reviewer PASS round: ${input.reviewerPassRound}`]
+      : []),
+    "",
+    "## Summary",
+    "",
+    input.summary
+  ];
+  if (input.findings.length > 0) {
+    lines.push("", "## Latest Reviewer Findings", "", ...formatFindingList(input.findings));
+  }
+  return lines.join("\n");
+}
+
+async function runHeuristicLiveReview(
+  input: MetaReviewLiveRunnerInput
+): Promise<MetaReviewLiveRunnerOutput> {
+  const transcript = await readTranscriptEnvelopes(input.transcriptPath, {
+    allowMissing: true,
+    toleratePartialFinalLine: true
+  });
+
+  const latestReviewerPass = [...transcript]
+    .reverse()
+    .find(
+      (envelope) =>
+        envelope.type === "PASS" && envelope.sender === input.reviewerAgent
+    );
+
+  if (latestReviewerPass === undefined) {
+    const summary =
+      "Heuristic meta-review inconclusive: no reviewer PASS envelope found in transcript.";
+    return {
+      recommendation: "inconclusive",
+      summary,
+      report_markdown: buildHeuristicReport({
+        bubbleId: input.bubbleId,
+        reviewerAgent: input.reviewerAgent,
+        recommendation: "inconclusive",
+        summary,
+        findings: []
+      }),
+      report_json: {
+        source: "transcript-heuristic",
+        reason: "reviewer_pass_missing"
+      }
+    };
+  }
+
+  const findings = normalizeFindings(latestReviewerPass.payload.findings);
+  const passIntent = latestReviewerPass.payload.pass_intent;
+  const blockingFindings = findings.filter((finding) => {
+    const priority = resolveMetaReviewFindingPriority(finding);
+    return priority === "P0" || priority === "P1";
+  });
+
+  if (passIntent === "fix_request" || blockingFindings.length > 0) {
+    const summary = `Heuristic meta-review recommends rework: latest reviewer pass includes ${blockingFindings.length > 0 ? "blocking findings" : "fix_request intent"}.`;
+    const messageLines = [
+      `Address reviewer blockers from round ${latestReviewerPass.round}:`,
+      ...(blockingFindings.length > 0
+        ? formatFindingList(blockingFindings)
+        : ["1. Reviewer requested explicit fix cycle before approval."])
+    ];
+    return {
+      recommendation: "rework",
+      summary,
+      report_markdown: buildHeuristicReport({
+        bubbleId: input.bubbleId,
+        reviewerAgent: input.reviewerAgent,
+        recommendation: "rework",
+        summary,
+        reviewerPassRound: latestReviewerPass.round,
+        findings
+      }),
+      report_json: {
+        source: "transcript-heuristic",
+        reviewer_pass_round: latestReviewerPass.round,
+        findings_count: findings.length,
+        blocking_findings_count: blockingFindings.length
+      },
+      rework_target_message: messageLines.join("\n")
+    };
+  }
+
+  if (findings.length === 0) {
+    const summary =
+      "Heuristic meta-review approves: latest reviewer pass is clean with no findings.";
+    return {
+      recommendation: "approve",
+      summary,
+      report_markdown: buildHeuristicReport({
+        bubbleId: input.bubbleId,
+        reviewerAgent: input.reviewerAgent,
+        recommendation: "approve",
+        summary,
+        reviewerPassRound: latestReviewerPass.round,
+        findings
+      }),
+      report_json: {
+        source: "transcript-heuristic",
+        reviewer_pass_round: latestReviewerPass.round,
+        findings_count: 0
+      }
+    };
+  }
+
+  const summary =
+    "Heuristic meta-review inconclusive: latest reviewer pass contains only non-blocking findings.";
+  return {
+    recommendation: "inconclusive",
+    summary,
+    report_markdown: buildHeuristicReport({
+      bubbleId: input.bubbleId,
+      reviewerAgent: input.reviewerAgent,
+      recommendation: "inconclusive",
+      summary,
+      reviewerPassRound: latestReviewerPass.round,
+      findings
+    }),
+    report_json: {
+      source: "transcript-heuristic",
+      reviewer_pass_round: latestReviewerPass.round,
+      findings_count: findings.length,
+      reason: "non_blocking_findings_only"
+    }
+  };
+}
+
+async function defaultLiveRunner(
+  input: MetaReviewLiveRunnerInput
+): Promise<MetaReviewLiveRunnerOutput> {
+  if (resolveMetaReviewRunnerMode() === "unavailable") {
+    throw new Error("Meta-review runner adapter is unavailable.");
+  }
+  return runHeuristicLiveReview(input);
 }
 
 function stateWriteConflictToMetaReviewError(error: unknown): MetaReviewError {
@@ -358,6 +560,8 @@ export async function runMetaReview(
     const output = await runLiveReview({
       bubbleId: resolved.bubbleId,
       repoPath: resolved.repoPath,
+      transcriptPath: resolved.bubblePaths.transcriptPath,
+      reviewerAgent: resolved.bubbleConfig.agents.reviewer,
       depth,
       state: loadedState.state,
       now
