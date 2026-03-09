@@ -140,6 +140,49 @@ describe("createBubble", () => {
     expect(inbox).toHaveLength(0);
   });
 
+  it("inherits doc gate mode from repository pairflow.toml", async () => {
+    const repoPath = await createTempRepo();
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      '[doc_contract_gates]\nmode = "required-for-doc-gates"\n',
+      "utf8"
+    );
+
+    const result = await createBubble({
+      id: "b_create_repo_mode_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "document",
+      task: "Document task with repo-level gate mode",
+      cwd: repoPath
+    });
+
+    expect(result.config.doc_contract_gates.mode).toBe("required-for-doc-gates");
+    const bubbleToml = await readFile(result.paths.bubbleTomlPath, "utf8");
+    const reparsedConfig = parseBubbleConfigToml(bubbleToml);
+    expect(reparsedConfig.doc_contract_gates.mode).toBe("required-for-doc-gates");
+  });
+
+  it("fails bubble creation when repository pairflow.toml has invalid doc gate mode", async () => {
+    const repoPath = await createTempRepo();
+    await writeFile(
+      join(repoPath, "pairflow.toml"),
+      '[doc_contract_gates]\nmode = "invalid-mode"\n',
+      "utf8"
+    );
+
+    await expect(
+      createBubble({
+        id: "b_create_repo_mode_invalid_01",
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Should fail due to invalid repo mode",
+        cwd: repoPath
+      })
+    ).rejects.toThrow(/Failed to load repository Pairflow config/u);
+  });
+
   it("does not persist open_command by default when create input omits it", async () => {
     const repoPath = await createTempRepo();
 

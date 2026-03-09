@@ -255,6 +255,13 @@ export {
   validatePairflowGlobalConfig
 } from "./config/pairflowConfig.js";
 export {
+  assertValidPairflowRepoConfig,
+  loadPairflowRepoConfig,
+  parsePairflowRepoConfigToml,
+  resolvePairflowRepoConfigPath,
+  validatePairflowRepoConfig
+} from "./config/repoConfig.js";
+export {
   SchemaValidationError,
   assertValidation,
   isInteger,

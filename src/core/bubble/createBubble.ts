@@ -6,6 +6,7 @@ import {
   assertValidBubbleConfig,
   renderBubbleConfigToml
 } from "../../config/bubbleConfig.js";
+import { loadPairflowRepoConfig } from "../../config/repoConfig.js";
 import {
   DEFAULT_DOC_CONTRACT_GATE_MODE,
   DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER,
@@ -37,7 +38,8 @@ import type {
   AgentName,
   BubbleConfig,
   BubbleStateSnapshot,
-  CreateReviewArtifactType
+  CreateReviewArtifactType,
+  DocContractGateMode
 } from "../../types/bubble.js";
 
 export interface BubbleCreateInput {
@@ -767,6 +769,7 @@ function buildBubbleConfig(input: {
   typecheckCommand?: string;
   bootstrapCommand?: string;
   openCommand?: string;
+  docContractGateMode?: DocContractGateMode;
 }): BubbleConfig {
   return assertValidBubbleConfig({
     id: input.id,
@@ -801,7 +804,7 @@ function buildBubbleConfig(input: {
       enabled: true
     },
     doc_contract_gates: {
-      mode: DEFAULT_DOC_CONTRACT_GATE_MODE,
+      mode: input.docContractGateMode ?? DEFAULT_DOC_CONTRACT_GATE_MODE,
       round_gate_applies_after: DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER
     }
   });
@@ -885,6 +888,17 @@ export async function createBubble(
   const task = await resolveTaskInput(taskResolveInput);
   const reviewerFocus = extractReviewerFocus(task.content);
   const accuracyCritical = input.accuracyCritical === true;
+  let repoConfigDocGateMode: DocContractGateMode | undefined;
+  try {
+    repoConfigDocGateMode = (
+      await loadPairflowRepoConfig(repoPath)
+    ).doc_contract_gates?.mode;
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new BubbleCreateError(
+      `Failed to load repository Pairflow config from ${repoPath}/pairflow.toml. Root error: ${reason}`
+    );
+  }
   const reviewerBrief = await resolveReviewerBriefInput({
     ...(input.reviewerBrief !== undefined
       ? { reviewerBrief: input.reviewerBrief }
@@ -922,6 +936,9 @@ export async function createBubble(
   }
   if (input.openCommand !== undefined) {
     bubbleConfigInput.openCommand = input.openCommand;
+  }
+  if (repoConfigDocGateMode !== undefined) {
+    bubbleConfigInput.docContractGateMode = repoConfigDocGateMode;
   }
 
   const config = buildBubbleConfig(bubbleConfigInput);

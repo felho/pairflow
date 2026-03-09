@@ -35,7 +35,8 @@ import {
   isWorkMode,
   type AttachLauncher,
   type BubbleConfig,
-  type CreateReviewArtifactType
+  type CreateReviewArtifactType,
+  type DocContractGateMode
 } from "../types/bubble.js";
 
 export const TOML_PARSER_LIMITATIONS = [
@@ -720,7 +721,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
       )
     : undefined;
   const docContractGateModeCandidate = docContractGates?.mode;
-  let docContractGateMode = DEFAULT_DOC_CONTRACT_GATE_MODE;
+  let docContractGateMode: DocContractGateMode = DEFAULT_DOC_CONTRACT_GATE_MODE;
   if (docContractGateModeCandidate !== undefined) {
     if (isDocContractGateMode(docContractGateModeCandidate)) {
       docContractGateMode = docContractGateModeCandidate;
