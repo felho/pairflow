@@ -5,6 +5,7 @@ export const bubbleLifecycleStates = [
   "WAITING_HUMAN",
   "READY_FOR_APPROVAL",
   "META_REVIEW_RUNNING",
+  "META_REVIEW_FAILED",
   "READY_FOR_HUMAN_APPROVAL",
   "APPROVED_FOR_COMMIT",
   "COMMITTED",
@@ -171,6 +172,7 @@ export interface UiRepoSummary {
     WAITING_HUMAN: number;
     READY_FOR_APPROVAL: number;
     META_REVIEW_RUNNING: number;
+    META_REVIEW_FAILED: number;
     READY_FOR_HUMAN_APPROVAL: number;
     APPROVED_FOR_COMMIT: number;
     COMMITTED: number;

@@ -44,6 +44,12 @@ export const stateVisuals: Record<BubbleLifecycleState, StateVisual> = {
     cardTone: "",
     stateText: "text-fuchsia-200"
   },
+  META_REVIEW_FAILED: {
+    led: "bg-rose-400 shadow-[0_0_6px_#ef4444] animate-attention-pulse",
+    border: "border-rose-500 shadow-[0_0_20px_rgba(239,68,68,0.15)]",
+    cardTone: "",
+    stateText: "text-rose-200"
+  },
   READY_FOR_HUMAN_APPROVAL: {
     led: "bg-lime-400 shadow-[0_0_6px_#a3e635]",
     border: "border-lime-500 shadow-[0_0_20px_rgba(163,230,53,0.15)]",

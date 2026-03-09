@@ -143,7 +143,7 @@ describe("BubbleCanvas", () => {
     expect(onPositionCommit).not.toHaveBeenCalled();
   });
 
-  it("renders Phase 3 lifecycle state messaging for meta-review running and human gate", () => {
+  it("renders Phase 3 lifecycle state messaging for meta-review running/failed and human gate", () => {
     render(
       <BubbleCanvas
         bubbles={[
@@ -151,6 +151,11 @@ describe("BubbleCanvas", () => {
             bubbleId: "b-meta-run",
             repoPath: "/repo-a",
             state: "META_REVIEW_RUNNING"
+          }),
+          bubbleCard({
+            bubbleId: "b-meta-failed",
+            repoPath: "/repo-a",
+            state: "META_REVIEW_FAILED"
           }),
           bubbleCard({
             bubbleId: "b-human-gate",
@@ -169,6 +174,9 @@ describe("BubbleCanvas", () => {
 
     expect(
       screen.getByText("meta-reviewer running autonomous gate analysis.")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Meta-review failed. Manual decision required.")
     ).toBeInTheDocument();
     expect(
       screen.getByText(

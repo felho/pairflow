@@ -308,6 +308,8 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
             ? `${props.bubble.activeRole ?? "agent"} working`
             : props.bubble.state === "META_REVIEW_RUNNING"
               ? "meta-reviewer running autonomous gate analysis."
+            : props.bubble.state === "META_REVIEW_FAILED"
+              ? "Meta-review failed. Manual decision required."
             : props.bubble.state === "READY_FOR_APPROVAL"
               ? "Reviewer found no issues. Ready for approval."
               : props.bubble.state === "READY_FOR_HUMAN_APPROVAL"

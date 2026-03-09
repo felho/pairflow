@@ -17,6 +17,7 @@ export function repoSummary(repoPath: string): UiRepoSummary {
       WAITING_HUMAN: 0,
       READY_FOR_APPROVAL: 0,
       META_REVIEW_RUNNING: 0,
+      META_REVIEW_FAILED: 0,
       READY_FOR_HUMAN_APPROVAL: 0,
       APPROVED_FOR_COMMIT: 0,
       COMMITTED: 0,
