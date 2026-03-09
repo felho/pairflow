@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import type { ProtocolMessageType, UiTimelineEntry } from "../../lib/types";
 
 function payloadSummary(entry: UiTimelineEntry): string {
@@ -138,6 +138,7 @@ export interface BubbleTimelineProps {
   isLoading: boolean;
   error: string | null;
   compact: boolean;
+  extras?: ReactNode;
 }
 
 export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
@@ -146,15 +147,19 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
   const compact = props.compact;
   const showError = props.error !== null;
   const showLoading = props.isLoading && !showError;
+  const hasExtras = props.extras !== null && props.extras !== undefined;
+  const hasEmptyState =
+    !showLoading && !showError && props.entries !== null && props.entries.length === 0;
 
   useEffect(() => {
     const el = scrollRef.current;
     if (el !== null && shouldAutoScrollRef.current) {
       el.scrollTop = el.scrollHeight;
     }
-  }, [props.entries]);
+  }, [props.entries, props.extras]);
 
   const hasEntries = !showLoading && !showError && props.entries !== null && props.entries.length > 0;
+  const showScrollable = hasEntries || hasEmptyState || hasExtras;
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -168,11 +173,7 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
         </div>
       ) : null}
 
-      {!showLoading && !showError && props.entries !== null && props.entries.length === 0 ? (
-        <div className="py-2 text-[10px] text-[#555]">No timeline entries yet.</div>
-      ) : null}
-
-      {hasEntries && props.entries !== null ? (
+      {showScrollable ? (
         <div
           ref={scrollRef}
           data-testid="bubble-timeline-scroll"
@@ -187,6 +188,12 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
             shouldAutoScrollRef.current = distanceFromBottom <= 24;
           }}
         >
+          {hasEmptyState ? (
+            <div className="py-2 text-[10px] text-[#555]">No timeline entries yet.</div>
+          ) : null}
+
+          {hasEntries && props.entries !== null ? (
+            <>
           {props.entries.map((entry) => {
             const role = resolveRole(entry);
             const isConvergence = entry.type === "CONVERGENCE";
@@ -246,6 +253,14 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
               </div>
             );
           })}
+            </>
+          ) : null}
+
+          {hasExtras ? (
+            <div className={hasEntries || hasEmptyState ? "mt-2" : undefined}>
+              {props.extras}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

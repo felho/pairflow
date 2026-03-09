@@ -49,6 +49,26 @@ describe("BubbleTimeline", () => {
     expect(screen.getByText("No timeline entries yet.")).toBeInTheDocument();
   });
 
+  it("renders extras inside the same scroll container as timeline entries", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          timelineEntry({
+            id: "env-1",
+            sender: "implementer"
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact
+        extras={<div data-testid="timeline-extras">Meta Review</div>}
+      />
+    );
+
+    const scroller = screen.getByTestId("bubble-timeline-scroll");
+    expect(scroller).toContainElement(screen.getByTestId("timeline-extras"));
+  });
+
   it("prioritizes error rendering over loading when both are present", () => {
     render(
       <BubbleTimeline
