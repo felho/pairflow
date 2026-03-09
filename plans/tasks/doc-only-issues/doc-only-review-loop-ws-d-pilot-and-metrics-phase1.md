@@ -40,6 +40,20 @@ Futtassunk 1 hetes WS-D pilotot a mar bevezetett doc workflow + gate policy mell
 5. A master memo kovetkezo lepes es status frissitese pilot eredmeny alapjan.
 6. `go|hold` javaslat Phase 2 `required-docs` enforce-ra.
 
+### Pilot Candidate Snapshot (2026-03-09)
+
+1. `bugfix`: `plans/tasks/RHI/reviewer-summary-diff-scope-prompt-hardening-phase1.md` (`READY`, merged: `f22124c`, `c21b80e`, `8486970`).
+2. `small feature`: `plans/tasks/doc-only-issues/artifact-type-ownership-enforcement-phase1.md` (`READY`, merged: `4bbeb03`, `8383efe`; refine sync: `47fdb54`, `3fb675e`).
+3. `docs-only hardening`: `plans/tasks/doc-only-issues/doc-only-evidence-source-whitelist-phase1.md` (`READY`, bubble history candidate: `7717faa`; merged trail: `80c0c58`, `b71d3e3`).
+4. `large feature` extension lane: `docs/meta-review-gate-prd.md` (`READY`, implemented/released PRD + pilot linkage in `docs/review-loop-ws-d-pilot-report-2026-03.md`).
+
+### Execution Outcome (2026-03-09)
+
+1. Pilot report created: `docs/review-loop-ws-d-pilot-report-2026-03.md`.
+2. Core set evidence captured for bugfix, small feature, and docs-only hardening candidates.
+3. Large-feature extension lane explicitly linked in both PRD and pilot report.
+4. Phase 2 `required-docs` enforce decision for this pilot window: `go` (WS-D docs-workflow scope alapjan, meta-review rollout jelek kulon lane-ben kezelve).
+
 ### Out of Scope
 
 1. Runtime gate logika/code tovabbi modositasai.

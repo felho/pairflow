@@ -1,7 +1,7 @@
 # Programterv: Review Loop Stabilization es LLM-Ready Doc Workflow
 
 Datum: 2026-03-04  
-Statusz: in-progress (WS-A/WS-B/WS-C delivered, WS-D pending; large-feature extension lane designated)  
+Statusz: in-progress (WS-A/WS-B/WS-C delivered, WS-D pilot assessed on 2026-03-09 with `go` (scope-filtered); large-feature extension lane linked)  
 Tulajdonos: Pairflow docs+runtime
 
 Referenciak:
@@ -141,6 +141,12 @@ Kimenet:
 2. Gate tuning javaslat.
 3. Large-feature extension lane rovid outcome note a pilot reportban.
 
+WS-D pilot outcome update (2026-03-09):
+1. Pilot report kesz: `docs/review-loop-ws-d-pilot-report-2026-03.md`.
+2. Large-feature extension lane explicit linkage kesz: `docs/meta-review-gate-prd.md` <-> pilot report.
+3. Phase 2 `required-docs` enforce dontes: `go` (WS-D docs-workflow scope alapjan).
+4. `meta_review_rollout.*` blokkolo reason code-ok kulon rollout-readiness lane-ben maradnak (nem WS-D gate input).
+
 ## 5) Fazos utemterv
 
 ### Phase 0 (azonnal)
@@ -194,10 +200,9 @@ Kimenet:
 ## 9) Kovetkezo konkret lepesek
 
 1. A sablonokat kiserleti modban alkalmazzuk 2 uj taskon.
-2. 1 het pilot utan meres + policy finomitas (WS-D).
-3. Keszuljon kulon implementacios task a Phase 2 `required-docs` enforce-ra.
-4. A memo statusz/done kriteriumok frissitese pilot eredmenyek alapjan.
-5. WS-D extension lane-ben a `docs/meta-review-gate-prd.md` process-test outcome explicit bekotese a pilot reportba.
+2. Phase 2 `required-docs` enforce rollout monitorozasa scope-filtered WS-D metrikakkal.
+3. Meta-review rollout-readiness kulon tracken: `docs/meta-review-gate-e2e-validation.md` + runbook szerinti gate.
+4. Ha a WS-D scoped metrikakban regresszio jelenik meg, policy tuning update task nyitasa.
 
 ## 10) Inline reviewer guidelines (temporary)
 

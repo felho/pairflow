@@ -1,9 +1,23 @@
 # Meta Review Gate PRD (Autonomous Rework Loop + Human Final Gate)
 
-**Date:** 2026-03-08  
-**Status:** Proposed (discussion-refined)  
+**Date:** 2026-03-09  
+**Status:** Implemented (released)  
 **Owner:** Pairflow Core  
 **Type:** Large feature
+
+## Implementation Snapshot (2026-03-09)
+
+1. Phase 1 delivered: `6d6ac06` (merged by `3f5b08c`).
+2. Phase 2 delivered: `a2bbc25` (merged by `b044acb`).
+3. Phase 3 delivered: `74ec1e3` (merged by `d672d29`).
+4. Phase 3e delivered: `8f5e1c6` (merged by `240ed47`).
+5. Post-release fail-closed correction delivered: `38a68ec`.
+
+## WS-D Pilot Tracking Note (2026-03-09)
+
+1. WS-D pilot report linkage: `docs/review-loop-ws-d-pilot-report-2026-03.md`.
+2. Current WS-D decision for Phase 2 `required-docs` enforce: `go` (WS-D docs-workflow scope only).
+3. Meta-review rollout blockers remain tracked in a separate rollout-readiness lane (runbook/e2e validation path).
 
 ## Summary
 
@@ -69,7 +83,8 @@ Pain points:
 2. `READY_FOR_APPROVAL`
 3. `META_REVIEW_RUNNING`
 4. `READY_FOR_HUMAN_APPROVAL`
-5. `APPROVED_FOR_COMMIT`
+5. `META_REVIEW_FAILED`
+6. `APPROVED_FOR_COMMIT`
 
 ### Transition Rules
 
@@ -86,12 +101,16 @@ Pain points:
 5. `META_REVIEW_RUNNING -> READY_FOR_HUMAN_APPROVAL`
    - Condition: recommendation `approve`, OR recommendation `rework` with exhausted budget, OR review `inconclusive` (non-error completion).
    - Action: set `sticky_human_gate=true`.
-6. `META_REVIEW_RUNNING -> READY_FOR_APPROVAL`
-   - Condition: autonomous meta-review execution failed (`status=error`, for example runner unavailable/invocation failure).
-   - Action: keep `sticky_human_gate=false`, persist run-failed diagnostics/recommendation snapshot, emit approval request for explicit human override workflow.
-7. `READY_FOR_HUMAN_APPROVAL -> RUNNING`
+6. `META_REVIEW_RUNNING -> META_REVIEW_FAILED`
+   - Condition: autonomous meta-review execution failed (`status=error`, runner unavailable, or invocation failure).
+   - Action: persist run-failed diagnostics/recommendation snapshot in fail-closed state.
+7. `META_REVIEW_FAILED -> RUNNING`
    - Trigger: human requests rework.
-8. `READY_FOR_HUMAN_APPROVAL -> APPROVED_FOR_COMMIT`
+8. `META_REVIEW_FAILED -> APPROVED_FOR_COMMIT`
+   - Trigger: human approves (explicit override policy applies on non-approve recommendation paths).
+9. `READY_FOR_HUMAN_APPROVAL -> RUNNING`
+   - Trigger: human requests rework.
+10. `READY_FOR_HUMAN_APPROVAL -> APPROVED_FOR_COMMIT`
    - Trigger: human approves.
 
 ## Auto-Rework Budget Contract
@@ -154,7 +173,7 @@ Routing semantics:
 
 Execution error semantics:
 1. `status=error` is not treated as a successful inconclusive review outcome.
-2. On `status=error`, route to `READY_FOR_APPROVAL` (not `READY_FOR_HUMAN_APPROVAL`) with explicit run-failed diagnostics, and require explicit human override policy for approval decisions.
+2. On `status=error`, route to `META_REVIEW_FAILED` (fail-closed) with explicit run-failed diagnostics, then require explicit human decision (`request-rework` or override-aware `approve`).
 
 ## Input Surface for Meta Review
 
@@ -221,7 +240,7 @@ Behavioral requirement:
 
 ## UI Impact (PRD-level)
 
-1. UI must recognize and render the meta-review lifecycle states used by this feature (at minimum `META_REVIEW_RUNNING` and `READY_FOR_HUMAN_APPROVAL`).
+1. UI must recognize and render the meta-review lifecycle states used by this feature (at minimum `META_REVIEW_RUNNING`, `READY_FOR_HUMAN_APPROVAL`, and `META_REVIEW_FAILED`).
 2. UI must recognize and render `meta-reviewer` as a first-class actor/role anywhere active role or timeline role is shown.
 3. Severity/finding tags should remain actor-agnostic: existing severity tag behavior (for example `P0`-`P3`) must continue to work for meta-reviewer findings when findings are present.
 4. UI should display the latest autonomous recommendation (`rework|approve|inconclusive`) from the canonical snapshot in a clearly visible bubble/detail surface.
@@ -229,7 +248,7 @@ Behavioral requirement:
 
 ## Approval and Human Gate Rules
 
-1. Human approval decisions happen only from `READY_FOR_HUMAN_APPROVAL`.
+1. Human approval decisions happen from `READY_FOR_HUMAN_APPROVAL` and `META_REVIEW_FAILED`.
 2. If latest recommendation is not `approve`, CLI should require explicit override flag for approval attempt.
 3. Override reason is mandatory and auditable.
 4. On first entry to `READY_FOR_HUMAN_APPROVAL`, set `sticky_human_gate=true`.
@@ -269,7 +288,7 @@ Fleet-level:
 
 ### Phase 3: Human Gate Hardening + Meta-Reviewer Pane
 
-1. Add `READY_FOR_HUMAN_APPROVAL` state wiring.
+1. Add `READY_FOR_HUMAN_APPROVAL` + `META_REVIEW_FAILED` decision wiring.
 2. Add explicit override path for non-approve recommendations.
 3. Ship meta-reviewer pane observability.
 4. Ship UI state/role/recommendation rendering for meta-review flow.
@@ -283,11 +302,13 @@ Fleet-level:
 5. `meta-review status` and `meta-review last-report` return latest autonomous snapshot data without running a new review.
 6. Pairflow CLI supports `run`, `status`, and `last-report`; fresh manual deep review remains an external workflow.
 7. When budget is exhausted or review is inconclusive, bubble routes to `READY_FOR_HUMAN_APPROVAL` and sets sticky human gate.
-8. After sticky human gate is set, future convergences route directly back to `READY_FOR_HUMAN_APPROVAL`.
-9. Meta-reviewer pane exposes live review progress and final routing outcome.
-10. All automated rework decisions are reflected in current state/snapshot.
-11. UI renders `META_REVIEW_RUNNING` and `READY_FOR_HUMAN_APPROVAL` states without fallback/unknown behavior.
-12. UI renders `meta-reviewer` actor and latest autonomous recommendation from the canonical snapshot.
+8. Autonomous run execution failure routes bubble to `META_REVIEW_FAILED` with persisted run-failed diagnostics.
+9. Human decision paths from `META_REVIEW_FAILED` remain explicit (`request-rework` or override-aware `approve`).
+10. After sticky human gate is set, future convergences route directly back to `READY_FOR_HUMAN_APPROVAL`.
+11. Meta-reviewer pane exposes live review progress and final routing outcome.
+12. All automated rework decisions are reflected in current state/snapshot.
+13. UI renders `META_REVIEW_RUNNING`, `READY_FOR_HUMAN_APPROVAL`, and `META_REVIEW_FAILED` states without fallback/unknown behavior.
+14. UI renders `meta-reviewer` actor and latest autonomous recommendation from the canonical snapshot.
 
 ## Risks and Mitigations
 
