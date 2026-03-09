@@ -267,6 +267,41 @@ describe("applyMetaReviewGateOnConvergence", () => {
     expect(result.state.meta_review?.sticky_human_gate).toBe(true);
   });
 
+  it("keeps bubble in READY_FOR_APPROVAL when meta-review run returns error status", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_02d",
+      task: "Error-status fallback route"
+    });
+
+    const result = await applyMetaReviewGateOnConvergence(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        summary: "Converged but meta-review runtime failed.",
+        now: new Date("2026-03-08T11:18:00.000Z")
+      },
+      {
+        metaReviewDependencies: {
+          randomUUID: () => "run_meta_gate_02d",
+          runLiveReview: async () => {
+            throw new Error("simulated meta-review adapter unavailable");
+          }
+        }
+      }
+    );
+
+    expect(result.route).toBe("human_gate_run_failed");
+    expect(result.gateEnvelope.type).toBe("APPROVAL_REQUEST");
+    expect(result.state.state).toBe("READY_FOR_APPROVAL");
+    expect(result.state.meta_review?.sticky_human_gate).toBe(false);
+    expect(result.state.meta_review?.last_autonomous_status).toBe("error");
+    expect(result.state.meta_review?.last_autonomous_recommendation).toBe(
+      "inconclusive"
+    );
+  });
+
   it("bypasses autonomous run when sticky_human_gate is already true", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -532,7 +567,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
     expect(inbox.some((entry) => entry.type === "APPROVAL_DECISION")).toBe(false);
   });
 
-  it("routes to human gate when meta-review invocation throws", async () => {
+  it("keeps bubble in READY_FOR_APPROVAL when meta-review invocation throws", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -558,9 +593,9 @@ describe("applyMetaReviewGateOnConvergence", () => {
     );
 
     expect(result.route).toBe("human_gate_run_failed");
-    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(result.state.state).toBe("READY_FOR_APPROVAL");
     expect(result.state.meta_review).toMatchObject({
-      sticky_human_gate: true,
+      sticky_human_gate: false,
       last_autonomous_status: "error",
       last_autonomous_recommendation: "inconclusive"
     });
@@ -623,7 +658,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
 
     expect(result.route).toBe("human_gate_run_failed");
     expect(result.state.meta_review).toMatchObject({
-      sticky_human_gate: true,
+      sticky_human_gate: false,
       last_autonomous_status: "error",
       last_autonomous_recommendation: "inconclusive"
     });

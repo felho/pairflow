@@ -60,6 +60,17 @@ async function setupReadyForHumanApprovalBubble(repoPath: string, bubbleId: stri
     summary: "Ready for approval",
     cwd: bubble.paths.worktreePath,
     now: new Date("2026-02-22T12:04:00.000Z")
+  }, {
+    applyMetaReviewGateOnConvergence: async (input) =>
+      applyMetaReviewGateOnConvergence(input, {
+        metaReviewDependencies: {
+          runLiveReview: async () => ({
+            recommendation: "inconclusive",
+            summary: "Autonomous review inconclusive; route to human gate.",
+            report_markdown: "# Meta Review Report\n\nInconclusive."
+          })
+        }
+      })
   });
 
   return bubble;
@@ -383,7 +394,7 @@ describe("approval decisions", () => {
     });
   });
 
-  it("keeps override path available after run-failed -> revise -> sticky-bypass cycle", async () => {
+  it("keeps override path available after run-failed -> revise -> rerun-failed cycle", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -429,7 +440,7 @@ describe("approval decisions", () => {
       },
       {
         expectedFingerprint: afterFailedGate.fingerprint,
-        expectedState: "READY_FOR_HUMAN_APPROVAL"
+        expectedState: "READY_FOR_APPROVAL"
       }
     );
 
@@ -445,14 +456,18 @@ describe("approval decisions", () => {
     }
     expect(revised.state.state).toBe("RUNNING");
 
-    const stickyBypass = await applyMetaReviewGateOnConvergence({
+    const rerunFailedGate = await applyMetaReviewGateOnConvergence({
       bubbleId: bubble.bubbleId,
       repoPath,
       summary: "Converged after revise.",
       now: new Date("2026-03-08T12:02:00.000Z")
     });
-    expect(stickyBypass.route).toBe("human_gate_sticky_bypass");
-    expect(stickyBypass.gateEnvelope.payload.summary).toBe("Converged after revise.");
+    expect(rerunFailedGate.route).toBe("human_gate_run_failed");
+    expect(rerunFailedGate.state.state).toBe("READY_FOR_APPROVAL");
+    expect(rerunFailedGate.state.meta_review?.sticky_human_gate).toBe(false);
+    expect(rerunFailedGate.gateEnvelope.payload.summary).toContain(
+      "Meta-review runner failure"
+    );
 
     await expect(
       emitApprove({

@@ -84,11 +84,14 @@ Pain points:
    - Condition: recommendation `rework` AND `auto_rework_count < auto_rework_limit`.
    - Action: Pairflow issues `request-rework` automatically.
 5. `META_REVIEW_RUNNING -> READY_FOR_HUMAN_APPROVAL`
-   - Condition: recommendation `approve`, OR recommendation `rework` with exhausted budget, OR review `inconclusive/error`.
+   - Condition: recommendation `approve`, OR recommendation `rework` with exhausted budget, OR review `inconclusive` (non-error completion).
    - Action: set `sticky_human_gate=true`.
-6. `READY_FOR_HUMAN_APPROVAL -> RUNNING`
+6. `META_REVIEW_RUNNING -> READY_FOR_APPROVAL`
+   - Condition: autonomous meta-review execution failed (`status=error`, for example runner unavailable/invocation failure).
+   - Action: keep `sticky_human_gate=false`, persist run-failed diagnostics/recommendation snapshot, emit approval request for explicit human override workflow.
+7. `READY_FOR_HUMAN_APPROVAL -> RUNNING`
    - Trigger: human requests rework.
-7. `READY_FOR_HUMAN_APPROVAL -> APPROVED_FOR_COMMIT`
+8. `READY_FOR_HUMAN_APPROVAL -> APPROVED_FOR_COMMIT`
    - Trigger: human approves.
 
 ## Auto-Rework Budget Contract
@@ -148,6 +151,10 @@ Routing semantics:
    - optional `rework_target_message` (if present) is advisory and human-consumed only.
 3. `inconclusive`:
    - route to `READY_FOR_HUMAN_APPROVAL` with explicit reason.
+
+Execution error semantics:
+1. `status=error` is not treated as a successful inconclusive review outcome.
+2. On `status=error`, route to `READY_FOR_APPROVAL` (not `READY_FOR_HUMAN_APPROVAL`) with explicit run-failed diagnostics, and require explicit human override policy for approval decisions.
 
 ## Input Surface for Meta Review
 

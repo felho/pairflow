@@ -181,14 +181,16 @@ async function appendHumanApprovalRequest(input: {
   });
 }
 
-function transitionToHumanGate(input: {
+function transitionToGateState(input: {
   current: BubbleStateSnapshot;
   nowIso: string;
+  targetState: "READY_FOR_HUMAN_APPROVAL" | "READY_FOR_APPROVAL";
+  stickyHumanGate: boolean;
   fallbackRecommendation?: MetaReviewRecommendation;
   fallbackSummary?: string;
 }): BubbleStateSnapshot {
   const transitioned = applyStateTransition(input.current, {
-    to: "READY_FOR_HUMAN_APPROVAL",
+    to: input.targetState,
     activeAgent: null,
     activeRole: null,
     activeSince: null,
@@ -220,7 +222,7 @@ function transitionToHumanGate(input: {
             last_autonomous_updated_at: input.nowIso
           }
         : {}),
-      sticky_human_gate: true
+      sticky_human_gate: input.stickyHumanGate
     }
   };
 }
@@ -272,10 +274,16 @@ async function persistHumanGateRoute(input: {
   route: MetaReviewGateRoute;
   metaReviewRun?: MetaReviewRunResult;
   fallbackRecommendation?: MetaReviewRecommendation;
+  targetState?: "READY_FOR_HUMAN_APPROVAL" | "READY_FOR_APPROVAL";
+  stickyHumanGate?: boolean;
 }): Promise<MetaReviewGateResult> {
-  const nextState = transitionToHumanGate({
+  const targetState = input.targetState ?? "READY_FOR_HUMAN_APPROVAL";
+  const stickyHumanGate = input.stickyHumanGate ?? true;
+  const nextState = transitionToGateState({
     current: input.loaded.state,
     nowIso: input.nowIso,
+    targetState,
+    stickyHumanGate,
     ...(input.fallbackRecommendation !== undefined
       ? {
           fallbackRecommendation: input.fallbackRecommendation,
@@ -319,7 +327,7 @@ async function persistHumanGateRoute(input: {
     const reason = error instanceof Error ? error.message : String(error);
     throw new MetaReviewGateError(
       "META_REVIEW_GATE_TRANSITION_INVALID",
-      `META_REVIEW_GATE_TRANSITION_INVALID: state transitioned to READY_FOR_HUMAN_APPROVAL but approval request append failed. Root error: ${reason}`
+      `META_REVIEW_GATE_TRANSITION_INVALID: state transitioned to ${targetState} but approval request append failed. Root error: ${reason}`
     );
   }
 
@@ -513,7 +521,9 @@ export async function applyMetaReviewGateOnConvergence(
       loaded: metaReviewRunningState,
       expectedState: "META_REVIEW_RUNNING",
       route: "human_gate_run_failed",
-      fallbackRecommendation: "inconclusive"
+      fallbackRecommendation: "inconclusive",
+      targetState: "READY_FOR_APPROVAL",
+      stickyHumanGate: false
     });
   }
 
@@ -533,6 +543,31 @@ export async function applyMetaReviewGateOnConvergence(
   }
 
   const afterRunMetaReview = normalizeMetaReviewSnapshot(afterRun.state.meta_review);
+  if (runResult.status === "error") {
+    return persistHumanGateRoute({
+      appendEnvelope,
+      writeState,
+      statePath: resolved.bubblePaths.statePath,
+      transcriptPath: resolved.bubblePaths.transcriptPath,
+      inboxPath: resolved.bubblePaths.inboxPath,
+      lockPath,
+      now,
+      nowIso,
+      bubbleId: resolved.bubbleId,
+      summary: buildHumanGateSummary({
+        convergenceSummary: input.summary,
+        metaReviewRun: runResult
+      }),
+      refs,
+      loaded: afterRun,
+      expectedState: "META_REVIEW_RUNNING",
+      route: "human_gate_run_failed",
+      metaReviewRun: runResult,
+      targetState: "READY_FOR_APPROVAL",
+      stickyHumanGate: false
+    });
+  }
+
   const recommendation = runResult.recommendation;
   const budgetAvailable =
     afterRunMetaReview.auto_rework_count < afterRunMetaReview.auto_rework_limit;

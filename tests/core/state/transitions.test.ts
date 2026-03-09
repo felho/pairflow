@@ -20,6 +20,9 @@ describe("state transitions", () => {
       true
     );
     expect(canTransition("META_REVIEW_RUNNING", "RUNNING")).toBe(true);
+    expect(canTransition("META_REVIEW_RUNNING", "READY_FOR_APPROVAL")).toBe(
+      true
+    );
     expect(canTransition("META_REVIEW_RUNNING", "READY_FOR_HUMAN_APPROVAL")).toBe(
       true
     );
@@ -69,6 +72,7 @@ describe("state transitions", () => {
 
     const metaReviewAllowed = getAllowedTransitions("META_REVIEW_RUNNING");
     expect(metaReviewAllowed).toContain("RUNNING");
+    expect(metaReviewAllowed).toContain("READY_FOR_APPROVAL");
     expect(metaReviewAllowed).toContain("READY_FOR_HUMAN_APPROVAL");
   });
 

@@ -118,7 +118,9 @@ If a blocking reason code appears during rollout:
 
 1. stop rollout progression immediately,
 2. attach the raw evidence/log reference that triggered the block,
-3. keep the lifecycle fail-safe path at `READY_FOR_HUMAN_APPROVAL`,
+3. keep lifecycle fail-safe routing explicit:
+   - default fail-safe path is `READY_FOR_HUMAN_APPROVAL`,
+   - meta-review execution failure (`META_REVIEW_GATE_RUN_FAILED` / `META_REVIEW_RUNNER_ERROR`) keeps the bubble at `READY_FOR_APPROVAL` with run-failed diagnostics for human override handling,
 4. resolve the blocking condition before re-running the smoke checklist.
 
 If the block is `PAIRFLOW_COMMAND_PATH_STALE`:
