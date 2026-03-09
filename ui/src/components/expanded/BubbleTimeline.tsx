@@ -74,7 +74,7 @@ function extractMetaRecommendationTag(entry: UiTimelineEntry): FindingTag | null
   if (!isRecord(metadata)) {
     return null;
   }
-  const recommendation = metadata.latest_recommendation;
+  const recommendation = metadata.latest_recommendation ?? metadata.recommendation;
   if (recommendation === "approve") {
     return {
       label: "approve",
@@ -141,6 +141,14 @@ const roleIcons: Record<RoleKind, string> = {
   meta: "\u25C9"
 };
 
+function resolveDisplaySender(entry: UiTimelineEntry): string {
+  const metadata = entry.payload.metadata;
+  if (isRecord(metadata) && typeof metadata.actor_agent === "string") {
+    return metadata.actor_agent;
+  }
+  return entry.sender;
+}
+
 function resolveRole(entry: UiTimelineEntry): RoleKind {
   const metadata = entry.payload.metadata;
   const actor =
@@ -158,6 +166,9 @@ function resolveRole(entry: UiTimelineEntry): RoleKind {
     return "system";
   }
   const sender = entry.sender.toLowerCase();
+  if (sender === "orchestrator") {
+    return "system";
+  }
   if (sender.includes("review") || sender.includes("claude")) {
     return "review";
   }
@@ -227,6 +238,7 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
             <>
           {props.entries.map((entry) => {
             const role = resolveRole(entry);
+            const displaySender = resolveDisplaySender(entry);
             const isConvergence = entry.type === "CONVERGENCE";
             const blocked = isBlockedEntry(entry);
             const findingTags = extractFindingTags(entry);
@@ -251,11 +263,11 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
                       <span className="font-semibold text-emerald-500">CONVERGENCE</span>
                     ) : blocked ? (
                       <span className="font-medium text-amber-500">
-                        {entry.sender} &mdash; blocked
+                        {displaySender} &mdash; blocked
                       </span>
                     ) : (
                       <span className="font-medium text-[#aaa]">
-                        {entry.sender}{" "}
+                        {displaySender}{" "}
                         <span className="text-[#555]">({role === "system" ? "system" : role === "human" ? "human" : role === "review" ? "reviewer" : role === "meta" ? "meta-reviewer" : "implementer"})</span>
                       </span>
                     )}

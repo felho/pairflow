@@ -171,6 +171,7 @@ async function appendHumanApprovalRequest(input: {
         summary: input.summary,
         metadata: {
           actor: "meta-reviewer",
+          actor_agent: "codex",
           ...(input.recommendation !== undefined
             ? { latest_recommendation: input.recommendation }
             : {})
@@ -657,6 +658,7 @@ export async function applyMetaReviewGateOnConvergence(
             message: reworkMessage,
             metadata: {
               actor: "meta-reviewer",
+              actor_agent: "codex",
               recommendation: runResult.recommendation,
               run_id: runResult.run_id
             }
