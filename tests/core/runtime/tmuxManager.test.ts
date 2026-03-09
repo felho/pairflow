@@ -192,9 +192,9 @@ describe("launchBubbleTmuxSession", () => {
       "pf-b_start_01",
       "client-resized"
     ]);
-    expect(calls[12]?.args?.[4]).toContain("REMAIN=\\$((#{window_height} - 15))");
-    expect(calls[12]?.args?.[4]).toContain("tmux resize-pane -t %11 -y \\$ROW");
-    expect(calls[12]?.args?.[4]).toContain("tmux resize-pane -t %12 -y \\$ROW");
+    expect(calls[12]?.args?.[4]).toContain("REMAIN=$((#{window_height} - 15))");
+    expect(calls[12]?.args?.[4]).toContain("tmux resize-pane -t %11 -y $ROW");
+    expect(calls[12]?.args?.[4]).toContain("tmux resize-pane -t %12 -y $ROW");
   });
 
   it("sends kickoff message to implementer pane when provided", async () => {

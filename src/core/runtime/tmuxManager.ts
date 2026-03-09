@@ -294,12 +294,12 @@ export async function launchBubbleTmuxSession(
   // All resize logic runs inside a single run-shell to avoid spawn quoting issues.
   const layoutScript = [
     `tmux resize-pane -t ${statusPane} -y ${statusPaneHeight} 2>/dev/null || true`,
-    `REMAIN=\\$((#{window_height} - ${statusPaneHeight + tmuxPaneSeparators}))`,
-    "if [ \\$REMAIN -lt 3 ]; then REMAIN=3; fi",
-    "ROW=\\$((REMAIN / 3))",
-    "if [ \\$ROW -lt 1 ]; then ROW=1; fi",
-    `tmux resize-pane -t ${implementerPaneId} -y \\$ROW 2>/dev/null || true`,
-    `tmux resize-pane -t ${reviewerPaneId} -y \\$ROW 2>/dev/null || true`
+    `REMAIN=$((#{window_height} - ${statusPaneHeight + tmuxPaneSeparators}))`,
+    "if [ $REMAIN -lt 3 ]; then REMAIN=3; fi",
+    "ROW=$((REMAIN / 3))",
+    "if [ $ROW -lt 1 ]; then ROW=1; fi",
+    `tmux resize-pane -t ${implementerPaneId} -y $ROW 2>/dev/null || true`,
+    `tmux resize-pane -t ${reviewerPaneId} -y $ROW 2>/dev/null || true`
   ].join("; ");
   const s = sessionName;
   await runner([
