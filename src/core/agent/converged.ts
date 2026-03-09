@@ -14,6 +14,7 @@ import {
   resolveDeliveryMessageRef,
   type EmitTmuxDeliveryNotificationResult
 } from "../runtime/tmuxDelivery.js";
+import { assessPairflowCommandPath } from "../runtime/pairflowCommand.js";
 import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import { readReviewVerificationArtifactStatus } from "../reviewer/reviewVerification.js";
@@ -81,6 +82,31 @@ export class ConvergedCommandError extends Error {
     super(message);
     this.name = "ConvergedCommandError";
   }
+}
+
+function resolveMetaReviewRolloutBlockingReasonCodes(input: {
+  gateRoute: MetaReviewGateRoute;
+  metaReviewWarnings: Array<{ reason_code: string }>;
+  commandPathStatus: ReturnType<typeof assessPairflowCommandPath>;
+}): string[] {
+  const codes = new Set<string>();
+
+  if (input.gateRoute === "human_gate_run_failed") {
+    codes.add("META_REVIEW_GATE_RUN_FAILED");
+  }
+  if (input.gateRoute === "human_gate_dispatch_failed") {
+    codes.add("META_REVIEW_GATE_REWORK_DISPATCH_FAILED");
+  }
+  if (input.commandPathStatus.status === "stale") {
+    codes.add("PAIRFLOW_COMMAND_PATH_STALE");
+  }
+  for (const warning of input.metaReviewWarnings) {
+    if (warning.reason_code === "META_REVIEW_RUNNER_ERROR") {
+      codes.add("META_REVIEW_RUNNER_ERROR");
+    }
+  }
+
+  return [...codes].sort((left, right) => left.localeCompare(right));
 }
 
 function assertReviewerContext(
@@ -367,6 +393,16 @@ export async function emitConvergedFromWorkspace(
   // Optional UX signal; never block protocol/state progression on notification failure.
   void emitNotification(resolved.bubbleConfig, "converged");
 
+  const commandPathStatus = assessPairflowCommandPath({
+    worktreePath: resolved.bubblePaths.worktreePath,
+    activeEntrypoint: process.argv[1]
+  });
+  const blockingReasonCodes = resolveMetaReviewRolloutBlockingReasonCodes({
+    gateRoute: gateResult.route,
+    metaReviewWarnings: gateResult.metaReviewRun?.warnings ?? [],
+    commandPathStatus
+  });
+
   await emitBubbleLifecycleEventBestEffort({
     repoPath: resolved.repoPath,
     bubbleId: resolved.bubbleId,
@@ -381,6 +417,23 @@ export async function emitConvergedFromWorkspace(
       gate_handoff_envelope_id: gateResult.gateEnvelope.id,
       gate_handoff_type: gateResult.gateEnvelope.type,
       gate_route: gateResult.route,
+      pairflow_command_path_status: commandPathStatus.status,
+      pairflow_command_path_local_entrypoint: commandPathStatus.localEntrypoint,
+      ...(commandPathStatus.activeEntrypoint !== null
+        ? {
+            pairflow_command_path_active_entrypoint:
+              commandPathStatus.activeEntrypoint
+          }
+        : {}),
+      ...(commandPathStatus.reasonCode !== undefined
+        ? {
+            pairflow_command_path_reason_code: commandPathStatus.reasonCode
+          }
+        : {}),
+      meta_review_warning_reason_codes: JSON.stringify(
+        (gateResult.metaReviewRun?.warnings ?? []).map((warning) => warning.reason_code)
+      ),
+      meta_review_rollout_blocking_reason_codes: JSON.stringify(blockingReasonCodes),
       summary_verifier_gate_decision: summaryVerifierGateDecision.gate_decision,
       summary_verifier_gate_reason_code: summaryVerifierGateDecision.reason_code,
       summary_verifier_gate_claim_classes_detected:
@@ -412,6 +465,94 @@ export async function emitConvergedFromWorkspace(
     },
     now
   });
+
+  await emitBubbleLifecycleEventBestEffort({
+    repoPath: resolved.repoPath,
+    bubbleId: resolved.bubbleId,
+    bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+    eventType: "bubble_meta_review_routed",
+    round: state.round,
+    actorRole: "reviewer",
+    metadata: {
+      gate_route: gateResult.route,
+      gate_handoff_type: gateResult.gateEnvelope.type,
+      recommendation:
+        gateResult.metaReviewRun?.recommendation ??
+        gateResult.state.meta_review?.last_autonomous_recommendation ??
+        "inconclusive",
+      run_status:
+        gateResult.metaReviewRun?.status ??
+        gateResult.state.meta_review?.last_autonomous_status ??
+        "inconclusive",
+      warning_reason_codes: JSON.stringify(
+        (gateResult.metaReviewRun?.warnings ?? []).map((warning) => warning.reason_code)
+      ),
+      blocking_reason_codes: JSON.stringify(blockingReasonCodes),
+      pairflow_command_path_status: commandPathStatus.status,
+      ...(commandPathStatus.reasonCode !== undefined
+        ? {
+            pairflow_command_path_reason_code: commandPathStatus.reasonCode
+          }
+        : {})
+    },
+    now
+  });
+
+  if (gateResult.route === "auto_rework") {
+    await emitBubbleLifecycleEventBestEffort({
+      repoPath: resolved.repoPath,
+      bubbleId: resolved.bubbleId,
+      bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+      eventType: "bubble_meta_review_auto_rework_dispatched",
+      round: state.round,
+      actorRole: "reviewer",
+      metadata: {
+        gate_route: gateResult.route,
+        rework_target_present:
+          (gateResult.metaReviewRun?.rework_target_message?.trim().length ?? 0) > 0,
+        auto_rework_count: gateResult.state.meta_review?.auto_rework_count ?? 0,
+        auto_rework_limit: gateResult.state.meta_review?.auto_rework_limit ?? 0
+      },
+      now
+    });
+  }
+
+  if (gateResult.gateEnvelope.type === "APPROVAL_REQUEST") {
+    await emitBubbleLifecycleEventBestEffort({
+      repoPath: resolved.repoPath,
+      bubbleId: resolved.bubbleId,
+      bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+      eventType: "bubble_meta_review_human_gate_reached",
+      round: state.round,
+      actorRole: "reviewer",
+      metadata: {
+        gate_route: gateResult.route,
+        recommendation:
+          gateResult.metaReviewRun?.recommendation ??
+          gateResult.state.meta_review?.last_autonomous_recommendation ??
+          "inconclusive",
+        blocking_reason_codes: JSON.stringify(blockingReasonCodes)
+      },
+      now
+    });
+  }
+
+  if (blockingReasonCodes.length > 0) {
+    await emitBubbleLifecycleEventBestEffort({
+      repoPath: resolved.repoPath,
+      bubbleId: resolved.bubbleId,
+      bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+      eventType: "bubble_meta_review_rollout_blocked",
+      round: state.round,
+      actorRole: "reviewer",
+      metadata: {
+        gate_route: gateResult.route,
+        blocking_reason_codes: JSON.stringify(blockingReasonCodes),
+        pairflow_command_path_status: commandPathStatus.status
+      },
+      now
+    });
+  }
 
   return {
     bubbleId: resolved.bubbleId,

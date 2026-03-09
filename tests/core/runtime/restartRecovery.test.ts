@@ -10,7 +10,8 @@ import {
   upsertRuntimeSession
 } from "../../../src/core/runtime/sessionsRegistry.js";
 import { reconcileRuntimeSessions } from "../../../src/core/runtime/startupReconciler.js";
-import { readStateSnapshot } from "../../../src/core/state/stateStore.js";
+import { applyStateTransition } from "../../../src/core/state/machine.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 
@@ -89,5 +90,137 @@ describe("restart recovery", () => {
     ]);
     expect(state.state.state).toBe("RUNNING");
     expect(registry[bubble.bubbleId]?.tmuxSessionName).toBe("pf-b_restart_01");
+  });
+
+  it("preserves META_REVIEW_RUNNING on restart and keeps worktree-local pairflow bootstrap active", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_restart_meta_01",
+      task: "Restart recovery meta-review task"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const readyForApproval = applyStateTransition(loaded.state, {
+      to: "READY_FOR_APPROVAL",
+      lastCommandAt: "2026-02-23T11:00:00.000Z"
+    });
+    const metaReviewRunning = applyStateTransition(readyForApproval, {
+      to: "META_REVIEW_RUNNING",
+      lastCommandAt: "2026-02-23T11:01:00.000Z"
+    });
+    await writeStateSnapshot(bubble.paths.statePath, metaReviewRunning, {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "RUNNING"
+    });
+
+    await upsertRuntimeSession({
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      tmuxSessionName: "pf-b_restart_meta_01",
+      now: new Date("2026-02-23T11:02:00.000Z")
+    });
+
+    const reconciled = await reconcileRuntimeSessions({
+      repoPath,
+      isTmuxSessionAlive: () => Promise.resolve(false)
+    });
+    expect(reconciled.actions[0]?.reason).toBe("missing_tmux_session");
+
+    let launchInput:
+      | {
+          implementerCommand: string;
+          reviewerCommand: string;
+        }
+      | undefined;
+    const started = await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        now: new Date("2026-02-23T11:05:00.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () =>
+          Promise.resolve({
+            repoPath,
+            baseRef: "refs/heads/main",
+            bubbleBranch: bubble.config.bubble_branch,
+            worktreePath: bubble.paths.worktreePath
+          }),
+        launchBubbleTmuxSession: (input) => {
+          launchInput = {
+            implementerCommand: input.implementerCommand,
+            reviewerCommand: input.reviewerCommand
+          };
+          return Promise.resolve({ sessionName: "pf-b_restart_meta_01" });
+        }
+      }
+    );
+
+    expect(started.state.state).toBe("META_REVIEW_RUNNING");
+    expect(launchInput?.implementerCommand).toContain("PAIRFLOW_LOCAL_ENTRYPOINT");
+    expect(launchInput?.implementerCommand).toContain("PAIRFLOW_COMMAND_PATH_STALE");
+    expect(launchInput?.reviewerCommand).toContain("PAIRFLOW_LOCAL_ENTRYPOINT");
+  });
+
+  it("preserves READY_FOR_HUMAN_APPROVAL on restart without invalid downgrade", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_restart_meta_02",
+      task: "Restart recovery human gate task"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const readyForApproval = applyStateTransition(loaded.state, {
+      to: "READY_FOR_APPROVAL",
+      lastCommandAt: "2026-02-23T12:00:00.000Z"
+    });
+    const humanGate = applyStateTransition(readyForApproval, {
+      to: "READY_FOR_HUMAN_APPROVAL",
+      lastCommandAt: "2026-02-23T12:01:00.000Z"
+    });
+    await writeStateSnapshot(bubble.paths.statePath, humanGate, {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "RUNNING"
+    });
+
+    await upsertRuntimeSession({
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      tmuxSessionName: "pf-b_restart_meta_02",
+      now: new Date("2026-02-23T12:02:00.000Z")
+    });
+
+    await reconcileRuntimeSessions({
+      repoPath,
+      isTmuxSessionAlive: () => Promise.resolve(false)
+    });
+
+    const started = await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        now: new Date("2026-02-23T12:05:00.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () =>
+          Promise.resolve({
+            repoPath,
+            baseRef: "refs/heads/main",
+            bubbleBranch: bubble.config.bubble_branch,
+            worktreePath: bubble.paths.worktreePath
+          }),
+        launchBubbleTmuxSession: () =>
+          Promise.resolve({ sessionName: "pf-b_restart_meta_02" })
+      }
+    );
+
+    expect(started.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(started.state.round).toBe(humanGate.round);
   });
 });

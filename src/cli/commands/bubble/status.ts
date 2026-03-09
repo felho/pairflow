@@ -146,7 +146,11 @@ function formatStateLabel(value: string): string {
   if (value.includes("WAITING")) {
     return bold(yellow(value));
   }
-  if (value === "READY_FOR_APPROVAL" || value === "APPROVED_FOR_COMMIT") {
+  if (
+    value === "READY_FOR_APPROVAL"
+    || value === "READY_FOR_HUMAN_APPROVAL"
+    || value === "APPROVED_FOR_COMMIT"
+  ) {
     return bold(cyan(value));
   }
   if (value === "DONE" || value === "MERGED") {
@@ -180,6 +184,17 @@ function formatFailingGateSummary(reasonCodes: string[]): string {
     return dim("-");
   }
   return bold(red(reasonCodes.join(", ")));
+}
+
+function formatCommandPath(status: BubbleStatusView["commandPath"]): string {
+  if (status.status === "worktree_local") {
+    return green(`worktree_local (${status.localEntrypoint})`);
+  }
+  return bold(
+    red(
+      `${status.reasonCode ?? "PAIRFLOW_COMMAND_PATH_STALE"} active=${status.activeEntrypoint ?? "unknown"} expected=${status.localEntrypoint}`
+    )
+  );
 }
 
 function formatWatchdogRemaining(status: BubbleStatusView["watchdog"]): string {
@@ -276,6 +291,10 @@ export function renderBubbleStatusTable(status: BubbleStatusView): string {
       `last ${dim(status.lastCommandAt ?? "-")} | watchdog ${status.watchdog.monitored ? green("on") : dim("off")} ${status.watchdog.timeoutMinutes}m rem=${formatWatchdogRemaining(status.watchdog)} exp=${status.watchdog.expired ? bold(red("yes")) : green("no")}`
     ],
     [
+      "Command path",
+      formatCommandPath(status.commandPath)
+    ],
+    [
       "Review",
       `accuracy=${status.accuracy_critical ? bold(red("yes")) : green("no")} | verification=${formatDisplayedReviewVerification(status)} | failing=${formatFailingGateSummary(failingGateReasonCodes)}`
     ],
@@ -320,6 +339,7 @@ export function renderBubbleStatusText(status: BubbleStatusView): string {
     `Watchdog: ${status.watchdog.monitored ? "on" : "off"} timeout=${status.watchdog.timeoutMinutes}m remaining=${status.watchdog.remainingSeconds ?? "-"}s expired=${status.watchdog.expired ? "yes" : "no"}`,
     `Inbox pending: questions=${status.pendingInboxItems.humanQuestions}, approvals=${status.pendingInboxItems.approvalRequests}, total=${status.pendingInboxItems.total}`,
     `Transcript: messages=${status.transcript.totalMessages}, last=${status.transcript.lastMessageType ?? "-"} @ ${status.transcript.lastMessageTs ?? "-"}`,
+    `Command path: ${status.commandPath.status}${status.commandPath.status === "stale" ? ` reason=${status.commandPath.reasonCode ?? "PAIRFLOW_COMMAND_PATH_STALE"}` : ""} active=${status.commandPath.activeEntrypoint ?? "-"} expected=${status.commandPath.localEntrypoint}`,
     `Accuracy critical: ${status.accuracy_critical ? "yes" : "no"}`,
     `Last review verification: ${status.accuracy_critical ? status.last_review_verification : "n/a"}`,
     `Failing gates: ${failingGateSummary}`,

@@ -40,6 +40,10 @@ import {
   buildReviewerRoundCommandGateProjection,
   type ReviewerCommandGateProjectionVariant
 } from "../runtime/reviewerCommandGateGuidance.js";
+import {
+  buildPairflowCommandGuidance,
+  buildPinnedPairflowCommand
+} from "../runtime/pairflowCommand.js";
 import { ensureBubbleInstanceIdForMutation } from "./bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import {
@@ -102,9 +106,10 @@ async function isTmuxSessionAliveDefault(sessionName: string): Promise<boolean> 
 
 function buildStatusPaneCommand(bubbleId: string, repoPath: string, worktreePath: string): string {
   const displayWorktreePath = formatStatusPaneWorktreePath(worktreePath);
-  const watchdogCommand = `pairflow bubble watchdog --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)} >/dev/null 2>&1 || true`;
-  const statusCommand = `pairflow bubble status --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)}`;
-  const statusSignatureCommand = `pairflow bubble status --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)} --json`;
+  const pairflowCommand = buildPinnedPairflowCommand(worktreePath);
+  const watchdogCommand = `${pairflowCommand} bubble watchdog --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)} >/dev/null 2>&1 || true`;
+  const statusCommand = `${pairflowCommand} bubble status --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)}`;
+  const statusSignatureCommand = `${pairflowCommand} bubble status --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)} --json`;
   const worktreeLine = shellQuote(displayWorktreePath);
   const loopScript = [
     "set +e",
@@ -162,6 +167,7 @@ function buildImplementerStartupPrompt(input: {
     `Read task: ${input.taskArtifactPath}.`,
     "Implement in this worktree and run relevant validation before handoff.",
     `Execute pairflow commands from this worktree path only: ${input.worktreePath}.`,
+    buildPairflowCommandGuidance(input.worktreePath),
     evidenceHandoffGuidance,
     `Keep done package updated at: ${input.donePackagePath}.`,
     "Done package should summarize changes + validation results for final commit handoff.",
@@ -205,6 +211,7 @@ function buildReviewerStartupPrompt(input: {
     buildReviewerFindingsPassInstruction(input.reviewArtifactType),
     ...buildReviewerCanonicalCommandGateLines(),
     "Execute pairflow commands directly from this worktree (do not ask for confirmation first).",
+    buildPairflowCommandGuidance(input.worktreePath),
     "Never edit transcript/inbox/state files manually.",
     `Repo: ${input.repoPath}. Worktree: ${input.worktreePath}. Task: ${input.taskArtifactPath}.`
   ].join(" ");
@@ -212,6 +219,7 @@ function buildReviewerStartupPrompt(input: {
 
 function buildImplementerKickoffMessage(input: {
   bubbleId: string;
+  worktreePath: string;
   taskArtifactPath: string;
   reviewArtifactType: ReviewArtifactType;
 }): string {
@@ -219,6 +227,7 @@ function buildImplementerKickoffMessage(input: {
     `# [pairflow] bubble=${input.bubbleId} kickoff.`,
     `Read task file now: ${input.taskArtifactPath}.`,
     "Start implementation immediately in this worktree.",
+    buildPairflowCommandGuidance(input.worktreePath),
     buildImplementerEvidenceHandoffGuidance(input.reviewArtifactType),
     "When done with validation, hand off with `pairflow pass --summary \"<what changed + validation>\"` and include available evidence `--ref` log paths."
   ].join(" ");
@@ -295,6 +304,7 @@ function buildResumeImplementerStartupPrompt(input: {
     `Task: ${input.taskArtifactPath}.`,
     `Done package: ${input.donePackagePath}.`,
     `Execute pairflow commands from this worktree path only: ${input.worktreePath}.`,
+    buildPairflowCommandGuidance(input.worktreePath),
     `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`,
     `State snapshot: ${buildResumeContextLine(input.state)}.`,
     `Transcript context: ${input.transcriptSummary}`,
@@ -331,6 +341,7 @@ function buildResumeReviewerStartupPrompt(input: {
     `Pairflow reviewer resume for bubble ${input.bubbleId}.`,
     `Task: ${input.taskArtifactPath}.`,
     `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`,
+    buildPairflowCommandGuidance(input.worktreePath),
     `State snapshot: ${buildResumeContextLine(input.state)}.`,
     `Transcript context: ${input.transcriptSummary}`,
     "Follow orchestrator test-evidence skip/run directive for test execution.",
@@ -387,6 +398,7 @@ function inferResumeReviewerProjectionVariant(input: {
 
 function buildResumeImplementerKickoffMessage(input: {
   bubbleId: string;
+  worktreePath: string;
   taskArtifactPath: string;
   round: number;
   reviewArtifactType: ReviewArtifactType;
@@ -395,6 +407,7 @@ function buildResumeImplementerKickoffMessage(input: {
     `# [pairflow] bubble=${input.bubbleId} resume kickoff (implementer).`,
     `State is RUNNING at round ${input.round}.`,
     `Re-open task context: ${input.taskArtifactPath}.`,
+    buildPairflowCommandGuidance(input.worktreePath),
     buildImplementerEvidenceHandoffGuidance(input.reviewArtifactType),
     "Continue active implementation and hand off with `pairflow pass --summary \"<what changed + validation>\"` plus available evidence `--ref` logs when ready."
   ].join(" ");
@@ -402,6 +415,7 @@ function buildResumeImplementerKickoffMessage(input: {
 
 function buildResumeReviewerKickoffMessage(input: {
   bubbleId: string;
+  worktreePath: string;
   round: number;
   reviewArtifactType: ReviewArtifactType;
   reviewerTestDirectiveLine?: string;
@@ -420,6 +434,7 @@ function buildResumeReviewerKickoffMessage(input: {
   return [
     `# [pairflow] bubble=${input.bubbleId} resume kickoff (reviewer).`,
     `State is RUNNING at round ${input.round}.`,
+    buildPairflowCommandGuidance(input.worktreePath),
     ...(input.reviewerTestDirectiveLine !== undefined
       ? [`Test directive: ${input.reviewerTestDirectiveLine}`]
       : []),
@@ -430,6 +445,7 @@ function buildResumeReviewerKickoffMessage(input: {
 
 function resolveResumeKickoffMessages(input: {
   bubbleId: string;
+  worktreePath: string;
   taskArtifactPath: string;
   reviewArtifactType: ReviewArtifactType;
   state: BubbleStateSnapshot;
@@ -453,6 +469,7 @@ function resolveResumeKickoffMessages(input: {
     return {
       implementerKickoffMessage: buildResumeImplementerKickoffMessage({
         bubbleId: input.bubbleId,
+        worktreePath: input.worktreePath,
         taskArtifactPath: input.taskArtifactPath,
         round: input.state.round,
         reviewArtifactType: input.reviewArtifactType
@@ -471,6 +488,7 @@ function resolveResumeKickoffMessages(input: {
     return {
       reviewerKickoffMessage: buildResumeReviewerKickoffMessage({
         bubbleId: input.bubbleId,
+        worktreePath: input.worktreePath,
         round: input.state.round,
         reviewArtifactType: input.reviewArtifactType,
         projectionVariant,
@@ -662,6 +680,7 @@ export async function startBubble(
         }),
         implementerKickoffMessage: buildImplementerKickoffMessage({
           bubbleId: resolved.bubbleId,
+          worktreePath: resolved.bubblePaths.worktreePath,
           taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
           reviewArtifactType: resolved.bubbleConfig.review_artifact_type
         })
@@ -716,6 +735,7 @@ export async function startBubble(
 
       const resumeKickoffResolution = resolveResumeKickoffMessages({
         bubbleId: resolved.bubbleId,
+        worktreePath: resolved.bubblePaths.worktreePath,
         taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
         reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
         state: loadedState.state,

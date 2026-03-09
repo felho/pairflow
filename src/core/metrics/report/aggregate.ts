@@ -1,4 +1,8 @@
-import type { MetricsReportEvent, MetricsReportMetrics } from "./types.js";
+import type {
+  MetricsMetaReviewRouteCounts,
+  MetricsReportEvent,
+  MetricsReportMetrics
+} from "./types.js";
 
 interface BubbleAggregateState {
   hasHumanIntervention: boolean;
@@ -14,6 +18,18 @@ interface ReviewerFindingMetadata {
   p2: number;
   p3: number;
 }
+
+const metaReviewRouteKeys = [
+  "auto_rework",
+  "human_gate_sticky_bypass",
+  "human_gate_approve",
+  "human_gate_budget_exhausted",
+  "human_gate_inconclusive",
+  "human_gate_run_failed",
+  "human_gate_dispatch_failed"
+] as const;
+
+type MetaReviewRouteKey = (typeof metaReviewRouteKeys)[number];
 
 function roundTo(value: number, decimals: number): number {
   const scale = 10 ** decimals;
@@ -91,6 +107,50 @@ function rate(count: number, total: number): number | null {
   return roundTo(count / total, 4);
 }
 
+function createEmptyMetaReviewRouteCounts(): MetricsMetaReviewRouteCounts {
+  return {
+    auto_rework: 0,
+    human_gate_sticky_bypass: 0,
+    human_gate_approve: 0,
+    human_gate_budget_exhausted: 0,
+    human_gate_inconclusive: 0,
+    human_gate_run_failed: 0,
+    human_gate_dispatch_failed: 0
+  };
+}
+
+function asMetaReviewRouteKey(value: unknown): MetaReviewRouteKey | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  return (metaReviewRouteKeys as readonly string[]).includes(value)
+    ? (value as MetaReviewRouteKey)
+    : null;
+}
+
+function parseJsonStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === "string");
+  }
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.filter((entry): entry is string => typeof entry === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function incrementReasonCodeCounts(counts: Record<string, number>, codes: string[]): void {
+  for (const code of codes) {
+    counts[code] = (counts[code] ?? 0) + 1;
+  }
+}
+
 function buildRoundKey(bubbleInstanceId: string, round: number): string {
   return `${bubbleInstanceId}:${String(round)}`;
 }
@@ -119,6 +179,18 @@ export class MetricsReportAggregator {
   private falseConvergenceCount = 0;
 
   private escapedP1AfterConverged = 0;
+
+  private readonly metaReviewRouteCounts = createEmptyMetaReviewRouteCounts();
+
+  private metaReviewAutoReworkDispatches = 0;
+
+  private metaReviewHumanGateEntries = 0;
+
+  private metaReviewRolloutBlockedEvents = 0;
+
+  private metaReviewPairflowCommandPathStaleCount = 0;
+
+  private readonly metaReviewBlockingReasonCodeCounts: Record<string, number> = {};
 
   private getOrCreateBubbleState(
     bubbleInstanceId: string
@@ -248,6 +320,39 @@ export class MetricsReportAggregator {
     ) {
       bubble.falseConvergenceCounted = true;
       this.falseConvergenceCount += 1;
+      return;
+    }
+
+    if (event.eventType === "bubble_meta_review_routed") {
+      const routeKey = asMetaReviewRouteKey(event.metadata.gate_route);
+      if (routeKey !== null) {
+        this.metaReviewRouteCounts[routeKey] += 1;
+      }
+      return;
+    }
+
+    if (event.eventType === "bubble_meta_review_auto_rework_dispatched") {
+      this.metaReviewAutoReworkDispatches += 1;
+      return;
+    }
+
+    if (event.eventType === "bubble_meta_review_human_gate_reached") {
+      this.metaReviewHumanGateEntries += 1;
+      return;
+    }
+
+    if (event.eventType === "bubble_meta_review_rollout_blocked") {
+      this.metaReviewRolloutBlockedEvents += 1;
+      const blockingReasonCodes = parseJsonStringArray(
+        event.metadata.blocking_reason_codes
+      );
+      incrementReasonCodeCounts(
+        this.metaReviewBlockingReasonCodeCounts,
+        blockingReasonCodes
+      );
+      if (blockingReasonCodes.includes("PAIRFLOW_COMMAND_PATH_STALE")) {
+        this.metaReviewPairflowCommandPathStaleCount += 1;
+      }
     }
   }
 
@@ -275,7 +380,20 @@ export class MetricsReportAggregator {
         rate: rate(bubblesWithHumanIntervention, totalBubbles)
       },
       false_convergence_count: this.falseConvergenceCount,
-      escaped_p1_after_converged: this.escapedP1AfterConverged
+      escaped_p1_after_converged: this.escapedP1AfterConverged,
+      meta_review_rollout_signals: {
+        route_counts: {
+          ...this.metaReviewRouteCounts
+        },
+        auto_rework_dispatches: this.metaReviewAutoReworkDispatches,
+        human_gate_entries: this.metaReviewHumanGateEntries,
+        rollout_blocked_events: this.metaReviewRolloutBlockedEvents,
+        pairflow_command_path_stale_count:
+          this.metaReviewPairflowCommandPathStaleCount,
+        blocking_reason_code_counts: {
+          ...this.metaReviewBlockingReasonCodeCounts
+        }
+      }
     };
   }
 }

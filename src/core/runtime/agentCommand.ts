@@ -1,4 +1,5 @@
 import type { AgentName } from "../../types/bubble.js";
+import { buildPairflowCommandBootstrap } from "./pairflowCommand.js";
 import { shellQuote } from "../util/shellQuote.js";
 
 export interface BuildAgentCommandInput {
@@ -37,12 +38,14 @@ export function buildAgentCommand(input: BuildAgentCommandInput): string {
   const missingBinaryMessage = `${agentName} CLI not found in PATH for bubble ${bubbleId}. Install it or configure agent command mapping.`;
   const worktreePinningMessage = `Failed to pin agent root to worktree ${worktreePath} for bubble ${bubbleId}.`;
   const launchCommand = buildAgentLaunchCommand(agentName, input.startupPrompt);
+  const pairflowBootstrap = buildPairflowCommandBootstrap(worktreePath);
   const script = [
     "set +e",
     `if ! cd ${shellQuote(worktreePath)}; then`,
     `  printf '%s\\n' ${shellQuote(worktreePinningMessage)}`,
     "  exec bash -i",
     "fi",
+    ...pairflowBootstrap,
     `if command -v ${agentName} >/dev/null 2>&1; then`,
     `  ${launchCommand}`,
     "  agent_exit_code=$?",

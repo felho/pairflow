@@ -51,6 +51,10 @@ describe("buildAgentCommand", () => {
     const script = extractBashLcScript(command);
 
     expect(script).toContain(`if ! cd ${shellQuote(worktreePath)}; then`);
+    expect(script).toContain("PAIRFLOW_LOCAL_ENTRYPOINT");
+    expect(script).toContain("PAIRFLOW_COMMAND_PATH_STALE");
+    expect(script).toContain('PAIRFLOW_WRAPPER_DIR');
+    expect(script).toContain('cat > "$PAIRFLOW_WRAPPER_DIR/pairflow"');
     expect(command).toContain("--dangerously-bypass-approvals-and-sandbox");
     expect(command).toContain("Prompt with `ticks` and $HOME literal.");
     await assertBashParses(command);
@@ -67,6 +71,7 @@ describe("buildAgentCommand", () => {
     const script = extractBashLcScript(command);
 
     expect(script).toContain(`if ! cd ${shellQuote(worktreePath)}; then`);
+    expect(script).toContain('export PATH="$PAIRFLOW_WRAPPER_DIR:$PATH"');
     expect(command).toContain("--dangerously-skip-permissions");
     expect(command).toContain("--permission-mode");
     expect(command).toContain("bypassPermissions");

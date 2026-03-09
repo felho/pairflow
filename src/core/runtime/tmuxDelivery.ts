@@ -24,6 +24,7 @@ import {
   formatReviewerFocusDeliveryReminder,
   type ReviewerFocusExtractionResult
 } from "../reviewer/reviewerBrief.js";
+import { buildPairflowCommandGuidance } from "./pairflowCommand.js";
 import type { BubbleConfig } from "../../types/bubble.js";
 import type { AgentName } from "../../types/bubble.js";
 import type { ProtocolEnvelope, ProtocolParticipant } from "../../types/protocol.js";
@@ -109,7 +110,7 @@ function buildDeliveryMessage(
   const worktreeHint =
     worktreePath === undefined
       ? "Run pairflow commands from the bubble worktree root."
-      : `Run pairflow commands from worktree: ${worktreePath}.`;
+      : `Run pairflow commands from worktree: ${worktreePath}. ${buildPairflowCommandGuidance(worktreePath)}`;
 
   let action = "Continue protocol from this event.";
   if (recipientRole === "implementer") {

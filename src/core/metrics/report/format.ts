@@ -63,6 +63,27 @@ export function formatMetricsReportTable(report: MetricsReportResult): string {
   lines.push(
     `- escaped_p1_after_converged: ${report.metrics.escaped_p1_after_converged}`
   );
+  lines.push(
+    `- meta_review_rollout.route_counts: auto_rework=${report.metrics.meta_review_rollout_signals.route_counts.auto_rework}, sticky_bypass=${report.metrics.meta_review_rollout_signals.route_counts.human_gate_sticky_bypass}, approve=${report.metrics.meta_review_rollout_signals.route_counts.human_gate_approve}, budget_exhausted=${report.metrics.meta_review_rollout_signals.route_counts.human_gate_budget_exhausted}, inconclusive=${report.metrics.meta_review_rollout_signals.route_counts.human_gate_inconclusive}, run_failed=${report.metrics.meta_review_rollout_signals.route_counts.human_gate_run_failed}, dispatch_failed=${report.metrics.meta_review_rollout_signals.route_counts.human_gate_dispatch_failed}`
+  );
+  lines.push(
+    `- meta_review_rollout.auto_rework_dispatches: ${report.metrics.meta_review_rollout_signals.auto_rework_dispatches}`
+  );
+  lines.push(
+    `- meta_review_rollout.human_gate_entries: ${report.metrics.meta_review_rollout_signals.human_gate_entries}`
+  );
+  lines.push(
+    `- meta_review_rollout.rollout_blocked_events: ${report.metrics.meta_review_rollout_signals.rollout_blocked_events}`
+  );
+  lines.push(
+    `- meta_review_rollout.pairflow_command_path_stale_count: ${report.metrics.meta_review_rollout_signals.pairflow_command_path_stale_count}`
+  );
+  const blockingReasonCodes = Object.entries(
+    report.metrics.meta_review_rollout_signals.blocking_reason_code_counts
+  );
+  lines.push(
+    `- meta_review_rollout.blocking_reason_code_counts: ${blockingReasonCodes.length === 0 ? "none" : blockingReasonCodes.map(([code, count]) => `${code}=${count}`).join(", ")}`
+  );
 
   return lines.join("\n");
 }

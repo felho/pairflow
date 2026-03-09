@@ -44,7 +44,26 @@ function createReportFixture(): MetricsReportResult {
         rate: 0.3333
       },
       false_convergence_count: 1,
-      escaped_p1_after_converged: 1
+      escaped_p1_after_converged: 1,
+      meta_review_rollout_signals: {
+        route_counts: {
+          auto_rework: 1,
+          human_gate_sticky_bypass: 0,
+          human_gate_approve: 1,
+          human_gate_budget_exhausted: 0,
+          human_gate_inconclusive: 0,
+          human_gate_run_failed: 1,
+          human_gate_dispatch_failed: 0
+        },
+        auto_rework_dispatches: 1,
+        human_gate_entries: 2,
+        rollout_blocked_events: 1,
+        pairflow_command_path_stale_count: 1,
+        blocking_reason_code_counts: {
+          META_REVIEW_GATE_RUN_FAILED: 1,
+          PAIRFLOW_COMMAND_PATH_STALE: 1
+        }
+      }
     },
     archive_context: {
       available: true,
@@ -81,6 +100,8 @@ describe("metrics report formatters", () => {
     expect(rendered).toContain("human_intervention_rate");
     expect(rendered).toContain("false_convergence_count");
     expect(rendered).toContain("escaped_p1_after_converged");
+    expect(rendered).toContain("meta_review_rollout.route_counts");
+    expect(rendered).toContain("PAIRFLOW_COMMAND_PATH_STALE=1");
   });
 
   it("renders deterministic JSON structure", () => {

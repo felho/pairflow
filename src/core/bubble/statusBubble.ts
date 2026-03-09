@@ -1,6 +1,7 @@
 import { readTranscriptEnvelopes } from "../protocol/transcriptStore.js";
 import { readStateSnapshot } from "../state/stateStore.js";
 import { computeWatchdogStatus, type WatchdogStatus } from "../runtime/watchdog.js";
+import { assessPairflowCommandPath } from "../runtime/pairflowCommand.js";
 import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
 import { readReviewVerificationArtifactStatus, type ReviewVerificationState } from "../reviewer/reviewVerification.js";
 import {
@@ -55,6 +56,14 @@ export interface BubbleStatusView {
     latestSummary: string | null;
     latestReportRef: string | null;
     latestUpdatedAt: string | null;
+  };
+  commandPath: {
+    status: "worktree_local" | "stale";
+    reasonCode?: "PAIRFLOW_COMMAND_PATH_STALE";
+    localEntrypoint: string;
+    activeEntrypoint: string | null;
+    message: string;
+    pinnedCommand: string;
   };
   accuracy_critical: boolean;
   last_review_verification: ReviewVerificationState;
@@ -186,6 +195,11 @@ export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleS
     ];
   }
 
+  const commandPath = assessPairflowCommandPath({
+    worktreePath: resolved.bubblePaths.worktreePath,
+    activeEntrypoint: process.argv[1]
+  });
+
   return {
     bubbleId: resolved.bubbleId,
     repoPath: resolved.repoPath,
@@ -219,6 +233,16 @@ export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleS
       latestSummary: state.meta_review?.last_autonomous_summary ?? null,
       latestReportRef: state.meta_review?.last_autonomous_report_ref ?? null,
       latestUpdatedAt: state.meta_review?.last_autonomous_updated_at ?? null
+    },
+    commandPath: {
+      status: commandPath.status,
+      ...(commandPath.reasonCode !== undefined
+        ? { reasonCode: commandPath.reasonCode }
+        : {}),
+      localEntrypoint: commandPath.localEntrypoint,
+      activeEntrypoint: commandPath.activeEntrypoint,
+      message: commandPath.message,
+      pinnedCommand: commandPath.pinnedCommand
     },
     accuracy_critical: accuracyCritical,
     last_review_verification: accuracyCritical ? verification.status : "missing",

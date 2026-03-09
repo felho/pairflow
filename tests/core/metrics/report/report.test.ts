@@ -121,6 +121,34 @@ describe("generateMetricsReport", () => {
         metadata: {}
       }),
       JSON.stringify({
+        ts: "2026-02-01T10:55:00.000Z",
+        schema_version: 1,
+        repo_path: repoPath,
+        bubble_instance_id: "bi_a",
+        bubble_id: "b_a",
+        event_type: "bubble_meta_review_routed",
+        round: 2,
+        actor_role: "reviewer",
+        metadata: {
+          gate_route: "auto_rework",
+          pairflow_command_path_status: "worktree_local",
+          blocking_reason_codes: "[]"
+        }
+      }),
+      JSON.stringify({
+        ts: "2026-02-01T10:56:00.000Z",
+        schema_version: 1,
+        repo_path: repoPath,
+        bubble_instance_id: "bi_a",
+        bubble_id: "b_a",
+        event_type: "bubble_meta_review_auto_rework_dispatched",
+        round: 2,
+        actor_role: "reviewer",
+        metadata: {
+          gate_route: "auto_rework"
+        }
+      }),
+      JSON.stringify({
         ts: "2026-02-01T11:00:00.000Z",
         schema_version: 1,
         repo_path: repoPath,
@@ -130,6 +158,52 @@ describe("generateMetricsReport", () => {
         round: 2,
         actor_role: "human",
         metadata: {}
+      }),
+      JSON.stringify({
+        ts: "2026-02-01T11:15:00.000Z",
+        schema_version: 1,
+        repo_path: repoPath,
+        bubble_instance_id: "bi_a",
+        bubble_id: "b_a",
+        event_type: "bubble_meta_review_routed",
+        round: 2,
+        actor_role: "reviewer",
+        metadata: {
+          gate_route: "human_gate_run_failed",
+          pairflow_command_path_status: "stale",
+          blocking_reason_codes:
+            "[\"META_REVIEW_GATE_RUN_FAILED\",\"PAIRFLOW_COMMAND_PATH_STALE\"]"
+        }
+      }),
+      JSON.stringify({
+        ts: "2026-02-01T11:16:00.000Z",
+        schema_version: 1,
+        repo_path: repoPath,
+        bubble_instance_id: "bi_a",
+        bubble_id: "b_a",
+        event_type: "bubble_meta_review_human_gate_reached",
+        round: 2,
+        actor_role: "reviewer",
+        metadata: {
+          gate_route: "human_gate_run_failed",
+          blocking_reason_codes:
+            "[\"META_REVIEW_GATE_RUN_FAILED\",\"PAIRFLOW_COMMAND_PATH_STALE\"]"
+        }
+      }),
+      JSON.stringify({
+        ts: "2026-02-01T11:17:00.000Z",
+        schema_version: 1,
+        repo_path: repoPath,
+        bubble_instance_id: "bi_a",
+        bubble_id: "b_a",
+        event_type: "bubble_meta_review_rollout_blocked",
+        round: 2,
+        actor_role: "reviewer",
+        metadata: {
+          gate_route: "human_gate_run_failed",
+          blocking_reason_codes:
+            "[\"META_REVIEW_GATE_RUN_FAILED\",\"PAIRFLOW_COMMAND_PATH_STALE\"]"
+        }
       }),
       JSON.stringify({
         ts: "2026-02-01T11:10:00.000Z",
@@ -270,8 +344,8 @@ describe("generateMetricsReport", () => {
     });
 
     expect(report.transparency.scanned_shard_count).toBe(1);
-    expect(report.transparency.parsed_event_count).toBe(12);
-    expect(report.transparency.matched_event_count).toBe(12);
+    expect(report.transparency.parsed_event_count).toBe(17);
+    expect(report.transparency.matched_event_count).toBe(17);
     expect(report.transparency.skipped_unknown_schema_events).toBe(1);
 
     expect(report.metrics.rounds_to_converge).toEqual({
@@ -296,6 +370,25 @@ describe("generateMetricsReport", () => {
     });
     expect(report.metrics.false_convergence_count).toBe(1);
     expect(report.metrics.escaped_p1_after_converged).toBe(1);
+    expect(report.metrics.meta_review_rollout_signals).toEqual({
+      route_counts: {
+        auto_rework: 1,
+        human_gate_sticky_bypass: 0,
+        human_gate_approve: 0,
+        human_gate_budget_exhausted: 0,
+        human_gate_inconclusive: 0,
+        human_gate_run_failed: 1,
+        human_gate_dispatch_failed: 0
+      },
+      auto_rework_dispatches: 1,
+      human_gate_entries: 1,
+      rollout_blocked_events: 1,
+      pairflow_command_path_stale_count: 1,
+      blocking_reason_code_counts: {
+        META_REVIEW_GATE_RUN_FAILED: 1,
+        PAIRFLOW_COMMAND_PATH_STALE: 1
+      }
+    });
 
     expect(report.archive_context.available).toBe(true);
     expect(report.archive_context.considered_entries).toBe(3);

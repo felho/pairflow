@@ -1284,6 +1284,12 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(passToImplementerCall?.[4]).toContain(
       "If `.pairflow/evidence/*.log` files exist, include them as `--ref` (lint/typecheck/test)."
     );
+    expect(passToImplementerCall?.[4]).toContain(
+      "Use the worktree-local Pairflow CLI pinned in this pane (/tmp/worktree/dist/cli/index.js)."
+    );
+    expect(passToImplementerCall?.[4]).toContain(
+      "PAIRFLOW_COMMAND_PATH_STALE"
+    );
     expect(passToImplementerCall?.[4]).not.toContain(
       "Docs-only scope: choose one mode and keep it consistent in the same PASS."
     );
