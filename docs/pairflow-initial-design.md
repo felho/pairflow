@@ -106,7 +106,7 @@ RUNNING turn tracking (required):
 2. `state.json` must track round-role metadata: `active_role` (`implementer` | `reviewer`) and `round_role_history`.
 3. The status pane shows high-level state, active turn owner, and active role.
 4. Liveness watchdog uses `active_agent` context for escalation when no `pairflow` command arrives within configured timeout.
-5. Timeout is configured by `watchdog_timeout_minutes` in `bubble.toml` (default: `20`).
+5. Timeout is configured by `watchdog_timeout_minutes` in `bubble.toml` (default: `30`).
 
 ## Convergence Policy (Quality-First)
 Each loop round:
@@ -265,7 +265,7 @@ work_mode = "worktree" # worktree|clone
 quality_mode = "strict" # MVP: strict only
 review_artifact_type = "auto" # auto|code|document (review guidance mode)
 reviewer_context_mode = "fresh" # fresh|persistent (default: fresh)
-watchdog_timeout_minutes = 20
+watchdog_timeout_minutes = 30
 max_rounds = 8
 commit_requires_approval = true
 open_command = "cursor {{worktree_path}}"
@@ -326,8 +326,9 @@ Step-1 MVP can run multiple bubbles by launching multiple `pairflow bubble start
 ## tmux Session Strategy
 Per bubble session layout:
 1. pane 0: status/watcher (round, state, last actions, pending human inbox items)
-2. pane 1: Claude Code interactive session
-3. pane 2: Codex CLI interactive session
+2. pane 1: Codex implementer interactive session
+3. pane 2: Claude reviewer interactive session
+4. pane 3: Codex meta-reviewer interactive session (autonomous gate worker)
 
 Rules:
 1. Session name includes bubble id (`pf-<id>`) to avoid collisions.
@@ -338,7 +339,8 @@ Rules:
 6. Status watcher must display `active_agent`, `active_since`, and watchdog countdown for escalation visibility.
 7. Watchdog escalation action is materialized as orchestrator-emitted `HUMAN_QUESTION` and state transition `RUNNING -> WAITING_HUMAN`.
 8. Bubble start injects an initial protocol briefing into implementer/reviewer panes (role, required command set, task/worktree references), and sends an implementer kickoff prompt so the first coding round starts automatically; this improves protocol adherence but does not emit protocol envelopes automatically.
-9. When `reviewer_context_mode = "fresh"`, each implementer -> reviewer `PASS` triggers reviewer pane process respawn so each review round starts from clean agent context.
+9. Meta-review execution uses the dedicated meta-reviewer pane as worker context during gate runs.
+10. When `reviewer_context_mode = "fresh"`, each implementer -> reviewer `PASS` triggers reviewer pane process respawn so each review round starts from clean agent context.
 
 ## Git Workflow Rules
 1. Create bubble branch from selected base branch.
@@ -371,7 +373,7 @@ Approval package must contain:
 ### Phase 1: Single Bubble, CLI-first
 1. Bubble config + state machine.
 2. Worktree manager.
-3. tmux launcher with 3-pane interactive layout.
+3. tmux launcher with interactive pane layout (status + implementer + reviewer, later extended with dedicated meta-reviewer pane).
 4. One implement-review loop with agent-facing `pass/ask-human/converged`.
 5. Human question and approval gates.
 6. Commit gating.

@@ -153,6 +153,10 @@ Source of truth:
 Standard docs-only no-claim wording:
 1. `docs-only scope, runtime checks not required in this round`
 
+Primary artifact rule (docs-only):
+1. Ha a feladat egy mar letezo forras dokumentumot vagy task file-t hivatkozik, azt kell in-place finomitani elsoleges kimenetkent.
+2. Pusztan uj, kulon review/szintezis dokumentum keszitese nem elegendo, kiveve ha a feladat explicit uj file letrehozasat keri.
+
 Disallowed docs-only wording:
 1. Evidence nelkuli vagy untrusted verifier melletti pozitiv runtime pass claim (`tests pass`, `typecheck clean`, `lint clean`).
 

@@ -73,7 +73,7 @@ Historical note: [`docs/pairflow-initial-design.md`](./docs/pairflow-initial-des
 A **bubble** is an isolated unit of work. Each bubble gets:
 
 - Its own **git worktree** (separate from your main repo)
-- Its own **tmux session** with 3 panes (status, implementer agent, reviewer agent)
+- Its own **tmux session** with 4 panes (status, implementer agent, reviewer agent, meta-reviewer agent)
 - Its own **state machine** tracking the lifecycle
 - Its own **NDJSON transcript** recording every protocol message
 
@@ -193,6 +193,47 @@ Recommended if you operate Pairflow via Claude Code or Codex:
    - `--link-other true|false` (optional cross-agent symlink)
 4. This installs/updates selected skills under `~/.claude/skills/` or `~/.codex/skills/`.
 
+### Skill quick routing (`$UsePairflow` vs `$CreatePairflowSpec`)
+
+Use this split to avoid mixing lifecycle execution with specification writing:
+
+| If your intent is... | Use this skill | Typical output |
+|---|---|---|
+| Start/create/intervene/review/close/recover a bubble | `$UsePairflow` | Lifecycle actions (`bubble ...`, `pass`, `converged`) |
+| Create/refine PRD/Plan/Task docs (`L0/L1/L2`) | `$CreatePairflowSpec` | Spec artifact(s) in `plans/` / `docs/` |
+| Docs-only task refinement before implementation | `$CreatePairflowSpec` first, then `$UsePairflow` | Refined task file, then bubble lifecycle |
+| Bubble anomaly/debug (`WAITING_HUMAN`, watchdog, mismatch) | `$UsePairflow` | State-aware diagnosis and next command |
+
+Boundary rules:
+1. `$CreatePairflowSpec` is for artifact authoring/refinement, not runtime bubble execution.
+2. `$UsePairflow` is for lifecycle/state handling, not direct implementation as the primary path in bubble-autonomous mode.
+3. If work starts as unclear notes: use `$CreatePairflowSpec` first; when task is ready, switch to `$UsePairflow`.
+
+Why this document structure exists:
+1. We observed a recurring failure mode: as docs were refined, they accumulated more and more detail, which exposed even more missing detail, causing a near endless refinement loop.
+2. The `L0/L1/L2` structure was introduced to stop that spiral by focusing on contract boundaries first, not implementation internals.
+3. This is a divide-and-conquer strategy: make interfaces, required behavior, and acceptance contracts explicit, then let implementation details stay in implementation.
+4. Goal: refine specs to a level where implementation failure risk is very low, without turning task docs into pseudo-code.
+5. We present this as a practical system trait, not as a novelty or "innovation" claim.
+
+Copy-paste prompt examples:
+
+```text
+$CreatePairflowSpec refine this task into strict L0/L1/L2 with explicit required-now vs later-hardening tags.
+```
+
+```text
+$UsePairflow create and start a docs-only bubble from plans/tasks/my-task.md with review_artifact_type=document.
+```
+
+```text
+$UsePairflow bubble is in WAITING_HUMAN; inspect status/inbox and route the correct next command.
+```
+
+```text
+$UsePairflow close this bubble end-to-end: approve -> commit -> merge -> cleanup, then report residual risks.
+```
+
 Development mode (zsh-safe, no global install):
 
 ```bash
@@ -223,7 +264,7 @@ pairflow bubble start --id my_first --repo "$TEST_REPO"
 pairflow bubble status --id my_first --repo "$TEST_REPO" --json
 ```
 
-This opens a tmux session with 3 panes. The agents can now start working.
+This opens a tmux session with 4 panes. The agents can now start working.
 
 ---
 
@@ -380,6 +421,7 @@ At this point, a tmux session `pf-feat_login` opens with:
 - **Pane 0**: Status loop (auto-refreshes state + watchdog)
 - **Pane 1**: Implementer agent (codex) — receives auto protocol briefing + kickoff prompt
 - **Pane 2**: Reviewer agent (claude) — receives auto protocol briefing
+- **Pane 3**: Meta-reviewer agent (codex) — used by autonomous meta-review gate runs
 
 By default, reviewer context mode is **fresh**: when the implementer hands off (`PASS` to reviewer), Pairflow respawns the reviewer pane process so each review round starts from a clean session context.
 
@@ -680,32 +722,28 @@ Each time the reviewer sends a `PASS` back to the implementer, a new **round** s
 ### Watchdog
 
 The status pane runs a watchdog loop. If an agent hasn't produced a protocol message within the configured timeout, the watchdog escalates the bubble to `WAITING_HUMAN` so you know something is stuck.
+Default timeout is 30 minutes (`watchdog_timeout_minutes` in `bubble.toml`).
 
 ---
 
 ## State machine
 
 ```
-CREATED ─→ PREPARING_WORKSPACE ─→ RUNNING ←──────────────────┐
-                                     │                         │
-                              ask-human│              reply / rework
-                                     ▼                         │
-                              WAITING_HUMAN ──── reply ────→ RUNNING
-                                                               │
-                                                        converged
-                                                               ▼
-                                                    READY_FOR_APPROVAL
-                                                        │         │
-                                                  approve    request-rework
-                                                        ▼         │
-                                               APPROVED_FOR_COMMIT │
-                                                        │         │
-                                                     commit       └──→ RUNNING
-                                                        ▼
-                                                    COMMITTED ─→ DONE
+CREATED -> PREPARING_WORKSPACE -> RUNNING <-> WAITING_HUMAN
+RUNNING --converged--> READY_FOR_APPROVAL
+READY_FOR_APPROVAL --meta-review gate--> META_REVIEW_RUNNING
+META_REVIEW_RUNNING --autonomous rework dispatch--> RUNNING
+META_REVIEW_RUNNING --human decision required--> READY_FOR_HUMAN_APPROVAL
+META_REVIEW_RUNNING --runner failure--> META_REVIEW_FAILED
+READY_FOR_HUMAN_APPROVAL --approve--> APPROVED_FOR_COMMIT
+READY_FOR_HUMAN_APPROVAL --request-rework--> RUNNING
+META_REVIEW_FAILED --approve (override)--> APPROVED_FOR_COMMIT
+META_REVIEW_FAILED --request-rework--> RUNNING
+READY_FOR_APPROVAL also accepts approve/request-rework for legacy compatibility.
+APPROVED_FOR_COMMIT -> COMMITTED -> DONE
 
-Any active state ─→ FAILED
-Any non-final state ─→ CANCELLED (via bubble stop)
+Any active state -> FAILED
+Any non-final state -> CANCELLED (via bubble stop)
 ```
 
 ---
@@ -727,12 +765,15 @@ Any non-final state ─→ CANCELLED (via bubble stop)
 | `bubble list [--repo <path>] [--json]` | List all bubbles |
 | `bubble inbox --id <id> [--repo <path>] [--json]` | Show pending human actions |
 | `bubble reply --id <id> --message <text> [--repo <path>] [--ref <path>]...` | Answer a human question |
-| `bubble approve --id <id> [--repo <path>] [--ref <path>]...` | Approve for commit |
-| `bubble request-rework --id <id> --message <text> [--repo <path>] [--ref <path>]...` | Send back for rework (`READY_FOR_APPROVAL`: immediate; `WAITING_HUMAN`: queues deferred deterministic rework intent) |
+| `bubble approve --id <id> [--override-non-approve] [--override-reason <text>] [--repo <path>] [--ref <path>]...` | Approve for commit (`READY_FOR_HUMAN_APPROVAL`/`META_REVIEW_FAILED`; legacy `READY_FOR_APPROVAL` compatible) |
+| `bubble request-rework --id <id> --message <text> [--repo <path>] [--ref <path>]...` | Send back for rework (`READY_FOR_HUMAN_APPROVAL`/`META_REVIEW_FAILED`: immediate; `WAITING_HUMAN`: queues deferred deterministic rework intent; legacy `READY_FOR_APPROVAL` compatible) |
 | `bubble commit --id <id> [--repo <path>] [--message <text>] [--ref <path>]...` | Commit and finalize |
 | `bubble merge --id <id> [--repo <path>] [--push] [--delete-remote]` | Merge bubble branch and clean up |
 | `bubble reconcile [--repo <path>] [--dry-run] [--json]` | Clean up stale sessions |
 | `bubble watchdog --id <id> [--repo <path>] [--json]` | Check for stuck agents |
+| `bubble meta-review run --id <id> [--repo <path>] [--depth standard\|deep] [--json]` | Run autonomous meta-review for the bubble |
+| `bubble meta-review status --id <id> [--repo <path>] [--json] [--verbose]` | Read latest cached meta-review snapshot/status |
+| `bubble meta-review last-report --id <id> [--repo <path>] [--json] [--verbose]` | Read latest cached meta-review report |
 
 #### Repo registry
 
@@ -814,6 +855,20 @@ Path overrides:
 ### Local environment parity in worktrees
 
 By default, `bubble start` mirrors selected local (non-git) files from the main repo into the bubble worktree so agent panes get the same local setup (MCP/editor/env files).
+
+### Optional bootstrap command at start
+
+`bubble start` can run an optional per-bubble bootstrap command before tmux launch:
+
+```toml
+[commands]
+bootstrap = "pnpm install --frozen-lockfile && pnpm build"
+```
+
+Behavior:
+
+- Runs after workspace/bootstrap prep, before tmux session launch.
+- If the command fails, startup fails and Pairflow rolls back start state for a clean retry.
 
 Default behavior:
 
