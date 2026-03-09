@@ -21,6 +21,21 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 | **RecoverBubble** | "cancelled bubble but keep changes", "recover worktree", "commit cancelled bubble" | `Workflows/RecoverBubble.md` |
 | **BootstrapEvidence** | "bootstrap evidence", "evidence plan", "trusted test evidence", "how to generate evidence logs" | `Workflows/BootstrapEvidence.md` |
 
+## ReviewBubble Mental Model
+
+- `Bubble` source means findings from the bubble loop context (reviewer/implementer transcript and related runtime artifacts).
+- `MetaReview` source means findings from the meta-reviewer layer.
+- `ReviewBubble` has two source modes:
+  - `fresh`: independent Codex meta-review now.
+  - `cached`: render previously produced Pairflow meta-review snapshot.
+
+### Mode Matrix
+
+| `--meta-review-source` | Runs new review now | Uses `pairflow bubble meta-review *` | Primary source |
+|---|---|---|---|
+| `fresh` (default) | yes | no | independent Codex meta-review output |
+| `cached` | no | yes (`status`, `last-report`) | latest Pairflow meta-review snapshot |
+
 ## Core Principles
 
 1. Always run `pairflow bubble status --id <id> --json` before any state-changing command.
@@ -32,7 +47,9 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 7. For bubble creation, always include `--review-artifact-type <document|code>` in `pairflow bubble create`.
 8. For implementation bubbles (`review_artifact_type=code`), `CloseBubble` includes mandatory post-merge completion: README/docs/progress check + required updates + task archival under `plans/archive/tasks/` with mirrored relative path.
 9. In `ReviewBubble` outputs, every finding must include source label: `[Bubble]` (from bubble transcript/tool output, e.g. reviewer findings) or `[MetaReview]` (from meta-reviewer output: cached snapshot or fresh run report).
-10. For `READY_FOR_HUMAN_APPROVAL`, default to loading cached autonomous results via `pairflow bubble meta-review status` and `pairflow bubble meta-review last-report`; do not trigger `meta-review run` unless explicitly requested.
+10. For `ReviewBubble`, use explicit `--meta-review-source fresh|cached` (default: `fresh`). `fresh` runs an independent Codex meta-review (no Pairflow meta-review command calls), while `cached` loads latest Pairflow meta-review snapshot (`meta-review status` + `meta-review last-report`).
+11. Hard rule: in `fresh` mode, never call `pairflow bubble meta-review *`; in `cached` mode, never run a new review.
+12. Decision separation: `--decide approve|rework` controls lifecycle action only (`bubble approve` / `bubble request-rework`) and is independent from meta-review source mode.
 
 ## Execution Modes (Mandatory)
 
@@ -137,11 +154,22 @@ If state is WAITING_HUMAN or RUNNING:
 
 ```
 Use ReviewBubble (deep mode default)
--> load cached autonomous snapshot first (`meta-review status` + `meta-review last-report`)
+-> default: fresh independent Codex meta-review (no Pairflow meta-review command calls)
+-> optional cached mode: `--meta-review-source cached` (load Pairflow meta-review snapshot only)
 -> file-by-file changes
 -> findings labeled by origin (`[Bubble]`, `[MetaReview]`)
 -> validation evidence summary
 -> explicit approve/rework recommendation
+```
+
+**Example 6: Explicit source selection**
+
+```
+Fresh:
+ReviewBubble --id <id> --meta-review-source fresh --mode deep --decide none
+
+Cached:
+ReviewBubble --id <id> --meta-review-source cached --mode deep --decide none
 ```
 
 **Example 4: Cancelled bubble but work is valuable**
