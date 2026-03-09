@@ -870,8 +870,8 @@ describe("startBubble", () => {
     if (statusCommand === undefined) {
       throw new Error("Expected status command to be captured.");
     }
-    expect(statusCommand).toContain("pairflow bubble watchdog --id");
-    expect(statusCommand).toContain("pairflow bubble status --id");
+    expect(statusCommand).toContain("bubble watchdog --id");
+    expect(statusCommand).toContain("bubble status --id");
     expect(statusCommand).toContain("--json");
     const homePath = homedir();
     const expectedDisplayWorktreePath =
@@ -886,7 +886,9 @@ describe("startBubble", () => {
     expect(statusScript).toContain("prev_signature=''");
     expect(statusScript).toContain("next_signature=$(");
     expect(statusScript).toContain("if [ \"$next_signature\" != \"$prev_signature\" ]; then");
-    expect(statusScript).toContain("pairflow bubble status --id");
+    expect(statusScript).toContain(
+      `node ${shellQuote(`${created.paths.worktreePath}/dist/cli/index.js`)} bubble status --id`
+    );
     expect(statusScript).not.toContain("clear;");
     await assertBashParses(statusCommand);
   });
@@ -949,9 +951,15 @@ describe("startBubble", () => {
           expect(input.implementerCommand).toContain(
             `Execute pairflow commands from this worktree path only: ${bubble.paths.worktreePath}.`
           );
+          expect(input.implementerCommand).toContain(
+            `Use the worktree-local Pairflow CLI pinned in this pane (${bubble.paths.worktreePath}/dist/cli/index.js).`
+          );
           expect(input.implementerCommand).toContain("resume-summary: messages=3");
           expect(input.reviewerCommand).toContain("--dangerously-skip-permissions");
           expect(input.reviewerCommand).toContain("Pairflow reviewer resume");
+          expect(input.reviewerCommand).toContain(
+            `Use the worktree-local Pairflow CLI pinned in this pane (${bubble.paths.worktreePath}/dist/cli/index.js).`
+          );
           expect(input.reviewerCommand).toContain("resume-summary: messages=3");
           expect(input.reviewerCommand).toContain(
             "Resume must keep reviewer brief context."

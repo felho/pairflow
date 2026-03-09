@@ -33,6 +33,25 @@ export interface MetricsRateSummary {
   rate: number | null;
 }
 
+export interface MetricsMetaReviewRouteCounts {
+  auto_rework: number;
+  human_gate_sticky_bypass: number;
+  human_gate_approve: number;
+  human_gate_budget_exhausted: number;
+  human_gate_inconclusive: number;
+  human_gate_run_failed: number;
+  human_gate_dispatch_failed: number;
+}
+
+export interface MetricsMetaReviewRolloutSignals {
+  route_counts: MetricsMetaReviewRouteCounts;
+  auto_rework_dispatches: number;
+  human_gate_entries: number;
+  rollout_blocked_events: number;
+  pairflow_command_path_stale_count: number;
+  blocking_reason_code_counts: Record<string, number>;
+}
+
 export interface MetricsReportMetrics {
   rounds_to_converge: MetricsQuantileSummary;
   review_cycle_time_minutes: MetricsQuantileSummary;
@@ -40,6 +59,7 @@ export interface MetricsReportMetrics {
   human_intervention_rate: MetricsRateSummary;
   false_convergence_count: number;
   escaped_p1_after_converged: number;
+  meta_review_rollout_signals: MetricsMetaReviewRolloutSignals;
 }
 
 export interface MetricsReportArchiveContext {

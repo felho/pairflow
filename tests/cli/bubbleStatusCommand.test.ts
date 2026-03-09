@@ -91,6 +91,14 @@ describe("renderBubbleStatusText", () => {
         latestReportRef: "artifacts/meta-review-last.md",
         latestUpdatedAt: "2026-02-22T12:04:59.000Z"
       },
+      commandPath: {
+        status: "worktree_local",
+        localEntrypoint: "/tmp/worktree/dist/cli/index.js",
+        activeEntrypoint: "/tmp/worktree/dist/cli/index.js",
+        message:
+          "worktree-local Pairflow entrypoint active (/tmp/worktree/dist/cli/index.js)",
+        pinnedCommand: "node '/tmp/worktree/dist/cli/index.js'"
+      },
       accuracy_critical: false,
       last_review_verification: "missing",
       failing_gates: [],
@@ -167,7 +175,30 @@ describe("renderBubbleStatusText", () => {
 
   it("shows review verification as n/a when accuracy critical is disabled", () => {
     const rendered = renderBubbleStatusText(createStatusView({}));
+    expect(rendered).toContain(
+      "Command path: worktree_local active=/tmp/worktree/dist/cli/index.js expected=/tmp/worktree/dist/cli/index.js"
+    );
     expect(rendered).toContain("Last review verification: n/a");
+  });
+
+  it("surfaces stale command-path diagnostics in text mode", () => {
+    const rendered = renderBubbleStatusText(
+      createStatusView({
+        commandPath: {
+          status: "stale",
+          reasonCode: "PAIRFLOW_COMMAND_PATH_STALE",
+          localEntrypoint: "/tmp/worktree/dist/cli/index.js",
+          activeEntrypoint: "/usr/local/lib/node_modules/pairflow/dist/cli/index.js",
+          message:
+            "PAIRFLOW_COMMAND_PATH_STALE: active Pairflow entrypoint /usr/local/lib/node_modules/pairflow/dist/cli/index.js does not match worktree-local /tmp/worktree/dist/cli/index.js.",
+          pinnedCommand: "node '/tmp/worktree/dist/cli/index.js'"
+        }
+      })
+    );
+
+    expect(rendered).toContain(
+      "Command path: stale reason=PAIRFLOW_COMMAND_PATH_STALE"
+    );
   });
 });
 
@@ -213,6 +244,14 @@ describe("renderBubbleStatusTable", () => {
         latestReportRef: "artifacts/meta-review-last.md",
         latestUpdatedAt: "2026-03-08T21:29:00.000Z"
       },
+      commandPath: {
+        status: "worktree_local",
+        localEntrypoint: "/tmp/worktree/dist/cli/index.js",
+        activeEntrypoint: "/tmp/worktree/dist/cli/index.js",
+        message:
+          "worktree-local Pairflow entrypoint active (/tmp/worktree/dist/cli/index.js)",
+        pinnedCommand: "node '/tmp/worktree/dist/cli/index.js'"
+      },
       accuracy_critical: false,
       last_review_verification: "missing",
       failing_gates: [],
@@ -236,6 +275,7 @@ describe("renderBubbleStatusTable", () => {
     expect(rendered).toContain("| Bubble");
     expect(rendered).toContain("| Lifecycle");
     expect(rendered).toContain("| Runtime");
+    expect(rendered).toContain("| Command path");
     expect(rendered).toContain("| Inbox");
     expect(rendered).toContain("| Review");
     expect(rendered).toContain("| Gates");
@@ -263,5 +303,23 @@ describe("renderBubbleStatusTable", () => {
 
     expect(rendered).toContain("| Escalation");
     expect(rendered).toContain("timeout for codex");
+  });
+
+  it("renders stale command-path warning in table mode", () => {
+    const rendered = renderBubbleStatusTable(
+      createStatusView({
+        commandPath: {
+          status: "stale",
+          reasonCode: "PAIRFLOW_COMMAND_PATH_STALE",
+          localEntrypoint: "/tmp/worktree/dist/cli/index.js",
+          activeEntrypoint: "/usr/local/lib/node_modules/pairflow/dist/cli/index.js",
+          message:
+            "PAIRFLOW_COMMAND_PATH_STALE: active Pairflow entrypoint /usr/local/lib/node_modules/pairflow/dist/cli/index.js does not match worktree-local /tmp/worktree/dist/cli/index.js.",
+          pinnedCommand: "node '/tmp/worktree/dist/cli/index.js'"
+        }
+      })
+    );
+
+    expect(rendered).toContain("PAIRFLOW_COMMAND_PATH_STALE");
   });
 });
