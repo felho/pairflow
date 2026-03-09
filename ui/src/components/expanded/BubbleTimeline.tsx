@@ -235,7 +235,7 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
             return (
               <div
                 key={entry.id}
-                className="flex items-start gap-2.5 border-b border-[#1a1a1a] py-1 text-[10px] last:border-b-0"
+                className="flex items-start gap-1.5 border-b border-[#1a1a1a] py-1 text-[10px] last:border-b-0"
               >
                 <span className="min-w-[20px] pt-px font-mono text-[9px] text-[#555]">
                   R{entry.round}
