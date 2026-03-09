@@ -862,7 +862,11 @@ describe("startBubble", () => {
           ? `~${created.paths.worktreePath.slice(homePath.length)}`
           : created.paths.worktreePath;
     const statusScript = extractBashLcScript(statusCommand);
-    expect(statusScript).toContain(`echo ${shellQuote(expectedDisplayWorktreePath)}`);
+    expect(statusScript).toContain(`printf '%s\\n' ${shellQuote(expectedDisplayWorktreePath)}`);
+    expect(statusScript).toContain("prev_render=''");
+    expect(statusScript).toContain("next_render=$(");
+    expect(statusScript).toContain("if [ \"$next_render\" != \"$prev_render\" ]; then");
+    expect(statusScript).not.toContain("clear;");
     await assertBashParses(statusCommand);
   });
 

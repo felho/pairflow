@@ -104,8 +104,25 @@ function buildStatusPaneCommand(bubbleId: string, repoPath: string, worktreePath
   const displayWorktreePath = formatStatusPaneWorktreePath(worktreePath);
   const watchdogCommand = `pairflow bubble watchdog --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)} >/dev/null 2>&1 || true`;
   const statusCommand = `pairflow bubble status --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)}`;
-  const echoWorktree = `echo ${shellQuote(displayWorktreePath)}`;
-  const loopScript = `while true; do clear; ${watchdogCommand}; ${statusCommand}; ${echoWorktree}; sleep 2; done`;
+  const worktreeLine = shellQuote(displayWorktreePath);
+  const loopScript = [
+    "prev_render=''",
+    "printf '\\033[2J\\033[H'",
+    "while true; do",
+    `  ${watchdogCommand}`,
+    "  next_render=$(",
+    `    ${statusCommand}`,
+    `    printf '%s\\n' ${worktreeLine}`,
+    "  )",
+    "  if [ \"$next_render\" != \"$prev_render\" ]; then",
+    "    printf '\\033[H'",
+    "    printf '%s\\n' \"$next_render\"",
+    "    printf '\\033[J'",
+    "    prev_render=\"$next_render\"",
+    "  fi",
+    "  sleep 2",
+    "done"
+  ].join("; ");
   return `bash -lc ${shellQuote(loopScript)}`;
 }
 
