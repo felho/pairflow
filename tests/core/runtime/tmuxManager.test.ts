@@ -100,6 +100,7 @@ describe("launchBubbleTmuxSession", () => {
       "split-window",
       "resize-pane",
       "set-hook",
+      "set-hook",
       "run-shell"
     ]);
     expect(calls[2]?.args).toEqual([
@@ -164,13 +165,13 @@ describe("launchBubbleTmuxSession", () => {
       "/tmp/worktree",
       "codex"
     ]);
-    // Status pane fixed to 11 lines before reviewer split.
+    // Status pane fixed to 13 lines before reviewer split.
     expect(calls[10]?.args).toEqual([
       "resize-pane",
       "-t",
       "pf-b_start_01:0.0",
       "-y",
-      "11"
+      "13"
     ]);
     // Reviewer split uses -p 50 inside implementer pane.
     expect(calls[11]?.args).toEqual([
@@ -211,10 +212,16 @@ describe("launchBubbleTmuxSession", () => {
     expect(calls[14]?.args?.[4]).toContain(
       "WINDOW_HEIGHT=$(tmux display-message -p -t pf-b_start_01:0 '#{window_height}'"
     );
-    expect(calls[14]?.args?.[4]).toContain("REMAIN=$((WINDOW_HEIGHT - 14))");
+    expect(calls[14]?.args?.[4]).toContain("REMAIN=$((WINDOW_HEIGHT - 17))");
     expect(calls[14]?.args?.[4]).toContain("tmux resize-pane -t %11 -y $ROW");
     expect(calls[14]?.args?.[4]).toContain("tmux resize-pane -t %12 -y $ROW");
     expect(calls[14]?.args?.[4]).toContain("tmux resize-pane -t %13 -y $ROW_LAST");
+    expect(calls[15]?.args?.slice(0, 4)).toEqual([
+      "set-hook",
+      "-t",
+      "pf-b_start_01",
+      "window-resized"
+    ]);
   });
 
   it("sends kickoff message to implementer pane when provided", async () => {
@@ -238,7 +245,7 @@ describe("launchBubbleTmuxSession", () => {
       runner
     });
 
-    expect(calls.slice(0, 16).map((call) => call[0])).toEqual([
+    expect(calls.slice(0, 17).map((call) => call[0])).toEqual([
       "has-session",
       "new-session",
       "set-option",
@@ -253,6 +260,7 @@ describe("launchBubbleTmuxSession", () => {
       "split-window",
       "split-window",
       "resize-pane",
+      "set-hook",
       "set-hook",
       "run-shell"
     ]);
