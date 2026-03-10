@@ -111,6 +111,26 @@ function isCleanPass(entry: UiTimelineEntry): boolean {
   return false;
 }
 
+function extractDecisionTag(entry: UiTimelineEntry): FindingTag | null {
+  if (entry.type !== "APPROVAL_DECISION") {
+    return null;
+  }
+  const decision = entry.payload.decision;
+  if (decision === "revise") {
+    return {
+      label: "rework",
+      style: "border-rose-500/20 bg-rose-500/10 text-rose-500"
+    };
+  }
+  if (decision === "approve") {
+    return {
+      label: "approve",
+      style: "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
+    };
+  }
+  return null;
+}
+
 function isBlockedEntry(entry: UiTimelineEntry): boolean {
   return entry.type === "HUMAN_QUESTION";
 }
@@ -174,6 +194,9 @@ function resolveRole(entry: UiTimelineEntry): RoleKind {
     return "system";
   }
   const sender = entry.sender.toLowerCase();
+  if (sender === "human") {
+    return "human";
+  }
   if (sender === "orchestrator") {
     return "system";
   }
@@ -251,6 +274,7 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
             const blocked = isBlockedEntry(entry);
             const findingTags = extractFindingTags(entry);
             const metaRecommendationTag = extractMetaRecommendationTag(entry);
+            const decisionTag = extractDecisionTag(entry);
             const cleanPass = isCleanPass(entry);
             return (
               <div
@@ -273,7 +297,7 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
                       <span className="font-medium text-amber-500">
                         {displaySender} &mdash; blocked
                       </span>
-                    ) : role === "system" ? (
+                    ) : role === "system" || role === "human" ? (
                       <span className="font-medium text-[#aaa]">
                         {displaySender}
                       </span>
@@ -296,6 +320,13 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
                         className={`inline-block rounded px-1 text-[9px] font-semibold leading-tight border ${metaRecommendationTag.style}`}
                       >
                         {metaRecommendationTag.label}
+                      </span>
+                    ) : null}
+                    {decisionTag !== null ? (
+                      <span
+                        className={`inline-block rounded px-1 text-[9px] font-semibold leading-tight border ${decisionTag.style}`}
+                      >
+                        {decisionTag.label}
                       </span>
                     ) : null}
                     {cleanPass ? (
