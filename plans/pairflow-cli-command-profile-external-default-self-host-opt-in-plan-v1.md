@@ -37,8 +37,8 @@ Eliminálni a base-case repo-agnosztikus használatot törő `PAIRFLOW_COMMAND_P
 
 1. Risk: self-host fejlesztési flow véletlen gyengítése.
    Mitigation: explicit `self_host` profile és fail-closed viselkedés változatlanul marad.
-2. Risk: rollout telemetry félrevezető marad.
-   Mitigation: converged/status reason code profile-aware átalakítás.
+2. Risk: részleges implementáció miatt (pl. wrapper profile-aware, de status/converged reason mapping még nem), átmenetileg hamis vagy vegyes diagnosztika jelenik meg rollout alatt.
+   Mitigation: a profile-aware reason mappinget kötelezően ugyanebben a scope-ban szállítani, és dedikált status+converged regressziós tesztekkel lezárni.
 3. Risk: profile nélküli régi bubble állapot inkompatibilitás.
    Mitigation: determinisztikus default `external`.
 

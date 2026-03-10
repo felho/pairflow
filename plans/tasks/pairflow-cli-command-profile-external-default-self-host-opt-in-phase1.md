@@ -189,10 +189,6 @@ Constraint: if profile is `self_host`, existing fail-closed behavior remains unc
 1. Base-case product intent: Pairflow tipikusan nem a Pairflow repo fejlesztésére, hanem más repositoryk orchestrationjére használatos.
 2. CLI option bővítés (`bubble create`) elfogadható ebben a fázisban.
 
-## Open Questions
-
-1. Szükséges-e már Phase 1-ben explicit env override (`PAIRFLOW_COMMAND_PROFILE`) vagy elég a bubble config + CLI flag?
-
 ## Spec Lock
 
 Mark task as `IMPLEMENTABLE` when AC1-AC6 are met and T1-T10 pass with profile-aware stale semantics verified.
