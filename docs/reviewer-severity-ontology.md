@@ -87,9 +87,10 @@ Each finding should include:
 Reviewer PASS with any `P0/P1` finding must have evidence bound at finding level:
 1. Preferred CLI form: `--finding "P1:Title|ref1,ref2"` (maps to `finding.refs`).
 2. If a single ref contains a comma, escape it as `\,` inside the `--finding` value.
-3. Envelope-level `--ref` values are optional generic artifacts only; they do not satisfy blocker finding evidence binding.
-4. If a `P0/P1` finding has no finding-level refs, PASS is rejected.
-5. Document-scope qualifier: post-gate blocker semantics require strict finding qualifiers (`timing=required-now` + `layer=L1`). CLI `--finding` carries severity/title/refs only, so unqualified CLI `P0/P1` findings are advisory for post-gate routing.
+3. CLI shorthand is backward-compatible and additive: every parsed `--finding` result gets `timing=later-hardening` and `layer=L1` defaults.
+4. Envelope-level `--ref` values are optional generic artifacts only; they do not satisfy blocker finding evidence binding.
+5. If a `P0/P1` finding has no finding-level refs, PASS is rejected.
+6. Document-scope qualifier: post-gate blocker semantics still require strict finding qualifiers (`timing=required-now` + `layer=L1`). The shorthand defaults above do not strengthen blocker policy, so CLI shorthand `P0/P1` remains advisory for post-gate routing unless explicit blocker qualifiers are present.
 
 ## Decision Mapping
 

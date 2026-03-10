@@ -6,9 +6,11 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { emitAskHumanFromWorkspace } from "../../../src/core/agent/askHuman.js";
 import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
+import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { emitHumanReply } from "../../../src/core/human/reply.js";
 import { getBubbleStatus } from "../../../src/core/bubble/statusBubble.js";
 import { resolveDocContractGateArtifactPath } from "../../../src/core/gates/docContractGates.js";
+import { appendProtocolEnvelope } from "../../../src/core/protocol/transcriptStore.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -86,6 +88,63 @@ describe("getBubbleStatus", () => {
     expect(status.state).toBe("RUNNING");
     expect(status.pendingInboxItems.humanQuestions).toBe(0);
     expect(status.transcript.lastMessageType).toBe("HUMAN_REPLY");
+  });
+
+  it("counts only the latest unresolved approval request as pending", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_status_approval_latest_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Status latest approval",
+      cwd: repoPath
+    });
+    const lockPath = join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`);
+
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      mirrorPaths: [bubble.paths.inboxPath],
+      lockPath,
+      now: new Date("2026-02-22T14:12:00.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: "human",
+        type: "APPROVAL_REQUEST",
+        round: 0,
+        payload: {
+          summary: "Older approval summary"
+        },
+        refs: []
+      }
+    });
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      mirrorPaths: [bubble.paths.inboxPath],
+      lockPath,
+      now: new Date("2026-02-22T14:13:00.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: "human",
+        type: "APPROVAL_REQUEST",
+        round: 0,
+        payload: {
+          summary: "Latest approval summary"
+        },
+        refs: []
+      }
+    });
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(status.pendingInboxItems.approvalRequests).toBe(1);
+    expect(status.pendingInboxItems.total).toBe(1);
+    expect(status.transcript.lastMessageType).toBe("APPROVAL_REQUEST");
   });
 
   it("reports accuracy-critical missing verification gate status", async () => {

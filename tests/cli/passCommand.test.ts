@@ -36,6 +36,8 @@ describe("parsePassCommandOptions", () => {
         priority: "P1",
         severity: "P1",
         title: "Missing test",
+        timing: "later-hardening",
+        layer: "L1",
         refs: [
           "artifact://review/failure.log",
           "artifact://review/repro.md"
@@ -60,7 +62,9 @@ describe("parsePassCommandOptions", () => {
       {
         priority: "P2",
         severity: "P2",
-        title: "Minor cleanup"
+        title: "Minor cleanup",
+        timing: "later-hardening",
+        layer: "L1"
       }
     ]);
   });
@@ -138,6 +142,8 @@ describe("parsePassCommandOptions", () => {
         priority: "P1",
         severity: "P1",
         title: "Missing test",
+        timing: "later-hardening",
+        layer: "L1",
         refs: ["artifact://review/failure,segment.log"]
       }
     ]);
@@ -156,8 +162,8 @@ describe("parsePassCommandOptions", () => {
 
   it("documents doc-scope blocker qualifier limits in help text", () => {
     const help = getPassHelpText();
-    expect(help).toContain("Doc scope note");
-    expect(help).toContain("CLI --finding cannot encode `timing`/`layer`");
+    expect(help).toContain("Shorthand defaults: timing=later-hardening, layer=L1");
+    expect(help).toContain("cannot encode explicit `timing`/`layer` values");
   });
 });
 

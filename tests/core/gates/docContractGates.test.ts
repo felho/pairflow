@@ -221,6 +221,57 @@ At least one concrete behavior statement.
     expect(result.warnings.some((entry) => entry.reason_code === "BLOCKER_EVIDENCE_WARNING")).toBe(true);
   });
 
+  it("does not emit missing timing/layer schema warning for shorthand-compatible defaults", () => {
+    const findings: Finding[] = [
+      {
+        priority: "P2",
+        severity: "P2",
+        timing: "later-hardening",
+        layer: "L1",
+        refs: ["docs/reviewer-severity-ontology.md#runtime-pass-evidence-binding"],
+        title: "CLI shorthand compatibility defaults"
+      }
+    ];
+
+    const result = evaluateReviewerGateWarnings({
+      round: 1,
+      findings,
+      roundGateAppliesAfter: 2
+    });
+
+    expect(result.warnings).toEqual([]);
+    expect(result.normalizedFindings[0]).toEqual(findings[0]);
+    expect(result.findingEvaluations[0]).toMatchObject({
+      priority: "P2",
+      effective_priority: "P2",
+      timing: "later-hardening",
+      effective_timing: "later-hardening",
+      layer: "L1"
+    });
+  });
+
+  it("keeps other schema warnings when shorthand-compatible defaults are valid", () => {
+    const result = evaluateReviewerGateWarnings({
+      round: 1,
+      findings: [
+        {
+          priority: "P2",
+          severity: "P2",
+          timing: "later-hardening",
+          layer: "L1",
+          title: "Compatibility defaults do not mask missing evidence"
+        }
+      ],
+      roundGateAppliesAfter: 2
+    });
+
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0]?.reason_code).toBe("REVIEW_SCHEMA_WARNING");
+    expect(result.warnings[0]?.message).toContain("evidence");
+    expect(result.warnings[0]?.message).not.toContain("timing");
+    expect(result.warnings[0]?.message).not.toContain("layer");
+  });
+
   it("downgrades blocker without evidence and keeps input finding immutable", () => {
     const inputFinding: Finding = {
       priority: "P1",

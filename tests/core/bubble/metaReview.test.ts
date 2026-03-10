@@ -4,7 +4,9 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { getBubbleInbox } from "../../../src/core/bubble/inboxBubble.js";
 import { getBubblePaths } from "../../../src/core/bubble/paths.js";
+import { getBubbleStatus } from "../../../src/core/bubble/statusBubble.js";
 import {
   extractMetaReviewDelimitedBlock,
   MetaReviewError,
@@ -14,6 +16,10 @@ import {
   runMetaReview,
   toMetaReviewError
 } from "../../../src/core/bubble/metaReview.js";
+import {
+  appendProtocolEnvelope,
+  readTranscriptEnvelopes
+} from "../../../src/core/protocol/transcriptStore.js";
 import {
   type LoadedStateSnapshot,
   StateStoreConflictError,
@@ -397,6 +403,122 @@ describe("meta-review run", () => {
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     expect(loaded.state.meta_review?.last_autonomous_summary).toBe(
       "State is canonical"
+    );
+  });
+
+  it("refreshes the effective human approval context after a successful rerun", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_run_refresh_approval_01",
+      task: "Meta rerun approval refresh"
+    });
+    const lockPath = join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`);
+
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      mirrorPaths: [bubble.paths.inboxPath],
+      lockPath,
+      now: new Date("2026-03-08T11:31:00.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: "human",
+        type: "APPROVAL_REQUEST",
+        round: 1,
+        payload: {
+          summary: "META_REVIEW_GATE_RUN_FAILED: stale timeout"
+        },
+        refs: ["artifacts/meta-review-last.md"]
+      }
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "READY_FOR_HUMAN_APPROVAL",
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        last_command_at: "2026-03-08T11:31:00.000Z",
+        meta_review: {
+          ...loaded.state.meta_review!,
+          last_autonomous_run_id: "run_meta_stale",
+          last_autonomous_status: "error",
+          last_autonomous_recommendation: "inconclusive",
+          last_autonomous_summary: "META_REVIEW_GATE_RUN_FAILED: stale timeout",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-03-08T11:31:00.000Z"
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await runMetaReview(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath
+      },
+      {
+        randomUUID: () => "run_meta_refresh_approval_01",
+        now: new Date("2026-03-08T11:35:00.000Z"),
+        runLiveReview: async () => ({
+          recommendation: "approve",
+          summary: "Recovered approve recommendation",
+          report_markdown: "# Recovered"
+        })
+      }
+    );
+
+    const transcript = await readTranscriptEnvelopes(
+      bubble.paths.transcriptPath,
+      { allowMissing: false }
+    );
+    const inbox = await getBubbleInbox({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+    const after = await readStateSnapshot(bubble.paths.statePath);
+
+    expect(result.lifecycle_state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(after.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(after.state.meta_review?.last_autonomous_recommendation).toBe("approve");
+    expect(after.state.meta_review?.last_autonomous_summary).toBe(
+      "Recovered approve recommendation"
+    );
+
+    const lastTranscriptMessage = transcript.at(-1);
+    expect(lastTranscriptMessage?.type).toBe("APPROVAL_REQUEST");
+    expect(lastTranscriptMessage?.payload.summary).toBe(
+      "Recovered approve recommendation"
+    );
+    expect(lastTranscriptMessage?.payload.metadata).toMatchObject({
+      actor: "meta-reviewer",
+      actor_agent: "codex",
+      latest_recommendation: "approve",
+      run_id: "run_meta_refresh_approval_01"
+    });
+
+    expect(inbox.pending.approvalRequests).toBe(1);
+    expect(inbox.items).toHaveLength(1);
+    expect(inbox.items[0]?.summary).toBe("Recovered approve recommendation");
+
+    expect(status.pendingInboxItems.approvalRequests).toBe(1);
+    expect(status.pendingInboxItems.total).toBe(1);
+    expect(status.transcript.lastMessageType).toBe("APPROVAL_REQUEST");
+    expect(status.metaReview.latestRecommendation).toBe("approve");
+    expect(status.metaReview.latestSummary).toBe(
+      "Recovered approve recommendation"
     );
   });
 });
