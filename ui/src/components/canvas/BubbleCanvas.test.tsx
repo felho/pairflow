@@ -88,7 +88,8 @@ function createDeferred<T>(): {
 }
 
 describe("BubbleCanvas", () => {
-  const bubbleReviewPrompt = "b-1: review the bubble, deep mode, be very verbose";
+  const bubbleReviewPrompt =
+    "b-1: review the bubble, deep mode, be very verbose --meta-review-source=cached";
 
   beforeEach(() => {
     copyToClipboardMock.mockReset();

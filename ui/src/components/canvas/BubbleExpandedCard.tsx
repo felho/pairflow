@@ -126,7 +126,7 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
   const [timelineCompact, setTimelineCompact] = useState(true);
 
   const copyBubbleId = useCallback(async () => {
-    const bubbleReviewPrompt = `${props.bubble.bubbleId}: review the bubble, deep mode, be very verbose`;
+    const bubbleReviewPrompt = `${props.bubble.bubbleId}: review the bubble, deep mode, be very verbose --meta-review-source=cached`;
     try {
       await copyToClipboard(bubbleReviewPrompt);
       setCopyError(null);

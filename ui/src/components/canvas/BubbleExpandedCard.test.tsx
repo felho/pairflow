@@ -57,7 +57,7 @@ function renderExpandedCard(overrides: RenderExpandedCardOverrides = {}): void {
 
 describe("BubbleExpandedCard", () => {
   const bubbleReviewPrompt =
-    "b-expanded-1: review the bubble, deep mode, be very verbose";
+    "b-expanded-1: review the bubble, deep mode, be very verbose --meta-review-source=cached";
 
   beforeEach(() => {
     copyToClipboardMock.mockReset();
