@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_pairflow_cli_command_profile_external_default_self_host_opt_in_phase1_v1
 title: "Pairflow CLI Command Profile: External Default + Self-Host Opt-In (Phase 1)"
-status: draft
+status: implementable
 phase: phase1
 target_files:
   - src/types/bubble.ts
@@ -30,7 +30,7 @@ owners:
 
 ### Goal
 
-Fix the repo-agnostic base case bug where bubble agents fail with `PAIRFLOW_COMMAND_PATH_STALE` in non-Pairflow repositories by making external/environment Pairflow CLI the default command profile, while preserving current worktree-local behavior as explicit self-host opt-in.
+Fix the repo-agnostic base case bug where bubble agents fail with `PAIRFLOW_COMMAND_PATH_STALE` in non-Pairflow repositories by making PATH-resolved external Pairflow CLI the default command profile, while preserving current worktree-local behavior as explicit self-host opt-in.
 
 ### Context
 
@@ -82,7 +82,7 @@ Observed mismatch:
 | CS1 | `src/types/bubble.ts` | bubble config type extension | `BubbleConfig` type fields | bubble config schema/type declarations | Add command profile enum (`external|self_host`) with deterministic default interpretation | P1 | required-now | stale behavior must be profile-aware |
 | CS2 | `src/core/bubble/createBubble.ts` | bubble config assembly | `createBubble(...) -> Promise<BubbleCreateResult>` | config construction before persistence | Persist selected profile from CLI/input; if absent, write `external` | P1 | required-now | base-case must not depend on local Pairflow build |
 | CS3 | `src/cli/commands/bubble/create.ts` | create command parsing | `handleBubbleCreateCommand(...)` | create options parsing | Add `--pairflow-command-profile external|self_host` and validate | P1 | required-now | explicit operator control for self-host exception |
-| CS4 | `src/core/runtime/agentCommand.ts` | bootstrap composition | `buildAgentCommand(input) -> string` | wrapper bootstrap generation | Build wrapper behavior according to profile: external calls env CLI; self_host uses local entrypoint pinning | P1 | required-now | command path must align with intended mode |
+| CS4 | `src/core/runtime/agentCommand.ts` | bootstrap composition | `buildAgentCommand(input) -> string` | wrapper bootstrap generation | Build wrapper behavior according to profile: external calls PATH-resolved CLI; self_host uses local entrypoint pinning | P1 | required-now | command path must align with intended mode |
 | CS5 | `src/core/runtime/pairflowCommand.ts` | profile-aware command path helpers | `assessPairflowCommandPath(input) -> PairflowCommandPathAssessment`; `buildPairflowCommandBootstrap(...)` | runtime command helper module | Compute stale only for self-host identity rule; external mode reports non-stale unless command missing | P1 | required-now | avoid false-positive stale in base case |
 | CS6 | `src/core/bubble/statusBubble.ts` | status command-path diagnostics | `getBubbleStatus(...) -> Promise<BubbleStatusView>` | commandPath assembly | Include profile-aware status/reason text consistent with runtime mode | P1 | required-now | status must explain real problem, not self-host mismatch in external mode |
 | CS7 | `src/core/agent/converged.ts` | rollout blocking reason derivation | `resolveMetaReviewRolloutBlockingReasonCodes(...)` | reason code aggregation | `PAIRFLOW_COMMAND_PATH_STALE` included only when active profile is `self_host` and assessment is stale | P1 | required-now | block signals must match actual risk |
@@ -99,7 +99,7 @@ Observed mismatch:
 | Bubble command profile | implicit self-host assumption | explicit profile enum | `pairflow_command_profile` with values `external|self_host` | none | additive with defaulting for old configs | P1 | required-now |
 | CLI create contract | no profile selector | explicit selector option | `--pairflow-command-profile` value validation | omitted -> default `external` | additive | P1 | required-now |
 | Command-path assessment | always compares active entrypoint vs worktree-local entrypoint | profile-aware assessment logic | mode-aware status + reason mapping | diagnostic detail fields | behavior fix | P1 | required-now |
-| Agent wrapper behavior | always local-entrypoint wrapper | mode-aware wrapper | external: environment pairflow command path; self_host: local entrypoint pinning | diagnostic exports | behavior fix | P1 | required-now |
+| Agent wrapper behavior | always local-entrypoint wrapper | mode-aware wrapper | external: PATH-resolved pairflow command path; self_host: local entrypoint pinning | diagnostic exports | behavior fix | P1 | required-now |
 
 ### 3) Side Effects Contract
 
@@ -137,7 +137,7 @@ Constraint: if profile is `self_host`, existing fail-closed behavior remains unc
 | T1 | Create default profile | bubble create without profile flag | create command runs | stored config profile is `external` | P1 | required-now | `tests/cli/bubbleCreateCommand.test.ts` |
 | T2 | Create explicit self-host profile | bubble create with `--pairflow-command-profile self_host` | create command runs | stored config profile is `self_host` | P1 | required-now | `tests/cli/bubbleCreateCommand.test.ts` |
 | T3 | Reject invalid profile | invalid profile token | create command parses args | command fails with validation error | P1 | required-now | `tests/cli/bubbleCreateCommand.test.ts` |
-| T4 | External wrapper path | profile `external` | agent command script is built | wrapper calls environment pairflow command path; does not hard-require local entrypoint | P1 | required-now | `tests/core/runtime/agentCommand.test.ts` |
+| T4 | External wrapper path | profile `external` | agent command script is built | wrapper calls PATH-resolved pairflow command path; does not hard-require local entrypoint | P1 | required-now | `tests/core/runtime/agentCommand.test.ts` |
 | T5 | Self-host wrapper path | profile `self_host` | agent command script is built | wrapper pins local entrypoint and keeps stale fail-closed semantics | P1 | required-now | `tests/core/runtime/agentCommand.test.ts` |
 | T6 | Status under external profile | profile `external`, active entrypoint differs from worktree local | status command runs | commandPath is not reported as stale mismatch | P1 | required-now | `tests/core/bubble/statusBubble.test.ts` |
 | T7 | Status under self-host profile | profile `self_host`, active entrypoint mismatch | status command runs | commandPath reports `stale` with `PAIRFLOW_COMMAND_PATH_STALE` | P1 | required-now | `tests/core/bubble/statusBubble.test.ts` |
@@ -158,9 +158,9 @@ Constraint: if profile is `self_host`, existing fail-closed behavior remains unc
 
 | Acceptance Criterion | Call Sites | Tests |
 |---|---|---|
-| AC1 | CS2, CS4, CS5 | T1, T4, T6 |
-| AC2 | CS1, CS2, CS3 | T1, T10 |
-| AC3 | CS1, CS3, CS4, CS5 | T2, T5, T7 |
+| AC1 | CS2, CS4, CS5, CS8, CS9 | T1, T4, T6 |
+| AC2 | CS1, CS2, CS3, CS5, CS6 | T1, T10 |
+| AC3 | CS1, CS3, CS4, CS5, CS8, CS9 | T2, T5, T7 |
 | AC4 | CS5, CS6, CS7 | T6, T7, T8, T9 |
 | AC5 | CS3, CS12 | T3 |
 | AC6 | CS6, CS7, CS10, CS11 | T6, T7, T8, T9 |
@@ -189,6 +189,13 @@ Constraint: if profile is `self_host`, existing fail-closed behavior remains unc
 1. Base-case product intent: Pairflow tipikusan nem a Pairflow repo fejlesztésére, hanem más repositoryk orchestrationjére használatos.
 2. CLI option bővítés (`bubble create`) elfogadható ebben a fázisban.
 
+## Open Questions (Non-Blocking)
+
+1. Nincs.
+
 ## Spec Lock
 
-Mark task as `IMPLEMENTABLE` when AC1-AC6 are met and T1-T10 pass with profile-aware stale semantics verified.
+Task `IMPLEMENTABLE`, ha:
+1. AC1-AC6 traceability sorai maradéktalanul lefedik a CS1-CS12 és T1-T10 contractokat.
+2. T1-T10 lefutási/eredményelvárásai profile-aware stale szemantikával teljesülnek.
+3. Nincs nyitott blocker vagy open question, amely a required-now scope-ot újranyitná.
