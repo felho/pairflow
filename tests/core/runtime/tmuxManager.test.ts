@@ -213,9 +213,11 @@ describe("launchBubbleTmuxSession", () => {
       "WINDOW_HEIGHT=$(tmux display-message -p -t pf-b_start_01:0 '#{window_height}'"
     );
     expect(calls[14]?.args?.[4]).toContain("REMAIN=$((WINDOW_HEIGHT - 17))");
-    expect(calls[14]?.args?.[4]).toContain("tmux resize-pane -t %11 -y $ROW");
-    expect(calls[14]?.args?.[4]).toContain("tmux resize-pane -t %12 -y $ROW");
-    expect(calls[14]?.args?.[4]).toContain("tmux resize-pane -t %13 -y $ROW_LAST");
+    // Hook script escapes $VAR → \$VAR so tmux's double-quote parser
+    // doesn't expand them as (empty) tmux env variables at set-hook time.
+    expect(calls[14]?.args?.[4]).toContain("tmux resize-pane -t %11 -y \\$ROW");
+    expect(calls[14]?.args?.[4]).toContain("tmux resize-pane -t %12 -y \\$ROW");
+    expect(calls[14]?.args?.[4]).toContain("tmux resize-pane -t %13 -y \\$ROW_LAST");
     expect(calls[15]?.args?.slice(0, 4)).toEqual([
       "set-hook",
       "-t",

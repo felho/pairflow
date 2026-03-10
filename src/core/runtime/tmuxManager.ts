@@ -339,20 +339,27 @@ export async function launchBubbleTmuxSession(
     `tmux resize-pane -t ${reviewerPaneId} -y $ROW 2>/dev/null || true`,
     `tmux resize-pane -t ${metaReviewerPaneId} -y $ROW_LAST 2>/dev/null || true`
   ].join("; ");
+  // For hooks, escape bare $VAR and embedded " so they survive tmux's
+  // double-quote expansion in the set-hook run-shell argument.
+  // Without this, tmux expands $VAR as tmux env variables (empty) at
+  // set-hook time, breaking the resize calculations.
+  const hookLayoutScript = layoutScript
+    .replace(/"/g, '\\"')
+    .replace(/\$([A-Z_][A-Z_0-9]*)(?!\()/g, "\\$$$1");
   const s = sessionName;
   await runner([
     "set-hook",
     "-t",
     s,
     "client-resized",
-    `run-shell "${layoutScript}"`
+    `run-shell "${hookLayoutScript}"`
   ]);
   await runner([
     "set-hook",
     "-t",
     s,
     "window-resized",
-    `run-shell "${layoutScript}"`
+    `run-shell "${hookLayoutScript}"`
   ]);
   await runner(["run-shell", layoutScript]);
   const sendPaneMessage = async (
