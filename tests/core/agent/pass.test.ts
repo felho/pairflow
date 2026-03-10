@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
+import { runPassCommand } from "../../../src/cli/commands/agent/pass.js";
 import {
   emitPassFromWorkspace,
   PassCommandError,
@@ -821,6 +822,187 @@ describe("emitPassFromWorkspace", () => {
     expect(result.envelope.payload.pass_intent).toBe("fix_request");
     expect(result.state.active_role).toBe("implementer");
     expect(result.state.round).toBe(5);
+  });
+
+  it("preserves shorthand compatibility defaults through document-scope reviewer pass emission from CLI parsing", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_doc_shorthand_defaults_01",
+      task: "Document scope shorthand defaults",
+      reviewArtifactType: "document"
+    });
+
+    await setReviewerActive(bubble.paths.statePath, bubble.config.agents.reviewer);
+
+    const result = await runPassCommand(
+      [
+        "--summary",
+        "Document scope shorthand-compatible finding",
+        "--finding",
+        "P2:Compatibility defaults applied by CLI shorthand|docs/reviewer-severity-ontology.md#runtime-pass-evidence-binding"
+      ],
+      bubble.paths.worktreePath
+    );
+
+    expect(result).not.toBeNull();
+    if (result === null) {
+      throw new Error("Expected PASS result from CLI shorthand integration path");
+    }
+
+    expect(result.envelope.payload.findings).toEqual([
+      {
+        priority: "P2",
+        severity: "P2",
+        timing: "later-hardening",
+        layer: "L1",
+        refs: ["docs/reviewer-severity-ontology.md#runtime-pass-evidence-binding"],
+        title: "Compatibility defaults applied by CLI shorthand"
+      }
+    ]);
+
+    const artifact = await readDocContractGateArtifact(
+      resolveDocContractGateArtifactPath(bubble.paths.artifactsDir)
+    );
+    expect(artifact?.review_warnings).toEqual([]);
+    expect(artifact?.finding_evaluations[0]).toMatchObject({
+      priority: "P2",
+      effective_priority: "P2",
+      timing: "later-hardening",
+      effective_timing: "later-hardening",
+      layer: "L1"
+    });
+    expect(artifact?.spec_lock_state).toEqual({
+      state: "IMPLEMENTABLE",
+      open_blocker_count: 0,
+      open_required_now_count: 0
+    });
+  });
+
+  it("keeps spec lock IMPLEMENTABLE for CLI shorthand P1 because timing defaults to later-hardening", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_doc_shorthand_p1_advisory_01",
+      task: "Document scope shorthand advisory P1",
+      reviewArtifactType: "document"
+    });
+
+    await setReviewerActive(bubble.paths.statePath, bubble.config.agents.reviewer);
+
+    const result = await runPassCommand(
+      [
+        "--summary",
+        "Document scope shorthand advisory blocker candidate",
+        "--finding",
+        "P1:Shorthand P1 remains advisory after default timing|docs/reviewer-severity-ontology.md#runtime-pass-evidence-binding"
+      ],
+      bubble.paths.worktreePath
+    );
+
+    expect(result).not.toBeNull();
+    if (result === null) {
+      throw new Error("Expected PASS result from CLI shorthand P1 path");
+    }
+
+    expect(result.envelope.payload.findings).toEqual([
+      {
+        priority: "P1",
+        severity: "P1",
+        timing: "later-hardening",
+        layer: "L1",
+        refs: ["docs/reviewer-severity-ontology.md#runtime-pass-evidence-binding"],
+        title: "Shorthand P1 remains advisory after default timing"
+      }
+    ]);
+
+    const artifact = await readDocContractGateArtifact(
+      resolveDocContractGateArtifactPath(bubble.paths.artifactsDir)
+    );
+    expect(artifact?.review_warnings).toEqual([]);
+    expect(artifact?.finding_evaluations[0]).toMatchObject({
+      priority: "P1",
+      effective_priority: "P1",
+      timing: "later-hardening",
+      effective_timing: "later-hardening",
+      layer: "L1"
+    });
+    expect(artifact?.spec_lock_state).toEqual({
+      state: "IMPLEMENTABLE",
+      open_blocker_count: 0,
+      open_required_now_count: 0
+    });
+  });
+
+  it("preserves explicit reviewer timing and layer values through normalization on blocker-eligible structured findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_doc_explicit_schema_values_01",
+      task: "Document scope explicit schema values",
+      reviewArtifactType: "document"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 2,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-03-01T12:14:00.000Z",
+        last_command_at: "2026-03-01T12:14:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Document scope explicit structured qualifiers",
+      findings: [
+        {
+          priority: "P1",
+          severity: "P1",
+          timing: "required-now",
+          layer: "L1",
+          refs: ["docs/pairflow-initial-design.md#review-contract"],
+          title: "Explicit structured finding values"
+        }
+      ],
+      cwd: bubble.paths.worktreePath
+    });
+
+    expect(result.envelope.payload.findings).toEqual([
+      {
+        priority: "P1",
+        severity: "P1",
+        timing: "required-now",
+        layer: "L1",
+        refs: ["docs/pairflow-initial-design.md#review-contract"],
+        title: "Explicit structured finding values"
+      }
+    ]);
+
+    const artifact = await readDocContractGateArtifact(
+      resolveDocContractGateArtifactPath(bubble.paths.artifactsDir)
+    );
+    expect(artifact?.review_warnings).toEqual([]);
+    expect(artifact?.finding_evaluations[0]).toMatchObject({
+      priority: "P1",
+      effective_priority: "P1",
+      timing: "required-now",
+      effective_timing: "required-now",
+      layer: "L1"
+    });
+    expect(artifact?.spec_lock_state).toEqual({
+      state: "LOCKED",
+      open_blocker_count: 1,
+      open_required_now_count: 1
+    });
   });
 
   it("classifies round>=2 reviewer clean PASS without previous reviewer PASS as missing", async () => {

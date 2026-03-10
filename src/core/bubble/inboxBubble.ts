@@ -2,6 +2,7 @@ import { readTranscriptEnvelopes } from "../protocol/transcriptStore.js";
 import { readStateSnapshot } from "../state/stateStore.js";
 import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
 import type { BubbleLifecycleState } from "../../types/bubble.js";
+import { resolveCanonicalPendingApprovalSignal } from "./pendingApprovalSignal.js";
 
 export type PendingInboxItemType = "HUMAN_QUESTION" | "APPROVAL_REQUEST";
 
@@ -47,13 +48,6 @@ function deriveQuestionSummary(payload: Record<string, unknown>): string {
     : "(missing question payload)";
 }
 
-function deriveApprovalSummary(payload: Record<string, unknown>): string {
-  const value = payload.summary;
-  return typeof value === "string" && value.trim().length > 0
-    ? value.trim()
-    : "(missing approval summary)";
-}
-
 export async function getBubbleInbox(
   input: BubbleInboxInput
 ): Promise<BubbleInboxView> {
@@ -71,8 +65,6 @@ export async function getBubbleInbox(
   ]);
 
   const pendingQuestions: PendingInboxItem[] = [];
-  const pendingApprovals: PendingInboxItem[] = [];
-
   for (const envelope of inbox) {
     if (envelope.type === "HUMAN_QUESTION") {
       pendingQuestions.push({
@@ -97,29 +89,28 @@ export async function getBubbleInbox(
     }
 
     if (envelope.type === "APPROVAL_REQUEST") {
-      pendingApprovals.push({
-        envelopeId: envelope.id,
-        type: "APPROVAL_REQUEST",
-        ts: envelope.ts,
-        round: envelope.round,
-        sender: envelope.sender,
-        summary: deriveApprovalSummary(
-          envelope.payload as unknown as Record<string, unknown>
-        ),
-        refs: envelope.refs
-      });
-      continue;
-    }
-
-    if (envelope.type === "APPROVAL_DECISION") {
-      if (pendingApprovals.length > 0) {
-        pendingApprovals.shift();
-      }
       continue;
     }
   }
 
-  const items = [...pendingQuestions, ...pendingApprovals].sort((left, right) =>
+  const canonicalPendingApprovalSignal = resolveCanonicalPendingApprovalSignal({
+    bubbleId: resolved.bubbleId,
+    state: state.state,
+    round: state.round,
+    metaReview: state.meta_review,
+    envelopes: inbox
+  });
+  const canonicalPendingApproval = canonicalPendingApprovalSignal === undefined
+    ? undefined
+    : {
+      ...canonicalPendingApprovalSignal,
+      type: "APPROVAL_REQUEST" as const
+    };
+
+  const items = [
+    ...pendingQuestions,
+    ...(canonicalPendingApproval !== undefined ? [canonicalPendingApproval] : [])
+  ].sort((left, right) =>
     left.ts.localeCompare(right.ts)
   );
 
@@ -129,7 +120,7 @@ export async function getBubbleInbox(
     state: state.state,
     pending: {
       humanQuestions: pendingQuestions.length,
-      approvalRequests: pendingApprovals.length,
+      approvalRequests: canonicalPendingApproval === undefined ? 0 : 1,
       total: items.length
     },
     items

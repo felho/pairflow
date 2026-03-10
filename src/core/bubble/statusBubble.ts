@@ -10,6 +10,7 @@ import {
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath
 } from "../gates/docContractGates.js";
+import { resolveCanonicalPendingApprovalSignal } from "./pendingApprovalSignal.js";
 import type {
   BubbleFailingGate,
   BubbleLifecycleState,
@@ -95,21 +96,6 @@ function countPendingHumanQuestions(envelopes: ProtocolEnvelope[]): number {
   return pending;
 }
 
-function countPendingApprovalRequests(envelopes: ProtocolEnvelope[]): number {
-  let pending = 0;
-  for (const envelope of envelopes) {
-    if (envelope.type === "APPROVAL_REQUEST") {
-      pending += 1;
-      continue;
-    }
-    if (envelope.type === "APPROVAL_DECISION") {
-      // Defensive clamp against malformed/out-of-order inbox edits.
-      pending = Math.max(0, pending - 1);
-    }
-  }
-  return pending;
-}
-
 export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleStatusView> {
   const resolved = await resolveBubbleById({
     bubbleId: input.bubbleId,
@@ -129,7 +115,16 @@ export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleS
 
   const lastMessage = transcript[transcript.length - 1] ?? null;
   const pendingQuestions = countPendingHumanQuestions(inbox);
-  const pendingApprovals = countPendingApprovalRequests(inbox);
+  const pendingApprovals =
+    resolveCanonicalPendingApprovalSignal({
+      bubbleId: resolved.bubbleId,
+      state: state.state,
+      round: state.round,
+      metaReview: state.meta_review,
+      envelopes: inbox
+    }) === undefined
+      ? 0
+      : 1;
   const accuracyCritical = resolved.bubbleConfig.accuracy_critical === true;
   const verification = accuracyCritical
     ? await readReviewVerificationArtifactStatus(

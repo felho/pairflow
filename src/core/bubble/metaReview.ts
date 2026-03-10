@@ -11,6 +11,7 @@ import {
   writeStateSnapshot,
   type LoadedStateSnapshot
 } from "../state/stateStore.js";
+import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
 import {
   SchemaValidationError,
   isNonEmptyString,
@@ -172,6 +173,16 @@ function normalizeOptionalText(value: string | undefined): string | null {
   }
 
   return value.trim();
+}
+
+function shouldRefreshApprovalRequest(
+  state: BubbleStateSnapshot["state"]
+): boolean {
+  return (
+    state === "READY_FOR_HUMAN_APPROVAL"
+    || state === "READY_FOR_APPROVAL"
+    || state === "META_REVIEW_FAILED"
+  );
 }
 
 function mapRecommendationToStatus(
@@ -1034,6 +1045,37 @@ export async function runMetaReview(
     warnings.push({
       reason_code: "META_REVIEW_ARTIFACT_WRITE_WARNING",
       message
+    });
+  }
+
+  if (shouldRefreshApprovalRequest(written.state.state)) {
+    await appendProtocolEnvelope({
+      transcriptPath: resolved.bubblePaths.transcriptPath,
+      mirrorPaths: [resolved.bubblePaths.inboxPath],
+      lockPath: join(
+        resolved.bubblePaths.locksDir,
+        `${resolved.bubbleId}.lock`
+      ),
+      now,
+      envelope: {
+        bubble_id: resolved.bubbleId,
+        sender: "orchestrator",
+        recipient: "human",
+        type: "APPROVAL_REQUEST",
+        round: written.state.round,
+        payload: {
+          summary:
+            summary ??
+            `Meta-review completed with recommendation ${recommendation}.`,
+          metadata: {
+            actor: "meta-reviewer",
+            actor_agent: "codex",
+            latest_recommendation: recommendation,
+            run_id: runId
+          }
+        },
+        refs: [CANONICAL_META_REVIEW_REPORT_REF]
+      }
     });
   }
 
