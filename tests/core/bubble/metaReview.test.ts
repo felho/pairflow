@@ -20,6 +20,7 @@ import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../../src/core/state/stateStore.js";
+import { applyStateTransition } from "../../../src/core/state/machine.js";
 import { SchemaValidationError } from "../../../src/core/validation.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -753,6 +754,65 @@ describe("meta-review reads", () => {
     expect(before.state.state).toBe("RUNNING");
     expect(result.lifecycle_state).toBe("RUNNING");
     expect(after.state.state).toBe("RUNNING");
+  });
+
+  it("recovers META_REVIEW_FAILED to READY_FOR_HUMAN_APPROVAL on successful rerun", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_read_recover_01",
+      task: "Meta failed recovery"
+    });
+
+    const before = await readStateSnapshot(bubble.paths.statePath);
+    const failed = applyStateTransition(before.state, {
+      to: "READY_FOR_APPROVAL",
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
+      lastCommandAt: "2026-03-08T12:40:00.000Z"
+    });
+    const failedAfterMeta = applyStateTransition(failed, {
+      to: "META_REVIEW_RUNNING",
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
+      lastCommandAt: "2026-03-08T12:41:00.000Z"
+    });
+    const failedState = applyStateTransition(failedAfterMeta, {
+      to: "META_REVIEW_FAILED",
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
+      lastCommandAt: "2026-03-08T12:42:00.000Z"
+    });
+    await writeStateSnapshot(bubble.paths.statePath, failedState, {
+      expectedFingerprint: before.fingerprint,
+      expectedState: "RUNNING"
+    });
+
+    const result = await runMetaReview(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath
+      },
+      {
+        randomUUID: () => "run_meta_recover_01",
+        now: new Date("2026-03-08T12:43:00.000Z"),
+        runLiveReview: async () => ({
+          recommendation: "approve",
+          summary: "Recovered after manual rerun",
+          report_markdown: "# Recovered"
+        })
+      }
+    );
+    const after = await readStateSnapshot(bubble.paths.statePath);
+
+    expect(result.status).toBe("success");
+    expect(result.lifecycle_state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(after.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(after.state.meta_review?.sticky_human_gate).toBe(true);
+    expect(after.state.meta_review?.last_autonomous_recommendation).toBe("approve");
   });
 
   it("wraps invalid run payloads with MetaReviewError", async () => {

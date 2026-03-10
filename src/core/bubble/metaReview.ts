@@ -11,6 +11,7 @@ import {
   writeStateSnapshot,
   type LoadedStateSnapshot
 } from "../state/stateStore.js";
+import { applyStateTransition } from "../state/machine.js";
 import {
   SchemaValidationError,
   isNonEmptyString,
@@ -964,6 +965,17 @@ export async function runMetaReview(
   });
 
   const previousMetaReview = normalizeMetaReviewSnapshot(loadedState.state.meta_review);
+  const shouldRecoverFromRunFailedHumanGate =
+    loadedState.state.state === "META_REVIEW_FAILED" && status === "success";
+  const lifecycleBaseState = shouldRecoverFromRunFailedHumanGate
+    ? applyStateTransition(loadedState.state, {
+        to: "READY_FOR_HUMAN_APPROVAL",
+        activeAgent: null,
+        activeRole: null,
+        activeSince: null,
+        lastCommandAt: updatedAt
+      })
+    : loadedState.state;
   const nextMetaReview: BubbleMetaReviewSnapshotState = {
     ...previousMetaReview,
     last_autonomous_run_id: runId,
@@ -972,11 +984,12 @@ export async function runMetaReview(
     last_autonomous_summary: summary,
     last_autonomous_report_ref: CANONICAL_META_REVIEW_REPORT_REF,
     last_autonomous_rework_target_message: reworkTargetMessage,
-    last_autonomous_updated_at: updatedAt
+    last_autonomous_updated_at: updatedAt,
+    ...(shouldRecoverFromRunFailedHumanGate ? { sticky_human_gate: true } : {})
   };
 
   const nextState: BubbleStateSnapshot = {
-    ...loadedState.state,
+    ...lifecycleBaseState,
     meta_review: nextMetaReview
   };
 

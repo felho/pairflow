@@ -26,6 +26,9 @@ describe("state transitions", () => {
     expect(canTransition("META_REVIEW_RUNNING", "READY_FOR_HUMAN_APPROVAL")).toBe(
       true
     );
+    expect(canTransition("META_REVIEW_FAILED", "READY_FOR_HUMAN_APPROVAL")).toBe(
+      true
+    );
     expect(canTransition("READY_FOR_HUMAN_APPROVAL", "RUNNING")).toBe(true);
     expect(canTransition("READY_FOR_HUMAN_APPROVAL", "APPROVED_FOR_COMMIT")).toBe(
       true

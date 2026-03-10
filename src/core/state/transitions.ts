@@ -46,7 +46,10 @@ const directedTransitions: ReadonlyMap<BubbleLifecycleState, ReadonlySet<BubbleL
         "READY_FOR_HUMAN_APPROVAL"
       ])
     ],
-    ["META_REVIEW_FAILED", new Set(["RUNNING", "APPROVED_FOR_COMMIT"])],
+    [
+      "META_REVIEW_FAILED",
+      new Set(["RUNNING", "APPROVED_FOR_COMMIT", "READY_FOR_HUMAN_APPROVAL"])
+    ],
     ["READY_FOR_HUMAN_APPROVAL", new Set(["RUNNING", "APPROVED_FOR_COMMIT"])],
     ["APPROVED_FOR_COMMIT", new Set(["COMMITTED"])],
     ["COMMITTED", new Set(["DONE"])],
