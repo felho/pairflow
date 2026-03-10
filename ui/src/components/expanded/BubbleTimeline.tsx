@@ -149,6 +149,14 @@ function resolveDisplaySender(entry: UiTimelineEntry): string {
   return entry.sender;
 }
 
+const roleLabels: Record<RoleKind, string> = {
+  impl: "implementer",
+  review: "reviewer",
+  human: "human",
+  system: "system",
+  meta: "meta-reviewer"
+};
+
 function resolveRole(entry: UiTimelineEntry): RoleKind {
   const metadata = entry.payload.metadata;
   const actor =
@@ -247,9 +255,9 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
             return (
               <div
                 key={entry.id}
-                className="flex items-start gap-1.5 border-b border-[#1a1a1a] py-1 text-[10px] last:border-b-0"
+                className="flex items-start border-b border-[#1a1a1a] py-1 text-[10px] last:border-b-0"
               >
-                <span className="min-w-[20px] pt-px font-mono text-[9px] text-[#555]">
+                <span className="min-w-[20px] pt-px pr-2 text-right font-mono text-[9px] text-[#555]">
                   R{entry.round}
                 </span>
                 <span
@@ -257,7 +265,7 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
                 >
                   {roleIcons[role]}
                 </span>
-                <div className="min-w-0 flex-1">
+                <div className="ml-2 min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     {isConvergence ? (
                       <span className="font-semibold text-emerald-500">CONVERGENCE</span>
@@ -265,10 +273,14 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
                       <span className="font-medium text-amber-500">
                         {displaySender} &mdash; blocked
                       </span>
+                    ) : role === "system" ? (
+                      <span className="font-medium text-[#aaa]">
+                        {displaySender}
+                      </span>
                     ) : (
                       <span className="font-medium text-[#aaa]">
-                        {displaySender}{" "}
-                        <span className="text-[#555]">({role === "system" ? "system" : role === "human" ? "human" : role === "review" ? "reviewer" : role === "meta" ? "meta-reviewer" : "implementer"})</span>
+                        {roleLabels[role]}{" "}
+                        <span className="text-[#555]">({displaySender})</span>
                       </span>
                     )}
                     {findingTags.map((tag) => (
