@@ -120,6 +120,7 @@ import {
   MetaReviewError,
   toMetaReviewError
 } from "../core/bubble/metaReview.js";
+import { isMainCliEntrypoint } from "./isMainCliEntrypoint.js";
 
 async function handlePassCommand(args: string[]): Promise<number> {
   const result = await runPassCommand(args);
@@ -789,7 +790,7 @@ export async function runCli(argv: string[]): Promise<number> {
   return 1;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainCliEntrypoint(import.meta.url, process.argv[1])) {
   runCli(process.argv.slice(2))
     .then((exitCode) => {
       process.exitCode = exitCode;

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { isMainCliEntrypoint } from "./isMainCliEntrypoint.js";
 import { runCli } from "./index.js";
 
 const supportedOrchestraCommands = new Set(["pass", "ask-human", "converged"]);
@@ -44,7 +45,7 @@ export async function runOrchestraCli(argv: string[]): Promise<number> {
   return 1;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainCliEntrypoint(import.meta.url, process.argv[1])) {
   runOrchestraCli(process.argv.slice(2))
     .then((exitCode) => {
       process.exitCode = exitCode;
