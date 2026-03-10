@@ -75,6 +75,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 - `CREATED` -> `pairflow bubble start`
 - `RUNNING` -> no approve/rework yet; use normal loop commands (`pass`, `converged`) in agent panes
 - `WAITING_HUMAN` -> use `pairflow bubble reply` (NOT `bubble request-rework`)
+- `META_REVIEW_RUNNING` -> if gate appears stuck after snapshot persisted, use `pairflow bubble meta-review recover` (no new review run; snapshot-route replay only)
 - `READY_FOR_HUMAN_APPROVAL` (legacy compatible: `READY_FOR_APPROVAL`) -> choose `pairflow bubble approve` OR `pairflow bubble request-rework`
   - If latest autonomous recommendation is `rework` or `inconclusive`, `approve` requires `--override-non-approve --override-reason "<reason>"`.
 - `APPROVED_FOR_COMMIT` -> `pairflow bubble commit --auto`

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import { runCli } from "../../src/cli/index.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../src/core/state/stateStore.js";
 import { setupRunningBubbleFixture } from "../helpers/bubble.js";
 import { initGitRepository } from "../helpers/git.js";
 
@@ -440,6 +441,75 @@ describe("runCli", () => {
     expect(parsed.has_report).toBe(false);
     expect(parsed.report_ref).toBeNull();
     expect(parsed.report_markdown).toBeNull();
+  });
+
+  it("renders meta-review recover as JSON through runCli", async () => {
+    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-meta-review-json-recover-"));
+    tempDirs.push(repoPath);
+    await initGitRepository(repoPath);
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_review_cli_json_05",
+      task: "meta-review json recover"
+    });
+
+    const loaded = await readStateSnapshot(join(
+      repoPath,
+      ".pairflow",
+      "bubbles",
+      bubble.bubbleId,
+      "state.json"
+    ));
+    await writeStateSnapshot(
+      join(repoPath, ".pairflow", "bubbles", bubble.bubbleId, "state.json"),
+      {
+        ...loaded.state,
+        state: "META_REVIEW_RUNNING",
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        meta_review: {
+          last_autonomous_run_id: "run_meta_review_cli_json_05",
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Recovered from CLI JSON test.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-03-08T12:50:00.000Z",
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const exitCode = await runCli([
+      "bubble",
+      "meta-review",
+      "recover",
+      "--id",
+      bubble.bubbleId,
+      "--repo",
+      repoPath,
+      "--json"
+    ]);
+
+    expect(exitCode).toBe(0);
+    const stdoutText = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+    const parsed = JSON.parse(stdoutText) as {
+      bubbleId: string;
+      route: string;
+      gateEnvelope: { type: string };
+      state: { state: string };
+    };
+    expect(parsed.bubbleId).toBe(bubble.bubbleId);
+    expect(parsed.route).toBe("human_gate_approve");
+    expect(parsed.gateEnvelope.type).toBe("APPROVAL_REQUEST");
+    expect(parsed.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
   });
 
   it("prints registry-backed unknown command support list", async () => {

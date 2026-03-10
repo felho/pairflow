@@ -263,6 +263,58 @@ describe("emitConvergedFromWorkspace", () => {
     });
   });
 
+  it("recovers from gate-routing failure by replaying route from META_REVIEW_RUNNING snapshot", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupConvergedCandidateBubble(repoPath, "b_converged_recover_01");
+
+    const result = await emitConvergedFromWorkspace(
+      {
+        summary: "Recover from partial gate failure.",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-22T09:04:45.000Z")
+      },
+      {
+        applyMetaReviewGateOnConvergence: async () => {
+          const loaded = await readStateSnapshot(bubble.paths.statePath);
+          await writeStateSnapshot(
+            bubble.paths.statePath,
+            {
+              ...loaded.state,
+              state: "META_REVIEW_RUNNING",
+              active_agent: null,
+              active_role: null,
+              active_since: null,
+              meta_review: {
+                last_autonomous_run_id: "run_converged_recover_01",
+                last_autonomous_status: "success",
+                last_autonomous_recommendation: "approve",
+                last_autonomous_summary: "Recovered summary from snapshot.",
+                last_autonomous_report_ref: "artifacts/meta-review-last.md",
+                last_autonomous_rework_target_message: null,
+                last_autonomous_updated_at: "2026-02-22T09:04:45.000Z",
+                auto_rework_count: 0,
+                auto_rework_limit: 5,
+                sticky_human_gate: false
+              }
+            },
+            {
+              expectedFingerprint: loaded.fingerprint,
+              expectedState: "RUNNING"
+            }
+          );
+          throw new Error("simulated gate crash after snapshot write");
+        }
+      }
+    );
+
+    expect(result.gateRoute).toBe("human_gate_approve");
+    expect(result.approvalRequestEnvelope.type).toBe("APPROVAL_REQUEST");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+
+    const finalState = await readStateSnapshot(bubble.paths.statePath);
+    expect(finalState.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+  });
+
   it("writes CONVERGENCE + APPROVAL_REQUEST and moves RUNNING -> READY_FOR_APPROVAL when meta-review run fails", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupConvergedCandidateBubble(repoPath, "b_converged_01");

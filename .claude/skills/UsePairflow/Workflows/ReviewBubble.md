@@ -81,7 +81,7 @@ pairflow bubble inbox --id <BUBBLE_ID> --repo <REPO_PATH>
 pairflow bubble meta-review status --id <BUBBLE_ID> --repo <REPO_PATH> --verbose
 pairflow bubble meta-review last-report --id <BUBBLE_ID> --repo <REPO_PATH> --verbose
 ```
-- If `META_REVIEW_SOURCE=fresh`, do not call `pairflow bubble meta-review run/status/last-report`; proceed with direct Codex review from worktree/task context.
+- If `META_REVIEW_SOURCE=fresh`, do not call `pairflow bubble meta-review run/status/last-report/recover`; proceed with direct Codex review from worktree/task context.
 
 3. Gather review context from worktree.
 - Resolve bubble worktree/task context without launching editor (`bubble open` is forbidden by default).

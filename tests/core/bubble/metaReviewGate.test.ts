@@ -6,7 +6,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   applyMetaReviewGateOnConvergence,
-  MetaReviewGateError
+  MetaReviewGateError,
+  recoverMetaReviewGateFromSnapshot
 } from "../../../src/core/bubble/metaReviewGate.js";
 import { appendProtocolEnvelope, readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
 import {
@@ -707,5 +708,104 @@ describe("applyMetaReviewGateOnConvergence", () => {
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     expect(loaded.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(loaded.state.meta_review?.sticky_human_gate).toBe(true);
+  });
+});
+
+describe("recoverMetaReviewGateFromSnapshot", () => {
+  it("routes approve recommendation snapshot to READY_FOR_HUMAN_APPROVAL", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_01",
+      task: "Recovery approve route"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "META_REVIEW_RUNNING",
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        meta_review: {
+          last_autonomous_run_id: "run_meta_gate_recover_01",
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Recovered approve summary.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-03-08T12:10:00.000Z",
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      now: new Date("2026-03-08T12:11:00.000Z")
+    });
+
+    expect(result.route).toBe("human_gate_approve");
+    expect(result.gateEnvelope.type).toBe("APPROVAL_REQUEST");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(result.state.meta_review?.sticky_human_gate).toBe(true);
+  });
+
+  it("dispatches auto-rework from snapshot when recommendation is rework with message", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_02",
+      task: "Recovery auto-rework route"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "META_REVIEW_RUNNING",
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        meta_review: {
+          last_autonomous_run_id: "run_meta_gate_recover_02",
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "rework",
+          last_autonomous_summary: "Recovered rework summary.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_rework_target_message: "Fix recovered issue.",
+          last_autonomous_updated_at: "2026-03-08T12:20:00.000Z",
+          auto_rework_count: 1,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      now: new Date("2026-03-08T12:21:00.000Z")
+    });
+
+    expect(result.route).toBe("auto_rework");
+    expect(result.gateEnvelope.type).toBe("APPROVAL_DECISION");
+    expect(result.state.state).toBe("RUNNING");
+    expect(result.state.round).toBe(2);
+    expect(result.state.meta_review?.auto_rework_count).toBe(2);
   });
 });

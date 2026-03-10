@@ -57,6 +57,7 @@ pairflow bubble meta-review status --id <BUBBLE_ID> --repo <REPO_PATH> --verbose
   ```bash
   pairflow bubble reply --id <BUBBLE_ID> --repo <REPO_PATH> --message "<MESSAGE>"
   ```
+- If state is `META_REVIEW_RUNNING` -> route to `TroubleshootBubble` and prefer `pairflow bubble meta-review recover --id <BUBBLE_ID> --repo <REPO_PATH>` when snapshot replay preconditions are satisfied.
 - If state is `READY_FOR_HUMAN_APPROVAL` (or legacy `READY_FOR_APPROVAL`) and user intent is explicit approve -> run:
   - If latest autonomous recommendation is `approve` (or missing):
     ```bash

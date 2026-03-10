@@ -37,6 +37,7 @@ Record every executed command with timestamp and raw marker lines.
 | `pnpm test` |  | `exit=0`, `.pairflow/evidence/test.log` |  |
 | `node ./dist/cli/index.js bubble status --id <bubble-id> --repo <repo-path>` |  | `Command path: worktree_local` |  |
 | `node ./dist/cli/index.js bubble meta-review status --id <bubble-id> --repo <repo-path> --verbose` |  | `Auto rework:`, `Sticky human gate:` |  |
+| `node ./dist/cli/index.js bubble meta-review recover --id <bubble-id> --repo <repo-path>` |  | `route=...`, `Lifecycle state: ...`, no new run started |  |
 | `node ./dist/cli/index.js metrics report --from <iso-from> --to <iso-to>` |  | `meta_review_rollout.route_counts`, `rollout_blocked_events: 0` |  |
 
 ## AC Coverage Matrix
@@ -45,10 +46,10 @@ Record every executed command with timestamp and raw marker lines.
 |---|---|---|
 | AC1 | Full lifecycle auto-rework loop reaches deterministic human gate | `tests/core/bubble/metaReviewGate.test.ts`, `tests/core/bubble/orchestrationLoopSmoke.test.ts` |
 | AC2 | Sticky human gate bypass validated end-to-end | `tests/core/bubble/metaReviewGate.test.ts` |
-| AC3 | Autonomous failure branches are fail-safe and auditable | `tests/core/bubble/metaReviewGate.test.ts` |
+| AC3 | Autonomous failure branches are fail-safe and auditable | `tests/core/bubble/metaReviewGate.test.ts`, `tests/core/agent/converged.test.ts` |
 | AC4 | No autonomous branch approves | `tests/core/bubble/metaReviewGate.test.ts` |
 | AC5 | Worker command path is worktree-local or explicitly blocked with `PAIRFLOW_COMMAND_PATH_STALE` | `tests/core/runtime/pairflowCommand.test.ts`, `tests/core/runtime/agentCommand.test.ts`, smoke `bubble status` command |
-| AC6 | Restart/reconcile behavior is validated for meta-review states | `tests/core/runtime/restartRecovery.test.ts`, `tests/core/runtime/startupReconciler.test.ts` |
+| AC6 | Restart/reconcile behavior is validated for meta-review states | `tests/core/runtime/restartRecovery.test.ts`, `tests/core/runtime/startupReconciler.test.ts`, `tests/core/bubble/metaReviewGate.test.ts` |
 | AC7 | UI list/detail/action payloads stay coherent after restart | `tests/core/ui/server.integration.test.ts` |
 | AC8 | Rollout metrics/events are emitted and reportable | `tests/core/metrics/report/report.test.ts`, `tests/core/metrics/report/format.test.ts` |
 | AC9 | Runbook exists with smoke + rollback + incident steps | `docs/meta-review-gate-rollout-runbook.md` |

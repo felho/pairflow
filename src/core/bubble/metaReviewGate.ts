@@ -14,7 +14,8 @@ import {
   DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
   type BubbleMetaReviewSnapshotState,
   type BubbleStateSnapshot,
-  type MetaReviewRecommendation
+  type MetaReviewRecommendation,
+  type MetaReviewRunStatus
 } from "../../types/bubble.js";
 import {
   MetaReviewError,
@@ -56,6 +57,23 @@ export interface ApplyMetaReviewGateOnConvergenceDependencies {
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;
   setMetaReviewerPaneBinding?: typeof setMetaReviewerPaneBinding;
   metaReviewDependencies?: MetaReviewDependencies;
+}
+
+export interface RecoverMetaReviewGateFromSnapshotInput {
+  bubbleId: string;
+  refs?: string[];
+  summary?: string;
+  repoPath?: string;
+  cwd?: string;
+  now?: Date;
+  runResult?: MetaReviewRunResult;
+}
+
+export interface RecoverMetaReviewGateFromSnapshotDependencies {
+  resolveBubbleById?: typeof resolveBubbleById;
+  readStateSnapshot?: typeof readStateSnapshot;
+  writeStateSnapshot?: typeof writeStateSnapshot;
+  appendProtocolEnvelope?: typeof appendProtocolEnvelope;
 }
 
 export interface MetaReviewGateResult {
@@ -261,6 +279,41 @@ function resolveHumanGateRoute(
   return "human_gate_inconclusive";
 }
 
+function synthesizeMetaReviewRunResultFromSnapshot(input: {
+  bubbleId: string;
+  nowIso: string;
+  snapshot: BubbleMetaReviewSnapshotState;
+  fallbackSummary: string;
+}): MetaReviewRunResult {
+  const recommendation = input.snapshot.last_autonomous_recommendation ?? "inconclusive";
+  const status: MetaReviewRunStatus =
+    input.snapshot.last_autonomous_status ?? "error";
+  const summary = input.snapshot.last_autonomous_summary ?? input.fallbackSummary;
+  const reportRef =
+    input.snapshot.last_autonomous_report_ref ?? metaReviewFallbackReportRef;
+  const runId =
+    input.snapshot.last_autonomous_run_id ??
+    `run_meta_gate_recover_${input.nowIso.replace(/[-:.TZ]/gu, "")}`;
+  const updatedAt = input.snapshot.last_autonomous_updated_at ?? input.nowIso;
+  const reworkTargetMessage = recommendation === "rework"
+    ? (input.snapshot.last_autonomous_rework_target_message ?? null)
+    : null;
+
+  return {
+    bubbleId: input.bubbleId,
+    depth: "standard",
+    run_id: runId,
+    status,
+    recommendation,
+    summary,
+    report_ref: reportRef,
+    rework_target_message: reworkTargetMessage,
+    updated_at: updatedAt,
+    lifecycle_state: "META_REVIEW_RUNNING",
+    warnings: []
+  };
+}
+
 async function persistHumanGateRoute(input: {
   appendEnvelope: typeof appendProtocolEnvelope;
   writeState: typeof writeStateSnapshot;
@@ -346,6 +399,307 @@ async function persistHumanGateRoute(input: {
     state: written.state,
     ...(input.metaReviewRun !== undefined ? { metaReviewRun: input.metaReviewRun } : {})
   };
+}
+
+export async function recoverMetaReviewGateFromSnapshot(
+  input: RecoverMetaReviewGateFromSnapshotInput,
+  dependencies: RecoverMetaReviewGateFromSnapshotDependencies = {}
+): Promise<MetaReviewGateResult> {
+  const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
+  const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
+  const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
+  const appendEnvelope = dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
+  const now = input.now ?? new Date();
+  const nowIso = now.toISOString();
+  const refs = input.refs ?? [];
+
+  const resolved = await resolveBubble({
+    bubbleId: input.bubbleId,
+    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
+    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+  });
+  const lockPath = buildGateLockPath({
+    locksDir: resolved.bubblePaths.locksDir,
+    bubbleId: resolved.bubbleId
+  });
+
+  const loaded = await readState(resolved.bubblePaths.statePath);
+  if (loaded.state.state !== "META_REVIEW_RUNNING") {
+    throw new MetaReviewGateError(
+      "META_REVIEW_GATE_TRANSITION_INVALID",
+      `meta-review gate recovery requires META_REVIEW_RUNNING state (current: ${loaded.state.state}).`
+    );
+  }
+
+  const snapshot = normalizeMetaReviewSnapshot(loaded.state.meta_review);
+  const runResult = input.runResult ?? synthesizeMetaReviewRunResultFromSnapshot({
+    bubbleId: resolved.bubbleId,
+    nowIso,
+    snapshot,
+    fallbackSummary:
+      input.summary ??
+      "Meta-review completed previously; recovering gate route from snapshot."
+  });
+  const summary = runResult.summary
+    ?? input.summary
+    ?? "Meta-review completed previously; recovering gate route from snapshot.";
+
+  if (runResult.status === "error") {
+    return persistHumanGateRoute({
+      appendEnvelope,
+      writeState,
+      statePath: resolved.bubblePaths.statePath,
+      transcriptPath: resolved.bubblePaths.transcriptPath,
+      inboxPath: resolved.bubblePaths.inboxPath,
+      lockPath,
+      now,
+      nowIso,
+      bubbleId: resolved.bubbleId,
+      summary: buildHumanGateSummary({
+        convergenceSummary: summary,
+        metaReviewRun: runResult
+      }),
+      refs,
+      loaded,
+      expectedState: "META_REVIEW_RUNNING",
+      route: "human_gate_run_failed",
+      metaReviewRun: runResult,
+      targetState: "META_REVIEW_FAILED",
+      stickyHumanGate: false
+    });
+  }
+
+  const recommendation = runResult.recommendation;
+  const budgetAvailable =
+    snapshot.auto_rework_count < snapshot.auto_rework_limit;
+
+  if (recommendation === "rework" && budgetAvailable) {
+    if (snapshot.sticky_human_gate) {
+      throw new MetaReviewGateError(
+        "META_REVIEW_GATE_STATE_CONFLICT",
+        "META_REVIEW_GATE_STATE_CONFLICT: sticky_human_gate became true before auto rework dispatch."
+      );
+    }
+
+    const reworkMessage = runResult.rework_target_message;
+    if (reworkMessage === null || reworkMessage.trim().length === 0) {
+      return persistHumanGateRoute({
+        appendEnvelope,
+        writeState,
+        statePath: resolved.bubblePaths.statePath,
+        transcriptPath: resolved.bubblePaths.transcriptPath,
+        inboxPath: resolved.bubblePaths.inboxPath,
+        lockPath,
+        now,
+        nowIso,
+        bubbleId: resolved.bubbleId,
+        summary: buildHumanGateSummary({
+          convergenceSummary: summary,
+          fallbackReason:
+            "META_REVIEW_GATE_REWORK_DISPATCH_FAILED: missing rework target message for autonomous dispatch"
+        }),
+        refs,
+        loaded,
+        expectedState: "META_REVIEW_RUNNING",
+        route: "human_gate_dispatch_failed",
+        metaReviewRun: runResult
+      });
+    }
+
+    let resumedWritten: LoadedStateSnapshot;
+    try {
+      const nextRound = loaded.state.round + 1;
+      const resumed = applyStateTransition(loaded.state, {
+        to: "RUNNING",
+        round: nextRound,
+        activeAgent: resolved.bubbleConfig.agents.implementer,
+        activeRole: "implementer",
+        activeSince: nowIso,
+        lastCommandAt: nowIso,
+        appendRoundRoleEntry: {
+          round: nextRound,
+          implementer: resolved.bubbleConfig.agents.implementer,
+          reviewer: resolved.bubbleConfig.agents.reviewer,
+          switched_at: nowIso
+        }
+      });
+      resumedWritten = await writeState(resolved.bubblePaths.statePath, resumed, {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "META_REVIEW_RUNNING"
+      });
+    } catch (error) {
+      if (error instanceof StateStoreConflictError) {
+        throw toConflictError(error);
+      }
+      throw toTransitionError(error);
+    }
+
+    let dispatched: AppendProtocolEnvelopeResult;
+    try {
+      dispatched = await appendEnvelope({
+        transcriptPath: resolved.bubblePaths.transcriptPath,
+        mirrorPaths: [resolved.bubblePaths.inboxPath],
+        lockPath,
+        now,
+        envelope: {
+          bubble_id: resolved.bubbleId,
+          sender: "orchestrator",
+          recipient: resolved.bubbleConfig.agents.implementer,
+          type: "APPROVAL_DECISION",
+          round: loaded.state.round,
+          payload: {
+            decision: "revise",
+            message: reworkMessage,
+            metadata: {
+              actor: "meta-reviewer",
+              actor_agent: "codex",
+              recommendation: runResult.recommendation,
+              run_id: runResult.run_id
+            }
+          },
+          refs
+        }
+      });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+
+      let readyForApproval: LoadedStateSnapshot;
+      try {
+        const backToReady = applyStateTransition(resumedWritten.state, {
+          to: "READY_FOR_APPROVAL",
+          activeAgent: null,
+          activeRole: null,
+          activeSince: null,
+          lastCommandAt: nowIso
+        });
+        const restoredCounterReady: BubbleStateSnapshot = {
+          ...backToReady,
+          round: loaded.state.round,
+          round_role_history: loaded.state.round_role_history,
+          meta_review: snapshot
+        };
+        readyForApproval = await writeState(
+          resolved.bubblePaths.statePath,
+          restoredCounterReady,
+          {
+            expectedFingerprint: resumedWritten.fingerprint,
+            expectedState: "RUNNING"
+          }
+        );
+      } catch (recoveryError) {
+        if (recoveryError instanceof StateStoreConflictError) {
+          throw toConflictError(recoveryError);
+        }
+        throw toTransitionError(recoveryError);
+      }
+
+      return persistHumanGateRoute({
+        appendEnvelope,
+        writeState,
+        statePath: resolved.bubblePaths.statePath,
+        transcriptPath: resolved.bubblePaths.transcriptPath,
+        inboxPath: resolved.bubblePaths.inboxPath,
+        lockPath,
+        now,
+        nowIso,
+        bubbleId: resolved.bubbleId,
+        summary: buildHumanGateSummary({
+          convergenceSummary: summary,
+          fallbackReason: `META_REVIEW_GATE_REWORK_DISPATCH_FAILED: ${reason}`
+        }),
+        refs,
+        loaded: readyForApproval,
+        expectedState: "READY_FOR_APPROVAL",
+        route: "human_gate_dispatch_failed",
+        metaReviewRun: runResult
+      });
+    }
+
+    let written: LoadedStateSnapshot;
+    try {
+      const resumedWithCounter = incrementAutoReworkCount(resumedWritten.state);
+      written = await writeState(
+        resolved.bubblePaths.statePath,
+        resumedWithCounter,
+        {
+          expectedFingerprint: resumedWritten.fingerprint,
+          expectedState: "RUNNING"
+        }
+      );
+    } catch (error) {
+      if (error instanceof StateStoreConflictError) {
+        const latest = await readState(resolved.bubblePaths.statePath);
+        if (latest.state.state !== "RUNNING") {
+          throw toConflictError(error);
+        }
+
+        const latestMetaReview = normalizeMetaReviewSnapshot(latest.state.meta_review);
+        const expectedCount = snapshot.auto_rework_count;
+        const targetCount = expectedCount + 1;
+
+        if (latestMetaReview.auto_rework_count === targetCount) {
+          written = latest;
+        } else if (latestMetaReview.auto_rework_count === expectedCount) {
+          const latestIncremented: BubbleStateSnapshot = {
+            ...latest.state,
+            meta_review: {
+              ...latestMetaReview,
+              auto_rework_count: targetCount
+            }
+          };
+          try {
+            written = await writeState(
+              resolved.bubblePaths.statePath,
+              latestIncremented,
+              {
+                expectedFingerprint: latest.fingerprint,
+                expectedState: "RUNNING"
+              }
+            );
+          } catch (retryError) {
+            if (retryError instanceof StateStoreConflictError) {
+              throw toConflictError(retryError);
+            }
+            throw toTransitionError(retryError);
+          }
+        } else {
+          throw toConflictError(error);
+        }
+      } else {
+        throw toTransitionError(error);
+      }
+    }
+
+    return {
+      bubbleId: resolved.bubbleId,
+      route: "auto_rework",
+      gateSequence: dispatched.sequence,
+      gateEnvelope: dispatched.envelope,
+      state: written.state,
+      metaReviewRun: runResult
+    };
+  }
+
+  return persistHumanGateRoute({
+    appendEnvelope,
+    writeState,
+    statePath: resolved.bubblePaths.statePath,
+    transcriptPath: resolved.bubblePaths.transcriptPath,
+    inboxPath: resolved.bubblePaths.inboxPath,
+    lockPath,
+    now,
+    nowIso,
+    bubbleId: resolved.bubbleId,
+    summary: buildHumanGateSummary({
+      convergenceSummary: summary,
+      metaReviewRun: runResult
+    }),
+    refs,
+    loaded,
+    expectedState: "META_REVIEW_RUNNING",
+    route: resolveHumanGateRoute(recommendation, budgetAvailable),
+    metaReviewRun: runResult
+  });
 }
 
 export async function applyMetaReviewGateOnConvergence(
@@ -549,263 +903,30 @@ export async function applyMetaReviewGateOnConvergence(
     );
   }
 
-  const afterRunMetaReview = normalizeMetaReviewSnapshot(afterRun.state.meta_review);
-  if (runResult.status === "error") {
-    return persistHumanGateRoute({
-      appendEnvelope,
-      writeState,
-      statePath: resolved.bubblePaths.statePath,
-      transcriptPath: resolved.bubblePaths.transcriptPath,
-      inboxPath: resolved.bubblePaths.inboxPath,
-      lockPath,
-      now,
-      nowIso,
+  let useCapturedAfterRun = true;
+  return recoverMetaReviewGateFromSnapshot(
+    {
       bubbleId: resolved.bubbleId,
-      summary: buildHumanGateSummary({
-        convergenceSummary: input.summary,
-        metaReviewRun: runResult
-      }),
+      summary: input.summary,
       refs,
-      loaded: afterRun,
-      expectedState: "META_REVIEW_RUNNING",
-      route: "human_gate_run_failed",
-      metaReviewRun: runResult,
-      targetState: "META_REVIEW_FAILED",
-      stickyHumanGate: false
-    });
-  }
-
-  const recommendation = runResult.recommendation;
-  const budgetAvailable =
-    afterRunMetaReview.auto_rework_count < afterRunMetaReview.auto_rework_limit;
-
-  if (recommendation === "rework" && budgetAvailable) {
-    if (afterRunMetaReview.sticky_human_gate) {
-      throw new MetaReviewGateError(
-        "META_REVIEW_GATE_STATE_CONFLICT",
-        "META_REVIEW_GATE_STATE_CONFLICT: sticky_human_gate became true before auto rework dispatch."
-      );
+      repoPath: resolved.repoPath,
+      cwd: resolved.bubblePaths.worktreePath,
+      now,
+      runResult
+    },
+    {
+      resolveBubbleById: async () => resolved,
+      readStateSnapshot: async (statePath) => {
+        if (useCapturedAfterRun) {
+          useCapturedAfterRun = false;
+          return afterRun;
+        }
+        return readState(statePath);
+      },
+      writeStateSnapshot: writeState,
+      appendProtocolEnvelope: appendEnvelope
     }
-
-    const reworkMessage = runResult.rework_target_message;
-    if (reworkMessage === null || reworkMessage.trim().length === 0) {
-      return persistHumanGateRoute({
-        appendEnvelope,
-        writeState,
-        statePath: resolved.bubblePaths.statePath,
-        transcriptPath: resolved.bubblePaths.transcriptPath,
-        inboxPath: resolved.bubblePaths.inboxPath,
-        lockPath,
-        now,
-        nowIso,
-        bubbleId: resolved.bubbleId,
-        summary: buildHumanGateSummary({
-          convergenceSummary: input.summary,
-          fallbackReason:
-            "META_REVIEW_GATE_REWORK_DISPATCH_FAILED: missing rework target message for autonomous dispatch"
-        }),
-        refs,
-        loaded: afterRun,
-        expectedState: "META_REVIEW_RUNNING",
-        route: "human_gate_dispatch_failed",
-        metaReviewRun: runResult
-      });
-    }
-
-    let resumedWritten: LoadedStateSnapshot;
-    try {
-      const nextRound = afterRun.state.round + 1;
-      const resumed = applyStateTransition(afterRun.state, {
-        to: "RUNNING",
-        round: nextRound,
-        activeAgent: resolved.bubbleConfig.agents.implementer,
-        activeRole: "implementer",
-        activeSince: nowIso,
-        lastCommandAt: nowIso,
-        appendRoundRoleEntry: {
-          round: nextRound,
-          implementer: resolved.bubbleConfig.agents.implementer,
-          reviewer: resolved.bubbleConfig.agents.reviewer,
-          switched_at: nowIso
-        }
-      });
-      resumedWritten = await writeState(resolved.bubblePaths.statePath, resumed, {
-        expectedFingerprint: afterRun.fingerprint,
-        expectedState: "META_REVIEW_RUNNING"
-      });
-    } catch (error) {
-      if (error instanceof StateStoreConflictError) {
-        throw toConflictError(error);
-      }
-      throw toTransitionError(error);
-    }
-
-    let dispatched: AppendProtocolEnvelopeResult;
-    try {
-      dispatched = await appendEnvelope({
-        transcriptPath: resolved.bubblePaths.transcriptPath,
-        mirrorPaths: [resolved.bubblePaths.inboxPath],
-        lockPath,
-        now,
-        envelope: {
-          bubble_id: resolved.bubbleId,
-          sender: "orchestrator",
-          recipient: resolved.bubbleConfig.agents.implementer,
-          type: "APPROVAL_DECISION",
-          round: afterRun.state.round,
-          payload: {
-            decision: "revise",
-            message: reworkMessage,
-            metadata: {
-              actor: "meta-reviewer",
-              actor_agent: "codex",
-              recommendation: runResult.recommendation,
-              run_id: runResult.run_id
-            }
-          },
-          refs
-        }
-      });
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-
-      let readyForApproval: LoadedStateSnapshot;
-      try {
-        const backToReady = applyStateTransition(resumedWritten.state, {
-          to: "READY_FOR_APPROVAL",
-          activeAgent: null,
-          activeRole: null,
-          activeSince: null,
-          lastCommandAt: nowIso
-        });
-        const restoredCounterReady: BubbleStateSnapshot = {
-          ...backToReady,
-          round: afterRun.state.round,
-          round_role_history: afterRun.state.round_role_history,
-          meta_review: afterRunMetaReview
-        };
-        readyForApproval = await writeState(
-          resolved.bubblePaths.statePath,
-          restoredCounterReady,
-          {
-            expectedFingerprint: resumedWritten.fingerprint,
-            expectedState: "RUNNING"
-          }
-        );
-      } catch (recoveryError) {
-        if (recoveryError instanceof StateStoreConflictError) {
-          throw toConflictError(recoveryError);
-        }
-        throw toTransitionError(recoveryError);
-      }
-
-      return persistHumanGateRoute({
-        appendEnvelope,
-        writeState,
-        statePath: resolved.bubblePaths.statePath,
-        transcriptPath: resolved.bubblePaths.transcriptPath,
-        inboxPath: resolved.bubblePaths.inboxPath,
-        lockPath,
-        now,
-        nowIso,
-        bubbleId: resolved.bubbleId,
-        summary: buildHumanGateSummary({
-          convergenceSummary: input.summary,
-          fallbackReason: `META_REVIEW_GATE_REWORK_DISPATCH_FAILED: ${reason}`
-        }),
-        refs,
-        loaded: readyForApproval,
-        expectedState: "READY_FOR_APPROVAL",
-        route: "human_gate_dispatch_failed",
-        metaReviewRun: runResult
-      });
-    }
-
-    let written: LoadedStateSnapshot;
-    try {
-      const resumedWithCounter = incrementAutoReworkCount(resumedWritten.state);
-      written = await writeState(
-        resolved.bubblePaths.statePath,
-        resumedWithCounter,
-        {
-          expectedFingerprint: resumedWritten.fingerprint,
-          expectedState: "RUNNING"
-        }
-      );
-    } catch (error) {
-      if (error instanceof StateStoreConflictError) {
-        const latest = await readState(resolved.bubblePaths.statePath);
-        if (latest.state.state !== "RUNNING") {
-          throw toConflictError(error);
-        }
-
-        const latestMetaReview = normalizeMetaReviewSnapshot(latest.state.meta_review);
-        const expectedCount = afterRunMetaReview.auto_rework_count;
-        const targetCount = expectedCount + 1;
-
-        if (latestMetaReview.auto_rework_count === targetCount) {
-          written = latest;
-        } else if (latestMetaReview.auto_rework_count === expectedCount) {
-          const latestIncremented: BubbleStateSnapshot = {
-            ...latest.state,
-            meta_review: {
-              ...latestMetaReview,
-              auto_rework_count: targetCount
-            }
-          };
-          try {
-            written = await writeState(
-              resolved.bubblePaths.statePath,
-              latestIncremented,
-              {
-                expectedFingerprint: latest.fingerprint,
-                expectedState: "RUNNING"
-              }
-            );
-          } catch (retryError) {
-            if (retryError instanceof StateStoreConflictError) {
-              throw toConflictError(retryError);
-            }
-            throw toTransitionError(retryError);
-          }
-        } else {
-          throw toConflictError(error);
-        }
-      } else {
-        throw toTransitionError(error);
-      }
-    }
-
-    return {
-      bubbleId: resolved.bubbleId,
-      route: "auto_rework",
-      gateSequence: dispatched.sequence,
-      gateEnvelope: dispatched.envelope,
-      state: written.state,
-      metaReviewRun: runResult
-    };
-  }
-
-  return persistHumanGateRoute({
-    appendEnvelope,
-    writeState,
-    statePath: resolved.bubblePaths.statePath,
-    transcriptPath: resolved.bubblePaths.transcriptPath,
-    inboxPath: resolved.bubblePaths.inboxPath,
-    lockPath,
-    now,
-    nowIso,
-    bubbleId: resolved.bubbleId,
-    summary: buildHumanGateSummary({
-      convergenceSummary: input.summary,
-      metaReviewRun: runResult
-    }),
-    refs,
-    loaded: afterRun,
-    expectedState: "META_REVIEW_RUNNING",
-    route: resolveHumanGateRoute(recommendation, budgetAvailable),
-    metaReviewRun: runResult
-  });
+  );
 }
 
 export function toMetaReviewGateError(error: unknown): MetaReviewGateError {

@@ -69,7 +69,15 @@ Run each command from the release worktree root and capture the command, timesta
    `Sticky human gate:`
    last autonomous summary/report ref visible when the bubble has run
 
-6. `node ./dist/cli/index.js metrics report --from <iso-from> --to <iso-to>`
+6. `node ./dist/cli/index.js bubble meta-review recover --id <bubble-id> --repo <repo-path>`
+   Preconditions:
+   bubble is in `META_REVIEW_RUNNING` and has a persisted autonomous snapshot.
+   Expected markers:
+   `route=...`
+   `Lifecycle state: ...`
+   no new autonomous run is started for this command.
+
+7. `node ./dist/cli/index.js metrics report --from <iso-from> --to <iso-to>`
    Expected markers:
    `meta_review_rollout.route_counts`
    `meta_review_rollout.rollout_blocked_events: 0`
@@ -121,6 +129,7 @@ If a blocking reason code appears during rollout:
 3. keep lifecycle fail-safe routing explicit:
    - default fail-safe path is `READY_FOR_HUMAN_APPROVAL`,
    - meta-review execution failure (`META_REVIEW_GATE_RUN_FAILED` / `META_REVIEW_RUNNER_ERROR`) routes to `META_REVIEW_FAILED` with run-failed diagnostics for explicit human override handling,
+   - if the bubble is stuck in `META_REVIEW_RUNNING` after snapshot persistence, execute `bubble meta-review recover` before declaring manual escalation,
 4. resolve the blocking condition before re-running the smoke checklist.
 
 If the block is `PAIRFLOW_COMMAND_PATH_STALE`:

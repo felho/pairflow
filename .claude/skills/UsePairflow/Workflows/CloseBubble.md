@@ -57,7 +57,7 @@ pairflow bubble status --id <BUBBLE_ID> --repo <REPO_PATH> --json
 ```
 
 - If state is `RUNNING` or `WAITING_HUMAN`, STOP and route to `InterveneBubble`.
-- If state is `META_REVIEW_RUNNING`, STOP and route to `InterveneBubble` (wait for autonomous gate completion or intervene safely).
+- If state is `META_REVIEW_RUNNING`, STOP and route to `TroubleshootBubble` first (attempt snapshot-route replay via `bubble meta-review recover` when applicable), then return to close flow after gate resolution.
 
 ### 3. Capture close context before merge
 

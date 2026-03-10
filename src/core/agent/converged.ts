@@ -35,6 +35,7 @@ import {
 } from "../gates/docContractGates.js";
 import {
   applyMetaReviewGateOnConvergence,
+  recoverMetaReviewGateFromSnapshot,
   toMetaReviewGateError,
   type MetaReviewGateRoute
 } from "../bubble/metaReviewGate.js";
@@ -60,6 +61,7 @@ export interface EmitConvergedDependencies {
   emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
   emitBubbleNotification?: typeof emitBubbleNotification;
   applyMetaReviewGateOnConvergence?: typeof applyMetaReviewGateOnConvergence;
+  recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshot;
 }
 
 export interface EmitConvergedResult {
@@ -321,14 +323,32 @@ export async function emitConvergedFromWorkspace(
   });
   const applyGate =
     dependencies.applyMetaReviewGateOnConvergence ?? applyMetaReviewGateOnConvergence;
-  const gateResult = await applyGate({
-    bubbleId: resolved.bubbleId,
-    summary,
-    refs,
-    repoPath: resolved.repoPath,
-    cwd: resolved.bubblePaths.worktreePath,
-    now
-  });
+  const recoverGate =
+    dependencies.recoverMetaReviewGateFromSnapshot ?? recoverMetaReviewGateFromSnapshot;
+  let gateResult: Awaited<ReturnType<typeof applyMetaReviewGateOnConvergence>>;
+  try {
+    gateResult = await applyGate({
+      bubbleId: resolved.bubbleId,
+      summary,
+      refs,
+      repoPath: resolved.repoPath,
+      cwd: resolved.bubblePaths.worktreePath,
+      now
+    });
+  } catch (error) {
+    try {
+      gateResult = await recoverGate({
+        bubbleId: resolved.bubbleId,
+        summary,
+        refs,
+        repoPath: resolved.repoPath,
+        cwd: resolved.bubblePaths.worktreePath,
+        now
+      });
+    } catch {
+      throw error;
+    }
+  }
 
   const emitDelivery =
     dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;

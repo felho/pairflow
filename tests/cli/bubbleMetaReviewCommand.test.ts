@@ -8,12 +8,13 @@ import {
   getBubbleMetaReviewHelpText,
   parseBubbleMetaReviewCommandOptions,
   renderMetaReviewLastReportText,
+  renderMetaReviewRecoverText,
   renderMetaReviewRunText,
   renderMetaReviewStatusText,
   runBubbleMetaReviewCommand
 } from "../../src/cli/commands/bubble/metaReview.js";
 import { MetaReviewError } from "../../src/core/bubble/metaReview.js";
-import { readStateSnapshot } from "../../src/core/state/stateStore.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../src/core/state/stateStore.js";
 import { initGitRepository } from "../helpers/git.js";
 import { setupRunningBubbleFixture } from "../helpers/bubble.js";
 
@@ -90,6 +91,21 @@ describe("parseBubbleMetaReviewCommandOptions", () => {
     expect(() =>
       parseBubbleMetaReviewCommandOptions(["unknown", "--id", "b_meta_cli_03"])
     ).toThrow(/Unknown meta-review subcommand/u);
+  });
+
+  it("parses recover options", () => {
+    const parsed = parseBubbleMetaReviewCommandOptions([
+      "recover",
+      "--id",
+      "b_meta_cli_recover_01"
+    ]);
+
+    expect(parsed.help).toBe(false);
+    if (parsed.help || parsed.command !== "recover") {
+      throw new Error("Expected recover command options.");
+    }
+
+    expect(parsed.id).toBe("b_meta_cli_recover_01");
   });
 
   it("rejects invalid depth values", () => {
@@ -171,7 +187,7 @@ describe("runBubbleMetaReviewCommand", () => {
     expect(result).toBeNull();
   });
 
-  it("routes run/status/last-report commands", async () => {
+  it("routes run/status/last-report/recover commands", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -208,9 +224,47 @@ describe("runBubbleMetaReviewCommand", () => {
     ]);
     expect(reportResult).not.toBeNull();
     expect(reportResult?.command).toBe("last-report");
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "META_REVIEW_RUNNING",
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        meta_review: {
+          last_autonomous_run_id: "run_meta_cli_recover_01",
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Recovered via CLI routing test.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-03-08T12:30:00.000Z",
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const recoverResult = await runBubbleMetaReviewCommand([
+      "recover",
+      "--id",
+      bubble.bubbleId,
+      "--repo",
+      repoPath
+    ]);
+    expect(recoverResult).not.toBeNull();
+    expect(recoverResult?.command).toBe("recover");
   });
 
-  it("supports pre-parsed options overload for status and last-report", async () => {
+  it("supports pre-parsed options overload for status/last-report/recover", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -247,6 +301,44 @@ describe("runBubbleMetaReviewCommand", () => {
       verbose: false
     });
     expect(reportResult?.command).toBe("last-report");
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "META_REVIEW_RUNNING",
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        meta_review: {
+          last_autonomous_run_id: "run_meta_cli_recover_02",
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Recovered via parsed overload test.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-03-08T12:35:00.000Z",
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const recoverResult = await runBubbleMetaReviewCommand({
+      help: false,
+      command: "recover",
+      id: bubble.bubbleId,
+      repo: repoPath,
+      json: false,
+      verbose: false
+    });
+    expect(recoverResult?.command).toBe("recover");
   });
 
   it("maps missing bubble lookup failures to dedicated meta-review reason code", async () => {
@@ -435,5 +527,54 @@ describe("meta-review render helpers", () => {
     );
     expect(verbose).toContain("has_report=yes");
     expect(verbose).toContain("# Latest Report");
+  });
+
+  it("renders recover output", () => {
+    const rendered = renderMetaReviewRecoverText({
+      bubbleId: "b_meta_cli_render_recover_01",
+      route: "human_gate_approve",
+      gateSequence: 42,
+      gateEnvelope: {
+        id: "msg_meta_recover_01",
+        ts: "2026-03-08T12:40:00.000Z",
+        bubble_id: "b_meta_cli_render_recover_01",
+        sender: "orchestrator",
+        recipient: "human",
+        type: "APPROVAL_REQUEST",
+        round: 4,
+        payload: {
+          summary: "Recovered summary."
+        },
+        refs: ["artifacts/meta-review-last.md"]
+      },
+      state: {
+        bubble_id: "b_meta_cli_render_recover_01",
+        state: "READY_FOR_HUMAN_APPROVAL",
+        round: 4,
+        active_agent: null,
+        active_since: null,
+        active_role: null,
+        round_role_history: [],
+        last_command_at: "2026-03-08T12:40:00.000Z",
+        pending_rework_intent: null,
+        rework_intent_history: [],
+        meta_review: {
+          last_autonomous_run_id: "run_meta_cli_render_recover_01",
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Recovered summary.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-03-08T12:39:00.000Z",
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: true
+        }
+      }
+    });
+
+    expect(rendered).toContain("route=human_gate_approve");
+    expect(rendered).toContain("APPROVAL_REQUEST msg_meta_recover_01");
+    expect(rendered).toContain("READY_FOR_HUMAN_APPROVAL");
   });
 });

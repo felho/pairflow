@@ -612,6 +612,15 @@ The restart is safe because:
 - `bubble start` detects an existing bubble in a runtime state and reattaches instead of bootstrapping from scratch
 - Resume start injects bounded transcript/state context into both agent panes; in `RUNNING` it sends kickoff to the currently active role pane
 
+If the bubble stays in `META_REVIEW_RUNNING` after restart (for example, meta-review run wrote snapshot data but routing did not finish), recover deterministically from the stored snapshot:
+
+```bash
+pairflow bubble meta-review recover --id feat_login --repo .
+pairflow bubble status --id feat_login --repo . --json
+```
+
+`meta-review recover` does not run a new review. It replays routing from the latest persisted autonomous snapshot and routes to `RUNNING`, `READY_FOR_HUMAN_APPROVAL`, or `META_REVIEW_FAILED`.
+
 ### Scenario 8: Stopping or cancelling a bubble
 
 ```bash
@@ -735,6 +744,7 @@ READY_FOR_APPROVAL --meta-review gate--> META_REVIEW_RUNNING
 META_REVIEW_RUNNING --autonomous rework dispatch--> RUNNING
 META_REVIEW_RUNNING --human decision required--> READY_FOR_HUMAN_APPROVAL
 META_REVIEW_RUNNING --runner failure--> META_REVIEW_FAILED
+META_REVIEW_RUNNING --snapshot route recovery (`meta-review recover`)--> RUNNING | READY_FOR_HUMAN_APPROVAL | META_REVIEW_FAILED
 READY_FOR_HUMAN_APPROVAL --approve--> APPROVED_FOR_COMMIT
 READY_FOR_HUMAN_APPROVAL --request-rework--> RUNNING
 META_REVIEW_FAILED --approve (override)--> APPROVED_FOR_COMMIT
@@ -774,6 +784,7 @@ Any non-final state -> CANCELLED (via bubble stop)
 | `bubble meta-review run --id <id> [--repo <path>] [--depth standard\|deep] [--json]` | Run autonomous meta-review for the bubble |
 | `bubble meta-review status --id <id> [--repo <path>] [--json] [--verbose]` | Read latest cached meta-review snapshot/status |
 | `bubble meta-review last-report --id <id> [--repo <path>] [--json] [--verbose]` | Read latest cached meta-review report |
+| `bubble meta-review recover --id <id> [--repo <path>] [--json]` | Recover routing from the latest meta-review snapshot when bubble is stuck in `META_REVIEW_RUNNING` |
 
 #### Repo registry
 

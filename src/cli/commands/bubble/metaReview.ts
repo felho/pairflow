@@ -11,6 +11,10 @@ import {
   type MetaReviewRunResult,
   type MetaReviewStatusView
 } from "../../../core/bubble/metaReview.js";
+import {
+  recoverMetaReviewGateFromSnapshot,
+  type MetaReviewGateResult
+} from "../../../core/bubble/metaReviewGate.js";
 
 interface BubbleMetaReviewCommandBase {
   id: string;
@@ -36,6 +40,11 @@ export interface BubbleMetaReviewLastReportCommandOptions
   command: "last-report";
 }
 
+export interface BubbleMetaReviewRecoverCommandOptions
+  extends BubbleMetaReviewCommandBase {
+  command: "recover";
+}
+
 export interface BubbleMetaReviewHelpCommandOptions {
   help: true;
 }
@@ -44,6 +53,7 @@ export type BubbleMetaReviewCommandOptions =
   | BubbleMetaReviewRunCommandOptions
   | BubbleMetaReviewStatusCommandOptions
   | BubbleMetaReviewLastReportCommandOptions
+  | BubbleMetaReviewRecoverCommandOptions
   | BubbleMetaReviewHelpCommandOptions;
 
 export type BubbleMetaReviewCommandResult =
@@ -58,6 +68,10 @@ export type BubbleMetaReviewCommandResult =
   | {
     command: "last-report";
     lastReport: MetaReviewLastReportView;
+  }
+  | {
+    command: "recover";
+    recover: MetaReviewGateResult;
   };
 
 function invalidMetaReviewCliOptions(message: string): never {
@@ -82,6 +96,7 @@ export function getBubbleMetaReviewHelpText(): string {
     "  pairflow bubble meta-review run --id <id> [--repo <path>] [--depth standard|deep] [--json]",
     "  pairflow bubble meta-review status --id <id> [--repo <path>] [--json] [--verbose]",
     "  pairflow bubble meta-review last-report --id <id> [--repo <path>] [--json] [--verbose]",
+    "  pairflow bubble meta-review recover --id <id> [--repo <path>] [--json]",
     "",
     "Options:",
     "  --id <id>             Bubble id",
@@ -141,10 +156,11 @@ export function parseBubbleMetaReviewCommandOptions(
   if (
     subcommand !== "run" &&
     subcommand !== "status" &&
-    subcommand !== "last-report"
+    subcommand !== "last-report" &&
+    subcommand !== "recover"
   ) {
     return invalidMetaReviewCliOptions(
-      "Unknown meta-review subcommand. Use one of: run, status, last-report."
+      "Unknown meta-review subcommand. Use one of: run, status, last-report, recover."
     );
   }
 
@@ -278,6 +294,15 @@ export function renderMetaReviewLastReportText(
   return lines.join("\n");
 }
 
+export function renderMetaReviewRecoverText(result: MetaReviewGateResult): string {
+  const lines = [
+    `Meta-review recovery for ${result.bubbleId}: route=${result.route}`,
+    `Gate envelope: ${result.gateEnvelope.type} ${result.gateEnvelope.id}`,
+    `Lifecycle state: ${result.state.state}`
+  ];
+  return lines.join("\n");
+}
+
 export async function runBubbleMetaReviewCommand(
   args: string[] | BubbleMetaReviewCommandOptions,
   cwd: string = process.cwd()
@@ -322,6 +347,17 @@ export async function runBubbleMetaReviewCommand(
       return {
         command: "last-report",
         lastReport
+      };
+    }
+    if (options.command === "recover") {
+      const recover = await recoverMetaReviewGateFromSnapshot({
+        bubbleId: options.id,
+        ...(options.repo !== undefined ? { repoPath: options.repo } : {}),
+        cwd
+      });
+      return {
+        command: "recover",
+        recover
       };
     }
 
