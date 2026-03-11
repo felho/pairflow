@@ -66,7 +66,7 @@ These are mandatory operating rules for bubble lifecycle handling to avoid rebas
    - If this is unavoidable, align first and use an explicit merge strategy.
 
 3. **Mandatory close order**
-   - `bubble approve` -> `bubble commit` -> `bubble merge` -> push.
+   - `bubble approve` -> `bubble commit` -> `bubble merge`.
    - Mandatory post-merge check: clean branch and no rebase/merge state.
 
 4. **Pull/Push safety policy (repo-local)**
