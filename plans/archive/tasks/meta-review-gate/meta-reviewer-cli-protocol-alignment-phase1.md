@@ -2,8 +2,9 @@
 artifact_type: task
 artifact_id: task_meta_reviewer_cli_protocol_alignment_phase1_v1
 title: "Meta-Reviewer CLI Protocol Alignment (Phase 1)"
-status: draft
+status: superseded
 phase: phase1
+superseded_by: plans/tasks/meta-reviewer-structured-pairflow-channel-cutover-phase1.md
 target_files:
   - src/core/bubble/metaReview.ts
   - src/core/bubble/metaReviewGate.ts
@@ -20,6 +21,10 @@ system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
 ---
+
+> Superseded task: canonical replacement is
+> `plans/tasks/meta-reviewer-structured-pairflow-channel-cutover-phase1.md`.
+> Kept in archive for historical traceability only.
 
 # Task: Meta-Reviewer CLI Protocol Alignment (Phase 1)
 

@@ -40,16 +40,27 @@ Observed incident pattern:
 1. Meta-review run reached `META_REVIEW_FAILED` due to marker timeout.
 2. The meta-reviewer session still produced a valid decision payload.
 3. This created split truth between pane output and canonical bubble state.
+4. This task is the canonical replacement for `meta-reviewer-cli-protocol-alignment-phase1.md`.
 
 Root simplification decision:
 1. Meta-review in a round is treated as a single owned turn, like implementer/reviewer.
 2. Authority comes from active role + round ownership, not from ad-hoc pane output parsing.
 
+### Ownership Tuple (Normative)
+
+For this task, "active meta-review ownership" means the full tuple below must be valid at submit time:
+1. `state.status = META_REVIEW_RUNNING`
+2. `state.active_role = meta_reviewer`
+3. `state.active_agent` is present and identifies the owner of the current turn
+4. submit payload `round` matches the current active round
+
+Any missing or mismatched tuple element is non-authoritative and must not mutate canonical state/artifacts.
+
 ### In Scope
 
 1. Promote meta-reviewer to first-class active role ownership during `META_REVIEW_RUNNING`.
-2. Accept structured meta-review submission only from the currently active meta-reviewer turn in the current round.
-3. Use active-role/round/state invariants as the only authoritative ingestion guard.
+2. Accept structured meta-review submission only from the currently active ownership tuple in the current round.
+3. Use ownership tuple invariants as the only authoritative ingestion guard.
 4. Keep canonical snapshot/artifact persistence (`state.meta_review`, `artifacts/meta-review-last.md/.json`) as single source of truth.
 5. Update prompts/delivery guidance to use structured return path only.
 6. Add tests for role-gated submission validation, gate routing, timeout fallback, and status consistency.
@@ -107,8 +118,9 @@ Root simplification decision:
 
 | Contract | Current | Target | Required Fields | Optional Fields | Compatibility | Priority | Timing |
 |---|---|---|---|---|---|---|---|
-| Meta-review ownership | side-channel pane/run binding | first-class active role ownership | `state= META_REVIEW_RUNNING`, `active_role=meta_reviewer`, `active_agent` set | diagnostic metadata | behavior change | P1 | required-now |
-| Meta-review submit handoff | pane-delimited JSON marker capture | structured CLI/protocol submission | `bubble_id`, `round`, `recommendation`, `summary`, `report_markdown` | `rework_target_message`, `report_json` | additive | P1 | required-now |
+| Meta-review ownership | side-channel pane/run binding | first-class active role ownership | `state= META_REVIEW_RUNNING`, `active_role=meta_reviewer`, `active_agent` set, active round identity | diagnostic metadata | behavior change | P1 | required-now |
+| Meta-review submit handoff | pane-delimited JSON marker capture | structured CLI/protocol submission | `bubble_id`, `round`, `recommendation`, `summary`, `report_markdown` | `rework_target_message`, `report_json` | behavior change (marker-only producers no longer authoritative); CLI surface additive | P1 | required-now |
+| Submitter identity binding | implicit trust in pane/run context | ownership-bound actor validation | authoritative submitter identity from active protocol/session context + ownership tuple match | diagnostic metadata | behavior change | P1 | required-now |
 | Canonical persistence | tied to runner capture path | shared persistence path for structured submit/read commands | `last_autonomous_*` snapshot fields + canonical artifact refs | warning list | non-breaking | P1 | required-now |
 | Gate consumption | implicit sync with pane output | explicit ownership + round validation | active meta-reviewer ownership + matching round + valid recommendation/status invariant | warning metadata | behavior fix | P1 | required-now |
 
@@ -129,7 +141,7 @@ Constraint: `status` and `last-report` remain read-only interfaces.
 | submit payload schema invalid | parser/validator | throw | reject and return non-zero | META_REVIEW_SCHEMA_INVALID | error | P1 | required-now |
 | recommendation/status invariant invalid | core validator | throw | reject with no mutation | META_REVIEW_SCHEMA_INVALID_COMBINATION | error | P1 | required-now |
 | submit while state is not `META_REVIEW_RUNNING` | lifecycle gate | throw | reject as non-authoritative | META_REVIEW_STATE_INVALID | warn | P1 | required-now |
-| submit sender/role does not match active meta-reviewer ownership | ownership binding | throw | reject as non-authoritative | META_REVIEW_SENDER_MISMATCH | warn | P1 | required-now |
+| submit sender/role does not match active meta-reviewer ownership | authoritative actor identity from active protocol/session context | throw | reject as non-authoritative | META_REVIEW_SENDER_MISMATCH | warn | P1 | required-now |
 | submit round does not match active round | round binding | throw | reject stale/foreign submit | META_REVIEW_ROUND_MISMATCH | warn | P1 | required-now |
 | timeout without valid structured submit | gate wait | fallback | route to `META_REVIEW_FAILED` + human approval request | META_REVIEW_GATE_RUN_FAILED | warn | P1 | required-now |
 | artifact write warning after snapshot success | filesystem write | result + warning | keep snapshot authoritative | META_REVIEW_ARTIFACT_WRITE_WARNING | warn | P2 | required-now |
@@ -150,39 +162,39 @@ Constraint: `status` and `last-report` remain read-only interfaces.
 
 | ID | Scenario | Given | When | Then | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|
-| T1 | Submit success `approve` | bubble in `META_REVIEW_RUNNING` with active `meta_reviewer` owner | submit valid payload | canonical snapshot/artifact updated consistently | P1 | required-now | `tests/core/bubble/metaReview.test.ts` |
+| T1 | Submit success `approve` | bubble in `META_REVIEW_RUNNING` with valid ownership tuple | submit valid payload | canonical snapshot/artifact updated consistently | P1 | required-now | `tests/core/bubble/metaReview.test.ts` |
 | T2 | Submit success `rework` | same as T1 | submit valid rework payload | rework target persisted; gate can route deterministically | P1 | required-now | `tests/core/bubble/metaReview.test.ts` |
 | T3 | Reject missing rework target | `recommendation=rework` | submit without `rework_target_message` | submit rejected with invariant error | P1 | required-now | `tests/core/bubble/metaReview.test.ts` |
-| T4 | Reject sender/role mismatch | state owned by a different active role/agent | submit payload | reject with `META_REVIEW_SENDER_MISMATCH`; no mutation | P1 | required-now | `tests/core/bubble/metaReview.test.ts` |
+| T4 | Reject sender/role mismatch | state owned by a different active role/agent than submitter context | submit payload | reject with `META_REVIEW_SENDER_MISMATCH`; no mutation | P1 | required-now | `tests/core/bubble/metaReview.test.ts` |
 | T5 | Reject stale round submit | active round differs | submit mismatched round | reject with `META_REVIEW_ROUND_MISMATCH`; no mutation | P1 | required-now | `tests/core/bubble/metaReview.test.ts` |
 | T6 | Gate route from submitted `approve` | canonical submitted result exists | convergence gate applies | reaches human approval route with consistent summary metadata | P1 | required-now | `tests/core/bubble/metaReviewGate.test.ts` |
-| T7 | Gate route from submitted `inconclusive/error` | canonical submitted/derived error result | gate applies | deterministic `META_REVIEW_FAILED` human-safe route | P1 | required-now | `tests/core/bubble/metaReviewGate.test.ts` |
-| T8 | Timeout fallback with no submit | no valid submission before deadline | gate wait expires | fallback reason and route emitted deterministically | P1 | required-now | `tests/core/bubble/metaReviewGate.test.ts` |
+| T7 | Gate route from submitted `inconclusive` or derived error status | canonical submitted/derived non-approve result exists | gate applies | deterministic `META_REVIEW_FAILED` human-safe route | P1 | required-now | `tests/core/bubble/metaReviewGate.test.ts` |
+| T8 | Timeout fallback with no submit | no valid submission before deadline | gate wait expires | fallback reason code and route emitted deterministically | P1 | required-now | `tests/core/bubble/metaReviewGate.test.ts` |
 | T9 | Read consistency | canonical snapshot/report exists | run `meta-review status` and `last-report` | read-only output consistent with persisted snapshot/artifacts | P1 | required-now | `tests/cli/bubbleMetaReviewCommand.test.ts` |
 | T10 | CLI submit contract | valid and invalid CLI invocations | run submit command | structured success + deterministic error surfaces | P1 | required-now | `tests/cli/bubbleMetaReviewCommand.test.ts` |
 | T11 | State schema role compatibility | `active_role=meta_reviewer` states | validate state snapshot | accepted when complete, rejected when partial/inconsistent | P1 | required-now | `tests/core/state/stateSchema.test.ts` |
 | T12 | No-hybrid enforcement | code/config wired for structured submit path | convergence + routing executed | marker-based ingest code cannot decide route or mutate canonical meta-review snapshot | P1 | required-now | `tests/core/bubble/metaReviewGate.test.ts` |
 
-## Acceptance Criteria
+## Acceptance Criteria (Binary)
 
 1. AC1: Meta-review handoff uses structured, machine-valid Pairflow submission.
 2. AC2: `META_REVIEW_RUNNING` has explicit active meta-reviewer ownership and submit acceptance depends on that ownership.
 3. AC3: Stale/wrong sender or wrong-round submissions are deterministically rejected without state/artifact mutation.
 4. AC4: Canonical snapshot and canonical report artifacts remain coherent for accepted submissions.
 5. AC5: Timeout/no-submit path still fails safe to human gate with explicit reason codes.
-6. AC6: Short-term runner-mode forcing (`agent` mode switch) is not required to satisfy this phase.
+6. AC6: Existing gate-routing semantics remain deterministic for submitted `approve` vs `inconclusive`/derived-error outcomes, while runner mode stays policy-neutral (no mandatory `agent` mode forcing in this phase).
 7. AC7: Legacy pane-marker ingestion/routing path is removed from authoritative decision flow (no hybrid behavior).
 
 ### Acceptance Traceability
 
-| Acceptance Criterion | Call Sites | Tests |
+| Acceptance Criterion | Call Sites | Tests / Verification |
 |---|---|---|
 | AC1 | CS5, CS6, CS7, CS10 | T1, T2, T10 |
 | AC2 | CS1, CS2, CS3, CS4, CS5 | T1, T4, T11 |
 | AC3 | CS5, CS10 | T4, T5 |
 | AC4 | CS5, CS4 | T1, T2, T9 |
 | AC5 | CS4 | T8 |
-| AC6 | CS4, CS8 | T6, T7 |
+| AC6 | CS4, CS8, CS9 | T6, T7 + L0 Explicit Non-Goal lock |
 | AC7 | CS4, CS5 | T12 |
 
 ## L2 - Implementation Notes (Optional)
@@ -198,21 +210,21 @@ Constraint: `status` and `last-report` remain read-only interfaces.
 
 ## Review Control
 
-1. P1 regresszió, ha meta-review canonical döntés bármilyen autoritatív útvonalon pane marker scrape-re támaszkodik.
-2. P1 regresszió, ha nem aktív meta-reviewer ownershipből érkező submit állapotot mégis módosít.
-3. P1 regresszió, ha stale round submit elfogadható marad.
-4. P1 regresszió, ha timeout fallback elveszíti a deterministic human-safe route-ot.
-5. P1 regresszió, ha marker parsing bármilyen úton visszakerül az autoritatív ingest/routing döntésbe (hibrid viselkedés).
+1. P1 regression if canonical meta-review decision on any authoritative path depends on pane-marker scraping.
+2. P1 regression if a submit outside the active ownership tuple can still mutate state/artifacts.
+3. P1 regression if stale-round submit remains acceptable.
+4. P1 regression if timeout fallback loses deterministic human-safe routing.
+5. P1 regression if marker parsing can re-enter authoritative ingest/routing (hybrid behavior).
 
 ## Assumptions
 
-1. Meta-reviewer pane képes Pairflow CLI submit parancsot futtatni a bubble kontextusban.
-2. A state role bővítése (`meta_reviewer`) elfogadható a Phase 1 scope-ban.
+1. Meta-reviewer pane can execute Pairflow CLI submit command in bubble context.
+2. State role extension (`meta_reviewer`) is acceptable within Phase 1 scope.
 
 ## Open Questions (Non-Blocking)
 
-1. Nincs.
+1. None.
 
 ## Spec Lock
 
-Task `IMPLEMENTABLE`, ha AC1-AC7 teljesül, T1-T12 pass, és meta-review döntés ingest kizárólag ownership+round+state guarddal történik marker-alapú hibrid útvonal nélkül.
+Task is `IMPLEMENTABLE` when AC1-AC7 are satisfied, T1-T12 pass, and meta-review ingest is guarded only by ownership+round+state invariants without marker-based hybrid authority.
