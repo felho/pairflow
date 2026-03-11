@@ -4,6 +4,7 @@ import {
   getMetaReviewLastReport,
   getMetaReviewStatus,
   MetaReviewError,
+  submitMetaReviewResult,
   runMetaReview,
   toMetaReviewError,
   type MetaReviewDepth,
@@ -11,6 +12,7 @@ import {
   type MetaReviewRunResult,
   type MetaReviewStatusView
 } from "../../../core/bubble/metaReview.js";
+import type { MetaReviewSubmissionPayload } from "../../../types/protocol.js";
 import {
   recoverMetaReviewGateFromSnapshot,
   type MetaReviewGateResult
@@ -45,6 +47,17 @@ export interface BubbleMetaReviewRecoverCommandOptions
   command: "recover";
 }
 
+export interface BubbleMetaReviewSubmitCommandOptions
+  extends BubbleMetaReviewCommandBase {
+  command: "submit";
+  round: number;
+  recommendation: MetaReviewSubmissionPayload["recommendation"];
+  summary: string;
+  reportMarkdown: string;
+  reworkTargetMessage: string | null;
+  reportJson?: Record<string, unknown>;
+}
+
 export interface BubbleMetaReviewHelpCommandOptions {
   help: true;
 }
@@ -54,6 +67,7 @@ export type BubbleMetaReviewCommandOptions =
   | BubbleMetaReviewStatusCommandOptions
   | BubbleMetaReviewLastReportCommandOptions
   | BubbleMetaReviewRecoverCommandOptions
+  | BubbleMetaReviewSubmitCommandOptions
   | BubbleMetaReviewHelpCommandOptions;
 
 export type BubbleMetaReviewCommandResult =
@@ -72,6 +86,10 @@ export type BubbleMetaReviewCommandResult =
   | {
     command: "recover";
     recover: MetaReviewGateResult;
+  }
+  | {
+    command: "submit";
+    submit: MetaReviewRunResult;
   };
 
 function invalidMetaReviewCliOptions(message: string): never {
@@ -90,6 +108,91 @@ function parseDepth(value: string | undefined): MetaReviewDepth {
   );
 }
 
+function parseSubmitRound(value: string | undefined): number {
+  if (value === undefined) {
+    return invalidMetaReviewCliOptions(
+      "Missing required option: --round for meta-review submit."
+    );
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    return invalidMetaReviewCliOptions(
+      "Invalid --round value. Must be a positive integer."
+    );
+  }
+  return parsed;
+}
+
+function parseSubmitRecommendation(
+  value: string | undefined
+): MetaReviewSubmissionPayload["recommendation"] {
+  if (value === undefined) {
+    return invalidMetaReviewCliOptions(
+      "Missing required option: --recommendation for meta-review submit."
+    );
+  }
+  if (value === "approve" || value === "rework" || value === "inconclusive") {
+    return value;
+  }
+  return invalidMetaReviewCliOptions(
+    "Invalid --recommendation value. Use one of: approve, rework, inconclusive."
+  );
+}
+
+function parseRequiredSubmitText(
+  value: string | undefined,
+  optionName: "--summary" | "--report-markdown"
+): string {
+  if (value === undefined) {
+    return invalidMetaReviewCliOptions(
+      `Missing required option: ${optionName} for meta-review submit.`
+    );
+  }
+  if (value.trim().length === 0) {
+    return invalidMetaReviewCliOptions(
+      `Invalid ${optionName} value. Must be non-empty.`
+    );
+  }
+  return optionName === "--summary" ? value.trim() : value.trimEnd();
+}
+
+function parseOptionalReworkTarget(value: string | undefined): string | null {
+  if (value === undefined) {
+    return null;
+  }
+  if (value.trim().length === 0) {
+    return invalidMetaReviewCliOptions(
+      "Invalid --rework-target-message value. Must be non-empty when provided."
+    );
+  }
+  return value.trim();
+}
+
+function parseSubmitReportJson(
+  value: string | undefined
+): Record<string, unknown> | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return invalidMetaReviewCliOptions(
+      `Invalid --report-json value. Must be valid JSON object. ${message}`
+    );
+  }
+
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return invalidMetaReviewCliOptions(
+      "Invalid --report-json value. Must be a JSON object."
+    );
+  }
+  return parsed as Record<string, unknown>;
+}
+
 export function getBubbleMetaReviewHelpText(): string {
   return [
     "Usage:",
@@ -97,11 +200,18 @@ export function getBubbleMetaReviewHelpText(): string {
     "  pairflow bubble meta-review status --id <id> [--repo <path>] [--json] [--verbose]",
     "  pairflow bubble meta-review last-report --id <id> [--repo <path>] [--json] [--verbose]",
     "  pairflow bubble meta-review recover --id <id> [--repo <path>] [--json]",
+    "  pairflow bubble meta-review submit --id <id> --round <n> --recommendation approve|rework|inconclusive --summary <text> --report-markdown <text> [--rework-target-message <text>] [--report-json <json>] [--repo <path>] [--json]",
     "",
     "Options:",
     "  --id <id>             Bubble id",
     "  --repo <path>         Optional repository path (defaults to cwd ancestry lookup)",
     "  --depth <value>       run-only depth profile: standard|deep (default: standard)",
+    "  --round <n>           submit-only round number (must equal active round)",
+    "  --recommendation <v>  submit-only recommendation: approve|rework|inconclusive",
+    "  --summary <text>      submit-only summary text",
+    "  --report-markdown <t> submit-only markdown report content",
+    "  --rework-target-message <text>  submit-only rework target message",
+    "  --report-json <json>  submit-only additional report JSON object",
     "  --json                Print structured JSON output",
     "  --verbose             Include additional detail in text output",
     "  -h, --help            Show this help"
@@ -123,6 +233,24 @@ export function parseBubbleMetaReviewCommandOptions(
           type: "string"
         },
         depth: {
+          type: "string"
+        },
+        round: {
+          type: "string"
+        },
+        recommendation: {
+          type: "string"
+        },
+        summary: {
+          type: "string"
+        },
+        "report-markdown": {
+          type: "string"
+        },
+        "rework-target-message": {
+          type: "string"
+        },
+        "report-json": {
           type: "string"
         },
         json: {
@@ -157,10 +285,11 @@ export function parseBubbleMetaReviewCommandOptions(
     subcommand !== "run" &&
     subcommand !== "status" &&
     subcommand !== "last-report" &&
-    subcommand !== "recover"
+    subcommand !== "recover" &&
+    subcommand !== "submit"
   ) {
     return invalidMetaReviewCliOptions(
-      "Unknown meta-review subcommand. Use one of: run, status, last-report, recover."
+      "Unknown meta-review subcommand. Use one of: run, status, last-report, recover, submit."
     );
   }
 
@@ -187,6 +316,41 @@ export function parseBubbleMetaReviewCommandOptions(
   if (depthValue !== undefined && typeof depthValue !== "string") {
     return invalidMetaReviewCliOptions("Invalid --depth value.");
   }
+  const roundValue = parsed.values.round;
+  if (roundValue !== undefined && typeof roundValue !== "string") {
+    return invalidMetaReviewCliOptions("Invalid --round value.");
+  }
+  const recommendationValue = parsed.values.recommendation;
+  if (
+    recommendationValue !== undefined &&
+    typeof recommendationValue !== "string"
+  ) {
+    return invalidMetaReviewCliOptions("Invalid --recommendation value.");
+  }
+  const summaryValue = parsed.values.summary;
+  if (summaryValue !== undefined && typeof summaryValue !== "string") {
+    return invalidMetaReviewCliOptions("Invalid --summary value.");
+  }
+  const reportMarkdownValue = parsed.values["report-markdown"];
+  if (
+    reportMarkdownValue !== undefined &&
+    typeof reportMarkdownValue !== "string"
+  ) {
+    return invalidMetaReviewCliOptions("Invalid --report-markdown value.");
+  }
+  const reworkTargetMessageValue = parsed.values["rework-target-message"];
+  if (
+    reworkTargetMessageValue !== undefined &&
+    typeof reworkTargetMessageValue !== "string"
+  ) {
+    return invalidMetaReviewCliOptions(
+      "Invalid --rework-target-message value."
+    );
+  }
+  const reportJsonValue = parsed.values["report-json"];
+  if (reportJsonValue !== undefined && typeof reportJsonValue !== "string") {
+    return invalidMetaReviewCliOptions("Invalid --report-json value.");
+  }
 
   const base: BubbleMetaReviewCommandBase = {
     id: idValue,
@@ -204,6 +368,43 @@ export function parseBubbleMetaReviewCommandOptions(
     };
   }
 
+  if (subcommand === "submit") {
+    if (depthValue !== undefined) {
+      return invalidMetaReviewCliOptions(
+        "--depth is only supported for meta-review run."
+      );
+    }
+    const parsedReportJson = parseSubmitReportJson(reportJsonValue);
+    return {
+      ...base,
+      command: "submit",
+      round: parseSubmitRound(roundValue),
+      recommendation: parseSubmitRecommendation(recommendationValue),
+      summary: parseRequiredSubmitText(summaryValue, "--summary"),
+      reportMarkdown: parseRequiredSubmitText(
+        reportMarkdownValue,
+        "--report-markdown"
+      ),
+      reworkTargetMessage: parseOptionalReworkTarget(reworkTargetMessageValue),
+      ...(parsedReportJson !== undefined
+        ? { reportJson: parsedReportJson }
+        : {})
+    };
+  }
+
+  if (
+    roundValue !== undefined ||
+    recommendationValue !== undefined ||
+    summaryValue !== undefined ||
+    reportMarkdownValue !== undefined ||
+    reworkTargetMessageValue !== undefined ||
+    reportJsonValue !== undefined
+  ) {
+    return invalidMetaReviewCliOptions(
+      "--round/--recommendation/--summary/--report-markdown/--rework-target-message/--report-json are only supported for meta-review submit."
+    );
+  }
+
   if (depthValue !== undefined) {
     return invalidMetaReviewCliOptions(
       "--depth is only supported for meta-review run."
@@ -219,6 +420,31 @@ export function parseBubbleMetaReviewCommandOptions(
 export function renderMetaReviewRunText(result: MetaReviewRunResult): string {
   const lines = [
     `Meta-review run for ${result.bubbleId}: status=${result.status}, recommendation=${result.recommendation}, depth=${result.depth}`,
+    `Run id: ${result.run_id}`,
+    `Updated: ${result.updated_at}`,
+    `Lifecycle state: ${result.lifecycle_state}`,
+    `Summary: ${result.summary ?? "-"}`,
+    `Report ref: ${result.report_ref}`
+  ];
+
+  if (result.rework_target_message !== null) {
+    lines.push(`Rework target: ${result.rework_target_message}`);
+  }
+
+  if (result.warnings.length > 0) {
+    lines.push(
+      `Warnings: ${result.warnings
+        .map((warning) => warning.reason_code)
+        .join(", ")}`
+    );
+  }
+
+  return lines.join("\n");
+}
+
+export function renderMetaReviewSubmitText(result: MetaReviewRunResult): string {
+  const lines = [
+    `Meta-review submit for ${result.bubbleId}: status=${result.status}, recommendation=${result.recommendation}`,
     `Run id: ${result.run_id}`,
     `Updated: ${result.updated_at}`,
     `Lifecycle state: ${result.lifecycle_state}`,
@@ -324,6 +550,26 @@ export async function runBubbleMetaReviewCommand(
       return {
         command: "run",
         run
+      };
+    }
+
+    if (options.command === "submit") {
+      const submit = await submitMetaReviewResult({
+        bubbleId: options.id,
+        ...(options.repo !== undefined ? { repoPath: options.repo } : {}),
+        round: options.round,
+        recommendation: options.recommendation,
+        summary: options.summary,
+        report_markdown: options.reportMarkdown,
+        rework_target_message: options.reworkTargetMessage,
+        ...(options.reportJson !== undefined
+          ? { report_json: options.reportJson }
+          : {}),
+        cwd
+      });
+      return {
+        command: "submit",
+        submit
       };
     }
 

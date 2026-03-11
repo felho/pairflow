@@ -1,3 +1,4 @@
+import type { MetaReviewRecommendation } from "./bubble.js";
 import type { Finding } from "./findings.js";
 
 export const protocolParticipants = [
@@ -50,6 +51,16 @@ export interface ProtocolEnvelope {
   round: number;
   payload: ProtocolEnvelopePayload;
   refs: string[];
+}
+
+export interface MetaReviewSubmissionPayload {
+  bubble_id: string;
+  round: number;
+  recommendation: MetaReviewRecommendation;
+  summary: string;
+  report_markdown: string;
+  rework_target_message?: string | null;
+  report_json?: Record<string, unknown>;
 }
 
 export function isProtocolParticipant(

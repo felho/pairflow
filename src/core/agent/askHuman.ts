@@ -89,6 +89,12 @@ export async function emitAskHumanFromWorkspace(
     );
   }
 
+  if (state.active_role === "meta_reviewer") {
+    throw new AskHumanCommandError(
+      "ask-human cannot be used from meta_reviewer role while bubble is RUNNING."
+    );
+  }
+
   const lockPath = join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`);
 
   const appended = await appendProtocolEnvelope({

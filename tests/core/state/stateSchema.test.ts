@@ -48,9 +48,9 @@ describe("state schema", () => {
       bubble_id: "b_test_meta_state_01",
       state: "META_REVIEW_RUNNING",
       round: 2,
-      active_agent: "claude",
+      active_agent: "codex",
       active_since: "2026-03-08T10:00:00.000Z",
-      active_role: "reviewer",
+      active_role: "meta_reviewer",
       round_role_history: [],
       last_command_at: "2026-03-08T10:01:00.000Z"
     });
@@ -58,9 +58,9 @@ describe("state schema", () => {
       bubble_id: "b_test_meta_state_02",
       state: "READY_FOR_HUMAN_APPROVAL",
       round: 2,
-      active_agent: "claude",
-      active_since: "2026-03-08T10:00:00.000Z",
-      active_role: "reviewer",
+      active_agent: null,
+      active_since: null,
+      active_role: null,
       round_role_history: [],
       last_command_at: "2026-03-08T10:01:00.000Z"
     });
@@ -69,7 +69,7 @@ describe("state schema", () => {
     expect(humanGate.ok).toBe(true);
   });
 
-  it("accepts META_REVIEW_RUNNING with cleared active agent context", () => {
+  it("rejects META_REVIEW_RUNNING with cleared active agent context when no recovery snapshot exists", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_state_03",
       state: "META_REVIEW_RUNNING",
@@ -81,7 +81,76 @@ describe("state schema", () => {
       last_command_at: "2026-03-08T10:01:00.000Z"
     });
 
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors.some((error) => error.path === "active_*")).toBe(true);
+  });
+
+  it("accepts META_REVIEW_RUNNING with cleared active context when recovering from an existing snapshot", () => {
+    const result = validateBubbleStateSnapshot({
+      bubble_id: "b_test_meta_state_03b",
+      state: "META_REVIEW_RUNNING",
+      round: 2,
+      active_agent: null,
+      active_since: null,
+      active_role: null,
+      round_role_history: [],
+      last_command_at: "2026-03-08T10:01:00.000Z",
+      meta_review: {
+        last_autonomous_run_id: "run_meta_state_03b",
+        last_autonomous_status: "success",
+        last_autonomous_recommendation: "approve",
+        last_autonomous_summary: "Recovered snapshot",
+        last_autonomous_report_ref: "artifacts/meta-review-last.md",
+        last_autonomous_rework_target_message: null,
+        last_autonomous_updated_at: "2026-03-08T10:01:00.000Z",
+        auto_rework_count: 0,
+        auto_rework_limit: 5,
+        sticky_human_gate: false
+      }
+    });
+
     expect(result.ok).toBe(true);
+  });
+
+  it("rejects META_REVIEW_RUNNING when active ownership role is not meta_reviewer", () => {
+    const result = validateBubbleStateSnapshot({
+      bubble_id: "b_test_meta_state_04",
+      state: "META_REVIEW_RUNNING",
+      round: 2,
+      active_agent: "claude",
+      active_since: "2026-03-08T10:00:00.000Z",
+      active_role: "reviewer",
+      round_role_history: [],
+      last_command_at: "2026-03-08T10:01:00.000Z"
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors.some((error) => error.path === "active_role")).toBe(true);
+  });
+
+  it("rejects META_REVIEW_RUNNING when meta_reviewer ownership is not bound to codex", () => {
+    const result = validateBubbleStateSnapshot({
+      bubble_id: "b_test_meta_state_04b",
+      state: "META_REVIEW_RUNNING",
+      round: 2,
+      active_agent: "claude",
+      active_since: "2026-03-08T10:00:00.000Z",
+      active_role: "meta_reviewer",
+      round_role_history: [],
+      last_command_at: "2026-03-08T10:01:00.000Z"
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors.some((error) => error.path === "active_agent")).toBe(true);
   });
 
   it("rejects RUNNING state when active fields are missing", () => {

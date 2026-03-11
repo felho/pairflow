@@ -26,7 +26,7 @@ export const bubbleLifecycleStates = [
 
 export type BubbleLifecycleState = (typeof bubbleLifecycleStates)[number];
 
-export const agentRoles = ["implementer", "reviewer"] as const;
+export const agentRoles = ["implementer", "reviewer", "meta_reviewer"] as const;
 
 export type AgentRole = (typeof agentRoles)[number];
 

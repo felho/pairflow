@@ -73,6 +73,17 @@ async function setupReadyForHumanApprovalBubble(repoPath: string, bubbleId: stri
       })
   });
 
+  const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+  const gateEnvelope = transcript.at(-1);
+  expect(gateEnvelope?.type).toBe("APPROVAL_REQUEST");
+  if (gateEnvelope?.type === "APPROVAL_REQUEST") {
+    expect(gateEnvelope.payload.metadata).toMatchObject({
+      actor: "meta-reviewer",
+      actor_agent: "codex",
+      latest_recommendation: "inconclusive"
+    });
+  }
+
   return bubble;
 }
 
@@ -466,7 +477,7 @@ describe("approval decisions", () => {
     expect(rerunFailedGate.state.state).toBe("META_REVIEW_FAILED");
     expect(rerunFailedGate.state.meta_review?.sticky_human_gate).toBe(false);
     expect(rerunFailedGate.gateEnvelope.payload.summary).toContain(
-      "Meta-review runner failure"
+      "META_REVIEW_GATE_RUN_FAILED"
     );
 
     await expect(

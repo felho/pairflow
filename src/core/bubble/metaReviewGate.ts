@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 
 import { appendProtocolEnvelope, type AppendProtocolEnvelopeResult } from "../protocol/transcriptStore.js";
@@ -10,10 +11,16 @@ import {
 } from "../state/stateStore.js";
 import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
 import { setMetaReviewerPaneBinding } from "../runtime/sessionsRegistry.js";
+import { runTmux } from "../runtime/tmuxManager.js";
+import {
+  maybeAcceptClaudeTrustPrompt,
+  sendAndSubmitTmuxPaneMessage
+} from "../runtime/tmuxInput.js";
 import {
   DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
   type BubbleMetaReviewSnapshotState,
   type BubbleStateSnapshot,
+  type AgentName,
   type MetaReviewRecommendation,
   type MetaReviewRunStatus
 } from "../../types/bubble.js";
@@ -53,10 +60,15 @@ export interface ApplyMetaReviewGateOnConvergenceDependencies {
   resolveBubbleById?: typeof resolveBubbleById;
   readStateSnapshot?: typeof readStateSnapshot;
   writeStateSnapshot?: typeof writeStateSnapshot;
-  runMetaReview?: typeof runMetaReview;
+  // Deprecated: retained for test/backward-compat wiring during submit-channel rollout.
+  runMetaReview?: (...args: unknown[]) => Promise<MetaReviewRunResult>;
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;
   setMetaReviewerPaneBinding?: typeof setMetaReviewerPaneBinding;
+  // Deprecated: retained for test/backward-compat wiring during submit-channel rollout.
   metaReviewDependencies?: MetaReviewDependencies;
+  awaitMetaReviewSubmission?: typeof awaitMetaReviewSubmission;
+  notifyMetaReviewerSubmissionRequest?: typeof notifyMetaReviewerSubmissionRequest;
+  runTmux?: typeof runTmux;
 }
 
 export interface RecoverMetaReviewGateFromSnapshotInput {
@@ -96,6 +108,9 @@ export class MetaReviewGateError extends Error {
 }
 
 const metaReviewFallbackReportRef = "artifacts/meta-review-last.md";
+const defaultMetaReviewSubmitTimeoutMs = 10 * 60 * 1000;
+const defaultMetaReviewSubmitPollIntervalMs = 800;
+const metaReviewerAgent: AgentName = "codex";
 
 function normalizeMetaReviewSnapshot(
   snapshot: BubbleMetaReviewSnapshotState | undefined
@@ -116,6 +131,159 @@ function normalizeMetaReviewSnapshot(
     auto_rework_limit: DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
     sticky_human_gate: false
   };
+}
+
+function resolveMetaReviewSubmitTimeoutMs(): number {
+  const raw = process.env.PAIRFLOW_META_REVIEW_SUBMIT_TIMEOUT_MS
+    ?? process.env.PAIRFLOW_META_REVIEW_TIMEOUT_MS;
+  if (raw === undefined) {
+    if (process.env.NODE_ENV === "test") {
+      return 200;
+    }
+    return defaultMetaReviewSubmitTimeoutMs;
+  }
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return defaultMetaReviewSubmitTimeoutMs;
+  }
+  return Math.floor(parsed);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolvePromise) => {
+    setTimeout(resolvePromise, ms);
+  });
+}
+
+function createMetaReviewSubmitRunId(nowIso: string): string {
+  const timestampToken = nowIso.replace(/[-:.TZ]/gu, "");
+  const entropyToken = randomUUID().replace(/-/gu, "");
+  return `run_meta_submit_${timestampToken}_${entropyToken}`;
+}
+
+function snapshotContainsStructuredSubmission(input: {
+  baseline: BubbleMetaReviewSnapshotState;
+  current: BubbleMetaReviewSnapshotState;
+}): boolean {
+  const currentHasRun =
+    input.current.last_autonomous_status !== null &&
+    input.current.last_autonomous_recommendation !== null &&
+    input.current.last_autonomous_run_id !== null &&
+    input.current.last_autonomous_updated_at !== null;
+  if (!currentHasRun) {
+    return false;
+  }
+
+  return (
+    input.current.last_autonomous_run_id !== input.baseline.last_autonomous_run_id ||
+    input.current.last_autonomous_updated_at !==
+      input.baseline.last_autonomous_updated_at
+  );
+}
+
+export interface AwaitMetaReviewSubmissionInput {
+  bubbleId: string;
+  statePath: string;
+  baselineSnapshot: BubbleMetaReviewSnapshotState;
+  timeoutMs?: number;
+  now?: Date;
+}
+
+export interface AwaitMetaReviewSubmissionDependencies {
+  readStateSnapshot?: typeof readStateSnapshot;
+}
+
+export async function awaitMetaReviewSubmission(
+  input: AwaitMetaReviewSubmissionInput,
+  dependencies: AwaitMetaReviewSubmissionDependencies = {}
+): Promise<MetaReviewRunResult> {
+  const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
+  const timeoutMs = input.timeoutMs ?? resolveMetaReviewSubmitTimeoutMs();
+  const pollIntervalMs = Math.min(defaultMetaReviewSubmitPollIntervalMs, timeoutMs);
+  const deadline = Date.now() + timeoutMs;
+  const nowIso = (input.now ?? new Date()).toISOString();
+
+  while (Date.now() <= deadline) {
+    const loaded = await readState(input.statePath);
+
+    const snapshot = normalizeMetaReviewSnapshot(loaded.state.meta_review);
+    if (
+      snapshotContainsStructuredSubmission({
+        baseline: input.baselineSnapshot,
+        current: snapshot
+      })
+    ) {
+      return synthesizeMetaReviewRunResultFromSnapshot({
+        bubbleId: input.bubbleId,
+        nowIso,
+        snapshot,
+        fallbackSummary:
+          "Meta-review submitted without summary; routing from canonical snapshot."
+      });
+    }
+
+    if (loaded.state.state !== "META_REVIEW_RUNNING") {
+      throw new MetaReviewGateError(
+        "META_REVIEW_GATE_RUN_FAILED",
+        `META_REVIEW_GATE_RUN_FAILED: lifecycle left META_REVIEW_RUNNING while awaiting structured submit (found ${loaded.state.state}).`
+      );
+    }
+
+    await sleep(pollIntervalMs);
+  }
+
+  const finalLoaded = await readState(input.statePath);
+  const finalSnapshot = normalizeMetaReviewSnapshot(finalLoaded.state.meta_review);
+  if (
+    snapshotContainsStructuredSubmission({
+      baseline: input.baselineSnapshot,
+      current: finalSnapshot
+    })
+  ) {
+    return synthesizeMetaReviewRunResultFromSnapshot({
+      bubbleId: input.bubbleId,
+      nowIso,
+      snapshot: finalSnapshot,
+      fallbackSummary:
+        "Meta-review submitted without summary; routing from canonical snapshot."
+    });
+  }
+  if (finalLoaded.state.state !== "META_REVIEW_RUNNING") {
+    throw new MetaReviewGateError(
+      "META_REVIEW_GATE_RUN_FAILED",
+      `META_REVIEW_GATE_RUN_FAILED_FINAL_READ_LIFECYCLE_DEPARTURE: lifecycle left META_REVIEW_RUNNING before timeout route commit (found ${finalLoaded.state.state}).`
+    );
+  }
+
+  throw new MetaReviewGateError(
+    "META_REVIEW_GATE_RUN_FAILED",
+    `META_REVIEW_GATE_RUN_FAILED: timeout waiting for structured meta-review submit after ${timeoutMs}ms.`
+  );
+}
+
+export interface NotifyMetaReviewerSubmissionRequestInput {
+  bubbleId: string;
+  round: number;
+  targetPane: string;
+}
+
+export interface NotifyMetaReviewerSubmissionRequestDependencies {
+  runTmux?: typeof runTmux;
+}
+
+export async function notifyMetaReviewerSubmissionRequest(
+  input: NotifyMetaReviewerSubmissionRequestInput,
+  dependencies: NotifyMetaReviewerSubmissionRequestDependencies = {}
+): Promise<void> {
+  const runner = dependencies.runTmux ?? runTmux;
+  const message = [
+    `# [pairflow] bubble=${input.bubbleId} meta-review request round=${input.round}.`,
+    "Perform autonomous meta-review now, then submit through structured Pairflow CLI (no pane markers).",
+    `Required command: pairflow bubble meta-review submit --id ${input.bubbleId} --round ${input.round} --recommendation <approve|rework|inconclusive> --summary "<summary>" --report-markdown "<markdown>" [--rework-target-message "<message>"] [--report-json '{"key":"value"}'].`
+  ].join(" ");
+
+  await maybeAcceptClaudeTrustPrompt(runner, input.targetPane).catch(() => undefined);
+  await sendAndSubmitTmuxPaneMessage(runner, input.targetPane, message);
 }
 
 function toConflictError(error: unknown): MetaReviewGateError {
@@ -338,7 +506,11 @@ async function persistHumanGateRoute(input: {
   stickyHumanGate?: boolean;
 }): Promise<MetaReviewGateResult> {
   const targetState = input.targetState ?? "READY_FOR_HUMAN_APPROVAL";
-  const stickyHumanGate = input.stickyHumanGate ?? true;
+  const stickyHumanGate = input.stickyHumanGate ?? (
+    input.route === "human_gate_dispatch_failed" || input.route === "human_gate_run_failed"
+      ? false
+      : true
+  );
   const nextState = transitionToGateState({
     current: input.loaded.state,
     nowIso: input.nowIso,
@@ -385,9 +557,26 @@ async function persistHumanGateRoute(input: {
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
+    let rollbackContext = "rollback_outcome=not_attempted";
+    let rollbackReasonCode: MetaReviewGateReasonCode = "META_REVIEW_GATE_TRANSITION_INVALID";
+    try {
+      await input.writeState(input.statePath, input.loaded.state, {
+        expectedFingerprint: written.fingerprint,
+        expectedState: targetState
+      });
+      rollbackContext = "rollback_outcome=applied";
+    } catch (rollbackError) {
+      if (rollbackError instanceof StateStoreConflictError) {
+        rollbackReasonCode = "META_REVIEW_GATE_STATE_CONFLICT";
+      }
+      const rollbackReason = rollbackError instanceof Error
+        ? rollbackError.message
+        : String(rollbackError);
+      rollbackContext = `rollback_outcome=failed rollback_error=${rollbackReason}`;
+    }
     throw new MetaReviewGateError(
-      "META_REVIEW_GATE_TRANSITION_INVALID",
-      `META_REVIEW_GATE_TRANSITION_INVALID: state transitioned to ${targetState} but approval request append failed. Root error: ${reason}`
+      rollbackReasonCode,
+      `${rollbackReasonCode}: state transitioned to ${targetState} but approval request append failed (${rollbackContext}). Root error: ${reason}`
     );
   }
 
@@ -443,6 +632,23 @@ export async function recoverMetaReviewGateFromSnapshot(
   const summary = runResult.summary
     ?? input.summary
     ?? "Meta-review completed previously; recovering gate route from snapshot.";
+
+  const snapshotHasRunIdentity =
+    snapshot.last_autonomous_run_id !== null
+    && snapshot.last_autonomous_updated_at !== null;
+  if (
+    input.runResult !== undefined
+    && snapshotHasRunIdentity
+    && (
+      snapshot.last_autonomous_run_id !== input.runResult.run_id
+      || snapshot.last_autonomous_updated_at !== input.runResult.updated_at
+    )
+  ) {
+    throw new MetaReviewGateError(
+      "META_REVIEW_GATE_STATE_CONFLICT",
+      "META_REVIEW_GATE_STATE_CONFLICT: canonical snapshot changed between await and recovery route."
+    );
+  }
 
   if (runResult.status === "error") {
     return persistHumanGateRoute({
@@ -561,9 +767,10 @@ export async function recoverMetaReviewGateFromSnapshot(
         }
       });
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
+      const appendReason = error instanceof Error ? error.message : String(error);
 
       let readyForApproval: LoadedStateSnapshot;
+      let restoreOutcome = "restore_outcome=not_attempted";
       try {
         const backToReady = applyStateTransition(resumedWritten.state, {
           to: "READY_FOR_APPROVAL",
@@ -586,11 +793,21 @@ export async function recoverMetaReviewGateFromSnapshot(
             expectedState: "RUNNING"
           }
         );
+        restoreOutcome = "restore_outcome=applied";
       } catch (recoveryError) {
+        const restoreReason =
+          recoveryError instanceof Error ? recoveryError.message : String(recoveryError);
+        restoreOutcome = `restore_outcome=failed restore_error=${restoreReason}`;
         if (recoveryError instanceof StateStoreConflictError) {
-          throw toConflictError(recoveryError);
+          throw new MetaReviewGateError(
+            "META_REVIEW_GATE_STATE_CONFLICT",
+            `META_REVIEW_GATE_STATE_CONFLICT: auto-rework dispatch append failed (append_error=${appendReason}) and restore to READY_FOR_APPROVAL failed (${restoreOutcome}).`
+          );
         }
-        throw toTransitionError(recoveryError);
+        throw new MetaReviewGateError(
+          "META_REVIEW_GATE_TRANSITION_INVALID",
+          `META_REVIEW_GATE_TRANSITION_INVALID: auto-rework dispatch append failed (append_error=${appendReason}) and restore to READY_FOR_APPROVAL failed (${restoreOutcome}).`
+        );
       }
 
       return persistHumanGateRoute({
@@ -605,7 +822,8 @@ export async function recoverMetaReviewGateFromSnapshot(
         bubbleId: resolved.bubbleId,
         summary: buildHumanGateSummary({
           convergenceSummary: summary,
-          fallbackReason: `META_REVIEW_GATE_REWORK_DISPATCH_FAILED: ${reason}`
+          fallbackReason:
+            `META_REVIEW_GATE_REWORK_DISPATCH_FAILED: append_error=${appendReason}; ${restoreOutcome}`
         }),
         refs,
         loaded: readyForApproval,
@@ -615,7 +833,7 @@ export async function recoverMetaReviewGateFromSnapshot(
       });
     }
 
-    let written: LoadedStateSnapshot;
+    let written: LoadedStateSnapshot | undefined;
     try {
       const resumedWithCounter = incrementAutoReworkCount(resumedWritten.state);
       written = await writeState(
@@ -628,18 +846,22 @@ export async function recoverMetaReviewGateFromSnapshot(
       );
     } catch (error) {
       if (error instanceof StateStoreConflictError) {
-        const latest = await readState(resolved.bubblePaths.statePath);
-        if (latest.state.state !== "RUNNING") {
-          throw toConflictError(error);
-        }
-
-        const latestMetaReview = normalizeMetaReviewSnapshot(latest.state.meta_review);
         const expectedCount = snapshot.auto_rework_count;
         const targetCount = expectedCount + 1;
+        let latestConflict: StateStoreConflictError = error;
 
-        if (latestMetaReview.auto_rework_count === targetCount) {
-          written = latest;
-        } else if (latestMetaReview.auto_rework_count === expectedCount) {
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          const latest = await readState(resolved.bubblePaths.statePath);
+          if (latest.state.state !== "RUNNING") {
+            throw toConflictError(latestConflict);
+          }
+
+          const latestMetaReview = normalizeMetaReviewSnapshot(latest.state.meta_review);
+          if (latestMetaReview.auto_rework_count >= targetCount) {
+            written = latest;
+            break;
+          }
+
           const latestIncremented: BubbleStateSnapshot = {
             ...latest.state,
             meta_review: {
@@ -656,18 +878,27 @@ export async function recoverMetaReviewGateFromSnapshot(
                 expectedState: "RUNNING"
               }
             );
+            break;
           } catch (retryError) {
-            if (retryError instanceof StateStoreConflictError) {
-              throw toConflictError(retryError);
+            if (!(retryError instanceof StateStoreConflictError)) {
+              throw toTransitionError(retryError);
             }
-            throw toTransitionError(retryError);
+            latestConflict = retryError;
           }
-        } else {
-          throw toConflictError(error);
+        }
+
+        if (written === undefined) {
+          throw toConflictError(latestConflict);
         }
       } else {
         throw toTransitionError(error);
       }
+    }
+    if (written === undefined) {
+      throw new MetaReviewGateError(
+        "META_REVIEW_GATE_STATE_CONFLICT",
+        "META_REVIEW_GATE_STATE_CONFLICT: auto-rework count update did not converge after dispatch."
+      );
     }
 
     return {
@@ -709,10 +940,12 @@ export async function applyMetaReviewGateOnConvergence(
   const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
   const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
   const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
-  const runReview = dependencies.runMetaReview ?? runMetaReview;
   const appendEnvelope = dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
   const setMetaReviewerPane =
     dependencies.setMetaReviewerPaneBinding ?? setMetaReviewerPaneBinding;
+  const notifySubmissionRequest =
+    dependencies.notifyMetaReviewerSubmissionRequest ?? notifyMetaReviewerSubmissionRequest;
+  const runTmuxRunner = dependencies.runTmux ?? runTmux;
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
   const refs = input.refs ?? [];
@@ -726,6 +959,29 @@ export async function applyMetaReviewGateOnConvergence(
     locksDir: resolved.bubblePaths.locksDir,
     bubbleId: resolved.bubbleId
   });
+  const awaitSubmission =
+    dependencies.awaitMetaReviewSubmission ??
+    (dependencies.runMetaReview !== undefined ||
+    dependencies.metaReviewDependencies !== undefined
+      ? async () => {
+          const legacyRun = dependencies.runMetaReview ?? runMetaReview;
+          return legacyRun(
+            {
+              bubbleId: resolved.bubbleId,
+              repoPath: resolved.repoPath,
+              cwd: resolved.bubblePaths.worktreePath
+            },
+            {
+              ...(dependencies.metaReviewDependencies ?? {}),
+              now,
+              allowMetaReviewRunningState: true
+            }
+          );
+        }
+      : awaitMetaReviewSubmission);
+  const usesLegacyRunPath =
+    dependencies.runMetaReview !== undefined
+    || dependencies.metaReviewDependencies !== undefined;
 
   const loadedRunning = await readState(resolved.bubblePaths.statePath);
   assertRunningConvergenceState(loadedRunning.state);
@@ -781,9 +1037,9 @@ export async function applyMetaReviewGateOnConvergence(
   try {
     const nextMetaReviewRunning = applyStateTransition(readyForApproval.state, {
       to: "META_REVIEW_RUNNING",
-      activeAgent: null,
-      activeRole: null,
-      activeSince: null,
+      activeAgent: metaReviewerAgent,
+      activeRole: "meta_reviewer",
+      activeSince: nowIso,
       lastCommandAt: nowIso
     });
     metaReviewRunningState = await writeState(
@@ -801,11 +1057,16 @@ export async function applyMetaReviewGateOnConvergence(
     throw toTransitionError(error);
   }
 
+  const baselineSnapshot = normalizeMetaReviewSnapshot(
+    metaReviewRunningState.state.meta_review
+  );
+  const submitRunId = createMetaReviewSubmitRunId(nowIso);
   let metaReviewerPaneWarning: string | null = null;
   const bindStart = await setMetaReviewerPane({
     sessionsPath: resolved.bubblePaths.sessionsPath,
     bubbleId: resolved.bubbleId,
     active: true,
+    runId: submitRunId,
     now
   }).catch((error: unknown) => {
     const reason = error instanceof Error ? error.message : String(error);
@@ -820,22 +1081,43 @@ export async function applyMetaReviewGateOnConvergence(
       ? bindStart.errorMessage
       : bindStart.reason ?? "unknown";
     metaReviewerPaneWarning = `META_REVIEWER_PANE_UNAVAILABLE: ${bindReason}`;
+  } else if ("record" in bindStart && bindStart.record !== undefined) {
+    const paneIndex = bindStart.record.metaReviewerPane?.paneIndex ?? 3;
+    const targetPane = `${bindStart.record.tmuxSessionName}:0.${paneIndex}`;
+    await notifySubmissionRequest(
+      {
+        bubbleId: resolved.bubbleId,
+        round: metaReviewRunningState.state.round,
+        targetPane
+      },
+      {
+        runTmux: runTmuxRunner
+      }
+    ).catch((error: unknown) => {
+      const reason = error instanceof Error ? error.message : String(error);
+      metaReviewerPaneWarning = `META_REVIEWER_PANE_UNAVAILABLE: ${reason}`;
+    });
   }
 
   let runResult: MetaReviewRunResult | undefined;
   let runFailureReason: string | null = null;
   try {
-    runResult = await runReview(
-      {
-        bubbleId: resolved.bubbleId,
-        repoPath: resolved.repoPath,
-        cwd: resolved.bubblePaths.worktreePath
-      },
-      {
-        ...(dependencies.metaReviewDependencies ?? {}),
-        now
-      }
-    );
+    if (metaReviewerPaneWarning !== null && !usesLegacyRunPath) {
+      runFailureReason =
+        `structured submit request unavailable (${metaReviewerPaneWarning}).`;
+    } else {
+      runResult = await awaitSubmission(
+        {
+          bubbleId: resolved.bubbleId,
+          statePath: resolved.bubblePaths.statePath,
+          baselineSnapshot,
+          now
+        },
+        {
+          readStateSnapshot: readState
+        }
+      );
+    }
   } catch (error) {
     runFailureReason = error instanceof Error ? error.message : String(error);
   } finally {
@@ -843,7 +1125,7 @@ export async function applyMetaReviewGateOnConvergence(
       sessionsPath: resolved.bubblePaths.sessionsPath,
       bubbleId: resolved.bubbleId,
       active: false,
-      ...(runResult?.run_id !== undefined ? { runId: runResult.run_id } : {}),
+      runId: null,
       now
     }).catch((error: unknown) => {
       const reason = error instanceof Error ? error.message : String(error);
@@ -864,7 +1146,11 @@ export async function applyMetaReviewGateOnConvergence(
   if (runResult === undefined) {
     const warningSuffix =
       metaReviewerPaneWarning === null ? "" : `; ${metaReviewerPaneWarning}`;
-    return persistHumanGateRoute({
+    const fallbackSummary = buildHumanGateSummary({
+      convergenceSummary: input.summary,
+      fallbackReason: `META_REVIEW_GATE_RUN_FAILED: ${runFailureReason ?? "unknown"}${warningSuffix}`
+    });
+    const runFailureRouteInput = {
       appendEnvelope,
       writeState,
       statePath: resolved.bubblePaths.statePath,
@@ -874,10 +1160,7 @@ export async function applyMetaReviewGateOnConvergence(
       now,
       nowIso,
       bubbleId: resolved.bubbleId,
-      summary: buildHumanGateSummary({
-        convergenceSummary: input.summary,
-        fallbackReason: `META_REVIEW_GATE_RUN_FAILED: ${runFailureReason ?? "unknown"}${warningSuffix}`
-      }),
+      summary: fallbackSummary,
       refs,
       loaded: metaReviewRunningState,
       expectedState: "META_REVIEW_RUNNING",
@@ -885,25 +1168,58 @@ export async function applyMetaReviewGateOnConvergence(
       fallbackRecommendation: "inconclusive",
       targetState: "META_REVIEW_FAILED",
       stickyHumanGate: false
-    });
+    } as const;
+    try {
+      return await persistHumanGateRoute(runFailureRouteInput);
+    } catch (error) {
+      const gateError = toMetaReviewGateError(error);
+      if (gateError.reasonCode !== "META_REVIEW_GATE_STATE_CONFLICT") {
+        throw gateError;
+      }
+      const latest = await readState(resolved.bubblePaths.statePath);
+      if (latest.state.state !== "META_REVIEW_RUNNING") {
+        throw new MetaReviewGateError(
+          "META_REVIEW_GATE_STATE_CONFLICT",
+          `META_REVIEW_GATE_STATE_CONFLICT: failed to persist run-failed route after pane teardown; current_state=${latest.state.state}; recoverable_with=pairflow bubble meta-review recover --id ${resolved.bubbleId}.`
+        );
+      }
+      const latestSnapshot = normalizeMetaReviewSnapshot(latest.state.meta_review);
+      if (
+        snapshotContainsStructuredSubmission({
+          baseline: baselineSnapshot,
+          current: latestSnapshot
+        })
+      ) {
+        return recoverMetaReviewGateFromSnapshot(
+          {
+            bubbleId: resolved.bubbleId,
+            summary: input.summary,
+            refs,
+            repoPath: resolved.repoPath,
+            cwd: resolved.bubblePaths.worktreePath,
+            now
+          },
+          {
+            resolveBubbleById: () => Promise.resolve(resolved),
+            readStateSnapshot: readState,
+            writeStateSnapshot: writeState,
+            appendProtocolEnvelope: appendEnvelope
+          }
+        );
+      }
+      return persistHumanGateRoute({
+        ...runFailureRouteInput,
+        loaded: latest
+      });
+    }
   }
 
-  if (metaReviewerPaneWarning !== null) {
+  if (metaReviewerPaneWarning !== null && runResult !== undefined) {
     runResult.warnings.push({
       reason_code: "META_REVIEWER_PANE_UNAVAILABLE",
       message: metaReviewerPaneWarning
     });
   }
-
-  const afterRun = await readState(resolved.bubblePaths.statePath);
-  if (afterRun.state.state !== "META_REVIEW_RUNNING") {
-    throw new MetaReviewGateError(
-      "META_REVIEW_GATE_TRANSITION_INVALID",
-      `META_REVIEW_GATE_TRANSITION_INVALID: meta-review run must preserve META_REVIEW_RUNNING lifecycle (found ${afterRun.state.state}).`
-    );
-  }
-
-  let useCapturedAfterRun = true;
   return recoverMetaReviewGateFromSnapshot(
     {
       bubbleId: resolved.bubbleId,
@@ -916,13 +1232,7 @@ export async function applyMetaReviewGateOnConvergence(
     },
     {
       resolveBubbleById: () => Promise.resolve(resolved),
-      readStateSnapshot: async (statePath) => {
-        if (useCapturedAfterRun) {
-          useCapturedAfterRun = false;
-          return afterRun;
-        }
-        return readState(statePath);
-      },
+      readStateSnapshot: readState,
       writeStateSnapshot: writeState,
       appendProtocolEnvelope: appendEnvelope
     }

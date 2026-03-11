@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -10,10 +10,12 @@ import {
   renderMetaReviewLastReportText,
   renderMetaReviewRecoverText,
   renderMetaReviewRunText,
+  renderMetaReviewSubmitText,
   renderMetaReviewStatusText,
   runBubbleMetaReviewCommand
 } from "../../src/cli/commands/bubble/metaReview.js";
 import { MetaReviewError } from "../../src/core/bubble/metaReview.js";
+import { applyStateTransition } from "../../src/core/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../src/core/state/stateStore.js";
 import { initGitRepository } from "../helpers/git.js";
 import { setupRunningBubbleFixture } from "../helpers/bubble.js";
@@ -34,6 +36,91 @@ afterEach(async () => {
     )
   );
 });
+
+async function prepareMetaReviewSubmitReadyFixture(input: {
+  statePath: string;
+  sessionsPath: string;
+  bubbleId: string;
+  repoPath: string;
+  worktreePath: string;
+}): Promise<void> {
+  const transitionTimestamp = "2026-03-10T09:00:00.000Z";
+  let current = await readStateSnapshot(input.statePath);
+
+  if (current.state.state !== "RUNNING" && current.state.state !== "READY_FOR_APPROVAL") {
+    const runningState = applyStateTransition(current.state, {
+      to: "RUNNING",
+      activeAgent: "codex",
+      activeRole: "implementer",
+      activeSince: transitionTimestamp,
+      lastCommandAt: transitionTimestamp
+    });
+    current = await writeStateSnapshot(input.statePath, runningState, {
+      expectedFingerprint: current.fingerprint,
+      expectedState: current.state.state
+    });
+  }
+
+  if (current.state.state !== "READY_FOR_APPROVAL") {
+    const readyForApprovalState = applyStateTransition(current.state, {
+      to: "READY_FOR_APPROVAL",
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
+      lastCommandAt: transitionTimestamp
+    });
+    current = await writeStateSnapshot(
+      input.statePath,
+      readyForApprovalState,
+      {
+        expectedFingerprint: current.fingerprint,
+        expectedState: current.state.state
+      }
+    );
+  }
+
+  const metaReviewRunningState = applyStateTransition(current.state, {
+    to: "META_REVIEW_RUNNING",
+    activeAgent: "codex",
+    activeRole: "meta_reviewer",
+    activeSince: transitionTimestamp,
+    lastCommandAt: transitionTimestamp
+  });
+  await writeStateSnapshot(
+    input.statePath,
+    metaReviewRunningState,
+    {
+      expectedFingerprint: current.fingerprint,
+      expectedState: "READY_FOR_APPROVAL"
+    }
+  );
+
+  await mkdir(join(input.repoPath, ".pairflow", "runtime"), { recursive: true });
+  await writeFile(
+    input.sessionsPath,
+    `${JSON.stringify(
+      {
+        [input.bubbleId]: {
+          bubbleId: input.bubbleId,
+          repoPath: input.repoPath,
+          worktreePath: input.worktreePath,
+          tmuxSessionName: "pf_cli_meta_submit",
+          updatedAt: "2026-03-10T09:00:00.000Z",
+          metaReviewerPane: {
+            role: "meta-reviewer",
+            paneIndex: 3,
+            active: true,
+            runId: "run_meta_cli_submit",
+            updatedAt: "2026-03-10T09:00:00.000Z"
+          }
+        }
+      },
+      null,
+      2
+    )}\n`,
+    "utf8"
+  );
+}
 
 describe("parseBubbleMetaReviewCommandOptions", () => {
   it("parses run options with depth/json", () => {
@@ -74,6 +161,35 @@ describe("parseBubbleMetaReviewCommandOptions", () => {
 
     expect(parsed.id).toBe("b_meta_cli_02");
     expect(parsed.verbose).toBe(true);
+  });
+
+  it("parses submit options with structured payload fields", () => {
+    const parsed = parseBubbleMetaReviewCommandOptions([
+      "submit",
+      "--id",
+      "b_meta_cli_submit_01",
+      "--round",
+      "2",
+      "--recommendation",
+      "approve",
+      "--summary",
+      "Structured submit summary",
+      "--report-markdown",
+      "# Report",
+      "--report-json",
+      "{\"findings\":0}"
+    ]);
+
+    expect(parsed.help).toBe(false);
+    if (parsed.help || parsed.command !== "submit") {
+      throw new Error("Expected submit command options.");
+    }
+
+    expect(parsed.round).toBe(2);
+    expect(parsed.recommendation).toBe("approve");
+    expect(parsed.summary).toBe("Structured submit summary");
+    expect(parsed.reportMarkdown).toBe("# Report");
+    expect(parsed.reportJson).toEqual({ findings: 0 });
   });
 
   it("returns help mode when missing subcommand", () => {
@@ -264,6 +380,53 @@ describe("runBubbleMetaReviewCommand", () => {
     expect(recoverResult?.command).toBe("recover");
   });
 
+  it("routes structured submit command and persists canonical snapshot", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_cli_submit_run_01",
+      task: "CLI submit routing"
+    });
+
+    await prepareMetaReviewSubmitReadyFixture({
+      statePath: bubble.paths.statePath,
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath
+    });
+
+    const result = await runBubbleMetaReviewCommand([
+      "submit",
+      "--id",
+      bubble.bubbleId,
+      "--repo",
+      repoPath,
+      "--round",
+      "1",
+      "--recommendation",
+      "approve",
+      "--summary",
+      "Structured CLI submit summary.",
+      "--report-markdown",
+      "# CLI Submit\n\nLooks good."
+    ]);
+
+    expect(result?.command).toBe("submit");
+    if (result?.command !== "submit") {
+      throw new Error("Expected submit command result.");
+    }
+    expect(result.submit.recommendation).toBe("approve");
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    expect(loaded.state.meta_review?.last_autonomous_recommendation).toBe(
+      "approve"
+    );
+    expect(loaded.state.meta_review?.last_autonomous_summary).toBe(
+      "Structured CLI submit summary."
+    );
+  });
+
   it("supports pre-parsed options overload for status/last-report/recover", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -339,6 +502,28 @@ describe("runBubbleMetaReviewCommand", () => {
       verbose: false
     });
     expect(recoverResult?.command).toBe("recover");
+
+    await prepareMetaReviewSubmitReadyFixture({
+      statePath: bubble.paths.statePath,
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath
+    });
+    const submitResult = await runBubbleMetaReviewCommand({
+      help: false,
+      command: "submit",
+      id: bubble.bubbleId,
+      repo: repoPath,
+      round: 1,
+      recommendation: "approve",
+      summary: "Parsed overload submit",
+      reportMarkdown: "# Parsed overload",
+      reworkTargetMessage: null,
+      json: false,
+      verbose: false
+    });
+    expect(submitResult?.command).toBe("submit");
   });
 
   it("maps missing bubble lookup failures to dedicated meta-review reason code", async () => {
@@ -454,6 +639,25 @@ describe("meta-review render helpers", () => {
 
     expect(rendered).toContain("status=error");
     expect(rendered).toContain("Warnings: META_REVIEW_RUNNER_ERROR");
+  });
+
+  it("renders submit output", () => {
+    const rendered = renderMetaReviewSubmitText({
+      bubbleId: "b_meta_cli_render_submit_01",
+      depth: "standard",
+      run_id: "run_submit_1",
+      status: "success",
+      recommendation: "approve",
+      summary: "Structured submit summary",
+      report_ref: "artifacts/meta-review-last.md",
+      rework_target_message: null,
+      updated_at: "2026-03-10T09:15:00.000Z",
+      lifecycle_state: "META_REVIEW_RUNNING",
+      warnings: []
+    });
+
+    expect(rendered).toContain("Meta-review submit for");
+    expect(rendered).toContain("status=success");
   });
 
   it("renders status output in compact and verbose modes", () => {

@@ -282,6 +282,7 @@ function buildMetaReviewerStartupPrompt(input: {
     `Pairflow meta-reviewer start for bubble ${input.bubbleId}.`,
     "This is a dedicated static worker pane for autonomous meta-review tasks.",
     "Stay idle until orchestration signals a meta-review run.",
+    "When signaled, submit only through structured Pairflow CLI: `pairflow bubble meta-review submit --id <id> --round <n> --recommendation <approve|rework|inconclusive> --summary \"...\" --report-markdown \"...\"`.",
     "Do not modify transcript/inbox/state files manually.",
     buildPairflowCommandGuidance(
       input.worktreePath,
@@ -458,6 +459,7 @@ function buildResumeMetaReviewerStartupPrompt(input: {
     `Pairflow meta-reviewer resume for bubble ${input.bubbleId}.`,
     "This pane is static across rounds; do not restart unless explicitly instructed.",
     "Stay idle until orchestration signals a meta-review run.",
+    "When signaled, return result only through structured Pairflow submit command (no pane marker output parsing).",
     buildPairflowCommandGuidance(
       input.worktreePath,
       input.pairflowCommandProfile
@@ -611,6 +613,23 @@ function buildResumeReviewerKickoffMessage(input: {
   ].join(" ");
 }
 
+function buildResumeMetaReviewerKickoffMessage(input: {
+  bubbleId: string;
+  worktreePath: string;
+  round: number;
+  pairflowCommandProfile: PairflowCommandProfile;
+}): string {
+  return [
+    `# [pairflow] bubble=${input.bubbleId} resume kickoff (meta-reviewer).`,
+    `State is META_REVIEW_RUNNING at round ${input.round}.`,
+    buildPairflowCommandGuidance(
+      input.worktreePath,
+      input.pairflowCommandProfile
+    ),
+    "Continue the active gate run and submit via `pairflow bubble meta-review submit ...` (no pane marker output parsing)."
+  ].join(" ");
+}
+
 function resolveResumeKickoffMessages(input: {
   bubbleId: string;
   worktreePath: string;
@@ -625,8 +644,33 @@ function resolveResumeKickoffMessages(input: {
 }): {
   implementerKickoffMessage?: string;
   reviewerKickoffMessage?: string;
+  metaReviewerKickoffMessage?: string;
   kickoffDiagnostic?: string;
 } {
+  if (input.state.state === "META_REVIEW_RUNNING") {
+    if (
+      input.state.active_role === "meta_reviewer" &&
+      input.state.active_agent === "codex"
+    ) {
+      return {
+        metaReviewerKickoffMessage: buildResumeMetaReviewerKickoffMessage({
+          bubbleId: input.bubbleId,
+          worktreePath: input.worktreePath,
+          round: input.state.round,
+          pairflowCommandProfile: input.pairflowCommandProfile
+        })
+      };
+    }
+    return {
+      kickoffDiagnostic: [
+        "META_REVIEW_RUNNING state active context is inconsistent;",
+        `active_role=${formatResumeStateValue(input.state.active_role)},`,
+        `active_agent=${formatResumeStateValue(input.state.active_agent)}.`,
+        "No meta-review kickoff was sent; continue from transcript/state and reconcile lifecycle ownership before acting."
+      ].join(" ")
+    };
+  }
+
   if (input.state.state !== "RUNNING") {
     return {};
   }
