@@ -152,10 +152,16 @@ describe("listBubbles", () => {
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const readyForApproval = applyStateTransition(loaded.state, {
       to: "READY_FOR_APPROVAL",
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
       lastCommandAt: "2026-02-22T18:40:00.000Z"
     });
     const metaRunning = applyStateTransition(readyForApproval, {
       to: "META_REVIEW_RUNNING",
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      activeSince: "2026-02-22T18:41:00.000Z",
       lastCommandAt: "2026-02-22T18:41:00.000Z"
     });
     const humanGate = applyStateTransition(metaRunning, {

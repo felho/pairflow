@@ -103,10 +103,16 @@ describe("restart recovery", () => {
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const readyForApproval = applyStateTransition(loaded.state, {
       to: "READY_FOR_APPROVAL",
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
       lastCommandAt: "2026-02-23T11:00:00.000Z"
     });
     const metaReviewRunning = applyStateTransition(readyForApproval, {
       to: "META_REVIEW_RUNNING",
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      activeSince: "2026-02-23T11:01:00.000Z",
       lastCommandAt: "2026-02-23T11:01:00.000Z"
     });
     await writeStateSnapshot(bubble.paths.statePath, metaReviewRunning, {
@@ -133,6 +139,7 @@ describe("restart recovery", () => {
       | {
           implementerCommand: string;
           reviewerCommand: string;
+          metaReviewerKickoffMessage?: string;
         }
       | undefined;
     const started = await startBubble(
@@ -152,7 +159,10 @@ describe("restart recovery", () => {
         launchBubbleTmuxSession: (input) => {
           launchInput = {
             implementerCommand: input.implementerCommand,
-            reviewerCommand: input.reviewerCommand
+            reviewerCommand: input.reviewerCommand,
+            ...(input.metaReviewerKickoffMessage !== undefined
+              ? { metaReviewerKickoffMessage: input.metaReviewerKickoffMessage }
+              : {})
           };
           return Promise.resolve({ sessionName: "pf-b_restart_meta_01" });
         }
@@ -165,6 +175,9 @@ describe("restart recovery", () => {
       "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE"
     );
     expect(launchInput?.reviewerCommand).toContain("PAIRFLOW_EXTERNAL_COMMAND");
+    expect(launchInput?.metaReviewerKickoffMessage).toContain(
+      "resume kickoff (meta-reviewer)"
+    );
   });
 
   it("preserves READY_FOR_HUMAN_APPROVAL on restart without invalid downgrade", async () => {

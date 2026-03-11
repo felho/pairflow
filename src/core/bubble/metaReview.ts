@@ -15,6 +15,7 @@ import { applyStateTransition } from "../state/machine.js";
 import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
 import {
   SchemaValidationError,
+  isInteger,
   isNonEmptyString,
   isRecord
 } from "../validation.js";
@@ -26,11 +27,13 @@ import {
 } from "../runtime/tmuxInput.js";
 import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../types/bubble.js";
 import type {
+  AgentName,
   BubbleMetaReviewSnapshotState,
   BubbleStateSnapshot,
   MetaReviewRecommendation,
   MetaReviewRunStatus
 } from "../../types/bubble.js";
+import type { MetaReviewSubmissionPayload } from "../../types/protocol.js";
 const CANONICAL_META_REVIEW_REPORT_REF = "artifacts/meta-review-last.md";
 const CANONICAL_META_REVIEW_REPORT_JSON_REF = "artifacts/meta-review-last.json";
 
@@ -44,6 +47,15 @@ export interface MetaReviewReadInput {
 
 export interface MetaReviewRunInput extends MetaReviewReadInput {
   depth?: MetaReviewDepth;
+}
+
+export interface MetaReviewSubmitInput extends MetaReviewReadInput {
+  round: number;
+  recommendation: MetaReviewSubmissionPayload["recommendation"];
+  summary: string;
+  report_markdown: string;
+  rework_target_message?: string | null;
+  report_json?: Record<string, unknown>;
 }
 
 export interface MetaReviewLiveRunnerInput {
@@ -116,6 +128,7 @@ export interface MetaReviewDependencies {
   resolveBubbleById?: typeof resolveBubbleById;
   readStateSnapshot?: typeof readStateSnapshot;
   writeStateSnapshot?: typeof writeStateSnapshot;
+  readRuntimeSessionsRegistry?: typeof readRuntimeSessionsRegistry;
   runLiveReview?: (
     input: MetaReviewLiveRunnerInput
   ) => Promise<MetaReviewLiveRunnerOutput>;
@@ -123,14 +136,19 @@ export interface MetaReviewDependencies {
   writeFile?: typeof writeFile;
   now?: Date;
   randomUUID?: () => string;
+  allowMetaReviewRunningState?: boolean;
 }
 
 export type MetaReviewErrorReasonCode =
   | "META_REVIEW_REWORK_MESSAGE_INVALID"
+  | "META_REVIEW_STATE_INVALID"
+  | "META_REVIEW_SENDER_MISMATCH"
+  | "META_REVIEW_ROUND_MISMATCH"
   | "META_REVIEW_SNAPSHOT_WRITE_CONFLICT"
   | "META_REVIEW_BUBBLE_LOOKUP_FAILED"
   | "META_REVIEW_SCHEMA_INVALID"
   | "META_REVIEW_SCHEMA_INVALID_COMBINATION"
+  | "META_REVIEW_GATE_RUN_FAILED"
   | "META_REVIEW_IO_ERROR"
   | "META_REVIEW_UNKNOWN_ERROR";
 
@@ -242,6 +260,89 @@ function assertRunPayloadInvariants(input: {
   }
 }
 
+function normalizeRequiredSubmitText(
+  value: string,
+  fieldName: "summary" | "report_markdown"
+): string {
+  if (!isNonEmptyString(value)) {
+    throw new MetaReviewError(
+      "META_REVIEW_SCHEMA_INVALID",
+      `meta-review submit ${fieldName} must be a non-empty string`
+    );
+  }
+  return fieldName === "summary" ? value.trim() : value.trimEnd();
+}
+
+function isDuplicateSubmitForGateRun(input: {
+  snapshot: BubbleMetaReviewSnapshotState;
+  runId: string;
+}): boolean {
+  return input.snapshot.last_autonomous_run_id === input.runId;
+}
+
+async function assertMetaReviewSubmitterOwnership(input: {
+  bubbleId: string;
+  sessionsPath: string;
+  readRuntimeSessions: typeof readRuntimeSessionsRegistry;
+  state: BubbleStateSnapshot;
+}): Promise<{ gateRunId: string }> {
+  if (input.state.state !== "META_REVIEW_RUNNING") {
+    throw new MetaReviewError(
+      "META_REVIEW_STATE_INVALID",
+      `meta-review submit requires META_REVIEW_RUNNING state (current: ${input.state.state}).`
+    );
+  }
+
+  if (input.state.active_role !== "meta_reviewer") {
+    throw new MetaReviewError(
+      "META_REVIEW_SENDER_MISMATCH",
+      `meta-review submit rejected: active role mismatch (expected meta_reviewer, found ${String(input.state.active_role)}).`
+    );
+  }
+
+  if (
+    input.state.active_agent !== metaReviewerSubmitterAgent ||
+    input.state.active_since === null
+  ) {
+    throw new MetaReviewError(
+      "META_REVIEW_SENDER_MISMATCH",
+      `meta-review submit rejected: active ownership is not bound to ${metaReviewerSubmitterAgent}.`
+    );
+  }
+
+  const sessions = await input.readRuntimeSessions(input.sessionsPath, {
+    allowMissing: true
+  });
+  const record = sessions[input.bubbleId];
+  if (
+    record?.metaReviewerPane?.role === "meta-reviewer" &&
+    record.metaReviewerPane.active !== true
+  ) {
+    throw new MetaReviewError(
+      "META_REVIEW_STATE_INVALID",
+      "meta-review submit window closed: meta-reviewer pane ownership was deactivated by gate progression."
+    );
+  }
+  if (
+    record?.metaReviewerPane?.role !== "meta-reviewer" ||
+    record.metaReviewerPane.active !== true
+  ) {
+    throw new MetaReviewError(
+      "META_REVIEW_SENDER_MISMATCH",
+      "meta-review submit rejected: meta-reviewer pane ownership is not active in runtime session."
+    );
+  }
+  if (!isNonEmptyString(record.metaReviewerPane.runId)) {
+    throw new MetaReviewError(
+      "META_REVIEW_STATE_INVALID",
+      "meta-review submit rejected: gate run identity is missing from active meta-reviewer pane binding."
+    );
+  }
+  return {
+    gateRunId: record.metaReviewerPane.runId
+  };
+}
+
 function resolveReportArtifactPath(input: {
   bubbleDir: string;
   artifactsDir: string;
@@ -326,6 +427,7 @@ type MetaReviewRunnerMode = (typeof metaReviewRunnerModes)[number];
 const defaultMetaReviewRunnerTimeoutMs = 10 * 60 * 1000;
 const defaultMetaReviewPanePollIntervalMs = 800;
 const metaReviewPaneCaptureHistoryLines = 5000;
+const metaReviewerSubmitterAgent: AgentName = "codex";
 
 function resolveMetaReviewRunnerMode(): MetaReviewRunnerMode {
   const configured = process.env.PAIRFLOW_META_REVIEW_RUNNER_MODE
@@ -880,6 +982,188 @@ function formatRunnerFailure(error: unknown): {
   };
 }
 
+export async function submitMetaReviewResult(
+  input: MetaReviewSubmitInput,
+  dependencies: MetaReviewDependencies = {}
+): Promise<MetaReviewRunResult> {
+  const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
+  const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
+  const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
+  const readRuntimeSessions =
+    dependencies.readRuntimeSessionsRegistry ?? readRuntimeSessionsRegistry;
+  const writeFileFn = dependencies.writeFile ?? writeFile;
+  const now = dependencies.now ?? new Date();
+
+  const resolved = await resolveBubble({
+    bubbleId: input.bubbleId,
+    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
+    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+  });
+
+  const loadedState = await readState(resolved.bubblePaths.statePath);
+  const ownership = await assertMetaReviewSubmitterOwnership({
+    bubbleId: resolved.bubbleId,
+    sessionsPath: resolved.bubblePaths.sessionsPath,
+    readRuntimeSessions,
+    state: loadedState.state
+  });
+
+  if (!isInteger(input.round) || input.round < 1) {
+    throw new MetaReviewError(
+      "META_REVIEW_SCHEMA_INVALID",
+      "meta-review submit round must be a positive integer"
+    );
+  }
+
+  if (input.round !== loadedState.state.round) {
+    throw new MetaReviewError(
+      "META_REVIEW_ROUND_MISMATCH",
+      `meta-review submit round mismatch (active: ${loadedState.state.round}, received: ${input.round}).`
+    );
+  }
+
+  if (
+    input.recommendation !== "approve" &&
+    input.recommendation !== "rework" &&
+    input.recommendation !== "inconclusive"
+  ) {
+    throw new MetaReviewError(
+      "META_REVIEW_SCHEMA_INVALID",
+      "meta-review submit recommendation must be one of: approve, rework, inconclusive"
+    );
+  }
+
+  if (input.report_json !== undefined && !isRecord(input.report_json)) {
+    throw new MetaReviewError(
+      "META_REVIEW_SCHEMA_INVALID",
+      "meta-review submit report_json must be an object when provided"
+    );
+  }
+
+  const runId = ownership.gateRunId;
+  const updatedAt = now.toISOString();
+  const recommendation = input.recommendation;
+  const status = mapRecommendationToStatus(recommendation);
+  const summary = normalizeRequiredSubmitText(input.summary, "summary");
+  const reportMarkdown = normalizeRequiredSubmitText(
+    input.report_markdown,
+    "report_markdown"
+  );
+  const reworkTargetMessage = normalizeOptionalText(
+    input.rework_target_message ?? undefined
+  );
+
+  assertRunPayloadInvariants({
+    recommendation,
+    status,
+    reworkTargetMessage
+  });
+
+  const previousMetaReview = normalizeMetaReviewSnapshot(loadedState.state.meta_review);
+  if (isDuplicateSubmitForGateRun({ snapshot: previousMetaReview, runId })) {
+    throw new MetaReviewError(
+      "META_REVIEW_STATE_INVALID",
+      `meta-review submit rejected: duplicate structured submit for active gate run (${runId}).`
+    );
+  }
+  const nextMetaReview: BubbleMetaReviewSnapshotState = {
+    ...previousMetaReview,
+    last_autonomous_run_id: runId,
+    last_autonomous_status: status,
+    last_autonomous_recommendation: recommendation,
+    last_autonomous_summary: summary,
+    last_autonomous_report_ref: CANONICAL_META_REVIEW_REPORT_REF,
+    last_autonomous_rework_target_message: reworkTargetMessage,
+    last_autonomous_updated_at: updatedAt
+  };
+
+  const nextState: BubbleStateSnapshot = {
+    ...loadedState.state,
+    meta_review: nextMetaReview
+  };
+
+  let written: LoadedStateSnapshot;
+  try {
+    written = await writeState(resolved.bubblePaths.statePath, nextState, {
+      expectedFingerprint: loadedState.fingerprint,
+      expectedState: "META_REVIEW_RUNNING"
+    });
+  } catch (error) {
+    if (error instanceof StateStoreConflictError) {
+      const latest = await readState(resolved.bubblePaths.statePath);
+      const latestSnapshot = normalizeMetaReviewSnapshot(latest.state.meta_review);
+      if (isDuplicateSubmitForGateRun({ snapshot: latestSnapshot, runId })) {
+        throw new MetaReviewError(
+          "META_REVIEW_STATE_INVALID",
+          `meta-review submit rejected: duplicate structured submit for active gate run (${runId}).`
+        );
+      }
+      throw stateWriteConflictToMetaReviewError(error);
+    }
+    throw error;
+  }
+
+  const warnings: MetaReviewRunWarning[] = [];
+  const reportPayload = {
+    bubble_id: resolved.bubbleId,
+    round: input.round,
+    run_id: runId,
+    generated_at: updatedAt,
+    status,
+    recommendation,
+    summary,
+    report_ref: CANONICAL_META_REVIEW_REPORT_REF,
+    report_json_ref: CANONICAL_META_REVIEW_REPORT_JSON_REF,
+    rework_target_message: reworkTargetMessage,
+    warnings,
+    ...(input.report_json !== undefined ? { report_json: input.report_json } : {})
+  };
+
+  const artifactWrites = await Promise.allSettled([
+    writeFileFn(
+      resolved.bubblePaths.metaReviewLastJsonArtifactPath,
+      `${JSON.stringify(reportPayload, null, 2)}\n`,
+      "utf8"
+    ),
+    writeFileFn(
+      resolved.bubblePaths.metaReviewLastMarkdownArtifactPath,
+      `${reportMarkdown.trimEnd()}\n`,
+      "utf8"
+    )
+  ]);
+
+  const failedArtifactWrites = artifactWrites.filter(
+    (result): result is PromiseRejectedResult => result.status === "rejected"
+  );
+  if (failedArtifactWrites.length > 0) {
+    const message = failedArtifactWrites
+      .map((result) =>
+        result.reason instanceof Error
+          ? result.reason.message
+          : String(result.reason)
+      )
+      .join("; ");
+    warnings.push({
+      reason_code: "META_REVIEW_ARTIFACT_WRITE_WARNING",
+      message
+    });
+  }
+
+  return {
+    bubbleId: resolved.bubbleId,
+    depth: "standard",
+    run_id: runId,
+    status,
+    recommendation,
+    summary,
+    report_ref: CANONICAL_META_REVIEW_REPORT_REF,
+    rework_target_message: reworkTargetMessage,
+    updated_at: updatedAt,
+    lifecycle_state: written.state.state,
+    warnings
+  };
+}
+
 export async function runMetaReview(
   input: MetaReviewRunInput,
   dependencies: MetaReviewDependencies = {}
@@ -899,6 +1183,15 @@ export async function runMetaReview(
   });
 
   const loadedState = await readState(resolved.bubblePaths.statePath);
+  if (
+    loadedState.state.state === "META_REVIEW_RUNNING"
+    && dependencies.allowMetaReviewRunningState !== true
+  ) {
+    throw new MetaReviewError(
+      "META_REVIEW_STATE_INVALID",
+      "meta-review run is disabled while META_REVIEW_RUNNING submit channel is active"
+    );
+  }
   const runId = makeUuid();
   const updatedAt = now.toISOString();
   const depth = input.depth ?? "standard";
@@ -1007,7 +1300,8 @@ export async function runMetaReview(
   let written: LoadedStateSnapshot;
   try {
     written = await writeState(resolved.bubblePaths.statePath, nextState, {
-      expectedFingerprint: loadedState.fingerprint
+      expectedFingerprint: loadedState.fingerprint,
+      expectedState: loadedState.state.state
     });
   } catch (error) {
     if (error instanceof StateStoreConflictError) {
@@ -1197,6 +1491,15 @@ export async function getMetaReviewLastReport(
 export function toMetaReviewError(error: unknown): MetaReviewError {
   if (error instanceof MetaReviewError) {
     return error;
+  }
+  if (
+    error instanceof Error &&
+    "reasonCode" in error &&
+    typeof (error as { reasonCode?: unknown }).reasonCode === "string" &&
+    (error as { reasonCode: string }).reasonCode.startsWith("META_REVIEW_GATE_")
+  ) {
+    const gateReason = (error as { reasonCode: string }).reasonCode;
+    return new MetaReviewError("META_REVIEW_GATE_RUN_FAILED", `${gateReason}: ${error.message}`);
   }
   if (error instanceof BubbleLookupError) {
     return new MetaReviewError("META_REVIEW_BUBBLE_LOOKUP_FAILED", error.message);

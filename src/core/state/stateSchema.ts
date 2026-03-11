@@ -301,15 +301,25 @@ function validateMetaReviewSnapshot(
 
   const lastReworkMessage = input.last_autonomous_rework_target_message;
   const lastReworkMessageIsString = typeof lastReworkMessage === "string";
-  const lastReworkMessageValid =
-    lastReworkMessage === null || isNonEmptyString(lastReworkMessage);
-  const suppressGenericReworkMessageError =
-    lastRecommendationValid &&
-    lastRecommendation === "rework" &&
-    lastReworkMessageIsString;
-  if (
-    !lastReworkMessageValid &&
-    !suppressGenericReworkMessageError
+  const lastReworkMessageIsNonEmptyString = isNonEmptyString(lastReworkMessage);
+  const recommendationRequiresReworkMessage =
+    lastRecommendationValid && lastRecommendation === "rework";
+  if (recommendationRequiresReworkMessage) {
+    if (lastReworkMessage === null || (lastReworkMessageIsString && !lastReworkMessageIsNonEmptyString)) {
+      errors.push({
+        path: `${pathPrefix}.last_autonomous_rework_target_message`,
+        message:
+          "Must be a non-empty string when last_autonomous_recommendation is rework"
+      });
+    } else if (!lastReworkMessageIsString) {
+      errors.push({
+        path: `${pathPrefix}.last_autonomous_rework_target_message`,
+        message: "Must be null or a non-empty string"
+      });
+    }
+  } else if (
+    lastReworkMessage !== null &&
+    !lastReworkMessageIsNonEmptyString
   ) {
     errors.push({
       path: `${pathPrefix}.last_autonomous_rework_target_message`,
@@ -352,19 +362,6 @@ function validateMetaReviewSnapshot(
     errors.push({
       path: `${pathPrefix}.sticky_human_gate`,
       message: "Must be a boolean"
-    });
-  }
-
-  if (
-    lastRecommendationValid &&
-    lastRecommendation === "rework" &&
-    (lastReworkMessage === null ||
-      (lastReworkMessageIsString && !isNonEmptyString(lastReworkMessage)))
-  ) {
-    errors.push({
-      path: `${pathPrefix}.last_autonomous_rework_target_message`,
-      message:
-        "Must be a non-empty string when last_autonomous_recommendation is rework"
     });
   }
 
@@ -535,7 +532,7 @@ export function validateBubbleStateSnapshot(
   if (!(activeRole === null || isAgentRole(activeRole))) {
     errors.push({
       path: "active_role",
-      message: "Must be null or one of: implementer, reviewer"
+      message: "Must be null or one of: implementer, reviewer, meta_reviewer"
     });
   }
 
@@ -661,6 +658,39 @@ export function validateBubbleStateSnapshot(
       message:
         "RUNNING state requires active_agent, active_role, and active_since"
     });
+  }
+
+  if (state === "META_REVIEW_RUNNING") {
+    const metaReviewHasRunSnapshot =
+      metaReview !== undefined &&
+      metaReview.last_autonomous_run_id !== null &&
+      metaReview.last_autonomous_status !== null &&
+      metaReview.last_autonomous_recommendation !== null &&
+      metaReview.last_autonomous_updated_at !== null;
+
+    if (!hasAllActiveFields && !metaReviewHasRunSnapshot) {
+      errors.push({
+        path: "active_*",
+        message:
+          "META_REVIEW_RUNNING state requires active_agent, active_role, and active_since unless recovering from an existing meta-review snapshot"
+      });
+    }
+
+    if (hasAllActiveFields && activeRole !== "meta_reviewer") {
+      errors.push({
+        path: "active_role",
+        message:
+          "META_REVIEW_RUNNING state requires active_role=meta_reviewer when active ownership is present"
+      });
+    }
+
+    if (hasAllActiveFields && activeRole === "meta_reviewer" && activeAgent !== "codex") {
+      errors.push({
+        path: "active_agent",
+        message:
+          "META_REVIEW_RUNNING state requires active_agent=codex when active_role=meta_reviewer"
+      });
+    }
   }
 
   if (errors.length > 0) {

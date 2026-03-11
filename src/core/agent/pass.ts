@@ -127,9 +127,9 @@ export interface EmitPassDependencies {
 
 interface ResolvedHandoff {
   senderAgent: AgentName;
-  senderRole: AgentRole;
+  senderRole: "implementer" | "reviewer";
   recipientAgent: AgentName;
-  recipientRole: AgentRole;
+  recipientRole: "implementer" | "reviewer";
   envelopeRound: number;
   nextRound: number;
   appendRoundRoleEntry?: RoundRoleHistoryEntry;
@@ -288,8 +288,13 @@ export function inferPassIntent(activeRole: AgentRole): PassIntent {
   if (activeRole === "implementer") {
     return "review";
   }
+  if (activeRole === "reviewer") {
+    return "fix_request";
+  }
 
-  return "fix_request";
+  throw new PassCommandError(
+    `Unsupported active role for pass intent inference: ${activeRole}.`
+  );
 }
 
 function inferReviewerPassIntent(
@@ -355,6 +360,12 @@ function resolveHandoff(
       envelopeRound: state.round,
       nextRound: state.round
     };
+  }
+
+  if (state.active_role !== "reviewer") {
+    throw new PassCommandError(
+      `Unsupported active role for PASS handoff resolution: ${state.active_role}.`
+    );
   }
 
   const nextRound = state.round + 1;

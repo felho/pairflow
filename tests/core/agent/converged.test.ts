@@ -202,6 +202,7 @@ describe("emitConvergedFromWorkspace", () => {
   it("emits approval wait notifications to human + implementer + reviewer panes", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupConvergedCandidateBubble(repoPath, "b_converged_notify_01");
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
     const deliveries: Array<{
       recipient: string;
       messageRef?: string;
@@ -234,7 +235,36 @@ describe("emitConvergedFromWorkspace", () => {
             delivered: false,
             soundPath: null,
             reason: "disabled"
-          })
+          }),
+        applyMetaReviewGateOnConvergence: async () => ({
+          bubbleId: bubble.bubbleId,
+          route: "human_gate_approve",
+          gateSequence: 42,
+          gateEnvelope: {
+            id: "msg_converged_notify_approval_01",
+            ts: "2026-02-22T09:04:00.000Z",
+            bubble_id: bubble.bubbleId,
+            sender: "orchestrator",
+            recipient: "human",
+            type: "APPROVAL_REQUEST",
+            round: loaded.state.round,
+            payload: {
+              summary: "Ready for approval."
+            },
+            refs: []
+          },
+          state: {
+            ...loaded.state,
+            state: "READY_FOR_HUMAN_APPROVAL",
+            active_agent: null,
+            active_role: null,
+            active_since: null,
+            last_command_at: "2026-02-22T09:04:00.000Z"
+          }
+        }),
+        recoverMetaReviewGateFromSnapshot: async () => {
+          throw new Error("recoverMetaReviewGateFromSnapshot should not be called");
+        }
       }
     );
 
@@ -300,6 +330,9 @@ describe("emitConvergedFromWorkspace", () => {
             last_command_at: "2026-02-22T09:04:30.000Z"
           }
         }),
+        recoverMetaReviewGateFromSnapshot: async () => {
+          throw new Error("recoverMetaReviewGateFromSnapshot should not be called");
+        },
         emitTmuxDeliveryNotification: (input) => {
           deliveries.push(input.envelope.recipient);
           return Promise.resolve({
@@ -344,6 +377,9 @@ describe("emitConvergedFromWorkspace", () => {
             sessionName: "pf-b_converged_notify_02",
             message: "ok"
           });
+        },
+        recoverMetaReviewGateFromSnapshot: async () => {
+          throw new Error("recoverMetaReviewGateFromSnapshot should not be called");
         }
       }
     );

@@ -202,10 +202,16 @@ describe("reconcileRuntimeSessions", () => {
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const metaRunning = applyStateTransition(loaded.state, {
       to: "READY_FOR_APPROVAL",
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
       lastCommandAt: "2026-02-22T19:40:00.000Z"
     });
     const transitioned = applyStateTransition(metaRunning, {
       to: "META_REVIEW_RUNNING",
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      activeSince: "2026-02-22T19:41:00.000Z",
       lastCommandAt: "2026-02-22T19:41:00.000Z"
     });
     await writeStateSnapshot(bubble.paths.statePath, transitioned, {

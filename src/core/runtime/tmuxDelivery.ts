@@ -103,7 +103,7 @@ function buildDeliveryMessage(
   reviewerBrief?: string,
   reviewerFocus?: ReviewerFocusExtractionResult
 ): string {
-  const recipientRole =
+  const recipientRole: string =
     envelope.recipient === bubbleConfig.agents.implementer
       ? "implementer"
       : envelope.recipient === bubbleConfig.agents.reviewer
@@ -202,6 +202,9 @@ function buildDeliveryMessage(
           ? "Meta-reviewer requested human gate decision. Wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now."
           : "Bubble is READY_FOR_HUMAN_APPROVAL. Review is complete; wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now.";
     }
+  } else if (recipientRole === "meta-reviewer") {
+    action =
+      "Meta-review task received. Produce autonomous meta-review output and return only through structured submit: `pairflow bubble meta-review submit --id <id> --round <n> --recommendation <approve|rework|inconclusive> --summary \"...\" --report-markdown \"...\"`.";
   } else if (recipientRole === "human" || recipientRole === "orchestrator") {
     action = "Check inbox/status and continue human orchestration flow.";
   }

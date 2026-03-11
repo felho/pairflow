@@ -1819,7 +1819,6 @@ describe("startBubble", () => {
     const resumableStates = [
       "WAITING_HUMAN",
       "READY_FOR_APPROVAL",
-      "META_REVIEW_RUNNING",
       "READY_FOR_HUMAN_APPROVAL",
       "APPROVED_FOR_COMMIT",
       "COMMITTED"
@@ -1858,6 +1857,47 @@ describe("startBubble", () => {
         }
       );
     }
+  });
+
+  it("sends explicit meta-reviewer kickoff when resuming META_REVIEW_RUNNING", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_start_resume_meta_01",
+      task: "Resume meta-review running"
+    });
+
+    await updateBubbleState(bubble.paths.statePath, (current) => ({
+      ...current,
+      state: "META_REVIEW_RUNNING",
+      active_agent: "codex",
+      active_role: "meta_reviewer"
+    }));
+
+    await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-23T09:07:30.000Z")
+      },
+      {
+        buildResumeTranscriptSummary: () =>
+          Promise.resolve("resume-summary: state=META_REVIEW_RUNNING"),
+        launchBubbleTmuxSession: (input) => {
+          expect(input.implementerKickoffMessage).toBeUndefined();
+          expect(input.reviewerKickoffMessage).toBeUndefined();
+          expect(input.metaReviewerKickoffMessage).toContain(
+            "resume kickoff (meta-reviewer)"
+          );
+          expect(input.metaReviewerKickoffMessage).toContain(
+            "META_REVIEW_RUNNING"
+          );
+          return Promise.resolve({
+            sessionName: "pf-b_start_resume_meta_01"
+          });
+        }
+      }
+    );
   });
 
   it("keeps resume start robust when injected summary builder throws", async () => {
