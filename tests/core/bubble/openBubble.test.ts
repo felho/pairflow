@@ -18,6 +18,7 @@ function createResolvedBubbleFixture(input: {
     work_mode: "worktree",
     quality_mode: "strict",
     review_artifact_type: "auto",
+    pairflow_command_profile: "external",
     reviewer_context_mode: "fresh",
     watchdog_timeout_minutes: 5,
     max_rounds: 8,

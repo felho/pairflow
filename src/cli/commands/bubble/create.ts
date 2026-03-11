@@ -5,10 +5,14 @@ import { createBubble, type BubbleCreateResult } from "../../../core/bubble/crea
 import { registerRepoInRegistry } from "../../../core/repo/registry.js";
 import {
   assertCreateReviewArtifactType,
+  assertPairflowCommandProfile,
   DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER,
   MISSING_REVIEW_ARTIFACT_TYPE_OPTION
 } from "../../../config/bubbleConfig.js";
-import type { CreateReviewArtifactType } from "../../../types/bubble.js";
+import type {
+  CreateReviewArtifactType,
+  PairflowCommandProfile
+} from "../../../types/bubble.js";
 
 export interface BubbleCreateCommandOptions {
   id?: string;
@@ -20,6 +24,7 @@ export interface BubbleCreateCommandOptions {
   reviewerBrief?: string;
   reviewerBriefFile?: string;
   bootstrapCommand?: string;
+  pairflowCommandProfile?: PairflowCommandProfile;
   accuracyCritical?: boolean;
   help: boolean;
 }
@@ -45,6 +50,7 @@ export function getBubbleCreateHelpText(): string {
     "  --task <text>         Inline task text",
     "  --task-file <path>    Task input from file",
     "  --bootstrap-command <cmd>    Optional worktree bootstrap command run by bubble start",
+    "  --pairflow-command-profile <external|self_host>  Pairflow CLI command profile (default: external)",
     "  --reviewer-brief <text>      Optional inline reviewer brief",
     "  --reviewer-brief-file <path> Optional reviewer brief from file",
     "  --accuracy-critical          Enforce reviewer verification payload gate",
@@ -84,6 +90,9 @@ export function parseBubbleCreateCommandOptions(
         type: "string"
       },
       "bootstrap-command": {
+        type: "string"
+      },
+      "pairflow-command-profile": {
         type: "string"
       },
       "accuracy-critical": {
@@ -143,6 +152,18 @@ export function parseBubbleCreateCommandOptions(
   if (options.base === undefined) {
     missing.push("--base");
   }
+  const rawPairflowCommandProfile = parsed.values["pairflow-command-profile"];
+  let pairflowCommandProfileValidationError: string | undefined;
+  if (rawPairflowCommandProfile !== undefined) {
+    try {
+      options.pairflowCommandProfile = assertPairflowCommandProfile(
+        rawPairflowCommandProfile
+      );
+    } catch (error) {
+      pairflowCommandProfileValidationError =
+        error instanceof Error ? error.message : String(error);
+    }
+  }
   const rawReviewArtifactType = parsed.values["review-artifact-type"];
   const isReviewArtifactTypeMissing = rawReviewArtifactType === undefined;
   let reviewArtifactTypeValidationError: string | undefined;
@@ -200,10 +221,18 @@ export function parseBubbleCreateCommandOptions(
         `${reviewArtifactTypeValidationError}${formatAlsoMissing(missing)}`
       );
     }
+    if (pairflowCommandProfileValidationError !== undefined) {
+      throw new Error(
+        `${pairflowCommandProfileValidationError}${formatAlsoMissing(missing)}`
+      );
+    }
     throw new Error(`Missing required options: ${missing.join(", ")}`);
   }
   if (reviewArtifactTypeValidationError !== undefined) {
     throw new Error(reviewArtifactTypeValidationError);
+  }
+  if (pairflowCommandProfileValidationError !== undefined) {
+    throw new Error(pairflowCommandProfileValidationError);
   }
 
   return {
@@ -249,6 +278,9 @@ export async function runBubbleCreateCommand(
       : {}),
     ...(options.bootstrapCommand !== undefined
       ? { bootstrapCommand: options.bootstrapCommand }
+      : {}),
+    ...(options.pairflowCommandProfile !== undefined
+      ? { pairflowCommandProfile: options.pairflowCommandProfile }
       : {}),
     ...(options.accuracyCritical === true ? { accuracyCritical: true } : {}),
     cwd

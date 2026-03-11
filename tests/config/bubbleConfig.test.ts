@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   assertCreateReviewArtifactType,
+  assertPairflowCommandProfile,
   INVALID_REVIEW_ARTIFACT_TYPE_OPTION,
   MISSING_REVIEW_ARTIFACT_TYPE_OPTION,
+  PAIRFLOW_COMMAND_PROFILE_INVALID,
   parseBubbleConfigToml,
   parseToml,
   REVIEW_ARTIFACT_TYPE_AUTO_REMOVED,
@@ -31,6 +33,7 @@ describe("bubble config schema", () => {
     const config = parseBubbleConfigToml(baseToml);
     expect(config.quality_mode).toBe("strict");
     expect(config.review_artifact_type).toBe("auto");
+    expect(config.pairflow_command_profile).toBe("external");
     expect(config.reviewer_context_mode).toBe("fresh");
     expect(config.watchdog_timeout_minutes).toBe(30);
     expect(config.work_mode).toBe("worktree");
@@ -125,11 +128,9 @@ docs_gate = "required"
 round_gate_applies_after = -1
 `);
 
-    expect(config.enforcement_mode).toEqual({
-      all_gate: "advisory",
-      docs_gate: "required",
-      parse_warning: expect.any(String)
-    });
+    expect(config.enforcement_mode.all_gate).toBe("advisory");
+    expect(config.enforcement_mode.docs_gate).toBe("required");
+    expect(config.enforcement_mode.parse_warning).toEqual(expect.any(String));
     expect(config.doc_contract_gates.round_gate_applies_after).toBe(2);
     expect(config.enforcement_mode.parse_warning).toContain("enforcement_mode.all_gate");
     expect(config.doc_contract_gates.parse_warning).toContain("round_gate_applies_after");
@@ -144,6 +145,7 @@ round_gate_applies_after = -1
       work_mode: "worktree",
       quality_mode: "strict",
       review_artifact_type: "auto",
+      pairflow_command_profile: "external",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 20,
       max_rounds: 8,
@@ -409,6 +411,7 @@ round_gate_applies_after = -1
       work_mode: "worktree",
       quality_mode: "strict",
       review_artifact_type: "auto",
+      pairflow_command_profile: "external",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
@@ -459,6 +462,7 @@ round_gate_applies_after = -1
         work_mode: "worktree",
         quality_mode: "strict",
         review_artifact_type: "auto",
+      pairflow_command_profile: "external",
         reviewer_context_mode: "fresh",
         watchdog_timeout_minutes: 5,
         max_rounds: 8,
@@ -494,6 +498,7 @@ round_gate_applies_after = -1
       work_mode: "worktree",
       quality_mode: "strict",
       review_artifact_type: "auto",
+      pairflow_command_profile: "external",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
@@ -553,6 +558,7 @@ typecheck = "pnpm typecheck"
       work_mode: "worktree",
       quality_mode: "strict",
       review_artifact_type: "auto",
+      pairflow_command_profile: "external",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
@@ -608,6 +614,7 @@ typecheck = "pnpm typecheck"
       work_mode: "worktree",
       quality_mode: "strict",
       review_artifact_type: "auto",
+      pairflow_command_profile: "external",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
@@ -640,6 +647,7 @@ typecheck = "pnpm typecheck"
       work_mode: "worktree",
       quality_mode: "strict",
       review_artifact_type: "auto",
+      pairflow_command_profile: "external",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
@@ -681,6 +689,51 @@ typecheck = "pnpm typecheck"
     expect(reparsed.attach_launcher).toBe("ghostty");
     expect(reparsed.local_overlay?.mode).toBe("copy");
     expect(reparsed.local_overlay?.entries).toEqual([".claude", ".env.local"]);
+  });
+
+  it("renders and re-parses bubble TOML with self_host profile", () => {
+    const rendered = renderBubbleConfigToml({
+      id: "b_test_self_host_roundtrip_01",
+      repo_path: "/tmp/repo",
+      base_branch: "main",
+      bubble_branch: "bubble/b_test_self_host_roundtrip_01",
+      work_mode: "worktree",
+      quality_mode: "strict",
+      review_artifact_type: "code",
+      pairflow_command_profile: "self_host",
+      reviewer_context_mode: "fresh",
+      watchdog_timeout_minutes: 5,
+      max_rounds: 8,
+      severity_gate_round: 4,
+      commit_requires_approval: true,
+      agents: {
+        implementer: "codex",
+        reviewer: "claude"
+      },
+      commands: {
+        test: "pnpm test",
+        typecheck: "pnpm typecheck"
+      },
+      notifications: {
+        enabled: true
+      },
+      enforcement_mode: {
+        all_gate: "advisory",
+        docs_gate: "advisory"
+      },
+      doc_contract_gates: {
+        round_gate_applies_after: 2
+      },
+      local_overlay: {
+        enabled: true,
+        mode: "symlink",
+        entries: [".claude"]
+      }
+    });
+
+    expect(rendered).toContain('pairflow_command_profile = "self_host"');
+    const reparsed = parseBubbleConfigToml(rendered);
+    expect(reparsed.pairflow_command_profile).toBe("self_host");
   });
 
   it("parses explicit open_command from TOML input", () => {
@@ -739,6 +792,7 @@ typecheck = "pnpm typecheck"
       work_mode: "worktree",
       quality_mode: "strict",
       review_artifact_type: "auto",
+      pairflow_command_profile: "external",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
@@ -783,6 +837,7 @@ typecheck = "pnpm typecheck"
       work_mode: "worktree",
       quality_mode: "strict",
       review_artifact_type: "auto",
+      pairflow_command_profile: "external",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
@@ -821,6 +876,7 @@ typecheck = "pnpm typecheck"
       work_mode: "worktree",
       quality_mode: "strict",
       review_artifact_type: "auto",
+      pairflow_command_profile: "external",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
       max_rounds: 8,
@@ -852,6 +908,28 @@ typecheck = "pnpm typecheck"
     );
     const reparsed = parseBubbleConfigToml(rendered);
     expect(reparsed.attach_launcher).toBeUndefined();
+  });
+});
+
+describe("assertPairflowCommandProfile", () => {
+  it("accepts external and self_host values", () => {
+    expect(assertPairflowCommandProfile("external")).toBe("external");
+    expect(assertPairflowCommandProfile("self_host")).toBe("self_host");
+  });
+
+  it("rejects empty and whitespace-only values", () => {
+    expect(() => assertPairflowCommandProfile("")).toThrow(
+      new RegExp(`^${PAIRFLOW_COMMAND_PROFILE_INVALID}:`, "u")
+    );
+    expect(() => assertPairflowCommandProfile("   ")).toThrow(
+      new RegExp(`^${PAIRFLOW_COMMAND_PROFILE_INVALID}:`, "u")
+    );
+  });
+
+  it("rejects invalid values with deterministic reason code", () => {
+    expect(() => assertPairflowCommandProfile("hosted")).toThrow(
+      new RegExp(`^${PAIRFLOW_COMMAND_PROFILE_INVALID}:`, "u")
+    );
   });
 });
 

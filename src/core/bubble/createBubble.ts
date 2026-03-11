@@ -12,6 +12,7 @@ import {
   DEFAULT_ENFORCEMENT_MODE_DOCS_GATE,
   DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER,
   DEFAULT_MAX_ROUNDS,
+  DEFAULT_PAIRFLOW_COMMAND_PROFILE,
   DEFAULT_QUALITY_MODE,
   DEFAULT_REVIEWER_CONTEXT_MODE,
   DEFAULT_SEVERITY_GATE_ROUND,
@@ -40,7 +41,8 @@ import type {
   BubbleConfig,
   BubbleStateSnapshot,
   CreateReviewArtifactType,
-  GateEnforcementLevel
+  GateEnforcementLevel,
+  PairflowCommandProfile
 } from "../../types/bubble.js";
 
 export interface BubbleCreateInput {
@@ -61,6 +63,7 @@ export interface BubbleCreateInput {
   typecheckCommand?: string;
   bootstrapCommand?: string;
   openCommand?: string;
+  pairflowCommandProfile?: PairflowCommandProfile;
 }
 
 export interface ResolvedTaskInput {
@@ -770,6 +773,7 @@ function buildBubbleConfig(input: {
   typecheckCommand?: string;
   bootstrapCommand?: string;
   openCommand?: string;
+  pairflowCommandProfile?: PairflowCommandProfile;
   enforcementModeAllGate?: GateEnforcementLevel;
   enforcementModeDocsGate?: GateEnforcementLevel;
 }): BubbleConfig {
@@ -788,6 +792,8 @@ function buildBubbleConfig(input: {
     work_mode: DEFAULT_WORK_MODE,
     quality_mode: DEFAULT_QUALITY_MODE,
     review_artifact_type: input.reviewArtifactType,
+    pairflow_command_profile:
+      input.pairflowCommandProfile ?? DEFAULT_PAIRFLOW_COMMAND_PROFILE,
     reviewer_context_mode: DEFAULT_REVIEWER_CONTEXT_MODE,
     watchdog_timeout_minutes: DEFAULT_WATCHDOG_TIMEOUT_MINUTES,
     max_rounds: DEFAULT_MAX_ROUNDS,
@@ -948,6 +954,9 @@ export async function createBubble(
   }
   if (input.openCommand !== undefined) {
     bubbleConfigInput.openCommand = input.openCommand;
+  }
+  if (input.pairflowCommandProfile !== undefined) {
+    bubbleConfigInput.pairflowCommandProfile = input.pairflowCommandProfile;
   }
   if (repoConfigEnforcementAllGate !== undefined) {
     bubbleConfigInput.enforcementModeAllGate = repoConfigEnforcementAllGate;

@@ -60,7 +60,11 @@ import {
   readReviewerFocusArtifact,
   type ReviewerFocusExtractionResult
 } from "../reviewer/reviewerBrief.js";
-import type { BubbleStateSnapshot, ReviewArtifactType } from "../../types/bubble.js";
+import type {
+  BubbleStateSnapshot,
+  PairflowCommandProfile,
+  ReviewArtifactType
+} from "../../types/bubble.js";
 
 export interface StartBubbleInput {
   bubbleId: string;
@@ -182,9 +186,17 @@ async function isTmuxSessionAliveDefault(sessionName: string): Promise<boolean> 
   }
 }
 
-function buildStatusPaneCommand(bubbleId: string, repoPath: string, worktreePath: string): string {
+function buildStatusPaneCommand(
+  bubbleId: string,
+  repoPath: string,
+  worktreePath: string,
+  pairflowCommandProfile: PairflowCommandProfile
+): string {
   const displayWorktreePath = formatStatusPaneWorktreePath(worktreePath);
-  const pairflowCommand = buildPinnedPairflowCommand(worktreePath);
+  const pairflowCommand = buildPinnedPairflowCommand(
+    worktreePath,
+    pairflowCommandProfile
+  );
   const watchdogCommand = `${pairflowCommand} bubble watchdog --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)} >/dev/null 2>&1 || true`;
   const statusCommand = `${pairflowCommand} bubble status --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)}`;
   const statusSignatureCommand = `${pairflowCommand} bubble status --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)} --json`;
@@ -236,6 +248,7 @@ function buildImplementerStartupPrompt(input: {
   taskArtifactPath: string;
   donePackagePath: string;
   reviewArtifactType: ReviewArtifactType;
+  pairflowCommandProfile: PairflowCommandProfile;
 }): string {
   const evidenceHandoffGuidance = buildImplementerEvidenceHandoffGuidance(
     input.reviewArtifactType
@@ -245,7 +258,10 @@ function buildImplementerStartupPrompt(input: {
     `Read task: ${input.taskArtifactPath}.`,
     "Implement in this worktree and run relevant validation before handoff.",
     `Execute pairflow commands from this worktree path only: ${input.worktreePath}.`,
-    buildPairflowCommandGuidance(input.worktreePath),
+    buildPairflowCommandGuidance(
+      input.worktreePath,
+      input.pairflowCommandProfile
+    ),
     evidenceHandoffGuidance,
     `Keep done package updated at: ${input.donePackagePath}.`,
     "Done package should summarize changes + validation results for final commit handoff.",
@@ -260,13 +276,17 @@ function buildMetaReviewerStartupPrompt(input: {
   repoPath: string;
   worktreePath: string;
   taskArtifactPath: string;
+  pairflowCommandProfile: PairflowCommandProfile;
 }): string {
   return [
     `Pairflow meta-reviewer start for bubble ${input.bubbleId}.`,
     "This is a dedicated static worker pane for autonomous meta-review tasks.",
     "Stay idle until orchestration signals a meta-review run.",
     "Do not modify transcript/inbox/state files manually.",
-    buildPairflowCommandGuidance(input.worktreePath),
+    buildPairflowCommandGuidance(
+      input.worktreePath,
+      input.pairflowCommandProfile
+    ),
     `Task: ${input.taskArtifactPath}.`,
     `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`
   ].join(" ");
@@ -278,6 +298,7 @@ function buildReviewerStartupPrompt(input: {
   worktreePath: string;
   taskArtifactPath: string;
   reviewArtifactType: ReviewArtifactType;
+  pairflowCommandProfile: PairflowCommandProfile;
   reviewerBriefText?: string;
   reviewerFocus?: ReviewerFocusExtractionResult;
 }): string {
@@ -306,7 +327,10 @@ function buildReviewerStartupPrompt(input: {
     buildReviewerFindingsPassInstruction(input.reviewArtifactType),
     ...buildReviewerCanonicalCommandGateLines(),
     "Execute pairflow commands directly from this worktree (do not ask for confirmation first).",
-    buildPairflowCommandGuidance(input.worktreePath),
+    buildPairflowCommandGuidance(
+      input.worktreePath,
+      input.pairflowCommandProfile
+    ),
     "Never edit transcript/inbox/state files manually.",
     `Repo: ${input.repoPath}. Worktree: ${input.worktreePath}. Task: ${input.taskArtifactPath}.`
   ].join(" ");
@@ -317,12 +341,16 @@ function buildImplementerKickoffMessage(input: {
   worktreePath: string;
   taskArtifactPath: string;
   reviewArtifactType: ReviewArtifactType;
+  pairflowCommandProfile: PairflowCommandProfile;
 }): string {
   return [
     `# [pairflow] bubble=${input.bubbleId} kickoff.`,
     `Read task file now: ${input.taskArtifactPath}.`,
     "Start implementation immediately in this worktree.",
-    buildPairflowCommandGuidance(input.worktreePath),
+    buildPairflowCommandGuidance(
+      input.worktreePath,
+      input.pairflowCommandProfile
+    ),
     buildImplementerEvidenceHandoffGuidance(input.reviewArtifactType),
     "When done with validation, hand off with `pairflow pass --summary \"<what changed + validation>\"` and include available evidence `--ref` log paths."
   ].join(" ");
@@ -383,6 +411,7 @@ function buildResumeImplementerStartupPrompt(input: {
   taskArtifactPath: string;
   donePackagePath: string;
   reviewArtifactType: ReviewArtifactType;
+  pairflowCommandProfile: PairflowCommandProfile;
   state: BubbleStateSnapshot;
   transcriptSummary: string;
   kickoffDiagnostic?: string;
@@ -399,7 +428,10 @@ function buildResumeImplementerStartupPrompt(input: {
     `Task: ${input.taskArtifactPath}.`,
     `Done package: ${input.donePackagePath}.`,
     `Execute pairflow commands from this worktree path only: ${input.worktreePath}.`,
-    buildPairflowCommandGuidance(input.worktreePath),
+    buildPairflowCommandGuidance(
+      input.worktreePath,
+      input.pairflowCommandProfile
+    ),
     `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`,
     `State snapshot: ${buildResumeContextLine(input.state)}.`,
     `Transcript context: ${input.transcriptSummary}`,
@@ -417,6 +449,7 @@ function buildResumeMetaReviewerStartupPrompt(input: {
   repoPath: string;
   worktreePath: string;
   taskArtifactPath: string;
+  pairflowCommandProfile: PairflowCommandProfile;
   state: BubbleStateSnapshot;
   transcriptSummary: string;
   kickoffDiagnostic?: string;
@@ -425,7 +458,10 @@ function buildResumeMetaReviewerStartupPrompt(input: {
     `Pairflow meta-reviewer resume for bubble ${input.bubbleId}.`,
     "This pane is static across rounds; do not restart unless explicitly instructed.",
     "Stay idle until orchestration signals a meta-review run.",
-    buildPairflowCommandGuidance(input.worktreePath),
+    buildPairflowCommandGuidance(
+      input.worktreePath,
+      input.pairflowCommandProfile
+    ),
     `Task: ${input.taskArtifactPath}.`,
     `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`,
     `State snapshot: ${buildResumeContextLine(input.state)}.`,
@@ -442,6 +478,7 @@ function buildResumeReviewerStartupPrompt(input: {
   repoPath: string;
   worktreePath: string;
   taskArtifactPath: string;
+  pairflowCommandProfile: PairflowCommandProfile;
   state: BubbleStateSnapshot;
   transcriptSummary: string;
   kickoffDiagnostic?: string;
@@ -461,7 +498,10 @@ function buildResumeReviewerStartupPrompt(input: {
     `Pairflow reviewer resume for bubble ${input.bubbleId}.`,
     `Task: ${input.taskArtifactPath}.`,
     `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`,
-    buildPairflowCommandGuidance(input.worktreePath),
+    buildPairflowCommandGuidance(
+      input.worktreePath,
+      input.pairflowCommandProfile
+    ),
     `State snapshot: ${buildResumeContextLine(input.state)}.`,
     `Transcript context: ${input.transcriptSummary}`,
     "Follow orchestrator test-evidence skip/run directive for test execution.",
@@ -522,12 +562,16 @@ function buildResumeImplementerKickoffMessage(input: {
   taskArtifactPath: string;
   round: number;
   reviewArtifactType: ReviewArtifactType;
+  pairflowCommandProfile: PairflowCommandProfile;
 }): string {
   return [
     `# [pairflow] bubble=${input.bubbleId} resume kickoff (implementer).`,
     `State is RUNNING at round ${input.round}.`,
     `Re-open task context: ${input.taskArtifactPath}.`,
-    buildPairflowCommandGuidance(input.worktreePath),
+    buildPairflowCommandGuidance(
+      input.worktreePath,
+      input.pairflowCommandProfile
+    ),
     buildImplementerEvidenceHandoffGuidance(input.reviewArtifactType),
     "Continue active implementation and hand off with `pairflow pass --summary \"<what changed + validation>\"` plus available evidence `--ref` logs when ready."
   ].join(" ");
@@ -538,6 +582,7 @@ function buildResumeReviewerKickoffMessage(input: {
   worktreePath: string;
   round: number;
   reviewArtifactType: ReviewArtifactType;
+  pairflowCommandProfile: PairflowCommandProfile;
   reviewerTestDirectiveLine?: string;
   projectionVariant?: ReviewerCommandGateProjectionVariant;
 }): string {
@@ -554,7 +599,10 @@ function buildResumeReviewerKickoffMessage(input: {
   return [
     `# [pairflow] bubble=${input.bubbleId} resume kickoff (reviewer).`,
     `State is RUNNING at round ${input.round}.`,
-    buildPairflowCommandGuidance(input.worktreePath),
+    buildPairflowCommandGuidance(
+      input.worktreePath,
+      input.pairflowCommandProfile
+    ),
     ...(input.reviewerTestDirectiveLine !== undefined
       ? [`Test directive: ${input.reviewerTestDirectiveLine}`]
       : []),
@@ -568,6 +616,7 @@ function resolveResumeKickoffMessages(input: {
   worktreePath: string;
   taskArtifactPath: string;
   reviewArtifactType: ReviewArtifactType;
+  pairflowCommandProfile: PairflowCommandProfile;
   state: BubbleStateSnapshot;
   transcriptSummary: string;
   implementerAgent: string;
@@ -592,7 +641,8 @@ function resolveResumeKickoffMessages(input: {
         worktreePath: input.worktreePath,
         taskArtifactPath: input.taskArtifactPath,
         round: input.state.round,
-        reviewArtifactType: input.reviewArtifactType
+        reviewArtifactType: input.reviewArtifactType,
+        pairflowCommandProfile: input.pairflowCommandProfile
       })
     };
   }
@@ -611,6 +661,7 @@ function resolveResumeKickoffMessages(input: {
         worktreePath: input.worktreePath,
         round: input.state.round,
         reviewArtifactType: input.reviewArtifactType,
+        pairflowCommandProfile: input.pairflowCommandProfile,
         projectionVariant,
         ...(input.reviewerTestDirectiveLine !== undefined
           ? { reviewerTestDirectiveLine: input.reviewerTestDirectiveLine }
@@ -784,7 +835,12 @@ export async function startBubble(
       const tmux = await launchTmux({
         bubbleId: resolved.bubbleId,
         worktreePath: resolved.bubblePaths.worktreePath,
-        statusCommand: buildStatusPaneCommand(resolved.bubbleId, resolved.repoPath, resolved.bubblePaths.worktreePath),
+        statusCommand: buildStatusPaneCommand(
+          resolved.bubbleId,
+          resolved.repoPath,
+          resolved.bubblePaths.worktreePath,
+          resolved.bubbleConfig.pairflow_command_profile
+        ),
         statusPaneLabel: "[orchestrator/status]",
         implementerPaneLabel: `[${resolved.bubbleConfig.agents.implementer}/implementer]`,
         reviewerPaneLabel: `[${resolved.bubbleConfig.agents.reviewer}/reviewer]`,
@@ -793,24 +849,28 @@ export async function startBubble(
           agentName: resolved.bubbleConfig.agents.implementer,
           bubbleId: resolved.bubbleId,
           worktreePath: resolved.bubblePaths.worktreePath,
+          pairflowCommandProfile: resolved.bubbleConfig.pairflow_command_profile,
           startupPrompt: buildImplementerStartupPrompt({
             bubbleId: resolved.bubbleId,
             repoPath: resolved.repoPath,
             worktreePath: resolved.bubblePaths.worktreePath,
             taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
             donePackagePath,
-            reviewArtifactType: resolved.bubbleConfig.review_artifact_type
+            reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
+            pairflowCommandProfile: resolved.bubbleConfig.pairflow_command_profile
           })
         }),
         reviewerCommand: buildAgentCommand({
           agentName: resolved.bubbleConfig.agents.reviewer,
           bubbleId: resolved.bubbleId,
           worktreePath: resolved.bubblePaths.worktreePath,
+          pairflowCommandProfile: resolved.bubbleConfig.pairflow_command_profile,
           startupPrompt: buildReviewerStartupPrompt({
             bubbleId: resolved.bubbleId,
             repoPath: resolved.repoPath,
             worktreePath: resolved.bubblePaths.worktreePath,
             taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+            pairflowCommandProfile: resolved.bubbleConfig.pairflow_command_profile,
             reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
             ...(reviewerFocus !== undefined ? { reviewerFocus } : {}),
             ...(reviewerBriefText !== undefined ? { reviewerBriefText } : {})
@@ -820,18 +880,21 @@ export async function startBubble(
           agentName: "codex",
           bubbleId: resolved.bubbleId,
           worktreePath: resolved.bubblePaths.worktreePath,
+          pairflowCommandProfile: resolved.bubbleConfig.pairflow_command_profile,
           startupPrompt: buildMetaReviewerStartupPrompt({
             bubbleId: resolved.bubbleId,
             repoPath: resolved.repoPath,
             worktreePath: resolved.bubblePaths.worktreePath,
-            taskArtifactPath: resolved.bubblePaths.taskArtifactPath
+            taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+            pairflowCommandProfile: resolved.bubbleConfig.pairflow_command_profile
           })
         }),
         implementerKickoffMessage: buildImplementerKickoffMessage({
           bubbleId: resolved.bubbleId,
           worktreePath: resolved.bubblePaths.worktreePath,
           taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
-          reviewArtifactType: resolved.bubbleConfig.review_artifact_type
+          reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
+          pairflowCommandProfile: resolved.bubbleConfig.pairflow_command_profile
         })
       });
       tmuxSessionName = tmux.sessionName;
@@ -887,6 +950,7 @@ export async function startBubble(
         worktreePath: resolved.bubblePaths.worktreePath,
         taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
         reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
+        pairflowCommandProfile: resolved.bubbleConfig.pairflow_command_profile,
         state: loadedState.state,
         transcriptSummary,
         implementerAgent: resolved.bubbleConfig.agents.implementer,
@@ -900,7 +964,12 @@ export async function startBubble(
       const tmux = await launchTmux({
         bubbleId: resolved.bubbleId,
         worktreePath: resolved.bubblePaths.worktreePath,
-        statusCommand: buildStatusPaneCommand(resolved.bubbleId, resolved.repoPath, resolved.bubblePaths.worktreePath),
+        statusCommand: buildStatusPaneCommand(
+          resolved.bubbleId,
+          resolved.repoPath,
+          resolved.bubblePaths.worktreePath,
+          resolved.bubbleConfig.pairflow_command_profile
+        ),
         statusPaneLabel: "[orchestrator/status]",
         implementerPaneLabel: `[${resolved.bubbleConfig.agents.implementer}/implementer]`,
         reviewerPaneLabel: `[${resolved.bubbleConfig.agents.reviewer}/reviewer]`,
@@ -909,6 +978,7 @@ export async function startBubble(
           agentName: resolved.bubbleConfig.agents.implementer,
           bubbleId: resolved.bubbleId,
           worktreePath: resolved.bubblePaths.worktreePath,
+          pairflowCommandProfile: resolved.bubbleConfig.pairflow_command_profile,
           startupPrompt: buildResumeImplementerStartupPrompt({
             bubbleId: resolved.bubbleId,
             repoPath: resolved.repoPath,
@@ -916,6 +986,7 @@ export async function startBubble(
             taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
             donePackagePath,
             reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
+            pairflowCommandProfile: resolved.bubbleConfig.pairflow_command_profile,
             state: loadedState.state,
             transcriptSummary,
             ...(kickoffDiagnostic !== undefined ? { kickoffDiagnostic } : {})
@@ -925,11 +996,13 @@ export async function startBubble(
           agentName: resolved.bubbleConfig.agents.reviewer,
           bubbleId: resolved.bubbleId,
           worktreePath: resolved.bubblePaths.worktreePath,
+          pairflowCommandProfile: resolved.bubbleConfig.pairflow_command_profile,
           startupPrompt: buildResumeReviewerStartupPrompt({
             bubbleId: resolved.bubbleId,
             repoPath: resolved.repoPath,
             worktreePath: resolved.bubblePaths.worktreePath,
             taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+            pairflowCommandProfile: resolved.bubbleConfig.pairflow_command_profile,
             state: loadedState.state,
             transcriptSummary,
             reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
@@ -945,11 +1018,13 @@ export async function startBubble(
           agentName: "codex",
           bubbleId: resolved.bubbleId,
           worktreePath: resolved.bubblePaths.worktreePath,
+          pairflowCommandProfile: resolved.bubbleConfig.pairflow_command_profile,
           startupPrompt: buildResumeMetaReviewerStartupPrompt({
             bubbleId: resolved.bubbleId,
             repoPath: resolved.repoPath,
             worktreePath: resolved.bubblePaths.worktreePath,
             taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+            pairflowCommandProfile: resolved.bubbleConfig.pairflow_command_profile,
             state: loadedState.state,
             transcriptSummary,
             ...(kickoffDiagnostic !== undefined ? { kickoffDiagnostic } : {})

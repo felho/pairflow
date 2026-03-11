@@ -26,12 +26,21 @@ describe("pairflow command path helpers", () => {
       resolveWorktreePairflowEntrypoint("/tmp/pairflow-worktree")
     ).toBe("/tmp/pairflow-worktree/dist/cli/index.js");
     expect(
-      buildPinnedPairflowCommand("/tmp/pairflow-worktree")
+      buildPinnedPairflowCommand("/tmp/pairflow-worktree", "self_host")
     ).toBe("node '/tmp/pairflow-worktree/dist/cli/index.js'");
+    expect(
+      buildPinnedPairflowCommand("/tmp/pairflow-worktree")
+    ).toBe("pairflow");
+    expect(
+      buildPinnedPairflowCommand("/tmp/pairflow-worktree", "external")
+    ).toBe("pairflow");
   });
 
-  it("fails closed with PAIRFLOW_COMMAND_PATH_STALE when local entrypoint is unavailable", () => {
-    const bootstrap = buildPairflowCommandBootstrap("/tmp/pairflow-worktree");
+  it("fails closed with PAIRFLOW_COMMAND_PATH_STALE when self_host local entrypoint is unavailable", () => {
+    const bootstrap = buildPairflowCommandBootstrap(
+      "/tmp/pairflow-worktree",
+      "self_host"
+    );
 
     expect(bootstrap.join("\n")).toContain("PAIRFLOW_COMMAND_PATH_STALE");
     expect(bootstrap.join("\n")).toContain('exit 86');
@@ -40,9 +49,31 @@ describe("pairflow command path helpers", () => {
     expect(bootstrap.join("\n")).toContain('export PATH="$PAIRFLOW_WRAPPER_DIR:$PATH"');
   });
 
+  it("builds external profile bootstrap wrapper", () => {
+    const bootstrap = buildPairflowCommandBootstrap(
+      "/tmp/pairflow-worktree",
+      "external"
+    );
+
+    expect(bootstrap.join("\n")).toContain("PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE");
+    expect(bootstrap.join("\n")).toContain("PAIRFLOW_EXTERNAL_COMMAND");
+    expect(bootstrap.join("\n")).toContain("PAIRFLOW_WRAPPER_PATH");
+    expect(bootstrap.join("\n")).toContain(
+      'if [ "$PAIRFLOW_EXTERNAL_COMMAND" = "$PAIRFLOW_WRAPPER_PATH" ]; then'
+    );
+    expect(bootstrap.join("\n")).toContain(
+      '[ "$PAIRFLOW_EXTERNAL_COMMAND" != "$PAIRFLOW_WRAPPER_PATH" ]'
+    );
+    expect(bootstrap.join("\n")).toContain("exit 87");
+    expect(bootstrap.join("\n")).toContain('PAIRFLOW_WRAPPER_DIR');
+    expect(bootstrap.join("\n")).toContain('cat > "$PAIRFLOW_WRAPPER_DIR/pairflow"');
+    expect(bootstrap.join("\n")).toContain('export PATH="$PAIRFLOW_WRAPPER_DIR:$PATH"');
+  });
+
   it("reports stale when active entrypoint does not match the worktree-local build", () => {
     const assessment = assessPairflowCommandPath({
       worktreePath: "/tmp/pairflow-worktree",
+      profile: "self_host",
       activeEntrypoint: "/usr/local/lib/node_modules/pairflow/dist/cli/index.js",
       localEntrypointExists: true
     });
@@ -56,6 +87,7 @@ describe("pairflow command path helpers", () => {
   it("reports worktree-local when the active entrypoint matches the current worktree", () => {
     const assessment = assessPairflowCommandPath({
       worktreePath: "/tmp/pairflow-worktree",
+      profile: "self_host",
       activeEntrypoint: "/tmp/pairflow-worktree/dist/cli/index.js",
       localEntrypointExists: true
     });
@@ -77,6 +109,7 @@ describe("pairflow command path helpers", () => {
 
     const assessment = assessPairflowCommandPath({
       worktreePath: root,
+      profile: "self_host",
       activeEntrypoint: linkedEntrypoint
     });
 
@@ -84,10 +117,72 @@ describe("pairflow command path helpers", () => {
     expect(assessment.reasonCode).toBeUndefined();
   });
 
+  it("does not report stale for external profile when local entrypoint differs", () => {
+    const assessment = assessPairflowCommandPath({
+      worktreePath: "/tmp/pairflow-worktree",
+      profile: "external",
+      activeEntrypoint: "/usr/local/lib/node_modules/pairflow/dist/cli/index.js",
+      localEntrypointExists: false,
+      externalPairflowAvailable: true
+    });
+
+    expect(assessment.status).toBe("external");
+    expect(assessment.reasonCode).toBeUndefined();
+  });
+
+  it("reports missing when external profile cannot resolve pairflow from PATH", () => {
+    const assessment = assessPairflowCommandPath({
+      worktreePath: "/tmp/pairflow-worktree",
+      profile: "external",
+      externalPairflowAvailable: false
+    });
+
+    expect(assessment.status).toBe("missing");
+    expect(assessment.reasonCode).toBe("PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE");
+  });
+
+  it("reports missing even when active entrypoint is already resolved if PATH pairflow is unavailable", () => {
+    const assessment = assessPairflowCommandPath({
+      worktreePath: "/tmp/pairflow-worktree",
+      profile: "external",
+      activeEntrypoint: "/usr/local/lib/node_modules/pairflow/dist/cli/index.js",
+      externalPairflowAvailable: false
+    });
+
+    expect(assessment.status).toBe("missing");
+    expect(assessment.reasonCode).toBe("PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE");
+    expect(assessment.message).toContain("Active entrypoint was resolved");
+  });
+
+  it("reports unresolved status when self_host active entrypoint cannot be resolved", () => {
+    const assessment = assessPairflowCommandPath({
+      worktreePath: "/tmp/pairflow-worktree",
+      profile: "self_host",
+      activeEntrypoint: undefined,
+      localEntrypointExists: true
+    });
+
+    expect(assessment.status).toBe("unknown");
+    expect(assessment.reasonCode).toBe("PAIRFLOW_COMMAND_PATH_UNRESOLVED");
+  });
+
   it("builds operator guidance with the stale-path fail-closed contract", () => {
-    const guidance = buildPairflowCommandGuidance("/tmp/pairflow-worktree");
+    const guidance = buildPairflowCommandGuidance(
+      "/tmp/pairflow-worktree",
+      "self_host"
+    );
     expect(guidance).toContain("/tmp/pairflow-worktree/dist/cli/index.js");
     expect(guidance).toContain("wrapper to `PATH`");
     expect(guidance).toContain("PAIRFLOW_COMMAND_PATH_STALE");
+  });
+
+  it("builds operator guidance for external profile", () => {
+    const guidance = buildPairflowCommandGuidance(
+      "/tmp/pairflow-worktree",
+      "external"
+    );
+
+    expect(guidance).toContain("Default command profile is `external`");
+    expect(guidance).toContain("--pairflow-command-profile self_host");
   });
 });

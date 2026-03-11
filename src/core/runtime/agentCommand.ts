@@ -1,11 +1,13 @@
 import type { AgentName } from "../../types/bubble.js";
 import { buildPairflowCommandBootstrap } from "./pairflowCommand.js";
 import { shellQuote } from "../util/shellQuote.js";
+import type { PairflowCommandProfile } from "../../types/bubble.js";
 
 export interface BuildAgentCommandInput {
   agentName: AgentName;
   bubbleId: string;
   worktreePath: string;
+  pairflowCommandProfile?: PairflowCommandProfile;
   startupPrompt?: string | undefined;
 }
 
@@ -38,7 +40,10 @@ export function buildAgentCommand(input: BuildAgentCommandInput): string {
   const missingBinaryMessage = `${agentName} CLI not found in PATH for bubble ${bubbleId}. Install it or configure agent command mapping.`;
   const worktreePinningMessage = `Failed to pin agent root to worktree ${worktreePath} for bubble ${bubbleId}.`;
   const launchCommand = buildAgentLaunchCommand(agentName, input.startupPrompt);
-  const pairflowBootstrap = buildPairflowCommandBootstrap(worktreePath);
+  const pairflowBootstrap = buildPairflowCommandBootstrap(
+    worktreePath,
+    input.pairflowCommandProfile ?? "external"
+  );
   const script = [
     "set +e",
     `if ! cd ${shellQuote(worktreePath)}; then`,

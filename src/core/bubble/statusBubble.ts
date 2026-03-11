@@ -59,8 +59,12 @@ export interface BubbleStatusView {
     latestUpdatedAt: string | null;
   };
   commandPath: {
-    status: "worktree_local" | "stale";
-    reasonCode?: "PAIRFLOW_COMMAND_PATH_STALE";
+    status: "worktree_local" | "external" | "stale" | "missing" | "unknown";
+    reasonCode?:
+      | "PAIRFLOW_COMMAND_PATH_STALE"
+      | "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE"
+      | "PAIRFLOW_COMMAND_PATH_UNRESOLVED";
+    profile: "external" | "self_host";
     localEntrypoint: string;
     activeEntrypoint: string | null;
     message: string;
@@ -192,6 +196,7 @@ export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleS
 
   const commandPath = assessPairflowCommandPath({
     worktreePath: resolved.bubblePaths.worktreePath,
+    profile: resolved.bubbleConfig.pairflow_command_profile,
     activeEntrypoint: process.argv[1]
   });
 
@@ -234,6 +239,7 @@ export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleS
       ...(commandPath.reasonCode !== undefined
         ? { reasonCode: commandPath.reasonCode }
         : {}),
+      profile: commandPath.profile,
       localEntrypoint: commandPath.localEntrypoint,
       activeEntrypoint: commandPath.activeEntrypoint,
       message: commandPath.message,

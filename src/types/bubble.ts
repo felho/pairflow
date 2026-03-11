@@ -42,6 +42,10 @@ export const reviewerContextModes = ["fresh", "persistent"] as const;
 
 export type ReviewerContextMode = (typeof reviewerContextModes)[number];
 
+export const pairflowCommandProfiles = ["external", "self_host"] as const;
+
+export type PairflowCommandProfile = (typeof pairflowCommandProfiles)[number];
+
 export const reviewArtifactTypes = ["auto", "code", "document"] as const;
 
 export type ReviewArtifactType = (typeof reviewArtifactTypes)[number];
@@ -168,6 +172,7 @@ export interface BubbleConfig {
   work_mode: WorkMode;
   quality_mode: QualityMode;
   review_artifact_type: ReviewArtifactType;
+  pairflow_command_profile: PairflowCommandProfile;
   reviewer_context_mode: ReviewerContextMode;
   watchdog_timeout_minutes: number;
   max_rounds: number;
@@ -282,6 +287,15 @@ export function isReviewArtifactType(value: unknown): value is ReviewArtifactTyp
   return (
     typeof value === "string" &&
     (reviewArtifactTypes as readonly string[]).includes(value)
+  );
+}
+
+export function isPairflowCommandProfile(
+  value: unknown
+): value is PairflowCommandProfile {
+  return (
+    typeof value === "string"
+    && (pairflowCommandProfiles as readonly string[]).includes(value)
   );
 }
 

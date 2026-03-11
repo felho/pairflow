@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -30,6 +30,32 @@ afterEach(async () => {
     )
   );
 });
+
+async function withFakePairflowOnPath<T>(fn: () => Promise<T>): Promise<T> {
+  const fakeBinDir = await mkdtemp(join(tmpdir(), "pairflow-fake-bin-"));
+  tempDirs.push(fakeBinDir);
+  const fakePairflowPath = join(fakeBinDir, "pairflow");
+  await writeFile(fakePairflowPath, "#!/usr/bin/env bash\nexit 0\n", "utf8");
+  await chmod(fakePairflowPath, 0o755);
+
+  const originalPath = process.env.PATH;
+  process.env.PATH = `${fakeBinDir}:${originalPath ?? ""}`;
+  try {
+    return await fn();
+  } finally {
+    process.env.PATH = originalPath;
+  }
+}
+
+async function withPathWithoutPairflow<T>(fn: () => Promise<T>): Promise<T> {
+  const originalPath = process.env.PATH;
+  process.env.PATH = "";
+  try {
+    return await fn();
+  } finally {
+    process.env.PATH = originalPath;
+  }
+}
 
 describe("getBubbleStatus", () => {
   it("returns state/watchdog/transcript summary and pending inbox counts", async () => {
@@ -517,5 +543,93 @@ describe("getBubbleStatus", () => {
       violated: false,
       round: 1
     });
+  });
+
+  it("uses external command profile by default and avoids false stale on entrypoint mismatch", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_cmd_profile_external_01",
+      task: "Status command profile external"
+    });
+
+    const status = await withFakePairflowOnPath(async () =>
+      getBubbleStatus({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath
+      })
+    );
+
+    expect(status.commandPath.profile).toBe("external");
+    expect(status.commandPath.status).toBe("external");
+    expect(status.commandPath.reasonCode).toBeUndefined();
+  });
+
+  it("reports stale only for self_host command profile", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_cmd_profile_self_host_01",
+      task: "Status command profile self_host",
+      pairflowCommandProfile: "self_host"
+    });
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(status.commandPath.profile).toBe("self_host");
+    expect(status.commandPath.status).toBe("stale");
+    expect(status.commandPath.reasonCode).toBe("PAIRFLOW_COMMAND_PATH_STALE");
+  });
+
+  it("defaults legacy profile-missing configs to external", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_cmd_profile_legacy_01",
+      task: "Status command profile legacy"
+    });
+
+    const rawConfig = await readFile(bubble.paths.bubbleTomlPath, "utf8");
+    const legacyConfig = rawConfig
+      .split("\n")
+      .filter((line) => !line.startsWith("pairflow_command_profile = "))
+      .join("\n");
+    await writeFile(bubble.paths.bubbleTomlPath, legacyConfig, "utf8");
+
+    const status = await withFakePairflowOnPath(async () =>
+      getBubbleStatus({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath
+      })
+    );
+
+    expect(status.commandPath.profile).toBe("external");
+    expect(status.commandPath.status).toBe("external");
+    expect(status.commandPath.reasonCode).toBeUndefined();
+  });
+
+  it("reports missing for external profile when PATH pairflow is unavailable even with resolved active entrypoint", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_cmd_profile_external_missing_01",
+      task: "Status command profile external missing"
+    });
+
+    const status = await withPathWithoutPairflow(async () =>
+      getBubbleStatus({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath
+      })
+    );
+
+    expect(status.commandPath.profile).toBe("external");
+    expect(status.commandPath.status).toBe("missing");
+    expect(status.commandPath.reasonCode).toBe(
+      "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE"
+    );
   });
 });

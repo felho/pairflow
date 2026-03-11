@@ -86,7 +86,7 @@ export class ConvergedCommandError extends Error {
   }
 }
 
-function resolveMetaReviewRolloutBlockingReasonCodes(input: {
+export function resolveMetaReviewRolloutBlockingReasonCodes(input: {
   gateRoute: MetaReviewGateRoute;
   metaReviewWarnings: Array<{ reason_code: string }>;
   commandPathStatus: ReturnType<typeof assessPairflowCommandPath>;
@@ -99,8 +99,24 @@ function resolveMetaReviewRolloutBlockingReasonCodes(input: {
   if (input.gateRoute === "human_gate_dispatch_failed") {
     codes.add("META_REVIEW_GATE_REWORK_DISPATCH_FAILED");
   }
-  if (input.commandPathStatus.status === "stale") {
+  if (
+    input.commandPathStatus.profile === "self_host"
+    && input.commandPathStatus.status === "stale"
+  ) {
     codes.add("PAIRFLOW_COMMAND_PATH_STALE");
+  }
+  if (
+    input.commandPathStatus.profile === "self_host"
+    && input.commandPathStatus.status === "unknown"
+    && input.commandPathStatus.reasonCode === "PAIRFLOW_COMMAND_PATH_UNRESOLVED"
+  ) {
+    codes.add("PAIRFLOW_COMMAND_PATH_UNRESOLVED");
+  }
+  if (
+    input.commandPathStatus.profile === "external"
+    && input.commandPathStatus.reasonCode === "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE"
+  ) {
+    codes.add("PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE");
   }
   for (const warning of input.metaReviewWarnings) {
     if (warning.reason_code === "META_REVIEW_RUNNER_ERROR") {
@@ -415,6 +431,7 @@ export async function emitConvergedFromWorkspace(
 
   const commandPathStatus = assessPairflowCommandPath({
     worktreePath: resolved.bubblePaths.worktreePath,
+    profile: resolved.bubbleConfig.pairflow_command_profile,
     activeEntrypoint: process.argv[1]
   });
   const blockingReasonCodes = resolveMetaReviewRolloutBlockingReasonCodes({

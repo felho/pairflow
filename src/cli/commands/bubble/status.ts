@@ -193,6 +193,15 @@ function formatCommandPath(status: BubbleStatusView["commandPath"]): string {
   if (status.status === "worktree_local") {
     return green("worktree_local");
   }
+  if (status.status === "external") {
+    return green("external");
+  }
+  if (status.status === "unknown") {
+    return bold(yellow(status.reasonCode ?? "PAIRFLOW_COMMAND_PATH_UNRESOLVED"));
+  }
+  if (status.status === "missing") {
+    return bold(red(status.reasonCode ?? "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE"));
+  }
   return bold(
     red(
       `${status.reasonCode ?? "PAIRFLOW_COMMAND_PATH_STALE"}`
@@ -354,7 +363,7 @@ export function renderBubbleStatusText(status: BubbleStatusView): string {
     `Watchdog: ${status.watchdog.monitored ? "on" : "off"} timeout=${status.watchdog.timeoutMinutes}m remaining=${status.watchdog.remainingSeconds ?? "-"}s expired=${status.watchdog.expired ? "yes" : "no"}`,
     `Inbox pending: questions=${status.pendingInboxItems.humanQuestions}, approvals=${status.pendingInboxItems.approvalRequests}, total=${status.pendingInboxItems.total}`,
     `Transcript: messages=${status.transcript.totalMessages}, last=${status.transcript.lastMessageType ?? "-"} @ ${status.transcript.lastMessageTs ?? "-"}`,
-    `Command path: ${status.commandPath.status}${status.commandPath.status === "stale" ? ` reason=${status.commandPath.reasonCode ?? "PAIRFLOW_COMMAND_PATH_STALE"}` : ""} active=${status.commandPath.activeEntrypoint ?? "-"} expected=${status.commandPath.localEntrypoint}`,
+    `Command path: ${status.commandPath.status} profile=${status.commandPath.profile}${status.commandPath.reasonCode !== undefined ? ` reason=${status.commandPath.reasonCode}` : ""} active=${status.commandPath.activeEntrypoint ?? "-"} expected=${status.commandPath.localEntrypoint} pinned=${status.commandPath.pinnedCommand}`,
     `Accuracy critical: ${status.accuracy_critical ? "yes" : "no"}`,
     `Last review verification: ${status.accuracy_critical ? status.last_review_verification : "n/a"}`,
     `Failing gates: ${failingGateSummary}`,

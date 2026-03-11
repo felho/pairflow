@@ -160,9 +160,11 @@ describe("restart recovery", () => {
     );
 
     expect(started.state.state).toBe("META_REVIEW_RUNNING");
-    expect(launchInput?.implementerCommand).toContain("PAIRFLOW_LOCAL_ENTRYPOINT");
-    expect(launchInput?.implementerCommand).toContain("PAIRFLOW_COMMAND_PATH_STALE");
-    expect(launchInput?.reviewerCommand).toContain("PAIRFLOW_LOCAL_ENTRYPOINT");
+    expect(launchInput?.implementerCommand).toContain("PAIRFLOW_EXTERNAL_COMMAND");
+    expect(launchInput?.implementerCommand).toContain(
+      "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE"
+    );
+    expect(launchInput?.reviewerCommand).toContain("PAIRFLOW_EXTERNAL_COMMAND");
   });
 
   it("preserves READY_FOR_HUMAN_APPROVAL on restart without invalid downgrade", async () => {

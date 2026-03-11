@@ -28,6 +28,7 @@ const baseConfig: BubbleConfig = {
   work_mode: "worktree",
   quality_mode: "strict",
   review_artifact_type: "auto",
+  pairflow_command_profile: "external",
   reviewer_context_mode: "persistent",
   watchdog_timeout_minutes: 5,
   max_rounds: 8,
@@ -1288,10 +1289,10 @@ describe("emitTmuxDeliveryNotification", () => {
       "If `.pairflow/evidence/*.log` files exist, include them as `--ref` (lint/typecheck/test)."
     );
     expect(passToImplementerCall?.[4]).toContain(
-      "Use the worktree-local Pairflow CLI pinned in this pane (/tmp/worktree/dist/cli/index.js)."
+      "Default command profile is `external`; Pairflow commands are resolved from PATH."
     );
     expect(passToImplementerCall?.[4]).toContain(
-      "PAIRFLOW_COMMAND_PATH_STALE"
+      "--pairflow-command-profile self_host"
     );
     expect(passToImplementerCall?.[4]).not.toContain(
       "Docs-only scope: choose one mode and keep it consistent in the same PASS."
