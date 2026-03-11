@@ -178,4 +178,23 @@ describe("BubbleExpandedCard", () => {
     expect(onPositionChange).not.toHaveBeenCalled();
     expect(onPositionCommit).not.toHaveBeenCalled();
   });
+
+  it("ignores mousemove drag updates when primary button is no longer pressed", () => {
+    const onPositionChange = vi.fn();
+    renderExpandedCard({
+      onPositionChange
+    });
+
+    const article = screen.getByRole("article");
+    const header = article.firstElementChild;
+    if (!(header instanceof HTMLDivElement)) {
+      throw new Error("Expanded card header not found");
+    }
+
+    fireEvent.mouseDown(header, { button: 0, clientX: 140, clientY: 140 });
+    fireEvent.mouseMove(document, { buttons: 0, clientX: 0, clientY: 0 });
+    fireEvent.mouseUp(document);
+
+    expect(onPositionChange).not.toHaveBeenCalled();
+  });
 });

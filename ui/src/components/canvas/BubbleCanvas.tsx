@@ -33,6 +33,10 @@ interface DragState {
   onUp: (event: MouseEvent) => void;
 }
 
+function isPrimaryMouseButtonPressed(event: MouseEvent): boolean {
+  return (event.buttons & 1) === 1;
+}
+
 interface BubbleCardProps {
   bubble: BubbleCardModel;
   position: BubblePosition;
@@ -175,6 +179,10 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
         startX: clientX,
         startY: clientY,
         onMove: (pointerEvent) => {
+          if (!isPrimaryMouseButtonPressed(pointerEvent)) {
+            stopDrag();
+            return;
+          }
           applyDragPosition(pointerEvent.clientX, pointerEvent.clientY);
         },
         onUp: () => {

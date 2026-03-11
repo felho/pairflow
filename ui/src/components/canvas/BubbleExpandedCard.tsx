@@ -26,6 +26,10 @@ interface DragState {
   onUp: (event: MouseEvent) => void;
 }
 
+function isPrimaryMouseButtonPressed(event: MouseEvent): boolean {
+  return (event.buttons & 1) === 1;
+}
+
 function formatStateLabel(state: BubbleLifecycleState): string {
   return state.replaceAll("_", " ");
 }
@@ -194,6 +198,10 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
             startX: event.clientX,
             startY: event.clientY,
             onMove: (pointerEvent) => {
+              if (!isPrimaryMouseButtonPressed(pointerEvent)) {
+                stopDrag();
+                return;
+              }
               applyDragPosition(pointerEvent.clientX, pointerEvent.clientY);
             },
             onUp: () => {

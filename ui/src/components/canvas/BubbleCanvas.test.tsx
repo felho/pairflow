@@ -258,6 +258,7 @@ describe("BubbleCanvas", () => {
       clientY: 140
     });
     fireEvent.mouseMove(document, {
+      buttons: 1,
       clientX: 170,
       clientY: 190
     });
@@ -492,6 +493,40 @@ describe("BubbleCanvas", () => {
 
     expect(onPositionChange).not.toHaveBeenCalled();
     expect(onPositionCommit).not.toHaveBeenCalled();
+  });
+
+  it("ignores mousemove drag updates when primary button is no longer pressed", () => {
+    const onPositionChange = vi.fn();
+    render(
+      <BubbleCanvas
+        bubbles={[
+          bubbleCard({
+            bubbleId: "b-1",
+            repoPath: "/repo-a"
+          })
+        ]}
+        positions={{
+          "b-1": {
+            x: 120,
+            y: 140
+          }
+        }}
+        expandedBubbleIds={[]}
+        onPositionChange={onPositionChange}
+        onPositionCommit={() => undefined}
+        onToggleExpand={() => undefined}
+        onDelete={(bubbleId) => Promise.resolve(deletedResult(bubbleId))}
+      />
+    );
+
+    const dragHandle = screen.getByRole("button", {
+      name: "Bubble b-1 drag handle"
+    });
+    fireEvent.mouseDown(dragHandle, { button: 0, clientX: 140, clientY: 140 });
+    fireEvent.mouseMove(document, { buttons: 0, clientX: 0, clientY: 0 });
+    fireEvent.mouseUp(document);
+
+    expect(onPositionChange).not.toHaveBeenCalled();
   });
 
   it("cancels pending single-click open when follow-up click has detail 2", () => {
