@@ -915,7 +915,7 @@ export async function applyMetaReviewGateOnConvergence(
       runResult
     },
     {
-      resolveBubbleById: async () => resolved,
+      resolveBubbleById: () => Promise.resolve(resolved),
       readStateSnapshot: async (statePath) => {
         if (useCapturedAfterRun) {
           useCapturedAfterRun = false;

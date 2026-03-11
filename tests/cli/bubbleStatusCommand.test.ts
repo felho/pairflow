@@ -93,6 +93,7 @@ describe("renderBubbleStatusText", () => {
       },
       commandPath: {
         status: "worktree_local",
+        profile: "self_host",
         localEntrypoint: "/tmp/worktree/dist/cli/index.js",
         activeEntrypoint: "/tmp/worktree/dist/cli/index.js",
         message:
@@ -176,7 +177,10 @@ describe("renderBubbleStatusText", () => {
   it("shows review verification as n/a when accuracy critical is disabled", () => {
     const rendered = renderBubbleStatusText(createStatusView({}));
     expect(rendered).toContain(
-      "Command path: worktree_local active=/tmp/worktree/dist/cli/index.js expected=/tmp/worktree/dist/cli/index.js"
+      "Command path: worktree_local profile=self_host active=/tmp/worktree/dist/cli/index.js expected=/tmp/worktree/dist/cli/index.js"
+    );
+    expect(rendered).toContain(
+      "pinned=node '/tmp/worktree/dist/cli/index.js'"
     );
     expect(rendered).toContain("Last review verification: n/a");
   });
@@ -187,6 +191,7 @@ describe("renderBubbleStatusText", () => {
         commandPath: {
           status: "stale",
           reasonCode: "PAIRFLOW_COMMAND_PATH_STALE",
+          profile: "self_host",
           localEntrypoint: "/tmp/worktree/dist/cli/index.js",
           activeEntrypoint: "/usr/local/lib/node_modules/pairflow/dist/cli/index.js",
           message:
@@ -197,7 +202,7 @@ describe("renderBubbleStatusText", () => {
     );
 
     expect(rendered).toContain(
-      "Command path: stale reason=PAIRFLOW_COMMAND_PATH_STALE"
+      "Command path: stale profile=self_host reason=PAIRFLOW_COMMAND_PATH_STALE"
     );
   });
 });
@@ -246,6 +251,7 @@ describe("renderBubbleStatusTable", () => {
       },
       commandPath: {
         status: "worktree_local",
+        profile: "self_host",
         localEntrypoint: "/tmp/worktree/dist/cli/index.js",
         activeEntrypoint: "/tmp/worktree/dist/cli/index.js",
         message:
@@ -313,6 +319,7 @@ describe("renderBubbleStatusTable", () => {
         commandPath: {
           status: "stale",
           reasonCode: "PAIRFLOW_COMMAND_PATH_STALE",
+          profile: "self_host",
           localEntrypoint: "/tmp/worktree/dist/cli/index.js",
           activeEntrypoint: "/usr/local/lib/node_modules/pairflow/dist/cli/index.js",
           message:

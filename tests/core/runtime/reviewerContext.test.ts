@@ -13,6 +13,7 @@ const baseConfig: BubbleConfig = {
   work_mode: "worktree",
   quality_mode: "strict",
   review_artifact_type: "auto",
+    pairflow_command_profile: "external",
   reviewer_context_mode: "fresh",
   watchdog_timeout_minutes: 5,
   max_rounds: 8,
@@ -104,5 +105,47 @@ describe("refreshReviewerContext", () => {
       refreshed: false,
       reason: "no_runtime_session"
     });
+  });
+
+  it("uses self_host bootstrap wrapper when reviewer context refresh runs under self_host profile", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await refreshReviewerContext({
+      bubbleId: "b_reviewer_ctx_01",
+      bubbleConfig: {
+        ...baseConfig,
+        pairflow_command_profile: "self_host"
+      },
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      runner,
+      readSessionsRegistry: () =>
+        Promise.resolve({
+          b_reviewer_ctx_01: {
+            bubbleId: "b_reviewer_ctx_01",
+            repoPath: "/tmp/repo",
+            worktreePath: "/tmp/worktree",
+            tmuxSessionName: "pf-b_reviewer_ctx_01",
+            updatedAt: "2026-02-23T10:00:00.000Z"
+          }
+        })
+    });
+
+    expect(result).toEqual({
+      refreshed: true
+    });
+    const reviewerCommand = calls[0]?.[6];
+    expect(typeof reviewerCommand).toBe("string");
+    const script = extractBashLcScript(reviewerCommand as string);
+    expect(script).toContain("PAIRFLOW_LOCAL_ENTRYPOINT");
+    expect(script).toContain("PAIRFLOW_COMMAND_PATH_STALE");
+    expect(script).not.toContain("PAIRFLOW_EXTERNAL_COMMAND");
   });
 });

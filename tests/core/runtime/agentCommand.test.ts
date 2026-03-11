@@ -40,7 +40,7 @@ function extractBashLcScript(command: string): string {
 }
 
 describe("buildAgentCommand", () => {
-  it("pins codex launch root to the explicit worktree path", async () => {
+  it("builds external profile bootstrap for codex by default", async () => {
     const worktreePath = "/tmp/pairflow worktree/it's-here";
     const command = buildAgentCommand({
       agentName: "codex",
@@ -51,8 +51,8 @@ describe("buildAgentCommand", () => {
     const script = extractBashLcScript(command);
 
     expect(script).toContain(`if ! cd ${shellQuote(worktreePath)}; then`);
-    expect(script).toContain("PAIRFLOW_LOCAL_ENTRYPOINT");
-    expect(script).toContain("PAIRFLOW_COMMAND_PATH_STALE");
+    expect(script).toContain("PAIRFLOW_EXTERNAL_COMMAND");
+    expect(script).toContain("PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE");
     expect(script).toContain('PAIRFLOW_WRAPPER_DIR');
     expect(script).toContain('cat > "$PAIRFLOW_WRAPPER_DIR/pairflow"');
     expect(command).toContain("--dangerously-bypass-approvals-and-sandbox");
@@ -60,17 +60,20 @@ describe("buildAgentCommand", () => {
     await assertBashParses(command);
   });
 
-  it("pins claude launch root to the explicit worktree path", async () => {
+  it("builds self_host profile bootstrap when explicitly selected", async () => {
     const worktreePath = "/tmp/pairflow-worktree/claude";
     const command = buildAgentCommand({
       agentName: "claude",
       bubbleId: "b_agent_cmd_claude_01",
       worktreePath,
+      pairflowCommandProfile: "self_host",
       startupPrompt: "Reviewer startup prompt."
     });
     const script = extractBashLcScript(command);
 
     expect(script).toContain(`if ! cd ${shellQuote(worktreePath)}; then`);
+    expect(script).toContain("PAIRFLOW_LOCAL_ENTRYPOINT");
+    expect(script).toContain("PAIRFLOW_COMMAND_PATH_STALE");
     expect(script).toContain('export PATH="$PAIRFLOW_WRAPPER_DIR:$PATH"');
     expect(command).toContain("--dangerously-skip-permissions");
     expect(command).toContain("--permission-mode");

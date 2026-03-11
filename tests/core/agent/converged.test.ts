@@ -4,7 +4,11 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { emitConvergedFromWorkspace, ConvergedCommandError } from "../../../src/core/agent/converged.js";
+import {
+  emitConvergedFromWorkspace,
+  ConvergedCommandError,
+  resolveMetaReviewRolloutBlockingReasonCodes
+} from "../../../src/core/agent/converged.js";
 import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { readTranscriptEnvelopes, appendProtocolEnvelope } from "../../../src/core/protocol/transcriptStore.js";
@@ -105,6 +109,96 @@ afterEach(async () => {
 });
 
 describe("emitConvergedFromWorkspace", () => {
+  it("adds PAIRFLOW_COMMAND_PATH_STALE blocking reason only for self_host stale status", () => {
+    const externalCodes = resolveMetaReviewRolloutBlockingReasonCodes({
+      gateRoute: "human_gate_approve",
+      metaReviewWarnings: [],
+      commandPathStatus: {
+        status: "external",
+        profile: "external",
+        localEntrypoint: "/tmp/w/dist/cli/index.js",
+        activeEntrypoint: "/usr/local/bin/pairflow",
+        localEntrypointExists: false,
+        externalPairflowAvailable: true,
+        pinnedCommand: "pairflow",
+        message: "external profile active"
+      }
+    });
+    expect(externalCodes).not.toContain("PAIRFLOW_COMMAND_PATH_STALE");
+
+    const selfHostCodes = resolveMetaReviewRolloutBlockingReasonCodes({
+      gateRoute: "human_gate_approve",
+      metaReviewWarnings: [],
+      commandPathStatus: {
+        status: "stale",
+        reasonCode: "PAIRFLOW_COMMAND_PATH_STALE",
+        profile: "self_host",
+        localEntrypoint: "/tmp/w/dist/cli/index.js",
+        activeEntrypoint: "/usr/local/bin/pairflow",
+        localEntrypointExists: true,
+        externalPairflowAvailable: true,
+        pinnedCommand: "node '/tmp/w/dist/cli/index.js'",
+        message: "stale"
+      }
+    });
+    expect(selfHostCodes).toContain("PAIRFLOW_COMMAND_PATH_STALE");
+
+    const externalUnavailableCodes = resolveMetaReviewRolloutBlockingReasonCodes({
+      gateRoute: "human_gate_approve",
+      metaReviewWarnings: [],
+      commandPathStatus: {
+        status: "missing",
+        reasonCode: "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE",
+        profile: "external",
+        localEntrypoint: "/tmp/w/dist/cli/index.js",
+        activeEntrypoint: null,
+        localEntrypointExists: true,
+        externalPairflowAvailable: false,
+        pinnedCommand: "pairflow",
+        message: "external unavailable"
+      }
+    });
+    expect(externalUnavailableCodes).toContain(
+      "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE"
+    );
+
+    const guardedExternalUnavailableCodes = resolveMetaReviewRolloutBlockingReasonCodes({
+      gateRoute: "human_gate_approve",
+      metaReviewWarnings: [],
+      commandPathStatus: {
+        status: "missing",
+        reasonCode: "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE",
+        profile: "self_host",
+        localEntrypoint: "/tmp/w/dist/cli/index.js",
+        activeEntrypoint: null,
+        localEntrypointExists: true,
+        externalPairflowAvailable: false,
+        pinnedCommand: "node '/tmp/w/dist/cli/index.js'",
+        message: "synthetic invalid combo"
+      }
+    });
+    expect(guardedExternalUnavailableCodes).not.toContain(
+      "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE"
+    );
+
+    const selfHostUnresolvedCodes = resolveMetaReviewRolloutBlockingReasonCodes({
+      gateRoute: "human_gate_approve",
+      metaReviewWarnings: [],
+      commandPathStatus: {
+        status: "unknown",
+        reasonCode: "PAIRFLOW_COMMAND_PATH_UNRESOLVED",
+        profile: "self_host",
+        localEntrypoint: "/tmp/w/dist/cli/index.js",
+        activeEntrypoint: null,
+        localEntrypointExists: true,
+        externalPairflowAvailable: true,
+        pinnedCommand: "node '/tmp/w/dist/cli/index.js'",
+        message: "self_host unresolved"
+      }
+    });
+    expect(selfHostUnresolvedCodes).toContain("PAIRFLOW_COMMAND_PATH_UNRESOLVED");
+  });
+
   it("emits approval wait notifications to human + implementer + reviewer panes", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupConvergedCandidateBubble(repoPath, "b_converged_notify_01");

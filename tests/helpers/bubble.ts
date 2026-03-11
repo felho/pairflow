@@ -4,7 +4,11 @@ import { renderBubbleConfigToml } from "../../src/config/bubbleConfig.js";
 import { createBubble, type BubbleCreateResult } from "../../src/core/bubble/createBubble.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../src/core/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../src/core/workspace/worktreeManager.js";
-import type { CreateReviewArtifactType, ReviewArtifactType } from "../../src/types/bubble.js";
+import type {
+  CreateReviewArtifactType,
+  PairflowCommandProfile,
+  ReviewArtifactType
+} from "../../src/types/bubble.js";
 
 export interface SetupRunningBubbleFixtureInput {
   bubbleId: string;
@@ -14,6 +18,7 @@ export interface SetupRunningBubbleFixtureInput {
   reviewerBrief?: string;
   accuracyCritical?: boolean;
   reviewArtifactType?: CreateReviewArtifactType;
+  pairflowCommandProfile?: PairflowCommandProfile;
 }
 
 interface SetupRunningBubbleFixtureOverrideOptions {
@@ -35,6 +40,9 @@ async function setupRunningBubbleFixtureWithOverride(
       ? { reviewerBrief: input.reviewerBrief }
       : {}),
     ...(input.accuracyCritical === true ? { accuracyCritical: true } : {}),
+    ...(input.pairflowCommandProfile !== undefined
+      ? { pairflowCommandProfile: input.pairflowCommandProfile }
+      : {}),
     cwd: input.repoPath
   });
 

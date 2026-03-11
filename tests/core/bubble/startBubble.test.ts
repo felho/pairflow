@@ -1034,11 +1034,64 @@ describe("startBubble", () => {
     expect(statusScript).toContain("prev_signature=''");
     expect(statusScript).toContain("next_signature=$(");
     expect(statusScript).toContain("if [ \"$next_signature\" != \"$prev_signature\" ]; then");
+    expect(statusScript).toContain("pairflow bubble status --id");
+    expect(statusScript).not.toContain("clear;");
+    await assertBashParses(statusCommand);
+  });
+
+  it("uses self_host command profile wiring when bubble config opts in", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_self_host_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      pairflowCommandProfile: "self_host",
+      task: "Start bubble self_host profile task",
+      cwd: repoPath
+    });
+
+    let statusCommand: string | undefined;
+    let implementerCommand: string | undefined;
+    let reviewerCommand: string | undefined;
+    let metaReviewerCommand: string | undefined;
+
+    await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T13:25:00.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () =>
+          Promise.resolve({
+            repoPath,
+            baseRef: "refs/heads/main",
+            bubbleBranch: created.config.bubble_branch,
+            worktreePath: created.paths.worktreePath
+          }),
+        launchBubbleTmuxSession: (input) => {
+          statusCommand = input.statusCommand;
+          implementerCommand = input.implementerCommand;
+          reviewerCommand = input.reviewerCommand;
+          metaReviewerCommand = input.metaReviewerCommand;
+          return Promise.resolve({ sessionName: "pf-b_start_self_host_01" });
+        }
+      }
+    );
+
+    const statusScript = extractBashLcScript(statusCommand as string);
     expect(statusScript).toContain(
       `node ${shellQuote(`${created.paths.worktreePath}/dist/cli/index.js`)} bubble status --id`
     );
-    expect(statusScript).not.toContain("clear;");
-    await assertBashParses(statusCommand);
+
+    for (const command of [implementerCommand, reviewerCommand, metaReviewerCommand]) {
+      expect(command).toBeDefined();
+      const script = extractBashLcScript(command as string);
+      expect(script).toContain("PAIRFLOW_LOCAL_ENTRYPOINT");
+      expect(script).toContain("PAIRFLOW_COMMAND_PATH_STALE");
+      expect(script).not.toContain("PAIRFLOW_EXTERNAL_COMMAND");
+    }
   });
 
   it("resumes RUNNING bubble with resume prompts and active implementer kickoff", async () => {
@@ -1100,13 +1153,13 @@ describe("startBubble", () => {
             `Execute pairflow commands from this worktree path only: ${bubble.paths.worktreePath}.`
           );
           expect(input.implementerCommand).toContain(
-            `Use the worktree-local Pairflow CLI pinned in this pane (${bubble.paths.worktreePath}/dist/cli/index.js).`
+            "Default command profile is `external`; Pairflow commands are resolved from PATH."
           );
           expect(input.implementerCommand).toContain("resume-summary: messages=3");
           expect(input.reviewerCommand).toContain("--dangerously-skip-permissions");
           expect(input.reviewerCommand).toContain("Pairflow reviewer resume");
           expect(input.reviewerCommand).toContain(
-            `Use the worktree-local Pairflow CLI pinned in this pane (${bubble.paths.worktreePath}/dist/cli/index.js).`
+            "Default command profile is `external`; Pairflow commands are resolved from PATH."
           );
           expect(input.reviewerCommand).toContain("resume-summary: messages=3");
           expect(input.reviewerCommand).toContain(

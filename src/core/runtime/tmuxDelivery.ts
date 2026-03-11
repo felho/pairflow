@@ -113,7 +113,7 @@ function buildDeliveryMessage(
   const worktreeHint =
     worktreePath === undefined
       ? "Run pairflow commands from the bubble worktree root."
-      : `Run pairflow commands from worktree: ${worktreePath}. ${buildPairflowCommandGuidance(worktreePath)}`;
+      : `Run pairflow commands from worktree: ${worktreePath}. ${buildPairflowCommandGuidance(worktreePath, bubbleConfig.pairflow_command_profile)}`;
 
   let action = "Continue protocol from this event.";
   if (recipientRole === "implementer") {

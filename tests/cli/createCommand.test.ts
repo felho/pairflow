@@ -4,6 +4,7 @@ import {
   DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER,
   INVALID_REVIEW_ARTIFACT_TYPE_OPTION,
   MISSING_REVIEW_ARTIFACT_TYPE_OPTION,
+  PAIRFLOW_COMMAND_PROFILE_INVALID,
   REVIEW_ARTIFACT_TYPE_AUTO_REMOVED
 } from "../../src/config/bubbleConfig.js";
 import {
@@ -34,6 +35,7 @@ describe("parseBubbleCreateCommandOptions", () => {
     expect(parsed.base).toBe("main");
     expect(parsed.reviewArtifactType).toBe("code");
     expect(parsed.task).toBe("Implement X");
+    expect(parsed.pairflowCommandProfile).toBeUndefined();
     expect(parsed.help).toBe(false);
   });
 
@@ -113,12 +115,41 @@ describe("parseBubbleCreateCommandOptions", () => {
     );
   });
 
+  it("parses optional pairflow command profile", () => {
+    const parsed = parseBubbleCreateCommandOptions([
+      "--id",
+      "b_create_profile_01",
+      "--repo",
+      "/tmp/repo",
+      "--base",
+      "main",
+      "--review-artifact-type",
+      "code",
+      "--task",
+      "Implement X",
+      "--pairflow-command-profile",
+      "self_host"
+    ]);
+
+    expect(parsed.pairflowCommandProfile).toBe("self_host");
+  });
+
   it("supports help flag", () => {
     const parsed = parseBubbleCreateCommandOptions(["--help"]);
     expect(parsed.help).toBe(true);
     expect(getBubbleCreateHelpText()).toContain("pairflow bubble create");
     expect(getBubbleCreateHelpText()).toContain("--review-artifact-type <document|code>");
     expect(getBubbleCreateHelpText()).not.toContain("<auto|");
+  });
+
+  it("accepts --help even when pairflow command profile is invalid", () => {
+    const parsed = parseBubbleCreateCommandOptions([
+      "--help",
+      "--pairflow-command-profile",
+      "hosted"
+    ]);
+    expect(parsed.help).toBe(true);
+    expect(parsed.pairflowCommandProfile).toBeUndefined();
   });
 
   it("throws when a required flag is missing", () => {
@@ -256,6 +287,44 @@ describe("parseBubbleCreateCommandOptions", () => {
         "code"
       ])
     ).toThrow(/--task or --task-file/u);
+  });
+
+  it("throws when pairflow command profile is invalid", () => {
+    expect(() =>
+      parseBubbleCreateCommandOptions([
+        "--id",
+        "b_create_invalid_profile_01",
+        "--repo",
+        "/tmp/repo",
+        "--base",
+        "main",
+        "--review-artifact-type",
+        "code",
+        "--task",
+        "Implement X",
+        "--pairflow-command-profile",
+        "hosted"
+      ])
+    ).toThrow(new RegExp(`^${PAIRFLOW_COMMAND_PROFILE_INVALID}:`, "u"));
+  });
+
+  it("keeps missing-option context when pairflow command profile is invalid", () => {
+    expect(() =>
+      parseBubbleCreateCommandOptions([
+        "--id",
+        "b_create_invalid_profile_02",
+        "--repo",
+        "/tmp/repo",
+        "--review-artifact-type",
+        "code",
+        "--task",
+        "Implement X",
+        "--pairflow-command-profile",
+        "hosted"
+      ])
+    ).toThrow(
+      new RegExp(`^${PAIRFLOW_COMMAND_PROFILE_INVALID}:.*Also missing: --base`, "u")
+    );
   });
 
   it("throws when both task input forms are provided", () => {
@@ -407,6 +476,42 @@ describe("parseBubbleCreateCommandOptions", () => {
     expect(createBubbleMock).toHaveBeenCalledWith(
       expect.objectContaining({
         bootstrapCommand: "pnpm install --frozen-lockfile && pnpm build"
+      })
+    );
+  });
+
+  it("forwards pairflow command profile to bubble creation", async () => {
+    const createBubbleResult = {
+      bubbleId: "b_create_profile_02"
+    } as unknown as BubbleCreateResult;
+    const createBubbleMock: NonNullable<
+      BubbleCreateCommandDependencies["createBubble"]
+    > = vi.fn(() => Promise.resolve(createBubbleResult));
+
+    await runBubbleCreateCommand(
+      [
+        "--id",
+        "b_create_profile_02",
+        "--repo",
+        "/tmp/repo",
+        "--base",
+        "main",
+        "--review-artifact-type",
+        "code",
+        "--task",
+        "Implement X",
+        "--pairflow-command-profile",
+        "self_host"
+      ],
+      "/tmp",
+      {
+        createBubble: createBubbleMock
+      }
+    );
+
+    expect(createBubbleMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pairflowCommandProfile: "self_host"
       })
     );
   });

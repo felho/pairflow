@@ -60,6 +60,7 @@ export async function refreshReviewerContext(
     agentName: input.bubbleConfig.agents.reviewer,
     bubbleId: input.bubbleId,
     worktreePath,
+    pairflowCommandProfile: input.bubbleConfig.pairflow_command_profile,
     startupPrompt: input.reviewerStartupPrompt
   });
 
