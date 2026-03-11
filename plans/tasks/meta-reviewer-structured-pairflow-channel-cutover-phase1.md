@@ -28,6 +28,12 @@ owners:
 
 # Task: Meta-Reviewer Structured Pairflow Channel Cutover (Phase 1)
 
+## Canonical Execution Directive (Normative)
+
+1. This file is the only executable task contract for this topic in Phase 1.
+2. The archived file `plans/archive/tasks/meta-review-gate/meta-reviewer-cli-protocol-alignment-phase1.md` is historical context only and must not be used as an implementation source.
+3. If any statement in the archived file conflicts with this file, this file wins without exception.
+
 ## L0 - Policy
 
 ### Goal
@@ -40,7 +46,7 @@ Observed incident pattern:
 1. Meta-review run reached `META_REVIEW_FAILED` due to marker timeout.
 2. The meta-reviewer session still produced a valid decision payload.
 3. This created split truth between pane output and canonical bubble state.
-4. This task is the canonical replacement for `meta-reviewer-cli-protocol-alignment-phase1.md`.
+4. This task is the canonical replacement for `plans/archive/tasks/meta-review-gate/meta-reviewer-cli-protocol-alignment-phase1.md`.
 
 Root simplification decision:
 1. Meta-review in a round is treated as a single owned turn, like implementer/reviewer.

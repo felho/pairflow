@@ -5,6 +5,7 @@ title: "Meta-Reviewer CLI Protocol Alignment (Phase 1)"
 status: superseded
 phase: phase1
 superseded_by: plans/tasks/meta-reviewer-structured-pairflow-channel-cutover-phase1.md
+execution_mode: historical_only
 target_files:
   - src/core/bubble/metaReview.ts
   - src/core/bubble/metaReviewGate.ts
@@ -26,7 +27,13 @@ owners:
 > `plans/tasks/meta-reviewer-structured-pairflow-channel-cutover-phase1.md`.
 > Kept in archive for historical traceability only.
 
-# Task: Meta-Reviewer CLI Protocol Alignment (Phase 1)
+# Historical Task Snapshot: Meta-Reviewer CLI Protocol Alignment (Phase 1)
+
+## Execution Directive (Normative)
+
+1. Do not implement from this archived file.
+2. Use only `plans/tasks/meta-reviewer-structured-pairflow-channel-cutover-phase1.md` for active planning, coding, validation, and acceptance decisions.
+3. If any section below conflicts with the canonical task, treat this file as obsolete historical context.
 
 ## L0 - Policy
 
@@ -191,6 +198,6 @@ Constraint: no hidden state mutations in read commands (`status`, `last-report` 
 1. Should legacy marker parsing remain as temporary fallback for one release or be removed in Phase 1 directly?
 2. Should submit command accept inline JSON only, file-based input only, or both?
 
-## Spec Lock
+## Spec Lock (Historical)
 
-Mark task as `IMPLEMENTABLE` when AC1-AC7 are satisfied with T1-T9 green and no split-truth scenario remains between gate state and meta-reviewer output.
+This archived document is `superseded` and has no execution authority. Implementability decisions must be made only from `plans/tasks/meta-reviewer-structured-pairflow-channel-cutover-phase1.md`.
