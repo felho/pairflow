@@ -4,7 +4,7 @@ artifact_id: task_meta_reviewer_cli_protocol_alignment_phase1_v1
 title: "Meta-Reviewer CLI Protocol Alignment (Phase 1)"
 status: superseded
 phase: phase1
-superseded_by: plans/tasks/meta-reviewer-structured-pairflow-channel-cutover-phase1.md
+superseded_by: plans/archive/tasks/meta-review-gate/meta-reviewer-structured-pairflow-channel-cutover-phase1.md
 execution_mode: historical_only
 target_files:
   - src/core/bubble/metaReview.ts
@@ -24,7 +24,7 @@ owners:
 ---
 
 > Superseded task: canonical replacement is
-> `plans/tasks/meta-reviewer-structured-pairflow-channel-cutover-phase1.md`.
+> `plans/archive/tasks/meta-review-gate/meta-reviewer-structured-pairflow-channel-cutover-phase1.md`.
 > Kept in archive for historical traceability only.
 
 # Historical Task Snapshot: Meta-Reviewer CLI Protocol Alignment (Phase 1)
@@ -32,7 +32,7 @@ owners:
 ## Execution Directive (Normative)
 
 1. Do not implement from this archived file.
-2. Use only `plans/tasks/meta-reviewer-structured-pairflow-channel-cutover-phase1.md` for active planning, coding, validation, and acceptance decisions.
+2. Use only `plans/archive/tasks/meta-review-gate/meta-reviewer-structured-pairflow-channel-cutover-phase1.md` for active planning, coding, validation, and acceptance decisions.
 3. If any section below conflicts with the canonical task, treat this file as obsolete historical context.
 
 ## L0 - Policy
@@ -200,4 +200,4 @@ Constraint: no hidden state mutations in read commands (`status`, `last-report` 
 
 ## Spec Lock (Historical)
 
-This archived document is `superseded` and has no execution authority. Implementability decisions must be made only from `plans/tasks/meta-reviewer-structured-pairflow-channel-cutover-phase1.md`.
+This archived document is `superseded` and has no execution authority. Implementability decisions must be made only from `plans/archive/tasks/meta-review-gate/meta-reviewer-structured-pairflow-channel-cutover-phase1.md`.

@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_meta_reviewer_structured_pairflow_channel_cutover_phase1_v2
 title: "Meta-Reviewer Structured Pairflow Channel Cutover (Phase 1)"
-status: implementable
+status: completed
 phase: phase1
 target_files:
   - src/types/bubble.ts
