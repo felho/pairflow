@@ -189,7 +189,11 @@ Envelope schema:
   "recipient": "codex|claude|orchestrator|human",
   "type": "TASK|PASS|HUMAN_QUESTION|HUMAN_REPLY|CONVERGENCE|APPROVAL_REQUEST|APPROVAL_DECISION|DONE_PACKAGE",
   "round": 3,
-  "payload": {},
+  "payload": {
+    "metadata": {
+      "delivery_target_role": "implementer|reviewer|meta_reviewer|status"
+    }
+  },
   "refs": ["artifact://diff/round-3.patch"]
 }
 ```
@@ -221,10 +225,20 @@ Transport and UX rules:
 4. Sequence IDs are allocated under lock to avoid concurrent write races.
 5. Agents never write NDJSON directly; `pairflow` CLI generates and appends envelopes on their behalf.
 
+Runtime delivery-target contract:
+1. Canonical role-target key path is `payload.metadata.delivery_target_role`.
+2. Allowed token domain is fixed: `implementer | reviewer | meta_reviewer | status`.
+3. Resolver precedence is role-first:
+   - valid + mapped `delivery_target_role` routes to role pane
+   - missing/invalid/unmapped role token falls back to legacy recipient-agent routing
+4. Legacy fallback remains required for backward-compatible envelopes without `delivery_target_role`.
+5. Human/orchestrator delivery semantics remain status-pane based (either via explicit `status` target or legacy recipient fallback).
+
 Incoming delivery contract:
 1. `pairflow pass` writes artifact + NDJSON envelope first.
-2. Then it sends a short tmux notification to the recipient pane containing the round and message file reference.
-3. Recipient agent reads referenced artifact(s), performs work/review, and responds via `pairflow` commands.
+2. Then runtime resolves target pane by `payload.metadata.delivery_target_role` first (when present/valid), otherwise by legacy recipient-agent mapping.
+3. Runtime sends a short tmux notification to the resolved pane containing the round and message file reference.
+4. Recipient agent reads referenced artifact(s), performs work/review, and responds via `pairflow` commands.
 
 ## Directory Layout
 Repository-local control data:

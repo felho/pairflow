@@ -45,7 +45,11 @@ import type {
   BubbleSpecLockState,
   BubbleStateSnapshot
 } from "../../types/bubble.js";
-import type { ProtocolEnvelope } from "../../types/protocol.js";
+import {
+  deliveryTargetRoleMetadataKey,
+  type DeliveryTargetRole,
+  type ProtocolEnvelope
+} from "../../types/protocol.js";
 
 export interface EmitConvergedInput {
   summary: string;
@@ -84,6 +88,54 @@ export class ConvergedCommandError extends Error {
     super(message);
     this.name = "ConvergedCommandError";
   }
+}
+
+function withDeliveryTargetRole(
+  envelope: ProtocolEnvelope,
+  role: DeliveryTargetRole
+): ProtocolEnvelope {
+  const existingMetadata =
+    typeof envelope.payload.metadata === "object" &&
+    envelope.payload.metadata !== null
+      ? envelope.payload.metadata
+      : {};
+  return {
+    ...envelope,
+    payload: {
+      ...envelope.payload,
+      metadata: {
+        ...existingMetadata,
+        [deliveryTargetRoleMetadataKey]: role
+      }
+    }
+  };
+}
+
+function resolveAggregateConvergedDeliveryReason(
+  deliveries: EmitTmuxDeliveryNotificationResult[]
+): string | undefined {
+  const failedDeliveries = deliveries.filter((delivery) => !delivery.delivered);
+  if (failedDeliveries.length === 0) {
+    return undefined;
+  }
+  if (failedDeliveries.length < deliveries.length) {
+    return "partial_delivery_failed";
+  }
+
+  const reasonPriority: Array<NonNullable<EmitTmuxDeliveryNotificationResult["reason"]>> = [
+    "delivery_unconfirmed",
+    "tmux_send_failed",
+    "registry_read_failed",
+    "unsupported_recipient",
+    "no_runtime_session"
+  ];
+  for (const reason of reasonPriority) {
+    if (failedDeliveries.some((delivery) => delivery.reason === reason)) {
+      return reason;
+    }
+  }
+
+  return failedDeliveries.find((delivery) => delivery.reason !== undefined)?.reason;
 }
 
 export function resolveMetaReviewRolloutBlockingReasonCodes(input: {
@@ -395,14 +447,14 @@ export async function emitConvergedFromWorkspace(
     gateResult.gateEnvelope.type === "APPROVAL_REQUEST"
       ? [
           gateResult.gateEnvelope,
-          {
+          withDeliveryTargetRole({
             ...gateResult.gateEnvelope,
             recipient: implementer
-          },
-          {
+          }, "implementer"),
+          withDeliveryTargetRole({
             ...gateResult.gateEnvelope,
             recipient: reviewer
-          }
+          }, "reviewer")
         ]
       : [gateResult.gateEnvelope];
   // Optional UX signal; never block protocol/state progression on notification failure.
@@ -410,18 +462,17 @@ export async function emitConvergedFromWorkspace(
     recipientEnvelopes.map((envelope) => emitDeliverySafe(envelope))
   );
 
-  const firstFailedDelivery = deliveryResults.find(
-    (delivery) => !delivery.delivered
-  );
-  const convergedDelivery = firstFailedDelivery === undefined
+  const failedDeliveryCount = deliveryResults.filter((delivery) => !delivery.delivered).length;
+  const aggregatedDeliveryReason = resolveAggregateConvergedDeliveryReason(deliveryResults);
+  const convergedDelivery = failedDeliveryCount === 0
     ? {
         delivered: true,
         retried: false
       }
     : {
         delivered: false,
-        ...(firstFailedDelivery.reason !== undefined
-          ? { reason: firstFailedDelivery.reason }
+        ...(aggregatedDeliveryReason !== undefined
+          ? { reason: aggregatedDeliveryReason }
           : {}),
         retried: false
       };

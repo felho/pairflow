@@ -10,6 +10,7 @@ import {
 } from "../../../src/core/bubble/metaReviewGate.js";
 import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
+import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import type { BubbleMetaReviewSnapshotState } from "../../../src/types/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -160,6 +161,9 @@ describe("applyMetaReviewGateOnConvergence", () => {
 
     expect(result.route).toBe("meta_review_running");
     expect(result.gateEnvelope.type).toBe("TASK");
+    expect(result.gateEnvelope.payload.metadata).toMatchObject({
+      [deliveryTargetRoleMetadataKey]: "meta_reviewer"
+    });
     expect(result.state.state).toBe("META_REVIEW_RUNNING");
     expect(result.state.active_role).toBe("meta_reviewer");
     expect(notifySpy).toHaveBeenCalledTimes(1);

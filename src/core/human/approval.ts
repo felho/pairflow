@@ -20,7 +20,11 @@ import type {
   BubbleStateSnapshot,
   MetaReviewRecommendation
 } from "../../types/bubble.js";
-import type { ApprovalDecision, ProtocolEnvelope } from "../../types/protocol.js";
+import {
+  deliveryTargetRoleMetadataKey,
+  type ApprovalDecision,
+  type ProtocolEnvelope
+} from "../../types/protocol.js";
 
 export interface EmitApprovalDecisionDependencies {
   emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
@@ -312,7 +316,9 @@ export async function emitApprovalDecision(
   const envelopePayload: ProtocolEnvelope["payload"] = {
     decision: input.decision
   };
-  const envelopeMetadata: Record<string, unknown> = {};
+  const envelopeMetadata: Record<string, unknown> = {
+    [deliveryTargetRoleMetadataKey]: "status"
+  };
   if (input.decision === "approve") {
     const approvalTranscriptContext =
       state.state === canonicalHumanApprovalState
@@ -409,13 +415,25 @@ export async function emitApprovalDecision(
     });
     // Rework requests must reach the implementer pane explicitly, otherwise
     // a human-gate -> RUNNING transition can remain invisible in practice.
+    const existingDeliveryMetadata =
+      typeof appended.envelope.payload.metadata === "object" &&
+      appended.envelope.payload.metadata !== null
+        ? appended.envelope.payload.metadata
+        : {};
     void emitDelivery({
       bubbleId: resolved.bubbleId,
       bubbleConfig: resolved.bubbleConfig,
       sessionsPath: resolved.bubblePaths.sessionsPath,
       envelope: {
         ...appended.envelope,
-        recipient: resolved.bubbleConfig.agents.implementer
+        recipient: resolved.bubbleConfig.agents.implementer,
+        payload: {
+          ...appended.envelope.payload,
+          metadata: {
+            ...existingDeliveryMetadata,
+            [deliveryTargetRoleMetadataKey]: "implementer"
+          }
+        }
       },
       messageRef: decisionMessageRef
     });

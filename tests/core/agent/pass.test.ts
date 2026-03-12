@@ -17,6 +17,7 @@ import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
 } from "../../../src/core/protocol/transcriptStore.js";
+import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import {
   repeatCleanAutoconvergeTriggeredReasonCode,
   repeatCleanAutoconvergePolicyRejectedReasonCode,
@@ -187,6 +188,11 @@ describe("emitPassFromWorkspace", () => {
     expect(result.envelope.sender).toBe("codex");
     expect(result.envelope.recipient).toBe("claude");
     expect(result.envelope.payload.pass_intent).toBe("review");
+    expect(result.envelope.payload.metadata).toEqual(
+      expect.objectContaining({
+        [deliveryTargetRoleMetadataKey]: "reviewer"
+      })
+    );
     expect(result.transitionDecision).toBe("normal_pass");
     expect(result.repeatCleanReasonCode).toBe(repeatCleanTriggerNotMetReasonCode);
     expect(result.repeatCleanReasonDetail).toBe("base_precondition_not_met");
@@ -1064,7 +1070,8 @@ describe("emitPassFromWorkspace", () => {
       reason_detail: "previous_reviewer_pass_absent",
       trigger: false,
       most_recent_previous_reviewer_pass_is_clean: false,
-      most_recent_previous_reviewer_clean_pass_envelope: false
+      most_recent_previous_reviewer_clean_pass_envelope: false,
+      [deliveryTargetRoleMetadataKey]: "implementer"
     });
   });
 
@@ -1115,7 +1122,8 @@ describe("emitPassFromWorkspace", () => {
       reason_detail: "previous_reviewer_pass_not_clean",
       trigger: false,
       most_recent_previous_reviewer_pass_is_clean: false,
-      most_recent_previous_reviewer_clean_pass_envelope: false
+      most_recent_previous_reviewer_clean_pass_envelope: false,
+      [deliveryTargetRoleMetadataKey]: "implementer"
     });
   });
 
@@ -1343,7 +1351,7 @@ describe("emitPassFromWorkspace", () => {
     expect(result.transitionDecision).toBe("auto_converge");
     expect(result.delivery).toEqual({
       delivered: false,
-      reason: "delivery_unconfirmed",
+      reason: "partial_delivery_failed",
       retried: false
     });
     expect(deliveryRecipients).toEqual([

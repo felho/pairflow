@@ -22,6 +22,7 @@ import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptSt
 import { applyStateTransition } from "../../../src/core/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/core/workspace/worktreeManager.js";
+import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -130,6 +131,7 @@ async function setupReadyForHumanApprovalBubble(repoPath: string, bubbleId: stri
   expect(gateEnvelope?.type).toBe("APPROVAL_REQUEST");
   if (gateEnvelope?.type === "APPROVAL_REQUEST") {
     expect(gateEnvelope.payload.metadata).toMatchObject({
+      [deliveryTargetRoleMetadataKey]: "status",
       actor: "meta-reviewer",
       actor_agent: "codex",
       latest_recommendation: "inconclusive"
@@ -176,6 +178,7 @@ describe("approval decisions", () => {
     expect(result.envelope.type).toBe("APPROVAL_DECISION");
     expect(result.envelope.payload.decision).toBe("approve");
     expect(result.envelope.payload.metadata).toMatchObject({
+      [deliveryTargetRoleMetadataKey]: "status",
       recommendation_at_decision: "inconclusive",
       override_non_approve: true,
       override_reason: "Human verified blocker context manually."
@@ -215,6 +218,7 @@ describe("approval decisions", () => {
       recipient: string;
       type: string;
       messageRef: string;
+      deliveryTargetRole?: unknown;
     }> = [];
 
     const result = await emitApprove(
@@ -233,7 +237,9 @@ describe("approval decisions", () => {
           deliveries.push({
             recipient: input.envelope.recipient,
             type: input.envelope.type,
-            messageRef: input.messageRef
+            messageRef: input.messageRef,
+            deliveryTargetRole:
+              input.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey]
           });
           return Promise.resolve({
             delivered: true,
@@ -248,7 +254,8 @@ describe("approval decisions", () => {
       {
         recipient: "orchestrator",
         type: "APPROVAL_DECISION",
-        messageRef: expectedRef
+        messageRef: expectedRef,
+        deliveryTargetRole: "status"
       }
     ]);
   });
@@ -261,6 +268,7 @@ describe("approval decisions", () => {
       messageRef?: string;
       type: string;
       decision?: unknown;
+      deliveryTargetRole?: unknown;
     }> = [];
 
     const result = await emitRequestRework(
@@ -276,6 +284,8 @@ describe("approval decisions", () => {
             recipient: input.envelope.recipient,
             type: input.envelope.type,
             decision: input.envelope.payload.decision,
+            deliveryTargetRole:
+              input.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey],
             ...(input.messageRef !== undefined
               ? { messageRef: input.messageRef }
               : {})
@@ -311,13 +321,15 @@ describe("approval decisions", () => {
       recipient: "orchestrator",
       type: "APPROVAL_DECISION",
       decision: "revise",
-      messageRef: expectedRef
+      messageRef: expectedRef,
+      deliveryTargetRole: "status"
     });
     expect(deliveries[1]).toMatchObject({
       recipient: bubble.config.agents.implementer,
       type: "APPROVAL_DECISION",
       decision: "revise",
-      messageRef: expectedRef
+      messageRef: expectedRef,
+      deliveryTargetRole: "implementer"
     });
   });
 

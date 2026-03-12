@@ -27,7 +27,12 @@ import {
 import { buildPairflowCommandGuidance } from "./pairflowCommand.js";
 import type { BubbleConfig } from "../../types/bubble.js";
 import type { AgentName } from "../../types/bubble.js";
-import type { ProtocolEnvelope, ProtocolParticipant } from "../../types/protocol.js";
+import {
+  parseDeliveryTargetRoleMetadata,
+  type DeliveryTargetRole,
+  type ProtocolEnvelope,
+  type ProtocolParticipant
+} from "../../types/protocol.js";
 
 export interface EmitTmuxDeliveryNotificationInput {
   bubbleId: string;
@@ -58,12 +63,32 @@ export type TmuxDeliveryFailureReason =
   | "delivery_unconfirmed"
   | "tmux_send_failed";
 
+export type DeliveryTargetReasonCode =
+  | "DELIVERY_TARGET_ROLE_ABSENT"
+  | "DELIVERY_TARGET_ROLE_INVALID"
+  | "DELIVERY_TARGET_ROLE_UNMAPPED"
+  | "DELIVERY_TARGET_REGISTRY_READ_FAILED";
+
 export interface EmitTmuxDeliveryNotificationResult {
   delivered: boolean;
   sessionName?: string;
   targetPaneIndex?: number;
   message: string;
   reason?: TmuxDeliveryFailureReason;
+  deliveryTargetReasonCode?: DeliveryTargetReasonCode;
+}
+
+type DeliveryMessageRecipientRole =
+  | ProtocolParticipant
+  | "implementer"
+  | "reviewer"
+  | "meta-reviewer"
+  | "status";
+
+function normalizePaneIndex(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0
+    ? value
+    : undefined;
 }
 
 function resolveTargetPaneIndex(
@@ -71,18 +96,94 @@ function resolveTargetPaneIndex(
   bubbleConfig: BubbleConfig
 ): number | undefined {
   if (recipient === bubbleConfig.agents.implementer) {
-    return runtimePaneIndices.implementer;
+    return normalizePaneIndex(runtimePaneIndices.implementer);
   }
   if (recipient === bubbleConfig.agents.reviewer) {
-    return runtimePaneIndices.reviewer;
+    return normalizePaneIndex(runtimePaneIndices.reviewer);
   }
   if (recipient === "meta-reviewer") {
-    return runtimePaneIndices.metaReviewer;
+    return normalizePaneIndex(runtimePaneIndices.metaReviewer);
   }
   if (recipient === "human" || recipient === "orchestrator") {
-    return runtimePaneIndices.status;
+    return normalizePaneIndex(runtimePaneIndices.status);
   }
   return undefined;
+}
+
+function resolveRecipientRoleFromRecipient(
+  recipient: ProtocolParticipant | "meta-reviewer",
+  bubbleConfig: BubbleConfig
+): DeliveryMessageRecipientRole {
+  if (recipient === bubbleConfig.agents.implementer) {
+    return "implementer";
+  }
+  if (recipient === bubbleConfig.agents.reviewer) {
+    return "reviewer";
+  }
+  return recipient;
+}
+
+function resolvePaneIndexByDeliveryTargetRole(role: DeliveryTargetRole): number | undefined {
+  if (role === "implementer") {
+    return normalizePaneIndex(runtimePaneIndices.implementer);
+  }
+  if (role === "reviewer") {
+    return normalizePaneIndex(runtimePaneIndices.reviewer);
+  }
+  if (role === "meta_reviewer") {
+    return normalizePaneIndex(runtimePaneIndices.metaReviewer);
+  }
+  return normalizePaneIndex(runtimePaneIndices.status);
+}
+
+interface EnvelopeTargetPaneResolution {
+  targetPaneIndex: number | undefined;
+  recipientRole: DeliveryMessageRecipientRole;
+  deliveryTargetReasonCode?: DeliveryTargetReasonCode;
+}
+
+function resolveEnvelopeTargetPane(
+  envelope: ProtocolEnvelope,
+  bubbleConfig: BubbleConfig
+): EnvelopeTargetPaneResolution {
+  const fallbackPane = resolveTargetPaneIndex(envelope.recipient, bubbleConfig);
+  const fallbackRecipientRole = resolveRecipientRoleFromRecipient(
+    envelope.recipient,
+    bubbleConfig
+  );
+  const parsed = parseDeliveryTargetRoleMetadata(envelope.payload.metadata);
+  if (parsed.status === "absent") {
+    return {
+      targetPaneIndex: fallbackPane,
+      recipientRole: fallbackRecipientRole,
+      deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_ABSENT"
+    };
+  }
+  if (parsed.status === "invalid") {
+    return {
+      targetPaneIndex: fallbackPane,
+      recipientRole: fallbackRecipientRole,
+      deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_INVALID"
+    };
+  }
+  const explicitPane = resolvePaneIndexByDeliveryTargetRole(parsed.role);
+  if (explicitPane === undefined) {
+    return {
+      targetPaneIndex: fallbackPane,
+      recipientRole: fallbackRecipientRole,
+      deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_UNMAPPED"
+    };
+  }
+  if (parsed.role === "meta_reviewer") {
+    return {
+      targetPaneIndex: explicitPane,
+      recipientRole: "meta-reviewer"
+    };
+  }
+  return {
+    targetPaneIndex: explicitPane,
+    recipientRole: parsed.role
+  };
 }
 
 function resolvePayloadActor(envelope: ProtocolEnvelope): string | null {
@@ -101,14 +202,12 @@ function buildDeliveryMessage(
   worktreePath?: string,
   reviewerTestDirective?: ReviewerTestExecutionDirective,
   reviewerBrief?: string,
-  reviewerFocus?: ReviewerFocusExtractionResult
+  reviewerFocus?: ReviewerFocusExtractionResult,
+  recipientRoleOverride?: DeliveryMessageRecipientRole
 ): string {
-  const recipientRole: string =
-    envelope.recipient === bubbleConfig.agents.implementer
-      ? "implementer"
-      : envelope.recipient === bubbleConfig.agents.reviewer
-      ? "reviewer"
-      : envelope.recipient;
+  const recipientRole =
+    recipientRoleOverride
+    ?? resolveRecipientRoleFromRecipient(envelope.recipient, bubbleConfig);
   const actorLabel = resolvePayloadActor(envelope);
   const worktreeHint =
     worktreePath === undefined
@@ -205,7 +304,11 @@ function buildDeliveryMessage(
   } else if (recipientRole === "meta-reviewer") {
     action =
       "Meta-review task received. Produce autonomous meta-review output and return only through structured submit: `pairflow bubble meta-review submit --id <id> --round <n> --recommendation <approve|rework|inconclusive> --summary \"...\" --report-markdown \"...\"`.";
-  } else if (recipientRole === "human" || recipientRole === "orchestrator") {
+  } else if (
+    recipientRole === "human" ||
+    recipientRole === "orchestrator" ||
+    recipientRole === "status"
+  ) {
     action = "Check inbox/status and continue human orchestration flow.";
   }
 
@@ -319,6 +422,10 @@ export async function emitTmuxDeliveryNotification(
       envelope: input.envelope
     });
   const readSessions = input.readSessionsRegistry ?? readRuntimeSessionsRegistry;
+  const targetResolution = resolveEnvelopeTargetPane(
+    input.envelope,
+    input.bubbleConfig
+  );
 
   let sessionName: string | undefined;
   let worktreePath: string | undefined;
@@ -337,12 +444,14 @@ export async function emitTmuxDeliveryNotification(
       undefined,
       input.reviewerTestDirective,
       input.reviewerBrief,
-      input.reviewerFocus
+      input.reviewerFocus,
+      targetResolution.recipientRole
     );
     return {
       delivered: false,
       message,
-      reason: "registry_read_failed"
+      reason: "registry_read_failed",
+      deliveryTargetReasonCode: "DELIVERY_TARGET_REGISTRY_READ_FAILED"
     };
   }
 
@@ -354,19 +463,20 @@ export async function emitTmuxDeliveryNotification(
       undefined,
       input.reviewerTestDirective,
       input.reviewerBrief,
-      input.reviewerFocus
+      input.reviewerFocus,
+      targetResolution.recipientRole
     );
     return {
       delivered: false,
       message,
-      reason: "no_runtime_session"
+      reason: "no_runtime_session",
+      ...(targetResolution.deliveryTargetReasonCode !== undefined
+        ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
+        : {})
     };
   }
 
-  const targetPaneIndex = resolveTargetPaneIndex(
-    input.envelope.recipient,
-    input.bubbleConfig
-  );
+  const targetPaneIndex = targetResolution.targetPaneIndex;
   if (targetPaneIndex === undefined) {
     const message = buildDeliveryMessage(
       input.envelope,
@@ -375,13 +485,17 @@ export async function emitTmuxDeliveryNotification(
       worktreePath,
       input.reviewerTestDirective,
       input.reviewerBrief,
-      input.reviewerFocus
+      input.reviewerFocus,
+      targetResolution.recipientRole
     );
     return {
       delivered: false,
       sessionName,
       message,
-      reason: "unsupported_recipient"
+      reason: "unsupported_recipient",
+      ...(targetResolution.deliveryTargetReasonCode !== undefined
+        ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
+        : {})
     };
   }
 
@@ -393,7 +507,8 @@ export async function emitTmuxDeliveryNotification(
     worktreePath,
     input.reviewerTestDirective,
     input.reviewerBrief,
-    input.reviewerFocus
+    input.reviewerFocus,
+    targetResolution.recipientRole
   );
   const runner = input.runner ?? runTmux;
 
@@ -428,7 +543,10 @@ export async function emitTmuxDeliveryNotification(
         sessionName,
         targetPaneIndex,
         message,
-        reason: "delivery_unconfirmed"
+        reason: "delivery_unconfirmed",
+        ...(targetResolution.deliveryTargetReasonCode !== undefined
+          ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
+          : {})
       };
     }
   } catch {
@@ -437,7 +555,10 @@ export async function emitTmuxDeliveryNotification(
       sessionName,
       targetPaneIndex,
       message,
-      reason: "tmux_send_failed"
+      reason: "tmux_send_failed",
+      ...(targetResolution.deliveryTargetReasonCode !== undefined
+        ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
+        : {})
     };
   }
 
@@ -445,7 +566,10 @@ export async function emitTmuxDeliveryNotification(
     delivered: true,
     sessionName,
     targetPaneIndex,
-    message
+    message,
+    ...(targetResolution.deliveryTargetReasonCode !== undefined
+      ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
+      : {})
   };
 }
 
