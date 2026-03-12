@@ -101,6 +101,10 @@ interface WorktreeFingerprint {
   ok: boolean;
 }
 
+interface CommandAliasFamily {
+  aliases: readonly string[];
+}
+
 type EvidenceSourceRejectReason =
   | "source_not_whitelisted"
   | "source_outside_repo_scope"
@@ -135,6 +139,28 @@ const sourcePolicyFallbackMarker = "source_policy_fallback"
 const evidencePolicyDirPrefix = ".pairflow/evidence/"
 const forcedFallbackErrorMessage = "forced source policy fallback"
 const forcedFallbackContextMarker = "forced_fallback"
+const commandBoundaryCharClass = "\\p{L}\\p{N}_:/.@\\-"
+const commandAliasFamiliesSeed: readonly CommandAliasFamily[] = [
+  {
+    aliases: ["pnpm typecheck", "pnpm run typecheck", "tsc --noEmit"]
+  },
+  {
+    aliases: ["pnpm test", "pnpm run test", "vitest", "vitest run"]
+  },
+  {
+    aliases: ["pnpm lint", "pnpm run lint", "eslint"]
+  }
+]
+const commandAliasFamilies: readonly CommandAliasFamily[] = commandAliasFamiliesSeed.map(
+  (family) => ({
+    aliases: normalizeAliasFamily(family.aliases)
+  })
+)
+const commandAliasLookup = new Map(
+  commandAliasFamilies.flatMap((family) =>
+    family.aliases.map((alias) => [alias, family.aliases] as const)
+  )
+)
 
 function isPathInside(parentPath: string, childPath: string): boolean {
   const rel = relative(resolve(parentPath), resolve(childPath))
@@ -143,6 +169,38 @@ function isPathInside(parentPath: string, childPath: string): boolean {
 
 function normalizeRelativePath(pathValue: string): string {
   return pathValue.split("\\").join("/")
+}
+
+function normalizeCommandText(command: string): string {
+  return command.trim().toLowerCase().replace(/\s+/gu, " ")
+}
+
+function normalizeAliasFamily(aliases: readonly string[]): string[] {
+  return [...new Set(aliases.map(normalizeCommandText))]
+}
+
+function resolveCommandMatchCandidates(command: string): string[] {
+  const normalized = normalizeCommandText(command)
+  const familyAliases = commandAliasLookup.get(normalized)
+  if (familyAliases === undefined) {
+    return [normalized]
+  }
+  return [...familyAliases].sort((left, right) => right.length - left.length)
+}
+
+function escapeRegExp(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")
+}
+
+function buildCommandMatchRegex(commandPattern: string): RegExp {
+  const commandBody = commandPattern
+    .split(/\s+/u)
+    .map((token) => escapeRegExp(token))
+    .join("\\s+")
+  return new RegExp(
+    `(^|[^${commandBoundaryCharClass}])(${commandBody})(?=$|[^${commandBoundaryCharClass}])`,
+    "giu"
+  )
 }
 
 function isWhitelistedEvidenceLogPath(
@@ -497,55 +555,64 @@ async function loadEvidenceSources(input: {
   }
 }
 
-function findAllCommandMatches(command: string, sources: EvidenceSource[]): CommandMatch[] {
-  const commandLower = command.toLowerCase()
+function findAllCommandMatches(commandPatterns: string[], sources: EvidenceSource[]): CommandMatch[] {
   const matches: CommandMatch[] = []
 
   for (const source of sources) {
-    const lower = source.text.toLowerCase()
-    let startAt = 0
-    while (startAt < lower.length) {
-      const index = lower.indexOf(commandLower, startAt)
-      if (index < 0) {
-        break
+    const consumedMatchStarts = new Set<number>()
+    for (const commandPattern of commandPatterns) {
+      const matcher = buildCommandMatchRegex(commandPattern)
+      for (const match of source.text.matchAll(matcher)) {
+        const boundaryPrefix = match[1] ?? ""
+        const matchedCommand = match[2] ?? commandPattern
+        const commandStart = (match.index ?? 0) + boundaryPrefix.length
+        if (consumedMatchStarts.has(commandStart)) {
+          continue
+        }
+        consumedMatchStarts.add(commandStart)
+        const snippetStart = Math.max(0, commandStart - 220)
+        const snippetEnd = Math.min(
+          source.text.length,
+          commandStart + matchedCommand.length + 220
+        )
+        const snippet = source.text.slice(snippetStart, snippetEnd)
+        const snippetLower = snippet.toLowerCase()
+
+        const explicitExitSuccess =
+          /\b(?:exit(?:\s*code)?|command\s+exit(?:\s*code)?|process\s+exit(?:\s*code)?|returned)\s*[:=]?\s*0\b/iu.test(
+            snippetLower
+          )
+        const explicitExitFailure =
+          /\b(?:exit(?:\s*code)?|command\s+exit(?:\s*code)?|process\s+exit(?:\s*code)?|returned)\s*[:=]?\s*[1-9][0-9]*\b/iu.test(
+            snippetLower
+          ) ||
+          /\b(?:found|with|had)\s+[1-9][0-9]*\s+errors?\b/iu.test(snippetLower) ||
+          /\b(?:[1-9][0-9]*\s+failed(?:\s+tests?)?|tests?\s+failed|command\s+failed)\b/iu.test(
+            snippetLower
+          )
+
+        const completionMarker =
+          commandPattern.includes("typecheck") || commandPattern.includes("tsc")
+            ? /\b(?:found\s+0\s+errors?|0\s+errors?|no\s+type\s+errors?|no\s+errors?|pass(?:ed)?|success(?:ful)?)\b/iu.test(
+              snippetLower
+            )
+            : commandPattern.includes("test")
+              ? /\b(?:\d+\s+tests?\b|test\s+files?\b|all\s+tests\s+passed|no\s+tests\s+failed|pass(?:ed)?)\b/iu.test(
+                snippetLower
+              )
+              : /\b(?:pass(?:ed)?|success(?:ful)?|ok)\b/iu.test(snippetLower)
+
+        const passToken = /\b(?:pass(?:ed)?|success(?:ful)?|ok)\b/iu.test(snippetLower)
+
+        matches.push({
+          source,
+          snippet,
+          explicitExitSuccess,
+          explicitExitFailure,
+          completionMarker,
+          passToken
+        })
       }
-
-      const snippetStart = Math.max(0, index - 220)
-      const snippetEnd = Math.min(source.text.length, index + command.length + 220)
-      const snippet = source.text.slice(snippetStart, snippetEnd)
-      const snippetLower = snippet.toLowerCase()
-
-      const explicitExitSuccess =
-        /\b(?:exit(?:\s*code)?|command\s+exit(?:\s*code)?|process\s+exit(?:\s*code)?|returned)\s*[:=]?\s*0\b/iu.test(
-          snippetLower
-        )
-      const explicitExitFailure =
-        /\b(?:exit(?:\s*code)?|command\s+exit(?:\s*code)?|process\s+exit(?:\s*code)?|returned)\s*[:=]?\s*[1-9][0-9]*\b/iu.test(
-          snippetLower
-        ) ||
-        /\b(?:found|with|had)\s+[1-9][0-9]*\s+errors?\b/iu.test(snippetLower) ||
-        /\b(?:[1-9][0-9]*\s+failed(?:\s+tests?)?|tests?\s+failed|command\s+failed)\b/iu.test(
-          snippetLower
-        )
-
-      const completionMarker = commandLower.includes("typecheck") || commandLower.includes("tsc")
-        ? /\b(?:found\s+0\s+errors?|0\s+errors?|no\s+type\s+errors?|no\s+errors?|pass(?:ed)?|success(?:ful)?)\b/iu.test(snippetLower)
-        : commandLower.includes("test")
-        ? /\b(?:\d+\s+tests?\b|test\s+files?\b|all\s+tests\s+passed|no\s+tests\s+failed|pass(?:ed)?\b)\b/iu.test(snippetLower)
-        : /\b(?:pass(?:ed)?|success(?:ful)?|ok)\b/iu.test(snippetLower)
-
-      const passToken = /\b(?:pass(?:ed)?|success(?:ful)?|ok)\b/iu.test(snippetLower)
-
-      matches.push({
-        source,
-        snippet,
-        explicitExitSuccess,
-        explicitExitFailure,
-        completionMarker,
-        passToken
-      })
-
-      startAt = index + commandLower.length
     }
   }
 
@@ -575,7 +642,7 @@ function scoreMatch(match: CommandMatch): number {
 function buildCommandEvidence(command: string, sources: EvidenceSource[]): ReviewerTestCommandEvidence {
   const commandLower = command.toLowerCase()
   const isTypecheckCommand = commandLower.includes("typecheck") || commandLower.includes("tsc")
-  const matches = findAllCommandMatches(command, sources)
+  const matches = findAllCommandMatches(resolveCommandMatchCandidates(command), sources)
   if (matches.length === 0) {
     return {
       command,

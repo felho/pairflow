@@ -1373,6 +1373,292 @@ describe("reviewer test evidence verification", () => {
     expect(artifact.status).toBe("trusted");
   });
 
+  it("accepts alias-equivalent command forms when log provenance and completion markers are present", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_alias_01",
+      task: "Verify closed-set command alias normalization"
+    });
+
+    const aliasLogPath = await writeEvidenceLog(
+      bubble.paths.worktreePath,
+      "alias-success.log",
+      [
+        "tsc --noEmit",
+        "Found 0 errors.",
+        "vitest run",
+        "406 tests passed"
+      ].join("\n")
+    );
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_alias_001",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Validation complete"
+        },
+        refs: [aliasLogPath]
+      }
+    });
+
+    expect(artifact.status).toBe("trusted");
+    expect(artifact.reason_code).toBe("no_trigger");
+    expect(
+      artifact.command_evidence.every((entry) => entry.status === "verified" && entry.source === "ref")
+    ).toBe(true);
+  });
+
+  it("normalizes alias lookup keys during construction for mixed-case command config values", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_alias_04",
+      task: "Verify alias lookup normalization at construction"
+    });
+
+    const aliasLogPath = await writeEvidenceLog(
+      bubble.paths.worktreePath,
+      "alias-mixed-case.log",
+      [
+        "tsc --noEmit",
+        "Found 0 errors.",
+        "vitest run exit=0 406 tests passed"
+      ].join("\n")
+    );
+
+    const mixedCaseConfig = {
+      ...bubble.config,
+      commands: {
+        ...bubble.config.commands,
+        typecheck: "   TSC   --NOEMIT   ",
+        test: "  VITEST    RUN  "
+      }
+    } satisfies BubbleConfig;
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: mixedCaseConfig,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_alias_004",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Validation complete"
+        },
+        refs: [aliasLogPath]
+      }
+    });
+
+    expect(artifact.status).toBe("trusted");
+    expect(artifact.reason_code).toBe("no_trigger");
+    expect(
+      artifact.command_evidence.every((entry) => entry.status === "verified")
+    ).toBe(true);
+  });
+
+  it("accepts eslint alias family evidence when configured as a required command", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_alias_06",
+      task: "Verify lint alias family coverage"
+    });
+
+    const aliasLogPath = await writeEvidenceLog(
+      bubble.paths.worktreePath,
+      "alias-eslint.log",
+      [
+        "eslint exit=0 success",
+        "pnpm test exit=0 406 tests passed"
+      ].join("\n")
+    );
+
+    const eslintRequiredConfig = {
+      ...bubble.config,
+      commands: {
+        ...bubble.config.commands,
+        typecheck: "eslint",
+        test: "pnpm test"
+      }
+    } satisfies BubbleConfig;
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: eslintRequiredConfig,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_alias_006",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Validation complete"
+        },
+        refs: [aliasLogPath]
+      }
+    });
+
+    expect(artifact.status).toBe("trusted");
+    expect(artifact.reason_code).toBe("no_trigger");
+    const eslintEvidence = artifact.command_evidence.find((entry) => entry.command === "eslint");
+    expect(eslintEvidence?.status).toBe("verified");
+    expect(eslintEvidence?.source).toBe("ref");
+  });
+
+  it("keeps alias evidence fail-closed when completion markers are missing", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_alias_02",
+      task: "Verify alias marker strictness"
+    });
+
+    const aliasLogPath = await writeEvidenceLog(
+      bubble.paths.worktreePath,
+      "alias-missing-marker.log",
+      [
+        "tsc --noEmit",
+        "vitest run exit=0"
+      ].join("\n")
+    );
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_alias_002",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Validation complete"
+        },
+        refs: [aliasLogPath]
+      }
+    });
+
+    expect(artifact.status).toBe("untrusted");
+    expect(artifact.reason_code).toBe("evidence_unverifiable");
+    expect(
+      artifact.command_evidence.every((entry) => entry.status === "unverifiable")
+    ).toBe(true);
+  });
+
+  it("does not treat extended script names as alias-equivalent command evidence", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_alias_03",
+      task: "Verify alias closed-set boundary"
+    });
+
+    const aliasLogPath = await writeEvidenceLog(
+      bubble.paths.worktreePath,
+      "alias-closed-set.log",
+      [
+        "pnpm run typecheck:ci exit=0 found 0 errors",
+        "pnpm run test:ci exit=0 406 tests passed"
+      ].join("\n")
+    );
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_alias_003",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Validation complete"
+        },
+        refs: [aliasLogPath]
+      }
+    });
+
+    expect(artifact.status).toBe("untrusted");
+    expect(artifact.reason_code).toBe("evidence_missing");
+    expect(
+      artifact.command_evidence.every((entry) => entry.status === "missing")
+    ).toBe(true);
+  });
+
+  it("does not treat vitest version tokens as executable alias evidence", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_alias_05",
+      task: "Verify alias boundary against version strings"
+    });
+
+    const aliasLogPath = await writeEvidenceLog(
+      bubble.paths.worktreePath,
+      "alias-version-token.log",
+      [
+        "pnpm typecheck exit=0 found 0 errors",
+        "dependency lock includes vitest@2.1.0"
+      ].join("\n")
+    );
+
+    const artifact = await verifyImplementerTestEvidence({
+      bubbleId: bubble.bubbleId,
+      bubbleConfig: bubble.config,
+      worktreePath: bubble.paths.worktreePath,
+      repoPath,
+      envelope: {
+        id: "msg_alias_005",
+        ts: "2026-02-27T12:00:00.000Z",
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.implementer,
+        recipient: bubble.config.agents.reviewer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Validation complete"
+        },
+        refs: [aliasLogPath]
+      }
+    });
+
+    expect(artifact.status).toBe("untrusted");
+    expect(artifact.reason_code).toBe("evidence_missing");
+    const testEvidence = artifact.command_evidence.find((entry) =>
+      entry.command.includes("test")
+    );
+    expect(testEvidence?.status).toBe("missing");
+  });
+
   it("marks trusted artifact stale when worktree changes after verification", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
