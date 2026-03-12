@@ -380,6 +380,84 @@ describe("runBubbleMetaReviewCommand", () => {
     expect(recoverResult?.command).toBe("recover");
   });
 
+  it("keeps recover persistence visible in status and last-report output", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_cli_recover_persist_01",
+      task: "CLI recover persistence visibility"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "META_REVIEW_RUNNING",
+        active_agent: "codex",
+        active_role: "meta_reviewer",
+        active_since: "2026-03-12T12:36:00.000Z",
+        meta_review: {
+          last_autonomous_run_id: null,
+          last_autonomous_status: null,
+          last_autonomous_recommendation: null,
+          last_autonomous_summary: null,
+          last_autonomous_report_ref: null,
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: null,
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const recoverResult = await runBubbleMetaReviewCommand([
+      "recover",
+      "--id",
+      bubble.bubbleId,
+      "--repo",
+      repoPath
+    ]);
+    expect(recoverResult?.command).toBe("recover");
+    if (recoverResult?.command !== "recover") {
+      throw new Error("Expected recover command result.");
+    }
+    expect(recoverResult.recover.route).toBe("human_gate_run_failed");
+
+    const statusResult = await runBubbleMetaReviewCommand([
+      "status",
+      "--id",
+      bubble.bubbleId,
+      "--repo",
+      repoPath
+    ]);
+    expect(statusResult?.command).toBe("status");
+    if (statusResult?.command !== "status") {
+      throw new Error("Expected status command result.");
+    }
+    expect(statusResult.status.has_run).toBe(true);
+
+    const reportResult = await runBubbleMetaReviewCommand([
+      "last-report",
+      "--id",
+      bubble.bubbleId,
+      "--repo",
+      repoPath
+    ]);
+    expect(reportResult?.command).toBe("last-report");
+    if (reportResult?.command !== "last-report") {
+      throw new Error("Expected last-report command result.");
+    }
+    expect(reportResult.lastReport.has_report).toBe(true);
+    expect(reportResult.lastReport.report_ref).toBe("artifacts/meta-review-last.md");
+    expect(reportResult.lastReport.report_markdown).toContain("# Meta Review Report");
+  });
+
   it("routes structured submit command and persists canonical snapshot", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -502,6 +580,31 @@ describe("runBubbleMetaReviewCommand", () => {
       verbose: false
     });
     expect(recoverResult?.command).toBe("recover");
+
+    const afterRecover = await readStateSnapshot(bubble.paths.statePath);
+    if (afterRecover.state.meta_review === undefined) {
+      throw new Error("Expected meta_review after recover.");
+    }
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...afterRecover.state,
+        meta_review: {
+          ...afterRecover.state.meta_review,
+          last_autonomous_run_id: null,
+          last_autonomous_status: null,
+          last_autonomous_recommendation: null,
+          last_autonomous_summary: null,
+          last_autonomous_report_ref: null,
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: null
+        }
+      },
+      {
+        expectedFingerprint: afterRecover.fingerprint,
+        expectedState: afterRecover.state.state
+      }
+    );
 
     await prepareMetaReviewSubmitReadyFixture({
       statePath: bubble.paths.statePath,

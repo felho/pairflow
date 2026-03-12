@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { appendProtocolEnvelope, type AppendProtocolEnvelopeResult } from "../protocol/transcriptStore.js";
@@ -26,7 +27,8 @@ import {
 import {
   MetaReviewError,
   hasCanonicalSubmitForActiveMetaReviewRound,
-  type MetaReviewRunResult
+  type MetaReviewRunResult,
+  type MetaReviewRunWarning
 } from "./metaReview.js";
 import {
   deliveryTargetRoleMetadataKey,
@@ -84,6 +86,7 @@ export interface RecoverMetaReviewGateFromSnapshotDependencies {
   writeStateSnapshot?: typeof writeStateSnapshot;
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;
   setMetaReviewerPaneBinding?: typeof setMetaReviewerPaneBinding;
+  writeFile?: typeof writeFile;
 }
 
 export interface MetaReviewGateResult {
@@ -106,6 +109,7 @@ export class MetaReviewGateError extends Error {
 }
 
 const metaReviewFallbackReportRef = "artifacts/meta-review-last.md";
+const metaReviewFallbackReportJsonRef = "artifacts/meta-review-last.json";
 const metaReviewerAgent: AgentName = "codex";
 
 function normalizeMetaReviewSnapshot(
@@ -245,6 +249,7 @@ function transitionToGateState(input: {
     | "READY_FOR_APPROVAL"
     | "META_REVIEW_FAILED";
   stickyHumanGate: boolean;
+  metaReviewRun?: MetaReviewRunResult;
   fallbackRecommendation?: MetaReviewRecommendation;
   fallbackSummary?: string;
 }): BubbleStateSnapshot {
@@ -257,9 +262,12 @@ function transitionToGateState(input: {
   });
 
   const metaReview = normalizeMetaReviewSnapshot(transitioned.meta_review);
+  const shouldHydrateFromRunResult = input.metaReviewRun !== undefined;
+  const runResult = input.metaReviewRun;
   const shouldHydrateFallbackRecommendation =
     input.fallbackRecommendation !== undefined;
-  const fallbackRecommendation = input.fallbackRecommendation;
+  const fallbackRecommendation: MetaReviewRecommendation =
+    input.fallbackRecommendation ?? "inconclusive";
   const fallbackStatus: MetaReviewRunStatus =
     fallbackRecommendation === "inconclusive" ? "error" : "success";
   const fallbackReworkTargetMessage =
@@ -275,7 +283,12 @@ function transitionToGateState(input: {
     ...transitioned,
     meta_review: {
       ...metaReview,
-      ...(shouldHydrateFallbackRecommendation
+      ...(shouldHydrateFromRunResult && runResult !== undefined
+        ? buildHydratedMetaReviewSnapshotFromRunResult({
+            metaReview,
+            runResult
+          })
+        : shouldHydrateFallbackRecommendation
         ? {
             last_autonomous_run_id: null,
             last_autonomous_status: fallbackStatus,
@@ -290,6 +303,30 @@ function transitionToGateState(input: {
         : {}),
       sticky_human_gate: input.stickyHumanGate
     }
+  };
+}
+
+function buildHydratedMetaReviewSnapshotFromRunResult(input: {
+  metaReview: BubbleMetaReviewSnapshotState;
+  runResult: MetaReviewRunResult;
+}): BubbleMetaReviewSnapshotState {
+  return {
+    ...input.metaReview,
+    last_autonomous_run_id: input.runResult.run_id ?? null,
+    last_autonomous_status: input.runResult.status,
+    last_autonomous_recommendation: input.runResult.recommendation,
+    last_autonomous_summary: input.runResult.summary,
+    last_autonomous_report_ref: input.runResult.report_ref,
+    last_autonomous_rework_target_message:
+      input.runResult.recommendation === "rework"
+        ? (
+            typeof input.runResult.rework_target_message === "string" &&
+            input.runResult.rework_target_message.trim().length > 0
+              ? input.runResult.rework_target_message
+              : "Meta-review gate fallback rework target unavailable."
+          )
+        : null,
+    last_autonomous_updated_at: input.runResult.updated_at
   };
 }
 
@@ -385,6 +422,131 @@ function synthesizeMetaReviewRunFailure(input: {
   };
 }
 
+function normalizeRecoveredMetaReviewRunResult(input: {
+  bubbleId: string;
+  nowIso: string;
+  fallbackSummary: string;
+  runResult: MetaReviewRunResult;
+}): MetaReviewRunResult {
+  const normalizedSummary =
+    typeof input.runResult.summary === "string"
+      && input.runResult.summary.trim().length > 0
+      ? input.runResult.summary
+      : input.fallbackSummary;
+  const normalizedUpdatedAt =
+    typeof input.runResult.updated_at === "string" &&
+      input.runResult.updated_at.trim().length > 0
+      ? input.runResult.updated_at
+      : input.nowIso;
+  const normalizedReportRef = metaReviewFallbackReportRef;
+
+  return {
+    ...input.runResult,
+    bubbleId: input.bubbleId,
+    summary: normalizedSummary,
+    report_ref: normalizedReportRef,
+    updated_at: normalizedUpdatedAt,
+    rework_target_message:
+      input.runResult.recommendation === "rework"
+        ? (input.runResult.rework_target_message ?? null)
+        : null,
+    warnings: [...input.runResult.warnings]
+  };
+}
+
+function buildRecoveredMetaReviewReportMarkdown(input: {
+  bubbleId: string;
+  runResult: MetaReviewRunResult;
+  nowIso: string;
+}): string {
+  const summary =
+    input.runResult.summary ??
+    `Meta-review recovery route recorded recommendation=${input.runResult.recommendation}.`;
+  const runIdLine =
+    typeof input.runResult.run_id === "string" && input.runResult.run_id.trim().length > 0
+      ? [`- Run: ${input.runResult.run_id}`]
+      : [];
+
+  return [
+    "# Meta Review Report",
+    "",
+    `- Bubble: ${input.bubbleId}`,
+    ...runIdLine,
+    `- Generated: ${input.nowIso}`,
+    `- Recommendation: ${input.runResult.recommendation}`,
+    `- Status: ${input.runResult.status}`,
+    "",
+    "## Summary",
+    "",
+    summary
+  ].join("\n");
+}
+
+async function writeRecoveredMetaReviewArtifacts(input: {
+  bubbleId: string;
+  round: number;
+  nowIso: string;
+  runResult: MetaReviewRunResult;
+  paths: {
+    metaReviewLastJsonArtifactPath: string;
+    metaReviewLastMarkdownArtifactPath: string;
+  };
+  writeFileFn: typeof writeFile;
+}): Promise<{ warnings: MetaReviewRunWarning[] }> {
+  const warnings: MetaReviewRunWarning[] = [];
+
+  const markdown = buildRecoveredMetaReviewReportMarkdown({
+    bubbleId: input.bubbleId,
+    runResult: input.runResult,
+    nowIso: input.nowIso
+  });
+  try {
+    await input.writeFileFn(
+      input.paths.metaReviewLastMarkdownArtifactPath,
+      `${markdown.trimEnd()}\n`,
+      "utf8"
+    );
+  } catch (error) {
+    warnings.push({
+      reason_code: "META_REVIEW_ARTIFACT_WRITE_WARNING",
+      message: `${metaReviewFallbackReportRef}: ${error instanceof Error ? error.message : String(error)}`
+    });
+  }
+
+  const reportPayload = {
+    bubble_id: input.bubbleId,
+    round: input.round,
+    generated_at: input.nowIso,
+    status: input.runResult.status,
+    recommendation: input.runResult.recommendation,
+    summary: input.runResult.summary,
+    report_ref: input.runResult.report_ref,
+    report_json_ref: metaReviewFallbackReportJsonRef,
+    rework_target_message: input.runResult.rework_target_message,
+    warnings: [
+      ...input.runResult.warnings,
+      ...warnings
+    ],
+    ...(input.runResult.run_id !== undefined
+      ? { run_id: input.runResult.run_id }
+      : {})
+  };
+  try {
+    await input.writeFileFn(
+      input.paths.metaReviewLastJsonArtifactPath,
+      `${JSON.stringify(reportPayload, null, 2)}\n`,
+      "utf8"
+    );
+  } catch (error) {
+    warnings.push({
+      reason_code: "META_REVIEW_ARTIFACT_WRITE_WARNING",
+      message: `${metaReviewFallbackReportJsonRef}: ${error instanceof Error ? error.message : String(error)}`
+    });
+  }
+
+  return { warnings };
+}
+
 async function persistHumanGateRoute(input: {
   appendEnvelope: typeof appendProtocolEnvelope;
   writeState: typeof writeStateSnapshot;
@@ -408,6 +570,15 @@ async function persistHumanGateRoute(input: {
     | "META_REVIEW_FAILED";
   stickyHumanGate?: boolean;
 }): Promise<MetaReviewGateResult> {
+  if (
+    input.metaReviewRun !== undefined
+    && input.fallbackRecommendation !== undefined
+  ) {
+    throw new MetaReviewGateError(
+      "META_REVIEW_GATE_TRANSITION_INVALID",
+      "META_REVIEW_GATE_TRANSITION_INVALID: persistHumanGateRoute requires either metaReviewRun or fallbackRecommendation, but not both."
+    );
+  }
   const targetState = input.targetState ?? "READY_FOR_HUMAN_APPROVAL";
   const stickyHumanGate = input.stickyHumanGate ?? (
     input.route === "human_gate_dispatch_failed" || input.route === "human_gate_run_failed"
@@ -419,6 +590,9 @@ async function persistHumanGateRoute(input: {
     nowIso: input.nowIso,
     targetState,
     stickyHumanGate,
+    ...(input.metaReviewRun !== undefined
+      ? { metaReviewRun: input.metaReviewRun }
+      : {}),
     ...(input.fallbackRecommendation !== undefined
       ? {
           fallbackRecommendation: input.fallbackRecommendation,
@@ -503,6 +677,7 @@ export async function recoverMetaReviewGateFromSnapshot(
   const appendEnvelope = dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
   const setMetaReviewerPane =
     dependencies.setMetaReviewerPaneBinding ?? setMetaReviewerPaneBinding;
+  const writeFileFn = dependencies.writeFile ?? writeFile;
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
   const refs = input.refs ?? [];
@@ -527,8 +702,36 @@ export async function recoverMetaReviewGateFromSnapshot(
   const finishWithPaneDeactivation = async (
     result: MetaReviewGateResult
   ): Promise<MetaReviewGateResult> => {
+    let finalizedResult = result;
+    if (result.metaReviewRun !== undefined) {
+      const artifactWrite = await writeRecoveredMetaReviewArtifacts({
+        bubbleId: resolved.bubbleId,
+        round: result.state.round,
+        nowIso,
+        runResult: result.metaReviewRun,
+        paths: {
+          metaReviewLastJsonArtifactPath:
+            resolved.bubblePaths.metaReviewLastJsonArtifactPath,
+          metaReviewLastMarkdownArtifactPath:
+            resolved.bubblePaths.metaReviewLastMarkdownArtifactPath
+        },
+        writeFileFn
+      });
+      if (artifactWrite.warnings.length > 0) {
+        finalizedResult = {
+          ...result,
+          metaReviewRun: {
+            ...result.metaReviewRun,
+            warnings: [
+              ...result.metaReviewRun.warnings,
+              ...artifactWrite.warnings
+            ]
+          }
+        };
+      }
+    }
     await deactivateMetaReviewerPane();
-    return result;
+    return finalizedResult;
   };
 
   const loaded = await readState(resolved.bubblePaths.statePath);
@@ -548,34 +751,39 @@ export async function recoverMetaReviewGateFromSnapshot(
       state: loaded.state,
       snapshot
     });
-  const runResult = input.runResult ?? (
-    snapshotHasCanonicalSubmitInActiveWindow
-      ? synthesizeMetaReviewRunResultFromSnapshot({
-          bubbleId: resolved.bubbleId,
-          nowIso,
-          snapshot,
-          fallbackSummary
-        })
-      : synthesizeMetaReviewRunFailure({
-          bubbleId: resolved.bubbleId,
-          nowIso,
-          fallbackSummary
-        })
-  );
+  const runResult = normalizeRecoveredMetaReviewRunResult({
+    bubbleId: resolved.bubbleId,
+    nowIso,
+    fallbackSummary,
+    runResult: input.runResult ?? (
+      snapshotHasCanonicalSubmitInActiveWindow
+        ? synthesizeMetaReviewRunResultFromSnapshot({
+            bubbleId: resolved.bubbleId,
+            nowIso,
+            snapshot,
+            fallbackSummary
+          })
+        : synthesizeMetaReviewRunFailure({
+            bubbleId: resolved.bubbleId,
+            nowIso,
+            fallbackSummary
+          })
+    )
+  });
   const summary = runResult.summary
     ?? input.summary
     ?? "Meta-review completed previously; recovering gate route from snapshot.";
 
   const snapshotHasRunIdentity = snapshotHasCanonicalSubmitInActiveWindow;
   const snapshotUpdatedAtMs = Date.parse(snapshot.last_autonomous_updated_at ?? "");
-  const runResultUpdatedAtMs = Date.parse(input.runResult?.updated_at ?? "");
+  const runResultUpdatedAtMs = Date.parse(runResult.updated_at);
   const hasComparableTimestamps =
     Number.isFinite(snapshotUpdatedAtMs) && Number.isFinite(runResultUpdatedAtMs);
   const updatedAtChanged = input.runResult === undefined
     ? false
     : (hasComparableTimestamps
         ? snapshotUpdatedAtMs !== runResultUpdatedAtMs
-        : snapshot.last_autonomous_updated_at !== input.runResult.updated_at);
+        : snapshot.last_autonomous_updated_at !== runResult.updated_at);
   if (
     input.runResult !== undefined
     && snapshotHasRunIdentity
@@ -781,7 +989,14 @@ export async function recoverMetaReviewGateFromSnapshot(
 
     let written: LoadedStateSnapshot | undefined;
     try {
-      const resumedWithCounter = incrementAutoReworkCount(resumedWritten.state);
+      const resumedWithHydratedRun: BubbleStateSnapshot = {
+        ...resumedWritten.state,
+        meta_review: buildHydratedMetaReviewSnapshotFromRunResult({
+          metaReview: normalizeMetaReviewSnapshot(resumedWritten.state.meta_review),
+          runResult
+        })
+      };
+      const resumedWithCounter = incrementAutoReworkCount(resumedWithHydratedRun);
       written = await writeState(
         resolved.bubblePaths.statePath,
         resumedWithCounter,
@@ -802,7 +1017,10 @@ export async function recoverMetaReviewGateFromSnapshot(
             throw toConflictError(latestConflict);
           }
 
-          const latestMetaReview = normalizeMetaReviewSnapshot(latest.state.meta_review);
+          const latestMetaReview = buildHydratedMetaReviewSnapshotFromRunResult({
+            metaReview: normalizeMetaReviewSnapshot(latest.state.meta_review),
+            runResult
+          });
           if (latestMetaReview.auto_rework_count >= targetCount) {
             written = latest;
             break;

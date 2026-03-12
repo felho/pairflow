@@ -465,9 +465,9 @@ describe("runCli", () => {
       {
         ...loaded.state,
         state: "META_REVIEW_RUNNING",
-        active_agent: null,
-        active_role: null,
-        active_since: null,
+        active_agent: "codex",
+        active_role: "meta_reviewer",
+        active_since: "2026-03-08T12:49:00.000Z",
         meta_review: {
           last_autonomous_run_id: "run_meta_review_cli_json_05",
           last_autonomous_status: "success",
