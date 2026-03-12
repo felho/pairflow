@@ -18,7 +18,7 @@ target_files:
   - tests/core/agent/converged.test.ts
   - tests/cli/bubbleCreateCommand.test.ts
 prd_ref: null
-plan_ref: plans/pairflow-cli-command-profile-external-default-self-host-opt-in-plan-v1.md
+plan_ref: plans/archive/plans/cli-config/pairflow-cli-command-profile-external-default-self-host-opt-in-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"

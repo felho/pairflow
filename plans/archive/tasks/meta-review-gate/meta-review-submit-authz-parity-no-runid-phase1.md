@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_meta_review_submit_authz_parity_no_runid_phase1_v1
 title: "Meta-Review Submit Auth Parity + Watchdog Timeout Unification: No runId Gate (Phase 1)"
-status: implementable
+status: completed
 phase: phase1
 target_files:
   - src/core/bubble/metaReview.ts
