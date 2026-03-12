@@ -677,7 +677,7 @@ describe("state schema", () => {
     ).toBe(true);
   });
 
-  it("rejects run snapshots without run_id when status/recommendation are set", () => {
+  it("accepts run snapshots without run_id when status/recommendation are set", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_05",
       state: "WAITING_HUMAN",
@@ -701,15 +701,7 @@ describe("state schema", () => {
       }
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) {
-      return;
-    }
-    expect(
-      result.errors.some(
-        (error) => error.path === "meta_review.last_autonomous_run_id"
-      )
-    ).toBe(true);
+    expect(result.ok).toBe(true);
   });
 
   it("rejects run snapshots without report_ref when status/recommendation are set", () => {

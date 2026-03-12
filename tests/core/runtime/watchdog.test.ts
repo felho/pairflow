@@ -73,9 +73,19 @@ describe("computeWatchdogStatus", () => {
     expect(status.remainingSeconds).toBeNull();
   });
 
-  it("treats phase-2 gate states as tracked but non-agent-monitored", () => {
+  it("treats META_REVIEW_RUNNING as watchdog-monitored (including recovery with null active_agent) while keeping human-only states unmonitored", () => {
     const metaRunning = computeWatchdogStatus(
       createState({ state: "META_REVIEW_RUNNING" }),
+      5,
+      new Date("2026-02-22T12:08:00.000Z")
+    );
+    const metaRunningRecovery = computeWatchdogStatus(
+      createState({
+        state: "META_REVIEW_RUNNING",
+        active_agent: null,
+        active_role: null,
+        active_since: null
+      }),
       5,
       new Date("2026-02-22T12:08:00.000Z")
     );
@@ -85,9 +95,11 @@ describe("computeWatchdogStatus", () => {
       new Date("2026-02-22T12:08:00.000Z")
     );
 
-    expect(metaRunning.monitored).toBe(false);
+    expect(metaRunning.monitored).toBe(true);
+    expect(metaRunningRecovery.monitored).toBe(true);
     expect(humanGate.monitored).toBe(false);
     expect(metaRunning.monitoredAgent).toBe("codex");
+    expect(metaRunningRecovery.monitoredAgent).toBeNull();
     expect(humanGate.monitoredAgent).toBe("codex");
   });
 });

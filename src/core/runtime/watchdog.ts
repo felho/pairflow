@@ -22,9 +22,11 @@ const watchdogTrackedStates = new Set<BubbleLifecycleState>([
 ]);
 
 const watchdogNonAgentMonitoredStates = new Set<BubbleLifecycleState>([
-  "META_REVIEW_RUNNING",
   "META_REVIEW_FAILED",
   "READY_FOR_HUMAN_APPROVAL"
+]);
+const watchdogAgentOptionalStates = new Set<BubbleLifecycleState>([
+  "META_REVIEW_RUNNING"
 ]);
 
 export function computeWatchdogStatus(
@@ -33,10 +35,11 @@ export function computeWatchdogStatus(
   now: Date = new Date()
 ): WatchdogStatus {
   const trackedState = watchdogTrackedStates.has(state.state);
+  const requiresActiveAgent = !watchdogAgentOptionalStates.has(state.state);
   const monitored =
     trackedState &&
     !watchdogNonAgentMonitoredStates.has(state.state) &&
-    state.active_agent !== null;
+    (!requiresActiveAgent || state.active_agent !== null);
   const referenceTimestamp = state.last_command_at ?? state.active_since;
 
   if (!monitored || referenceTimestamp === null) {

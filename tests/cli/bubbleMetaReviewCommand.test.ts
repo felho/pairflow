@@ -644,7 +644,6 @@ describe("meta-review render helpers", () => {
   it("renders submit output", () => {
     const rendered = renderMetaReviewSubmitText({
       bubbleId: "b_meta_cli_render_submit_01",
-      depth: "standard",
       run_id: "run_submit_1",
       status: "success",
       recommendation: "approve",

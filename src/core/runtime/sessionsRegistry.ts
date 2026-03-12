@@ -9,7 +9,6 @@ export interface RuntimeMetaReviewerPaneBinding {
   role: "meta-reviewer";
   paneIndex: number;
   active: boolean;
-  runId: string | null;
   updatedAt: string;
 }
 
@@ -57,6 +56,7 @@ export interface SetMetaReviewerPaneBindingInput {
   sessionsPath: string;
   bubbleId: string;
   active: boolean;
+  // Deprecated compatibility input; ignored.
   runId?: string | null;
   now?: Date;
   lockTimeoutMs?: number;
@@ -156,19 +156,6 @@ function parseSessionRecord(
   };
 }
 
-function normalizeOptionalRunId(value: unknown): string | null {
-  if (value === null || value === undefined) {
-    return null;
-  }
-  if (typeof value !== "string") {
-    throw new RuntimeSessionsRegistryError(
-      "runtime session metaReviewerPane.runId must be a string or null."
-    );
-  }
-  const trimmed = value.trim();
-  return trimmed.length === 0 ? null : trimmed;
-}
-
 function hasSharedRuntimePaneCollision(): boolean {
   const metaReviewerPaneIndex = Number(runtimePaneIndices.metaReviewer);
   const statusPaneIndex = Number(runtimePaneIndices.status);
@@ -220,12 +207,10 @@ function parseMetaReviewerPaneBinding(
     value.updatedAt,
     "runtime session metaReviewerPane.updatedAt"
   );
-  const runId = normalizeOptionalRunId(value.runId);
   return {
     role: "meta-reviewer",
     paneIndex: paneIndexValue,
     active: activeValue,
-    runId,
     updatedAt
   };
 }
@@ -436,16 +421,10 @@ export async function setMetaReviewerPaneBinding(
       }
 
       const nowIso = (input.now ?? new Date()).toISOString();
-      const requestedRunId = normalizeOptionalRunId(input.runId);
-      const runId =
-        requestedRunId ??
-        existing.metaReviewerPane?.runId ??
-        null;
       const metaReviewerPane: RuntimeMetaReviewerPaneBinding = {
         role: "meta-reviewer",
         paneIndex: runtimePaneIndices.metaReviewer,
         active: input.active,
-        runId,
         updatedAt: nowIso
       };
 

@@ -9,6 +9,7 @@ import { getBubblePaths } from "../../../src/core/bubble/paths.js";
 import { getBubbleStatus } from "../../../src/core/bubble/statusBubble.js";
 import {
   extractMetaReviewDelimitedBlock,
+  hasCanonicalSubmitForActiveMetaReviewRound,
   MetaReviewError,
   getMetaReviewLastReport,
   getMetaReviewStatus,
@@ -615,12 +616,119 @@ describe("meta-review submit", () => {
           role: "meta-reviewer" as const,
           paneIndex: 3,
           active: true,
-          runId: "run_meta_submit_test",
           updatedAt: "2026-03-09T09:00:00.000Z"
         }
       }
     };
   }
+
+  it("requires report_ref for canonical submit detection in active meta-review window", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_helper_01",
+      task: "Meta submit canonical helper report_ref requirement"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:05:00.000Z"
+    });
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+
+    expect(
+      hasCanonicalSubmitForActiveMetaReviewRound({
+        state: loaded.state,
+        snapshot: {
+          last_autonomous_run_id: null,
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Structured submit with missing report_ref.",
+          last_autonomous_report_ref: null,
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-03-09T09:06:00.000Z",
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      })
+    ).toBe(false);
+  });
+
+  it("does not treat canonical submit as active-window match when active_since is missing", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_helper_02",
+      task: "Meta submit canonical helper requires active_since"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:10:00.000Z"
+    });
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+
+    expect(
+      hasCanonicalSubmitForActiveMetaReviewRound({
+        state: {
+          ...loaded.state,
+          active_since: null
+        },
+        snapshot: {
+          last_autonomous_run_id: null,
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Structured submit snapshot.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-03-09T09:10:10.000Z",
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      })
+    ).toBe(false);
+  });
+
+  it("does not treat canonical submit as active-window match when active_since is invalid", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_helper_03",
+      task: "Meta submit canonical helper rejects invalid active_since"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:12:00.000Z"
+    });
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+
+    expect(
+      hasCanonicalSubmitForActiveMetaReviewRound({
+        state: {
+          ...loaded.state,
+          active_since: "not-a-timestamp"
+        },
+        snapshot: {
+          last_autonomous_run_id: null,
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Structured submit snapshot.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-03-09T09:12:10.000Z",
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      })
+    ).toBe(false);
+  });
 
   it("accepts structured approve submit and persists canonical snapshot", async () => {
     const repoPath = await createTempRepo();
@@ -659,12 +767,12 @@ describe("meta-review submit", () => {
 
     expect(result.status).toBe("success");
     expect(result.recommendation).toBe("approve");
-    expect(result.run_id).toBe("run_meta_submit_test");
+    expect(result.run_id).toBeUndefined();
     expect(result.lifecycle_state).toBe("META_REVIEW_RUNNING");
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     expect(loaded.state.meta_review).toMatchObject({
-      last_autonomous_run_id: "run_meta_submit_test",
+      last_autonomous_run_id: null,
       last_autonomous_status: "success",
       last_autonomous_recommendation: "approve",
       last_autonomous_summary: "Looks good after final review.",
@@ -711,7 +819,7 @@ describe("meta-review submit", () => {
 
     expect(result.status).toBe("success");
     expect(result.recommendation).toBe("rework");
-    expect(result.run_id).toBe("run_meta_submit_test");
+    expect(result.run_id).toBeUndefined();
     expect(result.rework_target_message).toBe(
       "Fix retry sequencing in gate recovery."
     );
@@ -752,6 +860,119 @@ describe("meta-review submit", () => {
       )
     ).rejects.toMatchObject({
       reasonCode: "META_REVIEW_REWORK_MESSAGE_INVALID"
+    });
+  });
+
+  it("rejects submit when lifecycle is not META_REVIEW_RUNNING", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_guard_01",
+      task: "Meta submit lifecycle guard"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "Lifecycle guard should reject.",
+          report_markdown: "# Meta Review\n\nLifecycle guard reject."
+        },
+        {
+          readRuntimeSessionsRegistry: async () => {
+            throw new Error("runtime sessions must not be read on lifecycle guard reject");
+          }
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_STATE_INVALID"
+    });
+  });
+
+  it("rejects submit when active role is not meta_reviewer", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_guard_02",
+      task: "Meta submit active-role guard"
+    });
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const mockedState = {
+      ...loaded.state,
+      state: "META_REVIEW_RUNNING" as const,
+      active_agent: "codex" as const,
+      active_role: "implementer" as const,
+      active_since: "2026-03-09T09:35:00.000Z",
+      last_command_at: "2026-03-09T09:35:00.000Z"
+    };
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "Active role guard should reject.",
+          report_markdown: "# Meta Review\n\nActive role guard reject."
+        },
+        {
+          readStateSnapshot: async () => ({
+            fingerprint: loaded.fingerprint,
+            state: mockedState
+          }),
+          readRuntimeSessionsRegistry: async () => {
+            throw new Error("runtime sessions must not be read on role guard reject");
+          }
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_SENDER_MISMATCH"
+    });
+  });
+
+  it("rejects submit when active ownership is missing active_since", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_guard_03",
+      task: "Meta submit active-ownership guard"
+    });
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const mockedState = {
+      ...loaded.state,
+      state: "META_REVIEW_RUNNING" as const,
+      active_agent: "codex" as const,
+      active_role: "meta_reviewer" as const,
+      active_since: null,
+      last_command_at: "2026-03-09T09:36:00.000Z"
+    };
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "Active ownership guard should reject.",
+          report_markdown: "# Meta Review\n\nActive ownership guard reject."
+        },
+        {
+          readStateSnapshot: async () => ({
+            fingerprint: loaded.fingerprint,
+            state: mockedState
+          }),
+          readRuntimeSessionsRegistry: async () => {
+            throw new Error("runtime sessions must not be read on ownership guard reject");
+          }
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_SENDER_MISMATCH"
     });
   });
 
@@ -829,7 +1050,6 @@ describe("meta-review submit", () => {
               role: "meta-reviewer",
               paneIndex: 3,
               active: false,
-              runId: "run_meta_submit_test",
               updatedAt: "2026-03-09T09:45:00.000Z"
             }
           }
@@ -849,7 +1069,7 @@ describe("meta-review submit", () => {
     expect(after.fingerprint).toBe(before.fingerprint);
   });
 
-  it("rejects submit when active runtime pane binding is missing gate run identity", async () => {
+  it("accepts submit when active runtime pane binding has no gate run identity", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -871,7 +1091,7 @@ describe("meta-review submit", () => {
           repoPath,
           round: 1,
           recommendation: "approve",
-          summary: "Should fail due to missing gate run identity.",
+          summary: "Should succeed without gate run identity.",
           report_markdown: "# Meta Review\n\nMissing run binding."
         },
         {
@@ -886,19 +1106,19 @@ describe("meta-review submit", () => {
                 role: "meta-reviewer",
                 paneIndex: 3,
                 active: true,
-                runId: null,
                 updatedAt: "2026-03-09T09:47:00.000Z"
               }
             }
           })
         }
       )
-    ).rejects.toMatchObject({
-      reasonCode: "META_REVIEW_STATE_INVALID"
+    ).resolves.toMatchObject({
+      status: "success",
+      recommendation: "approve"
     });
 
     const after = await readStateSnapshot(bubble.paths.statePath);
-    expect(after.fingerprint).toBe(before.fingerprint);
+    expect(after.fingerprint).not.toBe(before.fingerprint);
   });
 
   it("rejects duplicate structured submit for the same active gate run identity", async () => {
@@ -926,7 +1146,6 @@ describe("meta-review submit", () => {
           role: "meta-reviewer" as const,
           paneIndex: 3,
           active: true,
-          runId: "run_meta_submit_dup_01",
           updatedAt: "2026-03-09T09:48:00.000Z"
         }
       }
@@ -967,7 +1186,7 @@ describe("meta-review submit", () => {
     });
 
     const after = await readStateSnapshot(bubble.paths.statePath);
-    expect(after.state.meta_review?.last_autonomous_run_id).toBe("run_meta_submit_dup_01");
+    expect(after.state.meta_review?.last_autonomous_run_id).toBeNull();
     expect(after.state.meta_review?.last_autonomous_summary).toBe(
       "First submit should succeed."
     );
@@ -999,7 +1218,6 @@ describe("meta-review submit", () => {
           role: "meta-reviewer" as const,
           paneIndex: 3,
           active: true,
-          runId,
           updatedAt: "2026-03-09T09:49:00.000Z"
         }
       }

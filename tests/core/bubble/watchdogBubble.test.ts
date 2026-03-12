@@ -6,11 +6,17 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { runBubbleWatchdog } from "../../../src/core/bubble/watchdogBubble.js";
+import { MetaReviewGateError } from "../../../src/core/bubble/metaReviewGate.js";
 import { emitAskHumanFromWorkspace } from "../../../src/core/agent/askHuman.js";
 import { emitRequestRework } from "../../../src/core/human/approval.js";
 import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
-import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
-import { readStateSnapshot } from "../../../src/core/state/stateStore.js";
+import {
+  readRuntimeSessionsRegistry,
+  setMetaReviewerPaneBinding,
+  upsertRuntimeSession
+} from "../../../src/core/runtime/sessionsRegistry.js";
+import { applyStateTransition } from "../../../src/core/state/machine.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -70,6 +76,33 @@ async function installFakeTmuxForDeliveryConfirmation(stateFilePath: string): Pr
 }
 
 describe("runBubbleWatchdog", () => {
+  async function moveToMetaReviewRunning(input: {
+    statePath: string;
+    activeSinceIso: string;
+    lastCommandAtIso: string;
+    activeAgent?: "codex" | null;
+  }): Promise<void> {
+    const loaded = await readStateSnapshot(input.statePath);
+    const readyForApproval = applyStateTransition(loaded.state, {
+      to: "READY_FOR_APPROVAL",
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
+      lastCommandAt: input.lastCommandAtIso
+    });
+    const metaReviewRunning = applyStateTransition(readyForApproval, {
+      to: "META_REVIEW_RUNNING",
+      activeAgent: input.activeAgent ?? "codex",
+      activeRole: input.activeAgent === null ? null : "meta_reviewer",
+      activeSince: input.activeSinceIso,
+      lastCommandAt: input.lastCommandAtIso
+    });
+    await writeStateSnapshot(input.statePath, metaReviewRunning, {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "RUNNING"
+    });
+  }
+
   it("applies pending deferred rework intent in WAITING_HUMAN after confirmed delivery", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -341,5 +374,381 @@ describe("runBubbleWatchdog", () => {
     expect(result.escalated).toBe(false);
     expect(result.reason).toBe("not_monitored");
     expect(result.state.state).toBe("CREATED");
+  });
+
+  it("routes META_REVIEW_RUNNING timeout to META_REVIEW_FAILED with APPROVAL_REQUEST", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_meta_timeout_01",
+      task: "Meta-review watchdog timeout route",
+      startedAt: "2026-02-22T12:00:00.000Z"
+    });
+    await moveToMetaReviewRunning({
+      statePath: bubble.paths.statePath,
+      activeSinceIso: "2026-02-22T12:00:00.000Z",
+      lastCommandAtIso: "2026-02-22T12:00:00.000Z"
+    });
+
+    const result = await runBubbleWatchdog({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath,
+      now: new Date("2026-02-22T14:00:00.000Z")
+    });
+
+    expect(result.escalated).toBe(true);
+    expect(result.reason).toBe("escalated");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
+    expect(result.envelope?.type).toBe("APPROVAL_REQUEST");
+    const summary = result.envelope?.payload.summary;
+    expect(typeof summary).toBe("string");
+    expect(summary).toContain("META_REVIEW_GATE_RUN_FAILED");
+
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcript.at(-1)?.type).toBe("APPROVAL_REQUEST");
+    const inbox = await readTranscriptEnvelopes(bubble.paths.inboxPath);
+    expect(inbox.at(-1)?.type).toBe("APPROVAL_REQUEST");
+  });
+
+  it("still monitors META_REVIEW_RUNNING when active_agent is null in recovery state", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_meta_timeout_02",
+      task: "Meta-review watchdog timeout route with null active agent",
+      startedAt: "2026-02-22T12:00:00.000Z"
+    });
+    await moveToMetaReviewRunning({
+      statePath: bubble.paths.statePath,
+      activeSinceIso: "2026-02-22T12:00:00.000Z",
+      lastCommandAtIso: "2026-02-22T12:00:00.000Z"
+    });
+    const running = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...running.state,
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        meta_review: {
+          ...(running.state.meta_review ?? {
+            last_autonomous_run_id: null,
+            last_autonomous_status: null,
+            last_autonomous_recommendation: null,
+            last_autonomous_summary: null,
+            last_autonomous_report_ref: null,
+            last_autonomous_rework_target_message: null,
+            last_autonomous_updated_at: null,
+            auto_rework_count: 0,
+            auto_rework_limit: 5,
+            sticky_human_gate: false
+          }),
+          last_autonomous_run_id: null,
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "inconclusive",
+          last_autonomous_summary: "Recovered meta-review snapshot prior to timeout route.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-02-22T12:00:30.000Z"
+        }
+      },
+      {
+        expectedFingerprint: running.fingerprint,
+        expectedState: "META_REVIEW_RUNNING"
+      }
+    );
+
+    const result = await runBubbleWatchdog({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath,
+      now: new Date("2026-02-22T14:00:00.000Z")
+    });
+
+    expect(result.escalated).toBe(true);
+    expect(result.reason).toBe("escalated");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(result.envelope?.type).toBe("APPROVAL_REQUEST");
+  });
+
+  it("deactivates meta-reviewer pane binding when watchdog routes meta-review timeout", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_meta_timeout_03",
+      task: "Meta-review timeout pane deactivation",
+      startedAt: "2026-02-22T12:00:00.000Z"
+    });
+    await upsertRuntimeSession({
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      tmuxSessionName: "pf-watchdog-meta-timeout",
+      now: new Date("2026-02-22T12:00:00.000Z")
+    });
+    await setMetaReviewerPaneBinding({
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: bubble.bubbleId,
+      active: true,
+      now: new Date("2026-02-22T12:00:01.000Z")
+    });
+    await moveToMetaReviewRunning({
+      statePath: bubble.paths.statePath,
+      activeSinceIso: "2026-02-22T12:00:00.000Z",
+      lastCommandAtIso: "2026-02-22T12:00:00.000Z"
+    });
+
+    const result = await runBubbleWatchdog({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath,
+      now: new Date("2026-02-22T14:00:00.000Z")
+    });
+
+    expect(result.escalated).toBe(true);
+    const sessions = await readRuntimeSessionsRegistry(bubble.paths.sessionsPath, {
+      allowMissing: false
+    });
+    expect(sessions[bubble.bubbleId]?.metaReviewerPane?.active).toBe(false);
+  });
+
+  it("routes canonical META_REVIEW_RUNNING submit snapshot before timeout expiry", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_meta_submit_01",
+      task: "Meta-review watchdog canonical submit route",
+      startedAt: "2026-02-22T12:00:00.000Z"
+    });
+    await moveToMetaReviewRunning({
+      statePath: bubble.paths.statePath,
+      activeSinceIso: "2026-02-22T12:00:00.000Z",
+      lastCommandAtIso: "2026-02-22T12:00:00.000Z"
+    });
+
+    const running = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...running.state,
+        meta_review: {
+          ...(running.state.meta_review ?? {
+            last_autonomous_run_id: null,
+            last_autonomous_status: null,
+            last_autonomous_recommendation: null,
+            last_autonomous_summary: null,
+            last_autonomous_report_ref: null,
+            last_autonomous_rework_target_message: null,
+            last_autonomous_updated_at: null,
+            auto_rework_count: 0,
+            auto_rework_limit: 5,
+            sticky_human_gate: false
+          }),
+          last_autonomous_run_id: null,
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Canonical structured submit captured.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-02-22T12:01:00.000Z"
+        }
+      },
+      {
+        expectedFingerprint: running.fingerprint,
+        expectedState: "META_REVIEW_RUNNING"
+      }
+    );
+
+    const result = await runBubbleWatchdog({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath,
+      now: new Date("2026-02-22T12:02:00.000Z")
+    });
+
+    expect(result.escalated).toBe(true);
+    expect(result.reason).toBe("escalated");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(result.state.meta_review?.last_autonomous_run_id).toBeNull();
+    expect(result.envelope?.type).toBe("APPROVAL_REQUEST");
+  });
+
+  it("does not route canonical submit snapshot when submit is outside active window", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_meta_submit_02",
+      task: "Meta-review watchdog only routes canonical submit inside active window",
+      startedAt: "2026-02-22T12:00:00.000Z"
+    });
+    await moveToMetaReviewRunning({
+      statePath: bubble.paths.statePath,
+      activeSinceIso: "2026-02-22T12:00:00.000Z",
+      lastCommandAtIso: "2026-02-22T12:00:00.000Z"
+    });
+
+    const running = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...running.state,
+        meta_review: {
+          ...(running.state.meta_review ?? {
+            last_autonomous_run_id: null,
+            last_autonomous_status: null,
+            last_autonomous_recommendation: null,
+            last_autonomous_summary: null,
+            last_autonomous_report_ref: null,
+            last_autonomous_rework_target_message: null,
+            last_autonomous_updated_at: null,
+            auto_rework_count: 0,
+            auto_rework_limit: 5,
+            sticky_human_gate: false
+          }),
+          last_autonomous_run_id: null,
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Structured submit exists but predates active window.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-02-22T11:59:59.000Z"
+        }
+      },
+      {
+        expectedFingerprint: running.fingerprint,
+        expectedState: "META_REVIEW_RUNNING"
+      }
+    );
+
+    const result = await runBubbleWatchdog({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath,
+      now: new Date("2026-02-22T12:02:00.000Z")
+    });
+
+    expect(result.escalated).toBe(false);
+    expect(result.reason).toBe("not_expired");
+    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+  });
+
+  it("does not fail watchdog cycle when meta-review routing sees state conflict before timeout", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_meta_conflict_01",
+      task: "Watchdog meta-review recover conflict (pre-timeout)",
+      startedAt: "2026-02-22T12:00:00.000Z"
+    });
+    await moveToMetaReviewRunning({
+      statePath: bubble.paths.statePath,
+      activeSinceIso: "2026-02-22T12:00:00.000Z",
+      lastCommandAtIso: "2026-02-22T12:00:00.000Z"
+    });
+    const running = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...running.state,
+        meta_review: {
+          ...(running.state.meta_review ?? {
+            last_autonomous_run_id: null,
+            last_autonomous_status: null,
+            last_autonomous_recommendation: null,
+            last_autonomous_summary: null,
+            last_autonomous_report_ref: null,
+            last_autonomous_rework_target_message: null,
+            last_autonomous_updated_at: null,
+            auto_rework_count: 0,
+            auto_rework_limit: 5,
+            sticky_human_gate: false
+          }),
+          last_autonomous_run_id: null,
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Canonical submit is present in active window.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-02-22T12:01:00.000Z"
+        }
+      },
+      {
+        expectedFingerprint: running.fingerprint,
+        expectedState: "META_REVIEW_RUNNING"
+      }
+    );
+
+    const result = await runBubbleWatchdog(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:02:00.000Z")
+      },
+      {
+        recoverMetaReviewGateFromSnapshot: async () => {
+          throw new MetaReviewGateError(
+            "META_REVIEW_GATE_STATE_CONFLICT",
+            "simulated conflict before timeout"
+          );
+        }
+      }
+    );
+
+    expect(result.escalated).toBe(false);
+    expect(result.reason).toBe("not_expired");
+    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+  });
+
+  it("does not fail watchdog cycle when timeout routing sees state conflict and lifecycle already progressed", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_meta_conflict_02",
+      task: "Watchdog meta-review recover conflict (timeout)",
+      startedAt: "2026-02-22T12:00:00.000Z"
+    });
+    await moveToMetaReviewRunning({
+      statePath: bubble.paths.statePath,
+      activeSinceIso: "2026-02-22T12:00:00.000Z",
+      lastCommandAtIso: "2026-02-22T12:00:00.000Z"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const progressed = applyStateTransition(loaded.state, {
+      to: "META_REVIEW_FAILED",
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
+      lastCommandAt: "2026-02-22T14:00:00.000Z"
+    });
+    let readCount = 0;
+
+    const result = await runBubbleWatchdog(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T14:00:00.000Z")
+      },
+      {
+        readStateSnapshot: async () => {
+          readCount += 1;
+          if (readCount === 1) {
+            return loaded;
+          }
+          return {
+            fingerprint: "fp_progressed",
+            state: progressed
+          };
+        },
+        recoverMetaReviewGateFromSnapshot: async () => {
+          throw new MetaReviewGateError(
+            "META_REVIEW_GATE_STATE_CONFLICT",
+            "simulated timeout conflict"
+          );
+        }
+      }
+    );
+
+    expect(result.escalated).toBe(false);
+    expect(result.reason).toBe("state_not_running");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
   });
 });

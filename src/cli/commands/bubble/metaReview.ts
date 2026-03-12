@@ -10,6 +10,7 @@ import {
   type MetaReviewDepth,
   type MetaReviewLastReportView,
   type MetaReviewRunResult,
+  type MetaReviewSubmitResult,
   type MetaReviewStatusView
 } from "../../../core/bubble/metaReview.js";
 import type { MetaReviewSubmissionPayload } from "../../../types/protocol.js";
@@ -89,7 +90,7 @@ export type BubbleMetaReviewCommandResult =
   }
   | {
     command: "submit";
-    submit: MetaReviewRunResult;
+    submit: MetaReviewSubmitResult;
   };
 
 function invalidMetaReviewCliOptions(message: string): never {
@@ -420,12 +421,14 @@ export function parseBubbleMetaReviewCommandOptions(
 export function renderMetaReviewRunText(result: MetaReviewRunResult): string {
   const lines = [
     `Meta-review run for ${result.bubbleId}: status=${result.status}, recommendation=${result.recommendation}, depth=${result.depth}`,
-    `Run id: ${result.run_id}`,
     `Updated: ${result.updated_at}`,
     `Lifecycle state: ${result.lifecycle_state}`,
     `Summary: ${result.summary ?? "-"}`,
     `Report ref: ${result.report_ref}`
   ];
+  if (typeof result.run_id === "string" && result.run_id.trim().length > 0) {
+    lines.splice(1, 0, `Run id: ${result.run_id}`);
+  }
 
   if (result.rework_target_message !== null) {
     lines.push(`Rework target: ${result.rework_target_message}`);
@@ -442,15 +445,17 @@ export function renderMetaReviewRunText(result: MetaReviewRunResult): string {
   return lines.join("\n");
 }
 
-export function renderMetaReviewSubmitText(result: MetaReviewRunResult): string {
+export function renderMetaReviewSubmitText(result: MetaReviewSubmitResult): string {
   const lines = [
     `Meta-review submit for ${result.bubbleId}: status=${result.status}, recommendation=${result.recommendation}`,
-    `Run id: ${result.run_id}`,
     `Updated: ${result.updated_at}`,
     `Lifecycle state: ${result.lifecycle_state}`,
     `Summary: ${result.summary ?? "-"}`,
     `Report ref: ${result.report_ref}`
   ];
+  if (typeof result.run_id === "string" && result.run_id.trim().length > 0) {
+    lines.splice(1, 0, `Run id: ${result.run_id}`);
+  }
 
   if (result.rework_target_message !== null) {
     lines.push(`Rework target: ${result.rework_target_message}`);
@@ -490,12 +495,17 @@ export function renderMetaReviewStatusText(
   lines.push(`Last updated: ${view.last_autonomous_updated_at ?? "-"}`);
 
   if (verbose) {
-    lines.push(`Last run id: ${view.last_autonomous_run_id ?? "-"}`);
     lines.push(`Last summary: ${view.last_autonomous_summary ?? "-"}`);
     lines.push(`Last report ref: ${view.last_autonomous_report_ref ?? "-"}`);
     lines.push(
       `Last rework target: ${view.last_autonomous_rework_target_message ?? "-"}`
     );
+    if (
+      typeof view.last_autonomous_run_id === "string" &&
+      view.last_autonomous_run_id.trim().length > 0
+    ) {
+      lines.push(`Last run id: ${view.last_autonomous_run_id}`);
+    }
   }
 
   return lines.join("\n");
