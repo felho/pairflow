@@ -8,6 +8,8 @@ target_files:
   - src/core/bubble/metaReview.ts
   - src/core/bubble/metaReviewGate.ts
   - src/core/bubble/watchdogBubble.ts
+  - src/core/agent/converged.ts
+  - src/cli/commands/agent/converged.ts
   - src/core/runtime/watchdog.ts
   - src/core/runtime/sessionsRegistry.ts
   - src/core/state/stateSchema.ts
@@ -18,10 +20,12 @@ target_files:
   - tests/core/bubble/metaReview.test.ts
   - tests/core/bubble/metaReviewGate.test.ts
   - tests/core/bubble/watchdogBubble.test.ts
+  - tests/core/agent/converged.test.ts
   - tests/core/runtime/watchdog.test.ts
   - tests/core/runtime/sessionsRegistry.test.ts
   - tests/core/state/stateSchema.test.ts
   - tests/cli/bubbleMetaReviewCommand.test.ts
+  - tests/cli/convergedCommand.test.ts
 prd_ref: null
 plan_ref: null
 system_context_ref: docs/pairflow-initial-design.md
@@ -49,6 +53,7 @@ A meta-review submit engedélyezése pontosan ugyanarra a modellre álljon át, 
 8. Vezessük ki a `last_autonomous_run_id`/`run_id` kötelezőséget a meta-review state/read-model szerződésből.
 9. Tesztekkel zárjuk le, hogy rossz state/role/agent/round esetén továbbra is reject van, de `runId` hiánya vagy hiányzó `run_id` nem reject ok.
 10. Takarítsuk ki a historikus, már nem használt submit-gate maradványokat (`deprecated` fallback hookok, marker/run identity maradványkötések az autoritatív útban).
+11. Rögzítsük az upstream `converged` szerződést: `src/core/agent/converged.ts` ne függjön gate-lokális szinkron timeout-lezárástól; timeout ownership kizárólag watchdog.
 
 ### Out of Scope
 
@@ -57,9 +62,19 @@ A meta-review submit engedélyezése pontosan ugyanarra a modellre álljon át, 
 
 ### Safety Defaults
 
-1. Ha `META_REVIEW_RUNNING` alatt timeout történik, fail-safe út: `META_REVIEW_FAILED` + `APPROVAL_REQUEST` (nem néma hiba).
+1. Ha `META_REVIEW_RUNNING` alatt timeout történik és az adott roundban még nincs canonical submit, fail-safe út: `META_REVIEW_FAILED` + `APPROVAL_REQUEST` `META_REVIEW_GATE_RUN_FAILED` reason kóddal (nem néma hiba).
 2. Nem autoritatív submit (rossz lifecycle/ownership/round) továbbra is determinisztikusan elutasítandó.
-3. Canonical truth továbbra is state snapshot + canonical artifacts.
+3. Submit-wins race ágban (canonical submit már commitált ugyanarra a roundra) timeout eszkaláció nem írhat felül: determinisztikus no-op.
+4. Canonical truth továbbra is state snapshot + canonical artifacts.
+
+### Normatív döntési sorrend (submit vs timeout)
+
+1. Authoritative submit-accept feltétel: `lifecycle(META_REVIEW_RUNNING)` + `active_role(meta_reviewer)` + `active_agent` + `round` + CAS. (CS1, CS2; T1-T4; AC1-AC4)
+2. Timeout ownership kizárólag a központi watchdogé; gate és converged út nem birtokolhat timeout döntést. (CS4, CS9, CS10, CS16; T5, T10, T11, T14; AC5, AC8, AC9)
+3. Submit-timeout verseny esetén mindig CAS dönt:
+   - ha submit commitál előbb, watchdog timeout ága determinisztikus no-op ugyanarra a roundra (nincs timeout-eszkaláció utólag);
+   - ha watchdog timeout commitál előbb, későbbi submit determinisztikusan `META_REVIEW_STATE_INVALID` reject.
+4. "Néma timeout" tiltott: timeoutból csak explicit `META_REVIEW_FAILED` + `APPROVAL_REQUEST` route elfogadott `META_REVIEW_GATE_RUN_FAILED` reason kóddal. (CS10, CS16; T10, T11, T13, T15; AC8, AC9)
 
 ### Contract Boundary / Blast Radius
 
@@ -68,7 +83,8 @@ A meta-review submit engedélyezése pontosan ugyanarra a modellre álljon át, 
    - belső auth/gating contract (`META_REVIEW_RUNNING` submit acceptance),
    - runtime session binding shape (`metaReviewerPane` auth-releváns mezők),
    - timeout/escalation contract (`META_REVIEW_RUNNING` -> `META_REVIEW_FAILED` + human gate),
-   - meta-review state/read-model mezők (`last_autonomous_*` contract).
+   - meta-review state/read-model mezők (`last_autonomous_*` contract),
+   - converged upstream boundary contract (`src/core/agent/converged.ts` csak gate route/state fogyasztó; timeout ownership továbbra is watchdog).
 
 ## Reviewer/Implementer Parity Comparison (Normative)
 
@@ -111,6 +127,8 @@ A meta-review submit engedélyezése pontosan ugyanarra a modellre álljon át, 
 | CS13 | `tests/core/bubble/watchdogBubble.test.ts` | watchdog escalation tests | vitest | meta-review timeout suite | `META_REVIEW_RUNNING` timeout -> `META_REVIEW_FAILED` + `APPROVAL_REQUEST` | P1 | required-now | regression target |
 | CS14 | `tests/core/runtime/watchdog.test.ts` | watchdog monitor tests | vitest | watchdog status suite | `META_REVIEW_RUNNING` monitorozott legyen timeout számítással | P1 | required-now | regression target |
 | CS15 | `tests/core/runtime/sessionsRegistry.test.ts` + `tests/core/state/stateSchema.test.ts` + `tests/cli/bubbleMetaReviewCommand.test.ts` | schema/CLI tests | vitest | parity suites | `runId`/`run_id` dependency nélküli contract lock | P1 | required-now | schema + CLI lock |
+| CS16 | `src/core/agent/converged.ts` | `emitConvergedFromWorkspace` | `(input, deps?) -> Promise<EmitConvergedResult>` | upstream gate handoff | converged ne tartson fenn gate-lokális timeout ownershipot; meta-review timeoutot watchdog kezeli, converged csak route+state szerződést fogyaszt | P1 | required-now | jelenleg gate-szinkron eredményfeltételezés az upstream döntési pontban |
+| CS17 | `tests/core/agent/converged.test.ts` + `tests/cli/convergedCommand.test.ts` | converged upstream contract tests | vitest | converged + CLI contract suite | lockoljuk, hogy converged flow nem timeout-döntéshozó; timeout reason-code contract explicit | P1 | required-now | regression target |
 
 ### 2) Data and Interface Contract
 
@@ -121,7 +139,8 @@ A meta-review submit engedélyezése pontosan ugyanarra a modellre álljon át, 
 | Snapshot contract | status/recommendation set => `last_autonomous_run_id` required | run-id free snapshot contract | status, recommendation, summary/report_ref, updated_at | rework target | behavior change | P1 | required-now |
 | Duplicate submit protection | `runId` equality check | CAS/state-based single-accept rule | expected fingerprint/state, deterministic reject reason | optional diagnostics | behavior change | P1 | required-now |
 | Timeout ownership | gate-local wait/poll timeout (`awaitMetaReviewSubmission`) | central watchdog timeout ownership | watchdog expiry route for `META_REVIEW_RUNNING` | diagnostics | behavior change | P1 | required-now |
-| Timeout escalation contract | timeout may remain local gate failure path | timeout -> `META_REVIEW_FAILED` + `APPROVAL_REQUEST` | human gate signal + state transition | recommendation metadata | behavior change | P1 | required-now |
+| Timeout escalation contract | timeout may remain local gate failure path | timeout -> `META_REVIEW_FAILED` + `APPROVAL_REQUEST` + `META_REVIEW_GATE_RUN_FAILED` | human gate signal + state transition | recommendation metadata | behavior change | P1 | required-now |
+| Converged upstream gate contract | converged path depends on synchronous gate completion semantics | converged consumes gate route/state only; timeout ownership remains watchdog | gate route, lifecycle state, explicit timeout reason code propagation | diagnostics | behavior change | P1 | required-now |
 
 ### 3) Side Effects Contract
 
@@ -140,7 +159,9 @@ A meta-review submit engedélyezése pontosan ugyanarra a modellre álljon át, 
 | submit sender mismatch (active role/agent mismatch) | ownership tuple | throw | reject, no mutation | META_REVIEW_SENDER_MISMATCH | warn | P1 | required-now |
 | submit round mismatch | round binding | throw | reject, no mutation | META_REVIEW_ROUND_MISMATCH | warn | P1 | required-now |
 | duplicate submit race | state store CAS | throw/result | deterministic reject (already submitted/conflict) | META_REVIEW_STATE_INVALID or conflict-mapped code | warn | P1 | required-now |
-| timeout while `META_REVIEW_RUNNING` | central watchdog | fallback | `META_REVIEW_FAILED` + `APPROVAL_REQUEST` human gate | META_REVIEW_GATE_RUN_FAILED (or watchdog-mapped equivalent) | warn | P1 | required-now |
+| timeout while `META_REVIEW_RUNNING` (no prior canonical submit in same round) | central watchdog expiry evaluator + CAS guard | fallback | `META_REVIEW_FAILED` + `APPROVAL_REQUEST` human gate | META_REVIEW_GATE_RUN_FAILED | warn | P1 | required-now |
+| submit and timeout race in same round | `readStateSnapshot` + `writeStateSnapshot` CAS + watchdog expiry escalation guard (`META_REVIEW_RUNNING` + round match) | throw/fallback | first-writer-wins CAS; second path deterministic no-op/reject (no rollback) | late submit branch: `META_REVIEW_STATE_INVALID`; late watchdog branch: no escalation/no reason emission | warn | P1 | required-now |
+| converged receives watchdog-owned timeout outcome | meta-review gate route + converged route resolver | result | converged propagates watchdog-owned failure route/reason without re-running local timeout wait | META_REVIEW_GATE_RUN_FAILED | warn | P1 | required-now |
 
 ### 5) Dependency Constraints
 
@@ -149,12 +170,14 @@ A meta-review submit engedélyezése pontosan ugyanarra a modellre álljon át, 
 | must-use | `readStateSnapshot` + `writeStateSnapshot` CAS semantics | P1 | required-now |
 | must-use | active role ownership invariants (`META_REVIEW_RUNNING` + `meta_reviewer` + `active_agent` + `round`) | P1 | required-now |
 | must-use | central watchdog timeout path for meta-review lifecycle (`META_REVIEW_RUNNING`) | P1 | required-now |
+| must-use | converged upstream handoff only consumes gate route/state (no timeout ownership transfer back) | P1 | required-now |
 | must-not-use | `metaReviewerPane.runId` as submit authorization gate | P1 | required-now |
 | must-not-use | `run_id`/`last_autonomous_run_id` mint kötelező canonical mező | P1 | required-now |
 | must-not-use | duplicate-submit reject keyed solely by gate run identity | P1 | required-now |
 | must-not-use | any gate routing decision that requires pane-bound run identity | P1 | required-now |
 | must-not-use | deprecated/historical fallback hook (`runMetaReview`, marker-era compat) az autoritatív submit útban | P1 | required-now |
 | must-not-use | gate-local timeout polling mint elsődleges timeout ownership (`awaitMetaReviewSubmission` autoritatív timeoutként) | P1 | required-now |
+| must-not-use | upstream converged timeout döntéshozatal, amely watchdog ownershipot felülír | P1 | required-now |
 
 ### 6) Test Matrix
 
@@ -171,6 +194,10 @@ A meta-review submit engedélyezése pontosan ugyanarra a modellre álljon át, 
 | T9 | No deprecated fallback path | gate wiring in convergence path | run gate path | no `deprecated` compat hook usage on authoritative path | P1 | required-now | `tests/core/bubble/metaReviewGate.test.ts` |
 | T10 | Meta-review watchdog escalation route | `META_REVIEW_RUNNING` timeout + no submit | watchdog escalation | state `META_REVIEW_FAILED` és transcriptben `APPROVAL_REQUEST` jelenik meg | P1 | required-now | `tests/core/bubble/watchdogBubble.test.ts` |
 | T11 | No silent timeout failure | meta-review timeout branch | watchdog path executed | human gate jelzés kötelező; nincs „csak state change” | P1 | required-now | `tests/core/bubble/watchdogBubble.test.ts` |
+| T12 | Submit-timeout race (submit wins) | `META_REVIEW_RUNNING`, near-simultaneous submit + timeout | submit commit wins CAS before watchdog escalation commit | submit accepted canonicalan; timeout ág no-op ugyanarra a roundra; nincs utólagos `META_REVIEW_FAILED` | P1 | required-now | `tests/core/bubble/metaReview.test.ts` + `tests/core/bubble/watchdogBubble.test.ts` |
+| T13 | Submit-timeout race (watchdog wins) | `META_REVIEW_RUNNING`, near-simultaneous submit + timeout | watchdog escalation commit wins CAS before submit commit | state `META_REVIEW_FAILED` + `APPROVAL_REQUEST`; későbbi submit `META_REVIEW_STATE_INVALID`; nincs dupla elfogadás | P1 | required-now | `tests/core/bubble/metaReview.test.ts` + `tests/core/bubble/watchdogBubble.test.ts` |
+| T14 | Converged upstream timeout-ownership parity | reviewer `converged`, meta-review gate active | converged route döntés megtörténik timeout lejárata előtt | converged nem vár gate-lokális timeoutra; timeout ownership watchdognál marad | P1 | required-now | `tests/core/agent/converged.test.ts` + `tests/cli/convergedCommand.test.ts` |
+| T15 | Timeout reason-code pinning | `META_REVIEW_RUNNING`, timeout wins branch | watchdog timeout escalation + converged reason propagation | reason code explicit `META_REVIEW_GATE_RUN_FAILED`, nincs alternatív mapping | P1 | required-now | `tests/core/bubble/watchdogBubble.test.ts` + `tests/core/agent/converged.test.ts` |
 
 ## Acceptance Criteria (Binary)
 
@@ -179,9 +206,24 @@ A meta-review submit engedélyezése pontosan ugyanarra a modellre álljon át, 
 3. AC3: `last_autonomous_run_id`/`run_id` nem kötelező canonical mező.
 4. AC4: Duplikált submit kezelés determinisztikus marad `runId` nélkül is.
 5. AC5: Meta-review timeout ownership központi watchdogon van (nem gate-local poll timeouton).
-6. AC6: Nincs regresszió a canonical state/artifact persistenciában.
+6. AC6: Nincs regresszió a canonical state/artifact persistenciában, beleértve a submit-timeout race first-writer-wins viselkedést is (nincs dupla canonical kimenet).
 7. AC7: Autoritatív submit útból a historikus `deprecated` fallback hookok ki vannak vezetve.
-8. AC8: Meta-review timeout esetén kötelező route: `META_REVIEW_FAILED` + `APPROVAL_REQUEST` (nincs néma hiba).
+8. AC8: Meta-review timeout (amikor ugyanarra a roundra nincs előzetes canonical submit) esetén kötelező route: `META_REVIEW_FAILED` + `APPROVAL_REQUEST` `META_REVIEW_GATE_RUN_FAILED` reason kóddal; submit-wins race ágban timeout út determinisztikus no-op.
+9. AC9: Upstream converged szerződésben nincs szinkron gate-timeout függés; timeout ownership és timeout-failure reason kód forrása a watchdog.
+
+## Acceptance Traceability (AC -> CS -> T)
+
+| AC | Primary Call-site(s) | Mandatory Tests |
+|---|---|---|
+| AC1 | CS1, CS3, CS5 | T1, T6, T8 |
+| AC2 | CS1, CS2 | T1, T2, T3 |
+| AC3 | CS2, CS6, CS7 | T1, T7, T8 |
+| AC4 | CS2, CS10 | T4, T12, T13 |
+| AC5 | CS4, CS9, CS16 | T5, T11, T14 |
+| AC6 | CS2, CS10 | T1, T10, T12, T13, T15 |
+| AC7 | CS8 | T9 |
+| AC8 | CS9, CS10, CS16 | T10, T11, T13, T15 |
+| AC9 | CS16, CS17 | T14, T15 |
 
 ## L2 - Implementation Notes (Optional)
 
@@ -202,6 +244,8 @@ A meta-review submit engedélyezése pontosan ugyanarra a modellre álljon át, 
 5. P1 finding, ha az autoritatív submit út `deprecated` fallback wiringre támaszkodik.
 6. P1 finding, ha meta-review timeout esetén nincs `APPROVAL_REQUEST` human gate jelzés.
 7. P1 finding, ha meta-review timeout kezelés továbbra is gate-local polling ownershipon múlik.
+8. P1 finding, ha timeout reason code nem explicit `META_REVIEW_GATE_RUN_FAILED` a timeout-wins útban.
+9. P1 finding, ha converged upstream út timeout-ownerként viselkedik watchdog helyett.
 
 ## Assumptions
 
@@ -214,4 +258,4 @@ A meta-review submit engedélyezése pontosan ugyanarra a modellre álljon át, 
 
 ## Spec Lock
 
-Task `IMPLEMENTABLE`, ha AC1-AC8 teljesül, T1-T11 zöld, és a meta-review submit authorization útból a `runId` mint gate, valamint a canonical szerződésből a kötelező `run_id` maradvány teljesen kikerül, továbbá meta-review timeoutnál a watchdog-alapú `META_REVIEW_FAILED` + `APPROVAL_REQUEST` route érvényesül.
+Task `IMPLEMENTABLE`, ha AC1-AC9 teljesül, T1-T15 zöld, és a meta-review submit authorization útból a `runId` mint gate, valamint a canonical szerződésből a kötelező `run_id` maradvány teljesen kikerül, továbbá meta-review timeoutnál a watchdog-alapú `META_REVIEW_FAILED` + `APPROVAL_REQUEST` route explicit `META_REVIEW_GATE_RUN_FAILED` reason kóddal érvényesül (race submit-wins ágban determinisztikus no-op timeouttal), miközben a converged upstream út nem vesz vissza timeout ownershipot.
