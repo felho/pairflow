@@ -74,6 +74,13 @@ This task consolidates the intent previously split across:
 2. Summary prose is never canonical evidence/finding source by itself.
 3. No phase may relax canonical provenance requirements.
 
+### Deterministic Vocabulary (Normative)
+
+1. `canonical_evidence_ref`: only `.pairflow/evidence/*.log` refs are trust-eligible evidence sources.
+2. `completion_marker`: explicit command completion markers from the referenced log (for example command echo + exit marker) required for trust decisions.
+3. `positive_summary_assertion`: any summary clause claiming non-zero/open findings or severity presence, unless that exact clause is negated by explicit zero/no-findings language.
+4. `same_run_findings_artifact`: findings artifact produced by the same meta-review execution snapshot as the summary claim; linkage must be machine-verifiable via persisted run identity metadata.
+
 ### Contract Boundary / Blast Radius
 
 1. `contract_boundary_override`: `yes`
@@ -143,6 +150,8 @@ Exit criteria:
 2. Claimed count vs artifact count mismatch is rejected/fail-closed.
 3. Approval/gate metadata carries deterministic parity fields.
 4. Resume/CLI diagnostics show claimed/artifactized counts and parity status.
+5. Positive claim with missing/unlinkable same-run metadata (`meta_review_run_id`) is rejected/fail-closed with deterministic reason code.
+6. Artifact digest/parity metadata unavailable path is rejected/fail-closed with deterministic reason code (`META_REVIEW_FINDINGS_PARITY_GUARD`).
 
 ## L1 - Change Contract
 
@@ -154,8 +163,24 @@ Exit criteria:
 | R2 | Alias-equivalent command forms must map to canonical required command families without broad false-positive regex. | I3 | Phase 1 | Valid alias evidence no longer yields false `evidence_missing`. |
 | R3 | Reviewer clean PASS (`--no-findings`) summary must not assert positive findings/severity. | I1 | Phase 2 | Hard reject on contradiction. |
 | R4 | Convergence must block when previous clean payload (`findings=[]`) conflicts with positive summary assertions. | I1 | Phase 2 | Deterministic block (no wording bypass). |
-| R5 | Meta-review positive findings claims require same-run structured findings artifact with auditable count parity. | I4 | Phase 3 | Missing/mismatch triggers fail-closed route/error. |
+| R5 | Meta-review positive findings claims require same-run structured findings artifact with auditable count parity and run identity linkage (`meta_review_run_id`). | I4 | Phase 3 | Missing/mismatch/unlinkable run identity triggers fail-closed route/error. |
 | R6 | Any trust/parity ambiguity is fail-closed with explicit reason code and deterministic diagnostics. | I1-I4 | Phase 1-3 | No optimistic pass in uncertain states. |
+
+### 1.1) Rule Clarifications (Ambiguity Removal)
+
+1. Phase 1 alias handling is closed-set, not fuzzy:
+   - `typecheck` family accepted forms: `pnpm typecheck`, `pnpm run typecheck`, `tsc --noEmit`
+   - `test` family accepted forms: `pnpm test`, `pnpm run test`, `vitest`, `vitest run`
+   - `lint` family accepted forms: `pnpm lint`, `pnpm run lint`, `eslint`
+2. Any command text outside the closed-set alias families cannot satisfy required command evidence.
+3. Phase 2 summary classifier precedence is deterministic:
+   - evaluate clause-level negation/zero-count guards first,
+   - then evaluate positive finding/severity assertions,
+   - mixed summaries are positive if any unguarded positive clause remains.
+4. Phase 3 parity checks are strict for positive-claim runs:
+   - missing `same_run_findings_artifact` => fail-closed,
+   - missing run identity linkage metadata => fail-closed,
+   - count mismatch => fail-closed.
 
 ### 2) Call-site Matrix (Phase-Mapped)
 
@@ -185,11 +210,13 @@ Exit criteria:
    - `findings_summary`
    - `findings_digest_sha256`
    - `artifact_status`
+   - `meta_review_run_id`
 4. `APPROVAL_REQUEST.payload.metadata` becomes additive with findings parity fields:
    - `findings_claimed_open_total`
    - `findings_artifact_open_total`
    - `findings_artifact_status`
    - `findings_digest_sha256`
+   - `meta_review_run_id`
 5. Any mismatch/missing required parity data under positive claim must fail closed.
 
 ### 4) Error and Fallback Contract
@@ -198,11 +225,12 @@ Exit criteria:
 |---|---|---|---|
 | Non-canonical or marker-unverifiable trust evidence | deny trust | `untrusted/run_checks` | `evidence_unverifiable` |
 | No literal match but alias-equivalent command present with valid marker | accept as canonical-equivalent | verify command evidence | existing success path (`trusted/skip_full_rerun` when all required pass) |
-| Clean PASS summary asserts findings/severity | hard reject | none | existing invalid-findings path |
-| Previous clean payload conflicts with positive summary assertion | hard block | none | convergence consistency error path |
+| Clean PASS summary asserts findings/severity | hard reject | none | `REVIEWER_SUMMARY_FINDINGS_CONTRADICTION` |
+| Previous clean payload conflicts with positive summary assertion | hard block | none | `CONVERGENCE_SUMMARY_PAYLOAD_CONTRADICTION` |
 | Meta-review positive claim but findings artifact missing | reject/fail-closed | none | `META_REVIEW_FINDINGS_ARTIFACT_REQUIRED` |
 | Meta-review claimed count != artifact open_total | reject/fail-closed | none | `META_REVIEW_FINDINGS_COUNT_MISMATCH` |
-| Artifact digest/parity metadata unavailable | fail-closed route | `human_gate_inconclusive` | `META_REVIEW_FINDINGS_PARITY_GUARD` (or specific digest-unavailable code) |
+| Artifact digest/parity metadata unavailable | fail-closed route | `human_gate_inconclusive` | `META_REVIEW_FINDINGS_PARITY_GUARD` |
+| Positive claim present but run identity metadata missing/unlinkable | fail-closed route | `human_gate_inconclusive` | `META_REVIEW_FINDINGS_RUN_LINK_MISSING` |
 
 ### 5) Dependency Constraints
 
@@ -221,7 +249,7 @@ Exit criteria:
 | T1 | Non-log/prose ref cannot be trusted | I2 | 1 | `untrusted/run_checks` |
 | T2 | Canonical log but missing marker cannot be trusted | I2 | 1 | `untrusted/run_checks` |
 | T3 | Canonical log + marker trusted success path | I2 | 1 | `trusted/skip_full_rerun` |
-| T4 | Alias-equivalent commands (`tsc --noEmit`, `vitest run`, `pnpm run test/typecheck`) verify correctly | I3 | 1 | no false `evidence_missing` |
+| T4 | Alias-equivalent commands (`tsc --noEmit`, `vitest run`, `pnpm run test/typecheck`, `pnpm run lint`/`eslint`) verify correctly | I3 | 1 | no false `evidence_missing` |
 | T5 | Alias present but ambiguous/missing completion stays fail-closed | I3 | 1 | `untrusted` with explicit reason |
 | T6 | `--no-findings` + positive summary assertion is rejected | I1 | 2 | hard reject |
 | T7 | Convergence blocks for clean payload + positive summary assertion | I1 | 2 | deterministic block |
@@ -230,6 +258,8 @@ Exit criteria:
 | T10 | Meta-review positive claim without findings artifact rejected | I4 | 3 | artifact-required error |
 | T11 | Meta-review claim/artifact count mismatch rejected | I4 | 3 | mismatch error |
 | T12 | Meta-review parity metadata persisted and routed to approval/gate/CLI/resume | I4 | 3 | deterministic diagnostics visible |
+| T13 | Meta-review positive claim with missing/unlinkable `meta_review_run_id` rejected | I4 | 3 | fail-closed with `META_REVIEW_FINDINGS_RUN_LINK_MISSING` |
+| T14 | Meta-review positive claim with unavailable digest/parity metadata rejected | I4 | 3 | fail-closed with `META_REVIEW_FINDINGS_PARITY_GUARD` |
 
 ## L2 - Execution Order and Governance
 
@@ -239,13 +269,35 @@ Exit criteria:
 2. Complete Phase 2 before starting Phase 3.
 3. Do not merge partial phase work without passing that phase's exit criteria + tests.
 
+### Phase Interlock Gates (No Cross-Phase Drift)
+
+1. Phase 2 implementation cannot begin until Phase 1 alias closed-set and trust fail-closed tests (T1-T5) are green in the same branch.
+2. Phase 3 implementation cannot begin until Phase 2 summary classifier precedence tests (T6-T9) are green in the same branch.
+3. Any regression in an already-closed phase re-opens that phase and blocks forward merge.
+
 ### Acceptance Criteria (Task-Level)
 
 1. AC1: All Phase 1 exit criteria and tests (T1-T5) pass.
 2. AC2: All Phase 2 exit criteria and tests (T6-T9) pass.
-3. AC3: All Phase 3 exit criteria and tests (T10-T12) pass.
+3. AC3: All Phase 3 exit criteria and tests (T10-T14) pass.
 4. AC4: All four issues (I1-I4) have direct rule + call-site + test traceability.
 5. AC5: Final behavior remains fail-closed for ambiguity across all phases.
+6. AC6: Contradiction/parity fail-closed paths emit deterministic reason codes (no generic fallback wording) for I1 and I4.
+7. AC7: Positive-claim meta-review rounds persist run-linkage metadata (`meta_review_run_id`) through report, gate, and approval metadata.
+8. AC8: Negative controls exist for alias over-match, mixed negation/positive summary clauses, and Phase 3 parity/linkage guard failures to prevent optimistic false passes.
+
+### Acceptance Traceability Matrix
+
+| AC | Rules | Call-sites | Tests |
+|---|---|---|---|
+| AC1 | R1, R2, R6 | CS1, CS2, CS3 | T1, T2, T3, T4, T5 |
+| AC2 | R3, R4, R6 | CS4, CS5, CS6, CS7 | T6, T7, T8, T9 |
+| AC3 | R5, R6 | CS8, CS9, CS10, CS11, CS12, CS13, CS14 | T10, T11, T12, T13, T14 |
+| AC4 | R1-R6 | CS1-CS14 | T1-T14 |
+| AC5 | R1-R6 | CS1-CS14 | T1-T14 |
+| AC6 | R3, R4, R5, R6 | CS4, CS5, CS6, CS7, CS8, CS9, CS10 | T6, T7, T10, T11, T12, T13, T14 |
+| AC7 | R5, R6 | CS8, CS9, CS10, CS11, CS12, CS13, CS14 | T10, T11, T12, T13, T14 |
+| AC8 | R2, R3, R4, R5, R6 | CS1, CS2, CS4, CS5, CS6, CS7, CS8, CS9, CS14 | T4, T5, T8, T9, T13, T14 |
 
 ### Hardening Backlog (Optional)
 
@@ -261,3 +313,6 @@ Mark this task `IMPLEMENTABLE` only when:
 1. Rule-to-test traceability for I1-I4 is complete.
 2. All `P1 required-now` call-sites are implemented and verified by phase.
 3. Operator-facing diagnostics are deterministic for both trust and parity failures.
+4. Phase 1 alias families remain closed-set and explicitly tested for over-match rejection.
+5. Phase 2 summary classifier precedence is documented and test-locked (guard-first, then positives).
+6. Phase 3 positive-claim parity path has machine-verifiable same-run linkage (`meta_review_run_id`) end-to-end.
