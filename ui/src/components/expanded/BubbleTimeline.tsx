@@ -275,6 +275,12 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
             const findingTags = extractFindingTags(entry);
             const metaRecommendationTag = extractMetaRecommendationTag(entry);
             const decisionTag = extractDecisionTag(entry);
+            const effectiveMetaRecommendationTag =
+              metaRecommendationTag !== null &&
+              decisionTag !== null &&
+              metaRecommendationTag.label === decisionTag.label
+                ? null
+                : metaRecommendationTag;
             const cleanPass = isCleanPass(entry);
             return (
               <div
@@ -315,11 +321,11 @@ export function BubbleTimeline(props: BubbleTimelineProps): JSX.Element {
                         {tag.label}
                       </span>
                     ))}
-                    {metaRecommendationTag !== null ? (
+                    {effectiveMetaRecommendationTag !== null ? (
                       <span
-                        className={`inline-block rounded px-1 text-[9px] font-semibold leading-tight border ${metaRecommendationTag.style}`}
+                        className={`inline-block rounded px-1 text-[9px] font-semibold leading-tight border ${effectiveMetaRecommendationTag.style}`}
                       >
-                        {metaRecommendationTag.label}
+                        {effectiveMetaRecommendationTag.label}
                       </span>
                     ) : null}
                     {decisionTag !== null ? (

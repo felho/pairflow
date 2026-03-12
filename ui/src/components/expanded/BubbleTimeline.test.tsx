@@ -29,11 +29,12 @@ describe("BubbleTimeline", () => {
       />
     );
 
-    const actorLabel = screen.getByText("orchestrator", {
+    const actorLabel = screen.getByText("meta-reviewer", {
       selector: "span.font-medium"
     });
 
-    expect(actorLabel).toHaveTextContent(/orchestrator\s*\(meta-reviewer\)/u);
+    expect(actorLabel).toHaveTextContent(/meta-reviewer/u);
+    expect(actorLabel).toHaveTextContent(/\(orchestrator\)/u);
     expect(screen.getByText("rework")).toBeInTheDocument();
   });
 
@@ -48,6 +49,37 @@ describe("BubbleTimeline", () => {
     );
 
     expect(screen.getByText("No timeline entries yet.")).toBeInTheDocument();
+  });
+
+  it("deduplicates rework tag when decision and recommendation are the same", () => {
+    render(
+      <BubbleTimeline
+        entries={[
+          timelineEntry({
+            id: "env-decision-1",
+            type: "APPROVAL_DECISION",
+            sender: "orchestrator",
+            recipient: "codex",
+            payload: {
+              decision: "revise",
+              message: "Apply rework.",
+              metadata: {
+                actor: "meta-reviewer",
+                recommendation: "rework"
+              }
+            }
+          })
+        ]}
+        isLoading={false}
+        error={null}
+        compact={false}
+      />
+    );
+
+    const reworkBadges = screen
+      .getAllByText("rework")
+      .filter((node) => node.className.includes("inline-block"));
+    expect(reworkBadges).toHaveLength(1);
   });
 
   it("renders extras inside the same scroll container as timeline entries", () => {
