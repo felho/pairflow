@@ -69,14 +69,18 @@ This becomes essential when the Poller automatically creates instances.
 
 **PairFlow v2:** The `loop` step type defines rounds, but these always assume **implementer → reviewer** alternation. There is no "agent self-iterates within a step" concept.
 
-**Proposal:** A `max_turns_per_step` config for `action` step types:
+**Applicability note:** This is relevant **only if** the v2 Executor moves to a structured agent API (JSON-RPC / app-server protocol like Symphony's Codex integration), where each "turn" is a discrete API call/response with token limits and sandbox scope. In that model, the agent cannot freely iterate — it needs explicit continuation turns.
+
+In PairFlow's current tmux-based model (and any Executor where the agent runs freely in a shell session), **this is already solved implicitly** — the agent naturally self-iterates (write code → run tests → fix → re-run) within its session before calling `pairflow pass`. No multi-turn mechanism is needed.
+
+**Proposal (conditional — only for structured agent API executors):** A `max_turns_per_step` config for `action` step types:
 ```yaml
 - id: implement
   type: action
   role: implementer
   max_turns: 5  # Agent can self-iterate up to 5 turns before passing
 ```
-This is useful when the implementer wants to do multiple iterations (e.g., run tests, fix, re-run) before passing.
+This would be useful when the Executor uses a structured protocol where turns are bounded.
 
 ### 4. Exponential Backoff Retry at the Executor Level
 
@@ -190,7 +194,7 @@ This would allow the workflow template to fully control the agent prompt — not
 | **Medium** | Stall detection + auto-recovery | Executor health() extension + kernel policy |
 | **Medium** | External state reconciliation | Periodic kernel check or dedicated step type |
 | **Low** | Liquid-style prompt template | Step config extension |
-| **Low** | Multi-turn per step (agent self-iteration) | `max_turns_per_step` config |
+| **Low** | Multi-turn per step (agent self-iteration) | `max_turns_per_step` config — only relevant if Executor uses structured agent API, not needed for tmux/shell-based agents |
 | **Low** | Aggregate terminal dashboard | v2.1 UI scope |
 
 ---
