@@ -28,7 +28,10 @@ import {
   hasCanonicalSubmitForActiveMetaReviewRound,
   type MetaReviewRunResult
 } from "./metaReview.js";
-import type { ProtocolEnvelope } from "../../types/protocol.js";
+import {
+  deliveryTargetRoleMetadataKey,
+  type ProtocolEnvelope
+} from "../../types/protocol.js";
 
 export type MetaReviewGateRoute =
   | "meta_review_running"
@@ -221,6 +224,7 @@ async function appendHumanApprovalRequest(input: {
       payload: {
         summary: input.summary,
         metadata: {
+          [deliveryTargetRoleMetadataKey]: "status",
           actor: "meta-reviewer",
           actor_agent: "codex",
           ...(input.recommendation !== undefined
@@ -694,6 +698,7 @@ export async function recoverMetaReviewGateFromSnapshot(
             decision: "revise",
             message: reworkMessage,
             metadata: {
+              [deliveryTargetRoleMetadataKey]: "implementer",
               actor: "meta-reviewer",
               actor_agent: "codex",
               recommendation: runResult.recommendation,
@@ -1060,6 +1065,7 @@ export async function applyMetaReviewGateOnConvergence(
         payload: {
           summary: kickoffSummary,
           metadata: {
+            [deliveryTargetRoleMetadataKey]: "meta_reviewer",
             actor: "meta-review-gate",
             actor_agent: "orchestrator",
             lifecycle_state: "META_REVIEW_RUNNING",

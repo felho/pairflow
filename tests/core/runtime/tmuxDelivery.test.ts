@@ -15,10 +15,10 @@ import {
   REVIEWER_COMMAND_GATE_REQ_E
 } from "../../../src/core/runtime/reviewerCommandGateGuidance.js";
 import type { RuntimeSessionsRegistry } from "../../../src/core/runtime/sessionsRegistry.js";
-import type { TmuxRunResult, TmuxRunner } from "../../../src/core/runtime/tmuxManager.js";
+import { runtimePaneIndices, type TmuxRunResult, type TmuxRunner } from "../../../src/core/runtime/tmuxManager.js";
 import type { ReviewerTestExecutionDirective } from "../../../src/core/reviewer/testEvidence.js";
 import type { BubbleConfig } from "../../../src/types/bubble.js";
-import type { ProtocolEnvelope } from "../../../src/types/protocol.js";
+import { deliveryTargetRoleMetadataKey, type ProtocolEnvelope } from "../../../src/types/protocol.js";
 
 const baseConfig: BubbleConfig = {
   id: "b_delivery_01",
@@ -80,6 +80,18 @@ function createRegistry(): RuntimeSessionsRegistry {
       worktreePath: "/tmp/worktree",
       tmuxSessionName: "pf-b_delivery_01",
       updatedAt: "2026-02-22T12:00:00.000Z"
+    }
+  };
+}
+
+function createSharedAgentConfig(
+  agent: "codex" | "claude"
+): BubbleConfig {
+  return {
+    ...baseConfig,
+    agents: {
+      implementer: agent,
+      reviewer: agent
     }
   };
 }
@@ -170,6 +182,249 @@ describe("emitTmuxDeliveryNotification", () => {
     );
   });
 
+  it("prioritizes explicit delivery target role over recipient agent matching", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r1 TASK orchestrator->codex msg=msg_20260222_201 ref=artifact://meta-review-task.md.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: createSharedAgentConfig("codex"),
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        id: "msg_20260222_201",
+        sender: "orchestrator",
+        recipient: "codex",
+        type: "TASK",
+        payload: {
+          summary: "Run meta-review now.",
+          metadata: {
+            [deliveryTargetRoleMetadataKey]: "meta_reviewer"
+          }
+        },
+        refs: ["artifact://meta-review-task.md"]
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result.delivered).toBe(true);
+    expect(result.targetPaneIndex).toBe(3);
+    expect(
+      calls.some((call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.3")
+    ).toBe(true);
+  });
+
+  it("falls back to legacy recipient mapping when delivery target role token is invalid", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r1 PASS claude->codex msg=msg_20260222_202 ref=artifact://handoff.md.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: createSharedAgentConfig("codex"),
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        id: "msg_20260222_202",
+        sender: "claude",
+        recipient: "codex",
+        payload: {
+          summary: "Fallback expected.",
+          metadata: {
+            [deliveryTargetRoleMetadataKey]: "meta-reviewer"
+          }
+        }
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result.delivered).toBe(true);
+    expect(result.targetPaneIndex).toBe(1);
+    expect(result.deliveryTargetReasonCode).toBe("DELIVERY_TARGET_ROLE_INVALID");
+    expect(
+      calls.some((call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.1")
+    ).toBe(true);
+  });
+
+  it("falls back to legacy recipient mapping when explicit role is valid but pane index is unmapped", async () => {
+    const mutablePaneIndices = runtimePaneIndices as {
+      metaReviewer: number | undefined;
+    };
+    const originalMetaReviewerPaneIndex = mutablePaneIndices.metaReviewer;
+    mutablePaneIndices.metaReviewer = undefined;
+    try {
+      const calls: string[][] = [];
+      const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+        calls.push(args);
+        if (args[0] === "capture-pane") {
+          return Promise.resolve({
+            stdout:
+              "# [pairflow] r1 TASK orchestrator->codex msg=msg_20260222_203 ref=artifact://meta-review-task.md.",
+            stderr: "",
+            exitCode: 0
+          });
+        }
+        return Promise.resolve({
+          stdout: "",
+          stderr: "",
+          exitCode: 0
+        });
+      };
+
+      const result = await emitTmuxDeliveryNotification({
+        bubbleId: "b_delivery_01",
+        bubbleConfig: createSharedAgentConfig("codex"),
+        sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+        envelope: createEnvelope({
+          id: "msg_20260222_203",
+          sender: "orchestrator",
+          recipient: "codex",
+          type: "TASK",
+          payload: {
+            summary: "Meta-review dispatch fallback expected.",
+            metadata: {
+              [deliveryTargetRoleMetadataKey]: "meta_reviewer"
+            }
+          },
+          refs: ["artifact://meta-review-task.md"]
+        }),
+        runner,
+        readSessionsRegistry: () => Promise.resolve(createRegistry())
+      });
+
+      expect(result.delivered).toBe(true);
+      expect(result.targetPaneIndex).toBe(1);
+      expect(result.deliveryTargetReasonCode).toBe("DELIVERY_TARGET_ROLE_UNMAPPED");
+      expect(
+        calls.some((call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.1")
+      ).toBe(true);
+    } finally {
+      mutablePaneIndices.metaReviewer = originalMetaReviewerPaneIndex;
+    }
+  });
+
+  it("keeps role-target routing parity for shared non-codex agent identities", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_204 ref=artifact://handoff.md.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: createSharedAgentConfig("claude"),
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        id: "msg_20260222_204",
+        sender: "codex",
+        recipient: "claude",
+        payload: {
+          summary: "Route to reviewer pane.",
+          metadata: {
+            [deliveryTargetRoleMetadataKey]: "reviewer"
+          }
+        }
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result.delivered).toBe(true);
+    expect(result.targetPaneIndex).toBe(2);
+    expect(
+      calls.some((call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.2")
+    ).toBe(true);
+  });
+
+  it("routes HUMAN_REPLY to the explicit active role pane when agent identity is shared", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r2 HUMAN_REPLY human->codex msg=msg_20260222_205 ref=artifact://reply.md.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: createSharedAgentConfig("codex"),
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        id: "msg_20260222_205",
+        sender: "human",
+        recipient: "codex",
+        type: "HUMAN_REPLY",
+        round: 2,
+        payload: {
+          message: "Please continue reviewer analysis.",
+          metadata: {
+            [deliveryTargetRoleMetadataKey]: "reviewer"
+          }
+        },
+        refs: ["artifact://reply.md"]
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result.delivered).toBe(true);
+    expect(result.targetPaneIndex).toBe(2);
+    expect(
+      calls.some((call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.2")
+    ).toBe(true);
+  });
+
   it("routes PASS delivery to recipient agent pane with full ontology in fresh mode", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
@@ -220,6 +475,7 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(result.delivered).toBe(true);
     expect(result.sessionName).toBe("pf-b_delivery_01");
     expect(result.targetPaneIndex).toBe(2);
+    expect(result.deliveryTargetReasonCode).toBe("DELIVERY_TARGET_ROLE_ABSENT");
     expect(calls).toContainEqual([
       "send-keys",
       "-t",
@@ -1010,6 +1266,54 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(calls.some((call) => call[0] === "capture-pane")).toBe(true);
   });
 
+  it("routes explicit status delivery target to status pane for non-status recipients", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r2 APPROVAL_REQUEST orchestrator->codex msg=msg_20260222_206 ref=artifact://approval.md.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: createSharedAgentConfig("codex"),
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        id: "msg_20260222_206",
+        sender: "orchestrator",
+        recipient: "codex",
+        type: "APPROVAL_REQUEST",
+        round: 2,
+        payload: {
+          summary: "Human gate is pending.",
+          metadata: {
+            [deliveryTargetRoleMetadataKey]: "status"
+          }
+        },
+        refs: ["artifact://approval.md"]
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result.delivered).toBe(true);
+    expect(result.targetPaneIndex).toBe(0);
+    expect(
+      calls.some((call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.0")
+    ).toBe(true);
+  });
+
   it("routes approval-wait notification to implementer pane with stop instruction", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
@@ -1477,6 +1781,43 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(calls).toHaveLength(0);
   });
 
+  it("preserves unsupported-recipient behavior when explicit role and legacy recipient routes are both unavailable", async () => {
+    const mutablePaneIndices = runtimePaneIndices as {
+      metaReviewer: number | undefined;
+    };
+    const originalMetaReviewerPaneIndex = mutablePaneIndices.metaReviewer;
+    mutablePaneIndices.metaReviewer = undefined;
+    try {
+      const result = await emitTmuxDeliveryNotification({
+        bubbleId: "b_delivery_01",
+        bubbleConfig: createSharedAgentConfig("claude"),
+        sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+        envelope: createEnvelope({
+          id: "msg_20260222_401",
+          sender: "orchestrator",
+          recipient: "codex",
+          type: "TASK",
+          payload: {
+            summary: "Unmapped explicit + unsupported legacy route.",
+            metadata: {
+              [deliveryTargetRoleMetadataKey]: "meta_reviewer"
+            }
+          },
+          refs: ["artifact://meta-review-task.md"]
+        }),
+        readSessionsRegistry: () => Promise.resolve(createRegistry())
+      });
+
+      expect(result).toMatchObject({
+        delivered: false,
+        reason: "unsupported_recipient",
+        deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_UNMAPPED"
+      });
+    } finally {
+      mutablePaneIndices.metaReviewer = originalMetaReviewerPaneIndex;
+    }
+  });
+
   it("returns registry_read_failed when session registry load fails", async () => {
     const result = await emitTmuxDeliveryNotification({
       bubbleId: "b_delivery_01",
@@ -1488,7 +1829,8 @@ describe("emitTmuxDeliveryNotification", () => {
 
     expect(result).toMatchObject({
       delivered: false,
-      reason: "registry_read_failed"
+      reason: "registry_read_failed",
+      deliveryTargetReasonCode: "DELIVERY_TARGET_REGISTRY_READ_FAILED"
     });
     expect(result.message).toContain(
       "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."

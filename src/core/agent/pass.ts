@@ -19,7 +19,12 @@ import {
 } from "../runtime/tmuxDelivery.js";
 import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
-import { isPassIntent, type PassIntent, type ProtocolEnvelope } from "../../types/protocol.js";
+import {
+  deliveryTargetRoleMetadataKey,
+  isPassIntent,
+  type PassIntent,
+  type ProtocolEnvelope
+} from "../../types/protocol.js";
 import type { Finding } from "../../types/findings.js";
 import type {
   AgentName,
@@ -1119,14 +1124,17 @@ export async function emitPassFromWorkspace(
       payload: {
         summary,
         pass_intent: intent,
-        metadata: buildRepeatCleanPassPayloadMetadata({
-          transitionDecision: "normal_pass",
-          reasonCode: repeatCleanTrigger.reasonCode,
-          reasonDetail: repeatCleanTrigger.reasonDetail,
-          trigger: repeatCleanTrigger.trigger,
-          mostRecentPreviousReviewerCleanPassEnvelope:
-            repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope
-        }),
+        metadata: {
+          ...buildRepeatCleanPassPayloadMetadata({
+            transitionDecision: "normal_pass",
+            reasonCode: repeatCleanTrigger.reasonCode,
+            reasonDetail: repeatCleanTrigger.reasonDetail,
+            trigger: repeatCleanTrigger.trigger,
+            mostRecentPreviousReviewerCleanPassEnvelope:
+              repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope
+          }),
+          [deliveryTargetRoleMetadataKey]: handoff.recipientRole
+        },
         ...(handoff.senderRole === "reviewer"
           ? { findings: hasFindings ? findingsForPayload : [] }
           : {})

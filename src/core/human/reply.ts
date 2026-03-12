@@ -12,7 +12,10 @@ import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js
 import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
-import type { ProtocolEnvelope } from "../../types/protocol.js";
+import {
+  deliveryTargetRoleMetadataKey,
+  type ProtocolEnvelope
+} from "../../types/protocol.js";
 
 export interface EmitHumanReplyInput {
   bubbleId: string;
@@ -103,7 +106,10 @@ export async function emitHumanReply(
       type: "HUMAN_REPLY",
       round: state.round,
       payload: {
-        message
+        message,
+        metadata: {
+          [deliveryTargetRoleMetadataKey]: state.active_role
+        }
       },
       refs
     }

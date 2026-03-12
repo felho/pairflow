@@ -8,7 +8,8 @@ import { emitAskHumanFromWorkspace } from "../../../src/core/agent/askHuman.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { emitHumanReply, HumanReplyCommandError } from "../../../src/core/human/reply.js";
 import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
-import { readStateSnapshot } from "../../../src/core/state/stateStore.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
+import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -62,6 +63,11 @@ describe("emitHumanReply", () => {
     expect(result.envelope.type).toBe("HUMAN_REPLY");
     expect(result.envelope.sender).toBe("human");
     expect(result.envelope.recipient).toBe("codex");
+    expect(result.envelope.payload.metadata).toEqual(
+      expect.objectContaining({
+        [deliveryTargetRoleMetadataKey]: "implementer"
+      })
+    );
 
     const state = await readStateSnapshot(bubble.paths.statePath);
     expect(state.state.state).toBe("RUNNING");
@@ -113,6 +119,48 @@ describe("emitHumanReply", () => {
       `${bubble.paths.transcriptPath}#${result.envelope.id}`
     ]);
     expect(deliveryRefs[0]?.startsWith("transcript.ndjson#")).toBe(false);
+  });
+
+  it("derives delivery target role from active_role for shared-identity collision safety", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupWaitingHumanBubble(repoPath, "b_human_reply_04");
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "WAITING_HUMAN",
+        active_agent: bubble.config.agents.implementer,
+        active_role: "reviewer"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "WAITING_HUMAN"
+      }
+    );
+
+    const deliveries: string[] = [];
+    await emitHumanReply(
+      {
+        bubbleId: bubble.bubbleId,
+        message: "Continue with reviewer follow-up.",
+        cwd: repoPath,
+        now: new Date("2026-02-21T12:10:00.000Z")
+      },
+      {
+        emitTmuxDeliveryNotification: (input) => {
+          deliveries.push(
+            String(input.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey])
+          );
+          return Promise.resolve({
+            delivered: true,
+            message: "ok"
+          });
+        }
+      }
+    );
+
+    expect(deliveries).toEqual(["reviewer"]);
   });
 
   it("rejects reply when bubble is not WAITING_HUMAN", async () => {

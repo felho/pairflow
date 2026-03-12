@@ -18,6 +18,7 @@ import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/s
 import { resolveReviewerTestEvidenceArtifactPath } from "../../../src/core/reviewer/testEvidence.js";
 import { resolveSummaryVerifierConsistencyGateArtifactPath } from "../../../src/core/reviewer/summaryVerifierConsistencyGate.js";
 import { resolveDocContractGateArtifactPath } from "../../../src/core/gates/docContractGates.js";
+import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { initGitRepository } from "../../helpers/git.js";
 import {
   setupRunningBubbleFixture,
@@ -208,6 +209,7 @@ describe("emitConvergedFromWorkspace", () => {
     const deliveries: Array<{
       recipient: string;
       messageRef?: string;
+      deliveryTargetRole?: unknown;
     }> = [];
 
     const result = await emitConvergedFromWorkspace(
@@ -220,6 +222,8 @@ describe("emitConvergedFromWorkspace", () => {
         emitTmuxDeliveryNotification: (input) => {
           deliveries.push({
             recipient: input.envelope.recipient,
+            deliveryTargetRole:
+              input.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey],
             ...(input.messageRef !== undefined
               ? { messageRef: input.messageRef }
               : {})
@@ -251,7 +255,10 @@ describe("emitConvergedFromWorkspace", () => {
             type: "APPROVAL_REQUEST",
             round: loaded.state.round,
             payload: {
-              summary: "Ready for approval."
+              summary: "Ready for approval.",
+              metadata: {
+                [deliveryTargetRoleMetadataKey]: "status"
+              }
             },
             refs: []
           },
@@ -274,6 +281,11 @@ describe("emitConvergedFromWorkspace", () => {
       "human",
       "codex",
       "claude"
+    ]);
+    expect(deliveries.map((delivery) => delivery.deliveryTargetRole)).toEqual([
+      "status",
+      "implementer",
+      "reviewer"
     ]);
     const expectedRef = `${bubble.paths.transcriptPath}#${result.approvalRequestEnvelope.id}`;
     expect(deliveries.map((delivery) => delivery.messageRef)).toEqual([
@@ -426,7 +438,7 @@ describe("emitConvergedFromWorkspace", () => {
     expect(result.state.state).toBe("META_REVIEW_FAILED");
     expect(result.delivery).toEqual({
       delivered: false,
-      reason: "delivery_unconfirmed",
+      reason: "partial_delivery_failed",
       retried: false
     });
   });
