@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile as writeFileFs } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -277,6 +277,61 @@ describe("applyMetaReviewGateOnConvergence", () => {
 });
 
 describe("recoverMetaReviewGateFromSnapshot", () => {
+  it("hydrates empty snapshot during recover and writes canonical artifacts", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_empty_snapshot_01",
+      task: "Recover hydrate empty snapshot"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:09:00.000Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:09:02.000Z")
+    });
+    expect(recovered.route).toBe("human_gate_run_failed");
+    expect(recovered.state.state).toBe("META_REVIEW_FAILED");
+    expect(recovered.state.meta_review).toMatchObject({
+      last_autonomous_status: "error",
+      last_autonomous_recommendation: "inconclusive",
+      last_autonomous_summary: "Converged.",
+      last_autonomous_report_ref: "artifacts/meta-review-last.md"
+    });
+    expect(recovered.state.meta_review?.last_autonomous_updated_at).not.toBeNull();
+
+    const reportMarkdown = await readFile(
+      bubble.paths.metaReviewLastMarkdownArtifactPath,
+      "utf8"
+    );
+    const reportJsonRaw = await readFile(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      "utf8"
+    );
+    const reportJson = JSON.parse(reportJsonRaw) as {
+      recommendation: string;
+      status: string;
+      report_ref: string;
+    };
+
+    expect(reportMarkdown).toContain("# Meta Review Report");
+    expect(reportJson).toMatchObject({
+      recommendation: "inconclusive",
+      status: "error",
+      report_ref: "artifacts/meta-review-last.md"
+    });
+  });
+
   it("routes approve snapshot to human gate", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -310,6 +365,13 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     expect(recovered.route).toBe("human_gate_approve");
     expect(recovered.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(recovered.gateEnvelope.type).toBe("APPROVAL_REQUEST");
+    expect(recovered.state.meta_review).toMatchObject({
+      last_autonomous_status: "success",
+      last_autonomous_recommendation: "approve",
+      last_autonomous_summary: "Approve recommendation.",
+      last_autonomous_report_ref: "artifacts/meta-review-last.md",
+      last_autonomous_updated_at: "2026-03-12T12:10:01.000Z"
+    });
   });
 
   it("routes inconclusive snapshot to human gate", async () => {
@@ -384,6 +446,153 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     expect(recovered.state.meta_review?.auto_rework_count).toBe(1);
     expect(recovered.gateEnvelope.type).toBe("APPROVAL_DECISION");
     expect(recovered.gateEnvelope.payload.decision).toBe("revise");
+
+    const autoReworkReportMarkdown = await readFile(
+      bubble.paths.metaReviewLastMarkdownArtifactPath,
+      "utf8"
+    );
+    const autoReworkReportJsonRaw = await readFile(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      "utf8"
+    );
+    const autoReworkReportJson = JSON.parse(autoReworkReportJsonRaw) as {
+      recommendation: string;
+      status: string;
+      report_ref: string;
+    };
+    expect(autoReworkReportMarkdown).toContain("# Meta Review Report");
+    expect(autoReworkReportJson).toMatchObject({
+      recommendation: "rework",
+      status: "success",
+      report_ref: "artifacts/meta-review-last.md"
+    });
+  });
+
+  it("routes injected rework runResult to auto_rework and normalizes report_ref to canonical artifact", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_rework_injected_01",
+      task: "Recover rework injected runResult"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:30.000Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:32.000Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_rework_injected_01",
+        status: "success",
+        recommendation: "rework",
+        summary: "Injected rework recommendation.",
+        report_ref: "artifacts/custom-run-report.md",
+        rework_target_message: "Inject rework message.",
+        updated_at: "2026-03-12T12:12:31.000Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: []
+      }
+    });
+
+    expect(recovered.route).toBe("auto_rework");
+    expect(recovered.state.state).toBe("RUNNING");
+    expect(recovered.state.meta_review).toMatchObject({
+      last_autonomous_run_id: "run_recover_rework_injected_01",
+      last_autonomous_status: "success",
+      last_autonomous_recommendation: "rework",
+      last_autonomous_summary: "Injected rework recommendation.",
+      last_autonomous_report_ref: "artifacts/meta-review-last.md",
+      last_autonomous_rework_target_message: "Inject rework message.",
+      last_autonomous_updated_at: "2026-03-12T12:12:31.000Z",
+      auto_rework_count: 1
+    });
+    expect(recovered.metaReviewRun?.report_ref).toBe("artifacts/meta-review-last.md");
+
+    const injectedReportJsonRaw = await readFile(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      "utf8"
+    );
+    const injectedReportJson = JSON.parse(injectedReportJsonRaw) as {
+      report_ref: string;
+    };
+    expect(injectedReportJson.report_ref).toBe("artifacts/meta-review-last.md");
+  });
+
+  it("routes rework recommendation to human_gate_budget_exhausted when auto-rework budget is exhausted", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_budget_exhausted_01",
+      task: "Recover budget exhausted"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:40.000Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    if (loaded.state.meta_review === undefined) {
+      throw new Error("Expected meta_review snapshot.");
+    }
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        meta_review: {
+          ...loaded.state.meta_review,
+          auto_rework_count: 5,
+          auto_rework_limit: 5
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "META_REVIEW_RUNNING"
+      }
+    );
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:42.000Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_budget_exhausted_01",
+        status: "success",
+        recommendation: "rework",
+        summary: "Budget exhausted, escalate to human gate.",
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: "Would rework if budget allowed.",
+        updated_at: "2026-03-12T12:12:41.000Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: []
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_budget_exhausted");
+    expect(recovered.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(recovered.gateEnvelope.type).toBe("APPROVAL_REQUEST");
+    expect(recovered.state.meta_review).toMatchObject({
+      last_autonomous_recommendation: "rework",
+      last_autonomous_rework_target_message: "Would rework if budget allowed."
+    });
   });
 
   it("routes to human_gate_dispatch_failed when rework snapshot has no target message", async () => {
@@ -406,7 +615,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     await writeCanonicalMetaReviewSnapshot({
       statePath: bubble.paths.statePath,
       recommendation: "rework",
-      summary: "Need rework but missing message.",
+      summary: "Snapshot has message, injected runResult drops it.",
       reworkTargetMessage: "snapshot message",
       updatedAt: "2026-03-12T12:13:01.000Z"
     });
@@ -422,7 +631,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           depth: "standard",
           status: "success",
           recommendation: "rework",
-          summary: "Need rework but missing message.",
+          summary: "Run result is missing rework message.",
           report_ref: "artifacts/meta-review-last.md",
           rework_target_message: null,
           updated_at: "2026-03-12T12:13:01.000Z",
@@ -434,6 +643,34 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     expect(recovered.route).toBe("human_gate_dispatch_failed");
     expect(recovered.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(recovered.gateEnvelope.type).toBe("APPROVAL_REQUEST");
+    expect(recovered.state.meta_review).toMatchObject({
+      last_autonomous_status: "success",
+      last_autonomous_recommendation: "rework",
+      last_autonomous_summary: "Run result is missing rework message.",
+      last_autonomous_rework_target_message:
+        "Meta-review gate fallback rework target unavailable."
+    });
+    expect(recovered.metaReviewRun?.rework_target_message).toBeNull();
+
+    const dispatchFailedReportMarkdown = await readFile(
+      bubble.paths.metaReviewLastMarkdownArtifactPath,
+      "utf8"
+    );
+    const dispatchFailedReportJsonRaw = await readFile(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      "utf8"
+    );
+    const dispatchFailedReportJson = JSON.parse(dispatchFailedReportJsonRaw) as {
+      recommendation: string;
+      status: string;
+      report_ref: string;
+    };
+    expect(dispatchFailedReportMarkdown).toContain("# Meta Review Report");
+    expect(dispatchFailedReportJson).toMatchObject({
+      recommendation: "rework",
+      status: "success",
+      report_ref: "artifacts/meta-review-last.md"
+    });
   });
 
   it("routes error status to META_REVIEW_FAILED with human_gate_run_failed", async () => {
@@ -483,6 +720,209 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     expect(recovered.route).toBe("human_gate_run_failed");
     expect(recovered.state.state).toBe("META_REVIEW_FAILED");
     expect(recovered.gateEnvelope.type).toBe("APPROVAL_REQUEST");
+    expect(recovered.state.meta_review).toMatchObject({
+      last_autonomous_status: "error",
+      last_autonomous_recommendation: "inconclusive",
+      last_autonomous_summary: "Runner failed.",
+      last_autonomous_report_ref: "artifacts/meta-review-last.md",
+      last_autonomous_updated_at: "2026-03-12T12:14:01.000Z"
+    });
+  });
+
+  it("hydrates snapshot from provided runResult values and keeps metadata coherent", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_provided_run_01",
+      task: "Recover provided run snapshot hydrate"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:14:30.000Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:14:32.000Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_provided_01",
+        status: "success",
+        recommendation: "approve",
+        summary: "Provided recovery recommendation.",
+        report_ref: "artifacts/recovered-report-custom.md",
+        rework_target_message: null,
+        updated_at: "2026-03-12T12:14:31.000Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: []
+      }
+    });
+    expect(recovered.route).toBe("human_gate_approve");
+    expect(recovered.state.meta_review).toMatchObject({
+      last_autonomous_run_id: "run_recover_provided_01",
+      last_autonomous_status: "success",
+      last_autonomous_recommendation: "approve",
+      last_autonomous_summary: "Provided recovery recommendation.",
+      last_autonomous_report_ref: "artifacts/meta-review-last.md",
+      last_autonomous_rework_target_message: null,
+      last_autonomous_updated_at: "2026-03-12T12:14:31.000Z"
+    });
+    expect(recovered.metaReviewRun?.report_ref).toBe("artifacts/meta-review-last.md");
+    expect(recovered.gateEnvelope.payload.metadata).toMatchObject({
+      latest_recommendation:
+        recovered.state.meta_review?.last_autonomous_recommendation
+    });
+  });
+
+  it("persists markdown-write warning into canonical recover JSON when markdown write fails only", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_partial_artifact_warning_01",
+      task: "Recover partial artifact warning"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:14:40.000Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        summary: "Converged.",
+        now: new Date("2026-03-12T12:14:42.000Z"),
+        runResult: {
+          bubbleId: bubble.bubbleId,
+          depth: "standard",
+          run_id: "run_recover_partial_warning_01",
+          status: "success",
+          recommendation: "approve",
+          summary: "Recover route should persist warning in JSON when markdown write fails.",
+          report_ref: "artifacts/non-canonical.md",
+          rework_target_message: null,
+          updated_at: "2026-03-12T12:14:41.000Z",
+          lifecycle_state: "META_REVIEW_RUNNING",
+          warnings: []
+        }
+      },
+      {
+        writeFile: async (path, content, options) => {
+          if (path === bubble.paths.metaReviewLastMarkdownArtifactPath) {
+            throw new Error("simulated markdown write failure");
+          }
+          await writeFileFs(path, content, options);
+        }
+      }
+    );
+
+    expect(recovered.route).toBe("human_gate_approve");
+    expect(recovered.metaReviewRun?.warnings).toEqual([
+      {
+        reason_code: "META_REVIEW_ARTIFACT_WRITE_WARNING",
+        message: "artifacts/meta-review-last.md: simulated markdown write failure"
+      }
+    ]);
+    expect(recovered.state.meta_review?.last_autonomous_report_ref).toBe(
+      "artifacts/meta-review-last.md"
+    );
+
+    const persistedReportJsonRaw = await readFile(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      "utf8"
+    );
+    const persistedReportJson = JSON.parse(persistedReportJsonRaw) as {
+      report_ref: string;
+      warnings: Array<{ reason_code: string; message: string }>;
+    };
+    expect(persistedReportJson.report_ref).toBe("artifacts/meta-review-last.md");
+    expect(persistedReportJson.warnings).toEqual([
+      {
+        reason_code: "META_REVIEW_ARTIFACT_WRITE_WARNING",
+        message: "artifacts/meta-review-last.md: simulated markdown write failure"
+      }
+    ]);
+    await expect(
+      readFile(bubble.paths.metaReviewLastMarkdownArtifactPath, "utf8")
+    ).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+  });
+
+  it("surfaces structured warning when recover artifact write fails", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_artifact_warning_01",
+      task: "Recover warning fallback"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:14:40.000Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        summary: "Converged.",
+        now: new Date("2026-03-12T12:14:42.000Z"),
+        runResult: {
+          bubbleId: bubble.bubbleId,
+          depth: "standard",
+          run_id: "run_recover_warning_01",
+          status: "success",
+          recommendation: "approve",
+          summary: "Recovery should continue after artifact write warning.",
+          report_ref: "artifacts/meta-review-last.md",
+          rework_target_message: null,
+          updated_at: "2026-03-12T12:14:41.000Z",
+          lifecycle_state: "META_REVIEW_RUNNING",
+          warnings: []
+        }
+      },
+      {
+        writeFile: async () => {
+          throw new Error("simulated recover artifact write failure");
+        }
+      }
+    );
+
+    expect(recovered.route).toBe("human_gate_approve");
+    expect(recovered.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(recovered.state.meta_review).toMatchObject({
+      last_autonomous_recommendation: "approve",
+      last_autonomous_summary:
+        "Recovery should continue after artifact write warning."
+    });
+    expect(recovered.metaReviewRun?.warnings).toContainEqual({
+      reason_code: "META_REVIEW_ARTIFACT_WRITE_WARNING",
+      message:
+        "artifacts/meta-review-last.json: simulated recover artifact write failure"
+    });
+    expect(recovered.metaReviewRun?.warnings).toContainEqual({
+      reason_code: "META_REVIEW_ARTIFACT_WRITE_WARNING",
+      message:
+        "artifacts/meta-review-last.md: simulated recover artifact write failure"
+    });
   });
 
   it("throws state conflict when runResult differs from canonical snapshot", async () => {

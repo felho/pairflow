@@ -126,6 +126,7 @@ async function setupReadyForHumanApprovalBubble(repoPath: string, bubbleId: stri
     now: new Date("2026-02-22T12:04:01.000Z")
   });
 
+  const recoveredState = await readStateSnapshot(bubble.paths.statePath);
   const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
   const gateEnvelope = transcript.at(-1);
   expect(gateEnvelope?.type).toBe("APPROVAL_REQUEST");
@@ -136,6 +137,9 @@ async function setupReadyForHumanApprovalBubble(repoPath: string, bubbleId: stri
       actor_agent: "codex",
       latest_recommendation: "inconclusive"
     });
+    expect(gateEnvelope.payload.metadata?.latest_recommendation).toBe(
+      recoveredState.state.meta_review?.last_autonomous_recommendation
+    );
   }
 
   return bubble;
