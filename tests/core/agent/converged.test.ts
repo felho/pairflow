@@ -449,9 +449,9 @@ describe("emitConvergedFromWorkspace", () => {
             {
               ...loaded.state,
               state: "META_REVIEW_RUNNING",
-              active_agent: null,
-              active_role: null,
-              active_since: null,
+              active_agent: "codex",
+              active_role: "meta_reviewer",
+              active_since: "2026-02-22T09:04:40.000Z",
               meta_review: {
                 last_autonomous_run_id: "run_converged_recover_01",
                 last_autonomous_status: "success",

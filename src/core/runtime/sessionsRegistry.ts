@@ -56,8 +56,6 @@ export interface SetMetaReviewerPaneBindingInput {
   sessionsPath: string;
   bubbleId: string;
   active: boolean;
-  // Deprecated compatibility input; ignored.
-  runId?: string | null;
   now?: Date;
   lockTimeoutMs?: number;
 }

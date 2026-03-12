@@ -25,6 +25,7 @@ import {
 } from "../../types/bubble.js";
 import {
   MetaReviewError,
+  hasCanonicalSubmitForActiveMetaReviewRound,
   type MetaReviewRunResult
 } from "./metaReview.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
@@ -123,16 +124,6 @@ function normalizeMetaReviewSnapshot(
     auto_rework_limit: DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
     sticky_human_gate: false
   };
-}
-
-function snapshotHasCanonicalRecommendation(
-  snapshot: BubbleMetaReviewSnapshotState
-): boolean {
-  return (
-    snapshot.last_autonomous_status !== null &&
-    snapshot.last_autonomous_recommendation !== null &&
-    snapshot.last_autonomous_updated_at !== null
-  );
 }
 
 export interface NotifyMetaReviewerSubmissionRequestInput {
@@ -371,6 +362,25 @@ function synthesizeMetaReviewRunResultFromSnapshot(input: {
   };
 }
 
+function synthesizeMetaReviewRunFailure(input: {
+  bubbleId: string;
+  nowIso: string;
+  fallbackSummary: string;
+}): MetaReviewRunResult {
+  return {
+    bubbleId: input.bubbleId,
+    depth: "standard",
+    status: "error",
+    recommendation: "inconclusive",
+    summary: input.fallbackSummary,
+    report_ref: metaReviewFallbackReportRef,
+    rework_target_message: null,
+    updated_at: input.nowIso,
+    lifecycle_state: "META_REVIEW_RUNNING",
+    warnings: []
+  };
+}
+
 async function persistHumanGateRoute(input: {
   appendEnvelope: typeof appendProtocolEnvelope;
   writeState: typeof writeStateSnapshot;
@@ -526,19 +536,33 @@ export async function recoverMetaReviewGateFromSnapshot(
   }
 
   const snapshot = normalizeMetaReviewSnapshot(loaded.state.meta_review);
-  const runResult = input.runResult ?? synthesizeMetaReviewRunResultFromSnapshot({
-    bubbleId: resolved.bubbleId,
-    nowIso,
-    snapshot,
-    fallbackSummary:
-      input.summary ??
-      "Meta-review completed previously; recovering gate route from snapshot."
-  });
+  const fallbackSummary =
+    input.summary ??
+    "Meta-review completed previously; recovering gate route from snapshot.";
+  const snapshotHasCanonicalSubmitInActiveWindow =
+    hasCanonicalSubmitForActiveMetaReviewRound({
+      state: loaded.state,
+      snapshot
+    });
+  const runResult = input.runResult ?? (
+    snapshotHasCanonicalSubmitInActiveWindow
+      ? synthesizeMetaReviewRunResultFromSnapshot({
+          bubbleId: resolved.bubbleId,
+          nowIso,
+          snapshot,
+          fallbackSummary
+        })
+      : synthesizeMetaReviewRunFailure({
+          bubbleId: resolved.bubbleId,
+          nowIso,
+          fallbackSummary
+        })
+  );
   const summary = runResult.summary
     ?? input.summary
     ?? "Meta-review completed previously; recovering gate route from snapshot.";
 
-  const snapshotHasRunIdentity = snapshotHasCanonicalRecommendation(snapshot);
+  const snapshotHasRunIdentity = snapshotHasCanonicalSubmitInActiveWindow;
   const snapshotUpdatedAtMs = Date.parse(snapshot.last_autonomous_updated_at ?? "");
   const runResultUpdatedAtMs = Date.parse(input.runResult?.updated_at ?? "");
   const hasComparableTimestamps =

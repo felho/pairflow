@@ -467,7 +467,7 @@ describe("runBubbleWatchdog", () => {
 
     expect(result.escalated).toBe(true);
     expect(result.reason).toBe("escalated");
-    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
     expect(result.envelope?.type).toBe("APPROVAL_REQUEST");
   });
 
@@ -628,6 +628,66 @@ describe("runBubbleWatchdog", () => {
     expect(result.escalated).toBe(false);
     expect(result.reason).toBe("not_expired");
     expect(result.state.state).toBe("META_REVIEW_RUNNING");
+  });
+
+  it("routes timeout to META_REVIEW_FAILED when only stale snapshot exists outside active window", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_meta_submit_03",
+      task: "Meta-review timeout must ignore stale canonical snapshot from previous round",
+      startedAt: "2026-02-22T12:00:00.000Z"
+    });
+    await moveToMetaReviewRunning({
+      statePath: bubble.paths.statePath,
+      activeSinceIso: "2026-02-22T12:00:00.000Z",
+      lastCommandAtIso: "2026-02-22T12:00:00.000Z"
+    });
+
+    const running = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...running.state,
+        meta_review: {
+          ...(running.state.meta_review ?? {
+            last_autonomous_run_id: null,
+            last_autonomous_status: null,
+            last_autonomous_recommendation: null,
+            last_autonomous_summary: null,
+            last_autonomous_report_ref: null,
+            last_autonomous_rework_target_message: null,
+            last_autonomous_updated_at: null,
+            auto_rework_count: 0,
+            auto_rework_limit: 5,
+            sticky_human_gate: false
+          }),
+          last_autonomous_run_id: null,
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Stale previous-round submit snapshot.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-02-22T11:59:59.000Z"
+        }
+      },
+      {
+        expectedFingerprint: running.fingerprint,
+        expectedState: "META_REVIEW_RUNNING"
+      }
+    );
+
+    const result = await runBubbleWatchdog({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath,
+      now: new Date("2026-02-22T14:00:00.000Z")
+    });
+
+    expect(result.escalated).toBe(true);
+    expect(result.reason).toBe("escalated");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
+    expect(result.envelope?.type).toBe("APPROVAL_REQUEST");
+    expect(result.envelope?.payload.summary).toContain("META_REVIEW_GATE_RUN_FAILED");
   });
 
   it("does not fail watchdog cycle when meta-review routing sees state conflict before timeout", async () => {
