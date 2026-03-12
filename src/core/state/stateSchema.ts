@@ -245,7 +245,8 @@ function validateMetaReviewSnapshot(
     return undefined;
   }
 
-  const lastRunId = input.last_autonomous_run_id;
+  const lastRunIdRaw = input.last_autonomous_run_id;
+  const lastRunId = lastRunIdRaw === undefined ? null : lastRunIdRaw;
   const lastRunIdValid = lastRunId === null || isNonEmptyString(lastRunId);
   if (!lastRunIdValid) {
     errors.push({
@@ -411,13 +412,6 @@ function validateMetaReviewSnapshot(
         });
       }
     } else {
-      if (!isNonEmptyString(lastRunId)) {
-        errors.push({
-          path: `${pathPrefix}.last_autonomous_run_id`,
-          message:
-            "Must be a non-empty string when last_autonomous_status and last_autonomous_recommendation are set"
-        });
-      }
       if (!isNonEmptyString(lastReportRef)) {
         errors.push({
           path: `${pathPrefix}.last_autonomous_report_ref`,
@@ -464,7 +458,8 @@ function validateMetaReviewSnapshot(
   }
 
   return {
-    last_autonomous_run_id: lastRunId as BubbleMetaReviewSnapshotState["last_autonomous_run_id"],
+    last_autonomous_run_id:
+      isNonEmptyString(lastRunId) ? lastRunId : null,
     last_autonomous_status: lastStatus as BubbleMetaReviewSnapshotState["last_autonomous_status"],
     last_autonomous_recommendation:
       lastRecommendation as BubbleMetaReviewSnapshotState["last_autonomous_recommendation"],
@@ -663,7 +658,6 @@ export function validateBubbleStateSnapshot(
   if (state === "META_REVIEW_RUNNING") {
     const metaReviewHasRunSnapshot =
       metaReview !== undefined &&
-      metaReview.last_autonomous_run_id !== null &&
       metaReview.last_autonomous_status !== null &&
       metaReview.last_autonomous_recommendation !== null &&
       metaReview.last_autonomous_updated_at !== null;

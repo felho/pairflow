@@ -12,6 +12,8 @@ import {
 import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { readTranscriptEnvelopes, appendProtocolEnvelope } from "../../../src/core/protocol/transcriptStore.js";
+import { applyMetaReviewGateOnConvergence } from "../../../src/core/bubble/metaReviewGate.js";
+import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { resolveReviewerTestEvidenceArtifactPath } from "../../../src/core/reviewer/testEvidence.js";
 import { resolveSummaryVerifierConsistencyGateArtifactPath } from "../../../src/core/reviewer/summaryVerifierConsistencyGate.js";
@@ -351,6 +353,42 @@ describe("emitConvergedFromWorkspace", () => {
       retried: false
     });
   });
+
+  it(
+    "enters META_REVIEW_RUNNING without synchronous gate-timeout ownership when structured channel is available",
+    { timeout: 10_000 },
+    async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupConvergedCandidateBubble(repoPath, "b_converged_meta_async_01");
+
+    await upsertRuntimeSession({
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      tmuxSessionName: "pf-b_converged_meta_async_01",
+      now: new Date("2026-02-22T09:03:55.000Z")
+    });
+
+    const result = await emitConvergedFromWorkspace(
+      {
+        summary: "Ready for meta-review submit handoff.",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-22T09:04:00.000Z")
+      },
+      {
+        applyMetaReviewGateOnConvergence: (gateInput) =>
+          applyMetaReviewGateOnConvergence(gateInput, {
+            notifyMetaReviewerSubmissionRequest: async () => undefined
+          })
+      }
+    );
+
+    expect(result.gateRoute).toBe("meta_review_running");
+    expect(result.approvalRequestEnvelope.type).toBe("TASK");
+      expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    }
+  );
 
   it("returns deterministic delivery status when any approval notification is unconfirmed", async () => {
     const repoPath = await createTempRepo();

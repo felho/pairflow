@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, open, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, open, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -140,7 +140,6 @@ describe("sessionsRegistry", () => {
       sessionsPath,
       bubbleId: "b_sessions_meta_01",
       active: true,
-      runId: "run_meta_01",
       now: new Date("2026-02-22T16:05:05.000Z")
     });
     expect(started.updated).toBe(true);
@@ -148,9 +147,9 @@ describe("sessionsRegistry", () => {
       role: "meta-reviewer",
       paneIndex: runtimePaneIndices.metaReviewer,
       active: true,
-      runId: "run_meta_01",
       updatedAt: "2026-02-22T16:05:05.000Z"
     });
+    expect(Object.hasOwn(started.record?.metaReviewerPane ?? {}, "runId")).toBe(false);
 
     const stopped = await setMetaReviewerPaneBinding({
       sessionsPath,
@@ -162,9 +161,56 @@ describe("sessionsRegistry", () => {
     expect(stopped.record?.metaReviewerPane).toMatchObject({
       role: "meta-reviewer",
       paneIndex: runtimePaneIndices.metaReviewer,
-      active: false,
-      runId: "run_meta_01"
+      active: false
     });
+  });
+
+  it("drops deprecated metaReviewerPane.runId when reading and writing session records", async () => {
+    const root = await createTempDir();
+    const sessionsPath = join(root, "runtime", "sessions.json");
+    await mkdir(join(root, "runtime"), { recursive: true });
+    await writeFile(
+      sessionsPath,
+      `${JSON.stringify(
+        {
+          b_sessions_meta_legacy: {
+            bubbleId: "b_sessions_meta_legacy",
+            repoPath: "/repo/path",
+            worktreePath: "/repo/.pairflow-worktrees/b_sessions_meta_legacy",
+            tmuxSessionName: "pf-b_sessions_meta_legacy",
+            updatedAt: "2026-02-22T16:08:00.000Z",
+            metaReviewerPane: {
+              role: "meta-reviewer",
+              paneIndex: runtimePaneIndices.metaReviewer,
+              active: true,
+              runId: "legacy_run_id",
+              updatedAt: "2026-02-22T16:08:00.000Z"
+            }
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
+
+    const loaded = await readRuntimeSessionsRegistry(sessionsPath, {
+      allowMissing: false
+    });
+    expect(loaded.b_sessions_meta_legacy?.metaReviewerPane?.active).toBe(true);
+    expect(
+      Object.hasOwn(loaded.b_sessions_meta_legacy?.metaReviewerPane ?? {}, "runId")
+    ).toBe(false);
+
+    await setMetaReviewerPaneBinding({
+      sessionsPath,
+      bubbleId: "b_sessions_meta_legacy",
+      active: false,
+      now: new Date("2026-02-22T16:08:10.000Z")
+    });
+
+    const persistedRaw = await readFile(sessionsPath, "utf8");
+    expect(persistedRaw).not.toContain("\"runId\"");
   });
 
   it("returns no_runtime_session when binding meta-reviewer pane on missing bubble", async () => {
@@ -175,7 +221,6 @@ describe("sessionsRegistry", () => {
       sessionsPath,
       bubbleId: "b_sessions_meta_missing",
       active: true,
-      runId: "run_meta_missing_01",
       now: new Date("2026-02-22T16:06:00.000Z")
     });
 
@@ -209,7 +254,6 @@ describe("sessionsRegistry", () => {
         sessionsPath,
         bubbleId: "b_sessions_meta_shared",
         active: true,
-        runId: "run_meta_shared",
         now: new Date("2026-02-22T16:07:05.000Z")
       });
 

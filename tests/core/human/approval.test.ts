@@ -14,7 +14,8 @@ import {
 } from "../../../src/core/human/approval.js";
 import {
   applyMetaReviewGateOnConvergence,
-  MetaReviewGateError
+  MetaReviewGateError,
+  recoverMetaReviewGateFromSnapshot
 } from "../../../src/core/bubble/metaReviewGate.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
@@ -63,14 +64,65 @@ async function setupReadyForHumanApprovalBubble(repoPath: string, bubbleId: stri
   }, {
     applyMetaReviewGateOnConvergence: async (input) =>
       applyMetaReviewGateOnConvergence(input, {
-        metaReviewDependencies: {
-          runLiveReview: async () => ({
-            recommendation: "inconclusive",
-            summary: "Autonomous review inconclusive; route to human gate.",
-            report_markdown: "# Meta Review Report\n\nInconclusive."
-          })
-        }
+        setMetaReviewerPaneBinding: async ({ bubbleId: targetBubbleId, active }) => ({
+          updated: true,
+          record: {
+            bubbleId: targetBubbleId,
+            repoPath,
+            worktreePath: bubble.paths.worktreePath,
+            tmuxSessionName: "pf_approval_test",
+            updatedAt: "2026-02-22T12:04:00.000Z",
+            metaReviewerPane: {
+              role: "meta-reviewer",
+              paneIndex: 3,
+              active,
+              updatedAt: "2026-02-22T12:04:00.000Z"
+            }
+          }
+        }),
+        notifyMetaReviewerSubmissionRequest: async () => {}
       })
+  });
+
+  const loaded = await readStateSnapshot(bubble.paths.statePath);
+  const updatedAt = "2026-02-22T12:04:00.000Z";
+  await writeStateSnapshot(
+    bubble.paths.statePath,
+    {
+      ...loaded.state,
+      meta_review: {
+        ...(loaded.state.meta_review ?? {
+          last_autonomous_run_id: null,
+          last_autonomous_status: null,
+          last_autonomous_recommendation: null,
+          last_autonomous_summary: null,
+          last_autonomous_report_ref: null,
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: null,
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }),
+        last_autonomous_run_id: null,
+        last_autonomous_status: "inconclusive",
+        last_autonomous_recommendation: "inconclusive",
+        last_autonomous_summary: "Autonomous review inconclusive; route to human gate.",
+        last_autonomous_report_ref: "artifacts/meta-review-last.md",
+        last_autonomous_rework_target_message: null,
+        last_autonomous_updated_at: updatedAt
+      }
+    },
+    {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "META_REVIEW_RUNNING"
+    }
+  );
+
+  await recoverMetaReviewGateFromSnapshot({
+    bubbleId: bubble.bubbleId,
+    repoPath,
+    summary: "Ready for approval",
+    now: new Date("2026-02-22T12:04:01.000Z")
   });
 
   const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
@@ -135,6 +187,7 @@ describe("approval decisions", () => {
 
     const inbox = await readTranscriptEnvelopes(bubble.paths.inboxPath);
     expect(inbox.map((entry) => entry.type)).toEqual([
+      "TASK",
       "APPROVAL_REQUEST",
       "APPROVAL_DECISION"
     ]);
@@ -373,7 +426,23 @@ describe("approval decisions", () => {
         now: new Date("2026-03-08T11:50:00.000Z")
       },
       {
-        runMetaReview: async () => {
+        setMetaReviewerPaneBinding: async ({ bubbleId: targetBubbleId, active }) => ({
+          updated: true,
+          record: {
+            bubbleId: targetBubbleId,
+            repoPath,
+            worktreePath: bubble.paths.worktreePath,
+            tmuxSessionName: "pf_approval_test",
+            updatedAt: "2026-03-08T11:50:00.000Z",
+            metaReviewerPane: {
+              role: "meta-reviewer",
+              paneIndex: 3,
+              active,
+              updatedAt: "2026-03-08T11:50:00.000Z"
+            }
+          }
+        }),
+        notifyMetaReviewerSubmissionRequest: async () => {
           throw new MetaReviewGateError(
             "META_REVIEW_GATE_RUN_FAILED",
             "simulated runner invocation failure"
@@ -421,7 +490,23 @@ describe("approval decisions", () => {
         now: new Date("2026-03-08T12:00:00.000Z")
       },
       {
-        runMetaReview: async () => {
+        setMetaReviewerPaneBinding: async ({ bubbleId: targetBubbleId, active }) => ({
+          updated: true,
+          record: {
+            bubbleId: targetBubbleId,
+            repoPath,
+            worktreePath: bubble.paths.worktreePath,
+            tmuxSessionName: "pf_approval_test",
+            updatedAt: "2026-03-08T12:00:00.000Z",
+            metaReviewerPane: {
+              role: "meta-reviewer",
+              paneIndex: 3,
+              active,
+              updatedAt: "2026-03-08T12:00:00.000Z"
+            }
+          }
+        }),
+        notifyMetaReviewerSubmissionRequest: async () => {
           throw new MetaReviewGateError(
             "META_REVIEW_GATE_RUN_FAILED",
             "simulated runner invocation failure"

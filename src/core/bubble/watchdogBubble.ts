@@ -14,6 +14,11 @@ import {
 import { ensureBubbleInstanceIdForMutation } from "./bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import { applyDeferredReworkIntent } from "../human/reworkIntent.js";
+import {
+  MetaReviewGateError,
+  recoverMetaReviewGateFromSnapshot
+} from "./metaReviewGate.js";
+import { hasCanonicalSubmitForActiveMetaReviewRound } from "./metaReview.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 
@@ -27,6 +32,8 @@ export interface BubbleWatchdogInput {
 export interface BubbleWatchdogDependencies {
   emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
   emitBubbleNotification?: typeof emitBubbleNotification;
+  readStateSnapshot?: typeof readStateSnapshot;
+  recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshot;
 }
 
 export type BubbleWatchdogNoopReason =
@@ -63,6 +70,56 @@ function buildEscalationQuestion(
   return `Watchdog timeout: no pairflow command from active agent ${activeAgent} within ${timeoutMinutes} minutes. Please intervene, then run pairflow bubble resume --id ${bubbleId} when ready.`;
 }
 
+function hasCanonicalMetaReviewSubmitInActiveWindow(
+  state: BubbleStateSnapshot
+): boolean {
+  const snapshot = state.meta_review;
+  if (snapshot === undefined) {
+    return false;
+  }
+  return hasCanonicalSubmitForActiveMetaReviewRound({
+    state,
+    snapshot
+  });
+}
+
+async function recoverMetaReviewRouteWithConflictGuard(input: {
+  resolved: Awaited<ReturnType<typeof resolveBubbleById>>;
+  now: Date;
+  summary: string;
+  readState: typeof readStateSnapshot;
+  recoverMetaReviewRoute: typeof recoverMetaReviewGateFromSnapshot;
+}): Promise<{
+  routed: Awaited<ReturnType<typeof recoverMetaReviewGateFromSnapshot>> | null;
+  latestState: BubbleStateSnapshot | null;
+}> {
+  try {
+    const routed = await input.recoverMetaReviewRoute({
+      bubbleId: input.resolved.bubbleId,
+      repoPath: input.resolved.repoPath,
+      cwd: input.resolved.bubblePaths.worktreePath,
+      now: input.now,
+      summary: input.summary
+    });
+    return {
+      routed,
+      latestState: null
+    };
+  } catch (error) {
+    if (
+      !(error instanceof MetaReviewGateError) ||
+      error.reasonCode !== "META_REVIEW_GATE_STATE_CONFLICT"
+    ) {
+      throw error;
+    }
+    const latest = await input.readState(input.resolved.bubblePaths.statePath);
+    return {
+      routed: null,
+      latestState: latest.state
+    };
+  }
+}
+
 export async function runBubbleWatchdog(
   input: BubbleWatchdogInput,
   dependencies: BubbleWatchdogDependencies = {}
@@ -75,7 +132,10 @@ export async function runBubbleWatchdog(
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
   });
-  const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
+  const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
+  const recoverMetaReviewRoute =
+    dependencies.recoverMetaReviewGateFromSnapshot ?? recoverMetaReviewGateFromSnapshot;
+  const loadedState = await readState(resolved.bubblePaths.statePath);
   const state = loadedState.state;
   const emitDelivery =
     dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
@@ -205,6 +265,44 @@ export async function runBubbleWatchdog(
   }
 
   if (!watchdog.expired) {
+    if (state.state === "META_REVIEW_RUNNING") {
+      if (!hasCanonicalMetaReviewSubmitInActiveWindow(state)) {
+        return {
+          bubbleId: resolved.bubbleId,
+          escalated: false,
+          reason: "not_expired",
+          state
+        };
+      }
+
+      const recovered = await recoverMetaReviewRouteWithConflictGuard({
+        resolved,
+        now,
+        summary: "Meta-review submit detected; watchdog routed from canonical snapshot.",
+        readState,
+        recoverMetaReviewRoute
+      });
+      if (recovered.routed === null) {
+        const latestState = recovered.latestState ?? state;
+        return {
+          bubbleId: resolved.bubbleId,
+          escalated: false,
+          reason: latestState.state === "META_REVIEW_RUNNING"
+            ? "not_expired"
+            : "state_not_running",
+          state: latestState
+        };
+      }
+      return {
+        bubbleId: resolved.bubbleId,
+        escalated: true,
+        reason: "escalated",
+        state: recovered.routed.state,
+        envelope: recovered.routed.gateEnvelope,
+        sequence: recovered.routed.gateSequence
+      };
+    }
+
     // Best-effort: if a pairflow message is stuck in the active agent's
     // input buffer (Enter didn't register during delivery), retry it now.
     let stuckRetried: boolean | undefined;
@@ -225,6 +323,36 @@ export async function runBubbleWatchdog(
       reason: "not_expired",
       state,
       stuckRetried
+    };
+  }
+
+  if (state.state === "META_REVIEW_RUNNING") {
+    const recovered = await recoverMetaReviewRouteWithConflictGuard({
+      resolved,
+      now,
+      summary:
+        `META_REVIEW_GATE_RUN_FAILED: timeout waiting for structured meta-review submit after ${resolved.bubbleConfig.watchdog_timeout_minutes} minutes.`,
+      readState,
+      recoverMetaReviewRoute
+    });
+    if (recovered.routed === null) {
+      const latestState = recovered.latestState ?? state;
+      return {
+        bubbleId: resolved.bubbleId,
+        escalated: false,
+        reason: latestState.state === "META_REVIEW_RUNNING"
+          ? "not_expired"
+          : "state_not_running",
+        state: latestState
+      };
+    }
+    return {
+      bubbleId: resolved.bubbleId,
+      escalated: true,
+      reason: "escalated",
+      state: recovered.routed.state,
+      envelope: recovered.routed.gateEnvelope,
+      sequence: recovered.routed.gateSequence
     };
   }
 

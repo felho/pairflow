@@ -113,7 +113,7 @@ export interface MetaReviewRunWarning {
 export interface MetaReviewRunResult {
   bubbleId: string;
   depth: MetaReviewDepth;
-  run_id: string;
+  run_id?: string;
   status: MetaReviewRunStatus;
   recommendation: MetaReviewRecommendation;
   summary: string | null;
@@ -123,6 +123,8 @@ export interface MetaReviewRunResult {
   lifecycle_state: BubbleStateSnapshot["state"];
   warnings: MetaReviewRunWarning[];
 }
+
+export type MetaReviewSubmitResult = Omit<MetaReviewRunResult, "depth">;
 
 export interface MetaReviewDependencies {
   resolveBubbleById?: typeof resolveBubbleById;
@@ -273,11 +275,31 @@ function normalizeRequiredSubmitText(
   return fieldName === "summary" ? value.trim() : value.trimEnd();
 }
 
-function isDuplicateSubmitForGateRun(input: {
+export function hasCanonicalSubmitForActiveMetaReviewRound(input: {
+  state: BubbleStateSnapshot;
   snapshot: BubbleMetaReviewSnapshotState;
-  runId: string;
 }): boolean {
-  return input.snapshot.last_autonomous_run_id === input.runId;
+  if (input.state.state !== "META_REVIEW_RUNNING") {
+    return false;
+  }
+  if (
+    input.snapshot.last_autonomous_status === null ||
+    input.snapshot.last_autonomous_recommendation === null ||
+    !isNonEmptyString(input.snapshot.last_autonomous_report_ref) ||
+    !isNonEmptyString(input.snapshot.last_autonomous_updated_at)
+  ) {
+    return false;
+  }
+  if (!isNonEmptyString(input.state.active_since)) {
+    return false;
+  }
+
+  const activeSinceMs = Date.parse(input.state.active_since);
+  const updatedAtMs = Date.parse(input.snapshot.last_autonomous_updated_at);
+  if (Number.isNaN(activeSinceMs) || Number.isNaN(updatedAtMs)) {
+    return false;
+  }
+  return updatedAtMs >= activeSinceMs;
 }
 
 async function assertMetaReviewSubmitterOwnership(input: {
@@ -285,7 +307,7 @@ async function assertMetaReviewSubmitterOwnership(input: {
   sessionsPath: string;
   readRuntimeSessions: typeof readRuntimeSessionsRegistry;
   state: BubbleStateSnapshot;
-}): Promise<{ gateRunId: string }> {
+}): Promise<void> {
   if (input.state.state !== "META_REVIEW_RUNNING") {
     throw new MetaReviewError(
       "META_REVIEW_STATE_INVALID",
@@ -304,9 +326,11 @@ async function assertMetaReviewSubmitterOwnership(input: {
     input.state.active_agent !== metaReviewerSubmitterAgent ||
     input.state.active_since === null
   ) {
+    const activeAgent = input.state.active_agent ?? "null";
+    const activeSince = input.state.active_since ?? "null";
     throw new MetaReviewError(
       "META_REVIEW_SENDER_MISMATCH",
-      `meta-review submit rejected: active ownership is not bound to ${metaReviewerSubmitterAgent}.`
+      `meta-review submit rejected: active meta-review ownership is missing or stale (active_agent=${activeAgent}, active_since=${activeSince}; expected active_agent=${metaReviewerSubmitterAgent} with non-null active_since).`
     );
   }
 
@@ -332,15 +356,6 @@ async function assertMetaReviewSubmitterOwnership(input: {
       "meta-review submit rejected: meta-reviewer pane ownership is not active in runtime session."
     );
   }
-  if (!isNonEmptyString(record.metaReviewerPane.runId)) {
-    throw new MetaReviewError(
-      "META_REVIEW_STATE_INVALID",
-      "meta-review submit rejected: gate run identity is missing from active meta-reviewer pane binding."
-    );
-  }
-  return {
-    gateRunId: record.metaReviewerPane.runId
-  };
 }
 
 function resolveReportArtifactPath(input: {
@@ -985,7 +1000,7 @@ function formatRunnerFailure(error: unknown): {
 export async function submitMetaReviewResult(
   input: MetaReviewSubmitInput,
   dependencies: MetaReviewDependencies = {}
-): Promise<MetaReviewRunResult> {
+): Promise<MetaReviewSubmitResult> {
   const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
   const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
   const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
@@ -1001,7 +1016,7 @@ export async function submitMetaReviewResult(
   });
 
   const loadedState = await readState(resolved.bubblePaths.statePath);
-  const ownership = await assertMetaReviewSubmitterOwnership({
+  await assertMetaReviewSubmitterOwnership({
     bubbleId: resolved.bubbleId,
     sessionsPath: resolved.bubblePaths.sessionsPath,
     readRuntimeSessions,
@@ -1040,7 +1055,6 @@ export async function submitMetaReviewResult(
     );
   }
 
-  const runId = ownership.gateRunId;
   const updatedAt = now.toISOString();
   const recommendation = input.recommendation;
   const status = mapRecommendationToStatus(recommendation);
@@ -1060,15 +1074,20 @@ export async function submitMetaReviewResult(
   });
 
   const previousMetaReview = normalizeMetaReviewSnapshot(loadedState.state.meta_review);
-  if (isDuplicateSubmitForGateRun({ snapshot: previousMetaReview, runId })) {
+  if (
+    hasCanonicalSubmitForActiveMetaReviewRound({
+      state: loadedState.state,
+      snapshot: previousMetaReview
+    })
+  ) {
     throw new MetaReviewError(
       "META_REVIEW_STATE_INVALID",
-      `meta-review submit rejected: duplicate structured submit for active gate run (${runId}).`
+      "meta-review submit rejected: canonical submit already recorded for active meta-review round."
     );
   }
   const nextMetaReview: BubbleMetaReviewSnapshotState = {
     ...previousMetaReview,
-    last_autonomous_run_id: runId,
+    last_autonomous_run_id: null,
     last_autonomous_status: status,
     last_autonomous_recommendation: recommendation,
     last_autonomous_summary: summary,
@@ -1091,11 +1110,28 @@ export async function submitMetaReviewResult(
   } catch (error) {
     if (error instanceof StateStoreConflictError) {
       const latest = await readState(resolved.bubblePaths.statePath);
-      const latestSnapshot = normalizeMetaReviewSnapshot(latest.state.meta_review);
-      if (isDuplicateSubmitForGateRun({ snapshot: latestSnapshot, runId })) {
+      if (latest.state.state !== "META_REVIEW_RUNNING") {
         throw new MetaReviewError(
           "META_REVIEW_STATE_INVALID",
-          `meta-review submit rejected: duplicate structured submit for active gate run (${runId}).`
+          `meta-review submit requires META_REVIEW_RUNNING state (current: ${latest.state.state}).`
+        );
+      }
+      if (latest.state.round !== input.round) {
+        throw new MetaReviewError(
+          "META_REVIEW_ROUND_MISMATCH",
+          `meta-review submit round mismatch (active: ${latest.state.round}, received: ${input.round}).`
+        );
+      }
+      const latestSnapshot = normalizeMetaReviewSnapshot(latest.state.meta_review);
+      if (
+        hasCanonicalSubmitForActiveMetaReviewRound({
+          state: latest.state,
+          snapshot: latestSnapshot
+        })
+      ) {
+        throw new MetaReviewError(
+          "META_REVIEW_STATE_INVALID",
+          "meta-review submit rejected: canonical submit already recorded for active meta-review round."
         );
       }
       throw stateWriteConflictToMetaReviewError(error);
@@ -1107,7 +1143,6 @@ export async function submitMetaReviewResult(
   const reportPayload = {
     bubble_id: resolved.bubbleId,
     round: input.round,
-    run_id: runId,
     generated_at: updatedAt,
     status,
     recommendation,
@@ -1151,8 +1186,6 @@ export async function submitMetaReviewResult(
 
   return {
     bubbleId: resolved.bubbleId,
-    depth: "standard",
-    run_id: runId,
     status,
     recommendation,
     summary,
