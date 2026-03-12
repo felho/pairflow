@@ -35,6 +35,19 @@ Any unclassified reason code is treated as blocking until explicitly classified.
 3. Use the worktree-local CLI entrypoint for operator smoke commands: `node ./dist/cli/index.js ...`
 4. Keep `.pairflow/evidence/` writable so validation logs are captured.
 
+## Phase 1 Reviewer Evidence Trust Baseline (I2 + I3)
+
+`trusted/skip_full_rerun` classification is allowed only when all required checks satisfy these fail-closed rules:
+
+1. Provenance must be canonical: only `.pairflow/evidence/*.log` refs are trust-eligible.
+2. Summary text is never a trust anchor; summary-only command claims are `untrusted/run_checks`.
+3. Completion markers are mandatory for each required command family.
+4. Accepted alias-equivalent command forms are closed-set only:
+   - typecheck: `pnpm typecheck`, `pnpm run typecheck`, `tsc --noEmit`
+   - test: `pnpm test`, `pnpm run test`, `vitest`, `vitest run`
+   - lint: `pnpm lint`, `pnpm run lint`, `eslint`
+5. Script extensions outside the closed set (for example `pnpm run test:ci`) are not accepted as equivalent required-command evidence.
+
 ## Smoke Checklist
 
 Run each command from the release worktree root and capture the command, timestamp, and raw marker lines.

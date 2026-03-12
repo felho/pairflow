@@ -82,7 +82,6 @@ describe("runConvergedCommand", () => {
       },
       state: {
         bubble_id: "b_cli_converged_meta_01",
-        task: "task",
         state: "META_REVIEW_RUNNING",
         round: 2,
         active_agent: "codex",
