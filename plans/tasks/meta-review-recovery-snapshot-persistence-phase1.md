@@ -43,6 +43,7 @@ Residual issue:
 2. Recovery route must persist canonical artifacts (`artifacts/meta-review-last.md`, `artifacts/meta-review-last.json`) on successful recovery routing.
 3. `APPROVAL_REQUEST.payload.metadata.latest_recommendation` and persisted snapshot recommendation must remain consistent.
 4. CLI recovery follow-up (`meta-review status`, `meta-review last-report`) must reflect persisted outcome (`has_run=yes`, `has_report=yes`) in recoverable cases.
+5. Recover artifact write failures must be surfaced in structured form (`metaReviewRun.warnings[]`), not summary-only text.
 
 ### Out of Scope
 
@@ -73,7 +74,7 @@ Residual issue:
 |---|---|---|---|---|---|---|---|---|
 | CS1 | `src/core/bubble/metaReviewGate.ts` | `persistHumanGateRoute` | `(input) -> Promise<MetaReviewGateResult>` | snapshot build before state write | when `metaReviewRun` exists, hydrate `last_autonomous_*` from run result (status/recommendation/summary/report_ref/updated_at; optional run_id/rework_target_message) | P1 | required-now | recover route currently can return approval while snapshot remains null in residual cases |
 | CS2 | `src/core/bubble/metaReviewGate.ts` | `recoverMetaReviewGateFromSnapshot` | `(input, dependencies?) -> Promise<MetaReviewGateResult>` | branches calling `persistHumanGateRoute` | recovery with synthesized or provided run result must always provide canonical data needed for persistence, not route-only metadata | P1 | required-now | residual mismatch between route metadata and persisted snapshot |
-| CS3 | `src/core/bubble/metaReviewGate.ts` | new helper (or equivalent) `writeRecoveredMetaReviewArtifacts` | `(paths, runResult, nowIso) -> Promise<{ warnings: MetaReviewRunWarning[] }>` | before recover route return | write canonical `meta-review-last.md` and `meta-review-last.json` during recover path | P1 | required-now | `meta-review last-report` reliability after recover |
+| CS3 | `src/core/bubble/metaReviewGate.ts` | new helper (or equivalent) `writeRecoveredMetaReviewArtifacts` | `(paths, runResult, nowIso) -> Promise<{ warnings: MetaReviewRunWarning[] }>` | before recover route return | write canonical `meta-review-last.md` and `meta-review-last.json` during recover path; propagate write failures into structured warnings | P1 | required-now | `meta-review last-report` reliability after recover |
 | CS4 | `tests/core/bubble/metaReviewGate.test.ts` | recover regression tests | `vitest` cases | `recoverMetaReviewGateFromSnapshot` suite | add empty-snapshot and artifact persistence assertions; ensure metadata/snapshot coherence | P1 | required-now | prevent regression |
 | CS5 | `tests/cli/bubbleMetaReviewCommand.test.ts` | CLI recover/status/last-report assertions | `vitest` cases | recover flow tests | after recover, `status.has_run=yes` and `last-report.has_report=yes` where recover persisted output | P1 | required-now | user-visible correctness |
 | CS6 | `tests/core/human/approval.test.ts` | approval metadata coherence test | `vitest` case | recover -> approval request path | `latest_recommendation` in envelope metadata matches persisted snapshot recommendation | P2 | required-now | protocol/state consistency |
@@ -84,6 +85,7 @@ Residual issue:
 |---|---|---|---|---|---|---|---|
 | `meta_review` snapshot after recover | may remain null-like while recover route emits recommendation metadata | when recover route has recommendation outcome, snapshot must be hydrated | `last_autonomous_status`, `last_autonomous_recommendation`, `last_autonomous_summary`, `last_autonomous_report_ref`, `last_autonomous_updated_at` | `last_autonomous_run_id`, `last_autonomous_rework_target_message` | non-breaking (existing fields) | P1 | required-now |
 | recover artifact contract | recover path does not guarantee canonical md/json writes | recover must write both canonical report artifacts | `artifacts/meta-review-last.md`, `artifacts/meta-review-last.json` | json payload `run_id`, `rework_target_message`, `warnings` | non-breaking | P1 | required-now |
+| recover warning surface | artifact write issue may be visible only in prose | warning must be machine-readable in recover result | `metaReviewRun.warnings[].reason_code`, `metaReviewRun.warnings[].message` | optional summary/log mention | non-breaking | P1 | required-now |
 | approval metadata coherence | envelope can carry recommendation while snapshot is not hydrated | envelope recommendation and snapshot recommendation must match | recommendation value parity | additional diagnostics/warnings | non-breaking | P1 | required-now |
 
 ### 3) Side Effects Contract
@@ -102,7 +104,7 @@ Constraint: no new external dependency; implementation remains local state/files
 |---|---|---|---|---|---|---|---|
 | recover called outside `META_REVIEW_RUNNING` | lifecycle state | throw | no mutation | `META_REVIEW_GATE_TRANSITION_INVALID` | error | P1 | required-now |
 | snapshot write conflict during recover persistence | state store CAS | throw | no partial state mutation accepted | `META_REVIEW_GATE_STATE_CONFLICT` | error | P1 | required-now |
-| recover artifact write fails after successful snapshot persistence | filesystem write | fallback | keep hydrated snapshot + route; attach warning diagnostics | `META_REVIEW_ARTIFACT_WRITE_WARNING` | warn | P1 | required-now |
+| recover artifact write fails after successful snapshot persistence | filesystem write | fallback | keep hydrated snapshot + route; append structured warning (`metaReviewRun.warnings[]`) with reason code and message | `META_REVIEW_ARTIFACT_WRITE_WARNING` | warn | P1 | required-now |
 | dependency failure (state store unavailable) | state read/write | throw | abort recover route; no synthetic success | `META_REVIEW_GATE_STATE_CONFLICT` | error | P1 | required-now |
 
 ### 5) Dependency Constraints
@@ -122,7 +124,7 @@ Constraint: no new external dependency; implementation remains local state/files
 | T1 | Empty snapshot recover hydration | `META_REVIEW_RUNNING` + `last_autonomous_*` null | recover with synthesized fallback (no explicit runResult) | persisted snapshot has non-null status/recommendation/summary/report_ref/updated_at | P1 | required-now | automated test |
 | T2 | Recover writes canonical artifacts | same as T1 | recover completes | both `meta-review-last.md` and `meta-review-last.json` exist and are parseable | P1 | required-now | automated test |
 | T3 | Provided runResult persists into snapshot | `META_REVIEW_RUNNING` + null snapshot + explicit runResult (`approve`/`inconclusive`) | recover executes | snapshot fields mirror runResult values (including optional run_id when provided) | P1 | required-now | automated test |
-| T4 | Artifact write warning fallback | snapshot persistence succeeds, artifact write forced to fail | recover executes | route and snapshot stay persisted; warning includes `META_REVIEW_ARTIFACT_WRITE_WARNING` | P1 | required-now | automated test |
+| T4 | Artifact write warning fallback | snapshot persistence succeeds, artifact write forced to fail | recover executes | route and snapshot stay persisted; `recover.metaReviewRun.warnings[]` contains `META_REVIEW_ARTIFACT_WRITE_WARNING` (summary-only warning is insufficient) | P1 | required-now | automated test |
 | T5 | CLI status reflects recover persistence | post-recover bubble from T1/T3 | `pairflow bubble meta-review status` | `has_run=yes` with populated last-autonomous fields | P1 | required-now | automated test |
 | T6 | CLI last-report reflects recover persistence | post-recover bubble from T1/T3 | `pairflow bubble meta-review last-report` | `has_report=yes` and markdown present | P1 | required-now | automated test |
 | T7 | Approval metadata coherence | recover emits `APPROVAL_REQUEST` | inspect envelope + state | `payload.metadata.latest_recommendation` equals `state.meta_review.last_autonomous_recommendation` | P1 | required-now | automated test |
