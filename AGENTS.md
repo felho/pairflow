@@ -26,6 +26,13 @@
 - Run lint, typecheck, and tests relevant to changed code.
 - If any check is skipped, state it explicitly in the summary.
 
+## Build Freshness Policy
+
+- If Pairflow source code changes (`src/**`, `scripts/**`, or CLI/runtime-affecting config), run `pnpm build` before any bubble lifecycle command (`bubble start`, `pass`, `converged`, `meta-review`, `approve`, `commit`, `merge`).
+- If additional source edits are made later in the same session, run `pnpm build` again before continuing with lifecycle commands.
+- Treat stale/missing worktree entrypoint (`dist/cli/index.js`) as a blocker; rebuild before proceeding.
+- Document in the final summary that build was executed (or explicitly state if skipped and why).
+
 ## Skill Source-of-Truth & Sync Policy
 
 When modifying `UsePairflow` or `CreatePairflowSpec` skills:
