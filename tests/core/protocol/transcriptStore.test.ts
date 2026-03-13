@@ -312,4 +312,51 @@ describe("appendProtocolEnvelope", () => {
       code: "ENOENT"
     });
   });
+
+  it("can skip invalid envelope lines when tolerateInvalidEnvelopeLines is enabled", async () => {
+    const root = await createTempRoot();
+    const transcriptPath = join(root, "transcript.ndjson");
+
+    const validTaskLine = JSON.stringify({
+      id: "msg_20260221_001",
+      ts: "2026-02-21T12:00:00.000Z",
+      bubble_id: "b_protocol_01",
+      sender: "orchestrator",
+      recipient: "codex",
+      type: "TASK",
+      round: 0,
+      payload: { summary: "Task" },
+      refs: []
+    });
+    const passLineWithUnknownPayloadField = JSON.stringify({
+      id: "msg_20260221_002",
+      ts: "2026-02-21T12:05:00.000Z",
+      bubble_id: "b_protocol_01",
+      sender: "codex",
+      recipient: "claude",
+      type: "PASS",
+      round: 1,
+      payload: {
+        summary: "Forward compatible payload",
+        findings_claim_state: "open_findings"
+      },
+      refs: []
+    });
+    await writeFile(
+      transcriptPath,
+      `${validTaskLine}\n${passLineWithUnknownPayloadField}\n`,
+      "utf8"
+    );
+
+    await expect(readTranscriptEnvelopes(transcriptPath)).rejects.toMatchObject({
+      message: "Invalid protocol envelope"
+    });
+
+    const tolerant = await readTranscriptEnvelopes(transcriptPath, {
+      tolerateInvalidEnvelopeLines: true
+    });
+    expect(tolerant).toHaveLength(1);
+    expect(tolerant[0]?.id).toBe("msg_20260221_001");
+    expect(tolerant[0]?.type).toBe("TASK");
+  });
 });

@@ -60,7 +60,8 @@ export async function getBubbleInbox(
   const [{ state }, inbox] = await Promise.all([
     readStateSnapshot(resolved.bubblePaths.statePath),
     readTranscriptEnvelopes(resolved.bubblePaths.inboxPath, {
-      allowMissing: true
+      allowMissing: true,
+      tolerateInvalidEnvelopeLines: true
     })
   ]);
 

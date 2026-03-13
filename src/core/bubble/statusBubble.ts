@@ -110,10 +110,12 @@ export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleS
   const [{ state }, transcript, inbox] = await Promise.all([
     readStateSnapshot(resolved.bubblePaths.statePath),
     readTranscriptEnvelopes(resolved.bubblePaths.transcriptPath, {
-      allowMissing: true
+      allowMissing: true,
+      tolerateInvalidEnvelopeLines: true
     }),
     readTranscriptEnvelopes(resolved.bubblePaths.inboxPath, {
-      allowMissing: true
+      allowMissing: true,
+      tolerateInvalidEnvelopeLines: true
     })
   ]);
 

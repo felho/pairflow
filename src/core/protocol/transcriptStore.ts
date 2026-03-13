@@ -63,6 +63,7 @@ export interface AppendProtocolEnvelopesResult {
 export interface ReadTranscriptOptions {
   allowMissing?: boolean;
   toleratePartialFinalLine?: boolean;
+  tolerateInvalidEnvelopeLines?: boolean;
 }
 
 interface ParsedTranscript {
@@ -113,6 +114,7 @@ function parseTranscript(raw: string, options: ReadTranscriptOptions): ParsedTra
   const envelopes: ProtocolEnvelope[] = [];
 
   const toleratePartialFinalLine = options.toleratePartialFinalLine ?? true;
+  const tolerateInvalidEnvelopeLines = options.tolerateInvalidEnvelopeLines ?? false;
   const hasTrailingNewline = raw.endsWith("\n");
 
   let droppedTrailingPartialLine = false;
@@ -135,6 +137,14 @@ function parseTranscript(raw: string, options: ReadTranscriptOptions): ParsedTra
 
       if (canDropTrailingPartialLine) {
         droppedTrailingPartialLine = true;
+        continue;
+      }
+
+      if (
+        tolerateInvalidEnvelopeLines &&
+        error instanceof Error &&
+        /Invalid protocol envelope/u.test(error.message)
+      ) {
         continue;
       }
 
