@@ -39,6 +39,51 @@ export interface ReviewerFindingsAggregate {
   hasNonBlocking: boolean;
 }
 
+export interface SummaryFindingsAssertionEvaluation {
+  hasPositiveAssertion: boolean;
+  evaluatedClauseCount: number;
+  positiveClauseCount: number;
+}
+
+const convergenceSummaryPayloadContradictionReasonCode =
+  "CONVERGENCE_SUMMARY_PAYLOAD_CONTRADICTION";
+const summaryClauseSplitPattern =
+  /(?:[.;!?]|\bbut\b|\bhowever\b|\byet\b|\bthough\b|\bwhile\b|\balthough\b|\bdespite\b|(?<!p[0-3]),(?!\s*(?:were\s+)?(?:resolved|closed|cleared|fixed|addressed|handled)\b)|(?<!\bp[0-3]\s)(?<!\bp[0-3],\s)(?<!\bp[0-3],)\band\b)+/iu;
+const summaryFindingsWordPattern = /\bfindings?\b/iu;
+const summaryNoFindingsPattern =
+  /\b(?:no|zero)\s+(?:(?:open|remaining|active|unresolved)\s+)*findings?\b/iu;
+const summaryNoFindingsFoundPattern =
+  /\b(?:none\s+found|no\s+findings?\s+found)\b/iu;
+const summaryWithoutFindingsPattern = /\bwithout\s+(?:any\s+)?findings?\b/iu;
+const summaryFindingsZeroCountPattern = /\bfindings?\s*[:=]?\s*0\b/iu;
+const summaryFindingsRemainZeroCountPattern =
+  /\bfindings?\s+(?:remain|remaining)\s*[:=]?\s*0\b/iu;
+const summaryZeroFindingsPattern = /\b0\s+findings?\b/iu;
+const summaryNoSeverityFindingsPattern =
+  /\b(?:no|zero)\s+(?:open\s+)?p[0-3]\s+findings?\b/iu;
+const summaryNoSeverityAlternationFindingsPattern =
+  /\b(?:no|zero)\s+(?:open\s+)?p[0-3](?:\s*(?:,\s*and|,|\/|and|or)\s*p[0-3])+\s+findings?\b/iu;
+const summaryNoSeverityFindingsFoundPattern =
+  /\b(?:no|zero|none)\s+(?:open\s+)?p[0-3]\s+findings?\s+found\b/iu;
+const summaryResolvedSeverityFindingsPrefixPattern =
+  /\b(?:addressed|handled|resolved|closed|cleared|fixed)\s+p[0-3]\s+findings?\b/iu;
+const summaryNegatedSeverityFindingsPattern =
+  /\bp[0-3]\s+findings?\s*(?:,\s*)?(?:were|are|remain|remained|became|stay|stayed|seem|seemed|appear|appeared)?\s*(?:not|never)\s+(?:really\s+)?(?:present|open|remaining|active|found|observed|detected|seen|identified)\b/iu;
+const summaryResolvedSeverityFindingsPattern =
+  /\bp[0-3]\s+findings?\s*(?:,\s*)?(?:are|were|remain|remained|have\s+been|had\s+been)?\s*(?:resolved|closed|cleared|fixed|addressed|handled)\b/iu;
+const summaryResolvedFindingsCountPattern =
+  /\b([1-9]\d*)\s+findings?\s*(?:,\s*)?(?:(?:that|which)\s+)?(?:are|were|remain|remained|have\s+been|had\s+been)?\s*(?:resolved|closed|cleared|fixed|addressed|handled)\b/iu;
+const summaryNegatedFindingsCountPattern =
+  /\b([1-9]\d*)\s+findings?\s*(?:,\s*)?(?:were|are|remain|remained|became|stay|stayed|seem|seemed|appear|appeared)?\s*(?:not|never)\s+(?:really\s+)?(?:present|open|remaining|active|unresolved|found|observed|detected|seen|identified)\b/iu;
+const summarySeverityFindingsZeroCountPattern =
+  /\bp[0-3]\s+findings?\s*(?:(?:is|are|were|remain|remained)\s+|[:=]\s*)?0\b/iu;
+const summaryPositiveFindingsCountPattern = /(?:^|[^\w])([1-9]\d*)\s+findings?\b/iu;
+const summaryPositiveFindingsAssignedCountPattern =
+  /\bfindings?\s*[:=]\s*([1-9]\d*)\b/iu;
+const summaryPositiveFindingsSignalPattern =
+  /\b(?:open|remaining|unresolved|active)\s+findings?\b|\bfindings?\s+(?:remain|remaining|left|open|unresolved|active|persist|persists)\b/iu;
+const summarySeverityPattern = /\bp[0-3]\b/iu;
+
 function resolvePolicyPriority(input: {
   reviewArtifactType: ReviewArtifactType;
   priority: FindingPriority;
@@ -151,58 +196,123 @@ export function evaluateReviewerFindingsAggregate(input: {
   };
 }
 
-function parseSummarySeverityCounts(summary: string | undefined): {
-  hasFindingsWord: boolean;
-  p0: number;
-  p1: number;
-  p2: number;
-  p3: number;
-  hasAnyPositiveCount: boolean;
-} {
-  if (summary === undefined) {
-    return {
-      hasFindingsWord: false,
-      p0: 0,
-      p1: 0,
-      p2: 0,
-      p3: 0,
-      hasAnyPositiveCount: false
-    };
+function normalizeSummaryAssertionText(summary: string | undefined): string {
+  if (typeof summary !== "string") {
+    return "";
   }
+  return summary.toLowerCase().replace(/\s+/gu, " ").trim();
+}
 
-  const counts = {
-    p0: 0,
-    p1: 0,
-    p2: 0,
-    p3: 0
-  };
-  const pattern = /(\d+)\s*(?:[x×]\s*)?P([0-3])\b/giu;
-  for (const match of summary.matchAll(pattern)) {
+function splitSummaryIntoClauses(normalizedSummary: string): string[] {
+  if (normalizedSummary.length === 0) {
+    return [];
+  }
+  return normalizedSummary
+    .split(summaryClauseSplitPattern)
+    .map((clause) => clause.trim())
+    .filter((clause) => clause.length > 0);
+}
+
+function parseSeverityCountStats(clause: string): {
+  hasSeverityCount: boolean;
+  hasPositiveSeverityCount: boolean;
+} {
+  const summarySeverityCountPattern = /(\d+)\s*(?:[x×]\s*)?p([0-3])\b/giu;
+  let hasSeverityCount = false;
+  let hasPositiveSeverityCount = false;
+  for (const match of clause.matchAll(summarySeverityCountPattern)) {
     const rawCount = Number.parseInt(match[1] ?? "", 10);
     if (!Number.isFinite(rawCount)) {
       continue;
     }
-    const normalizedCount = Math.max(0, rawCount);
-    const severity = match[2];
-    if (severity === "0") {
-      counts.p0 += normalizedCount;
-    } else if (severity === "1") {
-      counts.p1 += normalizedCount;
-    } else if (severity === "2") {
-      counts.p2 += normalizedCount;
-    } else if (severity === "3") {
-      counts.p3 += normalizedCount;
+    hasSeverityCount = true;
+    if (rawCount > 0) {
+      hasPositiveSeverityCount = true;
+      break;
+    }
+  }
+  return {
+    hasSeverityCount,
+    hasPositiveSeverityCount
+  };
+}
+
+function clauseHasNegationOrZeroGuard(clause: string): boolean {
+  const severityCounts = parseSeverityCountStats(clause);
+  if (
+    summaryNoFindingsPattern.test(clause)
+    || summaryNoFindingsFoundPattern.test(clause)
+    || summaryWithoutFindingsPattern.test(clause)
+    || summaryFindingsZeroCountPattern.test(clause)
+    || summaryFindingsRemainZeroCountPattern.test(clause)
+    || summaryZeroFindingsPattern.test(clause)
+    || summaryNoSeverityFindingsPattern.test(clause)
+    || summaryNoSeverityAlternationFindingsPattern.test(clause)
+    || summaryNoSeverityFindingsFoundPattern.test(clause)
+    || summaryResolvedSeverityFindingsPrefixPattern.test(clause)
+    || summaryNegatedSeverityFindingsPattern.test(clause)
+    || summaryResolvedSeverityFindingsPattern.test(clause)
+    || summaryResolvedFindingsCountPattern.test(clause)
+    || summaryNegatedFindingsCountPattern.test(clause)
+    || summarySeverityFindingsZeroCountPattern.test(clause)
+  ) {
+    if (severityCounts.hasPositiveSeverityCount) {
+      return false;
+    }
+    return true;
+  }
+
+  return (
+    summaryFindingsWordPattern.test(clause)
+    && severityCounts.hasSeverityCount
+    && !severityCounts.hasPositiveSeverityCount
+    && !summaryPositiveFindingsCountPattern.test(clause)
+    && !summaryPositiveFindingsAssignedCountPattern.test(clause)
+  );
+}
+
+function clauseHasPositiveFindingsAssertion(clause: string): boolean {
+  const severityCounts = parseSeverityCountStats(clause);
+  if (severityCounts.hasPositiveSeverityCount) {
+    return true;
+  }
+  if (summaryPositiveFindingsCountPattern.test(clause)) {
+    return true;
+  }
+  if (summaryPositiveFindingsAssignedCountPattern.test(clause)) {
+    return true;
+  }
+  if (summaryPositiveFindingsSignalPattern.test(clause)) {
+    return true;
+  }
+  const hasSeverity = summarySeverityPattern.test(clause);
+  const hasFindingsWord = summaryFindingsWordPattern.test(clause);
+  if (hasSeverity && hasFindingsWord) {
+    return true;
+  }
+  return false;
+}
+
+export function evaluatePositiveSummaryFindingsAssertion(
+  summary: string | undefined
+): SummaryFindingsAssertionEvaluation {
+  const normalized = normalizeSummaryAssertionText(summary);
+  const clauses = splitSummaryIntoClauses(normalized);
+
+  let positiveClauseCount = 0;
+  for (const clause of clauses) {
+    if (clauseHasNegationOrZeroGuard(clause)) {
+      continue;
+    }
+    if (clauseHasPositiveFindingsAssertion(clause)) {
+      positiveClauseCount += 1;
     }
   }
 
   return {
-    hasFindingsWord: /\bfindings?\b/iu.test(summary),
-    p0: counts.p0,
-    p1: counts.p1,
-    p2: counts.p2,
-    p3: counts.p3,
-    hasAnyPositiveCount:
-      counts.p0 + counts.p1 + counts.p2 + counts.p3 > 0
+    hasPositiveAssertion: positiveClauseCount > 0,
+    evaluatedClauseCount: clauses.length,
+    positiveClauseCount
   };
 }
 
@@ -303,16 +413,16 @@ export function validateConvergencePolicy(
       findings: previousReviewerVerdict.payload.findings,
       reviewArtifactType: input.reviewArtifactType
     });
-    const summaryCounts = parseSummarySeverityCounts(
+    const summaryFindingsAssertion = evaluatePositiveSummaryFindingsAssertion(
       previousReviewerVerdict.payload.summary
     );
     if (findingsAggregate.missing) {
       errors.push(
         "Convergence requires previous reviewer PASS to declare findings explicitly (use --finding or --no-findings)."
       );
-      if (summaryCounts.hasAnyPositiveCount) {
+      if (summaryFindingsAssertion.hasPositiveAssertion) {
         errors.push(
-          "Convergence diagnostics: previous reviewer summary reports findings counts, but payload.findings is missing."
+          `${convergenceSummaryPayloadContradictionReasonCode}: Convergence diagnostics: previous reviewer PASS summary asserts positive findings/severity, but payload.findings is missing.`
         );
       }
     } else if (findingsAggregate.invalid) {
@@ -321,11 +431,10 @@ export function validateConvergencePolicy(
       );
     } else if (
       findingsAggregate.findingCount === 0 &&
-      summaryCounts.hasFindingsWord &&
-      summaryCounts.hasAnyPositiveCount
+      summaryFindingsAssertion.hasPositiveAssertion
     ) {
       errors.push(
-        "Convergence blocked: previous reviewer PASS summary reports positive finding counts but payload.findings is empty. Use structured --finding entries instead of summary-only findings."
+        `${convergenceSummaryPayloadContradictionReasonCode}: Convergence blocked: previous reviewer PASS summary asserts positive findings/severity but payload.findings is empty. Use structured --finding entries instead of summary-only findings.`
       );
     } else if (
       findingsAggregate.hasBlocking

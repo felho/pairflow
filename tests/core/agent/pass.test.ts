@@ -504,6 +504,1087 @@ describe("emitPassFromWorkspace", () => {
     expect(result.envelope.payload.findings).toEqual([]);
   });
 
+  it("allows reviewer --no-findings when summary explicitly reports zero findings/severity counts", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_no_findings_zero_summary_01",
+      task: "No-findings zero-count summary guard"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Reviewer clean. 0 findings (0 P0, 0 P1, 0 P2, 0 P3).",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:07:00.000Z")
+    });
+
+    expect(result.envelope.payload.pass_intent).toBe("review");
+    expect(result.envelope.payload.findings).toEqual([]);
+  });
+
+  it("allows reviewer --no-findings when summary says no open severity findings remain", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_no_open_severity_findings_01",
+      task: "No-open-severity-findings summary guard"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Reviewer clean. No open P2 findings remain.",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:07:00.000Z")
+    });
+
+    expect(result.envelope.payload.pass_intent).toBe("review");
+    expect(result.envelope.payload.findings).toEqual([]);
+  });
+
+  it("allows reviewer --no-findings for multi-severity alternation clean phrasing", async () => {
+    for (const [index, summary] of [
+      "No P2 or P3 findings.",
+      "No open P2 or P3 findings remain.",
+      "No P2 and P3 findings remain.",
+      "No open P2 and P3 findings remain.",
+      "No P2, P3 findings remain.",
+      "No open P2, P3 findings remain.",
+      "No P2, P3, and P1 findings remain.",
+      "No open P2, P3, and P1 findings remain.",
+      "No P2,P3,and P1 findings remain.",
+      "No open P2,P3,and P1 findings remain."
+    ].entries()) {
+      const repoPath = await createTempRepo();
+      const bubble = await setupRunningBubbleFixture({
+        repoPath,
+        bubbleId: `b_pass_no_findings_multi_severity_alternation_0${index + 1}`,
+        task: "No-findings multi-severity alternation clean summary guard"
+      });
+
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          state: "RUNNING",
+          round: 1,
+          active_agent: bubble.config.agents.reviewer,
+          active_role: "reviewer",
+          active_since: "2026-02-21T12:06:00.000Z",
+          last_command_at: "2026-02-21T12:06:00.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "RUNNING"
+        }
+      );
+
+      const result = await emitPassFromWorkspace({
+        summary,
+        noFindings: true,
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:07:00.000Z")
+      });
+
+      expect(result.envelope.payload.pass_intent).toBe("review");
+      expect(result.envelope.payload.findings).toEqual([]);
+    }
+  });
+
+  it("allows reviewer --no-findings when summary says no remaining findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_no_remaining_findings_01",
+      task: "No-remaining-findings summary guard"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "No remaining findings.",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:07:00.000Z")
+    });
+
+    expect(result.envelope.payload.pass_intent).toBe("review");
+    expect(result.envelope.payload.findings).toEqual([]);
+  });
+
+  it("allows reviewer --no-findings when summary says no active findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_no_active_findings_01",
+      task: "No-active-findings summary guard"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "No active findings.",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:07:00.000Z")
+    });
+
+    expect(result.envelope.payload.pass_intent).toBe("review");
+    expect(result.envelope.payload.findings).toEqual([]);
+  });
+
+  it("allows reviewer --no-findings when summary uses double-qualifier no-findings phrasing", async () => {
+    for (const [index, summary] of [
+      "No active unresolved findings.",
+      "No unresolved active findings."
+    ].entries()) {
+      const repoPath = await createTempRepo();
+      const bubble = await setupRunningBubbleFixture({
+        repoPath,
+        bubbleId: `b_pass_no_findings_double_qualifier_0${index + 1}`,
+        task: "No-findings double-qualifier clean summary guard"
+      });
+
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          state: "RUNNING",
+          round: 1,
+          active_agent: bubble.config.agents.reviewer,
+          active_role: "reviewer",
+          active_since: "2026-02-21T12:06:00.000Z",
+          last_command_at: "2026-02-21T12:06:00.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "RUNNING"
+        }
+      );
+
+      const result = await emitPassFromWorkspace({
+        summary,
+        noFindings: true,
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:07:00.000Z")
+      });
+
+      expect(result.envelope.payload.pass_intent).toBe("review");
+      expect(result.envelope.payload.findings).toEqual([]);
+    }
+  });
+
+  it("allows reviewer --no-findings when summary says no unresolved findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_no_unresolved_findings_01",
+      task: "No-unresolved-findings summary guard"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "No unresolved findings.",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:07:00.000Z")
+    });
+
+    expect(result.envelope.payload.pass_intent).toBe("review");
+    expect(result.envelope.payload.findings).toEqual([]);
+  });
+
+  it("allows reviewer --no-findings when summary says findings remain: 0", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_findings_remain_zero_01",
+      task: "Findings-remain-zero summary guard"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "findings remain: 0",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:07:00.000Z")
+    });
+
+    expect(result.envelope.payload.pass_intent).toBe("review");
+    expect(result.envelope.payload.findings).toEqual([]);
+  });
+
+  it("allows reviewer --no-findings for severity zero-count phrasing variants", async () => {
+    for (const [index, summary] of [
+      "P2 findings were 0.",
+      "P2 findings are 0.",
+      "P2 findings remained 0."
+    ].entries()) {
+      const repoPath = await createTempRepo();
+      const bubble = await setupRunningBubbleFixture({
+        repoPath,
+        bubbleId: `b_pass_severity_zero_variant_${index + 1}`,
+        task: "Severity zero-count phrasing variant guard"
+      });
+
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          state: "RUNNING",
+          round: 1,
+          active_agent: bubble.config.agents.reviewer,
+          active_role: "reviewer",
+          active_since: "2026-02-21T12:06:00.000Z",
+          last_command_at: "2026-02-21T12:06:00.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "RUNNING"
+        }
+      );
+
+      const result = await emitPassFromWorkspace({
+        summary,
+        noFindings: true,
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:07:00.000Z")
+      });
+
+      expect(result.envelope.payload.pass_intent).toBe("review");
+      expect(result.envelope.payload.findings).toEqual([]);
+    }
+  });
+
+  it("allows reviewer --no-findings when summary says severity findings were not present", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_no_severity_not_present_01",
+      task: "Severity findings negation summary guard"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Reviewer clean. P2 findings were not present in this round.",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:07:00.000Z")
+    });
+
+    expect(result.envelope.payload.pass_intent).toBe("review");
+    expect(result.envelope.payload.findings).toEqual([]);
+  });
+
+  it("allows reviewer --no-findings when summary uses natural negation terminal variants", async () => {
+    for (const [index, summary] of [
+      "P2 findings were not observed.",
+      "P2 findings were not detected.",
+      "P2 findings were not seen.",
+      "P2 findings were not identified.",
+      "P2 findings were never present.",
+      "P2 findings were never observed.",
+      "P2 findings were not really present.",
+      "P2 findings were never really present."
+    ].entries()) {
+      const repoPath = await createTempRepo();
+      const bubble = await setupRunningBubbleFixture({
+        repoPath,
+        bubbleId: `b_pass_no_findings_negation_variants_0${index + 1}`,
+        task: "No-findings negation terminal variants clean summary guard"
+      });
+
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          state: "RUNNING",
+          round: 1,
+          active_agent: bubble.config.agents.reviewer,
+          active_role: "reviewer",
+          active_since: "2026-02-21T12:06:00.000Z",
+          last_command_at: "2026-02-21T12:06:00.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "RUNNING"
+        }
+      );
+
+      const result = await emitPassFromWorkspace({
+        summary,
+        noFindings: true,
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:07:00.000Z")
+      });
+
+      expect(result.envelope.payload.pass_intent).toBe("review");
+      expect(result.envelope.payload.findings).toEqual([]);
+    }
+  });
+
+  it("allows reviewer --no-findings when summary says addressed P2 findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_addressed_p2_findings_01",
+      task: "Addressed-P2-findings summary guard"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Addressed P2 findings.",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:07:00.000Z")
+    });
+
+    expect(result.envelope.payload.pass_intent).toBe("review");
+    expect(result.envelope.payload.findings).toEqual([]);
+  });
+
+  it("allows reviewer --no-findings when summary says severity findings were addressed", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_no_severity_addressed_01",
+      task: "Severity findings addressed summary guard"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Reviewer clean. P2 findings were addressed in this round.",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:07:00.000Z")
+    });
+
+    expect(result.envelope.payload.pass_intent).toBe("review");
+    expect(result.envelope.payload.findings).toEqual([]);
+  });
+
+  it("allows reviewer --no-findings when summary uses disjointed resolved severity phrasing", async () => {
+    for (const [index, summary] of [
+      "P2 findings, resolved.",
+      "P2 findings, were resolved.",
+      "P2 findings had been resolved."
+    ].entries()) {
+      const repoPath = await createTempRepo();
+      const bubble = await setupRunningBubbleFixture({
+        repoPath,
+        bubbleId: `b_pass_no_findings_disjointed_resolved_0${index + 1}`,
+        task: "No-findings disjointed resolved severity clean summary guard"
+      });
+
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          state: "RUNNING",
+          round: 1,
+          active_agent: bubble.config.agents.reviewer,
+          active_role: "reviewer",
+          active_since: "2026-02-21T12:06:00.000Z",
+          last_command_at: "2026-02-21T12:06:00.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "RUNNING"
+        }
+      );
+
+      const result = await emitPassFromWorkspace({
+        summary,
+        noFindings: true,
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:07:00.000Z")
+      });
+
+      expect(result.envelope.payload.pass_intent).toBe("review");
+      expect(result.envelope.payload.findings).toEqual([]);
+    }
+  });
+
+  it("allows reviewer --no-findings when summary uses count-prefixed resolved phrasing", async () => {
+    for (const [index, summary] of [
+      "2 findings were resolved.",
+      "2 findings are resolved.",
+      "2 findings remained resolved.",
+      "2 findings had been resolved.",
+      "2 findings that were resolved.",
+      "2 findings which were resolved.",
+      "2 findings were closed.",
+      "2 findings were fixed.",
+      "2 findings were handled.",
+      "2 findings were addressed.",
+      "2 findings were cleared."
+    ].entries()) {
+      const repoPath = await createTempRepo();
+      const bubble = await setupRunningBubbleFixture({
+        repoPath,
+        bubbleId: `b_pass_no_findings_count_prefixed_resolved_0${index + 1}`,
+        task: "No-findings count-prefixed resolved clean summary guard"
+      });
+
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          state: "RUNNING",
+          round: 1,
+          active_agent: bubble.config.agents.reviewer,
+          active_role: "reviewer",
+          active_since: "2026-02-21T12:06:00.000Z",
+          last_command_at: "2026-02-21T12:06:00.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "RUNNING"
+        }
+      );
+
+      const result = await emitPassFromWorkspace({
+        summary,
+        noFindings: true,
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:07:00.000Z")
+      });
+
+      expect(result.envelope.payload.pass_intent).toBe("review");
+      expect(result.envelope.payload.findings).toEqual([]);
+    }
+  });
+
+  it("allows reviewer --no-findings when summary uses count-prefixed negation phrasing", async () => {
+    for (const [index, summary] of [
+      "2 findings were not open.",
+      "2 findings were never open."
+    ].entries()) {
+      const repoPath = await createTempRepo();
+      const bubble = await setupRunningBubbleFixture({
+        repoPath,
+        bubbleId: `b_pass_no_findings_count_prefixed_negation_0${index + 1}`,
+        task: "No-findings count-prefixed negation clean summary guard"
+      });
+
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          state: "RUNNING",
+          round: 1,
+          active_agent: bubble.config.agents.reviewer,
+          active_role: "reviewer",
+          active_since: "2026-02-21T12:06:00.000Z",
+          last_command_at: "2026-02-21T12:06:00.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "RUNNING"
+        }
+      );
+
+      const result = await emitPassFromWorkspace({
+        summary,
+        noFindings: true,
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:07:00.000Z")
+      });
+
+      expect(result.envelope.payload.pass_intent).toBe("review");
+      expect(result.envelope.payload.findings).toEqual([]);
+    }
+  });
+
+  it("rejects reviewer --no-findings when summary asserts positive findings/severity", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_no_findings_summary_contradiction_01",
+      task: "No-findings summary contradiction reject"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "No findings from smoke-check, but P2 findings remain open.",
+        noFindings: true,
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/REVIEWER_SUMMARY_FINDINGS_CONTRADICTION/u);
+  });
+
+  it("rejects reviewer --no-findings when comma-separated mixed summary contains positive findings assertion", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_no_findings_summary_comma_mixed_01",
+      task: "No-findings comma mixed summary contradiction reject"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "No findings remain, P2 findings remain open.",
+        noFindings: true,
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/REVIEWER_SUMMARY_FINDINGS_CONTRADICTION/u);
+  });
+
+  it("rejects reviewer --no-findings when conjunction-separated mixed summary contains positive findings assertion", async () => {
+    for (const [index, summary] of [
+      "No findings remain and P2 findings remain open.",
+      "No active findings and P2 findings remain open.",
+      "No unresolved findings and P2 findings remain open.",
+      "0 findings and P2 findings remain open.",
+      "No findings remain and 2 findings remain open."
+    ].entries()) {
+      const repoPath = await createTempRepo();
+      const bubble = await setupRunningBubbleFixture({
+        repoPath,
+        bubbleId: `b_pass_no_findings_summary_and_mixed_0${index + 1}`,
+        task: "No-findings conjunction mixed summary contradiction reject"
+      });
+
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          state: "RUNNING",
+          round: 1,
+          active_agent: bubble.config.agents.reviewer,
+          active_role: "reviewer",
+          active_since: "2026-02-21T12:06:00.000Z",
+          last_command_at: "2026-02-21T12:06:00.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "RUNNING"
+        }
+      );
+
+      await expect(
+        emitPassFromWorkspace({
+          summary,
+          noFindings: true,
+          cwd: bubble.paths.worktreePath
+        })
+      ).rejects.toThrow(/REVIEWER_SUMMARY_FINDINGS_CONTRADICTION/u);
+    }
+  });
+
+  it("rejects reviewer --no-findings when but/however-separated mixed summary contains positive findings assertion", async () => {
+    for (const [index, summary] of [
+      "No findings remain but P2 findings remain open.",
+      "No findings remain however P2 findings remain open."
+    ].entries()) {
+      const repoPath = await createTempRepo();
+      const bubble = await setupRunningBubbleFixture({
+        repoPath,
+        bubbleId: `b_pass_no_findings_summary_but_however_mixed_0${index + 1}`,
+        task: "No-findings but/however mixed summary contradiction reject"
+      });
+
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          state: "RUNNING",
+          round: 1,
+          active_agent: bubble.config.agents.reviewer,
+          active_role: "reviewer",
+          active_since: "2026-02-21T12:06:00.000Z",
+          last_command_at: "2026-02-21T12:06:00.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "RUNNING"
+        }
+      );
+
+      await expect(
+        emitPassFromWorkspace({
+          summary,
+          noFindings: true,
+          cwd: bubble.paths.worktreePath
+        })
+      ).rejects.toThrow(/REVIEWER_SUMMARY_FINDINGS_CONTRADICTION/u);
+    }
+  });
+
+  it("rejects reviewer --no-findings when though/yet-separated mixed summary contains positive findings assertion", async () => {
+    for (const [index, summary] of [
+      "No findings remain though P2 findings remain open.",
+      "No findings remain yet P2 findings remain open."
+    ].entries()) {
+      const repoPath = await createTempRepo();
+      const bubble = await setupRunningBubbleFixture({
+        repoPath,
+        bubbleId: `b_pass_no_findings_summary_though_yet_mixed_0${index + 1}`,
+        task: "No-findings though/yet mixed summary contradiction reject"
+      });
+
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          state: "RUNNING",
+          round: 1,
+          active_agent: bubble.config.agents.reviewer,
+          active_role: "reviewer",
+          active_since: "2026-02-21T12:06:00.000Z",
+          last_command_at: "2026-02-21T12:06:00.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "RUNNING"
+        }
+      );
+
+      await expect(
+        emitPassFromWorkspace({
+          summary,
+          noFindings: true,
+          cwd: bubble.paths.worktreePath
+        })
+      ).rejects.toThrow(/REVIEWER_SUMMARY_FINDINGS_CONTRADICTION/u);
+    }
+  });
+
+  it("rejects reviewer --no-findings when while/although/despite-separated mixed summary contains positive findings assertion", async () => {
+    for (const [index, summary] of [
+      "No findings remain while P2 findings remain open.",
+      "No findings remain although P2 findings remain open.",
+      "No findings remain despite P2 findings remain open."
+    ].entries()) {
+      const repoPath = await createTempRepo();
+      const bubble = await setupRunningBubbleFixture({
+        repoPath,
+        bubbleId: `b_pass_no_findings_summary_while_although_despite_mixed_0${index + 1}`,
+        task: "No-findings while/although/despite mixed summary contradiction reject"
+      });
+
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          state: "RUNNING",
+          round: 1,
+          active_agent: bubble.config.agents.reviewer,
+          active_role: "reviewer",
+          active_since: "2026-02-21T12:06:00.000Z",
+          last_command_at: "2026-02-21T12:06:00.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "RUNNING"
+        }
+      );
+
+      await expect(
+        emitPassFromWorkspace({
+          summary,
+          noFindings: true,
+          cwd: bubble.paths.worktreePath
+        })
+      ).rejects.toThrow(/REVIEWER_SUMMARY_FINDINGS_CONTRADICTION/u);
+    }
+  });
+
+  it("rejects reviewer --no-findings when summary is pure positive-only findings assertion", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_no_findings_summary_positive_only_01",
+      task: "No-findings pure positive-only summary contradiction reject"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "P2 findings remain open.",
+        noFindings: true,
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/REVIEWER_SUMMARY_FINDINGS_CONTRADICTION/u);
+  });
+
+  it("rejects reviewer --no-findings when summary has mixed zero-total and positive-severity count in one clause", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_no_findings_summary_zero_total_mixed_01",
+      task: "No-findings mixed zero-total contradiction reject"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    for (const summary of [
+      "0 findings (1 P2 finding).",
+      "0 findings and 1 P2 finding remain."
+    ]) {
+      await expect(
+        emitPassFromWorkspace({
+          summary,
+          noFindings: true,
+          cwd: bubble.paths.worktreePath
+        })
+      ).rejects.toThrow(/REVIEWER_SUMMARY_FINDINGS_CONTRADICTION/u);
+    }
+  });
+
+  it("rejects reviewer --no-findings when summary has positive total-findings count with all-zero severity counts", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_no_findings_summary_positive_total_zero_severity_01",
+      task: "No-findings positive-total/zero-severity contradiction reject"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    for (const summary of [
+      "2 findings (0 P0, 0 P1, 0 P2, 0 P3).",
+      "2 findings and 0 P2 findings."
+    ]) {
+      await expect(
+        emitPassFromWorkspace({
+          summary,
+          noFindings: true,
+          cwd: bubble.paths.worktreePath
+        })
+      ).rejects.toThrow(/REVIEWER_SUMMARY_FINDINGS_CONTRADICTION/u);
+    }
+  });
+
+  it("rejects reviewer --no-findings when summary uses no-space positive findings count notation", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_no_findings_summary_no_space_positive_count_01",
+      task: "No-findings no-space positive-count contradiction reject"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    for (const summary of [
+      "findings=5",
+      "findings:5",
+      "findings = 5",
+      "findings= 5",
+      "findings =5"
+    ]) {
+      await expect(
+        emitPassFromWorkspace({
+          summary,
+          noFindings: true,
+          cwd: bubble.paths.worktreePath
+        })
+      ).rejects.toThrow(/REVIEWER_SUMMARY_FINDINGS_CONTRADICTION/u);
+    }
+  });
+
+  it("allows reviewer --no-findings when summary contains severity-only status phrasing without findings context", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_severity_only_status_01",
+      task: "Severity-only status phrasing should not contradict no-findings"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Project status: P2 active rollout.",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:07:00.000Z")
+    });
+
+    expect(result.envelope.payload.pass_intent).toBe("review");
+    expect(result.envelope.payload.findings).toEqual([]);
+  });
+
   it("rejects reviewer --no-findings via pass at round>=severity_gate_round with no side effects", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -550,6 +1631,46 @@ describe("emitPassFromWorkspace", () => {
     expect(transcriptAfter).toEqual(transcriptBefore);
     const stateAfter = await readStateSnapshot(bubble.paths.statePath);
     expect(stateAfter.state).toEqual(stateBefore.state);
+  });
+
+  it("keeps post-gate no-findings reason-code precedence over summary contradiction checks", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_post_gate_no_findings_precedence_01",
+      task: "Post-gate no-findings reason precedence"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 4,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-03-01T12:00:00.000Z",
+        last_command_at: "2026-03-01T12:00:00.000Z",
+        round_role_history: buildRoundRoleHistoryThroughRound({
+          throughRound: 4,
+          implementer: bubble.config.agents.implementer,
+          reviewer: bubble.config.agents.reviewer
+        })
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "No findings remain, but P2 findings are still open.",
+        noFindings: true,
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(/REVIEWER_PASS_NO_FINDINGS_POST_GATE/u);
   });
 
   it("rejects reviewer non-blocking-only pass at round>=severity_gate_round with no side effects", async () => {
