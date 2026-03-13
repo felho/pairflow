@@ -429,14 +429,24 @@ export async function emitConvergedFromWorkspace(
   });
 
   const emitDeliverySafe = async (
-    envelope: ProtocolEnvelope
+    envelope: ProtocolEnvelope,
+    options?: {
+      initialDelayMs?: number;
+      deliveryAttempts?: number;
+    }
   ): Promise<EmitTmuxDeliveryNotificationResult> =>
     emitDelivery({
       bubbleId: resolved.bubbleId,
       bubbleConfig: resolved.bubbleConfig,
       sessionsPath: resolved.bubblePaths.sessionsPath,
       envelope,
-      messageRef: gateRef
+      messageRef: gateRef,
+      ...(options?.initialDelayMs !== undefined
+        ? { initialDelayMs: options.initialDelayMs }
+        : {}),
+      ...(options?.deliveryAttempts !== undefined
+        ? { deliveryAttempts: options.deliveryAttempts }
+        : {})
     }).catch(() => ({
       delivered: false,
       message: "",
@@ -458,23 +468,45 @@ export async function emitConvergedFromWorkspace(
         ]
       : [gateResult.gateEnvelope];
   // Optional UX signal; never block protocol/state progression on notification failure.
-  const deliveryResults = await Promise.all(
+  let deliveryResults = await Promise.all(
     recipientEnvelopes.map((envelope) => emitDeliverySafe(envelope))
   );
+  let deliveryRetried = false;
+  const primaryAutoReworkDelivery = deliveryResults[0];
+  const shouldRetryAutoReworkDelivery =
+    gateResult.route === "auto_rework" &&
+    recipientEnvelopes.length === 1 &&
+    primaryAutoReworkDelivery !== undefined &&
+    !primaryAutoReworkDelivery.delivered &&
+    (
+      primaryAutoReworkDelivery.reason === "delivery_unconfirmed" ||
+      primaryAutoReworkDelivery.reason === "tmux_send_failed"
+    );
+  if (shouldRetryAutoReworkDelivery) {
+    deliveryRetried = true;
+    deliveryResults = [
+      await emitDeliverySafe(recipientEnvelopes[0]!, {
+        // Auto-rework target pane can still be spinning up after gate routing.
+        // Give the CLI extra warm-up + probe attempts before giving up.
+        initialDelayMs: 5000,
+        deliveryAttempts: 6
+      })
+    ];
+  }
 
   const failedDeliveryCount = deliveryResults.filter((delivery) => !delivery.delivered).length;
   const aggregatedDeliveryReason = resolveAggregateConvergedDeliveryReason(deliveryResults);
   const convergedDelivery = failedDeliveryCount === 0
     ? {
         delivered: true,
-        retried: false
+        retried: deliveryRetried
       }
     : {
         delivered: false,
         ...(aggregatedDeliveryReason !== undefined
           ? { reason: aggregatedDeliveryReason }
           : {}),
-        retried: false
+        retried: deliveryRetried
       };
 
   // Optional UX signal; never block protocol/state progression on notification failure.

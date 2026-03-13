@@ -190,6 +190,15 @@ async function handleConvergedCommand(args: string[]): Promise<number> {
   process.stdout.write(
     `CONVERGENCE recorded for ${result.bubbleId}: ${result.convergenceEnvelope.id}; ${handoffDescription}\n`
   );
+  if (result.delivery !== undefined && !result.delivery.delivered) {
+    const guidance =
+      result.approvalRequestEnvelope.type === "APPROVAL_REQUEST"
+        ? `Use \`pairflow bubble status --id ${result.bubbleId}\` to inspect approval state, then \`pairflow bubble approve --id ${result.bubbleId}\`, \`pairflow bubble request-rework --id ${result.bubbleId}\`, or \`pairflow bubble reply --id ${result.bubbleId}\` as appropriate.`
+        : `Use \`pairflow bubble status --id ${result.bubbleId}\` and \`pairflow bubble resume --id ${result.bubbleId}\` if the implementer did not start after auto rework dispatch.`;
+    process.stderr.write(
+      `Warning: handoff delivery to active pane was not confirmed (reason: ${result.delivery.reason ?? "unknown"}${result.delivery.retried ? ", retried" : ""}). ${guidance}\n`
+    );
+  }
   return 0;
 }
 

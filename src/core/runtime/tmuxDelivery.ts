@@ -384,10 +384,7 @@ async function checkMarkerStatus(
   // Find the last prompt line.  Claude Code renders `>` (or `❯`) at the start
   // of its input area.  Everything after that line is the current input buffer.
   const lines = output.split("\n");
-  const lastPromptIdx = findLastIndex(
-    lines,
-    (l) => /^\s*[>❯]/.test(l)
-  );
+  const lastPromptIdx = findLastIndex(lines, isAgentPromptLine);
   if (lastPromptIdx < 0) {
     // No prompt visible — marker is in output area.
     return "submitted";
@@ -409,6 +406,12 @@ function findLastIndex(arr: string[], predicate: (item: string) => boolean): num
     }
   }
   return -1;
+}
+
+function isAgentPromptLine(line: string): boolean {
+  // Some terminal layouts prefix prompt lines with pane border glyphs (for
+  // example: `│ ❯`). Treat those as prompt lines too.
+  return /^\s*(?:[|│┃]\s*)*[>❯]/u.test(line);
 }
 
 export async function emitTmuxDeliveryNotification(
@@ -643,7 +646,7 @@ export async function retryStuckAgentInput(
   // Check if the [pairflow] marker is stuck in the input buffer
   // (after the last prompt line) rather than in the output area.
   const lines = output.split("\n");
-  const lastPromptIdx = findLastIndex(lines, (l) => /^\s*[>❯]/.test(l));
+  const lastPromptIdx = findLastIndex(lines, isAgentPromptLine);
   if (lastPromptIdx < 0) {
     // No prompt visible — marker is in output area, not stuck.
     return { retried: false, reason: "not_stuck" };

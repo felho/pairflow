@@ -366,6 +366,102 @@ describe("emitConvergedFromWorkspace", () => {
     });
   });
 
+  it("retries auto-rework delivery once with warm-up when first delivery is unconfirmed", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupConvergedCandidateBubble(repoPath, "b_converged_notify_retry_01");
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const calls: Array<{
+      recipient: string;
+      initialDelayMs?: number;
+      deliveryAttempts?: number;
+    }> = [];
+
+    const result = await emitConvergedFromWorkspace(
+      {
+        summary: "Auto rework route with retry.",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-22T09:04:31.000Z")
+      },
+      {
+        applyMetaReviewGateOnConvergence: async () => ({
+          bubbleId: bubble.bubbleId,
+          route: "auto_rework",
+          gateSequence: 1001,
+          gateEnvelope: {
+            id: "msg_auto_rework_retry_01",
+            ts: "2026-02-22T09:04:31.000Z",
+            bubble_id: bubble.bubbleId,
+            sender: "orchestrator",
+            recipient: bubble.config.agents.implementer,
+            type: "APPROVAL_DECISION",
+            round: loaded.state.round,
+            payload: {
+              decision: "revise",
+              message: "Implement retry-safe auto rework patch.",
+              metadata: {
+                actor: "meta-review-gate"
+              }
+            },
+            refs: []
+          },
+          state: {
+            ...loaded.state,
+            state: "RUNNING",
+            round: loaded.state.round + 1,
+            active_agent: bubble.config.agents.implementer,
+            active_role: "implementer",
+            active_since: "2026-02-22T09:04:31.000Z",
+            last_command_at: "2026-02-22T09:04:31.000Z"
+          }
+        }),
+        recoverMetaReviewGateFromSnapshot: async () => {
+          throw new Error("recoverMetaReviewGateFromSnapshot should not be called");
+        },
+        emitTmuxDeliveryNotification: (input) => {
+          calls.push({
+            recipient: input.envelope.recipient,
+            ...(input.initialDelayMs !== undefined
+              ? { initialDelayMs: input.initialDelayMs }
+              : {}),
+            ...(input.deliveryAttempts !== undefined
+              ? { deliveryAttempts: input.deliveryAttempts }
+              : {})
+          });
+          if (calls.length === 1) {
+            return Promise.resolve({
+              delivered: false,
+              sessionName: "pf-b_converged_notify_retry_01",
+              message: "not confirmed",
+              reason: "delivery_unconfirmed"
+            });
+          }
+          return Promise.resolve({
+            delivered: true,
+            sessionName: "pf-b_converged_notify_retry_01",
+            message: "ok"
+          });
+        }
+      }
+    );
+
+    expect(calls).toHaveLength(2);
+    expect(calls[0]).toMatchObject({
+      recipient: bubble.config.agents.implementer
+    });
+    expect(calls[0]?.initialDelayMs).toBeUndefined();
+    expect(calls[0]?.deliveryAttempts).toBeUndefined();
+    expect(calls[1]).toMatchObject({
+      recipient: bubble.config.agents.implementer,
+      initialDelayMs: 5000,
+      deliveryAttempts: 6
+    });
+    expect(result.gateRoute).toBe("auto_rework");
+    expect(result.delivery).toEqual({
+      delivered: true,
+      retried: true
+    });
+  });
+
   it(
     "enters META_REVIEW_RUNNING without synchronous gate-timeout ownership when structured channel is available",
     { timeout: 10_000 },

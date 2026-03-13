@@ -1970,7 +1970,63 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(enterRetries.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("returns delivery_unconfirmed when marker never appears", async () => {
+  it("detects marker stuck when prompt line has pane-border prefix", async () => {
+    const calls: string[][] = [];
+    let captureCount = 0;
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        captureCount += 1;
+        if (captureCount <= 2) {
+          return Promise.resolve({
+            stdout: [
+              "Claude Code is ready.",
+              "",
+              "│ ❯ # [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md."
+            ].join("\n"),
+            stderr: "",
+            exitCode: 0
+          });
+        }
+        return Promise.resolve({
+          stdout: [
+            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md.",
+            "",
+            "│ ❯"
+          ].join("\n"),
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope(),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry()),
+      deliveryAttempts: 3
+    });
+
+    expect(result.delivered).toBe(true);
+    const enterRetries = calls.filter(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.2" &&
+        call[3] === "Enter" &&
+        call.length === 4
+    );
+    expect(enterRetries.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("returns delivery_unconfirmed when marker never appears", { timeout: 10_000 }, async () => {
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
       if (args[0] === "capture-pane") {
         return Promise.resolve({
@@ -2091,6 +2147,42 @@ describe("retryStuckAgentInput", () => {
             "Claude Code is ready.",
             "",
             "❯ # [pairflow] r1 PASS codex->claude msg=msg_123 ref=handoff.md."
+          ].join("\n"),
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({ stdout: "", stderr: "", exitCode: 0 });
+    };
+
+    const result = await retryStuckAgentInput({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/sessions.json",
+      activeAgent: "claude",
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result.retried).toBe(true);
+    expect(calls).toContainEqual([
+      "send-keys",
+      "-t",
+      "pf-b_delivery_01:0.2",
+      "Enter"
+    ]);
+  });
+
+  it("treats pane-border-prefixed prompt as stuck-input prompt marker", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout: [
+            "Claude Code is ready.",
+            "",
+            "│ ❯ # [pairflow] r1 PASS codex->claude msg=msg_123 ref=handoff.md."
           ].join("\n"),
           stderr: "",
           exitCode: 0
