@@ -4,6 +4,8 @@ artifact_id: task_pairflow_four_issue_hardening_three_phase_v1
 title: "Pairflow Reviewer/Convergence/Meta-Review Hardening (Four Issues, Three Phases)"
 status: draft
 phase: phase1-phase3
+depends_on:
+  - plans/tasks/pairflow-summary-claim-canonicalization-foundation-phase1.md
 target_files:
   - src/core/reviewer/testEvidence.ts
   - src/core/agent/pass.ts
@@ -36,6 +38,15 @@ owners:
 ### Goal
 
 Close four distinct but related reliability/safety gaps in reviewer evidence trust, summary consistency, and meta-review round continuity with a phased delivery model that keeps blast radius controlled and testable.
+
+### Decision Snapshot (2026-03-13)
+
+1. Phase 2 is accepted and can be closed/merged as implemented hardening baseline.
+2. Before Phase 3 implementation, a separate canonicalization foundation task must land:
+   - `plans/tasks/pairflow-summary-claim-canonicalization-foundation-phase1.md`
+3. Phase 3 proceeds in slim mode on top of that foundation:
+   - keep artifact parity/run-linkage/diagnostics contracts,
+   - avoid extending free-form summary NLP parsing as primary gate input.
 
 ### Superseded Task Intents (Consolidated)
 
@@ -127,11 +138,12 @@ Exit criteria:
 3. Negation/zero-count guards avoid false positives.
 4. Mixed-clause summaries (`no findings ..., but P2 findings remain ...`) are classified deterministically as positive assertion.
 
-### Phase 3 - Meta-Review Findings Artifactization + Round Continuity (I4)
+### Phase 3 (Slim) - Meta-Review Findings Artifactization + Round Continuity (I4)
 
 Objective:
-1. Require auditable structured findings artifact when summary claims positive findings.
+1. Require auditable structured findings artifact when the structured findings-claim state indicates open findings.
 2. Persist continuity metadata (counts/digest/status) and surface it in gate/approval/CLI diagnostics.
+3. Consume claim state from canonical structured fields produced by the foundation task, not from new free-form summary parsing logic.
 
 Primary files:
 1. `src/core/bubble/metaReview.ts`
@@ -146,11 +158,11 @@ Primary files:
 10. `tests/cli/bubbleMetaReviewCommand.test.ts`
 
 Exit criteria:
-1. Positive findings claim without artifactized findings is rejected/fail-closed.
+1. Structured positive findings claim without artifactized findings is rejected/fail-closed.
 2. Claimed count vs artifact count mismatch is rejected/fail-closed.
 3. Approval/gate metadata carries deterministic parity fields.
 4. Resume/CLI diagnostics show claimed/artifactized counts and parity status.
-5. Positive claim with missing/unlinkable same-run metadata (`meta_review_run_id`) is rejected/fail-closed with deterministic reason code.
+5. Structured positive claim with missing/unlinkable same-run metadata (`meta_review_run_id`) is rejected/fail-closed with deterministic reason code.
 6. Artifact digest/parity metadata unavailable path is rejected/fail-closed with deterministic reason code (`META_REVIEW_FINDINGS_PARITY_GUARD`).
 
 ## L1 - Change Contract
@@ -177,7 +189,7 @@ Exit criteria:
    - evaluate clause-level negation/zero-count guards first,
    - then evaluate positive finding/severity assertions,
    - mixed summaries are positive if any unguarded positive clause remains.
-4. Phase 3 parity checks are strict for positive-claim runs:
+4. Phase 3 parity checks are strict for positive-claim runs (claim source: structured fields from canonicalization foundation task):
    - missing `same_run_findings_artifact` => fail-closed,
    - missing run identity linkage metadata => fail-closed,
    - count mismatch => fail-closed.
@@ -211,6 +223,8 @@ Exit criteria:
    - `findings_digest_sha256`
    - `artifact_status`
    - `meta_review_run_id`
+   - `findings_claim_state`
+   - `findings_claim_source`
 4. `APPROVAL_REQUEST.payload.metadata` becomes additive with findings parity fields:
    - `findings_claimed_open_total`
    - `findings_artifact_open_total`
@@ -218,6 +232,7 @@ Exit criteria:
    - `findings_digest_sha256`
    - `meta_review_run_id`
 5. Any mismatch/missing required parity data under positive claim must fail closed.
+6. In Phase 3, parity and gate routing must rely on structured claim fields; free-form summary parsing may be used for diagnostics only.
 
 ### 4) Error and Fallback Contract
 
@@ -237,7 +252,7 @@ Exit criteria:
 | Type | Items | Priority |
 |---|---|---|
 | must-use | canonical artifact/log path policies and current reason code namespaces | P1 |
-| must-use | deterministic clause-scoped summary marker detection and guard semantics | P1 |
+| must-use | canonical structured claim fields for findings state (`findings_claim_state`, `findings_claim_source`) in Phase 3 gating/parity paths | P1 |
 | must-not-use | summary-only trust or summary-only auditable findings truth | P1 |
 | must-not-use | broad alias regex that may classify unrelated commands as required checks | P1 |
 | must-not-use | manual transcript rewriting as continuity recovery mechanism | P1 |
@@ -267,13 +282,15 @@ Exit criteria:
 
 1. Complete Phase 1 before starting Phase 2.
 2. Complete Phase 2 before starting Phase 3.
-3. Do not merge partial phase work without passing that phase's exit criteria + tests.
+3. Complete canonicalization foundation task (`pairflow-summary-claim-canonicalization-foundation-phase1.md`) before starting Phase 3.
+4. Do not merge partial phase work without passing that phase's exit criteria + tests.
 
 ### Phase Interlock Gates (No Cross-Phase Drift)
 
 1. Phase 2 implementation cannot begin until Phase 1 alias closed-set and trust fail-closed tests (T1-T5) are green in the same branch.
 2. Phase 3 implementation cannot begin until Phase 2 summary classifier precedence tests (T6-T9) are green in the same branch.
-3. Any regression in an already-closed phase re-opens that phase and blocks forward merge.
+3. Phase 3 implementation cannot begin until canonicalization foundation contract/tests are green in the same branch.
+4. Any regression in an already-closed phase re-opens that phase and blocks forward merge.
 
 ### Acceptance Criteria (Task-Level)
 
@@ -283,7 +300,7 @@ Exit criteria:
 4. AC4: All four issues (I1-I4) have direct rule + call-site + test traceability.
 5. AC5: Final behavior remains fail-closed for ambiguity across all phases.
 6. AC6: Contradiction/parity fail-closed paths emit deterministic reason codes (no generic fallback wording) for I1 and I4.
-7. AC7: Positive-claim meta-review rounds persist run-linkage metadata (`meta_review_run_id`) through report, gate, and approval metadata.
+7. AC7: Positive-claim meta-review rounds persist run-linkage metadata (`meta_review_run_id`) through report, gate, and approval metadata, with claim source set to structured canonical fields.
 8. AC8: Negative controls exist for alias over-match, mixed negation/positive summary clauses, and Phase 3 parity/linkage guard failures to prevent optimistic false passes.
 
 ### Acceptance Traceability Matrix
@@ -315,4 +332,4 @@ Mark this task `IMPLEMENTABLE` only when:
 3. Operator-facing diagnostics are deterministic for both trust and parity failures.
 4. Phase 1 alias families remain closed-set and explicitly tested for over-match rejection.
 5. Phase 2 summary classifier precedence is documented and test-locked (guard-first, then positives).
-6. Phase 3 positive-claim parity path has machine-verifiable same-run linkage (`meta_review_run_id`) end-to-end.
+6. Phase 3 positive-claim parity path has machine-verifiable same-run linkage (`meta_review_run_id`) end-to-end, and is driven by structured claim fields rather than new prose parsing logic.
