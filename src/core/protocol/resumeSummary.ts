@@ -1,7 +1,11 @@
 import { readTranscriptEnvelopes } from "./transcriptStore.js";
 import type { Finding } from "../../types/findings.js";
 import { resolveFindingPriority } from "../../types/findings.js";
-import type { ProtocolEnvelope } from "../../types/protocol.js";
+import {
+  isFindingsClaimSource,
+  isFindingsClaimState,
+  type ProtocolEnvelope
+} from "../../types/protocol.js";
 
 const MAX_SUMMARY_CHARS = 3_800;
 const MAX_SUMMARY_LINES = 42;
@@ -61,6 +65,14 @@ function extractPayloadExcerpt(envelope: ProtocolEnvelope): string {
   if (Array.isArray(payload.findings)) {
     fields.push(`findings=${payload.findings.length}`);
   }
+  if (
+    isFindingsClaimState(payload.findings_claim_state) &&
+    isFindingsClaimSource(payload.findings_claim_source)
+  ) {
+    fields.push(
+      `findings_claim=${payload.findings_claim_state}@${payload.findings_claim_source}`
+    );
+  }
 
   if (fields.length === 0) {
     return "payload=(none)";
@@ -87,7 +99,12 @@ function formatPassEvent(envelope: ProtocolEnvelope): string {
     findings.length > 0
       ? ` findings=[${findings.join(" | ")}${envelope.payload.findings!.length > MAX_FINDINGS_PER_PASS ? " | ..." : ""}]`
       : "";
-  return `- PASS r${envelope.round} ${envelope.sender}->${envelope.recipient}: ${summary}${findingsText}`;
+  const claimText =
+    isFindingsClaimState(envelope.payload.findings_claim_state) &&
+      isFindingsClaimSource(envelope.payload.findings_claim_source)
+      ? ` claim=${envelope.payload.findings_claim_state}@${envelope.payload.findings_claim_source}`
+      : "";
+  return `- PASS r${envelope.round} ${envelope.sender}->${envelope.recipient}: ${summary}${claimText}${findingsText}`;
 }
 
 function formatFlowEvent(envelope: ProtocolEnvelope): string {

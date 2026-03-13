@@ -19,6 +19,8 @@ import {
 } from "../../types/findings.js";
 import {
   isApprovalDecision,
+  isFindingsClaimSource,
+  isFindingsClaimState,
   isPassIntent,
   isProtocolMessageType,
   isProtocolParticipant,
@@ -31,6 +33,8 @@ const allowedPayloadKeys = new Set([
   "message",
   "decision",
   "pass_intent",
+  "findings_claim_state",
+  "findings_claim_source",
   "findings",
   "metadata"
 ]);
@@ -233,6 +237,41 @@ function validatePayloadByType(
       message: "Must be one of: task, review, fix_request"
     });
   }
+  if (
+    payload.findings_claim_state !== undefined &&
+    !isFindingsClaimState(payload.findings_claim_state)
+  ) {
+    errors.push({
+      path: "payload.findings_claim_state",
+      message: "Must be one of: clean, open_findings, unknown"
+    });
+  }
+  if (
+    payload.findings_claim_source !== undefined &&
+    !isFindingsClaimSource(payload.findings_claim_source)
+  ) {
+    errors.push({
+      path: "payload.findings_claim_source",
+      message:
+        "Must be one of: payload_flags, payload_findings_count, legacy_summary_parser, meta_review_artifact"
+    });
+  }
+  const hasClaimStateField = payload.findings_claim_state !== undefined;
+  const hasClaimSourceField = payload.findings_claim_source !== undefined;
+  if (hasClaimStateField !== hasClaimSourceField) {
+    if (!hasClaimStateField) {
+      errors.push({
+        path: "payload.findings_claim_state",
+        message: "Required when payload.findings_claim_source is provided"
+      });
+    }
+    if (!hasClaimSourceField) {
+      errors.push({
+        path: "payload.findings_claim_source",
+        message: "Required when payload.findings_claim_state is provided"
+      });
+    }
+  }
 
   if (payload.metadata !== undefined && !isRecord(payload.metadata)) {
     errors.push({
@@ -261,6 +300,12 @@ function validatePayloadByType(
   }
   if (isPassIntent(payload.pass_intent)) {
     validatedPayload.pass_intent = payload.pass_intent;
+  }
+  if (isFindingsClaimState(payload.findings_claim_state)) {
+    validatedPayload.findings_claim_state = payload.findings_claim_state;
+  }
+  if (isFindingsClaimSource(payload.findings_claim_source)) {
+    validatedPayload.findings_claim_source = payload.findings_claim_source;
   }
   if (findings !== undefined) {
     validatedPayload.findings = findings;

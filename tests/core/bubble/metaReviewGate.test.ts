@@ -433,6 +433,27 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       reworkTargetMessage: "Fix edge-case behavior.",
       updatedAt: "2026-03-12T12:12:01.000Z"
     });
+    await writeFileFs(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      `${JSON.stringify(
+        {
+          bubble_id: bubble.bubbleId,
+          recommendation: "rework",
+          summary: "Need one more rework.",
+          report_ref: "artifacts/meta-review-last.md",
+          report_json: {
+            findings_claim_state: "open_findings",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 1,
+            findings_artifact_ref: "artifacts/rework-findings.json",
+            findings_run_id: "snapshot_rework_01"
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
 
     const recovered = await recoverMetaReviewGateFromSnapshot({
       bubbleId: bubble.bubbleId,
@@ -501,7 +522,14 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         rework_target_message: "Inject rework message.",
         updated_at: "2026-03-12T12:12:31.000Z",
         lifecycle_state: "META_REVIEW_RUNNING",
-        warnings: []
+        warnings: [],
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 2,
+          findings_artifact_ref: "artifacts/rework-findings.json",
+          findings_run_id: "run_recover_rework_injected_01"
+        }
       }
     });
 
@@ -527,6 +555,290 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       report_ref: string;
     };
     expect(injectedReportJson.report_ref).toBe("artifacts/meta-review-last.md");
+  });
+
+  it("records parser divergence as claim_diagnostics without mutating provided warnings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_rework_parser_divergence_01",
+      task: "Recover rework parser divergence diagnostics"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:35.000Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const providedWarnings = [
+      {
+        reason_code: "META_REVIEW_RUNNER_ERROR" as const,
+        message: "existing warning should remain untouched"
+      }
+    ];
+    const providedRunResult = {
+      bubbleId: bubble.bubbleId,
+      depth: "standard" as const,
+      run_id: "run_recover_rework_parser_divergence_01",
+      status: "success" as const,
+      recommendation: "rework" as const,
+      summary: "No findings remain after follow-up checks.",
+      report_ref: "artifacts/custom-report.md",
+      rework_target_message: "Retry after reviewer follow-up.",
+      updated_at: "2026-03-12T12:12:36.000Z",
+      lifecycle_state: "META_REVIEW_RUNNING" as const,
+      warnings: [...providedWarnings],
+      report_json: {
+        findings_claim_state: "open_findings",
+        findings_claim_source: "meta_review_artifact",
+        findings_count: 1,
+        findings_artifact_ref: "artifacts/rework-findings.json",
+        findings_run_id: "run_recover_rework_parser_divergence_01"
+      }
+    };
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:37.000Z"),
+      runResult: providedRunResult
+    });
+
+    expect(recovered.route).toBe("auto_rework");
+    expect(providedRunResult.warnings).toEqual(providedWarnings);
+    expect(recovered.metaReviewRun?.warnings).toEqual(providedWarnings);
+    const claimDiagnostics = recovered.metaReviewRun?.report_json?.claim_diagnostics;
+    expect(Array.isArray(claimDiagnostics)).toBe(true);
+    expect(
+      (claimDiagnostics as unknown[]).some(
+        (entry) =>
+          typeof entry === "string" &&
+          entry.includes("CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC")
+      )
+    ).toBe(true);
+
+    const persistedReportJsonRaw = await readFile(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      "utf8"
+    );
+    const persistedReportJson = JSON.parse(persistedReportJsonRaw) as {
+      report_json?: { claim_diagnostics?: unknown[] };
+    };
+    expect(
+      persistedReportJson.report_json?.claim_diagnostics?.some(
+        (entry) =>
+          typeof entry === "string" &&
+          entry.includes("CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC")
+      )
+    ).toBe(true);
+  });
+
+  it("does not emit claim_diagnostics when parser and structured claim are aligned", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_rework_parser_aligned_01",
+      task: "Recover rework parser aligned diagnostics"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:38.000Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:40.000Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_rework_parser_aligned_01",
+        status: "success",
+        recommendation: "rework",
+        summary: "P2 findings remain open after follow-up checks.",
+        report_ref: "artifacts/custom-report.md",
+        rework_target_message: "Retry after follow-up.",
+        updated_at: "2026-03-12T12:12:39.000Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 1,
+          findings_artifact_ref: "artifacts/rework-findings.json",
+          findings_run_id: "run_recover_rework_parser_aligned_01"
+        }
+      }
+    });
+
+    expect(recovered.route).toBe("auto_rework");
+    expect(recovered.metaReviewRun?.report_json?.claim_diagnostics).toBeUndefined();
+
+    const persistedReportJsonRaw = await readFile(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      "utf8"
+    );
+    const persistedReportJson = JSON.parse(persistedReportJsonRaw) as {
+      report_json?: { claim_diagnostics?: unknown[] };
+    };
+    expect(persistedReportJson.report_json?.claim_diagnostics).toBeUndefined();
+  });
+
+  it("fails closed when report_json findings_claim_state enum is invalid", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_rework_invalid_state_enum_01",
+      task: "Recover rework invalid claim state enum"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:41.000Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:43.000Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_rework_invalid_state_enum_01",
+        status: "success",
+        recommendation: "rework",
+        summary: "Invalid state enum.",
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: "Retry.",
+        updated_at: "2026-03-12T12:12:42.000Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "opened",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 1,
+          findings_artifact_ref: "artifacts/rework-findings.json",
+          findings_run_id: "run_recover_rework_invalid_state_enum_01"
+        }
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_dispatch_failed");
+    expect(recovered.gateEnvelope.payload.summary).toContain("CLAIM_STATE_REQUIRED");
+  });
+
+  it("fails closed when report_json findings_claim_source enum is invalid", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_rework_invalid_source_enum_01",
+      task: "Recover rework invalid claim source enum"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:44.000Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:46.000Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_rework_invalid_source_enum_01",
+        status: "success",
+        recommendation: "rework",
+        summary: "Invalid source enum.",
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: "Retry.",
+        updated_at: "2026-03-12T12:12:45.000Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_guess",
+          findings_count: 1,
+          findings_artifact_ref: "artifacts/rework-findings.json",
+          findings_run_id: "run_recover_rework_invalid_source_enum_01"
+        }
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_dispatch_failed");
+    expect(recovered.gateEnvelope.payload.summary).toContain("CLAIM_SOURCE_INVALID");
+  });
+
+  it("fails closed when approve recommendation carries open_findings structured claim", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_approve_open_claim_01",
+      task: "Recover approve contradictory open claim"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:47.000Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:49.000Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_approve_open_claim_01",
+        status: "success",
+        recommendation: "approve",
+        summary: "Approve but claim says findings are still open.",
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: null,
+        updated_at: "2026-03-12T12:12:48.000Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 1,
+          findings_artifact_ref: "artifacts/rework-findings.json",
+          findings_run_id: "run_recover_approve_open_claim_01"
+        }
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_dispatch_failed");
+    expect(recovered.gateEnvelope.payload.summary).toContain(
+      "recommendation=approve cannot carry findings_claim_state=open_findings"
+    );
   });
 
   it("routes rework recommendation to human_gate_budget_exhausted when auto-rework budget is exhausted", async () => {
@@ -582,7 +894,14 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         rework_target_message: "Would rework if budget allowed.",
         updated_at: "2026-03-12T12:12:41.000Z",
         lifecycle_state: "META_REVIEW_RUNNING",
-        warnings: []
+        warnings: [],
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 1,
+          findings_artifact_ref: "artifacts/rework-findings.json",
+          findings_run_id: "run_recover_budget_exhausted_01"
+        }
       }
     });
 
@@ -593,6 +912,104 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       last_autonomous_recommendation: "rework",
       last_autonomous_rework_target_message: "Would rework if budget allowed."
     });
+  });
+
+  it("fails closed with META_REVIEW_FINDINGS_ARTIFACT_REQUIRED when rework claim lacks artifact/run linkage", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_rework_artifact_required_01",
+      task: "Recover rework missing artifact linkage"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:50.000Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:52.000Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_artifact_required_01",
+        status: "success",
+        recommendation: "rework",
+        summary: "Rework without linkage",
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: "Need another revision.",
+        updated_at: "2026-03-12T12:12:51.000Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 2
+        }
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_dispatch_failed");
+    expect(recovered.gateEnvelope.payload.summary).toContain(
+      "META_REVIEW_FINDINGS_ARTIFACT_REQUIRED"
+    );
+  });
+
+  it("fails closed with META_REVIEW_FINDINGS_COUNT_MISMATCH when rework claim count parity is invalid", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_rework_count_mismatch_01",
+      task: "Recover rework count mismatch"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:55.000Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:57.000Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_count_mismatch_01",
+        status: "success",
+        recommendation: "rework",
+        summary: "Rework with invalid count parity",
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: "Need another revision.",
+        updated_at: "2026-03-12T12:12:56.000Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 0,
+          findings_artifact_ref: "artifacts/rework-findings.json",
+          findings_run_id: "run_recover_count_mismatch_01"
+        }
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_dispatch_failed");
+    expect(recovered.gateEnvelope.payload.summary).toContain(
+      "META_REVIEW_FINDINGS_COUNT_MISMATCH"
+    );
   });
 
   it("routes to human_gate_dispatch_failed when rework snapshot has no target message", async () => {
@@ -650,6 +1067,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       last_autonomous_rework_target_message:
         "Meta-review gate fallback rework target unavailable."
     });
+    expect(recovered.state.meta_review?.sticky_human_gate).toBe(true);
     expect(recovered.metaReviewRun?.rework_target_message).toBeNull();
 
     const dispatchFailedReportMarkdown = await readFile(
@@ -923,6 +1341,61 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       message:
         "artifacts/meta-review-last.md: simulated recover artifact write failure"
     });
+  });
+
+  it("captures report-json artifact parse diagnostics instead of silently swallowing them", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_artifact_parse_diag_01",
+      task: "Recover report-json parse diagnostics"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:14:50.000Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    await writeFileFs(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      "{ invalid json",
+      "utf8"
+    );
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:14:52.000Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_artifact_parse_diag_01",
+        status: "success",
+        recommendation: "approve",
+        summary: "Approve with malformed artifact JSON fallback.",
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: null,
+        updated_at: "2026-03-12T12:14:51.000Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: []
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_approve");
+    const claimDiagnostics = recovered.metaReviewRun?.report_json?.claim_diagnostics;
+    expect(Array.isArray(claimDiagnostics)).toBe(true);
+    expect(
+      (claimDiagnostics as unknown[]).some(
+        (entry) =>
+          typeof entry === "string" &&
+          entry.includes("META_REVIEW_REPORT_JSON_ARTIFACT_PARSE_DIAGNOSTIC")
+      )
+    ).toBe(true);
   });
 
   it("throws state conflict when runResult differs from canonical snapshot", async () => {

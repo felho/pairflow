@@ -45,12 +45,10 @@ function createConvergenceEnvelope(
   };
 }
 
-const missingFindingsRequiredError =
-  "Convergence requires previous reviewer PASS to declare findings explicitly (use --finding or --no-findings).";
-const missingFindingsContradictionError =
-  "CONVERGENCE_SUMMARY_PAYLOAD_CONTRADICTION: Convergence diagnostics: previous reviewer PASS summary asserts positive findings/severity, but payload.findings is missing.";
-const emptyFindingsContradictionError =
-  "CONVERGENCE_SUMMARY_PAYLOAD_CONTRADICTION: Convergence blocked: previous reviewer PASS summary asserts positive findings/severity but payload.findings is empty. Use structured --finding entries instead of summary-only findings.";
+const missingClaimStateError =
+  "CLAIM_STATE_REQUIRED: Convergence requires previous reviewer PASS to declare structured findings claim state/source (payload flags or findings count).";
+const missingFindingsParityError =
+  "Convergence requires previous reviewer PASS to include payload.findings so blocker parity can be evaluated deterministically.";
 
 describe("evaluatePositiveSummaryFindingsAssertion", () => {
   it("treats undefined and empty summaries as non-positive assertions", () => {
@@ -523,7 +521,7 @@ describe("validateConvergencePolicy", () => {
 
     expect(result.ok).toBe(false);
     expect(
-      result.errors.some((error) => error.includes("declare findings explicitly"))
+      result.errors.some((error) => error.includes("CLAIM_STATE_REQUIRED"))
     ).toBe(true);
   });
 
@@ -559,9 +557,267 @@ describe("validateConvergencePolicy", () => {
 
     expect(result.ok).toBe(false);
     expect(result.errors).toEqual([
-      missingFindingsRequiredError,
-      missingFindingsContradictionError
+      missingClaimStateError,
+      missingFindingsParityError
     ]);
+    expect(
+      result.diagnostics.some((entry) =>
+        entry.includes("CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC")
+      )
+    ).toBe(true);
+  });
+
+  it("fails closed when previous reviewer PASS claim source is invalid", () => {
+    const result = validateConvergencePolicy({
+      currentRound: 2,
+      reviewer: "claude",
+      implementer: "codex",
+      reviewArtifactType: "auto",
+      severity_gate_round: 4,
+      roundRoleHistory: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T11:59:00.000Z"
+        },
+        {
+          round: 2,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:01:00.000Z"
+        }
+      ],
+      transcript: [
+        createPassEnvelope({
+          payload: {
+            summary: "Clean handoff.",
+            findings: [],
+            findings_claim_state: "clean",
+            findings_claim_source: "legacy_summary_parser"
+          }
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(
+      result.errors.some((error) => error.includes("CLAIM_SOURCE_INVALID"))
+    ).toBe(true);
+  });
+
+  it("fails closed when previous reviewer PASS declares findings_claim_state without findings_claim_source", () => {
+    const result = validateConvergencePolicy({
+      currentRound: 2,
+      reviewer: "claude",
+      implementer: "codex",
+      reviewArtifactType: "auto",
+      severity_gate_round: 4,
+      roundRoleHistory: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T11:59:00.000Z"
+        },
+        {
+          round: 2,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:01:00.000Z"
+        }
+      ],
+      transcript: [
+        createPassEnvelope({
+          payload: {
+            summary: "Structured state without source.",
+            findings: [],
+            findings_claim_state: "clean"
+          }
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(
+      result.errors.some((error) =>
+        error.includes(
+          "CLAIM_SOURCE_INVALID: previous reviewer PASS findings_claim_source is required when findings_claim_state is provided."
+        )
+      )
+    ).toBe(true);
+  });
+
+  it("fails closed when previous reviewer PASS declares findings_claim_source without findings_claim_state", () => {
+    const result = validateConvergencePolicy({
+      currentRound: 2,
+      reviewer: "claude",
+      implementer: "codex",
+      reviewArtifactType: "auto",
+      severity_gate_round: 4,
+      roundRoleHistory: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T11:59:00.000Z"
+        },
+        {
+          round: 2,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:01:00.000Z"
+        }
+      ],
+      transcript: [
+        createPassEnvelope({
+          payload: {
+            summary: "Structured source without state.",
+            findings: [],
+            findings_claim_source: "payload_flags"
+          }
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(
+      result.errors.some((error) =>
+        error.includes(
+          "CLAIM_STATE_REQUIRED: previous reviewer PASS findings_claim_state is required when findings_claim_source is provided."
+        )
+      )
+    ).toBe(true);
+  });
+
+  it("fails closed when structured claim says clean but payload.findings has items", () => {
+    const result = validateConvergencePolicy({
+      currentRound: 2,
+      reviewer: "claude",
+      implementer: "codex",
+      reviewArtifactType: "auto",
+      severity_gate_round: 4,
+      roundRoleHistory: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T11:59:00.000Z"
+        },
+        {
+          round: 2,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:01:00.000Z"
+        }
+      ],
+      transcript: [
+        createPassEnvelope({
+          payload: {
+            summary: "Structured clean claim with findings payload mismatch.",
+            findings_claim_state: "clean",
+            findings_claim_source: "payload_flags",
+            findings: [
+              {
+                severity: "P2",
+                title: "Non-blocking finding still present."
+              }
+            ]
+          }
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(
+      result.errors.some((error) =>
+        error.includes(
+          "CLAIM_SOURCE_INVALID: Convergence blocked because findings_claim_state=clean but payload.findings contains 1 item(s)."
+        )
+      )
+    ).toBe(true);
+  });
+
+  it("fails closed when structured claim says open_findings but payload.findings is empty", () => {
+    const result = validateConvergencePolicy({
+      currentRound: 2,
+      reviewer: "claude",
+      implementer: "codex",
+      reviewArtifactType: "auto",
+      severity_gate_round: 4,
+      roundRoleHistory: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T11:59:00.000Z"
+        },
+        {
+          round: 2,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:01:00.000Z"
+        }
+      ],
+      transcript: [
+        createPassEnvelope({
+          payload: {
+            summary: "Structured open claim with empty findings payload mismatch.",
+            findings_claim_state: "open_findings",
+            findings_claim_source: "payload_findings_count",
+            findings: []
+          }
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(
+      result.errors.some((error) =>
+        error.includes(
+          "CLAIM_SOURCE_INVALID: Convergence blocked because findings_claim_state=open_findings but payload.findings is empty."
+        )
+      )
+    ).toBe(true);
+  });
+
+  it("fails closed when previous reviewer PASS claim state is unknown", () => {
+    const result = validateConvergencePolicy({
+      currentRound: 2,
+      reviewer: "claude",
+      implementer: "codex",
+      reviewArtifactType: "auto",
+      severity_gate_round: 4,
+      roundRoleHistory: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T11:59:00.000Z"
+        },
+        {
+          round: 2,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:01:00.000Z"
+        }
+      ],
+      transcript: [
+        createPassEnvelope({
+          payload: {
+            summary: "Unable to classify.",
+            findings: [],
+            findings_claim_state: "unknown",
+            findings_claim_source: "payload_flags"
+          }
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(
+      result.errors.some((error) => error.includes("CLAIM_STATE_REQUIRED"))
+    ).toBe(true);
   });
 
   it("flags blocking findings when previous reviewer PASS has P1", () => {
@@ -738,7 +994,7 @@ describe("validateConvergencePolicy", () => {
     expect(result.errors).toHaveLength(0);
   });
 
-  it("rejects convergence when previous reviewer PASS summary reports positive findings counts but findings payload is empty", () => {
+  it("keeps convergence structured-first when summary claims findings but payload claim is clean", () => {
     const result = validateConvergencePolicy({
       currentRound: 2,
       reviewer: "claude",
@@ -769,8 +1025,13 @@ describe("validateConvergencePolicy", () => {
       ]
     });
 
-    expect(result.ok).toBe(false);
-    expect(result.errors).toEqual([emptyFindingsContradictionError]);
+    expect(result.ok).toBe(true);
+    expect(result.errors).toEqual([]);
+    expect(
+      result.diagnostics.some((entry) =>
+        entry.includes("CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC")
+      )
+    ).toBe(true);
   });
 
   it("allows convergence when previous reviewer PASS explicitly reports zero findings with empty findings payload", () => {
@@ -1398,7 +1659,7 @@ describe("validateConvergencePolicy", () => {
     }
   });
 
-  it("rejects convergence when previous reviewer PASS summary uses no-space positive findings count notation with empty findings payload", () => {
+  it("keeps structured-first routing for no-space positive findings count notation with empty findings payload", () => {
     for (const summary of [
       "findings=5",
       "findings:5",
@@ -1436,12 +1697,17 @@ describe("validateConvergencePolicy", () => {
         ]
       });
 
-      expect(result.ok).toBe(false);
-      expect(result.errors).toEqual([emptyFindingsContradictionError]);
+      expect(result.ok).toBe(true);
+      expect(result.errors).toEqual([]);
+      expect(
+        result.diagnostics.some((entry) =>
+          entry.includes("CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC")
+        )
+      ).toBe(true);
     }
   });
 
-  it("rejects convergence when previous reviewer PASS summary has mixed no-findings and positive findings clauses with empty findings payload", () => {
+  it("keeps structured-first routing for mixed no-findings and positive findings clauses with empty findings payload", () => {
     const result = validateConvergencePolicy({
       currentRound: 2,
       reviewer: "claude",
@@ -1472,11 +1738,16 @@ describe("validateConvergencePolicy", () => {
       ]
     });
 
-    expect(result.ok).toBe(false);
-    expect(result.errors).toEqual([emptyFindingsContradictionError]);
+    expect(result.ok).toBe(true);
+    expect(result.errors).toEqual([]);
+    expect(
+      result.diagnostics.some((entry) =>
+        entry.includes("CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC")
+      )
+    ).toBe(true);
   });
 
-  it("rejects convergence when previous reviewer PASS summary has comma-separated mixed clauses with empty findings payload", () => {
+  it("keeps structured-first routing for comma-separated mixed clauses with empty findings payload", () => {
     const result = validateConvergencePolicy({
       currentRound: 2,
       reviewer: "claude",
@@ -1507,11 +1778,16 @@ describe("validateConvergencePolicy", () => {
       ]
     });
 
-    expect(result.ok).toBe(false);
-    expect(result.errors).toEqual([emptyFindingsContradictionError]);
+    expect(result.ok).toBe(true);
+    expect(result.errors).toEqual([]);
+    expect(
+      result.diagnostics.some((entry) =>
+        entry.includes("CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC")
+      )
+    ).toBe(true);
   });
 
-  it("rejects convergence when previous reviewer PASS summary uses but/however delimiters for mixed clauses", () => {
+  it("keeps structured-first routing for but/however delimiter mixed clauses", () => {
     for (const summary of [
       "No findings remain but P2 findings remain open.",
       "No findings remain however P2 findings remain open."
@@ -1546,12 +1822,17 @@ describe("validateConvergencePolicy", () => {
         ]
       });
 
-      expect(result.ok).toBe(false);
-      expect(result.errors).toEqual([emptyFindingsContradictionError]);
+      expect(result.ok).toBe(true);
+      expect(result.errors).toEqual([]);
+      expect(
+        result.diagnostics.some((entry) =>
+          entry.includes("CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC")
+        )
+      ).toBe(true);
     }
   });
 
-  it("rejects convergence when previous reviewer PASS summary uses though/yet delimiters for mixed clauses", () => {
+  it("keeps structured-first routing for though/yet delimiter mixed clauses", () => {
     for (const summary of [
       "No findings remain though P2 findings remain open.",
       "No findings remain yet P2 findings remain open."
@@ -1586,12 +1867,17 @@ describe("validateConvergencePolicy", () => {
         ]
       });
 
-      expect(result.ok).toBe(false);
-      expect(result.errors).toEqual([emptyFindingsContradictionError]);
+      expect(result.ok).toBe(true);
+      expect(result.errors).toEqual([]);
+      expect(
+        result.diagnostics.some((entry) =>
+          entry.includes("CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC")
+        )
+      ).toBe(true);
     }
   });
 
-  it("rejects convergence when previous reviewer PASS summary uses while/although/despite delimiters for mixed clauses", () => {
+  it("keeps structured-first routing for while/although/despite delimiter mixed clauses", () => {
     for (const summary of [
       "No findings remain while P2 findings remain open.",
       "No findings remain although P2 findings remain open.",
@@ -1627,12 +1913,17 @@ describe("validateConvergencePolicy", () => {
         ]
       });
 
-      expect(result.ok).toBe(false);
-      expect(result.errors).toEqual([emptyFindingsContradictionError]);
+      expect(result.ok).toBe(true);
+      expect(result.errors).toEqual([]);
+      expect(
+        result.diagnostics.some((entry) =>
+          entry.includes("CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC")
+        )
+      ).toBe(true);
     }
   });
 
-  it("rejects convergence when previous reviewer PASS summary has conjunction-separated mixed clauses with empty findings payload", () => {
+  it("keeps structured-first routing for conjunction-separated mixed clauses with empty findings payload", () => {
     for (const summary of [
       "No findings remain and P2 findings remain open.",
       "No active findings and P2 findings remain open.",
@@ -1670,16 +1961,17 @@ describe("validateConvergencePolicy", () => {
         ]
       });
 
-      expect(result.ok).toBe(false);
+      expect(result.ok).toBe(true);
+      expect(result.errors).toEqual([]);
       expect(
-        result.errors.some((error) =>
-          error.includes("CONVERGENCE_SUMMARY_PAYLOAD_CONTRADICTION")
+        result.diagnostics.some((entry) =>
+          entry.includes("CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC")
         )
       ).toBe(true);
     }
   });
 
-  it("rejects convergence when previous reviewer PASS summary has mixed zero-total and positive-severity count in one clause", () => {
+  it("keeps structured-first routing for mixed zero-total and positive-severity count clauses", () => {
     for (const summary of [
       "0 findings (1 P2 finding).",
       "0 findings and 1 P2 finding remain."
@@ -1714,16 +2006,17 @@ describe("validateConvergencePolicy", () => {
         ]
       });
 
-      expect(result.ok).toBe(false);
+      expect(result.ok).toBe(true);
+      expect(result.errors).toEqual([]);
       expect(
-        result.errors.some((error) =>
-          error.includes("CONVERGENCE_SUMMARY_PAYLOAD_CONTRADICTION")
+        result.diagnostics.some((entry) =>
+          entry.includes("CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC")
         )
       ).toBe(true);
     }
   });
 
-  it("rejects convergence when previous reviewer PASS summary has positive total-findings count with all-zero severity counts", () => {
+  it("keeps structured-first routing for positive total-findings count with all-zero severity counts", () => {
     for (const summary of [
       "2 findings (0 P0, 0 P1, 0 P2, 0 P3).",
       "2 findings and 0 P2 findings."
@@ -1758,10 +2051,11 @@ describe("validateConvergencePolicy", () => {
         ]
       });
 
-      expect(result.ok).toBe(false);
+      expect(result.ok).toBe(true);
+      expect(result.errors).toEqual([]);
       expect(
-        result.errors.some((error) =>
-          error.includes("CONVERGENCE_SUMMARY_PAYLOAD_CONTRADICTION")
+        result.diagnostics.some((entry) =>
+          entry.includes("CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC")
         )
       ).toBe(true);
     }

@@ -25,6 +25,10 @@ The rollout must stop on any of these codes:
 4. `META_REVIEW_RECONCILE_STATE_MISMATCH`
 5. `ROLLOUT_EVIDENCE_INCOMPLETE`
 6. `META_REVIEW_RUNNER_ERROR`
+7. `CLAIM_STATE_REQUIRED`
+8. `CLAIM_SOURCE_INVALID`
+9. `META_REVIEW_FINDINGS_ARTIFACT_REQUIRED`
+10. `META_REVIEW_FINDINGS_COUNT_MISMATCH`
 
 Any unclassified reason code is treated as blocking until explicitly classified.
 
@@ -47,6 +51,35 @@ Any unclassified reason code is treated as blocking until explicitly classified.
    - test: `pnpm test`, `pnpm run test`, `vitest`, `vitest run`
    - lint: `pnpm lint`, `pnpm run lint`, `eslint`
 5. Script extensions outside the closed set (for example `pnpm run test:ci`) are not accepted as equivalent required-command evidence.
+
+## Structured Findings-Claim Gate Baseline
+
+Gate-critical routing must use canonical claim fields, not prose parsing:
+
+1. PASS payloads must carry `findings_claim_state` and `findings_claim_source` from structured signals.
+2. `legacy_summary_parser` is compatibility-only and cannot be the sole approval gate source.
+3. Meta-review `recommendation=rework` requires structured `report_json` linkage:
+   - `findings_claim_state=open_findings`
+   - `findings_claim_source=meta_review_artifact`
+   - `findings_count>0`
+   - non-empty `findings_artifact_ref`
+   - non-empty `findings_run_id` (must match `run_id` when present)
+4. Missing/invalid claim parity is fail-closed via:
+   - `CLAIM_STATE_REQUIRED`
+   - `CLAIM_SOURCE_INVALID`
+   - `META_REVIEW_FINDINGS_ARTIFACT_REQUIRED`
+   - `META_REVIEW_FINDINGS_COUNT_MISMATCH`
+
+## Compatibility Fallbacks (Documented)
+
+During transition, recover-path report parsing intentionally supports legacy-compatible shapes, but these are treated as compatibility surfaces only:
+
+1. `artifacts/meta-review-last.json` may expose claim fields as flat top-level keys (not only nested under `report_json`).
+2. `findings_count` may be derived from:
+   - explicit integer `findings_count`,
+   - explicit integer `findings`,
+   - array length when `findings` is an array.
+3. Structured claim enums remain strict (`findings_claim_state`, `findings_claim_source`); invalid/half-pair values fail closed.
 
 ## Smoke Checklist
 

@@ -33,7 +33,10 @@ import type {
   MetaReviewRecommendation,
   MetaReviewRunStatus
 } from "../../types/bubble.js";
-import type { MetaReviewSubmissionPayload } from "../../types/protocol.js";
+import {
+  isFindingsClaimState,
+  type MetaReviewSubmissionPayload
+} from "../../types/protocol.js";
 const CANONICAL_META_REVIEW_REPORT_REF = "artifacts/meta-review-last.md";
 const CANONICAL_META_REVIEW_REPORT_JSON_REF = "artifacts/meta-review-last.json";
 
@@ -122,6 +125,7 @@ export interface MetaReviewRunResult {
   updated_at: string;
   lifecycle_state: BubbleStateSnapshot["state"];
   warnings: MetaReviewRunWarning[];
+  report_json?: Record<string, unknown>;
 }
 
 export type MetaReviewSubmitResult = Omit<MetaReviewRunResult, "depth">;
@@ -194,6 +198,62 @@ function normalizeOptionalText(value: string | undefined): string | null {
   }
 
   return value.trim();
+}
+
+function resolveClaimStateFromRecommendation(
+  recommendation: MetaReviewRecommendation
+): "clean" | "open_findings" | "unknown" {
+  if (recommendation === "approve") {
+    return "clean";
+  }
+  if (recommendation === "rework") {
+    return "open_findings";
+  }
+  return "unknown";
+}
+
+function resolveCanonicalMetaReviewReportJson(input: {
+  recommendation: MetaReviewRecommendation;
+  reportJson?: Record<string, unknown>;
+  runId?: string | null;
+}): Record<string, unknown> {
+  const base = input.reportJson ?? {};
+  const rawState = base.findings_claim_state;
+  const claimState = isFindingsClaimState(rawState)
+    ? rawState
+    : resolveClaimStateFromRecommendation(input.recommendation);
+  const claimSource = "meta_review_artifact";
+  const fallbackCount = 0;
+  const countFromFindings = typeof base.findings === "number"
+    && Number.isInteger(base.findings)
+    && base.findings >= 0
+    ? base.findings
+    : Array.isArray(base.findings)
+      ? base.findings.length
+      : undefined;
+  const findingsCount =
+    typeof base.findings_count === "number" &&
+      Number.isInteger(base.findings_count) &&
+      base.findings_count >= 0
+      ? base.findings_count
+      : (countFromFindings ?? fallbackCount);
+  const findingsArtifactRef =
+    isNonEmptyString(base.findings_artifact_ref)
+      ? base.findings_artifact_ref.trim()
+      : null;
+  const findingsRunId =
+    isNonEmptyString(base.findings_run_id)
+      ? base.findings_run_id.trim()
+      : input.runId ?? null;
+
+  return {
+    ...base,
+    findings_claim_state: claimState,
+    findings_claim_source: claimSource,
+    findings_count: findingsCount,
+    findings_artifact_ref: findingsArtifactRef,
+    findings_run_id: findingsRunId
+  };
 }
 
 function shouldRefreshApprovalRequest(
@@ -1066,6 +1126,13 @@ export async function submitMetaReviewResult(
   const reworkTargetMessage = normalizeOptionalText(
     input.rework_target_message ?? undefined
   );
+  const canonicalReportJson = resolveCanonicalMetaReviewReportJson({
+    recommendation,
+    ...(input.report_json !== undefined
+      ? { reportJson: input.report_json }
+      : {}),
+    runId: null
+  });
 
   assertRunPayloadInvariants({
     recommendation,
@@ -1151,7 +1218,7 @@ export async function submitMetaReviewResult(
     report_json_ref: CANONICAL_META_REVIEW_REPORT_JSON_REF,
     rework_target_message: reworkTargetMessage,
     warnings,
-    ...(input.report_json !== undefined ? { report_json: input.report_json } : {})
+    report_json: canonicalReportJson
   };
 
   const artifactWrites = await Promise.allSettled([
@@ -1193,7 +1260,8 @@ export async function submitMetaReviewResult(
     rework_target_message: reworkTargetMessage,
     updated_at: updatedAt,
     lifecycle_state: written.state.state,
-    warnings
+    warnings,
+    report_json: canonicalReportJson
   };
 }
 
@@ -1294,6 +1362,11 @@ export async function runMetaReview(
       message: failure.warningMessage
     });
   }
+  const canonicalReportJson = resolveCanonicalMetaReviewReportJson({
+    recommendation,
+    ...(reportJson !== undefined ? { reportJson } : {}),
+    runId
+  });
 
   assertRunPayloadInvariants({
     recommendation,
@@ -1355,7 +1428,7 @@ export async function runMetaReview(
     report_json_ref: CANONICAL_META_REVIEW_REPORT_JSON_REF,
     rework_target_message: reworkTargetMessage,
     warnings,
-    report_json: reportJson
+    report_json: canonicalReportJson
   };
 
   const artifactWrites = await Promise.allSettled([
@@ -1430,7 +1503,8 @@ export async function runMetaReview(
     rework_target_message: reworkTargetMessage,
     updated_at: updatedAt,
     lifecycle_state: written.state.state,
-    warnings
+    warnings,
+    report_json: canonicalReportJson
   };
 }
 
