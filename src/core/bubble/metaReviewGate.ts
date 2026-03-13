@@ -1,8 +1,9 @@
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { appendProtocolEnvelope, type AppendProtocolEnvelopeResult } from "../protocol/transcriptStore.js";
 import { applyStateTransition } from "../state/machine.js";
+import { isRecord } from "../validation.js";
 import {
   readStateSnapshot,
   StateStoreConflictError,
@@ -31,7 +32,14 @@ import {
   type MetaReviewRunWarning
 } from "./metaReview.js";
 import {
+  claimSourceInvalidReasonCode,
+  claimStateRequiredReasonCode,
+  resolveLegacySummaryFindingsClaimState
+} from "../convergence/policy.js";
+import {
   deliveryTargetRoleMetadataKey,
+  isFindingsClaimSource,
+  isFindingsClaimState,
   type ProtocolEnvelope
 } from "../../types/protocol.js";
 
@@ -86,6 +94,7 @@ export interface RecoverMetaReviewGateFromSnapshotDependencies {
   writeStateSnapshot?: typeof writeStateSnapshot;
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;
   setMetaReviewerPaneBinding?: typeof setMetaReviewerPaneBinding;
+  readFile?: typeof readFile;
   writeFile?: typeof writeFile;
 }
 
@@ -111,6 +120,10 @@ export class MetaReviewGateError extends Error {
 const metaReviewFallbackReportRef = "artifacts/meta-review-last.md";
 const metaReviewFallbackReportJsonRef = "artifacts/meta-review-last.json";
 const metaReviewerAgent: AgentName = "codex";
+const metaReviewFindingsArtifactRequiredReasonCode =
+  "META_REVIEW_FINDINGS_ARTIFACT_REQUIRED";
+const metaReviewFindingsCountMismatchReasonCode =
+  "META_REVIEW_FINDINGS_COUNT_MISMATCH";
 
 function normalizeMetaReviewSnapshot(
   snapshot: BubbleMetaReviewSnapshotState | undefined
@@ -151,7 +164,7 @@ export async function notifyMetaReviewerSubmissionRequest(
   const message = [
     `# [pairflow] bubble=${input.bubbleId} meta-review request round=${input.round}.`,
     "Perform autonomous meta-review now, then submit through structured Pairflow CLI (no pane markers).",
-    `Required command: pairflow bubble meta-review submit --id ${input.bubbleId} --round ${input.round} --recommendation <approve|rework|inconclusive> --summary "<summary>" --report-markdown "<markdown>" [--rework-target-message "<message>"] [--report-json '{"key":"value"}'].`
+    `Required command: pairflow bubble meta-review submit --id ${input.bubbleId} --round ${input.round} --recommendation <approve|rework|inconclusive> --summary "<summary>" --report-markdown "<markdown>" [--rework-target-message "<message>"] [--report-json '{"findings_claim_state":"clean|open_findings|unknown","findings_claim_source":"meta_review_artifact","findings_count":<int>,"findings_artifact_ref":"artifacts/...","findings_run_id":"<run-id>"}'].`
   ].join(" ");
 
   await maybeAcceptClaudeTrustPrompt(runner, input.targetPane).catch(() => undefined);
@@ -367,6 +380,265 @@ function resolveHumanGateRoute(
   return "human_gate_inconclusive";
 }
 
+function resolveMetaReviewReportJsonObject(
+  source: Record<string, unknown> | undefined
+): Record<string, unknown> | undefined {
+  if (source === undefined) {
+    return undefined;
+  }
+  if (isRecord(source.report_json)) {
+    return source.report_json;
+  }
+  const hasFlatClaimFields =
+    source.findings_claim_state !== undefined ||
+    source.findings_claim_source !== undefined ||
+    source.findings_count !== undefined ||
+    source.findings_artifact_ref !== undefined ||
+    source.findings_run_id !== undefined;
+  return hasFlatClaimFields ? source : undefined;
+}
+
+async function readMetaReviewReportJsonArtifact(input: {
+  artifactPath: string;
+  readFileFn: typeof readFile;
+}): Promise<{
+  reportJson?: Record<string, unknown>;
+  diagnostics: string[];
+}> {
+  const diagnostics: string[] = [];
+  let raw: string;
+  try {
+    raw = await input.readFileFn(input.artifactPath, "utf8");
+  } catch (error) {
+    const nodeError = error as NodeJS.ErrnoException;
+    if (nodeError?.code !== "ENOENT") {
+      diagnostics.push(
+        `META_REVIEW_REPORT_JSON_ARTIFACT_READ_DIAGNOSTIC: ${input.artifactPath}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+    return { diagnostics };
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    diagnostics.push(
+      `META_REVIEW_REPORT_JSON_ARTIFACT_PARSE_DIAGNOSTIC: ${input.artifactPath}: ${error instanceof Error ? error.message : String(error)}`
+    );
+    return { diagnostics };
+  }
+  if (!isRecord(parsed)) {
+    diagnostics.push(
+      `META_REVIEW_REPORT_JSON_ARTIFACT_PARSE_DIAGNOSTIC: ${input.artifactPath}: top-level JSON value must be an object.`
+    );
+    return { diagnostics };
+  }
+  const reportJson = resolveMetaReviewReportJsonObject(parsed);
+  if (reportJson === undefined) {
+    diagnostics.push(
+      `META_REVIEW_REPORT_JSON_ARTIFACT_PARSE_DIAGNOSTIC: ${input.artifactPath}: report_json claim object missing.`
+    );
+    return { diagnostics };
+  }
+  return { reportJson, diagnostics };
+}
+
+function resolveFindingsCountFromMetaReviewReportJson(
+  reportJson: Record<string, unknown>
+): number | undefined {
+  const explicitCount = reportJson.findings_count;
+  if (
+    typeof explicitCount === "number" &&
+    Number.isInteger(explicitCount) &&
+    explicitCount >= 0
+  ) {
+    return explicitCount;
+  }
+  const findingsRaw = reportJson.findings;
+  if (
+    typeof findingsRaw === "number" &&
+    Number.isInteger(findingsRaw) &&
+    findingsRaw >= 0
+  ) {
+    return findingsRaw;
+  }
+  if (Array.isArray(findingsRaw)) {
+    return findingsRaw.length;
+  }
+  return undefined;
+}
+
+function resolveStructuredMetaReviewClaimFromReportJson(input: {
+  reportJson: Record<string, unknown>;
+}):
+  | {
+      claim: {
+        state: "clean" | "open_findings" | "unknown";
+        source: "meta_review_artifact";
+      };
+    }
+  | { claim: undefined }
+  | { reason: string } {
+  const claimStateRaw = input.reportJson.findings_claim_state;
+  const claimSourceRaw = input.reportJson.findings_claim_source;
+  const hasClaimState = claimStateRaw !== undefined;
+  const hasClaimSource = claimSourceRaw !== undefined;
+
+  if (hasClaimState !== hasClaimSource) {
+    if (!hasClaimState) {
+      return {
+        reason:
+          `${claimStateRequiredReasonCode}: meta-review report_json.findings_claim_state is required when findings_claim_source is provided.`
+      };
+    }
+    return {
+      reason:
+        `${claimSourceInvalidReasonCode}: meta-review report_json.findings_claim_source is required when findings_claim_state is provided.`
+    };
+  }
+  if (!hasClaimState) {
+    return { claim: undefined };
+  }
+  if (!isFindingsClaimState(claimStateRaw)) {
+    return {
+      reason:
+        `${claimStateRequiredReasonCode}: meta-review report_json.findings_claim_state must be clean|open_findings|unknown.`
+    };
+  }
+  if (!isFindingsClaimSource(claimSourceRaw)) {
+    return {
+      reason:
+        `${claimSourceInvalidReasonCode}: meta-review report_json.findings_claim_source must be payload_flags|payload_findings_count|legacy_summary_parser|meta_review_artifact.`
+    };
+  }
+  if (claimSourceRaw !== "meta_review_artifact") {
+    return {
+      reason:
+        `${claimSourceInvalidReasonCode}: meta-review structured claim source must be meta_review_artifact (found ${claimSourceRaw}).`
+    };
+  }
+
+  return {
+    claim: {
+      state: claimStateRaw,
+      source: "meta_review_artifact"
+    }
+  };
+}
+
+function validateStructuredMetaReviewPositiveClaim(input: {
+  runResult: MetaReviewRunResult;
+  reportJson?: Record<string, unknown>;
+}):
+  | { ok: true; diagnostics: string[] }
+  | { ok: false; reason: string } {
+  const recommendation = input.runResult.recommendation;
+  if (input.reportJson === undefined) {
+    if (recommendation !== "rework") {
+      return { ok: true, diagnostics: [] };
+    }
+    return {
+      ok: false,
+      reason:
+        `${metaReviewFindingsArtifactRequiredReasonCode}: structured report_json is required for positive meta-review claim parity.`
+    };
+  }
+
+  const claimResolution = resolveStructuredMetaReviewClaimFromReportJson({
+    reportJson: input.reportJson
+  });
+  if ("reason" in claimResolution) {
+    return {
+      ok: false,
+      reason: claimResolution.reason
+    };
+  }
+  const claim = claimResolution.claim;
+  if (recommendation !== "rework") {
+    if (claim?.state === "open_findings") {
+      return {
+        ok: false,
+        reason:
+          `${claimSourceInvalidReasonCode}: recommendation=${recommendation} cannot carry findings_claim_state=open_findings.`
+      };
+    }
+    return { ok: true, diagnostics: [] };
+  }
+
+  if (claim === undefined) {
+    return {
+      ok: false,
+      reason:
+        `${claimStateRequiredReasonCode}: recommendation=rework requires report_json findings_claim_state/findings_claim_source.`
+    };
+  }
+  if (claim.state === "unknown") {
+    return {
+      ok: false,
+      reason:
+        `${claimStateRequiredReasonCode}: positive meta-review claim cannot remain unknown.`
+    };
+  }
+  if (claim.state !== "open_findings") {
+    return {
+      ok: false,
+      reason:
+        `${claimSourceInvalidReasonCode}: recommendation=rework requires findings_claim_state=open_findings (found ${claim.state}).`
+    };
+  }
+
+  const findingsCount = resolveFindingsCountFromMetaReviewReportJson(
+    input.reportJson
+  );
+  if (findingsCount === undefined || findingsCount <= 0) {
+    return {
+      ok: false,
+      reason:
+        `${metaReviewFindingsCountMismatchReasonCode}: recommendation=rework requires findings_count>0 in report_json.`
+    };
+  }
+
+  const artifactRef = input.reportJson.findings_artifact_ref;
+  const findingsRunId = input.reportJson.findings_run_id;
+  if (
+    typeof artifactRef !== "string" ||
+    artifactRef.trim().length === 0 ||
+    typeof findingsRunId !== "string" ||
+    findingsRunId.trim().length === 0
+  ) {
+    return {
+      ok: false,
+      reason:
+        `${metaReviewFindingsArtifactRequiredReasonCode}: recommendation=rework requires non-empty findings_artifact_ref and findings_run_id in report_json.`
+    };
+  }
+
+  if (
+    input.runResult.run_id !== undefined &&
+    findingsRunId.trim() !== input.runResult.run_id
+  ) {
+    return {
+      ok: false,
+      reason:
+        `${metaReviewFindingsCountMismatchReasonCode}: findings_run_id (${findingsRunId.trim()}) must match run_id (${input.runResult.run_id}).`
+    };
+  }
+
+  const parserState = resolveLegacySummaryFindingsClaimState(
+    input.runResult.summary ?? undefined
+  );
+  if (parserState !== "open_findings") {
+    return {
+      ok: true,
+      diagnostics: [
+        `CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC: parser_state=${parserState} structured_state=open_findings structured_source=meta_review_artifact`
+      ]
+    };
+  }
+
+  return { ok: true, diagnostics: [] };
+}
+
 function synthesizeMetaReviewRunResultFromSnapshot(input: {
   bubbleId: string;
   nowIso: string;
@@ -529,6 +801,9 @@ async function writeRecoveredMetaReviewArtifacts(input: {
     ],
     ...(input.runResult.run_id !== undefined
       ? { run_id: input.runResult.run_id }
+      : {}),
+    ...(input.runResult.report_json !== undefined
+      ? { report_json: input.runResult.report_json }
       : {})
   };
   try {
@@ -581,7 +856,7 @@ async function persistHumanGateRoute(input: {
   }
   const targetState = input.targetState ?? "READY_FOR_HUMAN_APPROVAL";
   const stickyHumanGate = input.stickyHumanGate ?? (
-    input.route === "human_gate_dispatch_failed" || input.route === "human_gate_run_failed"
+    input.route === "human_gate_run_failed"
       ? false
       : true
   );
@@ -677,6 +952,7 @@ export async function recoverMetaReviewGateFromSnapshot(
   const appendEnvelope = dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
   const setMetaReviewerPane =
     dependencies.setMetaReviewerPaneBinding ?? setMetaReviewerPaneBinding;
+  const readFileFn = dependencies.readFile ?? readFile;
   const writeFileFn = dependencies.writeFile ?? writeFile;
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
@@ -751,7 +1027,11 @@ export async function recoverMetaReviewGateFromSnapshot(
       state: loaded.state,
       snapshot
     });
-  const runResult = normalizeRecoveredMetaReviewRunResult({
+  const reportJsonArtifactRead = await readMetaReviewReportJsonArtifact({
+    artifactPath: resolved.bubblePaths.metaReviewLastJsonArtifactPath,
+    readFileFn
+  });
+  const runResultBase = normalizeRecoveredMetaReviewRunResult({
     bubbleId: resolved.bubbleId,
     nowIso,
     fallbackSummary,
@@ -770,6 +1050,33 @@ export async function recoverMetaReviewGateFromSnapshot(
           })
     )
   });
+  const runResultResolvedFromSnapshot: MetaReviewRunResult =
+    runResultBase.report_json !== undefined
+      ? runResultBase
+      : {
+          ...runResultBase,
+          ...(reportJsonArtifactRead.reportJson !== undefined
+            ? { report_json: reportJsonArtifactRead.reportJson }
+            : {})
+        };
+  const runResult: MetaReviewRunResult =
+    reportJsonArtifactRead.diagnostics.length === 0
+      ? runResultResolvedFromSnapshot
+      : {
+          ...runResultResolvedFromSnapshot,
+          report_json: {
+            ...(runResultResolvedFromSnapshot.report_json ?? {}),
+            claim_diagnostics: [
+              ...(
+                Array.isArray(runResultResolvedFromSnapshot.report_json?.claim_diagnostics)
+                  ? runResultResolvedFromSnapshot.report_json.claim_diagnostics
+                      .filter((entry): entry is string => typeof entry === "string")
+                  : []
+              ),
+              ...reportJsonArtifactRead.diagnostics
+            ]
+          }
+        };
   const summary = runResult.summary
     ?? input.summary
     ?? "Meta-review completed previously; recovering gate route from snapshot.";
@@ -825,6 +1132,55 @@ export async function recoverMetaReviewGateFromSnapshot(
   const recommendation = runResult.recommendation;
   const budgetAvailable =
     snapshot.auto_rework_count < snapshot.auto_rework_limit;
+  const positiveClaimParity = validateStructuredMetaReviewPositiveClaim({
+    runResult,
+    ...(runResult.report_json !== undefined
+      ? { reportJson: runResult.report_json }
+      : {})
+  });
+  if (!positiveClaimParity.ok) {
+    return finishWithPaneDeactivation(
+      await persistHumanGateRoute({
+        appendEnvelope,
+        writeState,
+        statePath: resolved.bubblePaths.statePath,
+        transcriptPath: resolved.bubblePaths.transcriptPath,
+        inboxPath: resolved.bubblePaths.inboxPath,
+        lockPath,
+        now,
+        nowIso,
+        bubbleId: resolved.bubbleId,
+        summary: buildHumanGateSummary({
+          convergenceSummary: summary,
+          fallbackReason:
+            `META_REVIEW_GATE_REWORK_DISPATCH_FAILED: ${positiveClaimParity.reason}`
+        }),
+        refs,
+        loaded,
+        expectedState: "META_REVIEW_RUNNING",
+        route: "human_gate_dispatch_failed",
+        metaReviewRun: runResult
+      })
+    );
+  }
+  const runResultForRouting: MetaReviewRunResult =
+    positiveClaimParity.diagnostics.length === 0
+      ? runResult
+      : {
+          ...runResult,
+          report_json: {
+            ...(runResult.report_json ?? {}),
+            claim_diagnostics: [
+              ...(
+                Array.isArray(runResult.report_json?.claim_diagnostics)
+                  ? runResult.report_json.claim_diagnostics
+                      .filter((entry): entry is string => typeof entry === "string")
+                  : []
+              ),
+              ...positiveClaimParity.diagnostics
+            ]
+          }
+        };
 
   if (recommendation === "rework" && budgetAvailable) {
     if (snapshot.sticky_human_gate) {
@@ -856,7 +1212,7 @@ export async function recoverMetaReviewGateFromSnapshot(
           loaded,
           expectedState: "META_REVIEW_RUNNING",
           route: "human_gate_dispatch_failed",
-          metaReviewRun: runResult
+          metaReviewRun: runResultForRouting
         })
       );
     }
@@ -909,9 +1265,9 @@ export async function recoverMetaReviewGateFromSnapshot(
               [deliveryTargetRoleMetadataKey]: "implementer",
               actor: "meta-reviewer",
               actor_agent: "codex",
-              recommendation: runResult.recommendation,
-              ...(runResult.run_id !== undefined
-                ? { run_id: runResult.run_id }
+              recommendation: runResultForRouting.recommendation,
+              ...(runResultForRouting.run_id !== undefined
+                ? { run_id: runResultForRouting.run_id }
                 : {})
             }
           },
@@ -982,7 +1338,7 @@ export async function recoverMetaReviewGateFromSnapshot(
           loaded: readyForApproval,
           expectedState: "READY_FOR_APPROVAL",
           route: "human_gate_dispatch_failed",
-          metaReviewRun: runResult
+          metaReviewRun: runResultForRouting
         })
       );
     }
@@ -993,7 +1349,7 @@ export async function recoverMetaReviewGateFromSnapshot(
         ...resumedWritten.state,
         meta_review: buildHydratedMetaReviewSnapshotFromRunResult({
           metaReview: normalizeMetaReviewSnapshot(resumedWritten.state.meta_review),
-          runResult
+          runResult: runResultForRouting
         })
       };
       const resumedWithCounter = incrementAutoReworkCount(resumedWithHydratedRun);
@@ -1019,7 +1375,7 @@ export async function recoverMetaReviewGateFromSnapshot(
 
           const latestMetaReview = buildHydratedMetaReviewSnapshotFromRunResult({
             metaReview: normalizeMetaReviewSnapshot(latest.state.meta_review),
-            runResult
+            runResult: runResultForRouting
           });
           if (latestMetaReview.auto_rework_count >= targetCount) {
             written = latest;
@@ -1071,7 +1427,7 @@ export async function recoverMetaReviewGateFromSnapshot(
       gateSequence: dispatched.sequence,
       gateEnvelope: dispatched.envelope,
       state: written.state,
-      metaReviewRun: runResult
+      metaReviewRun: runResultForRouting
     });
   }
 
@@ -1088,13 +1444,13 @@ export async function recoverMetaReviewGateFromSnapshot(
       bubbleId: resolved.bubbleId,
       summary: buildHumanGateSummary({
         convergenceSummary: summary,
-        metaReviewRun: runResult
+        metaReviewRun: runResultForRouting
       }),
       refs,
       loaded,
       expectedState: "META_REVIEW_RUNNING",
       route: resolveHumanGateRoute(recommendation, budgetAvailable),
-      metaReviewRun: runResult
+      metaReviewRun: runResultForRouting
     })
   );
 }
@@ -1266,7 +1622,7 @@ export async function applyMetaReviewGateOnConvergence(
     const kickoffSummary = [
       `Meta-review gate opened for bubble ${resolved.bubbleId} round ${metaReviewRunningState.state.round}.`,
       "Submit result through structured CLI:",
-      `pairflow bubble meta-review submit --id ${resolved.bubbleId} --round ${metaReviewRunningState.state.round} --recommendation <approve|rework|inconclusive> --summary "<summary>" --report-markdown "<markdown>" [--rework-target-message "<message>"] [--report-json '{"key":"value"}'].`
+      `pairflow bubble meta-review submit --id ${resolved.bubbleId} --round ${metaReviewRunningState.state.round} --recommendation <approve|rework|inconclusive> --summary "<summary>" --report-markdown "<markdown>" [--rework-target-message "<message>"] [--report-json '{"findings_claim_state":"clean|open_findings|unknown","findings_claim_source":"meta_review_artifact","findings_count":<int>,"findings_artifact_ref":"artifacts/...","findings_run_id":"<run-id>"}'].`
     ].join(" ");
 
     const appended = await appendEnvelope({

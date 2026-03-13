@@ -501,7 +501,100 @@ describe("emitPassFromWorkspace", () => {
     expect(result.repeatCleanReasonDetail).toBe("round_gate_disabled");
     expect(result.repeatCleanTrigger).toBe(false);
     expect(result.envelope.payload.pass_intent).toBe("review");
+    expect(result.envelope.payload.findings_claim_state).toBe("clean");
+    expect(result.envelope.payload.findings_claim_source).toBe("payload_flags");
     expect(result.envelope.payload.findings).toEqual([]);
+  });
+
+  it("emits open structured findings claim on reviewer fix_request PASS", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_findings_claim_open_01",
+      task: "Structured claim open findings"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "P2 findings remain open.",
+      findings: [
+        {
+          severity: "P2",
+          title: "Follow-up fix required"
+        }
+      ],
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:07:00.000Z")
+    });
+
+    expect(result.envelope.payload.pass_intent).toBe("fix_request");
+    expect(result.envelope.payload.findings_claim_state).toBe("open_findings");
+    expect(result.envelope.payload.findings_claim_source).toBe(
+      "payload_findings_count"
+    );
+  });
+
+  it("keeps structured findings-claim fields reviewer-only across role lifecycle", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_claim_lifecycle_roles_01",
+      task: "Structured claim lifecycle across roles"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 1,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-21T12:06:00.000Z",
+        last_command_at: "2026-02-21T12:06:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const reviewerPass = await emitPassFromWorkspace({
+      summary: "Reviewer clean.",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:07:00.000Z")
+    });
+    expect(reviewerPass.envelope.payload.findings_claim_state).toBe("clean");
+    expect(reviewerPass.envelope.payload.findings_claim_source).toBe("payload_flags");
+
+    const implementerPass = await emitPassFromWorkspace({
+      summary: "Implemented requested follow-up.",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:08:00.000Z")
+    });
+    expect(implementerPass.envelope.sender).toBe("codex");
+    expect("findings" in implementerPass.envelope.payload).toBe(false);
+    expect("findings_claim_state" in implementerPass.envelope.payload).toBe(false);
+    expect("findings_claim_source" in implementerPass.envelope.payload).toBe(false);
   });
 
   it("allows reviewer --no-findings when summary explicitly reports zero findings/severity counts", async () => {
@@ -2185,15 +2278,17 @@ describe("emitPassFromWorkspace", () => {
     expect(result.repeatCleanReasonDetail).toBe("previous_reviewer_pass_absent");
     expect(result.state.state).toBe("RUNNING");
     expect(result.state.active_role).toBe("implementer");
-    expect(result.envelope.payload.metadata).toEqual({
-      transition_decision: "normal_pass",
-      reason_code: repeatCleanPreviousMissingReasonCode,
-      reason_detail: "previous_reviewer_pass_absent",
-      trigger: false,
-      most_recent_previous_reviewer_pass_is_clean: false,
-      most_recent_previous_reviewer_clean_pass_envelope: false,
-      [deliveryTargetRoleMetadataKey]: "implementer"
-    });
+    expect(result.envelope.payload.metadata).toEqual(
+      expect.objectContaining({
+        transition_decision: "normal_pass",
+        reason_code: repeatCleanPreviousMissingReasonCode,
+        reason_detail: "previous_reviewer_pass_absent",
+        trigger: false,
+        most_recent_previous_reviewer_pass_is_clean: false,
+        most_recent_previous_reviewer_clean_pass_envelope: false,
+        [deliveryTargetRoleMetadataKey]: "implementer"
+      })
+    );
   });
 
   it("classifies round>=2 reviewer clean PASS with previous non-clean reviewer PASS using distinct reason code", async () => {
@@ -2237,15 +2332,17 @@ describe("emitPassFromWorkspace", () => {
     expect(result.repeatCleanTrigger).toBe(false);
     expect(result.repeatCleanReasonCode).toBe(repeatCleanPreviousNotCleanReasonCode);
     expect(result.repeatCleanReasonDetail).toBe("previous_reviewer_pass_not_clean");
-    expect(result.envelope.payload.metadata).toEqual({
-      transition_decision: "normal_pass",
-      reason_code: repeatCleanPreviousNotCleanReasonCode,
-      reason_detail: "previous_reviewer_pass_not_clean",
-      trigger: false,
-      most_recent_previous_reviewer_pass_is_clean: false,
-      most_recent_previous_reviewer_clean_pass_envelope: false,
-      [deliveryTargetRoleMetadataKey]: "implementer"
-    });
+    expect(result.envelope.payload.metadata).toEqual(
+      expect.objectContaining({
+        transition_decision: "normal_pass",
+        reason_code: repeatCleanPreviousNotCleanReasonCode,
+        reason_detail: "previous_reviewer_pass_not_clean",
+        trigger: false,
+        most_recent_previous_reviewer_pass_is_clean: false,
+        most_recent_previous_reviewer_clean_pass_envelope: false,
+        [deliveryTargetRoleMetadataKey]: "implementer"
+      })
+    );
   });
 
   it("auto-converges deterministic repeat-clean reviewer PASS in round>=2", async () => {

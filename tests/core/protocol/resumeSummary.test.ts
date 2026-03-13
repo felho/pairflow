@@ -108,6 +108,8 @@ describe("buildResumeTranscriptSummary", () => {
         recipient: "codex",
         payload: {
           summary: "review feedback",
+          findings_claim_state: "open_findings",
+          findings_claim_source: "payload_findings_count",
           findings: [
             {
               severity: "P1",
@@ -127,6 +129,7 @@ describe("buildResumeTranscriptSummary", () => {
 
     expect(summary).toContain("PASS highlights:");
     expect(summary).toContain("implementer handoff");
+    expect(summary).toContain("claim=open_findings@payload_findings_count");
     expect(summary).toContain("findings=[P1:Missing guard in resume flow");
     expect(summary).toContain("P2:Add coverage for reviewer kickoff");
   });

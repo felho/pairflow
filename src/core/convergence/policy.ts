@@ -9,7 +9,13 @@ import {
   resolveFindingPriority,
   type FindingPriority
 } from "../../types/findings.js";
-import type { ProtocolEnvelope } from "../../types/protocol.js";
+import {
+  isFindingsClaimSource,
+  isFindingsClaimState,
+  type FindingsClaimSource,
+  type FindingsClaimState,
+  type ProtocolEnvelope
+} from "../../types/protocol.js";
 import { isRecord } from "../validation.js";
 
 export interface ConvergencePolicyInput {
@@ -25,6 +31,7 @@ export interface ConvergencePolicyInput {
 export interface ConvergencePolicyResult {
   ok: boolean;
   errors: string[];
+  diagnostics: string[];
 }
 
 export interface ReviewerFindingsAggregate {
@@ -45,8 +52,10 @@ export interface SummaryFindingsAssertionEvaluation {
   positiveClauseCount: number;
 }
 
-const convergenceSummaryPayloadContradictionReasonCode =
-  "CONVERGENCE_SUMMARY_PAYLOAD_CONTRADICTION";
+export const claimStateRequiredReasonCode = "CLAIM_STATE_REQUIRED";
+export const claimSourceInvalidReasonCode = "CLAIM_SOURCE_INVALID";
+export const claimParserDivergenceDiagnosticReasonCode =
+  "CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC";
 const summaryClauseSplitPattern =
   /(?:[.;!?]|\bbut\b|\bhowever\b|\byet\b|\bthough\b|\bwhile\b|\balthough\b|\bdespite\b|(?<!p[0-3]),(?!\s*(?:were\s+)?(?:resolved|closed|cleared|fixed|addressed|handled)\b)|(?<!\bp[0-3]\s)(?<!\bp[0-3],\s)(?<!\bp[0-3],)\band\b)+/iu;
 const summaryFindingsWordPattern = /\bfindings?\b/iu;
@@ -316,6 +325,109 @@ export function evaluatePositiveSummaryFindingsAssertion(
   };
 }
 
+function resolveFindingsClaimStateFromFindingsPayload(
+  findings: unknown
+): FindingsClaimState | undefined {
+  if (!Array.isArray(findings)) {
+    return undefined;
+  }
+  return findings.length === 0 ? "clean" : "open_findings";
+}
+
+export function resolveLegacySummaryFindingsClaimState(
+  summary: string | undefined
+): FindingsClaimState {
+  const assertion = evaluatePositiveSummaryFindingsAssertion(summary);
+  return assertion.hasPositiveAssertion ? "open_findings" : "unknown";
+}
+
+interface StructuredPassFindingsClaimResolution {
+  claim?: {
+    state: FindingsClaimState;
+    source: FindingsClaimSource;
+  };
+  errors: string[];
+}
+
+function resolveStructuredPassFindingsClaim(payload: ProtocolEnvelope["payload"]): StructuredPassFindingsClaimResolution {
+  const errors: string[] = [];
+  const explicitStateRaw = payload.findings_claim_state;
+  const explicitSourceRaw = payload.findings_claim_source;
+  const hasStateRaw = explicitStateRaw !== undefined;
+  const hasSourceRaw = explicitSourceRaw !== undefined;
+  const explicitState = isFindingsClaimState(explicitStateRaw)
+    ? explicitStateRaw
+    : undefined;
+  const explicitSource = isFindingsClaimSource(explicitSourceRaw)
+    ? explicitSourceRaw
+    : undefined;
+
+  if (explicitStateRaw !== undefined && explicitState === undefined) {
+    errors.push(
+      `${claimStateRequiredReasonCode}: previous reviewer PASS findings_claim_state is invalid; expected clean|open_findings|unknown.`
+    );
+  }
+  if (explicitSourceRaw !== undefined && explicitSource === undefined) {
+    errors.push(
+      `${claimSourceInvalidReasonCode}: previous reviewer PASS findings_claim_source is invalid; expected payload_flags|payload_findings_count|legacy_summary_parser|meta_review_artifact.`
+    );
+  }
+
+  if (hasStateRaw !== hasSourceRaw) {
+    if (!hasStateRaw) {
+      errors.push(
+        `${claimStateRequiredReasonCode}: previous reviewer PASS findings_claim_state is required when findings_claim_source is provided.`
+      );
+    }
+    if (!hasSourceRaw) {
+      errors.push(
+        `${claimSourceInvalidReasonCode}: previous reviewer PASS findings_claim_source is required when findings_claim_state is provided.`
+      );
+    }
+    return { errors };
+  }
+
+  if (hasStateRaw && hasSourceRaw) {
+    if (explicitState === undefined || explicitSource === undefined) {
+      return { errors };
+    }
+    return {
+      claim: {
+        state: explicitState,
+        source: explicitSource
+      },
+      errors
+    };
+  }
+
+  const countDerivedState = resolveFindingsClaimStateFromFindingsPayload(
+    payload.findings
+  );
+  if (countDerivedState !== undefined) {
+    return {
+      claim: {
+        state: countDerivedState,
+        source: "payload_findings_count"
+      },
+      errors
+    };
+  }
+
+  return { errors };
+}
+
+function hasOpenClaimParserDivergence(input: {
+  structuredState: FindingsClaimState;
+  parserState: FindingsClaimState;
+}): boolean {
+  return (
+    (input.parserState === "open_findings" &&
+      input.structuredState !== "open_findings") ||
+    (input.structuredState === "open_findings" &&
+      input.parserState !== "open_findings")
+  );
+}
+
 function hasUnresolvedHumanQuestion(transcript: ProtocolEnvelope[]): boolean {
   let openQuestions = 0;
   for (const envelope of transcript) {
@@ -356,6 +468,7 @@ export function validateConvergencePolicy(
   input: ConvergencePolicyInput
 ): ConvergencePolicyResult {
   const errors: string[] = [];
+  const diagnostics: string[] = [];
 
   if (!Number.isInteger(input.severity_gate_round) || input.severity_gate_round < 4) {
     errors.push(
@@ -409,34 +522,74 @@ export function validateConvergencePolicy(
       "CONVERGENCE_PREVIOUS_REVIEWER_PASS_MISSING: Convergence requires a previous reviewer PASS or CONVERGENCE verdict from the prior round."
     );
   } else if (previousReviewerVerdict.type === "PASS") {
+    const claimResolution = resolveStructuredPassFindingsClaim(
+      previousReviewerVerdict.payload
+    );
+    errors.push(...claimResolution.errors);
     const findingsAggregate = evaluateReviewerFindingsAggregate({
       findings: previousReviewerVerdict.payload.findings,
       reviewArtifactType: input.reviewArtifactType
     });
-    const summaryFindingsAssertion = evaluatePositiveSummaryFindingsAssertion(
+    const parserClaimState = resolveLegacySummaryFindingsClaimState(
       previousReviewerVerdict.payload.summary
     );
-    if (findingsAggregate.missing) {
+    const claim = claimResolution.claim;
+
+    if (claim === undefined) {
       errors.push(
-        "Convergence requires previous reviewer PASS to declare findings explicitly (use --finding or --no-findings)."
+        `${claimStateRequiredReasonCode}: Convergence requires previous reviewer PASS to declare structured findings claim state/source (payload flags or findings count).`
       );
-      if (summaryFindingsAssertion.hasPositiveAssertion) {
-        errors.push(
-          `${convergenceSummaryPayloadContradictionReasonCode}: Convergence diagnostics: previous reviewer PASS summary asserts positive findings/severity, but payload.findings is missing.`
+      if (parserClaimState === "open_findings") {
+        diagnostics.push(
+          `${claimParserDivergenceDiagnosticReasonCode}: parser_state=open_findings structured_state=missing.`
         );
       }
+    } else {
+      if (claim.source === "legacy_summary_parser") {
+        errors.push(
+          `${claimSourceInvalidReasonCode}: Convergence requires structured claim source; legacy_summary_parser is compatibility-only.`
+        );
+      }
+      if (claim.state === "unknown") {
+        errors.push(
+          `${claimStateRequiredReasonCode}: Convergence requires determinate findings claim state; received unknown.`
+        );
+      }
+      if (
+        hasOpenClaimParserDivergence({
+          structuredState: claim.state,
+          parserState: parserClaimState
+        })
+      ) {
+        diagnostics.push(
+          `${claimParserDivergenceDiagnosticReasonCode}: parser_state=${parserClaimState} structured_state=${claim.state} structured_source=${claim.source}.`
+        );
+      }
+    }
+
+    if (findingsAggregate.missing) {
+      errors.push(
+        "Convergence requires previous reviewer PASS to include payload.findings so blocker parity can be evaluated deterministically."
+      );
     } else if (findingsAggregate.invalid) {
       errors.push(
         "Convergence blocked: previous reviewer PASS has invalid findings payload."
       );
-    } else if (
-      findingsAggregate.findingCount === 0 &&
-      summaryFindingsAssertion.hasPositiveAssertion
-    ) {
+    } else if (claim !== undefined && claim.state === "clean" && findingsAggregate.findingCount > 0) {
       errors.push(
-        `${convergenceSummaryPayloadContradictionReasonCode}: Convergence blocked: previous reviewer PASS summary asserts positive findings/severity but payload.findings is empty. Use structured --finding entries instead of summary-only findings.`
+        `${claimSourceInvalidReasonCode}: Convergence blocked because findings_claim_state=clean but payload.findings contains ${findingsAggregate.findingCount} item(s).`
       );
     } else if (
+      claim !== undefined &&
+      claim.state === "open_findings" &&
+      findingsAggregate.findingCount === 0
+    ) {
+      errors.push(
+        `${claimSourceInvalidReasonCode}: Convergence blocked because findings_claim_state=open_findings but payload.findings is empty.`
+      );
+    } else if (
+      claim !== undefined &&
+      claim.state === "open_findings" &&
       findingsAggregate.hasBlocking
       && (
         input.currentRound < input.severity_gate_round
@@ -455,6 +608,7 @@ export function validateConvergencePolicy(
 
   return {
     ok: errors.length === 0,
-    errors
+    errors,
+    diagnostics
   };
 }

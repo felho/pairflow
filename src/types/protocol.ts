@@ -27,6 +27,23 @@ export const passIntents = ["task", "review", "fix_request"] as const;
 
 export type PassIntent = (typeof passIntents)[number];
 
+export const findingsClaimStates = [
+  "clean",
+  "open_findings",
+  "unknown"
+] as const;
+
+export type FindingsClaimState = (typeof findingsClaimStates)[number];
+
+export const findingsClaimSources = [
+  "payload_flags",
+  "payload_findings_count",
+  "legacy_summary_parser",
+  "meta_review_artifact"
+] as const;
+
+export type FindingsClaimSource = (typeof findingsClaimSources)[number];
+
 export const approvalDecisions = ["approve", "reject", "revise"] as const;
 
 export type ApprovalDecision = (typeof approvalDecisions)[number];
@@ -61,6 +78,8 @@ export interface ProtocolEnvelopePayload {
   message?: string;
   decision?: ApprovalDecision;
   pass_intent?: PassIntent;
+  findings_claim_state?: FindingsClaimState;
+  findings_claim_source?: FindingsClaimSource;
   findings?: Finding[];
   metadata?: Record<string, unknown>;
 }
@@ -109,6 +128,22 @@ export function isPassIntent(value: unknown): value is PassIntent {
   return (
     typeof value === "string" &&
     (passIntents as readonly string[]).includes(value)
+  );
+}
+
+export function isFindingsClaimState(value: unknown): value is FindingsClaimState {
+  return (
+    typeof value === "string"
+    && (findingsClaimStates as readonly string[]).includes(value)
+  );
+}
+
+export function isFindingsClaimSource(
+  value: unknown
+): value is FindingsClaimSource {
+  return (
+    typeof value === "string"
+    && (findingsClaimSources as readonly string[]).includes(value)
   );
 }
 

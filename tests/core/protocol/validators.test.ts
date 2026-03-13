@@ -15,6 +15,8 @@ describe("protocol envelope schema", () => {
       payload: {
         summary: "Implemented schema module",
         pass_intent: "task",
+        findings_claim_state: "open_findings",
+        findings_claim_source: "payload_findings_count",
         findings: [
           {
             severity: "P2",
@@ -405,6 +407,128 @@ describe("protocol envelope schema", () => {
     ).toBe(true);
     expect(
       result.errors.some((error) => error.path === "payload.findings[0].evidence")
+    ).toBe(true);
+  });
+
+  it("rejects PASS envelope when findings_claim_state is present without findings_claim_source", () => {
+    const result = validateProtocolEnvelope({
+      id: "msg_001_claim_state_without_source",
+      ts: "2026-02-21T12:34:56.000Z",
+      bubble_id: "b_test_01",
+      sender: "claude",
+      recipient: "codex",
+      type: "PASS",
+      round: 1,
+      payload: {
+        summary: "Structured state declared without source.",
+        findings_claim_state: "clean",
+        findings: []
+      },
+      refs: []
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "payload.findings_claim_source" &&
+          error.message.includes("Required when payload.findings_claim_state is provided")
+      )
+    ).toBe(true);
+  });
+
+  it("rejects PASS envelope when findings_claim_source is present without findings_claim_state", () => {
+    const result = validateProtocolEnvelope({
+      id: "msg_001_claim_source_without_state",
+      ts: "2026-02-21T12:34:56.000Z",
+      bubble_id: "b_test_01",
+      sender: "claude",
+      recipient: "codex",
+      type: "PASS",
+      round: 1,
+      payload: {
+        summary: "Structured source declared without state.",
+        findings_claim_source: "payload_flags",
+        findings: []
+      },
+      refs: []
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "payload.findings_claim_state" &&
+          error.message.includes("Required when payload.findings_claim_source is provided")
+      )
+    ).toBe(true);
+  });
+
+  it("rejects PASS envelope when findings_claim_state uses invalid enum value", () => {
+    const result = validateProtocolEnvelope({
+      id: "msg_001_invalid_claim_state_enum",
+      ts: "2026-02-21T12:34:56.000Z",
+      bubble_id: "b_test_01",
+      sender: "claude",
+      recipient: "codex",
+      type: "PASS",
+      round: 1,
+      payload: {
+        summary: "Invalid claim state enum.",
+        findings_claim_state: "opened",
+        findings_claim_source: "payload_flags",
+        findings: []
+      },
+      refs: []
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "payload.findings_claim_state" &&
+          error.message.includes("Must be one of: clean, open_findings, unknown")
+      )
+    ).toBe(true);
+  });
+
+  it("rejects PASS envelope when findings_claim_source uses invalid enum value", () => {
+    const result = validateProtocolEnvelope({
+      id: "msg_001_invalid_claim_source_enum",
+      ts: "2026-02-21T12:34:56.000Z",
+      bubble_id: "b_test_01",
+      sender: "claude",
+      recipient: "codex",
+      type: "PASS",
+      round: 1,
+      payload: {
+        summary: "Invalid claim source enum.",
+        findings_claim_state: "clean",
+        findings_claim_source: "parser_guess",
+        findings: []
+      },
+      refs: []
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "payload.findings_claim_source" &&
+          error.message.includes("Must be one of: payload_flags")
+      )
     ).toBe(true);
   });
 

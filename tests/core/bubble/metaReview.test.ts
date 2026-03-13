@@ -117,7 +117,14 @@ describe("meta-review run", () => {
 
     const reportJson = JSON.parse(
       await readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
-    ) as { recommendation: string; report_ref: string };
+    ) as {
+      recommendation: string;
+      report_ref: string;
+      report_json?: {
+        findings_claim_state?: string;
+        findings_claim_source?: string;
+      };
+    };
     const reportMarkdown = await readFile(
       bubble.paths.metaReviewLastMarkdownArtifactPath,
       "utf8"
@@ -125,6 +132,10 @@ describe("meta-review run", () => {
 
     expect(reportJson.recommendation).toBe("rework");
     expect(reportJson.report_ref).toBe("artifacts/meta-review-last.md");
+    expect(reportJson.report_json).toMatchObject({
+      findings_claim_state: "open_findings",
+      findings_claim_source: "meta_review_artifact"
+    });
     expect(reportMarkdown).toContain("Fix deterministic drift");
   });
 
@@ -823,6 +834,16 @@ describe("meta-review submit", () => {
     expect(result.rework_target_message).toBe(
       "Fix retry sequencing in gate recovery."
     );
+    const reportJson = JSON.parse(
+      await readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
+    ) as {
+      report_json?: {
+        findings_count?: number;
+        findings_claim_state?: string;
+      };
+    };
+    expect(reportJson.report_json?.findings_claim_state).toBe("open_findings");
+    expect(reportJson.report_json?.findings_count).toBe(0);
   });
 
   it("rejects rework submit without rework target message", async () => {

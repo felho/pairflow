@@ -22,6 +22,8 @@ import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import {
   deliveryTargetRoleMetadataKey,
   isPassIntent,
+  type FindingsClaimSource,
+  type FindingsClaimState,
   type PassIntent,
   type ProtocolEnvelope
 } from "../../types/protocol.js";
@@ -66,8 +68,10 @@ import {
   writeDocContractGateArtifact
 } from "../gates/docContractGates.js";
 import {
+  claimParserDivergenceDiagnosticReasonCode,
   evaluatePositiveSummaryFindingsAssertion,
   evaluateReviewerFindingsAggregate,
+  resolveLegacySummaryFindingsClaimState,
   validateConvergencePolicy
 } from "../convergence/policy.js";
 import {
@@ -178,6 +182,11 @@ interface NormalizedReviewerFindingsPayload {
   invalid: boolean;
 }
 
+interface ReviewerFindingsClaim {
+  state: FindingsClaimState;
+  source: FindingsClaimSource;
+}
+
 function formatRepeatCleanPolicyRejectedMessage(input: {
   subtype: RepeatCleanPolicyRejectedSubtype;
   detail: string;
@@ -206,6 +215,44 @@ function hasRuntimeChecksSkippedClaim(summary: string): boolean {
 
 function collectRuntimeLogRefs(refs: string[]): string[] {
   return refs.filter((ref) => docsOnlyRuntimeLogRefPattern.test(ref));
+}
+
+function resolveReviewerFindingsClaim(input: {
+  noFindings: boolean;
+  findings: Finding[];
+}): ReviewerFindingsClaim {
+  if (input.noFindings) {
+    return {
+      state: "clean",
+      source: "payload_flags"
+    };
+  }
+  if (input.findings.length > 0) {
+    return {
+      state: "open_findings",
+      source: "payload_findings_count"
+    };
+  }
+  throw new PassCommandError(
+    `${findingsPayloadInvalidReasonCode}: Reviewer PASS requires explicit findings declaration: use --finding <P0|P1|P2|P3:Title[|ref1,ref2]> (repeatable) or --no-findings.`
+  );
+}
+
+function resolveReviewerFindingsClaimParserMetadata(input: {
+  summary: string;
+  claimState: FindingsClaimState;
+}): {
+  parserState: FindingsClaimState;
+  parserDivergence: boolean;
+} {
+  const parserState = resolveLegacySummaryFindingsClaimState(input.summary);
+  const parserDivergence =
+    (parserState === "open_findings" && input.claimState !== "open_findings") ||
+    (parserState !== "open_findings" && input.claimState === "open_findings");
+  return {
+    parserState,
+    parserDivergence
+  };
 }
 
 function assertNoDocsOnlySkipLogRefConflict(input: {
@@ -871,6 +918,20 @@ export async function emitPassFromWorkspace(
     handoff.senderRole === "reviewer"
       ? inferReviewerPassIntent(hasFindings, noFindings)
       : undefined;
+  const reviewerFindingsClaim =
+    handoff.senderRole === "reviewer"
+      ? resolveReviewerFindingsClaim({
+        noFindings,
+        findings
+      })
+      : undefined;
+  const reviewerFindingsClaimParserMetadata =
+    handoff.senderRole === "reviewer" && reviewerFindingsClaim !== undefined
+      ? resolveReviewerFindingsClaimParserMetadata({
+        summary,
+        claimState: reviewerFindingsClaim.state
+      })
+      : undefined;
 
   if (handoff.senderRole !== "reviewer" && (hasFindings || noFindings)) {
     throw new PassCommandError(
@@ -952,10 +1013,14 @@ export async function emitPassFromWorkspace(
       severity_gate_round: resolved.bubbleConfig.severity_gate_round
     });
     if (!policyResult.ok) {
+      const diagnosticsDetail =
+        policyResult.diagnostics.length > 0
+          ? ` diagnostics=${policyResult.diagnostics.join(" ")}`
+          : "";
       throw new PassCommandError(
         formatRepeatCleanPolicyRejectedMessage({
           subtype: "policy_gate_rejected",
-          detail: policyResult.errors.join(" ")
+          detail: `${policyResult.errors.join(" ")}${diagnosticsDetail}`
         })
       );
     }
@@ -1059,6 +1124,20 @@ export async function emitPassFromWorkspace(
         refs_count: refs.length,
         has_findings: hasFindings,
         no_findings: noFindings,
+        ...(reviewerFindingsClaim !== undefined
+          ? {
+              findings_claim_state: reviewerFindingsClaim.state,
+              findings_claim_source: reviewerFindingsClaim.source
+            }
+          : {}),
+        ...(reviewerFindingsClaimParserMetadata !== undefined
+          ? {
+              findings_claim_parser_state:
+                reviewerFindingsClaimParserMetadata.parserState,
+              findings_claim_parser_divergence:
+                reviewerFindingsClaimParserMetadata.parserDivergence
+            }
+          : {}),
         ...buildRepeatCleanLifecycleMetadata({
           transitionDecision: "auto_converge",
           reasonCode: repeatCleanTrigger.reasonCode,
@@ -1158,10 +1237,29 @@ export async function emitPassFromWorkspace(
             mostRecentPreviousReviewerCleanPassEnvelope:
               repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope
           }),
-          [deliveryTargetRoleMetadataKey]: handoff.recipientRole
+          [deliveryTargetRoleMetadataKey]: handoff.recipientRole,
+          ...(reviewerFindingsClaimParserMetadata !== undefined
+            ? {
+                findings_claim_parser_state:
+                  reviewerFindingsClaimParserMetadata.parserState,
+                findings_claim_parser_divergence:
+                  reviewerFindingsClaimParserMetadata.parserDivergence,
+                ...(reviewerFindingsClaimParserMetadata.parserDivergence
+                  ? {
+                      findings_claim_parser_divergence_reason_code:
+                        claimParserDivergenceDiagnosticReasonCode
+                    }
+                  : {})
+              }
+            : {})
         },
         ...(handoff.senderRole === "reviewer"
-          ? { findings: hasFindings ? findingsForPayload : [] }
+          ? {
+              findings: hasFindings ? findingsForPayload : [],
+              findings_claim_state: reviewerFindingsClaim?.state ?? "unknown",
+              findings_claim_source:
+                reviewerFindingsClaim?.source ?? "payload_findings_count"
+            }
           : {})
       },
       refs
@@ -1384,6 +1482,20 @@ export async function emitPassFromWorkspace(
       refs_count: refs.length,
       has_findings: hasFindings,
       no_findings: noFindings,
+      ...(reviewerFindingsClaim !== undefined
+        ? {
+            findings_claim_state: reviewerFindingsClaim.state,
+            findings_claim_source: reviewerFindingsClaim.source
+          }
+        : {}),
+      ...(reviewerFindingsClaimParserMetadata !== undefined
+        ? {
+            findings_claim_parser_state:
+              reviewerFindingsClaimParserMetadata.parserState,
+            findings_claim_parser_divergence:
+              reviewerFindingsClaimParserMetadata.parserDivergence
+          }
+        : {}),
       ...buildRepeatCleanLifecycleMetadata({
         transitionDecision: "normal_pass",
         reasonCode: repeatCleanTrigger.reasonCode,

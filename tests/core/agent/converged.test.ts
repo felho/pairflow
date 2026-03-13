@@ -366,6 +366,132 @@ describe("emitConvergedFromWorkspace", () => {
     });
   });
 
+  it("persists convergence-policy diagnostics into CONVERGENCE payload metadata", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_converged_policy_diag_01",
+      task: "Convergence diagnostics metadata"
+    });
+
+    const initial = await readStateSnapshot(bubble.paths.statePath);
+    const lockPath = join(
+      bubble.paths.locksDir,
+      `${bubble.bubbleId}.lock`
+    );
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      lockPath,
+      now: new Date("2026-02-22T09:10:00.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: bubble.config.agents.reviewer,
+        recipient: bubble.config.agents.implementer,
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "P2 findings remain open in parser phrasing.",
+          pass_intent: "review",
+          findings_claim_state: "clean",
+          findings_claim_source: "payload_flags",
+          findings: []
+        },
+        refs: []
+      }
+    });
+
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...initial.state,
+        round: 2,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-22T09:10:10.000Z",
+        last_command_at: "2026-02-22T09:10:10.000Z",
+        round_role_history: [
+          ...initial.state.round_role_history,
+          {
+            round: 2,
+            implementer: bubble.config.agents.implementer,
+            reviewer: bubble.config.agents.reviewer,
+            switched_at: "2026-02-22T09:10:10.000Z"
+          }
+        ]
+      },
+      {
+        expectedFingerprint: initial.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const result = await emitConvergedFromWorkspace(
+      {
+        summary: "Converge with parser divergence diagnostics.",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-22T09:10:20.000Z")
+      },
+      {
+        applyMetaReviewGateOnConvergence: async () => ({
+          bubbleId: bubble.bubbleId,
+          route: "human_gate_approve",
+          gateSequence: 501,
+          gateEnvelope: {
+            id: "msg_converged_policy_diag_gate_01",
+            ts: "2026-02-22T09:10:20.000Z",
+            bubble_id: bubble.bubbleId,
+            sender: "orchestrator",
+            recipient: "human",
+            type: "APPROVAL_REQUEST",
+            round: loaded.state.round,
+            payload: {
+              summary: "Ready for approval.",
+              metadata: {
+                [deliveryTargetRoleMetadataKey]: "status"
+              }
+            },
+            refs: []
+          },
+          state: {
+            ...loaded.state,
+            state: "READY_FOR_HUMAN_APPROVAL",
+            active_agent: null,
+            active_role: null,
+            active_since: null,
+            last_command_at: "2026-02-22T09:10:20.000Z"
+          }
+        }),
+        recoverMetaReviewGateFromSnapshot: async () => {
+          throw new Error("recoverMetaReviewGateFromSnapshot should not be called");
+        },
+        emitTmuxDeliveryNotification: async () => ({
+          delivered: true,
+          sessionName: "pf-b_converged_policy_diag_01",
+          message: "ok"
+        }),
+        emitBubbleNotification: async () => ({
+          kind: "converged",
+          attempted: false,
+          delivered: false,
+          soundPath: null,
+          reason: "disabled"
+        })
+      }
+    );
+
+    const diagnostics =
+      result.convergenceEnvelope.payload.metadata?.convergence_policy_diagnostics;
+    expect(Array.isArray(diagnostics)).toBe(true);
+    expect(
+      (diagnostics as unknown[]).some(
+        (entry) =>
+          typeof entry === "string" &&
+          entry.includes("CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC")
+      )
+    ).toBe(true);
+  });
+
   it("retries auto-rework delivery once with warm-up when first delivery is unconfirmed", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupConvergedCandidateBubble(repoPath, "b_converged_notify_retry_01");

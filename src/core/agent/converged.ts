@@ -278,10 +278,17 @@ export async function emitConvergedFromWorkspace(
     severity_gate_round: resolved.bubbleConfig.severity_gate_round
   });
   if (!policy.ok) {
+    const diagnosticsSuffix =
+      policy.diagnostics.length > 0
+        ? ` Diagnostics: ${policy.diagnostics.join(" ")}`
+        : "";
     throw new ConvergedCommandError(
-      `Convergence validation failed: ${policy.errors.join(" ")}`
+      `Convergence validation failed: ${policy.errors.join(" ")}${diagnosticsSuffix}`
     );
   }
+  const convergencePolicyDiagnostics = policy.diagnostics.filter(
+    (entry) => entry.trim().length > 0
+  );
 
   const docGateScopeActive = isDocContractGateScopeActive({
     reviewArtifactType: resolved.bubbleConfig.review_artifact_type
@@ -384,7 +391,14 @@ export async function emitConvergedFromWorkspace(
       type: "CONVERGENCE",
       round: state.round,
       payload: {
-        summary
+        summary,
+        ...(convergencePolicyDiagnostics.length > 0
+          ? {
+              metadata: {
+                convergence_policy_diagnostics: convergencePolicyDiagnostics
+              }
+            }
+          : {})
       },
       refs
     }
