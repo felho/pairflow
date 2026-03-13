@@ -66,6 +66,7 @@ import {
   writeDocContractGateArtifact
 } from "../gates/docContractGates.js";
 import {
+  evaluatePositiveSummaryFindingsAssertion,
   evaluateReviewerFindingsAggregate,
   validateConvergencePolicy
 } from "../convergence/policy.js";
@@ -169,6 +170,8 @@ const reviewerPassNonBlockingPostGateReasonCode =
 const reviewerPassNoFindingsPostGateReasonCode =
   "REVIEWER_PASS_NO_FINDINGS_POST_GATE";
 const findingsPayloadInvalidReasonCode = "FINDINGS_PAYLOAD_INVALID";
+const reviewerSummaryFindingsContradictionReasonCode =
+  "REVIEWER_SUMMARY_FINDINGS_CONTRADICTION";
 
 interface NormalizedReviewerFindingsPayload {
   findings: Finding[];
@@ -644,6 +647,24 @@ function validateReviewerPassGate(input: {
   );
 }
 
+function assertReviewerNoFindingsSummaryConsistency(input: {
+  summary: string;
+  noFindings: boolean;
+}): void {
+  if (!input.noFindings) {
+    return;
+  }
+
+  const summaryAssertion = evaluatePositiveSummaryFindingsAssertion(input.summary);
+  if (!summaryAssertion.hasPositiveAssertion) {
+    return;
+  }
+
+  throw new PassCommandError(
+    `${reviewerSummaryFindingsContradictionReasonCode}: Reviewer PASS with --no-findings cannot include positive findings/severity summary assertions. Remove positive findings language from --summary or provide structured --finding entries.`
+  );
+}
+
 function validateReviewerVerificationConsistency(input: {
   payloadOverall: "pass" | "fail";
   intent: PassIntent;
@@ -840,6 +861,10 @@ export async function emitPassFromWorkspace(
       findingsPayloadInvalid: normalizedFindings.invalid,
       reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
       severityGateRound: resolved.bubbleConfig.severity_gate_round
+    });
+    assertReviewerNoFindingsSummaryConsistency({
+      summary,
+      noFindings
     });
   }
   const inferredReviewerIntent =
