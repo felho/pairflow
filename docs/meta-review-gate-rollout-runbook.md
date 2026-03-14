@@ -29,6 +29,8 @@ The rollout must stop on any of these codes:
 8. `CLAIM_SOURCE_INVALID`
 9. `META_REVIEW_FINDINGS_ARTIFACT_REQUIRED`
 10. `META_REVIEW_FINDINGS_COUNT_MISMATCH`
+11. `META_REVIEW_FINDINGS_RUN_LINK_MISSING`
+12. `META_REVIEW_FINDINGS_PARITY_GUARD`
 
 Any unclassified reason code is treated as blocking until explicitly classified.
 
@@ -63,12 +65,17 @@ Gate-critical routing must use canonical claim fields, not prose parsing:
    - `findings_claim_source=meta_review_artifact`
    - `findings_count>0`
    - non-empty `findings_artifact_ref`
-   - non-empty `findings_run_id` (must match `run_id` when present)
+   - non-empty `meta_review_run_id` (must match `run_id` when present)
+   - non-empty `findings_digest_sha256` (must match artifact digest)
+   - non-empty `findings_artifact_status`
+   - artifact open count parity (`findings_count == findings_artifact_open_total`)
 4. Missing/invalid claim parity is fail-closed via:
    - `CLAIM_STATE_REQUIRED`
    - `CLAIM_SOURCE_INVALID`
    - `META_REVIEW_FINDINGS_ARTIFACT_REQUIRED`
    - `META_REVIEW_FINDINGS_COUNT_MISMATCH`
+   - `META_REVIEW_FINDINGS_RUN_LINK_MISSING`
+   - `META_REVIEW_FINDINGS_PARITY_GUARD`
 
 ## Compatibility Fallbacks (Documented)
 
@@ -183,3 +190,7 @@ If the block is `PAIRFLOW_COMMAND_PATH_STALE`:
 1. do not trust plain global `pairflow` invocations,
 2. rebuild or restore the local worktree `dist/cli/index.js`,
 3. re-run the command-path smoke check with `node ./dist/cli/index.js bubble status ...`.
+
+## Session Note (2026-03-14)
+
+- Applied targeted hardening for run-failed route detection (metadata-first, prefix as fallback) and non-approve summary normalization behavior.

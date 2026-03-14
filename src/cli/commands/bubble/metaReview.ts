@@ -18,6 +18,7 @@ import {
   recoverMetaReviewGateFromSnapshot,
   type MetaReviewGateResult
 } from "../../../core/bubble/metaReviewGate.js";
+import { isRecord } from "../../../core/validation.js";
 
 interface BubbleMetaReviewCommandBase {
   id: string;
@@ -433,6 +434,21 @@ export function renderMetaReviewRunText(result: MetaReviewRunResult): string {
   if (result.rework_target_message !== null) {
     lines.push(`Rework target: ${result.rework_target_message}`);
   }
+  if (isRecord(result.report_json)) {
+    const claimed = result.report_json.findings_claimed_open_total
+      ?? result.report_json.findings_count;
+    const artifact = result.report_json.findings_artifact_open_total;
+    const status = result.report_json.findings_parity_status;
+    if (
+      (typeof claimed === "number" && Number.isInteger(claimed)) ||
+      (typeof artifact === "number" && Number.isInteger(artifact)) ||
+      (typeof status === "string" && status.trim().length > 0)
+    ) {
+      lines.push(
+        `Findings parity: claimed=${typeof claimed === "number" ? claimed : "?"}, artifact=${typeof artifact === "number" ? artifact : "?"}, status=${typeof status === "string" ? status : "unknown"}`
+      );
+    }
+  }
 
   if (result.warnings.length > 0) {
     lines.push(
@@ -459,6 +475,21 @@ export function renderMetaReviewSubmitText(result: MetaReviewSubmitResult): stri
 
   if (result.rework_target_message !== null) {
     lines.push(`Rework target: ${result.rework_target_message}`);
+  }
+  if (isRecord(result.report_json)) {
+    const claimed = result.report_json.findings_claimed_open_total
+      ?? result.report_json.findings_count;
+    const artifact = result.report_json.findings_artifact_open_total;
+    const status = result.report_json.findings_parity_status;
+    if (
+      (typeof claimed === "number" && Number.isInteger(claimed)) ||
+      (typeof artifact === "number" && Number.isInteger(artifact)) ||
+      (typeof status === "string" && status.trim().length > 0)
+    ) {
+      lines.push(
+        `Findings parity: claimed=${typeof claimed === "number" ? claimed : "?"}, artifact=${typeof artifact === "number" ? artifact : "?"}, status=${typeof status === "string" ? status : "unknown"}`
+      );
+    }
   }
 
   if (result.warnings.length > 0) {
@@ -493,6 +524,12 @@ export function renderMetaReviewStatusText(
     `Last autonomous recommendation: ${view.last_autonomous_recommendation ?? "-"}`
   );
   lines.push(`Last updated: ${view.last_autonomous_updated_at ?? "-"}`);
+  lines.push(
+    `Findings parity: claimed=${view.findings_claimed_open_total ?? "-"}, artifact=${view.findings_artifact_open_total ?? "-"}, status=${view.findings_parity_status ?? "-"}`
+  );
+  if (view.parity_diagnostics.length > 0) {
+    lines.push(`Parity diagnostics: ${view.parity_diagnostics.join("; ")}`);
+  }
 
   if (verbose) {
     lines.push(`Last summary: ${view.last_autonomous_summary ?? "-"}`);
@@ -506,6 +543,9 @@ export function renderMetaReviewStatusText(
     ) {
       lines.push(`Last run id: ${view.last_autonomous_run_id}`);
     }
+    lines.push(`Last findings artifact status: ${view.findings_artifact_status ?? "-"}`);
+    lines.push(`Last findings digest: ${view.findings_digest_sha256 ?? "-"}`);
+    lines.push(`Last meta-review run id: ${view.meta_review_run_id ?? "-"}`);
   }
 
   return lines.join("\n");
@@ -519,8 +559,17 @@ export function renderMetaReviewLastReportText(
     `Meta-review last report for ${view.bubbleId}: has_report=${view.has_report ? "yes" : "no"}`,
     `Report ref: ${view.report_ref ?? "-"}`,
     `Summary: ${view.summary ?? "-"}`,
-    `Updated: ${view.updated_at ?? "-"}`
+    `Updated: ${view.updated_at ?? "-"}`,
+    `Findings parity: claimed=${view.findings_claimed_open_total ?? "-"}, artifact=${view.findings_artifact_open_total ?? "-"}, status=${view.findings_parity_status ?? "-"}`
   ];
+  if (view.parity_diagnostics.length > 0) {
+    lines.push(`Parity diagnostics: ${view.parity_diagnostics.join("; ")}`);
+  }
+  if (verbose) {
+    lines.push(`Findings artifact status: ${view.findings_artifact_status ?? "-"}`);
+    lines.push(`Findings digest: ${view.findings_digest_sha256 ?? "-"}`);
+    lines.push(`Meta-review run id: ${view.meta_review_run_id ?? "-"}`);
+  }
 
   if (verbose && view.report_markdown !== null) {
     lines.push("");

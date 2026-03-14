@@ -164,6 +164,56 @@ describe("buildResumeTranscriptSummary", () => {
     expect(summary).toContain("HUMAN_QUESTION");
   });
 
+  it("renders parity diagnostic token in latest payload excerpt when approval metadata is present", async () => {
+    const root = await createTempRoot();
+    const transcriptPath = join(root, "transcript.ndjson");
+
+    await writeTranscript(transcriptPath, [
+      createEnvelope(1, {
+        type: "APPROVAL_REQUEST",
+        sender: "orchestrator",
+        recipient: "human",
+        payload: {
+          summary: "Reviewer parity mismatch.",
+          metadata: {
+            findings_claimed_open_total: 2,
+            findings_artifact_open_total: 1,
+            findings_parity_status: "mismatch"
+          }
+        }
+      })
+    ]);
+
+    const summary = await buildResumeTranscriptSummary({ transcriptPath });
+
+    expect(summary).toContain("parity=2/1@mismatch");
+  });
+
+  it("does not render parity token when approval metadata parity fields are absent or invalid", async () => {
+    const root = await createTempRoot();
+    const transcriptPath = join(root, "transcript.ndjson");
+
+    await writeTranscript(transcriptPath, [
+      createEnvelope(1, {
+        type: "APPROVAL_REQUEST",
+        sender: "orchestrator",
+        recipient: "human",
+        payload: {
+          summary: "Reviewer parity unavailable.",
+          metadata: {
+            findings_claimed_open_total: "2",
+            findings_artifact_open_total: null,
+            findings_parity_status: ""
+          }
+        } as unknown as ProtocolEnvelope["payload"]
+      })
+    ]);
+
+    const summary = await buildResumeTranscriptSummary({ transcriptPath });
+
+    expect(summary).not.toContain("parity=");
+  });
+
   it("tolerates malformed trailing final line and still summarizes", async () => {
     const root = await createTempRoot();
     const transcriptPath = join(root, "transcript.ndjson");

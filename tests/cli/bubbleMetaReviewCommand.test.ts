@@ -693,6 +693,11 @@ describe("runBubbleMetaReviewCommand", () => {
       "auto_rework_count",
       "auto_rework_limit",
       "bubbleId",
+      "findings_artifact_open_total",
+      "findings_artifact_status",
+      "findings_claimed_open_total",
+      "findings_digest_sha256",
+      "findings_parity_status",
       "has_run",
       "last_autonomous_recommendation",
       "last_autonomous_report_ref",
@@ -701,6 +706,8 @@ describe("runBubbleMetaReviewCommand", () => {
       "last_autonomous_status",
       "last_autonomous_summary",
       "last_autonomous_updated_at",
+      "meta_review_run_id",
+      "parity_diagnostics",
       "sticky_human_gate"
     ]);
 
@@ -710,7 +717,14 @@ describe("runBubbleMetaReviewCommand", () => {
     }
     expect(Object.keys(reportResult.lastReport).sort()).toEqual([
       "bubbleId",
+      "findings_artifact_open_total",
+      "findings_artifact_status",
+      "findings_claimed_open_total",
+      "findings_digest_sha256",
+      "findings_parity_status",
       "has_report",
+      "meta_review_run_id",
+      "parity_diagnostics",
       "report_markdown",
       "report_ref",
       "summary",
@@ -732,6 +746,11 @@ describe("meta-review render helpers", () => {
       rework_target_message: null,
       updated_at: "2026-03-08T12:00:00.000Z",
       lifecycle_state: "RUNNING",
+      report_json: {
+        findings_claimed_open_total: 2,
+        findings_artifact_open_total: 1,
+        findings_parity_status: "mismatch"
+      },
       warnings: [
         {
           reason_code: "META_REVIEW_RUNNER_ERROR",
@@ -741,6 +760,9 @@ describe("meta-review render helpers", () => {
     });
 
     expect(rendered).toContain("status=error");
+    expect(rendered).toContain(
+      "Findings parity: claimed=2, artifact=1, status=mismatch"
+    );
     expect(rendered).toContain("Warnings: META_REVIEW_RUNNER_ERROR");
   });
 
@@ -755,11 +777,17 @@ describe("meta-review render helpers", () => {
       rework_target_message: null,
       updated_at: "2026-03-10T09:15:00.000Z",
       lifecycle_state: "META_REVIEW_RUNNING",
+      report_json: {
+        findings_claimed_open_total: 0,
+        findings_artifact_open_total: 0,
+        findings_parity_status: "ok"
+      },
       warnings: []
     });
 
     expect(rendered).toContain("Meta-review submit for");
     expect(rendered).toContain("status=success");
+    expect(rendered).toContain("Findings parity: claimed=0, artifact=0, status=ok");
   });
 
   it("renders status output in compact and verbose modes", () => {
@@ -776,7 +804,14 @@ describe("meta-review render helpers", () => {
         last_autonomous_summary: null,
         last_autonomous_report_ref: null,
         last_autonomous_rework_target_message: null,
-        last_autonomous_updated_at: null
+        last_autonomous_updated_at: null,
+        findings_claimed_open_total: null,
+        findings_artifact_open_total: null,
+        findings_artifact_status: null,
+        findings_digest_sha256: null,
+        meta_review_run_id: null,
+        findings_parity_status: null,
+        parity_diagnostics: []
       },
       false
     );
@@ -797,7 +832,15 @@ describe("meta-review render helpers", () => {
         last_autonomous_summary: "Clean",
         last_autonomous_report_ref: "artifacts/meta-review-last.md",
         last_autonomous_rework_target_message: "Optional hardening",
-        last_autonomous_updated_at: "2026-03-08T12:05:00.000Z"
+        last_autonomous_updated_at: "2026-03-08T12:05:00.000Z",
+        findings_claimed_open_total: 1,
+        findings_artifact_open_total: 1,
+        findings_artifact_status: "available",
+        findings_digest_sha256:
+          "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        meta_review_run_id: "run_3",
+        findings_parity_status: "ok",
+        parity_diagnostics: []
       },
       true
     );
@@ -814,7 +857,14 @@ describe("meta-review render helpers", () => {
         report_ref: null,
         summary: null,
         updated_at: null,
-        report_markdown: null
+        report_markdown: null,
+        findings_claimed_open_total: null,
+        findings_artifact_open_total: null,
+        findings_artifact_status: null,
+        findings_digest_sha256: null,
+        meta_review_run_id: null,
+        findings_parity_status: null,
+        parity_diagnostics: []
       },
       false
     );
@@ -827,12 +877,84 @@ describe("meta-review render helpers", () => {
         report_ref: "artifacts/meta-review-last.md",
         summary: "Latest",
         updated_at: "2026-03-08T12:10:00.000Z",
-        report_markdown: "# Latest Report\n\nAll good."
+        report_markdown: "# Latest Report\n\nAll good.",
+        findings_claimed_open_total: 2,
+        findings_artifact_open_total: 2,
+        findings_artifact_status: "available",
+        findings_digest_sha256:
+          "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+        meta_review_run_id: "run_last_report_1",
+        findings_parity_status: "ok",
+        parity_diagnostics: []
       },
       true
     );
     expect(verbose).toContain("has_report=yes");
     expect(verbose).toContain("# Latest Report");
+  });
+
+  it("renders parity diagnostics when present", () => {
+    const statusRendered = renderMetaReviewStatusText(
+      {
+        bubbleId: "b_meta_cli_render_diag_01",
+        has_run: true,
+        auto_rework_count: 0,
+        auto_rework_limit: 5,
+        sticky_human_gate: false,
+        last_autonomous_run_id: "run_diag_01",
+        last_autonomous_status: "success",
+        last_autonomous_recommendation: "approve",
+        last_autonomous_summary: "Summary",
+        last_autonomous_report_ref: "artifacts/meta-review-last.md",
+        last_autonomous_rework_target_message: null,
+        last_autonomous_updated_at: "2026-03-08T12:12:00.000Z",
+        findings_claimed_open_total: null,
+        findings_artifact_open_total: null,
+        findings_artifact_status: null,
+        findings_digest_sha256: null,
+        meta_review_run_id: null,
+        findings_parity_status: null,
+        parity_diagnostics: [
+          "META_REVIEW_PARITY_ARTIFACT_PARSE_FAILED",
+          "META_REVIEW_SNAPSHOT_ROUND_STALE:snapshot_round=3;current_round=11"
+        ]
+      },
+      false
+    );
+    expect(statusRendered).toContain(
+      "Parity diagnostics: META_REVIEW_PARITY_ARTIFACT_PARSE_FAILED"
+    );
+    expect(statusRendered).toContain(
+      "META_REVIEW_SNAPSHOT_ROUND_STALE:snapshot_round=3;current_round=11"
+    );
+
+    const reportRendered = renderMetaReviewLastReportText(
+      {
+        bubbleId: "b_meta_cli_render_diag_02",
+        has_report: true,
+        report_ref: "artifacts/meta-review-last.md",
+        summary: "Summary",
+        updated_at: "2026-03-08T12:12:10.000Z",
+        report_markdown: "# Report",
+        findings_claimed_open_total: null,
+        findings_artifact_open_total: null,
+        findings_artifact_status: null,
+        findings_digest_sha256: null,
+        meta_review_run_id: null,
+        findings_parity_status: null,
+        parity_diagnostics: [
+          "META_REVIEW_PARITY_ARTIFACT_READ_FAILED:EACCES",
+          "META_REVIEW_SNAPSHOT_ROUND_STALE:snapshot_round=2;current_round=4"
+        ]
+      },
+      false
+    );
+    expect(reportRendered).toContain(
+      "Parity diagnostics: META_REVIEW_PARITY_ARTIFACT_READ_FAILED:EACCES"
+    );
+    expect(reportRendered).toContain(
+      "META_REVIEW_SNAPSHOT_ROUND_STALE:snapshot_round=2;current_round=4"
+    );
   });
 
   it("renders recover output", () => {
