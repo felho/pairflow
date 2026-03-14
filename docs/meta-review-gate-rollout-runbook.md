@@ -190,3 +190,7 @@ If the block is `PAIRFLOW_COMMAND_PATH_STALE`:
 1. do not trust plain global `pairflow` invocations,
 2. rebuild or restore the local worktree `dist/cli/index.js`,
 3. re-run the command-path smoke check with `node ./dist/cli/index.js bubble status ...`.
+
+## Session Note (2026-03-14)
+
+- Applied targeted hardening for run-failed route detection (metadata-first, prefix as fallback) and non-approve summary normalization behavior.
