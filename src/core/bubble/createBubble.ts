@@ -99,9 +99,9 @@ export class BubbleCreateError extends Error {
 }
 
 function validateBubbleId(id: string): void {
-  if (!/^[a-z][a-z0-9_-]{2,63}$/u.test(id)) {
+  if (!/^[a-z][a-z0-9_-]{2,39}$/u.test(id)) {
     throw new BubbleCreateError(
-      "Invalid bubble id. Use 3-64 chars, starting with a lowercase letter, then lowercase letters, digits, '_' or '-'."
+      "Invalid bubble id. Maximum length is 40 characters. Use 3-40 chars, starting with a lowercase letter, then lowercase letters, digits, '_' or '-'."
     );
   }
 }

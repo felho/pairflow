@@ -43,7 +43,7 @@ export function getBubbleCreateHelpText(): string {
     "  pairflow bubble create --id <id> --repo <path> --base <branch> --review-artifact-type <document|code> (--task <text> | --task-file <path>)",
     "",
     "Options:",
-    "  --id <id>             Bubble id (e.g. b_feature_x_01)",
+    "  --id <id>             Bubble id (max 40 chars, e.g. b_feature_x_01)",
     "  --repo <path>         Repository path",
     "  --base <branch>       Base branch",
     "  --review-artifact-type <document|code>  Required explicit ownership type",

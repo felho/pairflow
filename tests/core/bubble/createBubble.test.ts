@@ -284,7 +284,7 @@ describe("createBubble", () => {
     const now = new Date("2026-02-27T10:00:00.000Z");
 
     await createBubble({
-      id: "b_create_metrics_reviewer_focus_present_01",
+      id: "b_create_metrics_focus_present_01",
       repoPath,
       baseBranch: "main",
       reviewArtifactType: "code",
@@ -297,7 +297,7 @@ describe("createBubble", () => {
     const bubbleCreated = events.find(
       (event) =>
         event.event_type === "bubble_created"
-        && event.bubble_id === "b_create_metrics_reviewer_focus_present_01"
+        && event.bubble_id === "b_create_metrics_focus_present_01"
     );
     expect(bubbleCreated).toBeDefined();
     expect(bubbleCreated?.metadata).toMatchObject({
@@ -311,7 +311,7 @@ describe("createBubble", () => {
     const now = new Date("2026-02-27T10:05:00.000Z");
 
     await createBubble({
-      id: "b_create_metrics_reviewer_focus_absent_01",
+      id: "b_create_metrics_focus_absent_01",
       repoPath,
       baseBranch: "main",
       reviewArtifactType: "code",
@@ -324,7 +324,7 @@ describe("createBubble", () => {
     const bubbleCreated = events.find(
       (event) =>
         event.event_type === "bubble_created"
-        && event.bubble_id === "b_create_metrics_reviewer_focus_absent_01"
+        && event.bubble_id === "b_create_metrics_focus_absent_01"
     );
     expect(bubbleCreated).toBeDefined();
     expect(bubbleCreated?.metadata).toMatchObject({
@@ -888,7 +888,7 @@ describe("createBubble", () => {
     const repoPath = await createTempRepo();
 
     const result = await createBubble({
-      id: "b_create_reviewer_focus_malformed_inline_01",
+      id: "b_create_focus_malformed_inline_01",
       repoPath,
       baseBranch: "main",
       reviewArtifactType: "code",
@@ -1056,6 +1056,21 @@ describe("createBubble", () => {
         cwd: repoPath
       })
     ).rejects.toThrow(/Invalid bubble id/u);
+  });
+
+  it("rejects bubble ids longer than 40 characters with explicit limit message", async () => {
+    const repoPath = await createTempRepo();
+
+    await expect(
+      createBubble({
+        id: `b${"a".repeat(40)}`,
+        repoPath,
+        baseBranch: "main",
+        reviewArtifactType: "code",
+        task: "Task",
+        cwd: repoPath
+      })
+    ).rejects.toThrow(/Maximum length is 40 characters/u);
   });
 
   it("rejects duplicate bubble ids in same repo", async () => {

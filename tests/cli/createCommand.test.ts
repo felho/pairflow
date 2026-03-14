@@ -138,6 +138,7 @@ describe("parseBubbleCreateCommandOptions", () => {
     const parsed = parseBubbleCreateCommandOptions(["--help"]);
     expect(parsed.help).toBe(true);
     expect(getBubbleCreateHelpText()).toContain("pairflow bubble create");
+    expect(getBubbleCreateHelpText()).toContain("Bubble id (max 40 chars");
     expect(getBubbleCreateHelpText()).toContain("--review-artifact-type <document|code>");
     expect(getBubbleCreateHelpText()).not.toContain("<auto|");
   });
