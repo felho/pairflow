@@ -5,7 +5,7 @@ title: "Architecture Boundary Simplification Discovery (Phase 1)"
 status: draft
 phase: phase1
 target_files:
-  - plans/tasks/doc-only-issues/architecture-boundary-simplification-discovery-phase1.md
+  - plans/tasks/architecture-boundary-simplification-discovery-phase1.md
   - docs/pairflow-initial-design.md
   - docs/review-loop-optimization.md
   - docs/llm-doc-workflow-v1.md
@@ -60,7 +60,7 @@ Keszitsunk egy minimal, de vegrehajthato alapdokumentumot arrol, hogyan lehet a 
 | CS1 | docs/v2/architecture-simplification-notes.md | N/A (docs section) | N/A | uj dokumentum | canonical cel-architektura es boundary elvek rogzitese | P1 | required-now | review diff |
 | CS2 | docs/pairflow-initial-design.md | N/A (architecture appendix update) | N/A | architecture/boundary resz | jelenlegi vs cel felelossegi hatar tisztazasa | P1 | required-now | review diff |
 | CS3 | docs/review-loop-optimization.md | N/A (program linkage) | N/A | stabilization/program fejezet | discovery outputok bekotese roadmap szintre | P2 | required-now | review diff |
-| CS4 | plans/tasks/doc-only-issues/architecture-boundary-simplification-discovery-phase1.md | N/A (task spec) | N/A | jelen task | vegrehajthato L0/L1/L2 contract fenntartasa | P1 | required-now | reviewer check |
+| CS4 | plans/tasks/architecture-boundary-simplification-discovery-phase1.md | N/A (task spec) | N/A | jelen task | vegrehajthato L0/L1/L2 contract fenntartasa | P1 | required-now | reviewer check |
 
 ### 2) Data and Interface Contract
 
