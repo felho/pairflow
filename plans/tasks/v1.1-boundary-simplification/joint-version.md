@@ -648,6 +648,59 @@ Javasolt artifact path:
 3. Shadow render mod: uj es regi prompt egyutt generalodik, diff csak logolodik.
 4. Ha stabil, akkor switch az uj composerre; utana implementer/meta-reviewer migracio.
 
+## 16) Meta Process: Architecture Fitness + Execution Loop
+
+Cel:
+1. Ne "masik kaoszt" epitunk, hanem merhetoen egyszerubb, stabilabb rendszert.
+2. A minoseg ne csak refaktor elejen legyen tema, hanem folyamatos process-resz.
+
+### 16.1 Foundation setup (egyszeri alapozas, implementalas elott)
+
+1. `Architecture Invariants` blokkot tekintsuk hard contractnak (PR-ben kotelezo ellenorzes).
+2. `Transcript-first` ADR formalis publikalasa (`docs/adr/ADR-XXX-transcript-first.md`).
+3. `MVP vs Out-of-scope` lista lockolasa erre a fazisra.
+4. Kritikus flow baseline tesztcsomag rogzitese: `pass`, `converged`, `approval`, `meta-review gate`.
+5. Pilot template letrehozasa (scope, risk, rollback, exit criteria).
+
+### 16.2 Architecture fitness functions (folyamatos, CI gate)
+
+1. Boundary fitness: domain retegben tilos I/O import (`fs`, `child_process`, tmux/git adapterek).
+2. Mutation fitness: state-changing pathok csak kozos mutation pipeline-on futhatnak.
+3. Transition fitness: normal flow-ban kotelezo `applyStateTransition()` hasznalat.
+4. Error fitness: message-only wrap tiltott, `code + context` megtartas kotelezo.
+5. Complexity fitness: max file-size / max function complexity budget top offender reporttal.
+6. Dependency fitness: ciklikus modulfugges tiltasa.
+
+### 16.3 Operating cadence (folyamatos QA + governance)
+
+1. Heti architecture checkpoint (`go | hold | rollback`) fix agenda-val.
+2. Pilotonként kotelezo postmortem-lite: mi egyszerusodott, mi bonyolodott.
+3. Minden boundary-erinto valtozasnal ADR frissites.
+4. PR template-be kotelezo `architecture impact` blokk.
+
+### 16.4 Action items (konkret, kovetkezo kor)
+
+Foundation action itemek (egyszeri):
+1. ADR draft a transcript-first dontesrol.
+2. Fitness check spec dokumentum (`docs/architecture-fitness-checks.md`).
+3. CI-ben kezdeti 2 hard check: boundary import tilt + transition gate check.
+4. Pilot template file (`plans/templates/refactor-pilot-template.md`).
+5. Baseline regression suite kijelolese es lockolasa.
+
+Ongoing action itemek (folyamatos):
+1. Minden pilot PR-ben fitness report csatolasa (mely checkek pass/fail).
+2. Heti top-10 komplexitas riport megnezese es 1 konkret cleanup vallalas.
+3. Regi es uj path shadow diff monitor (ahol alkalmazhato) es trendkovetes.
+4. Nyitott P1 regresszio eseten uj pilot inditas stop.
+
+### 16.5 Definition of done (architecture szinten)
+
+1. Nincs boundary-serto uj kod a pilot scope-ban.
+2. Kritikus regresszios csomag zold.
+3. Pilot exit kriterium teljesult.
+4. ADR/checklist dokumentacio frissitve.
+5. Nincs nyitott "scope creep" valtozas az Out-of-scope listabol.
+
 ---
 
 Ez a report direkt ugy keszult, hogy a jelenlegi mukodo rendszert ne boritsa fel.
