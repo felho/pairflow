@@ -100,6 +100,10 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
   - Use `document` for docs-only refinement/review/update bubbles.
   - Use `code` for implementation/testing/runtime behavior bubbles.
   - If intent is ambiguous, ask one explicit clarification question before create.
+- Bubble ID gate for create:
+  - `pairflow bubble create --id <id>` accepts only `3-40` chars.
+  - Pattern: start with lowercase letter, then lowercase letters, digits, `_` or `-`.
+  - This validation is create-time only; do not block lifecycle operations for already existing bubbles that may have longer IDs.
 - CloseBubble post-merge completion for `code` bubbles:
   - Determine whether `README.md`, relevant `docs/`, or progress tracker files must be updated based on merged behavior changes, then apply required updates.
   - Archive the completed task from `plans/tasks/...` into `plans/archive/tasks/...` while preserving subdirectory structure (`plans/tasks/FOO/x.md` -> `plans/archive/tasks/FOO/x.md`).
