@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, unlink } from "node:fs/promises";
+import { mkdtemp, readFile, rm, unlink, writeFile as writeFileFs } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -31,6 +31,7 @@ import {
 } from "../../../src/core/state/stateStore.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
 import { SchemaValidationError } from "../../../src/core/validation.js";
+import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -517,11 +518,12 @@ describe("meta-review run", () => {
       "Recovered approve recommendation"
     );
     expect(lastTranscriptMessage?.payload.metadata).toMatchObject({
+      [deliveryTargetRoleMetadataKey]: "status",
       actor: "meta-reviewer",
       actor_agent: "codex",
-      latest_recommendation: "approve",
-      run_id: "run_meta_refresh_approval_01"
+      latest_recommendation: "approve"
     });
+    expect(lastTranscriptMessage?.payload.metadata).not.toHaveProperty("run_id");
 
     expect(inbox.pending.approvalRequests).toBe(1);
     expect(inbox.items).toHaveLength(1);
@@ -534,6 +536,270 @@ describe("meta-review run", () => {
     expect(status.metaReview.latestSummary).toBe(
       "Recovered approve recommendation"
     );
+  });
+
+  it("uses shared approval-request normalization metadata on refresh path", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_run_refresh_approval_normalization_01",
+      task: "Meta rerun approval refresh normalization"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "READY_FOR_HUMAN_APPROVAL",
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        last_command_at: "2026-03-08T11:50:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await runMetaReview(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath
+      },
+      {
+        randomUUID: () => "run_meta_refresh_approval_normalization_01",
+        now: new Date("2026-03-08T11:55:00.000Z"),
+        runLiveReview: async () => ({
+          recommendation: "inconclusive",
+          summary: "1 findings remain unresolved.",
+          report_markdown: "# Inconclusive"
+        })
+      }
+    );
+
+    const transcript = await readTranscriptEnvelopes(
+      bubble.paths.transcriptPath,
+      { allowMissing: false }
+    );
+    const last = transcript.at(-1);
+    expect(last?.type).toBe("APPROVAL_REQUEST");
+    expect(last?.payload.summary).toBe("1 findings remain unresolved.");
+    expect(last?.payload.metadata).toMatchObject({
+      [deliveryTargetRoleMetadataKey]: "status",
+      actor: "meta-reviewer",
+      actor_agent: "codex",
+      latest_recommendation: "inconclusive",
+      meta_review_gate_route: "human_gate_inconclusive"
+    });
+    expect(last?.payload.metadata?.approval_summary_normalized).toBeUndefined();
+  });
+
+  it("rolls back state when approval refresh append fails after run writes", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_run_refresh_approval_append_fail_01",
+      task: "Meta rerun approval refresh rollback"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "READY_FOR_HUMAN_APPROVAL",
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        last_command_at: "2026-03-08T11:41:00.000Z",
+        meta_review: {
+          ...loaded.state.meta_review!,
+          last_autonomous_run_id: "run_meta_pre_refresh_append_fail_01",
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Pre-refresh state",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-03-08T11:41:00.000Z"
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+    const beforeRun = await readStateSnapshot(bubble.paths.statePath);
+    const previousJsonArtifact = JSON.stringify(
+      {
+        bubble_id: bubble.bubbleId,
+        run_id: "run_meta_pre_refresh_append_fail_01",
+        round: beforeRun.state.round,
+        generated_at: "2026-03-08T11:41:00.000Z",
+        status: "success",
+        recommendation: "approve",
+        summary: "Pre-refresh state",
+        report_ref: "artifacts/meta-review-last.md",
+        report_json_ref: "artifacts/meta-review-last.json",
+        rework_target_message: null,
+        warnings: [],
+        report_json: {
+          findings_claim_state: "clean",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 0
+        }
+      },
+      null,
+      2
+    );
+    const previousMarkdownArtifact = "# Previous report\n\nPre-refresh state.\n";
+    await writeFileFs(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      `${previousJsonArtifact}\n`,
+      "utf8"
+    );
+    await writeFileFs(
+      bubble.paths.metaReviewLastMarkdownArtifactPath,
+      previousMarkdownArtifact,
+      "utf8"
+    );
+
+    let thrown: unknown;
+    try {
+      await runMetaReview(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath
+        },
+        {
+          randomUUID: () => "run_meta_refresh_append_fail_01",
+          now: new Date("2026-03-08T11:42:00.000Z"),
+          runLiveReview: async () => ({
+            recommendation: "approve",
+            summary: "Recovered approve recommendation with append failure.",
+            report_markdown: "# Recovered"
+          }),
+          appendProtocolEnvelope: async () => {
+            throw new Error("simulated approval refresh append failure");
+          }
+        }
+      );
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toMatchObject({
+      reasonCode: "META_REVIEW_GATE_RUN_FAILED"
+    });
+    expect(String((thrown as Error).message)).toContain(
+      "META_REVIEW_GATE_REFRESH_APPROVAL_ROLLBACK_APPLIED"
+    );
+
+    const afterFailedRun = await readStateSnapshot(bubble.paths.statePath);
+    expect(afterFailedRun.state).toEqual(beforeRun.state);
+    await expect(
+      readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
+    ).resolves.toBe(`${previousJsonArtifact}\n`);
+    await expect(
+      readFile(bubble.paths.metaReviewLastMarkdownArtifactPath, "utf8")
+    ).resolves.toBe(previousMarkdownArtifact);
+
+    const transcript = await readTranscriptEnvelopes(
+      bubble.paths.transcriptPath,
+      { allowMissing: true }
+    );
+    expect(
+      transcript.some((entry) => entry.type === "APPROVAL_REQUEST")
+    ).toBe(false);
+  });
+
+  it("emits explicit hard-failure reason when approval refresh append rollback cannot be applied", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_run_refresh_approval_append_rollback_fail_01",
+      task: "Meta rerun approval refresh rollback failure"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "READY_FOR_HUMAN_APPROVAL",
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        last_command_at: "2026-03-08T11:46:00.000Z",
+        meta_review: {
+          ...loaded.state.meta_review!,
+          last_autonomous_run_id: "run_meta_pre_refresh_append_fail_rollback_01",
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Pre-refresh rollback-failure state",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-03-08T11:46:00.000Z"
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    let writeCallCount = 0;
+    const writeStateWithRollbackConflict: typeof writeStateSnapshot = async (
+      statePath,
+      state,
+      options
+    ) => {
+      writeCallCount += 1;
+      if (writeCallCount === 2) {
+        throw new StateStoreConflictError("simulated refresh rollback conflict");
+      }
+      return writeStateSnapshot(statePath, state, options);
+    };
+
+    let thrown: unknown;
+    try {
+      await runMetaReview(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath
+        },
+        {
+          randomUUID: () => "run_meta_refresh_append_fail_rollback_01",
+          now: new Date("2026-03-08T11:47:00.000Z"),
+          runLiveReview: async () => ({
+            recommendation: "approve",
+            summary: "Recovered approve recommendation with rollback failure.",
+            report_markdown: "# Recovered"
+          }),
+          appendProtocolEnvelope: async () => {
+            throw new Error("simulated approval refresh append failure");
+          },
+          writeStateSnapshot: writeStateWithRollbackConflict
+        }
+      );
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toMatchObject({
+      reasonCode: "META_REVIEW_GATE_RUN_FAILED"
+    });
+    expect(String((thrown as Error).message)).toContain(
+      "META_REVIEW_GATE_REFRESH_APPROVAL_ROLLBACK_STATE_CONFLICT"
+    );
+    expect(writeCallCount).toBe(2);
+
+    const transcript = await readTranscriptEnvelopes(
+      bubble.paths.transcriptPath,
+      { allowMissing: true }
+    );
+    expect(
+      transcript.some((entry) => entry.type === "APPROVAL_REQUEST")
+    ).toBe(false);
   });
 
   it("rejects legacy run invocation while META_REVIEW_RUNNING submit channel is active", async () => {
@@ -778,12 +1044,12 @@ describe("meta-review submit", () => {
 
     expect(result.status).toBe("success");
     expect(result.recommendation).toBe("approve");
-    expect(result.run_id).toBeUndefined();
+    expect(result.run_id).toBe("run_meta_submit_01");
     expect(result.lifecycle_state).toBe("META_REVIEW_RUNNING");
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     expect(loaded.state.meta_review).toMatchObject({
-      last_autonomous_run_id: null,
+      last_autonomous_run_id: "run_meta_submit_01",
       last_autonomous_status: "success",
       last_autonomous_recommendation: "approve",
       last_autonomous_summary: "Looks good after final review.",
@@ -792,7 +1058,7 @@ describe("meta-review submit", () => {
     });
   });
 
-  it("accepts structured rework submit with required rework message", async () => {
+  it("accepts structured rework submit when explicit same-run run-link is valid", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -814,10 +1080,13 @@ describe("meta-review submit", () => {
         recommendation: "rework",
         summary: "Needs one more deterministic fix.",
         report_markdown: "# Meta Review\n\nRework required.",
-        rework_target_message: "Fix retry sequencing in gate recovery."
+        rework_target_message: "Fix retry sequencing in gate recovery.",
+        report_json: {
+          meta_review_run_id: "run_meta_submit_02"
+        }
       },
       {
-        randomUUID: () => "run_meta_submit_02",
+        randomUUID: () => "run_generated_submit_02",
         now: new Date("2026-03-09T09:21:00.000Z"),
         readRuntimeSessionsRegistry: async () =>
           buildActiveMetaReviewerSession({
@@ -830,20 +1099,113 @@ describe("meta-review submit", () => {
 
     expect(result.status).toBe("success");
     expect(result.recommendation).toBe("rework");
-    expect(result.run_id).toBeUndefined();
+    expect(result.run_id).toBe("run_meta_submit_02");
     expect(result.rework_target_message).toBe(
       "Fix retry sequencing in gate recovery."
     );
     const reportJson = JSON.parse(
       await readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
     ) as {
+      run_id?: string;
       report_json?: {
         findings_count?: number;
         findings_claim_state?: string;
+        meta_review_run_id?: string;
       };
     };
+    expect(reportJson.run_id).toBe("run_meta_submit_02");
     expect(reportJson.report_json?.findings_claim_state).toBe("open_findings");
     expect(reportJson.report_json?.findings_count).toBe(0);
+    expect(reportJson.report_json?.meta_review_run_id).toBe(
+      "run_meta_submit_02"
+    );
+  });
+
+  it("rejects rework submit when report_json run-link metadata is missing", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_rework_run_link_missing_01",
+      task: "Meta submit rework missing run-link metadata"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:24:00.000Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "rework",
+          summary: "Missing run-link metadata.",
+          report_markdown: "# Meta Review\n\nMissing run-link metadata.",
+          rework_target_message: "Fix run-link metadata.",
+          report_json: {
+            findings_count: 1
+          }
+        },
+        {
+          randomUUID: () => "run_meta_submit_rework_run_link_missing_01",
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID"
+    });
+  });
+
+  it("rejects rework submit when report_json run-link fields mismatch each other", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_rework_run_link_mismatch_01",
+      task: "Meta submit rework run-link mismatch metadata"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:25:00.000Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "rework",
+          summary: "Mismatched run-link metadata.",
+          report_markdown: "# Meta Review\n\nMismatched run-link metadata.",
+          rework_target_message: "Fix run-link metadata.",
+          report_json: {
+            meta_review_run_id: "run_meta_submit_rework_run_link_mismatch_01",
+            findings_run_id: "run_meta_submit_rework_run_link_mismatch_other_01"
+          }
+        },
+        {
+          randomUUID: () => "run_meta_submit_rework_run_link_mismatch_01",
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID"
+    });
   });
 
   it("rejects rework submit without rework target message", async () => {
@@ -1182,6 +1544,7 @@ describe("meta-review submit", () => {
         report_markdown: "# Meta Review\n\nFirst submit."
       },
       {
+        randomUUID: () => "run_meta_submit_04d",
         now: new Date("2026-03-09T09:48:10.000Z"),
         readRuntimeSessionsRegistry: async () => runtimeSessions
       }
@@ -1207,7 +1570,9 @@ describe("meta-review submit", () => {
     });
 
     const after = await readStateSnapshot(bubble.paths.statePath);
-    expect(after.state.meta_review?.last_autonomous_run_id).toBeNull();
+    expect(after.state.meta_review?.last_autonomous_run_id).toBe(
+      "run_meta_submit_04d"
+    );
     expect(after.state.meta_review?.last_autonomous_summary).toBe(
       "First submit should succeed."
     );
@@ -1472,6 +1837,186 @@ describe("meta-review reads", () => {
     expect(before.fingerprint).toBe(after.fingerprint);
     expect(lastReport.has_report).toBe(true);
     expect(lastReport.report_markdown).toContain("Existing report");
+  });
+
+  it("surfaces deterministic parity diagnostics when parity JSON is malformed", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_read_parity_parse_01",
+      task: "Meta parity parse diagnostics"
+    });
+
+    await runMetaReview(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath
+      },
+      {
+        randomUUID: () => "run_meta_read_parity_parse_01",
+        now: new Date("2026-03-08T11:26:00.000Z"),
+        runLiveReview: async () => ({
+          recommendation: "approve",
+          summary: "Parity diagnostics parse case",
+          report_markdown: "# Existing report"
+        })
+      }
+    );
+
+    await writeFileFs(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      "{malformed-json",
+      "utf8"
+    );
+
+    const status = await getMetaReviewStatus({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+    const lastReport = await getMetaReviewLastReport({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+
+    expect(status.parity_diagnostics).toContain(
+      "META_REVIEW_PARITY_ARTIFACT_PARSE_FAILED"
+    );
+    expect(lastReport.parity_diagnostics).toContain(
+      "META_REVIEW_PARITY_ARTIFACT_PARSE_FAILED"
+    );
+    expect(lastReport.has_report).toBe(true);
+    expect(lastReport.report_markdown).toContain("Existing report");
+  });
+
+  it("surfaces deterministic parity diagnostics when parity JSON cannot be read", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_read_parity_read_01",
+      task: "Meta parity read diagnostics"
+    });
+
+    await runMetaReview(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath
+      },
+      {
+        randomUUID: () => "run_meta_read_parity_read_01",
+        now: new Date("2026-03-08T11:27:00.000Z"),
+        runLiveReview: async () => ({
+          recommendation: "approve",
+          summary: "Parity diagnostics read case",
+          report_markdown: "# Existing report"
+        })
+      }
+    );
+
+    const readWithDeniedParityArtifact = (async (
+      filePath: string,
+      encoding: BufferEncoding
+    ) => {
+      if (filePath === bubble.paths.metaReviewLastJsonArtifactPath) {
+        const error = new Error("permission denied") as NodeJS.ErrnoException;
+        error.code = "EACCES";
+        throw error;
+      }
+      return readFile(filePath, encoding);
+    }) as typeof readFile;
+
+    const status = await getMetaReviewStatus(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath
+      },
+      {
+        readFile: readWithDeniedParityArtifact
+      }
+    );
+    const lastReport = await getMetaReviewLastReport(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath
+      },
+      {
+        readFile: readWithDeniedParityArtifact
+      }
+    );
+
+    expect(status.parity_diagnostics).toContain(
+      "META_REVIEW_PARITY_ARTIFACT_READ_FAILED:EACCES"
+    );
+    expect(lastReport.parity_diagnostics).toContain(
+      "META_REVIEW_PARITY_ARTIFACT_READ_FAILED:EACCES"
+    );
+    expect(lastReport.has_report).toBe(true);
+    expect(lastReport.report_markdown).toContain("Existing report");
+  });
+
+  it("surfaces deterministic stale snapshot diagnostics when cached report round trails current bubble round", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_read_snapshot_stale_01",
+      task: "Meta stale snapshot diagnostics"
+    });
+
+    await runMetaReview(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath
+      },
+      {
+        randomUUID: () => "run_meta_read_snapshot_stale_01",
+        now: new Date("2026-03-08T11:28:00.000Z"),
+        runLiveReview: async () => ({
+          recommendation: "approve",
+          summary: "Stale snapshot diagnostics case",
+          report_markdown: "# Existing report"
+        })
+      }
+    );
+
+    const reportPayloadRaw = await readFile(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      "utf8"
+    );
+    const reportPayload = JSON.parse(reportPayloadRaw) as Record<string, unknown>;
+    reportPayload.round = 3;
+    await writeFileFs(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      `${JSON.stringify(reportPayload, null, 2)}\n`,
+      "utf8"
+    );
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        round: 11
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const status = await getMetaReviewStatus({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+    const lastReport = await getMetaReviewLastReport({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+
+    expect(status.parity_diagnostics).toContain(
+      "META_REVIEW_SNAPSHOT_ROUND_STALE:snapshot_round=3;current_round=11"
+    );
+    expect(lastReport.parity_diagnostics).toContain(
+      "META_REVIEW_SNAPSHOT_ROUND_STALE:snapshot_round=3;current_round=11"
+    );
   });
 
   it("returns no-report response before first run", async () => {

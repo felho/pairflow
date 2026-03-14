@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile as writeFileFs } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -18,7 +18,10 @@ import {
   recoverMetaReviewGateFromSnapshot
 } from "../../../src/core/bubble/metaReviewGate.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
-import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
+import {
+  appendProtocolEnvelope,
+  readTranscriptEnvelopes
+} from "../../../src/core/protocol/transcriptStore.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/core/workspace/worktreeManager.js";
@@ -388,7 +391,285 @@ describe("approval decisions", () => {
     expect(approved.state.state).toBe("APPROVED_FOR_COMMIT");
   });
 
-  it("fails closed when recommendation lookup is unavailable", async () => {
+  it("keeps parity override guard active in legacy READY_FOR_APPROVAL compatibility path", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_approval_legacy_parity_override_01",
+      task: "Legacy READY_FOR_APPROVAL parity override"
+    });
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const legacyReadyState = applyStateTransition(loaded.state, {
+      to: "READY_FOR_APPROVAL",
+      lastCommandAt: "2026-02-22T12:04:00.000Z"
+    });
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...legacyReadyState,
+        meta_review: {
+          ...(legacyReadyState.meta_review ?? {
+            last_autonomous_run_id: null,
+            last_autonomous_status: null,
+            last_autonomous_recommendation: null,
+            last_autonomous_summary: null,
+            last_autonomous_report_ref: null,
+            last_autonomous_rework_target_message: null,
+            last_autonomous_updated_at: null,
+            auto_rework_count: 0,
+            auto_rework_limit: 5,
+            sticky_human_gate: false
+          }),
+          last_autonomous_run_id: "run_legacy_parity_override_01",
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Legacy READY_FOR_APPROVAL parity guard.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_updated_at: "2026-02-22T12:03:59.000Z"
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      mirrorPaths: [bubble.paths.inboxPath],
+      lockPath: join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`),
+      now: new Date("2026-02-22T12:04:30.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: "human",
+        type: "APPROVAL_REQUEST",
+        round: legacyReadyState.round,
+        payload: {
+          summary: "Legacy readiness with parity inconsistency metadata.",
+          metadata: {
+            [deliveryTargetRoleMetadataKey]: "status",
+            actor: "meta-reviewer",
+            actor_agent: "codex",
+            latest_recommendation: "approve",
+            findings_parity_status: "guard_failed"
+          }
+        },
+        refs: ["artifacts/meta-review-last.md"]
+      }
+    });
+
+    await expect(
+      emitApprove({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:05:00.000Z")
+      })
+    ).rejects.toThrow(/APPROVAL_PARITY_OVERRIDE_REQUIRED/u);
+
+    const approved = await emitApprove({
+      bubbleId: bubble.bubbleId,
+      overrideNonApprove: true,
+      overrideReason: "Legacy parity inconsistency manually accepted.",
+      cwd: repoPath,
+      now: new Date("2026-02-22T12:05:01.000Z")
+    });
+    expect(approved.state.state).toBe("APPROVED_FOR_COMMIT");
+    expect(approved.envelope.payload.metadata).toMatchObject({
+      findings_parity_inconsistent: true,
+      override_non_approve: true
+    });
+  });
+
+  it("keeps sticky run-failed override behavior symmetric in legacy READY_FOR_APPROVAL compatibility path", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_approval_legacy_sticky_run_failed_01",
+      task: "Legacy READY_FOR_APPROVAL sticky run-failed compatibility"
+    });
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const legacyReadyState = applyStateTransition(loaded.state, {
+      to: "READY_FOR_APPROVAL",
+      lastCommandAt: "2026-02-22T12:04:00.000Z"
+    });
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...legacyReadyState,
+        meta_review: {
+          ...(legacyReadyState.meta_review ?? {
+            last_autonomous_run_id: null,
+            last_autonomous_status: null,
+            last_autonomous_recommendation: null,
+            last_autonomous_summary: null,
+            last_autonomous_report_ref: null,
+            last_autonomous_rework_target_message: null,
+            last_autonomous_updated_at: null,
+            auto_rework_count: 0,
+            auto_rework_limit: 5,
+            sticky_human_gate: false
+          }),
+          sticky_human_gate: true,
+          last_autonomous_run_id: null,
+          last_autonomous_status: null,
+          last_autonomous_recommendation: null,
+          last_autonomous_summary: null,
+          last_autonomous_report_ref: null,
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: null
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      mirrorPaths: [bubble.paths.inboxPath],
+      lockPath: join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`),
+      now: new Date("2026-02-22T12:04:30.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: "human",
+        type: "APPROVAL_REQUEST",
+        round: legacyReadyState.round,
+        payload: {
+          summary: "META_REVIEW_GATE_RUN_FAILED: legacy sticky gate fallback context",
+          metadata: {
+            [deliveryTargetRoleMetadataKey]: "status",
+            actor: "meta-reviewer",
+            actor_agent: "codex"
+          }
+        },
+        refs: ["artifacts/meta-review-last.md"]
+      }
+    });
+
+    await expect(
+      emitApprove({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:05:00.000Z")
+      })
+    ).rejects.toThrow(/APPROVAL_OVERRIDE_REQUIRED/u);
+
+    const approved = await emitApprove({
+      bubbleId: bubble.bubbleId,
+      overrideNonApprove: true,
+      overrideReason: "Legacy sticky run-failed fallback manually accepted.",
+      cwd: repoPath,
+      now: new Date("2026-02-22T12:05:01.000Z")
+    });
+    expect(approved.state.state).toBe("APPROVED_FOR_COMMIT");
+    expect(approved.envelope.payload.metadata).toMatchObject({
+      recommendation_at_decision: "inconclusive",
+      override_non_approve: true
+    });
+  });
+
+  it("falls back to inconclusive instead of recommendation-unavailable on legacy sticky compatibility path", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_approval_legacy_sticky_missing_recommendation_01",
+      task: "Legacy READY_FOR_APPROVAL sticky compatibility fallback"
+    });
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const legacyReadyState = applyStateTransition(loaded.state, {
+      to: "READY_FOR_APPROVAL",
+      lastCommandAt: "2026-02-22T12:04:00.000Z"
+    });
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...legacyReadyState,
+        meta_review: {
+          ...(legacyReadyState.meta_review ?? {
+            last_autonomous_run_id: null,
+            last_autonomous_status: null,
+            last_autonomous_recommendation: null,
+            last_autonomous_summary: null,
+            last_autonomous_report_ref: null,
+            last_autonomous_rework_target_message: null,
+            last_autonomous_updated_at: null,
+            auto_rework_count: 0,
+            auto_rework_limit: 5,
+            sticky_human_gate: false
+          }),
+          sticky_human_gate: true,
+          last_autonomous_run_id: null,
+          last_autonomous_status: null,
+          last_autonomous_recommendation: null,
+          last_autonomous_summary: null,
+          last_autonomous_report_ref: null,
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: null
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      mirrorPaths: [bubble.paths.inboxPath],
+      lockPath: join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`),
+      now: new Date("2026-02-22T12:04:30.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: "human",
+        type: "APPROVAL_REQUEST",
+        round: legacyReadyState.round,
+        payload: {
+          summary: "Legacy sticky compatibility request without recommendation fields.",
+          metadata: {
+            [deliveryTargetRoleMetadataKey]: "status",
+            actor: "meta-reviewer",
+            actor_agent: "codex"
+          }
+        },
+        refs: ["artifacts/meta-review-last.md"]
+      }
+    });
+
+    let caught: unknown;
+    try {
+      await emitApprove({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:05:00.000Z")
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(ApprovalCommandError);
+    const message = (caught as Error).message;
+    expect(message).toMatch(/APPROVAL_OVERRIDE_REQUIRED/u);
+    expect(message).not.toMatch(/APPROVAL_RECOMMENDATION_UNAVAILABLE/u);
+
+    const approved = await emitApprove({
+      bubbleId: bubble.bubbleId,
+      overrideNonApprove: true,
+      overrideReason: "Legacy sticky compatibility fallback manually accepted.",
+      cwd: repoPath,
+      now: new Date("2026-02-22T12:05:01.000Z")
+    });
+    expect(approved.state.state).toBe("APPROVED_FOR_COMMIT");
+    expect(approved.envelope.payload.metadata).toMatchObject({
+      recommendation_at_decision: "inconclusive",
+      override_non_approve: true
+    });
+  });
+
+  it("uses deterministic inconclusive fallback on sticky READY_FOR_HUMAN_APPROVAL compatibility path", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupReadyForHumanApprovalBubble(
       repoPath,
@@ -417,13 +698,123 @@ describe("approval decisions", () => {
       expectedState: "READY_FOR_HUMAN_APPROVAL"
     });
 
-    await expect(
-      emitApprove({
+    let caught: unknown;
+    try {
+      await emitApprove({
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
         now: new Date("2026-02-22T12:05:00.000Z")
-      })
-    ).rejects.toThrow(/APPROVAL_RECOMMENDATION_UNAVAILABLE/u);
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(ApprovalCommandError);
+    const message = (caught as Error).message;
+    expect(message).toMatch(/APPROVAL_OVERRIDE_REQUIRED/u);
+    expect(message).not.toMatch(/APPROVAL_RECOMMENDATION_UNAVAILABLE/u);
+
+    const approved = await emitApprove({
+      bubbleId: bubble.bubbleId,
+      overrideNonApprove: true,
+      overrideReason: "Sticky compatibility fallback manually accepted.",
+      cwd: repoPath,
+      now: new Date("2026-02-22T12:05:01.000Z")
+    });
+    expect(approved.state.state).toBe("APPROVED_FOR_COMMIT");
+    expect(approved.envelope.payload.metadata).toMatchObject({
+      recommendation_at_decision: "inconclusive",
+      override_non_approve: true
+    });
+  });
+
+  it("uses inconclusive fallback when sticky context has no current-round approval request", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupReadyForHumanApprovalBubble(
+      repoPath,
+      "b_approval_run_failed_history_scope_01"
+    );
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        round: loaded.state.round + 1,
+        meta_review: {
+          ...(loaded.state.meta_review ?? {
+            last_autonomous_run_id: null,
+            last_autonomous_status: null,
+            last_autonomous_recommendation: null,
+            last_autonomous_summary: null,
+            last_autonomous_report_ref: null,
+            last_autonomous_rework_target_message: null,
+            last_autonomous_updated_at: null,
+            auto_rework_count: 0,
+            auto_rework_limit: 5,
+            sticky_human_gate: false
+          }),
+          sticky_human_gate: true,
+          last_autonomous_status: null,
+          last_autonomous_recommendation: null,
+          last_autonomous_summary: null,
+          last_autonomous_report_ref: null,
+          last_autonomous_run_id: null,
+          last_autonomous_updated_at: null,
+          last_autonomous_rework_target_message: null
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "READY_FOR_HUMAN_APPROVAL"
+      }
+    );
+
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      mirrorPaths: [bubble.paths.inboxPath],
+      lockPath: join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`),
+      now: new Date("2026-02-22T12:04:30.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: "human",
+        type: "APPROVAL_REQUEST",
+        round: 0,
+        payload: {
+          summary: "META_REVIEW_GATE_RUN_FAILED: historical gate failure"
+        },
+        refs: ["artifacts/meta-review-last.md"]
+      }
+    });
+
+    let caught: unknown;
+    try {
+      await emitApprove({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:05:00.000Z")
+      });
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(ApprovalCommandError);
+    const message = (caught as Error).message;
+    expect(message).toMatch(/APPROVAL_OVERRIDE_REQUIRED/u);
+    expect(message).not.toMatch(/APPROVAL_RECOMMENDATION_UNAVAILABLE/u);
+
+    const approved = await emitApprove({
+      bubbleId: bubble.bubbleId,
+      overrideNonApprove: true,
+      overrideReason: "Sticky context had no current-round approval request; accepted manually.",
+      cwd: repoPath,
+      now: new Date("2026-02-22T12:05:01.000Z")
+    });
+    expect(approved.state.state).toBe("APPROVED_FOR_COMMIT");
+    expect(approved.envelope.payload.metadata).toMatchObject({
+      recommendation_at_decision: "inconclusive",
+      override_non_approve: true
+    });
   });
 
   it("supports override-based approve after human_gate_run_failed fallback", async () => {
@@ -640,6 +1031,362 @@ describe("approval decisions", () => {
     expect(result.state.state).toBe("APPROVED_FOR_COMMIT");
     expect(result.envelope.payload.metadata).toMatchObject({
       recommendation_at_decision: "approve"
+    });
+  });
+
+  it("requires override when latest approval request carries parity inconsistency metadata", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupReadyForHumanApprovalBubble(
+      repoPath,
+      "b_approval_parity_override_01"
+    );
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    if (loaded.state.meta_review === undefined) {
+      throw new Error("Expected meta_review snapshot to exist.");
+    }
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        meta_review: {
+          ...loaded.state.meta_review,
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Autonomous gate approve with parity guard warning.",
+          last_autonomous_updated_at: "2026-02-22T12:05:30.000Z"
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "READY_FOR_HUMAN_APPROVAL"
+      }
+    );
+
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      mirrorPaths: [bubble.paths.inboxPath],
+      lockPath: join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`),
+      now: new Date("2026-02-22T12:05:31.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: "human",
+        type: "APPROVAL_REQUEST",
+        round: loaded.state.round,
+        payload: {
+          summary: "Parity metadata unresolved; explicit human override required.",
+          metadata: {
+            [deliveryTargetRoleMetadataKey]: "status",
+            actor: "meta-reviewer",
+            actor_agent: "codex",
+            latest_recommendation: "approve",
+            findings_parity_status: "guard_failed"
+          }
+        },
+        refs: ["artifacts/meta-review-last.md"]
+      }
+    });
+
+    await expect(
+      emitApprove({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:05:32.000Z")
+      })
+    ).rejects.toThrow(/APPROVAL_PARITY_OVERRIDE_REQUIRED/u);
+
+    await expect(
+      emitApprove({
+        bubbleId: bubble.bubbleId,
+        overrideNonApprove: true,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:05:32.500Z")
+      })
+    ).rejects.toThrow(/APPROVAL_OVERRIDE_REASON_REQUIRED/u);
+
+    const approved = await emitApprove({
+      bubbleId: bubble.bubbleId,
+      overrideNonApprove: true,
+      overrideReason: "Human accepted parity inconsistency for this round.",
+      cwd: repoPath,
+      now: new Date("2026-02-22T12:05:33.000Z")
+    });
+    expect(approved.state.state).toBe("APPROVED_FOR_COMMIT");
+    expect(approved.envelope.payload.metadata).toMatchObject({
+      findings_parity_inconsistent: true,
+      override_non_approve: true
+    });
+  });
+
+  it("requires override when parity counts are inconsistent even if parity status is ok", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupReadyForHumanApprovalBubble(
+      repoPath,
+      "b_approval_parity_count_mismatch_override_01"
+    );
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    if (loaded.state.meta_review === undefined) {
+      throw new Error("Expected meta_review snapshot to exist.");
+    }
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        meta_review: {
+          ...loaded.state.meta_review,
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Autonomous approve with count mismatch parity metadata.",
+          last_autonomous_updated_at: "2026-02-22T12:05:35.000Z"
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "READY_FOR_HUMAN_APPROVAL"
+      }
+    );
+
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      mirrorPaths: [bubble.paths.inboxPath],
+      lockPath: join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`),
+      now: new Date("2026-02-22T12:05:36.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: "human",
+        type: "APPROVAL_REQUEST",
+        round: loaded.state.round,
+        payload: {
+          summary: "Parity counts are inconsistent but status is marked ok.",
+          metadata: {
+            [deliveryTargetRoleMetadataKey]: "status",
+            actor: "meta-reviewer",
+            actor_agent: "codex",
+            latest_recommendation: "approve",
+            findings_claimed_open_total: 2,
+            findings_artifact_open_total: 1,
+            findings_parity_status: "ok"
+          }
+        },
+        refs: ["artifacts/meta-review-last.md"]
+      }
+    });
+
+    await expect(
+      emitApprove({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:05:37.000Z")
+      })
+    ).rejects.toThrow(/APPROVAL_PARITY_OVERRIDE_REQUIRED/u);
+
+    const approved = await emitApprove({
+      bubbleId: bubble.bubbleId,
+      overrideNonApprove: true,
+      overrideReason: "Count mismatch parity metadata was manually reviewed and accepted.",
+      cwd: repoPath,
+      now: new Date("2026-02-22T12:05:38.000Z")
+    });
+    expect(approved.state.state).toBe("APPROVED_FOR_COMMIT");
+    expect(approved.envelope.payload.metadata).toMatchObject({
+      findings_parity_inconsistent: true,
+      override_non_approve: true
+    });
+  });
+
+  it("keeps parity override guard active for META_REVIEW_FAILED approvals", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_approval_meta_review_failed_parity_override_01",
+      task: "META_REVIEW_FAILED parity override guard"
+    });
+    const lockPath = join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`);
+
+    await applyMetaReviewGateOnConvergence(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        summary: "Converged for META_REVIEW_FAILED parity guard.",
+        now: new Date("2026-02-22T12:05:34.000Z")
+      },
+      {
+        setMetaReviewerPaneBinding: async ({ bubbleId: targetBubbleId, active }) => ({
+          updated: true,
+          record: {
+            bubbleId: targetBubbleId,
+            repoPath,
+            worktreePath: bubble.paths.worktreePath,
+            tmuxSessionName: "pf_approval_test",
+            updatedAt: "2026-02-22T12:05:34.000Z",
+            metaReviewerPane: {
+              role: "meta-reviewer",
+              paneIndex: 3,
+              active,
+              updatedAt: "2026-02-22T12:05:34.000Z"
+            }
+          }
+        }),
+        notifyMetaReviewerSubmissionRequest: async () => {
+          throw new MetaReviewGateError(
+            "META_REVIEW_GATE_RUN_FAILED",
+            "simulated runner invocation failure"
+          );
+        }
+      }
+    );
+
+    const failedLoaded = await readStateSnapshot(bubble.paths.statePath);
+    expect(failedLoaded.state.state).toBe("META_REVIEW_FAILED");
+    if (failedLoaded.state.meta_review === undefined) {
+      throw new Error("Expected meta_review snapshot to exist in META_REVIEW_FAILED.");
+    }
+
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      mirrorPaths: [bubble.paths.inboxPath],
+      lockPath,
+      now: new Date("2026-02-22T12:05:36.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: "human",
+        type: "APPROVAL_REQUEST",
+        round: failedLoaded.state.round,
+        payload: {
+          summary: "META_REVIEW_FAILED route with unresolved findings parity.",
+          metadata: {
+            [deliveryTargetRoleMetadataKey]: "status",
+            actor: "meta-reviewer",
+            actor_agent: "codex",
+            latest_recommendation: "approve",
+            findings_parity_status: "guard_failed"
+          }
+        },
+        refs: ["artifacts/meta-review-last.md"]
+      }
+    });
+
+    await expect(
+      emitApprove({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:05:37.000Z")
+      })
+    ).rejects.toThrow(/APPROVAL_PARITY_OVERRIDE_REQUIRED/u);
+
+    const approved = await emitApprove({
+      bubbleId: bubble.bubbleId,
+      overrideNonApprove: true,
+      overrideReason: "META_REVIEW_FAILED parity inconsistency manually accepted.",
+      cwd: repoPath,
+      now: new Date("2026-02-22T12:05:38.000Z")
+    });
+    expect(approved.state.state).toBe("APPROVED_FOR_COMMIT");
+    expect(approved.envelope.payload.metadata).toMatchObject({
+      recommendation_at_decision: "inconclusive",
+      findings_parity_inconsistent: true,
+      override_non_approve: true
+    });
+  });
+
+  it("keeps parity override guard active after sticky human-gate bypass", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_approval_sticky_parity_override_01",
+      task: "Sticky bypass parity override guard"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        meta_review: {
+          ...(loaded.state.meta_review ?? {
+            last_autonomous_run_id: null,
+            last_autonomous_status: null,
+            last_autonomous_recommendation: null,
+            last_autonomous_summary: null,
+            last_autonomous_report_ref: null,
+            last_autonomous_rework_target_message: null,
+            last_autonomous_updated_at: null,
+            auto_rework_count: 0,
+            auto_rework_limit: 5,
+            sticky_human_gate: false
+          }),
+          sticky_human_gate: true,
+          last_autonomous_run_id: "run_sticky_parity_override_01",
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Sticky bypass should preserve parity metadata.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_updated_at: "2026-02-22T12:06:00.000Z"
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+    await writeFileFs(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      `${JSON.stringify(
+        {
+          bubble_id: bubble.bubbleId,
+          run_id: "run_sticky_parity_override_01",
+          report_json: {
+            findings_count: 2,
+            findings_claimed_open_total: 2,
+            findings_artifact_open_total: 1,
+            findings_artifact_status: "available",
+            findings_digest_sha256:
+              "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            meta_review_run_id: "run_sticky_parity_override_01",
+            findings_parity_status: "guard_failed"
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
+
+    const gate = await applyMetaReviewGateOnConvergence({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged for sticky bypass parity override.",
+      now: new Date("2026-02-22T12:06:01.000Z")
+    });
+    expect(gate.route).toBe("human_gate_sticky_bypass");
+    expect(gate.gateEnvelope.payload.metadata).toMatchObject({
+      findings_parity_status: "guard_failed",
+      meta_review_run_id: "run_sticky_parity_override_01"
+    });
+
+    await expect(
+      emitApprove({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:06:02.000Z")
+      })
+    ).rejects.toThrow(/APPROVAL_PARITY_OVERRIDE_REQUIRED/u);
+
+    const approved = await emitApprove({
+      bubbleId: bubble.bubbleId,
+      overrideNonApprove: true,
+      overrideReason: "Sticky bypass parity inconsistency reviewed and accepted.",
+      cwd: repoPath,
+      now: new Date("2026-02-22T12:06:03.000Z")
+    });
+    expect(approved.state.state).toBe("APPROVED_FOR_COMMIT");
+    expect(approved.envelope.payload.metadata).toMatchObject({
+      findings_parity_inconsistent: true,
+      override_non_approve: true
     });
   });
 

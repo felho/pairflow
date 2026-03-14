@@ -99,7 +99,12 @@ const approvalOverrideReasonRequiredReasonCode =
   "APPROVAL_OVERRIDE_REASON_REQUIRED";
 const approvalRecommendationUnavailableReasonCode =
   "APPROVAL_RECOMMENDATION_UNAVAILABLE";
+const approvalParityOverrideRequiredReasonCode = "APPROVAL_PARITY_OVERRIDE_REQUIRED";
 const metaReviewRunFailedSummaryPrefix = "META_REVIEW_GATE_RUN_FAILED:";
+const metaReviewGateRunFailedReasonCode = "META_REVIEW_GATE_RUN_FAILED";
+const metaReviewGateRouteMetadataKey = "meta_review_gate_route";
+const metaReviewGateReasonCodeMetadataKey = "meta_review_gate_reason_code";
+const metaReviewGateRunFailedMetadataKey = "meta_review_gate_run_failed";
 
 interface ApprovalTranscriptContext {
   latestRoundApprovalRequest?: ProtocolEnvelope;
@@ -154,6 +159,8 @@ function resolveLatestApprovalRecommendation(
   state: BubbleStateSnapshot,
   context?: ApprovalTranscriptContext
 ): MetaReviewRecommendation {
+  const isCompatibilityLegacyWithMetaReview =
+    state.state === legacyHumanApprovalState && state.meta_review !== undefined;
   if (
     state.state === legacyHumanApprovalState &&
     state.meta_review === undefined
@@ -174,15 +181,30 @@ function resolveLatestApprovalRecommendation(
     return "inconclusive";
   }
   if (
-    state.state === canonicalHumanApprovalState &&
-    state.meta_review?.sticky_human_gate === true &&
-    context !== undefined &&
-    (
+    (state.state === canonicalHumanApprovalState || isCompatibilityLegacyWithMetaReview) &&
+    state.meta_review?.sticky_human_gate === true
+  ) {
+    if (context === undefined) {
+      return "inconclusive";
+    }
+    if (
       isRunFailedApprovalRequest(context.latestRoundApprovalRequest) ||
       context.hasRunFailedApprovalRequestHistory
-    )
-  ) {
-    return "inconclusive";
+    ) {
+      return "inconclusive";
+    }
+    if (isCompatibilityLegacyWithMetaReview) {
+      return "inconclusive";
+    }
+    if (
+      state.state === canonicalHumanApprovalState
+      && context.latestRoundApprovalRequest !== undefined
+    ) {
+      return "inconclusive";
+    }
+    if (state.state === canonicalHumanApprovalState) {
+      return "inconclusive";
+    }
   }
   throw new ApprovalCommandError(
     `${approvalRecommendationUnavailableReasonCode}: latest autonomous recommendation is unavailable at approval time.`
@@ -203,11 +225,53 @@ function isRunFailedApprovalRequest(
   if (approvalRequest === undefined || !isHumanApprovalRequest(approvalRequest)) {
     return false;
   }
+  const metadata = approvalRequest.payload.metadata;
+  if (typeof metadata === "object" && metadata !== null) {
+    const gateMetadata = metadata as Record<string, unknown>;
+    if (gateMetadata[metaReviewGateRunFailedMetadataKey] === true) {
+      return true;
+    }
+    if (gateMetadata[metaReviewGateRouteMetadataKey] === "human_gate_run_failed") {
+      return true;
+    }
+    if (gateMetadata[metaReviewGateReasonCodeMetadataKey] === metaReviewGateRunFailedReasonCode) {
+      return true;
+    }
+  }
   const summary = approvalRequest.payload.summary;
   return (
     typeof summary === "string" &&
     summary.startsWith(metaReviewRunFailedSummaryPrefix)
   );
+}
+
+function hasParityInconsistencyMetadata(
+  approvalRequest: ProtocolEnvelope | undefined
+): boolean {
+  if (approvalRequest === undefined || !isHumanApprovalRequest(approvalRequest)) {
+    return false;
+  }
+  const metadata = approvalRequest.payload.metadata;
+  if (typeof metadata !== "object" || metadata === null) {
+    return false;
+  }
+  const parityMetadata = metadata as Record<string, unknown>;
+  const parityStatus = parityMetadata.findings_parity_status;
+  if (parityStatus === "mismatch" || parityStatus === "guard_failed") {
+    return true;
+  }
+  const claimed = parityMetadata.findings_claimed_open_total;
+  const artifact = parityMetadata.findings_artifact_open_total;
+  const hasClaimed =
+    typeof claimed === "number" && Number.isInteger(claimed) && claimed >= 0;
+  const hasArtifact =
+    typeof artifact === "number"
+    && Number.isInteger(artifact)
+    && artifact >= 0;
+  if (hasClaimed && hasArtifact) {
+    return claimed !== artifact;
+  }
+  return false;
 }
 
 async function readApprovalTranscriptContext(
@@ -230,11 +294,7 @@ async function readApprovalTranscriptContext(
     ) {
       latestRoundApprovalRequest = envelope;
     }
-    const summary = envelope.payload.summary;
-    if (
-      typeof summary === "string" &&
-      summary.startsWith(metaReviewRunFailedSummaryPrefix)
-    ) {
+    if (envelope.round === round && isRunFailedApprovalRequest(envelope)) {
       hasRunFailedApprovalRequestHistory = true;
     }
     if (
@@ -320,28 +380,37 @@ export async function emitApprovalDecision(
     [deliveryTargetRoleMetadataKey]: "status"
   };
   if (input.decision === "approve") {
-    const approvalTranscriptContext =
-      state.state === canonicalHumanApprovalState
-        ? await readApprovalTranscriptContext(
-            resolved.bubblePaths.transcriptPath,
-            state.round
-          )
-        : undefined;
+    const approvalTranscriptContext = await readApprovalTranscriptContext(
+      resolved.bubblePaths.transcriptPath,
+      state.round
+    );
     const recommendationAtDecision = resolveLatestApprovalRecommendation(
       state,
       approvalTranscriptContext
     );
     envelopeMetadata.recommendation_at_decision = recommendationAtDecision;
+    const parityInconsistencyAtDecision = hasParityInconsistencyMetadata(
+      approvalTranscriptContext?.latestRoundApprovalRequest
+    );
+    if (parityInconsistencyAtDecision) {
+      envelopeMetadata.findings_parity_inconsistent = true;
+    }
 
-    if (recommendationAtDecision !== "approve") {
+    const overrideRequired =
+      recommendationAtDecision !== "approve" || parityInconsistencyAtDecision;
+    if (overrideRequired) {
       if (input.overrideNonApprove !== true) {
         throw new ApprovalCommandError(
-          `${approvalOverrideRequiredReasonCode}: approval requires --override-non-approve when latest recommendation is ${recommendationAtDecision}.`
+          parityInconsistencyAtDecision
+            ? `${approvalParityOverrideRequiredReasonCode}: approval requires --override-non-approve when findings parity metadata is inconsistent.`
+            : `${approvalOverrideRequiredReasonCode}: approval requires --override-non-approve when latest recommendation is ${recommendationAtDecision}.`
         );
       }
       if (overrideReason === undefined) {
         throw new ApprovalCommandError(
-          `${approvalOverrideReasonRequiredReasonCode}: approval override requires --override-reason when latest recommendation is ${recommendationAtDecision}.`
+          parityInconsistencyAtDecision
+            ? `${approvalOverrideReasonRequiredReasonCode}: approval override requires --override-reason when findings parity metadata is inconsistent.`
+            : `${approvalOverrideReasonRequiredReasonCode}: approval override requires --override-reason when latest recommendation is ${recommendationAtDecision}.`
         );
       }
       envelopeMetadata.override_non_approve = true;

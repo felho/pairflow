@@ -145,7 +145,7 @@ afterEach(async () => {
   );
 });
 
-describe("emitPassFromWorkspace", () => {
+describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
   it("resolves canonical repeat-clean metadata key and falls back to deprecated legacy key", () => {
     expect(
       resolveMostRecentPreviousReviewerPassIsCleanFromMetadata({

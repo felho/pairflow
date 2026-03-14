@@ -59,6 +59,23 @@ export type DeliveryTargetRole = (typeof deliveryTargetRoles)[number];
 
 export const deliveryTargetRoleMetadataKey = "delivery_target_role" as const;
 
+export const findingsParityStatuses = [
+  "ok",
+  "mismatch",
+  "guard_failed"
+] as const;
+
+export type FindingsParityStatus = (typeof findingsParityStatuses)[number];
+
+export interface FindingsParityMetadata {
+  findings_claimed_open_total?: number | null;
+  findings_artifact_open_total?: number | null;
+  findings_artifact_status?: string | null;
+  findings_digest_sha256?: string | null;
+  meta_review_run_id?: string | null;
+  findings_parity_status?: FindingsParityStatus | null;
+}
+
 export type DeliveryTargetRoleMetadataParseResult =
   | {
       status: "absent";
@@ -81,7 +98,7 @@ export interface ProtocolEnvelopePayload {
   findings_claim_state?: FindingsClaimState;
   findings_claim_source?: FindingsClaimSource;
   findings?: Finding[];
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> & FindingsParityMetadata;
 }
 
 export interface ProtocolEnvelope {

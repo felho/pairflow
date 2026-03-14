@@ -3,8 +3,17 @@ import { readFile } from "node:fs/promises";
 import { resolveBubbleById } from "../../bubble/bubbleLookup.js";
 import { readTranscriptEnvelopes } from "../../protocol/transcriptStore.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type { Finding } from "../../../types/findings.js";
+import {
+  isFindingLayer,
+  isFindingPriority,
+  isFindingSeverity,
+  isFindingTiming
+} from "../../../types/findings.js";
 import {
   isApprovalDecision,
+  isFindingsClaimSource,
+  isFindingsClaimState,
   isPassIntent,
   isProtocolMessageType
 } from "../../../types/protocol.js";
@@ -30,6 +39,45 @@ export function presentTimeline(envelopes: ProtocolEnvelope[]): UiTimelineEntry[
   }));
 }
 
+function isFinding(value: unknown): value is Finding {
+  if (!isRecord(value) || !isNonEmptyString(value.title)) {
+    return false;
+  }
+  if (value.priority !== undefined && !isFindingPriority(value.priority)) {
+    return false;
+  }
+  if (value.severity !== undefined && !isFindingSeverity(value.severity)) {
+    return false;
+  }
+  if (value.timing !== undefined && !isFindingTiming(value.timing)) {
+    return false;
+  }
+  if (value.layer !== undefined && !isFindingLayer(value.layer)) {
+    return false;
+  }
+  if (
+    value.evidence !== undefined
+    && !(
+      isNonEmptyString(value.evidence)
+      || (
+        Array.isArray(value.evidence)
+        && value.evidence.every((entry) => isNonEmptyString(entry))
+      )
+    )
+  ) {
+    return false;
+  }
+  if (value.refs !== undefined) {
+    if (!Array.isArray(value.refs) || !value.refs.every((entry) => isNonEmptyString(entry))) {
+      return false;
+    }
+  }
+  if (value.effective_priority !== undefined && !isFindingPriority(value.effective_priority)) {
+    return false;
+  }
+  return true;
+}
+
 function normalizePayloadForUi(raw: unknown): UiTimelineEntry["payload"] {
   if (!isRecord(raw)) {
     return {};
@@ -51,7 +99,13 @@ function normalizePayloadForUi(raw: unknown): UiTimelineEntry["payload"] {
   if (isPassIntent(raw.pass_intent)) {
     payload.pass_intent = raw.pass_intent;
   }
-  if (Array.isArray(raw.findings)) {
+  if (isFindingsClaimState(raw.findings_claim_state)) {
+    payload.findings_claim_state = raw.findings_claim_state;
+  }
+  if (isFindingsClaimSource(raw.findings_claim_source)) {
+    payload.findings_claim_source = raw.findings_claim_source;
+  }
+  if (Array.isArray(raw.findings) && raw.findings.every((value) => isFinding(value))) {
     payload.findings = raw.findings;
   }
   if (isRecord(raw.metadata)) {

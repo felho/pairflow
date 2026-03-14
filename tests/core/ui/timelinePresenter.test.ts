@@ -68,5 +68,43 @@ describe("timelinePresenter lenient fallback", () => {
     expect(timeline[1]?.type).toBe("PASS");
     expect(timeline[1]?.payload.summary).toBe("Forward-compatible payload fields");
     expect(timeline[1]?.payload.pass_intent).toBe("review");
+    expect(timeline[1]?.payload.findings_claim_state).toBe("open_findings");
+    expect(timeline[1]?.payload.findings_claim_source).toBe("payload_findings_count");
+  });
+
+  it("falls back after strict parser Invalid protocol envelope and preserves normalized claim fields", async () => {
+    const dir = await createTempDir();
+    const transcriptPath = join(dir, "transcript.ndjson");
+
+    const invalidForStrictButLenientCompatibleLine = JSON.stringify({
+      id: "msg_20260313_003",
+      ts: "2026-03-13T12:30:31.766Z",
+      bubble_id: "b_ui_compat_02",
+      sender: "reviewer",
+      recipient: "human",
+      type: "PASS",
+      round: 1,
+      payload: {
+        summary: "Strict parse should fail because sender enum is invalid.",
+        pass_intent: "review",
+        findings_claim_state: "open_findings",
+        findings_claim_source: "payload_findings_count"
+      },
+      refs: [".pairflow/evidence/typecheck.log"]
+    });
+    await writeFile(
+      transcriptPath,
+      `${invalidForStrictButLenientCompatibleLine}\n`,
+      "utf8"
+    );
+
+    const timeline = await readBubbleTimelineFromTranscriptPath(transcriptPath);
+
+    expect(timeline).toHaveLength(1);
+    expect(timeline[0]?.sender).toBe("reviewer");
+    expect(timeline[0]?.type).toBe("PASS");
+    expect(timeline[0]?.payload.summary).toContain("Strict parse should fail");
+    expect(timeline[0]?.payload.findings_claim_state).toBe("open_findings");
+    expect(timeline[0]?.payload.findings_claim_source).toBe("payload_findings_count");
   });
 });

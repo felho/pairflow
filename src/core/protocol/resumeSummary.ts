@@ -43,6 +43,27 @@ function clampSummary(text: string): string {
   return truncateText(limitedLines, MAX_SUMMARY_CHARS);
 }
 
+function extractFindingsParityDiagnosticFromMetadata(
+  metadata: Record<string, unknown> | undefined
+): string | null {
+  if (metadata === undefined) {
+    return null;
+  }
+  const claimed = metadata.findings_claimed_open_total;
+  const artifact = metadata.findings_artifact_open_total;
+  const status = metadata.findings_parity_status;
+  const hasClaimed = typeof claimed === "number" && Number.isInteger(claimed);
+  const hasArtifact = typeof artifact === "number" && Number.isInteger(artifact);
+  const hasStatus = typeof status === "string" && status.trim().length > 0;
+  if (!hasClaimed && !hasArtifact && !hasStatus) {
+    return null;
+  }
+  const claimedText = hasClaimed ? String(claimed) : "?";
+  const artifactText = hasArtifact ? String(artifact) : "?";
+  const statusText = hasStatus ? status.trim() : "unknown";
+  return `parity=${claimedText}/${artifactText}@${statusText}`;
+}
+
 function extractPayloadExcerpt(envelope: ProtocolEnvelope): string {
   const payload = envelope.payload;
   const fields: string[] = [];
@@ -72,6 +93,17 @@ function extractPayloadExcerpt(envelope: ProtocolEnvelope): string {
     fields.push(
       `findings_claim=${payload.findings_claim_state}@${payload.findings_claim_source}`
     );
+  }
+  if (
+    typeof payload.metadata === "object" &&
+    payload.metadata !== null
+  ) {
+    const parityDiagnostic = extractFindingsParityDiagnosticFromMetadata(
+      payload.metadata as Record<string, unknown>
+    );
+    if (parityDiagnostic !== null) {
+      fields.push(parityDiagnostic);
+    }
   }
 
   if (fields.length === 0) {
@@ -114,7 +146,20 @@ function formatFlowEvent(envelope: ProtocolEnvelope): string {
     envelope.payload.summary ??
     "(no text)";
   const text = truncateText(compactWhitespace(textSource), MAX_EVENT_TEXT_CHARS);
-  return `- ${envelope.type} r${envelope.round} ${envelope.sender}->${envelope.recipient}: ${text}`;
+  let paritySuffix = "";
+  if (
+    envelope.type === "APPROVAL_REQUEST" &&
+    typeof envelope.payload.metadata === "object" &&
+    envelope.payload.metadata !== null
+  ) {
+    const parityDiagnostic = extractFindingsParityDiagnosticFromMetadata(
+      envelope.payload.metadata as Record<string, unknown>
+    );
+    if (parityDiagnostic !== null) {
+      paritySuffix = ` (${parityDiagnostic})`;
+    }
+  }
+  return `- ${envelope.type} r${envelope.round} ${envelope.sender}->${envelope.recipient}: ${text}${paritySuffix}`;
 }
 
 function summarizeTranscript(envelopes: readonly ProtocolEnvelope[]): string {

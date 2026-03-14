@@ -1,5 +1,6 @@
+import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 
 import { appendProtocolEnvelope, type AppendProtocolEnvelopeResult } from "../protocol/transcriptStore.js";
 import { applyStateTransition } from "../state/machine.js";
@@ -31,6 +32,7 @@ import {
   type MetaReviewRunResult,
   type MetaReviewRunWarning
 } from "./metaReview.js";
+import { appendHumanApprovalRequestEnvelope } from "./approvalRequestEnvelope.js";
 import {
   claimSourceInvalidReasonCode,
   claimStateRequiredReasonCode,
@@ -38,6 +40,8 @@ import {
 } from "../convergence/policy.js";
 import {
   deliveryTargetRoleMetadataKey,
+  type FindingsParityStatus,
+  type FindingsParityMetadata,
   isFindingsClaimSource,
   isFindingsClaimState,
   type ProtocolEnvelope
@@ -76,6 +80,7 @@ export interface ApplyMetaReviewGateOnConvergenceDependencies {
   setMetaReviewerPaneBinding?: typeof setMetaReviewerPaneBinding;
   notifyMetaReviewerSubmissionRequest?: typeof notifyMetaReviewerSubmissionRequest;
   runTmux?: typeof runTmux;
+  readFile?: typeof readFile;
 }
 
 export interface RecoverMetaReviewGateFromSnapshotInput {
@@ -96,6 +101,7 @@ export interface RecoverMetaReviewGateFromSnapshotDependencies {
   setMetaReviewerPaneBinding?: typeof setMetaReviewerPaneBinding;
   readFile?: typeof readFile;
   writeFile?: typeof writeFile;
+  sleepForRetryMs?: (delayMs: number) => Promise<void>;
 }
 
 export interface MetaReviewGateResult {
@@ -107,13 +113,28 @@ export interface MetaReviewGateResult {
   metaReviewRun?: MetaReviewRunResult;
 }
 
+interface MetaReviewGateErrorDiagnostics {
+  rollbackReasonCode?: string;
+  rollbackOutcome?: "not_attempted" | "applied" | "failed";
+  rollbackTargetState?: BubbleStateSnapshot["state"];
+  stageReasonCode?: string;
+  restoreReasonCode?: string;
+  retryInvariantReasonCode?: string;
+}
+
 export class MetaReviewGateError extends Error {
   public readonly reasonCode: MetaReviewGateReasonCode;
+  public readonly diagnostics: MetaReviewGateErrorDiagnostics | undefined;
 
-  public constructor(reasonCode: MetaReviewGateReasonCode, message: string) {
+  public constructor(
+    reasonCode: MetaReviewGateReasonCode,
+    message: string,
+    diagnostics?: MetaReviewGateErrorDiagnostics
+  ) {
     super(message);
     this.name = "MetaReviewGateError";
     this.reasonCode = reasonCode;
+    this.diagnostics = diagnostics;
   }
 }
 
@@ -124,6 +145,58 @@ const metaReviewFindingsArtifactRequiredReasonCode =
   "META_REVIEW_FINDINGS_ARTIFACT_REQUIRED";
 const metaReviewFindingsCountMismatchReasonCode =
   "META_REVIEW_FINDINGS_COUNT_MISMATCH";
+const metaReviewFindingsRunLinkMissingReasonCode =
+  "META_REVIEW_FINDINGS_RUN_LINK_MISSING";
+const metaReviewFindingsParityGuardReasonCode =
+  "META_REVIEW_FINDINGS_PARITY_GUARD";
+const metaReviewGateRollbackNotAttemptedReasonCode =
+  "META_REVIEW_GATE_ROLLBACK_NOT_ATTEMPTED";
+const metaReviewGateRollbackAppliedReasonCode =
+  "META_REVIEW_GATE_ROLLBACK_APPLIED";
+const metaReviewGateRollbackStateConflictReasonCode =
+  "META_REVIEW_GATE_ROLLBACK_STATE_CONFLICT";
+const metaReviewGateRollbackTransitionInvalidReasonCode =
+  "META_REVIEW_GATE_ROLLBACK_TRANSITION_INVALID";
+const metaReviewGateStagedReadyRestoreAppliedReasonCode =
+  "META_REVIEW_GATE_STAGED_READY_RESTORE_APPLIED";
+const metaReviewGateStagedReadyRestoreStateConflictReasonCode =
+  "META_REVIEW_GATE_STAGED_READY_RESTORE_STATE_CONFLICT";
+const metaReviewGateStagedReadyRestoreTransitionInvalidReasonCode =
+  "META_REVIEW_GATE_STAGED_READY_RESTORE_TRANSITION_INVALID";
+const metaReviewGateAutoReworkRetryRoundInvariantReasonCode =
+  "META_REVIEW_GATE_AUTO_REWORK_RETRY_ROUND_INVARIANT";
+const metaReviewGateAutoReworkRetryOwnershipInvariantReasonCode =
+  "META_REVIEW_GATE_AUTO_REWORK_RETRY_OWNERSHIP_INVARIANT";
+const metaReviewGateAutoReworkRetryRoundRoleHistoryInvariantReasonCode =
+  "META_REVIEW_GATE_AUTO_REWORK_RETRY_ROUND_ROLE_HISTORY_INVARIANT";
+const metaReviewGateAutoReworkRetryRunIdentityInvariantReasonCode =
+  "META_REVIEW_GATE_AUTO_REWORK_RETRY_RUN_IDENTITY_INVARIANT";
+const metaReviewGatePaneDeactivationUnavoidableReasonCode =
+  "META_REVIEW_GATE_PANE_DEACTIVATION_UNAVOIDABLE";
+const findingsArtifactReadRetryableErrorCodes = new Set([
+  "EAGAIN",
+  "EBUSY",
+  "EINTR",
+  "EMFILE",
+  "ENFILE",
+  "ENOENT",
+  "ETIMEDOUT",
+  "EIO"
+]);
+const findingsArtifactReadMaxAttempts = 3;
+const findingsArtifactReadRetryBaseDelayMs = 25;
+const findingsArtifactReadRetryMaxDelayMs = 75;
+
+function resolveFindingsArtifactReadRetryDelayMs(attempt: number): number {
+  const scaledDelay = findingsArtifactReadRetryBaseDelayMs * attempt;
+  return Math.min(scaledDelay, findingsArtifactReadRetryMaxDelayMs);
+}
+
+async function defaultSleepForRetryMs(delayMs: number): Promise<void> {
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, delayMs);
+  });
+}
 
 function normalizeMetaReviewSnapshot(
   snapshot: BubbleMetaReviewSnapshotState | undefined
@@ -146,6 +219,70 @@ function normalizeMetaReviewSnapshot(
   };
 }
 
+function isRetryableFindingsArtifactReadError(error: unknown): boolean {
+  if (!(error instanceof Error) || !("code" in error)) {
+    return false;
+  }
+  const code = (error as NodeJS.ErrnoException).code;
+  return (
+    typeof code === "string" &&
+    findingsArtifactReadRetryableErrorCodes.has(code.trim().toUpperCase())
+  );
+}
+
+function formatReadErrorDetail(error: unknown): string {
+  if (error instanceof Error && "code" in error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (typeof code === "string" && code.trim().length > 0) {
+      return `${code.trim().toUpperCase()}: ${error.message}`;
+    }
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function readFindingsArtifactWithRetry(input: {
+  artifactPath: string;
+  readFileFn: typeof readFile;
+  sleepForRetryMs?: (delayMs: number) => Promise<void>;
+}): Promise<
+  | { ok: true; raw: string; attempts: number }
+  | { ok: false; error: unknown; attempts: number; retried: boolean }
+> {
+  let attempts = 0;
+  let lastError: unknown = new Error("unknown findings artifact read error");
+
+  while (attempts < findingsArtifactReadMaxAttempts) {
+    attempts += 1;
+    try {
+      const raw = await input.readFileFn(input.artifactPath, "utf8");
+      return { ok: true, raw, attempts };
+    } catch (error) {
+      lastError = error;
+      if (
+        !isRetryableFindingsArtifactReadError(error) ||
+        attempts >= findingsArtifactReadMaxAttempts
+      ) {
+        return {
+          ok: false,
+          error,
+          attempts,
+          retried: attempts > 1
+        };
+      }
+      const retryDelayMs = resolveFindingsArtifactReadRetryDelayMs(attempts);
+      const sleepForRetryMs = input.sleepForRetryMs ?? defaultSleepForRetryMs;
+      await sleepForRetryMs(retryDelayMs);
+    }
+  }
+
+  return {
+    ok: false,
+    error: lastError,
+    attempts,
+    retried: attempts > 1
+  };
+}
+
 export interface NotifyMetaReviewerSubmissionRequestInput {
   bubbleId: string;
   round: number;
@@ -164,7 +301,7 @@ export async function notifyMetaReviewerSubmissionRequest(
   const message = [
     `# [pairflow] bubble=${input.bubbleId} meta-review request round=${input.round}.`,
     "Perform autonomous meta-review now, then submit through structured Pairflow CLI (no pane markers).",
-    `Required command: pairflow bubble meta-review submit --id ${input.bubbleId} --round ${input.round} --recommendation <approve|rework|inconclusive> --summary "<summary>" --report-markdown "<markdown>" [--rework-target-message "<message>"] [--report-json '{"findings_claim_state":"clean|open_findings|unknown","findings_claim_source":"meta_review_artifact","findings_count":<int>,"findings_artifact_ref":"artifacts/...","findings_run_id":"<run-id>"}'].`
+    `Required command: pairflow bubble meta-review submit --id ${input.bubbleId} --round ${input.round} --recommendation <approve|rework|inconclusive> --summary "<summary>" --report-markdown "<markdown>" [--rework-target-message "<message>"] [--report-json '{"findings_claim_state":"clean|open_findings|unknown","findings_claim_source":"meta_review_artifact","findings_count":<int>,"findings_artifact_ref":"artifacts/...","meta_review_run_id":"<run-id>","findings_digest_sha256":"<sha256>","findings_artifact_status":"available"}'].`
   ].join(" ");
 
   await maybeAcceptClaudeTrustPrompt(runner, input.targetPane).catch(() => undefined);
@@ -215,43 +352,20 @@ function buildHumanGateSummary(input: {
   return input.convergenceSummary;
 }
 
-async function appendHumanApprovalRequest(input: {
-  appendEnvelope: typeof appendProtocolEnvelope;
-  transcriptPath: string;
-  inboxPath: string;
-  lockPath: string;
-  now: Date;
-  bubbleId: string;
-  round: number;
-  summary: string;
-  refs: string[];
-  recommendation?: MetaReviewRecommendation;
-}): Promise<AppendProtocolEnvelopeResult> {
-  return input.appendEnvelope({
-    transcriptPath: input.transcriptPath,
-    mirrorPaths: [input.inboxPath],
-    lockPath: input.lockPath,
-    now: input.now,
-    envelope: {
-      bubble_id: input.bubbleId,
-      sender: "orchestrator",
-      recipient: "human",
-      type: "APPROVAL_REQUEST",
-      round: input.round,
-      payload: {
-        summary: input.summary,
-        metadata: {
-          [deliveryTargetRoleMetadataKey]: "status",
-          actor: "meta-reviewer",
-          actor_agent: "codex",
-          ...(input.recommendation !== undefined
-            ? { latest_recommendation: input.recommendation }
-            : {})
-        }
-      },
-      refs: input.refs
-    }
-  });
+function resolveFindingsParityMetadataForEnvelope(
+  metadata: FindingsParityMetadata | null | undefined
+): Record<string, unknown> {
+  if (metadata === null || metadata === undefined) {
+    return {};
+  }
+  return {
+    findings_claimed_open_total: metadata.findings_claimed_open_total,
+    findings_artifact_open_total: metadata.findings_artifact_open_total,
+    findings_artifact_status: metadata.findings_artifact_status,
+    findings_digest_sha256: metadata.findings_digest_sha256,
+    meta_review_run_id: metadata.meta_review_run_id,
+    findings_parity_status: metadata.findings_parity_status
+  };
 }
 
 function transitionToGateState(input: {
@@ -394,8 +508,173 @@ function resolveMetaReviewReportJsonObject(
     source.findings_claim_source !== undefined ||
     source.findings_count !== undefined ||
     source.findings_artifact_ref !== undefined ||
-    source.findings_run_id !== undefined;
+    source.findings_run_id !== undefined ||
+    source.meta_review_run_id !== undefined ||
+    source.findings_digest_sha256 !== undefined ||
+    source.findings_artifact_status !== undefined ||
+    source.findings_parity_status !== undefined;
   return hasFlatClaimFields ? source : undefined;
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
+function resolveMetaReviewRunId(
+  reportJson: Record<string, unknown>
+): string | undefined {
+  if (
+    typeof reportJson.meta_review_run_id === "string" &&
+    reportJson.meta_review_run_id.trim().length > 0
+  ) {
+    return reportJson.meta_review_run_id.trim();
+  }
+  if (
+    typeof reportJson.findings_run_id === "string" &&
+    reportJson.findings_run_id.trim().length > 0
+  ) {
+    return reportJson.findings_run_id.trim();
+  }
+  return undefined;
+}
+
+function resolveFindingsArtifactStatus(
+  reportJson: Record<string, unknown>
+): string | undefined {
+  if (
+    typeof reportJson.findings_artifact_status === "string" &&
+    reportJson.findings_artifact_status.trim().length > 0
+  ) {
+    return reportJson.findings_artifact_status.trim();
+  }
+  if (
+    typeof reportJson.artifact_status === "string" &&
+    reportJson.artifact_status.trim().length > 0
+  ) {
+    return reportJson.artifact_status.trim();
+  }
+  return undefined;
+}
+
+function resolveFindingsDigestSha256(
+  reportJson: Record<string, unknown>
+): string | undefined {
+  if (
+    typeof reportJson.findings_digest_sha256 !== "string" ||
+    reportJson.findings_digest_sha256.trim().length === 0
+  ) {
+    return undefined;
+  }
+  const normalized = reportJson.findings_digest_sha256.trim().toLowerCase();
+  return /^[a-f0-9]{64}$/u.test(normalized) ? normalized : undefined;
+}
+
+function resolveFindingsArtifactOpenTotalFromArtifact(
+  artifact: Record<string, unknown>
+): number | undefined {
+  const candidates: unknown[] = [
+    artifact.open_total,
+    artifact.findings_open_total
+  ];
+  if (isRecord(artifact.summary)) {
+    candidates.push(artifact.summary.open_total);
+  }
+  if (isRecord(artifact.findings_summary)) {
+    candidates.push(artifact.findings_summary.open_total);
+  }
+  for (const candidate of candidates) {
+    if (isNonNegativeInteger(candidate)) {
+      return candidate;
+    }
+  }
+  return undefined;
+}
+
+function resolveFindingsParityStatus(
+  reportJson: Record<string, unknown>
+): FindingsParityStatus | null {
+  if (typeof reportJson.findings_parity_status === "string") {
+    if (reportJson.findings_parity_status === "ok") {
+      return "ok";
+    }
+    if (reportJson.findings_parity_status === "mismatch") {
+      return "mismatch";
+    }
+    if (reportJson.findings_parity_status === "guard_failed") {
+      return "guard_failed";
+    }
+  }
+  return null;
+}
+
+function resolveRecoveredReportRef(input: {
+  reportRef: string;
+  bubbleDir: string;
+  artifactsDir: string;
+}): string {
+  const reportRef = input.reportRef.trim();
+  if (
+    reportRef.length === 0 ||
+    !reportRef.startsWith("artifacts/") ||
+    reportRef.includes("..") ||
+    reportRef.includes("\\") ||
+    reportRef.includes("\0")
+  ) {
+    return metaReviewFallbackReportRef;
+  }
+  const resolvedPath = resolve(input.bubbleDir, reportRef);
+  const relativeToArtifacts = relative(input.artifactsDir, resolvedPath);
+  if (
+    relativeToArtifacts.startsWith("..") ||
+    isAbsolute(relativeToArtifacts)
+  ) {
+    return metaReviewFallbackReportRef;
+  }
+  return reportRef;
+}
+
+function resolveFindingsParityMetadataFromReportJson(
+  reportJson: Record<string, unknown> | undefined
+): FindingsParityMetadata | null {
+  if (reportJson === undefined) {
+    return null;
+  }
+  const claimCount = resolveFindingsCountFromMetaReviewReportJson(reportJson);
+  const artifactCount = isNonNegativeInteger(reportJson.findings_artifact_open_total)
+    ? reportJson.findings_artifact_open_total
+    : null;
+  return {
+    findings_claimed_open_total: claimCount ?? null,
+    findings_artifact_open_total: artifactCount,
+    findings_artifact_status: resolveFindingsArtifactStatus(reportJson) ?? null,
+    findings_digest_sha256: resolveFindingsDigestSha256(reportJson) ?? null,
+    meta_review_run_id: resolveMetaReviewRunId(reportJson) ?? null,
+    findings_parity_status: resolveFindingsParityStatus(reportJson)
+  };
+}
+
+function resolveFindingsArtifactPath(input: {
+  bubbleDir: string;
+  artifactsDir: string;
+  artifactRef: string;
+}): string | undefined {
+  if (
+    !input.artifactRef.startsWith("artifacts/") ||
+    input.artifactRef.includes("..") ||
+    input.artifactRef.includes("\\") ||
+    input.artifactRef.includes("\0")
+  ) {
+    return undefined;
+  }
+  const artifactPath = resolve(input.bubbleDir, input.artifactRef);
+  const relativeToArtifacts = relative(input.artifactsDir, artifactPath);
+  if (
+    relativeToArtifacts.startsWith("..") ||
+    isAbsolute(relativeToArtifacts)
+  ) {
+    return undefined;
+  }
+  return artifactPath;
 }
 
 async function readMetaReviewReportJsonArtifact(input: {
@@ -526,102 +805,282 @@ function resolveStructuredMetaReviewClaimFromReportJson(input: {
   };
 }
 
-function validateStructuredMetaReviewPositiveClaim(input: {
+async function validateStructuredMetaReviewPositiveClaim(input: {
   runResult: MetaReviewRunResult;
   reportJson?: Record<string, unknown>;
-}):
-  | { ok: true; diagnostics: string[] }
-  | { ok: false; reason: string } {
+  bubbleDir: string;
+  artifactsDir: string;
+  readFileFn: typeof readFile;
+  sleepForRetryMs?: (delayMs: number) => Promise<void>;
+}): Promise<
+  | { ok: true; diagnostics: string[]; metadata: FindingsParityMetadata | null }
+  | { ok: false; reason: string; metadata: FindingsParityMetadata | null }
+> {
+  const failWithMetadata = (
+    reason: string,
+    metadata: FindingsParityMetadata | null = null
+  ): { ok: false; reason: string; metadata: FindingsParityMetadata | null } => ({
+    ok: false,
+    reason,
+    metadata
+  });
   const recommendation = input.runResult.recommendation;
   if (input.reportJson === undefined) {
     if (recommendation !== "rework") {
-      return { ok: true, diagnostics: [] };
+      return { ok: true, diagnostics: [], metadata: null };
     }
-    return {
-      ok: false,
-      reason:
-        `${metaReviewFindingsArtifactRequiredReasonCode}: structured report_json is required for positive meta-review claim parity.`
-    };
+    return failWithMetadata(
+      `${metaReviewFindingsArtifactRequiredReasonCode}: structured report_json is required for positive meta-review claim parity.`
+    );
   }
 
   const claimResolution = resolveStructuredMetaReviewClaimFromReportJson({
     reportJson: input.reportJson
   });
   if ("reason" in claimResolution) {
-    return {
-      ok: false,
-      reason: claimResolution.reason
-    };
+    return failWithMetadata(claimResolution.reason);
   }
   const claim = claimResolution.claim;
   if (recommendation !== "rework") {
     if (claim?.state === "open_findings") {
-      return {
-        ok: false,
-        reason:
-          `${claimSourceInvalidReasonCode}: recommendation=${recommendation} cannot carry findings_claim_state=open_findings.`
-      };
+      return failWithMetadata(
+        `${claimSourceInvalidReasonCode}: recommendation=${recommendation} cannot carry findings_claim_state=open_findings.`
+      );
     }
-    return { ok: true, diagnostics: [] };
+    return { ok: true, diagnostics: [], metadata: null };
   }
 
   if (claim === undefined) {
-    return {
-      ok: false,
-      reason:
-        `${claimStateRequiredReasonCode}: recommendation=rework requires report_json findings_claim_state/findings_claim_source.`
-    };
+    return failWithMetadata(
+      `${claimStateRequiredReasonCode}: recommendation=rework requires report_json findings_claim_state/findings_claim_source.`
+    );
   }
   if (claim.state === "unknown") {
-    return {
-      ok: false,
-      reason:
-        `${claimStateRequiredReasonCode}: positive meta-review claim cannot remain unknown.`
-    };
+    return failWithMetadata(
+      `${claimStateRequiredReasonCode}: positive meta-review claim cannot remain unknown.`
+    );
   }
   if (claim.state !== "open_findings") {
-    return {
-      ok: false,
-      reason:
-        `${claimSourceInvalidReasonCode}: recommendation=rework requires findings_claim_state=open_findings (found ${claim.state}).`
-    };
+    return failWithMetadata(
+      `${claimSourceInvalidReasonCode}: recommendation=rework requires findings_claim_state=open_findings (found ${claim.state}).`
+    );
   }
 
   const findingsCount = resolveFindingsCountFromMetaReviewReportJson(
     input.reportJson
   );
   if (findingsCount === undefined || findingsCount <= 0) {
-    return {
-      ok: false,
-      reason:
-        `${metaReviewFindingsCountMismatchReasonCode}: recommendation=rework requires findings_count>0 in report_json.`
-    };
+    return failWithMetadata(
+      `${metaReviewFindingsCountMismatchReasonCode}: recommendation=rework requires findings_count>0 in report_json.`,
+      {
+        findings_claimed_open_total: findingsCount ?? null,
+        findings_artifact_open_total: null,
+        findings_artifact_status: resolveFindingsArtifactStatus(input.reportJson) ?? null,
+        findings_digest_sha256: resolveFindingsDigestSha256(input.reportJson) ?? null,
+        meta_review_run_id: resolveMetaReviewRunId(input.reportJson) ?? null,
+        findings_parity_status: "mismatch"
+      }
+    );
   }
 
   const artifactRef = input.reportJson.findings_artifact_ref;
-  const findingsRunId = input.reportJson.findings_run_id;
   if (
     typeof artifactRef !== "string" ||
-    artifactRef.trim().length === 0 ||
-    typeof findingsRunId !== "string" ||
-    findingsRunId.trim().length === 0
+    artifactRef.trim().length === 0
   ) {
-    return {
-      ok: false,
-      reason:
-        `${metaReviewFindingsArtifactRequiredReasonCode}: recommendation=rework requires non-empty findings_artifact_ref and findings_run_id in report_json.`
-    };
+    return failWithMetadata(
+      `${metaReviewFindingsArtifactRequiredReasonCode}: recommendation=rework requires non-empty findings_artifact_ref in report_json.`,
+      {
+        findings_claimed_open_total: findingsCount,
+        findings_artifact_open_total: null,
+        findings_artifact_status: resolveFindingsArtifactStatus(input.reportJson) ?? null,
+        findings_digest_sha256: resolveFindingsDigestSha256(input.reportJson) ?? null,
+        meta_review_run_id: resolveMetaReviewRunId(input.reportJson) ?? null,
+        findings_parity_status: "guard_failed"
+      }
+    );
+  }
+  const metaReviewRunId = resolveMetaReviewRunId(input.reportJson);
+  if (
+    metaReviewRunId === undefined
+  ) {
+    return failWithMetadata(
+      `${metaReviewFindingsRunLinkMissingReasonCode}: recommendation=rework requires non-empty meta_review_run_id in report_json.`,
+      {
+        findings_claimed_open_total: findingsCount,
+        findings_artifact_open_total: null,
+        findings_artifact_status: resolveFindingsArtifactStatus(input.reportJson) ?? null,
+        findings_digest_sha256: resolveFindingsDigestSha256(input.reportJson) ?? null,
+        meta_review_run_id: null,
+        findings_parity_status: "guard_failed"
+      }
+    );
   }
 
   if (
     input.runResult.run_id !== undefined &&
-    findingsRunId.trim() !== input.runResult.run_id
+    metaReviewRunId !== input.runResult.run_id
   ) {
-    return {
-      ok: false,
-      reason:
-        `${metaReviewFindingsCountMismatchReasonCode}: findings_run_id (${findingsRunId.trim()}) must match run_id (${input.runResult.run_id}).`
-    };
+    return failWithMetadata(
+      `${metaReviewFindingsRunLinkMissingReasonCode}: meta_review_run_id (${metaReviewRunId}) must match run_id (${input.runResult.run_id}).`,
+      {
+        findings_claimed_open_total: findingsCount,
+        findings_artifact_open_total: null,
+        findings_artifact_status: resolveFindingsArtifactStatus(input.reportJson) ?? null,
+        findings_digest_sha256: resolveFindingsDigestSha256(input.reportJson) ?? null,
+        meta_review_run_id: metaReviewRunId,
+        findings_parity_status: "guard_failed"
+      }
+    );
+  }
+
+  const digest = resolveFindingsDigestSha256(input.reportJson);
+  if (digest === undefined) {
+    return failWithMetadata(
+      `${metaReviewFindingsParityGuardReasonCode}: recommendation=rework requires findings_digest_sha256 parity metadata.`,
+      {
+        findings_claimed_open_total: findingsCount,
+        findings_artifact_open_total: null,
+        findings_artifact_status: resolveFindingsArtifactStatus(input.reportJson) ?? null,
+        findings_digest_sha256: null,
+        meta_review_run_id: metaReviewRunId,
+        findings_parity_status: "guard_failed"
+      }
+    );
+  }
+
+  const artifactStatus = resolveFindingsArtifactStatus(input.reportJson);
+  if (artifactStatus === undefined) {
+    return failWithMetadata(
+      `${metaReviewFindingsParityGuardReasonCode}: recommendation=rework requires findings_artifact_status parity metadata.`,
+      {
+        findings_claimed_open_total: findingsCount,
+        findings_artifact_open_total: null,
+        findings_artifact_status: null,
+        findings_digest_sha256: digest,
+        meta_review_run_id: metaReviewRunId,
+        findings_parity_status: "guard_failed"
+      }
+    );
+  }
+
+  const artifactPath = resolveFindingsArtifactPath({
+    bubbleDir: input.bubbleDir,
+    artifactsDir: input.artifactsDir,
+    artifactRef: artifactRef.trim()
+  });
+  if (artifactPath === undefined) {
+    return failWithMetadata(
+      `${metaReviewFindingsParityGuardReasonCode}: findings_artifact_ref (${artifactRef.trim()}) must resolve under artifacts/.`,
+      {
+        findings_claimed_open_total: findingsCount,
+        findings_artifact_open_total: null,
+        findings_artifact_status: artifactStatus,
+        findings_digest_sha256: digest,
+        meta_review_run_id: metaReviewRunId,
+        findings_parity_status: "guard_failed"
+      }
+    );
+  }
+
+  const artifactRead = await readFindingsArtifactWithRetry({
+    artifactPath,
+    readFileFn: input.readFileFn,
+    ...(input.sleepForRetryMs !== undefined
+      ? { sleepForRetryMs: input.sleepForRetryMs }
+      : {})
+  });
+  if (!artifactRead.ok) {
+    const retryStatus = artifactRead.retried
+      ? "transient_retry_exhausted"
+      : "non_retryable_or_first_attempt";
+    return failWithMetadata(
+      `${metaReviewFindingsParityGuardReasonCode}: findings artifact read failed [${retryStatus}] after ${artifactRead.attempts} attempt(s) (${formatReadErrorDetail(artifactRead.error)}).`,
+      {
+        findings_claimed_open_total: findingsCount,
+        findings_artifact_open_total: null,
+        findings_artifact_status: artifactStatus,
+        findings_digest_sha256: digest,
+        meta_review_run_id: metaReviewRunId,
+        findings_parity_status: "guard_failed"
+      }
+    );
+  }
+  const artifactRaw = artifactRead.raw;
+
+  let artifactParsed: unknown;
+  try {
+    artifactParsed = JSON.parse(artifactRaw);
+  } catch (error) {
+    return failWithMetadata(
+      `${metaReviewFindingsParityGuardReasonCode}: findings artifact parse failed (${error instanceof Error ? error.message : String(error)}).`,
+      {
+        findings_claimed_open_total: findingsCount,
+        findings_artifact_open_total: null,
+        findings_artifact_status: artifactStatus,
+        findings_digest_sha256: digest,
+        meta_review_run_id: metaReviewRunId,
+        findings_parity_status: "guard_failed"
+      }
+    );
+  }
+  if (!isRecord(artifactParsed)) {
+    return failWithMetadata(
+      `${metaReviewFindingsParityGuardReasonCode}: findings artifact must be a JSON object.`,
+      {
+        findings_claimed_open_total: findingsCount,
+        findings_artifact_open_total: null,
+        findings_artifact_status: artifactStatus,
+        findings_digest_sha256: digest,
+        meta_review_run_id: metaReviewRunId,
+        findings_parity_status: "guard_failed"
+      }
+    );
+  }
+  const artifactOpenTotal = resolveFindingsArtifactOpenTotalFromArtifact(
+    artifactParsed
+  );
+  if (artifactOpenTotal === undefined) {
+    return failWithMetadata(
+      `${metaReviewFindingsParityGuardReasonCode}: findings artifact open_total is unavailable.`,
+      {
+        findings_claimed_open_total: findingsCount,
+        findings_artifact_open_total: null,
+        findings_artifact_status: artifactStatus,
+        findings_digest_sha256: digest,
+        meta_review_run_id: metaReviewRunId,
+        findings_parity_status: "guard_failed"
+      }
+    );
+  }
+  const computedDigest = createHash("sha256")
+    .update(artifactRaw, "utf8")
+    .digest("hex");
+  if (computedDigest !== digest) {
+    return failWithMetadata(
+      `${metaReviewFindingsParityGuardReasonCode}: findings artifact digest mismatch.`,
+      {
+        findings_claimed_open_total: findingsCount,
+        findings_artifact_open_total: artifactOpenTotal,
+        findings_artifact_status: artifactStatus,
+        findings_digest_sha256: digest,
+        meta_review_run_id: metaReviewRunId,
+        findings_parity_status: "guard_failed"
+      }
+    );
+  }
+  if (findingsCount !== artifactOpenTotal) {
+    return failWithMetadata(
+      `${metaReviewFindingsCountMismatchReasonCode}: findings_count (${findingsCount}) must match findings artifact open_total (${artifactOpenTotal}).`,
+      {
+        findings_claimed_open_total: findingsCount,
+        findings_artifact_open_total: artifactOpenTotal,
+        findings_artifact_status: artifactStatus,
+        findings_digest_sha256: digest,
+        meta_review_run_id: metaReviewRunId,
+        findings_parity_status: "mismatch"
+      }
+    );
   }
 
   const parserState = resolveLegacySummaryFindingsClaimState(
@@ -632,11 +1091,30 @@ function validateStructuredMetaReviewPositiveClaim(input: {
       ok: true,
       diagnostics: [
         `CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC: parser_state=${parserState} structured_state=open_findings structured_source=meta_review_artifact`
-      ]
+      ],
+      metadata: {
+        findings_claimed_open_total: findingsCount,
+        findings_artifact_open_total: artifactOpenTotal,
+        findings_artifact_status: artifactStatus,
+        findings_digest_sha256: digest,
+        meta_review_run_id: metaReviewRunId,
+        findings_parity_status: "ok"
+      }
     };
   }
 
-  return { ok: true, diagnostics: [] };
+  return {
+    ok: true,
+    diagnostics: [],
+    metadata: {
+      findings_claimed_open_total: findingsCount,
+      findings_artifact_open_total: artifactOpenTotal,
+      findings_artifact_status: artifactStatus,
+      findings_digest_sha256: digest,
+      meta_review_run_id: metaReviewRunId,
+      findings_parity_status: "ok"
+    }
+  };
 }
 
 function synthesizeMetaReviewRunResultFromSnapshot(input: {
@@ -699,6 +1177,8 @@ function normalizeRecoveredMetaReviewRunResult(input: {
   nowIso: string;
   fallbackSummary: string;
   runResult: MetaReviewRunResult;
+  bubbleDir: string;
+  artifactsDir: string;
 }): MetaReviewRunResult {
   const normalizedSummary =
     typeof input.runResult.summary === "string"
@@ -710,7 +1190,14 @@ function normalizeRecoveredMetaReviewRunResult(input: {
       input.runResult.updated_at.trim().length > 0
       ? input.runResult.updated_at
       : input.nowIso;
-  const normalizedReportRef = metaReviewFallbackReportRef;
+  const normalizedReportRef =
+    typeof input.runResult.report_ref === "string"
+      ? resolveRecoveredReportRef({
+          reportRef: input.runResult.report_ref,
+          bubbleDir: input.bubbleDir,
+          artifactsDir: input.artifactsDir
+        })
+      : metaReviewFallbackReportRef;
 
   return {
     ...input.runResult,
@@ -838,12 +1325,14 @@ async function persistHumanGateRoute(input: {
   expectedState: BubbleStateSnapshot["state"];
   route: MetaReviewGateRoute;
   metaReviewRun?: MetaReviewRunResult;
+  parityMetadata?: FindingsParityMetadata | null;
   fallbackRecommendation?: MetaReviewRecommendation;
   targetState?:
     | "READY_FOR_HUMAN_APPROVAL"
     | "READY_FOR_APPROVAL"
     | "META_REVIEW_FAILED";
   stickyHumanGate?: boolean;
+  rollbackStateOnAppendFailure?: BubbleStateSnapshot;
 }): Promise<MetaReviewGateResult> {
   if (
     input.metaReviewRun !== undefined
@@ -855,11 +1344,8 @@ async function persistHumanGateRoute(input: {
     );
   }
   const targetState = input.targetState ?? "READY_FOR_HUMAN_APPROVAL";
-  const stickyHumanGate = input.stickyHumanGate ?? (
-    input.route === "human_gate_run_failed"
-      ? false
-      : true
-  );
+  const stickyHumanGate = input.stickyHumanGate
+    ?? resolveDefaultStickyHumanGateForRoute(input.route);
   const nextState = transitionToGateState({
     current: input.loaded.state,
     nowIso: input.nowIso,
@@ -891,7 +1377,7 @@ async function persistHumanGateRoute(input: {
 
   let gateAppended: AppendProtocolEnvelopeResult;
   try {
-    gateAppended = await appendHumanApprovalRequest({
+    gateAppended = await appendHumanApprovalRequestEnvelope({
       appendEnvelope: input.appendEnvelope,
       transcriptPath: input.transcriptPath,
       inboxPath: input.inboxPath,
@@ -900,35 +1386,51 @@ async function persistHumanGateRoute(input: {
       bubbleId: input.bubbleId,
       round: input.loaded.state.round,
       summary: input.summary,
+      route: input.route,
       refs: input.refs,
       ...(input.metaReviewRun !== undefined
         ? { recommendation: input.metaReviewRun.recommendation }
         : input.fallbackRecommendation !== undefined
           ? { recommendation: input.fallbackRecommendation }
-          : {})
+          : {}),
+      parityMetadata: input.parityMetadata
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
+    const rollbackState = input.rollbackStateOnAppendFailure ?? input.loaded.state;
     let rollbackContext = "rollback_outcome=not_attempted";
+    let rollbackDiagnosticReasonCode = metaReviewGateRollbackNotAttemptedReasonCode;
+    let rollbackOutcome: "not_attempted" | "applied" | "failed" = "not_attempted";
     let rollbackReasonCode: MetaReviewGateReasonCode = "META_REVIEW_GATE_TRANSITION_INVALID";
     try {
-      await input.writeState(input.statePath, input.loaded.state, {
+      await input.writeState(input.statePath, rollbackState, {
         expectedFingerprint: written.fingerprint,
         expectedState: targetState
       });
       rollbackContext = "rollback_outcome=applied";
+      rollbackDiagnosticReasonCode = metaReviewGateRollbackAppliedReasonCode;
+      rollbackOutcome = "applied";
     } catch (rollbackError) {
       if (rollbackError instanceof StateStoreConflictError) {
         rollbackReasonCode = "META_REVIEW_GATE_STATE_CONFLICT";
+        rollbackDiagnosticReasonCode = metaReviewGateRollbackStateConflictReasonCode;
+      } else {
+        rollbackDiagnosticReasonCode = metaReviewGateRollbackTransitionInvalidReasonCode;
       }
       const rollbackReason = rollbackError instanceof Error
         ? rollbackError.message
         : String(rollbackError);
       rollbackContext = `rollback_outcome=failed rollback_error=${rollbackReason}`;
+      rollbackOutcome = "failed";
     }
     throw new MetaReviewGateError(
       rollbackReasonCode,
-      `${rollbackReasonCode}: state transitioned to ${targetState} but approval request append failed (${rollbackContext}). Root error: ${reason}`
+      `${rollbackReasonCode}: state transitioned to ${targetState} but approval request append failed (rollback_reason_code=${rollbackDiagnosticReasonCode}; rollback_target_state=${rollbackState.state}; ${rollbackContext}). Root error: ${reason}`,
+      {
+        rollbackReasonCode: rollbackDiagnosticReasonCode,
+        rollbackOutcome,
+        rollbackTargetState: rollbackState.state
+      }
     );
   }
 
@@ -940,6 +1442,64 @@ async function persistHumanGateRoute(input: {
     state: written.state,
     ...(input.metaReviewRun !== undefined ? { metaReviewRun: input.metaReviewRun } : {})
   };
+}
+
+function resolveDefaultStickyHumanGateForRoute(route: MetaReviewGateRoute): boolean {
+  if (route === "human_gate_run_failed" || route === "human_gate_dispatch_failed") {
+    return false;
+  }
+  if (route === "human_gate_approve" || route === "human_gate_inconclusive") {
+    return true;
+  }
+  if (route === "human_gate_budget_exhausted" || route === "human_gate_sticky_bypass") {
+    return true;
+  }
+  throw new MetaReviewGateError(
+    "META_REVIEW_GATE_TRANSITION_INVALID",
+    `META_REVIEW_GATE_TRANSITION_INVALID: sticky_human_gate default policy is undefined for route=${route}.`
+  );
+}
+
+function resolveAutoReworkRetryInvariantViolation(input: {
+  latest: BubbleStateSnapshot;
+  expected: BubbleStateSnapshot;
+}): string | null {
+  if (input.latest.round !== input.expected.round) {
+    return metaReviewGateAutoReworkRetryRoundInvariantReasonCode;
+  }
+  if (
+    input.latest.active_role !== input.expected.active_role
+    || input.latest.active_agent !== input.expected.active_agent
+  ) {
+    return metaReviewGateAutoReworkRetryOwnershipInvariantReasonCode;
+  }
+  const expectedRoundRole = input.expected.round_role_history.find(
+    (entry) => entry.round === input.expected.round
+  );
+  const latestRoundRole = input.latest.round_role_history.find(
+    (entry) => entry.round === input.latest.round
+  );
+  if (
+    expectedRoundRole === undefined ||
+    latestRoundRole === undefined ||
+    latestRoundRole.implementer !== expectedRoundRole.implementer ||
+    latestRoundRole.reviewer !== expectedRoundRole.reviewer
+  ) {
+    return metaReviewGateAutoReworkRetryRoundRoleHistoryInvariantReasonCode;
+  }
+  return null;
+}
+
+function resolveCanonicalMetaReviewRunId(
+  snapshot: BubbleMetaReviewSnapshotState
+): string | null {
+  if (
+    typeof snapshot.last_autonomous_run_id === "string"
+    && snapshot.last_autonomous_run_id.trim().length > 0
+  ) {
+    return snapshot.last_autonomous_run_id.trim();
+  }
+  return null;
 }
 
 export async function recoverMetaReviewGateFromSnapshot(
@@ -954,6 +1514,7 @@ export async function recoverMetaReviewGateFromSnapshot(
     dependencies.setMetaReviewerPaneBinding ?? setMetaReviewerPaneBinding;
   const readFileFn = dependencies.readFile ?? readFile;
   const writeFileFn = dependencies.writeFile ?? writeFile;
+  const sleepForRetryMs = dependencies.sleepForRetryMs;
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
   const refs = input.refs ?? [];
@@ -967,13 +1528,18 @@ export async function recoverMetaReviewGateFromSnapshot(
     locksDir: resolved.bubblePaths.locksDir,
     bubbleId: resolved.bubbleId
   });
-  const deactivateMetaReviewerPane = async (): Promise<void> => {
-    await setMetaReviewerPane({
-      sessionsPath: resolved.bubblePaths.sessionsPath,
-      bubbleId: resolved.bubbleId,
-      active: false,
-      now
-    }).catch(() => undefined);
+  const deactivateMetaReviewerPane = async (): Promise<string | null> => {
+    try {
+      await setMetaReviewerPane({
+        sessionsPath: resolved.bubblePaths.sessionsPath,
+        bubbleId: resolved.bubbleId,
+        active: false,
+        now
+      });
+      return null;
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error);
+    }
   };
   const finishWithPaneDeactivation = async (
     result: MetaReviewGateResult
@@ -1018,7 +1584,8 @@ export async function recoverMetaReviewGateFromSnapshot(
     );
   }
 
-  const snapshot = normalizeMetaReviewSnapshot(loaded.state.meta_review);
+  try {
+    const snapshot = normalizeMetaReviewSnapshot(loaded.state.meta_review);
   const fallbackSummary =
     input.summary ??
     "Meta-review completed previously; recovering gate route from snapshot.";
@@ -1035,6 +1602,8 @@ export async function recoverMetaReviewGateFromSnapshot(
     bubbleId: resolved.bubbleId,
     nowIso,
     fallbackSummary,
+    bubbleDir: resolved.bubblePaths.bubbleDir,
+    artifactsDir: resolved.bubblePaths.artifactsDir,
     runResult: input.runResult ?? (
       snapshotHasCanonicalSubmitInActiveWindow
         ? synthesizeMetaReviewRunResultFromSnapshot({
@@ -1123,6 +1692,9 @@ export async function recoverMetaReviewGateFromSnapshot(
         expectedState: "META_REVIEW_RUNNING",
         route: "human_gate_run_failed",
         metaReviewRun: runResult,
+        parityMetadata: resolveFindingsParityMetadataFromReportJson(
+          runResult.report_json
+        ),
         targetState: "META_REVIEW_FAILED",
         stickyHumanGate: false
       })
@@ -1132,13 +1704,37 @@ export async function recoverMetaReviewGateFromSnapshot(
   const recommendation = runResult.recommendation;
   const budgetAvailable =
     snapshot.auto_rework_count < snapshot.auto_rework_limit;
-  const positiveClaimParity = validateStructuredMetaReviewPositiveClaim({
+  const positiveClaimParity = await validateStructuredMetaReviewPositiveClaim({
     runResult,
     ...(runResult.report_json !== undefined
       ? { reportJson: runResult.report_json }
-      : {})
+      : {}),
+    bubbleDir: resolved.bubblePaths.bubbleDir,
+    artifactsDir: resolved.bubblePaths.artifactsDir,
+    readFileFn,
+    ...(sleepForRetryMs !== undefined ? { sleepForRetryMs } : {})
   });
   if (!positiveClaimParity.ok) {
+    const parityDecoratedRunResult: MetaReviewRunResult =
+      positiveClaimParity.metadata === null
+        ? runResult
+        : {
+            ...runResult,
+            report_json: {
+              ...(runResult.report_json ?? {}),
+              findings_claimed_open_total:
+                positiveClaimParity.metadata.findings_claimed_open_total,
+              findings_artifact_open_total:
+                positiveClaimParity.metadata.findings_artifact_open_total,
+              findings_artifact_status:
+                positiveClaimParity.metadata.findings_artifact_status,
+              findings_digest_sha256:
+                positiveClaimParity.metadata.findings_digest_sha256,
+              meta_review_run_id: positiveClaimParity.metadata.meta_review_run_id,
+              findings_parity_status:
+                positiveClaimParity.metadata.findings_parity_status
+            }
+          };
     return finishWithPaneDeactivation(
       await persistHumanGateRoute({
         appendEnvelope,
@@ -1159,27 +1755,47 @@ export async function recoverMetaReviewGateFromSnapshot(
         loaded,
         expectedState: "META_REVIEW_RUNNING",
         route: "human_gate_dispatch_failed",
-        metaReviewRun: runResult
+        metaReviewRun: parityDecoratedRunResult,
+        parityMetadata: positiveClaimParity.metadata
       })
     );
   }
   const runResultForRouting: MetaReviewRunResult =
-    positiveClaimParity.diagnostics.length === 0
+    positiveClaimParity.diagnostics.length === 0 &&
+      positiveClaimParity.metadata === null
       ? runResult
       : {
           ...runResult,
-          report_json: {
-            ...(runResult.report_json ?? {}),
-            claim_diagnostics: [
-              ...(
-                Array.isArray(runResult.report_json?.claim_diagnostics)
-                  ? runResult.report_json.claim_diagnostics
-                      .filter((entry): entry is string => typeof entry === "string")
-                  : []
-              ),
+          report_json: (() => {
+            const base = { ...(runResult.report_json ?? {}) };
+            if (positiveClaimParity.metadata !== null) {
+              base.findings_claimed_open_total =
+                positiveClaimParity.metadata.findings_claimed_open_total;
+              base.findings_artifact_open_total =
+                positiveClaimParity.metadata.findings_artifact_open_total;
+              base.findings_artifact_status =
+                positiveClaimParity.metadata.findings_artifact_status;
+              base.findings_digest_sha256 =
+                positiveClaimParity.metadata.findings_digest_sha256;
+              base.meta_review_run_id =
+                positiveClaimParity.metadata.meta_review_run_id;
+              base.findings_parity_status =
+                positiveClaimParity.metadata.findings_parity_status;
+            }
+            const existingDiagnostics = Array.isArray(base.claim_diagnostics)
+              ? base.claim_diagnostics.filter(
+                  (entry): entry is string => typeof entry === "string"
+                )
+              : [];
+            const mergedDiagnostics = [
+              ...existingDiagnostics,
               ...positiveClaimParity.diagnostics
-            ]
-          }
+            ];
+            if (mergedDiagnostics.length > 0) {
+              base.claim_diagnostics = mergedDiagnostics;
+            }
+            return base;
+          })()
         };
 
   if (recommendation === "rework" && budgetAvailable) {
@@ -1212,7 +1828,11 @@ export async function recoverMetaReviewGateFromSnapshot(
           loaded,
           expectedState: "META_REVIEW_RUNNING",
           route: "human_gate_dispatch_failed",
-          metaReviewRun: runResultForRouting
+          metaReviewRun: runResultForRouting,
+          parityMetadata:
+            positiveClaimParity.metadata ??
+            resolveFindingsParityMetadataFromReportJson(runResultForRouting.report_json),
+          rollbackStateOnAppendFailure: loaded.state
         })
       );
     }
@@ -1268,7 +1888,10 @@ export async function recoverMetaReviewGateFromSnapshot(
               recommendation: runResultForRouting.recommendation,
               ...(runResultForRouting.run_id !== undefined
                 ? { run_id: runResultForRouting.run_id }
-                : {})
+                : {}),
+              ...resolveFindingsParityMetadataForEnvelope(
+                positiveClaimParity.metadata
+              )
             }
           },
           refs
@@ -1291,7 +1914,10 @@ export async function recoverMetaReviewGateFromSnapshot(
           ...backToReady,
           round: loaded.state.round,
           round_role_history: loaded.state.round_role_history,
-          meta_review: snapshot
+          meta_review: buildHydratedMetaReviewSnapshotFromRunResult({
+            metaReview: normalizeMetaReviewSnapshot(backToReady.meta_review),
+            runResult: runResultForRouting
+          })
         };
         readyForApproval = await writeState(
           resolved.bubblePaths.statePath,
@@ -1338,7 +1964,11 @@ export async function recoverMetaReviewGateFromSnapshot(
           loaded: readyForApproval,
           expectedState: "READY_FOR_APPROVAL",
           route: "human_gate_dispatch_failed",
-          metaReviewRun: runResultForRouting
+          metaReviewRun: runResultForRouting,
+          parityMetadata:
+            positiveClaimParity.metadata ??
+            resolveFindingsParityMetadataFromReportJson(runResultForRouting.report_json),
+          rollbackStateOnAppendFailure: readyForApproval.state
         })
       );
     }
@@ -1372,20 +2002,55 @@ export async function recoverMetaReviewGateFromSnapshot(
           if (latest.state.state !== "RUNNING") {
             throw toConflictError(latestConflict);
           }
-
-          const latestMetaReview = buildHydratedMetaReviewSnapshotFromRunResult({
-            metaReview: normalizeMetaReviewSnapshot(latest.state.meta_review),
-            runResult: runResultForRouting
+          const retryInvariantViolation = resolveAutoReworkRetryInvariantViolation({
+            latest: latest.state,
+            expected: resumedWritten.state
           });
+          if (retryInvariantViolation !== null) {
+            throw new MetaReviewGateError(
+              "META_REVIEW_GATE_STATE_CONFLICT",
+              `META_REVIEW_GATE_STATE_CONFLICT: auto-rework CAS retry invariant failed (retry_invariant_reason_code=${retryInvariantViolation}; attempt=${attempt + 1}).`,
+              {
+                retryInvariantReasonCode: retryInvariantViolation
+              }
+            );
+          }
+
+          const latestMetaReview = normalizeMetaReviewSnapshot(latest.state.meta_review);
           if (latestMetaReview.auto_rework_count >= targetCount) {
             written = latest;
             break;
           }
 
+          const retryRunId =
+            typeof runResultForRouting.run_id === "string" &&
+            runResultForRouting.run_id.trim().length > 0
+              ? runResultForRouting.run_id
+              : null;
+          const latestCanonicalRunId = resolveCanonicalMetaReviewRunId(latestMetaReview);
+          if (
+            latestCanonicalRunId !== null
+            && retryRunId !== null
+            && latestCanonicalRunId !== retryRunId
+          ) {
+            throw new MetaReviewGateError(
+              "META_REVIEW_GATE_STATE_CONFLICT",
+              `META_REVIEW_GATE_STATE_CONFLICT: auto-rework CAS retry invariant failed (retry_invariant_reason_code=${metaReviewGateAutoReworkRetryRunIdentityInvariantReasonCode}; attempt=${attempt + 1}).`,
+              {
+                retryInvariantReasonCode:
+                  metaReviewGateAutoReworkRetryRunIdentityInvariantReasonCode
+              }
+            );
+          }
+
+          const latestHydratedMetaReview = buildHydratedMetaReviewSnapshotFromRunResult({
+            metaReview: latestMetaReview,
+            runResult: runResultForRouting
+          });
           const latestIncremented: BubbleStateSnapshot = {
             ...latest.state,
             meta_review: {
-              ...latestMetaReview,
+              ...latestHydratedMetaReview,
               auto_rework_count: targetCount
             }
           };
@@ -1431,28 +2096,46 @@ export async function recoverMetaReviewGateFromSnapshot(
     });
   }
 
-  return finishWithPaneDeactivation(
-    await persistHumanGateRoute({
-      appendEnvelope,
-      writeState,
-      statePath: resolved.bubblePaths.statePath,
-      transcriptPath: resolved.bubblePaths.transcriptPath,
-      inboxPath: resolved.bubblePaths.inboxPath,
-      lockPath,
-      now,
-      nowIso,
-      bubbleId: resolved.bubbleId,
-      summary: buildHumanGateSummary({
-        convergenceSummary: summary,
-        metaReviewRun: runResultForRouting
-      }),
-      refs,
-      loaded,
-      expectedState: "META_REVIEW_RUNNING",
-      route: resolveHumanGateRoute(recommendation, budgetAvailable),
-      metaReviewRun: runResultForRouting
-    })
-  );
+    return finishWithPaneDeactivation(
+      await persistHumanGateRoute({
+        appendEnvelope,
+        writeState,
+        statePath: resolved.bubblePaths.statePath,
+        transcriptPath: resolved.bubblePaths.transcriptPath,
+        inboxPath: resolved.bubblePaths.inboxPath,
+        lockPath,
+        now,
+        nowIso,
+        bubbleId: resolved.bubbleId,
+        summary: buildHumanGateSummary({
+          convergenceSummary: summary,
+          metaReviewRun: runResultForRouting
+        }),
+        refs,
+        loaded,
+        expectedState: "META_REVIEW_RUNNING",
+        route: resolveHumanGateRoute(recommendation, budgetAvailable),
+        metaReviewRun: runResultForRouting,
+        parityMetadata:
+          positiveClaimParity.metadata ??
+          resolveFindingsParityMetadataFromReportJson(runResultForRouting.report_json)
+      })
+    );
+  } catch (error) {
+    const deactivationError = await deactivateMetaReviewerPane();
+    if (deactivationError !== null) {
+      const root = toMetaReviewGateError(error);
+      throw new MetaReviewGateError(
+        "META_REVIEW_GATE_TRANSITION_INVALID",
+        `META_REVIEW_GATE_TRANSITION_INVALID: ${metaReviewGatePaneDeactivationUnavoidableReasonCode}: recovery failed and pane deactivation could not be confirmed (deactivation_error=${deactivationError}). Root error: ${root.message}`,
+        {
+          ...root.diagnostics,
+          stageReasonCode: metaReviewGatePaneDeactivationUnavoidableReasonCode
+        }
+      );
+    }
+    throw error;
+  }
 }
 
 export async function applyMetaReviewGateOnConvergence(
@@ -1468,6 +2151,7 @@ export async function applyMetaReviewGateOnConvergence(
   const notifySubmissionRequest =
     dependencies.notifyMetaReviewerSubmissionRequest ?? notifyMetaReviewerSubmissionRequest;
   const runTmuxRunner = dependencies.runTmux ?? runTmux;
+  const readFileFn = dependencies.readFile ?? readFile;
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
   const refs = input.refs ?? [];
@@ -1481,6 +2165,14 @@ export async function applyMetaReviewGateOnConvergence(
     locksDir: resolved.bubblePaths.locksDir,
     bubbleId: resolved.bubbleId
   });
+  const deactivateMetaReviewerPane = async (): Promise<void> => {
+    await setMetaReviewerPane({
+      sessionsPath: resolved.bubblePaths.sessionsPath,
+      bubbleId: resolved.bubbleId,
+      active: false,
+      now
+    }).catch(() => undefined);
+  };
   const loadedRunning = await readState(resolved.bubblePaths.statePath);
   assertRunningConvergenceState(loadedRunning.state);
 
@@ -1508,27 +2200,91 @@ export async function applyMetaReviewGateOnConvergence(
     throw toTransitionError(error);
   }
 
+  const restoreRunningAfterStagedReadyFailure = async (input: {
+    rootError: unknown;
+    stageReasonCode: string;
+  }): Promise<never> => {
+    const rootGateError = toMetaReviewGateError(input.rootError);
+    try {
+      await writeState(resolved.bubblePaths.statePath, loadedRunning.state, {
+        expectedFingerprint: readyForApproval.fingerprint,
+        expectedState: "READY_FOR_APPROVAL"
+      });
+    } catch (restoreError) {
+      const restoreReason = restoreError instanceof Error
+        ? restoreError.message
+        : String(restoreError);
+      const restoreReasonCode =
+        restoreError instanceof StateStoreConflictError
+          ? metaReviewGateStagedReadyRestoreStateConflictReasonCode
+          : metaReviewGateStagedReadyRestoreTransitionInvalidReasonCode;
+      throw new MetaReviewGateError(
+        restoreError instanceof StateStoreConflictError
+          ? "META_REVIEW_GATE_STATE_CONFLICT"
+          : "META_REVIEW_GATE_TRANSITION_INVALID",
+        `${restoreError instanceof StateStoreConflictError ? "META_REVIEW_GATE_STATE_CONFLICT" : "META_REVIEW_GATE_TRANSITION_INVALID"}: ${input.stageReasonCode}: failed after READY_FOR_APPROVAL staging and restore to RUNNING failed (restore_reason_code=${restoreReasonCode}; restore_error=${restoreReason}). Root error: ${rootGateError.message}`,
+        {
+          ...rootGateError.diagnostics,
+          stageReasonCode: input.stageReasonCode,
+          restoreReasonCode
+        }
+      );
+    }
+    throw new MetaReviewGateError(
+      rootGateError.reasonCode,
+      `${rootGateError.reasonCode}: ${input.stageReasonCode}: failed after READY_FOR_APPROVAL staging and restore to RUNNING applied (restore_reason_code=${metaReviewGateStagedReadyRestoreAppliedReasonCode}). Root error: ${rootGateError.message}`,
+      {
+        ...rootGateError.diagnostics,
+        stageReasonCode: input.stageReasonCode,
+        restoreReasonCode: metaReviewGateStagedReadyRestoreAppliedReasonCode
+      }
+    );
+  };
+
   const readyMetaReview = normalizeMetaReviewSnapshot(
     readyForApproval.state.meta_review
   );
 
   if (readyMetaReview.sticky_human_gate) {
-    return persistHumanGateRoute({
-      appendEnvelope,
-      writeState,
-      statePath: resolved.bubblePaths.statePath,
-      transcriptPath: resolved.bubblePaths.transcriptPath,
-      inboxPath: resolved.bubblePaths.inboxPath,
-      lockPath,
-      now,
-      nowIso,
-      bubbleId: resolved.bubbleId,
-      summary: input.summary,
-      refs,
-      loaded: readyForApproval,
-      expectedState: "READY_FOR_APPROVAL",
-      route: "human_gate_sticky_bypass"
+    const parityArtifactRead = await readMetaReviewReportJsonArtifact({
+      artifactPath: resolved.bubblePaths.metaReviewLastJsonArtifactPath,
+      readFileFn
     });
+    try {
+      return await persistHumanGateRoute({
+        appendEnvelope,
+        writeState,
+        statePath: resolved.bubblePaths.statePath,
+        transcriptPath: resolved.bubblePaths.transcriptPath,
+        inboxPath: resolved.bubblePaths.inboxPath,
+        lockPath,
+        now,
+        nowIso,
+        bubbleId: resolved.bubbleId,
+        summary: input.summary,
+        refs,
+        loaded: readyForApproval,
+        expectedState: "READY_FOR_APPROVAL",
+        route: "human_gate_sticky_bypass",
+        parityMetadata: resolveFindingsParityMetadataFromReportJson(
+          parityArtifactRead.reportJson
+        ),
+        rollbackStateOnAppendFailure: loadedRunning.state
+      });
+    } catch (error) {
+      const gateError = toMetaReviewGateError(error);
+      if (
+        gateError.diagnostics?.rollbackOutcome === "applied" &&
+        gateError.diagnostics.rollbackReasonCode ===
+          metaReviewGateRollbackAppliedReasonCode
+      ) {
+        throw gateError;
+      }
+      return restoreRunningAfterStagedReadyFailure({
+        rootError: gateError,
+        stageReasonCode: "META_REVIEW_GATE_STICKY_BYPASS_ROUTE_FAILED"
+      });
+    }
   }
 
   let metaReviewRunningState: LoadedStateSnapshot;
@@ -1549,13 +2305,14 @@ export async function applyMetaReviewGateOnConvergence(
       }
     );
   } catch (error) {
-    if (error instanceof StateStoreConflictError) {
-      throw toConflictError(error);
-    }
-    throw toTransitionError(error);
+    return restoreRunningAfterStagedReadyFailure({
+      rootError: error,
+      stageReasonCode: "META_REVIEW_GATE_META_REVIEW_STAGE_TRANSITION_FAILED"
+    });
   }
 
   let metaReviewerPaneWarning: string | null = null;
+  let shouldDeactivateMetaReviewerPane = false;
   const bindStart = await setMetaReviewerPane({
     sessionsPath: resolved.bubblePaths.sessionsPath,
     bubbleId: resolved.bubbleId,
@@ -1575,6 +2332,7 @@ export async function applyMetaReviewGateOnConvergence(
       : bindStart.reason ?? "unknown";
     metaReviewerPaneWarning = `META_REVIEWER_PANE_UNAVAILABLE: ${bindReason}`;
   } else if ("record" in bindStart && bindStart.record !== undefined) {
+    shouldDeactivateMetaReviewerPane = true;
     const paneIndex = bindStart.record.metaReviewerPane?.paneIndex ?? 3;
     const targetPane = `${bindStart.record.tmuxSessionName}:0.${paneIndex}`;
     await notifySubmissionRequest(
@@ -1593,6 +2351,9 @@ export async function applyMetaReviewGateOnConvergence(
   }
 
   if (metaReviewerPaneWarning !== null) {
+    if (shouldDeactivateMetaReviewerPane) {
+      await deactivateMetaReviewerPane();
+    }
     return persistHumanGateRoute({
       appendEnvelope,
       writeState,
@@ -1622,7 +2383,7 @@ export async function applyMetaReviewGateOnConvergence(
     const kickoffSummary = [
       `Meta-review gate opened for bubble ${resolved.bubbleId} round ${metaReviewRunningState.state.round}.`,
       "Submit result through structured CLI:",
-      `pairflow bubble meta-review submit --id ${resolved.bubbleId} --round ${metaReviewRunningState.state.round} --recommendation <approve|rework|inconclusive> --summary "<summary>" --report-markdown "<markdown>" [--rework-target-message "<message>"] [--report-json '{"findings_claim_state":"clean|open_findings|unknown","findings_claim_source":"meta_review_artifact","findings_count":<int>,"findings_artifact_ref":"artifacts/...","findings_run_id":"<run-id>"}'].`
+      `pairflow bubble meta-review submit --id ${resolved.bubbleId} --round ${metaReviewRunningState.state.round} --recommendation <approve|rework|inconclusive> --summary "<summary>" --report-markdown "<markdown>" [--rework-target-message "<message>"] [--report-json '{"findings_claim_state":"clean|open_findings|unknown","findings_claim_source":"meta_review_artifact","findings_count":<int>,"findings_artifact_ref":"artifacts/...","meta_review_run_id":"<run-id>","findings_digest_sha256":"<sha256>","findings_artifact_status":"available"}'].`
     ].join(" ");
 
     const appended = await appendEnvelope({
@@ -1642,10 +2403,7 @@ export async function applyMetaReviewGateOnConvergence(
             [deliveryTargetRoleMetadataKey]: "meta_reviewer",
             actor: "meta-review-gate",
             actor_agent: "orchestrator",
-            lifecycle_state: "META_REVIEW_RUNNING",
-            ...(metaReviewerPaneWarning !== null
-              ? { pane_warning: metaReviewerPaneWarning }
-              : {})
+            lifecycle_state: "META_REVIEW_RUNNING"
           }
         },
         refs
@@ -1665,25 +2423,31 @@ export async function applyMetaReviewGateOnConvergence(
       convergenceSummary: input.summary,
       fallbackReason: `META_REVIEW_GATE_RUN_FAILED: ${runFailureReason}`
     });
-    return persistHumanGateRoute({
-      appendEnvelope,
-      writeState,
-      statePath: resolved.bubblePaths.statePath,
-      transcriptPath: resolved.bubblePaths.transcriptPath,
-      inboxPath: resolved.bubblePaths.inboxPath,
-      lockPath,
-      now,
-      nowIso,
-      bubbleId: resolved.bubbleId,
-      summary: fallbackSummary,
-      refs,
-      loaded: metaReviewRunningState,
-      expectedState: "META_REVIEW_RUNNING",
-      route: "human_gate_run_failed",
-      fallbackRecommendation: "inconclusive",
-      targetState: "META_REVIEW_FAILED",
-      stickyHumanGate: false
-    });
+    try {
+      return await persistHumanGateRoute({
+        appendEnvelope,
+        writeState,
+        statePath: resolved.bubblePaths.statePath,
+        transcriptPath: resolved.bubblePaths.transcriptPath,
+        inboxPath: resolved.bubblePaths.inboxPath,
+        lockPath,
+        now,
+        nowIso,
+        bubbleId: resolved.bubbleId,
+        summary: fallbackSummary,
+        refs,
+        loaded: metaReviewRunningState,
+        expectedState: "META_REVIEW_RUNNING",
+        route: "human_gate_run_failed",
+        fallbackRecommendation: "inconclusive",
+        targetState: "META_REVIEW_FAILED",
+        stickyHumanGate: false
+      });
+    } finally {
+      if (shouldDeactivateMetaReviewerPane) {
+        await deactivateMetaReviewerPane();
+      }
+    }
   }
 }
 

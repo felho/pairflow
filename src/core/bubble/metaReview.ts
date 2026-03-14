@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve } from "node:path";
 
 import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
+import { appendHumanApprovalRequestEnvelope } from "./approvalRequestEnvelope.js";
 import {
   StateStoreConflictError,
   readStateSnapshot,
@@ -35,6 +36,7 @@ import type {
 } from "../../types/bubble.js";
 import {
   isFindingsClaimState,
+  type FindingsParityStatus,
   type MetaReviewSubmissionPayload
 } from "../../types/protocol.js";
 const CANONICAL_META_REVIEW_REPORT_REF = "artifacts/meta-review-last.md";
@@ -94,6 +96,13 @@ export interface MetaReviewStatusView {
   last_autonomous_report_ref: string | null;
   last_autonomous_rework_target_message: string | null;
   last_autonomous_updated_at: string | null;
+  findings_claimed_open_total: number | null;
+  findings_artifact_open_total: number | null;
+  findings_artifact_status: string | null;
+  findings_digest_sha256: string | null;
+  meta_review_run_id: string | null;
+  findings_parity_status: FindingsParityStatus | null;
+  parity_diagnostics: string[];
 }
 
 export interface MetaReviewLastReportView {
@@ -103,6 +112,13 @@ export interface MetaReviewLastReportView {
   summary: string | null;
   updated_at: string | null;
   report_markdown: string | null;
+  findings_claimed_open_total: number | null;
+  findings_artifact_open_total: number | null;
+  findings_artifact_status: string | null;
+  findings_digest_sha256: string | null;
+  meta_review_run_id: string | null;
+  findings_parity_status: FindingsParityStatus | null;
+  parity_diagnostics: string[];
 }
 
 export interface MetaReviewRunWarning {
@@ -134,6 +150,7 @@ export interface MetaReviewDependencies {
   resolveBubbleById?: typeof resolveBubbleById;
   readStateSnapshot?: typeof readStateSnapshot;
   writeStateSnapshot?: typeof writeStateSnapshot;
+  appendProtocolEnvelope?: typeof appendProtocolEnvelope;
   readRuntimeSessionsRegistry?: typeof readRuntimeSessionsRegistry;
   runLiveReview?: (
     input: MetaReviewLiveRunnerInput
@@ -200,6 +217,70 @@ function normalizeOptionalText(value: string | undefined): string | null {
   return value.trim();
 }
 
+function parseOptionalSubmitRunLinkField(
+  value: unknown
+): { status: "absent" } | { status: "valid"; value: string } | { status: "invalid" } {
+  if (value === undefined || value === null) {
+    return { status: "absent" };
+  }
+  if (typeof value !== "string") {
+    return { status: "invalid" };
+  }
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return { status: "invalid" };
+  }
+  return { status: "valid", value: trimmed };
+}
+
+function resolveSubmitCanonicalRunId(input: {
+  recommendation: MetaReviewRecommendation;
+  reportJson?: Record<string, unknown>;
+  generatedRunId: string;
+}): string {
+  const reportJson = input.reportJson;
+  const metaReviewRunId = parseOptionalSubmitRunLinkField(
+    reportJson?.meta_review_run_id
+  );
+  const findingsRunId = parseOptionalSubmitRunLinkField(
+    reportJson?.findings_run_id
+  );
+
+  if (metaReviewRunId.status === "invalid" || findingsRunId.status === "invalid") {
+    throw new MetaReviewError(
+      "META_REVIEW_SCHEMA_INVALID",
+      "meta-review submit report_json run-link fields must be non-empty strings when provided"
+    );
+  }
+
+  if (
+    metaReviewRunId.status === "valid" &&
+    findingsRunId.status === "valid" &&
+    metaReviewRunId.value !== findingsRunId.value
+  ) {
+    throw new MetaReviewError(
+      "META_REVIEW_SCHEMA_INVALID",
+      "meta-review submit report_json run-link fields must match when both are provided"
+    );
+  }
+
+  const providedRunId =
+    metaReviewRunId.status === "valid"
+      ? metaReviewRunId.value
+      : findingsRunId.status === "valid"
+        ? findingsRunId.value
+        : null;
+
+  if (input.recommendation === "rework" && providedRunId === null) {
+    throw new MetaReviewError(
+      "META_REVIEW_SCHEMA_INVALID",
+      "meta-review submit recommendation=rework requires explicit report_json meta_review_run_id/findings_run_id linkage"
+    );
+  }
+
+  return providedRunId ?? input.generatedRunId;
+}
+
 function resolveClaimStateFromRecommendation(
   recommendation: MetaReviewRecommendation
 ): "clean" | "open_findings" | "unknown" {
@@ -215,7 +296,7 @@ function resolveClaimStateFromRecommendation(
 function resolveCanonicalMetaReviewReportJson(input: {
   recommendation: MetaReviewRecommendation;
   reportJson?: Record<string, unknown>;
-  runId?: string | null;
+  runId: string | null;
 }): Record<string, unknown> {
   const base = input.reportJson ?? {};
   const rawState = base.findings_claim_state;
@@ -241,18 +322,121 @@ function resolveCanonicalMetaReviewReportJson(input: {
     isNonEmptyString(base.findings_artifact_ref)
       ? base.findings_artifact_ref.trim()
       : null;
-  const findingsRunId =
-    isNonEmptyString(base.findings_run_id)
+  const resolvedMetaReviewRunId = isNonEmptyString(base.meta_review_run_id)
+    ? base.meta_review_run_id.trim()
+    : isNonEmptyString(base.findings_run_id)
       ? base.findings_run_id.trim()
-      : input.runId ?? null;
+      : input.runId;
+  const findingsRunId = resolvedMetaReviewRunId;
+  const findingsDigestSha256 = isNonEmptyString(base.findings_digest_sha256)
+    ? base.findings_digest_sha256.trim().toLowerCase()
+    : null;
+  const findingsArtifactStatus = isNonEmptyString(base.findings_artifact_status)
+    ? base.findings_artifact_status.trim()
+    : isNonEmptyString(base.artifact_status)
+      ? base.artifact_status.trim()
+      : null;
+  const findingsArtifactOpenTotal =
+    typeof base.findings_artifact_open_total === "number" &&
+      Number.isInteger(base.findings_artifact_open_total) &&
+      base.findings_artifact_open_total >= 0
+      ? base.findings_artifact_open_total
+      : null;
+  const findingsParityStatusRaw = isNonEmptyString(base.findings_parity_status)
+    ? base.findings_parity_status.trim()
+    : null;
+  const findingsParityStatus: FindingsParityStatus | null =
+    findingsParityStatusRaw === "ok" ||
+      findingsParityStatusRaw === "mismatch" ||
+      findingsParityStatusRaw === "guard_failed"
+      ? findingsParityStatusRaw
+      : null;
 
   return {
     ...base,
     findings_claim_state: claimState,
     findings_claim_source: claimSource,
     findings_count: findingsCount,
+    findings_claimed_open_total: findingsCount,
     findings_artifact_ref: findingsArtifactRef,
-    findings_run_id: findingsRunId
+    findings_run_id: findingsRunId,
+    meta_review_run_id: resolvedMetaReviewRunId,
+    findings_digest_sha256: findingsDigestSha256,
+    findings_artifact_status: findingsArtifactStatus,
+    artifact_status: findingsArtifactStatus,
+    findings_artifact_open_total: findingsArtifactOpenTotal,
+    findings_parity_status: findingsParityStatus
+  };
+}
+
+interface MetaReviewFindingsParitySnapshot {
+  findings_claimed_open_total: number | null;
+  findings_artifact_open_total: number | null;
+  findings_artifact_status: string | null;
+  findings_digest_sha256: string | null;
+  meta_review_run_id: string | null;
+  findings_parity_status: FindingsParityStatus | null;
+}
+
+const emptyMetaReviewFindingsParitySnapshot: MetaReviewFindingsParitySnapshot = {
+  findings_claimed_open_total: null,
+  findings_artifact_open_total: null,
+  findings_artifact_status: null,
+  findings_digest_sha256: null,
+  meta_review_run_id: null,
+  findings_parity_status: null
+};
+
+function normalizeNonNegativeInt(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0
+    ? value
+    : null;
+}
+
+function readMetaReviewFindingsParitySnapshot(
+  reportJson: Record<string, unknown> | undefined
+): MetaReviewFindingsParitySnapshot {
+  if (reportJson === undefined) {
+    return { ...emptyMetaReviewFindingsParitySnapshot };
+  }
+  const claimCount = normalizeNonNegativeInt(
+    reportJson.findings_claimed_open_total ?? reportJson.findings_count
+  );
+  const artifactCount = normalizeNonNegativeInt(
+    reportJson.findings_artifact_open_total
+  );
+  const artifactStatus = isNonEmptyString(reportJson.findings_artifact_status)
+    ? reportJson.findings_artifact_status.trim()
+    : isNonEmptyString(reportJson.artifact_status)
+      ? reportJson.artifact_status.trim()
+      : null;
+  const digest = isNonEmptyString(reportJson.findings_digest_sha256)
+    ? reportJson.findings_digest_sha256.trim().toLowerCase()
+    : null;
+  const runId = isNonEmptyString(reportJson.meta_review_run_id)
+    ? reportJson.meta_review_run_id.trim()
+    : isNonEmptyString(reportJson.findings_run_id)
+      ? reportJson.findings_run_id.trim()
+      : null;
+  const parityStatusRaw = isNonEmptyString(reportJson.findings_parity_status)
+    ? reportJson.findings_parity_status.trim()
+    : null;
+  let parityStatus: "ok" | "mismatch" | "guard_failed" | null = null;
+  if (
+    parityStatusRaw === "ok" ||
+    parityStatusRaw === "mismatch" ||
+    parityStatusRaw === "guard_failed"
+  ) {
+    parityStatus = parityStatusRaw;
+  }
+
+  return {
+    findings_claimed_open_total: claimCount,
+    findings_artifact_open_total: artifactCount,
+    findings_artifact_status: artifactStatus,
+    findings_digest_sha256: digest,
+    meta_review_run_id: runId,
+    findings_parity_status: parityStatus
   };
 }
 
@@ -474,7 +658,9 @@ function buildFallbackReportMarkdown(input: {
 
 function createMetaReviewStatusView(
   bubbleId: string,
-  snapshot: BubbleMetaReviewSnapshotState
+  snapshot: BubbleMetaReviewSnapshotState,
+  parity: MetaReviewFindingsParitySnapshot = emptyMetaReviewFindingsParitySnapshot,
+  parityDiagnostics: string[] = []
 ): MetaReviewStatusView {
   const hasRun =
     snapshot.last_autonomous_status !== null &&
@@ -493,7 +679,14 @@ function createMetaReviewStatusView(
     last_autonomous_report_ref: snapshot.last_autonomous_report_ref,
     last_autonomous_rework_target_message:
       snapshot.last_autonomous_rework_target_message,
-    last_autonomous_updated_at: snapshot.last_autonomous_updated_at
+    last_autonomous_updated_at: snapshot.last_autonomous_updated_at,
+    findings_claimed_open_total: parity.findings_claimed_open_total,
+    findings_artifact_open_total: parity.findings_artifact_open_total,
+    findings_artifact_status: parity.findings_artifact_status,
+    findings_digest_sha256: parity.findings_digest_sha256,
+    meta_review_run_id: parity.meta_review_run_id,
+    findings_parity_status: parity.findings_parity_status,
+    parity_diagnostics: [...parityDiagnostics]
   };
 }
 
@@ -1067,6 +1260,7 @@ export async function submitMetaReviewResult(
   const readRuntimeSessions =
     dependencies.readRuntimeSessionsRegistry ?? readRuntimeSessionsRegistry;
   const writeFileFn = dependencies.writeFile ?? writeFile;
+  const randomUuidFn = dependencies.randomUUID ?? randomUUID;
   const now = dependencies.now ?? new Date();
 
   const resolved = await resolveBubble({
@@ -1116,6 +1310,14 @@ export async function submitMetaReviewResult(
   }
 
   const updatedAt = now.toISOString();
+  const runIdRaw = randomUuidFn();
+  if (!isNonEmptyString(runIdRaw)) {
+    throw new MetaReviewError(
+      "META_REVIEW_SCHEMA_INVALID",
+      "meta-review submit run_id must be a non-empty string"
+    );
+  }
+  const generatedRunId = runIdRaw.trim();
   const recommendation = input.recommendation;
   const status = mapRecommendationToStatus(recommendation);
   const summary = normalizeRequiredSubmitText(input.summary, "summary");
@@ -1126,18 +1328,22 @@ export async function submitMetaReviewResult(
   const reworkTargetMessage = normalizeOptionalText(
     input.rework_target_message ?? undefined
   );
+  assertRunPayloadInvariants({
+    recommendation,
+    status,
+    reworkTargetMessage
+  });
+  const runId = resolveSubmitCanonicalRunId({
+    recommendation,
+    ...(input.report_json !== undefined ? { reportJson: input.report_json } : {}),
+    generatedRunId
+  });
   const canonicalReportJson = resolveCanonicalMetaReviewReportJson({
     recommendation,
     ...(input.report_json !== undefined
       ? { reportJson: input.report_json }
       : {}),
-    runId: null
-  });
-
-  assertRunPayloadInvariants({
-    recommendation,
-    status,
-    reworkTargetMessage
+    runId
   });
 
   const previousMetaReview = normalizeMetaReviewSnapshot(loadedState.state.meta_review);
@@ -1154,7 +1360,7 @@ export async function submitMetaReviewResult(
   }
   const nextMetaReview: BubbleMetaReviewSnapshotState = {
     ...previousMetaReview,
-    last_autonomous_run_id: null,
+    last_autonomous_run_id: runId,
     last_autonomous_status: status,
     last_autonomous_recommendation: recommendation,
     last_autonomous_summary: summary,
@@ -1209,6 +1415,7 @@ export async function submitMetaReviewResult(
   const warnings: MetaReviewRunWarning[] = [];
   const reportPayload = {
     bubble_id: resolved.bubbleId,
+    run_id: runId,
     round: input.round,
     generated_at: updatedAt,
     status,
@@ -1253,6 +1460,7 @@ export async function submitMetaReviewResult(
 
   return {
     bubbleId: resolved.bubbleId,
+    run_id: runId,
     status,
     recommendation,
     summary,
@@ -1272,7 +1480,9 @@ export async function runMetaReview(
   const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
   const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
   const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
+  const appendEnvelope = dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
   const runLiveReview = dependencies.runLiveReview ?? defaultLiveRunner;
+  const readFileFn = dependencies.readFile ?? readFile;
   const writeFileFn = dependencies.writeFile ?? writeFile;
   const now = dependencies.now ?? new Date();
   const makeUuid = dependencies.randomUUID ?? randomUUID;
@@ -1419,6 +1629,7 @@ export async function runMetaReview(
   const reportPayload = {
     bubble_id: resolved.bubbleId,
     run_id: runId,
+    round: written.state.round,
     generated_at: updatedAt,
     depth,
     status,
@@ -1430,6 +1641,31 @@ export async function runMetaReview(
     warnings,
     report_json: canonicalReportJson
   };
+  const rollingArtifactPaths = [
+    resolved.bubblePaths.metaReviewLastJsonArtifactPath,
+    resolved.bubblePaths.metaReviewLastMarkdownArtifactPath
+  ];
+  const rollingArtifactBackup = await Promise.all(
+    rollingArtifactPaths.map(async (artifactPath) => {
+      try {
+        const contents = await readFileFn(artifactPath, "utf8");
+        return {
+          artifactPath,
+          existed: true as const,
+          contents
+        };
+      } catch (error) {
+        if (isMissingFileError(error)) {
+          return {
+            artifactPath,
+            existed: false as const,
+            contents: null
+          };
+        }
+        throw error;
+      }
+    })
+  );
 
   const artifactWrites = await Promise.allSettled([
     writeFileFn(
@@ -1462,34 +1698,90 @@ export async function runMetaReview(
   }
 
   if (shouldRefreshApprovalRequest(written.state.state)) {
-    await appendProtocolEnvelope({
-      transcriptPath: resolved.bubblePaths.transcriptPath,
-      mirrorPaths: [resolved.bubblePaths.inboxPath],
-      lockPath: join(
-        resolved.bubblePaths.locksDir,
-        `${resolved.bubbleId}.lock`
-      ),
-      now,
-      envelope: {
-        bubble_id: resolved.bubbleId,
-        sender: "orchestrator",
-        recipient: "human",
-        type: "APPROVAL_REQUEST",
+    const parity = readMetaReviewFindingsParitySnapshot(canonicalReportJson);
+    const approvalRefreshRoute =
+      recommendation === "approve"
+        ? "human_gate_approve"
+        : recommendation === "rework"
+          ? "human_gate_budget_exhausted"
+          : "human_gate_inconclusive";
+    try {
+      await appendHumanApprovalRequestEnvelope({
+        appendEnvelope,
+        transcriptPath: resolved.bubblePaths.transcriptPath,
+        inboxPath: resolved.bubblePaths.inboxPath,
+        lockPath: join(
+          resolved.bubblePaths.locksDir,
+          `${resolved.bubbleId}.lock`
+        ),
+        now,
+        bubbleId: resolved.bubbleId,
         round: written.state.round,
-        payload: {
-          summary:
-            summary ??
-            `Meta-review completed with recommendation ${recommendation}.`,
-          metadata: {
-            actor: "meta-reviewer",
-            actor_agent: "codex",
-            latest_recommendation: recommendation,
-            run_id: runId
-          }
-        },
-        refs: [CANONICAL_META_REVIEW_REPORT_REF]
+        summary:
+          summary ??
+          `Meta-review completed with recommendation ${recommendation}.`,
+        route: approvalRefreshRoute,
+        refs: [CANONICAL_META_REVIEW_REPORT_REF],
+        recommendation,
+        parityMetadata: parity
+      });
+    } catch (appendError) {
+      const appendReason =
+        appendError instanceof Error ? appendError.message : String(appendError);
+      let rollbackReasonCode = "META_REVIEW_GATE_REFRESH_APPROVAL_ROLLBACK_NOT_ATTEMPTED";
+      let rollbackContext = "rollback_outcome=not_attempted";
+      let artifactRestoreReasonCode =
+        "META_REVIEW_GATE_REFRESH_APPROVAL_ARTIFACT_RESTORE_NOT_ATTEMPTED";
+      let artifactRestoreContext = "artifact_restore_outcome=not_attempted";
+      let gateReasonCode: "META_REVIEW_GATE_STATE_CONFLICT" | "META_REVIEW_GATE_TRANSITION_INVALID" =
+        "META_REVIEW_GATE_TRANSITION_INVALID";
+      try {
+        await writeState(resolved.bubblePaths.statePath, loadedState.state, {
+          expectedFingerprint: written.fingerprint,
+          expectedState: written.state.state
+        });
+        rollbackReasonCode = "META_REVIEW_GATE_REFRESH_APPROVAL_ROLLBACK_APPLIED";
+        rollbackContext = "rollback_outcome=applied";
+      } catch (rollbackError) {
+        const rollbackReason =
+          rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
+        rollbackContext = `rollback_outcome=failed rollback_error=${rollbackReason}`;
+        if (rollbackError instanceof StateStoreConflictError) {
+          gateReasonCode = "META_REVIEW_GATE_STATE_CONFLICT";
+          rollbackReasonCode = "META_REVIEW_GATE_REFRESH_APPROVAL_ROLLBACK_STATE_CONFLICT";
+        } else {
+          rollbackReasonCode =
+            "META_REVIEW_GATE_REFRESH_APPROVAL_ROLLBACK_TRANSITION_INVALID";
+        }
       }
-    });
+      if (rollbackReasonCode === "META_REVIEW_GATE_REFRESH_APPROVAL_ROLLBACK_APPLIED") {
+        try {
+          await Promise.all(
+            rollingArtifactBackup.map((artifact) =>
+              artifact.existed
+                ? writeFileFn(artifact.artifactPath, artifact.contents, "utf8")
+                : rm(artifact.artifactPath, { force: true })
+            )
+          );
+          artifactRestoreReasonCode =
+            "META_REVIEW_GATE_REFRESH_APPROVAL_ARTIFACT_RESTORE_APPLIED";
+          artifactRestoreContext = "artifact_restore_outcome=applied";
+        } catch (artifactRestoreError) {
+          const artifactRestoreReason =
+            artifactRestoreError instanceof Error
+              ? artifactRestoreError.message
+              : String(artifactRestoreError);
+          artifactRestoreReasonCode =
+            "META_REVIEW_GATE_REFRESH_APPROVAL_ARTIFACT_RESTORE_FAILED";
+          artifactRestoreContext =
+            `artifact_restore_outcome=failed artifact_restore_error=${artifactRestoreReason}`;
+        }
+      }
+      throw new MetaReviewError(
+        "META_REVIEW_GATE_RUN_FAILED",
+        `${gateReasonCode}: approval refresh append failed after state/artifact writes (append_error=${appendReason}; rollback_reason_code=${rollbackReasonCode}; rollback_target_state=${loadedState.state.state}; ${rollbackContext}; artifact_restore_reason_code=${artifactRestoreReasonCode}; ${artifactRestoreContext}).`
+      );
+    }
   }
 
   return {
@@ -1514,6 +1806,7 @@ export async function getMetaReviewStatus(
 ): Promise<MetaReviewStatusView> {
   const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
   const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
+  const readFileFn = dependencies.readFile ?? readFile;
 
   const resolved = await resolveBubble({
     bubbleId: input.bubbleId,
@@ -1522,8 +1815,24 @@ export async function getMetaReviewStatus(
   });
   const loadedState = await readState(resolved.bubblePaths.statePath);
   const snapshot = normalizeMetaReviewSnapshot(loadedState.state.meta_review);
+  if (!isNonEmptyString(snapshot.last_autonomous_report_ref)) {
+    return createMetaReviewStatusView(resolved.bubbleId, snapshot);
+  }
+  const parityRead = await readMetaReviewParitySnapshotFromArtifact({
+    artifactPath: resolved.bubblePaths.metaReviewLastJsonArtifactPath,
+    readFileFn
+  });
+  const freshnessDiagnostics = resolveSnapshotFreshnessDiagnostics({
+    currentRound: loadedState.state.round,
+    snapshotRound: parityRead.snapshotRound
+  });
 
-  return createMetaReviewStatusView(resolved.bubbleId, snapshot);
+  return createMetaReviewStatusView(
+    resolved.bubbleId,
+    snapshot,
+    parityRead.parity,
+    [...parityRead.diagnostics, ...freshnessDiagnostics]
+  );
 }
 
 function isMissingFileError(error: unknown): boolean {
@@ -1532,6 +1841,120 @@ function isMissingFileError(error: unknown): boolean {
     "code" in error &&
     (error as NodeJS.ErrnoException).code === "ENOENT"
   );
+}
+
+const metaReviewParityArtifactReadFailedReasonCode =
+  "META_REVIEW_PARITY_ARTIFACT_READ_FAILED";
+const metaReviewParityArtifactParseFailedReasonCode =
+  "META_REVIEW_PARITY_ARTIFACT_PARSE_FAILED";
+const metaReviewParityArtifactShapeInvalidReasonCode =
+  "META_REVIEW_PARITY_ARTIFACT_SHAPE_INVALID";
+const metaReviewParityArtifactReportJsonInvalidReasonCode =
+  "META_REVIEW_PARITY_REPORT_JSON_INVALID";
+const metaReviewSnapshotRoundStaleReasonCode = "META_REVIEW_SNAPSHOT_ROUND_STALE";
+
+interface MetaReviewParityArtifactReadResult {
+  parity: MetaReviewFindingsParitySnapshot;
+  diagnostics: string[];
+  snapshotRound: number | null;
+}
+
+function resolveParityArtifactReadErrorCode(error: unknown): string {
+  if (error instanceof Error && "code" in error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (typeof code === "string" && code.trim().length > 0) {
+      return code.trim().toUpperCase();
+    }
+  }
+  return "UNKNOWN";
+}
+
+function readMetaReviewParitySnapshotFromArtifactRaw(
+  artifactRaw: string
+): MetaReviewParityArtifactReadResult {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(artifactRaw) as unknown;
+  } catch {
+    return {
+      parity: { ...emptyMetaReviewFindingsParitySnapshot },
+      diagnostics: [metaReviewParityArtifactParseFailedReasonCode],
+      snapshotRound: null
+    };
+  }
+
+  if (!isRecord(parsed)) {
+    return {
+      parity: { ...emptyMetaReviewFindingsParitySnapshot },
+      diagnostics: [metaReviewParityArtifactShapeInvalidReasonCode],
+      snapshotRound: null
+    };
+  }
+
+  if (
+    "report_json" in parsed &&
+    parsed.report_json !== undefined &&
+    !isRecord(parsed.report_json)
+  ) {
+    return {
+      parity: { ...emptyMetaReviewFindingsParitySnapshot },
+      diagnostics: [metaReviewParityArtifactReportJsonInvalidReasonCode],
+      snapshotRound: null
+    };
+  }
+
+  const reportJson = isRecord(parsed.report_json)
+    ? parsed.report_json
+    : parsed;
+  const snapshotRound =
+    typeof parsed.round === "number" && isInteger(parsed.round) && parsed.round > 0
+      ? parsed.round
+      : null;
+
+  return {
+    parity: readMetaReviewFindingsParitySnapshot(reportJson),
+    diagnostics: [],
+    snapshotRound
+  };
+}
+
+function resolveSnapshotFreshnessDiagnostics(input: {
+  currentRound: number;
+  snapshotRound: number | null;
+}): string[] {
+  if (
+    !isInteger(input.currentRound) ||
+    input.currentRound < 1 ||
+    input.snapshotRound === null
+  ) {
+    return [];
+  }
+  if (input.snapshotRound < input.currentRound) {
+    return [
+      `${metaReviewSnapshotRoundStaleReasonCode}:snapshot_round=${input.snapshotRound};current_round=${input.currentRound}`
+    ];
+  }
+  return [];
+}
+
+async function readMetaReviewParitySnapshotFromArtifact(input: {
+  artifactPath: string;
+  readFileFn: typeof readFile;
+}): Promise<MetaReviewParityArtifactReadResult> {
+  let artifactRaw: string;
+  try {
+    artifactRaw = await input.readFileFn(input.artifactPath, "utf8");
+  } catch (error) {
+    return {
+      parity: { ...emptyMetaReviewFindingsParitySnapshot },
+      diagnostics: [
+        `${metaReviewParityArtifactReadFailedReasonCode}:${resolveParityArtifactReadErrorCode(error)}`
+      ],
+      snapshotRound: null
+    };
+  }
+
+  return readMetaReviewParitySnapshotFromArtifactRaw(artifactRaw);
 }
 
 export async function getMetaReviewLastReport(
@@ -1549,6 +1972,8 @@ export async function getMetaReviewLastReport(
   });
   const loadedState = await readState(resolved.bubblePaths.statePath);
   const snapshot = normalizeMetaReviewSnapshot(loadedState.state.meta_review);
+  let parity = { ...emptyMetaReviewFindingsParitySnapshot };
+  let parityDiagnostics: string[] = [];
 
   if (!isNonEmptyString(snapshot.last_autonomous_report_ref)) {
     return {
@@ -1557,7 +1982,14 @@ export async function getMetaReviewLastReport(
       report_ref: null,
       summary: snapshot.last_autonomous_summary,
       updated_at: snapshot.last_autonomous_updated_at,
-      report_markdown: null
+      report_markdown: null,
+      findings_claimed_open_total: parity.findings_claimed_open_total,
+      findings_artifact_open_total: parity.findings_artifact_open_total,
+      findings_artifact_status: parity.findings_artifact_status,
+      findings_digest_sha256: parity.findings_digest_sha256,
+      meta_review_run_id: parity.meta_review_run_id,
+      findings_parity_status: parity.findings_parity_status,
+      parity_diagnostics: parityDiagnostics
     };
   }
 
@@ -1567,6 +1999,18 @@ export async function getMetaReviewLastReport(
     artifactsDir: resolved.bubblePaths.artifactsDir,
     reportRef
   });
+  const parityRead = await readMetaReviewParitySnapshotFromArtifact({
+    artifactPath: resolved.bubblePaths.metaReviewLastJsonArtifactPath,
+    readFileFn
+  });
+  parity = parityRead.parity;
+  parityDiagnostics = [
+    ...parityRead.diagnostics,
+    ...resolveSnapshotFreshnessDiagnostics({
+      currentRound: loadedState.state.round,
+      snapshotRound: parityRead.snapshotRound
+    })
+  ];
 
   let reportMarkdown: string;
   try {
@@ -1579,7 +2023,14 @@ export async function getMetaReviewLastReport(
         report_ref: reportRef,
         summary: snapshot.last_autonomous_summary,
         updated_at: snapshot.last_autonomous_updated_at,
-        report_markdown: null
+        report_markdown: null,
+        findings_claimed_open_total: parity.findings_claimed_open_total,
+        findings_artifact_open_total: parity.findings_artifact_open_total,
+        findings_artifact_status: parity.findings_artifact_status,
+        findings_digest_sha256: parity.findings_digest_sha256,
+        meta_review_run_id: parity.meta_review_run_id,
+        findings_parity_status: parity.findings_parity_status,
+        parity_diagnostics: parityDiagnostics
       };
     }
     throw error;
@@ -1591,7 +2042,14 @@ export async function getMetaReviewLastReport(
     report_ref: reportRef,
     summary: snapshot.last_autonomous_summary,
     updated_at: snapshot.last_autonomous_updated_at,
-    report_markdown: reportMarkdown
+    report_markdown: reportMarkdown,
+    findings_claimed_open_total: parity.findings_claimed_open_total,
+    findings_artifact_open_total: parity.findings_artifact_open_total,
+    findings_artifact_status: parity.findings_artifact_status,
+    findings_digest_sha256: parity.findings_digest_sha256,
+    meta_review_run_id: parity.meta_review_run_id,
+    findings_parity_status: parity.findings_parity_status,
+    parity_diagnostics: parityDiagnostics
   };
 }
 
