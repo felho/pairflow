@@ -2,10 +2,10 @@
 artifact_type: task
 artifact_id: task_pairflow_four_issue_hardening_three_phase_v1
 title: "Pairflow Reviewer/Convergence/Meta-Review Hardening (Four Issues, Three Phases)"
-status: draft
+status: completed
 phase: phase1-phase3
 depends_on:
-  - plans/tasks/pairflow-summary-claim-canonicalization-foundation-phase1.md
+  - plans/archive/tasks/pairflow-summary-claim-canonicalization-foundation-phase1.md
 target_files:
   - src/core/reviewer/testEvidence.ts
   - src/core/agent/pass.ts
@@ -33,6 +33,13 @@ owners:
 
 # Task: Pairflow Reviewer/Convergence/Meta-Review Hardening (Four Issues, Three Phases)
 
+## Closure Note (2026-03-14)
+
+This task is closed based on merged Phase 3 hardening delivery:
+1. Bubble hardening commit: `d1421d8`
+2. Bubble finalize commit: `5469a2d`
+3. Main merge commit: `3ff05d5`
+
 ## L0 - Policy
 
 ### Goal
@@ -43,7 +50,7 @@ Close four distinct but related reliability/safety gaps in reviewer evidence tru
 
 1. Phase 2 is accepted and can be closed/merged as implemented hardening baseline.
 2. Before Phase 3 implementation, a separate canonicalization foundation task must land:
-   - `plans/tasks/pairflow-summary-claim-canonicalization-foundation-phase1.md`
+   - `plans/archive/tasks/pairflow-summary-claim-canonicalization-foundation-phase1.md`
 3. Phase 3 proceeds in slim mode on top of that foundation:
    - keep artifact parity/run-linkage/diagnostics contracts,
    - avoid extending free-form summary NLP parsing as primary gate input.
