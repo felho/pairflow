@@ -26,22 +26,22 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-  ORCH[Orchestrator]
+  ORCH["Orchestrator"]
 
-  CPE[ConvergencePolicyEngine]
-  GATE[GatePipelineEngine]
-  STS[StateTransitionService]
-  LEGACY[LegacyCompatAdapter]
+  CPE["ConvergencePolicyEngine"]
+  GATE["GatePipelineEngine"]
+  STS["StateTransitionService"]
+  LEGACY["LegacyCompatAdapter"]
 
-  BMR[BubbleMutationRunner]
-  CFG[ConfigLoader + TomlNormalizer]
-  AGENT[AgentAdapter\n(TmuxAgentAdapter)]
-  MET[MetricsDispatcher]
-  REC[TranscriptStateReconciler]
-  ERR[PairflowError + ErrorMappingBoundary]
+  BMR["BubbleMutationRunner"]
+  CFG["ConfigLoader / TomlNormalizer"]
+  AGENT["AgentAdapter<br/>(TmuxAgentAdapter)"]
+  MET["MetricsDispatcher"]
+  REC["TranscriptStateReconciler"]
+  ERR["PairflowError / ErrorMappingBoundary"]
 
-  TR[TranscriptRepository]
-  SR[StateRepository]
+  TR["TranscriptRepository"]
+  SR["StateRepository"]
 
   ORCH --> CFG
   ORCH --> LEGACY
@@ -68,16 +68,17 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-  A[Domain mutation plan ready]
-  B[BubbleMutationRunner\nvalidate input + snapshot]
-  C[Append transcript envelope/event]
-  D[Persist next state\nexpected fingerprint/state]
-  E[Return MutationOutcome\napplied|conflict|recovery_needed|rejected]
+  A["Domain mutation plan ready"]
+  B["BubbleMutationRunner<br/>validate input and snapshot"]
+  C["Append transcript envelope/event"]
+  D["Persist next state<br/>expected fingerprint/state"]
+  E["Return MutationOutcome<br/>applied, conflict, recovery_needed, rejected"]
+  R["TranscriptStateReconciler"]
 
   A --> B --> C --> D --> E
 
   C -. append ok, state fail .-> E
-  E -. recovery path .-> R[TranscriptStateReconciler]
+  E -. recovery path .-> R
 ```
 
 ## 4) Sequence: `pass`
