@@ -25,6 +25,12 @@ Scope: M0|M1|Later
 - Mit hivhat o.
 - Tiltott fuggosegek.
 
+## 4.1 Ownership Split (ha tobb komponenssel oszt felelosseget)
+
+- Pontosan mi az o kizarolagos felelossege.
+- Mi a szomszedos komponens kizarolagos felelossege.
+- Milyen atadasi contract validalja az ownership hatart.
+
 ## 5) Input Contract
 
 - Bemeneti adatszerkezetek.
@@ -64,3 +70,8 @@ Scope: M0|M1|Later
 ## 12) Done Criteria
 
 - Mikor tekintheto kesznek a komponens.
+
+## 12.1 Green Criteria (architecture fitness)
+
+- Mitol lesz ez a komponens boundary/ownership szempontbol "zold".
+- Melyik 2-3 konkret teszt vagy CI check bizonyitja ezt.

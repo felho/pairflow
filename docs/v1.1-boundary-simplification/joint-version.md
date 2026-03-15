@@ -254,6 +254,15 @@ Minta:
 4. persist nextState with expected fingerprint/state
 5. emit standardized mutation outcome
 
+Ownership split closure (StateTransitionService vs BubbleMutationRunner):
+1. `StateTransitionService` kizarolag transition validaciot es `validated_next_state` eloallitast vegez (pure).
+2. `BubbleMutationRunner` kizarolag transcript append + state persist + mutation outcome feladatot vegez.
+3. `Orchestrator` csak a lancot koordinlja: `policy -> transition -> mutation`.
+4. Green only if:
+   - nincs manual next-state build normal flow-ban,
+   - nincs kozvetlen state write runneren kivul state-changing commandban,
+   - STS hiba eseten nincs persist.
+
 Transcript-first ADR (kotelezo formalizalas):
 1. Kulon ADR-ben rogzitjuk, hogy normal mutacios flow-ban a sorrend kotelezoen:
    - eloszor transcript append,

@@ -105,7 +105,8 @@ sequenceDiagram
   OR->>CPE: evaluateConvergence(context)
   OR->>GATE: run(gates, gateContext)
   OR->>STS: applyStateTransition(current, request)
-  OR->>BMR: applyMutation(plan)
+  STS-->>OR: validated_next_state
+  OR->>BMR: applyMutation(plan, validated_next_state)
   BMR->>TR: append(envelope/event)
   BMR->>SR: write(nextState, expectedFingerprint)
   BMR-->>OR: MutationOutcome
@@ -138,7 +139,8 @@ sequenceDiagram
     OR-->>CLI: blocked + reason
   else allowed
     OR->>STS: applyStateTransition(...)
-    OR->>BMR: applyMutation(plan)
+    STS-->>OR: validated_next_state
+    OR->>BMR: applyMutation(plan, validated_next_state)
     OR->>AG: notify next recipient/state
     OR->>MET: dispatch(converged_emitted)
     OR-->>CLI: success
@@ -163,7 +165,8 @@ sequenceDiagram
   OR->>CFG: loadDecisionConfig()
   OR->>LC: normalizeApprovalContext()
   OR->>STS: applyStateTransition(current, approve/rework)
-  OR->>BMR: applyMutation(approval_decision_plan)
+  STS-->>OR: validated_next_state
+  OR->>BMR: applyMutation(approval_decision_plan, validated_next_state)
   OR->>AG: deliver decision notification
   OR->>MET: dispatch(approval_decision_emitted)
   OR-->>CLI: success
@@ -189,7 +192,8 @@ sequenceDiagram
     OR->>MET: dispatch(meta_review_started)
   else gate outcome is block/rework/approve route
     OR->>STS: applyStateTransition(...)
-    OR->>BMR: applyMutation(gate_route_plan)
+    STS-->>OR: validated_next_state
+    OR->>BMR: applyMutation(gate_route_plan, validated_next_state)
     OR->>MET: dispatch(meta_review_gate_routed)
   end
 ```
@@ -242,3 +246,20 @@ sequenceDiagram
 2. Ellenorizd, hogy a policy dontes domainben marad-e, es I/O csak orchestrator/adapternel van-e.
 3. Ha egy komponens tul sok sequence-ben tul sok fele szerepet kap, vedd elo az anti-goal blokkjat.
 4. Minden uj valtoztatasnal frissitsd a megfelelo sequence diagramot es a matrixot.
+
+## 11) Ownership closure criteria (StateTransitionService vs BubbleMutationRunner)
+
+Green ownership akkor teljesul, ha mindharom csoport igaz:
+
+1. Design-level szabaly:
+   - `StateTransitionService` csak validal es `validated_next_state`-et ad vissza.
+   - `BubbleMutationRunner` csak transcript append + state persist + mutation outcome.
+   - `Orchestrator` csak koordinaciot vegez (`policy -> transition -> mutation`).
+2. Code-level guard:
+   - nincs kozvetlen `writeStateSnapshot` state-changing commandban (runneren kivul),
+   - nincs manual `{ ...state, ... }` next-state epites normal flow-ban,
+   - STS-ben nincs I/O import, BMR-ben nincs transition/policy szamitas.
+3. Proof-level evidence:
+   - `pass` + `approval` flow mar a fenti lancot hasznalja,
+   - legalabb egy teszt bizonyitja: STS hiba eseten nincs persist,
+   - legalabb egy teszt bizonyitja: append ok + persist fail -> standard recovery outcome.
