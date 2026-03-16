@@ -13,6 +13,7 @@ import {
   IDEATION_KICKOFF_NOT_ELIGIBLE,
   IDEATION_KICKOFF_PERSISTENCE_FAILED,
   IDEATION_KICKOFF_REQUIRES_RUNNING,
+  IDEATION_KICKOFF_TASK_INVALID,
   IDEATION_KICKOFF_STATE_CONFLICT
 } from "../../../src/core/bubble/ideation.js";
 import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
@@ -113,6 +114,49 @@ describe("kickoffBubble", () => {
     expect(bubbleConfig.ideation?.mode).toBe(true);
     expect(bubbleConfig.ideation?.task_pending).toBe(false);
     expect(bubbleConfig.ideation?.kicked_off_at).toBe("2026-03-15T12:05:00.000Z");
+  });
+
+  it("rejects kickoff when task-file still contains ideation placeholder marker", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_kickoff_core_09",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      ideation: true,
+      cwd: repoPath
+    });
+    await setIdeationRunningRoundZero(created.paths.statePath);
+
+    const transcriptBefore = await readTranscriptEnvelopes(created.paths.transcriptPath);
+    const result = await kickoffBubble({
+      bubbleId: created.bubbleId,
+      repoPath,
+      taskFile: created.paths.taskArtifactPath,
+      cwd: repoPath
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.reason_code).toBe(IDEATION_KICKOFF_TASK_INVALID);
+    expect(result.state_changed).toBe(false);
+    expect(result.protocol.task_envelope_appended).toBe(false);
+    expect(result.markers_before).toEqual({
+      ideation_mode: true,
+      ideation_task_pending: true
+    });
+
+    const stateAfter = await readStateSnapshot(created.paths.statePath);
+    expect(stateAfter.state.round).toBe(0);
+    expect(stateAfter.state.active_role).toBe("implementer");
+
+    const bubbleConfig = parseBubbleConfigToml(
+      await readFile(created.paths.bubbleTomlPath, "utf8")
+    );
+    expect(bubbleConfig.ideation?.task_pending).toBe(true);
+    expect(bubbleConfig.ideation?.kicked_off_at).toBeUndefined();
+
+    const transcriptAfter = await readTranscriptEnvelopes(created.paths.transcriptPath);
+    expect(transcriptAfter).toEqual(transcriptBefore);
   });
 
   it("rejects kickoff for non-ideation bubbles", async () => {

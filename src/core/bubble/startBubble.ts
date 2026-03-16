@@ -250,7 +250,25 @@ function buildImplementerStartupPrompt(input: {
   donePackagePath: string;
   reviewArtifactType: ReviewArtifactType;
   pairflowCommandProfile: PairflowCommandProfile;
+  ideationPending: boolean;
 }): string {
+  if (input.ideationPending) {
+    return [
+      `Pairflow implementer start for bubble ${input.bubbleId}.`,
+      `Read task: ${input.taskArtifactPath}.`,
+      "This bubble is ideation-pending (`round=0`); do not start implementation yet.",
+      `Execute pairflow commands from this worktree path only: ${input.worktreePath}.`,
+      buildPairflowCommandGuidance(
+        input.worktreePath,
+        input.pairflowCommandProfile
+      ),
+      `Provide a concrete task via \`pairflow bubble kickoff --id ${input.bubbleId} --task "<text>"\` or \`--task-file <path>\`.`,
+      "Do not use the current placeholder artifact as kickoff input.",
+      "If no concrete task source is available, send a blocker with `pairflow ask-human --question \"...\"`.",
+      `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`
+    ].join(" ");
+  }
+
   const evidenceHandoffGuidance = buildImplementerEvidenceHandoffGuidance(
     input.reviewArtifactType
   );
@@ -372,7 +390,9 @@ function buildImplementerIdeationKickoffMessage(input: {
       input.worktreePath,
       input.pairflowCommandProfile
     ),
-    `Activate the first implementation round with \`pairflow bubble kickoff --id ${input.bubbleId} --task "<text>"\` or \`--task-file <path>\`.`
+    `Activate the first implementation round with \`pairflow bubble kickoff --id ${input.bubbleId} --task "<text>"\` or \`--task-file <path>\`.`,
+    "Do not use the current placeholder artifact as --task-file input.",
+    "If no concrete task source is available, use `pairflow ask-human --question \"...\"`."
   ].join(" ");
 }
 
@@ -436,11 +456,17 @@ function buildResumeImplementerStartupPrompt(input: {
   transcriptSummary: string;
   kickoffDiagnostic?: string;
 }): string {
-  const evidenceHandoffGuidance = buildImplementerEvidenceHandoffGuidance(
-    input.reviewArtifactType
-  );
+  const ideationPending =
+    input.state.state === "RUNNING" && input.state.round === 0;
+  const evidenceHandoffGuidance = ideationPending
+    ? undefined
+    : buildImplementerEvidenceHandoffGuidance(input.reviewArtifactType);
   const roleInstruction =
-    input.state.state === "RUNNING" && input.state.active_role === "implementer"
+    input.state.state === "RUNNING" &&
+      input.state.active_role === "implementer" &&
+      ideationPending
+      ? "You are active in ideation pending mode. Do not implement yet; first run kickoff with a concrete task."
+      : input.state.state === "RUNNING" && input.state.active_role === "implementer"
       ? "You are currently active. Continue implementation now."
       : "Continue implementation when you become active; otherwise stand by.";
   const lines = [
@@ -455,7 +481,13 @@ function buildResumeImplementerStartupPrompt(input: {
     `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`,
     `State snapshot: ${buildResumeContextLine(input.state)}.`,
     `Transcript context: ${input.transcriptSummary}`,
-    evidenceHandoffGuidance,
+    ...(evidenceHandoffGuidance !== undefined
+      ? [evidenceHandoffGuidance]
+      : [
+          `Provide a concrete task via \`pairflow bubble kickoff --id ${input.bubbleId} --task "<text>"\` or \`--task-file <path>\`.`,
+          "Do not use the current placeholder artifact as kickoff input.",
+          "If no concrete task source is available, send a blocker with `pairflow ask-human --question \"...\"`."
+        ]),
     roleInstruction
   ];
   if ((input.kickoffDiagnostic?.trim().length ?? 0) > 0) {
@@ -585,6 +617,20 @@ function buildResumeImplementerKickoffMessage(input: {
   reviewArtifactType: ReviewArtifactType;
   pairflowCommandProfile: PairflowCommandProfile;
 }): string {
+  if (input.round === 0) {
+    return [
+      `# [pairflow] bubble=${input.bubbleId} resume kickoff (implementer, ideation pending).`,
+      "State is RUNNING at round 0.",
+      `Read placeholder task artifact: ${input.taskArtifactPath}.`,
+      buildPairflowCommandGuidance(
+        input.worktreePath,
+        input.pairflowCommandProfile
+      ),
+      `Do not continue implementation yet. Activate round 1 with \`pairflow bubble kickoff --id ${input.bubbleId} --task "<text>"\` or \`--task-file <path>\`.`,
+      "Do not use the current placeholder artifact as kickoff input."
+    ].join(" ");
+  }
+
   return [
     `# [pairflow] bubble=${input.bubbleId} resume kickoff (implementer).`,
     `State is RUNNING at round ${input.round}.`,
@@ -926,7 +972,8 @@ export async function startBubble(
             taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
             donePackagePath,
             reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
-            pairflowCommandProfile: resolved.bubbleConfig.pairflow_command_profile
+            pairflowCommandProfile: resolved.bubbleConfig.pairflow_command_profile,
+            ideationPending
           })
         }),
         reviewerCommand: buildAgentCommand({

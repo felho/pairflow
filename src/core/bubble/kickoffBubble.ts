@@ -66,6 +66,12 @@ export interface KickoffBubbleDependencies {
 
 class KickoffTaskInputValidationError extends Error {}
 
+const IDEATION_PLACEHOLDER_CONTENT_MARKER = /metadata_source:\s*ideation_placeholder/iu;
+
+function isIdeationPlaceholderTaskContent(content: string): boolean {
+  return IDEATION_PLACEHOLDER_CONTENT_MARKER.test(content);
+}
+
 function renderTaskArtifact(task: ResolvedKickoffTaskInput): string {
   const sourceLine =
     task.source === "file"
@@ -108,12 +114,18 @@ async function resolveKickoffTaskInput(input: {
     }
 
     const content = await readFile(candidatePath, "utf8");
-    if (content.trim().length === 0) {
+    const normalizedContent = content.trimEnd();
+    if (normalizedContent.trim().length === 0) {
       throw new KickoffTaskInputValidationError(`Task file is empty: ${candidatePath}`);
+    }
+    if (isIdeationPlaceholderTaskContent(normalizedContent)) {
+      throw new KickoffTaskInputValidationError(
+        `Task file still contains ideation placeholder marker: ${candidatePath}`
+      );
     }
 
     return {
-      content: content.trimEnd(),
+      content: normalizedContent,
       source: "file",
       sourcePath: candidatePath
     };
@@ -122,6 +134,11 @@ async function resolveKickoffTaskInput(input: {
   const taskText = (input.task as string).trim();
   if (taskText.length === 0) {
     throw new KickoffTaskInputValidationError("Task cannot be empty.");
+  }
+  if (isIdeationPlaceholderTaskContent(taskText)) {
+    throw new KickoffTaskInputValidationError(
+      "Task text still contains ideation placeholder marker."
+    );
   }
   return {
     content: taskText,

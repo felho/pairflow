@@ -143,6 +143,7 @@ describe("startBubble", () => {
     });
 
     let capturedKickoff: string | undefined;
+    let implementerCommand: string | undefined;
     const result = await startBubble(
       {
         bubbleId: created.bubbleId,
@@ -159,6 +160,7 @@ describe("startBubble", () => {
           }),
         launchBubbleTmuxSession: (input) => {
           capturedKickoff = input.implementerKickoffMessage;
+          implementerCommand = input.implementerCommand;
           return Promise.resolve({ sessionName: "pf-b_start_ideation_01" });
         },
         claimRuntimeSession: (input) =>
@@ -181,6 +183,15 @@ describe("startBubble", () => {
     expect(result.state.round_role_history).toEqual([]);
     expect(capturedKickoff).toContain("kickoff (ideation pending)");
     expect(capturedKickoff).toContain("pairflow bubble kickoff --id b_start_ideation_01");
+    expect(capturedKickoff).toContain(
+      "Do not use the current placeholder artifact as --task-file input."
+    );
+    expect(implementerCommand).toContain(
+      "This bubble is ideation-pending (`round=0`); do not start implementation yet."
+    );
+    expect(implementerCommand).not.toContain(
+      "Implement in this worktree and run relevant validation before handoff."
+    );
   });
 
   it("transitions CREATED -> PREPARING_WORKSPACE -> RUNNING and launches tmux", async () => {
