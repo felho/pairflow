@@ -318,10 +318,19 @@ function resolveCanonicalMetaReviewReportJson(input: {
       base.findings_count >= 0
       ? base.findings_count
       : (countFromFindings ?? fallbackCount);
-  const findingsArtifactRef =
+  const findingsArtifactRefFromInput =
     isNonEmptyString(base.findings_artifact_ref)
       ? base.findings_artifact_ref.trim()
       : null;
+  let findingsArtifactRef = findingsArtifactRefFromInput;
+  if (input.recommendation === "rework") {
+    if (
+      findingsArtifactRefFromInput === null ||
+      findingsArtifactRefFromInput === CANONICAL_META_REVIEW_REPORT_REF
+    ) {
+      findingsArtifactRef = CANONICAL_META_REVIEW_REPORT_JSON_REF;
+    }
+  }
   const resolvedMetaReviewRunId = isNonEmptyString(base.meta_review_run_id)
     ? base.meta_review_run_id.trim()
     : isNonEmptyString(base.findings_run_id)

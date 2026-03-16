@@ -9,6 +9,10 @@ import {
   DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER,
   MISSING_REVIEW_ARTIFACT_TYPE_OPTION
 } from "../../../config/bubbleConfig.js";
+import {
+  IDEATION_TASK_INPUT_CONFLICT,
+  IDEATION_TASK_REQUIRED
+} from "../../../core/bubble/ideation.js";
 import type {
   CreateReviewArtifactType,
   PairflowCommandProfile
@@ -19,6 +23,7 @@ export interface BubbleCreateCommandOptions {
   repo?: string;
   base?: string;
   reviewArtifactType?: CreateReviewArtifactType;
+  ideation?: boolean;
   task?: string;
   taskFile?: string;
   reviewerBrief?: string;
@@ -40,13 +45,14 @@ export interface BubbleCreateCommandDependencies {
 export function getBubbleCreateHelpText(): string {
   return [
     "Usage:",
-    "  pairflow bubble create --id <id> --repo <path> --base <branch> --review-artifact-type <document|code> (--task <text> | --task-file <path>)",
+    "  pairflow bubble create --id <id> --repo <path> --base <branch> --review-artifact-type <document|code> ((--task <text> | --task-file <path>) | --ideation)",
     "",
     "Options:",
     "  --id <id>             Bubble id (max 40 chars, e.g. b_feature_x_01)",
     "  --repo <path>         Repository path",
     "  --base <branch>       Base branch",
     "  --review-artifact-type <document|code>  Required explicit ownership type",
+    "  --ideation            Create ideation bubble without task payload (requires explicit kickoff later)",
     "  --task <text>         Inline task text",
     "  --task-file <path>    Task input from file",
     "  --bootstrap-command <cmd>    Optional worktree bootstrap command run by bubble start",
@@ -79,6 +85,9 @@ export function parseBubbleCreateCommandOptions(
       },
       task: {
         type: "string"
+      },
+      ideation: {
+        type: "boolean"
       },
       "task-file": {
         type: "string"
@@ -121,6 +130,9 @@ export function parseBubbleCreateCommandOptions(
   }
   if (parsed.values.task !== undefined) {
     options.task = parsed.values.task;
+  }
+  if (parsed.values.ideation !== undefined) {
+    options.ideation = parsed.values.ideation;
   }
   if (parsed.values["task-file"] !== undefined) {
     options.taskFile = parsed.values["task-file"];
@@ -182,10 +194,18 @@ export function parseBubbleCreateCommandOptions(
 
   const hasTask = options.task !== undefined;
   const hasTaskFile = options.taskFile !== undefined;
-  if (!hasTask && !hasTaskFile) {
-    missing.push("--task or --task-file");
+  const ideationMode = options.ideation === true;
+  if (ideationMode && (hasTask || hasTaskFile)) {
+    throw new Error(
+      `${IDEATION_TASK_INPUT_CONFLICT}: --ideation cannot be combined with --task or --task-file.`
+    );
   }
-  if (hasTask && hasTaskFile) {
+  if (!ideationMode && !hasTask && !hasTaskFile) {
+    throw new Error(
+      `${IDEATION_TASK_REQUIRED}: Missing task input. Use --task, --task-file, or --ideation for taskless ideation bubbles.`
+    );
+  }
+  if (!ideationMode && hasTask && hasTaskFile) {
     throw new Error("Use only one task input: --task or --task-file.");
   }
 
@@ -268,6 +288,7 @@ export async function runBubbleCreateCommand(
     repoPath,
     baseBranch: options.base as string,
     reviewArtifactType: options.reviewArtifactType as CreateReviewArtifactType,
+    ...(options.ideation === true ? { ideation: true } : {}),
     ...(options.task !== undefined ? { task: options.task } : {}),
     ...(options.taskFile !== undefined ? { taskFile: options.taskFile } : {}),
     ...(options.reviewerBrief !== undefined

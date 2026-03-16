@@ -132,6 +132,14 @@ export interface BubbleDocContractGatesConfig {
   parse_warning?: string;
 }
 
+export interface BubbleIdeationConfig {
+  mode: boolean;
+  task_pending: boolean;
+  started_at?: string;
+  kicked_off_at?: string;
+  parse_warning?: string;
+}
+
 export interface BubbleEnforcementModeConfig {
   all_gate: GateEnforcementLevel;
   docs_gate: GateEnforcementLevel;
@@ -187,6 +195,7 @@ export interface BubbleConfig {
   local_overlay?: BubbleLocalOverlayConfig;
   enforcement_mode: BubbleEnforcementModeConfig;
   doc_contract_gates: BubbleDocContractGatesConfig;
+  ideation?: BubbleIdeationConfig;
 }
 
 export interface RoundRoleHistoryEntry {

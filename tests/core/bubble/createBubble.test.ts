@@ -146,6 +146,31 @@ describe("createBubble", () => {
     expect(inbox).toHaveLength(0);
   });
 
+  it("creates ideation bubble scaffold without initial TASK envelope", async () => {
+    const repoPath = await createTempRepo();
+
+    const result = await createBubble({
+      id: "b_create_ideation_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      ideation: true,
+      cwd: repoPath
+    });
+
+    const taskArtifact = await readFile(result.paths.taskArtifactPath, "utf8");
+    expect(taskArtifact).toContain("Source: ideation placeholder");
+    expect(taskArtifact).toContain("pairflow bubble kickoff --id b_create_ideation_01");
+    expect(taskArtifact).toContain("metadata_source: ideation_placeholder");
+
+    const transcript = await readTranscriptEnvelopes(result.paths.transcriptPath);
+    expect(transcript).toHaveLength(0);
+
+    expect(result.config.ideation?.mode).toBe(true);
+    expect(result.config.ideation?.task_pending).toBe(true);
+    expect(result.config.ideation?.started_at).toEqual(expect.any(String));
+  });
+
   it("inherits doc gate mode from repository pairflow.toml", async () => {
     const repoPath = await createTempRepo();
     await writeFile(

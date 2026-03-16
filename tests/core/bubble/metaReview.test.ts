@@ -1111,6 +1111,7 @@ describe("meta-review submit", () => {
         findings_count?: number;
         findings_claim_state?: string;
         meta_review_run_id?: string;
+        findings_artifact_ref?: string;
       };
     };
     expect(reportJson.run_id).toBe("run_meta_submit_02");
@@ -1118,6 +1119,61 @@ describe("meta-review submit", () => {
     expect(reportJson.report_json?.findings_count).toBe(0);
     expect(reportJson.report_json?.meta_review_run_id).toBe(
       "run_meta_submit_02"
+    );
+    expect(reportJson.report_json?.findings_artifact_ref).toBe(
+      "artifacts/meta-review-last.json"
+    );
+  });
+
+  it("normalizes markdown findings_artifact_ref to json artifact for rework submit", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_03",
+      task: "Meta submit rework findings artifact normalization"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:22:00.000Z"
+    });
+
+    await submitMetaReviewResult(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        round: 1,
+        recommendation: "rework",
+        summary: "Needs another pass.",
+        report_markdown: "# Meta Review\n\nRework required.",
+        rework_target_message: "Fix parity artifact path.",
+        report_json: {
+          meta_review_run_id: "run_meta_submit_03",
+          findings_artifact_ref: "artifacts/meta-review-last.md"
+        }
+      },
+      {
+        randomUUID: () => "run_generated_submit_03",
+        now: new Date("2026-03-09T09:22:30.000Z"),
+        readRuntimeSessionsRegistry: async () =>
+          buildActiveMetaReviewerSession({
+            bubbleId: bubble.bubbleId,
+            repoPath,
+            worktreePath: bubble.paths.worktreePath
+          })
+      }
+    );
+
+    const reportJson = JSON.parse(
+      await readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
+    ) as {
+      report_json?: {
+        findings_artifact_ref?: string;
+      };
+    };
+    expect(reportJson.report_json?.findings_artifact_ref).toBe(
+      "artifacts/meta-review-last.json"
     );
   });
 

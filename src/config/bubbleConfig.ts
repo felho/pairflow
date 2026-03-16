@@ -1,6 +1,7 @@
 import {
   assertValidation,
   isInteger,
+  isIsoTimestamp,
   isNonEmptyString,
   isRecord,
   validationFail,
@@ -61,6 +62,8 @@ export const DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER =
   "DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER" as const;
 export const SEVERITY_GATE_ROUND_INVALID =
   "SEVERITY_GATE_ROUND_INVALID" as const;
+const IDEATION_METADATA_PARSE_WARNING =
+  "IDEATION_METADATA_PARSE_WARNING" as const;
 
 function formatCreateReviewArtifactTypeError(
   reasonCode:
@@ -638,6 +641,13 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     errors,
     false
   );
+  const ideation = readObject(
+    input,
+    "ideation",
+    "ideation",
+    errors,
+    false
+  );
 
   const implementer = agents
     ? readString(agents, "implementer", "agents.implementer", errors, true)
@@ -812,6 +822,67 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     }
   }
 
+  const ideationWarnings: string[] = [];
+  const existingIdeationParseWarning = ideation
+    ? readString(
+        ideation,
+        "parse_warning",
+        "ideation.parse_warning",
+        errors,
+        false
+      )
+    : undefined;
+  const ideationModeCandidate = ideation?.mode;
+  let ideationMode = false;
+  if (ideationModeCandidate !== undefined) {
+    if (typeof ideationModeCandidate === "boolean") {
+      ideationMode = ideationModeCandidate;
+    } else {
+      ideationWarnings.push(
+        `${IDEATION_METADATA_PARSE_WARNING}: ideation.mode must be boolean. Received ${describeUnknownValue(ideationModeCandidate)}.`
+      );
+    }
+  }
+  const ideationTaskPendingCandidate = ideation?.task_pending;
+  let ideationTaskPending = false;
+  if (ideationTaskPendingCandidate !== undefined) {
+    if (typeof ideationTaskPendingCandidate === "boolean") {
+      ideationTaskPending = ideationTaskPendingCandidate;
+    } else {
+      ideationWarnings.push(
+        `${IDEATION_METADATA_PARSE_WARNING}: ideation.task_pending must be boolean. Received ${describeUnknownValue(ideationTaskPendingCandidate)}.`
+      );
+    }
+  }
+  const ideationStartedAtCandidate = ideation?.started_at;
+  let ideationStartedAt: string | undefined;
+  if (ideationStartedAtCandidate !== undefined) {
+    if (isIsoTimestamp(ideationStartedAtCandidate)) {
+      ideationStartedAt = ideationStartedAtCandidate;
+    } else {
+      ideationWarnings.push(
+        `${IDEATION_METADATA_PARSE_WARNING}: ideation.started_at must be an ISO timestamp. Received ${describeUnknownValue(ideationStartedAtCandidate)}.`
+      );
+    }
+  }
+  const ideationKickedOffAtCandidate = ideation?.kicked_off_at;
+  let ideationKickedOffAt: string | undefined;
+  if (ideationKickedOffAtCandidate !== undefined) {
+    if (isIsoTimestamp(ideationKickedOffAtCandidate)) {
+      ideationKickedOffAt = ideationKickedOffAtCandidate;
+    } else {
+      ideationWarnings.push(
+        `${IDEATION_METADATA_PARSE_WARNING}: ideation.kicked_off_at must be an ISO timestamp. Received ${describeUnknownValue(ideationKickedOffAtCandidate)}.`
+      );
+    }
+  }
+  if (!ideationMode && ideationTaskPending) {
+    ideationWarnings.push(
+      `${IDEATION_METADATA_PARSE_WARNING}: ideation.task_pending=true is invalid when ideation.mode=false; normalized to false.`
+    );
+    ideationTaskPending = false;
+  }
+
   if (errors.length > 0) {
     return validationFail(errors);
   }
@@ -897,7 +968,40 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
               .join(" ")
           }
         : {})
-    }
+    },
+    ...(
+      ideationMode ||
+      ideationTaskPending ||
+      ideationStartedAt !== undefined ||
+      ideationKickedOffAt !== undefined ||
+      existingIdeationParseWarning !== undefined ||
+      ideationWarnings.length > 0
+        ? {
+            ideation: {
+              mode: ideationMode,
+              task_pending: ideationTaskPending,
+              ...(ideationStartedAt !== undefined
+                ? { started_at: ideationStartedAt }
+                : {}),
+              ...(ideationKickedOffAt !== undefined
+                ? { kicked_off_at: ideationKickedOffAt }
+                : {}),
+              ...((existingIdeationParseWarning !== undefined || ideationWarnings.length > 0)
+                ? {
+                    parse_warning: [
+                      existingIdeationParseWarning,
+                      ...(ideationWarnings.length > 0
+                        ? [ideationWarnings.join(" ")]
+                        : [])
+                    ]
+                      .filter((entry): entry is string => entry !== undefined)
+                      .join(" ")
+                  }
+                : {})
+            }
+          }
+        : {}
+    )
   };
 
   if (openCommand !== undefined) {
@@ -968,6 +1072,7 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
   };
   const enforcementMode = config.enforcement_mode;
   const docContractGates = config.doc_contract_gates;
+  const ideation = config.ideation;
   const lines: Array<string | undefined> = [
     `id = ${tomlString(config.id)}`,
     config.bubble_instance_id
@@ -1029,7 +1134,24 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
     `round_gate_applies_after = ${docContractGates.round_gate_applies_after}`,
     docContractGates.parse_warning !== undefined
       ? `parse_warning = ${tomlString(docContractGates.parse_warning)}`
-      : undefined
+      : undefined,
+    ...(ideation !== undefined
+      ? [
+          "",
+          "[ideation]",
+          `mode = ${ideation.mode}`,
+          `task_pending = ${ideation.task_pending}`,
+          ideation.started_at !== undefined
+            ? `started_at = ${tomlString(ideation.started_at)}`
+            : undefined,
+          ideation.kicked_off_at !== undefined
+            ? `kicked_off_at = ${tomlString(ideation.kicked_off_at)}`
+            : undefined,
+          ideation.parse_warning !== undefined
+            ? `parse_warning = ${tomlString(ideation.parse_warning)}`
+            : undefined
+        ]
+      : [])
   ];
 
   return `${normalizeTomlLines(lines).join("\n")}\n`;

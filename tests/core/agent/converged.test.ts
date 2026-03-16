@@ -11,10 +11,13 @@ import {
 } from "../../../src/core/agent/converged.js";
 import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
+import { createBubble } from "../../../src/core/bubble/createBubble.js";
+import { IDEATION_CONVERGED_BLOCKED } from "../../../src/core/bubble/ideation.js";
 import { readTranscriptEnvelopes, appendProtocolEnvelope } from "../../../src/core/protocol/transcriptStore.js";
 import { applyMetaReviewGateOnConvergence } from "../../../src/core/bubble/metaReviewGate.js";
 import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
+import { bootstrapWorktreeWorkspace } from "../../../src/core/workspace/worktreeManager.js";
 import { resolveReviewerTestEvidenceArtifactPath } from "../../../src/core/reviewer/testEvidence.js";
 import { resolveSummaryVerifierConsistencyGateArtifactPath } from "../../../src/core/reviewer/summaryVerifierConsistencyGate.js";
 import { resolveDocContractGateArtifactPath } from "../../../src/core/gates/docContractGates.js";
@@ -112,6 +115,104 @@ afterEach(async () => {
 });
 
 describe("emitConvergedFromWorkspace", () => {
+  it("blocks CONVERGED while ideation kickoff is pending", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_converged_ideation_block_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      ideation: true,
+      cwd: repoPath
+    });
+    await bootstrapWorktreeWorkspace({
+      repoPath,
+      baseBranch: "main",
+      bubbleBranch: bubble.config.bubble_branch,
+      worktreePath: bubble.paths.worktreePath
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 0,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-03-15T12:20:00.000Z",
+        last_command_at: "2026-03-15T12:20:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "CREATED"
+      }
+    );
+
+    await expect(
+      emitConvergedFromWorkspace({
+        summary: "Attempted converged before kickoff",
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(new RegExp(IDEATION_CONVERGED_BLOCKED, "u"));
+  });
+
+  it("blocks CONVERGED while ideation kickoff is pending even with parse warning metadata", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_converged_ideation_block_02",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      ideation: true,
+      cwd: repoPath
+    });
+    await bootstrapWorktreeWorkspace({
+      repoPath,
+      baseBranch: "main",
+      bubbleBranch: bubble.config.bubble_branch,
+      worktreePath: bubble.paths.worktreePath
+    });
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        ideation: {
+          mode: true,
+          task_pending: true,
+          parse_warning: "IDEATION_METADATA_PARSE_WARNING: synthetic test fixture"
+        }
+      }),
+      "utf8"
+    );
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 0,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-03-15T12:20:00.000Z",
+        last_command_at: "2026-03-15T12:20:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "CREATED"
+      }
+    );
+
+    await expect(
+      emitConvergedFromWorkspace({
+        summary: "Attempted converged before kickoff with parse warning",
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(new RegExp(IDEATION_CONVERGED_BLOCKED, "u"));
+  });
+
   it("adds PAIRFLOW_COMMAND_PATH_STALE blocking reason only for self_host stale status", () => {
     const externalCodes = resolveMetaReviewRolloutBlockingReasonCodes({
       gateRoute: "human_gate_approve",

@@ -8,6 +8,10 @@ import {
   resolveBubbleFromWorkspaceCwd,
   WorkspaceResolutionError
 } from "../bubble/workspaceResolution.js";
+import {
+  IDEATION_CONVERGED_BLOCKED,
+  resolveIdeationMetadata
+} from "../bubble/ideation.js";
 import { emitBubbleNotification } from "../runtime/notifications.js";
 import {
   emitTmuxDeliveryNotification,
@@ -246,6 +250,17 @@ export async function emitConvergedFromWorkspace(
     );
   }
   const state = loadedState.state;
+  const ideationMetadata = resolveIdeationMetadata(resolved.bubbleConfig);
+  if (
+    state.state === "RUNNING" &&
+    state.round === 0 &&
+    ideationMetadata.mode &&
+    ideationMetadata.taskPending
+  ) {
+    throw new ConvergedCommandError(
+      `${IDEATION_CONVERGED_BLOCKED}: ideation kickoff is required before CONVERGED handoff.`
+    );
+  }
   if (input.expectedRound !== undefined && state.round !== input.expectedRound) {
     throw new ConvergedCommandError(
       `Convergence validation failed: AUTO_CONVERGE_STATE_STALE: expected round ${input.expectedRound}, got ${state.round}.`
