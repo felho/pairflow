@@ -182,12 +182,20 @@ describe("startBubble", () => {
     expect(result.state.active_role).toBe("implementer");
     expect(result.state.round_role_history).toEqual([]);
     expect(capturedKickoff).toContain("kickoff (ideation pending)");
-    expect(capturedKickoff).toContain("pairflow bubble kickoff --id b_start_ideation_01");
     expect(capturedKickoff).toContain(
-      "Do not use the current placeholder artifact as --task-file input."
+      "no implementer action is required"
+    );
+    expect(capturedKickoff).toContain(
+      "Stay idle and wait for explicit human instruction."
     );
     expect(implementerCommand).toContain(
-      "This bubble is ideation-pending (`round=0`); do not start implementation yet."
+      "Do nothing now. Stay idle."
+    );
+    expect(implementerCommand).toContain(
+      "Do not read task files, scan the repository, or search for kickoff sources."
+    );
+    expect(implementerCommand).not.toContain(
+      "Read task:"
     );
     expect(implementerCommand).not.toContain(
       "Implement in this worktree and run relevant validation before handoff."

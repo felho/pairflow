@@ -255,16 +255,11 @@ function buildImplementerStartupPrompt(input: {
   if (input.ideationPending) {
     return [
       `Pairflow implementer start for bubble ${input.bubbleId}.`,
-      `Read task: ${input.taskArtifactPath}.`,
-      "This bubble is ideation-pending (`round=0`); do not start implementation yet.",
-      `Execute pairflow commands from this worktree path only: ${input.worktreePath}.`,
-      buildPairflowCommandGuidance(
-        input.worktreePath,
-        input.pairflowCommandProfile
-      ),
-      `Provide a concrete task via \`pairflow bubble kickoff --id ${input.bubbleId} --task "<text>"\` or \`--task-file <path>\`.`,
-      "Do not use the current placeholder artifact as kickoff input.",
-      "If no concrete task source is available, send a blocker with `pairflow ask-human --question \"...\"`.",
+      "This bubble is ideation-pending (`round=0`).",
+      "Do nothing now. Stay idle.",
+      "Do not read task files, scan the repository, or search for kickoff sources.",
+      "Do not run lifecycle/protocol commands (`pairflow bubble kickoff`, `pairflow pass`, `pairflow ask-human`, `pairflow converged`) unless explicit human instruction arrives.",
+      "Wait for explicit human instruction that contains a concrete kickoff task.",
       `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`
     ].join(" ");
   }
@@ -384,15 +379,9 @@ function buildImplementerIdeationKickoffMessage(input: {
 }): string {
   return [
     `# [pairflow] bubble=${input.bubbleId} kickoff (ideation pending).`,
-    `Read placeholder task artifact: ${input.taskArtifactPath}.`,
-    "This bubble is in ideation mode; do not emit implementer/reviewer handoff yet.",
-    buildPairflowCommandGuidance(
-      input.worktreePath,
-      input.pairflowCommandProfile
-    ),
-    `Activate the first implementation round with \`pairflow bubble kickoff --id ${input.bubbleId} --task "<text>"\` or \`--task-file <path>\`.`,
-    "Do not use the current placeholder artifact as --task-file input.",
-    "If no concrete task source is available, use `pairflow ask-human --question \"...\"`."
+    "This bubble is in ideation mode; no implementer action is required.",
+    "Stay idle and wait for explicit human instruction.",
+    "Do not run `pairflow bubble kickoff` yourself and do not emit implementer/reviewer handoff yet."
   ].join(" ");
 }
 
@@ -458,6 +447,24 @@ function buildResumeImplementerStartupPrompt(input: {
 }): string {
   const ideationPending =
     input.state.state === "RUNNING" && input.state.round === 0;
+  if (ideationPending) {
+    const lines = [
+      `Pairflow implementer resume for bubble ${input.bubbleId}.`,
+      `State snapshot: ${buildResumeContextLine(input.state)}.`,
+      `Transcript context: ${input.transcriptSummary}`,
+      "This bubble is ideation-pending (`RUNNING`, `round=0`).",
+      "Do nothing now. Stay idle.",
+      "Do not read task files, scan the repository, or search for kickoff sources.",
+      "Do not run lifecycle/protocol commands (`pairflow bubble kickoff`, `pairflow pass`, `pairflow ask-human`, `pairflow converged`) unless explicit human instruction arrives.",
+      "Wait for explicit human instruction that contains a concrete kickoff task.",
+      `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`
+    ];
+    if ((input.kickoffDiagnostic?.trim().length ?? 0) > 0) {
+      lines.push(`Kickoff diagnostic: ${input.kickoffDiagnostic}`);
+    }
+    return lines.join(" ");
+  }
+
   const evidenceHandoffGuidance = ideationPending
     ? undefined
     : buildImplementerEvidenceHandoffGuidance(input.reviewArtifactType);
@@ -621,13 +628,9 @@ function buildResumeImplementerKickoffMessage(input: {
     return [
       `# [pairflow] bubble=${input.bubbleId} resume kickoff (implementer, ideation pending).`,
       "State is RUNNING at round 0.",
-      `Read placeholder task artifact: ${input.taskArtifactPath}.`,
-      buildPairflowCommandGuidance(
-        input.worktreePath,
-        input.pairflowCommandProfile
-      ),
-      `Do not continue implementation yet. Activate round 1 with \`pairflow bubble kickoff --id ${input.bubbleId} --task "<text>"\` or \`--task-file <path>\`.`,
-      "Do not use the current placeholder artifact as kickoff input."
+      "No implementer action is required right now.",
+      "Stay idle and wait for explicit human instruction.",
+      "Do not run `pairflow bubble kickoff` yourself."
     ].join(" ");
   }
 
