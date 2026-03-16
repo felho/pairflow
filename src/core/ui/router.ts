@@ -15,7 +15,11 @@ import { resumeBubble } from "../bubble/resumeBubble.js";
 import { commitBubble } from "../bubble/commitBubble.js";
 import { mergeBubble } from "../bubble/mergeBubble.js";
 import { openBubble } from "../bubble/openBubble.js";
-import { attachBubble, AttachBubbleError } from "../bubble/attachBubble.js";
+import {
+  attachBubble,
+  AttachBubbleError,
+  type AttachBubbleResult
+} from "../bubble/attachBubble.js";
 import { stopBubble } from "../bubble/stopBubble.js";
 import { deleteBubble } from "../bubble/deleteBubble.js";
 import type { BubbleLifecycleState } from "../../types/bubble.js";
@@ -228,9 +232,17 @@ function isConflictErrorMessage(message: string): boolean {
     "Base branch not found locally",
     "Bubble branch not found locally",
     "cannot be identical",
-    "Merge failed for"
+    "Merge failed for",
+    "does not exist. Start the bubble runtime first."
   ];
   return patterns.some((pattern) => message.includes(pattern));
+}
+
+function isAttachRuntimeMissingError(error: unknown): boolean {
+  return (
+    error instanceof AttachBubbleError &&
+    error.reasonCode === "TMUX_SESSION_MISSING"
+  );
 }
 
 function ensureStringArray(
@@ -906,11 +918,29 @@ export function createUiRouter(input: CreateUiRouterInput): UiRouter {
                   return true;
                 }
                 case "attach": {
-                  const result = await dependencies.attachBubble({
-                    bubbleId,
-                    repoPath,
-                    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
-                  });
+                  let result: AttachBubbleResult;
+                  try {
+                    result = await dependencies.attachBubble({
+                      bubbleId,
+                      repoPath,
+                      ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+                    });
+                  } catch (error) {
+                    if (!isAttachRuntimeMissingError(error)) {
+                      throw error;
+                    }
+
+                    await dependencies.startBubble({
+                      bubbleId,
+                      repoPath,
+                      ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+                    });
+                    result = await dependencies.attachBubble({
+                      bubbleId,
+                      repoPath,
+                      ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+                    });
+                  }
                   sendJson(res, 200, { result });
                   return true;
                 }

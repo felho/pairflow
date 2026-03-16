@@ -1023,6 +1023,21 @@ describe("attachBubble", () => {
           checkTmuxSessionExists: () => Promise.resolve(false)
         }
       )
+    ).rejects.toMatchObject({
+      reasonCode: "TMUX_SESSION_MISSING"
+    } satisfies Partial<AttachBubbleError>);
+
+    await expect(
+      attachBubble(
+        {
+          bubbleId: resolved.bubbleId,
+          repoPath: resolved.repoPath
+        },
+        {
+          resolveBubbleById: () => Promise.resolve(resolved),
+          checkTmuxSessionExists: () => Promise.resolve(false)
+        }
+      )
     ).rejects.toThrow(/Tmux session .* does not exist/u);
   });
 });

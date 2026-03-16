@@ -381,6 +381,84 @@ describe("createUiRouter delete action", () => {
 });
 
 describe("createUiRouter attach action", () => {
+  it("restarts runtime and retries attach when tmux session is missing", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-attach-repo";
+    const attachBubble = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new AttachBubbleError(
+          "Tmux session \"pf-b-router-attach-recover\" does not exist. Start the bubble runtime first.",
+          {
+            reasonCode: "TMUX_SESSION_MISSING"
+          }
+        )
+      )
+      .mockResolvedValueOnce({
+        bubbleId: "b-router-attach-recover",
+        tmuxSessionName: "pf-b-router-attach-recover",
+        launcherRequested: "auto",
+        launcherUsed: "copy",
+        attachCommand: "tmux attach -t pf-b-router-attach-recover"
+      });
+    const startBubble = vi.fn(async () => ({} as never));
+
+    const scope: UiRepoScope = {
+      repos: [repoPath],
+      has: (value: string) => Promise.resolve(value === repoPath)
+    };
+    const events: UiEventsBroker = {
+      subscribe: () => () => undefined,
+      getSnapshot: () => ({
+        id: 1,
+        ts: "2026-02-25T00:00:00.000Z",
+        type: "snapshot",
+        repos: [],
+        bubbles: []
+      }),
+      refreshNow: () => Promise.resolve(undefined),
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
+    };
+
+    const router = createUiRouter({
+      repoScope: scope,
+      events,
+      dependencies: {
+        attachBubble,
+        startBubble
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-attach-recover/attach?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST"
+        }
+      );
+      const payload = (await response.json()) as {
+        result: {
+          bubbleId: string;
+          launcherUsed: string;
+          attachCommand?: string;
+        };
+      };
+
+      expect(response.status).toBe(200);
+      expect(payload.result).toMatchObject({
+        bubbleId: "b-router-attach-recover",
+        launcherUsed: "copy",
+        attachCommand: "tmux attach -t pf-b-router-attach-recover"
+      });
+      expect(startBubble).toHaveBeenCalledTimes(1);
+      expect(attachBubble).toHaveBeenCalledTimes(2);
+    } finally {
+      await server.close();
+    }
+  });
+
   it("maps launcher_unavailable attach errors to HTTP 400 with launcher details", async () => {
     const repoPath = "/tmp/pairflow-ui-router-attach-repo";
     const attachBubble = vi.fn(() =>

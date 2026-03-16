@@ -56,8 +56,8 @@ export function getAttachAvailability(
 
   return {
     visible: true,
-    enabled: false,
+    enabled: true,
     command,
-    hint: "Runtime session unavailable. Reconcile or restart runtime, then retry attach."
+    hint: "Runtime session unavailable. Attach will restart runtime automatically before retrying."
   };
 }

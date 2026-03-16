@@ -23,7 +23,7 @@ describe("attachAvailability", () => {
     });
   });
 
-  it("returns disabled attach with hint when runtime session is missing/stale", () => {
+  it("keeps attach enabled and shows auto-restart hint when runtime session is missing/stale", () => {
     const availability = getAttachAvailability({
       bubbleId: "b-123",
       state: "WAITING_HUMAN",
@@ -36,9 +36,9 @@ describe("attachAvailability", () => {
     });
 
     expect(availability.visible).toBe(true);
-    expect(availability.enabled).toBe(false);
+    expect(availability.enabled).toBe(true);
     expect(availability.command).toBe("tmux attach -t pf-b-123");
-    expect(availability.hint).toContain("Runtime session unavailable");
+    expect(availability.hint).toContain("restart runtime automatically");
   });
 
   it("hides attach outside runtime-capable states", () => {

@@ -269,7 +269,7 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
         />
       ) : null}
 
-      {props.attach.visible && props.attach.enabled === false && props.attach.hint !== null ? (
+      {props.attach.visible && props.attach.hint !== null ? (
         <p className="mt-2 text-xs text-amber-300">{props.attach.hint}</p>
       ) : null}
 

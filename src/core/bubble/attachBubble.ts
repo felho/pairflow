@@ -76,6 +76,8 @@ export type AttachLauncherFailureClass =
   | "launcher_unavailable"
   | "launcher_launch_failed";
 
+export type AttachBubbleReasonCode = "TMUX_SESSION_MISSING";
+
 export interface AttachBubbleDependencies {
   executeAttachCommand?: AttachCommandExecutor;
   resolveBubbleById?: typeof resolveBubbleById;
@@ -88,6 +90,7 @@ export interface AttachBubbleDependencies {
 interface AttachBubbleErrorOptions {
   launcher?: ExplicitAttachLauncher;
   failureClass?: AttachLauncherFailureClass;
+  reasonCode?: AttachBubbleReasonCode;
   stdoutExcerpt?: string;
   stderrExcerpt?: string;
 }
@@ -103,6 +106,7 @@ interface AttachLaunchContext {
 export class AttachBubbleError extends Error {
   public readonly launcher?: ExplicitAttachLauncher;
   public readonly failureClass?: AttachLauncherFailureClass;
+  public readonly reasonCode?: AttachBubbleReasonCode;
   public readonly stdoutExcerpt?: string;
   public readonly stderrExcerpt?: string;
 
@@ -114,6 +118,9 @@ export class AttachBubbleError extends Error {
     }
     if (options.failureClass !== undefined) {
       this.failureClass = options.failureClass;
+    }
+    if (options.reasonCode !== undefined) {
+      this.reasonCode = options.reasonCode;
     }
     if (options.stdoutExcerpt !== undefined) {
       this.stdoutExcerpt = options.stdoutExcerpt;
@@ -658,7 +665,10 @@ export async function attachBubble(
   const sessionExists = await checkSession(tmuxSessionName);
   if (!sessionExists) {
     throw new AttachBubbleError(
-      `Tmux session "${tmuxSessionName}" does not exist. Start the bubble runtime first.`
+      `Tmux session "${tmuxSessionName}" does not exist. Start the bubble runtime first.`,
+      {
+        reasonCode: "TMUX_SESSION_MISSING"
+      }
     );
   }
 
