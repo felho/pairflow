@@ -44,6 +44,7 @@ Scope: M0
 
 - `current_state`
 - `transition_request` (`to`, optional metadata)
+- opcionis `task_activation_state` (`ideation_pending | active_task`) domain precondition validaciohoz.
 
 ## 6) Output Contract
 
@@ -56,6 +57,8 @@ Scope: M0
 - Normal flow-ban kotelezo.
 - Operator force path kulon bypass, audit eventtel.
 - Minden active/round mezok konzisztensek maradnak.
+- `RUNNING` + `round=0` csak `ideation_pending` aktivacios fazisban megengedett.
+- `pass`/`converged` jellegu tovabblepes `round < 1` eseten kotelezoen precondition-hiba.
 - Sikeres validacio nelkul nem adhat ki persistelheto `next_state`-et.
 
 ## 8) Error Model
@@ -74,7 +77,7 @@ Context:
 ## 10) Tests
 
 - Unit: valid/invalid transition matrix.
-- Integration: legalabb `start`, `pass`, `approval`.
+- Integration: legalabb `start`, `kickoff`, `pass`, `approval`.
 - Lint/arch check: tiltott kezi next-state pattern.
 - Integration ownership test: `STS` hiba eseten `BubbleMutationRunner` nem hivodik.
 
@@ -86,10 +89,11 @@ Context:
 ## 12) Done Criteria
 
 - Kritikus pathokon nincs manual next-state build.
+- Aktivacios precondition (`RUNNING round=0` only ideation pending) teszttel vedett.
 - Arch check stabilan zold.
 
 ## 12.1 Green Criteria (ownership fitness)
 
 - Nincs state-changing command, amely transition validacio nelkul hoz letre `next_state`-et.
 - Nincs STS modulban I/O import.
-- `pass` es `approval` flow bizonyitja, hogy a persist csak STS-validacio utan tortenik.
+- `kickoff`, `pass` es `approval` flow bizonyitja, hogy a persist csak STS-validacio utan tortenik.

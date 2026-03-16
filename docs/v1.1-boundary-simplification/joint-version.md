@@ -142,7 +142,7 @@ Kotelezo metrics boundary (`MetricsDispatcher` adapter):
 
 Bevezetesi minimum (fokozatos):
 1. Elso korben eleg egy vekony `MetricsDispatcher` interface + jelenlegi emitter adapterezese.
-2. Kritikus command pathokban fokozatos atallitas: `pass`, `converged`, `approval`, `start/commit`.
+2. Kritikus command pathokban fokozatos atallitas: `pass`, `converged`, `approval`, `start/kickoff/commit`.
 3. Adjunk legalabb egy integracios tesztet arra, hogy metrics hiba mellett a fo command kimenet valtozatlanul sikeres marad.
 
 Kotelezo config boundary (`ConfigLoader` + TOML util egységesítés):
@@ -171,7 +171,7 @@ Miert ez a sorrend:
 3. Pilot #3 csak stabil mutacios alapra epulve indul, igy kisebb a regresszios kockazat.
 
 Pilot exit kriterium (phase gate):
-1. Minden pilot utan kotelezo regresszios futas a kritikus pathokon (`pass`, `converged`, `approval`, `meta-review gate` relevans reszei).
+1. Minden pilot utan kotelezo regresszios futas a kritikus pathokon (`start`, `kickoff`, `pass`, `converged`, `approval`, `meta-review gate` relevans reszei).
 2. Uj pilot csak akkor indulhat, ha az elozo pilot utan nincs nyitott P1 regresszio.
 3. Ha pilot kozben policy drift jele van, rollback a pilot scope-on belul es ujratervezes (nem tovabblépés).
 
@@ -311,7 +311,7 @@ Kotelezo szabaly (must):
 ## Phase B - Mutation runner bevezetes
 
 1. kozos `BubbleMutationRunner` bevezetes
-2. pass/approval/reply/ask-human path atallas erre
+2. pass/approval/reply/ask-human/kickoff path atallas erre
 3. unified reason code + error envelope policy
 
 ## Phase C - Meta-review gate kettévagas
@@ -364,6 +364,9 @@ MVP scope (this phase):
 1. operator state-intervention (`state set`)
 2. operator agent-intervention (`agent restart`)
 3. bubble control-plane intervention (`bubble reset` a worktree/branch megtartasaval)
+
+Megjegyzes:
+1. `bubble kickoff` normal lifecycle activation command (`ideation_pending -> active_task`), nem operator intervention command.
 
 Minden fenti commandra kozosen kotelezo a kovetkezo harom guardrail:
 1. `reason` kotelezo mezokent

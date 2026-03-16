@@ -32,6 +32,7 @@ Scope: M0
 - `findings_summary`
 - `scope_policy`
 - `evidence_status`
+- `task_activation_state` (`ideation_pending | active_task`)
 
 ## 6) Output Contract
 
@@ -44,14 +45,16 @@ Scope: M0
 
 - Ugyanarra inputra determinisztikus output.
 - Policy sorrend fix es dokumentalt.
+- `task_activation_state=ideation_pending` eseten `pass|converged` nem engedelyezett, kotelezo `reject`.
 
 ## 8) Error Model
 
 - `CONVERGENCE_POLICY_INPUT_INVALID`
 - `CONVERGENCE_POLICY_UNDECIDABLE`
+- `CONVERGENCE_POLICY_TASK_NOT_ACTIVATED`
 
 Context:
-- `bubble_id`, `round`, `policy_profile`.
+- `bubble_id`, `round`, `policy_profile`, `task_activation_state`.
 
 ## 9) Observability
 
@@ -60,6 +63,7 @@ Context:
 ## 10) Tests
 
 - Unit: policy matrix + edge case.
+- Unit: pre-kickoff (`ideation_pending`) elutasitasi eset.
 - Regression: korabbi summary/parity drift bug osztalyok.
 
 ## 11) Migration Notes
@@ -68,4 +72,4 @@ Context:
 
 ## 12) Done Criteria
 
-- `pass` es `converged` path policy dontese ezt hasznalja.
+- `pass` es `converged` path policy dontese ezt hasznalja, es pre-kickoff allapotban determinisztikusan `reject`-el.

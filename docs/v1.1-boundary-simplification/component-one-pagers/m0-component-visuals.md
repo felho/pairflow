@@ -94,8 +94,6 @@ sequenceDiagram
   participant GATE as GatePipelineEngine
   participant STS as StateTransitionService
   participant BMR as BubbleMutationRunner
-  participant TR as TranscriptRepository
-  participant SR as StateRepository
   participant AG as AgentAdapter
   participant MET as MetricsDispatcher
 
@@ -172,7 +170,36 @@ sequenceDiagram
   OR-->>CLI: success
 ```
 
-## 7) Sequence: `meta-review gate`
+## 7) Sequence: `kickoff` (ideation -> active task)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant CLI as CLI
+  participant OR as KickoffOrchestrator
+  participant CFG as ConfigLoader
+  participant LC as LegacyCompatAdapter
+  participant STS as StateTransitionService
+  participant BMR as BubbleMutationRunner
+  participant TR as TranscriptRepository
+  participant SR as StateRepository
+  participant AG as AgentAdapter
+  participant MET as MetricsDispatcher
+
+  CLI->>OR: pairflow bubble kickoff --task|--task-file ...
+  OR->>CFG: loadDecisionConfig()
+  OR->>LC: normalizeKickoffInput()
+  OR->>STS: applyStateTransition(current RUNNING r0, activate round1)
+  STS-->>OR: validated_next_state
+  OR->>BMR: applyMutation(kickoff_task_plan, validated_next_state)
+  BMR->>TR: append(TASK envelope)
+  BMR->>SR: write(nextState, expectedFingerprint)
+  OR->>AG: deliver implementer kickoff context
+  OR->>MET: dispatch(bubble_kickoff_activated)
+  OR-->>CLI: success
+```
+
+## 8) Sequence: `meta-review gate`
 
 ```mermaid
 sequenceDiagram
@@ -198,7 +225,7 @@ sequenceDiagram
   end
 ```
 
-## 8) Sequence: `reconcile/recovery` (operator path)
+## 9) Sequence: `reconcile/recovery` (operator path)
 
 ```mermaid
 sequenceDiagram
@@ -225,29 +252,29 @@ sequenceDiagram
   OR-->>CLI: outcome
 ```
 
-## 9) Validation matrix (one-pagers vs key sequences)
+## 10) Validation matrix (one-pagers vs key sequences)
 
-| Component | pass | converged | approval | meta-review gate | reconcile/recovery |
-|---|---|---|---|---|---|
-| BubbleMutationRunner | X | X | X | X | optional |
-| StateTransitionService | X | X | X | X | optional |
-| ConvergencePolicyEngine | X | X | - | - | - |
-| GatePipelineEngine | X | X | - | X | - |
-| TranscriptStateReconciler | - | - | - | - | X |
-| PairflowError boundary | X | X | X | X | X |
-| MetricsDispatcher | X | X | X | X | X |
-| ConfigLoader + TomlNormalizer | X | X | X | X | X |
-| AgentAdapter | X | X | X | X | - |
-| LegacyCompatAdapter | X | optional | X | optional | - |
+| Component | pass | converged | approval | kickoff | meta-review gate | reconcile/recovery |
+|---|---|---|---|---|---|---|
+| BubbleMutationRunner | X | X | X | X | X | optional |
+| StateTransitionService | X | X | X | X | X | optional |
+| ConvergencePolicyEngine | X | X | - | - | - | - |
+| GatePipelineEngine | X | X | - | - | X | - |
+| TranscriptStateReconciler | - | - | - | - | - | X |
+| PairflowError boundary | X | X | X | X | X | X |
+| MetricsDispatcher | X | X | X | X | X | X |
+| ConfigLoader + TomlNormalizer | X | X | X | X | X | X |
+| AgentAdapter | X | X | X | X | X | - |
+| LegacyCompatAdapter | X | optional | X | optional | optional | - |
 
-## 10) How to use this doc during design review
+## 11) How to use this doc during design review
 
 1. Valassz egy sequence-et (pl. `pass`) es nezd meg, nincs-e tul sok komponens aktiv egyszerre.
 2. Ellenorizd, hogy a policy dontes domainben marad-e, es I/O csak orchestrator/adapternel van-e.
 3. Ha egy komponens tul sok sequence-ben tul sok fele szerepet kap, vedd elo az anti-goal blokkjat.
 4. Minden uj valtoztatasnal frissitsd a megfelelo sequence diagramot es a matrixot.
 
-## 11) Ownership closure criteria (StateTransitionService vs BubbleMutationRunner)
+## 12) Ownership closure criteria (StateTransitionService vs BubbleMutationRunner)
 
 Green ownership akkor teljesul, ha mindharom csoport igaz:
 
@@ -260,6 +287,6 @@ Green ownership akkor teljesul, ha mindharom csoport igaz:
    - nincs manual `{ ...state, ... }` next-state epites normal flow-ban,
    - STS-ben nincs I/O import, BMR-ben nincs transition/policy szamitas.
 3. Proof-level evidence:
-   - `pass` + `approval` flow mar a fenti lancot hasznalja,
+   - `kickoff` + `pass` + `approval` flow mar a fenti lancot hasznalja,
    - legalabb egy teszt bizonyitja: STS hiba eseten nincs persist,
    - legalabb egy teszt bizonyitja: append ok + persist fail -> standard recovery outcome.
