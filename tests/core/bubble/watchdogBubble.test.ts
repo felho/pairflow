@@ -354,6 +354,40 @@ describe("runBubbleWatchdog", () => {
     expect(loaded.state.state).toBe("RUNNING");
   });
 
+  it("returns no-op when bubble is RUNNING ideation round (round=0)", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_round0_01",
+      task: "Watchdog ideation round zero no-op",
+      startedAt: "2026-02-22T12:00:00.000Z"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        round: 0
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await runBubbleWatchdog({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath,
+      now: new Date("2026-02-22T14:00:00.000Z")
+    });
+
+    expect(result.escalated).toBe(false);
+    expect(result.reason).toBe("not_monitored");
+    expect(result.state.state).toBe("RUNNING");
+    expect(result.state.round).toBe(0);
+  });
+
   it("returns no-op when bubble is not in RUNNING state", async () => {
     const repoPath = await createTempRepo();
     const bubble = await createBubble({

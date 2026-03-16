@@ -34,9 +34,11 @@ export function computeWatchdogStatus(
   watchdogTimeoutMinutes: number,
   now: Date = new Date()
 ): WatchdogStatus {
+  const ideationRoundPending = state.state === "RUNNING" && state.round === 0;
   const trackedState = watchdogTrackedStates.has(state.state);
   const requiresActiveAgent = !watchdogAgentOptionalStates.has(state.state);
   const monitored =
+    !ideationRoundPending &&
     trackedState &&
     !watchdogNonAgentMonitoredStates.has(state.state) &&
     (!requiresActiveAgent || state.active_agent !== null);

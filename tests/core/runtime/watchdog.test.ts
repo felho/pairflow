@@ -102,4 +102,19 @@ describe("computeWatchdogStatus", () => {
     expect(metaRunningRecovery.monitoredAgent).toBeNull();
     expect(humanGate.monitoredAgent).toBe("codex");
   });
+
+  it("disables watchdog monitoring for RUNNING ideation round (round=0)", () => {
+    const status = computeWatchdogStatus(
+      createState({
+        round: 0,
+        last_command_at: "2026-02-22T12:00:00.000Z"
+      }),
+      5,
+      new Date("2026-02-22T12:10:00.000Z")
+    );
+
+    expect(status.monitored).toBe(false);
+    expect(status.remainingSeconds).toBeNull();
+    expect(status.expired).toBe(false);
+  });
 });
