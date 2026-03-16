@@ -1,6 +1,6 @@
 ---
 description: Create and start a pairflow bubble safely from clean base state
-argument-hint: [--id <name>] [--task-file <path>] [--task <text>] [--repo <path>] [--base <branch>] [--review-artifact-type <document|code>] [--print]
+argument-hint: [--id <name>] [--task-file <path>] [--task <text>] [--ideation] [--repo <path>] [--base <branch>] [--review-artifact-type <document|code>] [--print]
 allowed-tools: Bash, Read, Glob, AskUserQuestion
 ---
 
@@ -8,13 +8,14 @@ allowed-tools: Bash, Read, Glob, AskUserQuestion
 
 ## Purpose
 
-Create a new bubble from task file or inline task with explicit pre-flight checks, deterministic ID generation, and collision-safe creation/start behavior.
+Create a new bubble from task file, inline task, or taskless ideation mode with explicit pre-flight checks, deterministic ID generation, and collision-safe create/start behavior.
 
 ## Variables
 
 BUBBLE_ID: extracted from `--id` argument (optional)
 TASK_FILE: extracted from `--task-file` argument (optional)
 TASK_TEXT: extracted from `--task` argument (optional)
+IDEATION_MODE: `true` if `--ideation` flag is present, default `false`
 REPO_PATH: extracted from `--repo`, or `git rev-parse --show-toplevel`
 BASE_BRANCH: extracted from `--base`, default `main`
 REVIEW_ARTIFACT_TYPE: extracted from `--review-artifact-type` if provided, otherwise resolved from intent
@@ -23,8 +24,9 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
 ## Instructions
 
 - Always use absolute paths in generated commands.
-- Exactly one task source is expected (`TASK_FILE` or `TASK_TEXT`).
+- Exactly one create input is expected: `TASK_FILE`, `TASK_TEXT`, or `IDEATION_MODE=true`.
 - `pairflow bubble create` requires explicit `--review-artifact-type <document|code>`.
+- `--ideation` creates a taskless bubble and requires explicit `pairflow bubble kickoff` later before the first implementer/reviewer handoff.
 - Intent guardrail (critical):
   - If user intent is **plan/doc review or update** (e.g. "review this plan", "validate and update plan", "align task file"), default to inline `TASK_TEXT` that explicitly states:
     - docs-only scope
@@ -38,7 +40,7 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
   - implementation/testing/runtime behavior intent -> `code`
   - if user provides `--review-artifact-type`, validate and use it
   - if still ambiguous, ask one explicit clarification question before create/start
-- If both are missing, search `plans/tasks/` and ask the user which task file to use.
+- If all task inputs are missing and ideation intent is not explicit, search `plans/tasks/` and ask the user which task file to use.
 - Default behavior: execute `create` and `start`.
 - Print-only behavior (`--print`): print commands but run nothing.
 - Pre-flight before create/start:
@@ -62,18 +64,21 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
 - Resolve REPO_PATH from `--repo` or `git rev-parse --show-toplevel`.
 - Convert REPO_PATH to absolute path.
 
-### 2. Resolve task source
+### 2. Resolve task source or ideation mode
 
-- If TASK_FILE is provided:
+- If `IDEATION_MODE=true`:
+  - If `TASK_FILE` or `TASK_TEXT` is also provided, STOP and report that `--ideation` cannot be combined with `--task` or `--task-file`.
+  - Continue with taskless create path (kickoff required after start).
+- Else if TASK_FILE is provided:
   - Resolve to absolute path.
   - Verify file exists.
   - If intent is plan/doc review/update, transform to inline `TASK_TEXT` with explicit docs-only constraints and use that for bubble create.
-- If TASK_TEXT is provided:
+- Else if TASK_TEXT is provided:
   - Use inline text.
-- If neither TASK_FILE nor TASK_TEXT is provided:
+- Else if neither TASK_FILE nor TASK_TEXT is provided:
   - Search `plans/tasks/` for candidate task files.
   - If candidates exist, ask the user to choose one.
-  - If no candidates, STOP and report that task input is missing.
+  - If no candidates, STOP and report that task input is missing (or require explicit `--ideation` for taskless start).
 - If both TASK_FILE and TASK_TEXT are provided, STOP and ask for exactly one source.
 
 ### 3. Resolve review artifact type
@@ -111,7 +116,7 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
   ```
   Must be empty.
 - Verify no active merge/rebase/cherry-pick in REPO_PATH.
-- If `TASK_FILE` is provided and resolves inside `<REPO_PATH>`:
+- If `IDEATION_MODE=false` and `TASK_FILE` is provided and resolves inside `<REPO_PATH>`:
   - Verify it is tracked:
     ```bash
     git -C <REPO_PATH> ls-files --error-unmatch <TASK_FILE_REL_TO_REPO>
@@ -149,6 +154,12 @@ Inline task create:
 pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --review-artifact-type <REVIEW_ARTIFACT_TYPE> --task "<TASK_TEXT>"
 ```
 
+Ideation create:
+
+```bash
+pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --review-artifact-type <REVIEW_ARTIFACT_TYPE> --ideation
+```
+
 Start:
 
 ```bash
@@ -175,6 +186,7 @@ pairflow bubble status --id <BUBBLE_ID> --json
 ```
 
 - If state is still `CREATED` immediately after start, wait briefly and poll once more.
+- If state is `RUNNING` and this was an ideation create, report that `pairflow bubble kickoff` is now required before any `pass`/`converged`.
 
 ### 10. Hard stop after lifecycle actions
 
@@ -193,11 +205,12 @@ Bubble <BUBBLE_ID> created and started.
 Start session:
 pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
 
-Task source: <inline|task-file>
+Task source: <inline|task-file|ideation>
 Review artifact type: <REVIEW_ARTIFACT_TYPE>
 Verified base HEAD: <COMMIT_SHA>
 Current state: <STATE>
 Active agent: <AGENT or none>
+Next lifecycle step: <normal loop | kickoff required for ideation bubble>
 
 Stopped after bubble start (no task execution in CreateBubble workflow).
 ```
@@ -224,6 +237,23 @@ pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> 
 
 2. Start:
 pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
+```
+
+Print-only mode (ideation):
+
+```
+Commands ready:
+
+1. Create:
+pairflow bubble create --id <BUBBLE_ID> --repo <REPO_PATH> --base <BASE_BRANCH> --review-artifact-type <REVIEW_ARTIFACT_TYPE> --ideation
+
+2. Start:
+pairflow bubble start --id <BUBBLE_ID> --repo <REPO_PATH> --attach
+
+3. Kickoff (required before pass/converged):
+pairflow bubble kickoff --id <BUBBLE_ID> --repo <REPO_PATH> --task "<TASK_TEXT>"
+# or:
+pairflow bubble kickoff --id <BUBBLE_ID> --repo <REPO_PATH> --task-file <TASK_FILE>
 ```
 
 ## STOP

@@ -1,6 +1,6 @@
 ---
 description: Diagnose and resolve common Pairflow workflow issues quickly
-argument-hint: --id <name> [--repo <path>]
+argument-hint: --id <name> [--repo <path>] [--task <text>] [--task-file <path>]
 allowed-tools: Bash, Read, AskUserQuestion
 ---
 
@@ -14,6 +14,8 @@ Rapidly diagnose pairflow state/command mismatches and apply a safe next step wi
 
 BUBBLE_ID: extracted from `--id` argument (required)
 REPO_PATH: extracted from `--repo`, or `git rev-parse --show-toplevel`
+TASK_TEXT: extracted from `--task` argument (optional; for ideation kickoff)
+TASK_FILE: extracted from `--task-file` argument (optional; for ideation kickoff)
 
 ## Instructions
 
@@ -25,14 +27,15 @@ REPO_PATH: extracted from `--repo`, or `git rev-parse --show-toplevel`
 
 ## Error Messages
 
-- Missing bubble id: `"Usage: TroubleshootBubble --id <name> [--repo <path>]"`
+- Missing bubble id: `"Usage: TroubleshootBubble --id <name> [--repo <path>] [--task <text>] [--task-file <path>]"`
 - Bubble not found: `"Error: Bubble {id} was not found in repository {repo}."`
+- Missing task input for ideation kickoff: `"Error: ideation bubble in RUNNING round 0 requires --task <text> or --task-file <path> for bubble kickoff."`
 - No clear diagnosis: `"Error: No matching troubleshooting pattern found. Capture diagnostics and escalate."`
 
 ## Workflow
 
 1. Resolve inputs.
-- If `BUBBLE_ID` is empty -> STOP and report: `"Usage: TroubleshootBubble --id <name> [--repo <path>]"`
+- If `BUBBLE_ID` is empty -> STOP and report: `"Usage: TroubleshootBubble --id <name> [--repo <path>] [--task <text>] [--task-file <path>]"`
 - Resolve `REPO_PATH` from argument or `git rev-parse --show-toplevel`.
 
 2. Capture baseline diagnostics.
@@ -49,10 +52,15 @@ pairflow bubble inbox --id <BUBBLE_ID> --repo <REPO_PATH>
 3. Classify issue and apply state-safe fix.
 - If command failed due to wrong state -> map fix by state:
   - `WAITING_HUMAN` -> `pairflow bubble reply --id <BUBBLE_ID> --repo <REPO_PATH> --message "<next instruction>"`
-  - `RUNNING` -> continue normal loop (`pass` / `converged`) instead of approval commands.
+  - `RUNNING`:
+    - If ideation markers indicate pending kickoff (`round=0` and `bubble.toml` has `[ideation] task_pending=true`):
+      - If neither `TASK_TEXT` nor `TASK_FILE` is provided -> STOP and report: `"Error: ideation bubble in RUNNING round 0 requires --task <text> or --task-file <path> for bubble kickoff."`
+      - Else run `pairflow bubble kickoff --id <BUBBLE_ID> --repo <REPO_PATH> --task "<TASK_TEXT>"` or `pairflow bubble kickoff --id <BUBBLE_ID> --repo <REPO_PATH> --task-file <TASK_FILE>`.
+    - Otherwise continue normal loop (`pass` / `converged`) instead of approval commands.
   - `META_REVIEW_RUNNING` -> if snapshot fields (`meta_review.last_autonomous_*`) are present and routing did not complete, run `pairflow bubble meta-review recover --id <BUBBLE_ID> --repo <REPO_PATH>` and re-check state.
   - `READY_FOR_HUMAN_APPROVAL` (legacy `READY_FOR_APPROVAL`) -> `approve` or `request-rework`.
     - If latest autonomous recommendation is `rework` or `inconclusive`, use `bubble approve --override-non-approve --override-reason "<reason>"`.
+- If command output contains `IDEATION_PASS_BLOCKED` or `IDEATION_CONVERGED_BLOCKED`, treat it as pending kickoff and apply the same `bubble kickoff` path.
 - If watchdog timeout led to `WAITING_HUMAN` -> send precise `bubble reply`, then re-check.
 - If `bubble start` reported success but state remains `CREATED` -> wait briefly and poll status again from repo root cwd.
 - If repo lookup confusion exists -> retry with explicit absolute `--repo` and verify `repoPath`/`worktreePath` in status json.

@@ -1,6 +1,6 @@
 ---
 description: Handle stuck or active bubbles safely using state-aware intervention
-argument-hint: --id <name> [--repo <path>] [--message <text>]
+argument-hint: --id <name> [--repo <path>] [--message <text>] [--task <text>] [--task-file <path>]
 allowed-tools: Bash, Read, AskUserQuestion
 ---
 
@@ -15,6 +15,8 @@ Handle an active or stuck bubble without breaking lifecycle rules, and apply the
 BUBBLE_ID: extracted from `--id` argument (required)
 REPO_PATH: extracted from `--repo`, or `git rev-parse --show-toplevel`
 MESSAGE: extracted from `--message` argument (optional)
+TASK_TEXT: extracted from `--task` argument (optional; only for ideation kickoff)
+TASK_FILE: extracted from `--task-file` argument (optional; only for ideation kickoff)
 
 ## Instructions
 
@@ -28,16 +30,17 @@ MESSAGE: extracted from `--message` argument (optional)
 
 ## Error Messages
 
-- Missing bubble id: `"Usage: InterveneBubble --id <name> [--repo <path>] [--message <text>]"`
+- Missing bubble id: `"Usage: InterveneBubble --id <name> [--repo <path>] [--message <text>] [--task <text>] [--task-file <path>]"`
 - Missing message for waiting-human reply: `"Error: WAITING_HUMAN requires --message <text> for bubble reply."`
 - Missing message for rework request: `"Error: request-rework in READY_FOR_HUMAN_APPROVAL (legacy READY_FOR_APPROVAL) requires --message with actionable rework instructions."`
+- Missing task input for ideation kickoff: `"Error: ideation bubble in RUNNING round 0 requires --task <text> or --task-file <path> for bubble kickoff."`
 - Rework not allowed in state: `"Error: request-rework is allowed only in READY_FOR_HUMAN_APPROVAL (legacy READY_FOR_APPROVAL). Current state: {state}."`
 - Unsupported state for intervention: `"Error: Intervention workflow does not handle state: {state}."`
 
 ## Workflow
 
 1. Resolve inputs.
-- If `BUBBLE_ID` is empty -> STOP and report: `"Usage: InterveneBubble --id <name> [--repo <path>] [--message <text>]"`
+- If `BUBBLE_ID` is empty -> STOP and report: `"Usage: InterveneBubble --id <name> [--repo <path>] [--message <text>] [--task <text>] [--task-file <path>]"`
 - Resolve `REPO_PATH` from argument or `git rev-parse --show-toplevel`.
 
 2. Read current state and inbox.
@@ -49,9 +52,22 @@ pairflow bubble inbox --id <BUBBLE_ID> --repo <REPO_PATH>
 ```bash
 pairflow bubble meta-review status --id <BUBBLE_ID> --repo <REPO_PATH> --verbose
 ```
+- If state is `RUNNING`, check whether this is an ideation-pending bubble (`round=0` + `ideation.task_pending=true`) from:
+```bash
+cat <REPO_PATH>/.pairflow/bubbles/<BUBBLE_ID>/bubble.toml
+```
 
 3. Apply state-specific intervention.
-- If state is `RUNNING` -> do not approve/rework and do not perform direct implementation edits; report next actor should continue loop (`pass` / `converged`) and stop intervention.
+- If state is `RUNNING` and ideation is pending (`round=0` + `ideation.task_pending=true`):
+  - If neither `TASK_TEXT` nor `TASK_FILE` is provided -> STOP and report: `"Error: ideation bubble in RUNNING round 0 requires --task <text> or --task-file <path> for bubble kickoff."`
+  - If both are provided -> STOP and report that kickoff accepts exactly one task input.
+  - Else run:
+    ```bash
+    pairflow bubble kickoff --id <BUBBLE_ID> --repo <REPO_PATH> --task "<TASK_TEXT>"
+    # or:
+    pairflow bubble kickoff --id <BUBBLE_ID> --repo <REPO_PATH> --task-file <TASK_FILE>
+    ```
+- If state is `RUNNING` (non-ideation pending) -> do not approve/rework and do not perform direct implementation edits; report next actor should continue loop (`pass` / `converged`) and stop intervention.
 - If state is `WAITING_HUMAN` and `MESSAGE` is empty -> STOP and report: `"Error: WAITING_HUMAN requires --message <text> for bubble reply."`
 - If state is `WAITING_HUMAN` and `MESSAGE` is present -> run:
   ```bash

@@ -13,7 +13,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 
 | Workflow | Trigger | File |
 |----------|---------|------|
-| **CreateBubble** | "create bubble", "start bubble", "kick off bubble" | `Workflows/CreateBubble.md` |
+| **CreateBubble** | "create bubble", "start bubble", "kick off bubble", "ideation kickoff" | `Workflows/CreateBubble.md` |
 | **InterveneBubble** | "bubble stuck", "watchdog", "waiting human", "continue loop", "pass to implementer/reviewer" | `Workflows/InterveneBubble.md` |
 | **TroubleshootBubble** | "pairflow issue", "something is odd", "status mismatch", "why command failed" | `Workflows/TroubleshootBubble.md` |
 | **ReviewBubble** | "explain bubble changes", "detailed review", "approval review", "deep mode" | `Workflows/ReviewBubble.md` |
@@ -50,6 +50,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 10. For `ReviewBubble`, use explicit `--meta-review-source fresh|cached` (default: `fresh`). `fresh` runs an independent Codex meta-review (no Pairflow meta-review command calls), while `cached` loads latest Pairflow meta-review snapshot (`meta-review status` + `meta-review last-report`).
 11. Hard rule: in `fresh` mode, never call `pairflow bubble meta-review *`; in `cached` mode, never run a new review.
 12. Decision separation: `--decide approve|rework` controls lifecycle action only (`bubble approve` / `bubble request-rework`) and is independent from meta-review source mode.
+13. Ideation lifecycle is explicit: if a bubble was created with `--ideation`, run `pairflow bubble kickoff` before any `pass`/`converged` loop command.
 
 ## Execution Modes (Mandatory)
 
@@ -64,7 +65,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 ## Workflow Scope Contract
 
 - `CreateBubble` is **lifecycle-only**:
-  - Allowed: pre-flight checks, `pairflow bubble create`, `pairflow bubble start`, `pairflow bubble status`.
+  - Allowed: pre-flight checks, `pairflow bubble create`, `pairflow bubble start`, `pairflow bubble kickoff`, `pairflow bubble status`.
   - Not allowed: reading/implementing/reviewing the feature/task content after bubble start.
 - If the user asks only to start/create a bubble, stop immediately after reporting the started state.
 - Any task execution inside the bubble must be a separate, explicit follow-up request.
@@ -73,7 +74,8 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 ## State-to-Action Map
 
 - `CREATED` -> `pairflow bubble start`
-- `RUNNING` -> no approve/rework yet; use normal loop commands (`pass`, `converged`) in agent panes
+- `RUNNING` with ideation pending (`round=0` and `[ideation].task_pending=true`) -> `pairflow bubble kickoff --id <id> (--task <text> | --task-file <path>)`
+- `RUNNING` (active round, typically `round>=1`) -> no approve/rework yet; use normal loop commands (`pass`, `converged`) in agent panes
 - `WAITING_HUMAN` -> use `pairflow bubble reply` (NOT `bubble request-rework`)
 - `META_REVIEW_RUNNING` -> if gate appears stuck after snapshot persisted, use `pairflow bubble meta-review recover` (no new review run; snapshot-route replay only)
 - `READY_FOR_HUMAN_APPROVAL` (legacy compatible: `READY_FOR_APPROVAL`) -> choose `pairflow bubble approve` OR `pairflow bubble request-rework`
@@ -100,6 +102,10 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
   - Use `document` for docs-only refinement/review/update bubbles.
   - Use `code` for implementation/testing/runtime behavior bubbles.
   - If intent is ambiguous, ask one explicit clarification question before create.
+- Task input gate for create:
+  - Provide exactly one of `--task`, `--task-file`, or `--ideation`.
+  - `--ideation` cannot be combined with `--task` or `--task-file`.
+  - If created with `--ideation`, run `bubble kickoff` before any `pass`/`converged`.
 - Bubble ID gate for create:
   - `pairflow bubble create --id <id>` accepts only `3-40` chars.
   - Pattern: start with lowercase letter, then lowercase letters, digits, `_` or `-`.

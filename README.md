@@ -81,7 +81,7 @@ Bubbles are fully isolated from each other — you can run multiple bubbles in p
 
 ### How does the flow work?
 
-Pairflow does **not** autonomously decide technical content between agents. Instead, agents advance the flow through protocol commands (`pass`, `ask-human`, `converged`). Pairflow acts as the referee + state/protocol engine, injects an initial protocol briefing into agent panes at bubble start, and auto-sends an initial kickoff prompt to the implementer pane.
+Pairflow does **not** autonomously decide technical content between agents. Instead, agents advance the flow through protocol commands (`pass`, `ask-human`, `converged`). Pairflow acts as the referee + state/protocol engine, injects an initial protocol briefing into agent panes at bubble start, and auto-sends an initial kickoff prompt to the implementer pane (or, for `--ideation` bubbles, a kickoff instruction to run `pairflow bubble kickoff` first).
 
 ```
 ┌──────────┐    pass     ┌──────────┐    pass     ┌──────────┐          ┌──────────┐
@@ -362,9 +362,24 @@ For command-level details and full end-to-end CLI flows, see [API & CLI referenc
 ### Daily workflow cheat sheet
 
 ```bash
-# Create + start
+# Choose one create variant, then run start
+
+# Create (inline task)
 pairflow bubble create --id <id> --repo <repo> --base main --review-artifact-type <document|code> --task "<task>"
+
+# Create (task file)
+pairflow bubble create --id <id> --repo <repo> --base main --review-artifact-type <document|code> --task-file <path>
+
+# Create (taskless ideation)
+pairflow bubble create --id <id> --repo <repo> --base main --review-artifact-type <document|code> --ideation
+
+# Start
 pairflow bubble start --id <id> --repo <repo>
+
+# If this bubble was created with --ideation
+pairflow bubble kickoff --id <id> --repo <repo> --task "<task>"
+# or:
+pairflow bubble kickoff --id <id> --repo <repo> --task-file <path>
 
 # Monitor
 pairflow bubble status --id <id> --repo <repo> --json
@@ -756,6 +771,10 @@ Any active state -> FAILED
 Any non-final state -> CANCELLED (via bubble stop)
 ```
 
+Ideation note:
+- `bubble create --ideation` starts in `RUNNING` with round `0`.
+- Before first handoff, run `pairflow bubble kickoff --id <id> --task <text>` (or `--task-file <path>`) to activate round `1`.
+
 ---
 
 ### CLI command reference
@@ -764,7 +783,8 @@ Any non-final state -> CANCELLED (via bubble stop)
 
 | Command | Description |
 |---------|-------------|
-| `bubble create --id <id> --repo <path> --base <branch> --review-artifact-type <document\|code> (--task <text> \| --task-file <path>) [--reviewer-brief <text> \| --reviewer-brief-file <path>] [--accuracy-critical]` | Initialize a new bubble |
+| `bubble create --id <id> --repo <path> --base <branch> --review-artifact-type <document\|code> ((--task <text> \| --task-file <path>) \| --ideation) [--reviewer-brief <text> \| --reviewer-brief-file <path>] [--accuracy-critical]` | Initialize a new bubble (task-based or taskless ideation mode) |
+| `bubble kickoff --id <id> (--task <text> \| --task-file <path>) [--repo <path>]` | Activate a taskless ideation bubble (round `0` -> `1`) |
 | `bubble start --id <id> [--repo <path>]` | Start or restart a bubble (worktree + tmux) |
 | `bubble stop --id <id> [--repo <path>]` | Stop and cancel a bubble |
 | `bubble delete --id <id> [--repo <path>] [--force]` | Delete a bubble; without `--force` it reports external artifacts and exits with confirmation-required status |
