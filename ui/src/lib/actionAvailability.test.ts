@@ -9,14 +9,14 @@ import { bubbleActionKinds, bubbleLifecycleStates, type BubbleActionKind, type B
 const expectedMatrix: Record<BubbleLifecycleState, readonly BubbleActionKind[]> = {
   CREATED: ["start", "stop"],
   PREPARING_WORKSPACE: ["stop"],
-  RUNNING: ["open", "stop"],
-  WAITING_HUMAN: ["request-rework", "reply", "resume", "open", "stop"],
-  READY_FOR_APPROVAL: ["approve", "request-rework", "open", "stop"],
-  META_REVIEW_RUNNING: ["open", "stop"],
-  META_REVIEW_FAILED: ["approve", "request-rework", "open", "stop"],
-  READY_FOR_HUMAN_APPROVAL: ["approve", "request-rework", "open", "stop"],
-  APPROVED_FOR_COMMIT: ["commit", "open", "stop"],
-  COMMITTED: ["open", "stop"],
+  RUNNING: ["restart", "open", "stop"],
+  WAITING_HUMAN: ["request-rework", "reply", "resume", "restart", "open", "stop"],
+  READY_FOR_APPROVAL: ["approve", "request-rework", "restart", "open", "stop"],
+  META_REVIEW_RUNNING: ["restart", "open", "stop"],
+  META_REVIEW_FAILED: ["approve", "request-rework", "restart", "open", "stop"],
+  READY_FOR_HUMAN_APPROVAL: ["approve", "request-rework", "restart", "open", "stop"],
+  APPROVED_FOR_COMMIT: ["commit", "restart", "open", "stop"],
+  COMMITTED: ["restart", "open", "stop"],
   DONE: ["merge", "open"],
   FAILED: ["open"],
   CANCELLED: ["open"]
@@ -35,7 +35,7 @@ describe("actionAvailability", () => {
   }
 
   it("keeps disallowed actions absent in final and terminal states", () => {
-    expect(getAvailableActionsForState("COMMITTED")).toEqual(["open", "stop"]);
+    expect(getAvailableActionsForState("COMMITTED")).toEqual(["restart", "open", "stop"]);
     expect(getAvailableActionsForState("DONE")).toEqual(["merge", "open"]);
     expect(getAvailableActionsForState("FAILED")).toEqual(["open"]);
     expect(getAvailableActionsForState("CANCELLED")).toEqual(["open"]);

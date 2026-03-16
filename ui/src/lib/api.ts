@@ -86,6 +86,10 @@ export interface PairflowApiClient {
     repoPath: string,
     bubbleId: string
   ) => Promise<Record<string, unknown>>;
+  restartBubble: (
+    repoPath: string,
+    bubbleId: string
+  ) => Promise<Record<string, unknown>>;
   deleteBubble: (
     repoPath: string,
     bubbleId: string,
@@ -329,6 +333,10 @@ export function createApiClient(baseUrl: string = ""): PairflowApiClient {
 
     async stopBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>> {
       return postBubbleAction(baseUrl, repoPath, bubbleId, "stop");
+    },
+
+    async restartBubble(repoPath: string, bubbleId: string): Promise<Record<string, unknown>> {
+      return postBubbleAction(baseUrl, repoPath, bubbleId, "restart");
     },
 
     async deleteBubble(

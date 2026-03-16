@@ -19,6 +19,7 @@ const actionLabels: Partial<Record<BubbleActionKind, string>> = {
   "request-rework": "Request Rework",
   reply: "Reply",
   resume: "Resume",
+  restart: "Restart",
   commit: "Commit",
   merge: "Merge",
   open: "Open",
@@ -51,9 +52,37 @@ function buttonTone(action: BubbleActionKind): string {
       return "border-amber-500/70 bg-amber-500/[0.08] text-amber-500";
     case "reply":
       return "border-amber-500/70 bg-amber-500/[0.08] text-amber-500";
+    case "restart":
+      return "border-cyan-500/70 bg-cyan-500/[0.08] text-cyan-400";
     default:
       return "border-[#333] bg-[#1a1a1a] text-[#aaa] hover:border-[#555] hover:text-white";
   }
+}
+
+function isIconOnlyAction(action: BubbleActionKind): boolean {
+  return action === "restart";
+}
+
+function renderActionContent(action: BubbleActionKind, label: string): JSX.Element | string {
+  if (action !== "restart") {
+    return label;
+  }
+
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      className="h-3.5 w-3.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M16 10a6 6 0 1 1-2.1-4.57" />
+      <path d="M16 4v3.5h-3.5" />
+    </svg>
+  );
 }
 
 export interface ActionBarProps {
@@ -161,7 +190,7 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
             <button
               key={action}
               type="button"
-              className={`rounded-lg border px-2.5 py-1 text-[10px] transition hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-60 ${buttonTone(action)}`}
+              className={`rounded-lg border text-[10px] transition hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-60 ${isIconOnlyAction(action) ? "flex h-6 w-6 items-center justify-center p-0" : "px-2.5 py-1"} ${buttonTone(action)}`}
               onClick={() => {
                 if (openCommit) {
                   setShowCommitForm((value) => !value);
@@ -179,9 +208,11 @@ export function ActionBar(props: ActionBarProps): JSX.Element {
                 }
                 void invokeAction(action);
               }}
+              aria-label={label}
+              title={label}
               disabled={props.isSubmitting}
             >
-              {label}
+              {renderActionContent(action, label)}
             </button>
           );
         })}

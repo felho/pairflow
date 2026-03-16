@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createUiRouter, resolveStaticAssetPath } from "../../../src/core/ui/router.js";
 import { AttachBubbleError } from "../../../src/core/bubble/attachBubble.js";
+import type { RestartBubbleResult } from "../../../src/core/bubble/restartBubble.js";
 import type { UiEventsBroker } from "../../../src/core/ui/events.js";
 import type { UiRepoScope } from "../../../src/core/ui/repoScope.js";
 
@@ -589,6 +590,74 @@ describe("createUiRouter attach action", () => {
         launcher: "warp",
         failureClass: "launcher_launch_failed",
         stderrExcerpt: "URI launch failed"
+      });
+    } finally {
+      await server.close();
+    }
+  });
+});
+
+describe("createUiRouter restart action", () => {
+  it("routes restart action to restartBubble dependency", async () => {
+    const repoPath = "/tmp/pairflow-ui-router-restart-repo";
+    const restartBubble = vi.fn(async () => ({
+      bubbleId: "b-router-restart-01",
+      state: {
+        state: "RUNNING"
+      },
+      tmuxSessionName: "pf-b-router-restart-01",
+      worktreePath: "/tmp/worktree",
+      previousTmuxSessionExisted: true,
+      previousRuntimeSessionRemoved: true
+    } as unknown as RestartBubbleResult));
+
+    const scope: UiRepoScope = {
+      repos: [repoPath],
+      has: (value: string) => Promise.resolve(value === repoPath)
+    };
+    const events: UiEventsBroker = {
+      subscribe: () => () => undefined,
+      getSnapshot: () => ({
+        id: 1,
+        ts: "2026-02-25T00:00:00.000Z",
+        type: "snapshot",
+        repos: [],
+        bubbles: []
+      }),
+      refreshNow: () => Promise.resolve(undefined),
+      addRepo: () => Promise.resolve(false),
+      removeRepo: () => Promise.resolve(false),
+      close: () => Promise.resolve(undefined)
+    };
+
+    const router = createUiRouter({
+      repoScope: scope,
+      events,
+      dependencies: {
+        restartBubble
+      }
+    });
+    const server = await startRouterServer(router);
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/bubbles/b-router-restart-01/restart?repo=${encodeURIComponent(repoPath)}`,
+        {
+          method: "POST"
+        }
+      );
+      const payload = (await response.json()) as {
+        result: { bubbleId: string; tmuxSessionName: string };
+      };
+
+      expect(response.status).toBe(200);
+      expect(payload.result).toMatchObject({
+        bubbleId: "b-router-restart-01",
+        tmuxSessionName: "pf-b-router-restart-01"
+      });
+      expect(restartBubble).toHaveBeenCalledWith({
+        bubbleId: "b-router-restart-01",
+        repoPath
       });
     } finally {
       await server.close();

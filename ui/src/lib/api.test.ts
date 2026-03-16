@@ -239,6 +239,29 @@ describe("createApiClient", () => {
     );
   });
 
+  it("posts restart action payload", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ result: { bubbleId: "b-a", state: "RUNNING" } }), {
+        status: 200
+      })
+    );
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createApiClient();
+    await expect(client.restartBubble("/repo-a", "b-a")).resolves.toMatchObject({
+      bubbleId: "b-a",
+      state: "RUNNING"
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/bubbles/b-a/restart?repo=%2Frepo-a",
+      {
+        method: "POST"
+      }
+    );
+  });
+
   it("posts delete without body when force is omitted or false", async () => {
     const deleteResult = {
       result: {

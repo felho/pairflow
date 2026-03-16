@@ -33,6 +33,7 @@ export const bubbleActionKinds = [
   "request-rework",
   "reply",
   "resume",
+  "restart",
   "commit",
   "merge",
   "open",

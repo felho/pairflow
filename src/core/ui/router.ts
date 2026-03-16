@@ -21,6 +21,7 @@ import {
   type AttachBubbleResult
 } from "../bubble/attachBubble.js";
 import { stopBubble } from "../bubble/stopBubble.js";
+import { restartBubble } from "../bubble/restartBubble.js";
 import { deleteBubble } from "../bubble/deleteBubble.js";
 import type { BubbleLifecycleState } from "../../types/bubble.js";
 import type {
@@ -77,6 +78,7 @@ interface UiRouterDependencies {
   openBubble: typeof openBubble;
   attachBubble: typeof attachBubble;
   stopBubble: typeof stopBubble;
+  restartBubble: typeof restartBubble;
   deleteBubble: typeof deleteBubble;
 }
 
@@ -474,6 +476,7 @@ export function createUiRouter(input: CreateUiRouterInput): UiRouter {
     openBubble: input.dependencies?.openBubble ?? openBubble,
     attachBubble: input.dependencies?.attachBubble ?? attachBubble,
     stopBubble: input.dependencies?.stopBubble ?? stopBubble,
+    restartBubble: input.dependencies?.restartBubble ?? restartBubble,
     deleteBubble: input.dependencies?.deleteBubble ?? deleteBubble
   };
 
@@ -946,6 +949,15 @@ export function createUiRouter(input: CreateUiRouterInput): UiRouter {
                 }
                 case "stop": {
                   const result = await dependencies.stopBubble({
+                    bubbleId,
+                    repoPath,
+                    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+                  });
+                  sendJson(res, 200, { result });
+                  return true;
+                }
+                case "restart": {
+                  const result = await dependencies.restartBubble({
                     bubbleId,
                     repoPath,
                     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})

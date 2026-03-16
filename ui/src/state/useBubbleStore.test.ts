@@ -74,6 +74,7 @@ function createApiStub(overrides: Partial<PairflowApiClient>): PairflowApiClient
     requestRework: vi.fn(async () => ({})),
     replyBubble: vi.fn(async () => ({})),
     resumeBubble: vi.fn(async () => ({})),
+    restartBubble: vi.fn(async () => ({})),
     commitBubble: vi.fn(async () => ({})),
     mergeBubble: vi.fn(async () => ({})),
     openBubble: vi.fn(async () => ({})),
@@ -733,6 +734,43 @@ describe("createBubbleStore", () => {
       overrideReason: "Human override after manual validation."
     });
     expect(getBubbles).toHaveBeenCalledTimes(2);
+  });
+
+  it("routes restart action to api.restartBubble", async () => {
+    const getBubbles = vi.fn(async () => ({
+      repo: repoSummary("/repo-a"),
+      bubbles: [
+        bubbleSummary({
+          bubbleId: "b-a",
+          repoPath: "/repo-a",
+          state: "RUNNING"
+        })
+      ]
+    }));
+    const restartBubble = vi.fn(async () => ({}));
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles,
+      restartBubble
+    });
+
+    const store = createBubbleStore({
+      api,
+      createEventsClient: () => ({
+        start: () => undefined,
+        stop: () => undefined,
+        refresh: () => undefined
+      })
+    });
+
+    await store.getState().initialize();
+    await store.getState().runBubbleAction({
+      bubbleId: "b-a",
+      action: "restart"
+    });
+
+    expect(restartBubble).toHaveBeenCalledWith("/repo-a", "b-a");
   });
 
   it("returns confirmation artifacts for delete without force", async () => {

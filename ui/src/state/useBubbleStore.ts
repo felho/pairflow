@@ -496,6 +496,9 @@ async function performBubbleAction(
     case "resume":
       await api.resumeBubble(bubble.repoPath, bubble.bubbleId);
       return;
+    case "restart":
+      await api.restartBubble(bubble.repoPath, bubble.bubbleId);
+      return;
     case "commit": {
       const commitInput: CommitActionInput = {
         auto: input.auto ?? true,

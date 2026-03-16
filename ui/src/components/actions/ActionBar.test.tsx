@@ -12,6 +12,7 @@ const actionLabels: Record<Exclude<BubbleActionKind, "delete">, string> = {
   "request-rework": "Request Rework",
   reply: "Reply",
   resume: "Resume",
+  restart: "Restart",
   commit: "Commit",
   merge: "Merge",
   open: "Open",
@@ -32,14 +33,14 @@ function resolveActionLabelForState(
 const expectedMatrix: Record<BubbleLifecycleState, BubbleActionKind[]> = {
   CREATED: ["start", "stop"],
   PREPARING_WORKSPACE: ["stop"],
-  RUNNING: ["open", "stop"],
-  WAITING_HUMAN: ["request-rework", "reply", "resume", "open", "stop"],
-  READY_FOR_APPROVAL: ["approve", "request-rework", "open", "stop"],
-  META_REVIEW_RUNNING: ["open", "stop"],
-  META_REVIEW_FAILED: ["approve", "request-rework", "open", "stop"],
-  READY_FOR_HUMAN_APPROVAL: ["approve", "request-rework", "open", "stop"],
-  APPROVED_FOR_COMMIT: ["commit", "open", "stop"],
-  COMMITTED: ["open", "stop"],
+  RUNNING: ["restart", "open", "stop"],
+  WAITING_HUMAN: ["request-rework", "reply", "resume", "restart", "open", "stop"],
+  READY_FOR_APPROVAL: ["approve", "request-rework", "restart", "open", "stop"],
+  META_REVIEW_RUNNING: ["restart", "open", "stop"],
+  META_REVIEW_FAILED: ["approve", "request-rework", "restart", "open", "stop"],
+  READY_FOR_HUMAN_APPROVAL: ["approve", "request-rework", "restart", "open", "stop"],
+  APPROVED_FOR_COMMIT: ["commit", "restart", "open", "stop"],
+  COMMITTED: ["restart", "open", "stop"],
   DONE: ["merge", "open"],
   FAILED: ["open"],
   CANCELLED: ["open"]
@@ -241,5 +242,34 @@ describe("ActionBar", () => {
       action: "attach"
     });
     expect(screen.queryByText("Opening Warp terminal...")).not.toBeInTheDocument();
+  });
+
+  it("renders restart as icon-only control with accessible name", () => {
+    render(
+      <ActionBar
+        bubble={bubbleCard({
+          bubbleId: "b-run",
+          repoPath: "/repo-a",
+          state: "RUNNING"
+        })}
+        attach={{
+          visible: false,
+          enabled: false,
+          command: "tmux attach -t pf-b-run",
+          hint: null
+        }}
+        isSubmitting={false}
+        actionError={null}
+        retryHint={null}
+        actionFailure={null}
+        onAction={vi.fn(() => Promise.resolve(undefined))}
+        onClearFeedback={vi.fn()}
+      />
+    );
+
+    const restartButton = screen.getByRole("button", { name: "Restart" });
+    expect(restartButton).toBeInTheDocument();
+    expect(restartButton).toHaveTextContent("");
+    expect(restartButton.querySelector("svg")).not.toBeNull();
   });
 });
