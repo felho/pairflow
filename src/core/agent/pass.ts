@@ -14,6 +14,10 @@ import {
   WorkspaceResolutionError
 } from "../bubble/workspaceResolution.js";
 import {
+  IDEATION_PASS_BLOCKED,
+  resolveIdeationMetadata
+} from "../bubble/ideation.js";
+import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef
 } from "../runtime/tmuxDelivery.js";
@@ -897,6 +901,17 @@ export async function emitPassFromWorkspace(
 
   const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
   const state = loadedState.state;
+  const ideationMetadata = resolveIdeationMetadata(resolved.bubbleConfig);
+  if (
+    state.state === "RUNNING" &&
+    state.round === 0 &&
+    ideationMetadata.mode &&
+    ideationMetadata.taskPending
+  ) {
+    throw new PassCommandError(
+      `${IDEATION_PASS_BLOCKED}: ideation kickoff is required before PASS handoff.`
+    );
+  }
 
   const { implementer, reviewer } = resolved.bubbleConfig.agents;
   const handoff = resolveHandoff(state, implementer, reviewer, nowIso);

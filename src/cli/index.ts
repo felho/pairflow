@@ -27,6 +27,10 @@ import {
   runBubbleCreateCommand
 } from "./commands/bubble/create.js";
 import {
+  getBubbleKickoffHelpText,
+  runBubbleKickoffCommand
+} from "./commands/bubble/kickoff.js";
+import {
   getBubbleReplyHelpText,
   runBubbleReplyCommand
 } from "./commands/bubble/reply.js";
@@ -342,6 +346,18 @@ async function handleBubbleCreateCommand(args: string[]): Promise<number> {
   }
   process.stdout.write(
     `Created bubble ${result.bubbleId} at ${result.paths.bubbleDir}\n`
+  );
+  return 0;
+}
+
+async function handleBubbleKickoffCommand(args: string[]): Promise<number> {
+  const result = await runBubbleKickoffCommand(args);
+  if (result === null) {
+    process.stdout.write(`${getBubbleKickoffHelpText()}\n`);
+    return 0;
+  }
+  process.stdout.write(
+    `KICKOFF activated for ${result.bubble_id}: round 0 -> 1\n`
   );
   return 0;
 }
@@ -704,6 +720,7 @@ const bubbleSubcommandHandlers: Readonly<
   Record<string, (args: string[]) => Promise<number>>
 > = {
   create: handleBubbleCreateCommand,
+  kickoff: handleBubbleKickoffCommand,
   start: handleBubbleStartCommand,
   open: handleBubbleOpenCommand,
   stop: handleBubbleStopCommand,

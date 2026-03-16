@@ -50,6 +50,7 @@ export interface BubbleCreateInput {
   repoPath: string;
   baseBranch: string;
   reviewArtifactType: CreateReviewArtifactType;
+  ideation?: boolean;
   task?: string;
   taskFile?: string;
   reviewerBrief?: string;
@@ -68,7 +69,7 @@ export interface BubbleCreateInput {
 
 export interface ResolvedTaskInput {
   content: string;
-  source: "inline" | "file";
+  source: "inline" | "file" | "ideation_placeholder";
   sourcePath?: string;
 }
 
@@ -767,6 +768,8 @@ function buildBubbleConfig(input: {
   bubbleBranch: string;
   accuracyCritical: boolean;
   reviewArtifactType: CreateReviewArtifactType;
+  ideationMode?: boolean;
+  ideationStartedAt?: string;
   implementer?: AgentName;
   reviewer?: AgentName;
   testCommand?: string;
@@ -823,7 +826,18 @@ function buildBubbleConfig(input: {
     },
     doc_contract_gates: {
       round_gate_applies_after: DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER
-    }
+    },
+    ...(input.ideationMode === true
+      ? {
+          ideation: {
+            mode: true,
+            task_pending: true,
+            ...(input.ideationStartedAt !== undefined
+              ? { started_at: input.ideationStartedAt }
+              : {})
+          }
+        }
+      : {})
   });
 }
 
@@ -842,9 +856,24 @@ function renderTaskArtifact(task: ResolvedTaskInput): string {
   const sourceLine =
     task.source === "file"
       ? `Source: file (${task.sourcePath})`
+      : task.source === "ideation_placeholder"
+      ? "Source: ideation placeholder (kickoff required before implementation)"
       : "Source: inline text";
 
   return `# Bubble Task\n\n${sourceLine}\n\n${task.content}\n`;
+}
+
+function buildIdeationPlaceholderTaskContent(bubbleId: string): string {
+  return [
+    "## Ideation Placeholder",
+    "",
+    "This bubble was created with `--ideation`; there is no active implementation task yet.",
+    "Run kickoff before implementation handoff:",
+    `- pairflow bubble kickoff --id ${bubbleId} --task "<task text>"`,
+    `- pairflow bubble kickoff --id ${bubbleId} --task-file <path>`,
+    "",
+    "metadata_source: ideation_placeholder"
+  ].join("\n");
 }
 
 async function ensureBubbleDoesNotExist(bubbleDir: string): Promise<void> {
@@ -893,16 +922,17 @@ export async function createBubble(
   await ensureBubbleDoesNotExist(paths.bubbleDir);
 
   const bubbleBranch = `bubble/${input.id}`;
-  const taskResolveInput: { cwd: string; task?: string; taskFile?: string } = {
-    cwd: input.cwd ?? process.cwd()
-  };
-  if (input.task !== undefined) {
-    taskResolveInput.task = input.task;
-  }
-  if (input.taskFile !== undefined) {
-    taskResolveInput.taskFile = input.taskFile;
-  }
-  const task = await resolveTaskInput(taskResolveInput);
+  const ideationMode = input.ideation === true;
+  const task = ideationMode
+    ? {
+        content: buildIdeationPlaceholderTaskContent(input.id),
+        source: "ideation_placeholder" as const
+      }
+    : await resolveTaskInput({
+        cwd: input.cwd ?? process.cwd(),
+        ...(input.task !== undefined ? { task: input.task } : {}),
+        ...(input.taskFile !== undefined ? { taskFile: input.taskFile } : {})
+      });
   const reviewerFocus = extractReviewerFocus(task.content);
   const accuracyCritical = input.accuracyCritical === true;
   let repoConfigEnforcementAllGate: GateEnforcementLevel | undefined;
@@ -935,7 +965,13 @@ export async function createBubble(
     baseBranch,
     bubbleBranch,
     accuracyCritical,
-    reviewArtifactType
+    reviewArtifactType,
+    ...(ideationMode
+      ? {
+          ideationMode: true,
+          ideationStartedAt: createdAt.toISOString()
+        }
+      : {})
   };
   if (input.implementer !== undefined) {
     bubbleConfigInput.implementer = input.implementer;
@@ -1031,34 +1067,36 @@ export async function createBubble(
   }
   await ensureRuntimeSessionFile(paths.sessionsPath);
 
-  try {
-    await appendProtocolEnvelope({
-      transcriptPath: paths.transcriptPath,
-      lockPath: join(paths.locksDir, `${input.id}.lock`),
-      now: createdAt,
-      envelope: {
-        bubble_id: input.id,
-        sender: "orchestrator",
-        recipient: config.agents.implementer,
-        type: "TASK",
-        round: state.round,
-        payload: {
-          summary: task.content,
-          metadata: {
-            source: task.source,
-            ...(task.sourcePath !== undefined
-              ? { source_path: task.sourcePath }
-              : {})
-          }
-        },
-        refs: [paths.taskArtifactPath]
-      }
-    });
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new BubbleCreateError(
-      `Failed to append initial TASK envelope for bubble ${input.id}. Root error: ${reason}`
-    );
+  if (!ideationMode) {
+    try {
+      await appendProtocolEnvelope({
+        transcriptPath: paths.transcriptPath,
+        lockPath: join(paths.locksDir, `${input.id}.lock`),
+        now: createdAt,
+        envelope: {
+          bubble_id: input.id,
+          sender: "orchestrator",
+          recipient: config.agents.implementer,
+          type: "TASK",
+          round: state.round,
+          payload: {
+            summary: task.content,
+            metadata: {
+              source: task.source,
+              ...(task.sourcePath !== undefined
+                ? { source_path: task.sourcePath }
+                : {})
+            }
+          },
+          refs: [paths.taskArtifactPath]
+        }
+      });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      throw new BubbleCreateError(
+        `Failed to append initial TASK envelope for bubble ${input.id}. Root error: ${reason}`
+      );
+    }
   }
 
   await emitBubbleLifecycleEventBestEffort({
@@ -1073,6 +1111,8 @@ export async function createBubble(
       bubble_branch: config.bubble_branch,
       review_artifact_type: config.review_artifact_type,
       task_source: task.source,
+      ideation_mode: ideationMode,
+      ideation_task_pending: ideationMode,
       reviewer_focus_status: reviewerFocus.status,
       reviewer_focus_artifact_write: reviewerFocusArtifactWriteStatus,
       ...(reviewerFocusArtifactWriteErrorCode !== undefined

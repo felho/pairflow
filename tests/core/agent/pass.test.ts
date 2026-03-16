@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { runPassCommand } from "../../../src/cli/commands/agent/pass.js";
 import {
@@ -11,6 +12,7 @@ import {
   PassCommandError,
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata
 } from "../../../src/core/agent/pass.js";
+import { IDEATION_PASS_BLOCKED } from "../../../src/core/bubble/ideation.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/core/workspace/worktreeManager.js";
 import {
@@ -146,6 +148,108 @@ afterEach(async () => {
 });
 
 describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
+  it("blocks PASS while ideation kickoff is pending", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_pass_ideation_block_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      ideation: true,
+      cwd: repoPath
+    });
+
+    await bootstrapWorktreeWorkspace({
+      repoPath,
+      baseBranch: "main",
+      bubbleBranch: bubble.config.bubble_branch,
+      worktreePath: bubble.paths.worktreePath
+    });
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 0,
+        active_agent: bubble.config.agents.implementer,
+        active_role: "implementer",
+        active_since: "2026-03-15T12:00:00.000Z",
+        last_command_at: "2026-03-15T12:00:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "CREATED"
+      }
+    );
+
+    const transcriptBefore = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Attempted handoff before kickoff",
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(new RegExp(IDEATION_PASS_BLOCKED, "u"));
+    const transcriptAfter = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcriptAfter).toEqual(transcriptBefore);
+  });
+
+  it("blocks PASS while ideation kickoff is pending even with parse warning metadata", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_pass_ideation_block_02",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      ideation: true,
+      cwd: repoPath
+    });
+
+    await bootstrapWorktreeWorkspace({
+      repoPath,
+      baseBranch: "main",
+      bubbleBranch: bubble.config.bubble_branch,
+      worktreePath: bubble.paths.worktreePath
+    });
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        ideation: {
+          mode: true,
+          task_pending: true,
+          parse_warning: "IDEATION_METADATA_PARSE_WARNING: synthetic test fixture"
+        }
+      }),
+      "utf8"
+    );
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        round: 0,
+        active_agent: bubble.config.agents.implementer,
+        active_role: "implementer",
+        active_since: "2026-03-15T12:00:00.000Z",
+        last_command_at: "2026-03-15T12:00:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "CREATED"
+      }
+    );
+
+    await expect(
+      emitPassFromWorkspace({
+        summary: "Attempted handoff before kickoff with parse warning",
+        cwd: bubble.paths.worktreePath
+      })
+    ).rejects.toThrow(new RegExp(IDEATION_PASS_BLOCKED, "u"));
+  });
+
   it("resolves canonical repeat-clean metadata key and falls back to deprecated legacy key", () => {
     expect(
       resolveMostRecentPreviousReviewerPassIsCleanFromMetadata({

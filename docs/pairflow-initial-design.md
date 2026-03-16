@@ -309,23 +309,25 @@ Note: local overlay entries are synced at worktree bootstrap; missing sources ar
 
 ## CLI Surface (MVP)
 Human/operator commands:
-1. `pairflow bubble create --id <id> --repo <path> --base <branch> --review-artifact-type <document|code> --task <file-or-text>`
+1. `pairflow bubble create --id <id> --repo <path> --base <branch> --review-artifact-type <document|code> ((--task <file-or-text>) | --ideation)`
 2. `pairflow bubble start --id <id>`
-3. `pairflow bubble status --id <id>`
-4. `pairflow bubble inbox --id <id>`
-5. `pairflow bubble reply --id <id> --message "<text>"`
-6. `pairflow bubble approve --id <id>`
-7. `pairflow bubble request-rework --id <id> --message "<text>"`
-8. `pairflow bubble commit --id <id>`
-9. `pairflow bubble open --id <id>` (opens external editor at worktree path)
-10. `pairflow bubble stop --id <id>`
-11. `pairflow bubble resume --id <id>` (operator resumes ping-pong after intervention)
-12. `pairflow bubble watchdog --id <id>` (runs timeout check and escalates to `WAITING_HUMAN` when idle timeout is exceeded)
+3. `pairflow bubble kickoff --id <id> (--task <file-or-text>)` (activates ideation pending bubble to round 1)
+4. `pairflow bubble status --id <id>`
+5. `pairflow bubble inbox --id <id>`
+6. `pairflow bubble reply --id <id> --message "<text>"`
+7. `pairflow bubble approve --id <id>`
+8. `pairflow bubble request-rework --id <id> --message "<text>"`
+9. `pairflow bubble commit --id <id>`
+10. `pairflow bubble open --id <id>` (opens external editor at worktree path)
+11. `pairflow bubble stop --id <id>`
+12. `pairflow bubble resume --id <id>` (operator resumes ping-pong after intervention)
+13. `pairflow bubble watchdog --id <id>` (runs timeout check and escalates to `WAITING_HUMAN` when idle timeout is exceeded)
 
 Agent-facing commands (invoked from inside agent sessions):
 1. `pairflow pass --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>] [--finding <P0|P1|P2|P3:Title>]... [--no-findings]`
 2. `pairflow ask-human --question "<text>"`
 3. `pairflow converged --summary "<text>"`
+4. Ideation pending guard: `pass` and `converged` are rejected while bubble is `RUNNING` at `round=0` with `ideation.task_pending=true`.
 
 `pairflow pass` reference rules:
 1. `--ref` is optional and repeatable (`0..N`).
@@ -352,7 +354,7 @@ Rules:
 5. Optional sound notifications are supported for `waiting-human` and `converged` events (configurable on/off and sound file).
 6. Status watcher must display `active_agent`, `active_since`, and watchdog countdown for escalation visibility.
 7. Watchdog escalation action is materialized as orchestrator-emitted `HUMAN_QUESTION` and state transition `RUNNING -> WAITING_HUMAN`.
-8. Bubble start injects an initial protocol briefing into implementer/reviewer panes (role, required command set, task/worktree references), and sends an implementer kickoff prompt so the first coding round starts automatically; this improves protocol adherence but does not emit protocol envelopes automatically.
+8. Bubble start injects an initial protocol briefing into implementer/reviewer panes (role, required command set, task/worktree references). Legacy/task bubbles also send implementer kickoff to start round 1 automatically; ideation pending bubbles stay `RUNNING round=0` and require explicit `pairflow bubble kickoff`.
 9. Meta-review execution uses the dedicated meta-reviewer pane as worker context during gate runs.
 10. When `reviewer_context_mode = "fresh"`, each implementer -> reviewer `PASS` triggers reviewer pane process respawn so each review round starts from clean agent context.
 

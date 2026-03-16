@@ -8,6 +8,10 @@ import {
   startBubble,
   type StartBubbleResult
 } from "../../../core/bubble/startBubble.js";
+import {
+  IDEATION_METADATA_PARSE_WARNING,
+  hasIdeationMetadataParseWarning
+} from "../../../core/bubble/ideation.js";
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { registerRepoInRegistry } from "../../../core/repo/registry.js";
 
@@ -140,6 +144,11 @@ export async function runBubbleStartCommand(
       ...(options.repo !== undefined ? { repoPath: options.repo } : {}),
       cwd
     });
+    if (hasIdeationMetadataParseWarning(resolvedBubble.bubbleConfig)) {
+      reportWarning(
+        `${IDEATION_METADATA_PARSE_WARNING}: bubble ${options.id} has invalid ideation metadata; falling back to legacy start path.`
+      );
+    }
     const resolvedBubbleRepoPath = resolvePath(cwd, resolvedBubble.repoPath);
     const canonicalBubbleRepoPath = await realpath(resolvedBubbleRepoPath).catch(
       (error: NodeJS.ErrnoException) => {

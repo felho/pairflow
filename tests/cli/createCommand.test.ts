@@ -8,6 +8,10 @@ import {
   REVIEW_ARTIFACT_TYPE_AUTO_REMOVED
 } from "../../src/config/bubbleConfig.js";
 import {
+  IDEATION_TASK_INPUT_CONFLICT,
+  IDEATION_TASK_REQUIRED
+} from "../../src/core/bubble/ideation.js";
+import {
   type BubbleCreateCommandDependencies,
   getBubbleCreateHelpText,
   parseBubbleCreateCommandOptions,
@@ -71,6 +75,24 @@ describe("parseBubbleCreateCommandOptions", () => {
 
     expect(parsed.taskFile).toBe("/tmp/task.md");
     expect(parsed.reviewArtifactType).toBe("document");
+  });
+
+  it("parses ideation mode without task payload", () => {
+    const parsed = parseBubbleCreateCommandOptions([
+      "--id",
+      "b_create_ideation_01",
+      "--repo",
+      "/tmp/repo",
+      "--base",
+      "main",
+      "--review-artifact-type",
+      "code",
+      "--ideation"
+    ]);
+
+    expect(parsed.ideation).toBe(true);
+    expect(parsed.task).toBeUndefined();
+    expect(parsed.taskFile).toBeUndefined();
   });
 
   it("parses reviewer brief and accuracy-critical flags", () => {
@@ -287,7 +309,43 @@ describe("parseBubbleCreateCommandOptions", () => {
         "--review-artifact-type",
         "code"
       ])
-    ).toThrow(/--task or --task-file/u);
+    ).toThrow(new RegExp(`^${IDEATION_TASK_REQUIRED}:`, "u"));
+  });
+
+  it("rejects ideation mode mixed with inline task", () => {
+    expect(() =>
+      parseBubbleCreateCommandOptions([
+        "--id",
+        "b_create_ideation_conflict_01",
+        "--repo",
+        "/tmp/repo",
+        "--base",
+        "main",
+        "--review-artifact-type",
+        "code",
+        "--ideation",
+        "--task",
+        "inline task"
+      ])
+    ).toThrow(new RegExp(`^${IDEATION_TASK_INPUT_CONFLICT}:`, "u"));
+  });
+
+  it("rejects ideation mode mixed with task-file", () => {
+    expect(() =>
+      parseBubbleCreateCommandOptions([
+        "--id",
+        "b_create_ideation_conflict_02",
+        "--repo",
+        "/tmp/repo",
+        "--base",
+        "main",
+        "--review-artifact-type",
+        "code",
+        "--ideation",
+        "--task-file",
+        "/tmp/task.md"
+      ])
+    ).toThrow(new RegExp(`^${IDEATION_TASK_INPUT_CONFLICT}:`, "u"));
   });
 
   it("throws when pairflow command profile is invalid", () => {
@@ -513,6 +571,39 @@ describe("parseBubbleCreateCommandOptions", () => {
     expect(createBubbleMock).toHaveBeenCalledWith(
       expect.objectContaining({
         pairflowCommandProfile: "self_host"
+      })
+    );
+  });
+
+  it("forwards ideation mode to bubble creation", async () => {
+    const createBubbleResult = {
+      bubbleId: "b_create_ideation_forward_01"
+    } as unknown as BubbleCreateResult;
+    const createBubbleMock: NonNullable<
+      BubbleCreateCommandDependencies["createBubble"]
+    > = vi.fn(() => Promise.resolve(createBubbleResult));
+
+    await runBubbleCreateCommand(
+      [
+        "--id",
+        "b_create_ideation_forward_01",
+        "--repo",
+        "/tmp/repo",
+        "--base",
+        "main",
+        "--review-artifact-type",
+        "code",
+        "--ideation"
+      ],
+      "/tmp",
+      {
+        createBubble: createBubbleMock
+      }
+    );
+
+    expect(createBubbleMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ideation: true
       })
     );
   });

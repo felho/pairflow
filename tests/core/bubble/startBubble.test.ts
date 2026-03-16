@@ -131,6 +131,58 @@ afterEach(async () => {
 });
 
 describe("startBubble", () => {
+  it("starts ideation bubble in RUNNING round 0 and sends ideation kickoff guidance", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_ideation_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      ideation: true,
+      cwd: repoPath
+    });
+
+    let capturedKickoff: string | undefined;
+    const result = await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T13:00:00.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () =>
+          Promise.resolve({
+            repoPath,
+            baseRef: "refs/heads/main",
+            bubbleBranch: created.config.bubble_branch,
+            worktreePath: created.paths.worktreePath
+          }),
+        launchBubbleTmuxSession: (input) => {
+          capturedKickoff = input.implementerKickoffMessage;
+          return Promise.resolve({ sessionName: "pf-b_start_ideation_01" });
+        },
+        claimRuntimeSession: (input) =>
+          Promise.resolve({
+            claimed: true,
+            record: {
+              bubbleId: input.bubbleId,
+              repoPath: input.repoPath,
+              worktreePath: input.worktreePath,
+              tmuxSessionName: input.tmuxSessionName,
+              updatedAt: "2026-02-22T13:00:00.000Z"
+            }
+          })
+      }
+    );
+
+    expect(result.state.state).toBe("RUNNING");
+    expect(result.state.round).toBe(0);
+    expect(result.state.active_role).toBe("implementer");
+    expect(result.state.round_role_history).toEqual([]);
+    expect(capturedKickoff).toContain("kickoff (ideation pending)");
+    expect(capturedKickoff).toContain("pairflow bubble kickoff --id b_start_ideation_01");
+  });
+
   it("transitions CREATED -> PREPARING_WORKSPACE -> RUNNING and launches tmux", async () => {
     const repoPath = await createTempRepo();
     const created = await createBubble({

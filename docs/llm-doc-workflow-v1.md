@@ -109,8 +109,16 @@ pairflow bubble start --id <id> --repo <abs_repo_path> --attach
 pairflow bubble status --id <id> --repo <abs_repo_path> --json
 ```
 
+Ideation start (taskless create + explicit activation):
+```bash
+pairflow bubble create --id <id> --repo <abs_repo_path> --base main --review-artifact-type <document|code> --ideation
+pairflow bubble start --id <id> --repo <abs_repo_path> --attach
+pairflow bubble kickoff --id <id> --repo <abs_repo_path> --task-file <abs_task_path>
+```
+
 `pairflow bubble create` requires `--review-artifact-type <document|code>`.
 `auto` is not available as a create-time ownership option.
+Ideation Phase-1 uses no new lifecycle state: bubble runs as `RUNNING round=0` until explicit kickoff.
 
 Human intervention:
 ```bash

@@ -45,6 +45,7 @@ import {
   buildPairflowCommandGuidance,
   buildPinnedPairflowCommand
 } from "../runtime/pairflowCommand.js";
+import { resolveIdeationMetadata } from "./ideation.js";
 import { ensureBubbleInstanceIdForMutation } from "./bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import {
@@ -354,6 +355,24 @@ function buildImplementerKickoffMessage(input: {
     ),
     buildImplementerEvidenceHandoffGuidance(input.reviewArtifactType),
     "When done with validation, hand off with `pairflow pass --summary \"<what changed + validation>\"` and include available evidence `--ref` log paths."
+  ].join(" ");
+}
+
+function buildImplementerIdeationKickoffMessage(input: {
+  bubbleId: string;
+  worktreePath: string;
+  taskArtifactPath: string;
+  pairflowCommandProfile: PairflowCommandProfile;
+}): string {
+  return [
+    `# [pairflow] bubble=${input.bubbleId} kickoff (ideation pending).`,
+    `Read placeholder task artifact: ${input.taskArtifactPath}.`,
+    "This bubble is in ideation mode; do not emit implementer/reviewer handoff yet.",
+    buildPairflowCommandGuidance(
+      input.worktreePath,
+      input.pairflowCommandProfile
+    ),
+    `Activate the first implementation round with \`pairflow bubble kickoff --id ${input.bubbleId} --task "<text>"\` or \`--task-file <path>\`.`
   ].join(" ");
 }
 
@@ -876,6 +895,12 @@ export async function startBubble(
         });
       }
 
+      const ideationMetadata = resolveIdeationMetadata(resolved.bubbleConfig);
+      const ideationPending =
+        ideationMetadata.mode &&
+        ideationMetadata.taskPending &&
+        ideationMetadata.parseWarning === undefined;
+
       const tmux = await launchTmux({
         bubbleId: resolved.bubbleId,
         worktreePath: resolved.bubblePaths.worktreePath,
@@ -933,29 +958,40 @@ export async function startBubble(
             pairflowCommandProfile: resolved.bubbleConfig.pairflow_command_profile
           })
         }),
-        implementerKickoffMessage: buildImplementerKickoffMessage({
-          bubbleId: resolved.bubbleId,
-          worktreePath: resolved.bubblePaths.worktreePath,
-          taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
-          reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
-          pairflowCommandProfile: resolved.bubbleConfig.pairflow_command_profile
-        })
+        implementerKickoffMessage: ideationPending
+          ? buildImplementerIdeationKickoffMessage({
+              bubbleId: resolved.bubbleId,
+              worktreePath: resolved.bubblePaths.worktreePath,
+              taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+              pairflowCommandProfile: resolved.bubbleConfig.pairflow_command_profile
+            })
+          : buildImplementerKickoffMessage({
+              bubbleId: resolved.bubbleId,
+              worktreePath: resolved.bubblePaths.worktreePath,
+              taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+              reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
+              pairflowCommandProfile: resolved.bubbleConfig.pairflow_command_profile
+            })
       });
       tmuxSessionName = tmux.sessionName;
 
       const running = applyStateTransition(preparing, {
         to: "RUNNING",
-        round: 1,
+        round: ideationPending ? 0 : 1,
         activeAgent: resolved.bubbleConfig.agents.implementer,
         activeRole: "implementer",
         activeSince: nowIso,
         lastCommandAt: nowIso,
-        appendRoundRoleEntry: {
-          round: 1,
-          implementer: resolved.bubbleConfig.agents.implementer,
-          reviewer: resolved.bubbleConfig.agents.reviewer,
-          switched_at: nowIso
-        }
+        ...(ideationPending
+          ? {}
+          : {
+              appendRoundRoleEntry: {
+                round: 1,
+                implementer: resolved.bubbleConfig.agents.implementer,
+                reviewer: resolved.bubbleConfig.agents.reviewer,
+                switched_at: nowIso
+              }
+            })
       });
 
       written = await writeStateSnapshot(resolved.bubblePaths.statePath, running, {
