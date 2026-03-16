@@ -43,6 +43,10 @@ import {
   runBubbleResumeCommand
 } from "./commands/bubble/resume.js";
 import {
+  getBubbleRestartHelpText,
+  runBubbleRestartCommand
+} from "./commands/bubble/restart.js";
+import {
   getBubbleReconcileHelpText,
   parseBubbleReconcileCommandOptions,
   renderBubbleReconcileText,
@@ -436,6 +440,19 @@ async function handleBubbleResumeCommand(args: string[]): Promise<number> {
   return 0;
 }
 
+async function handleBubbleRestartCommand(args: string[]): Promise<number> {
+  const result = await runBubbleRestartCommand(args);
+  if (result === null) {
+    process.stdout.write(`${getBubbleRestartHelpText()}\n`);
+    return 0;
+  }
+
+  process.stdout.write(
+    `Restarted bubble ${result.bubbleId}: state=${result.state.state}, session=${result.tmuxSessionName}, previousTmuxExisted=${result.previousTmuxSessionExisted ? "yes" : "no"}, previousRuntimeSessionRemoved=${result.previousRuntimeSessionRemoved ? "yes" : "no"}\n`
+  );
+  return 0;
+}
+
 async function handleBubbleStopCommand(args: string[]): Promise<number> {
   const result = await runBubbleStopCommand(args);
   if (result === null) {
@@ -726,6 +743,7 @@ const bubbleSubcommandHandlers: Readonly<
   stop: handleBubbleStopCommand,
   delete: handleBubbleDeleteCommand,
   resume: handleBubbleResumeCommand,
+  restart: handleBubbleRestartCommand,
   status: handleBubbleStatusCommand,
   watchdog: handleBubbleWatchdogCommand,
   inbox: handleBubbleInboxCommand,

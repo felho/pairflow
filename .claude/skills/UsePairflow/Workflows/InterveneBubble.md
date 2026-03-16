@@ -25,6 +25,7 @@ TASK_FILE: extracted from `--task-file` argument (optional; only for ideation ki
 - Never run `approve` while bubble is `RUNNING` or `WAITING_HUMAN`.
 - Prefer explicit, targeted human messages; avoid vague replies.
 - Re-check state after every state-changing command.
+- For runtime/process restart intent (token budget/login refresh, pane appears stuck), use `pairflow bubble restart` instead of manual tmux commands.
 - Default mode is `bubble_autonomous`: do not perform direct implementation edits from this workflow.
 - Switch to `manual_assist` only on explicit user request; never switch silently.
 
@@ -58,6 +59,11 @@ cat <REPO_PATH>/.pairflow/bubbles/<BUBBLE_ID>/bubble.toml
 ```
 
 3. Apply state-specific intervention.
+- If intent is explicit runtime restart for a non-final active bubble (for example token/login refresh, stalled agent process) -> run:
+  ```bash
+  pairflow bubble restart --id <BUBBLE_ID> --repo <REPO_PATH>
+  ```
+  Then continue with step 5 verification.
 - If state is `RUNNING` and ideation is pending (`round=0` + `ideation.task_pending=true`):
   - If neither `TASK_TEXT` nor `TASK_FILE` is provided -> STOP and report: `"Error: ideation bubble in RUNNING round 0 requires --task <text> or --task-file <path> for bubble kickoff."`
   - If both are provided -> STOP and report that kickoff accepts exactly one task input.

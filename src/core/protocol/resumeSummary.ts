@@ -7,12 +7,12 @@ import {
   type ProtocolEnvelope
 } from "../../types/protocol.js";
 
-const MAX_SUMMARY_CHARS = 3_800;
-const MAX_SUMMARY_LINES = 42;
-const MAX_PASS_EVENTS = 6;
-const MAX_FLOW_EVENTS = 6;
-const MAX_EVENT_TEXT_CHARS = 180;
-const MAX_ERROR_TEXT_CHARS = 320;
+const MAX_SUMMARY_CHARS = 900;
+const MAX_SUMMARY_LINES = 16;
+const MAX_PASS_EVENTS = 3;
+const MAX_FLOW_EVENTS = 3;
+const MAX_EVENT_TEXT_CHARS = 120;
+const MAX_ERROR_TEXT_CHARS = 200;
 const MAX_FINDINGS_PER_PASS = 3;
 
 export interface BuildResumeTranscriptSummaryInput {

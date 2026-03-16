@@ -109,6 +109,13 @@ describe("runCli", () => {
     expect(stdoutSpy).toHaveBeenCalled();
   });
 
+  it("supports bubble restart help", async () => {
+    const exitCode = await runCli(["bubble", "restart", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+  });
+
   it("supports bubble status help", async () => {
     const exitCode = await runCli(["bubble", "status", "--help"]);
 

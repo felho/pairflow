@@ -1,0 +1,99 @@
+import { parseArgs } from "node:util";
+
+import {
+  asRestartBubbleError,
+  restartBubble,
+  type RestartBubbleResult
+} from "../../../core/bubble/restartBubble.js";
+
+export interface BubbleRestartCommandOptions {
+  id: string;
+  repo?: string;
+  help: false;
+}
+
+export interface BubbleRestartHelpCommandOptions {
+  help: true;
+}
+
+export type ParsedBubbleRestartCommandOptions =
+  | BubbleRestartCommandOptions
+  | BubbleRestartHelpCommandOptions;
+
+export interface BubbleRestartCommandDependencies {
+  restartBubble?: typeof restartBubble;
+}
+
+export function getBubbleRestartHelpText(): string {
+  return [
+    "Usage:",
+    "  pairflow bubble restart --id <id> [--repo <path>]",
+    "",
+    "Options:",
+    "  --id <id>             Bubble id",
+    "  --repo <path>         Optional repository path (defaults to cwd ancestry lookup)",
+    "  -h, --help            Show this help",
+    "",
+    "Notes:",
+    "  Restarts bubble runtime by terminating the existing tmux session/runtime ownership, then running bubble start."
+  ].join("\n");
+}
+
+export function parseBubbleRestartCommandOptions(
+  args: string[]
+): ParsedBubbleRestartCommandOptions {
+  const parsed = parseArgs({
+    args,
+    options: {
+      id: {
+        type: "string"
+      },
+      repo: {
+        type: "string"
+      },
+      help: {
+        type: "boolean",
+        short: "h"
+      }
+    },
+    strict: true,
+    allowPositionals: false
+  });
+
+  if (parsed.values.help ?? false) {
+    return { help: true };
+  }
+
+  const id = parsed.values.id;
+  if (id === undefined) {
+    throw new Error("Missing required option: --id");
+  }
+
+  return {
+    id,
+    ...(parsed.values.repo !== undefined ? { repo: parsed.values.repo } : {}),
+    help: false
+  };
+}
+
+export async function runBubbleRestartCommand(
+  args: string[],
+  cwd: string = process.cwd(),
+  dependencies: BubbleRestartCommandDependencies = {}
+): Promise<RestartBubbleResult | null> {
+  const options = parseBubbleRestartCommandOptions(args);
+  if (options.help) {
+    return null;
+  }
+
+  const runRestartBubble = dependencies.restartBubble ?? restartBubble;
+  try {
+    return await runRestartBubble({
+      bubbleId: options.id,
+      repoPath: options.repo,
+      cwd
+    });
+  } catch (error) {
+    asRestartBubbleError(error);
+  }
+}

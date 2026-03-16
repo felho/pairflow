@@ -62,6 +62,7 @@ pairflow bubble inbox --id <BUBBLE_ID> --repo <REPO_PATH>
     - If latest autonomous recommendation is `rework` or `inconclusive`, use `bubble approve --override-non-approve --override-reason "<reason>"`.
 - If command output contains `IDEATION_PASS_BLOCKED` or `IDEATION_CONVERGED_BLOCKED`, treat it as pending kickoff and apply the same `bubble kickoff` path.
 - If watchdog timeout led to `WAITING_HUMAN` -> send precise `bubble reply`, then re-check.
+- If runtime appears unhealthy (agent pane unresponsive, stale tmux/session ownership, token/login refresh required) -> run `pairflow bubble restart --id <BUBBLE_ID> --repo <REPO_PATH>`, then re-check status/inbox.
 - If `bubble start` reported success but state remains `CREATED` -> wait briefly and poll status again from repo root cwd.
 - If repo lookup confusion exists -> retry with explicit absolute `--repo` and verify `repoPath`/`worktreePath` in status json.
 - If `meta-review recover` fails because state is not `META_REVIEW_RUNNING`, treat as stale diagnosis, refresh status/inbox, then continue with state-correct routing.

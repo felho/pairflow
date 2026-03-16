@@ -51,6 +51,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 11. Hard rule: in `fresh` mode, never call `pairflow bubble meta-review *`; in `cached` mode, never run a new review.
 12. Decision separation: `--decide approve|rework` controls lifecycle action only (`bubble approve` / `bubble request-rework`) and is independent from meta-review source mode.
 13. Ideation lifecycle is explicit: if a bubble was created with `--ideation`, run `pairflow bubble kickoff` before any `pass`/`converged` loop command.
+14. If runtime is unhealthy (agent pane unresponsive, tmux/session mismatch, token/login refresh needed), prefer `pairflow bubble restart --id <id> [--repo <path>]` over manual tmux kill/start steps.
 
 ## Execution Modes (Mandatory)
 
@@ -76,6 +77,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 - `CREATED` -> `pairflow bubble start`
 - `RUNNING` with ideation pending (`round=0` and `[ideation].task_pending=true`) -> `pairflow bubble kickoff --id <id> (--task <text> | --task-file <path>)`
 - `RUNNING` (active round, typically `round>=1`) -> no approve/rework yet; use normal loop commands (`pass`, `converged`) in agent panes
+- Runtime-health issue in non-final active states (for example stalled pane, refreshed agent login/session) -> `pairflow bubble restart --id <id> [--repo <path>]`
 - `WAITING_HUMAN` -> use `pairflow bubble reply` (NOT `bubble request-rework`)
 - `META_REVIEW_RUNNING` -> if gate appears stuck after snapshot persisted, use `pairflow bubble meta-review recover` (no new review run; snapshot-route replay only)
 - `READY_FOR_HUMAN_APPROVAL` (legacy compatible: `READY_FOR_APPROVAL`) -> choose `pairflow bubble approve` OR `pairflow bubble request-rework`
