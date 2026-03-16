@@ -20,6 +20,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 | **CloseBubble** | "close bubble", "bubble done", "approve and merge", "finalize bubble", "clean bubble" | `Workflows/CloseBubble.md` |
 | **RecoverBubble** | "cancelled bubble but keep changes", "recover worktree", "commit cancelled bubble" | `Workflows/RecoverBubble.md` |
 | **BootstrapEvidence** | "bootstrap evidence", "evidence plan", "trusted test evidence", "how to generate evidence logs" | `Workflows/BootstrapEvidence.md` |
+| **TestBubble** | "manual test report", "test bubble", "smoke test plan", "fixture and browser matrix", "what to click and run" | `Workflows/TestBubble.md` |
 
 ## ReviewBubble Mental Model
 
@@ -201,4 +202,13 @@ Use BootstrapEvidence workflow:
 - inspect project validation surface
 - propose minimal evidence-generation plan
 - provide handoff --ref pattern
+```
+
+**Example 7: Operator-ready manual test runbook**
+
+```
+Use TestBubble workflow:
+- quick mode: critical smoke checks only (`--mode quick`)
+- default mode: full recommended manual suite (`--mode default`)
+- output must include fixtures, browser/session isolation, exact clicks, console commands, and GO/NO-GO rules
 ```
