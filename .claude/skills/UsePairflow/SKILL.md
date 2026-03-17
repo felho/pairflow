@@ -9,6 +9,12 @@ State-aware Pairflow orchestration skill.
 
 This skill exists to avoid lifecycle mistakes (wrong command in wrong state, lost worktree changes, stuck watchdog loops, accidental rebase/merge chaos).
 
+## Maintainer Warning
+
+- Workflow files under `Workflows/` are reusable templates: keep default wording project-agnostic.
+- Do not hardwire project-specific routes, selectors, or product copy as defaults in a workflow.
+- Keep project-specific pieces in workflows only as clearly labeled examples/placeholders.
+
 ## Workflow Routing
 
 | Workflow | Trigger | File |

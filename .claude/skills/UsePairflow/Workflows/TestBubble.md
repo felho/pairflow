@@ -37,6 +37,8 @@ FIRM_ID: extracted from `--firm-id` (optional)
 - Use deterministic test IDs (`SMK-*` in quick mode, `TC-*` in default mode).
 - Keep action steps imperative and short (`Open`, `Login`, `Run`, `Verify`).
 - Treat browser reload/navigation as volatile state: helper objects on `window` can disappear, so recovery steps must be explicit in the report.
+- When generating a runbook for a concrete project, prefer that project's domain language, routes, selectors, and business terminology.
+- Use `EXAMPLE (project-specific)` labeling only for placeholder/reference snippets that are not yet adapted to the current project.
 
 ## Workflow
 
@@ -81,63 +83,59 @@ Must include:
 4. an explicit "refresh recovery" note: if helper is missing (`window.<helper>` undefined), re-run helper block before continuing tests.
 5. an explicit firm-context note: after reload, re-apply firm selector/context (`setFirm(...)` or equivalent) before API calls.
 
-For billing UI/search lockout style tasks, use this helper:
+Use this generic helper template first (adapt route paths, selectors, and context key names):
 
 ```js
-window.billingTest = {
-  bootstrap: async (preferredFirmId = null) => {
-    const res = await fetch('/api/auth/bootstrap', {
-      method: 'POST',
+window.testHelper = {
+  context: {},
+
+  setContext(next = {}) {
+    this.context = { ...this.context, ...next };
+    return this.context;
+  },
+
+  api: async (url, body = null, method = 'POST') => {
+    const res = await fetch(url, {
+      method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ preferredFirmId }),
+      body: body == null ? undefined : JSON.stringify(body),
       cache: 'no-store'
     });
-    const json = await res.json();
-    console.log('payment:', json.payment);
-    return json;
+    const data = await res.json().catch(() => null);
+    console.log('[testHelper]', method, url, res.status, data);
+    return { ok: res.ok, status: res.status, data };
   },
 
-  ctaLinks: () =>
-    [...document.querySelectorAll('a')]
-      .filter(a => /Szamlazas|Elofizetes|Fizetes/i.test((a.textContent || '').trim()))
-      .map(a => ({ text: (a.textContent || '').trim(), href: a.getAttribute('href') })),
-
-  bannerText: () => {
-    const p = [...document.querySelectorAll('p')].find(x =>
-      /turelmi ido lejart|Fizetese lejart|elofizetes jelenleg nem aktiv|havi keresesi keret/i
-        .test((x.textContent || '').trim())
+  findText: (pattern) => {
+    const r = pattern instanceof RegExp ? pattern : new RegExp(pattern, 'i');
+    const el = [...document.querySelectorAll('*')].find(x =>
+      r.test((x.textContent || '').trim())
     );
-    return p ? p.textContent.trim() : null;
+    return el ? (el.textContent || '').trim() : null;
   },
 
-  hasUsageCard: () =>
-    [...document.querySelectorAll('*')].some(x =>
-      /Havi keresesi keret/i.test((x.textContent || '').trim())
-    ),
-
-  hasSearchInput: () => !!document.getElementById('search-view-input'),
-
-  switchFirmContext: (firmId = null) => {
-    if (firmId) localStorage.setItem('currentFirmId', firmId);
-    else localStorage.removeItem('currentFirmId');
+  switchContext: (storageKey, value = null) => {
+    if (value == null) localStorage.removeItem(storageKey);
+    else localStorage.setItem(storageKey, value);
     location.reload();
-  },
-
-  snapshot: async (preferredFirmId = null) => {
-    const boot = await window.billingTest.bootstrap(preferredFirmId);
-    return {
-      payment: boot.payment,
-      bannerText: window.billingTest.bannerText(),
-      ctaLinks: window.billingTest.ctaLinks(),
-      hasUsageCard: window.billingTest.hasUsageCard(),
-      hasSearchInput: window.billingTest.hasSearchInput(),
-      path: location.pathname
-    };
   }
 };
 ```
 
-When reports use a task-specific helper (for example `window.s10bTest`), require this preflight at the top of each test `Console` block:
+If you include an unadapted domain-specific helper snippet, mark it as:
+- `EXAMPLE (project-specific)` and explain what to rename/replace.
+
+Require this preflight at the top of each test `Console` block:
+
+```js
+const CONTEXT_ID = '<context-id>';
+if (!window.testHelper) {
+  throw new Error('Helper missing after reload. Re-run the One-Time Setup helper block first.');
+}
+window.testHelper.setContext({ contextId: CONTEXT_ID });
+```
+
+Reference preflight variant (`EXAMPLE (project-specific)`):
 
 ```js
 const FIRM_ID = '<firm-id>';
@@ -154,27 +152,30 @@ window.s10bTest.setFirm(FIRM_ID);
 Generate a compact smoke plan with only critical business risk checks.
 
 Recommended structure:
-1. `SMK-01` Active baseline (service allowed, no false lock)
-2. `SMK-02` None/free blocked (hard lock + correct billing CTA)
-3. `SMK-03` Canceled but usable (semantic separation from hard lock)
-4. `SMK-04` Past-due hard lock (fail-closed lock behavior)
-5. `SMK-05` Role policy (owner actionable vs admin/member info-only)
-6. `SMK-06` Search vs banner parity (same policy decision across surfaces)
+1. `SMK-01` Baseline happy path (core action succeeds)
+2. `SMK-02` Primary mutation path (state change persists)
+3. `SMK-03` Permission/role policy (authorized vs unauthorized)
+4. `SMK-04` Fail-closed error handling (invalid input/dependency failure)
+5. `SMK-05` Cross-surface parity (UI/API or two surfaces align)
+6. `SMK-06` Reload/retry resilience (post-refresh behavior remains consistent)
 
 Optional in quick mode:
-1. `SMK-07` Invalid CTA path fallback
+1. `SMK-07` Invalid route/path fallback
+2. `SMK-08` Idempotency/replay guard
 
 #### Default mode (`--mode default`)
 
 Generate full recommended manual plan, including edge cases.
 
-For billing alignment tasks, include:
-1. Baseline lifecycle cases (active, none blocked, canceled usable, past_due grace, past_due hard_lock)
-2. Role-policy matrix (owner/admin/member)
-3. Parity checks across search and banner
-4. Trial date sanity and canonical field behavior
-5. Invalid/malformed CTA path fallback behavior
-6. Inconsistent state fail-closed checks (if fixture exists)
+Recommended coverage:
+1. Full state/lifecycle matrix for the feature.
+2. Role-policy matrix (all relevant roles).
+3. Input boundary matrix (min/max/empty/malformed).
+4. Cross-surface parity (all affected entrypoints).
+5. Reload/session-loss/retry behavior.
+6. Fail-closed and recovery behavior (if fixture exists).
+
+Project-specific overlays (for example billing lockout lifecycle) are encouraged when relevant to the current task.
 
 ### 6. Enforce per-test execution format
 
@@ -216,13 +217,13 @@ Use this exact section order:
 
 ```bash
 # Quick smoke for critical coverage only
-TestBubble --mode quick --task-file @progress/active/stripe-v2/tasks/stripe-v2-s13-billing-ui-alignment.md
+TestBubble --mode quick --task-file @progress/active/<feature>/tasks/<task>.md
 
 # Full recommended manual plan
-TestBubble --mode default --task-file @progress/active/stripe-v2/tasks/stripe-v2-s13-billing-ui-alignment.md
+TestBubble --mode default --task-file @progress/active/<feature>/tasks/<task>.md
 
 # Inline scope without task file
-TestBubble --mode quick --task "Manual test plan for billing lockout CTA and role-policy parity"
+TestBubble --mode quick --task "Manual test plan for <feature> state changes and permission parity"
 ```
 
 ## STOP
