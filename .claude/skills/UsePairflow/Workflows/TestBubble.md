@@ -26,6 +26,13 @@ TASK_TEXT: extracted from `--task` (optional)
 APP_URL: extracted from `--app-url`, default `http://localhost:3000`  
 FIRM_ID: extracted from `--firm-id` (optional)
 
+## Input Policy (mandatory)
+
+- Before generating the runbook, resolve all runtime inputs required to execute tests (for example `firmId`, `accountId`, `workspaceId`, route params, fixture emails).
+- If any required input is missing, ask the user for those values first (single concise question block), then continue generation only after they are provided.
+- Prefer one canonical input registry over repeated inline placeholders.
+- If an input remains unknown, mark it as `MISSING INPUT` and bind it to explicit skip rules.
+
 ## Instructions
 
 - This workflow is docs/report generation only. Do not implement product code.
@@ -48,6 +55,18 @@ FIRM_ID: extracted from `--firm-id` (optional)
 2. Else if `TASK_TEXT` is provided, derive the same from text.
 3. Else use conversation context.
 4. If the task contains a known policy matrix (for example billing lockout lifecycle), preserve its terminology in fixtures and expected results.
+
+### 1.5 Resolve runtime inputs (input gate)
+
+1. Derive required execution inputs from task + routes + console commands.
+2. Pre-fill inputs from provided flags (for example `--firm-id`) when available.
+3. If any required input is missing, ask the user to provide values before continuing.
+4. Emit a dedicated `Input Registry` section in the report with:
+   - input key
+   - value
+   - source (`flag|task|user|derived`)
+   - used by tests (IDs)
+5. Do not duplicate raw IDs in every test step; reference the registry keys instead.
 
 ### 2. Build fixture matrix
 
@@ -79,9 +98,10 @@ Rules:
 Must include:
 1. app start command (if relevant),
 2. pages to open in each browser session,
-3. console helper script block to paste once per browser session and re-paste after every full page reload/navigation in that session.
-4. an explicit "refresh recovery" note: if helper is missing (`window.<helper>` undefined), re-run helper block before continuing tests.
-5. an explicit firm-context note: after reload, re-apply firm selector/context (`setFirm(...)` or equivalent) before API calls.
+3. one explicit input-bootstrap block that initializes all runtime identifiers once per browser session,
+4. console helper script block to paste once per browser session and re-paste after every full page reload/navigation in that session.
+5. an explicit "refresh recovery" note: if helper is missing (`window.<helper>` undefined), re-run helper block before continuing tests.
+6. an explicit firm-context note: after reload, re-apply firm selector/context (`setFirm(...)` or equivalent) before API calls.
 
 Use this generic helper template first (adapt route paths, selectors, and context key names):
 
@@ -128,9 +148,12 @@ If you include an unadapted domain-specific helper snippet, mark it as:
 Require this preflight at the top of each test `Console` block:
 
 ```js
-const CONTEXT_ID = '<context-id>';
+const CONTEXT_ID = window.testInputs?.CONTEXT_ID;
 if (!window.testHelper) {
   throw new Error('Helper missing after reload. Re-run the One-Time Setup helper block first.');
+}
+if (!CONTEXT_ID) {
+  throw new Error('MISSING INPUT: CONTEXT_ID. Fill One-Time Setup input bootstrap first.');
 }
 window.testHelper.setContext({ contextId: CONTEXT_ID });
 ```
@@ -138,11 +161,25 @@ window.testHelper.setContext({ contextId: CONTEXT_ID });
 Reference preflight variant (`EXAMPLE (project-specific)`):
 
 ```js
-const FIRM_ID = '<firm-id>';
+const FIRM_ID = window.testInputs?.FIRM_ID;
 if (!window.s10bTest) {
   throw new Error('Helper missing after reload. Re-run the One-Time Setup helper block first.');
 }
+if (!FIRM_ID) {
+  throw new Error('MISSING INPUT: FIRM_ID. Fill One-Time Setup input bootstrap first.');
+}
 window.s10bTest.setFirm(FIRM_ID);
+```
+
+Required One-Time Setup input bootstrap pattern:
+
+```js
+window.testInputs = {
+  // Fill once, reuse everywhere
+  FIRM_ID: '<firm-id>',
+  ACCOUNT_ID: '<account-id>',
+  CONTEXT_ID: '<context-id>'
+};
 ```
 
 ### 5. Generate mode-specific test plan
@@ -188,6 +225,7 @@ Every test must include these fields in this order:
 6. `Console` (must start with preflight: helper-presence check + firm-context set/reset)
 7. `Expected PASS`
 8. `Mark FAIL if`
+9. `Inputs used` (keys from `Input Registry`, for traceability)
 
 ### 7. Build GO/NO-GO rule block
 
@@ -207,12 +245,13 @@ Add a fillable checklist table:
 Use this exact section order:
 
 1. `Execution Goal`
-2. `Required Fixtures`
-3. `Browser Plan (No Overlap)`
-4. `One-Time Setup`
-5. `Test Steps`
-6. `GO / NO-GO`
-7. `Result Sheet`
+2. `Input Registry`
+3. `Required Fixtures`
+4. `Browser Plan (No Overlap)`
+5. `One-Time Setup`
+6. `Test Steps`
+7. `GO / NO-GO`
+8. `Result Sheet`
 
 ## Invocation examples
 
