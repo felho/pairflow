@@ -44,6 +44,9 @@ FIRM_ID: extracted from `--firm-id` (optional)
 - Use deterministic test IDs (`SMK-*` in quick mode, `TC-*` in default mode).
 - Keep action steps imperative and short (`Open`, `Login`, `Run`, `Verify`).
 - Treat browser reload/navigation as volatile state: helper objects on `window` can disappear, so recovery steps must be explicit in the report.
+- Do not rely on volatile cross-test in-memory state (for example `window.<helper>.context.last`, ad-hoc globals, or values set in previous test blocks).
+- Every test `Console` block must be self-contained: dynamic values must come from `Input Registry` or be computed/refetched in the same block.
+- If a test includes reload/navigation, recompute dynamic runtime values after reload unless an explicit persistence contract is defined (`localStorage`/`sessionStorage` key + cleanup).
 - When generating a runbook for a concrete project, prefer that project's domain language, routes, selectors, and business terminology.
 - Use `EXAMPLE (project-specific)` labeling only for placeholder/reference snippets that are not yet adapted to the current project.
 
@@ -214,6 +217,21 @@ Recommended coverage:
 
 Project-specific overlays (for example billing lockout lifecycle) are encouraged when relevant to the current task.
 
+### 5.5 Cross-test state safety gate (mandatory)
+
+1. Assume each test runs independently unless explicitly declared otherwise.
+2. Default `Depends on previous test` must be `No`.
+3. If a test depends on previous output, require an explicit persistence contract:
+   - key name (`localStorage` or `sessionStorage`)
+   - write step
+   - read step
+   - cleanup step
+4. Reject volatile dependency patterns in generated console snippets:
+   - `window.*.context.last`
+   - `window.*last`
+   - comments/instructions like "reuse value from SMK-01"
+5. For reload/retry tests, recompute required dynamic values in the same block instead of referencing earlier in-memory state.
+
 ### 6. Enforce per-test execution format
 
 Every test must include these fields in this order:
@@ -226,6 +244,15 @@ Every test must include these fields in this order:
 7. `Expected PASS`
 8. `Mark FAIL if`
 9. `Inputs used` (keys from `Input Registry`, for traceability)
+10. `State Source` (`input_registry|computed_here|persistent_storage`)
+11. `Depends on previous test` (`No` by default; `Yes` only with explicit persistence contract)
+
+### 6.5 Generated-runbook sanity checks (mandatory before final output)
+
+1. Verify there is no volatile cross-test state usage in console blocks.
+2. Verify each test declares `State Source` and `Depends on previous test`.
+3. If any test has reload/navigation, verify its dynamic values are recomputed in-block or loaded via explicit persistence contract.
+4. If checks fail, regenerate/fix the affected tests before returning the runbook.
 
 ### 7. Build GO/NO-GO rule block
 
