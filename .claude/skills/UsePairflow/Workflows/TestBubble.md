@@ -180,13 +180,14 @@ Project-specific overlays (for example billing lockout lifecycle) are encouraged
 ### 6. Enforce per-test execution format
 
 Every test must include these fields in this order:
-1. `User`
-2. `Browser session`
-3. `Start URL`
-4. `Clicks`
-5. `Console` (must start with preflight: helper-presence check + firm-context set/reset)
-6. `Expected PASS`
-7. `Mark FAIL if`
+1. `Goal` (one short sentence: why this test exists and what risk it covers)
+2. `User`
+3. `Browser session`
+4. `Start URL`
+5. `Clicks`
+6. `Console` (must start with preflight: helper-presence check + firm-context set/reset)
+7. `Expected PASS`
+8. `Mark FAIL if`
 
 ### 7. Build GO/NO-GO rule block
 
