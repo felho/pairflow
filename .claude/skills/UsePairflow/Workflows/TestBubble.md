@@ -36,6 +36,7 @@ FIRM_ID: extracted from `--firm-id` (optional)
 - If a fixture is unknown or missing, mark it clearly as `MISSING FIXTURE` with skip rule.
 - Use deterministic test IDs (`SMK-*` in quick mode, `TC-*` in default mode).
 - Keep action steps imperative and short (`Open`, `Login`, `Run`, `Verify`).
+- Treat browser reload/navigation as volatile state: helper objects on `window` can disappear, so recovery steps must be explicit in the report.
 
 ## Workflow
 
@@ -76,7 +77,9 @@ Rules:
 Must include:
 1. app start command (if relevant),
 2. pages to open in each browser session,
-3. console helper script block to paste once per session.
+3. console helper script block to paste once per browser session and re-paste after every full page reload/navigation in that session.
+4. an explicit "refresh recovery" note: if helper is missing (`window.<helper>` undefined), re-run helper block before continuing tests.
+5. an explicit firm-context note: after reload, re-apply firm selector/context (`setFirm(...)` or equivalent) before API calls.
 
 For billing UI/search lockout style tasks, use this helper:
 
@@ -134,6 +137,16 @@ window.billingTest = {
 };
 ```
 
+When reports use a task-specific helper (for example `window.s10bTest`), require this preflight at the top of each test `Console` block:
+
+```js
+const FIRM_ID = '<firm-id>';
+if (!window.s10bTest) {
+  throw new Error('Helper missing after reload. Re-run the One-Time Setup helper block first.');
+}
+window.s10bTest.setFirm(FIRM_ID);
+```
+
 ### 5. Generate mode-specific test plan
 
 #### Quick mode (`--mode quick`)
@@ -170,7 +183,7 @@ Every test must include these fields in this order:
 2. `Browser session`
 3. `Start URL`
 4. `Clicks`
-5. `Console`
+5. `Console` (must start with preflight: helper-presence check + firm-context set/reset)
 6. `Expected PASS`
 7. `Mark FAIL if`
 
