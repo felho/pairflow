@@ -48,6 +48,8 @@ FIRM_ID: extracted from `--firm-id` (optional)
 - Every test `Console` block must be self-contained: dynamic values must come from `Input Registry` or be computed/refetched in the same block.
 - If a test includes reload/navigation, recompute dynamic runtime values after reload unless an explicit persistence contract is defined (`localStorage`/`sessionStorage` key + cleanup).
 - When generating a runbook for a concrete project, prefer that project's domain language, routes, selectors, and business terminology.
+- Write each test `Goal` in plain business language first (operator-friendly, stakeholder-readable), not internal engineering shorthand.
+- Avoid raw internal labels in `Goal` (for example `AG6`, `CS3`, `T11`, `fail-closed`, `permissive leak`) unless immediately translated to business impact wording.
 - Use `EXAMPLE (project-specific)` labeling only for placeholder/reference snippets that are not yet adapted to the current project.
 
 ## Workflow
@@ -235,7 +237,7 @@ Project-specific overlays (for example billing lockout lifecycle) are encouraged
 ### 6. Enforce per-test execution format
 
 Every test must include these fields in this order:
-1. `Goal` (one short sentence: why this test exists and what risk it covers)
+1. `Goal` (1-2 clear business-language sentences: why this test exists and what user/business risk it covers)
 2. `User`
 3. `Browser session`
 4. `Start URL`
@@ -246,6 +248,17 @@ Every test must include these fields in this order:
 9. `Inputs used` (keys from `Input Registry`, for traceability)
 10. `State Source` (`input_registry|computed_here|persistent_storage`)
 11. `Depends on previous test` (`No` by default; `Yes` only with explicit persistence contract)
+
+### 6.1 Goal wording policy (mandatory)
+
+1. Start from user/business outcome, not implementation detail.
+2. If technical traceability is needed, keep it separate from `Goal` in an optional line:
+   - `Technical reference: AG6` (or equivalent).
+3. Prefer concrete impact words over internal terms:
+   - say `wrong menu options appear for the user` instead of `permissive leak`.
+   - say `system remains safe when profile selection data is invalid` instead of `invalid preferred context fail-closed`.
+4. Keep `Goal` understandable for a non-engineer operator without extra context.
+5. Brevity is secondary to clarity: a compact short paragraph is acceptable when needed for comprehension.
 
 ### 6.5 Generated-runbook sanity checks (mandatory before final output)
 
