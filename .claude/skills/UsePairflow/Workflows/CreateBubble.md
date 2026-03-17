@@ -27,6 +27,7 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
 - Exactly one create input is expected: `TASK_FILE`, `TASK_TEXT`, or `IDEATION_MODE=true`.
 - `pairflow bubble create` requires explicit `--review-artifact-type <document|code>`.
 - `--ideation` creates a taskless bubble and requires explicit `pairflow bubble kickoff` later before the first implementer/reviewer handoff.
+- Ideation default is **round-0 hold** after create/start. Do not auto-kickoff unless the user explicitly asks to kickoff now.
 - Intent guardrail (critical):
   - If user intent is **plan/doc review or update** (e.g. "review this plan", "validate and update plan", "align task file"), default to inline `TASK_TEXT` that explicitly states:
     - docs-only scope
@@ -56,6 +57,7 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
 - If pre-flight fails: STOP and report exact blocker.
 - Guardrail: this workflow must not execute task work (no implementation/review/testing/file edits related to task content).
 - Post-start default mode is `bubble_autonomous` unless user explicitly requests `manual_assist`.
+- If the user later requests pre-kickoff manual preparation in the bubble worktree, handle that as a separate follow-up request (outside this create/start workflow), then kickoff with an inline summary of already-applied changes.
 
 ## Workflow
 
@@ -68,7 +70,7 @@ PRINT_ONLY: `true` if `--print` flag is present, default `false`
 
 - If `IDEATION_MODE=true`:
   - If `TASK_FILE` or `TASK_TEXT` is also provided, STOP and report that `--ideation` cannot be combined with `--task` or `--task-file`.
-  - Continue with taskless create path (kickoff required after start).
+  - Continue with taskless create path (kickoff required later for loop progression; round-0 hold is valid).
 - Else if TASK_FILE is provided:
   - Resolve to absolute path.
   - Verify file exists.
@@ -186,7 +188,10 @@ pairflow bubble status --id <BUBBLE_ID> --json
 ```
 
 - If state is still `CREATED` immediately after start, wait briefly and poll once more.
-- If state is `RUNNING` and this was an ideation create, report that `pairflow bubble kickoff` is now required before any `pass`/`converged`.
+- If state is `RUNNING` and this was an ideation create, report:
+  - round-0 hold is valid,
+  - kickoff is required before any `pass`/`converged`,
+  - kickoff should be deferred unless the user explicitly asks to start the loop now.
 
 ### 10. Hard stop after lifecycle actions
 
@@ -210,7 +215,7 @@ Review artifact type: <REVIEW_ARTIFACT_TYPE>
 Verified base HEAD: <COMMIT_SHA>
 Current state: <STATE>
 Active agent: <AGENT or none>
-Next lifecycle step: <normal loop | kickoff required for ideation bubble>
+Next lifecycle step: <normal loop | hold in round-0 | kickoff required for ideation bubble>
 
 Stopped after bubble start (no task execution in CreateBubble workflow).
 ```

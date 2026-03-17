@@ -59,6 +59,8 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 12. Decision separation: `--decide approve|rework` controls lifecycle action only (`bubble approve` / `bubble request-rework`) and is independent from meta-review source mode.
 13. Ideation lifecycle is explicit: if a bubble was created with `--ideation`, run `pairflow bubble kickoff` before any `pass`/`converged` loop command.
 14. If runtime is unhealthy (agent pane unresponsive, tmux/session mismatch, token/login refresh needed), prefer `pairflow bubble restart --id <id> [--repo <path>]` over manual tmux kill/start steps.
+15. `RUNNING round=0` ideation state is a valid hold state. Do not auto-kickoff. Exception: if the user asks for a loop action (`pass`/`converged`) while still in round-0 ideation, run kickoff first because loop actions require an active round.
+16. Pre-kickoff manual preparation in the bubble worktree is allowed when explicitly requested by the user. In this pattern, kickoff text should summarize already-applied work and define expected first handoff behavior.
 
 ## Execution Modes (Mandatory)
 
@@ -66,6 +68,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 - `bubble_autonomous` mode:
   - Allowed: Pairflow lifecycle/protocol actions (`bubble ...`, `pass`, `ask-human`, `converged`) and state diagnostics.
   - Forbidden: direct feature implementation via manual file edits/tests as the primary execution path.
+  - Exception: ideation pre-kickoff prep edits are allowed only when explicitly requested by the user; after kickoff, return to lifecycle/protocol-driven flow.
 - `manual_assist` mode is allowed only with explicit user opt-in.
 - Never silently switch from `bubble_autonomous` to `manual_assist`.
 - If intent is ambiguous between modes, ask exactly one explicit clarification question before editing files.
@@ -83,6 +86,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
 
 - `CREATED` -> `pairflow bubble start`
 - `RUNNING` with ideation pending (`round=0` and `[ideation].task_pending=true`) -> `pairflow bubble kickoff --id <id> (--task <text> | --task-file <path>)`
+- `RUNNING` with ideation pending and no kickoff request yet -> hold in round-0; report status and wait for explicit kickoff decision
 - `RUNNING` (active round, typically `round>=1`) -> no approve/rework yet; use normal loop commands (`pass`, `converged`) in agent panes
 - Runtime-health issue in non-final active states (for example stalled pane, refreshed agent login/session) -> `pairflow bubble restart --id <id> [--repo <path>]`
 - `WAITING_HUMAN` -> use `pairflow bubble reply` (NOT `bubble request-rework`)
@@ -115,6 +119,7 @@ This skill exists to avoid lifecycle mistakes (wrong command in wrong state, los
   - Provide exactly one of `--task`, `--task-file`, or `--ideation`.
   - `--ideation` cannot be combined with `--task` or `--task-file`.
   - If created with `--ideation`, run `bubble kickoff` before any `pass`/`converged`.
+  - Do not auto-kickoff immediately after create/start unless the user explicitly asks for kickoff now.
 - Bubble ID gate for create:
   - `pairflow bubble create --id <id>` accepts only `3-40` chars.
   - Pattern: start with lowercase letter, then lowercase letters, digits, `_` or `-`.
@@ -217,4 +222,16 @@ Use TestBubble workflow:
 - quick mode: critical smoke checks only (`--mode quick`)
 - default mode: full recommended manual suite (`--mode default`)
 - output must include fixtures, browser/session isolation, exact clicks, console commands, and GO/NO-GO rules
+```
+
+**Example 8: Preworked ideation kickoff**
+
+```
+User: "Create ideation bubble first; I'll decide kickoff later."
+-> create + start only, keep RUNNING round=0 hold
+
+Later user: "Apply these manual edits in bubble worktree, then kickoff."
+-> perform requested pre-kickoff edits
+-> kickoff with inline task summarizing completed edits
+-> first loop step can be explicit validation/pass-to-reviewer
 ```
