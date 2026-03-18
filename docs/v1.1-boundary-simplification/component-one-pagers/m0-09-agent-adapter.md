@@ -44,6 +44,9 @@ Scope: M0
 - `AGENT_RESTART_FAILED`
 - `AGENT_HEALTH_CHECK_FAILED`
 
+Kotelezo context:
+- `bubble_id`, `role`, `agent_name`, `session_id` (ha van).
+
 ## 9) Observability
 
 - Agent-level lifecycle eventek es reason code.

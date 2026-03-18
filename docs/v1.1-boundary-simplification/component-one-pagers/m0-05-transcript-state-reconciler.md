@@ -47,6 +47,10 @@ Scope: M0
 - `RECONCILE_STATE_WRITE_FAILED`
 - `RECONCILE_REJECTED`
 
+Kotelezo context:
+- `bubble_id`, `operation_id`, `reason`, `before_state_hash`, `reconciled_state_hash`, `state_diff_summary` (ha van).
+- Opcionis debug context: `before_state_ref`, `reconciled_state_ref` (teljes snapshot csak artifact refkent).
+
 ## 9) Observability
 
 - `reconcile_started`, `reconcile_applied`, `reconcile_rejected` event.

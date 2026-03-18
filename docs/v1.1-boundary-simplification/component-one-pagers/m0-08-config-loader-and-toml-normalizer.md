@@ -44,6 +44,9 @@ Scope: M0
 - `CONFIG_PRECEDENCE_INVALID`
 - `CONFIG_UNSAFE_MUTATION_REQUIRES_RESTART`
 
+Kotelezo context:
+- `config_source_path`, `field_name` (ha specifikus mezorol van szo), `precedence_level` (global/repo/bubble).
+
 ## 9) Observability
 
 - `config_loaded`, `config_override_applied`, `config_override_rejected` event.

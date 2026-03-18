@@ -40,6 +40,9 @@ Scope: M0
 - `METRICS_DISPATCH_FAILED`
 - `METRICS_EVENT_INVALID`
 
+Kotelezo context:
+- `bubble_id`, `event_type`, `dispatch_attempt` (retry sorszam, ha van).
+
 ## 9) Observability
 
 - Dispatcher sajat error/warn eventek.

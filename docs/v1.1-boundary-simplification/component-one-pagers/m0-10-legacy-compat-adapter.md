@@ -45,6 +45,9 @@ Scope: M0
 - `LEGACY_INPUT_UNSUPPORTED`
 - `LEGACY_ACTIVATION_MARKER_INCONSISTENT`
 
+Kotelezo context:
+- `bubble_id`, `input_format_version` (ha megallapithato), `normalization_step` (melyik lepes bukott).
+
 ## 9) Observability
 
 - Compat usage metric (`legacy_path_taken`) es reason code.
