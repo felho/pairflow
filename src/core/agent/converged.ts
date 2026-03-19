@@ -1,7 +1,6 @@
 import {
   type MetaReviewGateRoute
 } from "../bubble/metaReviewGate.js";
-import type { PairflowCommandPathAssessment } from "../runtime/pairflowCommand.js";
 import type {
   AgentName,
   BubbleStateSnapshot
@@ -16,7 +15,8 @@ import {
 } from "../../v11/shared/converged/convergedFlowInvocationBuilders.js";
 import { normalizeConvergedCommandError } from "../../v11/shared/converged/convergedCommandErrorNormalization.js";
 import { normalizeConvergedCommandInput } from "../../v11/shared/converged/convergedCommandInputNormalization.js";
-import { resolveConvergedRolloutBlockingReasonCodes } from "../../v11/shared/converged/convergedRolloutBlockingReasonResolver.js";
+import { resolveConvergedRolloutBlockingReasonCodes as resolveMetaReviewRolloutBlockingReasonCodes } from "../../v11/shared/converged/convergedRolloutBlockingReasonResolver.js";
+export { resolveMetaReviewRolloutBlockingReasonCodes };
 
 export interface EmitConvergedInput {
   summary: string;
@@ -55,14 +55,6 @@ export class ConvergedCommandError extends Error {
     super(message);
     this.name = "ConvergedCommandError";
   }
-}
-
-export function resolveMetaReviewRolloutBlockingReasonCodes(input: {
-  gateRoute: MetaReviewGateRoute;
-  metaReviewWarnings: Array<{ reason_code: string }>;
-  commandPathStatus: PairflowCommandPathAssessment;
-}): string[] {
-  return resolveConvergedRolloutBlockingReasonCodes(input);
 }
 
 export async function emitConvergedFromWorkspace(
