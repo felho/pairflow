@@ -1,24 +1,9 @@
-import type {
-  EmitAskHumanDependencies,
-  EmitAskHumanInput
-} from "./askHumanCommandContract.js";
-import type {
-  AskHumanCommandOrchestrationDependencies,
-  AskHumanCommandOrchestrationInput
-} from "./askHumanCommandOrchestrationContract.js";
 import { buildAskHumanCommandContext } from "./askHumanCommandContextBuilder.js";
 import { createAskHumanCommandOrchestrationDependencies } from "./askHumanFlowDependencyWiring.js";
-
-export interface BuildAskHumanCommandOrchestrationInvocationInput {
-  commandInput: EmitAskHumanInput;
-  runtimeDependencies: EmitAskHumanDependencies;
-  createError: (message: string) => Error;
-}
-
-export interface AskHumanCommandOrchestrationInvocation {
-  orchestrationInput: AskHumanCommandOrchestrationInput;
-  orchestrationDependencies: AskHumanCommandOrchestrationDependencies;
-}
+import type {
+  AskHumanCommandOrchestrationInvocation,
+  BuildAskHumanCommandOrchestrationInvocationInput
+} from "./askHumanCommandOrchestrationInvocationContract.js";
 
 export function buildAskHumanCommandOrchestrationInvocation(
   input: BuildAskHumanCommandOrchestrationInvocationInput

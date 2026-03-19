@@ -12,15 +12,23 @@ export interface BuildKickoffValidationStepInput {
   cwd?: string;
 }
 
+function buildKickoffValidationOptionalFields(
+  input: BuildKickoffValidationStepInput
+): Pick<PrepareKickoffValidationInput, "repoPath" | "task" | "taskFile" | "cwd"> {
+  return {
+    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
+    ...(input.task !== undefined ? { task: input.task } : {}),
+    ...(input.taskFile !== undefined ? { taskFile: input.taskFile } : {}),
+    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+  };
+}
+
 export function buildKickoffValidationStepInput(
   input: BuildKickoffValidationStepInput
 ): PrepareKickoffValidationInput {
   return {
     bubbleId: input.bubbleId,
-    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
-    ...(input.task !== undefined ? { task: input.task } : {}),
-    ...(input.taskFile !== undefined ? { taskFile: input.taskFile } : {}),
-    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+    ...buildKickoffValidationOptionalFields(input)
   };
 }
 
