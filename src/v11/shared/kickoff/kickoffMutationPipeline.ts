@@ -79,6 +79,12 @@ function buildKickoffMutationPipelineSuccessResult(): ExecuteKickoffMutationPipe
   };
 }
 
+function buildKickoffMutationPipelineRolledBackResult(): ExecuteKickoffMutationPipelineResult {
+  return {
+    kind: "mutation_failed_rolled_back"
+  };
+}
+
 function buildKickoffMutationExecutionInput(
   input: ExecuteKickoffMutationPipelineInput
 ): ExecuteKickoffMutationInput {
@@ -153,9 +159,7 @@ async function handleKickoffMutationFailure(input: {
     );
   }
 
-  return {
-    kind: "mutation_failed_rolled_back"
-  };
+  return buildKickoffMutationPipelineRolledBackResult();
 }
 
 async function executeKickoffMutationWithRollbackGuard(input: {
