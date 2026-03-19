@@ -69,14 +69,26 @@ function buildKickoffMutationTaskEnvelope(
   });
 }
 
+function readKickoffTranscriptBackup(
+  input: ExecuteKickoffMutationInput
+): Promise<string> {
+  return input.readFile(input.transcriptPath, "utf8");
+}
+
+async function appendKickoffMutationEnvelope(
+  input: ExecuteKickoffMutationInput
+): Promise<void> {
+  await input.appendEnvelope(
+    buildKickoffMutationEnvelopeAppendInput(input)
+  );
+}
+
 export async function executeKickoffMutation(
   input: ExecuteKickoffMutationInput
 ): Promise<string> {
   await writeKickoffMutationArtifacts(input);
-  const transcriptBackup = await input.readFile(input.transcriptPath, "utf8");
-  await input.appendEnvelope(
-    buildKickoffMutationEnvelopeAppendInput(input)
-  );
+  const transcriptBackup = await readKickoffTranscriptBackup(input);
+  await appendKickoffMutationEnvelope(input);
 
   return transcriptBackup;
 }
