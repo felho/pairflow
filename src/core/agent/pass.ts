@@ -26,8 +26,6 @@ import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import {
   deliveryTargetRoleMetadataKey,
   isPassIntent,
-  type FindingsClaimSource,
-  type FindingsClaimState,
   type PassIntent,
   type ProtocolEnvelope
 } from "../../types/protocol.js";
@@ -71,7 +69,6 @@ import {
 } from "../gates/docContractGates.js";
 import {
   claimParserDivergenceDiagnosticReasonCode,
-  resolveLegacySummaryFindingsClaimState,
   validateConvergencePolicy
 } from "../convergence/policy.js";
 import {
@@ -100,6 +97,10 @@ import {
   inferReviewerPassIntent,
   validateReviewerPassGate
 } from "../../v11/domain/pass/reviewerDecision.js";
+import {
+  resolveReviewerFindingsClaim,
+  resolveReviewerFindingsClaimParserMetadata
+} from "../../v11/domain/pass/reviewerFindingsClaim.js";
 
 export interface EmitPassInput {
   summary: string;
@@ -168,16 +169,10 @@ const docsOnlyRuntimeChecksSkippedMarkers = [
 const docsOnlyRuntimeLogRefPattern = /^\.pairflow\/evidence\/[^\s]+\.log$/u;
 const docsOnlyRuntimeLogRefPatternText =
   docsOnlyRuntimeLogRefPattern.source.replaceAll("\\/", "/");
-const findingsPayloadInvalidReasonCode = "FINDINGS_PAYLOAD_INVALID";
 
 interface NormalizedReviewerFindingsPayload {
   findings: Finding[];
   invalid: boolean;
-}
-
-interface ReviewerFindingsClaim {
-  state: FindingsClaimState;
-  source: FindingsClaimSource;
 }
 
 function formatRepeatCleanPolicyRejectedMessage(input: {
@@ -208,44 +203,6 @@ function hasRuntimeChecksSkippedClaim(summary: string): boolean {
 
 function collectRuntimeLogRefs(refs: string[]): string[] {
   return refs.filter((ref) => docsOnlyRuntimeLogRefPattern.test(ref));
-}
-
-function resolveReviewerFindingsClaim(input: {
-  noFindings: boolean;
-  findings: Finding[];
-}): ReviewerFindingsClaim {
-  if (input.noFindings) {
-    return {
-      state: "clean",
-      source: "payload_flags"
-    };
-  }
-  if (input.findings.length > 0) {
-    return {
-      state: "open_findings",
-      source: "payload_findings_count"
-    };
-  }
-  throw new PassCommandError(
-    `${findingsPayloadInvalidReasonCode}: Reviewer PASS requires explicit findings declaration: use --finding <P0|P1|P2|P3:Title[|ref1,ref2]> (repeatable) or --no-findings.`
-  );
-}
-
-function resolveReviewerFindingsClaimParserMetadata(input: {
-  summary: string;
-  claimState: FindingsClaimState;
-}): {
-  parserState: FindingsClaimState;
-  parserDivergence: boolean;
-} {
-  const parserState = resolveLegacySummaryFindingsClaimState(input.summary);
-  const parserDivergence =
-    (parserState === "open_findings" && input.claimState !== "open_findings") ||
-    (parserState !== "open_findings" && input.claimState === "open_findings");
-  return {
-    parserState,
-    parserDivergence
-  };
 }
 
 function assertNoDocsOnlySkipLogRefConflict(input: {
@@ -734,7 +691,8 @@ export async function emitPassFromWorkspace(
     handoff.senderRole === "reviewer"
       ? resolveReviewerFindingsClaim({
         noFindings,
-        findings
+        findings,
+        createError: (message) => new PassCommandError(message)
       })
       : undefined;
   const reviewerFindingsClaimParserMetadata =
