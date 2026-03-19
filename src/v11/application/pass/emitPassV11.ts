@@ -1,9 +1,11 @@
 import {
-  emitPassFromWorkspace,
-  type EmitPassDependencies,
-  type EmitPassInput,
-  type EmitPassResult
+  emitPassFromWorkspace
 } from "../../../core/agent/pass.js";
+import type {
+  EmitPassDependencies,
+  EmitPassInput,
+  EmitPassResult
+} from "./passCommandContract.js";
 export {
   asPassCommandError as asPassCommandErrorV11,
   inferPassIntent as inferPassIntentV11,
