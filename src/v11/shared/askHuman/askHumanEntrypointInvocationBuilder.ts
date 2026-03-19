@@ -1,4 +1,4 @@
-import type { AskHumanCommandOrchestrationInput } from "./askHumanCommandOrchestration.js";
+import type { AskHumanCommandOrchestrationInput } from "./askHumanCommandOrchestrationContract.js";
 
 export interface BuildAskHumanEntrypointInvocationInput {
   normalizedInput: {

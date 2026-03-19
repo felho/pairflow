@@ -1,4 +1,4 @@
-import type { AskHumanCommandOrchestrationInput } from "./askHumanCommandOrchestration.js";
+import type { AskHumanCommandOrchestrationInput } from "./askHumanCommandOrchestrationContract.js";
 import type { EmitAskHumanInput } from "./askHumanCommandContract.js";
 import { normalizeAskHumanCommandInput } from "./askHumanCommandInputNormalization.js";
 import { buildAskHumanEntrypointInvocation } from "./askHumanEntrypointInvocationBuilder.js";
