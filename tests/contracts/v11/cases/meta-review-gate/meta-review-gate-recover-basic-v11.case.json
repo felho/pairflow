@@ -1,8 +1,8 @@
 {
-  "id": "meta-review-gate-recover-basic",
+  "id": "meta-review-gate-recover-basic-v11",
   "command": "metaReviewGate",
-  "mode": "legacy",
-  "description": "Seed contract case for meta-review gate recover baseline.",
+  "mode": "v11",
+  "description": "Seed contract case for meta-review gate recover baseline in v11 mode.",
   "input": {
     "route": "recover",
     "refs": []
@@ -20,3 +20,4 @@
     "meta-review-gate"
   ]
 }
+

@@ -36,13 +36,13 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
     command: "metaReviewGate",
     state: "parity",
     owner: "runtime",
-    notes: "v11 shared/application boundary active; core remains source-of-truth pending full extraction."
+    notes: "Recover path parity runner wired; v11 shared/application boundary active while core remains source-of-truth."
   },
   {
     command: "gate",
     state: "parity",
     owner: "runtime",
-    notes: "W3 matrix compatibility alias tracking metaReviewGate parity boundary status."
+    notes: "W3 matrix compatibility alias tracking metaReviewGate recover parity coverage and boundary status."
   },
   {
     command: "reconcile",
