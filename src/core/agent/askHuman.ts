@@ -3,6 +3,7 @@ import type { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
 import { executeAskHumanExecution } from "../../v11/application/askHuman/askHumanExecution.js";
 import { finalizeAskHumanFlow } from "../../v11/application/askHuman/askHumanFinalization.js";
 import { normalizeAskHumanCommandError } from "../../v11/shared/askHuman/askHumanCommandErrorNormalization.js";
+import { buildAskHumanCommandErrorFactory } from "../../v11/shared/askHuman/askHumanCommandErrorFactory.js";
 import { normalizeAskHumanCommandInput } from "../../v11/shared/askHuman/askHumanCommandInputNormalization.js";
 import { orchestrateAskHumanCommand } from "../../v11/shared/askHuman/askHumanCommandOrchestration.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
@@ -35,6 +36,10 @@ export class AskHumanCommandError extends Error {
   }
 }
 
+const createAskHumanCommandError = buildAskHumanCommandErrorFactory({
+  createAskHumanCommandError: (message) => new AskHumanCommandError(message)
+});
+
 export async function emitAskHumanFromWorkspace(
   input: EmitAskHumanInput,
   dependencies: EmitAskHumanDependencies = {}
@@ -45,15 +50,13 @@ export async function emitAskHumanFromWorkspace(
     cwd: input.cwd,
     now: input.now
   });
-  const createError = (message: string): AskHumanCommandError =>
-    new AskHumanCommandError(message);
   return orchestrateAskHumanCommand(
     {
       question: normalizedInput.question,
       refs: normalizedInput.refs,
       cwd: normalizedInput.cwd,
       now: normalizedInput.now,
-      createError
+      createError: createAskHumanCommandError
     },
     {
       executeAskHumanExecution,
@@ -68,6 +71,6 @@ export function asAskHumanCommandError(error: unknown): never {
   throw normalizeAskHumanCommandError({
     error,
     isAskHumanCommandError: (candidate) => candidate instanceof AskHumanCommandError,
-    createAskHumanCommandError: (message) => new AskHumanCommandError(message)
+    createAskHumanCommandError
   });
 }
