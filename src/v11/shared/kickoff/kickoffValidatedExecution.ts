@@ -9,6 +9,10 @@ import { prepareKickoffPersistence } from "./kickoffPersistencePreparation.js";
 import { persistKickoffState } from "./kickoffStatePersistence.js";
 import { executeKickoffMutationPipeline } from "./kickoffMutationPipeline.js";
 import {
+  buildKickoffMutationPipelineInput,
+  buildKickoffStatePersistenceInput
+} from "./kickoffValidatedExecutionInputBuilders.js";
+import {
   buildKickoffFailureResult,
   buildKickoffSuccessResult,
   type KickoffBubbleResultShape
@@ -30,50 +34,6 @@ function buildKickoffPersistenceFailureResult(input: {
     stateBefore: input.validation.state,
     markersBefore: input.validation.markersBefore
   });
-}
-
-function buildKickoffStatePersistenceInput(input: {
-  validation: KickoffPreparedValidation;
-  nextState: ReturnType<typeof buildKickoffNextState>;
-  dependencies: ResolvedKickoffDependencies;
-}): Parameters<typeof persistKickoffState>[0] {
-  return {
-    statePath: input.validation.resolved.bubblePaths.statePath,
-    loadedFingerprint: input.validation.loadedState.fingerprint,
-    nextState: input.nextState,
-    readState: input.dependencies.readState,
-    writeState: input.dependencies.writeState
-  };
-}
-
-function buildKickoffMutationPipelineInput(input: {
-  validation: KickoffPreparedValidation;
-  persistence: Awaited<ReturnType<typeof prepareKickoffPersistence>>;
-  writtenStateFingerprint: string;
-  now: Date;
-  dependencies: ResolvedKickoffDependencies;
-}): Parameters<typeof executeKickoffMutationPipeline>[0] {
-  return {
-    persistenceFailureCode: IDEATION_KICKOFF_PERSISTENCE_FAILED,
-    bubbleId: input.validation.resolved.bubbleId,
-    implementer: input.validation.resolved.bubbleConfig.agents.implementer,
-    task: input.validation.task,
-    taskArtifactPath: input.validation.resolved.bubblePaths.taskArtifactPath,
-    bubbleTomlPath: input.validation.resolved.bubblePaths.bubbleTomlPath,
-    nextBubbleToml: input.persistence.nextBubbleToml,
-    previousBubbleToml: input.persistence.previousBubbleToml,
-    previousTaskArtifact: input.persistence.previousTaskArtifact,
-    transcriptPath: input.validation.resolved.bubblePaths.transcriptPath,
-    locksDir: input.validation.resolved.bubblePaths.locksDir,
-    now: input.now,
-    statePath: input.validation.resolved.bubblePaths.statePath,
-    previousState: input.validation.state,
-    writtenStateFingerprint: input.writtenStateFingerprint,
-    writeFile: input.dependencies.writeFileFn,
-    readFile: input.dependencies.readFileFn,
-    appendEnvelope: input.dependencies.appendEnvelope,
-    writeState: input.dependencies.writeState
-  };
 }
 
 function buildKickoffValidatedSuccessResult(input: {
@@ -149,6 +109,7 @@ async function executeKickoffMutationOrFailure(input: {
 }): Promise<ExecuteKickoffMutationOrFailureResult> {
   const mutationPipelineResult = await executeKickoffMutationPipeline(
     buildKickoffMutationPipelineInput({
+      persistenceFailureCode: IDEATION_KICKOFF_PERSISTENCE_FAILED,
       validation: input.validation,
       persistence: input.persistence,
       writtenStateFingerprint: input.writtenStateFingerprint,
