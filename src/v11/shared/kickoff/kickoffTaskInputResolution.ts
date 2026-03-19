@@ -132,34 +132,55 @@ type KickoffTaskInputMode =
       task: string;
     };
 
+function resolveKickoffTaskInputPresence(input: {
+  task?: string;
+  taskFile?: string;
+}): {
+  taskText: string | null;
+  taskFile: string | null;
+} {
+  return {
+    taskText: isNonEmptyString(input.task) ? input.task : null,
+    taskFile: isNonEmptyString(input.taskFile) ? input.taskFile : null
+  };
+}
+
+function buildKickoffInlineInputMode(taskText: string | null): KickoffTaskInputMode {
+  if (taskText === null) {
+    // reason_code=KICKOFF_TASK_INPUT_MISSING context=kickoff_task_input_validation
+    throw new KickoffTaskInputValidationError("Provide task text or task file path.");
+  }
+
+  return {
+    kind: "inline",
+    task: taskText
+  };
+}
+
 function resolveKickoffTaskInputMode(input: {
   task?: string;
   taskFile?: string;
 }): KickoffTaskInputMode {
-  const hasTaskText = isNonEmptyString(input.task);
-  const hasTaskFile = isNonEmptyString(input.taskFile);
-  if (hasTaskText && hasTaskFile) {
+  const { taskText, taskFile } = resolveKickoffTaskInputPresence(input);
+  if (taskText !== null && taskFile !== null) {
     // reason_code=KICKOFF_TASK_INPUT_CONFLICT context=kickoff_task_input_validation
     throw new KickoffTaskInputValidationError(
       "Provide either task text or task file path, not both."
     );
   }
-  if (!hasTaskText && !hasTaskFile) {
+  if (taskText === null && taskFile === null) {
     // reason_code=KICKOFF_TASK_INPUT_MISSING context=kickoff_task_input_validation
     throw new KickoffTaskInputValidationError("Provide task text or task file path.");
   }
 
-  if (hasTaskFile) {
+  if (taskFile !== null) {
     return {
       kind: "file",
-      taskFile: input.taskFile as string
+      taskFile
     };
   }
 
-  return {
-    kind: "inline",
-    task: input.task as string
-  };
+  return buildKickoffInlineInputMode(taskText);
 }
 
 async function resolveKickoffTaskFromInputMode(input: {

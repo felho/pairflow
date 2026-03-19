@@ -1,8 +1,7 @@
-export interface BuildAskHumanCommandErrorFactoryInput {
-  createAskHumanCommandError: (message: string) => Error;
-}
-
-export type AskHumanCommandErrorFactory = (message: string) => Error;
+import type {
+  AskHumanCommandErrorFactory,
+  BuildAskHumanCommandErrorFactoryInput
+} from "./askHumanCommandErrorFactoryContract.js";
 
 export function buildAskHumanCommandErrorFactory(
   input: BuildAskHumanCommandErrorFactoryInput
