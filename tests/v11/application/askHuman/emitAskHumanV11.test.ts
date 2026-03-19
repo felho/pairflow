@@ -9,6 +9,7 @@ import {
   AskHumanCommandErrorV11,
   emitAskHumanFromWorkspaceV11
 } from "../../../../src/v11/application/askHuman/emitAskHumanV11.js";
+import { WorkspaceResolutionError } from "../../../../src/core/bubble/workspaceResolution.js";
 import { createBubble } from "../../../../src/core/bubble/createBubble.js";
 import { bootstrapWorktreeWorkspace } from "../../../../src/core/workspace/worktreeManager.js";
 import { readStateSnapshot } from "../../../../src/core/state/stateStore.js";
@@ -144,6 +145,14 @@ describe("emitAskHumanFromWorkspaceV11", () => {
 });
 
 describe("asAskHumanCommandErrorV11", () => {
+  it("maps WorkspaceResolutionError to AskHumanCommandErrorV11", () => {
+    expect(() =>
+      asAskHumanCommandErrorV11(
+        new WorkspaceResolutionError("workspace lookup failed")
+      )
+    ).toThrowError(AskHumanCommandErrorV11);
+  });
+
   it("maps generic Error to AskHumanCommandErrorV11", () => {
     expect(() => asAskHumanCommandErrorV11(new Error("unexpected"))).toThrowError(
       AskHumanCommandErrorV11
