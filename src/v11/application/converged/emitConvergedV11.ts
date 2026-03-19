@@ -5,6 +5,9 @@ export {
 export {
   ConvergedCommandError as ConvergedCommandErrorV11
 } from "../../shared/converged/convergedCommandError.js";
+export {
+  resolveConvergedRolloutBlockingReasonCodes as resolveMetaReviewRolloutBlockingReasonCodesV11
+} from "../../shared/converged/convergedRolloutBlockingReasonResolver.js";
 export type {
   EmitConvergedDependencies as EmitConvergedV11Dependencies,
   EmitConvergedInput as EmitConvergedV11Input,
