@@ -13,41 +13,15 @@ import {
   buildKickoffStatePersistenceInput
 } from "./kickoffValidatedExecutionInputBuilders.js";
 import {
-  buildKickoffFailureResult,
-  buildKickoffSuccessResult,
+  buildKickoffPersistenceFailureResult,
+  buildKickoffValidatedSuccessResult,
   type KickoffBubbleResultShape
-} from "./kickoffResultBuilders.js";
+} from "./kickoffValidatedExecutionResultBuilders.js";
 
 export interface ExecuteKickoffValidatedFlowInput {
   validation: KickoffPreparedValidation;
   now: Date;
   nowIso: string;
-}
-
-function buildKickoffPersistenceFailureResult(input: {
-  validation: KickoffPreparedValidation;
-  reasonCode: string;
-}): KickoffBubbleResultShape {
-  return buildKickoffFailureResult({
-    bubbleId: input.validation.resolved.bubbleId,
-    reasonCode: input.reasonCode,
-    stateBefore: input.validation.state,
-    markersBefore: input.validation.markersBefore
-  });
-}
-
-function buildKickoffValidatedSuccessResult(input: {
-  validation: KickoffPreparedValidation;
-  writtenState: {
-    state: KickoffPreparedValidation["state"];
-  };
-}): KickoffBubbleResultShape {
-  return buildKickoffSuccessResult({
-    bubbleId: input.validation.resolved.bubbleId,
-    markersBefore: input.validation.markersBefore,
-    stateBefore: input.validation.state,
-    stateAfter: input.writtenState.state
-  });
 }
 
 type PersistKickoffNextStateResult =
