@@ -87,11 +87,10 @@ import { updateReviewerDocGateArtifact } from "../../v11/application/pass/review
 import { raisePostAppendReviewVerificationWriteFailed } from "../../v11/domain/pass/postAppendReviewVerificationWriteFailure.js";
 import { raisePostAppendStateWriteFailed } from "../../v11/domain/pass/postAppendStateWriteFailure.js";
 import {
-  buildRepeatCleanLifecycleMetadata,
   buildRepeatCleanPassPayloadMetadata,
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
 } from "../../v11/domain/pass/repeatCleanMetadata.js";
-import { buildFindingCounts } from "../../v11/domain/pass/findingCounts.js";
+import { buildPassLifecycleMetricMetadata } from "../../v11/domain/pass/lifecycleMetricMetadata.js";
 
 export interface EmitPassInput {
   summary: string;
@@ -421,46 +420,35 @@ export async function emitPassFromWorkspace(
       eventType: "bubble_passed",
       round: handoff.envelopeRound,
       actorRole: handoff.senderRole,
-      metadata: {
-        pass_intent: intent,
-        inferred_intent: inferredIntent,
+      metadata: buildPassLifecycleMetricMetadata({
+        passIntent: intent,
+        inferredIntent,
         sender: handoff.senderAgent,
         recipient: "human",
-        recipient_role: "human",
-        refs_count: refs.length,
-        has_findings: hasFindings,
-        no_findings: noFindings,
+        recipientRole: "human",
+        refsCount: refs.length,
+        hasFindings,
+        noFindings,
         ...(reviewerFindingsClaim !== undefined
-          ? {
-              findings_claim_state: reviewerFindingsClaim.state,
-              findings_claim_source: reviewerFindingsClaim.source
-            }
+          ? { reviewerFindingsClaim }
           : {}),
         ...(reviewerFindingsClaimParserMetadata !== undefined
-          ? {
-              findings_claim_parser_state:
-                reviewerFindingsClaimParserMetadata.parserState,
-              findings_claim_parser_divergence:
-                reviewerFindingsClaimParserMetadata.parserDivergence
-            }
+          ? { reviewerFindingsClaimParserMetadata }
           : {}),
-        ...buildRepeatCleanLifecycleMetadata({
-          transitionDecision: "auto_converge",
-          reasonCode: repeatCleanTrigger.reasonCode,
-          reasonDetail: repeatCleanTrigger.reasonDetail,
-          trigger: repeatCleanTrigger.trigger,
-          mostRecentPreviousReviewerCleanPassEnvelope:
-            repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope
-        }),
-        ...buildFindingCounts(autoConvergeFindings),
+        transitionDecision: "auto_converge",
+        repeatCleanReasonCode: repeatCleanTrigger.reasonCode,
+        repeatCleanReasonDetail: repeatCleanTrigger.reasonDetail,
+        repeatCleanTrigger: repeatCleanTrigger.trigger,
+        mostRecentPreviousReviewerCleanPassEnvelope:
+          repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope,
+        findings: autoConvergeFindings,
         ...(autoConvergeDocGateArtifactWriteFailureReason !== undefined
           ? {
-              doc_gate_artifact_write_failed: true,
-              doc_gate_artifact_write_failure_reason:
+              docGateArtifactWriteFailureReason:
                 autoConvergeDocGateArtifactWriteFailureReason
             }
           : {})
-      },
+      }),
       now
     });
 
@@ -686,58 +674,33 @@ export async function emitPassFromWorkspace(
     eventType: "bubble_passed",
     round: handoff.envelopeRound,
     actorRole: handoff.senderRole,
-    metadata: {
-      pass_intent: intent,
-      inferred_intent: inferredIntent,
+    metadata: buildPassLifecycleMetricMetadata({
+      passIntent: intent,
+      inferredIntent,
       sender: handoff.senderAgent,
       recipient: handoff.recipientAgent,
-      recipient_role: handoff.recipientRole,
-      refs_count: refs.length,
-      has_findings: hasFindings,
-      no_findings: noFindings,
+      recipientRole: handoff.recipientRole,
+      refsCount: refs.length,
+      hasFindings,
+      noFindings,
       ...(reviewerFindingsClaim !== undefined
-        ? {
-            findings_claim_state: reviewerFindingsClaim.state,
-            findings_claim_source: reviewerFindingsClaim.source
-          }
+        ? { reviewerFindingsClaim }
         : {}),
       ...(reviewerFindingsClaimParserMetadata !== undefined
-        ? {
-            findings_claim_parser_state:
-              reviewerFindingsClaimParserMetadata.parserState,
-            findings_claim_parser_divergence:
-              reviewerFindingsClaimParserMetadata.parserDivergence
-          }
+        ? { reviewerFindingsClaimParserMetadata }
         : {}),
-      ...buildRepeatCleanLifecycleMetadata({
-        transitionDecision: "normal_pass",
-        reasonCode: repeatCleanTrigger.reasonCode,
-        reasonDetail: repeatCleanTrigger.reasonDetail,
-        trigger: repeatCleanTrigger.trigger,
-        mostRecentPreviousReviewerCleanPassEnvelope:
-          repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope
-      }),
-      ...(reviewerTestDirective !== undefined
-        ? {
-            reviewer_test_evidence_decision: reviewerTestDirective.skip_full_rerun
-              ? "skip_full_rerun"
-              : "run_checks",
-            reviewer_test_evidence_reason_code: reviewerTestDirective.reason_code,
-            reviewer_test_evidence_verification_status:
-              reviewerTestDirective.verification_status
-          }
-        : {}),
-      ...buildFindingCounts(
-        handoff.senderRole === "reviewer" ? findingsForPayload : findings
-      ),
+      transitionDecision: "normal_pass",
+      repeatCleanReasonCode: repeatCleanTrigger.reasonCode,
+      repeatCleanReasonDetail: repeatCleanTrigger.reasonDetail,
+      repeatCleanTrigger: repeatCleanTrigger.trigger,
+      mostRecentPreviousReviewerCleanPassEnvelope:
+        repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope,
+      ...(reviewerTestDirective !== undefined ? { reviewerTestDirective } : {}),
+      findings: handoff.senderRole === "reviewer" ? findingsForPayload : findings,
       ...(docGateArtifactWriteFailureReason !== undefined
-        ? {
-            doc_gate_artifact_write_failed: true,
-            doc_gate_artifact_write_failure_reason:
-              docGateArtifactWriteFailureReason
-          }
+        ? { docGateArtifactWriteFailureReason }
         : {})
-      },
+    }),
     now
   });
 

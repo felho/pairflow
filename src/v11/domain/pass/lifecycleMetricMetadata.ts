@@ -1,0 +1,96 @@
+import type {
+  RepeatCleanAutoconvergeReasonCode,
+  RepeatCleanAutoconvergeReasonDetail
+} from "../../../core/convergence/repeatCleanAutoconverge.js";
+import type { ReviewerTestExecutionDirective } from "../../../core/reviewer/testEvidence.js";
+import type { Finding } from "../../../types/findings.js";
+import type { PassIntent } from "../../../types/protocol.js";
+import type { AgentName } from "../../../types/bubble.js";
+import { buildFindingCounts } from "./findingCounts.js";
+import { buildRepeatCleanLifecycleMetadata } from "./repeatCleanMetadata.js";
+
+export interface ReviewerFindingsClaimMetricMetadata {
+  state: string;
+  source: string;
+}
+
+export interface ReviewerFindingsClaimParserMetricMetadata {
+  parserState: string;
+  parserDivergence: boolean;
+}
+
+export interface BuildPassLifecycleMetricMetadataInput {
+  passIntent: PassIntent;
+  inferredIntent: boolean;
+  sender: AgentName;
+  recipient: AgentName | "human";
+  recipientRole: "implementer" | "reviewer" | "human";
+  refsCount: number;
+  hasFindings: boolean;
+  noFindings: boolean;
+  reviewerFindingsClaim?: ReviewerFindingsClaimMetricMetadata;
+  reviewerFindingsClaimParserMetadata?: ReviewerFindingsClaimParserMetricMetadata;
+  transitionDecision: "normal_pass" | "auto_converge";
+  repeatCleanReasonCode: RepeatCleanAutoconvergeReasonCode;
+  repeatCleanReasonDetail: RepeatCleanAutoconvergeReasonDetail;
+  repeatCleanTrigger: boolean;
+  mostRecentPreviousReviewerCleanPassEnvelope: boolean;
+  findings: Finding[];
+  reviewerTestDirective?: ReviewerTestExecutionDirective;
+  docGateArtifactWriteFailureReason?: string;
+}
+
+export function buildPassLifecycleMetricMetadata(
+  input: BuildPassLifecycleMetricMetadataInput
+): Record<string, unknown> {
+  return {
+    pass_intent: input.passIntent,
+    inferred_intent: input.inferredIntent,
+    sender: input.sender,
+    recipient: input.recipient,
+    recipient_role: input.recipientRole,
+    refs_count: input.refsCount,
+    has_findings: input.hasFindings,
+    no_findings: input.noFindings,
+    ...(input.reviewerFindingsClaim !== undefined
+      ? {
+          findings_claim_state: input.reviewerFindingsClaim.state,
+          findings_claim_source: input.reviewerFindingsClaim.source
+        }
+      : {}),
+    ...(input.reviewerFindingsClaimParserMetadata !== undefined
+      ? {
+          findings_claim_parser_state:
+            input.reviewerFindingsClaimParserMetadata.parserState,
+          findings_claim_parser_divergence:
+            input.reviewerFindingsClaimParserMetadata.parserDivergence
+        }
+      : {}),
+    ...buildRepeatCleanLifecycleMetadata({
+      transitionDecision: input.transitionDecision,
+      reasonCode: input.repeatCleanReasonCode,
+      reasonDetail: input.repeatCleanReasonDetail,
+      trigger: input.repeatCleanTrigger,
+      mostRecentPreviousReviewerCleanPassEnvelope:
+        input.mostRecentPreviousReviewerCleanPassEnvelope
+    }),
+    ...(input.reviewerTestDirective !== undefined
+      ? {
+          reviewer_test_evidence_decision: input.reviewerTestDirective.skip_full_rerun
+            ? "skip_full_rerun"
+            : "run_checks",
+          reviewer_test_evidence_reason_code: input.reviewerTestDirective.reason_code,
+          reviewer_test_evidence_verification_status:
+            input.reviewerTestDirective.verification_status
+        }
+      : {}),
+    ...buildFindingCounts(input.findings),
+    ...(input.docGateArtifactWriteFailureReason !== undefined
+      ? {
+          doc_gate_artifact_write_failed: true,
+          doc_gate_artifact_write_failure_reason:
+            input.docGateArtifactWriteFailureReason
+        }
+      : {})
+  };
+}
