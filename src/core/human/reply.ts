@@ -3,14 +3,18 @@ import { join } from "node:path";
 import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
 import { applyStateTransition } from "../state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
-import { BubbleLookupError, resolveBubbleById } from "../bubble/bubbleLookup.js";
+import { resolveBubbleById } from "../bubble/bubbleLookup.js";
 import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef
 } from "../runtime/tmuxDelivery.js";
 import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
-import { normalizeReplyCommandError } from "../../v11/shared/reply/replyCommandErrorNormalization.js";
+import {
+  createHumanReplyCommandError,
+  HumanReplyCommandError,
+  throwAsHumanReplyCommandError
+} from "../../v11/shared/reply/replyCommandError.js";
 import { normalizeReplyCommandInput } from "../../v11/shared/reply/replyCommandInputNormalization.js";
 import type {
   EmitHumanReplyDependencies,
@@ -26,13 +30,7 @@ export type {
   EmitHumanReplyInput,
   EmitHumanReplyResult
 };
-
-export class HumanReplyCommandError extends Error {
-  public constructor(message: string) {
-    super(message);
-    this.name = "HumanReplyCommandError";
-  }
-}
+export { HumanReplyCommandError };
 
 export async function emitHumanReply(
   input: EmitHumanReplyInput,
@@ -42,7 +40,7 @@ export async function emitHumanReply(
     message: input.message,
     refs: input.refs,
     now: input.now,
-    createError: (inputMessage) => new HumanReplyCommandError(inputMessage)
+    createError: createHumanReplyCommandError
   });
   const now = normalizedInput.now;
   const nowIso = normalizedInput.nowIso;
@@ -166,10 +164,5 @@ export async function emitHumanReply(
 }
 
 export function asHumanReplyCommandError(error: unknown): never {
-  throw normalizeReplyCommandError({
-    error,
-    isReplyCommandError: (candidate) => candidate instanceof HumanReplyCommandError,
-    isBubbleLookupError: (candidate) => candidate instanceof BubbleLookupError,
-    createReplyCommandError: (message) => new HumanReplyCommandError(message)
-  });
+  return throwAsHumanReplyCommandError(error);
 }

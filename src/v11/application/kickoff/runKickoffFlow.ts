@@ -1,13 +1,10 @@
 import {
   IDEATION_KICKOFF_PERSISTENCE_FAILED,
-  IDEATION_KICKOFF_STATE_CONFLICT,
-  IDEATION_KICKOFF_TASK_INVALID
+  IDEATION_KICKOFF_STATE_CONFLICT
 } from "../../../core/bubble/ideation.js";
 import type { ResolvedKickoffDependencies } from "../../shared/kickoff/kickoffDependencyResolution.js";
-import { prepareKickoffEligibility } from "../../shared/kickoff/kickoffEligibilityPreparation.js";
 import { buildKickoffNextState } from "../../shared/kickoff/kickoffStateTransition.js";
 import { prepareKickoffPersistence } from "../../shared/kickoff/kickoffPersistencePreparation.js";
-import { resolveKickoffTask } from "../../shared/kickoff/kickoffTaskResolution.js";
 import { executeKickoffMutationPipeline } from "../../shared/kickoff/kickoffMutationPipeline.js";
 import { persistKickoffState } from "../../shared/kickoff/kickoffStatePersistence.js";
 import {
@@ -15,6 +12,7 @@ import {
   buildKickoffSuccessResult,
   type KickoffBubbleResultShape
 } from "../../shared/kickoff/kickoffResultBuilders.js";
+import { prepareKickoffValidation } from "../../shared/kickoff/kickoffValidationPreparation.js";
 
 export interface RunKickoffFlowInput {
   bubbleId: string;
@@ -32,41 +30,24 @@ export async function runKickoffFlow(
   input: RunKickoffFlowInput,
   dependencies: ResolvedKickoffDependencies
 ): Promise<RunKickoffFlowResult> {
-  const resolved = await dependencies.resolveBubble({
+  const validation = await prepareKickoffValidation({
     bubbleId: input.bubbleId,
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
-    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
-  });
-  const loadedState = await dependencies.readState(resolved.bubblePaths.statePath);
-  const state = loadedState.state;
-  const preparedEligibility = prepareKickoffEligibility({
-    bubbleConfig: resolved.bubbleConfig,
-    state
-  });
-  const { markersBefore, eligibilityFailureReason } = preparedEligibility;
-  if (eligibilityFailureReason !== null) {
-    return buildKickoffFailureResult({
-      bubbleId: resolved.bubbleId,
-      reasonCode: eligibilityFailureReason,
-      stateBefore: state,
-      markersBefore
-    });
-  }
-
-  const taskResolution = await resolveKickoffTask({
     ...(input.task !== undefined ? { task: input.task } : {}),
     ...(input.taskFile !== undefined ? { taskFile: input.taskFile } : {}),
-    cwd: input.cwd ?? process.cwd()
-  });
-  if (taskResolution.kind === "invalid") {
-    return buildKickoffFailureResult({
-      bubbleId: resolved.bubbleId,
-      reasonCode: IDEATION_KICKOFF_TASK_INVALID,
-      stateBefore: state,
-      markersBefore
-    });
+    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+  }, dependencies);
+  if (validation.kind === "failure") {
+    return validation.result;
   }
-  const task = taskResolution.task;
+
+  const {
+    resolved,
+    loadedState,
+    state,
+    markersBefore,
+    task
+  } = validation;
 
   const nextState = buildKickoffNextState({
     state,

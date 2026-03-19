@@ -11,7 +11,6 @@ import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef
 } from "../runtime/tmuxDelivery.js";
-import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
 import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import { queueDeferredReworkIntent } from "./reworkIntent.js";
@@ -33,6 +32,16 @@ import type {
   EmitRequestReworkInput,
   EmitRequestReworkResult
 } from "../../v11/application/approval/approvalCommandContract.js";
+import {
+  ApprovalCommandError,
+  createApprovalCommandError,
+  isApprovalCommandError
+} from "../../v11/shared/approval/approvalCommandError.js";
+import { normalizeApprovalCommandError } from "../../v11/shared/approval/approvalCommandErrorNormalization.js";
+import {
+  normalizeApprovalDecisionInput,
+  normalizeRequestReworkInput
+} from "../../v11/shared/approval/approvalCommandInputNormalization.js";
 export type {
   EmitApprovalDecisionDependencies,
   EmitApprovalDecisionInput,
@@ -43,13 +52,7 @@ export type {
   EmitRequestReworkQueuedResult,
   EmitRequestReworkResult
 } from "../../v11/application/approval/approvalCommandContract.js";
-
-export class ApprovalCommandError extends Error {
-  public constructor(message: string) {
-    super(message);
-    this.name = "ApprovalCommandError";
-  }
-}
+export { ApprovalCommandError } from "../../v11/shared/approval/approvalCommandError.js";
 
 const canonicalHumanApprovalState = "READY_FOR_HUMAN_APPROVAL" as const;
 const legacyHumanApprovalState = "READY_FOR_APPROVAL" as const;
@@ -272,42 +275,26 @@ async function readApprovalTranscriptContext(
   }
 }
 
-function validateAndNormalizeOverrideReason(
-  reason: string | undefined
-): string | undefined {
-  if (reason === undefined) {
-    return undefined;
-  }
-  const trimmed = reason.trim();
-  if (trimmed.length === 0) {
-    throw new ApprovalCommandError(
-      `${approvalOverrideReasonRequiredReasonCode}: --override-reason must be non-empty after trimming whitespace.`
-    );
-  }
-  return trimmed;
-}
-
 export async function emitApprovalDecision(
   input: EmitApprovalDecisionInput,
   dependencies: EmitApprovalDecisionDependencies = {}
 ): Promise<EmitApprovalDecisionResult> {
-  const now = input.now ?? new Date();
+  const normalizedInput = normalizeApprovalDecisionInput({
+    ...input,
+    createApprovalCommandError
+  });
+  const now = normalizedInput.now;
   const nowIso = now.toISOString();
-  const refs = normalizeStringList(input.refs ?? []);
-  const overrideReason = validateAndNormalizeOverrideReason(input.overrideReason);
-  const message =
-    input.message === undefined
-      ? undefined
-      : requireNonEmptyString(
-          input.message,
-          "Decision message",
-          (value) => new ApprovalCommandError(value)
-        );
+  const refs = normalizedInput.refs;
+  const overrideReason = normalizedInput.overrideReason;
+  const message = normalizedInput.message;
 
   const resolved = await resolveBubbleById({
-    bubbleId: input.bubbleId,
-    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
-    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+    bubbleId: normalizedInput.bubbleId,
+    ...(normalizedInput.repoPath !== undefined
+      ? { repoPath: normalizedInput.repoPath }
+      : {}),
+    ...(normalizedInput.cwd !== undefined ? { cwd: normalizedInput.cwd } : {})
   });
   const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
     bubbleId: resolved.bubbleId,
@@ -334,12 +321,12 @@ export async function emitApprovalDecision(
 
   const lockPath = join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`);
   const envelopePayload: ProtocolEnvelope["payload"] = {
-    decision: input.decision
+    decision: normalizedInput.decision
   };
   const envelopeMetadata: Record<string, unknown> = {
     [deliveryTargetRoleMetadataKey]: "status"
   };
-  if (input.decision === "approve") {
+  if (normalizedInput.decision === "approve") {
     const approvalTranscriptContext = await readApprovalTranscriptContext(
       resolved.bubblePaths.transcriptPath,
       state.round
@@ -359,7 +346,7 @@ export async function emitApprovalDecision(
     const overrideRequired =
       recommendationAtDecision !== "approve" || parityInconsistencyAtDecision;
     if (overrideRequired) {
-      if (input.overrideNonApprove !== true) {
+      if (normalizedInput.overrideNonApprove !== true) {
         throw new ApprovalCommandError(
           parityInconsistencyAtDecision
             ? `${approvalParityOverrideRequiredReasonCode}: approval requires --override-non-approve when findings parity metadata is inconsistent.`
@@ -402,7 +389,7 @@ export async function emitApprovalDecision(
 
   const nextState = resolveNextState(
     state,
-    input.decision,
+    normalizedInput.decision,
     nowIso,
     resolved.bubbleConfig.agents.implementer,
     resolved.bubbleConfig.agents.reviewer
@@ -436,7 +423,7 @@ export async function emitApprovalDecision(
       envelope: appended.envelope
     })
   });
-  if (input.decision === "revise") {
+  if (normalizedInput.decision === "revise") {
     const decisionMessageRef = resolveDeliveryMessageRef({
       bubbleId: resolved.bubbleId,
       sessionsPath: resolved.bubblePaths.sessionsPath,
@@ -473,13 +460,13 @@ export async function emitApprovalDecision(
     bubbleId: resolved.bubbleId,
     bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
     eventType:
-      input.decision === "approve"
+      normalizedInput.decision === "approve"
         ? "bubble_approved"
         : "bubble_rework_requested",
     round: state.round,
     actorRole: "human",
     metadata: {
-      decision: input.decision,
+      decision: normalizedInput.decision,
       refs_count: refs.length,
       has_message: message !== undefined,
       message_length:
@@ -516,18 +503,22 @@ export async function emitRequestRework(
   input: EmitRequestReworkInput,
   dependencies: EmitApprovalDecisionDependencies = {}
 ): Promise<EmitRequestReworkResult> {
-  const message = requireNonEmptyString(
-    input.message,
-    "Rework request message",
-    (value) => new ApprovalCommandError(value)
-  );
-  const now = input.now ?? new Date();
-  const refs = normalizeStringList(input.refs ?? []);
+  const normalizedInput = normalizeRequestReworkInput({
+    ...input,
+    createApprovalCommandError
+  });
+  const message = normalizedInput.message;
+  const now = normalizedInput.now;
+  const refs = normalizedInput.refs;
 
   const resolved = await resolveBubbleById({
-    bubbleId: input.bubbleId,
-    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
-    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+    bubbleId: normalizedInput.bubbleId,
+    ...(normalizedInput.repoPath !== undefined
+      ? { repoPath: normalizedInput.repoPath }
+      : {}),
+    ...(normalizedInput.cwd !== undefined
+      ? { cwd: normalizedInput.cwd }
+      : {})
   });
   const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
   const state = loadedState.state;
@@ -535,12 +526,12 @@ export async function emitRequestRework(
   if (isHumanApprovalState(state.state)) {
     const immediate = await emitApprovalDecision(
       {
-        bubbleId: input.bubbleId,
+        bubbleId: normalizedInput.bubbleId,
         decision: "revise",
         message,
         refs,
-        repoPath: input.repoPath,
-        cwd: input.cwd,
+        repoPath: normalizedInput.repoPath,
+        cwd: normalizedInput.cwd,
         now
       },
       dependencies
@@ -636,17 +627,10 @@ export async function emitRequestRework(
 }
 
 export function asApprovalCommandError(error: unknown): never {
-  if (error instanceof ApprovalCommandError) {
-    throw error;
-  }
-
-  if (error instanceof BubbleLookupError) {
-    throw new ApprovalCommandError(error.message);
-  }
-
-  if (error instanceof Error) {
-    throw new ApprovalCommandError(error.message);
-  }
-
-  throw error;
+  throw normalizeApprovalCommandError({
+    error,
+    isApprovalCommandError,
+    createApprovalCommandError,
+    isBubbleLookupError: (candidate) => candidate instanceof BubbleLookupError
+  });
 }
