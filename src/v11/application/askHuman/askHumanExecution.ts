@@ -1,11 +1,12 @@
 import { join } from "node:path";
 
 import {
-  appendProtocolEnvelope,
+  type appendProtocolEnvelope,
   type AppendProtocolEnvelopeResult
 } from "../../../core/protocol/transcriptStore.js";
-import { writeStateSnapshot, type LoadedStateSnapshot } from "../../../core/state/stateStore.js";
-import { applyStateTransition } from "../../../core/state/machine.js";
+import { type writeStateSnapshot, type LoadedStateSnapshot } from "../../../core/state/stateStore.js";
+import type { applyStateTransition } from "../../../core/state/machine.js";
+import { resolveAskHumanExecutionDependencies } from "../../shared/askHuman/askHumanExecutionDependencyResolution.js";
 import type { AskHumanRoutingContext } from "../../shared/askHuman/askHumanRoutingContext.js";
 
 export interface ExecuteAskHumanExecutionInput {
@@ -58,16 +59,15 @@ export async function executeAskHumanExecution(
   input: ExecuteAskHumanExecutionInput,
   dependencies: ExecuteAskHumanExecutionDependencies = {}
 ): Promise<ExecuteAskHumanExecutionResult> {
-  const appendProtocolEnvelopeFn =
-    dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
-  const writeStateSnapshotFn =
-    dependencies.writeStateSnapshot ?? writeStateSnapshot;
-  const applyStateTransitionFn =
-    dependencies.applyStateTransition ?? applyStateTransition;
+  const resolvedDependencies = resolveAskHumanExecutionDependencies({
+    appendProtocolEnvelope: dependencies.appendProtocolEnvelope,
+    writeStateSnapshot: dependencies.writeStateSnapshot,
+    applyStateTransition: dependencies.applyStateTransition
+  });
 
   const lockPath = buildAskHumanLockPath(input);
 
-  const appended = await appendProtocolEnvelopeFn({
+  const appended = await resolvedDependencies.appendEnvelope({
     transcriptPath: input.routing.resolved.bubblePaths.transcriptPath,
     mirrorPaths: [input.routing.resolved.bubblePaths.inboxPath],
     lockPath,
@@ -75,14 +75,14 @@ export async function executeAskHumanExecution(
     envelope: buildAskHumanEnvelope(input)
   });
 
-  const nextState = applyStateTransitionFn(input.routing.state, {
+  const nextState = resolvedDependencies.applyTransition(input.routing.state, {
     to: "WAITING_HUMAN",
     lastCommandAt: input.routing.nowIso
   });
 
   let written: LoadedStateSnapshot;
   try {
-    written = await writeStateSnapshotFn(
+    written = await resolvedDependencies.writeSnapshot(
       input.routing.resolved.bubblePaths.statePath,
       nextState,
       {
