@@ -1,13 +1,15 @@
-import { IDEATION_KICKOFF_TASK_INVALID } from "../../../core/bubble/ideation.js";
 import type { ResolvedKickoffTaskInput } from "./kickoffTaskInputResolution.js";
 import type { ResolvedKickoffDependencies } from "./kickoffDependencyResolution.js";
 import { prepareKickoffEligibility } from "./kickoffEligibilityPreparation.js";
 import { resolveKickoffTask } from "./kickoffTaskResolution.js";
 import {
-  buildKickoffFailureResult,
   type KickoffBubbleResultShape,
   type KickoffIdeationMarkers
 } from "./kickoffResultBuilders.js";
+import {
+  buildKickoffEligibilityFailureResult,
+  buildKickoffTaskInvalidFailureResult
+} from "./kickoffValidationFailureBuilders.js";
 
 export interface PrepareKickoffValidationInput {
   bubbleId: string;
@@ -54,23 +56,6 @@ function buildKickoffResolveBubbleInput(
   };
 }
 
-function buildKickoffValidationFailureResult(input: {
-  resolvedBubbleId: string;
-  reasonCode: string;
-  stateBefore: LoadedKickoffState["state"];
-  markersBefore: KickoffIdeationMarkers;
-}): PrepareKickoffValidationResult {
-  return {
-    kind: "failure",
-    result: buildKickoffFailureResult({
-      bubbleId: input.resolvedBubbleId,
-      reasonCode: input.reasonCode,
-      stateBefore: input.stateBefore,
-      markersBefore: input.markersBefore
-    })
-  };
-}
-
 function buildKickoffTaskResolutionInput(
   input: PrepareKickoffValidationInput
 ): Parameters<typeof resolveKickoffTask>[0] {
@@ -96,19 +81,6 @@ function buildKickoffPreparedValidationResult(input: {
     markersBefore: input.markersBefore,
     task: input.task
   };
-}
-
-function buildKickoffTaskInvalidFailureResult(input: {
-  resolvedBubbleId: string;
-  state: LoadedKickoffState["state"];
-  markersBefore: KickoffIdeationMarkers;
-}): PrepareKickoffValidationResult {
-  return buildKickoffValidationFailureResult({
-    resolvedBubbleId: input.resolvedBubbleId,
-    reasonCode: IDEATION_KICKOFF_TASK_INVALID,
-    stateBefore: input.state,
-    markersBefore: input.markersBefore
-  });
 }
 
 type PrepareKickoffTaskOrFailureResult =
@@ -156,20 +128,6 @@ type PrepareKickoffEligibilityOrFailureResult =
       kind: "eligible";
       markersBefore: KickoffIdeationMarkers;
     };
-
-function buildKickoffEligibilityFailureResult(input: {
-  resolvedBubbleId: string;
-  eligibilityFailureReason: string;
-  state: LoadedKickoffState["state"];
-  markersBefore: KickoffIdeationMarkers;
-}): PrepareKickoffValidationResult {
-  return buildKickoffValidationFailureResult({
-    resolvedBubbleId: input.resolvedBubbleId,
-    reasonCode: input.eligibilityFailureReason,
-    stateBefore: input.state,
-    markersBefore: input.markersBefore
-  });
-}
 
 function prepareKickoffEligibilityOrFailure(input: {
   resolvedBubbleId: string;
