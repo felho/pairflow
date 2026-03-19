@@ -158,6 +158,28 @@ async function handleKickoffMutationFailure(input: {
   };
 }
 
+async function executeKickoffMutationWithRollbackGuard(input: {
+  pipelineInput: ExecuteKickoffMutationPipelineInput;
+  executeMutation: typeof executeKickoffMutation;
+  executeRollback: typeof executeKickoffMutationRollback;
+}): Promise<ExecuteKickoffMutationPipelineResult> {
+  let transcriptBackup: string | null = null;
+  try {
+    transcriptBackup = await input.executeMutation(
+      buildKickoffMutationExecutionInput(input.pipelineInput)
+    );
+  } catch (error) {
+    return handleKickoffMutationFailure({
+      pipelineInput: input.pipelineInput,
+      mutationError: error,
+      transcriptBackup,
+      executeRollback: input.executeRollback
+    });
+  }
+
+  return buildKickoffMutationPipelineSuccessResult();
+}
+
 export async function executeKickoffMutationPipeline(
   input: ExecuteKickoffMutationPipelineInput,
   dependencies: ExecuteKickoffMutationPipelineDependencies = {}
@@ -165,19 +187,9 @@ export async function executeKickoffMutationPipeline(
   const resolvedDependencies =
     resolveKickoffMutationPipelineDependencies(dependencies);
 
-  let transcriptBackup: string | null = null;
-  try {
-    transcriptBackup = await resolvedDependencies.executeMutation(
-      buildKickoffMutationExecutionInput(input)
-    );
-  } catch (error) {
-    return handleKickoffMutationFailure({
-      pipelineInput: input,
-      mutationError: error,
-      transcriptBackup,
-      executeRollback: resolvedDependencies.executeRollback
-    });
-  }
-
-  return buildKickoffMutationPipelineSuccessResult();
+  return executeKickoffMutationWithRollbackGuard({
+    pipelineInput: input,
+    executeMutation: resolvedDependencies.executeMutation,
+    executeRollback: resolvedDependencies.executeRollback
+  });
 }
