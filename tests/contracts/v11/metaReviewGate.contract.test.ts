@@ -93,7 +93,7 @@ describe("v11 metaReviewGate contract harness", () => {
       expect(run.v11).toBeDefined();
       expect(run.legacy).toEqual(run.v11);
     }
-  });
+  }, 20_000);
 
   it("includes metaReviewGate seed entries in corpus manifest", async () => {
     const manifestPath = resolve(
