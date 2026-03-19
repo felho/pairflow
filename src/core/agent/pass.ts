@@ -33,12 +33,10 @@ import {
 } from "../../types/protocol.js";
 import type { Finding } from "../../types/findings.js";
 import type {
-  AgentName,
   AgentRole,
   BubbleConfig,
   BubbleFailingGate,
-  BubbleStateSnapshot,
-  RoundRoleHistoryEntry
+  BubbleStateSnapshot
 } from "../../types/bubble.js";
 import { refreshReviewerContext } from "../runtime/reviewerContext.js";
 import {
@@ -95,6 +93,10 @@ import {
   type EmitConvergedDependencies,
   type EmitConvergedResult
 } from "./converged.js";
+import {
+  resolvePassHandoff,
+  type ResolvedPassHandoff
+} from "../../v11/domain/pass/handoff.js";
 
 export interface EmitPassInput {
   summary: string;
@@ -137,16 +139,6 @@ export interface EmitPassDependencies {
   emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
   emitBubbleNotification?: EmitConvergedDependencies["emitBubbleNotification"];
   refreshReviewerContext?: typeof refreshReviewerContext;
-}
-
-interface ResolvedHandoff {
-  senderAgent: AgentName;
-  senderRole: "implementer" | "reviewer";
-  recipientAgent: AgentName;
-  recipientRole: "implementer" | "reviewer";
-  envelopeRound: number;
-  nextRound: number;
-  appendRoundRoleEntry?: RoundRoleHistoryEntry;
 }
 
 export class PassCommandError extends Error {
@@ -373,85 +365,6 @@ function inferReviewerPassIntent(
   }
 
   return noFindings ? "review" : "fix_request";
-}
-
-function resolveHandoff(
-  state: BubbleStateSnapshot,
-  implementer: AgentName,
-  reviewer: AgentName,
-  nowIso: string
-): ResolvedHandoff {
-  if (state.state !== "RUNNING") {
-    throw new PassCommandError(
-      `PASS can only be used while bubble is RUNNING (current: ${state.state}).`
-    );
-  }
-
-  if (state.active_agent === null || state.active_role === null) {
-    throw new PassCommandError(
-      "RUNNING state is missing active agent/role; cannot resolve PASS sender."
-    );
-  }
-
-  if (state.active_role === "implementer" && state.active_agent !== implementer) {
-    throw new PassCommandError(
-      `Active role implementer must map to configured implementer agent (${implementer}).`
-    );
-  }
-  if (state.active_role === "reviewer" && state.active_agent !== reviewer) {
-    throw new PassCommandError(
-      `Active role reviewer must map to configured reviewer agent (${reviewer}).`
-    );
-  }
-
-  if (state.round < 1) {
-    throw new PassCommandError(
-      `RUNNING state must have round >= 1 (found ${state.round}).`
-    );
-  }
-
-  if (state.active_role === "implementer") {
-    return {
-      senderAgent: implementer,
-      senderRole: "implementer",
-      recipientAgent: reviewer,
-      recipientRole: "reviewer",
-      envelopeRound: state.round,
-      nextRound: state.round
-    };
-  }
-
-  if (state.active_role !== "reviewer") {
-    throw new PassCommandError(
-      `Unsupported active role for PASS handoff resolution: ${state.active_role}.`
-    );
-  }
-
-  const nextRound = state.round + 1;
-  const hasRoundEntry = state.round_role_history.some((entry) => entry.round === nextRound);
-
-  const base: ResolvedHandoff = {
-    senderAgent: reviewer,
-    senderRole: "reviewer",
-    recipientAgent: implementer,
-    recipientRole: "implementer",
-    envelopeRound: state.round,
-    nextRound
-  };
-
-  if (hasRoundEntry) {
-    return base;
-  }
-
-  return {
-    ...base,
-    appendRoundRoleEntry: {
-      round: nextRound,
-      implementer,
-      reviewer,
-      switched_at: nowIso
-    }
-  };
 }
 
 function mapAppendResult(result: AppendProtocolEnvelopeResult): Pick<EmitPassResult, "sequence" | "envelope"> {
@@ -914,7 +827,13 @@ export async function emitPassFromWorkspace(
   }
 
   const { implementer, reviewer } = resolved.bubbleConfig.agents;
-  const handoff = resolveHandoff(state, implementer, reviewer, nowIso);
+  const handoff: ResolvedPassHandoff = resolvePassHandoff({
+    state,
+    implementer,
+    reviewer,
+    nowIso,
+    createError: (message) => new PassCommandError(message)
+  });
   if (handoff.senderRole === "reviewer") {
     validateReviewerPassGate({
       round: handoff.envelopeRound,
