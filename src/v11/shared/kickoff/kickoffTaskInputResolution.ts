@@ -17,6 +17,67 @@ function isIdeationPlaceholderTaskContent(content: string): boolean {
   return IDEATION_PLACEHOLDER_CONTENT_MARKER.test(content);
 }
 
+async function resolveKickoffTaskFromFileInput(input: {
+  taskFile: string;
+  cwd: string;
+}): Promise<ResolvedKickoffTaskInput> {
+  const candidatePath = resolve(input.cwd, input.taskFile);
+  const taskStats = await stat(candidatePath).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === "ENOENT") {
+      // reason_code=KICKOFF_TASK_FILE_NOT_FOUND context=kickoff_task_input_validation
+      throw new KickoffTaskInputValidationError(
+        `Task file does not exist: ${candidatePath}`
+      );
+    }
+    throw error;
+  });
+  if (!taskStats.isFile()) {
+    // reason_code=KICKOFF_TASK_FILE_NOT_REGULAR context=kickoff_task_input_validation
+    throw new KickoffTaskInputValidationError(
+      `Task path is not a file: ${candidatePath}`
+    );
+  }
+
+  const content = await readFile(candidatePath, "utf8");
+  const normalizedContent = content.trimEnd();
+  if (normalizedContent.trim().length === 0) {
+    // reason_code=KICKOFF_TASK_FILE_EMPTY context=kickoff_task_input_validation
+    throw new KickoffTaskInputValidationError(`Task file is empty: ${candidatePath}`);
+  }
+  if (isIdeationPlaceholderTaskContent(normalizedContent)) {
+    // reason_code=KICKOFF_TASK_FILE_PLACEHOLDER_MARKER context=kickoff_task_input_validation
+    throw new KickoffTaskInputValidationError(
+      `Task file still contains ideation placeholder marker: ${candidatePath}`
+    );
+  }
+
+  return {
+    content: normalizedContent,
+    source: "file",
+    sourcePath: candidatePath
+  };
+}
+
+function resolveKickoffTaskFromInlineInput(input: {
+  task: string;
+}): ResolvedKickoffTaskInput {
+  const taskText = input.task.trim();
+  if (taskText.length === 0) {
+    // reason_code=KICKOFF_TASK_INLINE_EMPTY context=kickoff_task_input_validation
+    throw new KickoffTaskInputValidationError("Task cannot be empty.");
+  }
+  if (isIdeationPlaceholderTaskContent(taskText)) {
+    // reason_code=KICKOFF_TASK_INLINE_PLACEHOLDER_MARKER context=kickoff_task_input_validation
+    throw new KickoffTaskInputValidationError(
+      "Task text still contains ideation placeholder marker."
+    );
+  }
+  return {
+    content: taskText,
+    source: "inline"
+  };
+}
+
 export function renderKickoffTaskArtifact(task: ResolvedKickoffTaskInput): string {
   const sourceLine =
     task.source === "file"
@@ -45,56 +106,13 @@ export async function resolveKickoffTaskInput(input: {
   }
 
   if (hasTaskFile) {
-    const candidatePath = resolve(input.cwd, input.taskFile as string);
-    const taskStats = await stat(candidatePath).catch((error: NodeJS.ErrnoException) => {
-      if (error.code === "ENOENT") {
-        // reason_code=KICKOFF_TASK_FILE_NOT_FOUND context=kickoff_task_input_validation
-        throw new KickoffTaskInputValidationError(
-          `Task file does not exist: ${candidatePath}`
-        );
-      }
-      throw error;
+    return resolveKickoffTaskFromFileInput({
+      taskFile: input.taskFile as string,
+      cwd: input.cwd
     });
-    if (!taskStats.isFile()) {
-      // reason_code=KICKOFF_TASK_FILE_NOT_REGULAR context=kickoff_task_input_validation
-      throw new KickoffTaskInputValidationError(
-        `Task path is not a file: ${candidatePath}`
-      );
-    }
-
-    const content = await readFile(candidatePath, "utf8");
-    const normalizedContent = content.trimEnd();
-    if (normalizedContent.trim().length === 0) {
-      // reason_code=KICKOFF_TASK_FILE_EMPTY context=kickoff_task_input_validation
-      throw new KickoffTaskInputValidationError(`Task file is empty: ${candidatePath}`);
-    }
-    if (isIdeationPlaceholderTaskContent(normalizedContent)) {
-      // reason_code=KICKOFF_TASK_FILE_PLACEHOLDER_MARKER context=kickoff_task_input_validation
-      throw new KickoffTaskInputValidationError(
-        `Task file still contains ideation placeholder marker: ${candidatePath}`
-      );
-    }
-
-    return {
-      content: normalizedContent,
-      source: "file",
-      sourcePath: candidatePath
-    };
   }
 
-  const taskText = (input.task as string).trim();
-  if (taskText.length === 0) {
-    // reason_code=KICKOFF_TASK_INLINE_EMPTY context=kickoff_task_input_validation
-    throw new KickoffTaskInputValidationError("Task cannot be empty.");
-  }
-  if (isIdeationPlaceholderTaskContent(taskText)) {
-    // reason_code=KICKOFF_TASK_INLINE_PLACEHOLDER_MARKER context=kickoff_task_input_validation
-    throw new KickoffTaskInputValidationError(
-      "Task text still contains ideation placeholder marker."
-    );
-  }
-  return {
-    content: taskText,
-    source: "inline"
-  };
+  return resolveKickoffTaskFromInlineInput({
+    task: input.task as string
+  });
 }
