@@ -2,7 +2,7 @@ import type {
   EmitAskHumanDependencies,
   EmitAskHumanInput,
   EmitAskHumanResult
-} from "../../application/askHuman/askHumanCommandContract.js";
+} from "./askHumanCommandContract.js";
 import {
   createAskHumanCommandError,
   throwAsAskHumanCommandError
