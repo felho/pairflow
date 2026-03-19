@@ -45,9 +45,6 @@ import {
 } from "../reviewer/testEvidence.js";
 import {
   createReviewVerificationArtifact,
-  type ReviewVerificationInputResolution,
-  resolveReviewVerificationInputFromRefs,
-  ReviewVerificationError,
   writeReviewVerificationArtifactAtomic
 } from "../reviewer/reviewVerification.js";
 import {
@@ -102,6 +99,7 @@ import { normalizeReviewerFindingsPayload } from "../../v11/domain/pass/reviewer
 import { assertNoDocsOnlySkipLogRefConflict } from "../../v11/domain/pass/docsOnlyRuntimeSkipGuard.js";
 import { assertReviewerIntentOverrideConsistency } from "../../v11/domain/pass/reviewerIntentOverrideGuard.js";
 import { validateReviewerVerificationConsistency } from "../../v11/domain/pass/reviewerVerificationConsistencyGuard.js";
+import { resolveReviewerVerification } from "../../v11/application/pass/reviewerVerificationResolver.js";
 
 export interface EmitPassInput {
   summary: string;
@@ -326,29 +324,6 @@ function extractTaskContentFromTaskArtifact(taskArtifactContent: string): string
   return taskArtifactContent;
 }
 
-async function resolveReviewerVerification(input: {
-  accuracyCritical: boolean;
-  senderRole: AgentRole;
-  refs: string[];
-  worktreePath: string;
-}): Promise<ReviewVerificationInputResolution | undefined> {
-  if (!input.accuracyCritical || input.senderRole !== "reviewer") {
-    return undefined;
-  }
-
-  try {
-    return await resolveReviewVerificationInputFromRefs({
-      refs: input.refs,
-      worktreePath: input.worktreePath
-    });
-  } catch (error) {
-    if (error instanceof ReviewVerificationError) {
-      throw new PassCommandError(error.message);
-    }
-    throw error;
-  }
-}
-
 async function updateReviewerDocGateArtifact(input: {
   now: Date;
   bubbleConfig: BubbleConfig;
@@ -558,7 +533,8 @@ export async function emitPassFromWorkspace(
     accuracyCritical,
     senderRole: handoff.senderRole,
     refs,
-    worktreePath: resolved.bubblePaths.worktreePath
+    worktreePath: resolved.bubblePaths.worktreePath,
+    createError: (message) => new PassCommandError(message)
   });
   if (reviewerVerification !== undefined) {
     validateReviewerVerificationConsistency({
