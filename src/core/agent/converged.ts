@@ -15,8 +15,10 @@ import {
 } from "../../v11/shared/converged/convergedFlowInvocationBuilders.js";
 import { normalizeConvergedCommandError } from "../../v11/shared/converged/convergedCommandErrorNormalization.js";
 import { normalizeConvergedCommandInput } from "../../v11/shared/converged/convergedCommandInputNormalization.js";
+import { ConvergedCommandError } from "../../v11/shared/converged/convergedCommandError.js";
 import { resolveConvergedRolloutBlockingReasonCodes as resolveMetaReviewRolloutBlockingReasonCodes } from "../../v11/shared/converged/convergedRolloutBlockingReasonResolver.js";
 export { resolveMetaReviewRolloutBlockingReasonCodes };
+export { ConvergedCommandError };
 
 export interface EmitConvergedInput {
   summary: string;
@@ -48,13 +50,6 @@ export interface EmitConvergedResult {
     reason?: string;
     retried: boolean;
   };
-}
-
-export class ConvergedCommandError extends Error {
-  public constructor(message: string) {
-    super(message);
-    this.name = "ConvergedCommandError";
-  }
 }
 
 export async function emitConvergedFromWorkspace(
