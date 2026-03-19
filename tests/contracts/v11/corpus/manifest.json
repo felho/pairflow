@@ -181,6 +181,42 @@
       "command": "reply",
       "source": "tests/contracts/v11/cases/reply/reply-no-refs-parity.case.json",
       "kind": "seed_case"
+    },
+    {
+      "id": "stop-basic",
+      "command": "stop",
+      "source": "tests/contracts/v11/cases/stop/stop-basic.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "stop-basic-v11",
+      "command": "stop",
+      "source": "tests/contracts/v11/cases/stop/stop-basic-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "stop-basic-parity",
+      "command": "stop",
+      "source": "tests/contracts/v11/cases/stop/stop-basic-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "stop-no-runtime-session",
+      "command": "stop",
+      "source": "tests/contracts/v11/cases/stop/stop-no-runtime-session.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "stop-no-runtime-session-v11",
+      "command": "stop",
+      "source": "tests/contracts/v11/cases/stop/stop-no-runtime-session-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "stop-no-runtime-session-parity",
+      "command": "stop",
+      "source": "tests/contracts/v11/cases/stop/stop-no-runtime-session-parity.case.json",
+      "kind": "seed_case"
     }
   ]
 }
