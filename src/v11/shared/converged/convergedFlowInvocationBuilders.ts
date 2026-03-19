@@ -1,4 +1,9 @@
 import type { AgentName } from "../../../types/bubble.js";
+import { executeConvergedExecution } from "../../application/converged/convergedExecution.js";
+import { finalizeConvergedFlow } from "../../application/converged/convergedFinalization.js";
+import { prepareConvergedPolicy } from "../../application/converged/convergedPolicyPreparation.js";
+import { prepareConvergedRouting } from "../../application/converged/convergedRoutingPreparation.js";
+import { prepareConvergedValidation } from "../../application/converged/convergedValidationPreparation.js";
 import type {
   RunConvergedFlowDependencies,
   RunConvergedFlowInput
@@ -89,4 +94,31 @@ export function buildConvergedFlowDependencies(
       ? { emitBubbleNotification: input.emitBubbleNotification }
       : {})
   };
+}
+
+export interface BuildDefaultConvergedFlowDependenciesInput {
+  applyMetaReviewGateOnConvergence?:
+    RunConvergedFlowDependencies["applyMetaReviewGateOnConvergence"];
+  recoverMetaReviewGateFromSnapshot?:
+    RunConvergedFlowDependencies["recoverMetaReviewGateFromSnapshot"];
+  emitTmuxDeliveryNotification?:
+    RunConvergedFlowDependencies["emitTmuxDeliveryNotification"];
+  emitBubbleNotification?:
+    RunConvergedFlowDependencies["emitBubbleNotification"];
+}
+
+export function buildDefaultConvergedFlowDependencies(
+  input: BuildDefaultConvergedFlowDependenciesInput = {}
+): RunConvergedFlowDependencies {
+  return buildConvergedFlowDependencies({
+    prepareConvergedRouting,
+    prepareConvergedPolicy,
+    prepareConvergedValidation,
+    executeConvergedExecution,
+    finalizeConvergedFlow,
+    applyMetaReviewGateOnConvergence: input.applyMetaReviewGateOnConvergence,
+    recoverMetaReviewGateFromSnapshot: input.recoverMetaReviewGateFromSnapshot,
+    emitTmuxDeliveryNotification: input.emitTmuxDeliveryNotification,
+    emitBubbleNotification: input.emitBubbleNotification
+  });
 }

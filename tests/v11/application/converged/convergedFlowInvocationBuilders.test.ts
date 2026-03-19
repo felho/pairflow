@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildDefaultConvergedFlowDependencies,
   buildConvergedFlowDependencies,
   buildConvergedFlowInput
 } from "../../../../src/v11/shared/converged/convergedFlowInvocationBuilders.js";
@@ -167,5 +168,28 @@ describe("convergedFlowInvocationBuilders", () => {
     expect("recoverMetaReviewGateFromSnapshot" in dependencies).toBe(false);
     expect("emitTmuxDeliveryNotification" in dependencies).toBe(false);
     expect("emitBubbleNotification" in dependencies).toBe(false);
+  });
+
+  it("builds default dependencies and forwards optional notifier overrides", () => {
+    const dependencies = buildDefaultConvergedFlowDependencies({
+      emitBubbleNotification: async () =>
+        ({
+          kind: "waiting-human",
+          attempted: false,
+          delivered: false,
+          soundPath: null,
+          reason: "disabled"
+        }) as never
+    });
+
+    expect(dependencies.prepareConvergedRouting).toBeTypeOf("function");
+    expect(dependencies.prepareConvergedPolicy).toBeTypeOf("function");
+    expect(dependencies.prepareConvergedValidation).toBeTypeOf("function");
+    expect(dependencies.executeConvergedExecution).toBeTypeOf("function");
+    expect(dependencies.finalizeConvergedFlow).toBeTypeOf("function");
+    expect(dependencies.emitBubbleNotification).toBeTypeOf("function");
+    expect("emitTmuxDeliveryNotification" in dependencies).toBe(false);
+    expect("applyMetaReviewGateOnConvergence" in dependencies).toBe(false);
+    expect("recoverMetaReviewGateFromSnapshot" in dependencies).toBe(false);
   });
 });

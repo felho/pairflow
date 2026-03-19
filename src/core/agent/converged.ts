@@ -14,16 +14,11 @@ import {
   runConvergedFlow,
   type RunConvergedFlowDependencies
 } from "../../v11/application/converged/runConvergedFlow.js";
-import { prepareConvergedRouting } from "../../v11/application/converged/convergedRoutingPreparation.js";
-import { prepareConvergedPolicy } from "../../v11/application/converged/convergedPolicyPreparation.js";
-import { prepareConvergedValidation } from "../../v11/application/converged/convergedValidationPreparation.js";
-import { executeConvergedExecution } from "../../v11/application/converged/convergedExecution.js";
-import { finalizeConvergedFlow } from "../../v11/application/converged/convergedFinalization.js";
 import {
   resolveMetaReviewRolloutBlockingReasonCodesV11
 } from "../../v11/application/converged/metaReviewRolloutBlockingReasonCodes.js";
 import {
-  buildConvergedFlowDependencies,
+  buildDefaultConvergedFlowDependencies,
   buildConvergedFlowInput
 } from "../../v11/shared/converged/convergedFlowInvocationBuilders.js";
 
@@ -99,12 +94,7 @@ export async function emitConvergedFromWorkspace(
       createError,
       resolveMetaReviewRolloutBlockingReasonCodes
     }),
-    buildConvergedFlowDependencies({
-      prepareConvergedRouting,
-      prepareConvergedPolicy,
-      prepareConvergedValidation,
-      executeConvergedExecution,
-      finalizeConvergedFlow,
+    buildDefaultConvergedFlowDependencies({
       applyMetaReviewGateOnConvergence:
         dependencies.applyMetaReviewGateOnConvergence,
       recoverMetaReviewGateFromSnapshot:
