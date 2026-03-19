@@ -9,6 +9,7 @@ import {
   buildAskHumanFlowInput,
   buildAskHumanRoutingInput
 } from "../../v11/shared/askHuman/askHumanFlowInvocationBuilders.js";
+import { normalizeAskHumanCommandError } from "../../v11/shared/askHuman/askHumanCommandErrorNormalization.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 
@@ -76,13 +77,9 @@ export async function emitAskHumanFromWorkspace(
 }
 
 export function asAskHumanCommandError(error: unknown): never {
-  if (error instanceof AskHumanCommandError) {
-    throw error;
-  }
-
-  if (error instanceof Error) {
-    throw new AskHumanCommandError(error.message);
-  }
-
-  throw error;
+  throw normalizeAskHumanCommandError({
+    error,
+    isAskHumanCommandError: (candidate) => candidate instanceof AskHumanCommandError,
+    createAskHumanCommandError: (message) => new AskHumanCommandError(message)
+  });
 }
