@@ -73,12 +73,8 @@ export async function emitAskHumanFromWorkspace(
     buildAskHumanFlowDependencies({
       executeAskHumanExecution,
       finalizeAskHumanFlow,
-      ...(dependencies.emitTmuxDeliveryNotification !== undefined
-        ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
-        : {}),
-      ...(dependencies.emitBubbleNotification !== undefined
-        ? { emitBubbleNotification: dependencies.emitBubbleNotification }
-        : {})
+      emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification,
+      emitBubbleNotification: dependencies.emitBubbleNotification
     })
   );
 }
