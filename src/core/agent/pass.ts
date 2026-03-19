@@ -8,7 +8,6 @@ import {
 } from "../protocol/transcriptStore.js";
 import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
-import { isRecord } from "../validation.js";
 import {
   resolveBubbleFromWorkspaceCwd,
   WorkspaceResolutionError
@@ -79,8 +78,6 @@ import {
   type RepeatCleanAutoconvergeReasonDetail
 } from "../convergence/repeatCleanAutoconverge.js";
 import {
-  isFindingLayer,
-  isFindingTiming,
   resolveFindingPriority
 } from "../../types/findings.js";
 import {
@@ -101,6 +98,7 @@ import {
   resolveReviewerFindingsClaim,
   resolveReviewerFindingsClaimParserMetadata
 } from "../../v11/domain/pass/reviewerFindingsClaim.js";
+import { normalizeReviewerFindingsPayload } from "../../v11/domain/pass/reviewerFindingsPayload.js";
 
 export interface EmitPassInput {
   summary: string;
@@ -169,11 +167,6 @@ const docsOnlyRuntimeChecksSkippedMarkers = [
 const docsOnlyRuntimeLogRefPattern = /^\.pairflow\/evidence\/[^\s]+\.log$/u;
 const docsOnlyRuntimeLogRefPatternText =
   docsOnlyRuntimeLogRefPattern.source.replaceAll("\\/", "/");
-
-interface NormalizedReviewerFindingsPayload {
-  findings: Finding[];
-  invalid: boolean;
-}
 
 function formatRepeatCleanPolicyRejectedMessage(input: {
   subtype: RepeatCleanPolicyRejectedSubtype;
@@ -348,114 +341,6 @@ function buildFindingCounts(findings: Finding[]): {
   }
 
   return counts;
-}
-
-function normalizeReviewerFindingsPayload(
-  findings: unknown
-): NormalizedReviewerFindingsPayload {
-  if (!Array.isArray(findings)) {
-    return {
-      findings: [],
-      invalid: findings !== undefined
-    };
-  }
-
-  const normalized: Finding[] = [];
-  let invalid = false;
-  for (const finding of findings) {
-    if (!isRecord(finding)) {
-      invalid = true;
-      continue;
-    }
-
-    if (typeof finding.title !== "string" || finding.title.trim().length === 0) {
-      invalid = true;
-      continue;
-    }
-
-    const priority = resolveFindingPriority({
-      priority: finding.priority,
-      severity: finding.severity
-    });
-    if (priority === undefined) {
-      invalid = true;
-      continue;
-    }
-
-    if (finding.refs !== undefined && !Array.isArray(finding.refs)) {
-      invalid = true;
-      continue;
-    }
-
-    const normalizedFindingRefs = normalizeStringList(finding.refs ?? []);
-    if (
-      Array.isArray(finding.refs)
-      && finding.refs.length > 0
-      && normalizedFindingRefs.length === 0
-    ) {
-      invalid = true;
-      continue;
-    }
-
-    const normalizedPriority = resolveFindingPriority({
-      priority: finding.priority,
-      severity: undefined
-    });
-    const normalizedSeverity = resolveFindingPriority({
-      priority: undefined,
-      severity: finding.severity
-    });
-    const normalizedFinding: Finding = {
-      title: finding.title.trim()
-    };
-    if (normalizedPriority !== undefined) {
-      normalizedFinding.priority = normalizedPriority;
-    }
-    if (normalizedSeverity !== undefined) {
-      normalizedFinding.severity = normalizedSeverity;
-    }
-    if (normalizedPriority === undefined && normalizedSeverity !== undefined) {
-      normalizedFinding.priority = normalizedSeverity;
-    }
-    if (typeof finding.detail === "string" && finding.detail.trim().length > 0) {
-      normalizedFinding.detail = finding.detail;
-    }
-    if (typeof finding.code === "string" && finding.code.trim().length > 0) {
-      normalizedFinding.code = finding.code;
-    }
-    if (isFindingTiming(finding.timing)) {
-      normalizedFinding.timing = finding.timing;
-    }
-    if (isFindingLayer(finding.layer)) {
-      normalizedFinding.layer = finding.layer;
-    }
-    const effectivePriority =
-      resolveFindingPriority({
-        priority: finding.effective_priority,
-        severity: undefined
-      });
-    if (effectivePriority !== undefined) {
-      normalizedFinding.effective_priority = effectivePriority;
-    }
-    if (typeof finding.evidence === "string") {
-      normalizedFinding.evidence = finding.evidence;
-    } else if (Array.isArray(finding.evidence)) {
-      normalizedFinding.evidence = normalizeStringList(finding.evidence);
-    }
-
-    if (normalizedFindingRefs.length > 0) {
-      normalizedFinding.refs = normalizedFindingRefs;
-    } else {
-      delete normalizedFinding.refs;
-    }
-
-    normalized.push(normalizedFinding);
-  }
-
-  return {
-    findings: normalized,
-    invalid
-  };
 }
 
 function validateReviewerVerificationConsistency(input: {
