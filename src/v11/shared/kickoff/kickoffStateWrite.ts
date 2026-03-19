@@ -29,6 +29,33 @@ export type WriteKickoffStateResult =
       kind: "conflict";
     };
 
+function buildKickoffWriteStateOptions(input: {
+  expectedFingerprint: string;
+}): {
+  expectedFingerprint: string;
+  expectedState: "RUNNING";
+} {
+  return {
+    expectedFingerprint: input.expectedFingerprint,
+    expectedState: "RUNNING"
+  };
+}
+
+function buildKickoffWriteSuccessResult(input: {
+  writtenState: KickoffWrittenState;
+}): WriteKickoffStateResult {
+  return {
+    kind: "success",
+    writtenState: input.writtenState
+  };
+}
+
+function buildKickoffWriteConflictResult(): WriteKickoffStateResult {
+  return {
+    kind: "conflict"
+  };
+}
+
 export async function writeKickoffState(
   input: WriteKickoffStateInput
 ): Promise<WriteKickoffStateResult> {
@@ -36,20 +63,16 @@ export async function writeKickoffState(
     const writtenState = await input.writeState(
       input.statePath,
       input.nextState,
-      {
-        expectedFingerprint: input.expectedFingerprint,
-        expectedState: "RUNNING"
-      }
+      buildKickoffWriteStateOptions({
+        expectedFingerprint: input.expectedFingerprint
+      })
     );
-    return {
-      kind: "success",
+    return buildKickoffWriteSuccessResult({
       writtenState
-    };
+    });
   } catch (error) {
     if (error instanceof StateStoreConflictError) {
-      return {
-        kind: "conflict"
-      };
+      return buildKickoffWriteConflictResult();
     }
     throw error;
   }

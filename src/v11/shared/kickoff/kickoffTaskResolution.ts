@@ -19,24 +19,44 @@ export type ResolveKickoffTaskResult =
       kind: "invalid";
     };
 
+function buildKickoffTaskInputResolutionInput(
+  input: ResolveKickoffTaskInput
+): Parameters<typeof resolveKickoffTaskInput>[0] {
+  return {
+    ...(input.task !== undefined ? { task: input.task } : {}),
+    ...(input.taskFile !== undefined ? { taskFile: input.taskFile } : {}),
+    cwd: input.cwd
+  };
+}
+
+function buildKickoffResolvedTaskResult(input: {
+  task: ResolvedKickoffTaskInput;
+}): ResolveKickoffTaskResult {
+  return {
+    kind: "resolved",
+    task: input.task
+  };
+}
+
+function buildKickoffInvalidTaskResult(): ResolveKickoffTaskResult {
+  return {
+    kind: "invalid"
+  };
+}
+
 export async function resolveKickoffTask(
   input: ResolveKickoffTaskInput
 ): Promise<ResolveKickoffTaskResult> {
   try {
-    const task = await resolveKickoffTaskInput({
-      ...(input.task !== undefined ? { task: input.task } : {}),
-      ...(input.taskFile !== undefined ? { taskFile: input.taskFile } : {}),
-      cwd: input.cwd
-    });
-    return {
-      kind: "resolved",
+    const task = await resolveKickoffTaskInput(
+      buildKickoffTaskInputResolutionInput(input)
+    );
+    return buildKickoffResolvedTaskResult({
       task
-    };
+    });
   } catch (error) {
     if (error instanceof KickoffTaskInputValidationError) {
-      return {
-        kind: "invalid"
-      };
+      return buildKickoffInvalidTaskResult();
     }
     throw error;
   }
