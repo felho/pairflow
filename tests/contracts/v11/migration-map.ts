@@ -46,9 +46,9 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
   },
   {
     command: "reconcile",
-    state: "legacy",
-    owner: "TBD",
-    notes: "M4 extension scope."
+    state: "v11",
+    owner: "runtime",
+    notes: "Core facade now delegates to v11 reconcile orchestration seams; v11 is the source of truth."
   },
   {
     command: "askHuman",
