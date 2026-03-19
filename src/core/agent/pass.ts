@@ -46,6 +46,7 @@ import {
   raiseRepeatCleanDownstreamConvergedRejected,
 } from "../../v11/domain/pass/repeatCleanPolicyRejection.js";
 import { executeAutoConvergeConverged } from "../../v11/application/pass/autoConvergeConvergedExecution.js";
+import { finalizeAutoConvergePass } from "../../v11/application/pass/autoConvergeFinalization.js";
 import { resolveReviewerVerification } from "../../v11/application/pass/reviewerVerificationResolver.js";
 import {
   executePassDelivery,
@@ -308,78 +309,41 @@ export async function emitPassFromWorkspace(
       }
     );
 
-    const autoConvergeFindings = findings;
-    let autoConvergeDocGateArtifactWriteFailureReason: string | undefined;
-    if (handoff.senderRole === "reviewer") {
-      autoConvergeDocGateArtifactWriteFailureReason = await updateReviewerDocGateArtifact({
-        now,
-        bubbleConfig: resolved.bubbleConfig,
-        artifactsDir: resolved.bubblePaths.artifactsDir,
-        taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
-        round: handoff.envelopeRound,
-        findings: autoConvergeFindings,
-        createError: (message) => new PassCommandError(message)
-      });
-    }
-
-    await emitBubbleLifecycleEventBestEffort({
+    return finalizeAutoConvergePass({
+      now,
+      bubbleConfig: resolved.bubbleConfig,
+      artifactsDir: resolved.bubblePaths.artifactsDir,
+      taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+      round: handoff.envelopeRound,
+      senderRole: handoff.senderRole,
+      findings,
+      createError: (message) => new PassCommandError(message),
       repoPath: resolved.repoPath,
       bubbleId: resolved.bubbleId,
       bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
-      eventType: "bubble_passed",
-      round: handoff.envelopeRound,
-      actorRole: handoff.senderRole,
-      metadata: buildPassLifecycleMetricMetadata({
-        passIntent: intent,
-        inferredIntent,
-        sender: handoff.senderAgent,
-        recipient: "human",
-        recipientRole: "human",
-        refsCount: refs.length,
-        hasFindings,
-        noFindings,
-        ...(reviewerFindingsClaim !== undefined
-          ? { reviewerFindingsClaim }
-          : {}),
-        ...(reviewerFindingsClaimParserMetadata !== undefined
-          ? { reviewerFindingsClaimParserMetadata }
-          : {}),
-        transitionDecision: "auto_converge",
-        repeatCleanReasonCode: repeatCleanTrigger.reasonCode,
-        repeatCleanReasonDetail: repeatCleanTrigger.reasonDetail,
-        repeatCleanTrigger: repeatCleanTrigger.trigger,
-        mostRecentPreviousReviewerCleanPassEnvelope:
-          repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope,
-        findings: autoConvergeFindings,
-        ...(autoConvergeDocGateArtifactWriteFailureReason !== undefined
-          ? {
-              docGateArtifactWriteFailureReason:
-                autoConvergeDocGateArtifactWriteFailureReason
-            }
-          : {})
-      }),
-      now
-    });
-
-    return buildAutoConvergePassResult({
-      bubbleId: resolved.bubbleId,
+      passIntent: intent,
       inferredIntent,
-      repeatCleanReasonDetail: repeatCleanTrigger.reasonDetail,
-      convergenceSequence: converged.convergenceSequence,
-      convergenceEnvelope: converged.convergenceEnvelope,
-      state: converged.state,
-      gateRoute: converged.gateRoute,
-      approvalRequestSequence: converged.approvalRequestSequence,
-      approvalRequestEnvelope: converged.approvalRequestEnvelope,
-      ...(converged.delivery !== undefined
-        ? { delivery: converged.delivery }
+      senderAgent: handoff.senderAgent,
+      refsCount: refs.length,
+      hasFindings,
+      noFindings,
+      ...(reviewerFindingsClaim !== undefined
+        ? { reviewerFindingsClaim }
         : {}),
-      ...(autoConvergeDocGateArtifactWriteFailureReason !== undefined
-        ? {
-            docGateArtifactWriteFailureReason:
-              autoConvergeDocGateArtifactWriteFailureReason
-          }
-        : {})
+      ...(reviewerFindingsClaimParserMetadata !== undefined
+        ? { reviewerFindingsClaimParserMetadata }
+        : {}),
+      repeatCleanReasonCode: repeatCleanTrigger.reasonCode,
+      repeatCleanReasonDetail: repeatCleanTrigger.reasonDetail,
+      repeatCleanTrigger: repeatCleanTrigger.trigger,
+      mostRecentPreviousReviewerCleanPassEnvelope:
+        repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope,
+      converged
+    }, {
+      updateReviewerDocGateArtifact,
+      emitBubbleLifecycleEventBestEffort,
+      buildPassLifecycleMetricMetadata,
+      buildAutoConvergePassResult
     });
   }
 
