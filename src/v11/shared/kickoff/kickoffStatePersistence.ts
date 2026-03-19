@@ -68,6 +68,18 @@ function buildKickoffStateWriteInput(
   };
 }
 
+function mapKickoffStateWriteResult(
+  result: Awaited<ReturnType<typeof writeKickoffState>>
+): PersistKickoffStateResult {
+  if (result.kind === "conflict") {
+    return buildKickoffStateConflictResult();
+  }
+
+  return buildKickoffStateSuccessResult({
+    writtenState: result.writtenState
+  });
+}
+
 export async function persistKickoffState(
   input: PersistKickoffStateInput
 ): Promise<PersistKickoffStateResult> {
@@ -84,11 +96,5 @@ export async function persistKickoffState(
   const stateWriteResult = await writeKickoffState(
     buildKickoffStateWriteInput(input)
   );
-  if (stateWriteResult.kind === "conflict") {
-    return buildKickoffStateConflictResult();
-  }
-
-  return buildKickoffStateSuccessResult({
-    writtenState: stateWriteResult.writtenState
-  });
+  return mapKickoffStateWriteResult(stateWriteResult);
 }
