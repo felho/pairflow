@@ -96,6 +96,14 @@ describe("v11 converged contract harness skeleton", () => {
     expect(sources).toEqual(sorted);
   });
 
+  it("keeps converged manifest sources in converged case directory", async () => {
+    const sources = await listConvergedCaseSourcesFromManifest();
+    for (const source of sources) {
+      expect(source.startsWith("tests/contracts/v11/cases/converged/")).toBe(true);
+      expect(source.endsWith(".case.json")).toBe(true);
+    }
+  });
+
   it("keeps converged manifest ids aligned with case ids", async () => {
     const entries = await listConvergedManifestEntries();
     const manifestIdsBySource = new Map(
