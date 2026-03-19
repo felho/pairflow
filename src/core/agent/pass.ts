@@ -64,6 +64,7 @@ import { resolveReviewerTestDirectiveForPass } from "../../v11/application/pass/
 import { updateReviewerDocGateArtifact } from "../../v11/application/pass/reviewerDocGateArtifactUpdater.js";
 import { prepareNormalPassAppend } from "../../v11/application/pass/normalPassAppendPreparation.js";
 import { executeNormalPassDelivery } from "../../v11/application/pass/normalPassDeliveryExecution.js";
+import { finalizeNormalPass } from "../../v11/application/pass/normalPassFinalization.js";
 import { prepareReviewerPass } from "../../v11/application/pass/reviewerPassPreparation.js";
 import { resolvePassIntent } from "../../v11/application/pass/passIntentResolution.js";
 import { prepareReviewerVerification } from "../../v11/application/pass/reviewerVerificationPreparation.js";
@@ -459,68 +460,48 @@ export async function emitPassFromWorkspace(
   const deliveryResult = normalPassDelivery.deliveryResult;
   const deliveryRetried = normalPassDelivery.deliveryRetried;
 
-  await emitBubbleLifecycleEventBestEffort({
+  return finalizeNormalPass({
+    now,
     repoPath: resolved.repoPath,
     bubbleId: resolved.bubbleId,
     bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
-    eventType: "bubble_passed",
     round: handoff.envelopeRound,
     actorRole: handoff.senderRole,
-    metadata: buildPassLifecycleMetricMetadata({
-      passIntent: intent,
-      inferredIntent,
-      sender: handoff.senderAgent,
-      recipient: handoff.recipientAgent,
-      recipientRole: handoff.recipientRole,
-      refsCount: refs.length,
-      hasFindings,
-      noFindings,
-      ...(reviewerFindingsClaim !== undefined
-        ? { reviewerFindingsClaim }
-        : {}),
-      ...(reviewerFindingsClaimParserMetadata !== undefined
-        ? { reviewerFindingsClaimParserMetadata }
-        : {}),
-      transitionDecision: "normal_pass",
-      repeatCleanReasonCode: repeatCleanTrigger.reasonCode,
-      repeatCleanReasonDetail: repeatCleanTrigger.reasonDetail,
-      repeatCleanTrigger: repeatCleanTrigger.trigger,
-      mostRecentPreviousReviewerCleanPassEnvelope:
-        repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope,
-      ...(reviewerTestDirective !== undefined ? { reviewerTestDirective } : {}),
-      findings: handoff.senderRole === "reviewer" ? findingsForPayload : findings,
-      ...(docGateArtifactWriteFailureReason !== undefined
-        ? { docGateArtifactWriteFailureReason }
-        : {})
-    }),
-    now
-  });
-
-  const mostRecentPreviousReviewerCleanPassEnvelope =
-    resolveMostRecentPreviousReviewerPassIsCleanFromMetadata(
-      mapped.envelope.payload.metadata
-    ) ?? repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope;
-  const deliveryForResult = mapPassResultDelivery({
-    deliveryResult,
-    deliveryRetried
-  });
-
-  return buildNormalPassResult({
-    bubbleId: resolved.bubbleId,
-    sequence: mapped.sequence,
-    envelope: mapped.envelope,
-    state: written.state,
+    passIntent: intent,
     inferredIntent,
+    sender: handoff.senderAgent,
+    recipient: handoff.recipientAgent,
+    recipientRole: handoff.recipientRole,
+    refsCount: refs.length,
+    hasFindings,
+    noFindings,
+    ...(reviewerFindingsClaim !== undefined
+      ? { reviewerFindingsClaim }
+      : {}),
+    ...(reviewerFindingsClaimParserMetadata !== undefined
+      ? { reviewerFindingsClaimParserMetadata }
+      : {}),
     repeatCleanReasonCode: repeatCleanTrigger.reasonCode,
     repeatCleanReasonDetail: repeatCleanTrigger.reasonDetail,
     repeatCleanTrigger: repeatCleanTrigger.trigger,
-    mostRecentPreviousReviewerCleanPassEnvelope,
-    ...(deliveryForResult !== undefined
-      ? { delivery: deliveryForResult }
-      : {}),
+    fallbackMostRecentPreviousReviewerCleanPassEnvelope:
+      repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope,
+    ...(reviewerTestDirective !== undefined ? { reviewerTestDirective } : {}),
+    findings: handoff.senderRole === "reviewer" ? findingsForPayload : findings,
     ...(docGateArtifactWriteFailureReason !== undefined
       ? { docGateArtifactWriteFailureReason }
-      : {})
+      : {}),
+    sequence: mapped.sequence,
+    envelope: mapped.envelope,
+    state: written.state,
+    deliveryResult,
+    deliveryRetried
+  }, {
+    emitBubbleLifecycleEventBestEffort,
+    buildPassLifecycleMetricMetadata,
+    resolveMostRecentPreviousReviewerPassIsCleanFromMetadata,
+    mapPassResultDelivery,
+    buildNormalPassResult
   });
 }
 
