@@ -48,7 +48,6 @@ import {
 } from "../convergence/policy.js";
 import {
   evaluateRepeatCleanAutoconvergeTrigger,
-  repeatCleanAutoconvergeTriggeredReasonCode,
   type RepeatCleanAutoconvergeReasonCode,
   type RepeatCleanAutoconvergeReasonDetail
 } from "../convergence/repeatCleanAutoconverge.js";
@@ -81,6 +80,10 @@ import {
   type PassDeliveryDependencies
 } from "../../v11/application/pass/reviewerDelivery.js";
 import { mapPassResultDelivery } from "../../v11/application/pass/passResultDelivery.js";
+import {
+  buildAutoConvergePassResult,
+  buildNormalPassResult
+} from "../../v11/application/pass/passResultBuilder.js";
 import { writePostAppendReviewVerificationArtifact } from "../../v11/application/pass/postAppendReviewVerificationWriter.js";
 import { writePostAppendPassState } from "../../v11/application/pass/postAppendStateWriter.js";
 import { resolveReviewerTestDirectiveForPass } from "../../v11/application/pass/reviewerTestDirectiveResolver.js";
@@ -451,29 +454,18 @@ export async function emitPassFromWorkspace(
       now
     });
 
-    return {
+    return buildAutoConvergePassResult({
       bubbleId: resolved.bubbleId,
-      sequence: converged.convergenceSequence,
-      envelope: converged.convergenceEnvelope,
-      resultEnvelopeKind: "convergence",
-      state: converged.state,
       inferredIntent,
-      transitionDecision: "auto_converge",
-      repeatCleanReasonCode: repeatCleanAutoconvergeTriggeredReasonCode,
       repeatCleanReasonDetail: repeatCleanTrigger.reasonDetail,
-      repeatCleanTrigger: true,
-      mostRecentPreviousReviewerCleanPassEnvelope: true,
-      autoConverged: {
-        gateRoute: converged.gateRoute,
-        convergenceSequence: converged.convergenceSequence,
-        convergenceEnvelope: converged.convergenceEnvelope,
-        approvalRequestSequence: converged.approvalRequestSequence,
-        approvalRequestEnvelope: converged.approvalRequestEnvelope
-      },
+      convergenceSequence: converged.convergenceSequence,
+      convergenceEnvelope: converged.convergenceEnvelope,
+      state: converged.state,
+      gateRoute: converged.gateRoute,
+      approvalRequestSequence: converged.approvalRequestSequence,
+      approvalRequestEnvelope: converged.approvalRequestEnvelope,
       ...(converged.delivery !== undefined
-        ? {
-            delivery: converged.delivery
-          }
+        ? { delivery: converged.delivery }
         : {}),
       ...(autoConvergeDocGateArtifactWriteFailureReason !== undefined
         ? {
@@ -481,7 +473,7 @@ export async function emitPassFromWorkspace(
               autoConvergeDocGateArtifactWriteFailureReason
           }
         : {})
-    };
+    });
   }
 
   let reviewerGateEvaluation:
@@ -653,14 +645,12 @@ export async function emitPassFromWorkspace(
     deliveryRetried
   });
 
-  return {
+  return buildNormalPassResult({
     bubbleId: resolved.bubbleId,
     sequence: mapped.sequence,
     envelope: mapped.envelope,
-    resultEnvelopeKind: "pass",
     state: written.state,
     inferredIntent,
-    transitionDecision: "normal_pass",
     repeatCleanReasonCode: repeatCleanTrigger.reasonCode,
     repeatCleanReasonDetail: repeatCleanTrigger.reasonDetail,
     repeatCleanTrigger: repeatCleanTrigger.trigger,
@@ -669,11 +659,9 @@ export async function emitPassFromWorkspace(
       ? { delivery: deliveryForResult }
       : {}),
     ...(docGateArtifactWriteFailureReason !== undefined
-      ? {
-          docGateArtifactWriteFailureReason
-        }
+      ? { docGateArtifactWriteFailureReason }
       : {})
-  };
+  });
 }
 
 export function asPassCommandError(error: unknown): never {
