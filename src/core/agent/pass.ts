@@ -1,17 +1,8 @@
-import { readStateSnapshot } from "../state/stateStore.js";
-import {
-  resolveBubbleFromWorkspaceCwd
-} from "../bubble/workspaceResolution.js";
-import {
-  IDEATION_PASS_BLOCKED,
-  resolveIdeationMetadata
-} from "../bubble/ideation.js";
 import {
   type EmitConvergedDependencies,
   emitConvergedFromWorkspace,
   type EmitConvergedResult
 } from "./converged.js";
-import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import {
   type PassIntent,
@@ -27,7 +18,6 @@ import {
   type RepeatCleanAutoconvergeReasonDetail
 } from "../convergence/repeatCleanAutoconverge.js";
 import {
-  resolvePassHandoff,
   type ResolvedPassHandoff
 } from "../../v11/domain/pass/handoff.js";
 import {
@@ -72,6 +62,7 @@ import {
 import { normalizePassCommandError } from "../../v11/shared/pass/passCommandErrorNormalization.js";
 import { normalizePassCommandInput } from "../../v11/shared/pass/passCommandInputNormalization.js";
 import { normalizePassCommandPayload } from "../../v11/shared/pass/passCommandPayloadNormalization.js";
+import { preparePassWorkspaceContext } from "../../v11/shared/pass/passWorkspaceContextPreparation.js";
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
 } from "../../v11/domain/pass/repeatCleanMetadata.js";
@@ -169,39 +160,19 @@ export async function emitPassFromWorkspace(
   const findings = normalizedPayload.findings;
   const hasFindings = normalizedPayload.hasFindings;
   const noFindings = normalizedPayload.noFindings;
-
-  const resolved = await resolveBubbleFromWorkspaceCwd(input.cwd);
-  const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
-    bubbleId: resolved.bubbleId,
-    repoPath: resolved.repoPath,
-    bubblePaths: resolved.bubblePaths,
-    bubbleConfig: resolved.bubbleConfig,
-    now
-  });
-  resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
-
-  const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
-  const state = loadedState.state;
-  const ideationMetadata = resolveIdeationMetadata(resolved.bubbleConfig);
-  if (
-    state.state === "RUNNING" &&
-    state.round === 0 &&
-    ideationMetadata.mode &&
-    ideationMetadata.taskPending
-  ) {
-    throw new PassCommandError(
-      `${IDEATION_PASS_BLOCKED}: ideation kickoff is required before PASS handoff.`
-    );
-  }
-
-  const { implementer, reviewer } = resolved.bubbleConfig.agents;
-  const handoff: ResolvedPassHandoff = resolvePassHandoff({
-    state,
-    implementer,
-    reviewer,
+  const workspaceContext = await preparePassWorkspaceContext({
+    cwd: input.cwd,
+    now,
     nowIso,
     createError: (message) => new PassCommandError(message)
   });
+  const resolved = workspaceContext.resolved;
+  const bubbleIdentity = workspaceContext.bubbleIdentity;
+  const loadedState = workspaceContext.loadedState;
+  const state = workspaceContext.state;
+  const handoff: ResolvedPassHandoff = workspaceContext.handoff;
+  const implementer = workspaceContext.implementer;
+  const reviewer = workspaceContext.reviewer;
   const passRouting = await preparePassRouting(
     {
       senderRole: handoff.senderRole,

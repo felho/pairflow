@@ -16,6 +16,7 @@ import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubble
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { AskHumanRoutingContext } from "../../shared/askHuman/askHumanRoutingContext.js";
+import { buildAskHumanExecutionDependencies } from "../../shared/askHuman/askHumanExecutionDependencyBuilder.js";
 
 export interface RunAskHumanFlowInput {
   now: Date;
@@ -80,22 +81,6 @@ export interface RunAskHumanFlowDependencies {
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
 }
 
-function buildExecutionDependencies(
-  dependencies: RunAskHumanFlowDependencies
-): ExecuteAskHumanExecutionDependencies {
-  return {
-    ...(dependencies.appendProtocolEnvelope !== undefined
-      ? { appendProtocolEnvelope: dependencies.appendProtocolEnvelope }
-      : {}),
-    ...(dependencies.writeStateSnapshot !== undefined
-      ? { writeStateSnapshot: dependencies.writeStateSnapshot }
-      : {}),
-    ...(dependencies.applyStateTransition !== undefined
-      ? { applyStateTransition: dependencies.applyStateTransition }
-      : {})
-  };
-}
-
 function buildFinalizationDependencies(
   dependencies: RunAskHumanFlowDependencies
 ): FinalizeAskHumanFlowDependencies {
@@ -125,7 +110,7 @@ export async function runAskHumanFlow(
       routing: input.routing,
       createError: input.createError
     },
-    buildExecutionDependencies(dependencies)
+    buildAskHumanExecutionDependencies(dependencies)
   );
 
   return dependencies.finalizeAskHumanFlow(
