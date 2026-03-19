@@ -407,7 +407,7 @@ export type {
 export type {
   EmitPassInput,
   EmitPassResult
-} from "./core/agent/pass.js";
+} from "./v11/application/pass/passCommandContract.js";
 export type {
   BubbleInboxInput,
   BubbleInboxView,
