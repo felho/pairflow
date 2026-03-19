@@ -1,33 +1,20 @@
-import {
-  type appendProtocolEnvelope,
-  type AppendProtocolEnvelopeResult
-} from "../../../core/protocol/transcriptStore.js";
-import { type writeStateSnapshot, type LoadedStateSnapshot } from "../../../core/state/stateStore.js";
-import type { applyStateTransition } from "../../../core/state/machine.js";
+import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
 import {
   buildAskHumanEnvelope,
   buildAskHumanLockPath,
   buildAskHumanStateWriteFailureMessage
 } from "../../shared/askHuman/askHumanExecutionArtifacts.js";
+import type {
+  ExecuteAskHumanExecutionDependencies,
+  ExecuteAskHumanExecutionInput,
+  ExecuteAskHumanExecutionResult
+} from "../../shared/askHuman/askHumanFlowContract.js";
 import { resolveAskHumanExecutionDependencies } from "../../shared/askHuman/askHumanExecutionDependencyResolution.js";
-import type { AskHumanRoutingContext } from "../../shared/askHuman/askHumanRoutingContext.js";
-
-export interface ExecuteAskHumanExecutionInput {
-  now: Date;
-  routing: AskHumanRoutingContext;
-  createError: (message: string) => Error;
-}
-
-export interface ExecuteAskHumanExecutionResult {
-  appended: AppendProtocolEnvelopeResult;
-  written: LoadedStateSnapshot;
-}
-
-export interface ExecuteAskHumanExecutionDependencies {
-  appendProtocolEnvelope?: typeof appendProtocolEnvelope;
-  writeStateSnapshot?: typeof writeStateSnapshot;
-  applyStateTransition?: typeof applyStateTransition;
-}
+export type {
+  ExecuteAskHumanExecutionDependencies,
+  ExecuteAskHumanExecutionInput,
+  ExecuteAskHumanExecutionResult
+};
 
 export async function executeAskHumanExecution(
   input: ExecuteAskHumanExecutionInput,
