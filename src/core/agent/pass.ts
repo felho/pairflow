@@ -21,7 +21,6 @@ import {
 import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import {
-  isPassIntent,
   type PassIntent,
   type ProtocolEnvelope
 } from "../../types/protocol.js";
@@ -42,9 +41,6 @@ import {
   resolvePassHandoff,
   type ResolvedPassHandoff
 } from "../../v11/domain/pass/handoff.js";
-import {
-  assertReviewerIntentOverrideConsistency
-} from "../../v11/domain/pass/reviewerIntentOverrideGuard.js";
 import { normalizeReviewerFindingsPayload } from "../../v11/domain/pass/reviewerFindingsPayload.js";
 import { assertNoDocsOnlySkipLogRefConflict } from "../../v11/domain/pass/docsOnlyRuntimeSkipGuard.js";
 import { validateReviewerVerificationConsistency } from "../../v11/domain/pass/reviewerVerificationConsistencyGuard.js";
@@ -68,6 +64,7 @@ import { resolveReviewerTestDirectiveForPass } from "../../v11/application/pass/
 import { updateReviewerDocGateArtifact } from "../../v11/application/pass/reviewerDocGateArtifactUpdater.js";
 import { prepareNormalPassAppend } from "../../v11/application/pass/normalPassAppendPreparation.js";
 import { prepareReviewerPass } from "../../v11/application/pass/reviewerPassPreparation.js";
+import { resolvePassIntent } from "../../v11/application/pass/passIntentResolution.js";
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
 } from "../../v11/domain/pass/repeatCleanMetadata.js";
@@ -218,22 +215,25 @@ export async function emitPassFromWorkspace(
   const reviewerFindingsClaimParserMetadata =
     reviewerPassPreparation.reviewerFindingsClaimParserMetadata;
 
-  const inferredIntent = input.intent === undefined;
-  const intent = input.intent
-    ?? (handoff.senderRole === "reviewer"
-      ? inferredReviewerIntent
-      : inferPassIntent(handoff.senderRole));
-  if (!isPassIntent(intent)) {
-    throw new PassCommandError(`Invalid pass intent: ${String(intent)}`);
-  }
-  if (handoff.senderRole === "reviewer") {
-    assertReviewerIntentOverrideConsistency({
-      intent,
+  const intentResolution = resolvePassIntent(
+    {
+      senderRole: handoff.senderRole,
       noFindings,
       hasFindings,
-      createError: (message) => new PassCommandError(message)
-    });
-  }
+      createError: (message) => new PassCommandError(message),
+      ...(input.intent !== undefined
+        ? { inputIntent: input.intent }
+        : {}),
+      ...(inferredReviewerIntent !== undefined
+        ? { inferredReviewerIntent }
+        : {})
+    },
+    {
+      inferDefaultPassIntent: inferPassIntent
+    }
+  );
+  const inferredIntent = intentResolution.inferredIntent;
+  const intent = intentResolution.intent;
 
   assertNoDocsOnlySkipLogRefConflict({
     reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
