@@ -29,9 +29,11 @@ describe("v11 converged contract harness skeleton", () => {
   it("executes legacy, v11 and parity assertions via shared runner", async () => {
     const casePaths = await listConvergedCasePaths();
     expect(casePaths.length).toBeGreaterThan(0);
+    const seenModes = new Set<string>();
 
     for (const casePath of casePaths) {
       const caseDef = await readContractCase(casePath);
+      seenModes.add(caseDef.mode);
       const run = await runConvergedContractCase(caseDef);
       if (caseDef.mode === "legacy") {
         expect(run.legacy?.status).toBe("ok");
@@ -48,6 +50,9 @@ describe("v11 converged contract harness skeleton", () => {
       expect(run.v11).toBeDefined();
       expect(run.legacy).toEqual(run.v11);
     }
+    expect(seenModes.has("legacy")).toBe(true);
+    expect(seenModes.has("v11")).toBe(true);
+    expect(seenModes.has("parity")).toBe(true);
   }, 30_000);
 
   it("rejects invalid converged contract input.reviewArtifactType", async () => {
