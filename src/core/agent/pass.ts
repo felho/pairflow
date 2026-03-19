@@ -74,9 +74,6 @@ import {
   type RepeatCleanAutoconvergeReasonDetail
 } from "../convergence/repeatCleanAutoconverge.js";
 import {
-  resolveFindingPriority
-} from "../../types/findings.js";
-import {
   emitConvergedFromWorkspace,
   type EmitConvergedDependencies,
   type EmitConvergedResult
@@ -112,6 +109,7 @@ import {
   buildRepeatCleanPassPayloadMetadata,
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
 } from "../../v11/domain/pass/repeatCleanMetadata.js";
+import { buildFindingCounts } from "../../v11/domain/pass/findingCounts.js";
 
 export interface EmitPassInput {
   summary: string;
@@ -191,47 +189,6 @@ function mapAppendResult(result: AppendProtocolEnvelopeResult): Pick<EmitPassRes
     sequence: result.sequence,
     envelope: result.envelope
   };
-}
-
-function buildFindingCounts(findings: Finding[]): {
-  p0: number;
-  p1: number;
-  p2: number;
-  p3: number;
-} {
-  const counts = {
-    p0: 0,
-    p1: 0,
-    p2: 0,
-    p3: 0
-  };
-
-  for (const finding of findings) {
-    const priority = resolveFindingPriority({
-      priority: finding.effective_priority ?? finding.priority,
-      ...(finding.effective_priority === undefined
-        ? { severity: finding.severity }
-        : {})
-    });
-    switch (priority) {
-      case "P0":
-        counts.p0 += 1;
-        break;
-      case "P1":
-        counts.p1 += 1;
-        break;
-      case "P2":
-        counts.p2 += 1;
-        break;
-      case "P3":
-        counts.p3 += 1;
-        break;
-      default:
-        break;
-    }
-  }
-
-  return counts;
 }
 
 function createDocGateReadFailureWarning(input: {
