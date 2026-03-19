@@ -1,0 +1,25 @@
+{
+  "id": "meta-review-gate-recover-inconclusive-parity",
+  "command": "metaReviewGate",
+  "mode": "parity",
+  "description": "Seed contract case for meta-review gate recover inconclusive parity baseline.",
+  "input": {
+    "route": "recover",
+    "recoverScenario": "inconclusive",
+    "refs": []
+  },
+  "expected": {
+    "status": "ok",
+    "gateRoute": "human_gate_inconclusive",
+    "stateSubset": {
+      "state": "READY_FOR_HUMAN_APPROVAL"
+    }
+  },
+  "tags": [
+    "seed",
+    "m3",
+    "meta-review-gate",
+    "parity"
+  ]
+}
+
