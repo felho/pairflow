@@ -55,6 +55,12 @@
       "command": "converged",
       "source": "tests/contracts/v11/cases/converged/converged-document-parity.case.json",
       "kind": "seed_case"
+    },
+    {
+      "id": "converged-document-v11",
+      "command": "converged",
+      "source": "tests/contracts/v11/cases/converged/converged-document-v11.case.json",
+      "kind": "seed_case"
     }
   ]
 }
