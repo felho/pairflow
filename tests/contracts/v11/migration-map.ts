@@ -10,9 +10,9 @@ export interface CommandMigrationEntry {
 export const commandMigrationMap: readonly CommandMigrationEntry[] = [
   {
     command: "pass",
-    state: "legacy",
-    owner: "TBD",
-    notes: "M1 first command slice target."
+    state: "parity",
+    owner: "runtime",
+    notes: "M1 parity runner wired (legacy-v11 shadow parity active)."
   },
   {
     command: "kickoff",

@@ -7,6 +7,12 @@
       "command": "pass",
       "source": "tests/contracts/v11/cases/pass/pass-basic.case.json",
       "kind": "seed_case"
+    },
+    {
+      "id": "pass-basic-handoff-parity",
+      "command": "pass",
+      "source": "tests/contracts/v11/cases/pass/pass-basic-parity.case.json",
+      "kind": "seed_case"
     }
   ]
 }

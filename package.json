@@ -23,6 +23,7 @@
     "codegen:reviewer-ontology": "node ./scripts/generate-reviewer-severity-ontology.mjs",
     "fitness:report": "pnpm exec tsx ./tools/fitness/run-report.ts",
     "fitness:check": "pnpm exec tsx ./tools/fitness/run-check.ts",
+    "test:contracts": "pnpm exec vitest run tests/contracts/v11/*.test.ts",
     "build": "pnpm codegen:reviewer-ontology && tsc -p tsconfig.build.json",
     "typecheck": "bash ./scripts/run-evidence.sh .pairflow/evidence/typecheck.log \"pnpm typecheck\" -- bash -lc \"pnpm codegen:reviewer-ontology && pnpm exec tsc --noEmit\"",
     "lint": "bash ./scripts/run-evidence.sh .pairflow/evidence/lint.log \"pnpm lint\" -- bash -lc \"pnpm codegen:reviewer-ontology && pnpm exec eslint .\"",
