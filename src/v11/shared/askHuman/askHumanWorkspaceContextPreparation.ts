@@ -4,7 +4,7 @@ import type {
 import type { ResolvedBubbleWorkspace } from "../../../core/bubble/workspaceResolution.js";
 import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
-import type { ResolvedAskHumanRoutingPreparationDependencies } from "./askHumanRoutingPreparationDependencyResolution.js";
+import type { ResolvedAskHumanRoutingPreparationDependencies } from "./askHumanRoutingPreparationDependencyResolutionContract.js";
 
 export interface PrepareAskHumanWorkspaceContextInput {
   cwd?: string | undefined;
