@@ -100,6 +100,7 @@ import {
 } from "../../v11/domain/pass/reviewerFindingsClaim.js";
 import { normalizeReviewerFindingsPayload } from "../../v11/domain/pass/reviewerFindingsPayload.js";
 import { assertNoDocsOnlySkipLogRefConflict } from "../../v11/domain/pass/docsOnlyRuntimeSkipGuard.js";
+import { assertReviewerIntentOverrideConsistency } from "../../v11/domain/pass/reviewerIntentOverrideGuard.js";
 
 export interface EmitPassInput {
   summary: string;
@@ -558,23 +559,12 @@ export async function emitPassFromWorkspace(
     throw new PassCommandError(`Invalid pass intent: ${String(intent)}`);
   }
   if (handoff.senderRole === "reviewer") {
-    // `intent=task` remains implementer-only by design; reviewer handoff
-    // semantics are constrained to `review`/`fix_request` with findings flags.
-    if (intent === "task") {
-      throw new PassCommandError(
-        "Reviewer PASS cannot use intent=task."
-      );
-    }
-    if (noFindings && intent === "fix_request") {
-      throw new PassCommandError(
-        "Reviewer PASS with --no-findings cannot use intent=fix_request."
-      );
-    }
-    if (hasFindings && intent === "review") {
-      throw new PassCommandError(
-        "Reviewer PASS with findings cannot use intent=review."
-      );
-    }
+    assertReviewerIntentOverrideConsistency({
+      intent,
+      noFindings,
+      hasFindings,
+      createError: (message) => new PassCommandError(message)
+    });
   }
 
   assertNoDocsOnlySkipLogRefConflict({
