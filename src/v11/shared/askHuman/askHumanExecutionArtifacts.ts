@@ -1,11 +1,7 @@
 import { join } from "node:path";
 
 import type { AppendProtocolEnvelopeResult } from "../../../core/protocol/transcriptStore.js";
-import type { AskHumanRoutingContext } from "./askHumanRoutingContext.js";
-
-export interface AskHumanExecutionArtifactsInput {
-  routing: AskHumanRoutingContext;
-}
+import type { AskHumanExecutionArtifactsInput } from "./askHumanExecutionArtifactsContract.js";
 
 export function buildAskHumanLockPath(input: AskHumanExecutionArtifactsInput): string {
   return join(
