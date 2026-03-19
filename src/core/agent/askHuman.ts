@@ -1,8 +1,8 @@
 import {
   WorkspaceResolutionError
 } from "../bubble/workspaceResolution.js";
-import { emitBubbleNotification } from "../runtime/notifications.js";
-import { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
+import type { emitBubbleNotification } from "../runtime/notifications.js";
+import type { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
 import { executeAskHumanExecution } from "../../v11/application/askHuman/askHumanExecution.js";
 import { finalizeAskHumanFlow } from "../../v11/application/askHuman/askHumanFinalization.js";
 import { runAskHumanFlow } from "../../v11/application/askHuman/runAskHumanFlow.js";
@@ -46,6 +46,8 @@ export async function emitAskHumanFromWorkspace(
   dependencies: EmitAskHumanDependencies = {}
 ): Promise<EmitAskHumanResult> {
   const now = input.now ?? new Date();
+  const createError = (message: string): AskHumanCommandError =>
+    new AskHumanCommandError(message);
   const routing = await prepareAskHumanRouting({
     question: input.question,
     ...(input.refs !== undefined
@@ -55,24 +57,24 @@ export async function emitAskHumanFromWorkspace(
       ? { cwd: input.cwd }
       : {}),
     now,
-    createError: (message) => new AskHumanCommandError(message)
+    createError
   });
 
   return runAskHumanFlow(
     buildAskHumanFlowInput({
       now,
       routing,
-      createError: (message) => new AskHumanCommandError(message)
+      createError
     }),
     buildAskHumanFlowDependencies({
       executeAskHumanExecution,
       finalizeAskHumanFlow,
       ...(dependencies.emitTmuxDeliveryNotification !== undefined
         ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
-        : { emitTmuxDeliveryNotification }),
+        : {}),
       ...(dependencies.emitBubbleNotification !== undefined
         ? { emitBubbleNotification: dependencies.emitBubbleNotification }
-        : { emitBubbleNotification })
+        : {})
     })
   );
 }
