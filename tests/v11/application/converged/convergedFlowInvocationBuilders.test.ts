@@ -115,4 +115,57 @@ describe("convergedFlowInvocationBuilders", () => {
     expect("applyMetaReviewGateOnConvergence" in dependencies).toBe(false);
     expect("recoverMetaReviewGateFromSnapshot" in dependencies).toBe(false);
   });
+
+  it("omits optional dependency overrides when explicitly undefined", () => {
+    const dependencies = buildConvergedFlowDependencies({
+      prepareConvergedRouting: async () =>
+        ({
+          resolved: {},
+          bubbleIdentity: {},
+          state: {},
+          implementer: "codex",
+          reviewer: "claude"
+        }) as never,
+      prepareConvergedPolicy: async () =>
+        ({
+          transcript: [],
+          policy: {
+            ok: true,
+            errors: [],
+            diagnostics: []
+          },
+          convergencePolicyDiagnostics: []
+        }) as never,
+      prepareConvergedValidation: async () =>
+        ({
+          specLockState: {},
+          roundGateState: {},
+          summaryVerifierGateDecision: {}
+        }) as never,
+      executeConvergedExecution: async () =>
+        ({
+          convergence: {},
+          gateResult: {}
+        }) as never,
+      finalizeConvergedFlow: async () =>
+        ({
+          bubbleId: "b_1",
+          convergenceSequence: 1,
+          convergenceEnvelope: {},
+          gateRoute: "human_gate_approve",
+          approvalRequestSequence: 2,
+          approvalRequestEnvelope: {},
+          state: {}
+        }) as never,
+      applyMetaReviewGateOnConvergence: undefined,
+      recoverMetaReviewGateFromSnapshot: undefined,
+      emitTmuxDeliveryNotification: undefined,
+      emitBubbleNotification: undefined
+    });
+
+    expect("applyMetaReviewGateOnConvergence" in dependencies).toBe(false);
+    expect("recoverMetaReviewGateFromSnapshot" in dependencies).toBe(false);
+    expect("emitTmuxDeliveryNotification" in dependencies).toBe(false);
+    expect("emitBubbleNotification" in dependencies).toBe(false);
+  });
 });
