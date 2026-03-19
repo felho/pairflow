@@ -3,10 +3,7 @@ import type {
   EmitAskHumanInput,
   EmitAskHumanResult
 } from "./askHumanCommandContract.js";
-import {
-  createAskHumanCommandError,
-  throwAsAskHumanCommandError
-} from "./askHumanCommandRuntime.js";
+import { createAskHumanCommandError } from "./askHumanCommandRuntime.js";
 import { dispatchAskHumanCommandOrchestration } from "./askHumanCommandOrchestrationDispatch.js";
 
 export async function emitAskHumanFromWorkspace(
@@ -19,7 +16,4 @@ export async function emitAskHumanFromWorkspace(
     createAskHumanCommandError
   );
 }
-
-export function asAskHumanCommandError(error: unknown): never {
-  return throwAsAskHumanCommandError(error);
-}
+export { throwAsAskHumanCommandError as asAskHumanCommandError } from "./askHumanCommandRuntime.js";
