@@ -1,9 +1,7 @@
 import {
   type EmitConvergedDependencies,
-  emitConvergedFromWorkspace,
   type EmitConvergedResult
 } from "./converged.js";
-import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import {
   type PassIntent,
   type ProtocolEnvelope
@@ -23,54 +21,24 @@ import {
 import {
   raiseRepeatCleanDownstreamConvergedRejected,
 } from "../../v11/domain/pass/repeatCleanPolicyRejection.js";
-import { executeAutoConvergeConverged } from "../../v11/application/pass/autoConvergeConvergedExecution.js";
-import { finalizeAutoConvergePass } from "../../v11/application/pass/autoConvergeFinalization.js";
-import { runAutoConvergeFlow } from "../../v11/application/pass/runAutoConvergeFlow.js";
-import { resolveReviewerVerification } from "../../v11/application/pass/reviewerVerificationResolver.js";
 import {
-  executePassDelivery,
   type PassDeliveryDependencies
 } from "../../v11/application/pass/reviewerDelivery.js";
-import { prepareRepeatCleanAutoConverge } from "../../v11/application/pass/autoConvergePreparation.js";
-import { mapPassResultDelivery } from "../../v11/application/pass/passResultDelivery.js";
-import {
-  buildAutoConvergePassResult,
-  buildNormalPassResult
-} from "../../v11/application/pass/passResultBuilder.js";
-import { writePostAppendReviewVerificationArtifact } from "../../v11/application/pass/postAppendReviewVerificationWriter.js";
-import { writePostAppendPassState } from "../../v11/application/pass/postAppendStateWriter.js";
-import { resolveReviewerTestDirectiveForPass } from "../../v11/application/pass/reviewerTestDirectiveResolver.js";
-import { updateReviewerDocGateArtifact } from "../../v11/application/pass/reviewerDocGateArtifactUpdater.js";
-import { prepareNormalPassAppend } from "../../v11/application/pass/normalPassAppendPreparation.js";
-import { executeNormalPassAppend } from "../../v11/application/pass/normalPassAppendExecution.js";
-import { executeNormalPassDelivery } from "../../v11/application/pass/normalPassDeliveryExecution.js";
-import { persistNormalPassPostAppend } from "../../v11/application/pass/normalPassPostAppendPersistence.js";
-import { finalizeNormalPass } from "../../v11/application/pass/normalPassFinalization.js";
 import { preparePassRouting } from "../../v11/application/pass/passRoutingPreparation.js";
-import { prepareReviewerPass } from "../../v11/application/pass/reviewerPassPreparation.js";
-import { resolvePassIntent } from "../../v11/application/pass/passIntentResolution.js";
-import { prepareReviewerVerification } from "../../v11/application/pass/reviewerVerificationPreparation.js";
-import { runNormalPassFlow } from "../../v11/application/pass/runNormalPassFlow.js";
-import {
-  buildAutoConvergeFlowDependencies,
-  buildAutoConvergeFlowInput
-} from "../../v11/shared/pass/autoConvergeFlowInvocationBuilders.js";
-import {
-  buildNormalPassFlowDependencies,
-  buildNormalPassFlowInput
-} from "../../v11/shared/pass/normalPassFlowInvocationBuilders.js";
 import { normalizePassCommandError } from "../../v11/shared/pass/passCommandErrorNormalization.js";
 import { normalizePassCommandInput } from "../../v11/shared/pass/passCommandInputNormalization.js";
 import { normalizePassCommandPayload } from "../../v11/shared/pass/passCommandPayloadNormalization.js";
+import { dispatchPassFlow } from "../../v11/shared/pass/passFlowDispatch.js";
 import {
-  buildPassRoutingDependencies,
   buildPassRoutingInput
 } from "../../v11/shared/pass/passRoutingInvocationBuilders.js";
 import { preparePassWorkspaceContext } from "../../v11/shared/pass/passWorkspaceContextPreparation.js";
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
 } from "../../v11/domain/pass/repeatCleanMetadata.js";
-import { buildPassLifecycleMetricMetadata } from "../../v11/domain/pass/lifecycleMetricMetadata.js";
+import {
+  createPassRoutingDependencies
+} from "../../v11/shared/pass/passFlowDependencyWiring.js";
 
 export interface EmitPassInput {
   summary: string;
@@ -197,69 +165,18 @@ export async function emitPassFromWorkspace(
         ? { inputIntent: input.intent }
         : {})
     }),
-    buildPassRoutingDependencies({
-      prepareReviewerPass,
-      resolvePassIntent,
-      prepareReviewerVerification,
-      resolveReviewerVerification,
-      inferDefaultPassIntent: inferPassIntent
-    })
+    createPassRoutingDependencies(inferPassIntent)
   );
 
-  const repeatCleanTrigger = passRouting.repeatCleanTrigger;
-  if (repeatCleanTrigger.trigger) {
-    return runAutoConvergeFlow(
-      buildAutoConvergeFlowInput({
-        summary,
-        refs,
-        now,
-        nowIso,
-        findings,
-        hasFindings,
-        noFindings,
-        resolved,
-        bubbleIdentity,
-        handoff,
-        reviewer,
-        implementer,
-        state,
-        loadedState,
-        passRouting,
-        createError: (message) => new PassCommandError(message),
-        onDownstreamRejected: (reason) =>
-          raiseRepeatCleanDownstreamConvergedRejected({
-            reason,
-            createError: (message) => new PassCommandError(message)
-          })
-      }),
-      buildAutoConvergeFlowDependencies({
-        prepareRepeatCleanAutoConverge,
-        executeAutoConvergeConverged,
-        emitConvergedFromWorkspace,
-        ...(dependencies.emitTmuxDeliveryNotification !== undefined
-          ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
-          : {}),
-        ...(dependencies.emitBubbleNotification !== undefined
-          ? { emitBubbleNotification: dependencies.emitBubbleNotification }
-          : {}),
-        finalizeAutoConvergePass,
-        updateReviewerDocGateArtifact,
-        emitBubbleLifecycleEventBestEffort,
-        buildPassLifecycleMetricMetadata,
-        buildAutoConvergePassResult
-      })
-    );
-  }
-
-  return runNormalPassFlow(
-    buildNormalPassFlowInput({
-      now,
-      nowIso,
+  return dispatchPassFlow(
+    {
       summary,
       refs,
+      now,
+      nowIso,
+      findings,
       hasFindings,
       noFindings,
-      findings,
       resolved,
       bubbleIdentity,
       handoff,
@@ -268,31 +185,14 @@ export async function emitPassFromWorkspace(
       state,
       loadedState,
       passRouting,
-      createError: (message) => new PassCommandError(message)
-    }),
-    buildNormalPassFlowDependencies({
-      prepareNormalPassAppend,
-      executeNormalPassAppend,
-      persistNormalPassPostAppend,
-      writePostAppendReviewVerificationArtifact,
-      writePostAppendPassState,
-      updateReviewerDocGateArtifact,
-      executeNormalPassDelivery,
-      resolveReviewerTestDirectiveForPass,
-      executePassDelivery,
-      ...(dependencies.emitTmuxDeliveryNotification !== undefined
-        ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
-        : {}),
-      ...(dependencies.refreshReviewerContext !== undefined
-        ? { refreshReviewerContext: dependencies.refreshReviewerContext }
-        : {}),
-      finalizeNormalPass,
-      emitBubbleLifecycleEventBestEffort,
-      buildPassLifecycleMetricMetadata,
-      resolveMostRecentPreviousReviewerPassIsCleanFromMetadata,
-      mapPassResultDelivery,
-      buildNormalPassResult
-    })
+      createError: (message) => new PassCommandError(message),
+      onDownstreamRejected: (reason) =>
+        raiseRepeatCleanDownstreamConvergedRejected({
+          reason,
+          createError: (message) => new PassCommandError(message)
+        })
+    },
+    dependencies
   );
 }
 
