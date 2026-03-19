@@ -17,14 +17,33 @@ export interface DispatchPassFlowInput extends BuildFlowBaseInput {
   onDownstreamRejected: (reason: string) => never;
 }
 
+export interface PassFlowDispatchDependencies {
+  runAutoConvergeFlow: typeof runAutoConvergeFlow;
+  runNormalPassFlow: typeof runNormalPassFlow;
+  buildAutoConvergeFlowInput: typeof buildAutoConvergeFlowInput;
+  buildNormalPassFlowInput: typeof buildNormalPassFlowInput;
+  createAutoConvergeFlowDependencies: typeof createAutoConvergeFlowDependencies;
+  createNormalPassFlowDependencies: typeof createNormalPassFlowDependencies;
+}
+
+const defaultDependencies: PassFlowDispatchDependencies = {
+  runAutoConvergeFlow,
+  runNormalPassFlow,
+  buildAutoConvergeFlowInput,
+  buildNormalPassFlowInput,
+  createAutoConvergeFlowDependencies,
+  createNormalPassFlowDependencies
+};
+
 export async function dispatchPassFlow(
   input: DispatchPassFlowInput,
-  runtimeDependencies: PassFlowRuntimeDependencies
+  runtimeDependencies: PassFlowRuntimeDependencies,
+  dependencies: PassFlowDispatchDependencies = defaultDependencies
 ): Promise<AutoConvergePassResult | NormalPassResult> {
   const repeatCleanTrigger = input.passRouting.repeatCleanTrigger;
   if (repeatCleanTrigger.trigger) {
-    return runAutoConvergeFlow(
-      buildAutoConvergeFlowInput({
+    return dependencies.runAutoConvergeFlow(
+      dependencies.buildAutoConvergeFlowInput({
         summary: input.summary,
         refs: input.refs,
         now: input.now,
@@ -43,12 +62,12 @@ export async function dispatchPassFlow(
         createError: input.createError,
         onDownstreamRejected: input.onDownstreamRejected
       }),
-      createAutoConvergeFlowDependencies(runtimeDependencies)
+      dependencies.createAutoConvergeFlowDependencies(runtimeDependencies)
     );
   }
 
-  return runNormalPassFlow(
-    buildNormalPassFlowInput({
+  return dependencies.runNormalPassFlow(
+    dependencies.buildNormalPassFlowInput({
       now: input.now,
       nowIso: input.nowIso,
       summary: input.summary,
@@ -66,6 +85,6 @@ export async function dispatchPassFlow(
       passRouting: input.passRouting,
       createError: input.createError
     }),
-    createNormalPassFlowDependencies(runtimeDependencies)
+    dependencies.createNormalPassFlowDependencies(runtimeDependencies)
   );
 }
