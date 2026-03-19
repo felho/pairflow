@@ -14,23 +14,47 @@ async function listConvergedCasePaths(): Promise<string[]> {
     .map((entry) => resolve(casesDir, entry));
 }
 
+interface CorpusManifestEntry {
+  id?: unknown;
+  command?: unknown;
+  source?: unknown;
+}
+
 interface CorpusManifest {
   entries?: Array<{
+    id?: unknown;
     command?: unknown;
     source?: unknown;
   }>;
 }
 
-async function listConvergedCaseSourcesFromManifest(): Promise<string[]> {
+async function listConvergedManifestEntries(): Promise<Array<{
+  id: string;
+  source: string;
+}>> {
   const manifestPath = resolve(process.cwd(), "tests/contracts/v11/corpus/manifest.json");
   const manifestRaw = await readFile(manifestPath, "utf8");
   const manifest = JSON.parse(manifestRaw) as CorpusManifest;
   if (!Array.isArray(manifest.entries)) {
     return [];
   }
-  return manifest.entries
-    .filter((entry) => entry.command === "converged" && typeof entry.source === "string")
-    .map((entry) => entry.source as string)
+  return (manifest.entries as CorpusManifestEntry[])
+    .filter(
+      (entry) =>
+        entry.command === "converged" &&
+        typeof entry.source === "string" &&
+        typeof entry.id === "string"
+    )
+    .map((entry) => ({
+      id: entry.id as string,
+      source: entry.source as string
+    }));
+}
+
+async function listConvergedCaseSourcesFromManifest(): Promise<string[]> {
+  const entries = await listConvergedManifestEntries();
+  return entries
+    .map((entry) => entry.source)
     .sort((left, right) => left.localeCompare(right));
 }
 
@@ -57,6 +81,13 @@ describe("v11 converged contract harness skeleton", () => {
     );
     const manifestSources = await listConvergedCaseSourcesFromManifest();
     expect(manifestSources).toEqual(caseSources);
+  });
+
+  it("keeps converged manifest entry ids unique", async () => {
+    const entries = await listConvergedManifestEntries();
+    const ids = entries.map((entry) => entry.id);
+    const uniqueIds = new Set(ids);
+    expect(uniqueIds.size).toBe(ids.length);
   });
 
   it("executes legacy, v11 and parity assertions via shared runner", async () => {
