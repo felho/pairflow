@@ -1,7 +1,6 @@
 import type { readFile, writeFile } from "node:fs/promises";
 
 import type { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
-import { StateStoreConflictError } from "../state/stateStore.js";
 import type { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import type { resolveBubbleById } from "./bubbleLookup.js";
 import {
@@ -10,7 +9,6 @@ import {
   IDEATION_KICKOFF_TASK_INVALID,
   resolveIdeationMetadata
 } from "./ideation.js";
-import type { BubbleStateSnapshot } from "../../types/bubble.js";
 import {
   KickoffTaskInputValidationError,
   type ResolvedKickoffTaskInput,
@@ -22,6 +20,12 @@ import { executeKickoffMutationRollback } from "../../v11/shared/kickoff/kickoff
 import { prepareKickoffPersistence } from "../../v11/shared/kickoff/kickoffPersistencePreparation.js";
 import { executeKickoffMutation } from "../../v11/shared/kickoff/kickoffMutationExecution.js";
 import { resolveKickoffDependencies } from "../../v11/shared/kickoff/kickoffDependencyResolution.js";
+import { writeKickoffState } from "../../v11/shared/kickoff/kickoffStateWrite.js";
+import {
+  buildKickoffFailureResult,
+  buildKickoffSuccessResult,
+  type KickoffBubbleResultShape
+} from "../../v11/shared/kickoff/kickoffResultBuilders.js";
 
 export interface KickoffBubbleInput {
   bubbleId: string;
@@ -32,25 +36,7 @@ export interface KickoffBubbleInput {
   now?: Date;
 }
 
-export interface KickoffBubbleResult {
-  ok: boolean;
-  bubble_id: string;
-  reason_code: string | null;
-  state_changed: boolean;
-  protocol: {
-    task_envelope_appended: boolean;
-  };
-  markers_before: {
-    ideation_mode: boolean;
-    ideation_task_pending: boolean;
-  };
-  markers_after: {
-    ideation_mode: boolean;
-    ideation_task_pending: boolean;
-  };
-  state_before?: BubbleStateSnapshot;
-  state_after?: BubbleStateSnapshot;
-}
+export type KickoffBubbleResult = KickoffBubbleResultShape;
 
 export interface KickoffBubbleDependencies {
   resolveBubbleById?: typeof resolveBubbleById;
@@ -59,30 +45,6 @@ export interface KickoffBubbleDependencies {
   readFile?: typeof readFile;
   writeFile?: typeof writeFile;
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;
-}
-
-
-function buildFailureResult(input: {
-  bubbleId: string;
-  reasonCode: string;
-  stateBefore: BubbleStateSnapshot;
-  markersBefore: {
-    ideation_mode: boolean;
-    ideation_task_pending: boolean;
-  };
-}): KickoffBubbleResult {
-  return {
-    ok: false,
-    bubble_id: input.bubbleId,
-    reason_code: input.reasonCode,
-    state_changed: false,
-    protocol: {
-      task_envelope_appended: false
-    },
-    markers_before: input.markersBefore,
-    markers_after: input.markersBefore,
-    state_before: input.stateBefore
-  };
 }
 
 export async function kickoffBubble(
@@ -120,7 +82,7 @@ export async function kickoffBubble(
     state
   });
   if (eligibilityFailureReason !== null) {
-    return buildFailureResult({
+    return buildKickoffFailureResult({
       bubbleId: resolved.bubbleId,
       reasonCode: eligibilityFailureReason,
       stateBefore: state,
@@ -137,7 +99,7 @@ export async function kickoffBubble(
     });
   } catch (error) {
     if (error instanceof KickoffTaskInputValidationError) {
-      return buildFailureResult({
+      return buildKickoffFailureResult({
         bubbleId: resolved.bubbleId,
         reasonCode: IDEATION_KICKOFF_TASK_INVALID,
         stateBefore: state,
@@ -149,7 +111,7 @@ export async function kickoffBubble(
 
   const latestState = await readState(resolved.bubblePaths.statePath);
   if (latestState.fingerprint !== loadedState.fingerprint) {
-    return buildFailureResult({
+    return buildKickoffFailureResult({
       bubbleId: resolved.bubbleId,
       reasonCode: IDEATION_KICKOFF_STATE_CONFLICT,
       stateBefore: state,
@@ -170,27 +132,21 @@ export async function kickoffBubble(
     readFile: readFileFn
   });
 
-  let writtenState;
-  try {
-    writtenState = await writeState(
-      resolved.bubblePaths.statePath,
-      nextState,
-      {
-        expectedFingerprint: loadedState.fingerprint,
-        expectedState: "RUNNING"
-      }
-    );
-  } catch (error) {
-    if (error instanceof StateStoreConflictError) {
-      return buildFailureResult({
-        bubbleId: resolved.bubbleId,
-        reasonCode: IDEATION_KICKOFF_STATE_CONFLICT,
-        stateBefore: state,
-        markersBefore
-      });
-    }
-    throw error;
+  const stateWriteResult = await writeKickoffState({
+    statePath: resolved.bubblePaths.statePath,
+    nextState,
+    expectedFingerprint: loadedState.fingerprint,
+    writeState
+  });
+  if (stateWriteResult.kind === "conflict") {
+    return buildKickoffFailureResult({
+      bubbleId: resolved.bubbleId,
+      reasonCode: IDEATION_KICKOFF_STATE_CONFLICT,
+      stateBefore: state,
+      markersBefore
+    });
   }
+  const writtenState = stateWriteResult.writtenState;
 
   let transcriptBackup: string | null = null;
   try {
@@ -230,7 +186,7 @@ export async function kickoffBubble(
       );
     }
 
-    return buildFailureResult({
+    return buildKickoffFailureResult({
       bubbleId: resolved.bubbleId,
       reasonCode: IDEATION_KICKOFF_PERSISTENCE_FAILED,
       stateBefore: state,
@@ -238,20 +194,10 @@ export async function kickoffBubble(
     });
   }
 
-  return {
-    ok: true,
-    bubble_id: resolved.bubbleId,
-    reason_code: null,
-    state_changed: true,
-    protocol: {
-      task_envelope_appended: true
-    },
-    markers_before: markersBefore,
-    markers_after: {
-      ideation_mode: true,
-      ideation_task_pending: false
-    },
-    state_before: state,
-    state_after: writtenState.state
-  };
+  return buildKickoffSuccessResult({
+    bubbleId: resolved.bubbleId,
+    markersBefore,
+    stateBefore: state,
+    stateAfter: writtenState.state
+  });
 }
