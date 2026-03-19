@@ -12,14 +12,12 @@ import {
   type RunConvergedFlowDependencies
 } from "../../v11/application/converged/runConvergedFlow.js";
 import {
-  resolveMetaReviewRolloutBlockingReasonCodesV11
-} from "../../v11/application/converged/metaReviewRolloutBlockingReasonCodes.js";
-import {
   buildDefaultConvergedFlowDependencies,
   buildConvergedFlowInput,
 } from "../../v11/shared/converged/convergedFlowInvocationBuilders.js";
 import { normalizeConvergedCommandError } from "../../v11/shared/converged/convergedCommandErrorNormalization.js";
 import { normalizeConvergedCommandInput } from "../../v11/shared/converged/convergedCommandInputNormalization.js";
+import { resolveConvergedRolloutBlockingReasonCodes } from "../../v11/shared/converged/convergedRolloutBlockingReasonResolver.js";
 
 export interface EmitConvergedInput {
   summary: string;
@@ -65,7 +63,7 @@ export function resolveMetaReviewRolloutBlockingReasonCodes(input: {
   metaReviewWarnings: Array<{ reason_code: string }>;
   commandPathStatus: PairflowCommandPathAssessment;
 }): string[] {
-  return resolveMetaReviewRolloutBlockingReasonCodesV11(input);
+  return resolveConvergedRolloutBlockingReasonCodes(input);
 }
 
 export async function emitConvergedFromWorkspace(
