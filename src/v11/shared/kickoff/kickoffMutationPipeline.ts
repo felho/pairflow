@@ -2,13 +2,18 @@ import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { AgentName } from "../../../types/bubble.js";
 import type { ProtocolEnvelopeDraft } from "../../../core/protocol/transcriptStore.js";
 import type { ResolvedKickoffTaskInput } from "./kickoffTaskInputResolution.js";
-import { executeKickoffMutation } from "./kickoffMutationExecution.js";
-import { executeKickoffMutationRollback } from "./kickoffMutationRollback.js";
+import type { executeKickoffMutation } from "./kickoffMutationExecution.js";
+import type { executeKickoffMutationRollback } from "./kickoffMutationRollback.js";
 import {
   buildKickoffMutationExecutionInput,
   buildKickoffMutationRollbackInput
 } from "./kickoffMutationPipelineInputBuilders.js";
 import { throwKickoffMutationRollbackFailure } from "./kickoffMutationRollbackFailure.js";
+import {
+  buildKickoffMutationPipelineRolledBackResult,
+  buildKickoffMutationPipelineSuccessResult,
+  resolveKickoffMutationPipelineDependencies
+} from "./kickoffMutationPipelineFlowHelpers.js";
 
 export interface ExecuteKickoffMutationPipelineInput {
   persistenceFailureCode: string;
@@ -62,30 +67,6 @@ export type ExecuteKickoffMutationPipelineResult =
 export interface ExecuteKickoffMutationPipelineDependencies {
   executeMutation?: typeof executeKickoffMutation;
   executeRollback?: typeof executeKickoffMutationRollback;
-}
-
-function resolveKickoffMutationPipelineDependencies(
-  dependencies: ExecuteKickoffMutationPipelineDependencies
-): {
-  executeMutation: typeof executeKickoffMutation;
-  executeRollback: typeof executeKickoffMutationRollback;
-} {
-  return {
-    executeMutation: dependencies.executeMutation ?? executeKickoffMutation,
-    executeRollback: dependencies.executeRollback ?? executeKickoffMutationRollback
-  };
-}
-
-function buildKickoffMutationPipelineSuccessResult(): ExecuteKickoffMutationPipelineResult {
-  return {
-    kind: "success"
-  };
-}
-
-function buildKickoffMutationPipelineRolledBackResult(): ExecuteKickoffMutationPipelineResult {
-  return {
-    kind: "mutation_failed_rolled_back"
-  };
 }
 
 async function executeKickoffRollback(input: {
