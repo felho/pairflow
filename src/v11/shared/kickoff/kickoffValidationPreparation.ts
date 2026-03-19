@@ -86,6 +86,26 @@ function buildKickoffTaskResolutionInput(
   };
 }
 
+function buildKickoffPreparedValidationResult(input: {
+  resolved: ResolvedKickoffBubble;
+  loadedState: LoadedKickoffState;
+  state: LoadedKickoffState["state"];
+  markersBefore: {
+    ideation_mode: boolean;
+    ideation_task_pending: boolean;
+  };
+  task: ResolvedKickoffTaskInput;
+}): KickoffPreparedValidation {
+  return {
+    kind: "prepared",
+    resolved: input.resolved,
+    loadedState: input.loadedState,
+    state: input.state,
+    markersBefore: input.markersBefore,
+    task: input.task
+  };
+}
+
 export async function prepareKickoffValidation(
   input: PrepareKickoffValidationInput,
   dependencies: ResolvedKickoffDependencies
@@ -121,12 +141,11 @@ export async function prepareKickoffValidation(
     });
   }
 
-  return {
-    kind: "prepared",
+  return buildKickoffPreparedValidationResult({
     resolved,
     loadedState,
     state,
     markersBefore,
     task: taskResolution.task
-  };
+  });
 }
