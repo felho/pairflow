@@ -1,16 +1,17 @@
 import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
-import { prepareAskHumanRouting } from "../../application/askHuman/askHumanRoutingPreparation.js";
-import { runAskHumanFlow } from "../../application/askHuman/runAskHumanFlow.js";
 import {
   buildAskHumanFlowDependencies,
   buildAskHumanFlowInput,
   buildAskHumanRoutingInput
 } from "./askHumanFlowInvocationBuilders.js";
+import { resolveAskHumanCommandOrchestrationDependencies } from "./askHumanCommandOrchestrationDependencyResolution.js";
+import type { prepareAskHumanRouting } from "../../application/askHuman/askHumanRoutingPreparation.js";
 import type {
   RunAskHumanFlowDependencies,
   RunAskHumanFlowResult
 } from "../../application/askHuman/runAskHumanFlow.js";
+import type { runAskHumanFlow } from "../../application/askHuman/runAskHumanFlow.js";
 
 export interface AskHumanCommandOrchestrationInput {
   question: string;
@@ -35,10 +36,12 @@ export async function orchestrateAskHumanCommand(
   input: AskHumanCommandOrchestrationInput,
   dependencies: AskHumanCommandOrchestrationDependencies
 ): Promise<RunAskHumanFlowResult> {
-  const prepareRouting = dependencies.prepareAskHumanRouting ?? prepareAskHumanRouting;
-  const runFlow = dependencies.runAskHumanFlow ?? runAskHumanFlow;
+  const resolvedDependencies = resolveAskHumanCommandOrchestrationDependencies({
+    prepareAskHumanRouting: dependencies.prepareAskHumanRouting,
+    runAskHumanFlow: dependencies.runAskHumanFlow
+  });
 
-  const routing = await prepareRouting(
+  const routing = await resolvedDependencies.prepareAskHumanRouting(
     buildAskHumanRoutingInput({
       question: input.question,
       refs: input.refs,
@@ -48,7 +51,7 @@ export async function orchestrateAskHumanCommand(
     })
   );
 
-  return runFlow(
+  return resolvedDependencies.runAskHumanFlow(
     buildAskHumanFlowInput({
       now: input.now,
       routing,
