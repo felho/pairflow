@@ -1,7 +1,6 @@
 import { readStateSnapshot } from "../state/stateStore.js";
 import {
-  resolveBubbleFromWorkspaceCwd,
-  WorkspaceResolutionError
+  resolveBubbleFromWorkspaceCwd
 } from "../bubble/workspaceResolution.js";
 import {
   IDEATION_PASS_BLOCKED,
@@ -71,6 +70,7 @@ import {
   buildNormalPassFlowDependencies,
   buildNormalPassFlowInput
 } from "../../v11/shared/pass/normalPassFlowInvocationBuilders.js";
+import { normalizePassCommandError } from "../../v11/shared/pass/passCommandErrorNormalization.js";
 import { normalizePassCommandInput } from "../../v11/shared/pass/passCommandInputNormalization.js";
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
@@ -325,17 +325,9 @@ export async function emitPassFromWorkspace(
 }
 
 export function asPassCommandError(error: unknown): never {
-  if (error instanceof PassCommandError) {
-    throw error;
-  }
-
-  if (error instanceof WorkspaceResolutionError) {
-    throw new PassCommandError(error.message);
-  }
-
-  if (error instanceof Error) {
-    throw new PassCommandError(error.message);
-  }
-
-  throw error;
+  throw normalizePassCommandError({
+    error,
+    isPassCommandError: (candidate) => candidate instanceof PassCommandError,
+    createPassCommandError: (message) => new PassCommandError(message)
+  });
 }
