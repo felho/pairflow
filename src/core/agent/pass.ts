@@ -105,6 +105,7 @@ import {
   raiseRepeatCleanReviewVerificationWriteFailed
 } from "../../v11/domain/pass/repeatCleanPolicyRejection.js";
 import { resolveReviewerVerification } from "../../v11/application/pass/reviewerVerificationResolver.js";
+import { raisePostAppendReviewVerificationWriteFailed } from "../../v11/domain/pass/postAppendReviewVerificationWriteFailure.js";
 
 export interface EmitPassInput {
   summary: string;
@@ -819,9 +820,11 @@ export async function emitPassFromWorkspace(
       );
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
-      throw new PassCommandError(
-        `PASS ${mapped.envelope.id} was appended but review-verification artifact write failed before state transition. State remains unchanged and transcript is canonical; recover via state reconciliation from transcript tail after fixing artifact path/input. Root error: ${reason}`
-      );
+      raisePostAppendReviewVerificationWriteFailed({
+        envelopeId: mapped.envelope.id,
+        reason,
+        createError: (message) => new PassCommandError(message)
+      });
     }
   }
 
