@@ -1,9 +1,13 @@
+import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { promisify } from "node:util";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runAskHumanContractCase } from "./askHuman.contract.runner.js";
 import { readContractCase } from "./runner.js";
+
+const execFileAsync = promisify(execFile);
 
 describe("v11 askHuman contract harness skeleton", () => {
   it("loads seed contract case metadata", async () => {
@@ -64,6 +68,34 @@ describe("v11 askHuman contract harness skeleton", () => {
     };
 
     const askHumanSources = (manifest.entries ?? [])
+      .filter((entry) => entry.command === "askHuman")
+      .map((entry) => entry.source)
+      .filter((source): source is string => typeof source === "string");
+
+    expect(askHumanSources.sort()).toEqual([
+      "tests/contracts/v11/cases/ask-human/ask-human-basic-parity.case.json",
+      "tests/contracts/v11/cases/ask-human/ask-human-basic-v11.case.json",
+      "tests/contracts/v11/cases/ask-human/ask-human-basic.case.json"
+    ]);
+  });
+
+  it("builds corpus output manifest with ask-human seed entries", async () => {
+    await execFileAsync("pnpm", [
+      "exec",
+      "tsx",
+      "./tests/contracts/v11/corpus/build-corpus.ts"
+    ]);
+
+    const outputManifestPath = resolve(
+      process.cwd(),
+      ".pairflow/evidence/contracts-v11-corpus-manifest.json"
+    );
+    const outputRaw = await readFile(outputManifestPath, "utf8");
+    const outputManifest = JSON.parse(outputRaw) as {
+      entries?: Array<{ command?: string; source?: string }>;
+    };
+
+    const askHumanSources = (outputManifest.entries ?? [])
       .filter((entry) => entry.command === "askHuman")
       .map((entry) => entry.source)
       .filter((source): source is string => typeof source === "string");
