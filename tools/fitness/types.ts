@@ -22,6 +22,7 @@ export interface FitnessPolicy {
   defaults:
     | {
         mode: string | undefined;
+        current_milestone: string | undefined;
       }
     | undefined;
   checks: FitnessPolicyCheck[];

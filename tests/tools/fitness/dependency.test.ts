@@ -56,7 +56,8 @@ describe("dependency fitness check", () => {
         exceptions: []
       },
       repoRoot,
-      fallbackMode: "report-only"
+      fallbackMode: "report-only",
+      currentMilestone: undefined
     });
 
     expect(report.status).toBe("fail");
@@ -88,7 +89,8 @@ describe("dependency fitness check", () => {
         exceptions: []
       },
       repoRoot,
-      fallbackMode: "report-only"
+      fallbackMode: "report-only",
+      currentMilestone: undefined
     });
 
     expect(report.status).toBe("fail");
@@ -125,7 +127,8 @@ describe("dependency fitness check", () => {
         exceptions: []
       },
       repoRoot,
-      fallbackMode: "report-only"
+      fallbackMode: "report-only",
+      currentMilestone: undefined
     });
 
     expect(report.status).toBe("pass");
@@ -166,7 +169,8 @@ describe("dependency fitness check", () => {
         ]
       },
       repoRoot,
-      fallbackMode: "report-only"
+      fallbackMode: "report-only",
+      currentMilestone: undefined
     });
 
     expect(report.status).toBe("pass");
@@ -212,7 +216,8 @@ describe("dependency fitness check", () => {
         ]
       },
       repoRoot,
-      fallbackMode: "report-only"
+      fallbackMode: "report-only",
+      currentMilestone: undefined
     });
 
     expect(report.status).toBe("pass");
@@ -220,6 +225,55 @@ describe("dependency fitness check", () => {
     expect(
       report.details?.some((detail) =>
         detail.includes("exceptions_applied_ids=dep-allow-cycle-001")
+      )
+    ).toBe(true);
+  });
+
+  it("warns when applied exception is expired for current milestone", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/handler.ts",
+      "export const handler = 1;\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/domain/rule.ts",
+      "import { handler } from '../application/handler.js';\nexport const rule = handler;\n"
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: [
+          {
+            id: "dep-allow-edge-expired",
+            kind: "allow-edge",
+            owner: "architecture",
+            reason: "temporary migration bridge",
+            expires_milestone: "M1",
+            from: "src/v11/domain/rule.ts",
+            to: "src/v11/application/handler.ts",
+            paths: undefined
+          }
+        ]
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+      currentMilestone: "M2"
+    });
+
+    expect(report.status).toBe("warn");
+    expect(
+      report.details?.some((detail) => detail === "exceptions_expired=1")
+    ).toBe(true);
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("exceptions_expired_ids=dep-allow-edge-expired")
       )
     ).toBe(true);
   });

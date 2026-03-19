@@ -30,7 +30,7 @@ describe("fitness policy loader", () => {
       policyPath,
       JSON.stringify(
         {
-          defaults: { mode: "report-only" },
+          defaults: { mode: "report-only", current_milestone: "M1" },
           checks: [
             {
               id: "boundary",
@@ -60,6 +60,7 @@ describe("fitness policy loader", () => {
 
     const policy = await readPolicy(policyPath);
     expect(policy.defaults?.mode).toBe("report-only");
+    expect(policy.defaults?.current_milestone).toBe("M1");
     expect(policy.checks).toHaveLength(1);
     expect(policy.checks[0]?.id).toBe("boundary");
     expect(policy.checks[0]?.scope).toEqual(["src/v11/**"]);

@@ -37,6 +37,9 @@ Rules:
 - `dependency` check supports:
   - `allow-edge` with `from` + `to`.
   - `allow-cycle` with `paths` (array of cycle member files).
+- Lifecycle context is provided via `defaults.current_milestone` in policy.
+  - Expiry semantics (current phase): exception is treated as lifecycle warning when `current_milestone > expires_milestone`.
+  - Example: current `M2`, exception expiry `M1` => warning.
 - Exceptions must stay temporary and milestone-bound.
 
 ## Check Definitions

@@ -11,11 +11,13 @@ import type { FitnessPolicy, FitnessPolicyCheck, FitnessReportCheck } from "../t
 export async function buildCheckReport({
   check,
   repoRoot,
-  fallbackMode
+  fallbackMode,
+  currentMilestone
 }: {
   check: FitnessPolicyCheck;
   repoRoot: string;
   fallbackMode: string;
+  currentMilestone: string | undefined;
 }): Promise<FitnessReportCheck> {
   if (check.id === "boundary") {
     return buildBoundaryCheckReport({
@@ -56,7 +58,8 @@ export async function buildCheckReport({
     return buildDependencyCheckReport({
       check,
       repoRoot,
-      fallbackMode
+      fallbackMode,
+      currentMilestone
     });
   }
   return createNotImplementedCheckReport(check, fallbackMode);
@@ -67,12 +70,14 @@ export async function buildReportChecks(
   repoRoot: string
 ): Promise<FitnessReportCheck[]> {
   const fallbackMode = policy.defaults?.mode ?? "report-only";
+  const currentMilestone = policy.defaults?.current_milestone;
   const checks = await Promise.all(
     policy.checks.map((check) =>
       buildCheckReport({
         check,
         repoRoot,
-        fallbackMode
+        fallbackMode,
+        currentMilestone
       })
     )
   );

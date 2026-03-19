@@ -36,6 +36,12 @@ interface DependencyCycleException {
   paths: string[];
 }
 
+interface ExceptionLifecycleStatus {
+  expiredIds: string[];
+  invalidLifecycle: string[];
+  currentMilestone: string | undefined;
+}
+
 const layerImportAllowlist: Record<string, readonly string[]> = {
   domain: ["domain", "shared"],
   application: ["domain", "ports", "shared"],
@@ -63,19 +69,58 @@ function cycleKey(paths: readonly string[]): string {
   return [...paths].sort((left, right) => left.localeCompare(right)).join(" <-> ");
 }
 
+function parseMilestoneOrdinal(raw: string): number | undefined {
+  const normalized = raw.trim().toUpperCase();
+  const match = normalized.match(/^M([0-9]+)$/u);
+  if (match === null) {
+    return undefined;
+  }
+  return Number.parseInt(match[1] ?? "", 10);
+}
+
 function parseDependencyExceptions(input: {
   repoRoot: string;
   exceptions: readonly FitnessPolicyException[] | undefined;
+  currentMilestone: string | undefined;
 }): {
   edgeAllowlist: DependencyEdgeException[];
   cycleAllowlist: DependencyCycleException[];
   invalid: string[];
+  lifecycle: ExceptionLifecycleStatus;
 } {
   const edgeAllowlist: DependencyEdgeException[] = [];
   const cycleAllowlist: DependencyCycleException[] = [];
   const invalid: string[] = [];
+  const expiredIds = new Set<string>();
+  const invalidLifecycle = new Set<string>();
+  const currentMilestoneOrdinal =
+    input.currentMilestone === undefined
+      ? undefined
+      : parseMilestoneOrdinal(input.currentMilestone);
+
+  if (
+    input.currentMilestone !== undefined
+    && currentMilestoneOrdinal === undefined
+    && (input.exceptions?.length ?? 0) > 0
+  ) {
+    invalidLifecycle.add(
+      `invalid current milestone format: ${input.currentMilestone} (expected M<number>)`
+    );
+  }
 
   for (const exception of input.exceptions ?? []) {
+    const expiryOrdinal = parseMilestoneOrdinal(exception.expires_milestone);
+    if (expiryOrdinal === undefined) {
+      invalidLifecycle.add(
+        `exception ${exception.id}: invalid expires_milestone "${exception.expires_milestone}" (expected M<number>)`
+      );
+    } else if (
+      currentMilestoneOrdinal !== undefined
+      && currentMilestoneOrdinal > expiryOrdinal
+    ) {
+      expiredIds.add(exception.id);
+    }
+
     if (exception.kind === "allow-edge") {
       if (exception.from === undefined || exception.to === undefined) {
         invalid.push(
@@ -115,7 +160,14 @@ function parseDependencyExceptions(input: {
   return {
     edgeAllowlist,
     cycleAllowlist,
-    invalid
+    invalid,
+    lifecycle: {
+      expiredIds: [...expiredIds].sort((left, right) => left.localeCompare(right)),
+      invalidLifecycle: [...invalidLifecycle].sort((left, right) =>
+        left.localeCompare(right)
+      ),
+      currentMilestone: input.currentMilestone
+    }
   };
 }
 
@@ -424,11 +476,13 @@ function summarizeDependencyViolations(
 export async function buildDependencyCheckReport({
   check,
   repoRoot,
-  fallbackMode
+  fallbackMode,
+  currentMilestone
 }: {
   check: FitnessPolicyCheck;
   repoRoot: string;
   fallbackMode: string;
+  currentMilestone: string | undefined;
 }): Promise<FitnessReportCheck> {
   const mode = check.mode ?? fallbackMode;
   const scope = check.scope ?? [];
@@ -481,7 +535,8 @@ export async function buildDependencyCheckReport({
   ];
   const parsedExceptions = parseDependencyExceptions({
     repoRoot,
-    exceptions: check.exceptions
+    exceptions: check.exceptions,
+    currentMilestone
   });
   const filtered = filterDependencyViolationsByExceptions({
     violations: allViolations,
@@ -489,6 +544,9 @@ export async function buildDependencyCheckReport({
     cycleAllowlist: parsedExceptions.cycleAllowlist
   });
   const violations = filtered.violations;
+  const lifecycleWarnCount =
+    parsedExceptions.lifecycle.expiredIds.length
+    + parsedExceptions.lifecycle.invalidLifecycle.length;
 
   if (violations.length === 0) {
     const details = [
@@ -498,14 +556,43 @@ export async function buildDependencyCheckReport({
       `exceptions_configured=${String(check.exceptions?.length ?? 0)}`,
       `exceptions_applied=${String(filtered.appliedExceptionIds.length)}`
     ];
+    if (parsedExceptions.lifecycle.currentMilestone !== undefined) {
+      details.push(`current_milestone=${parsedExceptions.lifecycle.currentMilestone}`);
+    }
     if (parsedExceptions.invalid.length > 0) {
       details.push(`exceptions_invalid=${String(parsedExceptions.invalid.length)}`);
       details.push(...parsedExceptions.invalid.slice(0, 10));
+    }
+    if (parsedExceptions.lifecycle.expiredIds.length > 0) {
+      details.push(
+        `exceptions_expired=${String(parsedExceptions.lifecycle.expiredIds.length)}`
+      );
+      details.push(
+        `exceptions_expired_ids=${parsedExceptions.lifecycle.expiredIds.join(", ")}`
+      );
+    }
+    if (parsedExceptions.lifecycle.invalidLifecycle.length > 0) {
+      details.push(
+        `exceptions_lifecycle_invalid=${String(parsedExceptions.lifecycle.invalidLifecycle.length)}`
+      );
+      details.push(...parsedExceptions.lifecycle.invalidLifecycle.slice(0, 10));
     }
     if (filtered.appliedExceptionIds.length > 0) {
       details.push(
         `exceptions_applied_ids=${filtered.appliedExceptionIds.join(", ")}`
       );
+    }
+    if (lifecycleWarnCount > 0) {
+      return {
+        id: check.id,
+        owner: check.owner ?? "unknown",
+        mode,
+        status: "warn",
+        summary:
+          `Dependency check warning: no active cycle/layer violations, but ${String(lifecycleWarnCount)} exception lifecycle warning(s) detected.`,
+        metric: check.metric,
+        details
+      };
     }
     return {
       id: check.id,
@@ -521,9 +608,26 @@ export async function buildDependencyCheckReport({
   const details = summarizeDependencyViolations(violations);
   details.push(`exceptions_configured=${String(check.exceptions?.length ?? 0)}`);
   details.push(`exceptions_applied=${String(filtered.appliedExceptionIds.length)}`);
+  if (parsedExceptions.lifecycle.currentMilestone !== undefined) {
+    details.push(`current_milestone=${parsedExceptions.lifecycle.currentMilestone}`);
+  }
   if (parsedExceptions.invalid.length > 0) {
     details.push(`exceptions_invalid=${String(parsedExceptions.invalid.length)}`);
     details.push(...parsedExceptions.invalid.slice(0, 10));
+  }
+  if (parsedExceptions.lifecycle.expiredIds.length > 0) {
+    details.push(
+      `exceptions_expired=${String(parsedExceptions.lifecycle.expiredIds.length)}`
+    );
+    details.push(
+      `exceptions_expired_ids=${parsedExceptions.lifecycle.expiredIds.join(", ")}`
+    );
+  }
+  if (parsedExceptions.lifecycle.invalidLifecycle.length > 0) {
+    details.push(
+      `exceptions_lifecycle_invalid=${String(parsedExceptions.lifecycle.invalidLifecycle.length)}`
+    );
+    details.push(...parsedExceptions.lifecycle.invalidLifecycle.slice(0, 10));
   }
   if (filtered.appliedExceptionIds.length > 0) {
     details.push(`exceptions_applied_ids=${filtered.appliedExceptionIds.join(", ")}`);

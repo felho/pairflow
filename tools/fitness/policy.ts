@@ -102,7 +102,8 @@ export async function readPolicy(policyPath: string): Promise<FitnessPolicy> {
   const checks = checksRaw.map((check) => parseCheck(check));
   const defaults = isRecord(parsed.defaults)
     ? {
-        mode: asString(parsed.defaults.mode)
+        mode: asString(parsed.defaults.mode),
+        current_milestone: asString(parsed.defaults.current_milestone)
       }
     : undefined;
   return {

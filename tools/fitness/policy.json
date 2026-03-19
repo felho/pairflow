@@ -2,7 +2,8 @@
   "version": 1,
   "updated_at": "2026-03-19T00:00:00.000Z",
   "defaults": {
-    "mode": "report-only"
+    "mode": "report-only",
+    "current_milestone": "M0"
   },
   "checks": [
     {
