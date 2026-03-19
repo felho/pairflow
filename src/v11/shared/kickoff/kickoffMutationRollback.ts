@@ -35,55 +35,66 @@ function appendKickoffRollbackError(input: {
   );
 }
 
+async function executeKickoffRollbackStep(input: {
+  rollbackErrors: string[];
+  target: string;
+  run: () => Promise<unknown>;
+}): Promise<void> {
+  await input.run().catch((rollbackError) => {
+    appendKickoffRollbackError({
+      rollbackErrors: input.rollbackErrors,
+      target: input.target,
+      rollbackError
+    });
+  });
+}
+
 export async function executeKickoffMutationRollback(
   input: ExecuteKickoffMutationRollbackInput
 ): Promise<string[]> {
   const rollbackErrors: string[] = [];
-  if (input.transcriptBackup !== null) {
-    await input.writeFile(input.transcriptPath, input.transcriptBackup, {
-      encoding: "utf8"
-    }).catch((rollbackError) => {
-      appendKickoffRollbackError({
-        rollbackErrors,
-        target: "transcript",
-        rollbackError
-      });
+  const transcriptBackup = input.transcriptBackup;
+  if (transcriptBackup !== null) {
+    await executeKickoffRollbackStep({
+      rollbackErrors,
+      target: "transcript",
+      run: () =>
+        input.writeFile(input.transcriptPath, transcriptBackup, {
+          encoding: "utf8"
+        })
     });
   }
 
-  await input.writeFile(input.taskArtifactPath, input.previousTaskArtifact, {
-    encoding: "utf8"
-  }).catch((rollbackError) => {
-    appendKickoffRollbackError({
-      rollbackErrors,
-      target: "task artifact",
-      rollbackError
-    });
+  await executeKickoffRollbackStep({
+    rollbackErrors,
+    target: "task artifact",
+    run: () =>
+      input.writeFile(input.taskArtifactPath, input.previousTaskArtifact, {
+        encoding: "utf8"
+      })
   });
 
-  await input.writeFile(input.bubbleTomlPath, input.previousBubbleToml, {
-    encoding: "utf8"
-  }).catch((rollbackError) => {
-    appendKickoffRollbackError({
-      rollbackErrors,
-      target: "bubble.toml",
-      rollbackError
-    });
+  await executeKickoffRollbackStep({
+    rollbackErrors,
+    target: "bubble.toml",
+    run: () =>
+      input.writeFile(input.bubbleTomlPath, input.previousBubbleToml, {
+        encoding: "utf8"
+      })
   });
 
-  await input.writeState(
-    input.statePath,
-    input.previousState,
-    {
-      expectedFingerprint: input.writtenStateFingerprint,
-      expectedState: "RUNNING"
-    }
-  ).catch((rollbackError) => {
-    appendKickoffRollbackError({
-      rollbackErrors,
-      target: "state",
-      rollbackError
-    });
+  await executeKickoffRollbackStep({
+    rollbackErrors,
+    target: "state",
+    run: () =>
+      input.writeState(
+        input.statePath,
+        input.previousState,
+        {
+          expectedFingerprint: input.writtenStateFingerprint,
+          expectedState: "RUNNING"
+        }
+      )
   });
 
   return rollbackErrors;

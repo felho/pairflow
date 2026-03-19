@@ -17,16 +17,35 @@ function isIdeationPlaceholderTaskContent(content: string): boolean {
   return IDEATION_PLACEHOLDER_CONTENT_MARKER.test(content);
 }
 
+type KickoffTaskContentValidationIssue = "empty" | "placeholder";
+
+function resolveKickoffTaskContentValidationIssue(
+  content: string
+): KickoffTaskContentValidationIssue | null {
+  if (content.trim().length === 0) {
+    return "empty";
+  }
+  if (isIdeationPlaceholderTaskContent(content)) {
+    return "placeholder";
+  }
+  return null;
+}
+
 function assertKickoffTaskContentIsValid(input: {
   content: string;
-  emptyError: () => KickoffTaskInputValidationError;
-  placeholderError: () => KickoffTaskInputValidationError;
+  errors: {
+    empty: () => KickoffTaskInputValidationError;
+    placeholder: () => KickoffTaskInputValidationError;
+  };
 }): void {
-  if (input.content.trim().length === 0) {
-    throw input.emptyError();
+  const issue = resolveKickoffTaskContentValidationIssue(input.content);
+  if (issue === "empty") {
+    // reason_code=KICKOFF_TASK_CONTENT_EMPTY context=kickoff_task_input_validation
+    throw input.errors.empty();
   }
-  if (isIdeationPlaceholderTaskContent(input.content)) {
-    throw input.placeholderError();
+  if (issue === "placeholder") {
+    // reason_code=KICKOFF_TASK_CONTENT_PLACEHOLDER_MARKER context=kickoff_task_input_validation
+    throw input.errors.placeholder();
   }
 }
 
@@ -55,17 +74,19 @@ async function resolveKickoffTaskFromFileInput(input: {
   const normalizedContent = content.trimEnd();
   assertKickoffTaskContentIsValid({
     content: normalizedContent,
-    emptyError: () => {
-      // reason_code=KICKOFF_TASK_FILE_EMPTY context=kickoff_task_input_validation
-      return new KickoffTaskInputValidationError(
-        `Task file is empty: ${candidatePath}`
-      );
-    },
-    placeholderError: () => {
-      // reason_code=KICKOFF_TASK_FILE_PLACEHOLDER_MARKER context=kickoff_task_input_validation
-      return new KickoffTaskInputValidationError(
-        `Task file still contains ideation placeholder marker: ${candidatePath}`
-      );
+    errors: {
+      empty: () => {
+        // reason_code=KICKOFF_TASK_FILE_EMPTY context=kickoff_task_input_validation
+        return new KickoffTaskInputValidationError(
+          `Task file is empty: ${candidatePath}`
+        );
+      },
+      placeholder: () => {
+        // reason_code=KICKOFF_TASK_FILE_PLACEHOLDER_MARKER context=kickoff_task_input_validation
+        return new KickoffTaskInputValidationError(
+          `Task file still contains ideation placeholder marker: ${candidatePath}`
+        );
+      }
     }
   });
 
@@ -82,15 +103,17 @@ function resolveKickoffTaskFromInlineInput(input: {
   const taskText = input.task.trim();
   assertKickoffTaskContentIsValid({
     content: taskText,
-    emptyError: () => {
-      // reason_code=KICKOFF_TASK_INLINE_EMPTY context=kickoff_task_input_validation
-      return new KickoffTaskInputValidationError("Task cannot be empty.");
-    },
-    placeholderError: () => {
-      // reason_code=KICKOFF_TASK_INLINE_PLACEHOLDER_MARKER context=kickoff_task_input_validation
-      return new KickoffTaskInputValidationError(
-        "Task text still contains ideation placeholder marker."
-      );
+    errors: {
+      empty: () => {
+        // reason_code=KICKOFF_TASK_INLINE_EMPTY context=kickoff_task_input_validation
+        return new KickoffTaskInputValidationError("Task cannot be empty.");
+      },
+      placeholder: () => {
+        // reason_code=KICKOFF_TASK_INLINE_PLACEHOLDER_MARKER context=kickoff_task_input_validation
+        return new KickoffTaskInputValidationError(
+          "Task text still contains ideation placeholder marker."
+        );
+      }
     }
   });
   return {
@@ -139,13 +162,30 @@ function resolveKickoffTaskInputMode(input: {
   };
 }
 
-export function renderKickoffTaskArtifact(task: ResolvedKickoffTaskInput): string {
-  const sourceLine =
-    task.source === "file"
-      ? `Source: file (${task.sourcePath})`
-      : "Source: inline text";
+async function resolveKickoffTaskFromInputMode(input: {
+  mode: KickoffTaskInputMode;
+  cwd: string;
+}): Promise<ResolvedKickoffTaskInput> {
+  if (input.mode.kind === "file") {
+    return resolveKickoffTaskFromFileInput({
+      taskFile: input.mode.taskFile,
+      cwd: input.cwd
+    });
+  }
 
-  return `# Bubble Task\n\n${sourceLine}\n\n${task.content}\n`;
+  return resolveKickoffTaskFromInlineInput({
+    task: input.mode.task
+  });
+}
+
+function renderKickoffTaskSourceLine(task: ResolvedKickoffTaskInput): string {
+  return task.source === "file"
+    ? `Source: file (${task.sourcePath})`
+    : "Source: inline text";
+}
+
+export function renderKickoffTaskArtifact(task: ResolvedKickoffTaskInput): string {
+  return `# Bubble Task\n\n${renderKickoffTaskSourceLine(task)}\n\n${task.content}\n`;
 }
 
 export async function resolveKickoffTaskInput(input: {
@@ -153,16 +193,8 @@ export async function resolveKickoffTaskInput(input: {
   taskFile?: string;
   cwd: string;
 }): Promise<ResolvedKickoffTaskInput> {
-  const mode = resolveKickoffTaskInputMode(input);
-
-  if (mode.kind === "file") {
-    return resolveKickoffTaskFromFileInput({
-      taskFile: mode.taskFile,
-      cwd: input.cwd
-    });
-  }
-
-  return resolveKickoffTaskFromInlineInput({
-    task: mode.task
+  return resolveKickoffTaskFromInputMode({
+    mode: resolveKickoffTaskInputMode(input),
+    cwd: input.cwd
   });
 }

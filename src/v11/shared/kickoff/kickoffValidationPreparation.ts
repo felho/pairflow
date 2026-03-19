@@ -106,6 +106,87 @@ function buildKickoffPreparedValidationResult(input: {
   };
 }
 
+type PrepareKickoffTaskOrFailureResult =
+  | {
+      kind: "failure";
+      result: PrepareKickoffValidationResult;
+    }
+  | {
+      kind: "task";
+      task: ResolvedKickoffTaskInput;
+    };
+
+async function prepareKickoffTaskOrFailure(input: {
+  validationInput: PrepareKickoffValidationInput;
+  resolvedBubbleId: string;
+  state: LoadedKickoffState["state"];
+  markersBefore: {
+    ideation_mode: boolean;
+    ideation_task_pending: boolean;
+  };
+}): Promise<PrepareKickoffTaskOrFailureResult> {
+  const taskResolution = await resolveKickoffTask(
+    buildKickoffTaskResolutionInput(input.validationInput)
+  );
+  if (taskResolution.kind === "invalid") {
+    return {
+      kind: "failure",
+      result: buildKickoffValidationFailureResult({
+        resolvedBubbleId: input.resolvedBubbleId,
+        reasonCode: IDEATION_KICKOFF_TASK_INVALID,
+        stateBefore: input.state,
+        markersBefore: input.markersBefore
+      })
+    };
+  }
+
+  return {
+    kind: "task",
+    task: taskResolution.task
+  };
+}
+
+type PrepareKickoffEligibilityOrFailureResult =
+  | {
+      kind: "failure";
+      result: PrepareKickoffValidationResult;
+    }
+  | {
+      kind: "eligible";
+      markersBefore: {
+        ideation_mode: boolean;
+        ideation_task_pending: boolean;
+      };
+    };
+
+function prepareKickoffEligibilityOrFailure(input: {
+  resolvedBubbleId: string;
+  state: LoadedKickoffState["state"];
+  bubbleConfig: ResolvedKickoffBubble["bubbleConfig"];
+}): PrepareKickoffEligibilityOrFailureResult {
+  const preparedEligibility = prepareKickoffEligibility({
+    bubbleConfig: input.bubbleConfig,
+    state: input.state
+  });
+  const { markersBefore, eligibilityFailureReason } = preparedEligibility;
+  if (eligibilityFailureReason !== null) {
+    return {
+      kind: "failure",
+      result: buildKickoffValidationFailureResult({
+        resolvedBubbleId: input.resolvedBubbleId,
+        reasonCode: eligibilityFailureReason,
+        stateBefore: input.state,
+        markersBefore
+      })
+    };
+  }
+
+  return {
+    kind: "eligible",
+    markersBefore
+  };
+}
+
 export async function prepareKickoffValidation(
   input: PrepareKickoffValidationInput,
   dependencies: ResolvedKickoffDependencies
@@ -115,30 +196,24 @@ export async function prepareKickoffValidation(
   );
   const loadedState = await dependencies.readState(resolved.bubblePaths.statePath);
   const state = loadedState.state;
-  const preparedEligibility = prepareKickoffEligibility({
-    bubbleConfig: resolved.bubbleConfig,
-    state
+  const eligibility = prepareKickoffEligibilityOrFailure({
+    resolvedBubbleId: resolved.bubbleId,
+    state,
+    bubbleConfig: resolved.bubbleConfig
   });
-  const { markersBefore, eligibilityFailureReason } = preparedEligibility;
-  if (eligibilityFailureReason !== null) {
-    return buildKickoffValidationFailureResult({
-      resolvedBubbleId: resolved.bubbleId,
-      reasonCode: eligibilityFailureReason,
-      stateBefore: state,
-      markersBefore
-    });
+  if (eligibility.kind === "failure") {
+    return eligibility.result;
   }
+  const markersBefore = eligibility.markersBefore;
 
-  const taskResolution = await resolveKickoffTask(
-    buildKickoffTaskResolutionInput(input)
-  );
-  if (taskResolution.kind === "invalid") {
-    return buildKickoffValidationFailureResult({
-      resolvedBubbleId: resolved.bubbleId,
-      reasonCode: IDEATION_KICKOFF_TASK_INVALID,
-      stateBefore: state,
-      markersBefore
-    });
+  const taskOrFailure = await prepareKickoffTaskOrFailure({
+    validationInput: input,
+    resolvedBubbleId: resolved.bubbleId,
+    state,
+    markersBefore
+  });
+  if (taskOrFailure.kind === "failure") {
+    return taskOrFailure.result;
   }
 
   return buildKickoffPreparedValidationResult({
@@ -146,6 +221,6 @@ export async function prepareKickoffValidation(
     loadedState,
     state,
     markersBefore,
-    task: taskResolution.task
+    task: taskOrFailure.task
   });
 }
