@@ -18,6 +18,7 @@ import {
 import { normalizeReplyCommandInput } from "../../v11/shared/reply/replyCommandInputNormalization.js";
 import { ensureReplyWaitingHumanState } from "../../v11/domain/reply/waitingHumanStateGuard.js";
 import { buildHumanReplyEnvelopeDraft } from "../../v11/domain/reply/replyEnvelopeDraft.js";
+import { raiseReplyPostAppendStateWriteFailed } from "../../v11/domain/reply/postAppendStateWriteFailure.js";
 import type {
   EmitHumanReplyDependencies,
   EmitHumanReplyInput,
@@ -96,9 +97,11 @@ export async function emitHumanReply(
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    throw new HumanReplyCommandError(
-      `HUMAN_REPLY ${appended.envelope.id} was appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`
-    );
+    raiseReplyPostAppendStateWriteFailed({
+      envelopeId: appended.envelope.id,
+      reason,
+      createError: createHumanReplyCommandError
+    });
   }
 
   const emitDelivery =
