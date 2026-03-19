@@ -50,20 +50,40 @@ function buildKickoffStateSuccessResult(input: {
   };
 }
 
-export async function persistKickoffState(
-  input: PersistKickoffStateInput
-): Promise<PersistKickoffStateResult> {
-  const latestState = await input.readState(input.statePath);
-  if (latestState.fingerprint !== input.loadedFingerprint) {
-    return buildKickoffStateConflictResult();
-  }
+function hasKickoffStateFingerprintConflict(input: {
+  latestFingerprint: string;
+  loadedFingerprint: string;
+}): boolean {
+  return input.latestFingerprint !== input.loadedFingerprint;
+}
 
-  const stateWriteResult = await writeKickoffState({
+function buildKickoffStateWriteInput(
+  input: PersistKickoffStateInput
+): Parameters<typeof writeKickoffState>[0] {
+  return {
     statePath: input.statePath,
     nextState: input.nextState,
     expectedFingerprint: input.loadedFingerprint,
     writeState: input.writeState
-  });
+  };
+}
+
+export async function persistKickoffState(
+  input: PersistKickoffStateInput
+): Promise<PersistKickoffStateResult> {
+  const latestState = await input.readState(input.statePath);
+  if (
+    hasKickoffStateFingerprintConflict({
+      latestFingerprint: latestState.fingerprint,
+      loadedFingerprint: input.loadedFingerprint
+    })
+  ) {
+    return buildKickoffStateConflictResult();
+  }
+
+  const stateWriteResult = await writeKickoffState(
+    buildKickoffStateWriteInput(input)
+  );
   if (stateWriteResult.kind === "conflict") {
     return buildKickoffStateConflictResult();
   }
