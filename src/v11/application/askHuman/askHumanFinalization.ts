@@ -8,6 +8,10 @@ import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { AppendProtocolEnvelopeResult } from "../../../core/protocol/transcriptStore.js";
 import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
+import {
+  buildAskHumanFinalizationResult,
+  buildAskHumanLifecycleMetricMetadata
+} from "../../shared/askHuman/askHumanFinalizationArtifacts.js";
 import type { AskHumanRoutingContext } from "../../shared/askHuman/askHumanRoutingContext.js";
 import { resolveAskHumanFinalizationDependencies } from "../../shared/askHuman/askHumanFinalizationDependencyResolution.js";
 
@@ -54,14 +58,6 @@ function emitOptionalAskHumanNotifications(
   void dependencies.emitBubbleNotification(input.routing.resolved.bubbleConfig, "waiting-human");
 }
 
-function buildAskHumanLifecycleMetadata(input: FinalizeAskHumanFlowInput) {
-  return {
-    sender: input.routing.state.active_agent,
-    refs_count: input.routing.refs.length,
-    question_length: Array.from(input.routing.question).length
-  };
-}
-
 export async function finalizeAskHumanFlow(
   input: FinalizeAskHumanFlowInput,
   dependencies: FinalizeAskHumanFlowDependencies = {}
@@ -97,15 +93,18 @@ export async function finalizeAskHumanFlow(
     eventType: "bubble_asked_human",
     round: input.routing.state.round,
     actorRole: input.routing.state.active_role,
-    metadata: buildAskHumanLifecycleMetadata(input),
+    metadata: buildAskHumanLifecycleMetricMetadata({
+      sender: input.routing.state.active_agent,
+      refs: input.routing.refs,
+      question: input.routing.question
+    }),
     now: input.now
   });
 
-  return {
+  return buildAskHumanFinalizationResult({
     bubbleId: input.routing.resolved.bubbleId,
     sequence: input.appended.sequence,
     envelope: input.appended.envelope,
-    state: input.written.state,
-    inferredRecipient: "human"
-  };
+    state: input.written.state
+  });
 }
