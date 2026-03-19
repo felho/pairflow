@@ -1,8 +1,6 @@
-import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
 import {
   type MetaReviewGateRoute
 } from "../bubble/metaReviewGate.js";
-import type { PairflowCommandPathAssessment } from "../runtime/pairflowCommand.js";
 import type {
   AgentName,
   BubbleStateSnapshot
@@ -13,13 +11,14 @@ import {
   type RunConvergedFlowDependencies
 } from "../../v11/application/converged/runConvergedFlow.js";
 import {
-  resolveMetaReviewRolloutBlockingReasonCodesV11
-} from "../../v11/application/converged/metaReviewRolloutBlockingReasonCodes.js";
-import {
-  buildDefaultConvergedFlowDependencies,
-  buildConvergedFlowInput,
+  buildConvergedCommandFlowInvocation,
 } from "../../v11/shared/converged/convergedFlowInvocationBuilders.js";
 import { normalizeConvergedCommandError } from "../../v11/shared/converged/convergedCommandErrorNormalization.js";
+import { normalizeConvergedCommandInput } from "../../v11/shared/converged/convergedCommandInputNormalization.js";
+import { ConvergedCommandError } from "../../v11/shared/converged/convergedCommandError.js";
+import { resolveConvergedRolloutBlockingReasonCodes as resolveMetaReviewRolloutBlockingReasonCodes } from "../../v11/shared/converged/convergedRolloutBlockingReasonResolver.js";
+export { resolveMetaReviewRolloutBlockingReasonCodes };
+export { ConvergedCommandError };
 
 export interface EmitConvergedInput {
   summary: string;
@@ -53,55 +52,32 @@ export interface EmitConvergedResult {
   };
 }
 
-export class ConvergedCommandError extends Error {
-  public constructor(message: string) {
-    super(message);
-    this.name = "ConvergedCommandError";
-  }
-}
-
-export function resolveMetaReviewRolloutBlockingReasonCodes(input: {
-  gateRoute: MetaReviewGateRoute;
-  metaReviewWarnings: Array<{ reason_code: string }>;
-  commandPathStatus: PairflowCommandPathAssessment;
-}): string[] {
-  return resolveMetaReviewRolloutBlockingReasonCodesV11(input);
-}
-
 export async function emitConvergedFromWorkspace(
   input: EmitConvergedInput,
   dependencies: EmitConvergedDependencies = {}
 ): Promise<EmitConvergedResult> {
-  const now = input.now ?? new Date();
   const createError = (message: string): ConvergedCommandError =>
     new ConvergedCommandError(message);
-  const summary = requireNonEmptyString(
-    input.summary,
-    "Convergence summary",
+  const normalized = normalizeConvergedCommandInput({
+    summary: input.summary,
+    refs: input.refs,
+    now: input.now,
     createError
-  );
-  const refs = normalizeStringList(input.refs ?? []);
-  return runConvergedFlow(
-    buildConvergedFlowInput({
-      summary,
-      refs,
-      now,
-      cwd: input.cwd,
-      expectedStateFingerprint: input.expectedStateFingerprint,
-      expectedRound: input.expectedRound,
-      expectedReviewer: input.expectedReviewer,
-      createError,
-      resolveMetaReviewRolloutBlockingReasonCodes
-    }),
-    buildDefaultConvergedFlowDependencies({
-      applyMetaReviewGateOnConvergence:
-        dependencies.applyMetaReviewGateOnConvergence,
-      recoverMetaReviewGateFromSnapshot:
-        dependencies.recoverMetaReviewGateFromSnapshot,
-      emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification,
-      emitBubbleNotification: dependencies.emitBubbleNotification
-    })
-  );
+  });
+  const invocation = buildConvergedCommandFlowInvocation({
+    summary: normalized.summary,
+    refs: normalized.refs,
+    now: normalized.now,
+    cwd: input.cwd,
+    expectedStateFingerprint: input.expectedStateFingerprint,
+    expectedRound: input.expectedRound,
+    expectedReviewer: input.expectedReviewer,
+    createError,
+    resolveMetaReviewRolloutBlockingReasonCodes,
+    dependencies
+  });
+
+  return runConvergedFlow(invocation.flowInput, invocation.flowDependencies);
 }
 
 export function asConvergedCommandError(error: unknown): never {

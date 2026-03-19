@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildConvergedCommandFlowInvocation,
   buildDefaultConvergedFlowDependencies,
   buildConvergedFlowDependencies,
   buildConvergedFlowInput
@@ -191,5 +192,66 @@ describe("convergedFlowInvocationBuilders", () => {
     expect("emitTmuxDeliveryNotification" in dependencies).toBe(false);
     expect("applyMetaReviewGateOnConvergence" in dependencies).toBe(false);
     expect("recoverMetaReviewGateFromSnapshot" in dependencies).toBe(false);
+  });
+
+  it("builds command flow invocation and forwards only defined optionals", () => {
+    const now = new Date("2026-03-19T20:15:00.000Z");
+    const createError = (message: string) => new Error(message);
+    const resolveMetaReviewRolloutBlockingReasonCodes = () => ["CODE_A"];
+    const invocation = buildConvergedCommandFlowInvocation({
+      summary: "ready for converged",
+      refs: ["artifacts/review.md"],
+      now,
+      expectedRound: 5,
+      createError,
+      resolveMetaReviewRolloutBlockingReasonCodes,
+      dependencies: {
+        emitBubbleNotification: async () =>
+          ({
+            kind: "waiting-human",
+            attempted: false,
+            delivered: false,
+            soundPath: null,
+            reason: "disabled"
+          }) as never
+      }
+    });
+
+    expect(invocation.flowInput).toEqual({
+      summary: "ready for converged",
+      refs: ["artifacts/review.md"],
+      now,
+      expectedRound: 5,
+      createError,
+      resolveMetaReviewRolloutBlockingReasonCodes
+    });
+    expect("cwd" in invocation.flowInput).toBe(false);
+    expect("expectedStateFingerprint" in invocation.flowInput).toBe(false);
+    expect("expectedReviewer" in invocation.flowInput).toBe(false);
+    expect(invocation.flowDependencies.emitBubbleNotification).toBeTypeOf("function");
+    expect("emitTmuxDeliveryNotification" in invocation.flowDependencies).toBe(false);
+    expect("applyMetaReviewGateOnConvergence" in invocation.flowDependencies).toBe(false);
+    expect("recoverMetaReviewGateFromSnapshot" in invocation.flowDependencies).toBe(false);
+  });
+
+  it("omits optional dependency overrides in command flow invocation when explicitly undefined", () => {
+    const invocation = buildConvergedCommandFlowInvocation({
+      summary: "ready for converged",
+      refs: [],
+      now: new Date("2026-03-19T20:20:00.000Z"),
+      createError: (message: string) => new Error(message),
+      resolveMetaReviewRolloutBlockingReasonCodes: () => [],
+      dependencies: {
+        applyMetaReviewGateOnConvergence: undefined,
+        recoverMetaReviewGateFromSnapshot: undefined,
+        emitTmuxDeliveryNotification: undefined,
+        emitBubbleNotification: undefined
+      }
+    });
+
+    expect("applyMetaReviewGateOnConvergence" in invocation.flowDependencies).toBe(false);
+    expect("recoverMetaReviewGateFromSnapshot" in invocation.flowDependencies).toBe(false);
+    expect("emitTmuxDeliveryNotification" in invocation.flowDependencies).toBe(false);
+    expect("emitBubbleNotification" in invocation.flowDependencies).toBe(false);
   });
 });

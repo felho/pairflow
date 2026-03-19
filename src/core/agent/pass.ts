@@ -1,5 +1,4 @@
 import { readStateSnapshot } from "../state/stateStore.js";
-import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
 import {
   resolveBubbleFromWorkspaceCwd,
   WorkspaceResolutionError
@@ -72,6 +71,7 @@ import {
   buildNormalPassFlowDependencies,
   buildNormalPassFlowInput
 } from "../../v11/shared/pass/normalPassFlowInvocationBuilders.js";
+import { normalizePassCommandInput } from "../../v11/shared/pass/passCommandInputNormalization.js";
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
 } from "../../v11/domain/pass/repeatCleanMetadata.js";
@@ -152,14 +152,16 @@ export async function emitPassFromWorkspace(
   input: EmitPassInput,
   dependencies: EmitPassDependencies = {}
 ): Promise<EmitPassResult> {
-  const now = input.now ?? new Date();
+  const normalizedCommandInput = normalizePassCommandInput({
+    summary: input.summary,
+    refs: input.refs,
+    now: input.now,
+    createError: (message) => new PassCommandError(message)
+  });
+  const now = normalizedCommandInput.now;
   const nowIso = now.toISOString();
-  const summary = requireNonEmptyString(
-    input.summary,
-    "PASS summary",
-    (message) => new PassCommandError(message)
-  );
-  const refs = normalizeStringList(input.refs ?? []);
+  const summary = normalizedCommandInput.summary;
+  const refs = normalizedCommandInput.refs;
   const normalizedFindings = normalizeReviewerFindingsPayload(input.findings);
   const findings = normalizedFindings.findings;
   const hasFindings = findings.length > 0;
