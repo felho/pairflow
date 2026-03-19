@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -50,5 +51,27 @@ describe("v11 askHuman contract harness skeleton", () => {
       expect(run.v11).toBeDefined();
       expect(run.legacy).toEqual(run.v11);
     }
+  });
+
+  it("includes ask-human seed entries in corpus manifest", async () => {
+    const manifestPath = resolve(
+      process.cwd(),
+      "tests/contracts/v11/corpus/manifest.json"
+    );
+    const manifestRaw = await readFile(manifestPath, "utf8");
+    const manifest = JSON.parse(manifestRaw) as {
+      entries?: Array<{ command?: string; source?: string }>;
+    };
+
+    const askHumanSources = (manifest.entries ?? [])
+      .filter((entry) => entry.command === "askHuman")
+      .map((entry) => entry.source)
+      .filter((source): source is string => typeof source === "string");
+
+    expect(askHumanSources.sort()).toEqual([
+      "tests/contracts/v11/cases/ask-human/ask-human-basic-parity.case.json",
+      "tests/contracts/v11/cases/ask-human/ask-human-basic-v11.case.json",
+      "tests/contracts/v11/cases/ask-human/ask-human-basic.case.json"
+    ]);
   });
 });
