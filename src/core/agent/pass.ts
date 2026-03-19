@@ -5,8 +5,12 @@ import type { AgentRole } from "../../types/bubble.js";
 import {
   raiseRepeatCleanDownstreamConvergedRejected,
 } from "../../v11/domain/pass/repeatCleanPolicyRejection.js";
-import { normalizePassCommandError } from "../../v11/shared/pass/passCommandErrorNormalization.js";
 import { createPassCommandErrorRuntime } from "../../v11/shared/pass/passCommandErrorRuntime.js";
+import {
+  createPassCommandError,
+  PassCommandError,
+  throwAsPassCommandError
+} from "../../v11/shared/pass/passCommandError.js";
 import { buildEmitPassContext } from "../../v11/shared/pass/emitPassContextBuilder.js";
 import { dispatchPassFlow } from "../../v11/shared/pass/passFlowDispatch.js";
 import type {
@@ -19,15 +23,7 @@ import {
 } from "../../v11/domain/pass/repeatCleanMetadata.js";
 
 export type { EmitPassDependencies, EmitPassInput, EmitPassResult };
-
-export class PassCommandError extends Error {
-  public constructor(message: string) {
-    super(message);
-    this.name = "PassCommandError";
-  }
-}
-
-const createPassCommandError = (message: string) => new PassCommandError(message);
+export { PassCommandError };
 const passCommandErrorRuntime = createPassCommandErrorRuntime({
   createPassCommandError,
   raiseDownstreamRejected: raiseRepeatCleanDownstreamConvergedRejected
@@ -73,9 +69,5 @@ export async function emitPassFromWorkspace(
 }
 
 export function asPassCommandError(error: unknown): never {
-  throw normalizePassCommandError({
-    error,
-    isPassCommandError: (candidate) => candidate instanceof PassCommandError,
-    createPassCommandError
-  });
+  return throwAsPassCommandError(error);
 }
