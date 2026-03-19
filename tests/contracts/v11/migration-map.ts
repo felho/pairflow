@@ -58,9 +58,9 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
   },
   {
     command: "reply",
-    state: "parity",
+    state: "v11",
     owner: "runtime",
-    notes: "M1 parity runner wired (legacy-v11 shadow parity active)."
+    notes: "Core facade now delegates to v11 reply orchestration seams; v11 is the source of truth."
   },
   {
     command: "start",
