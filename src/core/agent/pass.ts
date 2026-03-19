@@ -1,6 +1,3 @@
-import {
-  readTranscriptEnvelopes,
-} from "../protocol/transcriptStore.js";
 import { readStateSnapshot } from "../state/stateStore.js";
 import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
 import {
@@ -28,7 +25,6 @@ import type {
   BubbleStateSnapshot
 } from "../../types/bubble.js";
 import {
-  evaluateRepeatCleanAutoconvergeTrigger,
   type RepeatCleanAutoconvergeReasonCode,
   type RepeatCleanAutoconvergeReasonDetail
 } from "../convergence/repeatCleanAutoconverge.js";
@@ -63,10 +59,11 @@ import { executeNormalPassAppend } from "../../v11/application/pass/normalPassAp
 import { executeNormalPassDelivery } from "../../v11/application/pass/normalPassDeliveryExecution.js";
 import { persistNormalPassPostAppend } from "../../v11/application/pass/normalPassPostAppendPersistence.js";
 import { finalizeNormalPass } from "../../v11/application/pass/normalPassFinalization.js";
-import { runNormalPassFlow } from "../../v11/application/pass/runNormalPassFlow.js";
+import { preparePassRouting } from "../../v11/application/pass/passRoutingPreparation.js";
 import { prepareReviewerPass } from "../../v11/application/pass/reviewerPassPreparation.js";
 import { resolvePassIntent } from "../../v11/application/pass/passIntentResolution.js";
 import { prepareReviewerVerification } from "../../v11/application/pass/reviewerVerificationPreparation.js";
+import { runNormalPassFlow } from "../../v11/application/pass/runNormalPassFlow.js";
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
 } from "../../v11/domain/pass/repeatCleanMetadata.js";
@@ -192,71 +189,49 @@ export async function emitPassFromWorkspace(
     nowIso,
     createError: (message) => new PassCommandError(message)
   });
-  const reviewerPassPreparation = prepareReviewerPass({
-    senderRole: handoff.senderRole,
-    round: handoff.envelopeRound,
-    noFindings,
-    findings,
-    hasFindings,
-    findingsPayloadInvalid: normalizedFindings.invalid,
-    reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
-    severityGateRound: resolved.bubbleConfig.severity_gate_round,
-    summary,
-    createError: (message) => new PassCommandError(message)
-  });
-  const inferredReviewerIntent = reviewerPassPreparation.inferredReviewerIntent;
-  const reviewerFindingsClaim = reviewerPassPreparation.reviewerFindingsClaim;
-  const reviewerFindingsClaimParserMetadata =
-    reviewerPassPreparation.reviewerFindingsClaimParserMetadata;
-
-  const intentResolution = resolvePassIntent(
+  const passRouting = await preparePassRouting(
     {
       senderRole: handoff.senderRole,
-      noFindings,
+      round: handoff.envelopeRound,
+      summary,
+      refs,
+      findings,
       hasFindings,
+      noFindings,
+      findingsPayloadInvalid: normalizedFindings.invalid,
+      bubbleConfig: {
+        review_artifact_type: resolved.bubbleConfig.review_artifact_type,
+        severity_gate_round: resolved.bubbleConfig.severity_gate_round,
+        ...(resolved.bubbleConfig.accuracy_critical !== undefined
+          ? { accuracy_critical: resolved.bubbleConfig.accuracy_critical }
+          : {})
+      },
+      worktreePath: resolved.bubblePaths.worktreePath,
+      transcriptPath: resolved.bubblePaths.transcriptPath,
+      reviewer,
+      implementer,
       createError: (message) => new PassCommandError(message),
       ...(input.intent !== undefined
         ? { inputIntent: input.intent }
-        : {}),
-      ...(inferredReviewerIntent !== undefined
-        ? { inferredReviewerIntent }
         : {})
     },
     {
+      prepareReviewerPass,
+      resolvePassIntent,
+      prepareReviewerVerification,
+      resolveReviewerVerification,
       inferDefaultPassIntent: inferPassIntent
     }
   );
-  const inferredIntent = intentResolution.inferredIntent;
-  const intent = intentResolution.intent;
 
-  const accuracyCritical = resolved.bubbleConfig.accuracy_critical === true;
-  const reviewerVerification = await prepareReviewerVerification({
-    reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
-    senderRole: handoff.senderRole,
-    summary,
-    refs,
-    accuracyCritical,
-    worktreePath: resolved.bubblePaths.worktreePath,
-    intent,
-    hasFindings,
-    createError: (message) => new PassCommandError(message)
-  }, {
-    resolveReviewerVerification
-  });
-
-  const transcript = await readTranscriptEnvelopes(resolved.bubblePaths.transcriptPath, {
-    allowMissing: true,
-    toleratePartialFinalLine: true
-  });
-  const repeatCleanTrigger = evaluateRepeatCleanAutoconvergeTrigger({
-    activeRole: handoff.senderRole,
-    passIntent: intent,
-    hasFindings,
-    round: handoff.envelopeRound,
-    reviewer,
-    implementer,
-    transcript
-  });
+  const inferredIntent = passRouting.inferredIntent;
+  const intent = passRouting.intent;
+  const reviewerVerification = passRouting.reviewerVerification;
+  const transcript = passRouting.transcript;
+  const repeatCleanTrigger = passRouting.repeatCleanTrigger;
+  const reviewerFindingsClaim = passRouting.reviewerFindingsClaim;
+  const reviewerFindingsClaimParserMetadata =
+    passRouting.reviewerFindingsClaimParserMetadata;
   if (repeatCleanTrigger.trigger) {
     return runAutoConvergeFlow(
       {
