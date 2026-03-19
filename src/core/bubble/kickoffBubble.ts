@@ -11,12 +11,11 @@ import {
 } from "./ideation.js";
 import { resolveKickoffEligibilityFailureReason } from "../../v11/shared/kickoff/kickoffEligibility.js";
 import { buildKickoffNextState } from "../../v11/shared/kickoff/kickoffStateTransition.js";
-import { executeKickoffMutationRollback } from "../../v11/shared/kickoff/kickoffMutationRollback.js";
 import { prepareKickoffPersistence } from "../../v11/shared/kickoff/kickoffPersistencePreparation.js";
-import { executeKickoffMutation } from "../../v11/shared/kickoff/kickoffMutationExecution.js";
 import { resolveKickoffDependencies } from "../../v11/shared/kickoff/kickoffDependencyResolution.js";
 import { writeKickoffState } from "../../v11/shared/kickoff/kickoffStateWrite.js";
 import { resolveKickoffTask } from "../../v11/shared/kickoff/kickoffTaskResolution.js";
+import { executeKickoffMutationPipeline } from "../../v11/shared/kickoff/kickoffMutationPipeline.js";
 import {
   buildKickoffFailureResult,
   buildKickoffSuccessResult,
@@ -140,44 +139,28 @@ export async function kickoffBubble(
   }
   const writtenState = stateWriteResult.writtenState;
 
-  let transcriptBackup: string | null = null;
-  try {
-    transcriptBackup = await executeKickoffMutation({
-      bubbleId: resolved.bubbleId,
-      implementer: resolved.bubbleConfig.agents.implementer,
-      task,
-      taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
-      bubbleTomlPath: resolved.bubblePaths.bubbleTomlPath,
-      nextBubbleToml: persistence.nextBubbleToml,
-      transcriptPath: resolved.bubblePaths.transcriptPath,
-      locksDir: resolved.bubblePaths.locksDir,
-      now,
-      writeFile: writeFileFn,
-      readFile: readFileFn,
-      appendEnvelope
-    });
-  } catch (error) {
-    const rollbackErrors = await executeKickoffMutationRollback({
-      transcriptBackup,
-      transcriptPath: resolved.bubblePaths.transcriptPath,
-      taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
-      previousTaskArtifact: persistence.previousTaskArtifact,
-      bubbleTomlPath: resolved.bubblePaths.bubbleTomlPath,
-      previousBubbleToml: persistence.previousBubbleToml,
-      statePath: resolved.bubblePaths.statePath,
-      previousState: state,
-      writtenStateFingerprint: writtenState.fingerprint,
-      writeFile: writeFileFn,
-      writeState
-    });
-
-    if (rollbackErrors.length > 0) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new Error(
-        `${IDEATION_KICKOFF_PERSISTENCE_FAILED}: mutation failed (${errorMessage}) and rollback failed (${rollbackErrors.join("; ")}).`
-      );
-    }
-
+  const mutationPipelineResult = await executeKickoffMutationPipeline({
+    persistenceFailureCode: IDEATION_KICKOFF_PERSISTENCE_FAILED,
+    bubbleId: resolved.bubbleId,
+    implementer: resolved.bubbleConfig.agents.implementer,
+    task,
+    taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+    bubbleTomlPath: resolved.bubblePaths.bubbleTomlPath,
+    nextBubbleToml: persistence.nextBubbleToml,
+    previousBubbleToml: persistence.previousBubbleToml,
+    previousTaskArtifact: persistence.previousTaskArtifact,
+    transcriptPath: resolved.bubblePaths.transcriptPath,
+    locksDir: resolved.bubblePaths.locksDir,
+    now,
+    statePath: resolved.bubblePaths.statePath,
+    previousState: state,
+    writtenStateFingerprint: writtenState.fingerprint,
+    writeFile: writeFileFn,
+    readFile: readFileFn,
+    appendEnvelope,
+    writeState
+  });
+  if (mutationPipelineResult.kind === "mutation_failed_rolled_back") {
     return buildKickoffFailureResult({
       bubbleId: resolved.bubbleId,
       reasonCode: IDEATION_KICKOFF_PERSISTENCE_FAILED,
