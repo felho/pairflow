@@ -12,8 +12,7 @@ import {
   type RunConvergedFlowDependencies
 } from "../../v11/application/converged/runConvergedFlow.js";
 import {
-  buildDefaultConvergedFlowDependencies,
-  buildConvergedFlowInput,
+  buildConvergedCommandFlowInvocation,
 } from "../../v11/shared/converged/convergedFlowInvocationBuilders.js";
 import { normalizeConvergedCommandError } from "../../v11/shared/converged/convergedCommandErrorNormalization.js";
 import { normalizeConvergedCommandInput } from "../../v11/shared/converged/convergedCommandInputNormalization.js";
@@ -78,27 +77,27 @@ export async function emitConvergedFromWorkspace(
     now: input.now,
     createError
   });
-  return runConvergedFlow(
-    buildConvergedFlowInput({
-      summary: normalized.summary,
-      refs: normalized.refs,
-      now: normalized.now,
-      cwd: input.cwd,
-      expectedStateFingerprint: input.expectedStateFingerprint,
-      expectedRound: input.expectedRound,
-      expectedReviewer: input.expectedReviewer,
-      createError,
-      resolveMetaReviewRolloutBlockingReasonCodes
-    }),
-    buildDefaultConvergedFlowDependencies({
+  const invocation = buildConvergedCommandFlowInvocation({
+    summary: normalized.summary,
+    refs: normalized.refs,
+    now: normalized.now,
+    cwd: input.cwd,
+    expectedStateFingerprint: input.expectedStateFingerprint,
+    expectedRound: input.expectedRound,
+    expectedReviewer: input.expectedReviewer,
+    createError,
+    resolveMetaReviewRolloutBlockingReasonCodes,
+    dependencies: {
       applyMetaReviewGateOnConvergence:
         dependencies.applyMetaReviewGateOnConvergence,
       recoverMetaReviewGateFromSnapshot:
         dependencies.recoverMetaReviewGateFromSnapshot,
       emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification,
       emitBubbleNotification: dependencies.emitBubbleNotification
-    })
-  );
+    }
+  });
+
+  return runConvergedFlow(invocation.flowInput, invocation.flowDependencies);
 }
 
 export function asConvergedCommandError(error: unknown): never {

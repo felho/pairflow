@@ -122,3 +122,44 @@ export function buildDefaultConvergedFlowDependencies(
     emitBubbleNotification: input.emitBubbleNotification
   });
 }
+
+export interface BuildConvergedCommandFlowInvocationInput {
+  summary: string;
+  refs: string[];
+  now: Date;
+  cwd?: string | undefined;
+  expectedStateFingerprint?: string | undefined;
+  expectedRound?: number | undefined;
+  expectedReviewer?: AgentName | undefined;
+  createError: RunConvergedFlowInput["createError"];
+  resolveMetaReviewRolloutBlockingReasonCodes:
+    RunConvergedFlowInput["resolveMetaReviewRolloutBlockingReasonCodes"];
+  dependencies?: BuildDefaultConvergedFlowDependenciesInput | undefined;
+}
+
+export interface BuildConvergedCommandFlowInvocationResult {
+  flowInput: RunConvergedFlowInput;
+  flowDependencies: RunConvergedFlowDependencies;
+}
+
+export function buildConvergedCommandFlowInvocation(
+  input: BuildConvergedCommandFlowInvocationInput
+): BuildConvergedCommandFlowInvocationResult {
+  return {
+    flowInput: buildConvergedFlowInput({
+      summary: input.summary,
+      refs: input.refs,
+      now: input.now,
+      cwd: input.cwd,
+      expectedStateFingerprint: input.expectedStateFingerprint,
+      expectedRound: input.expectedRound,
+      expectedReviewer: input.expectedReviewer,
+      createError: input.createError,
+      resolveMetaReviewRolloutBlockingReasonCodes:
+        input.resolveMetaReviewRolloutBlockingReasonCodes
+    }),
+    flowDependencies: buildDefaultConvergedFlowDependencies(
+      input.dependencies ?? {}
+    )
+  };
+}
