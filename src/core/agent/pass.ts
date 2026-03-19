@@ -69,7 +69,6 @@ import {
 } from "../convergence/policy.js";
 import {
   evaluateRepeatCleanAutoconvergeTrigger,
-  repeatCleanAutoconvergePolicyRejectedReasonCode,
   repeatCleanAutoconvergeTriggeredReasonCode,
   type RepeatCleanAutoconvergeReasonCode,
   type RepeatCleanAutoconvergeReasonDetail
@@ -99,6 +98,12 @@ import { normalizeReviewerFindingsPayload } from "../../v11/domain/pass/reviewer
 import { assertNoDocsOnlySkipLogRefConflict } from "../../v11/domain/pass/docsOnlyRuntimeSkipGuard.js";
 import { assertReviewerIntentOverrideConsistency } from "../../v11/domain/pass/reviewerIntentOverrideGuard.js";
 import { validateReviewerVerificationConsistency } from "../../v11/domain/pass/reviewerVerificationConsistencyGuard.js";
+import {
+  raiseRepeatCleanAutoConvergeStateStale,
+  raiseRepeatCleanDownstreamConvergedRejected,
+  raiseRepeatCleanPolicyGateRejected,
+  raiseRepeatCleanReviewVerificationWriteFailed
+} from "../../v11/domain/pass/repeatCleanPolicyRejection.js";
 import { resolveReviewerVerification } from "../../v11/application/pass/reviewerVerificationResolver.js";
 
 export interface EmitPassInput {
@@ -151,22 +156,10 @@ export class PassCommandError extends Error {
   }
 }
 
-type RepeatCleanPolicyRejectedSubtype =
-  | "policy_gate_rejected"
-  | "review_verification_write_failed"
-  | "downstream_converged_rejected";
-
 const repeatCleanMostRecentPreviousReviewerPassIsCleanMetadataKey =
   "most_recent_previous_reviewer_pass_is_clean";
 const repeatCleanMostRecentPreviousReviewerCleanPassEnvelopeLegacyMetadataKey =
   "most_recent_previous_reviewer_clean_pass_envelope";
-
-function formatRepeatCleanPolicyRejectedMessage(input: {
-  subtype: RepeatCleanPolicyRejectedSubtype;
-  detail: string;
-}): string {
-  return `${repeatCleanAutoconvergePolicyRejectedReasonCode}: subtype=${input.subtype}; ${input.detail}`;
-}
 
 function readBooleanMetadataValue(
   metadata: Record<string, unknown>,
@@ -569,29 +562,20 @@ export async function emitPassFromWorkspace(
       severity_gate_round: resolved.bubbleConfig.severity_gate_round
     });
     if (!policyResult.ok) {
-      const diagnosticsDetail =
-        policyResult.diagnostics.length > 0
-          ? ` diagnostics=${policyResult.diagnostics.join(" ")}`
-          : "";
-      throw new PassCommandError(
-        formatRepeatCleanPolicyRejectedMessage({
-          subtype: "policy_gate_rejected",
-          detail: `${policyResult.errors.join(" ")}${diagnosticsDetail}`
-        })
-      );
+      raiseRepeatCleanPolicyGateRejected({
+        errors: policyResult.errors,
+        diagnostics: policyResult.diagnostics,
+        createError: (message) => new PassCommandError(message)
+      });
     }
 
     const stateBeforeAutoConvergeSideEffects = await readStateSnapshot(
       resolved.bubblePaths.statePath
     );
     if (stateBeforeAutoConvergeSideEffects.fingerprint !== loadedState.fingerprint) {
-      throw new PassCommandError(
-        formatRepeatCleanPolicyRejectedMessage({
-          subtype: "policy_gate_rejected",
-          detail:
-            "AUTO_CONVERGE_STATE_STALE: state changed between repeat-clean evaluation and convergence transition."
-        })
-      );
+      raiseRepeatCleanAutoConvergeStateStale({
+        createError: (message) => new PassCommandError(message)
+      });
     }
 
     if (reviewerVerification !== undefined) {
@@ -610,13 +594,10 @@ export async function emitPassFromWorkspace(
         );
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
-        throw new PassCommandError(
-          formatRepeatCleanPolicyRejectedMessage({
-            subtype: "review_verification_write_failed",
-            detail:
-              `review-verification artifact write failed before convergence transition. Root error: ${reason}`
-          })
-        );
+        raiseRepeatCleanReviewVerificationWriteFailed({
+          reason,
+          createError: (message) => new PassCommandError(message)
+        });
       }
     }
 
@@ -643,12 +624,10 @@ export async function emitPassFromWorkspace(
       );
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
-      throw new PassCommandError(
-        formatRepeatCleanPolicyRejectedMessage({
-          subtype: "downstream_converged_rejected",
-          detail: reason
-        })
-      );
+      raiseRepeatCleanDownstreamConvergedRejected({
+        reason,
+        createError: (message) => new PassCommandError(message)
+      });
     }
 
     const autoConvergeFindings = findings;
