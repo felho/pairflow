@@ -15,6 +15,24 @@
       "kind": "seed_case"
     },
     {
+      "id": "ask-human-basic",
+      "command": "askHuman",
+      "source": "tests/contracts/v11/cases/ask-human/ask-human-basic.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "ask-human-basic-v11",
+      "command": "askHuman",
+      "source": "tests/contracts/v11/cases/ask-human/ask-human-basic-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "ask-human-basic-parity",
+      "command": "askHuman",
+      "source": "tests/contracts/v11/cases/ask-human/ask-human-basic-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "converged-basic",
       "command": "converged",
       "source": "tests/contracts/v11/cases/converged/converged-basic.case.json",
