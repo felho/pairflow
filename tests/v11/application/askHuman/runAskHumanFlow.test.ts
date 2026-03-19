@@ -184,4 +184,48 @@ describe("runAskHumanFlow", () => {
       }
     );
   });
+
+  it("forwards empty execution dependency overrides when not provided", async () => {
+    const now = new Date("2026-02-21T12:10:00.000Z");
+
+    await runAskHumanFlow(
+      {
+        now,
+        routing: {
+          nowIso: now.toISOString()
+        } as never,
+        createError: (message) => new AskHumanFlowTestError(message)
+      },
+      {
+        executeAskHumanExecution: async (_input, dependencies) => {
+          expect(dependencies).toEqual({});
+          return {
+            appended: {
+              envelope: {
+                id: "msg_20260221_empty_exec_deps"
+              },
+              sequence: 10
+            },
+            written: {
+              state: {
+                state: "WAITING_HUMAN"
+              }
+            }
+          } as never;
+        },
+        finalizeAskHumanFlow: async () =>
+          ({
+            bubbleId: "b_ask_human_empty_exec_deps",
+            sequence: 10,
+            envelope: {
+              id: "msg_20260221_empty_exec_deps"
+            },
+            state: {
+              state: "WAITING_HUMAN"
+            },
+            inferredRecipient: "human"
+          }) as never
+      }
+    );
+  });
 });
