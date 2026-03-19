@@ -1,6 +1,10 @@
 import { readFile } from "node:fs/promises";
 
-import type { FitnessPolicy, FitnessPolicyCheck } from "./types.js";
+import type {
+  FitnessPolicy,
+  FitnessPolicyCheck,
+  FitnessPolicyException
+} from "./types.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -24,6 +28,48 @@ function asStringArray(value: unknown): string[] | undefined {
   return values;
 }
 
+function parseException(rawException: unknown): FitnessPolicyException {
+  if (!isRecord(rawException)) {
+    throw new Error("Fitness policy exception entries must be objects.");
+  }
+  const id = asString(rawException.id);
+  const kind = asString(rawException.kind);
+  const owner = asString(rawException.owner);
+  const reason = asString(rawException.reason);
+  const expiresMilestone = asString(rawException.expires_milestone);
+  if (
+    id === undefined
+    || kind === undefined
+    || owner === undefined
+    || reason === undefined
+    || expiresMilestone === undefined
+  ) {
+    throw new Error(
+      "Fitness policy exception must define id, kind, owner, reason, expires_milestone."
+    );
+  }
+  return {
+    id,
+    kind,
+    owner,
+    reason,
+    expires_milestone: expiresMilestone,
+    from: asString(rawException.from),
+    to: asString(rawException.to),
+    paths: asStringArray(rawException.paths)
+  };
+}
+
+function parseExceptions(value: unknown): FitnessPolicyException[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(value)) {
+    throw new Error("Fitness policy exceptions must be an array.");
+  }
+  return value.map((entry) => parseException(entry));
+}
+
 function parseCheck(rawCheck: unknown): FitnessPolicyCheck {
   if (!isRecord(rawCheck)) {
     throw new Error("Invalid fitness policy check entry.");
@@ -39,7 +85,7 @@ function parseCheck(rawCheck: unknown): FitnessPolicyCheck {
     mode: asString(rawCheck.mode),
     owner: asString(rawCheck.owner),
     scope: asStringArray(rawCheck.scope),
-    exceptions: asStringArray(rawCheck.exceptions)
+    exceptions: parseExceptions(rawCheck.exceptions)
   };
 }
 

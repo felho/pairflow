@@ -4,7 +4,11 @@ import { dirname, extname, relative, resolve } from "node:path";
 import ts from "typescript";
 
 import { normalizePathToPosix, resolveFilesForScopePatterns } from "../scope.js";
-import type { FitnessPolicyCheck, FitnessReportCheck } from "../types.js";
+import type {
+  FitnessPolicyCheck,
+  FitnessPolicyException,
+  FitnessReportCheck
+} from "../types.js";
 
 interface ImportEdge {
   from: string;
@@ -16,6 +20,20 @@ interface DependencyViolation {
   kind: "forbidden_layer_import" | "cycle_detected";
   severity: "fail";
   message: string;
+  fromRelative: string | undefined;
+  toRelative: string | undefined;
+  cycleNodes: string[] | undefined;
+}
+
+interface DependencyEdgeException {
+  id: string;
+  from: string;
+  to: string;
+}
+
+interface DependencyCycleException {
+  id: string;
+  paths: string[];
 }
 
 const layerImportAllowlist: Record<string, readonly string[]> = {
@@ -28,6 +46,127 @@ function layerFromRelativePath(path: string): string | undefined {
   const normalized = normalizePathToPosix(path);
   const match = normalized.match(/^src\/v11\/([^/]+)\//u);
   return match?.[1];
+}
+
+function normalizeRelativePolicyPath(
+  inputPath: string,
+  repoRoot: string
+): string {
+  const normalizedInput = normalizePathToPosix(inputPath).replace(/^\.\//u, "");
+  if (normalizedInput.startsWith("/")) {
+    return normalizePathToPosix(relative(repoRoot, normalizedInput));
+  }
+  return normalizedInput;
+}
+
+function cycleKey(paths: readonly string[]): string {
+  return [...paths].sort((left, right) => left.localeCompare(right)).join(" <-> ");
+}
+
+function parseDependencyExceptions(input: {
+  repoRoot: string;
+  exceptions: readonly FitnessPolicyException[] | undefined;
+}): {
+  edgeAllowlist: DependencyEdgeException[];
+  cycleAllowlist: DependencyCycleException[];
+  invalid: string[];
+} {
+  const edgeAllowlist: DependencyEdgeException[] = [];
+  const cycleAllowlist: DependencyCycleException[] = [];
+  const invalid: string[] = [];
+
+  for (const exception of input.exceptions ?? []) {
+    if (exception.kind === "allow-edge") {
+      if (exception.from === undefined || exception.to === undefined) {
+        invalid.push(
+          `exception ${exception.id}: allow-edge requires from/to fields`
+        );
+        continue;
+      }
+      edgeAllowlist.push({
+        id: exception.id,
+        from: normalizeRelativePolicyPath(exception.from, input.repoRoot),
+        to: normalizeRelativePolicyPath(exception.to, input.repoRoot)
+      });
+      continue;
+    }
+
+    if (exception.kind === "allow-cycle") {
+      if (exception.paths === undefined || exception.paths.length === 0) {
+        invalid.push(
+          `exception ${exception.id}: allow-cycle requires non-empty paths field`
+        );
+        continue;
+      }
+      cycleAllowlist.push({
+        id: exception.id,
+        paths: exception.paths.map((path) =>
+          normalizeRelativePolicyPath(path, input.repoRoot)
+        )
+      });
+      continue;
+    }
+
+    invalid.push(
+      `exception ${exception.id}: unsupported dependency exception kind "${exception.kind}"`
+    );
+  }
+
+  return {
+    edgeAllowlist,
+    cycleAllowlist,
+    invalid
+  };
+}
+
+function filterDependencyViolationsByExceptions(input: {
+  violations: readonly DependencyViolation[];
+  edgeAllowlist: readonly DependencyEdgeException[];
+  cycleAllowlist: readonly DependencyCycleException[];
+}): {
+  violations: DependencyViolation[];
+  appliedExceptionIds: string[];
+} {
+  const appliedExceptionIds = new Set<string>();
+  const remainingViolations: DependencyViolation[] = [];
+
+  for (const violation of input.violations) {
+    if (
+      violation.kind === "forbidden_layer_import"
+      && violation.fromRelative !== undefined
+      && violation.toRelative !== undefined
+    ) {
+      const match = input.edgeAllowlist.find(
+        (exception) =>
+          exception.from === violation.fromRelative
+          && exception.to === violation.toRelative
+      );
+      if (match !== undefined) {
+        appliedExceptionIds.add(match.id);
+        continue;
+      }
+    }
+
+    if (violation.kind === "cycle_detected" && violation.cycleNodes !== undefined) {
+      const violationCycleKey = cycleKey(violation.cycleNodes);
+      const match = input.cycleAllowlist.find(
+        (exception) => cycleKey(exception.paths) === violationCycleKey
+      );
+      if (match !== undefined) {
+        appliedExceptionIds.add(match.id);
+        continue;
+      }
+    }
+
+    remainingViolations.push(violation);
+  }
+
+  return {
+    violations: remainingViolations,
+    appliedExceptionIds: [...appliedExceptionIds].sort((left, right) =>
+      left.localeCompare(right)
+    )
+  };
 }
 
 function parseImportSpecifiers(input: {
@@ -164,7 +303,10 @@ function detectForbiddenLayerImports(input: {
       kind: "forbidden_layer_import",
       severity: "fail",
       message:
-        `${fromRelative}:${String(edge.line)} forbidden layer import ${fromLayer} -> ${toLayer}`
+        `${fromRelative}:${String(edge.line)} forbidden layer import ${fromLayer} -> ${toLayer}`,
+      fromRelative,
+      toRelative,
+      cycleNodes: undefined
     });
   }
   return violations;
@@ -237,14 +379,16 @@ function detectCycles(input: {
   const violations: DependencyViolation[] = [];
   for (const component of stronglyConnectedComponents) {
     if (component.length > 1) {
-      const cyclePath = component
+      const cycleNodes = component
         .map((path) => normalizePathToPosix(relative(input.repoRoot, path)))
-        .sort((left, right) => left.localeCompare(right))
-        .join(" <-> ");
+        .sort((left, right) => left.localeCompare(right));
       violations.push({
         kind: "cycle_detected",
         severity: "fail",
-        message: `import cycle detected: ${cyclePath}`
+        message: `import cycle detected: ${cycleNodes.join(" <-> ")}`,
+        fromRelative: undefined,
+        toRelative: undefined,
+        cycleNodes
       });
       continue;
     }
@@ -261,7 +405,10 @@ function detectCycles(input: {
       kind: "cycle_detected",
       severity: "fail",
       message:
-        `self import cycle detected: ${normalizePathToPosix(relative(input.repoRoot, single))}`
+        `self import cycle detected: ${normalizePathToPosix(relative(input.repoRoot, single))}`,
+      fromRelative: undefined,
+      toRelative: undefined,
+      cycleNodes: [normalizePathToPosix(relative(input.repoRoot, single))]
     });
   }
 
@@ -321,7 +468,7 @@ export async function buildDependencyCheckReport({
     sourceByPath
   });
 
-  const violations = [
+  const allViolations = [
     ...detectForbiddenLayerImports({
       repoRoot,
       edges
@@ -332,8 +479,34 @@ export async function buildDependencyCheckReport({
       edges
     })
   ];
+  const parsedExceptions = parseDependencyExceptions({
+    repoRoot,
+    exceptions: check.exceptions
+  });
+  const filtered = filterDependencyViolationsByExceptions({
+    violations: allViolations,
+    edgeAllowlist: parsedExceptions.edgeAllowlist,
+    cycleAllowlist: parsedExceptions.cycleAllowlist
+  });
+  const violations = filtered.violations;
 
   if (violations.length === 0) {
+    const details = [
+      `scope=${scope.join(", ")}`,
+      `files_scanned=${String(files.length)}`,
+      `import_edges=${String(edges.length)}`,
+      `exceptions_configured=${String(check.exceptions?.length ?? 0)}`,
+      `exceptions_applied=${String(filtered.appliedExceptionIds.length)}`
+    ];
+    if (parsedExceptions.invalid.length > 0) {
+      details.push(`exceptions_invalid=${String(parsedExceptions.invalid.length)}`);
+      details.push(...parsedExceptions.invalid.slice(0, 10));
+    }
+    if (filtered.appliedExceptionIds.length > 0) {
+      details.push(
+        `exceptions_applied_ids=${filtered.appliedExceptionIds.join(", ")}`
+      );
+    }
     return {
       id: check.id,
       owner: check.owner ?? "unknown",
@@ -341,12 +514,19 @@ export async function buildDependencyCheckReport({
       status: "pass",
       summary: `Dependency check passed: ${files.length} scoped files scanned with no cycle or forbidden-layer violations.`,
       metric: check.metric,
-      details: [
-        `scope=${scope.join(", ")}`,
-        `files_scanned=${String(files.length)}`,
-        `import_edges=${String(edges.length)}`
-      ]
+      details
     };
+  }
+
+  const details = summarizeDependencyViolations(violations);
+  details.push(`exceptions_configured=${String(check.exceptions?.length ?? 0)}`);
+  details.push(`exceptions_applied=${String(filtered.appliedExceptionIds.length)}`);
+  if (parsedExceptions.invalid.length > 0) {
+    details.push(`exceptions_invalid=${String(parsedExceptions.invalid.length)}`);
+    details.push(...parsedExceptions.invalid.slice(0, 10));
+  }
+  if (filtered.appliedExceptionIds.length > 0) {
+    details.push(`exceptions_applied_ids=${filtered.appliedExceptionIds.join(", ")}`);
   }
 
   return {
@@ -356,6 +536,6 @@ export async function buildDependencyCheckReport({
     status: "fail",
     summary: `Dependency check failed: ${String(violations.length)} violation(s) detected (cycles/forbidden-layer imports).`,
     metric: check.metric,
-    details: summarizeDependencyViolations(violations)
+    details
   };
 }

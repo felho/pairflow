@@ -15,6 +15,30 @@ This document defines what is measured, where it applies, and how CI should trea
 2. `soft-fail`: warning in CI and PR summary, merge still allowed.
 3. `hard-fail`: CI failure before merge.
 
+## Exception Format (Machine-Readable)
+
+`tools/fitness/policy.json` uses structured exception objects:
+
+```json
+{
+  "id": "dep-allow-edge-001",
+  "kind": "allow-edge",
+  "owner": "architecture",
+  "reason": "temporary migration bridge",
+  "expires_milestone": "M2",
+  "from": "src/v11/domain/legacy-bridge.ts",
+  "to": "src/v11/application/migration-bridge.ts"
+}
+```
+
+Rules:
+
+- `id`, `kind`, `owner`, `reason`, `expires_milestone` are mandatory.
+- `dependency` check supports:
+  - `allow-edge` with `from` + `to`.
+  - `allow-cycle` with `paths` (array of cycle member files).
+- Exceptions must stay temporary and milestone-bound.
+
 ## Check Definitions
 
 ## 1) Boundary Fitness

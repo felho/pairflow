@@ -131,4 +131,96 @@ describe("dependency fitness check", () => {
     expect(report.status).toBe("pass");
     expect(report.details?.some((detail) => detail.startsWith("import_edges="))).toBe(true);
   });
+
+  it("applies allow-edge exception for forbidden layer import", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/handler.ts",
+      "export const handler = 1;\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/domain/rule.ts",
+      "import { handler } from '../application/handler.js';\nexport const rule = handler;\n"
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: [
+          {
+            id: "dep-allow-edge-001",
+            kind: "allow-edge",
+            owner: "architecture",
+            reason: "temporary migration bridge",
+            expires_milestone: "M2",
+            from: "src/v11/domain/rule.ts",
+            to: "src/v11/application/handler.ts",
+            paths: undefined
+          }
+        ]
+      },
+      repoRoot,
+      fallbackMode: "report-only"
+    });
+
+    expect(report.status).toBe("pass");
+    expect(report.details?.some((detail) => detail === "exceptions_applied=1")).toBe(true);
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("exceptions_applied_ids=dep-allow-edge-001")
+      )
+    ).toBe(true);
+  });
+
+  it("applies allow-cycle exception for cycle violation", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/domain/a.ts",
+      "import { b } from './b.js';\nexport const a = b;\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/domain/b.ts",
+      "import { a } from './a.js';\nexport const b = a;\n"
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: [
+          {
+            id: "dep-allow-cycle-001",
+            kind: "allow-cycle",
+            owner: "architecture",
+            reason: "temporary migration cycle",
+            expires_milestone: "M2",
+            from: undefined,
+            to: undefined,
+            paths: ["src/v11/domain/a.ts", "src/v11/domain/b.ts"]
+          }
+        ]
+      },
+      repoRoot,
+      fallbackMode: "report-only"
+    });
+
+    expect(report.status).toBe("pass");
+    expect(report.details?.some((detail) => detail === "exceptions_applied=1")).toBe(true);
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("exceptions_applied_ids=dep-allow-cycle-001")
+      )
+    ).toBe(true);
+  });
 });

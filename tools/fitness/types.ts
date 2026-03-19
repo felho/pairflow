@@ -1,10 +1,21 @@
+export interface FitnessPolicyException {
+  id: string;
+  kind: string;
+  owner: string;
+  reason: string;
+  expires_milestone: string;
+  from: string | undefined;
+  to: string | undefined;
+  paths: string[] | undefined;
+}
+
 export interface FitnessPolicyCheck {
   id: string;
   metric: string;
   mode: string | undefined;
   owner: string | undefined;
   scope: string[] | undefined;
-  exceptions: string[] | undefined;
+  exceptions: FitnessPolicyException[] | undefined;
 }
 
 export interface FitnessPolicy {
