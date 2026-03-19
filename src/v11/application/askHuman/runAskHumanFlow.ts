@@ -1,4 +1,4 @@
-import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
+import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import type {
   appendProtocolEnvelope,
   AppendProtocolEnvelopeResult
@@ -8,15 +8,16 @@ import type {
   LoadedStateSnapshot
 } from "../../../core/state/stateStore.js";
 import type { applyStateTransition } from "../../../core/state/machine.js";
-import {
+import type {
   emitTmuxDeliveryNotification
 } from "../../../core/runtime/tmuxDelivery.js";
 import type { resolveDeliveryMessageRef } from "../../../core/runtime/tmuxDelivery.js";
-import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
+import type { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { AskHumanRoutingContext } from "../../shared/askHuman/askHumanRoutingContext.js";
 import { buildAskHumanExecutionDependencies } from "../../shared/askHuman/askHumanExecutionDependencyBuilder.js";
+import { buildAskHumanFinalizationDependencies } from "../../shared/askHuman/askHumanFinalizationDependencyBuilder.js";
 
 export interface RunAskHumanFlowInput {
   now: Date;
@@ -81,25 +82,6 @@ export interface RunAskHumanFlowDependencies {
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
 }
 
-function buildFinalizationDependencies(
-  dependencies: RunAskHumanFlowDependencies
-): FinalizeAskHumanFlowDependencies {
-  return {
-    ...(dependencies.emitTmuxDeliveryNotification !== undefined
-      ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
-      : { emitTmuxDeliveryNotification }),
-    ...(dependencies.emitBubbleNotification !== undefined
-      ? { emitBubbleNotification: dependencies.emitBubbleNotification }
-      : { emitBubbleNotification }),
-    ...(dependencies.resolveDeliveryMessageRef !== undefined
-      ? { resolveDeliveryMessageRef: dependencies.resolveDeliveryMessageRef }
-      : {}),
-    ...(dependencies.emitBubbleLifecycleEventBestEffort !== undefined
-      ? { emitBubbleLifecycleEventBestEffort: dependencies.emitBubbleLifecycleEventBestEffort }
-      : { emitBubbleLifecycleEventBestEffort })
-  };
-}
-
 export async function runAskHumanFlow(
   input: RunAskHumanFlowInput,
   dependencies: RunAskHumanFlowDependencies
@@ -120,6 +102,6 @@ export async function runAskHumanFlow(
       appended: execution.appended,
       written: execution.written
     },
-    buildFinalizationDependencies(dependencies)
+    buildAskHumanFinalizationDependencies(dependencies)
   );
 }
