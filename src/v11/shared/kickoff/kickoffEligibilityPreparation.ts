@@ -15,20 +15,46 @@ export interface KickoffEligibilityPreparationResult {
   eligibilityFailureReason: string | null;
 }
 
+function buildKickoffMarkersBefore(input: {
+  ideationMode: boolean;
+  ideationTaskPending: boolean;
+}): KickoffEligibilityPreparationResult["markersBefore"] {
+  return {
+    ideation_mode: input.ideationMode,
+    ideation_task_pending: input.ideationTaskPending
+  };
+}
+
+function buildKickoffEligibilityInput(input: {
+  bubbleConfig: BubbleConfig;
+  state: BubbleStateSnapshot;
+  ideationMode: boolean;
+  ideationTaskPending: boolean;
+}): Parameters<typeof resolveKickoffEligibilityFailureReason>[0] {
+  return {
+    hasParseWarning: input.bubbleConfig.ideation?.parse_warning !== undefined,
+    ideationMode: input.ideationMode,
+    ideationTaskPending: input.ideationTaskPending,
+    state: input.state
+  };
+}
+
 export function prepareKickoffEligibility(
   input: KickoffEligibilityPreparationInput
 ): KickoffEligibilityPreparationResult {
   const ideationMetadata = resolveIdeationMetadata(input.bubbleConfig);
-  const markersBefore = {
-    ideation_mode: ideationMetadata.mode,
-    ideation_task_pending: ideationMetadata.taskPending
-  };
-  const eligibilityFailureReason = resolveKickoffEligibilityFailureReason({
-    hasParseWarning: input.bubbleConfig.ideation?.parse_warning !== undefined,
+  const markersBefore = buildKickoffMarkersBefore({
     ideationMode: ideationMetadata.mode,
-    ideationTaskPending: ideationMetadata.taskPending,
-    state: input.state
+    ideationTaskPending: ideationMetadata.taskPending
   });
+  const eligibilityFailureReason = resolveKickoffEligibilityFailureReason(
+    buildKickoffEligibilityInput({
+      bubbleConfig: input.bubbleConfig,
+      state: input.state,
+      ideationMode: ideationMetadata.mode,
+      ideationTaskPending: ideationMetadata.taskPending
+    })
+  );
 
   return {
     markersBefore,

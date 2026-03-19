@@ -9,6 +9,27 @@ export interface BuildKickoffTaskEnvelopeInput {
   taskArtifactPath: string;
 }
 
+function buildKickoffTaskPayloadMetadata(
+  task: ResolvedKickoffTaskInput
+): {
+  source: ResolvedKickoffTaskInput["source"];
+  source_path?: string;
+} {
+  return {
+    source: task.source,
+    ...(task.sourcePath !== undefined ? { source_path: task.sourcePath } : {})
+  };
+}
+
+function buildKickoffTaskPayload(
+  task: ResolvedKickoffTaskInput
+): ProtocolEnvelopeDraft["payload"] {
+  return {
+    summary: task.content,
+    metadata: buildKickoffTaskPayloadMetadata(task)
+  };
+}
+
 export function buildKickoffTaskEnvelope(
   input: BuildKickoffTaskEnvelopeInput
 ): ProtocolEnvelopeDraft {
@@ -18,15 +39,7 @@ export function buildKickoffTaskEnvelope(
     recipient: input.implementer,
     type: "TASK",
     round: 1,
-    payload: {
-      summary: input.task.content,
-      metadata: {
-        source: input.task.source,
-        ...(input.task.sourcePath !== undefined
-          ? { source_path: input.task.sourcePath }
-          : {})
-      }
-    },
+    payload: buildKickoffTaskPayload(input.task),
     refs: [input.taskArtifactPath]
   };
 }
