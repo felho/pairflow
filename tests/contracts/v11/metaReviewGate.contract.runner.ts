@@ -1,6 +1,7 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createHash } from "node:crypto";
 
 import {
   applyMetaReviewGateOnConvergence,
@@ -41,7 +42,11 @@ type MetaReviewGateApplyScenario =
   | "run_failed"
   | "meta_review_running"
   | "sticky_bypass";
-type MetaReviewGateRecoverScenario = "error" | "approve" | "inconclusive";
+type MetaReviewGateRecoverScenario =
+  | "error"
+  | "approve"
+  | "inconclusive"
+  | "rework_budget_exhausted";
 interface NormalizedMetaReviewSnapshot {
   last_autonomous_run_id: string | null;
   last_autonomous_status: "success" | "error" | null;
@@ -101,10 +106,11 @@ function parseMetaReviewGateCaseInput(input: ContractCase["input"]): {
     recoverScenarioRaw !== undefined &&
     recoverScenarioRaw !== "error" &&
     recoverScenarioRaw !== "approve" &&
-    recoverScenarioRaw !== "inconclusive"
+    recoverScenarioRaw !== "inconclusive" &&
+    recoverScenarioRaw !== "rework_budget_exhausted"
   ) {
     throw new Error(
-      "metaReviewGate contract input.recoverScenario must be one of: error, approve, inconclusive."
+      "metaReviewGate contract input.recoverScenario must be one of: error, approve, inconclusive, rework_budget_exhausted."
     );
   }
 
@@ -226,6 +232,37 @@ function buildSyntheticMetaReviewRunInconclusive(input: {
     updated_at: "2026-03-19T10:03:00.000Z",
     lifecycle_state: "META_REVIEW_RUNNING",
     warnings: []
+  };
+}
+
+function buildSyntheticMetaReviewRunReworkBudgetExhausted(input: {
+  bubbleId: string;
+  runId: string;
+  findingsCount: number;
+  findingsArtifactRef: string;
+  findingsDigestSha256: string;
+}): MetaReviewRunResult {
+  return {
+    bubbleId: input.bubbleId,
+    depth: "standard",
+    run_id: input.runId,
+    status: "success",
+    recommendation: "rework",
+    summary: "Seed meta-review recover contract rework/budget-exhausted snapshot.",
+    report_ref: "artifacts/meta-review-last.md",
+    rework_target_message: "Fix the remaining blocker findings.",
+    updated_at: "2026-03-19T10:03:00.000Z",
+    lifecycle_state: "META_REVIEW_RUNNING",
+    warnings: [],
+    report_json: {
+      findings_claim_state: "open_findings",
+      findings_claim_source: "meta_review_artifact",
+      findings_count: input.findingsCount,
+      findings_artifact_ref: input.findingsArtifactRef,
+      meta_review_run_id: input.runId,
+      findings_digest_sha256: input.findingsDigestSha256,
+      findings_artifact_status: "available"
+    }
   };
 }
 
@@ -363,6 +400,12 @@ async function executeMetaReviewGateCase(input: {
       );
     } else {
       const loaded = await readStateSnapshot(bubble.paths.statePath);
+      const metaReviewSnapshot = normalizeMetaReviewSnapshotForContract(
+        loaded.state.meta_review
+      );
+      const isBudgetExhaustedScenario =
+        caseInput.recoverScenario === "rework_budget_exhausted";
+      const autoReworkLimit = Math.max(metaReviewSnapshot.auto_rework_limit, 1);
       await writeStateSnapshot(
         bubble.paths.statePath,
         {
@@ -371,7 +414,16 @@ async function executeMetaReviewGateCase(input: {
           active_agent: "codex",
           active_role: "meta_reviewer",
           active_since: "2026-03-19T10:03:30.000Z",
-          last_command_at: "2026-03-19T10:03:30.000Z"
+          last_command_at: "2026-03-19T10:03:30.000Z",
+          ...(isBudgetExhaustedScenario
+            ? {
+                meta_review: {
+                  ...metaReviewSnapshot,
+                  auto_rework_limit: autoReworkLimit,
+                  auto_rework_count: autoReworkLimit
+                }
+              }
+            : {})
         },
         {
           expectedFingerprint: loaded.fingerprint,
@@ -379,23 +431,55 @@ async function executeMetaReviewGateCase(input: {
         }
       );
 
+      let runResult: MetaReviewRunResult;
+      if (caseInput.recoverScenario === "approve") {
+        runResult = buildSyntheticMetaReviewRunApprove({
+          bubbleId: bubble.bubbleId
+        });
+      } else if (caseInput.recoverScenario === "inconclusive") {
+        runResult = buildSyntheticMetaReviewRunInconclusive({
+          bubbleId: bubble.bubbleId
+        });
+      } else if (caseInput.recoverScenario === "rework_budget_exhausted") {
+        const findingsCount = 2;
+        const findingsArtifactRef = "artifacts/meta-review-findings-contract.json";
+        const findingsArtifactPath = join(
+          bubble.paths.artifactsDir,
+          "meta-review-findings-contract.json"
+        );
+        const findingsArtifactRaw = `${JSON.stringify(
+          {
+            open_total: findingsCount,
+            summary: {
+              open_total: findingsCount
+            }
+          },
+          null,
+          2
+        )}\n`;
+        await writeFile(findingsArtifactPath, findingsArtifactRaw, "utf8");
+        const findingsDigestSha256 = createHash("sha256")
+          .update(findingsArtifactRaw, "utf8")
+          .digest("hex");
+        runResult = buildSyntheticMetaReviewRunReworkBudgetExhausted({
+          bubbleId: bubble.bubbleId,
+          runId: "meta-review-run-contract-1",
+          findingsCount,
+          findingsArtifactRef,
+          findingsDigestSha256
+        });
+      } else {
+        runResult = buildSyntheticMetaReviewRunError({
+          bubbleId: bubble.bubbleId
+        });
+      }
+
       result = await input.recoverExecutor({
         bubbleId: bubble.bubbleId,
         repoPath,
         refs: caseInput.refs,
         now: new Date("2026-03-19T10:04:00.000Z"),
-        runResult:
-          caseInput.recoverScenario === "approve"
-            ? buildSyntheticMetaReviewRunApprove({
-                bubbleId: bubble.bubbleId
-              })
-            : caseInput.recoverScenario === "inconclusive"
-              ? buildSyntheticMetaReviewRunInconclusive({
-                  bubbleId: bubble.bubbleId
-                })
-            : buildSyntheticMetaReviewRunError({
-                bubbleId: bubble.bubbleId
-              })
+        runResult
       });
     }
 
