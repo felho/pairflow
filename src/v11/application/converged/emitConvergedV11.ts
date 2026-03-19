@@ -1,29 +1,15 @@
-import {
-  emitConvergedFromWorkspaceCommandOrchestration,
-  throwAsConvergedCommandError
+export {
+  emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspaceV11,
+  throwAsConvergedCommandError as asConvergedCommandErrorV11
 } from "../../shared/converged/convergedCommandOrchestration.js";
-import {
-  ConvergedCommandError
+export {
+  ConvergedCommandError as ConvergedCommandErrorV11
 } from "../../shared/converged/convergedCommandError.js";
-import type {
-  EmitConvergedDependencies,
-  EmitConvergedInput,
-  EmitConvergedResult
+export {
+  resolveConvergedRolloutBlockingReasonCodes as resolveMetaReviewRolloutBlockingReasonCodesV11
+} from "../../shared/converged/convergedRolloutBlockingReasonResolver.js";
+export type {
+  EmitConvergedDependencies as EmitConvergedV11Dependencies,
+  EmitConvergedInput as EmitConvergedV11Input,
+  EmitConvergedResult as EmitConvergedV11Result
 } from "../../shared/converged/convergedCommandTypes.js";
-
-export { ConvergedCommandError as ConvergedCommandErrorV11 };
-
-export type EmitConvergedV11Input = EmitConvergedInput;
-export type EmitConvergedV11Result = EmitConvergedResult;
-export type EmitConvergedV11Dependencies = EmitConvergedDependencies;
-
-export function asConvergedCommandErrorV11(error: unknown): never {
-  return throwAsConvergedCommandError(error);
-}
-
-export async function emitConvergedFromWorkspaceV11(
-  input: EmitConvergedV11Input,
-  dependencies: EmitConvergedV11Dependencies = {}
-): Promise<EmitConvergedV11Result> {
-  return emitConvergedFromWorkspaceCommandOrchestration(input, dependencies);
-}
