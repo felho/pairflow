@@ -1,12 +1,3 @@
-import type {
-  ensureBubbleInstanceIdForMutation
-} from "../../../core/bubble/bubbleInstanceId.js";
-import type {
-  resolveBubbleFromWorkspaceCwd
-} from "../../../core/bubble/workspaceResolution.js";
-import type {
-  readStateSnapshot
-} from "../../../core/state/stateStore.js";
 import {
   normalizeStringList,
   requireNonEmptyString
@@ -14,23 +5,11 @@ import {
 import { resolveAskHumanRoutingPreparationDependencies } from "../../shared/askHuman/askHumanRoutingPreparationDependencyResolution.js";
 import { assertAskHumanRunningState } from "../../shared/askHuman/askHumanRunningStateValidation.js";
 import { prepareAskHumanWorkspaceContext } from "../../shared/askHuman/askHumanWorkspaceContextPreparation.js";
-import type { AskHumanRoutingContext } from "../../shared/askHuman/askHumanRoutingContext.js";
-
-export interface PrepareAskHumanRoutingInput {
-  question: string;
-  refs?: string[];
-  cwd?: string;
-  now: Date;
-  createError: (message: string) => Error;
-}
-
-export type PrepareAskHumanRoutingResult = AskHumanRoutingContext;
-
-export interface PrepareAskHumanRoutingDependencies {
-  resolveBubbleFromWorkspaceCwd?: typeof resolveBubbleFromWorkspaceCwd;
-  ensureBubbleInstanceIdForMutation?: typeof ensureBubbleInstanceIdForMutation;
-  readStateSnapshot?: typeof readStateSnapshot;
-}
+import type {
+  PrepareAskHumanRoutingDependencies,
+  PrepareAskHumanRoutingInput,
+  PrepareAskHumanRoutingResult
+} from "../../shared/askHuman/askHumanRoutingContract.js";
 
 export async function prepareAskHumanRouting(
   input: PrepareAskHumanRoutingInput,

@@ -1,10 +1,10 @@
 import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
-import type { PrepareAskHumanRoutingInput } from "../../application/askHuman/askHumanRoutingPreparation.js";
 import type {
   RunAskHumanFlowDependencies,
   RunAskHumanFlowInput
 } from "./askHumanFlowContract.js";
+import type { PrepareAskHumanRoutingInput } from "./askHumanRoutingContract.js";
 import type { AskHumanRoutingContext } from "./askHumanRoutingContext.js";
 
 export interface BuildAskHumanRoutingInputInput {
