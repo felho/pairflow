@@ -10,6 +10,7 @@ import {
   buildAskHumanRoutingInput
 } from "../../v11/shared/askHuman/askHumanFlowInvocationBuilders.js";
 import { normalizeAskHumanCommandError } from "../../v11/shared/askHuman/askHumanCommandErrorNormalization.js";
+import { normalizeAskHumanCommandInput } from "../../v11/shared/askHuman/askHumanCommandInputNormalization.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 
@@ -44,14 +45,20 @@ export async function emitAskHumanFromWorkspace(
   input: EmitAskHumanInput,
   dependencies: EmitAskHumanDependencies = {}
 ): Promise<EmitAskHumanResult> {
-  const now = input.now ?? new Date();
+  const normalizedInput = normalizeAskHumanCommandInput({
+    question: input.question,
+    refs: input.refs,
+    cwd: input.cwd,
+    now: input.now
+  });
+  const now = normalizedInput.now;
   const createError = (message: string): AskHumanCommandError =>
     new AskHumanCommandError(message);
   const routing = await prepareAskHumanRouting(
     buildAskHumanRoutingInput({
-      question: input.question,
-      refs: input.refs,
-      cwd: input.cwd,
+      question: normalizedInput.question,
+      refs: normalizedInput.refs,
+      cwd: normalizedInput.cwd,
       now,
       createError
     })
