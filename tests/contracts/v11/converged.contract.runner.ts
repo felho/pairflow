@@ -30,9 +30,12 @@ export interface ConvergedContractRunResult {
   v11?: ConvergedContractOutput;
 }
 
-function parseConvergedCaseInput(
-  input: ContractCase["input"]
-): Omit<EmitConvergedInput, "cwd"> {
+interface ParsedConvergedCaseInput {
+  convergedInput: Omit<EmitConvergedInput, "cwd">;
+  reviewArtifactType?: "code" | "document";
+}
+
+function parseConvergedCaseInput(input: ContractCase["input"]): ParsedConvergedCaseInput {
   const summaryRaw = input.summary;
   if (typeof summaryRaw !== "string" || summaryRaw.trim().length === 0) {
     throw new Error("converged contract input.summary must be a non-empty string.");
@@ -50,9 +53,23 @@ function parseConvergedCaseInput(
     refs = refsRaw;
   }
 
+  const reviewArtifactTypeRaw = input.reviewArtifactType;
+  let reviewArtifactType: "code" | "document" | undefined;
+  if (reviewArtifactTypeRaw !== undefined) {
+    if (reviewArtifactTypeRaw !== "code" && reviewArtifactTypeRaw !== "document") {
+      throw new Error(
+        "converged contract input.reviewArtifactType must be one of: code, document."
+      );
+    }
+    reviewArtifactType = reviewArtifactTypeRaw;
+  }
+
   return {
-    summary: summaryRaw.trim(),
-    ...(refs !== undefined ? { refs } : {})
+    convergedInput: {
+      summary: summaryRaw.trim(),
+      ...(refs !== undefined ? { refs } : {})
+    },
+    ...(reviewArtifactType !== undefined ? { reviewArtifactType } : {})
   };
 }
 
@@ -173,16 +190,19 @@ async function executeConvergedCase(input: {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-converged-contract-"));
   try {
     await initGitRepository(repoPath);
+    const parsedInput = parseConvergedCaseInput(input.caseDef.input);
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: `b_contract_${input.caseDef.id}`,
-      task: input.caseDef.description
+      task: input.caseDef.description,
+      ...(parsedInput.reviewArtifactType !== undefined
+        ? { reviewArtifactType: parsedInput.reviewArtifactType }
+        : {})
     });
     await seedConvergedCandidate(bubble.paths.worktreePath);
 
-    const convergedInput = parseConvergedCaseInput(input.caseDef.input);
     const result = await input.executor({
-      ...convergedInput,
+      ...parsedInput.convergedInput,
       cwd: bubble.paths.worktreePath,
       now: new Date("2026-02-22T09:05:00.000Z")
     });

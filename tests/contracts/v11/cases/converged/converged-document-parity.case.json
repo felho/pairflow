@@ -1,0 +1,24 @@
+{
+  "id": "converged-document-parity",
+  "command": "converged",
+  "mode": "parity",
+  "description": "converged document-scope parity baseline.",
+  "input": {
+    "summary": "Document scope convergence parity baseline.",
+    "refs": [
+      "docs/plan.md"
+    ],
+    "reviewArtifactType": "document"
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "CONVERGED_EMITTED",
+    "envelopeType": "CONVERGENCE"
+  },
+  "tags": [
+    "converged",
+    "v11-contract",
+    "parity",
+    "document-scope"
+  ]
+}
