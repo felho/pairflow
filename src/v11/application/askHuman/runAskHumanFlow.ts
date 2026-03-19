@@ -18,6 +18,10 @@ import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { AskHumanRoutingContext } from "../../shared/askHuman/askHumanRoutingContext.js";
 import { buildAskHumanExecutionDependencies } from "../../shared/askHuman/askHumanExecutionDependencyBuilder.js";
 import { buildAskHumanFinalizationDependencies } from "../../shared/askHuman/askHumanFinalizationDependencyBuilder.js";
+import {
+  buildAskHumanExecutionStepInput,
+  buildAskHumanFinalizationStepInput
+} from "../../shared/askHuman/askHumanFlowStepInputBuilders.js";
 
 export interface RunAskHumanFlowInput {
   now: Date;
@@ -87,21 +91,21 @@ export async function runAskHumanFlow(
   dependencies: RunAskHumanFlowDependencies
 ): Promise<RunAskHumanFlowResult> {
   const execution = await dependencies.executeAskHumanExecution(
-    {
+    buildAskHumanExecutionStepInput({
       now: input.now,
       routing: input.routing,
       createError: input.createError
-    },
+    }),
     buildAskHumanExecutionDependencies(dependencies)
   );
 
   return dependencies.finalizeAskHumanFlow(
-    {
+    buildAskHumanFinalizationStepInput({
       now: input.now,
       routing: input.routing,
       appended: execution.appended,
       written: execution.written
-    },
+    }),
     buildAskHumanFinalizationDependencies(dependencies)
   );
 }
