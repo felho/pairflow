@@ -35,8 +35,15 @@ function parsePassCaseInput(input: ContractCase["input"]): Omit<EmitPassInput, "
   }
 
   const refsRaw = input.refs;
-  if (!Array.isArray(refsRaw) || !refsRaw.every((value) => typeof value === "string")) {
-    throw new Error("PASS contract input.refs must be a string array.");
+  let refs: string[] | undefined;
+  if (refsRaw !== undefined) {
+    if (
+      !Array.isArray(refsRaw) ||
+      !refsRaw.every((value) => typeof value === "string")
+    ) {
+      throw new Error("PASS contract input.refs must be a string array.");
+    }
+    refs = refsRaw;
   }
 
   const intentRaw = input.intent;
@@ -52,7 +59,7 @@ function parsePassCaseInput(input: ContractCase["input"]): Omit<EmitPassInput, "
 
   return {
     summary: summaryRaw.trim(),
-    refs: refsRaw,
+    ...(refs !== undefined ? { refs } : {}),
     ...(intent !== undefined ? { intent } : {})
   };
 }
