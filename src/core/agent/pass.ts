@@ -42,6 +42,7 @@ import {
 } from "../../v11/domain/pass/repeatCleanPolicyRejection.js";
 import { executeAutoConvergeConverged } from "../../v11/application/pass/autoConvergeConvergedExecution.js";
 import { finalizeAutoConvergePass } from "../../v11/application/pass/autoConvergeFinalization.js";
+import { runAutoConvergeFlow } from "../../v11/application/pass/runAutoConvergeFlow.js";
 import { resolveReviewerVerification } from "../../v11/application/pass/reviewerVerificationResolver.js";
 import {
   executePassDelivery,
@@ -257,33 +258,46 @@ export async function emitPassFromWorkspace(
     transcript
   });
   if (repeatCleanTrigger.trigger) {
-    const autoConvergePreparation = await prepareRepeatCleanAutoConverge({
-      round: handoff.envelopeRound,
-      reviewer,
-      implementer,
-      reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
-      roundRoleHistory: state.round_role_history,
-      transcript,
-      severityGateRound: resolved.bubbleConfig.severity_gate_round,
-      statePath: resolved.bubblePaths.statePath,
-      expectedStateFingerprint: loadedState.fingerprint,
-      reviewerVerification,
-      reviewVerificationArtifactPath: resolved.bubblePaths.reviewVerificationArtifactPath,
-      bubbleId: resolved.bubbleId,
-      reviewerAgent: handoff.senderAgent,
-      generatedAt: nowIso,
-      createError: (message) => new PassCommandError(message)
-    });
-
-    const converged = await executeAutoConvergeConverged(
+    return runAutoConvergeFlow(
       {
         summary,
         refs,
-        cwd: resolved.bubblePaths.worktreePath,
         now,
-        expectedStateFingerprint: autoConvergePreparation.expectedStateFingerprint,
-        expectedRound: handoff.envelopeRound,
-        expectedReviewer: reviewer,
+        nowIso,
+        bubbleId: resolved.bubbleId,
+        bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+        repoPath: resolved.repoPath,
+        bubbleConfig: resolved.bubbleConfig,
+        worktreePath: resolved.bubblePaths.worktreePath,
+        artifactsDir: resolved.bubblePaths.artifactsDir,
+        taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+        statePath: resolved.bubblePaths.statePath,
+        reviewVerificationArtifactPath: resolved.bubblePaths.reviewVerificationArtifactPath,
+        handoff,
+        reviewer,
+        implementer,
+        roundRoleHistory: state.round_role_history,
+        transcript,
+        severityGateRound: resolved.bubbleConfig.severity_gate_round,
+        expectedStateFingerprint: loadedState.fingerprint,
+        reviewerVerification,
+        passIntent: intent,
+        inferredIntent,
+        hasFindings,
+        noFindings,
+        findings,
+        ...(reviewerFindingsClaim !== undefined
+          ? { reviewerFindingsClaim }
+          : {}),
+        ...(reviewerFindingsClaimParserMetadata !== undefined
+          ? { reviewerFindingsClaimParserMetadata }
+          : {}),
+        repeatCleanReasonCode: repeatCleanTrigger.reasonCode,
+        repeatCleanReasonDetail: repeatCleanTrigger.reasonDetail,
+        repeatCleanTrigger: repeatCleanTrigger.trigger,
+        mostRecentPreviousReviewerCleanPassEnvelope:
+          repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope,
+        createError: (message) => new PassCommandError(message),
         onDownstreamRejected: (reason) =>
           raiseRepeatCleanDownstreamConvergedRejected({
             reason,
@@ -291,52 +305,26 @@ export async function emitPassFromWorkspace(
           })
       },
       {
-        emitConvergedFromWorkspace,
-        ...(dependencies.emitTmuxDeliveryNotification !== undefined
-          ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
-          : {}),
-        ...(dependencies.emitBubbleNotification !== undefined
-          ? { emitBubbleNotification: dependencies.emitBubbleNotification }
-          : {})
+        prepareRepeatCleanAutoConverge,
+        executeAutoConvergeConverged: (autoConvergedInput) =>
+          executeAutoConvergeConverged(autoConvergedInput, {
+            emitConvergedFromWorkspace,
+            ...(dependencies.emitTmuxDeliveryNotification !== undefined
+              ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
+              : {}),
+            ...(dependencies.emitBubbleNotification !== undefined
+              ? { emitBubbleNotification: dependencies.emitBubbleNotification }
+              : {})
+          }),
+        finalizeAutoConvergePass: (autoConvergeFinalizationInput) =>
+          finalizeAutoConvergePass(autoConvergeFinalizationInput, {
+            updateReviewerDocGateArtifact,
+            emitBubbleLifecycleEventBestEffort,
+            buildPassLifecycleMetricMetadata,
+            buildAutoConvergePassResult
+          })
       }
     );
-
-    return finalizeAutoConvergePass({
-      now,
-      bubbleConfig: resolved.bubbleConfig,
-      artifactsDir: resolved.bubblePaths.artifactsDir,
-      taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
-      round: handoff.envelopeRound,
-      senderRole: handoff.senderRole,
-      findings,
-      createError: (message) => new PassCommandError(message),
-      repoPath: resolved.repoPath,
-      bubbleId: resolved.bubbleId,
-      bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
-      passIntent: intent,
-      inferredIntent,
-      senderAgent: handoff.senderAgent,
-      refsCount: refs.length,
-      hasFindings,
-      noFindings,
-      ...(reviewerFindingsClaim !== undefined
-        ? { reviewerFindingsClaim }
-        : {}),
-      ...(reviewerFindingsClaimParserMetadata !== undefined
-        ? { reviewerFindingsClaimParserMetadata }
-        : {}),
-      repeatCleanReasonCode: repeatCleanTrigger.reasonCode,
-      repeatCleanReasonDetail: repeatCleanTrigger.reasonDetail,
-      repeatCleanTrigger: repeatCleanTrigger.trigger,
-      mostRecentPreviousReviewerCleanPassEnvelope:
-        repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope,
-      converged
-    }, {
-      updateReviewerDocGateArtifact,
-      emitBubbleLifecycleEventBestEffort,
-      buildPassLifecycleMetricMetadata,
-      buildAutoConvergePassResult
-    });
   }
 
   return runNormalPassFlow(
