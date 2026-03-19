@@ -1,8 +1,18 @@
+import { readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runConvergedContractCase } from "./converged.contract.runner.js";
 import { readContractCase } from "./runner.js";
+
+async function listConvergedCasePaths(): Promise<string[]> {
+  const casesDir = resolve(process.cwd(), "tests/contracts/v11/cases/converged");
+  const entries = await readdir(casesDir);
+  return entries
+    .filter((entry) => entry.endsWith(".case.json"))
+    .sort((left, right) => left.localeCompare(right))
+    .map((entry) => resolve(casesDir, entry));
+}
 
 describe("v11 converged contract harness skeleton", () => {
   it("loads seed contract case metadata", async () => {
@@ -17,44 +27,8 @@ describe("v11 converged contract harness skeleton", () => {
   });
 
   it("executes legacy, v11 and parity assertions via shared runner", async () => {
-    const casePaths = [
-      resolve(
-        process.cwd(),
-        "tests/contracts/v11/cases/converged/converged-basic.case.json"
-      ),
-      resolve(
-        process.cwd(),
-        "tests/contracts/v11/cases/converged/converged-basic-v11.case.json"
-      ),
-      resolve(
-        process.cwd(),
-        "tests/contracts/v11/cases/converged/converged-basic-parity.case.json"
-      ),
-      resolve(
-        process.cwd(),
-        "tests/contracts/v11/cases/converged/converged-document-parity.case.json"
-      ),
-      resolve(
-        process.cwd(),
-        "tests/contracts/v11/cases/converged/converged-document.case.json"
-      ),
-      resolve(
-        process.cwd(),
-        "tests/contracts/v11/cases/converged/converged-document-v11.case.json"
-      ),
-      resolve(
-        process.cwd(),
-        "tests/contracts/v11/cases/converged/converged-no-refs-parity.case.json"
-      ),
-      resolve(
-        process.cwd(),
-        "tests/contracts/v11/cases/converged/converged-no-refs.case.json"
-      ),
-      resolve(
-        process.cwd(),
-        "tests/contracts/v11/cases/converged/converged-no-refs-v11.case.json"
-      )
-    ];
+    const casePaths = await listConvergedCasePaths();
+    expect(casePaths.length).toBeGreaterThan(0);
 
     for (const casePath of casePaths) {
       const caseDef = await readContractCase(casePath);
