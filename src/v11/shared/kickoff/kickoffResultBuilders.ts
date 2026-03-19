@@ -55,16 +55,22 @@ function buildKickoffResultBase(input: {
   };
 }
 
+function buildKickoffFailureResultBaseInput(input: BuildKickoffFailureResultInput): Parameters<
+  typeof buildKickoffResultBase
+>[0] {
+  return {
+    bubbleId: input.bubbleId,
+    taskEnvelopeAppended: false,
+    markersBefore: input.markersBefore,
+    markersAfter: input.markersBefore
+  };
+}
+
 export function buildKickoffFailureResult(
   input: BuildKickoffFailureResultInput
 ): KickoffBubbleResultShape {
   return {
-    ...buildKickoffResultBase({
-      bubbleId: input.bubbleId,
-      taskEnvelopeAppended: false,
-      markersBefore: input.markersBefore,
-      markersAfter: input.markersBefore
-    }),
+    ...buildKickoffResultBase(buildKickoffFailureResultBaseInput(input)),
     ok: false,
     reason_code: input.reasonCode,
     state_changed: false,
@@ -82,19 +88,25 @@ export interface BuildKickoffSuccessResultInput {
   stateAfter: BubbleStateSnapshot;
 }
 
+function buildKickoffSuccessResultBaseInput(input: BuildKickoffSuccessResultInput): Parameters<
+  typeof buildKickoffResultBase
+>[0] {
+  return {
+    bubbleId: input.bubbleId,
+    taskEnvelopeAppended: true,
+    markersBefore: input.markersBefore,
+    markersAfter: {
+      ideation_mode: true,
+      ideation_task_pending: false
+    }
+  };
+}
+
 export function buildKickoffSuccessResult(
   input: BuildKickoffSuccessResultInput
 ): KickoffBubbleResultShape {
   return {
-    ...buildKickoffResultBase({
-      bubbleId: input.bubbleId,
-      taskEnvelopeAppended: true,
-      markersBefore: input.markersBefore,
-      markersAfter: {
-        ideation_mode: true,
-        ideation_task_pending: false
-      }
-    }),
+    ...buildKickoffResultBase(buildKickoffSuccessResultBaseInput(input)),
     ok: true,
     reason_code: null,
     state_changed: true,
