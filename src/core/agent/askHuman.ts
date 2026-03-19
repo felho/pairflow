@@ -9,7 +9,8 @@ import { runAskHumanFlow } from "../../v11/application/askHuman/runAskHumanFlow.
 import { prepareAskHumanRouting } from "../../v11/application/askHuman/askHumanRoutingPreparation.js";
 import {
   buildAskHumanFlowDependencies,
-  buildAskHumanFlowInput
+  buildAskHumanFlowInput,
+  buildAskHumanRoutingInput
 } from "../../v11/shared/askHuman/askHumanFlowInvocationBuilders.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
@@ -48,17 +49,15 @@ export async function emitAskHumanFromWorkspace(
   const now = input.now ?? new Date();
   const createError = (message: string): AskHumanCommandError =>
     new AskHumanCommandError(message);
-  const routing = await prepareAskHumanRouting({
-    question: input.question,
-    ...(input.refs !== undefined
-      ? { refs: input.refs }
-      : {}),
-    ...(input.cwd !== undefined
-      ? { cwd: input.cwd }
-      : {}),
-    now,
-    createError
-  });
+  const routing = await prepareAskHumanRouting(
+    buildAskHumanRoutingInput({
+      question: input.question,
+      refs: input.refs,
+      cwd: input.cwd,
+      now,
+      createError
+    })
+  );
 
   return runAskHumanFlow(
     buildAskHumanFlowInput({

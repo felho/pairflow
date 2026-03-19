@@ -2,10 +2,32 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildAskHumanFlowDependencies,
-  buildAskHumanFlowInput
+  buildAskHumanFlowInput,
+  buildAskHumanRoutingInput
 } from "../../../../src/v11/shared/askHuman/askHumanFlowInvocationBuilders.js";
 
 describe("askHumanFlowInvocationBuilders", () => {
+  it("builds prepareAskHumanRouting input and omits undefined optional fields", () => {
+    const now = new Date("2026-02-21T12:10:00.000Z");
+    const createError = (message: string) => new Error(message);
+
+    const routingInput = buildAskHumanRoutingInput({
+      question: "Need migration decision?",
+      refs: undefined,
+      cwd: undefined,
+      now,
+      createError
+    });
+
+    expect(routingInput).toEqual({
+      question: "Need migration decision?",
+      now,
+      createError
+    });
+    expect("refs" in routingInput).toBe(false);
+    expect("cwd" in routingInput).toBe(false);
+  });
+
   it("builds runAskHumanFlow input without mutation", () => {
     const now = new Date("2026-02-21T12:10:00.000Z");
     const routing = {
