@@ -1,5 +1,6 @@
 import { buildBoundaryCheckReport } from "./boundary.js";
 import { buildComplexityCheckReport } from "./complexity.js";
+import { buildDependencyCheckReport } from "./dependency.js";
 import { buildErrorCheckReport } from "./error.js";
 import { buildMutationCheckReport } from "./mutation.js";
 import { createNotImplementedCheckReport } from "./not-implemented.js";
@@ -46,6 +47,13 @@ export async function buildCheckReport({
   }
   if (check.id === "complexity") {
     return buildComplexityCheckReport({
+      check,
+      repoRoot,
+      fallbackMode
+    });
+  }
+  if (check.id === "dependency") {
+    return buildDependencyCheckReport({
       check,
       repoRoot,
       fallbackMode
