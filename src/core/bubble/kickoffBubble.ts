@@ -6,16 +6,15 @@ import type { resolveBubbleById } from "./bubbleLookup.js";
 import {
   IDEATION_KICKOFF_PERSISTENCE_FAILED,
   IDEATION_KICKOFF_STATE_CONFLICT,
-  IDEATION_KICKOFF_TASK_INVALID,
-  resolveIdeationMetadata
+  IDEATION_KICKOFF_TASK_INVALID
 } from "./ideation.js";
-import { resolveKickoffEligibilityFailureReason } from "../../v11/shared/kickoff/kickoffEligibility.js";
 import { buildKickoffNextState } from "../../v11/shared/kickoff/kickoffStateTransition.js";
 import { prepareKickoffPersistence } from "../../v11/shared/kickoff/kickoffPersistencePreparation.js";
 import { resolveKickoffDependencies } from "../../v11/shared/kickoff/kickoffDependencyResolution.js";
-import { writeKickoffState } from "../../v11/shared/kickoff/kickoffStateWrite.js";
 import { resolveKickoffTask } from "../../v11/shared/kickoff/kickoffTaskResolution.js";
 import { executeKickoffMutationPipeline } from "../../v11/shared/kickoff/kickoffMutationPipeline.js";
+import { persistKickoffState } from "../../v11/shared/kickoff/kickoffStatePersistence.js";
+import { prepareKickoffEligibility } from "../../v11/shared/kickoff/kickoffEligibilityPreparation.js";
 import {
   buildKickoffFailureResult,
   buildKickoffSuccessResult,
@@ -64,18 +63,11 @@ export async function kickoffBubble(
   });
   const loadedState = await readState(resolved.bubblePaths.statePath);
   const state = loadedState.state;
-  const ideationMetadata = resolveIdeationMetadata(resolved.bubbleConfig);
-  const markersBefore = {
-    ideation_mode: ideationMetadata.mode,
-    ideation_task_pending: ideationMetadata.taskPending
-  };
-
-  const eligibilityFailureReason = resolveKickoffEligibilityFailureReason({
-    hasParseWarning: resolved.bubbleConfig.ideation?.parse_warning !== undefined,
-    ideationMode: ideationMetadata.mode,
-    ideationTaskPending: ideationMetadata.taskPending,
+  const preparedEligibility = prepareKickoffEligibility({
+    bubbleConfig: resolved.bubbleConfig,
     state
   });
+  const { markersBefore, eligibilityFailureReason } = preparedEligibility;
   if (eligibilityFailureReason !== null) {
     return buildKickoffFailureResult({
       bubbleId: resolved.bubbleId,
@@ -100,16 +92,6 @@ export async function kickoffBubble(
   }
   const task = taskResolution.task;
 
-  const latestState = await readState(resolved.bubblePaths.statePath);
-  if (latestState.fingerprint !== loadedState.fingerprint) {
-    return buildKickoffFailureResult({
-      bubbleId: resolved.bubbleId,
-      reasonCode: IDEATION_KICKOFF_STATE_CONFLICT,
-      stateBefore: state,
-      markersBefore
-    });
-  }
-
   const nextState = buildKickoffNextState({
     state,
     bubbleConfig: resolved.bubbleConfig,
@@ -123,13 +105,14 @@ export async function kickoffBubble(
     readFile: readFileFn
   });
 
-  const stateWriteResult = await writeKickoffState({
+  const statePersistenceResult = await persistKickoffState({
     statePath: resolved.bubblePaths.statePath,
+    loadedFingerprint: loadedState.fingerprint,
     nextState,
-    expectedFingerprint: loadedState.fingerprint,
+    readState,
     writeState
   });
-  if (stateWriteResult.kind === "conflict") {
+  if (statePersistenceResult.kind === "conflict") {
     return buildKickoffFailureResult({
       bubbleId: resolved.bubbleId,
       reasonCode: IDEATION_KICKOFF_STATE_CONFLICT,
@@ -137,7 +120,7 @@ export async function kickoffBubble(
       markersBefore
     });
   }
-  const writtenState = stateWriteResult.writtenState;
+  const writtenState = statePersistenceResult.writtenState;
 
   const mutationPipelineResult = await executeKickoffMutationPipeline({
     persistenceFailureCode: IDEATION_KICKOFF_PERSISTENCE_FAILED,
