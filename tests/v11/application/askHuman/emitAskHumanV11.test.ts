@@ -145,6 +145,11 @@ describe("emitAskHumanFromWorkspaceV11", () => {
 });
 
 describe("asAskHumanCommandErrorV11", () => {
+  it("rethrows AskHumanCommandErrorV11 instances as-is", () => {
+    const original = new AskHumanCommandErrorV11("already normalized");
+    expect(() => asAskHumanCommandErrorV11(original)).toThrow(original);
+  });
+
   it("maps WorkspaceResolutionError to AskHumanCommandErrorV11", () => {
     expect(() =>
       asAskHumanCommandErrorV11(
