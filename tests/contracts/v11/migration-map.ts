@@ -34,15 +34,15 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
   },
   {
     command: "metaReviewGate",
-    state: "parity",
+    state: "v11",
     owner: "runtime",
-    notes: "Apply (run_failed, running, sticky_bypass)+recover (error, approve, inconclusive, rework_budget_exhausted, dispatch_failed, auto_rework) parity runner wired; v11 shared/application boundary active while core remains source-of-truth."
+    notes: "Core facade now delegates to v11 shared meta-review gate runtime; v11 is the source of truth."
   },
   {
     command: "gate",
-    state: "parity",
+    state: "v11",
     owner: "runtime",
-    notes: "W3 matrix compatibility alias with dedicated apply+recover parity seed cases, tracking metaReviewGate parity coverage and boundary status."
+    notes: "W3 matrix compatibility alias follows v11 metaReviewGate source-of-truth runtime."
   },
   {
     command: "reconcile",

@@ -2,6 +2,7 @@ import { readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { isNonEmptyString } from "../../../core/validation.js";
+import { renderKickoffTaskArtifactFromInput } from "./kickoffTaskArtifactRendering.js";
 
 export interface ResolvedKickoffTaskInput {
   content: string;
@@ -199,14 +200,8 @@ async function resolveKickoffTaskFromInputMode(input: {
   });
 }
 
-function renderKickoffTaskSourceLine(task: ResolvedKickoffTaskInput): string {
-  return task.source === "file"
-    ? `Source: file (${task.sourcePath})`
-    : "Source: inline text";
-}
-
 export function renderKickoffTaskArtifact(task: ResolvedKickoffTaskInput): string {
-  return `# Bubble Task\n\n${renderKickoffTaskSourceLine(task)}\n\n${task.content}\n`;
+  return renderKickoffTaskArtifactFromInput(task);
 }
 
 export async function resolveKickoffTaskInput(input: {
