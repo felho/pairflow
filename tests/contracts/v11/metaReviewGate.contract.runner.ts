@@ -46,7 +46,9 @@ type MetaReviewGateRecoverScenario =
   | "error"
   | "approve"
   | "inconclusive"
-  | "rework_budget_exhausted";
+  | "rework_budget_exhausted"
+  | "rework_dispatch_failed"
+  | "auto_rework";
 interface NormalizedMetaReviewSnapshot {
   last_autonomous_run_id: string | null;
   last_autonomous_status: "success" | "error" | null;
@@ -107,10 +109,12 @@ function parseMetaReviewGateCaseInput(input: ContractCase["input"]): {
     recoverScenarioRaw !== "error" &&
     recoverScenarioRaw !== "approve" &&
     recoverScenarioRaw !== "inconclusive" &&
-    recoverScenarioRaw !== "rework_budget_exhausted"
+    recoverScenarioRaw !== "rework_budget_exhausted" &&
+    recoverScenarioRaw !== "rework_dispatch_failed" &&
+    recoverScenarioRaw !== "auto_rework"
   ) {
     throw new Error(
-      "metaReviewGate contract input.recoverScenario must be one of: error, approve, inconclusive, rework_budget_exhausted."
+      "metaReviewGate contract input.recoverScenario must be one of: error, approve, inconclusive, rework_budget_exhausted, rework_dispatch_failed, auto_rework."
     );
   }
 
@@ -266,6 +270,23 @@ function buildSyntheticMetaReviewRunReworkBudgetExhausted(input: {
   };
 }
 
+function buildSyntheticMetaReviewRunReworkDispatchFailed(input: {
+  bubbleId: string;
+}): MetaReviewRunResult {
+  return {
+    bubbleId: input.bubbleId,
+    depth: "standard",
+    status: "success",
+    recommendation: "rework",
+    summary: "Seed meta-review recover contract rework dispatch failed snapshot.",
+    report_ref: "artifacts/meta-review-last.md",
+    rework_target_message: "Fix the blocker findings before retry.",
+    updated_at: "2026-03-19T10:03:00.000Z",
+    lifecycle_state: "META_REVIEW_RUNNING",
+    warnings: []
+  };
+}
+
 function normalizeMetaReviewGateResult(
   result: Awaited<ReturnType<typeof recoverMetaReviewGateFromSnapshot>>
 ): MetaReviewGateContractOutput {
@@ -405,6 +426,7 @@ async function executeMetaReviewGateCase(input: {
       );
       const isBudgetExhaustedScenario =
         caseInput.recoverScenario === "rework_budget_exhausted";
+      const isAutoReworkScenario = caseInput.recoverScenario === "auto_rework";
       const autoReworkLimit = Math.max(metaReviewSnapshot.auto_rework_limit, 1);
       await writeStateSnapshot(
         bubble.paths.statePath,
@@ -423,6 +445,14 @@ async function executeMetaReviewGateCase(input: {
                   auto_rework_count: autoReworkLimit
                 }
               }
+            : isAutoReworkScenario
+              ? {
+                  meta_review: {
+                    ...metaReviewSnapshot,
+                    auto_rework_limit: autoReworkLimit,
+                    auto_rework_count: Math.max(0, autoReworkLimit - 1)
+                  }
+                }
             : {})
         },
         {
@@ -467,6 +497,38 @@ async function executeMetaReviewGateCase(input: {
           findingsCount,
           findingsArtifactRef,
           findingsDigestSha256
+        });
+      } else if (caseInput.recoverScenario === "auto_rework") {
+        const findingsCount = 2;
+        const findingsArtifactRef = "artifacts/meta-review-findings-contract-auto-rework.json";
+        const findingsArtifactPath = join(
+          bubble.paths.artifactsDir,
+          "meta-review-findings-contract-auto-rework.json"
+        );
+        const findingsArtifactRaw = `${JSON.stringify(
+          {
+            open_total: findingsCount,
+            summary: {
+              open_total: findingsCount
+            }
+          },
+          null,
+          2
+        )}\n`;
+        await writeFile(findingsArtifactPath, findingsArtifactRaw, "utf8");
+        const findingsDigestSha256 = createHash("sha256")
+          .update(findingsArtifactRaw, "utf8")
+          .digest("hex");
+        runResult = buildSyntheticMetaReviewRunReworkBudgetExhausted({
+          bubbleId: bubble.bubbleId,
+          runId: "meta-review-run-contract-auto-rework",
+          findingsCount,
+          findingsArtifactRef,
+          findingsDigestSha256
+        });
+      } else if (caseInput.recoverScenario === "rework_dispatch_failed") {
+        runResult = buildSyntheticMetaReviewRunReworkDispatchFailed({
+          bubbleId: bubble.bubbleId
         });
       } else {
         runResult = buildSyntheticMetaReviewRunError({

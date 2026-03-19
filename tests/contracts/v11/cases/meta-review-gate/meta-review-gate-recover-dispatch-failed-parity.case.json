@@ -1,0 +1,25 @@
+{
+  "id": "meta-review-gate-recover-dispatch-failed-parity",
+  "command": "metaReviewGate",
+  "mode": "parity",
+  "description": "Seed contract case for meta-review gate recover dispatch-failed parity baseline.",
+  "input": {
+    "route": "recover",
+    "recoverScenario": "rework_dispatch_failed",
+    "refs": []
+  },
+  "expected": {
+    "status": "ok",
+    "gateRoute": "human_gate_dispatch_failed",
+    "stateSubset": {
+      "state": "READY_FOR_HUMAN_APPROVAL"
+    }
+  },
+  "tags": [
+    "seed",
+    "m3",
+    "meta-review-gate",
+    "parity"
+  ]
+}
+

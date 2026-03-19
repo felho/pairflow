@@ -36,7 +36,7 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
     command: "metaReviewGate",
     state: "parity",
     owner: "runtime",
-    notes: "Apply (run_failed, running, sticky_bypass)+recover (error, approve, inconclusive, rework_budget_exhausted) parity runner wired; v11 shared/application boundary active while core remains source-of-truth."
+    notes: "Apply (run_failed, running, sticky_bypass)+recover (error, approve, inconclusive, rework_budget_exhausted, dispatch_failed, auto_rework) parity runner wired; v11 shared/application boundary active while core remains source-of-truth."
   },
   {
     command: "gate",
