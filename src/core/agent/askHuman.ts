@@ -1,13 +1,17 @@
 import type { emitBubbleNotification } from "../runtime/notifications.js";
 import type { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
-import { normalizeAskHumanCommandError } from "../../v11/shared/askHuman/askHumanCommandErrorNormalization.js";
-import { buildAskHumanCommandErrorFactory } from "../../v11/shared/askHuman/askHumanCommandErrorFactory.js";
+import {
+  AskHumanCommandError,
+  createAskHumanCommandError,
+  throwAsAskHumanCommandError
+} from "../../v11/shared/askHuman/askHumanCommandRuntime.js";
 import { normalizeAskHumanCommandInput } from "../../v11/shared/askHuman/askHumanCommandInputNormalization.js";
 import { buildAskHumanEntrypointInvocation } from "../../v11/shared/askHuman/askHumanEntrypointInvocationBuilder.js";
 import { orchestrateAskHumanCommand } from "../../v11/shared/askHuman/askHumanCommandOrchestration.js";
 import { createAskHumanCommandOrchestrationDependencies } from "../../v11/shared/askHuman/askHumanFlowDependencyWiring.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
+export { AskHumanCommandError };
 
 export interface EmitAskHumanInput {
   question: string;
@@ -28,17 +32,6 @@ export interface EmitAskHumanDependencies {
   emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
   emitBubbleNotification?: typeof emitBubbleNotification;
 }
-
-export class AskHumanCommandError extends Error {
-  public constructor(message: string) {
-    super(message);
-    this.name = "AskHumanCommandError";
-  }
-}
-
-const createAskHumanCommandError = buildAskHumanCommandErrorFactory({
-  createAskHumanCommandError: (message) => new AskHumanCommandError(message)
-});
 
 export async function emitAskHumanFromWorkspace(
   input: EmitAskHumanInput,
@@ -63,9 +56,5 @@ export async function emitAskHumanFromWorkspace(
 }
 
 export function asAskHumanCommandError(error: unknown): never {
-  throw normalizeAskHumanCommandError({
-    error,
-    isAskHumanCommandError: (candidate) => candidate instanceof AskHumanCommandError,
-    createAskHumanCommandError
-  });
+  return throwAsAskHumanCommandError(error);
 }
