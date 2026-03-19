@@ -156,4 +156,55 @@ describe("executeAskHumanExecution", () => {
         "HUMAN_QUESTION msg_20260221_777 was appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: State fingerprint mismatch; possible concurrent update."
     });
   });
+
+  it("forwards empty refs list into HUMAN_QUESTION envelope", async () => {
+    await executeAskHumanExecution(
+      {
+        now: new Date("2026-02-21T12:10:00.000Z"),
+        routing: {
+          nowIso: "2026-02-21T12:10:00.000Z",
+          question: "Need input",
+          refs: [],
+          resolved: {
+            bubbleId: "b_ask_human_03",
+            bubblePaths: {
+              locksDir: "/repo/.pairflow/bubbles/b_ask_human_03/locks",
+              transcriptPath: "/repo/.pairflow/bubbles/b_ask_human_03/transcript.ndjson",
+              inboxPath: "/repo/.pairflow/bubbles/b_ask_human_03/inbox.ndjson",
+              statePath: "/repo/.pairflow/bubbles/b_ask_human_03/state.json"
+            }
+          } as never,
+          loadedState: {
+            fingerprint: "fp_running_03"
+          } as never,
+          state: {
+            state: "RUNNING",
+            round: 2,
+            active_agent: "codex",
+            active_role: "implementer",
+            active_since: "2026-02-21T12:00:00.000Z"
+          } as never
+        } as never,
+        createError: (message) => new AskHumanExecutionTestError(message)
+      },
+      {
+        appendProtocolEnvelope: async (input) => {
+          expect(input.envelope.refs).toEqual([]);
+          return {
+            envelope: {
+              id: "msg_20260221_003"
+            },
+            sequence: 4
+          } as never;
+        },
+        applyStateTransition: (state) => state,
+        writeStateSnapshot: async () =>
+          ({
+            state: {
+              state: "WAITING_HUMAN"
+            }
+          }) as never
+      }
+    );
+  });
 });
