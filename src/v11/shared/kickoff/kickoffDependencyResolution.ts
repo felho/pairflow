@@ -22,15 +22,27 @@ export interface ResolvedKickoffDependencies {
   appendEnvelope: typeof appendProtocolEnvelope;
 }
 
+function buildKickoffDefaultDependencies(): ResolvedKickoffDependencies {
+  return {
+    resolveBubble: resolveBubbleById,
+    readState: readStateSnapshot,
+    writeState: writeStateSnapshot,
+    readFileFn: readFile,
+    writeFileFn: writeFile,
+    appendEnvelope: appendProtocolEnvelope
+  };
+}
+
 export function resolveKickoffDependencies(
   overrides: KickoffDependencyOverrides
 ): ResolvedKickoffDependencies {
+  const defaults = buildKickoffDefaultDependencies();
   return {
-    resolveBubble: overrides.resolveBubbleById ?? resolveBubbleById,
-    readState: overrides.readStateSnapshot ?? readStateSnapshot,
-    writeState: overrides.writeStateSnapshot ?? writeStateSnapshot,
-    readFileFn: overrides.readFile ?? readFile,
-    writeFileFn: overrides.writeFile ?? writeFile,
-    appendEnvelope: overrides.appendProtocolEnvelope ?? appendProtocolEnvelope
+    resolveBubble: overrides.resolveBubbleById ?? defaults.resolveBubble,
+    readState: overrides.readStateSnapshot ?? defaults.readState,
+    writeState: overrides.writeStateSnapshot ?? defaults.writeState,
+    readFileFn: overrides.readFile ?? defaults.readFileFn,
+    writeFileFn: overrides.writeFile ?? defaults.writeFileFn,
+    appendEnvelope: overrides.appendProtocolEnvelope ?? defaults.appendEnvelope
   };
 }
