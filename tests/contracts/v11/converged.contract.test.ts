@@ -116,4 +116,21 @@ describe("v11 converged contract harness skeleton", () => {
       })
     ).rejects.toThrow(/input\.refs must be a string array/u);
   });
+
+  it("rejects unsupported command for converged contract runner", async () => {
+    await expect(
+      runConvergedContractCase({
+        id: "converged-unsupported-command",
+        command: "pass",
+        mode: "legacy",
+        description: "Wrong command routed to converged runner",
+        input: {
+          summary: "Should not execute"
+        },
+        expected: {
+          status: "ok"
+        }
+      })
+    ).rejects.toThrow(/Unsupported command for converged contract runner/u);
+  });
 });
