@@ -122,6 +122,14 @@ function assertContractExpectedSubset(input: {
       `${input.label}: envelopeType mismatch (expected=${input.expected.envelopeType}, actual=${input.output.convergenceEnvelopeType})`
     );
   }
+  if (
+    input.expected.approvalRequestEnvelopeType !== undefined &&
+    input.output.approvalRequestEnvelopeType !== input.expected.approvalRequestEnvelopeType
+  ) {
+    throw new Error(
+      `${input.label}: approvalRequestEnvelopeType mismatch (expected=${input.expected.approvalRequestEnvelopeType}, actual=${input.output.approvalRequestEnvelopeType})`
+    );
+  }
   const expectedState = input.expected.stateSubset?.state;
   if (
     typeof expectedState === "string" &&

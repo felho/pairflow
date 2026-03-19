@@ -6,6 +6,7 @@ export interface ContractCaseExpected {
   gateRoute?: string;
   stateSubset?: Record<string, unknown>;
   envelopeType?: string;
+  approvalRequestEnvelopeType?: string;
   envelopePayloadSubset?: Record<string, unknown>;
 }
 
@@ -65,6 +66,18 @@ export function assertContractCaseShape(value: unknown): asserts value is Contra
   ) {
     throw new Error(
       "Contract case expected.gateRoute must be a non-empty string when provided."
+    );
+  }
+  if (
+    "approvalRequestEnvelopeType" in value.expected &&
+    value.expected.approvalRequestEnvelopeType !== undefined &&
+    (
+      typeof value.expected.approvalRequestEnvelopeType !== "string" ||
+      value.expected.approvalRequestEnvelopeType.length === 0
+    )
+  ) {
+    throw new Error(
+      "Contract case expected.approvalRequestEnvelopeType must be a non-empty string when provided."
     );
   }
   if (
