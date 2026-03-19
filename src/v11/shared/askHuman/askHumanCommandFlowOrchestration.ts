@@ -1,7 +1,7 @@
 import {
-  buildAskHumanFlowDependencies,
   buildAskHumanFlowInput
 } from "./askHumanFlowInvocationBuilders.js";
+import { buildAskHumanCommandFlowRuntimeDependencies } from "./askHumanCommandFlowRuntimeDependencies.js";
 import { buildAskHumanRoutingInput } from "./askHumanRoutingInvocationBuilder.js";
 import type {
   AskHumanCommandOrchestrationDependencies,
@@ -31,11 +31,6 @@ export async function runAskHumanCommandFlowOrchestration(
       routing,
       createError: input.createError
     }),
-    buildAskHumanFlowDependencies({
-      executeAskHumanExecution: dependencies.executeAskHumanExecution,
-      finalizeAskHumanFlow: dependencies.finalizeAskHumanFlow,
-      emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification,
-      emitBubbleNotification: dependencies.emitBubbleNotification
-    })
+    buildAskHumanCommandFlowRuntimeDependencies(dependencies)
   );
 }
