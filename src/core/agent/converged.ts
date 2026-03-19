@@ -87,14 +87,7 @@ export async function emitConvergedFromWorkspace(
     expectedReviewer: input.expectedReviewer,
     createError,
     resolveMetaReviewRolloutBlockingReasonCodes,
-    dependencies: {
-      applyMetaReviewGateOnConvergence:
-        dependencies.applyMetaReviewGateOnConvergence,
-      recoverMetaReviewGateFromSnapshot:
-        dependencies.recoverMetaReviewGateFromSnapshot,
-      emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification,
-      emitBubbleNotification: dependencies.emitBubbleNotification
-    }
+    dependencies
   });
 
   return runConvergedFlow(invocation.flowInput, invocation.flowDependencies);
