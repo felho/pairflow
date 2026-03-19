@@ -1,4 +1,4 @@
-import type { RunKickoffFlowInput } from "../../application/kickoff/runKickoffFlow.js";
+import type { RunKickoffFlowInput } from "./kickoffFlowContract.js";
 
 export interface BuildKickoffEntrypointInvocationInput {
   normalizedInput: {

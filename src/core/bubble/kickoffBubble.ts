@@ -5,7 +5,8 @@ import type { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.
 import type { resolveBubbleById } from "./bubbleLookup.js";
 import { resolveKickoffDependencies } from "../../v11/shared/kickoff/kickoffDependencyResolution.js";
 import { buildKickoffEntrypointInvocation } from "../../v11/shared/kickoff/kickoffEntrypointInvocationBuilder.js";
-import { runKickoffFlow, type RunKickoffFlowResult } from "../../v11/application/kickoff/runKickoffFlow.js";
+import type { RunKickoffFlowResult } from "../../v11/shared/kickoff/kickoffFlowContract.js";
+import { runKickoffFlow } from "../../v11/application/kickoff/runKickoffFlow.js";
 
 export interface KickoffBubbleInput {
   bubbleId: string;
