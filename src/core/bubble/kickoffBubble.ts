@@ -7,14 +7,9 @@ import { readStateSnapshot, StateStoreConflictError, writeStateSnapshot } from "
 import { assertValidBubbleStateSnapshot } from "../state/stateSchema.js";
 import { resolveBubbleById } from "./bubbleLookup.js";
 import {
-  IDEATION_ALREADY_ACTIVE,
-  IDEATION_KICKOFF_NOT_ALLOWED,
-  IDEATION_KICKOFF_NOT_ELIGIBLE,
   IDEATION_KICKOFF_PERSISTENCE_FAILED,
-  IDEATION_KICKOFF_REQUIRES_RUNNING,
   IDEATION_KICKOFF_STATE_CONFLICT,
   IDEATION_KICKOFF_TASK_INVALID,
-  hasIdeationMetadataParseWarning,
   resolveIdeationMetadata
 } from "./ideation.js";
 import type { BubbleConfig, BubbleStateSnapshot } from "../../types/bubble.js";
@@ -24,6 +19,7 @@ import {
   type ResolvedKickoffTaskInput,
   resolveKickoffTaskInput
 } from "../../v11/shared/kickoff/kickoffTaskInputResolution.js";
+import { resolveKickoffEligibilityFailureReason } from "../../v11/shared/kickoff/kickoffEligibility.js";
 
 export interface KickoffBubbleInput {
   bubbleId: string;
@@ -130,46 +126,16 @@ export async function kickoffBubble(
     ideation_task_pending: ideationMetadata.taskPending
   };
 
-  if (hasIdeationMetadataParseWarning(resolved.bubbleConfig)) {
+  const eligibilityFailureReason = resolveKickoffEligibilityFailureReason({
+    hasParseWarning: resolved.bubbleConfig.ideation?.parse_warning !== undefined,
+    ideationMode: ideationMetadata.mode,
+    ideationTaskPending: ideationMetadata.taskPending,
+    state
+  });
+  if (eligibilityFailureReason !== null) {
     return buildFailureResult({
       bubbleId: resolved.bubbleId,
-      reasonCode: IDEATION_KICKOFF_NOT_ALLOWED,
-      stateBefore: state,
-      markersBefore
-    });
-  }
-
-  if (!ideationMetadata.mode) {
-    return buildFailureResult({
-      bubbleId: resolved.bubbleId,
-      reasonCode: IDEATION_KICKOFF_NOT_ALLOWED,
-      stateBefore: state,
-      markersBefore
-    });
-  }
-
-  if (state.round >= 1) {
-    return buildFailureResult({
-      bubbleId: resolved.bubbleId,
-      reasonCode: IDEATION_ALREADY_ACTIVE,
-      stateBefore: state,
-      markersBefore
-    });
-  }
-
-  if (state.state !== "RUNNING") {
-    return buildFailureResult({
-      bubbleId: resolved.bubbleId,
-      reasonCode: IDEATION_KICKOFF_REQUIRES_RUNNING,
-      stateBefore: state,
-      markersBefore
-    });
-  }
-
-  if (!ideationMetadata.taskPending) {
-    return buildFailureResult({
-      bubbleId: resolved.bubbleId,
-      reasonCode: IDEATION_KICKOFF_NOT_ELIGIBLE,
+      reasonCode: eligibilityFailureReason,
       stateBefore: state,
       markersBefore
     });
