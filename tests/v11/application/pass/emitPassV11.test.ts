@@ -9,9 +9,12 @@ import {
   type EmitPassInput
 } from "../../../../src/core/agent/pass.js";
 import {
+  asPassCommandErrorV11,
   emitPassFromWorkspaceV11,
+  inferPassIntentV11,
   PassCommandErrorV11
 } from "../../../../src/v11/application/pass/emitPassV11.js";
+import { WorkspaceResolutionError } from "../../../../src/core/bubble/workspaceResolution.js";
 import { createBubble } from "../../../../src/core/bubble/createBubble.js";
 import { bootstrapWorktreeWorkspace } from "../../../../src/core/workspace/worktreeManager.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
@@ -142,5 +145,46 @@ describe("emitPassFromWorkspaceV11", () => {
         cwd: bubble.paths.worktreePath
       })
     ).rejects.toBeInstanceOf(PassCommandErrorV11);
+  });
+});
+
+describe("asPassCommandErrorV11", () => {
+  it("rethrows PassCommandError instances as-is", () => {
+    const original = new PassCommandErrorV11("already normalized");
+    expect(() => asPassCommandErrorV11(original)).toThrow(original);
+  });
+
+  it("maps WorkspaceResolutionError to PassCommandError", () => {
+    expect(() =>
+      asPassCommandErrorV11(
+        new WorkspaceResolutionError("workspace lookup failed")
+      )
+    ).toThrowError(PassCommandErrorV11);
+  });
+
+  it("maps generic Error to PassCommandError", () => {
+    expect(() => asPassCommandErrorV11(new Error("unexpected"))).toThrowError(
+      PassCommandErrorV11
+    );
+  });
+
+  it("rethrows non-Error values unchanged", () => {
+    expect(() => asPassCommandErrorV11("raw-error")).toThrow("raw-error");
+  });
+});
+
+describe("inferPassIntentV11", () => {
+  it("returns review for implementer role", () => {
+    expect(inferPassIntentV11("implementer")).toBe("review");
+  });
+
+  it("returns fix_request for reviewer role", () => {
+    expect(inferPassIntentV11("reviewer")).toBe("fix_request");
+  });
+
+  it("throws PassCommandError for unsupported role", () => {
+    expect(() => inferPassIntentV11("meta_reviewer")).toThrowError(
+      PassCommandErrorV11
+    );
   });
 });
