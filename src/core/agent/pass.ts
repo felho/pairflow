@@ -43,17 +43,10 @@ import {
   type ResolvedPassHandoff
 } from "../../v11/domain/pass/handoff.js";
 import {
-  assertReviewerNoFindingsSummaryConsistency,
-  inferReviewerPassIntent,
-  validateReviewerPassGate
-} from "../../v11/domain/pass/reviewerDecision.js";
-import {
-  resolveReviewerFindingsClaim,
-  resolveReviewerFindingsClaimParserMetadata
-} from "../../v11/domain/pass/reviewerFindingsClaim.js";
+  assertReviewerIntentOverrideConsistency
+} from "../../v11/domain/pass/reviewerIntentOverrideGuard.js";
 import { normalizeReviewerFindingsPayload } from "../../v11/domain/pass/reviewerFindingsPayload.js";
 import { assertNoDocsOnlySkipLogRefConflict } from "../../v11/domain/pass/docsOnlyRuntimeSkipGuard.js";
-import { assertReviewerIntentOverrideConsistency } from "../../v11/domain/pass/reviewerIntentOverrideGuard.js";
 import { validateReviewerVerificationConsistency } from "../../v11/domain/pass/reviewerVerificationConsistencyGuard.js";
 import {
   raiseRepeatCleanDownstreamConvergedRejected,
@@ -74,6 +67,7 @@ import { writePostAppendPassState } from "../../v11/application/pass/postAppendS
 import { resolveReviewerTestDirectiveForPass } from "../../v11/application/pass/reviewerTestDirectiveResolver.js";
 import { updateReviewerDocGateArtifact } from "../../v11/application/pass/reviewerDocGateArtifactUpdater.js";
 import { prepareNormalPassAppend } from "../../v11/application/pass/normalPassAppendPreparation.js";
+import { prepareReviewerPass } from "../../v11/application/pass/reviewerPassPreparation.js";
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
 } from "../../v11/domain/pass/repeatCleanMetadata.js";
@@ -207,51 +201,22 @@ export async function emitPassFromWorkspace(
     nowIso,
     createError: (message) => new PassCommandError(message)
   });
-  if (handoff.senderRole === "reviewer") {
-    validateReviewerPassGate({
-      round: handoff.envelopeRound,
-      noFindings,
-      findings,
-      findingsPayloadInvalid: normalizedFindings.invalid,
-      reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
-      severityGateRound: resolved.bubbleConfig.severity_gate_round,
-      createError: (message) => new PassCommandError(message)
-    });
-    assertReviewerNoFindingsSummaryConsistency({
-      summary,
-      noFindings,
-      createError: (message) => new PassCommandError(message)
-    });
-  }
-  const inferredReviewerIntent =
-    handoff.senderRole === "reviewer"
-      ? inferReviewerPassIntent({
-        hasFindings,
-        noFindings,
-        createError: (message) => new PassCommandError(message)
-      })
-      : undefined;
-  const reviewerFindingsClaim =
-    handoff.senderRole === "reviewer"
-      ? resolveReviewerFindingsClaim({
-        noFindings,
-        findings,
-        createError: (message) => new PassCommandError(message)
-      })
-      : undefined;
+  const reviewerPassPreparation = prepareReviewerPass({
+    senderRole: handoff.senderRole,
+    round: handoff.envelopeRound,
+    noFindings,
+    findings,
+    hasFindings,
+    findingsPayloadInvalid: normalizedFindings.invalid,
+    reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
+    severityGateRound: resolved.bubbleConfig.severity_gate_round,
+    summary,
+    createError: (message) => new PassCommandError(message)
+  });
+  const inferredReviewerIntent = reviewerPassPreparation.inferredReviewerIntent;
+  const reviewerFindingsClaim = reviewerPassPreparation.reviewerFindingsClaim;
   const reviewerFindingsClaimParserMetadata =
-    handoff.senderRole === "reviewer" && reviewerFindingsClaim !== undefined
-      ? resolveReviewerFindingsClaimParserMetadata({
-        summary,
-        claimState: reviewerFindingsClaim.state
-      })
-      : undefined;
-
-  if (handoff.senderRole !== "reviewer" && (hasFindings || noFindings)) {
-    throw new PassCommandError(
-      "Implementer PASS does not accept findings flags; findings are reviewer-only."
-    );
-  }
+    reviewerPassPreparation.reviewerFindingsClaimParserMetadata;
 
   const inferredIntent = input.intent === undefined;
   const intent = input.intent
