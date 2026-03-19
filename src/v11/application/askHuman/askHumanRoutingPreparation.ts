@@ -13,6 +13,7 @@ import {
 } from "../../../core/util/normalize.js";
 import { resolveAskHumanRoutingPreparationDependencies } from "../../shared/askHuman/askHumanRoutingPreparationDependencyResolution.js";
 import { assertAskHumanRunningState } from "../../shared/askHuman/askHumanRunningStateValidation.js";
+import { prepareAskHumanWorkspaceContext } from "../../shared/askHuman/askHumanWorkspaceContextPreparation.js";
 import type { AskHumanRoutingContext } from "../../shared/askHuman/askHumanRoutingContext.js";
 
 export interface PrepareAskHumanRoutingInput {
@@ -49,29 +50,20 @@ export async function prepareAskHumanRouting(
     readStateSnapshot: dependencies.readStateSnapshot
   });
 
-  const resolved = await resolvedDependencies.resolveBubble(input.cwd);
-  const bubbleIdentity = await resolvedDependencies.ensureBubbleIdentity({
-    bubbleId: resolved.bubbleId,
-    repoPath: resolved.repoPath,
-    bubblePaths: resolved.bubblePaths,
-    bubbleConfig: resolved.bubbleConfig,
-    now: input.now
+  const workspace = await prepareAskHumanWorkspaceContext({
+    cwd: input.cwd,
+    now: input.now,
+    dependencies: resolvedDependencies
   });
-  resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
-
-  const loadedState = await resolvedDependencies.readState(
-    resolved.bubblePaths.statePath
-  );
-  const state = loadedState.state;
-  assertAskHumanRunningState(state, input.createError);
+  assertAskHumanRunningState(workspace.state, input.createError);
 
   return {
     nowIso: input.now.toISOString(),
     question,
     refs,
-    resolved,
-    bubbleIdentity,
-    loadedState,
-    state
+    resolved: workspace.resolved,
+    bubbleIdentity: workspace.bubbleIdentity,
+    loadedState: workspace.loadedState,
+    state: workspace.state
   };
 }
