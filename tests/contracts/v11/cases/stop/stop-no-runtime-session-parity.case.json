@@ -1,0 +1,24 @@
+{
+  "id": "stop-no-runtime-session-parity",
+  "command": "stop",
+  "mode": "parity",
+  "description": "Seed contract case for STOP legacy-v11 parity when no runtime session exists.",
+  "input": {
+    "tmuxSessionExisted": false,
+    "runtimeSessionRemoved": false
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "STOPPED",
+    "stateSubset": {
+      "state": "CANCELLED"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "stop",
+    "no-runtime-session",
+    "parity"
+  ]
+}

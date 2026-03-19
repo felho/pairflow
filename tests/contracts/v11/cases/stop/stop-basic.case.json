@@ -1,0 +1,22 @@
+{
+  "id": "stop-basic",
+  "command": "stop",
+  "mode": "legacy",
+  "description": "Seed contract case for STOP baseline in M0.",
+  "input": {
+    "tmuxSessionExisted": true,
+    "runtimeSessionRemoved": true
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "STOPPED",
+    "stateSubset": {
+      "state": "CANCELLED"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "stop"
+  ]
+}
