@@ -28,7 +28,12 @@ export interface PassContractRunResult {
   v11?: PassContractOutput;
 }
 
-function parsePassCaseInput(input: ContractCase["input"]): Omit<EmitPassInput, "cwd"> {
+interface ParsedPassCaseInput {
+  passInput: Omit<EmitPassInput, "cwd">;
+  seedRoundTwoCleanHistory: boolean;
+}
+
+function parsePassCaseInput(input: ContractCase["input"]): ParsedPassCaseInput {
   const summaryRaw = input.summary;
   if (typeof summaryRaw !== "string" || summaryRaw.trim().length === 0) {
     throw new Error("PASS contract input.summary must be a non-empty string.");
@@ -57,10 +62,34 @@ function parsePassCaseInput(input: ContractCase["input"]): Omit<EmitPassInput, "
     intent = intentRaw;
   }
 
+  const noFindingsRaw = input.noFindings;
+  let noFindings: boolean | undefined;
+  if (noFindingsRaw !== undefined) {
+    if (typeof noFindingsRaw !== "boolean") {
+      throw new Error("PASS contract input.noFindings must be a boolean.");
+    }
+    noFindings = noFindingsRaw;
+  }
+
+  const seedRoundTwoCleanHistoryRaw = input.seedRoundTwoCleanHistory;
+  let seedRoundTwoCleanHistory = false;
+  if (seedRoundTwoCleanHistoryRaw !== undefined) {
+    if (typeof seedRoundTwoCleanHistoryRaw !== "boolean") {
+      throw new Error(
+        "PASS contract input.seedRoundTwoCleanHistory must be a boolean."
+      );
+    }
+    seedRoundTwoCleanHistory = seedRoundTwoCleanHistoryRaw;
+  }
+
   return {
-    summary: summaryRaw.trim(),
-    ...(refs !== undefined ? { refs } : {}),
-    ...(intent !== undefined ? { intent } : {})
+    passInput: {
+      summary: summaryRaw.trim(),
+      ...(refs !== undefined ? { refs } : {}),
+      ...(intent !== undefined ? { intent } : {}),
+      ...(noFindings !== undefined ? { noFindings } : {})
+    },
+    seedRoundTwoCleanHistory
   };
 }
 
@@ -139,15 +168,39 @@ async function executePassCase(input: {
       bubbleId: `b_contract_${input.caseDef.id}`,
       task: input.caseDef.description
     });
-    const passInput = parsePassCaseInput(input.caseDef.input);
+    const parsedInput = parsePassCaseInput(input.caseDef.input);
+    if (parsedInput.seedRoundTwoCleanHistory) {
+      await advanceToReviewerRoundTwoWithCleanHistory(bubble.paths.worktreePath);
+    }
     const result = await input.executor({
-      ...passInput,
+      ...parsedInput.passInput,
       cwd: bubble.paths.worktreePath
     });
     return normalizePassResult(result);
   } finally {
     await rm(repoPath, { recursive: true, force: true });
   }
+}
+
+async function advanceToReviewerRoundTwoWithCleanHistory(
+  worktreePath: string
+): Promise<void> {
+  await emitPassFromWorkspace({
+    summary: "Implementer handoff round 1",
+    cwd: worktreePath,
+    now: new Date("2026-03-01T10:01:00.000Z")
+  });
+  await emitPassFromWorkspace({
+    summary: "Reviewer clean handoff round 1",
+    noFindings: true,
+    cwd: worktreePath,
+    now: new Date("2026-03-01T10:02:00.000Z")
+  });
+  await emitPassFromWorkspace({
+    summary: "Implementer handoff round 2",
+    cwd: worktreePath,
+    now: new Date("2026-03-01T10:03:00.000Z")
+  });
 }
 
 export async function runPassContractCase(
