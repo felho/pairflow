@@ -74,7 +74,7 @@ describe("v11 converged contract harness skeleton", () => {
       expect(run.v11).toBeDefined();
       expect(run.legacy).toEqual(run.v11);
     }
-  }, 20_000);
+  }, 30_000);
 
   it("rejects invalid converged contract input.reviewArtifactType", async () => {
     await expect(

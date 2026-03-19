@@ -4,8 +4,13 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { emitAskHumanFromWorkspace, AskHumanCommandError } from "../../../src/core/agent/askHuman.js";
+import {
+  asAskHumanCommandError,
+  emitAskHumanFromWorkspace,
+  AskHumanCommandError
+} from "../../../src/core/agent/askHuman.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
+import { WorkspaceResolutionError } from "../../../src/core/bubble/workspaceResolution.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/core/workspace/worktreeManager.js";
 import { readStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
@@ -136,5 +141,30 @@ describe("emitAskHumanFromWorkspace", () => {
         cwd: bubble.paths.worktreePath
       })
     ).rejects.toBeInstanceOf(AskHumanCommandError);
+  });
+});
+
+describe("asAskHumanCommandError", () => {
+  it("rethrows AskHumanCommandError instances as-is", () => {
+    const original = new AskHumanCommandError("already normalized");
+    expect(() => asAskHumanCommandError(original)).toThrow(original);
+  });
+
+  it("maps WorkspaceResolutionError to AskHumanCommandError", () => {
+    expect(() =>
+      asAskHumanCommandError(
+        new WorkspaceResolutionError("workspace lookup failed")
+      )
+    ).toThrowError(AskHumanCommandError);
+  });
+
+  it("maps generic Error to AskHumanCommandError", () => {
+    expect(() => asAskHumanCommandError(new Error("unexpected"))).toThrowError(
+      AskHumanCommandError
+    );
+  });
+
+  it("rethrows non-Error values unchanged", () => {
+    expect(() => asAskHumanCommandError("raw-error")).toThrow("raw-error");
   });
 });
