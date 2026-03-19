@@ -8,4 +8,4 @@ export type {
   NotifyMetaReviewerSubmissionRequestInput,
   RecoverMetaReviewGateFromSnapshotDependencies,
   RecoverMetaReviewGateFromSnapshotInput
-} from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
+} from "../../../core/bubble/metaReviewGate.js";
