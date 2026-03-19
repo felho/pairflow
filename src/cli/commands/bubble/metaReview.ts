@@ -1,18 +1,18 @@
 import { parseArgs } from "node:util";
 
 import {
-  getMetaReviewLastReport,
-  getMetaReviewStatus,
-  MetaReviewError,
-  submitMetaReviewResult,
-  runMetaReview,
-  toMetaReviewError,
-  type MetaReviewDepth,
-  type MetaReviewLastReportView,
-  type MetaReviewRunResult,
-  type MetaReviewSubmitResult,
-  type MetaReviewStatusView
-} from "../../../core/bubble/metaReview.js";
+  getMetaReviewLastReportV11 as getMetaReviewLastReport,
+  getMetaReviewStatusV11 as getMetaReviewStatus,
+  MetaReviewErrorV11 as MetaReviewError,
+  runMetaReviewV11 as runMetaReview,
+  submitMetaReviewResultV11 as submitMetaReviewResult,
+  toMetaReviewErrorV11 as toMetaReviewError,
+  type MetaReviewDepthV11 as MetaReviewDepth,
+  type MetaReviewLastReportViewV11 as MetaReviewLastReportView,
+  type MetaReviewRunResultV11 as MetaReviewRunResult,
+  type MetaReviewStatusViewV11 as MetaReviewStatusView,
+  type MetaReviewSubmitResultV11 as MetaReviewSubmitResult
+} from "../../../v11/application/metaReview/emitMetaReviewV11.js";
 import type { MetaReviewSubmissionPayload } from "../../../types/protocol.js";
 import {
   recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot,
