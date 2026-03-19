@@ -1,9 +1,9 @@
 import { readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { isNonEmptyString } from "../../../core/validation.js";
 import { renderKickoffTaskArtifactFromInput } from "./kickoffTaskArtifactRendering.js";
 import { assertKickoffTaskContentIsValid } from "./kickoffTaskContentValidation.js";
+import { resolveKickoffTaskInputMode, type KickoffTaskInputMode } from "./kickoffTaskInputMode.js";
 
 export interface ResolvedKickoffTaskInput {
   content: string;
@@ -86,67 +86,6 @@ function resolveKickoffTaskFromInlineInput(input: {
   };
 }
 
-type KickoffTaskInputMode =
-  | {
-      kind: "file";
-      taskFile: string;
-    }
-  | {
-      kind: "inline";
-      task: string;
-    };
-
-function resolveKickoffTaskInputPresence(input: {
-  task?: string;
-  taskFile?: string;
-}): {
-  taskText: string | null;
-  taskFile: string | null;
-} {
-  return {
-    taskText: isNonEmptyString(input.task) ? input.task : null,
-    taskFile: isNonEmptyString(input.taskFile) ? input.taskFile : null
-  };
-}
-
-function buildKickoffInlineInputMode(taskText: string | null): KickoffTaskInputMode {
-  if (taskText === null) {
-    // reason_code=KICKOFF_TASK_INPUT_MISSING context=kickoff_task_input_validation
-    throw new KickoffTaskInputValidationError("Provide task text or task file path.");
-  }
-
-  return {
-    kind: "inline",
-    task: taskText
-  };
-}
-
-function resolveKickoffTaskInputMode(input: {
-  task?: string;
-  taskFile?: string;
-}): KickoffTaskInputMode {
-  const { taskText, taskFile } = resolveKickoffTaskInputPresence(input);
-  if (taskText !== null && taskFile !== null) {
-    // reason_code=KICKOFF_TASK_INPUT_CONFLICT context=kickoff_task_input_validation
-    throw new KickoffTaskInputValidationError(
-      "Provide either task text or task file path, not both."
-    );
-  }
-  if (taskText === null && taskFile === null) {
-    // reason_code=KICKOFF_TASK_INPUT_MISSING context=kickoff_task_input_validation
-    throw new KickoffTaskInputValidationError("Provide task text or task file path.");
-  }
-
-  if (taskFile !== null) {
-    return {
-      kind: "file",
-      taskFile
-    };
-  }
-
-  return buildKickoffInlineInputMode(taskText);
-}
-
 async function resolveKickoffTaskFromInputMode(input: {
   mode: KickoffTaskInputMode;
   cwd: string;
@@ -173,7 +112,11 @@ export async function resolveKickoffTaskInput(input: {
   cwd: string;
 }): Promise<ResolvedKickoffTaskInput> {
   return resolveKickoffTaskFromInputMode({
-    mode: resolveKickoffTaskInputMode(input),
+    mode: resolveKickoffTaskInputMode({
+      ...input,
+      createValidationError: (message) =>
+        new KickoffTaskInputValidationError(message)
+    }),
     cwd: input.cwd
   });
 }
