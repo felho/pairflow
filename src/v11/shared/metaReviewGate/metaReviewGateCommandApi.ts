@@ -5,7 +5,7 @@ export {
   notifyMetaReviewerSubmissionRequest,
   recoverMetaReviewGateFromSnapshot,
   toMetaReviewGateError
-} from "../../../core/bubble/metaReviewGate.js";
+} from "./metaReviewGateCommandRuntime.js";
 export type {
   ApplyMetaReviewGateOnConvergenceDependencies,
   ApplyMetaReviewGateOnConvergenceInput,
