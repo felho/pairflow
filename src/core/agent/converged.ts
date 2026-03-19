@@ -44,12 +44,11 @@ export async function emitConvergedFromWorkspace(
   input: EmitConvergedInput,
   dependencies: EmitConvergedDependencies = {}
 ): Promise<EmitConvergedResult> {
-  const createError = createConvergedCommandError;
   const normalized = normalizeConvergedCommandInput({
     summary: input.summary,
     refs: input.refs,
     now: input.now,
-    createError
+    createError: createConvergedCommandError
   });
   const invocation = buildConvergedCommandFlowInvocation({
     summary: normalized.summary,
@@ -59,7 +58,7 @@ export async function emitConvergedFromWorkspace(
     expectedStateFingerprint: input.expectedStateFingerprint,
     expectedRound: input.expectedRound,
     expectedReviewer: input.expectedReviewer,
-    createError,
+    createError: createConvergedCommandError,
     resolveMetaReviewRolloutBlockingReasonCodes,
     dependencies
   });
