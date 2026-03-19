@@ -1,15 +1,9 @@
 import {
-  runConvergedFlow
-} from "../../v11/application/converged/runConvergedFlow.js";
+  asConvergedCommandErrorV11,
+  emitConvergedFromWorkspaceV11
+} from "../../v11/application/converged/emitConvergedV11.js";
 import {
-  buildConvergedCommandFlowInvocation,
-} from "../../v11/shared/converged/convergedFlowInvocationBuilders.js";
-import { normalizeConvergedCommandError } from "../../v11/shared/converged/convergedCommandErrorNormalization.js";
-import { normalizeConvergedCommandInput } from "../../v11/shared/converged/convergedCommandInputNormalization.js";
-import {
-  ConvergedCommandError,
-  createConvergedCommandError,
-  isConvergedCommandError
+  ConvergedCommandError
 } from "../../v11/shared/converged/convergedCommandError.js";
 import type {
   EmitConvergedDependencies,
@@ -29,32 +23,9 @@ export async function emitConvergedFromWorkspace(
   input: EmitConvergedInput,
   dependencies: EmitConvergedDependencies = {}
 ): Promise<EmitConvergedResult> {
-  const normalized = normalizeConvergedCommandInput({
-    summary: input.summary,
-    refs: input.refs,
-    now: input.now,
-    createError: createConvergedCommandError
-  });
-  const invocation = buildConvergedCommandFlowInvocation({
-    summary: normalized.summary,
-    refs: normalized.refs,
-    now: normalized.now,
-    cwd: input.cwd,
-    expectedStateFingerprint: input.expectedStateFingerprint,
-    expectedRound: input.expectedRound,
-    expectedReviewer: input.expectedReviewer,
-    createError: createConvergedCommandError,
-    resolveMetaReviewRolloutBlockingReasonCodes,
-    dependencies
-  });
-
-  return runConvergedFlow(invocation.flowInput, invocation.flowDependencies);
+  return emitConvergedFromWorkspaceV11(input, dependencies);
 }
 
 export function asConvergedCommandError(error: unknown): never {
-  throw normalizeConvergedCommandError({
-    error,
-    isConvergedCommandError,
-    createConvergedCommandError
-  });
+  return asConvergedCommandErrorV11(error);
 }
