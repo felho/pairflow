@@ -80,6 +80,41 @@ export interface RunAskHumanFlowDependencies {
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
 }
 
+function buildExecutionDependencies(
+  dependencies: RunAskHumanFlowDependencies
+): ExecuteAskHumanExecutionDependencies {
+  return {
+    ...(dependencies.appendProtocolEnvelope !== undefined
+      ? { appendProtocolEnvelope: dependencies.appendProtocolEnvelope }
+      : {}),
+    ...(dependencies.writeStateSnapshot !== undefined
+      ? { writeStateSnapshot: dependencies.writeStateSnapshot }
+      : {}),
+    ...(dependencies.applyStateTransition !== undefined
+      ? { applyStateTransition: dependencies.applyStateTransition }
+      : {})
+  };
+}
+
+function buildFinalizationDependencies(
+  dependencies: RunAskHumanFlowDependencies
+): FinalizeAskHumanFlowDependencies {
+  return {
+    ...(dependencies.emitTmuxDeliveryNotification !== undefined
+      ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
+      : { emitTmuxDeliveryNotification }),
+    ...(dependencies.emitBubbleNotification !== undefined
+      ? { emitBubbleNotification: dependencies.emitBubbleNotification }
+      : { emitBubbleNotification }),
+    ...(dependencies.resolveDeliveryMessageRef !== undefined
+      ? { resolveDeliveryMessageRef: dependencies.resolveDeliveryMessageRef }
+      : {}),
+    ...(dependencies.emitBubbleLifecycleEventBestEffort !== undefined
+      ? { emitBubbleLifecycleEventBestEffort: dependencies.emitBubbleLifecycleEventBestEffort }
+      : { emitBubbleLifecycleEventBestEffort })
+  };
+}
+
 export async function runAskHumanFlow(
   input: RunAskHumanFlowInput,
   dependencies: RunAskHumanFlowDependencies
@@ -90,17 +125,7 @@ export async function runAskHumanFlow(
       routing: input.routing,
       createError: input.createError
     },
-    {
-      ...(dependencies.appendProtocolEnvelope !== undefined
-        ? { appendProtocolEnvelope: dependencies.appendProtocolEnvelope }
-        : {}),
-      ...(dependencies.writeStateSnapshot !== undefined
-        ? { writeStateSnapshot: dependencies.writeStateSnapshot }
-        : {}),
-      ...(dependencies.applyStateTransition !== undefined
-        ? { applyStateTransition: dependencies.applyStateTransition }
-        : {})
-    }
+    buildExecutionDependencies(dependencies)
   );
 
   return dependencies.finalizeAskHumanFlow(
@@ -110,19 +135,6 @@ export async function runAskHumanFlow(
       appended: execution.appended,
       written: execution.written
     },
-    {
-      ...(dependencies.emitTmuxDeliveryNotification !== undefined
-        ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
-        : { emitTmuxDeliveryNotification }),
-      ...(dependencies.emitBubbleNotification !== undefined
-        ? { emitBubbleNotification: dependencies.emitBubbleNotification }
-        : { emitBubbleNotification }),
-      ...(dependencies.resolveDeliveryMessageRef !== undefined
-        ? { resolveDeliveryMessageRef: dependencies.resolveDeliveryMessageRef }
-        : {}),
-      ...(dependencies.emitBubbleLifecycleEventBestEffort !== undefined
-        ? { emitBubbleLifecycleEventBestEffort: dependencies.emitBubbleLifecycleEventBestEffort }
-        : { emitBubbleLifecycleEventBestEffort })
-    }
+    buildFinalizationDependencies(dependencies)
   );
 }
