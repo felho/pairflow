@@ -147,4 +147,24 @@ describe("v11 askHuman contract harness skeleton", () => {
       "askHuman contract input.refs must be a string array."
     );
   });
+
+  it("rejects invalid ask-human contract input in v11 mode when refs is not string array", async () => {
+    const invalidCase: ContractCase = {
+      id: "ask-human-invalid-refs-v11",
+      command: "askHuman",
+      mode: "v11",
+      description: "invalid refs validation for v11 mode",
+      input: {
+        question: "Need clarification",
+        refs: ["ok-ref", 42]
+      },
+      expected: {
+        status: "ok"
+      }
+    };
+
+    await expect(runAskHumanContractCase(invalidCase)).rejects.toThrow(
+      "askHuman contract input.refs must be a string array."
+    );
+  });
 });
