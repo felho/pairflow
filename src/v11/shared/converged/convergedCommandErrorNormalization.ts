@@ -1,4 +1,4 @@
-import { toMetaReviewGateError } from "../../../core/bubble/metaReviewGate.js";
+import { toMetaReviewGateErrorV11 as toMetaReviewGateError } from "../../application/metaReviewGate/emitMetaReviewGateV11.js";
 import { WorkspaceResolutionError } from "../../../core/bubble/workspaceResolution.js";
 
 export interface NormalizeConvergedCommandErrorInput {

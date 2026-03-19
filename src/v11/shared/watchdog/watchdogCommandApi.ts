@@ -15,9 +15,9 @@ import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleIn
 import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
 import { applyDeferredReworkIntent } from "../../../core/human/reworkIntent.js";
 import {
-  MetaReviewGateError,
-  recoverMetaReviewGateFromSnapshot
-} from "../../../core/bubble/metaReviewGate.js";
+  MetaReviewGateErrorV11 as MetaReviewGateError,
+  recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
+} from "../../application/metaReviewGate/emitMetaReviewGateV11.js";
 import { hasCanonicalSubmitForActiveMetaReviewRound } from "../../../core/bubble/metaReview.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";

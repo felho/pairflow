@@ -6,8 +6,8 @@ import type {
   readStateSnapshot
 } from "../../../core/state/stateStore.js";
 import type {
-  recoverMetaReviewGateFromSnapshot
-} from "../../../core/bubble/metaReviewGate.js";
+  recoverMetaReviewGateFromSnapshotV11
+} from "../metaReviewGate/emitMetaReviewGateV11.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
@@ -22,7 +22,7 @@ export interface BubbleWatchdogDependencies {
   emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
   emitBubbleNotification?: typeof emitBubbleNotification;
   readStateSnapshot?: typeof readStateSnapshot;
-  recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshot;
+  recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshotV11;
 }
 
 export type BubbleWatchdogNoopReason =
