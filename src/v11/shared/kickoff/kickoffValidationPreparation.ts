@@ -106,6 +106,22 @@ function buildKickoffPreparedValidationResult(input: {
   };
 }
 
+function buildKickoffTaskInvalidFailureResult(input: {
+  resolvedBubbleId: string;
+  state: LoadedKickoffState["state"];
+  markersBefore: {
+    ideation_mode: boolean;
+    ideation_task_pending: boolean;
+  };
+}): PrepareKickoffValidationResult {
+  return buildKickoffValidationFailureResult({
+    resolvedBubbleId: input.resolvedBubbleId,
+    reasonCode: IDEATION_KICKOFF_TASK_INVALID,
+    stateBefore: input.state,
+    markersBefore: input.markersBefore
+  });
+}
+
 type PrepareKickoffTaskOrFailureResult =
   | {
       kind: "failure";
@@ -131,10 +147,9 @@ async function prepareKickoffTaskOrFailure(input: {
   if (taskResolution.kind === "invalid") {
     return {
       kind: "failure",
-      result: buildKickoffValidationFailureResult({
+      result: buildKickoffTaskInvalidFailureResult({
         resolvedBubbleId: input.resolvedBubbleId,
-        reasonCode: IDEATION_KICKOFF_TASK_INVALID,
-        stateBefore: input.state,
+        state: input.state,
         markersBefore: input.markersBefore
       })
     };
@@ -159,6 +174,23 @@ type PrepareKickoffEligibilityOrFailureResult =
       };
     };
 
+function buildKickoffEligibilityFailureResult(input: {
+  resolvedBubbleId: string;
+  eligibilityFailureReason: string;
+  state: LoadedKickoffState["state"];
+  markersBefore: {
+    ideation_mode: boolean;
+    ideation_task_pending: boolean;
+  };
+}): PrepareKickoffValidationResult {
+  return buildKickoffValidationFailureResult({
+    resolvedBubbleId: input.resolvedBubbleId,
+    reasonCode: input.eligibilityFailureReason,
+    stateBefore: input.state,
+    markersBefore: input.markersBefore
+  });
+}
+
 function prepareKickoffEligibilityOrFailure(input: {
   resolvedBubbleId: string;
   state: LoadedKickoffState["state"];
@@ -172,10 +204,10 @@ function prepareKickoffEligibilityOrFailure(input: {
   if (eligibilityFailureReason !== null) {
     return {
       kind: "failure",
-      result: buildKickoffValidationFailureResult({
+      result: buildKickoffEligibilityFailureResult({
         resolvedBubbleId: input.resolvedBubbleId,
-        reasonCode: eligibilityFailureReason,
-        stateBefore: input.state,
+        eligibilityFailureReason,
+        state: input.state,
         markersBefore
       })
     };
