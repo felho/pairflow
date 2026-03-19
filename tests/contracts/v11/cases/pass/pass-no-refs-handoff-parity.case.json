@@ -1,0 +1,25 @@
+{
+  "id": "pass-no-refs-handoff-parity",
+  "command": "pass",
+  "mode": "parity",
+  "description": "PASS parity baseline with omitted refs input.",
+  "input": {
+    "summary": "Implementer pass without refs (parity)",
+    "intent": "task"
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "PASS_ACCEPTED",
+    "envelopeType": "PASS",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m1",
+    "parity",
+    "no-refs",
+    "pass"
+  ]
+}

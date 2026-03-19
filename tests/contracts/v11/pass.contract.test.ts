@@ -140,6 +140,43 @@ const passInvalidInputCases: Array<{
     },
     expectedErrorMessage:
       "PASS contract input.intent must be one of: task, review, fix_request."
+  },
+  {
+    name: "rejects invalid pass contract input when noFindings is not boolean",
+    caseDef: {
+      id: "pass-invalid-no-findings",
+      command: "pass",
+      mode: "legacy",
+      description: "invalid noFindings validation",
+      input: {
+        summary: "Valid summary",
+        noFindings: "yes",
+        intent: "review"
+      },
+      expected: {
+        status: "ok"
+      }
+    },
+    expectedErrorMessage: "PASS contract input.noFindings must be a boolean."
+  },
+  {
+    name: "rejects invalid pass contract input when seedRoundTwoCleanHistory is not boolean",
+    caseDef: {
+      id: "pass-invalid-seed-round-two-clean-history",
+      command: "pass",
+      mode: "parity",
+      description: "invalid seedRoundTwoCleanHistory validation",
+      input: {
+        summary: "Valid summary",
+        noFindings: true,
+        seedRoundTwoCleanHistory: "true"
+      },
+      expected: {
+        status: "ok"
+      }
+    },
+    expectedErrorMessage:
+      "PASS contract input.seedRoundTwoCleanHistory must be a boolean."
   }
 ];
 
