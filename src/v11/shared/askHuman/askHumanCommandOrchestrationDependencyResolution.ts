@@ -1,7 +1,6 @@
-import { prepareAskHumanRouting } from "../../application/askHuman/askHumanRoutingPreparation.js";
-import { runAskHumanFlow } from "../../application/askHuman/runAskHumanFlow.js";
 import type { RunAskHumanFlowFn } from "./askHumanFlowContract.js";
 import type { PrepareAskHumanRoutingFn } from "./askHumanRoutingContract.js";
+import { createAskHumanCommandFlowDefaults } from "./askHumanCommandFlowDefaults.js";
 
 export interface ResolveAskHumanCommandOrchestrationDependenciesInput {
   prepareAskHumanRouting?: PrepareAskHumanRoutingFn | undefined;
@@ -16,8 +15,10 @@ export interface ResolvedAskHumanCommandOrchestrationDependencies {
 export function resolveAskHumanCommandOrchestrationDependencies(
   input: ResolveAskHumanCommandOrchestrationDependenciesInput
 ): ResolvedAskHumanCommandOrchestrationDependencies {
+  const defaults = createAskHumanCommandFlowDefaults();
   return {
-    prepareAskHumanRouting: input.prepareAskHumanRouting ?? prepareAskHumanRouting,
-    runAskHumanFlow: input.runAskHumanFlow ?? runAskHumanFlow
+    prepareAskHumanRouting:
+      input.prepareAskHumanRouting ?? defaults.prepareAskHumanRouting,
+    runAskHumanFlow: input.runAskHumanFlow ?? defaults.runAskHumanFlow
   };
 }

@@ -94,15 +94,15 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
   },
   {
     command: "commit",
-    state: "legacy",
-    owner: "TBD",
-    notes: "M6 close-out command wave."
+    state: "v11",
+    owner: "runtime",
+    notes: "Core facade now delegates to v11 commit orchestration seams; v11 is the source of truth."
   },
   {
     command: "merge",
-    state: "legacy",
-    owner: "TBD",
-    notes: "M6 close-out command wave."
+    state: "v11",
+    owner: "runtime",
+    notes: "Core facade now delegates to v11 merge orchestration seams; v11 is the source of truth."
   }
 ];
 
