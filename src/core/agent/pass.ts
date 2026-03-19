@@ -28,6 +28,7 @@ import { preparePassRouting } from "../../v11/application/pass/passRoutingPrepar
 import { normalizePassCommandError } from "../../v11/shared/pass/passCommandErrorNormalization.js";
 import { normalizePassCommandInput } from "../../v11/shared/pass/passCommandInputNormalization.js";
 import { normalizePassCommandPayload } from "../../v11/shared/pass/passCommandPayloadNormalization.js";
+import { createPassCommandErrorRuntime } from "../../v11/shared/pass/passCommandErrorRuntime.js";
 import { dispatchPassFlow } from "../../v11/shared/pass/passFlowDispatch.js";
 import {
   buildPassRoutingInput
@@ -88,6 +89,12 @@ export class PassCommandError extends Error {
   }
 }
 
+const createPassCommandError = (message: string) => new PassCommandError(message);
+const passCommandErrorRuntime = createPassCommandErrorRuntime({
+  createPassCommandError,
+  raiseDownstreamRejected: raiseRepeatCleanDownstreamConvergedRejected
+});
+
 // Canonical reader for repeat-clean most-recent previous reviewer PASS cleanliness.
 // Deprecated key is retained for backward compatibility with existing append-only transcripts.
 export function resolveMostRecentPreviousReviewerPassIsCleanFromMetadata(
@@ -106,7 +113,7 @@ export function inferPassIntent(activeRole: AgentRole): PassIntent {
     return "fix_request";
   }
 
-  throw new PassCommandError(
+  throw createPassCommandError(
     `Unsupported active role for pass intent inference: ${activeRole}.`
   );
 }
@@ -119,7 +126,7 @@ export async function emitPassFromWorkspace(
     summary: input.summary,
     refs: input.refs,
     now: input.now,
-    createError: (message) => new PassCommandError(message)
+    createError: passCommandErrorRuntime.createError
   });
   const now = normalizedCommandInput.now;
   const nowIso = now.toISOString();
@@ -136,7 +143,7 @@ export async function emitPassFromWorkspace(
     cwd: input.cwd,
     now,
     nowIso,
-    createError: (message) => new PassCommandError(message)
+    createError: passCommandErrorRuntime.createError
   });
   const resolved = workspaceContext.resolved;
   const bubbleIdentity = workspaceContext.bubbleIdentity;
@@ -160,7 +167,7 @@ export async function emitPassFromWorkspace(
       transcriptPath: resolved.bubblePaths.transcriptPath,
       reviewer,
       implementer,
-      createError: (message) => new PassCommandError(message),
+      createError: passCommandErrorRuntime.createError,
       ...(input.intent !== undefined
         ? { inputIntent: input.intent }
         : {})
@@ -185,12 +192,8 @@ export async function emitPassFromWorkspace(
       state,
       loadedState,
       passRouting,
-      createError: (message) => new PassCommandError(message),
-      onDownstreamRejected: (reason) =>
-        raiseRepeatCleanDownstreamConvergedRejected({
-          reason,
-          createError: (message) => new PassCommandError(message)
-        })
+      createError: passCommandErrorRuntime.createError,
+      onDownstreamRejected: passCommandErrorRuntime.onDownstreamRejected
     },
     dependencies
   );
@@ -200,6 +203,6 @@ export function asPassCommandError(error: unknown): never {
   throw normalizePassCommandError({
     error,
     isPassCommandError: (candidate) => candidate instanceof PassCommandError,
-    createPassCommandError: (message) => new PassCommandError(message)
+    createPassCommandError
   });
 }
