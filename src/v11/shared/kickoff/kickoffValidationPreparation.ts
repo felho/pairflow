@@ -146,6 +146,47 @@ async function prepareKickoffTaskOrFailure(input: {
   };
 }
 
+type PrepareKickoffEligibilityOrFailureResult =
+  | {
+      kind: "failure";
+      result: PrepareKickoffValidationResult;
+    }
+  | {
+      kind: "eligible";
+      markersBefore: {
+        ideation_mode: boolean;
+        ideation_task_pending: boolean;
+      };
+    };
+
+function prepareKickoffEligibilityOrFailure(input: {
+  resolvedBubbleId: string;
+  state: LoadedKickoffState["state"];
+  bubbleConfig: ResolvedKickoffBubble["bubbleConfig"];
+}): PrepareKickoffEligibilityOrFailureResult {
+  const preparedEligibility = prepareKickoffEligibility({
+    bubbleConfig: input.bubbleConfig,
+    state: input.state
+  });
+  const { markersBefore, eligibilityFailureReason } = preparedEligibility;
+  if (eligibilityFailureReason !== null) {
+    return {
+      kind: "failure",
+      result: buildKickoffValidationFailureResult({
+        resolvedBubbleId: input.resolvedBubbleId,
+        reasonCode: eligibilityFailureReason,
+        stateBefore: input.state,
+        markersBefore
+      })
+    };
+  }
+
+  return {
+    kind: "eligible",
+    markersBefore
+  };
+}
+
 export async function prepareKickoffValidation(
   input: PrepareKickoffValidationInput,
   dependencies: ResolvedKickoffDependencies
@@ -155,19 +196,15 @@ export async function prepareKickoffValidation(
   );
   const loadedState = await dependencies.readState(resolved.bubblePaths.statePath);
   const state = loadedState.state;
-  const preparedEligibility = prepareKickoffEligibility({
-    bubbleConfig: resolved.bubbleConfig,
-    state
+  const eligibility = prepareKickoffEligibilityOrFailure({
+    resolvedBubbleId: resolved.bubbleId,
+    state,
+    bubbleConfig: resolved.bubbleConfig
   });
-  const { markersBefore, eligibilityFailureReason } = preparedEligibility;
-  if (eligibilityFailureReason !== null) {
-    return buildKickoffValidationFailureResult({
-      resolvedBubbleId: resolved.bubbleId,
-      reasonCode: eligibilityFailureReason,
-      stateBefore: state,
-      markersBefore
-    });
+  if (eligibility.kind === "failure") {
+    return eligibility.result;
   }
+  const markersBefore = eligibility.markersBefore;
 
   const taskOrFailure = await prepareKickoffTaskOrFailure({
     validationInput: input,

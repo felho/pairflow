@@ -76,13 +76,13 @@ async function resolveKickoffTaskFromFileInput(input: {
     content: normalizedContent,
     errors: {
       empty: () => {
-      // reason_code=KICKOFF_TASK_FILE_EMPTY context=kickoff_task_input_validation
+        // reason_code=KICKOFF_TASK_FILE_EMPTY context=kickoff_task_input_validation
         return new KickoffTaskInputValidationError(
           `Task file is empty: ${candidatePath}`
         );
       },
       placeholder: () => {
-      // reason_code=KICKOFF_TASK_FILE_PLACEHOLDER_MARKER context=kickoff_task_input_validation
+        // reason_code=KICKOFF_TASK_FILE_PLACEHOLDER_MARKER context=kickoff_task_input_validation
         return new KickoffTaskInputValidationError(
           `Task file still contains ideation placeholder marker: ${candidatePath}`
         );
@@ -105,11 +105,11 @@ function resolveKickoffTaskFromInlineInput(input: {
     content: taskText,
     errors: {
       empty: () => {
-      // reason_code=KICKOFF_TASK_INLINE_EMPTY context=kickoff_task_input_validation
+        // reason_code=KICKOFF_TASK_INLINE_EMPTY context=kickoff_task_input_validation
         return new KickoffTaskInputValidationError("Task cannot be empty.");
       },
       placeholder: () => {
-      // reason_code=KICKOFF_TASK_INLINE_PLACEHOLDER_MARKER context=kickoff_task_input_validation
+        // reason_code=KICKOFF_TASK_INLINE_PLACEHOLDER_MARKER context=kickoff_task_input_validation
         return new KickoffTaskInputValidationError(
           "Task text still contains ideation placeholder marker."
         );
@@ -162,13 +162,30 @@ function resolveKickoffTaskInputMode(input: {
   };
 }
 
-export function renderKickoffTaskArtifact(task: ResolvedKickoffTaskInput): string {
-  const sourceLine =
-    task.source === "file"
-      ? `Source: file (${task.sourcePath})`
-      : "Source: inline text";
+async function resolveKickoffTaskFromInputMode(input: {
+  mode: KickoffTaskInputMode;
+  cwd: string;
+}): Promise<ResolvedKickoffTaskInput> {
+  if (input.mode.kind === "file") {
+    return resolveKickoffTaskFromFileInput({
+      taskFile: input.mode.taskFile,
+      cwd: input.cwd
+    });
+  }
 
-  return `# Bubble Task\n\n${sourceLine}\n\n${task.content}\n`;
+  return resolveKickoffTaskFromInlineInput({
+    task: input.mode.task
+  });
+}
+
+function renderKickoffTaskSourceLine(task: ResolvedKickoffTaskInput): string {
+  return task.source === "file"
+    ? `Source: file (${task.sourcePath})`
+    : "Source: inline text";
+}
+
+export function renderKickoffTaskArtifact(task: ResolvedKickoffTaskInput): string {
+  return `# Bubble Task\n\n${renderKickoffTaskSourceLine(task)}\n\n${task.content}\n`;
 }
 
 export async function resolveKickoffTaskInput(input: {
@@ -176,16 +193,8 @@ export async function resolveKickoffTaskInput(input: {
   taskFile?: string;
   cwd: string;
 }): Promise<ResolvedKickoffTaskInput> {
-  const mode = resolveKickoffTaskInputMode(input);
-
-  if (mode.kind === "file") {
-    return resolveKickoffTaskFromFileInput({
-      taskFile: mode.taskFile,
-      cwd: input.cwd
-    });
-  }
-
-  return resolveKickoffTaskFromInlineInput({
-    task: mode.task
+  return resolveKickoffTaskFromInputMode({
+    mode: resolveKickoffTaskInputMode(input),
+    cwd: input.cwd
   });
 }
