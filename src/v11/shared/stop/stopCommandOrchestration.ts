@@ -1,0 +1,88 @@
+import { applyStateTransition } from "../../../core/state/machine.js";
+import { isFinalState } from "../../../core/state/transitions.js";
+import {
+  readStateSnapshot,
+  writeStateSnapshot
+} from "../../../core/state/stateStore.js";
+import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import {
+  removeRuntimeSession
+} from "../../../core/runtime/sessionsRegistry.js";
+import {
+  terminateBubbleTmuxSession
+} from "../../../core/runtime/tmuxManager.js";
+import type {
+  StopBubbleDependencies,
+  StopBubbleInput,
+  StopBubbleResult
+} from "../../application/stop/stopCommandContract.js";
+import {
+  StopBubbleError,
+  createStopBubbleError,
+  throwAsStopBubbleError
+} from "./stopCommandRuntime.js";
+
+export async function stopBubbleCommandOrchestration(
+  input: StopBubbleInput,
+  dependencies: StopBubbleDependencies = {}
+): Promise<StopBubbleResult> {
+  const terminateTmux =
+    dependencies.terminateBubbleTmuxSession ?? terminateBubbleTmuxSession;
+  const removeSession = dependencies.removeRuntimeSession ?? removeRuntimeSession;
+
+  const resolved = await resolveBubbleById({
+    bubbleId: input.bubbleId,
+    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
+    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+  });
+  const now = input.now ?? new Date();
+  const nowIso = now.toISOString();
+
+  const loaded = await readStateSnapshot(resolved.bubblePaths.statePath);
+  if (isFinalState(loaded.state.state)) {
+    throw createStopBubbleError(
+      `bubble stop requires non-final state (current: ${loaded.state.state}).`
+    );
+  }
+
+  const tmux = await terminateTmux({
+    bubbleId: resolved.bubbleId
+  });
+  const runtimeSessionRemoved = await removeSession({
+    sessionsPath: resolved.bubblePaths.sessionsPath,
+    bubbleId: resolved.bubbleId
+  });
+
+  const cancelled = applyStateTransition(loaded.state, {
+    to: "CANCELLED",
+    activeAgent: null,
+    activeRole: null,
+    activeSince: null,
+    lastCommandAt: nowIso
+  });
+
+  let written;
+  try {
+    written = await writeStateSnapshot(resolved.bubblePaths.statePath, cancelled, {
+      expectedFingerprint: loaded.fingerprint
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw createStopBubbleError(
+      `Runtime cleanup completed (tmux session ${tmux.sessionName} terminated=${tmux.existed}, runtime session removed=${runtimeSessionRemoved}) but state transition to CANCELLED failed. Root error: ${reason}`
+    );
+  }
+
+  return {
+    bubbleId: resolved.bubbleId,
+    state: written.state,
+    tmuxSessionName: tmux.sessionName,
+    tmuxSessionExisted: tmux.existed,
+    runtimeSessionRemoved
+  };
+}
+
+export {
+  StopBubbleError,
+  throwAsStopBubbleError
+};
