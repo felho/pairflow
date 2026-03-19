@@ -45,6 +45,18 @@
       "kind": "seed_case"
     },
     {
+      "id": "pass-repeat-clean-autoconverge",
+      "command": "pass",
+      "source": "tests/contracts/v11/cases/pass/pass-repeat-clean-autoconverge.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "pass-repeat-clean-autoconverge-v11",
+      "command": "pass",
+      "source": "tests/contracts/v11/cases/pass/pass-repeat-clean-autoconverge-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "ask-human-basic",
       "command": "askHuman",
       "source": "tests/contracts/v11/cases/ask-human/ask-human-basic.case.json",
