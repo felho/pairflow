@@ -21,21 +21,14 @@ import {
 import {
   raiseRepeatCleanDownstreamConvergedRejected,
 } from "../../v11/domain/pass/repeatCleanPolicyRejection.js";
-import { runAutoConvergeFlow } from "../../v11/application/pass/runAutoConvergeFlow.js";
 import {
   type PassDeliveryDependencies
 } from "../../v11/application/pass/reviewerDelivery.js";
 import { preparePassRouting } from "../../v11/application/pass/passRoutingPreparation.js";
-import { runNormalPassFlow } from "../../v11/application/pass/runNormalPassFlow.js";
-import {
-  buildAutoConvergeFlowInput
-} from "../../v11/shared/pass/autoConvergeFlowInvocationBuilders.js";
-import {
-  buildNormalPassFlowInput
-} from "../../v11/shared/pass/normalPassFlowInvocationBuilders.js";
 import { normalizePassCommandError } from "../../v11/shared/pass/passCommandErrorNormalization.js";
 import { normalizePassCommandInput } from "../../v11/shared/pass/passCommandInputNormalization.js";
 import { normalizePassCommandPayload } from "../../v11/shared/pass/passCommandPayloadNormalization.js";
+import { dispatchPassFlow } from "../../v11/shared/pass/passFlowDispatch.js";
 import {
   buildPassRoutingInput
 } from "../../v11/shared/pass/passRoutingInvocationBuilders.js";
@@ -44,8 +37,6 @@ import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
 } from "../../v11/domain/pass/repeatCleanMetadata.js";
 import {
-  createAutoConvergeFlowDependencies,
-  createNormalPassFlowDependencies,
   createPassRoutingDependencies
 } from "../../v11/shared/pass/passFlowDependencyWiring.js";
 
@@ -177,45 +168,15 @@ export async function emitPassFromWorkspace(
     createPassRoutingDependencies(inferPassIntent)
   );
 
-  const repeatCleanTrigger = passRouting.repeatCleanTrigger;
-  if (repeatCleanTrigger.trigger) {
-    return runAutoConvergeFlow(
-      buildAutoConvergeFlowInput({
-        summary,
-        refs,
-        now,
-        nowIso,
-        findings,
-        hasFindings,
-        noFindings,
-        resolved,
-        bubbleIdentity,
-        handoff,
-        reviewer,
-        implementer,
-        state,
-        loadedState,
-        passRouting,
-        createError: (message) => new PassCommandError(message),
-        onDownstreamRejected: (reason) =>
-          raiseRepeatCleanDownstreamConvergedRejected({
-            reason,
-            createError: (message) => new PassCommandError(message)
-          })
-      }),
-      createAutoConvergeFlowDependencies(dependencies)
-    );
-  }
-
-  return runNormalPassFlow(
-    buildNormalPassFlowInput({
-      now,
-      nowIso,
+  return dispatchPassFlow(
+    {
       summary,
       refs,
+      now,
+      nowIso,
+      findings,
       hasFindings,
       noFindings,
-      findings,
       resolved,
       bubbleIdentity,
       handoff,
@@ -224,9 +185,14 @@ export async function emitPassFromWorkspace(
       state,
       loadedState,
       passRouting,
-      createError: (message) => new PassCommandError(message)
-    }),
-    createNormalPassFlowDependencies(dependencies)
+      createError: (message) => new PassCommandError(message),
+      onDownstreamRejected: (reason) =>
+        raiseRepeatCleanDownstreamConvergedRejected({
+          reason,
+          createError: (message) => new PassCommandError(message)
+        })
+    },
+    dependencies
   );
 }
 
