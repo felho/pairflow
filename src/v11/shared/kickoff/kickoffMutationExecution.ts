@@ -30,9 +30,9 @@ export interface ExecuteKickoffMutationInput {
   }) => Promise<unknown>;
 }
 
-export async function executeKickoffMutation(
+async function writeKickoffMutationArtifacts(
   input: ExecuteKickoffMutationInput
-): Promise<string> {
+): Promise<void> {
   await input.writeFile(
     input.taskArtifactPath,
     renderKickoffTaskArtifact(input.task),
@@ -45,8 +45,12 @@ export async function executeKickoffMutation(
     input.nextBubbleToml,
     { encoding: "utf8" }
   );
-  const transcriptBackup = await input.readFile(input.transcriptPath, "utf8");
-  await input.appendEnvelope({
+}
+
+function buildKickoffMutationEnvelopeAppendInput(
+  input: ExecuteKickoffMutationInput
+): Parameters<ExecuteKickoffMutationInput["appendEnvelope"]>[0] {
+  return {
     transcriptPath: input.transcriptPath,
     lockPath: join(input.locksDir, `${input.bubbleId}.lock`),
     now: input.now,
@@ -56,7 +60,17 @@ export async function executeKickoffMutation(
       task: input.task,
       taskArtifactPath: input.taskArtifactPath
     })
-  });
+  };
+}
+
+export async function executeKickoffMutation(
+  input: ExecuteKickoffMutationInput
+): Promise<string> {
+  await writeKickoffMutationArtifacts(input);
+  const transcriptBackup = await input.readFile(input.transcriptPath, "utf8");
+  await input.appendEnvelope(
+    buildKickoffMutationEnvelopeAppendInput(input)
+  );
 
   return transcriptBackup;
 }
