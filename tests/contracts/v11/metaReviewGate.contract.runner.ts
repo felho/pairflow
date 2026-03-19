@@ -41,6 +41,7 @@ type MetaReviewGateApplyScenario =
   | "run_failed"
   | "meta_review_running"
   | "sticky_bypass";
+type MetaReviewGateRecoverScenario = "error" | "approve";
 interface NormalizedMetaReviewSnapshot {
   last_autonomous_run_id: string | null;
   last_autonomous_status: "success" | "error" | null;
@@ -57,6 +58,7 @@ interface NormalizedMetaReviewSnapshot {
 function parseMetaReviewGateCaseInput(input: ContractCase["input"]): {
   route: MetaReviewGateContractRoute;
   applyScenario: MetaReviewGateApplyScenario;
+  recoverScenario: MetaReviewGateRecoverScenario;
   summary?: string;
   refs: string[];
 } {
@@ -94,9 +96,21 @@ function parseMetaReviewGateCaseInput(input: ContractCase["input"]): {
     );
   }
 
+  const recoverScenarioRaw = input.recoverScenario;
+  if (
+    recoverScenarioRaw !== undefined &&
+    recoverScenarioRaw !== "error" &&
+    recoverScenarioRaw !== "approve"
+  ) {
+    throw new Error(
+      "metaReviewGate contract input.recoverScenario must be one of: error, approve."
+    );
+  }
+
   return {
     route: routeRaw,
     applyScenario: applyScenarioRaw ?? "run_failed",
+    recoverScenario: recoverScenarioRaw ?? "error",
     ...(typeof summaryRaw === "string" ? { summary: summaryRaw } : {}),
     refs: refsRaw ?? []
   };
@@ -177,6 +191,23 @@ function buildSyntheticMetaReviewRunError(input: {
     report_json: {
       findings_count: 0
     }
+  };
+}
+
+function buildSyntheticMetaReviewRunApprove(input: {
+  bubbleId: string;
+}): MetaReviewRunResult {
+  return {
+    bubbleId: input.bubbleId,
+    depth: "standard",
+    status: "success",
+    recommendation: "approve",
+    summary: "Seed meta-review recover contract approve snapshot.",
+    report_ref: "artifacts/meta-review-last.md",
+    rework_target_message: null,
+    updated_at: "2026-03-19T10:03:00.000Z",
+    lifecycle_state: "META_REVIEW_RUNNING",
+    warnings: []
   };
 }
 
@@ -335,9 +366,14 @@ async function executeMetaReviewGateCase(input: {
         repoPath,
         refs: caseInput.refs,
         now: new Date("2026-03-19T10:04:00.000Z"),
-        runResult: buildSyntheticMetaReviewRunError({
-          bubbleId: bubble.bubbleId
-        })
+        runResult:
+          caseInput.recoverScenario === "approve"
+            ? buildSyntheticMetaReviewRunApprove({
+                bubbleId: bubble.bubbleId
+              })
+            : buildSyntheticMetaReviewRunError({
+                bubbleId: bubble.bubbleId
+              })
       });
     }
 
