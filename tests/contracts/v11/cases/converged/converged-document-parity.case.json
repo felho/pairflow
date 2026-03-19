@@ -13,7 +13,10 @@
   "expected": {
     "status": "ok",
     "reasonCode": "CONVERGED_EMITTED",
-    "envelopeType": "CONVERGENCE"
+    "envelopeType": "CONVERGENCE",
+    "stateSubset": {
+      "state": "META_REVIEW_FAILED"
+    }
   },
   "tags": [
     "converged",
