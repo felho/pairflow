@@ -3,6 +3,10 @@ import type { ResolvedKickoffDependencies } from "./kickoffDependencyResolution.
 import { prepareKickoffEligibility } from "./kickoffEligibilityPreparation.js";
 import { resolveKickoffTask } from "./kickoffTaskResolution.js";
 import {
+  buildKickoffResolveBubbleInput,
+  buildKickoffTaskResolutionInput
+} from "./kickoffValidationInputBuilders.js";
+import {
   type KickoffBubbleResultShape,
   type KickoffIdeationMarkers
 } from "./kickoffResultBuilders.js";
@@ -45,26 +49,6 @@ export type KickoffPreparedValidation = Extract<
   PrepareKickoffValidationResult,
   { kind: "prepared" }
 >;
-
-function buildKickoffResolveBubbleInput(
-  input: PrepareKickoffValidationInput
-): Parameters<ResolvedKickoffDependencies["resolveBubble"]>[0] {
-  return {
-    bubbleId: input.bubbleId,
-    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
-    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
-  };
-}
-
-function buildKickoffTaskResolutionInput(
-  input: PrepareKickoffValidationInput
-): Parameters<typeof resolveKickoffTask>[0] {
-  return {
-    ...(input.task !== undefined ? { task: input.task } : {}),
-    ...(input.taskFile !== undefined ? { taskFile: input.taskFile } : {}),
-    cwd: input.cwd ?? process.cwd()
-  };
-}
 
 function buildKickoffPreparedValidationResult(input: {
   resolved: ResolvedKickoffBubble;
