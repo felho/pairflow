@@ -1,7 +1,5 @@
 import {
-  appendProtocolEnvelope,
   readTranscriptEnvelopes,
-  type AppendProtocolEnvelopeResult
 } from "../protocol/transcriptStore.js";
 import { readStateSnapshot } from "../state/stateStore.js";
 import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
@@ -63,6 +61,7 @@ import { writePostAppendPassState } from "../../v11/application/pass/postAppendS
 import { resolveReviewerTestDirectiveForPass } from "../../v11/application/pass/reviewerTestDirectiveResolver.js";
 import { updateReviewerDocGateArtifact } from "../../v11/application/pass/reviewerDocGateArtifactUpdater.js";
 import { prepareNormalPassAppend } from "../../v11/application/pass/normalPassAppendPreparation.js";
+import { executeNormalPassAppend } from "../../v11/application/pass/normalPassAppendExecution.js";
 import { executeNormalPassDelivery } from "../../v11/application/pass/normalPassDeliveryExecution.js";
 import { persistNormalPassPostAppend } from "../../v11/application/pass/normalPassPostAppendPersistence.js";
 import { finalizeNormalPass } from "../../v11/application/pass/normalPassFinalization.js";
@@ -73,7 +72,6 @@ import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
 } from "../../v11/domain/pass/repeatCleanMetadata.js";
 import { buildPassLifecycleMetricMetadata } from "../../v11/domain/pass/lifecycleMetricMetadata.js";
-import { buildPassEnvelopeDraft } from "../../v11/domain/pass/passEnvelopeDraft.js";
 
 export interface EmitPassInput {
   summary: string;
@@ -144,13 +142,6 @@ export function inferPassIntent(activeRole: AgentRole): PassIntent {
   throw new PassCommandError(
     `Unsupported active role for pass intent inference: ${activeRole}.`
   );
-}
-
-function mapAppendResult(result: AppendProtocolEnvelopeResult): Pick<EmitPassResult, "sequence" | "envelope"> {
-  return {
-    sequence: result.sequence,
-    envelope: result.envelope
-  };
 }
 
 export async function emitPassFromWorkspace(
@@ -366,32 +357,29 @@ export async function emitPassFromWorkspace(
   const findingsForPayload = normalPassAppendPreparation.findingsForPayload;
   const lockPath = normalPassAppendPreparation.lockPath;
 
-  const appendResult = await appendProtocolEnvelope({
+  const mapped = await executeNormalPassAppend({
     transcriptPath: resolved.bubblePaths.transcriptPath,
     lockPath,
     now,
-    envelope: buildPassEnvelopeDraft({
-      bubbleId: resolved.bubbleId,
-      handoff,
-      summary,
-      passIntent: intent,
-      refs,
-      hasFindings,
-      findingsForPayload,
-      ...(reviewerFindingsClaim !== undefined ? { reviewerFindingsClaim } : {}),
-      ...(reviewerFindingsClaimParserMetadata !== undefined
-        ? { reviewerFindingsClaimParserMetadata }
-        : {}),
-      transitionDecision: "normal_pass",
-      repeatCleanReasonCode: repeatCleanTrigger.reasonCode,
-      repeatCleanReasonDetail: repeatCleanTrigger.reasonDetail,
-      repeatCleanTrigger: repeatCleanTrigger.trigger,
-      mostRecentPreviousReviewerCleanPassEnvelope:
-        repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope
-    })
+    bubbleId: resolved.bubbleId,
+    handoff,
+    summary,
+    passIntent: intent,
+    refs,
+    hasFindings,
+    findingsForPayload,
+    ...(reviewerFindingsClaim !== undefined
+      ? { reviewerFindingsClaim }
+      : {}),
+    ...(reviewerFindingsClaimParserMetadata !== undefined
+      ? { reviewerFindingsClaimParserMetadata }
+      : {}),
+    repeatCleanReasonCode: repeatCleanTrigger.reasonCode,
+    repeatCleanReasonDetail: repeatCleanTrigger.reasonDetail,
+    repeatCleanTrigger: repeatCleanTrigger.trigger,
+    mostRecentPreviousReviewerCleanPassEnvelope:
+      repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope
   });
-
-  const mapped = mapAppendResult(appendResult);
 
   const postAppendPersistence = await persistNormalPassPostAppend(
     {
@@ -404,7 +392,7 @@ export async function emitPassFromWorkspace(
       statePath: resolved.bubblePaths.statePath,
       state,
       expectedFingerprint: loadedState.fingerprint,
-      appendEnvelopeId: appendResult.envelope.id,
+      appendEnvelopeId: mapped.envelope.id,
       docGateScopeActive,
       now,
       bubbleConfig: resolved.bubbleConfig,
