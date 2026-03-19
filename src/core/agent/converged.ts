@@ -1,15 +1,7 @@
-import { join } from "node:path";
-
-import { appendProtocolEnvelope, readTranscriptEnvelopes } from "../protocol/transcriptStore.js";
+import { readTranscriptEnvelopes } from "../protocol/transcriptStore.js";
 import { validateConvergencePolicy } from "../convergence/policy.js";
 import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
 import { WorkspaceResolutionError } from "../bubble/workspaceResolution.js";
-import { emitBubbleNotification } from "../runtime/notifications.js";
-import {
-  emitTmuxDeliveryNotification,
-  resolveDeliveryMessageRef,
-  type EmitTmuxDeliveryNotificationResult
-} from "../runtime/tmuxDelivery.js";
 import { assessPairflowCommandPath } from "../runtime/pairflowCommand.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import { readReviewVerificationArtifactStatus } from "../reviewer/reviewVerification.js";
@@ -29,8 +21,6 @@ import {
   resolveDocContractGateArtifactPath
 } from "../gates/docContractGates.js";
 import {
-  applyMetaReviewGateOnConvergence,
-  recoverMetaReviewGateFromSnapshot,
   toMetaReviewGateError,
   type MetaReviewGateRoute
 } from "../bubble/metaReviewGate.js";
@@ -40,12 +30,12 @@ import type {
   BubbleRoundGateState,
   BubbleSpecLockState
 } from "../../types/bubble.js";
-import {
-  deliveryTargetRoleMetadataKey,
-  type DeliveryTargetRole,
-  type ProtocolEnvelope
-} from "../../types/protocol.js";
+import { type ProtocolEnvelope } from "../../types/protocol.js";
 import { prepareConvergedRouting } from "../../v11/application/converged/convergedRoutingPreparation.js";
+import {
+  executeConvergedExecution,
+  type ExecuteConvergedExecutionDependencies
+} from "../../v11/application/converged/convergedExecution.js";
 
 export interface EmitConvergedInput {
   summary: string;
@@ -58,10 +48,10 @@ export interface EmitConvergedInput {
 }
 
 export interface EmitConvergedDependencies {
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
-  emitBubbleNotification?: typeof emitBubbleNotification;
-  applyMetaReviewGateOnConvergence?: typeof applyMetaReviewGateOnConvergence;
-  recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshot;
+  emitTmuxDeliveryNotification?: ExecuteConvergedExecutionDependencies["emitTmuxDeliveryNotification"];
+  emitBubbleNotification?: ExecuteConvergedExecutionDependencies["emitBubbleNotification"];
+  applyMetaReviewGateOnConvergence?: ExecuteConvergedExecutionDependencies["applyMetaReviewGateOnConvergence"];
+  recoverMetaReviewGateFromSnapshot?: ExecuteConvergedExecutionDependencies["recoverMetaReviewGateFromSnapshot"];
 }
 
 export interface EmitConvergedResult {
@@ -84,54 +74,6 @@ export class ConvergedCommandError extends Error {
     super(message);
     this.name = "ConvergedCommandError";
   }
-}
-
-function withDeliveryTargetRole(
-  envelope: ProtocolEnvelope,
-  role: DeliveryTargetRole
-): ProtocolEnvelope {
-  const existingMetadata =
-    typeof envelope.payload.metadata === "object" &&
-    envelope.payload.metadata !== null
-      ? envelope.payload.metadata
-      : {};
-  return {
-    ...envelope,
-    payload: {
-      ...envelope.payload,
-      metadata: {
-        ...existingMetadata,
-        [deliveryTargetRoleMetadataKey]: role
-      }
-    }
-  };
-}
-
-function resolveAggregateConvergedDeliveryReason(
-  deliveries: EmitTmuxDeliveryNotificationResult[]
-): string | undefined {
-  const failedDeliveries = deliveries.filter((delivery) => !delivery.delivered);
-  if (failedDeliveries.length === 0) {
-    return undefined;
-  }
-  if (failedDeliveries.length < deliveries.length) {
-    return "partial_delivery_failed";
-  }
-
-  const reasonPriority: Array<NonNullable<EmitTmuxDeliveryNotificationResult["reason"]>> = [
-    "delivery_unconfirmed",
-    "tmux_send_failed",
-    "registry_read_failed",
-    "unsupported_recipient",
-    "no_runtime_session"
-  ];
-  for (const reason of reasonPriority) {
-    if (failedDeliveries.some((delivery) => delivery.reason === reason)) {
-      return reason;
-    }
-  }
-
-  return failedDeliveries.find((delivery) => delivery.reason !== undefined)?.reason;
 }
 
 export function resolveMetaReviewRolloutBlockingReasonCodes(input: {
@@ -326,152 +268,45 @@ export async function emitConvergedFromWorkspace(
     );
   }
 
-  const lockPath = join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`);
-  const convergence = await appendProtocolEnvelope({
-    transcriptPath: resolved.bubblePaths.transcriptPath,
-    lockPath,
-    now,
-    envelope: {
-      bubble_id: resolved.bubbleId,
-      sender: reviewer,
-      recipient: "orchestrator",
-      type: "CONVERGENCE",
-      round: state.round,
-      payload: {
-        summary,
-        ...(convergencePolicyDiagnostics.length > 0
-          ? {
-              metadata: {
-                convergence_policy_diagnostics: convergencePolicyDiagnostics
-              }
-            }
-          : {})
-      },
-      refs
-    }
-  });
-  const applyGate =
-    dependencies.applyMetaReviewGateOnConvergence ?? applyMetaReviewGateOnConvergence;
-  const recoverGate =
-    dependencies.recoverMetaReviewGateFromSnapshot ?? recoverMetaReviewGateFromSnapshot;
-  let gateResult: Awaited<ReturnType<typeof applyMetaReviewGateOnConvergence>>;
-  try {
-    gateResult = await applyGate({
-      bubbleId: resolved.bubbleId,
+  const {
+    convergence,
+    gateResult,
+    delivery: convergedDelivery
+  } = await executeConvergedExecution(
+    {
+      resolved,
+      state,
+      reviewer,
+      implementer,
       summary,
       refs,
-      repoPath: resolved.repoPath,
-      cwd: resolved.bubblePaths.worktreePath,
-      now
-    });
-  } catch (error) {
-    try {
-      gateResult = await recoverGate({
-        bubbleId: resolved.bubbleId,
-        summary,
-        refs,
-        repoPath: resolved.repoPath,
-        cwd: resolved.bubblePaths.worktreePath,
-        now
-      });
-    } catch {
-      throw error;
-    }
-  }
-
-  const emitDelivery =
-    dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
-  const emitNotification =
-    dependencies.emitBubbleNotification ?? emitBubbleNotification;
-  const gateRef = resolveDeliveryMessageRef({
-    bubbleId: resolved.bubbleId,
-    sessionsPath: resolved.bubblePaths.sessionsPath,
-    envelope: gateResult.gateEnvelope
-  });
-
-  const emitDeliverySafe = async (
-    envelope: ProtocolEnvelope,
-    options?: {
-      initialDelayMs?: number;
-      deliveryAttempts?: number;
-    }
-  ): Promise<EmitTmuxDeliveryNotificationResult> =>
-    emitDelivery({
-      bubbleId: resolved.bubbleId,
-      bubbleConfig: resolved.bubbleConfig,
-      sessionsPath: resolved.bubblePaths.sessionsPath,
-      envelope,
-      messageRef: gateRef,
-      ...(options?.initialDelayMs !== undefined
-        ? { initialDelayMs: options.initialDelayMs }
+      now,
+      convergencePolicyDiagnostics
+    },
+    {
+      ...(dependencies.applyMetaReviewGateOnConvergence !== undefined
+        ? {
+            applyMetaReviewGateOnConvergence:
+              dependencies.applyMetaReviewGateOnConvergence
+          }
         : {}),
-      ...(options?.deliveryAttempts !== undefined
-        ? { deliveryAttempts: options.deliveryAttempts }
+      ...(dependencies.recoverMetaReviewGateFromSnapshot !== undefined
+        ? {
+            recoverMetaReviewGateFromSnapshot:
+              dependencies.recoverMetaReviewGateFromSnapshot
+          }
+        : {}),
+      ...(dependencies.emitTmuxDeliveryNotification !== undefined
+        ? {
+            emitTmuxDeliveryNotification:
+              dependencies.emitTmuxDeliveryNotification
+          }
+        : {}),
+      ...(dependencies.emitBubbleNotification !== undefined
+        ? { emitBubbleNotification: dependencies.emitBubbleNotification }
         : {})
-    }).catch(() => ({
-      delivered: false,
-      message: "",
-      reason: "tmux_send_failed"
-    }));
-
-  const recipientEnvelopes =
-    gateResult.gateEnvelope.type === "APPROVAL_REQUEST"
-      ? [
-          gateResult.gateEnvelope,
-          withDeliveryTargetRole({
-            ...gateResult.gateEnvelope,
-            recipient: implementer
-          }, "implementer"),
-          withDeliveryTargetRole({
-            ...gateResult.gateEnvelope,
-            recipient: reviewer
-          }, "reviewer")
-        ]
-      : [gateResult.gateEnvelope];
-  // Optional UX signal; never block protocol/state progression on notification failure.
-  let deliveryResults = await Promise.all(
-    recipientEnvelopes.map((envelope) => emitDeliverySafe(envelope))
+    }
   );
-  let deliveryRetried = false;
-  const primaryAutoReworkDelivery = deliveryResults[0];
-  const shouldRetryAutoReworkDelivery =
-    gateResult.route === "auto_rework" &&
-    recipientEnvelopes.length === 1 &&
-    primaryAutoReworkDelivery !== undefined &&
-    !primaryAutoReworkDelivery.delivered &&
-    (
-      primaryAutoReworkDelivery.reason === "delivery_unconfirmed" ||
-      primaryAutoReworkDelivery.reason === "tmux_send_failed"
-    );
-  if (shouldRetryAutoReworkDelivery) {
-    deliveryRetried = true;
-    deliveryResults = [
-      await emitDeliverySafe(recipientEnvelopes[0]!, {
-        // Auto-rework target pane can still be spinning up after gate routing.
-        // Give the CLI extra warm-up + probe attempts before giving up.
-        initialDelayMs: 5000,
-        deliveryAttempts: 6
-      })
-    ];
-  }
-
-  const failedDeliveryCount = deliveryResults.filter((delivery) => !delivery.delivered).length;
-  const aggregatedDeliveryReason = resolveAggregateConvergedDeliveryReason(deliveryResults);
-  const convergedDelivery = failedDeliveryCount === 0
-    ? {
-        delivered: true,
-        retried: deliveryRetried
-      }
-    : {
-        delivered: false,
-        ...(aggregatedDeliveryReason !== undefined
-          ? { reason: aggregatedDeliveryReason }
-          : {}),
-        retried: deliveryRetried
-      };
-
-  // Optional UX signal; never block protocol/state progression on notification failure.
-  void emitNotification(resolved.bubbleConfig, "converged");
 
   const commandPathStatus = assessPairflowCommandPath({
     worktreePath: resolved.bubblePaths.worktreePath,
