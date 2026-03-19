@@ -13,44 +13,27 @@ import {
   type RuntimeSessionsRegistry
 } from "./sessionsRegistry.js";
 import { runTmux } from "./tmuxManager.js";
-
-export type RuntimeSessionStaleReason =
-  | "missing_bubble"
-  | "final_state"
-  | "non_runtime_state"
-  | "missing_tmux_session"
-  | "invalid_state";
-
-export type TmuxSessionLivenessProbe = (sessionName: string) => Promise<boolean>;
-
-export interface ReconcileRuntimeSessionsInput {
-  repoPath?: string | undefined;
-  cwd?: string | undefined;
-  dryRun?: boolean | undefined;
-  isTmuxSessionAlive?: TmuxSessionLivenessProbe | undefined;
-}
-
-export interface ReconcileRuntimeSessionsAction {
-  bubbleId: string;
-  reason: RuntimeSessionStaleReason;
-  removed: boolean;
-}
-
-export interface ReconcileRuntimeSessionsReport {
-  repoPath: string;
-  dryRun: boolean;
-  sessionsBefore: number;
-  sessionsAfter: number;
-  staleCandidates: number;
-  actions: ReconcileRuntimeSessionsAction[];
-}
-
-export class StartupReconcilerError extends Error {
-  public constructor(message: string) {
-    super(message);
-    this.name = "StartupReconcilerError";
-  }
-}
+import type {
+  ReconcileRuntimeSessionsAction,
+  ReconcileRuntimeSessionsInput,
+  ReconcileRuntimeSessionsReport,
+  RuntimeSessionStaleReason,
+  TmuxSessionLivenessProbe
+} from "../../v11/application/reconcile/reconcileCommandContract.js";
+export type {
+  ReconcileRuntimeSessionsAction,
+  ReconcileRuntimeSessionsInput,
+  ReconcileRuntimeSessionsReport,
+  RuntimeSessionStaleReason,
+  TmuxSessionLivenessProbe
+} from "../../v11/application/reconcile/reconcileCommandContract.js";
+import {
+  createStartupReconcilerError,
+  throwAsStartupReconcilerError
+} from "../../v11/shared/reconcile/reconcileCommandRuntime.js";
+export {
+  StartupReconcilerError
+} from "../../v11/shared/reconcile/reconcileCommandRuntime.js";
 
 const runtimeSessionExpectedStates = new Set([
   "RUNNING",
@@ -137,7 +120,7 @@ export async function reconcileRuntimeSessions(
     });
   } catch (error) {
     if (error instanceof RepoResolutionError) {
-      throw new StartupReconcilerError(error.message);
+      throw createStartupReconcilerError(error.message);
     }
     throw error;
   }
@@ -203,11 +186,5 @@ export async function reconcileRuntimeSessions(
 }
 
 export function asStartupReconcilerError(error: unknown): never {
-  if (error instanceof StartupReconcilerError) {
-    throw error;
-  }
-  if (error instanceof Error) {
-    throw new StartupReconcilerError(error.message);
-  }
-  throw error;
+  return throwAsStartupReconcilerError(error);
 }

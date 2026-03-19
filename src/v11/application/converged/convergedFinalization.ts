@@ -4,7 +4,7 @@ import { type EnsureBubbleInstanceIdForMutationResult } from "../../../core/bubb
 import { type ResolvedBubbleWorkspace } from "../../../core/bubble/workspaceResolution.js";
 import { type SummaryVerifierConsistencyGateDecisionRecord } from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
 import { type appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import { type MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateCommandContract.js";
+import { type MetaReviewGateRoute } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 import type {
   BubbleRoundGateState,
   BubbleSpecLockState,
