@@ -1,13 +1,39 @@
+import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 
+import { runMetaReviewGateContractCase } from "./metaReviewGate.contract.runner.js";
 import { readContractCase } from "./runner.js";
 
-describe("v11 metaReviewGate contract harness skeleton", () => {
+const execFileAsync = promisify(execFile);
+const metaReviewGateCaseSources = [
+  "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-basic.case.json",
+  "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-basic-v11.case.json",
+  "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-basic-parity.case.json"
+] as const;
+const metaReviewGateExpectedSourcesSorted = [...metaReviewGateCaseSources].sort();
+
+function parseMetaReviewGateSourcesFromManifest(
+  manifestRaw: string
+): string[] {
+  const manifest = JSON.parse(manifestRaw) as {
+    entries?: Array<{ command?: string; source?: string }>;
+  };
+
+  return (manifest.entries ?? [])
+    .filter((entry) => entry.command === "metaReviewGate")
+    .map((entry) => entry.source)
+    .filter((source): source is string => typeof source === "string")
+    .sort();
+}
+
+describe("v11 metaReviewGate contract harness", () => {
   it("loads seed contract case metadata", async () => {
     const casePath = resolve(
       process.cwd(),
-      "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-basic.case.json"
+      metaReviewGateCaseSources[0]
     );
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("metaReviewGate");
@@ -15,8 +41,58 @@ describe("v11 metaReviewGate contract harness skeleton", () => {
     expect(caseDef.expected.status).toBe("ok");
   });
 
-  it.skip("executes legacy and v11 parity assertions via shared runner", () => {
-    // TODO (M3): wire meta-review gate command-level runner and parity diff assertions.
+  it("executes legacy and parity assertions via shared runner", async () => {
+    const casePaths = metaReviewGateCaseSources.map((source) =>
+      resolve(process.cwd(), source)
+    );
+
+    for (const casePath of casePaths) {
+      const caseDef = await readContractCase(casePath);
+      const run = await runMetaReviewGateContractCase(caseDef);
+      if (caseDef.mode === "legacy") {
+        expect(run.legacy?.status).toBe("ok");
+        expect(run.v11).toBeUndefined();
+        continue;
+      }
+      if (caseDef.mode === "v11") {
+        expect(run.v11?.status).toBe("ok");
+        expect(run.legacy).toBeUndefined();
+        continue;
+      }
+
+      expect(run.legacy).toBeDefined();
+      expect(run.v11).toBeDefined();
+      expect(run.legacy).toEqual(run.v11);
+    }
+  });
+
+  it("includes metaReviewGate seed entries in corpus manifest", async () => {
+    const manifestPath = resolve(
+      process.cwd(),
+      "tests/contracts/v11/corpus/manifest.json"
+    );
+    const manifestRaw = await readFile(manifestPath, "utf8");
+    const metaReviewGateSources = parseMetaReviewGateSourcesFromManifest(
+      manifestRaw
+    );
+
+    expect(metaReviewGateSources).toEqual(metaReviewGateExpectedSourcesSorted);
+  });
+
+  it("builds corpus output manifest with metaReviewGate seed entries", async () => {
+    await execFileAsync("pnpm", [
+      "exec",
+      "tsx",
+      "./tests/contracts/v11/corpus/build-corpus.ts"
+    ]);
+
+    const outputManifestPath = resolve(
+      process.cwd(),
+      ".pairflow/evidence/contracts-v11-corpus-manifest.json"
+    );
+    const outputRaw = await readFile(outputManifestPath, "utf8");
+    const metaReviewGateSources = parseMetaReviewGateSourcesFromManifest(outputRaw);
+
+    expect(metaReviewGateSources).toEqual(metaReviewGateExpectedSourcesSorted);
   });
 });
-
