@@ -1,8 +1,4 @@
-import {
-  buildAskHumanFlowDependencies,
-  buildAskHumanFlowInput
-} from "./askHumanFlowInvocationBuilders.js";
-import { buildAskHumanRoutingInput } from "./askHumanRoutingInvocationBuilder.js";
+import { runAskHumanCommandFlowOrchestration } from "./askHumanCommandFlowOrchestration.js";
 import { resolveAskHumanCommandOrchestrationDependencies } from "./askHumanCommandOrchestrationDependencyResolution.js";
 import type {
   AskHumanCommandOrchestrationDependencies,
@@ -19,27 +15,9 @@ export async function orchestrateAskHumanCommand(
     runAskHumanFlow: dependencies.runAskHumanFlow
   });
 
-  const routing = await resolvedDependencies.prepareAskHumanRouting(
-    buildAskHumanRoutingInput({
-      question: input.question,
-      refs: input.refs,
-      cwd: input.cwd,
-      now: input.now,
-      createError: input.createError
-    })
-  );
-
-  return resolvedDependencies.runAskHumanFlow(
-    buildAskHumanFlowInput({
-      now: input.now,
-      routing,
-      createError: input.createError
-    }),
-    buildAskHumanFlowDependencies({
-      executeAskHumanExecution: dependencies.executeAskHumanExecution,
-      finalizeAskHumanFlow: dependencies.finalizeAskHumanFlow,
-      emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification,
-      emitBubbleNotification: dependencies.emitBubbleNotification
-    })
+  return runAskHumanCommandFlowOrchestration(
+    input,
+    dependencies,
+    resolvedDependencies
   );
 }
