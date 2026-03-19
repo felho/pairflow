@@ -1,14 +1,10 @@
 import {
-  type MetaReviewGateRoute
-} from "../bubble/metaReviewGate.js";
-import type {
-  AgentName,
-  BubbleStateSnapshot
+  type AgentName
 } from "../../types/bubble.js";
-import { type ProtocolEnvelope } from "../../types/protocol.js";
 import {
   runConvergedFlow,
-  type RunConvergedFlowDependencies
+  type RunConvergedFlowDependencies,
+  type RunConvergedFlowResult
 } from "../../v11/application/converged/runConvergedFlow.js";
 import {
   buildConvergedCommandFlowInvocation,
@@ -30,27 +26,15 @@ export interface EmitConvergedInput {
   expectedReviewer?: AgentName;
 }
 
-export interface EmitConvergedDependencies {
-  emitTmuxDeliveryNotification?: RunConvergedFlowDependencies["emitTmuxDeliveryNotification"];
-  emitBubbleNotification?: RunConvergedFlowDependencies["emitBubbleNotification"];
-  applyMetaReviewGateOnConvergence?: RunConvergedFlowDependencies["applyMetaReviewGateOnConvergence"];
-  recoverMetaReviewGateFromSnapshot?: RunConvergedFlowDependencies["recoverMetaReviewGateFromSnapshot"];
-}
+export type EmitConvergedDependencies = Pick<
+  RunConvergedFlowDependencies,
+  | "emitTmuxDeliveryNotification"
+  | "emitBubbleNotification"
+  | "applyMetaReviewGateOnConvergence"
+  | "recoverMetaReviewGateFromSnapshot"
+>;
 
-export interface EmitConvergedResult {
-  bubbleId: string;
-  convergenceSequence: number;
-  convergenceEnvelope: ProtocolEnvelope;
-  gateRoute: MetaReviewGateRoute;
-  approvalRequestSequence: number;
-  approvalRequestEnvelope: ProtocolEnvelope;
-  state: BubbleStateSnapshot;
-  delivery?: {
-    delivered: boolean;
-    reason?: string;
-    retried: boolean;
-  };
-}
+export type EmitConvergedResult = RunConvergedFlowResult;
 
 export async function emitConvergedFromWorkspace(
   input: EmitConvergedInput,
