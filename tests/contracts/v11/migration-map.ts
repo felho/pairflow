@@ -34,15 +34,15 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
   },
   {
     command: "metaReviewGate",
-    state: "legacy",
-    owner: "TBD",
-    notes: "M3 meta-review gate slice."
+    state: "parity",
+    owner: "runtime",
+    notes: "v11 shared/application boundary active; core remains source-of-truth pending full extraction."
   },
   {
     command: "gate",
-    state: "legacy",
-    owner: "TBD",
-    notes: "W3 matrix compatibility alias for metaReviewGate naming."
+    state: "parity",
+    owner: "runtime",
+    notes: "W3 matrix compatibility alias tracking metaReviewGate parity boundary status."
   },
   {
     command: "reconcile",
