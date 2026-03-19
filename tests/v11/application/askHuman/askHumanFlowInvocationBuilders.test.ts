@@ -103,4 +103,27 @@ describe("askHumanFlowInvocationBuilders", () => {
     expect("writeStateSnapshot" in dependencies).toBe(false);
     expect("applyStateTransition" in dependencies).toBe(false);
   });
+
+  it("omits optional dependency overrides when explicitly passed as undefined", () => {
+    const dependencies = buildAskHumanFlowDependencies({
+      executeAskHumanExecution: async () =>
+        ({
+          appended: {},
+          written: {}
+        }) as never,
+      finalizeAskHumanFlow: async () =>
+        ({
+          bubbleId: "b_ask_human_01",
+          sequence: 3,
+          envelope: {},
+          state: {},
+          inferredRecipient: "human"
+        }) as never,
+      emitTmuxDeliveryNotification: undefined,
+      emitBubbleNotification: undefined
+    });
+
+    expect("emitTmuxDeliveryNotification" in dependencies).toBe(false);
+    expect("emitBubbleNotification" in dependencies).toBe(false);
+  });
 });

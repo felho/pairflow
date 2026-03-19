@@ -52,11 +52,17 @@ export interface BuildAskHumanFlowDependenciesInput {
     RunAskHumanFlowDependencies["executeAskHumanExecution"];
   finalizeAskHumanFlow:
     RunAskHumanFlowDependencies["finalizeAskHumanFlow"];
-  appendProtocolEnvelope?: RunAskHumanFlowDependencies["appendProtocolEnvelope"];
-  writeStateSnapshot?: RunAskHumanFlowDependencies["writeStateSnapshot"];
-  applyStateTransition?: RunAskHumanFlowDependencies["applyStateTransition"];
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
-  emitBubbleNotification?: typeof emitBubbleNotification;
+  appendProtocolEnvelope?:
+    | RunAskHumanFlowDependencies["appendProtocolEnvelope"]
+    | undefined;
+  writeStateSnapshot?:
+    | RunAskHumanFlowDependencies["writeStateSnapshot"]
+    | undefined;
+  applyStateTransition?:
+    | RunAskHumanFlowDependencies["applyStateTransition"]
+    | undefined;
+  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification | undefined;
+  emitBubbleNotification?: typeof emitBubbleNotification | undefined;
 }
 
 export function buildAskHumanFlowDependencies(
