@@ -1,5 +1,4 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 
 import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
 import { readStateSnapshot, StateStoreConflictError, writeStateSnapshot } from "../state/stateStore.js";
@@ -13,15 +12,14 @@ import {
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
 import {
   KickoffTaskInputValidationError,
-  renderKickoffTaskArtifact,
   type ResolvedKickoffTaskInput,
   resolveKickoffTaskInput
 } from "../../v11/shared/kickoff/kickoffTaskInputResolution.js";
 import { resolveKickoffEligibilityFailureReason } from "../../v11/shared/kickoff/kickoffEligibility.js";
 import { buildKickoffNextState } from "../../v11/shared/kickoff/kickoffStateTransition.js";
-import { buildKickoffTaskEnvelope } from "../../v11/shared/kickoff/kickoffTaskEnvelope.js";
 import { executeKickoffMutationRollback } from "../../v11/shared/kickoff/kickoffMutationRollback.js";
 import { prepareKickoffPersistence } from "../../v11/shared/kickoff/kickoffPersistencePreparation.js";
+import { executeKickoffMutation } from "../../v11/shared/kickoff/kickoffMutationExecution.js";
 
 export interface KickoffBubbleInput {
   bubbleId: string;
@@ -192,25 +190,19 @@ export async function kickoffBubble(
 
   let transcriptBackup: string | null = null;
   try {
-    await writeFileFn(resolved.bubblePaths.taskArtifactPath, renderKickoffTaskArtifact(task), {
-      encoding: "utf8"
-    });
-    await writeFileFn(
-      resolved.bubblePaths.bubbleTomlPath,
-      persistence.nextBubbleToml,
-      { encoding: "utf8" }
-    );
-    transcriptBackup = await readFileFn(resolved.bubblePaths.transcriptPath, "utf8");
-    await appendEnvelope({
+    transcriptBackup = await executeKickoffMutation({
+      bubbleId: resolved.bubbleId,
+      implementer: resolved.bubbleConfig.agents.implementer,
+      task,
+      taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+      bubbleTomlPath: resolved.bubblePaths.bubbleTomlPath,
+      nextBubbleToml: persistence.nextBubbleToml,
       transcriptPath: resolved.bubblePaths.transcriptPath,
-      lockPath: join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`),
+      locksDir: resolved.bubblePaths.locksDir,
       now,
-      envelope: buildKickoffTaskEnvelope({
-        bubbleId: resolved.bubbleId,
-        implementer: resolved.bubbleConfig.agents.implementer,
-        task,
-        taskArtifactPath: resolved.bubblePaths.taskArtifactPath
-      })
+      writeFile: writeFileFn,
+      readFile: readFileFn,
+      appendEnvelope
     });
   } catch (error) {
     const rollbackErrors = await executeKickoffMutationRollback({
