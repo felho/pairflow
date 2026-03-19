@@ -81,9 +81,9 @@ import {
   type PassDeliveryDependencies
 } from "../../v11/application/pass/reviewerDelivery.js";
 import { mapPassResultDelivery } from "../../v11/application/pass/passResultDelivery.js";
+import { writePostAppendReviewVerificationArtifact } from "../../v11/application/pass/postAppendReviewVerificationWriter.js";
 import { resolveReviewerTestDirectiveForPass } from "../../v11/application/pass/reviewerTestDirectiveResolver.js";
 import { updateReviewerDocGateArtifact } from "../../v11/application/pass/reviewerDocGateArtifactUpdater.js";
-import { raisePostAppendReviewVerificationWriteFailed } from "../../v11/domain/pass/postAppendReviewVerificationWriteFailure.js";
 import { raisePostAppendStateWriteFailed } from "../../v11/domain/pass/postAppendStateWriteFailure.js";
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
@@ -535,29 +535,16 @@ export async function emitPassFromWorkspace(
 
   const mapped = mapAppendResult(appendResult);
 
-  if (reviewerVerification !== undefined) {
-    const verificationArtifact = createReviewVerificationArtifact({
-      payload: reviewerVerification.payload,
-      inputRef: reviewerVerification.inputRef,
-      bubbleId: resolved.bubbleId,
-      round: handoff.nextRound,
-      reviewer: handoff.senderAgent,
-      generatedAt: nowIso
-    });
-    try {
-      await writeReviewVerificationArtifactAtomic(
-        resolved.bubblePaths.reviewVerificationArtifactPath,
-        verificationArtifact
-      );
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      raisePostAppendReviewVerificationWriteFailed({
-        envelopeId: mapped.envelope.id,
-        reason,
-        createError: (message) => new PassCommandError(message)
-      });
-    }
-  }
+  await writePostAppendReviewVerificationArtifact({
+    reviewerVerification,
+    bubbleId: resolved.bubbleId,
+    round: handoff.nextRound,
+    reviewer: handoff.senderAgent,
+    generatedAt: nowIso,
+    artifactPath: resolved.bubblePaths.reviewVerificationArtifactPath,
+    envelopeId: mapped.envelope.id,
+    createError: (message) => new PassCommandError(message)
+  });
 
   const nextState: BubbleStateSnapshot = {
     ...state,
