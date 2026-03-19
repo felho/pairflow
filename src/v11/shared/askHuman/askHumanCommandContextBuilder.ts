@@ -1,5 +1,5 @@
-import { normalizeAskHumanCommandInput } from "./askHumanCommandInputNormalization.js";
 import { buildAskHumanEntrypointInvocation } from "./askHumanEntrypointInvocationBuilder.js";
+import { buildNormalizedAskHumanCommandInput } from "./askHumanCommandNormalizedInputBuilder.js";
 import type {
   AskHumanCommandContext,
   BuildAskHumanCommandContextInput
@@ -8,12 +8,7 @@ import type {
 export function buildAskHumanCommandContext(
   input: BuildAskHumanCommandContextInput
 ): AskHumanCommandContext {
-  const normalizedInput = normalizeAskHumanCommandInput({
-    question: input.commandInput.question,
-    refs: input.commandInput.refs,
-    cwd: input.commandInput.cwd,
-    now: input.commandInput.now
-  });
+  const normalizedInput = buildNormalizedAskHumanCommandInput(input.commandInput);
 
   return {
     orchestrationInput: buildAskHumanEntrypointInvocation({
