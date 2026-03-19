@@ -1,0 +1,19 @@
+{
+  "id": "meta-review-gate-recover-basic",
+  "command": "metaReviewGate",
+  "mode": "legacy",
+  "description": "Seed contract case for meta-review gate recover baseline.",
+  "input": {
+    "route": "recover",
+    "refs": []
+  },
+  "expected": {
+    "status": "ok"
+  },
+  "tags": [
+    "seed",
+    "m3",
+    "meta-review-gate"
+  ]
+}
+
