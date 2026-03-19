@@ -1,0 +1,60 @@
+import {
+  type LoadedStateSnapshot,
+  writeStateSnapshot
+} from "../../../core/state/stateStore.js";
+import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { ResolvedPassHandoff } from "../../domain/pass/handoff.js";
+import { raisePostAppendStateWriteFailed } from "../../domain/pass/postAppendStateWriteFailure.js";
+
+export interface WritePostAppendPassStateInput {
+  statePath: string;
+  state: BubbleStateSnapshot;
+  handoff: Pick<
+    ResolvedPassHandoff,
+    "nextRound" | "recipientAgent" | "recipientRole" | "appendRoundRoleEntry"
+  >;
+  nowIso: string;
+  expectedFingerprint: string;
+  envelopeId: string;
+  createError: (message: string) => Error;
+}
+
+export interface WritePostAppendPassStateDependencies {
+  writeStateSnapshot?: typeof writeStateSnapshot;
+}
+
+export async function writePostAppendPassState(
+  input: WritePostAppendPassStateInput,
+  dependencies: WritePostAppendPassStateDependencies = {}
+): Promise<LoadedStateSnapshot> {
+  const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
+
+  const nextState: BubbleStateSnapshot = {
+    ...input.state,
+    round: input.handoff.nextRound,
+    active_agent: input.handoff.recipientAgent,
+    active_role: input.handoff.recipientRole,
+    active_since: input.nowIso,
+    last_command_at: input.nowIso,
+    round_role_history:
+      input.handoff.appendRoundRoleEntry === undefined
+        ? input.state.round_role_history
+        : [...input.state.round_role_history, input.handoff.appendRoundRoleEntry]
+  };
+
+  try {
+    // Transcript is canonical source of truth. If state write fails after append,
+    // recovery must reconcile from latest transcript entry.
+    return await writeState(input.statePath, nextState, {
+      expectedFingerprint: input.expectedFingerprint,
+      expectedState: "RUNNING"
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    raisePostAppendStateWriteFailed({
+      envelopeId: input.envelopeId,
+      reason,
+      createError: input.createError
+    });
+  }
+}

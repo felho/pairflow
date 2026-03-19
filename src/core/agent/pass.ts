@@ -5,7 +5,7 @@ import {
   readTranscriptEnvelopes,
   type AppendProtocolEnvelopeResult
 } from "../protocol/transcriptStore.js";
-import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
+import { readStateSnapshot } from "../state/stateStore.js";
 import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
 import {
   resolveBubbleFromWorkspaceCwd,
@@ -82,9 +82,9 @@ import {
 } from "../../v11/application/pass/reviewerDelivery.js";
 import { mapPassResultDelivery } from "../../v11/application/pass/passResultDelivery.js";
 import { writePostAppendReviewVerificationArtifact } from "../../v11/application/pass/postAppendReviewVerificationWriter.js";
+import { writePostAppendPassState } from "../../v11/application/pass/postAppendStateWriter.js";
 import { resolveReviewerTestDirectiveForPass } from "../../v11/application/pass/reviewerTestDirectiveResolver.js";
 import { updateReviewerDocGateArtifact } from "../../v11/application/pass/reviewerDocGateArtifactUpdater.js";
-import { raisePostAppendStateWriteFailed } from "../../v11/domain/pass/postAppendStateWriteFailure.js";
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
 } from "../../v11/domain/pass/repeatCleanMetadata.js";
@@ -546,35 +546,15 @@ export async function emitPassFromWorkspace(
     createError: (message) => new PassCommandError(message)
   });
 
-  const nextState: BubbleStateSnapshot = {
-    ...state,
-    round: handoff.nextRound,
-    active_agent: handoff.recipientAgent,
-    active_role: handoff.recipientRole,
-    active_since: nowIso,
-    last_command_at: nowIso,
-    round_role_history:
-      handoff.appendRoundRoleEntry === undefined
-        ? state.round_role_history
-        : [...state.round_role_history, handoff.appendRoundRoleEntry]
-  };
-
-  let written;
-  try {
-    // Transcript is canonical source of truth. If state write fails after append,
-    // recovery must reconcile from latest transcript entry.
-    written = await writeStateSnapshot(resolved.bubblePaths.statePath, nextState, {
-      expectedFingerprint: loadedState.fingerprint,
-      expectedState: "RUNNING"
-    });
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    raisePostAppendStateWriteFailed({
-      envelopeId: appendResult.envelope.id,
-      reason,
-      createError: (message) => new PassCommandError(message)
-    });
-  }
+  const written = await writePostAppendPassState({
+    statePath: resolved.bubblePaths.statePath,
+    state,
+    handoff,
+    nowIso,
+    expectedFingerprint: loadedState.fingerprint,
+    envelopeId: appendResult.envelope.id,
+    createError: (message) => new PassCommandError(message)
+  });
 
   if (docGateScopeActive) {
     docGateArtifactWriteFailureReason = await updateReviewerDocGateArtifact({
