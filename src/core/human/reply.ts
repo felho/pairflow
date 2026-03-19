@@ -17,14 +17,13 @@ import {
 } from "../../v11/shared/reply/replyCommandError.js";
 import { normalizeReplyCommandInput } from "../../v11/shared/reply/replyCommandInputNormalization.js";
 import { ensureReplyWaitingHumanState } from "../../v11/domain/reply/waitingHumanStateGuard.js";
+import { buildHumanReplyEnvelopeDraft } from "../../v11/domain/reply/replyEnvelopeDraft.js";
+import { raiseReplyPostAppendStateWriteFailed } from "../../v11/domain/reply/postAppendStateWriteFailure.js";
 import type {
   EmitHumanReplyDependencies,
   EmitHumanReplyInput,
   EmitHumanReplyResult
 } from "../../v11/application/reply/replyCommandContract.js";
-import {
-  deliveryTargetRoleMetadataKey
-} from "../../types/protocol.js";
 
 export type {
   EmitHumanReplyDependencies,
@@ -75,20 +74,14 @@ export async function emitHumanReply(
     mirrorPaths: [resolved.bubblePaths.inboxPath],
     lockPath,
     now,
-    envelope: {
-      bubble_id: resolved.bubbleId,
-      sender: "human",
+    envelope: buildHumanReplyEnvelopeDraft({
+      bubbleId: resolved.bubbleId,
       recipient: state.active_agent,
-      type: "HUMAN_REPLY",
+      recipientRole: state.active_role,
       round: state.round,
-      payload: {
-        message,
-        metadata: {
-          [deliveryTargetRoleMetadataKey]: state.active_role
-        }
-      },
+      message,
       refs
-    }
+    })
   });
 
   const nextState = applyStateTransition(state, {
@@ -104,9 +97,11 @@ export async function emitHumanReply(
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    throw new HumanReplyCommandError(
-      `HUMAN_REPLY ${appended.envelope.id} was appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`
-    );
+    raiseReplyPostAppendStateWriteFailed({
+      envelopeId: appended.envelope.id,
+      reason,
+      createError: createHumanReplyCommandError
+    });
   }
 
   const emitDelivery =
