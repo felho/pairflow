@@ -1,5 +1,10 @@
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 
+export interface KickoffIdeationMarkers {
+  ideation_mode: boolean;
+  ideation_task_pending: boolean;
+}
+
 export interface KickoffBubbleResultShape {
   ok: boolean;
   bubble_id: string;
@@ -8,14 +13,8 @@ export interface KickoffBubbleResultShape {
   protocol: {
     task_envelope_appended: boolean;
   };
-  markers_before: {
-    ideation_mode: boolean;
-    ideation_task_pending: boolean;
-  };
-  markers_after: {
-    ideation_mode: boolean;
-    ideation_task_pending: boolean;
-  };
+  markers_before: KickoffIdeationMarkers;
+  markers_after: KickoffIdeationMarkers;
   state_before?: BubbleStateSnapshot;
   state_after?: BubbleStateSnapshot;
 }
@@ -24,23 +23,14 @@ export interface BuildKickoffFailureResultInput {
   bubbleId: string;
   reasonCode: string;
   stateBefore: BubbleStateSnapshot;
-  markersBefore: {
-    ideation_mode: boolean;
-    ideation_task_pending: boolean;
-  };
+  markersBefore: KickoffIdeationMarkers;
 }
 
 function buildKickoffResultBase(input: {
   bubbleId: string;
   taskEnvelopeAppended: boolean;
-  markersBefore: {
-    ideation_mode: boolean;
-    ideation_task_pending: boolean;
-  };
-  markersAfter: {
-    ideation_mode: boolean;
-    ideation_task_pending: boolean;
-  };
+  markersBefore: KickoffIdeationMarkers;
+  markersAfter: KickoffIdeationMarkers;
 }): Omit<
   KickoffBubbleResultShape,
   "ok" | "reason_code" | "state_changed" | "state_before" | "state_after"
@@ -80,12 +70,16 @@ export function buildKickoffFailureResult(
 
 export interface BuildKickoffSuccessResultInput {
   bubbleId: string;
-  markersBefore: {
-    ideation_mode: boolean;
-    ideation_task_pending: boolean;
-  };
+  markersBefore: KickoffIdeationMarkers;
   stateBefore: BubbleStateSnapshot;
   stateAfter: BubbleStateSnapshot;
+}
+
+function buildKickoffSuccessMarkersAfter(): KickoffIdeationMarkers {
+  return {
+    ideation_mode: true,
+    ideation_task_pending: false
+  };
 }
 
 function buildKickoffSuccessResultBaseInput(input: BuildKickoffSuccessResultInput): Parameters<
@@ -95,10 +89,7 @@ function buildKickoffSuccessResultBaseInput(input: BuildKickoffSuccessResultInpu
     bubbleId: input.bubbleId,
     taskEnvelopeAppended: true,
     markersBefore: input.markersBefore,
-    markersAfter: {
-      ideation_mode: true,
-      ideation_task_pending: false
-    }
+    markersAfter: buildKickoffSuccessMarkersAfter()
   };
 }
 

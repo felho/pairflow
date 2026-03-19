@@ -1,16 +1,7 @@
-export interface NormalizeAskHumanCommandInputInput {
-  question: string;
-  refs?: string[] | undefined;
-  cwd?: string | undefined;
-  now?: Date | undefined;
-}
-
-export interface NormalizedAskHumanCommandInput {
-  question: string;
-  refs?: string[] | undefined;
-  cwd?: string | undefined;
-  now: Date;
-}
+import type {
+  NormalizedAskHumanCommandInput,
+  NormalizeAskHumanCommandInputInput
+} from "./askHumanCommandInputNormalizationContract.js";
 
 export function normalizeAskHumanCommandInput(
   input: NormalizeAskHumanCommandInputInput
