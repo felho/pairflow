@@ -1,0 +1,20 @@
+{
+  "id": "converged-basic-v11",
+  "command": "converged",
+  "mode": "v11",
+  "description": "converged emits CONVERGENCE and approval routing envelope from v11 wrapper entrypoint.",
+  "input": {
+    "summary": "Converged baseline v11 run.",
+    "refs": []
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "CONVERGED_EMITTED",
+    "envelopeType": "CONVERGENCE"
+  },
+  "tags": [
+    "converged",
+    "v11-contract",
+    "v11"
+  ]
+}

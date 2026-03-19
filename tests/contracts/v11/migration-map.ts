@@ -22,9 +22,9 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
   },
   {
     command: "converged",
-    state: "legacy",
-    owner: "TBD",
-    notes: "M2 core handoff slice."
+    state: "parity",
+    owner: "runtime",
+    notes: "M1 parity runner wired (legacy-v11 shadow parity active)."
   },
   {
     command: "approval",

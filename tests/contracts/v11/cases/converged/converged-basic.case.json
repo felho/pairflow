@@ -1,0 +1,20 @@
+{
+  "id": "converged-basic",
+  "command": "converged",
+  "mode": "legacy",
+  "description": "converged emits CONVERGENCE and approval routing envelope from legacy entrypoint.",
+  "input": {
+    "summary": "Converged baseline legacy run.",
+    "refs": []
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "CONVERGED_EMITTED",
+    "envelopeType": "CONVERGENCE"
+  },
+  "tags": [
+    "converged",
+    "v11-contract",
+    "legacy"
+  ]
+}

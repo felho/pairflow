@@ -1,0 +1,20 @@
+{
+  "id": "converged-basic-parity",
+  "command": "converged",
+  "mode": "parity",
+  "description": "converged v11 wrapper matches legacy behavior.",
+  "input": {
+    "summary": "Converged baseline parity run.",
+    "refs": []
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "CONVERGED_EMITTED",
+    "envelopeType": "CONVERGENCE"
+  },
+  "tags": [
+    "converged",
+    "v11-contract",
+    "parity"
+  ]
+}
