@@ -1,10 +1,14 @@
+import { execFile } from "node:child_process";
 import { readFile, readdir } from "node:fs/promises";
 import { basename, relative, resolve } from "node:path";
+import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 
 import { readContractCase } from "./runner.js";
 import { runPassContractCase } from "./pass.contract.runner.js";
 import type { ContractCase } from "./schema.js";
+
+const execFileAsync = promisify(execFile);
 
 async function listPassCasePaths(): Promise<string[]> {
   const casesDir = resolve(process.cwd(), "tests/contracts/v11/cases/pass");
@@ -56,6 +60,20 @@ async function listPassCaseSourcesFromManifest(): Promise<string[]> {
   const entries = await listPassManifestEntries();
   return entries
     .map((entry) => entry.source)
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function parsePassSourcesFromManifest(
+  manifestRaw: string
+): string[] {
+  const manifest = JSON.parse(manifestRaw) as {
+    entries?: Array<{ command?: string; source?: string }>;
+  };
+
+  return (manifest.entries ?? [])
+    .filter((entry) => entry.command === "pass")
+    .map((entry) => entry.source)
+    .filter((source): source is string => typeof source === "string")
     .sort((left, right) => left.localeCompare(right));
 }
 
@@ -173,6 +191,27 @@ describe("v11 pass contract harness skeleton", () => {
       const caseDef = await readContractCase(casePath);
       expect(basename(casePath)).toBe(`${caseDef.id}.case.json`);
     }
+  });
+
+  it("builds corpus output manifest with pass seed entries", async () => {
+    await execFileAsync("pnpm", [
+      "exec",
+      "tsx",
+      "./tests/contracts/v11/corpus/build-corpus.ts"
+    ]);
+
+    const casePaths = await listPassCasePaths();
+    const expectedSources = casePaths.map(toRepoRelativePath).sort((left, right) =>
+      left.localeCompare(right)
+    );
+    const outputManifestPath = resolve(
+      process.cwd(),
+      ".pairflow/evidence/contracts-v11-corpus-manifest.json"
+    );
+    const outputRaw = await readFile(outputManifestPath, "utf8");
+    const passSources = parsePassSourcesFromManifest(outputRaw);
+
+    expect(passSources).toEqual(expectedSources);
   });
 
   it("executes legacy, v11 and parity assertions via shared runner", async () => {
