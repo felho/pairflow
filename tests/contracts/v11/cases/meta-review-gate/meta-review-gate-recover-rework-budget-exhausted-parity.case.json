@@ -1,0 +1,25 @@
+{
+  "id": "meta-review-gate-recover-rework-budget-exhausted-parity",
+  "command": "metaReviewGate",
+  "mode": "parity",
+  "description": "Seed contract case for meta-review gate recover rework budget exhausted parity baseline.",
+  "input": {
+    "route": "recover",
+    "recoverScenario": "rework_budget_exhausted",
+    "refs": []
+  },
+  "expected": {
+    "status": "ok",
+    "gateRoute": "human_gate_budget_exhausted",
+    "stateSubset": {
+      "state": "READY_FOR_HUMAN_APPROVAL"
+    }
+  },
+  "tags": [
+    "seed",
+    "m3",
+    "meta-review-gate",
+    "parity"
+  ]
+}
+
