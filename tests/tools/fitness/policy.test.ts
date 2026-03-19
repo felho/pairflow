@@ -36,6 +36,7 @@ describe("fitness policy loader", () => {
               id: "boundary",
               metric: "x",
               mode: "hard-fail",
+              exception_lifecycle_mode: "soft-fail",
               owner: "architecture",
               scope: ["src/v11/**"],
               exceptions: [
@@ -64,6 +65,7 @@ describe("fitness policy loader", () => {
     expect(policy.checks).toHaveLength(1);
     expect(policy.checks[0]?.id).toBe("boundary");
     expect(policy.checks[0]?.scope).toEqual(["src/v11/**"]);
+    expect(policy.checks[0]?.exception_lifecycle_mode).toBe("soft-fail");
     expect(policy.checks[0]?.exceptions?.[0]?.id).toBe("dep-allow-edge-001");
     expect(policy.checks[0]?.exceptions?.[0]?.expires_milestone).toBe("M2");
   });

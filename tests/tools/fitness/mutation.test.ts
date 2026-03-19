@@ -51,6 +51,7 @@ describe("mutation fitness check", () => {
         id: "mutation",
         metric: "mutation boundary and transcript-first pipeline usage",
         mode: "report-only",
+        exception_lifecycle_mode: undefined,
         owner: "architecture/runtime",
         scope: ["src/v11/infrastructure/**"],
         exceptions: []
@@ -84,6 +85,7 @@ describe("mutation fitness check", () => {
         id: "mutation",
         metric: "mutation boundary and transcript-first pipeline usage",
         mode: "report-only",
+        exception_lifecycle_mode: undefined,
         owner: "architecture/runtime",
         scope: ["src/v11/infrastructure/**"],
         exceptions: []

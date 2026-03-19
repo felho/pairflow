@@ -43,6 +43,7 @@ describe("complexity fitness check", () => {
         id: "complexity",
         metric: "file-size and function complexity budget",
         mode: "report-only",
+        exception_lifecycle_mode: undefined,
         owner: "architecture",
         scope: ["src/v11/application/**"],
         exceptions: []
@@ -79,6 +80,7 @@ describe("complexity fitness check", () => {
         id: "complexity",
         metric: "file-size and function complexity budget",
         mode: "report-only",
+        exception_lifecycle_mode: undefined,
         owner: "architecture",
         scope: ["src/v11/domain/**"],
         exceptions: []
@@ -113,6 +115,7 @@ describe("complexity fitness check", () => {
         id: "complexity",
         metric: "file-size and function complexity budget",
         mode: "report-only",
+        exception_lifecycle_mode: undefined,
         owner: "architecture",
         scope: ["src/v11/domain/**"],
         exceptions: []

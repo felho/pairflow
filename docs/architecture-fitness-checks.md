@@ -38,8 +38,12 @@ Rules:
   - `allow-edge` with `from` + `to`.
   - `allow-cycle` with `paths` (array of cycle member files).
 - Lifecycle context is provided via `defaults.current_milestone` in policy.
-  - Expiry semantics (current phase): exception is treated as lifecycle warning when `current_milestone > expires_milestone`.
-  - Example: current `M2`, exception expiry `M1` => warning.
+  - Expiry trigger: `current_milestone > expires_milestone`.
+  - Example: current `M2`, exception expiry `M1` => expired.
+- `dependency` check lifecycle gate mode is policy-driven via `exception_lifecycle_mode`:
+  - `report-only`: expired lifecycle stays `warn`.
+  - `soft-fail`: expired lifecycle is `warn` and surfaced in CI soft-fail summary.
+  - `hard-fail`: expired lifecycle is promoted to `fail` and blocks CI.
 - Exceptions must stay temporary and milestone-bound.
 
 ## Check Definitions

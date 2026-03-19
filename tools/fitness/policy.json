@@ -66,8 +66,19 @@
         "src/v11/**"
       ],
       "mode": "report-only",
+      "exception_lifecycle_mode": "soft-fail",
       "owner": "architecture",
-      "exceptions": []
+      "exceptions": [
+        {
+          "id": "dep-legacy-bridge-seed-m2",
+          "kind": "allow-edge",
+          "owner": "architecture",
+          "reason": "temporary migration bridge seed for lifecycle flow validation",
+          "expires_milestone": "M2",
+          "from": "src/v11/domain/legacy-bridge.ts",
+          "to": "src/v11/application/migration-bridge.ts"
+        }
+      ]
     }
   ]
 }

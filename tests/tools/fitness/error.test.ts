@@ -51,6 +51,7 @@ describe("error fitness check", () => {
         id: "error",
         metric: "error code and context completeness",
         mode: "report-only",
+        exception_lifecycle_mode: undefined,
         owner: "architecture/observability",
         scope: ["src/v11/application/**"],
         exceptions: []
@@ -83,6 +84,7 @@ describe("error fitness check", () => {
         id: "error",
         metric: "error code and context completeness",
         mode: "report-only",
+        exception_lifecycle_mode: undefined,
         owner: "architecture/observability",
         scope: ["src/v11/application/**"],
         exceptions: []
@@ -116,6 +118,7 @@ describe("error fitness check", () => {
         id: "error",
         metric: "error code and context completeness",
         mode: "report-only",
+        exception_lifecycle_mode: undefined,
         owner: "architecture/observability",
         scope: ["src/v11/application/**"],
         exceptions: []

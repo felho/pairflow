@@ -51,6 +51,7 @@ describe("dependency fitness check", () => {
         id: "dependency",
         metric: "cycle and forbidden import direction detection",
         mode: "report-only",
+        exception_lifecycle_mode: undefined,
         owner: "architecture",
         scope: ["src/v11/**"],
         exceptions: []
@@ -84,6 +85,7 @@ describe("dependency fitness check", () => {
         id: "dependency",
         metric: "cycle and forbidden import direction detection",
         mode: "report-only",
+        exception_lifecycle_mode: undefined,
         owner: "architecture",
         scope: ["src/v11/**"],
         exceptions: []
@@ -122,6 +124,7 @@ describe("dependency fitness check", () => {
         id: "dependency",
         metric: "cycle and forbidden import direction detection",
         mode: "report-only",
+        exception_lifecycle_mode: undefined,
         owner: "architecture",
         scope: ["src/v11/**"],
         exceptions: []
@@ -153,6 +156,7 @@ describe("dependency fitness check", () => {
         id: "dependency",
         metric: "cycle and forbidden import direction detection",
         mode: "report-only",
+        exception_lifecycle_mode: undefined,
         owner: "architecture",
         scope: ["src/v11/**"],
         exceptions: [
@@ -200,6 +204,7 @@ describe("dependency fitness check", () => {
         id: "dependency",
         metric: "cycle and forbidden import direction detection",
         mode: "report-only",
+        exception_lifecycle_mode: undefined,
         owner: "architecture",
         scope: ["src/v11/**"],
         exceptions: [
@@ -247,6 +252,7 @@ describe("dependency fitness check", () => {
         id: "dependency",
         metric: "cycle and forbidden import direction detection",
         mode: "report-only",
+        exception_lifecycle_mode: undefined,
         owner: "architecture",
         scope: ["src/v11/**"],
         exceptions: [
@@ -275,6 +281,88 @@ describe("dependency fitness check", () => {
       report.details?.some((detail) =>
         detail.includes("exceptions_expired_ids=dep-allow-edge-expired")
       )
+    ).toBe(true);
+  });
+
+  it("fails when lifecycle mode is hard-fail and exception is expired", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/handler.ts",
+      "export const handler = 1;\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/domain/rule.ts",
+      "import { handler } from '../application/handler.js';\nexport const rule = handler;\n"
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        exception_lifecycle_mode: "hard-fail",
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: [
+          {
+            id: "dep-allow-edge-expired-hard",
+            kind: "allow-edge",
+            owner: "architecture",
+            reason: "temporary migration bridge",
+            expires_milestone: "M1",
+            from: "src/v11/domain/rule.ts",
+            to: "src/v11/application/handler.ts",
+            paths: undefined
+          }
+        ]
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+      currentMilestone: "M2"
+    });
+
+    expect(report.status).toBe("fail");
+    expect(report.mode).toBe("hard-fail");
+    expect(
+      report.summary.includes("exception lifecycle violation")
+    ).toBe(true);
+  });
+
+  it("fails for expired lifecycle exception in hard-fail mode even with zero scoped files", async () => {
+    const repoRoot = await createTempRoot();
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        exception_lifecycle_mode: "hard-fail",
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: [
+          {
+            id: "dep-expired-no-files",
+            kind: "allow-edge",
+            owner: "architecture",
+            reason: "seed",
+            expires_milestone: "M1",
+            from: "src/v11/domain/a.ts",
+            to: "src/v11/application/b.ts",
+            paths: undefined
+          }
+        ]
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+      currentMilestone: "M2"
+    });
+
+    expect(report.status).toBe("fail");
+    expect(report.mode).toBe("hard-fail");
+    expect(
+      report.details?.some((detail) => detail === "files_scanned=0")
     ).toBe(true);
   });
 });

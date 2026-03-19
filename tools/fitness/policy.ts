@@ -83,6 +83,7 @@ function parseCheck(rawCheck: unknown): FitnessPolicyCheck {
     id,
     metric,
     mode: asString(rawCheck.mode),
+    exception_lifecycle_mode: asString(rawCheck.exception_lifecycle_mode),
     owner: asString(rawCheck.owner),
     scope: asStringArray(rawCheck.scope),
     exceptions: parseExceptions(rawCheck.exceptions)

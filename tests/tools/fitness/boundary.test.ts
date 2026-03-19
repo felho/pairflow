@@ -39,6 +39,7 @@ describe("boundary fitness check", () => {
         id: "boundary",
         metric: "forbidden direct state/transcript write",
         mode: undefined,
+        exception_lifecycle_mode: undefined,
         owner: "architecture",
         scope: undefined,
         exceptions: undefined
@@ -68,6 +69,7 @@ describe("boundary fitness check", () => {
         id: "boundary",
         metric: "forbidden direct state/transcript write",
         mode: "report-only",
+        exception_lifecycle_mode: undefined,
         owner: "architecture",
         scope: ["src/v11/application/**"],
         exceptions: []

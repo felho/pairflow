@@ -36,6 +36,13 @@ function shouldBlock(check: FitnessReport["checks"][number]): boolean {
   return blockingMode && check.status === "fail";
 }
 
+function isSoftFailWarning(check: FitnessReport["checks"][number]): boolean {
+  if (check.mode !== "soft-fail") {
+    return false;
+  }
+  return check.status === "warn" || check.status === "fail";
+}
+
 async function main() {
   const scriptDir = resolve(dirname(fileURLToPath(import.meta.url)));
   const repoRoot = resolve(scriptDir, "../..");
@@ -55,12 +62,19 @@ async function main() {
   });
 
   const blockingFailures = report.checks.filter(shouldBlock);
+  const softFailWarnings = report.checks.filter(isSoftFailWarning);
   if (blockingFailures.length > 0) {
     process.stderr.write(
       `fitness:check blocked (${blockingFailures.length} hard-fail violation).\n`
     );
     process.exitCode = 1;
     return;
+  }
+
+  if (softFailWarnings.length > 0) {
+    process.stderr.write(
+      `fitness:check soft-fail warnings (${softFailWarnings.length}) - merge allowed.\n`
+    );
   }
 
   process.stdout.write(

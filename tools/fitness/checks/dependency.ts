@@ -78,6 +78,20 @@ function parseMilestoneOrdinal(raw: string): number | undefined {
   return Number.parseInt(match[1] ?? "", 10);
 }
 
+function resolveLifecycleMode(input: {
+  lifecycleMode: string | undefined;
+  checkMode: string;
+}): "report-only" | "soft-fail" | "hard-fail" {
+  const candidate = (input.lifecycleMode ?? input.checkMode).toLowerCase();
+  if (candidate === "hard-fail") {
+    return "hard-fail";
+  }
+  if (candidate === "soft-fail") {
+    return "soft-fail";
+  }
+  return "report-only";
+}
+
 function parseDependencyExceptions(input: {
   repoRoot: string;
   exceptions: readonly FitnessPolicyException[] | undefined;
@@ -485,6 +499,18 @@ export async function buildDependencyCheckReport({
   currentMilestone: string | undefined;
 }): Promise<FitnessReportCheck> {
   const mode = check.mode ?? fallbackMode;
+  const lifecycleMode = resolveLifecycleMode({
+    lifecycleMode: check.exception_lifecycle_mode,
+    checkMode: mode
+  });
+  const parsedExceptions = parseDependencyExceptions({
+    repoRoot,
+    exceptions: check.exceptions,
+    currentMilestone
+  });
+  const lifecycleWarnCount =
+    parsedExceptions.lifecycle.expiredIds.length
+    + parsedExceptions.lifecycle.invalidLifecycle.length;
   const scope = check.scope ?? [];
   if (scope.length === 0) {
     return {
@@ -500,6 +526,60 @@ export async function buildDependencyCheckReport({
 
   const files = await resolveFilesForScopePatterns(repoRoot, scope);
   if (files.length === 0) {
+    const details = [
+      `scope=${scope.join(", ")}`,
+      "files_scanned=0",
+      `exceptions_configured=${String(check.exceptions?.length ?? 0)}`,
+      "exceptions_applied=0",
+      `exception_lifecycle_mode=${lifecycleMode}`
+    ];
+    if (parsedExceptions.lifecycle.currentMilestone !== undefined) {
+      details.push(`current_milestone=${parsedExceptions.lifecycle.currentMilestone}`);
+    }
+    if (parsedExceptions.invalid.length > 0) {
+      details.push(`exceptions_invalid=${String(parsedExceptions.invalid.length)}`);
+      details.push(...parsedExceptions.invalid.slice(0, 10));
+    }
+    if (parsedExceptions.lifecycle.expiredIds.length > 0) {
+      details.push(
+        `exceptions_expired=${String(parsedExceptions.lifecycle.expiredIds.length)}`
+      );
+      details.push(
+        `exceptions_expired_ids=${parsedExceptions.lifecycle.expiredIds.join(", ")}`
+      );
+    }
+    if (parsedExceptions.lifecycle.invalidLifecycle.length > 0) {
+      details.push(
+        `exceptions_lifecycle_invalid=${String(parsedExceptions.lifecycle.invalidLifecycle.length)}`
+      );
+      details.push(...parsedExceptions.lifecycle.invalidLifecycle.slice(0, 10));
+    }
+
+    if (lifecycleWarnCount > 0) {
+      if (lifecycleMode === "hard-fail") {
+        return {
+          id: check.id,
+          owner: check.owner ?? "unknown",
+          mode: lifecycleMode,
+          status: "fail",
+          summary:
+            `Dependency check blocked: ${String(lifecycleWarnCount)} exception lifecycle violation(s) detected under hard-fail mode (0 scoped files).`,
+          metric: check.metric,
+          details
+        };
+      }
+      return {
+        id: check.id,
+        owner: check.owner ?? "unknown",
+        mode: lifecycleMode,
+        status: "warn",
+        summary:
+          `Dependency check warning: no scoped files matched, but ${String(lifecycleWarnCount)} exception lifecycle warning(s) detected (${lifecycleMode}).`,
+        metric: check.metric,
+        details
+      };
+    }
+
     return {
       id: check.id,
       owner: check.owner ?? "unknown",
@@ -507,7 +587,7 @@ export async function buildDependencyCheckReport({
       status: "pass",
       summary: "Dependency check passed: no files matched current scope.",
       metric: check.metric,
-      details: [`scope=${scope.join(", ")}`]
+      details
     };
   }
 
@@ -533,20 +613,12 @@ export async function buildDependencyCheckReport({
       edges
     })
   ];
-  const parsedExceptions = parseDependencyExceptions({
-    repoRoot,
-    exceptions: check.exceptions,
-    currentMilestone
-  });
   const filtered = filterDependencyViolationsByExceptions({
     violations: allViolations,
     edgeAllowlist: parsedExceptions.edgeAllowlist,
     cycleAllowlist: parsedExceptions.cycleAllowlist
   });
   const violations = filtered.violations;
-  const lifecycleWarnCount =
-    parsedExceptions.lifecycle.expiredIds.length
-    + parsedExceptions.lifecycle.invalidLifecycle.length;
 
   if (violations.length === 0) {
     const details = [
@@ -554,7 +626,8 @@ export async function buildDependencyCheckReport({
       `files_scanned=${String(files.length)}`,
       `import_edges=${String(edges.length)}`,
       `exceptions_configured=${String(check.exceptions?.length ?? 0)}`,
-      `exceptions_applied=${String(filtered.appliedExceptionIds.length)}`
+      `exceptions_applied=${String(filtered.appliedExceptionIds.length)}`,
+      `exception_lifecycle_mode=${lifecycleMode}`
     ];
     if (parsedExceptions.lifecycle.currentMilestone !== undefined) {
       details.push(`current_milestone=${parsedExceptions.lifecycle.currentMilestone}`);
@@ -583,13 +656,25 @@ export async function buildDependencyCheckReport({
       );
     }
     if (lifecycleWarnCount > 0) {
+      if (lifecycleMode === "hard-fail") {
+        return {
+          id: check.id,
+          owner: check.owner ?? "unknown",
+          mode: lifecycleMode,
+          status: "fail",
+          summary:
+            `Dependency check blocked: ${String(lifecycleWarnCount)} exception lifecycle violation(s) detected under hard-fail mode.`,
+          metric: check.metric,
+          details
+        };
+      }
       return {
         id: check.id,
         owner: check.owner ?? "unknown",
-        mode,
+        mode: lifecycleMode,
         status: "warn",
         summary:
-          `Dependency check warning: no active cycle/layer violations, but ${String(lifecycleWarnCount)} exception lifecycle warning(s) detected.`,
+          `Dependency check warning: no active cycle/layer violations, but ${String(lifecycleWarnCount)} exception lifecycle warning(s) detected (${lifecycleMode}).`,
         metric: check.metric,
         details
       };
@@ -608,6 +693,7 @@ export async function buildDependencyCheckReport({
   const details = summarizeDependencyViolations(violations);
   details.push(`exceptions_configured=${String(check.exceptions?.length ?? 0)}`);
   details.push(`exceptions_applied=${String(filtered.appliedExceptionIds.length)}`);
+  details.push(`exception_lifecycle_mode=${lifecycleMode}`);
   if (parsedExceptions.lifecycle.currentMilestone !== undefined) {
     details.push(`current_milestone=${parsedExceptions.lifecycle.currentMilestone}`);
   }
