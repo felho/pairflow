@@ -1,6 +1,6 @@
 import { applyStateTransition } from "../state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
-import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
+import { resolveBubbleById } from "./bubbleLookup.js";
 import { shellQuote } from "../util/shellQuote.js";
 import { buildAgentCommand } from "../runtime/agentCommand.js";
 import { spawn } from "node:child_process";
@@ -12,22 +12,17 @@ import {
 } from "../protocol/resumeSummary.js";
 import {
   bootstrapWorktreeWorkspace,
-  cleanupWorktreeWorkspace,
-  WorkspaceBootstrapError
+  cleanupWorktreeWorkspace
 } from "../workspace/worktreeManager.js";
 import {
   buildBubbleTmuxSessionName,
   launchBubbleTmuxSession,
   runTmux,
-  terminateBubbleTmuxSession,
-  TmuxCommandError,
-  TmuxSessionExistsError
+  terminateBubbleTmuxSession
 } from "../runtime/tmuxManager.js";
 import {
   claimRuntimeSession,
-  removeRuntimeSession,
-  RuntimeSessionsRegistryError,
-  RuntimeSessionsRegistryLockError
+  removeRuntimeSession
 } from "../runtime/sessionsRegistry.js";
 import { buildReviewerAgentSelectionGuidance } from "../runtime/reviewerGuidance.js";
 import { buildReviewerSeverityOntologyReminder } from "../runtime/reviewerSeverityOntology.js";
@@ -62,51 +57,26 @@ import {
   type ReviewerFocusExtractionResult
 } from "../reviewer/reviewerBrief.js";
 import type {
+  RunWorktreeBootstrapCommandInput,
+  StartBubbleDependencies,
+  StartBubbleInput,
+  StartBubbleResult
+} from "../../v11/application/start/startCommandContract.js";
+import {
+  StartBubbleError,
+  throwAsStartBubbleError
+} from "../../v11/shared/start/startCommandRuntime.js";
+import type {
   BubbleStateSnapshot,
   PairflowCommandProfile,
   ReviewArtifactType
 } from "../../types/bubble.js";
-
-export interface StartBubbleInput {
-  bubbleId: string;
-  repoPath?: string | undefined;
-  cwd?: string | undefined;
-  now?: Date | undefined;
-}
-
-export interface StartBubbleResult {
-  bubbleId: string;
-  state: BubbleStateSnapshot;
-  tmuxSessionName: string;
-  worktreePath: string;
-}
-
-export interface StartBubbleDependencies {
-  bootstrapWorktreeWorkspace?: typeof bootstrapWorktreeWorkspace;
-  cleanupWorktreeWorkspace?: typeof cleanupWorktreeWorkspace;
-  runWorktreeBootstrapCommand?:
-    | ((input: RunWorktreeBootstrapCommandInput) => Promise<void>)
-    | undefined;
-  launchBubbleTmuxSession?: typeof launchBubbleTmuxSession;
-  terminateBubbleTmuxSession?: typeof terminateBubbleTmuxSession;
-  isTmuxSessionAlive?: ((sessionName: string) => Promise<boolean>) | undefined;
-  claimRuntimeSession?: typeof claimRuntimeSession;
-  removeRuntimeSession?: typeof removeRuntimeSession;
-  buildResumeTranscriptSummary?: typeof buildResumeTranscriptSummary;
-}
-
-export class StartBubbleError extends Error {
-  public constructor(message: string) {
-    super(message);
-    this.name = "StartBubbleError";
-  }
-}
-
-interface RunWorktreeBootstrapCommandInput {
-  bubbleId: string;
-  worktreePath: string;
-  command: string;
-}
+export type {
+  StartBubbleDependencies,
+  StartBubbleInput,
+  StartBubbleResult
+} from "../../v11/application/start/startCommandContract.js";
+export { StartBubbleError };
 
 function truncateCommandOutput(raw: string, maxChars: number = 1200): string {
   const normalized = raw.trim();
@@ -1237,26 +1207,5 @@ export async function startBubble(
 }
 
 export function asStartBubbleError(error: unknown): never {
-  if (error instanceof StartBubbleError) {
-    throw error;
-  }
-  if (error instanceof BubbleLookupError) {
-    throw new StartBubbleError(error.message);
-  }
-  if (error instanceof WorkspaceBootstrapError) {
-    throw new StartBubbleError(error.message);
-  }
-  if (error instanceof TmuxCommandError || error instanceof TmuxSessionExistsError) {
-    throw new StartBubbleError(error.message);
-  }
-  if (
-    error instanceof RuntimeSessionsRegistryError ||
-    error instanceof RuntimeSessionsRegistryLockError
-  ) {
-    throw new StartBubbleError(error.message);
-  }
-  if (error instanceof Error) {
-    throw new StartBubbleError(error.message);
-  }
-  throw error;
+  return throwAsStartBubbleError(error);
 }
