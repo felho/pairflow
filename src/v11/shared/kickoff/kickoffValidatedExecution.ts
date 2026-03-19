@@ -76,11 +76,25 @@ function buildKickoffMutationPipelineInput(input: {
   };
 }
 
+function buildKickoffValidatedSuccessResult(input: {
+  validation: KickoffPreparedValidation;
+  writtenState: {
+    state: KickoffPreparedValidation["state"];
+  };
+}): KickoffBubbleResultShape {
+  return buildKickoffSuccessResult({
+    bubbleId: input.validation.resolved.bubbleId,
+    markersBefore: input.validation.markersBefore,
+    stateBefore: input.validation.state,
+    stateAfter: input.writtenState.state
+  });
+}
+
 export async function executeKickoffValidatedFlow(
   input: ExecuteKickoffValidatedFlowInput,
   dependencies: ResolvedKickoffDependencies
 ): Promise<KickoffBubbleResultShape> {
-  const { resolved, state, markersBefore } = input.validation;
+  const { resolved, state } = input.validation;
 
   const nextState = buildKickoffNextState({
     state,
@@ -126,10 +140,8 @@ export async function executeKickoffValidatedFlow(
     });
   }
 
-  return buildKickoffSuccessResult({
-    bubbleId: resolved.bubbleId,
-    markersBefore,
-    stateBefore: state,
-    stateAfter: writtenState.state
+  return buildKickoffValidatedSuccessResult({
+    validation: input.validation,
+    writtenState
   });
 }
