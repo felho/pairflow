@@ -1,11 +1,13 @@
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { AgentName } from "../../../types/bubble.js";
 import type { ProtocolEnvelopeDraft } from "../../../core/protocol/transcriptStore.js";
-import type { ExecuteKickoffMutationInput } from "./kickoffMutationExecution.js";
-import type { ExecuteKickoffMutationRollbackInput } from "./kickoffMutationRollback.js";
 import type { ResolvedKickoffTaskInput } from "./kickoffTaskInputResolution.js";
 import { executeKickoffMutation } from "./kickoffMutationExecution.js";
 import { executeKickoffMutationRollback } from "./kickoffMutationRollback.js";
+import {
+  buildKickoffMutationExecutionInput,
+  buildKickoffMutationRollbackInput
+} from "./kickoffMutationPipelineInputBuilders.js";
 
 export interface ExecuteKickoffMutationPipelineInput {
   persistenceFailureCode: string;
@@ -82,44 +84,6 @@ function buildKickoffMutationPipelineSuccessResult(): ExecuteKickoffMutationPipe
 function buildKickoffMutationPipelineRolledBackResult(): ExecuteKickoffMutationPipelineResult {
   return {
     kind: "mutation_failed_rolled_back"
-  };
-}
-
-function buildKickoffMutationExecutionInput(
-  input: ExecuteKickoffMutationPipelineInput
-): ExecuteKickoffMutationInput {
-  return {
-    bubbleId: input.bubbleId,
-    implementer: input.implementer,
-    task: input.task,
-    taskArtifactPath: input.taskArtifactPath,
-    bubbleTomlPath: input.bubbleTomlPath,
-    nextBubbleToml: input.nextBubbleToml,
-    transcriptPath: input.transcriptPath,
-    locksDir: input.locksDir,
-    now: input.now,
-    writeFile: input.writeFile,
-    readFile: input.readFile,
-    appendEnvelope: input.appendEnvelope
-  };
-}
-
-function buildKickoffMutationRollbackInput(input: {
-  pipelineInput: ExecuteKickoffMutationPipelineInput;
-  transcriptBackup: string | null;
-}): ExecuteKickoffMutationRollbackInput {
-  return {
-    transcriptBackup: input.transcriptBackup,
-    transcriptPath: input.pipelineInput.transcriptPath,
-    taskArtifactPath: input.pipelineInput.taskArtifactPath,
-    previousTaskArtifact: input.pipelineInput.previousTaskArtifact,
-    bubbleTomlPath: input.pipelineInput.bubbleTomlPath,
-    previousBubbleToml: input.pipelineInput.previousBubbleToml,
-    statePath: input.pipelineInput.statePath,
-    previousState: input.pipelineInput.previousState,
-    writtenStateFingerprint: input.pipelineInput.writtenStateFingerprint,
-    writeFile: input.pipelineInput.writeFile,
-    writeState: input.pipelineInput.writeState
   };
 }
 
