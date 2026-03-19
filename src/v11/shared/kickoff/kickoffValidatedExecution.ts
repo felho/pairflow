@@ -90,6 +90,47 @@ function buildKickoffValidatedSuccessResult(input: {
   });
 }
 
+type PersistKickoffNextStateResult =
+  | {
+      kind: "failure";
+      result: KickoffBubbleResultShape;
+    }
+  | {
+      kind: "written";
+      writtenState: {
+        state: KickoffPreparedValidation["state"];
+        fingerprint: string;
+      };
+    };
+
+async function persistKickoffNextStateOrFailure(input: {
+  validation: KickoffPreparedValidation;
+  nextState: ReturnType<typeof buildKickoffNextState>;
+  dependencies: ResolvedKickoffDependencies;
+}): Promise<PersistKickoffNextStateResult> {
+  const statePersistenceResult = await persistKickoffState(
+    buildKickoffStatePersistenceInput({
+      validation: input.validation,
+      nextState: input.nextState,
+      dependencies: input.dependencies
+    })
+  );
+  if (statePersistenceResult.kind === "conflict") {
+    return {
+      kind: "failure",
+      result: buildKickoffPersistenceFailureResult({
+        validation: input.validation,
+        reasonCode: IDEATION_KICKOFF_STATE_CONFLICT
+      })
+    };
+  }
+
+  return {
+    kind: "written",
+    writtenState: statePersistenceResult.writtenState
+  };
+}
+
 export async function executeKickoffValidatedFlow(
   input: ExecuteKickoffValidatedFlowInput,
   dependencies: ResolvedKickoffDependencies
@@ -109,20 +150,15 @@ export async function executeKickoffValidatedFlow(
     readFile: dependencies.readFileFn
   });
 
-  const statePersistenceResult = await persistKickoffState(
-    buildKickoffStatePersistenceInput({
-      validation: input.validation,
-      nextState,
-      dependencies
-    })
-  );
-  if (statePersistenceResult.kind === "conflict") {
-    return buildKickoffPersistenceFailureResult({
-      validation: input.validation,
-      reasonCode: IDEATION_KICKOFF_STATE_CONFLICT
-    });
+  const persistedState = await persistKickoffNextStateOrFailure({
+    validation: input.validation,
+    nextState,
+    dependencies
+  });
+  if (persistedState.kind === "failure") {
+    return persistedState.result;
   }
-  const writtenState = statePersistenceResult.writtenState;
+  const writtenState = persistedState.writtenState;
 
   const mutationPipelineResult = await executeKickoffMutationPipeline(
     buildKickoffMutationPipelineInput({
