@@ -1,10 +1,5 @@
 import {
-  type AgentName
-} from "../../types/bubble.js";
-import {
-  runConvergedFlow,
-  type RunConvergedFlowDependencies,
-  type RunConvergedFlowResult
+  runConvergedFlow
 } from "../../v11/application/converged/runConvergedFlow.js";
 import {
   buildConvergedCommandFlowInvocation,
@@ -16,29 +11,19 @@ import {
   createConvergedCommandError,
   isConvergedCommandError
 } from "../../v11/shared/converged/convergedCommandError.js";
+import type {
+  EmitConvergedDependencies,
+  EmitConvergedInput,
+  EmitConvergedResult
+} from "../../v11/shared/converged/convergedCommandTypes.js";
 import { resolveConvergedRolloutBlockingReasonCodes as resolveMetaReviewRolloutBlockingReasonCodes } from "../../v11/shared/converged/convergedRolloutBlockingReasonResolver.js";
 export { resolveMetaReviewRolloutBlockingReasonCodes };
 export { ConvergedCommandError };
-
-export interface EmitConvergedInput {
-  summary: string;
-  refs?: string[];
-  cwd?: string;
-  now?: Date;
-  expectedStateFingerprint?: string;
-  expectedRound?: number;
-  expectedReviewer?: AgentName;
-}
-
-export type EmitConvergedDependencies = Pick<
-  RunConvergedFlowDependencies,
-  | "emitTmuxDeliveryNotification"
-  | "emitBubbleNotification"
-  | "applyMetaReviewGateOnConvergence"
-  | "recoverMetaReviewGateFromSnapshot"
->;
-
-export type EmitConvergedResult = RunConvergedFlowResult;
+export type {
+  EmitConvergedDependencies,
+  EmitConvergedInput,
+  EmitConvergedResult
+};
 
 export async function emitConvergedFromWorkspace(
   input: EmitConvergedInput,
