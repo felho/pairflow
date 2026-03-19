@@ -1,7 +1,6 @@
 import type { readFile, writeFile } from "node:fs/promises";
 
 import type { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
-import { StateStoreConflictError } from "../state/stateStore.js";
 import type { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import type { resolveBubbleById } from "./bubbleLookup.js";
 import {
@@ -21,6 +20,7 @@ import { executeKickoffMutationRollback } from "../../v11/shared/kickoff/kickoff
 import { prepareKickoffPersistence } from "../../v11/shared/kickoff/kickoffPersistencePreparation.js";
 import { executeKickoffMutation } from "../../v11/shared/kickoff/kickoffMutationExecution.js";
 import { resolveKickoffDependencies } from "../../v11/shared/kickoff/kickoffDependencyResolution.js";
+import { writeKickoffState } from "../../v11/shared/kickoff/kickoffStateWrite.js";
 import {
   buildKickoffFailureResult,
   buildKickoffSuccessResult,
@@ -132,27 +132,21 @@ export async function kickoffBubble(
     readFile: readFileFn
   });
 
-  let writtenState;
-  try {
-    writtenState = await writeState(
-      resolved.bubblePaths.statePath,
-      nextState,
-      {
-        expectedFingerprint: loadedState.fingerprint,
-        expectedState: "RUNNING"
-      }
-    );
-  } catch (error) {
-    if (error instanceof StateStoreConflictError) {
-      return buildKickoffFailureResult({
-        bubbleId: resolved.bubbleId,
-        reasonCode: IDEATION_KICKOFF_STATE_CONFLICT,
-        stateBefore: state,
-        markersBefore
-      });
-    }
-    throw error;
+  const stateWriteResult = await writeKickoffState({
+    statePath: resolved.bubblePaths.statePath,
+    nextState,
+    expectedFingerprint: loadedState.fingerprint,
+    writeState
+  });
+  if (stateWriteResult.kind === "conflict") {
+    return buildKickoffFailureResult({
+      bubbleId: resolved.bubbleId,
+      reasonCode: IDEATION_KICKOFF_STATE_CONFLICT,
+      stateBefore: state,
+      markersBefore
+    });
   }
+  const writtenState = stateWriteResult.writtenState;
 
   let transcriptBackup: string | null = null;
   try {
