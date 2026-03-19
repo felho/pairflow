@@ -6,10 +6,10 @@ import type { PairflowCommandPathAssessment } from "../../../core/runtime/pairfl
 import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import type { SummaryVerifierConsistencyGateDecisionRecord } from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
 import type {
-  applyMetaReviewGateOnConvergenceV11,
-  recoverMetaReviewGateFromSnapshotV11
-} from "../metaReviewGate/emitMetaReviewGateV11.js";
-import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateCommandContract.js";
+  applyMetaReviewGateOnConvergence,
+  recoverMetaReviewGateFromSnapshot
+} from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
+import type { MetaReviewGateRoute } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 import type {
   AgentName,
   BubbleRoundGateState,
@@ -21,8 +21,8 @@ import type { ProtocolEnvelope } from "../../../types/protocol.js";
 interface ExecuteConvergedExecutionDependencies {
   emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
   emitBubbleNotification?: typeof emitBubbleNotification;
-  applyMetaReviewGateOnConvergence?: typeof applyMetaReviewGateOnConvergenceV11;
-  recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshotV11;
+  applyMetaReviewGateOnConvergence?: typeof applyMetaReviewGateOnConvergence;
+  recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshot;
 }
 
 export interface RunConvergedFlowInput {
