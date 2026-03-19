@@ -78,20 +78,20 @@ function resolveKickoffTaskFromInlineInput(input: {
   };
 }
 
-export function renderKickoffTaskArtifact(task: ResolvedKickoffTaskInput): string {
-  const sourceLine =
-    task.source === "file"
-      ? `Source: file (${task.sourcePath})`
-      : "Source: inline text";
+type KickoffTaskInputMode =
+  | {
+      kind: "file";
+      taskFile: string;
+    }
+  | {
+      kind: "inline";
+      task: string;
+    };
 
-  return `# Bubble Task\n\n${sourceLine}\n\n${task.content}\n`;
-}
-
-export async function resolveKickoffTaskInput(input: {
+function resolveKickoffTaskInputMode(input: {
   task?: string;
   taskFile?: string;
-  cwd: string;
-}): Promise<ResolvedKickoffTaskInput> {
+}): KickoffTaskInputMode {
   const hasTaskText = isNonEmptyString(input.task);
   const hasTaskFile = isNonEmptyString(input.taskFile);
   if (hasTaskText && hasTaskFile) {
@@ -106,13 +106,42 @@ export async function resolveKickoffTaskInput(input: {
   }
 
   if (hasTaskFile) {
+    return {
+      kind: "file",
+      taskFile: input.taskFile as string
+    };
+  }
+
+  return {
+    kind: "inline",
+    task: input.task as string
+  };
+}
+
+export function renderKickoffTaskArtifact(task: ResolvedKickoffTaskInput): string {
+  const sourceLine =
+    task.source === "file"
+      ? `Source: file (${task.sourcePath})`
+      : "Source: inline text";
+
+  return `# Bubble Task\n\n${sourceLine}\n\n${task.content}\n`;
+}
+
+export async function resolveKickoffTaskInput(input: {
+  task?: string;
+  taskFile?: string;
+  cwd: string;
+}): Promise<ResolvedKickoffTaskInput> {
+  const mode = resolveKickoffTaskInputMode(input);
+
+  if (mode.kind === "file") {
     return resolveKickoffTaskFromFileInput({
-      taskFile: input.taskFile as string,
+      taskFile: mode.taskFile,
       cwd: input.cwd
     });
   }
 
   return resolveKickoffTaskFromInlineInput({
-    task: input.task as string
+    task: mode.task
   });
 }
