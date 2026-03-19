@@ -24,6 +24,10 @@ describe("v11 askHuman contract harness skeleton", () => {
       ),
       resolve(
         process.cwd(),
+        "tests/contracts/v11/cases/ask-human/ask-human-basic-v11.case.json"
+      ),
+      resolve(
+        process.cwd(),
         "tests/contracts/v11/cases/ask-human/ask-human-basic-parity.case.json"
       )
     ];

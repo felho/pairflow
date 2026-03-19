@@ -1,0 +1,25 @@
+{
+  "id": "ask-human-basic-v11",
+  "command": "askHuman",
+  "mode": "v11",
+  "description": "ask-human v11 entrypoint emits HUMAN_QUESTION and transitions to WAITING_HUMAN.",
+  "input": {
+    "question": "Need product clarification on rollout strategy?",
+    "refs": [
+      "artifact://analysis/rollout-plan.md"
+    ]
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "ASK_HUMAN_EMITTED",
+    "envelopeType": "HUMAN_QUESTION",
+    "stateSubset": {
+      "state": "WAITING_HUMAN"
+    }
+  },
+  "tags": [
+    "ask-human",
+    "v11-contract",
+    "v11"
+  ]
+}
