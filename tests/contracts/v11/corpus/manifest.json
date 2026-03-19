@@ -201,6 +201,12 @@
       "kind": "seed_case"
     },
     {
+      "id": "meta-review-gate-recover-approve-parity",
+      "command": "metaReviewGate",
+      "source": "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-approve-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "reply-basic",
       "command": "reply",
       "source": "tests/contracts/v11/cases/reply/reply-basic.case.json",
