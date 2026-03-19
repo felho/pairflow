@@ -5,7 +5,7 @@ export {
   resolveMetaReviewRolloutBlockingReasonCodesV11 as resolveMetaReviewRolloutBlockingReasonCodes
 } from "../../v11/application/converged/emitConvergedV11.js";
 export type {
-  EmitConvergedDependencies,
-  EmitConvergedInput,
-  EmitConvergedResult
+  EmitConvergedV11Dependencies as EmitConvergedDependencies,
+  EmitConvergedV11Input as EmitConvergedInput,
+  EmitConvergedV11Result as EmitConvergedResult
 } from "../../v11/application/converged/emitConvergedV11.js";
