@@ -5,6 +5,8 @@ import { emitBubbleNotification } from "../runtime/notifications.js";
 import {
   emitTmuxDeliveryNotification
 } from "../runtime/tmuxDelivery.js";
+import { executeAskHumanExecution } from "../../v11/application/askHuman/askHumanExecution.js";
+import { finalizeAskHumanFlow } from "../../v11/application/askHuman/askHumanFinalization.js";
 import { runAskHumanFlow } from "../../v11/application/askHuman/runAskHumanFlow.js";
 import { prepareAskHumanRouting } from "../../v11/application/askHuman/askHumanRoutingPreparation.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
@@ -61,6 +63,8 @@ export async function emitAskHumanFromWorkspace(
       createError: (message) => new AskHumanCommandError(message)
     },
     {
+      executeAskHumanExecution,
+      finalizeAskHumanFlow,
       ...(dependencies.emitTmuxDeliveryNotification !== undefined
         ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
         : { emitTmuxDeliveryNotification }),
