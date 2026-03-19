@@ -167,4 +167,24 @@ describe("v11 askHuman contract harness skeleton", () => {
       "askHuman contract input.refs must be a string array."
     );
   });
+
+  it("rejects invalid ask-human contract input in v11 mode when question is empty", async () => {
+    const invalidCase: ContractCase = {
+      id: "ask-human-invalid-empty-question-v11",
+      command: "askHuman",
+      mode: "v11",
+      description: "invalid empty question validation for v11 mode",
+      input: {
+        question: "   ",
+        refs: []
+      },
+      expected: {
+        status: "ok"
+      }
+    };
+
+    await expect(runAskHumanContractCase(invalidCase)).rejects.toThrow(
+      "askHuman contract input.question must be a non-empty string."
+    );
+  });
 });
