@@ -2,62 +2,33 @@ import { resolve } from "node:path";
 
 import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
 import { runGit, branchExists, type GitRunResult, GitCommandError } from "../workspace/git.js";
-import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
+import { resolveBubbleById } from "./bubbleLookup.js";
 import {
-  cleanupWorktreeWorkspace,
-  WorkspaceCleanupError
+  cleanupWorktreeWorkspace
 } from "../workspace/worktreeManager.js";
 import {
-  terminateBubbleTmuxSession,
-  TmuxCommandError
+  terminateBubbleTmuxSession
 } from "../runtime/tmuxManager.js";
 import {
-  removeRuntimeSession,
-  RuntimeSessionsRegistryError,
-  RuntimeSessionsRegistryLockError
+  removeRuntimeSession
 } from "../runtime/sessionsRegistry.js";
 import { ensureBubbleInstanceIdForMutation } from "./bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
-
-export interface MergeBubbleInput {
-  bubbleId: string;
-  repoPath?: string | undefined;
-  cwd?: string | undefined;
-  push?: boolean | undefined;
-  deleteRemote?: boolean | undefined;
-  now?: Date | undefined;
-}
-
-export interface MergeBubbleResult {
-  bubbleId: string;
-  baseBranch: string;
-  bubbleBranch: string;
-  mergeCommitSha: string;
-  pushedBaseBranch: boolean;
-  deletedRemoteBranch: boolean;
-  tmuxSessionName: string;
-  tmuxSessionExisted: boolean;
-  runtimeSessionRemoved: boolean;
-  removedWorktree: boolean;
-  removedBubbleBranch: boolean;
-}
-
-export interface MergeBubbleDependencies {
-  terminateBubbleTmuxSession?: typeof terminateBubbleTmuxSession;
-  removeRuntimeSession?: typeof removeRuntimeSession;
-  cleanupWorktreeWorkspace?: typeof cleanupWorktreeWorkspace;
-  runGit?: (
-    args: string[],
-    options: { cwd: string; allowFailure?: boolean }
-  ) => Promise<GitRunResult>;
-}
-
-export class BubbleMergeError extends Error {
-  public constructor(message: string) {
-    super(message);
-    this.name = "BubbleMergeError";
-  }
-}
+import type {
+  MergeBubbleDependencies,
+  MergeBubbleInput,
+  MergeBubbleResult
+} from "../../v11/application/merge/mergeCommandContract.js";
+import {
+  BubbleMergeError,
+  throwAsBubbleMergeError
+} from "../../v11/shared/merge/mergeCommandErrorRuntime.js";
+export type {
+  MergeBubbleDependencies,
+  MergeBubbleInput,
+  MergeBubbleResult
+} from "../../v11/application/merge/mergeCommandContract.js";
+export { BubbleMergeError } from "../../v11/shared/merge/mergeCommandErrorRuntime.js";
 
 type GitRunner = (
   args: string[],
@@ -300,29 +271,5 @@ export async function mergeBubble(
 }
 
 export function asBubbleMergeError(error: unknown): never {
-  if (error instanceof BubbleMergeError) {
-    throw error;
-  }
-  if (error instanceof BubbleLookupError) {
-    throw new BubbleMergeError(error.message);
-  }
-  if (error instanceof GitCommandError) {
-    throw new BubbleMergeError(error.message);
-  }
-  if (error instanceof WorkspaceCleanupError) {
-    throw new BubbleMergeError(error.message);
-  }
-  if (error instanceof TmuxCommandError) {
-    throw new BubbleMergeError(error.message);
-  }
-  if (
-    error instanceof RuntimeSessionsRegistryError ||
-    error instanceof RuntimeSessionsRegistryLockError
-  ) {
-    throw new BubbleMergeError(error.message);
-  }
-  if (error instanceof Error) {
-    throw new BubbleMergeError(error.message);
-  }
-  throw error;
+  throwAsBubbleMergeError(error);
 }
