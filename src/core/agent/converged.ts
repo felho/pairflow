@@ -1,17 +1,9 @@
 import { join } from "node:path";
 
 import { appendProtocolEnvelope, readTranscriptEnvelopes } from "../protocol/transcriptStore.js";
-import { readStateSnapshot } from "../state/stateStore.js";
 import { validateConvergencePolicy } from "../convergence/policy.js";
 import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
-import {
-  resolveBubbleFromWorkspaceCwd,
-  WorkspaceResolutionError
-} from "../bubble/workspaceResolution.js";
-import {
-  IDEATION_CONVERGED_BLOCKED,
-  resolveIdeationMetadata
-} from "../bubble/ideation.js";
+import { WorkspaceResolutionError } from "../bubble/workspaceResolution.js";
 import { emitBubbleNotification } from "../runtime/notifications.js";
 import {
   emitTmuxDeliveryNotification,
@@ -19,7 +11,6 @@ import {
   type EmitTmuxDeliveryNotificationResult
 } from "../runtime/tmuxDelivery.js";
 import { assessPairflowCommandPath } from "../runtime/pairflowCommand.js";
-import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import { readReviewVerificationArtifactStatus } from "../reviewer/reviewVerification.js";
 import {
@@ -45,15 +36,16 @@ import {
 } from "../bubble/metaReviewGate.js";
 import type {
   AgentName,
+  BubbleStateSnapshot,
   BubbleRoundGateState,
-  BubbleSpecLockState,
-  BubbleStateSnapshot
+  BubbleSpecLockState
 } from "../../types/bubble.js";
 import {
   deliveryTargetRoleMetadataKey,
   type DeliveryTargetRole,
   type ProtocolEnvelope
 } from "../../types/protocol.js";
+import { prepareConvergedRouting } from "../../v11/application/converged/convergedRoutingPreparation.js";
 
 export interface EmitConvergedInput {
   summary: string;
@@ -183,41 +175,6 @@ export function resolveMetaReviewRolloutBlockingReasonCodes(input: {
   return [...codes].sort((left, right) => left.localeCompare(right));
 }
 
-function assertReviewerContext(
-  state: BubbleStateSnapshot,
-  configuredReviewer: AgentName
-): void {
-  if (state.state !== "RUNNING") {
-    throw new ConvergedCommandError(
-      `converged can only be used while bubble is RUNNING (current: ${state.state}).`
-    );
-  }
-
-  if (state.round < 1) {
-    throw new ConvergedCommandError(
-      `RUNNING state must have round >= 1 (found ${state.round}).`
-    );
-  }
-
-  if (state.active_agent === null || state.active_role === null || state.active_since === null) {
-    throw new ConvergedCommandError(
-      "RUNNING state is missing active agent context; cannot validate convergence."
-    );
-  }
-
-  if (state.active_role !== "reviewer") {
-    throw new ConvergedCommandError(
-      `converged may only be invoked by the active reviewer (active role: ${state.active_role}).`
-    );
-  }
-
-  if (state.active_agent !== configuredReviewer) {
-    throw new ConvergedCommandError(
-      `Active reviewer must be configured reviewer agent (${configuredReviewer}).`
-    );
-  }
-}
-
 export async function emitConvergedFromWorkspace(
   input: EmitConvergedInput,
   dependencies: EmitConvergedDependencies = {}
@@ -231,53 +188,28 @@ export async function emitConvergedFromWorkspace(
   );
   const refs = normalizeStringList(input.refs ?? []);
 
-  const resolved = await resolveBubbleFromWorkspaceCwd(input.cwd);
-  const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
-    bubbleId: resolved.bubbleId,
-    repoPath: resolved.repoPath,
-    bubblePaths: resolved.bubblePaths,
-    bubbleConfig: resolved.bubbleConfig,
-    now
+  const {
+    resolved,
+    bubbleIdentity,
+    state,
+    implementer,
+    reviewer
+  } = await prepareConvergedRouting({
+    now,
+    ...(input.cwd !== undefined
+      ? { cwd: input.cwd }
+      : {}),
+    ...(input.expectedStateFingerprint !== undefined
+      ? { expectedStateFingerprint: input.expectedStateFingerprint }
+      : {}),
+    ...(input.expectedRound !== undefined
+      ? { expectedRound: input.expectedRound }
+      : {}),
+    ...(input.expectedReviewer !== undefined
+      ? { expectedReviewer: input.expectedReviewer }
+      : {}),
+    createError: (message) => new ConvergedCommandError(message)
   });
-  resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
-  const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
-  if (
-    input.expectedStateFingerprint !== undefined
-    && loadedState.fingerprint !== input.expectedStateFingerprint
-  ) {
-    throw new ConvergedCommandError(
-      "Convergence validation failed: AUTO_CONVERGE_STATE_STALE: state changed before converged transition."
-    );
-  }
-  const state = loadedState.state;
-  const ideationMetadata = resolveIdeationMetadata(resolved.bubbleConfig);
-  if (
-    state.state === "RUNNING" &&
-    state.round === 0 &&
-    ideationMetadata.mode &&
-    ideationMetadata.taskPending
-  ) {
-    throw new ConvergedCommandError(
-      `${IDEATION_CONVERGED_BLOCKED}: ideation kickoff is required before CONVERGED handoff.`
-    );
-  }
-  if (input.expectedRound !== undefined && state.round !== input.expectedRound) {
-    throw new ConvergedCommandError(
-      `Convergence validation failed: AUTO_CONVERGE_STATE_STALE: expected round ${input.expectedRound}, got ${state.round}.`
-    );
-  }
-  if (
-    input.expectedReviewer !== undefined
-    && state.active_role === "reviewer"
-    && state.active_agent !== input.expectedReviewer
-  ) {
-    throw new ConvergedCommandError(
-      `Convergence validation failed: AUTO_CONVERGE_STATE_STALE: expected reviewer ${input.expectedReviewer}, got ${String(state.active_agent)}.`
-    );
-  }
-
-  const { implementer, reviewer } = resolved.bubbleConfig.agents;
-  assertReviewerContext(state, reviewer);
 
   const transcript = await readTranscriptEnvelopes(resolved.bubblePaths.transcriptPath, {
     allowMissing: true,
