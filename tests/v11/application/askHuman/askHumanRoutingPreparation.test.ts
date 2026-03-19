@@ -126,4 +126,85 @@ describe("prepareAskHumanRouting", () => {
         "ask-human can only be used while bubble is RUNNING (current: WAITING_HUMAN)."
     });
   });
+
+  const invalidRunningStateCases: Array<{
+    name: string;
+    state: Record<string, unknown>;
+    expectedMessage: string;
+  }> = [
+    {
+      name: "throws when RUNNING state has round lower than 1",
+      state: {
+        state: "RUNNING",
+        round: 0,
+        active_agent: "codex",
+        active_role: "implementer",
+        active_since: "2026-02-21T12:00:00.000Z"
+      },
+      expectedMessage: "RUNNING state must have round >= 1 (found 0)."
+    },
+    {
+      name: "throws when RUNNING state is missing active agent context",
+      state: {
+        state: "RUNNING",
+        round: 2,
+        active_agent: null,
+        active_role: "implementer",
+        active_since: "2026-02-21T12:00:00.000Z"
+      },
+      expectedMessage:
+        "RUNNING state is missing active agent context; cannot emit HUMAN_QUESTION."
+    },
+    {
+      name: "throws when RUNNING state active role is meta_reviewer",
+      state: {
+        state: "RUNNING",
+        round: 2,
+        active_agent: "meta-reviewer",
+        active_role: "meta_reviewer",
+        active_since: "2026-02-21T12:00:00.000Z"
+      },
+      expectedMessage:
+        "ask-human cannot be used from meta_reviewer role while bubble is RUNNING."
+    }
+  ];
+
+  for (const testCase of invalidRunningStateCases) {
+    it(testCase.name, async () => {
+      await expect(
+        prepareAskHumanRouting(
+          {
+            question: "Need human input",
+            now: new Date("2026-02-21T12:10:00.000Z"),
+            createError: (message) => new AskHumanRoutingTestError(message)
+          },
+          {
+            resolveBubbleFromWorkspaceCwd: async () =>
+              ({
+                bubbleId: "b_ask_human_invalid_running",
+                repoPath: "/repo",
+                bubblePaths: {
+                  statePath: "/repo/.pairflow/bubbles/b_ask_human_invalid_running/state.json"
+                },
+                bubbleConfig: { id: "b_ask_human_invalid_running" }
+              }) as never,
+            ensureBubbleInstanceIdForMutation: async () =>
+              ({
+                bubbleInstanceId: "bi_1234567890_abcdef0123456789",
+                bubbleConfig: { id: "b_ask_human_invalid_running" },
+                backfilled: false
+              }) as never,
+            readStateSnapshot: async () =>
+              ({
+                state: testCase.state,
+                fingerprint: "fp_invalid_running_01"
+              }) as never
+          }
+        )
+      ).rejects.toMatchObject({
+        name: "AskHumanRoutingTestError",
+        message: testCase.expectedMessage
+      });
+    });
+  }
 });
