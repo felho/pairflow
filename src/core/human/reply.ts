@@ -16,6 +16,7 @@ import {
   throwAsHumanReplyCommandError
 } from "../../v11/shared/reply/replyCommandError.js";
 import { normalizeReplyCommandInput } from "../../v11/shared/reply/replyCommandInputNormalization.js";
+import { ensureReplyWaitingHumanState } from "../../v11/domain/reply/waitingHumanStateGuard.js";
 import type {
   EmitHumanReplyDependencies,
   EmitHumanReplyInput,
@@ -62,25 +63,10 @@ export async function emitHumanReply(
   resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
 
   const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
-  const state = loadedState.state;
-
-  if (state.state !== "WAITING_HUMAN") {
-    throw new HumanReplyCommandError(
-      `bubble reply can only be used while bubble is WAITING_HUMAN (current: ${state.state}).`
-    );
-  }
-
-  if (state.round < 1) {
-    throw new HumanReplyCommandError(
-      `WAITING_HUMAN state must have round >= 1 (found ${state.round}).`
-    );
-  }
-
-  if (state.active_agent === null || state.active_role === null || state.active_since === null) {
-    throw new HumanReplyCommandError(
-      "WAITING_HUMAN state is missing active agent context; cannot resume RUNNING after reply."
-    );
-  }
+  const state = ensureReplyWaitingHumanState({
+    state: loadedState.state,
+    createError: createHumanReplyCommandError
+  });
 
   const lockPath = join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`);
 
