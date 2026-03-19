@@ -45,6 +45,7 @@ import { normalizeReviewerFindingsPayload } from "../../v11/domain/pass/reviewer
 import {
   raiseRepeatCleanDownstreamConvergedRejected,
 } from "../../v11/domain/pass/repeatCleanPolicyRejection.js";
+import { executeAutoConvergeConverged } from "../../v11/application/pass/autoConvergeConvergedExecution.js";
 import { resolveReviewerVerification } from "../../v11/application/pass/reviewerVerificationResolver.js";
 import {
   executePassDelivery,
@@ -281,34 +282,31 @@ export async function emitPassFromWorkspace(
       createError: (message) => new PassCommandError(message)
     });
 
-    let converged;
-    try {
-      converged = await emitConvergedFromWorkspace(
-        {
-          summary,
-          refs,
-          cwd: resolved.bubblePaths.worktreePath,
-          now,
-          expectedStateFingerprint: autoConvergePreparation.expectedStateFingerprint,
-          expectedRound: handoff.envelopeRound,
-          expectedReviewer: reviewer
-        },
-        {
-          ...(dependencies.emitTmuxDeliveryNotification !== undefined
-            ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
-            : {}),
-          ...(dependencies.emitBubbleNotification !== undefined
-            ? { emitBubbleNotification: dependencies.emitBubbleNotification }
-            : {})
-        }
-      );
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      raiseRepeatCleanDownstreamConvergedRejected({
-        reason,
-        createError: (message) => new PassCommandError(message)
-      });
-    }
+    const converged = await executeAutoConvergeConverged(
+      {
+        summary,
+        refs,
+        cwd: resolved.bubblePaths.worktreePath,
+        now,
+        expectedStateFingerprint: autoConvergePreparation.expectedStateFingerprint,
+        expectedRound: handoff.envelopeRound,
+        expectedReviewer: reviewer,
+        onDownstreamRejected: (reason) =>
+          raiseRepeatCleanDownstreamConvergedRejected({
+            reason,
+            createError: (message) => new PassCommandError(message)
+          })
+      },
+      {
+        emitConvergedFromWorkspace,
+        ...(dependencies.emitTmuxDeliveryNotification !== undefined
+          ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
+          : {}),
+        ...(dependencies.emitBubbleNotification !== undefined
+          ? { emitBubbleNotification: dependencies.emitBubbleNotification }
+          : {})
+      }
+    );
 
     const autoConvergeFindings = findings;
     let autoConvergeDocGateArtifactWriteFailureReason: string | undefined;
