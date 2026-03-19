@@ -1,7 +1,7 @@
 import { renderKickoffTaskArtifactFromInput } from "./kickoffTaskArtifactRendering.js";
-import { assertKickoffTaskContentIsValid } from "./kickoffTaskContentValidation.js";
 import { resolveKickoffTaskInputMode, type KickoffTaskInputMode } from "./kickoffTaskInputMode.js";
 import { resolveKickoffTaskFromFileInput } from "./kickoffTaskFileInputResolution.js";
+import { resolveKickoffTaskFromInlineInput } from "./kickoffTaskInlineInputResolution.js";
 
 export interface ResolvedKickoffTaskInput {
   content: string;
@@ -10,31 +10,6 @@ export interface ResolvedKickoffTaskInput {
 }
 
 export class KickoffTaskInputValidationError extends Error {}
-
-function resolveKickoffTaskFromInlineInput(input: {
-  task: string;
-}): ResolvedKickoffTaskInput {
-  const taskText = input.task.trim();
-  assertKickoffTaskContentIsValid({
-    content: taskText,
-    errors: {
-      empty: () => {
-        // reason_code=KICKOFF_TASK_INLINE_EMPTY context=kickoff_task_input_validation
-        return new KickoffTaskInputValidationError("Task cannot be empty.");
-      },
-      placeholder: () => {
-        // reason_code=KICKOFF_TASK_INLINE_PLACEHOLDER_MARKER context=kickoff_task_input_validation
-        return new KickoffTaskInputValidationError(
-          "Task text still contains ideation placeholder marker."
-        );
-      }
-    }
-  });
-  return {
-    content: taskText,
-    source: "inline"
-  };
-}
 
 async function resolveKickoffTaskFromInputMode(input: {
   mode: KickoffTaskInputMode;
@@ -50,7 +25,9 @@ async function resolveKickoffTaskFromInputMode(input: {
   }
 
   return resolveKickoffTaskFromInlineInput({
-    task: input.mode.task
+    task: input.mode.task,
+    createValidationError: (message) =>
+      new KickoffTaskInputValidationError(message)
   });
 }
 
