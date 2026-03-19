@@ -107,6 +107,14 @@ function assertContractExpectedSubset(input: {
     );
   }
   if (
+    input.expected.gateRoute !== undefined &&
+    input.output.gateRoute !== input.expected.gateRoute
+  ) {
+    throw new Error(
+      `${input.label}: gateRoute mismatch (expected=${input.expected.gateRoute}, actual=${input.output.gateRoute})`
+    );
+  }
+  if (
     input.expected.envelopeType !== undefined &&
     input.output.convergenceEnvelopeType !== input.expected.envelopeType
   ) {

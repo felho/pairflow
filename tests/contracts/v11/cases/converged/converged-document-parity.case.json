@@ -13,6 +13,7 @@
   "expected": {
     "status": "ok",
     "reasonCode": "CONVERGED_EMITTED",
+    "gateRoute": "human_gate_run_failed",
     "envelopeType": "CONVERGENCE",
     "stateSubset": {
       "state": "META_REVIEW_FAILED"
