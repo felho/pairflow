@@ -41,6 +41,11 @@ export type PrepareKickoffValidationResult =
       task: ResolvedKickoffTaskInput;
     };
 
+export type KickoffPreparedValidation = Extract<
+  PrepareKickoffValidationResult,
+  { kind: "prepared" }
+>;
+
 export async function prepareKickoffValidation(
   input: PrepareKickoffValidationInput,
   dependencies: ResolvedKickoffDependencies
