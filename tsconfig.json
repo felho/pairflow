@@ -19,6 +19,7 @@
   "include": [
     "src",
     "tests",
+    "tools",
     "vitest.config.ts"
   ]
 }

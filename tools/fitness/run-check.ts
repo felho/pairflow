@@ -3,10 +3,15 @@
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { runReport } from "./run-report.mjs";
+import { runReport, type FitnessReport } from "./run-report.js";
 
-function parseArgs(argv) {
-  const args = {
+interface CliArgs {
+  policy: string | undefined;
+  out: string | undefined;
+}
+
+function parseArgs(argv: readonly string[]): CliArgs {
+  const args: CliArgs = {
     policy: undefined,
     out: undefined
   };
@@ -26,7 +31,7 @@ function parseArgs(argv) {
   return args;
 }
 
-function shouldBlock(check) {
+function shouldBlock(check: FitnessReport["checks"][number]): boolean {
   const blockingMode = check.mode === "hard-fail";
   return blockingMode && check.status === "fail";
 }

@@ -4,11 +4,23 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-function isRecord(value) {
+interface CorpusEntry {
+  id: string;
+  command: string;
+  source: string;
+}
+
+interface CorpusManifest {
+  version: number;
+  generated_at: string;
+  entries: CorpusEntry[];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function validateManifest(manifest) {
+function validateManifest(manifest: unknown): CorpusManifest {
   if (!isRecord(manifest)) {
     throw new Error("Manifest must be an object.");
   }
@@ -18,6 +30,7 @@ function validateManifest(manifest) {
   if (!Array.isArray(manifest.entries)) {
     throw new Error("Manifest entries must be an array.");
   }
+  const entries: CorpusEntry[] = [];
   for (const [index, entry] of manifest.entries.entries()) {
     if (!isRecord(entry)) {
       throw new Error(`Manifest entry at index ${index} must be an object.`);
@@ -35,10 +48,23 @@ function validateManifest(manifest) {
         `Manifest entry at index ${index} must include non-empty source.`
       );
     }
+    entries.push({
+      id: entry.id,
+      command: entry.command,
+      source: entry.source
+    });
   }
+  return {
+    version: manifest.version,
+    generated_at:
+      typeof manifest.generated_at === "string"
+        ? manifest.generated_at
+        : new Date().toISOString(),
+    entries
+  };
 }
 
-async function pathExists(path) {
+async function pathExists(path: string): Promise<boolean> {
   try {
     await readFile(path, "utf8");
     return true;
@@ -57,8 +83,7 @@ async function main() {
   );
 
   const manifestRaw = await readFile(manifestPath, "utf8");
-  const manifest = JSON.parse(manifestRaw);
-  validateManifest(manifest);
+  const manifest = validateManifest(JSON.parse(manifestRaw) as unknown);
 
   for (const entry of manifest.entries) {
     const sourcePath = resolve(repoRoot, entry.source);
