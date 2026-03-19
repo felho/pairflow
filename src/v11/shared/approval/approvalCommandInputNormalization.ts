@@ -2,10 +2,12 @@ import {
   normalizeStringList,
   requireNonEmptyString
 } from "../../../core/util/normalize.js";
+import type { ApprovalDecision } from "../../../types/protocol.js";
 
 export interface NormalizeApprovalDecisionInputInput {
   bubbleId: string;
-  decision: string;
+  decision: ApprovalDecision;
+  overrideNonApprove?: boolean | undefined;
   overrideReason?: string | undefined;
   message?: string | undefined;
   refs?: string[] | undefined;
@@ -17,7 +19,8 @@ export interface NormalizeApprovalDecisionInputInput {
 
 export interface NormalizedApprovalDecisionInput {
   bubbleId: string;
-  decision: string;
+  decision: ApprovalDecision;
+  overrideNonApprove?: boolean | undefined;
   overrideReason?: string | undefined;
   message?: string | undefined;
   refs: string[];
@@ -74,6 +77,9 @@ export function normalizeApprovalDecisionInput(
       input.createApprovalCommandError
     ),
     decision: input.decision,
+    ...(input.overrideNonApprove !== undefined
+      ? { overrideNonApprove: input.overrideNonApprove }
+      : {}),
     ...(input.overrideReason !== undefined
       ? {
           overrideReason: validateAndNormalizeOverrideReason(
