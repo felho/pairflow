@@ -3,6 +3,7 @@ import type { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
 import { normalizeAskHumanCommandError } from "../../v11/shared/askHuman/askHumanCommandErrorNormalization.js";
 import { buildAskHumanCommandErrorFactory } from "../../v11/shared/askHuman/askHumanCommandErrorFactory.js";
 import { normalizeAskHumanCommandInput } from "../../v11/shared/askHuman/askHumanCommandInputNormalization.js";
+import { buildAskHumanEntrypointInvocation } from "../../v11/shared/askHuman/askHumanEntrypointInvocationBuilder.js";
 import { orchestrateAskHumanCommand } from "../../v11/shared/askHuman/askHumanCommandOrchestration.js";
 import { createAskHumanCommandOrchestrationDependencies } from "../../v11/shared/askHuman/askHumanFlowDependencyWiring.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
@@ -50,13 +51,10 @@ export async function emitAskHumanFromWorkspace(
     now: input.now
   });
   return orchestrateAskHumanCommand(
-    {
-      question: normalizedInput.question,
-      refs: normalizedInput.refs,
-      cwd: normalizedInput.cwd,
-      now: normalizedInput.now,
+    buildAskHumanEntrypointInvocation({
+      normalizedInput,
       createError: createAskHumanCommandError
-    },
+    }),
     createAskHumanCommandOrchestrationDependencies({
       emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification,
       emitBubbleNotification: dependencies.emitBubbleNotification
