@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { readContractCase } from "./runner.js";
 import { runPassContractCase } from "./pass.contract.runner.js";
+import type { ContractCase } from "./schema.js";
 
 async function listPassCasePaths(): Promise<string[]> {
   const casesDir = resolve(process.cwd(), "tests/contracts/v11/cases/pass");
@@ -61,6 +62,68 @@ async function listPassCaseSourcesFromManifest(): Promise<string[]> {
 function toRepoRelativePath(path: string): string {
   return relative(process.cwd(), path).replaceAll("\\", "/");
 }
+
+const passInvalidInputCases: Array<{
+  name: string;
+  caseDef: ContractCase;
+  expectedErrorMessage: string;
+}> = [
+  {
+    name: "rejects invalid pass contract input when summary is empty",
+    caseDef: {
+      id: "pass-invalid-empty-summary",
+      command: "pass",
+      mode: "legacy",
+      description: "invalid empty summary validation",
+      input: {
+        summary: "   ",
+        refs: [],
+        intent: "task"
+      },
+      expected: {
+        status: "ok"
+      }
+    },
+    expectedErrorMessage: "PASS contract input.summary must be a non-empty string."
+  },
+  {
+    name: "rejects invalid pass contract input when refs is not string array",
+    caseDef: {
+      id: "pass-invalid-refs",
+      command: "pass",
+      mode: "legacy",
+      description: "invalid refs validation",
+      input: {
+        summary: "Valid summary",
+        refs: ["ok-ref", 42],
+        intent: "task"
+      },
+      expected: {
+        status: "ok"
+      }
+    },
+    expectedErrorMessage: "PASS contract input.refs must be a string array."
+  },
+  {
+    name: "rejects invalid pass contract input in v11 mode when intent is invalid",
+    caseDef: {
+      id: "pass-invalid-intent-v11",
+      command: "pass",
+      mode: "v11",
+      description: "invalid intent validation for v11 mode",
+      input: {
+        summary: "Valid summary",
+        refs: [],
+        intent: "handoff"
+      },
+      expected: {
+        status: "ok"
+      }
+    },
+    expectedErrorMessage:
+      "PASS contract input.intent must be one of: task, review, fix_request."
+  }
+];
 
 describe("v11 pass contract harness skeleton", () => {
   it("loads seed contract case metadata", async () => {
@@ -140,4 +203,30 @@ describe("v11 pass contract harness skeleton", () => {
     expect(seenModes.has("v11")).toBe(true);
     expect(seenModes.has("parity")).toBe(true);
   }, 30_000);
+
+  for (const testCase of passInvalidInputCases) {
+    it(testCase.name, async () => {
+      await expect(runPassContractCase(testCase.caseDef)).rejects.toThrow(
+        testCase.expectedErrorMessage
+      );
+    });
+  }
+
+  it("rejects unsupported command for pass contract runner", async () => {
+    await expect(
+      runPassContractCase({
+        id: "pass-unsupported-command",
+        command: "converged",
+        mode: "legacy",
+        description: "Wrong command routed to pass runner",
+        input: {
+          summary: "Should not execute",
+          refs: []
+        },
+        expected: {
+          status: "ok"
+        }
+      })
+    ).rejects.toThrow(/Unsupported command for PASS contract runner/u);
+  });
 });
