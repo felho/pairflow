@@ -1,20 +1,21 @@
 import {
-  ensureBubbleInstanceIdForMutation,
-  type EnsureBubbleInstanceIdForMutationResult
+  ensureBubbleInstanceIdForMutation
 } from "../../../core/bubble/bubbleInstanceId.js";
 import {
-  resolveBubbleFromWorkspaceCwd,
-  type ResolvedBubbleWorkspace
+  resolveBubbleFromWorkspaceCwd
 } from "../../../core/bubble/workspaceResolution.js";
 import {
-  readStateSnapshot,
-  type LoadedStateSnapshot
+  readStateSnapshot
 } from "../../../core/state/stateStore.js";
 import {
   normalizeStringList,
   requireNonEmptyString
 } from "../../../core/util/normalize.js";
-import type { AgentName, AgentRole, BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import type {
+  AskHumanRoutingContext,
+  AskHumanRunningState
+} from "../../shared/askHuman/askHumanRoutingContext.js";
 
 export interface PrepareAskHumanRoutingInput {
   question: string;
@@ -24,29 +25,12 @@ export interface PrepareAskHumanRoutingInput {
   createError: (message: string) => Error;
 }
 
-export interface PrepareAskHumanRoutingResult {
-  nowIso: string;
-  question: string;
-  refs: string[];
-  resolved: ResolvedBubbleWorkspace;
-  bubbleIdentity: EnsureBubbleInstanceIdForMutationResult;
-  loadedState: LoadedStateSnapshot;
-  state: AskHumanRunningState;
-}
+export type PrepareAskHumanRoutingResult = AskHumanRoutingContext;
 
 export interface PrepareAskHumanRoutingDependencies {
   resolveBubbleFromWorkspaceCwd?: typeof resolveBubbleFromWorkspaceCwd;
   ensureBubbleInstanceIdForMutation?: typeof ensureBubbleInstanceIdForMutation;
   readStateSnapshot?: typeof readStateSnapshot;
-}
-
-type AskHumanActiveRole = Exclude<AgentRole, "meta_reviewer">;
-
-export interface AskHumanRunningState extends BubbleStateSnapshot {
-  state: "RUNNING";
-  active_agent: AgentName;
-  active_role: AskHumanActiveRole;
-  active_since: string;
 }
 
 function assertAskHumanRunningState(

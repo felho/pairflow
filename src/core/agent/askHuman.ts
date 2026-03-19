@@ -1,17 +1,11 @@
-import { join } from "node:path";
-
-import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
-import { writeStateSnapshot } from "../state/stateStore.js";
-import { applyStateTransition } from "../state/machine.js";
 import {
   WorkspaceResolutionError
 } from "../bubble/workspaceResolution.js";
 import { emitBubbleNotification } from "../runtime/notifications.js";
 import {
-  emitTmuxDeliveryNotification,
-  resolveDeliveryMessageRef
+  emitTmuxDeliveryNotification
 } from "../runtime/tmuxDelivery.js";
-import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
+import { runAskHumanFlow } from "../../v11/application/askHuman/runAskHumanFlow.js";
 import { prepareAskHumanRouting } from "../../v11/application/askHuman/askHumanRoutingPreparation.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
@@ -48,15 +42,7 @@ export async function emitAskHumanFromWorkspace(
   dependencies: EmitAskHumanDependencies = {}
 ): Promise<EmitAskHumanResult> {
   const now = input.now ?? new Date();
-  const {
-    nowIso,
-    question,
-    refs,
-    resolved,
-    bubbleIdentity,
-    loadedState,
-    state
-  } = await prepareAskHumanRouting({
+  const routing = await prepareAskHumanRouting({
     question: input.question,
     ...(input.refs !== undefined
       ? { refs: input.refs }
@@ -68,88 +54,21 @@ export async function emitAskHumanFromWorkspace(
     createError: (message) => new AskHumanCommandError(message)
   });
 
-  const lockPath = join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`);
-
-  const appended = await appendProtocolEnvelope({
-    transcriptPath: resolved.bubblePaths.transcriptPath,
-    mirrorPaths: [resolved.bubblePaths.inboxPath],
-    lockPath,
-    now,
-    envelope: {
-      bubble_id: resolved.bubbleId,
-      sender: state.active_agent,
-      recipient: "human",
-      type: "HUMAN_QUESTION",
-      round: state.round,
-      payload: {
-        question
-      },
-      refs
-    }
-  });
-
-  const nextState = applyStateTransition(state, {
-    to: "WAITING_HUMAN",
-    lastCommandAt: nowIso
-  });
-
-  let written;
-  try {
-    written = await writeStateSnapshot(resolved.bubblePaths.statePath, nextState, {
-      expectedFingerprint: loadedState.fingerprint,
-      expectedState: "RUNNING"
-    });
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new AskHumanCommandError(
-      `HUMAN_QUESTION ${appended.envelope.id} was appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`
-    );
-  }
-
-  const emitDelivery =
-    dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
-  const emitNotification =
-    dependencies.emitBubbleNotification ?? emitBubbleNotification;
-  const messageRef = resolveDeliveryMessageRef({
-    bubbleId: resolved.bubbleId,
-    sessionsPath: resolved.bubblePaths.sessionsPath,
-    envelope: appended.envelope
-  });
-
-  // Optional UX signal; never block protocol/state progression on notification failure.
-  void emitDelivery({
-    bubbleId: resolved.bubbleId,
-    bubbleConfig: resolved.bubbleConfig,
-    sessionsPath: resolved.bubblePaths.sessionsPath,
-    envelope: appended.envelope,
-    messageRef
-  });
-
-  // Optional UX signal; never block protocol/state progression on notification failure.
-  void emitNotification(resolved.bubbleConfig, "waiting-human");
-
-  await emitBubbleLifecycleEventBestEffort({
-    repoPath: resolved.repoPath,
-    bubbleId: resolved.bubbleId,
-    bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
-    eventType: "bubble_asked_human",
-    round: state.round,
-    actorRole: state.active_role,
-    metadata: {
-      sender: state.active_agent,
-      refs_count: refs.length,
-      question_length: Array.from(question).length
+  return runAskHumanFlow(
+    {
+      now,
+      routing,
+      createError: (message) => new AskHumanCommandError(message)
     },
-    now
-  });
-
-  return {
-    bubbleId: resolved.bubbleId,
-    sequence: appended.sequence,
-    envelope: appended.envelope,
-    state: written.state,
-    inferredRecipient: "human"
-  };
+    {
+      ...(dependencies.emitTmuxDeliveryNotification !== undefined
+        ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
+        : { emitTmuxDeliveryNotification }),
+      ...(dependencies.emitBubbleNotification !== undefined
+        ? { emitBubbleNotification: dependencies.emitBubbleNotification }
+        : { emitBubbleNotification })
+    }
+  );
 }
 
 export function asAskHumanCommandError(error: unknown): never {
