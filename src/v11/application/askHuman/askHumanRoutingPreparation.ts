@@ -1,10 +1,10 @@
-import {
+import type {
   ensureBubbleInstanceIdForMutation
 } from "../../../core/bubble/bubbleInstanceId.js";
-import {
+import type {
   resolveBubbleFromWorkspaceCwd
 } from "../../../core/bubble/workspaceResolution.js";
-import {
+import type {
   readStateSnapshot
 } from "../../../core/state/stateStore.js";
 import {
@@ -12,6 +12,7 @@ import {
   requireNonEmptyString
 } from "../../../core/util/normalize.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import { resolveAskHumanRoutingPreparationDependencies } from "../../shared/askHuman/askHumanRoutingPreparationDependencyResolution.js";
 import type {
   AskHumanRoutingContext,
   AskHumanRunningState
@@ -106,15 +107,15 @@ export async function prepareAskHumanRouting(
   );
   const refs = normalizeStringList(input.refs ?? []);
 
-  const resolveBubble = dependencies.resolveBubbleFromWorkspaceCwd
-    ?? resolveBubbleFromWorkspaceCwd;
-  const ensureBubbleIdentity = dependencies.ensureBubbleInstanceIdForMutation
-    ?? ensureBubbleInstanceIdForMutation;
-  const readState = dependencies.readStateSnapshot
-    ?? readStateSnapshot;
+  const resolvedDependencies = resolveAskHumanRoutingPreparationDependencies({
+    resolveBubbleFromWorkspaceCwd: dependencies.resolveBubbleFromWorkspaceCwd,
+    ensureBubbleInstanceIdForMutation:
+      dependencies.ensureBubbleInstanceIdForMutation,
+    readStateSnapshot: dependencies.readStateSnapshot
+  });
 
-  const resolved = await resolveBubble(input.cwd);
-  const bubbleIdentity = await ensureBubbleIdentity({
+  const resolved = await resolvedDependencies.resolveBubble(input.cwd);
+  const bubbleIdentity = await resolvedDependencies.ensureBubbleIdentity({
     bubbleId: resolved.bubbleId,
     repoPath: resolved.repoPath,
     bubblePaths: resolved.bubblePaths,
@@ -123,7 +124,9 @@ export async function prepareAskHumanRouting(
   });
   resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
 
-  const loadedState = await readState(resolved.bubblePaths.statePath);
+  const loadedState = await resolvedDependencies.readState(
+    resolved.bubblePaths.statePath
+  );
   const state = loadedState.state;
   assertAskHumanRunningState(state, input.createError);
 
