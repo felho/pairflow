@@ -81,4 +81,39 @@ describe("v11 converged contract harness skeleton", () => {
       })
     ).rejects.toThrow(/reviewArtifactType must be one of: code, document/u);
   });
+
+  it("rejects converged contract input.summary when empty", async () => {
+    await expect(
+      runConvergedContractCase({
+        id: "converged-invalid-empty-summary",
+        command: "converged",
+        mode: "legacy",
+        description: "Invalid converged contract summary",
+        input: {
+          summary: "   "
+        },
+        expected: {
+          status: "ok"
+        }
+      })
+    ).rejects.toThrow(/input\.summary must be a non-empty string/u);
+  });
+
+  it("rejects converged contract input.refs when non-string array", async () => {
+    await expect(
+      runConvergedContractCase({
+        id: "converged-invalid-refs",
+        command: "converged",
+        mode: "legacy",
+        description: "Invalid converged contract refs input",
+        input: {
+          summary: "Valid summary",
+          refs: ["ok-ref", 42]
+        },
+        expected: {
+          status: "ok"
+        }
+      })
+    ).rejects.toThrow(/input\.refs must be a string array/u);
+  });
 });
