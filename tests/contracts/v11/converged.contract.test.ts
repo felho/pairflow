@@ -90,6 +90,20 @@ describe("v11 converged contract harness skeleton", () => {
     expect(uniqueIds.size).toBe(ids.length);
   });
 
+  it("keeps converged manifest ids aligned with case ids", async () => {
+    const entries = await listConvergedManifestEntries();
+    const manifestIdsBySource = new Map(
+      entries.map((entry) => [entry.source, entry.id] as const)
+    );
+    const casePaths = await listConvergedCasePaths();
+
+    for (const casePath of casePaths) {
+      const source = toRepoRelativePath(casePath);
+      const caseDef = await readContractCase(casePath);
+      expect(manifestIdsBySource.get(source)).toBe(caseDef.id);
+    }
+  });
+
   it("executes legacy, v11 and parity assertions via shared runner", async () => {
     const casePaths = await listConvergedCasePaths();
     expect(casePaths.length).toBeGreaterThan(0);
