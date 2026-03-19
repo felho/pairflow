@@ -7,4 +7,4 @@ export type {
   EmitAskHumanDependencies,
   EmitAskHumanInput,
   EmitAskHumanResult
-} from "../../v11/application/askHuman/askHumanCommandContract.js";
+} from "../../v11/shared/askHuman/askHumanCommandContract.js";
