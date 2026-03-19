@@ -1,14 +1,5 @@
 import type { AskHumanCommandOrchestrationInput } from "./askHumanCommandOrchestrationContract.js";
-
-export interface BuildAskHumanEntrypointInvocationInput {
-  normalizedInput: {
-    question: string;
-    refs?: string[] | undefined;
-    cwd?: string | undefined;
-    now: Date;
-  };
-  createError: (message: string) => Error;
-}
+import type { BuildAskHumanEntrypointInvocationInput } from "./askHumanEntrypointInvocationContract.js";
 
 export function buildAskHumanEntrypointInvocation(
   input: BuildAskHumanEntrypointInvocationInput
