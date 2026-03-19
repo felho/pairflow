@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../config/bubbleConfig.js";
 import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
 import { readStateSnapshot, StateStoreConflictError, writeStateSnapshot } from "../state/stateStore.js";
-import { assertValidBubbleStateSnapshot } from "../state/stateSchema.js";
 import { resolveBubbleById } from "./bubbleLookup.js";
 import {
   IDEATION_KICKOFF_PERSISTENCE_FAILED,
@@ -20,6 +19,8 @@ import {
   resolveKickoffTaskInput
 } from "../../v11/shared/kickoff/kickoffTaskInputResolution.js";
 import { resolveKickoffEligibilityFailureReason } from "../../v11/shared/kickoff/kickoffEligibility.js";
+import { buildKickoffNextState } from "../../v11/shared/kickoff/kickoffStateTransition.js";
+import { buildKickoffTaskEnvelope } from "../../v11/shared/kickoff/kickoffTaskEnvelope.js";
 
 export interface KickoffBubbleInput {
   bubbleId: string;
@@ -170,24 +171,10 @@ export async function kickoffBubble(
     });
   }
 
-  const nextState = assertValidBubbleStateSnapshot({
-    ...state,
-    round: 1,
-    active_agent: resolved.bubbleConfig.agents.implementer,
-    active_role: "implementer",
-    active_since: nowIso,
-    last_command_at: nowIso,
-    round_role_history: state.round_role_history.some((entry) => entry.round === 1)
-      ? state.round_role_history
-      : [
-          ...state.round_role_history,
-          {
-            round: 1,
-            implementer: resolved.bubbleConfig.agents.implementer,
-            reviewer: resolved.bubbleConfig.agents.reviewer,
-            switched_at: nowIso
-          }
-        ]
+  const nextState = buildKickoffNextState({
+    state,
+    bubbleConfig: resolved.bubbleConfig,
+    nowIso
   });
 
   const previousTaskArtifact = await readFileFn(
@@ -242,23 +229,12 @@ export async function kickoffBubble(
       transcriptPath: resolved.bubblePaths.transcriptPath,
       lockPath: join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`),
       now,
-      envelope: {
-        bubble_id: resolved.bubbleId,
-        sender: "orchestrator",
-        recipient: resolved.bubbleConfig.agents.implementer,
-        type: "TASK",
-        round: 1,
-        payload: {
-          summary: task.content,
-          metadata: {
-            source: task.source,
-            ...(task.sourcePath !== undefined
-              ? { source_path: task.sourcePath }
-              : {})
-          }
-        },
-        refs: [resolved.bubblePaths.taskArtifactPath]
-      }
+      envelope: buildKickoffTaskEnvelope({
+        bubbleId: resolved.bubbleId,
+        implementer: resolved.bubbleConfig.agents.implementer,
+        task,
+        taskArtifactPath: resolved.bubblePaths.taskArtifactPath
+      })
     });
   } catch (error) {
     const rollbackErrors: string[] = [];
