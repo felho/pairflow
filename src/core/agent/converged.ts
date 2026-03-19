@@ -22,6 +22,10 @@ import { finalizeConvergedFlow } from "../../v11/application/converged/converged
 import {
   resolveMetaReviewRolloutBlockingReasonCodesV11
 } from "../../v11/application/converged/metaReviewRolloutBlockingReasonCodes.js";
+import {
+  buildConvergedFlowDependencies,
+  buildConvergedFlowInput
+} from "../../v11/shared/converged/convergedFlowInvocationBuilders.js";
 
 export interface EmitConvergedInput {
   summary: string;
@@ -75,14 +79,16 @@ export async function emitConvergedFromWorkspace(
   dependencies: EmitConvergedDependencies = {}
 ): Promise<EmitConvergedResult> {
   const now = input.now ?? new Date();
+  const createError = (message: string): ConvergedCommandError =>
+    new ConvergedCommandError(message);
   const summary = requireNonEmptyString(
     input.summary,
     "Convergence summary",
-    (message) => new ConvergedCommandError(message)
+    createError
   );
   const refs = normalizeStringList(input.refs ?? []);
   return runConvergedFlow(
-    {
+    buildConvergedFlowInput({
       summary,
       refs,
       now,
@@ -98,10 +104,10 @@ export async function emitConvergedFromWorkspace(
       ...(input.expectedReviewer !== undefined
         ? { expectedReviewer: input.expectedReviewer }
         : {}),
-      createError: (message) => new ConvergedCommandError(message),
+      createError,
       resolveMetaReviewRolloutBlockingReasonCodes
-    },
-    {
+    }),
+    buildConvergedFlowDependencies({
       prepareConvergedRouting,
       prepareConvergedPolicy,
       prepareConvergedValidation,
@@ -128,7 +134,7 @@ export async function emitConvergedFromWorkspace(
       ...(dependencies.emitBubbleNotification !== undefined
         ? { emitBubbleNotification: dependencies.emitBubbleNotification }
         : {})
-    }
+    })
   );
 }
 
