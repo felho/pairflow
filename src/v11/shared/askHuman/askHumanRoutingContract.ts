@@ -24,3 +24,8 @@ export interface PrepareAskHumanRoutingDependencies {
   ensureBubbleInstanceIdForMutation?: typeof ensureBubbleInstanceIdForMutation;
   readStateSnapshot?: typeof readStateSnapshot;
 }
+
+export type PrepareAskHumanRoutingFn = (
+  input: PrepareAskHumanRoutingInput,
+  dependencies?: PrepareAskHumanRoutingDependencies
+) => Promise<PrepareAskHumanRoutingResult>;

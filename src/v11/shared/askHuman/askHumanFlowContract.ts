@@ -79,3 +79,8 @@ export interface RunAskHumanFlowDependencies {
   resolveDeliveryMessageRef?: FinalizeAskHumanFlowDependencies["resolveDeliveryMessageRef"];
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
 }
+
+export type RunAskHumanFlowFn = (
+  input: RunAskHumanFlowInput,
+  dependencies: RunAskHumanFlowDependencies
+) => Promise<RunAskHumanFlowResult>;
