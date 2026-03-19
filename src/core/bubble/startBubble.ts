@@ -7,23 +7,12 @@ import { spawn } from "node:child_process";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import {
-  buildResumeTranscriptSummary,
   buildResumeTranscriptSummaryFallback
 } from "../protocol/resumeSummary.js";
 import {
-  bootstrapWorktreeWorkspace,
-  cleanupWorktreeWorkspace
-} from "../workspace/worktreeManager.js";
-import {
   buildBubbleTmuxSessionName,
-  launchBubbleTmuxSession,
-  runTmux,
-  terminateBubbleTmuxSession
+  runTmux
 } from "../runtime/tmuxManager.js";
-import {
-  claimRuntimeSession,
-  removeRuntimeSession
-} from "../runtime/sessionsRegistry.js";
 import { buildReviewerAgentSelectionGuidance } from "../runtime/reviewerGuidance.js";
 import { buildReviewerSeverityOntologyReminder } from "../runtime/reviewerSeverityOntology.js";
 import {
@@ -66,6 +55,11 @@ import {
   StartBubbleError,
   throwAsStartBubbleError
 } from "../../v11/shared/start/startCommandRuntime.js";
+import {
+  mapStartBubbleResult,
+  resolveStartBubbleDependencies,
+  resolveStartBubbleMode
+} from "../../v11/shared/start/startCommandOrchestration.js";
 import type {
   BubbleStateSnapshot,
   PairflowCommandProfile,
@@ -762,34 +756,25 @@ function resolveResumeKickoffMessages(input: {
   };
 }
 
-const resumableRuntimeStates = new Set([
-  "RUNNING",
-  "WAITING_HUMAN",
-  "READY_FOR_APPROVAL",
-  "META_REVIEW_RUNNING",
-  "META_REVIEW_FAILED",
-  "READY_FOR_HUMAN_APPROVAL",
-  "APPROVED_FOR_COMMIT",
-  "COMMITTED"
-]);
-
 export async function startBubble(
   input: StartBubbleInput,
   dependencies: StartBubbleDependencies = {}
 ): Promise<StartBubbleResult> {
-  const bootstrap = dependencies.bootstrapWorktreeWorkspace ?? bootstrapWorktreeWorkspace;
-  const cleanup = dependencies.cleanupWorktreeWorkspace ?? cleanupWorktreeWorkspace;
-  const runWorktreeBootstrapCommand =
-    dependencies.runWorktreeBootstrapCommand ?? runWorktreeBootstrapCommandDefault;
-  const launchTmux = dependencies.launchBubbleTmuxSession ?? launchBubbleTmuxSession;
-  const terminateTmux =
-    dependencies.terminateBubbleTmuxSession ?? terminateBubbleTmuxSession;
-  const isTmuxSessionAlive =
-    dependencies.isTmuxSessionAlive ?? isTmuxSessionAliveDefault;
-  const claimSession = dependencies.claimRuntimeSession ?? claimRuntimeSession;
-  const removeSession = dependencies.removeRuntimeSession ?? removeRuntimeSession;
-  const buildResumeSummary =
-    dependencies.buildResumeTranscriptSummary ?? buildResumeTranscriptSummary;
+  const {
+    bootstrap,
+    cleanup,
+    runWorktreeBootstrapCommand,
+    launchTmux,
+    terminateTmux,
+    isTmuxSessionAlive,
+    claimSession,
+    removeSession,
+    buildResumeSummary
+  } = resolveStartBubbleDependencies({
+    dependencies,
+    runWorktreeBootstrapCommandDefault,
+    isTmuxSessionAliveDefault
+  });
 
   const resolved = await resolveBubbleById({
     bubbleId: input.bubbleId,
@@ -814,18 +799,7 @@ export async function startBubble(
   ).catch(() => undefined);
 
   const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
-  const currentState = loadedState.state.state;
-  const startMode =
-    currentState === "CREATED"
-      ? "fresh"
-      : resumableRuntimeStates.has(currentState)
-      ? "resume"
-      : null;
-  if (startMode === null) {
-    throw new StartBubbleError(
-      `bubble start requires state CREATED or resumable runtime state (current: ${currentState}).`
-    );
-  }
+  const startMode = resolveStartBubbleMode(loadedState.state.state);
 
   const expectedTmuxSessionName = buildBubbleTmuxSessionName(resolved.bubbleId);
   const donePackagePath = join(resolved.bubblePaths.artifactsDir, "done-package.md");
@@ -1161,12 +1135,12 @@ export async function startBubble(
       now
     });
 
-    return {
+    return mapStartBubbleResult({
       bubbleId: resolved.bubbleId,
       state: written.state,
       tmuxSessionName: resolvedTmuxSessionName,
       worktreePath: resolved.bubblePaths.worktreePath
-    };
+    });
   } catch (error) {
     if (tmuxSessionName !== null) {
       await terminateTmux({
