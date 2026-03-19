@@ -2,15 +2,9 @@ import type { emitBubbleNotification } from "../runtime/notifications.js";
 import type { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
 import { executeAskHumanExecution } from "../../v11/application/askHuman/askHumanExecution.js";
 import { finalizeAskHumanFlow } from "../../v11/application/askHuman/askHumanFinalization.js";
-import { runAskHumanFlow } from "../../v11/application/askHuman/runAskHumanFlow.js";
-import { prepareAskHumanRouting } from "../../v11/application/askHuman/askHumanRoutingPreparation.js";
-import {
-  buildAskHumanFlowDependencies,
-  buildAskHumanFlowInput,
-  buildAskHumanRoutingInput
-} from "../../v11/shared/askHuman/askHumanFlowInvocationBuilders.js";
 import { normalizeAskHumanCommandError } from "../../v11/shared/askHuman/askHumanCommandErrorNormalization.js";
 import { normalizeAskHumanCommandInput } from "../../v11/shared/askHuman/askHumanCommandInputNormalization.js";
+import { orchestrateAskHumanCommand } from "../../v11/shared/askHuman/askHumanCommandOrchestration.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 
@@ -51,31 +45,22 @@ export async function emitAskHumanFromWorkspace(
     cwd: input.cwd,
     now: input.now
   });
-  const now = normalizedInput.now;
   const createError = (message: string): AskHumanCommandError =>
     new AskHumanCommandError(message);
-  const routing = await prepareAskHumanRouting(
-    buildAskHumanRoutingInput({
+  return orchestrateAskHumanCommand(
+    {
       question: normalizedInput.question,
       refs: normalizedInput.refs,
       cwd: normalizedInput.cwd,
-      now,
+      now: normalizedInput.now,
       createError
-    })
-  );
-
-  return runAskHumanFlow(
-    buildAskHumanFlowInput({
-      now,
-      routing,
-      createError
-    }),
-    buildAskHumanFlowDependencies({
+    },
+    {
       executeAskHumanExecution,
       finalizeAskHumanFlow,
       emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification,
       emitBubbleNotification: dependencies.emitBubbleNotification
-    })
+    }
   );
 }
 
