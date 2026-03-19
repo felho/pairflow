@@ -171,6 +171,18 @@
       "kind": "seed_case"
     },
     {
+      "id": "meta-review-gate-apply-running-parity",
+      "command": "metaReviewGate",
+      "source": "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-running-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "meta-review-gate-apply-sticky-bypass-parity",
+      "command": "metaReviewGate",
+      "source": "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-sticky-bypass-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "meta-review-gate-recover-basic",
       "command": "metaReviewGate",
       "source": "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-basic.case.json",
