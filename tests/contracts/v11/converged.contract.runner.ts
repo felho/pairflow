@@ -113,6 +113,11 @@ function assertContractExpectedSubset(input: {
       `${input.label}: sequence invariant failed (convergenceSequence=${input.output.convergenceSequence}, approvalRequestSequence=${input.output.approvalRequestSequence})`
     );
   }
+  if (input.output.approvalRequestSequence !== input.output.convergenceSequence + 1) {
+    throw new Error(
+      `${input.label}: sequence adjacency invariant failed (convergenceSequence=${input.output.convergenceSequence}, approvalRequestSequence=${input.output.approvalRequestSequence})`
+    );
+  }
   if (
     input.expected.reasonCode !== undefined &&
     input.output.reasonCode !== input.expected.reasonCode
