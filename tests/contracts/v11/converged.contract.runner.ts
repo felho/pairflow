@@ -16,8 +16,10 @@ import type { ContractCase, ContractCaseExpected } from "./schema.js";
 export interface ConvergedContractOutput {
   status: "ok";
   reasonCode: "CONVERGED_EMITTED";
+  convergenceSequence: number;
   convergenceEnvelopeType: string;
   convergenceEnvelopeRecipient: string;
+  approvalRequestSequence: number;
   approvalRequestEnvelopeType: string;
   approvalRequestRecipient: string;
   approvalRequestSender: string;
@@ -82,8 +84,10 @@ function normalizeConvergedResult(
   return {
     status: "ok",
     reasonCode: "CONVERGED_EMITTED",
+    convergenceSequence: result.convergenceSequence,
     convergenceEnvelopeType: result.convergenceEnvelope.type,
     convergenceEnvelopeRecipient: result.convergenceEnvelope.recipient,
+    approvalRequestSequence: result.approvalRequestSequence,
     approvalRequestEnvelopeType: result.approvalRequestEnvelope.type,
     approvalRequestRecipient: result.approvalRequestEnvelope.recipient,
     approvalRequestSender: result.approvalRequestEnvelope.sender,
@@ -102,6 +106,11 @@ function assertContractExpectedSubset(input: {
   if (input.output.status !== input.expected.status) {
     throw new Error(
       `${input.label}: status mismatch (expected=${input.expected.status}, actual=${input.output.status})`
+    );
+  }
+  if (input.output.convergenceSequence >= input.output.approvalRequestSequence) {
+    throw new Error(
+      `${input.label}: sequence invariant failed (convergenceSequence=${input.output.convergenceSequence}, approvalRequestSequence=${input.output.approvalRequestSequence})`
     );
   }
   if (
