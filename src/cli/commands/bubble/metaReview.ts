@@ -15,9 +15,9 @@ import {
 } from "../../../core/bubble/metaReview.js";
 import type { MetaReviewSubmissionPayload } from "../../../types/protocol.js";
 import {
-  recoverMetaReviewGateFromSnapshot,
-  type MetaReviewGateResult
-} from "../../../core/bubble/metaReviewGate.js";
+  recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot,
+  type MetaReviewGateResultV11 as MetaReviewGateResult
+} from "../../../v11/application/metaReviewGate/emitMetaReviewGateV11.js";
 import { isRecord } from "../../../core/validation.js";
 
 interface BubbleMetaReviewCommandBase {
