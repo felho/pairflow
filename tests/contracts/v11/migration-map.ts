@@ -28,9 +28,9 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
   },
   {
     command: "approval",
-    state: "legacy",
-    owner: "TBD",
-    notes: "M3 human decision slice."
+    state: "v11",
+    owner: "runtime",
+    notes: "Core facade now delegates to v11 approval orchestration seams; v11 is the source of truth."
   },
   {
     command: "metaReviewGate",
