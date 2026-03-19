@@ -2,12 +2,19 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { recoverMetaReviewGateFromSnapshot } from "../../../src/core/bubble/metaReviewGate.js";
+import {
+  applyMetaReviewGateOnConvergence,
+  recoverMetaReviewGateFromSnapshot
+} from "../../../src/core/bubble/metaReviewGate.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
-import { recoverMetaReviewGateFromSnapshotV11 } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
+import {
+  applyMetaReviewGateOnConvergenceV11,
+  recoverMetaReviewGateFromSnapshotV11
+} from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import type { MetaReviewRunResult } from "../../../src/core/bubble/metaReview.js";
+import type { SetMetaReviewerPaneBindingResult } from "../../../src/core/runtime/sessionsRegistry.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
 
 export interface MetaReviewGateContractOutput {
@@ -25,13 +32,24 @@ export interface MetaReviewGateContractRunResult {
   v11?: MetaReviewGateContractOutput;
 }
 
+type MetaReviewGateContractRoute = "recover" | "apply";
+
 function parseMetaReviewGateCaseInput(input: ContractCase["input"]): {
+  route: MetaReviewGateContractRoute;
+  summary?: string;
   refs: string[];
 } {
   const routeRaw = input.route;
-  if (routeRaw !== "recover") {
+  if (routeRaw !== "recover" && routeRaw !== "apply") {
     throw new Error(
-      "metaReviewGate contract input.route must be \"recover\"."
+      "metaReviewGate contract input.route must be one of: recover, apply."
+    );
+  }
+
+  const summaryRaw = input.summary;
+  if (summaryRaw !== undefined && typeof summaryRaw !== "string") {
+    throw new Error(
+      "metaReviewGate contract input.summary must be a string when provided."
     );
   }
 
@@ -44,6 +62,8 @@ function parseMetaReviewGateCaseInput(input: ContractCase["input"]): {
   }
 
   return {
+    route: routeRaw,
+    ...(typeof summaryRaw === "string" ? { summary: summaryRaw } : {}),
     refs: refsRaw ?? []
   };
 }
@@ -129,7 +149,8 @@ function assertParityEquivalent(input: {
 
 async function executeMetaReviewGateCase(input: {
   caseDef: ContractCase;
-  executor: typeof recoverMetaReviewGateFromSnapshot;
+  applyExecutor: typeof applyMetaReviewGateOnConvergence;
+  recoverExecutor: typeof recoverMetaReviewGateFromSnapshot;
 }): Promise<MetaReviewGateContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-meta-review-gate-contract-"));
   try {
@@ -140,33 +161,56 @@ async function executeMetaReviewGateCase(input: {
       task: input.caseDef.description
     });
 
-    const loaded = await readStateSnapshot(bubble.paths.statePath);
-    await writeStateSnapshot(
-      bubble.paths.statePath,
-      {
-        ...loaded.state,
-        state: "META_REVIEW_RUNNING",
-        active_agent: "codex",
-        active_role: "meta_reviewer",
-        active_since: "2026-03-19T10:03:30.000Z",
-        last_command_at: "2026-03-19T10:03:30.000Z"
-      },
-      {
-        expectedFingerprint: loaded.fingerprint,
-        expectedState: "RUNNING"
-      }
-    );
-
     const caseInput = parseMetaReviewGateCaseInput(input.caseDef.input);
-    const result = await input.executor({
-      bubbleId: bubble.bubbleId,
-      repoPath,
-      refs: caseInput.refs,
-      now: new Date("2026-03-19T10:04:00.000Z"),
-      runResult: buildSyntheticMetaReviewRunError({
-        bubbleId: bubble.bubbleId
-      })
-    });
+    let result: Awaited<ReturnType<typeof recoverMetaReviewGateFromSnapshot>>;
+
+    if (caseInput.route === "apply") {
+      const noRuntimeSessionBindingResult: SetMetaReviewerPaneBindingResult = {
+        updated: false,
+        reason: "no_runtime_session"
+      };
+      result = await input.applyExecutor(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          summary:
+            caseInput.summary ??
+            "Seed meta-review gate apply contract baseline summary.",
+          refs: caseInput.refs,
+          now: new Date("2026-03-19T10:04:00.000Z")
+        },
+        {
+          setMetaReviewerPaneBinding: () => Promise.resolve(noRuntimeSessionBindingResult)
+        }
+      );
+    } else {
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          state: "META_REVIEW_RUNNING",
+          active_agent: "codex",
+          active_role: "meta_reviewer",
+          active_since: "2026-03-19T10:03:30.000Z",
+          last_command_at: "2026-03-19T10:03:30.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "RUNNING"
+        }
+      );
+
+      result = await input.recoverExecutor({
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        refs: caseInput.refs,
+        now: new Date("2026-03-19T10:04:00.000Z"),
+        runResult: buildSyntheticMetaReviewRunError({
+          bubbleId: bubble.bubbleId
+        })
+      });
+    }
 
     return normalizeMetaReviewGateResult(result);
   } finally {
@@ -186,7 +230,8 @@ export async function runMetaReviewGateContractCase(
   if (caseDef.mode === "legacy") {
     const legacy = await executeMetaReviewGateCase({
       caseDef,
-      executor: recoverMetaReviewGateFromSnapshot
+      applyExecutor: applyMetaReviewGateOnConvergence,
+      recoverExecutor: recoverMetaReviewGateFromSnapshot
     });
     assertContractExpectedSubset({
       output: legacy,
@@ -202,7 +247,8 @@ export async function runMetaReviewGateContractCase(
   if (caseDef.mode === "v11") {
     const v11 = await executeMetaReviewGateCase({
       caseDef,
-      executor: recoverMetaReviewGateFromSnapshotV11
+      applyExecutor: applyMetaReviewGateOnConvergenceV11,
+      recoverExecutor: recoverMetaReviewGateFromSnapshotV11
     });
     assertContractExpectedSubset({
       output: v11,
@@ -217,11 +263,13 @@ export async function runMetaReviewGateContractCase(
 
   const legacy = await executeMetaReviewGateCase({
     caseDef,
-    executor: recoverMetaReviewGateFromSnapshot
+    applyExecutor: applyMetaReviewGateOnConvergence,
+    recoverExecutor: recoverMetaReviewGateFromSnapshot
   });
   const v11 = await executeMetaReviewGateCase({
     caseDef,
-    executor: recoverMetaReviewGateFromSnapshotV11
+    applyExecutor: applyMetaReviewGateOnConvergenceV11,
+    recoverExecutor: recoverMetaReviewGateFromSnapshotV11
   });
   assertContractExpectedSubset({
     output: legacy,
