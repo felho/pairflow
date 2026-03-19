@@ -7,6 +7,10 @@ import { executeAskHumanExecution } from "../../v11/application/askHuman/askHuma
 import { finalizeAskHumanFlow } from "../../v11/application/askHuman/askHumanFinalization.js";
 import { runAskHumanFlow } from "../../v11/application/askHuman/runAskHumanFlow.js";
 import { prepareAskHumanRouting } from "../../v11/application/askHuman/askHumanRoutingPreparation.js";
+import {
+  buildAskHumanFlowDependencies,
+  buildAskHumanFlowInput
+} from "../../v11/shared/askHuman/askHumanFlowInvocationBuilders.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 
@@ -55,12 +59,12 @@ export async function emitAskHumanFromWorkspace(
   });
 
   return runAskHumanFlow(
-    {
+    buildAskHumanFlowInput({
       now,
       routing,
       createError: (message) => new AskHumanCommandError(message)
-    },
-    {
+    }),
+    buildAskHumanFlowDependencies({
       executeAskHumanExecution,
       finalizeAskHumanFlow,
       ...(dependencies.emitTmuxDeliveryNotification !== undefined
@@ -69,7 +73,7 @@ export async function emitAskHumanFromWorkspace(
       ...(dependencies.emitBubbleNotification !== undefined
         ? { emitBubbleNotification: dependencies.emitBubbleNotification }
         : { emitBubbleNotification })
-    }
+    })
   );
 }
 
