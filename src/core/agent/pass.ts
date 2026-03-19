@@ -1,74 +1,24 @@
 import {
-  type EmitConvergedDependencies,
-  type EmitConvergedResult
-} from "./converged.js";
-import {
-  type PassIntent,
-  type ProtocolEnvelope
+  type PassIntent
 } from "../../types/protocol.js";
-import type { Finding } from "../../types/findings.js";
-import type {
-  AgentRole,
-  BubbleStateSnapshot
-} from "../../types/bubble.js";
-import {
-  type RepeatCleanAutoconvergeReasonCode,
-  type RepeatCleanAutoconvergeReasonDetail
-} from "../convergence/repeatCleanAutoconverge.js";
+import type { AgentRole } from "../../types/bubble.js";
 import {
   raiseRepeatCleanDownstreamConvergedRejected,
 } from "../../v11/domain/pass/repeatCleanPolicyRejection.js";
-import {
-  type PassDeliveryDependencies
-} from "../../v11/application/pass/reviewerDelivery.js";
 import { normalizePassCommandError } from "../../v11/shared/pass/passCommandErrorNormalization.js";
 import { createPassCommandErrorRuntime } from "../../v11/shared/pass/passCommandErrorRuntime.js";
 import { buildEmitPassContext } from "../../v11/shared/pass/emitPassContextBuilder.js";
 import { dispatchPassFlow } from "../../v11/shared/pass/passFlowDispatch.js";
+import type {
+  EmitPassDependencies,
+  EmitPassInput,
+  EmitPassResult
+} from "../../v11/application/pass/passCommandContract.js";
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
 } from "../../v11/domain/pass/repeatCleanMetadata.js";
 
-export interface EmitPassInput {
-  summary: string;
-  refs?: string[];
-  intent?: PassIntent;
-  findings?: Finding[];
-  noFindings?: boolean;
-  cwd?: string;
-  now?: Date;
-}
-
-export interface EmitPassResult {
-  bubbleId: string;
-  sequence: number;
-  envelope: ProtocolEnvelope;
-  resultEnvelopeKind: "pass" | "convergence";
-  state: BubbleStateSnapshot;
-  inferredIntent: boolean;
-  transitionDecision: "normal_pass" | "auto_converge";
-  repeatCleanReasonCode: RepeatCleanAutoconvergeReasonCode;
-  repeatCleanReasonDetail: RepeatCleanAutoconvergeReasonDetail;
-  repeatCleanTrigger: boolean;
-  mostRecentPreviousReviewerCleanPassEnvelope: boolean;
-  autoConverged?: {
-    gateRoute: EmitConvergedResult["gateRoute"];
-    convergenceSequence: number;
-    convergenceEnvelope: ProtocolEnvelope;
-    approvalRequestSequence: number;
-    approvalRequestEnvelope: ProtocolEnvelope;
-  };
-  delivery?: {
-    delivered: boolean;
-    reason?: string;
-    retried: boolean;
-  };
-  docGateArtifactWriteFailureReason?: string;
-}
-
-export interface EmitPassDependencies extends PassDeliveryDependencies {
-  emitBubbleNotification?: EmitConvergedDependencies["emitBubbleNotification"];
-}
+export type { EmitPassDependencies, EmitPassInput, EmitPassResult };
 
 export class PassCommandError extends Error {
   public constructor(message: string) {
