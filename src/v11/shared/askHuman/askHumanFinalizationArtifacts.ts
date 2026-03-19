@@ -1,11 +1,7 @@
-import type { BubbleStateSnapshot } from "../../../types/bubble.js";
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
-
-export interface AskHumanLifecycleMetricMetadataInput {
-  sender: string;
-  refs: string[];
-  question: string;
-}
+import type {
+  AskHumanLifecycleMetricMetadataInput,
+  BuildAskHumanFinalizationResultInput
+} from "./askHumanFinalizationArtifactsContract.js";
 
 export function buildAskHumanLifecycleMetricMetadata(
   input: AskHumanLifecycleMetricMetadataInput
@@ -15,13 +11,6 @@ export function buildAskHumanLifecycleMetricMetadata(
     refs_count: input.refs.length,
     question_length: Array.from(input.question).length
   };
-}
-
-export interface BuildAskHumanFinalizationResultInput {
-  bubbleId: string;
-  sequence: number;
-  envelope: ProtocolEnvelope;
-  state: BubbleStateSnapshot;
 }
 
 export function buildAskHumanFinalizationResult(
