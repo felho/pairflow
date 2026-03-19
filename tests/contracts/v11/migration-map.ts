@@ -33,10 +33,76 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
     notes: "M3 human decision slice."
   },
   {
+    command: "metaReviewGate",
+    state: "legacy",
+    owner: "TBD",
+    notes: "M3 meta-review gate slice."
+  },
+  {
+    command: "gate",
+    state: "legacy",
+    owner: "TBD",
+    notes: "W3 matrix compatibility alias for metaReviewGate naming."
+  },
+  {
     command: "reconcile",
     state: "legacy",
     owner: "TBD",
     notes: "M4 extension scope."
+  },
+  {
+    command: "askHuman",
+    state: "legacy",
+    owner: "TBD",
+    notes: "M5 interaction command wave."
+  },
+  {
+    command: "reply",
+    state: "legacy",
+    owner: "TBD",
+    notes: "M5 interaction command wave."
+  },
+  {
+    command: "start",
+    state: "legacy",
+    owner: "TBD",
+    notes: "M5 runtime/operator command wave."
+  },
+  {
+    command: "stop",
+    state: "legacy",
+    owner: "TBD",
+    notes: "M5 runtime/operator command wave."
+  },
+  {
+    command: "restart",
+    state: "legacy",
+    owner: "TBD",
+    notes: "M5 runtime/operator command wave."
+  },
+  {
+    command: "resume",
+    state: "legacy",
+    owner: "TBD",
+    notes: "M5 runtime/operator command wave."
+  },
+  {
+    command: "watchdog",
+    state: "legacy",
+    owner: "TBD",
+    notes: "M5 runtime/operator command wave."
+  },
+  {
+    command: "commit",
+    state: "legacy",
+    owner: "TBD",
+    notes: "M6 close-out command wave."
+  },
+  {
+    command: "merge",
+    state: "legacy",
+    owner: "TBD",
+    notes: "M6 close-out command wave."
   }
 ];
 
