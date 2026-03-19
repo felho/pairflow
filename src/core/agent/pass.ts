@@ -21,6 +21,7 @@ import type {
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
 } from "../../v11/domain/pass/repeatCleanMetadata.js";
+import { inferPassIntentFromActiveRole } from "../../v11/domain/pass/passIntentInference.js";
 
 export type { EmitPassDependencies, EmitPassInput, EmitPassResult };
 export { PassCommandError };
@@ -40,16 +41,10 @@ export function resolveMostRecentPreviousReviewerPassIsCleanFromMetadata(
 }
 
 export function inferPassIntent(activeRole: AgentRole): PassIntent {
-  if (activeRole === "implementer") {
-    return "review";
-  }
-  if (activeRole === "reviewer") {
-    return "fix_request";
-  }
-
-  throw createPassCommandError(
-    `Unsupported active role for pass intent inference: ${activeRole}.`
-  );
+  return inferPassIntentFromActiveRole({
+    activeRole,
+    createError: createPassCommandError
+  });
 }
 
 export async function emitPassFromWorkspace(
