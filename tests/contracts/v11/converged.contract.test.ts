@@ -1,5 +1,5 @@
 import { readFile, readdir } from "node:fs/promises";
-import { relative, resolve } from "node:path";
+import { basename, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runConvergedContractCase } from "./converged.contract.runner.js";
@@ -101,6 +101,14 @@ describe("v11 converged contract harness skeleton", () => {
       const source = toRepoRelativePath(casePath);
       const caseDef = await readContractCase(casePath);
       expect(manifestIdsBySource.get(source)).toBe(caseDef.id);
+    }
+  });
+
+  it("keeps converged case filename aligned with case id", async () => {
+    const casePaths = await listConvergedCasePaths();
+    for (const casePath of casePaths) {
+      const caseDef = await readContractCase(casePath);
+      expect(basename(casePath)).toBe(`${caseDef.id}.case.json`);
     }
   });
 
