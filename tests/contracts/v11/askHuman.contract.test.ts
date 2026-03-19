@@ -9,13 +9,108 @@ import { readContractCase } from "./runner.js";
 import type { ContractCase } from "./schema.js";
 
 const execFileAsync = promisify(execFile);
+const askHumanCaseSources = [
+  "tests/contracts/v11/cases/ask-human/ask-human-basic.case.json",
+  "tests/contracts/v11/cases/ask-human/ask-human-basic-v11.case.json",
+  "tests/contracts/v11/cases/ask-human/ask-human-basic-parity.case.json"
+] as const;
+
+const askHumanExpectedSourcesSorted = [...askHumanCaseSources].sort();
+
+const askHumanInvalidInputCases: Array<{
+  name: string;
+  caseDef: ContractCase;
+  expectedErrorMessage: string;
+}> = [
+  {
+    name: "rejects invalid ask-human contract input when question is empty",
+    caseDef: {
+      id: "ask-human-invalid-empty-question",
+      command: "askHuman",
+      mode: "legacy",
+      description: "invalid question validation",
+      input: {
+        question: "   ",
+        refs: []
+      },
+      expected: {
+        status: "ok"
+      }
+    },
+    expectedErrorMessage:
+      "askHuman contract input.question must be a non-empty string."
+  },
+  {
+    name: "rejects invalid ask-human contract input when refs is not string array",
+    caseDef: {
+      id: "ask-human-invalid-refs",
+      command: "askHuman",
+      mode: "legacy",
+      description: "invalid refs validation",
+      input: {
+        question: "Need clarification",
+        refs: ["ok-ref", 42]
+      },
+      expected: {
+        status: "ok"
+      }
+    },
+    expectedErrorMessage: "askHuman contract input.refs must be a string array."
+  },
+  {
+    name: "rejects invalid ask-human contract input in v11 mode when refs is not string array",
+    caseDef: {
+      id: "ask-human-invalid-refs-v11",
+      command: "askHuman",
+      mode: "v11",
+      description: "invalid refs validation for v11 mode",
+      input: {
+        question: "Need clarification",
+        refs: ["ok-ref", 42]
+      },
+      expected: {
+        status: "ok"
+      }
+    },
+    expectedErrorMessage: "askHuman contract input.refs must be a string array."
+  },
+  {
+    name: "rejects invalid ask-human contract input in v11 mode when question is empty",
+    caseDef: {
+      id: "ask-human-invalid-empty-question-v11",
+      command: "askHuman",
+      mode: "v11",
+      description: "invalid empty question validation for v11 mode",
+      input: {
+        question: "   ",
+        refs: []
+      },
+      expected: {
+        status: "ok"
+      }
+    },
+    expectedErrorMessage:
+      "askHuman contract input.question must be a non-empty string."
+  }
+];
+
+function parseAskHumanSourcesFromManifest(
+  manifestRaw: string
+): string[] {
+  const manifest = JSON.parse(manifestRaw) as {
+    entries?: Array<{ command?: string; source?: string }>;
+  };
+
+  return (manifest.entries ?? [])
+    .filter((entry) => entry.command === "askHuman")
+    .map((entry) => entry.source)
+    .filter((source): source is string => typeof source === "string")
+    .sort();
+}
 
 describe("v11 askHuman contract harness skeleton", () => {
   it("loads seed contract case metadata", async () => {
-    const casePath = resolve(
-      process.cwd(),
-      "tests/contracts/v11/cases/ask-human/ask-human-basic.case.json"
-    );
+    const casePath = resolve(process.cwd(), askHumanCaseSources[0]);
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("askHuman");
     expect(caseDef.mode).toBe("legacy");
@@ -23,20 +118,9 @@ describe("v11 askHuman contract harness skeleton", () => {
   });
 
   it("executes legacy and parity assertions via shared runner", async () => {
-    const casePaths = [
-      resolve(
-        process.cwd(),
-        "tests/contracts/v11/cases/ask-human/ask-human-basic.case.json"
-      ),
-      resolve(
-        process.cwd(),
-        "tests/contracts/v11/cases/ask-human/ask-human-basic-v11.case.json"
-      ),
-      resolve(
-        process.cwd(),
-        "tests/contracts/v11/cases/ask-human/ask-human-basic-parity.case.json"
-      )
-    ];
+    const casePaths = askHumanCaseSources.map((source) =>
+      resolve(process.cwd(), source)
+    );
 
     for (const casePath of casePaths) {
       const caseDef = await readContractCase(casePath);
@@ -64,20 +148,9 @@ describe("v11 askHuman contract harness skeleton", () => {
       "tests/contracts/v11/corpus/manifest.json"
     );
     const manifestRaw = await readFile(manifestPath, "utf8");
-    const manifest = JSON.parse(manifestRaw) as {
-      entries?: Array<{ command?: string; source?: string }>;
-    };
+    const askHumanSources = parseAskHumanSourcesFromManifest(manifestRaw);
 
-    const askHumanSources = (manifest.entries ?? [])
-      .filter((entry) => entry.command === "askHuman")
-      .map((entry) => entry.source)
-      .filter((source): source is string => typeof source === "string");
-
-    expect(askHumanSources.sort()).toEqual([
-      "tests/contracts/v11/cases/ask-human/ask-human-basic-parity.case.json",
-      "tests/contracts/v11/cases/ask-human/ask-human-basic-v11.case.json",
-      "tests/contracts/v11/cases/ask-human/ask-human-basic.case.json"
-    ]);
+    expect(askHumanSources).toEqual(askHumanExpectedSourcesSorted);
   });
 
   it("builds corpus output manifest with ask-human seed entries", async () => {
@@ -92,99 +165,16 @@ describe("v11 askHuman contract harness skeleton", () => {
       ".pairflow/evidence/contracts-v11-corpus-manifest.json"
     );
     const outputRaw = await readFile(outputManifestPath, "utf8");
-    const outputManifest = JSON.parse(outputRaw) as {
-      entries?: Array<{ command?: string; source?: string }>;
-    };
+    const askHumanSources = parseAskHumanSourcesFromManifest(outputRaw);
 
-    const askHumanSources = (outputManifest.entries ?? [])
-      .filter((entry) => entry.command === "askHuman")
-      .map((entry) => entry.source)
-      .filter((source): source is string => typeof source === "string");
-
-    expect(askHumanSources.sort()).toEqual([
-      "tests/contracts/v11/cases/ask-human/ask-human-basic-parity.case.json",
-      "tests/contracts/v11/cases/ask-human/ask-human-basic-v11.case.json",
-      "tests/contracts/v11/cases/ask-human/ask-human-basic.case.json"
-    ]);
+    expect(askHumanSources).toEqual(askHumanExpectedSourcesSorted);
   });
 
-  it("rejects invalid ask-human contract input when question is empty", async () => {
-    const invalidCase: ContractCase = {
-      id: "ask-human-invalid-empty-question",
-      command: "askHuman",
-      mode: "legacy",
-      description: "invalid question validation",
-      input: {
-        question: "   ",
-        refs: []
-      },
-      expected: {
-        status: "ok"
-      }
-    };
-
-    await expect(runAskHumanContractCase(invalidCase)).rejects.toThrow(
-      "askHuman contract input.question must be a non-empty string."
-    );
-  });
-
-  it("rejects invalid ask-human contract input when refs is not string array", async () => {
-    const invalidCase: ContractCase = {
-      id: "ask-human-invalid-refs",
-      command: "askHuman",
-      mode: "legacy",
-      description: "invalid refs validation",
-      input: {
-        question: "Need clarification",
-        refs: ["ok-ref", 42]
-      },
-      expected: {
-        status: "ok"
-      }
-    };
-
-    await expect(runAskHumanContractCase(invalidCase)).rejects.toThrow(
-      "askHuman contract input.refs must be a string array."
-    );
-  });
-
-  it("rejects invalid ask-human contract input in v11 mode when refs is not string array", async () => {
-    const invalidCase: ContractCase = {
-      id: "ask-human-invalid-refs-v11",
-      command: "askHuman",
-      mode: "v11",
-      description: "invalid refs validation for v11 mode",
-      input: {
-        question: "Need clarification",
-        refs: ["ok-ref", 42]
-      },
-      expected: {
-        status: "ok"
-      }
-    };
-
-    await expect(runAskHumanContractCase(invalidCase)).rejects.toThrow(
-      "askHuman contract input.refs must be a string array."
-    );
-  });
-
-  it("rejects invalid ask-human contract input in v11 mode when question is empty", async () => {
-    const invalidCase: ContractCase = {
-      id: "ask-human-invalid-empty-question-v11",
-      command: "askHuman",
-      mode: "v11",
-      description: "invalid empty question validation for v11 mode",
-      input: {
-        question: "   ",
-        refs: []
-      },
-      expected: {
-        status: "ok"
-      }
-    };
-
-    await expect(runAskHumanContractCase(invalidCase)).rejects.toThrow(
-      "askHuman contract input.question must be a non-empty string."
-    );
-  });
+  for (const testCase of askHumanInvalidInputCases) {
+    it(testCase.name, async () => {
+      await expect(runAskHumanContractCase(testCase.caseDef)).rejects.toThrow(
+        testCase.expectedErrorMessage
+      );
+    });
+  }
 });
