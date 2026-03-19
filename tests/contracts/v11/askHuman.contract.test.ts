@@ -12,7 +12,10 @@ const execFileAsync = promisify(execFile);
 const askHumanCaseSources = [
   "tests/contracts/v11/cases/ask-human/ask-human-basic.case.json",
   "tests/contracts/v11/cases/ask-human/ask-human-basic-v11.case.json",
-  "tests/contracts/v11/cases/ask-human/ask-human-basic-parity.case.json"
+  "tests/contracts/v11/cases/ask-human/ask-human-basic-parity.case.json",
+  "tests/contracts/v11/cases/ask-human/ask-human-no-refs.case.json",
+  "tests/contracts/v11/cases/ask-human/ask-human-no-refs-v11.case.json",
+  "tests/contracts/v11/cases/ask-human/ask-human-no-refs-parity.case.json"
 ] as const;
 
 const askHumanExpectedSourcesSorted = [...askHumanCaseSources].sort();

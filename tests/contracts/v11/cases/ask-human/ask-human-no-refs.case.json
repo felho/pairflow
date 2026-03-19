@@ -1,0 +1,22 @@
+{
+  "id": "ask-human-no-refs",
+  "command": "askHuman",
+  "mode": "legacy",
+  "description": "ask-human legacy contract accepts omitted refs and emits HUMAN_QUESTION.",
+  "input": {
+    "question": "Need product clarification on rollout strategy?"
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "ASK_HUMAN_EMITTED",
+    "envelopeType": "HUMAN_QUESTION",
+    "stateSubset": {
+      "state": "WAITING_HUMAN"
+    }
+  },
+  "tags": [
+    "ask-human",
+    "v11-contract",
+    "legacy"
+  ]
+}
