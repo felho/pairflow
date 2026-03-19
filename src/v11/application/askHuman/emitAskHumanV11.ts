@@ -7,4 +7,4 @@ export type {
   EmitAskHumanDependencies as EmitAskHumanV11Dependencies,
   EmitAskHumanInput as EmitAskHumanV11Input,
   EmitAskHumanResult as EmitAskHumanV11Result
-} from "../../../core/agent/askHuman.js";
+} from "../../shared/askHuman/askHumanCommandContract.js";
