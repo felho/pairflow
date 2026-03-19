@@ -3,6 +3,7 @@ import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDel
 import { executeAskHumanExecution } from "../../application/askHuman/askHumanExecution.js";
 import { finalizeAskHumanFlow } from "../../application/askHuman/askHumanFinalization.js";
 import type { AskHumanCommandOrchestrationDependencies } from "./askHumanCommandOrchestration.js";
+import { forwardAskHumanRuntimeNotificationDependencies } from "./askHumanRuntimeDependencyForwarding.js";
 
 export interface AskHumanFlowRuntimeDependencies {
   emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification | undefined;
@@ -15,14 +16,6 @@ export function createAskHumanCommandOrchestrationDependencies(
   return {
     executeAskHumanExecution,
     finalizeAskHumanFlow,
-    ...(runtimeDependencies.emitTmuxDeliveryNotification !== undefined
-      ? {
-          emitTmuxDeliveryNotification:
-            runtimeDependencies.emitTmuxDeliveryNotification
-        }
-      : {}),
-    ...(runtimeDependencies.emitBubbleNotification !== undefined
-      ? { emitBubbleNotification: runtimeDependencies.emitBubbleNotification }
-      : {})
+    ...forwardAskHumanRuntimeNotificationDependencies(runtimeDependencies)
   };
 }
