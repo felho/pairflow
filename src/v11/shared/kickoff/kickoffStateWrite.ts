@@ -65,17 +65,23 @@ function resolveKickoffWriteErrorResult(
   return null;
 }
 
+function performKickoffStateWrite(
+  input: WriteKickoffStateInput
+): Promise<KickoffWrittenState> {
+  return input.writeState(
+    input.statePath,
+    input.nextState,
+    buildKickoffWriteStateOptions({
+      expectedFingerprint: input.expectedFingerprint
+    })
+  );
+}
+
 export async function writeKickoffState(
   input: WriteKickoffStateInput
 ): Promise<WriteKickoffStateResult> {
   try {
-    const writtenState = await input.writeState(
-      input.statePath,
-      input.nextState,
-      buildKickoffWriteStateOptions({
-        expectedFingerprint: input.expectedFingerprint
-      })
-    );
+    const writtenState = await performKickoffStateWrite(input);
     return buildKickoffWriteSuccessResult({
       writtenState
     });

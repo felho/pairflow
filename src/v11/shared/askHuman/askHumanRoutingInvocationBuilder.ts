@@ -1,12 +1,5 @@
 import type { PrepareAskHumanRoutingInput } from "./askHumanRoutingContract.js";
-
-export interface BuildAskHumanRoutingInputInput {
-  question: string;
-  refs: string[] | undefined;
-  cwd: string | undefined;
-  now: Date;
-  createError: (message: string) => Error;
-}
+import type { BuildAskHumanRoutingInputInput } from "./askHumanRoutingInvocationContract.js";
 
 export function buildAskHumanRoutingInput(
   input: BuildAskHumanRoutingInputInput
