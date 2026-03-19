@@ -1,6 +1,3 @@
-import {
-  WorkspaceResolutionError
-} from "../bubble/workspaceResolution.js";
 import type { emitBubbleNotification } from "../runtime/notifications.js";
 import type { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
 import { executeAskHumanExecution } from "../../v11/application/askHuman/askHumanExecution.js";
@@ -81,10 +78,6 @@ export async function emitAskHumanFromWorkspace(
 export function asAskHumanCommandError(error: unknown): never {
   if (error instanceof AskHumanCommandError) {
     throw error;
-  }
-
-  if (error instanceof WorkspaceResolutionError) {
-    throw new AskHumanCommandError(error.message);
   }
 
   if (error instanceof Error) {
