@@ -34,11 +34,7 @@ import type {
   BubbleStateSnapshot
 } from "../../types/bubble.js";
 import {
-  resolveReviewerTestEvidenceArtifactPath,
-  resolveReviewerTestExecutionDirectiveFromArtifact,
   type ReviewerTestExecutionDirective,
-  verifyImplementerTestEvidence,
-  writeReviewerTestEvidenceArtifact
 } from "../reviewer/testEvidence.js";
 import {
   createReviewVerificationArtifact,
@@ -86,6 +82,7 @@ import {
   executePassDelivery,
   type PassDeliveryDependencies
 } from "../../v11/application/pass/reviewerDelivery.js";
+import { resolveReviewerTestDirectiveForPass } from "../../v11/application/pass/reviewerTestDirectiveResolver.js";
 import { updateReviewerDocGateArtifact } from "../../v11/application/pass/reviewerDocGateArtifactUpdater.js";
 import { raisePostAppendReviewVerificationWriteFailed } from "../../v11/domain/pass/postAppendReviewVerificationWriteFailure.js";
 import { raisePostAppendStateWriteFailed } from "../../v11/domain/pass/postAppendStateWriteFailure.js";
@@ -646,55 +643,17 @@ export async function emitPassFromWorkspace(
     });
   }
 
-  let reviewerTestDirective: ReviewerTestExecutionDirective | undefined;
-  if (handoff.senderRole === "implementer") {
-    let implementerDirective: ReviewerTestExecutionDirective | undefined
-    const evidenceArtifactPath = resolveReviewerTestEvidenceArtifactPath(
-      resolved.bubblePaths.artifactsDir
-    );
-
-    const evidenceArtifact = await verifyImplementerTestEvidence({
+  const reviewerTestDirective: ReviewerTestExecutionDirective | undefined =
+    await resolveReviewerTestDirectiveForPass({
+      senderRole: handoff.senderRole,
       bubbleId: resolved.bubbleId,
       bubbleConfig: resolved.bubbleConfig,
       envelope: mapped.envelope,
       worktreePath: resolved.bubblePaths.worktreePath,
       repoPath: resolved.repoPath,
+      artifactsDir: resolved.bubblePaths.artifactsDir,
       now
-    }).catch(() => undefined);
-
-    if (evidenceArtifact !== undefined) {
-      const artifactWriteSucceeded = await writeReviewerTestEvidenceArtifact(
-        evidenceArtifactPath,
-        evidenceArtifact
-      )
-        .then(() => true)
-        .catch(() => false);
-      if (artifactWriteSucceeded) {
-        implementerDirective = await resolveReviewerTestExecutionDirectiveFromArtifact({
-          artifact: evidenceArtifact,
-          worktreePath: resolved.bubblePaths.worktreePath,
-          reviewArtifactType: resolved.bubbleConfig.review_artifact_type
-        }).catch(() => undefined);
-      }
-    }
-
-    reviewerTestDirective =
-      implementerDirective ??
-      (resolved.bubbleConfig.review_artifact_type === "document"
-        ? {
-            skip_full_rerun: true,
-            reason_code: "no_trigger",
-            reason_detail: "docs-only scope, runtime checks not required",
-            verification_status: "trusted"
-          }
-        : {
-            skip_full_rerun: false,
-            reason_code: "evidence_unverifiable",
-            reason_detail:
-              "Failed to resolve reviewer test directive due to verification runtime error.",
-            verification_status: "untrusted"
-          });
-  }
+    });
 
   const delivery = await executePassDelivery(
     {
