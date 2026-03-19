@@ -16,30 +16,18 @@ import {
   type RepeatCleanAutoconvergeReasonDetail
 } from "../convergence/repeatCleanAutoconverge.js";
 import {
-  type ResolvedPassHandoff
-} from "../../v11/domain/pass/handoff.js";
-import {
   raiseRepeatCleanDownstreamConvergedRejected,
 } from "../../v11/domain/pass/repeatCleanPolicyRejection.js";
 import {
   type PassDeliveryDependencies
 } from "../../v11/application/pass/reviewerDelivery.js";
-import { preparePassRouting } from "../../v11/application/pass/passRoutingPreparation.js";
 import { normalizePassCommandError } from "../../v11/shared/pass/passCommandErrorNormalization.js";
-import { normalizePassCommandInput } from "../../v11/shared/pass/passCommandInputNormalization.js";
-import { normalizePassCommandPayload } from "../../v11/shared/pass/passCommandPayloadNormalization.js";
 import { createPassCommandErrorRuntime } from "../../v11/shared/pass/passCommandErrorRuntime.js";
+import { buildEmitPassContext } from "../../v11/shared/pass/emitPassContextBuilder.js";
 import { dispatchPassFlow } from "../../v11/shared/pass/passFlowDispatch.js";
-import {
-  buildPassRoutingInput
-} from "../../v11/shared/pass/passRoutingInvocationBuilders.js";
-import { preparePassWorkspaceContext } from "../../v11/shared/pass/passWorkspaceContextPreparation.js";
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
 } from "../../v11/domain/pass/repeatCleanMetadata.js";
-import {
-  createPassRoutingDependencies
-} from "../../v11/shared/pass/passFlowDependencyWiring.js";
 
 export interface EmitPassInput {
   summary: string;
@@ -122,81 +110,16 @@ export async function emitPassFromWorkspace(
   input: EmitPassInput,
   dependencies: EmitPassDependencies = {}
 ): Promise<EmitPassResult> {
-  const normalizedCommandInput = normalizePassCommandInput({
-    summary: input.summary,
-    refs: input.refs,
-    now: input.now,
-    createError: passCommandErrorRuntime.createError
+  const flowContext = await buildEmitPassContext({
+    commandInput: input,
+    createError: passCommandErrorRuntime.createError,
+    inferDefaultPassIntent: inferPassIntent
   });
-  const now = normalizedCommandInput.now;
-  const nowIso = now.toISOString();
-  const summary = normalizedCommandInput.summary;
-  const refs = normalizedCommandInput.refs;
-  const normalizedPayload = normalizePassCommandPayload({
-    findings: input.findings,
-    noFindings: input.noFindings
-  });
-  const findings = normalizedPayload.findings;
-  const hasFindings = normalizedPayload.hasFindings;
-  const noFindings = normalizedPayload.noFindings;
-  const workspaceContext = await preparePassWorkspaceContext({
-    cwd: input.cwd,
-    now,
-    nowIso,
-    createError: passCommandErrorRuntime.createError
-  });
-  const resolved = workspaceContext.resolved;
-  const bubbleIdentity = workspaceContext.bubbleIdentity;
-  const loadedState = workspaceContext.loadedState;
-  const state = workspaceContext.state;
-  const handoff: ResolvedPassHandoff = workspaceContext.handoff;
-  const implementer = workspaceContext.implementer;
-  const reviewer = workspaceContext.reviewer;
-  const passRouting = await preparePassRouting(
-    buildPassRoutingInput({
-      senderRole: handoff.senderRole,
-      round: handoff.envelopeRound,
-      summary,
-      refs,
-      findings,
-      hasFindings,
-      noFindings,
-      findingsPayloadInvalid: normalizedPayload.findingsPayloadInvalid,
-      bubbleConfig: resolved.bubbleConfig,
-      worktreePath: resolved.bubblePaths.worktreePath,
-      transcriptPath: resolved.bubblePaths.transcriptPath,
-      reviewer,
-      implementer,
-      createError: passCommandErrorRuntime.createError,
-      ...(input.intent !== undefined
-        ? { inputIntent: input.intent }
-        : {})
-    }),
-    createPassRoutingDependencies(inferPassIntent)
-  );
 
-  return dispatchPassFlow(
-    {
-      summary,
-      refs,
-      now,
-      nowIso,
-      findings,
-      hasFindings,
-      noFindings,
-      resolved,
-      bubbleIdentity,
-      handoff,
-      reviewer,
-      implementer,
-      state,
-      loadedState,
-      passRouting,
-      createError: passCommandErrorRuntime.createError,
-      onDownstreamRejected: passCommandErrorRuntime.onDownstreamRejected
-    },
-    dependencies
-  );
+  return dispatchPassFlow({
+    ...flowContext,
+    onDownstreamRejected: passCommandErrorRuntime.onDownstreamRejected
+  }, dependencies);
 }
 
 export function asPassCommandError(error: unknown): never {
