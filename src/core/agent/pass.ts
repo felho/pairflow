@@ -42,8 +42,6 @@ import {
   type ResolvedPassHandoff
 } from "../../v11/domain/pass/handoff.js";
 import { normalizeReviewerFindingsPayload } from "../../v11/domain/pass/reviewerFindingsPayload.js";
-import { assertNoDocsOnlySkipLogRefConflict } from "../../v11/domain/pass/docsOnlyRuntimeSkipGuard.js";
-import { validateReviewerVerificationConsistency } from "../../v11/domain/pass/reviewerVerificationConsistencyGuard.js";
 import {
   raiseRepeatCleanDownstreamConvergedRejected,
 } from "../../v11/domain/pass/repeatCleanPolicyRejection.js";
@@ -65,6 +63,7 @@ import { updateReviewerDocGateArtifact } from "../../v11/application/pass/review
 import { prepareNormalPassAppend } from "../../v11/application/pass/normalPassAppendPreparation.js";
 import { prepareReviewerPass } from "../../v11/application/pass/reviewerPassPreparation.js";
 import { resolvePassIntent } from "../../v11/application/pass/passIntentResolution.js";
+import { prepareReviewerVerification } from "../../v11/application/pass/reviewerVerificationPreparation.js";
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
 } from "../../v11/domain/pass/repeatCleanMetadata.js";
@@ -235,30 +234,20 @@ export async function emitPassFromWorkspace(
   const inferredIntent = intentResolution.inferredIntent;
   const intent = intentResolution.intent;
 
-  assertNoDocsOnlySkipLogRefConflict({
+  const accuracyCritical = resolved.bubbleConfig.accuracy_critical === true;
+  const reviewerVerification = await prepareReviewerVerification({
     reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
     senderRole: handoff.senderRole,
     summary,
     refs,
-    createError: (message) => new PassCommandError(message)
-  });
-
-  const accuracyCritical = resolved.bubbleConfig.accuracy_critical === true;
-  const reviewerVerification = await resolveReviewerVerification({
     accuracyCritical,
-    senderRole: handoff.senderRole,
-    refs,
     worktreePath: resolved.bubblePaths.worktreePath,
+    intent,
+    hasFindings,
     createError: (message) => new PassCommandError(message)
+  }, {
+    resolveReviewerVerification
   });
-  if (reviewerVerification !== undefined) {
-    validateReviewerVerificationConsistency({
-      payloadOverall: reviewerVerification.payload.overall,
-      intent,
-      hasFindings,
-      createError: (message) => new PassCommandError(message)
-    });
-  }
 
   const transcript = await readTranscriptEnvelopes(resolved.bubblePaths.transcriptPath, {
     allowMissing: true,
