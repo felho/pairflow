@@ -2,9 +2,9 @@ import type { emitBubbleNotification } from "../../../core/runtime/notifications
 import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import {
   buildAskHumanFlowDependencies,
-  buildAskHumanFlowInput,
-  buildAskHumanRoutingInput
+  buildAskHumanFlowInput
 } from "./askHumanFlowInvocationBuilders.js";
+import { buildAskHumanRoutingInput } from "./askHumanRoutingInvocationBuilder.js";
 import { resolveAskHumanCommandOrchestrationDependencies } from "./askHumanCommandOrchestrationDependencyResolution.js";
 import type {
   RunAskHumanFlowFn,
