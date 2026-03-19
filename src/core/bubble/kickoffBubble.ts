@@ -1,9 +1,7 @@
-import type { readFile, writeFile } from "node:fs/promises";
-
-import type { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
-import type { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
-import type { resolveBubbleById } from "./bubbleLookup.js";
-import { resolveKickoffDependencies } from "../../v11/shared/kickoff/kickoffDependencyResolution.js";
+import {
+  resolveKickoffDependencies,
+  type KickoffDependencyOverrides
+} from "../../v11/shared/kickoff/kickoffDependencyResolution.js";
 import { buildKickoffEntrypointInvocation } from "../../v11/shared/kickoff/kickoffEntrypointInvocationBuilder.js";
 import type { RunKickoffFlowResult } from "../../v11/shared/kickoff/kickoffFlowContract.js";
 import { runKickoffFlow } from "../../v11/application/kickoff/runKickoffFlow.js";
@@ -19,14 +17,7 @@ export interface KickoffBubbleInput {
 
 export type KickoffBubbleResult = RunKickoffFlowResult;
 
-export interface KickoffBubbleDependencies {
-  resolveBubbleById?: typeof resolveBubbleById;
-  readStateSnapshot?: typeof readStateSnapshot;
-  writeStateSnapshot?: typeof writeStateSnapshot;
-  readFile?: typeof readFile;
-  writeFile?: typeof writeFile;
-  appendProtocolEnvelope?: typeof appendProtocolEnvelope;
-}
+export type KickoffBubbleDependencies = KickoffDependencyOverrides;
 
 export async function kickoffBubble(
   input: KickoffBubbleInput,
