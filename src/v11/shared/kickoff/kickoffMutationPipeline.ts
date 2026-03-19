@@ -111,6 +111,35 @@ function formatKickoffMutationRollbackFailure(input: {
   return `${input.persistenceFailureCode}: mutation failed (${errorMessage}) and rollback failed (${input.rollbackErrors.join("; ")}).`;
 }
 
+async function handleKickoffMutationFailure(input: {
+  pipelineInput: ExecuteKickoffMutationPipelineInput;
+  mutationError: unknown;
+  transcriptBackup: string | null;
+  executeRollback: typeof executeKickoffMutationRollback;
+}): Promise<ExecuteKickoffMutationPipelineResult> {
+  const rollbackErrors = await input.executeRollback(
+    buildKickoffMutationRollbackInput({
+      pipelineInput: input.pipelineInput,
+      transcriptBackup: input.transcriptBackup
+    })
+  );
+
+  if (rollbackErrors.length > 0) {
+    // reason_code=KICKOFF_MUTATION_ROLLBACK_FAILED context=kickoff_mutation_pipeline
+    throw new Error(
+      formatKickoffMutationRollbackFailure({
+        persistenceFailureCode: input.pipelineInput.persistenceFailureCode,
+        mutationError: input.mutationError,
+        rollbackErrors
+      })
+    );
+  }
+
+  return {
+    kind: "mutation_failed_rolled_back"
+  };
+}
+
 export async function executeKickoffMutationPipeline(
   input: ExecuteKickoffMutationPipelineInput,
   dependencies: ExecuteKickoffMutationPipelineDependencies = {}
@@ -124,27 +153,12 @@ export async function executeKickoffMutationPipeline(
       buildKickoffMutationExecutionInput(input)
     );
   } catch (error) {
-    const rollbackErrors = await executeRollback(
-      buildKickoffMutationRollbackInput({
-        pipelineInput: input,
-        transcriptBackup
-      })
-    );
-
-    if (rollbackErrors.length > 0) {
-      // reason_code=KICKOFF_MUTATION_ROLLBACK_FAILED context=kickoff_mutation_pipeline
-      throw new Error(
-        formatKickoffMutationRollbackFailure({
-          persistenceFailureCode: input.persistenceFailureCode,
-          mutationError: error,
-          rollbackErrors
-        })
-      );
-    }
-
-    return {
-      kind: "mutation_failed_rolled_back"
-    };
+    return handleKickoffMutationFailure({
+      pipelineInput: input,
+      mutationError: error,
+      transcriptBackup,
+      executeRollback
+    });
   }
 
   return {
