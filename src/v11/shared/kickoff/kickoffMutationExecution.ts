@@ -54,13 +54,19 @@ function buildKickoffMutationEnvelopeAppendInput(
     transcriptPath: input.transcriptPath,
     lockPath: join(input.locksDir, `${input.bubbleId}.lock`),
     now: input.now,
-    envelope: buildKickoffTaskEnvelope({
-      bubbleId: input.bubbleId,
-      implementer: input.implementer,
-      task: input.task,
-      taskArtifactPath: input.taskArtifactPath
-    })
+    envelope: buildKickoffMutationTaskEnvelope(input)
   };
+}
+
+function buildKickoffMutationTaskEnvelope(
+  input: ExecuteKickoffMutationInput
+): ReturnType<typeof buildKickoffTaskEnvelope> {
+  return buildKickoffTaskEnvelope({
+    bubbleId: input.bubbleId,
+    implementer: input.implementer,
+    task: input.task,
+    taskArtifactPath: input.taskArtifactPath
+  });
 }
 
 export async function executeKickoffMutation(

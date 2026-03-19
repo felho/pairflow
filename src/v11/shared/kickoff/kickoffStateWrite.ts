@@ -56,6 +56,15 @@ function buildKickoffWriteConflictResult(): WriteKickoffStateResult {
   };
 }
 
+function resolveKickoffWriteErrorResult(
+  error: unknown
+): WriteKickoffStateResult | null {
+  if (error instanceof StateStoreConflictError) {
+    return buildKickoffWriteConflictResult();
+  }
+  return null;
+}
+
 export async function writeKickoffState(
   input: WriteKickoffStateInput
 ): Promise<WriteKickoffStateResult> {
@@ -71,8 +80,9 @@ export async function writeKickoffState(
       writtenState
     });
   } catch (error) {
-    if (error instanceof StateStoreConflictError) {
-      return buildKickoffWriteConflictResult();
+    const errorResult = resolveKickoffWriteErrorResult(error);
+    if (errorResult !== null) {
+      return errorResult;
     }
     throw error;
   }
