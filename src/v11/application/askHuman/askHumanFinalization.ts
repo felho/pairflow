@@ -12,6 +12,7 @@ import {
   buildAskHumanFinalizationResult,
   buildAskHumanLifecycleMetricMetadata
 } from "../../shared/askHuman/askHumanFinalizationArtifacts.js";
+import { emitOptionalAskHumanNotifications } from "../../shared/askHuman/askHumanNotificationEmission.js";
 import type { AskHumanRoutingContext } from "../../shared/askHuman/askHumanRoutingContext.js";
 import { resolveAskHumanFinalizationDependencies } from "../../shared/askHuman/askHumanFinalizationDependencyResolution.js";
 
@@ -37,27 +38,6 @@ export interface FinalizeAskHumanFlowDependencies {
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
 }
 
-function emitOptionalAskHumanNotifications(
-  input: FinalizeAskHumanFlowInput,
-  dependencies: {
-    emitTmuxDeliveryNotification: typeof emitTmuxDeliveryNotification;
-    emitBubbleNotification: typeof emitBubbleNotification;
-  },
-  messageRef: string
-): void {
-  // Optional UX signal; never block protocol/state progression on notification failure.
-  void dependencies.emitTmuxDeliveryNotification({
-    bubbleId: input.routing.resolved.bubbleId,
-    bubbleConfig: input.routing.resolved.bubbleConfig,
-    sessionsPath: input.routing.resolved.bubblePaths.sessionsPath,
-    envelope: input.appended.envelope,
-    messageRef
-  });
-
-  // Optional UX signal; never block protocol/state progression on notification failure.
-  void dependencies.emitBubbleNotification(input.routing.resolved.bubbleConfig, "waiting-human");
-}
-
 export async function finalizeAskHumanFlow(
   input: FinalizeAskHumanFlowInput,
   dependencies: FinalizeAskHumanFlowDependencies = {}
@@ -77,13 +57,18 @@ export async function finalizeAskHumanFlow(
   });
 
   emitOptionalAskHumanNotifications(
-    input,
+    {
+      bubbleId: input.routing.resolved.bubbleId,
+      bubbleConfig: input.routing.resolved.bubbleConfig,
+      sessionsPath: input.routing.resolved.bubblePaths.sessionsPath,
+      envelope: input.appended.envelope,
+      messageRef
+    },
     {
       emitTmuxDeliveryNotification:
         resolvedDependencies.emitTmuxDeliveryNotification,
       emitBubbleNotification: resolvedDependencies.emitBubbleNotification
-    },
-    messageRef
+    }
   );
 
   await resolvedDependencies.emitBubbleLifecycleEventBestEffort({
