@@ -1,20 +1,21 @@
-import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
-import { resolveBubbleFromWorkspaceCwd } from "../../../core/bubble/workspaceResolution.js";
-import { readStateSnapshot } from "../../../core/state/stateStore.js";
 import type {
   ResolvedAskHumanRoutingPreparationDependencies,
   ResolveAskHumanRoutingPreparationDependenciesInput
 } from "./askHumanRoutingPreparationDependencyResolutionContract.js";
+import { askHumanRoutingPreparationDependencyDefaults } from "./askHumanRoutingPreparationDependencyDefaults.js";
 
 export function resolveAskHumanRoutingPreparationDependencies(
   input: ResolveAskHumanRoutingPreparationDependenciesInput
 ): ResolvedAskHumanRoutingPreparationDependencies {
   return {
     resolveBubble:
-      input.resolveBubbleFromWorkspaceCwd ?? resolveBubbleFromWorkspaceCwd,
+      input.resolveBubbleFromWorkspaceCwd
+      ?? askHumanRoutingPreparationDependencyDefaults.resolveBubbleFromWorkspaceCwd,
     ensureBubbleIdentity:
       input.ensureBubbleInstanceIdForMutation
-      ?? ensureBubbleInstanceIdForMutation,
-    readState: input.readStateSnapshot ?? readStateSnapshot
+      ?? askHumanRoutingPreparationDependencyDefaults.ensureBubbleInstanceIdForMutation,
+    readState:
+      input.readStateSnapshot
+      ?? askHumanRoutingPreparationDependencyDefaults.readStateSnapshot
   };
 }
