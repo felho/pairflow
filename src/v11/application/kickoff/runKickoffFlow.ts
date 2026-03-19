@@ -31,3 +31,5 @@ export async function runKickoffFlow(
     dependencies
   );
 }
+
+export type { RunKickoffFlowInput, RunKickoffFlowResult };
