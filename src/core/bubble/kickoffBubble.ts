@@ -1,30 +1,25 @@
-import { readFile, stat, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 
 import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../config/bubbleConfig.js";
 import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
 import { readStateSnapshot, StateStoreConflictError, writeStateSnapshot } from "../state/stateStore.js";
 import { assertValidBubbleStateSnapshot } from "../state/stateSchema.js";
-import { isNonEmptyString } from "../validation.js";
 import { resolveBubbleById } from "./bubbleLookup.js";
 import {
-  IDEATION_ALREADY_ACTIVE,
-  IDEATION_KICKOFF_NOT_ALLOWED,
-  IDEATION_KICKOFF_NOT_ELIGIBLE,
   IDEATION_KICKOFF_PERSISTENCE_FAILED,
-  IDEATION_KICKOFF_REQUIRES_RUNNING,
   IDEATION_KICKOFF_STATE_CONFLICT,
   IDEATION_KICKOFF_TASK_INVALID,
-  hasIdeationMetadataParseWarning,
   resolveIdeationMetadata
 } from "./ideation.js";
 import type { BubbleConfig, BubbleStateSnapshot } from "../../types/bubble.js";
-
-interface ResolvedKickoffTaskInput {
-  content: string;
-  source: "inline" | "file";
-  sourcePath?: string;
-}
+import {
+  KickoffTaskInputValidationError,
+  renderKickoffTaskArtifact,
+  type ResolvedKickoffTaskInput,
+  resolveKickoffTaskInput
+} from "../../v11/shared/kickoff/kickoffTaskInputResolution.js";
+import { resolveKickoffEligibilityFailureReason } from "../../v11/shared/kickoff/kickoffEligibility.js";
 
 export interface KickoffBubbleInput {
   bubbleId: string;
@@ -64,87 +59,6 @@ export interface KickoffBubbleDependencies {
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;
 }
 
-class KickoffTaskInputValidationError extends Error {}
-
-const IDEATION_PLACEHOLDER_CONTENT_MARKER = /metadata_source:\s*ideation_placeholder/iu;
-
-function isIdeationPlaceholderTaskContent(content: string): boolean {
-  return IDEATION_PLACEHOLDER_CONTENT_MARKER.test(content);
-}
-
-function renderTaskArtifact(task: ResolvedKickoffTaskInput): string {
-  const sourceLine =
-    task.source === "file"
-      ? `Source: file (${task.sourcePath})`
-      : "Source: inline text";
-
-  return `# Bubble Task\n\n${sourceLine}\n\n${task.content}\n`;
-}
-
-async function resolveKickoffTaskInput(input: {
-  task?: string;
-  taskFile?: string;
-  cwd: string;
-}): Promise<ResolvedKickoffTaskInput> {
-  const hasTaskText = isNonEmptyString(input.task);
-  const hasTaskFile = isNonEmptyString(input.taskFile);
-  if (hasTaskText && hasTaskFile) {
-    throw new KickoffTaskInputValidationError(
-      "Provide either task text or task file path, not both."
-    );
-  }
-  if (!hasTaskText && !hasTaskFile) {
-    throw new KickoffTaskInputValidationError("Provide task text or task file path.");
-  }
-
-  if (hasTaskFile) {
-    const candidatePath = resolve(input.cwd, input.taskFile as string);
-    const taskStats = await stat(candidatePath).catch((error: NodeJS.ErrnoException) => {
-      if (error.code === "ENOENT") {
-        throw new KickoffTaskInputValidationError(
-          `Task file does not exist: ${candidatePath}`
-        );
-      }
-      throw error;
-    });
-    if (!taskStats.isFile()) {
-      throw new KickoffTaskInputValidationError(
-        `Task path is not a file: ${candidatePath}`
-      );
-    }
-
-    const content = await readFile(candidatePath, "utf8");
-    const normalizedContent = content.trimEnd();
-    if (normalizedContent.trim().length === 0) {
-      throw new KickoffTaskInputValidationError(`Task file is empty: ${candidatePath}`);
-    }
-    if (isIdeationPlaceholderTaskContent(normalizedContent)) {
-      throw new KickoffTaskInputValidationError(
-        `Task file still contains ideation placeholder marker: ${candidatePath}`
-      );
-    }
-
-    return {
-      content: normalizedContent,
-      source: "file",
-      sourcePath: candidatePath
-    };
-  }
-
-  const taskText = (input.task as string).trim();
-  if (taskText.length === 0) {
-    throw new KickoffTaskInputValidationError("Task cannot be empty.");
-  }
-  if (isIdeationPlaceholderTaskContent(taskText)) {
-    throw new KickoffTaskInputValidationError(
-      "Task text still contains ideation placeholder marker."
-    );
-  }
-  return {
-    content: taskText,
-    source: "inline"
-  };
-}
 
 function buildFailureResult(input: {
   bubbleId: string;
@@ -212,46 +126,16 @@ export async function kickoffBubble(
     ideation_task_pending: ideationMetadata.taskPending
   };
 
-  if (hasIdeationMetadataParseWarning(resolved.bubbleConfig)) {
+  const eligibilityFailureReason = resolveKickoffEligibilityFailureReason({
+    hasParseWarning: resolved.bubbleConfig.ideation?.parse_warning !== undefined,
+    ideationMode: ideationMetadata.mode,
+    ideationTaskPending: ideationMetadata.taskPending,
+    state
+  });
+  if (eligibilityFailureReason !== null) {
     return buildFailureResult({
       bubbleId: resolved.bubbleId,
-      reasonCode: IDEATION_KICKOFF_NOT_ALLOWED,
-      stateBefore: state,
-      markersBefore
-    });
-  }
-
-  if (!ideationMetadata.mode) {
-    return buildFailureResult({
-      bubbleId: resolved.bubbleId,
-      reasonCode: IDEATION_KICKOFF_NOT_ALLOWED,
-      stateBefore: state,
-      markersBefore
-    });
-  }
-
-  if (state.round >= 1) {
-    return buildFailureResult({
-      bubbleId: resolved.bubbleId,
-      reasonCode: IDEATION_ALREADY_ACTIVE,
-      stateBefore: state,
-      markersBefore
-    });
-  }
-
-  if (state.state !== "RUNNING") {
-    return buildFailureResult({
-      bubbleId: resolved.bubbleId,
-      reasonCode: IDEATION_KICKOFF_REQUIRES_RUNNING,
-      stateBefore: state,
-      markersBefore
-    });
-  }
-
-  if (!ideationMetadata.taskPending) {
-    return buildFailureResult({
-      bubbleId: resolved.bubbleId,
-      reasonCode: IDEATION_KICKOFF_NOT_ELIGIBLE,
+      reasonCode: eligibilityFailureReason,
       stateBefore: state,
       markersBefore
     });
@@ -345,7 +229,7 @@ export async function kickoffBubble(
 
   let transcriptBackup: string | null = null;
   try {
-    await writeFileFn(resolved.bubblePaths.taskArtifactPath, renderTaskArtifact(task), {
+    await writeFileFn(resolved.bubblePaths.taskArtifactPath, renderKickoffTaskArtifact(task), {
       encoding: "utf8"
     });
     await writeFileFn(
