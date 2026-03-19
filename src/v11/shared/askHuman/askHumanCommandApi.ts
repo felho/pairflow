@@ -7,25 +7,22 @@ import {
   createAskHumanCommandError,
   throwAsAskHumanCommandError
 } from "./askHumanCommandRuntime.js";
-import { buildAskHumanCommandContext } from "./askHumanCommandContextBuilder.js";
+import { buildAskHumanCommandOrchestrationInvocation } from "./askHumanCommandOrchestrationInvocationBuilder.js";
 import { orchestrateAskHumanCommand } from "./askHumanCommandOrchestration.js";
-import { createAskHumanCommandOrchestrationDependencies } from "./askHumanFlowDependencyWiring.js";
 
 export async function emitAskHumanFromWorkspace(
   input: EmitAskHumanInput,
   dependencies: EmitAskHumanDependencies = {}
 ): Promise<EmitAskHumanResult> {
-  const context = buildAskHumanCommandContext({
+  const invocation = buildAskHumanCommandOrchestrationInvocation({
     commandInput: input,
+    runtimeDependencies: dependencies,
     createError: createAskHumanCommandError
   });
 
   return orchestrateAskHumanCommand(
-    context.orchestrationInput,
-    createAskHumanCommandOrchestrationDependencies({
-      emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification,
-      emitBubbleNotification: dependencies.emitBubbleNotification
-    })
+    invocation.orchestrationInput,
+    invocation.orchestrationDependencies
   );
 }
 
