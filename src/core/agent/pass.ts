@@ -106,6 +106,7 @@ import {
 } from "../../v11/domain/pass/repeatCleanPolicyRejection.js";
 import { resolveReviewerVerification } from "../../v11/application/pass/reviewerVerificationResolver.js";
 import { raisePostAppendReviewVerificationWriteFailed } from "../../v11/domain/pass/postAppendReviewVerificationWriteFailure.js";
+import { raisePostAppendStateWriteFailed } from "../../v11/domain/pass/postAppendStateWriteFailure.js";
 
 export interface EmitPassInput {
   summary: string;
@@ -851,9 +852,11 @@ export async function emitPassFromWorkspace(
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    throw new PassCommandError(
-      `PASS ${appendResult.envelope.id} was appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`
-    );
+    raisePostAppendStateWriteFailed({
+      envelopeId: appendResult.envelope.id,
+      reason,
+      createError: (message) => new PassCommandError(message)
+    });
   }
 
   if (docGateScopeActive) {
