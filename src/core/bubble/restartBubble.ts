@@ -1,49 +1,27 @@
-import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
+import { resolveBubbleById } from "./bubbleLookup.js";
 import {
-  removeRuntimeSession,
-  RuntimeSessionsRegistryError,
-  RuntimeSessionsRegistryLockError
+  removeRuntimeSession
 } from "../runtime/sessionsRegistry.js";
 import {
-  terminateBubbleTmuxSession,
-  TmuxCommandError
+  terminateBubbleTmuxSession
 } from "../runtime/tmuxManager.js";
 import {
-  asStartBubbleError,
-  startBubble,
-  StartBubbleError,
-  type StartBubbleResult
+  startBubble
 } from "./startBubble.js";
-
-export interface RestartBubbleInput {
-  bubbleId: string;
-  repoPath?: string | undefined;
-  cwd?: string | undefined;
-  now?: Date | undefined;
-}
-
-export interface RestartBubbleResult {
-  bubbleId: string;
-  state: StartBubbleResult["state"];
-  tmuxSessionName: string;
-  worktreePath: string;
-  previousTmuxSessionExisted: boolean;
-  previousRuntimeSessionRemoved: boolean;
-}
-
-export interface RestartBubbleDependencies {
-  resolveBubbleById?: typeof resolveBubbleById;
-  terminateBubbleTmuxSession?: typeof terminateBubbleTmuxSession;
-  removeRuntimeSession?: typeof removeRuntimeSession;
-  startBubble?: typeof startBubble;
-}
-
-export class RestartBubbleError extends Error {
-  public constructor(message: string) {
-    super(message);
-    this.name = "RestartBubbleError";
-  }
-}
+import type {
+  RestartBubbleDependencies,
+  RestartBubbleInput,
+  RestartBubbleResult
+} from "../../v11/application/restart/restartCommandContract.js";
+import {
+  throwAsRestartBubbleError
+} from "../../v11/shared/restart/restartCommandRuntime.js";
+export type {
+  RestartBubbleDependencies,
+  RestartBubbleInput,
+  RestartBubbleResult
+} from "../../v11/application/restart/restartCommandContract.js";
+export { RestartBubbleError } from "../../v11/shared/restart/restartCommandRuntime.js";
 
 export async function restartBubble(
   input: RestartBubbleInput,
@@ -91,34 +69,5 @@ export async function restartBubble(
 }
 
 export function asRestartBubbleError(error: unknown): never {
-  if (error instanceof RestartBubbleError) {
-    throw error;
-  }
-  if (error instanceof BubbleLookupError) {
-    throw new RestartBubbleError(error.message);
-  }
-  if (error instanceof TmuxCommandError) {
-    throw new RestartBubbleError(error.message);
-  }
-  if (
-    error instanceof RuntimeSessionsRegistryError ||
-    error instanceof RuntimeSessionsRegistryLockError
-  ) {
-    throw new RestartBubbleError(error.message);
-  }
-  if (error instanceof StartBubbleError) {
-    throw new RestartBubbleError(error.message);
-  }
-
-  try {
-    asStartBubbleError(error);
-  } catch (startError) {
-    if (startError instanceof StartBubbleError) {
-      throw new RestartBubbleError(startError.message);
-    }
-    if (startError instanceof Error) {
-      throw new RestartBubbleError(startError.message);
-    }
-    throw startError;
-  }
+  throwAsRestartBubbleError(error);
 }
