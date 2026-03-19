@@ -80,6 +80,7 @@ import {
   executePassDelivery,
   type PassDeliveryDependencies
 } from "../../v11/application/pass/reviewerDelivery.js";
+import { mapPassResultDelivery } from "../../v11/application/pass/passResultDelivery.js";
 import { resolveReviewerTestDirectiveForPass } from "../../v11/application/pass/reviewerTestDirectiveResolver.js";
 import { updateReviewerDocGateArtifact } from "../../v11/application/pass/reviewerDocGateArtifactUpdater.js";
 import { raisePostAppendReviewVerificationWriteFailed } from "../../v11/domain/pass/postAppendReviewVerificationWriteFailure.js";
@@ -680,6 +681,10 @@ export async function emitPassFromWorkspace(
     resolveMostRecentPreviousReviewerPassIsCleanFromMetadata(
       mapped.envelope.payload.metadata
     ) ?? repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope;
+  const deliveryForResult = mapPassResultDelivery({
+    deliveryResult,
+    deliveryRetried
+  });
 
   return {
     bubbleId: resolved.bubbleId,
@@ -693,16 +698,8 @@ export async function emitPassFromWorkspace(
     repeatCleanReasonDetail: repeatCleanTrigger.reasonDetail,
     repeatCleanTrigger: repeatCleanTrigger.trigger,
     mostRecentPreviousReviewerCleanPassEnvelope,
-    ...(deliveryResult !== undefined
-      ? {
-          delivery: {
-            delivered: deliveryResult.delivered,
-            ...(deliveryResult.reason !== undefined
-              ? { reason: deliveryResult.reason }
-              : {}),
-            retried: deliveryRetried
-          }
-        }
+    ...(deliveryForResult !== undefined
+      ? { delivery: deliveryForResult }
       : {}),
     ...(docGateArtifactWriteFailureReason !== undefined
       ? {
