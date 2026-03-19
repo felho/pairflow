@@ -10,14 +10,15 @@ import type {
   BubbleStateSnapshot
 } from "../../types/bubble.js";
 import { type ProtocolEnvelope } from "../../types/protocol.js";
-import { prepareConvergedRouting } from "../../v11/application/converged/convergedRoutingPreparation.js";
 import {
-  executeConvergedExecution,
-  type ExecuteConvergedExecutionDependencies
-} from "../../v11/application/converged/convergedExecution.js";
-import { finalizeConvergedFlow } from "../../v11/application/converged/convergedFinalization.js";
+  runConvergedFlow,
+  type RunConvergedFlowDependencies
+} from "../../v11/application/converged/runConvergedFlow.js";
+import { prepareConvergedRouting } from "../../v11/application/converged/convergedRoutingPreparation.js";
 import { prepareConvergedPolicy } from "../../v11/application/converged/convergedPolicyPreparation.js";
 import { prepareConvergedValidation } from "../../v11/application/converged/convergedValidationPreparation.js";
+import { executeConvergedExecution } from "../../v11/application/converged/convergedExecution.js";
+import { finalizeConvergedFlow } from "../../v11/application/converged/convergedFinalization.js";
 
 export interface EmitConvergedInput {
   summary: string;
@@ -30,10 +31,10 @@ export interface EmitConvergedInput {
 }
 
 export interface EmitConvergedDependencies {
-  emitTmuxDeliveryNotification?: ExecuteConvergedExecutionDependencies["emitTmuxDeliveryNotification"];
-  emitBubbleNotification?: ExecuteConvergedExecutionDependencies["emitBubbleNotification"];
-  applyMetaReviewGateOnConvergence?: ExecuteConvergedExecutionDependencies["applyMetaReviewGateOnConvergence"];
-  recoverMetaReviewGateFromSnapshot?: ExecuteConvergedExecutionDependencies["recoverMetaReviewGateFromSnapshot"];
+  emitTmuxDeliveryNotification?: RunConvergedFlowDependencies["emitTmuxDeliveryNotification"];
+  emitBubbleNotification?: RunConvergedFlowDependencies["emitBubbleNotification"];
+  applyMetaReviewGateOnConvergence?: RunConvergedFlowDependencies["applyMetaReviewGateOnConvergence"];
+  recoverMetaReviewGateFromSnapshot?: RunConvergedFlowDependencies["recoverMetaReviewGateFromSnapshot"];
 }
 
 export interface EmitConvergedResult {
@@ -104,88 +105,38 @@ export async function emitConvergedFromWorkspace(
   dependencies: EmitConvergedDependencies = {}
 ): Promise<EmitConvergedResult> {
   const now = input.now ?? new Date();
-  const nowIso = now.toISOString();
   const summary = requireNonEmptyString(
     input.summary,
     "Convergence summary",
     (message) => new ConvergedCommandError(message)
   );
   const refs = normalizeStringList(input.refs ?? []);
-
-  const {
-    resolved,
-    bubbleIdentity,
-    state,
-    implementer,
-    reviewer
-  } = await prepareConvergedRouting({
-    now,
-    ...(input.cwd !== undefined
-      ? { cwd: input.cwd }
-      : {}),
-    ...(input.expectedStateFingerprint !== undefined
-      ? { expectedStateFingerprint: input.expectedStateFingerprint }
-      : {}),
-    ...(input.expectedRound !== undefined
-      ? { expectedRound: input.expectedRound }
-      : {}),
-    ...(input.expectedReviewer !== undefined
-      ? { expectedReviewer: input.expectedReviewer }
-      : {}),
-    createError: (message) => new ConvergedCommandError(message)
-  });
-
-  const {
-    policy,
-    convergencePolicyDiagnostics
-  } = await prepareConvergedPolicy({
-    transcriptPath: resolved.bubblePaths.transcriptPath,
-    currentRound: state.round,
-    reviewer,
-    implementer,
-    reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
-    roundRoleHistory: state.round_role_history,
-    severityGateRound: resolved.bubbleConfig.severity_gate_round
-  });
-  if (!policy.ok) {
-    const diagnosticsSuffix =
-      policy.diagnostics.length > 0
-        ? ` Diagnostics: ${policy.diagnostics.join(" ")}`
-        : "";
-    throw new ConvergedCommandError(
-      `Convergence validation failed: ${policy.errors.join(" ")}${diagnosticsSuffix}`
-    );
-  }
-  const {
-    specLockState,
-    roundGateState,
-    docGateArtifactReadFailureReason,
-    summaryVerifierGateDecision
-  } = await prepareConvergedValidation({
-    resolved,
-    state,
-    reviewer,
-    summary,
-    nowIso,
-    createError: (message) => new ConvergedCommandError(message)
-  });
-
-  const {
-    convergence,
-    gateResult,
-    delivery: convergedDelivery
-  } = await executeConvergedExecution(
+  return runConvergedFlow(
     {
-      resolved,
-      state,
-      reviewer,
-      implementer,
       summary,
       refs,
       now,
-      convergencePolicyDiagnostics
+      ...(input.cwd !== undefined
+        ? { cwd: input.cwd }
+        : {}),
+      ...(input.expectedStateFingerprint !== undefined
+        ? { expectedStateFingerprint: input.expectedStateFingerprint }
+        : {}),
+      ...(input.expectedRound !== undefined
+        ? { expectedRound: input.expectedRound }
+        : {}),
+      ...(input.expectedReviewer !== undefined
+        ? { expectedReviewer: input.expectedReviewer }
+        : {}),
+      createError: (message) => new ConvergedCommandError(message),
+      resolveMetaReviewRolloutBlockingReasonCodes
     },
     {
+      prepareConvergedRouting,
+      prepareConvergedPolicy,
+      prepareConvergedValidation,
+      executeConvergedExecution,
+      finalizeConvergedFlow,
       ...(dependencies.applyMetaReviewGateOnConvergence !== undefined
         ? {
             applyMetaReviewGateOnConvergence:
@@ -207,31 +158,6 @@ export async function emitConvergedFromWorkspace(
       ...(dependencies.emitBubbleNotification !== undefined
         ? { emitBubbleNotification: dependencies.emitBubbleNotification }
         : {})
-    }
-  );
-
-  return finalizeConvergedFlow(
-    {
-      resolved,
-      bubbleIdentity,
-      state,
-      summary,
-      refs,
-      now,
-      convergence,
-      gateResult,
-      summaryVerifierGateDecision,
-      specLockState,
-      roundGateState,
-      ...(docGateArtifactReadFailureReason !== undefined
-        ? { docGateArtifactReadFailureReason }
-        : {}),
-      ...(convergedDelivery !== undefined
-        ? { delivery: convergedDelivery }
-        : {})
-    },
-    {
-      resolveMetaReviewRolloutBlockingReasonCodes
     }
   );
 }
