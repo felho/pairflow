@@ -8,9 +8,9 @@ import {
   type EmitTmuxDeliveryNotificationResult
 } from "../../../core/runtime/tmuxDelivery.js";
 import {
-  applyMetaReviewGateOnConvergence,
-  recoverMetaReviewGateFromSnapshot
-} from "../../../core/bubble/metaReviewGate.js";
+  applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence,
+  recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
+} from "../metaReviewGate/emitMetaReviewGateV11.js";
 import type { ResolvedBubbleWorkspace } from "../../../core/bubble/workspaceResolution.js";
 import type { AgentName, BubbleStateSnapshot } from "../../../types/bubble.js";
 import {

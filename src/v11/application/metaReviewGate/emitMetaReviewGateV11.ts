@@ -1,0 +1,19 @@
+export {
+  applyMetaReviewGateOnConvergence as applyMetaReviewGateOnConvergenceV11,
+  asMetaReviewGateError as asMetaReviewGateErrorV11,
+  MetaReviewGateError as MetaReviewGateErrorV11,
+  notifyMetaReviewerSubmissionRequest as notifyMetaReviewerSubmissionRequestV11,
+  recoverMetaReviewGateFromSnapshot as recoverMetaReviewGateFromSnapshotV11,
+  toMetaReviewGateError as toMetaReviewGateErrorV11
+} from "../../../core/bubble/metaReviewGate.js";
+export type {
+  ApplyMetaReviewGateOnConvergenceDependencies as ApplyMetaReviewGateOnConvergenceV11Dependencies,
+  ApplyMetaReviewGateOnConvergenceInput as ApplyMetaReviewGateOnConvergenceV11Input,
+  MetaReviewGateReasonCode as MetaReviewGateReasonCodeV11,
+  MetaReviewGateResult as MetaReviewGateResultV11,
+  MetaReviewGateRoute as MetaReviewGateRouteV11,
+  NotifyMetaReviewerSubmissionRequestDependencies as NotifyMetaReviewerSubmissionRequestV11Dependencies,
+  NotifyMetaReviewerSubmissionRequestInput as NotifyMetaReviewerSubmissionRequestV11Input,
+  RecoverMetaReviewGateFromSnapshotDependencies as RecoverMetaReviewGateFromSnapshotV11Dependencies,
+  RecoverMetaReviewGateFromSnapshotInput as RecoverMetaReviewGateFromSnapshotV11Input
+} from "./metaReviewGateCommandContract.js";

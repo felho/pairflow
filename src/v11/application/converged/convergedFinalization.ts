@@ -3,8 +3,8 @@ import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubble
 import { type EnsureBubbleInstanceIdForMutationResult } from "../../../core/bubble/bubbleInstanceId.js";
 import { type ResolvedBubbleWorkspace } from "../../../core/bubble/workspaceResolution.js";
 import { type SummaryVerifierConsistencyGateDecisionRecord } from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
-import { type MetaReviewGateRoute } from "../../../core/bubble/metaReviewGate.js";
 import { type appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
+import { type MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateCommandContract.js";
 import type {
   BubbleRoundGateState,
   BubbleSpecLockState,

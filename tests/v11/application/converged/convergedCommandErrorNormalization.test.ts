@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { MetaReviewGateError } from "../../../../src/core/bubble/metaReviewGate.js";
+import { MetaReviewGateErrorV11 as MetaReviewGateError } from "../../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
 import { WorkspaceResolutionError } from "../../../../src/core/bubble/workspaceResolution.js";
 import { normalizeConvergedCommandError } from "../../../../src/v11/shared/converged/convergedCommandErrorNormalization.js";
 

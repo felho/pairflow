@@ -1,4 +1,4 @@
-import type { MetaReviewGateRoute } from "../../../core/bubble/metaReviewGate.js";
+import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateCommandContract.js";
 import type { PairflowCommandPathAssessment } from "../../../core/runtime/pairflowCommand.js";
 
 export interface ResolveMetaReviewRolloutBlockingReasonCodesInput {

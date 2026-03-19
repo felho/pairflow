@@ -1,5 +1,4 @@
 import type { EnsureBubbleInstanceIdForMutationResult } from "../../../core/bubble/bubbleInstanceId.js";
-import type { MetaReviewGateRoute } from "../../../core/bubble/metaReviewGate.js";
 import type { ResolvedBubbleWorkspace } from "../../../core/bubble/workspaceResolution.js";
 import type { ConvergencePolicyResult } from "../../../core/convergence/policy.js";
 import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
@@ -7,9 +6,10 @@ import type { PairflowCommandPathAssessment } from "../../../core/runtime/pairfl
 import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import type { SummaryVerifierConsistencyGateDecisionRecord } from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
 import type {
-  applyMetaReviewGateOnConvergence,
-  recoverMetaReviewGateFromSnapshot
-} from "../../../core/bubble/metaReviewGate.js";
+  applyMetaReviewGateOnConvergenceV11,
+  recoverMetaReviewGateFromSnapshotV11
+} from "../metaReviewGate/emitMetaReviewGateV11.js";
+import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateCommandContract.js";
 import type {
   AgentName,
   BubbleRoundGateState,
@@ -21,8 +21,8 @@ import type { ProtocolEnvelope } from "../../../types/protocol.js";
 interface ExecuteConvergedExecutionDependencies {
   emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
   emitBubbleNotification?: typeof emitBubbleNotification;
-  applyMetaReviewGateOnConvergence?: typeof applyMetaReviewGateOnConvergence;
-  recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshot;
+  applyMetaReviewGateOnConvergence?: typeof applyMetaReviewGateOnConvergenceV11;
+  recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshotV11;
 }
 
 export interface RunConvergedFlowInput {
