@@ -1,0 +1,29 @@
+{
+  "id": "converged-document",
+  "command": "converged",
+  "mode": "legacy",
+  "description": "converged document-scope legacy baseline.",
+  "input": {
+    "summary": "Document scope convergence legacy baseline.",
+    "refs": [
+      "docs/plan.md"
+    ],
+    "reviewArtifactType": "document"
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "CONVERGED_EMITTED",
+    "gateRoute": "human_gate_run_failed",
+    "envelopeType": "CONVERGENCE",
+    "approvalRequestEnvelopeType": "APPROVAL_REQUEST",
+    "stateSubset": {
+      "state": "META_REVIEW_FAILED"
+    }
+  },
+  "tags": [
+    "converged",
+    "v11-contract",
+    "legacy",
+    "document-scope"
+  ]
+}
