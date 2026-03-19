@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { runAskHumanContractCase } from "./askHuman.contract.runner.js";
 import { readContractCase } from "./runner.js";
+import type { ContractCase } from "./schema.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -105,5 +106,45 @@ describe("v11 askHuman contract harness skeleton", () => {
       "tests/contracts/v11/cases/ask-human/ask-human-basic-v11.case.json",
       "tests/contracts/v11/cases/ask-human/ask-human-basic.case.json"
     ]);
+  });
+
+  it("rejects invalid ask-human contract input when question is empty", async () => {
+    const invalidCase: ContractCase = {
+      id: "ask-human-invalid-empty-question",
+      command: "askHuman",
+      mode: "legacy",
+      description: "invalid question validation",
+      input: {
+        question: "   ",
+        refs: []
+      },
+      expected: {
+        status: "ok"
+      }
+    };
+
+    await expect(runAskHumanContractCase(invalidCase)).rejects.toThrow(
+      "askHuman contract input.question must be a non-empty string."
+    );
+  });
+
+  it("rejects invalid ask-human contract input when refs is not string array", async () => {
+    const invalidCase: ContractCase = {
+      id: "ask-human-invalid-refs",
+      command: "askHuman",
+      mode: "legacy",
+      description: "invalid refs validation",
+      input: {
+        question: "Need clarification",
+        refs: ["ok-ref", 42]
+      },
+      expected: {
+        status: "ok"
+      }
+    };
+
+    await expect(runAskHumanContractCase(invalidCase)).rejects.toThrow(
+      "askHuman contract input.refs must be a string array."
+    );
   });
 });
