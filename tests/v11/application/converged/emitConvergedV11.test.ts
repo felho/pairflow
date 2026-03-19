@@ -84,12 +84,16 @@ async function seedConvergedCandidate(cwd: string): Promise<void> {
 async function executeSeededConverged(input: {
   bubbleId: string;
   executor: (input: EmitConvergedInput) => ReturnType<typeof emitConvergedFromWorkspace>;
+  reviewArtifactType?: "code" | "document";
 }) {
   const repoPath = await createTempRepo();
   const bubble = await setupRunningBubbleFixture({
     repoPath,
     bubbleId: input.bubbleId,
-    task: "Converged v11 wrapper parity"
+    task: "Converged v11 wrapper parity",
+    ...(input.reviewArtifactType !== undefined
+      ? { reviewArtifactType: input.reviewArtifactType }
+      : {})
   });
   await seedConvergedCandidate(bubble.paths.worktreePath);
 
@@ -117,6 +121,21 @@ describe("emitConvergedFromWorkspaceV11", () => {
     const v11 = await executeSeededConverged({
       bubbleId: "b_converged_v11_v11_01",
       executor: emitConvergedFromWorkspaceV11
+    });
+
+    expect(v11).toEqual(legacy);
+  });
+
+  it("matches legacy converged behavior on document-scope seeded scenario", async () => {
+    const legacy = await executeSeededConverged({
+      bubbleId: "b_converged_v11_legacy_doc_01",
+      executor: emitConvergedFromWorkspace,
+      reviewArtifactType: "document"
+    });
+    const v11 = await executeSeededConverged({
+      bubbleId: "b_converged_v11_v11_doc_01",
+      executor: emitConvergedFromWorkspaceV11,
+      reviewArtifactType: "document"
     });
 
     expect(v11).toEqual(legacy);
