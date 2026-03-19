@@ -1,11 +1,9 @@
 import { join } from "node:path";
 
 import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
-import { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
+import { writeStateSnapshot } from "../state/stateStore.js";
 import { applyStateTransition } from "../state/machine.js";
-import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
 import {
-  resolveBubbleFromWorkspaceCwd,
   WorkspaceResolutionError
 } from "../bubble/workspaceResolution.js";
 import { emitBubbleNotification } from "../runtime/notifications.js";
@@ -13,8 +11,8 @@ import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef
 } from "../runtime/tmuxDelivery.js";
-import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
+import { prepareAskHumanRouting } from "../../v11/application/askHuman/askHumanRoutingPreparation.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 
@@ -50,50 +48,25 @@ export async function emitAskHumanFromWorkspace(
   dependencies: EmitAskHumanDependencies = {}
 ): Promise<EmitAskHumanResult> {
   const now = input.now ?? new Date();
-  const nowIso = now.toISOString();
-  const question = requireNonEmptyString(
-    input.question,
-    "Question",
-    (message) => new AskHumanCommandError(message)
-  );
-  const refs = normalizeStringList(input.refs ?? []);
-
-  const resolved = await resolveBubbleFromWorkspaceCwd(input.cwd);
-  const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
-    bubbleId: resolved.bubbleId,
-    repoPath: resolved.repoPath,
-    bubblePaths: resolved.bubblePaths,
-    bubbleConfig: resolved.bubbleConfig,
-    now
+  const {
+    nowIso,
+    question,
+    refs,
+    resolved,
+    bubbleIdentity,
+    loadedState,
+    state
+  } = await prepareAskHumanRouting({
+    question: input.question,
+    ...(input.refs !== undefined
+      ? { refs: input.refs }
+      : {}),
+    ...(input.cwd !== undefined
+      ? { cwd: input.cwd }
+      : {}),
+    now,
+    createError: (message) => new AskHumanCommandError(message)
   });
-  resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
-
-  const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
-  const state = loadedState.state;
-
-  if (state.state !== "RUNNING") {
-    throw new AskHumanCommandError(
-      `ask-human can only be used while bubble is RUNNING (current: ${state.state}).`
-    );
-  }
-
-  if (state.round < 1) {
-    throw new AskHumanCommandError(
-      `RUNNING state must have round >= 1 (found ${state.round}).`
-    );
-  }
-
-  if (state.active_agent === null || state.active_role === null || state.active_since === null) {
-    throw new AskHumanCommandError(
-      "RUNNING state is missing active agent context; cannot emit HUMAN_QUESTION."
-    );
-  }
-
-  if (state.active_role === "meta_reviewer") {
-    throw new AskHumanCommandError(
-      "ask-human cannot be used from meta_reviewer role while bubble is RUNNING."
-    );
-  }
 
   const lockPath = join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`);
 
