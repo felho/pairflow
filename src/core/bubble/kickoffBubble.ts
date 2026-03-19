@@ -1,7 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../config/bubbleConfig.js";
 import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
 import { readStateSnapshot, StateStoreConflictError, writeStateSnapshot } from "../state/stateStore.js";
 import { resolveBubbleById } from "./bubbleLookup.js";
@@ -21,8 +20,8 @@ import {
 import { resolveKickoffEligibilityFailureReason } from "../../v11/shared/kickoff/kickoffEligibility.js";
 import { buildKickoffNextState } from "../../v11/shared/kickoff/kickoffStateTransition.js";
 import { buildKickoffTaskEnvelope } from "../../v11/shared/kickoff/kickoffTaskEnvelope.js";
-import { buildKickoffIdeationConfig } from "../../v11/shared/kickoff/kickoffIdeationConfig.js";
 import { executeKickoffMutationRollback } from "../../v11/shared/kickoff/kickoffMutationRollback.js";
+import { prepareKickoffPersistence } from "../../v11/shared/kickoff/kickoffPersistencePreparation.js";
 
 export interface KickoffBubbleInput {
   bubbleId: string;
@@ -162,20 +161,12 @@ export async function kickoffBubble(
     nowIso
   });
 
-  const previousTaskArtifact = await readFileFn(
-    resolved.bubblePaths.taskArtifactPath,
-    "utf8"
-  );
-  const previousBubbleToml = await readFileFn(
-    resolved.bubblePaths.bubbleTomlPath,
-    "utf8"
-  );
-  const latestConfig = parseBubbleConfigToml(previousBubbleToml);
-  const updatedConfig = buildKickoffIdeationConfig({
-    bubbleConfig: latestConfig,
-    nowIso
+  const persistence = await prepareKickoffPersistence({
+    taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+    bubbleTomlPath: resolved.bubblePaths.bubbleTomlPath,
+    nowIso,
+    readFile: readFileFn
   });
-  const nextBubbleToml = renderBubbleConfigToml(updatedConfig);
 
   let writtenState;
   try {
@@ -206,7 +197,7 @@ export async function kickoffBubble(
     });
     await writeFileFn(
       resolved.bubblePaths.bubbleTomlPath,
-      nextBubbleToml,
+      persistence.nextBubbleToml,
       { encoding: "utf8" }
     );
     transcriptBackup = await readFileFn(resolved.bubblePaths.transcriptPath, "utf8");
@@ -226,9 +217,9 @@ export async function kickoffBubble(
       transcriptBackup,
       transcriptPath: resolved.bubblePaths.transcriptPath,
       taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
-      previousTaskArtifact,
+      previousTaskArtifact: persistence.previousTaskArtifact,
       bubbleTomlPath: resolved.bubblePaths.bubbleTomlPath,
-      previousBubbleToml,
+      previousBubbleToml: persistence.previousBubbleToml,
       statePath: resolved.bubblePaths.statePath,
       previousState: state,
       writtenStateFingerprint: writtenState.fingerprint,
