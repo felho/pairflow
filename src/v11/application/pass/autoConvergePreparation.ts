@@ -1,0 +1,109 @@
+import { validateConvergencePolicy } from "../../../core/convergence/policy.js";
+import {
+  createReviewVerificationArtifact,
+  type ReviewVerificationInputResolution,
+  writeReviewVerificationArtifactAtomic
+} from "../../../core/reviewer/reviewVerification.js";
+import { readStateSnapshot } from "../../../core/state/stateStore.js";
+import type { AgentName, BubbleStateSnapshot, ReviewArtifactType } from "../../../types/bubble.js";
+import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import {
+  raiseRepeatCleanAutoConvergeStateStale,
+  raiseRepeatCleanPolicyGateRejected,
+  raiseRepeatCleanReviewVerificationWriteFailed
+} from "../../domain/pass/repeatCleanPolicyRejection.js";
+
+export interface PrepareRepeatCleanAutoConvergeInput {
+  round: number;
+  reviewer: AgentName;
+  implementer: AgentName;
+  reviewArtifactType: ReviewArtifactType;
+  roundRoleHistory: BubbleStateSnapshot["round_role_history"];
+  transcript: ProtocolEnvelope[];
+  severityGateRound: number;
+  statePath: string;
+  expectedStateFingerprint: string;
+  reviewerVerification: ReviewVerificationInputResolution | undefined;
+  reviewVerificationArtifactPath: string;
+  bubbleId: string;
+  reviewerAgent: AgentName;
+  generatedAt: string;
+  createError: (message: string) => Error;
+}
+
+export interface PrepareRepeatCleanAutoConvergeDependencies {
+  validateConvergencePolicy?: typeof validateConvergencePolicy;
+  readStateSnapshot?: typeof readStateSnapshot;
+  createReviewVerificationArtifact?: typeof createReviewVerificationArtifact;
+  writeReviewVerificationArtifactAtomic?: typeof writeReviewVerificationArtifactAtomic;
+}
+
+export interface PrepareRepeatCleanAutoConvergeResult {
+  expectedStateFingerprint: string;
+}
+
+export async function prepareRepeatCleanAutoConverge(
+  input: PrepareRepeatCleanAutoConvergeInput,
+  dependencies: PrepareRepeatCleanAutoConvergeDependencies = {}
+): Promise<PrepareRepeatCleanAutoConvergeResult> {
+  const validatePolicy =
+    dependencies.validateConvergencePolicy ?? validateConvergencePolicy;
+  const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
+  const createArtifact =
+    dependencies.createReviewVerificationArtifact
+    ?? createReviewVerificationArtifact;
+  const writeArtifact =
+    dependencies.writeReviewVerificationArtifactAtomic
+    ?? writeReviewVerificationArtifactAtomic;
+
+  const policyResult = validatePolicy({
+    currentRound: input.round,
+    reviewer: input.reviewer,
+    implementer: input.implementer,
+    reviewArtifactType: input.reviewArtifactType,
+    roundRoleHistory: input.roundRoleHistory,
+    transcript: input.transcript,
+    severity_gate_round: input.severityGateRound
+  });
+  if (!policyResult.ok) {
+    raiseRepeatCleanPolicyGateRejected({
+      errors: policyResult.errors,
+      diagnostics: policyResult.diagnostics,
+      createError: input.createError
+    });
+  }
+
+  const stateBeforeAutoConvergeSideEffects = await readState(input.statePath);
+  if (stateBeforeAutoConvergeSideEffects.fingerprint !== input.expectedStateFingerprint) {
+    raiseRepeatCleanAutoConvergeStateStale({
+      createError: input.createError
+    });
+  }
+
+  if (input.reviewerVerification !== undefined) {
+    const verificationArtifact = createArtifact({
+      payload: input.reviewerVerification.payload,
+      inputRef: input.reviewerVerification.inputRef,
+      bubbleId: input.bubbleId,
+      round: input.round,
+      reviewer: input.reviewerAgent,
+      generatedAt: input.generatedAt
+    });
+    try {
+      await writeArtifact(
+        input.reviewVerificationArtifactPath,
+        verificationArtifact
+      );
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      raiseRepeatCleanReviewVerificationWriteFailed({
+        reason,
+        createError: input.createError
+      });
+    }
+  }
+
+  return {
+    expectedStateFingerprint: stateBeforeAutoConvergeSideEffects.fingerprint
+  };
+}

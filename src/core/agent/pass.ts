@@ -36,16 +36,9 @@ import {
   type ReviewerTestExecutionDirective,
 } from "../reviewer/testEvidence.js";
 import {
-  createReviewVerificationArtifact,
-  writeReviewVerificationArtifactAtomic
-} from "../reviewer/reviewVerification.js";
-import {
   evaluateReviewerGateWarnings,
   isDocContractGateScopeActive,
 } from "../gates/docContractGates.js";
-import {
-  validateConvergencePolicy
-} from "../convergence/policy.js";
 import {
   evaluateRepeatCleanAutoconvergeTrigger,
   type RepeatCleanAutoconvergeReasonCode,
@@ -69,16 +62,14 @@ import { assertNoDocsOnlySkipLogRefConflict } from "../../v11/domain/pass/docsOn
 import { assertReviewerIntentOverrideConsistency } from "../../v11/domain/pass/reviewerIntentOverrideGuard.js";
 import { validateReviewerVerificationConsistency } from "../../v11/domain/pass/reviewerVerificationConsistencyGuard.js";
 import {
-  raiseRepeatCleanAutoConvergeStateStale,
   raiseRepeatCleanDownstreamConvergedRejected,
-  raiseRepeatCleanPolicyGateRejected,
-  raiseRepeatCleanReviewVerificationWriteFailed
 } from "../../v11/domain/pass/repeatCleanPolicyRejection.js";
 import { resolveReviewerVerification } from "../../v11/application/pass/reviewerVerificationResolver.js";
 import {
   executePassDelivery,
   type PassDeliveryDependencies
 } from "../../v11/application/pass/reviewerDelivery.js";
+import { prepareRepeatCleanAutoConverge } from "../../v11/application/pass/autoConvergePreparation.js";
 import { mapPassResultDelivery } from "../../v11/application/pass/passResultDelivery.js";
 import {
   buildAutoConvergePassResult,
@@ -323,54 +314,23 @@ export async function emitPassFromWorkspace(
     transcript
   });
   if (repeatCleanTrigger.trigger) {
-    const policyResult = validateConvergencePolicy({
-      currentRound: handoff.envelopeRound,
+    const autoConvergePreparation = await prepareRepeatCleanAutoConverge({
+      round: handoff.envelopeRound,
       reviewer,
       implementer,
       reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
       roundRoleHistory: state.round_role_history,
       transcript,
-      severity_gate_round: resolved.bubbleConfig.severity_gate_round
+      severityGateRound: resolved.bubbleConfig.severity_gate_round,
+      statePath: resolved.bubblePaths.statePath,
+      expectedStateFingerprint: loadedState.fingerprint,
+      reviewerVerification,
+      reviewVerificationArtifactPath: resolved.bubblePaths.reviewVerificationArtifactPath,
+      bubbleId: resolved.bubbleId,
+      reviewerAgent: handoff.senderAgent,
+      generatedAt: nowIso,
+      createError: (message) => new PassCommandError(message)
     });
-    if (!policyResult.ok) {
-      raiseRepeatCleanPolicyGateRejected({
-        errors: policyResult.errors,
-        diagnostics: policyResult.diagnostics,
-        createError: (message) => new PassCommandError(message)
-      });
-    }
-
-    const stateBeforeAutoConvergeSideEffects = await readStateSnapshot(
-      resolved.bubblePaths.statePath
-    );
-    if (stateBeforeAutoConvergeSideEffects.fingerprint !== loadedState.fingerprint) {
-      raiseRepeatCleanAutoConvergeStateStale({
-        createError: (message) => new PassCommandError(message)
-      });
-    }
-
-    if (reviewerVerification !== undefined) {
-      const verificationArtifact = createReviewVerificationArtifact({
-        payload: reviewerVerification.payload,
-        inputRef: reviewerVerification.inputRef,
-        bubbleId: resolved.bubbleId,
-        round: handoff.envelopeRound,
-        reviewer: handoff.senderAgent,
-        generatedAt: nowIso
-      });
-      try {
-        await writeReviewVerificationArtifactAtomic(
-          resolved.bubblePaths.reviewVerificationArtifactPath,
-          verificationArtifact
-        );
-      } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        raiseRepeatCleanReviewVerificationWriteFailed({
-          reason,
-          createError: (message) => new PassCommandError(message)
-        });
-      }
-    }
 
     let converged;
     try {
@@ -380,7 +340,7 @@ export async function emitPassFromWorkspace(
           refs,
           cwd: resolved.bubblePaths.worktreePath,
           now,
-          expectedStateFingerprint: stateBeforeAutoConvergeSideEffects.fingerprint,
+          expectedStateFingerprint: autoConvergePreparation.expectedStateFingerprint,
           expectedRound: handoff.envelopeRound,
           expectedReviewer: reviewer
         },
