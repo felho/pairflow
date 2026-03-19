@@ -1,8 +1,9 @@
-import { readFile, writeFile } from "node:fs/promises";
+import type { readFile, writeFile } from "node:fs/promises";
 
-import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
-import { readStateSnapshot, StateStoreConflictError, writeStateSnapshot } from "../state/stateStore.js";
-import { resolveBubbleById } from "./bubbleLookup.js";
+import type { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
+import { StateStoreConflictError } from "../state/stateStore.js";
+import type { readStateSnapshot, writeStateSnapshot } from "../state/stateStore.js";
+import type { resolveBubbleById } from "./bubbleLookup.js";
 import {
   IDEATION_KICKOFF_PERSISTENCE_FAILED,
   IDEATION_KICKOFF_STATE_CONFLICT,
@@ -20,6 +21,7 @@ import { buildKickoffNextState } from "../../v11/shared/kickoff/kickoffStateTran
 import { executeKickoffMutationRollback } from "../../v11/shared/kickoff/kickoffMutationRollback.js";
 import { prepareKickoffPersistence } from "../../v11/shared/kickoff/kickoffPersistencePreparation.js";
 import { executeKickoffMutation } from "../../v11/shared/kickoff/kickoffMutationExecution.js";
+import { resolveKickoffDependencies } from "../../v11/shared/kickoff/kickoffDependencyResolution.js";
 
 export interface KickoffBubbleInput {
   bubbleId: string;
@@ -89,12 +91,14 @@ export async function kickoffBubble(
 ): Promise<KickoffBubbleResult> {
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
-  const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
-  const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
-  const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
-  const readFileFn = dependencies.readFile ?? readFile;
-  const writeFileFn = dependencies.writeFile ?? writeFile;
-  const appendEnvelope = dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
+  const {
+    resolveBubble,
+    readState,
+    writeState,
+    readFileFn,
+    writeFileFn,
+    appendEnvelope
+  } = resolveKickoffDependencies(dependencies);
 
   const resolved = await resolveBubble({
     bubbleId: input.bubbleId,
