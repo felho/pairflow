@@ -11,7 +11,7 @@ import {
   IDEATION_KICKOFF_TASK_INVALID,
   resolveIdeationMetadata
 } from "./ideation.js";
-import type { BubbleConfig, BubbleStateSnapshot } from "../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../types/bubble.js";
 import {
   KickoffTaskInputValidationError,
   renderKickoffTaskArtifact,
@@ -21,6 +21,7 @@ import {
 import { resolveKickoffEligibilityFailureReason } from "../../v11/shared/kickoff/kickoffEligibility.js";
 import { buildKickoffNextState } from "../../v11/shared/kickoff/kickoffStateTransition.js";
 import { buildKickoffTaskEnvelope } from "../../v11/shared/kickoff/kickoffTaskEnvelope.js";
+import { buildKickoffIdeationConfig } from "../../v11/shared/kickoff/kickoffIdeationConfig.js";
 
 export interface KickoffBubbleInput {
   bubbleId: string;
@@ -81,23 +82,6 @@ function buildFailureResult(input: {
     markers_before: input.markersBefore,
     markers_after: input.markersBefore,
     state_before: input.stateBefore
-  };
-}
-
-function normalizeKickoffIdeationConfig(input: {
-  bubbleConfig: BubbleConfig;
-  nowIso: string;
-}): BubbleConfig {
-  return {
-    ...input.bubbleConfig,
-    ideation: {
-      mode: true,
-      task_pending: false,
-      ...(input.bubbleConfig.ideation?.started_at !== undefined
-        ? { started_at: input.bubbleConfig.ideation.started_at }
-        : {}),
-      kicked_off_at: input.nowIso
-    }
   };
 }
 
@@ -186,7 +170,7 @@ export async function kickoffBubble(
     "utf8"
   );
   const latestConfig = parseBubbleConfigToml(previousBubbleToml);
-  const updatedConfig = normalizeKickoffIdeationConfig({
+  const updatedConfig = buildKickoffIdeationConfig({
     bubbleConfig: latestConfig,
     nowIso
   });
