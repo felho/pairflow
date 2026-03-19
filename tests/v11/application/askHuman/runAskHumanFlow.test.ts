@@ -228,4 +228,52 @@ describe("runAskHumanFlow", () => {
       }
     );
   });
+
+  it("forwards resolveDeliveryMessageRef override to finalization dependencies", async () => {
+    const now = new Date("2026-02-21T12:10:00.000Z");
+    const resolveDeliveryMessageRef = () => "transcript-ref#msg_20260221_011";
+
+    await runAskHumanFlow(
+      {
+        now,
+        routing: {
+          nowIso: now.toISOString()
+        } as never,
+        createError: (message) => new AskHumanFlowTestError(message)
+      },
+      {
+        executeAskHumanExecution: async () =>
+          ({
+            appended: {
+              envelope: {
+                id: "msg_20260221_011"
+              },
+              sequence: 11
+            },
+            written: {
+              state: {
+                state: "WAITING_HUMAN"
+              }
+            }
+          }) as never,
+        finalizeAskHumanFlow: async (_input, dependencies) => {
+          expect(dependencies?.resolveDeliveryMessageRef).toBe(
+            resolveDeliveryMessageRef
+          );
+          return {
+            bubbleId: "b_ask_human_resolve_ref_override",
+            sequence: 11,
+            envelope: {
+              id: "msg_20260221_011"
+            },
+            state: {
+              state: "WAITING_HUMAN"
+            },
+            inferredRecipient: "human"
+          } as never;
+        },
+        resolveDeliveryMessageRef
+      }
+    );
+  });
 });

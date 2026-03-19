@@ -1,0 +1,22 @@
+{
+  "id": "ask-human-no-refs-v11",
+  "command": "askHuman",
+  "mode": "v11",
+  "description": "ask-human v11 contract accepts omitted refs and emits HUMAN_QUESTION.",
+  "input": {
+    "question": "Need product clarification on rollout strategy?"
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "ASK_HUMAN_EMITTED",
+    "envelopeType": "HUMAN_QUESTION",
+    "stateSubset": {
+      "state": "WAITING_HUMAN"
+    }
+  },
+  "tags": [
+    "ask-human",
+    "v11-contract",
+    "v11"
+  ]
+}

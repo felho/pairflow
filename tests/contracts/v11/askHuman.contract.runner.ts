@@ -36,13 +36,19 @@ function parseAskHumanCaseInput(
   }
 
   const refsRaw = input.refs;
-  if (!Array.isArray(refsRaw) || !refsRaw.every((value) => typeof value === "string")) {
+  if (
+    refsRaw !== undefined &&
+    (
+      !Array.isArray(refsRaw) ||
+      !refsRaw.every((value) => typeof value === "string")
+    )
+  ) {
     throw new Error("askHuman contract input.refs must be a string array.");
   }
 
   return {
     question: questionRaw.trim(),
-    refs: refsRaw
+    refs: refsRaw ?? []
   };
 }
 

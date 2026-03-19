@@ -1,0 +1,26 @@
+{
+  "id": "pass-repeat-clean-autoconverge",
+  "command": "pass",
+  "mode": "legacy",
+  "description": "PASS legacy auto-converge baseline after deterministic clean repeat reviewer history.",
+  "input": {
+    "summary": "Reviewer clean handoff round 2",
+    "noFindings": true,
+    "seedRoundTwoCleanHistory": true
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "PASS_AUTO_CONVERGED",
+    "envelopeType": "CONVERGENCE",
+    "stateSubset": {
+      "state": "META_REVIEW_FAILED"
+    }
+  },
+  "tags": [
+    "seed",
+    "m1",
+    "legacy",
+    "auto-converge",
+    "pass"
+  ]
+}

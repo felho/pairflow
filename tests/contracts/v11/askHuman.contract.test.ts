@@ -12,10 +12,19 @@ const execFileAsync = promisify(execFile);
 const askHumanCaseSources = [
   "tests/contracts/v11/cases/ask-human/ask-human-basic.case.json",
   "tests/contracts/v11/cases/ask-human/ask-human-basic-v11.case.json",
-  "tests/contracts/v11/cases/ask-human/ask-human-basic-parity.case.json"
+  "tests/contracts/v11/cases/ask-human/ask-human-basic-parity.case.json",
+  "tests/contracts/v11/cases/ask-human/ask-human-no-refs.case.json",
+  "tests/contracts/v11/cases/ask-human/ask-human-no-refs-v11.case.json",
+  "tests/contracts/v11/cases/ask-human/ask-human-no-refs-parity.case.json"
 ] as const;
 
 const askHumanExpectedSourcesSorted = [...askHumanCaseSources].sort();
+const askHumanNoRefsCaseSources = [
+  "tests/contracts/v11/cases/ask-human/ask-human-no-refs.case.json",
+  "tests/contracts/v11/cases/ask-human/ask-human-no-refs-v11.case.json",
+  "tests/contracts/v11/cases/ask-human/ask-human-no-refs-parity.case.json"
+] as const;
+const askHumanNoRefsExpectedSourcesSorted = [...askHumanNoRefsCaseSources].sort();
 
 const askHumanInvalidInputCases: Array<{
   name: string;
@@ -108,6 +117,15 @@ function parseAskHumanSourcesFromManifest(
     .sort();
 }
 
+function expectManifestContainsSources(input: {
+  actualSources: string[];
+  expectedSources: readonly string[];
+}): void {
+  for (const expectedSource of input.expectedSources) {
+    expect(input.actualSources).toContain(expectedSource);
+  }
+}
+
 describe("v11 askHuman contract harness skeleton", () => {
   it("loads seed contract case metadata", async () => {
     const casePath = resolve(process.cwd(), askHumanCaseSources[0]);
@@ -153,6 +171,20 @@ describe("v11 askHuman contract harness skeleton", () => {
     expect(askHumanSources).toEqual(askHumanExpectedSourcesSorted);
   });
 
+  it("includes ask-human no-refs seed entries in corpus manifest", async () => {
+    const manifestPath = resolve(
+      process.cwd(),
+      "tests/contracts/v11/corpus/manifest.json"
+    );
+    const manifestRaw = await readFile(manifestPath, "utf8");
+    const askHumanSources = parseAskHumanSourcesFromManifest(manifestRaw);
+
+    expectManifestContainsSources({
+      actualSources: askHumanSources,
+      expectedSources: askHumanNoRefsExpectedSourcesSorted
+    });
+  });
+
   it("builds corpus output manifest with ask-human seed entries", async () => {
     await execFileAsync("pnpm", [
       "exec",
@@ -168,6 +200,26 @@ describe("v11 askHuman contract harness skeleton", () => {
     const askHumanSources = parseAskHumanSourcesFromManifest(outputRaw);
 
     expect(askHumanSources).toEqual(askHumanExpectedSourcesSorted);
+  });
+
+  it("builds corpus output manifest with ask-human no-refs seed entries", async () => {
+    await execFileAsync("pnpm", [
+      "exec",
+      "tsx",
+      "./tests/contracts/v11/corpus/build-corpus.ts"
+    ]);
+
+    const outputManifestPath = resolve(
+      process.cwd(),
+      ".pairflow/evidence/contracts-v11-corpus-manifest.json"
+    );
+    const outputRaw = await readFile(outputManifestPath, "utf8");
+    const askHumanSources = parseAskHumanSourcesFromManifest(outputRaw);
+
+    expectManifestContainsSources({
+      actualSources: askHumanSources,
+      expectedSources: askHumanNoRefsExpectedSourcesSorted
+    });
   });
 
   for (const testCase of askHumanInvalidInputCases) {
