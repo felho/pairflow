@@ -1,9 +1,7 @@
-import { readFile, stat } from "node:fs/promises";
-import { resolve } from "node:path";
-
 import { renderKickoffTaskArtifactFromInput } from "./kickoffTaskArtifactRendering.js";
 import { assertKickoffTaskContentIsValid } from "./kickoffTaskContentValidation.js";
 import { resolveKickoffTaskInputMode, type KickoffTaskInputMode } from "./kickoffTaskInputMode.js";
+import { resolveKickoffTaskFromFileInput } from "./kickoffTaskFileInputResolution.js";
 
 export interface ResolvedKickoffTaskInput {
   content: string;
@@ -12,54 +10,6 @@ export interface ResolvedKickoffTaskInput {
 }
 
 export class KickoffTaskInputValidationError extends Error {}
-
-async function resolveKickoffTaskFromFileInput(input: {
-  taskFile: string;
-  cwd: string;
-}): Promise<ResolvedKickoffTaskInput> {
-  const candidatePath = resolve(input.cwd, input.taskFile);
-  const taskStats = await stat(candidatePath).catch((error: NodeJS.ErrnoException) => {
-    if (error.code === "ENOENT") {
-      // reason_code=KICKOFF_TASK_FILE_NOT_FOUND context=kickoff_task_input_validation
-      throw new KickoffTaskInputValidationError(
-        `Task file does not exist: ${candidatePath}`
-      );
-    }
-    throw error;
-  });
-  if (!taskStats.isFile()) {
-    // reason_code=KICKOFF_TASK_FILE_NOT_REGULAR context=kickoff_task_input_validation
-    throw new KickoffTaskInputValidationError(
-      `Task path is not a file: ${candidatePath}`
-    );
-  }
-
-  const content = await readFile(candidatePath, "utf8");
-  const normalizedContent = content.trimEnd();
-  assertKickoffTaskContentIsValid({
-    content: normalizedContent,
-    errors: {
-      empty: () => {
-        // reason_code=KICKOFF_TASK_FILE_EMPTY context=kickoff_task_input_validation
-        return new KickoffTaskInputValidationError(
-          `Task file is empty: ${candidatePath}`
-        );
-      },
-      placeholder: () => {
-        // reason_code=KICKOFF_TASK_FILE_PLACEHOLDER_MARKER context=kickoff_task_input_validation
-        return new KickoffTaskInputValidationError(
-          `Task file still contains ideation placeholder marker: ${candidatePath}`
-        );
-      }
-    }
-  });
-
-  return {
-    content: normalizedContent,
-    source: "file",
-    sourcePath: candidatePath
-  };
-}
 
 function resolveKickoffTaskFromInlineInput(input: {
   task: string;
@@ -93,7 +43,9 @@ async function resolveKickoffTaskFromInputMode(input: {
   if (input.mode.kind === "file") {
     return resolveKickoffTaskFromFileInput({
       taskFile: input.mode.taskFile,
-      cwd: input.cwd
+      cwd: input.cwd,
+      createValidationError: (message) =>
+        new KickoffTaskInputValidationError(message)
     });
   }
 
