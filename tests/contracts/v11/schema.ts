@@ -8,6 +8,7 @@ export interface ContractCaseExpected {
   envelopeType?: string;
   approvalRequestEnvelopeType?: string;
   approvalRequestRecipient?: string;
+  approvalRequestSender?: string;
   envelopePayloadSubset?: Record<string, unknown>;
 }
 
@@ -91,6 +92,18 @@ export function assertContractCaseShape(value: unknown): asserts value is Contra
   ) {
     throw new Error(
       "Contract case expected.approvalRequestRecipient must be a non-empty string when provided."
+    );
+  }
+  if (
+    "approvalRequestSender" in value.expected &&
+    value.expected.approvalRequestSender !== undefined &&
+    (
+      typeof value.expected.approvalRequestSender !== "string" ||
+      value.expected.approvalRequestSender.length === 0
+    )
+  ) {
+    throw new Error(
+      "Contract case expected.approvalRequestSender must be a non-empty string when provided."
     );
   }
   if (

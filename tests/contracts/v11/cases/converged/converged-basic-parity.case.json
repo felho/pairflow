@@ -14,6 +14,7 @@
     "envelopeType": "CONVERGENCE",
     "approvalRequestEnvelopeType": "APPROVAL_REQUEST",
     "approvalRequestRecipient": "human",
+    "approvalRequestSender": "orchestrator",
     "stateSubset": {
       "state": "META_REVIEW_FAILED"
     }

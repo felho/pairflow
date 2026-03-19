@@ -19,6 +19,7 @@ export interface ConvergedContractOutput {
   convergenceEnvelopeType: string;
   approvalRequestEnvelopeType: string;
   approvalRequestRecipient: string;
+  approvalRequestSender: string;
   gateRoute: string;
   stateSubset: {
     state: string;
@@ -83,6 +84,7 @@ function normalizeConvergedResult(
     convergenceEnvelopeType: result.convergenceEnvelope.type,
     approvalRequestEnvelopeType: result.approvalRequestEnvelope.type,
     approvalRequestRecipient: result.approvalRequestEnvelope.recipient,
+    approvalRequestSender: result.approvalRequestEnvelope.sender,
     gateRoute: result.gateRoute,
     stateSubset: {
       state: result.state.state
@@ -138,6 +140,14 @@ function assertContractExpectedSubset(input: {
   ) {
     throw new Error(
       `${input.label}: approvalRequestRecipient mismatch (expected=${input.expected.approvalRequestRecipient}, actual=${input.output.approvalRequestRecipient})`
+    );
+  }
+  if (
+    input.expected.approvalRequestSender !== undefined &&
+    input.output.approvalRequestSender !== input.expected.approvalRequestSender
+  ) {
+    throw new Error(
+      `${input.label}: approvalRequestSender mismatch (expected=${input.expected.approvalRequestSender}, actual=${input.output.approvalRequestSender})`
     );
   }
   const expectedState = input.expected.stateSubset?.state;
