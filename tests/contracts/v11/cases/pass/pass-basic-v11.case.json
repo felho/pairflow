@@ -1,0 +1,25 @@
+{
+  "id": "pass-basic-handoff-v11",
+  "command": "pass",
+  "mode": "v11",
+  "description": "M1 v11 baseline case for PASS handoff contract runner.",
+  "input": {
+    "summary": "Implementer pass v11 baseline",
+    "intent": "task",
+    "refs": []
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "PASS_ACCEPTED",
+    "envelopeType": "PASS",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m1",
+    "v11",
+    "pass"
+  ]
+}
