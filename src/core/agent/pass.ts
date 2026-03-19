@@ -28,9 +28,6 @@ import type {
   BubbleStateSnapshot
 } from "../../types/bubble.js";
 import {
-  type ReviewerTestExecutionDirective,
-} from "../reviewer/testEvidence.js";
-import {
   evaluateRepeatCleanAutoconvergeTrigger,
   type RepeatCleanAutoconvergeReasonCode,
   type RepeatCleanAutoconvergeReasonDetail
@@ -65,6 +62,7 @@ import { executeNormalPassAppend } from "../../v11/application/pass/normalPassAp
 import { executeNormalPassDelivery } from "../../v11/application/pass/normalPassDeliveryExecution.js";
 import { persistNormalPassPostAppend } from "../../v11/application/pass/normalPassPostAppendPersistence.js";
 import { finalizeNormalPass } from "../../v11/application/pass/normalPassFinalization.js";
+import { runNormalPassFlow } from "../../v11/application/pass/runNormalPassFlow.js";
 import { prepareReviewerPass } from "../../v11/application/pass/reviewerPassPreparation.js";
 import { resolvePassIntent } from "../../v11/application/pass/passIntentResolution.js";
 import { prepareReviewerVerification } from "../../v11/application/pass/reviewerVerificationPreparation.js";
@@ -341,154 +339,82 @@ export async function emitPassFromWorkspace(
     });
   }
 
-  const normalPassAppendPreparation = prepareNormalPassAppend({
-    senderRole: handoff.senderRole,
-    reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
-    round: handoff.envelopeRound,
-    findings,
-    hasFindings,
-    roundGateAppliesAfter:
-      resolved.bubbleConfig.doc_contract_gates.round_gate_applies_after,
-    locksDir: resolved.bubblePaths.locksDir,
-    bubbleId: resolved.bubbleId
-  });
-  const docGateScopeActive = normalPassAppendPreparation.docGateScopeActive;
-  const reviewerGateEvaluation = normalPassAppendPreparation.reviewerGateEvaluation;
-  const findingsForPayload = normalPassAppendPreparation.findingsForPayload;
-  const lockPath = normalPassAppendPreparation.lockPath;
-
-  const mapped = await executeNormalPassAppend({
-    transcriptPath: resolved.bubblePaths.transcriptPath,
-    lockPath,
-    now,
-    bubbleId: resolved.bubbleId,
-    handoff,
-    summary,
-    passIntent: intent,
-    refs,
-    hasFindings,
-    findingsForPayload,
-    ...(reviewerFindingsClaim !== undefined
-      ? { reviewerFindingsClaim }
-      : {}),
-    ...(reviewerFindingsClaimParserMetadata !== undefined
-      ? { reviewerFindingsClaimParserMetadata }
-      : {}),
-    repeatCleanReasonCode: repeatCleanTrigger.reasonCode,
-    repeatCleanReasonDetail: repeatCleanTrigger.reasonDetail,
-    repeatCleanTrigger: repeatCleanTrigger.trigger,
-    mostRecentPreviousReviewerCleanPassEnvelope:
-      repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope
-  });
-
-  const postAppendPersistence = await persistNormalPassPostAppend(
+  return runNormalPassFlow(
     {
-      reviewerVerification,
-      bubbleId: resolved.bubbleId,
-      handoff,
-      generatedAt: nowIso,
-      reviewVerificationArtifactPath: resolved.bubblePaths.reviewVerificationArtifactPath,
-      mappedEnvelopeId: mapped.envelope.id,
-      statePath: resolved.bubblePaths.statePath,
-      state,
-      expectedFingerprint: loadedState.fingerprint,
-      appendEnvelopeId: mapped.envelope.id,
-      docGateScopeActive,
       now,
-      bubbleConfig: resolved.bubbleConfig,
-      artifactsDir: resolved.bubblePaths.artifactsDir,
-      taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+      nowIso,
+      summary,
+      intent,
+      refs,
       hasFindings,
+      noFindings,
       findings,
-      ...(reviewerGateEvaluation !== undefined
-        ? { reviewerGateEvaluation }
+      inferredIntent,
+      reviewerVerification,
+      state,
+      expectedStateFingerprint: loadedState.fingerprint,
+      bubbleId: resolved.bubbleId,
+      bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+      repoPath: resolved.repoPath,
+      bubbleConfig: resolved.bubbleConfig,
+      paths: {
+        transcriptPath: resolved.bubblePaths.transcriptPath,
+        reviewVerificationArtifactPath: resolved.bubblePaths.reviewVerificationArtifactPath,
+        statePath: resolved.bubblePaths.statePath,
+        artifactsDir: resolved.bubblePaths.artifactsDir,
+        taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+        worktreePath: resolved.bubblePaths.worktreePath,
+        sessionsPath: resolved.bubblePaths.sessionsPath,
+        reviewerBriefArtifactPath: resolved.bubblePaths.reviewerBriefArtifactPath,
+        reviewerFocusArtifactPath: resolved.bubblePaths.reviewerFocusArtifactPath,
+        locksDir: resolved.bubblePaths.locksDir
+      },
+      handoff,
+      ...(reviewerFindingsClaim !== undefined
+        ? { reviewerFindingsClaim }
         : {}),
+      ...(reviewerFindingsClaimParserMetadata !== undefined
+        ? { reviewerFindingsClaimParserMetadata }
+        : {}),
+      repeatClean: {
+        reasonCode: repeatCleanTrigger.reasonCode,
+        reasonDetail: repeatCleanTrigger.reasonDetail,
+        trigger: repeatCleanTrigger.trigger,
+        mostRecentPreviousReviewerCleanPassEnvelope:
+          repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope
+      },
       createError: (message) => new PassCommandError(message)
     },
     {
-      writePostAppendReviewVerificationArtifact,
-      writePostAppendPassState,
-      updateReviewerDocGateArtifact
+      prepareNormalPassAppend,
+      executeNormalPassAppend,
+      persistNormalPassPostAppend: (persistInput) =>
+        persistNormalPassPostAppend(persistInput, {
+          writePostAppendReviewVerificationArtifact,
+          writePostAppendPassState,
+          updateReviewerDocGateArtifact
+        }),
+      executeNormalPassDelivery: (deliveryInput) =>
+        executeNormalPassDelivery(deliveryInput, {
+          resolveReviewerTestDirectiveForPass,
+          executePassDelivery,
+          ...(dependencies.emitTmuxDeliveryNotification !== undefined
+            ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
+            : {}),
+          ...(dependencies.refreshReviewerContext !== undefined
+            ? { refreshReviewerContext: dependencies.refreshReviewerContext }
+            : {})
+        }),
+      finalizeNormalPass: (finalizeInput) =>
+        finalizeNormalPass(finalizeInput, {
+          emitBubbleLifecycleEventBestEffort,
+          buildPassLifecycleMetricMetadata,
+          resolveMostRecentPreviousReviewerPassIsCleanFromMetadata,
+          mapPassResultDelivery,
+          buildNormalPassResult
+        })
     }
   );
-  const written = postAppendPersistence.written;
-  const docGateArtifactWriteFailureReason =
-    postAppendPersistence.docGateArtifactWriteFailureReason;
-
-  const normalPassDelivery = await executeNormalPassDelivery(
-    {
-      senderRole: handoff.senderRole,
-      bubbleId: resolved.bubbleId,
-      bubbleConfig: resolved.bubbleConfig,
-      envelope: mapped.envelope,
-      worktreePath: resolved.bubblePaths.worktreePath,
-      repoPath: resolved.repoPath,
-      artifactsDir: resolved.bubblePaths.artifactsDir,
-      sessionsPath: resolved.bubblePaths.sessionsPath,
-      reviewerBriefArtifactPath: resolved.bubblePaths.reviewerBriefArtifactPath,
-      reviewerFocusArtifactPath: resolved.bubblePaths.reviewerFocusArtifactPath,
-      recipientRole: handoff.recipientRole,
-      now
-    },
-    {
-      resolveReviewerTestDirectiveForPass,
-      executePassDelivery,
-      ...(dependencies.emitTmuxDeliveryNotification !== undefined
-        ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
-        : {}),
-      ...(dependencies.refreshReviewerContext !== undefined
-        ? { refreshReviewerContext: dependencies.refreshReviewerContext }
-        : {})
-    }
-  );
-  const reviewerTestDirective: ReviewerTestExecutionDirective | undefined =
-    normalPassDelivery.reviewerTestDirective;
-  const deliveryResult = normalPassDelivery.deliveryResult;
-  const deliveryRetried = normalPassDelivery.deliveryRetried;
-
-  return finalizeNormalPass({
-    now,
-    repoPath: resolved.repoPath,
-    bubbleId: resolved.bubbleId,
-    bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
-    round: handoff.envelopeRound,
-    actorRole: handoff.senderRole,
-    passIntent: intent,
-    inferredIntent,
-    sender: handoff.senderAgent,
-    recipient: handoff.recipientAgent,
-    recipientRole: handoff.recipientRole,
-    refsCount: refs.length,
-    hasFindings,
-    noFindings,
-    ...(reviewerFindingsClaim !== undefined
-      ? { reviewerFindingsClaim }
-      : {}),
-    ...(reviewerFindingsClaimParserMetadata !== undefined
-      ? { reviewerFindingsClaimParserMetadata }
-      : {}),
-    repeatCleanReasonCode: repeatCleanTrigger.reasonCode,
-    repeatCleanReasonDetail: repeatCleanTrigger.reasonDetail,
-    repeatCleanTrigger: repeatCleanTrigger.trigger,
-    fallbackMostRecentPreviousReviewerCleanPassEnvelope:
-      repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope,
-    ...(reviewerTestDirective !== undefined ? { reviewerTestDirective } : {}),
-    findings: handoff.senderRole === "reviewer" ? findingsForPayload : findings,
-    ...(docGateArtifactWriteFailureReason !== undefined
-      ? { docGateArtifactWriteFailureReason }
-      : {}),
-    sequence: mapped.sequence,
-    envelope: mapped.envelope,
-    state: written.state,
-    deliveryResult,
-    deliveryRetried
-  }, {
-    emitBubbleLifecycleEventBestEffort,
-    buildPassLifecycleMetricMetadata,
-    resolveMostRecentPreviousReviewerPassIsCleanFromMetadata,
-    mapPassResultDelivery,
-    buildNormalPassResult
-  });
 }
 
 export function asPassCommandError(error: unknown): never {
