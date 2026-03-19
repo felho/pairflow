@@ -1,0 +1,24 @@
+{
+  "id": "meta-review-gate-apply-basic",
+  "command": "metaReviewGate",
+  "mode": "legacy",
+  "description": "Seed contract case for meta-review gate apply baseline.",
+  "input": {
+    "route": "apply",
+    "summary": "Seed apply contract summary",
+    "refs": []
+  },
+  "expected": {
+    "status": "ok",
+    "gateRoute": "human_gate_run_failed",
+    "stateSubset": {
+      "state": "META_REVIEW_FAILED"
+    }
+  },
+  "tags": [
+    "seed",
+    "m3",
+    "meta-review-gate"
+  ]
+}
+
