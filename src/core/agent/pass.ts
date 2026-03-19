@@ -71,8 +71,6 @@ import {
 } from "../gates/docContractGates.js";
 import {
   claimParserDivergenceDiagnosticReasonCode,
-  evaluatePositiveSummaryFindingsAssertion,
-  evaluateReviewerFindingsAggregate,
   resolveLegacySummaryFindingsClaimState,
   validateConvergencePolicy
 } from "../convergence/policy.js";
@@ -97,6 +95,11 @@ import {
   resolvePassHandoff,
   type ResolvedPassHandoff
 } from "../../v11/domain/pass/handoff.js";
+import {
+  assertReviewerNoFindingsSummaryConsistency,
+  inferReviewerPassIntent,
+  validateReviewerPassGate
+} from "../../v11/domain/pass/reviewerDecision.js";
 
 export interface EmitPassInput {
   summary: string;
@@ -165,13 +168,7 @@ const docsOnlyRuntimeChecksSkippedMarkers = [
 const docsOnlyRuntimeLogRefPattern = /^\.pairflow\/evidence\/[^\s]+\.log$/u;
 const docsOnlyRuntimeLogRefPatternText =
   docsOnlyRuntimeLogRefPattern.source.replaceAll("\\/", "/");
-const reviewerPassNonBlockingPostGateReasonCode =
-  "REVIEWER_PASS_NON_BLOCKING_POST_GATE";
-const reviewerPassNoFindingsPostGateReasonCode =
-  "REVIEWER_PASS_NO_FINDINGS_POST_GATE";
 const findingsPayloadInvalidReasonCode = "FINDINGS_PAYLOAD_INVALID";
-const reviewerSummaryFindingsContradictionReasonCode =
-  "REVIEWER_SUMMARY_FINDINGS_CONTRADICTION";
 
 interface NormalizedReviewerFindingsPayload {
   findings: Finding[];
@@ -348,25 +345,6 @@ export function inferPassIntent(activeRole: AgentRole): PassIntent {
   );
 }
 
-function inferReviewerPassIntent(
-  hasFindings: boolean,
-  noFindings: boolean
-): PassIntent {
-  if (hasFindings && noFindings) {
-    throw new PassCommandError(
-      "Reviewer PASS cannot use both --finding and --no-findings."
-    );
-  }
-
-  if (!hasFindings && !noFindings) {
-    throw new PassCommandError(
-      `${findingsPayloadInvalidReasonCode}: Reviewer PASS requires explicit findings declaration: use --finding <P0|P1|P2|P3:Title[|ref1,ref2]> (repeatable) or --no-findings.`
-    );
-  }
-
-  return noFindings ? "review" : "fix_request";
-}
-
 function mapAppendResult(result: AppendProtocolEnvelopeResult): Pick<EmitPassResult, "sequence" | "envelope"> {
   return {
     sequence: result.sequence,
@@ -521,112 +499,6 @@ function normalizeReviewerFindingsPayload(
     findings: normalized,
     invalid
   };
-}
-
-function buildPostGateConvergedGuidance(input: {
-  round: number;
-  severityGateRound: number;
-}): string {
-  return `Use \`pairflow converged --summary "..."\` instead (round ${input.round} >= severity_gate_round ${input.severityGateRound}).`;
-}
-
-function validateReviewerPassGate(input: {
-  round: number;
-  noFindings: boolean;
-  findings: Finding[];
-  findingsPayloadInvalid: boolean;
-  reviewArtifactType: BubbleConfig["review_artifact_type"];
-  severityGateRound: number;
-}): void {
-  const postGate = input.round >= input.severityGateRound;
-  const invalidPayloadGuidance = postGate
-    ? `Provide structured findings with severity/title (and optional refs), or use \`pairflow converged --summary "..."\` for clean/non-blocking outcomes. ${buildPostGateConvergedGuidance({
-      round: input.round,
-      severityGateRound: input.severityGateRound
-    })}`
-    : "Provide structured findings with severity/title (and optional refs) or use --no-findings explicitly for a clean review.";
-  if (postGate && input.noFindings) {
-    throw new PassCommandError(
-      `${reviewerPassNoFindingsPostGateReasonCode}: Reviewer PASS with --no-findings is not allowed after severity gate. ${buildPostGateConvergedGuidance({
-        round: input.round,
-        severityGateRound: input.severityGateRound
-      })}`
-    );
-  }
-
-  if (input.findingsPayloadInvalid) {
-    throw new PassCommandError(
-      `${findingsPayloadInvalidReasonCode}: Reviewer PASS findings payload is invalid. ${invalidPayloadGuidance}`
-    );
-  }
-
-  if (input.findings.length === 0 && !input.noFindings) {
-    if (postGate) {
-      throw new PassCommandError(
-        `${findingsPayloadInvalidReasonCode}: Reviewer PASS requires explicit structured findings in post-gate rounds. ${buildPostGateConvergedGuidance({
-          round: input.round,
-          severityGateRound: input.severityGateRound
-        })}`
-      );
-    }
-    throw new PassCommandError(
-      `${findingsPayloadInvalidReasonCode}: Reviewer PASS requires explicit findings declaration: use --finding <P0|P1|P2|P3:Title[|ref1,ref2]> (repeatable) or --no-findings.`
-    );
-  }
-
-  if (!postGate) {
-    return;
-  }
-
-  const aggregate = evaluateReviewerFindingsAggregate({
-    findings: input.findings,
-    reviewArtifactType: input.reviewArtifactType
-  });
-  if (aggregate.invalid) {
-    throw new PassCommandError(
-      `${findingsPayloadInvalidReasonCode}: Reviewer PASS findings payload is invalid. ${invalidPayloadGuidance}`
-    );
-  }
-  if (aggregate.hasBlocking) {
-    return;
-  }
-
-  const p3Only = aggregate.p3 > 0 && aggregate.p0 === 0 && aggregate.p1 === 0 && aggregate.p2 === 0;
-  const hasDeclaredCanonicalBlocker = input.findings.some((finding) => {
-    const priority = resolveFindingPriority({
-      priority: finding.priority,
-      severity: finding.severity
-    });
-    return priority === "P0" || priority === "P1";
-  });
-  const docScopeQualifierNote =
-    input.reviewArtifactType === "document" && hasDeclaredCanonicalBlocker
-      ? " Document scope qualifier: blocker findings require strict `timing=required-now` + `layer=L1`; CLI `--finding` cannot encode these qualifiers, so unqualified `P0/P1` entries are treated as non-blocking."
-      : "";
-  throw new PassCommandError(
-    `${reviewerPassNonBlockingPostGateReasonCode}: Reviewer PASS is not allowed after severity gate when no blocker findings remain${p3Only ? " (P3-only finding set)." : "."}${docScopeQualifierNote} ${buildPostGateConvergedGuidance({
-      round: input.round,
-      severityGateRound: input.severityGateRound
-    })}`
-  );
-}
-
-function assertReviewerNoFindingsSummaryConsistency(input: {
-  summary: string;
-  noFindings: boolean;
-}): void {
-  if (!input.noFindings) {
-    return;
-  }
-
-  const summaryAssertion = evaluatePositiveSummaryFindingsAssertion(input.summary);
-  if (!summaryAssertion.hasPositiveAssertion) {
-    return;
-  }
-
-  throw new PassCommandError(
-    `${reviewerSummaryFindingsContradictionReasonCode}: Reviewer PASS with --no-findings cannot include positive findings/severity summary assertions. Remove positive findings language from --summary or provide structured --finding entries.`
-  );
 }
 
 function validateReviewerVerificationConsistency(input: {
@@ -841,16 +713,22 @@ export async function emitPassFromWorkspace(
       findings,
       findingsPayloadInvalid: normalizedFindings.invalid,
       reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
-      severityGateRound: resolved.bubbleConfig.severity_gate_round
+      severityGateRound: resolved.bubbleConfig.severity_gate_round,
+      createError: (message) => new PassCommandError(message)
     });
     assertReviewerNoFindingsSummaryConsistency({
       summary,
-      noFindings
+      noFindings,
+      createError: (message) => new PassCommandError(message)
     });
   }
   const inferredReviewerIntent =
     handoff.senderRole === "reviewer"
-      ? inferReviewerPassIntent(hasFindings, noFindings)
+      ? inferReviewerPassIntent({
+        hasFindings,
+        noFindings,
+        createError: (message) => new PassCommandError(message)
+      })
       : undefined;
   const reviewerFindingsClaim =
     handoff.senderRole === "reviewer"

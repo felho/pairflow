@@ -1,0 +1,160 @@
+import type { BubbleConfig } from "../../../types/bubble.js";
+import { resolveFindingPriority, type Finding } from "../../../types/findings.js";
+import type { PassIntent } from "../../../types/protocol.js";
+import {
+  evaluatePositiveSummaryFindingsAssertion,
+  evaluateReviewerFindingsAggregate
+} from "../../../core/convergence/policy.js";
+
+const reviewerPassNonBlockingPostGateReasonCode =
+  "REVIEWER_PASS_NON_BLOCKING_POST_GATE";
+const reviewerPassNoFindingsPostGateReasonCode =
+  "REVIEWER_PASS_NO_FINDINGS_POST_GATE";
+const findingsPayloadInvalidReasonCode = "FINDINGS_PAYLOAD_INVALID";
+const reviewerSummaryFindingsContradictionReasonCode =
+  "REVIEWER_SUMMARY_FINDINGS_CONTRADICTION";
+
+function raiseReviewerDecisionError(
+  createError: (message: string) => Error,
+  message: string
+): never {
+  // reason_code=REVIEWER_PASS_DECISION_INVALID context=reviewer_pass_decision_input
+  throw createError(message);
+}
+
+function buildPostGateConvergedGuidance(input: {
+  round: number;
+  severityGateRound: number;
+}): string {
+  return `Use \`pairflow converged --summary "..."\` instead (round ${input.round} >= severity_gate_round ${input.severityGateRound}).`;
+}
+
+export function inferReviewerPassIntent(input: {
+  hasFindings: boolean;
+  noFindings: boolean;
+  createError: (message: string) => Error;
+}): PassIntent {
+  if (input.hasFindings && input.noFindings) {
+    raiseReviewerDecisionError(
+      input.createError,
+      "Reviewer PASS cannot use both --finding and --no-findings."
+    );
+  }
+
+  if (!input.hasFindings && !input.noFindings) {
+    raiseReviewerDecisionError(
+      input.createError,
+      `${findingsPayloadInvalidReasonCode}: Reviewer PASS requires explicit findings declaration: use --finding <P0|P1|P2|P3:Title[|ref1,ref2]> (repeatable) or --no-findings.`
+    );
+  }
+
+  return input.noFindings ? "review" : "fix_request";
+}
+
+export function validateReviewerPassGate(input: {
+  round: number;
+  noFindings: boolean;
+  findings: Finding[];
+  findingsPayloadInvalid: boolean;
+  reviewArtifactType: BubbleConfig["review_artifact_type"];
+  severityGateRound: number;
+  createError: (message: string) => Error;
+}): void {
+  const postGate = input.round >= input.severityGateRound;
+  const invalidPayloadGuidance = postGate
+    ? `Provide structured findings with severity/title (and optional refs), or use \`pairflow converged --summary "..."\` for clean/non-blocking outcomes. ${buildPostGateConvergedGuidance({
+      round: input.round,
+      severityGateRound: input.severityGateRound
+    })}`
+    : "Provide structured findings with severity/title (and optional refs) or use --no-findings explicitly for a clean review.";
+  if (postGate && input.noFindings) {
+    raiseReviewerDecisionError(
+      input.createError,
+      `${reviewerPassNoFindingsPostGateReasonCode}: Reviewer PASS with --no-findings is not allowed after severity gate. ${buildPostGateConvergedGuidance({
+        round: input.round,
+        severityGateRound: input.severityGateRound
+      })}`
+    );
+  }
+
+  if (input.findingsPayloadInvalid) {
+    raiseReviewerDecisionError(
+      input.createError,
+      `${findingsPayloadInvalidReasonCode}: Reviewer PASS findings payload is invalid. ${invalidPayloadGuidance}`
+    );
+  }
+
+  if (input.findings.length === 0 && !input.noFindings) {
+    if (postGate) {
+      raiseReviewerDecisionError(
+        input.createError,
+        `${findingsPayloadInvalidReasonCode}: Reviewer PASS requires explicit structured findings in post-gate rounds. ${buildPostGateConvergedGuidance({
+          round: input.round,
+          severityGateRound: input.severityGateRound
+        })}`
+      );
+    }
+    raiseReviewerDecisionError(
+      input.createError,
+      `${findingsPayloadInvalidReasonCode}: Reviewer PASS requires explicit findings declaration: use --finding <P0|P1|P2|P3:Title[|ref1,ref2]> (repeatable) or --no-findings.`
+    );
+  }
+
+  if (!postGate) {
+    return;
+  }
+
+  const aggregate = evaluateReviewerFindingsAggregate({
+    findings: input.findings,
+    reviewArtifactType: input.reviewArtifactType
+  });
+  if (aggregate.invalid) {
+    raiseReviewerDecisionError(
+      input.createError,
+      `${findingsPayloadInvalidReasonCode}: Reviewer PASS findings payload is invalid. ${invalidPayloadGuidance}`
+    );
+  }
+  if (aggregate.hasBlocking) {
+    return;
+  }
+
+  const p3Only = aggregate.p3 > 0 && aggregate.p0 === 0 && aggregate.p1 === 0 && aggregate.p2 === 0;
+  const hasDeclaredCanonicalBlocker = input.findings.some((finding) => {
+    const priority = resolveFindingPriority({
+      priority: finding.priority,
+      severity: finding.severity
+    });
+    return priority === "P0" || priority === "P1";
+  });
+  const docScopeQualifierNote =
+    input.reviewArtifactType === "document" && hasDeclaredCanonicalBlocker
+      ? " Document scope qualifier: blocker findings require strict `timing=required-now` + `layer=L1`; CLI `--finding` cannot encode these qualifiers, so unqualified `P0/P1` entries are treated as non-blocking."
+      : "";
+  raiseReviewerDecisionError(
+    input.createError,
+    `${reviewerPassNonBlockingPostGateReasonCode}: Reviewer PASS is not allowed after severity gate when no blocker findings remain${p3Only ? " (P3-only finding set)." : "."}${docScopeQualifierNote} ${buildPostGateConvergedGuidance({
+      round: input.round,
+      severityGateRound: input.severityGateRound
+    })}`
+  );
+}
+
+export function assertReviewerNoFindingsSummaryConsistency(input: {
+  summary: string;
+  noFindings: boolean;
+  createError: (message: string) => Error;
+}): void {
+  if (!input.noFindings) {
+    return;
+  }
+
+  const summaryAssertion = evaluatePositiveSummaryFindingsAssertion(input.summary);
+  if (!summaryAssertion.hasPositiveAssertion) {
+    return;
+  }
+
+  raiseReviewerDecisionError(
+    input.createError,
+    `${reviewerSummaryFindingsContradictionReasonCode}: Reviewer PASS with --no-findings cannot include positive findings/severity summary assertions. Remove positive findings language from --summary or provide structured --finding entries.`
+  );
+}
