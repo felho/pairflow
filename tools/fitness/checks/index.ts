@@ -1,4 +1,5 @@
 import { buildBoundaryCheckReport } from "./boundary.js";
+import { buildMutationCheckReport } from "./mutation.js";
 import { createNotImplementedCheckReport } from "./not-implemented.js";
 import { buildTransitionCheckReport } from "./transition.js";
 
@@ -22,6 +23,13 @@ export async function buildCheckReport({
   }
   if (check.id === "transition") {
     return buildTransitionCheckReport({
+      check,
+      repoRoot,
+      fallbackMode
+    });
+  }
+  if (check.id === "mutation") {
+    return buildMutationCheckReport({
       check,
       repoRoot,
       fallbackMode
