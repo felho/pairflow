@@ -63,4 +63,22 @@ describe("v11 converged contract harness skeleton", () => {
       expect(run.legacy).toEqual(run.v11);
     }
   }, 20_000);
+
+  it("rejects invalid converged contract input.reviewArtifactType", async () => {
+    await expect(
+      runConvergedContractCase({
+        id: "converged-invalid-review-artifact-type",
+        command: "converged",
+        mode: "legacy",
+        description: "Invalid converged contract input shape",
+        input: {
+          summary: "Invalid case",
+          reviewArtifactType: "auto"
+        },
+        expected: {
+          status: "ok"
+        }
+      })
+    ).rejects.toThrow(/reviewArtifactType must be one of: code, document/u);
+  });
 });
