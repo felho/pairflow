@@ -1,0 +1,28 @@
+{
+  "id": "converged-no-refs-v11",
+  "command": "converged",
+  "mode": "v11",
+  "description": "converged v11 baseline with omitted refs input.",
+  "input": {
+    "summary": "Converged v11 with omitted refs."
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "CONVERGED_EMITTED",
+    "gateRoute": "human_gate_run_failed",
+    "envelopeType": "CONVERGENCE",
+    "convergenceRecipient": "orchestrator",
+    "approvalRequestEnvelopeType": "APPROVAL_REQUEST",
+    "approvalRequestRecipient": "human",
+    "approvalRequestSender": "orchestrator",
+    "stateSubset": {
+      "state": "META_REVIEW_FAILED"
+    }
+  },
+  "tags": [
+    "converged",
+    "v11-contract",
+    "v11",
+    "no-refs"
+  ]
+}

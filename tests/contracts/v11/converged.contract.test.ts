@@ -45,6 +45,14 @@ describe("v11 converged contract harness skeleton", () => {
       resolve(
         process.cwd(),
         "tests/contracts/v11/cases/converged/converged-no-refs-parity.case.json"
+      ),
+      resolve(
+        process.cwd(),
+        "tests/contracts/v11/cases/converged/converged-no-refs.case.json"
+      ),
+      resolve(
+        process.cwd(),
+        "tests/contracts/v11/cases/converged/converged-no-refs-v11.case.json"
       )
     ];
 
