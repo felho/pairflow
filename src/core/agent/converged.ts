@@ -11,7 +11,11 @@ import {
 } from "../../v11/shared/converged/convergedFlowInvocationBuilders.js";
 import { normalizeConvergedCommandError } from "../../v11/shared/converged/convergedCommandErrorNormalization.js";
 import { normalizeConvergedCommandInput } from "../../v11/shared/converged/convergedCommandInputNormalization.js";
-import { ConvergedCommandError } from "../../v11/shared/converged/convergedCommandError.js";
+import {
+  ConvergedCommandError,
+  createConvergedCommandError,
+  isConvergedCommandError
+} from "../../v11/shared/converged/convergedCommandError.js";
 import { resolveConvergedRolloutBlockingReasonCodes as resolveMetaReviewRolloutBlockingReasonCodes } from "../../v11/shared/converged/convergedRolloutBlockingReasonResolver.js";
 export { resolveMetaReviewRolloutBlockingReasonCodes };
 export { ConvergedCommandError };
@@ -40,8 +44,7 @@ export async function emitConvergedFromWorkspace(
   input: EmitConvergedInput,
   dependencies: EmitConvergedDependencies = {}
 ): Promise<EmitConvergedResult> {
-  const createError = (message: string): ConvergedCommandError =>
-    new ConvergedCommandError(message);
+  const createError = createConvergedCommandError;
   const normalized = normalizeConvergedCommandInput({
     summary: input.summary,
     refs: input.refs,
@@ -67,7 +70,7 @@ export async function emitConvergedFromWorkspace(
 export function asConvergedCommandError(error: unknown): never {
   throw normalizeConvergedCommandError({
     error,
-    isConvergedCommandError: (candidate) => candidate instanceof ConvergedCommandError,
-    createConvergedCommandError: (message) => new ConvergedCommandError(message)
+    isConvergedCommandError,
+    createConvergedCommandError
   });
 }
