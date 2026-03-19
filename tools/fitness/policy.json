@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "updated_at": "2026-03-19T00:00:00.000Z",
+  "defaults": {
+    "mode": "report-only"
+  },
+  "checks": [
+    {
+      "id": "boundary",
+      "metric": "forbidden direct state/transcript write in orchestrator path",
+      "scope": [
+        "src/v11/application/**",
+        "src/v11/domain/**"
+      ],
+      "mode": "report-only",
+      "owner": "architecture",
+      "exceptions": []
+    },
+    {
+      "id": "mutation",
+      "metric": "mutation boundary and transcript-first pipeline usage",
+      "scope": [
+        "src/v11/application/**",
+        "src/v11/infrastructure/**"
+      ],
+      "mode": "report-only",
+      "owner": "architecture/runtime",
+      "exceptions": []
+    },
+    {
+      "id": "transition",
+      "metric": "state transition validation before persist",
+      "scope": [
+        "src/v11/application/**",
+        "src/v11/domain/**"
+      ],
+      "mode": "report-only",
+      "owner": "architecture/runtime",
+      "exceptions": []
+    },
+    {
+      "id": "error",
+      "metric": "error code and context completeness",
+      "scope": [
+        "src/v11/**"
+      ],
+      "mode": "report-only",
+      "owner": "architecture/observability",
+      "exceptions": []
+    },
+    {
+      "id": "complexity",
+      "metric": "file and function complexity budget with top offenders",
+      "scope": [
+        "src/v11/**"
+      ],
+      "mode": "report-only",
+      "owner": "architecture",
+      "exceptions": []
+    },
+    {
+      "id": "dependency",
+      "metric": "cycle and forbidden import direction detection",
+      "scope": [
+        "src/v11/**"
+      ],
+      "mode": "report-only",
+      "owner": "architecture",
+      "exceptions": []
+    }
+  ]
+}

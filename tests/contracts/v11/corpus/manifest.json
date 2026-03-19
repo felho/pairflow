@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "generated_at": "2026-03-19T00:00:00.000Z",
+  "entries": [
+    {
+      "id": "pass-basic-handoff",
+      "command": "pass",
+      "source": "tests/contracts/v11/cases/pass/pass-basic.case.json",
+      "kind": "seed_case"
+    }
+  ]
+}

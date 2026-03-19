@@ -11,6 +11,9 @@ export default tseslint.config(
       "eslint.config.mjs",
       "ui/postcss.config.js",
       "scripts/generate-reviewer-severity-ontology.mjs",
+      "tools/fitness/run-report.mjs",
+      "tools/fitness/run-check.mjs",
+      "tests/contracts/v11/corpus/build-corpus.mjs",
       "src/core/runtime/reviewerSeverityOntology.generated.ts"
     ]
   },
