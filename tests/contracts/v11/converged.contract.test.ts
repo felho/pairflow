@@ -1,5 +1,5 @@
-import { readdir } from "node:fs/promises";
-import { resolve } from "node:path";
+import { readFile, readdir } from "node:fs/promises";
+import { relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runConvergedContractCase } from "./converged.contract.runner.js";
@@ -14,6 +14,30 @@ async function listConvergedCasePaths(): Promise<string[]> {
     .map((entry) => resolve(casesDir, entry));
 }
 
+interface CorpusManifest {
+  entries?: Array<{
+    command?: unknown;
+    source?: unknown;
+  }>;
+}
+
+async function listConvergedCaseSourcesFromManifest(): Promise<string[]> {
+  const manifestPath = resolve(process.cwd(), "tests/contracts/v11/corpus/manifest.json");
+  const manifestRaw = await readFile(manifestPath, "utf8");
+  const manifest = JSON.parse(manifestRaw) as CorpusManifest;
+  if (!Array.isArray(manifest.entries)) {
+    return [];
+  }
+  return manifest.entries
+    .filter((entry) => entry.command === "converged" && typeof entry.source === "string")
+    .map((entry) => entry.source as string)
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function toRepoRelativePath(path: string): string {
+  return relative(process.cwd(), path).replaceAll("\\", "/");
+}
+
 describe("v11 converged contract harness skeleton", () => {
   it("loads seed contract case metadata", async () => {
     const casePath = resolve(
@@ -24,6 +48,15 @@ describe("v11 converged contract harness skeleton", () => {
     expect(caseDef.command).toBe("converged");
     expect(caseDef.mode).toBe("legacy");
     expect(caseDef.expected.status).toBe("ok");
+  });
+
+  it("keeps corpus manifest converged entries aligned with case directory", async () => {
+    const casePaths = await listConvergedCasePaths();
+    const caseSources = casePaths.map(toRepoRelativePath).sort((left, right) =>
+      left.localeCompare(right)
+    );
+    const manifestSources = await listConvergedCaseSourcesFromManifest();
+    expect(manifestSources).toEqual(caseSources);
   });
 
   it("executes legacy, v11 and parity assertions via shared runner", async () => {
