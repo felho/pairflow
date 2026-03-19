@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  asAskHumanCommandErrorV11,
   AskHumanCommandErrorV11,
   emitAskHumanFromWorkspaceV11
 } from "../../../../src/v11/application/askHuman/emitAskHumanV11.js";
@@ -139,5 +140,17 @@ describe("emitAskHumanFromWorkspaceV11", () => {
       `${bubble.paths.transcriptPath}#${result.envelope.id}`
     ]);
     expect(deliveryRefs[0]?.startsWith("transcript.ndjson#")).toBe(false);
+  });
+});
+
+describe("asAskHumanCommandErrorV11", () => {
+  it("maps generic Error to AskHumanCommandErrorV11", () => {
+    expect(() => asAskHumanCommandErrorV11(new Error("unexpected"))).toThrowError(
+      AskHumanCommandErrorV11
+    );
+  });
+
+  it("rethrows non-Error values unchanged", () => {
+    expect(() => asAskHumanCommandErrorV11("raw-error")).toThrow("raw-error");
   });
 });
