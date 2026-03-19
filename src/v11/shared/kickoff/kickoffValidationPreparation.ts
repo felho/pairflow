@@ -187,14 +187,32 @@ function prepareKickoffEligibilityOrFailure(input: {
   };
 }
 
-export async function prepareKickoffValidation(
-  input: PrepareKickoffValidationInput,
-  dependencies: ResolvedKickoffDependencies
-): Promise<PrepareKickoffValidationResult> {
-  const resolved = await dependencies.resolveBubble(
-    buildKickoffResolveBubbleInput(input)
+type PrepareKickoffBubbleEligibilityOrFailureResult =
+  | {
+      kind: "failure";
+      result: PrepareKickoffValidationResult;
+    }
+  | {
+      kind: "eligible";
+      resolved: ResolvedKickoffBubble;
+      loadedState: LoadedKickoffState;
+      state: LoadedKickoffState["state"];
+      markersBefore: {
+        ideation_mode: boolean;
+        ideation_task_pending: boolean;
+      };
+    };
+
+async function prepareKickoffBubbleEligibilityOrFailure(input: {
+  validationInput: PrepareKickoffValidationInput;
+  dependencies: ResolvedKickoffDependencies;
+}): Promise<PrepareKickoffBubbleEligibilityOrFailureResult> {
+  const resolved = await input.dependencies.resolveBubble(
+    buildKickoffResolveBubbleInput(input.validationInput)
   );
-  const loadedState = await dependencies.readState(resolved.bubblePaths.statePath);
+  const loadedState = await input.dependencies.readState(
+    resolved.bubblePaths.statePath
+  );
   const state = loadedState.state;
   const eligibility = prepareKickoffEligibilityOrFailure({
     resolvedBubbleId: resolved.bubbleId,
@@ -202,9 +220,30 @@ export async function prepareKickoffValidation(
     bubbleConfig: resolved.bubbleConfig
   });
   if (eligibility.kind === "failure") {
-    return eligibility.result;
+    return eligibility;
   }
-  const markersBefore = eligibility.markersBefore;
+
+  return {
+    kind: "eligible",
+    resolved,
+    loadedState,
+    state,
+    markersBefore: eligibility.markersBefore
+  };
+}
+
+export async function prepareKickoffValidation(
+  input: PrepareKickoffValidationInput,
+  dependencies: ResolvedKickoffDependencies
+): Promise<PrepareKickoffValidationResult> {
+  const bubbleEligibility = await prepareKickoffBubbleEligibilityOrFailure({
+    validationInput: input,
+    dependencies
+  });
+  if (bubbleEligibility.kind === "failure") {
+    return bubbleEligibility.result;
+  }
+  const { resolved, loadedState, state, markersBefore } = bubbleEligibility;
 
   const taskOrFailure = await prepareKickoffTaskOrFailure({
     validationInput: input,
