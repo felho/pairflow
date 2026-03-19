@@ -1,10 +1,8 @@
 import type { ResolvedKickoffTaskInput } from "./kickoffTaskInputResolution.js";
 import type { ResolvedKickoffDependencies } from "./kickoffDependencyResolution.js";
 import { prepareKickoffEligibility } from "./kickoffEligibilityPreparation.js";
-import { resolveKickoffTask } from "./kickoffTaskResolution.js";
 import {
   buildKickoffResolveBubbleInput,
-  buildKickoffTaskResolutionInput
 } from "./kickoffValidationInputBuilders.js";
 import {
   type KickoffBubbleResultShape,
@@ -12,8 +10,8 @@ import {
 } from "./kickoffResultBuilders.js";
 import {
   buildKickoffEligibilityFailureResult,
-  buildKickoffTaskInvalidFailureResult
 } from "./kickoffValidationFailureBuilders.js";
+import { prepareKickoffTaskOrFailure } from "./kickoffTaskPreparation.js";
 
 export interface PrepareKickoffValidationInput {
   bubbleId: string;
@@ -64,42 +62,6 @@ function buildKickoffPreparedValidationResult(input: {
     state: input.state,
     markersBefore: input.markersBefore,
     task: input.task
-  };
-}
-
-type PrepareKickoffTaskOrFailureResult =
-  | {
-      kind: "failure";
-      result: PrepareKickoffValidationResult;
-    }
-  | {
-      kind: "task";
-      task: ResolvedKickoffTaskInput;
-    };
-
-async function prepareKickoffTaskOrFailure(input: {
-  validationInput: PrepareKickoffValidationInput;
-  resolvedBubbleId: string;
-  state: LoadedKickoffState["state"];
-  markersBefore: KickoffIdeationMarkers;
-}): Promise<PrepareKickoffTaskOrFailureResult> {
-  const taskResolution = await resolveKickoffTask(
-    buildKickoffTaskResolutionInput(input.validationInput)
-  );
-  if (taskResolution.kind === "invalid") {
-    return {
-      kind: "failure",
-      result: buildKickoffTaskInvalidFailureResult({
-        resolvedBubbleId: input.resolvedBubbleId,
-        state: input.state,
-        markersBefore: input.markersBefore
-      })
-    };
-  }
-
-  return {
-    kind: "task",
-    task: taskResolution.task
   };
 }
 
