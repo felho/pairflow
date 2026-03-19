@@ -9,6 +9,9 @@ export {
   resolveConvergedRolloutBlockingReasonCodes as resolveMetaReviewRolloutBlockingReasonCodesV11
 } from "../../shared/converged/convergedRolloutBlockingReasonResolver.js";
 export type {
+  EmitConvergedDependencies,
+  EmitConvergedInput,
+  EmitConvergedResult,
   EmitConvergedDependencies as EmitConvergedV11Dependencies,
   EmitConvergedInput as EmitConvergedV11Input,
   EmitConvergedResult as EmitConvergedV11Result

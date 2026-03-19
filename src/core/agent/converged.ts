@@ -8,4 +8,4 @@ export type {
   EmitConvergedDependencies,
   EmitConvergedInput,
   EmitConvergedResult
-} from "../../v11/shared/converged/convergedCommandTypes.js";
+} from "../../v11/application/converged/emitConvergedV11.js";
