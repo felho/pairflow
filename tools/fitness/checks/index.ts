@@ -1,5 +1,6 @@
 import { buildBoundaryCheckReport } from "./boundary.js";
 import { createNotImplementedCheckReport } from "./not-implemented.js";
+import { buildTransitionCheckReport } from "./transition.js";
 
 import type { FitnessPolicy, FitnessPolicyCheck, FitnessReportCheck } from "../types.js";
 
@@ -14,6 +15,13 @@ export async function buildCheckReport({
 }): Promise<FitnessReportCheck> {
   if (check.id === "boundary") {
     return buildBoundaryCheckReport({
+      check,
+      repoRoot,
+      fallbackMode
+    });
+  }
+  if (check.id === "transition") {
+    return buildTransitionCheckReport({
       check,
       repoRoot,
       fallbackMode
