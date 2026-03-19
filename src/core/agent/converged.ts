@@ -1,68 +1,39 @@
 import {
-  type MetaReviewGateRoute
-} from "../bubble/metaReviewGate.js";
-import type {
-  AgentName,
-  BubbleStateSnapshot
-} from "../../types/bubble.js";
-import { type ProtocolEnvelope } from "../../types/protocol.js";
-import {
-  runConvergedFlow,
-  type RunConvergedFlowDependencies
+  runConvergedFlow
 } from "../../v11/application/converged/runConvergedFlow.js";
 import {
   buildConvergedCommandFlowInvocation,
 } from "../../v11/shared/converged/convergedFlowInvocationBuilders.js";
 import { normalizeConvergedCommandError } from "../../v11/shared/converged/convergedCommandErrorNormalization.js";
 import { normalizeConvergedCommandInput } from "../../v11/shared/converged/convergedCommandInputNormalization.js";
-import { ConvergedCommandError } from "../../v11/shared/converged/convergedCommandError.js";
+import {
+  ConvergedCommandError,
+  createConvergedCommandError,
+  isConvergedCommandError
+} from "../../v11/shared/converged/convergedCommandError.js";
+import type {
+  EmitConvergedDependencies,
+  EmitConvergedInput,
+  EmitConvergedResult
+} from "../../v11/shared/converged/convergedCommandTypes.js";
 import { resolveConvergedRolloutBlockingReasonCodes as resolveMetaReviewRolloutBlockingReasonCodes } from "../../v11/shared/converged/convergedRolloutBlockingReasonResolver.js";
 export { resolveMetaReviewRolloutBlockingReasonCodes };
 export { ConvergedCommandError };
-
-export interface EmitConvergedInput {
-  summary: string;
-  refs?: string[];
-  cwd?: string;
-  now?: Date;
-  expectedStateFingerprint?: string;
-  expectedRound?: number;
-  expectedReviewer?: AgentName;
-}
-
-export interface EmitConvergedDependencies {
-  emitTmuxDeliveryNotification?: RunConvergedFlowDependencies["emitTmuxDeliveryNotification"];
-  emitBubbleNotification?: RunConvergedFlowDependencies["emitBubbleNotification"];
-  applyMetaReviewGateOnConvergence?: RunConvergedFlowDependencies["applyMetaReviewGateOnConvergence"];
-  recoverMetaReviewGateFromSnapshot?: RunConvergedFlowDependencies["recoverMetaReviewGateFromSnapshot"];
-}
-
-export interface EmitConvergedResult {
-  bubbleId: string;
-  convergenceSequence: number;
-  convergenceEnvelope: ProtocolEnvelope;
-  gateRoute: MetaReviewGateRoute;
-  approvalRequestSequence: number;
-  approvalRequestEnvelope: ProtocolEnvelope;
-  state: BubbleStateSnapshot;
-  delivery?: {
-    delivered: boolean;
-    reason?: string;
-    retried: boolean;
-  };
-}
+export type {
+  EmitConvergedDependencies,
+  EmitConvergedInput,
+  EmitConvergedResult
+};
 
 export async function emitConvergedFromWorkspace(
   input: EmitConvergedInput,
   dependencies: EmitConvergedDependencies = {}
 ): Promise<EmitConvergedResult> {
-  const createError = (message: string): ConvergedCommandError =>
-    new ConvergedCommandError(message);
   const normalized = normalizeConvergedCommandInput({
     summary: input.summary,
     refs: input.refs,
     now: input.now,
-    createError
+    createError: createConvergedCommandError
   });
   const invocation = buildConvergedCommandFlowInvocation({
     summary: normalized.summary,
@@ -72,7 +43,7 @@ export async function emitConvergedFromWorkspace(
     expectedStateFingerprint: input.expectedStateFingerprint,
     expectedRound: input.expectedRound,
     expectedReviewer: input.expectedReviewer,
-    createError,
+    createError: createConvergedCommandError,
     resolveMetaReviewRolloutBlockingReasonCodes,
     dependencies
   });
@@ -83,7 +54,7 @@ export async function emitConvergedFromWorkspace(
 export function asConvergedCommandError(error: unknown): never {
   throw normalizeConvergedCommandError({
     error,
-    isConvergedCommandError: (candidate) => candidate instanceof ConvergedCommandError,
-    createConvergedCommandError: (message) => new ConvergedCommandError(message)
+    isConvergedCommandError,
+    createConvergedCommandError
   });
 }

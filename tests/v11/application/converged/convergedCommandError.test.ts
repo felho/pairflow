@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { ConvergedCommandError } from "../../../../src/v11/shared/converged/convergedCommandError.js";
+import {
+  ConvergedCommandError,
+  createConvergedCommandError,
+  isConvergedCommandError
+} from "../../../../src/v11/shared/converged/convergedCommandError.js";
 
 describe("ConvergedCommandError", () => {
   it("uses stable error name and message", () => {
@@ -8,5 +12,17 @@ describe("ConvergedCommandError", () => {
 
     expect(error.name).toBe("ConvergedCommandError");
     expect(error.message).toBe("boom");
+  });
+
+  it("creates command error via factory helper", () => {
+    const error = createConvergedCommandError("factory boom");
+
+    expect(error).toBeInstanceOf(ConvergedCommandError);
+    expect(error.message).toBe("factory boom");
+  });
+
+  it("recognizes command error instances via type guard", () => {
+    expect(isConvergedCommandError(new ConvergedCommandError("boom"))).toBe(true);
+    expect(isConvergedCommandError(new Error("boom"))).toBe(false);
   });
 });

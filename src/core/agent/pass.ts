@@ -1,7 +1,6 @@
 import { readStateSnapshot } from "../state/stateStore.js";
 import {
-  resolveBubbleFromWorkspaceCwd,
-  WorkspaceResolutionError
+  resolveBubbleFromWorkspaceCwd
 } from "../bubble/workspaceResolution.js";
 import {
   IDEATION_PASS_BLOCKED,
@@ -31,7 +30,6 @@ import {
   resolvePassHandoff,
   type ResolvedPassHandoff
 } from "../../v11/domain/pass/handoff.js";
-import { normalizeReviewerFindingsPayload } from "../../v11/domain/pass/reviewerFindingsPayload.js";
 import {
   raiseRepeatCleanDownstreamConvergedRejected,
 } from "../../v11/domain/pass/repeatCleanPolicyRejection.js";
@@ -71,7 +69,9 @@ import {
   buildNormalPassFlowDependencies,
   buildNormalPassFlowInput
 } from "../../v11/shared/pass/normalPassFlowInvocationBuilders.js";
+import { normalizePassCommandError } from "../../v11/shared/pass/passCommandErrorNormalization.js";
 import { normalizePassCommandInput } from "../../v11/shared/pass/passCommandInputNormalization.js";
+import { normalizePassCommandPayload } from "../../v11/shared/pass/passCommandPayloadNormalization.js";
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
 } from "../../v11/domain/pass/repeatCleanMetadata.js";
@@ -162,10 +162,13 @@ export async function emitPassFromWorkspace(
   const nowIso = now.toISOString();
   const summary = normalizedCommandInput.summary;
   const refs = normalizedCommandInput.refs;
-  const normalizedFindings = normalizeReviewerFindingsPayload(input.findings);
-  const findings = normalizedFindings.findings;
-  const hasFindings = findings.length > 0;
-  const noFindings = input.noFindings ?? false;
+  const normalizedPayload = normalizePassCommandPayload({
+    findings: input.findings,
+    noFindings: input.noFindings
+  });
+  const findings = normalizedPayload.findings;
+  const hasFindings = normalizedPayload.hasFindings;
+  const noFindings = normalizedPayload.noFindings;
 
   const resolved = await resolveBubbleFromWorkspaceCwd(input.cwd);
   const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
@@ -208,7 +211,7 @@ export async function emitPassFromWorkspace(
       findings,
       hasFindings,
       noFindings,
-      findingsPayloadInvalid: normalizedFindings.invalid,
+      findingsPayloadInvalid: normalizedPayload.findingsPayloadInvalid,
       bubbleConfig: {
         review_artifact_type: resolved.bubbleConfig.review_artifact_type,
         severity_gate_round: resolved.bubbleConfig.severity_gate_round,
@@ -325,17 +328,9 @@ export async function emitPassFromWorkspace(
 }
 
 export function asPassCommandError(error: unknown): never {
-  if (error instanceof PassCommandError) {
-    throw error;
-  }
-
-  if (error instanceof WorkspaceResolutionError) {
-    throw new PassCommandError(error.message);
-  }
-
-  if (error instanceof Error) {
-    throw new PassCommandError(error.message);
-  }
-
-  throw error;
+  throw normalizePassCommandError({
+    error,
+    isPassCommandError: (candidate) => candidate instanceof PassCommandError,
+    createPassCommandError: (message) => new PassCommandError(message)
+  });
 }
