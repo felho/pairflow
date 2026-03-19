@@ -20,6 +20,7 @@ import {
 } from "../../v11/shared/kickoff/kickoffTaskInputResolution.js";
 import { resolveKickoffEligibilityFailureReason } from "../../v11/shared/kickoff/kickoffEligibility.js";
 import { buildKickoffNextState } from "../../v11/shared/kickoff/kickoffStateTransition.js";
+import { buildKickoffTaskEnvelope } from "../../v11/shared/kickoff/kickoffTaskEnvelope.js";
 
 export interface KickoffBubbleInput {
   bubbleId: string;
@@ -228,23 +229,12 @@ export async function kickoffBubble(
       transcriptPath: resolved.bubblePaths.transcriptPath,
       lockPath: join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`),
       now,
-      envelope: {
-        bubble_id: resolved.bubbleId,
-        sender: "orchestrator",
-        recipient: resolved.bubbleConfig.agents.implementer,
-        type: "TASK",
-        round: 1,
-        payload: {
-          summary: task.content,
-          metadata: {
-            source: task.source,
-            ...(task.sourcePath !== undefined
-              ? { source_path: task.sourcePath }
-              : {})
-          }
-        },
-        refs: [resolved.bubblePaths.taskArtifactPath]
-      }
+      envelope: buildKickoffTaskEnvelope({
+        bubbleId: resolved.bubbleId,
+        implementer: resolved.bubbleConfig.agents.implementer,
+        task,
+        taskArtifactPath: resolved.bubblePaths.taskArtifactPath
+      })
     });
   } catch (error) {
     const rollbackErrors: string[] = [];
