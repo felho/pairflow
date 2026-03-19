@@ -25,6 +25,27 @@ export interface ExecuteAskHumanExecutionDependencies {
   applyStateTransition?: typeof applyStateTransition;
 }
 
+function buildAskHumanLockPath(input: ExecuteAskHumanExecutionInput): string {
+  return join(
+    input.routing.resolved.bubblePaths.locksDir,
+    `${input.routing.resolved.bubbleId}.lock`
+  );
+}
+
+function buildAskHumanEnvelope(input: ExecuteAskHumanExecutionInput) {
+  return {
+    bubble_id: input.routing.resolved.bubbleId,
+    sender: input.routing.state.active_agent,
+    recipient: "human" as const,
+    type: "HUMAN_QUESTION" as const,
+    round: input.routing.state.round,
+    payload: {
+      question: input.routing.question
+    },
+    refs: input.routing.refs
+  };
+}
+
 function buildStateWriteFailureMessage(
   appendResult: AppendProtocolEnvelopeResult,
   error: unknown
@@ -44,27 +65,14 @@ export async function executeAskHumanExecution(
   const applyStateTransitionFn =
     dependencies.applyStateTransition ?? applyStateTransition;
 
-  const lockPath = join(
-    input.routing.resolved.bubblePaths.locksDir,
-    `${input.routing.resolved.bubbleId}.lock`
-  );
+  const lockPath = buildAskHumanLockPath(input);
 
   const appended = await appendProtocolEnvelopeFn({
     transcriptPath: input.routing.resolved.bubblePaths.transcriptPath,
     mirrorPaths: [input.routing.resolved.bubblePaths.inboxPath],
     lockPath,
     now: input.now,
-    envelope: {
-      bubble_id: input.routing.resolved.bubbleId,
-      sender: input.routing.state.active_agent,
-      recipient: "human",
-      type: "HUMAN_QUESTION",
-      round: input.routing.state.round,
-      payload: {
-        question: input.routing.question
-      },
-      refs: input.routing.refs
-    }
+    envelope: buildAskHumanEnvelope(input)
   });
 
   const nextState = applyStateTransitionFn(input.routing.state, {
