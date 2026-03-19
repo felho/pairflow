@@ -145,6 +145,42 @@
       "command": "converged",
       "source": "tests/contracts/v11/cases/converged/converged-no-refs-v11.case.json",
       "kind": "seed_case"
+    },
+    {
+      "id": "reply-basic",
+      "command": "reply",
+      "source": "tests/contracts/v11/cases/reply/reply-basic.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reply-basic-v11",
+      "command": "reply",
+      "source": "tests/contracts/v11/cases/reply/reply-basic-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reply-basic-parity",
+      "command": "reply",
+      "source": "tests/contracts/v11/cases/reply/reply-basic-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reply-no-refs",
+      "command": "reply",
+      "source": "tests/contracts/v11/cases/reply/reply-no-refs.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reply-no-refs-v11",
+      "command": "reply",
+      "source": "tests/contracts/v11/cases/reply/reply-no-refs-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reply-no-refs-parity",
+      "command": "reply",
+      "source": "tests/contracts/v11/cases/reply/reply-no-refs-parity.case.json",
+      "kind": "seed_case"
     }
   ]
 }

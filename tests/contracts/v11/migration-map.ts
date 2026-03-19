@@ -58,9 +58,9 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
   },
   {
     command: "reply",
-    state: "legacy",
-    owner: "TBD",
-    notes: "M5 interaction command wave."
+    state: "v11",
+    owner: "runtime",
+    notes: "Core facade now delegates to v11 reply orchestration seams; v11 is the source of truth."
   },
   {
     command: "start",
