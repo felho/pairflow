@@ -18,7 +18,9 @@ const metaReviewGateCaseSources = [
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-basic.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-basic-v11.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-basic-parity.case.json",
+  "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-auto-rework-parity.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-approve-parity.case.json",
+  "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-dispatch-failed-parity.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-inconclusive-parity.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-rework-budget-exhausted-parity.case.json"
 ] as const;

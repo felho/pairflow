@@ -1,0 +1,25 @@
+{
+  "id": "meta-review-gate-recover-auto-rework-parity",
+  "command": "metaReviewGate",
+  "mode": "parity",
+  "description": "Seed contract case for meta-review gate recover auto-rework parity baseline.",
+  "input": {
+    "route": "recover",
+    "recoverScenario": "auto_rework",
+    "refs": []
+  },
+  "expected": {
+    "status": "ok",
+    "gateRoute": "auto_rework",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m3",
+    "meta-review-gate",
+    "parity"
+  ]
+}
+
