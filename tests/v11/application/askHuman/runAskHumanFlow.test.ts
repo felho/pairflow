@@ -138,4 +138,50 @@ describe("runAskHumanFlow", () => {
 
     expect(finalizeCalled).toBe(false);
   });
+
+  it("injects default finalization dependencies when overrides are omitted", async () => {
+    const now = new Date("2026-02-21T12:10:00.000Z");
+
+    await runAskHumanFlow(
+      {
+        now,
+        routing: {
+          nowIso: now.toISOString()
+        } as never,
+        createError: (message) => new AskHumanFlowTestError(message)
+      },
+      {
+        executeAskHumanExecution: async () =>
+          ({
+            appended: {
+              envelope: {
+                id: "msg_20260221_default_dep"
+              },
+              sequence: 9
+            },
+            written: {
+              state: {
+                state: "WAITING_HUMAN"
+              }
+            }
+          }) as never,
+        finalizeAskHumanFlow: async (_input, dependencies) => {
+          expect(dependencies?.emitTmuxDeliveryNotification).toBeDefined();
+          expect(dependencies?.emitBubbleNotification).toBeDefined();
+          expect(dependencies?.emitBubbleLifecycleEventBestEffort).toBeDefined();
+          return {
+            bubbleId: "b_ask_human_default_dep",
+            sequence: 9,
+            envelope: {
+              id: "msg_20260221_default_dep"
+            },
+            state: {
+              state: "WAITING_HUMAN"
+            },
+            inferredRecipient: "human"
+          } as never;
+        }
+      }
+    );
+  });
 });
