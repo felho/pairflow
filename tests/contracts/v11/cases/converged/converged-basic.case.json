@@ -12,6 +12,7 @@
     "reasonCode": "CONVERGED_EMITTED",
     "gateRoute": "human_gate_run_failed",
     "envelopeType": "CONVERGENCE",
+    "convergenceRecipient": "orchestrator",
     "approvalRequestEnvelopeType": "APPROVAL_REQUEST",
     "approvalRequestRecipient": "human",
     "approvalRequestSender": "orchestrator",

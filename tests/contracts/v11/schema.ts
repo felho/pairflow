@@ -6,6 +6,7 @@ export interface ContractCaseExpected {
   gateRoute?: string;
   stateSubset?: Record<string, unknown>;
   envelopeType?: string;
+  convergenceRecipient?: string;
   approvalRequestEnvelopeType?: string;
   approvalRequestRecipient?: string;
   approvalRequestSender?: string;
@@ -68,6 +69,18 @@ export function assertContractCaseShape(value: unknown): asserts value is Contra
   ) {
     throw new Error(
       "Contract case expected.gateRoute must be a non-empty string when provided."
+    );
+  }
+  if (
+    "convergenceRecipient" in value.expected &&
+    value.expected.convergenceRecipient !== undefined &&
+    (
+      typeof value.expected.convergenceRecipient !== "string" ||
+      value.expected.convergenceRecipient.length === 0
+    )
+  ) {
+    throw new Error(
+      "Contract case expected.convergenceRecipient must be a non-empty string when provided."
     );
   }
   if (

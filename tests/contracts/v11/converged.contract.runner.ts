@@ -17,6 +17,7 @@ export interface ConvergedContractOutput {
   status: "ok";
   reasonCode: "CONVERGED_EMITTED";
   convergenceEnvelopeType: string;
+  convergenceEnvelopeRecipient: string;
   approvalRequestEnvelopeType: string;
   approvalRequestRecipient: string;
   approvalRequestSender: string;
@@ -82,6 +83,7 @@ function normalizeConvergedResult(
     status: "ok",
     reasonCode: "CONVERGED_EMITTED",
     convergenceEnvelopeType: result.convergenceEnvelope.type,
+    convergenceEnvelopeRecipient: result.convergenceEnvelope.recipient,
     approvalRequestEnvelopeType: result.approvalRequestEnvelope.type,
     approvalRequestRecipient: result.approvalRequestEnvelope.recipient,
     approvalRequestSender: result.approvalRequestEnvelope.sender,
@@ -124,6 +126,14 @@ function assertContractExpectedSubset(input: {
   ) {
     throw new Error(
       `${input.label}: envelopeType mismatch (expected=${input.expected.envelopeType}, actual=${input.output.convergenceEnvelopeType})`
+    );
+  }
+  if (
+    input.expected.convergenceRecipient !== undefined &&
+    input.output.convergenceEnvelopeRecipient !== input.expected.convergenceRecipient
+  ) {
+    throw new Error(
+      `${input.label}: convergenceRecipient mismatch (expected=${input.expected.convergenceRecipient}, actual=${input.output.convergenceEnvelopeRecipient})`
     );
   }
   if (
