@@ -1,7 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../config/bubbleConfig.js";
 import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
 import { readStateSnapshot, StateStoreConflictError, writeStateSnapshot } from "../state/stateStore.js";
 import { resolveBubbleById } from "./bubbleLookup.js";
@@ -11,7 +10,7 @@ import {
   IDEATION_KICKOFF_TASK_INVALID,
   resolveIdeationMetadata
 } from "./ideation.js";
-import type { BubbleConfig, BubbleStateSnapshot } from "../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../types/bubble.js";
 import {
   KickoffTaskInputValidationError,
   renderKickoffTaskArtifact,
@@ -21,6 +20,8 @@ import {
 import { resolveKickoffEligibilityFailureReason } from "../../v11/shared/kickoff/kickoffEligibility.js";
 import { buildKickoffNextState } from "../../v11/shared/kickoff/kickoffStateTransition.js";
 import { buildKickoffTaskEnvelope } from "../../v11/shared/kickoff/kickoffTaskEnvelope.js";
+import { executeKickoffMutationRollback } from "../../v11/shared/kickoff/kickoffMutationRollback.js";
+import { prepareKickoffPersistence } from "../../v11/shared/kickoff/kickoffPersistencePreparation.js";
 
 export interface KickoffBubbleInput {
   bubbleId: string;
@@ -81,23 +82,6 @@ function buildFailureResult(input: {
     markers_before: input.markersBefore,
     markers_after: input.markersBefore,
     state_before: input.stateBefore
-  };
-}
-
-function normalizeKickoffIdeationConfig(input: {
-  bubbleConfig: BubbleConfig;
-  nowIso: string;
-}): BubbleConfig {
-  return {
-    ...input.bubbleConfig,
-    ideation: {
-      mode: true,
-      task_pending: false,
-      ...(input.bubbleConfig.ideation?.started_at !== undefined
-        ? { started_at: input.bubbleConfig.ideation.started_at }
-        : {}),
-      kicked_off_at: input.nowIso
-    }
   };
 }
 
@@ -177,20 +161,12 @@ export async function kickoffBubble(
     nowIso
   });
 
-  const previousTaskArtifact = await readFileFn(
-    resolved.bubblePaths.taskArtifactPath,
-    "utf8"
-  );
-  const previousBubbleToml = await readFileFn(
-    resolved.bubblePaths.bubbleTomlPath,
-    "utf8"
-  );
-  const latestConfig = parseBubbleConfigToml(previousBubbleToml);
-  const updatedConfig = normalizeKickoffIdeationConfig({
-    bubbleConfig: latestConfig,
-    nowIso
+  const persistence = await prepareKickoffPersistence({
+    taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+    bubbleTomlPath: resolved.bubblePaths.bubbleTomlPath,
+    nowIso,
+    readFile: readFileFn
   });
-  const nextBubbleToml = renderBubbleConfigToml(updatedConfig);
 
   let writtenState;
   try {
@@ -221,7 +197,7 @@ export async function kickoffBubble(
     });
     await writeFileFn(
       resolved.bubblePaths.bubbleTomlPath,
-      nextBubbleToml,
+      persistence.nextBubbleToml,
       { encoding: "utf8" }
     );
     transcriptBackup = await readFileFn(resolved.bubblePaths.transcriptPath, "utf8");
@@ -237,41 +213,18 @@ export async function kickoffBubble(
       })
     });
   } catch (error) {
-    const rollbackErrors: string[] = [];
-    if (transcriptBackup !== null) {
-      await writeFileFn(resolved.bubblePaths.transcriptPath, transcriptBackup, {
-        encoding: "utf8"
-      }).catch((rollbackError) => {
-        rollbackErrors.push(
-          `transcript rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
-        );
-      });
-    }
-    await writeFileFn(resolved.bubblePaths.taskArtifactPath, previousTaskArtifact, {
-      encoding: "utf8"
-    }).catch((rollbackError) => {
-      rollbackErrors.push(
-        `task artifact rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
-      );
-    });
-    await writeFileFn(resolved.bubblePaths.bubbleTomlPath, previousBubbleToml, {
-      encoding: "utf8"
-    }).catch((rollbackError) => {
-      rollbackErrors.push(
-        `bubble.toml rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
-      );
-    });
-    await writeState(
-      resolved.bubblePaths.statePath,
-      state,
-      {
-        expectedFingerprint: writtenState.fingerprint,
-        expectedState: "RUNNING"
-      }
-    ).catch((rollbackError) => {
-      rollbackErrors.push(
-        `state rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
-      );
+    const rollbackErrors = await executeKickoffMutationRollback({
+      transcriptBackup,
+      transcriptPath: resolved.bubblePaths.transcriptPath,
+      taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+      previousTaskArtifact: persistence.previousTaskArtifact,
+      bubbleTomlPath: resolved.bubblePaths.bubbleTomlPath,
+      previousBubbleToml: persistence.previousBubbleToml,
+      statePath: resolved.bubblePaths.statePath,
+      previousState: state,
+      writtenStateFingerprint: writtenState.fingerprint,
+      writeFile: writeFileFn,
+      writeState
     });
 
     if (rollbackErrors.length > 0) {
