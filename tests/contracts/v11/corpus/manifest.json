@@ -5,19 +5,19 @@
     {
       "id": "pass-basic-handoff",
       "command": "pass",
-      "source": "tests/contracts/v11/cases/pass/pass-basic.case.json",
+      "source": "tests/contracts/v11/cases/pass/pass-basic-handoff.case.json",
       "kind": "seed_case"
     },
     {
       "id": "pass-basic-handoff-parity",
       "command": "pass",
-      "source": "tests/contracts/v11/cases/pass/pass-basic-parity.case.json",
+      "source": "tests/contracts/v11/cases/pass/pass-basic-handoff-parity.case.json",
       "kind": "seed_case"
     },
     {
       "id": "pass-basic-handoff-v11",
       "command": "pass",
-      "source": "tests/contracts/v11/cases/pass/pass-basic-v11.case.json",
+      "source": "tests/contracts/v11/cases/pass/pass-basic-handoff-v11.case.json",
       "kind": "seed_case"
     },
     {
