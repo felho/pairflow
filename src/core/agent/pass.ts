@@ -101,6 +101,7 @@ import {
 import { normalizeReviewerFindingsPayload } from "../../v11/domain/pass/reviewerFindingsPayload.js";
 import { assertNoDocsOnlySkipLogRefConflict } from "../../v11/domain/pass/docsOnlyRuntimeSkipGuard.js";
 import { assertReviewerIntentOverrideConsistency } from "../../v11/domain/pass/reviewerIntentOverrideGuard.js";
+import { validateReviewerVerificationConsistency } from "../../v11/domain/pass/reviewerVerificationConsistencyGuard.js";
 
 export interface EmitPassInput {
   summary: string;
@@ -297,29 +298,6 @@ function buildFindingCounts(findings: Finding[]): {
   }
 
   return counts;
-}
-
-function validateReviewerVerificationConsistency(input: {
-  payloadOverall: "pass" | "fail";
-  intent: PassIntent;
-  hasFindings: boolean;
-}): void {
-  if (
-    input.payloadOverall === "fail"
-    && (input.intent !== "fix_request" || !input.hasFindings)
-  ) {
-    throw new PassCommandError(
-      "Accuracy-critical reviewer PASS with overall=fail requires intent=fix_request and open findings."
-    );
-  }
-  if (
-    input.payloadOverall === "pass"
-    && (input.intent !== "review" || input.hasFindings)
-  ) {
-    throw new PassCommandError(
-      "Accuracy-critical reviewer PASS with overall=pass requires clean handoff (intent=review and no findings)."
-    );
-  }
 }
 
 function createDocGateReadFailureWarning(input: {
@@ -586,7 +564,8 @@ export async function emitPassFromWorkspace(
     validateReviewerVerificationConsistency({
       payloadOverall: reviewerVerification.payload.overall,
       intent,
-      hasFindings
+      hasFindings,
+      createError: (message) => new PassCommandError(message)
     });
   }
 
