@@ -61,6 +61,24 @@ export interface ExecuteKickoffMutationPipelineDependencies {
   executeRollback?: typeof executeKickoffMutationRollback;
 }
 
+function resolveKickoffMutationPipelineDependencies(
+  dependencies: ExecuteKickoffMutationPipelineDependencies
+): {
+  executeMutation: typeof executeKickoffMutation;
+  executeRollback: typeof executeKickoffMutationRollback;
+} {
+  return {
+    executeMutation: dependencies.executeMutation ?? executeKickoffMutation,
+    executeRollback: dependencies.executeRollback ?? executeKickoffMutationRollback
+  };
+}
+
+function buildKickoffMutationPipelineSuccessResult(): ExecuteKickoffMutationPipelineResult {
+  return {
+    kind: "success"
+  };
+}
+
 function buildKickoffMutationExecutionInput(
   input: ExecuteKickoffMutationPipelineInput
 ): ExecuteKickoffMutationInput {
@@ -144,12 +162,12 @@ export async function executeKickoffMutationPipeline(
   input: ExecuteKickoffMutationPipelineInput,
   dependencies: ExecuteKickoffMutationPipelineDependencies = {}
 ): Promise<ExecuteKickoffMutationPipelineResult> {
-  const executeMutation = dependencies.executeMutation ?? executeKickoffMutation;
-  const executeRollback = dependencies.executeRollback ?? executeKickoffMutationRollback;
+  const resolvedDependencies =
+    resolveKickoffMutationPipelineDependencies(dependencies);
 
   let transcriptBackup: string | null = null;
   try {
-    transcriptBackup = await executeMutation(
+    transcriptBackup = await resolvedDependencies.executeMutation(
       buildKickoffMutationExecutionInput(input)
     );
   } catch (error) {
@@ -157,11 +175,9 @@ export async function executeKickoffMutationPipeline(
       pipelineInput: input,
       mutationError: error,
       transcriptBackup,
-      executeRollback
+      executeRollback: resolvedDependencies.executeRollback
     });
   }
 
-  return {
-    kind: "success"
-  };
+  return buildKickoffMutationPipelineSuccessResult();
 }
