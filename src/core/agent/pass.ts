@@ -16,9 +16,10 @@ import {
   resolveIdeationMetadata
 } from "../bubble/ideation.js";
 import {
-  emitTmuxDeliveryNotification,
-  resolveDeliveryMessageRef
-} from "../runtime/tmuxDelivery.js";
+  type EmitConvergedDependencies,
+  emitConvergedFromWorkspace,
+  type EmitConvergedResult
+} from "./converged.js";
 import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import {
@@ -32,7 +33,6 @@ import type {
   AgentRole,
   BubbleStateSnapshot
 } from "../../types/bubble.js";
-import { refreshReviewerContext } from "../runtime/reviewerContext.js";
 import {
   resolveReviewerTestEvidenceArtifactPath,
   resolveReviewerTestExecutionDirectiveFromArtifact,
@@ -44,12 +44,6 @@ import {
   createReviewVerificationArtifact,
   writeReviewVerificationArtifactAtomic
 } from "../reviewer/reviewVerification.js";
-import {
-  formatReviewerBriefPrompt,
-  formatReviewerFocusBridgeBlock,
-  readReviewerBriefArtifact,
-  readReviewerFocusArtifact
-} from "../reviewer/reviewerBrief.js";
 import {
   evaluateReviewerGateWarnings,
   isDocContractGateScopeActive,
@@ -64,11 +58,6 @@ import {
   type RepeatCleanAutoconvergeReasonCode,
   type RepeatCleanAutoconvergeReasonDetail
 } from "../convergence/repeatCleanAutoconverge.js";
-import {
-  emitConvergedFromWorkspace,
-  type EmitConvergedDependencies,
-  type EmitConvergedResult
-} from "./converged.js";
 import {
   resolvePassHandoff,
   type ResolvedPassHandoff
@@ -93,6 +82,10 @@ import {
   raiseRepeatCleanReviewVerificationWriteFailed
 } from "../../v11/domain/pass/repeatCleanPolicyRejection.js";
 import { resolveReviewerVerification } from "../../v11/application/pass/reviewerVerificationResolver.js";
+import {
+  executePassDelivery,
+  type PassDeliveryDependencies
+} from "../../v11/application/pass/reviewerDelivery.js";
 import { updateReviewerDocGateArtifact } from "../../v11/application/pass/reviewerDocGateArtifactUpdater.js";
 import { raisePostAppendReviewVerificationWriteFailed } from "../../v11/domain/pass/postAppendReviewVerificationWriteFailure.js";
 import { raisePostAppendStateWriteFailed } from "../../v11/domain/pass/postAppendStateWriteFailure.js";
@@ -140,10 +133,8 @@ export interface EmitPassResult {
   docGateArtifactWriteFailureReason?: string;
 }
 
-export interface EmitPassDependencies {
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
+export interface EmitPassDependencies extends PassDeliveryDependencies {
   emitBubbleNotification?: EmitConvergedDependencies["emitBubbleNotification"];
-  refreshReviewerContext?: typeof refreshReviewerContext;
 }
 
 export class PassCommandError extends Error {
@@ -705,89 +696,29 @@ export async function emitPassFromWorkspace(
           });
   }
 
-  const reviewerBriefText = await readReviewerBriefArtifact(
-    resolved.bubblePaths.reviewerBriefArtifactPath
-  ).catch(() => undefined);
-  const reviewerFocus = await readReviewerFocusArtifact(
-    resolved.bubblePaths.reviewerFocusArtifactPath
-  ).catch(() => undefined);
-  const reviewerStartupContextBlocks: string[] = [];
-  if (reviewerBriefText !== undefined) {
-    reviewerStartupContextBlocks.push(formatReviewerBriefPrompt(reviewerBriefText));
-  }
-  if (reviewerFocus?.status === "present") {
-    reviewerStartupContextBlocks.push(
-      formatReviewerFocusBridgeBlock(reviewerFocus)
-    );
-  }
-  const reviewerStartupPrompt =
-    reviewerStartupContextBlocks.length > 0
-      ? reviewerStartupContextBlocks.join("\n\n")
-      : undefined;
-
-  const refreshReviewer =
-    dependencies.refreshReviewerContext ?? refreshReviewerContext;
-  let deliveryInitialDelayMs: number | undefined;
-  if (
-    handoff.senderRole === "implementer" &&
-    resolved.bubbleConfig.reviewer_context_mode === "fresh"
-  ) {
-    // Best effort only; protocol/state progression must not fail if tmux refresh fails.
-    const refreshResult = await refreshReviewer({
+  const delivery = await executePassDelivery(
+    {
       bubbleId: resolved.bubbleId,
       bubbleConfig: resolved.bubbleConfig,
       sessionsPath: resolved.bubblePaths.sessionsPath,
-      ...(reviewerStartupPrompt !== undefined
-        ? { reviewerStartupPrompt }
+      reviewerBriefArtifactPath: resolved.bubblePaths.reviewerBriefArtifactPath,
+      reviewerFocusArtifactPath: resolved.bubblePaths.reviewerFocusArtifactPath,
+      envelope: mapped.envelope,
+      senderRole: handoff.senderRole,
+      recipientRole: handoff.recipientRole,
+      ...(reviewerTestDirective !== undefined ? { reviewerTestDirective } : {})
+    },
+    {
+      ...(dependencies.emitTmuxDeliveryNotification !== undefined
+        ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
+        : {}),
+      ...(dependencies.refreshReviewerContext !== undefined
+        ? { refreshReviewerContext: dependencies.refreshReviewerContext }
         : {})
-    }).catch(() => undefined);
-    if (refreshResult?.refreshed === true) {
-      // Give the respawned reviewer CLI a short warm-up before delivery injection.
-      deliveryInitialDelayMs = 1500;
     }
-  }
-
-  const emitDelivery =
-    dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
-  const deliveryInput = {
-    bubbleId: resolved.bubbleId,
-    bubbleConfig: resolved.bubbleConfig,
-    sessionsPath: resolved.bubblePaths.sessionsPath,
-    envelope: mapped.envelope,
-    messageRef: resolveDeliveryMessageRef({
-      bubbleId: resolved.bubbleId,
-      sessionsPath: resolved.bubblePaths.sessionsPath,
-      envelope: mapped.envelope
-    }),
-    ...(reviewerTestDirective !== undefined ? { reviewerTestDirective } : {}),
-    ...(reviewerBriefText !== undefined ? { reviewerBrief: reviewerBriefText } : {}),
-    ...(
-      handoff.senderRole === "implementer" &&
-      reviewerFocus?.status === "present"
-        ? { reviewerFocus }
-        : {}
-    ),
-    ...(deliveryInitialDelayMs !== undefined ? { initialDelayMs: deliveryInitialDelayMs } : {})
-  };
-  let deliveryResult = await emitDelivery(deliveryInput).catch(() => undefined);
-  let deliveryRetried = false;
-  const shouldRetryDelivery =
-    handoff.senderRole === "implementer"
-    && handoff.recipientRole === "reviewer"
-    && (
-      deliveryResult?.reason === "delivery_unconfirmed"
-      || deliveryResult?.reason === "tmux_send_failed"
-    );
-  if (shouldRetryDelivery) {
-    deliveryRetried = true;
-    deliveryResult = await emitDelivery({
-      ...deliveryInput,
-      // Respawned reviewer CLIs can take a few seconds to become input-ready.
-      // Retry once with a longer warm-up window before giving up.
-      initialDelayMs: 5000,
-      deliveryAttempts: 6
-    }).catch(() => deliveryResult);
-  }
+  );
+  const deliveryResult = delivery.result;
+  const deliveryRetried = delivery.retried;
 
   await emitBubbleLifecycleEventBestEffort({
     repoPath: resolved.repoPath,
