@@ -28,6 +28,27 @@ describe("askHumanFlowInvocationBuilders", () => {
     expect("cwd" in routingInput).toBe(false);
   });
 
+  it("builds prepareAskHumanRouting input and forwards optional fields when provided", () => {
+    const now = new Date("2026-02-21T12:10:00.000Z");
+    const createError = (message: string) => new Error(message);
+
+    const routingInput = buildAskHumanRoutingInput({
+      question: "Need migration decision?",
+      refs: ["artifact://analysis.md"],
+      cwd: "/repo/worktrees/b_ask_human_01",
+      now,
+      createError
+    });
+
+    expect(routingInput).toEqual({
+      question: "Need migration decision?",
+      refs: ["artifact://analysis.md"],
+      cwd: "/repo/worktrees/b_ask_human_01",
+      now,
+      createError
+    });
+  });
+
   it("builds runAskHumanFlow input without mutation", () => {
     const now = new Date("2026-02-21T12:10:00.000Z");
     const routing = {
