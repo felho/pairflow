@@ -70,9 +70,9 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
   },
   {
     command: "stop",
-    state: "legacy",
-    owner: "TBD",
-    notes: "M5 runtime/operator command wave."
+    state: "v11",
+    owner: "runtime",
+    notes: "Core facade now delegates to v11 stop orchestration seams; v11 is the source of truth."
   },
   {
     command: "restart",

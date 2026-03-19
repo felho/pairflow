@@ -7,8 +7,7 @@ import {
   createAskHumanCommandError,
   throwAsAskHumanCommandError
 } from "./askHumanCommandRuntime.js";
-import { normalizeAskHumanCommandInput } from "./askHumanCommandInputNormalization.js";
-import { buildAskHumanEntrypointInvocation } from "./askHumanEntrypointInvocationBuilder.js";
+import { buildAskHumanCommandContext } from "./askHumanCommandContextBuilder.js";
 import { orchestrateAskHumanCommand } from "./askHumanCommandOrchestration.js";
 import { createAskHumanCommandOrchestrationDependencies } from "./askHumanFlowDependencyWiring.js";
 
@@ -16,18 +15,13 @@ export async function emitAskHumanFromWorkspace(
   input: EmitAskHumanInput,
   dependencies: EmitAskHumanDependencies = {}
 ): Promise<EmitAskHumanResult> {
-  const normalizedInput = normalizeAskHumanCommandInput({
-    question: input.question,
-    refs: input.refs,
-    cwd: input.cwd,
-    now: input.now
+  const context = buildAskHumanCommandContext({
+    commandInput: input,
+    createError: createAskHumanCommandError
   });
 
   return orchestrateAskHumanCommand(
-    buildAskHumanEntrypointInvocation({
-      normalizedInput,
-      createError: createAskHumanCommandError
-    }),
+    context.orchestrationInput,
     createAskHumanCommandOrchestrationDependencies({
       emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification,
       emitBubbleNotification: dependencies.emitBubbleNotification
