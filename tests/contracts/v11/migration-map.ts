@@ -16,9 +16,9 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
   },
   {
     command: "kickoff",
-    state: "legacy",
-    owner: "TBD",
-    notes: "M2 core handoff slice."
+    state: "v11",
+    owner: "runtime",
+    notes: "Core facade now delegates to v11 kickoff orchestration seams; v11 is the source of truth."
   },
   {
     command: "converged",
