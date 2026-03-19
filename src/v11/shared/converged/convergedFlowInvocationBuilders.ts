@@ -8,10 +8,10 @@ export interface BuildConvergedFlowInputInput {
   summary: string;
   refs: string[];
   now: Date;
-  cwd?: string;
-  expectedStateFingerprint?: string;
-  expectedRound?: number;
-  expectedReviewer?: AgentName;
+  cwd?: string | undefined;
+  expectedStateFingerprint?: string | undefined;
+  expectedRound?: number | undefined;
+  expectedReviewer?: AgentName | undefined;
   createError: RunConvergedFlowInput["createError"];
   resolveMetaReviewRolloutBlockingReasonCodes:
     RunConvergedFlowInput["resolveMetaReviewRolloutBlockingReasonCodes"];

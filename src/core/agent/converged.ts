@@ -92,18 +92,10 @@ export async function emitConvergedFromWorkspace(
       summary,
       refs,
       now,
-      ...(input.cwd !== undefined
-        ? { cwd: input.cwd }
-        : {}),
-      ...(input.expectedStateFingerprint !== undefined
-        ? { expectedStateFingerprint: input.expectedStateFingerprint }
-        : {}),
-      ...(input.expectedRound !== undefined
-        ? { expectedRound: input.expectedRound }
-        : {}),
-      ...(input.expectedReviewer !== undefined
-        ? { expectedReviewer: input.expectedReviewer }
-        : {}),
+      cwd: input.cwd,
+      expectedStateFingerprint: input.expectedStateFingerprint,
+      expectedRound: input.expectedRound,
+      expectedReviewer: input.expectedReviewer,
       createError,
       resolveMetaReviewRolloutBlockingReasonCodes
     }),
@@ -113,27 +105,12 @@ export async function emitConvergedFromWorkspace(
       prepareConvergedValidation,
       executeConvergedExecution,
       finalizeConvergedFlow,
-      ...(dependencies.applyMetaReviewGateOnConvergence !== undefined
-        ? {
-            applyMetaReviewGateOnConvergence:
-              dependencies.applyMetaReviewGateOnConvergence
-          }
-        : {}),
-      ...(dependencies.recoverMetaReviewGateFromSnapshot !== undefined
-        ? {
-            recoverMetaReviewGateFromSnapshot:
-              dependencies.recoverMetaReviewGateFromSnapshot
-          }
-        : {}),
-      ...(dependencies.emitTmuxDeliveryNotification !== undefined
-        ? {
-            emitTmuxDeliveryNotification:
-              dependencies.emitTmuxDeliveryNotification
-          }
-        : {}),
-      ...(dependencies.emitBubbleNotification !== undefined
-        ? { emitBubbleNotification: dependencies.emitBubbleNotification }
-        : {})
+      applyMetaReviewGateOnConvergence:
+        dependencies.applyMetaReviewGateOnConvergence,
+      recoverMetaReviewGateFromSnapshot:
+        dependencies.recoverMetaReviewGateFromSnapshot,
+      emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification,
+      emitBubbleNotification: dependencies.emitBubbleNotification
     })
   );
 }
