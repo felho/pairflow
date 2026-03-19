@@ -22,6 +22,7 @@ import { resolveKickoffEligibilityFailureReason } from "../../v11/shared/kickoff
 import { buildKickoffNextState } from "../../v11/shared/kickoff/kickoffStateTransition.js";
 import { buildKickoffTaskEnvelope } from "../../v11/shared/kickoff/kickoffTaskEnvelope.js";
 import { buildKickoffIdeationConfig } from "../../v11/shared/kickoff/kickoffIdeationConfig.js";
+import { executeKickoffMutationRollback } from "../../v11/shared/kickoff/kickoffMutationRollback.js";
 
 export interface KickoffBubbleInput {
   bubbleId: string;
@@ -221,41 +222,18 @@ export async function kickoffBubble(
       })
     });
   } catch (error) {
-    const rollbackErrors: string[] = [];
-    if (transcriptBackup !== null) {
-      await writeFileFn(resolved.bubblePaths.transcriptPath, transcriptBackup, {
-        encoding: "utf8"
-      }).catch((rollbackError) => {
-        rollbackErrors.push(
-          `transcript rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
-        );
-      });
-    }
-    await writeFileFn(resolved.bubblePaths.taskArtifactPath, previousTaskArtifact, {
-      encoding: "utf8"
-    }).catch((rollbackError) => {
-      rollbackErrors.push(
-        `task artifact rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
-      );
-    });
-    await writeFileFn(resolved.bubblePaths.bubbleTomlPath, previousBubbleToml, {
-      encoding: "utf8"
-    }).catch((rollbackError) => {
-      rollbackErrors.push(
-        `bubble.toml rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
-      );
-    });
-    await writeState(
-      resolved.bubblePaths.statePath,
-      state,
-      {
-        expectedFingerprint: writtenState.fingerprint,
-        expectedState: "RUNNING"
-      }
-    ).catch((rollbackError) => {
-      rollbackErrors.push(
-        `state rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
-      );
+    const rollbackErrors = await executeKickoffMutationRollback({
+      transcriptBackup,
+      transcriptPath: resolved.bubblePaths.transcriptPath,
+      taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
+      previousTaskArtifact,
+      bubbleTomlPath: resolved.bubblePaths.bubbleTomlPath,
+      previousBubbleToml,
+      statePath: resolved.bubblePaths.statePath,
+      previousState: state,
+      writtenStateFingerprint: writtenState.fingerprint,
+      writeFile: writeFileFn,
+      writeState
     });
 
     if (rollbackErrors.length > 0) {
