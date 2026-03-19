@@ -1,0 +1,25 @@
+{
+  "id": "reply-basic",
+  "command": "reply",
+  "mode": "legacy",
+  "description": "Seed contract case for HUMAN_REPLY baseline in M0.",
+  "input": {
+    "message": "Acknowledged. Continue with the current plan.",
+    "refs": [
+      "artifact://handoff.md"
+    ]
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "HUMAN_REPLY_EMITTED",
+    "envelopeType": "HUMAN_REPLY",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "reply"
+  ]
+}

@@ -58,9 +58,9 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
   },
   {
     command: "reply",
-    state: "legacy",
-    owner: "TBD",
-    notes: "M5 interaction command wave."
+    state: "parity",
+    owner: "runtime",
+    notes: "M1 parity runner wired (legacy-v11 shadow parity active)."
   },
   {
     command: "start",
