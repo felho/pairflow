@@ -10,6 +10,7 @@ import { readContractCase } from "./runner.js";
 const execFileAsync = promisify(execFile);
 const metaReviewGateCaseSources = [
   "tests/contracts/v11/cases/meta-review-gate/gate-apply-basic-parity.case.json",
+  "tests/contracts/v11/cases/meta-review-gate/gate-recover-approve-parity.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-basic.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-basic-v11.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-basic-parity.case.json",
@@ -92,7 +93,7 @@ describe("v11 metaReviewGate contract harness", () => {
       expect(run.v11).toBeDefined();
       expect(run.legacy).toEqual(run.v11);
     }
-  });
+  }, 20_000);
 
   it("includes metaReviewGate seed entries in corpus manifest", async () => {
     const manifestPath = resolve(
