@@ -1,21 +1,5 @@
 import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
 import { WorkspaceResolutionError } from "../bubble/workspaceResolution.js";
-import { readReviewVerificationArtifactStatus } from "../reviewer/reviewVerification.js";
-import {
-  resolveReviewerTestEvidenceArtifactPath,
-  resolveReviewerTestExecutionDirective
-} from "../reviewer/testEvidence.js";
-import {
-  evaluateSummaryVerifierConsistencyGate,
-  resolveSummaryVerifierConsistencyGateArtifactPath,
-  summaryVerifierConsistencyGateSchemaVersion,
-  writeSummaryVerifierConsistencyGateArtifact
-} from "../reviewer/summaryVerifierConsistencyGate.js";
-import {
-  isDocContractGateScopeActive,
-  readDocContractGateArtifact,
-  resolveDocContractGateArtifactPath
-} from "../gates/docContractGates.js";
 import {
   toMetaReviewGateError,
   type MetaReviewGateRoute
@@ -23,9 +7,7 @@ import {
 import type { PairflowCommandPathAssessment } from "../runtime/pairflowCommand.js";
 import type {
   AgentName,
-  BubbleStateSnapshot,
-  BubbleRoundGateState,
-  BubbleSpecLockState
+  BubbleStateSnapshot
 } from "../../types/bubble.js";
 import { type ProtocolEnvelope } from "../../types/protocol.js";
 import { prepareConvergedRouting } from "../../v11/application/converged/convergedRoutingPreparation.js";
@@ -35,6 +17,7 @@ import {
 } from "../../v11/application/converged/convergedExecution.js";
 import { finalizeConvergedFlow } from "../../v11/application/converged/convergedFinalization.js";
 import { prepareConvergedPolicy } from "../../v11/application/converged/convergedPolicyPreparation.js";
+import { prepareConvergedValidation } from "../../v11/application/converged/convergedValidationPreparation.js";
 
 export interface EmitConvergedInput {
   summary: string;
@@ -173,94 +156,19 @@ export async function emitConvergedFromWorkspace(
       `Convergence validation failed: ${policy.errors.join(" ")}${diagnosticsSuffix}`
     );
   }
-  const docGateScopeActive = isDocContractGateScopeActive({
-    reviewArtifactType: resolved.bubbleConfig.review_artifact_type
-  });
-  const defaultSpecLockState: BubbleSpecLockState = {
-    state: "IMPLEMENTABLE" as const,
-    open_blocker_count: 0,
-    open_required_now_count: 0
-  };
-  const defaultRoundGateState: BubbleRoundGateState = {
-    applies: false,
-    violated: false,
-    round: state.round
-  };
-  let gateArtifact: Awaited<ReturnType<typeof readDocContractGateArtifact>> | undefined;
-  let docGateArtifactReadFailureReason: string | undefined;
-  if (docGateScopeActive) {
-    try {
-      gateArtifact = await readDocContractGateArtifact(
-        resolveDocContractGateArtifactPath(resolved.bubblePaths.artifactsDir)
-      );
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      docGateArtifactReadFailureReason = reason;
-      gateArtifact = undefined;
-    }
-  }
-  const specLockState = docGateScopeActive
-    ? gateArtifact?.spec_lock_state ?? defaultSpecLockState
-    : defaultSpecLockState;
-  const roundGateState = docGateScopeActive
-    ? gateArtifact?.round_gate_state ?? defaultRoundGateState
-    : defaultRoundGateState;
-
-  if (resolved.bubbleConfig.accuracy_critical === true) {
-    const verification = await readReviewVerificationArtifactStatus(
-      resolved.bubblePaths.reviewVerificationArtifactPath,
-      {
-        expectedRound: state.round,
-        expectedReviewer: reviewer
-      }
-    );
-    if (verification.status !== "pass") {
-      throw new ConvergedCommandError(
-        `Convergence validation failed: accuracy-critical review verification must be pass (current: ${verification.status}).`
-      );
-    }
-  }
-
-  const reviewerTestDirective = await resolveReviewerTestExecutionDirective({
-    artifactPath: resolveReviewerTestEvidenceArtifactPath(resolved.bubblePaths.artifactsDir),
-    worktreePath: resolved.bubblePaths.worktreePath
-  }).catch(() => ({
-    skip_full_rerun: false,
-    reason_code: "evidence_unverifiable" as const,
-    reason_detail:
-      "Failed to resolve reviewer test directive due to verification runtime error.",
-    verification_status: "untrusted" as const
-  }));
-  const summaryVerifierGateDecision = evaluateSummaryVerifierConsistencyGate({
+  const {
+    specLockState,
+    roundGateState,
+    docGateArtifactReadFailureReason,
+    summaryVerifierGateDecision
+  } = await prepareConvergedValidation({
+    resolved,
+    state,
+    reviewer,
     summary,
-    reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
-    verifierStatus: reviewerTestDirective.verification_status,
-    ...(reviewerTestDirective.verification_status === "trusted"
-      ? {}
-      : { verifierOriginReason: reviewerTestDirective.reason_code })
+    nowIso,
+    createError: (message) => new ConvergedCommandError(message)
   });
-  const summaryVerifierGateArtifactPath = resolveSummaryVerifierConsistencyGateArtifactPath(
-    resolved.bubblePaths.artifactsDir
-  );
-  try {
-    await writeSummaryVerifierConsistencyGateArtifact(summaryVerifierGateArtifactPath, {
-      schema_version: summaryVerifierConsistencyGateSchemaVersion,
-      bubble_id: resolved.bubbleId,
-      round: state.round,
-      evaluated_at: nowIso,
-      ...summaryVerifierGateDecision
-    });
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new ConvergedCommandError(
-      `Convergence validation failed: summary/verifier consistency gate audit write failed. Root error: ${reason}`
-    );
-  }
-  if (summaryVerifierGateDecision.gate_decision === "block") {
-    throw new ConvergedCommandError(
-      `Convergence validation failed: docs-only summary/verifier consistency gate blocked approval summary (reason_code=${summaryVerifierGateDecision.reason_code}, claim_classes_detected=${summaryVerifierGateDecision.claim_classes_detected}, verifier_status=${summaryVerifierGateDecision.verifier_status}, verifier_origin_reason=${summaryVerifierGateDecision.verifier_origin_reason ?? "unknown"}).`
-    );
-  }
 
   const {
     convergence,
