@@ -1,11 +1,14 @@
-import { join } from "node:path";
-
 import {
   type appendProtocolEnvelope,
   type AppendProtocolEnvelopeResult
 } from "../../../core/protocol/transcriptStore.js";
 import { type writeStateSnapshot, type LoadedStateSnapshot } from "../../../core/state/stateStore.js";
 import type { applyStateTransition } from "../../../core/state/machine.js";
+import {
+  buildAskHumanEnvelope,
+  buildAskHumanLockPath,
+  buildAskHumanStateWriteFailureMessage
+} from "../../shared/askHuman/askHumanExecutionArtifacts.js";
 import { resolveAskHumanExecutionDependencies } from "../../shared/askHuman/askHumanExecutionDependencyResolution.js";
 import type { AskHumanRoutingContext } from "../../shared/askHuman/askHumanRoutingContext.js";
 
@@ -24,35 +27,6 @@ export interface ExecuteAskHumanExecutionDependencies {
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;
   writeStateSnapshot?: typeof writeStateSnapshot;
   applyStateTransition?: typeof applyStateTransition;
-}
-
-function buildAskHumanLockPath(input: ExecuteAskHumanExecutionInput): string {
-  return join(
-    input.routing.resolved.bubblePaths.locksDir,
-    `${input.routing.resolved.bubbleId}.lock`
-  );
-}
-
-function buildAskHumanEnvelope(input: ExecuteAskHumanExecutionInput) {
-  return {
-    bubble_id: input.routing.resolved.bubbleId,
-    sender: input.routing.state.active_agent,
-    recipient: "human" as const,
-    type: "HUMAN_QUESTION" as const,
-    round: input.routing.state.round,
-    payload: {
-      question: input.routing.question
-    },
-    refs: input.routing.refs
-  };
-}
-
-function buildStateWriteFailureMessage(
-  appendResult: AppendProtocolEnvelopeResult,
-  error: unknown
-): string {
-  const reason = error instanceof Error ? error.message : String(error);
-  return `HUMAN_QUESTION ${appendResult.envelope.id} was appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`;
 }
 
 export async function executeAskHumanExecution(
@@ -92,7 +66,7 @@ export async function executeAskHumanExecution(
     );
   } catch (error) {
     // reason_code=ASK_HUMAN_STATE_PERSIST_FAILED context=transcript_appended_state_write_failed
-    throw input.createError(buildStateWriteFailureMessage(appended, error));
+    throw input.createError(buildAskHumanStateWriteFailureMessage(appended, error));
   }
 
   return {
