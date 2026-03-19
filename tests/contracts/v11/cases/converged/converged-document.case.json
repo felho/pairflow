@@ -16,6 +16,7 @@
     "gateRoute": "human_gate_run_failed",
     "envelopeType": "CONVERGENCE",
     "approvalRequestEnvelopeType": "APPROVAL_REQUEST",
+    "approvalRequestRecipient": "human",
     "stateSubset": {
       "state": "META_REVIEW_FAILED"
     }
