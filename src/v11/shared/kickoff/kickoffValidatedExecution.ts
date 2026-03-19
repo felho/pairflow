@@ -131,6 +131,46 @@ async function persistKickoffNextStateOrFailure(input: {
   };
 }
 
+type ExecuteKickoffMutationOrFailureResult =
+  | {
+      kind: "failure";
+      result: KickoffBubbleResultShape;
+    }
+  | {
+      kind: "success";
+    };
+
+async function executeKickoffMutationOrFailure(input: {
+  validation: KickoffPreparedValidation;
+  persistence: Awaited<ReturnType<typeof prepareKickoffPersistence>>;
+  writtenStateFingerprint: string;
+  now: Date;
+  dependencies: ResolvedKickoffDependencies;
+}): Promise<ExecuteKickoffMutationOrFailureResult> {
+  const mutationPipelineResult = await executeKickoffMutationPipeline(
+    buildKickoffMutationPipelineInput({
+      validation: input.validation,
+      persistence: input.persistence,
+      writtenStateFingerprint: input.writtenStateFingerprint,
+      now: input.now,
+      dependencies: input.dependencies
+    })
+  );
+  if (mutationPipelineResult.kind === "mutation_failed_rolled_back") {
+    return {
+      kind: "failure",
+      result: buildKickoffPersistenceFailureResult({
+        validation: input.validation,
+        reasonCode: IDEATION_KICKOFF_PERSISTENCE_FAILED
+      })
+    };
+  }
+
+  return {
+    kind: "success"
+  };
+}
+
 export async function executeKickoffValidatedFlow(
   input: ExecuteKickoffValidatedFlowInput,
   dependencies: ResolvedKickoffDependencies
@@ -160,20 +200,15 @@ export async function executeKickoffValidatedFlow(
   }
   const writtenState = persistedState.writtenState;
 
-  const mutationPipelineResult = await executeKickoffMutationPipeline(
-    buildKickoffMutationPipelineInput({
-      validation: input.validation,
-      persistence,
-      writtenStateFingerprint: writtenState.fingerprint,
-      now: input.now,
-      dependencies
-    })
-  );
-  if (mutationPipelineResult.kind === "mutation_failed_rolled_back") {
-    return buildKickoffPersistenceFailureResult({
-      validation: input.validation,
-      reasonCode: IDEATION_KICKOFF_PERSISTENCE_FAILED
-    });
+  const mutationOrFailure = await executeKickoffMutationOrFailure({
+    validation: input.validation,
+    persistence,
+    writtenStateFingerprint: writtenState.fingerprint,
+    now: input.now,
+    dependencies
+  });
+  if (mutationOrFailure.kind === "failure") {
+    return mutationOrFailure.result;
   }
 
   return buildKickoffValidatedSuccessResult({
