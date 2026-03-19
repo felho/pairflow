@@ -25,6 +25,16 @@ export interface ExecuteKickoffMutationRollbackInput {
   ) => Promise<unknown>;
 }
 
+function appendKickoffRollbackError(input: {
+  rollbackErrors: string[];
+  target: string;
+  rollbackError: unknown;
+}): void {
+  input.rollbackErrors.push(
+    `${input.target} rollback failed: ${input.rollbackError instanceof Error ? input.rollbackError.message : String(input.rollbackError)}`
+  );
+}
+
 export async function executeKickoffMutationRollback(
   input: ExecuteKickoffMutationRollbackInput
 ): Promise<string[]> {
@@ -33,26 +43,32 @@ export async function executeKickoffMutationRollback(
     await input.writeFile(input.transcriptPath, input.transcriptBackup, {
       encoding: "utf8"
     }).catch((rollbackError) => {
-      rollbackErrors.push(
-        `transcript rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
-      );
+      appendKickoffRollbackError({
+        rollbackErrors,
+        target: "transcript",
+        rollbackError
+      });
     });
   }
 
   await input.writeFile(input.taskArtifactPath, input.previousTaskArtifact, {
     encoding: "utf8"
   }).catch((rollbackError) => {
-    rollbackErrors.push(
-      `task artifact rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
-    );
+    appendKickoffRollbackError({
+      rollbackErrors,
+      target: "task artifact",
+      rollbackError
+    });
   });
 
   await input.writeFile(input.bubbleTomlPath, input.previousBubbleToml, {
     encoding: "utf8"
   }).catch((rollbackError) => {
-    rollbackErrors.push(
-      `bubble.toml rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
-    );
+    appendKickoffRollbackError({
+      rollbackErrors,
+      target: "bubble.toml",
+      rollbackError
+    });
   });
 
   await input.writeState(
@@ -63,9 +79,11 @@ export async function executeKickoffMutationRollback(
       expectedState: "RUNNING"
     }
   ).catch((rollbackError) => {
-    rollbackErrors.push(
-      `state rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
-    );
+    appendKickoffRollbackError({
+      rollbackErrors,
+      target: "state",
+      rollbackError
+    });
   });
 
   return rollbackErrors;
