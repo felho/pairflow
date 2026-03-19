@@ -41,7 +41,7 @@ type MetaReviewGateApplyScenario =
   | "run_failed"
   | "meta_review_running"
   | "sticky_bypass";
-type MetaReviewGateRecoverScenario = "error" | "approve";
+type MetaReviewGateRecoverScenario = "error" | "approve" | "inconclusive";
 interface NormalizedMetaReviewSnapshot {
   last_autonomous_run_id: string | null;
   last_autonomous_status: "success" | "error" | null;
@@ -100,10 +100,11 @@ function parseMetaReviewGateCaseInput(input: ContractCase["input"]): {
   if (
     recoverScenarioRaw !== undefined &&
     recoverScenarioRaw !== "error" &&
-    recoverScenarioRaw !== "approve"
+    recoverScenarioRaw !== "approve" &&
+    recoverScenarioRaw !== "inconclusive"
   ) {
     throw new Error(
-      "metaReviewGate contract input.recoverScenario must be one of: error, approve."
+      "metaReviewGate contract input.recoverScenario must be one of: error, approve, inconclusive."
     );
   }
 
@@ -203,6 +204,23 @@ function buildSyntheticMetaReviewRunApprove(input: {
     status: "success",
     recommendation: "approve",
     summary: "Seed meta-review recover contract approve snapshot.",
+    report_ref: "artifacts/meta-review-last.md",
+    rework_target_message: null,
+    updated_at: "2026-03-19T10:03:00.000Z",
+    lifecycle_state: "META_REVIEW_RUNNING",
+    warnings: []
+  };
+}
+
+function buildSyntheticMetaReviewRunInconclusive(input: {
+  bubbleId: string;
+}): MetaReviewRunResult {
+  return {
+    bubbleId: input.bubbleId,
+    depth: "standard",
+    status: "success",
+    recommendation: "inconclusive",
+    summary: "Seed meta-review recover contract inconclusive snapshot.",
     report_ref: "artifacts/meta-review-last.md",
     rework_target_message: null,
     updated_at: "2026-03-19T10:03:00.000Z",
@@ -371,6 +389,10 @@ async function executeMetaReviewGateCase(input: {
             ? buildSyntheticMetaReviewRunApprove({
                 bubbleId: bubble.bubbleId
               })
+            : caseInput.recoverScenario === "inconclusive"
+              ? buildSyntheticMetaReviewRunInconclusive({
+                  bubbleId: bubble.bubbleId
+                })
             : buildSyntheticMetaReviewRunError({
                 bubbleId: bubble.bubbleId
               })
