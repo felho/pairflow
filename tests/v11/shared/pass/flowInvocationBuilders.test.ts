@@ -17,10 +17,12 @@ import type {
 
 import {
   buildAutoConvergeFlowDependencies,
-  buildAutoConvergeFlowInput,
+  buildAutoConvergeFlowInput
+} from "../../../../src/v11/shared/pass/autoConvergeFlowInvocationBuilders.js";
+import {
   buildNormalPassFlowDependencies,
   buildNormalPassFlowInput
-} from "../../../../src/v11/shared/pass/flowInvocationBuilders.js";
+} from "../../../../src/v11/shared/pass/normalPassFlowInvocationBuilders.js";
 
 describe("flowInvocationBuilders", () => {
   it("buildAutoConvergeFlowInput maps routing metadata and optional findings claim fields", () => {

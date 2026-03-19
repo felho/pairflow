@@ -66,10 +66,12 @@ import { prepareReviewerVerification } from "../../v11/application/pass/reviewer
 import { runNormalPassFlow } from "../../v11/application/pass/runNormalPassFlow.js";
 import {
   buildAutoConvergeFlowDependencies,
-  buildAutoConvergeFlowInput,
+  buildAutoConvergeFlowInput
+} from "../../v11/shared/pass/autoConvergeFlowInvocationBuilders.js";
+import {
   buildNormalPassFlowDependencies,
   buildNormalPassFlowInput
-} from "../../v11/shared/pass/flowInvocationBuilders.js";
+} from "../../v11/shared/pass/normalPassFlowInvocationBuilders.js";
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
 } from "../../v11/domain/pass/repeatCleanMetadata.js";
