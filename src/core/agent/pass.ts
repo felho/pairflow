@@ -1,5 +1,3 @@
-import { join } from "node:path";
-
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes,
@@ -35,10 +33,6 @@ import type {
 import {
   type ReviewerTestExecutionDirective,
 } from "../reviewer/testEvidence.js";
-import {
-  evaluateReviewerGateWarnings,
-  isDocContractGateScopeActive,
-} from "../gates/docContractGates.js";
 import {
   evaluateRepeatCleanAutoconvergeTrigger,
   type RepeatCleanAutoconvergeReasonCode,
@@ -79,6 +73,7 @@ import { writePostAppendReviewVerificationArtifact } from "../../v11/application
 import { writePostAppendPassState } from "../../v11/application/pass/postAppendStateWriter.js";
 import { resolveReviewerTestDirectiveForPass } from "../../v11/application/pass/reviewerTestDirectiveResolver.js";
 import { updateReviewerDocGateArtifact } from "../../v11/application/pass/reviewerDocGateArtifactUpdater.js";
+import { prepareNormalPassAppend } from "../../v11/application/pass/normalPassAppendPreparation.js";
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
 } from "../../v11/domain/pass/repeatCleanMetadata.js";
@@ -436,29 +431,22 @@ export async function emitPassFromWorkspace(
     });
   }
 
-  let reviewerGateEvaluation:
-    | ReturnType<typeof evaluateReviewerGateWarnings>
-    | undefined;
   let docGateArtifactWriteFailureReason: string | undefined;
-  const docGateScopeActive =
-    handoff.senderRole === "reviewer"
-    && isDocContractGateScopeActive({
-      reviewArtifactType: resolved.bubbleConfig.review_artifact_type
-    });
-  const findingsForPayload: Finding[] =
-    docGateScopeActive && hasFindings
-      ? (() => {
-        reviewerGateEvaluation = evaluateReviewerGateWarnings({
-          round: handoff.envelopeRound,
-          findings,
-          roundGateAppliesAfter:
-            resolved.bubbleConfig.doc_contract_gates.round_gate_applies_after
-        });
-        return reviewerGateEvaluation.normalizedFindings;
-      })()
-      : findings;
-
-  const lockPath = join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`);
+  const normalPassAppendPreparation = prepareNormalPassAppend({
+    senderRole: handoff.senderRole,
+    reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
+    round: handoff.envelopeRound,
+    findings,
+    hasFindings,
+    roundGateAppliesAfter:
+      resolved.bubbleConfig.doc_contract_gates.round_gate_applies_after,
+    locksDir: resolved.bubblePaths.locksDir,
+    bubbleId: resolved.bubbleId
+  });
+  const docGateScopeActive = normalPassAppendPreparation.docGateScopeActive;
+  const reviewerGateEvaluation = normalPassAppendPreparation.reviewerGateEvaluation;
+  const findingsForPayload = normalPassAppendPreparation.findingsForPayload;
+  const lockPath = normalPassAppendPreparation.lockPath;
 
   const appendResult = await appendProtocolEnvelope({
     transcriptPath: resolved.bubblePaths.transcriptPath,
