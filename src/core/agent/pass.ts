@@ -23,7 +23,6 @@ import {
 import { ensureBubbleInstanceIdForMutation } from "../bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import {
-  deliveryTargetRoleMetadataKey,
   isPassIntent,
   type PassIntent,
   type ProtocolEnvelope
@@ -45,7 +44,6 @@ import {
   isDocContractGateScopeActive,
 } from "../gates/docContractGates.js";
 import {
-  claimParserDivergenceDiagnosticReasonCode,
   validateConvergencePolicy
 } from "../convergence/policy.js";
 import {
@@ -87,10 +85,10 @@ import { updateReviewerDocGateArtifact } from "../../v11/application/pass/review
 import { raisePostAppendReviewVerificationWriteFailed } from "../../v11/domain/pass/postAppendReviewVerificationWriteFailure.js";
 import { raisePostAppendStateWriteFailed } from "../../v11/domain/pass/postAppendStateWriteFailure.js";
 import {
-  buildRepeatCleanPassPayloadMetadata,
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
 } from "../../v11/domain/pass/repeatCleanMetadata.js";
 import { buildPassLifecycleMetricMetadata } from "../../v11/domain/pass/lifecycleMetricMetadata.js";
+import { buildPassEnvelopeDraft } from "../../v11/domain/pass/passEnvelopeDraft.js";
 
 export interface EmitPassInput {
   summary: string;
@@ -513,51 +511,25 @@ export async function emitPassFromWorkspace(
     transcriptPath: resolved.bubblePaths.transcriptPath,
     lockPath,
     now,
-    envelope: {
-      bubble_id: resolved.bubbleId,
-      sender: handoff.senderAgent,
-      recipient: handoff.recipientAgent,
-      type: "PASS",
-      round: handoff.envelopeRound,
-      payload: {
-        summary,
-        pass_intent: intent,
-        metadata: {
-          ...buildRepeatCleanPassPayloadMetadata({
-            transitionDecision: "normal_pass",
-            reasonCode: repeatCleanTrigger.reasonCode,
-            reasonDetail: repeatCleanTrigger.reasonDetail,
-            trigger: repeatCleanTrigger.trigger,
-            mostRecentPreviousReviewerCleanPassEnvelope:
-              repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope
-          }),
-          [deliveryTargetRoleMetadataKey]: handoff.recipientRole,
-          ...(reviewerFindingsClaimParserMetadata !== undefined
-            ? {
-                findings_claim_parser_state:
-                  reviewerFindingsClaimParserMetadata.parserState,
-                findings_claim_parser_divergence:
-                  reviewerFindingsClaimParserMetadata.parserDivergence,
-                ...(reviewerFindingsClaimParserMetadata.parserDivergence
-                  ? {
-                      findings_claim_parser_divergence_reason_code:
-                        claimParserDivergenceDiagnosticReasonCode
-                    }
-                  : {})
-              }
-            : {})
-        },
-        ...(handoff.senderRole === "reviewer"
-          ? {
-              findings: hasFindings ? findingsForPayload : [],
-              findings_claim_state: reviewerFindingsClaim?.state ?? "unknown",
-              findings_claim_source:
-                reviewerFindingsClaim?.source ?? "payload_findings_count"
-            }
-          : {})
-      },
-      refs
-    }
+    envelope: buildPassEnvelopeDraft({
+      bubbleId: resolved.bubbleId,
+      handoff,
+      summary,
+      passIntent: intent,
+      refs,
+      hasFindings,
+      findingsForPayload,
+      ...(reviewerFindingsClaim !== undefined ? { reviewerFindingsClaim } : {}),
+      ...(reviewerFindingsClaimParserMetadata !== undefined
+        ? { reviewerFindingsClaimParserMetadata }
+        : {}),
+      transitionDecision: "normal_pass",
+      repeatCleanReasonCode: repeatCleanTrigger.reasonCode,
+      repeatCleanReasonDetail: repeatCleanTrigger.reasonDetail,
+      repeatCleanTrigger: repeatCleanTrigger.trigger,
+      mostRecentPreviousReviewerCleanPassEnvelope:
+        repeatCleanTrigger.mostRecentPreviousReviewerCleanPassEnvelope
+    })
   });
 
   const mapped = mapAppendResult(appendResult);
