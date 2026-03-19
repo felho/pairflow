@@ -42,7 +42,7 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
     command: "gate",
     state: "parity",
     owner: "runtime",
-    notes: "W3 matrix compatibility alias with dedicated parity seed case, tracking metaReviewGate apply+recover parity coverage and boundary status."
+    notes: "W3 matrix compatibility alias with dedicated apply+recover parity seed cases, tracking metaReviewGate parity coverage and boundary status."
   },
   {
     command: "reconcile",

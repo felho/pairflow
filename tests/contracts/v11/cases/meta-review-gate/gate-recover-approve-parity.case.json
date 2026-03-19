@@ -1,0 +1,26 @@
+{
+  "id": "gate-recover-approve-parity",
+  "command": "gate",
+  "mode": "parity",
+  "description": "Seed contract case for gate alias recover approve parity baseline.",
+  "input": {
+    "route": "recover",
+    "recoverScenario": "approve",
+    "refs": []
+  },
+  "expected": {
+    "status": "ok",
+    "gateRoute": "human_gate_approve",
+    "stateSubset": {
+      "state": "READY_FOR_HUMAN_APPROVAL"
+    }
+  },
+  "tags": [
+    "seed",
+    "m3",
+    "gate",
+    "meta-review-gate",
+    "parity"
+  ]
+}
+
