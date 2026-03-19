@@ -1,10 +1,10 @@
 import { parseArgs } from "node:util";
 
 import {
-  asPassCommandError,
-  emitPassFromWorkspace,
-  type EmitPassResult
-} from "../../../core/agent/pass.js";
+  asPassCommandErrorV11 as asPassCommandError,
+  emitPassFromWorkspaceV11 as emitPassFromWorkspace,
+  type EmitPassV11Result as EmitPassResult
+} from "../../../v11/application/pass/emitPassV11.js";
 import { isPassIntent, type PassIntent } from "../../../types/protocol.js";
 import {
   isFindingSeverity,

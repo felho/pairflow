@@ -15,11 +15,11 @@ export {
   ConvergedCommandError
 } from "./core/agent/converged.js";
 export {
-  asPassCommandError,
-  emitPassFromWorkspace,
-  inferPassIntent,
-  PassCommandError
-} from "./core/agent/pass.js";
+  asPassCommandErrorV11 as asPassCommandError,
+  emitPassFromWorkspaceV11 as emitPassFromWorkspace,
+  inferPassIntentV11 as inferPassIntent,
+  PassCommandErrorV11 as PassCommandError
+} from "./v11/application/pass/emitPassV11.js";
 export {
   BubbleLookupError,
   resolveBubbleById
