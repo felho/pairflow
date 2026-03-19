@@ -64,6 +64,7 @@ import { resolveReviewerTestDirectiveForPass } from "../../v11/application/pass/
 import { updateReviewerDocGateArtifact } from "../../v11/application/pass/reviewerDocGateArtifactUpdater.js";
 import { prepareNormalPassAppend } from "../../v11/application/pass/normalPassAppendPreparation.js";
 import { executeNormalPassDelivery } from "../../v11/application/pass/normalPassDeliveryExecution.js";
+import { persistNormalPassPostAppend } from "../../v11/application/pass/normalPassPostAppendPersistence.js";
 import { finalizeNormalPass } from "../../v11/application/pass/normalPassFinalization.js";
 import { prepareReviewerPass } from "../../v11/application/pass/reviewerPassPreparation.js";
 import { resolvePassIntent } from "../../v11/application/pass/passIntentResolution.js";
@@ -349,7 +350,6 @@ export async function emitPassFromWorkspace(
     });
   }
 
-  let docGateArtifactWriteFailureReason: string | undefined;
   const normalPassAppendPreparation = prepareNormalPassAppend({
     senderRole: handoff.senderRole,
     reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
@@ -393,41 +393,39 @@ export async function emitPassFromWorkspace(
 
   const mapped = mapAppendResult(appendResult);
 
-  await writePostAppendReviewVerificationArtifact({
-    reviewerVerification,
-    bubbleId: resolved.bubbleId,
-    round: handoff.nextRound,
-    reviewer: handoff.senderAgent,
-    generatedAt: nowIso,
-    artifactPath: resolved.bubblePaths.reviewVerificationArtifactPath,
-    envelopeId: mapped.envelope.id,
-    createError: (message) => new PassCommandError(message)
-  });
-
-  const written = await writePostAppendPassState({
-    statePath: resolved.bubblePaths.statePath,
-    state,
-    handoff,
-    nowIso,
-    expectedFingerprint: loadedState.fingerprint,
-    envelopeId: appendResult.envelope.id,
-    createError: (message) => new PassCommandError(message)
-  });
-
-  if (docGateScopeActive) {
-    docGateArtifactWriteFailureReason = await updateReviewerDocGateArtifact({
+  const postAppendPersistence = await persistNormalPassPostAppend(
+    {
+      reviewerVerification,
+      bubbleId: resolved.bubbleId,
+      handoff,
+      generatedAt: nowIso,
+      reviewVerificationArtifactPath: resolved.bubblePaths.reviewVerificationArtifactPath,
+      mappedEnvelopeId: mapped.envelope.id,
+      statePath: resolved.bubblePaths.statePath,
+      state,
+      expectedFingerprint: loadedState.fingerprint,
+      appendEnvelopeId: appendResult.envelope.id,
+      docGateScopeActive,
       now,
       bubbleConfig: resolved.bubbleConfig,
       artifactsDir: resolved.bubblePaths.artifactsDir,
       taskArtifactPath: resolved.bubblePaths.taskArtifactPath,
-      round: handoff.envelopeRound,
-      findings: hasFindings ? findings : [],
-      createError: (message) => new PassCommandError(message),
+      hasFindings,
+      findings,
       ...(reviewerGateEvaluation !== undefined
-        ? { reviewerEvaluation: reviewerGateEvaluation }
-        : {})
-    });
-  }
+        ? { reviewerGateEvaluation }
+        : {}),
+      createError: (message) => new PassCommandError(message)
+    },
+    {
+      writePostAppendReviewVerificationArtifact,
+      writePostAppendPassState,
+      updateReviewerDocGateArtifact
+    }
+  );
+  const written = postAppendPersistence.written;
+  const docGateArtifactWriteFailureReason =
+    postAppendPersistence.docGateArtifactWriteFailureReason;
 
   const normalPassDelivery = await executeNormalPassDelivery(
     {
