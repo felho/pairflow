@@ -1,4 +1,3 @@
-import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
 import {
   type MetaReviewGateRoute
 } from "../bubble/metaReviewGate.js";
@@ -20,6 +19,7 @@ import {
   buildConvergedFlowInput,
 } from "../../v11/shared/converged/convergedFlowInvocationBuilders.js";
 import { normalizeConvergedCommandError } from "../../v11/shared/converged/convergedCommandErrorNormalization.js";
+import { normalizeConvergedCommandInput } from "../../v11/shared/converged/convergedCommandInputNormalization.js";
 
 export interface EmitConvergedInput {
   summary: string;
@@ -72,20 +72,19 @@ export async function emitConvergedFromWorkspace(
   input: EmitConvergedInput,
   dependencies: EmitConvergedDependencies = {}
 ): Promise<EmitConvergedResult> {
-  const now = input.now ?? new Date();
   const createError = (message: string): ConvergedCommandError =>
     new ConvergedCommandError(message);
-  const summary = requireNonEmptyString(
-    input.summary,
-    "Convergence summary",
+  const normalized = normalizeConvergedCommandInput({
+    summary: input.summary,
+    refs: input.refs,
+    now: input.now,
     createError
-  );
-  const refs = normalizeStringList(input.refs ?? []);
+  });
   return runConvergedFlow(
     buildConvergedFlowInput({
-      summary,
-      refs,
-      now,
+      summary: normalized.summary,
+      refs: normalized.refs,
+      now: normalized.now,
       cwd: input.cwd,
       expectedStateFingerprint: input.expectedStateFingerprint,
       expectedRound: input.expectedRound,
