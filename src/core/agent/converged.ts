@@ -2,8 +2,6 @@ import { readTranscriptEnvelopes } from "../protocol/transcriptStore.js";
 import { validateConvergencePolicy } from "../convergence/policy.js";
 import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
 import { WorkspaceResolutionError } from "../bubble/workspaceResolution.js";
-import { assessPairflowCommandPath } from "../runtime/pairflowCommand.js";
-import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
 import { readReviewVerificationArtifactStatus } from "../reviewer/reviewVerification.js";
 import {
   resolveReviewerTestEvidenceArtifactPath,
@@ -24,6 +22,7 @@ import {
   toMetaReviewGateError,
   type MetaReviewGateRoute
 } from "../bubble/metaReviewGate.js";
+import type { PairflowCommandPathAssessment } from "../runtime/pairflowCommand.js";
 import type {
   AgentName,
   BubbleStateSnapshot,
@@ -36,6 +35,7 @@ import {
   executeConvergedExecution,
   type ExecuteConvergedExecutionDependencies
 } from "../../v11/application/converged/convergedExecution.js";
+import { finalizeConvergedFlow } from "../../v11/application/converged/convergedFinalization.js";
 
 export interface EmitConvergedInput {
   summary: string;
@@ -79,7 +79,7 @@ export class ConvergedCommandError extends Error {
 export function resolveMetaReviewRolloutBlockingReasonCodes(input: {
   gateRoute: MetaReviewGateRoute;
   metaReviewWarnings: Array<{ reason_code: string }>;
-  commandPathStatus: ReturnType<typeof assessPairflowCommandPath>;
+  commandPathStatus: PairflowCommandPathAssessment;
 }): string[] {
   const codes = new Set<string>();
 
@@ -308,178 +308,30 @@ export async function emitConvergedFromWorkspace(
     }
   );
 
-  const commandPathStatus = assessPairflowCommandPath({
-    worktreePath: resolved.bubblePaths.worktreePath,
-    profile: resolved.bubbleConfig.pairflow_command_profile,
-    activeEntrypoint: process.argv[1]
-  });
-  const blockingReasonCodes = resolveMetaReviewRolloutBlockingReasonCodes({
-    gateRoute: gateResult.route,
-    metaReviewWarnings: gateResult.metaReviewRun?.warnings ?? [],
-    commandPathStatus
-  });
-
-  await emitBubbleLifecycleEventBestEffort({
-    repoPath: resolved.repoPath,
-    bubbleId: resolved.bubbleId,
-    bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
-    eventType: "bubble_converged",
-    round: state.round,
-    actorRole: "reviewer",
-    metadata: {
-      refs_count: refs.length,
-      summary_length: Array.from(summary).length,
-      convergence_envelope_id: convergence.envelope.id,
-      gate_handoff_envelope_id: gateResult.gateEnvelope.id,
-      gate_handoff_type: gateResult.gateEnvelope.type,
-      gate_route: gateResult.route,
-      pairflow_command_path_status: commandPathStatus.status,
-      pairflow_command_path_local_entrypoint: commandPathStatus.localEntrypoint,
-      ...(commandPathStatus.activeEntrypoint !== null
-        ? {
-            pairflow_command_path_active_entrypoint:
-              commandPathStatus.activeEntrypoint
-          }
-        : {}),
-      ...(commandPathStatus.reasonCode !== undefined
-        ? {
-            pairflow_command_path_reason_code: commandPathStatus.reasonCode
-          }
-        : {}),
-      meta_review_warning_reason_codes: JSON.stringify(
-        (gateResult.metaReviewRun?.warnings ?? []).map((warning) => warning.reason_code)
-      ),
-      meta_review_rollout_blocking_reason_codes: JSON.stringify(blockingReasonCodes),
-      summary_verifier_gate_decision: summaryVerifierGateDecision.gate_decision,
-      summary_verifier_gate_reason_code: summaryVerifierGateDecision.reason_code,
-      summary_verifier_gate_claim_classes_detected:
-        summaryVerifierGateDecision.claim_classes_detected,
-      summary_verifier_gate_verifier_status:
-        summaryVerifierGateDecision.verifier_status,
-      summary_verifier_gate_matched_claim_triggers:
-        JSON.stringify(summaryVerifierGateDecision.matched_claim_triggers),
-      spec_lock_state: specLockState.state,
-      spec_lock_open_blocker_count: specLockState.open_blocker_count,
-      spec_lock_open_required_now_count: specLockState.open_required_now_count,
-      round_gate_applies: roundGateState.applies,
-      round_gate_violated: roundGateState.violated,
-      ...(roundGateState.reason_code !== undefined
-        ? { round_gate_reason_code: roundGateState.reason_code }
-        : {}),
-      ...(summaryVerifierGateDecision.verifier_origin_reason !== undefined
-        ? {
-            summary_verifier_gate_verifier_origin_reason:
-              summaryVerifierGateDecision.verifier_origin_reason
-          }
-        : {}),
+  return finalizeConvergedFlow(
+    {
+      resolved,
+      bubbleIdentity,
+      state,
+      summary,
+      refs,
+      now,
+      convergence,
+      gateResult,
+      summaryVerifierGateDecision,
+      specLockState,
+      roundGateState,
       ...(docGateArtifactReadFailureReason !== undefined
-        ? {
-            doc_gate_artifact_read_failed: true,
-            doc_gate_artifact_read_failure_reason: docGateArtifactReadFailureReason
-          }
+        ? { docGateArtifactReadFailureReason }
+        : {}),
+      ...(convergedDelivery !== undefined
+        ? { delivery: convergedDelivery }
         : {})
     },
-    now
-  });
-
-  await emitBubbleLifecycleEventBestEffort({
-    repoPath: resolved.repoPath,
-    bubbleId: resolved.bubbleId,
-    bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
-    eventType: "bubble_meta_review_routed",
-    round: state.round,
-    actorRole: "reviewer",
-    metadata: {
-      gate_route: gateResult.route,
-      gate_handoff_type: gateResult.gateEnvelope.type,
-      recommendation:
-        gateResult.metaReviewRun?.recommendation ??
-        gateResult.state.meta_review?.last_autonomous_recommendation ??
-        "inconclusive",
-      run_status:
-        gateResult.metaReviewRun?.status ??
-        gateResult.state.meta_review?.last_autonomous_status ??
-        "inconclusive",
-      warning_reason_codes: JSON.stringify(
-        (gateResult.metaReviewRun?.warnings ?? []).map((warning) => warning.reason_code)
-      ),
-      blocking_reason_codes: JSON.stringify(blockingReasonCodes),
-      pairflow_command_path_status: commandPathStatus.status,
-      ...(commandPathStatus.reasonCode !== undefined
-        ? {
-            pairflow_command_path_reason_code: commandPathStatus.reasonCode
-          }
-        : {})
-    },
-    now
-  });
-
-  if (gateResult.route === "auto_rework") {
-    await emitBubbleLifecycleEventBestEffort({
-      repoPath: resolved.repoPath,
-      bubbleId: resolved.bubbleId,
-      bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
-      eventType: "bubble_meta_review_auto_rework_dispatched",
-      round: state.round,
-      actorRole: "reviewer",
-      metadata: {
-        gate_route: gateResult.route,
-        rework_target_present:
-          (gateResult.metaReviewRun?.rework_target_message?.trim().length ?? 0) > 0,
-        auto_rework_count: gateResult.state.meta_review?.auto_rework_count ?? 0,
-        auto_rework_limit: gateResult.state.meta_review?.auto_rework_limit ?? 0
-      },
-      now
-    });
-  }
-
-  if (gateResult.gateEnvelope.type === "APPROVAL_REQUEST") {
-    await emitBubbleLifecycleEventBestEffort({
-      repoPath: resolved.repoPath,
-      bubbleId: resolved.bubbleId,
-      bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
-      eventType: "bubble_meta_review_human_gate_reached",
-      round: state.round,
-      actorRole: "reviewer",
-      metadata: {
-        gate_route: gateResult.route,
-        recommendation:
-          gateResult.metaReviewRun?.recommendation ??
-          gateResult.state.meta_review?.last_autonomous_recommendation ??
-          "inconclusive",
-        blocking_reason_codes: JSON.stringify(blockingReasonCodes)
-      },
-      now
-    });
-  }
-
-  if (blockingReasonCodes.length > 0) {
-    await emitBubbleLifecycleEventBestEffort({
-      repoPath: resolved.repoPath,
-      bubbleId: resolved.bubbleId,
-      bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
-      eventType: "bubble_meta_review_rollout_blocked",
-      round: state.round,
-      actorRole: "reviewer",
-      metadata: {
-        gate_route: gateResult.route,
-        blocking_reason_codes: JSON.stringify(blockingReasonCodes),
-        pairflow_command_path_status: commandPathStatus.status
-      },
-      now
-    });
-  }
-
-  return {
-    bubbleId: resolved.bubbleId,
-    convergenceSequence: convergence.sequence,
-    convergenceEnvelope: convergence.envelope,
-    gateRoute: gateResult.route,
-    approvalRequestSequence: gateResult.gateSequence,
-    approvalRequestEnvelope: gateResult.gateEnvelope,
-    state: gateResult.state,
-    delivery: convergedDelivery
-  };
+    {
+      resolveMetaReviewRolloutBlockingReasonCodes
+    }
+  );
 }
 
 export function asConvergedCommandError(error: unknown): never {
