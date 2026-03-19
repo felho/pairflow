@@ -30,19 +30,44 @@ export interface BuildKickoffFailureResultInput {
   };
 }
 
+function buildKickoffResultBase(input: {
+  bubbleId: string;
+  taskEnvelopeAppended: boolean;
+  markersBefore: {
+    ideation_mode: boolean;
+    ideation_task_pending: boolean;
+  };
+  markersAfter: {
+    ideation_mode: boolean;
+    ideation_task_pending: boolean;
+  };
+}): Omit<
+  KickoffBubbleResultShape,
+  "ok" | "reason_code" | "state_changed" | "state_before" | "state_after"
+> {
+  return {
+    bubble_id: input.bubbleId,
+    protocol: {
+      task_envelope_appended: input.taskEnvelopeAppended
+    },
+    markers_before: input.markersBefore,
+    markers_after: input.markersAfter
+  };
+}
+
 export function buildKickoffFailureResult(
   input: BuildKickoffFailureResultInput
 ): KickoffBubbleResultShape {
   return {
+    ...buildKickoffResultBase({
+      bubbleId: input.bubbleId,
+      taskEnvelopeAppended: false,
+      markersBefore: input.markersBefore,
+      markersAfter: input.markersBefore
+    }),
     ok: false,
-    bubble_id: input.bubbleId,
     reason_code: input.reasonCode,
     state_changed: false,
-    protocol: {
-      task_envelope_appended: false
-    },
-    markers_before: input.markersBefore,
-    markers_after: input.markersBefore,
     state_before: input.stateBefore
   };
 }
@@ -61,18 +86,18 @@ export function buildKickoffSuccessResult(
   input: BuildKickoffSuccessResultInput
 ): KickoffBubbleResultShape {
   return {
+    ...buildKickoffResultBase({
+      bubbleId: input.bubbleId,
+      taskEnvelopeAppended: true,
+      markersBefore: input.markersBefore,
+      markersAfter: {
+        ideation_mode: true,
+        ideation_task_pending: false
+      }
+    }),
     ok: true,
-    bubble_id: input.bubbleId,
     reason_code: null,
     state_changed: true,
-    protocol: {
-      task_envelope_appended: true
-    },
-    markers_before: input.markersBefore,
-    markers_after: {
-      ideation_mode: true,
-      ideation_task_pending: false
-    },
     state_before: input.stateBefore,
     state_after: input.stateAfter
   };
