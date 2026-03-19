@@ -13,15 +13,15 @@ export interface ResolveKickoffEligibilityInput {
   state: BubbleStateSnapshot;
 }
 
-export function resolveKickoffEligibilityFailureReason(
+function hasKickoffConfigurationGuardFailure(
+  input: ResolveKickoffEligibilityInput
+): boolean {
+  return input.hasParseWarning || !input.ideationMode;
+}
+
+function hasKickoffStateGuardFailure(
   input: ResolveKickoffEligibilityInput
 ): string | null {
-  if (input.hasParseWarning) {
-    return IDEATION_KICKOFF_NOT_ALLOWED;
-  }
-  if (!input.ideationMode) {
-    return IDEATION_KICKOFF_NOT_ALLOWED;
-  }
   if (input.state.round >= 1) {
     return IDEATION_ALREADY_ACTIVE;
   }
@@ -32,4 +32,13 @@ export function resolveKickoffEligibilityFailureReason(
     return IDEATION_KICKOFF_NOT_ELIGIBLE;
   }
   return null;
+}
+
+export function resolveKickoffEligibilityFailureReason(
+  input: ResolveKickoffEligibilityInput
+): string | null {
+  if (hasKickoffConfigurationGuardFailure(input)) {
+    return IDEATION_KICKOFF_NOT_ALLOWED;
+  }
+  return hasKickoffStateGuardFailure(input);
 }
