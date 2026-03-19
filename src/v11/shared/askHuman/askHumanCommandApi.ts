@@ -7,22 +7,16 @@ import {
   createAskHumanCommandError,
   throwAsAskHumanCommandError
 } from "./askHumanCommandRuntime.js";
-import { buildAskHumanCommandOrchestrationInvocation } from "./askHumanCommandOrchestrationInvocationBuilder.js";
-import { orchestrateAskHumanCommand } from "./askHumanCommandOrchestration.js";
+import { dispatchAskHumanCommandOrchestration } from "./askHumanCommandOrchestrationDispatch.js";
 
 export async function emitAskHumanFromWorkspace(
   input: EmitAskHumanInput,
   dependencies: EmitAskHumanDependencies = {}
 ): Promise<EmitAskHumanResult> {
-  const invocation = buildAskHumanCommandOrchestrationInvocation({
-    commandInput: input,
-    runtimeDependencies: dependencies,
-    createError: createAskHumanCommandError
-  });
-
-  return orchestrateAskHumanCommand(
-    invocation.orchestrationInput,
-    invocation.orchestrationDependencies
+  return dispatchAskHumanCommandOrchestration(
+    input,
+    dependencies,
+    createAskHumanCommandError
   );
 }
 
