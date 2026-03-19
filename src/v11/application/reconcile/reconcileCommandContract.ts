@@ -1,3 +1,12 @@
+import type { resolveRepoPath } from "../../../core/bubble/repoResolution.js";
+import type { readStateSnapshot } from "../../../core/state/stateStore.js";
+import type { isFinalState } from "../../../core/state/transitions.js";
+import type {
+  readRuntimeSessionsRegistry,
+  removeRuntimeSessions,
+  RuntimeSessionsRegistry
+} from "../../../core/runtime/sessionsRegistry.js";
+
 export type RuntimeSessionStaleReason =
   | "missing_bubble"
   | "final_state"
@@ -27,4 +36,16 @@ export interface ReconcileRuntimeSessionsReport {
   sessionsAfter: number;
   staleCandidates: number;
   actions: ReconcileRuntimeSessionsAction[];
+}
+
+export type ListBubbleIdSet = (repoPath: string) => Promise<Set<string>>;
+
+export interface ReconcileRuntimeSessionsDependencies {
+  resolveRepoPath?: typeof resolveRepoPath;
+  listBubbleIdSet?: ListBubbleIdSet;
+  readRuntimeSessionsRegistry?: typeof readRuntimeSessionsRegistry;
+  removeRuntimeSessions?: typeof removeRuntimeSessions;
+  readStateSnapshot?: typeof readStateSnapshot;
+  isFinalState?: typeof isFinalState;
+  countRegistryEntries?: (registry: RuntimeSessionsRegistry) => number;
 }
