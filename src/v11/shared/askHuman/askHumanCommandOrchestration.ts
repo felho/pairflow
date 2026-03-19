@@ -10,7 +10,7 @@ import type { prepareAskHumanRouting } from "../../application/askHuman/askHuman
 import type {
   RunAskHumanFlowDependencies,
   RunAskHumanFlowResult
-} from "../../application/askHuman/runAskHumanFlow.js";
+} from "./askHumanFlowContract.js";
 import type { runAskHumanFlow } from "../../application/askHuman/runAskHumanFlow.js";
 
 export interface AskHumanCommandOrchestrationInput {

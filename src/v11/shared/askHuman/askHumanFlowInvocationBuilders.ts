@@ -4,7 +4,7 @@ import type { PrepareAskHumanRoutingInput } from "../../application/askHuman/ask
 import type {
   RunAskHumanFlowDependencies,
   RunAskHumanFlowInput
-} from "../../application/askHuman/runAskHumanFlow.js";
+} from "./askHumanFlowContract.js";
 import type { AskHumanRoutingContext } from "./askHumanRoutingContext.js";
 
 export interface BuildAskHumanRoutingInputInput {
