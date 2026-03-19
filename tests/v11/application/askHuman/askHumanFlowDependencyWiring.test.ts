@@ -1,0 +1,28 @@
+import { describe, expect, it } from "vitest";
+
+import { executeAskHumanExecution } from "../../../../src/v11/application/askHuman/askHumanExecution.js";
+import { finalizeAskHumanFlow } from "../../../../src/v11/application/askHuman/askHumanFinalization.js";
+import { createAskHumanCommandOrchestrationDependencies } from "../../../../src/v11/shared/askHuman/askHumanFlowDependencyWiring.js";
+
+describe("askHumanFlowDependencyWiring", () => {
+  it("wires execution and finalization implementations", () => {
+    const dependencies = createAskHumanCommandOrchestrationDependencies({});
+
+    expect(dependencies.executeAskHumanExecution).toBe(executeAskHumanExecution);
+    expect(dependencies.finalizeAskHumanFlow).toBe(finalizeAskHumanFlow);
+  });
+
+  it("forwards only explicitly provided runtime notification dependencies", () => {
+    const emitTmuxDeliveryNotification = (() => Promise.resolve({})) as never;
+
+    const dependencies = createAskHumanCommandOrchestrationDependencies({
+      emitTmuxDeliveryNotification,
+      emitBubbleNotification: undefined
+    });
+
+    expect(dependencies.emitTmuxDeliveryNotification).toBe(
+      emitTmuxDeliveryNotification
+    );
+    expect("emitBubbleNotification" in dependencies).toBe(false);
+  });
+});

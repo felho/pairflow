@@ -1,11 +1,10 @@
 import type { emitBubbleNotification } from "../runtime/notifications.js";
 import type { emitTmuxDeliveryNotification } from "../runtime/tmuxDelivery.js";
-import { executeAskHumanExecution } from "../../v11/application/askHuman/askHumanExecution.js";
-import { finalizeAskHumanFlow } from "../../v11/application/askHuman/askHumanFinalization.js";
 import { normalizeAskHumanCommandError } from "../../v11/shared/askHuman/askHumanCommandErrorNormalization.js";
 import { buildAskHumanCommandErrorFactory } from "../../v11/shared/askHuman/askHumanCommandErrorFactory.js";
 import { normalizeAskHumanCommandInput } from "../../v11/shared/askHuman/askHumanCommandInputNormalization.js";
 import { orchestrateAskHumanCommand } from "../../v11/shared/askHuman/askHumanCommandOrchestration.js";
+import { createAskHumanCommandOrchestrationDependencies } from "../../v11/shared/askHuman/askHumanFlowDependencyWiring.js";
 import type { BubbleStateSnapshot } from "../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../types/protocol.js";
 
@@ -58,12 +57,10 @@ export async function emitAskHumanFromWorkspace(
       now: normalizedInput.now,
       createError: createAskHumanCommandError
     },
-    {
-      executeAskHumanExecution,
-      finalizeAskHumanFlow,
+    createAskHumanCommandOrchestrationDependencies({
       emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification,
       emitBubbleNotification: dependencies.emitBubbleNotification
-    }
+    })
   );
 }
 
