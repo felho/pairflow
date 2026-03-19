@@ -106,6 +106,46 @@ function buildKickoffPreparedValidationResult(input: {
   };
 }
 
+type PrepareKickoffTaskOrFailureResult =
+  | {
+      kind: "failure";
+      result: PrepareKickoffValidationResult;
+    }
+  | {
+      kind: "task";
+      task: ResolvedKickoffTaskInput;
+    };
+
+async function prepareKickoffTaskOrFailure(input: {
+  validationInput: PrepareKickoffValidationInput;
+  resolvedBubbleId: string;
+  state: LoadedKickoffState["state"];
+  markersBefore: {
+    ideation_mode: boolean;
+    ideation_task_pending: boolean;
+  };
+}): Promise<PrepareKickoffTaskOrFailureResult> {
+  const taskResolution = await resolveKickoffTask(
+    buildKickoffTaskResolutionInput(input.validationInput)
+  );
+  if (taskResolution.kind === "invalid") {
+    return {
+      kind: "failure",
+      result: buildKickoffValidationFailureResult({
+        resolvedBubbleId: input.resolvedBubbleId,
+        reasonCode: IDEATION_KICKOFF_TASK_INVALID,
+        stateBefore: input.state,
+        markersBefore: input.markersBefore
+      })
+    };
+  }
+
+  return {
+    kind: "task",
+    task: taskResolution.task
+  };
+}
+
 export async function prepareKickoffValidation(
   input: PrepareKickoffValidationInput,
   dependencies: ResolvedKickoffDependencies
@@ -129,16 +169,14 @@ export async function prepareKickoffValidation(
     });
   }
 
-  const taskResolution = await resolveKickoffTask(
-    buildKickoffTaskResolutionInput(input)
-  );
-  if (taskResolution.kind === "invalid") {
-    return buildKickoffValidationFailureResult({
-      resolvedBubbleId: resolved.bubbleId,
-      reasonCode: IDEATION_KICKOFF_TASK_INVALID,
-      stateBefore: state,
-      markersBefore
-    });
+  const taskOrFailure = await prepareKickoffTaskOrFailure({
+    validationInput: input,
+    resolvedBubbleId: resolved.bubbleId,
+    state,
+    markersBefore
+  });
+  if (taskOrFailure.kind === "failure") {
+    return taskOrFailure.result;
   }
 
   return buildKickoffPreparedValidationResult({
@@ -146,6 +184,6 @@ export async function prepareKickoffValidation(
     loadedState,
     state,
     markersBefore,
-    task: taskResolution.task
+    task: taskOrFailure.task
   });
 }
