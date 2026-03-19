@@ -63,6 +63,7 @@ import { writePostAppendPassState } from "../../v11/application/pass/postAppendS
 import { resolveReviewerTestDirectiveForPass } from "../../v11/application/pass/reviewerTestDirectiveResolver.js";
 import { updateReviewerDocGateArtifact } from "../../v11/application/pass/reviewerDocGateArtifactUpdater.js";
 import { prepareNormalPassAppend } from "../../v11/application/pass/normalPassAppendPreparation.js";
+import { executeNormalPassDelivery } from "../../v11/application/pass/normalPassDeliveryExecution.js";
 import { prepareReviewerPass } from "../../v11/application/pass/reviewerPassPreparation.js";
 import { resolvePassIntent } from "../../v11/application/pass/passIntentResolution.js";
 import { prepareReviewerVerification } from "../../v11/application/pass/reviewerVerificationPreparation.js";
@@ -427,8 +428,8 @@ export async function emitPassFromWorkspace(
     });
   }
 
-  const reviewerTestDirective: ReviewerTestExecutionDirective | undefined =
-    await resolveReviewerTestDirectiveForPass({
+  const normalPassDelivery = await executeNormalPassDelivery(
+    {
       senderRole: handoff.senderRole,
       bubbleId: resolved.bubbleId,
       bubbleConfig: resolved.bubbleConfig,
@@ -436,22 +437,15 @@ export async function emitPassFromWorkspace(
       worktreePath: resolved.bubblePaths.worktreePath,
       repoPath: resolved.repoPath,
       artifactsDir: resolved.bubblePaths.artifactsDir,
-      now
-    });
-
-  const delivery = await executePassDelivery(
-    {
-      bubbleId: resolved.bubbleId,
-      bubbleConfig: resolved.bubbleConfig,
       sessionsPath: resolved.bubblePaths.sessionsPath,
       reviewerBriefArtifactPath: resolved.bubblePaths.reviewerBriefArtifactPath,
       reviewerFocusArtifactPath: resolved.bubblePaths.reviewerFocusArtifactPath,
-      envelope: mapped.envelope,
-      senderRole: handoff.senderRole,
       recipientRole: handoff.recipientRole,
-      ...(reviewerTestDirective !== undefined ? { reviewerTestDirective } : {})
+      now
     },
     {
+      resolveReviewerTestDirectiveForPass,
+      executePassDelivery,
       ...(dependencies.emitTmuxDeliveryNotification !== undefined
         ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
         : {}),
@@ -460,8 +454,10 @@ export async function emitPassFromWorkspace(
         : {})
     }
   );
-  const deliveryResult = delivery.result;
-  const deliveryRetried = delivery.retried;
+  const reviewerTestDirective: ReviewerTestExecutionDirective | undefined =
+    normalPassDelivery.reviewerTestDirective;
+  const deliveryResult = normalPassDelivery.deliveryResult;
+  const deliveryRetried = normalPassDelivery.deliveryRetried;
 
   await emitBubbleLifecycleEventBestEffort({
     repoPath: resolved.repoPath,
