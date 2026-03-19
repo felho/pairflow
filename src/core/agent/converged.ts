@@ -1,5 +1,3 @@
-import { readTranscriptEnvelopes } from "../protocol/transcriptStore.js";
-import { validateConvergencePolicy } from "../convergence/policy.js";
 import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
 import { WorkspaceResolutionError } from "../bubble/workspaceResolution.js";
 import { readReviewVerificationArtifactStatus } from "../reviewer/reviewVerification.js";
@@ -36,6 +34,7 @@ import {
   type ExecuteConvergedExecutionDependencies
 } from "../../v11/application/converged/convergedExecution.js";
 import { finalizeConvergedFlow } from "../../v11/application/converged/convergedFinalization.js";
+import { prepareConvergedPolicy } from "../../v11/application/converged/convergedPolicyPreparation.js";
 
 export interface EmitConvergedInput {
   summary: string;
@@ -153,18 +152,17 @@ export async function emitConvergedFromWorkspace(
     createError: (message) => new ConvergedCommandError(message)
   });
 
-  const transcript = await readTranscriptEnvelopes(resolved.bubblePaths.transcriptPath, {
-    allowMissing: true,
-    toleratePartialFinalLine: true
-  });
-  const policy = validateConvergencePolicy({
+  const {
+    policy,
+    convergencePolicyDiagnostics
+  } = await prepareConvergedPolicy({
+    transcriptPath: resolved.bubblePaths.transcriptPath,
     currentRound: state.round,
     reviewer,
     implementer,
     reviewArtifactType: resolved.bubbleConfig.review_artifact_type,
     roundRoleHistory: state.round_role_history,
-    transcript,
-    severity_gate_round: resolved.bubbleConfig.severity_gate_round
+    severityGateRound: resolved.bubbleConfig.severity_gate_round
   });
   if (!policy.ok) {
     const diagnosticsSuffix =
@@ -175,10 +173,6 @@ export async function emitConvergedFromWorkspace(
       `Convergence validation failed: ${policy.errors.join(" ")}${diagnosticsSuffix}`
     );
   }
-  const convergencePolicyDiagnostics = policy.diagnostics.filter(
-    (entry) => entry.trim().length > 0
-  );
-
   const docGateScopeActive = isDocContractGateScopeActive({
     reviewArtifactType: resolved.bubbleConfig.review_artifact_type
   });
