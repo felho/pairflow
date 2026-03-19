@@ -9,6 +9,7 @@ import { readContractCase } from "./runner.js";
 
 const execFileAsync = promisify(execFile);
 const metaReviewGateCaseSources = [
+  "tests/contracts/v11/cases/meta-review-gate/gate-apply-basic-parity.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-basic.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-basic-v11.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-basic-parity.case.json",
@@ -16,7 +17,12 @@ const metaReviewGateCaseSources = [
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-basic-v11.case.json",
   "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-basic-parity.case.json"
 ] as const;
-const metaReviewGateExpectedSourcesSorted = [...metaReviewGateCaseSources].sort();
+const metaReviewGateExpectedSourcesSorted = metaReviewGateCaseSources.filter(
+  (source) => !source.includes("/gate-")
+).sort();
+const gateAliasExpectedSourcesSorted = metaReviewGateCaseSources.filter((source) =>
+  source.includes("/gate-")
+).sort();
 
 function parseMetaReviewGateSourcesFromManifest(
   manifestRaw: string
@@ -32,11 +38,23 @@ function parseMetaReviewGateSourcesFromManifest(
     .sort();
 }
 
+function parseGateAliasSourcesFromManifest(manifestRaw: string): string[] {
+  const manifest = JSON.parse(manifestRaw) as {
+    entries?: Array<{ command?: string; source?: string }>;
+  };
+
+  return (manifest.entries ?? [])
+    .filter((entry) => entry.command === "gate")
+    .map((entry) => entry.source)
+    .filter((source): source is string => typeof source === "string")
+    .sort();
+}
+
 describe("v11 metaReviewGate contract harness", () => {
   it("loads seed contract case metadata", async () => {
     const casePath = resolve(
       process.cwd(),
-      metaReviewGateCaseSources[0]
+      "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-apply-basic.case.json"
     );
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("metaReviewGate");
@@ -82,6 +100,17 @@ describe("v11 metaReviewGate contract harness", () => {
     expect(metaReviewGateSources).toEqual(metaReviewGateExpectedSourcesSorted);
   });
 
+  it("includes gate alias seed entries in corpus manifest", async () => {
+    const manifestPath = resolve(
+      process.cwd(),
+      "tests/contracts/v11/corpus/manifest.json"
+    );
+    const manifestRaw = await readFile(manifestPath, "utf8");
+    const gateAliasSources = parseGateAliasSourcesFromManifest(manifestRaw);
+
+    expect(gateAliasSources).toEqual(gateAliasExpectedSourcesSorted);
+  });
+
   it("builds corpus output manifest with metaReviewGate seed entries", async () => {
     await execFileAsync("pnpm", [
       "exec",
@@ -95,7 +124,9 @@ describe("v11 metaReviewGate contract harness", () => {
     );
     const outputRaw = await readFile(outputManifestPath, "utf8");
     const metaReviewGateSources = parseMetaReviewGateSourcesFromManifest(outputRaw);
+    const gateAliasSources = parseGateAliasSourcesFromManifest(outputRaw);
 
     expect(metaReviewGateSources).toEqual(metaReviewGateExpectedSourcesSorted);
+    expect(gateAliasSources).toEqual(gateAliasExpectedSourcesSorted);
   });
 });

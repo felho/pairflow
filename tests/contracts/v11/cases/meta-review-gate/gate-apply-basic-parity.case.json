@@ -1,0 +1,26 @@
+{
+  "id": "gate-apply-basic-parity",
+  "command": "gate",
+  "mode": "parity",
+  "description": "Seed contract case for gate alias apply legacy-v11 parity baseline.",
+  "input": {
+    "route": "apply",
+    "summary": "Seed gate alias apply contract summary",
+    "refs": []
+  },
+  "expected": {
+    "status": "ok",
+    "gateRoute": "human_gate_run_failed",
+    "stateSubset": {
+      "state": "META_REVIEW_FAILED"
+    }
+  },
+  "tags": [
+    "seed",
+    "m3",
+    "gate",
+    "meta-review-gate",
+    "parity"
+  ]
+}
+
