@@ -255,6 +255,9 @@ describe("v11 pass contract harness skeleton", () => {
     const casePaths = await listPassCasePaths();
     expect(casePaths.length).toBeGreaterThan(0);
     const seenModes = new Set<string>();
+    const seenReasonCodes = new Set<string>();
+    const seenEnvelopeTypes = new Set<string>();
+    const seenStates = new Set<string>();
 
     for (const casePath of casePaths) {
       const caseDef = await readContractCase(casePath);
@@ -263,21 +266,36 @@ describe("v11 pass contract harness skeleton", () => {
       if (caseDef.mode === "legacy") {
         expect(run.legacy?.status).toBe("ok");
         expect(run.v11).toBeUndefined();
+        seenReasonCodes.add(run.legacy?.reasonCode ?? "");
+        seenEnvelopeTypes.add(run.legacy?.envelopeType ?? "");
+        seenStates.add(run.legacy?.stateSubset.state ?? "");
         continue;
       }
       if (caseDef.mode === "v11") {
         expect(run.v11?.status).toBe("ok");
         expect(run.legacy).toBeUndefined();
+        seenReasonCodes.add(run.v11?.reasonCode ?? "");
+        seenEnvelopeTypes.add(run.v11?.envelopeType ?? "");
+        seenStates.add(run.v11?.stateSubset.state ?? "");
         continue;
       }
 
       expect(run.legacy).toBeDefined();
       expect(run.v11).toBeDefined();
       expect(run.legacy).toEqual(run.v11);
+      seenReasonCodes.add(run.legacy?.reasonCode ?? "");
+      seenEnvelopeTypes.add(run.legacy?.envelopeType ?? "");
+      seenStates.add(run.legacy?.stateSubset.state ?? "");
     }
     expect(seenModes.has("legacy")).toBe(true);
     expect(seenModes.has("v11")).toBe(true);
     expect(seenModes.has("parity")).toBe(true);
+    expect(seenReasonCodes.has("PASS_ACCEPTED")).toBe(true);
+    expect(seenReasonCodes.has("PASS_AUTO_CONVERGED")).toBe(true);
+    expect(seenEnvelopeTypes.has("PASS")).toBe(true);
+    expect(seenEnvelopeTypes.has("CONVERGENCE")).toBe(true);
+    expect(seenStates.has("RUNNING")).toBe(true);
+    expect(seenStates.has("META_REVIEW_FAILED")).toBe(true);
   }, 30_000);
 
   for (const testCase of passInvalidInputCases) {
