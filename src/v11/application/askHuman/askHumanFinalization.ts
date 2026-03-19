@@ -1,14 +1,15 @@
-import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
-import {
+import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
+import type {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef
 } from "../../../core/runtime/tmuxDelivery.js";
-import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
+import type { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { AppendProtocolEnvelopeResult } from "../../../core/protocol/transcriptStore.js";
 import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
 import type { AskHumanRoutingContext } from "../../shared/askHuman/askHumanRoutingContext.js";
+import { resolveAskHumanFinalizationDependencies } from "../../shared/askHuman/askHumanFinalizationDependencyResolution.js";
 
 export interface FinalizeAskHumanFlowInput {
   now: Date;
@@ -65,16 +66,15 @@ export async function finalizeAskHumanFlow(
   input: FinalizeAskHumanFlowInput,
   dependencies: FinalizeAskHumanFlowDependencies = {}
 ): Promise<FinalizeAskHumanFlowResult> {
-  const emitTmuxDeliveryNotificationFn =
-    dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
-  const emitBubbleNotificationFn =
-    dependencies.emitBubbleNotification ?? emitBubbleNotification;
-  const resolveDeliveryMessageRefFn =
-    dependencies.resolveDeliveryMessageRef ?? resolveDeliveryMessageRef;
-  const emitBubbleLifecycleEventBestEffortFn =
-    dependencies.emitBubbleLifecycleEventBestEffort ?? emitBubbleLifecycleEventBestEffort;
+  const resolvedDependencies = resolveAskHumanFinalizationDependencies({
+    emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification,
+    emitBubbleNotification: dependencies.emitBubbleNotification,
+    resolveDeliveryMessageRef: dependencies.resolveDeliveryMessageRef,
+    emitBubbleLifecycleEventBestEffort:
+      dependencies.emitBubbleLifecycleEventBestEffort
+  });
 
-  const messageRef = resolveDeliveryMessageRefFn({
+  const messageRef = resolvedDependencies.resolveDeliveryMessageRef({
     bubbleId: input.routing.resolved.bubbleId,
     sessionsPath: input.routing.resolved.bubblePaths.sessionsPath,
     envelope: input.appended.envelope
@@ -83,13 +83,14 @@ export async function finalizeAskHumanFlow(
   emitOptionalAskHumanNotifications(
     input,
     {
-      emitTmuxDeliveryNotification: emitTmuxDeliveryNotificationFn,
-      emitBubbleNotification: emitBubbleNotificationFn
+      emitTmuxDeliveryNotification:
+        resolvedDependencies.emitTmuxDeliveryNotification,
+      emitBubbleNotification: resolvedDependencies.emitBubbleNotification
     },
     messageRef
   );
 
-  await emitBubbleLifecycleEventBestEffortFn({
+  await resolvedDependencies.emitBubbleLifecycleEventBestEffort({
     repoPath: input.routing.resolved.repoPath,
     bubbleId: input.routing.resolved.bubbleId,
     bubbleInstanceId: input.routing.bubbleIdentity.bubbleInstanceId,
