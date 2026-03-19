@@ -1,0 +1,28 @@
+import { describe, expect, it } from "vitest";
+
+import { buildAskHumanCommandContext } from "../../../../src/v11/shared/askHuman/askHumanCommandContextBuilder.js";
+
+describe("askHumanCommandContextBuilder", () => {
+  it("builds orchestration input while preserving command-level payload", () => {
+    const now = new Date("2026-02-21T12:10:00.000Z");
+    const createError = (message: string) => new Error(message);
+
+    const context = buildAskHumanCommandContext({
+      commandInput: {
+        question: "  Need migration decision? ",
+        refs: [" artifact://a ", "artifact://a", "artifact://b", " "],
+        cwd: "/repo/worktrees/b_ask_human_01",
+        now
+      },
+      createError
+    });
+
+    expect(context.orchestrationInput).toEqual({
+      question: "  Need migration decision? ",
+      refs: [" artifact://a ", "artifact://a", "artifact://b", " "],
+      cwd: "/repo/worktrees/b_ask_human_01",
+      now,
+      createError
+    });
+  });
+});
