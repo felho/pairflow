@@ -1,3 +1,11 @@
+export {
+  applyMetaReviewGateOnConvergence,
+  asMetaReviewGateError,
+  MetaReviewGateError,
+  notifyMetaReviewerSubmissionRequest,
+  recoverMetaReviewGateFromSnapshot,
+  toMetaReviewGateError
+} from "../../../core/bubble/metaReviewGate.js";
 export type {
   ApplyMetaReviewGateOnConvergenceDependencies,
   ApplyMetaReviewGateOnConvergenceInput,
@@ -8,4 +16,4 @@ export type {
   NotifyMetaReviewerSubmissionRequestInput,
   RecoverMetaReviewGateFromSnapshotDependencies,
   RecoverMetaReviewGateFromSnapshotInput
-} from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
+} from "./metaReviewGateCommandContract.js";
