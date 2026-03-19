@@ -1,0 +1,26 @@
+{
+  "id": "reply-basic-parity",
+  "command": "reply",
+  "mode": "parity",
+  "description": "Seed contract case for HUMAN_REPLY legacy-v11 parity baseline in M0.",
+  "input": {
+    "message": "Acknowledged. Continue with the current plan.",
+    "refs": [
+      "artifact://handoff.md"
+    ]
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "HUMAN_REPLY_EMITTED",
+    "envelopeType": "HUMAN_REPLY",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "reply",
+    "parity"
+  ]
+}
