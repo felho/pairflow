@@ -33,6 +33,27 @@ describe("convergedFlowInvocationBuilders", () => {
     expect("expectedReviewer" in input).toBe(false);
   });
 
+  it("omits optional runConvergedFlow input fields when explicitly undefined", () => {
+    const now = new Date("2026-03-19T20:10:00.000Z");
+    const createError = (message: string) => new Error(message);
+    const input = buildConvergedFlowInput({
+      summary: "ready for converged",
+      refs: [],
+      now,
+      cwd: undefined,
+      expectedStateFingerprint: undefined,
+      expectedRound: undefined,
+      expectedReviewer: undefined,
+      createError,
+      resolveMetaReviewRolloutBlockingReasonCodes: () => []
+    });
+
+    expect("cwd" in input).toBe(false);
+    expect("expectedStateFingerprint" in input).toBe(false);
+    expect("expectedRound" in input).toBe(false);
+    expect("expectedReviewer" in input).toBe(false);
+  });
+
   it("builds dependencies and forwards only provided optional overrides", () => {
     const dependencies = buildConvergedFlowDependencies({
       prepareConvergedRouting: async () =>
