@@ -62,6 +62,10 @@ import {
 import { normalizePassCommandError } from "../../v11/shared/pass/passCommandErrorNormalization.js";
 import { normalizePassCommandInput } from "../../v11/shared/pass/passCommandInputNormalization.js";
 import { normalizePassCommandPayload } from "../../v11/shared/pass/passCommandPayloadNormalization.js";
+import {
+  buildPassRoutingDependencies,
+  buildPassRoutingInput
+} from "../../v11/shared/pass/passRoutingInvocationBuilders.js";
 import { preparePassWorkspaceContext } from "../../v11/shared/pass/passWorkspaceContextPreparation.js";
 import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata as resolveMostRecentPreviousReviewerPassIsCleanFromMetadataV11
@@ -174,7 +178,7 @@ export async function emitPassFromWorkspace(
   const implementer = workspaceContext.implementer;
   const reviewer = workspaceContext.reviewer;
   const passRouting = await preparePassRouting(
-    {
+    buildPassRoutingInput({
       senderRole: handoff.senderRole,
       round: handoff.envelopeRound,
       summary,
@@ -183,13 +187,7 @@ export async function emitPassFromWorkspace(
       hasFindings,
       noFindings,
       findingsPayloadInvalid: normalizedPayload.findingsPayloadInvalid,
-      bubbleConfig: {
-        review_artifact_type: resolved.bubbleConfig.review_artifact_type,
-        severity_gate_round: resolved.bubbleConfig.severity_gate_round,
-        ...(resolved.bubbleConfig.accuracy_critical !== undefined
-          ? { accuracy_critical: resolved.bubbleConfig.accuracy_critical }
-          : {})
-      },
+      bubbleConfig: resolved.bubbleConfig,
       worktreePath: resolved.bubblePaths.worktreePath,
       transcriptPath: resolved.bubblePaths.transcriptPath,
       reviewer,
@@ -198,14 +196,14 @@ export async function emitPassFromWorkspace(
       ...(input.intent !== undefined
         ? { inputIntent: input.intent }
         : {})
-    },
-    {
+    }),
+    buildPassRoutingDependencies({
       prepareReviewerPass,
       resolvePassIntent,
       prepareReviewerVerification,
       resolveReviewerVerification,
       inferDefaultPassIntent: inferPassIntent
-    }
+    })
   );
 
   const repeatCleanTrigger = passRouting.repeatCleanTrigger;
