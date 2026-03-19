@@ -2,28 +2,13 @@ import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import {
   emitTmuxDeliveryNotification
 } from "../../../core/runtime/tmuxDelivery.js";
-import type {
-  resolveDeliveryMessageRef
-} from "../../../core/runtime/tmuxDelivery.js";
 import {
   emitBubbleLifecycleEventBestEffort
 } from "../../../core/metrics/bubbleEvents.js";
-
-export interface AskHumanFinalizationDependencySource {
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification | undefined;
-  emitBubbleNotification?: typeof emitBubbleNotification | undefined;
-  resolveDeliveryMessageRef?: typeof resolveDeliveryMessageRef | undefined;
-  emitBubbleLifecycleEventBestEffort?:
-    | typeof emitBubbleLifecycleEventBestEffort
-    | undefined;
-}
-
-export interface AskHumanFinalizationDependencies {
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
-  emitBubbleNotification?: typeof emitBubbleNotification;
-  resolveDeliveryMessageRef?: typeof resolveDeliveryMessageRef;
-  emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
-}
+import type {
+  AskHumanFinalizationDependencies,
+  AskHumanFinalizationDependencySource
+} from "./askHumanFinalizationDependencyBuilderContract.js";
 
 export function buildAskHumanFinalizationDependencies(
   dependencies: AskHumanFinalizationDependencySource
