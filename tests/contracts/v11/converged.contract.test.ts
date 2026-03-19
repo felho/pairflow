@@ -90,6 +90,12 @@ describe("v11 converged contract harness skeleton", () => {
     expect(uniqueIds.size).toBe(ids.length);
   });
 
+  it("keeps converged manifest sources sorted", async () => {
+    const sources = await listConvergedCaseSourcesFromManifest();
+    const sorted = [...sources].sort((left, right) => left.localeCompare(right));
+    expect(sources).toEqual(sorted);
+  });
+
   it("keeps converged manifest ids aligned with case ids", async () => {
     const entries = await listConvergedManifestEntries();
     const manifestIdsBySource = new Map(
