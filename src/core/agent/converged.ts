@@ -1,7 +1,5 @@
 import { normalizeStringList, requireNonEmptyString } from "../util/normalize.js";
-import { WorkspaceResolutionError } from "../bubble/workspaceResolution.js";
 import {
-  toMetaReviewGateError,
   type MetaReviewGateRoute
 } from "../bubble/metaReviewGate.js";
 import type { PairflowCommandPathAssessment } from "../runtime/pairflowCommand.js";
@@ -19,8 +17,9 @@ import {
 } from "../../v11/application/converged/metaReviewRolloutBlockingReasonCodes.js";
 import {
   buildDefaultConvergedFlowDependencies,
-  buildConvergedFlowInput
+  buildConvergedFlowInput,
 } from "../../v11/shared/converged/convergedFlowInvocationBuilders.js";
+import { normalizeConvergedCommandError } from "../../v11/shared/converged/convergedCommandErrorNormalization.js";
 
 export interface EmitConvergedInput {
   summary: string;
@@ -106,22 +105,9 @@ export async function emitConvergedFromWorkspace(
 }
 
 export function asConvergedCommandError(error: unknown): never {
-  if (error instanceof ConvergedCommandError) {
-    throw error;
-  }
-
-  if (error instanceof WorkspaceResolutionError) {
-    throw new ConvergedCommandError(error.message);
-  }
-
-  if (error instanceof Error && error.name === "MetaReviewGateError") {
-    const gateError = toMetaReviewGateError(error);
-    throw new ConvergedCommandError(gateError.message);
-  }
-
-  if (error instanceof Error) {
-    throw new ConvergedCommandError(error.message);
-  }
-
-  throw error;
+  throw normalizeConvergedCommandError({
+    error,
+    isConvergedCommandError: (candidate) => candidate instanceof ConvergedCommandError,
+    createConvergedCommandError: (message) => new ConvergedCommandError(message)
+  });
 }
