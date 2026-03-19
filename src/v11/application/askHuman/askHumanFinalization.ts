@@ -32,6 +32,35 @@ export interface FinalizeAskHumanFlowDependencies {
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
 }
 
+function emitOptionalAskHumanNotifications(
+  input: FinalizeAskHumanFlowInput,
+  dependencies: {
+    emitTmuxDeliveryNotification: typeof emitTmuxDeliveryNotification;
+    emitBubbleNotification: typeof emitBubbleNotification;
+  },
+  messageRef: string
+): void {
+  // Optional UX signal; never block protocol/state progression on notification failure.
+  void dependencies.emitTmuxDeliveryNotification({
+    bubbleId: input.routing.resolved.bubbleId,
+    bubbleConfig: input.routing.resolved.bubbleConfig,
+    sessionsPath: input.routing.resolved.bubblePaths.sessionsPath,
+    envelope: input.appended.envelope,
+    messageRef
+  });
+
+  // Optional UX signal; never block protocol/state progression on notification failure.
+  void dependencies.emitBubbleNotification(input.routing.resolved.bubbleConfig, "waiting-human");
+}
+
+function buildAskHumanLifecycleMetadata(input: FinalizeAskHumanFlowInput) {
+  return {
+    sender: input.routing.state.active_agent,
+    refs_count: input.routing.refs.length,
+    question_length: Array.from(input.routing.question).length
+  };
+}
+
 export async function finalizeAskHumanFlow(
   input: FinalizeAskHumanFlowInput,
   dependencies: FinalizeAskHumanFlowDependencies = {}
@@ -51,17 +80,14 @@ export async function finalizeAskHumanFlow(
     envelope: input.appended.envelope
   });
 
-  // Optional UX signal; never block protocol/state progression on notification failure.
-  void emitTmuxDeliveryNotificationFn({
-    bubbleId: input.routing.resolved.bubbleId,
-    bubbleConfig: input.routing.resolved.bubbleConfig,
-    sessionsPath: input.routing.resolved.bubblePaths.sessionsPath,
-    envelope: input.appended.envelope,
+  emitOptionalAskHumanNotifications(
+    input,
+    {
+      emitTmuxDeliveryNotification: emitTmuxDeliveryNotificationFn,
+      emitBubbleNotification: emitBubbleNotificationFn
+    },
     messageRef
-  });
-
-  // Optional UX signal; never block protocol/state progression on notification failure.
-  void emitBubbleNotificationFn(input.routing.resolved.bubbleConfig, "waiting-human");
+  );
 
   await emitBubbleLifecycleEventBestEffortFn({
     repoPath: input.routing.resolved.repoPath,
@@ -70,11 +96,7 @@ export async function finalizeAskHumanFlow(
     eventType: "bubble_asked_human",
     round: input.routing.state.round,
     actorRole: input.routing.state.active_role,
-    metadata: {
-      sender: input.routing.state.active_agent,
-      refs_count: input.routing.refs.length,
-      question_length: Array.from(input.routing.question).length
-    },
+    metadata: buildAskHumanLifecycleMetadata(input),
     now: input.now
   });
 
