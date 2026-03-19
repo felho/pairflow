@@ -21,6 +21,7 @@ describe("approvalCommandInputNormalization", () => {
     const normalized = normalizeApprovalDecisionInput({
       bubbleId: "b_approval_01",
       decision: "approve",
+      overrideNonApprove: true,
       overrideReason: "  manual confirmation  ",
       message: "  verified manually  ",
       refs: ["  a.md ", "", "a.md", "b.md"],
@@ -32,6 +33,7 @@ describe("approvalCommandInputNormalization", () => {
     expect(normalized).toMatchObject({
       bubbleId: "b_approval_01",
       decision: "approve",
+      overrideNonApprove: true,
       overrideReason: "manual confirmation",
       message: "verified manually",
       refs: ["a.md", "b.md"],
