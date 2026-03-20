@@ -111,6 +111,24 @@
       "kind": "seed_case"
     },
     {
+      "id": "merge-state-not-done",
+      "command": "merge",
+      "source": "tests/contracts/v11/cases/merge/merge-state-not-done.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "merge-state-not-done-v11",
+      "command": "merge",
+      "source": "tests/contracts/v11/cases/merge/merge-state-not-done-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "merge-state-not-done-parity",
+      "command": "merge",
+      "source": "tests/contracts/v11/cases/merge/merge-state-not-done-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "approval-approve-basic",
       "command": "approval",
       "source": "tests/contracts/v11/cases/approval/approval-approve-basic.case.json",
@@ -183,6 +201,24 @@
       "kind": "seed_case"
     },
     {
+      "id": "start-state-not-startable",
+      "command": "start",
+      "source": "tests/contracts/v11/cases/start/start-state-not-startable.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "start-state-not-startable-v11",
+      "command": "start",
+      "source": "tests/contracts/v11/cases/start/start-state-not-startable-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "start-state-not-startable-parity",
+      "command": "start",
+      "source": "tests/contracts/v11/cases/start/start-state-not-startable-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "resume-basic",
       "command": "resume",
       "source": "tests/contracts/v11/cases/resume/resume-basic.case.json",
@@ -234,6 +270,24 @@
       "id": "commit-basic-parity",
       "command": "commit",
       "source": "tests/contracts/v11/cases/commit/commit-basic-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "commit-staged-files-empty",
+      "command": "commit",
+      "source": "tests/contracts/v11/cases/commit/commit-staged-files-empty.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "commit-staged-files-empty-v11",
+      "command": "commit",
+      "source": "tests/contracts/v11/cases/commit/commit-staged-files-empty-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "commit-staged-files-empty-parity",
+      "command": "commit",
+      "source": "tests/contracts/v11/cases/commit/commit-staged-files-empty-parity.case.json",
       "kind": "seed_case"
     },
     {

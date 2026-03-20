@@ -1,0 +1,25 @@
+{
+  "id": "start-state-not-startable-parity",
+  "command": "start",
+  "mode": "parity",
+  "description": "Seed start parity contract case for rejection when state cannot be started.",
+  "input": {
+    "fixture": {
+      "scenario": "state_not_startable"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "START_STATE_NOT_STARTABLE",
+    "stateSubset": {
+      "state": "FAILED"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "start",
+    "parity",
+    "error-path"
+  ]
+}

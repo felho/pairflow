@@ -1,0 +1,26 @@
+{
+  "id": "commit-staged-files-empty-parity",
+  "command": "commit",
+  "mode": "parity",
+  "description": "Seed commit parity contract case for rejection when no staged files exist and auto stage is disabled.",
+  "input": {
+    "auto": false,
+    "fixture": {
+      "scenario": "staged_files_empty"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "COMMIT_STAGED_FILES_EMPTY",
+    "stateSubset": {
+      "state": "APPROVED_FOR_COMMIT"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "commit",
+    "parity",
+    "error-path"
+  ]
+}

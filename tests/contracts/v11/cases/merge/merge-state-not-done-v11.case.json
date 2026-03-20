@@ -1,0 +1,26 @@
+{
+  "id": "merge-state-not-done-v11",
+  "command": "merge",
+  "mode": "v11",
+  "description": "Seed merge v11 contract case for rejection when state is not DONE.",
+  "input": {
+    "tmuxSessionExisted": false,
+    "fixture": {
+      "scenario": "state_not_done"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "MERGE_STATE_DONE_REQUIRED",
+    "stateSubset": {
+      "state": "CREATED"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "merge",
+    "v11",
+    "error-path"
+  ]
+}

@@ -12,7 +12,10 @@ const execFileAsync = promisify(execFile);
 const commitCaseSources = [
   "tests/contracts/v11/cases/commit/commit-basic.case.json",
   "tests/contracts/v11/cases/commit/commit-basic-v11.case.json",
-  "tests/contracts/v11/cases/commit/commit-basic-parity.case.json"
+  "tests/contracts/v11/cases/commit/commit-basic-parity.case.json",
+  "tests/contracts/v11/cases/commit/commit-staged-files-empty.case.json",
+  "tests/contracts/v11/cases/commit/commit-staged-files-empty-v11.case.json",
+  "tests/contracts/v11/cases/commit/commit-staged-files-empty-parity.case.json"
 ] as const;
 
 const commitExpectedSourcesSorted = [...commitCaseSources].sort();
@@ -52,12 +55,18 @@ describe("v11 commit contract harness skeleton", () => {
       const caseDef = await readContractCase(casePath);
       const run = await runCommitContractCase(caseDef);
       if (caseDef.mode === "legacy") {
-        expect(run.legacy?.status).toBe("ok");
+        expect(run.legacy?.status).toBe(caseDef.expected.status);
+        if (caseDef.expected.reasonCode !== undefined) {
+          expect(run.legacy?.reasonCode).toBe(caseDef.expected.reasonCode);
+        }
         expect(run.v11).toBeUndefined();
         continue;
       }
       if (caseDef.mode === "v11") {
-        expect(run.v11?.status).toBe("ok");
+        expect(run.v11?.status).toBe(caseDef.expected.status);
+        if (caseDef.expected.reasonCode !== undefined) {
+          expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
+        }
         expect(run.legacy).toBeUndefined();
         continue;
       }

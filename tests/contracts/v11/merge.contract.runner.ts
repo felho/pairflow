@@ -4,18 +4,21 @@ import { join } from "node:path";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { mergeBubble } from "../../../src/core/bubble/mergeBubble.js";
-import { mergeBubbleV11 } from "../../../src/v11/application/merge/emitMergeV11.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../../src/core/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/core/workspace/worktreeManager.js";
+import { mergeBubbleV11 } from "../../../src/v11/application/merge/emitMergeV11.js";
 import { initGitRepository, runGit } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
 
-export interface MergeContractOutput {
+export interface MergeContractSuccessOutput {
   status: "ok";
   reasonCode: "MERGED";
+  stateSubset: {
+    state: string;
+  };
   baseBranch: string;
   bubbleBranchPrefix: boolean;
   pushedBaseBranch: boolean;
@@ -27,14 +30,29 @@ export interface MergeContractOutput {
   hasMergeCommitSha: boolean;
 }
 
+export interface MergeContractErrorOutput {
+  status: "error";
+  reasonCode: string | null;
+  stateSubset: {
+    state: string;
+  };
+}
+
+export type MergeContractOutput =
+  | MergeContractSuccessOutput
+  | MergeContractErrorOutput;
+
 export interface MergeContractRunResult {
   mode: ContractCase["mode"];
   legacy?: MergeContractOutput;
   v11?: MergeContractOutput;
 }
 
+type MergeContractScenario = "basic" | "state_not_done";
+
 interface ParsedMergeCaseInput {
   tmuxSessionExisted: boolean;
+  scenario: MergeContractScenario;
 }
 
 function parseMergeCaseInput(input: ContractCase["input"]): ParsedMergeCaseInput {
@@ -45,17 +63,42 @@ function parseMergeCaseInput(input: ContractCase["input"]): ParsedMergeCaseInput
   ) {
     throw new Error("merge contract input.tmuxSessionExisted must be a boolean.");
   }
+
+  const fixtureRaw = input.fixture;
+  let scenario: MergeContractScenario = "basic";
+  if (fixtureRaw !== undefined) {
+    if (typeof fixtureRaw !== "object" || fixtureRaw === null) {
+      throw new Error("merge contract input.fixture must be an object when provided.");
+    }
+    const scenarioRaw = (fixtureRaw as Record<string, unknown>).scenario;
+    if (
+      scenarioRaw !== undefined &&
+      scenarioRaw !== "basic" &&
+      scenarioRaw !== "state_not_done"
+    ) {
+      throw new Error(
+        "merge contract input.fixture.scenario must be one of: basic, state_not_done."
+      );
+    }
+    scenario = (scenarioRaw as MergeContractScenario | undefined) ?? "basic";
+  }
+
   return {
-    tmuxSessionExisted: tmuxSessionExistedRaw ?? false
+    tmuxSessionExisted: tmuxSessionExistedRaw ?? false,
+    scenario
   };
 }
 
 function normalizeMergeResult(
-  result: Awaited<ReturnType<typeof mergeBubble>>
-): MergeContractOutput {
+  result: Awaited<ReturnType<typeof mergeBubble>>,
+  state: string
+): MergeContractSuccessOutput {
   return {
     status: "ok",
     reasonCode: "MERGED",
+    stateSubset: {
+      state
+    },
     baseBranch: result.baseBranch,
     bubbleBranchPrefix: result.bubbleBranch.startsWith("bubble/"),
     pushedBaseBranch: result.pushedBaseBranch,
@@ -65,6 +108,21 @@ function normalizeMergeResult(
     removedWorktree: result.removedWorktree,
     removedBubbleBranch: result.removedBubbleBranch,
     hasMergeCommitSha: result.mergeCommitSha.length > 6
+  };
+}
+
+function normalizeMergeErrorResult(input: {
+  error: unknown;
+  state: string;
+}): MergeContractErrorOutput {
+  const message = input.error instanceof Error ? input.error.message : String(input.error);
+  const reasonMatch = /^([A-Z0-9_]+):/u.exec(message.trim());
+  return {
+    status: "error",
+    reasonCode: reasonMatch?.[1] ?? null,
+    stateSubset: {
+      state: input.state
+    }
   };
 }
 
@@ -84,6 +142,15 @@ function assertContractExpectedSubset(input: {
   ) {
     throw new Error(
       `${input.label}: reasonCode mismatch (expected=${input.expected.reasonCode}, actual=${input.output.reasonCode})`
+    );
+  }
+  const expectedState = input.expected.stateSubset?.state;
+  if (
+    typeof expectedState === "string" &&
+    input.output.stateSubset.state !== expectedState
+  ) {
+    throw new Error(
+      `${input.label}: stateSubset.state mismatch (expected=${expectedState}, actual=${input.output.stateSubset.state})`
     );
   }
 }
@@ -145,6 +212,17 @@ async function setupDoneBubble(repoPath: string, bubbleId: string) {
   return bubble;
 }
 
+async function setupCreatedBubble(repoPath: string, bubbleId: string) {
+  return createBubble({
+    id: bubbleId,
+    repoPath,
+    baseBranch: "main",
+    reviewArtifactType: "code",
+    task: "Merge contract state-not-done fixture",
+    cwd: repoPath
+  });
+}
+
 async function executeMergeCase(input: {
   caseDef: ContractCase;
   executor: typeof mergeBubble;
@@ -152,25 +230,36 @@ async function executeMergeCase(input: {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-merge-contract-"));
   try {
     await initGitRepository(repoPath);
-    const bubble = await setupDoneBubble(repoPath, `b_contract_${input.caseDef.id}`);
     const parsedInput = parseMergeCaseInput(input.caseDef.input);
+    const bubble = parsedInput.scenario === "state_not_done"
+      ? await setupCreatedBubble(repoPath, `b_contract_${input.caseDef.id}`)
+      : await setupDoneBubble(repoPath, `b_contract_${input.caseDef.id}`);
 
-    const result = await input.executor(
-      {
-        bubbleId: bubble.bubbleId,
-        cwd: repoPath,
-        now: new Date("2026-03-20T11:20:00.000Z")
-      },
-      {
-        terminateBubbleTmuxSession: (terminateInput) =>
-          Promise.resolve({
-            sessionName: `pf-${terminateInput.bubbleId ?? "unknown"}`,
-            existed: parsedInput.tmuxSessionExisted
-          })
-      }
-    );
+    try {
+      const result = await input.executor(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-03-20T11:20:00.000Z")
+        },
+        {
+          terminateBubbleTmuxSession: (terminateInput) =>
+            Promise.resolve({
+              sessionName: `pf-${terminateInput.bubbleId ?? "unknown"}`,
+              existed: parsedInput.tmuxSessionExisted
+            })
+        }
+      );
 
-    return normalizeMergeResult(result);
+      const stateSnapshot = await readStateSnapshot(bubble.paths.statePath);
+      return normalizeMergeResult(result, stateSnapshot.state.state);
+    } catch (error) {
+      const stateSnapshot = await readStateSnapshot(bubble.paths.statePath);
+      return normalizeMergeErrorResult({
+        error,
+        state: stateSnapshot.state.state
+      });
+    }
   } finally {
     await rm(repoPath, { recursive: true, force: true });
   }

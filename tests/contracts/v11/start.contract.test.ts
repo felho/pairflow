@@ -12,7 +12,10 @@ const execFileAsync = promisify(execFile);
 const startCaseSources = [
   "tests/contracts/v11/cases/start/start-basic.case.json",
   "tests/contracts/v11/cases/start/start-basic-v11.case.json",
-  "tests/contracts/v11/cases/start/start-basic-parity.case.json"
+  "tests/contracts/v11/cases/start/start-basic-parity.case.json",
+  "tests/contracts/v11/cases/start/start-state-not-startable.case.json",
+  "tests/contracts/v11/cases/start/start-state-not-startable-v11.case.json",
+  "tests/contracts/v11/cases/start/start-state-not-startable-parity.case.json"
 ] as const;
 
 const startExpectedSourcesSorted = [...startCaseSources].sort();
@@ -49,12 +52,18 @@ describe("v11 start contract harness skeleton", () => {
       const caseDef = await readContractCase(casePath);
       const run = await runStartContractCase(caseDef);
       if (caseDef.mode === "legacy") {
-        expect(run.legacy?.status).toBe("ok");
+        expect(run.legacy?.status).toBe(caseDef.expected.status);
+        if (caseDef.expected.reasonCode !== undefined) {
+          expect(run.legacy?.reasonCode).toBe(caseDef.expected.reasonCode);
+        }
         expect(run.v11).toBeUndefined();
         continue;
       }
       if (caseDef.mode === "v11") {
-        expect(run.v11?.status).toBe("ok");
+        expect(run.v11?.status).toBe(caseDef.expected.status);
+        if (caseDef.expected.reasonCode !== undefined) {
+          expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
+        }
         expect(run.legacy).toBeUndefined();
         continue;
       }
