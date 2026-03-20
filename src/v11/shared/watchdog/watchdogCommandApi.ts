@@ -90,6 +90,304 @@ async function recoverMetaReviewRouteWithConflictGuard(input: {
   }
 }
 
+interface WatchdogRuntimeContext {
+  now: Date;
+  nowIso: string;
+  resolved: Awaited<ReturnType<typeof resolveBubbleById>>;
+  readState: typeof readStateSnapshot;
+  recoverMetaReviewRoute: typeof recoverMetaReviewGateFromSnapshot;
+  loadedState: Awaited<ReturnType<typeof readStateSnapshot>>;
+  state: BubbleStateSnapshot;
+  emitDelivery: typeof emitTmuxDeliveryNotification;
+  emitNotification: typeof emitBubbleNotification;
+}
+
+function mapRecoveredMetaReviewResult(input: {
+  bubbleId: string;
+  fallbackState: BubbleStateSnapshot;
+  recovered: Awaited<ReturnType<typeof recoverMetaReviewRouteWithConflictGuard>>;
+}): BubbleWatchdogResult {
+  if (input.recovered.routed === null) {
+    const latestState = input.recovered.latestState ?? input.fallbackState;
+    return {
+      bubbleId: input.bubbleId,
+      escalated: false,
+      reason: latestState.state === "META_REVIEW_RUNNING"
+        ? "not_expired"
+        : "state_not_running",
+      state: latestState
+    };
+  }
+  return {
+    bubbleId: input.bubbleId,
+    escalated: true,
+    reason: "escalated",
+    state: input.recovered.routed.state,
+    envelope: input.recovered.routed.gateEnvelope,
+    sequence: input.recovered.routed.gateSequence
+  };
+}
+
+async function maybeApplyPendingReworkIntent(
+  context: WatchdogRuntimeContext
+): Promise<BubbleWatchdogResult | null> {
+  if (context.state.state !== "WAITING_HUMAN") {
+    return null;
+  }
+  const pendingIntent = context.state.pending_rework_intent ?? null;
+  if (pendingIntent === null || pendingIntent.status !== "pending") {
+    return null;
+  }
+
+  const deliveryEnvelope: ProtocolEnvelope = {
+    id: pendingIntent.intent_id,
+    ts: context.nowIso,
+    bubble_id: context.resolved.bubbleId,
+    sender: "human",
+    recipient: context.resolved.bubbleConfig.agents.implementer,
+    type: "APPROVAL_DECISION",
+    round: context.state.round,
+    payload: {
+      decision: "revise",
+      message: pendingIntent.message
+    },
+    refs: [`rework-intent://${pendingIntent.intent_id}`]
+  };
+
+  const delivery = await context.emitDelivery({
+    bubbleId: context.resolved.bubbleId,
+    bubbleConfig: context.resolved.bubbleConfig,
+    sessionsPath: context.resolved.bubblePaths.sessionsPath,
+    envelope: deliveryEnvelope,
+    messageRef: resolveDeliveryMessageRef({
+      bubbleId: context.resolved.bubbleId,
+      sessionsPath: context.resolved.bubblePaths.sessionsPath,
+      envelope: deliveryEnvelope
+    })
+  });
+
+  if (!delivery.delivered) {
+    return {
+      bubbleId: context.resolved.bubbleId,
+      escalated: false,
+      reason: "rework_delivery_failed",
+      state: context.state,
+      intentId: pendingIntent.intent_id,
+      deliveryError: `Pending rework intent delivery was not confirmed (reason: ${delivery.reason ?? "unknown"}). Ensure runtime session is healthy, then rerun watchdog.`
+    };
+  }
+
+  const appliedTransition = applyDeferredReworkIntent({
+    state: context.state,
+    implementer: context.resolved.bubbleConfig.agents.implementer,
+    reviewer: context.resolved.bubbleConfig.agents.reviewer,
+    now: context.now
+  });
+  if (appliedTransition === null) {
+    return {
+      bubbleId: context.resolved.bubbleId,
+      escalated: false,
+      reason: "not_monitored",
+      state: context.state
+    };
+  }
+
+  const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
+    bubbleId: context.resolved.bubbleId,
+    repoPath: context.resolved.repoPath,
+    bubblePaths: context.resolved.bubblePaths,
+    bubbleConfig: context.resolved.bubbleConfig,
+    now: context.now
+  });
+  context.resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
+
+  let written;
+  try {
+    written = await writeStateSnapshot(
+      context.resolved.bubblePaths.statePath,
+      appliedTransition.state,
+      {
+        expectedFingerprint: context.loadedState.fingerprint,
+        expectedState: "WAITING_HUMAN"
+      }
+    );
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new BubbleWatchdogError(
+      `Pending rework intent ${pendingIntent.intent_id} delivery succeeded but state update failed. Root error: ${reason}`
+    );
+  }
+
+  await emitBubbleLifecycleEventBestEffort({
+    repoPath: context.resolved.repoPath,
+    bubbleId: context.resolved.bubbleId,
+    bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
+    eventType: "rework_intent_applied",
+    round: context.state.round,
+    actorRole: "orchestrator",
+    metadata: {
+      intent_id: appliedTransition.intent.intent_id,
+      requested_by: appliedTransition.intent.requested_by,
+      requested_at: appliedTransition.intent.requested_at,
+      state_at_request: "WAITING_HUMAN"
+    },
+    now: context.now
+  });
+
+  return {
+    bubbleId: context.resolved.bubbleId,
+    escalated: false,
+    reason: "rework_intent_applied",
+    state: written.state,
+    intentId: appliedTransition.intent.intent_id
+  };
+}
+
+async function maybeRouteMetaReviewBeforeExpiry(
+  context: WatchdogRuntimeContext
+): Promise<BubbleWatchdogResult | null> {
+  if (context.state.state !== "META_REVIEW_RUNNING") {
+    return null;
+  }
+  if (!hasCanonicalMetaReviewSubmitInActiveWindow(context.state)) {
+    return {
+      bubbleId: context.resolved.bubbleId,
+      escalated: false,
+      reason: "not_expired",
+      state: context.state
+    };
+  }
+
+  const recovered = await recoverMetaReviewRouteWithConflictGuard({
+    resolved: context.resolved,
+    now: context.now,
+    summary: "Meta-review submit detected; watchdog routed from canonical snapshot.",
+    readState: context.readState,
+    recoverMetaReviewRoute: context.recoverMetaReviewRoute
+  });
+  return mapRecoveredMetaReviewResult({
+    bubbleId: context.resolved.bubbleId,
+    fallbackState: context.state,
+    recovered
+  });
+}
+
+async function maybeRouteMetaReviewOnExpiry(
+  context: WatchdogRuntimeContext
+): Promise<BubbleWatchdogResult | null> {
+  if (context.state.state !== "META_REVIEW_RUNNING") {
+    return null;
+  }
+  const recovered = await recoverMetaReviewRouteWithConflictGuard({
+    resolved: context.resolved,
+    now: context.now,
+    summary:
+      `META_REVIEW_GATE_RUN_FAILED: timeout waiting for structured meta-review submit after ${context.resolved.bubbleConfig.watchdog_timeout_minutes} minutes.`,
+    readState: context.readState,
+    recoverMetaReviewRoute: context.recoverMetaReviewRoute
+  });
+  return mapRecoveredMetaReviewResult({
+    bubbleId: context.resolved.bubbleId,
+    fallbackState: context.state,
+    recovered
+  });
+}
+
+async function buildNotExpiredResult(
+  context: WatchdogRuntimeContext
+): Promise<BubbleWatchdogResult> {
+  // Best-effort: if a pairflow message is stuck in the active agent's
+  // input buffer (Enter didn't register during delivery), retry it now.
+  let stuckRetried: boolean | undefined;
+  if (context.state.state === "RUNNING" && context.state.active_agent !== null) {
+    const retryResult = await retryStuckAgentInput({
+      bubbleId: context.resolved.bubbleId,
+      bubbleConfig: context.resolved.bubbleConfig,
+      sessionsPath: context.resolved.bubblePaths.sessionsPath,
+      activeAgent: context.state.active_agent
+    }).catch(() => undefined);
+    if (retryResult?.retried) {
+      stuckRetried = true;
+    }
+  }
+  return {
+    bubbleId: context.resolved.bubbleId,
+    escalated: false,
+    reason: "not_expired",
+    state: context.state,
+    stuckRetried
+  };
+}
+
+async function escalateRunningWatchdog(
+  context: WatchdogRuntimeContext
+): Promise<BubbleWatchdogResult> {
+  const lockPath = join(context.resolved.bubblePaths.locksDir, `${context.resolved.bubbleId}.lock`);
+  const appended = await appendProtocolEnvelope({
+    transcriptPath: context.resolved.bubblePaths.transcriptPath,
+    mirrorPaths: [context.resolved.bubblePaths.inboxPath],
+    lockPath,
+    now: context.now,
+    envelope: {
+      bubble_id: context.resolved.bubbleId,
+      sender: "orchestrator",
+      recipient: "human",
+      type: "HUMAN_QUESTION",
+      round: context.state.round,
+      payload: {
+        question: buildEscalationQuestion(
+          context.resolved.bubbleId,
+          context.state.active_agent ?? "unknown",
+          context.resolved.bubbleConfig.watchdog_timeout_minutes
+        )
+      },
+      refs: []
+    }
+  });
+
+  const nextState = applyStateTransition(context.state, {
+    to: "WAITING_HUMAN",
+    lastCommandAt: context.nowIso
+  });
+
+  let written;
+  try {
+    written = await writeStateSnapshot(context.resolved.bubblePaths.statePath, nextState, {
+      expectedFingerprint: context.loadedState.fingerprint,
+      expectedState: "RUNNING"
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new BubbleWatchdogError(
+      `Watchdog escalation envelope ${appended.envelope.id} was appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`
+    );
+  }
+
+  // Optional UX signal; never block protocol/state progression on notification failure.
+  void context.emitDelivery({
+    bubbleId: context.resolved.bubbleId,
+    bubbleConfig: context.resolved.bubbleConfig,
+    sessionsPath: context.resolved.bubblePaths.sessionsPath,
+    envelope: appended.envelope,
+    messageRef: resolveDeliveryMessageRef({
+      bubbleId: context.resolved.bubbleId,
+      sessionsPath: context.resolved.bubblePaths.sessionsPath,
+      envelope: appended.envelope
+    })
+  });
+  // Optional UX signal; never block protocol/state progression on notification failure.
+  void context.emitNotification(context.resolved.bubbleConfig, "waiting-human");
+
+  return {
+    bubbleId: context.resolved.bubbleId,
+    escalated: true,
+    reason: "escalated",
+    state: written.state,
+    envelope: appended.envelope,
+    sequence: appended.sequence
+  };
+}
+
 export async function runBubbleWatchdog(
   input: BubbleWatchdogInput,
   dependencies: BubbleWatchdogDependencies = {}
@@ -111,113 +409,21 @@ export async function runBubbleWatchdog(
     dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
   const emitNotification =
     dependencies.emitBubbleNotification ?? emitBubbleNotification;
+  const context: WatchdogRuntimeContext = {
+    now,
+    nowIso,
+    resolved,
+    readState,
+    recoverMetaReviewRoute,
+    loadedState,
+    state,
+    emitDelivery,
+    emitNotification
+  };
 
-  if (state.state === "WAITING_HUMAN") {
-    const pendingIntent = state.pending_rework_intent ?? null;
-    if (pendingIntent !== null && pendingIntent.status === "pending") {
-      const deliveryEnvelope: ProtocolEnvelope = {
-        id: pendingIntent.intent_id,
-        ts: nowIso,
-        bubble_id: resolved.bubbleId,
-        sender: "human",
-        recipient: resolved.bubbleConfig.agents.implementer,
-        type: "APPROVAL_DECISION",
-        round: state.round,
-        payload: {
-          decision: "revise",
-          message: pendingIntent.message
-        },
-        refs: [`rework-intent://${pendingIntent.intent_id}`]
-      };
-
-      const delivery = await emitDelivery({
-        bubbleId: resolved.bubbleId,
-        bubbleConfig: resolved.bubbleConfig,
-        sessionsPath: resolved.bubblePaths.sessionsPath,
-        envelope: deliveryEnvelope,
-        messageRef: resolveDeliveryMessageRef({
-          bubbleId: resolved.bubbleId,
-          sessionsPath: resolved.bubblePaths.sessionsPath,
-          envelope: deliveryEnvelope
-        })
-      });
-
-      if (!delivery.delivered) {
-        return {
-          bubbleId: resolved.bubbleId,
-          escalated: false,
-          reason: "rework_delivery_failed",
-          state,
-          intentId: pendingIntent.intent_id,
-          deliveryError: `Pending rework intent delivery was not confirmed (reason: ${delivery.reason ?? "unknown"}). Ensure runtime session is healthy, then rerun watchdog.`
-        };
-      }
-
-      const appliedTransition = applyDeferredReworkIntent({
-        state,
-        implementer: resolved.bubbleConfig.agents.implementer,
-        reviewer: resolved.bubbleConfig.agents.reviewer,
-        now
-      });
-      if (appliedTransition === null) {
-        return {
-          bubbleId: resolved.bubbleId,
-          escalated: false,
-          reason: "not_monitored",
-          state
-        };
-      }
-
-      const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
-        bubbleId: resolved.bubbleId,
-        repoPath: resolved.repoPath,
-        bubblePaths: resolved.bubblePaths,
-        bubbleConfig: resolved.bubbleConfig,
-        now
-      });
-      resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
-
-      let written;
-      try {
-        written = await writeStateSnapshot(
-          resolved.bubblePaths.statePath,
-          appliedTransition.state,
-          {
-            expectedFingerprint: loadedState.fingerprint,
-            expectedState: "WAITING_HUMAN"
-          }
-        );
-      } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        throw new BubbleWatchdogError(
-          `Pending rework intent ${pendingIntent.intent_id} delivery succeeded but state update failed. Root error: ${reason}`
-        );
-      }
-
-      await emitBubbleLifecycleEventBestEffort({
-        repoPath: resolved.repoPath,
-        bubbleId: resolved.bubbleId,
-        bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
-        eventType: "rework_intent_applied",
-        round: state.round,
-        actorRole: "orchestrator",
-        metadata: {
-          intent_id: appliedTransition.intent.intent_id,
-          requested_by: appliedTransition.intent.requested_by,
-          requested_at: appliedTransition.intent.requested_at,
-          state_at_request: "WAITING_HUMAN"
-        },
-        now
-      });
-
-      return {
-        bubbleId: resolved.bubbleId,
-        escalated: false,
-        reason: "rework_intent_applied",
-        state: written.state,
-        intentId: appliedTransition.intent.intent_id
-      };
-    }
+  const pendingRework = await maybeApplyPendingReworkIntent(context);
+  if (pendingRework !== null) {
+    return pendingRework;
   }
 
   const watchdog = computeWatchdogStatus(
@@ -235,95 +441,16 @@ export async function runBubbleWatchdog(
   }
 
   if (!watchdog.expired) {
-    if (state.state === "META_REVIEW_RUNNING") {
-      if (!hasCanonicalMetaReviewSubmitInActiveWindow(state)) {
-        return {
-          bubbleId: resolved.bubbleId,
-          escalated: false,
-          reason: "not_expired",
-          state
-        };
-      }
-
-      const recovered = await recoverMetaReviewRouteWithConflictGuard({
-        resolved,
-        now,
-        summary: "Meta-review submit detected; watchdog routed from canonical snapshot.",
-        readState,
-        recoverMetaReviewRoute
-      });
-      if (recovered.routed === null) {
-        const latestState = recovered.latestState ?? state;
-        return {
-          bubbleId: resolved.bubbleId,
-          escalated: false,
-          reason: latestState.state === "META_REVIEW_RUNNING"
-            ? "not_expired"
-            : "state_not_running",
-          state: latestState
-        };
-      }
-      return {
-        bubbleId: resolved.bubbleId,
-        escalated: true,
-        reason: "escalated",
-        state: recovered.routed.state,
-        envelope: recovered.routed.gateEnvelope,
-        sequence: recovered.routed.gateSequence
-      };
+    const metaReviewNotExpired = await maybeRouteMetaReviewBeforeExpiry(context);
+    if (metaReviewNotExpired !== null) {
+      return metaReviewNotExpired;
     }
-
-    // Best-effort: if a pairflow message is stuck in the active agent's
-    // input buffer (Enter didn't register during delivery), retry it now.
-    let stuckRetried: boolean | undefined;
-    if (state.state === "RUNNING" && state.active_agent !== null) {
-      const retryResult = await retryStuckAgentInput({
-        bubbleId: resolved.bubbleId,
-        bubbleConfig: resolved.bubbleConfig,
-        sessionsPath: resolved.bubblePaths.sessionsPath,
-        activeAgent: state.active_agent
-      }).catch(() => undefined);
-      if (retryResult?.retried) {
-        stuckRetried = true;
-      }
-    }
-    return {
-      bubbleId: resolved.bubbleId,
-      escalated: false,
-      reason: "not_expired",
-      state,
-      stuckRetried
-    };
+    return buildNotExpiredResult(context);
   }
 
-  if (state.state === "META_REVIEW_RUNNING") {
-    const recovered = await recoverMetaReviewRouteWithConflictGuard({
-      resolved,
-      now,
-      summary:
-        `META_REVIEW_GATE_RUN_FAILED: timeout waiting for structured meta-review submit after ${resolved.bubbleConfig.watchdog_timeout_minutes} minutes.`,
-      readState,
-      recoverMetaReviewRoute
-    });
-    if (recovered.routed === null) {
-      const latestState = recovered.latestState ?? state;
-      return {
-        bubbleId: resolved.bubbleId,
-        escalated: false,
-        reason: latestState.state === "META_REVIEW_RUNNING"
-          ? "not_expired"
-          : "state_not_running",
-        state: latestState
-      };
-    }
-    return {
-      bubbleId: resolved.bubbleId,
-      escalated: true,
-      reason: "escalated",
-      state: recovered.routed.state,
-      envelope: recovered.routed.gateEnvelope,
-      sequence: recovered.routed.gateSequence
-    };
+  const metaReviewExpired = await maybeRouteMetaReviewOnExpiry(context);
+  if (metaReviewExpired !== null) {
+    return metaReviewExpired;
   }
 
   if (state.state !== "RUNNING") {
@@ -344,70 +471,7 @@ export async function runBubbleWatchdog(
     };
   }
 
-  const lockPath = join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`);
-  const appended = await appendProtocolEnvelope({
-    transcriptPath: resolved.bubblePaths.transcriptPath,
-    mirrorPaths: [resolved.bubblePaths.inboxPath],
-    lockPath,
-    now,
-    envelope: {
-      bubble_id: resolved.bubbleId,
-      sender: "orchestrator",
-      recipient: "human",
-      type: "HUMAN_QUESTION",
-      round: state.round,
-      payload: {
-        question: buildEscalationQuestion(
-          resolved.bubbleId,
-          state.active_agent,
-          resolved.bubbleConfig.watchdog_timeout_minutes
-        )
-      },
-      refs: []
-    }
-  });
-
-  const nextState = applyStateTransition(state, {
-    to: "WAITING_HUMAN",
-    lastCommandAt: nowIso
-  });
-
-  let written;
-  try {
-    written = await writeStateSnapshot(resolved.bubblePaths.statePath, nextState, {
-      expectedFingerprint: loadedState.fingerprint,
-      expectedState: "RUNNING"
-    });
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new BubbleWatchdogError(
-      `Watchdog escalation envelope ${appended.envelope.id} was appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`
-    );
-  }
-
-  // Optional UX signal; never block protocol/state progression on notification failure.
-  void emitDelivery({
-    bubbleId: resolved.bubbleId,
-    bubbleConfig: resolved.bubbleConfig,
-    sessionsPath: resolved.bubblePaths.sessionsPath,
-    envelope: appended.envelope,
-    messageRef: resolveDeliveryMessageRef({
-      bubbleId: resolved.bubbleId,
-      sessionsPath: resolved.bubblePaths.sessionsPath,
-      envelope: appended.envelope
-    })
-  });
-  // Optional UX signal; never block protocol/state progression on notification failure.
-  void emitNotification(resolved.bubbleConfig, "waiting-human");
-
-  return {
-    bubbleId: resolved.bubbleId,
-    escalated: true,
-    reason: "escalated",
-    state: written.state,
-    envelope: appended.envelope,
-    sequence: appended.sequence
-  };
+  return escalateRunningWatchdog(context);
 }
 
 export function asBubbleWatchdogError(error: unknown): never {
