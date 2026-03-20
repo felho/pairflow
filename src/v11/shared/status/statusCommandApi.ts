@@ -100,13 +100,138 @@ function countPendingHumanQuestions(envelopes: ProtocolEnvelope[]): number {
   return pending;
 }
 
-export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleStatusView> {
-  const resolved = await resolveBubbleById({
-    bubbleId: input.bubbleId,
-    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
-    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
-  });
+type ResolvedBubbleStatusContext = Awaited<ReturnType<typeof resolveBubbleById>>;
 
+interface StatusGateState {
+  failingGates: BubbleFailingGate[];
+  specLockState: BubbleSpecLockState;
+  roundGateState: BubbleRoundGateState;
+}
+
+function defaultGateState(round: number): StatusGateState {
+  return {
+    failingGates: [],
+    specLockState: {
+      state: "IMPLEMENTABLE",
+      open_blocker_count: 0,
+      open_required_now_count: 0
+    },
+    roundGateState: {
+      applies: false,
+      violated: false,
+      round
+    }
+  };
+}
+
+function toStatusSerializationWarning(reason: string): BubbleFailingGate {
+  return {
+    gate_id: "status.serialization",
+    reason_code: "STATUS_GATE_SERIALIZATION_WARNING",
+    message: `Status gate artifact parse failed; using fallback defaults. ${reason}`,
+    priority: "P2",
+    timing: "later-hardening",
+    layer: "L1",
+    signal_level: "warning"
+  };
+}
+
+function withAccuracyCriticalVerificationGate(
+  failingGates: BubbleFailingGate[],
+  accuracyCritical: boolean,
+  verificationStatus: ReviewVerificationState
+): BubbleFailingGate[] {
+  if (!accuracyCritical || verificationStatus === "pass") {
+    return failingGates;
+  }
+  return [
+    ...failingGates,
+    {
+      gate_id: "accuracy_critical.review_verification",
+      reason_code: `ACCURACY_CRITICAL_REVIEW_VERIFICATION_${verificationStatus.toUpperCase()}`,
+      message: `Accuracy-critical review verification status is ${verificationStatus}.`,
+      priority: "P1",
+      timing: "required-now",
+      layer: "L1",
+      signal_level: "warning"
+    }
+  ];
+}
+
+function resolvePendingApprovalCount(
+  resolved: ResolvedBubbleStatusContext,
+  state: Awaited<ReturnType<typeof readStateSnapshot>>["state"],
+  inbox: ProtocolEnvelope[]
+): number {
+  return resolveCanonicalPendingApprovalSignal({
+    bubbleId: resolved.bubbleId,
+    state: state.state,
+    round: state.round,
+    metaReview: state.meta_review,
+    envelopes: inbox
+  }) === undefined
+    ? 0
+    : 1;
+}
+
+async function resolveReviewVerificationState(
+  resolved: ResolvedBubbleStatusContext,
+  state: Awaited<ReturnType<typeof readStateSnapshot>>["state"],
+  accuracyCritical: boolean
+): Promise<ReviewVerificationState> {
+  if (!accuracyCritical) {
+    return "missing";
+  }
+  const verification = await readReviewVerificationArtifactStatus(
+    resolved.bubblePaths.reviewVerificationArtifactPath,
+    {
+      expectedRound: state.round,
+      expectedReviewer: resolved.bubbleConfig.agents.reviewer
+    }
+  );
+  return verification.status;
+}
+
+async function resolveStatusGateState(
+  resolved: ResolvedBubbleStatusContext,
+  round: number
+): Promise<StatusGateState> {
+  const defaults = defaultGateState(round);
+  const docGateScopeActive = isDocContractGateScopeActive({
+    reviewArtifactType: resolved.bubbleConfig.review_artifact_type
+  });
+  if (!docGateScopeActive) {
+    return defaults;
+  }
+
+  try {
+    const gateArtifact = await readDocContractGateArtifact(
+      resolveDocContractGateArtifactPath(resolved.bubblePaths.artifactsDir)
+    );
+    if (gateArtifact === undefined) {
+      return defaults;
+    }
+    return {
+      failingGates: collectFailingGatesFromArtifact(gateArtifact),
+      specLockState: gateArtifact.spec_lock_state,
+      roundGateState: gateArtifact.round_gate_state
+    };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return {
+      ...defaults,
+      failingGates: [toStatusSerializationWarning(reason)]
+    };
+  }
+}
+
+async function readStatusTranscriptData(
+  resolved: ResolvedBubbleStatusContext
+): Promise<{
+  state: Awaited<ReturnType<typeof readStateSnapshot>>["state"];
+  transcript: ProtocolEnvelope[];
+  inbox: ProtocolEnvelope[];
+}> {
   const [{ state }, transcript, inbox] = await Promise.all([
     readStateSnapshot(resolved.bubblePaths.statePath),
     readTranscriptEnvelopes(resolved.bubblePaths.transcriptPath, {
@@ -118,90 +243,52 @@ export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleS
       tolerateInvalidEnvelopeLines: true
     })
   ]);
+  return { state, transcript, inbox };
+}
 
-  const lastMessage = transcript[transcript.length - 1] ?? null;
-  const pendingQuestions = countPendingHumanQuestions(inbox);
-  const pendingApprovals =
-    resolveCanonicalPendingApprovalSignal({
-      bubbleId: resolved.bubbleId,
-      state: state.state,
-      round: state.round,
-      metaReview: state.meta_review,
-      envelopes: inbox
-    }) === undefined
-      ? 0
-      : 1;
-  const accuracyCritical = resolved.bubbleConfig.accuracy_critical === true;
-  const verification = accuracyCritical
-    ? await readReviewVerificationArtifactStatus(
-      resolved.bubblePaths.reviewVerificationArtifactPath,
-      {
-        expectedRound: state.round,
-        expectedReviewer: resolved.bubbleConfig.agents.reviewer
-      }
-    )
-    : { status: "missing" as const };
-  const defaultSpecLockState: BubbleSpecLockState = {
-    state: "IMPLEMENTABLE",
-    open_blocker_count: 0,
-    open_required_now_count: 0
-  };
-  const defaultRoundGateState: BubbleRoundGateState = {
-    applies: false,
-    violated: false,
-    round: state.round
-  };
-  let failingGates: BubbleFailingGate[] = [];
-  let specLockState = defaultSpecLockState;
-  let roundGateState = defaultRoundGateState;
-  const docGateScopeActive = isDocContractGateScopeActive({
-    reviewArtifactType: resolved.bubbleConfig.review_artifact_type
-  });
-  if (docGateScopeActive) {
-    try {
-      const gateArtifact = await readDocContractGateArtifact(
-        resolveDocContractGateArtifactPath(resolved.bubblePaths.artifactsDir)
-      );
-      if (gateArtifact !== undefined) {
-        failingGates = collectFailingGatesFromArtifact(gateArtifact);
-        specLockState = gateArtifact.spec_lock_state;
-        roundGateState = gateArtifact.round_gate_state;
-      }
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      failingGates.push({
-        gate_id: "status.serialization",
-        reason_code: "STATUS_GATE_SERIALIZATION_WARNING",
-        message: `Status gate artifact parse failed; using fallback defaults. ${reason}`,
-        priority: "P2",
-        timing: "later-hardening",
-        layer: "L1",
-        signal_level: "warning"
-      });
-    }
-  }
-
-  if (accuracyCritical && verification.status !== "pass") {
-    failingGates = [
-      ...failingGates,
-      {
-        gate_id: "accuracy_critical.review_verification",
-        reason_code: `ACCURACY_CRITICAL_REVIEW_VERIFICATION_${verification.status.toUpperCase()}`,
-        message: `Accuracy-critical review verification status is ${verification.status}.`,
-        priority: "P1",
-        timing: "required-now",
-        layer: "L1",
-        signal_level: "warning"
-      }
-    ];
-  }
-
+function toStatusCommandPathView(
+  resolved: ResolvedBubbleStatusContext
+): BubbleStatusView["commandPath"] {
   const commandPath = assessPairflowCommandPath({
     worktreePath: resolved.bubblePaths.worktreePath,
     profile: resolved.bubbleConfig.pairflow_command_profile,
     activeEntrypoint: process.argv[1]
   });
+  return {
+    status: commandPath.status,
+    ...(commandPath.reasonCode !== undefined
+      ? { reasonCode: commandPath.reasonCode }
+      : {}),
+    profile: commandPath.profile,
+    localEntrypoint: commandPath.localEntrypoint,
+    activeEntrypoint: commandPath.activeEntrypoint,
+    message: commandPath.message,
+    pinnedCommand: commandPath.pinnedCommand
+  };
+}
 
+function buildBubbleStatusView({
+  resolved,
+  state,
+  transcript,
+  pendingQuestions,
+  pendingApprovals,
+  accuracyCritical,
+  verificationStatus,
+  gateState,
+  now
+}: {
+  resolved: ResolvedBubbleStatusContext;
+  state: Awaited<ReturnType<typeof readStateSnapshot>>["state"];
+  transcript: ProtocolEnvelope[];
+  pendingQuestions: number;
+  pendingApprovals: number;
+  accuracyCritical: boolean;
+  verificationStatus: ReviewVerificationState;
+  gateState: StatusGateState;
+  now: Date;
+}): BubbleStatusView {
+  const lastMessage = transcript[transcript.length - 1] ?? null;
   return {
     bubbleId: resolved.bubbleId,
     repoPath: resolved.repoPath,
@@ -215,7 +302,7 @@ export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleS
     watchdog: computeWatchdogStatus(
       state,
       resolved.bubbleConfig.watchdog_timeout_minutes,
-      input.now ?? new Date()
+      now
     ),
     pendingInboxItems: {
       humanQuestions: pendingQuestions,
@@ -236,23 +323,48 @@ export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleS
       latestReportRef: state.meta_review?.last_autonomous_report_ref ?? null,
       latestUpdatedAt: state.meta_review?.last_autonomous_updated_at ?? null
     },
-    commandPath: {
-      status: commandPath.status,
-      ...(commandPath.reasonCode !== undefined
-        ? { reasonCode: commandPath.reasonCode }
-        : {}),
-      profile: commandPath.profile,
-      localEntrypoint: commandPath.localEntrypoint,
-      activeEntrypoint: commandPath.activeEntrypoint,
-      message: commandPath.message,
-      pinnedCommand: commandPath.pinnedCommand
-    },
+    commandPath: toStatusCommandPathView(resolved),
     accuracy_critical: accuracyCritical,
-    last_review_verification: accuracyCritical ? verification.status : "missing",
-    failing_gates: failingGates,
-    spec_lock_state: specLockState,
-    round_gate_state: roundGateState
+    last_review_verification: verificationStatus,
+    failing_gates: gateState.failingGates,
+    spec_lock_state: gateState.specLockState,
+    round_gate_state: gateState.roundGateState
   };
+}
+
+export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleStatusView> {
+  const resolved = await resolveBubbleById({
+    bubbleId: input.bubbleId,
+    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
+    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+  });
+  const { state, transcript, inbox } = await readStatusTranscriptData(resolved);
+  const pendingQuestions = countPendingHumanQuestions(inbox);
+  const pendingApprovals = resolvePendingApprovalCount(resolved, state, inbox);
+  const accuracyCritical = resolved.bubbleConfig.accuracy_critical === true;
+  const verificationStatus = await resolveReviewVerificationState(
+    resolved,
+    state,
+    accuracyCritical
+  );
+  const gateState = await resolveStatusGateState(resolved, state.round);
+  gateState.failingGates = withAccuracyCriticalVerificationGate(
+    gateState.failingGates,
+    accuracyCritical,
+    verificationStatus
+  );
+
+  return buildBubbleStatusView({
+    resolved,
+    state,
+    transcript,
+    pendingQuestions,
+    pendingApprovals,
+    accuracyCritical,
+    verificationStatus,
+    gateState,
+    now: input.now ?? new Date()
+  });
 }
 
 export function asBubbleStatusError(error: unknown): never {
