@@ -25,22 +25,13 @@ import {
   collectStagedFiles,
   formatCommitErrorMessage
 } from "./commitStagedFiles.js";
+import type {
+  AppendedEnvelope,
+  CommitGitResult,
+  CommitRuntimeContext,
+  WrittenState
+} from "./commitCommandApiContract.js";
 export { BubbleCommitError } from "./commitCommandRuntime.js";
-
-type ResolvedBubbleContext = Awaited<ReturnType<typeof resolveBubbleById>>;
-type BubbleIdentity = Awaited<ReturnType<typeof ensureBubbleInstanceIdForMutation>>;
-type LoadedState = Awaited<ReturnType<typeof readStateSnapshot>>;
-type AppendedEnvelope = Awaited<ReturnType<typeof appendProtocolEnvelope>>;
-type WrittenState = Awaited<ReturnType<typeof writeStateSnapshot>>;
-
-interface CommitRuntimeContext {
-  resolved: ResolvedBubbleContext;
-  bubbleIdentity: BubbleIdentity;
-  loadedState: LoadedState;
-  state: LoadedState["state"];
-  donePackagePath: string;
-  donePackageContent: string;
-}
 
 async function prepareCommitRuntimeContext(input: {
   command: CommitBubbleInput;
@@ -90,12 +81,6 @@ async function prepareCommitRuntimeContext(input: {
     donePackagePath,
     donePackageContent
   };
-}
-
-interface CommitGitResult {
-  stagedFiles: string[];
-  commitMessage: string;
-  commitSha: string;
 }
 
 async function runCommitGitStep(input: {
