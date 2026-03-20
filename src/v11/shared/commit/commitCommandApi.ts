@@ -1,13 +1,10 @@
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import { applyStateTransition } from "../../../core/state/machine.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../core/state/stateStore.js";
+import { readStateSnapshot } from "../../../core/state/stateStore.js";
 import { runGit } from "../../../core/workspace/git.js";
 import { normalizeStringList } from "../../../core/util/normalize.js";
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
-import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
 import type {
   CommitBubbleInput,
   CommitBubbleResult
@@ -17,7 +14,11 @@ import {
   throwAsBubbleCommitError
 } from "./commitCommandRuntime.js";
 import {
-  deriveDonePackageSummary,
+  appendDonePackageEnvelope,
+  emitCommitLifecycleEvent,
+  persistCommittedThenDoneState
+} from "./commitCommandFinalization.js";
+import {
   readOrCreateDonePackage
 } from "./commitDonePackage.js";
 import {
@@ -26,10 +27,8 @@ import {
   formatCommitErrorMessage
 } from "./commitStagedFiles.js";
 import type {
-  AppendedEnvelope,
   CommitGitResult,
-  CommitRuntimeContext,
-  WrittenState
+  CommitRuntimeContext
 } from "./commitCommandApiContract.js";
 export { BubbleCommitError } from "./commitCommandRuntime.js";
 
@@ -132,83 +131,6 @@ async function runCommitGitStep(input: {
   return { stagedFiles, commitMessage, commitSha };
 }
 
-async function appendDonePackageEnvelope(input: {
-  context: CommitRuntimeContext;
-  refs: string[];
-  now: Date;
-  stagedFiles: string[];
-  commitMessage: string;
-  commitSha: string;
-}): Promise<AppendedEnvelope> {
-  const envelopeRefs = normalizeStringList([...input.refs, input.context.donePackagePath]);
-  const lockPath = join(
-    input.context.resolved.bubblePaths.locksDir,
-    `${input.context.resolved.bubbleId}.lock`
-  );
-  return appendProtocolEnvelope({
-    transcriptPath: input.context.resolved.bubblePaths.transcriptPath,
-    lockPath,
-    now: input.now,
-    envelope: {
-      bubble_id: input.context.resolved.bubbleId,
-      sender: "orchestrator",
-      recipient: "human",
-      type: "DONE_PACKAGE",
-      round: input.context.state.round,
-      payload: {
-        summary: deriveDonePackageSummary(input.context.donePackageContent),
-        metadata: {
-          done_package_path: input.context.donePackagePath,
-          staged_files: input.stagedFiles,
-          commit_message: input.commitMessage,
-          commit_sha: input.commitSha
-        }
-      },
-      refs: envelopeRefs
-    }
-  });
-}
-
-async function persistCommittedThenDoneState(input: {
-  context: CommitRuntimeContext;
-  nowIso: string;
-  appended: AppendedEnvelope;
-  commitSha: string;
-}): Promise<WrittenState> {
-  const committed = applyStateTransition(input.context.state, {
-    to: "COMMITTED",
-    lastCommandAt: input.nowIso
-  });
-  const committedWritten = await writeStateSnapshot(
-    input.context.resolved.bubblePaths.statePath,
-    committed,
-    {
-      expectedFingerprint: input.context.loadedState.fingerprint,
-      expectedState: "APPROVED_FOR_COMMIT"
-    }
-  );
-
-  const done = applyStateTransition(committedWritten.state, {
-    to: "DONE",
-    activeAgent: null,
-    activeRole: null,
-    activeSince: null,
-    lastCommandAt: input.nowIso
-  });
-
-  try {
-    return await writeStateSnapshot(input.context.resolved.bubblePaths.statePath, done, {
-      expectedFingerprint: committedWritten.fingerprint,
-      expectedState: "COMMITTED"
-    });
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new BubbleCommitError(
-      `DONE_PACKAGE ${input.appended.envelope.id} was appended and git commit ${input.commitSha} completed, but DONE transition failed after COMMITTED state persisted. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`
-    );
-  }
-}
-
 export async function commitBubble(
   input: CommitBubbleInput
 ): Promise<CommitBubbleResult> {
@@ -246,22 +168,14 @@ export async function commitBubble(
     commitSha
   });
 
-  await emitBubbleLifecycleEventBestEffort({
-    repoPath: context.resolved.repoPath,
-    bubbleId: context.resolved.bubbleId,
-    bubbleInstanceId: context.bubbleIdentity.bubbleInstanceId,
-    eventType: "bubble_committed",
-    round: context.state.round,
-    actorRole: "orchestrator",
-    metadata: {
-      commit_sha: commitSha,
-      commit_message: commitMessage,
-      staged_file_count: stagedFiles.length,
-      done_package_path: context.donePackagePath,
-      auto,
-      refs_count: normalizeStringList([...refs, context.donePackagePath]).length
-    },
-    now
+  await emitCommitLifecycleEvent({
+    context,
+    commitSha,
+    commitMessage,
+    stagedFiles,
+    refs,
+    now,
+    auto
   });
 
   return {
