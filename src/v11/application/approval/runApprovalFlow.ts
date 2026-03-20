@@ -19,9 +19,9 @@ import {
   persistDeferredReworkIntentState
 } from "./runApprovalDeferredRework.js";
 import type {
-  NormalizedApprovalDecisionInput,
-  NormalizedRequestReworkInput
-} from "../../shared/approval/approvalCommandInputNormalization.js";
+  RunApprovalDecisionFlowInput,
+  RunRequestReworkFlowInput
+} from "./runApprovalFlowContract.js";
 import type {
   ResolvedApprovalCommandDependencies
 } from "../../shared/approval/approvalCommandDependencyResolution.js";
@@ -37,13 +37,10 @@ import {
   metaReviewFailedHumanState
 } from "../../shared/approval/approvalRoutingEligibility.js";
 
-export interface RunApprovalDecisionFlowInput extends NormalizedApprovalDecisionInput {
-  createError: (message: string) => Error;
-}
-
-export interface RunRequestReworkFlowInput extends NormalizedRequestReworkInput {
-  createError: (message: string) => Error;
-}
+export type {
+  RunApprovalDecisionFlowInput,
+  RunRequestReworkFlowInput
+} from "./runApprovalFlowContract.js";
 
 export async function runApprovalDecisionFlow(
   input: RunApprovalDecisionFlowInput,
