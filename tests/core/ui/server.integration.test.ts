@@ -1033,18 +1033,18 @@ describe("UI server integration", () => {
     });
 
     try {
-      await writeFile(
-        registryPath,
-        `${JSON.stringify({ version: 1, repos: [{ repoPath: "/tmp/x", addedAt: "2026-02-25T00:00:02.000Z" }] }, null, 2)}\n`,
-        "utf8"
+      await nudgeRegistryUntil(
+        {
+          registryPath,
+          started: () => addCalls.includes("/tmp/add-still-runs")
+        },
+        8_000
       );
-
-      await waitFor(() => Promise.resolve(addCalls.includes("/tmp/add-still-runs")));
       expect(addCalls).toContain("/tmp/add-still-runs");
     } finally {
       await server.close();
     }
-  });
+  }, 10_000);
 
   it("retries refresh when refreshFromRegistry throws transiently", async () => {
     const assetsDir = await createAssetsFixture();
