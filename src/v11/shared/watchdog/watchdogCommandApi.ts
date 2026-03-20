@@ -11,9 +11,6 @@ import {
   resolveDeliveryMessageRef,
   retryStuckAgentInput
 } from "../../../core/runtime/tmuxDelivery.js";
-import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
-import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
-import { applyDeferredReworkIntent } from "../../../core/human/reworkIntent.js";
 import {
   recoverMetaReviewGateFromSnapshot
 } from "../metaReviewGate/metaReviewGateCommandApi.js";
@@ -21,8 +18,8 @@ import {
   maybeRouteMetaReviewBeforeExpiry,
   maybeRouteMetaReviewOnExpiry
 } from "./watchdogMetaReviewRouting.js";
+import { maybeApplyPendingReworkIntent } from "./watchdogPendingReworkIntent.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
   BubbleWatchdogDependencies,
   BubbleWatchdogInput,
@@ -52,121 +49,6 @@ interface WatchdogRuntimeContext {
   state: BubbleStateSnapshot;
   emitDelivery: typeof emitTmuxDeliveryNotification;
   emitNotification: typeof emitBubbleNotification;
-}
-
-async function maybeApplyPendingReworkIntent(
-  context: WatchdogRuntimeContext
-): Promise<BubbleWatchdogResult | null> {
-  if (context.state.state !== "WAITING_HUMAN") {
-    return null;
-  }
-  const pendingIntent = context.state.pending_rework_intent ?? null;
-  if (pendingIntent === null || pendingIntent.status !== "pending") {
-    return null;
-  }
-
-  const deliveryEnvelope: ProtocolEnvelope = {
-    id: pendingIntent.intent_id,
-    ts: context.nowIso,
-    bubble_id: context.resolved.bubbleId,
-    sender: "human",
-    recipient: context.resolved.bubbleConfig.agents.implementer,
-    type: "APPROVAL_DECISION",
-    round: context.state.round,
-    payload: {
-      decision: "revise",
-      message: pendingIntent.message
-    },
-    refs: [`rework-intent://${pendingIntent.intent_id}`]
-  };
-
-  const delivery = await context.emitDelivery({
-    bubbleId: context.resolved.bubbleId,
-    bubbleConfig: context.resolved.bubbleConfig,
-    sessionsPath: context.resolved.bubblePaths.sessionsPath,
-    envelope: deliveryEnvelope,
-    messageRef: resolveDeliveryMessageRef({
-      bubbleId: context.resolved.bubbleId,
-      sessionsPath: context.resolved.bubblePaths.sessionsPath,
-      envelope: deliveryEnvelope
-    })
-  });
-
-  if (!delivery.delivered) {
-    return {
-      bubbleId: context.resolved.bubbleId,
-      escalated: false,
-      reason: "rework_delivery_failed",
-      state: context.state,
-      intentId: pendingIntent.intent_id,
-      deliveryError: `Pending rework intent delivery was not confirmed (reason: ${delivery.reason ?? "unknown"}). Ensure runtime session is healthy, then rerun watchdog.`
-    };
-  }
-
-  const appliedTransition = applyDeferredReworkIntent({
-    state: context.state,
-    implementer: context.resolved.bubbleConfig.agents.implementer,
-    reviewer: context.resolved.bubbleConfig.agents.reviewer,
-    now: context.now
-  });
-  if (appliedTransition === null) {
-    return {
-      bubbleId: context.resolved.bubbleId,
-      escalated: false,
-      reason: "not_monitored",
-      state: context.state
-    };
-  }
-
-  const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
-    bubbleId: context.resolved.bubbleId,
-    repoPath: context.resolved.repoPath,
-    bubblePaths: context.resolved.bubblePaths,
-    bubbleConfig: context.resolved.bubbleConfig,
-    now: context.now
-  });
-  context.resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
-
-  let written;
-  try {
-    written = await writeStateSnapshot(
-      context.resolved.bubblePaths.statePath,
-      appliedTransition.state,
-      {
-        expectedFingerprint: context.loadedState.fingerprint,
-        expectedState: "WAITING_HUMAN"
-      }
-    );
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new BubbleWatchdogError(
-      `Pending rework intent ${pendingIntent.intent_id} delivery succeeded but state update failed. Root error: ${reason}`
-    );
-  }
-
-  await emitBubbleLifecycleEventBestEffort({
-    repoPath: context.resolved.repoPath,
-    bubbleId: context.resolved.bubbleId,
-    bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
-    eventType: "rework_intent_applied",
-    round: context.state.round,
-    actorRole: "orchestrator",
-    metadata: {
-      intent_id: appliedTransition.intent.intent_id,
-      requested_by: appliedTransition.intent.requested_by,
-      requested_at: appliedTransition.intent.requested_at,
-      state_at_request: "WAITING_HUMAN"
-    },
-    now: context.now
-  });
-
-  return {
-    bubbleId: context.resolved.bubbleId,
-    escalated: false,
-    reason: "rework_intent_applied",
-    state: written.state,
-    intentId: appliedTransition.intent.intent_id
-  };
 }
 
 async function buildNotExpiredResult(
@@ -297,7 +179,14 @@ export async function runBubbleWatchdog(
     emitNotification
   };
 
-  const pendingRework = await maybeApplyPendingReworkIntent(context);
+  const pendingRework = await maybeApplyPendingReworkIntent({
+    now: context.now,
+    nowIso: context.nowIso,
+    resolved: context.resolved,
+    loadedState: context.loadedState,
+    state: context.state,
+    emitDelivery: context.emitDelivery
+  });
   if (pendingRework !== null) {
     return pendingRework;
   }
