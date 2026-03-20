@@ -1,8 +1,8 @@
 import {
-  buildAskHumanFinalizationResult,
-  buildAskHumanLifecycleMetricMetadata
+  buildAskHumanFinalizationResult
 } from "../../shared/askHuman/askHumanFinalizationArtifacts.js";
 import { buildAskHumanFinalizationDependencyResolutionInput } from "../../shared/askHuman/askHumanFinalizationDependencyResolutionInputBuilder.js";
+import { buildAskHumanFinalizationLifecycleEventInput } from "../../shared/askHuman/askHumanFinalizationLifecycleEventInputBuilder.js";
 import type {
   FinalizeAskHumanFlowDependencies,
   FinalizeAskHumanFlowInput,
@@ -40,20 +40,9 @@ export async function finalizeAskHumanFlow(
     }
   );
 
-  await resolvedDependencies.emitBubbleLifecycleEventBestEffort({
-    repoPath: input.routing.resolved.repoPath,
-    bubbleId: input.routing.resolved.bubbleId,
-    bubbleInstanceId: input.routing.bubbleIdentity.bubbleInstanceId,
-    eventType: "bubble_asked_human",
-    round: input.routing.state.round,
-    actorRole: input.routing.state.active_role,
-    metadata: buildAskHumanLifecycleMetricMetadata({
-      sender: input.routing.state.active_agent,
-      refs: input.routing.refs,
-      question: input.routing.question
-    }),
-    now: input.now
-  });
+  await resolvedDependencies.emitBubbleLifecycleEventBestEffort(
+    buildAskHumanFinalizationLifecycleEventInput(input)
+  );
 
   return buildAskHumanFinalizationResult({
     bubbleId: input.routing.resolved.bubbleId,
