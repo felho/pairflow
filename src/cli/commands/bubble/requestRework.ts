@@ -1,10 +1,10 @@
 import { parseArgs } from "node:util";
 
 import {
-  asApprovalCommandError,
-  emitRequestRework,
-  type EmitRequestReworkResult
-} from "../../../core/human/approval.js";
+  asApprovalCommandErrorV11 as asApprovalCommandError,
+  emitRequestReworkV11 as emitRequestRework,
+  type EmitRequestReworkV11Result as EmitRequestReworkResult
+} from "../../../v11/application/approval/emitApprovalV11.js";
 
 export interface BubbleRequestReworkCommandOptions {
   id: string;
