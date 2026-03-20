@@ -10,10 +10,10 @@ export {
   AskHumanCommandError
 } from "./core/agent/askHuman.js";
 export {
-  asConvergedCommandError,
-  emitConvergedFromWorkspace,
-  ConvergedCommandError
-} from "./core/agent/converged.js";
+  asConvergedCommandErrorV11 as asConvergedCommandError,
+  emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace,
+  ConvergedCommandErrorV11 as ConvergedCommandError
+} from "./v11/application/converged/emitConvergedV11.js";
 export {
   asPassCommandErrorV11 as asPassCommandError,
   emitPassFromWorkspaceV11 as emitPassFromWorkspace,
@@ -30,15 +30,15 @@ export {
   getBubbleInbox
 } from "./core/bubble/inboxBubble.js";
 export {
-  asBubbleCommitError,
-  BubbleCommitError,
-  commitBubble
-} from "./core/bubble/commitBubble.js";
+  asBubbleCommitErrorV11 as asBubbleCommitError,
+  BubbleCommitErrorV11 as BubbleCommitError,
+  commitBubbleV11 as commitBubble
+} from "./v11/application/commit/emitCommitV11.js";
 export {
-  asBubbleMergeError,
-  BubbleMergeError,
-  mergeBubble
-} from "./core/bubble/mergeBubble.js";
+  asBubbleMergeErrorV11 as asBubbleMergeError,
+  BubbleMergeErrorV11 as BubbleMergeError,
+  mergeBubbleV11 as mergeBubble
+} from "./v11/application/merge/emitMergeV11.js";
 export {
   asOpenBubbleError,
   executeOpenCommand,
@@ -46,11 +46,11 @@ export {
   OpenBubbleError
 } from "./core/bubble/openBubble.js";
 export {
-  asResumeBubbleError,
+  asResumeBubbleErrorV11 as asResumeBubbleError,
   DEFAULT_RESUME_MESSAGE,
-  ResumeBubbleError,
-  resumeBubble
-} from "./core/bubble/resumeBubble.js";
+  ResumeBubbleErrorV11 as ResumeBubbleError,
+  resumeBubbleV11 as resumeBubble
+} from "./v11/application/resume/emitResumeV11.js";
 export {
   asRestartBubbleError,
   RestartBubbleError,
@@ -401,9 +401,9 @@ export type {
   EmitAskHumanResult
 } from "./core/agent/askHuman.js";
 export type {
-  EmitConvergedInput,
-  EmitConvergedResult
-} from "./core/agent/converged.js";
+  EmitConvergedV11Input as EmitConvergedInput,
+  EmitConvergedV11Result as EmitConvergedResult
+} from "./v11/application/converged/emitConvergedV11.js";
 export type {
   EmitPassInput,
   EmitPassResult
@@ -415,13 +415,13 @@ export type {
   PendingInboxItemType
 } from "./core/bubble/inboxBubble.js";
 export type {
-  CommitBubbleInput,
-  CommitBubbleResult
-} from "./core/bubble/commitBubble.js";
+  CommitBubbleV11Input as CommitBubbleInput,
+  CommitBubbleV11Result as CommitBubbleResult
+} from "./v11/application/commit/emitCommitV11.js";
 export type {
-  MergeBubbleInput,
-  MergeBubbleResult
-} from "./core/bubble/mergeBubble.js";
+  MergeBubbleV11Input as MergeBubbleInput,
+  MergeBubbleV11Result as MergeBubbleResult
+} from "./v11/application/merge/emitMergeV11.js";
 export type {
   ResolvedBubbleById
 } from "./core/bubble/bubbleLookup.js";
@@ -434,10 +434,10 @@ export type {
   OpenCommandExecutor
 } from "./core/bubble/openBubble.js";
 export type {
-  ResumeBubbleDependencies,
-  ResumeBubbleInput,
-  ResumeBubbleResult
-} from "./core/bubble/resumeBubble.js";
+  ResumeBubbleV11Dependencies as ResumeBubbleDependencies,
+  ResumeBubbleV11Input as ResumeBubbleInput,
+  ResumeBubbleV11Result as ResumeBubbleResult
+} from "./v11/application/resume/emitResumeV11.js";
 export type {
   RestartBubbleDependencies,
   RestartBubbleInput,
