@@ -1,5 +1,6 @@
 import { buildBoundaryCheckReport } from "./boundary.js";
 import { buildComplexityCheckReport } from "./complexity.js";
+import { buildContractTimeoutPolicyCheckReport } from "./contract-timeout-policy.js";
 import { buildCriticalSideEffectCheckReport } from "./critical-side-effect.js";
 import { buildDependencyCheckReport } from "./dependency.js";
 import { buildErrorCheckReport } from "./error.js";
@@ -110,6 +111,13 @@ export async function buildCheckReport({
   }
   if (effectiveCheck.id === "complexity") {
     return buildComplexityCheckReport({
+      check: effectiveCheck,
+      repoRoot,
+      fallbackMode
+    });
+  }
+  if (effectiveCheck.id === "contract_timeout_policy") {
+    return buildContractTimeoutPolicyCheckReport({
       check: effectiveCheck,
       repoRoot,
       fallbackMode

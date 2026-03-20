@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-03-20T15:22:00.000Z",
+  "updated_at": "2026-03-20T21:48:00.000Z",
   "defaults": {
     "mode": "report-only",
     "current_milestone": "M3"
@@ -73,6 +73,19 @@
       ],
       "mode": "report-only",
       "owner": "architecture",
+      "exceptions": []
+    },
+    {
+      "id": "contract_timeout_policy",
+      "metric": "v11 contract tests must use shared timeout constants (no raw timeout literals)",
+      "scope": [
+        "tests/contracts/v11/*.contract.test.ts"
+      ],
+      "mode": "report-only",
+      "mode_by_milestone": {
+        "M3": "hard-fail"
+      },
+      "owner": "architecture/runtime",
       "exceptions": []
     },
     {
