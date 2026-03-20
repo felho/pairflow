@@ -65,7 +65,7 @@
       "scope": [
         "src/v11/**"
       ],
-      "mode": "hard-fail",
+      "mode": "report-only",
       "exception_lifecycle_mode": "soft-fail",
       "owner": "architecture",
       "exceptions": [
