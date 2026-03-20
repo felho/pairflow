@@ -2,6 +2,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { basename, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { CONTRACT_TEST_TIMEOUT } from "./contractTestTimeouts.js";
 import { runConvergedContractCase } from "./converged.contract.runner.js";
 import { readContractCase } from "./runner.js";
 
@@ -126,34 +127,38 @@ describe("v11 converged contract harness skeleton", () => {
     }
   });
 
-  it("executes legacy, v11 and parity assertions via shared runner", async () => {
-    const casePaths = await listConvergedCasePaths();
-    expect(casePaths.length).toBeGreaterThan(0);
-    const seenModes = new Set<string>();
+  it(
+    "executes legacy, v11 and parity assertions via shared runner",
+    { timeout: CONTRACT_TEST_TIMEOUT.parityExhaustiveMs },
+    async () => {
+      const casePaths = await listConvergedCasePaths();
+      expect(casePaths.length).toBeGreaterThan(0);
+      const seenModes = new Set<string>();
 
-    for (const casePath of casePaths) {
-      const caseDef = await readContractCase(casePath);
-      seenModes.add(caseDef.mode);
-      const run = await runConvergedContractCase(caseDef);
-      if (caseDef.mode === "legacy") {
-        expect(run.legacy?.status).toBe("ok");
-        expect(run.v11).toBeUndefined();
-        continue;
-      }
-      if (caseDef.mode === "v11") {
-        expect(run.v11?.status).toBe("ok");
-        expect(run.legacy).toBeUndefined();
-        continue;
-      }
+      for (const casePath of casePaths) {
+        const caseDef = await readContractCase(casePath);
+        seenModes.add(caseDef.mode);
+        const run = await runConvergedContractCase(caseDef);
+        if (caseDef.mode === "legacy") {
+          expect(run.legacy?.status).toBe("ok");
+          expect(run.v11).toBeUndefined();
+          continue;
+        }
+        if (caseDef.mode === "v11") {
+          expect(run.v11?.status).toBe("ok");
+          expect(run.legacy).toBeUndefined();
+          continue;
+        }
 
-      expect(run.legacy).toBeDefined();
-      expect(run.v11).toBeDefined();
-      expect(run.legacy).toEqual(run.v11);
+        expect(run.legacy).toBeDefined();
+        expect(run.v11).toBeDefined();
+        expect(run.legacy).toEqual(run.v11);
+      }
+      expect(seenModes.has("legacy")).toBe(true);
+      expect(seenModes.has("v11")).toBe(true);
+      expect(seenModes.has("parity")).toBe(true);
     }
-    expect(seenModes.has("legacy")).toBe(true);
-    expect(seenModes.has("v11")).toBe(true);
-    expect(seenModes.has("parity")).toBe(true);
-  }, 30_000);
+  );
 
   it("rejects invalid converged contract input.reviewArtifactType", async () => {
     await expect(

@@ -4,6 +4,7 @@ import { promisify } from "node:util";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { CONTRACT_TEST_TIMEOUT } from "./contractTestTimeouts.js";
 import { runAskHumanContractCase } from "./askHuman.contract.runner.js";
 import { readContractCase } from "./runner.js";
 import type { ContractCase } from "./schema.js";
@@ -146,7 +147,7 @@ describe("v11 askHuman contract harness skeleton", () => {
 
   it(
     "executes legacy and parity assertions via shared runner",
-    { timeout: 10_000 },
+    { timeout: CONTRACT_TEST_TIMEOUT.parityStandardMs },
     async () => {
     const casePaths = askHumanCaseSources.map((source) =>
       resolve(process.cwd(), source)

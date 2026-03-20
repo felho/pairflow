@@ -5,6 +5,7 @@ import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
+import { CONTRACT_TEST_TIMEOUT } from "./contractTestTimeouts.js";
 import { runReconcileContractCase } from "./reconcile.contract.runner.js";
 import { readContractCase } from "./runner.js";
 
@@ -54,7 +55,7 @@ describe("v11 reconcile contract harness skeleton", () => {
 
   it(
     "executes legacy and parity assertions via shared runner",
-    { timeout: 10_000 },
+    { timeout: CONTRACT_TEST_TIMEOUT.parityStandardMs },
     async () => {
     const casePaths = reconcileCaseSources.map((source) =>
       resolve(process.cwd(), source)

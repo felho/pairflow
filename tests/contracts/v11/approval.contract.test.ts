@@ -5,6 +5,7 @@ import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
+import { CONTRACT_TEST_TIMEOUT } from "./contractTestTimeouts.js";
 import { runApprovalContractCase } from "./approval.contract.runner.js";
 import { readContractCase } from "./runner.js";
 
@@ -73,7 +74,7 @@ describe("v11 approval contract harness skeleton", () => {
 
   it(
     "executes legacy and parity assertions via shared runner",
-    { timeout: 10_000 },
+    { timeout: CONTRACT_TEST_TIMEOUT.parityStandardMs },
     async () => {
     const casePaths = approvalCaseSources.map((source) =>
       resolve(process.cwd(), source)

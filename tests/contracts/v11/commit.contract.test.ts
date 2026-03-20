@@ -5,6 +5,7 @@ import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
+import { CONTRACT_TEST_TIMEOUT } from "./contractTestTimeouts.js";
 import { runCommitContractCase } from "./commit.contract.runner.js";
 import { readContractCase } from "./runner.js";
 
@@ -51,7 +52,7 @@ describe("v11 commit contract harness skeleton", () => {
 
   it(
     "executes legacy and parity assertions via shared runner",
-    { timeout: 12_000 },
+    { timeout: CONTRACT_TEST_TIMEOUT.parityGitHeavyMs },
     async () => {
     const casePaths = commitCaseSources.map((source) =>
       resolve(process.cwd(), source)

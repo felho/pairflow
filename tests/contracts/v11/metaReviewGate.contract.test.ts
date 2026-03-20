@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 
+import { CONTRACT_TEST_TIMEOUT } from "./contractTestTimeouts.js";
 import { runMetaReviewGateContractCase } from "./metaReviewGate.contract.runner.js";
 import { readContractCase } from "./runner.js";
 
@@ -70,30 +71,34 @@ describe("v11 metaReviewGate contract harness", () => {
     expect(caseDef.expected.status).toBe("ok");
   });
 
-  it("executes legacy and parity assertions via shared runner", async () => {
-    const casePaths = metaReviewGateCaseSources.map((source) =>
-      resolve(process.cwd(), source)
-    );
+  it(
+    "executes legacy and parity assertions via shared runner",
+    { timeout: CONTRACT_TEST_TIMEOUT.parityLargeCorpusMs },
+    async () => {
+      const casePaths = metaReviewGateCaseSources.map((source) =>
+        resolve(process.cwd(), source)
+      );
 
-    for (const casePath of casePaths) {
-      const caseDef = await readContractCase(casePath);
-      const run = await runMetaReviewGateContractCase(caseDef);
-      if (caseDef.mode === "legacy") {
-        expect(run.legacy?.status).toBe("ok");
-        expect(run.v11).toBeUndefined();
-        continue;
-      }
-      if (caseDef.mode === "v11") {
-        expect(run.v11?.status).toBe("ok");
-        expect(run.legacy).toBeUndefined();
-        continue;
-      }
+      for (const casePath of casePaths) {
+        const caseDef = await readContractCase(casePath);
+        const run = await runMetaReviewGateContractCase(caseDef);
+        if (caseDef.mode === "legacy") {
+          expect(run.legacy?.status).toBe("ok");
+          expect(run.v11).toBeUndefined();
+          continue;
+        }
+        if (caseDef.mode === "v11") {
+          expect(run.v11?.status).toBe("ok");
+          expect(run.legacy).toBeUndefined();
+          continue;
+        }
 
-      expect(run.legacy).toBeDefined();
-      expect(run.v11).toBeDefined();
-      expect(run.legacy).toEqual(run.v11);
+        expect(run.legacy).toBeDefined();
+        expect(run.v11).toBeDefined();
+        expect(run.legacy).toEqual(run.v11);
+      }
     }
-  }, 20_000);
+  );
 
   it("includes metaReviewGate seed entries in corpus manifest", async () => {
     const manifestPath = resolve(

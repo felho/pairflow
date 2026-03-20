@@ -4,6 +4,7 @@ import { promisify } from "node:util";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { CONTRACT_TEST_TIMEOUT } from "./contractTestTimeouts.js";
 import { runStopContractCase } from "./stop.contract.runner.js";
 import { readContractCase } from "./runner.js";
 import type { ContractCase } from "./schema.js";
@@ -107,7 +108,7 @@ describe("v11 stop contract harness skeleton", () => {
 
   it(
     "executes legacy and parity assertions via shared runner",
-    { timeout: 12_000 },
+    { timeout: CONTRACT_TEST_TIMEOUT.parityHeavyMs },
     async () => {
     const casePaths = stopCaseSources.map((source) =>
       resolve(process.cwd(), source)

@@ -5,6 +5,7 @@ import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
+import { CONTRACT_TEST_TIMEOUT } from "./contractTestTimeouts.js";
 import { runWatchdogContractCase } from "./watchdog.contract.runner.js";
 import { readContractCase } from "./runner.js";
 
@@ -51,7 +52,7 @@ describe("v11 watchdog contract harness skeleton", () => {
 
   it(
     "executes legacy and parity assertions via shared runner",
-    { timeout: 12_000 },
+    { timeout: CONTRACT_TEST_TIMEOUT.parityHeavyMs },
     async () => {
     const casePaths = watchdogCaseSources.map((source) =>
       resolve(process.cwd(), source)
