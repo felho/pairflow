@@ -134,3 +134,4 @@ Seed invariants:
 
 1. M0 delivers executable skeleton only; thresholds and hard-fail promotion are milestone-gated.
 2. Machine-readable policy is tracked in `tools/fitness/policy.json`.
+3. CI entrypoint: `pnpm fitness:check:ci` (`scripts/fitness-check-ci.sh`), which always forwards an explicit `--current-milestone` value.
