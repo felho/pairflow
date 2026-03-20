@@ -372,10 +372,14 @@ export function asBubbleStatusError(error: unknown): never {
     throw error;
   }
   if (error instanceof BubbleLookupError) {
-    throw new BubbleStatusError(error.message);
+    throw new BubbleStatusError(
+      `${error.message} context: command_name=status.`
+    );
   }
   if (error instanceof Error) {
-    throw new BubbleStatusError(error.message);
+    throw new BubbleStatusError(
+      `${error.message} context: command_name=status.`
+    );
   }
   throw error;
 }

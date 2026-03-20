@@ -72,7 +72,10 @@ interface ParsedMetaReviewOptionValues {
 }
 
 function invalidMetaReviewCliOptions(message: string): never {
-  throw new MetaReviewError("META_REVIEW_SCHEMA_INVALID", message);
+  throw new MetaReviewError(
+    "META_REVIEW_SCHEMA_INVALID",
+    `${message} context: command_name=meta-review.`
+  );
 }
 
 function parseDepth(value: string | undefined): MetaReviewDepth {
