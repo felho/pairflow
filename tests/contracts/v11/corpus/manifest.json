@@ -381,6 +381,24 @@
       "kind": "seed_case"
     },
     {
+      "id": "kickoff-task-file-missing",
+      "command": "kickoff",
+      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file-missing.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "kickoff-task-file-missing-v11",
+      "command": "kickoff",
+      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file-missing-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "kickoff-task-file-missing-parity",
+      "command": "kickoff",
+      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file-missing-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "ask-human-basic",
       "command": "askHuman",
       "source": "tests/contracts/v11/cases/ask-human/ask-human-basic.case.json",

@@ -1,0 +1,26 @@
+{
+  "id": "kickoff-task-file-missing",
+  "command": "kickoff",
+  "mode": "legacy",
+  "description": "Seed kickoff legacy contract case for missing task-file rejection.",
+  "input": {
+    "task": "Ignored content for missing task-file path",
+    "fixture": {
+      "taskViaFile": true,
+      "taskFileMissing": true
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "IDEATION_KICKOFF_TASK_INVALID",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "kickoff",
+    "error-path"
+  ]
+}
