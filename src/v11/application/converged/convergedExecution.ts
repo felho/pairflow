@@ -5,7 +5,6 @@ import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef,
-  type EmitTmuxDeliveryNotificationResult
 } from "../../../core/runtime/tmuxDelivery.js";
 import {
   applyMetaReviewGateOnConvergence,
@@ -14,10 +13,9 @@ import {
 import type { ResolvedBubbleWorkspace } from "../../../core/bubble/workspaceResolution.js";
 import type { AgentName, BubbleStateSnapshot } from "../../../types/bubble.js";
 import {
-  deliveryTargetRoleMetadataKey,
-  type DeliveryTargetRole,
-  type ProtocolEnvelope
-} from "../../../types/protocol.js";
+  executeGateDelivery,
+  type ConvergedDeliveryResult
+} from "./convergedGateDelivery.js";
 
 export interface ExecuteConvergedExecutionInput {
   resolved: ResolvedBubbleWorkspace;
@@ -42,59 +40,7 @@ export interface ExecuteConvergedExecutionDependencies {
 export interface ExecuteConvergedExecutionResult {
   convergence: Awaited<ReturnType<typeof appendProtocolEnvelope>>;
   gateResult: Awaited<ReturnType<typeof applyMetaReviewGateOnConvergence>>;
-  delivery: {
-    delivered: boolean;
-    reason?: string;
-    retried: boolean;
-  };
-}
-
-function withDeliveryTargetRole(
-  envelope: ProtocolEnvelope,
-  role: DeliveryTargetRole
-): ProtocolEnvelope {
-  const existingMetadata =
-    typeof envelope.payload.metadata === "object" &&
-    envelope.payload.metadata !== null
-      ? envelope.payload.metadata
-      : {};
-  return {
-    ...envelope,
-    payload: {
-      ...envelope.payload,
-      metadata: {
-        ...existingMetadata,
-        [deliveryTargetRoleMetadataKey]: role
-      }
-    }
-  };
-}
-
-function resolveAggregateConvergedDeliveryReason(
-  deliveries: EmitTmuxDeliveryNotificationResult[]
-): string | undefined {
-  const failedDeliveries = deliveries.filter((delivery) => !delivery.delivered);
-  if (failedDeliveries.length === 0) {
-    return undefined;
-  }
-  if (failedDeliveries.length < deliveries.length) {
-    return "partial_delivery_failed";
-  }
-
-  const reasonPriority: Array<NonNullable<EmitTmuxDeliveryNotificationResult["reason"]>> = [
-    "delivery_unconfirmed",
-    "tmux_send_failed",
-    "registry_read_failed",
-    "unsupported_recipient",
-    "no_runtime_session"
-  ];
-  for (const reason of reasonPriority) {
-    if (failedDeliveries.some((delivery) => delivery.reason === reason)) {
-      return reason;
-    }
-  }
-
-  return failedDeliveries.find((delivery) => delivery.reason !== undefined)?.reason;
+  delivery: ConvergedDeliveryResult;
 }
 
 interface ResolvedExecutionDependencies {
@@ -184,104 +130,6 @@ async function applyMetaReviewGateWithRecovery(
   }
 }
 
-function buildConvergedDelivery(
-  deliveries: EmitTmuxDeliveryNotificationResult[],
-  retried: boolean
-): ExecuteConvergedExecutionResult["delivery"] {
-  const failedDeliveryCount = deliveries.filter((delivery) => !delivery.delivered).length;
-  const aggregatedDeliveryReason = resolveAggregateConvergedDeliveryReason(deliveries);
-  return failedDeliveryCount === 0
-    ? {
-        delivered: true,
-        retried
-      }
-    : {
-        delivered: false,
-        ...(aggregatedDeliveryReason !== undefined
-          ? { reason: aggregatedDeliveryReason }
-          : {}),
-        retried
-      };
-}
-
-async function executeGateDelivery(
-  input: ExecuteConvergedExecutionInput,
-  gateResult: Awaited<ReturnType<typeof applyMetaReviewGateOnConvergence>>,
-  dependencies: Pick<ResolvedExecutionDependencies, "emitDelivery" | "resolveMessageRef">
-): Promise<ExecuteConvergedExecutionResult["delivery"]> {
-  const gateRef = dependencies.resolveMessageRef({
-    bubbleId: input.resolved.bubbleId,
-    sessionsPath: input.resolved.bubblePaths.sessionsPath,
-    envelope: gateResult.gateEnvelope
-  });
-  const emitDeliverySafe = async (
-    envelope: ProtocolEnvelope,
-    options?: {
-      initialDelayMs?: number;
-      deliveryAttempts?: number;
-    }
-  ): Promise<EmitTmuxDeliveryNotificationResult> =>
-    dependencies.emitDelivery({
-      bubbleId: input.resolved.bubbleId,
-      bubbleConfig: input.resolved.bubbleConfig,
-      sessionsPath: input.resolved.bubblePaths.sessionsPath,
-      envelope,
-      messageRef: gateRef,
-      ...(options?.initialDelayMs !== undefined
-        ? { initialDelayMs: options.initialDelayMs }
-        : {}),
-      ...(options?.deliveryAttempts !== undefined
-        ? { deliveryAttempts: options.deliveryAttempts }
-        : {})
-    }).catch(() => ({
-      delivered: false,
-      message: "",
-      reason: "tmux_send_failed"
-    }));
-
-  const recipientEnvelopes =
-    gateResult.gateEnvelope.type === "APPROVAL_REQUEST"
-      ? [
-          gateResult.gateEnvelope,
-          withDeliveryTargetRole({
-            ...gateResult.gateEnvelope,
-            recipient: input.implementer
-          }, "implementer"),
-          withDeliveryTargetRole({
-            ...gateResult.gateEnvelope,
-            recipient: input.reviewer
-          }, "reviewer")
-        ]
-      : [gateResult.gateEnvelope];
-  let deliveryResults = await Promise.all(
-    recipientEnvelopes.map((envelope) => emitDeliverySafe(envelope))
-  );
-  let deliveryRetried = false;
-
-  const primaryAutoReworkDelivery = deliveryResults[0];
-  const shouldRetryAutoReworkDelivery =
-    gateResult.route === "auto_rework" &&
-    recipientEnvelopes.length === 1 &&
-    primaryAutoReworkDelivery !== undefined &&
-    !primaryAutoReworkDelivery.delivered &&
-    (
-      primaryAutoReworkDelivery.reason === "delivery_unconfirmed" ||
-      primaryAutoReworkDelivery.reason === "tmux_send_failed"
-    );
-  if (shouldRetryAutoReworkDelivery) {
-    deliveryRetried = true;
-    deliveryResults = [
-      await emitDeliverySafe(recipientEnvelopes[0]!, {
-        // Auto-rework target pane can still be spinning up after gate routing.
-        // Give the CLI extra warm-up + probe attempts before giving up.
-        initialDelayMs: 5000,
-        deliveryAttempts: 6
-      })
-    ];
-  }
-
-  return buildConvergedDelivery(deliveryResults, deliveryRetried);
-}
 
 export async function executeConvergedExecution(
   input: ExecuteConvergedExecutionInput,
@@ -297,7 +145,11 @@ export async function executeConvergedExecution(
     resolvedDependencies.applyGate,
     resolvedDependencies.recoverGate
   );
-  const delivery = await executeGateDelivery(input, gateResult, {
+  const delivery = await executeGateDelivery({
+    resolved: input.resolved,
+    implementer: input.implementer,
+    reviewer: input.reviewer,
+    gateResult,
     emitDelivery: resolvedDependencies.emitDelivery,
     resolveMessageRef: resolvedDependencies.resolveMessageRef
   });
