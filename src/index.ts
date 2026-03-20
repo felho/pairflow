@@ -111,17 +111,17 @@ export {
   DEFAULT_WORK_MODE
 } from "./config/defaults.js";
 export {
-  asApprovalCommandError,
-  ApprovalCommandError,
-  emitApprovalDecision,
-  emitApprove,
-  emitRequestRework
-} from "./core/human/approval.js";
+  asApprovalCommandErrorV11 as asApprovalCommandError,
+  ApprovalCommandErrorV11 as ApprovalCommandError,
+  emitApprovalDecisionV11 as emitApprovalDecision,
+  emitApproveV11 as emitApprove,
+  emitRequestReworkV11 as emitRequestRework
+} from "./v11/application/approval/emitApprovalV11.js";
 export {
-  asHumanReplyCommandError,
-  emitHumanReply,
-  HumanReplyCommandError
-} from "./core/human/reply.js";
+  asHumanReplyCommandErrorV11 as asHumanReplyCommandError,
+  emitHumanReplyV11 as emitHumanReply,
+  HumanReplyCommandErrorV11 as HumanReplyCommandError
+} from "./v11/application/reply/emitReplyV11.js";
 export {
   getAskHumanHelpText,
   parseAskHumanCommandOptions,
@@ -666,18 +666,18 @@ export type {
   ProtocolEnvelopeDraft
 } from "./core/protocol/transcriptStore.js";
 export type {
-  EmitApprovalDecisionInput,
-  EmitApprovalDecisionResult,
-  EmitApproveInput,
-  EmitRequestReworkInput,
-  EmitRequestReworkImmediateResult,
-  EmitRequestReworkQueuedResult,
-  EmitRequestReworkResult
-} from "./core/human/approval.js";
+  EmitApprovalDecisionV11Input as EmitApprovalDecisionInput,
+  EmitApprovalDecisionV11Result as EmitApprovalDecisionResult,
+  EmitApproveV11Input as EmitApproveInput,
+  EmitRequestReworkV11Input as EmitRequestReworkInput,
+  EmitRequestReworkImmediateV11Result as EmitRequestReworkImmediateResult,
+  EmitRequestReworkQueuedV11Result as EmitRequestReworkQueuedResult,
+  EmitRequestReworkV11Result as EmitRequestReworkResult
+} from "./v11/application/approval/emitApprovalV11.js";
 export type {
-  EmitHumanReplyInput,
-  EmitHumanReplyResult
-} from "./core/human/reply.js";
+  EmitHumanReplyV11Input as EmitHumanReplyInput,
+  EmitHumanReplyV11Result as EmitHumanReplyResult
+} from "./v11/application/reply/emitReplyV11.js";
 export type {
   ApprovalDecision,
   PassIntent,
