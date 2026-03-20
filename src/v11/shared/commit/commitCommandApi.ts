@@ -1,4 +1,4 @@
-import { isAbsolute, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 
 import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
 import { applyStateTransition } from "../../../core/state/machine.js";
@@ -20,6 +20,11 @@ import {
   deriveDonePackageSummary,
   readOrCreateDonePackage
 } from "./commitDonePackage.js";
+import {
+  assertStagedFilesWithinWorktree,
+  collectStagedFiles,
+  formatCommitErrorMessage
+} from "./commitStagedFiles.js";
 export { BubbleCommitError } from "./commitCommandRuntime.js";
 
 type ResolvedBubbleContext = Awaited<ReturnType<typeof resolveBubbleById>>;
@@ -27,72 +32,6 @@ type BubbleIdentity = Awaited<ReturnType<typeof ensureBubbleInstanceIdForMutatio
 type LoadedState = Awaited<ReturnType<typeof readStateSnapshot>>;
 type AppendedEnvelope = Awaited<ReturnType<typeof appendProtocolEnvelope>>;
 type WrittenState = Awaited<ReturnType<typeof writeStateSnapshot>>;
-
-function isPathInside(parentPath: string, childPath: string): boolean {
-  const normalizedParent = resolve(parentPath);
-  const normalizedChild = resolve(childPath);
-  return (
-    normalizedChild === normalizedParent ||
-    normalizedChild.startsWith(`${normalizedParent}/`)
-  );
-}
-
-function formatCommitErrorMessage(input: {
-  reasonCode: string;
-  message: string;
-  context: Record<string, unknown>;
-}): string {
-  return `${input.reasonCode}: ${input.message} context=${JSON.stringify(input.context)}`;
-}
-
-async function collectStagedFiles(worktreePath: string): Promise<string[]> {
-  const staged = await runGit(["diff", "--cached", "--name-only"], {
-    cwd: worktreePath
-  });
-  return staged.stdout
-    .split(/\r?\n/u)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-}
-
-function assertStagedFilesWithinWorktree(
-  stagedFiles: string[],
-  worktreePath: string,
-  bubbleId: string
-): void {
-  for (const file of stagedFiles) {
-    if (isAbsolute(file)) {
-      throw new BubbleCommitError(
-        formatCommitErrorMessage({
-          reasonCode: "COMMIT_STAGED_PATH_ABSOLUTE",
-          message: `Invalid staged file path (absolute path not allowed): ${file}`,
-          context: {
-            bubble_id: bubbleId,
-            command_name: "commit",
-            staged_file: file,
-            worktree_path: worktreePath
-          }
-        })
-      );
-    }
-
-    const absoluteFilePath = resolve(worktreePath, file);
-    if (!isPathInside(worktreePath, absoluteFilePath)) {
-      throw new BubbleCommitError(
-        formatCommitErrorMessage({
-          reasonCode: "COMMIT_STAGED_PATH_OUTSIDE_WORKTREE",
-          message: `Staged file is outside bubble worktree scope: ${file}`,
-          context: {
-            bubble_id: bubbleId,
-            command_name: "commit",
-            staged_file: file,
-            worktree_path: worktreePath
-          }
-        })
-      );
-    }
-  }
-}
 
 interface CommitRuntimeContext {
   resolved: ResolvedBubbleContext;
