@@ -33,6 +33,36 @@ afterEach(async () => {
 });
 
 describe("transition fitness check", () => {
+  it("fails when lifecycle transition persist uses marker-like variable naming only", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/rename-only.ts",
+      [
+        "export async function run(state: { state: string }): Promise<void> {",
+        "  const validatedNextState = { ...state, state: 'RUNNING' };",
+        "  await writeStateSnapshot('state.json', validatedNextState);",
+        "}"
+      ].join("\n")
+    );
+
+    const report = await buildTransitionCheckReport({
+      check: {
+        id: "transition",
+        metric: "state transition validation before persist",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture/runtime",
+        scope: ["src/v11/application/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only"
+    });
+
+    expect(report.status).toBe("fail");
+  });
+
   it("fails when persist happens without transition marker", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
@@ -66,6 +96,72 @@ describe("transition fitness check", () => {
         detail.includes("persist without transition validation")
       )
     ).toBe(true);
+  });
+
+  it("passes metadata-only persist without transition marker", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/metadata-only.ts",
+      [
+        "export async function run(state: { state: string }, nowIso: string): Promise<void> {",
+        "  const persisted = {",
+        "    ...state,",
+        "    last_command_at: nowIso",
+        "  };",
+        "  await writeStateSnapshot('state.json', persisted);",
+        "}"
+      ].join("\n")
+    );
+
+    const report = await buildTransitionCheckReport({
+      check: {
+        id: "transition",
+        metric: "state transition validation before persist",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture/runtime",
+        scope: ["src/v11/application/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only"
+    });
+
+    expect(report.status).toBe("pass");
+  });
+
+  it("passes transition persist when applyStateTransition marker is present", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/validated-transition.ts",
+      [
+        "export async function run(state: { state: string }): Promise<void> {",
+        "  const nextState = applyStateTransition(state, {",
+        "    from: 'RUNNING',",
+        "    to: 'WAITING_HUMAN'",
+        "  });",
+        "  await writeStateSnapshot('state.json', nextState);",
+        "}"
+      ].join("\n")
+    );
+
+    const report = await buildTransitionCheckReport({
+      check: {
+        id: "transition",
+        metric: "state transition validation before persist",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture/runtime",
+        scope: ["src/v11/application/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only"
+    });
+
+    expect(report.status).toBe("pass");
   });
 
   it("warns on manual next-state candidates without hard fail", async () => {

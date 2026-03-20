@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { relative } from "node:path";
+import * as ts from "typescript";
 
 import { normalizePathToPosix, resolveFilesForScopePatterns } from "../scope.js";
 import type { FitnessPolicyCheck, FitnessReportCheck } from "../types.js";
@@ -12,18 +13,191 @@ interface TransitionViolation {
   snippet: string;
 }
 
-const persistCallPattern = /\bwriteStateSnapshot\s*\(/u;
-
 const transitionValidationMarkerPatterns: readonly RegExp[] = [
   /\bapplyStateTransition\s*\(/u,
   /\bStateTransitionService\b/u,
-  /\bvalidated_next_state\b/u,
-  /\bvalidatedNextState\b/u
+  /\bresolve[A-Za-z0-9_]*NextState\s*\(/u,
+  /\bqueueDeferredReworkTransition\s*\(/u
 ] as const;
 
 const stateSpreadPattern = /\.\.\.\s*(?:state|currentState)\b/u;
 const sensitiveStateFieldPattern =
-  /\b(?:state|round|active_agent|active_role|active_since|last_command_at)\s*:/u;
+  /\b(?:state|round|active_agent|active_role|active_since)\s*:/u;
+const lifecycleStateFields = new Set(["state", "round", "active_agent", "active_role", "active_since"]);
+
+interface StatePersistAnalysis {
+  analyzable: boolean;
+  hasLifecycleMutation: boolean;
+  hasNonLifecycleMutation: boolean;
+}
+
+const unknownPersistAnalysis: StatePersistAnalysis = {
+  analyzable: false,
+  hasLifecycleMutation: false,
+  hasNonLifecycleMutation: false
+};
+
+interface SourceAnalysisContext {
+  sourceFile: ts.SourceFile;
+  variableDeclarations: Map<string, ts.VariableDeclaration[]>;
+}
+
+function createSourceAnalysisContext(filePath: string, fileContent: string): SourceAnalysisContext {
+  const sourceFile = ts.createSourceFile(filePath, fileContent, ts.ScriptTarget.Latest, true);
+  const variableDeclarations = new Map<string, ts.VariableDeclaration[]>();
+  const visit = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+      const existing = variableDeclarations.get(node.name.text);
+      if (existing) {
+        existing.push(node);
+      } else {
+        variableDeclarations.set(node.name.text, [node]);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return { sourceFile, variableDeclarations };
+}
+
+function getCallExpressionName(expression: ts.LeftHandSideExpression): string | null {
+  if (ts.isIdentifier(expression)) {
+    return expression.text;
+  }
+  if (ts.isPropertyAccessExpression(expression)) {
+    return expression.name.text;
+  }
+  if (
+    ts.isElementAccessExpression(expression) &&
+    expression.argumentExpression !== undefined &&
+    ts.isStringLiteralLike(expression.argumentExpression)
+  ) {
+    return expression.argumentExpression.text;
+  }
+  return null;
+}
+
+function collectPersistCalls(sourceFile: ts.SourceFile): ts.CallExpression[] {
+  const calls: ts.CallExpression[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node)) {
+      const callName = getCallExpressionName(node.expression);
+      if (callName === "writeStateSnapshot") {
+        calls.push(node);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return calls;
+}
+
+function resolveVariableInitializer(
+  name: string,
+  beforePosition: number,
+  context: SourceAnalysisContext
+): ts.Expression | undefined {
+  const declarations = context.variableDeclarations.get(name);
+  if (!declarations || declarations.length === 0) {
+    return undefined;
+  }
+  for (let index = declarations.length - 1; index >= 0; index -= 1) {
+    const declaration = declarations[index];
+    if (!declaration) {
+      continue;
+    }
+    if (declaration.getStart(context.sourceFile) >= beforePosition) {
+      continue;
+    }
+    if (declaration.initializer) {
+      return declaration.initializer;
+    }
+  }
+  return undefined;
+}
+
+function getPropertyNameText(name: ts.PropertyName): string | null {
+  if (ts.isIdentifier(name) || ts.isStringLiteralLike(name) || ts.isNumericLiteral(name)) {
+    return name.text;
+  }
+  return null;
+}
+
+function analyzeObjectLiteralStateMutation(objectLiteral: ts.ObjectLiteralExpression): StatePersistAnalysis {
+  let hasLifecycleMutation = false;
+  let hasNonLifecycleMutation = false;
+  let hasUnknownMutation = false;
+
+  for (const property of objectLiteral.properties) {
+    if (ts.isSpreadAssignment(property)) {
+      continue;
+    }
+    if (
+      ts.isPropertyAssignment(property) ||
+      ts.isShorthandPropertyAssignment(property) ||
+      ts.isMethodDeclaration(property) ||
+      ts.isGetAccessorDeclaration(property) ||
+      ts.isSetAccessorDeclaration(property)
+    ) {
+      const fieldName = getPropertyNameText(property.name);
+      if (fieldName === null) {
+        hasUnknownMutation = true;
+        continue;
+      }
+      if (lifecycleStateFields.has(fieldName)) {
+        hasLifecycleMutation = true;
+      } else {
+        hasNonLifecycleMutation = true;
+      }
+      continue;
+    }
+    hasUnknownMutation = true;
+  }
+
+  if (hasUnknownMutation) {
+    return unknownPersistAnalysis;
+  }
+  return {
+    analyzable: true,
+    hasLifecycleMutation,
+    hasNonLifecycleMutation
+  };
+}
+
+function analyzePersistedStateExpression(
+  expression: ts.Expression,
+  context: SourceAnalysisContext,
+  beforePosition: number,
+  visited: Set<number> = new Set()
+): StatePersistAnalysis {
+  if (visited.has(expression.pos)) {
+    return unknownPersistAnalysis;
+  }
+  visited.add(expression.pos);
+
+  if (ts.isParenthesizedExpression(expression)) {
+    return analyzePersistedStateExpression(expression.expression, context, beforePosition, visited);
+  }
+  if (
+    ts.isAsExpression(expression) ||
+    ts.isTypeAssertionExpression(expression) ||
+    ts.isSatisfiesExpression(expression)
+  ) {
+    return analyzePersistedStateExpression(expression.expression, context, beforePosition, visited);
+  }
+  if (ts.isObjectLiteralExpression(expression)) {
+    return analyzeObjectLiteralStateMutation(expression);
+  }
+  if (ts.isIdentifier(expression)) {
+    const initializer = resolveVariableInitializer(expression.text, beforePosition, context);
+    if (!initializer) {
+      return unknownPersistAnalysis;
+    }
+    return analyzePersistedStateExpression(initializer, context, beforePosition, visited);
+  }
+
+  return unknownPersistAnalysis;
+}
 
 function collectLineNumbers(lines: readonly string[], pattern: RegExp): number[] {
   const matches: number[] = [];
@@ -38,14 +212,30 @@ function collectLineNumbers(lines: readonly string[], pattern: RegExp): number[]
 
 function collectPersistValidationViolations(
   filePath: string,
-  lines: readonly string[]
+  lines: readonly string[],
+  context: SourceAnalysisContext
 ): TransitionViolation[] {
   const violations: TransitionViolation[] = [];
-  const persistLines = collectLineNumbers(lines, persistCallPattern);
+  const persistCalls = collectPersistCalls(context.sourceFile);
   const validationMarkerLines = transitionValidationMarkerPatterns.flatMap((pattern) =>
     collectLineNumbers(lines, pattern)
   );
-  for (const persistLine of persistLines) {
+  for (const persistCall of persistCalls) {
+    const persistLine =
+      context.sourceFile.getLineAndCharacterOfPosition(persistCall.getStart(context.sourceFile)).line + 1;
+    const persistedStateArgument = persistCall.arguments[1];
+    if (persistedStateArgument) {
+      const analysis = analyzePersistedStateExpression(
+        persistedStateArgument,
+        context,
+        persistCall.getStart(context.sourceFile)
+      );
+      const isMetadataOnlyPersist =
+        analysis.analyzable && analysis.hasNonLifecycleMutation && !analysis.hasLifecycleMutation;
+      if (isMetadataOnlyPersist) {
+        continue;
+      }
+    }
     const hasPriorValidationMarker = validationMarkerLines.some(
       (markerLine) => markerLine < persistLine
     );
@@ -102,8 +292,9 @@ function collectTransitionViolations(
   fileContent: string
 ): TransitionViolation[] {
   const lines = fileContent.split(/\r?\n/u);
+  const context = createSourceAnalysisContext(filePath, fileContent);
   return [
-    ...collectPersistValidationViolations(filePath, lines),
+    ...collectPersistValidationViolations(filePath, lines, context),
     ...collectManualNextStateCandidates(filePath, lines)
   ];
 }
