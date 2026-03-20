@@ -2,7 +2,8 @@ import type { KickoffPreparedValidation } from "./kickoffValidationPreparation.j
 import {
   buildKickoffFailureResult,
   buildKickoffSuccessResult,
-  type KickoffBubbleResultShape
+  type KickoffBubbleResultShape,
+  type KickoffResultDelivery
 } from "./kickoffResultBuilders.js";
 export type { KickoffBubbleResultShape } from "./kickoffResultBuilders.js";
 
@@ -23,11 +24,13 @@ export function buildKickoffValidatedSuccessResult(input: {
   writtenState: {
     state: KickoffPreparedValidation["state"];
   };
+  delivery?: KickoffResultDelivery;
 }): KickoffBubbleResultShape {
   return buildKickoffSuccessResult({
     bubbleId: input.validation.resolved.bubbleId,
     markersBefore: input.validation.markersBefore,
     stateBefore: input.validation.state,
-    stateAfter: input.writtenState.state
+    stateAfter: input.writtenState.state,
+    ...(input.delivery !== undefined ? { delivery: input.delivery } : {})
   });
 }

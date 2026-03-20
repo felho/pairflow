@@ -1,6 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 
 import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
+import { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../core/state/stateStore.js";
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 
@@ -11,6 +12,7 @@ export interface KickoffDependencyOverrides {
   readFile?: typeof readFile;
   writeFile?: typeof writeFile;
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;
+  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
 }
 
 export interface ResolvedKickoffDependencies {
@@ -20,6 +22,7 @@ export interface ResolvedKickoffDependencies {
   readFileFn: typeof readFile;
   writeFileFn: typeof writeFile;
   appendEnvelope: typeof appendProtocolEnvelope;
+  emitDelivery: typeof emitTmuxDeliveryNotification;
 }
 
 function buildKickoffDefaultDependencies(): ResolvedKickoffDependencies {
@@ -29,7 +32,8 @@ function buildKickoffDefaultDependencies(): ResolvedKickoffDependencies {
     writeState: writeStateSnapshot,
     readFileFn: readFile,
     writeFileFn: writeFile,
-    appendEnvelope: appendProtocolEnvelope
+    appendEnvelope: appendProtocolEnvelope,
+    emitDelivery: emitTmuxDeliveryNotification
   };
 }
 
@@ -43,6 +47,7 @@ export function resolveKickoffDependencies(
     writeState: overrides.writeStateSnapshot ?? defaults.writeState,
     readFileFn: overrides.readFile ?? defaults.readFileFn,
     writeFileFn: overrides.writeFile ?? defaults.writeFileFn,
-    appendEnvelope: overrides.appendProtocolEnvelope ?? defaults.appendEnvelope
+    appendEnvelope: overrides.appendProtocolEnvelope ?? defaults.appendEnvelope,
+    emitDelivery: overrides.emitTmuxDeliveryNotification ?? defaults.emitDelivery
   };
 }

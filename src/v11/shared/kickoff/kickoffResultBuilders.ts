@@ -9,6 +9,12 @@ export interface KickoffIdeationMarkers {
   ideation_task_pending: boolean;
 }
 
+export interface KickoffResultDelivery {
+  delivered: boolean;
+  reason?: string;
+  retried: boolean;
+}
+
 export interface KickoffBubbleResultShape {
   ok: boolean;
   bubble_id: string;
@@ -21,6 +27,7 @@ export interface KickoffBubbleResultShape {
   markers_after: KickoffIdeationMarkers;
   state_before?: BubbleStateSnapshot;
   state_after?: BubbleStateSnapshot;
+  delivery?: KickoffResultDelivery;
 }
 
 export interface BuildKickoffFailureResultInput {
@@ -58,6 +65,7 @@ export interface BuildKickoffSuccessResultInput {
   markersBefore: KickoffIdeationMarkers;
   stateBefore: BubbleStateSnapshot;
   stateAfter: BubbleStateSnapshot;
+  delivery?: KickoffResultDelivery;
 }
 
 function buildKickoffSuccessMarkersAfter(): KickoffIdeationMarkers {
@@ -87,6 +95,9 @@ export function buildKickoffSuccessResult(
     reason_code: null,
     state_changed: true,
     state_before: input.stateBefore,
-    state_after: input.stateAfter
+    state_after: input.stateAfter,
+    ...(input.delivery !== undefined
+      ? { delivery: input.delivery }
+      : {})
   };
 }

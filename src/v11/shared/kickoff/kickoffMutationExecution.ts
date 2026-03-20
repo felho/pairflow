@@ -1,5 +1,6 @@
 import type { AgentName } from "../../../types/bubble.js";
 import type { ProtocolEnvelopeDraft } from "../../../core/protocol/transcriptStore.js";
+import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ResolvedKickoffTaskInput } from "./kickoffTaskInputResolution.js";
 import { renderKickoffTaskArtifact } from "./kickoffTaskInputResolution.js";
 import { appendKickoffMutationEnvelopeWithBackup } from "./kickoffMutationTranscriptAppend.js";
@@ -26,6 +27,7 @@ export interface ExecuteKickoffMutationInput {
     now: Date;
     envelope: ProtocolEnvelopeDraft;
   }) => Promise<unknown>;
+  onEnvelopeAppended?: (envelope: ProtocolEnvelope) => void;
 }
 
 async function writeKickoffMutationArtifacts(

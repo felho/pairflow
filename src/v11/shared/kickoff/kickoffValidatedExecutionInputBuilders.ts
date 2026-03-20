@@ -4,6 +4,7 @@ import type { buildKickoffNextState } from "./kickoffStateTransition.js";
 import type { prepareKickoffPersistence } from "./kickoffPersistencePreparation.js";
 import type { persistKickoffState } from "./kickoffStatePersistence.js";
 import type { executeKickoffMutationPipeline } from "./kickoffMutationPipeline.js";
+import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
 export function buildKickoffStatePersistenceInput(input: {
   validation: KickoffPreparedValidation;
@@ -26,6 +27,7 @@ export function buildKickoffMutationPipelineInput(input: {
   writtenStateFingerprint: string;
   now: Date;
   dependencies: ResolvedKickoffDependencies;
+  onEnvelopeAppended?: (envelope: ProtocolEnvelope) => void;
 }): Parameters<typeof executeKickoffMutationPipeline>[0] {
   return {
     persistenceFailureCode: input.persistenceFailureCode,
@@ -46,6 +48,9 @@ export function buildKickoffMutationPipelineInput(input: {
     writeFile: input.dependencies.writeFileFn,
     readFile: input.dependencies.readFileFn,
     appendEnvelope: input.dependencies.appendEnvelope,
+    ...(input.onEnvelopeAppended !== undefined
+      ? { onEnvelopeAppended: input.onEnvelopeAppended }
+      : {}),
     writeState: input.dependencies.writeState
   };
 }

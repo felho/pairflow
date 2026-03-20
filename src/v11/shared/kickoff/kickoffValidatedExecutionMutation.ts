@@ -1,4 +1,5 @@
 import { IDEATION_KICKOFF_PERSISTENCE_FAILED } from "../../../core/bubble/ideation.js";
+import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ResolvedKickoffDependencies } from "./kickoffDependencyResolution.js";
 import type { KickoffPreparedValidation } from "./kickoffValidationPreparation.js";
 import { executeKickoffMutationPipeline } from "./kickoffMutationPipeline.js";
@@ -15,6 +16,7 @@ export type ExecuteKickoffMutationOrFailureResult =
     }
   | {
       kind: "success";
+      appendedTaskEnvelope?: ProtocolEnvelope;
     };
 
 export async function executeKickoffMutationOrFailure(input: {
@@ -28,6 +30,7 @@ export async function executeKickoffMutationOrFailure(input: {
   now: Date;
   dependencies: ResolvedKickoffDependencies;
 }): Promise<ExecuteKickoffMutationOrFailureResult> {
+  let appendedTaskEnvelope: ProtocolEnvelope | undefined;
   const mutationPipelineResult = await executeKickoffMutationPipeline(
     buildKickoffMutationPipelineInput({
       persistenceFailureCode: IDEATION_KICKOFF_PERSISTENCE_FAILED,
@@ -35,7 +38,10 @@ export async function executeKickoffMutationOrFailure(input: {
       persistence: input.persistence,
       writtenStateFingerprint: input.writtenStateFingerprint,
       now: input.now,
-      dependencies: input.dependencies
+      dependencies: input.dependencies,
+      onEnvelopeAppended: (envelope) => {
+        appendedTaskEnvelope = envelope;
+      }
     })
   );
   if (mutationPipelineResult.kind === "mutation_failed_rolled_back") {
@@ -49,6 +55,9 @@ export async function executeKickoffMutationOrFailure(input: {
   }
 
   return {
-    kind: "success"
+    kind: "success",
+    ...(appendedTaskEnvelope !== undefined
+      ? { appendedTaskEnvelope }
+      : {})
   };
 }

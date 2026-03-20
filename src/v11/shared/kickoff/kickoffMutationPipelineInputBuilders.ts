@@ -19,7 +19,10 @@ export function buildKickoffMutationExecutionInput(
     now: input.now,
     writeFile: input.writeFile,
     readFile: input.readFile,
-    appendEnvelope: input.appendEnvelope
+    appendEnvelope: input.appendEnvelope,
+    ...(input.onEnvelopeAppended !== undefined
+      ? { onEnvelopeAppended: input.onEnvelopeAppended }
+      : {})
   };
 }
 

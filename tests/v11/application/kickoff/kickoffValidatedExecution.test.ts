@@ -41,6 +41,100 @@ afterEach(async () => {
 });
 
 describe("executeKickoffValidatedFlow", () => {
+  it("enforces kickoff delivery invariant on successful activation", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_kickoff_exec_delivery_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      ideation: true,
+      cwd: repoPath
+    });
+    const currentState = createRunningState(created.state);
+    const nowIso = "2026-03-20T10:00:00.000Z";
+    const emitDelivery = vi.fn(async () => ({
+      delivered: true,
+      message: "ok"
+    }));
+
+    const dependencies = {
+      resolveBubble: vi.fn(async () => ({})),
+      readState: vi.fn(async () => ({
+        state: currentState,
+        fingerprint: "stable-fingerprint"
+      })),
+      writeState: vi.fn(async (_statePath: string, nextState: BubbleStateSnapshot) => ({
+        state: nextState,
+        fingerprint: "written-fingerprint"
+      })),
+      readFileFn: vi.fn(async (path: string) => {
+        if (path === created.paths.bubbleTomlPath) {
+          return renderBubbleConfigToml(created.config);
+        }
+        return "# Bubble Task\n\nplaceholder\n";
+      }),
+      writeFileFn: vi.fn(async () => undefined),
+      appendEnvelope: vi.fn(async () => ({
+        envelope: {
+          id: "msg_20260320_001",
+          ts: nowIso,
+          bubble_id: created.bubbleId,
+          sender: "orchestrator",
+          recipient: created.config.agents.implementer,
+          type: "TASK",
+          round: 1,
+          payload: {
+            summary: "Kickoff execution delivery task",
+            metadata: {
+              source: "inline"
+            }
+          },
+          refs: [created.paths.taskArtifactPath]
+        },
+        sequence: 1,
+        mirrorWriteFailures: []
+      })),
+      emitDelivery
+    } as unknown as ResolvedKickoffDependencies;
+
+    const validation = {
+      kind: "prepared",
+      resolved: {
+        bubbleId: created.bubbleId,
+        bubbleConfig: created.config,
+        bubblePaths: created.paths,
+        repoPath
+      },
+      loadedState: {
+        state: currentState,
+        fingerprint: "stable-fingerprint"
+      },
+      state: currentState,
+      markersBefore: {
+        ideation_mode: true,
+        ideation_task_pending: true
+      },
+      task: {
+        content: "Kickoff execution delivery task",
+        source: "inline"
+      }
+    } as KickoffPreparedValidation;
+
+    const result = await executeKickoffValidatedFlow({
+      validation,
+      now: new Date(nowIso),
+      nowIso
+    }, dependencies);
+
+    expect(result.ok).toBe(true);
+    expect((result as { delivery?: unknown }).delivery).toMatchObject({
+      delivered: true,
+      retried: false
+    });
+    expect(emitDelivery).toHaveBeenCalledTimes(1);
+  });
+
   it("returns kickoff conflict result when state fingerprint changed before write", async () => {
     const repoPath = await createTempRepo();
     const created = await createBubble({
@@ -70,7 +164,11 @@ describe("executeKickoffValidatedFlow", () => {
         return renderBubbleConfigToml(created.config);
       }),
       writeFileFn: vi.fn(async () => undefined),
-      appendEnvelope: vi.fn(async () => ({}))
+      appendEnvelope: vi.fn(async () => ({})),
+      emitDelivery: vi.fn(async () => ({
+        delivered: true,
+        message: "ok"
+      }))
     } as unknown as ResolvedKickoffDependencies;
 
     const validation = {

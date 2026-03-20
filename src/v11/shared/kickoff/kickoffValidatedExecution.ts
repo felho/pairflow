@@ -4,6 +4,10 @@ import {
   buildKickoffValidatedSuccessResult,
   type KickoffBubbleResultShape
 } from "./kickoffValidatedExecutionResultBuilders.js";
+import {
+  buildKickoffMissingEnvelopeDeliveryResult,
+  executeKickoffValidatedDelivery
+} from "./kickoffValidatedExecutionDelivery.js";
 import { executeKickoffMutationOrFailure } from "./kickoffValidatedExecutionMutation.js";
 import { persistKickoffNextStateOrFailure } from "./kickoffValidatedExecutionPersistence.js";
 import { prepareKickoffValidatedExecutionContext } from "./kickoffValidatedExecutionPreparation.js";
@@ -44,9 +48,18 @@ export async function executeKickoffValidatedFlow(
   if (mutationOrFailure.kind === "failure") {
     return mutationOrFailure.result;
   }
+  const delivery =
+    mutationOrFailure.appendedTaskEnvelope === undefined
+      ? buildKickoffMissingEnvelopeDeliveryResult()
+      : await executeKickoffValidatedDelivery({
+          validation: input.validation,
+          envelope: mutationOrFailure.appendedTaskEnvelope,
+          dependencies
+        });
 
   return buildKickoffValidatedSuccessResult({
     validation: input.validation,
-    writtenState
+    writtenState,
+    delivery
   });
 }

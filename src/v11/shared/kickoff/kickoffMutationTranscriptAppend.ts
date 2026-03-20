@@ -2,6 +2,7 @@ import { join } from "node:path";
 
 import type { ProtocolEnvelopeDraft } from "../../../core/protocol/transcriptStore.js";
 import type { AgentName } from "../../../types/bubble.js";
+import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ResolvedKickoffTaskInput } from "./kickoffTaskInputResolution.js";
 import { buildKickoffTaskEnvelope } from "./kickoffTaskEnvelope.js";
 
@@ -20,6 +21,7 @@ export interface AppendKickoffMutationEnvelopeWithBackupInput {
     now: Date;
     envelope: ProtocolEnvelopeDraft;
   }) => Promise<unknown>;
+  onEnvelopeAppended?: (envelope: ProtocolEnvelope) => void;
 }
 
 function buildKickoffMutationTaskEnvelope(input: {
@@ -56,8 +58,15 @@ export async function appendKickoffMutationEnvelopeWithBackup(
   input: AppendKickoffMutationEnvelopeWithBackupInput
 ): Promise<string> {
   const transcriptBackup = await input.readFile(input.transcriptPath, "utf8");
-  await input.appendEnvelope(
+  const appendResult = await input.appendEnvelope(
     buildKickoffMutationEnvelopeAppendInput(input)
   );
+  const appendedEnvelope =
+    typeof appendResult === "object" && appendResult !== null
+      ? (appendResult as { envelope?: unknown }).envelope
+      : undefined;
+  if (input.onEnvelopeAppended !== undefined && appendedEnvelope !== undefined) {
+    input.onEnvelopeAppended(appendedEnvelope as ProtocolEnvelope);
+  }
   return transcriptBackup;
 }

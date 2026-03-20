@@ -48,7 +48,11 @@ function createDependencies(config: BubbleConfig, state: BubbleStateSnapshot): R
       void args;
       return Promise.resolve(undefined);
     }) as unknown as ResolvedKickoffDependencies["writeFileFn"],
-    appendEnvelope: vi.fn(async () => ({})) as unknown as ResolvedKickoffDependencies["appendEnvelope"]
+    appendEnvelope: vi.fn(async () => ({})) as unknown as ResolvedKickoffDependencies["appendEnvelope"],
+    emitDelivery: vi.fn(async () => ({
+      delivered: true,
+      message: "ok"
+    })) as unknown as ResolvedKickoffDependencies["emitDelivery"]
   };
 }
 

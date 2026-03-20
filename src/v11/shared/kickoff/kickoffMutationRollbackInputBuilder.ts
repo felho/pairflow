@@ -1,5 +1,6 @@
 import type { ProtocolEnvelopeDraft } from "../../../core/protocol/transcriptStore.js";
 import type { AgentName, BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ExecuteKickoffMutationRollbackInput } from "./kickoffMutationRollback.js";
 import type { ResolvedKickoffTaskInput } from "./kickoffTaskInputResolution.js";
 
@@ -30,6 +31,7 @@ export interface KickoffMutationPipelineInputForBuilders {
     now: Date;
     envelope: ProtocolEnvelopeDraft;
   }) => Promise<unknown>;
+  onEnvelopeAppended?: (envelope: ProtocolEnvelope) => void;
   writeState: (
     statePath: string,
     state: BubbleStateSnapshot,
