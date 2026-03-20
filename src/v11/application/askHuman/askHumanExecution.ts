@@ -10,6 +10,7 @@ import type {
   ExecuteAskHumanExecutionResult
 } from "../../shared/askHuman/askHumanFlowContract.js";
 import { resolveAskHumanExecutionDependencies } from "../../shared/askHuman/askHumanExecutionDependencyResolution.js";
+import { buildAskHumanExecutionDependencyResolutionInput } from "../../shared/askHuman/askHumanExecutionDependencyResolutionInputBuilder.js";
 export type {
   ExecuteAskHumanExecutionDependencies,
   ExecuteAskHumanExecutionInput,
@@ -20,11 +21,9 @@ export async function executeAskHumanExecution(
   input: ExecuteAskHumanExecutionInput,
   dependencies: ExecuteAskHumanExecutionDependencies = {}
 ): Promise<ExecuteAskHumanExecutionResult> {
-  const resolvedDependencies = resolveAskHumanExecutionDependencies({
-    appendProtocolEnvelope: dependencies.appendProtocolEnvelope,
-    writeStateSnapshot: dependencies.writeStateSnapshot,
-    applyStateTransition: dependencies.applyStateTransition
-  });
+  const resolvedDependencies = resolveAskHumanExecutionDependencies(
+    buildAskHumanExecutionDependencyResolutionInput(dependencies)
+  );
 
   const lockPath = buildAskHumanLockPath(input);
 
