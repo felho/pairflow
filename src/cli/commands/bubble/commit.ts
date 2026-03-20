@@ -1,10 +1,10 @@
 import { parseArgs } from "node:util";
 
 import {
-  asBubbleCommitError,
-  commitBubble,
-  type CommitBubbleResult
-} from "../../../core/bubble/commitBubble.js";
+  asBubbleCommitErrorV11 as asBubbleCommitError,
+  commitBubbleV11 as commitBubble,
+  type CommitBubbleV11Result as CommitBubbleResult
+} from "../../../v11/application/commit/emitCommitV11.js";
 
 export interface BubbleCommitCommandOptions {
   id: string;
