@@ -13,3 +13,11 @@ From the repository root:
 ```
 
 The script installs dependencies, builds, links `pairflow` globally, initializes `.pairflow` runtime folders, and runs a smoke test.
+
+Optional but recommended for local quality gating before push:
+
+```bash
+pnpm hooks:install
+```
+
+This enables the versioned `pre-push` hook that runs `pnpm ci:local`.

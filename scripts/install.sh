@@ -74,4 +74,5 @@ Next steps:
   1) pairflow bubble list --repo . --json
   2) pairflow bubble create --id demo --repo . --base main --review-artifact-type code --task "Your task"
   3) pairflow bubble start --id demo --repo .
+  4) pnpm hooks:install   # optional: enforce local CI before push
 MSG

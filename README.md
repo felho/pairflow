@@ -1103,6 +1103,31 @@ Milestone precedence used by `fitness:check:ci`:
 2. `PAIRFLOW_FITNESS_CURRENT_MILESTONE`
 3. `M0` (fallback)
 
+### Local CI gate (main push before)
+
+Set up a local pre-push quality gate once per clone:
+
+```bash
+pnpm hooks:install
+```
+
+This enables a versioned git `pre-push` hook (`.githooks/pre-push`) that runs:
+
+```bash
+pnpm ci:local
+```
+
+`ci:local` steps:
+1. `pnpm install --frozen-lockfile`
+2. `pnpm check`
+3. `pnpm fitness:check:ci`
+
+Optional milestone override for local run:
+
+```bash
+PAIRFLOW_CI_MILESTONE=M2 pnpm ci:local
+```
+
 ## Roadmap
 
 - Diff / changed files view in the web UI
