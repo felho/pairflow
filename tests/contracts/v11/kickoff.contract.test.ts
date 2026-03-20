@@ -18,7 +18,10 @@ const kickoffCaseSources = [
   "tests/contracts/v11/cases/kickoff/kickoff-not-allowed-parity.case.json",
   "tests/contracts/v11/cases/kickoff/kickoff-requires-running.case.json",
   "tests/contracts/v11/cases/kickoff/kickoff-requires-running-v11.case.json",
-  "tests/contracts/v11/cases/kickoff/kickoff-requires-running-parity.case.json"
+  "tests/contracts/v11/cases/kickoff/kickoff-requires-running-parity.case.json",
+  "tests/contracts/v11/cases/kickoff/kickoff-task-invalid.case.json",
+  "tests/contracts/v11/cases/kickoff/kickoff-task-invalid-v11.case.json",
+  "tests/contracts/v11/cases/kickoff/kickoff-task-invalid-parity.case.json"
 ] as const;
 
 const kickoffExpectedSourcesSorted = [...kickoffCaseSources].sort();

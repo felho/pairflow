@@ -1,0 +1,22 @@
+{
+  "id": "kickoff-task-invalid-parity",
+  "command": "kickoff",
+  "mode": "parity",
+  "description": "Seed kickoff parity contract case for placeholder-marked inline task rejection.",
+  "input": {
+    "task": "metadata_source: ideation_placeholder"
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "IDEATION_KICKOFF_TASK_INVALID",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "kickoff",
+    "error-path"
+  ]
+}

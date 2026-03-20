@@ -273,6 +273,24 @@
       "kind": "seed_case"
     },
     {
+      "id": "kickoff-task-invalid",
+      "command": "kickoff",
+      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-invalid.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "kickoff-task-invalid-v11",
+      "command": "kickoff",
+      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-invalid-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "kickoff-task-invalid-parity",
+      "command": "kickoff",
+      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-invalid-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "ask-human-basic",
       "command": "askHuman",
       "source": "tests/contracts/v11/cases/ask-human/ask-human-basic.case.json",
