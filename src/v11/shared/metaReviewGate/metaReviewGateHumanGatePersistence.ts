@@ -1,4 +1,3 @@
-import { appendHumanApprovalRequestEnvelope } from "../../../core/bubble/approvalRequestEnvelope.js";
 import {
   StateStoreConflictError,
   type LoadedStateSnapshot,
@@ -23,15 +22,18 @@ import {
   resolveDefaultStickyHumanGateForRoute,
   transitionToGateState
 } from "./metaReviewGateStateHelpers.js";
+import {
+  appendHumanGateApprovalRequest,
+  resolveHumanGateRecommendation,
+  resolveRollbackAfterGateAppendFailure
+} from "./metaReviewGateHumanGatePersistenceHelpers.js";
 
-export const metaReviewGateRollbackNotAttemptedReasonCode =
-  "META_REVIEW_GATE_ROLLBACK_NOT_ATTEMPTED";
-export const metaReviewGateRollbackAppliedReasonCode =
-  "META_REVIEW_GATE_ROLLBACK_APPLIED";
-export const metaReviewGateRollbackStateConflictReasonCode =
-  "META_REVIEW_GATE_ROLLBACK_STATE_CONFLICT";
-export const metaReviewGateRollbackTransitionInvalidReasonCode =
-  "META_REVIEW_GATE_ROLLBACK_TRANSITION_INVALID";
+export {
+  metaReviewGateRollbackAppliedReasonCode,
+  metaReviewGateRollbackNotAttemptedReasonCode,
+  metaReviewGateRollbackStateConflictReasonCode,
+  metaReviewGateRollbackTransitionInvalidReasonCode
+} from "./metaReviewGateHumanGatePersistenceHelpers.js";
 
 export interface PersistHumanGateRouteInput {
   appendEnvelope: typeof appendProtocolEnvelope;
@@ -76,83 +78,6 @@ function assertPersistHumanGateRouteInput(
   }
 }
 
-function resolveHumanGateRecommendation(
-  input: PersistHumanGateRouteInput
-): MetaReviewRecommendation | undefined {
-  if (input.metaReviewRun !== undefined) {
-    return input.metaReviewRun.recommendation;
-  }
-  return input.fallbackRecommendation;
-}
-
-async function appendHumanGateApprovalRequest(input: {
-  routeInput: PersistHumanGateRouteInput;
-  recommendation: MetaReviewRecommendation | undefined;
-}): Promise<AppendProtocolEnvelopeResult> {
-  return appendHumanApprovalRequestEnvelope({
-    appendEnvelope: input.routeInput.appendEnvelope,
-    transcriptPath: input.routeInput.transcriptPath,
-    inboxPath: input.routeInput.inboxPath,
-    lockPath: input.routeInput.lockPath,
-    now: input.routeInput.now,
-    bubbleId: input.routeInput.bubbleId,
-    round: input.routeInput.loaded.state.round,
-    summary: input.routeInput.summary,
-    route: input.routeInput.route,
-    refs: input.routeInput.refs,
-    ...(input.recommendation !== undefined
-      ? { recommendation: input.recommendation }
-      : {}),
-    parityMetadata: input.routeInput.parityMetadata
-  });
-}
-
-async function resolveRollbackAfterGateAppendFailure(input: {
-  writeState: typeof writeStateSnapshot;
-  statePath: string;
-  rollbackState: BubbleStateSnapshot;
-  expectedFingerprint: string;
-  expectedState: "READY_FOR_HUMAN_APPROVAL" | "READY_FOR_APPROVAL" | "META_REVIEW_FAILED";
-}): Promise<{
-  rollbackContext: string;
-  rollbackDiagnosticReasonCode: string;
-  rollbackOutcome: "not_attempted" | "applied" | "failed";
-  rollbackReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID" | "META_REVIEW_GATE_STATE_CONFLICT";
-}> {
-  let rollbackContext = "rollback_outcome=not_attempted";
-  let rollbackDiagnosticReasonCode = metaReviewGateRollbackNotAttemptedReasonCode;
-  let rollbackOutcome: "not_attempted" | "applied" | "failed" = "not_attempted";
-  let rollbackReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID" | "META_REVIEW_GATE_STATE_CONFLICT" =
-    "META_REVIEW_GATE_TRANSITION_INVALID";
-  try {
-    await input.writeState(input.statePath, input.rollbackState, {
-      expectedFingerprint: input.expectedFingerprint,
-      expectedState: input.expectedState
-    });
-    rollbackContext = "rollback_outcome=applied";
-    rollbackDiagnosticReasonCode = metaReviewGateRollbackAppliedReasonCode;
-    rollbackOutcome = "applied";
-  } catch (rollbackError) {
-    if (rollbackError instanceof StateStoreConflictError) {
-      rollbackReasonCode = "META_REVIEW_GATE_STATE_CONFLICT";
-      rollbackDiagnosticReasonCode = metaReviewGateRollbackStateConflictReasonCode;
-    } else {
-      rollbackDiagnosticReasonCode = metaReviewGateRollbackTransitionInvalidReasonCode;
-    }
-    const rollbackReason = rollbackError instanceof Error
-      ? rollbackError.message
-      : String(rollbackError);
-    rollbackContext = `rollback_outcome=failed rollback_error=${rollbackReason}`;
-    rollbackOutcome = "failed";
-  }
-  return {
-    rollbackContext,
-    rollbackDiagnosticReasonCode,
-    rollbackOutcome,
-    rollbackReasonCode
-  };
-}
-
 export async function persistHumanGateRoute(
   input: PersistHumanGateRouteInput
 ): Promise<MetaReviewGateResult> {
@@ -176,7 +101,12 @@ export async function persistHumanGateRoute(
       : {})
   });
 
-  const recommendation = resolveHumanGateRecommendation(input);
+  const recommendation = resolveHumanGateRecommendation({
+    ...(input.metaReviewRun !== undefined ? { metaReviewRun: input.metaReviewRun } : {}),
+    ...(input.fallbackRecommendation !== undefined
+      ? { fallbackRecommendation: input.fallbackRecommendation }
+      : {})
+  });
   let written: LoadedStateSnapshot;
   try {
     written = await input.writeState(input.statePath, nextState, {
@@ -198,8 +128,20 @@ export async function persistHumanGateRoute(
   let gateAppended: AppendProtocolEnvelopeResult;
   try {
     gateAppended = await appendHumanGateApprovalRequest({
-      routeInput: input,
-      recommendation
+      appendEnvelope: input.appendEnvelope,
+      transcriptPath: input.transcriptPath,
+      inboxPath: input.inboxPath,
+      lockPath: input.lockPath,
+      now: input.now,
+      bubbleId: input.bubbleId,
+      round: input.loaded.state.round,
+      summary: input.summary,
+      route: input.route,
+      refs: input.refs,
+      ...(recommendation !== undefined ? { recommendation } : {}),
+      ...(input.parityMetadata !== undefined
+        ? { parityMetadata: input.parityMetadata }
+        : {})
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
