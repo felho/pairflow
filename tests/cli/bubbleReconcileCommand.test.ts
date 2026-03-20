@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   getBubbleReconcileHelpText,
@@ -36,5 +36,33 @@ describe("runBubbleReconcileCommand", () => {
   it("returns null on help", async () => {
     const result = await runBubbleReconcileCommand(["--help"]);
     expect(result).toBeNull();
+  });
+
+  it("delegates execution to reconcile dependency with parsed options", async () => {
+    const reconcileRuntimeSessions = vi.fn(() =>
+      Promise.resolve({
+        repoPath: "/tmp/repo",
+        dryRun: true,
+        sessionsBefore: 1,
+        sessionsAfter: 1,
+        staleCandidates: 0,
+        actions: []
+      })
+    );
+
+    const result = await runBubbleReconcileCommand(
+      ["--repo", "/tmp/repo", "--dry-run"],
+      "/tmp/cwd",
+      {
+        reconcileRuntimeSessions
+      }
+    );
+
+    expect(reconcileRuntimeSessions).toHaveBeenCalledWith({
+      repoPath: "/tmp/repo",
+      cwd: "/tmp/cwd",
+      dryRun: true
+    });
+    expect(result?.dryRun).toBe(true);
   });
 });
