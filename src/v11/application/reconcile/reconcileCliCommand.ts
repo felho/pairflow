@@ -21,6 +21,10 @@ export type ParsedBubbleReconcileCommandOptions =
   | BubbleReconcileCommandOptions
   | BubbleReconcileHelpCommandOptions;
 
+export interface BubbleReconcileCommandDependencies {
+  reconcileRuntimeSessions?: typeof reconcileRuntimeSessionsV11;
+}
+
 export function getBubbleReconcileHelpText(): string {
   return [
     "Usage:",
@@ -97,15 +101,18 @@ export function renderBubbleReconcileText(
 
 export async function runBubbleReconcileCommand(
   args: string[] | BubbleReconcileCommandOptions,
-  cwd: string = process.cwd()
+  cwd: string = process.cwd(),
+  dependencies: BubbleReconcileCommandDependencies = {}
 ): Promise<ReconcileRuntimeSessionsReportV11 | null> {
   const options = Array.isArray(args) ? parseBubbleReconcileCommandOptions(args) : args;
   if (options.help) {
     return null;
   }
 
+  const runReconcileRuntimeSessions =
+    dependencies.reconcileRuntimeSessions ?? reconcileRuntimeSessionsV11;
   try {
-    return await reconcileRuntimeSessionsV11({
+    return await runReconcileRuntimeSessions({
       repoPath: options.repo,
       cwd,
       dryRun: options.dryRun
