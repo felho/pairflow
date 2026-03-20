@@ -45,7 +45,7 @@ import {
 import {
   getBubbleRestartHelpText,
   runBubbleRestartCommand
-} from "./commands/bubble/restart.js";
+} from "../v11/application/restart/restartCliCommand.js";
 import {
   getBubbleReconcileHelpText,
   parseBubbleReconcileCommandOptions,
