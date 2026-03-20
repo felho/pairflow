@@ -1,0 +1,27 @@
+{
+  "id": "reply-waiting-human-round-invalid-parity",
+  "command": "reply",
+  "mode": "parity",
+  "description": "Reply contract parity case for rejecting WAITING_HUMAN states with invalid round.",
+  "input": {
+    "message": "Acknowledged.",
+    "refs": [],
+    "fixture": {
+      "scenario": "waiting_human_round_invalid"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "REPLY_WAITING_HUMAN_ROUND_INVALID",
+    "stateSubset": {
+      "state": "WAITING_HUMAN"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "reply",
+    "error-path",
+    "parity"
+  ]
+}

@@ -10,6 +10,10 @@ import {
 } from "../../../src/core/human/reply.js";
 import { emitAskHumanFromWorkspace } from "../../../src/core/agent/askHuman.js";
 import { emitHumanReplyV11 } from "../../../src/v11/application/reply/emitReplyV11.js";
+import {
+  readStateSnapshot,
+  writeStateSnapshot
+} from "../../../src/core/state/stateStore.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -22,6 +26,18 @@ interface CapturedReplyDelivery {
   recipient: string;
   targetRole: string | null;
   refKind: DeliveryRefKind;
+}
+
+type ReplyContractScenario =
+  | "basic"
+  | "state_not_waiting_human"
+  | "waiting_human_round_invalid"
+  | "waiting_human_context_incomplete";
+
+interface ParsedReplyCaseInput {
+  message: string;
+  refs: string[];
+  scenario: ReplyContractScenario;
 }
 
 export interface ReplyContractOutput {
@@ -37,15 +53,27 @@ export interface ReplyContractOutput {
   deliveryRefKinds: DeliveryRefKind[];
 }
 
+export interface ReplyContractErrorOutput {
+  status: "error";
+  reasonCode: string | null;
+  stateSubset: {
+    state: string;
+  };
+}
+
+export type ReplyContractResultOutput =
+  | ReplyContractOutput
+  | ReplyContractErrorOutput;
+
 export interface ReplyContractRunResult {
   mode: ContractCase["mode"];
-  legacy?: ReplyContractOutput;
-  v11?: ReplyContractOutput;
+  legacy?: ReplyContractResultOutput;
+  v11?: ReplyContractResultOutput;
 }
 
 function parseReplyCaseInput(
   input: ContractCase["input"]
-): Omit<EmitHumanReplyInput, "bubbleId" | "cwd"> {
+): ParsedReplyCaseInput {
   const messageRaw = input.message;
   if (typeof messageRaw !== "string" || messageRaw.trim().length === 0) {
     throw new Error("reply contract input.message must be a non-empty string.");
@@ -62,9 +90,31 @@ function parseReplyCaseInput(
     throw new Error("reply contract input.refs must be a string array.");
   }
 
+  const fixtureRaw = input.fixture;
+  let scenario: ReplyContractScenario = "basic";
+  if (fixtureRaw !== undefined) {
+    if (typeof fixtureRaw !== "object" || fixtureRaw === null) {
+      throw new Error("reply contract input.fixture must be an object when provided.");
+    }
+    const scenarioRaw = (fixtureRaw as Record<string, unknown>).scenario;
+    if (
+      scenarioRaw !== undefined &&
+      scenarioRaw !== "basic" &&
+      scenarioRaw !== "state_not_waiting_human" &&
+      scenarioRaw !== "waiting_human_round_invalid" &&
+      scenarioRaw !== "waiting_human_context_incomplete"
+    ) {
+      throw new Error(
+        "reply contract input.fixture.scenario must be one of: basic, state_not_waiting_human, waiting_human_round_invalid, waiting_human_context_incomplete."
+      );
+    }
+    scenario = (scenarioRaw as ReplyContractScenario | undefined) ?? "basic";
+  }
+
   return {
     message: messageRaw.trim(),
-    refs: refsRaw ?? []
+    refs: refsRaw ?? [],
+    scenario
   };
 }
 
@@ -85,6 +135,42 @@ function normalizeReplyResult(
       .map((delivery) => delivery.targetRole)
       .filter((role): role is string => role !== null),
     deliveryRefKinds: deliveries.map((delivery) => delivery.refKind)
+  };
+}
+
+function normalizeReplyErrorResult(input: {
+  error: unknown;
+  state: string;
+}): ReplyContractErrorOutput {
+  const message = input.error instanceof Error ? input.error.message : String(input.error);
+  const reasonMatch = /^([A-Z0-9_]+):/u.exec(message.trim());
+  let reasonCode: string | null = reasonMatch?.[1] ?? null;
+
+  if (
+    reasonCode === null &&
+    message.includes("can only be used while bubble is WAITING_HUMAN")
+  ) {
+    reasonCode = "REPLY_WAITING_HUMAN_STATE_REQUIRED";
+  }
+  if (
+    reasonCode === null &&
+    message.includes("WAITING_HUMAN state must have round >= 1")
+  ) {
+    reasonCode = "REPLY_WAITING_HUMAN_ROUND_INVALID";
+  }
+  if (
+    reasonCode === null &&
+    message.includes("WAITING_HUMAN state is missing active agent context")
+  ) {
+    reasonCode = "REPLY_WAITING_HUMAN_CONTEXT_INCOMPLETE";
+  }
+
+  return {
+    status: "error",
+    reasonCode,
+    stateSubset: {
+      state: input.state
+    }
   };
 }
 
@@ -135,7 +221,7 @@ function assertReplyDeliveryInvariant(input: {
 }
 
 function assertContractExpectedSubset(input: {
-  output: ReplyContractOutput;
+  output: ReplyContractResultOutput;
   expected: ContractCaseExpected;
   label: string;
 }): void {
@@ -154,10 +240,15 @@ function assertContractExpectedSubset(input: {
   }
   if (
     input.expected.envelopeType !== undefined &&
-    input.output.envelopeType !== input.expected.envelopeType
+    (
+      input.output.status !== "ok"
+      || input.output.envelopeType !== input.expected.envelopeType
+    )
   ) {
+    const actualEnvelopeType =
+      input.output.status === "ok" ? input.output.envelopeType : "<error>";
     throw new Error(
-      `${input.label}: envelopeType mismatch (expected=${input.expected.envelopeType}, actual=${input.output.envelopeType})`
+      `${input.label}: envelopeType mismatch (expected=${input.expected.envelopeType}, actual=${actualEnvelopeType})`
     );
   }
   const expectedState = input.expected.stateSubset?.state;
@@ -171,44 +262,67 @@ function assertContractExpectedSubset(input: {
   }
   if (
     input.expected.deliveryCount !== undefined &&
-    input.output.deliveryCount !== input.expected.deliveryCount
+    (
+      input.output.status !== "ok"
+      || input.output.deliveryCount !== input.expected.deliveryCount
+    )
   ) {
+    const actualDeliveryCount =
+      input.output.status === "ok" ? String(input.output.deliveryCount) : "<error>";
     throw new Error(
-      `${input.label}: deliveryCount mismatch (expected=${input.expected.deliveryCount}, actual=${input.output.deliveryCount})`
+      `${input.label}: deliveryCount mismatch (expected=${input.expected.deliveryCount}, actual=${actualDeliveryCount})`
     );
   }
   if (
     input.expected.deliveryRecipients !== undefined &&
-    JSON.stringify(input.output.deliveryRecipients)
+    (
+      input.output.status !== "ok"
+      || JSON.stringify(input.output.deliveryRecipients)
       !== JSON.stringify(input.expected.deliveryRecipients)
+    )
   ) {
+    const actualRecipients = JSON.stringify(
+      input.output.status === "ok" ? input.output.deliveryRecipients : []
+    );
     throw new Error(
-      `${input.label}: deliveryRecipients mismatch (expected=${JSON.stringify(input.expected.deliveryRecipients)}, actual=${JSON.stringify(input.output.deliveryRecipients)})`
+      `${input.label}: deliveryRecipients mismatch (expected=${JSON.stringify(input.expected.deliveryRecipients)}, actual=${actualRecipients})`
     );
   }
   if (
     input.expected.deliveryTargetRoles !== undefined &&
-    JSON.stringify(input.output.deliveryTargetRoles)
+    (
+      input.output.status !== "ok"
+      || JSON.stringify(input.output.deliveryTargetRoles)
       !== JSON.stringify(input.expected.deliveryTargetRoles)
+    )
   ) {
+    const actualTargetRoles = JSON.stringify(
+      input.output.status === "ok" ? input.output.deliveryTargetRoles : []
+    );
     throw new Error(
-      `${input.label}: deliveryTargetRoles mismatch (expected=${JSON.stringify(input.expected.deliveryTargetRoles)}, actual=${JSON.stringify(input.output.deliveryTargetRoles)})`
+      `${input.label}: deliveryTargetRoles mismatch (expected=${JSON.stringify(input.expected.deliveryTargetRoles)}, actual=${actualTargetRoles})`
     );
   }
   if (
     input.expected.deliveryRefKinds !== undefined &&
-    JSON.stringify(input.output.deliveryRefKinds)
+    (
+      input.output.status !== "ok"
+      || JSON.stringify(input.output.deliveryRefKinds)
       !== JSON.stringify(input.expected.deliveryRefKinds)
+    )
   ) {
+    const actualRefKinds = JSON.stringify(
+      input.output.status === "ok" ? input.output.deliveryRefKinds : []
+    );
     throw new Error(
-      `${input.label}: deliveryRefKinds mismatch (expected=${JSON.stringify(input.expected.deliveryRefKinds)}, actual=${JSON.stringify(input.output.deliveryRefKinds)})`
+      `${input.label}: deliveryRefKinds mismatch (expected=${JSON.stringify(input.expected.deliveryRefKinds)}, actual=${actualRefKinds})`
     );
   }
 }
 
 function assertParityEquivalent(input: {
-  legacy: ReplyContractOutput;
-  v11: ReplyContractOutput;
+  legacy: ReplyContractResultOutput;
+  v11: ReplyContractResultOutput;
   caseId: string;
 }): void {
   if (JSON.stringify(input.legacy) !== JSON.stringify(input.v11)) {
@@ -222,7 +336,7 @@ async function executeReplyCase(input: {
   caseDef: ContractCase;
   executor: typeof emitHumanReply;
   label: string;
-}): Promise<ReplyContractOutput> {
+}): Promise<ReplyContractResultOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-reply-contract-"));
   try {
     await initGitRepository(repoPath);
@@ -232,11 +346,48 @@ async function executeReplyCase(input: {
       task: input.caseDef.description
     });
 
-    await emitAskHumanFromWorkspace({
-      question: "Seed WAITING_HUMAN state for reply contract run.",
-      cwd: bubble.paths.worktreePath,
-      now: new Date("2026-03-19T10:01:00.000Z")
-    });
+    const replyInput = parseReplyCaseInput(input.caseDef.input);
+    if (replyInput.scenario !== "state_not_waiting_human") {
+      await emitAskHumanFromWorkspace({
+        question: "Seed WAITING_HUMAN state for reply contract run.",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-03-19T10:01:00.000Z")
+      });
+    }
+
+    if (replyInput.scenario === "waiting_human_round_invalid") {
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          round: 0,
+          last_command_at: "2026-03-19T10:01:30.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "WAITING_HUMAN"
+        }
+      );
+    }
+
+    if (replyInput.scenario === "waiting_human_context_incomplete") {
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          active_agent: null,
+          active_role: null,
+          active_since: null,
+          last_command_at: "2026-03-19T10:01:45.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "WAITING_HUMAN"
+        }
+      );
+    }
 
     const deliveries: CapturedReplyDelivery[] = [];
     const emitDelivery: NonNullable<
@@ -256,21 +407,34 @@ async function executeReplyCase(input: {
       });
     };
 
-    const replyInput = parseReplyCaseInput(input.caseDef.input);
-    const result = await input.executor({
-      ...replyInput,
-      bubbleId: bubble.bubbleId,
-      repoPath,
-      now: new Date("2026-03-19T10:02:00.000Z")
-    }, {
-      emitTmuxDeliveryNotification: emitDelivery
-    });
-    assertReplyDeliveryInvariant({
-      deliveries,
-      result,
-      label: input.label
-    });
-    return normalizeReplyResult(result, deliveries);
+    try {
+      const result = await input.executor({
+        message: replyInput.message,
+        refs: replyInput.refs,
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        now: new Date("2026-03-19T10:02:00.000Z")
+      }, {
+        emitTmuxDeliveryNotification: emitDelivery
+      });
+      assertReplyDeliveryInvariant({
+        deliveries,
+        result,
+        label: input.label
+      });
+      return normalizeReplyResult(result, deliveries);
+    } catch (error) {
+      const stateSnapshot = await readStateSnapshot(bubble.paths.statePath);
+      if (deliveries.length > 0) {
+        throw new Error(
+          `${input.label}: reply error path emitted unexpected delivery count=${deliveries.length}.`
+        );
+      }
+      return normalizeReplyErrorResult({
+        error,
+        state: stateSnapshot.state.state
+      });
+    }
   } finally {
     await rm(repoPath, { recursive: true, force: true });
   }

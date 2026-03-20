@@ -15,7 +15,16 @@ const replyCaseSources = [
   "tests/contracts/v11/cases/reply/reply-basic-parity.case.json",
   "tests/contracts/v11/cases/reply/reply-no-refs.case.json",
   "tests/contracts/v11/cases/reply/reply-no-refs-v11.case.json",
-  "tests/contracts/v11/cases/reply/reply-no-refs-parity.case.json"
+  "tests/contracts/v11/cases/reply/reply-no-refs-parity.case.json",
+  "tests/contracts/v11/cases/reply/reply-state-not-waiting-human.case.json",
+  "tests/contracts/v11/cases/reply/reply-state-not-waiting-human-v11.case.json",
+  "tests/contracts/v11/cases/reply/reply-state-not-waiting-human-parity.case.json",
+  "tests/contracts/v11/cases/reply/reply-waiting-human-round-invalid.case.json",
+  "tests/contracts/v11/cases/reply/reply-waiting-human-round-invalid-v11.case.json",
+  "tests/contracts/v11/cases/reply/reply-waiting-human-round-invalid-parity.case.json",
+  "tests/contracts/v11/cases/reply/reply-waiting-human-context-incomplete.case.json",
+  "tests/contracts/v11/cases/reply/reply-waiting-human-context-incomplete-v11.case.json",
+  "tests/contracts/v11/cases/reply/reply-waiting-human-context-incomplete-parity.case.json"
 ] as const;
 const replyExpectedSourcesSorted = [...replyCaseSources].sort();
 
@@ -109,12 +118,18 @@ describe("v11 reply contract harness skeleton", () => {
       const caseDef = await readContractCase(casePath);
       const run = await runReplyContractCase(caseDef);
       if (caseDef.mode === "legacy") {
-        expect(run.legacy?.status).toBe("ok");
+        expect(run.legacy?.status).toBe(caseDef.expected.status);
+        if (caseDef.expected.reasonCode !== undefined) {
+          expect(run.legacy?.reasonCode).toBe(caseDef.expected.reasonCode);
+        }
         expect(run.v11).toBeUndefined();
         continue;
       }
       if (caseDef.mode === "v11") {
-        expect(run.v11?.status).toBe("ok");
+        expect(run.v11?.status).toBe(caseDef.expected.status);
+        if (caseDef.expected.reasonCode !== undefined) {
+          expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
+        }
         expect(run.legacy).toBeUndefined();
         continue;
       }

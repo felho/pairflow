@@ -993,6 +993,60 @@
       "kind": "seed_case"
     },
     {
+      "id": "reply-state-not-waiting-human",
+      "command": "reply",
+      "source": "tests/contracts/v11/cases/reply/reply-state-not-waiting-human.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reply-state-not-waiting-human-v11",
+      "command": "reply",
+      "source": "tests/contracts/v11/cases/reply/reply-state-not-waiting-human-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reply-state-not-waiting-human-parity",
+      "command": "reply",
+      "source": "tests/contracts/v11/cases/reply/reply-state-not-waiting-human-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reply-waiting-human-round-invalid",
+      "command": "reply",
+      "source": "tests/contracts/v11/cases/reply/reply-waiting-human-round-invalid.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reply-waiting-human-round-invalid-v11",
+      "command": "reply",
+      "source": "tests/contracts/v11/cases/reply/reply-waiting-human-round-invalid-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reply-waiting-human-round-invalid-parity",
+      "command": "reply",
+      "source": "tests/contracts/v11/cases/reply/reply-waiting-human-round-invalid-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reply-waiting-human-context-incomplete",
+      "command": "reply",
+      "source": "tests/contracts/v11/cases/reply/reply-waiting-human-context-incomplete.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reply-waiting-human-context-incomplete-v11",
+      "command": "reply",
+      "source": "tests/contracts/v11/cases/reply/reply-waiting-human-context-incomplete-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reply-waiting-human-context-incomplete-parity",
+      "command": "reply",
+      "source": "tests/contracts/v11/cases/reply/reply-waiting-human-context-incomplete-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "stop-basic",
       "command": "stop",
       "source": "tests/contracts/v11/cases/stop/stop-basic.case.json",

@@ -1,0 +1,27 @@
+{
+  "id": "reply-state-not-waiting-human-parity",
+  "command": "reply",
+  "mode": "parity",
+  "description": "Reply contract parity case for rejecting non-WAITING_HUMAN lifecycle state.",
+  "input": {
+    "message": "Acknowledged.",
+    "refs": [],
+    "fixture": {
+      "scenario": "state_not_waiting_human"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "REPLY_WAITING_HUMAN_STATE_REQUIRED",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "reply",
+    "error-path",
+    "parity"
+  ]
+}
