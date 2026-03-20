@@ -1,0 +1,20 @@
+{
+  "id": "watchdog-running-expired-parity",
+  "command": "watchdog",
+  "mode": "parity",
+  "description": "Seed watchdog parity contract case for RUNNING timeout escalation.",
+  "input": {
+    "fixture": {
+      "scenario": "running_expired"
+    }
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "WATCHDOG_EVALUATED",
+    "commandReason": "escalated",
+    "stateSubset": {
+      "state": "WAITING_HUMAN"
+    }
+  },
+  "tags": ["seed", "m0", "watchdog", "parity", "guard-path"]
+}

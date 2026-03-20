@@ -15,7 +15,13 @@ const watchdogCaseSources = [
   "tests/contracts/v11/cases/watchdog/watchdog-waiting-human-parity.case.json",
   "tests/contracts/v11/cases/watchdog/watchdog-final-state.case.json",
   "tests/contracts/v11/cases/watchdog/watchdog-final-state-v11.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-final-state-parity.case.json"
+  "tests/contracts/v11/cases/watchdog/watchdog-final-state-parity.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-running-expired.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-running-expired-v11.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-running-expired-parity.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-expired.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-expired-v11.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-expired-parity.case.json"
 ] as const;
 
 const watchdogExpectedSourcesSorted = [...watchdogCaseSources].sort();

@@ -32,9 +32,13 @@ export interface WatchdogContractRunResult {
 }
 
 type WatchdogContractScenario = "waiting_human" | "final_state";
+type WatchdogContractExtendedScenario =
+  | WatchdogContractScenario
+  | "running_expired"
+  | "meta_review_running_expired";
 
 interface ParsedWatchdogCaseInput {
-  scenario: WatchdogContractScenario;
+  scenario: WatchdogContractExtendedScenario;
 }
 
 function buildWatchdogContractBubbleId(caseId: string): string {
@@ -44,7 +48,7 @@ function buildWatchdogContractBubbleId(caseId: string): string {
 
 function parseWatchdogCaseInput(input: ContractCase["input"]): ParsedWatchdogCaseInput {
   const fixtureRaw = input.fixture;
-  let scenario: WatchdogContractScenario = "waiting_human";
+  let scenario: WatchdogContractExtendedScenario = "waiting_human";
   if (fixtureRaw !== undefined) {
     if (typeof fixtureRaw !== "object" || fixtureRaw === null) {
       throw new Error("watchdog contract input.fixture must be an object when provided.");
@@ -53,13 +57,15 @@ function parseWatchdogCaseInput(input: ContractCase["input"]): ParsedWatchdogCas
     if (
       scenarioRaw !== undefined &&
       scenarioRaw !== "waiting_human" &&
-      scenarioRaw !== "final_state"
+      scenarioRaw !== "final_state" &&
+      scenarioRaw !== "running_expired" &&
+      scenarioRaw !== "meta_review_running_expired"
     ) {
       throw new Error(
-        "watchdog contract input.fixture.scenario must be one of: waiting_human, final_state."
+        "watchdog contract input.fixture.scenario must be one of: waiting_human, final_state, running_expired, meta_review_running_expired."
       );
     }
-    scenario = (scenarioRaw as WatchdogContractScenario | undefined) ?? "waiting_human";
+    scenario = (scenarioRaw as WatchdogContractExtendedScenario | undefined) ?? "waiting_human";
   }
   return { scenario };
 }
@@ -131,7 +137,7 @@ function assertParityEquivalent(input: {
 async function seedWaitingHumanState(input: {
   repoPath: string;
   bubbleId: string;
-  scenario: WatchdogContractScenario;
+  scenario: WatchdogContractExtendedScenario;
 }) {
   const bubble = await setupRunningBubbleFixture({
     repoPath: input.repoPath,
@@ -149,6 +155,44 @@ async function seedWaitingHumanState(input: {
         active_role: null,
         active_since: null,
         last_command_at: "2026-03-20T12:40:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+    return bubble;
+  }
+  if (input.scenario === "running_expired") {
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "RUNNING",
+        active_agent: loaded.state.active_agent ?? "codex",
+        active_role: loaded.state.active_role ?? "implementer",
+        active_since: loaded.state.active_since ?? "2026-03-20T10:00:00.000Z",
+        last_command_at: "2026-03-20T10:00:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+    return bubble;
+  }
+  if (input.scenario === "meta_review_running_expired") {
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "META_REVIEW_RUNNING",
+        active_agent: "codex",
+        active_role: "meta_reviewer",
+        active_since: "2026-03-20T10:00:00.000Z",
+        last_command_at: "2026-03-20T10:00:00.000Z"
       },
       {
         expectedFingerprint: loaded.fingerprint,
@@ -183,11 +227,53 @@ async function executeWatchdogCase(input: {
       scenario: parsedInput.scenario
     });
 
-    const result = await input.executor({
-      bubbleId: bubble.bubbleId,
-      cwd: repoPath,
-      now: new Date("2026-03-20T12:45:00.000Z")
-    });
+    let recoverCalled = false;
+    const result = await input.executor(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-03-20T12:45:00.000Z")
+      },
+      parsedInput.scenario === "meta_review_running_expired"
+        ? {
+            recoverMetaReviewGateFromSnapshot: async () => {
+              recoverCalled = true;
+              const latest = await readStateSnapshot(bubble.paths.statePath);
+              return {
+                bubbleId: bubble.bubbleId,
+                route: "human_gate_run_failed",
+                state: {
+                  ...latest.state,
+                  state: "READY_FOR_HUMAN_APPROVAL",
+                  active_agent: null,
+                  active_role: null,
+                  active_since: null,
+                  last_command_at: "2026-03-20T12:45:00.000Z"
+                },
+                gateEnvelope: {
+                  id: "evt_meta_review_recover_seed",
+                  ts: "2026-03-20T12:45:00.000Z",
+                  bubble_id: bubble.bubbleId,
+                  sender: "orchestrator",
+                  recipient: "human",
+                  type: "HUMAN_QUESTION",
+                  round: latest.state.round,
+                  payload: {
+                    question: "Meta-review route recovered by watchdog contract fixture."
+                  },
+                  refs: []
+                },
+                gateSequence: 1
+              };
+            }
+          }
+        : undefined
+    );
+    if (parsedInput.scenario === "meta_review_running_expired" && !recoverCalled) {
+      throw new Error(
+        `watchdog contract case=${input.caseDef.id}: expected meta-review recovery dependency to be invoked.`
+      );
+    }
     return normalizeWatchdogResult(result);
   } finally {
     await rm(repoPath, { recursive: true, force: true });
