@@ -15,42 +15,21 @@ import {
   resolveReviewerTestEvidenceArtifactPath,
   resolveReviewerTestExecutionDirective
 } from "../../../core/reviewer/testEvidence.js";
-import type { ResolvedBubbleWorkspace } from "../../../core/bubble/workspaceResolution.js";
 import type {
-  AgentName,
   BubbleRoundGateState,
-  BubbleSpecLockState,
-  BubbleStateSnapshot
+  BubbleSpecLockState
 } from "../../../types/bubble.js";
+import type {
+  PrepareConvergedValidationDependencies,
+  PrepareConvergedValidationInput,
+  PrepareConvergedValidationResult
+} from "./convergedValidationPreparationContract.js";
 
-export interface PrepareConvergedValidationInput {
-  resolved: ResolvedBubbleWorkspace;
-  state: BubbleStateSnapshot;
-  reviewer: AgentName;
-  summary: string;
-  nowIso: string;
-  createError: (message: string) => Error;
-}
-
-export interface PrepareConvergedValidationDependencies {
-  isDocContractGateScopeActive?: typeof isDocContractGateScopeActive;
-  readDocContractGateArtifact?: typeof readDocContractGateArtifact;
-  resolveDocContractGateArtifactPath?: typeof resolveDocContractGateArtifactPath;
-  readReviewVerificationArtifactStatus?: typeof readReviewVerificationArtifactStatus;
-  resolveReviewerTestEvidenceArtifactPath?: typeof resolveReviewerTestEvidenceArtifactPath;
-  resolveReviewerTestExecutionDirective?: typeof resolveReviewerTestExecutionDirective;
-  evaluateSummaryVerifierConsistencyGate?: typeof evaluateSummaryVerifierConsistencyGate;
-  resolveSummaryVerifierConsistencyGateArtifactPath?:
-    typeof resolveSummaryVerifierConsistencyGateArtifactPath;
-  writeSummaryVerifierConsistencyGateArtifact?: typeof writeSummaryVerifierConsistencyGateArtifact;
-}
-
-export interface PrepareConvergedValidationResult {
-  specLockState: BubbleSpecLockState;
-  roundGateState: BubbleRoundGateState;
-  docGateArtifactReadFailureReason?: string;
-  summaryVerifierGateDecision: SummaryVerifierConsistencyGateDecisionRecord;
-}
+export type {
+  PrepareConvergedValidationDependencies,
+  PrepareConvergedValidationInput,
+  PrepareConvergedValidationResult
+} from "./convergedValidationPreparationContract.js";
 
 interface ResolvedValidationDependencies {
   isDocGateScopeActive: typeof isDocContractGateScopeActive;
