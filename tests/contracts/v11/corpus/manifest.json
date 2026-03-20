@@ -75,6 +75,24 @@
       "kind": "seed_case"
     },
     {
+      "id": "reconcile-mutate-stale-session",
+      "command": "reconcile",
+      "source": "tests/contracts/v11/cases/reconcile/reconcile-mutate-stale-session.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reconcile-mutate-stale-session-v11",
+      "command": "reconcile",
+      "source": "tests/contracts/v11/cases/reconcile/reconcile-mutate-stale-session-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reconcile-mutate-stale-session-parity",
+      "command": "reconcile",
+      "source": "tests/contracts/v11/cases/reconcile/reconcile-mutate-stale-session-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "restart-basic",
       "command": "restart",
       "source": "tests/contracts/v11/cases/restart/restart-basic.case.json",

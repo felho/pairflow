@@ -12,7 +12,10 @@ const execFileAsync = promisify(execFile);
 const reconcileCaseSources = [
   "tests/contracts/v11/cases/reconcile/reconcile-basic.case.json",
   "tests/contracts/v11/cases/reconcile/reconcile-basic-v11.case.json",
-  "tests/contracts/v11/cases/reconcile/reconcile-basic-parity.case.json"
+  "tests/contracts/v11/cases/reconcile/reconcile-basic-parity.case.json",
+  "tests/contracts/v11/cases/reconcile/reconcile-mutate-stale-session.case.json",
+  "tests/contracts/v11/cases/reconcile/reconcile-mutate-stale-session-v11.case.json",
+  "tests/contracts/v11/cases/reconcile/reconcile-mutate-stale-session-parity.case.json"
 ] as const;
 
 const reconcileExpectedSourcesSorted = [...reconcileCaseSources].sort();
@@ -49,12 +52,18 @@ describe("v11 reconcile contract harness skeleton", () => {
       const caseDef = await readContractCase(casePath);
       const run = await runReconcileContractCase(caseDef);
       if (caseDef.mode === "legacy") {
-        expect(run.legacy?.status).toBe("ok");
+        expect(run.legacy?.status).toBe(caseDef.expected.status);
+        if (caseDef.expected.reasonCode !== undefined) {
+          expect(run.legacy?.reasonCode).toBe(caseDef.expected.reasonCode);
+        }
         expect(run.v11).toBeUndefined();
         continue;
       }
       if (caseDef.mode === "v11") {
-        expect(run.v11?.status).toBe("ok");
+        expect(run.v11?.status).toBe(caseDef.expected.status);
+        if (caseDef.expected.reasonCode !== undefined) {
+          expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
+        }
         expect(run.legacy).toBeUndefined();
         continue;
       }

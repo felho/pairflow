@@ -1,4 +1,5 @@
 import { mkdtemp, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -32,6 +33,11 @@ interface ParsedReconcileCaseInput {
   dryRun: boolean;
 }
 
+function buildReconcileContractBubbleId(caseId: string): string {
+  const suffix = createHash("sha1").update(caseId).digest("hex").slice(0, 12);
+  return `b_contract_${suffix}`;
+}
+
 function parseReconcileCaseInput(
   input: ContractCase["input"]
 ): ParsedReconcileCaseInput {
@@ -57,6 +63,27 @@ function normalizeReconcileResult(
     actionReasons: result.actions.map((action) => action.reason).sort(),
     actionRemovedFlags: result.actions.map((action) => action.removed)
   };
+}
+
+function assertReconcileMutationScenario(input: {
+  caseDef: ContractCase;
+  parsedInput: ParsedReconcileCaseInput;
+  output: ReconcileContractOutput;
+}): void {
+  if (input.parsedInput.dryRun) {
+    return;
+  }
+  const removedAny = input.output.actionRemovedFlags.some((flag) => flag);
+  if (!removedAny) {
+    throw new Error(
+      `reconcile contract case=${input.caseDef.id}: expected at least one removed runtime session when dryRun=false.`
+    );
+  }
+  if (input.output.sessionsAfter >= input.output.sessionsBefore) {
+    throw new Error(
+      `reconcile contract case=${input.caseDef.id}: expected sessionsAfter < sessionsBefore when dryRun=false (before=${input.output.sessionsBefore}, after=${input.output.sessionsAfter}).`
+    );
+  }
 }
 
 function assertContractExpectedSubset(input: {
@@ -124,7 +151,7 @@ async function executeReconcileCase(input: {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-reconcile-contract-"));
   try {
     await initGitRepository(repoPath);
-    await seedRuntimeSessionsFixture(repoPath, `b_contract_${input.caseDef.id}`);
+    await seedRuntimeSessionsFixture(repoPath, buildReconcileContractBubbleId(input.caseDef.id));
     const parsedInput = parseReconcileCaseInput(input.caseDef.input);
 
     const result = await input.executor({
@@ -133,7 +160,13 @@ async function executeReconcileCase(input: {
       isTmuxSessionAlive: (sessionName) =>
         Promise.resolve(sessionName.startsWith("pf-b_contract_"))
     });
-    return normalizeReconcileResult(result);
+    const output = normalizeReconcileResult(result);
+    assertReconcileMutationScenario({
+      caseDef: input.caseDef,
+      parsedInput,
+      output
+    });
+    return output;
   } finally {
     await rm(repoPath, { recursive: true, force: true });
   }
