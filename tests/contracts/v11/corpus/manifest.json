@@ -93,6 +93,24 @@
       "kind": "seed_case"
     },
     {
+      "id": "restart-start-state-not-startable",
+      "command": "restart",
+      "source": "tests/contracts/v11/cases/restart/restart-start-state-not-startable.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "restart-start-state-not-startable-v11",
+      "command": "restart",
+      "source": "tests/contracts/v11/cases/restart/restart-start-state-not-startable-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "restart-start-state-not-startable-parity",
+      "command": "restart",
+      "source": "tests/contracts/v11/cases/restart/restart-start-state-not-startable-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "merge-basic",
       "command": "merge",
       "source": "tests/contracts/v11/cases/merge/merge-basic.case.json",

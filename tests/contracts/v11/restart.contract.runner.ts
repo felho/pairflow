@@ -1,15 +1,23 @@
+import { createHash } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { restartBubble } from "../../../src/core/bubble/restartBubble.js";
-import type { StartBubbleResult } from "../../../src/core/bubble/startBubble.js";
+import {
+  startBubble,
+  type StartBubbleResult
+} from "../../../src/core/bubble/startBubble.js";
+import {
+  readStateSnapshot,
+  writeStateSnapshot
+} from "../../../src/core/state/stateStore.js";
 import { restartBubbleV11 } from "../../../src/v11/application/restart/emitRestartV11.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
 
-export interface RestartContractOutput {
+export interface RestartContractSuccessOutput {
   status: "ok";
   reasonCode: "RESTARTED";
   stateSubset: {
@@ -21,15 +29,35 @@ export interface RestartContractOutput {
   hasWorktreePath: boolean;
 }
 
+export interface RestartContractErrorOutput {
+  status: "error";
+  reasonCode: string | null;
+  stateSubset: {
+    state: string;
+  };
+}
+
+export type RestartContractOutput =
+  | RestartContractSuccessOutput
+  | RestartContractErrorOutput;
+
 export interface RestartContractRunResult {
   mode: ContractCase["mode"];
   legacy?: RestartContractOutput;
   v11?: RestartContractOutput;
 }
 
+type RestartContractScenario = "basic" | "start_state_not_startable";
+
 interface ParsedRestartCaseInput {
   previousTmuxSessionExisted: boolean;
   previousRuntimeSessionRemoved: boolean;
+  scenario: RestartContractScenario;
+}
+
+function buildRestartContractBubbleId(caseId: string): string {
+  const suffix = createHash("sha1").update(caseId).digest("hex").slice(0, 12);
+  return `b_contract_${suffix}`;
 }
 
 function parseRestartCaseInput(input: ContractCase["input"]): ParsedRestartCaseInput {
@@ -53,15 +81,35 @@ function parseRestartCaseInput(input: ContractCase["input"]): ParsedRestartCaseI
     );
   }
 
+  const fixtureRaw = input.fixture;
+  let scenario: RestartContractScenario = "basic";
+  if (fixtureRaw !== undefined) {
+    if (typeof fixtureRaw !== "object" || fixtureRaw === null) {
+      throw new Error("restart contract input.fixture must be an object when provided.");
+    }
+    const scenarioRaw = (fixtureRaw as Record<string, unknown>).scenario;
+    if (
+      scenarioRaw !== undefined &&
+      scenarioRaw !== "basic" &&
+      scenarioRaw !== "start_state_not_startable"
+    ) {
+      throw new Error(
+        "restart contract input.fixture.scenario must be one of: basic, start_state_not_startable."
+      );
+    }
+    scenario = (scenarioRaw as RestartContractScenario | undefined) ?? "basic";
+  }
+
   return {
     previousTmuxSessionExisted: previousTmuxSessionExistedRaw ?? false,
-    previousRuntimeSessionRemoved: previousRuntimeSessionRemovedRaw ?? false
+    previousRuntimeSessionRemoved: previousRuntimeSessionRemovedRaw ?? false,
+    scenario
   };
 }
 
 function normalizeRestartResult(
   result: Awaited<ReturnType<typeof restartBubble>>
-): RestartContractOutput {
+): RestartContractSuccessOutput {
   return {
     status: "ok",
     reasonCode: "RESTARTED",
@@ -72,6 +120,30 @@ function normalizeRestartResult(
     previousRuntimeSessionRemoved: result.previousRuntimeSessionRemoved,
     tmuxSessionNamePrefix: result.tmuxSessionName.startsWith("pf-"),
     hasWorktreePath: result.worktreePath.length > 0
+  };
+}
+
+function normalizeRestartErrorResult(input: {
+  error: unknown;
+  state: string;
+}): RestartContractErrorOutput {
+  const message = input.error instanceof Error ? input.error.message : String(input.error);
+  const reasonMatch = /^([A-Z0-9_]+):/u.exec(message.trim());
+  let reasonCode: string | null = reasonMatch?.[1] ?? null;
+
+  if (
+    reasonCode === null &&
+    message.includes("bubble start requires state CREATED or resumable runtime state")
+  ) {
+    reasonCode = "START_STATE_NOT_STARTABLE";
+  }
+
+  return {
+    status: "error",
+    reasonCode,
+    stateSubset: {
+      state: input.state
+    }
   };
 }
 
@@ -123,38 +195,67 @@ async function executeRestartCase(input: {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-restart-contract-"));
   try {
     await initGitRepository(repoPath);
+    const parsedInput = parseRestartCaseInput(input.caseDef.input);
     const bubble = await setupRunningBubbleFixture({
       repoPath,
-      bubbleId: `b_contract_${input.caseDef.id}`,
+      bubbleId: buildRestartContractBubbleId(input.caseDef.id),
       task: input.caseDef.description
     });
-    const parsedInput = parseRestartCaseInput(input.caseDef.input);
 
-    const result = await input.executor(
-      {
-        bubbleId: bubble.bubbleId,
-        cwd: repoPath,
-        now: new Date("2026-03-20T11:00:00.000Z")
-      },
-      {
-        terminateBubbleTmuxSession: () =>
-          Promise.resolve({
-            sessionName: `pf-${bubble.bubbleId}`,
-            existed: parsedInput.previousTmuxSessionExisted
-          }),
-        removeRuntimeSession: () =>
-          Promise.resolve(parsedInput.previousRuntimeSessionRemoved),
-        startBubble: () =>
-          Promise.resolve({
-            bubbleId: bubble.bubbleId,
-            state: { state: "RUNNING" },
-            tmuxSessionName: `pf-${bubble.bubbleId}`,
-            worktreePath: bubble.paths.worktreePath
-          } as unknown as StartBubbleResult)
-      }
-    );
+    if (parsedInput.scenario === "start_state_not_startable") {
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          state: "FAILED",
+          active_agent: null,
+          active_role: null,
+          active_since: null,
+          last_command_at: "2026-03-20T11:00:00.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "RUNNING"
+        }
+      );
+    }
 
-    return normalizeRestartResult(result);
+    try {
+      const result = await input.executor(
+        {
+          bubbleId: bubble.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-03-20T11:00:00.000Z")
+        },
+        {
+          terminateBubbleTmuxSession: () =>
+            Promise.resolve({
+              sessionName: `pf-${bubble.bubbleId}`,
+              existed: parsedInput.previousTmuxSessionExisted
+            }),
+          removeRuntimeSession: () =>
+            Promise.resolve(parsedInput.previousRuntimeSessionRemoved),
+          startBubble: parsedInput.scenario === "start_state_not_startable"
+            ? startBubble
+            : () =>
+                Promise.resolve({
+                  bubbleId: bubble.bubbleId,
+                  state: { state: "RUNNING" },
+                  tmuxSessionName: `pf-${bubble.bubbleId}`,
+                  worktreePath: bubble.paths.worktreePath
+                } as unknown as StartBubbleResult)
+        }
+      );
+
+      return normalizeRestartResult(result);
+    } catch (error) {
+      const stateSnapshot = await readStateSnapshot(bubble.paths.statePath);
+      return normalizeRestartErrorResult({
+        error,
+        state: stateSnapshot.state.state
+      });
+    }
   } finally {
     await rm(repoPath, { recursive: true, force: true });
   }

@@ -1,0 +1,24 @@
+{
+  "id": "restart-start-state-not-startable",
+  "command": "restart",
+  "mode": "legacy",
+  "description": "Seed restart contract case for start failure when bubble state is not startable.",
+  "input": {
+    "fixture": {
+      "scenario": "start_state_not_startable"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "START_STATE_NOT_STARTABLE",
+    "stateSubset": {
+      "state": "FAILED"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "restart",
+    "error-path"
+  ]
+}
