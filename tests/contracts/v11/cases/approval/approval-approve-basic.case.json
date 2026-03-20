@@ -1,0 +1,18 @@
+{
+  "id": "approval-approve-basic",
+  "command": "approval",
+  "mode": "legacy",
+  "description": "Seed approval approve contract case for READY_FOR_APPROVAL baseline.",
+  "input": {
+    "action": "approve"
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "APPROVAL_APPROVE_EMITTED"
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "approval"
+  ]
+}

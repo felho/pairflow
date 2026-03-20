@@ -1,0 +1,18 @@
+{
+  "id": "merge-basic-parity",
+  "command": "merge",
+  "mode": "parity",
+  "description": "Seed merge parity contract case for DONE bubble merge baseline.",
+  "input": {
+    "tmuxSessionExisted": false
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "MERGED"
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "merge"
+  ]
+}

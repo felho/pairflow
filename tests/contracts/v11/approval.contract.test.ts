@@ -1,172 +1,126 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  emitApprove,
-  emitRequestRework
-} from "../../../src/core/human/approval.js";
-import {
-  emitApproveV11,
-  emitRequestReworkV11
-} from "../../../src/v11/application/approval/emitApprovalV11.js";
-import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
-import { initGitRepository } from "../../helpers/git.js";
-import { applyStateTransition } from "../../../src/core/state/machine.js";
-import {
-  readStateSnapshot,
-  writeStateSnapshot
-} from "../../../src/core/state/stateStore.js";
+import { runApprovalContractCase } from "./approval.contract.runner.js";
+import { readContractCase } from "./runner.js";
 
-async function withTempRepo<T>(run: (repoPath: string) => Promise<T>): Promise<T> {
-  const repoPath = await mkdtemp(join(tmpdir(), "pairflow-approval-contract-"));
-  try {
-    await initGitRepository(repoPath);
-    return await run(repoPath);
-  } finally {
-    await rm(repoPath, { recursive: true, force: true });
+const execFileAsync = promisify(execFile);
+const approvalCaseSources = [
+  "tests/contracts/v11/cases/approval/approval-approve-basic.case.json",
+  "tests/contracts/v11/cases/approval/approval-approve-basic-v11.case.json",
+  "tests/contracts/v11/cases/approval/approval-approve-basic-parity.case.json",
+  "tests/contracts/v11/cases/approval/approval-rework-queued.case.json",
+  "tests/contracts/v11/cases/approval/approval-rework-queued-v11.case.json",
+  "tests/contracts/v11/cases/approval/approval-rework-queued-parity.case.json"
+] as const;
+
+const approvalExpectedSourcesSorted = [...approvalCaseSources].sort();
+const approvalQueuedReworkSources = [
+  "tests/contracts/v11/cases/approval/approval-rework-queued.case.json",
+  "tests/contracts/v11/cases/approval/approval-rework-queued-v11.case.json",
+  "tests/contracts/v11/cases/approval/approval-rework-queued-parity.case.json"
+] as const;
+
+function parseApprovalSourcesFromManifest(
+  manifestRaw: string
+): string[] {
+  const manifest = JSON.parse(manifestRaw) as {
+    entries?: Array<{ command?: string; source?: string }>;
+  };
+
+  return (manifest.entries ?? [])
+    .filter((entry) => entry.command === "approval")
+    .map((entry) => entry.source)
+    .filter((source): source is string => typeof source === "string")
+    .sort();
+}
+
+function expectManifestContainsSources(input: {
+  actualSources: string[];
+  expectedSources: readonly string[];
+}): void {
+  for (const expectedSource of input.expectedSources) {
+    expect(input.actualSources).toContain(expectedSource);
   }
 }
 
-async function seedReadyForHumanApprovalState(input: {
-  repoPath: string;
-  bubbleId: string;
-}) {
-  const bubble = await setupRunningBubbleFixture({
-    repoPath: input.repoPath,
-    bubbleId: input.bubbleId,
-    task: "Approval contract parity fixture"
+describe("v11 approval contract harness skeleton", () => {
+  it("loads seed contract case metadata", async () => {
+    const casePath = resolve(process.cwd(), approvalCaseSources[0]);
+    const caseDef = await readContractCase(casePath);
+    expect(caseDef.command).toBe("approval");
+    expect(caseDef.mode).toBe("legacy");
+    expect(caseDef.expected.status).toBe("ok");
   });
-  const loaded = await readStateSnapshot(bubble.paths.statePath);
-  const transitioned = applyStateTransition(loaded.state, {
-    to: "READY_FOR_APPROVAL",
-    lastCommandAt: "2026-03-19T21:00:00.000Z"
-  });
-  const legacyStateWithoutMetaReview = { ...transitioned };
-  delete legacyStateWithoutMetaReview.meta_review;
-  await writeStateSnapshot(
-    bubble.paths.statePath,
-    legacyStateWithoutMetaReview,
-    {
-      expectedFingerprint: loaded.fingerprint,
-      expectedState: "RUNNING"
+
+  it("executes legacy and parity assertions via shared runner", async () => {
+    const casePaths = approvalCaseSources.map((source) =>
+      resolve(process.cwd(), source)
+    );
+
+    for (const casePath of casePaths) {
+      const caseDef = await readContractCase(casePath);
+      const run = await runApprovalContractCase(caseDef);
+      if (caseDef.mode === "legacy") {
+        expect(run.legacy?.status).toBe("ok");
+        expect(run.v11).toBeUndefined();
+        continue;
+      }
+      if (caseDef.mode === "v11") {
+        expect(run.v11?.status).toBe("ok");
+        expect(run.legacy).toBeUndefined();
+        continue;
+      }
+
+      expect(run.legacy).toBeDefined();
+      expect(run.v11).toBeDefined();
+      expect(run.legacy).toEqual(run.v11);
     }
-  );
-  return bubble;
-}
-
-async function seedWaitingHumanState(input: {
-  repoPath: string;
-  bubbleId: string;
-}) {
-  const bubble = await setupRunningBubbleFixture({
-    repoPath: input.repoPath,
-    bubbleId: input.bubbleId,
-    task: "Approval contract queued rework fixture"
   });
-  const loaded = await readStateSnapshot(bubble.paths.statePath);
-  const transitioned = applyStateTransition(loaded.state, {
-    to: "WAITING_HUMAN",
-    lastCommandAt: "2026-03-19T21:05:00.000Z"
+
+  it("includes approval seed entries in corpus manifest", async () => {
+    const manifestPath = resolve(
+      process.cwd(),
+      "tests/contracts/v11/corpus/manifest.json"
+    );
+    const manifestRaw = await readFile(manifestPath, "utf8");
+    const approvalSources = parseApprovalSourcesFromManifest(manifestRaw);
+
+    expect(approvalSources).toEqual(approvalExpectedSourcesSorted);
   });
-  await writeStateSnapshot(bubble.paths.statePath, transitioned, {
-    expectedFingerprint: loaded.fingerprint,
-    expectedState: "RUNNING"
-  });
-  return bubble;
-}
 
-describe("v11 approval contract parity", () => {
-  it("keeps approve contract parity between core facade and v11 entrypoint", async () => {
-    const legacy = await withTempRepo(async (repoPath) => {
-      const bubble = await seedReadyForHumanApprovalState({
-        repoPath,
-        bubbleId: "b_approval_contract_legacy_approve"
-      });
-      return emitApprove({
-        bubbleId: bubble.bubbleId,
-        cwd: repoPath,
-        now: new Date("2026-03-19T21:10:00.000Z")
-      });
-    });
+  it("includes queued-rework approval entries in corpus manifest", async () => {
+    const manifestPath = resolve(
+      process.cwd(),
+      "tests/contracts/v11/corpus/manifest.json"
+    );
+    const manifestRaw = await readFile(manifestPath, "utf8");
+    const approvalSources = parseApprovalSourcesFromManifest(manifestRaw);
 
-    const v11 = await withTempRepo(async (repoPath) => {
-      const bubble = await seedReadyForHumanApprovalState({
-        repoPath,
-        bubbleId: "b_approval_contract_v11_approve"
-      });
-      return emitApproveV11({
-        bubbleId: bubble.bubbleId,
-        cwd: repoPath,
-        now: new Date("2026-03-19T21:10:00.000Z")
-      });
-    });
-
-    const normalize = (result: Awaited<typeof legacy>) => ({
-      envelopeType: result.envelope.type,
-      decision: result.envelope.payload.decision,
-      recommendationAtDecision:
-        result.envelope.payload.metadata?.recommendation_at_decision,
-      state: result.state.state
-    });
-
-    expect(normalize(legacy)).toEqual(normalize(v11));
-    expect(normalize(legacy)).toMatchObject({
-      envelopeType: "APPROVAL_DECISION",
-      decision: "approve",
-      recommendationAtDecision: "approve",
-      state: "APPROVED_FOR_COMMIT"
+    expectManifestContainsSources({
+      actualSources: approvalSources,
+      expectedSources: approvalQueuedReworkSources
     });
   });
 
-  it("keeps queued request-rework contract parity between core facade and v11 entrypoint", async () => {
-    const legacy = await withTempRepo(async (repoPath) => {
-      const bubble = await seedWaitingHumanState({
-        repoPath,
-        bubbleId: "b_approval_contract_legacy_rework"
-      });
-      return emitRequestRework({
-        bubbleId: bubble.bubbleId,
-        message: "Please restart with updated test matrix.",
-        cwd: repoPath,
-        now: new Date("2026-03-19T21:15:00.000Z")
-      });
-    });
+  it("builds corpus output manifest with approval seed entries", async () => {
+    await execFileAsync("pnpm", [
+      "exec",
+      "tsx",
+      "./tests/contracts/v11/corpus/build-corpus.ts"
+    ]);
 
-    const v11 = await withTempRepo(async (repoPath) => {
-      const bubble = await seedWaitingHumanState({
-        repoPath,
-        bubbleId: "b_approval_contract_v11_rework"
-      });
-      return emitRequestReworkV11({
-        bubbleId: bubble.bubbleId,
-        message: "Please restart with updated test matrix.",
-        cwd: repoPath,
-        now: new Date("2026-03-19T21:15:00.000Z")
-      });
-    });
+    const outputManifestPath = resolve(
+      process.cwd(),
+      ".pairflow/evidence/contracts-v11-corpus-manifest.json"
+    );
+    const outputRaw = await readFile(outputManifestPath, "utf8");
+    const approvalSources = parseApprovalSourcesFromManifest(outputRaw);
 
-    expect(legacy.mode).toBe("queued");
-    expect(v11.mode).toBe("queued");
-    if (legacy.mode !== "queued" || v11.mode !== "queued") {
-      throw new Error("Expected queued rework contract outputs.");
-    }
-
-    const normalizeQueued = (result: typeof legacy) => ({
-      mode: result.mode,
-      state: result.state.state,
-      hasIntentId: result.intentId.startsWith("intent_"),
-      hasSupersededIntentId: result.supersededIntentId !== undefined
-    });
-
-    expect(normalizeQueued(legacy)).toEqual(normalizeQueued(v11));
-    expect(normalizeQueued(legacy)).toMatchObject({
-      mode: "queued",
-      state: "WAITING_HUMAN",
-      hasIntentId: true,
-      hasSupersededIntentId: false
-    });
+    expect(approvalSources).toEqual(approvalExpectedSourcesSorted);
   });
 });

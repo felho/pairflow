@@ -57,6 +57,96 @@
       "kind": "seed_case"
     },
     {
+      "id": "reconcile-basic",
+      "command": "reconcile",
+      "source": "tests/contracts/v11/cases/reconcile/reconcile-basic.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reconcile-basic-v11",
+      "command": "reconcile",
+      "source": "tests/contracts/v11/cases/reconcile/reconcile-basic-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reconcile-basic-parity",
+      "command": "reconcile",
+      "source": "tests/contracts/v11/cases/reconcile/reconcile-basic-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "restart-basic",
+      "command": "restart",
+      "source": "tests/contracts/v11/cases/restart/restart-basic.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "restart-basic-v11",
+      "command": "restart",
+      "source": "tests/contracts/v11/cases/restart/restart-basic-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "restart-basic-parity",
+      "command": "restart",
+      "source": "tests/contracts/v11/cases/restart/restart-basic-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "merge-basic",
+      "command": "merge",
+      "source": "tests/contracts/v11/cases/merge/merge-basic.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "merge-basic-v11",
+      "command": "merge",
+      "source": "tests/contracts/v11/cases/merge/merge-basic-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "merge-basic-parity",
+      "command": "merge",
+      "source": "tests/contracts/v11/cases/merge/merge-basic-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "approval-approve-basic",
+      "command": "approval",
+      "source": "tests/contracts/v11/cases/approval/approval-approve-basic.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "approval-approve-basic-v11",
+      "command": "approval",
+      "source": "tests/contracts/v11/cases/approval/approval-approve-basic-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "approval-approve-basic-parity",
+      "command": "approval",
+      "source": "tests/contracts/v11/cases/approval/approval-approve-basic-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "approval-rework-queued",
+      "command": "approval",
+      "source": "tests/contracts/v11/cases/approval/approval-rework-queued.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "approval-rework-queued-v11",
+      "command": "approval",
+      "source": "tests/contracts/v11/cases/approval/approval-rework-queued-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "approval-rework-queued-parity",
+      "command": "approval",
+      "source": "tests/contracts/v11/cases/approval/approval-rework-queued-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "ask-human-basic",
       "command": "askHuman",
       "source": "tests/contracts/v11/cases/ask-human/ask-human-basic.case.json",

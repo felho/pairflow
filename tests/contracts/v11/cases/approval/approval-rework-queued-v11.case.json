@@ -1,0 +1,19 @@
+{
+  "id": "approval-rework-queued-v11",
+  "command": "approval",
+  "mode": "v11",
+  "description": "Seed approval queued-rework v11 contract case for WAITING_HUMAN baseline.",
+  "input": {
+    "action": "request_rework_queued",
+    "message": "Please restart with updated test matrix."
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "APPROVAL_REWORK_QUEUED"
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "approval"
+  ]
+}
