@@ -1,10 +1,10 @@
 import { parseArgs } from "node:util";
 
 import {
-  asAskHumanCommandError,
-  emitAskHumanFromWorkspace,
-  type EmitAskHumanResult
-} from "../../../core/agent/askHuman.js";
+  asAskHumanCommandErrorV11 as asAskHumanCommandError,
+  emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace,
+  type EmitAskHumanV11Result as EmitAskHumanResult
+} from "../../../v11/application/askHuman/emitAskHumanV11.js";
 
 export interface AskHumanCommandOptions {
   question: string;

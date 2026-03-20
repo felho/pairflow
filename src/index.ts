@@ -5,10 +5,10 @@ export function healthcheck(): string {
 }
 
 export {
-  asAskHumanCommandError,
-  emitAskHumanFromWorkspace,
-  AskHumanCommandError
-} from "./core/agent/askHuman.js";
+  asAskHumanCommandErrorV11 as asAskHumanCommandError,
+  emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace,
+  AskHumanCommandErrorV11 as AskHumanCommandError
+} from "./v11/application/askHuman/emitAskHumanV11.js";
 export {
   asConvergedCommandErrorV11 as asConvergedCommandError,
   emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace,
@@ -397,9 +397,9 @@ export {
   protocolParticipants
 } from "./types/protocol.js";
 export type {
-  EmitAskHumanInput,
-  EmitAskHumanResult
-} from "./core/agent/askHuman.js";
+  EmitAskHumanV11Input as EmitAskHumanInput,
+  EmitAskHumanV11Result as EmitAskHumanResult
+} from "./v11/application/askHuman/emitAskHumanV11.js";
 export type {
   EmitConvergedV11Input as EmitConvergedInput,
   EmitConvergedV11Result as EmitConvergedResult
