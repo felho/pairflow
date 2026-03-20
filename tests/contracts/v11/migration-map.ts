@@ -103,6 +103,12 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
     state: "v11",
     owner: "runtime",
     notes: "Core facade now delegates to v11 merge orchestration seams; v11 is the source of truth."
+  },
+  {
+    command: "status",
+    state: "v11",
+    owner: "runtime",
+    notes: "Core facade now delegates to v11 status runtime; v11 is the source of truth."
   }
 ];
 
