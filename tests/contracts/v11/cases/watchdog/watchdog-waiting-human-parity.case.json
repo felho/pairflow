@@ -1,0 +1,19 @@
+{
+  "id": "watchdog-waiting-human-parity",
+  "command": "watchdog",
+  "mode": "parity",
+  "description": "Seed watchdog parity contract case for WAITING_HUMAN no-op baseline.",
+  "input": {},
+  "expected": {
+    "status": "ok",
+    "reasonCode": "WATCHDOG_EVALUATED",
+    "stateSubset": {
+      "state": "WAITING_HUMAN"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "watchdog"
+  ]
+}
