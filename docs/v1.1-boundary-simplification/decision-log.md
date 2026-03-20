@@ -193,3 +193,54 @@ Minimum szabaly:
 - `v1.1-implementation-roadmap.md` — 4.2.3 policy + M2 shield hardening gate.
 - `docs/architecture-fitness-checks.md` — cross-cutting critical side-effect invariant overlay.
 - `orchestration-matrix-annex.md` — review evidence kovetelmeny kiegeszitese side-effect invarianttal.
+
+---
+
+## ADR-004: Fitness Rollout Method and Triage Governance
+
+**Date:** 2026-03-20  
+**Status:** accepted  
+**Scope:** Fitness infrastructure lifecycle (W2), CI enforcement strategy, finding triage
+
+### Context
+
+A fitness infrastructure nem "kesz szabalykonyvkent" szuletett, hanem migration kozbeni tanulasi ciklusban:
+
+1. M0 indulaskor gyors, egyszeru checker-ek (foleg regex/line-window jellegu logika) keszultek, hogy azonnal legyen merheto signal.
+2. Report-only modban elkezdtuk gyujteni a valos zaj/problema mintakat.
+3. A strangler refaktor soran kiderult, hogy:
+   - vannak valos architekturalis serulesek,
+   - es vannak checker precision problemak (false positive / loophole).
+4. Bevezettuk a lepcsozetes enforcementet (`report-only` -> `soft-fail` -> `hard-fail`), hogy ne zajra blokkoljon a CI.
+5. Hardening soran egyes checkek AST-segitett analizis fele mozdultak (kulonosen transition/mutation), es kulon kezeltuk a metadata-only persist vs lifecycle transition eseteket.
+6. Egy kickoff regresszio osztaly megmutatta, hogy parity onmagaban nem eleg: kritikus side-effect (delivery) kieshet ugy, hogy allapot/tranzakcio "zoldnek" tunik. Emiatt kulon cross-cutting `critical_side_effect` overlay check szuletett.
+
+### Decision
+
+A fitness findingok kezelesere kotelezo triage sorrend:
+
+1. **Refactor first** (alapertelmezett), ha a finding valos runtime/architecture kockazatot jelez.
+2. **Policy/checker refinement**, ha igazolt, reprodukalhato false positive mintat latunk.
+3. **Temporary exception**, ha az elozo ketto idoben vagy kockazatban nem vallalhato az adott milestone-ban.
+
+Kotelezo guardrailok:
+
+1. Nincs csendes downgrade `fail` -> `warn` indoklas es teszt nelkul.
+2. Nincs hatarozatlan ideju exception; `owner + reason + expires_milestone` kotelezo.
+3. Minden checker-semantika valtozasnal audit nyom kell:
+   - commit,
+   - checker/test artifact,
+   - rovid decision-log hivatkozas.
+
+### Consequences
+
+1. A W2 munka formalisan ket agra bomlik:
+   - detection quality hardening (precision/noise),
+   - enforcement maturity hardening (mode promotion).
+2. A CI zaj csokkentese explicit cel lesz hard-fail promocio elott.
+3. Uj check csak akkor kerul be, ha van reprodukalhato kockazati osztaly es determinisztikus detektalasi strategia.
+
+### Affected Documents
+
+- `docs/architecture-fitness-checks.md` — evolution history + triage matrix + operational workflow
+- `docs/v1.1-boundary-simplification/v1.1-implementation-roadmap.md` — W2 hardening/triage workflow

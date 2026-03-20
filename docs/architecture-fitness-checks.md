@@ -130,6 +130,88 @@ Seed invariants:
 - `kickoff`: sikeres kickoff utan implementer delivery path verifikalt legyen (adapter call vagy explicit failure status).
 - `pass` es `converged`: delivery status mezok folyamatosan asserted coverage alatt maradjanak.
 
+## Evolution History (M0 -> M3 Hardening Story)
+
+The current fitness system was built incrementally, not as a one-shot "perfect checker" rollout.
+
+1. **M0 bootstrap (executable skeleton):**
+   - We introduced a machine-readable policy (`tools/fitness/policy.json`) and executable check runners.
+   - Initial implementations were intentionally simple (mostly regex / line-window heuristics).
+   - Goal was fast visibility and low setup cost, not perfect semantic precision.
+2. **Safety rollout modes from day one:**
+   - `report-only` for signal collection and baseline discovery.
+   - `soft-fail` for enforcement rehearsal without blocking delivery.
+   - `hard-fail` only after noise level is acceptable.
+3. **Refactor-driven learning loop:**
+   - Running checks against real migration work surfaced both true issues and false positives.
+   - We used those findings to harden both code and checkers (never checker-only gaming).
+4. **Checker hardening path:**
+   - `transition` and `mutation` moved from naive regex assumptions toward AST-assisted analysis.
+   - Metadata-only state persists were separated from lifecycle transitions.
+   - Name-based marker loopholes were removed.
+5. **Semantic gap discovery:**
+   - Parity alone did not protect critical side effects (example class: kickoff delivery path).
+   - This led to a new cross-cutting fitness overlay: **critical side-effect invariants**.
+6. **Current maturity posture:**
+   - Some checks are now low-noise enough for stronger enforcement on migrated scope.
+   - Remaining high-noise areas are explicitly tracked with warn/fail split and phased hardening.
+
+## Triage Decision Matrix (Policy vs Refactor vs Exception)
+
+Every fitness finding must be triaged explicitly before action.
+
+1. **Refactor (preferred)**
+   - Choose when the finding maps to a real architecture/runtime risk.
+   - Typical signals: unstable behavior risk, boundary leakage, high-maintenance hotspot.
+   - Requirement: small-slice change + regression proof (contract/integration tests).
+2. **Policy / Checker refinement**
+   - Choose when findings are systematic false positives and code is architecture-aligned.
+   - Typical signals: rule over-matches by syntax, misses semantic distinction, penalizes accepted pattern.
+   - Requirement: add/update checker tests that demonstrate old false positive and new expected behavior.
+3. **Exception (last resort, temporary)**
+   - Use only when immediate refactor/policy change is unsafe or blocked by milestone timing.
+   - Mandatory fields: owner, reason, expiry milestone, explicit allow scope.
+   - Exception lifecycle must be visible in CI (`report-only`/`soft-fail`/`hard-fail` behavior by mode).
+
+Decision guardrails:
+
+- No silent downgrade from `fail` to `warn` without rationale and tests.
+- No permanent exceptions; expiry is required.
+- Each triage decision must leave audit evidence:
+  - commit,
+  - checker/test artifact,
+  - short note in decision log when rule semantics change.
+
+## Operational Workflow For New/Red Findings
+
+1. Capture baseline report (`fitness:check:ci`) and cluster findings by check + pattern.
+2. For each cluster decide: `real issue` vs `checker/policy noise`.
+3. Apply one small batch:
+   - either code refactor,
+   - or checker/policy refinement,
+   - or temporary exception (with expiry).
+4. Re-run targeted tests + lint/typecheck + fitness report.
+5. Keep rollout mode conservative (`report-only` -> `soft-fail` -> `hard-fail`) until noise is controlled.
+6. Promote enforcement only on migrated scope that is proven stable.
+
+## When To Add A New Fitness Check
+
+Add a new check when all of the following are true:
+
+1. Existing checks cannot express a recurring risk class.
+2. The risk has meaningful architectural/business impact (not cosmetic style preference).
+3. There is a deterministic detection strategy (or a clear report-only path with hardening plan).
+4. We can define:
+   - metric,
+   - scope,
+   - pass/fail semantics,
+   - owner,
+   - rollout mode and promotion criteria.
+
+Example already applied in this project:
+
+- `critical_side_effect` overlay was added after parity-only protection proved insufficient for delivery-path regressions.
+
 ## Notes
 
 1. M0 delivers executable skeleton only; thresholds and hard-fail promotion are milestone-gated.
