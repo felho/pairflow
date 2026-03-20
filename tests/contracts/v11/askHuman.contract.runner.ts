@@ -222,7 +222,7 @@ async function executeAskHumanCase(input: {
     const deliveries: CapturedAskHumanDelivery[] = [];
     const emitDelivery: NonNullable<
       EmitAskHumanDependencies["emitTmuxDeliveryNotification"]
-    > = async (deliveryInput) => {
+    > = (deliveryInput) => {
       const targetRoleRaw =
         deliveryInput.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey];
       deliveries.push({
@@ -231,10 +231,10 @@ async function executeAskHumanCase(input: {
         targetRole: typeof targetRoleRaw === "string" ? targetRoleRaw : null,
         refKind: classifyDeliveryRefKind(deliveryInput.messageRef)
       });
-      return {
+      return Promise.resolve({
         delivered: true,
         message: "ok"
-      };
+      });
     };
     const askHumanInput = parseAskHumanCaseInput(input.caseDef.input);
     const result = await input.executor({

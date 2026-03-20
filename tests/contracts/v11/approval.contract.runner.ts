@@ -361,7 +361,7 @@ async function executeApprovalCase(input: {
     const deliveries: CapturedApprovalDelivery[] = [];
     const emitDelivery: NonNullable<
       EmitApprovalDecisionDependencies["emitTmuxDeliveryNotification"]
-    > = async (deliveryInput) => {
+    > = (deliveryInput) => {
       const targetRoleRaw =
         deliveryInput.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey];
       deliveries.push({
@@ -370,10 +370,10 @@ async function executeApprovalCase(input: {
         targetRole: typeof targetRoleRaw === "string" ? targetRoleRaw : null,
         refKind: classifyDeliveryRefKind(deliveryInput.messageRef)
       });
-      return {
+      return Promise.resolve({
         delivered: true,
         message: "ok"
-      };
+      });
     };
 
     if (input.action.action === "approve") {

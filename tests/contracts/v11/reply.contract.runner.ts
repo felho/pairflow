@@ -241,7 +241,7 @@ async function executeReplyCase(input: {
     const deliveries: CapturedReplyDelivery[] = [];
     const emitDelivery: NonNullable<
       EmitHumanReplyDependencies["emitTmuxDeliveryNotification"]
-    > = async (deliveryInput) => {
+    > = (deliveryInput) => {
       const targetRoleRaw =
         deliveryInput.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey];
       deliveries.push({
@@ -250,10 +250,10 @@ async function executeReplyCase(input: {
         targetRole: typeof targetRoleRaw === "string" ? targetRoleRaw : null,
         refKind: classifyDeliveryRefKind(deliveryInput.messageRef)
       });
-      return {
+      return Promise.resolve({
         delivered: true,
         message: "ok"
-      };
+      });
     };
 
     const replyInput = parseReplyCaseInput(input.caseDef.input);
