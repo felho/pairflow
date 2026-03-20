@@ -15,9 +15,6 @@ import type {
   MetaReviewRecommendation
 } from "../../../types/bubble.js";
 import type { FindingsParityMetadata } from "../../../types/protocol.js";
-import {
-  resolveFindingsParityMetadataFromReportJson
-} from "./metaReviewGateFindingsMetadata.js";
 export {
   resolveRecoveryParityRouting,
   type RecoveryParityResolution
@@ -39,6 +36,7 @@ import {
   buildFinishWithPaneDeactivation,
   resolveRecoveryContextDependencies
 } from "./metaReviewGateRecoveryContextHelpers.js";
+import { buildRecoveryHumanRoutePersistenceInput } from "./metaReviewGateRecoveryHumanRouteInput.js";
 export {
   assertRecoveredRunResolutionConsistency,
   resolveRecoveredRunResolution,
@@ -127,31 +125,20 @@ export async function persistRecoveryRunFailedHumanRoute(input: {
   summary: string;
   runResult: MetaReviewRunResult;
 }): Promise<MetaReviewGateResult> {
-  return persistHumanGateRoute({
-    appendEnvelope: input.context.appendEnvelope,
-    writeState: input.context.writeState,
-    statePath: input.context.resolved.bubblePaths.statePath,
-    transcriptPath: input.context.resolved.bubblePaths.transcriptPath,
-    inboxPath: input.context.resolved.bubblePaths.inboxPath,
-    lockPath: input.context.lockPath,
-    now: input.context.now,
-    nowIso: input.context.nowIso,
-    bubbleId: input.context.resolved.bubbleId,
+  return persistHumanGateRoute(buildRecoveryHumanRoutePersistenceInput({
+    context: input.context,
     summary: buildHumanGateSummary({
       convergenceSummary: input.summary,
       metaReviewRun: input.runResult
     }),
-    refs: input.context.refs,
     loaded: input.context.loaded,
     expectedState: "META_REVIEW_RUNNING",
     route: "human_gate_run_failed",
-    metaReviewRun: input.runResult,
-    parityMetadata: resolveFindingsParityMetadataFromReportJson(
-      input.runResult.report_json
-    ),
+    runResultForRouting: input.runResult,
+    parityMetadata: null,
     targetState: "META_REVIEW_FAILED",
     stickyHumanGate: false
-  });
+  }));
 }
 
 export async function persistRecoveryDispatchFailedHumanRoute(input: {
@@ -164,32 +151,21 @@ export async function persistRecoveryDispatchFailedHumanRoute(input: {
   parityMetadata: FindingsParityMetadata | null;
   rollbackStateOnAppendFailure?: BubbleStateSnapshot;
 }): Promise<MetaReviewGateResult> {
-  return persistHumanGateRoute({
-    appendEnvelope: input.context.appendEnvelope,
-    writeState: input.context.writeState,
-    statePath: input.context.resolved.bubblePaths.statePath,
-    transcriptPath: input.context.resolved.bubblePaths.transcriptPath,
-    inboxPath: input.context.resolved.bubblePaths.inboxPath,
-    lockPath: input.context.lockPath,
-    now: input.context.now,
-    nowIso: input.context.nowIso,
-    bubbleId: input.context.resolved.bubbleId,
+  return persistHumanGateRoute(buildRecoveryHumanRoutePersistenceInput({
+    context: input.context,
     summary: buildHumanGateSummary({
       convergenceSummary: input.summary,
       fallbackReason: input.fallbackReason
     }),
-    refs: input.context.refs,
     loaded: input.loaded,
     expectedState: input.expectedState,
     route: "human_gate_dispatch_failed",
-    metaReviewRun: input.runResultForRouting,
-    parityMetadata:
-      input.parityMetadata ??
-      resolveFindingsParityMetadataFromReportJson(input.runResultForRouting.report_json),
+    runResultForRouting: input.runResultForRouting,
+    parityMetadata: input.parityMetadata,
     ...(input.rollbackStateOnAppendFailure !== undefined
       ? { rollbackStateOnAppendFailure: input.rollbackStateOnAppendFailure }
       : {})
-  });
+  }));
 }
 
 export async function persistRecoveryResolvedHumanRoute(input: {
@@ -200,27 +176,16 @@ export async function persistRecoveryResolvedHumanRoute(input: {
   budgetAvailable: boolean;
   parityMetadata: FindingsParityMetadata | null;
 }): Promise<MetaReviewGateResult> {
-  return persistHumanGateRoute({
-    appendEnvelope: input.context.appendEnvelope,
-    writeState: input.context.writeState,
-    statePath: input.context.resolved.bubblePaths.statePath,
-    transcriptPath: input.context.resolved.bubblePaths.transcriptPath,
-    inboxPath: input.context.resolved.bubblePaths.inboxPath,
-    lockPath: input.context.lockPath,
-    now: input.context.now,
-    nowIso: input.context.nowIso,
-    bubbleId: input.context.resolved.bubbleId,
+  return persistHumanGateRoute(buildRecoveryHumanRoutePersistenceInput({
+    context: input.context,
     summary: buildHumanGateSummary({
       convergenceSummary: input.summary,
       metaReviewRun: input.runResultForRouting
     }),
-    refs: input.context.refs,
     loaded: input.context.loaded,
     expectedState: "META_REVIEW_RUNNING",
     route: resolveHumanGateRoute(input.recommendation, input.budgetAvailable),
-    metaReviewRun: input.runResultForRouting,
-    parityMetadata:
-      input.parityMetadata ??
-      resolveFindingsParityMetadataFromReportJson(input.runResultForRouting.report_json)
-  });
+    runResultForRouting: input.runResultForRouting,
+    parityMetadata: input.parityMetadata
+  }));
 }
