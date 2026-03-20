@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "updated_at": "2026-03-20T00:00:00.000Z",
+  "updated_at": "2026-03-20T15:12:00.000Z",
   "defaults": {
     "mode": "report-only",
-    "current_milestone": "M0"
+    "current_milestone": "M2"
   },
   "checks": [
     {
@@ -14,6 +14,10 @@
         "src/v11/domain/**"
       ],
       "mode": "report-only",
+      "mode_by_milestone": {
+        "M2": "soft-fail",
+        "M3": "hard-fail"
+      },
       "owner": "architecture",
       "exceptions": []
     },
@@ -25,6 +29,10 @@
         "src/v11/infrastructure/**"
       ],
       "mode": "report-only",
+      "mode_by_milestone": {
+        "M2": "soft-fail",
+        "M3": "hard-fail"
+      },
       "owner": "architecture/runtime",
       "exceptions": []
     },
@@ -36,6 +44,10 @@
         "src/v11/domain/**"
       ],
       "mode": "report-only",
+      "mode_by_milestone": {
+        "M2": "soft-fail",
+        "M3": "hard-fail"
+      },
       "owner": "architecture/runtime",
       "exceptions": []
     },
@@ -46,6 +58,10 @@
         "src/v11/**"
       ],
       "mode": "report-only",
+      "mode_by_milestone": {
+        "M2": "soft-fail",
+        "M3": "hard-fail"
+      },
       "owner": "architecture/observability",
       "exceptions": []
     },
@@ -66,6 +82,10 @@
         "src/v11/**"
       ],
       "mode": "report-only",
+      "mode_by_milestone": {
+        "M2": "soft-fail",
+        "M3": "hard-fail"
+      },
       "exception_lifecycle_mode": "soft-fail",
       "owner": "architecture",
       "exceptions": [
