@@ -1567,10 +1567,48 @@ function resolveCanonicalMetaReviewRunId(
   return null;
 }
 
-export async function recoverMetaReviewGateFromSnapshot(
+interface RecoverMetaReviewExecutionContext {
+  resolved: Awaited<ReturnType<typeof resolveBubbleById>>;
+  now: Date;
+  nowIso: string;
+  refs: string[];
+  lockPath: string;
+  loaded: LoadedStateSnapshot;
+  appendEnvelope: typeof appendProtocolEnvelope;
+  writeState: typeof writeStateSnapshot;
+  readState: typeof readStateSnapshot;
+  readFileFn: typeof readFile;
+  writeFileFn: typeof writeFile;
+  sleepForRetryMs?: (delayMs: number) => Promise<void>;
+  deactivateMetaReviewerPane: () => Promise<string | null>;
+  finishWithPaneDeactivation: (result: MetaReviewGateResult) => Promise<MetaReviewGateResult>;
+}
+
+interface RecoveredRunResolution {
+  snapshot: BubbleMetaReviewSnapshotState;
+  runResult: MetaReviewRunResult;
+  summary: string;
+  snapshotHasCanonicalSubmitInActiveWindow: boolean;
+}
+
+type RecoveryParityResolution =
+  | {
+      ok: true;
+      budgetAvailable: boolean;
+      runResultForRouting: MetaReviewRunResult;
+      parityMetadata: FindingsParityMetadata | null;
+    }
+  | {
+      ok: false;
+      reason: string;
+      runResultForRouting: MetaReviewRunResult;
+      parityMetadata: FindingsParityMetadata | null;
+    };
+
+async function initializeRecoverMetaReviewExecutionContext(
   input: RecoverMetaReviewGateFromSnapshotInput,
-  dependencies: RecoverMetaReviewGateFromSnapshotDependencies = {}
-): Promise<MetaReviewGateResult> {
+  dependencies: RecoverMetaReviewGateFromSnapshotDependencies
+): Promise<RecoverMetaReviewExecutionContext> {
   const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
   const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
   const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
@@ -1579,7 +1617,6 @@ export async function recoverMetaReviewGateFromSnapshot(
     dependencies.setMetaReviewerPaneBinding ?? setMetaReviewerPaneBinding;
   const readFileFn = dependencies.readFile ?? readFile;
   const writeFileFn = dependencies.writeFile ?? writeFile;
-  const sleepForRetryMs = dependencies.sleepForRetryMs;
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
   const refs = input.refs ?? [];
@@ -1593,6 +1630,7 @@ export async function recoverMetaReviewGateFromSnapshot(
     locksDir: resolved.bubblePaths.locksDir,
     bubbleId: resolved.bubbleId
   });
+
   const deactivateMetaReviewerPane = async (): Promise<string | null> => {
     try {
       await setMetaReviewerPane({
@@ -1606,6 +1644,7 @@ export async function recoverMetaReviewGateFromSnapshot(
       return error instanceof Error ? error.message : String(error);
     }
   };
+
   const finishWithPaneDeactivation = async (
     result: MetaReviewGateResult
   ): Promise<MetaReviewGateResult> => {
@@ -1649,37 +1688,62 @@ export async function recoverMetaReviewGateFromSnapshot(
     );
   }
 
-  try {
-    const snapshot = normalizeMetaReviewSnapshot(loaded.state.meta_review);
+  return {
+    resolved,
+    now,
+    nowIso,
+    refs,
+    lockPath,
+    loaded,
+    appendEnvelope,
+    writeState,
+    readState,
+    readFileFn,
+    writeFileFn,
+    ...(dependencies.sleepForRetryMs !== undefined
+      ? { sleepForRetryMs: dependencies.sleepForRetryMs }
+      : {}),
+    deactivateMetaReviewerPane,
+    finishWithPaneDeactivation
+  };
+}
+
+async function resolveRecoveredRunResolution(input: {
+  context: RecoverMetaReviewExecutionContext;
+  requestedRunResult?: MetaReviewRunResult;
+  requestedSummary?: string;
+}): Promise<RecoveredRunResolution> {
+  const snapshot = normalizeMetaReviewSnapshot(input.context.loaded.state.meta_review);
   const fallbackSummary =
-    input.summary ??
+    input.requestedSummary ??
     "Meta-review completed previously; recovering gate route from snapshot.";
   const snapshotHasCanonicalSubmitInActiveWindow =
     hasCanonicalSubmitForActiveMetaReviewRound({
-      state: loaded.state,
+      state: input.context.loaded.state,
       snapshot
     });
   const reportJsonArtifactRead = await readMetaReviewReportJsonArtifact({
-    artifactPath: resolved.bubblePaths.metaReviewLastJsonArtifactPath,
-    readFileFn
+    artifactPath: input.context.resolved.bubblePaths.metaReviewLastJsonArtifactPath,
+    readFileFn: input.context.readFileFn
   });
+
   const runResultBase = normalizeRecoveredMetaReviewRunResult({
-    bubbleId: resolved.bubbleId,
-    nowIso,
+    bubbleId: input.context.resolved.bubbleId,
+    nowIso: input.context.nowIso,
     fallbackSummary,
-    bubbleDir: resolved.bubblePaths.bubbleDir,
-    artifactsDir: resolved.bubblePaths.artifactsDir,
-    runResult: input.runResult ?? (
+    bubbleDir: input.context.resolved.bubblePaths.bubbleDir,
+    artifactsDir: input.context.resolved.bubblePaths.artifactsDir,
+    runResult: input.requestedRunResult ?? (
       snapshotHasCanonicalSubmitInActiveWindow
         ? synthesizeMetaReviewRunResultFromSnapshot({
-            bubbleId: resolved.bubbleId,
-            nowIso,
+            bubbleId: input.context.resolved.bubbleId,
+            nowIso: input.context.nowIso,
             snapshot,
             fallbackSummary
           })
         : synthesizeMetaReviewRunFailure({
-            bubbleId: resolved.bubbleId,
-            nowIso,
+            bubbleId: input.context.resolved.bubbleId,
+            nowIso: input.context.nowIso,
             fallbackSummary
           })
     )
@@ -1712,22 +1776,35 @@ export async function recoverMetaReviewGateFromSnapshot(
           }
         };
   const summary = runResult.summary
-    ?? input.summary
+    ?? input.requestedSummary
     ?? "Meta-review completed previously; recovering gate route from snapshot.";
 
-  const snapshotHasRunIdentity = snapshotHasCanonicalSubmitInActiveWindow;
-  const snapshotUpdatedAtMs = Date.parse(snapshot.last_autonomous_updated_at ?? "");
-  const runResultUpdatedAtMs = Date.parse(runResult.updated_at);
+  return {
+    snapshot,
+    runResult,
+    summary,
+    snapshotHasCanonicalSubmitInActiveWindow
+  };
+}
+
+function assertRecoveredRunResolutionConsistency(input: {
+  requestedRunResult?: MetaReviewRunResult;
+  snapshotHasCanonicalSubmitInActiveWindow: boolean;
+  snapshot: BubbleMetaReviewSnapshotState;
+  runResult: MetaReviewRunResult;
+}): void {
+  const snapshotUpdatedAtMs = Date.parse(input.snapshot.last_autonomous_updated_at ?? "");
+  const runResultUpdatedAtMs = Date.parse(input.runResult.updated_at);
   const hasComparableTimestamps =
     Number.isFinite(snapshotUpdatedAtMs) && Number.isFinite(runResultUpdatedAtMs);
-  const updatedAtChanged = input.runResult === undefined
+  const updatedAtChanged = input.requestedRunResult === undefined
     ? false
     : (hasComparableTimestamps
         ? snapshotUpdatedAtMs !== runResultUpdatedAtMs
-        : snapshot.last_autonomous_updated_at !== runResult.updated_at);
+        : input.snapshot.last_autonomous_updated_at !== input.runResult.updated_at);
   if (
-    input.runResult !== undefined
-    && snapshotHasRunIdentity
+    input.requestedRunResult !== undefined
+    && input.snapshotHasCanonicalSubmitInActiveWindow
     && updatedAtChanged
   ) {
     throw new MetaReviewGateError(
@@ -1738,471 +1815,582 @@ export async function recoverMetaReviewGateFromSnapshot(
       }
     );
   }
+}
 
-  if (runResult.status === "error") {
-    return finishWithPaneDeactivation(
-      await persistHumanGateRoute({
-        appendEnvelope,
-        writeState,
-        statePath: resolved.bubblePaths.statePath,
-        transcriptPath: resolved.bubblePaths.transcriptPath,
-        inboxPath: resolved.bubblePaths.inboxPath,
-        lockPath,
-        now,
-        nowIso,
-        bubbleId: resolved.bubbleId,
-        summary: buildHumanGateSummary({
-          convergenceSummary: summary,
-          metaReviewRun: runResult
-        }),
-        refs,
-        loaded,
-        expectedState: "META_REVIEW_RUNNING",
-        route: "human_gate_run_failed",
-        metaReviewRun: runResult,
-        parityMetadata: resolveFindingsParityMetadataFromReportJson(
-          runResult.report_json
-        ),
-        targetState: "META_REVIEW_FAILED",
-        stickyHumanGate: false
-      })
-    );
+function mergeRunResultWithParityResolution(input: {
+  runResult: MetaReviewRunResult;
+  metadata: FindingsParityMetadata | null;
+  diagnostics: string[];
+}): MetaReviewRunResult {
+  if (input.metadata === null && input.diagnostics.length === 0) {
+    return input.runResult;
   }
+  const reportJson = { ...(input.runResult.report_json ?? {}) };
+  if (input.metadata !== null) {
+    reportJson.findings_claimed_open_total = input.metadata.findings_claimed_open_total;
+    reportJson.findings_artifact_open_total = input.metadata.findings_artifact_open_total;
+    reportJson.findings_artifact_status = input.metadata.findings_artifact_status;
+    reportJson.findings_digest_sha256 = input.metadata.findings_digest_sha256;
+    reportJson.meta_review_run_id = input.metadata.meta_review_run_id;
+    reportJson.findings_parity_status = input.metadata.findings_parity_status;
+  }
+  const existingDiagnostics = Array.isArray(reportJson.claim_diagnostics)
+    ? reportJson.claim_diagnostics.filter(
+        (entry): entry is string => typeof entry === "string"
+      )
+    : [];
+  const mergedDiagnostics = [...existingDiagnostics, ...input.diagnostics];
+  if (mergedDiagnostics.length > 0) {
+    reportJson.claim_diagnostics = mergedDiagnostics;
+  }
+  return {
+    ...input.runResult,
+    report_json: reportJson
+  };
+}
 
-  const recommendation = runResult.recommendation;
-  const budgetAvailable =
-    snapshot.auto_rework_count < snapshot.auto_rework_limit;
+async function resolveRecoveryParityRouting(input: {
+  context: RecoverMetaReviewExecutionContext;
+  snapshot: BubbleMetaReviewSnapshotState;
+  runResult: MetaReviewRunResult;
+}): Promise<RecoveryParityResolution> {
   const positiveClaimParity = await validateStructuredMetaReviewPositiveClaim({
-    runResult,
-    ...(runResult.report_json !== undefined
-      ? { reportJson: runResult.report_json }
+    runResult: input.runResult,
+    ...(input.runResult.report_json !== undefined
+      ? { reportJson: input.runResult.report_json }
       : {}),
-    bubbleDir: resolved.bubblePaths.bubbleDir,
-    artifactsDir: resolved.bubblePaths.artifactsDir,
-    readFileFn,
-    ...(sleepForRetryMs !== undefined ? { sleepForRetryMs } : {})
+    bubbleDir: input.context.resolved.bubblePaths.bubbleDir,
+    artifactsDir: input.context.resolved.bubblePaths.artifactsDir,
+    readFileFn: input.context.readFileFn,
+    ...(input.context.sleepForRetryMs !== undefined
+      ? { sleepForRetryMs: input.context.sleepForRetryMs }
+      : {})
   });
   if (!positiveClaimParity.ok) {
-    const parityDecoratedRunResult: MetaReviewRunResult =
-      positiveClaimParity.metadata === null
-        ? runResult
-        : {
-            ...runResult,
-            report_json: {
-              ...(runResult.report_json ?? {}),
-              findings_claimed_open_total:
-                positiveClaimParity.metadata.findings_claimed_open_total,
-              findings_artifact_open_total:
-                positiveClaimParity.metadata.findings_artifact_open_total,
-              findings_artifact_status:
-                positiveClaimParity.metadata.findings_artifact_status,
-              findings_digest_sha256:
-                positiveClaimParity.metadata.findings_digest_sha256,
-              meta_review_run_id: positiveClaimParity.metadata.meta_review_run_id,
-              findings_parity_status:
-                positiveClaimParity.metadata.findings_parity_status
-            }
-          };
-    return finishWithPaneDeactivation(
-      await persistHumanGateRoute({
-        appendEnvelope,
-        writeState,
-        statePath: resolved.bubblePaths.statePath,
-        transcriptPath: resolved.bubblePaths.transcriptPath,
-        inboxPath: resolved.bubblePaths.inboxPath,
-        lockPath,
-        now,
-        nowIso,
-        bubbleId: resolved.bubbleId,
-        summary: buildHumanGateSummary({
-          convergenceSummary: summary,
-          fallbackReason:
-            `META_REVIEW_GATE_REWORK_DISPATCH_FAILED: ${positiveClaimParity.reason}`
-        }),
-        refs,
-        loaded,
-        expectedState: "META_REVIEW_RUNNING",
-        route: "human_gate_dispatch_failed",
-        metaReviewRun: parityDecoratedRunResult,
-        parityMetadata: positiveClaimParity.metadata
-      })
-    );
+    return {
+      ok: false,
+      reason: positiveClaimParity.reason,
+      runResultForRouting: mergeRunResultWithParityResolution({
+        runResult: input.runResult,
+        metadata: positiveClaimParity.metadata,
+        diagnostics: []
+      }),
+      parityMetadata: positiveClaimParity.metadata
+    };
   }
-  const runResultForRouting: MetaReviewRunResult =
-    positiveClaimParity.diagnostics.length === 0 &&
-      positiveClaimParity.metadata === null
-      ? runResult
-      : {
-          ...runResult,
-          report_json: (() => {
-            const base = { ...(runResult.report_json ?? {}) };
-            if (positiveClaimParity.metadata !== null) {
-              base.findings_claimed_open_total =
-                positiveClaimParity.metadata.findings_claimed_open_total;
-              base.findings_artifact_open_total =
-                positiveClaimParity.metadata.findings_artifact_open_total;
-              base.findings_artifact_status =
-                positiveClaimParity.metadata.findings_artifact_status;
-              base.findings_digest_sha256 =
-                positiveClaimParity.metadata.findings_digest_sha256;
-              base.meta_review_run_id =
-                positiveClaimParity.metadata.meta_review_run_id;
-              base.findings_parity_status =
-                positiveClaimParity.metadata.findings_parity_status;
-            }
-            const existingDiagnostics = Array.isArray(base.claim_diagnostics)
-              ? base.claim_diagnostics.filter(
-                  (entry): entry is string => typeof entry === "string"
-                )
-              : [];
-            const mergedDiagnostics = [
-              ...existingDiagnostics,
-              ...positiveClaimParity.diagnostics
-            ];
-            if (mergedDiagnostics.length > 0) {
-              base.claim_diagnostics = mergedDiagnostics;
-            }
-            return base;
-          })()
-        };
+  return {
+    ok: true,
+    budgetAvailable: input.snapshot.auto_rework_count < input.snapshot.auto_rework_limit,
+    runResultForRouting: mergeRunResultWithParityResolution({
+      runResult: input.runResult,
+      metadata: positiveClaimParity.metadata,
+      diagnostics: positiveClaimParity.diagnostics
+    }),
+    parityMetadata: positiveClaimParity.metadata
+  };
+}
 
-  if (recommendation === "rework" && budgetAvailable) {
-    if (snapshot.sticky_human_gate) {
+async function persistRecoveryRunFailedHumanRoute(input: {
+  context: RecoverMetaReviewExecutionContext;
+  summary: string;
+  runResult: MetaReviewRunResult;
+}): Promise<MetaReviewGateResult> {
+  return persistHumanGateRoute({
+    appendEnvelope: input.context.appendEnvelope,
+    writeState: input.context.writeState,
+    statePath: input.context.resolved.bubblePaths.statePath,
+    transcriptPath: input.context.resolved.bubblePaths.transcriptPath,
+    inboxPath: input.context.resolved.bubblePaths.inboxPath,
+    lockPath: input.context.lockPath,
+    now: input.context.now,
+    nowIso: input.context.nowIso,
+    bubbleId: input.context.resolved.bubbleId,
+    summary: buildHumanGateSummary({
+      convergenceSummary: input.summary,
+      metaReviewRun: input.runResult
+    }),
+    refs: input.context.refs,
+    loaded: input.context.loaded,
+    expectedState: "META_REVIEW_RUNNING",
+    route: "human_gate_run_failed",
+    metaReviewRun: input.runResult,
+    parityMetadata: resolveFindingsParityMetadataFromReportJson(
+      input.runResult.report_json
+    ),
+    targetState: "META_REVIEW_FAILED",
+    stickyHumanGate: false
+  });
+}
+
+async function persistRecoveryDispatchFailedHumanRoute(input: {
+  context: RecoverMetaReviewExecutionContext;
+  summary: string;
+  fallbackReason: string;
+  loaded: LoadedStateSnapshot;
+  expectedState: BubbleStateSnapshot["state"];
+  runResultForRouting: MetaReviewRunResult;
+  parityMetadata: FindingsParityMetadata | null;
+  rollbackStateOnAppendFailure?: BubbleStateSnapshot;
+}): Promise<MetaReviewGateResult> {
+  return persistHumanGateRoute({
+    appendEnvelope: input.context.appendEnvelope,
+    writeState: input.context.writeState,
+    statePath: input.context.resolved.bubblePaths.statePath,
+    transcriptPath: input.context.resolved.bubblePaths.transcriptPath,
+    inboxPath: input.context.resolved.bubblePaths.inboxPath,
+    lockPath: input.context.lockPath,
+    now: input.context.now,
+    nowIso: input.context.nowIso,
+    bubbleId: input.context.resolved.bubbleId,
+    summary: buildHumanGateSummary({
+      convergenceSummary: input.summary,
+      fallbackReason: input.fallbackReason
+    }),
+    refs: input.context.refs,
+    loaded: input.loaded,
+    expectedState: input.expectedState,
+    route: "human_gate_dispatch_failed",
+    metaReviewRun: input.runResultForRouting,
+    parityMetadata:
+      input.parityMetadata ??
+      resolveFindingsParityMetadataFromReportJson(input.runResultForRouting.report_json),
+    ...(input.rollbackStateOnAppendFailure !== undefined
+      ? { rollbackStateOnAppendFailure: input.rollbackStateOnAppendFailure }
+      : {})
+  });
+}
+
+async function transitionRecoveryToRunningForAutoRework(input: {
+  context: RecoverMetaReviewExecutionContext;
+  loaded: LoadedStateSnapshot;
+}): Promise<LoadedStateSnapshot> {
+  const nextRound = input.loaded.state.round + 1;
+  const resumed = applyStateTransition(input.loaded.state, {
+    to: "RUNNING",
+    round: nextRound,
+    activeAgent: input.context.resolved.bubbleConfig.agents.implementer,
+    activeRole: "implementer",
+    activeSince: input.context.nowIso,
+    lastCommandAt: input.context.nowIso,
+    appendRoundRoleEntry: {
+      round: nextRound,
+      implementer: input.context.resolved.bubbleConfig.agents.implementer,
+      reviewer: input.context.resolved.bubbleConfig.agents.reviewer,
+      switched_at: input.context.nowIso
+    }
+  });
+  return input.context.writeState(input.context.resolved.bubblePaths.statePath, resumed, {
+    expectedFingerprint: input.loaded.fingerprint,
+    expectedState: "META_REVIEW_RUNNING"
+  });
+}
+
+async function restoreReadyForApprovalAfterDispatchFailure(input: {
+  context: RecoverMetaReviewExecutionContext;
+  loaded: LoadedStateSnapshot;
+  resumedWritten: LoadedStateSnapshot;
+  runResultForRouting: MetaReviewRunResult;
+  appendReason: string;
+}): Promise<{ readyForApproval: LoadedStateSnapshot; restoreOutcome: string }> {
+  let restoreOutcome = "restore_outcome=not_attempted";
+  try {
+    const backToReady = applyStateTransition(input.resumedWritten.state, {
+      to: "READY_FOR_APPROVAL",
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
+      lastCommandAt: input.context.nowIso
+    });
+    const restoredCounterReady: BubbleStateSnapshot = {
+      ...backToReady,
+      round: input.loaded.state.round,
+      round_role_history: input.loaded.state.round_role_history,
+      meta_review: buildHydratedMetaReviewSnapshotFromRunResult({
+        metaReview: normalizeMetaReviewSnapshot(backToReady.meta_review),
+        runResult: input.runResultForRouting
+      })
+    };
+    const readyForApproval = await input.context.writeState(
+      input.context.resolved.bubblePaths.statePath,
+      restoredCounterReady,
+      {
+        expectedFingerprint: input.resumedWritten.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+    restoreOutcome = "restore_outcome=applied";
+    return { readyForApproval, restoreOutcome };
+  } catch (recoveryError) {
+    const restoreReason =
+      recoveryError instanceof Error ? recoveryError.message : String(recoveryError);
+    restoreOutcome = `restore_outcome=failed restore_error=${restoreReason}`;
+    if (recoveryError instanceof StateStoreConflictError) {
       throw new MetaReviewGateError(
         "META_REVIEW_GATE_STATE_CONFLICT",
-        "META_REVIEW_GATE_STATE_CONFLICT: sticky_human_gate became true before auto rework dispatch.",
+        `META_REVIEW_GATE_STATE_CONFLICT: auto-rework dispatch append failed (append_error=${input.appendReason}) and restore to READY_FOR_APPROVAL failed (${restoreOutcome}).`,
         {
           stageReasonCode: "META_REVIEW_GATE_STATE_CONFLICT"
         }
       );
     }
-
-    const reworkMessage = runResult.rework_target_message;
-    if (reworkMessage === null || reworkMessage.trim().length === 0) {
-      return finishWithPaneDeactivation(
-        await persistHumanGateRoute({
-          appendEnvelope,
-          writeState,
-          statePath: resolved.bubblePaths.statePath,
-          transcriptPath: resolved.bubblePaths.transcriptPath,
-          inboxPath: resolved.bubblePaths.inboxPath,
-          lockPath,
-          now,
-          nowIso,
-          bubbleId: resolved.bubbleId,
-          summary: buildHumanGateSummary({
-            convergenceSummary: summary,
-            fallbackReason:
-              "META_REVIEW_GATE_REWORK_DISPATCH_FAILED: missing rework target message for autonomous dispatch"
-          }),
-          refs,
-          loaded,
-          expectedState: "META_REVIEW_RUNNING",
-          route: "human_gate_dispatch_failed",
-          metaReviewRun: runResultForRouting,
-          parityMetadata:
-            positiveClaimParity.metadata ??
-            resolveFindingsParityMetadataFromReportJson(runResultForRouting.report_json),
-          rollbackStateOnAppendFailure: loaded.state
-        })
-      );
-    }
-
-    let resumedWritten: LoadedStateSnapshot;
-    try {
-      const nextRound = loaded.state.round + 1;
-      const resumed = applyStateTransition(loaded.state, {
-        to: "RUNNING",
-        round: nextRound,
-        activeAgent: resolved.bubbleConfig.agents.implementer,
-        activeRole: "implementer",
-        activeSince: nowIso,
-        lastCommandAt: nowIso,
-        appendRoundRoleEntry: {
-          round: nextRound,
-          implementer: resolved.bubbleConfig.agents.implementer,
-          reviewer: resolved.bubbleConfig.agents.reviewer,
-          switched_at: nowIso
-        }
-      });
-      resumedWritten = await writeState(resolved.bubblePaths.statePath, resumed, {
-        expectedFingerprint: loaded.fingerprint,
-        expectedState: "META_REVIEW_RUNNING"
-      });
-    } catch (error) {
-      if (error instanceof StateStoreConflictError) {
-        throw toConflictError(error);
+    throw new MetaReviewGateError(
+      "META_REVIEW_GATE_TRANSITION_INVALID",
+      `META_REVIEW_GATE_TRANSITION_INVALID: auto-rework dispatch append failed (append_error=${input.appendReason}) and restore to READY_FOR_APPROVAL failed (${restoreOutcome}).`,
+      {
+        stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
       }
+    );
+  }
+}
+
+async function persistAutoReworkCounterAfterRecoveryDispatch(input: {
+  context: RecoverMetaReviewExecutionContext;
+  snapshot: BubbleMetaReviewSnapshotState;
+  resumedWritten: LoadedStateSnapshot;
+  runResultForRouting: MetaReviewRunResult;
+}): Promise<LoadedStateSnapshot> {
+  let written: LoadedStateSnapshot | undefined;
+  try {
+    const resumedWithHydratedRun: BubbleStateSnapshot = {
+      ...input.resumedWritten.state,
+      meta_review: buildHydratedMetaReviewSnapshotFromRunResult({
+        metaReview: normalizeMetaReviewSnapshot(input.resumedWritten.state.meta_review),
+        runResult: input.runResultForRouting
+      })
+    };
+    const resumedWithCounter = incrementAutoReworkCount(resumedWithHydratedRun);
+    written = await input.context.writeState(
+      input.context.resolved.bubblePaths.statePath,
+      resumedWithCounter,
+      {
+        expectedFingerprint: input.resumedWritten.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+  } catch (error) {
+    if (!(error instanceof StateStoreConflictError)) {
       throw toTransitionError(error);
     }
+    let latestConflict: StateStoreConflictError = error;
+    const expectedCount = input.snapshot.auto_rework_count;
+    const targetCount = expectedCount + 1;
 
-    let dispatched: AppendProtocolEnvelopeResult;
-    try {
-      dispatched = await appendEnvelope({
-        transcriptPath: resolved.bubblePaths.transcriptPath,
-        mirrorPaths: [resolved.bubblePaths.inboxPath],
-        lockPath,
-        now,
-        envelope: {
-          bubble_id: resolved.bubbleId,
-          sender: "orchestrator",
-          recipient: resolved.bubbleConfig.agents.implementer,
-          type: "APPROVAL_DECISION",
-          round: loaded.state.round,
-          payload: {
-            decision: "revise",
-            message: reworkMessage,
-            metadata: {
-              [deliveryTargetRoleMetadataKey]: "implementer",
-              actor: "meta-reviewer",
-              actor_agent: "codex",
-              recommendation: runResultForRouting.recommendation,
-              ...(runResultForRouting.run_id !== undefined
-                ? { run_id: runResultForRouting.run_id }
-                : {}),
-              ...resolveFindingsParityMetadataForEnvelope(
-                positiveClaimParity.metadata
-              )
-            }
-          },
-          refs
-        }
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const latest = await input.context.readState(
+        input.context.resolved.bubblePaths.statePath
+      );
+      if (latest.state.state !== "RUNNING") {
+        throw toConflictError(latestConflict);
+      }
+      const retryInvariantViolation = resolveAutoReworkRetryInvariantViolation({
+        latest: latest.state,
+        expected: input.resumedWritten.state
       });
-    } catch (error) {
-      const appendReason = error instanceof Error ? error.message : String(error);
-
-      let readyForApproval: LoadedStateSnapshot;
-      let restoreOutcome = "restore_outcome=not_attempted";
-      try {
-        const backToReady = applyStateTransition(resumedWritten.state, {
-          to: "READY_FOR_APPROVAL",
-          activeAgent: null,
-          activeRole: null,
-          activeSince: null,
-          lastCommandAt: nowIso
-        });
-        const restoredCounterReady: BubbleStateSnapshot = {
-          ...backToReady,
-          round: loaded.state.round,
-          round_role_history: loaded.state.round_role_history,
-          meta_review: buildHydratedMetaReviewSnapshotFromRunResult({
-            metaReview: normalizeMetaReviewSnapshot(backToReady.meta_review),
-            runResult: runResultForRouting
-          })
-        };
-        readyForApproval = await writeState(
-          resolved.bubblePaths.statePath,
-          restoredCounterReady,
+      if (retryInvariantViolation !== null) {
+        throw new MetaReviewGateError(
+          "META_REVIEW_GATE_STATE_CONFLICT",
+          `META_REVIEW_GATE_STATE_CONFLICT: auto-rework CAS retry invariant failed (retry_invariant_reason_code=${retryInvariantViolation}; attempt=${attempt + 1}).`,
           {
-            expectedFingerprint: resumedWritten.fingerprint,
+            retryInvariantReasonCode: retryInvariantViolation
+          }
+        );
+      }
+
+      const latestMetaReview = normalizeMetaReviewSnapshot(latest.state.meta_review);
+      if (latestMetaReview.auto_rework_count >= targetCount) {
+        written = latest;
+        break;
+      }
+
+      const retryRunId =
+        typeof input.runResultForRouting.run_id === "string" &&
+        input.runResultForRouting.run_id.trim().length > 0
+          ? input.runResultForRouting.run_id
+          : null;
+      const latestCanonicalRunId = resolveCanonicalMetaReviewRunId(latestMetaReview);
+      if (
+        latestCanonicalRunId !== null &&
+        retryRunId !== null &&
+        latestCanonicalRunId !== retryRunId
+      ) {
+        throw new MetaReviewGateError(
+          "META_REVIEW_GATE_STATE_CONFLICT",
+          `META_REVIEW_GATE_STATE_CONFLICT: auto-rework CAS retry invariant failed (retry_invariant_reason_code=${metaReviewGateAutoReworkRetryRunIdentityInvariantReasonCode}; attempt=${attempt + 1}).`,
+          {
+            retryInvariantReasonCode:
+              metaReviewGateAutoReworkRetryRunIdentityInvariantReasonCode
+          }
+        );
+      }
+
+      const latestHydratedMetaReview = buildHydratedMetaReviewSnapshotFromRunResult({
+        metaReview: latestMetaReview,
+        runResult: input.runResultForRouting
+      });
+      const latestIncremented: BubbleStateSnapshot = {
+        ...latest.state,
+        meta_review: {
+          ...latestHydratedMetaReview,
+          auto_rework_count: targetCount
+        }
+      };
+      try {
+        written = await input.context.writeState(
+          input.context.resolved.bubblePaths.statePath,
+          latestIncremented,
+          {
+            expectedFingerprint: latest.fingerprint,
             expectedState: "RUNNING"
           }
         );
-        restoreOutcome = "restore_outcome=applied";
-      } catch (recoveryError) {
-        const restoreReason =
-          recoveryError instanceof Error ? recoveryError.message : String(recoveryError);
-        restoreOutcome = `restore_outcome=failed restore_error=${restoreReason}`;
-        if (recoveryError instanceof StateStoreConflictError) {
-          throw new MetaReviewGateError(
-            "META_REVIEW_GATE_STATE_CONFLICT",
-            `META_REVIEW_GATE_STATE_CONFLICT: auto-rework dispatch append failed (append_error=${appendReason}) and restore to READY_FOR_APPROVAL failed (${restoreOutcome}).`,
-            {
-              stageReasonCode: "META_REVIEW_GATE_STATE_CONFLICT"
-            }
-          );
+        break;
+      } catch (retryError) {
+        if (!(retryError instanceof StateStoreConflictError)) {
+          throw toTransitionError(retryError);
         }
-        throw new MetaReviewGateError(
-          "META_REVIEW_GATE_TRANSITION_INVALID",
-          `META_REVIEW_GATE_TRANSITION_INVALID: auto-rework dispatch append failed (append_error=${appendReason}) and restore to READY_FOR_APPROVAL failed (${restoreOutcome}).`,
-          {
-            stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
-          }
-        );
-      }
-
-      return finishWithPaneDeactivation(
-        await persistHumanGateRoute({
-          appendEnvelope,
-          writeState,
-          statePath: resolved.bubblePaths.statePath,
-          transcriptPath: resolved.bubblePaths.transcriptPath,
-          inboxPath: resolved.bubblePaths.inboxPath,
-          lockPath,
-          now,
-          nowIso,
-          bubbleId: resolved.bubbleId,
-          summary: buildHumanGateSummary({
-            convergenceSummary: summary,
-            fallbackReason:
-              `META_REVIEW_GATE_REWORK_DISPATCH_FAILED: append_error=${appendReason}; ${restoreOutcome}`
-          }),
-          refs,
-          loaded: readyForApproval,
-          expectedState: "READY_FOR_APPROVAL",
-          route: "human_gate_dispatch_failed",
-          metaReviewRun: runResultForRouting,
-          parityMetadata:
-            positiveClaimParity.metadata ??
-            resolveFindingsParityMetadataFromReportJson(runResultForRouting.report_json),
-          rollbackStateOnAppendFailure: readyForApproval.state
-        })
-      );
-    }
-
-    let written: LoadedStateSnapshot | undefined;
-    try {
-      const resumedWithHydratedRun: BubbleStateSnapshot = {
-        ...resumedWritten.state,
-        meta_review: buildHydratedMetaReviewSnapshotFromRunResult({
-          metaReview: normalizeMetaReviewSnapshot(resumedWritten.state.meta_review),
-          runResult: runResultForRouting
-        })
-      };
-      const resumedWithCounter = incrementAutoReworkCount(resumedWithHydratedRun);
-      written = await writeState(
-        resolved.bubblePaths.statePath,
-        resumedWithCounter,
-        {
-          expectedFingerprint: resumedWritten.fingerprint,
-          expectedState: "RUNNING"
-        }
-      );
-    } catch (error) {
-      if (error instanceof StateStoreConflictError) {
-        const expectedCount = snapshot.auto_rework_count;
-        const targetCount = expectedCount + 1;
-        let latestConflict: StateStoreConflictError = error;
-
-        for (let attempt = 0; attempt < 3; attempt += 1) {
-          const latest = await readState(resolved.bubblePaths.statePath);
-          if (latest.state.state !== "RUNNING") {
-            throw toConflictError(latestConflict);
-          }
-          const retryInvariantViolation = resolveAutoReworkRetryInvariantViolation({
-            latest: latest.state,
-            expected: resumedWritten.state
-          });
-          if (retryInvariantViolation !== null) {
-            throw new MetaReviewGateError(
-              "META_REVIEW_GATE_STATE_CONFLICT",
-              `META_REVIEW_GATE_STATE_CONFLICT: auto-rework CAS retry invariant failed (retry_invariant_reason_code=${retryInvariantViolation}; attempt=${attempt + 1}).`,
-              {
-                retryInvariantReasonCode: retryInvariantViolation
-              }
-            );
-          }
-
-          const latestMetaReview = normalizeMetaReviewSnapshot(latest.state.meta_review);
-          if (latestMetaReview.auto_rework_count >= targetCount) {
-            written = latest;
-            break;
-          }
-
-          const retryRunId =
-            typeof runResultForRouting.run_id === "string" &&
-            runResultForRouting.run_id.trim().length > 0
-              ? runResultForRouting.run_id
-              : null;
-          const latestCanonicalRunId = resolveCanonicalMetaReviewRunId(latestMetaReview);
-          if (
-            latestCanonicalRunId !== null
-            && retryRunId !== null
-            && latestCanonicalRunId !== retryRunId
-          ) {
-            throw new MetaReviewGateError(
-              "META_REVIEW_GATE_STATE_CONFLICT",
-              `META_REVIEW_GATE_STATE_CONFLICT: auto-rework CAS retry invariant failed (retry_invariant_reason_code=${metaReviewGateAutoReworkRetryRunIdentityInvariantReasonCode}; attempt=${attempt + 1}).`,
-              {
-                retryInvariantReasonCode:
-                  metaReviewGateAutoReworkRetryRunIdentityInvariantReasonCode
-              }
-            );
-          }
-
-          const latestHydratedMetaReview = buildHydratedMetaReviewSnapshotFromRunResult({
-            metaReview: latestMetaReview,
-            runResult: runResultForRouting
-          });
-          const latestIncremented: BubbleStateSnapshot = {
-            ...latest.state,
-            meta_review: {
-              ...latestHydratedMetaReview,
-              auto_rework_count: targetCount
-            }
-          };
-          try {
-            written = await writeState(
-              resolved.bubblePaths.statePath,
-              latestIncremented,
-              {
-                expectedFingerprint: latest.fingerprint,
-                expectedState: "RUNNING"
-              }
-            );
-            break;
-          } catch (retryError) {
-            if (!(retryError instanceof StateStoreConflictError)) {
-              throw toTransitionError(retryError);
-            }
-            latestConflict = retryError;
-          }
-        }
-
-        if (written === undefined) {
-          throw toConflictError(latestConflict);
-        }
-      } else {
-        throw toTransitionError(error);
+        latestConflict = retryError;
       }
     }
     if (written === undefined) {
-      throw new MetaReviewGateError(
-        "META_REVIEW_GATE_STATE_CONFLICT",
-        "META_REVIEW_GATE_STATE_CONFLICT: auto-rework count update did not converge after dispatch.",
-        {
-          stageReasonCode: "META_REVIEW_GATE_STATE_CONFLICT"
-        }
-      );
+      throw toConflictError(latestConflict);
     }
+  }
+  if (written === undefined) {
+    throw new MetaReviewGateError(
+      "META_REVIEW_GATE_STATE_CONFLICT",
+      "META_REVIEW_GATE_STATE_CONFLICT: auto-rework count update did not converge after dispatch.",
+      {
+        stageReasonCode: "META_REVIEW_GATE_STATE_CONFLICT"
+      }
+    );
+  }
+  return written;
+}
 
-    return finishWithPaneDeactivation({
-      bubbleId: resolved.bubbleId,
-      route: "auto_rework",
-      gateSequence: dispatched.sequence,
-      gateEnvelope: dispatched.envelope,
-      state: written.state,
-      metaReviewRun: runResultForRouting
+async function handleRecoveryAutoReworkRoute(input: {
+  context: RecoverMetaReviewExecutionContext;
+  snapshot: BubbleMetaReviewSnapshotState;
+  summary: string;
+  runResultForRouting: MetaReviewRunResult;
+  parityMetadata: FindingsParityMetadata | null;
+}): Promise<MetaReviewGateResult> {
+  if (input.snapshot.sticky_human_gate) {
+    throw new MetaReviewGateError(
+      "META_REVIEW_GATE_STATE_CONFLICT",
+      "META_REVIEW_GATE_STATE_CONFLICT: sticky_human_gate became true before auto rework dispatch.",
+      {
+        stageReasonCode: "META_REVIEW_GATE_STATE_CONFLICT"
+      }
+    );
+  }
+
+  const reworkMessage = input.runResultForRouting.rework_target_message;
+  if (reworkMessage === null || reworkMessage.trim().length === 0) {
+    return persistRecoveryDispatchFailedHumanRoute({
+      context: input.context,
+      summary: input.summary,
+      fallbackReason:
+        "META_REVIEW_GATE_REWORK_DISPATCH_FAILED: missing rework target message for autonomous dispatch",
+      loaded: input.context.loaded,
+      expectedState: "META_REVIEW_RUNNING",
+      runResultForRouting: input.runResultForRouting,
+      parityMetadata: input.parityMetadata,
+      rollbackStateOnAppendFailure: input.context.loaded.state
     });
   }
 
-    return finishWithPaneDeactivation(
-      await persistHumanGateRoute({
-        appendEnvelope,
-        writeState,
-        statePath: resolved.bubblePaths.statePath,
-        transcriptPath: resolved.bubblePaths.transcriptPath,
-        inboxPath: resolved.bubblePaths.inboxPath,
-        lockPath,
-        now,
-        nowIso,
-        bubbleId: resolved.bubbleId,
-        summary: buildHumanGateSummary({
-          convergenceSummary: summary,
-          metaReviewRun: runResultForRouting
-        }),
-        refs,
-        loaded,
-        expectedState: "META_REVIEW_RUNNING",
-        route: resolveHumanGateRoute(recommendation, budgetAvailable),
-        metaReviewRun: runResultForRouting,
-        parityMetadata:
-          positiveClaimParity.metadata ??
-          resolveFindingsParityMetadataFromReportJson(runResultForRouting.report_json)
+  const resumedWritten = await transitionRecoveryToRunningForAutoRework({
+    context: input.context,
+    loaded: input.context.loaded
+  }).catch((error: unknown) => {
+    if (error instanceof StateStoreConflictError) {
+      throw toConflictError(error);
+    }
+    throw toTransitionError(error);
+  });
+
+  let dispatched: AppendProtocolEnvelopeResult;
+  try {
+    dispatched = await input.context.appendEnvelope({
+      transcriptPath: input.context.resolved.bubblePaths.transcriptPath,
+      mirrorPaths: [input.context.resolved.bubblePaths.inboxPath],
+      lockPath: input.context.lockPath,
+      now: input.context.now,
+      envelope: {
+        bubble_id: input.context.resolved.bubbleId,
+        sender: "orchestrator",
+        recipient: input.context.resolved.bubbleConfig.agents.implementer,
+        type: "APPROVAL_DECISION",
+        round: input.context.loaded.state.round,
+        payload: {
+          decision: "revise",
+          message: reworkMessage,
+          metadata: {
+            [deliveryTargetRoleMetadataKey]: "implementer",
+            actor: "meta-reviewer",
+            actor_agent: "codex",
+            recommendation: input.runResultForRouting.recommendation,
+            ...(input.runResultForRouting.run_id !== undefined
+              ? { run_id: input.runResultForRouting.run_id }
+              : {}),
+            ...resolveFindingsParityMetadataForEnvelope(input.parityMetadata)
+          }
+        },
+        refs: input.context.refs
+      }
+    });
+  } catch (error) {
+    const appendReason = error instanceof Error ? error.message : String(error);
+    const restored = await restoreReadyForApprovalAfterDispatchFailure({
+      context: input.context,
+      loaded: input.context.loaded,
+      resumedWritten,
+      runResultForRouting: input.runResultForRouting,
+      appendReason
+    });
+    return persistRecoveryDispatchFailedHumanRoute({
+      context: input.context,
+      summary: input.summary,
+      fallbackReason:
+        `META_REVIEW_GATE_REWORK_DISPATCH_FAILED: append_error=${appendReason}; ${restored.restoreOutcome}`,
+      loaded: restored.readyForApproval,
+      expectedState: "READY_FOR_APPROVAL",
+      runResultForRouting: input.runResultForRouting,
+      parityMetadata: input.parityMetadata,
+      rollbackStateOnAppendFailure: restored.readyForApproval.state
+    });
+  }
+
+  const written = await persistAutoReworkCounterAfterRecoveryDispatch({
+    context: input.context,
+    snapshot: input.snapshot,
+    resumedWritten,
+    runResultForRouting: input.runResultForRouting
+  });
+
+  return {
+    bubbleId: input.context.resolved.bubbleId,
+    route: "auto_rework",
+    gateSequence: dispatched.sequence,
+    gateEnvelope: dispatched.envelope,
+    state: written.state,
+    metaReviewRun: input.runResultForRouting
+  };
+}
+
+async function persistRecoveryResolvedHumanRoute(input: {
+  context: RecoverMetaReviewExecutionContext;
+  summary: string;
+  runResultForRouting: MetaReviewRunResult;
+  recommendation: MetaReviewRecommendation;
+  budgetAvailable: boolean;
+  parityMetadata: FindingsParityMetadata | null;
+}): Promise<MetaReviewGateResult> {
+  return persistHumanGateRoute({
+    appendEnvelope: input.context.appendEnvelope,
+    writeState: input.context.writeState,
+    statePath: input.context.resolved.bubblePaths.statePath,
+    transcriptPath: input.context.resolved.bubblePaths.transcriptPath,
+    inboxPath: input.context.resolved.bubblePaths.inboxPath,
+    lockPath: input.context.lockPath,
+    now: input.context.now,
+    nowIso: input.context.nowIso,
+    bubbleId: input.context.resolved.bubbleId,
+    summary: buildHumanGateSummary({
+      convergenceSummary: input.summary,
+      metaReviewRun: input.runResultForRouting
+    }),
+    refs: input.context.refs,
+    loaded: input.context.loaded,
+    expectedState: "META_REVIEW_RUNNING",
+    route: resolveHumanGateRoute(input.recommendation, input.budgetAvailable),
+    metaReviewRun: input.runResultForRouting,
+    parityMetadata:
+      input.parityMetadata ??
+      resolveFindingsParityMetadataFromReportJson(input.runResultForRouting.report_json)
+  });
+}
+
+export async function recoverMetaReviewGateFromSnapshot(
+  input: RecoverMetaReviewGateFromSnapshotInput,
+  dependencies: RecoverMetaReviewGateFromSnapshotDependencies = {}
+): Promise<MetaReviewGateResult> {
+  const context = await initializeRecoverMetaReviewExecutionContext(
+    input,
+    dependencies
+  );
+  try {
+    const runResolution = await resolveRecoveredRunResolution({
+      context,
+      ...(input.runResult !== undefined ? { requestedRunResult: input.runResult } : {}),
+      ...(input.summary !== undefined ? { requestedSummary: input.summary } : {})
+    });
+
+    assertRecoveredRunResolutionConsistency({
+      ...(input.runResult !== undefined ? { requestedRunResult: input.runResult } : {}),
+      snapshotHasCanonicalSubmitInActiveWindow:
+        runResolution.snapshotHasCanonicalSubmitInActiveWindow,
+      snapshot: runResolution.snapshot,
+      runResult: runResolution.runResult
+    });
+
+    if (runResolution.runResult.status === "error") {
+      return context.finishWithPaneDeactivation(
+        await persistRecoveryRunFailedHumanRoute({
+          context,
+          summary: runResolution.summary,
+          runResult: runResolution.runResult
+        })
+      );
+    }
+
+    const parityResolution = await resolveRecoveryParityRouting({
+      context,
+      snapshot: runResolution.snapshot,
+      runResult: runResolution.runResult
+    });
+    if (!parityResolution.ok) {
+      return context.finishWithPaneDeactivation(
+        await persistRecoveryDispatchFailedHumanRoute({
+          context,
+          summary: runResolution.summary,
+          fallbackReason:
+            `META_REVIEW_GATE_REWORK_DISPATCH_FAILED: ${parityResolution.reason}`,
+          loaded: context.loaded,
+          expectedState: "META_REVIEW_RUNNING",
+          runResultForRouting: parityResolution.runResultForRouting,
+          parityMetadata: parityResolution.parityMetadata
+        })
+      );
+    }
+
+    if (
+      runResolution.runResult.recommendation === "rework" &&
+      parityResolution.budgetAvailable
+    ) {
+      return context.finishWithPaneDeactivation(
+        await handleRecoveryAutoReworkRoute({
+          context,
+          snapshot: runResolution.snapshot,
+          summary: runResolution.summary,
+          runResultForRouting: parityResolution.runResultForRouting,
+          parityMetadata: parityResolution.parityMetadata
+        })
+      );
+    }
+
+    return context.finishWithPaneDeactivation(
+      await persistRecoveryResolvedHumanRoute({
+        context,
+        summary: runResolution.summary,
+        runResultForRouting: parityResolution.runResultForRouting,
+        recommendation: runResolution.runResult.recommendation,
+        budgetAvailable: parityResolution.budgetAvailable,
+        parityMetadata: parityResolution.parityMetadata
       })
     );
   } catch (error) {
-    const deactivationError = await deactivateMetaReviewerPane();
+    const deactivationError = await context.deactivateMetaReviewerPane();
     if (deactivationError !== null) {
       const root = toMetaReviewGateError(error);
       throw new MetaReviewGateError(
