@@ -1,0 +1,20 @@
+{
+  "id": "merge-branch-missing-v11",
+  "command": "merge",
+  "mode": "v11",
+  "description": "Seed merge v11 contract case for missing bubble branch guard.",
+  "input": {
+    "tmuxSessionExisted": false,
+    "fixture": {
+      "scenario": "bubble_branch_missing"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "MERGE_BUBBLE_BRANCH_NOT_FOUND",
+    "stateSubset": {
+      "state": "DONE"
+    }
+  },
+  "tags": ["seed", "m0", "merge", "v11", "error-path"]
+}

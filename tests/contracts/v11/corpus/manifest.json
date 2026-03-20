@@ -165,6 +165,60 @@
       "kind": "seed_case"
     },
     {
+      "id": "merge-repo-dirty",
+      "command": "merge",
+      "source": "tests/contracts/v11/cases/merge/merge-repo-dirty.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "merge-repo-dirty-v11",
+      "command": "merge",
+      "source": "tests/contracts/v11/cases/merge/merge-repo-dirty-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "merge-repo-dirty-parity",
+      "command": "merge",
+      "source": "tests/contracts/v11/cases/merge/merge-repo-dirty-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "merge-branch-missing",
+      "command": "merge",
+      "source": "tests/contracts/v11/cases/merge/merge-branch-missing.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "merge-branch-missing-v11",
+      "command": "merge",
+      "source": "tests/contracts/v11/cases/merge/merge-branch-missing-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "merge-branch-missing-parity",
+      "command": "merge",
+      "source": "tests/contracts/v11/cases/merge/merge-branch-missing-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "merge-conflict-manual-resolution",
+      "command": "merge",
+      "source": "tests/contracts/v11/cases/merge/merge-conflict-manual-resolution.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "merge-conflict-manual-resolution-v11",
+      "command": "merge",
+      "source": "tests/contracts/v11/cases/merge/merge-conflict-manual-resolution-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "merge-conflict-manual-resolution-parity",
+      "command": "merge",
+      "source": "tests/contracts/v11/cases/merge/merge-conflict-manual-resolution-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "approval-approve-basic",
       "command": "approval",
       "source": "tests/contracts/v11/cases/approval/approval-approve-basic.case.json",
@@ -360,6 +414,24 @@
       "id": "commit-staged-files-empty-parity",
       "command": "commit",
       "source": "tests/contracts/v11/cases/commit/commit-staged-files-empty-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "commit-state-not-approved",
+      "command": "commit",
+      "source": "tests/contracts/v11/cases/commit/commit-state-not-approved.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "commit-state-not-approved-v11",
+      "command": "commit",
+      "source": "tests/contracts/v11/cases/commit/commit-state-not-approved-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "commit-state-not-approved-parity",
+      "command": "commit",
+      "source": "tests/contracts/v11/cases/commit/commit-state-not-approved-parity.case.json",
       "kind": "seed_case"
     },
     {

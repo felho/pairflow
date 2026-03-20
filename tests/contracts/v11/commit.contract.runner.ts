@@ -1,4 +1,5 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -43,10 +44,18 @@ export interface CommitContractRunResult {
 }
 
 type CommitContractScenario = "basic" | "staged_files_empty";
+type CommitContractExtendedScenario =
+  | CommitContractScenario
+  | "state_not_approved";
 
 interface ParsedCommitCaseInput {
   auto: boolean;
-  scenario: CommitContractScenario;
+  scenario: CommitContractExtendedScenario;
+}
+
+function buildCommitContractBubbleId(caseId: string): string {
+  const suffix = createHash("sha1").update(caseId).digest("hex").slice(0, 12);
+  return `b_contract_${suffix}`;
 }
 
 function parseCommitCaseInput(input: ContractCase["input"]): ParsedCommitCaseInput {
@@ -55,7 +64,7 @@ function parseCommitCaseInput(input: ContractCase["input"]): ParsedCommitCaseInp
     throw new Error("commit contract input.auto must be a boolean.");
   }
   const fixtureRaw = input.fixture;
-  let scenario: CommitContractScenario = "basic";
+  let scenario: CommitContractExtendedScenario = "basic";
   if (fixtureRaw !== undefined) {
     if (typeof fixtureRaw !== "object" || fixtureRaw === null) {
       throw new Error("commit contract input.fixture must be an object when provided.");
@@ -64,13 +73,14 @@ function parseCommitCaseInput(input: ContractCase["input"]): ParsedCommitCaseInp
     if (
       scenarioRaw !== undefined &&
       scenarioRaw !== "basic" &&
-      scenarioRaw !== "staged_files_empty"
+      scenarioRaw !== "staged_files_empty" &&
+      scenarioRaw !== "state_not_approved"
     ) {
       throw new Error(
-        "commit contract input.fixture.scenario must be one of: basic, staged_files_empty."
+        "commit contract input.fixture.scenario must be one of: basic, staged_files_empty, state_not_approved."
       );
     }
-    scenario = (scenarioRaw as CommitContractScenario | undefined) ?? "basic";
+    scenario = (scenarioRaw as CommitContractExtendedScenario | undefined) ?? "basic";
   }
   const auto = autoRaw ?? true;
   if (scenario === "staged_files_empty" && auto) {
@@ -106,9 +116,16 @@ function normalizeCommitErrorResult(input: {
 }): CommitContractErrorOutput {
   const message = input.error instanceof Error ? input.error.message : String(input.error);
   const reasonMatch = /^([A-Z0-9_]+):/u.exec(message.trim());
+  let reasonCode: string | null = reasonMatch?.[1] ?? null;
+  if (
+    reasonCode === null &&
+    message.includes("bubble commit can only be used while state is APPROVED_FOR_COMMIT")
+  ) {
+    reasonCode = "COMMIT_STATE_NOT_APPROVED";
+  }
   return {
     status: "error",
-    reasonCode: reasonMatch?.[1] ?? null,
+    reasonCode,
     stateSubset: {
       state: input.state
     }
@@ -202,8 +219,14 @@ async function executeCommitCase(input: {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-commit-contract-"));
   try {
     await initGitRepository(repoPath);
-    const bubble = await setupApprovedBubble(repoPath, `b_contract_${input.caseDef.id}`);
     const parsedInput = parseCommitCaseInput(input.caseDef.input);
+    const bubble = parsedInput.scenario === "state_not_approved"
+      ? await setupRunningBubbleFixture({
+          repoPath,
+          bubbleId: buildCommitContractBubbleId(input.caseDef.id),
+          task: "Commit contract state-not-approved fixture"
+        })
+      : await setupApprovedBubble(repoPath, buildCommitContractBubbleId(input.caseDef.id));
 
     if (parsedInput.scenario === "basic") {
       await writeFile(

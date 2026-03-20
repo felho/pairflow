@@ -1,0 +1,20 @@
+{
+  "id": "merge-repo-dirty",
+  "command": "merge",
+  "mode": "legacy",
+  "description": "Seed merge contract case for repository dirty guard.",
+  "input": {
+    "tmuxSessionExisted": false,
+    "fixture": {
+      "scenario": "repo_dirty"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "MERGE_REPO_DIRTY",
+    "stateSubset": {
+      "state": "DONE"
+    }
+  },
+  "tags": ["seed", "m0", "merge", "error-path"]
+}

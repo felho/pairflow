@@ -1,0 +1,20 @@
+{
+  "id": "merge-branch-missing-parity",
+  "command": "merge",
+  "mode": "parity",
+  "description": "Seed merge parity contract case for missing bubble branch guard.",
+  "input": {
+    "tmuxSessionExisted": false,
+    "fixture": {
+      "scenario": "bubble_branch_missing"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "MERGE_BUBBLE_BRANCH_NOT_FOUND",
+    "stateSubset": {
+      "state": "DONE"
+    }
+  },
+  "tags": ["seed", "m0", "merge", "parity", "error-path"]
+}

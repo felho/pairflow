@@ -15,7 +15,16 @@ const mergeCaseSources = [
   "tests/contracts/v11/cases/merge/merge-basic-parity.case.json",
   "tests/contracts/v11/cases/merge/merge-state-not-done.case.json",
   "tests/contracts/v11/cases/merge/merge-state-not-done-v11.case.json",
-  "tests/contracts/v11/cases/merge/merge-state-not-done-parity.case.json"
+  "tests/contracts/v11/cases/merge/merge-state-not-done-parity.case.json",
+  "tests/contracts/v11/cases/merge/merge-repo-dirty.case.json",
+  "tests/contracts/v11/cases/merge/merge-repo-dirty-v11.case.json",
+  "tests/contracts/v11/cases/merge/merge-repo-dirty-parity.case.json",
+  "tests/contracts/v11/cases/merge/merge-branch-missing.case.json",
+  "tests/contracts/v11/cases/merge/merge-branch-missing-v11.case.json",
+  "tests/contracts/v11/cases/merge/merge-branch-missing-parity.case.json",
+  "tests/contracts/v11/cases/merge/merge-conflict-manual-resolution.case.json",
+  "tests/contracts/v11/cases/merge/merge-conflict-manual-resolution-v11.case.json",
+  "tests/contracts/v11/cases/merge/merge-conflict-manual-resolution-parity.case.json"
 ] as const;
 
 const mergeExpectedSourcesSorted = [...mergeCaseSources].sort();

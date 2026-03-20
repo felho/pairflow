@@ -1,4 +1,5 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -49,10 +50,20 @@ export interface MergeContractRunResult {
 }
 
 type MergeContractScenario = "basic" | "state_not_done";
+type MergeContractExtendedScenario =
+  | MergeContractScenario
+  | "repo_dirty"
+  | "bubble_branch_missing"
+  | "merge_conflict";
 
 interface ParsedMergeCaseInput {
   tmuxSessionExisted: boolean;
-  scenario: MergeContractScenario;
+  scenario: MergeContractExtendedScenario;
+}
+
+function buildMergeContractBubbleId(caseId: string): string {
+  const suffix = createHash("sha1").update(caseId).digest("hex").slice(0, 12);
+  return `b_contract_${suffix}`;
 }
 
 function parseMergeCaseInput(input: ContractCase["input"]): ParsedMergeCaseInput {
@@ -65,7 +76,7 @@ function parseMergeCaseInput(input: ContractCase["input"]): ParsedMergeCaseInput
   }
 
   const fixtureRaw = input.fixture;
-  let scenario: MergeContractScenario = "basic";
+  let scenario: MergeContractExtendedScenario = "basic";
   if (fixtureRaw !== undefined) {
     if (typeof fixtureRaw !== "object" || fixtureRaw === null) {
       throw new Error("merge contract input.fixture must be an object when provided.");
@@ -74,13 +85,16 @@ function parseMergeCaseInput(input: ContractCase["input"]): ParsedMergeCaseInput
     if (
       scenarioRaw !== undefined &&
       scenarioRaw !== "basic" &&
-      scenarioRaw !== "state_not_done"
+      scenarioRaw !== "state_not_done" &&
+      scenarioRaw !== "repo_dirty" &&
+      scenarioRaw !== "bubble_branch_missing" &&
+      scenarioRaw !== "merge_conflict"
     ) {
       throw new Error(
-        "merge contract input.fixture.scenario must be one of: basic, state_not_done."
+        "merge contract input.fixture.scenario must be one of: basic, state_not_done, repo_dirty, bubble_branch_missing, merge_conflict."
       );
     }
-    scenario = (scenarioRaw as MergeContractScenario | undefined) ?? "basic";
+    scenario = (scenarioRaw as MergeContractExtendedScenario | undefined) ?? "basic";
   }
 
   return {
@@ -223,6 +237,86 @@ async function setupCreatedBubble(repoPath: string, bubbleId: string) {
   });
 }
 
+async function setupDoneBubbleWithoutBranch(repoPath: string, bubbleId: string) {
+  const bubble = await createBubble({
+    id: bubbleId,
+    repoPath,
+    baseBranch: "main",
+    reviewArtifactType: "code",
+    task: "Merge contract missing-branch fixture",
+    cwd: repoPath
+  });
+
+  const loaded = await readStateSnapshot(bubble.paths.statePath);
+  await writeStateSnapshot(
+    bubble.paths.statePath,
+    {
+      ...loaded.state,
+      state: "DONE",
+      active_agent: null,
+      active_role: null,
+      active_since: null,
+      last_command_at: "2026-03-20T11:15:00.000Z"
+    },
+    {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "CREATED"
+    }
+  );
+
+  return bubble;
+}
+
+async function setupDoneBubbleWithConflict(repoPath: string, bubbleId: string) {
+  const bubble = await createBubble({
+    id: bubbleId,
+    repoPath,
+    baseBranch: "main",
+    reviewArtifactType: "code",
+    task: "Merge contract conflict fixture",
+    cwd: repoPath
+  });
+
+  await bootstrapWorktreeWorkspace({
+    repoPath,
+    baseBranch: "main",
+    bubbleBranch: bubble.config.bubble_branch,
+    worktreePath: bubble.paths.worktreePath
+  });
+
+  await writeFile(join(bubble.paths.worktreePath, "conflict.txt"), "base-line\n", "utf8");
+  await runGit(bubble.paths.worktreePath, ["add", "conflict.txt"]);
+  await runGit(bubble.paths.worktreePath, ["commit", "-m", `chore(${bubbleId}): base`]);
+
+  await runGit(repoPath, ["checkout", "main"]);
+  await writeFile(join(repoPath, "conflict.txt"), "main-line\n", "utf8");
+  await runGit(repoPath, ["add", "conflict.txt"]);
+  await runGit(repoPath, ["commit", "-m", `chore(${bubbleId}): main conflict`]);
+
+  await writeFile(join(bubble.paths.worktreePath, "conflict.txt"), "bubble-line\n", "utf8");
+  await runGit(bubble.paths.worktreePath, ["add", "conflict.txt"]);
+  await runGit(bubble.paths.worktreePath, ["commit", "-m", `chore(${bubbleId}): bubble conflict`]);
+
+  const loaded = await readStateSnapshot(bubble.paths.statePath);
+  await writeStateSnapshot(
+    bubble.paths.statePath,
+    {
+      ...loaded.state,
+      state: "DONE",
+      active_agent: null,
+      active_role: null,
+      active_since: null,
+      last_command_at: "2026-03-20T11:15:00.000Z"
+    },
+    {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "CREATED"
+    }
+  );
+
+  return bubble;
+}
+
 async function executeMergeCase(input: {
   caseDef: ContractCase;
   executor: typeof mergeBubble;
@@ -231,9 +325,18 @@ async function executeMergeCase(input: {
   try {
     await initGitRepository(repoPath);
     const parsedInput = parseMergeCaseInput(input.caseDef.input);
+    const bubbleId = buildMergeContractBubbleId(input.caseDef.id);
     const bubble = parsedInput.scenario === "state_not_done"
-      ? await setupCreatedBubble(repoPath, `b_contract_${input.caseDef.id}`)
-      : await setupDoneBubble(repoPath, `b_contract_${input.caseDef.id}`);
+      ? await setupCreatedBubble(repoPath, bubbleId)
+      : parsedInput.scenario === "bubble_branch_missing"
+        ? await setupDoneBubbleWithoutBranch(repoPath, bubbleId)
+        : parsedInput.scenario === "merge_conflict"
+          ? await setupDoneBubbleWithConflict(repoPath, bubbleId)
+          : await setupDoneBubble(repoPath, bubbleId);
+
+    if (parsedInput.scenario === "repo_dirty") {
+      await writeFile(join(repoPath, "dirty.txt"), "dirty\n", "utf8");
+    }
 
     try {
       const result = await input.executor(
