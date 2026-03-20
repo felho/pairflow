@@ -61,10 +61,10 @@ export {
   createBubble
 } from "./core/bubble/createBubble.js";
 export {
-  asStartBubbleError,
-  StartBubbleError,
-  startBubble
-} from "./core/bubble/startBubble.js";
+  asStartBubbleErrorV11 as asStartBubbleError,
+  StartBubbleErrorV11 as StartBubbleError,
+  startBubbleV11 as startBubble
+} from "./v11/application/start/emitStartV11.js";
 export {
   asBubbleListError,
   BubbleListError,
@@ -444,10 +444,10 @@ export type {
   RestartBubbleResult
 } from "./core/bubble/restartBubble.js";
 export type {
-  StartBubbleDependencies,
-  StartBubbleInput,
-  StartBubbleResult
-} from "./core/bubble/startBubble.js";
+  StartBubbleV11Dependencies as StartBubbleDependencies,
+  StartBubbleV11Input as StartBubbleInput,
+  StartBubbleV11Result as StartBubbleResult
+} from "./v11/application/start/emitStartV11.js";
 export type {
   StopBubbleV11Dependencies as StopBubbleDependencies,
   StopBubbleV11Input as StopBubbleInput,
