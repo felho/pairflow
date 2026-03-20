@@ -15,7 +15,10 @@ const stopCaseSources = [
   "tests/contracts/v11/cases/stop/stop-basic-parity.case.json",
   "tests/contracts/v11/cases/stop/stop-no-runtime-session.case.json",
   "tests/contracts/v11/cases/stop/stop-no-runtime-session-v11.case.json",
-  "tests/contracts/v11/cases/stop/stop-no-runtime-session-parity.case.json"
+  "tests/contracts/v11/cases/stop/stop-no-runtime-session-parity.case.json",
+  "tests/contracts/v11/cases/stop/stop-final-state.case.json",
+  "tests/contracts/v11/cases/stop/stop-final-state-v11.case.json",
+  "tests/contracts/v11/cases/stop/stop-final-state-parity.case.json"
 ] as const;
 const stopExpectedSourcesSorted = [...stopCaseSources].sort();
 
@@ -108,12 +111,18 @@ describe("v11 stop contract harness skeleton", () => {
       const caseDef = await readContractCase(casePath);
       const run = await runStopContractCase(caseDef);
       if (caseDef.mode === "legacy") {
-        expect(run.legacy?.status).toBe("ok");
+        expect(run.legacy?.status).toBe(caseDef.expected.status);
+        if (caseDef.expected.reasonCode !== undefined) {
+          expect(run.legacy?.reasonCode).toBe(caseDef.expected.reasonCode);
+        }
         expect(run.v11).toBeUndefined();
         continue;
       }
       if (caseDef.mode === "v11") {
-        expect(run.v11?.status).toBe("ok");
+        expect(run.v11?.status).toBe(caseDef.expected.status);
+        if (caseDef.expected.reasonCode !== undefined) {
+          expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
+        }
         expect(run.legacy).toBeUndefined();
         continue;
       }

@@ -1,0 +1,24 @@
+{
+  "id": "stop-final-state",
+  "command": "stop",
+  "mode": "legacy",
+  "description": "Seed stop contract case for rejection when bubble state is already final.",
+  "input": {
+    "fixture": {
+      "scenario": "final_state"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "STOP_BUBBLE_REQUIRES_NON_FINAL_STATE",
+    "stateSubset": {
+      "state": "DONE"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "stop",
+    "error-path"
+  ]
+}

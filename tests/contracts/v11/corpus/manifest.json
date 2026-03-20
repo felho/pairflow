@@ -829,6 +829,24 @@
       "command": "stop",
       "source": "tests/contracts/v11/cases/stop/stop-no-runtime-session-parity.case.json",
       "kind": "seed_case"
+    },
+    {
+      "id": "stop-final-state",
+      "command": "stop",
+      "source": "tests/contracts/v11/cases/stop/stop-final-state.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "stop-final-state-v11",
+      "command": "stop",
+      "source": "tests/contracts/v11/cases/stop/stop-final-state-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "stop-final-state-parity",
+      "command": "stop",
+      "source": "tests/contracts/v11/cases/stop/stop-final-state-parity.case.json",
+      "kind": "seed_case"
     }
   ]
 }

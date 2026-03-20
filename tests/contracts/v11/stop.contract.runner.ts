@@ -8,12 +8,16 @@ import {
   type StopBubbleInput,
   type StopBubbleResult
 } from "../../../src/core/bubble/stopBubble.js";
+import {
+  readStateSnapshot,
+  writeStateSnapshot
+} from "../../../src/core/state/stateStore.js";
 import { stopBubbleV11 } from "../../../src/v11/application/stop/emitStopV11.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
 
-export interface StopContractOutput {
+export interface StopContractSuccessOutput {
   status: "ok";
   reasonCode: "STOPPED";
   stateSubset: {
@@ -23,15 +27,30 @@ export interface StopContractOutput {
   runtimeSessionRemoved: boolean;
 }
 
+export interface StopContractErrorOutput {
+  status: "error";
+  reasonCode: string | null;
+  stateSubset: {
+    state: string;
+  };
+}
+
+export type StopContractOutput =
+  | StopContractSuccessOutput
+  | StopContractErrorOutput;
+
 export interface StopContractRunResult {
   mode: ContractCase["mode"];
   legacy?: StopContractOutput;
   v11?: StopContractOutput;
 }
 
+type StopContractScenario = "basic" | "final_state";
+
 interface ParsedStopCaseInput {
   tmuxSessionExisted: boolean;
   runtimeSessionRemoved: boolean;
+  scenario: StopContractScenario;
 }
 
 function parseStopCaseInput(input: ContractCase["input"]): ParsedStopCaseInput {
@@ -51,13 +70,33 @@ function parseStopCaseInput(input: ContractCase["input"]): ParsedStopCaseInput {
     throw new Error("stop contract input.runtimeSessionRemoved must be a boolean.");
   }
 
+  const fixtureRaw = input.fixture;
+  let scenario: StopContractScenario = "basic";
+  if (fixtureRaw !== undefined) {
+    if (typeof fixtureRaw !== "object" || fixtureRaw === null) {
+      throw new Error("stop contract input.fixture must be an object when provided.");
+    }
+    const scenarioRaw = (fixtureRaw as Record<string, unknown>).scenario;
+    if (
+      scenarioRaw !== undefined &&
+      scenarioRaw !== "basic" &&
+      scenarioRaw !== "final_state"
+    ) {
+      throw new Error(
+        "stop contract input.fixture.scenario must be one of: basic, final_state."
+      );
+    }
+    scenario = (scenarioRaw as StopContractScenario | undefined) ?? "basic";
+  }
+
   return {
     tmuxSessionExisted: tmuxSessionExistedRaw ?? true,
-    runtimeSessionRemoved: runtimeSessionRemovedRaw ?? true
+    runtimeSessionRemoved: runtimeSessionRemovedRaw ?? true,
+    scenario
   };
 }
 
-function normalizeStopResult(result: StopBubbleResult): StopContractOutput {
+function normalizeStopResult(result: StopBubbleResult): StopContractSuccessOutput {
   return {
     status: "ok",
     reasonCode: "STOPPED",
@@ -66,6 +105,21 @@ function normalizeStopResult(result: StopBubbleResult): StopContractOutput {
     },
     tmuxSessionExisted: result.tmuxSessionExisted,
     runtimeSessionRemoved: result.runtimeSessionRemoved
+  };
+}
+
+function normalizeStopErrorResult(input: {
+  error: unknown;
+  state: string;
+}): StopContractErrorOutput {
+  const message = input.error instanceof Error ? input.error.message : String(input.error);
+  const reasonMatch = /^([A-Z0-9_]+):/u.exec(message.trim());
+  return {
+    status: "error",
+    reasonCode: reasonMatch?.[1] ?? null,
+    stateSubset: {
+      state: input.state
+    }
   };
 }
 
@@ -127,23 +181,50 @@ async function executeStopCase(input: {
     });
 
     const parsedInput = parseStopCaseInput(input.caseDef.input);
-    const result = await input.executor(
-      {
-        bubbleId: bubble.bubbleId,
-        repoPath,
-        now: new Date("2026-03-19T23:00:00.000Z")
-      },
-      {
-        terminateBubbleTmuxSession: () =>
-          Promise.resolve({
-            sessionName: `pf-${bubble.bubbleId}`,
-            existed: parsedInput.tmuxSessionExisted
-          }),
-        removeRuntimeSession: () => Promise.resolve(parsedInput.runtimeSessionRemoved)
-      }
-    );
+    if (parsedInput.scenario === "final_state") {
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          state: "DONE",
+          active_agent: null,
+          active_role: null,
+          active_since: null,
+          last_command_at: "2026-03-20T00:00:00.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "RUNNING"
+        }
+      );
+    }
 
-    return normalizeStopResult(result);
+    try {
+      const result = await input.executor(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          now: new Date("2026-03-19T23:00:00.000Z")
+        },
+        {
+          terminateBubbleTmuxSession: () =>
+            Promise.resolve({
+              sessionName: `pf-${bubble.bubbleId}`,
+              existed: parsedInput.tmuxSessionExisted
+            }),
+          removeRuntimeSession: () => Promise.resolve(parsedInput.runtimeSessionRemoved)
+        }
+      );
+
+      return normalizeStopResult(result);
+    } catch (error) {
+      const stateSnapshot = await readStateSnapshot(bubble.paths.statePath);
+      return normalizeStopErrorResult({
+        error,
+        state: stateSnapshot.state.state
+      });
+    }
   } finally {
     await rm(repoPath, { recursive: true, force: true });
   }

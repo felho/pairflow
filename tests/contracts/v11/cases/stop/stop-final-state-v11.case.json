@@ -1,0 +1,25 @@
+{
+  "id": "stop-final-state-v11",
+  "command": "stop",
+  "mode": "v11",
+  "description": "Seed stop v11 contract case for rejection when bubble state is already final.",
+  "input": {
+    "fixture": {
+      "scenario": "final_state"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "STOP_BUBBLE_REQUIRES_NON_FINAL_STATE",
+    "stateSubset": {
+      "state": "DONE"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "stop",
+    "v11",
+    "error-path"
+  ]
+}
