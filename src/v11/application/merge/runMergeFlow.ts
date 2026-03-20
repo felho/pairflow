@@ -129,12 +129,14 @@ export async function runMergeFlow(
     worktreePath: resolved.bubblePaths.worktreePath
   });
 
+  const validatedNextState = {
+    ...loaded.state,
+    last_command_at: input.nowIso
+  };
+
   await dependencies.writeStateSnapshot(
     resolved.bubblePaths.statePath,
-    {
-      ...loaded.state,
-      last_command_at: input.nowIso
-    },
+    validatedNextState,
     {
       expectedFingerprint: loaded.fingerprint,
       expectedState: "DONE"

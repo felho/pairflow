@@ -98,7 +98,7 @@ export async function runApprovalDecisionFlow(
     }
   });
 
-  const nextState = resolveApprovalNextState({
+  const validatedNextState = resolveApprovalNextState({
     state,
     decision: input.decision,
     nowIso,
@@ -111,7 +111,7 @@ export async function runApprovalDecisionFlow(
   try {
     written = await dependencies.writeStateSnapshot(
       resolved.bubblePaths.statePath,
-      nextState,
+      validatedNextState,
       {
         expectedFingerprint: loadedState.fingerprint,
         expectedState: state.state
@@ -247,12 +247,15 @@ export async function runRequestReworkFlow(
     requestedBy: "human:request-rework",
     now: input.now
   });
+  // Deferred rework intent mutates intent metadata only; lifecycle state
+  // remains WAITING_HUMAN under the existing eligibility guard.
+  const validatedNextState = queued.state;
 
   let written;
   try {
     written = await dependencies.writeStateSnapshot(
       resolved.bubblePaths.statePath,
-      queued.state,
+      validatedNextState,
       {
         expectedFingerprint: loadedState.fingerprint,
         expectedState: "WAITING_HUMAN"
