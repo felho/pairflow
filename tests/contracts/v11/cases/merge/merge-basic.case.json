@@ -1,0 +1,18 @@
+{
+  "id": "merge-basic",
+  "command": "merge",
+  "mode": "legacy",
+  "description": "Seed merge contract case for DONE bubble merge baseline.",
+  "input": {
+    "tmuxSessionExisted": false
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "MERGED"
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "merge"
+  ]
+}
