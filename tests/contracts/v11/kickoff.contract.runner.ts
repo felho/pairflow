@@ -50,6 +50,7 @@ interface ParsedKickoffFixtureInput {
   round: number;
   taskPending: boolean;
   stateConflict: boolean;
+  appendFailure: boolean;
   bubbleTask: string;
 }
 
@@ -73,6 +74,7 @@ function parseKickoffFixtureInput(
       round: 0,
       taskPending: true,
       stateConflict: false,
+      appendFailure: false,
       bubbleTask: "Legacy kickoff fixture task"
     };
   }
@@ -110,6 +112,11 @@ function parseKickoffFixtureInput(
     throw new Error("kickoff contract input.fixture.stateConflict must be a boolean.");
   }
 
+  const appendFailureRaw = fixtureRaw.appendFailure;
+  if (appendFailureRaw !== undefined && typeof appendFailureRaw !== "boolean") {
+    throw new Error("kickoff contract input.fixture.appendFailure must be a boolean.");
+  }
+
   const bubbleTaskRaw = fixtureRaw.bubbleTask;
   if (
     bubbleTaskRaw !== undefined &&
@@ -126,6 +133,7 @@ function parseKickoffFixtureInput(
     round: roundRaw ?? 0,
     taskPending: taskPendingRaw ?? true,
     stateConflict: stateConflictRaw ?? false,
+    appendFailure: appendFailureRaw ?? false,
     bubbleTask: bubbleTaskRaw?.trim() ?? "Legacy kickoff fixture task"
   };
 }
@@ -309,12 +317,15 @@ async function executeKickoffCase(input: {
       parsedInput.fixture
     );
 
-    const dependencyOverrides = parsedInput.fixture.stateConflict
-      ? {
-          writeStateSnapshot: () =>
-            Promise.reject(new StateStoreConflictError("Injected kickoff state conflict."))
-        }
-      : undefined;
+    const dependencyOverrides: Parameters<typeof input.executor>[1] = {};
+    if (parsedInput.fixture.stateConflict) {
+      dependencyOverrides.writeStateSnapshot = () =>
+        Promise.reject(new StateStoreConflictError("Injected kickoff state conflict."));
+    }
+    if (parsedInput.fixture.appendFailure) {
+      dependencyOverrides.appendProtocolEnvelope = () =>
+        Promise.reject(new Error("Injected kickoff append failure."));
+    }
 
     const result = await input.executor({
       bubbleId: bubble.bubbleId,
