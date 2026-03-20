@@ -328,7 +328,10 @@ function assertRunningConvergenceState(state: BubbleStateSnapshot): void {
   if (state.state !== "RUNNING") {
     throw new MetaReviewGateError(
       "META_REVIEW_GATE_TRANSITION_INVALID",
-      `meta-review gate convergence route requires RUNNING state (current: ${state.state}).`
+      `meta-review gate convergence route requires RUNNING state (current: ${state.state}).`,
+      {
+        stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
+      }
     );
   }
 }
@@ -486,7 +489,10 @@ function resolveHumanGateRoute(
     if (budgetAvailable) {
       throw new MetaReviewGateError(
         "META_REVIEW_GATE_TRANSITION_INVALID",
-        "META_REVIEW_GATE_TRANSITION_INVALID: human gate route resolver reached rework+budgetAvailable branch unexpectedly."
+        "META_REVIEW_GATE_TRANSITION_INVALID: human gate route resolver reached rework+budgetAvailable branch unexpectedly.",
+        {
+          stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
+        }
       );
     }
     return "human_gate_budget_exhausted";
@@ -1340,7 +1346,10 @@ async function persistHumanGateRoute(input: {
   ) {
     throw new MetaReviewGateError(
       "META_REVIEW_GATE_TRANSITION_INVALID",
-      "META_REVIEW_GATE_TRANSITION_INVALID: persistHumanGateRoute requires either metaReviewRun or fallbackRecommendation, but not both."
+      "META_REVIEW_GATE_TRANSITION_INVALID: persistHumanGateRoute requires either metaReviewRun or fallbackRecommendation, but not both.",
+      {
+        stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
+      }
     );
   }
   const targetState = input.targetState ?? "READY_FOR_HUMAN_APPROVAL";
@@ -1456,7 +1465,10 @@ function resolveDefaultStickyHumanGateForRoute(route: MetaReviewGateRoute): bool
   }
   throw new MetaReviewGateError(
     "META_REVIEW_GATE_TRANSITION_INVALID",
-    `META_REVIEW_GATE_TRANSITION_INVALID: sticky_human_gate default policy is undefined for route=${route}.`
+    `META_REVIEW_GATE_TRANSITION_INVALID: sticky_human_gate default policy is undefined for route=${route}.`,
+    {
+      stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
+    }
   );
 }
 
@@ -1667,7 +1679,10 @@ export async function recoverMetaReviewGateFromSnapshot(
   ) {
     throw new MetaReviewGateError(
       "META_REVIEW_GATE_STATE_CONFLICT",
-      "META_REVIEW_GATE_STATE_CONFLICT: canonical snapshot changed between await and recovery route."
+      "META_REVIEW_GATE_STATE_CONFLICT: canonical snapshot changed between await and recovery route.",
+      {
+        stageReasonCode: "META_REVIEW_GATE_STATE_CONFLICT"
+      }
     );
   }
 
@@ -1802,7 +1817,10 @@ export async function recoverMetaReviewGateFromSnapshot(
     if (snapshot.sticky_human_gate) {
       throw new MetaReviewGateError(
         "META_REVIEW_GATE_STATE_CONFLICT",
-        "META_REVIEW_GATE_STATE_CONFLICT: sticky_human_gate became true before auto rework dispatch."
+        "META_REVIEW_GATE_STATE_CONFLICT: sticky_human_gate became true before auto rework dispatch.",
+        {
+          stageReasonCode: "META_REVIEW_GATE_STATE_CONFLICT"
+        }
       );
     }
 
@@ -1935,12 +1953,18 @@ export async function recoverMetaReviewGateFromSnapshot(
         if (recoveryError instanceof StateStoreConflictError) {
           throw new MetaReviewGateError(
             "META_REVIEW_GATE_STATE_CONFLICT",
-            `META_REVIEW_GATE_STATE_CONFLICT: auto-rework dispatch append failed (append_error=${appendReason}) and restore to READY_FOR_APPROVAL failed (${restoreOutcome}).`
+            `META_REVIEW_GATE_STATE_CONFLICT: auto-rework dispatch append failed (append_error=${appendReason}) and restore to READY_FOR_APPROVAL failed (${restoreOutcome}).`,
+            {
+              stageReasonCode: "META_REVIEW_GATE_STATE_CONFLICT"
+            }
           );
         }
         throw new MetaReviewGateError(
           "META_REVIEW_GATE_TRANSITION_INVALID",
-          `META_REVIEW_GATE_TRANSITION_INVALID: auto-rework dispatch append failed (append_error=${appendReason}) and restore to READY_FOR_APPROVAL failed (${restoreOutcome}).`
+          `META_REVIEW_GATE_TRANSITION_INVALID: auto-rework dispatch append failed (append_error=${appendReason}) and restore to READY_FOR_APPROVAL failed (${restoreOutcome}).`,
+          {
+            stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
+          }
         );
       }
 
@@ -2082,7 +2106,10 @@ export async function recoverMetaReviewGateFromSnapshot(
     if (written === undefined) {
       throw new MetaReviewGateError(
         "META_REVIEW_GATE_STATE_CONFLICT",
-        "META_REVIEW_GATE_STATE_CONFLICT: auto-rework count update did not converge after dispatch."
+        "META_REVIEW_GATE_STATE_CONFLICT: auto-rework count update did not converge after dispatch.",
+        {
+          stageReasonCode: "META_REVIEW_GATE_STATE_CONFLICT"
+        }
       );
     }
 

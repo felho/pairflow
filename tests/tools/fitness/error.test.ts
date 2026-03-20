@@ -251,4 +251,44 @@ describe("error fitness check", () => {
 
     expect(report.status).toBe("pass");
   });
+
+  it("passes when throw delegates through to*Error conversion helper", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/error-to-helper.ts",
+      [
+        "class SampleError extends Error {",
+        "  public constructor(reasonCode: string, message: string) {",
+        "    super(message);",
+        "    this.name = 'SampleError';",
+        "    void reasonCode;",
+        "  }",
+        "}",
+        "function toSampleError(error: unknown): SampleError {",
+        "  const reason = error instanceof Error ? error.message : String(error);",
+        "  return new SampleError('ERR_SAMPLE', reason);",
+        "}",
+        "export function run(error: unknown): never {",
+        "  throw toSampleError(error);",
+        "}"
+      ].join("\n")
+    );
+
+    const report = await buildErrorCheckReport({
+      check: {
+        id: "error",
+        metric: "error code and context completeness",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture/observability",
+        scope: ["src/v11/application/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only"
+    });
+
+    expect(report.status).toBe("pass");
+  });
 });

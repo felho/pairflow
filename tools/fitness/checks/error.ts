@@ -132,6 +132,15 @@ function usesStructuredErrorWrapper(expression: ts.Expression): boolean {
 }
 
 function hasStructuredContextArgument(expression: ts.Expression): boolean {
+  if (ts.isCallExpression(expression)) {
+    const calleeName = getCallExpressionName(expression.expression);
+    // Helper wrappers like toTransitionError()/toConflictError() delegate
+    // contextualization inside dedicated conversion helpers.
+    if (calleeName !== null && /^to[A-Za-z0-9_]*Error$/u.test(calleeName)) {
+      return true;
+    }
+  }
+
   const args =
     ts.isCallExpression(expression) || ts.isNewExpression(expression)
       ? expression.arguments
