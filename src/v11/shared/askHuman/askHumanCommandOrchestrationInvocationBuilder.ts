@@ -1,6 +1,5 @@
 import { buildAskHumanCommandContext } from "./askHumanCommandContextBuilder.js";
-import { createAskHumanCommandOrchestrationDependencies } from "./askHumanFlowDependencyWiring.js";
-import { buildAskHumanFlowRuntimeDependenciesFromCommandRuntime } from "./askHumanCommandFlowDependencyWiringInputBuilder.js";
+import { buildAskHumanCommandOrchestrationDependencies } from "./askHumanCommandOrchestrationDependencyBuilder.js";
 import type {
   AskHumanCommandOrchestrationInvocation,
   BuildAskHumanCommandOrchestrationInvocationInput
@@ -16,10 +15,8 @@ export function buildAskHumanCommandOrchestrationInvocation(
 
   return {
     orchestrationInput: context.orchestrationInput,
-    orchestrationDependencies: createAskHumanCommandOrchestrationDependencies(
-      buildAskHumanFlowRuntimeDependenciesFromCommandRuntime(
-        input.runtimeDependencies
-      )
+    orchestrationDependencies: buildAskHumanCommandOrchestrationDependencies(
+      input.runtimeDependencies
     )
   };
 }
