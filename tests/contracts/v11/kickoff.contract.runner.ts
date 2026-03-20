@@ -7,7 +7,11 @@ import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/conf
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { kickoffBubble } from "../../../src/core/bubble/kickoffBubble.js";
 import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
+import {
+  readStateSnapshot,
+  StateStoreConflictError,
+  writeStateSnapshot
+} from "../../../src/core/state/stateStore.js";
 import { kickoffBubbleV11 } from "../../../src/v11/application/kickoff/emitKickoffV11.js";
 import { initGitRepository } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
@@ -45,6 +49,7 @@ interface ParsedKickoffFixtureInput {
   running: boolean;
   round: number;
   taskPending: boolean;
+  stateConflict: boolean;
   bubbleTask: string;
 }
 
@@ -67,6 +72,7 @@ function parseKickoffFixtureInput(
       running: true,
       round: 0,
       taskPending: true,
+      stateConflict: false,
       bubbleTask: "Legacy kickoff fixture task"
     };
   }
@@ -99,6 +105,11 @@ function parseKickoffFixtureInput(
     throw new Error("kickoff contract input.fixture.taskPending must be a boolean.");
   }
 
+  const stateConflictRaw = fixtureRaw.stateConflict;
+  if (stateConflictRaw !== undefined && typeof stateConflictRaw !== "boolean") {
+    throw new Error("kickoff contract input.fixture.stateConflict must be a boolean.");
+  }
+
   const bubbleTaskRaw = fixtureRaw.bubbleTask;
   if (
     bubbleTaskRaw !== undefined &&
@@ -114,6 +125,7 @@ function parseKickoffFixtureInput(
     running: runningRaw ?? true,
     round: roundRaw ?? 0,
     taskPending: taskPendingRaw ?? true,
+    stateConflict: stateConflictRaw ?? false,
     bubbleTask: bubbleTaskRaw?.trim() ?? "Legacy kickoff fixture task"
   };
 }
@@ -297,13 +309,20 @@ async function executeKickoffCase(input: {
       parsedInput.fixture
     );
 
+    const dependencyOverrides = parsedInput.fixture.stateConflict
+      ? {
+          writeStateSnapshot: () =>
+            Promise.reject(new StateStoreConflictError("Injected kickoff state conflict."))
+        }
+      : undefined;
+
     const result = await input.executor({
       bubbleId: bubble.bubbleId,
       repoPath,
       task: parsedInput.task,
       cwd: repoPath,
       now: new Date("2026-03-20T14:05:00.000Z")
-    });
+    }, dependencyOverrides);
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
     const taskEnvelopeCount = transcript.reduce(
