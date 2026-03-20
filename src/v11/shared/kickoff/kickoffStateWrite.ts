@@ -1,5 +1,5 @@
-import { StateStoreConflictError } from "../../../core/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import { isKickoffStateWriteConflict } from "./kickoffStateWriteConflict.js";
 
 export interface KickoffWrittenState {
   fingerprint: string;
@@ -59,7 +59,7 @@ function buildKickoffWriteConflictResult(): WriteKickoffStateResult {
 function resolveKickoffWriteErrorResult(
   error: unknown
 ): WriteKickoffStateResult | null {
-  if (error instanceof StateStoreConflictError) {
+  if (isKickoffStateWriteConflict(error)) {
     return buildKickoffWriteConflictResult();
   }
   return null;
