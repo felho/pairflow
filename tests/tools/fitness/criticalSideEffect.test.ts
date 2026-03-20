@@ -270,4 +270,58 @@ describe("critical side-effect fitness check", () => {
       )
     ).toBe(true);
   });
+
+  it("treats adapter alias calls as delivery evidence", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/reply/runReplyFlow.ts",
+      [
+        "const notifier = dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;",
+        "void notifier({ recipient: 'human', message: 'x' });"
+      ].join("\n")
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/kickoff/runKickoffFlow.ts",
+      "export const result = { delivery: { delivered: true } };\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/pass/runPassFlow.ts",
+      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/converged/runConvergedFlow.ts",
+      "export const result = { delivery: { delivered: true } };\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/approval/runApprovalFlow.ts",
+      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/askHuman/runAskHumanFlow.ts",
+      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+    );
+
+    const report = await buildCriticalSideEffectCheckReport({
+      check: {
+        id: "critical_side_effect",
+        metric: "critical command side-effect invariant coverage",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture/runtime",
+        scope: ["src/v11/application/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only"
+    });
+
+    expect(report.status).toBe("pass");
+    expect(report.summary).toContain("all 6 command invariant(s) covered");
+  });
 });

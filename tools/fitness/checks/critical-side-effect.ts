@@ -72,6 +72,7 @@ function collectMatchEvidence(input: {
   );
   const adapter = new Set<string>();
   const result = new Set<string>();
+  const adapterAliasNames = new Set<string>();
 
   const lineOf = (node: ts.Node): number =>
     sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
@@ -97,9 +98,51 @@ function collectMatchEvidence(input: {
     return false;
   };
 
+  const expressionContainsDeliveryAdapterReference = (
+    node: ts.Node
+  ): boolean => {
+    let found = false;
+    const visitReference = (candidate: ts.Node): void => {
+      if (found) {
+        return;
+      }
+      if (
+        ts.isIdentifier(candidate)
+        && candidate.text === "emitTmuxDeliveryNotification"
+      ) {
+        found = true;
+        return;
+      }
+      if (
+        ts.isPropertyAccessExpression(candidate)
+        && candidate.name.text === "emitTmuxDeliveryNotification"
+      ) {
+        found = true;
+        return;
+      }
+      candidate.forEachChild(visitReference);
+    };
+    visitReference(node);
+    return found;
+  };
+
   const visit = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node)
+      && ts.isIdentifier(node.name)
+      && node.initializer !== undefined
+      && expressionContainsDeliveryAdapterReference(node.initializer)
+    ) {
+      adapterAliasNames.add(node.name.text);
+    }
+
     if (ts.isCallExpression(node) && isDeliveryAdapterCall(node)) {
       adapter.add(`${input.relativePath}:${String(lineOf(node))} adapter`);
+    }
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+      if (adapterAliasNames.has(node.expression.text)) {
+        adapter.add(`${input.relativePath}:${String(lineOf(node))} adapter`);
+      }
     }
 
     if (ts.isObjectLiteralExpression(node)) {
