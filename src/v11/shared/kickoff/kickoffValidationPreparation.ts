@@ -4,6 +4,7 @@ import {
   type KickoffBubbleResultShape,
   type KickoffIdeationMarkers,
 } from "./kickoffResultBuilders.js";
+import { buildKickoffPreparedValidationResult } from "./kickoffPreparedValidationResult.js";
 import { prepareKickoffTaskOrFailure } from "./kickoffTaskPreparation.js";
 import {
   prepareKickoffBubbleEligibilityOrFailure,
@@ -37,23 +38,6 @@ export type KickoffPreparedValidation = Extract<
   PrepareKickoffValidationResult,
   { kind: "prepared" }
 >;
-
-function buildKickoffPreparedValidationResult(input: {
-  resolved: KickoffEligibilityResolvedBubble;
-  loadedState: KickoffEligibilityLoadedState;
-  state: KickoffEligibilityLoadedState["state"];
-  markersBefore: KickoffIdeationMarkers;
-  task: ResolvedKickoffTaskInput;
-}): KickoffPreparedValidation {
-  return {
-    kind: "prepared",
-    resolved: input.resolved,
-    loadedState: input.loadedState,
-    state: input.state,
-    markersBefore: input.markersBefore,
-    task: input.task
-  };
-}
 
 export async function prepareKickoffValidation(
   input: PrepareKickoffValidationInput,

@@ -1,25 +1,21 @@
 import type { ResolvedKickoffDependencies } from "./kickoffDependencyResolution.js";
 import { prepareKickoffEligibility } from "./kickoffEligibilityPreparation.js";
-import { buildKickoffResolveBubbleInput } from "./kickoffValidationInputBuilders.js";
 import { buildKickoffEligibilityFailureResult } from "./kickoffValidationFailureBuilders.js";
 import type {
   KickoffBubbleResultShape,
   KickoffIdeationMarkers
 } from "./kickoffResultBuilders.js";
-
-export interface KickoffValidationBubbleInput {
-  bubbleId: string;
-  repoPath?: string;
-  cwd?: string;
-}
-
-export type KickoffEligibilityResolvedBubble = Awaited<
-  ReturnType<ResolvedKickoffDependencies["resolveBubble"]>
->;
-
-export type KickoffEligibilityLoadedState = Awaited<
-  ReturnType<ResolvedKickoffDependencies["readState"]>
->;
+import {
+  loadKickoffEligibilityState,
+  type KickoffEligibilityLoadedState,
+  type KickoffEligibilityResolvedBubble,
+  type KickoffValidationBubbleInput
+} from "./kickoffEligibilityStateLoading.js";
+export type {
+  KickoffEligibilityLoadedState,
+  KickoffEligibilityResolvedBubble,
+  KickoffValidationBubbleInput
+} from "./kickoffEligibilityStateLoading.js";
 
 type PrepareKickoffEligibilityOrFailureResult =
   | {
@@ -82,13 +78,10 @@ export async function prepareKickoffBubbleEligibilityOrFailure(input: {
   validationInput: KickoffValidationBubbleInput;
   dependencies: Pick<ResolvedKickoffDependencies, "resolveBubble" | "readState">;
 }): Promise<PrepareKickoffBubbleEligibilityOrFailureResult> {
-  const resolved = await input.dependencies.resolveBubble(
-    buildKickoffResolveBubbleInput(input.validationInput)
-  );
-  const loadedState = await input.dependencies.readState(
-    resolved.bubblePaths.statePath
-  );
-  const state = loadedState.state;
+  const { resolved, loadedState, state } = await loadKickoffEligibilityState({
+    validationInput: input.validationInput,
+    dependencies: input.dependencies
+  });
   const eligibility = prepareKickoffEligibilityOrFailure({
     resolvedBubbleId: resolved.bubbleId,
     state,
