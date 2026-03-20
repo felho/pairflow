@@ -1,10 +1,10 @@
 import { parseArgs } from "node:util";
 
 import {
-  asStopBubbleError,
-  stopBubble,
-  type StopBubbleResult
-} from "../../../core/bubble/stopBubble.js";
+  asStopBubbleErrorV11 as asStopBubbleError,
+  stopBubbleV11 as stopBubble,
+  type StopBubbleV11Result as StopBubbleResult
+} from "../../../v11/application/stop/emitStopV11.js";
 
 export interface BubbleStopCommandOptions {
   id: string;

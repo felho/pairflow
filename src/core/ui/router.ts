@@ -20,9 +20,9 @@ import {
   AttachBubbleError,
   type AttachBubbleResult
 } from "../bubble/attachBubble.js";
-import { stopBubble } from "../bubble/stopBubble.js";
 import { restartBubble } from "../bubble/restartBubble.js";
 import { deleteBubble } from "../bubble/deleteBubble.js";
+import { stopBubbleV11 as stopBubble } from "../../v11/application/stop/emitStopV11.js";
 import type { BubbleLifecycleState } from "../../types/bubble.js";
 import type {
   UiApiErrorBody,

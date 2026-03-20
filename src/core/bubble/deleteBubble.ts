@@ -24,7 +24,10 @@ import {
   RuntimeSessionsRegistryLockError
 } from "../runtime/sessionsRegistry.js";
 import { readStateSnapshot } from "../state/stateStore.js";
-import { stopBubble, StopBubbleError } from "./stopBubble.js";
+import {
+  stopBubbleV11 as stopBubble,
+  StopBubbleErrorV11 as StopBubbleError
+} from "../../v11/application/stop/emitStopV11.js";
 import { pathExists } from "../util/pathExists.js";
 import { ensureBubbleInstanceIdForMutation } from "./bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../metrics/bubbleEvents.js";
