@@ -1,14 +1,8 @@
-import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
-import {
-  emitTmuxDeliveryNotification
-} from "../../../core/runtime/tmuxDelivery.js";
-import {
-  emitBubbleLifecycleEventBestEffort
-} from "../../../core/metrics/bubbleEvents.js";
 import type {
   AskHumanFinalizationDependencies,
   AskHumanFinalizationDependencySource
 } from "./askHumanFinalizationDependencyBuilderContract.js";
+import { askHumanFinalizationDependencyDefaults } from "./askHumanFinalizationDependencyDefaults.js";
 
 export function buildAskHumanFinalizationDependencies(
   dependencies: AskHumanFinalizationDependencySource
@@ -16,15 +10,24 @@ export function buildAskHumanFinalizationDependencies(
   return {
     ...(dependencies.emitTmuxDeliveryNotification !== undefined
       ? { emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification }
-      : { emitTmuxDeliveryNotification }),
+      : {
+          emitTmuxDeliveryNotification:
+            askHumanFinalizationDependencyDefaults.emitTmuxDeliveryNotification
+        }),
     ...(dependencies.emitBubbleNotification !== undefined
       ? { emitBubbleNotification: dependencies.emitBubbleNotification }
-      : { emitBubbleNotification }),
+      : {
+          emitBubbleNotification:
+            askHumanFinalizationDependencyDefaults.emitBubbleNotification
+        }),
     ...(dependencies.resolveDeliveryMessageRef !== undefined
       ? { resolveDeliveryMessageRef: dependencies.resolveDeliveryMessageRef }
       : {}),
     ...(dependencies.emitBubbleLifecycleEventBestEffort !== undefined
       ? { emitBubbleLifecycleEventBestEffort: dependencies.emitBubbleLifecycleEventBestEffort }
-      : { emitBubbleLifecycleEventBestEffort })
+      : {
+          emitBubbleLifecycleEventBestEffort:
+            askHumanFinalizationDependencyDefaults.emitBubbleLifecycleEventBestEffort
+        })
   };
 }
