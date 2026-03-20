@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { kickoffBubble } from "../../../src/core/bubble/kickoffBubble.js";
 import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
@@ -43,6 +44,7 @@ interface ParsedKickoffFixtureInput {
   ideation: boolean;
   running: boolean;
   round: number;
+  taskPending: boolean;
   bubbleTask: string;
 }
 
@@ -64,6 +66,7 @@ function parseKickoffFixtureInput(
       ideation: true,
       running: true,
       round: 0,
+      taskPending: true,
       bubbleTask: "Legacy kickoff fixture task"
     };
   }
@@ -91,6 +94,11 @@ function parseKickoffFixtureInput(
     );
   }
 
+  const taskPendingRaw = fixtureRaw.taskPending;
+  if (taskPendingRaw !== undefined && typeof taskPendingRaw !== "boolean") {
+    throw new Error("kickoff contract input.fixture.taskPending must be a boolean.");
+  }
+
   const bubbleTaskRaw = fixtureRaw.bubbleTask;
   if (
     bubbleTaskRaw !== undefined &&
@@ -105,6 +113,7 @@ function parseKickoffFixtureInput(
     ideation: ideationRaw ?? true,
     running: runningRaw ?? true,
     round: roundRaw ?? 0,
+    taskPending: taskPendingRaw ?? true,
     bubbleTask: bubbleTaskRaw?.trim() ?? "Legacy kickoff fixture task"
   };
 }
@@ -228,6 +237,24 @@ async function setupKickoffFixture(
       : { task: fixture.bubbleTask }),
     cwd: repoPath
   });
+
+  if (fixture.ideation) {
+    const config = parseBubbleConfigToml(
+      await readFile(bubble.paths.bubbleTomlPath, "utf8")
+    );
+    const normalizedConfig = {
+      ...config,
+      ideation: {
+        mode: true,
+        task_pending: fixture.taskPending
+      }
+    };
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml(normalizedConfig),
+      "utf8"
+    );
+  }
 
   if (!fixture.ideation || !fixture.running) {
     return bubble;
