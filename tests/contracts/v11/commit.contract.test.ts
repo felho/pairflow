@@ -1,113 +1,95 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
-import { emitConvergedFromWorkspace } from "../../../src/core/agent/converged.js";
-import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
-import { commitBubble } from "../../../src/core/bubble/commitBubble.js";
-import { emitApprove } from "../../../src/core/human/approval.js";
-import { commitBubbleV11 } from "../../../src/v11/application/commit/emitCommitV11.js";
-import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
-import { initGitRepository } from "../../helpers/git.js";
+import { runCommitContractCase } from "./commit.contract.runner.js";
+import { readContractCase } from "./runner.js";
 
-async function withTempRepo<T>(run: (repoPath: string) => Promise<T>): Promise<T> {
-  const repoPath = await mkdtemp(join(tmpdir(), "pairflow-commit-contract-"));
-  try {
-    await initGitRepository(repoPath);
-    return await run(repoPath);
-  } finally {
-    await rm(repoPath, { recursive: true, force: true });
-  }
+const execFileAsync = promisify(execFile);
+const commitCaseSources = [
+  "tests/contracts/v11/cases/commit/commit-basic.case.json",
+  "tests/contracts/v11/cases/commit/commit-basic-v11.case.json",
+  "tests/contracts/v11/cases/commit/commit-basic-parity.case.json"
+] as const;
+
+const commitExpectedSourcesSorted = [...commitCaseSources].sort();
+
+function parseCommitSourcesFromManifest(
+  manifestRaw: string
+): string[] {
+  const manifest = JSON.parse(manifestRaw) as {
+    entries?: Array<{ command?: string; source?: string }>;
+  };
+
+  return (manifest.entries ?? [])
+    .filter((entry) => entry.command === "commit")
+    .map((entry) => entry.source)
+    .filter((source): source is string => typeof source === "string")
+    .sort();
 }
 
-async function setupApprovedBubble(repoPath: string, bubbleId: string) {
-  const bubble = await setupRunningBubbleFixture({
-    repoPath,
-    bubbleId,
-    task: "Commit contract parity fixture"
+describe("v11 commit contract harness skeleton", () => {
+  it("loads seed contract case metadata", async () => {
+    const casePath = resolve(process.cwd(), commitCaseSources[0]);
+    const caseDef = await readContractCase(casePath);
+    expect(caseDef.command).toBe("commit");
+    expect(caseDef.mode).toBe("legacy");
+    expect(caseDef.expected.status).toBe("ok");
   });
 
-  await emitPassFromWorkspace({
-    summary: "Implementation pass 1",
-    cwd: bubble.paths.worktreePath,
-    now: new Date("2026-03-20T10:30:00.000Z")
-  });
-  await emitPassFromWorkspace({
-    summary: "Review pass 1 clean",
-    noFindings: true,
-    cwd: bubble.paths.worktreePath,
-    now: new Date("2026-03-20T10:31:00.000Z")
-  });
-  await emitPassFromWorkspace({
-    summary: "Implementation pass 2",
-    cwd: bubble.paths.worktreePath,
-    now: new Date("2026-03-20T10:32:00.000Z")
-  });
-  await emitConvergedFromWorkspace({
-    summary: "Ready for approval",
-    cwd: bubble.paths.worktreePath,
-    now: new Date("2026-03-20T10:33:00.000Z")
-  });
-  await emitApprove({
-    bubbleId: bubble.bubbleId,
-    overrideNonApprove: true,
-    overrideReason: "Human override for commit contract fixture setup.",
-    cwd: repoPath,
-    now: new Date("2026-03-20T10:34:00.000Z")
+  it("executes legacy and parity assertions via shared runner", async () => {
+    const casePaths = commitCaseSources.map((source) =>
+      resolve(process.cwd(), source)
+    );
+
+    for (const casePath of casePaths) {
+      const caseDef = await readContractCase(casePath);
+      const run = await runCommitContractCase(caseDef);
+      if (caseDef.mode === "legacy") {
+        expect(run.legacy?.status).toBe("ok");
+        expect(run.v11).toBeUndefined();
+        continue;
+      }
+      if (caseDef.mode === "v11") {
+        expect(run.v11?.status).toBe("ok");
+        expect(run.legacy).toBeUndefined();
+        continue;
+      }
+
+      expect(run.legacy).toBeDefined();
+      expect(run.v11).toBeDefined();
+      expect(run.legacy).toEqual(run.v11);
+    }
   });
 
-  return bubble;
-}
+  it("includes commit seed entries in corpus manifest", async () => {
+    const manifestPath = resolve(
+      process.cwd(),
+      "tests/contracts/v11/corpus/manifest.json"
+    );
+    const manifestRaw = await readFile(manifestPath, "utf8");
+    const commitSources = parseCommitSourcesFromManifest(manifestRaw);
 
-describe("v11 commit contract parity", () => {
-  it("keeps core facade and v11 commit output parity on APPROVED_FOR_COMMIT bubble", async () => {
-    const legacy = await withTempRepo(async (repoPath) => {
-      const bubble = await setupApprovedBubble(repoPath, "b_commit_contract_legacy");
-      await writeFile(
-        join(bubble.paths.worktreePath, "feature-auto.txt"),
-        "legacy\n",
-        "utf8"
-      );
-      return commitBubble({
-        bubbleId: bubble.bubbleId,
-        cwd: repoPath,
-        auto: true,
-        now: new Date("2026-03-20T10:40:00.000Z")
-      });
-    });
+    expect(commitSources).toEqual(commitExpectedSourcesSorted);
+  });
 
-    const v11 = await withTempRepo(async (repoPath) => {
-      const bubble = await setupApprovedBubble(repoPath, "b_commit_contract_v11");
-      await writeFile(
-        join(bubble.paths.worktreePath, "feature-auto.txt"),
-        "v11\n",
-        "utf8"
-      );
-      return commitBubbleV11({
-        bubbleId: bubble.bubbleId,
-        cwd: repoPath,
-        auto: true,
-        now: new Date("2026-03-20T10:40:00.000Z")
-      });
-    });
+  it("builds corpus output manifest with commit seed entries", async () => {
+    await execFileAsync("pnpm", [
+      "exec",
+      "tsx",
+      "./tests/contracts/v11/corpus/build-corpus.ts"
+    ]);
 
-    const normalize = (result: Awaited<typeof legacy>) => ({
-      state: result.state.state,
-      envelopeType: result.envelope.type,
-      stagedFiles: [...result.stagedFiles].sort(),
-      hasCommitSha: result.commitSha.length > 6,
-      donePackageSuffix: result.donePackagePath.endsWith("/artifacts/done-package.md")
-    });
+    const outputManifestPath = resolve(
+      process.cwd(),
+      ".pairflow/evidence/contracts-v11-corpus-manifest.json"
+    );
+    const outputRaw = await readFile(outputManifestPath, "utf8");
+    const commitSources = parseCommitSourcesFromManifest(outputRaw);
 
-    expect(normalize(legacy)).toEqual(normalize(v11));
-    expect(normalize(legacy)).toMatchObject({
-      state: "DONE",
-      envelopeType: "DONE_PACKAGE",
-      stagedFiles: ["feature-auto.txt"],
-      hasCommitSha: true,
-      donePackageSuffix: true
-    });
+    expect(commitSources).toEqual(commitExpectedSourcesSorted);
   });
 });

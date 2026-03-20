@@ -1,0 +1,19 @@
+{
+  "id": "watchdog-waiting-human-v11",
+  "command": "watchdog",
+  "mode": "v11",
+  "description": "Seed watchdog v11 contract case for WAITING_HUMAN no-op baseline.",
+  "input": {},
+  "expected": {
+    "status": "ok",
+    "reasonCode": "WATCHDOG_EVALUATED",
+    "stateSubset": {
+      "state": "WAITING_HUMAN"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "watchdog"
+  ]
+}
