@@ -1,0 +1,23 @@
+{
+  "id": "kickoff-task-file",
+  "command": "kickoff",
+  "mode": "legacy",
+  "description": "Seed kickoff legacy contract case for task-file input success path.",
+  "input": {
+    "task": "Implement kickoff from task file",
+    "fixture": {
+      "taskViaFile": true
+    }
+  },
+  "expected": {
+    "status": "ok",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "kickoff"
+  ]
+}
