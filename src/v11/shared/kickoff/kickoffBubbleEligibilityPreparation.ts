@@ -1,5 +1,4 @@
 import type { ResolvedKickoffDependencies } from "./kickoffDependencyResolution.js";
-import { prepareKickoffEligibility } from "./kickoffEligibilityPreparation.js";
 import type {
   KickoffBubbleResultShape,
   KickoffIdeationMarkers
@@ -11,31 +10,13 @@ import {
   type KickoffValidationBubbleInput
 } from "./kickoffEligibilityStateLoading.js";
 import {
-  buildKickoffEligibilityOutcome,
-  type PrepareKickoffEligibilityOrFailureResult
-} from "./kickoffEligibilityOutcomeBuilder.js";
+  prepareKickoffEligibilityOrFailure
+} from "./kickoffEligibilityPreparationOrFailure.js";
 export type {
   KickoffEligibilityLoadedState,
   KickoffEligibilityResolvedBubble,
   KickoffValidationBubbleInput
 } from "./kickoffEligibilityStateLoading.js";
-
-function prepareKickoffEligibilityOrFailure(input: {
-  resolvedBubbleId: string;
-  state: KickoffEligibilityLoadedState["state"];
-  bubbleConfig: KickoffEligibilityResolvedBubble["bubbleConfig"];
-}): PrepareKickoffEligibilityOrFailureResult {
-  const preparedEligibility = prepareKickoffEligibility({
-    bubbleConfig: input.bubbleConfig,
-    state: input.state
-  });
-  return buildKickoffEligibilityOutcome({
-    resolvedBubbleId: input.resolvedBubbleId,
-    state: input.state,
-    markersBefore: preparedEligibility.markersBefore,
-    eligibilityFailureReason: preparedEligibility.eligibilityFailureReason
-  });
-}
 
 export type PrepareKickoffBubbleEligibilityOrFailureResult =
   | {
