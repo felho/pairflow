@@ -244,6 +244,24 @@ export function renderMetaReviewStatusText(
   return lines.join("\n");
 }
 
+function appendMetaReviewParityDiagnostics(
+  lines: string[],
+  parityDiagnostics: string[]
+): void {
+  if (parityDiagnostics.length > 0) {
+    lines.push(`Parity diagnostics: ${parityDiagnostics.join("; ")}`);
+  }
+}
+
+function appendMetaReviewLastReportVerboseLines(
+  lines: string[],
+  view: MetaReviewLastReportView
+): void {
+  lines.push(`Findings artifact status: ${view.findings_artifact_status ?? "-"}`);
+  lines.push(`Findings digest: ${view.findings_digest_sha256 ?? "-"}`);
+  lines.push(`Meta-review run id: ${view.meta_review_run_id ?? "-"}`);
+}
+
 export function renderMetaReviewLastReportText(
   view: MetaReviewLastReportView,
   verbose: boolean
@@ -255,13 +273,9 @@ export function renderMetaReviewLastReportText(
     `Updated: ${view.updated_at ?? "-"}`,
     `Findings parity: claimed=${view.findings_claimed_open_total ?? "-"}, artifact=${view.findings_artifact_open_total ?? "-"}, status=${view.findings_parity_status ?? "-"}`
   ];
-  if (view.parity_diagnostics.length > 0) {
-    lines.push(`Parity diagnostics: ${view.parity_diagnostics.join("; ")}`);
-  }
+  appendMetaReviewParityDiagnostics(lines, view.parity_diagnostics);
   if (verbose) {
-    lines.push(`Findings artifact status: ${view.findings_artifact_status ?? "-"}`);
-    lines.push(`Findings digest: ${view.findings_digest_sha256 ?? "-"}`);
-    lines.push(`Meta-review run id: ${view.meta_review_run_id ?? "-"}`);
+    appendMetaReviewLastReportVerboseLines(lines, view);
   }
 
   if (verbose && view.report_markdown !== null) {
