@@ -1,10 +1,10 @@
 import { parseArgs } from "node:util";
 
 import {
-  asBubbleMergeError,
-  mergeBubble,
-  type MergeBubbleResult
-} from "../../../core/bubble/mergeBubble.js";
+  asBubbleMergeErrorV11 as asBubbleMergeError,
+  mergeBubbleV11 as mergeBubble,
+  type MergeBubbleV11Result as MergeBubbleResult
+} from "../../../v11/application/merge/emitMergeV11.js";
 
 export interface BubbleMergeCommandOptions {
   id: string;
