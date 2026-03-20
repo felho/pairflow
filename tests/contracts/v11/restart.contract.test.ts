@@ -1,102 +1,95 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
-import { restartBubble } from "../../../src/core/bubble/restartBubble.js";
-import type { StartBubbleResult } from "../../../src/core/bubble/startBubble.js";
-import { restartBubbleV11 } from "../../../src/v11/application/restart/emitRestartV11.js";
-import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
-import { initGitRepository } from "../../helpers/git.js";
+import { runRestartContractCase } from "./restart.contract.runner.js";
+import { readContractCase } from "./runner.js";
 
-async function withTempRepo<T>(run: (repoPath: string) => Promise<T>): Promise<T> {
-  const repoPath = await mkdtemp(join(tmpdir(), "pairflow-restart-contract-"));
-  try {
-    await initGitRepository(repoPath);
-    return await run(repoPath);
-  } finally {
-    await rm(repoPath, { recursive: true, force: true });
-  }
+const execFileAsync = promisify(execFile);
+const restartCaseSources = [
+  "tests/contracts/v11/cases/restart/restart-basic.case.json",
+  "tests/contracts/v11/cases/restart/restart-basic-v11.case.json",
+  "tests/contracts/v11/cases/restart/restart-basic-parity.case.json"
+] as const;
+
+const restartExpectedSourcesSorted = [...restartCaseSources].sort();
+
+function parseRestartSourcesFromManifest(
+  manifestRaw: string
+): string[] {
+  const manifest = JSON.parse(manifestRaw) as {
+    entries?: Array<{ command?: string; source?: string }>;
+  };
+
+  return (manifest.entries ?? [])
+    .filter((entry) => entry.command === "restart")
+    .map((entry) => entry.source)
+    .filter((source): source is string => typeof source === "string")
+    .sort();
 }
 
-describe("v11 restart contract parity", () => {
-  it("keeps core facade and v11 restart output parity on running bubble", async () => {
-    const legacy = await withTempRepo(async (repoPath) => {
-      const bubble = await setupRunningBubbleFixture({
-        repoPath,
-        bubbleId: "b_restart_contract_legacy",
-        task: "Restart contract parity fixture"
-      });
-      return restartBubble(
-        {
-          bubbleId: bubble.bubbleId,
-          cwd: repoPath,
-          now: new Date("2026-03-19T23:20:00.000Z")
-        },
-        {
-          terminateBubbleTmuxSession: () =>
-            Promise.resolve({
-              sessionName: `pf-${bubble.bubbleId}`,
-              existed: false
-            }),
-          removeRuntimeSession: () => Promise.resolve(false),
-          startBubble: () =>
-            Promise.resolve({
-              bubbleId: bubble.bubbleId,
-              state: { state: "RUNNING" },
-              tmuxSessionName: `pf-${bubble.bubbleId}`,
-              worktreePath: bubble.paths.worktreePath
-            } as unknown as StartBubbleResult)
-        }
-      );
-    });
+describe("v11 restart contract harness skeleton", () => {
+  it("loads seed contract case metadata", async () => {
+    const casePath = resolve(process.cwd(), restartCaseSources[0]);
+    const caseDef = await readContractCase(casePath);
+    expect(caseDef.command).toBe("restart");
+    expect(caseDef.mode).toBe("legacy");
+    expect(caseDef.expected.status).toBe("ok");
+  });
 
-    const v11 = await withTempRepo(async (repoPath) => {
-      const bubble = await setupRunningBubbleFixture({
-        repoPath,
-        bubbleId: "b_restart_contract_v11",
-        task: "Restart contract parity fixture"
-      });
-      return restartBubbleV11(
-        {
-          bubbleId: bubble.bubbleId,
-          cwd: repoPath,
-          now: new Date("2026-03-19T23:20:00.000Z")
-        },
-        {
-          terminateBubbleTmuxSession: () =>
-            Promise.resolve({
-              sessionName: `pf-${bubble.bubbleId}`,
-              existed: false
-            }),
-          removeRuntimeSession: () => Promise.resolve(false),
-          startBubble: () =>
-            Promise.resolve({
-              bubbleId: bubble.bubbleId,
-              state: { state: "RUNNING" },
-              tmuxSessionName: `pf-${bubble.bubbleId}`,
-              worktreePath: bubble.paths.worktreePath
-            } as unknown as StartBubbleResult)
-        }
-      );
-    });
+  it("executes legacy and parity assertions via shared runner", async () => {
+    const casePaths = restartCaseSources.map((source) =>
+      resolve(process.cwd(), source)
+    );
 
-    const normalize = (result: Awaited<typeof legacy>) => ({
-      state: result.state.state,
-      tmuxSessionNamePrefix: result.tmuxSessionName.startsWith("pf-"),
-      hasWorktreePath: result.worktreePath.length > 0,
-      previousTmuxSessionExisted: result.previousTmuxSessionExisted,
-      previousRuntimeSessionRemoved: result.previousRuntimeSessionRemoved
-    });
+    for (const casePath of casePaths) {
+      const caseDef = await readContractCase(casePath);
+      const run = await runRestartContractCase(caseDef);
+      if (caseDef.mode === "legacy") {
+        expect(run.legacy?.status).toBe("ok");
+        expect(run.v11).toBeUndefined();
+        continue;
+      }
+      if (caseDef.mode === "v11") {
+        expect(run.v11?.status).toBe("ok");
+        expect(run.legacy).toBeUndefined();
+        continue;
+      }
 
-    expect(normalize(legacy)).toEqual(normalize(v11));
-    expect(normalize(legacy)).toMatchObject({
-      state: "RUNNING",
-      tmuxSessionNamePrefix: true,
-      hasWorktreePath: true,
-      previousTmuxSessionExisted: false,
-      previousRuntimeSessionRemoved: false
-    });
+      expect(run.legacy).toBeDefined();
+      expect(run.v11).toBeDefined();
+      expect(run.legacy).toEqual(run.v11);
+    }
+  });
+
+  it("includes restart seed entries in corpus manifest", async () => {
+    const manifestPath = resolve(
+      process.cwd(),
+      "tests/contracts/v11/corpus/manifest.json"
+    );
+    const manifestRaw = await readFile(manifestPath, "utf8");
+    const restartSources = parseRestartSourcesFromManifest(manifestRaw);
+
+    expect(restartSources).toEqual(restartExpectedSourcesSorted);
+  });
+
+  it("builds corpus output manifest with restart seed entries", async () => {
+    await execFileAsync("pnpm", [
+      "exec",
+      "tsx",
+      "./tests/contracts/v11/corpus/build-corpus.ts"
+    ]);
+
+    const outputManifestPath = resolve(
+      process.cwd(),
+      ".pairflow/evidence/contracts-v11-corpus-manifest.json"
+    );
+    const outputRaw = await readFile(outputManifestPath, "utf8");
+    const restartSources = parseRestartSourcesFromManifest(outputRaw);
+
+    expect(restartSources).toEqual(restartExpectedSourcesSorted);
   });
 });

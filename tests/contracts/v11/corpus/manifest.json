@@ -75,6 +75,24 @@
       "kind": "seed_case"
     },
     {
+      "id": "restart-basic",
+      "command": "restart",
+      "source": "tests/contracts/v11/cases/restart/restart-basic.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "restart-basic-v11",
+      "command": "restart",
+      "source": "tests/contracts/v11/cases/restart/restart-basic-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "restart-basic-parity",
+      "command": "restart",
+      "source": "tests/contracts/v11/cases/restart/restart-basic-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "ask-human-basic",
       "command": "askHuman",
       "source": "tests/contracts/v11/cases/ask-human/ask-human-basic.case.json",

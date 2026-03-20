@@ -1,0 +1,22 @@
+{
+  "id": "restart-basic-parity",
+  "command": "restart",
+  "mode": "parity",
+  "description": "Seed restart parity contract case for runtime restart parity baseline.",
+  "input": {
+    "previousTmuxSessionExisted": false,
+    "previousRuntimeSessionRemoved": false
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "RESTARTED",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "restart"
+  ]
+}
