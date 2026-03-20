@@ -1,0 +1,20 @@
+{
+  "id": "kickoff-basic-v11",
+  "command": "kickoff",
+  "mode": "v11",
+  "description": "Seed kickoff v11 contract case for ideation RUNNING round 0 activation baseline.",
+  "input": {
+    "task": "Implement kickoff contract baseline"
+  },
+  "expected": {
+    "status": "ok",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "kickoff"
+  ]
+}
