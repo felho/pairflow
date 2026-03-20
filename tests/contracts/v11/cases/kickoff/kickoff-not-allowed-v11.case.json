@@ -1,0 +1,25 @@
+{
+  "id": "kickoff-not-allowed-v11",
+  "command": "kickoff",
+  "mode": "v11",
+  "description": "Seed kickoff v11 contract case for non-ideation bubble rejection.",
+  "input": {
+    "task": "Should reject kickoff on non-ideation bubble",
+    "fixture": {
+      "ideation": false
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "IDEATION_KICKOFF_NOT_ALLOWED",
+    "stateSubset": {
+      "state": "CREATED"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "kickoff",
+    "error-path"
+  ]
+}
