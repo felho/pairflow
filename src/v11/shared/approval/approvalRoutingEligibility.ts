@@ -182,11 +182,8 @@ export function assertApprovalDecisionEligibility(
 
 function resolveLatestApprovalRecommendation(
   state: BubbleStateSnapshot,
-  context: ApprovalTranscriptContext | undefined,
   createError: (message: string) => Error
 ): MetaReviewRecommendation {
-  const isCompatibilityLegacyWithMetaReview =
-    state.state === legacyHumanApprovalState && state.meta_review !== undefined;
   if (
     state.state === legacyHumanApprovalState &&
     state.meta_review === undefined
@@ -206,31 +203,13 @@ function resolveLatestApprovalRecommendation(
   if (state.state === metaReviewFailedHumanState) {
     return "inconclusive";
   }
-  if (
-    (state.state === canonicalHumanApprovalState || isCompatibilityLegacyWithMetaReview) &&
-    state.meta_review?.sticky_human_gate === true
-  ) {
-    if (context === undefined) {
-      return "inconclusive";
-    }
-    if (
-      isRunFailedApprovalRequest(context.latestRoundApprovalRequest) ||
-      context.hasRunFailedApprovalRequestHistory
-    ) {
-      return "inconclusive";
-    }
-    if (isCompatibilityLegacyWithMetaReview) {
-      return "inconclusive";
-    }
-    if (
-      state.state === canonicalHumanApprovalState
-      && context.latestRoundApprovalRequest !== undefined
-    ) {
-      return "inconclusive";
-    }
-    if (state.state === canonicalHumanApprovalState) {
-      return "inconclusive";
-    }
+  const isCompatibilityLegacyWithMetaReview =
+    state.state === legacyHumanApprovalState && state.meta_review !== undefined;
+  const stickyHumanGateRoute =
+    state.meta_review?.sticky_human_gate === true &&
+    (state.state === canonicalHumanApprovalState || isCompatibilityLegacyWithMetaReview);
+  if (stickyHumanGateRoute) {
+    return "inconclusive";
   }
   throw createError(
     `${APPROVAL_RECOMMENDATION_UNAVAILABLE}: latest autonomous recommendation is unavailable at approval time. context: command_name=approval.`
@@ -256,7 +235,6 @@ export async function resolveApprovalDecisionMetadata(
   );
   const recommendationAtDecision = resolveLatestApprovalRecommendation(
     input.state,
-    transcriptContext,
     input.createError
   );
   metadata.recommendation_at_decision = recommendationAtDecision;
