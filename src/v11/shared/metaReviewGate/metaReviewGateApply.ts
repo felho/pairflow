@@ -1,162 +1,19 @@
-import { readFile } from "node:fs/promises";
-
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
-import { runTmux } from "../../../core/runtime/tmuxManager.js";
-import { readStateSnapshot, writeStateSnapshot, type LoadedStateSnapshot } from "../../../core/state/stateStore.js";
-import { notifyMetaReviewerSubmissionRequest } from "./metaReviewGateNotify.js";
+import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
 import {
-  appendMetaReviewKickoffEnvelope,
   persistMetaReviewRunFailedRoute,
   resolveMetaReviewerPaneWarning,
   restoreRunningAfterStagedReadyFailure,
   routeStickyHumanGateBypass,
-  stageMetaReviewRunningState,
-  stageReadyForApprovalState
+  stageMetaReviewRunningState
 } from "./metaReviewGateApplyHelpers.js";
-import {
-  assertRunningConvergenceState,
-  buildGateLockPath,
-  normalizeMetaReviewSnapshot
-} from "./metaReviewGateShared.js";
+import { normalizeMetaReviewSnapshot } from "./metaReviewGateShared.js";
+import { routeMetaReviewKickoffOrRunFailed } from "./metaReviewGateApplyRunRouting.js";
+import { initializeApplyMetaReviewGateExecutionContext } from "./metaReviewGateApplyContext.js";
 import type {
   ApplyMetaReviewGateOnConvergenceDependencies,
   ApplyMetaReviewGateOnConvergenceInput,
-  MetaReviewGateResult,
-  NotifyMetaReviewerSubmissionRequest
+  MetaReviewGateResult
 } from "./metaReviewGateTypes.js";
-
-interface ApplyMetaReviewGateExecutionContext {
-  appendEnvelope: typeof appendProtocolEnvelope;
-  writeState: typeof writeStateSnapshot;
-  setMetaReviewerPane: typeof setMetaReviewerPaneBinding;
-  notifySubmissionRequest: NotifyMetaReviewerSubmissionRequest;
-  runTmuxRunner: typeof runTmux;
-  readFileFn: typeof readFile;
-  now: Date;
-  nowIso: string;
-  refs: string[];
-  resolved: Awaited<ReturnType<typeof resolveBubbleById>>;
-  lockPath: string;
-  deactivateMetaReviewerPane: () => Promise<void>;
-  loadedRunning: LoadedStateSnapshot;
-  readyForApproval: LoadedStateSnapshot;
-}
-
-async function initializeApplyMetaReviewGateExecutionContext(
-  input: ApplyMetaReviewGateOnConvergenceInput,
-  dependencies: ApplyMetaReviewGateOnConvergenceDependencies
-): Promise<ApplyMetaReviewGateExecutionContext> {
-  const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
-  const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
-  const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
-  const appendEnvelope = dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
-  const setMetaReviewerPane =
-    dependencies.setMetaReviewerPaneBinding ?? setMetaReviewerPaneBinding;
-  const notifySubmissionRequest =
-    dependencies.notifyMetaReviewerSubmissionRequest ?? notifyMetaReviewerSubmissionRequest;
-  const runTmuxRunner = dependencies.runTmux ?? runTmux;
-  const readFileFn = dependencies.readFile ?? readFile;
-  const now = input.now ?? new Date();
-  const nowIso = now.toISOString();
-  const refs = input.refs ?? [];
-  const resolved = await resolveBubble({
-    bubbleId: input.bubbleId,
-    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
-    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
-  });
-  const lockPath = buildGateLockPath({
-    locksDir: resolved.bubblePaths.locksDir,
-    bubbleId: resolved.bubbleId
-  });
-  const deactivateMetaReviewerPane = async (): Promise<void> => {
-    await setMetaReviewerPane({
-      sessionsPath: resolved.bubblePaths.sessionsPath,
-      bubbleId: resolved.bubbleId,
-      active: false,
-      now
-    }).catch(() => undefined);
-  };
-  const loadedRunning = await readState(resolved.bubblePaths.statePath);
-  assertRunningConvergenceState(loadedRunning.state);
-  const readyForApproval = await stageReadyForApprovalState({
-    loadedRunning,
-    nowIso,
-    statePath: resolved.bubblePaths.statePath,
-    writeState
-  });
-
-  return {
-    appendEnvelope,
-    writeState,
-    setMetaReviewerPane,
-    notifySubmissionRequest,
-    runTmuxRunner,
-    readFileFn,
-    now,
-    nowIso,
-    refs,
-    resolved,
-    lockPath,
-    deactivateMetaReviewerPane,
-    loadedRunning,
-    readyForApproval
-  };
-}
-
-async function routeMetaReviewKickoffOrRunFailed(
-  input: {
-    context: ApplyMetaReviewGateExecutionContext;
-    convergenceSummary: string;
-    metaReviewRunningState: LoadedStateSnapshot;
-    shouldDeactivateMetaReviewerPane: boolean;
-  }
-): Promise<MetaReviewGateResult> {
-  try {
-    const appended = await appendMetaReviewKickoffEnvelope({
-      appendEnvelope: input.context.appendEnvelope,
-      transcriptPath: input.context.resolved.bubblePaths.transcriptPath,
-      inboxPath: input.context.resolved.bubblePaths.inboxPath,
-      lockPath: input.context.lockPath,
-      now: input.context.now,
-      bubbleId: input.context.resolved.bubbleId,
-      round: input.metaReviewRunningState.state.round,
-      refs: input.context.refs
-    });
-
-    return {
-      bubbleId: input.context.resolved.bubbleId,
-      route: "meta_review_running",
-      gateSequence: appended.sequence,
-      gateEnvelope: appended.envelope,
-      state: input.metaReviewRunningState.state
-    };
-  } catch (error) {
-    const runFailureReason = error instanceof Error ? error.message : String(error);
-    try {
-      return await persistMetaReviewRunFailedRoute({
-        appendEnvelope: input.context.appendEnvelope,
-        writeState: input.context.writeState,
-        statePath: input.context.resolved.bubblePaths.statePath,
-        transcriptPath: input.context.resolved.bubblePaths.transcriptPath,
-        inboxPath: input.context.resolved.bubblePaths.inboxPath,
-        lockPath: input.context.lockPath,
-        now: input.context.now,
-        nowIso: input.context.nowIso,
-        bubbleId: input.context.resolved.bubbleId,
-        convergenceSummary: input.convergenceSummary,
-        fallbackReason: `META_REVIEW_GATE_RUN_FAILED: ${runFailureReason}`,
-        refs: input.context.refs,
-        loaded: input.metaReviewRunningState
-      });
-    } finally {
-      if (input.shouldDeactivateMetaReviewerPane) {
-        await input.context.deactivateMetaReviewerPane();
-      }
-    }
-  }
-}
 
 export async function applyMetaReviewGateOnConvergence(
   input: ApplyMetaReviewGateOnConvergenceInput,
