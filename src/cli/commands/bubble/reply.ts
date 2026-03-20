@@ -1,10 +1,10 @@
 import { parseArgs } from "node:util";
 
 import {
-  asHumanReplyCommandError,
-  emitHumanReply,
-  type EmitHumanReplyResult
-} from "../../../core/human/reply.js";
+  asHumanReplyCommandErrorV11 as asHumanReplyCommandError,
+  emitHumanReplyV11 as emitHumanReply,
+  type EmitHumanReplyV11Result as EmitHumanReplyResult
+} from "../../../v11/application/reply/emitReplyV11.js";
 
 export interface BubbleReplyCommandOptions {
   id: string;
