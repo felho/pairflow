@@ -1,0 +1,25 @@
+{
+  "id": "start-stale-session-reclaim-v11",
+  "command": "start",
+  "mode": "v11",
+  "description": "Start contract case for stale runtime session reclaim before successful start.",
+  "input": {
+    "fixture": {
+      "scenario": "stale_session_reclaim"
+    }
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "STARTED",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "start",
+    "session",
+    "v11"
+  ]
+}

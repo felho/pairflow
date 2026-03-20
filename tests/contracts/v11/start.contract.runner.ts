@@ -45,9 +45,13 @@ export interface StartContractRunResult {
 }
 
 type StartContractScenario = "basic" | "state_not_startable";
+type StartContractExtendedScenario =
+  | StartContractScenario
+  | "bootstrap_fails_cleanup"
+  | "stale_session_reclaim";
 
 interface ParsedStartCaseInput {
-  scenario: StartContractScenario;
+  scenario: StartContractExtendedScenario;
 }
 
 function buildStartContractBubbleId(caseId: string): string {
@@ -57,7 +61,7 @@ function buildStartContractBubbleId(caseId: string): string {
 
 function parseStartCaseInput(input: ContractCase["input"]): ParsedStartCaseInput {
   const fixtureRaw = input.fixture;
-  let scenario: StartContractScenario = "basic";
+  let scenario: StartContractExtendedScenario = "basic";
   if (fixtureRaw !== undefined) {
     if (typeof fixtureRaw !== "object" || fixtureRaw === null) {
       throw new Error("start contract input.fixture must be an object when provided.");
@@ -66,13 +70,15 @@ function parseStartCaseInput(input: ContractCase["input"]): ParsedStartCaseInput
     if (
       scenarioRaw !== undefined &&
       scenarioRaw !== "basic" &&
-      scenarioRaw !== "state_not_startable"
+      scenarioRaw !== "state_not_startable" &&
+      scenarioRaw !== "bootstrap_fails_cleanup" &&
+      scenarioRaw !== "stale_session_reclaim"
     ) {
       throw new Error(
-        "start contract input.fixture.scenario must be one of: basic, state_not_startable."
+        "start contract input.fixture.scenario must be one of: basic, state_not_startable, bootstrap_fails_cleanup, stale_session_reclaim."
       );
     }
-    scenario = (scenarioRaw as StartContractScenario | undefined) ?? "basic";
+    scenario = (scenarioRaw as StartContractExtendedScenario | undefined) ?? "basic";
   }
 
   return {
@@ -110,6 +116,12 @@ function normalizeStartErrorResult(input: {
     message.includes("bubble start requires state CREATED or resumable runtime state")
   ) {
     reasonCode = "START_STATE_NOT_STARTABLE";
+  }
+  if (
+    reasonCode === null &&
+    message.includes("BOOTSTRAP_FAIL_TEST")
+  ) {
+    reasonCode = "START_BOOTSTRAP_FAILED";
   }
 
   return {
@@ -198,6 +210,10 @@ async function executeStartCase(input: {
       );
     }
 
+    let claimCalls = 0;
+    let staleSessionRemoved = false;
+    let cleanupSessionRemoved = false;
+
     try {
       const result = await input.executor(
         {
@@ -207,18 +223,33 @@ async function executeStartCase(input: {
         },
         {
           bootstrapWorktreeWorkspace: () =>
-            Promise.resolve({
-              repoPath,
-              baseRef: "refs/heads/main",
-              bubbleBranch: bubble.config.bubble_branch,
-              worktreePath: bubble.paths.worktreePath
-            }),
+            parsedInput.scenario === "bootstrap_fails_cleanup"
+              ? Promise.reject(new Error("BOOTSTRAP_FAIL_TEST"))
+              : Promise.resolve({
+                  repoPath,
+                  baseRef: "refs/heads/main",
+                  bubbleBranch: bubble.config.bubble_branch,
+                  worktreePath: bubble.paths.worktreePath
+                }),
           launchBubbleTmuxSession: () =>
             Promise.resolve({
               sessionName: `pf-${bubble.bubbleId}`
             }),
-          claimRuntimeSession: () =>
-            Promise.resolve({
+          claimRuntimeSession: () => {
+            claimCalls += 1;
+            if (parsedInput.scenario === "stale_session_reclaim" && claimCalls === 1) {
+              return Promise.resolve({
+                claimed: false,
+                record: {
+                  bubbleId: bubble.bubbleId,
+                  repoPath,
+                  worktreePath: bubble.paths.worktreePath,
+                  tmuxSessionName: `pf-${bubble.bubbleId}`,
+                  updatedAt: "2026-03-20T12:00:00.000Z"
+                }
+              });
+            }
+            return Promise.resolve({
               claimed: true,
               record: {
                 bubbleId: bubble.bubbleId,
@@ -227,13 +258,39 @@ async function executeStartCase(input: {
                 tmuxSessionName: `pf-${bubble.bubbleId}`,
                 updatedAt: "2026-03-20T12:00:00.000Z"
               }
-            })
+            });
+          },
+          isTmuxSessionAlive: () =>
+            Promise.resolve(parsedInput.scenario !== "stale_session_reclaim"),
+          removeRuntimeSession: () => {
+            if (parsedInput.scenario === "stale_session_reclaim" && claimCalls === 1) {
+              staleSessionRemoved = true;
+            } else {
+              cleanupSessionRemoved = true;
+            }
+            return Promise.resolve(true);
+          }
         }
       );
+
+      if (parsedInput.scenario === "stale_session_reclaim") {
+        if (claimCalls < 2 || !staleSessionRemoved) {
+          throw new Error(
+            "start contract stale_session_reclaim scenario expected claim retry and stale session removal."
+          );
+        }
+      }
 
       return normalizeStartResult(result);
     } catch (error) {
       const stateSnapshot = await readStateSnapshot(bubble.paths.statePath);
+      if (parsedInput.scenario === "bootstrap_fails_cleanup") {
+        if (!cleanupSessionRemoved) {
+          throw new Error(
+            "start contract bootstrap_fails_cleanup scenario expected runtime session cleanup."
+          );
+        }
+      }
       return normalizeStartErrorResult({
         error,
         state: stateSnapshot.state.state

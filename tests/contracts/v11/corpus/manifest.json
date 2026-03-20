@@ -309,6 +309,42 @@
       "kind": "seed_case"
     },
     {
+      "id": "start-bootstrap-fails-cleanup",
+      "command": "start",
+      "source": "tests/contracts/v11/cases/start/start-bootstrap-fails-cleanup.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "start-bootstrap-fails-cleanup-v11",
+      "command": "start",
+      "source": "tests/contracts/v11/cases/start/start-bootstrap-fails-cleanup-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "start-bootstrap-fails-cleanup-parity",
+      "command": "start",
+      "source": "tests/contracts/v11/cases/start/start-bootstrap-fails-cleanup-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "start-stale-session-reclaim",
+      "command": "start",
+      "source": "tests/contracts/v11/cases/start/start-stale-session-reclaim.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "start-stale-session-reclaim-v11",
+      "command": "start",
+      "source": "tests/contracts/v11/cases/start/start-stale-session-reclaim-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "start-stale-session-reclaim-parity",
+      "command": "start",
+      "source": "tests/contracts/v11/cases/start/start-stale-session-reclaim-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "resume-basic",
       "command": "resume",
       "source": "tests/contracts/v11/cases/resume/resume-basic.case.json",

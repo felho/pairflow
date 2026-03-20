@@ -15,7 +15,13 @@ const startCaseSources = [
   "tests/contracts/v11/cases/start/start-basic-parity.case.json",
   "tests/contracts/v11/cases/start/start-state-not-startable.case.json",
   "tests/contracts/v11/cases/start/start-state-not-startable-v11.case.json",
-  "tests/contracts/v11/cases/start/start-state-not-startable-parity.case.json"
+  "tests/contracts/v11/cases/start/start-state-not-startable-parity.case.json",
+  "tests/contracts/v11/cases/start/start-bootstrap-fails-cleanup.case.json",
+  "tests/contracts/v11/cases/start/start-bootstrap-fails-cleanup-v11.case.json",
+  "tests/contracts/v11/cases/start/start-bootstrap-fails-cleanup-parity.case.json",
+  "tests/contracts/v11/cases/start/start-stale-session-reclaim.case.json",
+  "tests/contracts/v11/cases/start/start-stale-session-reclaim-v11.case.json",
+  "tests/contracts/v11/cases/start/start-stale-session-reclaim-parity.case.json"
 ] as const;
 
 const startExpectedSourcesSorted = [...startCaseSources].sort();
