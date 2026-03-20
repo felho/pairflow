@@ -8,12 +8,13 @@ import {
   type EmitPassResult
 } from "../../../src/core/agent/pass.js";
 import { emitPassFromWorkspaceV11 } from "../../../src/v11/application/pass/emitPassV11.js";
+import { readStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { isPassIntent, type PassIntent } from "../../../src/types/protocol.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
 
-export interface PassContractOutput {
+export interface PassContractSuccessOutput {
   status: "ok";
   reasonCode: "PASS_ACCEPTED" | "PASS_AUTO_CONVERGED";
   envelopeType: string;
@@ -21,6 +22,18 @@ export interface PassContractOutput {
     state: string;
   };
 }
+
+export interface PassContractErrorOutput {
+  status: "error";
+  reasonCode: string | null;
+  stateSubset: {
+    state: string;
+  };
+}
+
+export type PassContractOutput =
+  | PassContractSuccessOutput
+  | PassContractErrorOutput;
 
 export interface PassContractRunResult {
   mode: ContractCase["mode"];
@@ -107,6 +120,21 @@ function normalizePassResult(result: EmitPassResult): PassContractOutput {
   };
 }
 
+function normalizePassErrorResult(input: {
+  error: unknown;
+  state: string;
+}): PassContractErrorOutput {
+  const message = input.error instanceof Error ? input.error.message : String(input.error);
+  const reasonMatch = /^([A-Z0-9_]+):/u.exec(message.trim());
+  return {
+    status: "error",
+    reasonCode: reasonMatch?.[1] ?? null,
+    stateSubset: {
+      state: input.state
+    }
+  };
+}
+
 function assertContractExpectedSubset(input: {
   output: PassContractOutput;
   expected: ContractCaseExpected;
@@ -127,10 +155,13 @@ function assertContractExpectedSubset(input: {
   }
   if (
     input.expected.envelopeType !== undefined &&
-    input.output.envelopeType !== input.expected.envelopeType
+    (
+      input.output.status !== "ok"
+      || input.output.envelopeType !== input.expected.envelopeType
+    )
   ) {
     throw new Error(
-      `${input.label}: envelopeType mismatch (expected=${input.expected.envelopeType}, actual=${input.output.envelopeType})`
+      `${input.label}: envelopeType mismatch (expected=${input.expected.envelopeType}, actual=${input.output.status === "ok" ? input.output.envelopeType : "error-output"})`
     );
   }
   const expectedState = input.expected.stateSubset?.state;
@@ -172,11 +203,19 @@ async function executePassCase(input: {
     if (parsedInput.seedRoundTwoCleanHistory) {
       await advanceToReviewerRoundTwoWithCleanHistory(bubble.paths.worktreePath);
     }
-    const result = await input.executor({
-      ...parsedInput.passInput,
-      cwd: bubble.paths.worktreePath
-    });
-    return normalizePassResult(result);
+    try {
+      const result = await input.executor({
+        ...parsedInput.passInput,
+        cwd: bubble.paths.worktreePath
+      });
+      return normalizePassResult(result);
+    } catch (error) {
+      const stateSnapshot = await readStateSnapshot(bubble.paths.statePath);
+      return normalizePassErrorResult({
+        error,
+        state: stateSnapshot.state.state
+      });
+    }
   } finally {
     await rm(repoPath, { recursive: true, force: true });
   }

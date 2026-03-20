@@ -18,14 +18,20 @@ const approvalCaseSources = [
   "tests/contracts/v11/cases/approval/approval-rework-immediate-parity.case.json",
   "tests/contracts/v11/cases/approval/approval-rework-queued.case.json",
   "tests/contracts/v11/cases/approval/approval-rework-queued-v11.case.json",
-  "tests/contracts/v11/cases/approval/approval-rework-queued-parity.case.json"
+  "tests/contracts/v11/cases/approval/approval-rework-queued-parity.case.json",
+  "tests/contracts/v11/cases/approval/approval-rework-queued-supersede.case.json",
+  "tests/contracts/v11/cases/approval/approval-rework-queued-supersede-v11.case.json",
+  "tests/contracts/v11/cases/approval/approval-rework-queued-supersede-parity.case.json"
 ] as const;
 
 const approvalExpectedSourcesSorted = [...approvalCaseSources].sort();
 const approvalQueuedReworkSources = [
   "tests/contracts/v11/cases/approval/approval-rework-queued.case.json",
   "tests/contracts/v11/cases/approval/approval-rework-queued-v11.case.json",
-  "tests/contracts/v11/cases/approval/approval-rework-queued-parity.case.json"
+  "tests/contracts/v11/cases/approval/approval-rework-queued-parity.case.json",
+  "tests/contracts/v11/cases/approval/approval-rework-queued-supersede.case.json",
+  "tests/contracts/v11/cases/approval/approval-rework-queued-supersede-v11.case.json",
+  "tests/contracts/v11/cases/approval/approval-rework-queued-supersede-parity.case.json"
 ] as const;
 const approvalImmediateReworkSources = [
   "tests/contracts/v11/cases/approval/approval-rework-immediate.case.json",

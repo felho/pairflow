@@ -62,6 +62,7 @@ export interface ApprovalContractRunResult {
 interface ParsedApprovalCaseInput {
   action: ApprovalCaseAction;
   message?: string;
+  seedQueuedIntentBeforeAction: boolean;
 }
 
 function parseApprovalCaseInput(input: ContractCase["input"]): ParsedApprovalCaseInput {
@@ -79,8 +80,18 @@ function parseApprovalCaseInput(input: ContractCase["input"]): ParsedApprovalCas
   if (messageRaw !== undefined && typeof messageRaw !== "string") {
     throw new Error("approval contract input.message must be a string.");
   }
+  const seedQueuedIntentBeforeActionRaw = input.seedQueuedIntentBeforeAction;
+  if (
+    seedQueuedIntentBeforeActionRaw !== undefined
+    && typeof seedQueuedIntentBeforeActionRaw !== "boolean"
+  ) {
+    throw new Error(
+      "approval contract input.seedQueuedIntentBeforeAction must be a boolean."
+    );
+  }
   return {
     action: actionRaw,
+    seedQueuedIntentBeforeAction: seedQueuedIntentBeforeActionRaw ?? false,
     ...(messageRaw !== undefined ? { message: messageRaw } : {})
   };
 }
@@ -425,6 +436,17 @@ async function executeApprovalCase(input: {
       repoPath,
       bubbleId: `b_contract_${input.caseDef.id}`
     });
+    if (input.action.seedQueuedIntentBeforeAction) {
+      await input.emitRequestReworkFn({
+        bubbleId: bubble.bubbleId,
+        message: "Pre-seeded queued rework intent for supersede contract scenario.",
+        cwd: repoPath,
+        now: new Date("2026-03-20T11:35:30.000Z")
+      }, {
+        emitTmuxDeliveryNotification: emitDelivery
+      });
+      deliveries.length = 0;
+    }
     const result = await input.emitRequestReworkFn({
       bubbleId: bubble.bubbleId,
       message:
@@ -441,7 +463,13 @@ async function executeApprovalCase(input: {
       implementerAgent: bubble.config.agents.implementer,
       label: input.label
     });
-    return normalizeQueuedReworkResult(result, deliveries);
+    const output = normalizeQueuedReworkResult(result, deliveries);
+    if (input.action.seedQueuedIntentBeforeAction && !output.hasSupersededIntentId) {
+      throw new Error(
+        `${input.label}: approval queued rework supersede invariant expected hasSupersededIntentId=true.`
+      );
+    }
+    return output;
   } finally {
     await rm(repoPath, { recursive: true, force: true });
   }

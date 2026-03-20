@@ -1,0 +1,24 @@
+{
+  "id": "pass-review-missing-findings-parity",
+  "command": "pass",
+  "mode": "parity",
+  "description": "Reviewer PASS parity rejects missing findings declaration when --no-findings is omitted.",
+  "input": {
+    "summary": "Reviewer follow-up without explicit findings payload",
+    "intent": "review",
+    "seedRoundTwoCleanHistory": true
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "FINDINGS_PAYLOAD_INVALID",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "pass",
+    "error-path"
+  ]
+}

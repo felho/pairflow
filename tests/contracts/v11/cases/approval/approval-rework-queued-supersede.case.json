@@ -1,0 +1,23 @@
+{
+  "id": "approval-rework-queued-supersede",
+  "command": "approval",
+  "mode": "legacy",
+  "description": "Queued rework supersedes an existing deferred rework intent in WAITING_HUMAN.",
+  "input": {
+    "action": "request_rework_queued",
+    "message": "Please restart with narrowed acceptance criteria.",
+    "seedQueuedIntentBeforeAction": true
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "APPROVAL_REWORK_QUEUED",
+    "deliveryCount": 0
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "approval",
+    "queued-rework",
+    "supersede"
+  ]
+}
