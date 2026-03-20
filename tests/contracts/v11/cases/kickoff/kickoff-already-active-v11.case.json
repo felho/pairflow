@@ -1,0 +1,25 @@
+{
+  "id": "kickoff-already-active-v11",
+  "command": "kickoff",
+  "mode": "v11",
+  "description": "Seed kickoff v11 contract case for active round precedence rejection.",
+  "input": {
+    "task": "Should reject kickoff when ideation round already active",
+    "fixture": {
+      "round": 1
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "IDEATION_ALREADY_ACTIVE",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "kickoff",
+    "error-path"
+  ]
+}

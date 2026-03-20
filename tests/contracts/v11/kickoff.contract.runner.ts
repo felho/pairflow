@@ -42,6 +42,7 @@ export interface KickoffContractRunResult {
 interface ParsedKickoffFixtureInput {
   ideation: boolean;
   running: boolean;
+  round: number;
   bubbleTask: string;
 }
 
@@ -62,6 +63,7 @@ function parseKickoffFixtureInput(
     return {
       ideation: true,
       running: true,
+      round: 0,
       bubbleTask: "Legacy kickoff fixture task"
     };
   }
@@ -79,6 +81,16 @@ function parseKickoffFixtureInput(
     throw new Error("kickoff contract input.fixture.running must be a boolean.");
   }
 
+  const roundRaw = fixtureRaw.round;
+  if (
+    roundRaw !== undefined
+    && (typeof roundRaw !== "number" || !Number.isInteger(roundRaw) || roundRaw < 0)
+  ) {
+    throw new Error(
+      "kickoff contract input.fixture.round must be a non-negative integer."
+    );
+  }
+
   const bubbleTaskRaw = fixtureRaw.bubbleTask;
   if (
     bubbleTaskRaw !== undefined &&
@@ -92,6 +104,7 @@ function parseKickoffFixtureInput(
   return {
     ideation: ideationRaw ?? true,
     running: runningRaw ?? true,
+    round: roundRaw ?? 0,
     bubbleTask: bubbleTaskRaw?.trim() ?? "Legacy kickoff fixture task"
   };
 }
@@ -227,7 +240,7 @@ async function setupKickoffFixture(
     {
       ...loaded.state,
       state: "RUNNING",
-      round: 0,
+      round: fixture.round,
       active_agent: "codex",
       active_role: "implementer",
       active_since: startedAt,
