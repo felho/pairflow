@@ -244,3 +244,50 @@ Kotelezo guardrailok:
 
 - `docs/architecture-fitness-checks.md` — evolution history + triage matrix + operational workflow
 - `docs/v1.1-boundary-simplification/v1.1-implementation-roadmap.md` — W2 hardening/triage workflow
+
+---
+
+## ADR-005: Contract Case Baseline "Good Enough" Stop Gate
+
+**Date:** 2026-03-20  
+**Status:** accepted  
+**Scope:** Command-level contract case expansion policy and migration-stop criteria
+
+### Context
+
+A contract case hardening munka gyorsan tud "vegtelen checklist"-be csuszni:
+
+1. Ha tul keves a case, gyenge marad a regresszio vedelmi alap.
+2. Ha tul sok, a csapat a variansok finomitasaval tolti az idot, es lassul a migration.
+
+Szukseg volt egy explicit stop-szabalyra, ami egyszerre vedi a minoseget es a tempot.
+
+### Decision
+
+Bevezetunk egy formalis `good enough` baseline gate-et a contract case-ekre:
+
+1. Minden kritikus commandra minimum:
+   - 1 happy-path triad (`legacy` + `v11` + `parity`),
+   - legalabb 2 magas erteku guard/error triad,
+   - legalabb 1 invariant triad (kritikus side-effect / cleanup / mutation-no-op).
+2. Risk-tier coverage cel:
+   - `P0` kockazatok: 100% ismert osztaly lefedes,
+   - `P1` kockazatok: >=80% ismert osztaly lefedes,
+   - `P2` variansok: nem release-gate kotelezoek.
+3. Baseline utan uj case csak admission szabaly szerint:
+   - uj reason code, vagy
+   - uj kockazati osztaly, vagy
+   - valos regresszio/incident reprodukcio.
+
+Ha egyik admission feltetel sem teljesul, az uj case backlog varians, nem migration-blocker.
+
+### Consequences
+
+1. A case-epitesnek van formalis "elég" allapota.
+2. A migration nem all be vegtelen varians-gyartasba.
+3. A baseline utan a bovitest incident-driven modra valtjuk.
+
+### Affected Documents
+
+- `docs/architecture-fitness-checks.md` — Contract Case "Good Enough" Baseline + Case Admission Policy
+- `docs/v1.1-boundary-simplification/v1.1-implementation-roadmap.md` — Rules section updated with mandatory good-enough stop-gate reference

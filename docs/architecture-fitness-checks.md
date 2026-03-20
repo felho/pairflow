@@ -194,6 +194,44 @@ Decision guardrails:
 5. Keep rollout mode conservative (`report-only` -> `soft-fail` -> `hard-fail`) until noise is controlled.
 6. Promote enforcement only on migrated scope that is proven stable.
 
+## Contract Case "Good Enough" Baseline (Stop Rule)
+
+Goal: avoid both under-testing and endless case expansion.
+
+### Minimum per critical command
+
+For each migrated, release-relevant command (`pass`, `kickoff`, `converged`, `approval`, `merge`, `commit`, `reply`, `askHuman`, `start`, `resume`, `stop`, `reconcile`):
+
+1. `1` happy-path triad (`legacy` + `v11` + `parity`).
+2. At least `2` high-value guard/error triads (state/eligibility/routing errors).
+3. At least `1` invariant triad (critical side effect, cleanup semantics, or mutation no-op/removal behavior).
+
+### Risk-tier coverage target
+
+1. `P0` (state integrity, transcript/state divergence, silent side-effect loss): `100%` contract coverage for identified classes.
+2. `P1` (incorrect gate decision, merge/commit safety, routing eligibility): target `>=80%` coverage of known classes.
+3. `P2` (message wording / low-impact UX variants): optional for release gate; keep as backlog unless incident-driven.
+
+### "Foundation complete" stop condition
+
+The baseline is considered **good enough** when all are true:
+
+1. Minimum-per-command rule above is satisfied for all currently migrated commands.
+2. Local CI gates are stable for the migrated scope (`check` + contract suites + fitness lanes) across repeated runs.
+3. Last hardening cycles do not reveal a new risk class, only low-impact variants of known patterns.
+
+After this point, new case expansion is **incident-driven**, not open-ended.
+
+## Contract Case Admission Policy (Post-Baseline)
+
+Add a new contract case only if at least one condition is true:
+
+1. It covers a previously uncovered reason code.
+2. It covers a genuinely new risk class (not a naming/input variant).
+3. It reproduces a real regression/incident and prevents recurrence.
+
+If none of the above are true, defer as backlog variant and do not block migration progress.
+
 ## When To Add A New Fitness Check
 
 Add a new check when all of the following are true:
