@@ -2,7 +2,7 @@ import {
   buildAskHumanFlowInput
 } from "./askHumanFlowInvocationBuilders.js";
 import { buildAskHumanCommandFlowRuntimeDependencies } from "./askHumanCommandFlowRuntimeDependencies.js";
-import { buildAskHumanRoutingInput } from "./askHumanRoutingInvocationBuilder.js";
+import { buildAskHumanRoutingInputFromCommandOrchestration } from "./askHumanCommandRoutingInvocationBuilder.js";
 import type {
   AskHumanCommandOrchestrationDependencies,
   AskHumanCommandOrchestrationInput,
@@ -16,13 +16,7 @@ export async function runAskHumanCommandFlowOrchestration(
   resolvedDependencies: ResolvedAskHumanCommandOrchestrationDependencies
 ): Promise<AskHumanCommandOrchestrationResult> {
   const routing = await resolvedDependencies.prepareAskHumanRouting(
-    buildAskHumanRoutingInput({
-      question: input.question,
-      refs: input.refs,
-      cwd: input.cwd,
-      now: input.now,
-      createError: input.createError
-    })
+    buildAskHumanRoutingInputFromCommandOrchestration(input)
   );
 
   return resolvedDependencies.runAskHumanFlow(
