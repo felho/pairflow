@@ -67,7 +67,7 @@ describe("v11 approval contract harness skeleton", () => {
 
   it(
     "executes legacy and parity assertions via shared runner",
-    { timeout: 20_000 },
+    { timeout: 10_000 },
     async () => {
     const casePaths = approvalCaseSources.map((source) =>
       resolve(process.cwd(), source)
