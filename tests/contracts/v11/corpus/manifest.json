@@ -147,6 +147,24 @@
       "kind": "seed_case"
     },
     {
+      "id": "start-basic",
+      "command": "start",
+      "source": "tests/contracts/v11/cases/start/start-basic.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "start-basic-v11",
+      "command": "start",
+      "source": "tests/contracts/v11/cases/start/start-basic-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "start-basic-parity",
+      "command": "start",
+      "source": "tests/contracts/v11/cases/start/start-basic-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "ask-human-basic",
       "command": "askHuman",
       "source": "tests/contracts/v11/cases/ask-human/ask-human-basic.case.json",

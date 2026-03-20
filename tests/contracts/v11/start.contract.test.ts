@@ -1,129 +1,95 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
-import { createBubble } from "../../../src/core/bubble/createBubble.js";
-import { startBubble } from "../../../src/core/bubble/startBubble.js";
-import { startBubbleV11 } from "../../../src/v11/application/start/emitStartV11.js";
-import { initGitRepository } from "../../helpers/git.js";
+import { runStartContractCase } from "./start.contract.runner.js";
+import { readContractCase } from "./runner.js";
 
-async function withTempRepo<T>(run: (repoPath: string) => Promise<T>): Promise<T> {
-  const repoPath = await mkdtemp(join(tmpdir(), "pairflow-start-contract-"));
-  try {
-    await initGitRepository(repoPath);
-    return await run(repoPath);
-  } finally {
-    await rm(repoPath, { recursive: true, force: true });
-  }
+const execFileAsync = promisify(execFile);
+const startCaseSources = [
+  "tests/contracts/v11/cases/start/start-basic.case.json",
+  "tests/contracts/v11/cases/start/start-basic-v11.case.json",
+  "tests/contracts/v11/cases/start/start-basic-parity.case.json"
+] as const;
+
+const startExpectedSourcesSorted = [...startCaseSources].sort();
+
+function parseStartSourcesFromManifest(
+  manifestRaw: string
+): string[] {
+  const manifest = JSON.parse(manifestRaw) as {
+    entries?: Array<{ command?: string; source?: string }>;
+  };
+
+  return (manifest.entries ?? [])
+    .filter((entry) => entry.command === "start")
+    .map((entry) => entry.source)
+    .filter((source): source is string => typeof source === "string")
+    .sort();
 }
 
-describe("v11 start contract parity", () => {
-  it("keeps core facade and v11 start output parity on CREATED bubble", async () => {
-    const legacy = await withTempRepo(async (repoPath) => {
-      const bubble = await createBubble({
-        id: "b_start_contract_legacy",
-        repoPath,
-        baseBranch: "main",
-        reviewArtifactType: "code",
-        task: "Start contract parity fixture",
-        cwd: repoPath
-      });
+describe("v11 start contract harness skeleton", () => {
+  it("loads seed contract case metadata", async () => {
+    const casePath = resolve(process.cwd(), startCaseSources[0]);
+    const caseDef = await readContractCase(casePath);
+    expect(caseDef.command).toBe("start");
+    expect(caseDef.mode).toBe("legacy");
+    expect(caseDef.expected.status).toBe("ok");
+  });
 
-      return startBubble(
-        {
-          bubbleId: bubble.bubbleId,
-          cwd: repoPath,
-          now: new Date("2026-03-20T09:00:00.000Z")
-        },
-        {
-          bootstrapWorktreeWorkspace: () =>
-            Promise.resolve({
-              repoPath,
-              baseRef: "refs/heads/main",
-              bubbleBranch: bubble.config.bubble_branch,
-              worktreePath: bubble.paths.worktreePath
-            }),
-          launchBubbleTmuxSession: () =>
-            Promise.resolve({
-              sessionName: `pf-${bubble.bubbleId}`
-            }),
-          claimRuntimeSession: () =>
-            Promise.resolve({
-              claimed: true,
-              record: {
-                bubbleId: bubble.bubbleId,
-                repoPath,
-                worktreePath: bubble.paths.worktreePath,
-                tmuxSessionName: `pf-${bubble.bubbleId}`,
-                updatedAt: "2026-03-20T09:00:00.000Z"
-              }
-            })
-        }
-      );
-    });
+  it("executes legacy and parity assertions via shared runner", async () => {
+    const casePaths = startCaseSources.map((source) =>
+      resolve(process.cwd(), source)
+    );
 
-    const v11 = await withTempRepo(async (repoPath) => {
-      const bubble = await createBubble({
-        id: "b_start_contract_v11",
-        repoPath,
-        baseBranch: "main",
-        reviewArtifactType: "code",
-        task: "Start contract parity fixture",
-        cwd: repoPath
-      });
+    for (const casePath of casePaths) {
+      const caseDef = await readContractCase(casePath);
+      const run = await runStartContractCase(caseDef);
+      if (caseDef.mode === "legacy") {
+        expect(run.legacy?.status).toBe("ok");
+        expect(run.v11).toBeUndefined();
+        continue;
+      }
+      if (caseDef.mode === "v11") {
+        expect(run.v11?.status).toBe("ok");
+        expect(run.legacy).toBeUndefined();
+        continue;
+      }
 
-      return startBubbleV11(
-        {
-          bubbleId: bubble.bubbleId,
-          cwd: repoPath,
-          now: new Date("2026-03-20T09:00:00.000Z")
-        },
-        {
-          bootstrapWorktreeWorkspace: () =>
-            Promise.resolve({
-              repoPath,
-              baseRef: "refs/heads/main",
-              bubbleBranch: bubble.config.bubble_branch,
-              worktreePath: bubble.paths.worktreePath
-            }),
-          launchBubbleTmuxSession: () =>
-            Promise.resolve({
-              sessionName: `pf-${bubble.bubbleId}`
-            }),
-          claimRuntimeSession: () =>
-            Promise.resolve({
-              claimed: true,
-              record: {
-                bubbleId: bubble.bubbleId,
-                repoPath,
-                worktreePath: bubble.paths.worktreePath,
-                tmuxSessionName: `pf-${bubble.bubbleId}`,
-                updatedAt: "2026-03-20T09:00:00.000Z"
-              }
-            })
-        }
-      );
-    });
+      expect(run.legacy).toBeDefined();
+      expect(run.v11).toBeDefined();
+      expect(run.legacy).toEqual(run.v11);
+    }
+  });
 
-    const normalize = (result: Awaited<typeof legacy>) => ({
-      state: result.state.state,
-      round: result.state.round,
-      activeAgent: result.state.active_agent,
-      activeRole: result.state.active_role,
-      tmuxSessionNamePrefix: result.tmuxSessionName.startsWith("pf-"),
-      hasWorktreePath: result.worktreePath.length > 0
-    });
+  it("includes start seed entries in corpus manifest", async () => {
+    const manifestPath = resolve(
+      process.cwd(),
+      "tests/contracts/v11/corpus/manifest.json"
+    );
+    const manifestRaw = await readFile(manifestPath, "utf8");
+    const startSources = parseStartSourcesFromManifest(manifestRaw);
 
-    expect(normalize(legacy)).toEqual(normalize(v11));
-    expect(normalize(legacy)).toMatchObject({
-      state: "RUNNING",
-      round: 1,
-      activeAgent: "codex",
-      activeRole: "implementer",
-      tmuxSessionNamePrefix: true,
-      hasWorktreePath: true
-    });
+    expect(startSources).toEqual(startExpectedSourcesSorted);
+  });
+
+  it("builds corpus output manifest with start seed entries", async () => {
+    await execFileAsync("pnpm", [
+      "exec",
+      "tsx",
+      "./tests/contracts/v11/corpus/build-corpus.ts"
+    ]);
+
+    const outputManifestPath = resolve(
+      process.cwd(),
+      ".pairflow/evidence/contracts-v11-corpus-manifest.json"
+    );
+    const outputRaw = await readFile(outputManifestPath, "utf8");
+    const startSources = parseStartSourcesFromManifest(outputRaw);
+
+    expect(startSources).toEqual(startExpectedSourcesSorted);
   });
 });

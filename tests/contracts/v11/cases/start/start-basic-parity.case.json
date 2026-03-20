@@ -1,0 +1,19 @@
+{
+  "id": "start-basic-parity",
+  "command": "start",
+  "mode": "parity",
+  "description": "Seed start parity contract case for CREATED to RUNNING baseline.",
+  "input": {},
+  "expected": {
+    "status": "ok",
+    "reasonCode": "STARTED",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "start"
+  ]
+}

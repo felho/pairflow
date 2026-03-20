@@ -1,0 +1,19 @@
+{
+  "id": "start-basic",
+  "command": "start",
+  "mode": "legacy",
+  "description": "Seed start contract case for CREATED to RUNNING baseline.",
+  "input": {},
+  "expected": {
+    "status": "ok",
+    "reasonCode": "STARTED",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "start"
+  ]
+}
