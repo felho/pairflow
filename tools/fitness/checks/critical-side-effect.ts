@@ -7,7 +7,7 @@ import type { FitnessPolicyCheck, FitnessReportCheck } from "../types.js";
 type InvariantStatus = "covered" | "missing" | "absent";
 
 interface CommandInvariantResult {
-  command: "kickoff" | "pass" | "converged" | "approval" | "reply";
+  command: "kickoff" | "pass" | "converged" | "approval" | "reply" | "askHuman";
   status: InvariantStatus;
   evidence: string[];
 }
@@ -17,7 +17,8 @@ const criticalCommands: readonly CommandInvariantResult["command"][] = [
   "pass",
   "converged",
   "approval",
-  "reply"
+  "reply",
+  "askHuman"
 ] as const;
 
 const deliveryAdapterPattern = /\bemitTmuxDeliveryNotification\b/u;

@@ -64,6 +64,11 @@ describe("critical side-effect fitness check", () => {
       "src/v11/shared/reply/replyCommandApi.ts",
       "export const emit = emitTmuxDeliveryNotification;\n"
     );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/askHuman/runAskHumanFlow.ts",
+      "export const emit = emitTmuxDeliveryNotification;\n"
+    );
 
     const report = await buildCriticalSideEffectCheckReport({
       check: {
@@ -114,6 +119,11 @@ describe("critical side-effect fitness check", () => {
       "src/v11/shared/reply/replyCommandApi.ts",
       "export const emit = emitTmuxDeliveryNotification;\n"
     );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/askHuman/runAskHumanFlow.ts",
+      "export const emit = emitTmuxDeliveryNotification;\n"
+    );
 
     const report = await buildCriticalSideEffectCheckReport({
       check: {
@@ -130,7 +140,7 @@ describe("critical side-effect fitness check", () => {
     });
 
     expect(report.status).toBe("pass");
-    expect(report.summary).toContain("all 5 command invariant(s) covered");
+    expect(report.summary).toContain("all 6 command invariant(s) covered");
   });
 
   it("warns when scope is missing", async () => {
@@ -177,6 +187,11 @@ describe("critical side-effect fitness check", () => {
       repoRoot,
       "src/v11/application/reply/replyCommandContract.ts",
       "export interface ReplyCommandContract { emitTmuxDeliveryNotification: unknown }\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/askHuman/askHumanCommandContract.ts",
+      "export interface AskHumanCommandContract { emitTmuxDeliveryNotification: unknown }\n"
     );
 
     const report = await buildCriticalSideEffectCheckReport({
