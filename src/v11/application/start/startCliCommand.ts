@@ -12,7 +12,10 @@ import {
   IDEATION_METADATA_PARSE_WARNING,
   hasIdeationMetadataParseWarning
 } from "../../../core/bubble/ideation.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import {
+  resolveBubbleById,
+  type ResolvedBubbleById
+} from "../../../core/bubble/bubbleLookup.js";
 import { registerRepoInRegistry } from "../../../core/repo/registry.js";
 
 export interface BubbleStartCommandOptions {
@@ -37,6 +40,13 @@ export interface BubbleStartCommandDependencies {
   reportRegistryRegistrationWarning?:
     | ((message: string) => void)
     | undefined;
+}
+
+interface ResolvedBubbleStartDependencies {
+  resolveBubble: typeof resolveBubbleById;
+  register: typeof registerRepoInRegistry;
+  runStartBubble: typeof startBubble;
+  reportWarning: (message: string) => void;
 }
 
 export function getBubbleStartHelpText(): string {
@@ -120,6 +130,86 @@ async function runTmuxAttach(sessionName: string): Promise<void> {
   });
 }
 
+function resolveBubbleStartDependencies(
+  dependencies: BubbleStartCommandDependencies
+): ResolvedBubbleStartDependencies {
+  return {
+    resolveBubble: dependencies.resolveBubbleById ?? resolveBubbleById,
+    register: dependencies.registerRepoInRegistry ?? registerRepoInRegistry,
+    runStartBubble: dependencies.startBubble ?? startBubble,
+    reportWarning:
+      dependencies.reportRegistryRegistrationWarning ??
+      ((message: string) => {
+        process.stderr.write(`${message}\n`);
+      })
+  };
+}
+
+function warnOnIdeationMetadataParseFailure(input: {
+  bubbleId: string;
+  bubbleConfig: ResolvedBubbleById["bubbleConfig"];
+  reportWarning: (message: string) => void;
+}): void {
+  if (hasIdeationMetadataParseWarning(input.bubbleConfig)) {
+    input.reportWarning(
+      `${IDEATION_METADATA_PARSE_WARNING}: bubble ${input.bubbleId} has invalid ideation metadata; falling back to legacy start path.`
+    );
+  }
+}
+
+async function canonicalizeBubbleRepoPath(input: {
+  resolvedBubbleRepoPath: string;
+  reportWarning: (message: string) => void;
+}): Promise<string | null> {
+  return realpath(input.resolvedBubbleRepoPath).catch(
+    (error: NodeJS.ErrnoException) => {
+      const reason = error instanceof Error ? error.message : String(error);
+      input.reportWarning(
+        `Pairflow warning: skipping repository auto-registration for bubble start (${input.resolvedBubbleRepoPath}) because canonical path resolution failed: ${reason}`
+      );
+      return null;
+    }
+  );
+}
+
+async function registerStartRepoBestEffort(input: {
+  repoPath: string | null;
+  register: typeof registerRepoInRegistry;
+  reportWarning: (message: string) => void;
+}): Promise<void> {
+  if (input.repoPath === null) {
+    return;
+  }
+  try {
+    await input.register({
+      repoPath: input.repoPath
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    input.reportWarning(
+      `Pairflow warning: failed to auto-register repository for bubble start (${input.repoPath}): ${reason}`
+    );
+  }
+}
+
+async function runStartAndAttachIfRequested(input: {
+  bubbleId: string;
+  repoPathForStart: string;
+  cwd: string;
+  attach: boolean;
+  runStartBubble: typeof startBubble;
+}): Promise<StartBubbleResult> {
+  const result = await input.runStartBubble({
+    bubbleId: input.bubbleId,
+    repoPath: input.repoPathForStart,
+    cwd: input.cwd
+  });
+  if (input.attach) {
+    await runTmuxAttach(result.tmuxSessionName);
+  }
+  return result;
+}
+
 export async function runBubbleStartCommand(
   args: string[],
   cwd: string = process.cwd(),
@@ -130,60 +220,38 @@ export async function runBubbleStartCommand(
     return null;
   }
 
-  const resolveBubble =
-    dependencies.resolveBubbleById ?? resolveBubbleById;
-  const register = dependencies.registerRepoInRegistry ?? registerRepoInRegistry;
-  const runStartBubble = dependencies.startBubble ?? startBubble;
-  const reportWarning =
-    dependencies.reportRegistryRegistrationWarning ??
-    ((message: string) => {
-      process.stderr.write(`${message}\n`);
-    });
+  const resolvedDependencies = resolveBubbleStartDependencies(dependencies);
 
   try {
-    const resolvedBubble = await resolveBubble({
+    const resolvedBubble = await resolvedDependencies.resolveBubble({
       bubbleId: options.id,
       ...(options.repo !== undefined ? { repoPath: options.repo } : {}),
       cwd
     });
-    if (hasIdeationMetadataParseWarning(resolvedBubble.bubbleConfig)) {
-      reportWarning(
-        `${IDEATION_METADATA_PARSE_WARNING}: bubble ${options.id} has invalid ideation metadata; falling back to legacy start path.`
-      );
-    }
-    const resolvedBubbleRepoPath = resolvePath(cwd, resolvedBubble.repoPath);
-    const canonicalBubbleRepoPath = await realpath(resolvedBubbleRepoPath).catch(
-      (error: NodeJS.ErrnoException) => {
-        const reason = error instanceof Error ? error.message : String(error);
-        reportWarning(
-          `Pairflow warning: skipping repository auto-registration for bubble start (${resolvedBubbleRepoPath}) because canonical path resolution failed: ${reason}`
-        );
-        return null;
-      }
-    );
-    if (canonicalBubbleRepoPath !== null) {
-      try {
-        await register({
-          repoPath: canonicalBubbleRepoPath
-        });
-      } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        reportWarning(
-          `Pairflow warning: failed to auto-register repository for bubble start (${canonicalBubbleRepoPath}): ${reason}`
-        );
-      }
-    }
-    const repoPathForStart = canonicalBubbleRepoPath ?? resolvedBubbleRepoPath;
-
-    const result = await runStartBubble({
+    warnOnIdeationMetadataParseFailure({
       bubbleId: options.id,
-      repoPath: repoPathForStart,
-      cwd
+      bubbleConfig: resolvedBubble.bubbleConfig,
+      reportWarning: resolvedDependencies.reportWarning
     });
-    if (options.attach) {
-      await runTmuxAttach(result.tmuxSessionName);
-    }
-    return result;
+
+    const resolvedBubbleRepoPath = resolvePath(cwd, resolvedBubble.repoPath);
+    const canonicalBubbleRepoPath = await canonicalizeBubbleRepoPath({
+      resolvedBubbleRepoPath,
+      reportWarning: resolvedDependencies.reportWarning
+    });
+    await registerStartRepoBestEffort({
+      repoPath: canonicalBubbleRepoPath,
+      register: resolvedDependencies.register,
+      reportWarning: resolvedDependencies.reportWarning
+    });
+    const repoPathForStart = canonicalBubbleRepoPath ?? resolvedBubbleRepoPath;
+    return runStartAndAttachIfRequested({
+      bubbleId: options.id,
+      repoPathForStart,
+      cwd,
+      attach: options.attach,
+      runStartBubble: resolvedDependencies.runStartBubble
+    });
   } catch (error) {
     asStartBubbleError(error);
   }
