@@ -5,7 +5,6 @@ import { join } from "node:path";
 import {
   emitHumanReply,
   type EmitHumanReplyDependencies,
-  type EmitHumanReplyInput,
   type EmitHumanReplyResult
 } from "../../../src/core/human/reply.js";
 import { emitAskHumanFromWorkspace } from "../../../src/core/agent/askHuman.js";
@@ -108,7 +107,7 @@ function parseReplyCaseInput(
         "reply contract input.fixture.scenario must be one of: basic, state_not_waiting_human, waiting_human_round_invalid, waiting_human_context_incomplete."
       );
     }
-    scenario = (scenarioRaw as ReplyContractScenario | undefined) ?? "basic";
+    scenario = scenarioRaw ?? "basic";
   }
 
   return {

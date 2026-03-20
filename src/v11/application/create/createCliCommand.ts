@@ -197,28 +197,30 @@ export function parseBubbleCreateCommandOptions(
   const ideationMode = options.ideation === true;
   if (ideationMode && (hasTask || hasTaskFile)) {
     throw new Error(
-      `${IDEATION_TASK_INPUT_CONFLICT}: --ideation cannot be combined with --task or --task-file.`
+      `${IDEATION_TASK_INPUT_CONFLICT}: --ideation cannot be combined with --task or --task-file. context: command_name=create.`
     );
   }
   if (!ideationMode && !hasTask && !hasTaskFile) {
     throw new Error(
-      `${IDEATION_TASK_REQUIRED}: Missing task input. Use --task, --task-file, or --ideation for taskless ideation bubbles.`
+      `${IDEATION_TASK_REQUIRED}: Missing task input. Use --task, --task-file, or --ideation for taskless ideation bubbles. context: command_name=create.`
     );
   }
   if (!ideationMode && hasTask && hasTaskFile) {
-    throw new Error("Use only one task input: --task or --task-file.");
+    throw new Error(
+      "CREATE_TASK_INPUT_MODE_CONFLICT: Use only one task input: --task or --task-file. context: command_name=create."
+    );
   }
 
   const hasReviewerBrief = options.reviewerBrief !== undefined;
   const hasReviewerBriefFile = options.reviewerBriefFile !== undefined;
   if (hasReviewerBrief && hasReviewerBriefFile) {
     throw new Error(
-      "Use only one reviewer brief input: --reviewer-brief or --reviewer-brief-file."
+      "CREATE_REVIEWER_BRIEF_INPUT_CONFLICT: Use only one reviewer brief input: --reviewer-brief or --reviewer-brief-file. context: command_name=create."
     );
   }
   if ((options.accuracyCritical ?? false) && !hasReviewerBrief && !hasReviewerBriefFile) {
     throw new Error(
-      "--accuracy-critical requires reviewer brief input via --reviewer-brief or --reviewer-brief-file."
+      "CREATE_ACCURACY_CRITICAL_REVIEWER_BRIEF_REQUIRED: --accuracy-critical requires reviewer brief input via --reviewer-brief or --reviewer-brief-file. context: command_name=create."
     );
   }
 
@@ -233,26 +235,32 @@ export function parseBubbleCreateCommandOptions(
         (option) => option !== "--review-artifact-type"
       );
       throw new Error(
-        `${MISSING_REVIEW_ARTIFACT_TYPE_OPTION}: Missing required --review-artifact-type=<document|code> option.${formatAlsoMissing(otherMissing)}`
+        `${MISSING_REVIEW_ARTIFACT_TYPE_OPTION}: Missing required --review-artifact-type=<document|code> option.${formatAlsoMissing(otherMissing)} context: command_name=create.`
       );
     }
     if (reviewArtifactTypeValidationError !== undefined) {
       throw new Error(
-        `${reviewArtifactTypeValidationError}${formatAlsoMissing(missing)}`
+        `${reviewArtifactTypeValidationError}${formatAlsoMissing(missing)} context: command_name=create reason_code=CREATE_REVIEW_ARTIFACT_TYPE_VALIDATION_FAILED.`
       );
     }
     if (pairflowCommandProfileValidationError !== undefined) {
       throw new Error(
-        `${pairflowCommandProfileValidationError}${formatAlsoMissing(missing)}`
+        `${pairflowCommandProfileValidationError}${formatAlsoMissing(missing)} context: command_name=create reason_code=PAIRFLOW_COMMAND_PROFILE_INVALID.`
       );
     }
-    throw new Error(`Missing required options: ${missing.join(", ")}`);
+    throw new Error(
+      `CREATE_REQUIRED_OPTIONS_MISSING: Missing required options: ${missing.join(", ")} context: command_name=create.`
+    );
   }
   if (reviewArtifactTypeValidationError !== undefined) {
-    throw new Error(reviewArtifactTypeValidationError);
+    throw new Error(
+      `${reviewArtifactTypeValidationError} context: command_name=create reason_code=CREATE_REVIEW_ARTIFACT_TYPE_VALIDATION_FAILED.`
+    );
   }
   if (pairflowCommandProfileValidationError !== undefined) {
-    throw new Error(pairflowCommandProfileValidationError);
+    throw new Error(
+      `${pairflowCommandProfileValidationError} context: command_name=create reason_code=PAIRFLOW_COMMAND_PROFILE_INVALID.`
+    );
   }
 
   return {

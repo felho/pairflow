@@ -5,7 +5,6 @@ import { join } from "node:path";
 import {
   emitAskHumanFromWorkspace,
   type EmitAskHumanDependencies,
-  type EmitAskHumanInput,
   type EmitAskHumanResult
 } from "../../../src/core/agent/askHuman.js";
 import { emitAskHumanFromWorkspaceV11 } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
@@ -107,7 +106,7 @@ function parseAskHumanCaseInput(
         "askHuman contract input.fixture.scenario must be one of: basic, state_not_running, running_round_invalid, running_role_unsupported."
       );
     }
-    scenario = (scenarioRaw as AskHumanContractScenario | undefined) ?? "basic";
+    scenario = scenarioRaw ?? "basic";
   }
 
   return {

@@ -62,7 +62,9 @@ export function parseBubbleOpenCommandOptions(
 
   const id = parsed.values.id;
   if (id === undefined) {
-    throw new Error("Missing required option: --id");
+    throw new Error(
+      "OPEN_ID_REQUIRED: Missing required option: --id. context: command_name=open."
+    );
   }
 
   return {

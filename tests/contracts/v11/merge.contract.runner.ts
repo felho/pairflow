@@ -97,7 +97,7 @@ function parseMergeCaseInput(input: ContractCase["input"]): ParsedMergeCaseInput
         "merge contract input.fixture.scenario must be one of: basic, state_not_done, repo_dirty, bubble_branch_missing, merge_conflict, cleanup_invariant."
       );
     }
-    scenario = (scenarioRaw as MergeContractExtendedScenario | undefined) ?? "basic";
+    scenario = scenarioRaw ?? "basic";
   }
 
   return {

@@ -97,7 +97,7 @@ function parseRestartCaseInput(input: ContractCase["input"]): ParsedRestartCaseI
         "restart contract input.fixture.scenario must be one of: basic, start_state_not_startable."
       );
     }
-    scenario = (scenarioRaw as RestartContractScenario | undefined) ?? "basic";
+    scenario = scenarioRaw ?? "basic";
   }
 
   return {

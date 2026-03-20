@@ -84,7 +84,7 @@ function parseResumeCaseInput(input: ContractCase["input"]): ParsedResumeCaseInp
         "resume contract input.fixture.scenario must be one of: basic, state_not_waiting_human, waiting_human_round_invalid, waiting_human_context_incomplete, default_message_invariant."
       );
     }
-    scenario = (scenarioRaw as ResumeContractScenario | undefined) ?? "basic";
+    scenario = scenarioRaw ?? "basic";
   }
   return { scenario };
 }

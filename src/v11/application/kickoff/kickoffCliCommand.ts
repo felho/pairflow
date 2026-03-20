@@ -93,13 +93,15 @@ export function parseBubbleKickoffCommandOptions(
 
   if (parsed.values["review-artifact-type"] !== undefined) {
     throw new Error(
-      `${IDEATION_REVIEW_ARTIFACT_TYPE_IMMUTABLE}: --review-artifact-type cannot be overridden by bubble kickoff.`
+      `${IDEATION_REVIEW_ARTIFACT_TYPE_IMMUTABLE}: --review-artifact-type cannot be overridden by bubble kickoff. context: command_name=kickoff.`
     );
   }
 
   const id = parsed.values.id;
   if (id === undefined) {
-    throw new Error("Missing required option: --id");
+    throw new Error(
+      "KICKOFF_ID_REQUIRED: Missing required option: --id. context: command_name=kickoff."
+    );
   }
 
   const task = parsed.values.task;
@@ -108,12 +110,12 @@ export function parseBubbleKickoffCommandOptions(
   const hasTaskFile = typeof taskFile === "string" && taskFile.trim().length > 0;
   if (hasTask && hasTaskFile) {
     throw new Error(
-      `${IDEATION_TASK_INPUT_CONFLICT}: Provide exactly one task input via --task or --task-file.`
+      `${IDEATION_TASK_INPUT_CONFLICT}: Provide exactly one task input via --task or --task-file. context: command_name=kickoff.`
     );
   }
   if (!hasTask && !hasTaskFile) {
     throw new Error(
-      `${IDEATION_KICKOFF_TASK_INVALID}: Provide exactly one task input via --task or --task-file.`
+      `${IDEATION_KICKOFF_TASK_INVALID}: Provide exactly one task input via --task or --task-file. context: command_name=kickoff.`
     );
   }
 

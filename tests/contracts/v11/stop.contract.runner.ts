@@ -87,7 +87,7 @@ function parseStopCaseInput(input: ContractCase["input"]): ParsedStopCaseInput {
         "stop contract input.fixture.scenario must be one of: basic, final_state, cleanup_invariant."
       );
     }
-    scenario = (scenarioRaw as StopContractScenario | undefined) ?? "basic";
+    scenario = scenarioRaw ?? "basic";
   }
 
   return {

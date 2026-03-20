@@ -67,7 +67,9 @@ export function parseBubbleInboxCommandOptions(
 
   const id = parsed.values.id;
   if (id === undefined) {
-    throw new Error("Missing required option: --id");
+    throw new Error(
+      "INBOX_ID_REQUIRED: Missing required option: --id. context: command_name=inbox."
+    );
   }
 
   return {

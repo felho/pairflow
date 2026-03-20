@@ -69,7 +69,9 @@ export function parseBubbleDeleteCommandOptions(
 
   const id = parsed.values.id;
   if (id === undefined) {
-    throw new Error("Missing required option: --id");
+    throw new Error(
+      "DELETE_ID_REQUIRED: Missing required option: --id. context: command_name=delete."
+    );
   }
 
   return {

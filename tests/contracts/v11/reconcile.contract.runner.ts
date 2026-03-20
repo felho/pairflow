@@ -72,7 +72,7 @@ function parseReconcileCaseInput(
         "reconcile contract input.fixture.scenario must be one of: default, mutate_no_stale, stale_reason_final_state, stale_reason_non_runtime_state."
       );
     }
-    scenario = (scenarioRaw as ParsedReconcileCaseInput["scenario"] | undefined) ?? "default";
+    scenario = scenarioRaw ?? "default";
   }
   return {
     dryRun: dryRunRaw ?? true,

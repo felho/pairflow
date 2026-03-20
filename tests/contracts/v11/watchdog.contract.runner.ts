@@ -65,7 +65,7 @@ function parseWatchdogCaseInput(input: ContractCase["input"]): ParsedWatchdogCas
         "watchdog contract input.fixture.scenario must be one of: waiting_human, final_state, running_expired, meta_review_running_expired."
       );
     }
-    scenario = (scenarioRaw as WatchdogContractExtendedScenario | undefined) ?? "waiting_human";
+    scenario = scenarioRaw ?? "waiting_human";
   }
   return { scenario };
 }

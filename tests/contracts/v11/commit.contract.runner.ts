@@ -82,7 +82,7 @@ function parseCommitCaseInput(input: ContractCase["input"]): ParsedCommitCaseInp
         "commit contract input.fixture.scenario must be one of: basic, staged_files_empty, state_not_approved, done_package_invariant."
       );
     }
-    scenario = (scenarioRaw as CommitContractExtendedScenario | undefined) ?? "basic";
+    scenario = scenarioRaw ?? "basic";
   }
   const auto = autoRaw ?? true;
   if (scenario === "staged_files_empty" && auto) {

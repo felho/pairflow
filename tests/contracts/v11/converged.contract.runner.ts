@@ -100,7 +100,7 @@ function parseConvergedCaseInput(input: ContractCase["input"]): ParsedConvergedC
         "converged contract input.fixture.scenario must be one of: default, delivery_partial_failure."
       );
     }
-    scenario = (scenarioRaw as ParsedConvergedCaseInput["scenario"] | undefined) ?? "default";
+    scenario = scenarioRaw ?? "default";
   }
 
   return {

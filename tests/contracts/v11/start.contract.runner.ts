@@ -78,7 +78,7 @@ function parseStartCaseInput(input: ContractCase["input"]): ParsedStartCaseInput
         "start contract input.fixture.scenario must be one of: basic, state_not_startable, bootstrap_fails_cleanup, stale_session_reclaim."
       );
     }
-    scenario = (scenarioRaw as StartContractExtendedScenario | undefined) ?? "basic";
+    scenario = scenarioRaw ?? "basic";
   }
 
   return {

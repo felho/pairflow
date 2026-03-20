@@ -83,7 +83,9 @@ export function parseBubbleStartCommandOptions(
 
   const id = parsed.values.id;
   if (id === undefined) {
-    throw new Error("Missing required option: --id");
+    throw new Error(
+      "START_ID_REQUIRED: Missing required option: --id. context: command_name=start."
+    );
   }
 
   return {

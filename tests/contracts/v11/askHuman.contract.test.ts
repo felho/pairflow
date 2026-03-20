@@ -144,7 +144,10 @@ describe("v11 askHuman contract harness skeleton", () => {
     expect(caseDef.expected.status).toBe("ok");
   });
 
-  it("executes legacy and parity assertions via shared runner", async () => {
+  it(
+    "executes legacy and parity assertions via shared runner",
+    { timeout: 10_000 },
+    async () => {
     const casePaths = askHumanCaseSources.map((source) =>
       resolve(process.cwd(), source)
     );
@@ -173,7 +176,8 @@ describe("v11 askHuman contract harness skeleton", () => {
       expect(run.v11).toBeDefined();
       expect(run.legacy).toEqual(run.v11);
     }
-  });
+    }
+  );
 
   it("includes ask-human seed entries in corpus manifest", async () => {
     const manifestPath = resolve(

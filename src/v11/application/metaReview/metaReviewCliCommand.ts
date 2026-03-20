@@ -666,7 +666,9 @@ export async function runBubbleMetaReviewCommand(
       };
     }
 
-    throw new Error("Unexpected meta-review subcommand.");
+    throw new Error(
+      "META_REVIEW_SUBCOMMAND_UNEXPECTED: Unexpected meta-review subcommand. context: command_name=meta-review."
+    );
   } catch (error) {
     throw toMetaReviewError(error);
   }
