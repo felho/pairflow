@@ -435,6 +435,24 @@
       "kind": "seed_case"
     },
     {
+      "id": "kickoff-task-input-conflict",
+      "command": "kickoff",
+      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-input-conflict.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "kickoff-task-input-conflict-v11",
+      "command": "kickoff",
+      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-input-conflict-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "kickoff-task-input-conflict-parity",
+      "command": "kickoff",
+      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-input-conflict-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "ask-human-basic",
       "command": "askHuman",
       "source": "tests/contracts/v11/cases/ask-human/ask-human-basic.case.json",
