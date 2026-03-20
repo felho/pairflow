@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { mergeBubble } from "../../../src/core/bubble/mergeBubble.js";
+import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
@@ -54,7 +55,8 @@ type MergeContractExtendedScenario =
   | MergeContractScenario
   | "repo_dirty"
   | "bubble_branch_missing"
-  | "merge_conflict";
+  | "merge_conflict"
+  | "cleanup_invariant";
 
 interface ParsedMergeCaseInput {
   tmuxSessionExisted: boolean;
@@ -88,10 +90,11 @@ function parseMergeCaseInput(input: ContractCase["input"]): ParsedMergeCaseInput
       scenarioRaw !== "state_not_done" &&
       scenarioRaw !== "repo_dirty" &&
       scenarioRaw !== "bubble_branch_missing" &&
-      scenarioRaw !== "merge_conflict"
+      scenarioRaw !== "merge_conflict" &&
+      scenarioRaw !== "cleanup_invariant"
     ) {
       throw new Error(
-        "merge contract input.fixture.scenario must be one of: basic, state_not_done, repo_dirty, bubble_branch_missing, merge_conflict."
+        "merge contract input.fixture.scenario must be one of: basic, state_not_done, repo_dirty, bubble_branch_missing, merge_conflict, cleanup_invariant."
       );
     }
     scenario = (scenarioRaw as MergeContractExtendedScenario | undefined) ?? "basic";
@@ -177,6 +180,37 @@ function assertParityEquivalent(input: {
   if (JSON.stringify(input.legacy) !== JSON.stringify(input.v11)) {
     throw new Error(
       `merge parity mismatch for case=${input.caseId}: legacy=${JSON.stringify(input.legacy)} v11=${JSON.stringify(input.v11)}`
+    );
+  }
+}
+
+function assertMergeScenarioInvariant(input: {
+  output: MergeContractOutput;
+  scenario: MergeContractExtendedScenario;
+  caseId: string;
+}): void {
+  if (input.scenario !== "cleanup_invariant") {
+    return;
+  }
+
+  if (input.output.status !== "ok") {
+    throw new Error(
+      `merge contract case=${input.caseId}: cleanup_invariant requires success output (reason=${input.output.reasonCode ?? "unknown"}).`
+    );
+  }
+  if (!input.output.tmuxSessionExisted) {
+    throw new Error(
+      `merge contract case=${input.caseId}: expected tmuxSessionExisted=true for cleanup_invariant.`
+    );
+  }
+  if (!input.output.runtimeSessionRemoved) {
+    throw new Error(
+      `merge contract case=${input.caseId}: expected runtimeSessionRemoved=true for cleanup_invariant.`
+    );
+  }
+  if (!input.output.removedWorktree || !input.output.removedBubbleBranch) {
+    throw new Error(
+      `merge contract case=${input.caseId}: expected worktree+bubble branch cleanup for cleanup_invariant.`
     );
   }
 }
@@ -338,6 +372,18 @@ async function executeMergeCase(input: {
       await writeFile(join(repoPath, "dirty.txt"), "dirty\n", "utf8");
     }
 
+    if (parsedInput.scenario === "cleanup_invariant") {
+      await upsertRuntimeSession({
+        sessionsPath: bubble.paths.sessionsPath,
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        worktreePath: bubble.paths.worktreePath,
+        tmuxSessionName: `pf-${bubble.bubbleId}`,
+        now: new Date("2026-03-20T11:19:00.000Z")
+      });
+    }
+
+    let output: MergeContractOutput;
     try {
       const result = await input.executor(
         {
@@ -355,14 +401,21 @@ async function executeMergeCase(input: {
       );
 
       const stateSnapshot = await readStateSnapshot(bubble.paths.statePath);
-      return normalizeMergeResult(result, stateSnapshot.state.state);
+      output = normalizeMergeResult(result, stateSnapshot.state.state);
     } catch (error) {
       const stateSnapshot = await readStateSnapshot(bubble.paths.statePath);
-      return normalizeMergeErrorResult({
+      output = normalizeMergeErrorResult({
         error,
         state: stateSnapshot.state.state
       });
     }
+
+    assertMergeScenarioInvariant({
+      output,
+      scenario: parsedInput.scenario,
+      caseId: input.caseDef.id
+    });
+    return output;
   } finally {
     await rm(repoPath, { recursive: true, force: true });
   }

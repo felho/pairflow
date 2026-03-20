@@ -1,0 +1,22 @@
+{
+  "id": "merge-cleanup-invariant-v11",
+  "command": "merge",
+  "mode": "v11",
+  "description": "Merge v11 cleanup invariant with tmux/runtime/worktree cleanup.",
+  "input": {
+    "tmuxSessionExisted": true,
+    "fixture": {
+      "scenario": "cleanup_invariant"
+    }
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "MERGED"
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "merge",
+    "invariant"
+  ]
+}

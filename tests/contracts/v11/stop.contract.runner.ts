@@ -45,7 +45,7 @@ export interface StopContractRunResult {
   v11?: StopContractOutput;
 }
 
-type StopContractScenario = "basic" | "final_state";
+type StopContractScenario = "basic" | "final_state" | "cleanup_invariant";
 
 interface ParsedStopCaseInput {
   tmuxSessionExisted: boolean;
@@ -80,10 +80,11 @@ function parseStopCaseInput(input: ContractCase["input"]): ParsedStopCaseInput {
     if (
       scenarioRaw !== undefined &&
       scenarioRaw !== "basic" &&
-      scenarioRaw !== "final_state"
+      scenarioRaw !== "final_state" &&
+      scenarioRaw !== "cleanup_invariant"
     ) {
       throw new Error(
-        "stop contract input.fixture.scenario must be one of: basic, final_state."
+        "stop contract input.fixture.scenario must be one of: basic, final_state, cleanup_invariant."
       );
     }
     scenario = (scenarioRaw as StopContractScenario | undefined) ?? "basic";
@@ -164,6 +165,32 @@ function assertParityEquivalent(input: {
   }
 }
 
+function assertStopScenarioInvariant(input: {
+  output: StopContractOutput;
+  scenario: StopContractScenario;
+  caseId: string;
+}): void {
+  if (input.scenario !== "cleanup_invariant") {
+    return;
+  }
+
+  if (input.output.status !== "ok") {
+    throw new Error(
+      `stop contract case=${input.caseId}: cleanup_invariant requires success output.`
+    );
+  }
+  if (!input.output.runtimeSessionRemoved) {
+    throw new Error(
+      `stop contract case=${input.caseId}: expected runtimeSessionRemoved=true for cleanup_invariant.`
+    );
+  }
+  if (input.output.stateSubset.state !== "CANCELLED") {
+    throw new Error(
+      `stop contract case=${input.caseId}: expected state=CANCELLED for cleanup_invariant (actual=${input.output.stateSubset.state}).`
+    );
+  }
+}
+
 async function executeStopCase(input: {
   caseDef: ContractCase;
   executor: (
@@ -200,6 +227,7 @@ async function executeStopCase(input: {
       );
     }
 
+    let output: StopContractOutput;
     try {
       const result = await input.executor(
         {
@@ -217,14 +245,21 @@ async function executeStopCase(input: {
         }
       );
 
-      return normalizeStopResult(result);
+      output = normalizeStopResult(result);
     } catch (error) {
       const stateSnapshot = await readStateSnapshot(bubble.paths.statePath);
-      return normalizeStopErrorResult({
+      output = normalizeStopErrorResult({
         error,
         state: stateSnapshot.state.state
       });
     }
+
+    assertStopScenarioInvariant({
+      output,
+      scenario: parsedInput.scenario,
+      caseId: input.caseDef.id
+    });
+    return output;
   } finally {
     await rm(repoPath, { recursive: true, force: true });
   }

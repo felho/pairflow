@@ -18,7 +18,10 @@ const commitCaseSources = [
   "tests/contracts/v11/cases/commit/commit-staged-files-empty-parity.case.json",
   "tests/contracts/v11/cases/commit/commit-state-not-approved.case.json",
   "tests/contracts/v11/cases/commit/commit-state-not-approved-v11.case.json",
-  "tests/contracts/v11/cases/commit/commit-state-not-approved-parity.case.json"
+  "tests/contracts/v11/cases/commit/commit-state-not-approved-parity.case.json",
+  "tests/contracts/v11/cases/commit/commit-done-package-invariant.case.json",
+  "tests/contracts/v11/cases/commit/commit-done-package-invariant-v11.case.json",
+  "tests/contracts/v11/cases/commit/commit-done-package-invariant-parity.case.json"
 ] as const;
 
 const commitExpectedSourcesSorted = [...commitCaseSources].sort();

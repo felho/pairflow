@@ -24,7 +24,10 @@ const mergeCaseSources = [
   "tests/contracts/v11/cases/merge/merge-branch-missing-parity.case.json",
   "tests/contracts/v11/cases/merge/merge-conflict-manual-resolution.case.json",
   "tests/contracts/v11/cases/merge/merge-conflict-manual-resolution-v11.case.json",
-  "tests/contracts/v11/cases/merge/merge-conflict-manual-resolution-parity.case.json"
+  "tests/contracts/v11/cases/merge/merge-conflict-manual-resolution-parity.case.json",
+  "tests/contracts/v11/cases/merge/merge-cleanup-invariant.case.json",
+  "tests/contracts/v11/cases/merge/merge-cleanup-invariant-v11.case.json",
+  "tests/contracts/v11/cases/merge/merge-cleanup-invariant-parity.case.json"
 ] as const;
 
 const mergeExpectedSourcesSorted = [...mergeCaseSources].sort();
@@ -52,7 +55,10 @@ describe("v11 merge contract harness skeleton", () => {
     expect(caseDef.expected.status).toBe("ok");
   });
 
-  it("executes legacy and parity assertions via shared runner", async () => {
+  it(
+    "executes legacy and parity assertions via shared runner",
+    { timeout: 10_000 },
+    async () => {
     const casePaths = mergeCaseSources.map((source) =>
       resolve(process.cwd(), source)
     );
@@ -81,7 +87,8 @@ describe("v11 merge contract harness skeleton", () => {
       expect(run.v11).toBeDefined();
       expect(run.legacy).toEqual(run.v11);
     }
-  });
+    }
+  );
 
   it("includes merge seed entries in corpus manifest", async () => {
     const manifestPath = resolve(

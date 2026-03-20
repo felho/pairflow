@@ -46,7 +46,8 @@ export interface CommitContractRunResult {
 type CommitContractScenario = "basic" | "staged_files_empty";
 type CommitContractExtendedScenario =
   | CommitContractScenario
-  | "state_not_approved";
+  | "state_not_approved"
+  | "done_package_invariant";
 
 interface ParsedCommitCaseInput {
   auto: boolean;
@@ -74,10 +75,11 @@ function parseCommitCaseInput(input: ContractCase["input"]): ParsedCommitCaseInp
       scenarioRaw !== undefined &&
       scenarioRaw !== "basic" &&
       scenarioRaw !== "staged_files_empty" &&
-      scenarioRaw !== "state_not_approved"
+      scenarioRaw !== "state_not_approved" &&
+      scenarioRaw !== "done_package_invariant"
     ) {
       throw new Error(
-        "commit contract input.fixture.scenario must be one of: basic, staged_files_empty, state_not_approved."
+        "commit contract input.fixture.scenario must be one of: basic, staged_files_empty, state_not_approved, done_package_invariant."
       );
     }
     scenario = (scenarioRaw as CommitContractExtendedScenario | undefined) ?? "basic";
@@ -173,6 +175,32 @@ function assertParityEquivalent(input: {
   }
 }
 
+function assertCommitScenarioInvariant(input: {
+  output: CommitContractOutput;
+  scenario: CommitContractExtendedScenario;
+  caseId: string;
+}): void {
+  if (input.scenario !== "done_package_invariant") {
+    return;
+  }
+
+  if (input.output.status !== "ok") {
+    throw new Error(
+      `commit contract case=${input.caseId}: done_package_invariant requires success output.`
+    );
+  }
+  if (!input.output.donePackageSuffix) {
+    throw new Error(
+      `commit contract case=${input.caseId}: expected done-package artifact path suffix for done_package_invariant.`
+    );
+  }
+  if (!input.output.hasCommitSha || input.output.stagedFiles.length < 1) {
+    throw new Error(
+      `commit contract case=${input.caseId}: expected commit sha and staged file list for done_package_invariant.`
+    );
+  }
+}
+
 async function setupApprovedBubble(repoPath: string, bubbleId: string) {
   const bubble = await setupRunningBubbleFixture({
     repoPath,
@@ -228,7 +256,7 @@ async function executeCommitCase(input: {
         })
       : await setupApprovedBubble(repoPath, buildCommitContractBubbleId(input.caseDef.id));
 
-    if (parsedInput.scenario === "basic") {
+    if (parsedInput.scenario === "basic" || parsedInput.scenario === "done_package_invariant") {
       await writeFile(
         join(bubble.paths.worktreePath, "feature-auto.txt"),
         `${input.caseDef.id}\n`,
@@ -242,6 +270,7 @@ async function executeCommitCase(input: {
       );
     }
 
+    let output: CommitContractOutput;
     try {
       const result = await input.executor({
         bubbleId: bubble.bubbleId,
@@ -249,14 +278,21 @@ async function executeCommitCase(input: {
         auto: parsedInput.auto,
         now: new Date("2026-03-20T13:10:00.000Z")
       });
-      return normalizeCommitResult(result);
+      output = normalizeCommitResult(result);
     } catch (error) {
       const stateSnapshot = await readStateSnapshot(bubble.paths.statePath);
-      return normalizeCommitErrorResult({
+      output = normalizeCommitErrorResult({
         error,
         state: stateSnapshot.state.state
       });
     }
+
+    assertCommitScenarioInvariant({
+      output,
+      scenario: parsedInput.scenario,
+      caseId: input.caseDef.id
+    });
+    return output;
   } finally {
     await rm(repoPath, { recursive: true, force: true });
   }

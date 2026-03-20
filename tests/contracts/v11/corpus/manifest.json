@@ -273,6 +273,24 @@
       "kind": "seed_case"
     },
     {
+      "id": "merge-cleanup-invariant",
+      "command": "merge",
+      "source": "tests/contracts/v11/cases/merge/merge-cleanup-invariant.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "merge-cleanup-invariant-v11",
+      "command": "merge",
+      "source": "tests/contracts/v11/cases/merge/merge-cleanup-invariant-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "merge-cleanup-invariant-parity",
+      "command": "merge",
+      "source": "tests/contracts/v11/cases/merge/merge-cleanup-invariant-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "approval-approve-basic",
       "command": "approval",
       "source": "tests/contracts/v11/cases/approval/approval-approve-basic.case.json",
@@ -612,6 +630,24 @@
       "id": "commit-state-not-approved-parity",
       "command": "commit",
       "source": "tests/contracts/v11/cases/commit/commit-state-not-approved-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "commit-done-package-invariant",
+      "command": "commit",
+      "source": "tests/contracts/v11/cases/commit/commit-done-package-invariant.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "commit-done-package-invariant-v11",
+      "command": "commit",
+      "source": "tests/contracts/v11/cases/commit/commit-done-package-invariant-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "commit-done-package-invariant-parity",
+      "command": "commit",
+      "source": "tests/contracts/v11/cases/commit/commit-done-package-invariant-parity.case.json",
       "kind": "seed_case"
     },
     {
@@ -1260,6 +1296,24 @@
       "id": "stop-final-state-parity",
       "command": "stop",
       "source": "tests/contracts/v11/cases/stop/stop-final-state-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "stop-cleanup-invariant",
+      "command": "stop",
+      "source": "tests/contracts/v11/cases/stop/stop-cleanup-invariant.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "stop-cleanup-invariant-v11",
+      "command": "stop",
+      "source": "tests/contracts/v11/cases/stop/stop-cleanup-invariant-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "stop-cleanup-invariant-parity",
+      "command": "stop",
+      "source": "tests/contracts/v11/cases/stop/stop-cleanup-invariant-parity.case.json",
       "kind": "seed_case"
     }
   ]

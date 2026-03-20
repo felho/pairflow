@@ -1,0 +1,25 @@
+{
+  "id": "commit-done-package-invariant-v11",
+  "command": "commit",
+  "mode": "v11",
+  "description": "Commit v11 preserves done package invariant and commit artifacts.",
+  "input": {
+    "auto": true,
+    "fixture": {
+      "scenario": "done_package_invariant"
+    }
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "COMMITTED",
+    "stateSubset": {
+      "state": "DONE"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "commit",
+    "invariant"
+  ]
+}

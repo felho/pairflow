@@ -18,7 +18,10 @@ const stopCaseSources = [
   "tests/contracts/v11/cases/stop/stop-no-runtime-session-parity.case.json",
   "tests/contracts/v11/cases/stop/stop-final-state.case.json",
   "tests/contracts/v11/cases/stop/stop-final-state-v11.case.json",
-  "tests/contracts/v11/cases/stop/stop-final-state-parity.case.json"
+  "tests/contracts/v11/cases/stop/stop-final-state-parity.case.json",
+  "tests/contracts/v11/cases/stop/stop-cleanup-invariant.case.json",
+  "tests/contracts/v11/cases/stop/stop-cleanup-invariant-v11.case.json",
+  "tests/contracts/v11/cases/stop/stop-cleanup-invariant-parity.case.json"
 ] as const;
 const stopExpectedSourcesSorted = [...stopCaseSources].sort();
 
