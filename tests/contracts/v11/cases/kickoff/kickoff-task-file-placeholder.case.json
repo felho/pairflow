@@ -1,0 +1,25 @@
+{
+  "id": "kickoff-task-file-placeholder",
+  "command": "kickoff",
+  "mode": "legacy",
+  "description": "Seed kickoff legacy contract case for placeholder marker in task-file content.",
+  "input": {
+    "task": "metadata_source: ideation_placeholder",
+    "fixture": {
+      "taskViaFile": true
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "IDEATION_KICKOFF_TASK_INVALID",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "kickoff",
+    "error-path"
+  ]
+}
