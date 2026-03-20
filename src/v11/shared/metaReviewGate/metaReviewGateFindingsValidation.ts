@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import type { readFile } from "node:fs/promises";
 
 import { resolveLegacySummaryFindingsClaimState } from "../../../core/convergence/policy.js";
 import { isRecord } from "../../../core/validation.js";
