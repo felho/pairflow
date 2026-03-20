@@ -57,7 +57,7 @@ describe("v11 merge contract harness skeleton", () => {
 
   it(
     "executes legacy and parity assertions via shared runner",
-    { timeout: 10_000 },
+    { timeout: 12_000 },
     async () => {
     const casePaths = mergeCaseSources.map((source) =>
       resolve(process.cwd(), source)

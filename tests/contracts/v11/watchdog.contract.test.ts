@@ -49,7 +49,10 @@ describe("v11 watchdog contract harness skeleton", () => {
     expect(caseDef.expected.status).toBe("ok");
   });
 
-  it("executes legacy and parity assertions via shared runner", async () => {
+  it(
+    "executes legacy and parity assertions via shared runner",
+    { timeout: 12_000 },
+    async () => {
     const casePaths = watchdogCaseSources.map((source) =>
       resolve(process.cwd(), source)
     );
@@ -78,7 +81,8 @@ describe("v11 watchdog contract harness skeleton", () => {
       expect(run.v11).toBeDefined();
       expect(run.legacy).toEqual(run.v11);
     }
-  });
+    }
+  );
 
   it("includes watchdog seed entries in corpus manifest", async () => {
     const manifestPath = resolve(

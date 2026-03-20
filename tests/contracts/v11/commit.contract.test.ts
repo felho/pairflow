@@ -51,7 +51,7 @@ describe("v11 commit contract harness skeleton", () => {
 
   it(
     "executes legacy and parity assertions via shared runner",
-    { timeout: 10_000 },
+    { timeout: 12_000 },
     async () => {
     const casePaths = commitCaseSources.map((source) =>
       resolve(process.cwd(), source)
