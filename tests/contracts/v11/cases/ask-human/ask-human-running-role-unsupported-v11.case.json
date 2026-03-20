@@ -1,0 +1,26 @@
+{
+  "id": "ask-human-running-role-unsupported-v11",
+  "command": "askHuman",
+  "mode": "v11",
+  "description": "ask-human rejects RUNNING state when active role is meta_reviewer.",
+  "input": {
+    "question": "Need clarification from product.",
+    "refs": [],
+    "fixture": {
+      "scenario": "running_role_unsupported"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "ASK_HUMAN_ROLE_UNSUPPORTED",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "ask-human",
+    "v11-contract",
+    "v11",
+    "error-path"
+  ]
+}

@@ -9,6 +9,10 @@ import {
   type EmitAskHumanResult
 } from "../../../src/core/agent/askHuman.js";
 import { emitAskHumanFromWorkspaceV11 } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
+import {
+  readStateSnapshot,
+  writeStateSnapshot
+} from "../../../src/core/state/stateStore.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -21,6 +25,18 @@ interface CapturedAskHumanDelivery {
   recipient: string;
   targetRole: string | null;
   refKind: DeliveryRefKind;
+}
+
+type AskHumanContractScenario =
+  | "basic"
+  | "state_not_running"
+  | "running_round_invalid"
+  | "running_role_unsupported";
+
+interface ParsedAskHumanCaseInput {
+  question: string;
+  refs: string[];
+  scenario: AskHumanContractScenario;
 }
 
 export interface AskHumanContractOutput {
@@ -36,15 +52,27 @@ export interface AskHumanContractOutput {
   deliveryRefKinds: DeliveryRefKind[];
 }
 
+export interface AskHumanContractErrorOutput {
+  status: "error";
+  reasonCode: string | null;
+  stateSubset: {
+    state: string;
+  };
+}
+
+export type AskHumanContractResultOutput =
+  | AskHumanContractOutput
+  | AskHumanContractErrorOutput;
+
 export interface AskHumanContractRunResult {
   mode: ContractCase["mode"];
-  legacy?: AskHumanContractOutput;
-  v11?: AskHumanContractOutput;
+  legacy?: AskHumanContractResultOutput;
+  v11?: AskHumanContractResultOutput;
 }
 
 function parseAskHumanCaseInput(
   input: ContractCase["input"]
-): Omit<EmitAskHumanInput, "cwd"> {
+): ParsedAskHumanCaseInput {
   const questionRaw = input.question;
   if (typeof questionRaw !== "string" || questionRaw.trim().length === 0) {
     throw new Error("askHuman contract input.question must be a non-empty string.");
@@ -61,9 +89,31 @@ function parseAskHumanCaseInput(
     throw new Error("askHuman contract input.refs must be a string array.");
   }
 
+  const fixtureRaw = input.fixture;
+  let scenario: AskHumanContractScenario = "basic";
+  if (fixtureRaw !== undefined) {
+    if (typeof fixtureRaw !== "object" || fixtureRaw === null) {
+      throw new Error("askHuman contract input.fixture must be an object when provided.");
+    }
+    const scenarioRaw = (fixtureRaw as Record<string, unknown>).scenario;
+    if (
+      scenarioRaw !== undefined &&
+      scenarioRaw !== "basic" &&
+      scenarioRaw !== "state_not_running" &&
+      scenarioRaw !== "running_round_invalid" &&
+      scenarioRaw !== "running_role_unsupported"
+    ) {
+      throw new Error(
+        "askHuman contract input.fixture.scenario must be one of: basic, state_not_running, running_round_invalid, running_role_unsupported."
+      );
+    }
+    scenario = (scenarioRaw as AskHumanContractScenario | undefined) ?? "basic";
+  }
+
   return {
     question: questionRaw.trim(),
-    refs: refsRaw ?? []
+    refs: refsRaw ?? [],
+    scenario
   };
 }
 
@@ -84,6 +134,42 @@ function normalizeAskHumanResult(
       .map((delivery) => delivery.targetRole)
       .filter((role): role is string => role !== null),
     deliveryRefKinds: deliveries.map((delivery) => delivery.refKind)
+  };
+}
+
+function normalizeAskHumanErrorResult(input: {
+  error: unknown;
+  state: string;
+}): AskHumanContractErrorOutput {
+  const message = input.error instanceof Error ? input.error.message : String(input.error);
+  const reasonMatch = /^([A-Z0-9_]+):/u.exec(message.trim());
+  let reasonCode: string | null = reasonMatch?.[1] ?? null;
+
+  if (
+    reasonCode === null &&
+    message.includes("can only be used while bubble is RUNNING")
+  ) {
+    reasonCode = "ASK_HUMAN_STATE_NOT_RUNNING";
+  }
+  if (
+    reasonCode === null &&
+    message.includes("RUNNING state must have round >= 1")
+  ) {
+    reasonCode = "ASK_HUMAN_RUNNING_ROUND_INVALID";
+  }
+  if (
+    reasonCode === null &&
+    message.includes("cannot be used from meta_reviewer role")
+  ) {
+    reasonCode = "ASK_HUMAN_ROLE_UNSUPPORTED";
+  }
+
+  return {
+    status: "error",
+    reasonCode,
+    stateSubset: {
+      state: input.state
+    }
   };
 }
 
@@ -123,7 +209,7 @@ function assertAskHumanDeliveryInvariant(input: {
 }
 
 function assertContractExpectedSubset(input: {
-  output: AskHumanContractOutput;
+  output: AskHumanContractResultOutput;
   expected: ContractCaseExpected;
   label: string;
 }): void {
@@ -142,10 +228,15 @@ function assertContractExpectedSubset(input: {
   }
   if (
     input.expected.envelopeType !== undefined &&
-    input.output.envelopeType !== input.expected.envelopeType
+    (
+      input.output.status !== "ok"
+      || input.output.envelopeType !== input.expected.envelopeType
+    )
   ) {
+    const actualEnvelopeType =
+      input.output.status === "ok" ? input.output.envelopeType : "<error>";
     throw new Error(
-      `${input.label}: envelopeType mismatch (expected=${input.expected.envelopeType}, actual=${input.output.envelopeType})`
+      `${input.label}: envelopeType mismatch (expected=${input.expected.envelopeType}, actual=${actualEnvelopeType})`
     );
   }
   const expectedState = input.expected.stateSubset?.state;
@@ -159,44 +250,67 @@ function assertContractExpectedSubset(input: {
   }
   if (
     input.expected.deliveryCount !== undefined &&
-    input.output.deliveryCount !== input.expected.deliveryCount
+    (
+      input.output.status !== "ok"
+      || input.output.deliveryCount !== input.expected.deliveryCount
+    )
   ) {
+    const actualDeliveryCount =
+      input.output.status === "ok" ? String(input.output.deliveryCount) : "<error>";
     throw new Error(
-      `${input.label}: deliveryCount mismatch (expected=${input.expected.deliveryCount}, actual=${input.output.deliveryCount})`
+      `${input.label}: deliveryCount mismatch (expected=${input.expected.deliveryCount}, actual=${actualDeliveryCount})`
     );
   }
   if (
     input.expected.deliveryRecipients !== undefined &&
-    JSON.stringify(input.output.deliveryRecipients)
+    (
+      input.output.status !== "ok"
+      || JSON.stringify(input.output.deliveryRecipients)
       !== JSON.stringify(input.expected.deliveryRecipients)
+    )
   ) {
+    const actualRecipients = JSON.stringify(
+      input.output.status === "ok" ? input.output.deliveryRecipients : []
+    );
     throw new Error(
-      `${input.label}: deliveryRecipients mismatch (expected=${JSON.stringify(input.expected.deliveryRecipients)}, actual=${JSON.stringify(input.output.deliveryRecipients)})`
+      `${input.label}: deliveryRecipients mismatch (expected=${JSON.stringify(input.expected.deliveryRecipients)}, actual=${actualRecipients})`
     );
   }
   if (
     input.expected.deliveryTargetRoles !== undefined &&
-    JSON.stringify(input.output.deliveryTargetRoles)
+    (
+      input.output.status !== "ok"
+      || JSON.stringify(input.output.deliveryTargetRoles)
       !== JSON.stringify(input.expected.deliveryTargetRoles)
+    )
   ) {
+    const actualTargetRoles = JSON.stringify(
+      input.output.status === "ok" ? input.output.deliveryTargetRoles : []
+    );
     throw new Error(
-      `${input.label}: deliveryTargetRoles mismatch (expected=${JSON.stringify(input.expected.deliveryTargetRoles)}, actual=${JSON.stringify(input.output.deliveryTargetRoles)})`
+      `${input.label}: deliveryTargetRoles mismatch (expected=${JSON.stringify(input.expected.deliveryTargetRoles)}, actual=${actualTargetRoles})`
     );
   }
   if (
     input.expected.deliveryRefKinds !== undefined &&
-    JSON.stringify(input.output.deliveryRefKinds)
+    (
+      input.output.status !== "ok"
+      || JSON.stringify(input.output.deliveryRefKinds)
       !== JSON.stringify(input.expected.deliveryRefKinds)
+    )
   ) {
+    const actualRefKinds = JSON.stringify(
+      input.output.status === "ok" ? input.output.deliveryRefKinds : []
+    );
     throw new Error(
-      `${input.label}: deliveryRefKinds mismatch (expected=${JSON.stringify(input.expected.deliveryRefKinds)}, actual=${JSON.stringify(input.output.deliveryRefKinds)})`
+      `${input.label}: deliveryRefKinds mismatch (expected=${JSON.stringify(input.expected.deliveryRefKinds)}, actual=${actualRefKinds})`
     );
   }
 }
 
 function assertParityEquivalent(input: {
-  legacy: AskHumanContractOutput;
-  v11: AskHumanContractOutput;
+  legacy: AskHumanContractResultOutput;
+  v11: AskHumanContractResultOutput;
   caseId: string;
 }): void {
   if (JSON.stringify(input.legacy) !== JSON.stringify(input.v11)) {
@@ -210,7 +324,7 @@ async function executeAskHumanCase(input: {
   caseDef: ContractCase;
   executor: typeof emitAskHumanFromWorkspace;
   label: string;
-}): Promise<AskHumanContractOutput> {
+}): Promise<AskHumanContractResultOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-ask-human-contract-"));
   try {
     await initGitRepository(repoPath);
@@ -219,6 +333,61 @@ async function executeAskHumanCase(input: {
       bubbleId: `b_contract_${input.caseDef.id}`,
       task: input.caseDef.description
     });
+    const askHumanInput = parseAskHumanCaseInput(input.caseDef.input);
+
+    if (askHumanInput.scenario === "state_not_running") {
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          state: "WAITING_HUMAN",
+          active_agent: loaded.state.active_agent ?? "codex",
+          active_role: loaded.state.active_role ?? "implementer",
+          active_since: loaded.state.active_since ?? "2026-03-19T10:01:00.000Z",
+          last_command_at: "2026-03-19T10:01:00.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "RUNNING"
+        }
+      );
+    }
+
+    if (askHumanInput.scenario === "running_round_invalid") {
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          round: 0,
+          last_command_at: "2026-03-19T10:01:15.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "RUNNING"
+        }
+      );
+    }
+
+    if (askHumanInput.scenario === "running_role_unsupported") {
+      const loaded = await readStateSnapshot(bubble.paths.statePath);
+      await writeStateSnapshot(
+        bubble.paths.statePath,
+        {
+          ...loaded.state,
+          active_agent: "codex",
+          active_role: "meta_reviewer",
+          active_since: "2026-03-19T10:01:45.000Z",
+          last_command_at: "2026-03-19T10:01:45.000Z"
+        },
+        {
+          expectedFingerprint: loaded.fingerprint,
+          expectedState: "RUNNING"
+        }
+      );
+    }
+
     const deliveries: CapturedAskHumanDelivery[] = [];
     const emitDelivery: NonNullable<
       EmitAskHumanDependencies["emitTmuxDeliveryNotification"]
@@ -236,19 +405,32 @@ async function executeAskHumanCase(input: {
         message: "ok"
       });
     };
-    const askHumanInput = parseAskHumanCaseInput(input.caseDef.input);
-    const result = await input.executor({
-      ...askHumanInput,
-      cwd: bubble.paths.worktreePath
-    }, {
-      emitTmuxDeliveryNotification: emitDelivery
-    });
-    assertAskHumanDeliveryInvariant({
-      deliveries,
-      result,
-      label: input.label
-    });
-    return normalizeAskHumanResult(result, deliveries);
+    try {
+      const result = await input.executor({
+        question: askHumanInput.question,
+        refs: askHumanInput.refs,
+        cwd: bubble.paths.worktreePath
+      }, {
+        emitTmuxDeliveryNotification: emitDelivery
+      });
+      assertAskHumanDeliveryInvariant({
+        deliveries,
+        result,
+        label: input.label
+      });
+      return normalizeAskHumanResult(result, deliveries);
+    } catch (error) {
+      const stateSnapshot = await readStateSnapshot(bubble.paths.statePath);
+      if (deliveries.length > 0) {
+        throw new Error(
+          `${input.label}: askHuman error path emitted unexpected delivery count=${deliveries.length}.`
+        );
+      }
+      return normalizeAskHumanErrorResult({
+        error,
+        state: stateSnapshot.state.state
+      });
+    }
   } finally {
     await rm(repoPath, { recursive: true, force: true });
   }

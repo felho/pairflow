@@ -1,0 +1,26 @@
+{
+  "id": "ask-human-running-round-invalid-parity",
+  "command": "askHuman",
+  "mode": "parity",
+  "description": "ask-human parity case for RUNNING state with invalid round.",
+  "input": {
+    "question": "Need clarification from product.",
+    "refs": [],
+    "fixture": {
+      "scenario": "running_round_invalid"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "ASK_HUMAN_RUNNING_ROUND_INVALID",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "ask-human",
+    "v11-contract",
+    "parity",
+    "error-path"
+  ]
+}

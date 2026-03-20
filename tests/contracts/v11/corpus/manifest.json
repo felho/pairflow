@@ -813,6 +813,60 @@
       "kind": "seed_case"
     },
     {
+      "id": "ask-human-state-not-running",
+      "command": "askHuman",
+      "source": "tests/contracts/v11/cases/ask-human/ask-human-state-not-running.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "ask-human-state-not-running-v11",
+      "command": "askHuman",
+      "source": "tests/contracts/v11/cases/ask-human/ask-human-state-not-running-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "ask-human-state-not-running-parity",
+      "command": "askHuman",
+      "source": "tests/contracts/v11/cases/ask-human/ask-human-state-not-running-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "ask-human-running-round-invalid",
+      "command": "askHuman",
+      "source": "tests/contracts/v11/cases/ask-human/ask-human-running-round-invalid.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "ask-human-running-round-invalid-v11",
+      "command": "askHuman",
+      "source": "tests/contracts/v11/cases/ask-human/ask-human-running-round-invalid-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "ask-human-running-round-invalid-parity",
+      "command": "askHuman",
+      "source": "tests/contracts/v11/cases/ask-human/ask-human-running-round-invalid-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "ask-human-running-role-unsupported",
+      "command": "askHuman",
+      "source": "tests/contracts/v11/cases/ask-human/ask-human-running-role-unsupported.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "ask-human-running-role-unsupported-v11",
+      "command": "askHuman",
+      "source": "tests/contracts/v11/cases/ask-human/ask-human-running-role-unsupported-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "ask-human-running-role-unsupported-parity",
+      "command": "askHuman",
+      "source": "tests/contracts/v11/cases/ask-human/ask-human-running-role-unsupported-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "converged-basic",
       "command": "converged",
       "source": "tests/contracts/v11/cases/converged/converged-basic.case.json",

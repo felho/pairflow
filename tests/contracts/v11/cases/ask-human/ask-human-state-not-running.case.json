@@ -1,0 +1,26 @@
+{
+  "id": "ask-human-state-not-running",
+  "command": "askHuman",
+  "mode": "legacy",
+  "description": "ask-human rejects when bubble is not RUNNING.",
+  "input": {
+    "question": "Need clarification from product.",
+    "refs": [],
+    "fixture": {
+      "scenario": "state_not_running"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "ASK_HUMAN_STATE_NOT_RUNNING",
+    "stateSubset": {
+      "state": "WAITING_HUMAN"
+    }
+  },
+  "tags": [
+    "ask-human",
+    "v11-contract",
+    "legacy",
+    "error-path"
+  ]
+}

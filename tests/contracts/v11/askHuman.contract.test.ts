@@ -15,7 +15,16 @@ const askHumanCaseSources = [
   "tests/contracts/v11/cases/ask-human/ask-human-basic-parity.case.json",
   "tests/contracts/v11/cases/ask-human/ask-human-no-refs.case.json",
   "tests/contracts/v11/cases/ask-human/ask-human-no-refs-v11.case.json",
-  "tests/contracts/v11/cases/ask-human/ask-human-no-refs-parity.case.json"
+  "tests/contracts/v11/cases/ask-human/ask-human-no-refs-parity.case.json",
+  "tests/contracts/v11/cases/ask-human/ask-human-state-not-running.case.json",
+  "tests/contracts/v11/cases/ask-human/ask-human-state-not-running-v11.case.json",
+  "tests/contracts/v11/cases/ask-human/ask-human-state-not-running-parity.case.json",
+  "tests/contracts/v11/cases/ask-human/ask-human-running-round-invalid.case.json",
+  "tests/contracts/v11/cases/ask-human/ask-human-running-round-invalid-v11.case.json",
+  "tests/contracts/v11/cases/ask-human/ask-human-running-round-invalid-parity.case.json",
+  "tests/contracts/v11/cases/ask-human/ask-human-running-role-unsupported.case.json",
+  "tests/contracts/v11/cases/ask-human/ask-human-running-role-unsupported-v11.case.json",
+  "tests/contracts/v11/cases/ask-human/ask-human-running-role-unsupported-parity.case.json"
 ] as const;
 
 const askHumanExpectedSourcesSorted = [...askHumanCaseSources].sort();
@@ -144,12 +153,18 @@ describe("v11 askHuman contract harness skeleton", () => {
       const caseDef = await readContractCase(casePath);
       const run = await runAskHumanContractCase(caseDef);
       if (caseDef.mode === "legacy") {
-        expect(run.legacy?.status).toBe("ok");
+        expect(run.legacy?.status).toBe(caseDef.expected.status);
+        if (caseDef.expected.reasonCode !== undefined) {
+          expect(run.legacy?.reasonCode).toBe(caseDef.expected.reasonCode);
+        }
         expect(run.v11).toBeUndefined();
         continue;
       }
       if (caseDef.mode === "v11") {
-        expect(run.v11?.status).toBe("ok");
+        expect(run.v11?.status).toBe(caseDef.expected.status);
+        if (caseDef.expected.reasonCode !== undefined) {
+          expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
+        }
         expect(run.legacy).toBeUndefined();
         continue;
       }

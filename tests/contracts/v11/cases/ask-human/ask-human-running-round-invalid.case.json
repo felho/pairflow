@@ -1,0 +1,26 @@
+{
+  "id": "ask-human-running-round-invalid",
+  "command": "askHuman",
+  "mode": "legacy",
+  "description": "ask-human rejects RUNNING state with invalid round.",
+  "input": {
+    "question": "Need clarification from product.",
+    "refs": [],
+    "fixture": {
+      "scenario": "running_round_invalid"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "ASK_HUMAN_RUNNING_ROUND_INVALID",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "ask-human",
+    "v11-contract",
+    "legacy",
+    "error-path"
+  ]
+}
