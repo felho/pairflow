@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -171,13 +172,41 @@ function assertParityEquivalent(input: {
   }
 }
 
+function normalizeTestBubbleId(id: string): string {
+  const trimmed = id.trim();
+  if (/^[a-z][a-z0-9_-]{2,39}$/u.test(trimmed)) {
+    return trimmed;
+  }
+
+  const hashSuffix = createHash("sha1")
+    .update(trimmed)
+    .digest("hex")
+    .slice(0, 10);
+  const prefixMaxLength = 40 - 1 - hashSuffix.length;
+  const normalizedPrefix = trimmed
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/gu, "-")
+    .replace(/^[^a-z]+/u, "")
+    .slice(0, prefixMaxLength)
+    .replace(/[-_]+$/u, "");
+
+  const safePrefix = normalizedPrefix.length >= 3 ? normalizedPrefix : "bubble";
+  const candidate = `${safePrefix}-${hashSuffix}`.slice(0, 40);
+
+  if (/^[a-z][a-z0-9_-]{2,39}$/u.test(candidate)) {
+    return candidate;
+  }
+
+  return `bubble-${hashSuffix}`.slice(0, 40);
+}
+
 async function setupKickoffFixture(
   repoPath: string,
   bubbleId: string,
   fixture: ParsedKickoffFixtureInput
 ) {
   const bubble = await createBubble({
-    id: bubbleId,
+    id: normalizeTestBubbleId(bubbleId),
     repoPath,
     baseBranch: "main",
     reviewArtifactType: "code",
