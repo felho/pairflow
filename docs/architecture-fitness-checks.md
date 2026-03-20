@@ -232,6 +232,10 @@ Add a new contract case only if at least one condition is true:
 
 If none of the above are true, defer as backlog variant and do not block migration progress.
 
+Operational tracking artifact:
+
+- `docs/v1.1-boundary-simplification/contract-case-good-enough-checklist.md`
+
 ## When To Add A New Fitness Check
 
 Add a new check when all of the following are true:
