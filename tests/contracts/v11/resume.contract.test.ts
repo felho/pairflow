@@ -15,7 +15,16 @@ const resumeCaseSources = [
   "tests/contracts/v11/cases/resume/resume-basic-parity.case.json",
   "tests/contracts/v11/cases/resume/resume-state-not-waiting-human.case.json",
   "tests/contracts/v11/cases/resume/resume-state-not-waiting-human-v11.case.json",
-  "tests/contracts/v11/cases/resume/resume-state-not-waiting-human-parity.case.json"
+  "tests/contracts/v11/cases/resume/resume-state-not-waiting-human-parity.case.json",
+  "tests/contracts/v11/cases/resume/resume-waiting-human-round-invalid.case.json",
+  "tests/contracts/v11/cases/resume/resume-waiting-human-round-invalid-v11.case.json",
+  "tests/contracts/v11/cases/resume/resume-waiting-human-round-invalid-parity.case.json",
+  "tests/contracts/v11/cases/resume/resume-waiting-human-context-incomplete.case.json",
+  "tests/contracts/v11/cases/resume/resume-waiting-human-context-incomplete-v11.case.json",
+  "tests/contracts/v11/cases/resume/resume-waiting-human-context-incomplete-parity.case.json",
+  "tests/contracts/v11/cases/resume/resume-default-message-invariant.case.json",
+  "tests/contracts/v11/cases/resume/resume-default-message-invariant-v11.case.json",
+  "tests/contracts/v11/cases/resume/resume-default-message-invariant-parity.case.json"
 ] as const;
 
 const resumeExpectedSourcesSorted = [...resumeCaseSources].sort();

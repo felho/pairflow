@@ -3,7 +3,10 @@ import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { resumeBubble } from "../../../src/core/bubble/resumeBubble.js";
+import {
+  DEFAULT_RESUME_MESSAGE,
+  resumeBubble
+} from "../../../src/core/bubble/resumeBubble.js";
 import { resumeBubbleV11 } from "../../../src/v11/application/resume/emitResumeV11.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -19,6 +22,7 @@ export interface ResumeContractSuccessOutput {
   reasonCode: "RESUMED";
   envelopeType: string;
   hasMessage: boolean;
+  messageMatchesDefault: boolean;
   stateSubset: {
     state: string;
   };
@@ -44,7 +48,12 @@ export interface ResumeContractRunResult {
   v11?: ResumeContractOutput;
 }
 
-type ResumeContractScenario = "basic" | "state_not_waiting_human";
+type ResumeContractScenario =
+  | "basic"
+  | "state_not_waiting_human"
+  | "waiting_human_round_invalid"
+  | "waiting_human_context_incomplete"
+  | "default_message_invariant";
 
 interface ParsedResumeCaseInput {
   scenario: ResumeContractScenario;
@@ -66,10 +75,13 @@ function parseResumeCaseInput(input: ContractCase["input"]): ParsedResumeCaseInp
     if (
       scenarioRaw !== undefined &&
       scenarioRaw !== "basic" &&
-      scenarioRaw !== "state_not_waiting_human"
+      scenarioRaw !== "state_not_waiting_human" &&
+      scenarioRaw !== "waiting_human_round_invalid" &&
+      scenarioRaw !== "waiting_human_context_incomplete" &&
+      scenarioRaw !== "default_message_invariant"
     ) {
       throw new Error(
-        "resume contract input.fixture.scenario must be one of: basic, state_not_waiting_human."
+        "resume contract input.fixture.scenario must be one of: basic, state_not_waiting_human, waiting_human_round_invalid, waiting_human_context_incomplete, default_message_invariant."
       );
     }
     scenario = (scenarioRaw as ResumeContractScenario | undefined) ?? "basic";
@@ -85,6 +97,7 @@ function normalizeResumeResult(
     reasonCode: "RESUMED",
     envelopeType: result.envelope.type,
     hasMessage: typeof result.envelope.payload.message === "string",
+    messageMatchesDefault: result.envelope.payload.message === DEFAULT_RESUME_MESSAGE,
     stateSubset: {
       state: result.state.state
     },
@@ -149,6 +162,26 @@ function assertParityEquivalent(input: {
   }
 }
 
+function assertResumeScenarioInvariant(input: {
+  output: ResumeContractOutput;
+  scenario: ResumeContractScenario;
+  caseId: string;
+}): void {
+  if (input.scenario !== "default_message_invariant") {
+    return;
+  }
+  if (input.output.status !== "ok") {
+    throw new Error(
+      `resume contract case=${input.caseId}: default_message_invariant requires success output.`
+    );
+  }
+  if (!input.output.messageMatchesDefault) {
+    throw new Error(
+      `resume contract case=${input.caseId}: expected resume message to match DEFAULT_RESUME_MESSAGE.`
+    );
+  }
+}
+
 async function seedWaitingHumanState(input: {
   repoPath: string;
   bubbleId: string;
@@ -159,14 +192,28 @@ async function seedWaitingHumanState(input: {
     bubbleId: input.bubbleId,
     task: "Resume contract parity fixture"
   });
-  if (input.scenario !== "basic") {
+  if (input.scenario === "state_not_waiting_human") {
     return bubble;
   }
   const loaded = await readStateSnapshot(bubble.paths.statePath);
-  const transitioned = applyStateTransition(loaded.state, {
+  let transitioned = applyStateTransition(loaded.state, {
     to: "WAITING_HUMAN",
     lastCommandAt: "2026-03-20T12:20:00.000Z"
   });
+  if (input.scenario === "waiting_human_round_invalid") {
+    transitioned = {
+      ...transitioned,
+      round: 0
+    };
+  }
+  if (input.scenario === "waiting_human_context_incomplete") {
+    transitioned = {
+      ...transitioned,
+      active_agent: null,
+      active_role: null,
+      active_since: null
+    };
+  }
   await writeStateSnapshot(bubble.paths.statePath, transitioned, {
     expectedFingerprint: loaded.fingerprint,
     expectedState: "RUNNING"
@@ -195,13 +242,25 @@ async function executeResumeCase(input: {
         now: new Date("2026-03-20T12:25:00.000Z")
       });
 
-      return normalizeResumeResult(result);
+      const output = normalizeResumeResult(result);
+      assertResumeScenarioInvariant({
+        output,
+        scenario: parsedInput.scenario,
+        caseId: input.caseDef.id
+      });
+      return output;
     } catch (error) {
       const stateSnapshot = await readStateSnapshot(bubble.paths.statePath);
-      return normalizeResumeErrorResult({
+      const output = normalizeResumeErrorResult({
         error,
         state: stateSnapshot.state.state
       });
+      assertResumeScenarioInvariant({
+        output,
+        scenario: parsedInput.scenario,
+        caseId: input.caseDef.id
+      });
+      return output;
     }
   } finally {
     await rm(repoPath, { recursive: true, force: true });

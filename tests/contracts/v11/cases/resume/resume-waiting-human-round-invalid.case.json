@@ -1,0 +1,24 @@
+{
+  "id": "resume-waiting-human-round-invalid",
+  "command": "resume",
+  "mode": "legacy",
+  "description": "Resume rejects WAITING_HUMAN state when round is invalid.",
+  "input": {
+    "fixture": {
+      "scenario": "waiting_human_round_invalid"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "REPLY_WAITING_HUMAN_ROUND_INVALID",
+    "stateSubset": {
+      "state": "WAITING_HUMAN"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "resume",
+    "error-path"
+  ]
+}

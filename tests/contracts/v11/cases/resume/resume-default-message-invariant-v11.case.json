@@ -1,0 +1,24 @@
+{
+  "id": "resume-default-message-invariant-v11",
+  "command": "resume",
+  "mode": "v11",
+  "description": "Resume v11 emits the default resume message payload invariant.",
+  "input": {
+    "fixture": {
+      "scenario": "default_message_invariant"
+    }
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "RESUMED",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "resume",
+    "invariant"
+  ]
+}

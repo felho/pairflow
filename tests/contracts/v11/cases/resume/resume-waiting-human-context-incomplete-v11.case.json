@@ -1,0 +1,24 @@
+{
+  "id": "resume-waiting-human-context-incomplete-v11",
+  "command": "resume",
+  "mode": "v11",
+  "description": "Resume v11 rejects WAITING_HUMAN state when active context is missing.",
+  "input": {
+    "fixture": {
+      "scenario": "waiting_human_context_incomplete"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "REPLY_WAITING_HUMAN_CONTEXT_INCOMPLETE",
+    "stateSubset": {
+      "state": "WAITING_HUMAN"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "resume",
+    "error-path"
+  ]
+}
