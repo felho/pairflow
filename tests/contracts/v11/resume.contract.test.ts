@@ -1,91 +1,95 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
-import { resumeBubble } from "../../../src/core/bubble/resumeBubble.js";
-import { resumeBubbleV11 } from "../../../src/v11/application/resume/emitResumeV11.js";
-import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
-import { initGitRepository } from "../../helpers/git.js";
-import { applyStateTransition } from "../../../src/core/state/machine.js";
-import {
-  readStateSnapshot,
-  writeStateSnapshot
-} from "../../../src/core/state/stateStore.js";
+import { runResumeContractCase } from "./resume.contract.runner.js";
+import { readContractCase } from "./runner.js";
 
-async function withTempRepo<T>(run: (repoPath: string) => Promise<T>): Promise<T> {
-  const repoPath = await mkdtemp(join(tmpdir(), "pairflow-resume-contract-"));
-  try {
-    await initGitRepository(repoPath);
-    return await run(repoPath);
-  } finally {
-    await rm(repoPath, { recursive: true, force: true });
-  }
+const execFileAsync = promisify(execFile);
+const resumeCaseSources = [
+  "tests/contracts/v11/cases/resume/resume-basic.case.json",
+  "tests/contracts/v11/cases/resume/resume-basic-v11.case.json",
+  "tests/contracts/v11/cases/resume/resume-basic-parity.case.json"
+] as const;
+
+const resumeExpectedSourcesSorted = [...resumeCaseSources].sort();
+
+function parseResumeSourcesFromManifest(
+  manifestRaw: string
+): string[] {
+  const manifest = JSON.parse(manifestRaw) as {
+    entries?: Array<{ command?: string; source?: string }>;
+  };
+
+  return (manifest.entries ?? [])
+    .filter((entry) => entry.command === "resume")
+    .map((entry) => entry.source)
+    .filter((source): source is string => typeof source === "string")
+    .sort();
 }
 
-async function seedWaitingHumanState(input: {
-  repoPath: string;
-  bubbleId: string;
-}) {
-  const bubble = await setupRunningBubbleFixture({
-    repoPath: input.repoPath,
-    bubbleId: input.bubbleId,
-    task: "Resume contract parity fixture"
+describe("v11 resume contract harness skeleton", () => {
+  it("loads seed contract case metadata", async () => {
+    const casePath = resolve(process.cwd(), resumeCaseSources[0]);
+    const caseDef = await readContractCase(casePath);
+    expect(caseDef.command).toBe("resume");
+    expect(caseDef.mode).toBe("legacy");
+    expect(caseDef.expected.status).toBe("ok");
   });
-  const loaded = await readStateSnapshot(bubble.paths.statePath);
-  const transitioned = applyStateTransition(loaded.state, {
-    to: "WAITING_HUMAN",
-    lastCommandAt: "2026-03-20T10:00:00.000Z"
+
+  it("executes legacy and parity assertions via shared runner", async () => {
+    const casePaths = resumeCaseSources.map((source) =>
+      resolve(process.cwd(), source)
+    );
+
+    for (const casePath of casePaths) {
+      const caseDef = await readContractCase(casePath);
+      const run = await runResumeContractCase(caseDef);
+      if (caseDef.mode === "legacy") {
+        expect(run.legacy?.status).toBe("ok");
+        expect(run.v11).toBeUndefined();
+        continue;
+      }
+      if (caseDef.mode === "v11") {
+        expect(run.v11?.status).toBe("ok");
+        expect(run.legacy).toBeUndefined();
+        continue;
+      }
+
+      expect(run.legacy).toBeDefined();
+      expect(run.v11).toBeDefined();
+      expect(run.legacy).toEqual(run.v11);
+    }
   });
-  await writeStateSnapshot(bubble.paths.statePath, transitioned, {
-    expectedFingerprint: loaded.fingerprint,
-    expectedState: "RUNNING"
+
+  it("includes resume seed entries in corpus manifest", async () => {
+    const manifestPath = resolve(
+      process.cwd(),
+      "tests/contracts/v11/corpus/manifest.json"
+    );
+    const manifestRaw = await readFile(manifestPath, "utf8");
+    const resumeSources = parseResumeSourcesFromManifest(manifestRaw);
+
+    expect(resumeSources).toEqual(resumeExpectedSourcesSorted);
   });
-  return bubble;
-}
 
-describe("v11 resume contract parity", () => {
-  it("keeps core facade and v11 resume output parity from WAITING_HUMAN", async () => {
-    const legacy = await withTempRepo(async (repoPath) => {
-      const bubble = await seedWaitingHumanState({
-        repoPath,
-        bubbleId: "b_resume_contract_legacy"
-      });
-      return resumeBubble({
-        bubbleId: bubble.bubbleId,
-        cwd: repoPath,
-        now: new Date("2026-03-20T10:05:00.000Z")
-      });
-    });
+  it("builds corpus output manifest with resume seed entries", async () => {
+    await execFileAsync("pnpm", [
+      "exec",
+      "tsx",
+      "./tests/contracts/v11/corpus/build-corpus.ts"
+    ]);
 
-    const v11 = await withTempRepo(async (repoPath) => {
-      const bubble = await seedWaitingHumanState({
-        repoPath,
-        bubbleId: "b_resume_contract_v11"
-      });
-      return resumeBubbleV11({
-        bubbleId: bubble.bubbleId,
-        cwd: repoPath,
-        now: new Date("2026-03-20T10:05:00.000Z")
-      });
-    });
+    const outputManifestPath = resolve(
+      process.cwd(),
+      ".pairflow/evidence/contracts-v11-corpus-manifest.json"
+    );
+    const outputRaw = await readFile(outputManifestPath, "utf8");
+    const resumeSources = parseResumeSourcesFromManifest(outputRaw);
 
-    const normalize = (result: Awaited<typeof legacy>) => ({
-      envelopeType: result.envelope.type,
-      hasMessage: typeof result.envelope.payload.message === "string",
-      state: result.state.state,
-      round: result.state.round,
-      activeRole: result.state.active_role
-    });
-
-    expect(normalize(legacy)).toEqual(normalize(v11));
-    expect(normalize(legacy)).toMatchObject({
-      envelopeType: "HUMAN_REPLY",
-      hasMessage: true,
-      state: "RUNNING",
-      round: 1,
-      activeRole: "implementer"
-    });
+    expect(resumeSources).toEqual(resumeExpectedSourcesSorted);
   });
 });

@@ -1,0 +1,19 @@
+{
+  "id": "resume-basic-v11",
+  "command": "resume",
+  "mode": "v11",
+  "description": "Seed resume v11 contract case for WAITING_HUMAN to RUNNING baseline.",
+  "input": {},
+  "expected": {
+    "status": "ok",
+    "reasonCode": "RESUMED",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "resume"
+  ]
+}
