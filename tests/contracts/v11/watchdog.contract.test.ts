@@ -12,7 +12,10 @@ const execFileAsync = promisify(execFile);
 const watchdogCaseSources = [
   "tests/contracts/v11/cases/watchdog/watchdog-waiting-human.case.json",
   "tests/contracts/v11/cases/watchdog/watchdog-waiting-human-v11.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-waiting-human-parity.case.json"
+  "tests/contracts/v11/cases/watchdog/watchdog-waiting-human-parity.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-final-state.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-final-state-v11.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-final-state-parity.case.json"
 ] as const;
 
 const watchdogExpectedSourcesSorted = [...watchdogCaseSources].sort();
@@ -49,12 +52,18 @@ describe("v11 watchdog contract harness skeleton", () => {
       const caseDef = await readContractCase(casePath);
       const run = await runWatchdogContractCase(caseDef);
       if (caseDef.mode === "legacy") {
-        expect(run.legacy?.status).toBe("ok");
+        expect(run.legacy?.status).toBe(caseDef.expected.status);
+        if (caseDef.expected.reasonCode !== undefined) {
+          expect(run.legacy?.reasonCode).toBe(caseDef.expected.reasonCode);
+        }
         expect(run.v11).toBeUndefined();
         continue;
       }
       if (caseDef.mode === "v11") {
-        expect(run.v11?.status).toBe("ok");
+        expect(run.v11?.status).toBe(caseDef.expected.status);
+        if (caseDef.expected.reasonCode !== undefined) {
+          expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
+        }
         expect(run.legacy).toBeUndefined();
         continue;
       }

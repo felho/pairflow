@@ -3,6 +3,7 @@ export type CommandMigrationState = "legacy" | "parity" | "v11";
 export interface ContractCaseExpected {
   status: string;
   reasonCode?: string;
+  commandReason?: string;
   gateRoute?: string;
   stateSubset?: Record<string, unknown>;
   envelopeType?: string;
@@ -62,6 +63,18 @@ export function assertContractCaseShape(value: unknown): asserts value is Contra
     value.expected.status.length === 0
   ) {
     throw new Error("Contract case expected.status must be a non-empty string.");
+  }
+  if (
+    "commandReason" in value.expected &&
+    value.expected.commandReason !== undefined &&
+    (
+      typeof value.expected.commandReason !== "string" ||
+      value.expected.commandReason.length === 0
+    )
+  ) {
+    throw new Error(
+      "Contract case expected.commandReason must be a non-empty string when provided."
+    );
   }
   if (
     "gateRoute" in value.expected &&

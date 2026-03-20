@@ -1,0 +1,26 @@
+{
+  "id": "watchdog-final-state-v11",
+  "command": "watchdog",
+  "mode": "v11",
+  "description": "Seed watchdog v11 contract case for final-state non-monitored route.",
+  "input": {
+    "fixture": {
+      "scenario": "final_state"
+    }
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "WATCHDOG_EVALUATED",
+    "commandReason": "not_monitored",
+    "stateSubset": {
+      "state": "DONE"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "watchdog",
+    "v11",
+    "guard-path"
+  ]
+}

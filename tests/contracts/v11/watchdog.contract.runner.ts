@@ -1,4 +1,5 @@
 import { mkdtemp, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -28,6 +29,39 @@ export interface WatchdogContractRunResult {
   mode: ContractCase["mode"];
   legacy?: WatchdogContractOutput;
   v11?: WatchdogContractOutput;
+}
+
+type WatchdogContractScenario = "waiting_human" | "final_state";
+
+interface ParsedWatchdogCaseInput {
+  scenario: WatchdogContractScenario;
+}
+
+function buildWatchdogContractBubbleId(caseId: string): string {
+  const suffix = createHash("sha1").update(caseId).digest("hex").slice(0, 12);
+  return `b_contract_${suffix}`;
+}
+
+function parseWatchdogCaseInput(input: ContractCase["input"]): ParsedWatchdogCaseInput {
+  const fixtureRaw = input.fixture;
+  let scenario: WatchdogContractScenario = "waiting_human";
+  if (fixtureRaw !== undefined) {
+    if (typeof fixtureRaw !== "object" || fixtureRaw === null) {
+      throw new Error("watchdog contract input.fixture must be an object when provided.");
+    }
+    const scenarioRaw = (fixtureRaw as Record<string, unknown>).scenario;
+    if (
+      scenarioRaw !== undefined &&
+      scenarioRaw !== "waiting_human" &&
+      scenarioRaw !== "final_state"
+    ) {
+      throw new Error(
+        "watchdog contract input.fixture.scenario must be one of: waiting_human, final_state."
+      );
+    }
+    scenario = (scenarioRaw as WatchdogContractScenario | undefined) ?? "waiting_human";
+  }
+  return { scenario };
 }
 
 function normalizeWatchdogResult(
@@ -63,6 +97,14 @@ function assertContractExpectedSubset(input: {
       `${input.label}: reasonCode mismatch (expected=${input.expected.reasonCode}, actual=${input.output.reasonCode})`
     );
   }
+  if (
+    input.expected.commandReason !== undefined &&
+    input.output.reason !== input.expected.commandReason
+  ) {
+    throw new Error(
+      `${input.label}: commandReason mismatch (expected=${input.expected.commandReason}, actual=${input.output.reason})`
+    );
+  }
   const expectedState = input.expected.stateSubset?.state;
   if (
     typeof expectedState === "string" &&
@@ -89,12 +131,32 @@ function assertParityEquivalent(input: {
 async function seedWaitingHumanState(input: {
   repoPath: string;
   bubbleId: string;
+  scenario: WatchdogContractScenario;
 }) {
   const bubble = await setupRunningBubbleFixture({
     repoPath: input.repoPath,
     bubbleId: input.bubbleId,
     task: "Watchdog contract parity fixture"
   });
+  if (input.scenario === "final_state") {
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "DONE",
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        last_command_at: "2026-03-20T12:40:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+    return bubble;
+  }
   const loaded = await readStateSnapshot(bubble.paths.statePath);
   const transitioned = applyStateTransition(loaded.state, {
     to: "WAITING_HUMAN",
@@ -113,10 +175,12 @@ async function executeWatchdogCase(input: {
 }): Promise<WatchdogContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-watchdog-contract-"));
   try {
+    const parsedInput = parseWatchdogCaseInput(input.caseDef.input);
     await initGitRepository(repoPath);
     const bubble = await seedWaitingHumanState({
       repoPath,
-      bubbleId: `b_contract_${input.caseDef.id}`
+      bubbleId: buildWatchdogContractBubbleId(input.caseDef.id),
+      scenario: parsedInput.scenario
     });
 
     const result = await input.executor({
