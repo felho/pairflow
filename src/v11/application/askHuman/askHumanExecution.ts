@@ -1,9 +1,12 @@
 import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
 import {
-  buildAskHumanEnvelope,
   buildAskHumanLockPath,
   buildAskHumanStateWriteFailureMessage
 } from "../../shared/askHuman/askHumanExecutionArtifacts.js";
+import {
+  buildAskHumanAppendEnvelopeInput,
+  buildAskHumanWriteSnapshotCallInput
+} from "../../shared/askHuman/askHumanExecutionCallInputBuilders.js";
 import type {
   ExecuteAskHumanExecutionDependencies,
   ExecuteAskHumanExecutionInput,
@@ -27,13 +30,9 @@ export async function executeAskHumanExecution(
 
   const lockPath = buildAskHumanLockPath(input);
 
-  const appended = await resolvedDependencies.appendEnvelope({
-    transcriptPath: input.routing.resolved.bubblePaths.transcriptPath,
-    mirrorPaths: [input.routing.resolved.bubblePaths.inboxPath],
-    lockPath,
-    now: input.now,
-    envelope: buildAskHumanEnvelope(input)
-  });
+  const appended = await resolvedDependencies.appendEnvelope(
+    buildAskHumanAppendEnvelopeInput(input, lockPath)
+  );
 
   const nextState = resolvedDependencies.applyTransition(input.routing.state, {
     to: "WAITING_HUMAN",
@@ -42,13 +41,14 @@ export async function executeAskHumanExecution(
 
   let written: LoadedStateSnapshot;
   try {
+    const writeSnapshotInput = buildAskHumanWriteSnapshotCallInput(
+      input,
+      nextState
+    );
     written = await resolvedDependencies.writeSnapshot(
-      input.routing.resolved.bubblePaths.statePath,
-      nextState,
-      {
-        expectedFingerprint: input.routing.loadedState.fingerprint,
-        expectedState: "RUNNING"
-      }
+      writeSnapshotInput.statePath,
+      writeSnapshotInput.state,
+      writeSnapshotInput.options
     );
   } catch (error) {
     // reason_code=ASK_HUMAN_STATE_PERSIST_FAILED context=transcript_appended_state_write_failed
