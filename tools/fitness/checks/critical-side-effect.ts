@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { relative } from "node:path";
 
+import ts from "typescript";
+
 import { normalizePathToPosix, resolveFilesForScopePatterns } from "../scope.js";
 import type { FitnessPolicyCheck, FitnessReportCheck } from "../types.js";
 
@@ -20,9 +22,6 @@ const criticalCommands: readonly CommandInvariantResult["command"][] = [
   "reply",
   "askHuman"
 ] as const;
-
-const deliveryAdapterPattern = /\bemitTmuxDeliveryNotification\b/u;
-const deliveryResultPattern = /\bdelivery\s*:/u;
 
 function commandFolderPatterns(
   command: CommandInvariantResult["command"]
@@ -65,23 +64,71 @@ function collectMatchEvidence(input: {
     };
   }
 
-  const adapter: string[] = [];
-  const result: string[] = [];
-  const lines = input.fileContent.split(/\r?\n/u);
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index] ?? "";
-    const trimmed = line.trim();
-    if (trimmed.startsWith("//")) {
-      continue;
+  const sourceFile = ts.createSourceFile(
+    input.relativePath,
+    input.fileContent,
+    ts.ScriptTarget.Latest,
+    true
+  );
+  const adapter = new Set<string>();
+  const result = new Set<string>();
+
+  const lineOf = (node: ts.Node): number =>
+    sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
+
+  const propertyNameText = (name: ts.PropertyName): string | undefined => {
+    if (ts.isIdentifier(name) || ts.isStringLiteral(name)) {
+      return name.text;
     }
-    if (deliveryAdapterPattern.test(line)) {
-      adapter.push(`${input.relativePath}:${String(index + 1)} adapter`);
+    if (ts.isNumericLiteral(name)) {
+      return name.text;
     }
-    if (deliveryResultPattern.test(line)) {
-      result.push(`${input.relativePath}:${String(index + 1)} result`);
+    return undefined;
+  };
+
+  const isDeliveryAdapterCall = (node: ts.CallExpression): boolean => {
+    const expression = node.expression;
+    if (ts.isIdentifier(expression)) {
+      return expression.text === "emitTmuxDeliveryNotification";
     }
-  }
-  return { adapter, result };
+    if (ts.isPropertyAccessExpression(expression)) {
+      return expression.name.text === "emitTmuxDeliveryNotification";
+    }
+    return false;
+  };
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node) && isDeliveryAdapterCall(node)) {
+      adapter.add(`${input.relativePath}:${String(lineOf(node))} adapter`);
+    }
+
+    if (ts.isObjectLiteralExpression(node)) {
+      for (const property of node.properties) {
+        if (
+          ts.isPropertyAssignment(property)
+          && propertyNameText(property.name) === "delivery"
+        ) {
+          result.add(`${input.relativePath}:${String(lineOf(property))} result`);
+          continue;
+        }
+        if (
+          ts.isShorthandPropertyAssignment(property)
+          && property.name.text === "delivery"
+        ) {
+          result.add(`${input.relativePath}:${String(lineOf(property))} result`);
+        }
+      }
+    }
+
+    node.forEachChild(visit);
+  };
+
+  visit(sourceFile);
+
+  return {
+    adapter: [...adapter].sort((left, right) => left.localeCompare(right)),
+    result: [...result].sort((left, right) => left.localeCompare(right))
+  };
 }
 
 function summarizeInvariant(result: CommandInvariantResult): string {
