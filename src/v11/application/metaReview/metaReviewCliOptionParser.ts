@@ -1,17 +1,16 @@
 import { parseArgs } from "node:util";
 
-import { MetaReviewErrorV11 as MetaReviewError, type MetaReviewDepthV11 as MetaReviewDepth } from "./emitMetaReviewV11.js";
 import {
-  parseDepth as parseDepthValue,
-  parseOptionalReworkTarget as parseOptionalReworkTargetValue,
-  parseRequiredSubmitText as parseRequiredSubmitTextValue,
-  parseSubmitRecommendation as parseSubmitRecommendationValue,
-  parseSubmitReportJson as parseSubmitReportJsonValue,
-  parseSubmitRound as parseSubmitRoundValue,
-  readBooleanOption as readBooleanOptionValue,
-  readStringOption as readStringOptionValue
-} from "./metaReviewCliValueParsers.js";
-import type { MetaReviewSubmissionPayload } from "../../../types/protocol.js";
+  invalidMetaReviewCliOptionsWithContext as invalidMetaReviewCliOptions,
+  parseDepth,
+  parseMetaReviewCliOptionValues,
+  parseOptionalReworkTarget,
+  parseRequiredSubmitText,
+  parseSubmitRecommendation,
+  parseSubmitReportJson,
+  parseSubmitRound,
+  type ParsedMetaReviewOptionValues
+} from "./metaReviewCliOptionValueReader.js";
 import type {
   BubbleMetaReviewCommandOptions,
   BubbleMetaReviewLastReportCommandOptions,
@@ -22,143 +21,13 @@ import type {
 
 type MetaReviewSubcommand = "run" | "status" | "last-report" | "recover" | "submit";
 
-interface ParsedMetaReviewOptionValues {
+type BubbleMetaReviewBaseOptions = {
   id: string;
-  repo: string | undefined;
-  depth: string | undefined;
-  round: string | undefined;
-  recommendation: string | undefined;
-  summary: string | undefined;
-  reportMarkdown: string | undefined;
-  reworkTargetMessage: string | undefined;
-  reportJson: string | undefined;
+  repo?: string;
   json: boolean;
   verbose: boolean;
-}
-
-function invalidMetaReviewCliOptions(message: string): never {
-  throw new MetaReviewError(
-    "META_REVIEW_SCHEMA_INVALID",
-    `${message} context: command_name=meta-review.`
-  );
-}
-
-function parseDepth(value: string | undefined): MetaReviewDepth {
-  return parseDepthValue(value, invalidMetaReviewCliOptions);
-}
-
-function parseSubmitRound(value: string | undefined): number {
-  return parseSubmitRoundValue(value, invalidMetaReviewCliOptions);
-}
-
-function parseSubmitRecommendation(
-  value: string | undefined
-): MetaReviewSubmissionPayload["recommendation"] {
-  return parseSubmitRecommendationValue(
-    value,
-    invalidMetaReviewCliOptions
-  );
-}
-
-function parseRequiredSubmitText(
-  value: string | undefined,
-  optionName: "--summary" | "--report-markdown"
-): string {
-  return parseRequiredSubmitTextValue(
-    value,
-    optionName,
-    invalidMetaReviewCliOptions
-  );
-}
-
-function parseOptionalReworkTarget(value: string | undefined): string | null {
-  return parseOptionalReworkTargetValue(
-    value,
-    invalidMetaReviewCliOptions
-  );
-}
-
-function parseSubmitReportJson(
-  value: string | undefined
-): Record<string, unknown> | undefined {
-  return parseSubmitReportJsonValue(
-    value,
-    invalidMetaReviewCliOptions
-  );
-}
-
-function readStringOption(
-  values: Record<string, unknown>,
-  key:
-    | "id"
-    | "repo"
-    | "depth"
-    | "round"
-    | "recommendation"
-    | "summary"
-    | "report-markdown"
-    | "rework-target-message"
-    | "report-json",
-  errorMessage: string
-): string | undefined {
-  return readStringOptionValue(
-    values,
-    key,
-    errorMessage,
-    invalidMetaReviewCliOptions
-  );
-}
-
-function readBooleanOption(
-  values: Record<string, unknown>,
-  key: "json" | "verbose",
-  errorMessage: string
-): boolean | undefined {
-  return readBooleanOptionValue(
-    values,
-    key,
-    errorMessage,
-    invalidMetaReviewCliOptions
-  );
-}
-
-function parseMetaReviewCliOptionValues(
-  values: Record<string, unknown>
-): ParsedMetaReviewOptionValues {
-  const id = readStringOption(values, "id", "Invalid --id value.");
-  if (id === undefined) {
-    return invalidMetaReviewCliOptions("Missing required option: --id");
-  }
-  if (id.trim().length === 0) {
-    return invalidMetaReviewCliOptions("Invalid --id value. Must be non-empty.");
-  }
-
-  return {
-    id,
-    repo: readStringOption(values, "repo", "Invalid --repo value."),
-    depth: readStringOption(values, "depth", "Invalid --depth value."),
-    round: readStringOption(values, "round", "Invalid --round value."),
-    recommendation: readStringOption(
-      values,
-      "recommendation",
-      "Invalid --recommendation value."
-    ),
-    summary: readStringOption(values, "summary", "Invalid --summary value."),
-    reportMarkdown: readStringOption(
-      values,
-      "report-markdown",
-      "Invalid --report-markdown value."
-    ),
-    reworkTargetMessage: readStringOption(
-      values,
-      "rework-target-message",
-      "Invalid --rework-target-message value."
-    ),
-    reportJson: readStringOption(values, "report-json", "Invalid --report-json value."),
-    json: readBooleanOption(values, "json", "Invalid --json value.") ?? false,
-    verbose: readBooleanOption(values, "verbose", "Invalid --verbose value.") ?? false
-  };
-}
+  help: false;
+};
 
 function parseMetaReviewSubcommand(value: string | undefined): MetaReviewSubcommand | null {
   if (value === undefined) {
@@ -232,13 +101,7 @@ function parseMetaReviewCliArgs(args: string[]): ReturnType<typeof parseArgs> {
 
 function createMetaReviewBaseOptions(
   values: ParsedMetaReviewOptionValues
-): {
-  id: string;
-  repo?: string;
-  json: boolean;
-  verbose: boolean;
-  help: false;
-} {
+): BubbleMetaReviewBaseOptions {
   return {
     id: values.id,
     ...(values.repo !== undefined ? { repo: values.repo } : {}),
@@ -278,13 +141,7 @@ function assertRunOnlyDepthAllowed(depth: string | undefined): void {
 }
 
 function buildMetaReviewSubmitOptions(
-  base: {
-    id: string;
-    repo?: string;
-    json: boolean;
-    verbose: boolean;
-    help: false;
-  },
+  base: BubbleMetaReviewBaseOptions,
   values: ParsedMetaReviewOptionValues
 ): BubbleMetaReviewSubmitCommandOptions {
   if (values.depth !== undefined) {
@@ -309,13 +166,7 @@ function buildMetaReviewSubmitOptions(
 }
 
 function buildMetaReviewReadonlyCommandOptions(
-  base: {
-    id: string;
-    repo?: string;
-    json: boolean;
-    verbose: boolean;
-    help: false;
-  },
+  base: BubbleMetaReviewBaseOptions,
   subcommand: Exclude<MetaReviewSubcommand, "run" | "submit">
 ): BubbleMetaReviewStatusCommandOptions
   | BubbleMetaReviewLastReportCommandOptions
