@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-03-19T00:00:00.000Z",
+  "updated_at": "2026-03-20T00:00:00.000Z",
   "defaults": {
     "mode": "report-only",
     "current_milestone": "M0"
@@ -79,6 +79,16 @@
           "to": "src/v11/application/migration-bridge.ts"
         }
       ]
+    },
+    {
+      "id": "critical_side_effect",
+      "metric": "critical command side-effect invariant coverage",
+      "scope": [
+        "src/v11/application/**"
+      ],
+      "mode": "report-only",
+      "owner": "architecture/runtime",
+      "exceptions": []
     }
   ]
 }

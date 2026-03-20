@@ -1,5 +1,6 @@
 import { buildBoundaryCheckReport } from "./boundary.js";
 import { buildComplexityCheckReport } from "./complexity.js";
+import { buildCriticalSideEffectCheckReport } from "./critical-side-effect.js";
 import { buildDependencyCheckReport } from "./dependency.js";
 import { buildErrorCheckReport } from "./error.js";
 import { buildMutationCheckReport } from "./mutation.js";
@@ -60,6 +61,13 @@ export async function buildCheckReport({
       repoRoot,
       fallbackMode,
       currentMilestone
+    });
+  }
+  if (check.id === "critical_side_effect") {
+    return buildCriticalSideEffectCheckReport({
+      check,
+      repoRoot,
+      fallbackMode
     });
   }
   return createNotImplementedCheckReport(check, fallbackMode);
