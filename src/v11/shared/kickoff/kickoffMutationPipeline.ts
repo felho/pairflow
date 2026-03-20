@@ -6,14 +6,12 @@ import type { executeKickoffMutation } from "./kickoffMutationExecution.js";
 import type { executeKickoffMutationRollback } from "./kickoffMutationRollback.js";
 import {
   buildKickoffMutationExecutionInput,
-  buildKickoffMutationRollbackInput
 } from "./kickoffMutationPipelineInputBuilders.js";
-import { throwKickoffMutationRollbackFailure } from "./kickoffMutationRollbackFailure.js";
 import {
-  buildKickoffMutationPipelineRolledBackResult,
   buildKickoffMutationPipelineSuccessResult,
   resolveKickoffMutationPipelineDependencies
 } from "./kickoffMutationPipelineFlowHelpers.js";
+import { handleKickoffMutationFailure } from "./kickoffMutationFailureHandling.js";
 
 export interface ExecuteKickoffMutationPipelineInput {
   persistenceFailureCode: string;
@@ -67,42 +65,6 @@ export type ExecuteKickoffMutationPipelineResult =
 export interface ExecuteKickoffMutationPipelineDependencies {
   executeMutation?: typeof executeKickoffMutation;
   executeRollback?: typeof executeKickoffMutationRollback;
-}
-
-async function executeKickoffRollback(input: {
-  pipelineInput: ExecuteKickoffMutationPipelineInput;
-  transcriptBackup: string | null;
-  executeRollback: typeof executeKickoffMutationRollback;
-}): Promise<string[]> {
-  return input.executeRollback(
-    buildKickoffMutationRollbackInput({
-      pipelineInput: input.pipelineInput,
-      transcriptBackup: input.transcriptBackup
-    })
-  );
-}
-
-async function handleKickoffMutationFailure(input: {
-  pipelineInput: ExecuteKickoffMutationPipelineInput;
-  mutationError: unknown;
-  transcriptBackup: string | null;
-  executeRollback: typeof executeKickoffMutationRollback;
-}): Promise<ExecuteKickoffMutationPipelineResult> {
-  const rollbackErrors = await executeKickoffRollback({
-    pipelineInput: input.pipelineInput,
-    transcriptBackup: input.transcriptBackup,
-    executeRollback: input.executeRollback
-  });
-
-  if (rollbackErrors.length > 0) {
-    throwKickoffMutationRollbackFailure({
-      persistenceFailureCode: input.pipelineInput.persistenceFailureCode,
-      mutationError: input.mutationError,
-      rollbackErrors
-    });
-  }
-
-  return buildKickoffMutationPipelineRolledBackResult();
 }
 
 async function executeKickoffMutationWithRollbackGuard(input: {
