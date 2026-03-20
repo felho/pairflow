@@ -23,7 +23,8 @@ const facadeParityTestsByCommand: Record<string, readonly string[]> = {
   resume: ["tests/v11/application/resume/resumeFacadeParity.test.ts"],
   watchdog: ["tests/v11/application/watchdog/watchdogFacadeParity.test.ts"],
   commit: ["tests/v11/application/commit/commitFacadeParity.test.ts"],
-  merge: ["tests/v11/application/merge/mergeFacadeParity.test.ts"]
+  merge: ["tests/v11/application/merge/mergeFacadeParity.test.ts"],
+  status: ["tests/v11/application/status/statusFacadeParity.test.ts"]
 };
 
 describe("v11 facade parity coverage", () => {
