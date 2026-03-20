@@ -1,20 +1,28 @@
 import { applyStateTransition } from "../../../core/state/machine.js";
 import {
-  DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
-  type BubbleMetaReviewSnapshotState,
   type BubbleStateSnapshot,
   type MetaReviewRecommendation,
   type MetaReviewRunStatus
 } from "../../../types/bubble.js";
 import type { MetaReviewRunResult } from "../../../core/bubble/metaReview.js";
-import { type FindingsParityMetadata } from "../../../types/protocol.js";
 import {
   MetaReviewGateError,
   type MetaReviewGateRoute
 } from "./metaReviewGateTypes.js";
-
-export const metaReviewFallbackReportRef = "artifacts/meta-review-last.md";
-export const metaReviewerAgent = "codex";
+import {
+  buildHydratedMetaReviewSnapshotFromRunResult,
+  metaReviewFallbackReportRef,
+  normalizeMetaReviewSnapshot
+} from "./metaReviewGateSnapshotHelpers.js";
+export {
+  buildHumanGateSummary,
+  buildHydratedMetaReviewSnapshotFromRunResult,
+  metaReviewFallbackReportRef,
+  metaReviewerAgent,
+  normalizeMetaReviewSnapshot,
+  resolveCanonicalMetaReviewRunId,
+  resolveFindingsParityMetadataForEnvelope
+} from "./metaReviewGateSnapshotHelpers.js";
 const metaReviewGateAutoReworkRetryRoundInvariantReasonCode =
   "META_REVIEW_GATE_AUTO_REWORK_RETRY_ROUND_INVARIANT";
 const metaReviewGateAutoReworkRetryOwnershipInvariantReasonCode =
@@ -23,82 +31,6 @@ const metaReviewGateAutoReworkRetryRoundRoleHistoryInvariantReasonCode =
   "META_REVIEW_GATE_AUTO_REWORK_RETRY_ROUND_ROLE_HISTORY_INVARIANT";
 export const metaReviewGateAutoReworkRetryRunIdentityInvariantReasonCode =
   "META_REVIEW_GATE_AUTO_REWORK_RETRY_RUN_IDENTITY_INVARIANT";
-
-export function normalizeMetaReviewSnapshot(
-  snapshot: BubbleMetaReviewSnapshotState | undefined
-): BubbleMetaReviewSnapshotState {
-  if (snapshot !== undefined) {
-    return snapshot;
-  }
-
-  return {
-    last_autonomous_run_id: null,
-    last_autonomous_status: null,
-    last_autonomous_recommendation: null,
-    last_autonomous_summary: null,
-    last_autonomous_report_ref: null,
-    last_autonomous_rework_target_message: null,
-    last_autonomous_updated_at: null,
-    auto_rework_count: 0,
-    auto_rework_limit: DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
-    sticky_human_gate: false
-  };
-}
-
-export function buildHumanGateSummary(input: {
-  convergenceSummary: string;
-  metaReviewRun?: MetaReviewRunResult;
-  fallbackReason?: string;
-}): string {
-  if (input.fallbackReason !== undefined) {
-    return input.fallbackReason;
-  }
-  const runSummary = input.metaReviewRun?.summary;
-  if (typeof runSummary === "string" && runSummary.trim().length > 0) {
-    return runSummary;
-  }
-  return input.convergenceSummary;
-}
-
-export function resolveFindingsParityMetadataForEnvelope(
-  metadata: FindingsParityMetadata | null | undefined
-): Record<string, unknown> {
-  if (metadata === null || metadata === undefined) {
-    return {};
-  }
-  return {
-    findings_claimed_open_total: metadata.findings_claimed_open_total,
-    findings_artifact_open_total: metadata.findings_artifact_open_total,
-    findings_artifact_status: metadata.findings_artifact_status,
-    findings_digest_sha256: metadata.findings_digest_sha256,
-    meta_review_run_id: metadata.meta_review_run_id,
-    findings_parity_status: metadata.findings_parity_status
-  };
-}
-
-export function buildHydratedMetaReviewSnapshotFromRunResult(input: {
-  metaReview: BubbleMetaReviewSnapshotState;
-  runResult: MetaReviewRunResult;
-}): BubbleMetaReviewSnapshotState {
-  return {
-    ...input.metaReview,
-    last_autonomous_run_id: input.runResult.run_id ?? null,
-    last_autonomous_status: input.runResult.status,
-    last_autonomous_recommendation: input.runResult.recommendation,
-    last_autonomous_summary: input.runResult.summary,
-    last_autonomous_report_ref: input.runResult.report_ref,
-    last_autonomous_rework_target_message:
-      input.runResult.recommendation === "rework"
-        ? (
-            typeof input.runResult.rework_target_message === "string" &&
-            input.runResult.rework_target_message.trim().length > 0
-              ? input.runResult.rework_target_message
-              : "Meta-review gate fallback rework target unavailable."
-          )
-        : null,
-    last_autonomous_updated_at: input.runResult.updated_at
-  };
-}
 
 export function transitionToGateState(input: {
   current: BubbleStateSnapshot;
@@ -250,18 +182,6 @@ export function resolveAutoReworkRetryInvariantViolation(input: {
     latestRoundRole.reviewer !== expectedRoundRole.reviewer
   ) {
     return metaReviewGateAutoReworkRetryRoundRoleHistoryInvariantReasonCode;
-  }
-  return null;
-}
-
-export function resolveCanonicalMetaReviewRunId(
-  snapshot: BubbleMetaReviewSnapshotState
-): string | null {
-  if (
-    typeof snapshot.last_autonomous_run_id === "string" &&
-    snapshot.last_autonomous_run_id.trim().length > 0
-  ) {
-    return snapshot.last_autonomous_run_id.trim();
   }
   return null;
 }
