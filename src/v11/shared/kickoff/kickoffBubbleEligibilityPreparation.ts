@@ -1,6 +1,5 @@
 import type { ResolvedKickoffDependencies } from "./kickoffDependencyResolution.js";
 import { prepareKickoffEligibility } from "./kickoffEligibilityPreparation.js";
-import { buildKickoffEligibilityFailureResult } from "./kickoffValidationFailureBuilders.js";
 import type {
   KickoffBubbleResultShape,
   KickoffIdeationMarkers
@@ -11,24 +10,15 @@ import {
   type KickoffEligibilityResolvedBubble,
   type KickoffValidationBubbleInput
 } from "./kickoffEligibilityStateLoading.js";
+import {
+  buildKickoffEligibilityOutcome,
+  type PrepareKickoffEligibilityOrFailureResult
+} from "./kickoffEligibilityOutcomeBuilder.js";
 export type {
   KickoffEligibilityLoadedState,
   KickoffEligibilityResolvedBubble,
   KickoffValidationBubbleInput
 } from "./kickoffEligibilityStateLoading.js";
-
-type PrepareKickoffEligibilityOrFailureResult =
-  | {
-      kind: "failure";
-      result: {
-        kind: "failure";
-        result: KickoffBubbleResultShape;
-      };
-    }
-  | {
-      kind: "eligible";
-      markersBefore: KickoffIdeationMarkers;
-    };
 
 function prepareKickoffEligibilityOrFailure(input: {
   resolvedBubbleId: string;
@@ -39,23 +29,12 @@ function prepareKickoffEligibilityOrFailure(input: {
     bubbleConfig: input.bubbleConfig,
     state: input.state
   });
-  const { markersBefore, eligibilityFailureReason } = preparedEligibility;
-  if (eligibilityFailureReason !== null) {
-    return {
-      kind: "failure",
-      result: buildKickoffEligibilityFailureResult({
-        resolvedBubbleId: input.resolvedBubbleId,
-        eligibilityFailureReason,
-        state: input.state,
-        markersBefore
-      })
-    };
-  }
-
-  return {
-    kind: "eligible",
-    markersBefore
-  };
+  return buildKickoffEligibilityOutcome({
+    resolvedBubbleId: input.resolvedBubbleId,
+    state: input.state,
+    markersBefore: preparedEligibility.markersBefore,
+    eligibilityFailureReason: preparedEligibility.eligibilityFailureReason
+  });
 }
 
 export type PrepareKickoffBubbleEligibilityOrFailureResult =
