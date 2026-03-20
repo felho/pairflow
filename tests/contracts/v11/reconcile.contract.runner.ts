@@ -31,6 +31,7 @@ export interface ReconcileContractRunResult {
 
 interface ParsedReconcileCaseInput {
   dryRun: boolean;
+  scenario: "default" | "mutate_no_stale";
 }
 
 function buildReconcileContractBubbleId(caseId: string): string {
@@ -45,8 +46,27 @@ function parseReconcileCaseInput(
   if (dryRunRaw !== undefined && typeof dryRunRaw !== "boolean") {
     throw new Error("reconcile contract input.dryRun must be a boolean.");
   }
+  const fixtureRaw = input.fixture;
+  let scenario: ParsedReconcileCaseInput["scenario"] = "default";
+  if (fixtureRaw !== undefined) {
+    if (typeof fixtureRaw !== "object" || fixtureRaw === null) {
+      throw new Error("reconcile contract input.fixture must be an object when provided.");
+    }
+    const scenarioRaw = (fixtureRaw as Record<string, unknown>).scenario;
+    if (
+      scenarioRaw !== undefined &&
+      scenarioRaw !== "default" &&
+      scenarioRaw !== "mutate_no_stale"
+    ) {
+      throw new Error(
+        "reconcile contract input.fixture.scenario must be one of: default, mutate_no_stale."
+      );
+    }
+    scenario = (scenarioRaw as ParsedReconcileCaseInput["scenario"] | undefined) ?? "default";
+  }
   return {
-    dryRun: dryRunRaw ?? true
+    dryRun: dryRunRaw ?? true,
+    scenario
   };
 }
 
@@ -71,6 +91,24 @@ function assertReconcileMutationScenario(input: {
   output: ReconcileContractOutput;
 }): void {
   if (input.parsedInput.dryRun) {
+    return;
+  }
+  if (input.parsedInput.scenario === "mutate_no_stale") {
+    if (input.output.staleCandidates !== 0) {
+      throw new Error(
+        `reconcile contract case=${input.caseDef.id}: expected staleCandidates=0 for mutate_no_stale scenario (actual=${input.output.staleCandidates}).`
+      );
+    }
+    if (input.output.sessionsAfter !== input.output.sessionsBefore) {
+      throw new Error(
+        `reconcile contract case=${input.caseDef.id}: expected no session removal for mutate_no_stale scenario (before=${input.output.sessionsBefore}, after=${input.output.sessionsAfter}).`
+      );
+    }
+    if (input.output.actionRemovedFlags.some((flag) => flag)) {
+      throw new Error(
+        `reconcile contract case=${input.caseDef.id}: expected no removed flags for mutate_no_stale scenario.`
+      );
+    }
     return;
   }
   const removedAny = input.output.actionRemovedFlags.some((flag) => flag);
@@ -118,30 +156,36 @@ function assertParityEquivalent(input: {
   }
 }
 
-async function seedRuntimeSessionsFixture(repoPath: string, bubbleId: string) {
+async function seedRuntimeSessionsFixture(input: {
+  repoPath: string;
+  bubbleId: string;
+  includeStaleSession: boolean;
+}) {
   const bubble = await setupRunningBubbleFixture({
-    repoPath,
-    bubbleId,
+    repoPath: input.repoPath,
+    bubbleId: input.bubbleId,
     task: "Reconcile contract parity fixture"
   });
 
   await upsertRuntimeSession({
     sessionsPath: bubble.paths.sessionsPath,
     bubbleId: bubble.bubbleId,
-    repoPath,
+    repoPath: input.repoPath,
     worktreePath: bubble.paths.worktreePath,
     tmuxSessionName: `pf-${bubble.bubbleId}`,
     now: new Date("2026-03-20T10:45:00.000Z")
   });
 
-  await upsertRuntimeSession({
-    sessionsPath: bubble.paths.sessionsPath,
-    bubbleId: "b_reconcile_contract_missing",
-    repoPath,
-    worktreePath: "/tmp/missing",
-    tmuxSessionName: "pf-b_reconcile_contract_missing",
-    now: new Date("2026-03-20T10:45:01.000Z")
-  });
+  if (input.includeStaleSession) {
+    await upsertRuntimeSession({
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: "b_reconcile_contract_missing",
+      repoPath: input.repoPath,
+      worktreePath: "/tmp/missing",
+      tmuxSessionName: "pf-b_reconcile_contract_missing",
+      now: new Date("2026-03-20T10:45:01.000Z")
+    });
+  }
 }
 
 async function executeReconcileCase(input: {
@@ -151,8 +195,12 @@ async function executeReconcileCase(input: {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-reconcile-contract-"));
   try {
     await initGitRepository(repoPath);
-    await seedRuntimeSessionsFixture(repoPath, buildReconcileContractBubbleId(input.caseDef.id));
     const parsedInput = parseReconcileCaseInput(input.caseDef.input);
+    await seedRuntimeSessionsFixture({
+      repoPath,
+      bubbleId: buildReconcileContractBubbleId(input.caseDef.id),
+      includeStaleSession: parsedInput.scenario !== "mutate_no_stale"
+    });
 
     const result = await input.executor({
       repoPath,

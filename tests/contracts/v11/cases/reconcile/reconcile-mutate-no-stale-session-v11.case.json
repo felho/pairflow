@@ -1,0 +1,23 @@
+{
+  "id": "reconcile-mutate-no-stale-session-v11",
+  "command": "reconcile",
+  "mode": "v11",
+  "description": "Seed reconcile v11 contract case for mutation mode with no stale runtime sessions.",
+  "input": {
+    "dryRun": false,
+    "fixture": {
+      "scenario": "mutate_no_stale"
+    }
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "RECONCILE_COMPLETED"
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "reconcile",
+    "v11",
+    "mutation-path"
+  ]
+}
