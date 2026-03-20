@@ -9,7 +9,10 @@ import {
   hasIdeationMetadataParseWarning
 } from "../../../core/bubble/ideation.js";
 import type { ResolvedBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import { kickoffBubble, type KickoffBubbleResult } from "../../../core/bubble/kickoffBubble.js";
+import {
+  kickoffBubbleV11 as kickoffBubble,
+  type KickoffBubbleV11Result as KickoffBubbleResult
+} from "../../../v11/application/kickoff/emitKickoffV11.js";
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 
 export interface BubbleKickoffCommandOptions {
