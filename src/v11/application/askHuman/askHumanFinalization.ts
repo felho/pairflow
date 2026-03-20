@@ -2,6 +2,7 @@ import {
   buildAskHumanFinalizationResult,
   buildAskHumanLifecycleMetricMetadata
 } from "../../shared/askHuman/askHumanFinalizationArtifacts.js";
+import { buildAskHumanFinalizationDependencyResolutionInput } from "../../shared/askHuman/askHumanFinalizationDependencyResolutionInputBuilder.js";
 import type {
   FinalizeAskHumanFlowDependencies,
   FinalizeAskHumanFlowInput,
@@ -19,13 +20,9 @@ export async function finalizeAskHumanFlow(
   input: FinalizeAskHumanFlowInput,
   dependencies: FinalizeAskHumanFlowDependencies = {}
 ): Promise<RunAskHumanFlowResult> {
-  const resolvedDependencies = resolveAskHumanFinalizationDependencies({
-    emitTmuxDeliveryNotification: dependencies.emitTmuxDeliveryNotification,
-    emitBubbleNotification: dependencies.emitBubbleNotification,
-    resolveDeliveryMessageRef: dependencies.resolveDeliveryMessageRef,
-    emitBubbleLifecycleEventBestEffort:
-      dependencies.emitBubbleLifecycleEventBestEffort
-  });
+  const resolvedDependencies = resolveAskHumanFinalizationDependencies(
+    buildAskHumanFinalizationDependencyResolutionInput(dependencies)
+  );
 
   const messageRef = resolvedDependencies.resolveDeliveryMessageRef({
     bubbleId: input.routing.resolved.bubbleId,
