@@ -1,10 +1,14 @@
 import { join } from "node:path";
 
-import { deliveryTargetRoleMetadataKey, type ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
   EmitApprovalDecisionResult,
   EmitRequestReworkResult
 } from "./approvalCommandContract.js";
+import {
+  buildApprovalDecisionEnvelopePayload,
+  emitApprovalDecisionDeliverySignals,
+  emitApprovalDecisionLifecycleEvent
+} from "./runApprovalDecisionEffects.js";
 import {
   mapImmediateReworkResult,
   mapQueuedReworkResult,
@@ -30,8 +34,7 @@ import {
   canonicalHumanApprovalState,
   isHumanApprovalState,
   legacyHumanApprovalState,
-  metaReviewFailedHumanState,
-  resolveApprovalDecisionMetadata
+  metaReviewFailedHumanState
 } from "../../shared/approval/approvalRoutingEligibility.js";
 
 export interface RunApprovalDecisionFlowInput extends NormalizedApprovalDecisionInput {
@@ -40,118 +43,6 @@ export interface RunApprovalDecisionFlowInput extends NormalizedApprovalDecision
 
 export interface RunRequestReworkFlowInput extends NormalizedRequestReworkInput {
   createError: (message: string) => Error;
-}
-
-async function buildApprovalDecisionEnvelopePayload(input: {
-  decision: RunApprovalDecisionFlowInput["decision"];
-  message: RunApprovalDecisionFlowInput["message"];
-  overrideNonApprove: RunApprovalDecisionFlowInput["overrideNonApprove"];
-  overrideReason: RunApprovalDecisionFlowInput["overrideReason"];
-  state: Parameters<typeof resolveApprovalDecisionMetadata>[0]["state"];
-  transcriptPath: string;
-  round: number;
-  readTranscriptEnvelopes: ResolvedApprovalCommandDependencies["readTranscriptEnvelopes"];
-  createError: RunApprovalDecisionFlowInput["createError"];
-}): Promise<ProtocolEnvelope["payload"]> {
-  const envelopePayload: ProtocolEnvelope["payload"] = {
-    decision: input.decision
-  };
-  const envelopeMetadata = await resolveApprovalDecisionMetadata({
-    decision: input.decision,
-    state: input.state,
-    transcriptPath: input.transcriptPath,
-    round: input.round,
-    overrideNonApprove: input.overrideNonApprove,
-    overrideReason: input.overrideReason,
-    readTranscriptEnvelopes: input.readTranscriptEnvelopes,
-    createError: input.createError
-  });
-
-  if (input.message !== undefined) {
-    envelopePayload.message = input.message;
-  }
-  if (Object.keys(envelopeMetadata).length > 0) {
-    envelopePayload.metadata = envelopeMetadata;
-  }
-
-  return envelopePayload;
-}
-
-function emitApprovalDecisionDeliverySignals(input: {
-  decision: RunApprovalDecisionFlowInput["decision"];
-  resolved: Awaited<ReturnType<ResolvedApprovalCommandDependencies["resolveBubbleById"]>>;
-  appendedEnvelope: ProtocolEnvelope;
-  messageRef: string;
-  dependencies: ResolvedApprovalCommandDependencies;
-}): void {
-  // Optional UX signal; never block protocol/state progression on notification failure.
-  void input.dependencies.emitTmuxDeliveryNotification({
-    bubbleId: input.resolved.bubbleId,
-    bubbleConfig: input.resolved.bubbleConfig,
-    sessionsPath: input.resolved.bubblePaths.sessionsPath,
-    envelope: input.appendedEnvelope,
-    messageRef: input.messageRef
-  });
-
-  if (input.decision !== "revise") {
-    return;
-  }
-
-  // Rework requests must reach the implementer pane explicitly, otherwise
-  // a human-gate -> RUNNING transition can remain invisible in practice.
-  const existingDeliveryMetadata =
-    typeof input.appendedEnvelope.payload.metadata === "object" &&
-    input.appendedEnvelope.payload.metadata !== null
-      ? input.appendedEnvelope.payload.metadata
-      : {};
-  void input.dependencies.emitTmuxDeliveryNotification({
-    bubbleId: input.resolved.bubbleId,
-    bubbleConfig: input.resolved.bubbleConfig,
-    sessionsPath: input.resolved.bubblePaths.sessionsPath,
-    envelope: {
-      ...input.appendedEnvelope,
-      recipient: input.resolved.bubbleConfig.agents.implementer,
-      payload: {
-        ...input.appendedEnvelope.payload,
-        metadata: {
-          ...existingDeliveryMetadata,
-          [deliveryTargetRoleMetadataKey]: "implementer"
-        }
-      }
-    },
-    messageRef: input.messageRef
-  });
-}
-
-async function emitApprovalDecisionLifecycleEvent(input: {
-  decision: RunApprovalDecisionFlowInput["decision"];
-  refsCount: number;
-  message: RunApprovalDecisionFlowInput["message"];
-  resolved: Awaited<ReturnType<ResolvedApprovalCommandDependencies["resolveBubbleById"]>>;
-  bubbleInstanceId: string;
-  round: number;
-  now: Date;
-  dependencies: ResolvedApprovalCommandDependencies;
-}): Promise<void> {
-  await input.dependencies.emitBubbleLifecycleEventBestEffort({
-    repoPath: input.resolved.repoPath,
-    bubbleId: input.resolved.bubbleId,
-    bubbleInstanceId: input.bubbleInstanceId,
-    eventType:
-      input.decision === "approve"
-        ? "bubble_approved"
-        : "bubble_rework_requested",
-    round: input.round,
-    actorRole: "human",
-    metadata: {
-      decision: input.decision,
-      refs_count: input.refsCount,
-      has_message: input.message !== undefined,
-      message_length:
-        input.message === undefined ? 0 : Array.from(input.message).length
-    },
-    now: input.now
-  });
 }
 
 export async function runApprovalDecisionFlow(
