@@ -4,5 +4,9 @@ import type { NormalizeAskHumanCommandErrorInput } from "./askHumanCommandErrorN
 export function throwAsNormalizedAskHumanCommandError(
   input: NormalizeAskHumanCommandErrorInput
 ): never {
-  throw normalizeAskHumanCommandError(input);
+  throw normalizeAskHumanCommandError({
+    error: input.error,
+    isAskHumanCommandError: input.isAskHumanCommandError,
+    createAskHumanCommandError: input.createAskHumanCommandError
+  });
 }

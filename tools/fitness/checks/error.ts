@@ -43,13 +43,21 @@ const contextMarkers: readonly RegExp[] = [
 
 const contextObjectKeys = new Set([
   "context",
+  "contexts",
   "bubble_id",
   "bubbleId",
+  "bubble_state",
+  "bubbleState",
   "command_name",
   "commandName",
   "operation_id",
   "operationId",
   "round",
+  "reason",
+  "reason_code",
+  "reasonCode",
+  "diagnostics",
+  "metadata",
   "base_branch",
   "baseBranch",
   "bubble_branch",
@@ -57,7 +65,17 @@ const contextObjectKeys = new Set([
   "repo_path",
   "repoPath",
   "state_path",
-  "statePath"
+  "statePath",
+  "from_state",
+  "fromState",
+  "to_state",
+  "toState",
+  "rollbackReasonCode",
+  "rollbackOutcome",
+  "rollbackTargetState",
+  "stageReasonCode",
+  "restoreReasonCode",
+  "retryInvariantReasonCode"
 ]);
 
 function hasAnyPattern(text: string, patterns: readonly RegExp[]): boolean {
@@ -126,6 +144,11 @@ function hasStructuredContextArgument(expression: ts.Expression): boolean {
     if (!ts.isObjectLiteralExpression(arg)) {
       continue;
     }
+    let hasContextKey = false;
+    let hasErrorKey = false;
+    let hasClassifier = false;
+    let hasFactory = false;
+
     for (const property of arg.properties) {
       if (
         !ts.isPropertyAssignment(property) &&
@@ -137,9 +160,29 @@ function hasStructuredContextArgument(expression: ts.Expression): boolean {
         continue;
       }
       const key = getPropertyNameText(property.name);
-      if (key !== null && contextObjectKeys.has(key)) {
-        return true;
+      if (key === null) {
+        continue;
       }
+      if (contextObjectKeys.has(key)) {
+        hasContextKey = true;
+      }
+      if (key === "error") {
+        hasErrorKey = true;
+      }
+      if (/^is[A-Z0-9_]/u.test(key)) {
+        hasClassifier = true;
+      }
+      if (/^create[A-Z0-9_]/u.test(key)) {
+        hasFactory = true;
+      }
+    }
+
+    if (hasContextKey) {
+      return true;
+    }
+    // Normalization adapters often delegate contextualization through classifier+factory pairs.
+    if (hasErrorKey && hasClassifier && hasFactory) {
+      return true;
     }
   }
 

@@ -167,4 +167,88 @@ describe("error fitness check", () => {
       )
     ).toBe(true);
   });
+
+  it("passes when structured error throw provides diagnostics context object", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/error-structured-diagnostics.ts",
+      [
+        "class SampleError extends Error {",
+        "  public constructor(reasonCode: string, message: string, diagnostics?: Record<string, unknown>) {",
+        "    super(message);",
+        "    this.name = 'SampleError';",
+        "    void reasonCode;",
+        "    void diagnostics;",
+        "  }",
+        "}",
+        "export function run(): never {",
+        "  throw new SampleError(",
+        "    'ERR_SAMPLE',",
+        "    'failed',",
+        "    { rollbackReasonCode: 'ROLLBACK_APPLIED' }",
+        "  );",
+        "}"
+      ].join("\n")
+    );
+
+    const report = await buildErrorCheckReport({
+      check: {
+        id: "error",
+        metric: "error code and context completeness",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture/observability",
+        scope: ["src/v11/application/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only"
+    });
+
+    expect(report.status).toBe("pass");
+  });
+
+  it("passes when normalization wrapper delegates through error+is/create contract", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/error-normalization-delegation.ts",
+      [
+        "class SampleError extends Error {}",
+        "function normalizeSampleError(input: {",
+        "  error: unknown;",
+        "  isSampleError: (candidate: unknown) => boolean;",
+        "  createSampleError: (message: string) => Error;",
+        "}): unknown {",
+        "  if (input.isSampleError(input.error)) return input.error;",
+        "  if (input.error instanceof Error) return input.createSampleError(input.error.message);",
+        "  return input.error;",
+        "}",
+        "export function run(error: unknown): never {",
+        "  throw normalizeSampleError({",
+        "    error,",
+        "    isSampleError: (candidate) => candidate instanceof SampleError,",
+        "    createSampleError: (message) => new SampleError(message)",
+        "  });",
+        "}"
+      ].join("\n")
+    );
+
+    const report = await buildErrorCheckReport({
+      check: {
+        id: "error",
+        metric: "error code and context completeness",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture/observability",
+        scope: ["src/v11/application/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only"
+    });
+
+    expect(report.status).toBe("pass");
+  });
 });

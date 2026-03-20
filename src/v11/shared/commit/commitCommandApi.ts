@@ -43,6 +43,14 @@ function deriveDonePackageSummary(content: string): string {
   return chars.length > 240 ? `${chars.slice(0, 237).join("")}...` : candidate;
 }
 
+function formatCommitErrorMessage(input: {
+  reasonCode: string;
+  message: string;
+  context: Record<string, unknown>;
+}): string {
+  return `${input.reasonCode}: ${input.message} context=${JSON.stringify(input.context)}`;
+}
+
 function extractPayloadSummary(envelope: ProtocolEnvelope): string | undefined {
   const payload = envelope.payload;
   if (
@@ -144,11 +152,29 @@ async function readOrCreateDonePackage(input: {
   if (!input.autoGenerate) {
     if (existing === undefined) {
       throw new BubbleCommitError(
-        `Missing done package artifact: ${input.donePackagePath}`
+        formatCommitErrorMessage({
+          reasonCode: "COMMIT_DONE_PACKAGE_MISSING",
+          message: `Missing done package artifact: ${input.donePackagePath}`,
+          context: {
+            bubble_id: input.bubbleId,
+            command_name: "commit",
+            done_package_path: input.donePackagePath,
+            auto_generate: input.autoGenerate
+          }
+        })
       );
     }
     throw new BubbleCommitError(
-      `Done package artifact is empty: ${input.donePackagePath}`
+      formatCommitErrorMessage({
+        reasonCode: "COMMIT_DONE_PACKAGE_EMPTY",
+        message: `Done package artifact is empty: ${input.donePackagePath}`,
+        context: {
+          bubble_id: input.bubbleId,
+          command_name: "commit",
+          done_package_path: input.donePackagePath,
+          auto_generate: input.autoGenerate
+        }
+      })
     );
   }
 
@@ -196,19 +222,38 @@ async function collectStagedFiles(worktreePath: string): Promise<string[]> {
 
 function assertStagedFilesWithinWorktree(
   stagedFiles: string[],
-  worktreePath: string
+  worktreePath: string,
+  bubbleId: string
 ): void {
   for (const file of stagedFiles) {
     if (isAbsolute(file)) {
       throw new BubbleCommitError(
-        `Invalid staged file path (absolute path not allowed): ${file}`
+        formatCommitErrorMessage({
+          reasonCode: "COMMIT_STAGED_PATH_ABSOLUTE",
+          message: `Invalid staged file path (absolute path not allowed): ${file}`,
+          context: {
+            bubble_id: bubbleId,
+            command_name: "commit",
+            staged_file: file,
+            worktree_path: worktreePath
+          }
+        })
       );
     }
 
     const absoluteFilePath = resolve(worktreePath, file);
     if (!isPathInside(worktreePath, absoluteFilePath)) {
       throw new BubbleCommitError(
-        `Staged file is outside bubble worktree scope: ${file}`
+        formatCommitErrorMessage({
+          reasonCode: "COMMIT_STAGED_PATH_OUTSIDE_WORKTREE",
+          message: `Staged file is outside bubble worktree scope: ${file}`,
+          context: {
+            bubble_id: bubbleId,
+            command_name: "commit",
+            staged_file: file,
+            worktree_path: worktreePath
+          }
+        })
       );
     }
   }
@@ -265,13 +310,27 @@ export async function commitBubble(
   const stagedFiles = await collectStagedFiles(resolved.bubblePaths.worktreePath);
   if (stagedFiles.length === 0) {
     throw new BubbleCommitError(
-      auto
-        ? "No staged files found in bubble worktree even after --auto stage-all."
-        : "No staged files found in bubble worktree. Stage changes before commit, or use `pairflow bubble commit --auto`."
+      formatCommitErrorMessage({
+        reasonCode: "COMMIT_STAGED_FILES_EMPTY",
+        message:
+          auto
+            ? `No staged files found in bubble worktree even after --auto stage-all (bubble_id=${resolved.bubbleId}; command_name=commit).`
+            : `No staged files found in bubble worktree. Stage changes before commit, or use \`pairflow bubble commit --auto\` (bubble_id=${resolved.bubbleId}; command_name=commit).`,
+        context: {
+          bubble_id: resolved.bubbleId,
+          command_name: "commit",
+          auto_generate: auto,
+          worktree_path: resolved.bubblePaths.worktreePath
+        }
+      })
     );
   }
 
-  assertStagedFilesWithinWorktree(stagedFiles, resolved.bubblePaths.worktreePath);
+  assertStagedFilesWithinWorktree(
+    stagedFiles,
+    resolved.bubblePaths.worktreePath,
+    resolved.bubbleId
+  );
 
   const commitMessage = input.message ?? `bubble(${resolved.bubbleId}): finalize`;
   await runGit(["commit", "-m", commitMessage], {

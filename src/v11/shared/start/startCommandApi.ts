@@ -126,10 +126,18 @@ async function runWorktreeBootstrapCommandDefault(
 
   const stderrSummary = truncateCommandOutput(result.stderr);
   const stdoutSummary = truncateCommandOutput(result.stdout);
+  const errorContext = {
+    bubble_id: input.bubbleId,
+    command_name: "start",
+    worktree_path: input.worktreePath,
+    bootstrap_command: command,
+    exit_code: result.exitCode
+  };
   const details: string[] = [
     `Configured commands.bootstrap failed for bubble ${input.bubbleId} (exit ${result.exitCode}).`,
     `Command: ${command}`,
-    `Worktree: ${input.worktreePath}`
+    `Worktree: ${input.worktreePath}`,
+    `context: ${JSON.stringify(errorContext)}`
   ];
   if (stderrSummary.length > 0) {
     details.push(`stderr: ${stderrSummary}`);
@@ -137,6 +145,9 @@ async function runWorktreeBootstrapCommandDefault(
   if (stdoutSummary.length > 0) {
     details.push(`stdout: ${stdoutSummary}`);
   }
+  details.push(
+    `context bubble_id=${input.bubbleId} command_name=start worktree_path=${input.worktreePath}`
+  );
   throw new StartBubbleError(details.join(" "));
 }
 
