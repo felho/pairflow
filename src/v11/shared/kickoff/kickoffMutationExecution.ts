@@ -1,10 +1,8 @@
-import { join } from "node:path";
-
 import type { AgentName } from "../../../types/bubble.js";
 import type { ProtocolEnvelopeDraft } from "../../../core/protocol/transcriptStore.js";
 import type { ResolvedKickoffTaskInput } from "./kickoffTaskInputResolution.js";
 import { renderKickoffTaskArtifact } from "./kickoffTaskInputResolution.js";
-import { buildKickoffTaskEnvelope } from "./kickoffTaskEnvelope.js";
+import { appendKickoffMutationEnvelopeWithBackup } from "./kickoffMutationTranscriptAppend.js";
 
 export interface ExecuteKickoffMutationInput {
   bubbleId: string;
@@ -47,48 +45,11 @@ async function writeKickoffMutationArtifacts(
   );
 }
 
-function buildKickoffMutationEnvelopeAppendInput(
-  input: ExecuteKickoffMutationInput
-): Parameters<ExecuteKickoffMutationInput["appendEnvelope"]>[0] {
-  return {
-    transcriptPath: input.transcriptPath,
-    lockPath: join(input.locksDir, `${input.bubbleId}.lock`),
-    now: input.now,
-    envelope: buildKickoffMutationTaskEnvelope(input)
-  };
-}
-
-function buildKickoffMutationTaskEnvelope(
-  input: ExecuteKickoffMutationInput
-): ReturnType<typeof buildKickoffTaskEnvelope> {
-  return buildKickoffTaskEnvelope({
-    bubbleId: input.bubbleId,
-    implementer: input.implementer,
-    task: input.task,
-    taskArtifactPath: input.taskArtifactPath
-  });
-}
-
-function readKickoffTranscriptBackup(
-  input: ExecuteKickoffMutationInput
-): Promise<string> {
-  return input.readFile(input.transcriptPath, "utf8");
-}
-
-async function appendKickoffMutationEnvelope(
-  input: ExecuteKickoffMutationInput
-): Promise<void> {
-  await input.appendEnvelope(
-    buildKickoffMutationEnvelopeAppendInput(input)
-  );
-}
-
 export async function executeKickoffMutation(
   input: ExecuteKickoffMutationInput
 ): Promise<string> {
   await writeKickoffMutationArtifacts(input);
-  const transcriptBackup = await readKickoffTranscriptBackup(input);
-  await appendKickoffMutationEnvelope(input);
+  const transcriptBackup = await appendKickoffMutationEnvelopeWithBackup(input);
 
   return transcriptBackup;
 }
