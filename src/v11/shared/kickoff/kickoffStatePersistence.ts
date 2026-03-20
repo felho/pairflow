@@ -4,6 +4,10 @@ import {
   type KickoffWrittenState
 } from "./kickoffStateWrite.js";
 import { hasKickoffStateFingerprintConflict } from "./kickoffStateConflictCheck.js";
+import {
+  buildKickoffStateConflictResult,
+  mapKickoffStateWriteResult
+} from "./kickoffStateWriteResultMapping.js";
 
 export interface LoadedKickoffState {
   state: BubbleStateSnapshot;
@@ -36,21 +40,6 @@ export type PersistKickoffStateResult =
       kind: "conflict";
     };
 
-function buildKickoffStateConflictResult(): PersistKickoffStateResult {
-  return {
-    kind: "conflict"
-  };
-}
-
-function buildKickoffStateSuccessResult(input: {
-  writtenState: KickoffWrittenState;
-}): PersistKickoffStateResult {
-  return {
-    kind: "success",
-    writtenState: input.writtenState
-  };
-}
-
 function buildKickoffStateWriteInput(
   input: PersistKickoffStateInput
 ): Parameters<typeof writeKickoffState>[0] {
@@ -60,18 +49,6 @@ function buildKickoffStateWriteInput(
     expectedFingerprint: input.loadedFingerprint,
     writeState: input.writeState
   };
-}
-
-function mapKickoffStateWriteResult(
-  result: Awaited<ReturnType<typeof writeKickoffState>>
-): PersistKickoffStateResult {
-  if (result.kind === "conflict") {
-    return buildKickoffStateConflictResult();
-  }
-
-  return buildKickoffStateSuccessResult({
-    writtenState: result.writtenState
-  });
 }
 
 export async function persistKickoffState(

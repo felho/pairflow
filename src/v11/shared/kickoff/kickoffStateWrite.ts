@@ -1,6 +1,6 @@
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
-import { isKickoffStateWriteConflict } from "./kickoffStateWriteConflict.js";
 import { buildKickoffWriteStateOptions } from "./kickoffStateWriteOptions.js";
+import { resolveKickoffWriteErrorResult } from "./kickoffStateWriteErrorResult.js";
 
 export interface KickoffWrittenState {
   fingerprint: string;
@@ -37,21 +37,6 @@ function buildKickoffWriteSuccessResult(input: {
     kind: "success",
     writtenState: input.writtenState
   };
-}
-
-function buildKickoffWriteConflictResult(): WriteKickoffStateResult {
-  return {
-    kind: "conflict"
-  };
-}
-
-function resolveKickoffWriteErrorResult(
-  error: unknown
-): WriteKickoffStateResult | null {
-  if (isKickoffStateWriteConflict(error)) {
-    return buildKickoffWriteConflictResult();
-  }
-  return null;
 }
 
 function performKickoffStateWrite(
