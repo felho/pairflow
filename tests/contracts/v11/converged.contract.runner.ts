@@ -52,6 +52,7 @@ export interface ConvergedContractRunResult {
 interface ParsedConvergedCaseInput {
   convergedInput: Omit<EmitConvergedInput, "cwd">;
   reviewArtifactType?: "code" | "document";
+  scenario: "default" | "delivery_partial_failure";
 }
 
 function parseConvergedCaseInput(input: ContractCase["input"]): ParsedConvergedCaseInput {
@@ -83,11 +84,31 @@ function parseConvergedCaseInput(input: ContractCase["input"]): ParsedConvergedC
     reviewArtifactType = reviewArtifactTypeRaw;
   }
 
+  const fixtureRaw = input.fixture;
+  let scenario: ParsedConvergedCaseInput["scenario"] = "default";
+  if (fixtureRaw !== undefined) {
+    if (typeof fixtureRaw !== "object" || fixtureRaw === null) {
+      throw new Error("converged contract input.fixture must be an object when provided.");
+    }
+    const scenarioRaw = (fixtureRaw as Record<string, unknown>).scenario;
+    if (
+      scenarioRaw !== undefined &&
+      scenarioRaw !== "default" &&
+      scenarioRaw !== "delivery_partial_failure"
+    ) {
+      throw new Error(
+        "converged contract input.fixture.scenario must be one of: default, delivery_partial_failure."
+      );
+    }
+    scenario = (scenarioRaw as ParsedConvergedCaseInput["scenario"] | undefined) ?? "default";
+  }
+
   return {
     convergedInput: {
       summary: summaryRaw.trim(),
       ...(refs !== undefined ? { refs } : {})
     },
+    scenario,
     ...(reviewArtifactType !== undefined ? { reviewArtifactType } : {})
   };
 }
@@ -260,6 +281,26 @@ function assertParityEquivalent(input: {
   }
 }
 
+function assertConvergedScenarioInvariant(input: {
+  result: EmitConvergedResult;
+  scenario: ParsedConvergedCaseInput["scenario"];
+  caseId: string;
+}): void {
+  if (input.scenario !== "delivery_partial_failure") {
+    return;
+  }
+  if (input.result.delivery?.delivered !== false) {
+    throw new Error(
+      `converged contract case=${input.caseId}: delivery_partial_failure expected delivery.delivered=false.`
+    );
+  }
+  if (input.result.delivery.reason !== "partial_delivery_failed") {
+    throw new Error(
+      `converged contract case=${input.caseId}: delivery_partial_failure expected reason=partial_delivery_failed (actual=${input.result.delivery.reason ?? "none"}).`
+    );
+  }
+}
+
 async function executeConvergedCase(input: {
   caseDef: ContractCase;
   executor: typeof emitConvergedFromWorkspace;
@@ -288,6 +329,16 @@ async function executeConvergedCase(input: {
         targetRole: typeof targetRoleRaw === "string" ? targetRoleRaw : null,
         refKind: classifyDeliveryRefKind(deliveryInput.messageRef)
       });
+      if (
+        parsedInput.scenario === "delivery_partial_failure"
+        && deliveryInput.envelope.recipient === bubble.config.agents.reviewer
+      ) {
+        return Promise.resolve({
+          delivered: false,
+          message: "delivery failed",
+          reason: "delivery_unconfirmed"
+        });
+      }
       return Promise.resolve({
         delivered: true,
         message: "ok"
@@ -300,6 +351,11 @@ async function executeConvergedCase(input: {
       now: new Date("2026-02-22T09:05:00.000Z")
     }, {
       emitTmuxDeliveryNotification: emitDelivery
+    });
+    assertConvergedScenarioInvariant({
+      result,
+      scenario: parsedInput.scenario,
+      caseId: input.caseDef.id
     });
     return normalizeConvergedResult(result, deliveries);
   } finally {

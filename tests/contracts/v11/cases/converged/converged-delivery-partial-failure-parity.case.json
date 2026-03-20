@@ -1,0 +1,43 @@
+{
+  "id": "converged-delivery-partial-failure-parity",
+  "command": "converged",
+  "mode": "parity",
+  "description": "converged parity remains successful when one delivery target fails and reports partial delivery.",
+  "input": {
+    "summary": "Converged with partial delivery failure.",
+    "refs": [],
+    "fixture": {
+      "scenario": "delivery_partial_failure"
+    }
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "CONVERGED_EMITTED",
+    "gateRoute": "human_gate_run_failed",
+    "envelopeType": "CONVERGENCE",
+    "convergenceRecipient": "orchestrator",
+    "approvalRequestEnvelopeType": "APPROVAL_REQUEST",
+    "approvalRequestRecipient": "human",
+    "approvalRequestSender": "orchestrator",
+    "stateSubset": {
+      "state": "META_REVIEW_FAILED"
+    },
+    "deliveryCount": 3,
+    "deliveryRecipients": [
+      "human",
+      "codex",
+      "claude"
+    ],
+    "deliveryTargetRoles": [
+      "status",
+      "implementer",
+      "reviewer"
+    ]
+  },
+  "tags": [
+    "converged",
+    "v11-contract",
+    "parity",
+    "delivery-partial-failure"
+  ]
+}
