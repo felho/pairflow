@@ -1,0 +1,26 @@
+{
+  "id": "kickoff-task-file-empty-v11",
+  "command": "kickoff",
+  "mode": "v11",
+  "description": "Seed kickoff v11 contract case for empty task-file content rejection.",
+  "input": {
+    "task": "Ignored content for empty task-file",
+    "fixture": {
+      "taskViaFile": true,
+      "taskFileEmpty": true
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "IDEATION_KICKOFF_TASK_INVALID",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "kickoff",
+    "error-path"
+  ]
+}

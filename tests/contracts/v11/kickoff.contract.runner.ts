@@ -53,6 +53,7 @@ interface ParsedKickoffFixtureInput {
   appendFailure: boolean;
   taskViaFile: boolean;
   taskFileMissing: boolean;
+  taskFileEmpty: boolean;
   bubbleTask: string;
 }
 
@@ -79,6 +80,7 @@ function parseKickoffFixtureInput(
       appendFailure: false,
       taskViaFile: false,
       taskFileMissing: false,
+      taskFileEmpty: false,
       bubbleTask: "Legacy kickoff fixture task"
     };
   }
@@ -136,6 +138,22 @@ function parseKickoffFixtureInput(
     );
   }
 
+  const taskFileEmptyRaw = fixtureRaw.taskFileEmpty;
+  if (
+    taskFileEmptyRaw !== undefined &&
+    typeof taskFileEmptyRaw !== "boolean"
+  ) {
+    throw new Error(
+      "kickoff contract input.fixture.taskFileEmpty must be a boolean."
+    );
+  }
+
+  if (taskFileMissingRaw === true && taskFileEmptyRaw === true) {
+    throw new Error(
+      "kickoff contract fixture cannot set both taskFileMissing and taskFileEmpty."
+    );
+  }
+
   const bubbleTaskRaw = fixtureRaw.bubbleTask;
   if (
     bubbleTaskRaw !== undefined &&
@@ -155,6 +173,7 @@ function parseKickoffFixtureInput(
     appendFailure: appendFailureRaw ?? false,
     taskViaFile: taskViaFileRaw ?? false,
     taskFileMissing: taskFileMissingRaw ?? false,
+    taskFileEmpty: taskFileEmptyRaw ?? false,
     bubbleTask: bubbleTaskRaw?.trim() ?? "Legacy kickoff fixture task"
   };
 }
@@ -359,7 +378,7 @@ async function executeKickoffCase(input: {
       if (!parsedInput.fixture.taskFileMissing) {
         await writeFile(
           join(repoPath, taskFileName),
-          `${parsedInput.task}\n`,
+          parsedInput.fixture.taskFileEmpty ? "" : `${parsedInput.task}\n`,
           "utf8"
         );
       }

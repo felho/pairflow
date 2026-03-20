@@ -42,7 +42,10 @@ const kickoffCaseSources = [
   "tests/contracts/v11/cases/kickoff/kickoff-task-file-missing-parity.case.json",
   "tests/contracts/v11/cases/kickoff/kickoff-task-file-placeholder.case.json",
   "tests/contracts/v11/cases/kickoff/kickoff-task-file-placeholder-v11.case.json",
-  "tests/contracts/v11/cases/kickoff/kickoff-task-file-placeholder-parity.case.json"
+  "tests/contracts/v11/cases/kickoff/kickoff-task-file-placeholder-parity.case.json",
+  "tests/contracts/v11/cases/kickoff/kickoff-task-file-empty.case.json",
+  "tests/contracts/v11/cases/kickoff/kickoff-task-file-empty-v11.case.json",
+  "tests/contracts/v11/cases/kickoff/kickoff-task-file-empty-parity.case.json"
 ] as const;
 
 const kickoffExpectedSourcesSorted = [...kickoffCaseSources].sort();
@@ -93,7 +96,7 @@ describe("v11 kickoff contract harness skeleton", () => {
       expect(run.v11).toBeDefined();
       expect(run.legacy).toEqual(run.v11);
     }
-  });
+  }, 20_000);
 
   it("includes kickoff seed entries in corpus manifest", async () => {
     const manifestPath = resolve(
