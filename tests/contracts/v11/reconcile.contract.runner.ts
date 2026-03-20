@@ -10,6 +10,10 @@ import {
 import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
+import {
+  readStateSnapshot,
+  writeStateSnapshot
+} from "../../../src/core/state/stateStore.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
 
 export interface ReconcileContractOutput {
@@ -31,7 +35,11 @@ export interface ReconcileContractRunResult {
 
 interface ParsedReconcileCaseInput {
   dryRun: boolean;
-  scenario: "default" | "mutate_no_stale";
+  scenario:
+    | "default"
+    | "mutate_no_stale"
+    | "stale_reason_final_state"
+    | "stale_reason_non_runtime_state";
 }
 
 function buildReconcileContractBubbleId(caseId: string): string {
@@ -56,10 +64,12 @@ function parseReconcileCaseInput(
     if (
       scenarioRaw !== undefined &&
       scenarioRaw !== "default" &&
-      scenarioRaw !== "mutate_no_stale"
+      scenarioRaw !== "mutate_no_stale" &&
+      scenarioRaw !== "stale_reason_final_state" &&
+      scenarioRaw !== "stale_reason_non_runtime_state"
     ) {
       throw new Error(
-        "reconcile contract input.fixture.scenario must be one of: default, mutate_no_stale."
+        "reconcile contract input.fixture.scenario must be one of: default, mutate_no_stale, stale_reason_final_state, stale_reason_non_runtime_state."
       );
     }
     scenario = (scenarioRaw as ParsedReconcileCaseInput["scenario"] | undefined) ?? "default";
@@ -90,9 +100,6 @@ function assertReconcileMutationScenario(input: {
   parsedInput: ParsedReconcileCaseInput;
   output: ReconcileContractOutput;
 }): void {
-  if (input.parsedInput.dryRun) {
-    return;
-  }
   if (input.parsedInput.scenario === "mutate_no_stale") {
     if (input.output.staleCandidates !== 0) {
       throw new Error(
@@ -111,6 +118,42 @@ function assertReconcileMutationScenario(input: {
     }
     return;
   }
+
+  if (input.parsedInput.scenario === "stale_reason_final_state") {
+    if (input.output.staleCandidates !== 1) {
+      throw new Error(
+        `reconcile contract case=${input.caseDef.id}: expected staleCandidates=1 for stale_reason_final_state (actual=${input.output.staleCandidates}).`
+      );
+    }
+    if (input.output.actionReasons.length !== 1 || input.output.actionReasons[0] !== "final_state") {
+      throw new Error(
+        `reconcile contract case=${input.caseDef.id}: expected only final_state stale reason (actual=${JSON.stringify(input.output.actionReasons)}).`
+      );
+    }
+    return;
+  }
+
+  if (input.parsedInput.scenario === "stale_reason_non_runtime_state") {
+    if (input.output.staleCandidates !== 1) {
+      throw new Error(
+        `reconcile contract case=${input.caseDef.id}: expected staleCandidates=1 for stale_reason_non_runtime_state (actual=${input.output.staleCandidates}).`
+      );
+    }
+    if (
+      input.output.actionReasons.length !== 1 ||
+      input.output.actionReasons[0] !== "non_runtime_state"
+    ) {
+      throw new Error(
+        `reconcile contract case=${input.caseDef.id}: expected only non_runtime_state stale reason (actual=${JSON.stringify(input.output.actionReasons)}).`
+      );
+    }
+    return;
+  }
+
+  if (input.parsedInput.dryRun) {
+    return;
+  }
+
   const removedAny = input.output.actionRemovedFlags.some((flag) => flag);
   if (!removedAny) {
     throw new Error(
@@ -159,7 +202,7 @@ function assertParityEquivalent(input: {
 async function seedRuntimeSessionsFixture(input: {
   repoPath: string;
   bubbleId: string;
-  includeStaleSession: boolean;
+  scenario: ParsedReconcileCaseInput["scenario"];
 }) {
   const bubble = await setupRunningBubbleFixture({
     repoPath: input.repoPath,
@@ -176,7 +219,24 @@ async function seedRuntimeSessionsFixture(input: {
     now: new Date("2026-03-20T10:45:00.000Z")
   });
 
-  if (input.includeStaleSession) {
+  if (input.scenario === "stale_reason_final_state" || input.scenario === "stale_reason_non_runtime_state") {
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const targetState: typeof loaded.state.state =
+      input.scenario === "stale_reason_final_state"
+        ? "FAILED"
+        : "PREPARING_WORKSPACE";
+    const nextState = {
+      ...loaded.state,
+      state: targetState
+    };
+    await writeStateSnapshot(bubble.paths.statePath, nextState, {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "RUNNING"
+    });
+    return;
+  }
+
+  if (input.scenario !== "mutate_no_stale") {
     await upsertRuntimeSession({
       sessionsPath: bubble.paths.sessionsPath,
       bubbleId: "b_reconcile_contract_missing",
@@ -199,7 +259,7 @@ async function executeReconcileCase(input: {
     await seedRuntimeSessionsFixture({
       repoPath,
       bubbleId: buildReconcileContractBubbleId(input.caseDef.id),
-      includeStaleSession: parsedInput.scenario !== "mutate_no_stale"
+      scenario: parsedInput.scenario
     });
 
     const result = await input.executor({

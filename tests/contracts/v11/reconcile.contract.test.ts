@@ -18,7 +18,13 @@ const reconcileCaseSources = [
   "tests/contracts/v11/cases/reconcile/reconcile-mutate-stale-session-parity.case.json",
   "tests/contracts/v11/cases/reconcile/reconcile-mutate-no-stale-session.case.json",
   "tests/contracts/v11/cases/reconcile/reconcile-mutate-no-stale-session-v11.case.json",
-  "tests/contracts/v11/cases/reconcile/reconcile-mutate-no-stale-session-parity.case.json"
+  "tests/contracts/v11/cases/reconcile/reconcile-mutate-no-stale-session-parity.case.json",
+  "tests/contracts/v11/cases/reconcile/reconcile-stale-reason-final-state.case.json",
+  "tests/contracts/v11/cases/reconcile/reconcile-stale-reason-final-state-v11.case.json",
+  "tests/contracts/v11/cases/reconcile/reconcile-stale-reason-final-state-parity.case.json",
+  "tests/contracts/v11/cases/reconcile/reconcile-stale-reason-non-runtime-state.case.json",
+  "tests/contracts/v11/cases/reconcile/reconcile-stale-reason-non-runtime-state-v11.case.json",
+  "tests/contracts/v11/cases/reconcile/reconcile-stale-reason-non-runtime-state-parity.case.json"
 ] as const;
 
 const reconcileExpectedSourcesSorted = [...reconcileCaseSources].sort();

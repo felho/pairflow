@@ -1,0 +1,21 @@
+{
+  "id": "reconcile-stale-reason-non-runtime-state-parity",
+  "command": "reconcile",
+  "mode": "parity",
+  "description": "Reconcile parity marks runtime session stale when bubble state is non-runtime.",
+  "input": {
+    "fixture": {
+      "scenario": "stale_reason_non_runtime_state"
+    }
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "RECONCILE_COMPLETED"
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "reconcile",
+    "stale-reason"
+  ]
+}

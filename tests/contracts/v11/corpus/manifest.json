@@ -111,6 +111,42 @@
       "kind": "seed_case"
     },
     {
+      "id": "reconcile-stale-reason-final-state",
+      "command": "reconcile",
+      "source": "tests/contracts/v11/cases/reconcile/reconcile-stale-reason-final-state.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reconcile-stale-reason-final-state-v11",
+      "command": "reconcile",
+      "source": "tests/contracts/v11/cases/reconcile/reconcile-stale-reason-final-state-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reconcile-stale-reason-final-state-parity",
+      "command": "reconcile",
+      "source": "tests/contracts/v11/cases/reconcile/reconcile-stale-reason-final-state-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reconcile-stale-reason-non-runtime-state",
+      "command": "reconcile",
+      "source": "tests/contracts/v11/cases/reconcile/reconcile-stale-reason-non-runtime-state.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reconcile-stale-reason-non-runtime-state-v11",
+      "command": "reconcile",
+      "source": "tests/contracts/v11/cases/reconcile/reconcile-stale-reason-non-runtime-state-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "reconcile-stale-reason-non-runtime-state-parity",
+      "command": "reconcile",
+      "source": "tests/contracts/v11/cases/reconcile/reconcile-stale-reason-non-runtime-state-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "restart-basic",
       "command": "restart",
       "source": "tests/contracts/v11/cases/restart/restart-basic.case.json",
