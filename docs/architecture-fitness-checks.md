@@ -123,6 +123,7 @@ Rules:
   - M2+: soft-fail.
   - M3+: hard-fail a `v11` allapotu commandokra.
   - Policy wiring: `tools/fitness/policy.json` `critical_side_effect.mode_by_milestone` map.
+  - CI override: `PAIRFLOW_FITNESS_CURRENT_MILESTONE` env vagy `--current-milestone` flag (flag elsobbseggel).
 
 Seed invariants:
 

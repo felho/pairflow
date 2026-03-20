@@ -135,10 +135,14 @@ export async function buildCheckReport({
 
 export async function buildReportChecks(
   policy: FitnessPolicy,
-  repoRoot: string
+  repoRoot: string,
+  options?: {
+    currentMilestoneOverride?: string | undefined;
+  }
 ): Promise<FitnessReportCheck[]> {
   const fallbackMode = policy.defaults?.mode ?? "report-only";
-  const currentMilestone = policy.defaults?.current_milestone;
+  const currentMilestone =
+    options?.currentMilestoneOverride ?? policy.defaults?.current_milestone;
   const checks = await Promise.all(
     policy.checks.map((check) =>
       buildCheckReport({

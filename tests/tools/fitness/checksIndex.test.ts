@@ -91,4 +91,35 @@ describe("fitness check mode-by-milestone resolution", () => {
     expect(checks).toHaveLength(1);
     expect(checks[0]?.mode).toBe("soft-fail");
   });
+
+  it("uses explicit current milestone override instead of policy default", async () => {
+    const checks = await buildReportChecks(
+      {
+        defaults: {
+          mode: "report-only",
+          current_milestone: "M1"
+        },
+        checks: [
+          {
+            id: "custom_check",
+            metric: "x",
+            mode: "report-only",
+            mode_by_milestone: {
+              M2: "soft-fail",
+              M3: "hard-fail"
+            },
+            exception_lifecycle_mode: undefined,
+            owner: "architecture",
+            scope: undefined,
+            exceptions: undefined
+          }
+        ]
+      },
+      process.cwd(),
+      { currentMilestoneOverride: "M3" }
+    );
+
+    expect(checks).toHaveLength(1);
+    expect(checks[0]?.mode).toBe("hard-fail");
+  });
 });
