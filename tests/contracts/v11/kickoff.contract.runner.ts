@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -54,6 +54,7 @@ interface ParsedKickoffFixtureInput {
   taskViaFile: boolean;
   taskFileMissing: boolean;
   taskFileEmpty: boolean;
+  taskFileDirectory: boolean;
   taskInputConflict: boolean;
   bubbleTask: string;
 }
@@ -82,6 +83,7 @@ function parseKickoffFixtureInput(
       taskViaFile: false,
       taskFileMissing: false,
       taskFileEmpty: false,
+      taskFileDirectory: false,
       taskInputConflict: false,
       bubbleTask: "Legacy kickoff fixture task"
     };
@@ -150,6 +152,16 @@ function parseKickoffFixtureInput(
     );
   }
 
+  const taskFileDirectoryRaw = fixtureRaw.taskFileDirectory;
+  if (
+    taskFileDirectoryRaw !== undefined &&
+    typeof taskFileDirectoryRaw !== "boolean"
+  ) {
+    throw new Error(
+      "kickoff contract input.fixture.taskFileDirectory must be a boolean."
+    );
+  }
+
   const taskInputConflictRaw = fixtureRaw.taskInputConflict;
   if (
     taskInputConflictRaw !== undefined &&
@@ -160,9 +172,12 @@ function parseKickoffFixtureInput(
     );
   }
 
-  if (taskFileMissingRaw === true && taskFileEmptyRaw === true) {
+  const taskFileVariantCount = [taskFileMissingRaw, taskFileEmptyRaw, taskFileDirectoryRaw]
+    .filter((value) => value === true)
+    .length;
+  if (taskFileVariantCount > 1) {
     throw new Error(
-      "kickoff contract fixture cannot set both taskFileMissing and taskFileEmpty."
+      "kickoff contract fixture cannot combine multiple task-file variants."
     );
   }
 
@@ -186,6 +201,7 @@ function parseKickoffFixtureInput(
     taskViaFile: taskViaFileRaw ?? false,
     taskFileMissing: taskFileMissingRaw ?? false,
     taskFileEmpty: taskFileEmptyRaw ?? false,
+    taskFileDirectory: taskFileDirectoryRaw ?? false,
     taskInputConflict: taskInputConflictRaw ?? false,
     bubbleTask: bubbleTaskRaw?.trim() ?? "Legacy kickoff fixture task"
   };
@@ -393,9 +409,12 @@ async function executeKickoffCase(input: {
       kickoffInput.taskFile = taskFileName;
     } else if (parsedInput.fixture.taskViaFile) {
       const taskFileName = "kickoff-task-input.md";
-      if (!parsedInput.fixture.taskFileMissing) {
+      const taskFilePath = join(repoPath, taskFileName);
+      if (parsedInput.fixture.taskFileDirectory) {
+        await mkdir(taskFilePath, { recursive: true });
+      } else if (!parsedInput.fixture.taskFileMissing) {
         await writeFile(
-          join(repoPath, taskFileName),
+          taskFilePath,
           parsedInput.fixture.taskFileEmpty ? "" : `${parsedInput.task}\n`,
           "utf8"
         );

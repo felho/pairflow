@@ -1,0 +1,26 @@
+{
+  "id": "kickoff-task-file-not-regular",
+  "command": "kickoff",
+  "mode": "legacy",
+  "description": "Seed kickoff legacy contract case for task-file path that is not a regular file.",
+  "input": {
+    "task": "Ignored content for non-regular task-file path",
+    "fixture": {
+      "taskViaFile": true,
+      "taskFileDirectory": true
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "IDEATION_KICKOFF_TASK_INVALID",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "kickoff",
+    "error-path"
+  ]
+}
