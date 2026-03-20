@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { relative } from "node:path";
+import ts from "typescript";
 
 import { normalizePathToPosix, resolveFilesForScopePatterns } from "../scope.js";
 import type { FitnessPolicyCheck, FitnessReportCheck } from "../types.js";
@@ -7,12 +8,19 @@ import type { FitnessPolicyCheck, FitnessReportCheck } from "../types.js";
 interface ErrorViolation {
   path: string;
   line: number;
-  severity: "fail";
+  severity: "fail" | "warn";
   kind: "missing_code" | "missing_context";
   snippet: string;
 }
 
-const throwPattern = /\bthrow\b/u;
+interface ThrowSite {
+  line: number;
+  snippet: string;
+  contextWindow: string;
+  usesStructuredErrorWrapper: boolean;
+  hasStructuredContextArgument: boolean;
+}
+
 const bareRethrowPattern = /^\s*throw\s+[A-Za-z_$][\w$]*\s*;?\s*$/u;
 const codeMarkers: readonly RegExp[] = [
   /\breason_code\b/u,
@@ -26,39 +34,175 @@ const contextMarkers: readonly RegExp[] = [
   /\bbubble_id\b|\bbubbleId\b/u,
   /\bcommand_name\b|\bcommandName\b/u,
   /\boperation_id\b|\boperationId\b/u,
-  /\bround\b/u
+  /\bround\b/u,
+  /\bbase_branch\b|\bbaseBranch\b/u,
+  /\bbubble_branch\b|\bbubbleBranch\b/u,
+  /\brepo_path\b|\brepoPath\b/u,
+  /\bstate_path\b|\bstatePath\b/u
 ] as const;
+
+const contextObjectKeys = new Set([
+  "context",
+  "bubble_id",
+  "bubbleId",
+  "command_name",
+  "commandName",
+  "operation_id",
+  "operationId",
+  "round",
+  "base_branch",
+  "baseBranch",
+  "bubble_branch",
+  "bubbleBranch",
+  "repo_path",
+  "repoPath",
+  "state_path",
+  "statePath"
+]);
 
 function hasAnyPattern(text: string, patterns: readonly RegExp[]): boolean {
   return patterns.some((pattern) => pattern.test(text));
 }
 
-function collectErrorViolations(filePath: string, fileContent: string): ErrorViolation[] {
-  const lines = fileContent.split(/\r?\n/u);
-  const violations: ErrorViolation[] = [];
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index] ?? "";
-    if (!throwPattern.test(line)) {
+function getCallExpressionName(expression: ts.LeftHandSideExpression): string | null {
+  if (ts.isIdentifier(expression)) {
+    return expression.text;
+  }
+  if (ts.isPropertyAccessExpression(expression)) {
+    return expression.name.text;
+  }
+  if (
+    ts.isElementAccessExpression(expression) &&
+    expression.argumentExpression !== undefined &&
+    ts.isStringLiteralLike(expression.argumentExpression)
+  ) {
+    return expression.argumentExpression.text;
+  }
+  return null;
+}
+
+function getPropertyNameText(name: ts.PropertyName): string | null {
+  if (ts.isIdentifier(name) || ts.isStringLiteralLike(name) || ts.isNumericLiteral(name)) {
+    return name.text;
+  }
+  return null;
+}
+
+function isStructuredErrorName(name: string): boolean {
+  if (/^normalize[A-Za-z0-9_]*Error$/u.test(name)) {
+    return true;
+  }
+  if (/^to[A-Za-z0-9_]*Error$/u.test(name)) {
+    return true;
+  }
+  if (/^[A-Z][A-Za-z0-9_]*Error$/u.test(name)) {
+    return true;
+  }
+  return false;
+}
+
+function usesStructuredErrorWrapper(expression: ts.Expression): boolean {
+  if (ts.isCallExpression(expression)) {
+    const name = getCallExpressionName(expression.expression);
+    return name !== null && isStructuredErrorName(name);
+  }
+  if (ts.isNewExpression(expression)) {
+    const name = getCallExpressionName(expression.expression);
+    return name !== null && isStructuredErrorName(name);
+  }
+  return false;
+}
+
+function hasStructuredContextArgument(expression: ts.Expression): boolean {
+  const args =
+    ts.isCallExpression(expression) || ts.isNewExpression(expression)
+      ? expression.arguments
+      : undefined;
+  if (!args) {
+    return false;
+  }
+
+  for (const arg of args) {
+    if (!ts.isObjectLiteralExpression(arg)) {
       continue;
     }
-    const trimmed = line.trim();
-    if (trimmed.startsWith("//") || bareRethrowPattern.test(trimmed)) {
-      continue;
+    for (const property of arg.properties) {
+      if (
+        !ts.isPropertyAssignment(property) &&
+        !ts.isShorthandPropertyAssignment(property) &&
+        !ts.isMethodDeclaration(property) &&
+        !ts.isGetAccessorDeclaration(property) &&
+        !ts.isSetAccessorDeclaration(property)
+      ) {
+        continue;
+      }
+      const key = getPropertyNameText(property.name);
+      if (key !== null && contextObjectKeys.has(key)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function collectThrowSites(fileContent: string): ThrowSite[] {
+  const sourceFile = ts.createSourceFile("error.ts", fileContent, ts.ScriptTarget.Latest, true);
+  const lines = fileContent.split(/\r?\n/u);
+  const sites: ThrowSite[] = [];
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isThrowStatement(node)) {
+      const expression = node.expression;
+      if (!expression) {
+        ts.forEachChild(node, visit);
+        return;
+      }
+
+      const line = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
+      const snippet = (lines[line - 1] ?? "").trim();
+      if (snippet.startsWith("//") || bareRethrowPattern.test(snippet)) {
+        ts.forEachChild(node, visit);
+        return;
+      }
+
+      const windowStart = Math.max(0, line - 1 - 6);
+      const windowEnd = Math.min(lines.length - 1, line - 1 + 6);
+      const contextWindow = lines.slice(windowStart, windowEnd + 1).join("\n");
+
+      sites.push({
+        line,
+        snippet,
+        contextWindow,
+        usesStructuredErrorWrapper: usesStructuredErrorWrapper(expression),
+        hasStructuredContextArgument: hasStructuredContextArgument(expression)
+      });
     }
 
-    const windowStart = Math.max(0, index - 6);
-    const windowEnd = Math.min(lines.length - 1, index + 6);
-    const contextWindow = lines.slice(windowStart, windowEnd + 1).join("\n");
-    const hasCode = hasAnyPattern(contextWindow, codeMarkers);
-    const hasContext = hasAnyPattern(contextWindow, contextMarkers);
+    ts.forEachChild(node, visit);
+  };
+
+  visit(sourceFile);
+  return sites;
+}
+
+function collectErrorViolations(filePath: string, fileContent: string): ErrorViolation[] {
+  const throwSites = collectThrowSites(fileContent);
+  const violations: ErrorViolation[] = [];
+
+  for (const site of throwSites) {
+    const hasCode =
+      hasAnyPattern(site.contextWindow, codeMarkers) || site.usesStructuredErrorWrapper;
+    const hasContext =
+      hasAnyPattern(site.contextWindow, contextMarkers) || site.hasStructuredContextArgument;
 
     if (!hasCode) {
       violations.push({
         path: filePath,
-        line: index + 1,
-        severity: "fail",
+        line: site.line,
+        severity: site.usesStructuredErrorWrapper ? "warn" : "fail",
         kind: "missing_code",
-        snippet: trimmed
+        snippet: site.snippet
       });
       continue;
     }
@@ -66,13 +210,14 @@ function collectErrorViolations(filePath: string, fileContent: string): ErrorVio
     if (!hasContext) {
       violations.push({
         path: filePath,
-        line: index + 1,
-        severity: "fail",
+        line: site.line,
+        severity: site.usesStructuredErrorWrapper ? "warn" : "fail",
         kind: "missing_context",
-        snippet: trimmed
+        snippet: site.snippet
       });
     }
   }
+
   return violations;
 }
 
@@ -129,7 +274,10 @@ export async function buildErrorCheckReport({
     violations.push(...collectErrorViolations(relativePath, raw));
   }
 
-  if (violations.length === 0) {
+  const failCount = violations.filter((violation) => violation.severity === "fail").length;
+  const warnCount = violations.filter((violation) => violation.severity === "warn").length;
+
+  if (failCount === 0 && warnCount === 0) {
     return {
       id: check.id,
       owner: check.owner ?? "unknown",
@@ -141,12 +289,24 @@ export async function buildErrorCheckReport({
     };
   }
 
+  if (failCount > 0) {
+    return {
+      id: check.id,
+      owner: check.owner ?? "unknown",
+      mode,
+      status: "fail",
+      summary: `Error check failed: ${String(failCount)} fail + ${String(warnCount)} warn throw boundary violation(s).`,
+      metric: check.metric,
+      details: summarizeErrorViolations(violations)
+    };
+  }
+
   return {
     id: check.id,
     owner: check.owner ?? "unknown",
     mode,
-    status: "fail",
-    summary: `Error check failed: ${String(violations.length)} throw boundary violation(s) missing code/context markers.`,
+    status: "warn",
+    summary: `Error check warning: ${String(warnCount)} throw boundary warning(s).`,
     metric: check.metric,
     details: summarizeErrorViolations(violations)
   };

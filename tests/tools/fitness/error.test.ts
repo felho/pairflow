@@ -129,4 +129,42 @@ describe("error fitness check", () => {
 
     expect(report.status).toBe("pass");
   });
+
+  it("warns for structured error wrapper throws without nearby explicit markers", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/error-structured-wrapper.ts",
+      [
+        "export function run(error: unknown): never {",
+        "  throw normalizeBubbleMergeError({",
+        "    error",
+        "  });",
+        "}"
+      ].join("\n")
+    );
+
+    const report = await buildErrorCheckReport({
+      check: {
+        id: "error",
+        metric: "error code and context completeness",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture/observability",
+        scope: ["src/v11/application/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only"
+    });
+
+    expect(report.status).toBe("warn");
+    expect(
+      report.details?.some(
+        (detail) =>
+          detail.includes("[warn]") &&
+          detail.includes("missing required error context")
+      )
+    ).toBe(true);
+  });
 });
