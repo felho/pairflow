@@ -25,6 +25,97 @@ const MERGE_REMOTE_DELETE_ORIGIN_UNAVAILABLE =
   "MERGE_REMOTE_DELETE_ORIGIN_UNAVAILABLE";
 const MERGE_REMOTE_DELETE_FAILED = "MERGE_REMOTE_DELETE_FAILED";
 
+async function mergeBubbleBranchIntoBase(input: {
+  repoPath: string;
+  baseBranch: string;
+  bubbleBranch: string;
+  runGit: ResolvedMergeCommandDependencies["runGit"];
+  createError: RunMergeFlowInput["createError"];
+}): Promise<string> {
+  await input.runGit(["checkout", input.baseBranch], {
+    cwd: input.repoPath
+  });
+
+  try {
+    await input.runGit(["merge", "--no-ff", "--no-edit", input.bubbleBranch], {
+      cwd: input.repoPath
+    });
+  } catch (error) {
+    await input.runGit(["merge", "--abort"], {
+      cwd: input.repoPath,
+      allowFailure: true
+    }).catch(() => undefined);
+    if (error instanceof GitCommandError) {
+      throw input.createError(
+        `${MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION}: Merge failed for ${input.bubbleBranch} -> ${input.baseBranch}. Resolve conflicts manually.`
+      );
+    }
+    throw error;
+  }
+
+  return (
+    await input.runGit(["rev-parse", "HEAD"], {
+      cwd: input.repoPath
+    })
+  ).stdout.trim();
+}
+
+async function runMergeRemoteOperations(input: {
+  push: boolean;
+  deleteRemote: boolean;
+  repoPath: string;
+  baseBranch: string;
+  bubbleBranch: string;
+  runGit: ResolvedMergeCommandDependencies["runGit"];
+  createError: RunMergeFlowInput["createError"];
+}): Promise<{ pushedBaseBranch: boolean; deletedRemoteBranch: boolean }> {
+  let pushedBaseBranch = false;
+  let deletedRemoteBranch = false;
+
+  if (input.push || input.deleteRemote) {
+    await ensureOriginRemote(input.repoPath, input.runGit, input.createError);
+  }
+  if (input.push) {
+    await input.runGit(["push", "origin", input.baseBranch], {
+      cwd: input.repoPath
+    });
+    pushedBaseBranch = true;
+  }
+
+  if (!input.deleteRemote) {
+    return { pushedBaseBranch, deletedRemoteBranch };
+  }
+
+  if (
+    await remoteBranchExists({
+      repoPath: input.repoPath,
+      branch: input.bubbleBranch,
+      runGitCommand: input.runGit
+    })
+  ) {
+    const remoteDelete = await input.runGit(
+      ["push", "origin", "--delete", input.bubbleBranch],
+      {
+        cwd: input.repoPath,
+        allowFailure: true
+      }
+    );
+    if (remoteDelete.exitCode !== 0) {
+      if (hasOriginRemoteError(remoteDelete.stderr)) {
+        throw input.createError(
+          `${MERGE_REMOTE_DELETE_ORIGIN_UNAVAILABLE}: Failed to delete remote branch ${input.bubbleBranch}: origin remote is not available.`
+        );
+      }
+      throw input.createError(
+        `${MERGE_REMOTE_DELETE_FAILED}: Failed to delete remote branch ${input.bubbleBranch}: ${remoteDelete.stderr.trim()}`
+      );
+    }
+    deletedRemoteBranch = true;
+  }
+
+  return { pushedBaseBranch, deletedRemoteBranch };
+}
+
 export async function runMergeFlow(
   input: RunMergeFlowInput,
   dependencies: ResolvedMergeCommandDependencies
@@ -61,67 +152,24 @@ export async function runMergeFlow(
     createError: input.createError
   });
 
-  await dependencies.runGit(["checkout", baseBranch], {
-    cwd: repoPath
+  const mergeCommitSha = await mergeBubbleBranchIntoBase({
+    repoPath,
+    baseBranch,
+    bubbleBranch,
+    runGit: dependencies.runGit,
+    createError: input.createError
   });
 
-  try {
-    await dependencies.runGit(["merge", "--no-ff", "--no-edit", bubbleBranch], {
-      cwd: repoPath
+  const { pushedBaseBranch, deletedRemoteBranch } =
+    await runMergeRemoteOperations({
+      push: input.push,
+      deleteRemote: input.deleteRemote,
+      repoPath,
+      baseBranch,
+      bubbleBranch,
+      runGit: dependencies.runGit,
+      createError: input.createError
     });
-  } catch (error) {
-    await dependencies.runGit(["merge", "--abort"], {
-      cwd: repoPath,
-      allowFailure: true
-    }).catch(() => undefined);
-    if (error instanceof GitCommandError) {
-      throw input.createError(
-        `${MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION}: Merge failed for ${bubbleBranch} -> ${baseBranch}. Resolve conflicts manually.`
-      );
-    }
-    throw error;
-  }
-
-  const mergeCommitSha = (
-    await dependencies.runGit(["rev-parse", "HEAD"], {
-      cwd: repoPath
-    })
-  ).stdout.trim();
-
-  let pushedBaseBranch = false;
-  if (input.push || input.deleteRemote) {
-    await ensureOriginRemote(repoPath, dependencies.runGit, input.createError);
-  }
-  if (input.push) {
-    await dependencies.runGit(["push", "origin", baseBranch], {
-      cwd: repoPath
-    });
-    pushedBaseBranch = true;
-  }
-
-  let deletedRemoteBranch = false;
-  if (input.deleteRemote) {
-    if (await remoteBranchExists({ repoPath, branch: bubbleBranch, runGitCommand: dependencies.runGit })) {
-      const remoteDelete = await dependencies.runGit(
-        ["push", "origin", "--delete", bubbleBranch],
-        {
-          cwd: repoPath,
-          allowFailure: true
-        }
-      );
-      if (remoteDelete.exitCode !== 0) {
-        if (hasOriginRemoteError(remoteDelete.stderr)) {
-          throw input.createError(
-            `${MERGE_REMOTE_DELETE_ORIGIN_UNAVAILABLE}: Failed to delete remote branch ${bubbleBranch}: origin remote is not available.`
-          );
-        }
-        throw input.createError(
-          `${MERGE_REMOTE_DELETE_FAILED}: Failed to delete remote branch ${bubbleBranch}: ${remoteDelete.stderr.trim()}`
-        );
-      }
-      deletedRemoteBranch = true;
-    }
-  }
 
   const tmux = await dependencies.terminateBubbleTmuxSession({
     bubbleId: resolved.bubbleId
