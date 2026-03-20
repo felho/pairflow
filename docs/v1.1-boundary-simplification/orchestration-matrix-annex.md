@@ -16,7 +16,7 @@ M0-ban kotelezo minimum: a `pass` command baseline sora kitoltve es review-zva.
 - `ownership`: ki validal, ki ir state-et/transcriptet, ki csak koordinal.
 - `required_call_order`: kotelezo sorrend a baseline flow-ban.
 - `budget`: baseline budget (`max_components`, `max_state_write`, `max_external_io`, `max_side_effect`).
-- `review_evidence`: review bizonyitek (kod referencia + megjegyzes).
+- `review_evidence`: review bizonyitek (kod referencia + megjegyzes), kritikus side-effect commandnal kotelezo semantic invariant hivatkozassal.
 - `status`: `incomplete | baseline_filled | reviewed`.
 
 ## 3) Matrix
@@ -43,3 +43,4 @@ M0-ban kotelezo minimum: a `pass` command baseline sora kitoltve es review-zva.
 
 1. A fenti budget baseline-keret, nem vegleges hard threshold.
 2. W2 fitness tooling feladata a budget muszeresitett merese, majd a kuszobok pontositasa.
+3. Kritikus side-effect commandoknal (`kickoff`, `pass`, `converged`) a `reviewed` status csak akkor adható, ha a review evidence tartalmaz legalabb 1 explicit side-effect invariant teszt hivatkozast.

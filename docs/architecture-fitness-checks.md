@@ -108,6 +108,26 @@ Rules:
 - owner: architecture.
 - rollout mode (current): report-only.
 
+## Cross-Cutting Overlay: Critical Side-Effect Invariants
+
+- metric: command-level semantic invariants for critical runtime side effects.
+- scope: migralt command flow-k a `src/v11/application/**` retegen.
+- pass-fail:
+  - success pathon az elvart side-effect adapter hivas megtortenik (pl. delivery),
+  - vagy explicit delivery-failure status jelenik meg az eredmenyben (nincs csendes kieses).
+- exceptions: ideiglenes milestone-bound exception engedett (`owner`, `reason`, `expires_milestone` kotelezo).
+- report: commandonkenti invariant status (`covered|missing|failing`) + hivatkozott tesztartifact.
+- owner: architecture/runtime.
+- rollout mode:
+  - M0-M1: report-only.
+  - M2+: soft-fail.
+  - M3+: hard-fail a `v11` allapotu commandokra.
+
+Seed invariants:
+
+- `kickoff`: sikeres kickoff utan implementer delivery path verifikalt legyen (adapter call vagy explicit failure status).
+- `pass` es `converged`: delivery status mezok folyamatosan asserted coverage alatt maradjanak.
+
 ## Notes
 
 1. M0 delivers executable skeleton only; thresholds and hard-fail promotion are milestone-gated.

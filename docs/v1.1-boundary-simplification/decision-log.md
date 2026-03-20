@@ -146,3 +146,50 @@ Already complete (no change needed):
 - `component-one-pagers/m0-08-config-loader-and-toml-normalizer.md` — Context fields added
 - `component-one-pagers/m0-09-agent-adapter.md` — Context fields added
 - `component-one-pagers/m0-10-legacy-compat-adapter.md` — Context fields added
+
+---
+
+## ADR-003: Parity + Semantic Side-Effect Shield
+
+**Date:** 2026-03-20
+**Status:** accepted
+**Scope:** Contract parity exit quality gate (especially kickoff/handoff commands)
+
+### Context
+
+Migration policy eddig eros parity-fokuszra epult (`legacy <-> v11` ekvivalencia contract/replay alapon).
+Egy kickoff jellegu hibaosztalynal ez onmagaban nem volt eleg:
+
+- control-plane allapot valtozott (`RUNNING`, round update),
+- transcript `TASK` append megtortent,
+- de runtime implementer delivery nem tortent meg,
+- es ez nem jelent meg explicit failure statusban sem.
+
+Igy parity sikeres maradhatott ugy, hogy a felhasznaloi elvart viselkedes serult.
+
+### Decision
+
+`parity -> v11` gatehez kotelezoen bevezetunk command-level semantic side-effect invariantokat.
+
+Minimum szabaly:
+
+1. Kritikus side-effectet vegzo command success pathjan kotelezo ellenorizni:
+   - az elvart adapter hivas tenylegesen megtortenik, vagy
+   - explicit delivery-failure status visszater (nincs csendes kieses).
+2. Az invariant deterministic contract/integration tesztben legyen verifikalva.
+3. A rollout lepcsozetes:
+   - M0-M1: report-only,
+   - M2+: soft-fail,
+   - M3+: hard-fail a `v11` allapotu commandokra.
+
+### Consequences
+
+- A migration gate erosebb lesz: parity ekvivalencia + semantic side-effect coverage egyutt kotelezo.
+- Kickoff jellegu regressziok korabban (teszt/CI szinten) eszlelhetok.
+- A command matrixben explicit review-bizonyitek kell a kritikus side-effect invariantokra.
+
+### Affected Documents
+
+- `v1.1-implementation-roadmap.md` — 4.2.3 policy + M2 shield hardening gate.
+- `docs/architecture-fitness-checks.md` — cross-cutting critical side-effect invariant overlay.
+- `orchestration-matrix-annex.md` — review evidence kovetelmeny kiegeszitese side-effect invarianttal.
