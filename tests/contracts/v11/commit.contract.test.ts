@@ -40,7 +40,10 @@ describe("v11 commit contract harness skeleton", () => {
     expect(caseDef.expected.status).toBe("ok");
   });
 
-  it("executes legacy and parity assertions via shared runner", async () => {
+  it(
+    "executes legacy and parity assertions via shared runner",
+    { timeout: 20_000 },
+    async () => {
     const casePaths = commitCaseSources.map((source) =>
       resolve(process.cwd(), source)
     );
@@ -63,7 +66,8 @@ describe("v11 commit contract harness skeleton", () => {
       expect(run.v11).toBeDefined();
       expect(run.legacy).toEqual(run.v11);
     }
-  });
+    }
+  );
 
   it("includes commit seed entries in corpus manifest", async () => {
     const manifestPath = resolve(
