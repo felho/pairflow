@@ -1,4 +1,8 @@
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import {
+  buildKickoffResultBase,
+  type BuildKickoffResultBaseInput
+} from "./kickoffResultBaseBuilder.js";
 
 export interface KickoffIdeationMarkers {
   ideation_mode: boolean;
@@ -26,28 +30,9 @@ export interface BuildKickoffFailureResultInput {
   markersBefore: KickoffIdeationMarkers;
 }
 
-function buildKickoffResultBase(input: {
-  bubbleId: string;
-  taskEnvelopeAppended: boolean;
-  markersBefore: KickoffIdeationMarkers;
-  markersAfter: KickoffIdeationMarkers;
-}): Omit<
-  KickoffBubbleResultShape,
-  "ok" | "reason_code" | "state_changed" | "state_before" | "state_after"
-> {
-  return {
-    bubble_id: input.bubbleId,
-    protocol: {
-      task_envelope_appended: input.taskEnvelopeAppended
-    },
-    markers_before: input.markersBefore,
-    markers_after: input.markersAfter
-  };
-}
-
-function buildKickoffFailureResultBaseInput(input: BuildKickoffFailureResultInput): Parameters<
-  typeof buildKickoffResultBase
->[0] {
+function buildKickoffFailureResultBaseInput(
+  input: BuildKickoffFailureResultInput
+): BuildKickoffResultBaseInput<KickoffIdeationMarkers> {
   return {
     bubbleId: input.bubbleId,
     taskEnvelopeAppended: false,
@@ -82,9 +67,9 @@ function buildKickoffSuccessMarkersAfter(): KickoffIdeationMarkers {
   };
 }
 
-function buildKickoffSuccessResultBaseInput(input: BuildKickoffSuccessResultInput): Parameters<
-  typeof buildKickoffResultBase
->[0] {
+function buildKickoffSuccessResultBaseInput(
+  input: BuildKickoffSuccessResultInput
+): BuildKickoffResultBaseInput<KickoffIdeationMarkers> {
   return {
     bubbleId: input.bubbleId,
     taskEnvelopeAppended: true,
