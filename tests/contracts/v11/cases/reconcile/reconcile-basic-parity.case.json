@@ -1,0 +1,18 @@
+{
+  "id": "reconcile-basic-parity",
+  "command": "reconcile",
+  "mode": "parity",
+  "description": "Seed reconcile parity contract case for runtime session cleanup parity.",
+  "input": {
+    "dryRun": true
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "RECONCILE_COMPLETED"
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "reconcile"
+  ]
+}

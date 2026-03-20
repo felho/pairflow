@@ -1,90 +1,95 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
-import { reconcileRuntimeSessions } from "../../../src/core/runtime/startupReconciler.js";
-import { reconcileRuntimeSessionsV11 } from "../../../src/v11/application/reconcile/emitReconcileV11.js";
-import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
-import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
-import { initGitRepository } from "../../helpers/git.js";
+import { runReconcileContractCase } from "./reconcile.contract.runner.js";
+import { readContractCase } from "./runner.js";
 
-async function withTempRepo<T>(run: (repoPath: string) => Promise<T>): Promise<T> {
-  const repoPath = await mkdtemp(join(tmpdir(), "pairflow-reconcile-contract-"));
-  try {
-    await initGitRepository(repoPath);
-    return await run(repoPath);
-  } finally {
-    await rm(repoPath, { recursive: true, force: true });
-  }
+const execFileAsync = promisify(execFile);
+const reconcileCaseSources = [
+  "tests/contracts/v11/cases/reconcile/reconcile-basic.case.json",
+  "tests/contracts/v11/cases/reconcile/reconcile-basic-v11.case.json",
+  "tests/contracts/v11/cases/reconcile/reconcile-basic-parity.case.json"
+] as const;
+
+const reconcileExpectedSourcesSorted = [...reconcileCaseSources].sort();
+
+function parseReconcileSourcesFromManifest(
+  manifestRaw: string
+): string[] {
+  const manifest = JSON.parse(manifestRaw) as {
+    entries?: Array<{ command?: string; source?: string }>;
+  };
+
+  return (manifest.entries ?? [])
+    .filter((entry) => entry.command === "reconcile")
+    .map((entry) => entry.source)
+    .filter((source): source is string => typeof source === "string")
+    .sort();
 }
 
-async function seedRuntimeSessionsFixture(repoPath: string, bubbleId: string) {
-  const bubble = await setupRunningBubbleFixture({
-    repoPath,
-    bubbleId,
-    task: "Reconcile contract parity fixture"
+describe("v11 reconcile contract harness skeleton", () => {
+  it("loads seed contract case metadata", async () => {
+    const casePath = resolve(process.cwd(), reconcileCaseSources[0]);
+    const caseDef = await readContractCase(casePath);
+    expect(caseDef.command).toBe("reconcile");
+    expect(caseDef.mode).toBe("legacy");
+    expect(caseDef.expected.status).toBe("ok");
   });
 
-  await upsertRuntimeSession({
-    sessionsPath: bubble.paths.sessionsPath,
-    bubbleId: bubble.bubbleId,
-    repoPath,
-    worktreePath: bubble.paths.worktreePath,
-    tmuxSessionName: `pf-${bubble.bubbleId}`,
-    now: new Date("2026-03-19T23:45:00.000Z")
+  it("executes legacy and parity assertions via shared runner", async () => {
+    const casePaths = reconcileCaseSources.map((source) =>
+      resolve(process.cwd(), source)
+    );
+
+    for (const casePath of casePaths) {
+      const caseDef = await readContractCase(casePath);
+      const run = await runReconcileContractCase(caseDef);
+      if (caseDef.mode === "legacy") {
+        expect(run.legacy?.status).toBe("ok");
+        expect(run.v11).toBeUndefined();
+        continue;
+      }
+      if (caseDef.mode === "v11") {
+        expect(run.v11?.status).toBe("ok");
+        expect(run.legacy).toBeUndefined();
+        continue;
+      }
+
+      expect(run.legacy).toBeDefined();
+      expect(run.v11).toBeDefined();
+      expect(run.legacy).toEqual(run.v11);
+    }
   });
 
-  await upsertRuntimeSession({
-    sessionsPath: bubble.paths.sessionsPath,
-    bubbleId: "b_reconcile_contract_missing",
-    repoPath,
-    worktreePath: "/tmp/missing",
-    tmuxSessionName: "pf-b_reconcile_contract_missing",
-    now: new Date("2026-03-19T23:45:01.000Z")
+  it("includes reconcile seed entries in corpus manifest", async () => {
+    const manifestPath = resolve(
+      process.cwd(),
+      "tests/contracts/v11/corpus/manifest.json"
+    );
+    const manifestRaw = await readFile(manifestPath, "utf8");
+    const reconcileSources = parseReconcileSourcesFromManifest(manifestRaw);
+
+    expect(reconcileSources).toEqual(reconcileExpectedSourcesSorted);
   });
-}
 
-describe("v11 reconcile contract parity", () => {
-  it("keeps core facade and v11 reconcile output parity", async () => {
-    const legacy = await withTempRepo(async (repoPath) => {
-      await seedRuntimeSessionsFixture(repoPath, "b_reconcile_contract_active");
-      return reconcileRuntimeSessions({
-        repoPath,
-        dryRun: true,
-        isTmuxSessionAlive: (sessionName) =>
-          Promise.resolve(sessionName === "pf-b_reconcile_contract_active")
-      });
-    });
+  it("builds corpus output manifest with reconcile seed entries", async () => {
+    await execFileAsync("pnpm", [
+      "exec",
+      "tsx",
+      "./tests/contracts/v11/corpus/build-corpus.ts"
+    ]);
 
-    const v11 = await withTempRepo(async (repoPath) => {
-      await seedRuntimeSessionsFixture(repoPath, "b_reconcile_contract_active");
-      return reconcileRuntimeSessionsV11({
-        repoPath,
-        dryRun: true,
-        isTmuxSessionAlive: (sessionName) =>
-          Promise.resolve(sessionName === "pf-b_reconcile_contract_active")
-      });
-    });
+    const outputManifestPath = resolve(
+      process.cwd(),
+      ".pairflow/evidence/contracts-v11-corpus-manifest.json"
+    );
+    const outputRaw = await readFile(outputManifestPath, "utf8");
+    const reconcileSources = parseReconcileSourcesFromManifest(outputRaw);
 
-    const normalize = (result: typeof legacy) => ({
-      dryRun: result.dryRun,
-      sessionsBefore: result.sessionsBefore,
-      sessionsAfter: result.sessionsAfter,
-      staleCandidates: result.staleCandidates,
-      actionReasons: result.actions.map((action) => action.reason).sort(),
-      actionRemovedFlags: result.actions.map((action) => action.removed)
-    });
-
-    expect(normalize(legacy)).toEqual(normalize(v11));
-    expect(normalize(legacy)).toMatchObject({
-      dryRun: true,
-      sessionsBefore: 2,
-      sessionsAfter: 2,
-      staleCandidates: 1,
-      actionReasons: ["missing_bubble"],
-      actionRemovedFlags: [false]
-    });
+    expect(reconcileSources).toEqual(reconcileExpectedSourcesSorted);
   });
 });
