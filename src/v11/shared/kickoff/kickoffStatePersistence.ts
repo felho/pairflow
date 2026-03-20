@@ -8,6 +8,7 @@ import {
   buildKickoffStateConflictResult,
   mapKickoffStateWriteResult
 } from "./kickoffStateWriteResultMapping.js";
+import { buildKickoffStateWriteInput } from "./kickoffStateWriteInputBuilder.js";
 
 export interface LoadedKickoffState {
   state: BubbleStateSnapshot;
@@ -39,17 +40,6 @@ export type PersistKickoffStateResult =
   | {
       kind: "conflict";
     };
-
-function buildKickoffStateWriteInput(
-  input: PersistKickoffStateInput
-): Parameters<typeof writeKickoffState>[0] {
-  return {
-    statePath: input.statePath,
-    nextState: input.nextState,
-    expectedFingerprint: input.loadedFingerprint,
-    writeState: input.writeState
-  };
-}
 
 export async function persistKickoffState(
   input: PersistKickoffStateInput
