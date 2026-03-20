@@ -1,4 +1,5 @@
 import { mkdtemp, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -13,7 +14,7 @@ import {
 } from "../../../src/core/state/stateStore.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
 
-export interface ResumeContractOutput {
+export interface ResumeContractSuccessOutput {
   status: "ok";
   reasonCode: "RESUMED";
   envelopeType: string;
@@ -25,15 +26,60 @@ export interface ResumeContractOutput {
   activeRole: string | null;
 }
 
+export interface ResumeContractErrorOutput {
+  status: "error";
+  reasonCode: string | null;
+  stateSubset: {
+    state: string;
+  };
+}
+
+export type ResumeContractOutput =
+  | ResumeContractSuccessOutput
+  | ResumeContractErrorOutput;
+
 export interface ResumeContractRunResult {
   mode: ContractCase["mode"];
   legacy?: ResumeContractOutput;
   v11?: ResumeContractOutput;
 }
 
+type ResumeContractScenario = "basic" | "state_not_waiting_human";
+
+interface ParsedResumeCaseInput {
+  scenario: ResumeContractScenario;
+}
+
+function buildResumeContractBubbleId(caseId: string): string {
+  const suffix = createHash("sha1").update(caseId).digest("hex").slice(0, 12);
+  return `b_contract_${suffix}`;
+}
+
+function parseResumeCaseInput(input: ContractCase["input"]): ParsedResumeCaseInput {
+  const fixtureRaw = input.fixture;
+  let scenario: ResumeContractScenario = "basic";
+  if (fixtureRaw !== undefined) {
+    if (typeof fixtureRaw !== "object" || fixtureRaw === null) {
+      throw new Error("resume contract input.fixture must be an object when provided.");
+    }
+    const scenarioRaw = (fixtureRaw as Record<string, unknown>).scenario;
+    if (
+      scenarioRaw !== undefined &&
+      scenarioRaw !== "basic" &&
+      scenarioRaw !== "state_not_waiting_human"
+    ) {
+      throw new Error(
+        "resume contract input.fixture.scenario must be one of: basic, state_not_waiting_human."
+      );
+    }
+    scenario = (scenarioRaw as ResumeContractScenario | undefined) ?? "basic";
+  }
+  return { scenario };
+}
+
 function normalizeResumeResult(
   result: Awaited<ReturnType<typeof resumeBubble>>
-): ResumeContractOutput {
+): ResumeContractSuccessOutput {
   return {
     status: "ok",
     reasonCode: "RESUMED",
@@ -44,6 +90,21 @@ function normalizeResumeResult(
     },
     round: result.state.round,
     activeRole: result.state.active_role
+  };
+}
+
+function normalizeResumeErrorResult(input: {
+  error: unknown;
+  state: string;
+}): ResumeContractErrorOutput {
+  const message = input.error instanceof Error ? input.error.message : String(input.error);
+  const reasonMatch = /^([A-Z0-9_]+):/u.exec(message.trim());
+  return {
+    status: "error",
+    reasonCode: reasonMatch?.[1] ?? null,
+    stateSubset: {
+      state: input.state
+    }
   };
 }
 
@@ -91,12 +152,16 @@ function assertParityEquivalent(input: {
 async function seedWaitingHumanState(input: {
   repoPath: string;
   bubbleId: string;
+  scenario: ResumeContractScenario;
 }) {
   const bubble = await setupRunningBubbleFixture({
     repoPath: input.repoPath,
     bubbleId: input.bubbleId,
     task: "Resume contract parity fixture"
   });
+  if (input.scenario !== "basic") {
+    return bubble;
+  }
   const loaded = await readStateSnapshot(bubble.paths.statePath);
   const transitioned = applyStateTransition(loaded.state, {
     to: "WAITING_HUMAN",
@@ -115,19 +180,29 @@ async function executeResumeCase(input: {
 }): Promise<ResumeContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-resume-contract-"));
   try {
+    const parsedInput = parseResumeCaseInput(input.caseDef.input);
     await initGitRepository(repoPath);
     const bubble = await seedWaitingHumanState({
       repoPath,
-      bubbleId: `b_contract_${input.caseDef.id}`
+      bubbleId: buildResumeContractBubbleId(input.caseDef.id),
+      scenario: parsedInput.scenario
     });
 
-    const result = await input.executor({
-      bubbleId: bubble.bubbleId,
-      cwd: repoPath,
-      now: new Date("2026-03-20T12:25:00.000Z")
-    });
+    try {
+      const result = await input.executor({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-03-20T12:25:00.000Z")
+      });
 
-    return normalizeResumeResult(result);
+      return normalizeResumeResult(result);
+    } catch (error) {
+      const stateSnapshot = await readStateSnapshot(bubble.paths.statePath);
+      return normalizeResumeErrorResult({
+        error,
+        state: stateSnapshot.state.state
+      });
+    }
   } finally {
     await rm(repoPath, { recursive: true, force: true });
   }

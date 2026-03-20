@@ -237,6 +237,24 @@
       "kind": "seed_case"
     },
     {
+      "id": "resume-state-not-waiting-human",
+      "command": "resume",
+      "source": "tests/contracts/v11/cases/resume/resume-state-not-waiting-human.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "resume-state-not-waiting-human-v11",
+      "command": "resume",
+      "source": "tests/contracts/v11/cases/resume/resume-state-not-waiting-human-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "resume-state-not-waiting-human-parity",
+      "command": "resume",
+      "source": "tests/contracts/v11/cases/resume/resume-state-not-waiting-human-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "watchdog-waiting-human",
       "command": "watchdog",
       "source": "tests/contracts/v11/cases/watchdog/watchdog-waiting-human.case.json",

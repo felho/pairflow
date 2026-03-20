@@ -12,7 +12,10 @@ const execFileAsync = promisify(execFile);
 const resumeCaseSources = [
   "tests/contracts/v11/cases/resume/resume-basic.case.json",
   "tests/contracts/v11/cases/resume/resume-basic-v11.case.json",
-  "tests/contracts/v11/cases/resume/resume-basic-parity.case.json"
+  "tests/contracts/v11/cases/resume/resume-basic-parity.case.json",
+  "tests/contracts/v11/cases/resume/resume-state-not-waiting-human.case.json",
+  "tests/contracts/v11/cases/resume/resume-state-not-waiting-human-v11.case.json",
+  "tests/contracts/v11/cases/resume/resume-state-not-waiting-human-parity.case.json"
 ] as const;
 
 const resumeExpectedSourcesSorted = [...resumeCaseSources].sort();
@@ -49,12 +52,18 @@ describe("v11 resume contract harness skeleton", () => {
       const caseDef = await readContractCase(casePath);
       const run = await runResumeContractCase(caseDef);
       if (caseDef.mode === "legacy") {
-        expect(run.legacy?.status).toBe("ok");
+        expect(run.legacy?.status).toBe(caseDef.expected.status);
+        if (caseDef.expected.reasonCode !== undefined) {
+          expect(run.legacy?.reasonCode).toBe(caseDef.expected.reasonCode);
+        }
         expect(run.v11).toBeUndefined();
         continue;
       }
       if (caseDef.mode === "v11") {
-        expect(run.v11?.status).toBe("ok");
+        expect(run.v11?.status).toBe(caseDef.expected.status);
+        if (caseDef.expected.reasonCode !== undefined) {
+          expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
+        }
         expect(run.legacy).toBeUndefined();
         continue;
       }

@@ -1,0 +1,24 @@
+{
+  "id": "resume-state-not-waiting-human",
+  "command": "resume",
+  "mode": "legacy",
+  "description": "Seed resume contract case for rejection when state is not WAITING_HUMAN.",
+  "input": {
+    "fixture": {
+      "scenario": "state_not_waiting_human"
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "REPLY_WAITING_HUMAN_STATE_REQUIRED",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "resume",
+    "error-path"
+  ]
+}
