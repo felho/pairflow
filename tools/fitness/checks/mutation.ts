@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { relative } from "node:path";
+import ts from "typescript";
 
 import { normalizePathToPosix, resolveFilesForScopePatterns } from "../scope.js";
 import type { FitnessPolicyCheck, FitnessReportCheck } from "../types.js";
@@ -12,58 +13,272 @@ interface MutationViolation {
   snippet: string;
 }
 
-const persistCallPattern = /\bwriteStateSnapshot\s*\(/u;
-const transcriptAppendPattern = /\bappendProtocolEnvelope\s*\(/u;
+interface MutationCallSite {
+  line: number;
+  snippet: string;
+}
 
-function collectLineNumbers(lines: readonly string[], pattern: RegExp): number[] {
-  const matches: number[] = [];
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index] ?? "";
-    if (pattern.test(line)) {
-      matches.push(index + 1);
+interface MutationSourceAnalysis {
+  appendLines: number[];
+  statePersistCalls: MutationCallSite[];
+}
+
+interface StatePersistAnalysis {
+  analyzable: boolean;
+  hasLifecycleMutation: boolean;
+  hasNonLifecycleMutation: boolean;
+}
+
+interface SourceAnalysisContext {
+  sourceFile: ts.SourceFile;
+  lines: readonly string[];
+  variableDeclarations: Map<string, ts.VariableDeclaration[]>;
+}
+
+const lifecycleStateFields = new Set(["state", "round", "active_agent", "active_role", "active_since"]);
+
+const unknownPersistAnalysis: StatePersistAnalysis = {
+  analyzable: false,
+  hasLifecycleMutation: false,
+  hasNonLifecycleMutation: false
+};
+
+function getCallExpressionName(expression: ts.LeftHandSideExpression): string | null {
+  if (ts.isIdentifier(expression)) {
+    return expression.text;
+  }
+  if (ts.isPropertyAccessExpression(expression)) {
+    return expression.name.text;
+  }
+  if (
+    ts.isElementAccessExpression(expression) &&
+    expression.argumentExpression !== undefined &&
+    ts.isStringLiteralLike(expression.argumentExpression)
+  ) {
+    return expression.argumentExpression.text;
+  }
+  return null;
+}
+
+function getPropertyNameText(name: ts.PropertyName): string | null {
+  if (ts.isIdentifier(name) || ts.isStringLiteralLike(name) || ts.isNumericLiteral(name)) {
+    return name.text;
+  }
+  return null;
+}
+
+function createSourceAnalysisContext(filePath: string, fileContent: string): SourceAnalysisContext {
+  const sourceFile = ts.createSourceFile(filePath, fileContent, ts.ScriptTarget.Latest, true);
+  const lines = fileContent.split(/\r?\n/u);
+  const variableDeclarations = new Map<string, ts.VariableDeclaration[]>();
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+      const existing = variableDeclarations.get(node.name.text);
+      if (existing) {
+        existing.push(node);
+      } else {
+        variableDeclarations.set(node.name.text, [node]);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+
+  visit(sourceFile);
+  return { sourceFile, lines, variableDeclarations };
+}
+
+function resolveVariableInitializer(
+  name: string,
+  beforePosition: number,
+  context: SourceAnalysisContext
+): ts.Expression | undefined {
+  const declarations = context.variableDeclarations.get(name);
+  if (!declarations || declarations.length === 0) {
+    return undefined;
+  }
+
+  for (let index = declarations.length - 1; index >= 0; index -= 1) {
+    const declaration = declarations[index];
+    if (!declaration) {
+      continue;
+    }
+    if (declaration.getStart(context.sourceFile) >= beforePosition) {
+      continue;
+    }
+    if (declaration.initializer) {
+      return declaration.initializer;
     }
   }
-  return matches;
+
+  return undefined;
+}
+
+function analyzeObjectLiteralStateMutation(objectLiteral: ts.ObjectLiteralExpression): StatePersistAnalysis {
+  let hasLifecycleMutation = false;
+  let hasNonLifecycleMutation = false;
+  let hasUnknownMutation = false;
+
+  for (const property of objectLiteral.properties) {
+    if (ts.isSpreadAssignment(property)) {
+      continue;
+    }
+
+    if (
+      ts.isPropertyAssignment(property) ||
+      ts.isShorthandPropertyAssignment(property) ||
+      ts.isMethodDeclaration(property) ||
+      ts.isGetAccessorDeclaration(property) ||
+      ts.isSetAccessorDeclaration(property)
+    ) {
+      const fieldName = getPropertyNameText(property.name);
+      if (fieldName === null) {
+        hasUnknownMutation = true;
+        continue;
+      }
+      if (lifecycleStateFields.has(fieldName)) {
+        hasLifecycleMutation = true;
+      } else {
+        hasNonLifecycleMutation = true;
+      }
+      continue;
+    }
+
+    hasUnknownMutation = true;
+  }
+
+  if (hasUnknownMutation) {
+    return unknownPersistAnalysis;
+  }
+
+  return {
+    analyzable: true,
+    hasLifecycleMutation,
+    hasNonLifecycleMutation
+  };
+}
+
+function analyzePersistedStateExpression(
+  expression: ts.Expression,
+  context: SourceAnalysisContext,
+  beforePosition: number,
+  visited: Set<number> = new Set()
+): StatePersistAnalysis {
+  if (visited.has(expression.pos)) {
+    return unknownPersistAnalysis;
+  }
+  visited.add(expression.pos);
+
+  if (ts.isParenthesizedExpression(expression)) {
+    return analyzePersistedStateExpression(expression.expression, context, beforePosition, visited);
+  }
+
+  if (
+    ts.isAsExpression(expression) ||
+    ts.isTypeAssertionExpression(expression) ||
+    ts.isSatisfiesExpression(expression)
+  ) {
+    return analyzePersistedStateExpression(expression.expression, context, beforePosition, visited);
+  }
+
+  if (ts.isObjectLiteralExpression(expression)) {
+    return analyzeObjectLiteralStateMutation(expression);
+  }
+
+  if (ts.isIdentifier(expression)) {
+    const initializer = resolveVariableInitializer(expression.text, beforePosition, context);
+    if (!initializer) {
+      return unknownPersistAnalysis;
+    }
+    return analyzePersistedStateExpression(initializer, context, beforePosition, visited);
+  }
+
+  return unknownPersistAnalysis;
+}
+
+function analyzeMutationCallSites(filePath: string, fileContent: string): MutationSourceAnalysis {
+  const context = createSourceAnalysisContext(filePath, fileContent);
+  const appendLines: number[] = [];
+  const statePersistCalls: MutationCallSite[] = [];
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node)) {
+      const callName = getCallExpressionName(node.expression);
+      if (callName === "appendProtocolEnvelope") {
+        const line =
+          context.sourceFile.getLineAndCharacterOfPosition(node.getStart(context.sourceFile)).line + 1;
+        appendLines.push(line);
+      }
+
+      if (callName === "writeStateSnapshot") {
+        const line =
+          context.sourceFile.getLineAndCharacterOfPosition(node.getStart(context.sourceFile)).line + 1;
+        const snippet = (context.lines[line - 1] ?? "").trim();
+        const persistedStateArgument = node.arguments[1];
+
+        if (persistedStateArgument) {
+          const analysis = analyzePersistedStateExpression(
+            persistedStateArgument,
+            context,
+            node.getStart(context.sourceFile)
+          );
+          const isMetadataOnlyPersist =
+            analysis.analyzable && analysis.hasNonLifecycleMutation && !analysis.hasLifecycleMutation;
+          if (isMetadataOnlyPersist) {
+            ts.forEachChild(node, visit);
+            return;
+          }
+        }
+
+        statePersistCalls.push({ line, snippet });
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  };
+
+  visit(context.sourceFile);
+  return { appendLines, statePersistCalls };
 }
 
 function collectMutationViolations(
   filePath: string,
   fileContent: string
 ): MutationViolation[] {
-  const lines = fileContent.split(/\r?\n/u);
-  const persistLines = collectLineNumbers(lines, persistCallPattern);
-  const appendLines = collectLineNumbers(lines, transcriptAppendPattern);
+  const analysis = analyzeMutationCallSites(filePath, fileContent);
   const violations: MutationViolation[] = [];
 
-  if (persistLines.length === 0) {
+  if (analysis.statePersistCalls.length === 0) {
     return violations;
   }
-  if (appendLines.length === 0) {
-    for (const line of persistLines) {
+
+  if (analysis.appendLines.length === 0) {
+    for (const persist of analysis.statePersistCalls) {
       violations.push({
         path: filePath,
-        line,
+        line: persist.line,
         severity: "warn",
         kind: "state_without_transcript",
-        snippet: (lines[line - 1] ?? "").trim()
+        snippet: persist.snippet
       });
     }
     return violations;
   }
 
-  for (const persistLine of persistLines) {
-    const hasPriorAppend = appendLines.some((appendLine) => appendLine < persistLine);
+  for (const persist of analysis.statePersistCalls) {
+    const hasPriorAppend = analysis.appendLines.some((appendLine) => appendLine < persist.line);
     if (hasPriorAppend) {
       continue;
     }
     violations.push({
       path: filePath,
-      line: persistLine,
+      line: persist.line,
       severity: "fail",
       kind: "state_before_transcript",
-      snippet: (lines[persistLine - 1] ?? "").trim()
+      snippet: persist.snippet
     });
   }
+
   return violations;
 }
 

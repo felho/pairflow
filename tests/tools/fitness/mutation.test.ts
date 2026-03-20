@@ -33,6 +33,39 @@ afterEach(async () => {
 });
 
 describe("mutation fitness check", () => {
+  it("passes metadata-only persist without transcript append evidence", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/infrastructure/mutation-metadata-only.ts",
+      [
+        "export async function run(state: { state: string }, nowIso: string): Promise<void> {",
+        "  const persisted = {",
+        "    ...state,",
+        "    last_command_at: nowIso",
+        "  };",
+        "  await writeStateSnapshot('state.json', persisted);",
+        "}"
+      ].join("\n")
+    );
+
+    const report = await buildMutationCheckReport({
+      check: {
+        id: "mutation",
+        metric: "mutation boundary and transcript-first pipeline usage",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture/runtime",
+        scope: ["src/v11/infrastructure/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only"
+    });
+
+    expect(report.status).toBe("pass");
+  });
+
   it("fails when state persist happens before transcript append", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
@@ -76,6 +109,44 @@ describe("mutation fitness check", () => {
       [
         "export async function run(): Promise<void> {",
         "  await writeStateSnapshot('state.json', {});",
+        "}"
+      ].join("\n")
+    );
+
+    const report = await buildMutationCheckReport({
+      check: {
+        id: "mutation",
+        metric: "mutation boundary and transcript-first pipeline usage",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture/runtime",
+        scope: ["src/v11/infrastructure/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only"
+    });
+
+    expect(report.status).toBe("warn");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("state persist without transcript append evidence")
+      )
+    ).toBe(true);
+  });
+
+  it("warns when lifecycle state persist is routed through variable without transcript append", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/infrastructure/mutation-lifecycle-via-variable.ts",
+      [
+        "export async function run(state: { state: string }): Promise<void> {",
+        "  const nextState = {",
+        "    ...state,",
+        "    state: 'WAITING_HUMAN'",
+        "  };",
+        "  await writeStateSnapshot('state.json', nextState);",
         "}"
       ].join("\n")
     );
