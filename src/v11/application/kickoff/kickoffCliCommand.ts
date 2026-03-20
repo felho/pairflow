@@ -58,7 +58,31 @@ export function getBubbleKickoffHelpText(): string {
 export function parseBubbleKickoffCommandOptions(
   args: string[]
 ): ParsedBubbleKickoffCommandOptions {
-  const parsed = parseArgs({
+  const parsed = parseKickoffArgs(args);
+
+  if (parsed.values.help ?? false) {
+    return {
+      help: true
+    };
+  }
+
+  assertNoReviewArtifactTypeOverride(parsed.values["review-artifact-type"]);
+  const id = parseRequiredKickoffId(parsed.values.id);
+  const taskInput = parseKickoffTaskInput({
+    task: parsed.values.task,
+    taskFile: parsed.values["task-file"]
+  });
+
+  return {
+    id,
+    ...(parsed.values.repo !== undefined ? { repo: parsed.values.repo } : {}),
+    ...taskInput,
+    help: false
+  };
+}
+
+function parseKickoffArgs(args: string[]) {
+  return parseArgs({
     args,
     options: {
       id: {
@@ -84,30 +108,37 @@ export function parseBubbleKickoffCommandOptions(
     strict: true,
     allowPositionals: false
   });
+}
 
-  if (parsed.values.help ?? false) {
-    return {
-      help: true
-    };
-  }
-
-  if (parsed.values["review-artifact-type"] !== undefined) {
+function assertNoReviewArtifactTypeOverride(
+  reviewArtifactType: string | undefined
+): void {
+  if (reviewArtifactType !== undefined) {
     throw new Error(
       `${IDEATION_REVIEW_ARTIFACT_TYPE_IMMUTABLE}: --review-artifact-type cannot be overridden by bubble kickoff. context: command_name=kickoff.`
     );
   }
+}
 
-  const id = parsed.values.id;
+function parseRequiredKickoffId(id: string | undefined): string {
   if (id === undefined) {
     throw new Error(
       "KICKOFF_ID_REQUIRED: Missing required option: --id. context: command_name=kickoff."
     );
   }
+  return id;
+}
 
-  const task = parsed.values.task;
-  const taskFile = parsed.values["task-file"];
-  const hasTask = typeof task === "string" && task.trim().length > 0;
-  const hasTaskFile = typeof taskFile === "string" && taskFile.trim().length > 0;
+function parseKickoffTaskInput(input: {
+  task: string | undefined;
+  taskFile: string | undefined;
+}): {
+  task?: string;
+  taskFile?: string;
+} {
+  const hasTask = typeof input.task === "string" && input.task.trim().length > 0;
+  const hasTaskFile =
+    typeof input.taskFile === "string" && input.taskFile.trim().length > 0;
   if (hasTask && hasTaskFile) {
     throw new Error(
       `${IDEATION_TASK_INPUT_CONFLICT}: Provide exactly one task input via --task or --task-file. context: command_name=kickoff.`
@@ -118,13 +149,9 @@ export function parseBubbleKickoffCommandOptions(
       `${IDEATION_KICKOFF_TASK_INVALID}: Provide exactly one task input via --task or --task-file. context: command_name=kickoff.`
     );
   }
-
   return {
-    id,
-    ...(parsed.values.repo !== undefined ? { repo: parsed.values.repo } : {}),
-    ...(task !== undefined ? { task } : {}),
-    ...(taskFile !== undefined ? { taskFile } : {}),
-    help: false
+    ...(input.task !== undefined ? { task: input.task } : {}),
+    ...(input.taskFile !== undefined ? { taskFile: input.taskFile } : {})
   };
 }
 
