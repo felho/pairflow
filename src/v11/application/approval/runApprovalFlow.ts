@@ -10,6 +10,10 @@ import {
   mapQueuedReworkResult,
   resolveApprovalNextState
 } from "./approvalResultMapping.js";
+import {
+  emitDeferredReworkIntentLifecycleEvents,
+  persistDeferredReworkIntentState
+} from "./runApprovalDeferredRework.js";
 import type {
   NormalizedApprovalDecisionInput,
   NormalizedRequestReworkInput
@@ -324,60 +328,26 @@ export async function runRequestReworkFlow(
   // Deferred rework intent mutates intent metadata only; lifecycle state
   // remains WAITING_HUMAN under the existing eligibility guard.
 
-  let written;
-  try {
-    written = await persistStateViaMutationBoundary({
-      write: dependencies.writeStateSnapshot,
-      statePath: resolved.bubblePaths.statePath,
-      state: queued.state,
-      options: {
-        expectedFingerprint: loadedState.fingerprint,
-        expectedState: "WAITING_HUMAN"
-      }
-    });
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw input.createError(
-      `Deferred rework intent ${queued.intent.intent_id} was queued in-memory but state update failed. Root error: ${reason}`
-    );
-  }
+  const written = await persistDeferredReworkIntentState({
+    queued,
+    loadedFingerprint: loadedState.fingerprint,
+    statePath: resolved.bubblePaths.statePath,
+    writeStateSnapshot: dependencies.writeStateSnapshot,
+    createError: input.createError
+  });
 
-  await dependencies.emitBubbleLifecycleEventBestEffort({
+  await emitDeferredReworkIntentLifecycleEvents({
+    dependencies,
     repoPath: resolved.repoPath,
     bubbleId: resolved.bubbleId,
     bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
-    eventType: "rework_intent_queued",
     round: state.round,
-    actorRole: "human",
-    metadata: {
-      intent_id: queued.intent.intent_id,
-      requested_by: queued.intent.requested_by,
-      requested_at: queued.intent.requested_at,
-      state_at_request: state.state,
-      refs_count: input.refs.length,
-      message_length: Array.from(input.message).length
-    },
-    now: input.now
+    stateAtRequest: state.state,
+    refsCount: input.refs.length,
+    message: input.message,
+    now: input.now,
+    queued
   });
-
-  if (queued.supersededIntentId !== undefined) {
-    await dependencies.emitBubbleLifecycleEventBestEffort({
-      repoPath: resolved.repoPath,
-      bubbleId: resolved.bubbleId,
-      bubbleInstanceId: bubbleIdentity.bubbleInstanceId,
-      eventType: "rework_intent_superseded",
-      round: state.round,
-      actorRole: "human",
-      metadata: {
-        intent_id: queued.supersededIntentId,
-        superseded_by_intent_id: queued.intent.intent_id,
-        requested_by: queued.intent.requested_by,
-        requested_at: queued.intent.requested_at,
-        state_at_request: state.state
-      },
-      now: input.now
-    });
-  }
 
   return mapQueuedReworkResult({
     bubbleId: resolved.bubbleId,
