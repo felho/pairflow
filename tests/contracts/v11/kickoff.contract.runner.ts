@@ -7,14 +7,27 @@ import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/conf
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { kickoffBubble } from "../../../src/core/bubble/kickoffBubble.js";
 import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
+import type { EmitTmuxDeliveryNotificationResult } from "../../../src/core/runtime/tmuxDelivery.js";
 import {
   readStateSnapshot,
   StateStoreConflictError,
   writeStateSnapshot
 } from "../../../src/core/state/stateStore.js";
 import { kickoffBubbleV11 } from "../../../src/v11/application/kickoff/emitKickoffV11.js";
+import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { initGitRepository } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
+
+type DeliveryRefKind = "external" | "none" | "transcript";
+type KickoffDependencyOverrideMap = NonNullable<
+  Parameters<typeof kickoffBubble>[1]
+>;
+
+interface CapturedKickoffDelivery {
+  recipient: string;
+  targetRole: string | null;
+  refKind: DeliveryRefKind;
+}
 
 export interface KickoffContractOutput {
   status: "ok" | "error";
@@ -36,6 +49,10 @@ export interface KickoffContractOutput {
   };
   taskEnvelopeCount: number;
   taskArtifactContainsTask: boolean;
+  deliveryCount: number;
+  deliveryRecipients: string[];
+  deliveryTargetRoles: string[];
+  deliveryRefKinds: DeliveryRefKind[];
 }
 
 export interface KickoffContractRunResult {
@@ -242,6 +259,7 @@ function normalizeKickoffResult(input: {
   result: Awaited<ReturnType<typeof kickoffBubble>>;
   taskEnvelopeCount: number;
   taskArtifactContainsTask: boolean;
+  deliveries: CapturedKickoffDelivery[];
 }): KickoffContractOutput {
   const state = input.result.state_after ?? input.result.state_before;
   return {
@@ -257,8 +275,21 @@ function normalizeKickoffResult(input: {
     markersBefore: input.result.markers_before,
     markersAfter: input.result.markers_after,
     taskEnvelopeCount: input.taskEnvelopeCount,
-    taskArtifactContainsTask: input.taskArtifactContainsTask
+    taskArtifactContainsTask: input.taskArtifactContainsTask,
+    deliveryCount: input.deliveries.length,
+    deliveryRecipients: input.deliveries.map((delivery) => delivery.recipient),
+    deliveryTargetRoles: input.deliveries
+      .map((delivery) => delivery.targetRole)
+      .filter((role): role is string => role !== null),
+    deliveryRefKinds: input.deliveries.map((delivery) => delivery.refKind)
   };
+}
+
+function classifyDeliveryRefKind(messageRef: string | undefined): DeliveryRefKind {
+  if (messageRef === undefined) {
+    return "none";
+  }
+  return messageRef.includes("transcript.ndjson#") ? "transcript" : "external";
 }
 
 function assertContractExpectedSubset(input: {
@@ -286,6 +317,41 @@ function assertContractExpectedSubset(input: {
   ) {
     throw new Error(
       `${input.label}: stateSubset.state mismatch (expected=${expectedState}, actual=${input.output.stateSubset.state})`
+    );
+  }
+  if (
+    input.expected.deliveryCount !== undefined &&
+    input.output.deliveryCount !== input.expected.deliveryCount
+  ) {
+    throw new Error(
+      `${input.label}: deliveryCount mismatch (expected=${input.expected.deliveryCount}, actual=${input.output.deliveryCount})`
+    );
+  }
+  if (
+    input.expected.deliveryRecipients !== undefined &&
+    JSON.stringify(input.output.deliveryRecipients)
+      !== JSON.stringify(input.expected.deliveryRecipients)
+  ) {
+    throw new Error(
+      `${input.label}: deliveryRecipients mismatch (expected=${JSON.stringify(input.expected.deliveryRecipients)}, actual=${JSON.stringify(input.output.deliveryRecipients)})`
+    );
+  }
+  if (
+    input.expected.deliveryTargetRoles !== undefined &&
+    JSON.stringify(input.output.deliveryTargetRoles)
+      !== JSON.stringify(input.expected.deliveryTargetRoles)
+  ) {
+    throw new Error(
+      `${input.label}: deliveryTargetRoles mismatch (expected=${JSON.stringify(input.expected.deliveryTargetRoles)}, actual=${JSON.stringify(input.output.deliveryTargetRoles)})`
+    );
+  }
+  if (
+    input.expected.deliveryRefKinds !== undefined &&
+    JSON.stringify(input.output.deliveryRefKinds)
+      !== JSON.stringify(input.expected.deliveryRefKinds)
+  ) {
+    throw new Error(
+      `${input.label}: deliveryRefKinds mismatch (expected=${JSON.stringify(input.expected.deliveryRefKinds)}, actual=${JSON.stringify(input.output.deliveryRefKinds)})`
     );
   }
 }
@@ -405,7 +471,26 @@ async function executeKickoffCase(input: {
       parsedInput.fixture
     );
 
-    const dependencyOverrides: Parameters<typeof input.executor>[1] = {};
+    const deliveries: CapturedKickoffDelivery[] = [];
+    const emitDelivery: NonNullable<
+      KickoffDependencyOverrideMap["emitTmuxDeliveryNotification"]
+    > = (deliveryInput) => {
+      const targetRoleRaw =
+        deliveryInput.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey];
+      deliveries.push({
+        recipient: deliveryInput.envelope.recipient,
+        targetRole: typeof targetRoleRaw === "string" ? targetRoleRaw : null,
+        refKind: classifyDeliveryRefKind(deliveryInput.messageRef)
+      });
+      return Promise.resolve<EmitTmuxDeliveryNotificationResult>({
+        delivered: true,
+        message: "ok"
+      });
+    };
+
+    const dependencyOverrides: KickoffDependencyOverrideMap = {
+      emitTmuxDeliveryNotification: emitDelivery
+    };
     if (parsedInput.fixture.stateConflict) {
       dependencyOverrides.writeStateSnapshot = () =>
         Promise.reject(new StateStoreConflictError("Injected kickoff state conflict."));
@@ -457,7 +542,8 @@ async function executeKickoffCase(input: {
     return normalizeKickoffResult({
       result,
       taskEnvelopeCount,
-      taskArtifactContainsTask: taskArtifact.includes(parsedInput.task)
+      taskArtifactContainsTask: taskArtifact.includes(parsedInput.task),
+      deliveries
     });
   } finally {
     await rm(repoPath, { recursive: true, force: true });

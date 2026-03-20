@@ -14,7 +14,11 @@
     "reasonCode": "IDEATION_KICKOFF_NOT_ELIGIBLE",
     "stateSubset": {
       "state": "RUNNING"
-    }
+    },
+    "deliveryCount": 0,
+    "deliveryRecipients": [],
+    "deliveryTargetRoles": [],
+    "deliveryRefKinds": []
   },
   "tags": [
     "seed",

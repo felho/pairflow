@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import {
   emitConvergedFromWorkspace,
+  type EmitConvergedDependencies,
   type EmitConvergedInput,
   type EmitConvergedResult
 } from "../../../src/core/agent/converged.js";
@@ -11,7 +12,16 @@ import { emitConvergedFromWorkspaceV11 } from "../../../src/v11/application/conv
 import { seedConvergedCandidate } from "../../v11/application/converged/convergedSeedFixture.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
+import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
+
+type DeliveryRefKind = "external" | "none" | "transcript";
+
+interface CapturedConvergedDelivery {
+  recipient: string;
+  targetRole: string | null;
+  refKind: DeliveryRefKind;
+}
 
 export interface ConvergedContractOutput {
   status: "ok";
@@ -27,6 +37,10 @@ export interface ConvergedContractOutput {
   stateSubset: {
     state: string;
   };
+  deliveryCount: number;
+  deliveryRecipients: string[];
+  deliveryTargetRoles: string[];
+  deliveryRefKinds: DeliveryRefKind[];
 }
 
 export interface ConvergedContractRunResult {
@@ -79,7 +93,8 @@ function parseConvergedCaseInput(input: ContractCase["input"]): ParsedConvergedC
 }
 
 function normalizeConvergedResult(
-  result: EmitConvergedResult
+  result: EmitConvergedResult,
+  deliveries: CapturedConvergedDelivery[]
 ): ConvergedContractOutput {
   return {
     status: "ok",
@@ -94,8 +109,21 @@ function normalizeConvergedResult(
     gateRoute: result.gateRoute,
     stateSubset: {
       state: result.state.state
-    }
+    },
+    deliveryCount: deliveries.length,
+    deliveryRecipients: deliveries.map((delivery) => delivery.recipient),
+    deliveryTargetRoles: deliveries
+      .map((delivery) => delivery.targetRole)
+      .filter((role): role is string => role !== null),
+    deliveryRefKinds: deliveries.map((delivery) => delivery.refKind)
   };
+}
+
+function classifyDeliveryRefKind(messageRef: string | undefined): DeliveryRefKind {
+  if (messageRef === undefined) {
+    return "none";
+  }
+  return messageRef.includes("transcript.ndjson#") ? "transcript" : "external";
 }
 
 function assertContractExpectedSubset(input: {
@@ -183,6 +211,41 @@ function assertContractExpectedSubset(input: {
       `${input.label}: stateSubset.state mismatch (expected=${expectedState}, actual=${input.output.stateSubset.state})`
     );
   }
+  if (
+    input.expected.deliveryCount !== undefined &&
+    input.output.deliveryCount !== input.expected.deliveryCount
+  ) {
+    throw new Error(
+      `${input.label}: deliveryCount mismatch (expected=${input.expected.deliveryCount}, actual=${input.output.deliveryCount})`
+    );
+  }
+  if (
+    input.expected.deliveryRecipients !== undefined &&
+    JSON.stringify(input.output.deliveryRecipients)
+      !== JSON.stringify(input.expected.deliveryRecipients)
+  ) {
+    throw new Error(
+      `${input.label}: deliveryRecipients mismatch (expected=${JSON.stringify(input.expected.deliveryRecipients)}, actual=${JSON.stringify(input.output.deliveryRecipients)})`
+    );
+  }
+  if (
+    input.expected.deliveryTargetRoles !== undefined &&
+    JSON.stringify(input.output.deliveryTargetRoles)
+      !== JSON.stringify(input.expected.deliveryTargetRoles)
+  ) {
+    throw new Error(
+      `${input.label}: deliveryTargetRoles mismatch (expected=${JSON.stringify(input.expected.deliveryTargetRoles)}, actual=${JSON.stringify(input.output.deliveryTargetRoles)})`
+    );
+  }
+  if (
+    input.expected.deliveryRefKinds !== undefined &&
+    JSON.stringify(input.output.deliveryRefKinds)
+      !== JSON.stringify(input.expected.deliveryRefKinds)
+  ) {
+    throw new Error(
+      `${input.label}: deliveryRefKinds mismatch (expected=${JSON.stringify(input.expected.deliveryRefKinds)}, actual=${JSON.stringify(input.output.deliveryRefKinds)})`
+    );
+  }
 }
 
 function assertParityEquivalent(input: {
@@ -199,7 +262,7 @@ function assertParityEquivalent(input: {
 
 async function executeConvergedCase(input: {
   caseDef: ContractCase;
-  executor: (convergedInput: EmitConvergedInput) => Promise<EmitConvergedResult>;
+  executor: typeof emitConvergedFromWorkspace;
 }): Promise<ConvergedContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-converged-contract-"));
   try {
@@ -214,13 +277,31 @@ async function executeConvergedCase(input: {
         : {})
     });
     await seedConvergedCandidate(bubble.paths.worktreePath);
+    const deliveries: CapturedConvergedDelivery[] = [];
+    const emitDelivery: NonNullable<
+      EmitConvergedDependencies["emitTmuxDeliveryNotification"]
+    > = (deliveryInput) => {
+      const targetRoleRaw =
+        deliveryInput.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey];
+      deliveries.push({
+        recipient: deliveryInput.envelope.recipient,
+        targetRole: typeof targetRoleRaw === "string" ? targetRoleRaw : null,
+        refKind: classifyDeliveryRefKind(deliveryInput.messageRef)
+      });
+      return Promise.resolve({
+        delivered: true,
+        message: "ok"
+      });
+    };
 
     const result = await input.executor({
       ...parsedInput.convergedInput,
       cwd: bubble.paths.worktreePath,
       now: new Date("2026-02-22T09:05:00.000Z")
+    }, {
+      emitTmuxDeliveryNotification: emitDelivery
     });
-    return normalizeConvergedResult(result);
+    return normalizeConvergedResult(result, deliveries);
   } finally {
     await rm(repoPath, { recursive: true, force: true });
   }

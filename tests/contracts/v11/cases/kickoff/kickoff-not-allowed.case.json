@@ -14,7 +14,11 @@
     "reasonCode": "IDEATION_KICKOFF_NOT_ALLOWED",
     "stateSubset": {
       "state": "CREATED"
-    }
+    },
+    "deliveryCount": 0,
+    "deliveryRecipients": [],
+    "deliveryTargetRoles": [],
+    "deliveryRefKinds": []
   },
   "tags": [
     "seed",

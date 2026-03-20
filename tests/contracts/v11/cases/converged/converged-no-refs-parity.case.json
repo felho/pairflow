@@ -17,7 +17,18 @@
     "approvalRequestSender": "orchestrator",
     "stateSubset": {
       "state": "META_REVIEW_FAILED"
-    }
+    },
+    "deliveryCount": 3,
+    "deliveryRecipients": [
+      "human",
+      "codex",
+      "claude"
+    ],
+    "deliveryTargetRoles": [
+      "status",
+      "implementer",
+      "reviewer"
+    ]
   },
   "tags": [
     "converged",

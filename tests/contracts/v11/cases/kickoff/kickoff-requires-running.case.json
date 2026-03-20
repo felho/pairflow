@@ -14,7 +14,11 @@
     "reasonCode": "IDEATION_KICKOFF_REQUIRES_RUNNING",
     "stateSubset": {
       "state": "CREATED"
-    }
+    },
+    "deliveryCount": 0,
+    "deliveryRecipients": [],
+    "deliveryTargetRoles": [],
+    "deliveryRefKinds": []
   },
   "tags": [
     "seed",

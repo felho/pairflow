@@ -13,7 +13,15 @@
     "status": "ok",
     "stateSubset": {
       "state": "RUNNING"
-    }
+    },
+    "deliveryCount": 1,
+    "deliveryRecipients": [
+      "codex"
+    ],
+    "deliveryTargetRoles": [],
+    "deliveryRefKinds": [
+      "none"
+    ]
   },
   "tags": [
     "seed",
