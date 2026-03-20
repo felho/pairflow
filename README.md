@@ -1086,6 +1086,23 @@ pnpm dev:ui     # Rebuild CLI + restart web UI server on port 4173
 
 Validation commands write evidence logs to `.pairflow/evidence/` (lint/typecheck/test), which can be attached in `pairflow pass --ref ...`.
 
+### CI (milestone-aware fitness gate)
+
+Use the CI entrypoint to ensure the fitness check always receives an explicit milestone:
+
+```bash
+# Default fallback milestone is M0 when no env is provided
+pnpm fitness:check:ci
+
+# Recommended in CI: pass milestone explicitly from pipeline input
+PAIRFLOW_CI_MILESTONE=M2 pnpm fitness:check:ci
+```
+
+Milestone precedence used by `fitness:check:ci`:
+1. `PAIRFLOW_CI_MILESTONE`
+2. `PAIRFLOW_FITNESS_CURRENT_MILESTONE`
+3. `M0` (fallback)
+
 ## Roadmap
 
 - Diff / changed files view in the web UI
