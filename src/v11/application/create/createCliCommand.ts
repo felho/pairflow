@@ -1,18 +1,21 @@
 import { parseArgs } from "node:util";
-import { resolve } from "node:path";
 
-import { createBubble, type BubbleCreateResult } from "../../../core/bubble/createBubble.js";
-import { registerRepoInRegistry } from "../../../core/repo/registry.js";
+import type { BubbleCreateResult, createBubble } from "../../../core/bubble/createBubble.js";
+import type { registerRepoInRegistry } from "../../../core/repo/registry.js";
 import {
   assertCreateReviewArtifactType,
   assertPairflowCommandProfile,
-  DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER,
   MISSING_REVIEW_ARTIFACT_TYPE_OPTION
 } from "../../../config/bubbleConfig.js";
 import {
   IDEATION_TASK_INPUT_CONFLICT,
   IDEATION_TASK_REQUIRED
 } from "../../../core/bubble/ideation.js";
+import {
+  buildCreateBubbleInput,
+  registerRepoAfterCreateBestEffort,
+  resolveBubbleCreateCommandDependencies
+} from "./createCliRunHelpers.js";
 import type {
   CreateReviewArtifactType,
   PairflowCommandProfile
@@ -418,47 +421,13 @@ export async function runBubbleCreateCommand(
     return null;
   }
 
-  const repoPath = resolve(cwd, options.repo as string);
-  const register = dependencies.registerRepoInRegistry ?? registerRepoInRegistry;
-  const reportWarning =
-    dependencies.reportRegistryRegistrationWarning ??
-    ((message: string) => {
-      process.stderr.write(`${message}\n`);
-    });
-
-  const create = dependencies.createBubble ?? createBubble;
-  const created = await create({
-    id: options.id as string,
-    repoPath,
-    baseBranch: options.base as string,
-    reviewArtifactType: options.reviewArtifactType as CreateReviewArtifactType,
-    ...(options.ideation === true ? { ideation: true } : {}),
-    ...(options.task !== undefined ? { task: options.task } : {}),
-    ...(options.taskFile !== undefined ? { taskFile: options.taskFile } : {}),
-    ...(options.reviewerBrief !== undefined
-      ? { reviewerBrief: options.reviewerBrief }
-      : {}),
-    ...(options.reviewerBriefFile !== undefined
-      ? { reviewerBriefFile: options.reviewerBriefFile }
-      : {}),
-    ...(options.bootstrapCommand !== undefined
-      ? { bootstrapCommand: options.bootstrapCommand }
-      : {}),
-    ...(options.pairflowCommandProfile !== undefined
-      ? { pairflowCommandProfile: options.pairflowCommandProfile }
-      : {}),
-    ...(options.accuracyCritical === true ? { accuracyCritical: true } : {}),
-    cwd
+  const resolvedDependencies = resolveBubbleCreateCommandDependencies(dependencies);
+  const createInput = buildCreateBubbleInput(options, cwd);
+  const created = await resolvedDependencies.create(createInput.input);
+  await registerRepoAfterCreateBestEffort({
+    repoPath: createInput.repoPath,
+    register: resolvedDependencies.register,
+    reportWarning: resolvedDependencies.reportWarning
   });
-  try {
-    await register({
-      repoPath
-    });
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    reportWarning(
-      `${DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER}: failed to auto-register repository for bubble create (${repoPath}): ${reason}`
-    );
-  }
   return created;
 }
