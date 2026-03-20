@@ -1,10 +1,22 @@
-import { parseArgs, stripVTControlCharacters } from "node:util";
+import { parseArgs } from "node:util";
 
 import {
   asBubbleStatusErrorV11 as asBubbleStatusError,
   getBubbleStatusV11 as getBubbleStatus,
   type BubbleStatusV11View as BubbleStatusView
 } from "./emitStatusV11.js";
+import {
+  blue,
+  bold,
+  cyan,
+  dim,
+  green,
+  padRightVisible,
+  red,
+  visibleLength,
+  white,
+  yellow
+} from "./statusCliAnsi.js";
 
 export interface BubbleStatusCommandOptions {
   id: string;
@@ -81,64 +93,6 @@ export function parseBubbleStatusCommandOptions(
     table: parsed.values.table ?? false,
     help: false
   };
-}
-
-function style(input: string, ...ansiCodes: number[]): string {
-  if (!process.stdout.isTTY) {
-    return input;
-  }
-  if (process.env.NO_COLOR !== undefined) {
-    return input;
-  }
-  return `\u001b[${ansiCodes.join(";")}m${input}\u001b[0m`;
-}
-
-function green(input: string): string {
-  return style(input, 32);
-}
-
-function yellow(input: string): string {
-  return style(input, 33);
-}
-
-function red(input: string): string {
-  return style(input, 31);
-}
-
-function cyan(input: string): string {
-  return style(input, 36);
-}
-
-function blue(input: string): string {
-  return style(input, 34);
-}
-
-function white(input: string): string {
-  return style(input, 37);
-}
-
-function bold(input: string): string {
-  return style(input, 1);
-}
-
-function dim(input: string): string {
-  return style(input, 2);
-}
-
-function stripAnsi(input: string): string {
-  return stripVTControlCharacters(input);
-}
-
-function visibleLength(input: string): number {
-  return stripAnsi(input).length;
-}
-
-function padRightVisible(input: string, targetLength: number): string {
-  const missing = targetLength - visibleLength(input);
-  if (missing <= 0) {
-    return input;
-  }
-  return `${input}${" ".repeat(missing)}`;
 }
 
 function formatStateLabel(value: string): string {
