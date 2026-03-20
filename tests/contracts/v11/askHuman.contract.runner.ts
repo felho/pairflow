@@ -4,13 +4,24 @@ import { join } from "node:path";
 
 import {
   emitAskHumanFromWorkspace,
+  type EmitAskHumanDependencies,
   type EmitAskHumanInput,
   type EmitAskHumanResult
 } from "../../../src/core/agent/askHuman.js";
 import { emitAskHumanFromWorkspaceV11 } from "../../../src/v11/application/askHuman/emitAskHumanV11.js";
+import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
+
+type DeliveryRefKind = "external" | "none" | "transcript";
+
+interface CapturedAskHumanDelivery {
+  type: string;
+  recipient: string;
+  targetRole: string | null;
+  refKind: DeliveryRefKind;
+}
 
 export interface AskHumanContractOutput {
   status: "ok";
@@ -19,6 +30,10 @@ export interface AskHumanContractOutput {
   stateSubset: {
     state: string;
   };
+  deliveryCount: number;
+  deliveryRecipients: string[];
+  deliveryTargetRoles: string[];
+  deliveryRefKinds: DeliveryRefKind[];
 }
 
 export interface AskHumanContractRunResult {
@@ -53,7 +68,8 @@ function parseAskHumanCaseInput(
 }
 
 function normalizeAskHumanResult(
-  result: EmitAskHumanResult
+  result: EmitAskHumanResult,
+  deliveries: CapturedAskHumanDelivery[]
 ): AskHumanContractOutput {
   return {
     status: "ok",
@@ -61,8 +77,49 @@ function normalizeAskHumanResult(
     envelopeType: result.envelope.type,
     stateSubset: {
       state: result.state.state
-    }
+    },
+    deliveryCount: deliveries.length,
+    deliveryRecipients: deliveries.map((delivery) => delivery.recipient),
+    deliveryTargetRoles: deliveries
+      .map((delivery) => delivery.targetRole)
+      .filter((role): role is string => role !== null),
+    deliveryRefKinds: deliveries.map((delivery) => delivery.refKind)
   };
+}
+
+function classifyDeliveryRefKind(messageRef: string | undefined): DeliveryRefKind {
+  if (messageRef === undefined) {
+    return "none";
+  }
+  return messageRef.includes("transcript.ndjson#") ? "transcript" : "external";
+}
+
+function assertAskHumanDeliveryInvariant(input: {
+  deliveries: CapturedAskHumanDelivery[];
+  result: EmitAskHumanResult;
+  label: string;
+}): void {
+  if (input.deliveries.length !== 1) {
+    throw new Error(
+      `${input.label}: askHuman delivery invariant expected exactly 1 notification (actual=${input.deliveries.length}).`
+    );
+  }
+  const delivery = input.deliveries[0];
+  if (delivery === undefined) {
+    throw new Error(
+      `${input.label}: askHuman delivery invariant missing captured delivery after length guard.`
+    );
+  }
+  if (delivery.type !== input.result.envelope.type) {
+    throw new Error(
+      `${input.label}: askHuman delivery envelope type mismatch (expected=${input.result.envelope.type}, actual=${delivery.type}).`
+    );
+  }
+  if (delivery.recipient !== input.result.envelope.recipient) {
+    throw new Error(
+      `${input.label}: askHuman delivery recipient mismatch (expected=${input.result.envelope.recipient}, actual=${delivery.recipient}).`
+    );
+  }
 }
 
 function assertContractExpectedSubset(input: {
@@ -100,6 +157,41 @@ function assertContractExpectedSubset(input: {
       `${input.label}: stateSubset.state mismatch (expected=${expectedState}, actual=${input.output.stateSubset.state})`
     );
   }
+  if (
+    input.expected.deliveryCount !== undefined &&
+    input.output.deliveryCount !== input.expected.deliveryCount
+  ) {
+    throw new Error(
+      `${input.label}: deliveryCount mismatch (expected=${input.expected.deliveryCount}, actual=${input.output.deliveryCount})`
+    );
+  }
+  if (
+    input.expected.deliveryRecipients !== undefined &&
+    JSON.stringify(input.output.deliveryRecipients)
+      !== JSON.stringify(input.expected.deliveryRecipients)
+  ) {
+    throw new Error(
+      `${input.label}: deliveryRecipients mismatch (expected=${JSON.stringify(input.expected.deliveryRecipients)}, actual=${JSON.stringify(input.output.deliveryRecipients)})`
+    );
+  }
+  if (
+    input.expected.deliveryTargetRoles !== undefined &&
+    JSON.stringify(input.output.deliveryTargetRoles)
+      !== JSON.stringify(input.expected.deliveryTargetRoles)
+  ) {
+    throw new Error(
+      `${input.label}: deliveryTargetRoles mismatch (expected=${JSON.stringify(input.expected.deliveryTargetRoles)}, actual=${JSON.stringify(input.output.deliveryTargetRoles)})`
+    );
+  }
+  if (
+    input.expected.deliveryRefKinds !== undefined &&
+    JSON.stringify(input.output.deliveryRefKinds)
+      !== JSON.stringify(input.expected.deliveryRefKinds)
+  ) {
+    throw new Error(
+      `${input.label}: deliveryRefKinds mismatch (expected=${JSON.stringify(input.expected.deliveryRefKinds)}, actual=${JSON.stringify(input.output.deliveryRefKinds)})`
+    );
+  }
 }
 
 function assertParityEquivalent(input: {
@@ -116,7 +208,8 @@ function assertParityEquivalent(input: {
 
 async function executeAskHumanCase(input: {
   caseDef: ContractCase;
-  executor: (askHumanInput: EmitAskHumanInput) => Promise<EmitAskHumanResult>;
+  executor: typeof emitAskHumanFromWorkspace;
+  label: string;
 }): Promise<AskHumanContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-ask-human-contract-"));
   try {
@@ -126,12 +219,36 @@ async function executeAskHumanCase(input: {
       bubbleId: `b_contract_${input.caseDef.id}`,
       task: input.caseDef.description
     });
+    const deliveries: CapturedAskHumanDelivery[] = [];
+    const emitDelivery: NonNullable<
+      EmitAskHumanDependencies["emitTmuxDeliveryNotification"]
+    > = async (deliveryInput) => {
+      const targetRoleRaw =
+        deliveryInput.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey];
+      deliveries.push({
+        type: deliveryInput.envelope.type,
+        recipient: deliveryInput.envelope.recipient,
+        targetRole: typeof targetRoleRaw === "string" ? targetRoleRaw : null,
+        refKind: classifyDeliveryRefKind(deliveryInput.messageRef)
+      });
+      return {
+        delivered: true,
+        message: "ok"
+      };
+    };
     const askHumanInput = parseAskHumanCaseInput(input.caseDef.input);
     const result = await input.executor({
       ...askHumanInput,
       cwd: bubble.paths.worktreePath
+    }, {
+      emitTmuxDeliveryNotification: emitDelivery
     });
-    return normalizeAskHumanResult(result);
+    assertAskHumanDeliveryInvariant({
+      deliveries,
+      result,
+      label: input.label
+    });
+    return normalizeAskHumanResult(result, deliveries);
   } finally {
     await rm(repoPath, { recursive: true, force: true });
   }
@@ -149,7 +266,8 @@ export async function runAskHumanContractCase(
   if (caseDef.mode === "legacy") {
     const legacy = await executeAskHumanCase({
       caseDef,
-      executor: emitAskHumanFromWorkspace
+      executor: emitAskHumanFromWorkspace,
+      label: "legacy"
     });
     assertContractExpectedSubset({
       output: legacy,
@@ -165,7 +283,8 @@ export async function runAskHumanContractCase(
   if (caseDef.mode === "v11") {
     const v11 = await executeAskHumanCase({
       caseDef,
-      executor: emitAskHumanFromWorkspaceV11
+      executor: emitAskHumanFromWorkspaceV11,
+      label: "v11"
     });
     assertContractExpectedSubset({
       output: v11,
@@ -180,11 +299,13 @@ export async function runAskHumanContractCase(
 
   const legacy = await executeAskHumanCase({
     caseDef,
-    executor: emitAskHumanFromWorkspace
+    executor: emitAskHumanFromWorkspace,
+    label: "parity/legacy"
   });
   const v11 = await executeAskHumanCase({
     caseDef,
-    executor: emitAskHumanFromWorkspaceV11
+    executor: emitAskHumanFromWorkspaceV11,
+    label: "parity/v11"
   });
   assertContractExpectedSubset({
     output: legacy,

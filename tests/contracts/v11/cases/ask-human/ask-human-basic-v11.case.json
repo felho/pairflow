@@ -15,7 +15,15 @@
     "envelopeType": "HUMAN_QUESTION",
     "stateSubset": {
       "state": "WAITING_HUMAN"
-    }
+    },
+    "deliveryCount": 1,
+    "deliveryRecipients": [
+      "human"
+    ],
+    "deliveryTargetRoles": [],
+    "deliveryRefKinds": [
+      "external"
+    ]
   },
   "tags": [
     "ask-human",
