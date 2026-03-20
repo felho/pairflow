@@ -822,175 +822,293 @@ async function validateStructuredMetaReviewPositiveClaim(input: {
   | { ok: true; diagnostics: string[]; metadata: FindingsParityMetadata | null }
   | { ok: false; reason: string; metadata: FindingsParityMetadata | null }
 > {
-  const failWithMetadata = (
-    reason: string,
-    metadata: FindingsParityMetadata | null = null
-  ): { ok: false; reason: string; metadata: FindingsParityMetadata | null } => ({
-    ok: false,
-    reason,
-    metadata
-  });
   const recommendation = input.runResult.recommendation;
-  if (input.reportJson === undefined) {
-    if (recommendation !== "rework") {
-      return { ok: true, diagnostics: [], metadata: null };
-    }
-    return failWithMetadata(
-      `${metaReviewFindingsArtifactRequiredReasonCode}: structured report_json is required for positive meta-review claim parity.`
+  const preflight = validateStructuredMetaReviewClaimPreflight({
+    recommendation,
+    ...(input.reportJson !== undefined ? { reportJson: input.reportJson } : {})
+  });
+  if (preflight.kind === "fail") {
+    return failStructuredMetaReviewPositiveClaim(preflight.reason);
+  }
+  if (preflight.kind === "pass") {
+    return { ok: true, diagnostics: [], metadata: null };
+  }
+
+  const parityInput = resolveReworkFindingsParityInput({
+    reportJson: preflight.reportJson,
+    runResult: input.runResult,
+    bubbleDir: input.bubbleDir,
+    artifactsDir: input.artifactsDir
+  });
+  if (!parityInput.ok) {
+    return failStructuredMetaReviewPositiveClaim(
+      parityInput.reason,
+      parityInput.metadata
     );
+  }
+
+  const artifactParity = await validateFindingsArtifactParity({
+    artifactPath: parityInput.value.artifactPath,
+    findingsCount: parityInput.value.findingsCount,
+    digest: parityInput.value.digest,
+    artifactStatus: parityInput.value.artifactStatus,
+    metaReviewRunId: parityInput.value.metaReviewRunId,
+    readFileFn: input.readFileFn,
+    ...(input.sleepForRetryMs !== undefined
+      ? { sleepForRetryMs: input.sleepForRetryMs }
+      : {})
+  });
+  if (!artifactParity.ok) {
+    return failStructuredMetaReviewPositiveClaim(
+      artifactParity.reason,
+      artifactParity.metadata
+    );
+  }
+
+  const parserState = resolveLegacySummaryFindingsClaimState(
+    input.runResult.summary ?? undefined
+  );
+  const diagnostics = parserState === "open_findings"
+    ? []
+    : [
+        `CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC: parser_state=${parserState} structured_state=open_findings structured_source=meta_review_artifact`
+      ];
+
+  return {
+    ok: true,
+    diagnostics,
+    metadata: buildFindingsParityMetadata({
+      findingsCount: parityInput.value.findingsCount,
+      artifactOpenTotal: artifactParity.artifactOpenTotal,
+      artifactStatus: parityInput.value.artifactStatus,
+      digest: parityInput.value.digest,
+      metaReviewRunId: parityInput.value.metaReviewRunId,
+      parityStatus: "ok"
+    })
+  };
+}
+
+type StructuredClaimValidationPreflight =
+  | { kind: "pass" }
+  | { kind: "fail"; reason: string }
+  | { kind: "rework"; reportJson: Record<string, unknown> };
+
+interface ReworkFindingsParityInput {
+  findingsCount: number;
+  artifactPath: string;
+  artifactStatus: string;
+  digest: string;
+  metaReviewRunId: string;
+}
+
+function failStructuredMetaReviewPositiveClaim(
+  reason: string,
+  metadata: FindingsParityMetadata | null = null
+): { ok: false; reason: string; metadata: FindingsParityMetadata | null } {
+  return { ok: false, reason, metadata };
+}
+
+function buildFindingsParityMetadata(input: {
+  findingsCount?: number | undefined;
+  artifactOpenTotal?: number | null | undefined;
+  artifactStatus?: string | undefined;
+  digest?: string | undefined;
+  metaReviewRunId?: string | undefined;
+  parityStatus: FindingsParityStatus;
+}): FindingsParityMetadata {
+  return {
+    findings_claimed_open_total: input.findingsCount ?? null,
+    findings_artifact_open_total: input.artifactOpenTotal ?? null,
+    findings_artifact_status: input.artifactStatus ?? null,
+    findings_digest_sha256: input.digest ?? null,
+    meta_review_run_id: input.metaReviewRunId ?? null,
+    findings_parity_status: input.parityStatus
+  };
+}
+
+function validateStructuredMetaReviewClaimPreflight(input: {
+  recommendation: MetaReviewRecommendation;
+  reportJson?: Record<string, unknown>;
+}): StructuredClaimValidationPreflight {
+  if (input.reportJson === undefined) {
+    if (input.recommendation !== "rework") {
+      return { kind: "pass" };
+    }
+    return {
+      kind: "fail",
+      reason:
+        `${metaReviewFindingsArtifactRequiredReasonCode}: structured report_json is required for positive meta-review claim parity.`
+    };
   }
 
   const claimResolution = resolveStructuredMetaReviewClaimFromReportJson({
     reportJson: input.reportJson
   });
   if ("reason" in claimResolution) {
-    return failWithMetadata(claimResolution.reason);
+    return { kind: "fail", reason: claimResolution.reason };
   }
-  const claim = claimResolution.claim;
-  if (recommendation !== "rework") {
-    if (claim?.state === "open_findings") {
-      return failWithMetadata(
-        `${claimSourceInvalidReasonCode}: recommendation=${recommendation} cannot carry findings_claim_state=open_findings.`
-      );
+  if (input.recommendation !== "rework") {
+    if (claimResolution.claim?.state === "open_findings") {
+      return {
+        kind: "fail",
+        reason:
+          `${claimSourceInvalidReasonCode}: recommendation=${input.recommendation} cannot carry findings_claim_state=open_findings.`
+      };
     }
-    return { ok: true, diagnostics: [], metadata: null };
+    return { kind: "pass" };
   }
+  if (claimResolution.claim === undefined) {
+    return {
+      kind: "fail",
+      reason:
+        `${claimStateRequiredReasonCode}: recommendation=rework requires report_json findings_claim_state/findings_claim_source.`
+    };
+  }
+  if (claimResolution.claim.state === "unknown") {
+    return {
+      kind: "fail",
+      reason:
+        `${claimStateRequiredReasonCode}: positive meta-review claim cannot remain unknown.`
+    };
+  }
+  if (claimResolution.claim.state !== "open_findings") {
+    return {
+      kind: "fail",
+      reason:
+        `${claimSourceInvalidReasonCode}: recommendation=rework requires findings_claim_state=open_findings (found ${claimResolution.claim.state}).`
+    };
+  }
+  return { kind: "rework", reportJson: input.reportJson };
+}
 
-  if (claim === undefined) {
-    return failWithMetadata(
-      `${claimStateRequiredReasonCode}: recommendation=rework requires report_json findings_claim_state/findings_claim_source.`
-    );
-  }
-  if (claim.state === "unknown") {
-    return failWithMetadata(
-      `${claimStateRequiredReasonCode}: positive meta-review claim cannot remain unknown.`
-    );
-  }
-  if (claim.state !== "open_findings") {
-    return failWithMetadata(
-      `${claimSourceInvalidReasonCode}: recommendation=rework requires findings_claim_state=open_findings (found ${claim.state}).`
-    );
-  }
+function resolveReworkFindingsParityInput(input: {
+  reportJson: Record<string, unknown>;
+  runResult: MetaReviewRunResult;
+  bubbleDir: string;
+  artifactsDir: string;
+}):
+  | { ok: true; value: ReworkFindingsParityInput }
+  | { ok: false; reason: string; metadata: FindingsParityMetadata } {
+  const findingsCount = resolveFindingsCountFromMetaReviewReportJson(input.reportJson);
+  const artifactStatus = resolveFindingsArtifactStatus(input.reportJson);
+  const digest = resolveFindingsDigestSha256(input.reportJson);
+  const metaReviewRunId = resolveMetaReviewRunId(input.reportJson);
 
-  const findingsCount = resolveFindingsCountFromMetaReviewReportJson(
-    input.reportJson
-  );
+  const metadata = (parityStatus: FindingsParityStatus): FindingsParityMetadata =>
+    buildFindingsParityMetadata({
+      findingsCount,
+      artifactOpenTotal: null,
+      artifactStatus,
+      digest,
+      metaReviewRunId,
+      parityStatus
+    });
+
   if (findingsCount === undefined || findingsCount <= 0) {
-    return failWithMetadata(
-      `${metaReviewFindingsCountMismatchReasonCode}: recommendation=rework requires findings_count>0 in report_json.`,
-      {
-        findings_claimed_open_total: findingsCount ?? null,
-        findings_artifact_open_total: null,
-        findings_artifact_status: resolveFindingsArtifactStatus(input.reportJson) ?? null,
-        findings_digest_sha256: resolveFindingsDigestSha256(input.reportJson) ?? null,
-        meta_review_run_id: resolveMetaReviewRunId(input.reportJson) ?? null,
-        findings_parity_status: "mismatch"
-      }
-    );
+    return {
+      ok: false,
+      reason:
+        `${metaReviewFindingsCountMismatchReasonCode}: recommendation=rework requires findings_count>0 in report_json.`,
+      metadata: metadata("mismatch")
+    };
   }
 
   const artifactRef = input.reportJson.findings_artifact_ref;
-  if (
-    typeof artifactRef !== "string" ||
-    artifactRef.trim().length === 0
-  ) {
-    return failWithMetadata(
-      `${metaReviewFindingsArtifactRequiredReasonCode}: recommendation=rework requires non-empty findings_artifact_ref in report_json.`,
-      {
-        findings_claimed_open_total: findingsCount,
-        findings_artifact_open_total: null,
-        findings_artifact_status: resolveFindingsArtifactStatus(input.reportJson) ?? null,
-        findings_digest_sha256: resolveFindingsDigestSha256(input.reportJson) ?? null,
-        meta_review_run_id: resolveMetaReviewRunId(input.reportJson) ?? null,
-        findings_parity_status: "guard_failed"
-      }
-    );
+  if (typeof artifactRef !== "string" || artifactRef.trim().length === 0) {
+    return {
+      ok: false,
+      reason:
+        `${metaReviewFindingsArtifactRequiredReasonCode}: recommendation=rework requires non-empty findings_artifact_ref in report_json.`,
+      metadata: metadata("guard_failed")
+    };
   }
-  const metaReviewRunId = resolveMetaReviewRunId(input.reportJson);
-  if (
-    metaReviewRunId === undefined
-  ) {
-    return failWithMetadata(
-      `${metaReviewFindingsRunLinkMissingReasonCode}: recommendation=rework requires non-empty meta_review_run_id in report_json.`,
-      {
-        findings_claimed_open_total: findingsCount,
-        findings_artifact_open_total: null,
-        findings_artifact_status: resolveFindingsArtifactStatus(input.reportJson) ?? null,
-        findings_digest_sha256: resolveFindingsDigestSha256(input.reportJson) ?? null,
-        meta_review_run_id: null,
-        findings_parity_status: "guard_failed"
-      }
-    );
+  if (metaReviewRunId === undefined) {
+    return {
+      ok: false,
+      reason:
+        `${metaReviewFindingsRunLinkMissingReasonCode}: recommendation=rework requires non-empty meta_review_run_id in report_json.`,
+      metadata: metadata("guard_failed")
+    };
   }
-
-  if (
-    input.runResult.run_id !== undefined &&
-    metaReviewRunId !== input.runResult.run_id
-  ) {
-    return failWithMetadata(
-      `${metaReviewFindingsRunLinkMissingReasonCode}: meta_review_run_id (${metaReviewRunId}) must match run_id (${input.runResult.run_id}).`,
-      {
-        findings_claimed_open_total: findingsCount,
-        findings_artifact_open_total: null,
-        findings_artifact_status: resolveFindingsArtifactStatus(input.reportJson) ?? null,
-        findings_digest_sha256: resolveFindingsDigestSha256(input.reportJson) ?? null,
-        meta_review_run_id: metaReviewRunId,
-        findings_parity_status: "guard_failed"
-      }
-    );
+  if (input.runResult.run_id !== undefined && metaReviewRunId !== input.runResult.run_id) {
+    return {
+      ok: false,
+      reason:
+        `${metaReviewFindingsRunLinkMissingReasonCode}: meta_review_run_id (${metaReviewRunId}) must match run_id (${input.runResult.run_id}).`,
+      metadata: metadata("guard_failed")
+    };
   }
-
-  const digest = resolveFindingsDigestSha256(input.reportJson);
   if (digest === undefined) {
-    return failWithMetadata(
-      `${metaReviewFindingsParityGuardReasonCode}: recommendation=rework requires findings_digest_sha256 parity metadata.`,
-      {
-        findings_claimed_open_total: findingsCount,
-        findings_artifact_open_total: null,
-        findings_artifact_status: resolveFindingsArtifactStatus(input.reportJson) ?? null,
-        findings_digest_sha256: null,
-        meta_review_run_id: metaReviewRunId,
-        findings_parity_status: "guard_failed"
-      }
-    );
+    return {
+      ok: false,
+      reason:
+        `${metaReviewFindingsParityGuardReasonCode}: recommendation=rework requires findings_digest_sha256 parity metadata.`,
+      metadata: metadata("guard_failed")
+    };
   }
-
-  const artifactStatus = resolveFindingsArtifactStatus(input.reportJson);
   if (artifactStatus === undefined) {
-    return failWithMetadata(
-      `${metaReviewFindingsParityGuardReasonCode}: recommendation=rework requires findings_artifact_status parity metadata.`,
-      {
-        findings_claimed_open_total: findingsCount,
-        findings_artifact_open_total: null,
-        findings_artifact_status: null,
-        findings_digest_sha256: digest,
-        meta_review_run_id: metaReviewRunId,
-        findings_parity_status: "guard_failed"
-      }
-    );
+    return {
+      ok: false,
+      reason:
+        `${metaReviewFindingsParityGuardReasonCode}: recommendation=rework requires findings_artifact_status parity metadata.`,
+      metadata: metadata("guard_failed")
+    };
   }
 
+  const normalizedArtifactRef = artifactRef.trim();
   const artifactPath = resolveFindingsArtifactPath({
     bubbleDir: input.bubbleDir,
     artifactsDir: input.artifactsDir,
-    artifactRef: artifactRef.trim()
+    artifactRef: normalizedArtifactRef
   });
   if (artifactPath === undefined) {
-    return failWithMetadata(
-      `${metaReviewFindingsParityGuardReasonCode}: findings_artifact_ref (${artifactRef.trim()}) must resolve under artifacts/.`,
-      {
-        findings_claimed_open_total: findingsCount,
-        findings_artifact_open_total: null,
-        findings_artifact_status: artifactStatus,
-        findings_digest_sha256: digest,
-        meta_review_run_id: metaReviewRunId,
-        findings_parity_status: "guard_failed"
-      }
-    );
+    return {
+      ok: false,
+      reason:
+        `${metaReviewFindingsParityGuardReasonCode}: findings_artifact_ref (${normalizedArtifactRef}) must resolve under artifacts/.`,
+      metadata: metadata("guard_failed")
+    };
   }
 
+  return {
+    ok: true,
+    value: {
+      findingsCount,
+      artifactPath,
+      artifactStatus,
+      digest,
+      metaReviewRunId
+    }
+  };
+}
+
+async function validateFindingsArtifactParity(input: {
+  artifactPath: string;
+  findingsCount: number;
+  digest: string;
+  artifactStatus: string;
+  metaReviewRunId: string;
+  readFileFn: typeof readFile;
+  sleepForRetryMs?: (delayMs: number) => Promise<void>;
+}): Promise<
+  | { ok: true; artifactOpenTotal: number }
+  | { ok: false; reason: string; metadata: FindingsParityMetadata }
+> {
+  const metadata = (
+    parityStatus: FindingsParityStatus,
+    artifactOpenTotal: number | null
+  ): FindingsParityMetadata =>
+    buildFindingsParityMetadata({
+      findingsCount: input.findingsCount,
+      artifactOpenTotal,
+      artifactStatus: input.artifactStatus,
+      digest: input.digest,
+      metaReviewRunId: input.metaReviewRunId,
+      parityStatus
+    });
+
   const artifactRead = await readFindingsArtifactWithRetry({
-    artifactPath,
+    artifactPath: input.artifactPath,
     readFileFn: input.readFileFn,
     ...(input.sleepForRetryMs !== undefined
       ? { sleepForRetryMs: input.sleepForRetryMs }
@@ -1000,127 +1118,62 @@ async function validateStructuredMetaReviewPositiveClaim(input: {
     const retryStatus = artifactRead.retried
       ? "transient_retry_exhausted"
       : "non_retryable_or_first_attempt";
-    return failWithMetadata(
-      `${metaReviewFindingsParityGuardReasonCode}: findings artifact read failed [${retryStatus}] after ${artifactRead.attempts} attempt(s) (${formatReadErrorDetail(artifactRead.error)}).`,
-      {
-        findings_claimed_open_total: findingsCount,
-        findings_artifact_open_total: null,
-        findings_artifact_status: artifactStatus,
-        findings_digest_sha256: digest,
-        meta_review_run_id: metaReviewRunId,
-        findings_parity_status: "guard_failed"
-      }
-    );
-  }
-  const artifactRaw = artifactRead.raw;
-
-  let artifactParsed: unknown;
-  try {
-    artifactParsed = JSON.parse(artifactRaw);
-  } catch (error) {
-    return failWithMetadata(
-      `${metaReviewFindingsParityGuardReasonCode}: findings artifact parse failed (${error instanceof Error ? error.message : String(error)}).`,
-      {
-        findings_claimed_open_total: findingsCount,
-        findings_artifact_open_total: null,
-        findings_artifact_status: artifactStatus,
-        findings_digest_sha256: digest,
-        meta_review_run_id: metaReviewRunId,
-        findings_parity_status: "guard_failed"
-      }
-    );
-  }
-  if (!isRecord(artifactParsed)) {
-    return failWithMetadata(
-      `${metaReviewFindingsParityGuardReasonCode}: findings artifact must be a JSON object.`,
-      {
-        findings_claimed_open_total: findingsCount,
-        findings_artifact_open_total: null,
-        findings_artifact_status: artifactStatus,
-        findings_digest_sha256: digest,
-        meta_review_run_id: metaReviewRunId,
-        findings_parity_status: "guard_failed"
-      }
-    );
-  }
-  const artifactOpenTotal = resolveFindingsArtifactOpenTotalFromArtifact(
-    artifactParsed
-  );
-  if (artifactOpenTotal === undefined) {
-    return failWithMetadata(
-      `${metaReviewFindingsParityGuardReasonCode}: findings artifact open_total is unavailable.`,
-      {
-        findings_claimed_open_total: findingsCount,
-        findings_artifact_open_total: null,
-        findings_artifact_status: artifactStatus,
-        findings_digest_sha256: digest,
-        meta_review_run_id: metaReviewRunId,
-        findings_parity_status: "guard_failed"
-      }
-    );
-  }
-  const computedDigest = createHash("sha256")
-    .update(artifactRaw, "utf8")
-    .digest("hex");
-  if (computedDigest !== digest) {
-    return failWithMetadata(
-      `${metaReviewFindingsParityGuardReasonCode}: findings artifact digest mismatch.`,
-      {
-        findings_claimed_open_total: findingsCount,
-        findings_artifact_open_total: artifactOpenTotal,
-        findings_artifact_status: artifactStatus,
-        findings_digest_sha256: digest,
-        meta_review_run_id: metaReviewRunId,
-        findings_parity_status: "guard_failed"
-      }
-    );
-  }
-  if (findingsCount !== artifactOpenTotal) {
-    return failWithMetadata(
-      `${metaReviewFindingsCountMismatchReasonCode}: findings_count (${findingsCount}) must match findings artifact open_total (${artifactOpenTotal}).`,
-      {
-        findings_claimed_open_total: findingsCount,
-        findings_artifact_open_total: artifactOpenTotal,
-        findings_artifact_status: artifactStatus,
-        findings_digest_sha256: digest,
-        meta_review_run_id: metaReviewRunId,
-        findings_parity_status: "mismatch"
-      }
-    );
-  }
-
-  const parserState = resolveLegacySummaryFindingsClaimState(
-    input.runResult.summary ?? undefined
-  );
-  if (parserState !== "open_findings") {
     return {
-      ok: true,
-      diagnostics: [
-        `CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC: parser_state=${parserState} structured_state=open_findings structured_source=meta_review_artifact`
-      ],
-      metadata: {
-        findings_claimed_open_total: findingsCount,
-        findings_artifact_open_total: artifactOpenTotal,
-        findings_artifact_status: artifactStatus,
-        findings_digest_sha256: digest,
-        meta_review_run_id: metaReviewRunId,
-        findings_parity_status: "ok"
-      }
+      ok: false,
+      reason:
+        `${metaReviewFindingsParityGuardReasonCode}: findings artifact read failed [${retryStatus}] after ${artifactRead.attempts} attempt(s) (${formatReadErrorDetail(artifactRead.error)}).`,
+      metadata: metadata("guard_failed", null)
     };
   }
 
-  return {
-    ok: true,
-    diagnostics: [],
-    metadata: {
-      findings_claimed_open_total: findingsCount,
-      findings_artifact_open_total: artifactOpenTotal,
-      findings_artifact_status: artifactStatus,
-      findings_digest_sha256: digest,
-      meta_review_run_id: metaReviewRunId,
-      findings_parity_status: "ok"
-    }
-  };
+  let artifactParsed: unknown;
+  try {
+    artifactParsed = JSON.parse(artifactRead.raw);
+  } catch (error) {
+    return {
+      ok: false,
+      reason:
+        `${metaReviewFindingsParityGuardReasonCode}: findings artifact parse failed (${error instanceof Error ? error.message : String(error)}).`,
+      metadata: metadata("guard_failed", null)
+    };
+  }
+  if (!isRecord(artifactParsed)) {
+    return {
+      ok: false,
+      reason: `${metaReviewFindingsParityGuardReasonCode}: findings artifact must be a JSON object.`,
+      metadata: metadata("guard_failed", null)
+    };
+  }
+
+  const artifactOpenTotal = resolveFindingsArtifactOpenTotalFromArtifact(artifactParsed);
+  if (artifactOpenTotal === undefined) {
+    return {
+      ok: false,
+      reason: `${metaReviewFindingsParityGuardReasonCode}: findings artifact open_total is unavailable.`,
+      metadata: metadata("guard_failed", null)
+    };
+  }
+
+  const computedDigest = createHash("sha256")
+    .update(artifactRead.raw, "utf8")
+    .digest("hex");
+  if (computedDigest !== input.digest) {
+    return {
+      ok: false,
+      reason: `${metaReviewFindingsParityGuardReasonCode}: findings artifact digest mismatch.`,
+      metadata: metadata("guard_failed", artifactOpenTotal)
+    };
+  }
+  if (input.findingsCount !== artifactOpenTotal) {
+    return {
+      ok: false,
+      reason:
+        `${metaReviewFindingsCountMismatchReasonCode}: findings_count (${input.findingsCount}) must match findings artifact open_total (${artifactOpenTotal}).`,
+      metadata: metadata("mismatch", artifactOpenTotal)
+    };
+  }
+
+  return { ok: true, artifactOpenTotal };
 }
 
 function synthesizeMetaReviewRunResultFromSnapshot(input: {
