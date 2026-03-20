@@ -56,6 +56,7 @@ interface ParsedKickoffFixtureInput {
   taskFileEmpty: boolean;
   taskFileDirectory: boolean;
   taskInputConflict: boolean;
+  taskInputMissing: boolean;
   bubbleTask: string;
 }
 
@@ -85,6 +86,7 @@ function parseKickoffFixtureInput(
       taskFileEmpty: false,
       taskFileDirectory: false,
       taskInputConflict: false,
+      taskInputMissing: false,
       bubbleTask: "Legacy kickoff fixture task"
     };
   }
@@ -172,6 +174,22 @@ function parseKickoffFixtureInput(
     );
   }
 
+  const taskInputMissingRaw = fixtureRaw.taskInputMissing;
+  if (
+    taskInputMissingRaw !== undefined &&
+    typeof taskInputMissingRaw !== "boolean"
+  ) {
+    throw new Error(
+      "kickoff contract input.fixture.taskInputMissing must be a boolean."
+    );
+  }
+
+  if (taskInputConflictRaw === true && taskInputMissingRaw === true) {
+    throw new Error(
+      "kickoff contract fixture cannot set both taskInputConflict and taskInputMissing."
+    );
+  }
+
   const taskFileVariantCount = [taskFileMissingRaw, taskFileEmptyRaw, taskFileDirectoryRaw]
     .filter((value) => value === true)
     .length;
@@ -203,6 +221,7 @@ function parseKickoffFixtureInput(
     taskFileEmpty: taskFileEmptyRaw ?? false,
     taskFileDirectory: taskFileDirectoryRaw ?? false,
     taskInputConflict: taskInputConflictRaw ?? false,
+    taskInputMissing: taskInputMissingRaw ?? false,
     bubbleTask: bubbleTaskRaw?.trim() ?? "Legacy kickoff fixture task"
   };
 }
@@ -402,7 +421,9 @@ async function executeKickoffCase(input: {
       cwd: repoPath,
       now: new Date("2026-03-20T14:05:00.000Z")
     };
-    if (parsedInput.fixture.taskInputConflict) {
+    if (parsedInput.fixture.taskInputMissing) {
+      // Intentionally provide neither task nor taskFile to cover validation branch.
+    } else if (parsedInput.fixture.taskInputConflict) {
       const taskFileName = "kickoff-task-input.md";
       await writeFile(join(repoPath, taskFileName), `${parsedInput.task}\n`, "utf8");
       kickoffInput.task = parsedInput.task;

@@ -1,0 +1,25 @@
+{
+  "id": "kickoff-task-input-missing",
+  "command": "kickoff",
+  "mode": "legacy",
+  "description": "Seed kickoff legacy contract case for missing task input validation.",
+  "input": {
+    "task": "Ignored content for missing task-input fixture",
+    "fixture": {
+      "taskInputMissing": true
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "IDEATION_KICKOFF_TASK_INVALID",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "kickoff",
+    "error-path"
+  ]
+}
