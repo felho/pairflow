@@ -87,6 +87,10 @@
         "src/v11/application/**"
       ],
       "mode": "report-only",
+      "mode_by_milestone": {
+        "M2": "soft-fail",
+        "M3": "hard-fail"
+      },
       "owner": "architecture/runtime",
       "exceptions": []
     }

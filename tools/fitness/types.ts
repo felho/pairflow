@@ -13,6 +13,7 @@ export interface FitnessPolicyCheck {
   id: string;
   metric: string;
   mode: string | undefined;
+  mode_by_milestone?: Record<string, string> | undefined;
   exception_lifecycle_mode: string | undefined;
   owner: string | undefined;
   scope: string[] | undefined;

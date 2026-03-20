@@ -28,6 +28,22 @@ function asStringArray(value: unknown): string[] | undefined {
   return values;
 }
 
+function asStringRecord(
+  value: unknown
+): Record<string, string> | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const mapped: Record<string, string> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (typeof entry !== "string") {
+      throw new Error("Fitness policy mode_by_milestone entries must be strings.");
+    }
+    mapped[key] = entry;
+  }
+  return mapped;
+}
+
 function parseException(rawException: unknown): FitnessPolicyException {
   if (!isRecord(rawException)) {
     throw new Error("Fitness policy exception entries must be objects.");
@@ -83,6 +99,7 @@ function parseCheck(rawCheck: unknown): FitnessPolicyCheck {
     id,
     metric,
     mode: asString(rawCheck.mode),
+    mode_by_milestone: asStringRecord(rawCheck.mode_by_milestone),
     exception_lifecycle_mode: asString(rawCheck.exception_lifecycle_mode),
     owner: asString(rawCheck.owner),
     scope: asStringArray(rawCheck.scope),

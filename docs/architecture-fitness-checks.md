@@ -122,6 +122,7 @@ Rules:
   - M0-M1: report-only.
   - M2+: soft-fail.
   - M3+: hard-fail a `v11` allapotu commandokra.
+  - Policy wiring: `tools/fitness/policy.json` `critical_side_effect.mode_by_milestone` map.
 
 Seed invariants:
 
