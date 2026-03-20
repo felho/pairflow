@@ -4,14 +4,25 @@ import { join } from "node:path";
 
 import {
   emitHumanReply,
+  type EmitHumanReplyDependencies,
   type EmitHumanReplyInput,
   type EmitHumanReplyResult
 } from "../../../src/core/human/reply.js";
 import { emitAskHumanFromWorkspace } from "../../../src/core/agent/askHuman.js";
 import { emitHumanReplyV11 } from "../../../src/v11/application/reply/emitReplyV11.js";
+import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
+
+type DeliveryRefKind = "external" | "none" | "transcript";
+
+interface CapturedReplyDelivery {
+  type: string;
+  recipient: string;
+  targetRole: string | null;
+  refKind: DeliveryRefKind;
+}
 
 export interface ReplyContractOutput {
   status: "ok";
@@ -20,6 +31,10 @@ export interface ReplyContractOutput {
   stateSubset: {
     state: string;
   };
+  deliveryCount: number;
+  deliveryRecipients: string[];
+  deliveryTargetRoles: string[];
+  deliveryRefKinds: DeliveryRefKind[];
 }
 
 export interface ReplyContractRunResult {
@@ -54,7 +69,8 @@ function parseReplyCaseInput(
 }
 
 function normalizeReplyResult(
-  result: EmitHumanReplyResult
+  result: EmitHumanReplyResult,
+  deliveries: CapturedReplyDelivery[]
 ): ReplyContractOutput {
   return {
     status: "ok",
@@ -62,8 +78,60 @@ function normalizeReplyResult(
     envelopeType: result.envelope.type,
     stateSubset: {
       state: result.state.state
-    }
+    },
+    deliveryCount: deliveries.length,
+    deliveryRecipients: deliveries.map((delivery) => delivery.recipient),
+    deliveryTargetRoles: deliveries
+      .map((delivery) => delivery.targetRole)
+      .filter((role): role is string => role !== null),
+    deliveryRefKinds: deliveries.map((delivery) => delivery.refKind)
   };
+}
+
+function classifyDeliveryRefKind(messageRef: string | undefined): DeliveryRefKind {
+  if (messageRef === undefined) {
+    return "none";
+  }
+  return messageRef.includes("transcript.ndjson#") ? "transcript" : "external";
+}
+
+function assertReplyDeliveryInvariant(input: {
+  deliveries: CapturedReplyDelivery[];
+  result: EmitHumanReplyResult;
+  label: string;
+}): void {
+  if (input.deliveries.length !== 1) {
+    throw new Error(
+      `${input.label}: reply delivery invariant expected exactly 1 notification (actual=${input.deliveries.length}).`
+    );
+  }
+
+  const delivery = input.deliveries[0];
+  if (delivery === undefined) {
+    throw new Error(
+      `${input.label}: reply delivery invariant missing captured delivery after length guard.`
+    );
+  }
+  if (delivery.type !== input.result.envelope.type) {
+    throw new Error(
+      `${input.label}: reply delivery envelope type mismatch (expected=${input.result.envelope.type}, actual=${delivery.type}).`
+    );
+  }
+  if (delivery.recipient !== input.result.envelope.recipient) {
+    throw new Error(
+      `${input.label}: reply delivery recipient mismatch (expected=${input.result.envelope.recipient}, actual=${delivery.recipient}).`
+    );
+  }
+
+  const envelopeTargetRole =
+    input.result.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey];
+  const expectedTargetRole =
+    typeof envelopeTargetRole === "string" ? envelopeTargetRole : null;
+  if (delivery.targetRole !== expectedTargetRole) {
+    throw new Error(
+      `${input.label}: reply delivery target role mismatch (expected=${String(expectedTargetRole)}, actual=${String(delivery.targetRole)}).`
+    );
+  }
 }
 
 function assertContractExpectedSubset(input: {
@@ -101,6 +169,41 @@ function assertContractExpectedSubset(input: {
       `${input.label}: stateSubset.state mismatch (expected=${expectedState}, actual=${input.output.stateSubset.state})`
     );
   }
+  if (
+    input.expected.deliveryCount !== undefined &&
+    input.output.deliveryCount !== input.expected.deliveryCount
+  ) {
+    throw new Error(
+      `${input.label}: deliveryCount mismatch (expected=${input.expected.deliveryCount}, actual=${input.output.deliveryCount})`
+    );
+  }
+  if (
+    input.expected.deliveryRecipients !== undefined &&
+    JSON.stringify(input.output.deliveryRecipients)
+      !== JSON.stringify(input.expected.deliveryRecipients)
+  ) {
+    throw new Error(
+      `${input.label}: deliveryRecipients mismatch (expected=${JSON.stringify(input.expected.deliveryRecipients)}, actual=${JSON.stringify(input.output.deliveryRecipients)})`
+    );
+  }
+  if (
+    input.expected.deliveryTargetRoles !== undefined &&
+    JSON.stringify(input.output.deliveryTargetRoles)
+      !== JSON.stringify(input.expected.deliveryTargetRoles)
+  ) {
+    throw new Error(
+      `${input.label}: deliveryTargetRoles mismatch (expected=${JSON.stringify(input.expected.deliveryTargetRoles)}, actual=${JSON.stringify(input.output.deliveryTargetRoles)})`
+    );
+  }
+  if (
+    input.expected.deliveryRefKinds !== undefined &&
+    JSON.stringify(input.output.deliveryRefKinds)
+      !== JSON.stringify(input.expected.deliveryRefKinds)
+  ) {
+    throw new Error(
+      `${input.label}: deliveryRefKinds mismatch (expected=${JSON.stringify(input.expected.deliveryRefKinds)}, actual=${JSON.stringify(input.output.deliveryRefKinds)})`
+    );
+  }
 }
 
 function assertParityEquivalent(input: {
@@ -117,7 +220,8 @@ function assertParityEquivalent(input: {
 
 async function executeReplyCase(input: {
   caseDef: ContractCase;
-  executor: (replyInput: EmitHumanReplyInput) => Promise<EmitHumanReplyResult>;
+  executor: typeof emitHumanReply;
+  label: string;
 }): Promise<ReplyContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-reply-contract-"));
   try {
@@ -134,14 +238,39 @@ async function executeReplyCase(input: {
       now: new Date("2026-03-19T10:01:00.000Z")
     });
 
+    const deliveries: CapturedReplyDelivery[] = [];
+    const emitDelivery: NonNullable<
+      EmitHumanReplyDependencies["emitTmuxDeliveryNotification"]
+    > = async (deliveryInput) => {
+      const targetRoleRaw =
+        deliveryInput.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey];
+      deliveries.push({
+        type: deliveryInput.envelope.type,
+        recipient: deliveryInput.envelope.recipient,
+        targetRole: typeof targetRoleRaw === "string" ? targetRoleRaw : null,
+        refKind: classifyDeliveryRefKind(deliveryInput.messageRef)
+      });
+      return {
+        delivered: true,
+        message: "ok"
+      };
+    };
+
     const replyInput = parseReplyCaseInput(input.caseDef.input);
     const result = await input.executor({
       ...replyInput,
       bubbleId: bubble.bubbleId,
       repoPath,
       now: new Date("2026-03-19T10:02:00.000Z")
+    }, {
+      emitTmuxDeliveryNotification: emitDelivery
     });
-    return normalizeReplyResult(result);
+    assertReplyDeliveryInvariant({
+      deliveries,
+      result,
+      label: input.label
+    });
+    return normalizeReplyResult(result, deliveries);
   } finally {
     await rm(repoPath, { recursive: true, force: true });
   }
@@ -157,7 +286,8 @@ export async function runReplyContractCase(
   if (caseDef.mode === "legacy") {
     const legacy = await executeReplyCase({
       caseDef,
-      executor: emitHumanReply
+      executor: emitHumanReply,
+      label: "legacy"
     });
     assertContractExpectedSubset({
       output: legacy,
@@ -173,7 +303,8 @@ export async function runReplyContractCase(
   if (caseDef.mode === "v11") {
     const v11 = await executeReplyCase({
       caseDef,
-      executor: emitHumanReplyV11
+      executor: emitHumanReplyV11,
+      label: "v11"
     });
     assertContractExpectedSubset({
       output: v11,
@@ -188,11 +319,13 @@ export async function runReplyContractCase(
 
   const legacy = await executeReplyCase({
     caseDef,
-    executor: emitHumanReply
+    executor: emitHumanReply,
+    label: "parity/legacy"
   });
   const v11 = await executeReplyCase({
     caseDef,
-    executor: emitHumanReplyV11
+    executor: emitHumanReplyV11,
+    label: "parity/v11"
   });
   assertContractExpectedSubset({
     output: legacy,

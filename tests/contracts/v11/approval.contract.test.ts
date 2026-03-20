@@ -13,6 +13,9 @@ const approvalCaseSources = [
   "tests/contracts/v11/cases/approval/approval-approve-basic.case.json",
   "tests/contracts/v11/cases/approval/approval-approve-basic-v11.case.json",
   "tests/contracts/v11/cases/approval/approval-approve-basic-parity.case.json",
+  "tests/contracts/v11/cases/approval/approval-rework-immediate.case.json",
+  "tests/contracts/v11/cases/approval/approval-rework-immediate-v11.case.json",
+  "tests/contracts/v11/cases/approval/approval-rework-immediate-parity.case.json",
   "tests/contracts/v11/cases/approval/approval-rework-queued.case.json",
   "tests/contracts/v11/cases/approval/approval-rework-queued-v11.case.json",
   "tests/contracts/v11/cases/approval/approval-rework-queued-parity.case.json"
@@ -23,6 +26,11 @@ const approvalQueuedReworkSources = [
   "tests/contracts/v11/cases/approval/approval-rework-queued.case.json",
   "tests/contracts/v11/cases/approval/approval-rework-queued-v11.case.json",
   "tests/contracts/v11/cases/approval/approval-rework-queued-parity.case.json"
+] as const;
+const approvalImmediateReworkSources = [
+  "tests/contracts/v11/cases/approval/approval-rework-immediate.case.json",
+  "tests/contracts/v11/cases/approval/approval-rework-immediate-v11.case.json",
+  "tests/contracts/v11/cases/approval/approval-rework-immediate-parity.case.json"
 ] as const;
 
 function parseApprovalSourcesFromManifest(
@@ -104,6 +112,20 @@ describe("v11 approval contract harness skeleton", () => {
     expectManifestContainsSources({
       actualSources: approvalSources,
       expectedSources: approvalQueuedReworkSources
+    });
+  });
+
+  it("includes immediate-rework approval entries in corpus manifest", async () => {
+    const manifestPath = resolve(
+      process.cwd(),
+      "tests/contracts/v11/corpus/manifest.json"
+    );
+    const manifestRaw = await readFile(manifestPath, "utf8");
+    const approvalSources = parseApprovalSourcesFromManifest(manifestRaw);
+
+    expectManifestContainsSources({
+      actualSources: approvalSources,
+      expectedSources: approvalImmediateReworkSources
     });
   });
 

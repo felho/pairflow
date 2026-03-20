@@ -4,12 +4,14 @@ import { join } from "node:path";
 
 import {
   emitApprove,
-  emitRequestRework
+  emitRequestRework,
+  type EmitApprovalDecisionDependencies
 } from "../../../src/core/human/approval.js";
 import {
   emitApproveV11,
   emitRequestReworkV11
 } from "../../../src/v11/application/approval/emitApprovalV11.js";
+import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
@@ -19,11 +21,25 @@ import {
 } from "../../../src/core/state/stateStore.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
 
-type ApprovalCaseAction = "approve" | "request_rework_queued";
+type ApprovalCaseAction =
+  | "approve"
+  | "request_rework_immediate"
+  | "request_rework_queued";
+type DeliveryRefKind = "external" | "none" | "transcript";
+
+interface CapturedApprovalDelivery {
+  type: string;
+  recipient: string;
+  targetRole: string | null;
+  refKind: DeliveryRefKind;
+}
 
 export interface ApprovalContractOutput {
   status: "ok";
-  reasonCode: "APPROVAL_APPROVE_EMITTED" | "APPROVAL_REWORK_QUEUED";
+  reasonCode:
+    | "APPROVAL_APPROVE_EMITTED"
+    | "APPROVAL_REWORK_IMMEDIATE"
+    | "APPROVAL_REWORK_QUEUED";
   state: string;
   envelopeType: string | null;
   decision: string | null;
@@ -31,6 +47,10 @@ export interface ApprovalContractOutput {
   queueMode: string | null;
   hasIntentId: boolean;
   hasSupersededIntentId: boolean;
+  deliveryCount: number;
+  deliveryRecipients: string[];
+  deliveryTargetRoles: string[];
+  deliveryRefKinds: DeliveryRefKind[];
 }
 
 export interface ApprovalContractRunResult {
@@ -46,9 +66,13 @@ interface ParsedApprovalCaseInput {
 
 function parseApprovalCaseInput(input: ContractCase["input"]): ParsedApprovalCaseInput {
   const actionRaw = input.action;
-  if (actionRaw !== "approve" && actionRaw !== "request_rework_queued") {
+  if (
+    actionRaw !== "approve"
+    && actionRaw !== "request_rework_immediate"
+    && actionRaw !== "request_rework_queued"
+  ) {
     throw new Error(
-      "approval contract input.action must be one of: approve, request_rework_queued."
+      "approval contract input.action must be one of: approve, request_rework_immediate, request_rework_queued."
     );
   }
   const messageRaw = input.message;
@@ -77,6 +101,41 @@ function assertContractExpectedSubset(input: {
   ) {
     throw new Error(
       `${input.label}: reasonCode mismatch (expected=${input.expected.reasonCode}, actual=${input.output.reasonCode})`
+    );
+  }
+  if (
+    input.expected.deliveryCount !== undefined &&
+    input.output.deliveryCount !== input.expected.deliveryCount
+  ) {
+    throw new Error(
+      `${input.label}: deliveryCount mismatch (expected=${input.expected.deliveryCount}, actual=${input.output.deliveryCount})`
+    );
+  }
+  if (
+    input.expected.deliveryRecipients !== undefined &&
+    JSON.stringify(input.output.deliveryRecipients)
+      !== JSON.stringify(input.expected.deliveryRecipients)
+  ) {
+    throw new Error(
+      `${input.label}: deliveryRecipients mismatch (expected=${JSON.stringify(input.expected.deliveryRecipients)}, actual=${JSON.stringify(input.output.deliveryRecipients)})`
+    );
+  }
+  if (
+    input.expected.deliveryTargetRoles !== undefined &&
+    JSON.stringify(input.output.deliveryTargetRoles)
+      !== JSON.stringify(input.expected.deliveryTargetRoles)
+  ) {
+    throw new Error(
+      `${input.label}: deliveryTargetRoles mismatch (expected=${JSON.stringify(input.expected.deliveryTargetRoles)}, actual=${JSON.stringify(input.output.deliveryTargetRoles)})`
+    );
+  }
+  if (
+    input.expected.deliveryRefKinds !== undefined &&
+    JSON.stringify(input.output.deliveryRefKinds)
+      !== JSON.stringify(input.expected.deliveryRefKinds)
+  ) {
+    throw new Error(
+      `${input.label}: deliveryRefKinds mismatch (expected=${JSON.stringify(input.expected.deliveryRefKinds)}, actual=${JSON.stringify(input.output.deliveryRefKinds)})`
     );
   }
 }
@@ -141,8 +200,85 @@ async function seedWaitingHumanState(input: {
   return bubble;
 }
 
+function classifyDeliveryRefKind(messageRef: string | undefined): DeliveryRefKind {
+  if (messageRef === undefined) {
+    return "none";
+  }
+  return messageRef.includes("transcript.ndjson#") ? "transcript" : "external";
+}
+
+function buildDeliverySummary(deliveries: CapturedApprovalDelivery[]) {
+  return {
+    deliveryCount: deliveries.length,
+    deliveryRecipients: deliveries.map((delivery) => delivery.recipient),
+    deliveryTargetRoles: deliveries
+      .map((delivery) => delivery.targetRole)
+      .filter((role): role is string => role !== null),
+    deliveryRefKinds: deliveries.map((delivery) => delivery.refKind)
+  };
+}
+
+function assertApprovalDeliveryInvariant(input: {
+  action: ApprovalCaseAction;
+  deliveries: CapturedApprovalDelivery[];
+  implementerAgent: string;
+  label: string;
+}): void {
+  if (input.action === "approve") {
+    if (input.deliveries.length !== 1) {
+      throw new Error(
+        `${input.label}: approval approve invariant expected exactly 1 delivery (actual=${input.deliveries.length}).`
+      );
+    }
+    if (input.deliveries[0]?.recipient !== "orchestrator") {
+      throw new Error(
+        `${input.label}: approval approve invariant expected recipient=orchestrator (actual=${input.deliveries[0]?.recipient ?? "none"}).`
+      );
+    }
+    return;
+  }
+
+  if (input.action === "request_rework_queued") {
+    if (input.deliveries.length !== 0) {
+      throw new Error(
+        `${input.label}: approval queued rework invariant expected 0 deliveries (actual=${input.deliveries.length}).`
+      );
+    }
+    return;
+  }
+
+  if (input.deliveries.length !== 2) {
+    throw new Error(
+      `${input.label}: approval immediate rework invariant expected 2 deliveries (actual=${input.deliveries.length}).`
+    );
+  }
+  const first = input.deliveries[0];
+  const second = input.deliveries[1];
+  if (first === undefined || second === undefined) {
+    throw new Error(
+      `${input.label}: approval immediate rework invariant missing captured deliveries after length guard.`
+    );
+  }
+  if (first.recipient !== "orchestrator") {
+    throw new Error(
+      `${input.label}: approval immediate rework first delivery recipient mismatch (expected=orchestrator, actual=${first.recipient}).`
+    );
+  }
+  if (second.recipient !== input.implementerAgent) {
+    throw new Error(
+      `${input.label}: approval immediate rework second delivery recipient mismatch (expected=${input.implementerAgent}, actual=${second.recipient}).`
+    );
+  }
+  if (second.targetRole !== "implementer") {
+    throw new Error(
+      `${input.label}: approval immediate rework expected second delivery targetRole=implementer (actual=${String(second.targetRole)}).`
+    );
+  }
+}
+
 function normalizeApproveResult(
-  result: Awaited<ReturnType<typeof emitApprove>>
+  result: Awaited<ReturnType<typeof emitApprove>>,
+  deliveries: CapturedApprovalDelivery[]
 ): ApprovalContractOutput {
   const decisionRaw = result.envelope.payload.decision;
   const recommendationAtDecisionRaw =
@@ -159,12 +295,41 @@ function normalizeApproveResult(
         : null,
     queueMode: null,
     hasIntentId: false,
-    hasSupersededIntentId: false
+    hasSupersededIntentId: false,
+    ...buildDeliverySummary(deliveries)
+  };
+}
+
+function normalizeImmediateReworkResult(
+  result: Awaited<ReturnType<typeof emitRequestRework>>,
+  deliveries: CapturedApprovalDelivery[]
+): ApprovalContractOutput {
+  if (result.mode !== "immediate") {
+    throw new Error("Expected immediate request-rework contract output.");
+  }
+  const decisionRaw = result.envelope.payload.decision;
+  const recommendationAtDecisionRaw =
+    result.envelope.payload.metadata?.recommendation_at_decision;
+  return {
+    status: "ok",
+    reasonCode: "APPROVAL_REWORK_IMMEDIATE",
+    state: result.state.state,
+    envelopeType: result.envelope.type,
+    decision: typeof decisionRaw === "string" ? decisionRaw : null,
+    recommendationAtDecision:
+      typeof recommendationAtDecisionRaw === "string"
+        ? recommendationAtDecisionRaw
+        : null,
+    queueMode: result.mode,
+    hasIntentId: false,
+    hasSupersededIntentId: false,
+    ...buildDeliverySummary(deliveries)
   };
 }
 
 function normalizeQueuedReworkResult(
-  result: Awaited<ReturnType<typeof emitRequestRework>>
+  result: Awaited<ReturnType<typeof emitRequestRework>>,
+  deliveries: CapturedApprovalDelivery[]
 ): ApprovalContractOutput {
   if (result.mode !== "queued") {
     throw new Error("Expected queued request-rework contract output.");
@@ -178,7 +343,8 @@ function normalizeQueuedReworkResult(
     recommendationAtDecision: null,
     queueMode: result.mode,
     hasIntentId: result.intentId.startsWith("intent_"),
-    hasSupersededIntentId: result.supersededIntentId !== undefined
+    hasSupersededIntentId: result.supersededIntentId !== undefined,
+    ...buildDeliverySummary(deliveries)
   };
 }
 
@@ -187,10 +353,28 @@ async function executeApprovalCase(input: {
   action: ParsedApprovalCaseInput;
   emitApproveFn: typeof emitApprove;
   emitRequestReworkFn: typeof emitRequestRework;
+  label: string;
 }): Promise<ApprovalContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-approval-contract-"));
   try {
     await initGitRepository(repoPath);
+    const deliveries: CapturedApprovalDelivery[] = [];
+    const emitDelivery: NonNullable<
+      EmitApprovalDecisionDependencies["emitTmuxDeliveryNotification"]
+    > = async (deliveryInput) => {
+      const targetRoleRaw =
+        deliveryInput.envelope.payload.metadata?.[deliveryTargetRoleMetadataKey];
+      deliveries.push({
+        type: deliveryInput.envelope.type,
+        recipient: deliveryInput.envelope.recipient,
+        targetRole: typeof targetRoleRaw === "string" ? targetRoleRaw : null,
+        refKind: classifyDeliveryRefKind(deliveryInput.messageRef)
+      });
+      return {
+        delivered: true,
+        message: "ok"
+      };
+    };
 
     if (input.action.action === "approve") {
       const bubble = await seedReadyForHumanApprovalState({
@@ -201,8 +385,40 @@ async function executeApprovalCase(input: {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
         now: new Date("2026-03-20T11:35:00.000Z")
+      }, {
+        emitTmuxDeliveryNotification: emitDelivery
       });
-      return normalizeApproveResult(result);
+      assertApprovalDeliveryInvariant({
+        action: input.action.action,
+        deliveries,
+        implementerAgent: bubble.config.agents.implementer,
+        label: input.label
+      });
+      return normalizeApproveResult(result, deliveries);
+    }
+
+    if (input.action.action === "request_rework_immediate") {
+      const bubble = await seedReadyForHumanApprovalState({
+        repoPath,
+        bubbleId: `b_contract_${input.caseDef.id}`
+      });
+      const result = await input.emitRequestReworkFn({
+        bubbleId: bubble.bubbleId,
+        message:
+          input.action.message
+          ?? "Please revise the current implementation with the updated test matrix.",
+        cwd: repoPath,
+        now: new Date("2026-03-20T11:36:00.000Z")
+      }, {
+        emitTmuxDeliveryNotification: emitDelivery
+      });
+      assertApprovalDeliveryInvariant({
+        action: input.action.action,
+        deliveries,
+        implementerAgent: bubble.config.agents.implementer,
+        label: input.label
+      });
+      return normalizeImmediateReworkResult(result, deliveries);
     }
 
     const bubble = await seedWaitingHumanState({
@@ -216,8 +432,16 @@ async function executeApprovalCase(input: {
         ?? "Please restart with updated test matrix.",
       cwd: repoPath,
       now: new Date("2026-03-20T11:36:00.000Z")
+    }, {
+      emitTmuxDeliveryNotification: emitDelivery
     });
-    return normalizeQueuedReworkResult(result);
+    assertApprovalDeliveryInvariant({
+      action: input.action.action,
+      deliveries,
+      implementerAgent: bubble.config.agents.implementer,
+      label: input.label
+    });
+    return normalizeQueuedReworkResult(result, deliveries);
   } finally {
     await rm(repoPath, { recursive: true, force: true });
   }
@@ -238,7 +462,8 @@ export async function runApprovalContractCase(
       caseDef,
       action: parsedInput,
       emitApproveFn: emitApprove,
-      emitRequestReworkFn: emitRequestRework
+      emitRequestReworkFn: emitRequestRework,
+      label: "legacy"
     });
     assertContractExpectedSubset({
       output: legacy,
@@ -256,7 +481,8 @@ export async function runApprovalContractCase(
       caseDef,
       action: parsedInput,
       emitApproveFn: emitApproveV11,
-      emitRequestReworkFn: emitRequestReworkV11
+      emitRequestReworkFn: emitRequestReworkV11,
+      label: "v11"
     });
     assertContractExpectedSubset({
       output: v11,
@@ -273,13 +499,15 @@ export async function runApprovalContractCase(
     caseDef,
     action: parsedInput,
     emitApproveFn: emitApprove,
-    emitRequestReworkFn: emitRequestRework
+    emitRequestReworkFn: emitRequestRework,
+    label: "parity/legacy"
   });
   const v11 = await executeApprovalCase({
     caseDef,
     action: parsedInput,
     emitApproveFn: emitApproveV11,
-    emitRequestReworkFn: emitRequestReworkV11
+    emitRequestReworkFn: emitRequestReworkV11,
+    label: "parity/v11"
   });
   assertContractExpectedSubset({
     output: legacy,

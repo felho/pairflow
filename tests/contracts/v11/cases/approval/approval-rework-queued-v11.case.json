@@ -9,7 +9,11 @@
   },
   "expected": {
     "status": "ok",
-    "reasonCode": "APPROVAL_REWORK_QUEUED"
+    "reasonCode": "APPROVAL_REWORK_QUEUED",
+    "deliveryCount": 0,
+    "deliveryRecipients": [],
+    "deliveryTargetRoles": [],
+    "deliveryRefKinds": []
   },
   "tags": [
     "seed",

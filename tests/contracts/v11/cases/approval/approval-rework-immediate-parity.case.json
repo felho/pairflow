@@ -1,0 +1,34 @@
+{
+  "id": "approval-rework-immediate-parity",
+  "command": "approval",
+  "mode": "parity",
+  "description": "Seed approval immediate-rework parity contract case for READY_FOR_APPROVAL baseline.",
+  "input": {
+    "action": "request_rework_immediate",
+    "message": "Please revise based on the current review notes."
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "APPROVAL_REWORK_IMMEDIATE",
+    "deliveryCount": 2,
+    "deliveryRecipients": [
+      "orchestrator",
+      "codex"
+    ],
+    "deliveryTargetRoles": [
+      "status",
+      "implementer"
+    ],
+    "deliveryRefKinds": [
+      "transcript",
+      "transcript"
+    ]
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "approval",
+    "immediate-rework",
+    "parity"
+  ]
+}

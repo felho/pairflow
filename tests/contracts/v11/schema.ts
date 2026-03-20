@@ -6,6 +6,10 @@ export interface ContractCaseExpected {
   gateRoute?: string;
   stateSubset?: Record<string, unknown>;
   envelopeType?: string;
+  deliveryCount?: number;
+  deliveryRecipients?: string[];
+  deliveryTargetRoles?: string[];
+  deliveryRefKinds?: string[];
   convergenceRecipient?: string;
   approvalRequestEnvelopeType?: string;
   approvalRequestRecipient?: string;
@@ -117,6 +121,46 @@ export function assertContractCaseShape(value: unknown): asserts value is Contra
   ) {
     throw new Error(
       "Contract case expected.approvalRequestSender must be a non-empty string when provided."
+    );
+  }
+  if (
+    "deliveryCount" in value.expected &&
+    value.expected.deliveryCount !== undefined &&
+    (
+      typeof value.expected.deliveryCount !== "number" ||
+      !Number.isInteger(value.expected.deliveryCount) ||
+      value.expected.deliveryCount < 0
+    )
+  ) {
+    throw new Error(
+      "Contract case expected.deliveryCount must be a non-negative integer when provided."
+    );
+  }
+  if (
+    "deliveryRecipients" in value.expected &&
+    value.expected.deliveryRecipients !== undefined &&
+    !isStringArray(value.expected.deliveryRecipients)
+  ) {
+    throw new Error(
+      "Contract case expected.deliveryRecipients must be a string array when provided."
+    );
+  }
+  if (
+    "deliveryTargetRoles" in value.expected &&
+    value.expected.deliveryTargetRoles !== undefined &&
+    !isStringArray(value.expected.deliveryTargetRoles)
+  ) {
+    throw new Error(
+      "Contract case expected.deliveryTargetRoles must be a string array when provided."
+    );
+  }
+  if (
+    "deliveryRefKinds" in value.expected &&
+    value.expected.deliveryRefKinds !== undefined &&
+    !isStringArray(value.expected.deliveryRefKinds)
+  ) {
+    throw new Error(
+      "Contract case expected.deliveryRefKinds must be a string array when provided."
     );
   }
   if (

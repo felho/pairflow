@@ -13,6 +13,16 @@
     "status": "ok",
     "reasonCode": "HUMAN_REPLY_EMITTED",
     "envelopeType": "HUMAN_REPLY",
+    "deliveryCount": 1,
+    "deliveryRecipients": [
+      "codex"
+    ],
+    "deliveryTargetRoles": [
+      "implementer"
+    ],
+    "deliveryRefKinds": [
+      "external"
+    ],
     "stateSubset": {
       "state": "RUNNING"
     }

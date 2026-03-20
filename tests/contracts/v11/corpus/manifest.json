@@ -129,6 +129,24 @@
       "kind": "seed_case"
     },
     {
+      "id": "approval-rework-immediate",
+      "command": "approval",
+      "source": "tests/contracts/v11/cases/approval/approval-rework-immediate.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "approval-rework-immediate-v11",
+      "command": "approval",
+      "source": "tests/contracts/v11/cases/approval/approval-rework-immediate-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "approval-rework-immediate-parity",
+      "command": "approval",
+      "source": "tests/contracts/v11/cases/approval/approval-rework-immediate-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "approval-rework-queued",
       "command": "approval",
       "source": "tests/contracts/v11/cases/approval/approval-rework-queued.case.json",
