@@ -8,6 +8,7 @@ import type {
   FinalizeAskHumanFlowInput,
   RunAskHumanFlowResult
 } from "../../shared/askHuman/askHumanFlowContract.js";
+import { buildAskHumanFinalizationNotificationInput } from "../../shared/askHuman/askHumanFinalizationNotificationInputBuilder.js";
 import { emitOptionalAskHumanNotifications } from "../../shared/askHuman/askHumanNotificationEmission.js";
 import { resolveAskHumanFinalizationDependencies } from "../../shared/askHuman/askHumanFinalizationDependencyResolution.js";
 export type {
@@ -31,13 +32,7 @@ export async function finalizeAskHumanFlow(
   });
 
   emitOptionalAskHumanNotifications(
-    {
-      bubbleId: input.routing.resolved.bubbleId,
-      bubbleConfig: input.routing.resolved.bubbleConfig,
-      sessionsPath: input.routing.resolved.bubblePaths.sessionsPath,
-      envelope: input.appended.envelope,
-      messageRef
-    },
+    buildAskHumanFinalizationNotificationInput(input, messageRef),
     {
       emitTmuxDeliveryNotification:
         resolvedDependencies.emitTmuxDeliveryNotification,
