@@ -13,9 +13,7 @@ import {
 } from "../../../core/runtime/reviewerScoutExpansionGuidance.js";
 import {
   buildReviewerCanonicalCommandGateLines,
-  buildReviewerFindingsPassInstruction,
-  buildReviewerRoundCommandGateProjection,
-  type ReviewerCommandGateProjectionVariant
+  buildReviewerFindingsPassInstruction
 } from "../../../core/runtime/reviewerCommandGateGuidance.js";
 import { buildReviewerDecisionMatrixReminder } from "../../../core/reviewer/testEvidence.js";
 import {
@@ -24,7 +22,6 @@ import {
   type ReviewerFocusExtractionResult
 } from "../../../core/reviewer/reviewerBrief.js";
 import type {
-  BubbleStateSnapshot,
   PairflowCommandProfile,
   ReviewArtifactType
 } from "../../../types/bubble.js";
