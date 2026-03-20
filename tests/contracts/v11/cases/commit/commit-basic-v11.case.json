@@ -1,0 +1,21 @@
+{
+  "id": "commit-basic-v11",
+  "command": "commit",
+  "mode": "v11",
+  "description": "Seed commit v11 contract case for APPROVED_FOR_COMMIT to DONE baseline.",
+  "input": {
+    "auto": true
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "COMMITTED",
+    "stateSubset": {
+      "state": "DONE"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "commit"
+  ]
+}
