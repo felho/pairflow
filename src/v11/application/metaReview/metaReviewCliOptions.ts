@@ -1,6 +1,16 @@
 import { parseArgs } from "node:util";
 
 import { MetaReviewErrorV11 as MetaReviewError, type MetaReviewDepthV11 as MetaReviewDepth } from "./emitMetaReviewV11.js";
+import {
+  parseDepth as parseDepthValue,
+  parseOptionalReworkTarget as parseOptionalReworkTargetValue,
+  parseRequiredSubmitText as parseRequiredSubmitTextValue,
+  parseSubmitRecommendation as parseSubmitRecommendationValue,
+  parseSubmitReportJson as parseSubmitReportJsonValue,
+  parseSubmitRound as parseSubmitRoundValue,
+  readBooleanOption as readBooleanOptionValue,
+  readStringOption as readStringOptionValue
+} from "./metaReviewCliValueParsers.js";
 import type { MetaReviewSubmissionPayload } from "../../../types/protocol.js";
 
 interface BubbleMetaReviewCommandBase {
@@ -79,45 +89,19 @@ function invalidMetaReviewCliOptions(message: string): never {
 }
 
 function parseDepth(value: string | undefined): MetaReviewDepth {
-  if (value === undefined || value === "standard") {
-    return "standard";
-  }
-  if (value === "deep") {
-    return "deep";
-  }
-  return invalidMetaReviewCliOptions(
-    "Invalid --depth value. Use one of: standard, deep."
-  );
+  return parseDepthValue(value, invalidMetaReviewCliOptions);
 }
 
 function parseSubmitRound(value: string | undefined): number {
-  if (value === undefined) {
-    return invalidMetaReviewCliOptions(
-      "Missing required option: --round for meta-review submit."
-    );
-  }
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1) {
-    return invalidMetaReviewCliOptions(
-      "Invalid --round value. Must be a positive integer."
-    );
-  }
-  return parsed;
+  return parseSubmitRoundValue(value, invalidMetaReviewCliOptions);
 }
 
 function parseSubmitRecommendation(
   value: string | undefined
 ): MetaReviewSubmissionPayload["recommendation"] {
-  if (value === undefined) {
-    return invalidMetaReviewCliOptions(
-      "Missing required option: --recommendation for meta-review submit."
-    );
-  }
-  if (value === "approve" || value === "rework" || value === "inconclusive") {
-    return value;
-  }
-  return invalidMetaReviewCliOptions(
-    "Invalid --recommendation value. Use one of: approve, rework, inconclusive."
+  return parseSubmitRecommendationValue(
+    value,
+    invalidMetaReviewCliOptions
   );
 }
 
@@ -125,54 +109,27 @@ function parseRequiredSubmitText(
   value: string | undefined,
   optionName: "--summary" | "--report-markdown"
 ): string {
-  if (value === undefined) {
-    return invalidMetaReviewCliOptions(
-      `Missing required option: ${optionName} for meta-review submit.`
-    );
-  }
-  if (value.trim().length === 0) {
-    return invalidMetaReviewCliOptions(
-      `Invalid ${optionName} value. Must be non-empty.`
-    );
-  }
-  return optionName === "--summary" ? value.trim() : value.trimEnd();
+  return parseRequiredSubmitTextValue(
+    value,
+    optionName,
+    invalidMetaReviewCliOptions
+  );
 }
 
 function parseOptionalReworkTarget(value: string | undefined): string | null {
-  if (value === undefined) {
-    return null;
-  }
-  if (value.trim().length === 0) {
-    return invalidMetaReviewCliOptions(
-      "Invalid --rework-target-message value. Must be non-empty when provided."
-    );
-  }
-  return value.trim();
+  return parseOptionalReworkTargetValue(
+    value,
+    invalidMetaReviewCliOptions
+  );
 }
 
 function parseSubmitReportJson(
   value: string | undefined
 ): Record<string, unknown> | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return invalidMetaReviewCliOptions(
-      `Invalid --report-json value. Must be valid JSON object. ${message}`
-    );
-  }
-
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    return invalidMetaReviewCliOptions(
-      "Invalid --report-json value. Must be a JSON object."
-    );
-  }
-  return parsed as Record<string, unknown>;
+  return parseSubmitReportJsonValue(
+    value,
+    invalidMetaReviewCliOptions
+  );
 }
 
 function readStringOption(
@@ -189,14 +146,12 @@ function readStringOption(
     | "report-json",
   errorMessage: string
 ): string | undefined {
-  const value = values[key];
-  if (value === undefined) {
-    return undefined;
-  }
-  if (typeof value !== "string") {
-    return invalidMetaReviewCliOptions(errorMessage);
-  }
-  return value;
+  return readStringOptionValue(
+    values,
+    key,
+    errorMessage,
+    invalidMetaReviewCliOptions
+  );
 }
 
 function readBooleanOption(
@@ -204,14 +159,12 @@ function readBooleanOption(
   key: "json" | "verbose",
   errorMessage: string
 ): boolean | undefined {
-  const value = values[key];
-  if (value === undefined) {
-    return undefined;
-  }
-  if (typeof value !== "boolean") {
-    return invalidMetaReviewCliOptions(errorMessage);
-  }
-  return value;
+  return readBooleanOptionValue(
+    values,
+    key,
+    errorMessage,
+    invalidMetaReviewCliOptions
+  );
 }
 
 function parseMetaReviewCliOptionValues(
