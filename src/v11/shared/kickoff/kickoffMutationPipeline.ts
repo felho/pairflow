@@ -5,13 +5,9 @@ import type { ResolvedKickoffTaskInput } from "./kickoffTaskInputResolution.js";
 import type { executeKickoffMutation } from "./kickoffMutationExecution.js";
 import type { executeKickoffMutationRollback } from "./kickoffMutationRollback.js";
 import {
-  buildKickoffMutationExecutionInput,
-} from "./kickoffMutationPipelineInputBuilders.js";
-import {
-  buildKickoffMutationPipelineSuccessResult,
   resolveKickoffMutationPipelineDependencies
 } from "./kickoffMutationPipelineFlowHelpers.js";
-import { handleKickoffMutationFailure } from "./kickoffMutationFailureHandling.js";
+import { executeKickoffMutationWithRollbackGuard } from "./kickoffMutationGuardedExecution.js";
 
 export interface ExecuteKickoffMutationPipelineInput {
   persistenceFailureCode: string;
@@ -65,28 +61,6 @@ export type ExecuteKickoffMutationPipelineResult =
 export interface ExecuteKickoffMutationPipelineDependencies {
   executeMutation?: typeof executeKickoffMutation;
   executeRollback?: typeof executeKickoffMutationRollback;
-}
-
-async function executeKickoffMutationWithRollbackGuard(input: {
-  pipelineInput: ExecuteKickoffMutationPipelineInput;
-  executeMutation: typeof executeKickoffMutation;
-  executeRollback: typeof executeKickoffMutationRollback;
-}): Promise<ExecuteKickoffMutationPipelineResult> {
-  let transcriptBackup: string | null = null;
-  try {
-    transcriptBackup = await input.executeMutation(
-      buildKickoffMutationExecutionInput(input.pipelineInput)
-    );
-  } catch (error) {
-    return handleKickoffMutationFailure({
-      pipelineInput: input.pipelineInput,
-      mutationError: error,
-      transcriptBackup,
-      executeRollback: input.executeRollback
-    });
-  }
-
-  return buildKickoffMutationPipelineSuccessResult();
 }
 
 export async function executeKickoffMutationPipeline(
