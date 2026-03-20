@@ -417,6 +417,60 @@
       "kind": "seed_case"
     },
     {
+      "id": "kickoff-task-file-empty",
+      "command": "kickoff",
+      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file-empty.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "kickoff-task-file-empty-v11",
+      "command": "kickoff",
+      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file-empty-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "kickoff-task-file-empty-parity",
+      "command": "kickoff",
+      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file-empty-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "kickoff-task-input-conflict",
+      "command": "kickoff",
+      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-input-conflict.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "kickoff-task-input-conflict-v11",
+      "command": "kickoff",
+      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-input-conflict-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "kickoff-task-input-conflict-parity",
+      "command": "kickoff",
+      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-input-conflict-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "kickoff-task-file-not-regular",
+      "command": "kickoff",
+      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file-not-regular.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "kickoff-task-file-not-regular-v11",
+      "command": "kickoff",
+      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file-not-regular-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "kickoff-task-file-not-regular-parity",
+      "command": "kickoff",
+      "source": "tests/contracts/v11/cases/kickoff/kickoff-task-file-not-regular-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "ask-human-basic",
       "command": "askHuman",
       "source": "tests/contracts/v11/cases/ask-human/ask-human-basic.case.json",

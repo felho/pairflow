@@ -1,0 +1,25 @@
+{
+  "id": "kickoff-task-input-conflict-parity",
+  "command": "kickoff",
+  "mode": "parity",
+  "description": "Seed kickoff parity contract case for conflicting task and task-file inputs.",
+  "input": {
+    "task": "Should reject when both task and task-file are provided",
+    "fixture": {
+      "taskInputConflict": true
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "IDEATION_KICKOFF_TASK_INVALID",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "kickoff",
+    "error-path"
+  ]
+}
