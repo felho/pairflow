@@ -4,10 +4,10 @@ import { realpath } from "node:fs/promises";
 import { resolve as resolvePath } from "node:path";
 
 import {
-  asStartBubbleError,
-  startBubble,
-  type StartBubbleResult
-} from "../../../core/bubble/startBubble.js";
+  asStartBubbleErrorV11 as asStartBubbleError,
+  startBubbleV11 as startBubble,
+  type StartBubbleV11Result as StartBubbleResult
+} from "../../../v11/application/start/emitStartV11.js";
 import {
   IDEATION_METADATA_PARSE_WARNING,
   hasIdeationMetadataParseWarning
