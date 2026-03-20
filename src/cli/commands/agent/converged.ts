@@ -1,10 +1,10 @@
 import { parseArgs } from "node:util";
 
 import {
-  asConvergedCommandError,
-  emitConvergedFromWorkspace,
-  type EmitConvergedResult
-} from "../../../core/agent/converged.js";
+  asConvergedCommandErrorV11 as asConvergedCommandError,
+  emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace,
+  type EmitConvergedV11Result as EmitConvergedResult
+} from "../../../v11/application/converged/emitConvergedV11.js";
 
 export interface ConvergedCommandOptions {
   summary: string;

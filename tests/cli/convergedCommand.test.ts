@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { EmitConvergedResult } from "../../src/core/agent/converged.js";
-import * as convergedCore from "../../src/core/agent/converged.js";
+import type { EmitConvergedV11Result as EmitConvergedResult } from "../../src/v11/application/converged/emitConvergedV11.js";
+import * as convergedApp from "../../src/v11/application/converged/emitConvergedV11.js";
 import {
   getConvergedHelpText,
   parseConvergedCommandOptions,
@@ -48,7 +48,7 @@ describe("runConvergedCommand", () => {
     expect(result).toBeNull();
   });
 
-  it("returns meta-review-running handoff result from core converged flow", async () => {
+  it("returns meta-review-running handoff result from converged flow", async () => {
     const mocked = {
       bubbleId: "b_cli_converged_meta_01",
       convergenceSequence: 11,
@@ -105,7 +105,7 @@ describe("runConvergedCommand", () => {
     } satisfies EmitConvergedResult;
 
     const emitSpy = vi
-      .spyOn(convergedCore, "emitConvergedFromWorkspace")
+      .spyOn(convergedApp, "emitConvergedFromWorkspaceV11")
       .mockResolvedValue(mocked);
 
     const result = await runConvergedCommand(
