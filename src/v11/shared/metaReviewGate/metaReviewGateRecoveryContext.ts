@@ -1,12 +1,11 @@
-import { readFile, writeFile } from "node:fs/promises";
+import type { readFile, writeFile } from "node:fs/promises";
 
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
-import {
+import type { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
+import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import type {
   readStateSnapshot,
   writeStateSnapshot,
-  type LoadedStateSnapshot
+  LoadedStateSnapshot
 } from "../../../core/state/stateStore.js";
 import {
   type MetaReviewRunResult
@@ -19,9 +18,6 @@ import type { FindingsParityMetadata } from "../../../types/protocol.js";
 import {
   resolveFindingsParityMetadataFromReportJson
 } from "./metaReviewGateFindingsMetadata.js";
-import {
-  writeRecoveredMetaReviewArtifacts
-} from "./metaReviewGateRunResultArtifacts.js";
 export {
   resolveRecoveryParityRouting,
   type RecoveryParityResolution
@@ -33,11 +29,16 @@ import {
   resolveHumanGateRoute
 } from "./metaReviewGateShared.js";
 import {
-  MetaReviewGateError,
   type MetaReviewGateResult,
   type RecoverMetaReviewGateFromSnapshotDependencies,
   type RecoverMetaReviewGateFromSnapshotInput
 } from "./metaReviewGateTypes.js";
+import {
+  assertRecoverableMetaReviewState,
+  buildDeactivateMetaReviewerPane,
+  buildFinishWithPaneDeactivation,
+  resolveRecoveryContextDependencies
+} from "./metaReviewGateRecoveryContextHelpers.js";
 export {
   assertRecoveredRunResolutionConsistency,
   resolveRecoveredRunResolution,
@@ -65,19 +66,12 @@ export async function initializeRecoverMetaReviewExecutionContext(
   input: RecoverMetaReviewGateFromSnapshotInput,
   dependencies: RecoverMetaReviewGateFromSnapshotDependencies
 ): Promise<RecoverMetaReviewExecutionContext> {
-  const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
-  const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
-  const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
-  const appendEnvelope = dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
-  const setMetaReviewerPane =
-    dependencies.setMetaReviewerPaneBinding ?? setMetaReviewerPaneBinding;
-  const readFileFn = dependencies.readFile ?? readFile;
-  const writeFileFn = dependencies.writeFile ?? writeFile;
+  const resolvedDependencies = resolveRecoveryContextDependencies(dependencies);
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
   const refs = input.refs ?? [];
 
-  const resolved = await resolveBubble({
+  const resolved = await resolvedDependencies.resolveBubble({
     bubbleId: input.bubbleId,
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
@@ -86,63 +80,27 @@ export async function initializeRecoverMetaReviewExecutionContext(
     locksDir: resolved.bubblePaths.locksDir,
     bubbleId: resolved.bubbleId
   });
+  const deactivateMetaReviewerPane = buildDeactivateMetaReviewerPane({
+    setMetaReviewerPane: resolvedDependencies.setMetaReviewerPane,
+    sessionsPath: resolved.bubblePaths.sessionsPath,
+    bubbleId: resolved.bubbleId,
+    now
+  });
+  const finishWithPaneDeactivation = buildFinishWithPaneDeactivation({
+    bubbleId: resolved.bubbleId,
+    nowIso,
+    writeFileFn: resolvedDependencies.writeFileFn,
+    artifactsPaths: {
+      metaReviewLastJsonArtifactPath:
+        resolved.bubblePaths.metaReviewLastJsonArtifactPath,
+      metaReviewLastMarkdownArtifactPath:
+        resolved.bubblePaths.metaReviewLastMarkdownArtifactPath
+    },
+    deactivateMetaReviewerPane
+  });
 
-  const deactivateMetaReviewerPane = async (): Promise<string | null> => {
-    try {
-      await setMetaReviewerPane({
-        sessionsPath: resolved.bubblePaths.sessionsPath,
-        bubbleId: resolved.bubbleId,
-        active: false,
-        now
-      });
-      return null;
-    } catch (error) {
-      return error instanceof Error ? error.message : String(error);
-    }
-  };
-
-  const finishWithPaneDeactivation = async (
-    result: MetaReviewGateResult
-  ): Promise<MetaReviewGateResult> => {
-    let finalizedResult = result;
-    if (result.metaReviewRun !== undefined) {
-      const artifactWrite = await writeRecoveredMetaReviewArtifacts({
-        bubbleId: resolved.bubbleId,
-        round: result.state.round,
-        nowIso,
-        runResult: result.metaReviewRun,
-        paths: {
-          metaReviewLastJsonArtifactPath:
-            resolved.bubblePaths.metaReviewLastJsonArtifactPath,
-          metaReviewLastMarkdownArtifactPath:
-            resolved.bubblePaths.metaReviewLastMarkdownArtifactPath
-        },
-        writeFileFn
-      });
-      if (artifactWrite.warnings.length > 0) {
-        finalizedResult = {
-          ...result,
-          metaReviewRun: {
-            ...result.metaReviewRun,
-            warnings: [
-              ...result.metaReviewRun.warnings,
-              ...artifactWrite.warnings
-            ]
-          }
-        };
-      }
-    }
-    await deactivateMetaReviewerPane();
-    return finalizedResult;
-  };
-
-  const loaded = await readState(resolved.bubblePaths.statePath);
-  if (loaded.state.state !== "META_REVIEW_RUNNING") {
-    throw new MetaReviewGateError(
-      "META_REVIEW_GATE_TRANSITION_INVALID",
-      `meta-review gate recovery requires META_REVIEW_RUNNING state (current: ${loaded.state.state}).`
-    );
-  }
+  const loaded = await resolvedDependencies.readState(resolved.bubblePaths.statePath);
+  assertRecoverableMetaReviewState(loaded);
 
   return {
     resolved,
@@ -151,11 +109,11 @@ export async function initializeRecoverMetaReviewExecutionContext(
     refs,
     lockPath,
     loaded,
-    appendEnvelope,
-    writeState,
-    readState,
-    readFileFn,
-    writeFileFn,
+    appendEnvelope: resolvedDependencies.appendEnvelope,
+    writeState: resolvedDependencies.writeState,
+    readState: resolvedDependencies.readState,
+    readFileFn: resolvedDependencies.readFileFn,
+    writeFileFn: resolvedDependencies.writeFileFn,
     ...(dependencies.sleepForRetryMs !== undefined
       ? { sleepForRetryMs: dependencies.sleepForRetryMs }
       : {}),
