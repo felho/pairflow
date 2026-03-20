@@ -18,6 +18,10 @@ import type {
   ResolvedApprovalCommandDependencies
 } from "../../shared/approval/approvalCommandDependencyResolution.js";
 import {
+  appendEnvelopeViaMutationBoundary,
+  persistStateViaMutationBoundary
+} from "../../shared/mutation/mutationBoundaryIO.js";
+import {
   assertApprovalDecisionEligibility,
   canonicalHumanApprovalState,
   isHumanApprovalState,
@@ -82,19 +86,22 @@ export async function runApprovalDecisionFlow(
     envelopePayload.metadata = envelopeMetadata;
   }
 
-  const appended = await dependencies.appendProtocolEnvelope({
-    transcriptPath: resolved.bubblePaths.transcriptPath,
-    mirrorPaths: [resolved.bubblePaths.inboxPath],
-    lockPath,
-    now: input.now,
-    envelope: {
-      bubble_id: resolved.bubbleId,
-      sender: "human",
-      recipient: "orchestrator",
-      type: "APPROVAL_DECISION",
-      round: state.round,
-      payload: envelopePayload,
-      refs: input.refs
+  const appended = await appendEnvelopeViaMutationBoundary({
+    append: dependencies.appendProtocolEnvelope,
+    payload: {
+      transcriptPath: resolved.bubblePaths.transcriptPath,
+      mirrorPaths: [resolved.bubblePaths.inboxPath],
+      lockPath,
+      now: input.now,
+      envelope: {
+        bubble_id: resolved.bubbleId,
+        sender: "human",
+        recipient: "orchestrator",
+        type: "APPROVAL_DECISION",
+        round: state.round,
+        payload: envelopePayload,
+        refs: input.refs
+      }
     }
   });
 
@@ -109,14 +116,15 @@ export async function runApprovalDecisionFlow(
 
   let written;
   try {
-    written = await dependencies.writeStateSnapshot(
-      resolved.bubblePaths.statePath,
-      nextState,
-      {
+    written = await persistStateViaMutationBoundary({
+      write: dependencies.writeStateSnapshot,
+      statePath: resolved.bubblePaths.statePath,
+      state: nextState,
+      options: {
         expectedFingerprint: loadedState.fingerprint,
         expectedState: state.state
       }
-    );
+    });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw input.createError(
@@ -252,14 +260,15 @@ export async function runRequestReworkFlow(
 
   let written;
   try {
-    written = await dependencies.writeStateSnapshot(
-      resolved.bubblePaths.statePath,
-      queued.state,
-      {
+    written = await persistStateViaMutationBoundary({
+      write: dependencies.writeStateSnapshot,
+      statePath: resolved.bubblePaths.statePath,
+      state: queued.state,
+      options: {
         expectedFingerprint: loadedState.fingerprint,
         expectedState: "WAITING_HUMAN"
       }
-    );
+    });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw input.createError(

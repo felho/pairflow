@@ -67,7 +67,7 @@ describe("ensureReplyWaitingHumanState", () => {
       )
     ).toThrowError(
       new TestReplyError(
-        "bubble reply can only be used while bubble is WAITING_HUMAN (current: RUNNING)."
+        "REPLY_WAITING_HUMAN_STATE_REQUIRED: bubble reply can only be used while bubble is WAITING_HUMAN (current: RUNNING). context: command_name=reply."
       )
     );
   });
@@ -80,7 +80,9 @@ describe("ensureReplyWaitingHumanState", () => {
         })
       )
     ).toThrowError(
-      new TestReplyError("WAITING_HUMAN state must have round >= 1 (found 0).")
+      new TestReplyError(
+        "REPLY_WAITING_HUMAN_ROUND_INVALID: WAITING_HUMAN state must have round >= 1 (found 0). context: command_name=reply."
+      )
     );
   });
 
@@ -93,7 +95,7 @@ describe("ensureReplyWaitingHumanState", () => {
       )
     ).toThrowError(
       new TestReplyError(
-        "WAITING_HUMAN state is missing active agent context; cannot resume RUNNING after reply."
+        "REPLY_WAITING_HUMAN_CONTEXT_INCOMPLETE: WAITING_HUMAN state is missing active agent context; cannot resume RUNNING after reply. context: command_name=reply."
       )
     );
   });

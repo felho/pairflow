@@ -27,6 +27,6 @@ describe("passIntentInference", () => {
         activeRole: "meta_reviewer",
         createError: (message) => new Error(`synthetic:${message}`)
       })
-    ).toThrow("synthetic:Unsupported active role for pass intent inference: meta_reviewer.");
+    ).toThrow("synthetic:PASS_INTENT_ACTIVE_ROLE_UNSUPPORTED:");
   });
 });

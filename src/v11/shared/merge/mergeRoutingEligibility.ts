@@ -9,6 +9,13 @@ export interface MergeBranchValidationInput {
   createError: (message: string) => Error;
 }
 
+const MERGE_STATE_DONE_REQUIRED = "MERGE_STATE_DONE_REQUIRED";
+const MERGE_BASE_BRANCH_NOT_FOUND = "MERGE_BASE_BRANCH_NOT_FOUND";
+const MERGE_BUBBLE_BRANCH_NOT_FOUND = "MERGE_BUBBLE_BRANCH_NOT_FOUND";
+const MERGE_BRANCHES_IDENTICAL = "MERGE_BRANCHES_IDENTICAL";
+const MERGE_REPO_DIRTY = "MERGE_REPO_DIRTY";
+const MERGE_ORIGIN_REMOTE_REQUIRED = "MERGE_ORIGIN_REMOTE_REQUIRED";
+
 export type GitRunner = (
   args: string[],
   options: { cwd: string; allowFailure?: boolean }
@@ -28,7 +35,7 @@ export function assertMergeStateEligibility(
 ): void {
   if (state.state !== "DONE") {
     throw createError(
-      `bubble merge requires state DONE (current: ${state.state}).`
+      `${MERGE_STATE_DONE_REQUIRED}: bubble merge requires state DONE (current: ${state.state}); context: command_name=merge.`
     );
   }
 }
@@ -37,13 +44,19 @@ export function assertMergeBranchEligibility(
   input: MergeBranchValidationInput
 ): void {
   if (!input.baseBranchExists) {
-    throw input.createError(`Base branch not found locally: ${input.baseBranch}`);
+    throw input.createError(
+      `${MERGE_BASE_BRANCH_NOT_FOUND}: Base branch not found locally: ${input.baseBranch}`
+    );
   }
   if (!input.bubbleBranchExists) {
-    throw input.createError(`Bubble branch not found locally: ${input.bubbleBranch}`);
+    throw input.createError(
+      `${MERGE_BUBBLE_BRANCH_NOT_FOUND}: Bubble branch not found locally: ${input.bubbleBranch}`
+    );
   }
   if (input.baseBranch === input.bubbleBranch) {
-    throw input.createError("Base branch and bubble branch cannot be identical.");
+    throw input.createError(
+      `${MERGE_BRANCHES_IDENTICAL}: Base branch and bubble branch cannot be identical.`
+    );
   }
 }
 
@@ -68,7 +81,7 @@ export async function assertCleanRepoWorkingTree(
     );
   if (blockingLines.length > 0) {
     throw createError(
-      `Repository has uncommitted changes at ${repoPath}. Commit/stash them before bubble merge.`
+      `${MERGE_REPO_DIRTY}: Repository has uncommitted changes at ${repoPath}. Commit/stash them before bubble merge.`
     );
   }
 }
@@ -84,7 +97,7 @@ export async function ensureOriginRemote(
   });
   if (origin.exitCode !== 0) {
     throw createError(
-      `Remote origin is required for push/delete-remote operations at ${repoPath}.`
+      `${MERGE_ORIGIN_REMOTE_REQUIRED}: Remote origin is required for push/delete-remote operations at ${repoPath}.`
     );
   }
 }

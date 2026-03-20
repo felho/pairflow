@@ -6,6 +6,9 @@ export interface InferPassIntentFromActiveRoleInput {
   createError: (message: string) => Error;
 }
 
+const PASS_INTENT_ACTIVE_ROLE_UNSUPPORTED =
+  "PASS_INTENT_ACTIVE_ROLE_UNSUPPORTED";
+
 export function inferPassIntentFromActiveRole(
   input: InferPassIntentFromActiveRoleInput
 ): PassIntent {
@@ -17,6 +20,6 @@ export function inferPassIntentFromActiveRole(
   }
 
   throw input.createError(
-    `Unsupported active role for pass intent inference: ${input.activeRole}.`
+    `${PASS_INTENT_ACTIVE_ROLE_UNSUPPORTED}: Unsupported active role for pass intent inference: ${input.activeRole}. context: command_name=pass; active_role=${input.activeRole}.`
   );
 }

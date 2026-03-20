@@ -17,6 +17,13 @@ export const approvalRecommendationUnavailableReasonCode =
   "APPROVAL_RECOMMENDATION_UNAVAILABLE";
 export const approvalParityOverrideRequiredReasonCode =
   "APPROVAL_PARITY_OVERRIDE_REQUIRED";
+const APPROVAL_DECISION_STATE_INELIGIBLE =
+  "APPROVAL_DECISION_STATE_INELIGIBLE";
+const APPROVAL_DECISION_ROUND_INVALID = "APPROVAL_DECISION_ROUND_INVALID";
+const APPROVAL_OVERRIDE_REQUIRED = approvalOverrideRequiredReasonCode;
+const APPROVAL_OVERRIDE_REASON_REQUIRED = approvalOverrideReasonRequiredReasonCode;
+const APPROVAL_RECOMMENDATION_UNAVAILABLE = approvalRecommendationUnavailableReasonCode;
+const APPROVAL_PARITY_OVERRIDE_REQUIRED = approvalParityOverrideRequiredReasonCode;
 
 const metaReviewRunFailedSummaryPrefix = "META_REVIEW_GATE_RUN_FAILED:";
 const metaReviewGateRunFailedReasonCode = "META_REVIEW_GATE_RUN_FAILED";
@@ -163,12 +170,12 @@ export function assertApprovalDecisionEligibility(
 ): void {
   if (!isHumanApprovalState(state.state)) {
     throw createError(
-      `approval decision can only be used while bubble is ${canonicalHumanApprovalState} or ${metaReviewFailedHumanState} (legacy compatibility: ${legacyHumanApprovalState}) (current: ${state.state}).`
+      `${APPROVAL_DECISION_STATE_INELIGIBLE}: approval decision can only be used while bubble is ${canonicalHumanApprovalState} or ${metaReviewFailedHumanState} (legacy compatibility: ${legacyHumanApprovalState}) (current: ${state.state}).`
     );
   }
   if (state.round < 1) {
     throw createError(
-      `${state.state} state must have round >= 1 (found ${state.round}).`
+      `${APPROVAL_DECISION_ROUND_INVALID}: ${state.state} state must have round >= 1 (found ${state.round}).`
     );
   }
 }
@@ -226,7 +233,7 @@ function resolveLatestApprovalRecommendation(
     }
   }
   throw createError(
-    `${approvalRecommendationUnavailableReasonCode}: latest autonomous recommendation is unavailable at approval time.`
+    `${APPROVAL_RECOMMENDATION_UNAVAILABLE}: latest autonomous recommendation is unavailable at approval time. context: command_name=approval.`
   );
 }
 
@@ -269,15 +276,15 @@ export async function resolveApprovalDecisionMetadata(
   if (input.overrideNonApprove !== true) {
     throw input.createError(
       parityInconsistencyAtDecision
-        ? `${approvalParityOverrideRequiredReasonCode}: approval requires --override-non-approve when findings parity metadata is inconsistent.`
-        : `${approvalOverrideRequiredReasonCode}: approval requires --override-non-approve when latest recommendation is ${recommendationAtDecision}.`
+        ? `${APPROVAL_PARITY_OVERRIDE_REQUIRED}: approval requires --override-non-approve when findings parity metadata is inconsistent. context: command_name=approval.`
+        : `${APPROVAL_OVERRIDE_REQUIRED}: approval requires --override-non-approve when latest recommendation is ${recommendationAtDecision}. context: command_name=approval.`
     );
   }
   if (input.overrideReason === undefined) {
     throw input.createError(
       parityInconsistencyAtDecision
-        ? `${approvalOverrideReasonRequiredReasonCode}: approval override requires --override-reason when findings parity metadata is inconsistent.`
-        : `${approvalOverrideReasonRequiredReasonCode}: approval override requires --override-reason when latest recommendation is ${recommendationAtDecision}.`
+        ? `${APPROVAL_OVERRIDE_REASON_REQUIRED}: approval override requires --override-reason when findings parity metadata is inconsistent. context: command_name=approval.`
+        : `${APPROVAL_OVERRIDE_REASON_REQUIRED}: approval override requires --override-reason when latest recommendation is ${recommendationAtDecision}. context: command_name=approval.`
     );
   }
 

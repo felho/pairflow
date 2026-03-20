@@ -22,6 +22,9 @@ import {
   throwAsStopBubbleError
 } from "./stopCommandRuntime.js";
 
+const STOP_BUBBLE_REQUIRES_NON_FINAL_STATE =
+  "STOP_BUBBLE_REQUIRES_NON_FINAL_STATE";
+
 export async function stopBubbleCommandOrchestration(
   input: StopBubbleInput,
   dependencies: StopBubbleDependencies = {}
@@ -41,7 +44,7 @@ export async function stopBubbleCommandOrchestration(
   const loaded = await readStateSnapshot(resolved.bubblePaths.statePath);
   if (isFinalState(loaded.state.state)) {
     throw createStopBubbleError(
-      `bubble stop requires non-final state (current: ${loaded.state.state}).`
+      `${STOP_BUBBLE_REQUIRES_NON_FINAL_STATE}: bubble stop requires non-final state (current: ${loaded.state.state}).`
     );
   }
 

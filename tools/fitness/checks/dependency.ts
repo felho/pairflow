@@ -44,7 +44,7 @@ interface ExceptionLifecycleStatus {
 
 const layerImportAllowlist: Record<string, readonly string[]> = {
   domain: ["domain", "shared"],
-  application: ["domain", "ports", "shared"],
+  application: ["application", "domain", "ports", "shared"],
   "legacy-compat": ["application", "ports", "shared", "legacy-compat"]
 };
 

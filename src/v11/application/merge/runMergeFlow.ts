@@ -5,6 +5,7 @@ import type { MergeBubbleResult } from "./mergeCommandContract.js";
 import { buildMergeBubbleResult } from "./mergeResultMapping.js";
 import type { ResolvedMergeCommandDependencies } from "../../shared/merge/mergeCommandDependencyResolution.js";
 import type { NormalizedMergeBubbleInput } from "../../shared/merge/mergeCommandInputNormalization.js";
+import { persistStateViaMutationBoundary } from "../../shared/mutation/mutationBoundaryIO.js";
 import {
   assertCleanRepoWorkingTree,
   assertMergeBranchEligibility,
@@ -17,6 +18,12 @@ import {
 export interface RunMergeFlowInput extends NormalizedMergeBubbleInput {
   createError: (message: string) => Error;
 }
+
+const MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION =
+  "MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION";
+const MERGE_REMOTE_DELETE_ORIGIN_UNAVAILABLE =
+  "MERGE_REMOTE_DELETE_ORIGIN_UNAVAILABLE";
+const MERGE_REMOTE_DELETE_FAILED = "MERGE_REMOTE_DELETE_FAILED";
 
 export async function runMergeFlow(
   input: RunMergeFlowInput,
@@ -69,7 +76,7 @@ export async function runMergeFlow(
     }).catch(() => undefined);
     if (error instanceof GitCommandError) {
       throw input.createError(
-        `Merge failed for ${bubbleBranch} -> ${baseBranch}. Resolve conflicts manually.`
+        `${MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION}: Merge failed for ${bubbleBranch} -> ${baseBranch}. Resolve conflicts manually.`
       );
     }
     throw error;
@@ -105,11 +112,11 @@ export async function runMergeFlow(
       if (remoteDelete.exitCode !== 0) {
         if (hasOriginRemoteError(remoteDelete.stderr)) {
           throw input.createError(
-            `Failed to delete remote branch ${bubbleBranch}: origin remote is not available.`
+            `${MERGE_REMOTE_DELETE_ORIGIN_UNAVAILABLE}: Failed to delete remote branch ${bubbleBranch}: origin remote is not available.`
           );
         }
         throw input.createError(
-          `Failed to delete remote branch ${bubbleBranch}: ${remoteDelete.stderr.trim()}`
+          `${MERGE_REMOTE_DELETE_FAILED}: Failed to delete remote branch ${bubbleBranch}: ${remoteDelete.stderr.trim()}`
         );
       }
       deletedRemoteBranch = true;
@@ -129,17 +136,18 @@ export async function runMergeFlow(
     worktreePath: resolved.bubblePaths.worktreePath
   });
 
-  await dependencies.writeStateSnapshot(
-    resolved.bubblePaths.statePath,
-    {
+  await persistStateViaMutationBoundary({
+    write: dependencies.writeStateSnapshot,
+    statePath: resolved.bubblePaths.statePath,
+    state: {
       ...loaded.state,
       last_command_at: input.nowIso
     },
-    {
+    options: {
       expectedFingerprint: loaded.fingerprint,
       expectedState: "DONE"
     }
-  );
+  });
 
   await dependencies.emitBubbleLifecycleEventBestEffort({
     repoPath: resolved.repoPath,

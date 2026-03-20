@@ -48,7 +48,7 @@ export interface NormalizedRequestReworkInput {
   now: Date;
 }
 
-const approvalOverrideReasonRequiredReasonCode =
+const APPROVAL_OVERRIDE_REASON_REQUIRED =
   "APPROVAL_OVERRIDE_REASON_REQUIRED";
 
 function validateAndNormalizeOverrideReason(
@@ -61,7 +61,7 @@ function validateAndNormalizeOverrideReason(
   const trimmed = reason.trim();
   if (trimmed.length === 0) {
     throw createError(
-      `${approvalOverrideReasonRequiredReasonCode}: --override-reason must be non-empty after trimming whitespace.`
+      `${APPROVAL_OVERRIDE_REASON_REQUIRED}: --override-reason must be non-empty after trimming whitespace. context: command_name=approval.`
     );
   }
   return trimmed;

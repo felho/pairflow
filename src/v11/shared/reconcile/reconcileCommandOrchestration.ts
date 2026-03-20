@@ -13,6 +13,8 @@ import {
   resolveReconcileRuntimeSessionsDependencies
 } from "./reconcileCommandDependencyResolution.js";
 
+const RECONCILE_REPO_RESOLUTION_FAILED = "RECONCILE_REPO_RESOLUTION_FAILED";
+
 export async function reconcileRuntimeSessionsCommandOrchestration(
   input: ReconcileRuntimeSessionsInput = {},
   dependencies: ReconcileRuntimeSessionsDependencies = {}
@@ -31,7 +33,9 @@ export async function reconcileRuntimeSessionsCommandOrchestration(
     });
   } catch (error) {
     if (error instanceof RepoResolutionError) {
-      throw createStartupReconcilerError(error.message);
+      throw createStartupReconcilerError(
+        `${RECONCILE_REPO_RESOLUTION_FAILED}: ${error.message}`
+      );
     }
     throw error;
   }

@@ -18,10 +18,18 @@ export interface EnsureReplyWaitingHumanStateInput {
 
 function raiseWaitingHumanStateError(
   createError: (message: string) => Error,
+  reasonCode: string,
   message: string
 ): never {
-  throw createError(message);
+  throw createError(`${reasonCode}: ${message} context: command_name=reply.`);
 }
+
+const REPLY_WAITING_HUMAN_STATE_REQUIRED =
+  "REPLY_WAITING_HUMAN_STATE_REQUIRED";
+const REPLY_WAITING_HUMAN_ROUND_INVALID =
+  "REPLY_WAITING_HUMAN_ROUND_INVALID";
+const REPLY_WAITING_HUMAN_CONTEXT_INCOMPLETE =
+  "REPLY_WAITING_HUMAN_CONTEXT_INCOMPLETE";
 
 export function ensureReplyWaitingHumanState(
   input: EnsureReplyWaitingHumanStateInput
@@ -31,6 +39,7 @@ export function ensureReplyWaitingHumanState(
   if (state.state !== "WAITING_HUMAN") {
     raiseWaitingHumanStateError(
       createError,
+      REPLY_WAITING_HUMAN_STATE_REQUIRED,
       `bubble reply can only be used while bubble is WAITING_HUMAN (current: ${state.state}).`
     );
   }
@@ -38,6 +47,7 @@ export function ensureReplyWaitingHumanState(
   if (state.round < 1) {
     raiseWaitingHumanStateError(
       createError,
+      REPLY_WAITING_HUMAN_ROUND_INVALID,
       `WAITING_HUMAN state must have round >= 1 (found ${state.round}).`
     );
   }
@@ -45,6 +55,7 @@ export function ensureReplyWaitingHumanState(
   if (state.active_agent === null || state.active_role === null || state.active_since === null) {
     raiseWaitingHumanStateError(
       createError,
+      REPLY_WAITING_HUMAN_CONTEXT_INCOMPLETE,
       "WAITING_HUMAN state is missing active agent context; cannot resume RUNNING after reply."
     );
   }

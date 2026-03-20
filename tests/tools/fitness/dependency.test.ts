@@ -138,6 +138,42 @@ describe("dependency fitness check", () => {
     expect(report.details?.some((detail) => detail.startsWith("import_edges="))).toBe(true);
   });
 
+  it("passes on application to application imports within the same layer", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/feature-a.ts",
+      "export const featureA = 1;\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/feature-b.ts",
+      "import { featureA } from './feature-a.js';\nexport const featureB = featureA;\n"
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+      currentMilestone: undefined
+    });
+
+    expect(report.status).toBe("pass");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("forbidden layer import application -> application")
+      )
+    ).toBe(false);
+  });
+
   it("applies allow-edge exception for forbidden layer import", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
