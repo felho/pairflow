@@ -54,6 +54,16 @@ describe("critical side-effect fitness check", () => {
       "src/v11/application/converged/convergedResult.ts",
       "export const result = { delivery: { delivered: true } };\n"
     );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/approval/runApprovalFlow.ts",
+      "export const emit = emitTmuxDeliveryNotification;\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/reply/replyCommandApi.ts",
+      "export const emit = emitTmuxDeliveryNotification;\n"
+    );
 
     const report = await buildCriticalSideEffectCheckReport({
       check: {
@@ -94,6 +104,16 @@ describe("critical side-effect fitness check", () => {
       "src/v11/application/converged/convergedResult.ts",
       "export const result = { delivery: { delivered: true } };\n"
     );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/approval/runApprovalFlow.ts",
+      "export const emit = emitTmuxDeliveryNotification;\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/reply/replyCommandApi.ts",
+      "export const emit = emitTmuxDeliveryNotification;\n"
+    );
 
     const report = await buildCriticalSideEffectCheckReport({
       check: {
@@ -110,7 +130,7 @@ describe("critical side-effect fitness check", () => {
     });
 
     expect(report.status).toBe("pass");
-    expect(report.summary).toContain("all 3 command invariant(s) covered");
+    expect(report.summary).toContain("all 5 command invariant(s) covered");
   });
 
   it("warns when scope is missing", async () => {
@@ -129,5 +149,55 @@ describe("critical side-effect fitness check", () => {
     });
 
     expect(report.status).toBe("warn");
+  });
+
+  it("ignores contract-only command files as delivery evidence", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/kickoff/kickoffCommandContract.ts",
+      "export interface KickoffCommandContract { delivery: { delivered: boolean } }\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/pass/passCommandContract.ts",
+      "export interface PassCommandContract { emitTmuxDeliveryNotification: unknown }\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/converged/convergedCommandContract.ts",
+      "export interface ConvergedCommandContract { delivery: { delivered: boolean } }\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/approval/approvalCommandContract.ts",
+      "export interface ApprovalCommandContract { emitTmuxDeliveryNotification: unknown }\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/reply/replyCommandContract.ts",
+      "export interface ReplyCommandContract { emitTmuxDeliveryNotification: unknown }\n"
+    );
+
+    const report = await buildCriticalSideEffectCheckReport({
+      check: {
+        id: "critical_side_effect",
+        metric: "critical command side-effect invariant coverage",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture/runtime",
+        scope: ["src/v11/application/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only"
+    });
+
+    expect(report.status).toBe("fail");
+    expect(
+      report.details?.every((detail) =>
+        detail.includes("missing delivery invariant evidence")
+      )
+    ).toBe(true);
   });
 });

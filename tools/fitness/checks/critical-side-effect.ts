@@ -7,7 +7,7 @@ import type { FitnessPolicyCheck, FitnessReportCheck } from "../types.js";
 type InvariantStatus = "covered" | "missing" | "absent";
 
 interface CommandInvariantResult {
-  command: "kickoff" | "pass" | "converged";
+  command: "kickoff" | "pass" | "converged" | "approval" | "reply";
   status: InvariantStatus;
   evidence: string[];
 }
@@ -15,20 +15,55 @@ interface CommandInvariantResult {
 const criticalCommands: readonly CommandInvariantResult["command"][] = [
   "kickoff",
   "pass",
-  "converged"
+  "converged",
+  "approval",
+  "reply"
 ] as const;
 
 const deliveryAdapterPattern = /\bemitTmuxDeliveryNotification\b/u;
 const deliveryResultPattern = /\bdelivery\s*:/u;
 
-function commandFolderPattern(command: CommandInvariantResult["command"]): RegExp {
-  return new RegExp(`/src/v11/application/${command}/`, "u");
+function commandFolderPatterns(
+  command: CommandInvariantResult["command"]
+): RegExp[] {
+  return [
+    new RegExp(`/src/v11/application/${command}/`, "u"),
+    new RegExp(`/src/v11/shared/${command}/`, "u")
+  ];
+}
+
+function buildCriticalSideEffectSearchScope(
+  scope: string[]
+): string[] {
+  const expanded = new Set(scope);
+  for (const command of criticalCommands) {
+    expanded.add(`src/v11/shared/${command}/**`);
+  }
+  return [...expanded];
+}
+
+function isContractOnlyEvidencePath(relativePath: string): boolean {
+  const normalized = normalizePathToPosix(relativePath).toLowerCase();
+  if (
+    normalized.endsWith("contract.ts") ||
+    normalized.includes("facadeparity")
+  ) {
+    return true;
+  }
+  return false;
 }
 
 function collectMatchEvidence(input: {
   relativePath: string;
   fileContent: string;
 }): { adapter: string[]; result: string[] } {
+  if (isContractOnlyEvidencePath(input.relativePath)) {
+    return {
+      adapter: [],
+      result: []
+    };
+  }
+
   const adapter: string[] = [];
   const result: string[] = [];
   const lines = input.fileContent.split(/\r?\n/u);
@@ -106,7 +141,10 @@ export async function buildCriticalSideEffectCheckReport({
     };
   }
 
-  const files = await resolveFilesForScopePatterns(repoRoot, scope);
+  const files = await resolveFilesForScopePatterns(
+    repoRoot,
+    buildCriticalSideEffectSearchScope(scope)
+  );
   if (files.length === 0) {
     return {
       id: check.id,
@@ -130,7 +168,9 @@ export async function buildCriticalSideEffectCheckReport({
   const results: CommandInvariantResult[] = [];
   for (const command of criticalCommands) {
     const commandFiles = files.filter((absolutePath) =>
-      commandFolderPattern(command).test(normalizePathToPosix(absolutePath))
+      commandFolderPatterns(command).some((pattern) =>
+        pattern.test(normalizePathToPosix(absolutePath))
+      )
     );
     if (commandFiles.length === 0) {
       results.push({
