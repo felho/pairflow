@@ -55,6 +55,11 @@ export type BubbleMetaReviewCommandResult =
     submit: MetaReviewSubmitResult;
   };
 
+type BubbleMetaReviewExecutableCommandOptions = Exclude<
+  BubbleMetaReviewCommandOptions,
+  { help: true }
+>;
+
 interface MetaReviewRenderedResultLike {
   bubbleId: string;
   status: string;
@@ -276,6 +281,135 @@ export function renderMetaReviewRecoverText(result: MetaReviewGateResult): strin
   return lines.join("\n");
 }
 
+function toRepoPathOption(repo: string | undefined): {
+  repoPath?: string;
+} {
+  return repo !== undefined ? { repoPath: repo } : {};
+}
+
+async function runMetaReviewRunCommand(input: {
+  options: Extract<BubbleMetaReviewExecutableCommandOptions, { command: "run" }>;
+  cwd: string;
+}): Promise<BubbleMetaReviewCommandResult> {
+  const run = await runMetaReview({
+    bubbleId: input.options.id,
+    ...toRepoPathOption(input.options.repo),
+    depth: input.options.depth,
+    cwd: input.cwd
+  });
+  return {
+    command: "run",
+    run
+  };
+}
+
+async function runMetaReviewSubmitCommand(input: {
+  options: Extract<BubbleMetaReviewExecutableCommandOptions, { command: "submit" }>;
+  cwd: string;
+}): Promise<BubbleMetaReviewCommandResult> {
+  const submit = await submitMetaReviewResult({
+    bubbleId: input.options.id,
+    ...toRepoPathOption(input.options.repo),
+    round: input.options.round,
+    recommendation: input.options.recommendation,
+    summary: input.options.summary,
+    report_markdown: input.options.reportMarkdown,
+    rework_target_message: input.options.reworkTargetMessage,
+    ...(input.options.reportJson !== undefined
+      ? { report_json: input.options.reportJson }
+      : {}),
+    cwd: input.cwd
+  });
+  return {
+    command: "submit",
+    submit
+  };
+}
+
+async function runMetaReviewStatusCommand(input: {
+  options: Extract<BubbleMetaReviewExecutableCommandOptions, { command: "status" }>;
+  cwd: string;
+}): Promise<BubbleMetaReviewCommandResult> {
+  const status = await getMetaReviewStatus({
+    bubbleId: input.options.id,
+    ...toRepoPathOption(input.options.repo),
+    cwd: input.cwd
+  });
+  return {
+    command: "status",
+    status
+  };
+}
+
+async function runMetaReviewLastReportCommand(input: {
+  options: Extract<BubbleMetaReviewExecutableCommandOptions, { command: "last-report" }>;
+  cwd: string;
+}): Promise<BubbleMetaReviewCommandResult> {
+  const lastReport = await getMetaReviewLastReport({
+    bubbleId: input.options.id,
+    ...toRepoPathOption(input.options.repo),
+    cwd: input.cwd
+  });
+  return {
+    command: "last-report",
+    lastReport
+  };
+}
+
+async function runMetaReviewRecoverCommand(input: {
+  options: Extract<BubbleMetaReviewExecutableCommandOptions, { command: "recover" }>;
+  cwd: string;
+}): Promise<BubbleMetaReviewCommandResult> {
+  const recover = await recoverMetaReviewGateFromSnapshot({
+    bubbleId: input.options.id,
+    ...toRepoPathOption(input.options.repo),
+    cwd: input.cwd
+  });
+  return {
+    command: "recover",
+    recover
+  };
+}
+
+async function dispatchMetaReviewCommand(input: {
+  options: BubbleMetaReviewExecutableCommandOptions;
+  cwd: string;
+}): Promise<BubbleMetaReviewCommandResult> {
+  if (input.options.command === "run") {
+    return runMetaReviewRunCommand({
+      options: input.options,
+      cwd: input.cwd
+    });
+  }
+  if (input.options.command === "submit") {
+    return runMetaReviewSubmitCommand({
+      options: input.options,
+      cwd: input.cwd
+    });
+  }
+  if (input.options.command === "status") {
+    return runMetaReviewStatusCommand({
+      options: input.options,
+      cwd: input.cwd
+    });
+  }
+  if (input.options.command === "last-report") {
+    return runMetaReviewLastReportCommand({
+      options: input.options,
+      cwd: input.cwd
+    });
+  }
+  if (input.options.command === "recover") {
+    return runMetaReviewRecoverCommand({
+      options: input.options,
+      cwd: input.cwd
+    });
+  }
+  throw new Error(
+    "META_REVIEW_SUBCOMMAND_UNEXPECTED: Unexpected meta-review subcommand. context: command_name=meta-review."
+  );
+}
+
 export async function runBubbleMetaReviewCommand(
   args: string[] | BubbleMetaReviewCommandOptions,
   cwd: string = process.cwd()
@@ -286,77 +420,10 @@ export async function runBubbleMetaReviewCommand(
     if (options.help) {
       return null;
     }
-
-    if (options.command === "run") {
-      const run = await runMetaReview({
-        bubbleId: options.id,
-        ...(options.repo !== undefined ? { repoPath: options.repo } : {}),
-        depth: options.depth,
-        cwd
-      });
-      return {
-        command: "run",
-        run
-      };
-    }
-
-    if (options.command === "submit") {
-      const submit = await submitMetaReviewResult({
-        bubbleId: options.id,
-        ...(options.repo !== undefined ? { repoPath: options.repo } : {}),
-        round: options.round,
-        recommendation: options.recommendation,
-        summary: options.summary,
-        report_markdown: options.reportMarkdown,
-        rework_target_message: options.reworkTargetMessage,
-        ...(options.reportJson !== undefined
-          ? { report_json: options.reportJson }
-          : {}),
-        cwd
-      });
-      return {
-        command: "submit",
-        submit
-      };
-    }
-
-    if (options.command === "status") {
-      const status = await getMetaReviewStatus({
-        bubbleId: options.id,
-        ...(options.repo !== undefined ? { repoPath: options.repo } : {}),
-        cwd
-      });
-      return {
-        command: "status",
-        status
-      };
-    }
-    if (options.command === "last-report") {
-      const lastReport = await getMetaReviewLastReport({
-        bubbleId: options.id,
-        ...(options.repo !== undefined ? { repoPath: options.repo } : {}),
-        cwd
-      });
-      return {
-        command: "last-report",
-        lastReport
-      };
-    }
-    if (options.command === "recover") {
-      const recover = await recoverMetaReviewGateFromSnapshot({
-        bubbleId: options.id,
-        ...(options.repo !== undefined ? { repoPath: options.repo } : {}),
-        cwd
-      });
-      return {
-        command: "recover",
-        recover
-      };
-    }
-
-    throw new Error(
-      "META_REVIEW_SUBCOMMAND_UNEXPECTED: Unexpected meta-review subcommand. context: command_name=meta-review."
-    );
+    return await dispatchMetaReviewCommand({
+      options,
+      cwd
+    });
   } catch (error) {
     throw toMetaReviewError(error);
   }
