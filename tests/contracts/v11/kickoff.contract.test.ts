@@ -12,7 +12,10 @@ const execFileAsync = promisify(execFile);
 const kickoffCaseSources = [
   "tests/contracts/v11/cases/kickoff/kickoff-basic.case.json",
   "tests/contracts/v11/cases/kickoff/kickoff-basic-v11.case.json",
-  "tests/contracts/v11/cases/kickoff/kickoff-basic-parity.case.json"
+  "tests/contracts/v11/cases/kickoff/kickoff-basic-parity.case.json",
+  "tests/contracts/v11/cases/kickoff/kickoff-not-allowed.case.json",
+  "tests/contracts/v11/cases/kickoff/kickoff-not-allowed-v11.case.json",
+  "tests/contracts/v11/cases/kickoff/kickoff-not-allowed-parity.case.json"
 ] as const;
 
 const kickoffExpectedSourcesSorted = [...kickoffCaseSources].sort();
@@ -49,12 +52,12 @@ describe("v11 kickoff contract harness skeleton", () => {
       const caseDef = await readContractCase(casePath);
       const run = await runKickoffContractCase(caseDef);
       if (caseDef.mode === "legacy") {
-        expect(run.legacy?.status).toBe("ok");
+        expect(run.legacy?.status).toBe(caseDef.expected.status);
         expect(run.v11).toBeUndefined();
         continue;
       }
       if (caseDef.mode === "v11") {
-        expect(run.v11?.status).toBe("ok");
+        expect(run.v11?.status).toBe(caseDef.expected.status);
         expect(run.legacy).toBeUndefined();
         continue;
       }

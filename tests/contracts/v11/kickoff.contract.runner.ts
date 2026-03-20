@@ -38,8 +38,61 @@ export interface KickoffContractRunResult {
   v11?: KickoffContractOutput;
 }
 
+interface ParsedKickoffFixtureInput {
+  ideation: boolean;
+  running: boolean;
+  bubbleTask: string;
+}
+
 interface ParsedKickoffCaseInput {
   task: string;
+  fixture: ParsedKickoffFixtureInput;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function parseKickoffFixtureInput(
+  input: ContractCase["input"]
+): ParsedKickoffFixtureInput {
+  const fixtureRaw = input.fixture;
+  if (fixtureRaw === undefined) {
+    return {
+      ideation: true,
+      running: true,
+      bubbleTask: "Legacy kickoff fixture task"
+    };
+  }
+  if (!isRecord(fixtureRaw)) {
+    throw new Error("kickoff contract input.fixture must be an object when provided.");
+  }
+
+  const ideationRaw = fixtureRaw.ideation;
+  if (ideationRaw !== undefined && typeof ideationRaw !== "boolean") {
+    throw new Error("kickoff contract input.fixture.ideation must be a boolean.");
+  }
+
+  const runningRaw = fixtureRaw.running;
+  if (runningRaw !== undefined && typeof runningRaw !== "boolean") {
+    throw new Error("kickoff contract input.fixture.running must be a boolean.");
+  }
+
+  const bubbleTaskRaw = fixtureRaw.bubbleTask;
+  if (
+    bubbleTaskRaw !== undefined &&
+    (typeof bubbleTaskRaw !== "string" || bubbleTaskRaw.trim().length === 0)
+  ) {
+    throw new Error(
+      "kickoff contract input.fixture.bubbleTask must be a non-empty string."
+    );
+  }
+
+  return {
+    ideation: ideationRaw ?? true,
+    running: runningRaw ?? true,
+    bubbleTask: bubbleTaskRaw?.trim() ?? "Legacy kickoff fixture task"
+  };
 }
 
 function parseKickoffCaseInput(input: ContractCase["input"]): ParsedKickoffCaseInput {
@@ -49,7 +102,8 @@ function parseKickoffCaseInput(input: ContractCase["input"]): ParsedKickoffCaseI
   }
 
   return {
-    task: taskRaw.trim()
+    task: taskRaw.trim(),
+    fixture: parseKickoffFixtureInput(input)
   };
 }
 
@@ -117,15 +171,25 @@ function assertParityEquivalent(input: {
   }
 }
 
-async function setupKickoffFixture(repoPath: string, bubbleId: string) {
+async function setupKickoffFixture(
+  repoPath: string,
+  bubbleId: string,
+  fixture: ParsedKickoffFixtureInput
+) {
   const bubble = await createBubble({
     id: bubbleId,
     repoPath,
     baseBranch: "main",
     reviewArtifactType: "code",
-    ideation: true,
+    ...(fixture.ideation
+      ? { ideation: true }
+      : { task: fixture.bubbleTask }),
     cwd: repoPath
   });
+
+  if (!fixture.ideation || !fixture.running) {
+    return bubble;
+  }
 
   const loaded = await readStateSnapshot(bubble.paths.statePath);
   const startedAt = "2026-03-20T14:00:00.000Z";
@@ -157,8 +221,12 @@ async function executeKickoffCase(input: {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-kickoff-contract-"));
   try {
     await initGitRepository(repoPath);
-    const bubble = await setupKickoffFixture(repoPath, `b_contract_${input.caseDef.id}`);
     const parsedInput = parseKickoffCaseInput(input.caseDef.input);
+    const bubble = await setupKickoffFixture(
+      repoPath,
+      `b_contract_${input.caseDef.id}`,
+      parsedInput.fixture
+    );
 
     const result = await input.executor({
       bubbleId: bubble.bubbleId,
