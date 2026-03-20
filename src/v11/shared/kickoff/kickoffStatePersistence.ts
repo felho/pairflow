@@ -3,6 +3,7 @@ import {
   writeKickoffState,
   type KickoffWrittenState
 } from "./kickoffStateWrite.js";
+import { hasKickoffStateFingerprintConflict } from "./kickoffStateConflictCheck.js";
 
 export interface LoadedKickoffState {
   state: BubbleStateSnapshot;
@@ -50,13 +51,6 @@ function buildKickoffStateSuccessResult(input: {
   };
 }
 
-function hasKickoffStateFingerprintConflict(input: {
-  latestFingerprint: string;
-  loadedFingerprint: string;
-}): boolean {
-  return input.latestFingerprint !== input.loadedFingerprint;
-}
-
 function buildKickoffStateWriteInput(
   input: PersistKickoffStateInput
 ): Parameters<typeof writeKickoffState>[0] {
@@ -83,13 +77,7 @@ function mapKickoffStateWriteResult(
 export async function persistKickoffState(
   input: PersistKickoffStateInput
 ): Promise<PersistKickoffStateResult> {
-  const latestState = await input.readState(input.statePath);
-  if (
-    hasKickoffStateFingerprintConflict({
-      latestFingerprint: latestState.fingerprint,
-      loadedFingerprint: input.loadedFingerprint
-    })
-  ) {
+  if (await hasKickoffStateFingerprintConflict(input)) {
     return buildKickoffStateConflictResult();
   }
 
