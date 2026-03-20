@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "updated_at": "2026-03-20T15:12:00.000Z",
+  "updated_at": "2026-03-20T15:22:00.000Z",
   "defaults": {
     "mode": "report-only",
-    "current_milestone": "M2"
+    "current_milestone": "M3"
   },
   "checks": [
     {
@@ -86,19 +86,9 @@
         "M2": "soft-fail",
         "M3": "hard-fail"
       },
-      "exception_lifecycle_mode": "soft-fail",
+      "exception_lifecycle_mode": "hard-fail",
       "owner": "architecture",
-      "exceptions": [
-        {
-          "id": "dep-legacy-bridge-seed-m2",
-          "kind": "allow-edge",
-          "owner": "architecture",
-          "reason": "temporary migration bridge seed for lifecycle flow validation",
-          "expires_milestone": "M2",
-          "from": "src/v11/domain/legacy-bridge.ts",
-          "to": "src/v11/application/migration-bridge.ts"
-        }
-      ]
+      "exceptions": []
     },
     {
       "id": "critical_side_effect",
