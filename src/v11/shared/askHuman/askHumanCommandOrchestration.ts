@@ -1,5 +1,6 @@
 import { runAskHumanCommandFlowOrchestration } from "./askHumanCommandFlowOrchestration.js";
 import { resolveAskHumanCommandOrchestrationDependencies } from "./askHumanCommandOrchestrationDependencyResolution.js";
+import { buildAskHumanCommandFlowOrchestrationCallInput } from "./askHumanCommandFlowOrchestrationCallInputBuilder.js";
 import { buildAskHumanCommandOrchestrationDependencyResolutionInput } from "./askHumanCommandOrchestrationDependencyResolutionInputBuilder.js";
 import type {
   AskHumanCommandOrchestrationDependencies,
@@ -14,10 +15,15 @@ export async function orchestrateAskHumanCommand(
   const resolvedDependencies = resolveAskHumanCommandOrchestrationDependencies(
     buildAskHumanCommandOrchestrationDependencyResolutionInput(dependencies)
   );
-
-  return runAskHumanCommandFlowOrchestration(
+  const flowCallInput = buildAskHumanCommandFlowOrchestrationCallInput(
     input,
     dependencies,
     resolvedDependencies
+  );
+
+  return runAskHumanCommandFlowOrchestration(
+    flowCallInput.input,
+    flowCallInput.dependencies,
+    flowCallInput.resolvedDependencies
   );
 }
