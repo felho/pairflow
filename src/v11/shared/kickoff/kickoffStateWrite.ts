@@ -1,5 +1,6 @@
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import { isKickoffStateWriteConflict } from "./kickoffStateWriteConflict.js";
+import { buildKickoffWriteStateOptions } from "./kickoffStateWriteOptions.js";
 
 export interface KickoffWrittenState {
   fingerprint: string;
@@ -28,18 +29,6 @@ export type WriteKickoffStateResult =
   | {
       kind: "conflict";
     };
-
-function buildKickoffWriteStateOptions(input: {
-  expectedFingerprint: string;
-}): {
-  expectedFingerprint: string;
-  expectedState: "RUNNING";
-} {
-  return {
-    expectedFingerprint: input.expectedFingerprint,
-    expectedState: "RUNNING"
-  };
-}
 
 function buildKickoffWriteSuccessResult(input: {
   writtenState: KickoffWrittenState;
