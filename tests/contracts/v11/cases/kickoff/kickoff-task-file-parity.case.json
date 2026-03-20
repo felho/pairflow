@@ -1,0 +1,23 @@
+{
+  "id": "kickoff-task-file-parity",
+  "command": "kickoff",
+  "mode": "parity",
+  "description": "Seed kickoff parity contract case for task-file input success path.",
+  "input": {
+    "task": "Implement kickoff from task file",
+    "fixture": {
+      "taskViaFile": true
+    }
+  },
+  "expected": {
+    "status": "ok",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "kickoff"
+  ]
+}

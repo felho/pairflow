@@ -1,0 +1,23 @@
+{
+  "id": "kickoff-task-file-v11",
+  "command": "kickoff",
+  "mode": "v11",
+  "description": "Seed kickoff v11 contract case for task-file input success path.",
+  "input": {
+    "task": "Implement kickoff from task file",
+    "fixture": {
+      "taskViaFile": true
+    }
+  },
+  "expected": {
+    "status": "ok",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "kickoff"
+  ]
+}

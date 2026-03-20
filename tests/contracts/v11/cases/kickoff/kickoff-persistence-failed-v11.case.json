@@ -1,0 +1,25 @@
+{
+  "id": "kickoff-persistence-failed-v11",
+  "command": "kickoff",
+  "mode": "v11",
+  "description": "Seed kickoff v11 contract case for injected transcript append failure.",
+  "input": {
+    "task": "Should fail kickoff when persistence mutation append fails",
+    "fixture": {
+      "appendFailure": true
+    }
+  },
+  "expected": {
+    "status": "error",
+    "reasonCode": "IDEATION_KICKOFF_PERSISTENCE_FAILED",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": [
+    "seed",
+    "m0",
+    "kickoff",
+    "error-path"
+  ]
+}

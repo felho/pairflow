@@ -50,6 +50,8 @@ interface ParsedKickoffFixtureInput {
   round: number;
   taskPending: boolean;
   stateConflict: boolean;
+  appendFailure: boolean;
+  taskViaFile: boolean;
   bubbleTask: string;
 }
 
@@ -73,6 +75,8 @@ function parseKickoffFixtureInput(
       round: 0,
       taskPending: true,
       stateConflict: false,
+      appendFailure: false,
+      taskViaFile: false,
       bubbleTask: "Legacy kickoff fixture task"
     };
   }
@@ -110,6 +114,16 @@ function parseKickoffFixtureInput(
     throw new Error("kickoff contract input.fixture.stateConflict must be a boolean.");
   }
 
+  const appendFailureRaw = fixtureRaw.appendFailure;
+  if (appendFailureRaw !== undefined && typeof appendFailureRaw !== "boolean") {
+    throw new Error("kickoff contract input.fixture.appendFailure must be a boolean.");
+  }
+
+  const taskViaFileRaw = fixtureRaw.taskViaFile;
+  if (taskViaFileRaw !== undefined && typeof taskViaFileRaw !== "boolean") {
+    throw new Error("kickoff contract input.fixture.taskViaFile must be a boolean.");
+  }
+
   const bubbleTaskRaw = fixtureRaw.bubbleTask;
   if (
     bubbleTaskRaw !== undefined &&
@@ -126,6 +140,8 @@ function parseKickoffFixtureInput(
     round: roundRaw ?? 0,
     taskPending: taskPendingRaw ?? true,
     stateConflict: stateConflictRaw ?? false,
+    appendFailure: appendFailureRaw ?? false,
+    taskViaFile: taskViaFileRaw ?? false,
     bubbleTask: bubbleTaskRaw?.trim() ?? "Legacy kickoff fixture task"
   };
 }
@@ -309,20 +325,31 @@ async function executeKickoffCase(input: {
       parsedInput.fixture
     );
 
-    const dependencyOverrides = parsedInput.fixture.stateConflict
-      ? {
-          writeStateSnapshot: () =>
-            Promise.reject(new StateStoreConflictError("Injected kickoff state conflict."))
-        }
-      : undefined;
+    const dependencyOverrides: Parameters<typeof input.executor>[1] = {};
+    if (parsedInput.fixture.stateConflict) {
+      dependencyOverrides.writeStateSnapshot = () =>
+        Promise.reject(new StateStoreConflictError("Injected kickoff state conflict."));
+    }
+    if (parsedInput.fixture.appendFailure) {
+      dependencyOverrides.appendProtocolEnvelope = () =>
+        Promise.reject(new Error("Injected kickoff append failure."));
+    }
 
-    const result = await input.executor({
+    const kickoffInput: Parameters<typeof input.executor>[0] = {
       bubbleId: bubble.bubbleId,
       repoPath,
-      task: parsedInput.task,
       cwd: repoPath,
       now: new Date("2026-03-20T14:05:00.000Z")
-    }, dependencyOverrides);
+    };
+    if (parsedInput.fixture.taskViaFile) {
+      const taskFileName = "kickoff-task-input.md";
+      await writeFile(join(repoPath, taskFileName), `${parsedInput.task}\n`, "utf8");
+      kickoffInput.taskFile = taskFileName;
+    } else {
+      kickoffInput.task = parsedInput.task;
+    }
+
+    const result = await input.executor(kickoffInput, dependencyOverrides);
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
     const taskEnvelopeCount = transcript.reduce(
