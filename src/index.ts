@@ -172,7 +172,7 @@ export {
   getBubbleRestartHelpText,
   parseBubbleRestartCommandOptions,
   runBubbleRestartCommand
-} from "./cli/commands/bubble/restart.js";
+} from "./v11/application/restart/restartCliCommand.js";
 export {
   getBubbleReplyHelpText,
   parseBubbleReplyCommandOptions,
@@ -527,7 +527,7 @@ export type {
   BubbleRestartCommandOptions,
   BubbleRestartHelpCommandOptions,
   ParsedBubbleRestartCommandOptions
-} from "./cli/commands/bubble/restart.js";
+} from "./v11/application/restart/restartCliCommand.js";
 export type {
   BubbleInboxCommandOptions,
   BubbleInboxHelpCommandOptions,
