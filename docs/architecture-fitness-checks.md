@@ -1,8 +1,8 @@
 # Architecture Fitness Checks (v1)
 
-Status: draft  
+Status: active  
 Owner: architecture  
-Scope: M0 skeleton
+Scope: v1.1 migrated command scope
 
 ## Purpose
 
@@ -56,7 +56,7 @@ Rules:
 - exceptions: explicit migration allowlist with owner, reason, expiry milestone.
 - report: command-level offender list + import/write trace.
 - owner: architecture.
-- rollout mode (current): report-only.
+- rollout mode (current): hard-fail.
 
 ## 2) Mutation Fitness (Dual-Gate)
 
@@ -66,7 +66,7 @@ Rules:
 - exceptions: none for `v11` command state; temporary allowlist only in parity.
 - report: mutation path count + bypass candidates.
 - owner: architecture/runtime.
-- rollout mode (current): report-only.
+- rollout mode (current): hard-fail.
 
 ## 3) Transition Fitness (Dual-Gate)
 
@@ -76,7 +76,7 @@ Rules:
 - exceptions: operator force path with mandatory audit event.
 - report: transition calls and potential bypass call-sites.
 - owner: architecture/runtime.
-- rollout mode (current): report-only.
+- rollout mode (current): hard-fail.
 
 ## 4) Error Fitness
 
@@ -86,7 +86,7 @@ Rules:
 - exceptions: none.
 - report: missing-code/missing-context histogram.
 - owner: architecture/observability.
-- rollout mode (current): report-only.
+- rollout mode (current): hard-fail.
 
 ## 5) Complexity Fitness
 
@@ -106,7 +106,7 @@ Rules:
 - exceptions: temporary migration allowlist with expiry milestone.
 - report: cycle graph summary + violating edge list.
 - owner: architecture.
-- rollout mode (current): report-only.
+- rollout mode (current): hard-fail.
 
 ## Cross-Cutting Overlay: Critical Side-Effect Invariants
 
@@ -122,6 +122,7 @@ Rules:
   - M0-M1: report-only.
   - M2+: soft-fail.
   - M3+: hard-fail a `v11` allapotu commandokra.
+  - Current effective mode (`defaults.current_milestone = M3`): hard-fail.
   - Policy wiring: `tools/fitness/policy.json` `critical_side_effect.mode_by_milestone` map.
   - CI override: `PAIRFLOW_FITNESS_CURRENT_MILESTONE` env vagy `--current-milestone` flag (flag elsobbseggel).
 
