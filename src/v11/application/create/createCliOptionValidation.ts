@@ -1,17 +1,16 @@
 import {
-  assertCreateReviewArtifactType,
-  assertPairflowCommandProfile,
-  MISSING_REVIEW_ARTIFACT_TYPE_OPTION
-} from "../../../config/bubbleConfig.js";
-import {
   IDEATION_TASK_INPUT_CONFLICT,
   IDEATION_TASK_REQUIRED
 } from "../../../core/bubble/ideation.js";
-import type {
-  CreateReviewArtifactType,
-  PairflowCommandProfile
-} from "../../../types/bubble.js";
 import type { BubbleCreateCommandOptions } from "./createCliOptionTypes.js";
+import {
+  appendMissingOption,
+  parsePairflowCommandProfile,
+  parseReviewArtifactType,
+  toCreateCommandError,
+  toCreateCommandReasonCodeError
+} from "./createCliOptionValidationHelpers.js";
+import { MISSING_REVIEW_ARTIFACT_TYPE_OPTION } from "../../../config/bubbleConfig.js";
 
 export interface BubbleCreateParsedValues {
   id?: string;
@@ -34,81 +33,6 @@ export interface CreateValidationState {
   isReviewArtifactTypeMissing: boolean;
   reviewArtifactTypeValidationError: string | undefined;
   pairflowCommandProfileValidationError: string | undefined;
-}
-
-function appendMissingOption(
-  missing: string[],
-  value: string | undefined,
-  option: string
-): void {
-  if (value === undefined) {
-    missing.push(option);
-  }
-}
-
-function toValidationErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-function formatCreateError(message: string): string {
-  return `${message} context: command_name=create.`;
-}
-
-function formatCreateErrorWithReason(message: string, reasonCode: string): string {
-  return `${message} context: command_name=create reason_code=${reasonCode}.`;
-}
-
-function toCreateCommandError(message: string): Error {
-  return new Error(formatCreateError(message));
-}
-
-function toCreateCommandReasonCodeError(message: string, reasonCode: string): Error {
-  return new Error(formatCreateErrorWithReason(message, reasonCode));
-}
-
-function parsePairflowCommandProfile(
-  rawPairflowCommandProfile: string | undefined
-): {
-  pairflowCommandProfile?: PairflowCommandProfile;
-  pairflowCommandProfileValidationError?: string;
-} {
-  if (rawPairflowCommandProfile === undefined) {
-    return {};
-  }
-  try {
-    return {
-      pairflowCommandProfile: assertPairflowCommandProfile(rawPairflowCommandProfile)
-    };
-  } catch (error) {
-    return {
-      pairflowCommandProfileValidationError: toValidationErrorMessage(error)
-    };
-  }
-}
-
-function parseReviewArtifactType(
-  rawReviewArtifactType: string | undefined
-): {
-  isReviewArtifactTypeMissing: boolean;
-  reviewArtifactType?: CreateReviewArtifactType;
-  reviewArtifactTypeValidationError?: string;
-} {
-  if (rawReviewArtifactType === undefined) {
-    return {
-      isReviewArtifactTypeMissing: true
-    };
-  }
-  try {
-    return {
-      isReviewArtifactTypeMissing: false,
-      reviewArtifactType: assertCreateReviewArtifactType(rawReviewArtifactType)
-    };
-  } catch (error) {
-    return {
-      isReviewArtifactTypeMissing: false,
-      reviewArtifactTypeValidationError: toValidationErrorMessage(error)
-    };
-  }
 }
 
 export function collectCreateValidationState(
