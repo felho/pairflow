@@ -49,6 +49,7 @@ export function buildStatusPaneCommand(
   const worktreeLine = shellQuote(displayWorktreePath);
   const loopScript = [
     "set +e",
+    "unset NO_COLOR",
     "prev_signature=''",
     "printf '\\033[2J\\033[H'",
     "while true; do",
