@@ -1,12 +1,14 @@
 import {
   resolveDeliveryMessageRef,
+  type EmitTmuxDeliveryNotificationInput,
   type EmitTmuxDeliveryNotificationResult
 } from "../../../core/runtime/tmuxDelivery.js";
 import {
   formatReviewerBriefPrompt,
   formatReviewerFocusBridgeBlock,
   readReviewerBriefArtifact,
-  readReviewerFocusArtifact
+  readReviewerFocusArtifact,
+  type ReviewerFocusExtractionResult
 } from "../../../core/reviewer/reviewerBrief.js";
 import { type refreshReviewerContext } from "../../../core/runtime/reviewerContext.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
@@ -98,7 +100,14 @@ export function buildPassDeliveryInput(input: {
   reviewerBriefText: string | undefined;
   reviewerFocus: Awaited<ReturnType<typeof readReviewerFocusArtifact>> | undefined;
   initialDelayMs: number | undefined;
-}) {
+}): EmitTmuxDeliveryNotificationInput {
+  const reviewerFocusForDelivery: ReviewerFocusExtractionResult | undefined = (
+    input.executeInput.senderRole === "implementer"
+    && input.reviewerFocus?.status === "present"
+  )
+    ? input.reviewerFocus
+    : undefined;
+
   return {
     bubbleId: input.executeInput.bubbleId,
     bubbleConfig: input.executeInput.bubbleConfig,
@@ -115,12 +124,9 @@ export function buildPassDeliveryInput(input: {
     ...(input.reviewerBriefText !== undefined
       ? { reviewerBrief: input.reviewerBriefText }
       : {}),
-    ...(
-      input.executeInput.senderRole === "implementer"
-      && input.reviewerFocus?.status === "present"
-        ? { reviewerFocus: input.reviewerFocus }
-        : {}
-    ),
+    ...(reviewerFocusForDelivery !== undefined
+      ? { reviewerFocus: reviewerFocusForDelivery }
+      : {}),
     ...(input.initialDelayMs !== undefined ? { initialDelayMs: input.initialDelayMs } : {})
   };
 }
