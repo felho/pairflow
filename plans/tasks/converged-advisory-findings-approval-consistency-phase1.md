@@ -20,6 +20,7 @@ target_files:
   - tests/core/bubble/approvalRequestEnvelope.test.ts
   - tests/core/protocol/resumeSummary.test.ts
   - tests/core/protocol/validators.test.ts
+  - tests/core/reviewer/summaryVerifierConsistencyGate.test.ts
   - tests/v11/shared/metaReviewGate/metaReviewGateFindingsParityHelpers.test.ts
 prd_ref: null
 plan_ref: plans/converged-advisory-findings-contract-plan-v1.md
@@ -49,6 +50,7 @@ Biztositsuk, hogy a converged advisory findingok strukturaltan atjussanak az app
 4. Approval envelope summary normalization + defense-in-depth metadata jeloles.
 5. Downstream consumer audit es update.
 6. Uj parity helper tesztfile + test directory letrehozas.
+7. SummaryVerifier gate regresszios stabilitas-ellenorzes advisory bovitessel.
 
 ### Out of Scope
 
@@ -145,6 +147,7 @@ Constraint: command-level rejectet WP3 nem duplikalhat, de metadata-level mismat
 | T7 | protocol type safety | extended metadata types | typecheck fut | compile hiba nelkul | P1 | required-now | automated test |
 | T8 | resume summary parity visibility | approval request metadata with new fields | resume summary build fut | advisory/blocking parity info latszik | P2 | required-now | automated test |
 | T9 | lifecycle metric minimal aggregate | advisory findings jelen | converged finalization event fut | `advisory_findings_open_total` metadata publikalt | P2 | required-now | automated test |
+| T10 | summary verifier gate invariant | advisory parity/normalization valtozasok mellett | reviewer summary verifier gate tesztek futnak | gate dontesi matrix valtozatlan marad (`claim_class` bovites nelkul) | P2 | required-now | automated test |
 
 ## L2 - Implementation Notes (Optional)
 
@@ -160,7 +163,7 @@ Constraint: command-level rejectet WP3 nem duplikalhat, de metadata-level mismat
 
 ## Review Control
 
-1. Kotelezo coverage: T1-T9.
+1. Kotelezo coverage: T1-T10.
 2. Downstream consumer audit tabla/felsorolas kotelezo a PR summary-ban.
 3. Task 3 csak akkor indulhat, ha approval metadata parity stabil es auditalhato.
 
@@ -171,6 +174,7 @@ Task `IMPLEMENTABLE`, ha:
 2. `FindingsParityMetadata` bovitese mukodik es validatorral konzisztens.
 3. defense-in-depth mismatch jeloles deterministic (`mismatch` + reason code).
 4. approval oldalon nincs csendes clean advisory-open esetben.
+5. summary verifier gate invarians regresszioban igazolt (claim-class valtozas nelkul).
 
 ## Assumptions
 
@@ -180,4 +184,3 @@ Task `IMPLEMENTABLE`, ha:
 ## Open Questions
 
 1. N/A (blocker nyitott kerdes nincs).
-
