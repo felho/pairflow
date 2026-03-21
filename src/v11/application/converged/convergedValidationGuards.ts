@@ -9,10 +9,20 @@ import type {
 } from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
 import type { readReviewVerificationArtifactStatus } from "../../../core/reviewer/reviewVerification.js";
 import type {
-  resolveReviewerTestEvidenceArtifactPath,
-  resolveReviewerTestExecutionDirective
+  resolveReviewerTestEvidenceArtifactPath
 } from "../../../core/reviewer/testEvidence.js";
 import type { PrepareConvergedValidationInput } from "./convergedValidationPreparationContract.js";
+
+type ReviewerDirectiveResolution = {
+  skip_full_rerun: boolean;
+  reason_code:
+    | "evidence_unverifiable"
+    | "not_required"
+    | "skip_requested"
+    | "full_rerun";
+  reason_detail: string;
+  verification_status: "trusted" | "untrusted";
+};
 
 export async function assertAccuracyCriticalVerification(input: {
   validation: PrepareConvergedValidationInput;
@@ -37,7 +47,9 @@ export async function assertAccuracyCriticalVerification(input: {
 
 export async function evaluateAndPersistSummaryVerifierDecision(input: {
   validation: PrepareConvergedValidationInput;
-  resolveReviewerDirective: typeof resolveReviewerTestExecutionDirective;
+  resolveReviewerDirective: (
+    input: { artifactPath: string; worktreePath: string }
+  ) => Promise<ReviewerDirectiveResolution>;
   resolveTestEvidenceArtifactPath: typeof resolveReviewerTestEvidenceArtifactPath;
   evaluateSummaryVerifierGate: typeof evaluateSummaryVerifierConsistencyGate;
   resolveSummaryVerifierArtifactPath: typeof resolveSummaryVerifierConsistencyGateArtifactPath;

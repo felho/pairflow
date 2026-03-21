@@ -9,17 +9,12 @@ import {
   resolveSummaryVerifierConsistencyGateArtifactPath,
   writeSummaryVerifierConsistencyGateArtifact
 } from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
-import type {
-  SummaryVerifierConsistencyGateArtifact,
-  SummaryVerifierConsistencyGateDecisionRecord
-} from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
 import {
   resolveReviewerTestEvidenceArtifactPath,
   resolveReviewerTestExecutionDirective
 } from "../../../core/reviewer/testEvidence.js";
 import type { ReviewerTestReasonCode } from "../../../core/reviewer/testEvidence.js";
 import type {
-  AgentName,
   BubbleRoundGateState,
   BubbleSpecLockState
 } from "../../../types/bubble.js";
@@ -54,25 +49,14 @@ interface ResolvedValidationDependencies {
   isDocGateScopeActive: typeof isDocContractGateScopeActive;
   readDocGateArtifact: typeof readDocContractGateArtifact;
   resolveDocGateArtifactPath: typeof resolveDocContractGateArtifactPath;
-  readVerificationArtifactStatus: (
-    artifactPath: string,
-    options: { expectedRound: number; expectedReviewer: string }
-  ) => Promise<{ status: string }>;
+  readVerificationArtifactStatus: typeof readReviewVerificationArtifactStatus;
   resolveTestEvidenceArtifactPath: typeof resolveReviewerTestEvidenceArtifactPath;
   resolveReviewerDirective: (
     input: { artifactPath: string; worktreePath: string }
   ) => Promise<ResolvedReviewerDirective>;
   evaluateSummaryVerifierGate: typeof evaluateSummaryVerifierConsistencyGate;
   resolveSummaryVerifierArtifactPath: typeof resolveSummaryVerifierConsistencyGateArtifactPath;
-  writeSummaryVerifierArtifact: (
-    artifactPath: string,
-    record: {
-      schema_version: number;
-      bubble_id: string;
-      round: number;
-      evaluated_at: string;
-    } & SummaryVerifierConsistencyGateDecisionRecord
-  ) => Promise<void>;
+  writeSummaryVerifierArtifact: typeof writeSummaryVerifierConsistencyGateArtifact;
 }
 
 function normalizeReviewerDirective(input: {
@@ -99,37 +83,29 @@ function resolveValidationDependencies(
       dependencies.readDocContractGateArtifact ?? readDocContractGateArtifact,
     resolveDocGateArtifactPath:
       dependencies.resolveDocContractGateArtifactPath ?? resolveDocContractGateArtifactPath,
-    readVerificationArtifactStatus: async (artifactPath, options) =>
-      (dependencies.readReviewVerificationArtifactStatus ?? readReviewVerificationArtifactStatus)(
-        artifactPath,
-        {
-          expectedRound: options.expectedRound,
-          expectedReviewer: options.expectedReviewer as AgentName
-        }
-      ),
+    readVerificationArtifactStatus:
+      dependencies.readReviewVerificationArtifactStatus ?? readReviewVerificationArtifactStatus,
     resolveTestEvidenceArtifactPath:
       dependencies.resolveReviewerTestEvidenceArtifactPath
       ?? resolveReviewerTestEvidenceArtifactPath,
-    resolveReviewerDirective: async ({ artifactPath, worktreePath }) =>
-      normalizeReviewerDirective(
-        await (dependencies.resolveReviewerTestExecutionDirective
-          ?? resolveReviewerTestExecutionDirective)({
-          artifactPath,
-          worktreePath
-        })
-      ),
+    resolveReviewerDirective:
+      (async ({ artifactPath, worktreePath }) =>
+        normalizeReviewerDirective(
+          await (dependencies.resolveReviewerTestExecutionDirective
+            ?? resolveReviewerTestExecutionDirective)({
+            artifactPath,
+            worktreePath
+          })
+        )) as ResolvedValidationDependencies["resolveReviewerDirective"],
     evaluateSummaryVerifierGate:
       dependencies.evaluateSummaryVerifierConsistencyGate
       ?? evaluateSummaryVerifierConsistencyGate,
     resolveSummaryVerifierArtifactPath:
       dependencies.resolveSummaryVerifierConsistencyGateArtifactPath
       ?? resolveSummaryVerifierConsistencyGateArtifactPath,
-    writeSummaryVerifierArtifact: async (artifactPath, record) =>
-      (dependencies.writeSummaryVerifierConsistencyGateArtifact
-        ?? writeSummaryVerifierConsistencyGateArtifact)(
-        artifactPath,
-        record as SummaryVerifierConsistencyGateArtifact
-      )
+    writeSummaryVerifierArtifact:
+      dependencies.writeSummaryVerifierConsistencyGateArtifact
+      ?? writeSummaryVerifierConsistencyGateArtifact
   };
 }
 
