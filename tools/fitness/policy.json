@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-03-20T21:48:00.000Z",
+  "updated_at": "2026-03-21T00:36:00.000Z",
   "defaults": {
     "mode": "report-only",
     "current_milestone": "M3"
@@ -71,7 +71,7 @@
       "scope": [
         "src/v11/**"
       ],
-      "mode": "report-only",
+      "mode": "soft-fail",
       "owner": "architecture",
       "exceptions": []
     },
