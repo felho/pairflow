@@ -1,8 +1,10 @@
 # ConfigLoader + TomlNormalizer
 
-Status: draft
-Owner: TBD
+Status: active (ratified baseline)
+Owner: architecture/runtime
 Scope: M0
+
+Current State (2026-03-21): implemented baseline contract; maintained under active v11 hard-gate rollout.
 
 ## 1) Purpose
 

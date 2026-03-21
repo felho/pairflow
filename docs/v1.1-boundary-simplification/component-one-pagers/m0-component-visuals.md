@@ -1,7 +1,10 @@
 # M0 Component Visuals
 
-Status: draft
+Status: active (ratified baseline)
+Owner: architecture
 Scope: M0 architecture understanding + one-pager validation
+
+Current State (2026-03-21): implemented baseline contract; maintained under active v11 hard-gate rollout.
 
 ## 1) Layered view (who can call what)
 
