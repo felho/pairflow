@@ -1,13 +1,6 @@
 import { applyStateTransition } from "../../../core/state/machine.js";
 import { writeStateSnapshot } from "../../../core/state/stateStore.js";
 import { resolveIdeationMetadata } from "../../../core/bubble/ideation.js";
-import { buildResumeTranscriptSummaryFallback } from "../../../core/protocol/resumeSummary.js";
-import {
-  formatReviewerTestExecutionDirective,
-  resolveReviewerTestEvidenceArtifactPath,
-  resolveReviewerTestExecutionDirective
-} from "../../../core/reviewer/testEvidence.js";
-import { resolveResumeKickoffMessages } from "./startCommandResumePrompts.js";
 import {
   launchFreshTmuxSession,
   launchResumeTmuxSession
@@ -15,6 +8,7 @@ import {
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ResolvedStartBubbleDependencies } from "./startCommandOrchestration.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
+import { prepareResumeLaunchInput } from "./startCommandResumeFlowPreparation.js";
 
 type StartWrittenState = Awaited<ReturnType<typeof writeStateSnapshot>>;
 
@@ -121,48 +115,12 @@ export async function runResumeStartFlow(input: {
   context: StartExecutionContext;
   deps: ResolvedStartBubbleDependencies;
 }): Promise<ResumeStartResult> {
-  let transcriptSummary: string;
-  try {
-    transcriptSummary = await input.deps.buildResumeSummary({
-      transcriptPath: input.context.resolved.bubblePaths.transcriptPath
-    });
-  } catch (error) {
-    transcriptSummary = buildResumeTranscriptSummaryFallback(error);
-  }
-
-  const shouldInjectReviewerDirective =
-    input.context.loadedState.state.state === "RUNNING" &&
-    input.context.loadedState.state.active_role === "reviewer" &&
-    input.context.loadedState.state.active_agent ===
-      input.context.resolved.bubbleConfig.agents.reviewer;
-
-  const reviewerTestDirectiveLine = shouldInjectReviewerDirective
-    ? await resolveReviewerTestExecutionDirective({
-        artifactPath: resolveReviewerTestEvidenceArtifactPath(
-          input.context.resolved.bubblePaths.artifactsDir
-        ),
-        worktreePath: input.context.resolved.bubblePaths.worktreePath,
-        reviewArtifactType: input.context.resolved.bubbleConfig.review_artifact_type
-      })
-        .then((directive) => formatReviewerTestExecutionDirective(directive))
-        .catch(() => undefined)
-    : undefined;
-
-  const resumeKickoffResolution = resolveResumeKickoffMessages({
-    bubbleId: input.context.resolved.bubbleId,
-    worktreePath: input.context.resolved.bubblePaths.worktreePath,
-    taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
-    reviewArtifactType: input.context.resolved.bubbleConfig.review_artifact_type,
-    pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
-    state: input.context.loadedState.state,
+  const {
     transcriptSummary,
-    implementerAgent: input.context.resolved.bubbleConfig.agents.implementer,
-    reviewerAgent: input.context.resolved.bubbleConfig.agents.reviewer,
-    ...(reviewerTestDirectiveLine !== undefined
-      ? { reviewerTestDirectiveLine }
-      : {})
-  });
-  const { kickoffDiagnostic, ...resumeKickoffMessages } = resumeKickoffResolution;
+    reviewerTestDirectiveLine,
+    kickoffDiagnostic,
+    resumeKickoffMessages
+  } = await prepareResumeLaunchInput(input);
 
   const tmux = await launchResumeTmuxSession({
     context: input.context,
