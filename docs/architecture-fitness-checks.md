@@ -96,7 +96,7 @@ Rules:
 - exceptions: temporary budget waiver with expiry milestone.
 - report: top offender table with trend deltas.
 - owner: architecture.
-- rollout mode (current): report-only.
+- rollout mode (current): soft-fail.
 
 ## 6) Dependency Fitness
 
