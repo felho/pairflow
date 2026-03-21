@@ -36,11 +36,7 @@ export type {
 
 type ResolvedReviewerDirective = {
   skip_full_rerun: boolean;
-  reason_code:
-    | "evidence_unverifiable"
-    | "not_required"
-    | "skip_requested"
-    | "full_rerun";
+  reason_code: ReviewerTestReasonCode;
   reason_detail: string;
   verification_status: "trusted" | "untrusted";
 };
@@ -67,7 +63,7 @@ function normalizeReviewerDirective(input: {
 }): ResolvedReviewerDirective {
   return {
     skip_full_rerun: input.skip_full_rerun,
-    reason_code: "evidence_unverifiable",
+    reason_code: input.reason_code,
     reason_detail: input.reason_detail,
     verification_status: input.verification_status === "trusted" ? "trusted" : "untrusted"
   };

@@ -11,15 +11,12 @@ import type { readReviewVerificationArtifactStatus } from "../../../core/reviewe
 import type {
   resolveReviewerTestEvidenceArtifactPath
 } from "../../../core/reviewer/testEvidence.js";
+import type { ReviewerTestReasonCode } from "../../../core/reviewer/testEvidence.js";
 import type { PrepareConvergedValidationInput } from "./convergedValidationPreparationContract.js";
 
 type ReviewerDirectiveResolution = {
   skip_full_rerun: boolean;
-  reason_code:
-    | "evidence_unverifiable"
-    | "not_required"
-    | "skip_requested"
-    | "full_rerun";
+  reason_code: ReviewerTestReasonCode;
   reason_detail: string;
   verification_status: "trusted" | "untrusted";
 };
