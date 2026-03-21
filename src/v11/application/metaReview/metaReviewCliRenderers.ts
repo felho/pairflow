@@ -17,6 +17,7 @@ import {
   appendMetaReviewStatusRunLines,
   appendMetaReviewStatusVerboseLines,
   buildMetaReviewOutcomeHeaderLines,
+  buildMetaReviewRecoverText,
   buildMetaReviewStatusHeaderLines
 } from "./metaReviewCliRenderersHelpers.js";
 
@@ -91,10 +92,6 @@ export function renderMetaReviewLastReportText(
 }
 
 export function renderMetaReviewRecoverText(result: MetaReviewGateResult): string {
-  const lines = [
-    `Meta-review recovery for ${result.bubbleId}: route=${result.route}`,
-    `Gate envelope: ${result.gateEnvelope.type} ${result.gateEnvelope.id}`,
-    `Lifecycle state: ${result.state.state}`
-  ];
+  const lines = buildMetaReviewRecoverText(result);
   return lines.join("\n");
 }
