@@ -24,17 +24,27 @@ Egy egyertelmu, audit-kesz contract bevezetese arra, hogy reviewer `converged` u
 3. Ez inkonzisztens allapotot eredmenyezhet:
    - summary: maradt advisory finding,
    - metadata/parity: `findings_claimed_open_total = 0` vagy `unknown`.
+4. Mar most is van pre-existing UX inkonzisztencia:
+   - a `converged` help/guidance szovegben megjelenik `--finding` referencia, mikozben az option jelenleg nincs tenylegesen bekotve.
 
 ## Design Decision
 
 Canonikus irany:
-1. Uj CLI opcio: `--advisory-finding <P2|P3:Title[|ref1,ref2]>` (repeatable) a `converged` commandban.
-2. `converged` alatt `P0/P1` explicit tiltott (hard fail).
-3. Advisory finding payload strukturaltan bekerul a convergence envelope-be, de nem blokkolo claimkent:
+1. Uj CLI opcio a `converged` commandban: `--finding <P0|P1|P2|P3:Title[|ref1,ref2]>` (repeatable), a `pass` commanddal azonos flag-nevvel.
+2. A finding parser kozositett/ujrahasznositott (`pass` es `converged` kozos parse logika), nem kulon format.
+3. `converged` kontextusban `P0/P1` explicit tiltott (hard fail), tehat runtime-ban csak `P2/P3` mehet tovabb.
+4. Advisory finding payload strukturaltan bekerul a convergence envelope-be, de nem blokkolo claimkent:
    - blocker claim semantics nem valtozik,
    - kulon advisory metadata mezokkel kovetheto.
-4. Summary-claim konzisztencia guard:
-   - ha summary pozitiv finding-allitast tesz es advisory finding payload nincs, command reject.
+5. Ketziranyu summary-claim konzisztencia guard:
+   - ha summary pozitiv finding-allitast tesz es structured finding payload nincs, command reject,
+   - ha structured finding payload van, de summary "clean/no findings" allitast tesz, command reject.
+6. SummaryVerifierConsistencyGate interakcio Phase 1-ben valtozatlan:
+   - uj claim_class nem kerul bevezetesre,
+   - a jelenlegi gate-dontes modell marad, advisory konzisztencia az input/approval parity guardokon ervenyesul.
+7. Guard ownership explicit:
+   - hard reject csak command-szinten (`converged` input validacio, WP1),
+   - approval path (WP3) csak normalization + diagnosztika, uj command-level reject nelkul.
 
 ## Contract Scope
 
@@ -54,9 +64,9 @@ Out of scope:
 
 | Phase | Goal | Inputs | Outputs | Exit Criteria |
 |---|---|---|---|---|
-| Phase 1A | CLI + command contract bovitese | Jelenlegi `pass` finding parser minta, `converged` command | `--advisory-finding` parser, P2/P3-only guard, konzisztens hibauezenetek | `converged` elfogad advisory findingot, `P0/P1` reject, backward compatibility megmarad |
-| Phase 1B | Envelope + metadata transport | 1A output | convergence payload advisory finding adatok + lifecycle metadata countok | advisory finding count audit-keszen visszaolvashato transcriptbol es event metadata-bol |
-| Phase 1C | Approval/meta-review lathatosag | 1B output | approval request metadata advisory count + summary normalization guard update | approval oldalon nincs hamis "clean" jelzes advisory finding mellett |
+| Phase 1A | CLI + command contract bovitese | Jelenlegi `pass` finding parser, `converged` command | `converged --finding` parser reuse, P2/P3-only guard, konzisztens hibauezenetek | `converged` elfogad `--finding`-ot, `P0/P1` reject, backward compatibility megmarad |
+| Phase 1B | Envelope + metadata transport | 1A output | convergence payload advisory finding adatok + minimal lifecycle metadata | advisory finding count audit-keszen visszaolvashato transcriptbol es event metadata-bol |
+| Phase 1C | Approval/meta-review lathatosag | 1B output | FindingsParityMetadata bovitese + approval request metadata advisory count + ketiranyu summary guard | approval oldalon nincs hamis "clean" jelzes advisory finding mellett |
 | Phase 1D | Prompt/docs/ops alignment | 1A-1C output | reviewer guidance + help text + docs frissites | reviewer first-try command hibarata csokken, policy egyertelmu |
 | Phase 1E | Release + monitor | Minden fazis outputja | feature flag nelkuli, kompatibilis rollout + metrika monitor | 2 heten belul kontradikcio rate cel elerese |
 
@@ -66,49 +76,77 @@ Out of scope:
 
 Target files:
 1. `src/cli/commands/agent/converged.ts`
-2. `src/v11/shared/converged/convergedCommandTypes.ts`
-3. `src/v11/application/converged/runConvergedFlowContract.ts`
-4. `src/v11/application/converged/runConvergedFlow.ts`
+2. `src/cli/commands/agent/pass.ts` (parser extraction/reuse)
+3. `src/v11/shared/converged/convergedCommandTypes.ts`
+4. `src/v11/application/converged/runConvergedFlowContract.ts`
+5. `src/v11/application/converged/runConvergedFlow.ts`
 
 Deliverables:
-1. Uj `--advisory-finding` option a helpben es parserben.
-2. Uj input mezok a converged flow contractban.
-3. Parser-szintu validacio:
+1. Uj `--finding` option a `converged` helpben es parserben, `pass` formatummal azonos szintaxissal.
+2. Parser reuse explicit:
+   - `parseFinding()` logika ujrahasznositasa vagy kozos utility-be kiemelese.
+3. Uj input mezok a converged flow contractban.
+4. Parser-szintu/command-szintu validacio:
    - csak `P2/P3`,
    - ures title/ref formatum tiltva.
-4. Hibauezenet reason code-ok:
-   - `CONVERGED_ADVISORY_FINDINGS_INVALID`
+5. Hibauezenet reason code-ok:
+   - `CONVERGED_FINDINGS_INVALID`
    - `CONVERGED_BLOCKER_FINDINGS_FORBIDDEN`
+   - `CONVERGED_SUMMARY_FINDINGS_CONTRADICTION`
+6. Kontradikcio-gard vegrehajtasi helye:
+   - a ketiranyu summary-vs-structured hard reject kizarolag itt, command-szinten tortenik.
+7. Summary finding-detection heurisztika explicit:
+   - a jelenlegi `evaluatePositiveSummaryFindingsAssertion` (regex/keyword alapu) logika az elsodleges detektor,
+   - nincs kulon NLP modell Phase 1-ben,
+   - a detektor viselkedeset regresszios tesztek vedik (`tests/core/convergence/policy.test.ts`).
 
 ### WP2 - Convergence Payload and Metrics (Phase 1B)
 
 Target files:
 1. `src/v11/application/converged/convergedExecution.ts`
-2. `src/v11/application/converged/convergedFinalizationMetadata.ts`
-3. `src/v11/application/converged/convergedFinalizationEvents.ts`
+2. `src/v11/shared/metaReviewGate/metaReviewGateFindingsParityHelpers.ts`
+3. `src/v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.ts`
+4. `src/v11/shared/metaReviewGate/metaReviewGateApplyHelpers.ts` (csak route-level parity atadas wiring, ha szukseges)
+5. `src/v11/application/converged/convergedFinalizationMetadata.ts`
+6. `src/v11/application/converged/convergedFinalizationEvents.ts`
 
 Deliverables:
-1. Advisory finding lista atadasa convergence payloadban (metadata-backed, schema-safe).
-2. Uj convergence lifecycle metadata:
+1. Advisory finding lista atadasa convergence payloadban (metadata-backed, schema-safe):
+   - finding-szintu `priority/severity`, `title`, `refs` megorzes.
+2. Minimal Phase 1 convergence lifecycle metadata:
    - `advisory_findings_open_total`
-   - `advisory_findings_p2_total`
-   - `advisory_findings_p3_total`
 3. Explicit jelzes:
    - `blocking_findings_open_total = 0` converged pathon.
+4. Per-severity advisory bontas (`P2/P3`) nem Phase 1, hanem opcionis Phase 2 scope.
+5. Meta-review parity mapping explicit:
+   - a finding listabol szarmaztatott advisory open count atvezetesre kerul a parity metadata pipeline-ba.
+6. Downstream consumer audit (kotelozo):
+   - az uj parity mezok fogyasztoinak teljes listaja es update-je: `metaReviewGateFindingsParityHelpers`, `metaReviewGateFindingsMetadata`, `approvalRequestEnvelope`, `resumeSummary`, `protocol validators`.
 
 ### WP3 - Approval Path Consistency (Phase 1C)
 
 Target files:
 1. `src/core/bubble/approvalRequestEnvelope.ts`
-2. `src/types/protocol.ts` (metadata tipizalas, ha szukseges)
+2. `src/types/protocol.ts`
 3. `src/core/protocol/resumeSummary.ts` (ha operator UI osszegzeshez kell)
+4. `src/v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.ts`
 
 Deliverables:
-1. Approval metadata atveszi az advisory finding countokat.
-2. Summary normalization logika ne tekintse "clean"-nek azt az esetet, ahol advisory finding count > 0.
-3. Human approval kontextusban kulon mezok:
-   - `open_blocking_findings_total`
-   - `open_advisory_findings_total`
+1. FindingsParityMetadata explicit bovitese:
+   - `findings_blocking_open_total`
+   - `findings_advisory_open_total`
+2. Approval metadata atveszi az advisory finding countokat a parity pipeline-on keresztul.
+3. Summary normalization logika ketiranyu:
+   - ne tekintse "clean"-nek azt az esetet, ahol advisory finding count > 0,
+   - summary="clean/no findings" + structured open finding esetben explicit normalization + reason_code (hard reject nelkul, mert az WP1 felelossege).
+4. SummaryVerifierConsistencyGateDecisionRecord valtozatlan marad Phase 1-ben (nincs uj claim_class), ezt explicit dokumentalja a terv.
+5. Defense-in-depth assertion:
+   - ha WP1 command-level guard valamilyen integracios utvonalon nem futott le, WP3 allitsa:
+     - `findings_parity_status = "mismatch"`,
+     - `approval_summary_normalization_reason_code = "CONVERGED_SUMMARY_FINDINGS_CONTRADICTION_DEFENSE_IN_DEPTH"`,
+   - approval request mehet tovabb (hard reject nelkul), de "clean" jelzes nem adható.
+6. Approval kontextusban advisory lista lathatosag:
+   - az aggregalt szam mellett a finding-lista (severity/title) transcript/payload oldalon visszakeresheto marad, hogy P2 vs P3 kulonbseg emberileg megitelheto legyen.
 
 ### WP4 - Reviewer Guidance Alignment (Phase 1D)
 
@@ -121,37 +159,58 @@ Target files:
 Deliverables:
 1. Egyertelmu reviewer utmutato:
    - blocker -> `pass --finding`
-   - non-blocking -> `converged --advisory-finding`
+   - non-blocking -> `converged --finding` (`P2/P3`)
    - clean -> `converged` finding nelkul
 2. Konvergens command peldak copy-paste formaban.
 3. Tiltott minta explicite:
-   - summaryban finding allitas, strukturalt advisory payload nelkul.
+   - summaryban finding allitas, strukturalt payload nelkul.
+   - strukturalt payload mellett "clean/no findings" summary allitas.
 
 ### WP5 - Validation and Regression (Phase 1E)
 
 Target files:
-1. `tests/cli/...` (converged option parsing tesztek)
-2. `tests/core/...` (approval metadata consistency tesztek)
-3. `tests/v11/...` (runConvergedFlow integration)
+1. `tests/cli/convergedCommand.test.ts`
+2. `tests/v11/application/converged/convergedCommandInputNormalization.test.ts`
+3. `tests/v11/application/converged/convergedExecution.test.ts`
+4. `tests/v11/application/converged/runConvergedFlow.test.ts`
+5. `tests/core/bubble/approvalRequestEnvelope.test.ts`
+6. `tests/core/protocol/resumeSummary.test.ts`
+7. `tests/core/protocol/validators.test.ts`
+8. `tests/contracts/v11/converged.contract.test.ts`
+9. `tests/v11/shared/metaReviewGate/metaReviewGateFindingsParityHelpers.test.ts` (uj tesztfile)
+10. `tests/v11/shared/metaReviewGate/` directory letrehozasa (ha meg nem letezik)
+11. `tests/core/reviewer/summaryVerifierConsistencyGate.test.ts`
+12. `tests/core/convergence/policy.test.ts`
 
 Deliverables:
 1. Parser tesztek:
-   - `--advisory-finding` accepted (`P2/P3`)
+   - `--finding` accepted converged alatt (`P2/P3`)
    - `P0/P1` rejected converged alatt
 2. Convergence envelope tesztek:
    - advisory metadata persisted
 3. Approval metadata tesztek:
    - advisory count helyesen atadva
-   - summary normalization nem ad hamis clean-t
+   - ketiranyu summary consistency guard nem ad hamis clean/open jelzest
+4. Guard + detektor stabilitas tesztek:
+   - summary verifier gate viselkedese valtozatlan marad advisory bovitessel,
+   - summary finding detektor regex/keyword alapu triggerjei regresszioban fedettek.
 
-## Compatibility Strategy
+## Forward Contract Strategy
 
-1. Backward compatible default:
+1. CLI backward compatibility:
    - `pairflow converged --summary ...` tovabbra is mukodik.
-2. Uj mezo optionalis:
-   - advisory finding nelkuli clean converged teljesen valtozatlan.
-3. Legacy transcript olvasas:
-   - advisory metadata hianya esetben fallback `0`.
+2. Forward-only transcript contract:
+   - a bevezetes utan keletkezo converged/approval esemenyekben advisory metadata kotelezoen jelen van.
+3. Determinisztikus advisory semantics:
+   - `advisory_*_total = 0` csak valos "nincs advisory finding" esetben irhato.
+   - hianyzo advisory metadata nem "0"-ra esik vissza, hanem contract hiba (fail-closed).
+4. Legacy transcript kompatibilitas nem cel Phase 1-ben:
+   - nincs fallback/normalizalo logika regi transcript formakra.
+5. In-flight bubble atmeneti strategia:
+   - a bubble kickoff idejen rogzitett contract-verzio dont (`legacy_inflight` vagy `advisory_v1`).
+   - rollout elott indult bubble a rogzitett korabbi contract szerint zarhato le, uj bubble mar `advisory_v1` modban indul.
+6. Grace period policy:
+   - az in-flight atmenet idoben korlatozott (operaciosan kihirdetett idoablak), utana minden aktiv bubble `advisory_v1` contractra terelendo.
 
 ## Risk and Mitigation
 
@@ -173,13 +232,13 @@ Deliverables:
 
 ## Rollout Plan
 
-1. Week 1: WP1 + WP2 + unit tesztek.
-2. Week 2: WP3 + WP4 + integration tesztek.
-3. Week 3: monitor, fine-tuning, docs freeze.
+1. Week 1: WP1 complete + WP2 kickoff (payload wiring, initial metadata path).
+2. Week 2: WP2 finish + WP3 (approval/parity metadata) + celzott integration tesztek.
+3. Week 3: WP4 + WP5 teljesites, monitor, fine-tuning, docs freeze.
 
 Rollback policy:
-1. Ha regresszio van, `--advisory-finding` parser elfogadast ideiglenesen kikapcsoljuk, de a meglevo converged command marad.
-2. A metadata mezok additive-ek, nem torik a regi olvasot.
+1. Ha regresszio van, `converged --finding` parser elfogadast ideiglenesen kikapcsoljuk, de a meglevo converged command marad.
+2. Advisory metadata hianya az uj contract alatt nem normalizalhato `0`-ra; a rendszer fail-closed viselkedest tart fenn.
 
 ## Task List
 
@@ -187,8 +246,18 @@ Rollback policy:
 2. `plans/tasks/converged-advisory-findings-approval-consistency-phase1.md`
 3. `plans/tasks/converged-advisory-findings-reviewer-guidance-and-rollout-phase1.md`
 
+Task dependency order:
+1. Task 1 (`cli-and-flow-contract`) onallo kezdofeladat.
+2. Task 2 (`approval-consistency`) Task 1 outputjara epul.
+3. Task 3 (`reviewer-guidance-and-rollout`) Task 1 + Task 2 lezarasara epul.
+
+Readiness gate:
+1. A plan status marad `draft`, amig a fenti 3 task file nem jon letre es nincs egyeztetett owner + acceptance criteria.
+2. A jelen review plan-szinten ervenyes; task-level granularitas a 3 task file letrehozasaval valik teljesse.
+
 ## Assumptions
 
 1. A `converged` tovabbra is nem-blokkolasi allapotot jelent.
 2. Advisory finding atadas business celja a lathatosag, nem uj blokkolo kapu.
 3. A jelenlegi meta-review folyamat recommendation semantics valtozatlan marad Phase 1-ben.
+4. Legacy transcript visszafele kompatibilitas nem kovetelmeny; a fokusz a bevezetes utani helyes contract-mukodes.
