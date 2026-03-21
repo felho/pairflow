@@ -122,7 +122,7 @@ Rules:
   - M0-M1: report-only.
   - M2+: soft-fail.
   - M3+: hard-fail a `v11` allapotu commandokra.
-  - Current effective mode (`defaults.current_milestone = M3`): hard-fail.
+  - Current effective mode (`defaults.current_milestone = M6`): hard-fail.
   - Policy wiring: `tools/fitness/policy.json` `critical_side_effect.mode_by_milestone` map.
   - CI override: `PAIRFLOW_FITNESS_CURRENT_MILESTONE` env vagy `--current-milestone` flag (flag elsobbseggel).
 

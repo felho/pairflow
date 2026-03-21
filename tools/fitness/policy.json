@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "updated_at": "2026-03-21T08:28:00.000Z",
+  "updated_at": "2026-03-21T09:05:00.000Z",
   "defaults": {
     "mode": "report-only",
-    "current_milestone": "M3"
+    "current_milestone": "M6"
   },
   "checks": [
     {
