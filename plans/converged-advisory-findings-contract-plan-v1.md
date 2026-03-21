@@ -242,9 +242,9 @@ Rollback policy:
 
 ## Task List
 
-1. `plans/tasks/converged-advisory-findings-cli-and-flow-contract-phase1.md`
-2. `plans/tasks/converged-advisory-findings-approval-consistency-phase1.md`
-3. `plans/tasks/converged-advisory-findings-reviewer-guidance-and-rollout-phase1.md`
+1. `plans/tasks/01-converged-advisory-findings-cli-and-flow-contract-phase1.md`
+2. `plans/tasks/02-converged-advisory-findings-approval-consistency-phase1.md`
+3. `plans/tasks/03-converged-advisory-findings-reviewer-guidance-and-rollout-phase1.md`
 
 Task dependency order:
 1. Task 1 (`cli-and-flow-contract`) onallo kezdofeladat.
