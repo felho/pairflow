@@ -1,0 +1,146 @@
+import { parseArgs } from "node:util";
+
+import {
+  invalidMetaReviewCliOptionsWithContext as invalidMetaReviewCliOptions,
+  type ParsedMetaReviewOptionValues
+} from "./metaReviewCliOptionValueReader.js";
+import type {
+  BubbleMetaReviewLastReportCommandOptions,
+  BubbleMetaReviewRecoverCommandOptions,
+  BubbleMetaReviewStatusCommandOptions
+} from "./metaReviewCliOptionTypes.js";
+
+export type MetaReviewSubcommand = "run" | "status" | "last-report" | "recover" | "submit";
+
+export type BubbleMetaReviewBaseOptions = {
+  id: string;
+  repo?: string;
+  json: boolean;
+  verbose: boolean;
+  help: false;
+};
+
+export function parseMetaReviewSubcommand(
+  value: string | undefined
+): MetaReviewSubcommand | null {
+  if (value === undefined) {
+    return null;
+  }
+  if (
+    value === "run" ||
+    value === "status" ||
+    value === "last-report" ||
+    value === "recover" ||
+    value === "submit"
+  ) {
+    return value;
+  }
+  return invalidMetaReviewCliOptions(
+    "Unknown meta-review subcommand. Use one of: run, status, last-report, recover, submit."
+  );
+}
+
+export function parseMetaReviewCliArgs(args: string[]): ReturnType<typeof parseArgs> {
+  try {
+    return parseArgs({
+      args,
+      options: {
+        id: {
+          type: "string"
+        },
+        repo: {
+          type: "string"
+        },
+        depth: {
+          type: "string"
+        },
+        round: {
+          type: "string"
+        },
+        recommendation: {
+          type: "string"
+        },
+        summary: {
+          type: "string"
+        },
+        "report-markdown": {
+          type: "string"
+        },
+        "rework-target-message": {
+          type: "string"
+        },
+        "report-json": {
+          type: "string"
+        },
+        json: {
+          type: "boolean"
+        },
+        verbose: {
+          type: "boolean"
+        },
+        help: {
+          type: "boolean",
+          short: "h"
+        }
+      },
+      strict: true,
+      allowPositionals: true
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return invalidMetaReviewCliOptions(message);
+  }
+}
+
+export function createMetaReviewBaseOptions(
+  values: ParsedMetaReviewOptionValues
+): BubbleMetaReviewBaseOptions {
+  return {
+    id: values.id,
+    ...(values.repo !== undefined ? { repo: values.repo } : {}),
+    json: values.json,
+    verbose: values.verbose,
+    help: false
+  };
+}
+
+function hasSubmitOnlyOptions(values: ParsedMetaReviewOptionValues): boolean {
+  return (
+    values.round !== undefined ||
+    values.recommendation !== undefined ||
+    values.summary !== undefined ||
+    values.reportMarkdown !== undefined ||
+    values.reworkTargetMessage !== undefined ||
+    values.reportJson !== undefined
+  );
+}
+
+export function assertSubmitOnlyOptionsAllowed(
+  values: ParsedMetaReviewOptionValues
+): void {
+  if (hasSubmitOnlyOptions(values)) {
+    invalidMetaReviewCliOptions(
+      "--round/--recommendation/--summary/--report-markdown/--rework-target-message/--report-json are only supported for meta-review submit."
+    );
+  }
+}
+
+export function assertRunOnlyDepthAllowed(depth: string | undefined): void {
+  if (depth !== undefined) {
+    invalidMetaReviewCliOptions(
+      "--depth is only supported for meta-review run."
+    );
+  }
+}
+
+export function buildMetaReviewReadonlyCommandOptions(
+  base: BubbleMetaReviewBaseOptions,
+  subcommand: Exclude<MetaReviewSubcommand, "run" | "submit">
+): BubbleMetaReviewStatusCommandOptions
+  | BubbleMetaReviewLastReportCommandOptions
+  | BubbleMetaReviewRecoverCommandOptions {
+  return {
+    ...base,
+    command: subcommand
+  };
+}
