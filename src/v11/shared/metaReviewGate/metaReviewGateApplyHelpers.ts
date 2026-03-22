@@ -6,8 +6,17 @@ import {
   type writeStateSnapshot
 } from "../../../core/state/stateStore.js";
 import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import { deliveryTargetRoleMetadataKey } from "../../../types/protocol.js";
-import { readMetaReviewReportJsonArtifact, resolveFindingsParityMetadataFromReportJson } from "./metaReviewGateFindingsMetadata.js";
+import {
+  deliveryTargetRoleMetadataKey,
+  type FindingsParityMetadata
+} from "../../../types/protocol.js";
+import {
+  readMetaReviewReportJsonArtifact,
+  resolveAdvisoryFindingsFromFindings,
+  resolveAdvisoryFindingsFromReportJson,
+  resolveFindingsOpenSplitFromFindings,
+  resolveFindingsParityMetadataFromReportJson
+} from "./metaReviewGateFindingsMetadata.js";
 import { toMetaReviewGateError } from "./metaReviewGateErrorConversion.js";
 export { resolveMetaReviewerPaneWarning } from "./metaReviewGatePaneBinding.js";
 import { restoreRunningAfterStagedReadyFailure } from "./metaReviewGateStateStaging.js";
@@ -106,6 +115,26 @@ export async function persistMetaReviewRunFailedRoute(input: {
   });
 }
 
+function resolveConvergenceParityMetadataFromFindings(
+  findings: unknown
+): FindingsParityMetadata | null {
+  const split = resolveFindingsOpenSplitFromFindings(findings);
+  if (split === null) {
+    return null;
+  }
+  const openTotal =
+    split.findings_blocking_open_total + split.findings_advisory_open_total;
+  return {
+    findings_claimed_open_total: openTotal,
+    // This snapshot is convergence-derived (no artifact parity read),
+    // therefore artifact parity fields stay explicit null.
+    findings_artifact_open_total: null,
+    findings_blocking_open_total: split.findings_blocking_open_total,
+    findings_advisory_open_total: split.findings_advisory_open_total,
+    findings_parity_status: null
+  };
+}
+
 export async function routeStickyHumanGateBypass(input: {
   appendEnvelope: typeof appendProtocolEnvelope;
   writeState: typeof writeStateSnapshot;
@@ -117,6 +146,11 @@ export async function routeStickyHumanGateBypass(input: {
   bubbleId: string;
   summary: string;
   refs: string[];
+  findings?: Array<{
+    severity: "P2" | "P3";
+    title: string;
+    refs?: string[];
+  }>;
   loadedRunning: LoadedStateSnapshot;
   readyForApproval: LoadedStateSnapshot;
 }): Promise<MetaReviewGateResult> {
@@ -124,6 +158,21 @@ export async function routeStickyHumanGateBypass(input: {
     artifactPath: input.bubblePaths.metaReviewLastJsonArtifactPath,
     readFileFn: input.readFileFn
   });
+  const convergenceAdvisoryFindings = resolveAdvisoryFindingsFromFindings(input.findings);
+  const artifactAdvisoryFindings = resolveAdvisoryFindingsFromReportJson(
+    parityArtifactRead.reportJson
+  );
+  const advisoryFindings = convergenceAdvisoryFindings ?? artifactAdvisoryFindings;
+  const artifactParityMetadata = resolveFindingsParityMetadataFromReportJson(
+    parityArtifactRead.reportJson
+  );
+  const convergenceParityMetadata = resolveConvergenceParityMetadataFromFindings(
+    input.findings
+  );
+  // Deterministic source-of-truth rule for sticky bypass:
+  // prefer current-round convergence findings parity snapshot when available;
+  // otherwise fall back to the meta-review artifact parity snapshot.
+  const parityMetadata = convergenceParityMetadata ?? artifactParityMetadata;
   try {
     return await persistHumanGateRoute({
       appendEnvelope: input.appendEnvelope,
@@ -140,9 +189,8 @@ export async function routeStickyHumanGateBypass(input: {
       loaded: input.readyForApproval,
       expectedState: "READY_FOR_APPROVAL",
       route: "human_gate_sticky_bypass",
-      parityMetadata: resolveFindingsParityMetadataFromReportJson(
-        parityArtifactRead.reportJson
-      ),
+      ...(parityMetadata !== null ? { parityMetadata } : {}),
+      ...(advisoryFindings !== undefined ? { findings: advisoryFindings } : {}),
       rollbackStateOnAppendFailure: input.loadedRunning.state
     });
   } catch (error) {

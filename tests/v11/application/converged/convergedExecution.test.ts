@@ -52,6 +52,10 @@ describe("executeConvergedExecution", () => {
               refs: ["artifact://review/follow-up.md"]
             }
           ]);
+          expect(input.envelope.payload.metadata).toMatchObject({
+            advisory_findings_open_total: 1,
+            convergence_policy_diagnostics: ["diagnostic-a"]
+          });
           return {
             sequence: 17,
             envelope: {
@@ -166,6 +170,9 @@ describe("executeConvergedExecution", () => {
       {
         appendProtocolEnvelope: async (input) => {
           expect(input.envelope.payload.findings).toBeUndefined();
+          expect(input.envelope.payload.metadata).toMatchObject({
+            advisory_findings_open_total: 0
+          });
           return {
             sequence: 19,
             envelope: {

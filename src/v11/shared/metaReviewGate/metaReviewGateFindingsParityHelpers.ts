@@ -5,6 +5,8 @@ import { isRecord } from "../../../core/validation.js";
 import type { MetaReviewRecommendation } from "../../../types/bubble.js";
 import { type FindingsParityMetadata, type FindingsParityStatus } from "../../../types/protocol.js";
 import {
+  deriveFindingsOpenSplit as deriveFindingsOpenSplitFromMetadata,
+  type FindingsOpenSplit,
   resolveFindingsArtifactOpenTotalFromArtifact
 } from "./metaReviewGateFindingsMetadata.js";
 import {
@@ -28,6 +30,12 @@ export {
   type ReworkFindingsParityInput
 } from "./metaReviewGateFindingsParityInput.js";
 
+export function deriveFindingsOpenSplit(
+  findings: unknown
+): FindingsOpenSplit | null {
+  return deriveFindingsOpenSplitFromMetadata(findings);
+}
+
 export async function validateFindingsArtifactParity(input: {
   artifactPath: string;
   findingsCount: number;
@@ -40,17 +48,28 @@ export async function validateFindingsArtifactParity(input: {
   | { ok: true; artifactOpenTotal: number }
   | { ok: false; reason: string; metadata: FindingsParityMetadata }
 > {
-  const metadata = (
-    parityStatus: FindingsParityStatus,
-    artifactOpenTotal: number | null
-  ): FindingsParityMetadata =>
-    buildFindingsParityMetadata({
+  const buildMetadata = (inputMetadata: {
+    parityStatus: FindingsParityStatus;
+    artifactOpenTotal: number | null;
+    split: FindingsOpenSplit | null;
+  }): FindingsParityMetadata => ({
+    ...buildFindingsParityMetadata({
       findingsCount: input.findingsCount,
-      artifactOpenTotal,
+      artifactOpenTotal: inputMetadata.artifactOpenTotal,
       artifactStatus: input.artifactStatus,
       digest: input.digest,
       metaReviewRunId: input.metaReviewRunId,
-      parityStatus
+      parityStatus: inputMetadata.parityStatus
+    }),
+    findings_blocking_open_total: inputMetadata.split?.blockingOpenTotal ?? null,
+    findings_advisory_open_total: inputMetadata.split?.advisoryOpenTotal ?? null
+  });
+
+  const guardFailedMetadata = (): FindingsParityMetadata =>
+    buildMetadata({
+      parityStatus: "guard_failed",
+      artifactOpenTotal: null,
+      split: null
     });
 
   const artifactRead = await readFindingsArtifactWithRetry({
@@ -68,7 +87,7 @@ export async function validateFindingsArtifactParity(input: {
       ok: false,
       reason:
         `${metaReviewFindingsParityGuardReasonCode}: findings artifact read failed [${retryStatus}] after ${artifactRead.attempts} attempt(s) (${formatReadErrorDetail(artifactRead.error)}).`,
-      metadata: metadata("guard_failed", null)
+      metadata: guardFailedMetadata()
     };
   }
 
@@ -80,23 +99,30 @@ export async function validateFindingsArtifactParity(input: {
       ok: false,
       reason:
         `${metaReviewFindingsParityGuardReasonCode}: findings artifact parse failed (${error instanceof Error ? error.message : String(error)}).`,
-      metadata: metadata("guard_failed", null)
+      metadata: guardFailedMetadata()
     };
   }
   if (!isRecord(artifactParsed)) {
     return {
       ok: false,
       reason: `${metaReviewFindingsParityGuardReasonCode}: findings artifact must be a JSON object.`,
-      metadata: metadata("guard_failed", null)
+      metadata: guardFailedMetadata()
     };
   }
+  const parsedSplit = deriveFindingsOpenSplit(
+    artifactParsed.findings
+  );
 
   const artifactOpenTotal = resolveFindingsArtifactOpenTotalFromArtifact(artifactParsed);
   if (artifactOpenTotal === undefined) {
     return {
       ok: false,
       reason: `${metaReviewFindingsParityGuardReasonCode}: findings artifact open_total is unavailable.`,
-      metadata: metadata("guard_failed", null)
+      metadata: buildMetadata({
+        parityStatus: "guard_failed",
+        artifactOpenTotal: null,
+        split: parsedSplit
+      })
     };
   }
 
@@ -107,7 +133,11 @@ export async function validateFindingsArtifactParity(input: {
     return {
       ok: false,
       reason: `${metaReviewFindingsParityGuardReasonCode}: findings artifact digest mismatch.`,
-      metadata: metadata("guard_failed", artifactOpenTotal)
+      metadata: buildMetadata({
+        parityStatus: "guard_failed",
+        artifactOpenTotal,
+        split: parsedSplit
+      })
     };
   }
   if (input.findingsCount !== artifactOpenTotal) {
@@ -115,7 +145,11 @@ export async function validateFindingsArtifactParity(input: {
       ok: false,
       reason:
         `${metaReviewFindingsCountMismatchReasonCode}: findings_count (${input.findingsCount}) must match findings artifact open_total (${artifactOpenTotal}).`,
-      metadata: metadata("mismatch", artifactOpenTotal)
+      metadata: buildMetadata({
+        parityStatus: "mismatch",
+        artifactOpenTotal,
+        split: parsedSplit
+      })
     };
   }
 

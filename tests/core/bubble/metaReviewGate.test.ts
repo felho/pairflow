@@ -365,11 +365,24 @@ describe("applyMetaReviewGateOnConvergence", () => {
             findings_count: 2,
             findings_claimed_open_total: 2,
             findings_artifact_open_total: 1,
+            findings_blocking_open_total: 0,
+            findings_advisory_open_total: 2,
             findings_artifact_status: "available",
             findings_digest_sha256:
               "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             meta_review_run_id: "run_sticky_bypass_parity_01",
-            findings_parity_status: "guard_failed"
+            findings_parity_status: "guard_failed",
+            findings: [
+              {
+                severity: "P2",
+                title: "sticky advisory a",
+                refs: ["artifact://sticky/a"]
+              },
+              {
+                severity: "P3",
+                title: "sticky advisory b"
+              }
+            ]
           }
         },
         null,
@@ -391,9 +404,120 @@ describe("applyMetaReviewGateOnConvergence", () => {
     expect(result.gateEnvelope.payload.metadata).toMatchObject({
       findings_claimed_open_total: 2,
       findings_artifact_open_total: 1,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 2,
       findings_parity_status: "guard_failed",
       meta_review_run_id: "run_sticky_bypass_parity_01"
     });
+    expect(result.gateEnvelope.payload.findings).toEqual([
+      {
+        priority: "P2",
+        severity: "P2",
+        title: "sticky advisory a",
+        refs: ["artifact://sticky/a"]
+      },
+      {
+        priority: "P3",
+        severity: "P3",
+        title: "sticky advisory b"
+      }
+    ]);
+  });
+
+  it("uses a coherent current-round parity snapshot on sticky bypass without artifact counter leakage", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_async_sticky_convergence_source_01",
+      task: "Sticky gate convergence findings source"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        meta_review: {
+          ...(loaded.state.meta_review ?? defaultMetaReviewSnapshot()),
+          sticky_human_gate: true
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+    await writeFileFs(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      `${JSON.stringify(
+        {
+          bubble_id: bubble.bubbleId,
+          run_id: "run_sticky_convergence_source_01",
+          report_json: {
+            findings_count: 7,
+            findings_claimed_open_total: 7,
+            findings_artifact_open_total: 1,
+            findings_blocking_open_total: 5,
+            findings_advisory_open_total: 2,
+            findings_artifact_status: "available",
+            findings_digest_sha256:
+              "abababababababababababababababababababababababababababababababab",
+            meta_review_run_id: "run_sticky_convergence_source_01",
+            findings_parity_status: "guard_failed"
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
+
+    const result = await applyMetaReviewGateOnConvergence({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "R5 convergence summary with advisory follow-ups.",
+      findings: [
+        {
+          severity: "P2",
+          title: "current-round advisory a",
+          refs: ["artifact://convergence/a"]
+        },
+        {
+          severity: "P3",
+          title: "current-round advisory b"
+        }
+      ],
+      now: new Date("2026-03-13T12:03:12.000Z")
+    });
+
+    expect(result.route).toBe("human_gate_sticky_bypass");
+    expect(result.gateEnvelope.payload.metadata).toMatchObject({
+      findings_claimed_open_total: 2,
+      findings_artifact_open_total: null,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 2,
+      findings_parity_status: null,
+      meta_review_gate_route: "human_gate_sticky_bypass"
+    });
+    expect(result.gateEnvelope.payload.metadata).not.toHaveProperty(
+      "meta_review_run_id"
+    );
+    expect(result.gateEnvelope.payload.metadata).not.toHaveProperty(
+      "findings_digest_sha256"
+    );
+    expect(result.gateEnvelope.payload.findings).toEqual([
+      {
+        priority: "P2",
+        severity: "P2",
+        title: "current-round advisory a",
+        refs: ["artifact://convergence/a"]
+      },
+      {
+        priority: "P3",
+        severity: "P3",
+        title: "current-round advisory b"
+      }
+    ]);
   });
 
   it("keeps positive findings summary when structured parity metadata proves open findings", async () => {
@@ -881,13 +1005,30 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_json: {
           findings_claim_state: "clean",
           findings_claim_source: "meta_review_artifact",
-          findings_count: 0,
-          findings_claimed_open_total: 0,
-          findings_artifact_open_total: 0,
+          findings_count: 2,
+          findings_claimed_open_total: 2,
+          findings_artifact_open_total: 2,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 2,
           findings_artifact_status: "available",
           findings_digest_sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           meta_review_run_id: "run_recover_approve_parity_metadata_01",
-          findings_parity_status: "ok"
+          findings_parity_status: "ok",
+          findings: [
+            {
+              severity: "P2",
+              title: "advisory a",
+              refs: ["artifact://a"]
+            },
+            {
+              severity: "P3",
+              title: "advisory b"
+            },
+            {
+              severity: "P1",
+              title: "blocking ignored"
+            }
+          ]
         }
       }
     });
@@ -895,13 +1036,28 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     expect(recovered.route).toBe("human_gate_approve");
     expect(recovered.gateEnvelope.type).toBe("APPROVAL_REQUEST");
     expect(recovered.gateEnvelope.payload.metadata).toMatchObject({
-      findings_claimed_open_total: 0,
-      findings_artifact_open_total: 0,
+      findings_claimed_open_total: 2,
+      findings_artifact_open_total: 2,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 2,
       findings_artifact_status: "available",
       findings_digest_sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       meta_review_run_id: "run_recover_approve_parity_metadata_01",
       findings_parity_status: "ok"
     });
+    expect(recovered.gateEnvelope.payload.findings).toEqual([
+      {
+        priority: "P2",
+        severity: "P2",
+        title: "advisory a",
+        refs: ["artifact://a"]
+      },
+      {
+        priority: "P3",
+        severity: "P3",
+        title: "advisory b"
+      }
+    ]);
   });
 
   it("does not normalize approve-route summary when parity proof is unavailable", async () => {

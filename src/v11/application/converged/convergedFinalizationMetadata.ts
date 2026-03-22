@@ -11,6 +11,7 @@ import type { ProtocolEnvelope } from "../../../types/protocol.js";
 export function buildConvergedEventMetadata(input: {
   summary: string;
   refs: string[];
+  advisoryFindingsOpenTotal: number;
   convergenceEnvelopeId: string;
   gateResult: {
     route: MetaReviewGateRoute;
@@ -33,6 +34,7 @@ export function buildConvergedEventMetadata(input: {
   return {
     refs_count: input.refs.length,
     summary_length: Array.from(input.summary).length,
+    advisory_findings_open_total: input.advisoryFindingsOpenTotal,
     convergence_envelope_id: input.convergenceEnvelopeId,
     gate_handoff_envelope_id: input.gateResult.gateEnvelope.id,
     gate_handoff_type: input.gateResult.gateEnvelope.type,
@@ -86,6 +88,7 @@ export function buildConvergedEventMetadata(input: {
 }
 
 export function buildMetaReviewRoutedMetadata(input: {
+  advisoryFindingsOpenTotal: number;
   gateResult: {
     route: MetaReviewGateRoute;
     gateEnvelope: ProtocolEnvelope;
@@ -103,6 +106,7 @@ export function buildMetaReviewRoutedMetadata(input: {
   return {
     gate_route: input.gateResult.route,
     gate_handoff_type: input.gateResult.gateEnvelope.type,
+    advisory_findings_open_total: input.advisoryFindingsOpenTotal,
     recommendation:
       input.gateResult.metaReviewRun?.recommendation ??
       input.gateResult.state.meta_review?.last_autonomous_recommendation ??

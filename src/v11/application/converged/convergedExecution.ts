@@ -79,6 +79,13 @@ async function appendConvergenceEnvelope(
   appendEnvelope: typeof appendProtocolEnvelope
 ): Promise<Awaited<ReturnType<typeof appendProtocolEnvelope>>> {
   const lockPath = join(input.resolved.bubblePaths.locksDir, `${input.resolved.bubbleId}.lock`);
+  const advisoryFindingsOpenTotal = input.findings?.length ?? 0;
+  const metadata: Record<string, unknown> = {
+    advisory_findings_open_total: advisoryFindingsOpenTotal
+  };
+  if (input.convergencePolicyDiagnostics.length > 0) {
+    metadata.convergence_policy_diagnostics = input.convergencePolicyDiagnostics;
+  }
   return appendEnvelope({
     transcriptPath: input.resolved.bubblePaths.transcriptPath,
     lockPath,
@@ -94,13 +101,7 @@ async function appendConvergenceEnvelope(
         ...(input.findings !== undefined && input.findings.length > 0
           ? { findings: input.findings }
           : {}),
-        ...(input.convergencePolicyDiagnostics.length > 0
-          ? {
-              metadata: {
-                convergence_policy_diagnostics: input.convergencePolicyDiagnostics
-              }
-            }
-          : {})
+        metadata
       },
       refs: input.refs
     }
@@ -117,6 +118,7 @@ async function applyMetaReviewGateWithRecovery(
       bubbleId: input.resolved.bubbleId,
       summary: input.summary,
       refs: input.refs,
+      ...(input.findings !== undefined ? { findings: input.findings } : {}),
       repoPath: input.resolved.repoPath,
       cwd: input.resolved.bubblePaths.worktreePath,
       now: input.now

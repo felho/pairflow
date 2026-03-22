@@ -47,6 +47,11 @@ export interface ApplyMetaReviewGateOnConvergenceInput {
   bubbleId: string;
   summary: string;
   refs?: string[];
+  findings?: Array<{
+    severity: "P2" | "P3";
+    title: string;
+    refs?: string[];
+  }>;
   repoPath?: string;
   cwd?: string;
   now?: Date;

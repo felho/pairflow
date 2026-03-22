@@ -33,6 +33,75 @@ describe("protocol envelope schema", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("accepts additive findings parity split metadata fields", () => {
+    const result = validateProtocolEnvelope({
+      id: "msg_parity_split_ok",
+      ts: "2026-02-21T12:34:56.000Z",
+      bubble_id: "b_test_01",
+      sender: "orchestrator",
+      recipient: "human",
+      type: "APPROVAL_REQUEST",
+      round: 1,
+      payload: {
+        summary: "Approval request",
+        metadata: {
+          findings_claimed_open_total: 2,
+          findings_artifact_open_total: 2,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 2,
+          findings_parity_status: "ok"
+        }
+      },
+      refs: []
+    });
+
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects invalid findings parity split metadata fields", () => {
+    const result = validateProtocolEnvelope({
+      id: "msg_parity_split_invalid",
+      ts: "2026-02-21T12:34:56.000Z",
+      bubble_id: "b_test_01",
+      sender: "orchestrator",
+      recipient: "human",
+      type: "APPROVAL_REQUEST",
+      round: 1,
+      payload: {
+        summary: "Approval request",
+        metadata: {
+          findings_blocking_open_total: -1,
+          findings_advisory_open_total: "2",
+          findings_parity_status: "partial"
+        }
+      },
+      refs: []
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "payload.metadata.findings_blocking_open_total"
+      )
+    ).toBe(true);
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "payload.metadata.findings_advisory_open_total"
+      )
+    ).toBe(true);
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "payload.metadata.findings_parity_status"
+      )
+    ).toBe(true);
+  });
+
   it("accepts PASS envelope when blocker finding has no finding refs and envelope refs are empty", () => {
     const result = validateProtocolEnvelope({
       id: "msg_001b",
