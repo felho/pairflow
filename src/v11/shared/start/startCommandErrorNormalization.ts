@@ -12,7 +12,7 @@ import type {
 export interface NormalizeStartBubbleErrorInput {
   error: unknown;
   isStartBubbleError: (candidate: unknown) => boolean;
-  createStartBubbleError: (message: string) => Error;
+  createStartBubbleError: PairflowCreateCommandError;
   isBubbleLookupError: (candidate: unknown) => candidate is BubbleLookupError;
   isWorkspaceBootstrapError:
     (candidate: unknown) => candidate is WorkspaceBootstrapError;

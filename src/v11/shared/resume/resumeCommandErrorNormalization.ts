@@ -2,7 +2,7 @@ export interface NormalizeResumeBubbleErrorInput {
   error: unknown;
   isResumeBubbleError: (candidate: unknown) => boolean;
   asHumanReplyCommandError: (error: unknown) => never;
-  createResumeBubbleError: (message: string) => Error;
+  createResumeBubbleError: PairflowCreateCommandError;
 }
 
 export function normalizeResumeBubbleError(

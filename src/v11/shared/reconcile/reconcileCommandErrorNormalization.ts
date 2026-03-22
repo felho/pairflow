@@ -1,7 +1,7 @@
 export interface NormalizeStartupReconcilerErrorInput {
   error: unknown;
   isStartupReconcilerError: (candidate: unknown) => boolean;
-  createStartupReconcilerError: (message: string) => Error;
+  createStartupReconcilerError: PairflowCreateCommandError;
   isError: (candidate: unknown) => candidate is Error;
 }
 

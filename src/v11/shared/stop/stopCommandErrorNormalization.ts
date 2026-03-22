@@ -8,7 +8,7 @@ import type {
 export interface NormalizeStopBubbleErrorInput {
   error: unknown;
   isStopBubbleError: (candidate: unknown) => boolean;
-  createStopBubbleError: (message: string) => Error;
+  createStopBubbleError: PairflowCreateCommandError;
   isBubbleLookupError: (candidate: unknown) => candidate is BubbleLookupError;
   isTmuxCommandError: (candidate: unknown) => candidate is TmuxCommandError;
   isRuntimeSessionsRegistryError:

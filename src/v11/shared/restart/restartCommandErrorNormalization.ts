@@ -9,7 +9,7 @@ import type { StartBubbleError } from "../../../core/bubble/startBubble.js";
 export interface NormalizeRestartBubbleErrorInput {
   error: unknown;
   isRestartBubbleError: (candidate: unknown) => boolean;
-  createRestartBubbleError: (message: string) => Error;
+  createRestartBubbleError: PairflowCreateCommandError;
   isBubbleLookupError: (candidate: unknown) => candidate is BubbleLookupError;
   isTmuxCommandError: (candidate: unknown) => candidate is TmuxCommandError;
   isRuntimeSessionsRegistryError:

@@ -12,7 +12,7 @@ interface ResolveKickoffTaskFromFileInputResult {
 export async function resolveKickoffTaskFromFileInput(input: {
   taskFile: string;
   cwd: string;
-  createValidationError: (message: string) => Error;
+  createValidationError: PairflowCreateCommandError;
 }): Promise<ResolveKickoffTaskFromFileInputResult> {
   const candidatePath = resolve(input.cwd, input.taskFile);
   const taskStats = await stat(candidatePath).catch((error: NodeJS.ErrnoException) => {

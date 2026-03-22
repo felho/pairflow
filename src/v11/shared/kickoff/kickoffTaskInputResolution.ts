@@ -11,6 +11,13 @@ export interface ResolvedKickoffTaskInput {
 
 export class KickoffTaskInputValidationError extends Error {}
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 async function resolveKickoffTaskFromInputMode(input: {
   mode: KickoffTaskInputMode;
   cwd: string;
@@ -20,14 +27,14 @@ async function resolveKickoffTaskFromInputMode(input: {
       taskFile: input.mode.taskFile,
       cwd: input.cwd,
       createValidationError: (message) =>
-        new KickoffTaskInputValidationError(message)
+        new KickoffTaskInputValidationError(toErrorMessage(message))
     });
   }
 
   return resolveKickoffTaskFromInlineInput({
     task: input.mode.task,
     createValidationError: (message) =>
-      new KickoffTaskInputValidationError(message)
+      new KickoffTaskInputValidationError(toErrorMessage(message))
   });
 }
 
@@ -44,7 +51,7 @@ export async function resolveKickoffTaskInput(input: {
     mode: resolveKickoffTaskInputMode({
       ...input,
       createValidationError: (message) =>
-        new KickoffTaskInputValidationError(message)
+        new KickoffTaskInputValidationError(toErrorMessage(message))
     }),
     cwd: input.cwd
   });

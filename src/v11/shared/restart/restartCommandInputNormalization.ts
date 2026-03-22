@@ -10,7 +10,7 @@ export interface NormalizedRestartBubbleInput {
 
 export function normalizeRestartBubbleInput(
   input: RestartBubbleInput,
-  createError: (message: string) => Error
+  createError: PairflowCreateCommandError
 ): NormalizedRestartBubbleInput {
   return {
     bubbleId: requireNonEmptyString(input.bubbleId, "Bubble id", createError),

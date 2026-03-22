@@ -25,7 +25,7 @@ function resolveKickoffTaskInputPresence(input: {
 
 function buildKickoffInlineInputMode(input: {
   taskText: string | null;
-  createValidationError: (message: string) => Error;
+  createValidationError: PairflowCreateCommandError;
 }): KickoffTaskInputMode {
   if (input.taskText === null) {
     // reason_code=KICKOFF_TASK_INPUT_MISSING context=kickoff_task_input_validation
@@ -41,7 +41,7 @@ function buildKickoffInlineInputMode(input: {
 export function resolveKickoffTaskInputMode(input: {
   task?: string;
   taskFile?: string;
-  createValidationError: (message: string) => Error;
+  createValidationError: PairflowCreateCommandError;
 }): KickoffTaskInputMode {
   const { taskText, taskFile } = resolveKickoffTaskInputPresence(input);
   if (taskText !== null && taskFile !== null) {

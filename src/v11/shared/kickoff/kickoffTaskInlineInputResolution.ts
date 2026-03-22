@@ -7,7 +7,7 @@ interface ResolveKickoffTaskFromInlineInputResult {
 
 export function resolveKickoffTaskFromInlineInput(input: {
   task: string;
-  createValidationError: (message: string) => Error;
+  createValidationError: PairflowCreateCommandError;
 }): ResolveKickoffTaskFromInlineInputResult {
   const taskText = input.task.trim();
   assertKickoffTaskContentIsValid({

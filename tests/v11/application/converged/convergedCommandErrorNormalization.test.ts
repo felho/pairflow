@@ -11,13 +11,20 @@ class SyntheticConvergedCommandError extends Error {
   }
 }
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 function runNormalization(error: unknown): unknown {
   return normalizeConvergedCommandError({
     error,
     isConvergedCommandError: (candidate) =>
       candidate instanceof SyntheticConvergedCommandError,
     createConvergedCommandError: (message) =>
-      new SyntheticConvergedCommandError(message)
+      new SyntheticConvergedCommandError(toErrorMessage(message))
   });
 }
 

@@ -1,7 +1,7 @@
 export interface NormalizeBubbleCommitErrorInput {
   error: unknown;
   isBubbleCommitError: (candidate: unknown) => boolean;
-  createBubbleCommitError: (message: string) => Error;
+  createBubbleCommitError: PairflowCreateCommandError;
   isBubbleLookupError?: (candidate: unknown) => boolean;
   isGitCommandError?: (candidate: unknown) => boolean;
 }

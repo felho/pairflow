@@ -4,7 +4,7 @@ import { WorkspaceResolutionError } from "../../../core/bubble/workspaceResoluti
 export interface NormalizeConvergedCommandErrorInput {
   error: unknown;
   isConvergedCommandError: (candidate: unknown) => boolean;
-  createConvergedCommandError: (message: string) => Error;
+  createConvergedCommandError: PairflowCreateCommandError;
 }
 
 export function normalizeConvergedCommandError(

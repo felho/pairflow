@@ -3,7 +3,15 @@ import { describe, expect, it } from "vitest";
 import { normalizeRestartBubbleInput } from "../../../../src/v11/shared/restart/restartCommandInputNormalization.js";
 import { RestartBubbleError } from "../../../../src/v11/shared/restart/restartCommandRuntime.js";
 
-const createError = (message: string) => new RestartBubbleError(message);
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
+const createError: PairflowCreateCommandError = (message) =>
+  new RestartBubbleError(toErrorMessage(message));
 
 describe("restartCommandInputNormalization", () => {
   it("normalizes optional fields", () => {

@@ -3,7 +3,7 @@ import type { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
 export interface NormalizeBubbleWatchdogErrorInput {
   error: unknown;
   isBubbleWatchdogError: (candidate: unknown) => boolean;
-  createBubbleWatchdogError: (message: string) => Error;
+  createBubbleWatchdogError: PairflowCreateCommandError;
   isBubbleLookupError: (candidate: unknown) => candidate is BubbleLookupError;
 }
 
