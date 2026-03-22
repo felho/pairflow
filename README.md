@@ -1122,6 +1122,16 @@ pnpm ci:local
 2. `pnpm check`
 3. `pnpm fitness:check:ci`
 
+By default `ci:local` runs in compact mode:
+- each step writes a full log under `.pairflow/evidence/ci-local/<timestamp>/`
+- on failure, it prints a focused error summary (`matched error lines` + `log tail`) and the exact log path
+
+Use verbose mode if you want fully streamed command output:
+
+```bash
+PAIRFLOW_CI_VERBOSE=1 pnpm ci:local
+```
+
 Optional milestone override for local run:
 
 ```bash
