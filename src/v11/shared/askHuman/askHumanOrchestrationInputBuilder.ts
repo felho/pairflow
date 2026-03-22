@@ -3,7 +3,7 @@ import type { BuildAskHumanEntrypointInvocationInput } from "./askHumanEntrypoin
 
 export function buildAskHumanOrchestrationInput(
   normalizedInput: BuildAskHumanEntrypointInvocationInput["normalizedInput"],
-  createError: (message: string) => Error
+  createError: PairflowCreateCommandError
 ): AskHumanCommandOrchestrationInput {
   return {
     question: normalizedInput.question,

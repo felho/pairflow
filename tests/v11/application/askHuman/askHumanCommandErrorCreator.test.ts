@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import { createAskHumanCommandErrorCreator } from "../../../../src/v11/shared/askHuman/askHumanCommandErrorCreator.js";
 
 class SyntheticAskHumanCommandError extends Error {
@@ -12,7 +19,7 @@ class SyntheticAskHumanCommandError extends Error {
 describe("askHumanCommandErrorCreator", () => {
   it("builds an error creator that calls the provided constructor", () => {
     const createCommandError = createAskHumanCommandErrorCreator(
-      (message) => new SyntheticAskHumanCommandError(message)
+      (message: PairflowCommandErrorInput) => new SyntheticAskHumanCommandError(toErrorMessage(message))
     );
 
     const created = createCommandError("unexpected");

@@ -10,7 +10,7 @@ import type {
 export interface BuildAskHumanCommandOrchestrationInvocationInput {
   commandInput: EmitAskHumanInput;
   runtimeDependencies: EmitAskHumanDependencies;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export interface AskHumanCommandOrchestrationInvocation {

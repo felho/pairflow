@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import { buildAskHumanFlowInputFromCommandOrchestration } from "../../../../src/v11/shared/askHuman/askHumanCommandFlowInvocationBuilder.js";
 
 class AskHumanFlowInvocationTestError extends Error {
@@ -15,8 +22,7 @@ describe("askHumanCommandFlowInvocationBuilder", () => {
     const routing = {
       question: "Need migration decision?"
     } as never;
-    const createError = (message: string) =>
-      new AskHumanFlowInvocationTestError(message);
+    const createError = (message: PairflowCommandErrorInput) => new AskHumanFlowInvocationTestError(toErrorMessage(message));
 
     const flowInput = buildAskHumanFlowInputFromCommandOrchestration(
       {

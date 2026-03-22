@@ -1,5 +1,5 @@
 export interface BuildAskHumanCommandErrorFactoryInput {
-  createAskHumanCommandError: (message: string) => Error;
+  createAskHumanCommandError: PairflowCreateCommandError;
 }
 
-export type AskHumanCommandErrorFactory = (message: string) => Error;
+export type AskHumanCommandErrorFactory = PairflowCreateCommandError;

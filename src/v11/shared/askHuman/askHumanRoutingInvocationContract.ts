@@ -3,5 +3,5 @@ export interface BuildAskHumanRoutingInputInput {
   refs: string[] | undefined;
   cwd: string | undefined;
   now: Date;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }

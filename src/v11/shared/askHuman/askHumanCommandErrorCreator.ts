@@ -2,7 +2,7 @@ import { buildAskHumanCommandErrorFactory } from "./askHumanCommandErrorFactory.
 import type { AskHumanCommandErrorFactory } from "./askHumanCommandErrorFactoryContract.js";
 
 export function createAskHumanCommandErrorCreator(
-  createAskHumanCommandError: (message: string) => Error
+  createAskHumanCommandError: PairflowCreateCommandError
 ): AskHumanCommandErrorFactory {
   return buildAskHumanCommandErrorFactory({
     createAskHumanCommandError

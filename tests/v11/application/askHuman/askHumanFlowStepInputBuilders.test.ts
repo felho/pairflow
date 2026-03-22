@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import {
   buildAskHumanExecutionStepInput,
   buildAskHumanFinalizationStepInput
@@ -11,7 +18,7 @@ describe("askHumanFlowStepInputBuilders", () => {
     const routing = {
       question: "Need migration decision?"
     } as never;
-    const createError = (message: string) => new Error(message);
+    const createError = (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message));
 
     expect(
       buildAskHumanExecutionStepInput({

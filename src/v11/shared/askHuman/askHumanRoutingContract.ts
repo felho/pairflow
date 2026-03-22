@@ -14,7 +14,7 @@ export interface PrepareAskHumanRoutingInput {
   refs?: string[];
   cwd?: string;
   now: Date;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export type PrepareAskHumanRoutingResult = AskHumanRoutingContext;

@@ -12,7 +12,7 @@ export interface AskHumanCommandOrchestrationInput {
   refs?: string[] | undefined;
   cwd?: string | undefined;
   now: Date;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export interface AskHumanCommandOrchestrationDependencies {

@@ -20,13 +20,13 @@ import type { AskHumanRoutingContext } from "./askHumanRoutingContext.js";
 export interface RunAskHumanFlowInput {
   now: Date;
   routing: AskHumanRoutingContext;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export interface ExecuteAskHumanExecutionInput {
   now: Date;
   routing: AskHumanRoutingContext;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export interface ExecuteAskHumanExecutionResult {

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import { prepareAskHumanRouting } from "../../../../src/v11/application/askHuman/askHumanRoutingPreparation.js";
 import type { ResolvedBubbleWorkspace } from "../../../../src/core/bubble/workspaceResolution.js";
 
@@ -35,7 +42,7 @@ describe("prepareAskHumanRouting", () => {
         refs: [" artifact://a ", "artifact://a", "artifact://b", " "],
         cwd: "/repo/worktrees/b_ask_human_01",
         now,
-        createError: (message) => new AskHumanRoutingTestError(message)
+        createError: (message: PairflowCommandErrorInput) => new AskHumanRoutingTestError(toErrorMessage(message))
       },
       {
         resolveBubbleFromWorkspaceCwd: async (cwd) => {
@@ -89,7 +96,7 @@ describe("prepareAskHumanRouting", () => {
         {
           question: "Need human input",
           now: new Date("2026-02-21T12:10:00.000Z"),
-          createError: (message) => new AskHumanRoutingTestError(message)
+          createError: (message: PairflowCommandErrorInput) => new AskHumanRoutingTestError(toErrorMessage(message))
         },
         {
           resolveBubbleFromWorkspaceCwd: async () =>
@@ -176,7 +183,7 @@ describe("prepareAskHumanRouting", () => {
           {
             question: "Need human input",
             now: new Date("2026-02-21T12:10:00.000Z"),
-            createError: (message) => new AskHumanRoutingTestError(message)
+            createError: (message: PairflowCommandErrorInput) => new AskHumanRoutingTestError(toErrorMessage(message))
           },
           {
             resolveBubbleFromWorkspaceCwd: async () =>

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import { orchestrateAskHumanCommand } from "../../../../src/v11/shared/askHuman/askHumanCommandOrchestration.js";
 
 class AskHumanCommandOrchestrationTestError extends Error {
@@ -25,8 +32,7 @@ describe("askHumanCommandOrchestration", () => {
         refs: ["artifact://analysis.md"],
         cwd: "/repo/worktrees/b_ask_human_01",
         now,
-        createError: (message) =>
-          new AskHumanCommandOrchestrationTestError(message)
+        createError: (message: PairflowCommandErrorInput) => new AskHumanCommandOrchestrationTestError(toErrorMessage(message))
       },
       {
         executeAskHumanExecution: async () =>
@@ -112,8 +118,7 @@ describe("askHumanCommandOrchestration", () => {
       {
         question: "Need operator input",
         now,
-        createError: (message) =>
-          new AskHumanCommandOrchestrationTestError(message)
+        createError: (message: PairflowCommandErrorInput) => new AskHumanCommandOrchestrationTestError(toErrorMessage(message))
       },
       {
         executeAskHumanExecution: async () =>

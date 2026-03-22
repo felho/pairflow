@@ -2,7 +2,7 @@ import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 
 function assertRunningLifecycleState(
   state: BubbleStateSnapshot,
-  createError: (message: string) => Error
+  createError: PairflowCreateCommandError
 ): void {
   if (state.state !== "RUNNING") {
     // reason_code=ASK_HUMAN_STATE_NOT_RUNNING context=routing_precondition
@@ -14,7 +14,7 @@ function assertRunningLifecycleState(
 
 function assertRunningRound(
   state: BubbleStateSnapshot,
-  createError: (message: string) => Error
+  createError: PairflowCreateCommandError
 ): void {
   if (state.round < 1) {
     // reason_code=ASK_HUMAN_RUNNING_ROUND_INVALID context=routing_precondition
@@ -26,7 +26,7 @@ function assertRunningRound(
 
 function assertRunningActiveContext(
   state: BubbleStateSnapshot,
-  createError: (message: string) => Error
+  createError: PairflowCreateCommandError
 ): void {
   if (
     state.active_agent === null
@@ -42,7 +42,7 @@ function assertRunningActiveContext(
 
 function assertRunningRoleAllowed(
   state: BubbleStateSnapshot,
-  createError: (message: string) => Error
+  createError: PairflowCreateCommandError
 ): void {
   if (state.active_role === "meta_reviewer") {
     // reason_code=ASK_HUMAN_ROLE_UNSUPPORTED context=routing_precondition
@@ -54,7 +54,7 @@ function assertRunningRoleAllowed(
 
 export function runAskHumanRunningStateValidationChecks(
   state: BubbleStateSnapshot,
-  createError: (message: string) => Error
+  createError: PairflowCreateCommandError
 ): void {
   assertRunningLifecycleState(state, createError);
   assertRunningRound(state, createError);

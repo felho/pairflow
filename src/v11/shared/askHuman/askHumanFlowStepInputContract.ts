@@ -5,7 +5,7 @@ import type { AskHumanRoutingContext } from "./askHumanRoutingContext.js";
 export interface BuildAskHumanExecutionStepInput {
   now: Date;
   routing: AskHumanRoutingContext;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export interface BuildAskHumanFinalizationStepInput {

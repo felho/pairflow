@@ -4,7 +4,7 @@ import { runAskHumanRunningStateValidationChecks } from "./askHumanRunningStateV
 
 export function assertAskHumanRunningState(
   state: BubbleStateSnapshot,
-  createError: (message: string) => Error
+  createError: PairflowCreateCommandError
 ): asserts state is AskHumanRunningState {
   runAskHumanRunningStateValidationChecks(state, createError);
 }

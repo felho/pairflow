@@ -7,7 +7,7 @@ import type {
 export function buildAskHumanCommandDispatchInvocation(
   input: EmitAskHumanInput,
   dependencies: EmitAskHumanDependencies,
-  createError: (message: string) => Error
+  createError: PairflowCreateCommandError
 ): BuildAskHumanCommandOrchestrationInvocationInput {
   return {
     commandInput: input,

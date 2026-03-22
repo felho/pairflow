@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import { executeAskHumanExecution } from "../../../../src/v11/application/askHuman/askHumanExecution.js";
 
 class AskHumanExecutionTestError extends Error {
@@ -41,7 +48,7 @@ describe("executeAskHumanExecution", () => {
             active_since: "2026-02-21T12:00:00.000Z"
           } as never
         } as never,
-        createError: (message) => new AskHumanExecutionTestError(message)
+        createError: (message: PairflowCommandErrorInput) => new AskHumanExecutionTestError(toErrorMessage(message))
       },
       {
         appendProtocolEnvelope: async (input) => {
@@ -134,7 +141,7 @@ describe("executeAskHumanExecution", () => {
               active_since: "2026-02-21T12:00:00.000Z"
             } as never
           } as never,
-          createError: (message) => new AskHumanExecutionTestError(message)
+          createError: (message: PairflowCommandErrorInput) => new AskHumanExecutionTestError(toErrorMessage(message))
         },
         {
           appendProtocolEnvelope: async () =>
@@ -185,7 +192,7 @@ describe("executeAskHumanExecution", () => {
             active_since: "2026-02-21T12:00:00.000Z"
           } as never
         } as never,
-        createError: (message) => new AskHumanExecutionTestError(message)
+        createError: (message: PairflowCommandErrorInput) => new AskHumanExecutionTestError(toErrorMessage(message))
       },
       {
         appendProtocolEnvelope: async (input) => {

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import { buildAskHumanCommandDispatchInput } from "../../../../src/v11/shared/askHuman/askHumanCommandDispatchInputBuilder.js";
 
 describe("askHumanCommandDispatchInputBuilder", () => {
@@ -15,7 +22,7 @@ describe("askHumanCommandDispatchInputBuilder", () => {
       emitTmuxDeliveryNotification: (() => Promise.resolve({})) as never,
       emitBubbleNotification: (() => Promise.resolve({})) as never
     };
-    const createError = (message: string) => new Error(message);
+    const createError = (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message));
 
     const dispatchInput = buildAskHumanCommandDispatchInput(
       input,

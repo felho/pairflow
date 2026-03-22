@@ -11,7 +11,7 @@ import { orchestrateAskHumanCommand } from "./askHumanCommandOrchestration.js";
 export async function dispatchAskHumanCommandOrchestration(
   input: EmitAskHumanInput,
   dependencies: EmitAskHumanDependencies,
-  createError: (message: string) => Error
+  createError: PairflowCreateCommandError
 ): Promise<EmitAskHumanResult> {
   const invocation = buildAskHumanCommandOrchestrationInvocation(
     buildAskHumanCommandDispatchInvocation(input, dependencies, createError)

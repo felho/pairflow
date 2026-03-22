@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import { buildAskHumanCommandFlowOrchestrationCallInput } from "../../../../src/v11/shared/askHuman/askHumanCommandFlowOrchestrationCallInputBuilder.js";
 
 describe("askHumanCommandFlowOrchestrationCallInputBuilder", () => {
@@ -9,7 +16,7 @@ describe("askHumanCommandFlowOrchestrationCallInputBuilder", () => {
       refs: ["artifact://analysis.md"],
       cwd: "/repo/worktrees/b_ask_human_01",
       now: new Date("2026-03-20T10:30:00.000Z"),
-      createError: (message: string) => new Error(message)
+      createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
     };
     const dependencies = {
       executeAskHumanExecution: (async () => ({})) as never,

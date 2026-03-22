@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import { buildAskHumanRoutingInput } from "../../../../src/v11/shared/askHuman/askHumanRoutingInvocationBuilder.js";
 
 describe("askHumanRoutingInvocationBuilder", () => {
   it("omits undefined optional fields", () => {
     const now = new Date("2026-02-21T12:10:00.000Z");
-    const createError = (message: string) => new Error(message);
+    const createError = (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message));
 
     const routingInput = buildAskHumanRoutingInput({
       question: "Need migration decision?",
@@ -26,7 +33,7 @@ describe("askHumanRoutingInvocationBuilder", () => {
 
   it("forwards optional fields when provided", () => {
     const now = new Date("2026-02-21T12:10:00.000Z");
-    const createError = (message: string) => new Error(message);
+    const createError = (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message));
 
     const routingInput = buildAskHumanRoutingInput({
       question: "Need migration decision?",

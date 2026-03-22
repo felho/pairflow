@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import { assertAskHumanRunningState } from "../../../../src/v11/shared/askHuman/askHumanRunningStateValidation.js";
 
 class AskHumanRunningStateValidationError extends Error {
@@ -20,7 +27,7 @@ describe("askHumanRunningStateValidation", () => {
           active_role: "implementer",
           active_since: "2026-02-21T12:00:00.000Z"
         } as never,
-        (message) => new AskHumanRunningStateValidationError(message)
+        (message: PairflowCommandErrorInput) => new AskHumanRunningStateValidationError(toErrorMessage(message))
       )
     ).not.toThrow();
   });
@@ -35,7 +42,7 @@ describe("askHumanRunningStateValidation", () => {
           active_role: "implementer",
           active_since: "2026-02-21T12:00:00.000Z"
         } as never,
-        (message) => new AskHumanRunningStateValidationError(message)
+        (message: PairflowCommandErrorInput) => new AskHumanRunningStateValidationError(toErrorMessage(message))
       )
     ).toThrow("RUNNING state must have round >= 1 (found 0).");
 
@@ -48,7 +55,7 @@ describe("askHumanRunningStateValidation", () => {
           active_role: "implementer",
           active_since: "2026-02-21T12:00:00.000Z"
         } as never,
-        (message) => new AskHumanRunningStateValidationError(message)
+        (message: PairflowCommandErrorInput) => new AskHumanRunningStateValidationError(toErrorMessage(message))
       )
     ).toThrow(
       "RUNNING state is missing active agent context; cannot emit HUMAN_QUESTION."
@@ -63,7 +70,7 @@ describe("askHumanRunningStateValidation", () => {
           active_role: "meta_reviewer",
           active_since: "2026-02-21T12:00:00.000Z"
         } as never,
-        (message) => new AskHumanRunningStateValidationError(message)
+        (message: PairflowCommandErrorInput) => new AskHumanRunningStateValidationError(toErrorMessage(message))
       )
     ).toThrow(
       "ask-human cannot be used from meta_reviewer role while bubble is RUNNING."

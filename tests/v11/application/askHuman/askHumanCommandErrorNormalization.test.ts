@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import { normalizeAskHumanCommandError } from "../../../../src/v11/shared/askHuman/askHumanCommandErrorNormalization.js";
 
 class SyntheticAskHumanCommandError extends Error {
@@ -14,8 +21,7 @@ function runNormalization(error: unknown): unknown {
     error,
     isAskHumanCommandError: (candidate) =>
       candidate instanceof SyntheticAskHumanCommandError,
-    createAskHumanCommandError: (message) =>
-      new SyntheticAskHumanCommandError(message)
+    createAskHumanCommandError: (message: PairflowCommandErrorInput) => new SyntheticAskHumanCommandError(toErrorMessage(message))
   });
 }
 

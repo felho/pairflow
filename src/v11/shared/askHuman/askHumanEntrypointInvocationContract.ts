@@ -5,5 +5,5 @@ export interface BuildAskHumanEntrypointInvocationInput {
     cwd?: string | undefined;
     now: Date;
   };
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }

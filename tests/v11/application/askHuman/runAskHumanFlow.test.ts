@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import { runAskHumanFlow } from "../../../../src/v11/application/askHuman/runAskHumanFlow.js";
 
 class AskHumanFlowTestError extends Error {
@@ -33,7 +40,7 @@ describe("runAskHumanFlow", () => {
           question: "Need migration decision?",
           refs: ["artifact://analysis.md"]
         } as never,
-        createError: (message) => new AskHumanFlowTestError(message)
+        createError: (message: PairflowCommandErrorInput) => new AskHumanFlowTestError(toErrorMessage(message))
       },
       {
         executeAskHumanExecution: async (input, dependencies) => {
@@ -113,7 +120,7 @@ describe("runAskHumanFlow", () => {
           routing: {
             nowIso: now.toISOString()
           } as never,
-          createError: (message) => new AskHumanFlowTestError(message)
+          createError: (message: PairflowCommandErrorInput) => new AskHumanFlowTestError(toErrorMessage(message))
         },
         {
           executeAskHumanExecution: async () => {
@@ -148,7 +155,7 @@ describe("runAskHumanFlow", () => {
         routing: {
           nowIso: now.toISOString()
         } as never,
-        createError: (message) => new AskHumanFlowTestError(message)
+        createError: (message: PairflowCommandErrorInput) => new AskHumanFlowTestError(toErrorMessage(message))
       },
       {
         executeAskHumanExecution: async () =>
@@ -194,7 +201,7 @@ describe("runAskHumanFlow", () => {
         routing: {
           nowIso: now.toISOString()
         } as never,
-        createError: (message) => new AskHumanFlowTestError(message)
+        createError: (message: PairflowCommandErrorInput) => new AskHumanFlowTestError(toErrorMessage(message))
       },
       {
         executeAskHumanExecution: async (_input, dependencies) => {
@@ -239,7 +246,7 @@ describe("runAskHumanFlow", () => {
         routing: {
           nowIso: now.toISOString()
         } as never,
-        createError: (message) => new AskHumanFlowTestError(message)
+        createError: (message: PairflowCommandErrorInput) => new AskHumanFlowTestError(toErrorMessage(message))
       },
       {
         executeAskHumanExecution: async () =>

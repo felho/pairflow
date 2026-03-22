@@ -6,13 +6,13 @@ import type {
 export interface AskHumanCommandDispatchInput {
   input: EmitAskHumanInput;
   dependencies: EmitAskHumanDependencies;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export function buildAskHumanCommandDispatchInput(
   input: EmitAskHumanInput,
   dependencies: EmitAskHumanDependencies,
-  createError: (message: string) => Error
+  createError: PairflowCreateCommandError
 ): AskHumanCommandDispatchInput {
   return {
     input,

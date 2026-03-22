@@ -3,7 +3,7 @@ import type { AskHumanCommandOrchestrationInput } from "./askHumanCommandOrchest
 
 export interface BuildAskHumanCommandContextInput {
   commandInput: EmitAskHumanInput;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export interface AskHumanCommandContext {
