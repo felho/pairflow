@@ -3,7 +3,7 @@ import { WorkspaceResolutionError } from "../../../core/bubble/workspaceResoluti
 export interface NormalizePassCommandErrorInput {
   error: unknown;
   isPassCommandError: (candidate: unknown) => boolean;
-  createPassCommandError: (message: string) => Error;
+  createPassCommandError: PairflowCreateCommandError;
 }
 
 export function normalizePassCommandError(

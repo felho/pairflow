@@ -23,7 +23,7 @@ export interface PrepareReviewerPassInput {
   reviewArtifactType: ReviewArtifactType;
   severityGateRound: number;
   summary: string;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export interface PrepareReviewerPassDependencies {

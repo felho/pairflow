@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import type { Finding } from "../../../../src/types/findings.js";
 import { prepareReviewerPass } from "../../../../src/v11/application/pass/reviewerPassPreparation.js";
 
@@ -15,7 +22,7 @@ describe("prepareReviewerPass", () => {
       reviewArtifactType: "code",
       severityGateRound: 2,
       summary: "handoff",
-      createError: (message) => new Error(message)
+      createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
     });
 
     expect(result).toEqual({});
@@ -35,7 +42,7 @@ describe("prepareReviewerPass", () => {
         reviewArtifactType: "document",
         severityGateRound: 2,
         summary: "handoff",
-        createError: (message) => new Error(message)
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
       })
     ).toThrow("Implementer PASS does not accept findings flags; findings are reviewer-only.");
   });
@@ -55,7 +62,7 @@ describe("prepareReviewerPass", () => {
         reviewArtifactType: "document",
         severityGateRound: 2,
         summary: "Reviewer found one issue.",
-        createError: (message) => new Error(message)
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
       },
       {
         validateReviewerPassGate: () => {

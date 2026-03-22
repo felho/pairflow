@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import type { PassIntent } from "../../../../src/types/protocol.js";
 import { resolvePassIntent } from "../../../../src/v11/application/pass/passIntentResolution.js";
 
@@ -10,7 +17,7 @@ describe("resolvePassIntent", () => {
         senderRole: "implementer",
         noFindings: false,
         hasFindings: false,
-        createError: (message) => new Error(message)
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
       },
       {
         inferDefaultPassIntent: () => "review"
@@ -32,7 +39,7 @@ describe("resolvePassIntent", () => {
         inferredReviewerIntent: "fix_request",
         noFindings: false,
         hasFindings: true,
-        createError: (message) => new Error(message)
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
       },
       {
         assertReviewerIntentOverrideConsistency: (input) => {
@@ -57,7 +64,7 @@ describe("resolvePassIntent", () => {
         senderRole: "reviewer",
         noFindings: false,
         hasFindings: true,
-        createError: (message) => new Error(message)
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
       })
     ).toThrow("Reviewer PASS intent inference is missing before intent resolution.");
   });
@@ -70,7 +77,7 @@ describe("resolvePassIntent", () => {
           inputIntent: "review" as PassIntent,
           noFindings: false,
           hasFindings: false,
-          createError: (message) => new Error(message)
+          createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
         },
         {
           isPassIntent: (_value): _value is PassIntent => false

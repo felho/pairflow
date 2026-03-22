@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import {
   REVIEW_VERIFICATION_SCHEMA,
   type ReviewVerificationInputResolution
@@ -29,7 +36,7 @@ describe("prepareReviewerVerification", () => {
         worktreePath: "/tmp/worktree",
         intent: "fix_request",
         hasFindings: true,
-        createError: (message) => new Error(message)
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
       },
       {
         assertNoDocsOnlySkipLogRefConflict: () => {
@@ -65,7 +72,7 @@ describe("prepareReviewerVerification", () => {
         worktreePath: "/tmp/worktree",
         intent: "review",
         hasFindings: false,
-        createError: (message) => new Error(message)
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
       },
       {
         assertNoDocsOnlySkipLogRefConflict: () => undefined,
@@ -94,7 +101,7 @@ describe("prepareReviewerVerification", () => {
           worktreePath: "/tmp/worktree",
           intent: "review",
           hasFindings: false,
-          createError: (message) => new Error(message)
+          createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
         },
         {
           assertNoDocsOnlySkipLogRefConflict: () => {
@@ -122,7 +129,7 @@ describe("prepareReviewerVerification", () => {
         worktreePath: "/tmp/worktree",
         intent: "review",
         hasFindings: false,
-        createError: (message) => new Error(message)
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
       })
     ).rejects.toThrow("Reviewer verification resolver dependency is required for preparation.");
   });

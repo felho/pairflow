@@ -27,5 +27,5 @@ export interface BuildFlowBaseInput {
   state: BubbleStateSnapshot;
   loadedState: Pick<LoadedStateSnapshot, "fingerprint">;
   passRouting: PreparePassRoutingResult;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }

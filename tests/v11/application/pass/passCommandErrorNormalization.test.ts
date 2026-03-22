@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import { WorkspaceResolutionError } from "../../../../src/core/bubble/workspaceResolution.js";
 import { normalizePassCommandError } from "../../../../src/v11/shared/pass/passCommandErrorNormalization.js";
 
@@ -15,7 +22,7 @@ function runNormalization(error: unknown): unknown {
     error,
     isPassCommandError: (candidate) =>
       candidate instanceof SyntheticPassCommandError,
-    createPassCommandError: (message) => new SyntheticPassCommandError(message)
+    createPassCommandError: (message) => new SyntheticPassCommandError(toErrorMessage(message))
   });
 }
 

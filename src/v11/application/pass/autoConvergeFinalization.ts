@@ -19,7 +19,7 @@ export interface FinalizeAutoConvergePassInput {
   round: number;
   senderRole: "implementer" | "reviewer";
   findings: Finding[];
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
   repoPath: string;
   bubbleId: string;
   bubbleInstanceId: string;
@@ -46,7 +46,7 @@ export interface FinalizeAutoConvergePassDependencies<TResult> {
     taskArtifactPath: string;
     round: number;
     findings: Finding[];
-    createError: (message: string) => Error;
+    createError: PairflowCreateCommandError;
   }) => Promise<string | undefined>;
   emitBubbleLifecycleEventBestEffort: (input: {
     repoPath: string;

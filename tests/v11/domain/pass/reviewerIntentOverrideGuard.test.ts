@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import { assertReviewerIntentOverrideConsistency } from "../../../../src/v11/domain/pass/reviewerIntentOverrideGuard.js";
 
 class TestReviewerIntentOverrideError extends Error {
@@ -9,8 +16,8 @@ class TestReviewerIntentOverrideError extends Error {
   }
 }
 
-function createError(message: string): Error {
-  return new TestReviewerIntentOverrideError(message);
+function createError(message: PairflowCommandErrorInput): Error {
+  return new TestReviewerIntentOverrideError(toErrorMessage(message));
 }
 
 describe("assertReviewerIntentOverrideConsistency", () => {

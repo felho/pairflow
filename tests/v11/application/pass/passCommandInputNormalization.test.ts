@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import { normalizePassCommandInput } from "../../../../src/v11/shared/pass/passCommandInputNormalization.js";
 
 class SyntheticPassCommandError extends Error {
@@ -17,7 +24,7 @@ describe("passCommandInputNormalization", () => {
       summary: "  implementer handoff  ",
       refs: [" artifacts/a.md ", "", "artifacts/a.md", "artifacts/b.md "],
       now,
-      createError: (message) => new SyntheticPassCommandError(message)
+      createError: (message: PairflowCommandErrorInput) => new SyntheticPassCommandError(toErrorMessage(message))
     });
 
     expect(normalized.summary).toBe("implementer handoff");
@@ -28,7 +35,7 @@ describe("passCommandInputNormalization", () => {
   it("creates current time when now is omitted", () => {
     const normalized = normalizePassCommandInput({
       summary: "ready",
-      createError: (message) => new SyntheticPassCommandError(message)
+      createError: (message: PairflowCommandErrorInput) => new SyntheticPassCommandError(toErrorMessage(message))
     });
 
     expect(normalized.now).toBeInstanceOf(Date);
@@ -38,7 +45,7 @@ describe("passCommandInputNormalization", () => {
     expect(() =>
       normalizePassCommandInput({
         summary: "   ",
-        createError: (message) => new SyntheticPassCommandError(message)
+        createError: (message: PairflowCommandErrorInput) => new SyntheticPassCommandError(toErrorMessage(message))
       })
     ).toThrow("PASS summary cannot be empty.");
   });

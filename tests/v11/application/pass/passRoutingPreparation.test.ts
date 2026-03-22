@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import { preparePassRouting } from "../../../../src/v11/application/pass/passRoutingPreparation.js";
 
 describe("preparePassRouting", () => {
@@ -26,7 +33,7 @@ describe("preparePassRouting", () => {
         transcriptPath: "/tmp/transcript.ndjson",
         reviewer: "claude",
         implementer: "codex",
-        createError: (message) => new Error(message)
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
       },
       {
         prepareReviewerPass: (input) => {
@@ -128,7 +135,7 @@ describe("preparePassRouting", () => {
         transcriptPath: "/tmp/transcript.ndjson",
         reviewer: "claude",
         implementer: "codex",
-        createError: (message) => new Error(message)
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
       },
       {
         prepareReviewerPass: () => ({}),

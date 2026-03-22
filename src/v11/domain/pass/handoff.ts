@@ -19,11 +19,11 @@ export interface ResolvePassHandoffInput {
   implementer: AgentName;
   reviewer: AgentName;
   nowIso: string;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 function raiseResolutionError(
-  createError: (message: string) => Error,
+  createError: PairflowCreateCommandError,
   message: string
 ): never {
   // reason_code=PASS_HANDOFF_RESOLUTION_ERROR context=handoff_resolution_input

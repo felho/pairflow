@@ -10,7 +10,7 @@ interface ResolveReviewerVerificationInput {
   senderRole: AgentRole;
   refs: string[];
   worktreePath: string;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
   resolveInputFromRefs?: (
     input: {
       refs: string[];
@@ -20,7 +20,7 @@ interface ResolveReviewerVerificationInput {
 }
 
 function raiseReviewerVerificationResolverError(
-  createError: (message: string) => Error,
+  createError: PairflowCreateCommandError,
   message: string
 ): never {
   // reason_code=REVIEWER_VERIFICATION_RESOLUTION_FAILED context=reviewer_verification_resolution

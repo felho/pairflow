@@ -15,7 +15,7 @@ const reviewerSummaryFindingsContradictionReasonCode =
   "REVIEWER_SUMMARY_FINDINGS_CONTRADICTION";
 
 function raiseReviewerDecisionError(
-  createError: (message: string) => Error,
+  createError: PairflowCreateCommandError,
   message: string
 ): never {
   // reason_code=REVIEWER_PASS_DECISION_INVALID context=reviewer_pass_decision_input
@@ -32,7 +32,7 @@ function buildPostGateConvergedGuidance(input: {
 export function inferReviewerPassIntent(input: {
   hasFindings: boolean;
   noFindings: boolean;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }): PassIntent {
   if (input.hasFindings && input.noFindings) {
     raiseReviewerDecisionError(
@@ -58,7 +58,7 @@ export function validateReviewerPassGate(input: {
   findingsPayloadInvalid: boolean;
   reviewArtifactType: BubbleConfig["review_artifact_type"];
   severityGateRound: number;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }): void {
   const postGate = input.round >= input.severityGateRound;
   const invalidPayloadGuidance = postGate
@@ -142,7 +142,7 @@ export function validateReviewerPassGate(input: {
 export function assertReviewerNoFindingsSummaryConsistency(input: {
   summary: string;
   noFindings: boolean;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }): void {
   if (!input.noFindings) {
     return;

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import type { AgentName, BubbleStateSnapshot } from "../../../../src/types/bubble.js";
 import { resolvePassHandoff } from "../../../../src/v11/domain/pass/handoff.js";
 
@@ -43,7 +50,7 @@ function resolveFromState(state: BubbleStateSnapshot) {
     implementer,
     reviewer,
     nowIso,
-    createError: (message) => new TestPassError(message)
+    createError: (message: PairflowCommandErrorInput) => new TestPassError(toErrorMessage(message))
   });
 }
 

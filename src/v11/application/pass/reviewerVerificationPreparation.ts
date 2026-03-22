@@ -13,7 +13,7 @@ export interface PrepareReviewerVerificationInput {
   worktreePath: string;
   intent: PassIntent;
   hasFindings: boolean;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export interface PrepareReviewerVerificationDependencies {
@@ -23,7 +23,7 @@ export interface PrepareReviewerVerificationDependencies {
     senderRole: AgentRole;
     refs: string[];
     worktreePath: string;
-    createError: (message: string) => Error;
+    createError: PairflowCreateCommandError;
   }) => Promise<ReviewVerificationInputResolution | undefined>;
   validateReviewerVerificationConsistency?: typeof validateReviewerVerificationConsistency;
 }

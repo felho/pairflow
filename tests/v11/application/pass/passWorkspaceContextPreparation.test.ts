@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import { IDEATION_PASS_BLOCKED } from "../../../../src/core/bubble/ideation.js";
 import { preparePassWorkspaceContext } from "../../../../src/v11/shared/pass/passWorkspaceContextPreparation.js";
 
@@ -51,7 +58,7 @@ describe("passWorkspaceContextPreparation", () => {
         cwd: "/repo/.pairflow/worktrees/b_pass_ctx_01",
         now,
         nowIso,
-        createError: (message) => new SyntheticPassCommandError(message)
+        createError: (message: PairflowCommandErrorInput) => new SyntheticPassCommandError(toErrorMessage(message))
       },
       {
         resolveBubbleFromWorkspaceCwd: async () => resolved,
@@ -114,7 +121,7 @@ describe("passWorkspaceContextPreparation", () => {
           cwd: "/repo/.pairflow/worktrees/b_pass_ctx_02",
           now,
           nowIso,
-          createError: (message) => new SyntheticPassCommandError(message)
+          createError: (message: PairflowCommandErrorInput) => new SyntheticPassCommandError(toErrorMessage(message))
         },
         {
           resolveBubbleFromWorkspaceCwd: async () =>

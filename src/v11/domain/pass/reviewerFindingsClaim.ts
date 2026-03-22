@@ -18,7 +18,7 @@ export interface ReviewerFindingsClaimParserMetadata {
 }
 
 function raiseReviewerFindingsClaimError(
-  createError: (message: string) => Error,
+  createError: PairflowCreateCommandError,
   message: string
 ): never {
   // reason_code=REVIEWER_FINDINGS_CLAIM_INVALID context=reviewer_findings_claim_input
@@ -28,7 +28,7 @@ function raiseReviewerFindingsClaimError(
 export function resolveReviewerFindingsClaim(input: {
   noFindings: boolean;
   findings: Finding[];
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }): ReviewerFindingsClaim {
   if (input.noFindings) {
     return {

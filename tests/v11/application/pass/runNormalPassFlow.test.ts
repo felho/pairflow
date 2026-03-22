@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import { runNormalPassFlow } from "../../../../src/v11/application/pass/runNormalPassFlow.js";
 
 describe("runNormalPassFlow", () => {
@@ -56,7 +63,7 @@ describe("runNormalPassFlow", () => {
           trigger: false,
           mostRecentPreviousReviewerCleanPassEnvelope: false
         },
-        createError: (message) => new Error(message)
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
       },
       {
         prepareNormalPassAppend: () => {
@@ -161,7 +168,7 @@ describe("runNormalPassFlow", () => {
           trigger: false,
           mostRecentPreviousReviewerCleanPassEnvelope: false
         },
-        createError: (message) => new Error(message)
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
       },
       {
         prepareNormalPassAppend: () => ({

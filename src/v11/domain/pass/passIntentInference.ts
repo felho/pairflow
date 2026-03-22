@@ -3,7 +3,7 @@ import type { PassIntent } from "../../../types/protocol.js";
 
 export interface InferPassIntentFromActiveRoleInput {
   activeRole: AgentRole;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 const PASS_INTENT_ACTIVE_ROLE_UNSUPPORTED =

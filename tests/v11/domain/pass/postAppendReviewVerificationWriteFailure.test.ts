@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import {
   formatPostAppendReviewVerificationWriteFailureMessage,
   raisePostAppendReviewVerificationWriteFailed
@@ -12,8 +19,8 @@ class TestPostAppendReviewVerificationWriteFailureError extends Error {
   }
 }
 
-function createError(message: string): Error {
-  return new TestPostAppendReviewVerificationWriteFailureError(message);
+function createError(message: PairflowCommandErrorInput): Error {
+  return new TestPostAppendReviewVerificationWriteFailureError(toErrorMessage(message));
 }
 
 describe("postAppendReviewVerificationWriteFailure", () => {

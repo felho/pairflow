@@ -7,7 +7,7 @@ export interface NormalizePassCommandInputInput {
   summary: string;
   refs?: string[] | undefined;
   now?: Date | undefined;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export interface NormalizedPassCommandInput {

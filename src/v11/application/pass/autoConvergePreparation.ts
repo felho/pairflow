@@ -28,7 +28,7 @@ export interface PrepareRepeatCleanAutoConvergeInput {
   bubbleId: string;
   reviewerAgent: AgentName;
   generatedAt: string;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export interface PrepareRepeatCleanAutoConvergeDependencies {

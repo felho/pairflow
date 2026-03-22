@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import {
   formatRepeatCleanPolicyRejectedMessage,
   raiseRepeatCleanAutoConvergeStateStale,
@@ -15,8 +22,8 @@ class TestRepeatCleanPolicyRejectionError extends Error {
   }
 }
 
-function createError(message: string): Error {
-  return new TestRepeatCleanPolicyRejectionError(message);
+function createError(message: PairflowCommandErrorInput): Error {
+  return new TestRepeatCleanPolicyRejectionError(toErrorMessage(message));
 }
 
 describe("repeatCleanPolicyRejection", () => {

@@ -33,7 +33,7 @@ export interface PreparePassRoutingInput {
   transcriptPath: string;
   reviewer: AgentName;
   implementer: AgentName;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export interface PreparePassRoutingResult {
@@ -57,7 +57,7 @@ export interface PreparePassRoutingDependencies {
     reviewArtifactType: BubbleConfig["review_artifact_type"];
     severityGateRound: number;
     summary: string;
-    createError: (message: string) => Error;
+    createError: PairflowCreateCommandError;
   }) => {
     inferredReviewerIntent?: PassIntent;
     reviewerFindingsClaim?: ReviewerFindingsClaim;
@@ -68,7 +68,7 @@ export interface PreparePassRoutingDependencies {
     noFindings: boolean;
     hasFindings: boolean;
     inferredReviewerIntent?: PassIntent;
-    createError: (message: string) => Error;
+    createError: PairflowCreateCommandError;
     inputIntent?: PassIntent;
   }, dependencies?: {
     inferDefaultPassIntent?: (role: "implementer" | "reviewer") => PassIntent;
@@ -86,14 +86,14 @@ export interface PreparePassRoutingDependencies {
     worktreePath: string;
     intent: PassIntent;
     hasFindings: boolean;
-    createError: (message: string) => Error;
+    createError: PairflowCreateCommandError;
   }, dependencies: {
     resolveReviewerVerification: (input: {
       accuracyCritical: boolean;
       senderRole: AgentRole;
       refs: string[];
       worktreePath: string;
-      createError: (message: string) => Error;
+      createError: PairflowCreateCommandError;
     }) => Promise<ReviewVerificationInputResolution | undefined>;
   }) => Promise<ReviewVerificationInputResolution | undefined>;
   resolveReviewerVerification: (input: {
@@ -101,7 +101,7 @@ export interface PreparePassRoutingDependencies {
     senderRole: AgentRole;
     refs: string[];
     worktreePath: string;
-    createError: (message: string) => Error;
+    createError: PairflowCreateCommandError;
   }) => Promise<ReviewVerificationInputResolution | undefined>;
   readTranscriptEnvelopes?: (
     transcriptPath: string,

@@ -14,7 +14,7 @@ export interface WritePostAppendReviewVerificationArtifactInput {
   generatedAt: string;
   artifactPath: string;
   envelopeId: string;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export interface WritePostAppendReviewVerificationArtifactDependencies {

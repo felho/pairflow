@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import {
   buildEmitPassContext,
   type BuildEmitPassContextDependencies
@@ -9,7 +16,7 @@ import type { BuildPassRoutingInputInput } from "../../../../src/v11/shared/pass
 describe("emitPassContextBuilder", () => {
   it("builds flow context from normalized command, payload and workspace data", async () => {
     const now = new Date("2026-03-19T22:30:00.000Z");
-    const createError = (message: string) => new Error(message);
+    const createError = (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message));
     const passRouting = {
       intent: "review",
       inferredIntent: false,
@@ -197,7 +204,7 @@ describe("emitPassContextBuilder", () => {
         commandInput: {
           summary: "raw summary"
         },
-        createError: (message) => new Error(message),
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message)),
         inferDefaultPassIntent: () => "review"
       },
       dependencies

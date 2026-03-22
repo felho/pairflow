@@ -61,7 +61,7 @@ export interface RunNormalPassFlowInput {
   reviewerFindingsClaim?: ReviewerFindingsClaim;
   reviewerFindingsClaimParserMetadata?: ReviewerFindingsClaimParserMetadata;
   repeatClean: RepeatCleanMetadataInput;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export interface RunNormalPassFlowDependencies<TResult> {
@@ -126,7 +126,7 @@ export interface RunNormalPassFlowDependencies<TResult> {
     hasFindings: boolean;
     findings: Finding[];
     reviewerGateEvaluation?: ReturnType<typeof evaluateReviewerGateWarnings>;
-    createError: (message: string) => Error;
+    createError: PairflowCreateCommandError;
   }) => Promise<{
     written: LoadedStateSnapshot;
     docGateArtifactWriteFailureReason?: string;

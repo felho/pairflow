@@ -15,7 +15,7 @@ export function formatRepeatCleanPolicyRejectedMessage(input: {
 function raiseRepeatCleanPolicyRejection(input: {
   subtype: RepeatCleanPolicyRejectedSubtype;
   detail: string;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }): never {
   // reason_code=REPEAT_CLEAN_AUTOCONVERGE_POLICY_REJECTED context=repeat_clean_policy_rejection
   throw input.createError(
@@ -29,7 +29,7 @@ function raiseRepeatCleanPolicyRejection(input: {
 export function raiseRepeatCleanPolicyGateRejected(input: {
   errors: string[];
   diagnostics: string[];
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }): never {
   const diagnosticsDetail =
     input.diagnostics.length > 0
@@ -43,7 +43,7 @@ export function raiseRepeatCleanPolicyGateRejected(input: {
 }
 
 export function raiseRepeatCleanAutoConvergeStateStale(input: {
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }): never {
   raiseRepeatCleanPolicyRejection({
     subtype: "policy_gate_rejected",
@@ -55,7 +55,7 @@ export function raiseRepeatCleanAutoConvergeStateStale(input: {
 
 export function raiseRepeatCleanReviewVerificationWriteFailed(input: {
   reason: string;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }): never {
   raiseRepeatCleanPolicyRejection({
     subtype: "review_verification_write_failed",
@@ -67,7 +67,7 @@ export function raiseRepeatCleanReviewVerificationWriteFailed(input: {
 
 export function raiseRepeatCleanDownstreamConvergedRejected(input: {
   reason: string;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }): never {
   raiseRepeatCleanPolicyRejection({
     subtype: "downstream_converged_rejected",

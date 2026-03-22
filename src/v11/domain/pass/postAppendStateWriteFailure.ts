@@ -8,7 +8,7 @@ export function formatPostAppendStateWriteFailureMessage(input: {
 export function raisePostAppendStateWriteFailed(input: {
   envelopeId: string;
   reason: string;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }): never {
   // reason_code=PASS_STATE_WRITE_FAILED_POST_APPEND context=post_append_state_write
   throw input.createError(

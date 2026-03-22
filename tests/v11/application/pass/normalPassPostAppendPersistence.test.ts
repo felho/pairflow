@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import { persistNormalPassPostAppend } from "../../../../src/v11/application/pass/normalPassPostAppendPersistence.js";
 
 describe("persistNormalPassPostAppend", () => {
@@ -32,7 +39,7 @@ describe("persistNormalPassPostAppend", () => {
         taskArtifactPath: "/tmp/task.md",
         hasFindings: false,
         findings: [{ title: "p1", priority: "P1" }],
-        createError: (message) => new Error(message)
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
       },
       {
         writePostAppendReviewVerificationArtifact: async () => {
@@ -90,7 +97,7 @@ describe("persistNormalPassPostAppend", () => {
         taskArtifactPath: "/tmp/task.md",
         hasFindings: true,
         findings: [{ title: "p1", priority: "P1" }],
-        createError: (message) => new Error(message)
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
       },
       {
         writePostAppendReviewVerificationArtifact: async () => undefined,

@@ -27,7 +27,7 @@ export interface PersistNormalPassPostAppendInput {
   hasFindings: boolean;
   findings: Finding[];
   reviewerGateEvaluation?: ReturnType<typeof evaluateReviewerGateWarnings>;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export interface PersistNormalPassPostAppendDependencies {
@@ -39,7 +39,7 @@ export interface PersistNormalPassPostAppendDependencies {
     generatedAt: string;
     artifactPath: string;
     envelopeId: string;
-    createError: (message: string) => Error;
+    createError: PairflowCreateCommandError;
   }) => Promise<void>;
   writePostAppendPassState: (input: {
     statePath: string;
@@ -51,7 +51,7 @@ export interface PersistNormalPassPostAppendDependencies {
     nowIso: string;
     expectedFingerprint: string;
     envelopeId: string;
-    createError: (message: string) => Error;
+    createError: PairflowCreateCommandError;
   }) => Promise<LoadedStateSnapshot>;
   updateReviewerDocGateArtifact: (input: {
     now: Date;
@@ -61,7 +61,7 @@ export interface PersistNormalPassPostAppendDependencies {
     round: number;
     findings: Finding[];
     reviewerEvaluation?: ReturnType<typeof evaluateReviewerGateWarnings>;
-    createError: (message: string) => Error;
+    createError: PairflowCreateCommandError;
   }) => Promise<string | undefined>;
 }
 

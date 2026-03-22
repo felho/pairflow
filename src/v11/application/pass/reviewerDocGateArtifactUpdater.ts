@@ -21,7 +21,7 @@ export interface UpdateReviewerDocGateArtifactInput {
   round: number;
   findings: Finding[];
   reviewerEvaluation?: ReturnType<typeof evaluateReviewerGateWarnings>;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export function createDocGateReadFailureWarning(input: {

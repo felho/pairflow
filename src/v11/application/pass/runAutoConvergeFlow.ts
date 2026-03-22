@@ -53,7 +53,7 @@ export interface RunAutoConvergeFlowInput {
   repeatCleanReasonDetail: RepeatCleanAutoconvergeReasonDetail;
   repeatCleanTrigger: boolean;
   mostRecentPreviousReviewerCleanPassEnvelope: boolean;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
   onDownstreamRejected: (reason: string) => never;
 }
 
@@ -73,7 +73,7 @@ export interface RunAutoConvergeFlowDependencies<TResult> {
     bubbleId: string;
     reviewerAgent: AgentName;
     generatedAt: string;
-    createError: (message: string) => Error;
+    createError: PairflowCreateCommandError;
   }) => Promise<{
     expectedStateFingerprint: string;
   }>;
@@ -95,7 +95,7 @@ export interface RunAutoConvergeFlowDependencies<TResult> {
     round: number;
     senderRole: "implementer" | "reviewer";
     findings: Finding[];
-    createError: (message: string) => Error;
+    createError: PairflowCreateCommandError;
     repoPath: string;
     bubbleId: string;
     bubbleInstanceId: string;

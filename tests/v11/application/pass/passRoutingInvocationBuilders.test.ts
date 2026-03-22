@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import {
   buildPassRoutingDependencies,
   buildPassRoutingInput
@@ -7,7 +14,7 @@ import {
 
 describe("passRoutingInvocationBuilders", () => {
   it("builds preparePassRouting input and omits undefined optional fields", () => {
-    const createError = (message: string) => new Error(message);
+    const createError = (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message));
 
     const routingInput = buildPassRoutingInput({
       senderRole: "implementer",
@@ -53,7 +60,7 @@ describe("passRoutingInvocationBuilders", () => {
   });
 
   it("forwards optional inputIntent and accuracy_critical when provided", () => {
-    const createError = (message: string) => new Error(message);
+    const createError = (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message));
 
     const routingInput = buildPassRoutingInput({
       senderRole: "reviewer",

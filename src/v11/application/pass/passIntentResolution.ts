@@ -7,7 +7,7 @@ export interface ResolvePassIntentInput {
   inferredReviewerIntent?: PassIntent;
   noFindings: boolean;
   hasFindings: boolean;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export interface ResolvePassIntentDependencies {

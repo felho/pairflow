@@ -25,7 +25,7 @@ function collectRuntimeLogRefs(refs: string[]): string[] {
 }
 
 function raiseDocsOnlyRuntimeSkipConflict(
-  createError: (message: string) => Error,
+  createError: PairflowCreateCommandError,
   message: string
 ): never {
   // reason_code=DOCS_ONLY_SKIP_LOG_REF_CONFLICT context=docs_only_runtime_skip_guard
@@ -37,7 +37,7 @@ export function assertNoDocsOnlySkipLogRefConflict(input: {
   senderRole: AgentRole;
   summary: string;
   refs: string[];
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }): void {
   if (input.senderRole !== "implementer" || input.reviewArtifactType !== "document") {
     return;

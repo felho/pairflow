@@ -21,7 +21,7 @@ export interface EmitPassContextCommandInput {
 
 export interface BuildEmitPassContextInput {
   commandInput: EmitPassContextCommandInput;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
   inferDefaultPassIntent: (activeRole: AgentRole) => PassIntent;
 }
 

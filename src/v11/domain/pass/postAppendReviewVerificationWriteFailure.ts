@@ -8,7 +8,7 @@ export function formatPostAppendReviewVerificationWriteFailureMessage(input: {
 export function raisePostAppendReviewVerificationWriteFailed(input: {
   envelopeId: string;
   reason: string;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }): never {
   // reason_code=PASS_REVIEW_VERIFICATION_WRITE_FAILED_POST_APPEND context=post_append_review_verification_artifact_write
   throw input.createError(

@@ -25,7 +25,7 @@ export interface BuildPassRoutingInputInput {
   transcriptPath: string;
   reviewer: BubbleConfig["agents"]["reviewer"];
   implementer: BubbleConfig["agents"]["implementer"];
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export function buildPassRoutingInput(

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import type { ReviewVerificationInputResolution } from "../../../../src/core/reviewer/reviewVerification.js";
 import { prepareRepeatCleanAutoConverge } from "../../../../src/v11/application/pass/autoConvergePreparation.js";
 
@@ -10,8 +17,8 @@ class TestAutoConvergePreparationError extends Error {
   }
 }
 
-function createError(message: string): Error {
-  return new TestAutoConvergePreparationError(message);
+function createError(message: PairflowCommandErrorInput): Error {
+  return new TestAutoConvergePreparationError(toErrorMessage(message));
 }
 
 function buildInput(

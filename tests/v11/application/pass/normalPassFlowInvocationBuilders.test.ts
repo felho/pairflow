@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import {
   type BuildNormalPassFlowDependenciesInput,
   type BuildNormalPassFlowInputInput,
@@ -75,7 +82,7 @@ function createNormalBaseInput(
       },
       ...passRoutingOverrides
     },
-    createError: (message: string) => new Error(message)
+    createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
   } as unknown as BuildNormalPassFlowInputInput;
 }
 

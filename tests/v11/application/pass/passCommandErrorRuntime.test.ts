@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import { createPassCommandErrorRuntime } from "../../../../src/v11/shared/pass/passCommandErrorRuntime.js";
 
 class SyntheticPassCommandError extends Error {
@@ -12,7 +19,7 @@ class SyntheticPassCommandError extends Error {
 describe("passCommandErrorRuntime", () => {
   it("exposes createError via the provided factory", () => {
     const runtime = createPassCommandErrorRuntime({
-      createPassCommandError: (message) => new SyntheticPassCommandError(message),
+      createPassCommandError: (message) => new SyntheticPassCommandError(toErrorMessage(message)),
       raiseDownstreamRejected: ({ reason, createError }) => {
         throw createError(`wrapped:${reason}`);
       }
@@ -28,7 +35,7 @@ describe("passCommandErrorRuntime", () => {
     let capturedErrorMessage: string | undefined;
 
     const runtime = createPassCommandErrorRuntime({
-      createPassCommandError: (message) => new SyntheticPassCommandError(message),
+      createPassCommandError: (message) => new SyntheticPassCommandError(toErrorMessage(message)),
       raiseDownstreamRejected: ({ reason, createError }) => {
         capturedReason = reason;
         capturedErrorMessage = createError("from-callback").message;

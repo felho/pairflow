@@ -18,7 +18,7 @@ export interface PreparePassWorkspaceContextInput {
   cwd?: string | undefined;
   now: Date;
   nowIso: string;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export interface PreparePassWorkspaceContextDependencies {

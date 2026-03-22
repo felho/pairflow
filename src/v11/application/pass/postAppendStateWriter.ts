@@ -16,7 +16,7 @@ export interface WritePostAppendPassStateInput {
   nowIso: string;
   expectedFingerprint: string;
   envelopeId: string;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export interface WritePostAppendPassStateDependencies {

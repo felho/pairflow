@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import type { EmitConvergedResult } from "../../../../src/core/agent/converged.js";
 import { finalizeAutoConvergePass } from "../../../../src/v11/application/pass/autoConvergeFinalization.js";
 
@@ -31,7 +38,7 @@ describe("finalizeAutoConvergePass", () => {
         round: 2,
         senderRole: "reviewer",
         findings: [{ title: "p1", priority: "P1" }],
-        createError: (message) => new Error(message),
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message)),
         repoPath: "/tmp/repo",
         bubbleId: "b_123",
         bubbleInstanceId: "inst_1",
@@ -94,7 +101,7 @@ describe("finalizeAutoConvergePass", () => {
         round: 2,
         senderRole: "implementer",
         findings: [],
-        createError: (message) => new Error(message),
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message)),
         repoPath: "/tmp/repo",
         bubbleId: "b_123",
         bubbleInstanceId: "inst_1",

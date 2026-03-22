@@ -1,7 +1,7 @@
 import type { PassIntent } from "../../../types/protocol.js";
 
 function raiseReviewerVerificationConsistencyError(
-  createError: (message: string) => Error,
+  createError: PairflowCreateCommandError,
   message: string
 ): never {
   // reason_code=REVIEWER_VERIFICATION_CONSISTENCY_INVALID context=reviewer_verification_consistency_guard
@@ -12,7 +12,7 @@ export function validateReviewerVerificationConsistency(input: {
   payloadOverall: "pass" | "fail";
   intent: PassIntent;
   hasFindings: boolean;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }): void {
   if (
     input.payloadOverall === "fail"

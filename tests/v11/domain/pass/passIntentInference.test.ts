@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+}
+
 import { inferPassIntentFromActiveRole } from "../../../../src/v11/domain/pass/passIntentInference.js";
 
 describe("passIntentInference", () => {
@@ -7,7 +14,7 @@ describe("passIntentInference", () => {
     expect(
       inferPassIntentFromActiveRole({
         activeRole: "implementer",
-        createError: (message) => new Error(message)
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
       })
     ).toBe("review");
   });
@@ -16,7 +23,7 @@ describe("passIntentInference", () => {
     expect(
       inferPassIntentFromActiveRole({
         activeRole: "reviewer",
-        createError: (message) => new Error(message)
+        createError: (message: PairflowCommandErrorInput) => new Error(toErrorMessage(message))
       })
     ).toBe("fix_request");
   });
@@ -25,7 +32,7 @@ describe("passIntentInference", () => {
     expect(() =>
       inferPassIntentFromActiveRole({
         activeRole: "meta_reviewer",
-        createError: (message) => new Error(`synthetic:${message}`)
+        createError: (message) => new Error(`synthetic:${toErrorMessage(message)}`)
       })
     ).toThrow("synthetic:PASS_INTENT_ACTIVE_ROLE_UNSUPPORTED:");
   });
