@@ -10,6 +10,13 @@ describe("runConvergedFlow", () => {
       {
         summary: "converged summary",
         refs: ["artifacts/review.md"],
+        findings: [
+          {
+            severity: "P2",
+            title: "Follow-up",
+            refs: ["artifact://review/follow-up.md"]
+          }
+        ],
         now: new Date("2026-03-19T19:30:00.000Z"),
         cwd: "/repo/worktree",
         expectedStateFingerprint: "fp_1",
@@ -85,6 +92,13 @@ describe("runConvergedFlow", () => {
         executeConvergedExecution: async (input) => {
           callOrder.push("executeConvergedExecution");
           expect(input.convergencePolicyDiagnostics).toEqual(["diag-a"]);
+          expect(input.findings).toEqual([
+            {
+              severity: "P2",
+              title: "Follow-up",
+              refs: ["artifact://review/follow-up.md"]
+            }
+          ]);
           return {
             convergence: {
               sequence: 41,
@@ -187,6 +201,102 @@ describe("runConvergedFlow", () => {
       )
     ).rejects.toThrow(
       "wrapped:Convergence validation failed: MISSING_ALTERNATION Diagnostics: DIAG_A"
+    );
+  });
+
+  it("does not forward findings to execution when input findings is an explicit empty array", async () => {
+    await runConvergedFlow(
+      {
+        summary: "converged summary",
+        refs: [],
+        findings: [],
+        now: new Date("2026-03-19T19:40:00.000Z"),
+        createError: (message) => new Error(message),
+        resolveMetaReviewRolloutBlockingReasonCodes: () => []
+      },
+      {
+        prepareConvergedRouting: async () =>
+          ({
+            resolved: {
+              bubbleConfig: {
+                review_artifact_type: "document",
+                severity_gate_round: 2
+              },
+              bubblePaths: {
+                transcriptPath: "/repo/.pairflow/transcript.ndjson"
+              }
+            },
+            bubbleIdentity: {},
+            state: {
+              round: 3,
+              round_role_history: []
+            },
+            implementer: "codex",
+            reviewer: "claude"
+          }) as never,
+        prepareConvergedPolicy: async () => ({
+          transcript: [],
+          policy: {
+            ok: true,
+            errors: [],
+            diagnostics: []
+          },
+          convergencePolicyDiagnostics: []
+        }),
+        prepareConvergedValidation: async () => ({
+          specLockState: {
+            state: "IMPLEMENTABLE",
+            open_blocker_count: 0,
+            open_required_now_count: 0
+          },
+          roundGateState: {
+            applies: false,
+            violated: false,
+            round: 3
+          },
+          summaryVerifierGateDecision: {
+            gate_decision: "allow",
+            reason_code: "no_claim_in_docs_only",
+            review_artifact_type: "document",
+            verifier_status: "trusted",
+            claim_classes_detected: "none",
+            matched_claim_triggers: []
+          }
+        }),
+        executeConvergedExecution: async (input) => {
+          expect("findings" in input).toBe(false);
+          return {
+            convergence: {
+              sequence: 41,
+              envelope: {
+                id: "env_conv_41"
+              },
+              mirrorWriteFailures: []
+            },
+            gateResult: {
+              route: "human_gate_approve",
+              gateSequence: 42,
+              gateEnvelope: {
+                id: "env_gate_42",
+                type: "APPROVAL_REQUEST"
+              },
+              state: {
+                state: "READY_FOR_HUMAN_APPROVAL"
+              }
+            }
+          } as never;
+        },
+        finalizeConvergedFlow: async () =>
+          ({
+            bubbleId: "b_run_001",
+            convergenceSequence: 41,
+            convergenceEnvelope: { id: "env_conv_41" },
+            gateRoute: "human_gate_approve",
+            approvalRequestSequence: 42,
+            approvalRequestEnvelope: { id: "env_gate_42", type: "APPROVAL_REQUEST" },
+            state: { state: "READY_FOR_HUMAN_APPROVAL" }
+          }) as never
+      }
     );
   });
 });

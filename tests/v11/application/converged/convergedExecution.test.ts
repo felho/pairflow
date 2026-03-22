@@ -33,16 +33,32 @@ describe("executeConvergedExecution", () => {
         implementer: "codex",
         summary: "converged summary",
         refs: ["artifacts/review.md"],
+        findings: [
+          {
+            severity: "P2",
+            title: "Follow-up",
+            refs: ["artifact://review/follow-up.md"]
+          }
+        ],
         now: new Date("2026-03-19T11:00:00.000Z"),
         convergencePolicyDiagnostics: ["diagnostic-a"]
       },
       {
-        appendProtocolEnvelope: async () => ({
-          sequence: 17,
-          envelope: {
-            id: "env_conv_1"
-          }
-        }) as never,
+        appendProtocolEnvelope: async (input) => {
+          expect(input.envelope.payload.findings).toEqual([
+            {
+              severity: "P2",
+              title: "Follow-up",
+              refs: ["artifact://review/follow-up.md"]
+            }
+          ]);
+          return {
+            sequence: 17,
+            envelope: {
+              id: "env_conv_1"
+            }
+          } as never;
+        },
         applyMetaReviewGateOnConvergence: async () => ({
           bubbleId: "b_exec_001",
           route: "human_gate_approve",
@@ -148,12 +164,15 @@ describe("executeConvergedExecution", () => {
         convergencePolicyDiagnostics: []
       },
       {
-        appendProtocolEnvelope: async () => ({
-          sequence: 19,
-          envelope: {
-            id: "env_conv_2"
-          }
-        }) as never,
+        appendProtocolEnvelope: async (input) => {
+          expect(input.envelope.payload.findings).toBeUndefined();
+          return {
+            sequence: 19,
+            envelope: {
+              id: "env_conv_2"
+            }
+          } as never;
+        },
         applyMetaReviewGateOnConvergence: async () => ({
           bubbleId: "b_exec_002",
           route: "auto_rework",

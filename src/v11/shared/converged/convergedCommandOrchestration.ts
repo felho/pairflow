@@ -22,12 +22,14 @@ export async function emitConvergedFromWorkspaceCommandOrchestration(
   const normalized = normalizeConvergedCommandInput({
     summary: input.summary,
     refs: input.refs,
+    findings: input.findings,
     now: input.now,
     createError: createConvergedCommandError
   });
   const invocation = buildConvergedCommandFlowInvocation({
     summary: normalized.summary,
     refs: normalized.refs,
+    ...(normalized.findings.length > 0 ? { findings: normalized.findings } : {}),
     now: normalized.now,
     cwd: input.cwd,
     expectedStateFingerprint: input.expectedStateFingerprint,

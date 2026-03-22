@@ -16,6 +16,12 @@ describe("convergedFlowInvocationBuilders", () => {
     const input = buildConvergedFlowInput({
       summary: "ready for converged",
       refs: ["artifacts/review.md"],
+      findings: [
+        {
+          severity: "P2",
+          title: "Follow-up"
+        }
+      ],
       now,
       expectedRound: 4,
       createError,
@@ -25,6 +31,12 @@ describe("convergedFlowInvocationBuilders", () => {
     expect(input).toEqual({
       summary: "ready for converged",
       refs: ["artifacts/review.md"],
+      findings: [
+        {
+          severity: "P2",
+          title: "Follow-up"
+        }
+      ],
       now,
       expectedRound: 4,
       createError,
@@ -54,6 +66,19 @@ describe("convergedFlowInvocationBuilders", () => {
     expect("expectedStateFingerprint" in input).toBe(false);
     expect("expectedRound" in input).toBe(false);
     expect("expectedReviewer" in input).toBe(false);
+  });
+
+  it("omits findings from runConvergedFlow input when findings is an explicit empty array", () => {
+    const input = buildConvergedFlowInput({
+      summary: "ready for converged",
+      refs: [],
+      findings: [],
+      now: new Date("2026-03-19T20:12:00.000Z"),
+      createError: (message: string) => new Error(message),
+      resolveMetaReviewRolloutBlockingReasonCodes: () => []
+    });
+
+    expect("findings" in input).toBe(false);
   });
 
   it("builds dependencies and forwards only provided optional overrides", () => {
@@ -201,6 +226,13 @@ describe("convergedFlowInvocationBuilders", () => {
     const invocation = buildConvergedCommandFlowInvocation({
       summary: "ready for converged",
       refs: ["artifacts/review.md"],
+      findings: [
+        {
+          severity: "P3",
+          title: "Minor note",
+          refs: ["artifact://review/minor.md"]
+        }
+      ],
       now,
       expectedRound: 5,
       createError,
@@ -220,6 +252,13 @@ describe("convergedFlowInvocationBuilders", () => {
     expect(invocation.flowInput).toEqual({
       summary: "ready for converged",
       refs: ["artifacts/review.md"],
+      findings: [
+        {
+          severity: "P3",
+          title: "Minor note",
+          refs: ["artifact://review/minor.md"]
+        }
+      ],
       now,
       expectedRound: 5,
       createError,
@@ -253,5 +292,18 @@ describe("convergedFlowInvocationBuilders", () => {
     expect("recoverMetaReviewGateFromSnapshot" in invocation.flowDependencies).toBe(false);
     expect("emitTmuxDeliveryNotification" in invocation.flowDependencies).toBe(false);
     expect("emitBubbleNotification" in invocation.flowDependencies).toBe(false);
+  });
+
+  it("omits findings from command flow invocation when findings is an explicit empty array", () => {
+    const invocation = buildConvergedCommandFlowInvocation({
+      summary: "ready for converged",
+      refs: [],
+      findings: [],
+      now: new Date("2026-03-19T20:21:00.000Z"),
+      createError: (message: string) => new Error(message),
+      resolveMetaReviewRolloutBlockingReasonCodes: () => []
+    });
+
+    expect("findings" in invocation.flowInput).toBe(false);
   });
 });

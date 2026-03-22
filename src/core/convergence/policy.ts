@@ -52,10 +52,25 @@ export interface SummaryFindingsAssertionEvaluation {
   positiveClauseCount: number;
 }
 
+export interface SummaryNoFindingsAssertionEvaluation {
+  hasNoFindingsAssertion: boolean;
+  evaluatedClauseCount: number;
+  noFindingsClauseCount: number;
+  positiveClauseCount: number;
+}
+
+export type ConvergedSummaryFindingsContradiction =
+  | "summary_open_without_findings"
+  | "summary_clean_with_findings";
+
 export const claimStateRequiredReasonCode = "CLAIM_STATE_REQUIRED";
 export const claimSourceInvalidReasonCode = "CLAIM_SOURCE_INVALID";
 export const claimParserDivergenceDiagnosticReasonCode =
   "CLAIM_PARSER_DIVERGENCE_DIAGNOSTIC";
+export const claimSourcePayloadFindingsCountFallbackDiagnosticReasonCode =
+  "CLAIM_SOURCE_PAYLOAD_FINDINGS_COUNT_FALLBACK_DIAGNOSTIC";
+export const claimStateRequiredSuppressedDiagnosticReasonCode =
+  "CLAIM_STATE_REQUIRED_SUPPRESSED_DIAGNOSTIC";
 const summaryClauseSplitPattern =
   /(?:[.;!?]|\bbut\b|\bhowever\b|\byet\b|\bthough\b|\bwhile\b|\balthough\b|\bdespite\b|(?<!p[0-3]),(?!\s*(?:were\s+)?(?:resolved|closed|cleared|fixed|addressed|handled)\b)|(?<!\bp[0-3]\s)(?<!\bp[0-3],\s)(?<!\bp[0-3],)\band\b)+/iu;
 const summaryFindingsWordPattern = /\bfindings?\b/iu;
@@ -280,6 +295,37 @@ function clauseHasNegationOrZeroGuard(clause: string): boolean {
   );
 }
 
+function clauseHasExplicitNoFindingsAssertion(clause: string): boolean {
+  const severityCounts = parseSeverityCountStats(clause);
+  if (
+    summaryNoFindingsPattern.test(clause)
+    || summaryNoFindingsFoundPattern.test(clause)
+    || summaryWithoutFindingsPattern.test(clause)
+    || summaryFindingsZeroCountPattern.test(clause)
+    || summaryFindingsRemainZeroCountPattern.test(clause)
+    || summaryZeroFindingsPattern.test(clause)
+    || summaryNoSeverityFindingsPattern.test(clause)
+    || summaryNoSeverityAlternationFindingsPattern.test(clause)
+    || summaryNoSeverityFindingsFoundPattern.test(clause)
+    || summaryNegatedSeverityFindingsPattern.test(clause)
+    || summaryNegatedFindingsCountPattern.test(clause)
+    || summarySeverityFindingsZeroCountPattern.test(clause)
+  ) {
+    if (severityCounts.hasPositiveSeverityCount) {
+      return false;
+    }
+    return true;
+  }
+
+  return (
+    summaryFindingsWordPattern.test(clause)
+    && severityCounts.hasSeverityCount
+    && !severityCounts.hasPositiveSeverityCount
+    && !summaryPositiveFindingsCountPattern.test(clause)
+    && !summaryPositiveFindingsAssignedCountPattern.test(clause)
+  );
+}
+
 function clauseHasPositiveFindingsAssertion(clause: string): boolean {
   const severityCounts = parseSeverityCountStats(clause);
   if (severityCounts.hasPositiveSeverityCount) {
@@ -325,6 +371,51 @@ export function evaluatePositiveSummaryFindingsAssertion(
   };
 }
 
+export function evaluateNoFindingsSummaryFindingsAssertion(
+  summary: string | undefined
+): SummaryNoFindingsAssertionEvaluation {
+  const normalized = normalizeSummaryAssertionText(summary);
+  const clauses = splitSummaryIntoClauses(normalized);
+  let noFindingsClauseCount = 0;
+  let positiveClauseCount = 0;
+
+  for (const clause of clauses) {
+    if (clauseHasNegationOrZeroGuard(clause)) {
+      if (clauseHasExplicitNoFindingsAssertion(clause)) {
+        noFindingsClauseCount += 1;
+      }
+      continue;
+    }
+    if (clauseHasPositiveFindingsAssertion(clause)) {
+      positiveClauseCount += 1;
+    }
+  }
+
+  return {
+    hasNoFindingsAssertion: noFindingsClauseCount > 0 && positiveClauseCount === 0,
+    evaluatedClauseCount: clauses.length,
+    noFindingsClauseCount,
+    positiveClauseCount
+  };
+}
+
+export function resolveConvergedSummaryFindingsContradiction(input: {
+  summary: string;
+  hasFindings: boolean;
+}): ConvergedSummaryFindingsContradiction | undefined {
+  const positiveSummaryAssertion =
+    evaluatePositiveSummaryFindingsAssertion(input.summary);
+  const noFindingsSummaryAssertion =
+    evaluateNoFindingsSummaryFindingsAssertion(input.summary);
+  if (positiveSummaryAssertion.hasPositiveAssertion && !input.hasFindings) {
+    return "summary_open_without_findings";
+  }
+  if (input.hasFindings && noFindingsSummaryAssertion.hasNoFindingsAssertion) {
+    return "summary_clean_with_findings";
+  }
+  return undefined;
+}
+
 function resolveFindingsClaimStateFromFindingsPayload(
   findings: unknown
 ): FindingsClaimState | undefined {
@@ -347,6 +438,7 @@ interface StructuredPassFindingsClaimResolution {
     source: FindingsClaimSource;
   };
   errors: string[];
+  usedCountFallback: boolean;
 }
 
 function resolveStructuredPassFindingsClaim(payload: ProtocolEnvelope["payload"]): StructuredPassFindingsClaimResolution {
@@ -384,19 +476,26 @@ function resolveStructuredPassFindingsClaim(payload: ProtocolEnvelope["payload"]
         `${claimSourceInvalidReasonCode}: previous reviewer PASS findings_claim_source is required when findings_claim_state is provided.`
       );
     }
-    return { errors };
+    return {
+      errors,
+      usedCountFallback: false
+    };
   }
 
   if (hasStateRaw && hasSourceRaw) {
     if (explicitState === undefined || explicitSource === undefined) {
-      return { errors };
+      return {
+        errors,
+        usedCountFallback: false
+      };
     }
     return {
       claim: {
         state: explicitState,
         source: explicitSource
       },
-      errors
+      errors,
+      usedCountFallback: false
     };
   }
 
@@ -409,11 +508,15 @@ function resolveStructuredPassFindingsClaim(payload: ProtocolEnvelope["payload"]
         state: countDerivedState,
         source: "payload_findings_count"
       },
-      errors
+      errors,
+      usedCountFallback: true
     };
   }
 
-  return { errors };
+  return {
+    errors,
+    usedCountFallback: false
+  };
 }
 
 function hasOpenClaimParserDivergence(input: {
@@ -534,11 +637,25 @@ export function validateConvergencePolicy(
       previousReviewerVerdict.payload.summary
     );
     const claim = claimResolution.claim;
+    if (
+      claimResolution.usedCountFallback
+      && input.currentRound >= input.severity_gate_round
+    ) {
+      diagnostics.push(
+        `${claimSourcePayloadFindingsCountFallbackDiagnosticReasonCode}: post_gate=true source=payload_findings_count explicit_claim=false.`
+      );
+    }
 
     if (claim === undefined) {
-      errors.push(
-        `${claimStateRequiredReasonCode}: Convergence requires previous reviewer PASS to declare structured findings claim state/source (payload flags or findings count).`
-      );
+      if (claimResolution.errors.length === 0) {
+        errors.push(
+          `${claimStateRequiredReasonCode}: Convergence requires previous reviewer PASS to declare structured findings claim state/source (payload flags or findings count).`
+        );
+      } else {
+        diagnostics.push(
+          `${claimStateRequiredSuppressedDiagnosticReasonCode}: missing_claim_generic_error_suppressed due_to=${claimResolution.errors.length}_claim_error(s).`
+        );
+      }
       if (parserClaimState === "open_findings") {
         diagnostics.push(
           `${claimParserDivergenceDiagnosticReasonCode}: parser_state=open_findings structured_state=missing.`

@@ -1,4 +1,5 @@
 import type { AgentName } from "../../../types/bubble.js";
+import type { ConvergedStructuredFinding } from "./convergedCommandTypes.js";
 import { executeConvergedExecution } from "../../application/converged/convergedExecution.js";
 import { finalizeConvergedFlow } from "../../application/converged/convergedFinalization.js";
 import { prepareConvergedPolicy } from "../../application/converged/convergedPolicyPreparation.js";
@@ -12,6 +13,7 @@ import type {
 export interface BuildConvergedFlowInputInput {
   summary: string;
   refs: string[];
+  findings?: ConvergedStructuredFinding[] | undefined;
   now: Date;
   cwd?: string | undefined;
   expectedStateFingerprint?: string | undefined;
@@ -28,6 +30,9 @@ export function buildConvergedFlowInput(
   return {
     summary: input.summary,
     refs: input.refs,
+    ...(input.findings !== undefined && input.findings.length > 0
+      ? { findings: input.findings }
+      : {}),
     now: input.now,
     ...(input.cwd !== undefined
       ? { cwd: input.cwd }
@@ -126,6 +131,7 @@ export function buildDefaultConvergedFlowDependencies(
 export interface BuildConvergedCommandFlowInvocationInput {
   summary: string;
   refs: string[];
+  findings?: ConvergedStructuredFinding[] | undefined;
   now: Date;
   cwd?: string | undefined;
   expectedStateFingerprint?: string | undefined;
@@ -149,6 +155,7 @@ export function buildConvergedCommandFlowInvocation(
     flowInput: buildConvergedFlowInput({
       summary: input.summary,
       refs: input.refs,
+      findings: input.findings,
       now: input.now,
       cwd: input.cwd,
       expectedStateFingerprint: input.expectedStateFingerprint,
