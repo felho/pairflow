@@ -38,9 +38,17 @@ async function mergeBubbleBranchIntoBase(input: {
       allowFailure: true
     }).catch(() => undefined);
     if (error instanceof GitCommandError) {
-      throw input.createError(
-        `${MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION}: Merge failed for ${input.bubbleBranch} -> ${input.baseBranch}. Resolve conflicts manually.`
-      );
+      throw input.createError({
+        reasonCode: MERGE_CONFLICT_REQUIRES_MANUAL_RESOLUTION,
+        message:
+          `Merge failed for ${input.bubbleBranch} -> ${input.baseBranch}. Resolve conflicts manually.`,
+        context: {
+          command_name: "merge",
+          bubble_branch: input.bubbleBranch,
+          base_branch: input.baseBranch
+        },
+        cause: error
+      });
     }
     throw error;
   }
@@ -94,13 +102,27 @@ async function runMergeRemoteOperations(input: {
     );
     if (remoteDelete.exitCode !== 0) {
       if (hasOriginRemoteError(remoteDelete.stderr)) {
-        throw input.createError(
-          `${MERGE_REMOTE_DELETE_ORIGIN_UNAVAILABLE}: Failed to delete remote branch ${input.bubbleBranch}: origin remote is not available.`
-        );
+        throw input.createError({
+          reasonCode: MERGE_REMOTE_DELETE_ORIGIN_UNAVAILABLE,
+          message:
+            `Failed to delete remote branch ${input.bubbleBranch}: origin remote is not available.`,
+          context: {
+            command_name: "merge",
+            bubble_branch: input.bubbleBranch
+          },
+          cause: remoteDelete.stderr
+        });
       }
-      throw input.createError(
-        `${MERGE_REMOTE_DELETE_FAILED}: Failed to delete remote branch ${input.bubbleBranch}: ${remoteDelete.stderr.trim()}`
-      );
+      throw input.createError({
+        reasonCode: MERGE_REMOTE_DELETE_FAILED,
+        message:
+          `Failed to delete remote branch ${input.bubbleBranch}: ${remoteDelete.stderr.trim()}`,
+        context: {
+          command_name: "merge",
+          bubble_branch: input.bubbleBranch
+        },
+        cause: remoteDelete.stderr
+      });
     }
     deletedRemoteBranch = true;
   }

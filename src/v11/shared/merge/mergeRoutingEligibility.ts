@@ -6,7 +6,7 @@ export interface MergeBranchValidationInput {
   bubbleBranch: string;
   baseBranchExists: boolean;
   bubbleBranchExists: boolean;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 const MERGE_STATE_DONE_REQUIRED = "MERGE_STATE_DONE_REQUIRED";
@@ -31,12 +31,17 @@ export function hasOriginRemoteError(stderr: string): boolean {
 
 export function assertMergeStateEligibility(
   state: BubbleStateSnapshot,
-  createError: (message: string) => Error
+  createError: PairflowCreateCommandError
 ): void {
   if (state.state !== "DONE") {
-    throw createError(
-      `${MERGE_STATE_DONE_REQUIRED}: bubble merge requires state DONE (current: ${state.state}); context: command_name=merge.`
-    );
+    throw createError({
+      reasonCode: MERGE_STATE_DONE_REQUIRED,
+      message: `bubble merge requires state DONE (current: ${state.state}).`,
+      context: {
+        command_name: "merge",
+        current_state: state.state
+      }
+    });
   }
 }
 
@@ -44,26 +49,42 @@ export function assertMergeBranchEligibility(
   input: MergeBranchValidationInput
 ): void {
   if (!input.baseBranchExists) {
-    throw input.createError(
-      `${MERGE_BASE_BRANCH_NOT_FOUND}: Base branch not found locally: ${input.baseBranch}`
-    );
+    throw input.createError({
+      reasonCode: MERGE_BASE_BRANCH_NOT_FOUND,
+      message: `Base branch not found locally: ${input.baseBranch}`,
+      context: {
+        command_name: "merge",
+        base_branch: input.baseBranch
+      }
+    });
   }
   if (!input.bubbleBranchExists) {
-    throw input.createError(
-      `${MERGE_BUBBLE_BRANCH_NOT_FOUND}: Bubble branch not found locally: ${input.bubbleBranch}`
-    );
+    throw input.createError({
+      reasonCode: MERGE_BUBBLE_BRANCH_NOT_FOUND,
+      message: `Bubble branch not found locally: ${input.bubbleBranch}`,
+      context: {
+        command_name: "merge",
+        bubble_branch: input.bubbleBranch
+      }
+    });
   }
   if (input.baseBranch === input.bubbleBranch) {
-    throw input.createError(
-      `${MERGE_BRANCHES_IDENTICAL}: Base branch and bubble branch cannot be identical.`
-    );
+    throw input.createError({
+      reasonCode: MERGE_BRANCHES_IDENTICAL,
+      message: "Base branch and bubble branch cannot be identical.",
+      context: {
+        command_name: "merge",
+        base_branch: input.baseBranch,
+        bubble_branch: input.bubbleBranch
+      }
+    });
   }
 }
 
 export async function assertCleanRepoWorkingTree(
   repoPath: string,
   runGitCommand: GitRunner,
-  createError: (message: string) => Error
+  createError: PairflowCreateCommandError
 ): Promise<void> {
   const status = await runGitCommand(["status", "--porcelain"], {
     cwd: repoPath
@@ -80,25 +101,36 @@ export async function assertCleanRepoWorkingTree(
         !line.startsWith("?? .pairflow/")
     );
   if (blockingLines.length > 0) {
-    throw createError(
-      `${MERGE_REPO_DIRTY}: Repository has uncommitted changes at ${repoPath}. Commit/stash them before bubble merge.`
-    );
+    throw createError({
+      reasonCode: MERGE_REPO_DIRTY,
+      message: `Repository has uncommitted changes at ${repoPath}. Commit/stash them before bubble merge.`,
+      context: {
+        command_name: "merge",
+        repo_path: repoPath,
+        blocking_line_count: blockingLines.length
+      }
+    });
   }
 }
 
 export async function ensureOriginRemote(
   repoPath: string,
   runGitCommand: GitRunner,
-  createError: (message: string) => Error
+  createError: PairflowCreateCommandError
 ): Promise<void> {
   const origin = await runGitCommand(["remote", "get-url", "origin"], {
     cwd: repoPath,
     allowFailure: true
   });
   if (origin.exitCode !== 0) {
-    throw createError(
-      `${MERGE_ORIGIN_REMOTE_REQUIRED}: Remote origin is required for push/delete-remote operations at ${repoPath}.`
-    );
+    throw createError({
+      reasonCode: MERGE_ORIGIN_REMOTE_REQUIRED,
+      message: `Remote origin is required for push/delete-remote operations at ${repoPath}.`,
+      context: {
+        command_name: "merge",
+        repo_path: repoPath
+      }
+    });
   }
 }
 

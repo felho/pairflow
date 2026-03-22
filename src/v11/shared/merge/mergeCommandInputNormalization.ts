@@ -13,7 +13,7 @@ export interface NormalizedMergeBubbleInput {
 
 export function normalizeMergeBubbleInput(
   input: MergeBubbleInput,
-  createError: (message: string) => Error
+  createError: PairflowCreateCommandError
 ): NormalizedMergeBubbleInput {
   const now = input.now ?? new Date();
   return {

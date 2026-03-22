@@ -10,7 +10,7 @@ import type {
 export interface NormalizeBubbleMergeErrorInput {
   error: unknown;
   isBubbleMergeError: (candidate: unknown) => boolean;
-  createBubbleMergeError: (message: string) => Error;
+  createBubbleMergeError: PairflowCreateCommandError;
   isBubbleLookupError: (candidate: unknown) => candidate is BubbleLookupError;
   isGitCommandError: (candidate: unknown) => candidate is GitCommandError;
   isWorkspaceCleanupError: (candidate: unknown) => candidate is WorkspaceCleanupError;

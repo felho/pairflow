@@ -3,7 +3,15 @@ import { describe, expect, it } from "vitest";
 import { normalizeMergeBubbleInput } from "../../../../src/v11/shared/merge/mergeCommandInputNormalization.js";
 import { BubbleMergeError } from "../../../../src/v11/shared/merge/mergeCommandErrorRuntime.js";
 
-const createError = (message: string) => new BubbleMergeError(message);
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return `${input.reasonCode !== undefined ? `${input.reasonCode}: ` : ""}${input.message}`;
+}
+
+const createError: PairflowCreateCommandError = (input) =>
+  new BubbleMergeError(toErrorMessage(input));
 
 describe("mergeCommandInputNormalization", () => {
   it("normalizes flags and now timestamp", () => {
