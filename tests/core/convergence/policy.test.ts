@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  evaluateNoFindingsSummaryFindingsAssertion,
   evaluatePositiveSummaryFindingsAssertion,
   evaluateReviewerFindingsAggregate,
+  resolveConvergedSummaryFindingsContradiction,
   validateConvergencePolicy
 } from "../../../src/core/convergence/policy.js";
 import type { ProtocolEnvelope } from "../../../src/types/protocol.js";
@@ -426,6 +428,83 @@ describe("evaluatePositiveSummaryFindingsAssertion", () => {
   });
 });
 
+describe("evaluateNoFindingsSummaryFindingsAssertion", () => {
+  it("detects explicit clean/no-findings assertions", () => {
+    expect(
+      evaluateNoFindingsSummaryFindingsAssertion("No findings remain after review.")
+        .hasNoFindingsAssertion
+    ).toBe(true);
+    expect(
+      evaluateNoFindingsSummaryFindingsAssertion("No open P2 or P3 findings remain.")
+        .hasNoFindingsAssertion
+    ).toBe(true);
+  });
+
+  it("does not classify mixed clean+open clauses as no-findings", () => {
+    const result = evaluateNoFindingsSummaryFindingsAssertion(
+      "No findings remain and P2 findings remain open."
+    );
+    expect(result.hasNoFindingsAssertion).toBe(false);
+    expect(result.noFindingsClauseCount).toBeGreaterThan(0);
+    expect(result.positiveClauseCount).toBeGreaterThan(0);
+  });
+
+  it("does not classify neutral summaries as no-findings assertions", () => {
+    expect(
+      evaluateNoFindingsSummaryFindingsAssertion("Ready for approval.")
+        .hasNoFindingsAssertion
+    ).toBe(false);
+  });
+
+  it("treats resolved-count/history phrasing as neutral for no-findings assertion", () => {
+    for (const summary of [
+      "2 findings were resolved.",
+      "2 findings had been resolved.",
+      "P2 findings were resolved."
+    ]) {
+      const result = evaluateNoFindingsSummaryFindingsAssertion(summary);
+      expect(result.hasNoFindingsAssertion).toBe(false);
+      expect(result.noFindingsClauseCount).toBe(0);
+      expect(result.positiveClauseCount).toBe(0);
+    }
+  });
+});
+
+describe("resolveConvergedSummaryFindingsContradiction", () => {
+  it("returns summary_open_without_findings when summary claims open findings but findings are missing", () => {
+    expect(
+      resolveConvergedSummaryFindingsContradiction({
+        summary: "P2 findings remain open.",
+        hasFindings: false
+      })
+    ).toBe("summary_open_without_findings");
+  });
+
+  it("returns summary_clean_with_findings when summary claims clean state while findings are present", () => {
+    expect(
+      resolveConvergedSummaryFindingsContradiction({
+        summary: "No findings remain.",
+        hasFindings: true
+      })
+    ).toBe("summary_clean_with_findings");
+  });
+
+  it("returns undefined when summary and findings state are consistent", () => {
+    expect(
+      resolveConvergedSummaryFindingsContradiction({
+        summary: "2 findings were resolved.",
+        hasFindings: true
+      })
+    ).toBeUndefined();
+    expect(
+      resolveConvergedSummaryFindingsContradiction({
+        summary: "Ready for approval.",
+        hasFindings: false
+      })
+    ).toBeUndefined();
+  });
+});
+
 describe("validateConvergencePolicy", () => {
   it("rejects malformed findings payload on previous reviewer PASS", () => {
     const transcript = [
@@ -646,6 +725,12 @@ describe("validateConvergencePolicy", () => {
         )
       )
     ).toBe(true);
+    expect(result.errors).not.toContain(missingClaimStateError);
+    expect(
+      result.diagnostics.some((entry) =>
+        entry.includes("CLAIM_STATE_REQUIRED_SUPPRESSED_DIAGNOSTIC")
+      )
+    ).toBe(true);
   });
 
   it("fails closed when previous reviewer PASS declares findings_claim_source without findings_claim_state", () => {
@@ -686,6 +771,12 @@ describe("validateConvergencePolicy", () => {
         error.includes(
           "CLAIM_STATE_REQUIRED: previous reviewer PASS findings_claim_state is required when findings_claim_source is provided."
         )
+      )
+    ).toBe(true);
+    expect(result.errors).not.toContain(missingClaimStateError);
+    expect(
+      result.diagnostics.some((entry) =>
+        entry.includes("CLAIM_STATE_REQUIRED_SUPPRESSED_DIAGNOSTIC")
       )
     ).toBe(true);
   });
@@ -911,6 +1002,59 @@ describe("validateConvergencePolicy", () => {
 
     expect(result.ok).toBe(true);
     expect(result.errors).toHaveLength(0);
+  });
+
+  it("emits explicit post-gate fallback diagnostic when claim state/source is derived from findings payload count", () => {
+    const result = validateConvergencePolicy({
+      currentRound: 4,
+      reviewer: "claude",
+      implementer: "codex",
+      reviewArtifactType: "auto",
+      severity_gate_round: 4,
+      roundRoleHistory: [
+        {
+          round: 1,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T11:59:00.000Z"
+        },
+        {
+          round: 2,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:01:00.000Z"
+        },
+        {
+          round: 3,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:03:00.000Z"
+        },
+        {
+          round: 4,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-02-22T12:05:00.000Z"
+        }
+      ],
+      transcript: [
+        createPassEnvelope({
+          round: 3,
+          payload: {
+            summary: "No findings remain.",
+            findings: []
+          }
+        })
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.errors).toHaveLength(0);
+    expect(
+      result.diagnostics.some((entry) =>
+        entry.includes("CLAIM_SOURCE_PAYLOAD_FINDINGS_COUNT_FALLBACK_DIAGNOSTIC")
+      )
+    ).toBe(true);
   });
 
   it("keeps non-document blocking on canonical P1 even when effective_priority is downgraded", () => {

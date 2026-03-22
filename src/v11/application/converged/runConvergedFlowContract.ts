@@ -5,6 +5,7 @@ import type { emitBubbleNotification } from "../../../core/runtime/notifications
 import type { PairflowCommandPathAssessment } from "../../../core/runtime/pairflowCommand.js";
 import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import type { SummaryVerifierConsistencyGateDecisionRecord } from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
+import type { ConvergedStructuredFinding } from "../../shared/converged/convergedCommandTypes.js";
 import type {
   applyMetaReviewGateOnConvergence,
   recoverMetaReviewGateFromSnapshot
@@ -28,6 +29,7 @@ export interface ExecuteConvergedExecutionDependencies {
 export interface RunConvergedFlowInput {
   summary: string;
   refs: string[];
+  findings?: ConvergedStructuredFinding[];
   now: Date;
   cwd?: string;
   expectedStateFingerprint?: string;
@@ -126,6 +128,7 @@ export interface RunConvergedFlowDependencies
       implementer: AgentName;
       summary: string;
       refs: string[];
+      findings?: ConvergedStructuredFinding[];
       now: Date;
       convergencePolicyDiagnostics: string[];
     },

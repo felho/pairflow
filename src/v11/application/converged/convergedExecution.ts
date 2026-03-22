@@ -10,6 +10,9 @@ import {
   applyMetaReviewGateOnConvergence,
   recoverMetaReviewGateFromSnapshot
 } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
+import type {
+  ConvergedStructuredFinding
+} from "../../shared/converged/convergedCommandTypes.js";
 import type { ResolvedBubbleWorkspace } from "../../../core/bubble/workspaceResolution.js";
 import type { AgentName, BubbleStateSnapshot } from "../../../types/bubble.js";
 import {
@@ -24,6 +27,7 @@ export interface ExecuteConvergedExecutionInput {
   implementer: AgentName;
   summary: string;
   refs: string[];
+  findings?: ConvergedStructuredFinding[];
   now: Date;
   convergencePolicyDiagnostics: string[];
 }
@@ -87,6 +91,9 @@ async function appendConvergenceEnvelope(
       round: input.state.round,
       payload: {
         summary: input.summary,
+        ...(input.findings !== undefined && input.findings.length > 0
+          ? { findings: input.findings }
+          : {}),
         ...(input.convergencePolicyDiagnostics.length > 0
           ? {
               metadata: {

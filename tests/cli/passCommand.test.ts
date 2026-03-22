@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { PassCommandErrorV11 } from "../../src/v11/application/pass/emitPassV11.js";
 import {
   getPassHelpText,
   parsePassCommandOptions,
@@ -72,14 +73,24 @@ describe("parsePassCommandOptions", () => {
   it("rejects invalid intent", () => {
     expect(() =>
       parsePassCommandOptions(["--summary", "handoff", "--intent", "unknown"])
+    ).toThrow(/PASS_OPTIONS_INVALID/u);
+    expect(() =>
+      parsePassCommandOptions(["--summary", "handoff", "--intent", "unknown"])
     ).toThrow(/Invalid --intent value/u);
   });
 
   it("requires summary unless help is requested", () => {
+    expect(() => parsePassCommandOptions([])).toThrow(/PASS_OPTIONS_INVALID/u);
     expect(() => parsePassCommandOptions([])).toThrow(/Missing required option/u);
 
     const helpOptions = parsePassCommandOptions(["--help"]);
     expect(helpOptions.help).toBe(true);
+  });
+
+  it("wraps strict parse option errors with PASS_OPTIONS_INVALID reason code", () => {
+    expect(() =>
+      parsePassCommandOptions(["--summary", "handoff", "--bogus", "x"])
+    ).toThrow(/PASS_OPTIONS_INVALID/u);
   });
 
   it("parses explicit no-findings flag", () => {
@@ -100,7 +111,7 @@ describe("parsePassCommandOptions", () => {
   it("rejects invalid finding format", () => {
     expect(() =>
       parsePassCommandOptions(["--summary", "handoff", "--finding", "bad-format"])
-    ).toThrow(/Invalid --finding format/u);
+    ).toThrow(/PASS_FINDINGS_INVALID: Invalid --finding format/u);
   });
 
   it("rejects invalid finding refs format", () => {
@@ -111,7 +122,7 @@ describe("parsePassCommandOptions", () => {
         "--finding",
         "P1:Missing test|artifact://ok,,artifact://also-ok"
       ])
-    ).toThrow(/Invalid --finding refs/u);
+    ).toThrow(/PASS_FINDINGS_INVALID: Invalid --finding refs/u);
   });
 
   it("rejects trailing finding refs separator with explicit message", () => {
@@ -122,7 +133,7 @@ describe("parsePassCommandOptions", () => {
         "--finding",
         "P1:Missing test|"
       ])
-    ).toThrow(/trailing `\|` without refs/u);
+    ).toThrow(/PASS_FINDINGS_INVALID: Invalid --finding refs: trailing `\|` without refs/u);
   });
 
   it("supports escaped commas inside a single finding ref", () => {
@@ -157,11 +168,24 @@ describe("parsePassCommandOptions", () => {
         "--finding",
         "P1:Missing test|artifact://review/failure.log,segment.log"
       ])
-    ).toThrow(/single ref contains a comma/u);
+    ).toThrow(/PASS_FINDINGS_INVALID: Invalid --finding refs/u);
+  });
+
+  it("returns help even when malformed finding is present", () => {
+    const options = parsePassCommandOptions([
+      "--help",
+      "--finding",
+      "bad-format"
+    ]);
+
+    expect(options.help).toBe(true);
   });
 
   it("documents doc-scope blocker qualifier limits in help text", () => {
     const help = getPassHelpText();
+    expect(help).toContain(
+      "Single ref accepts any non-empty token; multi-ref requires structured path/URI refs."
+    );
     expect(help).toContain("Shorthand defaults: timing=later-hardening, layer=L1");
     expect(help).toContain("cannot encode explicit `timing`/`layer` values");
   });
@@ -171,5 +195,49 @@ describe("runPassCommand", () => {
   it("returns null on help", async () => {
     const result = await runPassCommand(["--help"]);
     expect(result).toBeNull();
+  });
+
+  it("wraps missing-summary parse-phase error through pass command error normalization", async () => {
+    await expect(runPassCommand([])).rejects.toBeInstanceOf(PassCommandErrorV11);
+    await expect(runPassCommand([])).rejects.toThrow(/PASS_OPTIONS_INVALID/u);
+    await expect(runPassCommand([])).rejects.toThrow(/Missing required option/u);
+  });
+
+  it("wraps malformed-finding parse-phase error through pass command error normalization", async () => {
+    await expect(
+      runPassCommand([
+        "--summary",
+        "handoff",
+        "--finding",
+        "bad-format"
+      ])
+    ).rejects.toBeInstanceOf(PassCommandErrorV11);
+    await expect(
+      runPassCommand([
+        "--summary",
+        "handoff",
+        "--finding",
+        "bad-format"
+      ])
+    ).rejects.toThrow(/PASS_FINDINGS_INVALID/u);
+  });
+
+  it("wraps invalid-intent parse-phase error through pass command error normalization", async () => {
+    await expect(
+      runPassCommand([
+        "--summary",
+        "handoff",
+        "--intent",
+        "unknown"
+      ])
+    ).rejects.toBeInstanceOf(PassCommandErrorV11);
+    await expect(
+      runPassCommand([
+        "--summary",
+        "handoff",
+        "--intent",
+        "unknown"
+      ])
+    ).rejects.toThrow(/PASS_OPTIONS_INVALID/u);
   });
 });

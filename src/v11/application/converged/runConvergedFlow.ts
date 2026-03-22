@@ -105,6 +105,9 @@ export async function runConvergedFlow(
       implementer: routing.implementer,
       summary: input.summary,
       refs: input.refs,
+      ...(input.findings !== undefined && input.findings.length > 0
+        ? { findings: input.findings }
+        : {}),
       now: input.now,
       convergencePolicyDiagnostics: policyResult.convergencePolicyDiagnostics
     },
