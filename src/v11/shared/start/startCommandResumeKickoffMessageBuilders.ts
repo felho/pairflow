@@ -18,10 +18,13 @@ export function inferResumeReviewerProjectionVariant(input: {
   round: number;
   transcriptSummary: string;
 }): ReviewerCommandGateProjectionVariant {
+  // Round 0-1 never uses converged routing, so we always keep the clean projection.
   if (input.round <= 1) {
     return "clean";
   }
 
+  // For round >=2 we fail closed to the findings projection unless transcript
+  // summary clearly reports zero findings with parseable counts.
   const findingsMatches = input.transcriptSummary.match(/\bfindings=(\d+)\b/gu);
   if (findingsMatches === null) {
     return "findings";
@@ -29,9 +32,6 @@ export function inferResumeReviewerProjectionVariant(input: {
   for (const token of findingsMatches) {
     const [, value = "0"] = token.split("=");
     const parsed = Number.parseInt(value, 10);
-    if (!Number.isFinite(parsed)) {
-      return "findings";
-    }
     if (parsed > 0) {
       return "findings";
     }
@@ -87,7 +87,7 @@ export function buildResumeReviewerKickoffMessage(input: {
   });
   const findingsDetailLine =
     input.round <= 1
-      ? "In round 1, declare findings explicitly with `--finding` or `--no-findings` when using `pairflow pass`."
+      ? "In round 1, use `pairflow pass --summary ...` and declare findings explicitly (`--finding` when findings exist, `--no-findings` only when truly clean)."
       : buildReviewerFindingsPassInstruction(input.reviewArtifactType);
   return [
     `# [pairflow] bubble=${input.bubbleId} resume kickoff (reviewer).`,

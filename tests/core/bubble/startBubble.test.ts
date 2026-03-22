@@ -15,7 +15,8 @@ import {
   REVIEWER_COMMAND_GATE_REQ_B,
   REVIEWER_COMMAND_GATE_REQ_C,
   REVIEWER_COMMAND_GATE_REQ_D,
-  REVIEWER_COMMAND_GATE_REQ_E
+  REVIEWER_COMMAND_GATE_REQ_E,
+  REVIEWER_COMMAND_GATE_REQ_F
 } from "../../../src/core/runtime/reviewerCommandGateGuidance.js";
 import {
   resolveReviewerTestEvidenceArtifactPath,
@@ -425,6 +426,7 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_B);
     expect(reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_C);
     expect(reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+    expect(reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_F);
     expect(reviewerCommand).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
     expectNoForbiddenReviewerCommandGateTokens(reviewerCommand);
     expect(implementerCommand).not.toContain("then;");
@@ -641,11 +643,15 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain("document/task artifacts");
     expect(reviewerCommand).toContain("Do not force `feature-dev:code-reviewer`");
     expect(reviewerCommand).toContain(
-      "Document scope: `pairflow pass` for blockers is valid only when structured findings include strict qualifiers (`timing=required-now` + `layer=L1`)."
+      "Document scope: `pairflow pass --finding` for blockers is valid only when structured findings include strict qualifiers (`timing=required-now` + `layer=L1`)."
     );
     expect(reviewerCommand).toContain(
       "CLI `--finding` cannot encode these qualifiers"
     );
+    expect(reviewerCommand).toContain(
+      "`pairflow converged --finding` (`P2/P3` only)"
+    );
+    expect(reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_F);
     expect(reviewerCommand).toContain(
       "Runtime checks are not required for document-only scope."
     );
@@ -1320,6 +1326,7 @@ describe("startBubble", () => {
           expect(input.reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_B);
           expect(input.reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_C);
           expect(input.reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+          expect(input.reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_F);
           expect(input.reviewerCommand).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
           expectNoForbiddenReviewerCommandGateTokens(input.reviewerCommand);
           return Promise.resolve({ sessionName: "pf-b_start_resume_01" });
@@ -1471,6 +1478,7 @@ describe("startBubble", () => {
           expect(input.reviewerKickoffMessage).toContain("resume kickoff (reviewer)");
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_A);
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+          expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_F);
           expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_B);
           expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_C);
           expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
@@ -1510,6 +1518,7 @@ describe("startBubble", () => {
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_B);
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_C);
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+          expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_F);
           expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_A);
           expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
           expectNoForbiddenReviewerCommandGateTokens(input.reviewerKickoffMessage);
@@ -1548,6 +1557,7 @@ describe("startBubble", () => {
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_E);
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_C);
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+          expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_F);
           expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_A);
           expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_B);
           expectNoForbiddenReviewerCommandGateTokens(input.reviewerKickoffMessage);
@@ -1586,6 +1596,7 @@ describe("startBubble", () => {
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_E);
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_C);
           expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+          expect(input.reviewerKickoffMessage).toContain(REVIEWER_COMMAND_GATE_REQ_F);
           expect(input.reviewerKickoffMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_B);
           expectNoForbiddenReviewerCommandGateTokens(input.reviewerKickoffMessage);
           return Promise.resolve({ sessionName: "pf-b_start_resume_r2_parse_fallback_01" });
@@ -1660,10 +1671,12 @@ describe("startBubble", () => {
     expect(cleanKickoff).toContain(REVIEWER_COMMAND_GATE_REQ_C);
     expect(cleanKickoff).toContain(REVIEWER_COMMAND_GATE_REQ_D);
     expect(cleanKickoff).toContain(REVIEWER_COMMAND_GATE_REQ_B);
+    expect(cleanKickoff).toContain(REVIEWER_COMMAND_GATE_REQ_F);
     expect(cleanKickoff).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
     expect(findingsKickoff).toContain(REVIEWER_COMMAND_GATE_REQ_C);
     expect(findingsKickoff).toContain(REVIEWER_COMMAND_GATE_REQ_D);
     expect(findingsKickoff).toContain(REVIEWER_COMMAND_GATE_REQ_E);
+    expect(findingsKickoff).toContain(REVIEWER_COMMAND_GATE_REQ_F);
     expect(findingsKickoff).not.toContain(REVIEWER_COMMAND_GATE_REQ_B);
   });
 

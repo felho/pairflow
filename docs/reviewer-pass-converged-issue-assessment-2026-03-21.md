@@ -1,7 +1,7 @@
 # Reviewer Atadasi Inkonzisztenciak - Uzleti Hatas es Javitasi Terv
 
 **Datum:** 2026-03-21  
-**Statusz:** Draft, dontesre elo  
+**Statusz:** Historical baseline rogzitve + aktualis policy alignment (2026-03-22)  
 **Tulajdonos:** Pairflow core
 
 ## 1. Vezetoi Osszegzes
@@ -13,6 +13,18 @@ Ket, egymast erosito hibat latunk:
 2. Contract-szintu korlat a `converged` utvonalon: nyitott finding emlitheto summary-ban, de strukturalt findingkent nem mindig jelenik meg.
 
 Uzleti szinten ez azt eredmenyezi, hogy a rendszer egyes korokben "konvergens" allapotot jelez, mikozben a narrativ allapot es a strukturalt metrika nincs osszhangban.
+
+### Historical baseline vs aktualis policy
+
+1. A fenti inkonzisztencia-leiras historical baseline: a 2026-03-21 elotti allapotot dokumentalja.
+2. Aktualis (Phase 1) routing policy:
+   - blocker -> `pairflow pass --finding`
+   - advisory (`P2/P3`) -> `pairflow converged --finding`
+   - clean -> `pairflow converged` (`--finding` nelkul)
+3. Aktualis tiltott mintak:
+   - summary-only finding allitas structured `--finding` nelkul,
+   - `clean/no findings` allitas structured finding payload mellett.
+4. Terminology lock: `--finding` az egyetlen elfogadott flag-nev; `--advisory-finding` nem hasznalhato.
 
 ## 2. Milyen uzleti problemat okoz
 
@@ -114,6 +126,10 @@ Indok:
 1. A problema mar most is merheto uzleti kockazatot okoz.
 2. A javitas fokozatosan, visszafele kompatibilisen bevezetheto.
 3. A legnagyobb hatas kis-kozepes implementacios raforditassal elerheto.
+
+Megvalositas allapot frissites (2026-03-22):
+1. Phase 1 reviewer guidance routing matrix explicititve.
+2. Historical mismatch baseline-kent megorizve, aktualis policy kulon megjelolve.
 
 ## 9. Scope Clarification
 

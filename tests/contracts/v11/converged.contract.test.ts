@@ -29,6 +29,25 @@ interface CorpusManifest {
   }>;
 }
 
+interface ReviewerRoutingContractFixture {
+  expected_route?: unknown;
+  allowed_converged_finding_severities?: unknown;
+  requires_no_structured_findings?: unknown;
+  forbidden_patterns?: unknown;
+}
+
+interface RolloutContractFixture {
+  kickoff_contract_version?: unknown;
+  inflight_policy?: unknown;
+  grace_period_gate?: unknown;
+}
+
+interface ConvergedCaseFixture {
+  scenario?: unknown;
+  reviewer_routing_contract?: ReviewerRoutingContractFixture;
+  rollout_contract?: RolloutContractFixture;
+}
+
 async function listConvergedManifestEntries(): Promise<Array<{
   id: string;
   source: string;
@@ -61,6 +80,16 @@ async function listConvergedCaseSourcesFromManifest(): Promise<string[]> {
 
 function toRepoRelativePath(path: string): string {
   return relative(process.cwd(), path).replaceAll("\\", "/");
+}
+
+function readConvergedCaseFixture(
+  caseDef: Awaited<ReturnType<typeof readContractCase>>
+): ConvergedCaseFixture {
+  const fixture = caseDef.input.fixture;
+  if (typeof fixture !== "object" || fixture === null) {
+    throw new Error(`fixture missing for converged case id=${caseDef.id}`);
+  }
+  return fixture as ConvergedCaseFixture;
 }
 
 describe("v11 converged contract harness skeleton", () => {
@@ -125,6 +154,99 @@ describe("v11 converged contract harness skeleton", () => {
       const caseDef = await readContractCase(casePath);
       expect(basename(casePath)).toBe(`${caseDef.id}.case.json`);
     }
+  });
+
+  it("keeps reviewer routing + rollout fixture contract explicit for Task3 guidance cases", async () => {
+    const advisoryV11Case = await readContractCase(
+      resolve(
+        process.cwd(),
+        "tests/contracts/v11/cases/converged/converged-document-v11.case.json"
+      )
+    );
+    const inflightParityCase = await readContractCase(
+      resolve(
+        process.cwd(),
+        "tests/contracts/v11/cases/converged/converged-document-parity.case.json"
+      )
+    );
+
+    const advisoryFixture = readConvergedCaseFixture(advisoryV11Case);
+    const inflightFixture = readConvergedCaseFixture(inflightParityCase);
+
+    expect(advisoryFixture.reviewer_routing_contract?.expected_route).toBe(
+      "converged_with_advisory_findings"
+    );
+    expect(
+      advisoryFixture.reviewer_routing_contract?.allowed_converged_finding_severities
+    ).toEqual(["P2", "P3"]);
+    expect(advisoryFixture.rollout_contract?.kickoff_contract_version).toBe(
+      "advisory_v1"
+    );
+    expect(advisoryFixture.rollout_contract?.inflight_policy).toBe(
+      "kickoff_pinned_until_close"
+    );
+    expect(advisoryFixture.rollout_contract?.grace_period_gate).toBe(
+      "required_for_new_rollout_signoff"
+    );
+    expect(Array.isArray(advisoryV11Case.input.findings)).toBe(true);
+    expect((advisoryV11Case.input.findings as unknown[]).length).toBeGreaterThan(0);
+
+    expect(inflightFixture.reviewer_routing_contract?.expected_route).toBe(
+      "converged_clean"
+    );
+    expect(
+      inflightFixture.reviewer_routing_contract?.requires_no_structured_findings
+    ).toBe(true);
+    expect(inflightFixture.rollout_contract?.kickoff_contract_version).toBe(
+      "legacy_inflight"
+    );
+    expect(inflightFixture.rollout_contract?.inflight_policy).toBe(
+      "kickoff_pinned_until_close"
+    );
+    expect(inflightFixture.rollout_contract?.grace_period_gate).toBe(
+      "legacy_only_within_window"
+    );
+    expect(inflightFixture.reviewer_routing_contract?.forbidden_patterns).toEqual(
+      advisoryFixture.reviewer_routing_contract?.forbidden_patterns
+    );
+    expect(inflightParityCase.input.findings).toBeUndefined();
+
+    expect(advisoryV11Case.tags).toEqual(
+      expect.arrayContaining(["reviewer-guidance-phase1", "advisory-v1-rollout"])
+    );
+    expect(inflightParityCase.tags).toEqual(
+      expect.arrayContaining(["reviewer-guidance-phase1", "inflight-rollout-edge"])
+    );
+  });
+
+  it("allows advisory_v1 rollout with clean converged route when routing contract requires clean payload", async () => {
+    const run = await runConvergedContractCase({
+      id: "converged-advisory-v1-clean-route",
+      command: "converged",
+      mode: "v11",
+      description: "advisory_v1 rollout accepts clean convergence when fixture route is clean",
+      input: {
+        summary: "No open findings remain after verification; clean convergence requested.",
+        reviewArtifactType: "document",
+        fixture: {
+          reviewer_routing_contract: {
+            expected_route: "converged_clean",
+            requires_no_structured_findings: true
+          },
+          rollout_contract: {
+            kickoff_contract_version: "advisory_v1",
+            inflight_policy: "kickoff_pinned_until_close",
+            grace_period_gate: "required_for_new_rollout_signoff"
+          }
+        }
+      },
+      expected: {
+        status: "ok"
+      }
+    });
+
+    expect(run.legacy).toBeUndefined();
+    expect(run.v11?.status).toBe("ok");
   });
 
   it(
@@ -211,6 +333,30 @@ describe("v11 converged contract harness skeleton", () => {
         }
       })
     ).rejects.toThrow(/input\.refs must be a string array/u);
+  });
+
+  it("rejects unsupported reviewer_routing_contract forbidden_patterns values", async () => {
+    await expect(
+      runConvergedContractCase({
+        id: "converged-invalid-forbidden-pattern",
+        command: "converged",
+        mode: "v11",
+        description: "Invalid forbidden pattern value should fail closed",
+        input: {
+          summary: "No open findings remain after verification; clean convergence requested.",
+          reviewArtifactType: "document",
+          fixture: {
+            reviewer_routing_contract: {
+              expected_route: "converged_clean",
+              forbidden_patterns: ["typo_clean_with_structured_findings"]
+            }
+          }
+        },
+        expected: {
+          status: "ok"
+        }
+      })
+    ).rejects.toThrow(/forbidden_patterns contains unsupported value/u);
   });
 
   it("rejects unsupported command for converged contract runner", async () => {
