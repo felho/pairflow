@@ -1,12 +1,22 @@
+import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
+
 export class ApprovalCommandError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly reasonCode: string | undefined;
+  public readonly context: PairflowCommandErrorContext | undefined;
+
+  public constructor(input: PairflowCommandErrorInput) {
+    const normalized = normalizePairflowCommandErrorInput(input);
+    super(normalized.message, { cause: normalized.cause });
     this.name = "ApprovalCommandError";
+    this.reasonCode = normalized.reasonCode;
+    this.context = normalized.context;
   }
 }
 
-export function createApprovalCommandError(message: string): ApprovalCommandError {
-  return new ApprovalCommandError(message);
+export function createApprovalCommandError(
+  input: PairflowCommandErrorInput
+): ApprovalCommandError {
+  return new ApprovalCommandError(input);
 }
 
 export function isApprovalCommandError(candidate: unknown): boolean {

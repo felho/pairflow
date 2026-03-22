@@ -7,16 +7,25 @@ import {
   RuntimeSessionsRegistryLockError
 } from "../../../core/runtime/sessionsRegistry.js";
 import { normalizeBubbleMergeError } from "./mergeCommandErrorNormalization.js";
+import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
 
 export class BubbleMergeError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly reasonCode: string | undefined;
+  public readonly context: PairflowCommandErrorContext | undefined;
+
+  public constructor(input: PairflowCommandErrorInput) {
+    const normalized = normalizePairflowCommandErrorInput(input);
+    super(normalized.message, { cause: normalized.cause });
     this.name = "BubbleMergeError";
+    this.reasonCode = normalized.reasonCode;
+    this.context = normalized.context;
   }
 }
 
-export function createBubbleMergeError(message: string): BubbleMergeError {
-  return new BubbleMergeError(message);
+export function createBubbleMergeError(
+  input: PairflowCommandErrorInput
+): BubbleMergeError {
+  return new BubbleMergeError(input);
 }
 
 export function throwAsBubbleMergeError(error: unknown): never {

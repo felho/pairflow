@@ -1,12 +1,22 @@
+import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
+
 export class BubbleCommitError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly reasonCode: string | undefined;
+  public readonly context: PairflowCommandErrorContext | undefined;
+
+  public constructor(input: PairflowCommandErrorInput) {
+    const normalized = normalizePairflowCommandErrorInput(input);
+    super(normalized.message, { cause: normalized.cause });
     this.name = "BubbleCommitError";
+    this.reasonCode = normalized.reasonCode;
+    this.context = normalized.context;
   }
 }
 
-export function createBubbleCommitError(message: string): BubbleCommitError {
-  return new BubbleCommitError(message);
+export function createBubbleCommitError(
+  input: PairflowCommandErrorInput
+): BubbleCommitError {
+  return new BubbleCommitError(input);
 }
 
 export function isBubbleCommitError(candidate: unknown): boolean {

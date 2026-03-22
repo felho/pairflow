@@ -1,14 +1,23 @@
 import { normalizePassCommandError } from "./passCommandErrorNormalization.js";
+import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
 
 export class PassCommandError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly reasonCode: string | undefined;
+  public readonly context: PairflowCommandErrorContext | undefined;
+
+  public constructor(input: PairflowCommandErrorInput) {
+    const normalized = normalizePairflowCommandErrorInput(input);
+    super(normalized.message, { cause: normalized.cause });
     this.name = "PassCommandError";
+    this.reasonCode = normalized.reasonCode;
+    this.context = normalized.context;
   }
 }
 
-export function createPassCommandError(message: string): PassCommandError {
-  return new PassCommandError(message);
+export function createPassCommandError(
+  input: PairflowCommandErrorInput
+): PassCommandError {
+  return new PassCommandError(input);
 }
 
 export function throwAsPassCommandError(error: unknown): never {

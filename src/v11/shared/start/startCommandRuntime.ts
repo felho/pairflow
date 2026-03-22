@@ -9,16 +9,25 @@ import {
   RuntimeSessionsRegistryLockError
 } from "../../../core/runtime/sessionsRegistry.js";
 import { normalizeStartBubbleError } from "./startCommandErrorNormalization.js";
+import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
 
 export class StartBubbleError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly reasonCode: string | undefined;
+  public readonly context: PairflowCommandErrorContext | undefined;
+
+  public constructor(input: PairflowCommandErrorInput) {
+    const normalized = normalizePairflowCommandErrorInput(input);
+    super(normalized.message, { cause: normalized.cause });
     this.name = "StartBubbleError";
+    this.reasonCode = normalized.reasonCode;
+    this.context = normalized.context;
   }
 }
 
-export function createStartBubbleError(message: string): StartBubbleError {
-  return new StartBubbleError(message);
+export function createStartBubbleError(
+  input: PairflowCommandErrorInput
+): StartBubbleError {
+  return new StartBubbleError(input);
 }
 
 export function throwAsStartBubbleError(error: unknown): never {

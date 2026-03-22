@@ -9,16 +9,25 @@ import {
   StartBubbleError
 } from "../../../core/bubble/startBubble.js";
 import { normalizeRestartBubbleError } from "./restartCommandErrorNormalization.js";
+import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
 
 export class RestartBubbleError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly reasonCode: string | undefined;
+  public readonly context: PairflowCommandErrorContext | undefined;
+
+  public constructor(input: PairflowCommandErrorInput) {
+    const normalized = normalizePairflowCommandErrorInput(input);
+    super(normalized.message, { cause: normalized.cause });
     this.name = "RestartBubbleError";
+    this.reasonCode = normalized.reasonCode;
+    this.context = normalized.context;
   }
 }
 
-export function createRestartBubbleError(message: string): RestartBubbleError {
-  return new RestartBubbleError(message);
+export function createRestartBubbleError(
+  input: PairflowCommandErrorInput
+): RestartBubbleError {
+  return new RestartBubbleError(input);
 }
 
 export function throwAsRestartBubbleError(error: unknown): never {

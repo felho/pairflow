@@ -1,16 +1,23 @@
 import { normalizeStartupReconcilerError } from "./reconcileCommandErrorNormalization.js";
+import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
 
 export class StartupReconcilerError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly reasonCode: string | undefined;
+  public readonly context: PairflowCommandErrorContext | undefined;
+
+  public constructor(input: PairflowCommandErrorInput) {
+    const normalized = normalizePairflowCommandErrorInput(input);
+    super(normalized.message, { cause: normalized.cause });
     this.name = "StartupReconcilerError";
+    this.reasonCode = normalized.reasonCode;
+    this.context = normalized.context;
   }
 }
 
 export function createStartupReconcilerError(
-  message: string
+  input: PairflowCommandErrorInput
 ): StartupReconcilerError {
-  return new StartupReconcilerError(message);
+  return new StartupReconcilerError(input);
 }
 
 export function throwAsStartupReconcilerError(error: unknown): never {
