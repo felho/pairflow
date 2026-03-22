@@ -4,11 +4,27 @@
   "mode": "parity",
   "description": "converged document-scope parity baseline.",
   "input": {
-    "summary": "Document scope convergence parity baseline.",
+    "summary": "Document scope convergence contract fixture parity baseline.",
     "refs": [
       "docs/plan.md"
     ],
-    "reviewArtifactType": "document"
+    "reviewArtifactType": "document",
+    "fixture": {
+      "scenario": "default",
+      "reviewer_routing_contract": {
+        "expected_route": "converged_clean",
+        "requires_no_structured_findings": true,
+        "forbidden_patterns": [
+          "summary_only_finding_claim_without_structured_finding",
+          "clean_summary_with_structured_findings"
+        ]
+      },
+      "rollout_contract": {
+        "kickoff_contract_version": "legacy_inflight",
+        "inflight_policy": "kickoff_pinned_until_close",
+        "grace_period_gate": "legacy_only_within_window"
+      }
+    }
   },
   "expected": {
     "status": "ok",
@@ -38,6 +54,8 @@
     "converged",
     "v11-contract",
     "parity",
-    "document-scope"
+    "document-scope",
+    "reviewer-guidance-phase1",
+    "inflight-rollout-edge"
   ]
 }

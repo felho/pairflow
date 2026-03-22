@@ -8,7 +8,12 @@ import {
   type EmitConvergedInput,
   type EmitConvergedResult
 } from "../../../src/core/agent/converged.js";
+import { resolveConvergedSummaryFindingsContradiction } from "../../../src/core/convergence/policy.js";
 import { emitConvergedFromWorkspaceV11 } from "../../../src/v11/application/converged/emitConvergedV11.js";
+import {
+  isConvergedStructuredFindingSeverity,
+  type ConvergedStructuredFinding
+} from "../../../src/v11/shared/converged/convergedCommandTypes.js";
 import { seedConvergedCandidate } from "../../v11/application/converged/convergedSeedFixture.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -49,10 +54,30 @@ export interface ConvergedContractRunResult {
   v11?: ConvergedContractOutput;
 }
 
+type ReviewerRoutingForbiddenPattern =
+  | "summary_only_finding_claim_without_structured_finding"
+  | "clean_summary_with_structured_findings";
+
+const REVIEWER_ROUTING_FORBIDDEN_PATTERNS: readonly ReviewerRoutingForbiddenPattern[] = [
+  "summary_only_finding_claim_without_structured_finding",
+  "clean_summary_with_structured_findings"
+];
+
 interface ParsedConvergedCaseInput {
   convergedInput: Omit<EmitConvergedInput, "cwd">;
   reviewArtifactType?: "code" | "document";
   scenario: "default" | "delivery_partial_failure";
+  reviewerRoutingContract?: {
+    expectedRoute?: "converged_with_advisory_findings" | "converged_clean";
+    allowedConvergedFindingSeverities?: Array<"P2" | "P3">;
+    requiresNoStructuredFindings?: boolean;
+    forbiddenPatterns?: ReviewerRoutingForbiddenPattern[];
+  };
+  rolloutContract?: {
+    kickoffContractVersion?: "legacy_inflight" | "advisory_v1";
+    inflightPolicy?: "kickoff_pinned_until_close";
+    gracePeriodGate?: "required_for_new_rollout_signoff" | "legacy_only_within_window";
+  };
 }
 
 function parseConvergedCaseInput(input: ContractCase["input"]): ParsedConvergedCaseInput {
@@ -84,8 +109,57 @@ function parseConvergedCaseInput(input: ContractCase["input"]): ParsedConvergedC
     reviewArtifactType = reviewArtifactTypeRaw;
   }
 
+  const findingsRaw = input.findings;
+  let findings: ConvergedStructuredFinding[] | undefined;
+  if (findingsRaw !== undefined) {
+    if (!Array.isArray(findingsRaw)) {
+      throw new Error(
+        "converged contract input.findings must be an array when provided."
+      );
+    }
+    findings = findingsRaw.map((entry, index) => {
+      if (typeof entry !== "object" || entry === null) {
+        throw new Error(
+          `converged contract input.findings[${index}] must be an object.`
+        );
+      }
+      const record = entry as Record<string, unknown>;
+      const severityRaw = record.severity;
+      if (!isConvergedStructuredFindingSeverity(severityRaw)) {
+        throw new Error(
+          `converged contract input.findings[${index}].severity must be P2 or P3.`
+        );
+      }
+      const titleRaw = record.title;
+      if (typeof titleRaw !== "string" || titleRaw.trim().length === 0) {
+        throw new Error(
+          `converged contract input.findings[${index}].title must be a non-empty string.`
+        );
+      }
+      const refsRaw = record.refs;
+      if (
+        refsRaw !== undefined
+        && (
+          !Array.isArray(refsRaw)
+          || !refsRaw.every((value) => typeof value === "string")
+        )
+      ) {
+        throw new Error(
+          `converged contract input.findings[${index}].refs must be a string array when provided.`
+        );
+      }
+      return {
+        severity: severityRaw,
+        title: titleRaw.trim(),
+        ...(refsRaw !== undefined ? { refs: refsRaw } : {})
+      };
+    });
+  }
+
   const fixtureRaw = input.fixture;
   let scenario: ParsedConvergedCaseInput["scenario"] = "default";
+  let reviewerRoutingContract: ParsedConvergedCaseInput["reviewerRoutingContract"];
+  let rolloutContract: ParsedConvergedCaseInput["rolloutContract"];
   if (fixtureRaw !== undefined) {
     if (typeof fixtureRaw !== "object" || fixtureRaw === null) {
       throw new Error("converged contract input.fixture must be an object when provided.");
@@ -101,14 +175,167 @@ function parseConvergedCaseInput(input: ContractCase["input"]): ParsedConvergedC
       );
     }
     scenario = scenarioRaw ?? "default";
+
+    const reviewerRoutingRaw = (fixtureRaw as Record<string, unknown>).reviewer_routing_contract;
+    if (reviewerRoutingRaw !== undefined) {
+      if (typeof reviewerRoutingRaw !== "object" || reviewerRoutingRaw === null) {
+        throw new Error(
+          "converged contract input.fixture.reviewer_routing_contract must be an object when provided."
+        );
+      }
+      const reviewerRoutingRecord = reviewerRoutingRaw as Record<string, unknown>;
+      const expectedRouteRaw = reviewerRoutingRecord.expected_route;
+      let expectedRoute:
+        | "converged_with_advisory_findings"
+        | "converged_clean"
+        | undefined;
+      if (expectedRouteRaw !== undefined) {
+        if (
+          expectedRouteRaw !== "converged_with_advisory_findings"
+          && expectedRouteRaw !== "converged_clean"
+        ) {
+          throw new Error(
+            "converged contract fixture reviewer_routing_contract.expected_route must be converged_with_advisory_findings or converged_clean."
+          );
+        }
+        expectedRoute = expectedRouteRaw;
+      }
+      const allowedSeveritiesRaw =
+        reviewerRoutingRecord.allowed_converged_finding_severities;
+      let allowedConvergedFindingSeverities: Array<"P2" | "P3"> | undefined;
+      if (allowedSeveritiesRaw !== undefined) {
+        if (
+          !Array.isArray(allowedSeveritiesRaw)
+          || !allowedSeveritiesRaw.every(
+            (value) => value === "P2" || value === "P3"
+          )
+        ) {
+          throw new Error(
+            "converged contract fixture reviewer_routing_contract.allowed_converged_finding_severities must be a P2/P3 string array."
+          );
+        }
+        allowedConvergedFindingSeverities =
+          allowedSeveritiesRaw as Array<"P2" | "P3">;
+      }
+      const requiresNoStructuredFindingsRaw =
+        reviewerRoutingRecord.requires_no_structured_findings;
+      if (
+        requiresNoStructuredFindingsRaw !== undefined
+        && typeof requiresNoStructuredFindingsRaw !== "boolean"
+      ) {
+        throw new Error(
+          "converged contract fixture reviewer_routing_contract.requires_no_structured_findings must be boolean when provided."
+        );
+      }
+      const forbiddenPatternsRaw = reviewerRoutingRecord.forbidden_patterns;
+      let forbiddenPatterns: ReviewerRoutingForbiddenPattern[] | undefined;
+      if (forbiddenPatternsRaw !== undefined) {
+        if (!Array.isArray(forbiddenPatternsRaw)) {
+          throw new Error(
+            "converged contract fixture reviewer_routing_contract.forbidden_patterns must be a string array when provided."
+          );
+        }
+        const forbiddenPatternValues = forbiddenPatternsRaw as unknown[];
+        if (!forbiddenPatternValues.every((value) => typeof value === "string")) {
+          throw new Error(
+            "converged contract fixture reviewer_routing_contract.forbidden_patterns must be a string array when provided."
+          );
+        }
+        const invalidPattern = forbiddenPatternValues.find(
+          (value) =>
+            !REVIEWER_ROUTING_FORBIDDEN_PATTERNS.some(
+              (allowedPattern) => allowedPattern === value
+            )
+        );
+        if (invalidPattern !== undefined) {
+          throw new Error(
+            `converged contract fixture reviewer_routing_contract.forbidden_patterns contains unsupported value=${String(invalidPattern)}. Allowed: ${REVIEWER_ROUTING_FORBIDDEN_PATTERNS.join(", ")}.`
+          );
+        }
+        forbiddenPatterns =
+          forbiddenPatternValues as ReviewerRoutingForbiddenPattern[];
+      }
+      reviewerRoutingContract = {
+        ...(expectedRoute !== undefined ? { expectedRoute } : {}),
+        ...(allowedConvergedFindingSeverities !== undefined
+          ? { allowedConvergedFindingSeverities }
+          : {}),
+        ...(requiresNoStructuredFindingsRaw !== undefined
+          ? { requiresNoStructuredFindings: requiresNoStructuredFindingsRaw }
+          : {}),
+        ...(forbiddenPatterns !== undefined ? { forbiddenPatterns } : {})
+      };
+    }
+
+    const rolloutRaw = (fixtureRaw as Record<string, unknown>).rollout_contract;
+    if (rolloutRaw !== undefined) {
+      if (typeof rolloutRaw !== "object" || rolloutRaw === null) {
+        throw new Error(
+          "converged contract input.fixture.rollout_contract must be an object when provided."
+        );
+      }
+      const rolloutRecord = rolloutRaw as Record<string, unknown>;
+      const kickoffContractVersionRaw = rolloutRecord.kickoff_contract_version;
+      let kickoffContractVersion: "legacy_inflight" | "advisory_v1" | undefined;
+      if (
+        kickoffContractVersionRaw !== undefined
+        && kickoffContractVersionRaw !== "legacy_inflight"
+        && kickoffContractVersionRaw !== "advisory_v1"
+      ) {
+        throw new Error(
+          "converged contract fixture rollout_contract.kickoff_contract_version must be legacy_inflight or advisory_v1 when provided."
+        );
+      }
+      if (kickoffContractVersionRaw !== undefined) {
+        kickoffContractVersion = kickoffContractVersionRaw;
+      }
+      const inflightPolicyRaw = rolloutRecord.inflight_policy;
+      let inflightPolicy: "kickoff_pinned_until_close" | undefined;
+      if (
+        inflightPolicyRaw !== undefined
+        && inflightPolicyRaw !== "kickoff_pinned_until_close"
+      ) {
+        throw new Error(
+          "converged contract fixture rollout_contract.inflight_policy must be kickoff_pinned_until_close when provided."
+        );
+      }
+      if (inflightPolicyRaw !== undefined) {
+        inflightPolicy = inflightPolicyRaw;
+      }
+      const gracePeriodGateRaw = rolloutRecord.grace_period_gate;
+      let gracePeriodGate:
+        | "required_for_new_rollout_signoff"
+        | "legacy_only_within_window"
+        | undefined;
+      if (
+        gracePeriodGateRaw !== undefined
+        && gracePeriodGateRaw !== "required_for_new_rollout_signoff"
+        && gracePeriodGateRaw !== "legacy_only_within_window"
+      ) {
+        throw new Error(
+          "converged contract fixture rollout_contract.grace_period_gate must be required_for_new_rollout_signoff or legacy_only_within_window when provided."
+        );
+      }
+      if (gracePeriodGateRaw !== undefined) {
+        gracePeriodGate = gracePeriodGateRaw;
+      }
+      rolloutContract = {
+        ...(kickoffContractVersion !== undefined ? { kickoffContractVersion } : {}),
+        ...(inflightPolicy !== undefined ? { inflightPolicy } : {}),
+        ...(gracePeriodGate !== undefined ? { gracePeriodGate } : {})
+      };
+    }
   }
 
   return {
     convergedInput: {
       summary: summaryRaw.trim(),
-      ...(refs !== undefined ? { refs } : {})
+      ...(refs !== undefined ? { refs } : {}),
+      ...(findings !== undefined ? { findings } : {})
     },
     scenario,
+    ...(reviewerRoutingContract !== undefined ? { reviewerRoutingContract } : {}),
+    ...(rolloutContract !== undefined ? { rolloutContract } : {}),
     ...(reviewArtifactType !== undefined ? { reviewArtifactType } : {})
   };
 }
@@ -301,6 +528,193 @@ function assertConvergedScenarioInvariant(input: {
   }
 }
 
+function extractConvergenceEnvelopeFindings(input: {
+  result: EmitConvergedResult;
+  caseId: string;
+}): ConvergedStructuredFinding[] {
+  const payload = input.result.convergenceEnvelope.payload;
+  if (typeof payload !== "object" || payload === null) {
+    throw new Error(
+      `converged contract case=${input.caseId}: convergence payload must be an object.`
+    );
+  }
+  const findingsRaw = (payload as Record<string, unknown>).findings;
+  if (findingsRaw === undefined) {
+    return [];
+  }
+  if (!Array.isArray(findingsRaw)) {
+    throw new Error(
+      `converged contract case=${input.caseId}: convergence payload findings must be an array when provided.`
+    );
+  }
+  return findingsRaw.map((entry, index) => {
+    if (typeof entry !== "object" || entry === null) {
+      throw new Error(
+        `converged contract case=${input.caseId}: convergence payload findings[${index}] must be an object.`
+      );
+    }
+    const record = entry as Record<string, unknown>;
+    const severityRaw = record.severity;
+    if (!isConvergedStructuredFindingSeverity(severityRaw)) {
+      throw new Error(
+        `converged contract case=${input.caseId}: convergence payload findings[${index}].severity must be P2 or P3.`
+      );
+    }
+    const titleRaw = record.title;
+    if (typeof titleRaw !== "string" || titleRaw.trim().length === 0) {
+      throw new Error(
+        `converged contract case=${input.caseId}: convergence payload findings[${index}].title must be a non-empty string.`
+      );
+    }
+    const refsRaw = record.refs;
+    if (
+      refsRaw !== undefined
+      && (
+        !Array.isArray(refsRaw)
+        || !refsRaw.every((value) => typeof value === "string")
+      )
+    ) {
+      throw new Error(
+        `converged contract case=${input.caseId}: convergence payload findings[${index}].refs must be a string array when provided.`
+      );
+    }
+    return {
+      severity: severityRaw,
+      title: titleRaw.trim(),
+      ...(refsRaw !== undefined ? { refs: refsRaw } : {})
+    };
+  });
+}
+
+function extractAdvisoryFindingsOpenTotal(input: {
+  result: EmitConvergedResult;
+  caseId: string;
+}): number {
+  const payload = input.result.convergenceEnvelope.payload;
+  if (typeof payload !== "object" || payload === null) {
+    throw new Error(
+      `converged contract case=${input.caseId}: convergence payload must be an object.`
+    );
+  }
+  const metadataRaw = (payload as Record<string, unknown>).metadata;
+  if (typeof metadataRaw !== "object" || metadataRaw === null) {
+    throw new Error(
+      `converged contract case=${input.caseId}: convergence payload metadata must be an object.`
+    );
+  }
+  const value = (metadataRaw as Record<string, unknown>).advisory_findings_open_total;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    throw new Error(
+      `converged contract case=${input.caseId}: convergence payload metadata.advisory_findings_open_total must be a non-negative integer.`
+    );
+  }
+  return value;
+}
+
+function assertFixtureRuntimeBinding(input: {
+  parsedInput: ParsedConvergedCaseInput;
+  result: EmitConvergedResult;
+  caseId: string;
+}): void {
+  const emittedFindings = extractConvergenceEnvelopeFindings({
+    result: input.result,
+    caseId: input.caseId
+  });
+  const advisoryOpenTotal = extractAdvisoryFindingsOpenTotal({
+    result: input.result,
+    caseId: input.caseId
+  });
+  if (advisoryOpenTotal !== emittedFindings.length) {
+    throw new Error(
+      `converged contract case=${input.caseId}: advisory_findings_open_total (${advisoryOpenTotal}) must match emitted structured findings count (${emittedFindings.length}).`
+    );
+  }
+
+  const routing = input.parsedInput.reviewerRoutingContract;
+  if (routing !== undefined) {
+    const contradiction = resolveConvergedSummaryFindingsContradiction({
+      summary: input.parsedInput.convergedInput.summary,
+      hasFindings: emittedFindings.length > 0
+    });
+    for (const pattern of routing.forbiddenPatterns ?? []) {
+      switch (pattern) {
+        case "summary_only_finding_claim_without_structured_finding": {
+          if (contradiction === "summary_open_without_findings") {
+            throw new Error(
+              `converged contract case=${input.caseId}: forbidden pattern triggered at runtime (${pattern}).`
+            );
+          }
+          break;
+        }
+        case "clean_summary_with_structured_findings": {
+          if (contradiction === "summary_clean_with_findings") {
+            throw new Error(
+              `converged contract case=${input.caseId}: forbidden pattern triggered at runtime (${pattern}).`
+            );
+          }
+          break;
+        }
+      }
+    }
+    if (
+      routing.expectedRoute === "converged_with_advisory_findings"
+      && emittedFindings.length === 0
+    ) {
+      throw new Error(
+        `converged contract case=${input.caseId}: expected_route=converged_with_advisory_findings requires runtime structured findings.`
+      );
+    }
+    if (
+      routing.expectedRoute === "converged_clean"
+      && emittedFindings.length > 0
+    ) {
+      throw new Error(
+        `converged contract case=${input.caseId}: expected_route=converged_clean requires runtime clean findings payload.`
+      );
+    }
+    if (
+      routing.requiresNoStructuredFindings === true
+      && emittedFindings.length > 0
+    ) {
+      throw new Error(
+        `converged contract case=${input.caseId}: requires_no_structured_findings=true violated by runtime findings payload.`
+      );
+    }
+    if (routing.allowedConvergedFindingSeverities !== undefined) {
+      for (const finding of emittedFindings) {
+        if (!routing.allowedConvergedFindingSeverities.includes(finding.severity)) {
+          throw new Error(
+            `converged contract case=${input.caseId}: runtime finding severity ${finding.severity} is outside allowed_converged_finding_severities=${routing.allowedConvergedFindingSeverities.join(",")}.`
+          );
+        }
+      }
+    }
+  }
+
+  const rollout = input.parsedInput.rolloutContract;
+  if (rollout !== undefined) {
+    // Route strictness (clean vs advisory findings payload) is enforced only by
+    // reviewer_routing_contract fixture fields. rollout_contract version fields
+    // model rollout policy context and must not force findings-count routing.
+    if (
+      rollout.gracePeriodGate === "required_for_new_rollout_signoff"
+      && rollout.kickoffContractVersion !== "advisory_v1"
+    ) {
+      throw new Error(
+        `converged contract case=${input.caseId}: grace_period_gate=required_for_new_rollout_signoff requires kickoff_contract_version=advisory_v1.`
+      );
+    }
+    if (
+      rollout.gracePeriodGate === "legacy_only_within_window"
+      && rollout.kickoffContractVersion !== "legacy_inflight"
+    ) {
+      throw new Error(
+        `converged contract case=${input.caseId}: grace_period_gate=legacy_only_within_window requires kickoff_contract_version=legacy_inflight.`
+      );
+    }
+  }
+}
+
 async function executeConvergedCase(input: {
   caseDef: ContractCase;
   executor: typeof emitConvergedFromWorkspace;
@@ -355,6 +769,11 @@ async function executeConvergedCase(input: {
     assertConvergedScenarioInvariant({
       result,
       scenario: parsedInput.scenario,
+      caseId: input.caseDef.id
+    });
+    assertFixtureRuntimeBinding({
+      parsedInput,
+      result,
       caseId: input.caseDef.id
     });
     return normalizeConvergedResult(result, deliveries);

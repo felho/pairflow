@@ -97,7 +97,17 @@ Reviewer PASS with any `P0/P1` finding must have evidence bound at finding level
 1. Round `< severity_gate_round` (default `4`): reviewer `pairflow pass` remains allowed (including non-blocking findings), while `pairflow converged` is still allowed when policy preconditions are met.
 2. Round `>= severity_gate_round` with blocker findings under scope policy: reviewer should request a fix cycle with `pairflow pass`.
    Document scope blocker means `P0/P1` with strict qualifiers (`timing=required-now` + `layer=L1`).
+   Operational command form: `pairflow pass --summary "..." --finding "P1:Title|artifact://ref"` (repeat `--finding` as needed).
 3. Round `>= severity_gate_round` with only non-blocking findings (`P2/P3`) or clean result: reviewer should use `pairflow converged`.
+   Operational command forms:
+   - Advisory-only (`P2/P3`): `pairflow converged --summary "..." --finding "P2:Title|artifact://ref"`.
+   - Clean (no findings): `pairflow converged --summary "..."` (without `--finding`).
+
+## Command Consistency Guardrails
+
+1. Never make summary-only finding claims without structured `--finding` payload.
+2. Never claim `clean/no findings` while structured findings are present in the same handoff.
+3. Terminology lock: use `--finding`; do not reintroduce `--advisory-finding`.
 
 ## Operational Use
 

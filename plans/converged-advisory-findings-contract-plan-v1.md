@@ -207,10 +207,20 @@ Deliverables:
 4. Legacy transcript kompatibilitas nem cel Phase 1-ben:
    - nincs fallback/normalizalo logika regi transcript formakra.
 5. In-flight bubble atmeneti strategia:
-   - a bubble kickoff idejen rogzitett contract-verzio dont (`legacy_inflight` vagy `advisory_v1`).
-   - rollout elott indult bubble a rogzitett korabbi contract szerint zarhato le, uj bubble mar `advisory_v1` modban indul.
+   - a bubble kickoff idejen rogzitett contract-verzio a bubble teljes elettartamara iranyado (`legacy_inflight` vagy `advisory_v1`), bubble-closeig nem valthat automatikusan.
+   - rollout elott indult bubble a kickoffkor rogzitett korabbi contract szerint zarhato le; uj kickoff mar `advisory_v1` policyval indulhat.
+   - close/approve elott kotelezo ellenorzes: kickoff-version pin megvan es kovetkezetesen szerepel a bubble-level handoff/context anyagban.
 6. Grace period policy:
-   - az in-flight atmenet idoben korlatozott (operaciosan kihirdetett idoablak), utana minden aktiv bubble `advisory_v1` contractra terelendo.
+   - az in-flight atmenet idoben korlatozott, operaciosan kihirdetett grace-windowhoz kotott.
+   - a grace-window lezarasa utan minden uj rollout sign-off csak `advisory_v1` policyval engedheto.
+   - grace-window utan `legacy_inflight` kivetel nem adható uj kickoffra.
+
+### Rollout Sign-off Gate (RSC-T3-WP4)
+
+1. `RC1` - `Forward Contract Strategy` kifejezetten tartalmazza kickoff-version pinning + grace period policy mondatait.
+2. `RC2` - Task traceability megfeleles: `CS5 -> T4` 1:1 hivatkozasi osszhang dokumentalva.
+3. `RC3` - Contract coverage traceability lock: `CS6 -> T5` (assertion-level) es `CS7 -> T6` (fixture-level) overlap nelkul.
+4. `RC4` - Terminology drift gate: nincs `--advisory-finding` visszacsuszas guidance/docs/fixture szinteken.
 
 ## Risk and Mitigation
 

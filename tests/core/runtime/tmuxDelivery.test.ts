@@ -12,7 +12,8 @@ import {
   REVIEWER_COMMAND_GATE_REQ_B,
   REVIEWER_COMMAND_GATE_REQ_C,
   REVIEWER_COMMAND_GATE_REQ_D,
-  REVIEWER_COMMAND_GATE_REQ_E
+  REVIEWER_COMMAND_GATE_REQ_E,
+  REVIEWER_COMMAND_GATE_REQ_F
 } from "../../../src/core/runtime/reviewerCommandGateGuidance.js";
 import type { RuntimeSessionsRegistry } from "../../../src/core/runtime/sessionsRegistry.js";
 import { runtimePaneIndices, type TmuxRunResult, type TmuxRunner } from "../../../src/core/runtime/tmuxManager.js";
@@ -579,6 +580,7 @@ describe("emitTmuxDeliveryNotification", () => {
     );
     expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_A);
     expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+    expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_F);
     expect(messageCall?.[4]).not.toContain(REVIEWER_COMMAND_GATE_REQ_B);
     expect(messageCall?.[4]).not.toContain(REVIEWER_COMMAND_GATE_REQ_C);
     expect(messageCall?.[4]).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
@@ -850,6 +852,7 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_B);
     expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_C);
     expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+    expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_F);
     expect(messageCall?.[4]).not.toContain(REVIEWER_COMMAND_GATE_REQ_A);
     expect(messageCall?.[4]).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
     expectNoForbiddenReviewerCommandGateTokens(messageCall?.[4]);
@@ -908,6 +911,7 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_E);
     expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_C);
     expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_D);
+    expect(messageCall?.[4]).toContain(REVIEWER_COMMAND_GATE_REQ_F);
     expect(messageCall?.[4]).not.toContain(REVIEWER_COMMAND_GATE_REQ_A);
     expect(messageCall?.[4]).not.toContain(REVIEWER_COMMAND_GATE_REQ_B);
     expectNoForbiddenReviewerCommandGateTokens(messageCall?.[4]);
@@ -987,10 +991,12 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(cleanMessage).toContain(REVIEWER_COMMAND_GATE_REQ_C);
     expect(cleanMessage).toContain(REVIEWER_COMMAND_GATE_REQ_D);
     expect(cleanMessage).toContain(REVIEWER_COMMAND_GATE_REQ_B);
+    expect(cleanMessage).toContain(REVIEWER_COMMAND_GATE_REQ_F);
     expect(cleanMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
     expect(findingsMessage).toContain(REVIEWER_COMMAND_GATE_REQ_C);
     expect(findingsMessage).toContain(REVIEWER_COMMAND_GATE_REQ_D);
     expect(findingsMessage).toContain(REVIEWER_COMMAND_GATE_REQ_E);
+    expect(findingsMessage).toContain(REVIEWER_COMMAND_GATE_REQ_F);
     expect(findingsMessage).not.toContain(REVIEWER_COMMAND_GATE_REQ_B);
   });
 

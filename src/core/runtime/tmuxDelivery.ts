@@ -265,7 +265,7 @@ function buildDeliveryMessage(
       });
       const findingsDetailInstruction =
         envelope.round <= 1
-          ? "In round 1, declare findings explicitly with `--finding` or `--no-findings` when using `pairflow pass`."
+          ? "In round 1, use `pairflow pass --summary ...` and declare findings explicitly (`--finding` when findings exist, `--no-findings` only when truly clean)."
           : buildReviewerFindingsPassInstruction(
             bubbleConfig.review_artifact_type
           );

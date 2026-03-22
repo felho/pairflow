@@ -4,11 +4,39 @@
   "mode": "v11",
   "description": "converged document-scope v11 baseline.",
   "input": {
-    "summary": "Document scope convergence v11 baseline.",
+    "summary": "Document scope convergence contract fixture v11 baseline with residual advisory items.",
     "refs": [
       "docs/plan.md"
     ],
-    "reviewArtifactType": "document"
+    "reviewArtifactType": "document",
+    "findings": [
+      {
+        "severity": "P2",
+        "title": "Advisory fixture residual item",
+        "refs": [
+          "docs/plan.md#L1"
+        ]
+      }
+    ],
+    "fixture": {
+      "scenario": "default",
+      "reviewer_routing_contract": {
+        "expected_route": "converged_with_advisory_findings",
+        "allowed_converged_finding_severities": [
+          "P2",
+          "P3"
+        ],
+        "forbidden_patterns": [
+          "summary_only_finding_claim_without_structured_finding",
+          "clean_summary_with_structured_findings"
+        ]
+      },
+      "rollout_contract": {
+        "kickoff_contract_version": "advisory_v1",
+        "inflight_policy": "kickoff_pinned_until_close",
+        "grace_period_gate": "required_for_new_rollout_signoff"
+      }
+    }
   },
   "expected": {
     "status": "ok",
@@ -38,6 +66,8 @@
     "converged",
     "v11-contract",
     "v11",
-    "document-scope"
+    "document-scope",
+    "reviewer-guidance-phase1",
+    "advisory-v1-rollout"
   ]
 }
