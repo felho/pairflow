@@ -10,6 +10,13 @@ class SyntheticReplyCommandError extends Error {
   }
 }
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return `${input.reasonCode !== undefined ? `${input.reasonCode}: ` : ""}${input.message}`;
+}
+
 describe("replyCommandErrorNormalization", () => {
   it("reuses reply command error instances unchanged", () => {
     const original = new SyntheticReplyCommandError("already normalized");
@@ -18,7 +25,8 @@ describe("replyCommandErrorNormalization", () => {
       isReplyCommandError: (candidate) =>
         candidate instanceof SyntheticReplyCommandError,
       isBubbleLookupError: () => false,
-      createReplyCommandError: (message) => new SyntheticReplyCommandError(message)
+      createReplyCommandError: (input) =>
+        new SyntheticReplyCommandError(toErrorMessage(input))
     });
 
     expect(normalized).toBe(original);
@@ -29,13 +37,15 @@ describe("replyCommandErrorNormalization", () => {
       error: new BubbleLookupError("bubble missing"),
       isReplyCommandError: () => false,
       isBubbleLookupError: (candidate) => candidate instanceof BubbleLookupError,
-      createReplyCommandError: (message) => new SyntheticReplyCommandError(message)
+      createReplyCommandError: (input) =>
+        new SyntheticReplyCommandError(toErrorMessage(input))
     });
     const fromGeneric = normalizeReplyCommandError({
       error: new Error("unexpected"),
       isReplyCommandError: () => false,
       isBubbleLookupError: () => false,
-      createReplyCommandError: (message) => new SyntheticReplyCommandError(message)
+      createReplyCommandError: (input) =>
+        new SyntheticReplyCommandError(toErrorMessage(input))
     });
 
     expect(fromLookup).toBeInstanceOf(SyntheticReplyCommandError);
@@ -49,7 +59,8 @@ describe("replyCommandErrorNormalization", () => {
       error: "raw-error",
       isReplyCommandError: () => false,
       isBubbleLookupError: () => false,
-      createReplyCommandError: (message) => new SyntheticReplyCommandError(message)
+      createReplyCommandError: (input) =>
+        new SyntheticReplyCommandError(toErrorMessage(input))
     });
     expect(raw).toBe("raw-error");
   });

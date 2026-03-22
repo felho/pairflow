@@ -8,13 +8,18 @@ export function formatReplyPostAppendStateWriteFailureMessage(input: {
 export function raiseReplyPostAppendStateWriteFailed(input: {
   envelopeId: string;
   reason: string;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }): never {
-  // reason_code=REPLY_STATE_WRITE_FAILED_POST_APPEND context=post_append_state_write
-  throw input.createError(
-    formatReplyPostAppendStateWriteFailureMessage({
+  throw input.createError({
+    reasonCode: "REPLY_STATE_WRITE_FAILED_POST_APPEND",
+    message: formatReplyPostAppendStateWriteFailureMessage({
       envelopeId: input.envelopeId,
       reason: input.reason
-    })
-  );
+    }),
+    context: {
+      command_name: "reply",
+      envelope_id: input.envelopeId
+    },
+    cause: input.reason
+  });
 }

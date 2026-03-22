@@ -2,7 +2,7 @@ export interface NormalizeReplyCommandErrorInput {
   error: unknown;
   isReplyCommandError: (candidate: unknown) => boolean;
   isBubbleLookupError: (candidate: unknown) => boolean;
-  createReplyCommandError: (message: string) => Error;
+  createReplyCommandError: PairflowCreateCommandError;
 }
 
 export function normalizeReplyCommandError(

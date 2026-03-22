@@ -13,15 +13,23 @@ export type ReplyWaitingHumanState = BubbleStateSnapshot & {
 
 export interface EnsureReplyWaitingHumanStateInput {
   state: BubbleStateSnapshot;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 function raiseWaitingHumanStateError(
-  createError: (message: string) => Error,
+  createError: PairflowCreateCommandError,
   reasonCode: string,
-  message: string
+  message: string,
+  context: PairflowCommandErrorContext
 ): never {
-  throw createError(`${reasonCode}: ${message} context: command_name=reply.`);
+  throw createError({
+    reasonCode,
+    message,
+    context: {
+      command_name: "reply",
+      ...context
+    }
+  });
 }
 
 const REPLY_WAITING_HUMAN_STATE_REQUIRED =
@@ -40,7 +48,10 @@ export function ensureReplyWaitingHumanState(
     raiseWaitingHumanStateError(
       createError,
       REPLY_WAITING_HUMAN_STATE_REQUIRED,
-      `bubble reply can only be used while bubble is WAITING_HUMAN (current: ${state.state}).`
+      `bubble reply can only be used while bubble is WAITING_HUMAN (current: ${state.state}).`,
+      {
+        current_state: state.state
+      }
     );
   }
 
@@ -48,7 +59,11 @@ export function ensureReplyWaitingHumanState(
     raiseWaitingHumanStateError(
       createError,
       REPLY_WAITING_HUMAN_ROUND_INVALID,
-      `WAITING_HUMAN state must have round >= 1 (found ${state.round}).`
+      `WAITING_HUMAN state must have round >= 1 (found ${state.round}).`,
+      {
+        state: state.state,
+        round: state.round
+      }
     );
   }
 
@@ -56,7 +71,12 @@ export function ensureReplyWaitingHumanState(
     raiseWaitingHumanStateError(
       createError,
       REPLY_WAITING_HUMAN_CONTEXT_INCOMPLETE,
-      "WAITING_HUMAN state is missing active agent context; cannot resume RUNNING after reply."
+      "WAITING_HUMAN state is missing active agent context; cannot resume RUNNING after reply.",
+      {
+        has_active_agent: state.active_agent !== null,
+        has_active_role: state.active_role !== null,
+        has_active_since: state.active_since !== null
+      }
     );
   }
 

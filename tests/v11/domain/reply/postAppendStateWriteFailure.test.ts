@@ -12,8 +12,15 @@ class TestReplyPostAppendStateWriteFailureError extends Error {
   }
 }
 
-function createError(message: string): Error {
-  return new TestReplyPostAppendStateWriteFailureError(message);
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return `${input.reasonCode !== undefined ? `${input.reasonCode}: ` : ""}${input.message}`;
+}
+
+function createError(input: PairflowCommandErrorInput): Error {
+  return new TestReplyPostAppendStateWriteFailureError(toErrorMessage(input));
 }
 
 describe("reply post-append state write failure", () => {
@@ -37,7 +44,7 @@ describe("reply post-append state write failure", () => {
       })
     ).toThrowError(
       new TestReplyPostAppendStateWriteFailureError(
-        "HUMAN_REPLY env_654 was appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: io error"
+        "REPLY_STATE_WRITE_FAILED_POST_APPEND: HUMAN_REPLY env_654 was appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: io error"
       )
     );
   });
