@@ -2,6 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { normalizeConvergedCommandInput } from "../../../../src/v11/shared/converged/convergedCommandInputNormalization.js";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return `${input.reasonCode !== undefined ? `${input.reasonCode}: ` : ""}${input.message}`;
+}
+
 class SyntheticConvergedCommandError extends Error {
   public constructor(message: string) {
     super(message);
@@ -24,7 +31,7 @@ describe("convergedCommandInputNormalization", () => {
         }
       ],
       now,
-      createError: (message) => new SyntheticConvergedCommandError(message)
+      createError: (input) => new SyntheticConvergedCommandError(toErrorMessage(input))
     });
 
     expect(normalized.summary).toBe("ready for approval");
@@ -42,7 +49,7 @@ describe("convergedCommandInputNormalization", () => {
   it("creates current time when now is omitted", () => {
     const normalized = normalizeConvergedCommandInput({
       summary: "ready",
-      createError: (message) => new SyntheticConvergedCommandError(message)
+      createError: (input) => new SyntheticConvergedCommandError(toErrorMessage(input))
     });
 
     expect(normalized.now).toBeInstanceOf(Date);
@@ -53,7 +60,7 @@ describe("convergedCommandInputNormalization", () => {
     const normalized = normalizeConvergedCommandInput({
       summary: "ready",
       findings: [],
-      createError: (message) => new SyntheticConvergedCommandError(message)
+      createError: (input) => new SyntheticConvergedCommandError(toErrorMessage(input))
     });
 
     expect(normalized.findings).toEqual([]);
@@ -63,7 +70,7 @@ describe("convergedCommandInputNormalization", () => {
     expect(() =>
       normalizeConvergedCommandInput({
         summary: "   ",
-        createError: (message) => new SyntheticConvergedCommandError(message)
+        createError: (input) => new SyntheticConvergedCommandError(toErrorMessage(input))
       })
     ).toThrow("Convergence summary cannot be empty.");
   });
@@ -79,7 +86,7 @@ describe("convergedCommandInputNormalization", () => {
               title: "not allowed"
             }
           ],
-          createError: (message) => new SyntheticConvergedCommandError(message)
+          createError: (input) => new SyntheticConvergedCommandError(toErrorMessage(input))
         })
       ).toThrow(/CONVERGED_BLOCKER_FINDINGS_FORBIDDEN/u);
     }
@@ -95,7 +102,7 @@ describe("convergedCommandInputNormalization", () => {
             title: "not allowed"
           }
         ],
-        createError: (message) => new SyntheticConvergedCommandError(message)
+        createError: (input) => new SyntheticConvergedCommandError(toErrorMessage(input))
       })
     ).toThrow(/CONVERGED_FINDINGS_INVALID/u);
   });
@@ -111,7 +118,7 @@ describe("convergedCommandInputNormalization", () => {
             refs: ["artifact://review/a.md", "   ", "artifact://review/b.md"]
           }
         ],
-        createError: (message) => new SyntheticConvergedCommandError(message)
+        createError: (input) => new SyntheticConvergedCommandError(toErrorMessage(input))
       })
     ).toThrow(/CONVERGED_FINDINGS_INVALID/u);
   });
@@ -127,7 +134,7 @@ describe("convergedCommandInputNormalization", () => {
             refs: ["artifact://review/a.md", "notes-token"]
           }
         ],
-        createError: (message) => new SyntheticConvergedCommandError(message)
+        createError: (input) => new SyntheticConvergedCommandError(toErrorMessage(input))
       })
     ).toThrow(/CONVERGED_FINDINGS_INVALID/u);
   });
@@ -143,7 +150,7 @@ describe("convergedCommandInputNormalization", () => {
             refs: ["notes-token", "notes-token"]
           }
         ],
-        createError: (message) => new SyntheticConvergedCommandError(message)
+        createError: (input) => new SyntheticConvergedCommandError(toErrorMessage(input))
       })
     ).toThrow(/CONVERGED_FINDINGS_INVALID/u);
   });
@@ -158,7 +165,7 @@ describe("convergedCommandInputNormalization", () => {
           refs: ["artifact://review/a.md", "artifact://review/a.md"]
         }
       ],
-      createError: (message) => new SyntheticConvergedCommandError(message)
+      createError: (input) => new SyntheticConvergedCommandError(toErrorMessage(input))
     });
 
     expect(normalized.findings).toEqual([
@@ -175,7 +182,7 @@ describe("convergedCommandInputNormalization", () => {
       normalizeConvergedCommandInput({
         summary: "P2 findings remain open.",
         findings: [],
-        createError: (message) => new SyntheticConvergedCommandError(message)
+        createError: (input) => new SyntheticConvergedCommandError(toErrorMessage(input))
       })
     ).toThrow(/CONVERGED_SUMMARY_FINDINGS_CONTRADICTION/u);
   });
@@ -191,7 +198,7 @@ describe("convergedCommandInputNormalization", () => {
             refs: ["artifact://review/a.md"]
           }
         ],
-        createError: (message) => new SyntheticConvergedCommandError(message)
+        createError: (input) => new SyntheticConvergedCommandError(toErrorMessage(input))
       })
     ).toThrow(/CONVERGED_SUMMARY_FINDINGS_CONTRADICTION/u);
   });
@@ -206,7 +213,7 @@ describe("convergedCommandInputNormalization", () => {
           refs: ["artifact://review/a.md"]
         }
       ],
-      createError: (message) => new SyntheticConvergedCommandError(message)
+      createError: (input) => new SyntheticConvergedCommandError(toErrorMessage(input))
     });
 
     expect(normalized.findings).toEqual([

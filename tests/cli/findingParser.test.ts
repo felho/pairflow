@@ -148,7 +148,12 @@ describe("parseCliFinding", () => {
                 refs: [...fixture.normalizationRefs]
               }
             ],
-            createError: (message) => new SyntheticConvergedCommandError(message)
+            createError: (input) =>
+              new SyntheticConvergedCommandError(
+                typeof input === "string"
+                  ? input
+                  : `${input.reasonCode !== undefined ? `${input.reasonCode}: ` : ""}${input.message}`
+              )
           });
           return true;
         } catch {

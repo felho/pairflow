@@ -28,7 +28,7 @@ export interface PrepareConvergedValidationInput {
   reviewer: AgentName;
   summary: string;
   nowIso: string;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export interface PrepareConvergedValidationDependencies {

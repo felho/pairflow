@@ -7,10 +7,17 @@ import {
   buildConvergedFlowInput
 } from "../../../../src/v11/shared/converged/convergedFlowInvocationBuilders.js";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return `${input.reasonCode !== undefined ? `${input.reasonCode}: ` : ""}${input.message}`;
+}
+
 describe("convergedFlowInvocationBuilders", () => {
   it("builds runConvergedFlow input and forwards only provided optionals", () => {
     const now = new Date("2026-03-19T20:05:00.000Z");
-    const createError = (message: string) => new Error(message);
+    const createError = (input: PairflowCommandErrorInput) => new Error(toErrorMessage(input));
     const resolveMetaReviewRolloutBlockingReasonCodes = () => ["CODE_A"];
 
     const input = buildConvergedFlowInput({
@@ -49,7 +56,7 @@ describe("convergedFlowInvocationBuilders", () => {
 
   it("omits optional runConvergedFlow input fields when explicitly undefined", () => {
     const now = new Date("2026-03-19T20:10:00.000Z");
-    const createError = (message: string) => new Error(message);
+    const createError = (input: PairflowCommandErrorInput) => new Error(toErrorMessage(input));
     const input = buildConvergedFlowInput({
       summary: "ready for converged",
       refs: [],
@@ -74,7 +81,7 @@ describe("convergedFlowInvocationBuilders", () => {
       refs: [],
       findings: [],
       now: new Date("2026-03-19T20:12:00.000Z"),
-      createError: (message: string) => new Error(message),
+      createError: (input: PairflowCommandErrorInput) => new Error(toErrorMessage(input)),
       resolveMetaReviewRolloutBlockingReasonCodes: () => []
     });
 
@@ -221,7 +228,7 @@ describe("convergedFlowInvocationBuilders", () => {
 
   it("builds command flow invocation and forwards only defined optionals", () => {
     const now = new Date("2026-03-19T20:15:00.000Z");
-    const createError = (message: string) => new Error(message);
+    const createError = (input: PairflowCommandErrorInput) => new Error(toErrorMessage(input));
     const resolveMetaReviewRolloutBlockingReasonCodes = () => ["CODE_A"];
     const invocation = buildConvergedCommandFlowInvocation({
       summary: "ready for converged",
@@ -278,7 +285,7 @@ describe("convergedFlowInvocationBuilders", () => {
       summary: "ready for converged",
       refs: [],
       now: new Date("2026-03-19T20:20:00.000Z"),
-      createError: (message: string) => new Error(message),
+      createError: (input: PairflowCommandErrorInput) => new Error(toErrorMessage(input)),
       resolveMetaReviewRolloutBlockingReasonCodes: () => [],
       dependencies: {
         applyMetaReviewGateOnConvergence: undefined,
@@ -300,7 +307,7 @@ describe("convergedFlowInvocationBuilders", () => {
       refs: [],
       findings: [],
       now: new Date("2026-03-19T20:21:00.000Z"),
-      createError: (message: string) => new Error(message),
+      createError: (input: PairflowCommandErrorInput) => new Error(toErrorMessage(input)),
       resolveMetaReviewRolloutBlockingReasonCodes: () => []
     });
 

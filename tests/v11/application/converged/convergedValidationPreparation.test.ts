@@ -2,6 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { prepareConvergedValidation } from "../../../../src/v11/application/converged/convergedValidationPreparation.js";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return `${input.reasonCode !== undefined ? `${input.reasonCode}: ` : ""}${input.message}`;
+}
+
 describe("prepareConvergedValidation", () => {
   it("returns default doc-gate states when artifact read fails and persists summary/verifier audit", async () => {
     let writerCalled = false;
@@ -26,7 +33,7 @@ describe("prepareConvergedValidation", () => {
         reviewer: "claude",
         summary: "No runtime claims.",
         nowIso: "2026-03-19T19:00:00.000Z",
-        createError: (message) => new Error(message)
+        createError: (input) => new Error(toErrorMessage(input))
       },
       {
         isDocContractGateScopeActive: () => true,
@@ -107,7 +114,7 @@ describe("prepareConvergedValidation", () => {
           reviewer: "claude",
           summary: "summary",
           nowIso: "2026-03-19T19:05:00.000Z",
-          createError: (message) => new Error(message)
+          createError: (input) => new Error(toErrorMessage(input))
         },
         {
           isDocContractGateScopeActive: () => false,
@@ -161,7 +168,7 @@ describe("prepareConvergedValidation", () => {
           reviewer: "claude",
           summary: "tests pass and typecheck clean",
           nowIso: "2026-03-19T19:10:00.000Z",
-          createError: (message) => new Error(message)
+          createError: (input) => new Error(toErrorMessage(input))
         },
         {
           isDocContractGateScopeActive: () => true,

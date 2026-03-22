@@ -35,7 +35,7 @@ export interface RunConvergedFlowInput {
   expectedStateFingerprint?: string;
   expectedRound?: number;
   expectedReviewer?: AgentName;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
   resolveMetaReviewRolloutBlockingReasonCodes: (input: {
     gateRoute: MetaReviewGateRoute;
     metaReviewWarnings: Array<{ reason_code: string }>;
@@ -101,7 +101,7 @@ export interface RunConvergedFlowDependencies
     expectedStateFingerprint?: string;
     expectedRound?: number;
     expectedReviewer?: AgentName;
-    createError: (message: string) => Error;
+    createError: PairflowCreateCommandError;
   }) => Promise<PrepareConvergedRoutingResult>;
   prepareConvergedPolicy: (input: {
     transcriptPath: string;
@@ -118,7 +118,7 @@ export interface RunConvergedFlowDependencies
     reviewer: AgentName;
     summary: string;
     nowIso: string;
-    createError: (message: string) => Error;
+    createError: PairflowCreateCommandError;
   }) => Promise<PrepareConvergedValidationResult>;
   executeConvergedExecution: (
     input: {

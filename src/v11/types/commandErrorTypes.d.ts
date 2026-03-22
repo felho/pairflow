@@ -8,3 +8,4 @@ interface PairflowCommandErrorDetails {
 }
 
 type PairflowCommandErrorInput = string | PairflowCommandErrorDetails;
+type PairflowCreateCommandError = (input: PairflowCommandErrorInput) => Error;

@@ -11,6 +11,13 @@ import {
   buildAutoConvergeFlowInput
 } from "../../../../src/v11/shared/pass/autoConvergeFlowInvocationBuilders.js";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return `${input.reasonCode !== undefined ? `${input.reasonCode}: ` : ""}${input.message}`;
+}
+
 describe("autoConvergeFlowInvocationBuilders", () => {
   it("buildAutoConvergeFlowInput maps routing metadata and optional findings claim fields", () => {
     const created = buildAutoConvergeFlowInput({
@@ -71,7 +78,7 @@ describe("autoConvergeFlowInvocationBuilders", () => {
           parserDivergence: false
         }
       },
-      createError: (message) => new Error(message),
+      createError: (input) => new Error(toErrorMessage(input)),
       onDownstreamRejected: (reason) => {
         throw new Error(reason);
       }

@@ -14,6 +14,13 @@ import {
   buildNormalPassFlowInput
 } from "../../../../src/v11/shared/pass/normalPassFlowInvocationBuilders.js";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return `${input.reasonCode !== undefined ? `${input.reasonCode}: ` : ""}${input.message}`;
+}
+
 describe("normalPassFlowInvocationBuilders", () => {
   it("buildNormalPassFlowInput maps shared flow input and repeat-clean metadata", () => {
     const created = buildNormalPassFlowInput({
@@ -63,7 +70,7 @@ describe("normalPassFlowInvocationBuilders", () => {
           mostRecentPreviousReviewerCleanPassEnvelope: false
         }
       },
-      createError: (message) => new Error(message)
+      createError: (input) => new Error(toErrorMessage(input))
     });
 
     expect(created.intent).toBe("fix_request");

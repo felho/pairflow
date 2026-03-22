@@ -2,6 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { runConvergedFlow } from "../../../../src/v11/application/converged/runConvergedFlow.js";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return `${input.reasonCode !== undefined ? `${input.reasonCode}: ` : ""}${input.message}`;
+}
+
 describe("runConvergedFlow", () => {
   it("orchestrates routing -> policy -> validation -> execution -> finalization in order", async () => {
     const callOrder: string[] = [];
@@ -22,7 +29,7 @@ describe("runConvergedFlow", () => {
         expectedStateFingerprint: "fp_1",
         expectedRound: 3,
         expectedReviewer: "claude",
-        createError: (message) => new Error(message),
+        createError: (input) => new Error(toErrorMessage(input)),
         resolveMetaReviewRolloutBlockingReasonCodes: () => []
       },
       {
@@ -157,7 +164,7 @@ describe("runConvergedFlow", () => {
           summary: "summary",
           refs: [],
           now: new Date("2026-03-19T19:35:00.000Z"),
-          createError: (message) => new Error(`wrapped:${message}`),
+          createError: (input) => new Error(`wrapped:${toErrorMessage(input)}`),
           resolveMetaReviewRolloutBlockingReasonCodes: () => []
         },
         {
@@ -200,7 +207,7 @@ describe("runConvergedFlow", () => {
         }
       )
     ).rejects.toThrow(
-      "wrapped:Convergence validation failed: MISSING_ALTERNATION Diagnostics: DIAG_A"
+      "wrapped:CONVERGED_POLICY_VALIDATION_FAILED: Convergence validation failed: MISSING_ALTERNATION Diagnostics: DIAG_A"
     );
   });
 
@@ -211,7 +218,7 @@ describe("runConvergedFlow", () => {
         refs: [],
         findings: [],
         now: new Date("2026-03-19T19:40:00.000Z"),
-        createError: (message) => new Error(message),
+        createError: (input) => new Error(toErrorMessage(input)),
         resolveMetaReviewRolloutBlockingReasonCodes: () => []
       },
       {

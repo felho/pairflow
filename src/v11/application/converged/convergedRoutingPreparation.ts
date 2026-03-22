@@ -13,7 +13,7 @@ export interface PrepareConvergedRoutingInput {
   expectedStateFingerprint?: string;
   expectedRound?: number;
   expectedReviewer?: AgentName;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export interface PrepareConvergedRoutingDependencies {
@@ -34,37 +34,62 @@ export interface PrepareConvergedRoutingResult {
 function assertConvergedReviewerContext(
   state: BubbleStateSnapshot,
   configuredReviewer: AgentName,
-  createError: (message: string) => Error
+  createError: PairflowCreateCommandError
 ): void {
   if (state.state !== "RUNNING") {
-    throw createError(
-      `converged can only be used while bubble is RUNNING (current: ${state.state}).`
-    );
+    throw createError({
+      reasonCode: "CONVERGED_STATE_NOT_RUNNING",
+      message: `converged can only be used while bubble is RUNNING (current: ${state.state}).`,
+      context: {
+        command_name: "converged",
+        current_state: state.state
+      }
+    });
   }
 
   if (state.round < 1) {
-    throw createError(
-      `RUNNING state must have round >= 1 (found ${state.round}).`
-    );
+    throw createError({
+      reasonCode: "CONVERGED_RUNNING_ROUND_INVALID",
+      message: `RUNNING state must have round >= 1 (found ${state.round}).`,
+      context: {
+        command_name: "converged",
+        round: state.round
+      }
+    });
   }
 
   if (state.active_agent === null || state.active_role === null || state.active_since === null) {
-    throw createError(
-      "RUNNING state is missing active agent context; cannot validate convergence."
-    );
+    throw createError({
+      reasonCode: "CONVERGED_ACTIVE_CONTEXT_MISSING",
+      message: "RUNNING state is missing active agent context; cannot validate convergence.",
+      context: {
+        command_name: "converged"
+      }
+    });
   }
 
   if (state.active_role !== "reviewer") {
-    throw createError(
-      `converged may only be invoked by the active reviewer (active role: ${state.active_role}).`
-    );
+    throw createError({
+      reasonCode: "CONVERGED_ACTIVE_ROLE_UNSUPPORTED",
+      message: `converged may only be invoked by the active reviewer (active role: ${state.active_role}).`,
+      context: {
+        command_name: "converged",
+        active_role: state.active_role
+      }
+    });
   }
 
   if (state.active_agent !== configuredReviewer) {
-    // reason_code=CONVERGED_REVIEWER_CONTEXT_MISMATCH round
-    throw createError(
-      `Active reviewer must be configured reviewer agent (${configuredReviewer}).`
-    );
+    throw createError({
+      reasonCode: "CONVERGED_REVIEWER_CONTEXT_MISMATCH",
+      message: `Active reviewer must be configured reviewer agent (${configuredReviewer}).`,
+      context: {
+        command_name: "converged",
+        round: state.round,
+        active_agent: state.active_agent,
+        configured_reviewer: configuredReviewer
+      }
+    });
   }
 }
 
@@ -96,10 +121,15 @@ export async function prepareConvergedRouting(
     input.expectedStateFingerprint !== undefined
     && loadedState.fingerprint !== input.expectedStateFingerprint
   ) {
-    // bubbleId context is emitted downstream by lifecycle metrics.
-    throw input.createError(
-      "Convergence validation failed: AUTO_CONVERGE_STATE_STALE: state changed before converged transition."
-    );
+    throw input.createError({
+      reasonCode: "AUTO_CONVERGE_STATE_STALE",
+      message: "Convergence validation failed: state changed before converged transition.",
+      context: {
+        command_name: "converged",
+        expected_state_fingerprint: input.expectedStateFingerprint,
+        actual_state_fingerprint: loadedState.fingerprint
+      }
+    });
   }
 
   const state = loadedState.state;
@@ -110,24 +140,40 @@ export async function prepareConvergedRouting(
     ideationMetadata.mode &&
     ideationMetadata.taskPending
   ) {
-    throw input.createError(
-      `${IDEATION_CONVERGED_BLOCKED}: ideation kickoff is required before CONVERGED handoff.`
-    );
+    throw input.createError({
+      reasonCode: IDEATION_CONVERGED_BLOCKED,
+      message: "ideation kickoff is required before CONVERGED handoff.",
+      context: {
+        command_name: "converged",
+        round: state.round
+      }
+    });
   }
   if (input.expectedRound !== undefined && state.round !== input.expectedRound) {
-    throw input.createError(
-      `Convergence validation failed: AUTO_CONVERGE_STATE_STALE: expected round ${input.expectedRound}, got ${state.round}.`
-    );
+    throw input.createError({
+      reasonCode: "AUTO_CONVERGE_STATE_STALE",
+      message: `Convergence validation failed: expected round ${input.expectedRound}, got ${state.round}.`,
+      context: {
+        command_name: "converged",
+        expected_round: input.expectedRound,
+        current_round: state.round
+      }
+    });
   }
   if (
     input.expectedReviewer !== undefined
     && state.active_role === "reviewer"
     && state.active_agent !== input.expectedReviewer
   ) {
-    // round and bubbleId context are emitted downstream by lifecycle metrics.
-    throw input.createError(
-      `Convergence validation failed: AUTO_CONVERGE_STATE_STALE: expected reviewer ${input.expectedReviewer}, got ${String(state.active_agent)}.`
-    );
+    throw input.createError({
+      reasonCode: "AUTO_CONVERGE_STATE_STALE",
+      message: `Convergence validation failed: expected reviewer ${input.expectedReviewer}, got ${String(state.active_agent)}.`,
+      context: {
+        command_name: "converged",
+        expected_reviewer: input.expectedReviewer,
+        active_reviewer: String(state.active_agent)
+      }
+    });
   }
 
   const { implementer, reviewer } = resolved.bubbleConfig.agents;

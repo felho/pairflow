@@ -83,10 +83,14 @@ export async function runConvergedFlow(
       policyResult.policy.diagnostics.length > 0
         ? ` Diagnostics: ${policyResult.policy.diagnostics.join(" ")}`
         : "";
-    // reason_code=CONVERGED_POLICY_VALIDATION_FAILED round
-    throw input.createError(
-      `Convergence validation failed: ${policyResult.policy.errors.join(" ")}${diagnosticsSuffix}`
-    );
+    throw input.createError({
+      reasonCode: "CONVERGED_POLICY_VALIDATION_FAILED",
+      message: `Convergence validation failed: ${policyResult.policy.errors.join(" ")}${diagnosticsSuffix}`,
+      context: {
+        command_name: "converged",
+        round: routing.state.round
+      }
+    });
   }
 
   const validationResult = await dependencies.prepareConvergedValidation({

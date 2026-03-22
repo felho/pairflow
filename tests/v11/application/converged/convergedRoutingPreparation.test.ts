@@ -3,6 +3,13 @@ import { describe, expect, it } from "vitest";
 import { IDEATION_CONVERGED_BLOCKED } from "../../../../src/core/bubble/ideation.js";
 import { prepareConvergedRouting } from "../../../../src/v11/application/converged/convergedRoutingPreparation.js";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return `${input.reasonCode !== undefined ? `${input.reasonCode}: ` : ""}${input.message}`;
+}
+
 describe("prepareConvergedRouting", () => {
   it("loads workspace routing context and enforces reviewer ownership", async () => {
     const now = new Date("2026-03-19T10:00:00.000Z");
@@ -39,7 +46,7 @@ describe("prepareConvergedRouting", () => {
         expectedStateFingerprint: "fp-1",
         expectedRound: 2,
         expectedReviewer: "claude",
-        createError: (message) => new Error(message)
+        createError: (input) => new Error(toErrorMessage(input))
       },
       {
         resolveBubbleFromWorkspaceCwd: async (cwd) => {
@@ -93,7 +100,7 @@ describe("prepareConvergedRouting", () => {
         {
           now: new Date("2026-03-19T10:00:00.000Z"),
           expectedStateFingerprint: "fp-expected",
-          createError: (message) => new Error(message)
+          createError: (input) => new Error(toErrorMessage(input))
         },
         {
           resolveBubbleFromWorkspaceCwd: async () => ({
@@ -135,7 +142,7 @@ describe("prepareConvergedRouting", () => {
         }
       )
     ).rejects.toThrow(
-      "Convergence validation failed: AUTO_CONVERGE_STATE_STALE: state changed before converged transition."
+      "AUTO_CONVERGE_STATE_STALE: Convergence validation failed: state changed before converged transition."
     );
   });
 
@@ -144,7 +151,7 @@ describe("prepareConvergedRouting", () => {
       prepareConvergedRouting(
         {
           now: new Date("2026-03-19T10:00:00.000Z"),
-          createError: (message) => new Error(message)
+          createError: (input) => new Error(toErrorMessage(input))
         },
         {
           resolveBubbleFromWorkspaceCwd: async () => ({
