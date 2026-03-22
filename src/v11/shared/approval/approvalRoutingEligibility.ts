@@ -41,7 +41,7 @@ export interface ResolveApprovalDecisionMetadataInput {
   overrideNonApprove?: boolean | undefined;
   overrideReason?: string | undefined;
   readTranscriptEnvelopes: typeof readTranscriptEnvelopes;
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export function isHumanApprovalState(
@@ -59,23 +59,35 @@ export function isHumanApprovalState(
 
 export function assertApprovalDecisionEligibility(
   state: BubbleStateSnapshot,
-  createError: (message: string) => Error
+  createError: PairflowCreateCommandError
 ): void {
   if (!isHumanApprovalState(state.state)) {
-    throw createError(
-      `${APPROVAL_DECISION_STATE_INELIGIBLE}: approval decision can only be used while bubble is ${canonicalHumanApprovalState} or ${metaReviewFailedHumanState} (legacy compatibility: ${legacyHumanApprovalState}) (current: ${state.state}).`
-    );
+    throw createError({
+      reasonCode: APPROVAL_DECISION_STATE_INELIGIBLE,
+      message:
+        `approval decision can only be used while bubble is ${canonicalHumanApprovalState} or ${metaReviewFailedHumanState} (legacy compatibility: ${legacyHumanApprovalState}) (current: ${state.state}).`,
+      context: {
+        command_name: "approval",
+        current_state: state.state
+      }
+    });
   }
   if (state.round < 1) {
-    throw createError(
-      `${APPROVAL_DECISION_ROUND_INVALID}: ${state.state} state must have round >= 1 (found ${state.round}).`
-    );
+    throw createError({
+      reasonCode: APPROVAL_DECISION_ROUND_INVALID,
+      message: `${state.state} state must have round >= 1 (found ${state.round}).`,
+      context: {
+        command_name: "approval",
+        state: state.state,
+        round: state.round
+      }
+    });
   }
 }
 
 function resolveLatestApprovalRecommendation(
   state: BubbleStateSnapshot,
-  createError: (message: string) => Error
+  createError: PairflowCreateCommandError
 ): MetaReviewRecommendation {
   if (
     state.state === legacyHumanApprovalState &&
@@ -104,9 +116,13 @@ function resolveLatestApprovalRecommendation(
   if (stickyHumanGateRoute) {
     return "inconclusive";
   }
-  throw createError(
-    `${APPROVAL_RECOMMENDATION_UNAVAILABLE}: latest autonomous recommendation is unavailable at approval time. context: command_name=approval.`
-  );
+  throw createError({
+    reasonCode: APPROVAL_RECOMMENDATION_UNAVAILABLE,
+    message: "latest autonomous recommendation is unavailable at approval time.",
+    context: {
+      command_name: "approval"
+    }
+  });
 }
 
 export async function resolveApprovalDecisionMetadata(
@@ -145,18 +161,33 @@ export async function resolveApprovalDecisionMetadata(
   }
 
   if (input.overrideNonApprove !== true) {
-    throw input.createError(
-      parityInconsistencyAtDecision
-        ? `${APPROVAL_PARITY_OVERRIDE_REQUIRED}: approval requires --override-non-approve when findings parity metadata is inconsistent. context: command_name=approval.`
-        : `${APPROVAL_OVERRIDE_REQUIRED}: approval requires --override-non-approve when latest recommendation is ${recommendationAtDecision}. context: command_name=approval.`
-    );
+    throw input.createError({
+      reasonCode:
+        parityInconsistencyAtDecision
+          ? APPROVAL_PARITY_OVERRIDE_REQUIRED
+          : APPROVAL_OVERRIDE_REQUIRED,
+      message:
+        parityInconsistencyAtDecision
+          ? "approval requires --override-non-approve when findings parity metadata is inconsistent."
+          : `approval requires --override-non-approve when latest recommendation is ${recommendationAtDecision}.`,
+      context: {
+        command_name: "approval",
+        recommendation_at_decision: recommendationAtDecision
+      }
+    });
   }
   if (input.overrideReason === undefined) {
-    throw input.createError(
-      parityInconsistencyAtDecision
-        ? `${APPROVAL_OVERRIDE_REASON_REQUIRED}: approval override requires --override-reason when findings parity metadata is inconsistent. context: command_name=approval.`
-        : `${APPROVAL_OVERRIDE_REASON_REQUIRED}: approval override requires --override-reason when latest recommendation is ${recommendationAtDecision}. context: command_name=approval.`
-    );
+    throw input.createError({
+      reasonCode: APPROVAL_OVERRIDE_REASON_REQUIRED,
+      message:
+        parityInconsistencyAtDecision
+          ? "approval override requires --override-reason when findings parity metadata is inconsistent."
+          : `approval override requires --override-reason when latest recommendation is ${recommendationAtDecision}.`,
+      context: {
+        command_name: "approval",
+        recommendation_at_decision: recommendationAtDecision
+      }
+    });
   }
 
   metadata.override_non_approve = true;

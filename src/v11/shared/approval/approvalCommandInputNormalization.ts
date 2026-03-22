@@ -14,7 +14,7 @@ export interface NormalizeApprovalDecisionInputInput {
   repoPath?: string | undefined;
   cwd?: string | undefined;
   now?: Date | undefined;
-  createApprovalCommandError: (message: string) => Error;
+  createApprovalCommandError: PairflowCreateCommandError;
 }
 
 export interface NormalizedApprovalDecisionInput {
@@ -36,7 +36,7 @@ export interface NormalizeRequestReworkInputInput {
   repoPath?: string | undefined;
   cwd?: string | undefined;
   now?: Date | undefined;
-  createApprovalCommandError: (message: string) => Error;
+  createApprovalCommandError: PairflowCreateCommandError;
 }
 
 export interface NormalizedRequestReworkInput {
@@ -53,16 +53,20 @@ const APPROVAL_OVERRIDE_REASON_REQUIRED =
 
 function validateAndNormalizeOverrideReason(
   reason: string | undefined,
-  createError: (message: string) => Error
+  createError: PairflowCreateCommandError
 ): string | undefined {
   if (reason === undefined) {
     return undefined;
   }
   const trimmed = reason.trim();
   if (trimmed.length === 0) {
-    throw createError(
-      `${APPROVAL_OVERRIDE_REASON_REQUIRED}: --override-reason must be non-empty after trimming whitespace. context: command_name=approval.`
-    );
+    throw createError({
+      reasonCode: APPROVAL_OVERRIDE_REASON_REQUIRED,
+      message: "--override-reason must be non-empty after trimming whitespace.",
+      context: {
+        command_name: "approval"
+      }
+    });
   }
   return trimmed;
 }

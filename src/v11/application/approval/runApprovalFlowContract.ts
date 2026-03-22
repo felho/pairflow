@@ -4,9 +4,9 @@ import type {
 } from "../../shared/approval/approvalCommandInputNormalization.js";
 
 export interface RunApprovalDecisionFlowInput extends NormalizedApprovalDecisionInput {
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }
 
 export interface RunRequestReworkFlowInput extends NormalizedRequestReworkInput {
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }

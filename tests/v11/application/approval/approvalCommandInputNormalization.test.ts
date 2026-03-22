@@ -12,8 +12,15 @@ class ApprovalInputNormalizationTestError extends Error {
   }
 }
 
-const createError = (message: string) =>
-  new ApprovalInputNormalizationTestError(message);
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return `${input.reasonCode !== undefined ? `${input.reasonCode}: ` : ""}${input.message}`;
+}
+
+const createError: PairflowCreateCommandError = (input) =>
+  new ApprovalInputNormalizationTestError(toErrorMessage(input));
 
 describe("approvalCommandInputNormalization", () => {
   it("normalizes decision input refs and override reason", () => {

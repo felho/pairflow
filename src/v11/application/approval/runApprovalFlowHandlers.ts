@@ -36,9 +36,15 @@ export async function runRequestReworkFlowWithContext(
   }
 
   if (state.state !== "WAITING_HUMAN") {
-    throw input.flow.createError(
-      `bubble request-rework can only be used while bubble is ${canonicalHumanApprovalState}, ${metaReviewFailedHumanState} (legacy compatibility: ${legacyHumanApprovalState}) or WAITING_HUMAN (current: ${state.state}).`
-    );
+    throw input.flow.createError({
+      reasonCode: "APPROVAL_REQUEST_REWORK_STATE_INELIGIBLE",
+      message:
+        `bubble request-rework can only be used while bubble is ${canonicalHumanApprovalState}, ${metaReviewFailedHumanState} (legacy compatibility: ${legacyHumanApprovalState}) or WAITING_HUMAN (current: ${state.state}).`,
+      context: {
+        command_name: "approval",
+        current_state: state.state
+      }
+    });
   }
 
   const bubbleIdentity = await input.dependencies.ensureBubbleInstanceIdForMutation({

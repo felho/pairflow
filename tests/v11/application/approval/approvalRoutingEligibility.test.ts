@@ -12,8 +12,15 @@ class ApprovalRoutingEligibilityTestError extends Error {
   }
 }
 
-const createError = (message: string) =>
-  new ApprovalRoutingEligibilityTestError(message);
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return `${input.reasonCode !== undefined ? `${input.reasonCode}: ` : ""}${input.message}`;
+}
+
+const createError: PairflowCreateCommandError = (input) =>
+  new ApprovalRoutingEligibilityTestError(toErrorMessage(input));
 
 describe("approvalRoutingEligibility", () => {
   it("rejects decisions outside approval states", () => {

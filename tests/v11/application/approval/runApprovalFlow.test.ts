@@ -4,6 +4,13 @@ import { applyStateTransition } from "../../../../src/core/state/machine.js";
 import { deliveryTargetRoleMetadataKey } from "../../../../src/types/protocol.js";
 import { runApprovalDecisionFlow } from "../../../../src/v11/application/approval/runApprovalFlow.js";
 
+function toErrorMessage(input: PairflowCommandErrorInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return `${input.reasonCode !== undefined ? `${input.reasonCode}: ` : ""}${input.message}`;
+}
+
 function createReadyForHumanApprovalState() {
   return {
     bubble_id: "b_approval_flow_01",
@@ -139,7 +146,7 @@ describe("runApprovalDecisionFlow delivery invariant", () => {
         decision: "approve",
         refs: [],
         now,
-        createError: (message) => new Error(message)
+        createError: (input) => new Error(toErrorMessage(input))
       },
       flow.dependencies
     );
@@ -167,7 +174,7 @@ describe("runApprovalDecisionFlow delivery invariant", () => {
         message: "Please rework.",
         refs: [],
         now,
-        createError: (message) => new Error(message)
+        createError: (input) => new Error(toErrorMessage(input))
       },
       flow.dependencies
     );

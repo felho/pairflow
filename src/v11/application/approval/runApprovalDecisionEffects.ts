@@ -13,7 +13,7 @@ type ApprovalDecisionFlowShape = Pick<
   NormalizedApprovalDecisionInput,
   "decision" | "message" | "overrideNonApprove" | "overrideReason"
 > & {
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 };
 
 export async function buildApprovalDecisionEnvelopePayload(input: {

@@ -7,7 +7,7 @@ export async function persistDeferredReworkIntentState(input: {
   loadedFingerprint: string;
   statePath: string;
   writeStateSnapshot: ResolvedApprovalCommandDependencies["writeStateSnapshot"];
-  createError: (message: string) => Error;
+  createError: PairflowCreateCommandError;
 }): Promise<Awaited<ReturnType<ResolvedApprovalCommandDependencies["writeStateSnapshot"]>>> {
   try {
     return await persistStateViaMutationBoundary({
@@ -21,9 +21,16 @@ export async function persistDeferredReworkIntentState(input: {
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    throw input.createError(
-      `DEFERRED_REWORK_STATE_PERSIST_FAILED: Deferred rework intent ${input.queued.intent.intent_id} was queued in-memory but state update failed. Root error: ${reason} context: command_name=approval.`
-    );
+    throw input.createError({
+      reasonCode: "DEFERRED_REWORK_STATE_PERSIST_FAILED",
+      message:
+        `Deferred rework intent ${input.queued.intent.intent_id} was queued in-memory but state update failed.`,
+      context: {
+        command_name: "approval",
+        intent_id: input.queued.intent.intent_id
+      },
+      cause: reason
+    });
   }
 }
 

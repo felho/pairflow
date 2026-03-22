@@ -79,9 +79,16 @@ export async function runApprovalDecisionFlowWithContext(
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    throw input.flow.createError(
-      `APPROVAL_DECISION ${appended.envelope.id} was appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`
-    );
+    throw input.flow.createError({
+      reasonCode: "APPROVAL_DECISION_STATE_PERSIST_FAILED",
+      message:
+        `APPROVAL_DECISION ${appended.envelope.id} was appended but state update failed. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`,
+      context: {
+        command_name: "approval",
+        envelope_id: appended.envelope.id
+      },
+      cause: error
+    });
   }
 
   const decisionMessageRef = input.dependencies.resolveDeliveryMessageRef({

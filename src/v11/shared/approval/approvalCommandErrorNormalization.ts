@@ -1,7 +1,7 @@
 export interface NormalizeApprovalCommandErrorInput {
   error: unknown;
   isApprovalCommandError: (candidate: unknown) => boolean;
-  createApprovalCommandError: (message: string) => Error;
+  createApprovalCommandError: PairflowCreateCommandError;
   isBubbleLookupError?: (candidate: unknown) => boolean;
 }
 
