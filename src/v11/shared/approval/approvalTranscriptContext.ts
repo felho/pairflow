@@ -6,6 +6,8 @@ const metaReviewGateRunFailedReasonCode = "META_REVIEW_GATE_RUN_FAILED";
 const metaReviewGateRouteMetadataKey = "meta_review_gate_route";
 const metaReviewGateReasonCodeMetadataKey = "meta_review_gate_reason_code";
 const metaReviewGateRunFailedMetadataKey = "meta_review_gate_run_failed";
+const approvalSummaryConsistencyStatusMetadataKey =
+  "approval_summary_consistency_status";
 
 export interface ApprovalTranscriptContext {
   latestRoundApprovalRequest?: ProtocolEnvelope;
@@ -57,6 +59,11 @@ export function hasParityInconsistencyMetadata(
     return false;
   }
   const parityMetadata = metadata as Record<string, unknown>;
+  const summaryConsistencyStatus =
+    parityMetadata[approvalSummaryConsistencyStatusMetadataKey];
+  if (summaryConsistencyStatus === "mismatch") {
+    return true;
+  }
   const parityStatus = parityMetadata.findings_parity_status;
   if (parityStatus === "mismatch" || parityStatus === "guard_failed") {
     return true;

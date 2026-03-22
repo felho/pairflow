@@ -486,7 +486,32 @@ describe("meta-review run", () => {
         runLiveReview: async () => ({
           recommendation: "approve",
           summary: "Recovered approve recommendation",
-          report_markdown: "# Recovered"
+          report_markdown: "# Recovered",
+          report_json: {
+            findings_claim_state: "open_findings",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 2,
+            findings_claimed_open_total: 2,
+            findings_artifact_open_total: 2,
+            findings_blocking_open_total: 0,
+            findings_advisory_open_total: 2,
+            findings_artifact_status: "available",
+            findings_digest_sha256:
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            meta_review_run_id: "run_meta_refresh_approval_01",
+            findings_parity_status: "ok",
+            findings: [
+              {
+                severity: "P2",
+                title: "refresh advisory a",
+                refs: ["artifact://refresh/a"]
+              },
+              {
+                severity: "P3",
+                title: "refresh advisory b"
+              }
+            ]
+          }
         })
       }
     );
@@ -521,9 +546,24 @@ describe("meta-review run", () => {
       [deliveryTargetRoleMetadataKey]: "status",
       actor: "meta-reviewer",
       actor_agent: "codex",
-      latest_recommendation: "approve"
+      latest_recommendation: "approve",
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 2
     });
     expect(lastTranscriptMessage?.payload.metadata).not.toHaveProperty("run_id");
+    expect(lastTranscriptMessage?.payload.findings).toEqual([
+      {
+        priority: "P2",
+        severity: "P2",
+        title: "refresh advisory a",
+        refs: ["artifact://refresh/a"]
+      },
+      {
+        priority: "P3",
+        severity: "P3",
+        title: "refresh advisory b"
+      }
+    ]);
 
     expect(inbox.pending.approvalRequests).toBe(1);
     expect(inbox.items).toHaveLength(1);
@@ -1893,6 +1933,63 @@ describe("meta-review reads", () => {
     expect(before.fingerprint).toBe(after.fingerprint);
     expect(lastReport.has_report).toBe(true);
     expect(lastReport.report_markdown).toContain("Existing report");
+  });
+
+  it("reads blocking/advisory split parity fields from report json into status and last-report views", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_read_split_01",
+      task: "Meta split parity snapshot"
+    });
+
+    await runMetaReview(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath
+      },
+      {
+        randomUUID: () => "run_meta_read_split_01",
+        now: new Date("2026-03-08T11:25:30.000Z"),
+        runLiveReview: async () => ({
+          recommendation: "approve",
+          summary: "Split parity snapshot exists",
+          report_markdown: "# Split report",
+          report_json: {
+            findings_claim_state: "open_findings",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 2,
+            findings_claimed_open_total: 2,
+            findings_artifact_open_total: 2,
+            findings_blocking_open_total: 0,
+            findings_advisory_open_total: 2,
+            findings_artifact_status: "available",
+            findings_digest_sha256:
+              "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            meta_review_run_id: "run_meta_read_split_01",
+            findings_parity_status: "ok"
+          }
+        })
+      }
+    );
+
+    const status = await getMetaReviewStatus({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+    const lastReport = await getMetaReviewLastReport({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+
+    expect(status).toMatchObject({
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 2
+    });
+    expect(lastReport).toMatchObject({
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 2
+    });
   });
 
   it("surfaces deterministic parity diagnostics when parity JSON is malformed", async () => {

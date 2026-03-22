@@ -1197,6 +1197,72 @@ describe("approval decisions", () => {
     });
   });
 
+  it("requires override when approval summary consistency metadata is mismatch", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupReadyForHumanApprovalBubble(
+      repoPath,
+      "b_approval_summary_consistency_override_01"
+    );
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    if (loaded.state.meta_review === undefined) {
+      throw new Error("Expected meta_review snapshot to exist.");
+    }
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        meta_review: {
+          ...loaded.state.meta_review,
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Autonomous approve with summary-consistency mismatch metadata.",
+          last_autonomous_updated_at: "2026-02-22T12:05:39.000Z"
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "READY_FOR_HUMAN_APPROVAL"
+      }
+    );
+
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      mirrorPaths: [bubble.paths.inboxPath],
+      lockPath: join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`),
+      now: new Date("2026-02-22T12:05:40.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: "human",
+        type: "APPROVAL_REQUEST",
+        round: loaded.state.round,
+        payload: {
+          summary: "Summary normalization reported mismatch.",
+          metadata: {
+            [deliveryTargetRoleMetadataKey]: "status",
+            actor: "meta-reviewer",
+            actor_agent: "codex",
+            latest_recommendation: "approve",
+            findings_claimed_open_total: 2,
+            findings_artifact_open_total: 2,
+            findings_parity_status: "ok",
+            approval_summary_consistency_status: "mismatch"
+          }
+        },
+        refs: ["artifacts/meta-review-last.md"]
+      }
+    });
+
+    await expect(
+      emitApprove({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:05:41.000Z")
+      })
+    ).rejects.toThrow(/APPROVAL_PARITY_OVERRIDE_REQUIRED/u);
+  });
+
   it("keeps parity override guard active for META_REVIEW_FAILED approvals", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({

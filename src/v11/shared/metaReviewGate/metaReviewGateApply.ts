@@ -40,6 +40,7 @@ export async function applyMetaReviewGateOnConvergence(
       bubbleId: context.resolved.bubbleId,
       summary: input.summary,
       refs: context.refs,
+      ...(input.findings !== undefined ? { findings: input.findings } : {}),
       loadedRunning: context.loadedRunning,
       readyForApproval: context.readyForApproval
     });

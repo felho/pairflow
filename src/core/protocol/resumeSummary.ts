@@ -51,17 +51,27 @@ function extractFindingsParityDiagnosticFromMetadata(
   }
   const claimed = metadata.findings_claimed_open_total;
   const artifact = metadata.findings_artifact_open_total;
+  const blocking = metadata.findings_blocking_open_total;
+  const advisory = metadata.findings_advisory_open_total;
   const status = metadata.findings_parity_status;
   const hasClaimed = typeof claimed === "number" && Number.isInteger(claimed);
   const hasArtifact = typeof artifact === "number" && Number.isInteger(artifact);
+  const hasBlocking = typeof blocking === "number" && Number.isInteger(blocking);
+  const hasAdvisory = typeof advisory === "number" && Number.isInteger(advisory);
   const hasStatus = typeof status === "string" && status.trim().length > 0;
-  if (!hasClaimed && !hasArtifact && !hasStatus) {
+  if (!hasClaimed && !hasArtifact && !hasStatus && !hasBlocking && !hasAdvisory) {
     return null;
   }
   const claimedText = hasClaimed ? String(claimed) : "?";
   const artifactText = hasArtifact ? String(artifact) : "?";
+  const blockingText = hasBlocking ? String(blocking) : "?";
+  const advisoryText = hasAdvisory ? String(advisory) : "?";
   const statusText = hasStatus ? status.trim() : "unknown";
-  return `parity=${claimedText}/${artifactText}@${statusText}`;
+  const splitSuffix =
+    hasBlocking || hasAdvisory
+      ? `, split=${blockingText}/${advisoryText}`
+      : "";
+  return `parity=${claimedText}/${artifactText}@${statusText}${splitSuffix}`;
 }
 
 function extractPayloadExcerpt(envelope: ProtocolEnvelope): string {

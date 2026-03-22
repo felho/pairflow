@@ -214,6 +214,44 @@ describe("buildResumeTranscriptSummary", () => {
     expect(summary).not.toContain("parity=");
   });
 
+  it("renders advisory/blocking parity split and approval findings presence in transcript summary", async () => {
+    const root = await createTempRoot();
+    const transcriptPath = join(root, "transcript.ndjson");
+
+    await writeTranscript(transcriptPath, [
+      createEnvelope(1, {
+        type: "APPROVAL_REQUEST",
+        sender: "orchestrator",
+        recipient: "human",
+        payload: {
+          summary: "Approval routing with advisory findings list.",
+          findings: [
+            {
+              severity: "P2",
+              title: "Follow-up regression test coverage"
+            },
+            {
+              severity: "P3",
+              title: "CLI guidance wording consistency"
+            }
+          ],
+          metadata: {
+            findings_claimed_open_total: 2,
+            findings_artifact_open_total: 2,
+            findings_blocking_open_total: 0,
+            findings_advisory_open_total: 2,
+            findings_parity_status: "ok"
+          }
+        }
+      })
+    ]);
+
+    const summary = await buildResumeTranscriptSummary({ transcriptPath });
+
+    expect(summary).toContain("parity=2/2@ok, split=0/2");
+    expect(summary).toContain("findings=2");
+  });
+
   it("tolerates malformed trailing final line and still summarizes", async () => {
     const root = await createTempRoot();
     const transcriptPath = join(root, "transcript.ndjson");

@@ -5,7 +5,10 @@ import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve } from "node:path";
 
 import { BubbleLookupError, resolveBubbleById } from "./bubbleLookup.js";
-import { appendHumanApprovalRequestEnvelope } from "./approvalRequestEnvelope.js";
+import {
+  appendHumanApprovalRequestEnvelope,
+  type ApprovalAdvisoryFinding
+} from "./approvalRequestEnvelope.js";
 import {
   StateStoreConflictError,
   readStateSnapshot,
@@ -39,6 +42,10 @@ import {
   type FindingsParityStatus,
   type MetaReviewSubmissionPayload
 } from "../../types/protocol.js";
+import {
+  resolveAdvisoryFindingsFromReportJson,
+  resolveFindingsOpenSplitFromReportJson
+} from "../../v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.js";
 const CANONICAL_META_REVIEW_REPORT_REF = "artifacts/meta-review-last.md";
 const CANONICAL_META_REVIEW_REPORT_JSON_REF = "artifacts/meta-review-last.json";
 
@@ -98,6 +105,8 @@ export interface MetaReviewStatusView {
   last_autonomous_updated_at: string | null;
   findings_claimed_open_total: number | null;
   findings_artifact_open_total: number | null;
+  findings_blocking_open_total: number | null;
+  findings_advisory_open_total: number | null;
   findings_artifact_status: string | null;
   findings_digest_sha256: string | null;
   meta_review_run_id: string | null;
@@ -114,6 +123,8 @@ export interface MetaReviewLastReportView {
   report_markdown: string | null;
   findings_claimed_open_total: number | null;
   findings_artifact_open_total: number | null;
+  findings_blocking_open_total: number | null;
+  findings_advisory_open_total: number | null;
   findings_artifact_status: string | null;
   findings_digest_sha256: string | null;
   meta_review_run_id: string | null;
@@ -381,6 +392,8 @@ function resolveCanonicalMetaReviewReportJson(input: {
 interface MetaReviewFindingsParitySnapshot {
   findings_claimed_open_total: number | null;
   findings_artifact_open_total: number | null;
+  findings_blocking_open_total: number | null;
+  findings_advisory_open_total: number | null;
   findings_artifact_status: string | null;
   findings_digest_sha256: string | null;
   meta_review_run_id: string | null;
@@ -390,6 +403,8 @@ interface MetaReviewFindingsParitySnapshot {
 const emptyMetaReviewFindingsParitySnapshot: MetaReviewFindingsParitySnapshot = {
   findings_claimed_open_total: null,
   findings_artifact_open_total: null,
+  findings_blocking_open_total: null,
+  findings_advisory_open_total: null,
   findings_artifact_status: null,
   findings_digest_sha256: null,
   meta_review_run_id: null,
@@ -414,6 +429,17 @@ function readMetaReviewFindingsParitySnapshot(
   const artifactCount = normalizeNonNegativeInt(
     reportJson.findings_artifact_open_total
   );
+  const explicitBlockingCount = normalizeNonNegativeInt(
+    reportJson.findings_blocking_open_total
+  );
+  const explicitAdvisoryCount = normalizeNonNegativeInt(
+    reportJson.findings_advisory_open_total
+  );
+  const splitFromReportJson = resolveFindingsOpenSplitFromReportJson(reportJson);
+  const blockingCount =
+    explicitBlockingCount ?? splitFromReportJson.findings_blocking_open_total;
+  const advisoryCount =
+    explicitAdvisoryCount ?? splitFromReportJson.findings_advisory_open_total;
   const artifactStatus = isNonEmptyString(reportJson.findings_artifact_status)
     ? reportJson.findings_artifact_status.trim()
     : isNonEmptyString(reportJson.artifact_status)
@@ -442,11 +468,19 @@ function readMetaReviewFindingsParitySnapshot(
   return {
     findings_claimed_open_total: claimCount,
     findings_artifact_open_total: artifactCount,
+    findings_blocking_open_total: blockingCount,
+    findings_advisory_open_total: advisoryCount,
     findings_artifact_status: artifactStatus,
     findings_digest_sha256: digest,
     meta_review_run_id: runId,
     findings_parity_status: parityStatus
   };
+}
+
+function readApprovalAdvisoryFindingsSnapshot(
+  reportJson: Record<string, unknown> | undefined
+): ApprovalAdvisoryFinding[] | undefined {
+  return resolveAdvisoryFindingsFromReportJson(reportJson);
 }
 
 function shouldRefreshApprovalRequest(
@@ -691,6 +725,8 @@ function createMetaReviewStatusView(
     last_autonomous_updated_at: snapshot.last_autonomous_updated_at,
     findings_claimed_open_total: parity.findings_claimed_open_total,
     findings_artifact_open_total: parity.findings_artifact_open_total,
+    findings_blocking_open_total: parity.findings_blocking_open_total,
+    findings_advisory_open_total: parity.findings_advisory_open_total,
     findings_artifact_status: parity.findings_artifact_status,
     findings_digest_sha256: parity.findings_digest_sha256,
     meta_review_run_id: parity.meta_review_run_id,
@@ -1708,6 +1744,9 @@ export async function runMetaReview(
 
   if (shouldRefreshApprovalRequest(written.state.state)) {
     const parity = readMetaReviewFindingsParitySnapshot(canonicalReportJson);
+    const approvalFindings = readApprovalAdvisoryFindingsSnapshot(
+      canonicalReportJson
+    );
     const approvalRefreshRoute =
       recommendation === "approve"
         ? "human_gate_approve"
@@ -1732,7 +1771,10 @@ export async function runMetaReview(
         route: approvalRefreshRoute,
         refs: [CANONICAL_META_REVIEW_REPORT_REF],
         recommendation,
-        parityMetadata: parity
+        parityMetadata: parity,
+        ...(approvalFindings !== undefined
+          ? { findings: approvalFindings }
+          : {})
       });
     } catch (appendError) {
       const appendReason =
@@ -1994,6 +2036,8 @@ export async function getMetaReviewLastReport(
       report_markdown: null,
       findings_claimed_open_total: parity.findings_claimed_open_total,
       findings_artifact_open_total: parity.findings_artifact_open_total,
+      findings_blocking_open_total: parity.findings_blocking_open_total,
+      findings_advisory_open_total: parity.findings_advisory_open_total,
       findings_artifact_status: parity.findings_artifact_status,
       findings_digest_sha256: parity.findings_digest_sha256,
       meta_review_run_id: parity.meta_review_run_id,
@@ -2035,6 +2079,8 @@ export async function getMetaReviewLastReport(
         report_markdown: null,
         findings_claimed_open_total: parity.findings_claimed_open_total,
         findings_artifact_open_total: parity.findings_artifact_open_total,
+        findings_blocking_open_total: parity.findings_blocking_open_total,
+        findings_advisory_open_total: parity.findings_advisory_open_total,
         findings_artifact_status: parity.findings_artifact_status,
         findings_digest_sha256: parity.findings_digest_sha256,
         meta_review_run_id: parity.meta_review_run_id,
@@ -2054,6 +2100,8 @@ export async function getMetaReviewLastReport(
     report_markdown: reportMarkdown,
     findings_claimed_open_total: parity.findings_claimed_open_total,
     findings_artifact_open_total: parity.findings_artifact_open_total,
+    findings_blocking_open_total: parity.findings_blocking_open_total,
+    findings_advisory_open_total: parity.findings_advisory_open_total,
     findings_artifact_status: parity.findings_artifact_status,
     findings_digest_sha256: parity.findings_digest_sha256,
     meta_review_run_id: parity.meta_review_run_id,

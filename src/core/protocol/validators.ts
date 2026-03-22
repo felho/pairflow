@@ -39,6 +39,49 @@ const allowedPayloadKeys = new Set([
   "metadata"
 ]);
 
+function isNonNegativeIntegerOrNull(value: unknown): boolean {
+  return value === null || (isInteger(value) && value >= 0);
+}
+
+function validateParityMetadataFields(
+  metadata: Record<string, unknown>,
+  errors: ValidationError[]
+): void {
+  const nonNegativeIntegerOrNullFields = [
+    "findings_claimed_open_total",
+    "findings_artifact_open_total",
+    "findings_blocking_open_total",
+    "findings_advisory_open_total"
+  ] as const;
+
+  for (const field of nonNegativeIntegerOrNullFields) {
+    const value = metadata[field];
+    if (value === undefined) {
+      continue;
+    }
+    if (!isNonNegativeIntegerOrNull(value)) {
+      errors.push({
+        path: `payload.metadata.${field}`,
+        message: "Must be a non-negative integer or null when provided"
+      });
+    }
+  }
+
+  const parityStatus = metadata.findings_parity_status;
+  if (
+    parityStatus !== undefined &&
+    parityStatus !== null &&
+    parityStatus !== "ok" &&
+    parityStatus !== "mismatch" &&
+    parityStatus !== "guard_failed"
+  ) {
+    errors.push({
+      path: "payload.metadata.findings_parity_status",
+      message: "Must be one of: ok, mismatch, guard_failed, null"
+    });
+  }
+}
+
 function validateFindings(
   input: unknown,
   path: string,
@@ -278,6 +321,8 @@ function validatePayloadByType(
       path: "payload.metadata",
       message: "Must be an object when provided"
     });
+  } else if (isRecord(payload.metadata)) {
+    validateParityMetadataFields(payload.metadata, errors);
   }
 
   const findings =

@@ -3,7 +3,10 @@ import {
   type BubbleMetaReviewSnapshotState
 } from "../../../types/bubble.js";
 import type { MetaReviewRunResult } from "../../../core/bubble/metaReview.js";
-import type { FindingsParityMetadata } from "../../../types/protocol.js";
+import {
+  resolveFindingsParityMetadataForEnvelope as resolveFindingsParityMetadataForEnvelopeFromProtocol,
+  type FindingsParityMetadata
+} from "../../../types/protocol.js";
 
 export const metaReviewFallbackReportRef = "artifacts/meta-review-last.md";
 export const metaReviewerAgent = "codex";
@@ -47,17 +50,7 @@ export function buildHumanGateSummary(input: {
 export function resolveFindingsParityMetadataForEnvelope(
   metadata: FindingsParityMetadata | null | undefined
 ): Record<string, unknown> {
-  if (metadata === null || metadata === undefined) {
-    return {};
-  }
-  return {
-    findings_claimed_open_total: metadata.findings_claimed_open_total,
-    findings_artifact_open_total: metadata.findings_artifact_open_total,
-    findings_artifact_status: metadata.findings_artifact_status,
-    findings_digest_sha256: metadata.findings_digest_sha256,
-    meta_review_run_id: metadata.meta_review_run_id,
-    findings_parity_status: metadata.findings_parity_status
-  };
+  return resolveFindingsParityMetadataForEnvelopeFromProtocol(metadata);
 }
 
 export function buildHydratedMetaReviewSnapshotFromRunResult(input: {

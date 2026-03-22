@@ -9,12 +9,47 @@ import type {
   FinalizeConvergedFlowResult
 } from "./convergedFinalizationTypes.js";
 
+function resolveAdvisoryFindingsOpenTotal(
+  convergenceEnvelope: FinalizeConvergedFlowInput["convergence"]["envelope"]
+): number {
+  const payload =
+    typeof convergenceEnvelope.payload === "object" &&
+    convergenceEnvelope.payload !== null
+      ? convergenceEnvelope.payload
+      : null;
+  if (payload === null) {
+    return 0;
+  }
+
+  const metadata = payload.metadata;
+  let metadataCount: number | null = null;
+  if (typeof metadata === "object" && metadata !== null) {
+    const candidate = (metadata as Record<string, unknown>).advisory_findings_open_total;
+    if (typeof candidate === "number") {
+      metadataCount = candidate;
+    }
+  }
+  if (
+    metadataCount !== null &&
+    Number.isInteger(metadataCount) &&
+    metadataCount >= 0
+  ) {
+    return metadataCount;
+  }
+
+  return 0;
+}
+
 async function emitConvergedAndRoutedEvents(input: {
   flow: FinalizeConvergedFlowInput;
   emitLifecycle: typeof emitBubbleLifecycleEventBestEffort;
   commandPathStatus: ReturnType<typeof assessPairflowCommandPath>;
   blockingReasonCodes: string[];
 }): Promise<void> {
+  const advisoryFindingsOpenTotal = resolveAdvisoryFindingsOpenTotal(
+    input.flow.convergence.envelope
+  );
+
   await input.emitLifecycle({
     repoPath: input.flow.resolved.repoPath,
     bubbleId: input.flow.resolved.bubbleId,
@@ -25,6 +60,7 @@ async function emitConvergedAndRoutedEvents(input: {
     metadata: buildConvergedEventMetadata({
       summary: input.flow.summary,
       refs: input.flow.refs,
+      advisoryFindingsOpenTotal,
       convergenceEnvelopeId: input.flow.convergence.envelope.id,
       gateResult: input.flow.gateResult,
       commandPathStatus: input.commandPathStatus,
@@ -47,6 +83,7 @@ async function emitConvergedAndRoutedEvents(input: {
     round: input.flow.state.round,
     actorRole: "reviewer",
     metadata: buildMetaReviewRoutedMetadata({
+      advisoryFindingsOpenTotal,
       gateResult: input.flow.gateResult,
       blockingReasonCodes: input.blockingReasonCodes,
       commandPathStatus: input.commandPathStatus

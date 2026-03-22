@@ -14,6 +14,7 @@ import type {
   AppendProtocolEnvelopeResult
 } from "../../../core/protocol/transcriptStore.js";
 import type { MetaReviewGateRoute } from "./metaReviewGateTypes.js";
+import type { MetaReviewGateAdvisoryFinding } from "./metaReviewGateFindingsMetadata.js";
 
 export const metaReviewGateRollbackNotAttemptedReasonCode =
   "META_REVIEW_GATE_ROLLBACK_NOT_ATTEMPTED";
@@ -62,6 +63,7 @@ export interface AppendHumanGateApprovalRequestInput {
   refs: string[];
   recommendation?: MetaReviewRecommendation;
   parityMetadata?: FindingsParityMetadata | null;
+  findings?: MetaReviewGateAdvisoryFinding[];
 }
 
 export async function appendHumanGateApprovalRequest(
@@ -81,7 +83,8 @@ export async function appendHumanGateApprovalRequest(
     ...(input.recommendation !== undefined
       ? { recommendation: input.recommendation }
       : {}),
-    parityMetadata: input.parityMetadata
+    parityMetadata: input.parityMetadata,
+    ...(input.findings !== undefined ? { findings: input.findings } : {})
   });
 }
 

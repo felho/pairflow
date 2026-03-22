@@ -27,6 +27,10 @@ import {
   resolveHumanGateRecommendation,
   resolveRollbackAfterGateAppendFailure
 } from "./metaReviewGateHumanGatePersistenceHelpers.js";
+import {
+  resolveAdvisoryFindingsFromReportJson,
+  type MetaReviewGateAdvisoryFinding
+} from "./metaReviewGateFindingsMetadata.js";
 
 export {
   metaReviewGateRollbackAppliedReasonCode,
@@ -52,6 +56,7 @@ export interface PersistHumanGateRouteInput {
   route: MetaReviewGateRoute;
   metaReviewRun?: MetaReviewRunResult;
   parityMetadata?: FindingsParityMetadata | null;
+  findings?: MetaReviewGateAdvisoryFinding[];
   fallbackRecommendation?: MetaReviewRecommendation;
   targetState?:
     | "READY_FOR_HUMAN_APPROVAL"
@@ -107,6 +112,9 @@ export async function persistHumanGateRoute(
       ? { fallbackRecommendation: input.fallbackRecommendation }
       : {})
   });
+  const advisoryFindings =
+    input.findings ??
+    resolveAdvisoryFindingsFromReportJson(input.metaReviewRun?.report_json);
   let written: LoadedStateSnapshot;
   try {
     written = await input.writeState(input.statePath, nextState, {
@@ -141,7 +149,8 @@ export async function persistHumanGateRoute(
       ...(recommendation !== undefined ? { recommendation } : {}),
       ...(input.parityMetadata !== undefined
         ? { parityMetadata: input.parityMetadata }
-        : {})
+        : {}),
+      ...(advisoryFindings !== undefined ? { findings: advisoryFindings } : {})
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
