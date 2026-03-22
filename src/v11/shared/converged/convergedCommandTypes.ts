@@ -1,8 +1,13 @@
 import type { AgentName } from "../../../types/bubble.js";
+import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
+import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
+import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
-  RunConvergedFlowDependencies,
-  RunConvergedFlowResult
-} from "../../application/converged/runConvergedFlow.js";
+  applyMetaReviewGateOnConvergence,
+  recoverMetaReviewGateFromSnapshot
+} from "../metaReviewGate/metaReviewGateCommandApi.js";
+import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateCommandContract.js";
 
 export const convergedStructuredFindingSeverities = ["P2", "P3"] as const;
 export type ConvergedStructuredFindingSeverity =
@@ -34,12 +39,24 @@ export interface EmitConvergedInput {
   expectedReviewer?: AgentName;
 }
 
-export type EmitConvergedDependencies = Pick<
-  RunConvergedFlowDependencies,
-  | "emitTmuxDeliveryNotification"
-  | "emitBubbleNotification"
-  | "applyMetaReviewGateOnConvergence"
-  | "recoverMetaReviewGateFromSnapshot"
->;
+export interface EmitConvergedDependencies {
+  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
+  emitBubbleNotification?: typeof emitBubbleNotification;
+  applyMetaReviewGateOnConvergence?: typeof applyMetaReviewGateOnConvergence;
+  recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshot;
+}
 
-export type EmitConvergedResult = RunConvergedFlowResult;
+export interface EmitConvergedResult {
+  bubbleId: string;
+  convergenceSequence: number;
+  convergenceEnvelope: ProtocolEnvelope;
+  gateRoute: MetaReviewGateRoute;
+  approvalRequestSequence: number;
+  approvalRequestEnvelope: ProtocolEnvelope;
+  state: BubbleStateSnapshot;
+  delivery?: {
+    delivered: boolean;
+    reason?: string;
+    retried: boolean;
+  };
+}

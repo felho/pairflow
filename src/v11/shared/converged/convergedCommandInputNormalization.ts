@@ -44,12 +44,14 @@ function normalizeConvergedFindings(
         isFindingSeverity(finding.severity)
         && (finding.severity === "P0" || finding.severity === "P1")
       ) {
+        // reason_code=CONVERGED_BLOCKER_FINDINGS_FORBIDDEN command_name=converged
         throw createError(
-          `${convergedBlockerFindingsForbiddenReasonCode}: Converged findings reject P0/P1 severities. Use P2 or P3.`
+          `${convergedBlockerFindingsForbiddenReasonCode}: Converged findings reject P0/P1 severities. Use P2 or P3. context: command_name=converged.`
         );
       }
+      // reason_code=CONVERGED_FINDINGS_INVALID command_name=converged
       throw createError(
-        `${convergedFindingsInvalidReasonCode}: Unsupported converged finding severity: ${String(finding.severity)}. Use P2 or P3.`
+        `${convergedFindingsInvalidReasonCode}: Unsupported converged finding severity: ${String(finding.severity)}. Use P2 or P3. context: command_name=converged.`
       );
     }
     const title = requireNonEmptyString(
@@ -58,15 +60,17 @@ function normalizeConvergedFindings(
       createError
     );
     if (finding.refs?.some((value) => value.trim().length === 0)) {
+      // reason_code=CONVERGED_FINDINGS_INVALID command_name=converged
       throw createError(
-        `${convergedFindingsInvalidReasonCode}: Invalid converged finding refs. Empty ref tokens are not allowed.`
+        `${convergedFindingsInvalidReasonCode}: Invalid converged finding refs. Empty ref tokens are not allowed. context: command_name=converged.`
       );
     }
     // Keep CLI/programmatic parity by validating multi-ref structure before de-dup.
     const trimmedRefs = (finding.refs ?? []).map((value) => value.trim());
     if (trimmedRefs.length > 1 && trimmedRefs.some((value) => !isLikelyStructuredRef(value))) {
+      // reason_code=CONVERGED_FINDINGS_INVALID command_name=converged
       throw createError(
-        `${convergedFindingsInvalidReasonCode}: Invalid converged finding refs. Single ref accepts any non-empty token; multiple refs must each be path-like (\`.../...\`) or URI-like (\`scheme://...\`).`
+        `${convergedFindingsInvalidReasonCode}: Invalid converged finding refs. Single ref accepts any non-empty token; multiple refs must each be path-like (\`.../...\`) or URI-like (\`scheme://...\`). context: command_name=converged.`
       );
     }
     const refs = normalizeStringList(finding.refs ?? []);
@@ -89,13 +93,15 @@ function assertConvergedSummaryFindingsConsistency(input: {
     hasFindings: input.findings.length > 0
   });
   if (contradiction === "summary_open_without_findings") {
+    // reason_code=CONVERGED_SUMMARY_FINDINGS_CONTRADICTION command_name=converged
     throw input.createError(
-      `${convergedSummaryFindingsContradictionReasonCode}: Summary indicates open findings but no structured findings were provided.`
+      `${convergedSummaryFindingsContradictionReasonCode}: Summary indicates open findings but no structured findings were provided. context: command_name=converged.`
     );
   }
   if (contradiction === "summary_clean_with_findings") {
+    // reason_code=CONVERGED_SUMMARY_FINDINGS_CONTRADICTION command_name=converged
     throw input.createError(
-      `${convergedSummaryFindingsContradictionReasonCode}: Summary declares clean/no-findings while structured findings are present.`
+      `${convergedSummaryFindingsContradictionReasonCode}: Summary declares clean/no-findings while structured findings are present. context: command_name=converged.`
     );
   }
 }
