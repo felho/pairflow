@@ -115,6 +115,7 @@ export function buildReviewerStartupPrompt(input: {
   repoPath: string;
   worktreePath: string;
   taskArtifactPath: string;
+  policySnapshotPathAbs: string;
   reviewArtifactType: ReviewArtifactType;
   pairflowCommandProfile: PairflowCommandProfile;
   reviewerBriefText?: string;
@@ -128,7 +129,9 @@ export function buildReviewerStartupPrompt(input: {
     "Stand by first. Do not start reviewing until implementer handoff (`PASS`) arrives.",
     "When PASS arrives, run a fresh review.",
     "When PASS arrives, follow the orchestrator test-evidence skip/run directive for test execution.",
-    buildReviewerSeverityOntologyReminder({ includeFullOntology: true }),
+    buildReviewerSeverityOntologyReminder(),
+    `Reviewer policy file: ${input.policySnapshotPathAbs}`,
+    "Read this file before first review action.",
     buildReviewerDecisionMatrixReminder(),
     buildReviewerAgentSelectionGuidance(input.reviewArtifactType),
     ...(documentPrimaryArtifactGuardrail !== undefined

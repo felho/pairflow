@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
@@ -23,11 +23,18 @@ import {
   verifyImplementerTestEvidence,
   writeReviewerTestEvidenceArtifact
 } from "../../../src/core/reviewer/testEvidence.js";
+import {
+  reviewerSeverityOntologyFullMarkdown
+} from "../../../src/core/runtime/reviewerSeverityOntology.generated.js";
 import { shellQuote } from "../../../src/core/util/shellQuote.js";
 import type { BubbleStateSnapshot } from "../../../src/types/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { writeEvidenceLog } from "../../helpers/evidence.js";
+import {
+  reviewerPolicySnapshotFileName,
+  reviewerPolicySnapshotUnavailableReasonCode
+} from "../../../src/v11/shared/start/startCommandContext.js";
 
 const tempDirs: string[] = [];
 
@@ -345,7 +352,13 @@ describe("startBubble", () => {
     );
     expect(reviewerCommand).toContain("Stand by first. Do not start reviewing");
     expect(reviewerCommand).toContain("Severity Ontology v1 reminder");
-    expect(reviewerCommand).toContain("Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)");
+    expect(reviewerCommand).not.toContain(
+      "Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)"
+    );
+    expect(reviewerCommand).toContain(
+      `Reviewer policy file: ${join(created.paths.artifactsDir, reviewerPolicySnapshotFileName)}`
+    );
+    expect(reviewerCommand).toContain("Read this file before first review action.");
     expect(reviewerCommand).toContain("Blocker severities (`P0/P1`) require concrete evidence");
     expect(reviewerCommand).toContain("Without blocker-grade evidence (`P0/P1`), downgrade to `P2` by default");
     expect(reviewerCommand).toContain("Cosmetic/comment-only findings are `P3`");
@@ -431,6 +444,12 @@ describe("startBubble", () => {
     expectNoForbiddenReviewerCommandGateTokens(reviewerCommand);
     expect(implementerCommand).not.toContain("then;");
     expect(reviewerCommand).not.toContain("then;");
+    const policySnapshotPath = join(
+      created.paths.artifactsDir,
+      reviewerPolicySnapshotFileName
+    );
+    const policySnapshot = await readFile(policySnapshotPath, "utf8");
+    expect(policySnapshot).toBe(`${reviewerSeverityOntologyFullMarkdown}\n`);
     await assertBashParses(implementerCommand);
     await assertBashParses(reviewerCommand);
   });
@@ -937,6 +956,172 @@ describe("startBubble", () => {
     );
   });
 
+  it("overwrites existing reviewer policy snapshot artifact on every start", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_policy_snapshot_overwrite_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Always overwrite reviewer policy snapshot",
+      cwd: repoPath
+    });
+
+    const policySnapshotPath = join(
+      created.paths.artifactsDir,
+      reviewerPolicySnapshotFileName
+    );
+    await writeFile(policySnapshotPath, "stale reviewer policy\n", "utf8");
+
+    await startBubble(
+      {
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-03-23T10:00:00.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () =>
+          Promise.resolve({
+            repoPath,
+            baseRef: "refs/heads/main",
+            bubbleBranch: created.config.bubble_branch,
+            worktreePath: created.paths.worktreePath
+          }),
+        launchBubbleTmuxSession: () =>
+          Promise.resolve({ sessionName: "pf-b_start_policy_snapshot_overwrite_01" }),
+        claimRuntimeSession: (input) =>
+          Promise.resolve({
+            claimed: true,
+            record: {
+              bubbleId: input.bubbleId,
+              repoPath: input.repoPath,
+              worktreePath: input.worktreePath,
+              tmuxSessionName: input.tmuxSessionName,
+              updatedAt: "2026-03-23T10:00:00.000Z"
+            }
+          })
+      }
+    );
+
+    const snapshot = await readFile(policySnapshotPath, "utf8");
+    expect(snapshot).toBe(`${reviewerSeverityOntologyFullMarkdown}\n`);
+  });
+
+  it("fails fast with snapshot reasonCode when reviewer policy snapshot write fails during context load", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_policy_snapshot_write_fail_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Fail-fast reviewer policy snapshot write",
+      cwd: repoPath
+    });
+
+    await mkdir(
+      join(created.paths.artifactsDir, reviewerPolicySnapshotFileName),
+      { recursive: true }
+    );
+
+    await expect(
+      startBubble({
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-03-23T10:01:00.000Z")
+      })
+    ).rejects.toMatchObject({
+      reasonCode: reviewerPolicySnapshotUnavailableReasonCode
+    });
+  });
+
+  it("fails fast with snapshot reasonCode when reviewer policy snapshot read-back is empty", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_policy_snapshot_empty_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Fail-fast reviewer policy snapshot empty read-back",
+      cwd: repoPath
+    });
+
+    const policySnapshotPath = join(
+      created.paths.artifactsDir,
+      reviewerPolicySnapshotFileName
+    );
+    await symlink("/dev/null", policySnapshotPath);
+
+    await expect(
+      startBubble({
+        bubbleId: created.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-03-23T10:02:00.000Z")
+      })
+    ).rejects.toMatchObject({
+      reasonCode: reviewerPolicySnapshotUnavailableReasonCode
+    });
+  });
+
+  it("preserves incoming StartBubbleError reasonCode in top-level start catch", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_start_reason_preserve_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Preserve StartBubbleError reason code",
+      cwd: repoPath
+    });
+
+    await expect(
+      startBubble(
+        {
+          bubbleId: created.bubbleId,
+          cwd: repoPath,
+          now: new Date("2026-03-23T10:03:00.000Z")
+        },
+        {
+          bootstrapWorktreeWorkspace: () =>
+            Promise.resolve({
+              repoPath,
+              baseRef: "refs/heads/main",
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath
+            }),
+          launchBubbleTmuxSession: () =>
+            Promise.reject(
+              new StartBubbleError({
+                reasonCode: reviewerPolicySnapshotUnavailableReasonCode,
+                message: "Injected snapshot failure for reason-code preservation"
+              })
+            ),
+          cleanupWorktreeWorkspace: () =>
+            Promise.resolve({
+              repoPath,
+              bubbleBranch: created.config.bubble_branch,
+              worktreePath: created.paths.worktreePath,
+              removedBranch: true,
+              removedWorktree: true
+            }),
+          claimRuntimeSession: (input) =>
+            Promise.resolve({
+              claimed: true,
+              record: {
+                bubbleId: input.bubbleId,
+                repoPath: input.repoPath,
+                worktreePath: input.worktreePath,
+                tmuxSessionName: input.tmuxSessionName,
+                updatedAt: "2026-03-23T10:03:00.000Z"
+              }
+            }),
+          removeRuntimeSession: () => Promise.resolve(true)
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: reviewerPolicySnapshotUnavailableReasonCode
+    });
+  });
+
   it("fails before bootstrap when runtime session ownership claim fails", async () => {
     const repoPath = await createTempRepo();
     const created = await createBubble({
@@ -1252,7 +1437,15 @@ describe("startBubble", () => {
             "- Resume path should keep reviewer focus context"
           );
           expect(input.reviewerCommand).toContain("Severity Ontology v1 reminder");
-          expect(input.reviewerCommand).toContain("Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)");
+          expect(input.reviewerCommand).not.toContain(
+            "Full canonical ontology (embedded from `docs/reviewer-severity-ontology.md`)"
+          );
+          expect(input.reviewerCommand).toContain(
+            `Reviewer policy file: ${join(bubble.paths.artifactsDir, reviewerPolicySnapshotFileName)}`
+          );
+          expect(input.reviewerCommand).toContain(
+            "Read this file before first review action."
+          );
           expect(input.reviewerCommand).toContain("Blocker severities (`P0/P1`) require concrete evidence");
           expect(input.reviewerCommand).toContain("Without blocker-grade evidence (`P0/P1`), downgrade to `P2` by default");
           expect(input.reviewerCommand).toContain(

@@ -60,6 +60,7 @@ export async function launchFreshTmuxSession(input: {
         repoPath: input.context.resolved.repoPath,
         worktreePath: input.context.resolved.bubblePaths.worktreePath,
         taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
+        policySnapshotPathAbs: input.context.policySnapshotPathAbs,
         pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
         reviewArtifactType: input.context.resolved.bubbleConfig.review_artifact_type,
         ...(input.context.reviewerFocus !== undefined
@@ -152,6 +153,7 @@ export async function launchResumeTmuxSession(input: {
         repoPath: input.context.resolved.repoPath,
         worktreePath: input.context.resolved.bubblePaths.worktreePath,
         taskArtifactPath: input.context.resolved.bubblePaths.taskArtifactPath,
+        policySnapshotPathAbs: input.context.policySnapshotPathAbs,
         pairflowCommandProfile: input.context.resolved.bubbleConfig.pairflow_command_profile,
         state: input.context.loadedState.state,
         transcriptSummary: input.transcriptSummary,

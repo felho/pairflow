@@ -66,6 +66,7 @@ export function buildResumeReviewerStartupPrompt(input: {
   repoPath: string;
   worktreePath: string;
   taskArtifactPath: string;
+  policySnapshotPathAbs: string;
   pairflowCommandProfile: PairflowCommandProfile;
   state: BubbleStateSnapshot;
   transcriptSummary: string;
@@ -93,7 +94,9 @@ export function buildResumeReviewerStartupPrompt(input: {
     `State snapshot: ${buildResumeContextLine(input.state)}.`,
     `Transcript context: ${input.transcriptSummary}`,
     "Follow orchestrator test-evidence skip/run directive for test execution.",
-    buildReviewerSeverityOntologyReminder({ includeFullOntology: true }),
+    buildReviewerSeverityOntologyReminder(),
+    `Reviewer policy file: ${input.policySnapshotPathAbs}`,
+    "Read this file before first review action.",
     buildReviewerDecisionMatrixReminder(),
     ...(input.reviewerTestDirectiveLine !== undefined
       ? [`Current directive: ${input.reviewerTestDirectiveLine}`]

@@ -16,7 +16,10 @@ import {
   type FreshStartProgress
 } from "./startCommandFlows.js";
 import { isTmuxSessionAliveDefault, runWorktreeBootstrapCommandDefault } from "./startCommandDefaults.js";
-import { loadStartExecutionContext } from "./startCommandContext.js";
+import {
+  loadStartExecutionContext,
+  type StartExecutionContext
+} from "./startCommandContext.js";
 import { claimRuntimeSessionOwnership } from "./startCommandSession.js";
 
 export type {
@@ -36,7 +39,19 @@ export async function startBubble(
     isTmuxSessionAliveDefault
   });
 
-  const context = await loadStartExecutionContext(input);
+  let context: StartExecutionContext;
+  try {
+    context = await loadStartExecutionContext(input);
+  } catch (error) {
+    if (error instanceof StartBubbleError) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    throw new StartBubbleError(
+      `Failed to load start execution context for bubble ${input.bubbleId}: ${message}`
+    );
+  }
+
   let ownershipClaimed = false;
   try {
     await claimRuntimeSessionOwnership({
@@ -106,6 +121,9 @@ export async function startBubble(
       tmuxSessionName,
       preparingState: freshProgress.preparingState
     });
+    if (error instanceof StartBubbleError) {
+      throw error;
+    }
     const message = error instanceof Error ? error.message : String(error);
     throw new StartBubbleError(`Failed to start bubble ${context.resolved.bubbleId}: ${message}`);
   }
