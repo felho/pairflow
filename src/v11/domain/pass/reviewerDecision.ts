@@ -10,16 +10,27 @@ const reviewerPassNonBlockingPostGateReasonCode =
   "REVIEWER_PASS_NON_BLOCKING_POST_GATE";
 const reviewerPassNoFindingsPostGateReasonCode =
   "REVIEWER_PASS_NO_FINDINGS_POST_GATE";
+const reviewerPassDecisionInvalidReasonCode = "REVIEWER_PASS_DECISION_INVALID";
 const findingsPayloadInvalidReasonCode = "FINDINGS_PAYLOAD_INVALID";
 const reviewerSummaryFindingsContradictionReasonCode =
   "REVIEWER_SUMMARY_FINDINGS_CONTRADICTION";
 
 function raiseReviewerDecisionError(
   createError: PairflowCreateCommandError,
-  message: string
+  input: {
+    reasonCode: string;
+    message: string;
+    context?: Record<string, unknown>;
+  }
 ): never {
-  // reason_code=REVIEWER_PASS_DECISION_INVALID context=reviewer_pass_decision_input
-  throw createError(message);
+  throw createError({
+    reasonCode: input.reasonCode,
+    message: input.message,
+    context: {
+      guard: "reviewer_pass_decision_input",
+      ...(input.context ?? {})
+    }
+  });
 }
 
 function buildPostGateConvergedGuidance(input: {
@@ -37,14 +48,21 @@ export function inferReviewerPassIntent(input: {
   if (input.hasFindings && input.noFindings) {
     raiseReviewerDecisionError(
       input.createError,
-      "Reviewer PASS cannot use both --finding and --no-findings."
+      {
+        reasonCode: reviewerPassDecisionInvalidReasonCode,
+        message: "Reviewer PASS cannot use both --finding and --no-findings."
+      }
     );
   }
 
   if (!input.hasFindings && !input.noFindings) {
     raiseReviewerDecisionError(
       input.createError,
-      `${findingsPayloadInvalidReasonCode}: Reviewer PASS requires explicit findings declaration: use --finding <P0|P1|P2|P3:Title[|ref1,ref2]> (repeatable) or --no-findings.`
+      {
+        reasonCode: findingsPayloadInvalidReasonCode,
+        message:
+          "Reviewer PASS requires explicit findings declaration: use --finding <P0|P1|P2|P3:Title[|ref1,ref2]> (repeatable) or --no-findings."
+      }
     );
   }
 
@@ -70,17 +88,24 @@ export function validateReviewerPassGate(input: {
   if (postGate && input.noFindings) {
     raiseReviewerDecisionError(
       input.createError,
-      `${reviewerPassNoFindingsPostGateReasonCode}: Reviewer PASS with --no-findings is not allowed after severity gate. ${buildPostGateConvergedGuidance({
-        round: input.round,
-        severityGateRound: input.severityGateRound
-      })}`
+      {
+        reasonCode: reviewerPassNoFindingsPostGateReasonCode,
+        message:
+          `Reviewer PASS with --no-findings is not allowed after severity gate. ${buildPostGateConvergedGuidance({
+            round: input.round,
+            severityGateRound: input.severityGateRound
+          })}`
+      }
     );
   }
 
   if (input.findingsPayloadInvalid) {
     raiseReviewerDecisionError(
       input.createError,
-      `${findingsPayloadInvalidReasonCode}: Reviewer PASS findings payload is invalid. ${invalidPayloadGuidance}`
+      {
+        reasonCode: findingsPayloadInvalidReasonCode,
+        message: `Reviewer PASS findings payload is invalid. ${invalidPayloadGuidance}`
+      }
     );
   }
 
@@ -88,15 +113,23 @@ export function validateReviewerPassGate(input: {
     if (postGate) {
       raiseReviewerDecisionError(
         input.createError,
-        `${findingsPayloadInvalidReasonCode}: Reviewer PASS requires explicit structured findings in post-gate rounds. ${buildPostGateConvergedGuidance({
-          round: input.round,
-          severityGateRound: input.severityGateRound
-        })}`
+        {
+          reasonCode: findingsPayloadInvalidReasonCode,
+          message:
+            `Reviewer PASS requires explicit structured findings in post-gate rounds. ${buildPostGateConvergedGuidance({
+              round: input.round,
+              severityGateRound: input.severityGateRound
+            })}`
+        }
       );
     }
     raiseReviewerDecisionError(
       input.createError,
-      `${findingsPayloadInvalidReasonCode}: Reviewer PASS requires explicit findings declaration: use --finding <P0|P1|P2|P3:Title[|ref1,ref2]> (repeatable) or --no-findings.`
+      {
+        reasonCode: findingsPayloadInvalidReasonCode,
+        message:
+          "Reviewer PASS requires explicit findings declaration: use --finding <P0|P1|P2|P3:Title[|ref1,ref2]> (repeatable) or --no-findings."
+      }
     );
   }
 
@@ -111,7 +144,10 @@ export function validateReviewerPassGate(input: {
   if (aggregate.invalid) {
     raiseReviewerDecisionError(
       input.createError,
-      `${findingsPayloadInvalidReasonCode}: Reviewer PASS findings payload is invalid. ${invalidPayloadGuidance}`
+      {
+        reasonCode: findingsPayloadInvalidReasonCode,
+        message: `Reviewer PASS findings payload is invalid. ${invalidPayloadGuidance}`
+      }
     );
   }
   if (aggregate.hasBlocking) {
@@ -132,10 +168,14 @@ export function validateReviewerPassGate(input: {
       : "";
   raiseReviewerDecisionError(
     input.createError,
-    `${reviewerPassNonBlockingPostGateReasonCode}: Reviewer PASS is not allowed after severity gate when no blocker findings remain${p3Only ? " (P3-only finding set)." : "."}${docScopeQualifierNote} ${buildPostGateConvergedGuidance({
-      round: input.round,
-      severityGateRound: input.severityGateRound
-    })}`
+    {
+      reasonCode: reviewerPassNonBlockingPostGateReasonCode,
+      message:
+        `Reviewer PASS is not allowed after severity gate when no blocker findings remain${p3Only ? " (P3-only finding set)." : "."}${docScopeQualifierNote} ${buildPostGateConvergedGuidance({
+          round: input.round,
+          severityGateRound: input.severityGateRound
+        })}`
+    }
   );
 }
 
@@ -155,6 +195,10 @@ export function assertReviewerNoFindingsSummaryConsistency(input: {
 
   raiseReviewerDecisionError(
     input.createError,
-    `${reviewerSummaryFindingsContradictionReasonCode}: Reviewer PASS with --no-findings cannot include positive findings/severity summary assertions. Remove positive findings language from --summary or provide structured --finding entries.`
+    {
+      reasonCode: reviewerSummaryFindingsContradictionReasonCode,
+      message:
+        "Reviewer PASS with --no-findings cannot include positive findings/severity summary assertions. Remove positive findings language from --summary or provide structured --finding entries."
+    }
   );
 }

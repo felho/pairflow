@@ -25,11 +25,24 @@ function collectRuntimeLogRefs(refs: string[]): string[] {
 }
 
 function raiseDocsOnlyRuntimeSkipConflict(
-  createError: PairflowCreateCommandError,
-  message: string
+  input: {
+    createError: PairflowCreateCommandError;
+    conflictingRefs: string[];
+  }
 ): never {
-  // reason_code=DOCS_ONLY_SKIP_LOG_REF_CONFLICT context=docs_only_runtime_skip_guard
-  throw createError(message);
+  const sampledRefs = input.conflictingRefs.slice(0, 3).join(",");
+  throw input.createError({
+    reasonCode: docsOnlySkipLogRefConflictReasonCode,
+    message:
+      "Runtime-check skip claim conflicts with runtime log refs. Remove runtime log refs or update the summary claim.",
+    context: {
+      guard: "docs_only_runtime_skip_guard",
+      conflicting_ref_count: input.conflictingRefs.length,
+      ref_class: "runtime_log_ref",
+      ref_pattern: docsOnlyRuntimeLogRefPatternText,
+      example_refs: sampledRefs
+    }
+  });
 }
 
 export function assertNoDocsOnlySkipLogRefConflict(input: {
@@ -49,10 +62,8 @@ export function assertNoDocsOnlySkipLogRefConflict(input: {
   if (conflictingRefs.length === 0) {
     return;
   }
-  const sampledRefs = conflictingRefs.slice(0, 3).join(",");
-  const sampleSuffix = `; example_refs=${sampledRefs}`;
-  raiseDocsOnlyRuntimeSkipConflict(
-    input.createError,
-    `${docsOnlySkipLogRefConflictReasonCode}: reason_code=${docsOnlySkipLogRefConflictReasonCode}; conflicting_ref_count=${conflictingRefs.length}; ref_class=runtime_log_ref; ref_pattern=${docsOnlyRuntimeLogRefPatternText}${sampleSuffix}. Remove runtime log refs or update the summary claim.`
-  );
+  raiseDocsOnlyRuntimeSkipConflict({
+    createError: input.createError,
+    conflictingRefs
+  });
 }

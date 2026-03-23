@@ -4830,10 +4830,10 @@ present`,
     } catch (error) {
       expect(error).toBeInstanceOf(PassCommandError);
       const message = error instanceof Error ? error.message : String(error);
-      expect(message).toContain("reason_code=DOCS_ONLY_SKIP_LOG_REF_CONFLICT");
-      expect(message).toContain("conflicting_ref_count=1");
-      expect(message).toContain("ref_class=runtime_log_ref");
-      expect(message).toContain("ref_pattern=^\\.pairflow/evidence/[^\\s]+\\.log$");
+      expect(message).toMatch(/^DOCS_ONLY_SKIP_LOG_REF_CONFLICT:/u);
+      expect(message).toContain("\"conflicting_ref_count\":1");
+      expect(message).toContain("\"ref_class\":\"runtime_log_ref\"");
+      expect(message).toContain("\"ref_pattern\":\"^\\\\.pairflow/evidence/[^\\\\s]+\\\\.log$\"");
     }
   });
 
@@ -4859,9 +4859,9 @@ present`,
       throw new Error("expected docs-only conflict to throw");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      expect(message).toContain("reason_code=DOCS_ONLY_SKIP_LOG_REF_CONFLICT");
-      expect(message).toContain("conflicting_ref_count=1");
-      expect(message).toContain("example_refs=.pairflow/evidence/subdir/lint.log");
+      expect(message).toMatch(/^DOCS_ONLY_SKIP_LOG_REF_CONFLICT:/u);
+      expect(message).toContain("\"conflicting_ref_count\":1");
+      expect(message).toContain("\"example_refs\":\".pairflow/evidence/subdir/lint.log\"");
       expect(message).not.toContain(".pairflow/evidence/lint.log.bak");
     }
   });
@@ -4910,9 +4910,9 @@ present`,
       throw new Error("expected docs-only conflict to throw");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      expect(message).toContain("conflicting_ref_count=4");
+      expect(message).toContain("\"conflicting_ref_count\":4");
       expect(message).toContain(
-        "example_refs=.pairflow/evidence/lint.log,.pairflow/evidence/typecheck.log,.pairflow/evidence/test.log"
+        "\"example_refs\":\".pairflow/evidence/lint.log,.pairflow/evidence/typecheck.log,.pairflow/evidence/test.log\""
       );
       expect(message).not.toContain(".pairflow/evidence/extra.log");
     }

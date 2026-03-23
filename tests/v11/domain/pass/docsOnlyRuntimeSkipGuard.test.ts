@@ -4,7 +4,11 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   if (typeof input === "string") {
     return input;
   }
-  return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
+  return (
+    (input.reasonCode !== undefined ? input.reasonCode + ": " : "")
+    + input.message
+    + (input.context !== undefined ? ` context=${JSON.stringify(input.context)}` : "")
+  );
 }
 
 import { assertNoDocsOnlySkipLogRefConflict } from "../../../../src/v11/domain/pass/docsOnlyRuntimeSkipGuard.js";
@@ -18,6 +22,20 @@ class TestDocsOnlyRuntimeSkipGuardError extends Error {
 
 function createError(message: PairflowCommandErrorInput): Error {
   return new TestDocsOnlyRuntimeSkipGuardError(toErrorMessage(message));
+}
+
+function parseContextFromMessage(message: string): Record<string, unknown> {
+  const marker = " context=";
+  const markerIndex = message.indexOf(marker);
+  if (markerIndex < 0) {
+    return {};
+  }
+  const raw = message.slice(markerIndex + marker.length);
+  const parsed: unknown = JSON.parse(raw);
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return {};
+  }
+  return parsed as Record<string, unknown>;
 }
 
 function expectGuardError(
@@ -104,13 +122,16 @@ describe("assertNoDocsOnlySkipLogRefConflict", () => {
           createError
         }),
       (message) => {
-        expect(message).toContain("reason_code=DOCS_ONLY_SKIP_LOG_REF_CONFLICT");
-        expect(message).toContain("conflicting_ref_count=3");
-        expect(message).toContain("ref_class=runtime_log_ref");
-        expect(message).toContain("ref_pattern=^\\.pairflow/evidence/[^\\s]+\\.log$");
-        expect(message).toContain(
-          "example_refs=.pairflow/evidence/lint.log,.pairflow/evidence/test.log,.pairflow/evidence/subdir/build.log"
-        );
+        expect(message).toMatch(/^DOCS_ONLY_SKIP_LOG_REF_CONFLICT:/u);
+        const context = parseContextFromMessage(message);
+        expect(context).toMatchObject({
+          guard: "docs_only_runtime_skip_guard",
+          conflicting_ref_count: 3,
+          ref_class: "runtime_log_ref",
+          ref_pattern: "^\\.pairflow/evidence/[^\\s]+\\.log$",
+          example_refs:
+            ".pairflow/evidence/lint.log,.pairflow/evidence/test.log,.pairflow/evidence/subdir/build.log"
+        });
       }
     );
   });
@@ -131,11 +152,20 @@ describe("assertNoDocsOnlySkipLogRefConflict", () => {
           createError
         }),
       (message) => {
-        expect(message).toContain("conflicting_ref_count=4");
-        expect(message).toContain(
-          "example_refs=.pairflow/evidence/lint.log,.pairflow/evidence/typecheck.log,.pairflow/evidence/test.log"
-        );
-        expect(message).not.toContain(".pairflow/evidence/subdir/build.log");
+        const context = parseContextFromMessage(message);
+        expect(context).toMatchObject({
+          conflicting_ref_count: 4,
+          example_refs:
+            ".pairflow/evidence/lint.log,.pairflow/evidence/typecheck.log,.pairflow/evidence/test.log"
+        });
+        const exampleRefs =
+          typeof context.example_refs === "string"
+            ? context.example_refs
+            : "";
+        expect(exampleRefs).toContain(".pairflow/evidence/lint.log");
+        expect(exampleRefs).toContain(".pairflow/evidence/typecheck.log");
+        expect(exampleRefs).toContain(".pairflow/evidence/test.log");
+        expect(exampleRefs).not.toContain(".pairflow/evidence/subdir/build.log");
       }
     );
   });
