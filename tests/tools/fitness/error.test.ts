@@ -130,6 +130,47 @@ describe("error fitness check", () => {
     expect(report.status).toBe("pass");
   });
 
+  it("passes when throw uses identifier with code/context declared outside line window", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/error-identifier-resolution.ts",
+      [
+        "const reasonCode = 'ERR_SAMPLE';",
+        "const context = { bubble_id: 'b_1', command_name: 'pass', round: 1 };",
+        "const failureMessage = `${reasonCode}: ${JSON.stringify(context)}`;",
+        "",
+        "function filler01() { return 1; }",
+        "function filler02() { return 2; }",
+        "function filler03() { return 3; }",
+        "function filler04() { return 4; }",
+        "function filler05() { return 5; }",
+        "function filler06() { return 6; }",
+        "function filler07() { return 7; }",
+        "",
+        "export function run(): never {",
+        "  throw new Error(failureMessage);",
+        "}"
+      ].join("\n")
+    );
+
+    const report = await buildErrorCheckReport({
+      check: {
+        id: "error",
+        metric: "error code and context completeness",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture/observability",
+        scope: ["src/v11/application/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only"
+    });
+
+    expect(report.status).toBe("pass");
+  });
+
   it("warns for structured error wrapper throws without nearby explicit markers", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(

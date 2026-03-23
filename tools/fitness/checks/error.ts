@@ -17,8 +17,15 @@ interface ThrowSite {
   line: number;
   snippet: string;
   contextWindow: string;
+  expression: ts.Expression;
+  throwStart: number;
   usesStructuredErrorWrapper: boolean;
   hasStructuredContextArgument: boolean;
+}
+
+interface SourceAnalysisContext {
+  sourceFile: ts.SourceFile;
+  variableDeclarations: Map<string, ts.VariableDeclaration[]>;
 }
 
 const bareRethrowPattern = /^\s*throw\s+[A-Za-z_$][\w$]*\s*;?\s*$/u;
@@ -54,8 +61,6 @@ const contextObjectKeys = new Set([
   "operationId",
   "round",
   "reason",
-  "reason_code",
-  "reasonCode",
   "diagnostics",
   "metadata",
   "base_branch",
@@ -78,8 +83,89 @@ const contextObjectKeys = new Set([
   "retryInvariantReasonCode"
 ]);
 
+const explicitCodeObjectKeys = new Set([
+  "reason_code",
+  "reasonCode",
+  "code",
+  "error_code",
+  "errorCode",
+  "rollbackReasonCode",
+  "stageReasonCode",
+  "restoreReasonCode",
+  "retryInvariantReasonCode"
+]);
+
+const contextIdentifierHints = new Set([
+  "context",
+  "contexts",
+  "metadata",
+  "diagnostics",
+  "bubbleContext",
+  "commandContext",
+  "errorContext"
+]);
+
 function hasAnyPattern(text: string, patterns: readonly RegExp[]): boolean {
   return patterns.some((pattern) => pattern.test(text));
+}
+
+function unwrapExpression(expression: ts.Expression): ts.Expression {
+  if (ts.isParenthesizedExpression(expression)) {
+    return unwrapExpression(expression.expression);
+  }
+  if (
+    ts.isAsExpression(expression) ||
+    ts.isTypeAssertionExpression(expression) ||
+    ts.isSatisfiesExpression(expression)
+  ) {
+    return unwrapExpression(expression.expression);
+  }
+  if (ts.isNonNullExpression(expression)) {
+    return unwrapExpression(expression.expression);
+  }
+  return expression;
+}
+
+function createSourceAnalysisContext(filePath: string, fileContent: string): SourceAnalysisContext {
+  const sourceFile = ts.createSourceFile(filePath, fileContent, ts.ScriptTarget.Latest, true);
+  const variableDeclarations = new Map<string, ts.VariableDeclaration[]>();
+  const visit = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+      const existing = variableDeclarations.get(node.name.text);
+      if (existing) {
+        existing.push(node);
+      } else {
+        variableDeclarations.set(node.name.text, [node]);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return { sourceFile, variableDeclarations };
+}
+
+function resolveVariableInitializer(
+  name: string,
+  beforePosition: number,
+  context: SourceAnalysisContext
+): ts.Expression | undefined {
+  const declarations = context.variableDeclarations.get(name);
+  if (!declarations || declarations.length === 0) {
+    return undefined;
+  }
+  for (let index = declarations.length - 1; index >= 0; index -= 1) {
+    const declaration = declarations[index];
+    if (!declaration) {
+      continue;
+    }
+    if (declaration.getStart(context.sourceFile) >= beforePosition) {
+      continue;
+    }
+    if (declaration.initializer) {
+      return declaration.initializer;
+    }
+  }
+  return undefined;
 }
 
 function getCallExpressionName(expression: ts.LeftHandSideExpression): string | null {
@@ -117,6 +203,280 @@ function isStructuredErrorName(name: string): boolean {
     return true;
   }
   return false;
+}
+
+function expressionTextMatchesCodeMarkers(
+  expression: ts.Expression,
+  context: SourceAnalysisContext
+): boolean {
+  return hasAnyPattern(expression.getText(context.sourceFile), codeMarkers);
+}
+
+function hasAstCodeEvidence(
+  expression: ts.Expression,
+  context: SourceAnalysisContext,
+  beforePosition: number,
+  visited: Set<number> = new Set()
+): boolean {
+  const node = unwrapExpression(expression);
+  if (visited.has(node.pos)) {
+    return false;
+  }
+  visited.add(node.pos);
+
+  if (ts.isStringLiteralLike(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+    return hasAnyPattern(node.text, codeMarkers);
+  }
+
+  if (ts.isTemplateExpression(node)) {
+    if (hasAnyPattern(node.head.text, codeMarkers)) {
+      return true;
+    }
+    for (const span of node.templateSpans) {
+      if (hasAstCodeEvidence(span.expression, context, beforePosition, visited)) {
+        return true;
+      }
+      if (hasAnyPattern(span.literal.text, codeMarkers)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  if (ts.isIdentifier(node)) {
+    if (/reason[_A-Za-z0-9]*code/iu.test(node.text)) {
+      return true;
+    }
+    if (/^[A-Z][A-Z0-9_]{2,}$/u.test(node.text)) {
+      return true;
+    }
+    const initializer = resolveVariableInitializer(node.text, beforePosition, context);
+    if (!initializer) {
+      return false;
+    }
+    return hasAstCodeEvidence(initializer, context, node.getStart(context.sourceFile), visited);
+  }
+
+  if (ts.isPropertyAccessExpression(node)) {
+    if (explicitCodeObjectKeys.has(node.name.text)) {
+      return true;
+    }
+    return hasAstCodeEvidence(node.expression, context, beforePosition, visited);
+  }
+
+  if (ts.isElementAccessExpression(node)) {
+    if (
+      node.argumentExpression !== undefined &&
+      ts.isStringLiteralLike(node.argumentExpression) &&
+      explicitCodeObjectKeys.has(node.argumentExpression.text)
+    ) {
+      return true;
+    }
+    return hasAstCodeEvidence(node.expression, context, beforePosition, visited);
+  }
+
+  if (ts.isObjectLiteralExpression(node)) {
+    for (const property of node.properties) {
+      if (ts.isSpreadAssignment(property)) {
+        if (hasAstCodeEvidence(property.expression, context, beforePosition, visited)) {
+          return true;
+        }
+        continue;
+      }
+      if (ts.isPropertyAssignment(property)) {
+        const key = getPropertyNameText(property.name);
+        if (key !== null && explicitCodeObjectKeys.has(key)) {
+          return true;
+        }
+        if (hasAstCodeEvidence(property.initializer, context, beforePosition, visited)) {
+          return true;
+        }
+        continue;
+      }
+      if (ts.isShorthandPropertyAssignment(property)) {
+        if (explicitCodeObjectKeys.has(property.name.text)) {
+          return true;
+        }
+        if (hasAstCodeEvidence(property.name, context, beforePosition, visited)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
+    const callName = getCallExpressionName(node.expression);
+    if (callName !== null && isStructuredErrorName(callName)) {
+      return true;
+    }
+    const args = node.arguments ?? [];
+    for (const arg of args) {
+      if (hasAstCodeEvidence(arg, context, beforePosition, visited)) {
+        return true;
+      }
+    }
+    return expressionTextMatchesCodeMarkers(node, context);
+  }
+
+  if (ts.isBinaryExpression(node)) {
+    return (
+      hasAstCodeEvidence(node.left, context, beforePosition, visited) ||
+      hasAstCodeEvidence(node.right, context, beforePosition, visited)
+    );
+  }
+
+  if (ts.isConditionalExpression(node)) {
+    return (
+      hasAstCodeEvidence(node.whenTrue, context, beforePosition, visited) ||
+      hasAstCodeEvidence(node.whenFalse, context, beforePosition, visited)
+    );
+  }
+
+  if (ts.isArrayLiteralExpression(node)) {
+    return node.elements.some((element) =>
+      ts.isExpression(element) && hasAstCodeEvidence(element, context, beforePosition, visited)
+    );
+  }
+
+  return expressionTextMatchesCodeMarkers(node, context);
+}
+
+function expressionTextMatchesContextMarkers(
+  expression: ts.Expression,
+  context: SourceAnalysisContext
+): boolean {
+  return hasAnyPattern(expression.getText(context.sourceFile), contextMarkers);
+}
+
+function hasAstContextEvidence(
+  expression: ts.Expression,
+  context: SourceAnalysisContext,
+  beforePosition: number,
+  visited: Set<number> = new Set()
+): boolean {
+  const node = unwrapExpression(expression);
+  if (visited.has(node.pos)) {
+    return false;
+  }
+  visited.add(node.pos);
+
+  if (ts.isStringLiteralLike(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+    return hasAnyPattern(node.text, contextMarkers);
+  }
+
+  if (ts.isTemplateExpression(node)) {
+    if (hasAnyPattern(node.head.text, contextMarkers)) {
+      return true;
+    }
+    for (const span of node.templateSpans) {
+      if (hasAstContextEvidence(span.expression, context, beforePosition, visited)) {
+        return true;
+      }
+      if (hasAnyPattern(span.literal.text, contextMarkers)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  if (ts.isIdentifier(node)) {
+    if (contextIdentifierHints.has(node.text)) {
+      return true;
+    }
+    if (contextObjectKeys.has(node.text)) {
+      return true;
+    }
+    const initializer = resolveVariableInitializer(node.text, beforePosition, context);
+    if (!initializer) {
+      return false;
+    }
+    return hasAstContextEvidence(initializer, context, node.getStart(context.sourceFile), visited);
+  }
+
+  if (ts.isPropertyAccessExpression(node)) {
+    if (contextObjectKeys.has(node.name.text)) {
+      return true;
+    }
+    return hasAstContextEvidence(node.expression, context, beforePosition, visited);
+  }
+
+  if (ts.isElementAccessExpression(node)) {
+    if (
+      node.argumentExpression !== undefined &&
+      ts.isStringLiteralLike(node.argumentExpression) &&
+      contextObjectKeys.has(node.argumentExpression.text)
+    ) {
+      return true;
+    }
+    return hasAstContextEvidence(node.expression, context, beforePosition, visited);
+  }
+
+  if (ts.isObjectLiteralExpression(node)) {
+    for (const property of node.properties) {
+      if (ts.isSpreadAssignment(property)) {
+        if (hasAstContextEvidence(property.expression, context, beforePosition, visited)) {
+          return true;
+        }
+        continue;
+      }
+      if (ts.isPropertyAssignment(property)) {
+        const key = getPropertyNameText(property.name);
+        if (key !== null && contextObjectKeys.has(key)) {
+          return true;
+        }
+        if (hasAstContextEvidence(property.initializer, context, beforePosition, visited)) {
+          return true;
+        }
+        continue;
+      }
+      if (ts.isShorthandPropertyAssignment(property)) {
+        if (contextObjectKeys.has(property.name.text)) {
+          return true;
+        }
+        if (hasAstContextEvidence(property.name, context, beforePosition, visited)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
+    const callName = getCallExpressionName(node.expression);
+    if (callName !== null && /^to[A-Za-z0-9_]*Error$/u.test(callName)) {
+      return true;
+    }
+    const args = node.arguments ?? [];
+    for (const arg of args) {
+      if (hasAstContextEvidence(arg, context, beforePosition, visited)) {
+        return true;
+      }
+    }
+    return expressionTextMatchesContextMarkers(node, context);
+  }
+
+  if (ts.isBinaryExpression(node)) {
+    return (
+      hasAstContextEvidence(node.left, context, beforePosition, visited) ||
+      hasAstContextEvidence(node.right, context, beforePosition, visited)
+    );
+  }
+
+  if (ts.isConditionalExpression(node)) {
+    return (
+      hasAstContextEvidence(node.whenTrue, context, beforePosition, visited) ||
+      hasAstContextEvidence(node.whenFalse, context, beforePosition, visited)
+    );
+  }
+
+  if (ts.isArrayLiteralExpression(node)) {
+    return node.elements.some((element) =>
+      ts.isExpression(element) && hasAstContextEvidence(element, context, beforePosition, visited)
+    );
+  }
+
+  return expressionTextMatchesContextMarkers(node, context);
 }
 
 function usesStructuredErrorWrapper(expression: ts.Expression): boolean {
@@ -198,8 +558,10 @@ function hasStructuredContextArgument(expression: ts.Expression): boolean {
   return false;
 }
 
-function collectThrowSites(fileContent: string): ThrowSite[] {
-  const sourceFile = ts.createSourceFile("error.ts", fileContent, ts.ScriptTarget.Latest, true);
+function collectThrowSites(
+  fileContent: string,
+  context: SourceAnalysisContext
+): ThrowSite[] {
   const lines = fileContent.split(/\r?\n/u);
   const sites: ThrowSite[] = [];
 
@@ -211,7 +573,10 @@ function collectThrowSites(fileContent: string): ThrowSite[] {
         return;
       }
 
-      const line = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
+      const line =
+        context.sourceFile.getLineAndCharacterOfPosition(
+          node.getStart(context.sourceFile)
+        ).line + 1;
       const snippet = (lines[line - 1] ?? "").trim();
       if (snippet.startsWith("//") || bareRethrowPattern.test(snippet)) {
         ts.forEachChild(node, visit);
@@ -226,6 +591,8 @@ function collectThrowSites(fileContent: string): ThrowSite[] {
         line,
         snippet,
         contextWindow,
+        expression,
+        throwStart: node.getStart(context.sourceFile),
         usesStructuredErrorWrapper: usesStructuredErrorWrapper(expression),
         hasStructuredContextArgument: hasStructuredContextArgument(expression)
       });
@@ -234,19 +601,24 @@ function collectThrowSites(fileContent: string): ThrowSite[] {
     ts.forEachChild(node, visit);
   };
 
-  visit(sourceFile);
+  visit(context.sourceFile);
   return sites;
 }
 
 function collectErrorViolations(filePath: string, fileContent: string): ErrorViolation[] {
-  const throwSites = collectThrowSites(fileContent);
+  const sourceContext = createSourceAnalysisContext(filePath, fileContent);
+  const throwSites = collectThrowSites(fileContent, sourceContext);
   const violations: ErrorViolation[] = [];
 
   for (const site of throwSites) {
     const hasCode =
-      hasAnyPattern(site.contextWindow, codeMarkers) || site.usesStructuredErrorWrapper;
+      hasAstCodeEvidence(site.expression, sourceContext, site.throwStart) ||
+      hasAnyPattern(site.contextWindow, codeMarkers) ||
+      site.usesStructuredErrorWrapper;
     const hasContext =
-      hasAnyPattern(site.contextWindow, contextMarkers) || site.hasStructuredContextArgument;
+      hasAstContextEvidence(site.expression, sourceContext, site.throwStart) ||
+      site.hasStructuredContextArgument ||
+      hasAnyPattern(site.contextWindow, contextMarkers);
 
     if (!hasCode) {
       violations.push({
