@@ -24,6 +24,86 @@ extract_error_lines() {
   grep -Ein "$pattern" "$log_file" | tail -n 40 || true
 }
 
+extract_root_cause_line() {
+  local log_file="$1"
+  local extracted
+  extracted="$(extract_error_lines "$log_file")"
+  if [[ -z "$extracted" ]]; then
+    return 1
+  fi
+
+  local filtered
+  filtered="$(printf '%s\n' "$extracted" | awk '
+    {
+      line=$0
+      if (line ~ /ELIFECYCLE/) next
+      if (line ~ /PAIRFLOW_EVIDENCE_EXIT=/) next
+      if (line ~ /PAIRFLOW_EVIDENCE_COMMAND_RESULT/) next
+      print line
+      exit
+    }'
+  )"
+  if [[ -n "$filtered" ]]; then
+    printf '%s\n' "$filtered"
+    return 0
+  fi
+
+  printf '%s\n' "$extracted" | head -n 1
+}
+
+extract_fitness_report_path() {
+  local log_file="$1"
+  local out_token
+  out_token="$(
+    grep -Eo 'out=[^[:space:]]+' "$log_file" | tail -n 1 || true
+  )"
+  if [[ -z "$out_token" ]]; then
+    return 1
+  fi
+  printf '%s\n' "${out_token#out=}"
+}
+
+print_fitness_failure_summary() {
+  local log_file="$1"
+  local report_path
+  report_path="$(extract_fitness_report_path "$log_file" || true)"
+  if [[ -z "$report_path" ]]; then
+    return 1
+  fi
+  if [[ ! -f "$report_path" ]]; then
+    return 1
+  fi
+
+  local summary_output
+  summary_output="$(
+    node - "$report_path" <<'NODE'
+const fs = require("node:fs");
+const reportPath = process.argv[2];
+const reportRaw = fs.readFileSync(reportPath, "utf8");
+const report = JSON.parse(reportRaw);
+const checks = Array.isArray(report?.checks) ? report.checks : [];
+const failing = checks.find((check) => check?.status === "fail")
+  ?? checks.find((check) => check?.status === "warn");
+if (!failing) {
+  process.exit(0);
+}
+const details = Array.isArray(failing.details) ? failing.details : [];
+const topDetail = details[0];
+process.stdout.write(`  fitness_check: ${String(failing.id ?? "unknown")}\n`);
+process.stdout.write(`  fitness_status: ${String(failing.status ?? "unknown")}\n`);
+process.stdout.write(`  fitness_summary: ${String(failing.summary ?? "n/a")}\n`);
+if (topDetail !== undefined && topDetail !== null && String(topDetail).length > 0) {
+  process.stdout.write(`  fitness_top_detail: ${String(topDetail)}\n`);
+}
+NODE
+  )"
+  if [[ -z "$summary_output" ]]; then
+    return 1
+  fi
+
+  printf '%s\n' "$summary_output"
+}
+
 print_failure_summary() {
   local step_id="$1"
   local step_label="$2"
@@ -38,6 +118,22 @@ print_failure_summary() {
   echo "  command: $command_text"
   echo "  full log: $log_file"
   echo "  run logs: $RUN_DIR"
+  echo "  failure summary:"
+  if [[ "$step_id" == "fitness" ]]; then
+    if ! print_fitness_failure_summary "$log_file"; then
+      local root_line
+      root_line="$(extract_root_cause_line "$log_file" || true)"
+      if [[ -n "$root_line" ]]; then
+        echo "  root_cause: $root_line"
+      fi
+    fi
+  else
+    local root_line
+    root_line="$(extract_root_cause_line "$log_file" || true)"
+    if [[ -n "$root_line" ]]; then
+      echo "  root_cause: $root_line"
+    fi
+  fi
   echo
   echo "ci:local matched error lines (last 40):"
   extract_error_lines "$log_file"
