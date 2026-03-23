@@ -82,8 +82,8 @@ describe("getBubbleStatus", () => {
     expect(status.pendingInboxItems.humanQuestions).toBe(1);
     expect(status.pendingInboxItems.total).toBe(1);
     expect(status.transcript.lastMessageType).toBe("HUMAN_QUESTION");
-    expect(status.watchdog.timeoutMinutes).toBe(30);
-    expect(status.watchdog.remainingSeconds).toBe(1620);
+    expect(status.watchdog.timeoutMinutes).toBe(40);
+    expect(status.watchdog.remainingSeconds).toBe(2220);
   });
 
   it("clears pending human question count after reply", async () => {

@@ -746,7 +746,7 @@ Each time the reviewer sends a `PASS` back to the implementer, a new **round** s
 ### Watchdog
 
 The status pane runs a watchdog loop. If an agent hasn't produced a protocol message within the configured timeout, the watchdog escalates the bubble to `WAITING_HUMAN` so you know something is stuck.
-Default timeout is 30 minutes (`watchdog_timeout_minutes` in `bubble.toml`).
+Default timeout is 40 minutes (`watchdog_timeout_minutes` in `bubble.toml`).
 
 ---
 
