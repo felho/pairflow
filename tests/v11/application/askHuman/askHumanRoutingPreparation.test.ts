@@ -130,7 +130,7 @@ describe("prepareAskHumanRouting", () => {
     ).rejects.toMatchObject({
       name: "AskHumanRoutingTestError",
       message:
-        "ask-human can only be used while bubble is RUNNING (current: WAITING_HUMAN)."
+        "ASK_HUMAN_STATE_NOT_RUNNING: ask-human can only be used while bubble is RUNNING (current: WAITING_HUMAN)."
     });
   });
 
@@ -148,7 +148,7 @@ describe("prepareAskHumanRouting", () => {
         active_role: "implementer",
         active_since: "2026-02-21T12:00:00.000Z"
       },
-      expectedMessage: "RUNNING state must have round >= 1 (found 0)."
+      expectedMessage: "ASK_HUMAN_RUNNING_ROUND_INVALID: RUNNING state must have round >= 1 (found 0)."
     },
     {
       name: "throws when RUNNING state is missing active agent context",
@@ -160,7 +160,7 @@ describe("prepareAskHumanRouting", () => {
         active_since: "2026-02-21T12:00:00.000Z"
       },
       expectedMessage:
-        "RUNNING state is missing active agent context; cannot emit HUMAN_QUESTION."
+        "ASK_HUMAN_ACTIVE_CONTEXT_MISSING: RUNNING state is missing active agent context; cannot emit HUMAN_QUESTION."
     },
     {
       name: "throws when RUNNING state active role is meta_reviewer",
@@ -172,7 +172,7 @@ describe("prepareAskHumanRouting", () => {
         active_since: "2026-02-21T12:00:00.000Z"
       },
       expectedMessage:
-        "ask-human cannot be used from meta_reviewer role while bubble is RUNNING."
+        "ASK_HUMAN_ROLE_UNSUPPORTED: ask-human cannot be used from meta_reviewer role while bubble is RUNNING."
     }
   ];
 

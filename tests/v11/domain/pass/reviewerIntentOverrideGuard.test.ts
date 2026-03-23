@@ -29,7 +29,11 @@ describe("assertReviewerIntentOverrideConsistency", () => {
         hasFindings: true,
         createError
       })
-    ).toThrowError(new TestReviewerIntentOverrideError("Reviewer PASS cannot use intent=task."));
+    ).toThrowError(
+      new TestReviewerIntentOverrideError(
+        "REVIEWER_INTENT_OVERRIDE_INVALID: Reviewer PASS cannot use intent=task."
+      )
+    );
   });
 
   it("rejects --no-findings with intent=fix_request", () => {
@@ -42,7 +46,7 @@ describe("assertReviewerIntentOverrideConsistency", () => {
       })
     ).toThrowError(
       new TestReviewerIntentOverrideError(
-        "Reviewer PASS with --no-findings cannot use intent=fix_request."
+        "REVIEWER_INTENT_OVERRIDE_INVALID: Reviewer PASS with --no-findings cannot use intent=fix_request."
       )
     );
   });
@@ -57,7 +61,7 @@ describe("assertReviewerIntentOverrideConsistency", () => {
       })
     ).toThrowError(
       new TestReviewerIntentOverrideError(
-        "Reviewer PASS with findings cannot use intent=review."
+        "REVIEWER_INTENT_OVERRIDE_INVALID: Reviewer PASS with findings cannot use intent=review."
       )
     );
   });

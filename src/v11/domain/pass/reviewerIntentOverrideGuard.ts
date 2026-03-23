@@ -1,11 +1,18 @@
 import type { PassIntent } from "../../../types/protocol.js";
 
+const reviewerIntentOverrideInvalidReasonCode = "REVIEWER_INTENT_OVERRIDE_INVALID";
+
 function raiseReviewerIntentOverrideError(
   createError: PairflowCreateCommandError,
   message: string
 ): never {
-  // reason_code=REVIEWER_INTENT_OVERRIDE_INVALID context=reviewer_intent_override_guard
-  throw createError(message);
+  throw createError({
+    reasonCode: reviewerIntentOverrideInvalidReasonCode,
+    message,
+    context: {
+      guard: "reviewer_intent_override_guard"
+    }
+  });
 }
 
 export function assertReviewerIntentOverrideConsistency(input: {

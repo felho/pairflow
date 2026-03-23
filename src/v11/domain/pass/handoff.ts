@@ -22,12 +22,19 @@ export interface ResolvePassHandoffInput {
   createError: PairflowCreateCommandError;
 }
 
+const passHandoffResolutionErrorReasonCode = "PASS_HANDOFF_RESOLUTION_ERROR";
+
 function raiseResolutionError(
   createError: PairflowCreateCommandError,
   message: string
 ): never {
-  // reason_code=PASS_HANDOFF_RESOLUTION_ERROR context=handoff_resolution_input
-  throw createError(message);
+  throw createError({
+    reasonCode: passHandoffResolutionErrorReasonCode,
+    message,
+    context: {
+      guard: "handoff_resolution_input"
+    }
+  });
 }
 
 export function resolvePassHandoff(input: ResolvePassHandoffInput): ResolvedPassHandoff {

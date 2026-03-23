@@ -97,7 +97,9 @@ describe("resolveReviewerVerification", () => {
         }
       })
     ).rejects.toThrowError(
-      new TestReviewerVerificationResolverError("invalid verification payload")
+      new TestReviewerVerificationResolverError(
+        "REVIEWER_VERIFICATION_RESOLUTION_FAILED: invalid verification payload"
+      )
     );
   });
 

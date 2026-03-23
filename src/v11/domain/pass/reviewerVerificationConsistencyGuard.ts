@@ -1,11 +1,19 @@
 import type { PassIntent } from "../../../types/protocol.js";
 
+const reviewerVerificationConsistencyInvalidReasonCode =
+  "REVIEWER_VERIFICATION_CONSISTENCY_INVALID";
+
 function raiseReviewerVerificationConsistencyError(
   createError: PairflowCreateCommandError,
   message: string
 ): never {
-  // reason_code=REVIEWER_VERIFICATION_CONSISTENCY_INVALID context=reviewer_verification_consistency_guard
-  throw createError(message);
+  throw createError({
+    reasonCode: reviewerVerificationConsistencyInvalidReasonCode,
+    message,
+    context: {
+      guard: "reviewer_verification_consistency_guard"
+    }
+  });
 }
 
 export function validateReviewerVerificationConsistency(input: {

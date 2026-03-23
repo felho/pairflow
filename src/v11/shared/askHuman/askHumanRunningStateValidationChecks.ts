@@ -1,14 +1,23 @@
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 
+const askHumanStateNotRunningReasonCode = "ASK_HUMAN_STATE_NOT_RUNNING";
+const askHumanRunningRoundInvalidReasonCode = "ASK_HUMAN_RUNNING_ROUND_INVALID";
+const askHumanActiveContextMissingReasonCode = "ASK_HUMAN_ACTIVE_CONTEXT_MISSING";
+const askHumanRoleUnsupportedReasonCode = "ASK_HUMAN_ROLE_UNSUPPORTED";
+
 function assertRunningLifecycleState(
   state: BubbleStateSnapshot,
   createError: PairflowCreateCommandError
 ): void {
   if (state.state !== "RUNNING") {
-    // reason_code=ASK_HUMAN_STATE_NOT_RUNNING context=routing_precondition
-    throw createError(
-      `ask-human can only be used while bubble is RUNNING (current: ${state.state}).`
-    );
+    throw createError({
+      reasonCode: askHumanStateNotRunningReasonCode,
+      message: `ask-human can only be used while bubble is RUNNING (current: ${state.state}).`,
+      context: {
+        guard: "routing_precondition",
+        current_state: state.state
+      }
+    });
   }
 }
 
@@ -17,10 +26,14 @@ function assertRunningRound(
   createError: PairflowCreateCommandError
 ): void {
   if (state.round < 1) {
-    // reason_code=ASK_HUMAN_RUNNING_ROUND_INVALID context=routing_precondition
-    throw createError(
-      `RUNNING state must have round >= 1 (found ${state.round}).`
-    );
+    throw createError({
+      reasonCode: askHumanRunningRoundInvalidReasonCode,
+      message: `RUNNING state must have round >= 1 (found ${state.round}).`,
+      context: {
+        guard: "routing_precondition",
+        round: state.round
+      }
+    });
   }
 }
 
@@ -33,10 +46,13 @@ function assertRunningActiveContext(
     || state.active_role === null
     || state.active_since === null
   ) {
-    // reason_code=ASK_HUMAN_ACTIVE_CONTEXT_MISSING context=routing_precondition
-    throw createError(
-      "RUNNING state is missing active agent context; cannot emit HUMAN_QUESTION."
-    );
+    throw createError({
+      reasonCode: askHumanActiveContextMissingReasonCode,
+      message: "RUNNING state is missing active agent context; cannot emit HUMAN_QUESTION.",
+      context: {
+        guard: "routing_precondition"
+      }
+    });
   }
 }
 
@@ -45,10 +61,14 @@ function assertRunningRoleAllowed(
   createError: PairflowCreateCommandError
 ): void {
   if (state.active_role === "meta_reviewer") {
-    // reason_code=ASK_HUMAN_ROLE_UNSUPPORTED context=routing_precondition
-    throw createError(
-      "ask-human cannot be used from meta_reviewer role while bubble is RUNNING."
-    );
+    throw createError({
+      reasonCode: askHumanRoleUnsupportedReasonCode,
+      message: "ask-human cannot be used from meta_reviewer role while bubble is RUNNING.",
+      context: {
+        guard: "routing_precondition",
+        active_role: state.active_role
+      }
+    });
   }
 }
 

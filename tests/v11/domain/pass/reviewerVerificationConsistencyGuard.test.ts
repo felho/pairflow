@@ -42,7 +42,7 @@ describe("validateReviewerVerificationConsistency", () => {
       })
     ).toThrowError(
       new TestReviewerVerificationConsistencyError(
-        "Accuracy-critical reviewer PASS with overall=fail requires intent=fix_request and open findings."
+        "REVIEWER_VERIFICATION_CONSISTENCY_INVALID: Accuracy-critical reviewer PASS with overall=fail requires intent=fix_request and open findings."
       )
     );
   });
@@ -57,7 +57,7 @@ describe("validateReviewerVerificationConsistency", () => {
       })
     ).toThrowError(
       new TestReviewerVerificationConsistencyError(
-        "Accuracy-critical reviewer PASS with overall=fail requires intent=fix_request and open findings."
+        "REVIEWER_VERIFICATION_CONSISTENCY_INVALID: Accuracy-critical reviewer PASS with overall=fail requires intent=fix_request and open findings."
       )
     );
   });
@@ -83,7 +83,7 @@ describe("validateReviewerVerificationConsistency", () => {
       })
     ).toThrowError(
       new TestReviewerVerificationConsistencyError(
-        "Accuracy-critical reviewer PASS with overall=pass requires clean handoff (intent=review and no findings)."
+        "REVIEWER_VERIFICATION_CONSISTENCY_INVALID: Accuracy-critical reviewer PASS with overall=pass requires clean handoff (intent=review and no findings)."
       )
     );
   });
@@ -98,7 +98,7 @@ describe("validateReviewerVerificationConsistency", () => {
       })
     ).toThrowError(
       new TestReviewerVerificationConsistencyError(
-        "Accuracy-critical reviewer PASS with overall=pass requires clean handoff (intent=review and no findings)."
+        "REVIEWER_VERIFICATION_CONSISTENCY_INVALID: Accuracy-critical reviewer PASS with overall=pass requires clean handoff (intent=review and no findings)."
       )
     );
   });

@@ -21,8 +21,13 @@ function raiseReviewerFindingsClaimError(
   createError: PairflowCreateCommandError,
   message: string
 ): never {
-  // reason_code=REVIEWER_FINDINGS_CLAIM_INVALID context=reviewer_findings_claim_input
-  throw createError(message);
+  throw createError({
+    reasonCode: findingsPayloadInvalidReasonCode,
+    message,
+    context: {
+      guard: "reviewer_findings_claim_input"
+    }
+  });
 }
 
 export function resolveReviewerFindingsClaim(input: {
@@ -44,7 +49,7 @@ export function resolveReviewerFindingsClaim(input: {
   }
   raiseReviewerFindingsClaimError(
     input.createError,
-    `${findingsPayloadInvalidReasonCode}: Reviewer PASS requires explicit findings declaration: use --finding <P0|P1|P2|P3:Title[|ref1,ref2]> (repeatable) or --no-findings.`
+    "Reviewer PASS requires explicit findings declaration: use --finding <P0|P1|P2|P3:Title[|ref1,ref2]> (repeatable) or --no-findings."
   );
 }
 

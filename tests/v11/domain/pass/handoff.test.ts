@@ -154,7 +154,9 @@ describe("resolvePassHandoff", () => {
         })
       )
     ).toThrowError(
-      new TestPassError("PASS can only be used while bubble is RUNNING (current: CREATED).")
+      new TestPassError(
+        "PASS_HANDOFF_RESOLUTION_ERROR: PASS can only be used while bubble is RUNNING (current: CREATED)."
+      )
     );
   });
 
@@ -168,7 +170,7 @@ describe("resolvePassHandoff", () => {
       )
     ).toThrowError(
       new TestPassError(
-        `Active role reviewer must map to configured reviewer agent (${reviewer}).`
+        `PASS_HANDOFF_RESOLUTION_ERROR: Active role reviewer must map to configured reviewer agent (${reviewer}).`
       )
     );
   });
@@ -180,6 +182,10 @@ describe("resolvePassHandoff", () => {
           round: 0
         })
       )
-    ).toThrowError(new TestPassError("RUNNING state must have round >= 1 (found 0)."));
+    ).toThrowError(
+      new TestPassError(
+        "PASS_HANDOFF_RESOLUTION_ERROR: RUNNING state must have round >= 1 (found 0)."
+      )
+    );
   });
 });

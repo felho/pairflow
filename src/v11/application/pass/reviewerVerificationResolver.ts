@@ -5,6 +5,9 @@ import {
   type ReviewVerificationInputResolution
 } from "../../../core/reviewer/reviewVerification.js";
 
+const reviewerVerificationResolutionFailedReasonCode =
+  "REVIEWER_VERIFICATION_RESOLUTION_FAILED";
+
 interface ResolveReviewerVerificationInput {
   accuracyCritical: boolean;
   senderRole: AgentRole;
@@ -21,10 +24,19 @@ interface ResolveReviewerVerificationInput {
 
 function raiseReviewerVerificationResolverError(
   createError: PairflowCreateCommandError,
-  message: string
+  message: string,
+  context?: Record<string, unknown>,
+  cause?: unknown
 ): never {
-  // reason_code=REVIEWER_VERIFICATION_RESOLUTION_FAILED context=reviewer_verification_resolution
-  throw createError(message);
+  throw createError({
+    reasonCode: reviewerVerificationResolutionFailedReasonCode,
+    message,
+    context: {
+      guard: "reviewer_verification_resolution",
+      ...(context ?? {})
+    },
+    ...(cause !== undefined ? { cause } : {})
+  });
 }
 
 export async function resolveReviewerVerification(
@@ -43,7 +55,15 @@ export async function resolveReviewerVerification(
     });
   } catch (error) {
     if (error instanceof ReviewVerificationError) {
-      raiseReviewerVerificationResolverError(input.createError, error.message);
+      raiseReviewerVerificationResolverError(
+        input.createError,
+        error.message,
+        {
+          review_verification_code: error.code,
+          ref_count: input.refs.length
+        },
+        error
+      );
     }
     throw error;
   }
