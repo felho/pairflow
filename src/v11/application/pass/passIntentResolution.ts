@@ -1,6 +1,8 @@
 import { isPassIntent, type PassIntent } from "../../../types/protocol.js";
 import { assertReviewerIntentOverrideConsistency } from "../../domain/pass/reviewerIntentOverrideGuard.js";
 
+const passIntentResolutionErrorReasonCode = "PASS_INTENT_RESOLUTION_ERROR";
+
 export interface ResolvePassIntentInput {
   inputIntent?: PassIntent;
   senderRole: "implementer" | "reviewer";
@@ -43,10 +45,14 @@ export function resolvePassIntent(
     }
     if (input.senderRole === "reviewer") {
       if (input.inferredReviewerIntent === undefined) {
-        // reason_code=PASS_INTENT_RESOLUTION_ERROR context=reviewer_inference_missing
-        throw input.createError(
-          "Reviewer PASS intent inference is missing before intent resolution."
-        );
+        throw input.createError({
+          reasonCode: passIntentResolutionErrorReasonCode,
+          message: "Reviewer PASS intent inference is missing before intent resolution.",
+          context: {
+            guard: "pass_intent_resolution",
+            phase: "reviewer_inference_missing"
+          }
+        });
       }
       return input.inferredReviewerIntent;
     }
@@ -54,8 +60,15 @@ export function resolvePassIntent(
   })();
 
   if (!isValidPassIntent(intentCandidate)) {
-    // reason_code=PASS_INTENT_RESOLUTION_ERROR context=invalid_pass_intent
-    throw input.createError(`Invalid pass intent: ${String(intentCandidate)}`);
+    throw input.createError({
+      reasonCode: passIntentResolutionErrorReasonCode,
+      message: `Invalid pass intent: ${String(intentCandidate)}`,
+      context: {
+        guard: "pass_intent_resolution",
+        phase: "invalid_pass_intent",
+        intent_candidate: String(intentCandidate)
+      }
+    });
   }
 
   if (input.senderRole === "reviewer") {
