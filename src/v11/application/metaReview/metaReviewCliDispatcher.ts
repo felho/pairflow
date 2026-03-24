@@ -44,9 +44,7 @@ async function runMetaReviewSubmitCommand(input: {
     summary: input.options.summary,
     report_markdown: input.options.reportMarkdown,
     rework_target_message: input.options.reworkTargetMessage,
-    ...(input.options.reportJson !== undefined
-      ? { report_json: input.options.reportJson }
-      : {}),
+    report_json: input.options.reportJson,
     cwd: input.cwd
   });
   return {

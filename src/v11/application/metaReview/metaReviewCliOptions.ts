@@ -16,7 +16,7 @@ export function getBubbleMetaReviewHelpText(): string {
     "  pairflow bubble meta-review status --id <id> [--repo <path>] [--json] [--verbose]",
     "  pairflow bubble meta-review last-report --id <id> [--repo <path>] [--json] [--verbose]",
     "  pairflow bubble meta-review recover --id <id> [--repo <path>] [--json]",
-    "  pairflow bubble meta-review submit --id <id> --round <n> --recommendation approve|rework|inconclusive --summary <text> --report-markdown <text> [--rework-target-message <text>] [--report-json <json>] [--repo <path>] [--json]",
+    "  pairflow bubble meta-review submit --id <id> --round <n> --recommendation approve|rework|inconclusive --summary <text> --report-markdown <text> [--rework-target-message <text>] --report-json <json> [--repo <path>] [--json]",
     "",
     "Options:",
     "  --id <id>             Bubble id",
@@ -27,7 +27,7 @@ export function getBubbleMetaReviewHelpText(): string {
     "  --summary <text>      submit-only summary text",
     "  --report-markdown <t> submit-only markdown report content",
     "  --rework-target-message <text>  submit-only rework target message",
-    "  --report-json <json>  submit-only additional report JSON object",
+    "  --report-json <json>  submit-only required report JSON object",
     "  --json                Print structured JSON output",
     "  --verbose             Include additional detail in text output",
     "  -h, --help            Show this help"

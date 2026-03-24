@@ -3,9 +3,9 @@ import {
   parseDepth,
   parseMetaReviewCliOptionValues,
   parseOptionalReworkTarget,
+  parseRequiredSubmitReportJson,
   parseRequiredSubmitText,
   parseSubmitRecommendation,
-  parseSubmitReportJson,
   parseSubmitRound,
   type ParsedMetaReviewOptionValues,
 } from "./metaReviewCliOptionValueReader.js";
@@ -32,7 +32,6 @@ function buildMetaReviewSubmitOptions(
       "--depth is only supported for meta-review run."
     );
   }
-  const parsedReportJson = parseSubmitReportJson(values.reportJson);
   return {
     ...base,
     command: "submit",
@@ -44,7 +43,7 @@ function buildMetaReviewSubmitOptions(
       "--report-markdown"
     ),
     reworkTargetMessage: parseOptionalReworkTarget(values.reworkTargetMessage),
-    ...(parsedReportJson !== undefined ? { reportJson: parsedReportJson } : {})
+    reportJson: parseRequiredSubmitReportJson(values.reportJson)
   };
 }
 

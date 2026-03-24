@@ -87,13 +87,9 @@ export function parseOptionalReworkTarget(
 }
 
 export function parseSubmitReportJson(
-  value: string | undefined,
+  value: string,
   raiseInvalidOption: RaiseInvalidMetaReviewOption
-): Record<string, unknown> | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
+): Record<string, unknown> {
   let parsed: unknown;
   try {
     parsed = JSON.parse(value);

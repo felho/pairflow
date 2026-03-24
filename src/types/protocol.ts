@@ -161,7 +161,7 @@ export interface MetaReviewSubmissionPayload {
   summary: string;
   report_markdown: string;
   rework_target_message?: string | null;
-  report_json?: Record<string, unknown>;
+  report_json: Record<string, unknown>;
 }
 
 export function isProtocolParticipant(

@@ -228,6 +228,17 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(
       calls.some((call) => call[0] === "send-keys" && call[2] === "pf-b_delivery_01:0.3")
     ).toBe(true);
+    const metaReviewMessageCall = calls.find(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.3" &&
+        call[3] === "-l" &&
+        call[4]?.includes("Meta-review task received.")
+    );
+    expect(metaReviewMessageCall?.[4]).toContain("--report-json");
+    expect(metaReviewMessageCall?.[4]).toContain("findings_claim_state");
+    expect(metaReviewMessageCall?.[4]).toContain("findings_claim_source");
+    expect(metaReviewMessageCall?.[4]).toContain("findings_count");
   });
 
   it("falls back to legacy recipient mapping when delivery target role token is invalid", async () => {

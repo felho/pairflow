@@ -378,6 +378,10 @@ describe("startBubble", () => {
       "--dangerously-bypass-approvals-and-sandbox"
     );
     expect(metaReviewerCommand).toContain("Pairflow meta-reviewer start");
+    expect(metaReviewerCommand).toContain("--report-json");
+    expect(metaReviewerCommand).toContain("findings_claim_state");
+    expect(metaReviewerCommand).toContain("findings_claim_source");
+    expect(metaReviewerCommand).toContain("findings_count");
     expect(metaReviewerCommand).toContain(created.paths.taskArtifactPath);
     expect(reviewerCommand).toContain(
       "Summary scope guardrail: scope statements must cover only current worktree changes."

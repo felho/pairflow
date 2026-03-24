@@ -67,13 +67,15 @@ export function parseOptionalReworkTarget(value: string | undefined): string | n
   );
 }
 
-export function parseSubmitReportJson(
+export function parseRequiredSubmitReportJson(
   value: string | undefined
-): Record<string, unknown> | undefined {
-  return parseSubmitReportJsonValue(
-    value,
-    invalidMetaReviewCliOptions
-  );
+): Record<string, unknown> {
+  if (value === undefined) {
+    return invalidMetaReviewCliOptions(
+      "Missing required option: --report-json"
+    );
+  }
+  return parseSubmitReportJsonValue(value, invalidMetaReviewCliOptions);
 }
 
 function readStringOption(

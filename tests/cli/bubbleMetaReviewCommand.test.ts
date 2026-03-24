@@ -192,6 +192,24 @@ describe("parseBubbleMetaReviewCommandOptions", () => {
     expect(parsed.reportJson).toEqual({ findings: 0 });
   });
 
+  it("rejects submit options when --report-json is missing", () => {
+    expect(() =>
+      parseBubbleMetaReviewCommandOptions([
+        "submit",
+        "--id",
+        "b_meta_cli_submit_missing_report_json_01",
+        "--round",
+        "1",
+        "--recommendation",
+        "approve",
+        "--summary",
+        "missing report json",
+        "--report-markdown",
+        "# Report"
+      ])
+    ).toThrow(/Missing required option: --report-json/u);
+  });
+
   it("returns help mode when missing subcommand", () => {
     const parsed = parseBubbleMetaReviewCommandOptions([]);
     expect(parsed).toEqual({ help: true });
@@ -487,7 +505,9 @@ describe("runBubbleMetaReviewCommand", () => {
       "--summary",
       "Structured CLI submit summary.",
       "--report-markdown",
-      "# CLI Submit\n\nLooks good."
+      "# CLI Submit\n\nLooks good.",
+      "--report-json",
+      "{\"findings_claim_state\":\"clean\",\"findings_claim_source\":\"meta_review_artifact\",\"findings_count\":0}"
     ]);
 
     expect(result?.command).toBe("submit");
@@ -503,6 +523,43 @@ describe("runBubbleMetaReviewCommand", () => {
     expect(loaded.state.meta_review?.last_autonomous_summary).toBe(
       "Structured CLI submit summary."
     );
+  });
+
+  it("rejects submit command when --report-json is missing", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_cli_submit_missing_report_json_run_01",
+      task: "CLI submit missing report-json"
+    });
+
+    await prepareMetaReviewSubmitReadyFixture({
+      statePath: bubble.paths.statePath,
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath
+    });
+
+    await expect(
+      runBubbleMetaReviewCommand([
+        "submit",
+        "--id",
+        bubble.bubbleId,
+        "--repo",
+        repoPath,
+        "--round",
+        "1",
+        "--recommendation",
+        "approve",
+        "--summary",
+        "Structured CLI submit summary.",
+        "--report-markdown",
+        "# CLI Submit\n\nLooks good."
+      ])
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID"
+    });
   });
 
   it("supports pre-parsed options overload for status/last-report/recover", async () => {
@@ -622,6 +679,11 @@ describe("runBubbleMetaReviewCommand", () => {
       recommendation: "approve",
       summary: "Parsed overload submit",
       reportMarkdown: "# Parsed overload",
+      reportJson: {
+        findings_claim_state: "clean",
+        findings_claim_source: "meta_review_artifact",
+        findings_count: 0
+      },
       reworkTargetMessage: null,
       json: false,
       verbose: false
