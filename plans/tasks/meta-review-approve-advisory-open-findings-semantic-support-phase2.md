@@ -21,10 +21,10 @@ target_files:
   - tests/v11/shared/metaReviewGate/metaReviewGateFindingsParityHelpers.test.ts
   - docs/meta-review-gate-rollout-runbook.md
 prd_ref: null
-plan_ref: plans/tasks/meta-review-summary-structured-parity-enforcement-phase1.md
+plan_ref: plans/archive/tasks/meta-review-gate/meta-review-summary-structured-parity-enforcement-phase1.md
 system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
-  - plans/tasks/meta-review-summary-structured-parity-enforcement-phase1.md
+  - plans/archive/tasks/meta-review-gate/meta-review-summary-structured-parity-enforcement-phase1.md
   - docs/pairflow-initial-design.md
 owners:
   - "felho"
