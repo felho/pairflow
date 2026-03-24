@@ -280,18 +280,22 @@ describe("runBubbleWatchdog", () => {
 
   it("escalates expired RUNNING watchdog to HUMAN_QUESTION + WAITING_HUMAN", async () => {
     const repoPath = await createTempRepo();
+    const startedAt = "2026-02-22T12:00:00.000Z";
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_watchdog_01",
       task: "Watchdog escalation task",
-      startedAt: "2026-02-22T12:00:00.000Z"
+      startedAt
     });
+    const escalatedAt = new Date(
+      Date.parse(startedAt) + (bubble.config.watchdog_timeout_minutes + 1) * 60_000
+    );
     const deliveryRefs: string[] = [];
 
     const result = await runBubbleWatchdog({
       bubbleId: bubble.bubbleId,
       cwd: repoPath,
-      now: new Date("2026-02-22T12:31:00.000Z")
+      now: escalatedAt
     }, {
       emitTmuxDeliveryNotification: (input) => {
         if (input.messageRef !== undefined) {
