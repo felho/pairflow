@@ -46,6 +46,13 @@ import {
   resolveAdvisoryFindingsFromReportJson,
   resolveFindingsOpenSplitFromReportJson
 } from "../../v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.js";
+import {
+  resolveStructuredMetaReviewClaimFromReportJson
+} from "../../v11/shared/metaReviewGate/metaReviewGateFindingsClaimParsing.js";
+import {
+  evaluateNoFindingsSummaryFindingsAssertion,
+  evaluatePositiveSummaryFindingsAssertion
+} from "../convergence/policy.js";
 const CANONICAL_META_REVIEW_REPORT_REF = "artifacts/meta-review-last.md";
 const CANONICAL_META_REVIEW_REPORT_JSON_REF = "artifacts/meta-review-last.json";
 
@@ -67,7 +74,7 @@ export interface MetaReviewSubmitInput extends MetaReviewReadInput {
   summary: string;
   report_markdown: string;
   rework_target_message?: string | null;
-  report_json?: Record<string, unknown>;
+  report_json: Record<string, unknown>;
 }
 
 export interface MetaReviewLiveRunnerInput {
@@ -155,7 +162,12 @@ export interface MetaReviewRunResult {
   report_json?: Record<string, unknown>;
 }
 
-export type MetaReviewSubmitResult = Omit<MetaReviewRunResult, "depth">;
+export type MetaReviewSubmitResult = Omit<
+  MetaReviewRunResult,
+  "depth" | "report_json"
+> & {
+  report_json: Record<string, unknown>;
+};
 
 export interface MetaReviewDependencies {
   resolveBubbleById?: typeof resolveBubbleById;
@@ -181,6 +193,7 @@ export type MetaReviewErrorReasonCode =
   | "META_REVIEW_SNAPSHOT_WRITE_CONFLICT"
   | "META_REVIEW_BUBBLE_LOOKUP_FAILED"
   | "META_REVIEW_SCHEMA_INVALID"
+  | "META_REVIEW_SUMMARY_STRUCTURED_MISMATCH"
   | "META_REVIEW_SCHEMA_INVALID_COMBINATION"
   | "META_REVIEW_GATE_RUN_FAILED"
   | "META_REVIEW_IO_ERROR"
@@ -246,7 +259,7 @@ function parseOptionalSubmitRunLinkField(
 
 function resolveSubmitCanonicalRunId(input: {
   recommendation: MetaReviewRecommendation;
-  reportJson?: Record<string, unknown>;
+  reportJson: Record<string, unknown>;
   generatedRunId: string;
 }): string {
   const reportJson = input.reportJson;
@@ -304,10 +317,89 @@ function resolveClaimStateFromRecommendation(
   return "unknown";
 }
 
+function requireStructuredMetaReviewClaim(
+  reportJson: Record<string, unknown>
+): {
+  state: "clean" | "open_findings" | "unknown";
+  source: "meta_review_artifact";
+} {
+  const parsed = resolveStructuredMetaReviewClaimFromReportJson({ reportJson });
+  if ("reason" in parsed) {
+    throw new MetaReviewError("META_REVIEW_SCHEMA_INVALID", parsed.reason);
+  }
+  if (parsed.claim === undefined) {
+    throw new MetaReviewError(
+      "META_REVIEW_SCHEMA_INVALID",
+      "meta-review submit report_json requires findings_claim_state and findings_claim_source fields"
+    );
+  }
+  return parsed.claim;
+}
+
+function requireStructuredFindingsCount(reportJson: Record<string, unknown>): number {
+  if (!Object.hasOwn(reportJson, "findings_count")) {
+    throw new MetaReviewError(
+      "META_REVIEW_SCHEMA_INVALID",
+      "meta-review submit report_json.findings_count is required and must be a non-negative integer"
+    );
+  }
+  const explicitCount = reportJson.findings_count;
+  if (!isInteger(explicitCount) || explicitCount < 0) {
+    throw new MetaReviewError(
+      "META_REVIEW_SCHEMA_INVALID",
+      "meta-review submit report_json.findings_count is required and must be a non-negative integer"
+    );
+  }
+  return explicitCount;
+}
+
+function assertSummaryStructuredParity(input: {
+  summary: string;
+  reportJson: Record<string, unknown>;
+}): void {
+  const structuredClaim = requireStructuredMetaReviewClaim(input.reportJson);
+  const structuredCount = requireStructuredFindingsCount(input.reportJson);
+  if (
+    (structuredClaim.state === "open_findings" && structuredCount === 0) ||
+    (structuredClaim.state === "clean" && structuredCount > 0)
+  ) {
+    throw new MetaReviewError(
+      "META_REVIEW_SCHEMA_INVALID",
+      "meta-review submit structured claim/count tuple is inconsistent"
+    );
+  }
+  const summaryPositiveAssertion =
+    evaluatePositiveSummaryFindingsAssertion(input.summary);
+  const summaryNoFindingsAssertion =
+    evaluateNoFindingsSummaryFindingsAssertion(input.summary);
+  const structuredHasOpenFindings =
+    structuredClaim.state === "open_findings" || structuredCount > 0;
+
+  if (summaryPositiveAssertion.hasPositiveAssertion && structuredCount === 0) {
+    throw new MetaReviewError(
+      "META_REVIEW_SUMMARY_STRUCTURED_MISMATCH",
+      "meta-review submit summary claims open findings while report_json.findings_count is 0"
+    );
+  }
+
+  if (
+    summaryNoFindingsAssertion.hasNoFindingsAssertion &&
+    structuredHasOpenFindings
+  ) {
+    throw new MetaReviewError(
+      "META_REVIEW_SUMMARY_STRUCTURED_MISMATCH",
+      "meta-review submit summary claims no findings while structured report_json claims open findings"
+    );
+  }
+}
+
+// Shared by submit and runner paths:
+// - submit always provides reportJson (already schema-validated),
+// - runMetaReview may canonicalize runner output without report_json.
 function resolveCanonicalMetaReviewReportJson(input: {
   recommendation: MetaReviewRecommendation;
   reportJson?: Record<string, unknown>;
-  runId: string | null;
+  runId: string;
 }): Record<string, unknown> {
   const base = input.reportJson ?? {};
   const rawState = base.findings_claim_state;
@@ -1347,12 +1439,13 @@ export async function submitMetaReviewResult(
     );
   }
 
-  if (input.report_json !== undefined && !isRecord(input.report_json)) {
+  if (input.report_json === undefined || !isRecord(input.report_json)) {
     throw new MetaReviewError(
       "META_REVIEW_SCHEMA_INVALID",
-      "meta-review submit report_json must be an object when provided"
+      "meta-review submit report_json is required and must be an object"
     );
   }
+  const reportJson = input.report_json;
 
   const updatedAt = now.toISOString();
   const runIdRaw = randomUuidFn();
@@ -1378,16 +1471,18 @@ export async function submitMetaReviewResult(
     status,
     reworkTargetMessage
   });
+  assertSummaryStructuredParity({
+    summary,
+    reportJson
+  });
   const runId = resolveSubmitCanonicalRunId({
     recommendation,
-    ...(input.report_json !== undefined ? { reportJson: input.report_json } : {}),
+    reportJson,
     generatedRunId
   });
   const canonicalReportJson = resolveCanonicalMetaReviewReportJson({
     recommendation,
-    ...(input.report_json !== undefined
-      ? { reportJson: input.report_json }
-      : {}),
+    reportJson,
     runId
   });
 

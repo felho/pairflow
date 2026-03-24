@@ -38,7 +38,7 @@ export interface BubbleMetaReviewSubmitCommandOptions
   summary: string;
   reportMarkdown: string;
   reworkTargetMessage: string | null;
-  reportJson?: Record<string, unknown>;
+  reportJson: Record<string, unknown>;
 }
 
 export interface BubbleMetaReviewHelpCommandOptions {

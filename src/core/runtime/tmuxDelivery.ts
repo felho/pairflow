@@ -303,7 +303,7 @@ function buildDeliveryMessage(
     }
   } else if (recipientRole === "meta-reviewer") {
     action =
-      "Meta-review task received. Produce autonomous meta-review output and return only through structured submit: `pairflow bubble meta-review submit --id <id> --round <n> --recommendation <approve|rework|inconclusive> --summary \"...\" --report-markdown \"...\"`.";
+      "Meta-review task received. Produce autonomous meta-review output and return only through structured submit with required report-json parity fields: `pairflow bubble meta-review submit --id <id> --round <n> --recommendation <approve|rework|inconclusive> --summary \"...\" --report-markdown \"...\" --report-json '{\"findings_claim_state\":\"clean|open_findings|unknown\",\"findings_claim_source\":\"meta_review_artifact\",\"findings_count\":<int>,\"findings_artifact_ref\":\"artifacts/...\",\"meta_review_run_id\":\"<run-id>\",\"findings_digest_sha256\":\"<sha256>\",\"findings_artifact_status\":\"available\"}'`.";
   } else if (
     recipientRole === "human" ||
     recipientRole === "orchestrator" ||

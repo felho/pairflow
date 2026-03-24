@@ -9,6 +9,7 @@ import {
   applyMetaReviewGateOnConvergence,
   recoverMetaReviewGateFromSnapshot
 } from "../../../src/core/bubble/metaReviewGate.js";
+import { notifyMetaReviewerSubmissionRequest } from "../../../src/v11/shared/metaReviewGate/metaReviewGateNotify.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
@@ -177,6 +178,48 @@ function buildReworkReportJson(input: {
   };
 }
 
+describe("notifyMetaReviewerSubmissionRequest", () => {
+  it("sends required structured submit command with --report-json parity fields", async () => {
+    const tmuxCalls: string[][] = [];
+    await notifyMetaReviewerSubmissionRequest(
+      {
+        bubbleId: "b_meta_gate_notify_01",
+        round: 4,
+        targetPane: "pf_meta_structured:0.3"
+      },
+      {
+        runTmux: async (args) => {
+          tmuxCalls.push(args);
+          if (args[0] === "capture-pane") {
+            return {
+              stdout: "trusted pane",
+              stderr: "",
+              exitCode: 0
+            };
+          }
+          return {
+            stdout: "",
+            stderr: "",
+            exitCode: 0
+          };
+        }
+      }
+    );
+
+    const messageCall = tmuxCalls.find(
+      (args) =>
+        args[0] === "send-keys" &&
+        args[2] === "pf_meta_structured:0.3" &&
+        args[3] === "-l"
+    );
+    expect(messageCall?.[4]).toContain("Required command (include --report-json parity fields):");
+    expect(messageCall?.[4]).toContain("--report-json");
+    expect(messageCall?.[4]).toContain("findings_claim_state");
+    expect(messageCall?.[4]).toContain("findings_claim_source");
+    expect(messageCall?.[4]).toContain("findings_count");
+  });
+});
+
 describe("applyMetaReviewGateOnConvergence", () => {
   it("starts async meta-review and emits TASK kickoff when pane is available", async () => {
     const repoPath = await createTempRepo();
@@ -208,6 +251,11 @@ describe("applyMetaReviewGateOnConvergence", () => {
 
     expect(result.route).toBe("meta_review_running");
     expect(result.gateEnvelope.type).toBe("TASK");
+    expect(result.gateEnvelope.payload.summary).toContain("--report-json");
+    expect(result.gateEnvelope.payload.summary).toContain("findings_claim_state");
+    expect(result.gateEnvelope.payload.summary).toContain("findings_claim_source");
+    expect(result.gateEnvelope.payload.summary).toContain("findings_count");
+    expect(result.gateEnvelope.payload.summary).not.toContain("[--report-json");
     expect(result.gateEnvelope.payload.metadata).toMatchObject({
       [deliveryTargetRoleMetadataKey]: "meta_reviewer"
     });
@@ -1005,30 +1053,16 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_json: {
           findings_claim_state: "clean",
           findings_claim_source: "meta_review_artifact",
-          findings_count: 2,
-          findings_claimed_open_total: 2,
-          findings_artifact_open_total: 2,
+          findings_count: 0,
+          findings_claimed_open_total: 0,
+          findings_artifact_open_total: 0,
           findings_blocking_open_total: 0,
-          findings_advisory_open_total: 2,
+          findings_advisory_open_total: 0,
           findings_artifact_status: "available",
           findings_digest_sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           meta_review_run_id: "run_recover_approve_parity_metadata_01",
           findings_parity_status: "ok",
-          findings: [
-            {
-              severity: "P2",
-              title: "advisory a",
-              refs: ["artifact://a"]
-            },
-            {
-              severity: "P3",
-              title: "advisory b"
-            },
-            {
-              severity: "P1",
-              title: "blocking ignored"
-            }
-          ]
+          findings: []
         }
       }
     });
@@ -1036,28 +1070,16 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     expect(recovered.route).toBe("human_gate_approve");
     expect(recovered.gateEnvelope.type).toBe("APPROVAL_REQUEST");
     expect(recovered.gateEnvelope.payload.metadata).toMatchObject({
-      findings_claimed_open_total: 2,
-      findings_artifact_open_total: 2,
+      findings_claimed_open_total: 0,
+      findings_artifact_open_total: 0,
       findings_blocking_open_total: 0,
-      findings_advisory_open_total: 2,
+      findings_advisory_open_total: 0,
       findings_artifact_status: "available",
       findings_digest_sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       meta_review_run_id: "run_recover_approve_parity_metadata_01",
       findings_parity_status: "ok"
     });
-    expect(recovered.gateEnvelope.payload.findings).toEqual([
-      {
-        priority: "P2",
-        severity: "P2",
-        title: "advisory a",
-        refs: ["artifact://a"]
-      },
-      {
-        priority: "P3",
-        severity: "P3",
-        title: "advisory b"
-      }
-    ]);
+    expect(recovered.gateEnvelope.payload.findings).toBeUndefined();
   });
 
   it("does not normalize approve-route summary when parity proof is unavailable", async () => {

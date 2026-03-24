@@ -939,6 +939,36 @@ describe("meta-review submit", () => {
     };
   }
 
+  function buildStructuredSubmitReportJson(input?: {
+    findingsClaimState?: "clean" | "open_findings" | "unknown";
+    findingsClaimSource?:
+      | "meta_review_artifact"
+      | "legacy_summary_parser";
+    findingsCount?: unknown;
+    metaReviewRunId?: string;
+    findingsRunId?: string;
+    findingsArtifactRef?: string;
+  }): Record<string, unknown> {
+    const findingsClaimState = input?.findingsClaimState ?? "clean";
+    const reportJson: Record<string, unknown> = {
+      findings_claim_state: findingsClaimState,
+      findings_claim_source: input?.findingsClaimSource ?? "meta_review_artifact",
+      findings_count:
+        input?.findingsCount ??
+        (findingsClaimState === "open_findings" ? 1 : 0)
+    };
+    if (input?.metaReviewRunId !== undefined) {
+      reportJson.meta_review_run_id = input.metaReviewRunId;
+    }
+    if (input?.findingsRunId !== undefined) {
+      reportJson.findings_run_id = input.findingsRunId;
+    }
+    if (input?.findingsArtifactRef !== undefined) {
+      reportJson.findings_artifact_ref = input.findingsArtifactRef;
+    }
+    return reportJson;
+  }
+
   it("requires report_ref for canonical submit detection in active meta-review window", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -1047,6 +1077,787 @@ describe("meta-review submit", () => {
     ).toBe(false);
   });
 
+  it("rejects submit when report_json is missing", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_missing_report_json_01",
+      task: "Meta submit missing report_json"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:09:00.000Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "Summary only submit should be rejected.",
+          report_markdown: "# Meta Review\n\nMissing report_json."
+        } as unknown as Parameters<typeof submitMetaReviewResult>[0],
+        {
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID"
+    });
+  });
+
+  it("rejects submit when summary claims open findings but structured findings_count is 0", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_summary_open_mismatch_01",
+      task: "Meta submit open-summary mismatch"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:09:30.000Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "1 open finding remains in this run.",
+          report_markdown: "# Meta Review\n\nOpen finding summary mismatch.",
+          report_json: buildStructuredSubmitReportJson({
+            findingsClaimState: "clean",
+            findingsCount: 0
+          })
+        },
+        {
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_SUMMARY_STRUCTURED_MISMATCH"
+    });
+  });
+
+  it("rejects submit when summary claims no findings but structured payload reports open findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_summary_clean_mismatch_01",
+      task: "Meta submit no-findings mismatch"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:09:45.000Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "No findings remain after this review.",
+          report_markdown: "# Meta Review\n\nNo-findings mismatch.",
+          report_json: buildStructuredSubmitReportJson({
+            findingsClaimState: "open_findings",
+            findingsCount: 2
+          })
+        },
+        {
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_SUMMARY_STRUCTURED_MISMATCH"
+    });
+  });
+
+  it("rejects submit when claim state is unknown with zero findings_count and summary claims open findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_unknown_zero_summary_open_01",
+      task: "Meta submit unknown state zero count open summary mismatch"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:09:47.000Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "1 open finding remains in this run.",
+          report_markdown: "# Meta Review\n\nUnknown state with zero count open-summary mismatch.",
+          report_json: buildStructuredSubmitReportJson({
+            findingsClaimState: "unknown",
+            findingsCount: 0
+          })
+        },
+        {
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_SUMMARY_STRUCTURED_MISMATCH"
+    });
+  });
+
+  it("rejects submit when claim state is unknown with positive findings_count and summary claims no findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_unknown_positive_summary_clean_01",
+      task: "Meta submit unknown state positive count no-findings summary mismatch"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:09:47.500Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "No findings remain after this review.",
+          report_markdown: "# Meta Review\n\nUnknown state with positive count no-findings mismatch.",
+          report_json: buildStructuredSubmitReportJson({
+            findingsClaimState: "unknown",
+            findingsCount: 2
+          })
+        },
+        {
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_SUMMARY_STRUCTURED_MISMATCH"
+    });
+  });
+
+  it("accepts submit when claim state is unknown with zero findings_count and summary is ambiguous", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_unknown_zero_ambiguous_accept_01",
+      task: "Meta submit unknown state zero count ambiguous summary acceptance"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:09:48.000Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "Operator notes captured for follow-up context.",
+          report_markdown: "# Meta Review\n\nUnknown state with zero count and ambiguous summary.",
+          report_json: buildStructuredSubmitReportJson({
+            findingsClaimState: "unknown",
+            findingsCount: 0
+          })
+        },
+        {
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).resolves.toMatchObject({
+      status: "success",
+      recommendation: "approve"
+    });
+  });
+
+  it("accepts submit when summary claims open findings and structured payload reports open findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_summary_open_aligned_01",
+      task: "Meta submit open-summary aligned"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:09:50.000Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "rework",
+          summary: "1 open finding remains in this run.",
+          report_markdown: "# Meta Review\n\nOpen findings remain and rework is required.",
+          rework_target_message: "Resolve the remaining open finding.",
+          report_json: buildStructuredSubmitReportJson({
+            findingsClaimState: "open_findings",
+            findingsCount: 1,
+            metaReviewRunId: "run_meta_submit_summary_open_aligned_01"
+          })
+        },
+        {
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).resolves.toMatchObject({
+      status: "success",
+      recommendation: "rework"
+    });
+  });
+
+  it("accepts submit when summary is ambiguous and structured payload is clean", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_summary_ambiguous_clean_01",
+      task: "Meta submit ambiguous summary should pass"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:09:55.000Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "Follow-up notes captured for operator context.",
+          report_markdown: "# Meta Review\n\nAmbiguous summary with clean structured payload.",
+          report_json: buildStructuredSubmitReportJson({
+            findingsClaimState: "clean",
+            findingsCount: 0
+          })
+        },
+        {
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).resolves.toMatchObject({
+      status: "success",
+      recommendation: "approve"
+    });
+  });
+
+  it("accepts submit on canonical clean/no-findings path with explicit no-findings summary assertion", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_clean_zero_no_findings_accept_01",
+      task: "Meta submit canonical clean no-findings acceptance"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:09:56.000Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "No findings remain after this review.",
+          report_markdown: "# Meta Review\n\nCanonical clean no-findings path.",
+          report_json: buildStructuredSubmitReportJson({
+            findingsClaimState: "clean",
+            findingsCount: 0
+          })
+        },
+        {
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).resolves.toMatchObject({
+      status: "success",
+      recommendation: "approve"
+    });
+  });
+
+  it("accepts submit when summary is ambiguous and structured payload reports open findings (policy: structured source-of-truth)", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_summary_ambiguous_open_01",
+      task: "Meta submit ambiguous summary with open findings payload"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:09:56.500Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "rework",
+          summary: "Operator context notes captured for follow-up handling.",
+          report_markdown: "# Meta Review\n\nAmbiguous summary with structured open findings payload.",
+          rework_target_message: "Resolve remaining open findings.",
+          report_json: buildStructuredSubmitReportJson({
+            findingsClaimState: "open_findings",
+            findingsCount: 2,
+            metaReviewRunId: "run_meta_submit_summary_ambiguous_open_01"
+          })
+        },
+        {
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).resolves.toMatchObject({
+      status: "success",
+      recommendation: "rework"
+    });
+  });
+
+  it("rejects submit when structured tuple has open_findings state with zero findings_count", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_tuple_open_zero_01",
+      task: "Meta submit tuple consistency open-zero"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:09:57.000Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "Operator notes captured for context.",
+          report_markdown: "# Meta Review\n\nTuple inconsistency open/zero.",
+          report_json: buildStructuredSubmitReportJson({
+            findingsClaimState: "open_findings",
+            findingsCount: 0
+          })
+        },
+        {
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID"
+    });
+  });
+
+  it("rejects submit when structured tuple has clean state with positive findings_count", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_tuple_clean_positive_01",
+      task: "Meta submit tuple consistency clean-positive"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:09:57.500Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "Operator notes captured for context.",
+          report_markdown: "# Meta Review\n\nTuple inconsistency clean/positive.",
+          report_json: buildStructuredSubmitReportJson({
+            findingsClaimState: "clean",
+            findingsCount: 1
+          })
+        },
+        {
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID"
+    });
+  });
+
+  it("rejects submit when report_json claim tuple is incomplete in either direction", async () => {
+    const repoPath = await createTempRepo();
+    const invalidCases: Array<{
+      bubbleId: string;
+      reportJson: Record<string, unknown>;
+    }> = [
+      {
+        bubbleId: "b_meta_submit_claim_tuple_missing_source_01",
+        reportJson: {
+          findings_claim_state: "clean",
+          findings_count: 0
+        }
+      },
+      {
+        bubbleId: "b_meta_submit_claim_tuple_missing_state_01",
+        reportJson: {
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 0
+        }
+      }
+    ];
+
+    for (const testCase of invalidCases) {
+      const bubble = await setupRunningBubbleFixture({
+        repoPath,
+        bubbleId: testCase.bubbleId,
+        task: "Meta submit incomplete claim tuple"
+      });
+      await writeMetaReviewRunningState({
+        statePath: bubble.paths.statePath,
+        activeAgent: "codex",
+        activeRole: "meta_reviewer",
+        nowIso: "2026-03-09T09:09:58.000Z"
+      });
+
+      await expect(
+        submitMetaReviewResult(
+          {
+            bubbleId: bubble.bubbleId,
+            repoPath,
+            round: 1,
+            recommendation: "approve",
+            summary: "Claim tuple incomplete should reject.",
+            report_markdown: "# Meta Review\n\nIncomplete claim tuple.",
+            report_json: testCase.reportJson
+          },
+          {
+            readRuntimeSessionsRegistry: async () =>
+              buildActiveMetaReviewerSession({
+                bubbleId: bubble.bubbleId,
+                repoPath,
+                worktreePath: bubble.paths.worktreePath
+              })
+          }
+        )
+      ).rejects.toMatchObject({
+        reasonCode: "META_REVIEW_SCHEMA_INVALID"
+      });
+    }
+  });
+
+  it("rejects submit when report_json claim source is not meta_review_artifact", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_claim_source_invalid_01",
+      task: "Meta submit invalid claim source"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:09:59.000Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "Claim source mismatch should reject.",
+          report_markdown: "# Meta Review\n\nInvalid claim source.",
+          report_json: buildStructuredSubmitReportJson({
+            findingsClaimState: "clean",
+            findingsClaimSource: "legacy_summary_parser",
+            findingsCount: 0
+          })
+        },
+        {
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID"
+    });
+  });
+
+  it("rejects submit when findings_count is missing or invalid even if findings fallback is present", async () => {
+    const repoPath = await createTempRepo();
+    const invalidCases: Array<{
+      bubbleId: string;
+      reportJson: Record<string, unknown>;
+    }> = [
+      {
+        bubbleId: "b_meta_submit_findings_count_missing_01",
+        reportJson: {
+          findings_claim_state: "clean",
+          findings_claim_source: "meta_review_artifact"
+        }
+      },
+      {
+        bubbleId: "b_meta_submit_findings_count_invalid_neg_01",
+        reportJson: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: -1,
+          findings: [{ id: "fallback_1" }]
+        }
+      },
+      {
+        bubbleId: "b_meta_submit_findings_count_invalid_float_01",
+        reportJson: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 1.5
+        }
+      },
+      {
+        bubbleId: "b_meta_submit_findings_count_invalid_string_01",
+        reportJson: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: "1",
+          findings: 1
+        }
+      },
+      {
+        bubbleId: "b_meta_submit_findings_count_missing_with_findings_array_01",
+        reportJson: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings: [{ id: "fallback_2" }, { id: "fallback_3" }]
+        }
+      }
+    ];
+
+    for (const invalidCase of invalidCases) {
+      const bubble = await setupRunningBubbleFixture({
+        repoPath,
+        bubbleId: invalidCase.bubbleId,
+        task: "Meta submit findings_count validation"
+      });
+      await writeMetaReviewRunningState({
+        statePath: bubble.paths.statePath,
+        activeAgent: "codex",
+        activeRole: "meta_reviewer",
+        nowIso: "2026-03-09T09:10:00.000Z"
+      });
+
+      await expect(
+        submitMetaReviewResult(
+          {
+            bubbleId: bubble.bubbleId,
+            repoPath,
+            round: 1,
+            recommendation: "approve",
+            summary: "Invalid findings_count should reject.",
+            report_markdown: "# Meta Review\n\nInvalid findings_count.",
+            report_json: invalidCase.reportJson
+          },
+          {
+            readRuntimeSessionsRegistry: async () =>
+              buildActiveMetaReviewerSession({
+                bubbleId: bubble.bubbleId,
+                repoPath,
+                worktreePath: bubble.paths.worktreePath
+              })
+          }
+        )
+      ).rejects.toMatchObject({
+        reasonCode: "META_REVIEW_SCHEMA_INVALID"
+      });
+    }
+  });
+
+  it("rejects submit when both claim fields are missing", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_claim_fields_missing_01",
+      task: "Meta submit missing claim fields"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:10:05.000Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "Missing claim tuple should reject.",
+          report_markdown: "# Meta Review\n\nMissing claim fields.",
+          report_json: {
+            findings_count: 0
+          }
+        },
+        {
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID"
+    });
+  });
+
+  it("rejects direct submit API payload when report_json is empty object", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_empty_report_json_01",
+      task: "Meta submit empty report_json direct api"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:10:06.000Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "Empty report_json should be rejected.",
+          report_markdown: "# Meta Review\n\nEmpty report_json payload.",
+          report_json: {}
+        },
+        {
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID"
+    });
+  });
+
   it("accepts structured approve submit and persists canonical snapshot", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -1068,7 +1879,8 @@ describe("meta-review submit", () => {
         round: 1,
         recommendation: "approve",
         summary: "Looks good after final review.",
-        report_markdown: "# Meta Review\n\nApproved."
+        report_markdown: "# Meta Review\n\nApproved.",
+        report_json: buildStructuredSubmitReportJson()
       },
       {
         randomUUID: () => "run_meta_submit_01",
@@ -1121,9 +1933,11 @@ describe("meta-review submit", () => {
         summary: "Needs one more deterministic fix.",
         report_markdown: "# Meta Review\n\nRework required.",
         rework_target_message: "Fix retry sequencing in gate recovery.",
-        report_json: {
-          meta_review_run_id: "run_meta_submit_02"
-        }
+        report_json: buildStructuredSubmitReportJson({
+          findingsClaimState: "open_findings",
+          findingsCount: 1,
+          metaReviewRunId: "run_meta_submit_02"
+        })
       },
       {
         randomUUID: () => "run_generated_submit_02",
@@ -1156,7 +1970,7 @@ describe("meta-review submit", () => {
     };
     expect(reportJson.run_id).toBe("run_meta_submit_02");
     expect(reportJson.report_json?.findings_claim_state).toBe("open_findings");
-    expect(reportJson.report_json?.findings_count).toBe(0);
+    expect(reportJson.report_json?.findings_count).toBe(1);
     expect(reportJson.report_json?.meta_review_run_id).toBe(
       "run_meta_submit_02"
     );
@@ -1188,10 +2002,12 @@ describe("meta-review submit", () => {
         summary: "Needs another pass.",
         report_markdown: "# Meta Review\n\nRework required.",
         rework_target_message: "Fix parity artifact path.",
-        report_json: {
-          meta_review_run_id: "run_meta_submit_03",
-          findings_artifact_ref: "artifacts/meta-review-last.md"
-        }
+        report_json: buildStructuredSubmitReportJson({
+          findingsClaimState: "open_findings",
+          findingsCount: 1,
+          metaReviewRunId: "run_meta_submit_03",
+          findingsArtifactRef: "artifacts/meta-review-last.md"
+        })
       },
       {
         randomUUID: () => "run_generated_submit_03",
@@ -1241,9 +2057,10 @@ describe("meta-review submit", () => {
           summary: "Missing run-link metadata.",
           report_markdown: "# Meta Review\n\nMissing run-link metadata.",
           rework_target_message: "Fix run-link metadata.",
-          report_json: {
-            findings_count: 1
-          }
+          report_json: buildStructuredSubmitReportJson({
+            findingsClaimState: "open_findings",
+            findingsCount: 1
+          })
         },
         {
           randomUUID: () => "run_meta_submit_rework_run_link_missing_01",
@@ -1284,10 +2101,12 @@ describe("meta-review submit", () => {
           summary: "Mismatched run-link metadata.",
           report_markdown: "# Meta Review\n\nMismatched run-link metadata.",
           rework_target_message: "Fix run-link metadata.",
-          report_json: {
-            meta_review_run_id: "run_meta_submit_rework_run_link_mismatch_01",
-            findings_run_id: "run_meta_submit_rework_run_link_mismatch_other_01"
-          }
+          report_json: buildStructuredSubmitReportJson({
+            findingsClaimState: "open_findings",
+            findingsCount: 1,
+            metaReviewRunId: "run_meta_submit_rework_run_link_mismatch_01",
+            findingsRunId: "run_meta_submit_rework_run_link_mismatch_other_01"
+          })
         },
         {
           randomUUID: () => "run_meta_submit_rework_run_link_mismatch_01",
@@ -1326,7 +2145,12 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "rework",
           summary: "Missing target.",
-          report_markdown: "# Meta Review\n\nMissing target."
+          report_markdown: "# Meta Review\n\nMissing target.",
+          report_json: buildStructuredSubmitReportJson({
+            findingsClaimState: "open_findings",
+            findingsCount: 1,
+            metaReviewRunId: "run_meta_submit_03_missing_target"
+          })
         },
         {
           readRuntimeSessionsRegistry: async () =>
@@ -1340,6 +2164,67 @@ describe("meta-review submit", () => {
     ).rejects.toMatchObject({
       reasonCode: "META_REVIEW_REWORK_MESSAGE_INVALID"
     });
+  });
+
+  it("prioritizes rework-target invariant before parity mismatch when recommendation is rework", async () => {
+    const repoPath = await createTempRepo();
+    const invalidCases: Array<{
+      bubbleId: string;
+      reworkTargetMessage?: string;
+    }> = [
+      {
+        bubbleId: "b_meta_submit_rework_precedence_missing_target_01"
+      },
+      {
+        bubbleId: "b_meta_submit_rework_precedence_empty_target_01",
+        reworkTargetMessage: "   "
+      }
+    ];
+
+    for (const invalidCase of invalidCases) {
+      const bubble = await setupRunningBubbleFixture({
+        repoPath,
+        bubbleId: invalidCase.bubbleId,
+        task: "Meta submit rework invariant-first precedence"
+      });
+      await writeMetaReviewRunningState({
+        statePath: bubble.paths.statePath,
+        activeAgent: "codex",
+        activeRole: "meta_reviewer",
+        nowIso: "2026-03-09T09:30:30.000Z"
+      });
+
+      await expect(
+        submitMetaReviewResult(
+          {
+            bubbleId: bubble.bubbleId,
+            repoPath,
+            round: 1,
+            recommendation: "rework",
+            summary: "No findings remain after this review.",
+            report_markdown: "# Meta Review\n\nRework submit missing/empty target with parity mismatch payload.",
+            ...(invalidCase.reworkTargetMessage !== undefined
+              ? { rework_target_message: invalidCase.reworkTargetMessage }
+              : {}),
+            report_json: buildStructuredSubmitReportJson({
+              findingsClaimState: "open_findings",
+              findingsCount: 2,
+              metaReviewRunId: `${invalidCase.bubbleId}_run`
+            })
+          },
+          {
+            readRuntimeSessionsRegistry: async () =>
+              buildActiveMetaReviewerSession({
+                bubbleId: bubble.bubbleId,
+                repoPath,
+                worktreePath: bubble.paths.worktreePath
+              })
+          }
+        )
+      ).rejects.toMatchObject({
+        reasonCode: "META_REVIEW_REWORK_MESSAGE_INVALID"
+      });
+    }
   });
 
   it("rejects submit when lifecycle is not META_REVIEW_RUNNING", async () => {
@@ -1358,7 +2243,8 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Lifecycle guard should reject.",
-          report_markdown: "# Meta Review\n\nLifecycle guard reject."
+          report_markdown: "# Meta Review\n\nLifecycle guard reject.",
+          report_json: buildStructuredSubmitReportJson()
         },
         {
           readRuntimeSessionsRegistry: async () => {
@@ -1396,7 +2282,8 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Active role guard should reject.",
-          report_markdown: "# Meta Review\n\nActive role guard reject."
+          report_markdown: "# Meta Review\n\nActive role guard reject.",
+          report_json: buildStructuredSubmitReportJson()
         },
         {
           readStateSnapshot: async () => ({
@@ -1438,7 +2325,8 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Active ownership guard should reject.",
-          report_markdown: "# Meta Review\n\nActive ownership guard reject."
+          report_markdown: "# Meta Review\n\nActive ownership guard reject.",
+          report_json: buildStructuredSubmitReportJson()
         },
         {
           readStateSnapshot: async () => ({
@@ -1478,7 +2366,8 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Should fail sender check.",
-          report_markdown: "# Meta Review\n\nShould fail."
+          report_markdown: "# Meta Review\n\nShould fail.",
+          report_json: buildStructuredSubmitReportJson()
         },
         {
           readRuntimeSessionsRegistry: async () => ({})
@@ -1515,7 +2404,8 @@ describe("meta-review submit", () => {
         round: 1,
         recommendation: "approve",
         summary: "Should fail runtime pane ownership check.",
-        report_markdown: "# Meta Review\n\nInactive pane should reject."
+        report_markdown: "# Meta Review\n\nInactive pane should reject.",
+        report_json: buildStructuredSubmitReportJson()
       },
       {
         readRuntimeSessionsRegistry: async () => ({
@@ -1571,7 +2461,8 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Should succeed without gate run identity.",
-          report_markdown: "# Meta Review\n\nMissing run binding."
+          report_markdown: "# Meta Review\n\nMissing run binding.",
+          report_json: buildStructuredSubmitReportJson()
         },
         {
           readRuntimeSessionsRegistry: async () => ({
@@ -1637,7 +2528,8 @@ describe("meta-review submit", () => {
         round: 1,
         recommendation: "approve",
         summary: "First submit should succeed.",
-        report_markdown: "# Meta Review\n\nFirst submit."
+        report_markdown: "# Meta Review\n\nFirst submit.",
+        report_json: buildStructuredSubmitReportJson()
       },
       {
         randomUUID: () => "run_meta_submit_04d",
@@ -1654,7 +2546,8 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Second submit should be rejected.",
-          report_markdown: "# Meta Review\n\nSecond submit."
+          report_markdown: "# Meta Review\n\nSecond submit.",
+          report_json: buildStructuredSubmitReportJson()
         },
         {
           now: new Date("2026-03-09T09:48:11.000Z"),
@@ -1671,6 +2564,69 @@ describe("meta-review submit", () => {
     );
     expect(after.state.meta_review?.last_autonomous_summary).toBe(
       "First submit should succeed."
+    );
+  });
+
+  it("prioritizes schema/parity validation before duplicate-state guard for malformed duplicate submits", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_duplicate_malformed_precedence_01",
+      task: "Meta submit duplicate malformed precedence"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:48:20.000Z"
+    });
+
+    const runtimeSessions = buildActiveMetaReviewerSession({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath
+    });
+
+    await submitMetaReviewResult(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        round: 1,
+        recommendation: "approve",
+        summary: "First submit should succeed for precedence test.",
+        report_markdown: "# Meta Review\n\nFirst submit for precedence test.",
+        report_json: buildStructuredSubmitReportJson()
+      },
+      {
+        randomUUID: () => "run_meta_submit_duplicate_malformed_precedence_01",
+        now: new Date("2026-03-09T09:48:21.000Z"),
+        readRuntimeSessionsRegistry: async () => runtimeSessions
+      }
+    );
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "Second malformed duplicate submit should fail schema-first.",
+          report_markdown: "# Meta Review\n\nSecond malformed duplicate submit.",
+          report_json: {}
+        },
+        {
+          now: new Date("2026-03-09T09:48:22.000Z"),
+          readRuntimeSessionsRegistry: async () => runtimeSessions
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID"
+    });
+
+    const after = await readStateSnapshot(bubble.paths.statePath);
+    expect(after.state.meta_review?.last_autonomous_run_id).toBe(
+      "run_meta_submit_duplicate_malformed_precedence_01"
     );
   });
 
@@ -1714,7 +2670,8 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Duplicate submit should be detected after lifecycle departure.",
-          report_markdown: "# Meta Review\n\nDuplicate after lifecycle departure."
+          report_markdown: "# Meta Review\n\nDuplicate after lifecycle departure.",
+          report_json: buildStructuredSubmitReportJson()
         },
         {
           now: new Date("2026-03-09T09:49:10.000Z"),
@@ -1802,7 +2759,8 @@ describe("meta-review submit", () => {
           round: 2,
           recommendation: "approve",
           summary: "Stale round should fail.",
-          report_markdown: "# Meta Review\n\nStale round."
+          report_markdown: "# Meta Review\n\nStale round.",
+          report_json: buildStructuredSubmitReportJson()
         },
         {
           readRuntimeSessionsRegistry: async () =>

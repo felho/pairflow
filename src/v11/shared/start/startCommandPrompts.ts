@@ -99,7 +99,7 @@ export function buildMetaReviewerStartupPrompt(input: {
     `Pairflow meta-reviewer start for bubble ${input.bubbleId}.`,
     "This is a dedicated static worker pane for autonomous meta-review tasks.",
     "Stay idle until orchestration signals a meta-review run.",
-    "When signaled, submit only through structured Pairflow CLI: `pairflow bubble meta-review submit --id <id> --round <n> --recommendation <approve|rework|inconclusive> --summary \"...\" --report-markdown \"...\"`.",
+    "When signaled, submit only through structured Pairflow CLI and always include required report-json parity fields: `pairflow bubble meta-review submit --id <id> --round <n> --recommendation <approve|rework|inconclusive> --summary \"...\" --report-markdown \"...\" --report-json '{\"findings_claim_state\":\"clean|open_findings|unknown\",\"findings_claim_source\":\"meta_review_artifact\",\"findings_count\":<int>,\"findings_artifact_ref\":\"artifacts/...\",\"meta_review_run_id\":\"<run-id>\",\"findings_digest_sha256\":\"<sha256>\",\"findings_artifact_status\":\"available\"}'`.",
     "Do not modify transcript/inbox/state files manually.",
     buildPairflowCommandGuidance(
       input.worktreePath,
