@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile as writeFileFs } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -137,6 +137,44 @@ async function writeCanonicalMetaReviewSnapshot(input: {
       expectedState: "META_REVIEW_RUNNING"
     }
   );
+  const bubbleDir = dirname(input.statePath);
+  const runId = `snapshot_${input.recommendation}_${Date.parse(input.updatedAt)}`;
+  const defaultReportJson =
+    input.recommendation === "approve"
+      ? {
+          findings_claim_state: "clean",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 0,
+          findings_claimed_open_total: 0,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 0
+        }
+      : input.recommendation === "rework"
+        ? {
+            findings_claim_state: "open_findings",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 1
+          }
+        : {
+            findings_claim_state: "unknown",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 0
+          };
+  await writeFileFs(
+    join(bubbleDir, "artifacts", "meta-review-last.json"),
+    `${JSON.stringify(
+      {
+        run_id: runId,
+        recommendation: input.recommendation,
+        summary: input.summary,
+        report_ref: "artifacts/meta-review-last.md",
+        report_json: defaultReportJson
+      },
+      null,
+      2
+    )}\n`,
+    "utf8"
+  );
 }
 
 async function writeReworkFindingsArtifact(input: {
@@ -178,6 +216,29 @@ function buildReworkReportJson(input: {
   };
 }
 
+function buildApproveReportJson(input?: {
+  claimedOpenTotal?: number;
+  blockingOpenTotal?: number;
+  advisoryOpenTotal?: number;
+  artifactOpenTotal?: number;
+}) {
+  const claimedOpenTotal = input?.claimedOpenTotal ?? 0;
+  const blockingOpenTotal = input?.blockingOpenTotal ?? 0;
+  const advisoryOpenTotal = input?.advisoryOpenTotal ?? 0;
+  const artifactOpenTotal = input?.artifactOpenTotal;
+  return {
+    findings_claim_state: claimedOpenTotal > 0 ? "open_findings" : "clean",
+    findings_claim_source: "meta_review_artifact",
+    findings_count: claimedOpenTotal,
+    findings_claimed_open_total: claimedOpenTotal,
+    findings_blocking_open_total: blockingOpenTotal,
+    findings_advisory_open_total: advisoryOpenTotal,
+    ...(artifactOpenTotal !== undefined
+      ? { findings_artifact_open_total: artifactOpenTotal }
+      : {})
+  } as const;
+}
+
 describe("notifyMetaReviewerSubmissionRequest", () => {
   it("sends required structured submit command with --report-json parity fields", async () => {
     const tmuxCalls: string[][] = [];
@@ -217,6 +278,9 @@ describe("notifyMetaReviewerSubmissionRequest", () => {
     expect(messageCall?.[4]).toContain("findings_claim_state");
     expect(messageCall?.[4]).toContain("findings_claim_source");
     expect(messageCall?.[4]).toContain("findings_count");
+    expect(messageCall?.[4]).toContain("findings_claimed_open_total");
+    expect(messageCall?.[4]).toContain("findings_blocking_open_total");
+    expect(messageCall?.[4]).toContain("findings_advisory_open_total");
   });
 });
 
@@ -255,6 +319,9 @@ describe("applyMetaReviewGateOnConvergence", () => {
     expect(result.gateEnvelope.payload.summary).toContain("findings_claim_state");
     expect(result.gateEnvelope.payload.summary).toContain("findings_claim_source");
     expect(result.gateEnvelope.payload.summary).toContain("findings_count");
+    expect(result.gateEnvelope.payload.summary).toContain("findings_claimed_open_total");
+    expect(result.gateEnvelope.payload.summary).toContain("findings_blocking_open_total");
+    expect(result.gateEnvelope.payload.summary).toContain("findings_advisory_open_total");
     expect(result.gateEnvelope.payload.summary).not.toContain("[--report-json");
     expect(result.gateEnvelope.payload.metadata).toMatchObject({
       [deliveryTargetRoleMetadataKey]: "meta_reviewer"
@@ -545,14 +612,11 @@ describe("applyMetaReviewGateOnConvergence", () => {
       findings_blocking_open_total: 0,
       findings_advisory_open_total: 2,
       findings_parity_status: null,
+      findings_artifact_status: null,
+      findings_digest_sha256: null,
+      meta_review_run_id: null,
       meta_review_gate_route: "human_gate_sticky_bypass"
     });
-    expect(result.gateEnvelope.payload.metadata).not.toHaveProperty(
-      "meta_review_run_id"
-    );
-    expect(result.gateEnvelope.payload.metadata).not.toHaveProperty(
-      "findings_digest_sha256"
-    );
     expect(result.gateEnvelope.payload.findings).toEqual([
       {
         priority: "P2",
@@ -566,6 +630,83 @@ describe("applyMetaReviewGateOnConvergence", () => {
         title: "current-round advisory b"
       }
     ]);
+  });
+
+  it("keeps sticky bypass advisory/parity fallback symmetric when current-round findings are explicitly empty", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_async_sticky_symmetry_empty_findings_01",
+      task: "Sticky bypass fallback symmetry with empty current-round findings"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        meta_review: {
+          ...(loaded.state.meta_review ?? defaultMetaReviewSnapshot()),
+          sticky_human_gate: true
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+    await writeFileFs(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      `${JSON.stringify(
+        {
+          bubble_id: bubble.bubbleId,
+          run_id: "run_sticky_symmetry_empty_findings_01",
+          report_json: {
+            findings_count: 4,
+            findings_claimed_open_total: 4,
+            findings_artifact_open_total: 4,
+            findings_blocking_open_total: 1,
+            findings_advisory_open_total: 3,
+            findings_artifact_status: "available",
+            findings_digest_sha256:
+              "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            meta_review_run_id: "run_sticky_symmetry_empty_findings_01",
+            findings_parity_status: "ok",
+            findings: [
+              {
+                severity: "P2",
+                title: "artifact advisory should not leak"
+              }
+            ]
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
+
+    const result = await applyMetaReviewGateOnConvergence({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "No advisory carry-over expected.",
+      findings: [],
+      now: new Date("2026-03-13T12:03:13.000Z")
+    });
+
+    expect(result.route).toBe("human_gate_sticky_bypass");
+    expect(result.gateEnvelope.payload.metadata).toMatchObject({
+      findings_claimed_open_total: 0,
+      findings_artifact_open_total: null,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 0,
+      findings_parity_status: null,
+      findings_artifact_status: null,
+      findings_digest_sha256: null,
+      meta_review_run_id: null,
+      meta_review_gate_route: "human_gate_sticky_bypass"
+    });
+    expect(result.gateEnvelope.payload.findings).toBeUndefined();
   });
 
   it("keeps positive findings summary when structured parity metadata proves open findings", async () => {
@@ -674,7 +815,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
     ).toBeUndefined();
   });
 
-  it("normalizes positive findings summary with METADATA_MISMATCH when non-approve parity invariants are inconsistent", async () => {
+  it("keeps positive findings summary unchanged when non-approve parity invariants are inconsistent", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -729,24 +870,14 @@ describe("applyMetaReviewGateOnConvergence", () => {
     });
 
     expect(result.route).toBe("human_gate_sticky_bypass");
-    expect(result.gateEnvelope.payload.summary).toContain(
-      "META_REVIEW_GATE_APPROVAL_SUMMARY_NORMALIZED"
-    );
-    expect(result.gateEnvelope.payload.summary).toContain(
-      "META_REVIEW_GATE_APPROVAL_SUMMARY_METADATA_MISMATCH"
-    );
-    expect(result.gateEnvelope.payload.summary).toContain(
-      "conflicts with structured parity metadata"
-    );
-    expect(result.gateEnvelope.payload.summary).not.toContain(
-      "structured parity proof is unavailable"
-    );
-    expect(result.gateEnvelope.payload.metadata).toMatchObject({
-      approval_summary_normalized: true,
-      approval_summary_normalization_reason_code:
-        "META_REVIEW_GATE_APPROVAL_SUMMARY_METADATA_MISMATCH",
-      approval_summary_normalization_original_summary: originalSummary
-    });
+    expect(result.gateEnvelope.payload.summary).toBe(originalSummary);
+    expect(result.gateEnvelope.payload.metadata?.approval_summary_normalized).toBeUndefined();
+    expect(
+      result.gateEnvelope.payload.metadata?.approval_summary_normalization_reason_code
+    ).toBeUndefined();
+    expect(
+      result.gateEnvelope.payload.metadata?.approval_summary_normalization_original_summary
+    ).toBeUndefined();
   });
 
   it("restores RUNNING when sticky APPROVAL_REQUEST append fails after staged transition without staged-restore fall-through", async () => {
@@ -997,6 +1128,26 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Approve recommendation.",
       updatedAt: "2026-03-12T12:10:01.000Z"
     });
+    await writeFileFs(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      `${JSON.stringify(
+        {
+          bubble_id: bubble.bubbleId,
+          run_id: "run_recover_approve_01",
+          report_json: {
+            findings_claim_state: "clean",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 0,
+            findings_claimed_open_total: 0,
+            findings_blocking_open_total: 0,
+            findings_advisory_open_total: 0
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
 
     const recovered = await recoverMetaReviewGateFromSnapshot({
       bubbleId: bubble.bubbleId,
@@ -1082,7 +1233,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     expect(recovered.gateEnvelope.payload.findings).toBeUndefined();
   });
 
-  it("does not normalize approve-route summary when parity proof is unavailable", async () => {
+  it("fails closed when approve-route split metadata is unavailable", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -1120,11 +1271,10 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       }
     });
 
-    expect(recovered.route).toBe("human_gate_approve");
-    expect(recovered.gateEnvelope.payload.summary).toBe(summary);
-    expect(
-      recovered.gateEnvelope.payload.metadata?.approval_summary_normalized
-    ).toBeUndefined();
+    expect(recovered.route).toBe("human_gate_dispatch_failed");
+    expect(recovered.gateEnvelope.payload.summary).toContain(
+      "META_REVIEW_APPROVE_ADVISORY_SPLIT_REQUIRED"
+    );
   });
 
   it("keeps approve-route positive summary unchanged when structured parity metadata is consistent", async () => {
@@ -1163,11 +1313,13 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         lifecycle_state: "META_REVIEW_RUNNING",
         warnings: [],
         report_json: {
-          findings_claim_state: "clean",
+          findings_claim_state: "open_findings",
           findings_claim_source: "meta_review_artifact",
-          findings_count: 0,
-          findings_claimed_open_total: 0,
-          findings_artifact_open_total: 0,
+          findings_count: 2,
+          findings_claimed_open_total: 2,
+          findings_artifact_open_total: 2,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 2,
           findings_artifact_status: "available",
           findings_digest_sha256: "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
           meta_review_run_id: "run_recover_approve_summary_consistent_01",
@@ -1183,7 +1335,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     ).toBeUndefined();
   });
 
-  it("normalizes approve-route summary with METADATA_MISMATCH when parity guard invariants are inconsistent", async () => {
+  it("fails closed with summary mismatch before metadata normalization when approve summary contradicts structured split", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -1224,6 +1376,8 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           findings_count: 0,
           findings_claimed_open_total: 0,
           findings_artifact_open_total: 0,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 0,
           findings_artifact_status: "available",
           findings_digest_sha256: "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
           meta_review_run_id: "run_recover_approve_summary_inconsistent_01",
@@ -1232,18 +1386,10 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       }
     });
 
-    expect(recovered.route).toBe("human_gate_approve");
+    expect(recovered.route).toBe("human_gate_dispatch_failed");
     expect(recovered.gateEnvelope.payload.summary).toContain(
-      "META_REVIEW_GATE_APPROVAL_SUMMARY_METADATA_MISMATCH"
+      "META_REVIEW_SUMMARY_STRUCTURED_MISMATCH"
     );
-    expect(recovered.gateEnvelope.payload.summary).not.toContain(
-      "META_REVIEW_GATE_APPROVAL_SUMMARY_PARITY_UNAVAILABLE"
-    );
-    expect(recovered.gateEnvelope.payload.metadata).toMatchObject({
-      approval_summary_normalized: true,
-      approval_summary_normalization_reason_code:
-        "META_REVIEW_GATE_APPROVAL_SUMMARY_METADATA_MISMATCH"
-    });
   });
 
   it("keeps approve-route summary unchanged when normalization trigger preconditions are not met", async () => {
@@ -1287,6 +1433,8 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           findings_count: 0,
           findings_claimed_open_total: 0,
           findings_artifact_open_total: 0,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 0,
           findings_artifact_status: "available",
           findings_digest_sha256: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
           meta_review_run_id: "run_recover_approve_summary_no_trigger_01",
@@ -2415,7 +2563,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     expect(recovered.gateEnvelope.payload.summary).toContain("CLAIM_SOURCE_INVALID");
   });
 
-  it("fails closed when approve recommendation carries open_findings structured claim", async () => {
+  it("fails closed when approve recommendation is missing required advisory split fields", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -2461,7 +2609,783 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
 
     expect(recovered.route).toBe("human_gate_dispatch_failed");
     expect(recovered.gateEnvelope.payload.summary).toContain(
-      "recommendation=approve cannot carry findings_claim_state=open_findings"
+      "META_REVIEW_APPROVE_ADVISORY_SPLIT_REQUIRED"
+    );
+  });
+
+  it("routes advisory-only approve when split metadata is valid and blocking total is zero", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_approve_advisory_only_01",
+      task: "Recover approve advisory-only split route"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:49.500Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const summary = "2 findings remain open, all advisory.";
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:50.500Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_approve_advisory_only_01",
+        status: "success",
+        recommendation: "approve",
+        summary,
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: null,
+        updated_at: "2026-03-12T12:12:50.000Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 2,
+          findings_claimed_open_total: 2,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 2,
+          findings_artifact_open_total: 2,
+          findings_artifact_status: "available",
+          findings_digest_sha256:
+            "abababababababababababababababababababababababababababababababab",
+          meta_review_run_id: "run_recover_approve_advisory_only_01",
+          findings_parity_status: "ok"
+        }
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_approve");
+    expect(recovered.gateEnvelope.payload.summary).toBe(summary);
+    expect(recovered.gateEnvelope.payload.summary).not.toContain(
+      "META_REVIEW_GATE_APPROVAL_SUMMARY_NORMALIZED"
+    );
+    expect(recovered.gateEnvelope.payload.summary).not.toContain(
+      "CONVERGED_ADVISORY_COUNT_LIST_MISMATCH"
+    );
+    expect(recovered.gateEnvelope.payload.metadata).toMatchObject({
+      findings_claimed_open_total: 2,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 2,
+      findings_artifact_open_total: 2,
+      findings_parity_status: "ok"
+    });
+    expect(
+      recovered.gateEnvelope.payload.metadata?.approval_summary_normalization_reason_code
+    ).toBeUndefined();
+  });
+
+  it("routes advisory-only approve when findings_artifact_open_total is absent and keeps parity status unset", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_approve_advisory_no_artifact_total_01",
+      task: "Recover approve advisory split route without artifact-open total"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:50.700Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const summary = "2 advisory findings remain open.";
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:51.700Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_approve_advisory_no_artifact_total_01",
+        status: "success",
+        recommendation: "approve",
+        summary,
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: null,
+        updated_at: "2026-03-12T12:12:51.100Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 2,
+          findings_claimed_open_total: 2,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 2,
+          findings_artifact_status: "available",
+          findings_digest_sha256:
+            "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+          meta_review_run_id: "run_recover_approve_advisory_no_artifact_total_01"
+        }
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_approve");
+    expect(recovered.gateEnvelope.payload.summary).toBe(summary);
+    expect(recovered.gateEnvelope.payload.metadata).toMatchObject({
+      findings_claimed_open_total: 2,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 2,
+      findings_artifact_open_total: null,
+      findings_parity_status: null
+    });
+  });
+
+  it("routes advisory-only approve when findings_artifact_open_total is explicit null and keeps parity status unset", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_approve_advisory_null_artifact_total_01",
+      task: "Recover approve advisory split route with null artifact-open total"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:51.900Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const summary = "2 advisory findings remain open.";
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:52.900Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_approve_advisory_null_artifact_total_01",
+        status: "success",
+        recommendation: "approve",
+        summary,
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: null,
+        updated_at: "2026-03-12T12:12:52.300Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 2,
+          findings_claimed_open_total: 2,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 2,
+          findings_artifact_open_total: null,
+          findings_artifact_status: "available",
+          findings_digest_sha256:
+            "efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef",
+          meta_review_run_id: "run_recover_approve_advisory_null_artifact_total_01"
+        }
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_approve");
+    expect(recovered.gateEnvelope.payload.summary).toBe(summary);
+    expect(recovered.gateEnvelope.payload.metadata).toMatchObject({
+      findings_claimed_open_total: 2,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 2,
+      findings_artifact_open_total: null,
+      findings_parity_status: null
+    });
+  });
+
+  it("routes advisory-only approve when runResult summary is null", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_approve_advisory_null_summary_01",
+      task: "Recover approve advisory split route with null summary"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:52.200Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:53.200Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_approve_advisory_null_summary_01",
+        status: "success",
+        recommendation: "approve",
+        summary: null,
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: null,
+        updated_at: "2026-03-12T12:12:52.700Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 1,
+          findings_claimed_open_total: 1,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 1
+        }
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_approve");
+    expect(recovered.gateEnvelope.payload.summary).toContain("Converged.");
+    expect(recovered.gateEnvelope.payload.summary).not.toContain(
+      "META_REVIEW_SUMMARY_STRUCTURED_MISMATCH"
+    );
+  });
+
+  it("fails closed when approve split indicates blocking open findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_approve_blocking_present_01",
+      task: "Recover approve blocking split rejection"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:51.000Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:52.000Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_approve_blocking_present_01",
+        status: "success",
+        recommendation: "approve",
+        summary: "Blocking findings remain open.",
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: null,
+        updated_at: "2026-03-12T12:12:51.500Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 1,
+          findings_claimed_open_total: 1,
+          findings_blocking_open_total: 1,
+          findings_advisory_open_total: 0
+        }
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_dispatch_failed");
+    expect(recovered.gateEnvelope.payload.summary).toContain(
+      "META_REVIEW_APPROVE_BLOCKING_FINDINGS_PRESENT"
+    );
+  });
+
+  it("fails closed with parity guard when approve split arithmetic is inconsistent", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_approve_split_arithmetic_01",
+      task: "Recover approve split arithmetic mismatch"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:52.100Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:53.100Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_approve_split_arithmetic_01",
+        status: "success",
+        recommendation: "approve",
+        summary: "Advisory findings remain open.",
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: null,
+        updated_at: "2026-03-12T12:12:52.700Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 2,
+          findings_claimed_open_total: 2,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 1
+        }
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_dispatch_failed");
+    expect(recovered.gateEnvelope.payload.summary).toContain(
+      "META_REVIEW_FINDINGS_PARITY_GUARD"
+    );
+  });
+
+  it("fails closed with parity guard when findings_artifact_open_total mismatches approve claimed total", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_approve_artifact_invariant_01",
+      task: "Recover approve artifact-open invariant mismatch"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:53.150Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:54.150Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_approve_artifact_invariant_01",
+        status: "success",
+        recommendation: "approve",
+        summary: "Advisory findings remain open.",
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: null,
+        updated_at: "2026-03-12T12:12:53.650Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 1,
+          findings_claimed_open_total: 1,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 1,
+          findings_artifact_open_total: 2
+        }
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_dispatch_failed");
+    expect(recovered.gateEnvelope.payload.summary).toContain(
+      "META_REVIEW_FINDINGS_PARITY_GUARD"
+    );
+  });
+
+  it("fails closed with summary/structured mismatch before approve semantic gate", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_approve_summary_structured_mismatch_01",
+      task: "Recover approve summary/structured mismatch precedence"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:53.200Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:54.200Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_approve_summary_structured_mismatch_01",
+        status: "success",
+        recommendation: "approve",
+        summary: "No findings remain after this review.",
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: null,
+        updated_at: "2026-03-12T12:12:53.700Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 1,
+          findings_claimed_open_total: 1,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 1
+        }
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_dispatch_failed");
+    expect(recovered.gateEnvelope.payload.summary).toContain(
+      "META_REVIEW_SUMMARY_STRUCTURED_MISMATCH"
+    );
+  });
+
+  it("does not fail advisory-only approve when summary only asserts no P0/P1 findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_approve_no_blocking_summary_01",
+      task: "Recover approve no-blocking summary with advisory-open split"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:54.250Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const summary = "No open P0/P1 findings remain.";
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:55.250Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_approve_no_blocking_summary_01",
+        status: "success",
+        recommendation: "approve",
+        summary,
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: null,
+        updated_at: "2026-03-12T12:12:54.750Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 2,
+          findings_claimed_open_total: 2,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 2
+        }
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_approve");
+    expect(recovered.gateEnvelope.payload.summary).toBe(summary);
+    expect(recovered.gateEnvelope.payload.summary).not.toContain(
+      "META_REVIEW_SUMMARY_STRUCTURED_MISMATCH"
+    );
+  });
+
+  it("fails closed with split format guard when approve split fields are non-integer/negative", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_approve_split_format_01",
+      task: "Recover approve split format guard precedence"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:54.300Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:55.300Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_approve_split_format_01",
+        status: "success",
+        recommendation: "approve",
+        summary: "Advisory findings remain open.",
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: null,
+        updated_at: "2026-03-12T12:12:54.800Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 1,
+          findings_claimed_open_total: "1",
+          findings_blocking_open_total: -1,
+          findings_advisory_open_total: 2
+        }
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_dispatch_failed");
+    expect(recovered.gateEnvelope.payload.summary).toContain(
+      "META_REVIEW_APPROVE_ADVISORY_SPLIT_FORMAT_INVALID"
+    );
+  });
+
+  it("fails closed with blocking reason precedence when artifact open total is invalid and blocking findings are present", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_approve_blocking_precedence_01",
+      task: "Recover approve blocking precedence over artifact format guard"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:55.350Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:56.350Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_approve_blocking_precedence_01",
+        status: "success",
+        recommendation: "approve",
+        summary: "Blocking finding remains open.",
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: null,
+        updated_at: "2026-03-12T12:12:55.850Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 1,
+          findings_claimed_open_total: 1,
+          findings_blocking_open_total: 1,
+          findings_advisory_open_total: 0,
+          findings_artifact_open_total: "invalid"
+        }
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_dispatch_failed");
+    expect(recovered.gateEnvelope.payload.summary).toContain(
+      "META_REVIEW_APPROVE_BLOCKING_FINDINGS_PRESENT"
+    );
+    expect(recovered.gateEnvelope.payload.summary).not.toContain(
+      "META_REVIEW_FINDINGS_PARITY_GUARD"
+    );
+  });
+
+  it("fails closed with parity guard when findings_artifact_open_total is non-integer on approve route", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_approve_artifact_format_01",
+      task: "Recover approve artifact-open format guard coverage"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:56.400Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:57.400Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_approve_artifact_format_01",
+        status: "success",
+        recommendation: "approve",
+        summary: "Advisory finding remains open.",
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: null,
+        updated_at: "2026-03-12T12:12:56.900Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 1,
+          findings_claimed_open_total: 1,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 1,
+          findings_artifact_open_total: "invalid"
+        }
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_dispatch_failed");
+    expect(recovered.gateEnvelope.payload.summary).toContain(
+      "META_REVIEW_FINDINGS_PARITY_GUARD"
+    );
+    expect(recovered.gateEnvelope.payload.summary).toContain(
+      "findings_artifact_open_total must be a non-negative integer when provided"
+    );
+  });
+
+  it("fails closed with split arithmetic reason when split arithmetic and artifact format errors are both present", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_approve_split_precedes_artifact_format_01",
+      task: "Recover approve split arithmetic precedence over artifact format guard"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:57.450Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:58.450Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_approve_split_precedes_artifact_format_01",
+        status: "success",
+        recommendation: "approve",
+        summary: "Advisory findings remain open.",
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: null,
+        updated_at: "2026-03-12T12:12:57.950Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 2,
+          findings_claimed_open_total: 2,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 1,
+          findings_artifact_open_total: "invalid"
+        }
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_dispatch_failed");
+    expect(recovered.gateEnvelope.payload.summary).toContain(
+      "findings_claimed_open_total (2) must equal findings_blocking_open_total + findings_advisory_open_total (1)"
+    );
+    expect(recovered.gateEnvelope.payload.summary).not.toContain(
+      "findings_artifact_open_total must be a non-negative integer when provided"
+    );
+  });
+
+  it("fails closed with claim-state contradiction reason when claim-state contradiction and artifact format error are both present", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_approve_claim_state_precedence_01",
+      task: "Recover approve claim-state contradiction precedence over artifact format guard"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:57.800Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:12:58.800Z"),
+      runResult: {
+        bubbleId: bubble.bubbleId,
+        depth: "standard",
+        run_id: "run_recover_approve_claim_state_precedence_01",
+        status: "success",
+        recommendation: "approve",
+        summary: "Advisory findings remain open.",
+        report_ref: "artifacts/meta-review-last.md",
+        rework_target_message: null,
+        updated_at: "2026-03-12T12:12:58.300Z",
+        lifecycle_state: "META_REVIEW_RUNNING",
+        warnings: [],
+        report_json: {
+          findings_claim_state: "clean",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 1,
+          findings_claimed_open_total: 1,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 1,
+          findings_artifact_open_total: "invalid"
+        }
+      }
+    });
+
+    expect(recovered.route).toBe("human_gate_dispatch_failed");
+    expect(recovered.gateEnvelope.payload.summary).toContain(
+      "findings_claim_state=clean contradicts findings_claimed_open_total=1"
+    );
+    expect(recovered.gateEnvelope.payload.summary).not.toContain(
+      "findings_artifact_open_total must be a non-negative integer when provided"
     );
   });
 
@@ -3365,7 +4289,8 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         rework_target_message: null,
         updated_at: "2026-03-12T12:14:31.000Z",
         lifecycle_state: "META_REVIEW_RUNNING",
-        warnings: []
+        warnings: [],
+        report_json: buildApproveReportJson()
       }
     });
     expect(recovered.route).toBe("human_gate_approve");
@@ -3419,7 +4344,8 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           rework_target_message: null,
           updated_at: "2026-03-12T12:14:41.000Z",
           lifecycle_state: "META_REVIEW_RUNNING",
-          warnings: []
+          warnings: [],
+          report_json: buildApproveReportJson()
         }
       },
       {
@@ -3499,7 +4425,8 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           rework_target_message: null,
           updated_at: "2026-03-12T12:14:41.000Z",
           lifecycle_state: "META_REVIEW_RUNNING",
-          warnings: []
+          warnings: [],
+          report_json: buildApproveReportJson()
         }
       },
       {
@@ -3567,7 +4494,8 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         rework_target_message: null,
         updated_at: "2026-03-12T12:14:51.000Z",
         lifecycle_state: "META_REVIEW_RUNNING",
-        warnings: []
+        warnings: [],
+        report_json: buildApproveReportJson()
       }
     });
 

@@ -399,6 +399,23 @@ export function evaluateNoFindingsSummaryFindingsAssertion(
   };
 }
 
+export function hasGlobalNoFindingsSummaryAssertion(
+  summary: string | undefined
+): boolean {
+  const normalized = normalizeSummaryAssertionText(summary);
+  if (normalized.length === 0) {
+    return false;
+  }
+  return (
+    summaryNoFindingsPattern.test(normalized)
+    || summaryNoFindingsFoundPattern.test(normalized)
+    || summaryWithoutFindingsPattern.test(normalized)
+    || summaryFindingsZeroCountPattern.test(normalized)
+    || summaryFindingsRemainZeroCountPattern.test(normalized)
+    || summaryZeroFindingsPattern.test(normalized)
+  );
+}
+
 export function resolveConvergedSummaryFindingsContradiction(input: {
   summary: string;
   hasFindings: boolean;

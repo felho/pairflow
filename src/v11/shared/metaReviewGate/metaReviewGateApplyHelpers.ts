@@ -48,7 +48,7 @@ export async function appendMetaReviewKickoffEnvelope(input: {
   const kickoffSummary = [
     `Meta-review gate opened for bubble ${input.bubbleId} round ${input.round}.`,
     "Submit result through structured CLI:",
-    `pairflow bubble meta-review submit --id ${input.bubbleId} --round ${input.round} --recommendation <approve|rework|inconclusive> --summary "<summary>" --report-markdown "<markdown>" [--rework-target-message "<message>"] --report-json '{"findings_claim_state":"clean|open_findings|unknown","findings_claim_source":"meta_review_artifact","findings_count":<int>,"findings_artifact_ref":"artifacts/...","meta_review_run_id":"<run-id>","findings_digest_sha256":"<sha256>","findings_artifact_status":"available"}'.`
+    `pairflow bubble meta-review submit --id ${input.bubbleId} --round ${input.round} --recommendation <approve|rework|inconclusive> --summary "<summary>" --report-markdown "<markdown>" [--rework-target-message "<message>"] --report-json '{"findings_claim_state":"clean|open_findings|unknown","findings_claim_source":"meta_review_artifact","findings_count":<int>,"findings_claimed_open_total":<int>,"findings_blocking_open_total":<int>,"findings_advisory_open_total":<int>,"findings_artifact_ref":"artifacts/...","meta_review_run_id":"<run-id>","findings_digest_sha256":"<sha256>","findings_artifact_status":"available"}'.`
   ].join(" ");
 
   return input.appendEnvelope({
@@ -131,6 +131,9 @@ function resolveConvergenceParityMetadataFromFindings(
     findings_artifact_open_total: null,
     findings_blocking_open_total: split.findings_blocking_open_total,
     findings_advisory_open_total: split.findings_advisory_open_total,
+    findings_artifact_status: null,
+    findings_digest_sha256: null,
+    meta_review_run_id: null,
     findings_parity_status: null
   };
 }
@@ -158,21 +161,21 @@ export async function routeStickyHumanGateBypass(input: {
     artifactPath: input.bubblePaths.metaReviewLastJsonArtifactPath,
     readFileFn: input.readFileFn
   });
-  const convergenceAdvisoryFindings = resolveAdvisoryFindingsFromFindings(input.findings);
-  const artifactAdvisoryFindings = resolveAdvisoryFindingsFromReportJson(
-    parityArtifactRead.reportJson
-  );
-  const advisoryFindings = convergenceAdvisoryFindings ?? artifactAdvisoryFindings;
+  const hasCurrentRoundFindingsSignal = input.findings !== undefined;
+  const advisoryFindings = hasCurrentRoundFindingsSignal
+    ? resolveAdvisoryFindingsFromFindings(input.findings)
+    : resolveAdvisoryFindingsFromReportJson(parityArtifactRead.reportJson);
   const artifactParityMetadata = resolveFindingsParityMetadataFromReportJson(
     parityArtifactRead.reportJson
   );
-  const convergenceParityMetadata = resolveConvergenceParityMetadataFromFindings(
-    input.findings
-  );
-  // Deterministic source-of-truth rule for sticky bypass:
-  // prefer current-round convergence findings parity snapshot when available;
-  // otherwise fall back to the meta-review artifact parity snapshot.
-  const parityMetadata = convergenceParityMetadata ?? artifactParityMetadata;
+  // Sticky bypass source priority is intentionally symmetric across advisory list
+  // and parity metadata:
+  // - if current-round findings are present (even empty array), use only current-round
+  //   derived advisory/parity view to avoid cross-round artifact leakage;
+  // - otherwise fall back to the persisted meta-review artifact snapshot for both.
+  const parityMetadata = hasCurrentRoundFindingsSignal
+    ? resolveConvergenceParityMetadataFromFindings(input.findings)
+    : artifactParityMetadata;
   try {
     return await persistHumanGateRoute({
       appendEnvelope: input.appendEnvelope,

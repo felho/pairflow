@@ -23,6 +23,7 @@ export interface PairflowCommandPathAssessment {
   localEntrypointExists: boolean;
   externalPairflowAvailable: boolean;
   pinnedCommand: string;
+  entrypointConsistency?: "consistent" | "inconsistent" | "unknown";
   message: string;
 }
 
@@ -82,6 +83,14 @@ function isExternalPairflowAvailable(): boolean {
   return resolveFirstPathCommand("pairflow") !== null;
 }
 
+function isPairflowDistCliEntrypoint(path: string | null): boolean {
+  if (path === null) {
+    return false;
+  }
+  const normalized = path.replace(/\\/gu, "/");
+  return normalized.endsWith("/dist/cli/index.js");
+}
+
 export function buildPinnedPairflowCommand(
   worktreePath: string,
   profile: PairflowCommandProfile = "external"
@@ -116,6 +125,27 @@ export function assessPairflowCommandPath(input: {
     input.externalPairflowAvailable ?? isExternalPairflowAvailable();
 
   if (profile === "external") {
+    if (
+      localEntrypointExists &&
+      canonicalActiveEntrypoint !== null &&
+      canonicalLocalEntrypoint !== null &&
+      isPairflowDistCliEntrypoint(activeEntrypoint) &&
+      canonicalActiveEntrypoint !== canonicalLocalEntrypoint
+    ) {
+      return {
+        status: "stale",
+        reasonCode: "PAIRFLOW_COMMAND_PATH_STALE",
+        profile,
+        localEntrypoint,
+        activeEntrypoint,
+        localEntrypointExists,
+        externalPairflowAvailable,
+        pinnedCommand,
+        entrypointConsistency: "inconsistent",
+        message:
+          `PAIRFLOW_COMMAND_PATH_STALE: active Pairflow entrypoint ${activeEntrypoint} does not match worktree-local ${localEntrypoint} under external profile; lifecycle routing must use the worktree build to avoid runtime drift.`
+      };
+    }
     if (!externalPairflowAvailable) {
       const activeEntryDetail =
         canonicalActiveEntrypoint !== null
@@ -130,6 +160,13 @@ export function assessPairflowCommandPath(input: {
         localEntrypointExists,
         externalPairflowAvailable,
         pinnedCommand,
+        entrypointConsistency:
+          localEntrypointExists
+          && canonicalActiveEntrypoint !== null
+          && canonicalLocalEntrypoint !== null
+          && canonicalActiveEntrypoint === canonicalLocalEntrypoint
+            ? "consistent"
+            : "unknown",
         message:
           `PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE: no PATH-resolved \`pairflow\` command available for external profile.${activeEntryDetail}`
       };
@@ -146,6 +183,13 @@ export function assessPairflowCommandPath(input: {
       localEntrypointExists,
       externalPairflowAvailable,
       pinnedCommand,
+      entrypointConsistency:
+        localEntrypointExists
+        && canonicalActiveEntrypoint !== null
+        && canonicalLocalEntrypoint !== null
+        && canonicalActiveEntrypoint === canonicalLocalEntrypoint
+          ? "consistent"
+          : "unknown",
       message:
         `external Pairflow command profile active (${externalPairflowAvailable ? "PATH-resolved `pairflow` available" : "PATH `pairflow` unavailable but active entrypoint is already resolved"}).${activeEntryDetail}`
     };
@@ -164,6 +208,7 @@ export function assessPairflowCommandPath(input: {
       localEntrypointExists,
       externalPairflowAvailable,
       pinnedCommand,
+      entrypointConsistency: "consistent",
       message: `worktree-local Pairflow entrypoint active (${localEntrypoint})`
     };
   }
@@ -178,6 +223,7 @@ export function assessPairflowCommandPath(input: {
       localEntrypointExists,
       externalPairflowAvailable,
       pinnedCommand,
+      entrypointConsistency: "inconsistent",
       message: `PAIRFLOW_COMMAND_PATH_STALE: worktree-local Pairflow entrypoint missing at ${localEntrypoint}.`
     };
   }
@@ -192,6 +238,7 @@ export function assessPairflowCommandPath(input: {
       localEntrypointExists,
       externalPairflowAvailable,
       pinnedCommand,
+      entrypointConsistency: "unknown",
       message:
         "PAIRFLOW_COMMAND_PATH_UNRESOLVED: active Pairflow entrypoint could not be resolved under self_host profile."
     };
@@ -206,6 +253,7 @@ export function assessPairflowCommandPath(input: {
     localEntrypointExists,
     externalPairflowAvailable,
     pinnedCommand,
+    entrypointConsistency: "inconsistent",
     message: `PAIRFLOW_COMMAND_PATH_STALE: active Pairflow entrypoint ${activeEntrypoint ?? "unknown"} does not match worktree-local ${localEntrypoint}.`
   };
 }
@@ -240,7 +288,11 @@ export function buildPairflowCommandBootstrap(
       "#!/usr/bin/env bash",
       "set -euo pipefail",
       'PAIRFLOW_EXTERNAL_COMMAND="${PAIRFLOW_EXTERNAL_COMMAND:-}"',
+      'PAIRFLOW_LOCAL_ENTRYPOINT="${PAIRFLOW_LOCAL_ENTRYPOINT:-}"',
       'PAIRFLOW_WRAPPER_PATH="${PAIRFLOW_WRAPPER_PATH:-}"',
+      'if [ -n "$PAIRFLOW_LOCAL_ENTRYPOINT" ] && [ -f "$PAIRFLOW_LOCAL_ENTRYPOINT" ]; then',
+      '  exec node "$PAIRFLOW_LOCAL_ENTRYPOINT" "$@"',
+      "fi",
       'if [ -n "$PAIRFLOW_EXTERNAL_COMMAND" ] && [ -x "$PAIRFLOW_EXTERNAL_COMMAND" ] && [ "$PAIRFLOW_EXTERNAL_COMMAND" != "$PAIRFLOW_WRAPPER_PATH" ] && [ "$PAIRFLOW_EXTERNAL_COMMAND" != "$0" ]; then',
       '  exec "$PAIRFLOW_EXTERNAL_COMMAND" "$@"',
       "fi",
@@ -249,7 +301,9 @@ export function buildPairflowCommandBootstrap(
       "PAIRFLOW_WRAPPER",
       'chmod +x "$PAIRFLOW_WRAPPER_DIR/pairflow"',
       'export PATH="$PAIRFLOW_WRAPPER_DIR:$PATH"',
-      'if [ -n "$PAIRFLOW_EXTERNAL_COMMAND" ] && [ -x "$PAIRFLOW_EXTERNAL_COMMAND" ]; then',
+      'if [ -f "$PAIRFLOW_LOCAL_ENTRYPOINT" ]; then',
+      "  export PAIRFLOW_COMMAND_PATH_STATUS=worktree_local",
+      'elif [ -n "$PAIRFLOW_EXTERNAL_COMMAND" ] && [ -x "$PAIRFLOW_EXTERNAL_COMMAND" ]; then',
       "  export PAIRFLOW_COMMAND_PATH_STATUS=external",
       "else",
       "  export PAIRFLOW_COMMAND_PATH_STATUS=missing",
@@ -293,6 +347,7 @@ export function buildPairflowCommandGuidance(
   if (profile === "external") {
     return [
       "Default command profile is `external`; Pairflow commands are resolved from PATH.",
+      "In bubble panes, the command wrapper prefers the worktree-local `dist/cli/index.js` when present to keep lifecycle/runtime decisions aligned with validated worktree code.",
       "If external CLI is unavailable, install it globally or recreate the bubble with `--pairflow-command-profile self_host` in a Pairflow self-host worktree.",
       `Self-host local entrypoint (for opt-in only): ${localEntrypoint}.`
     ].join(" ");

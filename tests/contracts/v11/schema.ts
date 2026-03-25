@@ -177,6 +177,15 @@ export function assertContractCaseShape(value: unknown): asserts value is Contra
     );
   }
   if (
+    "envelopePayloadSubset" in value.expected &&
+    value.expected.envelopePayloadSubset !== undefined &&
+    !isRecord(value.expected.envelopePayloadSubset)
+  ) {
+    throw new Error(
+      "Contract case expected.envelopePayloadSubset must be an object when provided."
+    );
+  }
+  if (
     "tags" in value &&
     value.tags !== undefined &&
     !isStringArray(value.tags)

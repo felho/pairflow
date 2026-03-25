@@ -55,6 +55,8 @@ describe("appendHumanApprovalRequestEnvelope", () => {
       parityMetadata: {
         findings_claimed_open_total: 0,
         findings_artifact_open_total: 0,
+        findings_blocking_open_total: 0,
+        findings_advisory_open_total: 0,
         findings_artifact_status: "available",
         findings_digest_sha256:
           "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -91,6 +93,8 @@ describe("appendHumanApprovalRequestEnvelope", () => {
       parityMetadata: {
         findings_claimed_open_total: 0,
         findings_artifact_open_total: 0,
+        findings_blocking_open_total: 0,
+        findings_advisory_open_total: 0,
         findings_artifact_status: "available",
         findings_digest_sha256:
           "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -111,7 +115,7 @@ describe("appendHumanApprovalRequestEnvelope", () => {
     });
   });
 
-  it("keeps open-findings summary unchanged when structured parity explicitly indicates open findings", async () => {
+  it("keeps open-findings summary unchanged via structured-open-findings suppression branch even when parity status is mismatch", async () => {
     const now = new Date("2026-03-14T12:31:30.000Z");
     const stub = createAppendEnvelopeStub(now);
 
@@ -152,8 +156,16 @@ describe("appendHumanApprovalRequestEnvelope", () => {
     });
 
     expect(result.envelope.payload.summary).toBe(summary);
+    expect(result.envelope.payload.metadata).toMatchObject({
+      findings_claimed_open_total: 2,
+      findings_artifact_open_total: 2,
+      findings_parity_status: "mismatch"
+    });
     expect(
       result.envelope.payload.metadata?.approval_summary_normalized
+    ).toBeUndefined();
+    expect(
+      result.envelope.payload.metadata?.approval_summary_normalization_reason_code
     ).toBeUndefined();
   });
 
@@ -214,6 +226,52 @@ describe("appendHumanApprovalRequestEnvelope", () => {
       meta_review_gate_reason_code: "META_REVIEW_GATE_RUN_FAILED",
       meta_review_gate_run_failed: true
     });
+  });
+
+  it("keeps dispatch-failed fallback summary unchanged on approve recommendation without mismatch normalization", async () => {
+    const now = new Date("2026-03-14T12:33:30.000Z");
+    const stub = createAppendEnvelopeStub(now);
+    const summary =
+      "META_REVIEW_GATE_REWORK_DISPATCH_FAILED: FINDINGS_CLAIM_SOURCE_INVALID: recommendation=approve cannot carry findings_claim_state=open_findings.";
+
+    const result = await appendHumanApprovalRequestEnvelope({
+      appendEnvelope: stub.appendEnvelope,
+      transcriptPath: "/tmp/transcript.ndjson",
+      inboxPath: "/tmp/inbox.ndjson",
+      lockPath: "/tmp/bubble.lock",
+      now,
+      bubbleId: "b_approval_env_dispatch_failed_approve_01",
+      round: 18,
+      summary,
+      route: "human_gate_dispatch_failed",
+      refs: [],
+      recommendation: "approve",
+      parityMetadata: {
+        findings_claimed_open_total: 4,
+        findings_artifact_open_total: null,
+        findings_blocking_open_total: 0,
+        findings_advisory_open_total: 4,
+        findings_artifact_status: "available",
+        findings_digest_sha256:
+          "0202020202020202020202020202020202020202020202020202020202020202",
+        meta_review_run_id: "run_approval_env_dispatch_failed_approve_01",
+        findings_parity_status: null
+      }
+    });
+
+    expect(result.envelope.payload.summary).toBe(summary);
+    expect(result.envelope.payload.metadata).toMatchObject({
+      [deliveryTargetRoleMetadataKey]: "status",
+      latest_recommendation: "approve",
+      meta_review_gate_route: "human_gate_dispatch_failed",
+      findings_claimed_open_total: 4,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 4
+    });
+    expect(result.envelope.payload.metadata?.approval_summary_normalized).toBeUndefined();
+    expect(
+      result.envelope.payload.metadata?.approval_summary_normalization_reason_code
+    ).toBeUndefined();
   });
 
   it("normalizes clean summary when advisory findings are still open (defense-in-depth)", async () => {
@@ -325,6 +383,135 @@ describe("appendHumanApprovalRequestEnvelope", () => {
     });
   });
 
+  it("does not normalize summary for consistent advisory-only approve split when list count differs", async () => {
+    const now = new Date("2026-03-14T12:35:30.000Z");
+    const stub = createAppendEnvelopeStub(now);
+
+    const result = await appendHumanApprovalRequestEnvelope({
+      appendEnvelope: stub.appendEnvelope,
+      transcriptPath: "/tmp/transcript.ndjson",
+      inboxPath: "/tmp/inbox.ndjson",
+      lockPath: "/tmp/bubble.lock",
+      now,
+      bubbleId: "b_approval_env_advisory_consistent_split_01",
+      round: 18,
+      summary: "2 advisory findings remain open.",
+      route: "human_gate_approve",
+      refs: [],
+      recommendation: "approve",
+      findings: [
+        {
+          severity: "P2",
+          title: "Follow-up regression test coverage"
+        }
+      ],
+      parityMetadata: {
+        findings_claimed_open_total: 2,
+        findings_artifact_open_total: 2,
+        findings_blocking_open_total: 0,
+        findings_advisory_open_total: 2,
+        findings_artifact_status: "available",
+        findings_digest_sha256:
+          "efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef",
+        meta_review_run_id: "run_approval_env_advisory_consistent_split_01",
+        findings_parity_status: "ok"
+      }
+    });
+
+    expect(result.envelope.payload.summary).toBe("2 advisory findings remain open.");
+    expect(result.envelope.payload.metadata?.approval_summary_normalized).toBeUndefined();
+  });
+
+  it("keeps advisory-only approve summary unchanged when findings_artifact_open_total is null", async () => {
+    const now = new Date("2026-03-14T12:36:00.000Z");
+    const stub = createAppendEnvelopeStub(now);
+    const summary = "2 advisory findings remain open.";
+
+    const result = await appendHumanApprovalRequestEnvelope({
+      appendEnvelope: stub.appendEnvelope,
+      transcriptPath: "/tmp/transcript.ndjson",
+      inboxPath: "/tmp/inbox.ndjson",
+      lockPath: "/tmp/bubble.lock",
+      now,
+      bubbleId: "b_approval_env_advisory_artifact_null_01",
+      round: 18,
+      summary,
+      route: "human_gate_approve",
+      refs: [],
+      recommendation: "approve",
+      findings: [
+        {
+          severity: "P2",
+          title: "Follow-up regression test coverage"
+        },
+        {
+          severity: "P3",
+          title: "CLI guidance wording consistency"
+        }
+      ],
+      parityMetadata: {
+        findings_claimed_open_total: 2,
+        findings_artifact_open_total: null,
+        findings_blocking_open_total: 0,
+        findings_advisory_open_total: 2,
+        findings_artifact_status: "available",
+        findings_digest_sha256:
+          "0101010101010101010101010101010101010101010101010101010101010101",
+        meta_review_run_id: "run_approval_env_advisory_artifact_null_01",
+        findings_parity_status: null
+      }
+    });
+
+    expect(result.envelope.payload.summary).toBe(summary);
+    expect(result.envelope.payload.metadata).toMatchObject({
+      findings_claimed_open_total: 2,
+      findings_artifact_open_total: null,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 2,
+      findings_parity_status: null
+    });
+    expect(
+      result.envelope.payload.metadata?.approval_summary_normalization_reason_code
+    ).toBeUndefined();
+  });
+
+  it("keeps advisory-only approve summary unchanged when summary only asserts no P0/P1 findings", async () => {
+    const now = new Date("2026-03-14T12:36:30.000Z");
+    const stub = createAppendEnvelopeStub(now);
+    const summary = "No open P0/P1 findings remain.";
+
+    const result = await appendHumanApprovalRequestEnvelope({
+      appendEnvelope: stub.appendEnvelope,
+      transcriptPath: "/tmp/transcript.ndjson",
+      inboxPath: "/tmp/inbox.ndjson",
+      lockPath: "/tmp/bubble.lock",
+      now,
+      bubbleId: "b_approval_env_advisory_no_blocking_scope_01",
+      round: 18,
+      summary,
+      route: "human_gate_approve",
+      refs: [],
+      recommendation: "approve",
+      parityMetadata: {
+        findings_claimed_open_total: 2,
+        findings_artifact_open_total: null,
+        findings_blocking_open_total: 0,
+        findings_advisory_open_total: 2,
+        findings_artifact_status: "available",
+        findings_digest_sha256:
+          "3434343434343434343434343434343434343434343434343434343434343434",
+        meta_review_run_id: "run_approval_env_advisory_no_blocking_scope_01",
+        findings_parity_status: null
+      }
+    });
+
+    expect(result.envelope.payload.summary).toBe(summary);
+    expect(result.envelope.payload.metadata?.approval_summary_normalized).toBeUndefined();
+    expect(
+      result.envelope.payload.metadata?.approval_summary_normalization_reason_code
+    ).toBeUndefined();
+  });
+
   it("does not fail-closed on empty advisory findings list without advisory aggregate signal", async () => {
     const now = new Date("2026-03-14T12:37:00.000Z");
     const stub = createAppendEnvelopeStub(now);
@@ -345,6 +532,8 @@ describe("appendHumanApprovalRequestEnvelope", () => {
       parityMetadata: {
         findings_claimed_open_total: 0,
         findings_artifact_open_total: 0,
+        findings_blocking_open_total: 0,
+        findings_advisory_open_total: 0,
         findings_artifact_status: "available",
         findings_digest_sha256:
           "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
@@ -381,9 +570,9 @@ describe("appendHumanApprovalRequestEnvelope", () => {
       bubbleId: "b_approval_env_undefined_keys_01",
       round: 18,
       summary: "No open findings remain.",
-      route: "human_gate_approve",
+      route: "human_gate_inconclusive",
       refs: [],
-      recommendation: "approve",
+      recommendation: "inconclusive",
       parityMetadata: parityMetadata as FindingsParityMetadata
     });
 
@@ -443,4 +632,130 @@ describe("appendHumanApprovalRequestEnvelope", () => {
       })
     ).rejects.toThrow("CONVERGED_ADVISORY_METADATA_REQUIRED");
   });
+
+  it("fails closed when recommendation=approve carries blocking open findings", async () => {
+    const now = new Date("2026-03-14T12:39:00.000Z");
+    const stub = createAppendEnvelopeStub(now);
+
+    await expect(
+      appendHumanApprovalRequestEnvelope({
+        appendEnvelope: stub.appendEnvelope,
+        transcriptPath: "/tmp/transcript.ndjson",
+        inboxPath: "/tmp/inbox.ndjson",
+        lockPath: "/tmp/bubble.lock",
+        now,
+        bubbleId: "b_approval_env_blocking_guard_01",
+        round: 18,
+        summary: "Blocking findings remain open.",
+        route: "human_gate_approve",
+        refs: [],
+        recommendation: "approve",
+        parityMetadata: {
+          findings_claimed_open_total: 1,
+          findings_artifact_open_total: 1,
+          findings_blocking_open_total: 1,
+          findings_advisory_open_total: 0,
+          findings_parity_status: "ok"
+        }
+      })
+    ).rejects.toThrow("META_REVIEW_APPROVE_BLOCKING_FINDINGS_PRESENT");
+  });
+
+  it("fails closed when recommendation=approve split arithmetic is inconsistent", async () => {
+    const now = new Date("2026-03-14T12:40:00.000Z");
+    const stub = createAppendEnvelopeStub(now);
+
+    await expect(
+      appendHumanApprovalRequestEnvelope({
+        appendEnvelope: stub.appendEnvelope,
+        transcriptPath: "/tmp/transcript.ndjson",
+        inboxPath: "/tmp/inbox.ndjson",
+        lockPath: "/tmp/bubble.lock",
+        now,
+        bubbleId: "b_approval_env_split_guard_01",
+        round: 18,
+        summary: "Advisory findings remain open.",
+        route: "human_gate_approve",
+        refs: [],
+        recommendation: "approve",
+        parityMetadata: {
+          findings_claimed_open_total: 2,
+          findings_artifact_open_total: 2,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 1,
+          findings_parity_status: "ok"
+        }
+      })
+    ).rejects.toThrow("META_REVIEW_FINDINGS_PARITY_GUARD");
+  });
+
+  it("fails closed with blocking reason precedence when blocking findings and artifact mismatch are both present", async () => {
+    const now = new Date("2026-03-14T12:41:00.000Z");
+    const stub = createAppendEnvelopeStub(now);
+
+    await expect(
+      appendHumanApprovalRequestEnvelope({
+        appendEnvelope: stub.appendEnvelope,
+        transcriptPath: "/tmp/transcript.ndjson",
+        inboxPath: "/tmp/inbox.ndjson",
+        lockPath: "/tmp/bubble.lock",
+        now,
+        bubbleId: "b_approval_env_blocking_precedence_01",
+        round: 18,
+        summary: "Blocking findings remain open.",
+        route: "human_gate_approve",
+        refs: [],
+        recommendation: "approve",
+        parityMetadata: {
+          findings_claimed_open_total: 1,
+          findings_artifact_open_total: 2,
+          findings_blocking_open_total: 1,
+          findings_advisory_open_total: 0,
+          findings_parity_status: "ok"
+        }
+      })
+    ).rejects.toThrow("META_REVIEW_APPROVE_BLOCKING_FINDINGS_PRESENT");
+  });
+
+  it("keeps valid refs while dropping invalid refs within the same advisory finding", async () => {
+    const now = new Date("2026-03-14T12:42:00.000Z");
+    const stub = createAppendEnvelopeStub(now);
+
+    const result = await appendHumanApprovalRequestEnvelope({
+      appendEnvelope: stub.appendEnvelope,
+      transcriptPath: "/tmp/transcript.ndjson",
+      inboxPath: "/tmp/inbox.ndjson",
+      lockPath: "/tmp/bubble.lock",
+      now,
+      bubbleId: "b_approval_env_refs_partial_01",
+      round: 18,
+      summary: "2 advisory findings remain open.",
+      route: "human_gate_approve",
+      refs: [],
+      recommendation: "approve",
+      findings: [
+        {
+          severity: "P2",
+          title: "Follow-up regression test coverage",
+          refs: ["artifact://ok-a", "", "   ", "artifact://ok-b"]
+        }
+      ],
+      parityMetadata: {
+        findings_claimed_open_total: 1,
+        findings_artifact_open_total: 1,
+        findings_blocking_open_total: 0,
+        findings_advisory_open_total: 1,
+        findings_parity_status: "ok"
+      }
+    });
+
+    expect(result.envelope.payload.findings).toEqual([
+      {
+        severity: "P2",
+        title: "Follow-up regression test coverage",
+        refs: ["artifact://ok-a", "artifact://ok-b"]
+      }
+    ]);
+  });
+
 });

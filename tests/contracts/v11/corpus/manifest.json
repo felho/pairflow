@@ -1185,6 +1185,18 @@
       "kind": "seed_case"
     },
     {
+      "id": "meta-review-gate-recover-approve-advisory-parity",
+      "command": "metaReviewGate",
+      "source": "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-approve-advisory-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "meta-review-gate-recover-approve-advisory-with-artifact-parity",
+      "command": "metaReviewGate",
+      "source": "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-approve-advisory-with-artifact-parity.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "meta-review-gate-recover-approve-parity",
       "command": "metaReviewGate",
       "source": "tests/contracts/v11/cases/meta-review-gate/meta-review-gate-recover-approve-parity.case.json",

@@ -51,6 +51,7 @@ import {
 } from "../../v11/shared/metaReviewGate/metaReviewGateFindingsClaimParsing.js";
 import {
   evaluateNoFindingsSummaryFindingsAssertion,
+  hasGlobalNoFindingsSummaryAssertion,
   evaluatePositiveSummaryFindingsAssertion
 } from "../convergence/policy.js";
 const CANONICAL_META_REVIEW_REPORT_REF = "artifacts/meta-review-last.md";
@@ -354,6 +355,7 @@ function requireStructuredFindingsCount(reportJson: Record<string, unknown>): nu
 }
 
 function assertSummaryStructuredParity(input: {
+  recommendation: MetaReviewRecommendation;
   summary: string;
   reportJson: Record<string, unknown>;
 }): void {
@@ -386,6 +388,22 @@ function assertSummaryStructuredParity(input: {
     summaryNoFindingsAssertion.hasNoFindingsAssertion &&
     structuredHasOpenFindings
   ) {
+    const split = resolveFindingsOpenSplitFromReportJson(input.reportJson);
+    const claimedOpenTotal =
+      normalizeNonNegativeInt(input.reportJson.findings_claimed_open_total)
+      ?? structuredCount;
+    const hasAdvisoryOnlyApproveOpenFindings =
+      input.recommendation === "approve" &&
+      structuredClaim.state === "open_findings" &&
+      claimedOpenTotal > 0 &&
+      split.findings_blocking_open_total === 0 &&
+      split.findings_advisory_open_total === claimedOpenTotal;
+    if (
+      hasAdvisoryOnlyApproveOpenFindings &&
+      !hasGlobalNoFindingsSummaryAssertion(input.summary)
+    ) {
+      return;
+    }
     throw new MetaReviewError(
       "META_REVIEW_SUMMARY_STRUCTURED_MISMATCH",
       "meta-review submit summary claims no findings while structured report_json claims open findings"
@@ -421,6 +439,61 @@ function resolveCanonicalMetaReviewReportJson(input: {
       base.findings_count >= 0
       ? base.findings_count
       : (countFromFindings ?? fallbackCount);
+  const splitFromReportJson = resolveFindingsOpenSplitFromReportJson(base);
+  const findingsClaimedOpenTotal =
+    normalizeNonNegativeInt(base.findings_claimed_open_total) ?? findingsCount;
+  const hasExplicitBlockingOpenTotal = Object.hasOwn(
+    base,
+    "findings_blocking_open_total"
+  );
+  const hasExplicitAdvisoryOpenTotal = Object.hasOwn(
+    base,
+    "findings_advisory_open_total"
+  );
+  const explicitBlockingOpenTotal = normalizeNonNegativeInt(
+    base.findings_blocking_open_total
+  );
+  const explicitAdvisoryOpenTotal = normalizeNonNegativeInt(
+    base.findings_advisory_open_total
+  );
+  const hasInvalidExplicitSplitField =
+    (hasExplicitBlockingOpenTotal && explicitBlockingOpenTotal === null) ||
+    (hasExplicitAdvisoryOpenTotal && explicitAdvisoryOpenTotal === null);
+  let findingsBlockingOpenTotal =
+    explicitBlockingOpenTotal ?? splitFromReportJson.findings_blocking_open_total;
+  let findingsAdvisoryOpenTotal =
+    explicitAdvisoryOpenTotal ?? splitFromReportJson.findings_advisory_open_total;
+  if (input.recommendation === "approve" && !hasInvalidExplicitSplitField) {
+    if (
+      findingsBlockingOpenTotal === null &&
+      findingsAdvisoryOpenTotal === null
+    ) {
+      // Keep clean approve refresh deterministic while preserving fail-closed behavior
+      // for approve+open_findings payloads that omit explicit split metadata.
+      if (findingsClaimedOpenTotal === 0) {
+        findingsBlockingOpenTotal = 0;
+        findingsAdvisoryOpenTotal = 0;
+      }
+    } else if (
+      findingsBlockingOpenTotal === null &&
+      findingsAdvisoryOpenTotal !== null
+    ) {
+      const derivedBlockingOpenTotal =
+        findingsClaimedOpenTotal - findingsAdvisoryOpenTotal;
+      if (derivedBlockingOpenTotal >= 0) {
+        findingsBlockingOpenTotal = derivedBlockingOpenTotal;
+      }
+    } else if (
+      findingsBlockingOpenTotal !== null &&
+      findingsAdvisoryOpenTotal === null
+    ) {
+      const derivedAdvisoryOpenTotal =
+        findingsClaimedOpenTotal - findingsBlockingOpenTotal;
+      if (derivedAdvisoryOpenTotal >= 0) {
+        findingsAdvisoryOpenTotal = derivedAdvisoryOpenTotal;
+      }
+    }
+  }
   const findingsArtifactRefFromInput =
     isNonEmptyString(base.findings_artifact_ref)
       ? base.findings_artifact_ref.trim()
@@ -469,7 +542,9 @@ function resolveCanonicalMetaReviewReportJson(input: {
     findings_claim_state: claimState,
     findings_claim_source: claimSource,
     findings_count: findingsCount,
-    findings_claimed_open_total: findingsCount,
+    findings_claimed_open_total: findingsClaimedOpenTotal,
+    findings_blocking_open_total: findingsBlockingOpenTotal,
+    findings_advisory_open_total: findingsAdvisoryOpenTotal,
     findings_artifact_ref: findingsArtifactRef,
     findings_run_id: findingsRunId,
     meta_review_run_id: resolvedMetaReviewRunId,
@@ -1472,6 +1547,7 @@ export async function submitMetaReviewResult(
     reworkTargetMessage
   });
   assertSummaryStructuredParity({
+    recommendation,
     summary,
     reportJson
   });

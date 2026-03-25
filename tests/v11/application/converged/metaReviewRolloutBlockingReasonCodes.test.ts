@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { resolveMetaReviewRolloutBlockingReasonCodesV11 } from "../../../../src/v11/application/converged/metaReviewRolloutBlockingReasonCodes.js";
 
 describe("resolveMetaReviewRolloutBlockingReasonCodesV11", () => {
-  it("includes self_host stale and meta-review warning codes", () => {
+  it("includes stale and meta-review warning codes", () => {
     const codes = resolveMetaReviewRolloutBlockingReasonCodesV11({
       gateRoute: "human_gate_run_failed",
       metaReviewWarnings: [{ reason_code: "META_REVIEW_RUNNER_ERROR" }],
@@ -25,6 +25,26 @@ describe("resolveMetaReviewRolloutBlockingReasonCodesV11", () => {
       "META_REVIEW_RUNNER_ERROR",
       "PAIRFLOW_COMMAND_PATH_STALE"
     ]);
+  });
+
+  it("includes stale code for external profile when command path is stale", () => {
+    const codes = resolveMetaReviewRolloutBlockingReasonCodesV11({
+      gateRoute: "human_gate_approve",
+      metaReviewWarnings: [],
+      commandPathStatus: {
+        status: "stale",
+        reasonCode: "PAIRFLOW_COMMAND_PATH_STALE",
+        profile: "external",
+        localEntrypoint: "/tmp/w/dist/cli/index.js",
+        activeEntrypoint: "/usr/local/lib/node_modules/pairflow/dist/cli/index.js",
+        localEntrypointExists: true,
+        externalPairflowAvailable: true,
+        pinnedCommand: "pairflow",
+        message: "stale"
+      }
+    });
+
+    expect(codes).toContain("PAIRFLOW_COMMAND_PATH_STALE");
   });
 
   it("includes external-unavailable code only for external profile", () => {

@@ -29,6 +29,20 @@ export function resolveFindingsCountFromMetaReviewReportJson(
   return undefined;
 }
 
+export function resolveNonNegativeIntegerField(
+  reportJson: Record<string, unknown>,
+  field: string
+): number | null | undefined {
+  const raw = reportJson[field];
+  if (raw === undefined) {
+    return undefined;
+  }
+  if (typeof raw === "number" && Number.isInteger(raw) && raw >= 0) {
+    return raw;
+  }
+  return null;
+}
+
 export function resolveStructuredMetaReviewClaimFromReportJson(input: {
   reportJson: Record<string, unknown>;
 }):
