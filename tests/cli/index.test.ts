@@ -500,6 +500,33 @@ describe("runCli", () => {
         expectedState: "RUNNING"
       }
     );
+    await writeFile(
+      join(
+        repoPath,
+        ".pairflow",
+        "bubbles",
+        bubble.bubbleId,
+        "artifacts",
+        "meta-review-last.json"
+      ),
+      `${JSON.stringify(
+        {
+          bubble_id: bubble.bubbleId,
+          run_id: "run_meta_review_cli_json_05",
+          report_json: {
+            findings_claim_state: "clean",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 0,
+            findings_claimed_open_total: 0,
+            findings_blocking_open_total: 0,
+            findings_advisory_open_total: 0
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
 
     const exitCode = await runCli([
       "bubble",

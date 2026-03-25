@@ -57,7 +57,11 @@ describe("pairflow command path helpers", () => {
 
     expect(bootstrap.join("\n")).toContain("PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE");
     expect(bootstrap.join("\n")).toContain("PAIRFLOW_EXTERNAL_COMMAND");
+    expect(bootstrap.join("\n")).toContain("PAIRFLOW_LOCAL_ENTRYPOINT");
     expect(bootstrap.join("\n")).toContain("PAIRFLOW_WRAPPER_PATH");
+    expect(bootstrap.join("\n")).toContain(
+      'if [ -n "$PAIRFLOW_LOCAL_ENTRYPOINT" ] && [ -f "$PAIRFLOW_LOCAL_ENTRYPOINT" ]; then'
+    );
     expect(bootstrap.join("\n")).toContain(
       'if [ "$PAIRFLOW_EXTERNAL_COMMAND" = "$PAIRFLOW_WRAPPER_PATH" ]; then'
     );
@@ -65,6 +69,7 @@ describe("pairflow command path helpers", () => {
       '[ "$PAIRFLOW_EXTERNAL_COMMAND" != "$PAIRFLOW_WRAPPER_PATH" ]'
     );
     expect(bootstrap.join("\n")).toContain("exit 87");
+    expect(bootstrap.join("\n")).toContain("PAIRFLOW_COMMAND_PATH_STATUS=worktree_local");
     expect(bootstrap.join("\n")).toContain('PAIRFLOW_WRAPPER_DIR');
     expect(bootstrap.join("\n")).toContain('cat > "$PAIRFLOW_WRAPPER_DIR/pairflow"');
     expect(bootstrap.join("\n")).toContain('export PATH="$PAIRFLOW_WRAPPER_DIR:$PATH"');
@@ -117,7 +122,7 @@ describe("pairflow command path helpers", () => {
     expect(assessment.reasonCode).toBeUndefined();
   });
 
-  it("does not report stale for external profile when local entrypoint differs", () => {
+  it("keeps external status when external profile has no local worktree entrypoint", () => {
     const assessment = assessPairflowCommandPath({
       worktreePath: "/tmp/pairflow-worktree",
       profile: "external",
@@ -128,6 +133,42 @@ describe("pairflow command path helpers", () => {
 
     expect(assessment.status).toBe("external");
     expect(assessment.reasonCode).toBeUndefined();
+  });
+
+  it("reports stale for external profile when active Pairflow dist entrypoint drifts from worktree-local build", () => {
+    const assessment = assessPairflowCommandPath({
+      worktreePath: "/tmp/pairflow-worktree",
+      profile: "external",
+      activeEntrypoint: "/usr/local/lib/node_modules/pairflow/dist/cli/index.js",
+      localEntrypointExists: true,
+      externalPairflowAvailable: true
+    });
+
+    expect(assessment.status).toBe("stale");
+    expect(assessment.reasonCode).toBe("PAIRFLOW_COMMAND_PATH_STALE");
+    expect(assessment.entrypointConsistency).toBe("inconsistent");
+  });
+
+  it("marks external profile entrypoint consistency as consistent when active and local dist entrypoints resolve to the same canonical file", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pairflow-command-path-external-"));
+    tempDirs.push(root);
+    const distDir = join(root, "dist", "cli");
+    await mkdir(distDir, { recursive: true });
+    const localEntrypoint = join(distDir, "index.js");
+    const activeEntrypoint = join(root, "active-dist-index.js");
+    await writeFile(localEntrypoint, "console.log('pairflow-external');\n", "utf8");
+    await symlink(localEntrypoint, activeEntrypoint);
+
+    const assessment = assessPairflowCommandPath({
+      worktreePath: root,
+      profile: "external",
+      activeEntrypoint,
+      externalPairflowAvailable: true
+    });
+
+    expect(assessment.status).toBe("external");
+    expect(assessment.reasonCode).toBeUndefined();
+    expect(assessment.entrypointConsistency).toBe("consistent");
   });
 
   it("reports missing when external profile cannot resolve pairflow from PATH", () => {
@@ -183,6 +224,7 @@ describe("pairflow command path helpers", () => {
     );
 
     expect(guidance).toContain("Default command profile is `external`");
+    expect(guidance).toContain("wrapper prefers the worktree-local `dist/cli/index.js`");
     expect(guidance).toContain("--pairflow-command-profile self_host");
   });
 });

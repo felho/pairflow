@@ -4,24 +4,22 @@ import {
   type FindingsParityMetadata,
   type FindingsParityStatus
 } from "../../../types/protocol.js";
-import { resolveFindingsCountFromMetaReviewReportJson } from "./metaReviewGateFindingsClaimParsing.js";
+import {
+  resolveFindingsCountFromMetaReviewReportJson,
+  resolveNonNegativeIntegerField
+} from "./metaReviewGateFindingsClaimParsing.js";
 export {
   readMetaReviewReportJsonArtifact,
   resolveFindingsArtifactPath
 } from "./metaReviewGateFindingsArtifactJson.js";
 export {
   resolveFindingsCountFromMetaReviewReportJson,
+  resolveNonNegativeIntegerField,
   resolveStructuredMetaReviewClaimFromReportJson
 } from "./metaReviewGateFindingsClaimParsing.js";
 
 function isNonNegativeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0;
-}
-
-function resolveNonNegativeIntegerOrNull(
-  value: unknown
-): number | null {
-  return isNonNegativeInteger(value) ? value : null;
 }
 
 export interface FindingsOpenSplit {
@@ -88,18 +86,41 @@ export function resolveFindingsOpenSplitFromReportJson(
   findings_advisory_open_total: number | null;
 } {
   const derived = resolveFindingsOpenSplitFromFindings(reportJson.findings);
-  const explicitBlocking = resolveNonNegativeIntegerOrNull(
-    reportJson.findings_blocking_open_total
+  const hasExplicitBlocking = Object.hasOwn(
+    reportJson,
+    "findings_blocking_open_total"
   );
-  const explicitAdvisory = resolveNonNegativeIntegerOrNull(
-    reportJson.findings_advisory_open_total
+  const hasExplicitAdvisory = Object.hasOwn(
+    reportJson,
+    "findings_advisory_open_total"
   );
+  const explicitBlocking = resolveNonNegativeIntegerField(
+    reportJson,
+    "findings_blocking_open_total"
+  );
+  const explicitAdvisory = resolveNonNegativeIntegerField(
+    reportJson,
+    "findings_advisory_open_total"
+  );
+  const hasExplicitInvalidSplitField =
+    (hasExplicitBlocking && explicitBlocking === null)
+    || (hasExplicitAdvisory && explicitAdvisory === null);
+  if (hasExplicitInvalidSplitField) {
+    return {
+      findings_blocking_open_total: null,
+      findings_advisory_open_total: null
+    };
+  }
 
   return {
     findings_blocking_open_total:
-      explicitBlocking ?? derived?.findings_blocking_open_total ?? null,
+      (explicitBlocking === undefined
+        ? derived?.findings_blocking_open_total
+        : explicitBlocking) ?? null,
     findings_advisory_open_total:
-      explicitAdvisory ?? derived?.findings_advisory_open_total ?? null
+      (explicitAdvisory === undefined
+        ? derived?.findings_advisory_open_total
+        : explicitAdvisory) ?? null
   };
 }
 
@@ -248,14 +269,22 @@ export function resolveFindingsParityMetadataFromReportJson(
   if (reportJson === undefined) {
     return null;
   }
-  const claimCount = resolveFindingsCountFromMetaReviewReportJson(reportJson);
-  const artifactCount = isNonNegativeInteger(reportJson.findings_artifact_open_total)
-    ? reportJson.findings_artifact_open_total
-    : null;
+  const explicitClaimedCount = resolveNonNegativeIntegerField(
+    reportJson,
+    "findings_claimed_open_total"
+  );
+  const derivedClaimCount = resolveFindingsCountFromMetaReviewReportJson(reportJson);
+  const claimCount = explicitClaimedCount === undefined
+    ? (derivedClaimCount ?? null)
+    : explicitClaimedCount;
+  const artifactCount = resolveNonNegativeIntegerField(
+    reportJson,
+    "findings_artifact_open_total"
+  );
   const findingsOpenSplit = resolveFindingsOpenSplitFromReportJson(reportJson);
   return {
-    findings_claimed_open_total: claimCount ?? null,
-    findings_artifact_open_total: artifactCount,
+    findings_claimed_open_total: claimCount,
+    findings_artifact_open_total: artifactCount ?? null,
     findings_blocking_open_total: findingsOpenSplit.findings_blocking_open_total,
     findings_advisory_open_total: findingsOpenSplit.findings_advisory_open_total,
     findings_artifact_status: resolveFindingsArtifactStatus(reportJson) ?? null,

@@ -31,6 +31,10 @@ The rollout must stop on any of these codes:
 10. `META_REVIEW_FINDINGS_COUNT_MISMATCH`
 11. `META_REVIEW_FINDINGS_RUN_LINK_MISSING`
 12. `META_REVIEW_FINDINGS_PARITY_GUARD`
+13. `META_REVIEW_APPROVE_BLOCKING_FINDINGS_PRESENT`
+14. `META_REVIEW_APPROVE_ADVISORY_SPLIT_REQUIRED`
+15. `META_REVIEW_APPROVE_ADVISORY_SPLIT_FORMAT_INVALID`
+16. `META_REVIEW_SUMMARY_STRUCTURED_MISMATCH`
 
 Any unclassified reason code is treated as blocking until explicitly classified.
 
@@ -76,6 +80,18 @@ Gate-critical routing must use canonical claim fields, not prose parsing:
    - `META_REVIEW_FINDINGS_COUNT_MISMATCH`
    - `META_REVIEW_FINDINGS_RUN_LINK_MISSING`
    - `META_REVIEW_FINDINGS_PARITY_GUARD`
+5. `recommendation=approve` uses split-aware semantics:
+   - required split triplet: `findings_claimed_open_total`, `findings_blocking_open_total`, `findings_advisory_open_total`
+   - format: all three must be non-negative integers
+   - invariants: `claimed = blocking + advisory`; if `findings_artifact_open_total` is present, it must equal `claimed`
+   - semantic gate: `findings_blocking_open_total` must be `0`; advisory-only open findings are allowed
+6. Split/semantic failures are fail-closed via:
+   - `META_REVIEW_APPROVE_ADVISORY_SPLIT_REQUIRED`
+   - `META_REVIEW_APPROVE_ADVISORY_SPLIT_FORMAT_INVALID`
+   - `META_REVIEW_APPROVE_BLOCKING_FINDINGS_PRESENT`
+7. Advisory-only approve classification (non-blocking diagnostic):
+   - `META_REVIEW_APPROVE_ADVISORY_ONLY`
+   - Meaning: recommendation stays `approve`, `findings_blocking_open_total=0`, advisory open findings are allowed and must remain split-consistent.
 
 ## Compatibility Fallbacks (Documented)
 

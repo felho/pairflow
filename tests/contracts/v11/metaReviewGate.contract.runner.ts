@@ -26,6 +26,7 @@ export interface MetaReviewGateContractOutput {
   status: "ok";
   gateRoute: string;
   envelopeType: string;
+  envelopePayload: Record<string, unknown>;
   stateSubset: {
     state: string;
   };
@@ -45,6 +46,8 @@ type MetaReviewGateApplyScenario =
 type MetaReviewGateRecoverScenario =
   | "error"
   | "approve"
+  | "approve_advisory"
+  | "approve_advisory_with_artifact"
   | "inconclusive"
   | "rework_budget_exhausted"
   | "rework_dispatch_failed"
@@ -108,13 +111,15 @@ function parseMetaReviewGateCaseInput(input: ContractCase["input"]): {
     recoverScenarioRaw !== undefined &&
     recoverScenarioRaw !== "error" &&
     recoverScenarioRaw !== "approve" &&
+    recoverScenarioRaw !== "approve_advisory" &&
+    recoverScenarioRaw !== "approve_advisory_with_artifact" &&
     recoverScenarioRaw !== "inconclusive" &&
     recoverScenarioRaw !== "rework_budget_exhausted" &&
     recoverScenarioRaw !== "rework_dispatch_failed" &&
     recoverScenarioRaw !== "auto_rework"
   ) {
     throw new Error(
-      "metaReviewGate contract input.recoverScenario must be one of: error, approve, inconclusive, rework_budget_exhausted, rework_dispatch_failed, auto_rework."
+      "metaReviewGate contract input.recoverScenario must be one of: error, approve, approve_advisory, approve_advisory_with_artifact, inconclusive, rework_budget_exhausted, rework_dispatch_failed, auto_rework."
     );
   }
 
@@ -218,7 +223,77 @@ function buildSyntheticMetaReviewRunApprove(input: {
     rework_target_message: null,
     updated_at: "2026-03-19T10:03:00.000Z",
     lifecycle_state: "META_REVIEW_RUNNING",
-    warnings: []
+    warnings: [],
+    report_json: {
+      findings_claim_state: "clean",
+      findings_claim_source: "meta_review_artifact",
+      findings_count: 0,
+      findings_claimed_open_total: 0,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 0
+    }
+  };
+}
+
+function buildSyntheticMetaReviewRunApproveAdvisory(input: {
+  bubbleId: string;
+}): MetaReviewRunResult {
+  return {
+    bubbleId: input.bubbleId,
+    depth: "standard",
+    status: "success",
+    recommendation: "approve",
+    summary: "No open P0/P1 findings remain.",
+    report_ref: "artifacts/meta-review-last.md",
+    rework_target_message: null,
+    updated_at: "2026-03-19T10:03:00.000Z",
+    lifecycle_state: "META_REVIEW_RUNNING",
+    warnings: [],
+    report_json: {
+      findings_claim_state: "open_findings",
+      findings_claim_source: "meta_review_artifact",
+      findings_count: 2,
+      findings_claimed_open_total: 2,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 2,
+      findings: [
+        {
+          severity: "P2",
+          title: "Seed advisory finding P2",
+          refs: ["artifact://seed/advisory-p2"]
+        },
+        {
+          priority: "P3",
+          title: "Seed advisory finding P3"
+        }
+      ]
+    }
+  };
+}
+
+function buildSyntheticMetaReviewRunApproveAdvisoryWithArtifact(input: {
+  bubbleId: string;
+}): MetaReviewRunResult {
+  return {
+    bubbleId: input.bubbleId,
+    depth: "standard",
+    status: "success",
+    recommendation: "approve",
+    summary: "Seed meta-review recover contract approve/advisory+artifact snapshot.",
+    report_ref: "artifacts/meta-review-last.md",
+    rework_target_message: null,
+    updated_at: "2026-03-19T10:03:00.000Z",
+    lifecycle_state: "META_REVIEW_RUNNING",
+    warnings: [],
+    report_json: {
+      findings_claim_state: "open_findings",
+      findings_claim_source: "meta_review_artifact",
+      findings_count: 2,
+      findings_claimed_open_total: 2,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 2,
+      findings_artifact_open_total: 2
+    }
   };
 }
 
@@ -290,14 +365,89 @@ function buildSyntheticMetaReviewRunReworkDispatchFailed(input: {
 function normalizeMetaReviewGateResult(
   result: Awaited<ReturnType<typeof recoverMetaReviewGateFromSnapshot>>
 ): MetaReviewGateContractOutput {
+  const envelopePayload =
+    typeof result.gateEnvelope.payload === "object" &&
+    result.gateEnvelope.payload !== null
+      ? result.gateEnvelope.payload as Record<string, unknown>
+      : {};
   return {
     status: "ok",
     gateRoute: result.route,
     envelopeType: result.gateEnvelope.type,
+    envelopePayload,
     stateSubset: {
       state: result.state.state
     }
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function assertSubsetValue(input: {
+  actual: unknown;
+  expected: unknown;
+  label: string;
+  path: string;
+}): void {
+  if (Array.isArray(input.expected)) {
+    if (!Array.isArray(input.actual)) {
+      throw new Error(`${input.label}: expected array at ${input.path}`);
+    }
+    if (input.actual.length !== input.expected.length) {
+      throw new Error(
+        `${input.label}: array length mismatch at ${input.path} (expected=${input.expected.length}, actual=${input.actual.length})`
+      );
+    }
+    for (let index = 0; index < input.expected.length; index += 1) {
+      assertSubsetValue({
+        actual: input.actual[index],
+        expected: input.expected[index],
+        label: input.label,
+        path: `${input.path}[${index}]`
+      });
+    }
+    return;
+  }
+  if (isRecord(input.expected)) {
+    if (!isRecord(input.actual)) {
+      throw new Error(`${input.label}: expected object at ${input.path}`);
+    }
+    assertRecordSubset({
+      actual: input.actual,
+      expected: input.expected,
+      label: input.label,
+      path: input.path
+    });
+    return;
+  }
+  if (input.actual !== input.expected) {
+    throw new Error(
+      `${input.label}: value mismatch at ${input.path} (expected=${JSON.stringify(input.expected)}, actual=${JSON.stringify(input.actual)})`
+    );
+  }
+}
+
+function assertRecordSubset(input: {
+  actual: Record<string, unknown>;
+  expected: Record<string, unknown>;
+  label: string;
+  path: string;
+}): void {
+  for (const [key, expectedValue] of Object.entries(input.expected)) {
+    if (!(key in input.actual)) {
+      throw new Error(
+        `${input.label}: missing key at ${input.path}.${key}`
+      );
+    }
+    assertSubsetValue({
+      actual: input.actual[key],
+      expected: expectedValue,
+      label: input.label,
+      path: `${input.path}.${key}`
+    });
+  }
 }
 
 function assertContractExpectedSubset(input: {
@@ -327,6 +477,22 @@ function assertContractExpectedSubset(input: {
       `${input.label}: stateSubset.state mismatch (expected=${expectedState}, actual=${input.output.stateSubset.state})`
     );
   }
+  if (
+    input.expected.envelopeType !== undefined &&
+    input.output.envelopeType !== input.expected.envelopeType
+  ) {
+    throw new Error(
+      `${input.label}: envelopeType mismatch (expected=${input.expected.envelopeType}, actual=${input.output.envelopeType})`
+    );
+  }
+  if (input.expected.envelopePayloadSubset !== undefined) {
+    assertRecordSubset({
+      actual: input.output.envelopePayload,
+      expected: input.expected.envelopePayloadSubset,
+      label: input.label,
+      path: "envelopePayload"
+    });
+  }
 }
 
 function assertParityEquivalent(input: {
@@ -334,11 +500,30 @@ function assertParityEquivalent(input: {
   v11: MetaReviewGateContractOutput;
   caseId: string;
 }): void {
-  if (JSON.stringify(input.legacy) !== JSON.stringify(input.v11)) {
+  const normalizedLegacy = normalizeParityComparableValue(input.legacy);
+  const normalizedV11 = normalizeParityComparableValue(input.v11);
+  if (JSON.stringify(normalizedLegacy) !== JSON.stringify(normalizedV11)) {
     throw new Error(
       `metaReviewGate parity mismatch for case=${input.caseId}: legacy=${JSON.stringify(input.legacy)} v11=${JSON.stringify(input.v11)}`
     );
   }
+}
+
+function normalizeParityComparableValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeParityComparableValue(item));
+  }
+  if (!isRecord(value)) {
+    return value;
+  }
+  const normalized: Record<string, unknown> = {};
+  const sortedKeys = Object.keys(value).sort((left, right) =>
+    left.localeCompare(right)
+  );
+  for (const key of sortedKeys) {
+    normalized[key] = normalizeParityComparableValue(value[key]);
+  }
+  return normalized;
 }
 
 async function executeMetaReviewGateCase(input: {
@@ -464,6 +649,14 @@ async function executeMetaReviewGateCase(input: {
       let runResult: MetaReviewRunResult;
       if (caseInput.recoverScenario === "approve") {
         runResult = buildSyntheticMetaReviewRunApprove({
+          bubbleId: bubble.bubbleId
+        });
+      } else if (caseInput.recoverScenario === "approve_advisory") {
+        runResult = buildSyntheticMetaReviewRunApproveAdvisory({
+          bubbleId: bubble.bubbleId
+        });
+      } else if (caseInput.recoverScenario === "approve_advisory_with_artifact") {
+        runResult = buildSyntheticMetaReviewRunApproveAdvisoryWithArtifact({
           bubbleId: bubble.bubbleId
         });
       } else if (caseInput.recoverScenario === "inconclusive") {

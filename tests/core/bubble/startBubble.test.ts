@@ -382,6 +382,9 @@ describe("startBubble", () => {
     expect(metaReviewerCommand).toContain("findings_claim_state");
     expect(metaReviewerCommand).toContain("findings_claim_source");
     expect(metaReviewerCommand).toContain("findings_count");
+    expect(metaReviewerCommand).toContain("findings_claimed_open_total");
+    expect(metaReviewerCommand).toContain("findings_blocking_open_total");
+    expect(metaReviewerCommand).toContain("findings_advisory_open_total");
     expect(metaReviewerCommand).toContain(created.paths.taskArtifactPath);
     expect(reviewerCommand).toContain(
       "Summary scope guardrail: scope statements must cover only current worktree changes."

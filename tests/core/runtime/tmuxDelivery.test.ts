@@ -239,6 +239,9 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(metaReviewMessageCall?.[4]).toContain("findings_claim_state");
     expect(metaReviewMessageCall?.[4]).toContain("findings_claim_source");
     expect(metaReviewMessageCall?.[4]).toContain("findings_count");
+    expect(metaReviewMessageCall?.[4]).toContain("findings_claimed_open_total");
+    expect(metaReviewMessageCall?.[4]).toContain("findings_blocking_open_total");
+    expect(metaReviewMessageCall?.[4]).toContain("findings_advisory_open_total");
   });
 
   it("falls back to legacy recipient mapping when delivery target role token is invalid", async () => {

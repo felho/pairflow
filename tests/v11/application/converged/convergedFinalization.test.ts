@@ -101,6 +101,7 @@ describe("finalizeConvergedFlow", () => {
           localEntrypointExists: true,
           externalPairflowAvailable: true,
           pinnedCommand: "node '/repo/worktree/dist/cli/index.js'",
+          entrypointConsistency: "inconsistent",
           message: "stale"
         }),
         resolveMetaReviewRolloutBlockingReasonCodes: (input) => {
@@ -125,6 +126,12 @@ describe("finalizeConvergedFlow", () => {
     ]);
     expect(emittedEvents[0]?.metadata.advisory_findings_open_total).toBe(2);
     expect(emittedEvents[1]?.metadata.advisory_findings_open_total).toBe(2);
+    expect(
+      emittedEvents[0]?.metadata.pairflow_command_path_entrypoint_consistency
+    ).toBe("inconsistent");
+    expect(
+      emittedEvents[1]?.metadata.pairflow_command_path_entrypoint_consistency
+    ).toBe("inconsistent");
     expect(result).toEqual({
       bubbleId: "b_final_001",
       convergenceSequence: 30,
@@ -250,6 +257,7 @@ describe("finalizeConvergedFlow", () => {
           localEntrypointExists: true,
           externalPairflowAvailable: true,
           pinnedCommand: "pairflow",
+          entrypointConsistency: "consistent",
           message: "external"
         }),
         resolveMetaReviewRolloutBlockingReasonCodes: () => [],
@@ -269,12 +277,15 @@ describe("finalizeConvergedFlow", () => {
     ]);
     expect(emittedEvents[0]?.metadata.advisory_findings_open_total).toBe(3);
     expect(emittedEvents[1]?.metadata.advisory_findings_open_total).toBe(3);
+    expect(
+      emittedEvents[0]?.metadata.pairflow_command_path_entrypoint_consistency
+    ).toBe("consistent");
   });
 
-  it("uses convergence metadata as single advisory metric source even when findings list length differs", async () => {
+  it("uses convergence metadata as single advisory metric source over list length and gate payload metadata", async () => {
     const emittedEvents: Array<{ eventType: string; metadata: Record<string, unknown> }> = [];
 
-    await finalizeConvergedFlow(
+    const result = await finalizeConvergedFlow(
       {
         resolved: {
           bubbleId: "b_final_003",
@@ -318,7 +329,18 @@ describe("finalizeConvergedFlow", () => {
           gateSequence: 51,
           gateEnvelope: {
             id: "env_gate_final_3",
-            type: "APPROVAL_REQUEST"
+            type: "APPROVAL_REQUEST",
+            payload: {
+              metadata: {
+                advisory_findings_open_total: 9
+              },
+              findings: [
+                {
+                  severity: "P2",
+                  title: "gate-follow-up"
+                }
+              ]
+            }
           },
           state: {
             meta_review: {
@@ -371,5 +393,11 @@ describe("finalizeConvergedFlow", () => {
     expect(emittedEvents[0]?.metadata.advisory_findings_open_total).toBe(5);
     expect(emittedEvents[1]?.eventType).toBe("bubble_meta_review_routed");
     expect(emittedEvents[1]?.metadata.advisory_findings_open_total).toBe(5);
+    expect(emittedEvents[0]?.metadata.advisory_findings_open_total).not.toBe(1);
+    expect(emittedEvents[1]?.metadata.advisory_findings_open_total).not.toBe(9);
+    expect(
+      (result.approvalRequestEnvelope as { payload?: { metadata?: { advisory_findings_open_total?: unknown } } })
+        .payload?.metadata?.advisory_findings_open_total
+    ).toBe(9);
   });
 });

@@ -496,6 +496,26 @@ describe("runBubbleWatchdog", () => {
         expectedState: "META_REVIEW_RUNNING"
       }
     );
+    await writeFile(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      `${JSON.stringify(
+        {
+          bubble_id: bubble.bubbleId,
+          run_id: "run_watchdog_meta_submit_01",
+          report_json: {
+            findings_claim_state: "clean",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 0,
+            findings_claimed_open_total: 0,
+            findings_blocking_open_total: 0,
+            findings_advisory_open_total: 0
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
 
     const result = await runBubbleWatchdog({
       bubbleId: bubble.bubbleId,
@@ -595,6 +615,26 @@ describe("runBubbleWatchdog", () => {
         expectedFingerprint: running.fingerprint,
         expectedState: "META_REVIEW_RUNNING"
       }
+    );
+    await writeFile(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      `${JSON.stringify(
+        {
+          bubble_id: bubble.bubbleId,
+          run_id: "run_watchdog_meta_submit_01",
+          report_json: {
+            findings_claim_state: "clean",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 0,
+            findings_claimed_open_total: 0,
+            findings_blocking_open_total: 0,
+            findings_advisory_open_total: 0
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
     );
 
     const result = await runBubbleWatchdog({

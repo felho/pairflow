@@ -1,0 +1,35 @@
+{
+  "id": "meta-review-gate-recover-approve-advisory-with-artifact-parity",
+  "command": "metaReviewGate",
+  "mode": "parity",
+  "description": "Seed contract case for meta-review gate recover advisory-only approve parity with explicit findings_artifact_open_total.",
+  "input": {
+    "route": "recover",
+    "recoverScenario": "approve_advisory_with_artifact",
+    "refs": []
+  },
+  "expected": {
+    "status": "ok",
+    "gateRoute": "human_gate_approve",
+    "envelopeType": "APPROVAL_REQUEST",
+    "envelopePayloadSubset": {
+      "metadata": {
+        "meta_review_gate_route": "human_gate_approve",
+        "findings_claimed_open_total": 2,
+        "findings_artifact_open_total": 2,
+        "findings_blocking_open_total": 0,
+        "findings_advisory_open_total": 2,
+        "findings_parity_status": "ok"
+      }
+    },
+    "stateSubset": {
+      "state": "READY_FOR_HUMAN_APPROVAL"
+    }
+  },
+  "tags": [
+    "seed",
+    "m3",
+    "meta-review-gate",
+    "parity"
+  ]
+}

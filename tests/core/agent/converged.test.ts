@@ -213,7 +213,7 @@ describe("emitConvergedFromWorkspace", () => {
     ).rejects.toThrow(new RegExp(IDEATION_CONVERGED_BLOCKED, "u"));
   });
 
-  it("adds PAIRFLOW_COMMAND_PATH_STALE blocking reason only for self_host stale status", () => {
+  it("adds PAIRFLOW_COMMAND_PATH_STALE blocking reason for any stale command-path status", () => {
     const externalCodes = resolveMetaReviewRolloutBlockingReasonCodes({
       gateRoute: "human_gate_approve",
       metaReviewWarnings: [],
@@ -246,6 +246,23 @@ describe("emitConvergedFromWorkspace", () => {
       }
     });
     expect(selfHostCodes).toContain("PAIRFLOW_COMMAND_PATH_STALE");
+
+    const externalStaleCodes = resolveMetaReviewRolloutBlockingReasonCodes({
+      gateRoute: "human_gate_approve",
+      metaReviewWarnings: [],
+      commandPathStatus: {
+        status: "stale",
+        reasonCode: "PAIRFLOW_COMMAND_PATH_STALE",
+        profile: "external",
+        localEntrypoint: "/tmp/w/dist/cli/index.js",
+        activeEntrypoint: "/usr/local/lib/node_modules/pairflow/dist/cli/index.js",
+        localEntrypointExists: true,
+        externalPairflowAvailable: true,
+        pinnedCommand: "pairflow",
+        message: "external stale"
+      }
+    });
+    expect(externalStaleCodes).toContain("PAIRFLOW_COMMAND_PATH_STALE");
 
     const externalUnavailableCodes = resolveMetaReviewRolloutBlockingReasonCodes({
       gateRoute: "human_gate_approve",
@@ -804,6 +821,26 @@ describe("emitConvergedFromWorkspace", () => {
               expectedFingerprint: loaded.fingerprint,
               expectedState: "RUNNING"
             }
+          );
+          await writeFile(
+            bubble.paths.metaReviewLastJsonArtifactPath,
+            `${JSON.stringify(
+              {
+                bubble_id: bubble.bubbleId,
+                run_id: "run_converged_recover_01",
+                report_json: {
+                  findings_claim_state: "clean",
+                  findings_claim_source: "meta_review_artifact",
+                  findings_count: 0,
+                  findings_claimed_open_total: 0,
+                  findings_blocking_open_total: 0,
+                  findings_advisory_open_total: 0
+                }
+              },
+              null,
+              2
+            )}\n`,
+            "utf8"
           );
           throw new Error("simulated gate crash after snapshot write");
         }

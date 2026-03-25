@@ -41,6 +41,8 @@ export function buildConvergedEventMetadata(input: {
     gate_route: input.gateResult.route,
     pairflow_command_path_status: input.commandPathStatus.status,
     pairflow_command_path_local_entrypoint: input.commandPathStatus.localEntrypoint,
+    pairflow_command_path_entrypoint_consistency:
+      input.commandPathStatus.entrypointConsistency ?? "unknown",
     ...(input.commandPathStatus.activeEntrypoint !== null
       ? {
           pairflow_command_path_active_entrypoint:
@@ -120,6 +122,15 @@ export function buildMetaReviewRoutedMetadata(input: {
     ),
     blocking_reason_codes: JSON.stringify(input.blockingReasonCodes),
     pairflow_command_path_status: input.commandPathStatus.status,
+    pairflow_command_path_entrypoint_consistency:
+      input.commandPathStatus.entrypointConsistency ?? "unknown",
+    pairflow_command_path_local_entrypoint: input.commandPathStatus.localEntrypoint,
+    ...(input.commandPathStatus.activeEntrypoint !== null
+      ? {
+          pairflow_command_path_active_entrypoint:
+            input.commandPathStatus.activeEntrypoint
+        }
+      : {}),
     ...(input.commandPathStatus.reasonCode !== undefined
       ? {
           pairflow_command_path_reason_code: input.commandPathStatus.reasonCode

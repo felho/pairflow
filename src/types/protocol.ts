@@ -78,6 +78,29 @@ export interface FindingsParityMetadata {
   findings_parity_status?: FindingsParityStatus | null;
 }
 
+export interface ApproveFindingsSplitMetadata extends FindingsParityMetadata {
+  findings_claimed_open_total: number;
+  findings_blocking_open_total: number;
+  findings_advisory_open_total: number;
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
+export function hasApproveFindingsSplitMetadata(
+  metadata: FindingsParityMetadata | null | undefined
+): metadata is ApproveFindingsSplitMetadata {
+  if (metadata === null || metadata === undefined) {
+    return false;
+  }
+  return (
+    isNonNegativeInteger(metadata.findings_claimed_open_total) &&
+    isNonNegativeInteger(metadata.findings_blocking_open_total) &&
+    isNonNegativeInteger(metadata.findings_advisory_open_total)
+  );
+}
+
 export function resolveFindingsParityMetadataForEnvelope(
   metadata: FindingsParityMetadata | null | undefined
 ): Record<string, unknown> {

@@ -578,6 +578,116 @@ describe("meta-review run", () => {
     );
   });
 
+  it("avoids stale snapshot drift when deep approve refresh omits report_json split metadata", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_run_refresh_approval_deep_no_split_01",
+      task: "Meta deep rerun refresh without explicit split metadata"
+    });
+    const lockPath = join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`);
+
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      mirrorPaths: [bubble.paths.inboxPath],
+      lockPath,
+      now: new Date("2026-03-08T11:59:00.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: "human",
+        type: "APPROVAL_REQUEST",
+        round: 1,
+        payload: {
+          summary: "Meta-review R11: advisory findings remain open.",
+          metadata: {
+            meta_review_gate_route: "human_gate_sticky_bypass",
+            findings_claimed_open_total: 2,
+            findings_blocking_open_total: 0,
+            findings_advisory_open_total: 2
+          }
+        },
+        refs: ["artifacts/meta-review-last.md"]
+      }
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "READY_FOR_HUMAN_APPROVAL",
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        last_command_at: "2026-03-08T11:59:00.000Z",
+        meta_review: {
+          ...loaded.state.meta_review!,
+          last_autonomous_run_id: "run_meta_r10_stale_snapshot",
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary:
+            "Meta-review R10: approve javasolt, 4 advisory finding nyitott.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-03-08T11:50:00.000Z"
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const refreshedSummary = "Meta-review R12 deep run: approve, no open findings.";
+    const result = await runMetaReview(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        depth: "deep"
+      },
+      {
+        randomUUID: () => "run_meta_refresh_approval_deep_no_split_01",
+        now: new Date("2026-03-08T12:00:00.000Z"),
+        runLiveReview: async () => ({
+          recommendation: "approve",
+          summary: refreshedSummary,
+          report_markdown: "# Deep rerun\n\nApprove."
+        })
+      }
+    );
+
+    expect(result.status).toBe("success");
+    expect(result.lifecycle_state).toBe("READY_FOR_HUMAN_APPROVAL");
+
+    const after = await readStateSnapshot(bubble.paths.statePath);
+    expect(after.state.meta_review?.last_autonomous_summary).toBe(refreshedSummary);
+    expect(after.state.meta_review?.last_autonomous_summary).not.toContain("R10");
+
+    const transcript = await readTranscriptEnvelopes(
+      bubble.paths.transcriptPath,
+      { allowMissing: false }
+    );
+    const lastTranscriptMessage = transcript.at(-1);
+    expect(lastTranscriptMessage?.type).toBe("APPROVAL_REQUEST");
+    expect(lastTranscriptMessage?.payload.summary).toBe(refreshedSummary);
+    expect(lastTranscriptMessage?.payload.metadata).toMatchObject({
+      [deliveryTargetRoleMetadataKey]: "status",
+      latest_recommendation: "approve",
+      meta_review_gate_route: "human_gate_approve",
+      findings_claimed_open_total: 0,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 0
+    });
+    expect(lastTranscriptMessage?.payload.metadata?.approval_summary_normalized).toBeUndefined();
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+    expect(status.metaReview.latestSummary).toBe(refreshedSummary);
+  });
+
   it("uses shared approval-request normalization metadata on refresh path", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -1908,6 +2018,137 @@ describe("meta-review submit", () => {
       last_autonomous_report_ref: "artifacts/meta-review-last.md",
       last_autonomous_rework_target_message: null
     });
+  });
+
+  it("accepts advisory-only approve submit and preserves split metadata when artifact open total is absent", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_approve_advisory_01",
+      task: "Meta submit advisory-only approve"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:11:30.000Z"
+    });
+
+    const result = await submitMetaReviewResult(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        round: 1,
+        recommendation: "approve",
+        summary: "2 advisory findings remain open.",
+        report_markdown: "# Meta Review\n\nAdvisory-only approve.",
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 2,
+          findings_claimed_open_total: 2,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 2
+        }
+      },
+      {
+        randomUUID: () => "run_meta_submit_approve_advisory_01",
+        now: new Date("2026-03-09T09:12:00.000Z"),
+        readRuntimeSessionsRegistry: async () =>
+          buildActiveMetaReviewerSession({
+            bubbleId: bubble.bubbleId,
+            repoPath,
+            worktreePath: bubble.paths.worktreePath
+          })
+      }
+    );
+
+    expect(result.status).toBe("success");
+    expect(result.recommendation).toBe("approve");
+    expect(result.run_id).toBe("run_meta_submit_approve_advisory_01");
+    expect(result.report_json).toMatchObject({
+      findings_claim_state: "open_findings",
+      findings_count: 2,
+      findings_claimed_open_total: 2,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 2,
+      findings_artifact_open_total: null,
+      findings_parity_status: null
+    });
+
+    const reportJsonArtifact = JSON.parse(
+      await readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
+    ) as {
+      report_json?: Record<string, unknown>;
+    };
+    expect(reportJsonArtifact.report_json).toMatchObject({
+      findings_claim_state: "open_findings",
+      findings_count: 2,
+      findings_claimed_open_total: 2,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 2,
+      findings_artifact_open_total: null,
+      findings_parity_status: null
+    });
+  });
+
+  it("accepts advisory-only approve submit when summary only asserts no P0/P1 findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_approve_no_blocking_summary_01",
+      task: "Meta submit advisory-only approve with scoped no-blocking summary"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:12:30.000Z"
+    });
+
+    const summary = "No open P0/P1 findings remain.";
+    const result = await submitMetaReviewResult(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        round: 1,
+        recommendation: "approve",
+        summary,
+        report_markdown: "# Meta Review\n\nAdvisory-only approve.",
+        report_json: {
+          findings_claim_state: "open_findings",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 2,
+          findings_claimed_open_total: 2,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 2
+        }
+      },
+      {
+        randomUUID: () => "run_meta_submit_approve_no_blocking_summary_01",
+        now: new Date("2026-03-09T09:13:00.000Z"),
+        readRuntimeSessionsRegistry: async () =>
+          buildActiveMetaReviewerSession({
+            bubbleId: bubble.bubbleId,
+            repoPath,
+            worktreePath: bubble.paths.worktreePath
+          })
+      }
+    );
+
+    expect(result.status).toBe("success");
+    expect(result.recommendation).toBe("approve");
+    expect(result.summary).toBe(summary);
+    expect(result.report_json).toMatchObject({
+      findings_claim_state: "open_findings",
+      findings_count: 2,
+      findings_claimed_open_total: 2,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 2
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    expect(loaded.state.meta_review?.last_autonomous_summary).toBe(summary);
   });
 
   it("accepts structured rework submit when explicit same-run run-link is valid", async () => {
@@ -3418,7 +3659,15 @@ describe("meta-review reads", () => {
         runLiveReview: async () => ({
           recommendation: "approve",
           summary: "Recovered after manual rerun",
-          report_markdown: "# Recovered"
+          report_markdown: "# Recovered",
+          report_json: {
+            findings_claim_state: "clean",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 0,
+            findings_claimed_open_total: 0,
+            findings_blocking_open_total: 0,
+            findings_advisory_open_total: 0
+          }
         })
       }
     );

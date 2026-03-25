@@ -7,6 +7,15 @@ import {
 } from "../../../../src/v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.js";
 
 describe("resolveFindingsOpenSplitFromReportJson", () => {
+  it("returns null split fields for empty report_json input", () => {
+    const split = resolveFindingsOpenSplitFromReportJson({});
+
+    expect(split).toEqual({
+      findings_blocking_open_total: null,
+      findings_advisory_open_total: null
+    });
+  });
+
   it("prefers explicit advisory/blocking split totals when present", () => {
     const split = resolveFindingsOpenSplitFromReportJson({
       findings_blocking_open_total: 1,
@@ -36,9 +45,88 @@ describe("resolveFindingsOpenSplitFromReportJson", () => {
       findings_advisory_open_total: 2
     });
   });
+
+  it("fails closed when explicit split fields are present but invalid", () => {
+    const split = resolveFindingsOpenSplitFromReportJson({
+      findings_blocking_open_total: -1,
+      findings_advisory_open_total: 2,
+      findings: [
+        { severity: "P1", title: "blocking-a" },
+        { severity: "P2", title: "advisory-a" }
+      ]
+    });
+
+    expect(split).toEqual({
+      findings_blocking_open_total: null,
+      findings_advisory_open_total: null
+    });
+  });
+
+  it("fails closed symmetrically when advisory split field is explicitly invalid", () => {
+    const split = resolveFindingsOpenSplitFromReportJson({
+      findings_blocking_open_total: 1,
+      findings_advisory_open_total: "2",
+      findings: [
+        { severity: "P1", title: "blocking-a" },
+        { severity: "P2", title: "advisory-a" }
+      ]
+    });
+
+    expect(split).toEqual({
+      findings_blocking_open_total: null,
+      findings_advisory_open_total: null
+    });
+  });
+
+  it("derives only the missing split field when the other explicit split field is valid", () => {
+    const split = resolveFindingsOpenSplitFromReportJson({
+      findings_blocking_open_total: 1,
+      findings: [
+        { severity: "P1", title: "blocking-a" },
+        { severity: "P2", title: "advisory-a" },
+        { severity: "P3", title: "advisory-b" }
+      ]
+    });
+
+    expect(split).toEqual({
+      findings_blocking_open_total: 1,
+      findings_advisory_open_total: 2
+    });
+  });
+
+  it("derives missing blocking split field when advisory split field is explicitly valid", () => {
+    const split = resolveFindingsOpenSplitFromReportJson({
+      findings_advisory_open_total: 2,
+      findings: [
+        { severity: "P1", title: "blocking-a" },
+        { severity: "P2", title: "advisory-a" },
+        { severity: "P3", title: "advisory-b" }
+      ]
+    });
+
+    expect(split).toEqual({
+      findings_blocking_open_total: 1,
+      findings_advisory_open_total: 2
+    });
+  });
 });
 
 describe("resolveFindingsParityMetadataFromReportJson", () => {
+  it("prefers explicit findings_claimed_open_total over derived findings_count", () => {
+    const metadata = resolveFindingsParityMetadataFromReportJson({
+      findings_count: 5,
+      findings_claimed_open_total: 2,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 2
+    });
+
+    expect(metadata).toMatchObject({
+      findings_claimed_open_total: 2,
+      findings_blocking_open_total: 0,
+      findings_advisory_open_total: 2
+    });
+  });
+
   it("includes advisory/blocking split fields in parity metadata", () => {
     const metadata = resolveFindingsParityMetadataFromReportJson({
       findings_count: 2,
@@ -94,6 +182,15 @@ describe("resolveAdvisoryFindingsFromReportJson", () => {
       resolveAdvisoryFindingsFromReportJson({
         findings: [{ severity: "P1", title: "blocking-only" }]
       })
+    ).toBeUndefined();
+  });
+
+  it("returns undefined when findings is missing or not an array", () => {
+    expect(resolveAdvisoryFindingsFromReportJson({})).toBeUndefined();
+    expect(
+      resolveAdvisoryFindingsFromReportJson({
+        findings: { severity: "P2", title: "not-an-array" }
+      } as unknown as Record<string, unknown>)
     ).toBeUndefined();
   });
 });

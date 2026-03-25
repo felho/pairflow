@@ -1,11 +1,13 @@
 import type { MetaReviewRecommendation } from "../../types/bubble.js";
 import {
   deliveryTargetRoleMetadataKey,
+  hasApproveFindingsSplitMetadata,
   resolveFindingsParityMetadataForEnvelope,
   type FindingsParityMetadata
 } from "../../types/protocol.js";
 import {
   evaluateNoFindingsSummaryFindingsAssertion,
+  hasGlobalNoFindingsSummaryAssertion,
   evaluatePositiveSummaryFindingsAssertion
 } from "../convergence/policy.js";
 import {
@@ -26,6 +28,9 @@ const approvalSummaryNormalizedReasonCode =
 const approvalSummaryConsistencyStatusMetadataKey =
   "approval_summary_consistency_status";
 const metaReviewGateRunFailedReasonCode = "META_REVIEW_GATE_RUN_FAILED";
+const metaReviewFindingsParityGuardReasonCode = "META_REVIEW_FINDINGS_PARITY_GUARD";
+const metaReviewApproveBlockingFindingsPresentReasonCode =
+  "META_REVIEW_APPROVE_BLOCKING_FINDINGS_PRESENT";
 
 function resolveStructuredParityMetadataSnapshot(
   parityMetadata: FindingsParityMetadata | null | undefined
@@ -122,20 +127,38 @@ function normalizeApprovalAdvisoryFindings(
         `${convergedAdvisoryMetadataRequiredReasonCode}: advisory findings payload must include non-empty title and severity=P2|P3.`
       );
     }
-    const refs =
-      Array.isArray(finding.refs) &&
-      finding.refs.every((value) => typeof value === "string" && value.trim().length > 0)
-        ? finding.refs
-        : undefined;
+    const refs = Array.isArray(finding.refs)
+      ? finding.refs
+        .filter((value): value is string => typeof value === "string")
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0)
+      : undefined;
     normalized.push({
       severity,
       title,
-      ...(refs !== undefined
+      ...(refs !== undefined && refs.length > 0
         ? { refs }
         : {})
     });
   }
   return normalized;
+}
+
+function hasConsistentApproveAdvisoryOnlySplit(input: {
+  route: string;
+  recommendation: MetaReviewRecommendation | undefined;
+  parityMetadata: FindingsParityMetadata | null | undefined;
+}): boolean {
+  if (input.route !== "human_gate_approve" || input.recommendation !== "approve") {
+    return false;
+  }
+  if (!hasApproveFindingsSplitMetadata(input.parityMetadata)) {
+    return false;
+  }
+  const claimed = input.parityMetadata.findings_claimed_open_total;
+  const blocking = input.parityMetadata.findings_blocking_open_total;
+  const advisory = input.parityMetadata.findings_advisory_open_total;
+  return claimed > 0 && blocking === 0 && advisory === claimed;
 }
 
 function resolveAdvisoryContractInvariant(input: {
@@ -149,11 +172,14 @@ function resolveAdvisoryContractInvariant(input: {
 } {
   const advisoryFindingsListCount = input.advisoryFindings?.length ?? 0;
   const advisoryCount = input.parity.advisoryOpenTotal;
+  const hasAdvisoryList = input.advisoryFindings !== undefined;
   const hasAdvisorySignal =
-    advisoryCount !== null
+    (advisoryCount ?? 0) > 0
     || ((input.advisoryFindings?.length ?? 0) > 0);
   const advisoryCountListMismatch =
-    advisoryCount !== null && advisoryCount !== advisoryFindingsListCount;
+    hasAdvisoryList &&
+    advisoryCount !== null &&
+    advisoryCount !== advisoryFindingsListCount;
   return {
     advisoryCountListMismatch,
     advisoryFindingsOpenTotal: advisoryCount,
@@ -164,9 +190,44 @@ function resolveAdvisoryContractInvariant(input: {
 }
 
 function assertAdvisorySplitMetadataWhenRequired(input: {
+  route: string;
+  recommendation: MetaReviewRecommendation | undefined;
   parityMetadata: FindingsParityMetadata | null | undefined;
   advisoryFindings: ApprovalAdvisoryFinding[] | undefined;
 }): void {
+  if (input.route !== "human_gate_approve") {
+    return;
+  }
+
+  if (
+    input.recommendation === "approve"
+  ) {
+    if (!hasApproveFindingsSplitMetadata(input.parityMetadata)) {
+      throw new Error(
+        `${convergedAdvisoryMetadataRequiredReasonCode}: recommendation=approve requires findings_claimed_open_total, findings_blocking_open_total, and findings_advisory_open_total.`
+      );
+    }
+    const claimed = input.parityMetadata.findings_claimed_open_total;
+    const blocking = input.parityMetadata.findings_blocking_open_total;
+    const advisory = input.parityMetadata.findings_advisory_open_total;
+    if (blocking > 0) {
+      throw new Error(
+        `${metaReviewApproveBlockingFindingsPresentReasonCode}: recommendation=approve requires findings_blocking_open_total=0 (found ${blocking}).`
+      );
+    }
+    if (claimed !== blocking + advisory) {
+      throw new Error(
+        `${metaReviewFindingsParityGuardReasonCode}: findings_claimed_open_total (${claimed}) must equal findings_blocking_open_total + findings_advisory_open_total (${blocking + advisory}).`
+      );
+    }
+    const artifact = input.parityMetadata.findings_artifact_open_total;
+    if (typeof artifact === "number" && artifact !== claimed) {
+      throw new Error(
+        `${metaReviewFindingsParityGuardReasonCode}: findings_artifact_open_total (${artifact}) must equal findings_claimed_open_total (${claimed}).`
+      );
+    }
+  }
+
   const parity = resolveStructuredParityMetadataSnapshot(input.parityMetadata);
   const advisoryContractInvariant = resolveAdvisoryContractInvariant({
     parity,
@@ -182,19 +243,36 @@ function assertAdvisorySplitMetadataWhenRequired(input: {
 function resolveApprovalRequestSummaryConsistency(input: {
   summary: string;
   route: string;
+  recommendation: MetaReviewRecommendation | undefined;
   parityMetadata: FindingsParityMetadata | null | undefined;
   advisoryFindings: ApprovalAdvisoryFinding[] | undefined;
 }): {
   summary: string;
   metadata: Record<string, unknown>;
 } {
-  void input.route;
+  if (input.route !== "human_gate_approve") {
+    return {
+      summary: input.summary,
+      metadata: {}
+    };
+  }
+
   const parity = resolveStructuredParityMetadataSnapshot(input.parityMetadata);
   const advisoryContractInvariant = resolveAdvisoryContractInvariant({
     parity,
     advisoryFindings: input.advisoryFindings
   });
-  if (advisoryContractInvariant.advisoryCountListMismatch) {
+  const skipAdvisoryCountListMismatchNormalization =
+    advisoryContractInvariant.advisoryCountListMismatch &&
+    hasConsistentApproveAdvisoryOnlySplit({
+      route: input.route,
+      recommendation: input.recommendation,
+      parityMetadata: input.parityMetadata
+    });
+  if (
+    advisoryContractInvariant.advisoryCountListMismatch
+    && !skipAdvisoryCountListMismatchNormalization
+  ) {
     return {
       summary:
         `${approvalSummaryNormalizedReasonCode}: advisory findings aggregate/list mismatch detected (reason=${convergedAdvisoryCountListMismatchReasonCode}; advisory_open_total=${advisoryContractInvariant.advisoryFindingsOpenTotal}; advisory_list_total=${advisoryContractInvariant.advisoryFindingsListCount}).`,
@@ -210,8 +288,22 @@ function resolveApprovalRequestSummaryConsistency(input: {
 
   const noFindingsAssertion = evaluateNoFindingsSummaryFindingsAssertion(input.summary);
   const hasAdvisoryOpenFindings =
-    (advisoryContractInvariant.advisoryFindingsOpenTotal ?? 0) > 0;
-  if (noFindingsAssertion.hasNoFindingsAssertion && hasAdvisoryOpenFindings) {
+    (advisoryContractInvariant.advisoryFindingsOpenTotal ?? 0) > 0
+    || advisoryContractInvariant.advisoryFindingsListCount > 0;
+  const suppressNoFindingsDefenseForScopedBlockingSummary =
+    noFindingsAssertion.hasNoFindingsAssertion
+    && hasAdvisoryOpenFindings
+    && hasConsistentApproveAdvisoryOnlySplit({
+      route: input.route,
+      recommendation: input.recommendation,
+      parityMetadata: input.parityMetadata
+    })
+    && !hasGlobalNoFindingsSummaryAssertion(input.summary);
+  if (
+    noFindingsAssertion.hasNoFindingsAssertion
+    && hasAdvisoryOpenFindings
+    && !suppressNoFindingsDefenseForScopedBlockingSummary
+  ) {
     return {
       summary:
         `${approvalSummaryNormalizedReasonCode}: reviewer convergence narrative claim conflicts with advisory findings aggregate (reason=${convergedSummaryFindingsContradictionDefenseInDepthReasonCode}; advisory_open_total=${advisoryContractInvariant.advisoryFindingsOpenTotal}).`,
@@ -308,12 +400,15 @@ export async function appendHumanApprovalRequestEnvelope(input: {
   const appendEnvelope = input.appendEnvelope ?? appendProtocolEnvelope;
   const advisoryFindings = normalizeApprovalAdvisoryFindings(input.findings);
   assertAdvisorySplitMetadataWhenRequired({
+    route: input.route,
+    recommendation: input.recommendation,
     parityMetadata: input.parityMetadata,
     advisoryFindings
   });
   const summaryConsistency = resolveApprovalRequestSummaryConsistency({
     summary: input.summary,
     route: input.route,
+    recommendation: input.recommendation,
     parityMetadata: input.parityMetadata,
     advisoryFindings
   });
