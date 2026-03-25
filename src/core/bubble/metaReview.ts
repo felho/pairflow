@@ -468,10 +468,12 @@ function resolveCanonicalMetaReviewReportJson(input: {
       findingsBlockingOpenTotal === null &&
       findingsAdvisoryOpenTotal === null
     ) {
-      // Deep refresh path may omit report_json split fields; synthesize deterministic
-      // approve semantics to avoid stale-state rollback on approval refresh append.
-      findingsBlockingOpenTotal = 0;
-      findingsAdvisoryOpenTotal = findingsClaimedOpenTotal;
+      // Keep clean approve refresh deterministic while preserving fail-closed behavior
+      // for approve+open_findings payloads that omit explicit split metadata.
+      if (findingsClaimedOpenTotal === 0) {
+        findingsBlockingOpenTotal = 0;
+        findingsAdvisoryOpenTotal = 0;
+      }
     } else if (
       findingsBlockingOpenTotal === null &&
       findingsAdvisoryOpenTotal !== null

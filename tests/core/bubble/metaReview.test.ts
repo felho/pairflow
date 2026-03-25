@@ -688,6 +688,71 @@ describe("meta-review run", () => {
     expect(status.metaReview.latestSummary).toBe(refreshedSummary);
   });
 
+  it("fails closed on deep approve refresh when open findings split metadata is omitted", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_run_refresh_approval_missing_split_open_01",
+      task: "Meta deep rerun approve/open findings without split metadata"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "READY_FOR_HUMAN_APPROVAL",
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        last_command_at: "2026-03-08T12:04:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+    const beforeRun = await readStateSnapshot(bubble.paths.statePath);
+
+    let thrown: unknown;
+    try {
+      await runMetaReview(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          depth: "deep"
+        },
+        {
+          randomUUID: () => "run_meta_refresh_approval_missing_split_open_01",
+          now: new Date("2026-03-08T12:05:00.000Z"),
+          runLiveReview: async () => ({
+            recommendation: "approve",
+            summary: "2 advisory findings remain open.",
+            report_markdown: "# Deep rerun\n\nAdvisory findings remain open.",
+            report_json: {
+              findings_claim_state: "open_findings",
+              findings_claim_source: "meta_review_artifact",
+              findings_count: 2,
+              findings_claimed_open_total: 2
+            }
+          })
+        }
+      );
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toMatchObject({
+      reasonCode: "META_REVIEW_GATE_RUN_FAILED"
+    });
+    expect(String((thrown as Error).message)).toContain(
+      "CONVERGED_ADVISORY_METADATA_REQUIRED"
+    );
+
+    const afterFailedRun = await readStateSnapshot(bubble.paths.statePath);
+    expect(afterFailedRun.state).toEqual(beforeRun.state);
+  });
+
   it("uses shared approval-request normalization metadata on refresh path", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
