@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -648,6 +649,153 @@ describe("runBubbleWatchdog", () => {
     expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(result.state.meta_review?.last_autonomous_run_id).toBeNull();
     expect(result.envelope?.type).toBe("APPROVAL_REQUEST");
+  });
+
+  it("routes canonical rework submit snapshot before timeout and delivers auto-rework envelope", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_meta_submit_rework_01",
+      task: "Meta-review watchdog canonical rework route",
+      startedAt: "2026-02-22T12:00:00.000Z"
+    });
+    await moveToMetaReviewRunning({
+      statePath: bubble.paths.statePath,
+      activeSinceIso: "2026-02-22T12:00:00.000Z",
+      lastCommandAtIso: "2026-02-22T12:00:00.000Z"
+    });
+
+    const running = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...running.state,
+        meta_review: {
+          ...(running.state.meta_review ?? {
+            last_autonomous_run_id: null,
+            last_autonomous_status: null,
+            last_autonomous_recommendation: null,
+            last_autonomous_summary: null,
+            last_autonomous_report_ref: null,
+            last_autonomous_rework_target_message: null,
+            last_autonomous_updated_at: null,
+            auto_rework_count: 0,
+            auto_rework_limit: 5,
+            sticky_human_gate: false
+          }),
+          last_autonomous_run_id: null,
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "rework",
+          last_autonomous_summary: "Canonical structured submit captured for rework.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_rework_target_message: "Fix parity mismatch before next pass.",
+          last_autonomous_updated_at: "2026-02-22T12:01:00.000Z"
+        }
+      },
+      {
+        expectedFingerprint: running.fingerprint,
+        expectedState: "META_REVIEW_RUNNING"
+      }
+    );
+    const runId = "run_watchdog_meta_submit_rework_01";
+    const findingsRef = "artifacts/rework-findings.json";
+    const findingsRaw = `${JSON.stringify(
+      {
+        open_total: 1,
+        findings: [
+          {
+            id: "f_1",
+            status: "open"
+          }
+        ]
+      },
+      null,
+      2
+    )}\n`;
+    await writeFile(
+      join(bubble.paths.artifactsDir, "rework-findings.json"),
+      findingsRaw,
+      "utf8"
+    );
+    const findingsDigest = createHash("sha256")
+      .update(findingsRaw, "utf8")
+      .digest("hex");
+
+    await writeFile(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      `${JSON.stringify(
+        {
+          bubble_id: bubble.bubbleId,
+          run_id: runId,
+          recommendation: "rework",
+          summary: "Canonical rework snapshot for watchdog routing.",
+          report_ref: "artifacts/meta-review-last.md",
+          report_json: {
+            findings_claim_state: "open_findings",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 1,
+            findings_claimed_open_total: 1,
+            findings_blocking_open_total: 1,
+            findings_advisory_open_total: 0,
+            findings_artifact_ref: findingsRef,
+            meta_review_run_id: runId,
+            findings_digest_sha256: findingsDigest,
+            findings_artifact_status: "available"
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
+
+    const deliveries: Array<{
+      bubbleId: string;
+      envelopeType: string;
+      recipient: string;
+      decision: string | undefined;
+      messageRef: string | undefined;
+    }> = [];
+
+    const result = await runBubbleWatchdog(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:02:00.000Z")
+      },
+      {
+        emitTmuxDeliveryNotification: async (input) => {
+          deliveries.push({
+            bubbleId: input.bubbleId,
+            envelopeType: input.envelope.type,
+            recipient: input.envelope.recipient,
+            decision:
+              input.envelope.type === "APPROVAL_DECISION"
+                ? input.envelope.payload.decision
+                : undefined,
+            messageRef: input.messageRef
+          });
+          return {
+            delivered: true,
+            message: "ok"
+          };
+        }
+      }
+    );
+
+    expect(result.escalated).toBe(true);
+    expect(result.reason).toBe("escalated");
+    expect(result.state.state).toBe("RUNNING");
+    expect(result.state.active_role).toBe("implementer");
+    expect(result.envelope?.type).toBe("APPROVAL_DECISION");
+    expect(result.envelope?.payload.decision).toBe("revise");
+    expect(deliveries).toHaveLength(1);
+    expect(deliveries[0]).toMatchObject({
+      bubbleId: bubble.bubbleId,
+      envelopeType: "APPROVAL_DECISION",
+      recipient: bubble.config.agents.implementer,
+      decision: "revise"
+    });
   });
 
   it("does not route canonical submit snapshot when submit is outside active window", async () => {

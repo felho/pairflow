@@ -1,4 +1,5 @@
 import { hasCanonicalSubmitForActiveMetaReviewRound } from "../../../core/bubble/metaReview.js";
+import { resolveDeliveryMessageRef } from "../../../core/runtime/tmuxDelivery.js";
 import {
   MetaReviewGateError
 } from "../metaReviewGate/metaReviewGateCommandApi.js";
@@ -7,6 +8,7 @@ import type { readStateSnapshot } from "../../../core/state/stateStore.js";
 import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { BubbleWatchdogResult } from "../../application/watchdog/watchdogCommandContract.js";
+import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 
 function hasCanonicalMetaReviewSubmitInActiveWindow(
   state: BubbleStateSnapshot
@@ -84,12 +86,32 @@ function mapRecoveredMetaReviewResult(input: {
   };
 }
 
+function emitRecoveredMetaReviewDelivery(input: {
+  bubbleId: string;
+  resolved: Awaited<ReturnType<typeof resolveBubbleById>>;
+  envelope: NonNullable<BubbleWatchdogResult["envelope"]>;
+  emitDelivery: typeof emitTmuxDeliveryNotification;
+}): void {
+  void input.emitDelivery({
+    bubbleId: input.bubbleId,
+    bubbleConfig: input.resolved.bubbleConfig,
+    sessionsPath: input.resolved.bubblePaths.sessionsPath,
+    envelope: input.envelope,
+    messageRef: resolveDeliveryMessageRef({
+      bubbleId: input.bubbleId,
+      sessionsPath: input.resolved.bubblePaths.sessionsPath,
+      envelope: input.envelope
+    })
+  });
+}
+
 export async function maybeRouteMetaReviewBeforeExpiry(input: {
   state: BubbleStateSnapshot;
   resolved: Awaited<ReturnType<typeof resolveBubbleById>>;
   now: Date;
   readState: typeof readStateSnapshot;
   recoverMetaReviewRoute: typeof recoverMetaReviewGateFromSnapshot;
+  emitDelivery: typeof emitTmuxDeliveryNotification;
 }): Promise<BubbleWatchdogResult | null> {
   if (input.state.state !== "META_REVIEW_RUNNING") {
     return null;
@@ -110,11 +132,20 @@ export async function maybeRouteMetaReviewBeforeExpiry(input: {
     readState: input.readState,
     recoverMetaReviewRoute: input.recoverMetaReviewRoute
   });
-  return mapRecoveredMetaReviewResult({
+  const mapped = mapRecoveredMetaReviewResult({
     bubbleId: input.resolved.bubbleId,
     fallbackState: input.state,
     recovered
   });
+  if (mapped.escalated && mapped.envelope !== undefined) {
+    emitRecoveredMetaReviewDelivery({
+      bubbleId: input.resolved.bubbleId,
+      resolved: input.resolved,
+      envelope: mapped.envelope,
+      emitDelivery: input.emitDelivery
+    });
+  }
+  return mapped;
 }
 
 export async function maybeRouteMetaReviewOnExpiry(input: {
@@ -123,6 +154,7 @@ export async function maybeRouteMetaReviewOnExpiry(input: {
   now: Date;
   readState: typeof readStateSnapshot;
   recoverMetaReviewRoute: typeof recoverMetaReviewGateFromSnapshot;
+  emitDelivery: typeof emitTmuxDeliveryNotification;
 }): Promise<BubbleWatchdogResult | null> {
   if (input.state.state !== "META_REVIEW_RUNNING") {
     return null;
@@ -135,9 +167,18 @@ export async function maybeRouteMetaReviewOnExpiry(input: {
     readState: input.readState,
     recoverMetaReviewRoute: input.recoverMetaReviewRoute
   });
-  return mapRecoveredMetaReviewResult({
+  const mapped = mapRecoveredMetaReviewResult({
     bubbleId: input.resolved.bubbleId,
     fallbackState: input.state,
     recovered
   });
+  if (mapped.escalated && mapped.envelope !== undefined) {
+    emitRecoveredMetaReviewDelivery({
+      bubbleId: input.resolved.bubbleId,
+      resolved: input.resolved,
+      envelope: mapped.envelope,
+      emitDelivery: input.emitDelivery
+    });
+  }
+  return mapped;
 }

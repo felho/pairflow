@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -98,7 +98,10 @@ async function main() {
   };
 
   await mkdir(dirname(outputPath), { recursive: true });
-  await writeFile(outputPath, JSON.stringify(normalized, null, 2) + "\n", "utf8");
+  const outputContent = JSON.stringify(normalized, null, 2) + "\n";
+  const tempOutputPath = `${outputPath}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  await writeFile(tempOutputPath, outputContent, "utf8");
+  await rename(tempOutputPath, outputPath);
   process.stdout.write(`v11 corpus manifest written: ${outputPath}\n`);
 }
 
