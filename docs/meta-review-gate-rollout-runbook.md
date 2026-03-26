@@ -38,12 +38,43 @@ The rollout must stop on any of these codes:
 
 Any unclassified reason code is treated as blocking until explicitly classified.
 
+## Classified Non-Blocking Round-Local Reason Codes
+
+These codes are expected informational or route-shaping signals for the round-local freshness policy and do not block rollout by themselves:
+
+1. `META_REVIEW_FRESH_RUN_REQUIRED`
+2. `META_REVIEW_AUTHORITY_INVALIDATED_BY_NEW_ROUND`
+3. `META_REVIEW_STICKY_FLAG_CLEARED_ON_ROUND_INCREMENT`
+4. `META_REVIEW_CURRENT_ROUND_PENDING`
+
+`META_REVIEW_RECOVERY_REQUIRES_CURRENT_ROUND_RESULT` is not a generic rollout blocker by itself, but it is a smoke-check failure for recovery validation if it appears during the dedicated same-round recovery check where canonical current-round output is expected.
+
+Operator action outside that dedicated happy-path recovery smoke:
+
+1. Classify it as an expected unhappy-path diagnostic meaning the bubble does not currently have recoverable current-round meta-review output.
+2. Do not treat it as proof of a current-round recovery regression unless canonical current-round output was expected to exist.
+3. Inspect transcript and persisted historical artifacts to confirm the available output is prior-round-only.
+4. Route operations back toward a fresh current-round meta-review path rather than trying to force same-round recovery from prior-round artifacts.
+
 ## Pre-flight
 
 1. Start from the target worktree/release checkout.
 2. Ensure `dist/cli/index.js` exists in the worktree build output.
 3. Use the worktree-local CLI entrypoint for operator smoke commands: `node ./dist/cli/index.js ...`
 4. Keep `.pairflow/evidence/` writable so validation logs are captured.
+
+## Round-Local Freshness Rule
+
+Operator interpretation must follow these invariants:
+
+1. Each newly converged round requires a fresh meta-review run before the bubble is treated as ready for new human approval attention.
+2. Prior-round meta-review output is historical only after round increment; it must not be treated as active/current-round gate authority.
+3. After round increment and before a fresh current-round run exists, `bubble meta-review status` / `last-report` must be interpreted as pending/none for the current round.
+4. `sticky_human_gate` is not a cross-round bypass signal in this rollout phase; on round increment it is cleared from live state.
+5. Same-round recovery remains valid when canonical current-round meta-review output already exists and matches the active gate context.
+6. If prior-round details are needed for diagnosis, use transcript and persisted historical artifacts rather than current-round status surfaces.
+
+For this runbook, "persisted historical artifacts" means prior-round transcript entries or other persisted prior-round records used for diagnosis only, not as current-round routing or status authority.
 
 ## Phase 1 Reviewer Evidence Trust Baseline (I2 + I3)
 
@@ -134,19 +165,34 @@ Run each command from the release worktree root and capture the command, timesta
 
 5. `node ./dist/cli/index.js bubble meta-review status --id <bubble-id> --repo <repo-path> --verbose`
    Expected markers:
-   `Auto rework:`
-   `Sticky human gate:`
-   last autonomous summary/report ref visible when the bubble has run
+   current-round status renders without presenting prior-round recommendation/report or sticky carry-over as active
+   if no fresh current-round run exists after round increment, output shows pending/none semantics for the current round
+   if a fresh current-round run exists, the visible summary/report ref corresponds to the current round
 
-6. `node ./dist/cli/index.js bubble meta-review recover --id <bubble-id> --repo <repo-path>`
+6. `node ./dist/cli/index.js bubble meta-review last-report --id <bubble-id> --repo <repo-path> --verbose`
+   Expected markers:
+   after round increment and before a fresh current-round run, output shows pending/none or explicit no-current-round-report semantics
+   prior-round report is not rendered as the current-round last report
+   after a fresh current-round run, the visible report ref corresponds to the current round
+
+7. `node ./dist/cli/index.js bubble meta-review recover --id <bubble-id> --repo <repo-path>`
    Preconditions:
-   bubble is in `META_REVIEW_RUNNING` and has a persisted autonomous snapshot.
+   bubble is in `META_REVIEW_RUNNING` and has canonical current-round meta-review output already persisted for recovery.
    Expected markers:
    `route=...`
    `Lifecycle state: ...`
-   no new autonomous run is started for this command.
+   no new autonomous run is started for this command
+   no `META_REVIEW_RECOVERY_REQUIRES_CURRENT_ROUND_RESULT` reason is emitted when canonical current-round output exists
 
-7. `node ./dist/cli/index.js metrics report --from <iso-from> --to <iso-to>`
+8. `node ./dist/cli/index.js bubble meta-review recover --id <bubble-id> --repo <repo-path>`
+   Preconditions:
+   bubble is in `META_REVIEW_RUNNING`, but only prior-round meta-review output is available for diagnosis.
+   Expected markers:
+   `META_REVIEW_RECOVERY_REQUIRES_CURRENT_ROUND_RESULT`
+   no recovered current-round route is claimed
+   output is classified as expected unhappy-path diagnostic evidence, not same-round recovery success
+
+9. `node ./dist/cli/index.js metrics report --from <iso-from> --to <iso-to>`
    Expected markers:
    `meta_review_rollout.route_counts`
    `meta_review_rollout.rollout_blocked_events: 0`
