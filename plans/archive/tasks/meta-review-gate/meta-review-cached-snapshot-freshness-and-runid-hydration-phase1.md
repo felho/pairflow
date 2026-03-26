@@ -2,8 +2,10 @@
 artifact_type: task
 artifact_id: task_meta_review_cached_snapshot_freshness_runid_hydration_phase1_v1
 title: "Meta-Review Cached Snapshot Freshness + Run-ID Hydration Consistency (Phase 1)"
-status: draft
+status: superseded
 phase: phase1
+superseded_by: plans/tasks/meta-review-round-local-freshness-and-cross-round-sticky-bypass-removal-phase1.md
+execution_mode: historical_only
 target_files:
   - src/core/bubble/metaReviewGate.ts
   - src/core/bubble/metaReview.ts
@@ -19,7 +21,17 @@ owners:
   - "felho"
 ---
 
-# Task: Meta-Review Cached Snapshot Freshness + Run-ID Hydration Consistency (Phase 1)
+> Superseded task: canonical replacement is
+> `plans/tasks/meta-review-round-local-freshness-and-cross-round-sticky-bypass-removal-phase1.md`.
+> Kept in archive for historical traceability only.
+
+# Historical Task Snapshot: Meta-Review Cached Snapshot Freshness + Run-ID Hydration Consistency (Phase 1)
+
+## Execution Directive (Normative)
+
+1. Do not implement from this archived file.
+2. Use only `plans/tasks/meta-review-round-local-freshness-and-cross-round-sticky-bypass-removal-phase1.md` for active planning, coding, validation, and acceptance decisions.
+3. If any section below conflicts with the canonical task, treat this file as obsolete historical context.
 
 ## L0 - Policy
 
@@ -152,7 +164,8 @@ Normative rules:
 
 ## Spec Lock
 
-Task is `IMPLEMENTABLE` when:
+This archived document is `superseded` and has no execution authority. Historical rationale remains below for traceability only.
+The former implementability lock was:
 1. Cached stale state is always explicitly visible in status surfaces.
 2. Run-id is hydrated when provable from canonical report metadata.
 3. Missing/unreadable metadata paths remain fail-safe and diagnostic, not silent or crashing.
