@@ -1,0 +1,20 @@
+{
+  "id": "watchdog-expired-missing-session-escalates-v11",
+  "command": "watchdog",
+  "mode": "v11",
+  "description": "Watchdog v11 case escalates after timeout when the runtime session is missing.",
+  "input": {
+    "fixture": {
+      "scenario": "expired_missing_session_escalates"
+    }
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "WATCHDOG_EVALUATED",
+    "commandReason": "escalated",
+    "stateSubset": {
+      "state": "WAITING_HUMAN"
+    }
+  },
+  "tags": ["seed", "m5", "watchdog", "v11", "guard-path"]
+}

@@ -1,0 +1,20 @@
+{
+  "id": "watchdog-expired-quiet-window-escalates-v11",
+  "command": "watchdog",
+  "mode": "v11",
+  "description": "Watchdog v11 case escalates after timeout when the pane stays quiet for the full post-timeout window.",
+  "input": {
+    "fixture": {
+      "scenario": "expired_quiet_window_escalates"
+    }
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "WATCHDOG_EVALUATED",
+    "commandReason": "escalated",
+    "stateSubset": {
+      "state": "WAITING_HUMAN"
+    }
+  },
+  "tags": ["seed", "m5", "watchdog", "v11", "guard-path"]
+}
