@@ -64,7 +64,6 @@ Operator action outside that dedicated happy-path recovery smoke:
 2. Do not treat it as proof of a current-round recovery regression unless canonical current-round output was expected to exist.
 3. Inspect transcript and persisted historical artifacts to confirm the available output is prior-round-only.
 4. Route operations back toward a fresh current-round meta-review path rather than trying to force same-round recovery from prior-round artifacts.
-
 ## Pre-flight
 
 1. Start from the target worktree/release checkout.

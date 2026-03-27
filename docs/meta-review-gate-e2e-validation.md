@@ -3,14 +3,18 @@
 ## Rollout Contract
 
 - `rollout_readiness_gate_owner`: `felho`
-- `rollout_readiness_decision_source`: completed AC checklist below plus `node ./dist/cli/index.js metrics report --from <iso-from> --to <iso-to>` for the rollout window
+- `rollout_readiness_decision_source`: completed AC checklist below plus `<pairflow-command> metrics report --from <iso-from> --to <iso-to>` for the rollout window
 - `blocking_reason_codes`:
   - `META_REVIEW_GATE_RUN_FAILED`
   - `META_REVIEW_GATE_REWORK_DISPATCH_FAILED`
+  - `PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE`
   - `PAIRFLOW_COMMAND_PATH_STALE`
   - `META_REVIEW_RECONCILE_STATE_MISMATCH`
   - `ROLLOUT_EVIDENCE_INCOMPLETE`
   - `META_REVIEW_RUNNER_ERROR`
+
+`PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE` remains the fail-closed rollout blocker when `external` profile cannot resolve PATH `pairflow`.
+`PAIRFLOW_COMMAND_PATH_STALE` remains a rollout blocker for `self_host` identity failures. If it appears under `external`, treat that as a regression in command-profile semantics.
 
 If either owner or decision source is missing, rollout is `not ready`.
 
@@ -20,6 +24,7 @@ If either owner or decision source is missing, rollout is `not ready`.
 - Operator:
 - Repo path:
 - Worktree path:
+- Command profile:
 - Release/ref:
 - Rollback rehearsal mode: `dry-run | executed`
 - Metrics report window:
@@ -35,10 +40,10 @@ Record every executed command with timestamp and raw marker lines.
 | `pnpm lint` |  | `exit=0`, `.pairflow/evidence/lint.log` |  |
 | `pnpm typecheck` |  | `exit=0`, `.pairflow/evidence/typecheck.log` |  |
 | `pnpm test` |  | `exit=0`, `.pairflow/evidence/test.log` |  |
-| `node ./dist/cli/index.js bubble status --id <bubble-id> --repo <repo-path>` |  | `Command path: worktree_local` |  |
-| `node ./dist/cli/index.js bubble meta-review status --id <bubble-id> --repo <repo-path> --verbose` |  | `Auto rework:`, `Sticky human gate:` |  |
-| `node ./dist/cli/index.js bubble meta-review recover --id <bubble-id> --repo <repo-path>` |  | `route=...`, `Lifecycle state: ...`, no new run started |  |
-| `node ./dist/cli/index.js metrics report --from <iso-from> --to <iso-to>` |  | `meta_review_rollout.route_counts`, `rollout_blocked_events: 0` |  |
+| `<pairflow-command> bubble status --id <bubble-id> --repo <repo-path>` |  | `profile=external -> Command path: external`, `profile=self_host -> Command path: worktree_local` |  |
+| `<pairflow-command> bubble meta-review status --id <bubble-id> --repo <repo-path> --verbose` |  | `Auto rework:`, `Sticky human gate:` |  |
+| `<pairflow-command> bubble meta-review recover --id <bubble-id> --repo <repo-path>` |  | `route=...`, `Lifecycle state: ...`, no new run started |  |
+| `<pairflow-command> metrics report --from <iso-from> --to <iso-to>` |  | `meta_review_rollout.route_counts`, `rollout_blocked_events: 0`, `meta_review_rollout.pairflow_command_external_unavailable_count: 0`, `meta_review_rollout.pairflow_command_path_stale_count: 0` |  |
 
 ## AC Coverage Matrix
 
@@ -48,7 +53,7 @@ Record every executed command with timestamp and raw marker lines.
 | AC2 | Sticky human gate bypass validated end-to-end | `tests/core/bubble/metaReviewGate.test.ts` |
 | AC3 | Autonomous failure branches are fail-safe and auditable | `tests/core/bubble/metaReviewGate.test.ts`, `tests/core/agent/converged.test.ts` |
 | AC4 | No autonomous branch approves | `tests/core/bubble/metaReviewGate.test.ts` |
-| AC5 | Worker command path is worktree-local or explicitly blocked with `PAIRFLOW_COMMAND_PATH_STALE` | `tests/core/runtime/pairflowCommand.test.ts`, `tests/core/runtime/agentCommand.test.ts`, smoke `bubble status` command |
+| AC5 | Worker command path matches the configured authority model (`external` for `external`, `worktree_local` for `self_host`), or the active profile is explicitly fail-closed with the matching command-path blocker (`PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE` for `external`, `PAIRFLOW_COMMAND_PATH_STALE` for `self_host`) | `tests/core/runtime/pairflowCommand.test.ts`, `tests/core/runtime/agentCommand.test.ts`, smoke `bubble status` command |
 | AC6 | Restart/reconcile behavior is validated for meta-review states | `tests/core/runtime/restartRecovery.test.ts`, `tests/core/runtime/startupReconciler.test.ts`, `tests/core/bubble/metaReviewGate.test.ts` |
 | AC7 | UI list/detail/action payloads stay coherent after restart | `tests/core/ui/server.integration.test.ts` |
 | AC8 | Rollout metrics/events are emitted and reportable | `tests/core/metrics/report/report.test.ts`, `tests/core/metrics/report/format.test.ts` |
@@ -72,10 +77,12 @@ Record every executed command with timestamp and raw marker lines.
 
 ## Command-Path Determinism Check
 
-- Expected local entrypoint: `./dist/cli/index.js`
+- Expected authority by profile: `external -> PATH-resolved pairflow`, `self_host -> ./dist/cli/index.js`
 - Observed command-path status:
 - Observed active entrypoint:
-- If stale, capture exact `PAIRFLOW_COMMAND_PATH_STALE` output and mark rollout `not ready`.
+- If `external` cannot resolve PATH `pairflow`, capture exact `PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE` output and mark rollout `not ready`.
+- If stale under `self_host`, capture exact `PAIRFLOW_COMMAND_PATH_STALE` output and mark rollout `not ready`.
+- If stale under `external`, capture it as a regression and mark rollout `not ready`.
 
 ## Rollout Metrics Summary
 
@@ -83,6 +90,7 @@ Record every executed command with timestamp and raw marker lines.
 - `meta_review_rollout.auto_rework_dispatches`:
 - `meta_review_rollout.human_gate_entries`:
 - `meta_review_rollout.rollout_blocked_events`:
+- `meta_review_rollout.pairflow_command_external_unavailable_count`:
 - `meta_review_rollout.pairflow_command_path_stale_count`:
 - `meta_review_rollout.blocking_reason_code_counts`:
 
@@ -98,5 +106,5 @@ Mark the rollout `ready` only if:
 
 1. every AC row is filled and passes,
 2. every claimed validation command has a matching evidence log,
-3. the command-path check is `worktree_local`,
+3. the command-path check matches the configured profile authority,
 4. no blocking reason code is present in the metrics report or command/log bundle.

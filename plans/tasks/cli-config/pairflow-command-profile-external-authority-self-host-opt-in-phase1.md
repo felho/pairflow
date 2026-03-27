@@ -29,6 +29,7 @@ owners:
 
 Eliminate the remaining self-host drift model from `external` command profile semantics.
 When a bubble is configured with `pairflow_command_profile=external`, the authoritative Pairflow CLI must be the PATH-resolved external tool, not the bubble worktree's local Pairflow build, even when the target repository is Pairflow itself.
+Authority is selected by explicit profile, not by repository identity: `self_host` remains the only opt-in mode where the worktree-local Pairflow build is authoritative.
 
 ### Context
 
@@ -44,7 +45,7 @@ Observed mismatch in current implementation:
 2. Remove external-profile stale classification caused solely by mismatch with the worktree-local Pairflow build.
 3. Keep `self_host` as the only profile that requires worktree-local entrypoint identity and fail-closed stale behavior.
 4. Align rollout blocking reason aggregation with the corrected profile semantics.
-5. Update operator-facing docs/guidance so `external` no longer implies worktree-local authority.
+5. Update operator-facing docs/guidance so rollout readiness and smoke commands are profile-aware: `external` expects external authority, `self_host` expects worktree-local authority.
 6. Add regression tests for external-vs-self_host semantics in runtime helper, pane bootstrap, status, and converged rollout blocking.
 
 ### Out of Scope
@@ -81,7 +82,7 @@ Observed mismatch in current implementation:
 | CS3 | `src/core/runtime/pairflowCommand.ts` | operator guidance | `buildPairflowCommandGuidance(worktreePath, profile) -> string` | `profile === "external"` branch | Guidance must describe external tool authority and self_host opt-in clearly; it must not say external wrapper prefers worktree-local build. | P2 | required-now | current text contradicts intended semantics |
 | CS4 | `src/core/runtime/agentCommand.ts` | agent pane launch integration | `buildAgentCommand(input) -> string` | bootstrap composition | Generated agent command must preserve the corrected external-authority bootstrap semantics and keep self_host opt-in semantics unchanged. | P1 | required-now | pane lifecycle behavior must match helper contract |
 | CS5 | `src/v11/application/converged/metaReviewRolloutBlockingReasonCodes.ts` | rollout blocking resolver | `resolveMetaReviewRolloutBlockingReasonCodesV11(input) -> string[]` | stale reason aggregation | `PAIRFLOW_COMMAND_PATH_STALE` must be emitted only for `self_host` stale identity failures, not for external-mode mismatch. | P1 | required-now | rollout blockers must track real risk only |
-| CS6 | `docs/meta-review-gate-rollout-runbook.md` + `docs/meta-review-gate-e2e-validation.md` | rollout/operator docs | markdown guidance | command-path readiness sections | External profile must no longer require or prefer worktree-local command-path identity in docs. | P2 | required-now | active docs still imply worktree-local readiness |
+| CS6 | `docs/meta-review-gate-rollout-runbook.md` + `docs/meta-review-gate-e2e-validation.md` | rollout/operator docs | markdown guidance | command-path readiness sections, blocking reason-code enumerations, metrics expectations, determinism/failure interpretation sections, and metrics-report smoke marker rows | External profile must no longer require or prefer worktree-local command-path identity in docs, the blocking rollout reason-code contract must explicitly include `PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE` as the fail-closed external PATH-unavailable case, and the metrics-report smoke step must explicitly require both command-path blocker counters in runbook and evidence template. | P2 | required-now | active docs still imply worktree-local readiness and omitted the external unavailable blocker |
 | CS7 | `tests/core/runtime/pairflowCommand.test.ts` | helper regression tests | `vitest` | existing test file | Lock external non-stale mismatch behavior, external bootstrap authority, self_host stale identity, and guidance wording. | P1 | required-now | regression guard |
 | CS8 | `tests/core/runtime/agentCommand.test.ts` | bootstrap script regression tests | `vitest` | existing test file | Verify generated agent scripts preserve external-vs-self_host authority rules. | P1 | required-now | pane bootstrap parity |
 | CS9 | `tests/core/bubble/statusBubble.test.ts` | status semantics | `vitest` | existing test file | Verify status under external profile does not report stale due to worktree-local mismatch, while self_host still does. | P1 | required-now | user-visible correctness |
@@ -95,12 +96,14 @@ Observed mismatch in current implementation:
 | Self-host profile authority | explicit local-entrypoint identity and stale fail-closed | unchanged | `profile=self_host`, local worktree entrypoint | diagnostic detail fields | non-breaking | P1 | required-now |
 | Command-path status semantics | external profile may emit `PAIRFLOW_COMMAND_PATH_STALE` on local mismatch | external profile emits `external` or `missing`, never stale due only to local mismatch | `status`, `profile`, `message` | `entrypointConsistency` | behavior change | P1 | required-now |
 | Rollout blocking semantics | stale code may be emitted for external mismatch | stale code emitted only for self_host identity failures | `reasonCode`, `profile`, `status` | none | behavior change | P1 | required-now |
+| Operator rollout docs semantics | runbook/template assume worker-side readiness means `worktree_local` | runbook/template express profile-consistent readiness: `external -> external`, `self_host -> worktree_local` | configured profile, smoke command form, expected command-path marker | local entrypoint detail in external mode | documentation change | P2 | required-now |
 
 Normative rules:
 1. `external` means external tool authority, even when the bubble worktree belongs to the Pairflow repository.
 2. Worktree-local Pairflow identity is authoritative only in `self_host` profile.
 3. External-mode mismatch with a local worktree entrypoint may be observable, but it must not be represented as `PAIRFLOW_COMMAND_PATH_STALE`.
 4. External-mode readiness is blocked only when PATH-resolved `pairflow` is unavailable.
+5. Rollout docs and validation templates must describe command-path readiness as profile-consistent, not universally `worktree_local`.
 
 ### 3) Side Effects Contract
 
@@ -109,7 +112,8 @@ Normative rules:
 | Runtime bootstrap | external wrapper invokes PATH `pairflow`; self_host wrapper invokes local entrypoint | external wrapper silently executing worktree-local Pairflow | authority model must be profile-driven | P1 | required-now |
 | Status/diagnostics | external mode may report informational external status with active entrypoint detail | external mismatch represented as stale/blocking | diagnostics must match product semantics | P1 | required-now |
 | Rollout blockers | self_host stale remains blocking | external mismatch becoming rollout blocker | avoid false rollout stops | P1 | required-now |
-| Docs/guidance | clarify external-tool vs self-host boundary | wording that implies external should use worktree-local Pairflow | operator model must stay coherent | P2 | required-now |
+| Docs/guidance | clarify external-tool vs self-host boundary, including profile-aware smoke commands and readiness markers | wording that implies external should use worktree-local Pairflow | operator model must stay coherent | P2 | required-now |
+| Rollout reason-code docs | explicitly enumerate external PATH-unavailable fail-closed behavior | omitting `PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE` from rollout blocking reason-code lists or incident guidance | rollout docs must match required-now error contract | P2 | required-now |
 
 ### 4) Error and Fallback Contract
 
@@ -143,7 +147,7 @@ Normative rules:
 | T6 | Status under self_host profile stays stale | bubble uses `self_host` profile and local/active entrypoints differ | `bubble status` runs | command path is `stale` | P1 | required-now | automated test |
 | T7 | Rollout blocking excludes external mismatch | external command-path mismatch status | blocking reason resolver runs | no `PAIRFLOW_COMMAND_PATH_STALE` returned | P1 | required-now | automated test |
 | T8 | Rollout blocking includes self_host mismatch | self_host stale status | blocking reason resolver runs | `PAIRFLOW_COMMAND_PATH_STALE` returned | P1 | required-now | automated test |
-| T9 | External guidance wording is corrected | `profile=external` | guidance/docs render | wording describes external authority and self_host opt-in without worktree-local preference claim | P2 | required-now | automated/doc review |
+| T9 | Guidance and rollout docs are profile-aware | `profile=external` or `profile=self_host` | guidance/docs render | wording and smoke expectations describe external authority vs self_host opt-in without unconditional worktree-local readiness claim, rollout blocker lists explicitly include `PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE` for external PATH-unavailable failure, metrics/determinism sections mention the corresponding external-unavailable failure case, and the metrics-report smoke row explicitly requires both command-path blocker counters | P2 | required-now | automated/doc review |
 
 ## Acceptance Criteria
 
