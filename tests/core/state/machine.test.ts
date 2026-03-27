@@ -69,4 +69,55 @@ describe("state machine", () => {
     expect(running.round_role_history).toHaveLength(1);
     expect(running.last_command_at).toBe("2026-02-21T12:01:00Z");
   });
+
+  it("preserves active ownership when transition fields are omitted", () => {
+    const preparing = applyStateTransition(createInitialBubbleState("b_test_01"), {
+      to: "PREPARING_WORKSPACE"
+    });
+    const running = applyStateTransition(preparing, {
+      to: "RUNNING",
+      round: 1,
+      activeAgent: "codex",
+      activeRole: "implementer",
+      activeSince: "2026-02-21T12:00:00Z",
+      lastCommandAt: "2026-02-21T12:01:00Z"
+    });
+
+    const waitingHuman = applyStateTransition(running, {
+      to: "WAITING_HUMAN",
+      lastCommandAt: "2026-02-21T12:02:00Z"
+    });
+
+    expect(waitingHuman.active_agent).toBe("codex");
+    expect(waitingHuman.active_role).toBe("implementer");
+    expect(waitingHuman.active_since).toBe("2026-02-21T12:00:00Z");
+    expect(waitingHuman.last_command_at).toBe("2026-02-21T12:02:00Z");
+  });
+
+  it("clears active ownership when transition fields are explicitly set to null", () => {
+    const preparing = applyStateTransition(createInitialBubbleState("b_test_01"), {
+      to: "PREPARING_WORKSPACE"
+    });
+    const running = applyStateTransition(preparing, {
+      to: "RUNNING",
+      round: 1,
+      activeAgent: "codex",
+      activeRole: "implementer",
+      activeSince: "2026-02-21T12:00:00Z",
+      lastCommandAt: "2026-02-21T12:01:00Z"
+    });
+
+    const readyForApproval = applyStateTransition(running, {
+      to: "READY_FOR_APPROVAL",
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
+      lastCommandAt: "2026-02-21T12:03:00Z"
+    });
+
+    expect(readyForApproval.active_agent).toBeNull();
+    expect(readyForApproval.active_role).toBeNull();
+    expect(readyForApproval.active_since).toBeNull();
+    expect(readyForApproval.last_command_at).toBe("2026-02-21T12:03:00Z");
+  });
 });

@@ -63,6 +63,10 @@ Kotelezo context:
 ## 11) Migration Notes
 
 - Fokozatosan szukitjuk a legacy pathot.
+- 2026-03-27 inventory: a bubble CLI legacy shim felulet jelenleg csak a tiszta v11 re-export parancsokbol all:
+  `create`, `delete`, `inbox`, `kickoff`, `list`, `metaReview`, `open`, `reconcile`, `restart`, `start`, `status`.
+- Maintenance rule: uj bubble CLI shim csak explicit parity teszttel es inventory frissitessel kerulhet be.
+- Maintenance rule: a bubble CLI wrapper/shim reteg csak `node:*` vagy `v11/application/*` boundary-re importalhat; kozvetlen `core`/`shared` bekotes nem nohet vissza ebbe a retegre.
 
 ## 12) Done Criteria
 

@@ -67,6 +67,8 @@ Fontos elv:
 1. Current State:
    - Központi transition API jelen van és használt.
    - Fitness/contract védelmek aktívak.
+   - 2026-03-27: explicit regresszióteszt zárja a transition API `undefined = preserve`, `null = clear` active-ownership szemantikáját, hogy a state-gép ownership-megőrzés és ownership-clear útjai ne csak implicit konvenciók legyenek.
+   - 2026-03-27: teljes state-mátrix guard ellenőrzi, hogy a `getAllowedTransitions` mindig pontosan a `canTransition` által engedett célállapotokat adja vissza, így a transition query és enforcement felület nem tud csendben divergálni.
 2. Target State:
    - Stabil, jól tesztelt transition szerződés minimális további átalakítással.
 3. Gap:
@@ -87,6 +89,8 @@ Fontos elv:
 
 1. Current State:
    - Policy logika domain/application határon izolált.
+   - 2026-03-27: repeat-clean policy konzisztencia guard került a transcript payload és lifecycle metric surface közé, hogy a canonical és legacy clean-pass marker ugyanazzal a döntési inputtal azonosan jelenjen meg mindkét kimeneten.
+   - 2026-03-27: explicit guard ellenőrzi, hogy a converged severity allowlist, a severity predicate és a command input normalizer ugyanazt a nem-blocker policy-t érvényesítse (`P2`/`P3` only).
 2. Target State:
    - Konzisztens policy viselkedés minden érintett commandban.
 3. Gap:
@@ -267,6 +271,8 @@ Fontos elv:
 2026-03-27 progress note:
 - A legacy CLI shim-felületre coverage guard került: a meglévő bubble CLI entrypoint parity tesztek most már explicit mappinggel ellenőrzik a teljes v11 `*CliCommand` halmazt, így új legacy export shim nem tud csendben parity-guard nélkül bekerülni.
 - Hozzáadva a hiányzó `restart` és `reconcile` CLI entrypoint parity tesztek, hogy a jelenlegi shim-halmaz teljes legyen a coverage checkhez.
+- Rögzítve lett az aktuális közvetlen bubble CLI shim inventory is, plusz guard védi, hogy a tiszta `export *` shim-halmaz ne növekedjen csendben külön maintenance döntés nélkül.
+- Új import-boundary guard védi, hogy a bubble CLI wrapper réteg ne csússzon vissza közvetlen `core` vagy `shared` importokra; ezen a szinten csak `node:*` és `v11/application/*` boundary maradhat.
 
 ### 3.11 `m0-11 UseCaseOrchestrator`
 

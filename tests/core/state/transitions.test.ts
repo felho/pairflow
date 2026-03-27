@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { bubbleLifecycleStates } from "../../../src/types/bubble.js";
 import {
   assertTransitionAllowed,
   canTransition,
@@ -90,5 +91,15 @@ describe("state transitions", () => {
     expect(isFinalState("FAILED")).toBe(true);
     expect(isFinalState("CANCELLED")).toBe(true);
     expect(isFinalState("RUNNING")).toBe(false);
+  });
+
+  it("keeps getAllowedTransitions aligned with canTransition across the full state matrix", () => {
+    for (const from of bubbleLifecycleStates) {
+      const expected = bubbleLifecycleStates
+        .filter((to) => canTransition(from, to))
+        .sort();
+      const actual = [...getAllowedTransitions(from)].sort();
+      expect(actual).toEqual(expected);
+    }
   });
 });
