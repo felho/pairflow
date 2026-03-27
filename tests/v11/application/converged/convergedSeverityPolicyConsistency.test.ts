@@ -42,7 +42,7 @@ describe("converged severity policy consistency", () => {
 
   it("accepts only allowlisted severities and keeps blocker rejection reason code stable", () => {
     for (const severity of findingSeverities) {
-      if (convergedStructuredFindingSeverities.includes(severity as "P2" | "P3")) {
+      if (isConvergedStructuredFindingSeverity(severity)) {
         const normalized = normalizeConvergedCommandInput({
           summary: "ready",
           findings: [
