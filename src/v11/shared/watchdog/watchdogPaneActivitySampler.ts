@@ -9,9 +9,11 @@ import {
   type TmuxRunner
 } from "../../../core/runtime/tmuxManager.js";
 import type { AgentRole, BubbleConfig } from "../../../types/bubble.js";
+import { createBubbleWatchdogError } from "./watchdogCommandRuntime.js";
 
 export const WATCHDOG_PANE_ACTIVITY_SAMPLE_INTERVAL_MS = 60_000;
 export const WATCHDOG_PANE_QUIET_WINDOW_MS = 10 * 60_000;
+const watchdogActiveRoleInvalidReasonCode = "WATCHDOG_ACTIVE_ROLE_INVALID";
 
 export type PaneActivitySampleResult =
   | {
@@ -51,7 +53,15 @@ function resolveWatchdogTargetPaneIndex(
 }
 
 function assertUnreachable(value: never): never {
-  throw new Error(`Unhandled watchdog agent role: ${String(value)}`);
+  throw createBubbleWatchdogError({
+    reasonCode: watchdogActiveRoleInvalidReasonCode,
+    message: `Unhandled watchdog agent role: ${String(value)}.`,
+    context: {
+      subsystem: "watchdog_pane_activity_sampler",
+      function_name: "resolveWatchdogTargetPaneIndex",
+      active_role: String(value)
+    }
+  });
 }
 
 export async function sampleWatchdogPaneActivity(input: {

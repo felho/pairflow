@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { createBubbleWatchdogError } from "./watchdogCommandRuntime.js";
 
 export interface WatchdogPaneActivityRecord {
   bubble_id: string;
@@ -26,20 +27,91 @@ export type ReadWatchdogPaneActivityResult =
       error: string;
     };
 
+const watchdogPaneActivityFieldInvalidReasonCode =
+  "WATCHDOG_PANE_ACTIVITY_FIELD_INVALID";
+const watchdogPaneActivityRecordInvalidReasonCode =
+  "WATCHDOG_PANE_ACTIVITY_RECORD_INVALID";
+const watchdogPaneActivityStatusInvalidReasonCode =
+  "WATCHDOG_PANE_ACTIVITY_STATUS_INVALID";
+const watchdogPaneActivityBubbleMismatchReasonCode =
+  "WATCHDOG_PANE_ACTIVITY_BUBBLE_ID_MISMATCH";
+
+function createPaneActivityStoreError(input: {
+  reasonCode: string;
+  message: string;
+  context: PairflowCommandErrorContext;
+  cause?: unknown;
+}): Error {
+  return createBubbleWatchdogError(input);
+}
+
+function describeUnknownValue(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (
+    typeof value === "number"
+    || typeof value === "boolean"
+    || typeof value === "bigint"
+  ) {
+    return String(value);
+  }
+  if (value === null) {
+    return "null";
+  }
+  if (value === undefined) {
+    return "undefined";
+  }
+  if (Array.isArray(value)) {
+    return "array";
+  }
+  return typeof value;
+}
+
 function requireNonEmptyString(value: unknown, fieldName: string): string {
   if (typeof value !== "string") {
-    throw new Error(`${fieldName} must be a string.`);
+    throw createPaneActivityStoreError({
+      reasonCode: watchdogPaneActivityFieldInvalidReasonCode,
+      message: `${fieldName} must be a string.`,
+      context: {
+        subsystem: "watchdog_pane_activity_store",
+        field_name: fieldName,
+        expected_type: "string",
+        received_type: value === null ? "null" : typeof value
+      }
+    });
   }
   const trimmed = value.trim();
   if (trimmed.length === 0) {
-    throw new Error(`${fieldName} cannot be empty.`);
+    throw createPaneActivityStoreError({
+      reasonCode: watchdogPaneActivityFieldInvalidReasonCode,
+      message: `${fieldName} cannot be empty.`,
+      context: {
+        subsystem: "watchdog_pane_activity_store",
+        field_name: fieldName,
+        constraint: "non_empty_string"
+      }
+    });
   }
   return trimmed;
 }
 
 function parseWatchdogPaneActivityRecord(value: unknown): WatchdogPaneActivityRecord {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error("watchdog pane activity record must be a JSON object.");
+    throw createPaneActivityStoreError({
+      reasonCode: watchdogPaneActivityRecordInvalidReasonCode,
+      message: "watchdog pane activity record must be a JSON object.",
+      context: {
+        subsystem: "watchdog_pane_activity_store",
+        expected_type: "object",
+        received_type:
+          value === null
+            ? "null"
+            : Array.isArray(value)
+              ? "array"
+              : typeof value
+      }
+    });
   }
 
   const typed = value as Record<string, unknown>;
@@ -51,7 +123,15 @@ function parseWatchdogPaneActivityRecord(value: unknown): WatchdogPaneActivityRe
       && lastSampleStatusRaw !== "no_session"
       && lastSampleStatusRaw !== "pane_unreadable"
     ) {
-      throw new Error("last_sample_status must be sampled, no_session, or pane_unreadable.");
+      throw createPaneActivityStoreError({
+        reasonCode: watchdogPaneActivityStatusInvalidReasonCode,
+        message: "last_sample_status must be sampled, no_session, or pane_unreadable.",
+        context: {
+          subsystem: "watchdog_pane_activity_store",
+          field_name: "last_sample_status",
+          received_value: describeUnknownValue(lastSampleStatusRaw)
+        }
+      });
     }
     lastSampleStatus = lastSampleStatusRaw;
   }
@@ -144,9 +224,16 @@ export async function writeWatchdogPaneActivity(input: {
   record: WatchdogPaneActivityRecord;
 }): Promise<string> {
   if (input.record.bubble_id !== input.bubbleId) {
-    throw new Error(
-      `Watchdog pane activity bubble_id mismatch: expected ${input.bubbleId}, found ${input.record.bubble_id}.`
-    );
+    throw createPaneActivityStoreError({
+      reasonCode: watchdogPaneActivityBubbleMismatchReasonCode,
+      message:
+        `Watchdog pane activity bubble_id mismatch: expected ${input.bubbleId}, found ${input.record.bubble_id}.`,
+      context: {
+        subsystem: "watchdog_pane_activity_store",
+        expected_bubble_id: input.bubbleId,
+        actual_bubble_id: input.record.bubble_id
+      }
+    });
   }
 
   const path = getWatchdogPaneActivityPath(input.runtimeDir, input.bubbleId);
