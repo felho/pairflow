@@ -168,6 +168,11 @@ Fontos elv:
 8. Üzleti haszon:
    - Rövidebb MTTR, gyorsabb incident-feloldás.
 
+2026-03-27 progress note:
+- A top operációs error-családok (`start`, `restart`, `stop`, `reconcile`, `merge`) minimum context-sémát kaptak: az error objektum `context` mezőjében most kötelezően jelenik meg a `command_name`, akkor is, ha az eredeti hiba csak nyers stringként érkezett.
+- Hozzáadva egy schema-audit regresszióteszt, ami ellenőrzi a minimum `command_name` jelenlétét, a parsed text-context megtartását és azt is, hogy a meglévő message-formátum közben változatlan maradjon.
+- A `commit` error-család is bekerült ugyanebbe a minimum context-schema körbe, így a top operációs boundary audit ezen a batchen belül konzisztens lett.
+
 ### 3.7 `m0-07 MetricsDispatcher`
 
 1. Current State:

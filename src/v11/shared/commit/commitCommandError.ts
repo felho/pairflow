@@ -1,4 +1,7 @@
-import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
+import {
+  normalizePairflowCommandErrorInput,
+  withRequiredCommandContext
+} from "../errors/commandErrorDetails.js";
 
 export class BubbleCommitError extends Error {
   public readonly reasonCode: string | undefined;
@@ -9,7 +12,7 @@ export class BubbleCommitError extends Error {
     super(normalized.message, { cause: normalized.cause });
     this.name = "BubbleCommitError";
     this.reasonCode = normalized.reasonCode;
-    this.context = normalized.context;
+    this.context = withRequiredCommandContext(normalized.context, "commit");
   }
 }
 

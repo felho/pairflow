@@ -9,7 +9,10 @@ import {
   StartBubbleError
 } from "../../../core/bubble/startBubble.js";
 import { normalizeRestartBubbleError } from "./restartCommandErrorNormalization.js";
-import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
+import {
+  normalizePairflowCommandErrorInput,
+  withRequiredCommandContext
+} from "../errors/commandErrorDetails.js";
 
 export class RestartBubbleError extends Error {
   public readonly reasonCode: string | undefined;
@@ -20,7 +23,7 @@ export class RestartBubbleError extends Error {
     super(normalized.message, { cause: normalized.cause });
     this.name = "RestartBubbleError";
     this.reasonCode = normalized.reasonCode;
-    this.context = normalized.context;
+    this.context = withRequiredCommandContext(normalized.context, "restart");
   }
 }
 

@@ -1,5 +1,8 @@
 import { normalizeStartupReconcilerError } from "./reconcileCommandErrorNormalization.js";
-import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
+import {
+  normalizePairflowCommandErrorInput,
+  withRequiredCommandContext
+} from "../errors/commandErrorDetails.js";
 
 export class StartupReconcilerError extends Error {
   public readonly reasonCode: string | undefined;
@@ -10,7 +13,7 @@ export class StartupReconcilerError extends Error {
     super(normalized.message, { cause: normalized.cause });
     this.name = "StartupReconcilerError";
     this.reasonCode = normalized.reasonCode;
-    this.context = normalized.context;
+    this.context = withRequiredCommandContext(normalized.context, "reconcile");
   }
 }
 

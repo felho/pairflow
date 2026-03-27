@@ -68,6 +68,16 @@ export function formatPairflowCommandErrorMessage(
   return `${reasonPrefix}${input.message}${contextSuffix}`;
 }
 
+export function withRequiredCommandContext(
+  context: PairflowCommandErrorContext | undefined,
+  commandName: string
+): PairflowCommandErrorContext {
+  return {
+    command_name: commandName,
+    ...(context ?? {})
+  };
+}
+
 export function normalizePairflowCommandErrorInput(
   input: PairflowCommandErrorInput
 ): NormalizedPairflowCommandErrorDetails {

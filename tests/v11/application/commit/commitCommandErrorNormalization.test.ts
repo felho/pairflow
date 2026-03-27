@@ -19,6 +19,9 @@ describe("commitCommandErrorNormalization", () => {
     });
 
     expect(normalized).toBe(original);
+    expect(original.context).toEqual({
+      command_name: "commit"
+    });
   });
 
   it("maps bubble lookup and git command errors to BubbleCommitError", () => {
@@ -39,5 +42,8 @@ describe("commitCommandErrorNormalization", () => {
     });
     expect(fromGit).toBeInstanceOf(BubbleCommitError);
     expect((fromGit as Error).message).toContain("git commit failed");
+    expect((fromGit as BubbleCommitError).context).toEqual({
+      command_name: "commit"
+    });
   });
 });
