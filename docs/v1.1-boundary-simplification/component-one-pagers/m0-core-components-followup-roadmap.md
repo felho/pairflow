@@ -130,6 +130,13 @@ Fontos elv:
 8. Üzleti haszon:
    - Gyorsabb gate rollout, alacsonyabb változtatási költség.
 
+2026-03-27 progress note:
+- A Step 1 POC lezárult a `converged` commandon: egy minimális shared gate-pipeline kernel került be ordering, `block` short-circuit, `skip_list`, diagnosztika-aggregálás és strukturált evaluator-error védelemmel.
+- A `converged` policy + validation gate-út most a közös kernelre van kötve, miközben a command-specifikus execution/finalization lokális maradt.
+- A kapcsolódó unit, integration és contract védelem zöld; a rollout során feltárt regressziók ugyanebben a taskban le lettek zárva a publikus converged error-contract és a validation block preservation szintjén.
+- A current-cycle DoD ezzel teljesült.
+- Step 2 csak akkor nyitható, ha látható, visszatérő többhelyes gate-módosítás vagy mérhető rollout-költségcsökkenés igazolja, hogy érdemes további 1-2 commandra átvinni a mintát.
+
 ### 3.5 `m0-05 TranscriptStateReconciler`
 
 1. Current State:
