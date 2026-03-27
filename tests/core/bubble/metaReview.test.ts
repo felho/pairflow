@@ -3431,9 +3431,95 @@ describe("meta-review reads", () => {
     expect(status.parity_diagnostics).toContain(
       "META_REVIEW_SNAPSHOT_ROUND_STALE:snapshot_round=3;current_round=11"
     );
+    expect(status.has_run).toBe(false);
+    expect(status.last_autonomous_recommendation).toBeNull();
+    expect(status.last_autonomous_report_ref).toBeNull();
+    expect(status.sticky_human_gate).toBe(false);
     expect(lastReport.parity_diagnostics).toContain(
       "META_REVIEW_SNAPSHOT_ROUND_STALE:snapshot_round=3;current_round=11"
     );
+    expect(lastReport.parity_diagnostics).toEqual([
+      "META_REVIEW_SNAPSHOT_ROUND_STALE:snapshot_round=3;current_round=11"
+    ]);
+    expect(lastReport.has_report).toBe(false);
+    expect(lastReport.report_ref).toBeNull();
+    expect(lastReport.summary).toBeNull();
+    expect(lastReport.updated_at).toBeNull();
+  });
+
+  it("fails closed for legacy parity artifacts without a top-level round after round increment", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_read_snapshot_round_missing_01",
+      task: "Meta legacy no-round snapshot"
+    });
+
+    await runMetaReview(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath
+      },
+      {
+        randomUUID: () => "run_meta_read_snapshot_round_missing_01",
+        now: new Date("2026-03-08T11:29:00.000Z"),
+        runLiveReview: async () => ({
+          recommendation: "approve",
+          summary: "Legacy no-round artifact case",
+          report_markdown: "# Existing report"
+        })
+      }
+    );
+
+    const reportPayloadRaw = await readFile(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      "utf8"
+    );
+    const reportPayload = JSON.parse(reportPayloadRaw) as Record<string, unknown>;
+    delete reportPayload.round;
+    await writeFileFs(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      `${JSON.stringify(reportPayload, null, 2)}\n`,
+      "utf8"
+    );
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        round: 12
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const status = await getMetaReviewStatus({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+    const lastReport = await getMetaReviewLastReport({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+
+    expect(status.parity_diagnostics).toEqual([
+      "META_REVIEW_SNAPSHOT_ROUND_MISSING:current_round=12"
+    ]);
+    expect(status.has_run).toBe(false);
+    expect(status.last_autonomous_recommendation).toBeNull();
+    expect(status.last_autonomous_report_ref).toBeNull();
+    expect(status.sticky_human_gate).toBe(false);
+
+    expect(lastReport.parity_diagnostics).toEqual([
+      "META_REVIEW_SNAPSHOT_ROUND_MISSING:current_round=12"
+    ]);
+    expect(lastReport.has_report).toBe(false);
+    expect(lastReport.report_ref).toBeNull();
+    expect(lastReport.summary).toBeNull();
+    expect(lastReport.updated_at).toBeNull();
   });
 
   it("returns no-report response before first run", async () => {

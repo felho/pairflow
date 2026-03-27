@@ -1,4 +1,5 @@
 import { applyStateTransition } from "../../../core/state/machine.js";
+import { clearLiveMetaReviewSnapshot } from "../../../core/bubble/metaReview.js";
 import {
   StateStoreConflictError,
   type LoadedStateSnapshot,
@@ -29,10 +30,17 @@ export async function stageReadyForApprovalState(input: {
       activeSince: null,
       lastCommandAt: input.nowIso
     });
-    return await input.writeState(input.statePath, nextReadyForApproval, {
-      expectedFingerprint: input.loadedRunning.fingerprint,
-      expectedState: "RUNNING"
-    });
+    return await input.writeState(
+      input.statePath,
+      {
+        ...nextReadyForApproval,
+        meta_review: clearLiveMetaReviewSnapshot(nextReadyForApproval.meta_review)
+      },
+      {
+        expectedFingerprint: input.loadedRunning.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
   } catch (error) {
     if (error instanceof StateStoreConflictError) {
       throw toConflictError(error);
@@ -50,8 +58,12 @@ export async function restoreRunningAfterStagedReadyFailure(input: {
   readyForApproval: LoadedStateSnapshot;
 }): Promise<never> {
   const rootGateError = toMetaReviewGateError(input.rootError);
+  const restoredRunningState = {
+    ...input.loadedRunning.state,
+    meta_review: clearLiveMetaReviewSnapshot(input.loadedRunning.state.meta_review)
+  };
   try {
-    await input.writeState(input.statePath, input.loadedRunning.state, {
+    await input.writeState(input.statePath, restoredRunningState, {
       expectedFingerprint: input.readyForApproval.fingerprint,
       expectedState: "READY_FOR_APPROVAL"
     });

@@ -1,4 +1,5 @@
 import type { applyStateTransition } from "../../../core/state/machine.js";
+import { clearLiveMetaReviewSnapshot } from "../../../core/bubble/metaReview.js";
 import type {
   AgentName,
   BubbleReworkIntentRecord,
@@ -30,7 +31,7 @@ export function resolveApprovalNextState(
   }
 
   const nextRound = input.state.round + 1;
-  return input.applyStateTransition(input.state, {
+  const resumed = input.applyStateTransition(input.state, {
     to: "RUNNING",
     round: nextRound,
     activeAgent: input.implementer,
@@ -44,6 +45,10 @@ export function resolveApprovalNextState(
       switched_at: input.nowIso
     }
   });
+  return {
+    ...resumed,
+    meta_review: clearLiveMetaReviewSnapshot(resumed.meta_review)
+  };
 }
 
 export function mapImmediateReworkResult(

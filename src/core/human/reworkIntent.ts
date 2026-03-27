@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 
+import { clearLiveMetaReviewSnapshot } from "../bubble/metaReview.js";
 import { applyStateTransition } from "../state/machine.js";
 import type {
   AgentName,
@@ -139,6 +140,7 @@ export function applyDeferredReworkIntent(
   return {
     state: {
       ...resumed,
+      meta_review: clearLiveMetaReviewSnapshot(resumed.meta_review),
       pending_rework_intent: null,
       rework_intent_history: [
         ...(resumed.rework_intent_history ?? []),

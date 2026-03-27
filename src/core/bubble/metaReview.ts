@@ -234,6 +234,23 @@ function normalizeMetaReviewSnapshot(
   return snapshot;
 }
 
+export function clearLiveMetaReviewSnapshot(
+  snapshot: BubbleMetaReviewSnapshotState | undefined
+): BubbleMetaReviewSnapshotState {
+  const normalized = normalizeMetaReviewSnapshot(snapshot);
+  return {
+    ...normalized,
+    last_autonomous_run_id: null,
+    last_autonomous_status: null,
+    last_autonomous_recommendation: null,
+    last_autonomous_summary: null,
+    last_autonomous_report_ref: null,
+    last_autonomous_rework_target_message: null,
+    last_autonomous_updated_at: null,
+    sticky_human_gate: false
+  };
+}
+
 function normalizeOptionalText(value: string | undefined): string | null {
   if (!isNonEmptyString(value)) {
     return null;
@@ -900,6 +917,19 @@ function createMetaReviewStatusView(
     findings_parity_status: parity.findings_parity_status,
     parity_diagnostics: [...parityDiagnostics]
   };
+}
+
+function isRoundLocalMetaReviewSnapshotStale(input: {
+  currentRound: number;
+  snapshotRound: number | null;
+  snapshotRoundIdentity: "present" | "missing" | "unavailable";
+}): boolean {
+  return (
+    isInteger(input.currentRound) &&
+    input.currentRound > 0 &&
+    ((input.snapshotRoundIdentity === "missing" && input.snapshotRound === null) ||
+      (input.snapshotRound !== null && input.snapshotRound < input.currentRound))
+  );
 }
 
 const metaReviewRunnerModes = ["pane_agent", "agent", "unavailable"] as const;
@@ -2046,8 +2076,23 @@ export async function getMetaReviewStatus(
   });
   const freshnessDiagnostics = resolveSnapshotFreshnessDiagnostics({
     currentRound: loadedState.state.round,
-    snapshotRound: parityRead.snapshotRound
+    snapshotRound: parityRead.snapshotRound,
+    snapshotRoundIdentity: parityRead.snapshotRoundIdentity
   });
+  if (
+    isRoundLocalMetaReviewSnapshotStale({
+      currentRound: loadedState.state.round,
+      snapshotRound: parityRead.snapshotRound,
+      snapshotRoundIdentity: parityRead.snapshotRoundIdentity
+    })
+  ) {
+    return createMetaReviewStatusView(
+      resolved.bubbleId,
+      clearLiveMetaReviewSnapshot(snapshot),
+      emptyMetaReviewFindingsParitySnapshot,
+      [...parityRead.diagnostics, ...freshnessDiagnostics]
+    );
+  }
 
   return createMetaReviewStatusView(
     resolved.bubbleId,
@@ -2074,11 +2119,16 @@ const metaReviewParityArtifactShapeInvalidReasonCode =
 const metaReviewParityArtifactReportJsonInvalidReasonCode =
   "META_REVIEW_PARITY_REPORT_JSON_INVALID";
 const metaReviewSnapshotRoundStaleReasonCode = "META_REVIEW_SNAPSHOT_ROUND_STALE";
+const metaReviewSnapshotRoundMissingReasonCode =
+  "META_REVIEW_SNAPSHOT_ROUND_MISSING";
+
+type MetaReviewSnapshotRoundIdentity = "present" | "missing" | "unavailable";
 
 interface MetaReviewParityArtifactReadResult {
   parity: MetaReviewFindingsParitySnapshot;
   diagnostics: string[];
   snapshotRound: number | null;
+  snapshotRoundIdentity: MetaReviewSnapshotRoundIdentity;
 }
 
 function resolveParityArtifactReadErrorCode(error: unknown): string {
@@ -2101,7 +2151,8 @@ function readMetaReviewParitySnapshotFromArtifactRaw(
     return {
       parity: { ...emptyMetaReviewFindingsParitySnapshot },
       diagnostics: [metaReviewParityArtifactParseFailedReasonCode],
-      snapshotRound: null
+      snapshotRound: null,
+      snapshotRoundIdentity: "unavailable"
     };
   }
 
@@ -2109,7 +2160,8 @@ function readMetaReviewParitySnapshotFromArtifactRaw(
     return {
       parity: { ...emptyMetaReviewFindingsParitySnapshot },
       diagnostics: [metaReviewParityArtifactShapeInvalidReasonCode],
-      snapshotRound: null
+      snapshotRound: null,
+      snapshotRoundIdentity: "unavailable"
     };
   }
 
@@ -2121,7 +2173,8 @@ function readMetaReviewParitySnapshotFromArtifactRaw(
     return {
       parity: { ...emptyMetaReviewFindingsParitySnapshot },
       diagnostics: [metaReviewParityArtifactReportJsonInvalidReasonCode],
-      snapshotRound: null
+      snapshotRound: null,
+      snapshotRoundIdentity: "unavailable"
     };
   }
 
@@ -2136,19 +2189,25 @@ function readMetaReviewParitySnapshotFromArtifactRaw(
   return {
     parity: readMetaReviewFindingsParitySnapshot(reportJson),
     diagnostics: [],
-    snapshotRound
+    snapshotRound,
+    snapshotRoundIdentity: snapshotRound === null ? "missing" : "present"
   };
 }
 
 function resolveSnapshotFreshnessDiagnostics(input: {
   currentRound: number;
   snapshotRound: number | null;
+  snapshotRoundIdentity: MetaReviewSnapshotRoundIdentity;
 }): string[] {
-  if (
-    !isInteger(input.currentRound) ||
-    input.currentRound < 1 ||
-    input.snapshotRound === null
-  ) {
+  if (!isInteger(input.currentRound) || input.currentRound < 1) {
+    return [];
+  }
+  if (input.snapshotRoundIdentity === "missing" && input.snapshotRound === null) {
+    return [
+      `${metaReviewSnapshotRoundMissingReasonCode}:current_round=${input.currentRound}`
+    ];
+  }
+  if (input.snapshotRound === null) {
     return [];
   }
   if (input.snapshotRound < input.currentRound) {
@@ -2172,7 +2231,8 @@ async function readMetaReviewParitySnapshotFromArtifact(input: {
       diagnostics: [
         `${metaReviewParityArtifactReadFailedReasonCode}:${resolveParityArtifactReadErrorCode(error)}`
       ],
-      snapshotRound: null
+      snapshotRound: null,
+      snapshotRoundIdentity: "unavailable"
     };
   }
 
@@ -2232,9 +2292,40 @@ export async function getMetaReviewLastReport(
     ...parityRead.diagnostics,
     ...resolveSnapshotFreshnessDiagnostics({
       currentRound: loadedState.state.round,
-      snapshotRound: parityRead.snapshotRound
+      snapshotRound: parityRead.snapshotRound,
+      snapshotRoundIdentity: parityRead.snapshotRoundIdentity
     })
   ];
+  if (
+    isRoundLocalMetaReviewSnapshotStale({
+      currentRound: loadedState.state.round,
+      snapshotRound: parityRead.snapshotRound,
+      snapshotRoundIdentity: parityRead.snapshotRoundIdentity
+    })
+  ) {
+    const freshnessDiagnostics = resolveSnapshotFreshnessDiagnostics({
+      currentRound: loadedState.state.round,
+      snapshotRound: parityRead.snapshotRound,
+      snapshotRoundIdentity: parityRead.snapshotRoundIdentity
+    });
+    return {
+      bubbleId: resolved.bubbleId,
+      has_report: false,
+      report_ref: null,
+      summary: null,
+      updated_at: null,
+      report_markdown: null,
+      findings_claimed_open_total: null,
+      findings_artifact_open_total: null,
+      findings_blocking_open_total: null,
+      findings_advisory_open_total: null,
+      findings_artifact_status: null,
+      findings_digest_sha256: null,
+      meta_review_run_id: null,
+      findings_parity_status: null,
+      parity_diagnostics: freshnessDiagnostics
+    };
+  }
 
   let reportMarkdown: string;
   try {

@@ -594,7 +594,8 @@ async function executeMetaReviewGateCase(input: {
         },
         {
           setMetaReviewerPaneBinding: () => Promise.resolve(
-            caseInput.applyScenario === "meta_review_running"
+            caseInput.applyScenario === "meta_review_running" ||
+              caseInput.applyScenario === "sticky_bypass"
               ? {
                   updated: true,
                   record: activeMetaReviewerRecord
