@@ -19,7 +19,8 @@ export function resolveMetaReviewRolloutBlockingReasonCodesV11(
     codes.add("META_REVIEW_GATE_REWORK_DISPATCH_FAILED");
   }
   if (
-    input.commandPathStatus.status === "stale"
+    input.commandPathStatus.profile === "self_host"
+    && input.commandPathStatus.status === "stale"
     && input.commandPathStatus.reasonCode === "PAIRFLOW_COMMAND_PATH_STALE"
   ) {
     codes.add("PAIRFLOW_COMMAND_PATH_STALE");

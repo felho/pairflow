@@ -1,4 +1,4 @@
-import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -11,6 +11,7 @@ import { emitHumanReply } from "../../../src/core/human/reply.js";
 import { getBubbleStatus } from "../../../src/core/bubble/statusBubble.js";
 import { resolveDocContractGateArtifactPath } from "../../../src/core/gates/docContractGates.js";
 import { appendProtocolEnvelope } from "../../../src/core/protocol/transcriptStore.js";
+import { resolveWorktreePairflowEntrypoint } from "../../../src/core/runtime/pairflowCommand.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -552,6 +553,13 @@ describe("getBubbleStatus", () => {
       bubbleId: "b_status_cmd_profile_external_01",
       task: "Status command profile external"
     });
+    const localEntrypoint = resolveWorktreePairflowEntrypoint(
+      bubble.paths.worktreePath
+    );
+    await mkdir(join(bubble.paths.worktreePath, "dist", "cli"), {
+      recursive: true
+    });
+    await writeFile(localEntrypoint, "console.log('local pairflow');\n", "utf8");
 
     const status = await withFakePairflowOnPath(async () =>
       getBubbleStatus({
@@ -563,6 +571,10 @@ describe("getBubbleStatus", () => {
     expect(status.commandPath.profile).toBe("external");
     expect(status.commandPath.status).toBe("external");
     expect(status.commandPath.reasonCode).toBeUndefined();
+    expect(status.commandPath.localEntrypoint).toBe(localEntrypoint);
+    expect(status.commandPath.message).toContain(
+      "external Pairflow command profile active"
+    );
   });
 
   it("reports stale only for self_host command profile", async () => {
