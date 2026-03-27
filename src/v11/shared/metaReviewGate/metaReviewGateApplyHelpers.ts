@@ -1,25 +1,12 @@
-import type { readFile } from "node:fs/promises";
-
 import type { appendProtocolEnvelope, AppendProtocolEnvelopeResult } from "../../../core/protocol/transcriptStore.js";
 import {
   type LoadedStateSnapshot,
   type writeStateSnapshot
 } from "../../../core/state/stateStore.js";
-import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import {
-  deliveryTargetRoleMetadataKey,
-  type FindingsParityMetadata
+  deliveryTargetRoleMetadataKey
 } from "../../../types/protocol.js";
-import {
-  readMetaReviewReportJsonArtifact,
-  resolveAdvisoryFindingsFromFindings,
-  resolveAdvisoryFindingsFromReportJson,
-  resolveFindingsOpenSplitFromFindings,
-  resolveFindingsParityMetadataFromReportJson
-} from "./metaReviewGateFindingsMetadata.js";
-import { toMetaReviewGateError } from "./metaReviewGateErrorConversion.js";
 export { resolveMetaReviewerPaneWarning } from "./metaReviewGatePaneBinding.js";
-import { restoreRunningAfterStagedReadyFailure } from "./metaReviewGateStateStaging.js";
 export {
   restoreRunningAfterStagedReadyFailure,
   stageMetaReviewRunningState,
@@ -27,7 +14,6 @@ export {
 } from "./metaReviewGateStateStaging.js";
 import {
   buildHumanGateSummary,
-  metaReviewGateRollbackAppliedReasonCode,
   metaReviewerAgent,
   persistHumanGateRoute
 } from "./metaReviewGateShared.js";
@@ -113,104 +99,4 @@ export async function persistMetaReviewRunFailedRoute(input: {
     targetState: "META_REVIEW_FAILED",
     stickyHumanGate: false
   });
-}
-
-function resolveConvergenceParityMetadataFromFindings(
-  findings: unknown
-): FindingsParityMetadata | null {
-  const split = resolveFindingsOpenSplitFromFindings(findings);
-  if (split === null) {
-    return null;
-  }
-  const openTotal =
-    split.findings_blocking_open_total + split.findings_advisory_open_total;
-  return {
-    findings_claimed_open_total: openTotal,
-    // This snapshot is convergence-derived (no artifact parity read),
-    // therefore artifact parity fields stay explicit null.
-    findings_artifact_open_total: null,
-    findings_blocking_open_total: split.findings_blocking_open_total,
-    findings_advisory_open_total: split.findings_advisory_open_total,
-    findings_artifact_status: null,
-    findings_digest_sha256: null,
-    meta_review_run_id: null,
-    findings_parity_status: null
-  };
-}
-
-export async function routeStickyHumanGateBypass(input: {
-  appendEnvelope: typeof appendProtocolEnvelope;
-  writeState: typeof writeStateSnapshot;
-  readFileFn: typeof readFile;
-  bubblePaths: Awaited<ReturnType<typeof resolveBubbleById>>["bubblePaths"];
-  lockPath: string;
-  now: Date;
-  nowIso: string;
-  bubbleId: string;
-  summary: string;
-  refs: string[];
-  findings?: Array<{
-    severity: "P2" | "P3";
-    title: string;
-    refs?: string[];
-  }>;
-  loadedRunning: LoadedStateSnapshot;
-  readyForApproval: LoadedStateSnapshot;
-}): Promise<MetaReviewGateResult> {
-  const parityArtifactRead = await readMetaReviewReportJsonArtifact({
-    artifactPath: input.bubblePaths.metaReviewLastJsonArtifactPath,
-    readFileFn: input.readFileFn
-  });
-  const hasCurrentRoundFindingsSignal = input.findings !== undefined;
-  const advisoryFindings = hasCurrentRoundFindingsSignal
-    ? resolveAdvisoryFindingsFromFindings(input.findings)
-    : resolveAdvisoryFindingsFromReportJson(parityArtifactRead.reportJson);
-  const artifactParityMetadata = resolveFindingsParityMetadataFromReportJson(
-    parityArtifactRead.reportJson
-  );
-  // Sticky bypass source priority is intentionally symmetric across advisory list
-  // and parity metadata:
-  // - if current-round findings are present (even empty array), use only current-round
-  //   derived advisory/parity view to avoid cross-round artifact leakage;
-  // - otherwise fall back to the persisted meta-review artifact snapshot for both.
-  const parityMetadata = hasCurrentRoundFindingsSignal
-    ? resolveConvergenceParityMetadataFromFindings(input.findings)
-    : artifactParityMetadata;
-  try {
-    return await persistHumanGateRoute({
-      appendEnvelope: input.appendEnvelope,
-      writeState: input.writeState,
-      statePath: input.bubblePaths.statePath,
-      transcriptPath: input.bubblePaths.transcriptPath,
-      inboxPath: input.bubblePaths.inboxPath,
-      lockPath: input.lockPath,
-      now: input.now,
-      nowIso: input.nowIso,
-      bubbleId: input.bubbleId,
-      summary: input.summary,
-      refs: input.refs,
-      loaded: input.readyForApproval,
-      expectedState: "READY_FOR_APPROVAL",
-      route: "human_gate_sticky_bypass",
-      ...(parityMetadata !== null ? { parityMetadata } : {}),
-      ...(advisoryFindings !== undefined ? { findings: advisoryFindings } : {}),
-      rollbackStateOnAppendFailure: input.loadedRunning.state
-    });
-  } catch (error) {
-    const gateError = toMetaReviewGateError(error);
-    if (
-      gateError.diagnostics?.rollbackOutcome === "applied" &&
-      gateError.diagnostics.rollbackReasonCode === metaReviewGateRollbackAppliedReasonCode
-    ) {
-      throw gateError;
-    }
-    return restoreRunningAfterStagedReadyFailure({
-      rootError: gateError,
-      stageReasonCode: "META_REVIEW_GATE_STICKY_BYPASS_ROUTE_FAILED",
-      writeState: input.writeState,
-      statePath: input.bubblePaths.statePath,
-      loadedRunning: input.loadedRunning,
-      readyForApproval: input.readyForApproval
-    });
-  }
 }

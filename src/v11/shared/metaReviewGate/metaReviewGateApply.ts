@@ -3,10 +3,8 @@ import {
   persistMetaReviewRunFailedRoute,
   resolveMetaReviewerPaneWarning,
   restoreRunningAfterStagedReadyFailure,
-  routeStickyHumanGateBypass,
   stageMetaReviewRunningState
 } from "./metaReviewGateApplyHelpers.js";
-import { normalizeMetaReviewSnapshot } from "./metaReviewGateShared.js";
 import { routeMetaReviewKickoffOrRunFailed } from "./metaReviewGateApplyRunRouting.js";
 import { initializeApplyMetaReviewGateExecutionContext } from "./metaReviewGateApplyContext.js";
 import type {
@@ -23,28 +21,6 @@ export async function applyMetaReviewGateOnConvergence(
     input,
     dependencies
   );
-
-  const readyMetaReview = normalizeMetaReviewSnapshot(
-    context.readyForApproval.state.meta_review
-  );
-
-  if (readyMetaReview.sticky_human_gate) {
-    return routeStickyHumanGateBypass({
-      appendEnvelope: context.appendEnvelope,
-      writeState: context.writeState,
-      readFileFn: context.readFileFn,
-      bubblePaths: context.resolved.bubblePaths,
-      lockPath: context.lockPath,
-      now: context.now,
-      nowIso: context.nowIso,
-      bubbleId: context.resolved.bubbleId,
-      summary: input.summary,
-      refs: context.refs,
-      ...(input.findings !== undefined ? { findings: input.findings } : {}),
-      loadedRunning: context.loadedRunning,
-      readyForApproval: context.readyForApproval
-    });
-  }
 
   let metaReviewRunningState: LoadedStateSnapshot;
   try {

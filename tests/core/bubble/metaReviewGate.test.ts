@@ -442,12 +442,12 @@ describe("applyMetaReviewGateOnConvergence", () => {
     expect(setPaneCalls).toEqual([true, false]);
   });
 
-  it("bypasses meta-review run when sticky_human_gate is already true", async () => {
+  it("requires a fresh meta-review run when legacy sticky state leaks into a later round", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
-      bubbleId: "b_meta_gate_async_sticky_01",
-      task: "Sticky gate bypass"
+      bubbleId: "b_meta_gate_round_local_01",
+      task: "Round-local freshness"
     });
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
@@ -455,12 +455,14 @@ describe("applyMetaReviewGateOnConvergence", () => {
       bubble.paths.statePath,
       {
         ...loaded.state,
+        round: 4,
         meta_review: {
           ...(loaded.state.meta_review ?? defaultMetaReviewSnapshot()),
           sticky_human_gate: true,
-          last_autonomous_status: "inconclusive",
-          last_autonomous_recommendation: "inconclusive",
-          last_autonomous_summary: "Sticky human gate active.",
+          last_autonomous_run_id: "run_prev_round",
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Previous round approve.",
           last_autonomous_report_ref: "artifacts/meta-review-last.md",
           last_autonomous_updated_at: "2026-03-12T12:03:00.000Z"
         }
@@ -475,29 +477,12 @@ describe("applyMetaReviewGateOnConvergence", () => {
       `${JSON.stringify(
         {
           bubble_id: bubble.bubbleId,
-          run_id: "run_sticky_bypass_parity_01",
+          run_id: "run_prev_round",
+          round: 3,
           report_json: {
-            findings_count: 2,
-            findings_claimed_open_total: 2,
-            findings_artifact_open_total: 1,
-            findings_blocking_open_total: 0,
-            findings_advisory_open_total: 2,
-            findings_artifact_status: "available",
-            findings_digest_sha256:
-              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            meta_review_run_id: "run_sticky_bypass_parity_01",
-            findings_parity_status: "guard_failed",
-            findings: [
-              {
-                severity: "P2",
-                title: "sticky advisory a",
-                refs: ["artifact://sticky/a"]
-              },
-              {
-                severity: "P3",
-                title: "sticky advisory b"
-              }
-            ]
+            findings_claim_state: "clean",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 0
           }
         },
         null,
@@ -506,45 +491,36 @@ describe("applyMetaReviewGateOnConvergence", () => {
       "utf8"
     );
 
-    const result = await applyMetaReviewGateOnConvergence({
+    const result = await startAsyncMetaReviewGate({
       bubbleId: bubble.bubbleId,
       repoPath,
-      summary: "Converged for meta-review.",
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Later-round convergence should rerun meta-review.",
       now: new Date("2026-03-12T12:03:10.000Z")
     });
 
-    expect(result.route).toBe("human_gate_sticky_bypass");
-    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
-    expect(result.gateEnvelope.type).toBe("APPROVAL_REQUEST");
-    expect(result.gateEnvelope.payload.metadata).toMatchObject({
-      findings_claimed_open_total: 2,
-      findings_artifact_open_total: 1,
-      findings_blocking_open_total: 0,
-      findings_advisory_open_total: 2,
-      findings_parity_status: "guard_failed",
-      meta_review_run_id: "run_sticky_bypass_parity_01"
+    expect(result.route).toBe("meta_review_running");
+    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.gateEnvelope.type).toBe("TASK");
+
+    const after = await readStateSnapshot(bubble.paths.statePath);
+    expect(after.state.meta_review).toMatchObject({
+      sticky_human_gate: false,
+      last_autonomous_run_id: null,
+      last_autonomous_status: null,
+      last_autonomous_recommendation: null,
+      last_autonomous_summary: null,
+      last_autonomous_report_ref: null,
+      last_autonomous_updated_at: null
     });
-    expect(result.gateEnvelope.payload.findings).toEqual([
-      {
-        priority: "P2",
-        severity: "P2",
-        title: "sticky advisory a",
-        refs: ["artifact://sticky/a"]
-      },
-      {
-        priority: "P3",
-        severity: "P3",
-        title: "sticky advisory b"
-      }
-    ]);
   });
 
-  it("uses a coherent current-round parity snapshot on sticky bypass without artifact counter leakage", async () => {
+  it("does not route convergence findings directly to human approval from sticky carry-over", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
-      bubbleId: "b_meta_gate_async_sticky_convergence_source_01",
-      task: "Sticky gate convergence findings source"
+      bubbleId: "b_meta_gate_round_local_02",
+      task: "Round-local findings freshness"
     });
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
@@ -552,9 +528,16 @@ describe("applyMetaReviewGateOnConvergence", () => {
       bubble.paths.statePath,
       {
         ...loaded.state,
+        round: 5,
         meta_review: {
           ...(loaded.state.meta_review ?? defaultMetaReviewSnapshot()),
-          sticky_human_gate: true
+          sticky_human_gate: true,
+          last_autonomous_run_id: "run_prev_round_findings",
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Previous round approve with advisories.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_updated_at: "2026-03-13T12:03:00.000Z"
         }
       },
       {
@@ -562,422 +545,28 @@ describe("applyMetaReviewGateOnConvergence", () => {
         expectedState: "RUNNING"
       }
     );
-    await writeFileFs(
-      bubble.paths.metaReviewLastJsonArtifactPath,
-      `${JSON.stringify(
-        {
-          bubble_id: bubble.bubbleId,
-          run_id: "run_sticky_convergence_source_01",
-          report_json: {
-            findings_count: 7,
-            findings_claimed_open_total: 7,
-            findings_artifact_open_total: 1,
-            findings_blocking_open_total: 5,
-            findings_advisory_open_total: 2,
-            findings_artifact_status: "available",
-            findings_digest_sha256:
-              "abababababababababababababababababababababababababababababababab",
-            meta_review_run_id: "run_sticky_convergence_source_01",
-            findings_parity_status: "guard_failed"
-          }
-        },
-        null,
-        2
-      )}\n`,
-      "utf8"
-    );
 
-    const result = await applyMetaReviewGateOnConvergence({
+    const result = await startAsyncMetaReviewGate({
       bubbleId: bubble.bubbleId,
       repoPath,
+      worktreePath: bubble.paths.worktreePath,
       summary: "R5 convergence summary with advisory follow-ups.",
-      findings: [
-        {
-          severity: "P2",
-          title: "current-round advisory a",
-          refs: ["artifact://convergence/a"]
-        },
-        {
-          severity: "P3",
-          title: "current-round advisory b"
-        }
-      ],
       now: new Date("2026-03-13T12:03:12.000Z")
     });
 
-    expect(result.route).toBe("human_gate_sticky_bypass");
-    expect(result.gateEnvelope.payload.metadata).toMatchObject({
-      findings_claimed_open_total: 2,
-      findings_artifact_open_total: null,
-      findings_blocking_open_total: 0,
-      findings_advisory_open_total: 2,
-      findings_parity_status: null,
-      findings_artifact_status: null,
-      findings_digest_sha256: null,
-      meta_review_run_id: null,
-      meta_review_gate_route: "human_gate_sticky_bypass"
-    });
-    expect(result.gateEnvelope.payload.findings).toEqual([
-      {
-        priority: "P2",
-        severity: "P2",
-        title: "current-round advisory a",
-        refs: ["artifact://convergence/a"]
-      },
-      {
-        priority: "P3",
-        severity: "P3",
-        title: "current-round advisory b"
-      }
-    ]);
-  });
+    expect(result.route).toBe("meta_review_running");
+    expect(result.gateEnvelope.type).toBe("TASK");
 
-  it("keeps sticky bypass advisory/parity fallback symmetric when current-round findings are explicitly empty", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_meta_gate_async_sticky_symmetry_empty_findings_01",
-      task: "Sticky bypass fallback symmetry with empty current-round findings"
-    });
-
-    const loaded = await readStateSnapshot(bubble.paths.statePath);
-    await writeStateSnapshot(
-      bubble.paths.statePath,
-      {
-        ...loaded.state,
-        meta_review: {
-          ...(loaded.state.meta_review ?? defaultMetaReviewSnapshot()),
-          sticky_human_gate: true
-        }
-      },
-      {
-        expectedFingerprint: loaded.fingerprint,
-        expectedState: "RUNNING"
-      }
-    );
-    await writeFileFs(
-      bubble.paths.metaReviewLastJsonArtifactPath,
-      `${JSON.stringify(
-        {
-          bubble_id: bubble.bubbleId,
-          run_id: "run_sticky_symmetry_empty_findings_01",
-          report_json: {
-            findings_count: 4,
-            findings_claimed_open_total: 4,
-            findings_artifact_open_total: 4,
-            findings_blocking_open_total: 1,
-            findings_advisory_open_total: 3,
-            findings_artifact_status: "available",
-            findings_digest_sha256:
-              "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-            meta_review_run_id: "run_sticky_symmetry_empty_findings_01",
-            findings_parity_status: "ok",
-            findings: [
-              {
-                severity: "P2",
-                title: "artifact advisory should not leak"
-              }
-            ]
-          }
-        },
-        null,
-        2
-      )}\n`,
-      "utf8"
-    );
-
-    const result = await applyMetaReviewGateOnConvergence({
-      bubbleId: bubble.bubbleId,
-      repoPath,
-      summary: "No advisory carry-over expected.",
-      findings: [],
-      now: new Date("2026-03-13T12:03:13.000Z")
-    });
-
-    expect(result.route).toBe("human_gate_sticky_bypass");
-    expect(result.gateEnvelope.payload.metadata).toMatchObject({
-      findings_claimed_open_total: 0,
-      findings_artifact_open_total: null,
-      findings_blocking_open_total: 0,
-      findings_advisory_open_total: 0,
-      findings_parity_status: null,
-      findings_artifact_status: null,
-      findings_digest_sha256: null,
-      meta_review_run_id: null,
-      meta_review_gate_route: "human_gate_sticky_bypass"
-    });
-    expect(result.gateEnvelope.payload.findings).toBeUndefined();
-  });
-
-  it("keeps positive findings summary when structured parity metadata proves open findings", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_meta_gate_async_sticky_summary_aligned_01",
-      task: "Sticky summary parity alignment"
-    });
-
-    const loaded = await readStateSnapshot(bubble.paths.statePath);
-    await writeStateSnapshot(
-      bubble.paths.statePath,
-      {
-        ...loaded.state,
-        meta_review: {
-          ...(loaded.state.meta_review ?? defaultMetaReviewSnapshot()),
-          sticky_human_gate: true
-        }
-      },
-      {
-        expectedFingerprint: loaded.fingerprint,
-        expectedState: "RUNNING"
-      }
-    );
-    await writeFileFs(
-      bubble.paths.metaReviewLastJsonArtifactPath,
-      `${JSON.stringify(
-        {
-          bubble_id: bubble.bubbleId,
-          run_id: "run_sticky_summary_aligned_01",
-          report_json: {
-            findings_count: 8,
-            findings_claimed_open_total: 8,
-            findings_artifact_open_total: 8,
-            findings_artifact_status: "available",
-            findings_digest_sha256:
-              "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-            meta_review_run_id: "run_sticky_summary_aligned_01",
-            findings_parity_status: "ok"
-          }
-        },
-        null,
-        2
-      )}\n`,
-      "utf8"
-    );
-
-    const summary = "R6 review: 8 deduplicated findings remain open.";
-    const result = await applyMetaReviewGateOnConvergence({
-      bubbleId: bubble.bubbleId,
-      repoPath,
-      summary,
-      now: new Date("2026-03-13T12:03:20.000Z")
-    });
-
-    expect(result.route).toBe("human_gate_sticky_bypass");
-    expect(result.gateEnvelope.payload.summary).toBe(summary);
-    expect(result.gateEnvelope.payload.metadata).toMatchObject({
-      findings_claimed_open_total: 8,
-      findings_artifact_open_total: 8,
-      findings_parity_status: "ok"
-    });
-    expect(
-      result.gateEnvelope.payload.metadata?.approval_summary_normalized
-    ).toBeUndefined();
-  });
-
-  it("keeps positive findings summary unchanged when structured parity proof is unavailable", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_meta_gate_async_sticky_summary_normalized_01",
-      task: "Sticky summary normalization"
-    });
-
-    const loaded = await readStateSnapshot(bubble.paths.statePath);
-    await writeStateSnapshot(
-      bubble.paths.statePath,
-      {
-        ...loaded.state,
-        meta_review: {
-          ...(loaded.state.meta_review ?? defaultMetaReviewSnapshot()),
-          sticky_human_gate: true
-        }
-      },
-      {
-        expectedFingerprint: loaded.fingerprint,
-        expectedState: "RUNNING"
-      }
-    );
-
-    const result = await applyMetaReviewGateOnConvergence({
-      bubbleId: bubble.bubbleId,
-      repoPath,
-      summary: "R6 review: 8 deduplicated findings remain open.",
-      now: new Date("2026-03-13T12:03:30.000Z")
-    });
-
-    expect(result.route).toBe("human_gate_sticky_bypass");
-    expect(result.gateEnvelope.payload.summary).toBe(
-      "R6 review: 8 deduplicated findings remain open."
-    );
-    expect(
-      result.gateEnvelope.payload.metadata?.approval_summary_normalized
-    ).toBeUndefined();
-  });
-
-  it("keeps positive findings summary unchanged when non-approve parity invariants are inconsistent", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_meta_gate_async_sticky_summary_mismatch_01",
-      task: "Sticky summary mismatch normalization"
-    });
-
-    const loaded = await readStateSnapshot(bubble.paths.statePath);
-    await writeStateSnapshot(
-      bubble.paths.statePath,
-      {
-        ...loaded.state,
-        meta_review: {
-          ...(loaded.state.meta_review ?? defaultMetaReviewSnapshot()),
-          sticky_human_gate: true
-        }
-      },
-      {
-        expectedFingerprint: loaded.fingerprint,
-        expectedState: "RUNNING"
-      }
-    );
-    const originalSummary = "R7 reviewer converged with 4 open findings.";
-    await writeFileFs(
-      bubble.paths.metaReviewLastJsonArtifactPath,
-      `${JSON.stringify(
-        {
-          bubble_id: bubble.bubbleId,
-          run_id: "run_sticky_summary_mismatch_01",
-          report_json: {
-            findings_count: 0,
-            findings_claimed_open_total: 0,
-            findings_artifact_open_total: 0,
-            findings_artifact_status: "available",
-            findings_digest_sha256:
-              "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-            meta_review_run_id: "run_sticky_summary_mismatch_01",
-            findings_parity_status: "mismatch"
-          }
-        },
-        null,
-        2
-      )}\n`,
-      "utf8"
-    );
-
-    const result = await applyMetaReviewGateOnConvergence({
-      bubbleId: bubble.bubbleId,
-      repoPath,
-      summary: originalSummary,
-      now: new Date("2026-03-13T12:03:35.000Z")
-    });
-
-    expect(result.route).toBe("human_gate_sticky_bypass");
-    expect(result.gateEnvelope.payload.summary).toBe(originalSummary);
-    expect(result.gateEnvelope.payload.metadata?.approval_summary_normalized).toBeUndefined();
-    expect(
-      result.gateEnvelope.payload.metadata?.approval_summary_normalization_reason_code
-    ).toBeUndefined();
-    expect(
-      result.gateEnvelope.payload.metadata?.approval_summary_normalization_original_summary
-    ).toBeUndefined();
-  });
-
-  it("restores RUNNING when sticky APPROVAL_REQUEST append fails after staged transition without staged-restore fall-through", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_meta_gate_async_sticky_append_restore_01",
-      task: "Sticky append failure restore"
-    });
-
-    const loaded = await readStateSnapshot(bubble.paths.statePath);
-    await writeStateSnapshot(
-      bubble.paths.statePath,
-      {
-        ...loaded.state,
-        meta_review: {
-          ...(loaded.state.meta_review ?? defaultMetaReviewSnapshot()),
-          sticky_human_gate: true
-        }
-      },
-      {
-        expectedFingerprint: loaded.fingerprint,
-        expectedState: "RUNNING"
-      }
-    );
-
-    const writeCalls: Array<{
-      expectedState: string | undefined;
-      state: string;
-    }> = [];
-    const trackingWriteState: typeof writeStateSnapshot = async (
-      statePath,
-      state,
-      options
-    ) => {
-      writeCalls.push({
-        expectedState: options?.expectedState,
-        state: state.state
-      });
-      return writeStateSnapshot(statePath, state, options);
-    };
-
-    let thrown: unknown;
-    try {
-      await applyMetaReviewGateOnConvergence(
-        {
-          bubbleId: bubble.bubbleId,
-          repoPath,
-          summary: "R6 review: 8 deduplicated findings remain open.",
-          now: new Date("2026-03-13T12:03:40.000Z")
-        },
-        {
-          appendProtocolEnvelope: async (input) => {
-            if (input.envelope.type === "APPROVAL_REQUEST") {
-              throw new Error("simulated approval append failure");
-            }
-            return appendProtocolEnvelope(input);
-          },
-          writeStateSnapshot: trackingWriteState
-        }
-      );
-    } catch (error) {
-      thrown = error;
-    }
-
-    expect(thrown).toMatchObject({
-      reasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
-    });
-    expect(
-      (
-        thrown as {
-          diagnostics?: {
-            rollbackReasonCode?: string;
-            rollbackOutcome?: string;
-          };
-        }
-      ).diagnostics
-    ).toMatchObject({
-      rollbackReasonCode: "META_REVIEW_GATE_ROLLBACK_APPLIED",
-      rollbackOutcome: "applied"
-    });
-
-    const finalState = await readStateSnapshot(bubble.paths.statePath);
-    expect(finalState.state.state).toBe("RUNNING");
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
     expect(transcript.some((entry) => entry.type === "APPROVAL_REQUEST")).toBe(false);
-    expect(
-      writeCalls.some(
-        (call) =>
-          call.expectedState === "READY_FOR_APPROVAL" && call.state === "RUNNING"
-      )
-    ).toBe(false);
   });
 
-  it("emits explicit reason-coded diagnostics when sticky append rollback and staged restore both fail", async () => {
+  it("keeps cleared live meta-review state when META_REVIEW_RUNNING staging fails", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
-      bubbleId: "b_meta_gate_async_sticky_append_restore_conflict_01",
-      task: "Sticky append rollback diagnostics"
+      bubbleId: "b_meta_gate_round_local_restore_01",
+      task: "Round-local restore semantics"
     });
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
@@ -987,7 +576,13 @@ describe("applyMetaReviewGateOnConvergence", () => {
         ...loaded.state,
         meta_review: {
           ...(loaded.state.meta_review ?? defaultMetaReviewSnapshot()),
-          sticky_human_gate: true
+          sticky_human_gate: true,
+          last_autonomous_run_id: "run_prev_round_restore",
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Previous round snapshot.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_updated_at: "2026-03-13T12:03:00.000Z"
         }
       },
       {
@@ -996,57 +591,47 @@ describe("applyMetaReviewGateOnConvergence", () => {
       }
     );
 
-    const writeStateSnapshotWithRollbackFailure: typeof writeStateSnapshot = async (
+    const stageFailureWriteState: typeof writeStateSnapshot = async (
       statePath,
       state,
       options
     ) => {
       if (
-        options?.expectedState === "READY_FOR_HUMAN_APPROVAL"
-        && state.state === "RUNNING"
+        options?.expectedState === "READY_FOR_APPROVAL" &&
+        state.state === "META_REVIEW_RUNNING"
       ) {
-        throw new StateStoreConflictError("simulated rollback conflict");
+        throw new StateStoreConflictError("simulated meta-review-running stage failure");
       }
       return writeStateSnapshot(statePath, state, options);
     };
 
-    let thrown: unknown;
-    try {
-      await applyMetaReviewGateOnConvergence(
+    await expect(
+      applyMetaReviewGateOnConvergence(
         {
           bubbleId: bubble.bubbleId,
           repoPath,
-          summary: "R6 review: 8 deduplicated findings remain open.",
-          now: new Date("2026-03-13T12:03:50.000Z")
+          summary: "Converged with round-local restore guard.",
+          now: new Date("2026-03-13T12:03:12.000Z")
         },
         {
-          appendProtocolEnvelope: async (input) => {
-            if (input.envelope.type === "APPROVAL_REQUEST") {
-              throw new Error("simulated approval append failure");
-            }
-            return appendProtocolEnvelope(input);
-          },
-          writeStateSnapshot: writeStateSnapshotWithRollbackFailure
+          writeStateSnapshot: stageFailureWriteState
         }
-      );
-    } catch (error) {
-      thrown = error;
-    }
-
-    expect(thrown).toMatchObject({
+      )
+    ).rejects.toMatchObject({
       reasonCode: "META_REVIEW_GATE_STATE_CONFLICT"
     });
-    expect(
-      (thrown as { diagnostics?: { rollbackReasonCode?: string } }).diagnostics
-    ).toMatchObject({
-      rollbackReasonCode: "META_REVIEW_GATE_ROLLBACK_STATE_CONFLICT"
+
+    const after = await readStateSnapshot(bubble.paths.statePath);
+    expect(after.state.state).toBe("RUNNING");
+    expect(after.state.meta_review).toMatchObject({
+      sticky_human_gate: false,
+      last_autonomous_run_id: null,
+      last_autonomous_status: null,
+      last_autonomous_recommendation: null,
+      last_autonomous_summary: null,
+      last_autonomous_report_ref: null,
+      last_autonomous_updated_at: null
     });
-    expect(String((thrown as Error).message)).toContain(
-      "rollback_reason_code=META_REVIEW_GATE_ROLLBACK_STATE_CONFLICT"
-    );
-    expect(String((thrown as Error).message)).toContain(
-      "restore_reason_code=META_REVIEW_GATE_STAGED_READY_RESTORE_STATE_CONFLICT"
-    );
   });
 });
 

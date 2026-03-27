@@ -166,12 +166,12 @@ Run each command from the release worktree root and capture the command, timesta
 5. `node ./dist/cli/index.js bubble meta-review status --id <bubble-id> --repo <repo-path> --verbose`
    Expected markers:
    current-round status renders without presenting prior-round recommendation/report or sticky carry-over as active
-   if no fresh current-round run exists after round increment, output shows pending/none semantics for the current round
+   if no fresh current-round run exists after round increment, output shows pending/none semantics for the current round (`has_run=no`, recommendation/report ref absent, `Sticky human gate: no`)
    if a fresh current-round run exists, the visible summary/report ref corresponds to the current round
 
 6. `node ./dist/cli/index.js bubble meta-review last-report --id <bubble-id> --repo <repo-path> --verbose`
    Expected markers:
-   after round increment and before a fresh current-round run, output shows pending/none or explicit no-current-round-report semantics
+   after round increment and before a fresh current-round run, output shows pending/none or explicit no-current-round-report semantics (`has_report=no`, report ref absent)
    prior-round report is not rendered as the current-round last report
    after a fresh current-round run, the visible report ref corresponds to the current round
 

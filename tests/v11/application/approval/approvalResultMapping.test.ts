@@ -63,4 +63,47 @@ describe("approvalResultMapping", () => {
       supersededIntentId: "intent_00"
     });
   });
+
+  it("clears live meta-review authority when human rework starts the next round", () => {
+    const next = resolveApprovalNextState({
+      state: {
+        state: "READY_FOR_HUMAN_APPROVAL",
+        round: 2,
+        meta_review: {
+          last_autonomous_run_id: "run_prev_round",
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary: "Previous round approve",
+          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-03-19T21:59:00.000Z",
+          auto_rework_count: 1,
+          auto_rework_limit: 5,
+          sticky_human_gate: true
+        }
+      } as never,
+      decision: "revise",
+      nowIso: "2026-03-19T22:00:00.000Z",
+      implementer: "codex",
+      reviewer: "claude",
+      applyStateTransition: ((state: Record<string, unknown>) => ({
+        ...state,
+        state: "RUNNING",
+        round: 3
+      })) as never
+    });
+
+    expect(next.meta_review).toMatchObject({
+      last_autonomous_run_id: null,
+      last_autonomous_status: null,
+      last_autonomous_recommendation: null,
+      last_autonomous_summary: null,
+      last_autonomous_report_ref: null,
+      last_autonomous_rework_target_message: null,
+      last_autonomous_updated_at: null,
+      auto_rework_count: 1,
+      auto_rework_limit: 5,
+      sticky_human_gate: false
+    });
+  });
 });
