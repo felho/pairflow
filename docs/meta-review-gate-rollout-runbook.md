@@ -7,7 +7,7 @@ This runbook defines the staged rollout checks for the Meta Review Gate after Ph
 Release status is `not ready` by default until:
 
 1. the validation evidence bundle is complete,
-2. worker-side Pairflow command path is confirmed `worktree_local`,
+2. worker-side Pairflow command path is confirmed profile-consistent (`external` for `external`, `worktree_local` for `self_host`),
 3. no blocking reason code is present in the rollout decision package.
 
 ## Authoritative Gate
@@ -21,22 +21,31 @@ The rollout must stop on any of these codes:
 
 1. `META_REVIEW_GATE_RUN_FAILED`
 2. `META_REVIEW_GATE_REWORK_DISPATCH_FAILED`
-3. `PAIRFLOW_COMMAND_PATH_STALE`
-4. `META_REVIEW_RECONCILE_STATE_MISMATCH`
-5. `ROLLOUT_EVIDENCE_INCOMPLETE`
-6. `META_REVIEW_RUNNER_ERROR`
-7. `CLAIM_STATE_REQUIRED`
-8. `CLAIM_SOURCE_INVALID`
-9. `META_REVIEW_FINDINGS_ARTIFACT_REQUIRED`
-10. `META_REVIEW_FINDINGS_COUNT_MISMATCH`
-11. `META_REVIEW_FINDINGS_RUN_LINK_MISSING`
-12. `META_REVIEW_FINDINGS_PARITY_GUARD`
-13. `META_REVIEW_APPROVE_BLOCKING_FINDINGS_PRESENT`
-14. `META_REVIEW_APPROVE_ADVISORY_SPLIT_REQUIRED`
-15. `META_REVIEW_APPROVE_ADVISORY_SPLIT_FORMAT_INVALID`
-16. `META_REVIEW_SUMMARY_STRUCTURED_MISMATCH`
+3. `PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE`
+4. `PAIRFLOW_COMMAND_PATH_STALE`
+5. `META_REVIEW_RECONCILE_STATE_MISMATCH`
+6. `ROLLOUT_EVIDENCE_INCOMPLETE`
+7. `META_REVIEW_RUNNER_ERROR`
+8. `CLAIM_STATE_REQUIRED`
+9. `CLAIM_SOURCE_INVALID`
+10. `META_REVIEW_FINDINGS_ARTIFACT_REQUIRED`
+11. `META_REVIEW_FINDINGS_COUNT_MISMATCH`
+12. `META_REVIEW_FINDINGS_RUN_LINK_MISSING`
+13. `META_REVIEW_FINDINGS_PARITY_GUARD`
+14. `META_REVIEW_APPROVE_BLOCKING_FINDINGS_PRESENT`
+15. `META_REVIEW_APPROVE_ADVISORY_SPLIT_REQUIRED`
+16. `META_REVIEW_APPROVE_ADVISORY_SPLIT_FORMAT_INVALID`
+17. `META_REVIEW_SUMMARY_STRUCTURED_MISMATCH`
 
 Any unclassified reason code is treated as blocking until explicitly classified.
+
+## Command Profile Authority
+
+1. `external` profile means the PATH-resolved external `pairflow` tool is authoritative.
+2. `self_host` is the only profile where the worktree-local `dist/cli/index.js` entrypoint is authoritative.
+3. A worktree-local Pairflow build may exist during `external` operation, but it is diagnostic only and must not redefine authority.
+4. `PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE` is the fail-closed rollout blocker when `external` profile cannot resolve a PATH-available `pairflow`.
+5. `PAIRFLOW_COMMAND_PATH_STALE` remains a blocking signal only for `self_host` identity failures; seeing it under `external` is a regression.
 
 ## Classified Non-Blocking Round-Local Reason Codes
 
@@ -59,9 +68,10 @@ Operator action outside that dedicated happy-path recovery smoke:
 ## Pre-flight
 
 1. Start from the target worktree/release checkout.
-2. Ensure `dist/cli/index.js` exists in the worktree build output.
-3. Use the worktree-local CLI entrypoint for operator smoke commands: `node ./dist/cli/index.js ...`
-4. Keep `.pairflow/evidence/` writable so validation logs are captured.
+2. Determine the configured `pairflow_command_profile` for the rollout window.
+3. If profile is `self_host`, ensure `dist/cli/index.js` exists in the worktree build output and use `node ./dist/cli/index.js ...` for operator smoke commands.
+4. If profile is `external`, ensure PATH-resolved `pairflow` is available and use `pairflow ...` for operator smoke commands; do not substitute the worktree-local entrypoint as authority.
+5. Keep `.pairflow/evidence/` writable so validation logs are captured.
 
 ## Round-Local Freshness Rule
 
@@ -157,25 +167,28 @@ Run each command from the release worktree root and capture the command, timesta
    `exit=0`
    `.pairflow/evidence/test.log`
 
-4. `node ./dist/cli/index.js bubble status --id <bubble-id> --repo <repo-path>`
+4. `<pairflow-command> bubble status --id <bubble-id> --repo <repo-path>`
    Expected markers:
-   `Command path: worktree_local`
+   `profile=external`: `Command path: external`
+   `profile=self_host`: `Command path: worktree_local`
    no `PAIRFLOW_COMMAND_PATH_STALE`
    lifecycle/report data renders without fallback errors
 
-5. `node ./dist/cli/index.js bubble meta-review status --id <bubble-id> --repo <repo-path> --verbose`
+5. `<pairflow-command> bubble meta-review status --id <bubble-id> --repo <repo-path> --verbose`
    Expected markers:
+   `Auto rework:`
+   `Sticky human gate:`
    current-round status renders without presenting prior-round recommendation/report or sticky carry-over as active
    if no fresh current-round run exists after round increment, output shows pending/none semantics for the current round
    if a fresh current-round run exists, the visible summary/report ref corresponds to the current round
 
-6. `node ./dist/cli/index.js bubble meta-review last-report --id <bubble-id> --repo <repo-path> --verbose`
+6. `<pairflow-command> bubble meta-review last-report --id <bubble-id> --repo <repo-path> --verbose`
    Expected markers:
    after round increment and before a fresh current-round run, output shows pending/none or explicit no-current-round-report semantics
    prior-round report is not rendered as the current-round last report
    after a fresh current-round run, the visible report ref corresponds to the current round
 
-7. `node ./dist/cli/index.js bubble meta-review recover --id <bubble-id> --repo <repo-path>`
+7. `<pairflow-command> bubble meta-review recover --id <bubble-id> --repo <repo-path>`
    Preconditions:
    bubble is in `META_REVIEW_RUNNING` and has canonical current-round meta-review output already persisted for recovery.
    Expected markers:
@@ -184,7 +197,7 @@ Run each command from the release worktree root and capture the command, timesta
    no new autonomous run is started for this command
    no `META_REVIEW_RECOVERY_REQUIRES_CURRENT_ROUND_RESULT` reason is emitted when canonical current-round output exists
 
-8. `node ./dist/cli/index.js bubble meta-review recover --id <bubble-id> --repo <repo-path>`
+8. `<pairflow-command> bubble meta-review recover --id <bubble-id> --repo <repo-path>`
    Preconditions:
    bubble is in `META_REVIEW_RUNNING`, but only prior-round meta-review output is available for diagnosis.
    Expected markers:
@@ -192,10 +205,11 @@ Run each command from the release worktree root and capture the command, timesta
    no recovered current-round route is claimed
    output is classified as expected unhappy-path diagnostic evidence, not same-round recovery success
 
-9. `node ./dist/cli/index.js metrics report --from <iso-from> --to <iso-to>`
+9. `<pairflow-command> metrics report --from <iso-from> --to <iso-to>`
    Expected markers:
    `meta_review_rollout.route_counts`
    `meta_review_rollout.rollout_blocked_events: 0`
+   `meta_review_rollout.pairflow_command_external_unavailable_count: 0`
    `meta_review_rollout.pairflow_command_path_stale_count: 0`
 
 ## Go/No-Go Checklist
@@ -204,7 +218,7 @@ All items must be true before rollout is marked ready:
 
 1. Validation logs exist for every command that was claimed as executed.
 2. `docs/meta-review-gate-e2e-validation.md` is filled without AC gaps.
-3. The command-path smoke check reports `worktree_local`.
+3. The command-path smoke check reports the authority expected by the configured profile.
 4. Metrics report shows zero blocking rollout events in the rollout window.
 5. No blocking reason code appears in the evidence template, metrics report, or smoke outputs.
 6. Human approval remains mandatory; no autonomous approval path is observed.
@@ -233,7 +247,7 @@ Use one of these modes and record the observed outcome:
    - run `pnpm install --frozen-lockfile`,
    - run `pnpm build`,
    - restart any affected operator/UI process against the restored worktree,
-   - verify `node ./dist/cli/index.js bubble status ...` no longer shows rollout blockers.
+   - verify the profile-selected status command no longer shows rollout blockers.
 
 ## Incident Handling
 
@@ -249,9 +263,18 @@ If a blocking reason code appears during rollout:
 
 If the block is `PAIRFLOW_COMMAND_PATH_STALE`:
 
-1. do not trust plain global `pairflow` invocations,
-2. rebuild or restore the local worktree `dist/cli/index.js`,
-3. re-run the command-path smoke check with `node ./dist/cli/index.js bubble status ...`.
+1. if profile is `self_host`, do not trust stale local entrypoint state,
+2. if profile is `self_host`, rebuild or restore the local worktree `dist/cli/index.js`,
+3. if profile is `external`, treat the stale signal itself as a regression and stop rollout until the command-path semantics are fixed,
+4. re-run the command-path smoke check with the profile-selected status command.
+
+If the block is `PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE`:
+
+1. this blocker is valid only for `external` profile; if it appears under `self_host`, treat that as a contract mismatch/regression,
+2. treat the rollout as fail-closed for `external` profile,
+3. restore PATH access to the authoritative external `pairflow` tool or explicitly move the rollout to `self_host` with matching operator procedure,
+4. do not treat a present worktree-local `dist/cli/index.js` as an acceptable implicit fallback while the profile remains `external`,
+5. re-run the profile-selected smoke commands only after the authority mode is again consistent.
 
 ## Session Note (2026-03-14)
 
