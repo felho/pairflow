@@ -115,7 +115,7 @@ async function setupReadyForHumanApprovalBubble(repoPath: string, bubbleId: stri
         last_autonomous_status: "inconclusive",
         last_autonomous_recommendation: "inconclusive",
         last_autonomous_summary: "Autonomous review inconclusive; route to human gate.",
-        last_autonomous_report_ref: "artifacts/meta-review-last.md",
+        last_autonomous_report_ref: "artifacts/meta-review-last.json",
         last_autonomous_rework_target_message: null,
         last_autonomous_updated_at: updatedAt
       }
@@ -450,7 +450,7 @@ describe("approval decisions", () => {
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",
           last_autonomous_summary: "Legacy READY_FOR_APPROVAL parity guard.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_updated_at: "2026-02-22T12:03:59.000Z"
         }
       },
@@ -481,7 +481,7 @@ describe("approval decisions", () => {
             findings_parity_status: "guard_failed"
           }
         },
-        refs: ["artifacts/meta-review-last.md"]
+        refs: ["artifacts/meta-review-last.json"]
       }
     });
 
@@ -571,7 +571,7 @@ describe("approval decisions", () => {
             actor_agent: "codex"
           }
         },
-        refs: ["artifacts/meta-review-last.md"]
+        refs: ["artifacts/meta-review-last.json"]
       }
     });
 
@@ -661,7 +661,7 @@ describe("approval decisions", () => {
             actor_agent: "codex"
           }
         },
-        refs: ["artifacts/meta-review-last.md"]
+        refs: ["artifacts/meta-review-last.json"]
       }
     });
 
@@ -810,7 +810,7 @@ describe("approval decisions", () => {
         payload: {
           summary: "META_REVIEW_GATE_RUN_FAILED: historical gate failure"
         },
-        refs: ["artifacts/meta-review-last.md"]
+        refs: ["artifacts/meta-review-last.json"]
       }
     });
 
@@ -1038,7 +1038,7 @@ describe("approval decisions", () => {
         last_autonomous_status: "success" as const,
         last_autonomous_recommendation: "approve" as const,
         last_autonomous_summary: "Autonomous gate approved.",
-        last_autonomous_report_ref: "artifacts/meta-review-last.md",
+        last_autonomous_report_ref: "artifacts/meta-review-last.json",
         last_autonomous_run_id: "run_approve_path_01",
         last_autonomous_updated_at: "2026-02-22T12:04:59.000Z"
       }
@@ -1110,7 +1110,7 @@ describe("approval decisions", () => {
             findings_parity_status: "guard_failed"
           }
         },
-        refs: ["artifacts/meta-review-last.md"]
+        refs: ["artifacts/meta-review-last.json"]
       }
     });
 
@@ -1197,7 +1197,7 @@ describe("approval decisions", () => {
             findings_parity_status: "ok"
           }
         },
-        refs: ["artifacts/meta-review-last.md"]
+        refs: ["artifacts/meta-review-last.json"]
       }
     });
 
@@ -1276,7 +1276,7 @@ describe("approval decisions", () => {
             approval_summary_consistency_status: "mismatch"
           }
         },
-        refs: ["artifacts/meta-review-last.md"]
+        refs: ["artifacts/meta-review-last.json"]
       }
     });
 
@@ -1358,7 +1358,7 @@ describe("approval decisions", () => {
             findings_parity_status: "guard_failed"
           }
         },
-        refs: ["artifacts/meta-review-last.md"]
+        refs: ["artifacts/meta-review-last.json"]
       }
     });
 
@@ -1416,7 +1416,7 @@ describe("approval decisions", () => {
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",
           last_autonomous_summary: "Sticky bypass should preserve parity metadata.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_updated_at: "2026-02-22T12:06:00.000Z"
         }
       },
@@ -1498,7 +1498,7 @@ describe("approval decisions", () => {
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",
           last_autonomous_summary: "Fresh current-round meta-review preserved parity metadata.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_updated_at: "2026-02-22T12:06:01.500Z"
         }
       },

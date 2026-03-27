@@ -105,9 +105,7 @@ describe("v11 meta-review submit contract", () => {
         "--recommendation",
         "approve",
         "--summary",
-        "Contract submit payload without report_json",
-        "--report-markdown",
-        "# Meta Review"
+        "Contract submit payload without report_json"
       ]);
     } catch (error) {
       thrown = error;
@@ -134,8 +132,6 @@ describe("v11 meta-review submit contract", () => {
         "approve",
         "--summary",
         "Contract submit payload with invalid report_json shape",
-        "--report-markdown",
-        "# Meta Review",
         "--report-json",
         "[]"
       ]);
@@ -173,7 +169,6 @@ describe("v11 meta-review submit contract", () => {
           round: 1,
           recommendation: "approve",
           summary: "1 open finding remains in this run.",
-          report_markdown: "# Meta Review\n\nContract parity mismatch.",
           report_json: {
             findings_claim_state: "clean",
             findings_claim_source: "meta_review_artifact",
@@ -216,7 +211,6 @@ describe("v11 meta-review submit contract", () => {
           round: 1,
           recommendation: "approve",
           summary: "No findings remain after this review.",
-          report_markdown: "# Meta Review\n\nContract acceptance path.",
           report_json: {
             findings_claim_state: "clean",
             findings_claim_source: "meta_review_artifact",

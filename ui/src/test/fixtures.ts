@@ -72,7 +72,7 @@ export function bubbleSummary(input: {
       latestRecommendation: "approve",
       latestStatus: "success",
       latestSummary: "Looks good.",
-      latestReportRef: "artifacts/meta-review-last.md",
+      latestReportRef: "artifacts/meta-review-last.json",
       latestUpdatedAt: "2026-02-24T12:00:00.000Z"
     }
   };

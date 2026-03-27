@@ -42,7 +42,6 @@ async function runMetaReviewSubmitCommand(input: {
     round: input.options.round,
     recommendation: input.options.recommendation,
     summary: input.options.summary,
-    report_markdown: input.options.reportMarkdown,
     rework_target_message: input.options.reworkTargetMessage,
     report_json: input.options.reportJson,
     cwd: input.cwd

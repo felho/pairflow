@@ -63,9 +63,6 @@ export function parseMetaReviewCliArgs(args: string[]): ReturnType<typeof parseA
         summary: {
           type: "string"
         },
-        "report-markdown": {
-          type: "string"
-        },
         "rework-target-message": {
           type: "string"
         },
@@ -109,7 +106,6 @@ function hasSubmitOnlyOptions(values: ParsedMetaReviewOptionValues): boolean {
     values.round !== undefined ||
     values.recommendation !== undefined ||
     values.summary !== undefined ||
-    values.reportMarkdown !== undefined ||
     values.reworkTargetMessage !== undefined ||
     values.reportJson !== undefined
   );
@@ -120,7 +116,7 @@ export function assertSubmitOnlyOptionsAllowed(
 ): void {
   if (hasSubmitOnlyOptions(values)) {
     invalidMetaReviewCliOptions(
-      "--round/--recommendation/--summary/--report-markdown/--rework-target-message/--report-json are only supported for meta-review submit."
+      "--round/--recommendation/--summary/--rework-target-message/--report-json are only supported for meta-review submit."
     );
   }
 }

@@ -28,7 +28,7 @@ function createReadyForHumanApprovalState() {
       last_autonomous_status: "success",
       last_autonomous_recommendation: "approve",
       last_autonomous_summary: "ready",
-      last_autonomous_report_ref: "artifacts/meta-review-last.md",
+      last_autonomous_report_ref: "artifacts/meta-review-last.json",
       last_autonomous_rework_target_message: null,
       last_autonomous_updated_at: "2026-03-20T10:00:00.000Z",
       auto_rework_count: 0,

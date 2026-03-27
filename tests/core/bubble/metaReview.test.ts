@@ -59,8 +59,8 @@ describe("meta-review paths", () => {
     expect(paths.metaReviewLastJsonArtifactPath).toBe(
       "/tmp/repo/.pairflow/bubbles/b_meta_review_path_01/artifacts/meta-review-last.json"
     );
-    expect(paths.metaReviewLastMarkdownArtifactPath).toBe(
-      "/tmp/repo/.pairflow/bubbles/b_meta_review_path_01/artifacts/meta-review-last.md"
+    expect(paths.metaReviewLastJsonArtifactPath).toBe(
+      "/tmp/repo/.pairflow/bubbles/b_meta_review_path_01/artifacts/meta-review-last.json"
     );
   });
 });
@@ -86,7 +86,6 @@ describe("meta-review run", () => {
         runLiveReview: async () => ({
           recommendation: "rework",
           summary: "Found deterministic drift",
-          report_markdown: "# Report\n\nFix deterministic drift.",
           report_json: {
             findings: 1
           },
@@ -107,7 +106,7 @@ describe("meta-review run", () => {
       last_autonomous_status: "success",
       last_autonomous_recommendation: "rework",
       last_autonomous_summary: "Found deterministic drift",
-      last_autonomous_report_ref: "artifacts/meta-review-last.md",
+      last_autonomous_report_ref: "artifacts/meta-review-last.json",
       last_autonomous_rework_target_message:
         "Fix deterministic drift in command routing",
       last_autonomous_updated_at: "2026-03-08T11:00:00.000Z",
@@ -126,18 +125,18 @@ describe("meta-review run", () => {
         findings_claim_source?: string;
       };
     };
-    const reportMarkdown = await readFile(
-      bubble.paths.metaReviewLastMarkdownArtifactPath,
+    const reportArtifactRaw = await readFile(
+      bubble.paths.metaReviewLastJsonArtifactPath,
       "utf8"
     );
 
     expect(reportJson.recommendation).toBe("rework");
-    expect(reportJson.report_ref).toBe("artifacts/meta-review-last.md");
+    expect(reportJson.report_ref).toBe("artifacts/meta-review-last.json");
     expect(reportJson.report_json).toMatchObject({
       findings_claim_state: "open_findings",
       findings_claim_source: "meta_review_artifact"
     });
-    expect(reportMarkdown).toContain("Fix deterministic drift");
+    expect(reportArtifactRaw).toContain("Fix deterministic drift");
   });
 
   it("falls back to error/inconclusive when live runner fails", async () => {
@@ -270,7 +269,6 @@ describe("meta-review run", () => {
           runLiveReview: async () => ({
             recommendation: "rework",
             summary: "needs fixes",
-            report_markdown: "# Report"
           })
         }
       )
@@ -307,7 +305,6 @@ describe("meta-review run", () => {
         runLiveReview: async () => ({
           recommendation: "approve",
           summary: "First snapshot",
-          report_markdown: "# First",
           rework_target_message: "advisory"
         })
       }
@@ -324,7 +321,6 @@ describe("meta-review run", () => {
         runLiveReview: async () => ({
           recommendation: "inconclusive",
           summary: "Second snapshot",
-          report_markdown: "# Second"
         })
       }
     );
@@ -335,12 +331,12 @@ describe("meta-review run", () => {
       "Second snapshot"
     );
 
-    const reportMarkdown = await readFile(
-      bubble.paths.metaReviewLastMarkdownArtifactPath,
+    const reportArtifactRaw = await readFile(
+      bubble.paths.metaReviewLastJsonArtifactPath,
       "utf8"
     );
-    expect(reportMarkdown).toContain("# Second");
-    expect(reportMarkdown).not.toContain("# First");
+    expect(reportArtifactRaw).toContain("Second snapshot");
+    expect(reportArtifactRaw).not.toContain("First snapshot");
   });
 
   it("returns CAS conflict error and skips artifact writes when snapshot write fails", async () => {
@@ -363,7 +359,6 @@ describe("meta-review run", () => {
           runLiveReview: async () => ({
             recommendation: "approve",
             summary: "No-op",
-            report_markdown: "# Report"
           }),
           writeStateSnapshot: async () => {
             throw new StateStoreConflictError("conflict");
@@ -381,7 +376,7 @@ describe("meta-review run", () => {
       readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
     ).rejects.toMatchObject({ code: "ENOENT" });
     await expect(
-      readFile(bubble.paths.metaReviewLastMarkdownArtifactPath, "utf8")
+      readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
@@ -402,7 +397,6 @@ describe("meta-review run", () => {
         runLiveReview: async () => ({
           recommendation: "approve",
           summary: "State is canonical",
-          report_markdown: "# Report"
         }),
         writeFile: async () => {
           throw new Error("artifact write blocked");
@@ -444,7 +438,7 @@ describe("meta-review run", () => {
         payload: {
           summary: "META_REVIEW_GATE_RUN_FAILED: stale timeout"
         },
-        refs: ["artifacts/meta-review-last.md"]
+        refs: ["artifacts/meta-review-last.json"]
       }
     });
 
@@ -464,7 +458,7 @@ describe("meta-review run", () => {
           last_autonomous_status: "error",
           last_autonomous_recommendation: "inconclusive",
           last_autonomous_summary: "META_REVIEW_GATE_RUN_FAILED: stale timeout",
-          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_rework_target_message: null,
           last_autonomous_updated_at: "2026-03-08T11:31:00.000Z"
         }
@@ -486,7 +480,6 @@ describe("meta-review run", () => {
         runLiveReview: async () => ({
           recommendation: "approve",
           summary: "Recovered approve recommendation",
-          report_markdown: "# Recovered",
           report_json: {
             findings_claim_state: "open_findings",
             findings_claim_source: "meta_review_artifact",
@@ -607,7 +600,7 @@ describe("meta-review run", () => {
             findings_advisory_open_total: 2
           }
         },
-        refs: ["artifacts/meta-review-last.md"]
+        refs: ["artifacts/meta-review-last.json"]
       }
     });
 
@@ -628,7 +621,7 @@ describe("meta-review run", () => {
           last_autonomous_recommendation: "approve",
           last_autonomous_summary:
             "Meta-review R10: approve javasolt, 4 advisory finding nyitott.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_rework_target_message: null,
           last_autonomous_updated_at: "2026-03-08T11:50:00.000Z"
         }
@@ -652,7 +645,6 @@ describe("meta-review run", () => {
         runLiveReview: async () => ({
           recommendation: "approve",
           summary: refreshedSummary,
-          report_markdown: "# Deep rerun\n\nApprove."
         })
       }
     );
@@ -728,7 +720,6 @@ describe("meta-review run", () => {
           runLiveReview: async () => ({
             recommendation: "approve",
             summary: "2 advisory findings remain open.",
-            report_markdown: "# Deep rerun\n\nAdvisory findings remain open.",
             report_json: {
               findings_claim_state: "open_findings",
               findings_claim_source: "meta_review_artifact",
@@ -789,7 +780,6 @@ describe("meta-review run", () => {
         runLiveReview: async () => ({
           recommendation: "inconclusive",
           summary: "1 findings remain unresolved.",
-          report_markdown: "# Inconclusive"
         })
       }
     );
@@ -835,7 +825,7 @@ describe("meta-review run", () => {
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",
           last_autonomous_summary: "Pre-refresh state",
-          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_rework_target_message: null,
           last_autonomous_updated_at: "2026-03-08T11:41:00.000Z"
         }
@@ -855,7 +845,7 @@ describe("meta-review run", () => {
         status: "success",
         recommendation: "approve",
         summary: "Pre-refresh state",
-        report_ref: "artifacts/meta-review-last.md",
+        report_ref: "artifacts/meta-review-last.json",
         report_json_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         warnings: [],
@@ -868,15 +858,9 @@ describe("meta-review run", () => {
       null,
       2
     );
-    const previousMarkdownArtifact = "# Previous report\n\nPre-refresh state.\n";
     await writeFileFs(
       bubble.paths.metaReviewLastJsonArtifactPath,
       `${previousJsonArtifact}\n`,
-      "utf8"
-    );
-    await writeFileFs(
-      bubble.paths.metaReviewLastMarkdownArtifactPath,
-      previousMarkdownArtifact,
       "utf8"
     );
 
@@ -893,7 +877,6 @@ describe("meta-review run", () => {
           runLiveReview: async () => ({
             recommendation: "approve",
             summary: "Recovered approve recommendation with append failure.",
-            report_markdown: "# Recovered"
           }),
           appendProtocolEnvelope: async () => {
             throw new Error("simulated approval refresh append failure");
@@ -915,9 +898,6 @@ describe("meta-review run", () => {
     await expect(
       readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
     ).resolves.toBe(`${previousJsonArtifact}\n`);
-    await expect(
-      readFile(bubble.paths.metaReviewLastMarkdownArtifactPath, "utf8")
-    ).resolves.toBe(previousMarkdownArtifact);
 
     const transcript = await readTranscriptEnvelopes(
       bubble.paths.transcriptPath,
@@ -952,7 +932,7 @@ describe("meta-review run", () => {
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",
           last_autonomous_summary: "Pre-refresh rollback-failure state",
-          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_rework_target_message: null,
           last_autonomous_updated_at: "2026-03-08T11:46:00.000Z"
         }
@@ -989,7 +969,6 @@ describe("meta-review run", () => {
           runLiveReview: async () => ({
             recommendation: "approve",
             summary: "Recovered approve recommendation with rollback failure.",
-            report_markdown: "# Recovered"
           }),
           appendProtocolEnvelope: async () => {
             throw new Error("simulated approval refresh append failure");
@@ -1055,7 +1034,6 @@ describe("meta-review run", () => {
           runLiveReview: async () => ({
             recommendation: "approve",
             summary: "Should not run",
-            report_markdown: "# Report"
           })
         }
       )
@@ -1204,7 +1182,7 @@ describe("meta-review submit", () => {
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",
           last_autonomous_summary: "Structured submit snapshot.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_rework_target_message: null,
           last_autonomous_updated_at: "2026-03-09T09:10:10.000Z",
           auto_rework_count: 0,
@@ -1241,7 +1219,7 @@ describe("meta-review submit", () => {
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",
           last_autonomous_summary: "Structured submit snapshot.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_rework_target_message: null,
           last_autonomous_updated_at: "2026-03-09T09:12:10.000Z",
           auto_rework_count: 0,
@@ -1274,7 +1252,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Summary only submit should be rejected.",
-          report_markdown: "# Meta Review\n\nMissing report_json."
         } as unknown as Parameters<typeof submitMetaReviewResult>[0],
         {
           readRuntimeSessionsRegistry: async () =>
@@ -1312,7 +1289,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "1 open finding remains in this run.",
-          report_markdown: "# Meta Review\n\nOpen finding summary mismatch.",
           report_json: buildStructuredSubmitReportJson({
             findingsClaimState: "clean",
             findingsCount: 0
@@ -1354,7 +1330,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "No findings remain after this review.",
-          report_markdown: "# Meta Review\n\nNo-findings mismatch.",
           report_json: buildStructuredSubmitReportJson({
             findingsClaimState: "open_findings",
             findingsCount: 2
@@ -1396,7 +1371,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "1 open finding remains in this run.",
-          report_markdown: "# Meta Review\n\nUnknown state with zero count open-summary mismatch.",
           report_json: buildStructuredSubmitReportJson({
             findingsClaimState: "unknown",
             findingsCount: 0
@@ -1438,7 +1412,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "No findings remain after this review.",
-          report_markdown: "# Meta Review\n\nUnknown state with positive count no-findings mismatch.",
           report_json: buildStructuredSubmitReportJson({
             findingsClaimState: "unknown",
             findingsCount: 2
@@ -1480,7 +1453,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Operator notes captured for follow-up context.",
-          report_markdown: "# Meta Review\n\nUnknown state with zero count and ambiguous summary.",
           report_json: buildStructuredSubmitReportJson({
             findingsClaimState: "unknown",
             findingsCount: 0
@@ -1523,7 +1495,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "rework",
           summary: "1 open finding remains in this run.",
-          report_markdown: "# Meta Review\n\nOpen findings remain and rework is required.",
           rework_target_message: "Resolve the remaining open finding.",
           report_json: buildStructuredSubmitReportJson({
             findingsClaimState: "open_findings",
@@ -1568,7 +1539,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Follow-up notes captured for operator context.",
-          report_markdown: "# Meta Review\n\nAmbiguous summary with clean structured payload.",
           report_json: buildStructuredSubmitReportJson({
             findingsClaimState: "clean",
             findingsCount: 0
@@ -1611,7 +1581,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "No findings remain after this review.",
-          report_markdown: "# Meta Review\n\nCanonical clean no-findings path.",
           report_json: buildStructuredSubmitReportJson({
             findingsClaimState: "clean",
             findingsCount: 0
@@ -1654,7 +1623,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "rework",
           summary: "Operator context notes captured for follow-up handling.",
-          report_markdown: "# Meta Review\n\nAmbiguous summary with structured open findings payload.",
           rework_target_message: "Resolve remaining open findings.",
           report_json: buildStructuredSubmitReportJson({
             findingsClaimState: "open_findings",
@@ -1699,7 +1667,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Operator notes captured for context.",
-          report_markdown: "# Meta Review\n\nTuple inconsistency open/zero.",
           report_json: buildStructuredSubmitReportJson({
             findingsClaimState: "open_findings",
             findingsCount: 0
@@ -1741,7 +1708,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Operator notes captured for context.",
-          report_markdown: "# Meta Review\n\nTuple inconsistency clean/positive.",
           report_json: buildStructuredSubmitReportJson({
             findingsClaimState: "clean",
             findingsCount: 1
@@ -1804,7 +1770,6 @@ describe("meta-review submit", () => {
             round: 1,
             recommendation: "approve",
             summary: "Claim tuple incomplete should reject.",
-            report_markdown: "# Meta Review\n\nIncomplete claim tuple.",
             report_json: testCase.reportJson
           },
           {
@@ -1844,7 +1809,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Claim source mismatch should reject.",
-          report_markdown: "# Meta Review\n\nInvalid claim source.",
           report_json: buildStructuredSubmitReportJson({
             findingsClaimState: "clean",
             findingsClaimSource: "legacy_summary_parser",
@@ -1935,7 +1899,6 @@ describe("meta-review submit", () => {
             round: 1,
             recommendation: "approve",
             summary: "Invalid findings_count should reject.",
-            report_markdown: "# Meta Review\n\nInvalid findings_count.",
             report_json: invalidCase.reportJson
           },
           {
@@ -1975,7 +1938,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Missing claim tuple should reject.",
-          report_markdown: "# Meta Review\n\nMissing claim fields.",
           report_json: {
             findings_count: 0
           }
@@ -2016,7 +1978,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Empty report_json should be rejected.",
-          report_markdown: "# Meta Review\n\nEmpty report_json payload.",
           report_json: {}
         },
         {
@@ -2054,7 +2015,6 @@ describe("meta-review submit", () => {
         round: 1,
         recommendation: "approve",
         summary: "Looks good after final review.",
-        report_markdown: "# Meta Review\n\nApproved.",
         report_json: buildStructuredSubmitReportJson()
       },
       {
@@ -2080,7 +2040,7 @@ describe("meta-review submit", () => {
       last_autonomous_status: "success",
       last_autonomous_recommendation: "approve",
       last_autonomous_summary: "Looks good after final review.",
-      last_autonomous_report_ref: "artifacts/meta-review-last.md",
+      last_autonomous_report_ref: "artifacts/meta-review-last.json",
       last_autonomous_rework_target_message: null
     });
   });
@@ -2106,7 +2066,6 @@ describe("meta-review submit", () => {
         round: 1,
         recommendation: "approve",
         summary: "2 advisory findings remain open.",
-        report_markdown: "# Meta Review\n\nAdvisory-only approve.",
         report_json: {
           findings_claim_state: "open_findings",
           findings_claim_source: "meta_review_artifact",
@@ -2179,7 +2138,6 @@ describe("meta-review submit", () => {
         round: 1,
         recommendation: "approve",
         summary,
-        report_markdown: "# Meta Review\n\nAdvisory-only approve.",
         report_json: {
           findings_claim_state: "open_findings",
           findings_claim_source: "meta_review_artifact",
@@ -2237,7 +2195,6 @@ describe("meta-review submit", () => {
         round: 1,
         recommendation: "rework",
         summary: "Needs one more deterministic fix.",
-        report_markdown: "# Meta Review\n\nRework required.",
         rework_target_message: "Fix retry sequencing in gate recovery.",
         report_json: buildStructuredSubmitReportJson({
           findingsClaimState: "open_findings",
@@ -2306,13 +2263,12 @@ describe("meta-review submit", () => {
         round: 1,
         recommendation: "rework",
         summary: "Needs another pass.",
-        report_markdown: "# Meta Review\n\nRework required.",
         rework_target_message: "Fix parity artifact path.",
         report_json: buildStructuredSubmitReportJson({
           findingsClaimState: "open_findings",
           findingsCount: 1,
           metaReviewRunId: "run_meta_submit_03",
-          findingsArtifactRef: "artifacts/meta-review-last.md"
+          findingsArtifactRef: "artifacts/meta-review-last.json"
         })
       },
       {
@@ -2361,7 +2317,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "rework",
           summary: "Missing run-link metadata.",
-          report_markdown: "# Meta Review\n\nMissing run-link metadata.",
           rework_target_message: "Fix run-link metadata.",
           report_json: buildStructuredSubmitReportJson({
             findingsClaimState: "open_findings",
@@ -2405,7 +2360,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "rework",
           summary: "Mismatched run-link metadata.",
-          report_markdown: "# Meta Review\n\nMismatched run-link metadata.",
           rework_target_message: "Fix run-link metadata.",
           report_json: buildStructuredSubmitReportJson({
             findingsClaimState: "open_findings",
@@ -2451,7 +2405,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "rework",
           summary: "Missing target.",
-          report_markdown: "# Meta Review\n\nMissing target.",
           report_json: buildStructuredSubmitReportJson({
             findingsClaimState: "open_findings",
             findingsCount: 1,
@@ -2508,7 +2461,6 @@ describe("meta-review submit", () => {
             round: 1,
             recommendation: "rework",
             summary: "No findings remain after this review.",
-            report_markdown: "# Meta Review\n\nRework submit missing/empty target with parity mismatch payload.",
             ...(invalidCase.reworkTargetMessage !== undefined
               ? { rework_target_message: invalidCase.reworkTargetMessage }
               : {}),
@@ -2549,7 +2501,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Lifecycle guard should reject.",
-          report_markdown: "# Meta Review\n\nLifecycle guard reject.",
           report_json: buildStructuredSubmitReportJson()
         },
         {
@@ -2588,7 +2539,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Active role guard should reject.",
-          report_markdown: "# Meta Review\n\nActive role guard reject.",
           report_json: buildStructuredSubmitReportJson()
         },
         {
@@ -2631,7 +2581,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Active ownership guard should reject.",
-          report_markdown: "# Meta Review\n\nActive ownership guard reject.",
           report_json: buildStructuredSubmitReportJson()
         },
         {
@@ -2672,7 +2621,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Should fail sender check.",
-          report_markdown: "# Meta Review\n\nShould fail.",
           report_json: buildStructuredSubmitReportJson()
         },
         {
@@ -2710,7 +2658,6 @@ describe("meta-review submit", () => {
         round: 1,
         recommendation: "approve",
         summary: "Should fail runtime pane ownership check.",
-        report_markdown: "# Meta Review\n\nInactive pane should reject.",
         report_json: buildStructuredSubmitReportJson()
       },
       {
@@ -2767,7 +2714,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Should succeed without gate run identity.",
-          report_markdown: "# Meta Review\n\nMissing run binding.",
           report_json: buildStructuredSubmitReportJson()
         },
         {
@@ -2834,7 +2780,6 @@ describe("meta-review submit", () => {
         round: 1,
         recommendation: "approve",
         summary: "First submit should succeed.",
-        report_markdown: "# Meta Review\n\nFirst submit.",
         report_json: buildStructuredSubmitReportJson()
       },
       {
@@ -2852,7 +2797,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Second submit should be rejected.",
-          report_markdown: "# Meta Review\n\nSecond submit.",
           report_json: buildStructuredSubmitReportJson()
         },
         {
@@ -2900,7 +2844,6 @@ describe("meta-review submit", () => {
         round: 1,
         recommendation: "approve",
         summary: "First submit should succeed for precedence test.",
-        report_markdown: "# Meta Review\n\nFirst submit for precedence test.",
         report_json: buildStructuredSubmitReportJson()
       },
       {
@@ -2918,7 +2861,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Second malformed duplicate submit should fail schema-first.",
-          report_markdown: "# Meta Review\n\nSecond malformed duplicate submit.",
           report_json: {}
         },
         {
@@ -2976,7 +2918,6 @@ describe("meta-review submit", () => {
           round: 1,
           recommendation: "approve",
           summary: "Duplicate submit should be detected after lifecycle departure.",
-          report_markdown: "# Meta Review\n\nDuplicate after lifecycle departure.",
           report_json: buildStructuredSubmitReportJson()
         },
         {
@@ -3014,7 +2955,7 @@ describe("meta-review submit", () => {
                     last_autonomous_status: "success",
                     last_autonomous_recommendation: "approve",
                     last_autonomous_summary: "Concurrent submit already routed gate.",
-                    last_autonomous_report_ref: "artifacts/meta-review-last.md",
+                    last_autonomous_report_ref: "artifacts/meta-review-last.json",
                     last_autonomous_rework_target_message: null,
                     last_autonomous_updated_at: "2026-03-09T09:49:09.000Z"
                   }
@@ -3065,7 +3006,6 @@ describe("meta-review submit", () => {
           round: 2,
           recommendation: "approve",
           summary: "Stale round should fail.",
-          report_markdown: "# Meta Review\n\nStale round.",
           report_json: buildStructuredSubmitReportJson()
         },
         {
@@ -3112,15 +3052,12 @@ describe("meta-review runner parsing", () => {
 
   it("parses pane JSON output even when string fields contain raw line breaks", () => {
     const raw = `{"recommendation":"approve","summary":"line one
-line two","rework_target_message":null,"report_markdown":"# Report
-
-ok"}`;
+line two","rework_target_message":null}`;
 
     const parsed = parseMetaReviewRunnerOutput(raw);
 
     expect(parsed.recommendation).toBe("approve");
     expect(parsed.summary).toBe("line one\nline two");
-    expect(parsed.reportMarkdown).toContain("# Report");
     expect(parsed.reworkTargetMessage).toBeNull();
   });
 });
@@ -3145,7 +3082,6 @@ describe("meta-review reads", () => {
         runLiveReview: async () => ({
           recommendation: "approve",
           summary: "Looks clean",
-          report_markdown: "# Clean"
         })
       }
     );
@@ -3182,7 +3118,6 @@ describe("meta-review reads", () => {
         runLiveReview: async () => ({
           recommendation: "approve",
           summary: "Report exists",
-          report_markdown: "# Existing report"
         })
       }
     );
@@ -3196,7 +3131,11 @@ describe("meta-review reads", () => {
 
     expect(before.fingerprint).toBe(after.fingerprint);
     expect(lastReport.has_report).toBe(true);
-    expect(lastReport.report_markdown).toContain("Existing report");
+    expect(lastReport.summary).toBe("Report exists");
+    expect(lastReport.report_json).toMatchObject({
+      findings_claim_state: "clean",
+      findings_count: 0
+    });
   });
 
   it("reads blocking/advisory split parity fields from report json into status and last-report views", async () => {
@@ -3218,7 +3157,6 @@ describe("meta-review reads", () => {
         runLiveReview: async () => ({
           recommendation: "approve",
           summary: "Split parity snapshot exists",
-          report_markdown: "# Split report",
           report_json: {
             findings_claim_state: "open_findings",
             findings_claim_source: "meta_review_artifact",
@@ -3275,7 +3213,6 @@ describe("meta-review reads", () => {
         runLiveReview: async () => ({
           recommendation: "approve",
           summary: "Parity diagnostics parse case",
-          report_markdown: "# Existing report"
         })
       }
     );
@@ -3302,7 +3239,8 @@ describe("meta-review reads", () => {
       "META_REVIEW_PARITY_ARTIFACT_PARSE_FAILED"
     );
     expect(lastReport.has_report).toBe(true);
-    expect(lastReport.report_markdown).toContain("Existing report");
+    expect(lastReport.report_json).toBeNull();
+    expect(lastReport.summary).toBe("Parity diagnostics parse case");
   });
 
   it("surfaces deterministic parity diagnostics when parity JSON cannot be read", async () => {
@@ -3324,7 +3262,6 @@ describe("meta-review reads", () => {
         runLiveReview: async () => ({
           recommendation: "approve",
           summary: "Parity diagnostics read case",
-          report_markdown: "# Existing report"
         })
       }
     );
@@ -3367,7 +3304,8 @@ describe("meta-review reads", () => {
       "META_REVIEW_PARITY_ARTIFACT_READ_FAILED:EACCES"
     );
     expect(lastReport.has_report).toBe(true);
-    expect(lastReport.report_markdown).toContain("Existing report");
+    expect(lastReport.report_json).toBeNull();
+    expect(lastReport.summary).toBe("Parity diagnostics read case");
   });
 
   it("surfaces deterministic stale snapshot diagnostics when cached report round trails current bubble round", async () => {
@@ -3389,7 +3327,6 @@ describe("meta-review reads", () => {
         runLiveReview: async () => ({
           recommendation: "approve",
           summary: "Stale snapshot diagnostics case",
-          report_markdown: "# Existing report"
         })
       }
     );
@@ -3466,7 +3403,6 @@ describe("meta-review reads", () => {
         runLiveReview: async () => ({
           recommendation: "approve",
           summary: "Legacy no-round artifact case",
-          report_markdown: "# Existing report"
         })
       }
     );
@@ -3592,12 +3528,11 @@ describe("meta-review reads", () => {
         runLiveReview: async () => ({
           recommendation: "approve",
           summary: "Generated then removed",
-          report_markdown: "# Report"
         })
       }
     );
 
-    await unlink(bubble.paths.metaReviewLastMarkdownArtifactPath);
+    await unlink(bubble.paths.metaReviewLastJsonArtifactPath);
 
     const lastReport = await getMetaReviewLastReport({
       bubbleId: bubble.bubbleId,
@@ -3605,7 +3540,7 @@ describe("meta-review reads", () => {
     });
 
     expect(lastReport.has_report).toBe(false);
-    expect(lastReport.report_ref).toBe("artifacts/meta-review-last.md");
+    expect(lastReport.report_ref).toBe("artifacts/meta-review-last.json");
     expect(lastReport.summary).toBe("Generated then removed");
     expect(lastReport.updated_at).toBe("2026-03-08T11:30:00.000Z");
   });
@@ -3629,7 +3564,6 @@ describe("meta-review reads", () => {
         runLiveReview: async () => ({
           recommendation: "approve",
           summary: "Canonical report exists",
-          report_markdown: "# Report"
         })
       }
     );
@@ -3691,7 +3625,6 @@ describe("meta-review reads", () => {
         runLiveReview: async () => ({
           recommendation: "approve",
           summary: "Canonical report exists",
-          report_markdown: "# Report"
         })
       }
     );
@@ -3707,7 +3640,7 @@ describe("meta-review reads", () => {
         ...loaded.state,
         meta_review: {
           ...loaded.state.meta_review,
-          last_autonomous_report_ref: "artifacts/meta-review-last.md\u0000tmp"
+          last_autonomous_report_ref: "artifacts/meta-review-last.json\u0000tmp"
         }
       }
     };
@@ -3753,7 +3686,6 @@ describe("meta-review reads", () => {
         runLiveReview: async () => ({
           recommendation: "approve",
           summary: "No lifecycle mutation",
-          report_markdown: "# Report"
         })
       }
     );
@@ -3810,7 +3742,6 @@ describe("meta-review reads", () => {
         runLiveReview: async () => ({
           recommendation: "approve",
           summary: "Recovered after manual rerun",
-          report_markdown: "# Recovered",
           report_json: {
             findings_claim_state: "clean",
             findings_claim_source: "meta_review_artifact",
@@ -3848,7 +3779,6 @@ describe("meta-review reads", () => {
         {
           runLiveReview: async () => ({
             recommendation: "rework",
-            report_markdown: "# Report"
           })
         }
       )

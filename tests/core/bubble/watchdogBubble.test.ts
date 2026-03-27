@@ -487,7 +487,7 @@ describe("runBubbleWatchdog", () => {
           last_autonomous_status: "success",
           last_autonomous_recommendation: "inconclusive",
           last_autonomous_summary: "Recovered meta-review snapshot prior to timeout route.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_rework_target_message: null,
           last_autonomous_updated_at: "2026-02-22T12:00:30.000Z"
         }
@@ -607,7 +607,7 @@ describe("runBubbleWatchdog", () => {
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",
           last_autonomous_summary: "Canonical structured submit captured.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_rework_target_message: null,
           last_autonomous_updated_at: "2026-02-22T12:01:00.000Z"
         }
@@ -687,7 +687,7 @@ describe("runBubbleWatchdog", () => {
           last_autonomous_status: "success",
           last_autonomous_recommendation: "rework",
           last_autonomous_summary: "Canonical structured submit captured for rework.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_rework_target_message: "Fix parity mismatch before next pass.",
           last_autonomous_updated_at: "2026-02-22T12:01:00.000Z"
         }
@@ -729,7 +729,7 @@ describe("runBubbleWatchdog", () => {
           run_id: runId,
           recommendation: "rework",
           summary: "Canonical rework snapshot for watchdog routing.",
-          report_ref: "artifacts/meta-review-last.md",
+          report_ref: "artifacts/meta-review-last.json",
           report_json: {
             findings_claim_state: "open_findings",
             findings_claim_source: "meta_review_artifact",
@@ -834,7 +834,7 @@ describe("runBubbleWatchdog", () => {
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",
           last_autonomous_summary: "Structured submit exists but predates active window.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_rework_target_message: null,
           last_autonomous_updated_at: "2026-02-22T11:59:59.000Z"
         }
@@ -892,7 +892,7 @@ describe("runBubbleWatchdog", () => {
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",
           last_autonomous_summary: "Stale previous-round submit snapshot.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_rework_target_message: null,
           last_autonomous_updated_at: "2026-02-22T11:59:59.000Z"
         }
@@ -951,7 +951,7 @@ describe("runBubbleWatchdog", () => {
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",
           last_autonomous_summary: "Canonical submit is present in active window.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_rework_target_message: null,
           last_autonomous_updated_at: "2026-02-22T12:01:00.000Z"
         }

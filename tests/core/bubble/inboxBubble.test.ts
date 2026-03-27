@@ -320,7 +320,7 @@ describe("getBubbleInbox", () => {
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",
           last_autonomous_summary: "Fresh approve summary",
-          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_rework_target_message: null,
           last_autonomous_updated_at: "2026-02-22T10:15:00.000Z"
         }

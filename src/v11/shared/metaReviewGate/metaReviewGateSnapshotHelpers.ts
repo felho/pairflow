@@ -8,7 +8,7 @@ import {
   type FindingsParityMetadata
 } from "../../../types/protocol.js";
 
-export const metaReviewFallbackReportRef = "artifacts/meta-review-last.md";
+export const metaReviewFallbackReportRef = "artifacts/meta-review-last.json";
 export const metaReviewerAgent = "codex";
 
 export function normalizeMetaReviewSnapshot(

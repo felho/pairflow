@@ -201,7 +201,7 @@ Canonical persistence policy:
 3. Retrieval commands read the canonical autonomous snapshot only.
 
 Canonical artifact/state footprint:
-1. Optional rolling artifacts: `artifacts/meta-review-last.json` and `artifacts/meta-review-last.md` (single-slot overwrite model).
+1. Rolling artifact: `artifacts/meta-review-last.json` (single-slot overwrite model).
 2. State fields (minimum):
    - `meta_review.last_autonomous_run_id`
    - `meta_review.last_autonomous_status` (`success|error|inconclusive`)

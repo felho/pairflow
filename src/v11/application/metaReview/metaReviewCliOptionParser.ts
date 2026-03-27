@@ -38,10 +38,6 @@ function buildMetaReviewSubmitOptions(
     round: parseSubmitRound(values.round),
     recommendation: parseSubmitRecommendation(values.recommendation),
     summary: parseRequiredSubmitText(values.summary, "--summary"),
-    reportMarkdown: parseRequiredSubmitText(
-      values.reportMarkdown,
-      "--report-markdown"
-    ),
     reworkTargetMessage: parseOptionalReworkTarget(values.reworkTargetMessage),
     reportJson: parseRequiredSubmitReportJson(values.reportJson)
   };

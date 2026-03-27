@@ -1,7 +1,6 @@
 import type { MetaReviewRunResult, MetaReviewRunWarning } from "../../../core/bubble/metaReview.js";
 
-export const metaReviewFallbackReportRef = "artifacts/meta-review-last.md";
-export const metaReviewFallbackReportJsonRef = "artifacts/meta-review-last.json";
+export const metaReviewFallbackReportRef = "artifacts/meta-review-last.json";
 
 export function buildMetaReviewArtifactWriteWarning(input: {
   artifactRef: string;
@@ -11,34 +10,6 @@ export function buildMetaReviewArtifactWriteWarning(input: {
     reason_code: "META_REVIEW_ARTIFACT_WRITE_WARNING",
     message: `${input.artifactRef}: ${input.error instanceof Error ? input.error.message : String(input.error)}`
   };
-}
-
-export function buildRecoveredMetaReviewReportMarkdown(input: {
-  bubbleId: string;
-  runResult: MetaReviewRunResult;
-  nowIso: string;
-}): string {
-  const summary =
-    input.runResult.summary ??
-    `Meta-review recovery route recorded recommendation=${input.runResult.recommendation}.`;
-  const runIdLine =
-    typeof input.runResult.run_id === "string" && input.runResult.run_id.trim().length > 0
-      ? [`- Run: ${input.runResult.run_id}`]
-      : [];
-
-  return [
-    "# Meta Review Report",
-    "",
-    `- Bubble: ${input.bubbleId}`,
-    ...runIdLine,
-    `- Generated: ${input.nowIso}`,
-    `- Recommendation: ${input.runResult.recommendation}`,
-    `- Status: ${input.runResult.status}`,
-    "",
-    "## Summary",
-    "",
-    summary
-  ].join("\n");
 }
 
 export function buildRecoveredMetaReviewReportPayload(input: {
@@ -70,7 +41,7 @@ export function buildRecoveredMetaReviewReportPayload(input: {
     recommendation: input.runResult.recommendation,
     summary: input.runResult.summary,
     report_ref: input.runResult.report_ref,
-    report_json_ref: metaReviewFallbackReportJsonRef,
+    report_json_ref: input.runResult.report_ref,
     warnings: [
       ...input.runResult.warnings,
       ...input.recoveredWarnings

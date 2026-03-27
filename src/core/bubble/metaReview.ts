@@ -54,8 +54,7 @@ import {
   hasGlobalNoFindingsSummaryAssertion,
   evaluatePositiveSummaryFindingsAssertion
 } from "../convergence/policy.js";
-const CANONICAL_META_REVIEW_REPORT_REF = "artifacts/meta-review-last.md";
-const CANONICAL_META_REVIEW_REPORT_JSON_REF = "artifacts/meta-review-last.json";
+const CANONICAL_META_REVIEW_REPORT_REF = "artifacts/meta-review-last.json";
 
 export type MetaReviewDepth = "standard" | "deep";
 
@@ -73,7 +72,6 @@ export interface MetaReviewSubmitInput extends MetaReviewReadInput {
   round: number;
   recommendation: MetaReviewSubmissionPayload["recommendation"];
   summary: string;
-  report_markdown: string;
   rework_target_message?: string | null;
   report_json: Record<string, unknown>;
 }
@@ -93,7 +91,6 @@ export interface MetaReviewLiveRunnerInput {
 export interface MetaReviewLiveRunnerOutput {
   recommendation: MetaReviewRecommendation;
   summary?: string;
-  report_markdown?: string;
   report_json?: Record<string, unknown>;
   rework_target_message?: string;
 }
@@ -128,7 +125,7 @@ export interface MetaReviewLastReportView {
   report_ref: string | null;
   summary: string | null;
   updated_at: string | null;
-  report_markdown: string | null;
+  report_json: Record<string, unknown> | null;
   findings_claimed_open_total: number | null;
   findings_artifact_open_total: number | null;
   findings_blocking_open_total: number | null;
@@ -521,7 +518,7 @@ function resolveCanonicalMetaReviewReportJson(input: {
       findingsArtifactRefFromInput === null ||
       findingsArtifactRefFromInput === CANONICAL_META_REVIEW_REPORT_REF
     ) {
-      findingsArtifactRef = CANONICAL_META_REVIEW_REPORT_JSON_REF;
+      findingsArtifactRef = CANONICAL_META_REVIEW_REPORT_REF;
     }
   }
   const resolvedMetaReviewRunId = isNonEmptyString(base.meta_review_run_id)
@@ -735,7 +732,7 @@ function assertRunPayloadInvariants(input: {
 
 function normalizeRequiredSubmitText(
   value: string,
-  fieldName: "summary" | "report_markdown"
+  fieldName: "summary"
 ): string {
   if (!isNonEmptyString(value)) {
     throw new MetaReviewError(
@@ -743,7 +740,7 @@ function normalizeRequiredSubmitText(
       `meta-review submit ${fieldName} must be a non-empty string`
     );
   }
-  return fieldName === "summary" ? value.trim() : value.trimEnd();
+  return value.trim();
 }
 
 export function hasCanonicalSubmitForActiveMetaReviewRound(input: {
@@ -860,27 +857,6 @@ function resolveReportArtifactPath(input: {
   }
 
   return resolvedReportPath;
-}
-
-function buildFallbackReportMarkdown(input: {
-  bubbleId: string;
-  runId: string;
-  updatedAt: string;
-  summary: string;
-}): string {
-  return [
-    "# Meta Review Report",
-    "",
-    `- Bubble: ${input.bubbleId}`,
-    `- Run: ${input.runId}`,
-    `- Generated: ${input.updatedAt}`,
-    "- Recommendation: inconclusive",
-    "- Status: error",
-    "",
-    "## Summary",
-    "",
-    input.summary
-  ].join("\n");
 }
 
 function createMetaReviewStatusView(
@@ -1050,16 +1026,12 @@ function buildCodexMetaReviewSchema(): string {
       },
       rework_target_message: {
         type: ["string", "null"]
-      },
-      report_markdown: {
-        type: "string"
       }
     },
     required: [
       "recommendation",
       "summary",
-      "rework_target_message",
-      "report_markdown"
+      "rework_target_message"
     ],
     additionalProperties: false
   } as const;
@@ -1092,7 +1064,6 @@ function buildMetaReviewPrompt(input: MetaReviewLiveRunnerInput): string {
     "",
     "Rules:",
     '- "summary" must be concise and specific.',
-    '- "report_markdown" must contain your rationale and evidence references.',
     '- if recommendation is "rework", "rework_target_message" must be non-empty and actionable.',
     '- if recommendation is not "rework", "rework_target_message" must be null.',
     "- Do not modify repository files; read-only review only."
@@ -1125,7 +1096,6 @@ export function parseMetaReviewRunnerOutput(
   recommendation: MetaReviewRecommendation;
   summary: string;
   reworkTargetMessage: string | null;
-  reportMarkdown: string;
 } {
   const normalizeJsonControlCharactersInStrings = (input: string): string => {
     let output = "";
@@ -1218,14 +1188,6 @@ export function parseMetaReviewRunnerOutput(
   }
   const summary = summaryRaw.trim();
 
-  const reportMarkdownRaw = parsed.report_markdown;
-  if (!isNonEmptyString(reportMarkdownRaw)) {
-    throw new Error(
-      "meta-review runner output.report_markdown must be a non-empty string."
-    );
-  }
-  const reportMarkdown = reportMarkdownRaw.trimEnd();
-
   const reworkRaw = parsed.rework_target_message;
   let reworkTargetMessage: string | null;
   if (reworkRaw === null || reworkRaw === undefined) {
@@ -1250,8 +1212,7 @@ export function parseMetaReviewRunnerOutput(
   return {
     recommendation,
     summary,
-    reworkTargetMessage,
-    reportMarkdown
+    reworkTargetMessage
   };
 }
 
@@ -1393,7 +1354,6 @@ async function runCodexAgentLiveReview(
     return {
       recommendation: parsed.recommendation,
       summary: parsed.summary,
-      report_markdown: parsed.reportMarkdown,
       report_json: {
         source: "codex-exec",
         mode: "agent",
@@ -1439,7 +1399,6 @@ async function runCodexPaneLiveReview(
   return {
     recommendation: parsed.recommendation,
     summary: parsed.summary,
-    report_markdown: parsed.reportMarkdown,
     report_json: {
       source: "codex-pane",
       mode: "agent",
@@ -1564,10 +1523,6 @@ export async function submitMetaReviewResult(
   const recommendation = input.recommendation;
   const status = mapRecommendationToStatus(recommendation);
   const summary = normalizeRequiredSubmitText(input.summary, "summary");
-  const reportMarkdown = normalizeRequiredSubmitText(
-    input.report_markdown,
-    "report_markdown"
-  );
   const reworkTargetMessage = normalizeOptionalText(
     input.rework_target_message ?? undefined
   );
@@ -1668,7 +1623,7 @@ export async function submitMetaReviewResult(
     recommendation,
     summary,
     report_ref: CANONICAL_META_REVIEW_REPORT_REF,
-    report_json_ref: CANONICAL_META_REVIEW_REPORT_JSON_REF,
+    report_json_ref: CANONICAL_META_REVIEW_REPORT_REF,
     rework_target_message: reworkTargetMessage,
     warnings,
     report_json: canonicalReportJson
@@ -1678,11 +1633,6 @@ export async function submitMetaReviewResult(
     writeFileFn(
       resolved.bubblePaths.metaReviewLastJsonArtifactPath,
       `${JSON.stringify(reportPayload, null, 2)}\n`,
-      "utf8"
-    ),
-    writeFileFn(
-      resolved.bubblePaths.metaReviewLastMarkdownArtifactPath,
-      `${reportMarkdown.trimEnd()}\n`,
       "utf8"
     )
   ]);
@@ -1756,7 +1706,6 @@ export async function runMetaReview(
   let recommendation: MetaReviewRecommendation;
   let status: MetaReviewRunStatus;
   let summary: string | null;
-  let reportMarkdown: string;
   let reportJson: Record<string, unknown> | undefined;
   let reworkTargetMessage: string | null;
   const warnings: MetaReviewRunWarning[] = [];
@@ -1779,39 +1728,12 @@ export async function runMetaReview(
     summary = normalizeOptionalText(output.summary);
     reworkTargetMessage = normalizeOptionalText(output.rework_target_message);
     reportJson = output.report_json;
-
-    if (isNonEmptyString(output.report_markdown)) {
-      reportMarkdown = output.report_markdown.trimEnd();
-    } else {
-      const summaryText =
-        summary ??
-        `Meta-review completed with recommendation ${recommendation}.`;
-      reportMarkdown = [
-        "# Meta Review Report",
-        "",
-        `- Bubble: ${resolved.bubbleId}`,
-        `- Run: ${runId}`,
-        `- Generated: ${updatedAt}`,
-        `- Recommendation: ${recommendation}`,
-        `- Status: ${status}`,
-        "",
-        "## Summary",
-        "",
-        summaryText
-      ].join("\n");
-    }
   } catch (error) {
     const failure = formatRunnerFailure(error);
     recommendation = "inconclusive";
     status = "error";
     summary = failure.summary;
     reworkTargetMessage = null;
-    reportMarkdown = buildFallbackReportMarkdown({
-      bubbleId: resolved.bubbleId,
-      runId,
-      updatedAt,
-      summary
-    });
 
     warnings.push({
       reason_code: "META_REVIEW_RUNNER_ERROR",
@@ -1882,14 +1804,13 @@ export async function runMetaReview(
     recommendation,
     summary,
     report_ref: CANONICAL_META_REVIEW_REPORT_REF,
-    report_json_ref: CANONICAL_META_REVIEW_REPORT_JSON_REF,
+    report_json_ref: CANONICAL_META_REVIEW_REPORT_REF,
     rework_target_message: reworkTargetMessage,
     warnings,
     report_json: canonicalReportJson
   };
   const rollingArtifactPaths = [
-    resolved.bubblePaths.metaReviewLastJsonArtifactPath,
-    resolved.bubblePaths.metaReviewLastMarkdownArtifactPath
+    resolved.bubblePaths.metaReviewLastJsonArtifactPath
   ];
   const rollingArtifactBackup = await Promise.all(
     rollingArtifactPaths.map(async (artifactPath) => {
@@ -1917,11 +1838,6 @@ export async function runMetaReview(
     writeFileFn(
       resolved.bubblePaths.metaReviewLastJsonArtifactPath,
       `${JSON.stringify(reportPayload, null, 2)}\n`,
-      "utf8"
-    ),
-    writeFileFn(
-      resolved.bubblePaths.metaReviewLastMarkdownArtifactPath,
-      `${reportMarkdown.trimEnd()}\n`,
       "utf8"
     )
   ]);
@@ -2264,7 +2180,7 @@ export async function getMetaReviewLastReport(
       report_ref: null,
       summary: snapshot.last_autonomous_summary,
       updated_at: snapshot.last_autonomous_updated_at,
-      report_markdown: null,
+      report_json: null,
       findings_claimed_open_total: parity.findings_claimed_open_total,
       findings_artifact_open_total: parity.findings_artifact_open_total,
       findings_blocking_open_total: parity.findings_blocking_open_total,
@@ -2314,7 +2230,7 @@ export async function getMetaReviewLastReport(
       report_ref: null,
       summary: null,
       updated_at: null,
-      report_markdown: null,
+      report_json: null,
       findings_claimed_open_total: null,
       findings_artifact_open_total: null,
       findings_blocking_open_total: null,
@@ -2327,9 +2243,15 @@ export async function getMetaReviewLastReport(
     };
   }
 
-  let reportMarkdown: string;
+  let reportJson: Record<string, unknown> | null = null;
   try {
-    reportMarkdown = await readFileFn(reportPath, "utf8");
+    const reportRaw = await readFileFn(reportPath, "utf8");
+    const parsed: unknown = JSON.parse(reportRaw);
+    if (isRecord(parsed) && isRecord(parsed.report_json)) {
+      reportJson = parsed.report_json;
+    } else if (isRecord(parsed)) {
+      reportJson = parsed;
+    }
   } catch (error) {
     if (isMissingFileError(error)) {
       return {
@@ -2338,7 +2260,7 @@ export async function getMetaReviewLastReport(
         report_ref: reportRef,
         summary: snapshot.last_autonomous_summary,
         updated_at: snapshot.last_autonomous_updated_at,
-        report_markdown: null,
+        report_json: null,
         findings_claimed_open_total: parity.findings_claimed_open_total,
         findings_artifact_open_total: parity.findings_artifact_open_total,
         findings_blocking_open_total: parity.findings_blocking_open_total,
@@ -2350,7 +2272,23 @@ export async function getMetaReviewLastReport(
         parity_diagnostics: parityDiagnostics
       };
     }
-    throw error;
+    return {
+      bubbleId: resolved.bubbleId,
+      has_report: true,
+      report_ref: reportRef,
+      summary: snapshot.last_autonomous_summary,
+      updated_at: snapshot.last_autonomous_updated_at,
+      report_json: null,
+      findings_claimed_open_total: parity.findings_claimed_open_total,
+      findings_artifact_open_total: parity.findings_artifact_open_total,
+      findings_blocking_open_total: parity.findings_blocking_open_total,
+      findings_advisory_open_total: parity.findings_advisory_open_total,
+      findings_artifact_status: parity.findings_artifact_status,
+      findings_digest_sha256: parity.findings_digest_sha256,
+      meta_review_run_id: parity.meta_review_run_id,
+      findings_parity_status: parity.findings_parity_status,
+      parity_diagnostics: parityDiagnostics
+    };
   }
 
   return {
@@ -2359,7 +2297,7 @@ export async function getMetaReviewLastReport(
     report_ref: reportRef,
     summary: snapshot.last_autonomous_summary,
     updated_at: snapshot.last_autonomous_updated_at,
-    report_markdown: reportMarkdown,
+    report_json: reportJson,
     findings_claimed_open_total: parity.findings_claimed_open_total,
     findings_artifact_open_total: parity.findings_artifact_open_total,
     findings_blocking_open_total: parity.findings_blocking_open_total,

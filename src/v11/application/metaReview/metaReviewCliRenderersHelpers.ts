@@ -160,13 +160,6 @@ export function appendMetaReviewLastReportVerboseLines(
   lines.push(`Meta-review run id: ${view.meta_review_run_id ?? "-"}`);
 }
 
-export function appendMetaReviewLastReportMarkdown(lines: string[], view: MetaReviewLastReportView): void {
-  if (view.report_markdown !== null) {
-    lines.push("");
-    lines.push(view.report_markdown.trimEnd());
-  }
-}
-
 export function buildMetaReviewRecoverText(result: MetaReviewGateResult): string[] {
   return [
     `Meta-review recovery for ${result.bubbleId}: route=${result.route}`,

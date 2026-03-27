@@ -36,7 +36,6 @@ export interface BubbleMetaReviewSubmitCommandOptions
   round: number;
   recommendation: MetaReviewSubmissionPayload["recommendation"];
   summary: string;
-  reportMarkdown: string;
   reworkTargetMessage: string | null;
   reportJson: Record<string, unknown>;
 }

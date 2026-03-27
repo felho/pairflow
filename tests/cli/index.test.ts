@@ -372,7 +372,7 @@ describe("runCli", () => {
     expect(parsed.run_id.length).toBeGreaterThan(0);
     expect(parsed.status).toBe("error");
     expect(parsed.recommendation).toBe("inconclusive");
-    expect(parsed.report_ref).toBe("artifacts/meta-review-last.md");
+    expect(parsed.report_ref).toBe("artifacts/meta-review-last.json");
   });
 
   it("renders meta-review last-report as JSON through runCli", async () => {
@@ -414,12 +414,12 @@ describe("runCli", () => {
       bubbleId: string;
       has_report: boolean;
       report_ref: string | null;
-      report_markdown: string | null;
+      report_json: Record<string, unknown> | null;
     };
     expect(parsed.bubbleId).toBe(bubble.bubbleId);
     expect(parsed.has_report).toBe(true);
-    expect(parsed.report_ref).toBe("artifacts/meta-review-last.md");
-    expect(typeof parsed.report_markdown).toBe("string");
+    expect(parsed.report_ref).toBe("artifacts/meta-review-last.json");
+    expect(parsed.report_json).toBeTruthy();
   });
 
   it("renders meta-review last-report no-report JSON through runCli", async () => {
@@ -449,12 +449,12 @@ describe("runCli", () => {
       bubbleId: string;
       has_report: boolean;
       report_ref: string | null;
-      report_markdown: string | null;
+      report_json: Record<string, unknown> | null;
     };
     expect(parsed.bubbleId).toBe(bubble.bubbleId);
     expect(parsed.has_report).toBe(false);
     expect(parsed.report_ref).toBeNull();
-    expect(parsed.report_markdown).toBeNull();
+    expect(parsed.report_json).toBeNull();
   });
 
   it("renders meta-review recover as JSON through runCli", async () => {
@@ -487,7 +487,7 @@ describe("runCli", () => {
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",
           last_autonomous_summary: "Recovered from CLI JSON test.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_rework_target_message: null,
           last_autonomous_updated_at: "2026-03-08T12:50:00.000Z",
           auto_rework_count: 0,

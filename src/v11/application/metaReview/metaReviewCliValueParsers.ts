@@ -55,7 +55,7 @@ export function parseSubmitRecommendation(
 
 export function parseRequiredSubmitText(
   value: string | undefined,
-  optionName: "--summary" | "--report-markdown",
+  optionName: "--summary",
   raiseInvalidOption: RaiseInvalidMetaReviewOption
 ): string {
   if (value === undefined) {
@@ -68,7 +68,7 @@ export function parseRequiredSubmitText(
       `Invalid ${optionName} value. Must be non-empty.`
     );
   }
-  return optionName === "--summary" ? value.trim() : value.trimEnd();
+  return value.trim();
 }
 
 export function parseOptionalReworkTarget(
@@ -117,7 +117,6 @@ export function readStringOption(
     | "round"
     | "recommendation"
     | "summary"
-    | "report-markdown"
     | "rework-target-message"
     | "report-json",
   errorMessage: string,

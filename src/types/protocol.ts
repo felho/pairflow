@@ -182,7 +182,6 @@ export interface MetaReviewSubmissionPayload {
   round: number;
   recommendation: MetaReviewRecommendation;
   summary: string;
-  report_markdown: string;
   rework_target_message?: string | null;
   report_json: Record<string, unknown>;
 }

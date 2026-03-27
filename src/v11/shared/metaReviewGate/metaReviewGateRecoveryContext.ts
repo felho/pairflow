@@ -90,9 +90,7 @@ export async function initializeRecoverMetaReviewExecutionContext(
     writeFileFn: resolvedDependencies.writeFileFn,
     artifactsPaths: {
       metaReviewLastJsonArtifactPath:
-        resolved.bubblePaths.metaReviewLastJsonArtifactPath,
-      metaReviewLastMarkdownArtifactPath:
-        resolved.bubblePaths.metaReviewLastMarkdownArtifactPath
+        resolved.bubblePaths.metaReviewLastJsonArtifactPath
     },
     deactivateMetaReviewerPane
   });

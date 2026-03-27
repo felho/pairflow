@@ -18,7 +18,6 @@ export interface ParsedMetaReviewOptionValues {
   round: string | undefined;
   recommendation: string | undefined;
   summary: string | undefined;
-  reportMarkdown: string | undefined;
   reworkTargetMessage: string | undefined;
   reportJson: string | undefined;
   json: boolean;
@@ -51,7 +50,7 @@ export function parseSubmitRecommendation(
 
 export function parseRequiredSubmitText(
   value: string | undefined,
-  optionName: "--summary" | "--report-markdown"
+  optionName: "--summary"
 ): string {
   return parseRequiredSubmitTextValue(
     value,
@@ -87,7 +86,6 @@ function readStringOption(
     | "round"
     | "recommendation"
     | "summary"
-    | "report-markdown"
     | "rework-target-message"
     | "report-json",
   errorMessage: string
@@ -135,11 +133,6 @@ export function parseMetaReviewCliOptionValues(
       "Invalid --recommendation value."
     ),
     summary: readStringOption(values, "summary", "Invalid --summary value."),
-    reportMarkdown: readStringOption(
-      values,
-      "report-markdown",
-      "Invalid --report-markdown value."
-    ),
     reworkTargetMessage: readStringOption(
       values,
       "rework-target-message",

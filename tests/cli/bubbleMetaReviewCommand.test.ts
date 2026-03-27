@@ -174,8 +174,6 @@ describe("parseBubbleMetaReviewCommandOptions", () => {
       "approve",
       "--summary",
       "Structured submit summary",
-      "--report-markdown",
-      "# Report",
       "--report-json",
       "{\"findings\":0}"
     ]);
@@ -188,7 +186,6 @@ describe("parseBubbleMetaReviewCommandOptions", () => {
     expect(parsed.round).toBe(2);
     expect(parsed.recommendation).toBe("approve");
     expect(parsed.summary).toBe("Structured submit summary");
-    expect(parsed.reportMarkdown).toBe("# Report");
     expect(parsed.reportJson).toEqual({ findings: 0 });
   });
 
@@ -203,9 +200,7 @@ describe("parseBubbleMetaReviewCommandOptions", () => {
         "--recommendation",
         "approve",
         "--summary",
-        "missing report json",
-        "--report-markdown",
-        "# Report"
+        "missing report json"
       ])
     ).toThrow(/Missing required option: --report-json/u);
   });
@@ -373,7 +368,7 @@ describe("runBubbleMetaReviewCommand", () => {
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",
           last_autonomous_summary: "Recovered via CLI routing test.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_rework_target_message: null,
           last_autonomous_updated_at: "2026-03-08T12:30:00.000Z",
           auto_rework_count: 0,
@@ -472,8 +467,8 @@ describe("runBubbleMetaReviewCommand", () => {
       throw new Error("Expected last-report command result.");
     }
     expect(reportResult.lastReport.has_report).toBe(true);
-    expect(reportResult.lastReport.report_ref).toBe("artifacts/meta-review-last.md");
-    expect(reportResult.lastReport.report_markdown).toContain("# Meta Review Report");
+    expect(reportResult.lastReport.report_ref).toBe("artifacts/meta-review-last.json");
+    expect(reportResult.lastReport.report_json).toBeTruthy();
   });
 
   it("routes structured submit command and persists canonical snapshot", async () => {
@@ -504,8 +499,6 @@ describe("runBubbleMetaReviewCommand", () => {
       "approve",
       "--summary",
       "Structured CLI submit summary.",
-      "--report-markdown",
-      "# CLI Submit\n\nLooks good.",
       "--report-json",
       "{\"findings_claim_state\":\"clean\",\"findings_claim_source\":\"meta_review_artifact\",\"findings_count\":0}"
     ]);
@@ -553,9 +546,7 @@ describe("runBubbleMetaReviewCommand", () => {
         "--recommendation",
         "approve",
         "--summary",
-        "Structured CLI submit summary.",
-        "--report-markdown",
-        "# CLI Submit\n\nLooks good."
+        "Structured CLI submit summary."
       ])
     ).rejects.toMatchObject({
       reasonCode: "META_REVIEW_SCHEMA_INVALID"
@@ -614,7 +605,7 @@ describe("runBubbleMetaReviewCommand", () => {
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",
           last_autonomous_summary: "Recovered via parsed overload test.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_rework_target_message: null,
           last_autonomous_updated_at: "2026-03-08T12:35:00.000Z",
           auto_rework_count: 0,
@@ -678,7 +669,6 @@ describe("runBubbleMetaReviewCommand", () => {
       round: 1,
       recommendation: "approve",
       summary: "Parsed overload submit",
-      reportMarkdown: "# Parsed overload",
       reportJson: {
         findings_claim_state: "clean",
         findings_claim_source: "meta_review_artifact",
@@ -791,7 +781,7 @@ describe("runBubbleMetaReviewCommand", () => {
       "has_report",
       "meta_review_run_id",
       "parity_diagnostics",
-      "report_markdown",
+      "report_json",
       "report_ref",
       "summary",
       "updated_at"
@@ -808,7 +798,7 @@ describe("meta-review render helpers", () => {
       status: "error",
       recommendation: "inconclusive",
       summary: "Runner failed",
-      report_ref: "artifacts/meta-review-last.md",
+      report_ref: "artifacts/meta-review-last.json",
       rework_target_message: null,
       updated_at: "2026-03-08T12:00:00.000Z",
       lifecycle_state: "RUNNING",
@@ -839,7 +829,7 @@ describe("meta-review render helpers", () => {
       status: "success",
       recommendation: "approve",
       summary: "Structured submit summary",
-      report_ref: "artifacts/meta-review-last.md",
+      report_ref: "artifacts/meta-review-last.json",
       rework_target_message: null,
       updated_at: "2026-03-10T09:15:00.000Z",
       lifecycle_state: "META_REVIEW_RUNNING",
@@ -898,7 +888,7 @@ describe("meta-review render helpers", () => {
         last_autonomous_status: "success",
         last_autonomous_recommendation: "approve",
         last_autonomous_summary: "Clean",
-        last_autonomous_report_ref: "artifacts/meta-review-last.md",
+        last_autonomous_report_ref: "artifacts/meta-review-last.json",
         last_autonomous_rework_target_message: "Optional hardening",
         last_autonomous_updated_at: "2026-03-08T12:05:00.000Z",
         findings_claimed_open_total: 1,
@@ -919,7 +909,7 @@ describe("meta-review render helpers", () => {
     expect(verbose).toContain("Last rework target: Optional hardening");
   });
 
-  it("renders last-report output with optional markdown payload", () => {
+  it("renders last-report output without embedded markdown payload", () => {
     const empty = renderMetaReviewLastReportText(
       {
         bubbleId: "b_meta_cli_render_04",
@@ -927,7 +917,7 @@ describe("meta-review render helpers", () => {
         report_ref: null,
         summary: null,
         updated_at: null,
-        report_markdown: null,
+        report_json: null,
         findings_claimed_open_total: null,
         findings_artifact_open_total: null,
         findings_blocking_open_total: null,
@@ -946,10 +936,10 @@ describe("meta-review render helpers", () => {
       {
         bubbleId: "b_meta_cli_render_05",
         has_report: true,
-        report_ref: "artifacts/meta-review-last.md",
+        report_ref: "artifacts/meta-review-last.json",
         summary: "Latest",
         updated_at: "2026-03-08T12:10:00.000Z",
-        report_markdown: "# Latest Report\n\nAll good.",
+        report_json: { findings_count: 0 },
         findings_claimed_open_total: 2,
         findings_artifact_open_total: 2,
         findings_blocking_open_total: 0,
@@ -964,7 +954,7 @@ describe("meta-review render helpers", () => {
       true
     );
     expect(verbose).toContain("has_report=yes");
-    expect(verbose).toContain("# Latest Report");
+    expect(verbose).toContain("Report ref: artifacts/meta-review-last.json");
   });
 
   it("renders parity diagnostics when present", () => {
@@ -979,7 +969,7 @@ describe("meta-review render helpers", () => {
         last_autonomous_status: "success",
         last_autonomous_recommendation: "approve",
         last_autonomous_summary: "Summary",
-        last_autonomous_report_ref: "artifacts/meta-review-last.md",
+        last_autonomous_report_ref: "artifacts/meta-review-last.json",
         last_autonomous_rework_target_message: null,
         last_autonomous_updated_at: "2026-03-08T12:12:00.000Z",
         findings_claimed_open_total: null,
@@ -1008,10 +998,10 @@ describe("meta-review render helpers", () => {
       {
         bubbleId: "b_meta_cli_render_diag_02",
         has_report: true,
-        report_ref: "artifacts/meta-review-last.md",
+        report_ref: "artifacts/meta-review-last.json",
         summary: "Summary",
         updated_at: "2026-03-08T12:12:10.000Z",
-        report_markdown: "# Report",
+        report_json: null,
         findings_claimed_open_total: null,
         findings_artifact_open_total: null,
         findings_blocking_open_total: null,
@@ -1051,7 +1041,7 @@ describe("meta-review render helpers", () => {
         payload: {
           summary: "Recovered summary."
         },
-        refs: ["artifacts/meta-review-last.md"]
+        refs: ["artifacts/meta-review-last.json"]
       },
       state: {
         bubble_id: "b_meta_cli_render_recover_01",
@@ -1069,7 +1059,7 @@ describe("meta-review render helpers", () => {
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",
           last_autonomous_summary: "Recovered summary.",
-          last_autonomous_report_ref: "artifacts/meta-review-last.md",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_rework_target_message: null,
           last_autonomous_updated_at: "2026-03-08T12:39:00.000Z",
           auto_rework_count: 0,

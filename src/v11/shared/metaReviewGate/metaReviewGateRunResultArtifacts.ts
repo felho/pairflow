@@ -5,9 +5,7 @@ import type { BubbleMetaReviewSnapshotState, MetaReviewRunStatus } from "../../.
 import type { MetaReviewRunResult, MetaReviewRunWarning } from "../../../core/bubble/metaReview.js";
 import {
   buildMetaReviewArtifactWriteWarning,
-  buildRecoveredMetaReviewReportMarkdown,
   buildRecoveredMetaReviewReportPayload,
-  metaReviewFallbackReportJsonRef,
   metaReviewFallbackReportRef
 } from "./metaReviewGateRunResultArtifactPayload.js";
 
@@ -140,32 +138,11 @@ export async function writeRecoveredMetaReviewArtifacts(input: {
   runResult: MetaReviewRunResult;
   paths: {
     metaReviewLastJsonArtifactPath: string;
-    metaReviewLastMarkdownArtifactPath: string;
   };
   writeFileFn?: typeof writeFile;
 }): Promise<{ warnings: MetaReviewRunWarning[] }> {
   const writer = input.writeFileFn ?? writeFile;
   const warnings: MetaReviewRunWarning[] = [];
-
-  const markdown = buildRecoveredMetaReviewReportMarkdown({
-    bubbleId: input.bubbleId,
-    runResult: input.runResult,
-    nowIso: input.nowIso
-  });
-  try {
-    await writer(
-      input.paths.metaReviewLastMarkdownArtifactPath,
-      `${markdown.trimEnd()}\n`,
-      "utf8"
-    );
-  } catch (error) {
-    warnings.push(
-      buildMetaReviewArtifactWriteWarning({
-        artifactRef: metaReviewFallbackReportRef,
-        error
-      })
-    );
-  }
 
   const reportPayload = buildRecoveredMetaReviewReportPayload({
     bubbleId: input.bubbleId,
@@ -184,7 +161,7 @@ export async function writeRecoveredMetaReviewArtifacts(input: {
   } catch (error) {
     warnings.push(
       buildMetaReviewArtifactWriteWarning({
-        artifactRef: metaReviewFallbackReportJsonRef,
+        artifactRef: metaReviewFallbackReportRef,
         error
       })
     );

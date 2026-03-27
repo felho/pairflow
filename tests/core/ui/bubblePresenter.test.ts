@@ -44,7 +44,7 @@ describe("bubblePresenter", () => {
         latestRecommendation: "approve",
         latestStatus: "success",
         latestSummary: "Autonomous review clean.",
-        latestReportRef: "artifacts/meta-review-last.md",
+        latestReportRef: "artifacts/meta-review-last.json",
         latestUpdatedAt: "2026-02-24T12:00:30.000Z"
       },
       runtimeSession: {

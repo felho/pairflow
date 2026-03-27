@@ -6,7 +6,6 @@ import type {
 } from "./emitMetaReviewV11.js";
 import type { MetaReviewGateResultV11 as MetaReviewGateResult } from "../metaReviewGate/emitMetaReviewGateV11.js";
 import {
-  appendMetaReviewLastReportMarkdown,
   appendMetaReviewLastReportVerboseLines,
   appendMetaReviewMissingRunLines,
   appendMetaReviewOptionalFindingsParityLine,
@@ -82,10 +81,6 @@ export function renderMetaReviewLastReportText(
   appendMetaReviewParityDiagnostics(lines, view.parity_diagnostics);
   if (verbose) {
     appendMetaReviewLastReportVerboseLines(lines, view);
-  }
-
-  if (verbose && view.report_markdown !== null) {
-    appendMetaReviewLastReportMarkdown(lines, view);
   }
 
   return lines.join("\n");

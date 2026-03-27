@@ -67,7 +67,6 @@ export function buildFinishWithPaneDeactivation(input: {
   writeFileFn: typeof writeFile;
   artifactsPaths: {
     metaReviewLastJsonArtifactPath: string;
-    metaReviewLastMarkdownArtifactPath: string;
   };
   deactivateMetaReviewerPane: () => Promise<string | null>;
 }): (result: MetaReviewGateResult) => Promise<MetaReviewGateResult> {

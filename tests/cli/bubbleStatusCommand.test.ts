@@ -88,7 +88,7 @@ describe("renderBubbleStatusText", () => {
         latestRecommendation: "inconclusive",
         latestStatus: "inconclusive",
         latestSummary: "No deterministic recommendation.",
-        latestReportRef: "artifacts/meta-review-last.md",
+        latestReportRef: "artifacts/meta-review-last.json",
         latestUpdatedAt: "2026-02-22T12:04:59.000Z"
       },
       commandPath: {
@@ -246,7 +246,7 @@ describe("renderBubbleStatusTable", () => {
         latestRecommendation: "approve",
         latestStatus: "success",
         latestSummary: "Autonomous recommendation approve.",
-        latestReportRef: "artifacts/meta-review-last.md",
+        latestReportRef: "artifacts/meta-review-last.json",
         latestUpdatedAt: "2026-03-08T21:29:00.000Z"
       },
       commandPath: {
