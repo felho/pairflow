@@ -40,7 +40,7 @@ Record every executed command with timestamp and raw marker lines.
 | `pnpm lint` |  | `exit=0`, `.pairflow/evidence/lint.log` |  |
 | `pnpm typecheck` |  | `exit=0`, `.pairflow/evidence/typecheck.log` |  |
 | `pnpm test` |  | `exit=0`, `.pairflow/evidence/test.log` |  |
-| `<pairflow-command> bubble status --id <bubble-id> --repo <repo-path>` |  | `profile=external -> Command path: external`, `profile=self_host -> Command path: worktree_local` |  |
+| `<pairflow-command> bubble status --id <bubble-id> --repo <repo-path>` |  | `profile=external -> Command path: external`, no `PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE`, no `PAIRFLOW_COMMAND_PATH_STALE`; `profile=self_host -> Command path: worktree_local`, no `PAIRFLOW_COMMAND_PATH_STALE` |  |
 | `<pairflow-command> bubble meta-review status --id <bubble-id> --repo <repo-path> --verbose` |  | `Auto rework:`, `Sticky human gate:` |  |
 | `<pairflow-command> bubble meta-review recover --id <bubble-id> --repo <repo-path>` |  | `route=...`, `Lifecycle state: ...`, no new run started |  |
 | `<pairflow-command> metrics report --from <iso-from> --to <iso-to>` |  | `meta_review_rollout.route_counts`, `rollout_blocked_events: 0`, `meta_review_rollout.pairflow_command_external_unavailable_count: 0`, `meta_review_rollout.pairflow_command_path_stale_count: 0` |  |
@@ -108,3 +108,4 @@ Mark the rollout `ready` only if:
 2. every claimed validation command has a matching evidence log,
 3. the command-path check matches the configured profile authority,
 4. no blocking reason code is present in the metrics report or command/log bundle.
+   This includes `meta_review_rollout.pairflow_command_external_unavailable_count: 0` and `meta_review_rollout.pairflow_command_path_stale_count: 0`.

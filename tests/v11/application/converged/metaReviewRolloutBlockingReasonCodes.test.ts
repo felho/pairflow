@@ -27,24 +27,24 @@ describe("resolveMetaReviewRolloutBlockingReasonCodesV11", () => {
     ]);
   });
 
-  it("includes stale code for external profile when command path is stale", () => {
+  it("ignores stale code for external profile when command path is a non-blocking mismatch diagnostic", () => {
     const codes = resolveMetaReviewRolloutBlockingReasonCodesV11({
       gateRoute: "human_gate_approve",
       metaReviewWarnings: [],
       commandPathStatus: {
-        status: "stale",
-        reasonCode: "PAIRFLOW_COMMAND_PATH_STALE",
+        status: "external",
         profile: "external",
         localEntrypoint: "/tmp/w/dist/cli/index.js",
         activeEntrypoint: "/usr/local/lib/node_modules/pairflow/dist/cli/index.js",
         localEntrypointExists: true,
         externalPairflowAvailable: true,
         pinnedCommand: "pairflow",
-        message: "stale"
+        entrypointConsistency: "inconsistent",
+        message: "external mismatch diagnostic"
       }
     });
 
-    expect(codes).toContain("PAIRFLOW_COMMAND_PATH_STALE");
+    expect(codes).not.toContain("PAIRFLOW_COMMAND_PATH_STALE");
   });
 
   it("includes external-unavailable code only for external profile", () => {

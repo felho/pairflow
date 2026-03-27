@@ -55,6 +55,8 @@ describe("buildAgentCommand", () => {
     expect(script).toContain("PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE");
     expect(script).toContain('PAIRFLOW_WRAPPER_DIR');
     expect(script).toContain('cat > "$PAIRFLOW_WRAPPER_DIR/pairflow"');
+    expect(script).toContain('exec "$PAIRFLOW_EXTERNAL_COMMAND" "$@"');
+    expect(script).not.toContain('exec node "$PAIRFLOW_LOCAL_ENTRYPOINT" "$@"');
     expect(command).toContain("--dangerously-bypass-approvals-and-sandbox");
     expect(command).toContain("Prompt with `ticks` and $HOME literal.");
     await assertBashParses(command);

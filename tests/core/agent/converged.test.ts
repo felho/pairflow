@@ -213,7 +213,7 @@ describe("emitConvergedFromWorkspace", () => {
     ).rejects.toThrow(new RegExp(IDEATION_CONVERGED_BLOCKED, "u"));
   });
 
-  it("adds PAIRFLOW_COMMAND_PATH_STALE blocking reason for any stale command-path status", () => {
+  it("adds PAIRFLOW_COMMAND_PATH_STALE blocking reason only for self_host stale command-path status", () => {
     const externalCodes = resolveMetaReviewRolloutBlockingReasonCodes({
       gateRoute: "human_gate_approve",
       metaReviewWarnings: [],
@@ -247,22 +247,22 @@ describe("emitConvergedFromWorkspace", () => {
     });
     expect(selfHostCodes).toContain("PAIRFLOW_COMMAND_PATH_STALE");
 
-    const externalStaleCodes = resolveMetaReviewRolloutBlockingReasonCodes({
+    const externalMismatchCodes = resolveMetaReviewRolloutBlockingReasonCodes({
       gateRoute: "human_gate_approve",
       metaReviewWarnings: [],
       commandPathStatus: {
-        status: "stale",
-        reasonCode: "PAIRFLOW_COMMAND_PATH_STALE",
+        status: "external",
         profile: "external",
         localEntrypoint: "/tmp/w/dist/cli/index.js",
         activeEntrypoint: "/usr/local/lib/node_modules/pairflow/dist/cli/index.js",
         localEntrypointExists: true,
         externalPairflowAvailable: true,
         pinnedCommand: "pairflow",
-        message: "external stale"
+        entrypointConsistency: "inconsistent",
+        message: "external mismatch diagnostic"
       }
     });
-    expect(externalStaleCodes).toContain("PAIRFLOW_COMMAND_PATH_STALE");
+    expect(externalMismatchCodes).not.toContain("PAIRFLOW_COMMAND_PATH_STALE");
 
     const externalUnavailableCodes = resolveMetaReviewRolloutBlockingReasonCodes({
       gateRoute: "human_gate_approve",

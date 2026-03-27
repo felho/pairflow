@@ -169,6 +169,8 @@ Run each command from the release worktree root and capture the command, timesta
 4. `<pairflow-command> bubble status --id <bubble-id> --repo <repo-path>`
    Expected markers:
    `profile=external`: `Command path: external`
+   no `PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE`
+   no `PAIRFLOW_COMMAND_PATH_STALE`
    `profile=self_host`: `Command path: worktree_local`
    no `PAIRFLOW_COMMAND_PATH_STALE`
    lifecycle/report data renders without fallback errors
@@ -220,6 +222,7 @@ All items must be true before rollout is marked ready:
 3. The command-path smoke check reports the authority expected by the configured profile.
 4. Metrics report shows zero blocking rollout events in the rollout window.
 5. No blocking reason code appears in the evidence template, metrics report, or smoke outputs.
+   This includes `meta_review_rollout.pairflow_command_external_unavailable_count: 0` and `meta_review_rollout.pairflow_command_path_stale_count: 0` in the rollout window.
 6. Human approval remains mandatory; no autonomous approval path is observed.
 
 ## Minimum Artifact Bundle
