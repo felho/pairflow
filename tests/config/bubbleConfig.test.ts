@@ -50,8 +50,7 @@ describe("bubble config schema", () => {
       ".env.production"
     ]);
     expect(config.enforcement_mode).toEqual({
-      all_gate: "advisory",
-      docs_gate: "advisory"
+      all_gate: "advisory"
     });
     expect(config.doc_contract_gates.round_gate_applies_after).toBe(2);
   });
@@ -88,8 +87,7 @@ describe("bubble config schema", () => {
   it("applies enforcement_mode and doc_contract_gates defaults when sections are omitted", () => {
     const config = parseBubbleConfigToml(baseToml);
     expect(config.enforcement_mode).toEqual({
-      all_gate: "advisory",
-      docs_gate: "advisory"
+      all_gate: "advisory"
     });
     expect(config.doc_contract_gates).toEqual({
       round_gate_applies_after: 2
@@ -97,60 +95,32 @@ describe("bubble config schema", () => {
   });
 
   it("accepts explicit enforcement mode values", () => {
-    const requiredForDocs = parseBubbleConfigToml(`${baseToml}
-[enforcement_mode]
-all_gate = "advisory"
-docs_gate = "required"
-`);
-    expect(requiredForDocs.enforcement_mode).toEqual({
-      all_gate: "advisory",
-      docs_gate: "required"
-    });
-
     const requiredForAll = parseBubbleConfigToml(`${baseToml}
 [enforcement_mode]
 all_gate = "required"
-docs_gate = "required"
 `);
     expect(requiredForAll.enforcement_mode).toEqual({
-      all_gate: "required",
-      docs_gate: "required"
+      all_gate: "required"
     });
   });
 
-  it("keeps deterministic defaults and emits parse_warning for invalid enforcement/doc gate values", () => {
+  it("keeps deterministic defaults and emits parse_warning for invalid enforcement values", () => {
     const config = parseBubbleConfigToml(`${baseToml}
 [enforcement_mode]
 all_gate = "blocking"
-docs_gate = "required"
 
 [doc_contract_gates]
 round_gate_applies_after = -1
 `);
 
     expect(config.enforcement_mode.all_gate).toBe("advisory");
-    expect(config.enforcement_mode.docs_gate).toBe("required");
     expect(config.enforcement_mode.parse_warning).toEqual(expect.any(String));
     expect(config.doc_contract_gates.round_gate_applies_after).toBe(2);
     expect(config.enforcement_mode.parse_warning).toContain("enforcement_mode.all_gate");
     expect(config.doc_contract_gates.parse_warning).toContain("round_gate_applies_after");
   });
 
-  it("normalizes contradictory docs_gate to required when all_gate is required", () => {
-    const config = parseBubbleConfigToml(`${baseToml}
-[enforcement_mode]
-all_gate = "required"
-docs_gate = "advisory"
-`);
-
-    expect(config.enforcement_mode.all_gate).toBe("required");
-    expect(config.enforcement_mode.docs_gate).toBe("required");
-    expect(config.enforcement_mode.parse_warning).toContain(
-      "docs_gate cannot be advisory when enforcement_mode.all_gate is required"
-    );
-  });
-
-  it("serializes and restores enforcement/doc gate parse_warning through TOML roundtrip", () => {
+  it("serializes and restores enforcement parse_warning through TOML roundtrip", () => {
     const rendered = renderBubbleConfigToml({
       id: "b_test_parse_warning_roundtrip_01",
       repo_path: "/tmp/repo",
@@ -184,7 +154,6 @@ docs_gate = "advisory"
       },
       enforcement_mode: {
         all_gate: "advisory",
-        docs_gate: "advisory",
         parse_warning: "enforcement_mode.all_gate invalid; fallback applied."
       },
       doc_contract_gates: {
@@ -293,8 +262,7 @@ docs_gate = "advisory"
         enabled: true
       },
       enforcement_mode: {
-        all_gate: "advisory",
-        docs_gate: "advisory"
+        all_gate: "advisory"
       },
       doc_contract_gates: {
         round_gate_applies_after: 2
@@ -332,8 +300,7 @@ docs_gate = "advisory"
         enabled: true
       },
       enforcement_mode: {
-        all_gate: "advisory",
-        docs_gate: "advisory"
+        all_gate: "advisory"
       },
       doc_contract_gates: {
         round_gate_applies_after: 2
@@ -376,8 +343,7 @@ docs_gate = "advisory"
         enabled: true
       },
       enforcement_mode: {
-        all_gate: "advisory",
-        docs_gate: "advisory"
+        all_gate: "advisory"
       },
       doc_contract_gates: {
         round_gate_applies_after: 2
@@ -681,8 +647,7 @@ typecheck = "pnpm typecheck"
         enabled: true
       },
       enforcement_mode: {
-        all_gate: "advisory",
-        docs_gate: "advisory"
+        all_gate: "advisory"
       },
       doc_contract_gates: {
         round_gate_applies_after: 2
@@ -732,8 +697,7 @@ typecheck = "pnpm typecheck"
         enabled: true
       },
       enforcement_mode: {
-        all_gate: "advisory",
-        docs_gate: "advisory"
+        all_gate: "advisory"
       },
       doc_contract_gates: {
         round_gate_applies_after: 2
@@ -825,8 +789,7 @@ typecheck = "pnpm typecheck"
         enabled: true
       },
       enforcement_mode: {
-        all_gate: "advisory",
-        docs_gate: "advisory"
+        all_gate: "advisory"
       },
       doc_contract_gates: {
         round_gate_applies_after: 2
@@ -870,8 +833,7 @@ typecheck = "pnpm typecheck"
         enabled: true
       },
       enforcement_mode: {
-        all_gate: "advisory",
-        docs_gate: "advisory"
+        all_gate: "advisory"
       },
       doc_contract_gates: {
         round_gate_applies_after: 2
@@ -908,8 +870,7 @@ typecheck = "pnpm typecheck"
         enabled: true
       },
       enforcement_mode: {
-        all_gate: "advisory",
-        docs_gate: "advisory"
+        all_gate: "advisory"
       },
       doc_contract_gates: {
         round_gate_applies_after: 2

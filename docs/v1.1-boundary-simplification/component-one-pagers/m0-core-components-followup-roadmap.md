@@ -210,7 +210,7 @@ Fontos elv:
 
 1. Current State:
    - Alap precedence működik, de nehezen reprodukálható edge-case kockázat maradt.
-   - 2026-03-27: a repo-level `enforcement_mode` normalizáció igazítva lett a bubble config viselkedéséhez (`all_gate=required` => `docs_gate=required`), és explicit regresszióteszt került a repo parserre, a bubble parserre és a `createBubble` öröklési útra.
+   - 2026-03-27: a repo-level `enforcement_mode` egytengelyesítve lett (`all_gate`), és explicit regresszióteszt került a repo parserre, a bubble parserre és a `createBubble` öröklési útra.
    - 2026-03-27: explicit precedence-lock tesztek kerültek az `openBubble` és `attachBubble` utakra is, hogy bubble override esetén hibás globális config se próbálja felülírni vagy blokkolni a lokális döntést.
    - 2026-03-27: a globális és repo config parser korlátaihoz is került explicit regresszióteszt (`sections`, `dotted keys`, `duplicate keys`, `array-of-tables`, scalar-vs-section boundary), hogy a TOML normalizer határai ne legyenek implicit tudásra bízva.
 2. Target State:

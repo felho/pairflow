@@ -34,8 +34,7 @@ const bubbleConfig: BubbleConfig = {
     enabled: false
   },
   enforcement_mode: {
-    all_gate: "required",
-    docs_gate: "required"
+    all_gate: "required"
   },
   doc_contract_gates: {
     round_gate_applies_after: 1

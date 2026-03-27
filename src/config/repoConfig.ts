@@ -19,7 +19,6 @@ import { parseToml } from "./bubbleConfig.js";
 export interface PairflowRepoConfig {
   enforcement_mode?: {
     all_gate?: GateEnforcementLevel;
-    docs_gate?: GateEnforcementLevel;
   };
 }
 
@@ -66,44 +65,13 @@ export function validatePairflowRepoConfig(
     }
   }
 
-  const docsGateRaw = enforcementModeRaw.docs_gate;
-  let validatedDocsGate: GateEnforcementLevel | undefined;
-  if (docsGateRaw !== undefined) {
-    if (isGateEnforcementLevel(docsGateRaw)) {
-      validatedDocsGate = docsGateRaw;
-    } else {
-      errors.push({
-        path: "enforcement_mode.docs_gate",
-        message: "Must be one of: advisory, required"
-      });
-    }
-  }
-
-  if (
-    validatedAllGate === "required"
-    && validatedDocsGate !== undefined
-    && validatedDocsGate !== "required"
-  ) {
-    errors.push({
-      path: "enforcement_mode.docs_gate",
-      message:
-        "Cannot be advisory when enforcement_mode.all_gate is required"
-    });
-  }
-
   if (errors.length > 0) {
     return validationFail(errors);
   }
 
-  const normalizedDocsGate =
-    validatedAllGate === "required"
-      ? "required"
-      : validatedDocsGate;
-
   return validationOk({
     enforcement_mode: {
-      ...(validatedAllGate !== undefined ? { all_gate: validatedAllGate } : {}),
-      ...(normalizedDocsGate !== undefined ? { docs_gate: normalizedDocsGate } : {})
+      ...(validatedAllGate !== undefined ? { all_gate: validatedAllGate } : {})
     }
   });
 }

@@ -92,8 +92,7 @@ describe("createBubble", () => {
     expect(result.config.review_artifact_type).toBe("code");
     expect(result.config.severity_gate_round).toBe(4);
     expect(result.config.enforcement_mode).toEqual({
-      all_gate: "advisory",
-      docs_gate: "advisory"
+      all_gate: "advisory"
     });
     expect(result.config.doc_contract_gates.round_gate_applies_after).toBe(2);
     expect(result.config.bubble_instance_id).toMatch(
@@ -107,8 +106,7 @@ describe("createBubble", () => {
     expect(reparsedConfig.review_artifact_type).toBe("code");
     expect(reparsedConfig.severity_gate_round).toBe(4);
     expect(reparsedConfig.enforcement_mode).toEqual({
-      all_gate: "advisory",
-      docs_gate: "advisory"
+      all_gate: "advisory"
     });
     expect(reparsedConfig.doc_contract_gates.round_gate_applies_after).toBe(2);
     expect(reparsedConfig.bubble_instance_id).toBe(
@@ -171,11 +169,11 @@ describe("createBubble", () => {
     expect(result.config.ideation?.started_at).toEqual(expect.any(String));
   });
 
-  it("inherits doc gate mode from repository pairflow.toml", async () => {
+  it("inherits all_gate mode from repository pairflow.toml", async () => {
     const repoPath = await createTempRepo();
     await writeFile(
       join(repoPath, "pairflow.toml"),
-      '[enforcement_mode]\nall_gate = "advisory"\ndocs_gate = "required"\n',
+      '[enforcement_mode]\nall_gate = "required"\n',
       "utf8"
     );
 
@@ -189,22 +187,20 @@ describe("createBubble", () => {
     });
 
     expect(result.config.enforcement_mode).toEqual({
-      all_gate: "advisory",
-      docs_gate: "required"
+      all_gate: "required"
     });
     const bubbleToml = await readFile(result.paths.bubbleTomlPath, "utf8");
     const reparsedConfig = parseBubbleConfigToml(bubbleToml);
     expect(reparsedConfig.enforcement_mode).toEqual({
-      all_gate: "advisory",
-      docs_gate: "required"
+      all_gate: "required"
     });
   });
 
-  it("normalizes inherited docs gate to required when repository config only requires all_gate", async () => {
+  it("ignores legacy docs_gate in repository pairflow.toml", async () => {
     const repoPath = await createTempRepo();
     await writeFile(
       join(repoPath, "pairflow.toml"),
-      '[enforcement_mode]\nall_gate = "required"\n',
+      '[enforcement_mode]\nall_gate = "advisory"\ndocs_gate = "required"\n',
       "utf8"
     );
 
@@ -218,18 +214,16 @@ describe("createBubble", () => {
     });
 
     expect(result.config.enforcement_mode).toEqual({
-      all_gate: "required",
-      docs_gate: "required"
+      all_gate: "advisory"
     });
     const bubbleToml = await readFile(result.paths.bubbleTomlPath, "utf8");
     const reparsedConfig = parseBubbleConfigToml(bubbleToml);
     expect(reparsedConfig.enforcement_mode).toEqual({
-      all_gate: "required",
-      docs_gate: "required"
+      all_gate: "advisory"
     });
   });
 
-  it("fails bubble creation when repository pairflow.toml has invalid doc gate mode", async () => {
+  it("fails bubble creation when repository pairflow.toml has invalid all_gate mode", async () => {
     const repoPath = await createTempRepo();
     await writeFile(
       join(repoPath, "pairflow.toml"),

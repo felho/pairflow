@@ -13,7 +13,7 @@ const baseConfig: BubbleConfig = {
   work_mode: "worktree",
   quality_mode: "strict",
   review_artifact_type: "auto",
-    pairflow_command_profile: "external",
+  pairflow_command_profile: "external",
   reviewer_context_mode: "fresh",
   watchdog_timeout_minutes: 5,
   max_rounds: 8,
@@ -32,8 +32,7 @@ const baseConfig: BubbleConfig = {
     enabled: true
   },
   enforcement_mode: {
-    all_gate: "advisory",
-    docs_gate: "advisory"
+    all_gate: "advisory"
   },
   doc_contract_gates: {
     round_gate_applies_after: 2

@@ -142,7 +142,6 @@ export interface BubbleIdeationConfig {
 
 export interface BubbleEnforcementModeConfig {
   all_gate: GateEnforcementLevel;
-  docs_gate: GateEnforcementLevel;
   parse_warning?: string;
 }
 

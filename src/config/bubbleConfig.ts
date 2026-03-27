@@ -12,7 +12,6 @@ import {
 import {
   DEFAULT_COMMIT_REQUIRES_APPROVAL,
   DEFAULT_ENFORCEMENT_MODE_ALL_GATE,
-  DEFAULT_ENFORCEMENT_MODE_DOCS_GATE,
   DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER,
   DEFAULT_LOCAL_OVERLAY_ENABLED,
   DEFAULT_LOCAL_OVERLAY_ENTRIES,
@@ -779,26 +778,6 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
       );
     }
   }
-  const docsGateCandidate = enforcementMode?.docs_gate;
-  let docsGate: GateEnforcementLevel =
-    allGate === "required"
-      ? "required"
-      : DEFAULT_ENFORCEMENT_MODE_DOCS_GATE;
-  if (docsGateCandidate !== undefined) {
-    if (isGateEnforcementLevel(docsGateCandidate)) {
-      docsGate = docsGateCandidate;
-    } else {
-      enforcementConfigWarnings.push(
-        `enforcement_mode.docs_gate must be one of: advisory, required. Received ${describeUnknownValue(docsGateCandidate)}.`
-      );
-    }
-  }
-  if (allGate === "required" && docsGate !== "required") {
-    enforcementConfigWarnings.push(
-      "enforcement_mode.docs_gate cannot be advisory when enforcement_mode.all_gate is required; docs_gate normalized to required."
-    );
-    docsGate = "required";
-  }
 
   const docContractGateWarnings: string[] = [];
   const existingDocContractGateParseWarning = docContractGates
@@ -940,7 +919,6 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     },
     enforcement_mode: {
       all_gate: allGate,
-      docs_gate: docsGate,
       ...((existingEnforcementParseWarning !== undefined || enforcementConfigWarnings.length > 0)
         ? {
             parse_warning: [
@@ -1125,7 +1103,6 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
     "",
     "[enforcement_mode]",
     `all_gate = ${tomlString(enforcementMode.all_gate)}`,
-    `docs_gate = ${tomlString(enforcementMode.docs_gate)}`,
     enforcementMode.parse_warning !== undefined
       ? `parse_warning = ${tomlString(enforcementMode.parse_warning)}`
       : undefined,

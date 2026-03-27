@@ -33,24 +33,21 @@ describe("pairflow repo config", () => {
     const parsed = parsePairflowRepoConfigToml(`
 [enforcement_mode]
 all_gate = "advisory"
-docs_gate = "required"
 `);
 
     expect(parsed.enforcement_mode).toEqual({
-      all_gate: "advisory",
-      docs_gate: "required"
+      all_gate: "advisory"
     });
   });
 
-  it("normalizes docs_gate to required when all_gate is required and docs_gate is omitted", () => {
+  it("parses required all_gate without additional normalization", () => {
     const parsed = parsePairflowRepoConfigToml(`
 [enforcement_mode]
 all_gate = "required"
 `);
 
     expect(parsed.enforcement_mode).toEqual({
-      all_gate: "required",
-      docs_gate: "required"
+      all_gate: "required"
     });
   });
 
@@ -77,7 +74,7 @@ all_gate = "required"
     );
   });
 
-  it("rejects contradictory required/advisory combination", () => {
+  it("ignores legacy docs_gate values when present in repo config", () => {
     const result = validatePairflowRepoConfig({
       enforcement_mode: {
         all_gate: "required",
@@ -85,13 +82,15 @@ all_gate = "required"
       }
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) {
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
       return;
     }
-    expect(result.errors.some((error) => error.path === "enforcement_mode.docs_gate")).toBe(
-      true
-    );
+    expect(result.value).toEqual({
+      enforcement_mode: {
+        all_gate: "required"
+      }
+    });
   });
 
   it("rejects scalar enforcement_mode instead of section/object", () => {
@@ -147,15 +146,14 @@ enforcement_mode.all_gate = "required"
     const repoPath = await createTempDir();
     await writeFile(
       join(repoPath, "pairflow.toml"),
-      '[enforcement_mode]\nall_gate = "required"\ndocs_gate = "required"\n',
+      '[enforcement_mode]\nall_gate = "required"\n',
       "utf8"
     );
 
     const loaded = await loadPairflowRepoConfig(repoPath);
     expect(loaded).toEqual({
       enforcement_mode: {
-        all_gate: "required",
-        docs_gate: "required"
+        all_gate: "required"
       }
     });
   });

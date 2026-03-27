@@ -9,7 +9,6 @@ import {
 import { loadPairflowRepoConfig } from "../../config/repoConfig.js";
 import {
   DEFAULT_ENFORCEMENT_MODE_ALL_GATE,
-  DEFAULT_ENFORCEMENT_MODE_DOCS_GATE,
   DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER,
   DEFAULT_MAX_ROUNDS,
   DEFAULT_PAIRFLOW_COMMAND_PROFILE,
@@ -778,13 +777,9 @@ function buildBubbleConfig(input: {
   openCommand?: string;
   pairflowCommandProfile?: PairflowCommandProfile;
   enforcementModeAllGate?: GateEnforcementLevel;
-  enforcementModeDocsGate?: GateEnforcementLevel;
 }): BubbleConfig {
   const allGate =
     input.enforcementModeAllGate ?? DEFAULT_ENFORCEMENT_MODE_ALL_GATE;
-  const docsGate =
-    input.enforcementModeDocsGate
-    ?? (allGate === "required" ? "required" : DEFAULT_ENFORCEMENT_MODE_DOCS_GATE);
 
   return assertValidBubbleConfig({
     id: input.id,
@@ -821,8 +816,7 @@ function buildBubbleConfig(input: {
       enabled: true
     },
     enforcement_mode: {
-      all_gate: allGate,
-      docs_gate: docsGate
+      all_gate: allGate
     },
     doc_contract_gates: {
       round_gate_applies_after: DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER
@@ -936,11 +930,9 @@ export async function createBubble(
   const reviewerFocus = extractReviewerFocus(task.content);
   const accuracyCritical = input.accuracyCritical === true;
   let repoConfigEnforcementAllGate: GateEnforcementLevel | undefined;
-  let repoConfigEnforcementDocsGate: GateEnforcementLevel | undefined;
   try {
     const repoConfig = await loadPairflowRepoConfig(repoPath);
     repoConfigEnforcementAllGate = repoConfig.enforcement_mode?.all_gate;
-    repoConfigEnforcementDocsGate = repoConfig.enforcement_mode?.docs_gate;
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new BubbleCreateError(
@@ -996,9 +988,6 @@ export async function createBubble(
   }
   if (repoConfigEnforcementAllGate !== undefined) {
     bubbleConfigInput.enforcementModeAllGate = repoConfigEnforcementAllGate;
-  }
-  if (repoConfigEnforcementDocsGate !== undefined) {
-    bubbleConfigInput.enforcementModeDocsGate = repoConfigEnforcementDocsGate;
   }
 
   const config = buildBubbleConfig(bubbleConfigInput);

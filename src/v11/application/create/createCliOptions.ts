@@ -19,7 +19,7 @@ export function getBubbleCreateHelpText(): string {
     "  --reviewer-brief <text>      Optional inline reviewer brief",
     "  --reviewer-brief-file <path> Optional reviewer brief from file",
     "  --accuracy-critical          Enforce reviewer verification payload gate",
-    "  Repo defaults: if <repo>/pairflow.toml sets [enforcement_mode].all_gate/docs_gate, bubble create inherits it.",
+    "  Repo defaults: if <repo>/pairflow.toml sets [enforcement_mode].all_gate, bubble create inherits it.",
     "  -h, --help            Show this help"
   ].join("\n");
 }
