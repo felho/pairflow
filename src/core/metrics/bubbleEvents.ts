@@ -16,6 +16,7 @@ export interface EmitBubbleLifecycleEventInput {
   round: number | null;
   actorRole: MetricsActorRole;
   metadata: Record<string, unknown>;
+  rootPath?: string;
   lockTimeoutMs?: number;
   staleLockRecoveryAfterMs?: number | null;
   now?: Date;
@@ -55,6 +56,9 @@ export async function emitBubbleLifecycleEvent(
       metadata: input.metadata,
       ...(input.now !== undefined ? { now: input.now } : {})
     }),
+    ...(input.rootPath !== undefined
+      ? { rootPath: input.rootPath }
+      : {}),
     ...(input.lockTimeoutMs !== undefined
       ? { lockTimeoutMs: input.lockTimeoutMs }
       : {}),

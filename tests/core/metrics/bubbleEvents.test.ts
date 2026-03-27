@@ -150,9 +150,6 @@ describe("bubble metrics best-effort warnings", () => {
   it("warns when recovery is disabled, then recovers after re-enabling stale lock recovery", async () => {
     clearReportedBubbleEventWarnings();
     const root = await createTempDir();
-    const previousMetricsRoot = process.env.PAIRFLOW_METRICS_EVENTS_ROOT;
-    process.env.PAIRFLOW_METRICS_EVENTS_ROOT = root;
-
     const now = new Date("2026-02-27T09:00:00.000Z");
     const shardPath = resolveMetricsShardPath({
       at: now,
@@ -161,61 +158,55 @@ describe("bubble metrics best-effort warnings", () => {
     const staleTimestamp = new Date("2026-02-27T08:58:00.000Z");
     const warnings: string[] = [];
 
-    try {
-      await mkdir(dirname(shardPath.lockPath), { recursive: true });
-      await writeFile(shardPath.lockPath, "", "utf8");
-      await utimes(shardPath.lockPath, staleTimestamp, staleTimestamp);
+    await mkdir(dirname(shardPath.lockPath), { recursive: true });
+    await writeFile(shardPath.lockPath, "", "utf8");
+    await utimes(shardPath.lockPath, staleTimestamp, staleTimestamp);
 
-      await emitBubbleLifecycleEventBestEffort({
-        repoPath: "/tmp/repo",
-        bubbleId: "b_warn_recover_01",
-        bubbleInstanceId: "bi_00m8f7w14k_2f03e8b8e4f24d99",
-        eventType: "bubble_passed",
-        round: 1,
-        actorRole: "implementer",
-        metadata: {},
-        now,
-        lockTimeoutMs: 20,
-        staleLockRecoveryAfterMs: null,
-        reportWarning: (message) => {
-          warnings.push(message);
-        }
-      });
-
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0]).toContain("Could not acquire metrics shard lock");
-
-      await writeFile(shardPath.lockPath, "", "utf8");
-      await utimes(shardPath.lockPath, staleTimestamp, staleTimestamp);
-
-      await emitBubbleLifecycleEventBestEffort({
-        repoPath: "/tmp/repo",
-        bubbleId: "b_warn_recover_01",
-        bubbleInstanceId: "bi_00m8f7w14k_2f03e8b8e4f24d99",
-        eventType: "bubble_passed",
-        round: 1,
-        actorRole: "implementer",
-        metadata: {},
-        now,
-        lockTimeoutMs: 20,
-        reportWarning: (message) => {
-          warnings.push(message);
-        }
-      });
-
-      expect(warnings).toHaveLength(1);
-
-      const lines = (await readFile(shardPath.filePath, "utf8"))
-        .split("\n")
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0);
-      expect(lines).toHaveLength(1);
-    } finally {
-      if (previousMetricsRoot === undefined) {
-        delete process.env.PAIRFLOW_METRICS_EVENTS_ROOT;
-      } else {
-        process.env.PAIRFLOW_METRICS_EVENTS_ROOT = previousMetricsRoot;
+    await emitBubbleLifecycleEventBestEffort({
+      repoPath: "/tmp/repo",
+      bubbleId: "b_warn_recover_01",
+      bubbleInstanceId: "bi_00m8f7w14k_2f03e8b8e4f24d99",
+      eventType: "bubble_passed",
+      round: 1,
+      actorRole: "implementer",
+      metadata: {},
+      rootPath: root,
+      now,
+      lockTimeoutMs: 20,
+      staleLockRecoveryAfterMs: null,
+      reportWarning: (message) => {
+        warnings.push(message);
       }
-    }
+    });
+
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("Could not acquire metrics shard lock");
+
+    await writeFile(shardPath.lockPath, "", "utf8");
+    await utimes(shardPath.lockPath, staleTimestamp, staleTimestamp);
+
+    await emitBubbleLifecycleEventBestEffort({
+      repoPath: "/tmp/repo",
+      bubbleId: "b_warn_recover_01",
+      bubbleInstanceId: "bi_00m8f7w14k_2f03e8b8e4f24d99",
+      eventType: "bubble_passed",
+      round: 1,
+      actorRole: "implementer",
+      metadata: {},
+      rootPath: root,
+      now,
+      lockTimeoutMs: 20,
+      reportWarning: (message) => {
+        warnings.push(message);
+      }
+    });
+
+    expect(warnings).toHaveLength(1);
+
+    const lines = (await readFile(shardPath.filePath, "utf8"))
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+    expect(lines).toHaveLength(1);
   });
 });
