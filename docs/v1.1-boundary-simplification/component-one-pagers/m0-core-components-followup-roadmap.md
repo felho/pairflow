@@ -48,12 +48,12 @@ Fontos elv:
    - Duplikált mutation minták több helyen.
    - Egységesítés részben manuális.
 4. Step roadmap:
-   - Step 1 (kötelező): duplikált minta inventory + 1 alacsony kockázatú kivonat shared helperbe.
+   - Step 1 (kötelező): duplikált minta inventory + 1 alacsony kockázatú kivonat shared helperbe, szűk blast radiusszal (`approval` + 1 második low-risk path minimum; további path csak inventory-jelölt vagy opcionális harmadik bekötés).
    - Step 2 (feltételes): további 1-2 stabil minta kivonata, ha ugyanaz a szabály több commandban jelenik meg.
    - Step 3 (opcionális): kicsi shared mutation kernel, csak ha Step 2 után is marad jelentős duplikáció.
 5. DoD (aktuális ciklus):
-   - Legalább 1 minta közös helperbe került.
-   - Kapcsolódó contract/parity tesztek zöldek.
+   - Legalább 1 minta közös helperbe került az explicit Step 1 scope-on belül.
+   - A `required-now` pathokhoz kapcsolódó contract/parity tesztek zöldek.
    - Nincs mutation-order regresszió.
 6. Stop condition:
    - A megmaradt különbségek már valódi domain-eltérések, nem technikai duplikáció.
