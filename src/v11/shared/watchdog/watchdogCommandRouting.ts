@@ -38,7 +38,7 @@ export async function resolveWatchdogLifecycleRoute(input: {
   }
 
   if (!input.expired) {
-    const metaReviewNotExpired = await maybeRouteMetaReviewBeforeExpiry(context);
+    const metaReviewNotExpired = maybeRouteMetaReviewBeforeExpiry(context);
     if (metaReviewNotExpired !== null) {
       return metaReviewNotExpired;
     }

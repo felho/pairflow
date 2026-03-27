@@ -40,7 +40,8 @@ import type {
 import {
   isFindingsClaimState,
   type FindingsParityStatus,
-  type MetaReviewSubmissionPayload
+  type MetaReviewSubmissionPayload,
+  type ProtocolEnvelope
 } from "../../types/protocol.js";
 import {
   resolveAdvisoryFindingsFromReportJson,
@@ -49,6 +50,11 @@ import {
 import {
   resolveStructuredMetaReviewClaimFromReportJson
 } from "../../v11/shared/metaReviewGate/metaReviewGateFindingsClaimParsing.js";
+import type {
+  MetaReviewGateRoute,
+  RecoverMetaReviewGateFromSnapshotDependencies,
+  recoverMetaReviewGateFromSnapshot
+} from "../../v11/shared/metaReviewGate/metaReviewGateCommandApi.js";
 import {
   evaluateNoFindingsSummaryFindingsAssertion,
   hasGlobalNoFindingsSummaryAssertion,
@@ -165,7 +171,12 @@ export type MetaReviewSubmitResult = Omit<
   "depth" | "report_json"
 > & {
   report_json: Record<string, unknown>;
+  gate_route: MetaReviewGateRoute;
+  gate_sequence: number;
+  gate_envelope_type: ProtocolEnvelope["type"];
 };
+
+type RecoverMetaReviewGateFromSnapshotFn = typeof recoverMetaReviewGateFromSnapshot;
 
 export interface MetaReviewDependencies {
   resolveBubbleById?: typeof resolveBubbleById;
@@ -181,6 +192,7 @@ export interface MetaReviewDependencies {
   now?: Date;
   randomUUID?: () => string;
   allowMetaReviewRunningState?: boolean;
+  recoverMetaReviewGateFromSnapshot?: RecoverMetaReviewGateFromSnapshotFn;
 }
 
 export type MetaReviewErrorReasonCode =
@@ -1451,6 +1463,82 @@ function formatRunnerFailure(error: unknown): {
   };
 }
 
+async function resolveMetaReviewGateRecoveryExecutor(
+  dependencies: MetaReviewDependencies
+): Promise<RecoverMetaReviewGateFromSnapshotFn> {
+  if (dependencies.recoverMetaReviewGateFromSnapshot !== undefined) {
+    return dependencies.recoverMetaReviewGateFromSnapshot;
+  }
+  const module = await import(
+    "../../v11/shared/metaReviewGate/metaReviewGateRecovery.js"
+  );
+  return module.recoverMetaReviewGateFromSnapshot;
+}
+
+function buildMetaReviewGateRecoveryDependencies(
+  dependencies: MetaReviewDependencies
+): RecoverMetaReviewGateFromSnapshotDependencies {
+  return {
+    ...(dependencies.resolveBubbleById !== undefined
+      ? { resolveBubbleById: dependencies.resolveBubbleById }
+      : {}),
+    ...(dependencies.readStateSnapshot !== undefined
+      ? { readStateSnapshot: dependencies.readStateSnapshot }
+      : {}),
+    ...(dependencies.writeStateSnapshot !== undefined
+      ? { writeStateSnapshot: dependencies.writeStateSnapshot }
+      : {}),
+    ...(dependencies.appendProtocolEnvelope !== undefined
+      ? { appendProtocolEnvelope: dependencies.appendProtocolEnvelope }
+      : {}),
+    ...(dependencies.readFile !== undefined
+      ? { readFile: dependencies.readFile }
+      : {}),
+    ...(dependencies.writeFile !== undefined
+      ? { writeFile: dependencies.writeFile }
+      : {})
+  };
+}
+
+function buildCanonicalSubmitRunResult(input: {
+  bubbleId: string;
+  runId: string;
+  status: MetaReviewRunStatus;
+  recommendation: MetaReviewRecommendation;
+  summary: string;
+  reworkTargetMessage: string | null;
+  updatedAt: string;
+  warnings: MetaReviewRunWarning[];
+  reportJson: Record<string, unknown>;
+}): MetaReviewRunResult {
+  return {
+    bubbleId: input.bubbleId,
+    depth: "standard",
+    run_id: input.runId,
+    status: input.status,
+    recommendation: input.recommendation,
+    summary: input.summary,
+    report_ref: CANONICAL_META_REVIEW_REPORT_REF,
+    rework_target_message: input.reworkTargetMessage,
+    updated_at: input.updatedAt,
+    lifecycle_state: "META_REVIEW_RUNNING",
+    warnings: [...input.warnings],
+    report_json: input.reportJson
+  };
+}
+
+function assertSubmitRecommendationRouteable(
+  recommendation: MetaReviewRecommendation
+): void {
+  if (recommendation !== "inconclusive") {
+    return;
+  }
+  throw new MetaReviewError(
+    "META_REVIEW_GATE_RUN_FAILED",
+    "meta-review submit recorded a canonical snapshot but recommendation=inconclusive is not routeable in the normal submit handoff. Use recovery only as fallback."
+  );
+}
+
 export async function submitMetaReviewResult(
   input: MetaReviewSubmitInput,
   dependencies: MetaReviewDependencies = {}
@@ -1575,9 +1663,8 @@ export async function submitMetaReviewResult(
     meta_review: nextMetaReview
   };
 
-  let written: LoadedStateSnapshot;
   try {
-    written = await writeState(resolved.bubblePaths.statePath, nextState, {
+    await writeState(resolved.bubblePaths.statePath, nextState, {
       expectedFingerprint: loadedState.fingerprint,
       expectedState: "META_REVIEW_RUNNING"
     });
@@ -1654,18 +1741,58 @@ export async function submitMetaReviewResult(
     });
   }
 
-  return {
+  const canonicalRunResult = buildCanonicalSubmitRunResult({
     bubbleId: resolved.bubbleId,
-    run_id: runId,
+    runId,
     status,
     recommendation,
     summary,
-    report_ref: CANONICAL_META_REVIEW_REPORT_REF,
-    rework_target_message: reworkTargetMessage,
-    updated_at: updatedAt,
-    lifecycle_state: written.state.state,
+    reworkTargetMessage,
+    updatedAt,
     warnings,
-    report_json: canonicalReportJson
+    reportJson: canonicalReportJson
+  });
+
+  assertSubmitRecommendationRouteable(recommendation);
+
+  let routed;
+  try {
+    const recoverMetaReviewRoute =
+      await resolveMetaReviewGateRecoveryExecutor(dependencies);
+    routed = await recoverMetaReviewRoute(
+      {
+        bubbleId: resolved.bubbleId,
+        repoPath: resolved.repoPath,
+        cwd: resolved.bubblePaths.worktreePath,
+        now,
+        summary:
+          "Meta-review submit completed; applying gate route from canonical snapshot.",
+        runResult: canonicalRunResult
+      },
+      buildMetaReviewGateRecoveryDependencies(dependencies)
+    );
+  } catch (error) {
+    throw toMetaReviewError(error);
+  }
+
+  const finalizedRunResult = routed.metaReviewRun ?? canonicalRunResult;
+  return {
+    bubbleId: resolved.bubbleId,
+    status: finalizedRunResult.status,
+    recommendation: finalizedRunResult.recommendation,
+    summary: finalizedRunResult.summary,
+    report_ref: finalizedRunResult.report_ref,
+    rework_target_message: finalizedRunResult.rework_target_message,
+    updated_at: finalizedRunResult.updated_at,
+    lifecycle_state: routed.state.state,
+    warnings: finalizedRunResult.warnings,
+    report_json: finalizedRunResult.report_json ?? canonicalReportJson,
+    gate_route: routed.route,
+    gate_sequence: routed.gateSequence,
+    gate_envelope_type: routed.gateEnvelope.type,
+    ...(finalizedRunResult.run_id !== undefined
+      ? { run_id: finalizedRunResult.run_id }
+      : {})
   };
 }
 

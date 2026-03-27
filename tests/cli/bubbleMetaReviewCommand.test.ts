@@ -508,8 +508,11 @@ describe("runBubbleMetaReviewCommand", () => {
       throw new Error("Expected submit command result.");
     }
     expect(result.submit.recommendation).toBe("approve");
+    expect(result.submit.gate_route).toBe("human_gate_approve");
+    expect(result.submit.lifecycle_state).toBe("READY_FOR_HUMAN_APPROVAL");
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
+    expect(loaded.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(loaded.state.meta_review?.last_autonomous_recommendation).toBe(
       "approve"
     );
@@ -832,7 +835,10 @@ describe("meta-review render helpers", () => {
       report_ref: "artifacts/meta-review-last.json",
       rework_target_message: null,
       updated_at: "2026-03-10T09:15:00.000Z",
-      lifecycle_state: "META_REVIEW_RUNNING",
+      lifecycle_state: "READY_FOR_HUMAN_APPROVAL",
+      gate_route: "human_gate_approve",
+      gate_sequence: 12,
+      gate_envelope_type: "APPROVAL_REQUEST",
       report_json: {
         findings_claimed_open_total: 0,
         findings_artifact_open_total: 0,
@@ -843,6 +849,8 @@ describe("meta-review render helpers", () => {
 
     expect(rendered).toContain("Meta-review submit for");
     expect(rendered).toContain("status=success");
+    expect(rendered).toContain("Gate route: human_gate_approve");
+    expect(rendered).toContain("Lifecycle state: READY_FOR_HUMAN_APPROVAL");
     expect(rendered).toContain("Findings parity: claimed=0, artifact=0, status=ok");
   });
 

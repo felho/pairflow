@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, unlink, writeFile as writeFileFs } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -1101,6 +1102,8 @@ describe("meta-review submit", () => {
     metaReviewRunId?: string;
     findingsRunId?: string;
     findingsArtifactRef?: string;
+    findingsDigestSha256?: string;
+    findingsArtifactStatus?: string;
   }): Record<string, unknown> {
     const findingsClaimState = input?.findingsClaimState ?? "clean";
     const reportJson: Record<string, unknown> = {
@@ -1118,6 +1121,12 @@ describe("meta-review submit", () => {
     }
     if (input?.findingsArtifactRef !== undefined) {
       reportJson.findings_artifact_ref = input.findingsArtifactRef;
+    }
+    if (input?.findingsDigestSha256 !== undefined) {
+      reportJson.findings_digest_sha256 = input.findingsDigestSha256;
+    }
+    if (input?.findingsArtifactStatus !== undefined) {
+      reportJson.findings_artifact_status = input.findingsArtifactStatus;
     }
     return reportJson;
   }
@@ -2032,9 +2041,12 @@ describe("meta-review submit", () => {
     expect(result.status).toBe("success");
     expect(result.recommendation).toBe("approve");
     expect(result.run_id).toBe("run_meta_submit_01");
-    expect(result.lifecycle_state).toBe("META_REVIEW_RUNNING");
+    expect(result.gate_route).toBe("human_gate_approve");
+    expect(result.gate_envelope_type).toBe("APPROVAL_REQUEST");
+    expect(result.lifecycle_state).toBe("READY_FOR_HUMAN_APPROVAL");
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
+    expect(loaded.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(loaded.state.meta_review).toMatchObject({
       last_autonomous_run_id: "run_meta_submit_01",
       last_autonomous_status: "success",
@@ -2090,6 +2102,8 @@ describe("meta-review submit", () => {
     expect(result.status).toBe("success");
     expect(result.recommendation).toBe("approve");
     expect(result.run_id).toBe("run_meta_submit_approve_advisory_01");
+    expect(result.gate_route).toBe("human_gate_approve");
+    expect(result.lifecycle_state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(result.report_json).toMatchObject({
       findings_claim_state: "open_findings",
       findings_count: 2,
@@ -2162,6 +2176,8 @@ describe("meta-review submit", () => {
     expect(result.status).toBe("success");
     expect(result.recommendation).toBe("approve");
     expect(result.summary).toBe(summary);
+    expect(result.gate_route).toBe("human_gate_approve");
+    expect(result.lifecycle_state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(result.report_json).toMatchObject({
       findings_claim_state: "open_findings",
       findings_count: 2,
@@ -2187,6 +2203,23 @@ describe("meta-review submit", () => {
       activeRole: "meta_reviewer",
       nowIso: "2026-03-09T09:20:00.000Z"
     });
+    const findingsRaw = `${JSON.stringify(
+      {
+        open_total: 1,
+        findings: [{ id: "f_1", status: "open" }]
+      },
+      null,
+      2
+    )}\n`;
+    const findingsArtifactRef = "artifacts/rework-findings.json";
+    await writeFileFs(
+      join(bubble.paths.artifactsDir, "rework-findings.json"),
+      findingsRaw,
+      "utf8"
+    );
+    const findingsDigest = createHash("sha256")
+      .update(findingsRaw, "utf8")
+      .digest("hex");
 
     const result = await submitMetaReviewResult(
       {
@@ -2199,7 +2232,10 @@ describe("meta-review submit", () => {
         report_json: buildStructuredSubmitReportJson({
           findingsClaimState: "open_findings",
           findingsCount: 1,
-          metaReviewRunId: "run_meta_submit_02"
+          metaReviewRunId: "run_meta_submit_02",
+          findingsArtifactRef,
+          findingsDigestSha256: findingsDigest,
+          findingsArtifactStatus: "available"
         })
       },
       {
@@ -2217,9 +2253,15 @@ describe("meta-review submit", () => {
     expect(result.status).toBe("success");
     expect(result.recommendation).toBe("rework");
     expect(result.run_id).toBe("run_meta_submit_02");
+    expect(result.gate_route).toBe("auto_rework");
+    expect(result.gate_envelope_type).toBe("APPROVAL_DECISION");
+    expect(result.lifecycle_state).toBe("RUNNING");
     expect(result.rework_target_message).toBe(
       "Fix retry sequencing in gate recovery."
     );
+    const routed = await readStateSnapshot(bubble.paths.statePath);
+    expect(routed.state.state).toBe("RUNNING");
+    expect(routed.state.active_role).toBe("implementer");
     const reportJson = JSON.parse(
       await readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
     ) as {
@@ -2237,9 +2279,114 @@ describe("meta-review submit", () => {
     expect(reportJson.report_json?.meta_review_run_id).toBe(
       "run_meta_submit_02"
     );
-    expect(reportJson.report_json?.findings_artifact_ref).toBe(
-      "artifacts/meta-review-last.json"
-    );
+    expect(reportJson.report_json?.findings_artifact_ref).toBe(findingsArtifactRef);
+  });
+
+  it("fails closed when submit routing fails after canonical snapshot persist", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_route_fail_01",
+      task: "Meta submit route failure"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:21:30.000Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "Canonical snapshot should persist before route failure.",
+          report_json: buildStructuredSubmitReportJson()
+        },
+        {
+          randomUUID: () => "run_meta_submit_route_fail_01",
+          now: new Date("2026-03-09T09:22:00.000Z"),
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            }),
+          recoverMetaReviewGateFromSnapshot: async () => {
+            throw new MetaReviewGateError(
+              "META_REVIEW_GATE_TRANSITION_INVALID",
+              "simulated route failure"
+            );
+          }
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_GATE_RUN_FAILED"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    expect(loaded.state.state).toBe("META_REVIEW_RUNNING");
+    expect(loaded.state.meta_review).toMatchObject({
+      last_autonomous_run_id: "run_meta_submit_route_fail_01",
+      last_autonomous_recommendation: "approve",
+      last_autonomous_summary:
+        "Canonical snapshot should persist before route failure."
+    });
+  });
+
+  it("rejects inconclusive submit as non-routeable after canonical snapshot persist", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_inconclusive_01",
+      task: "Meta submit inconclusive route rejection"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:22:30.000Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "inconclusive",
+          summary: "Needs human interpretation.",
+          report_json: {
+            findings_claim_state: "unknown",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 0
+          }
+        },
+        {
+          randomUUID: () => "run_meta_submit_inconclusive_01",
+          now: new Date("2026-03-09T09:23:00.000Z"),
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_GATE_RUN_FAILED"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    expect(loaded.state.state).toBe("META_REVIEW_RUNNING");
+    expect(loaded.state.meta_review).toMatchObject({
+      last_autonomous_run_id: "run_meta_submit_inconclusive_01",
+      last_autonomous_recommendation: "inconclusive",
+      last_autonomous_summary: "Needs human interpretation."
+    });
   });
 
   it("normalizes markdown findings_artifact_ref to json artifact for rework submit", async () => {
@@ -2850,6 +2997,23 @@ describe("meta-review submit", () => {
         randomUUID: () => "run_meta_submit_duplicate_malformed_precedence_01",
         now: new Date("2026-03-09T09:48:21.000Z"),
         readRuntimeSessionsRegistry: async () => runtimeSessions
+      }
+    );
+
+    const routed = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...routed.state,
+        state: "META_REVIEW_RUNNING",
+        active_agent: "codex",
+        active_role: "meta_reviewer",
+        active_since: "2026-03-09T09:48:21.500Z",
+        last_command_at: "2026-03-09T09:48:21.500Z"
+      },
+      {
+        expectedFingerprint: routed.fingerprint,
+        expectedState: "READY_FOR_HUMAN_APPROVAL"
       }
     );
 

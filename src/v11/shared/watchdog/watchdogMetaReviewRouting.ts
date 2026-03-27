@@ -1,4 +1,3 @@
-import { hasCanonicalSubmitForActiveMetaReviewRound } from "../../../core/bubble/metaReview.js";
 import { resolveDeliveryMessageRef } from "../../../core/runtime/tmuxDelivery.js";
 import {
   MetaReviewGateError
@@ -9,19 +8,6 @@ import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { BubbleWatchdogResult } from "../../application/watchdog/watchdogCommandContract.js";
 import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
-
-function hasCanonicalMetaReviewSubmitInActiveWindow(
-  state: BubbleStateSnapshot
-): boolean {
-  const snapshot = state.meta_review;
-  if (snapshot === undefined) {
-    return false;
-  }
-  return hasCanonicalSubmitForActiveMetaReviewRound({
-    state,
-    snapshot
-  });
-}
 
 async function recoverMetaReviewRouteWithConflictGuard(input: {
   resolved: Awaited<ReturnType<typeof resolveBubbleById>>;
@@ -105,47 +91,23 @@ function emitRecoveredMetaReviewDelivery(input: {
   });
 }
 
-export async function maybeRouteMetaReviewBeforeExpiry(input: {
+export function maybeRouteMetaReviewBeforeExpiry(input: {
   state: BubbleStateSnapshot;
   resolved: Awaited<ReturnType<typeof resolveBubbleById>>;
   now: Date;
   readState: typeof readStateSnapshot;
   recoverMetaReviewRoute: typeof recoverMetaReviewGateFromSnapshot;
   emitDelivery: typeof emitTmuxDeliveryNotification;
-}): Promise<BubbleWatchdogResult | null> {
+}): BubbleWatchdogResult | null {
   if (input.state.state !== "META_REVIEW_RUNNING") {
     return null;
   }
-  if (!hasCanonicalMetaReviewSubmitInActiveWindow(input.state)) {
-    return {
-      bubbleId: input.resolved.bubbleId,
-      escalated: false,
-      reason: "not_expired",
-      state: input.state
-    };
-  }
-
-  const recovered = await recoverMetaReviewRouteWithConflictGuard({
-    resolved: input.resolved,
-    now: input.now,
-    summary: "Meta-review submit detected; watchdog routed from canonical snapshot.",
-    readState: input.readState,
-    recoverMetaReviewRoute: input.recoverMetaReviewRoute
-  });
-  const mapped = mapRecoveredMetaReviewResult({
+  return {
     bubbleId: input.resolved.bubbleId,
-    fallbackState: input.state,
-    recovered
-  });
-  if (mapped.escalated && mapped.envelope !== undefined) {
-    emitRecoveredMetaReviewDelivery({
-      bubbleId: input.resolved.bubbleId,
-      resolved: input.resolved,
-      envelope: mapped.envelope,
-      emitDelivery: input.emitDelivery
-    });
-  }
-  return mapped;
+    escalated: false,
+    reason: "not_expired",
+    state: input.state
+  };
 }
 
 export async function maybeRouteMetaReviewOnExpiry(input: {
