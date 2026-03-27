@@ -70,6 +70,8 @@ describe("prepareConvergedValidation", () => {
 
     expect(writerCalled).toBe(true);
     expect(result).toEqual({
+      outcome: "warn",
+      diagnostics: ["Doc gate artifact read failed: gate artifact unreadable"],
       specLockState: {
         state: "IMPLEMENTABLE",
         open_blocker_count: 0,
@@ -92,122 +94,279 @@ describe("prepareConvergedValidation", () => {
     });
   });
 
-  it("rejects convergence when accuracy-critical verification is not pass", async () => {
-    await expect(
-      prepareConvergedValidation(
-        {
-          resolved: {
-            bubbleId: "b_val_002",
-            bubbleConfig: {
-              review_artifact_type: "code",
-              accuracy_critical: true
-            },
-            bubblePaths: {
-              artifactsDir: "/tmp/artifacts",
-              worktreePath: "/tmp/worktree",
-              reviewVerificationArtifactPath: "/tmp/review-verification.json"
-            }
-          } as never,
-          state: {
-            round: 2
-          } as never,
-          reviewer: "claude",
-          summary: "summary",
-          nowIso: "2026-03-19T19:05:00.000Z",
-          createError: (input) => new Error(toErrorMessage(input))
-        },
-        {
-          isDocContractGateScopeActive: () => false,
-          readReviewVerificationArtifactStatus: async () => ({
-            status: "fail"
-          }) as never,
-          resolveReviewerTestExecutionDirective: async () => ({
-            skip_full_rerun: false,
-            reason_code: "evidence_verified",
-            reason_detail: "ok",
-            verification_status: "trusted"
-          }) as never,
-          resolveReviewerTestEvidenceArtifactPath: () => "/tmp/artifacts/reviewer-test-evidence.json",
-          evaluateSummaryVerifierConsistencyGate: () => ({
-            gate_decision: "not_applicable",
-            reason_code: "not_applicable_non_docs",
+  it("returns a block outcome when accuracy-critical verification is not pass", async () => {
+    const result = await prepareConvergedValidation(
+      {
+        resolved: {
+          bubbleId: "b_val_002",
+          bubbleConfig: {
             review_artifact_type: "code",
-            verifier_status: "trusted",
-            claim_classes_detected: "none",
-            matched_claim_triggers: []
-          }),
-          resolveSummaryVerifierConsistencyGateArtifactPath: () =>
-            "/tmp/artifacts/summary-verifier-consistency-gate.json",
-          writeSummaryVerifierConsistencyGateArtifact: async () => undefined
+            accuracy_critical: true
+          },
+          bubblePaths: {
+            artifactsDir: "/tmp/artifacts",
+            worktreePath: "/tmp/worktree",
+            reviewVerificationArtifactPath: "/tmp/review-verification.json"
+          }
+        } as never,
+        state: {
+          round: 2
+        } as never,
+        reviewer: "claude",
+        summary: "summary",
+        nowIso: "2026-03-19T19:05:00.000Z",
+        createError: (input) => new Error(toErrorMessage(input))
+      },
+      {
+        isDocContractGateScopeActive: () => false,
+        readReviewVerificationArtifactStatus: async () => ({
+          status: "fail"
+        }) as never,
+        resolveReviewerTestExecutionDirective: async () => ({
+          skip_full_rerun: false,
+          reason_code: "evidence_verified",
+          reason_detail: "ok",
+          verification_status: "trusted"
+        }) as never,
+        resolveReviewerTestEvidenceArtifactPath: () => "/tmp/artifacts/reviewer-test-evidence.json",
+        evaluateSummaryVerifierConsistencyGate: () => ({
+          gate_decision: "not_applicable",
+          reason_code: "not_applicable_non_docs",
+          review_artifact_type: "code",
+          verifier_status: "trusted",
+          claim_classes_detected: "none",
+          matched_claim_triggers: []
+        }),
+        resolveSummaryVerifierConsistencyGateArtifactPath: () =>
+          "/tmp/artifacts/summary-verifier-consistency-gate.json",
+        writeSummaryVerifierConsistencyGateArtifact: async () => undefined
+      }
+    );
+
+    expect(result).toMatchObject({
+      outcome: "block",
+      blockingError: {
+        reasonCode: "CONVERGED_ACCURACY_VERIFICATION_REQUIRED",
+        message:
+          "Convergence validation failed: accuracy-critical review verification must be pass (current: fail).",
+        context: {
+          command_name: "converged",
+          bubble_id: "b_val_002",
+          round: 2,
+          gate_id: "converged_validation"
         }
-      )
-    ).rejects.toThrow(
-      "Convergence validation failed: accuracy-critical review verification must be pass (current: fail)."
+      },
+      diagnostics: [
+        "Convergence validation failed: accuracy-critical review verification must be pass (current: fail)."
+      ]
+    });
+  });
+
+  it("preserves structured validation blocks without relying on wrapped error message prefixes", async () => {
+    const result = await prepareConvergedValidation(
+      {
+        resolved: {
+          bubbleId: "b_val_002b",
+          bubbleConfig: {
+            review_artifact_type: "code",
+            accuracy_critical: true
+          },
+          bubblePaths: {
+            artifactsDir: "/tmp/artifacts",
+            worktreePath: "/tmp/worktree",
+            reviewVerificationArtifactPath: "/tmp/review-verification.json"
+          }
+        } as never,
+        state: {
+          round: 7
+        } as never,
+        reviewer: "claude",
+        summary: "summary",
+        nowIso: "2026-03-19T19:06:00.000Z",
+        createError: () => new Error("wrapped-custom-error")
+      },
+      {
+        isDocContractGateScopeActive: () => false,
+        readReviewVerificationArtifactStatus: async () => ({
+          status: "fail"
+        }) as never,
+        resolveReviewerTestExecutionDirective: async () => ({
+          skip_full_rerun: false,
+          reason_code: "evidence_verified",
+          reason_detail: "ok",
+          verification_status: "trusted"
+        }) as never,
+        resolveReviewerTestEvidenceArtifactPath: () => "/tmp/artifacts/reviewer-test-evidence.json",
+        evaluateSummaryVerifierConsistencyGate: () => ({
+          gate_decision: "not_applicable",
+          reason_code: "not_applicable_non_docs",
+          review_artifact_type: "code",
+          verifier_status: "trusted",
+          claim_classes_detected: "none",
+          matched_claim_triggers: []
+        }),
+        resolveSummaryVerifierConsistencyGateArtifactPath: () =>
+          "/tmp/artifacts/summary-verifier-consistency-gate.json",
+        writeSummaryVerifierConsistencyGateArtifact: async () => undefined
+      }
+    );
+
+    expect(result).toMatchObject({
+      outcome: "block",
+      blockingError: {
+        reasonCode: "CONVERGED_ACCURACY_VERIFICATION_REQUIRED",
+        message:
+          "Convergence validation failed: accuracy-critical review verification must be pass (current: fail)."
+      },
+      diagnostics: [
+        "Convergence validation failed: accuracy-critical review verification must be pass (current: fail)."
+      ]
+    });
+    expect(result.diagnostics).not.toContain("wrapped-custom-error");
+  });
+
+  it("returns a block outcome when summary/verifier decision blocks", async () => {
+    const result = await prepareConvergedValidation(
+      {
+        resolved: {
+          bubbleId: "b_val_003",
+          bubbleConfig: {
+            review_artifact_type: "document",
+            accuracy_critical: false
+          },
+          bubblePaths: {
+            artifactsDir: "/tmp/artifacts",
+            worktreePath: "/tmp/worktree",
+            reviewVerificationArtifactPath: "/tmp/review-verification.json"
+          }
+        } as never,
+        state: {
+          round: 5
+        } as never,
+        reviewer: "claude",
+        summary: "tests pass and typecheck clean",
+        nowIso: "2026-03-19T19:10:00.000Z",
+        createError: (input) => new Error(toErrorMessage(input))
+      },
+      {
+        isDocContractGateScopeActive: () => true,
+        readDocContractGateArtifact: async () => ({
+          spec_lock_state: {
+            state: "IMPLEMENTABLE",
+            open_blocker_count: 0,
+            open_required_now_count: 0
+          },
+          round_gate_state: {
+            applies: false,
+            violated: false,
+            round: 5
+          }
+        }) as never,
+        resolveDocContractGateArtifactPath: () => "/tmp/artifacts/doc-contract-gate.json",
+        resolveReviewerTestExecutionDirective: async () => ({
+          skip_full_rerun: false,
+          reason_code: "evidence_unverifiable",
+          reason_detail: "runtime error",
+          verification_status: "untrusted"
+        }) as never,
+        resolveReviewerTestEvidenceArtifactPath: () => "/tmp/artifacts/reviewer-test-evidence.json",
+        evaluateSummaryVerifierConsistencyGate: () => ({
+          gate_decision: "block",
+          reason_code: "summary_verifier_mismatch",
+          review_artifact_type: "document",
+          verifier_status: "untrusted",
+          claim_classes_detected: "test,typecheck",
+          matched_claim_triggers: ["tests pass", "typecheck clean"],
+          verifier_origin_reason: "evidence_unverifiable"
+        }),
+        resolveSummaryVerifierConsistencyGateArtifactPath: () =>
+          "/tmp/artifacts/summary-verifier-consistency-gate.json",
+        writeSummaryVerifierConsistencyGateArtifact: async () => undefined
+      }
+    );
+
+    expect(result).toMatchObject({
+      outcome: "block",
+      blockingError: {
+        reasonCode: "CONVERGED_SUMMARY_VERIFIER_GATE_BLOCKED"
+      }
+    });
+    expect(result.diagnostics[0]).toMatch(
+      /^Convergence validation failed: docs-only summary\/verifier consistency gate blocked approval summary/
     );
   });
 
-  it("rejects convergence when summary/verifier decision blocks", async () => {
-    await expect(
-      prepareConvergedValidation(
-        {
-          resolved: {
-            bubbleId: "b_val_003",
-            bubbleConfig: {
-              review_artifact_type: "document",
-              accuracy_critical: false
-            },
-            bubblePaths: {
-              artifactsDir: "/tmp/artifacts",
-              worktreePath: "/tmp/worktree",
-              reviewVerificationArtifactPath: "/tmp/review-verification.json"
-            }
-          } as never,
-          state: {
-            round: 5
-          } as never,
-          reviewer: "claude",
-          summary: "tests pass and typecheck clean",
-          nowIso: "2026-03-19T19:10:00.000Z",
-          createError: (input) => new Error(toErrorMessage(input))
-        },
-        {
-          isDocContractGateScopeActive: () => true,
-          readDocContractGateArtifact: async () => ({
-            spec_lock_state: {
-              state: "IMPLEMENTABLE",
-              open_blocker_count: 0,
-              open_required_now_count: 0
-            },
-            round_gate_state: {
-              applies: false,
-              violated: false,
-              round: 5
-            }
-          }) as never,
-          resolveDocContractGateArtifactPath: () => "/tmp/artifacts/doc-contract-gate.json",
-          resolveReviewerTestExecutionDirective: async () => ({
-            skip_full_rerun: false,
-            reason_code: "evidence_unverifiable",
-            reason_detail: "runtime error",
-            verification_status: "untrusted"
-          }) as never,
-          resolveReviewerTestEvidenceArtifactPath: () => "/tmp/artifacts/reviewer-test-evidence.json",
-          evaluateSummaryVerifierConsistencyGate: () => ({
-            gate_decision: "block",
-            reason_code: "summary_verifier_mismatch",
+  it("preserves audit-write failure as a blocking validation result", async () => {
+    const result = await prepareConvergedValidation(
+      {
+        resolved: {
+          bubbleId: "b_val_004",
+          bubbleConfig: {
             review_artifact_type: "document",
-            verifier_status: "untrusted",
-            claim_classes_detected: "test,typecheck",
-            matched_claim_triggers: ["tests pass", "typecheck clean"],
-            verifier_origin_reason: "evidence_unverifiable"
-          }),
-          resolveSummaryVerifierConsistencyGateArtifactPath: () =>
-            "/tmp/artifacts/summary-verifier-consistency-gate.json",
-          writeSummaryVerifierConsistencyGateArtifact: async () => undefined
+            accuracy_critical: false
+          },
+          bubblePaths: {
+            artifactsDir: "/tmp/artifacts",
+            worktreePath: "/tmp/worktree",
+            reviewVerificationArtifactPath: "/tmp/review-verification.json"
+          }
+        } as never,
+        state: {
+          round: 6
+        } as never,
+        reviewer: "claude",
+        summary: "No runtime claims.",
+        nowIso: "2026-03-19T19:15:00.000Z",
+        createError: (input) => new Error(toErrorMessage(input))
+      },
+      {
+        isDocContractGateScopeActive: () => true,
+        readDocContractGateArtifact: async () => ({
+          spec_lock_state: {
+            state: "IMPLEMENTABLE",
+            open_blocker_count: 0,
+            open_required_now_count: 0
+          },
+          round_gate_state: {
+            applies: false,
+            violated: false,
+            round: 6
+          }
+        }) as never,
+        resolveDocContractGateArtifactPath: () => "/tmp/artifacts/doc-contract-gate.json",
+        resolveReviewerTestExecutionDirective: async () => ({
+          skip_full_rerun: false,
+          reason_code: "evidence_verified",
+          reason_detail: "ok",
+          verification_status: "trusted"
+        }) as never,
+        resolveReviewerTestEvidenceArtifactPath: () => "/tmp/artifacts/reviewer-test-evidence.json",
+        evaluateSummaryVerifierConsistencyGate: () => ({
+          gate_decision: "allow",
+          reason_code: "no_claim_in_docs_only",
+          review_artifact_type: "document",
+          verifier_status: "trusted",
+          claim_classes_detected: "none",
+          matched_claim_triggers: []
+        }),
+        resolveSummaryVerifierConsistencyGateArtifactPath: () =>
+          "/tmp/artifacts/summary-verifier-consistency-gate.json",
+        writeSummaryVerifierConsistencyGateArtifact: async () => {
+          throw new Error("disk full");
         }
-      )
-    ).rejects.toThrow(
-      /Convergence validation failed: docs-only summary\/verifier consistency gate blocked approval summary/
+      }
     );
+
+    expect(result).toMatchObject({
+      outcome: "block",
+      blockingError: {
+        reasonCode: "CONVERGED_SUMMARY_VERIFIER_AUDIT_WRITE_FAILED",
+        message:
+          "Convergence validation failed: summary/verifier consistency gate audit write failed. Root error: disk full"
+      },
+      diagnostics: [
+        "Convergence validation failed: summary/verifier consistency gate audit write failed. Root error: disk full"
+      ]
+    });
   });
 });

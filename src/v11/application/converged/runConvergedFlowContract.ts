@@ -18,6 +18,7 @@ import type {
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type { PrepareConvergedValidationResult } from "./convergedValidationPreparationContract.js";
 
 export interface ExecuteConvergedExecutionDependencies {
   emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
@@ -55,13 +56,6 @@ interface PrepareConvergedPolicyResult {
   transcript: ProtocolEnvelope[];
   policy: ConvergencePolicyResult;
   convergencePolicyDiagnostics: string[];
-}
-
-interface PrepareConvergedValidationResult {
-  specLockState: BubbleSpecLockState;
-  roundGateState: BubbleRoundGateState;
-  docGateArtifactReadFailureReason?: string;
-  summaryVerifierGateDecision: SummaryVerifierConsistencyGateDecisionRecord;
 }
 
 interface ExecuteConvergedExecutionResult {
@@ -131,6 +125,7 @@ export interface RunConvergedFlowDependencies
       findings?: ConvergedStructuredFinding[];
       now: Date;
       convergencePolicyDiagnostics: string[];
+      gatePipelineDiagnostics: string[];
     },
     dependencies?: ExecuteConvergedExecutionDependencies
   ) => Promise<ExecuteConvergedExecutionResult>;

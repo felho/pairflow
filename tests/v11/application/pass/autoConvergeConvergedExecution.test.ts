@@ -92,4 +92,37 @@ describe("executeAutoConvergeConverged", () => {
       )
     ).rejects.toThrow("wrapped:downstream failed");
   });
+
+  it("prefers structured detailMessage over normalized public message for downstream rejection", async () => {
+    await expect(() =>
+      executeAutoConvergeConverged(
+        {
+          summary: "auto converge",
+          refs: [],
+          cwd: "/tmp/wt",
+          now: new Date("2026-03-19T12:00:00.000Z"),
+          expectedStateFingerprint: "fp_1",
+          expectedRound: 2,
+          expectedReviewer: "claude",
+          onDownstreamRejected: (reason) => {
+            throw new Error(`wrapped:${reason}`);
+          }
+        },
+        {
+          emitConvergedFromWorkspace: async () => {
+            throw Object.assign(
+              new Error(
+                "CONVERGED_SUMMARY_VERIFIER_GATE_BLOCKED: Convergence validation failed context={\"command_name\":\"converged\"}"
+              ),
+              {
+                detailMessage: "Convergence validation failed",
+                reasonCode: "CONVERGED_SUMMARY_VERIFIER_GATE_BLOCKED",
+                context: { command_name: "converged" }
+              }
+            );
+          }
+        }
+      )
+    ).rejects.toThrow("wrapped:Convergence validation failed");
+  });
 });

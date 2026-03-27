@@ -25,7 +25,8 @@ import type {
 } from "./convergedValidationPreparationContract.js";
 import {
   assertAccuracyCriticalVerification,
-  evaluateAndPersistSummaryVerifierDecision
+  evaluateAndPersistSummaryVerifierDecision,
+  isConvergedValidationBlockError
 } from "./convergedValidationGuards.js";
 
 export type {
@@ -167,22 +168,47 @@ export async function prepareConvergedValidation(
     readDocGateArtifact: resolvedDependencies.readDocGateArtifact,
     resolveDocGateArtifactPath: resolvedDependencies.resolveDocGateArtifactPath
   });
-  await assertAccuracyCriticalVerification({
-    validation: input,
-    readVerificationArtifactStatus: resolvedDependencies.readVerificationArtifactStatus
-  });
-  const summaryVerifierGateDecision =
-    await evaluateAndPersistSummaryVerifierDecision({
-      validation: input,
-      resolveReviewerDirective: resolvedDependencies.resolveReviewerDirective,
-      resolveTestEvidenceArtifactPath: resolvedDependencies.resolveTestEvidenceArtifactPath,
-      evaluateSummaryVerifierGate: resolvedDependencies.evaluateSummaryVerifierGate,
-      resolveSummaryVerifierArtifactPath: resolvedDependencies.resolveSummaryVerifierArtifactPath,
-      writeSummaryVerifierArtifact: resolvedDependencies.writeSummaryVerifierArtifact
-    });
+  const diagnostics =
+    docGateState.docGateArtifactReadFailureReason !== undefined
+      ? [
+          `Doc gate artifact read failed: ${docGateState.docGateArtifactReadFailureReason}`
+        ]
+      : [];
 
-  return {
-    ...docGateState,
-    summaryVerifierGateDecision
-  };
+  try {
+    await assertAccuracyCriticalVerification({
+      validation: input,
+      readVerificationArtifactStatus: resolvedDependencies.readVerificationArtifactStatus
+    });
+    const summaryVerifierGateDecision =
+      await evaluateAndPersistSummaryVerifierDecision({
+        validation: input,
+        resolveReviewerDirective: resolvedDependencies.resolveReviewerDirective,
+        resolveTestEvidenceArtifactPath: resolvedDependencies.resolveTestEvidenceArtifactPath,
+        evaluateSummaryVerifierGate: resolvedDependencies.evaluateSummaryVerifierGate,
+        resolveSummaryVerifierArtifactPath:
+          resolvedDependencies.resolveSummaryVerifierArtifactPath,
+        writeSummaryVerifierArtifact: resolvedDependencies.writeSummaryVerifierArtifact
+      });
+
+    return {
+      outcome:
+        docGateState.docGateArtifactReadFailureReason !== undefined ? "warn" : "pass",
+      diagnostics,
+      ...docGateState,
+      summaryVerifierGateDecision
+    };
+  } catch (error) {
+    if (!isConvergedValidationBlockError(error)) {
+      throw error;
+    }
+    const blockingError = error.blockingInput;
+
+    return {
+      outcome: "block",
+      diagnostics: [...diagnostics, blockingError.message],
+      blockingError,
+      ...docGateState
+    };
+  }
 }

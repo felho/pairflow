@@ -21,6 +21,7 @@ import type {
   BubbleSpecLockState,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
+import type { GatePipelineOutcome } from "../gates/gatePipelineContract.js";
 
 export interface PrepareConvergedValidationInput {
   resolved: ResolvedBubbleWorkspace;
@@ -44,9 +45,24 @@ export interface PrepareConvergedValidationDependencies {
   writeSummaryVerifierConsistencyGateArtifact?: typeof writeSummaryVerifierConsistencyGateArtifact;
 }
 
-export interface PrepareConvergedValidationResult {
+export interface PrepareConvergedValidationAllowedResult {
+  outcome: Exclude<GatePipelineOutcome, "block">;
+  diagnostics: string[];
   specLockState: BubbleSpecLockState;
   roundGateState: BubbleRoundGateState;
   docGateArtifactReadFailureReason?: string;
   summaryVerifierGateDecision: SummaryVerifierConsistencyGateDecisionRecord;
 }
+
+export interface PrepareConvergedValidationBlockedResult {
+  outcome: "block";
+  diagnostics: string[];
+  blockingError: PairflowCommandErrorDetails;
+  specLockState: BubbleSpecLockState;
+  roundGateState: BubbleRoundGateState;
+  docGateArtifactReadFailureReason?: string;
+}
+
+export type PrepareConvergedValidationResult =
+  | PrepareConvergedValidationAllowedResult
+  | PrepareConvergedValidationBlockedResult;

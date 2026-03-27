@@ -57,7 +57,11 @@ export async function executeAutoConvergeConverged(
       }
     );
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
+    const reason =
+      error instanceof Error
+        ? (((error as Error & { detailMessage?: string }).detailMessage)
+          ?? error.message)
+        : String(error);
     return input.onDownstreamRejected(reason);
   }
 }

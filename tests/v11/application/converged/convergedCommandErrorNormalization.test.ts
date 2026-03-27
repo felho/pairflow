@@ -57,6 +57,39 @@ describe("convergedCommandErrorNormalization", () => {
     expect((normalized as Error).message).toBe("meta-review gate failed");
   });
 
+  it("preserves structured reason code and context when rewrapping generic errors", () => {
+    let captured: PairflowCommandErrorInput | undefined;
+    const rootError = Object.assign(new Error("Gate evaluator failed: policy_gate"), {
+      reasonCode: "GATE_EVALUATOR_FAILED",
+      context: {
+        profile: "converged",
+        gate_id: "policy_gate"
+      }
+    });
+
+    const normalized = normalizeConvergedCommandError({
+      error: rootError,
+      isConvergedCommandError: (candidate) =>
+        candidate instanceof SyntheticConvergedCommandError,
+      createConvergedCommandError: (input) => {
+        captured = input;
+        return new SyntheticConvergedCommandError(
+          typeof input === "string" ? input : input.message
+        );
+      }
+    });
+
+    expect(normalized).toBeInstanceOf(SyntheticConvergedCommandError);
+    expect(captured).toEqual({
+      reasonCode: "GATE_EVALUATOR_FAILED",
+      message: "Gate evaluator failed: policy_gate",
+      context: {
+        profile: "converged",
+        gate_id: "policy_gate"
+      }
+    });
+  });
+
   it("returns non-Error values unchanged", () => {
     const normalized = runNormalization("raw-error-value");
     expect(normalized).toBe("raw-error-value");

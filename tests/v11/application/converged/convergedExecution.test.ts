@@ -41,7 +41,8 @@ describe("executeConvergedExecution", () => {
           }
         ],
         now: new Date("2026-03-19T11:00:00.000Z"),
-        convergencePolicyDiagnostics: ["diagnostic-a"]
+        convergencePolicyDiagnostics: ["diagnostic-a"],
+        gatePipelineDiagnostics: ["diagnostic-a", "gate-warning"]
       },
       {
         appendProtocolEnvelope: async (input) => {
@@ -54,7 +55,8 @@ describe("executeConvergedExecution", () => {
           ]);
           expect(input.envelope.payload.metadata).toMatchObject({
             advisory_findings_open_total: 1,
-            convergence_policy_diagnostics: ["diagnostic-a"]
+            convergence_policy_diagnostics: ["diagnostic-a"],
+            gate_pipeline_diagnostics: ["diagnostic-a", "gate-warning"]
           });
           return {
             sequence: 17,
@@ -165,7 +167,8 @@ describe("executeConvergedExecution", () => {
         summary: "converged summary",
         refs: [],
         now: new Date("2026-03-19T11:10:00.000Z"),
-        convergencePolicyDiagnostics: []
+        convergencePolicyDiagnostics: [],
+        gatePipelineDiagnostics: []
       },
       {
         appendProtocolEnvelope: async (input) => {

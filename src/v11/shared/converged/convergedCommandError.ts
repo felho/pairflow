@@ -1,6 +1,7 @@
 import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
 
 export class ConvergedCommandError extends Error {
+  public readonly detailMessage: string;
   public readonly reasonCode: string | undefined;
   public readonly context: PairflowCommandErrorContext | undefined;
 
@@ -8,6 +9,7 @@ export class ConvergedCommandError extends Error {
     const normalized = normalizePairflowCommandErrorInput(input);
     super(normalized.message, { cause: normalized.cause });
     this.name = "ConvergedCommandError";
+    this.detailMessage = typeof input === "string" ? normalized.message : input.message;
     this.reasonCode = normalized.reasonCode;
     this.context = normalized.context;
   }
