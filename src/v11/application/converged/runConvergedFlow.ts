@@ -82,7 +82,7 @@ function buildDiagnosticsSuffix(input: {
     : "";
 }
 
-function createBlockedGateError(input: {
+function toConvergedBlockedGateError(input: {
   flowInput: RunConvergedFlowInput;
   round: number;
   pipelineResult: GatePipelineResult<ConvergedGateMetadata>;
@@ -213,15 +213,15 @@ function buildRoutingInput(input: RunConvergedFlowInput): Parameters<
   };
 }
 
-export async function runConvergedFlow(
-  input: RunConvergedFlowInput,
-  dependencies: RunConvergedFlowDependencies
-): Promise<RunConvergedFlowResult> {
-  const nowIso = input.now.toISOString();
-  const routing = await dependencies.prepareConvergedRouting(
-    buildRoutingInput(input)
-  );
-  const pipelineResult = await runGatePipeline<
+async function runConvergedGatePipeline(input: {
+  flowInput: RunConvergedFlowInput;
+  dependencies: RunConvergedFlowDependencies;
+  routing: Awaited<ReturnType<RunConvergedFlowDependencies["prepareConvergedRouting"]>>;
+  nowIso: string;
+}): Promise<GatePipelineResult<ConvergedGateMetadata>> {
+  const { flowInput, dependencies, routing, nowIso } = input;
+
+  return runGatePipeline<
     { bubble_id: string; round: number },
     "converged",
     ConvergedGateMetadata
@@ -266,9 +266,9 @@ export async function runConvergedFlow(
             resolved: routing.resolved,
             state: routing.state,
             reviewer: routing.reviewer,
-            summary: input.summary,
+            summary: flowInput.summary,
             nowIso,
-            createError: input.createError
+            createError: flowInput.createError
           });
 
           return {
@@ -284,8 +284,58 @@ export async function runConvergedFlow(
       }
     ]
   });
+}
+
+function buildFinalizeConvergedFlowInput(input: {
+  flowInput: RunConvergedFlowInput;
+  routing: Awaited<ReturnType<RunConvergedFlowDependencies["prepareConvergedRouting"]>>;
+  executionResult: Awaited<
+    ReturnType<RunConvergedFlowDependencies["executeConvergedExecution"]>
+  >;
+  validationResult: ResolvedConvergedValidationPassResult;
+}): Parameters<RunConvergedFlowDependencies["finalizeConvergedFlow"]>[0] {
+  const { flowInput, routing, executionResult, validationResult } = input;
+
+  return {
+    resolved: routing.resolved,
+    bubbleIdentity: routing.bubbleIdentity,
+    state: routing.state,
+    summary: flowInput.summary,
+    refs: flowInput.refs,
+    now: flowInput.now,
+    convergence: executionResult.convergence,
+    gateResult: executionResult.gateResult,
+    summaryVerifierGateDecision: validationResult.summaryVerifierGateDecision,
+    specLockState: validationResult.specLockState,
+    roundGateState: validationResult.roundGateState,
+    ...(validationResult.docGateArtifactReadFailureReason !== undefined
+      ? {
+          docGateArtifactReadFailureReason:
+            validationResult.docGateArtifactReadFailureReason
+        }
+      : {}),
+    ...(executionResult.delivery !== undefined
+      ? { delivery: executionResult.delivery }
+      : {})
+  };
+}
+
+export async function runConvergedFlow(
+  input: RunConvergedFlowInput,
+  dependencies: RunConvergedFlowDependencies
+): Promise<RunConvergedFlowResult> {
+  const nowIso = input.now.toISOString();
+  const routing = await dependencies.prepareConvergedRouting(
+    buildRoutingInput(input)
+  );
+  const pipelineResult = await runConvergedGatePipeline({
+    flowInput: input,
+    dependencies,
+    routing,
+    nowIso
+  });
   if (pipelineResult.final_outcome === "block") {
-    throw createBlockedGateError({
+    throw toConvergedBlockedGateError({
       flowInput: input,
       round: routing.state.round,
       pipelineResult
@@ -324,28 +374,12 @@ export async function runConvergedFlow(
   );
 
   return dependencies.finalizeConvergedFlow(
-    {
-      resolved: routing.resolved,
-      bubbleIdentity: routing.bubbleIdentity,
-      state: routing.state,
-      summary: input.summary,
-      refs: input.refs,
-      now: input.now,
-      convergence: executionResult.convergence,
-      gateResult: executionResult.gateResult,
-      summaryVerifierGateDecision: validationResult.summaryVerifierGateDecision,
-      specLockState: validationResult.specLockState,
-      roundGateState: validationResult.roundGateState,
-      ...(validationResult.docGateArtifactReadFailureReason !== undefined
-        ? {
-            docGateArtifactReadFailureReason:
-              validationResult.docGateArtifactReadFailureReason
-          }
-        : {}),
-      ...(executionResult.delivery !== undefined
-        ? { delivery: executionResult.delivery }
-        : {})
-    },
+    buildFinalizeConvergedFlowInput({
+      flowInput: input,
+      routing,
+      executionResult,
+      validationResult
+    }),
     {
       resolveMetaReviewRolloutBlockingReasonCodes:
         input.resolveMetaReviewRolloutBlockingReasonCodes
