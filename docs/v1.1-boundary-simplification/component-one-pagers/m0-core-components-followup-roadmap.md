@@ -264,6 +264,10 @@ Fontos elv:
 8. Üzleti haszon:
    - Alacsonyabb hosszú távú fenntartási költség.
 
+2026-03-27 progress note:
+- A legacy CLI shim-felületre coverage guard került: a meglévő bubble CLI entrypoint parity tesztek most már explicit mappinggel ellenőrzik a teljes v11 `*CliCommand` halmazt, így új legacy export shim nem tud csendben parity-guard nélkül bekerülni.
+- Hozzáadva a hiányzó `restart` és `reconcile` CLI entrypoint parity tesztek, hogy a jelenlegi shim-halmaz teljes legyen a coverage checkhez.
+
 ### 3.11 `m0-11 UseCaseOrchestrator`
 
 1. Current State:
