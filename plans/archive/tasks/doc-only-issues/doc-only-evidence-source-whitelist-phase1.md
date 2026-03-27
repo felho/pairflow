@@ -2,18 +2,18 @@
 artifact_type: task
 artifact_id: task_doc_only_evidence_source_whitelist_phase1_v11
 title: "Docs-Only Evidence Source Whitelist (Phase 1)"
-status: draft
+status: completed
 phase: phase1
 target_files:
   - src/core/reviewer/testEvidence.ts
   - tests/core/reviewer/testEvidence.test.ts
   - docs/llm-doc-workflow-v1.md
 prd_ref: null
-plan_ref: plans/tasks/doc-only-issues/doc-only-priority-and-rollout-plan-2026-03-04.md
+plan_ref: plans/archive/tasks/doc-only-issues/doc-only-priority-and-rollout-plan-2026-03-04.md
 system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
   - docs/reviewer-severity-ontology.md
-  - plans/tasks/doc-only-issues/doc-only-summary-verifier-consistency-gate-phase1.md
+  - plans/archive/tasks/doc-only-issues/doc-only-summary-verifier-consistency-gate-phase1.md
 owners:
   - "felho"
 ---
@@ -49,7 +49,7 @@ Out of scope:
 
 1. `NR1` (`normative_refs[0]`): `docs/reviewer-severity-ontology.md`
    - finding/priority/timing kifejezesek es gate-sulyok konzisztens hasznalata.
-2. `NR2` (`normative_refs[1]`): `plans/tasks/doc-only-issues/doc-only-summary-verifier-consistency-gate-phase1.md`
+2. `NR2` (`normative_refs[1]`): `plans/archive/tasks/doc-only-issues/doc-only-summary-verifier-consistency-gate-phase1.md`
    - docs-only bypass (`review_artifact_type=document`) traceability (`CS6`, `T9`, `AC#6`) ehhez igazodik.
 
 ## L0 - Policy

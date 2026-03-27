@@ -5,11 +5,13 @@ Owner: felho
 Scope: WS-D pilot assessment (`bugfix` + `small feature` + `docs-only hardening`) + large-feature extension lane
 Decision: go
 
+Historical note (`2026-03-27`): the `go` decision below is retained as a March 2026 pilot output only. The later commits `9fab8f1` and `c55a90c` removed the enforcement config surface, so this report no longer implies an active rollout step.
+
 ## Summary
 
 A WS-D pilot core set es a large-feature extension lane evidence osszegyujtese megtortent.
 A nagy feature (Meta Review Gate PRD scope) implementaciosan release-elt allapotban van.
-A pilot-window `meta_review_rollout.*` jelek megjelentek, de ezek kulon feature-lane rollout-readiness jelzok, nem a WS-D docs-workflow pilot gate bemenetei, ezert a WS-D Phase 2 `required-for-doc-gates` enforce dontes: `go`.
+A pilot-window `meta_review_rollout.*` jelek megjelentek, de ezek kulon feature-lane rollout-readiness jelzok, nem a WS-D docs-workflow pilot gate bemenetei, ezert a korabeli WS-D Phase 2 `required-for-doc-gates` pilot dontes: `go`.
 
 ## Pilot Set
 
@@ -87,7 +89,7 @@ Out-of-scope for WS-D decision:
 ### Decision Rationale
 
 A WS-D pilot implementacios es process-evidence oldalon teljesitett, a core pilot set zarasa blockermentes.
-A pilot-window-ben megjelent meta-review rollout blokkolo kodok ettol fuggetlen lane-hez tartoznak, ezert nem blokkoljak a WS-D docs-workflow `required-for-doc-gates` phase dontest.
+A pilot-window-ben megjelent meta-review rollout blokkolo kodok ettol fuggetlen lane-hez tartoznak, ezert nem blokkoltak a WS-D docs-workflow korabeli `required-for-doc-gates` pilot donteset.
 
 ## Risks
 
@@ -97,9 +99,9 @@ A pilot-window-ben megjelent meta-review rollout blokkolo kodok ettol fuggetlen 
 
 ## Next Actions
 
-1. Inditsatok kontrollalt Phase 2 `required-for-doc-gates` enforce rolloutot a docs-workflow gate-re.
-2. A meta-review lane rollout-readiness dontest kulon, runbook/e2e-validacios csatornan tartsatok.
-3. Kovessetek tovabbra is a WS-D scoped metrikakat heti bontasban a regressziojelzesek miatt.
+1. Orizzetek meg ezt a riportot historical pilot evidence-kent a March 2026 docs-workflow ertekeleshez.
+2. A meta-review lane rollout-readiness dontest tovabbra is kulon, runbook/e2e-validacios csatornan kell kezelni.
+3. Ha uj gate-rollout modellre lesz igeny, azt uj taskban kell megnyitni a jelenlegi runtime modellhez igazitva.
 
 ## Appendix A: Pilot Evidence Commands (executed)
 

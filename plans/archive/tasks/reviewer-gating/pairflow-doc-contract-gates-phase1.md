@@ -17,7 +17,7 @@ target_files:
   - src/types/findings.ts
   - tests/**
 prd_ref: null
-plan_ref: plans/tasks/doc-only-issues/review-loop-complexity-memo-2026-03-04.md
+plan_ref: plans/archive/tasks/doc-only-issues/review-loop-complexity-memo-2026-03-04.md
 system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
   - docs/llm-doc-workflow-v1.md

@@ -149,7 +149,7 @@ Command verificationhez csak whitelistelt log refeket adj:
 ## Docs-Only Operational Decision Matrix (Phase 1)
 
 Source of truth:
-1. `plans/tasks/doc-only-issues/doc-only-operational-decision-matrix-and-rollout-phase1.md`
+1. `plans/archive/tasks/doc-only-issues/doc-only-operational-decision-matrix-and-rollout-phase1.md`
 2. Ez a szekcio operational kivonat; konfliktus eseten a fenti task file az elsoseges.
 
 | Scenario | Runtime check requirement | Claim policy | Evidence policy | Summary wording |
@@ -257,7 +257,7 @@ Rollback action:
 
 ## Adoption Strategy
 
-1. Phase 1 (`advisory-for-all-gates`): check and warn only.
-2. Phase 2 (`required-for-doc-gates`): hard-gate doc-only/task bubbles.
-3. Phase 3 (`required-for-all-gates`): enforce on all bubbles.
-4. Phase 1 docs-only operational mukodesben a fenti decision matrix es rollout gate az iranyado.
+1. Historical note: the March 2026 WS-D pilot evaluated a phased ladder (`advisory-for-all-gates` -> `required-for-doc-gates` -> `required-for-all-gates`) for rollout analysis.
+2. That ladder is not an active configuration surface after `9fab8f1` and `c55a90c` removed the enforcement config surface on `2026-03-27`.
+3. Current docs-only guidance in this document is the decision matrix and wording policy above.
+4. Code/auto bubbles continue to follow the current runtime behavior; any new rollout model requires a fresh task.

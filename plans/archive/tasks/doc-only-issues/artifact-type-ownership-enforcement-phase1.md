@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_artifact_type_ownership_enforcement_phase1_v21
 title: "Artifact Type Ownership Enforcement (Strict Explicit Mode)"
-status: implementable
+status: completed
 phase: phase1
 target_files:
   - src/cli/commands/bubble/create.ts
@@ -13,12 +13,12 @@ target_files:
   - tests/core/bubble/createBubble.test.ts
   - tests/config/bubbleConfig.test.ts
   - docs/llm-doc-workflow-v1.md
-  - plans/tasks/doc-only-issues/artifact-type-ownership-enforcement-phase1.md # meta/self-doc target only (non-runtime scope)
+  - plans/archive/tasks/doc-only-issues/artifact-type-ownership-enforcement-phase1.md # meta/self-doc target only (non-runtime scope)
 prd_ref: null
-plan_ref: plans/tasks/doc-only-issues/doc-only-priority-and-rollout-plan-2026-03-04.md
+plan_ref: plans/archive/tasks/doc-only-issues/doc-only-priority-and-rollout-plan-2026-03-04.md
 system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
-  - plans/tasks/doc-only-issues/doc-only-operational-decision-matrix-and-rollout-phase1.md
+  - plans/archive/tasks/doc-only-issues/doc-only-operational-decision-matrix-and-rollout-phase1.md
   - docs/llm-doc-workflow-v1.md
 owners:
   - "felho"
@@ -66,7 +66,7 @@ Minden uj bubble inditasakor kotelezo legyen explicit, keterteku dontes:
    - Core create contract (`reviewArtifactType` required ownership input).
    - Config/schema contract (`review_artifact_type` canonical set runtimeban).
 3. `plan_ref` kotelezo, ezert nem `null`.
-4. `target_files` self-doc entry (`plans/tasks/doc-only-issues/artifact-type-ownership-enforcement-phase1.md`) meta celu artifact scope, nem runtime implementacios target.
+4. `target_files` self-doc entry (`plans/archive/tasks/doc-only-issues/artifact-type-ownership-enforcement-phase1.md`) meta celu artifact scope, nem runtime implementacios target.
 
 ## L1 - Change Contract
 

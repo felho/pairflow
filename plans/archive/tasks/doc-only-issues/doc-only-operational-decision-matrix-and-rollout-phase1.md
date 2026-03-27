@@ -2,24 +2,30 @@
 artifact_type: task
 artifact_id: task_doc_only_operational_decision_matrix_rollout_phase1_v2
 title: "Docs-Only Operational Decision Matrix and Rollout (Phase 1)"
-status: draft
+status: completed
 phase: phase1
 target_files:
-  - plans/tasks/doc-only-issues/doc-only-operational-decision-matrix-and-rollout-phase1.md
+  - plans/archive/tasks/doc-only-issues/doc-only-operational-decision-matrix-and-rollout-phase1.md
   - docs/llm-doc-workflow-v1.md
-  - plans/tasks/doc-only-issues/doc-only-priority-and-rollout-plan-2026-03-04.md
+  - plans/archive/tasks/doc-only-issues/doc-only-priority-and-rollout-plan-2026-03-04.md
 prd_ref: null
-plan_ref: plans/tasks/doc-only-issues/doc-only-priority-and-rollout-plan-2026-03-04.md
+plan_ref: plans/archive/tasks/doc-only-issues/doc-only-priority-and-rollout-plan-2026-03-04.md
 system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
-  - plans/tasks/doc-only-issues/doc-only-temporary-disable-runtime-checks-phase1.md
-  - plans/tasks/doc-only-issues/doc-only-summary-verifier-consistency-gate-phase1.md
-  - plans/tasks/doc-only-issues/doc-only-evidence-source-whitelist-phase1.md
+  - plans/archive/tasks/doc-only-issues/doc-only-temporary-disable-runtime-checks-phase1.md
+  - plans/archive/tasks/doc-only-issues/doc-only-summary-verifier-consistency-gate-phase1.md
+  - plans/archive/tasks/doc-only-issues/doc-only-evidence-source-whitelist-phase1.md
 owners:
   - "felho"
 ---
 
 # Task: Docs-Only Operational Decision Matrix and Rollout (Phase 1)
+
+## Closure Note (2026-03-27)
+
+1. This task's docs-only matrix, wording sync, baseline freeze, and rollout tracking inputs were completed in March 2026.
+2. The planned enforcement-config rollout was not carried forward after `9fab8f1` and `c55a90c` removed the enforcement config surface on `2026-03-27`.
+3. This document remains the historical source-of-truth snapshot for the Phase 1 docs-only matrix, not an active implementation task.
 
 ## L0 - Policy
 
@@ -60,9 +66,9 @@ Definialjunk rovid, vegrehajthato es audit-kesz operational decision matrixot a 
 
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|---|
-| CS1 | `plans/tasks/doc-only-issues/doc-only-operational-decision-matrix-and-rollout-phase1.md` | matrix + rollout spec authoring | `defineDecisionMatrixAndRollout(context) -> markdown_contract` | teljes dokumentum | tartalmazza a 3-agas matrixot, rollout/rollback lepessorat es metric keszletet | P1 | required-now | T1, T3, T4, T5 |
+| CS1 | `plans/archive/tasks/doc-only-issues/doc-only-operational-decision-matrix-and-rollout-phase1.md` | matrix + rollout spec authoring | `defineDecisionMatrixAndRollout(context) -> markdown_contract` | teljes dokumentum | tartalmazza a 3-agas matrixot, rollout/rollback lepessorat es metric keszletet | P1 | required-now | T1, T3, T4, T5 |
 | CS2 | `docs/llm-doc-workflow-v1.md` | docs-only summary policy wording sync | `syncDocsOnlySummaryPolicy(matrix) -> workflow_doc_delta` | docs-only workflow/guidance blokk | summary formula es claim policy a matrixszal konzisztens | P1 | required-now | T2, T3 |
-| CS3 | `plans/tasks/doc-only-issues/doc-only-priority-and-rollout-plan-2026-03-04.md` | P1/2 state + sequence sync | `syncRolloutProgress(matrix_rollout) -> updated_plan_status` | Step 4/P1 szekciok | statusz, sorrend es ownership nyomkovetes frissul | P1 | required-now | T6 |
+| CS3 | `plans/archive/tasks/doc-only-issues/doc-only-priority-and-rollout-plan-2026-03-04.md` | P1/2 state + sequence sync | `syncRolloutProgress(matrix_rollout) -> updated_plan_status` | Step 4/P1 szekciok | statusz, sorrend es ownership nyomkovetes frissul | P1 | required-now | T6 |
 
 ### 2) Data and Interface Contract
 

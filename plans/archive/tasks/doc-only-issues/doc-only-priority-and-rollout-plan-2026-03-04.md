@@ -1,17 +1,24 @@
 # Docs-Only Issues Priority + Rollout Plan (2026-03-04)
 
 ## Status
-- Date: 2026-03-07
+- Date: 2026-03-27
 - Owner: felho
-- State: In Progress
+- State: Closed (historical)
 
-## Progress Snapshot (2026-03-07)
+## Progress Snapshot (2026-03-27)
 
 1. Completed: P0/1 (`doc-only-temporary-disable-runtime-checks-phase1.md`) merged on 2026-03-04 via `c24c20f` (`bubble/doc-only-runtime-checks-phase1-impl`) and `7eaf70e` (merge to `main`).
 2. Completed: P0/2 (`doc-only-summary-verifier-consistency-gate-phase1.md`) merged via `f631ecd` + `3b7f68d`.
 3. Completed: P1/1 (`doc-only-evidence-source-whitelist-phase1.md`) merged via `80c0c58` (bubble finalize) and `b71d3e3` (merge to `main`).
-4. Active item: P1/2 operational decision matrix rollout. Task spec migrated to L0/L1/L2 in `25b609a`; workflow/rollout source-of-truth synchronization done, baseline freeze recorded, and initial weekly measurement windows logged (`2026-W09`, `2026-W10`).
+4. Closed: P1/2 operational decision matrix task/spec, workflow source-of-truth synchronization, baseline freeze, and initial weekly measurement windows (`2026-W09`, `2026-W10`) were completed and retained as historical rollout evidence.
 5. Parked: P2/1 claim-based validation architecture is intentionally deferred; task file removed in `c1739e7` and will be recreated only on concrete demand.
+6. Closure note: the planned enforcement-config rollout was not carried forward after `9fab8f1` and `c55a90c` removed the enforcement config surface on `2026-03-27`.
+
+## Closure Note (2026-03-27)
+
+1. This plan is closed as a historical control document.
+2. The March rollout tracking data remains useful as baseline and decision history.
+3. Any future runtime-gate rollout work must start from a new task against the current runtime model, not by reopening this plan implicitly.
 
 ## Objective
 
@@ -44,7 +51,7 @@ Rationale:
 
 Rationale:
 1. Hosszabb távú, nagyobb scope; jelenleg nincs eleg indok az aktiv vegrehajtashoz.
-2. A mostani fokusz a P1/2 rollout stabil futtatasa es metrika-alapu validacio.
+2. A folder le van zarva; ujranyitas csak uj, konkret incident vagy uj scope eseten indokolt.
 
 ## Recommended Execution Sequence
 
@@ -75,20 +82,24 @@ Exit criteria:
 1. `done-package.md`/artifact JSON nem szolgálhat command evidence forrásként.
 2. Command verification csak dedikált evidence logokra épül.
 
-### Step 4 (Operational rollout for P1/2, Active)
+### Step 4 (P1/2 record completed; closed on 2026-03-27)
 
 Reference task:
 1. [doc-only-operational-decision-matrix-and-rollout-phase1.md](./doc-only-operational-decision-matrix-and-rollout-phase1.md)
 
-Actions:
-1. Publish the operational decision matrix into workflow guidance and communicate one standard docs-only summary wording.
-2. Apply deterministic routing in team routine:
+Recorded outcomes:
+1. The operational decision matrix was published into workflow guidance with one standard docs-only summary wording.
+2. Deterministic routing was documented in team routine form:
    - docs-only + no runtime claim -> runtime checks not required wording,
    - docs-only + explicit runtime claim -> claim allowed only with trusted verifier + whitelisted evidence,
    - code/auto bubble -> existing policy unchanged.
-3. Ensure workflow + rollout docs both reference the same P1/2 matrix source-of-truth task file.
-4. Start metrics collection with explicit source and weekly cadence for required set (`docs_only_round_count_avg`, `summary_verifier_mismatch_count`, `docs_only_evidence_rework_ratio`, `false_blocker_ratio`).
-5. Freeze baseline contract inputs before rollout go-live (`baseline_window`, `baseline_source`, `baseline_snapshot_ts`, `baseline_owner`).
+3. Workflow and rollout docs were synchronized to the same P1/2 matrix source-of-truth task file.
+4. Metrics collection was started with explicit source and weekly cadence for the required set (`docs_only_round_count_avg`, `summary_verifier_mismatch_count`, `docs_only_evidence_rework_ratio`, `false_blocker_ratio`).
+5. Baseline contract inputs were frozen before rollout go-live (`baseline_window`, `baseline_source`, `baseline_snapshot_ts`, `baseline_owner`).
+
+Historical closure note:
+1. All Step 4 docs/process exit criteria were satisfied at the workflow level.
+2. The later enforcement-config surface removal on `2026-03-27` means this section remains a historical record, not an active rollout lane.
 
 Exit criteria:
 1. Workflow doc and rollout plan both reference the same P1/2 matrix source-of-truth.
@@ -133,7 +144,7 @@ Rollback action:
 2. Revert only P1/2 communication wording/routine changes.
 3. Keep evidence whitelist behavior unchanged while investigating.
 
-### Step 5 (Optional future Phase 2 re-open, Parked)
+### Step 5 (Optional future re-open, Parked)
 
 1. Do not execute by default in the current cycle.
 2. Re-open only if Step 4 metrics or incident review shows persistent runtime-claim gaps.

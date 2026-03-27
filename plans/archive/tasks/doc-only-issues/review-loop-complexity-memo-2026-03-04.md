@@ -1,22 +1,22 @@
 # Programterv: Review Loop Stabilization es LLM-Ready Doc Workflow
 
 Datum: 2026-03-04  
-Statusz: in-progress (WS-A/WS-B/WS-C delivered, WS-D pilot assessed on 2026-03-09 with `go` (scope-filtered); large-feature extension lane linked)  
+Statusz: completed/historical (`2026-03-27`; WS-A/WS-B/WS-C delivered, WS-D pilot assessed on `2026-03-09`, then the phased enforcement config surface was removed by `9fab8f1` and `c55a90c`)  
 Tulajdonos: Pairflow docs+runtime
 
 Referenciak:
 - kapcsolodo context: `docs/pairflow-evidence-governance-context-2026-03-03.md`
-- aktualis doc-only task: `plans/tasks/doc-only-issues/doc-only-temporary-disable-runtime-checks-phase1.md`
+- aktualis doc-only task: `plans/archive/tasks/doc-only-issues/doc-only-temporary-disable-runtime-checks-phase1.md`
 - severity policy: `docs/reviewer-severity-ontology.md`
 - convergence policy baseline: `docs/pairflow-initial-design.md`
 
 ## Active Scope Snapshot (quick view)
 
-Fut most (in scope):
+Lezart kimenetek (historical record):
 1. Doc workflow es task contract (`L0/L1/L2`, frontmatter policy).
 2. Pairflow doc-contract gate-ek advisory modban.
 3. Skill alapu PRD/Plan/Task authoring workflow.
-4. Rollout/pilot es meres (Phase 1 -> Phase 2 elokeszites).
+4. Rollout/pilot es meres (historical pilot evidence es baseline).
 
 Parkolva (out of current initiative scope):
 1. Pairflow Architecture v2 redesign (`docs/pairflow-architecture-v2-note.md`).
@@ -45,7 +45,7 @@ A cel egy olyan szabvanyositott dokumentacios + review rendszer bevezetese, amel
 ### In scope
 1. Doc workflow szabvanyok (`PRD/Plan/Task` struktura, hivatkozasok, L0/L1/L2 szabalyok).
 2. Review governance (`required-now/later-hardening`, P0/P1 evidence policy illesztes).
-3. Pairflow runtime gate-ek terve (advisory-for-all-gates -> required-for-doc-gates -> required-for-all-gates rollout).
+3. Pairflow runtime gate-ek dokumentacios baseline-je es a kapcsolodo historical rollout learnings.
 4. Skill oldali dokumentum-letrehozasi es triage workflow.
 
 ### Out of scope
@@ -123,7 +123,7 @@ Kimenet:
 ### WS-D: Rollout es meres (adoption layer)
 
 Feladatok:
-1. Rollout modok:
+1. Kezdeti rollout hipotezis (historical planning model):
    - Phase 1: `advisory-for-all-gates`,
    - Phase 2: `required-for-doc-gates`,
    - Phase 3: `required-for-all-gates`.
@@ -144,10 +144,13 @@ Kimenet:
 WS-D pilot outcome update (2026-03-09):
 1. Pilot report kesz: `docs/review-loop-ws-d-pilot-report-2026-03.md`.
 2. Large-feature extension lane explicit linkage kesz: `docs/meta-review-gate-prd.md` <-> pilot report.
-3. Phase 2 `required-for-doc-gates` enforce dontes: `go` (WS-D docs-workflow scope alapjan).
+3. Historical pilot decision: the then-current Phase 2 `required-for-doc-gates` outcome was `go` (WS-D docs-workflow scope alapjan).
 4. `meta_review_rollout.*` blokkolo reason code-ok kulon rollout-readiness lane-ben maradnak (nem WS-D gate input).
+5. Closure update (`2026-03-27`): the phased enforcement config model was not carried forward; `9fab8f1` es `c55a90c` removed the config surface, so WS-D remains historical pilot evidence only.
 
 ## 5) Fazos utemterv
+
+Historical planning snapshot only. The phased enforcement rollout below was not carried forward after the `2026-03-27` config-surface removal.
 
 ### Phase 0 (azonnal)
 1. Doc workflow + templatek bevezetese.
@@ -159,13 +162,13 @@ WS-D pilot outcome update (2026-03-09):
 3. 2-3 pilot task futtatasa.
 
 ### Phase 2
-1. Required-docs mode bekapcsolasa doc-only/task bubblekre.
-2. Status JSON gate mezok aktivalasa.
-3. Regresszio + usability feedback kor.
+1. Historical pilot outcome only: the original plan was a `required-for-doc-gates` follow-up.
+2. This was not continued as an active config rollout after `9fab8f1` and `c55a90c`.
+3. Future runtime-gate changes require a new task against the current implementation.
 
 ### Phase 3
-1. Required-all mode (fokozatosan, repo-szintu kapcsoloval).
-2. Stabilizalas, false-blocker csokkentes.
+1. `required-for-all-gates` remained a planning idea only.
+2. The repo-level enforcement config surface was later removed, so this phase was not pursued in this initiative.
 
 ## 6) Elfogadasi kriteriumok (Done)
 
@@ -178,7 +181,7 @@ WS-D pilot outcome update (2026-03-09):
 ## 7) Kockazatok es mitigacio
 
 1. Kockazat: tul merev gate, lassul a munka.
-   - Mitigacio: advisory rollout, fokozatos hard gate.
+   - Mitigacio: fokozatos docs-policy pilot, es csak kulon uj taskban folytathato runtime-gate szigoritas.
 2. Kockazat: projekt-specifikus formatum utkozik a templatekkel.
    - Mitigacio: minimal machine-readable contract, szoveges stilus szabad.
 3. Kockazat: severity inflation (`P2` -> `P1`) a gate megkerulesere.
@@ -200,9 +203,9 @@ WS-D pilot outcome update (2026-03-09):
 ## 9) Kovetkezo konkret lepesek
 
 1. A sablonokat kiserleti modban alkalmazzuk 2 uj taskon.
-2. Phase 2 `required-for-doc-gates` enforce rollout monitorozasa scope-filtered WS-D metrikakkal.
-3. Meta-review rollout-readiness kulon tracken: `docs/meta-review-gate-e2e-validation.md` + runbook szerinti gate.
-4. Ha a WS-D scoped metrikakban regresszio jelenik meg, policy tuning update task nyitasa.
+2. Meta-review rollout-readiness kulon tracken marad: `docs/meta-review-gate-e2e-validation.md` + runbook szerinti gate.
+3. Ha uj runtime-gate rolloutra lesz igeny, azt uj taskkent kell megnyitni a jelenlegi runtime modellhez igazitva.
+4. Ez a memo historical baseline-kent marad meg; nem jelez aktiv vegrehajtasi lane-t.
 
 ## 10) Inline reviewer guidelines (temporary)
 
@@ -231,7 +234,7 @@ Purpose: keep review high-signal and stop infinite refinement loops.
 
 Datum: 2026-03-04  
 Referenciak:
-- aktualis spec: `plans/tasks/doc-only-issues/doc-only-temporary-disable-runtime-checks-phase1.md`
+- aktualis spec: `plans/archive/tasks/doc-only-issues/doc-only-temporary-disable-runtime-checks-phase1.md`
 - kapcsolodo context: `docs/pairflow-evidence-governance-context-2026-03-03.md`
 
 ## 1) Mi tortent most (meta szint)
