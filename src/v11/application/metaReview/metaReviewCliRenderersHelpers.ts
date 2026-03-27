@@ -11,6 +11,7 @@ interface MetaReviewRenderedResultLike {
   recommendation: string;
   updated_at: string;
   lifecycle_state: string;
+  gate_route?: string;
   summary: string | null;
   report_ref: string;
   run_id?: string;
@@ -83,13 +84,17 @@ export function buildMetaReviewOutcomeHeaderLines(input: {
   depth?: string;
 }): string[] {
   const { label, result, depth } = input;
-  return [
+  const lines = [
     `Meta-review ${label} for ${result.bubbleId}: status=${result.status}, recommendation=${result.recommendation}${label === "run" ? `, depth=${depth ?? "standard"}` : ""}`,
     `Updated: ${result.updated_at}`,
-    `Lifecycle state: ${result.lifecycle_state}`,
     `Summary: ${result.summary ?? "-"}`,
     `Report ref: ${result.report_ref}`
   ];
+  if (label === "submit" && typeof result.gate_route === "string") {
+    lines.splice(2, 0, `Gate route: ${result.gate_route}`);
+  }
+  lines.splice(typeof result.gate_route === "string" && label === "submit" ? 3 : 2, 0, `Lifecycle state: ${result.lifecycle_state}`);
+  return lines;
 }
 
 export function buildMetaReviewStatusHeaderLines(view: MetaReviewStatusView): string[] {

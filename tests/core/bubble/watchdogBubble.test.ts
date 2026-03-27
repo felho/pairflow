@@ -571,7 +571,7 @@ describe("runBubbleWatchdog", () => {
     expect(sessions[bubble.bubbleId]?.metaReviewerPane?.active).toBe(false);
   });
 
-  it("routes canonical META_REVIEW_RUNNING submit snapshot before timeout expiry", async () => {
+  it("does not route canonical META_REVIEW_RUNNING submit snapshot before timeout expiry", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -644,14 +644,13 @@ describe("runBubbleWatchdog", () => {
       now: new Date("2026-02-22T12:02:00.000Z")
     });
 
-    expect(result.escalated).toBe(true);
-    expect(result.reason).toBe("escalated");
-    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
-    expect(result.state.meta_review?.last_autonomous_run_id).toBeNull();
-    expect(result.envelope?.type).toBe("APPROVAL_REQUEST");
+    expect(result.escalated).toBe(false);
+    expect(result.reason).toBe("not_expired");
+    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.envelope).toBeUndefined();
   });
 
-  it("routes canonical rework submit snapshot before timeout and delivers auto-rework envelope", async () => {
+  it("does not route canonical rework submit snapshot before timeout", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -783,19 +782,11 @@ describe("runBubbleWatchdog", () => {
       }
     );
 
-    expect(result.escalated).toBe(true);
-    expect(result.reason).toBe("escalated");
-    expect(result.state.state).toBe("RUNNING");
-    expect(result.state.active_role).toBe("implementer");
-    expect(result.envelope?.type).toBe("APPROVAL_DECISION");
-    expect(result.envelope?.payload.decision).toBe("rework");
-    expect(deliveries).toHaveLength(1);
-    expect(deliveries[0]).toMatchObject({
-      bubbleId: bubble.bubbleId,
-      envelopeType: "APPROVAL_DECISION",
-      recipient: bubble.config.agents.implementer,
-      decision: "rework"
-    });
+    expect(result.escalated).toBe(false);
+    expect(result.reason).toBe("not_expired");
+    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.envelope).toBeUndefined();
+    expect(deliveries).toHaveLength(0);
   });
 
   it("does not route canonical submit snapshot when submit is outside active window", async () => {

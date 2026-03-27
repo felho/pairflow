@@ -228,7 +228,9 @@ describe("v11 meta-review submit contract", () => {
       )
     ).resolves.toMatchObject({
       status: "success",
-      recommendation: "approve"
+      recommendation: "approve",
+      gate_route: "human_gate_approve",
+      lifecycle_state: "READY_FOR_HUMAN_APPROVAL"
     });
   });
 });

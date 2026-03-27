@@ -108,6 +108,12 @@ RUNNING turn tracking (required):
 4. Liveness watchdog uses `active_agent` context and pane activity sampling; timeout alone is not enough for standard `RUNNING` escalation.
 5. Timeout is configured by `watchdog_timeout_minutes` in `bubble.toml` (default: `30`), then standard `RUNNING` escalation additionally requires either a hard dead-signal (missing session / unreadable pane) or a post-timeout quiet window.
 
+META_REVIEW_RUNNING handoff semantics:
+1. `pairflow bubble meta-review submit` is the normal success-path handoff command. A successful submit persists the canonical result, applies the gate route, advances lifecycle state, and closes meta-reviewer ownership in the same command flow.
+2. A submit that cannot produce a routeable normal handoff must fail closed as a typed submit error; a canonical snapshot alone is not a successful handoff.
+3. The watchdog is not the normal success-path router for canonical meta-review submits before timeout expiry.
+4. Watchdog responsibility for meta-review is limited to timeout/liveness/recovery fallback handling when normal submit handoff did not finish.
+
 ## Convergence Policy (Quality-First)
 Each loop round:
 1. Implementer agent proposes changes and rationale.
