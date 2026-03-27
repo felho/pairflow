@@ -102,4 +102,61 @@ describe("restartBubble", () => {
       )
     ).rejects.toBeInstanceOf(RestartBubbleError);
   });
+
+  it("restarts even when prior tmux/runtime ownership is already gone", async () => {
+    const callOrder: string[] = [];
+    const resolveBubbleById = vi.fn(() => {
+      callOrder.push("resolve");
+      return Promise.resolve({
+        bubbleId: "b_restart_03",
+        repoPath: "/tmp/repo-real",
+        bubbleConfig: {
+          id: "b_restart_03"
+        },
+        bubblePaths: {
+          sessionsPath: "/tmp/repo-real/.pairflow/runtime/sessions.json"
+        }
+      } as unknown as ResolvedBubbleById);
+    });
+    const terminateBubbleTmuxSession = vi.fn(() => {
+      callOrder.push("terminate");
+      return Promise.resolve({
+        sessionName: "pf-b_restart_03",
+        existed: false
+      });
+    });
+    const removeRuntimeSession = vi.fn(() => {
+      callOrder.push("remove");
+      return Promise.resolve(false);
+    });
+    const startBubble = vi.fn(() => {
+      callOrder.push("start");
+      return Promise.resolve({
+        bubbleId: "b_restart_03",
+        state: {
+          state: "RUNNING"
+        },
+        tmuxSessionName: "pf-b_restart_03",
+        worktreePath: "/tmp/repo-real/.pairflow/worktrees/b_restart_03"
+      } as unknown as StartBubbleResult);
+    });
+
+    const result = await restartBubble(
+      {
+        bubbleId: "b_restart_03",
+        repoPath: "/tmp/repo-real"
+      },
+      {
+        resolveBubbleById,
+        terminateBubbleTmuxSession,
+        removeRuntimeSession,
+        startBubble
+      }
+    );
+
+    expect(callOrder).toEqual(["resolve", "terminate", "remove", "start"]);
+    expect(result.previousTmuxSessionExisted).toBe(false);
+    expect(result.previousRuntimeSessionRemoved).toBe(false);
+    expect(result.tmuxSessionName).toBe("pf-b_restart_03");
+  });
 });

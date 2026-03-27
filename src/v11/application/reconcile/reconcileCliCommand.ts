@@ -84,6 +84,15 @@ export function renderBubbleReconcileText(
     `Stale candidates: ${report.staleCandidates}`
   ];
 
+  const sortedReasonEntries = Object.entries(report.reasonCounts).sort(([left], [right]) =>
+    left.localeCompare(right)
+  );
+  if (sortedReasonEntries.length > 0) {
+    lines.push(
+      `Reasons: ${sortedReasonEntries.map(([reason, count]) => `${reason}=${count}`).join(", ")}`
+    );
+  }
+
   if (report.actions.length === 0) {
     lines.push("No stale runtime sessions found.");
     return lines.join("\n");

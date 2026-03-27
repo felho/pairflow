@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { SchemaValidationError } from "../../src/core/validation.js";
 import {
   loadPairflowGlobalConfig,
   parsePairflowGlobalConfigToml,
@@ -78,6 +79,50 @@ open_command = "code --reuse-window {{worktree_path}}"
     expect(result.errors.some((error) => error.path === "open_command")).toBe(
       true
     );
+  });
+
+  it("rejects TOML sections in global config", () => {
+    try {
+      parsePairflowGlobalConfigToml(`
+[ui]
+open_command = "code --reuse-window {{worktree_path}}"
+`);
+      throw new Error("Expected parsePairflowGlobalConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors[0]?.message).toMatch(
+        /sections are not supported in global config/u
+      );
+    }
+  });
+
+  it("rejects dotted keys in global config", () => {
+    try {
+      parsePairflowGlobalConfigToml(`
+ui.open_command = "code --reuse-window {{worktree_path}}"
+`);
+      throw new Error("Expected parsePairflowGlobalConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors[0]?.message).toMatch(
+        /Dotted TOML keys are not supported/u
+      );
+    }
+  });
+
+  it("rejects duplicate keys in global config", () => {
+    try {
+      parsePairflowGlobalConfigToml(`
+open_command = "code --reuse-window {{worktree_path}}"
+open_command = "cursor {{worktree_path}}"
+`);
+      throw new Error("Expected parsePairflowGlobalConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors[0]?.message).toMatch(
+        /Duplicate TOML key "open_command"/u
+      );
+    }
   });
 
   it("loads empty config when file does not exist", async () => {

@@ -95,10 +95,15 @@ export function validatePairflowRepoConfig(
     return validationFail(errors);
   }
 
+  const normalizedDocsGate =
+    validatedAllGate === "required"
+      ? "required"
+      : validatedDocsGate;
+
   return validationOk({
     enforcement_mode: {
       ...(validatedAllGate !== undefined ? { all_gate: validatedAllGate } : {}),
-      ...(validatedDocsGate !== undefined ? { docs_gate: validatedDocsGate } : {})
+      ...(normalizedDocsGate !== undefined ? { docs_gate: normalizedDocsGate } : {})
     }
   });
 }

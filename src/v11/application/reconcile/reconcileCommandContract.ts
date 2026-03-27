@@ -35,6 +35,7 @@ export interface ReconcileRuntimeSessionsReport {
   sessionsBefore: number;
   sessionsAfter: number;
   staleCandidates: number;
+  reasonCounts: Partial<Record<RuntimeSessionStaleReason, number>>;
   actions: ReconcileRuntimeSessionsAction[];
 }
 

@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { SchemaValidationError } from "../../src/core/validation.js";
 import {
   loadPairflowRepoConfig,
   parsePairflowRepoConfigToml,
@@ -37,6 +38,18 @@ docs_gate = "required"
 
     expect(parsed.enforcement_mode).toEqual({
       all_gate: "advisory",
+      docs_gate: "required"
+    });
+  });
+
+  it("normalizes docs_gate to required when all_gate is required and docs_gate is omitted", () => {
+    const parsed = parsePairflowRepoConfigToml(`
+[enforcement_mode]
+all_gate = "required"
+`);
+
+    expect(parsed.enforcement_mode).toEqual({
+      all_gate: "required",
       docs_gate: "required"
     });
   });
@@ -79,6 +92,49 @@ docs_gate = "required"
     expect(result.errors.some((error) => error.path === "enforcement_mode.docs_gate")).toBe(
       true
     );
+  });
+
+  it("rejects scalar enforcement_mode instead of section/object", () => {
+    try {
+      parsePairflowRepoConfigToml(`
+enforcement_mode = "required"
+`);
+      throw new Error("Expected parsePairflowRepoConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors[0]?.message).toMatch(
+        /Must be an object\/section/u
+      );
+    }
+  });
+
+  it("rejects array-of-tables parser syntax in repo config", () => {
+    try {
+      parsePairflowRepoConfigToml(`
+[[enforcement_mode]]
+all_gate = "required"
+`);
+      throw new Error("Expected parsePairflowRepoConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors[0]?.message).toMatch(
+        /Array-of-tables are not supported/u
+      );
+    }
+  });
+
+  it("rejects dotted keys parser syntax in repo config", () => {
+    try {
+      parsePairflowRepoConfigToml(`
+enforcement_mode.all_gate = "required"
+`);
+      throw new Error("Expected parsePairflowRepoConfigToml to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SchemaValidationError);
+      expect((error as SchemaValidationError).errors[0]?.message).toMatch(
+        /Dotted TOML keys are not supported/u
+      );
+    }
   });
 
   it("loads empty config when pairflow.toml is missing", async () => {

@@ -112,6 +112,41 @@ describe("bubble metrics best-effort warnings", () => {
     expect(warnings).toHaveLength(2);
   });
 
+  it("does not deduplicate distinct failure reasons for the same bubble and event", async () => {
+    clearReportedBubbleEventWarnings();
+    const warnings: string[] = [];
+
+    await emitBubbleLifecycleEventBestEffort({
+      repoPath: "/tmp/repo",
+      bubbleId: "b_warn_reason_01",
+      bubbleInstanceId: "",
+      eventType: "bubble_passed",
+      round: 1,
+      actorRole: "implementer",
+      metadata: {},
+      reportWarning: (message) => {
+        warnings.push(message);
+      }
+    });
+
+    await emitBubbleLifecycleEventBestEffort({
+      repoPath: "/tmp/repo",
+      bubbleId: "b_warn_reason_01",
+      bubbleInstanceId: "bi_00m8f7w14k_2f03e8b8e4f24d98",
+      eventType: "bubble_passed",
+      round: 0,
+      actorRole: "implementer",
+      metadata: {},
+      reportWarning: (message) => {
+        warnings.push(message);
+      }
+    });
+
+    expect(warnings).toHaveLength(2);
+    expect(warnings[0]).toContain("bubble_instance_id must be a non-empty string");
+    expect(warnings[1]).toContain("round must be null or a positive integer");
+  });
+
   it("warns when recovery is disabled, then recovers after re-enabling stale lock recovery", async () => {
     clearReportedBubbleEventWarnings();
     const root = await createTempDir();

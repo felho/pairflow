@@ -106,6 +106,10 @@ describe("reconcileRuntimeSessions", () => {
     expect(preview.staleCandidates).toBe(2);
     expect(preview.sessionsBefore).toBe(3);
     expect(preview.sessionsAfter).toBe(3);
+    expect(preview.reasonCounts).toEqual({
+      final_state: 1,
+      missing_bubble: 1
+    });
     expect(preview.actions.map((action) => action.reason).sort()).toEqual([
       "final_state",
       "missing_bubble"
@@ -119,6 +123,10 @@ describe("reconcileRuntimeSessions", () => {
     expect(applied.staleCandidates).toBe(2);
     expect(applied.sessionsBefore).toBe(3);
     expect(applied.sessionsAfter).toBe(1);
+    expect(applied.reasonCounts).toEqual({
+      final_state: 1,
+      missing_bubble: 1
+    });
     expect(applied.actions.every((action) => action.removed)).toBe(true);
 
     const registry = await readRuntimeSessionsRegistry(bubbleActive.paths.sessionsPath, {
@@ -153,6 +161,9 @@ describe("reconcileRuntimeSessions", () => {
       isTmuxSessionAlive: () => Promise.resolve(true)
     });
     expect(report.staleCandidates).toBe(1);
+    expect(report.reasonCounts).toEqual({
+      invalid_state: 1
+    });
     expect(report.actions[0]?.reason).toBe("invalid_state");
     expect(report.sessionsAfter).toBe(0);
   });
@@ -186,6 +197,9 @@ describe("reconcileRuntimeSessions", () => {
       isTmuxSessionAlive: () => Promise.resolve(false)
     });
     expect(report.staleCandidates).toBe(1);
+    expect(report.reasonCounts).toEqual({
+      missing_tmux_session: 1
+    });
     expect(report.actions[0]?.reason).toBe("missing_tmux_session");
     expect(report.actions[0]?.removed).toBe(true);
     expect(report.sessionsAfter).toBe(0);
@@ -233,6 +247,7 @@ describe("reconcileRuntimeSessions", () => {
       isTmuxSessionAlive: () => Promise.resolve(true)
     });
     expect(report.staleCandidates).toBe(0);
+    expect(report.reasonCounts).toEqual({});
     expect(report.sessionsAfter).toBe(1);
   });
 

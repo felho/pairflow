@@ -136,6 +136,20 @@ round_gate_applies_after = -1
     expect(config.doc_contract_gates.parse_warning).toContain("round_gate_applies_after");
   });
 
+  it("normalizes contradictory docs_gate to required when all_gate is required", () => {
+    const config = parseBubbleConfigToml(`${baseToml}
+[enforcement_mode]
+all_gate = "required"
+docs_gate = "advisory"
+`);
+
+    expect(config.enforcement_mode.all_gate).toBe("required");
+    expect(config.enforcement_mode.docs_gate).toBe("required");
+    expect(config.enforcement_mode.parse_warning).toContain(
+      "docs_gate cannot be advisory when enforcement_mode.all_gate is required"
+    );
+  });
+
   it("serializes and restores enforcement/doc gate parse_warning through TOML roundtrip", () => {
     const rendered = renderBubbleConfigToml({
       id: "b_test_parse_warning_roundtrip_01",

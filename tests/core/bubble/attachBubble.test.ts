@@ -636,6 +636,45 @@ describe("attachBubble", () => {
     expect(loadPairflowGlobalConfig).not.toHaveBeenCalled();
   });
 
+  it("keeps bubble attach launcher precedence even when global config loader would fail", async () => {
+    const resolved = createResolvedBubbleFixture({
+      bubbleId: "b_attach_bubble_override_invalid_global",
+      repoPath: "/tmp/pairflow-attach-bubble-override-invalid-global",
+      attachLauncher: "copy"
+    });
+
+    const loadPairflowGlobalConfig = vi.fn(() => {
+      throw new SchemaValidationError("Invalid Pairflow global config", [
+        { path: "attach_launcher", message: "invalid" }
+      ]);
+    });
+
+    const result = await attachBubble(
+      {
+        bubbleId: resolved.bubbleId,
+        repoPath: resolved.repoPath
+      },
+      {
+        resolveBubbleById: () => Promise.resolve(resolved),
+        checkTmuxSessionExists: () => Promise.resolve(true),
+        checkLauncherAvailability: createAvailabilityChecker(
+          { terminal: true },
+          []
+        ),
+        executeAttachCommand: () =>
+          Promise.resolve({ exitCode: 0, stdout: "", stderr: "" }),
+        loadPairflowGlobalConfig
+      }
+    );
+
+    expect(result.launcherRequested).toBe("copy");
+    expect(result.launcherUsed).toBe("copy");
+    expect(result.attachCommand).toBe(
+      `tmux attach -t '${result.tmuxSessionName}'`
+    );
+    expect(loadPairflowGlobalConfig).not.toHaveBeenCalled();
+  });
+
   it("uses global attach launcher when bubble override is not set", async () => {
     const resolved = createResolvedBubbleFixture({
       bubbleId: "b_attach_global_fallback",

@@ -130,6 +130,7 @@ Fontos elv:
 
 1. Current State:
    - Reconcile/recovery logika jelen van, de ritkább operátori útvonal.
+   - 2026-03-27: a reconcile report kapott strukturált stale-ok bontást (`reasonCounts`), és a CLI text output is mutatja az ok-összesítést, így az incidensjellegű runtime drift már nem csak nyers action-listaként látszik.
 2. Target State:
    - Mért és kontrollált recovery útvonal, incidensfókuszú fejlesztéssel.
 3. Gap:
@@ -171,6 +172,7 @@ Fontos elv:
 
 1. Current State:
    - Alap telemetry működik, edge-case stabilitás erősíthető.
+   - 2026-03-27: explicit metrics edge-case tesztek kerültek a contention-feloldódás timeout előtti sikerére és a warning dedupe kulcs reason-szintű viselkedésére, hogy a retry/dedupe contract ne csak a `withFileLock` utility szintjén legyen lefedve.
 2. Target State:
    - Megbízható retry/backoff/dedupe viselkedés kritikus útvonalakon.
 3. Gap:
@@ -192,6 +194,9 @@ Fontos elv:
 
 1. Current State:
    - Alap precedence működik, de nehezen reprodukálható edge-case kockázat maradt.
+   - 2026-03-27: a repo-level `enforcement_mode` normalizáció igazítva lett a bubble config viselkedéséhez (`all_gate=required` => `docs_gate=required`), és explicit regresszióteszt került a repo parserre, a bubble parserre és a `createBubble` öröklési útra.
+   - 2026-03-27: explicit precedence-lock tesztek kerültek az `openBubble` és `attachBubble` utakra is, hogy bubble override esetén hibás globális config se próbálja felülírni vagy blokkolni a lokális döntést.
+   - 2026-03-27: a globális és repo config parser korlátaihoz is került explicit regresszióteszt (`sections`, `dotted keys`, `duplicate keys`, `array-of-tables`, scalar-vs-section boundary), hogy a TOML normalizer határai ne legyenek implicit tudásra bízva.
 2. Target State:
    - Kritikus config precedence útvonalak explicit regressziótesztekkel lefedve.
 3. Gap:
@@ -229,6 +234,10 @@ Fontos elv:
    - Gyakori tmux/agent manuális recovery.
 8. Üzleti haszon:
    - Folyamatosabb delivery flow, alacsonyabb operációs terhelés.
+
+2026-03-27 progress note:
+- Lezárva egy tmux delivery reason-mapping rés: explicit teszt és runtime guard biztosítja, hogy a non-zero `send-keys` write/submit hiba `tmux_send_failed` maradjon, ne mosódjon `delivery_unconfirmed` kategóriába.
+- Hozzáadva restart cleanup regresszióteszt arra az esetre, amikor a korábbi tmux session és runtime registry ownership már eltűnt; a restart flow ilyenkor is továbblép és visszaadja a `false/false` cleanup állapotot.
 
 ### 3.10 `m0-10 LegacyCompatAdapter`
 

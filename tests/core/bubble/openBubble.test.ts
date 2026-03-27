@@ -130,6 +130,48 @@ describe("openBubble", () => {
     expect(loadPairflowGlobalConfig).not.toHaveBeenCalled();
   });
 
+  it("keeps bubble open_command precedence even when global config loader would fail", async () => {
+    const resolved = createResolvedBubbleFixture({
+      bubbleId: "b_open_02b",
+      repoPath: "/tmp/pairflow-open-02b",
+      openCommand: "editor --reuse-window {{worktree_path}}"
+    });
+
+    const loadPairflowGlobalConfig = vi.fn(() => {
+      throw new SchemaValidationError("Invalid Pairflow global config", [
+        {
+          path: "open_command",
+          message: "Must be a non-empty string"
+        }
+      ]);
+    });
+    let capturedCommand = "";
+    await openBubble(
+      {
+        bubbleId: resolved.bubbleId,
+        repoPath: resolved.repoPath
+      },
+      {
+        resolveBubbleById: () => Promise.resolve(resolved),
+        assertWorktreeExists: () => Promise.resolve(),
+        loadPairflowGlobalConfig,
+        executeOpenCommand: (input) => {
+          capturedCommand = input.command;
+          return Promise.resolve({
+            exitCode: 0,
+            stdout: "",
+            stderr: ""
+          });
+        }
+      }
+    );
+
+    expect(capturedCommand).toBe(
+      `editor --reuse-window '${resolved.bubblePaths.worktreePath}'`
+    );
+    expect(loadPairflowGlobalConfig).not.toHaveBeenCalled();
+  });
+
   it("uses global open_command when bubble override is not set", async () => {
     const resolved = createResolvedBubbleFixture({
       bubbleId: "b_open_03",

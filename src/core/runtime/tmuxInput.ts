@@ -6,6 +6,10 @@ function sleep(ms: number): Promise<void> {
   });
 }
 
+export interface SendAndSubmitTmuxPaneMessageOptions {
+  requireSuccess?: boolean;
+}
+
 /**
  * Send a message to a tmux pane and submit it via Enter.
  *
@@ -21,13 +25,17 @@ function sleep(ms: number): Promise<void> {
 export async function sendAndSubmitTmuxPaneMessage(
   runner: TmuxRunner,
   targetPane: string,
-  message: string
+  message: string,
+  options: SendAndSubmitTmuxPaneMessageOptions = {}
 ): Promise<void> {
   const writeResult = await runner(
     ["send-keys", "-t", targetPane, "-l", message],
     { allowFailure: true }
   );
   if (writeResult.exitCode !== 0) {
+    if (options.requireSuccess) {
+      throw new Error(`tmux message write failed for pane ${targetPane}`);
+    }
     return;
   }
 
@@ -35,9 +43,12 @@ export async function sendAndSubmitTmuxPaneMessage(
   // the Enter key as a distinct input event.  500ms was verified against Claude
   // Code v2.1.50 with messages up to 550 chars.
   await sleep(500);
-  await runner(["send-keys", "-t", targetPane, "Enter"], {
+  const submitResult = await runner(["send-keys", "-t", targetPane, "Enter"], {
     allowFailure: true
   });
+  if (submitResult.exitCode !== 0 && options.requireSuccess) {
+    throw new Error(`tmux message submit failed for pane ${targetPane}`);
+  }
 }
 
 /**

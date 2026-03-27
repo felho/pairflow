@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   getBubbleReconcileHelpText,
   parseBubbleReconcileCommandOptions,
+  renderBubbleReconcileText,
   runBubbleReconcileCommand
 } from "../../src/cli/commands/bubble/reconcile.js";
 
@@ -46,6 +47,7 @@ describe("runBubbleReconcileCommand", () => {
         sessionsBefore: 1,
         sessionsAfter: 1,
         staleCandidates: 0,
+        reasonCounts: {},
         actions: []
       })
     );
@@ -64,5 +66,35 @@ describe("runBubbleReconcileCommand", () => {
       dryRun: true
     });
     expect(result?.dryRun).toBe(true);
+  });
+
+  it("renders structured reason counts in reconcile text output", () => {
+    const rendered = renderBubbleReconcileText({
+      repoPath: "/tmp/repo",
+      dryRun: true,
+      sessionsBefore: 3,
+      sessionsAfter: 3,
+      staleCandidates: 2,
+      reasonCounts: {
+        missing_bubble: 1,
+        final_state: 1
+      },
+      actions: [
+        {
+          bubbleId: "b_missing",
+          reason: "missing_bubble",
+          removed: false
+        },
+        {
+          bubbleId: "b_final",
+          reason: "final_state",
+          removed: false
+        }
+      ]
+    });
+
+    expect(rendered).toContain(
+      "Reasons: final_state=1, missing_bubble=1"
+    );
   });
 });

@@ -73,6 +73,7 @@ export async function runReconcileFlow(
   const sessionsBefore = dependencies.countRegistryEntries(registry);
   const actions: ReconcileRuntimeSessionsAction[] = [];
   const staleBubbleIds: string[] = [];
+  const reasonCounts: Partial<Record<RuntimeSessionStaleReason, number>> = {};
 
   for (const bubbleId of Object.keys(registry).sort((a, b) => a.localeCompare(b))) {
     const session = registry[bubbleId];
@@ -97,6 +98,7 @@ export async function runReconcileFlow(
       reason,
       removed: false
     });
+    reasonCounts[reason] = (reasonCounts[reason] ?? 0) + 1;
     staleBubbleIds.push(bubbleId);
   }
 
@@ -120,6 +122,7 @@ export async function runReconcileFlow(
     sessionsBefore,
     sessionsAfter: input.dryRun ? sessionsBefore : sessionsBefore - removedCount,
     staleCandidates: actions.length,
+    reasonCounts,
     actions
   };
 }

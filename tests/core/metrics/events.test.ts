@@ -191,6 +191,58 @@ describe("metrics events writer", () => {
     ).rejects.toBeInstanceOf(MetricsEventLockError);
   });
 
+  it("succeeds when contention clears before lock timeout expires", async () => {
+    const root = await createTempDir();
+    const now = new Date("2026-02-26T14:30:00.000Z");
+    const event = createMetricsEvent({
+      repo_path: "/tmp/repo",
+      bubble_instance_id: "bi_00m8f7w14k_2f03e8b8e4f24d17ac15",
+      bubble_id: "b_metrics_contention_then_success",
+      event_type: "bubble_passed",
+      round: 1,
+      actor_role: "implementer",
+      metadata: {
+        source: "contention-release-test"
+      },
+      now
+    });
+    const shardPath = resolveMetricsShardPath({
+      at: now,
+      rootPath: root
+    });
+
+    await mkdir(dirname(shardPath.lockPath), { recursive: true });
+    await writeFile(shardPath.lockPath, "", "utf8");
+
+    const releaseTimer = setTimeout(() => {
+      void rm(shardPath.lockPath, { force: true });
+    }, 20);
+
+    try {
+      await expect(
+        appendMetricsEvent({
+          event,
+          rootPath: root,
+          lockTimeoutMs: 200,
+          staleLockRecoveryAfterMs: null
+        })
+      ).resolves.toMatchObject({
+        shardPath: {
+          filePath: shardPath.filePath
+        }
+      });
+    } finally {
+      clearTimeout(releaseTimer);
+    }
+
+    const raw = await readFile(shardPath.filePath, "utf8");
+    const lines = raw
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+    expect(lines).toHaveLength(1);
+  });
+
   it("rejects invalid event envelopes", () => {
     expect(() =>
       createMetricsEvent({

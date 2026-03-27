@@ -522,10 +522,11 @@ export async function emitTmuxDeliveryNotification(
     const attempts = Math.max(1, input.deliveryAttempts ?? 3);
     let confirmed = false;
     await maybeAcceptClaudeTrustPrompt(runner, targetPane).catch(() => undefined);
-    // Send message + trailing newline in a single literal send-keys call.
-    // This eliminates the timing gap between text entry and Enter that caused
-    // messages to get stuck in the Claude Code input buffer without submitting.
-    await sendAndSubmitTmuxPaneMessage(runner, targetPane, message);
+    // Delivery is best-effort, but an explicit tmux write/submit failure should
+    // still map to `tmux_send_failed` instead of degrading into unconfirmed.
+    await sendAndSubmitTmuxPaneMessage(runner, targetPane, message, {
+      requireSuccess: true
+    });
     for (let attempt = 0; attempt < attempts; attempt += 1) {
       // Allow UI flush then check where the marker appears.
       await sleep(800);

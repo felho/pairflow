@@ -1887,6 +1887,57 @@ describe("emitTmuxDeliveryNotification", () => {
     );
   });
 
+  it("returns tmux_send_failed when literal pane write exits non-zero", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (
+        args[0] === "send-keys" &&
+        args[2] === "pf-b_delivery_01:0.2" &&
+        args[3] === "-l"
+      ) {
+        return Promise.resolve({
+          stdout: "",
+          stderr: "can't find pane",
+          exitCode: 1
+        });
+      }
+
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope(),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry()),
+      deliveryAttempts: 2
+    });
+
+    expect(result).toMatchObject({
+      delivered: false,
+      sessionName: "pf-b_delivery_01",
+      targetPaneIndex: 2,
+      reason: "tmux_send_failed"
+    });
+    expect(
+      calls.some(
+        (call) =>
+          call[0] === "send-keys" &&
+          call[2] === "pf-b_delivery_01:0.2" &&
+          call[3] === "Enter" &&
+          call.length === 4
+      )
+    ).toBe(false);
+    expect(calls.filter((call) => call[0] === "capture-pane")).toHaveLength(1);
+  });
+
   it("retries delivery when handoff marker is not visible after first submit", async () => {
     const calls: string[][] = [];
     let captureCount = 0;
