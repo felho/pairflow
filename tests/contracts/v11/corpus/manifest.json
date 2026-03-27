@@ -555,12 +555,6 @@
       "kind": "seed_case"
     },
     {
-      "id": "watchdog-waiting-human-parity",
-      "command": "watchdog",
-      "source": "tests/contracts/v11/cases/watchdog/watchdog-waiting-human-parity.case.json",
-      "kind": "seed_case"
-    },
-    {
       "id": "watchdog-final-state",
       "command": "watchdog",
       "source": "tests/contracts/v11/cases/watchdog/watchdog-final-state.case.json",
@@ -573,27 +567,51 @@
       "kind": "seed_case"
     },
     {
-      "id": "watchdog-final-state-parity",
+      "id": "watchdog-expired-recent-change-noop",
       "command": "watchdog",
-      "source": "tests/contracts/v11/cases/watchdog/watchdog-final-state-parity.case.json",
+      "source": "tests/contracts/v11/cases/watchdog/watchdog-expired-recent-change-noop.case.json",
       "kind": "seed_case"
     },
     {
-      "id": "watchdog-running-expired",
+      "id": "watchdog-expired-recent-change-noop-v11",
       "command": "watchdog",
-      "source": "tests/contracts/v11/cases/watchdog/watchdog-running-expired.case.json",
+      "source": "tests/contracts/v11/cases/watchdog/watchdog-expired-recent-change-noop-v11.case.json",
       "kind": "seed_case"
     },
     {
-      "id": "watchdog-running-expired-v11",
+      "id": "watchdog-expired-quiet-window-escalates",
       "command": "watchdog",
-      "source": "tests/contracts/v11/cases/watchdog/watchdog-running-expired-v11.case.json",
+      "source": "tests/contracts/v11/cases/watchdog/watchdog-expired-quiet-window-escalates.case.json",
       "kind": "seed_case"
     },
     {
-      "id": "watchdog-running-expired-parity",
+      "id": "watchdog-expired-quiet-window-escalates-v11",
       "command": "watchdog",
-      "source": "tests/contracts/v11/cases/watchdog/watchdog-running-expired-parity.case.json",
+      "source": "tests/contracts/v11/cases/watchdog/watchdog-expired-quiet-window-escalates-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "watchdog-expired-missing-session-escalates",
+      "command": "watchdog",
+      "source": "tests/contracts/v11/cases/watchdog/watchdog-expired-missing-session-escalates.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "watchdog-expired-missing-session-escalates-v11",
+      "command": "watchdog",
+      "source": "tests/contracts/v11/cases/watchdog/watchdog-expired-missing-session-escalates-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "watchdog-expired-unreadable-pane-escalates",
+      "command": "watchdog",
+      "source": "tests/contracts/v11/cases/watchdog/watchdog-expired-unreadable-pane-escalates.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "watchdog-expired-unreadable-pane-escalates-v11",
+      "command": "watchdog",
+      "source": "tests/contracts/v11/cases/watchdog/watchdog-expired-unreadable-pane-escalates-v11.case.json",
       "kind": "seed_case"
     },
     {
@@ -606,12 +624,6 @@
       "id": "watchdog-meta-review-running-expired-v11",
       "command": "watchdog",
       "source": "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-expired-v11.case.json",
-      "kind": "seed_case"
-    },
-    {
-      "id": "watchdog-meta-review-running-expired-parity",
-      "command": "watchdog",
-      "source": "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-expired-parity.case.json",
       "kind": "seed_case"
     },
     {

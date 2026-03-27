@@ -1,0 +1,20 @@
+{
+  "id": "watchdog-expired-recent-change-noop",
+  "command": "watchdog",
+  "mode": "legacy",
+  "description": "Watchdog keeps RUNNING after timeout when the pane changed within the quiet window.",
+  "input": {
+    "fixture": {
+      "scenario": "expired_recent_change_noop"
+    }
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "WATCHDOG_EVALUATED",
+    "commandReason": "not_expired",
+    "stateSubset": {
+      "state": "RUNNING"
+    }
+  },
+  "tags": ["seed", "m5", "watchdog", "guard-path"]
+}

@@ -1,11 +1,11 @@
 {
-  "id": "watchdog-running-expired",
+  "id": "watchdog-expired-missing-session-escalates",
   "command": "watchdog",
   "mode": "legacy",
-  "description": "Seed watchdog contract case for RUNNING timeout escalation.",
+  "description": "Watchdog escalates after timeout when the runtime session is missing.",
   "input": {
     "fixture": {
-      "scenario": "running_expired"
+      "scenario": "expired_missing_session_escalates"
     }
   },
   "expected": {
@@ -16,5 +16,5 @@
       "state": "WAITING_HUMAN"
     }
   },
-  "tags": ["seed", "m0", "watchdog", "guard-path"]
+  "tags": ["seed", "m5", "watchdog", "guard-path"]
 }

@@ -5,6 +5,9 @@ import { join } from "node:path";
 
 import { runBubbleWatchdog } from "../../../src/core/bubble/watchdogBubble.js";
 import { runBubbleWatchdogV11 } from "../../../src/v11/application/watchdog/emitWatchdogV11.js";
+import {
+  writeWatchdogPaneActivity
+} from "../../../src/v11/shared/watchdog/watchdogPaneActivityStore.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
@@ -34,7 +37,10 @@ export interface WatchdogContractRunResult {
 type WatchdogContractScenario = "waiting_human" | "final_state";
 type WatchdogContractExtendedScenario =
   | WatchdogContractScenario
-  | "running_expired"
+  | "expired_recent_change_noop"
+  | "expired_quiet_window_escalates"
+  | "expired_missing_session_escalates"
+  | "expired_unreadable_pane_escalates"
   | "meta_review_running_expired";
 
 interface ParsedWatchdogCaseInput {
@@ -58,11 +64,14 @@ function parseWatchdogCaseInput(input: ContractCase["input"]): ParsedWatchdogCas
       scenarioRaw !== undefined &&
       scenarioRaw !== "waiting_human" &&
       scenarioRaw !== "final_state" &&
-      scenarioRaw !== "running_expired" &&
+      scenarioRaw !== "expired_recent_change_noop" &&
+      scenarioRaw !== "expired_quiet_window_escalates" &&
+      scenarioRaw !== "expired_missing_session_escalates" &&
+      scenarioRaw !== "expired_unreadable_pane_escalates" &&
       scenarioRaw !== "meta_review_running_expired"
     ) {
       throw new Error(
-        "watchdog contract input.fixture.scenario must be one of: waiting_human, final_state, running_expired, meta_review_running_expired."
+        "watchdog contract input.fixture.scenario must be one of: waiting_human, final_state, expired_recent_change_noop, expired_quiet_window_escalates, expired_missing_session_escalates, expired_unreadable_pane_escalates, meta_review_running_expired."
       );
     }
     scenario = scenarioRaw ?? "waiting_human";
@@ -163,7 +172,12 @@ async function seedWaitingHumanState(input: {
     );
     return bubble;
   }
-  if (input.scenario === "running_expired") {
+  if (
+    input.scenario === "expired_recent_change_noop"
+    || input.scenario === "expired_quiet_window_escalates"
+    || input.scenario === "expired_missing_session_escalates"
+    || input.scenario === "expired_unreadable_pane_escalates"
+  ) {
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     await writeStateSnapshot(
       bubble.paths.statePath,
@@ -213,6 +227,89 @@ async function seedWaitingHumanState(input: {
   return bubble;
 }
 
+async function seedWatchdogPaneActivityFixture(input: {
+  bubble: Awaited<ReturnType<typeof setupRunningBubbleFixture>>;
+  scenario: WatchdogContractExtendedScenario;
+}): Promise<void> {
+  if (
+    input.scenario !== "expired_recent_change_noop"
+    && input.scenario !== "expired_quiet_window_escalates"
+  ) {
+    return;
+  }
+
+  await writeWatchdogPaneActivity({
+    runtimeDir: input.bubble.paths.runtimeDir,
+    bubbleId: input.bubble.bubbleId,
+    record: {
+      bubble_id: input.bubble.bubbleId,
+      sampled_at: "2026-03-20T12:44:00.000Z",
+      pane_hash: "pane-stable",
+      last_changed_at:
+        input.scenario === "expired_recent_change_noop"
+          ? "2026-03-20T12:40:30.000Z"
+          : "2026-03-20T12:34:00.000Z",
+      session_name: "pf-watchdog-contract",
+      target_pane: "pf-watchdog-contract:0.1",
+      last_sample_status: "sampled"
+    }
+  });
+}
+
+function buildWatchdogScenarioDependencies(
+  scenario: WatchdogContractExtendedScenario
+) {
+  if (scenario === "expired_recent_change_noop") {
+    return {
+      sampleWatchdogPaneActivity: () => Promise.resolve({
+        status: "sampled" as const,
+        sampled_at: "2026-03-20T12:45:00.000Z",
+        pane_hash: "pane-stable",
+        changed: false,
+        session_name: "pf-watchdog-contract",
+        target_pane: "pf-watchdog-contract:0.1"
+      })
+    };
+  }
+
+  if (scenario === "expired_quiet_window_escalates") {
+    return {
+      sampleWatchdogPaneActivity: () => Promise.resolve({
+        status: "sampled" as const,
+        sampled_at: "2026-03-20T12:45:00.000Z",
+        pane_hash: "pane-stable",
+        changed: false,
+        session_name: "pf-watchdog-contract",
+        target_pane: "pf-watchdog-contract:0.1"
+      })
+    };
+  }
+
+  if (scenario === "expired_missing_session_escalates") {
+    return {
+      sampleWatchdogPaneActivity: () => Promise.resolve({
+        status: "no_session" as const,
+        sampled_at: "2026-03-20T12:45:00.000Z",
+        error: "runtime session missing"
+      })
+    };
+  }
+
+  if (scenario === "expired_unreadable_pane_escalates") {
+    return {
+      sampleWatchdogPaneActivity: () => Promise.resolve({
+        status: "pane_unreadable" as const,
+        sampled_at: "2026-03-20T12:45:00.000Z",
+        error: "capture-pane failed",
+        session_name: "pf-watchdog-contract",
+        target_pane: "pf-watchdog-contract:0.1"
+      })
+    };
+  }
+
+  return undefined;
+}
+
 async function executeWatchdogCase(input: {
   caseDef: ContractCase;
   executor: typeof runBubbleWatchdog;
@@ -226,8 +323,15 @@ async function executeWatchdogCase(input: {
       bubbleId: buildWatchdogContractBubbleId(input.caseDef.id),
       scenario: parsedInput.scenario
     });
+    await seedWatchdogPaneActivityFixture({
+      bubble,
+      scenario: parsedInput.scenario
+    });
 
     let recoverCalled = false;
+    const scenarioDependencies = buildWatchdogScenarioDependencies(
+      parsedInput.scenario
+    );
     const result = await input.executor(
       {
         bubbleId: bubble.bubbleId,
@@ -265,9 +369,10 @@ async function executeWatchdogCase(input: {
                 },
                 gateSequence: 1
               };
-            }
+            },
+            ...(scenarioDependencies ?? {})
           }
-        : undefined
+        : scenarioDependencies
     );
     if (parsedInput.scenario === "meta_review_running_expired" && !recoverCalled) {
       throw new Error(

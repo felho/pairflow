@@ -105,8 +105,8 @@ RUNNING turn tracking (required):
 1. `state.json` must track `active_agent` (`claude` | `codex`) and `active_since` timestamp.
 2. `state.json` must track round-role metadata: `active_role` (`implementer` | `reviewer`) and `round_role_history`.
 3. The status pane shows high-level state, active turn owner, and active role.
-4. Liveness watchdog uses `active_agent` context for escalation when no `pairflow` command arrives within configured timeout.
-5. Timeout is configured by `watchdog_timeout_minutes` in `bubble.toml` (default: `40`).
+4. Liveness watchdog uses `active_agent` context and pane activity sampling; timeout alone is not enough for standard `RUNNING` escalation.
+5. Timeout is configured by `watchdog_timeout_minutes` in `bubble.toml` (default: `30`), then standard `RUNNING` escalation additionally requires either a hard dead-signal (missing session / unreadable pane) or a post-timeout quiet window.
 
 ## Convergence Policy (Quality-First)
 Each loop round:
@@ -261,6 +261,8 @@ Repository-local control data:
     <bubble_id>.lock
   runtime/
     sessions.json
+    watchdog-health/
+      <bubble_id>.json
 ```
 
 Worktree root default:
@@ -279,7 +281,7 @@ work_mode = "worktree" # worktree|clone
 quality_mode = "strict" # MVP: strict only
 review_artifact_type = "auto" # auto|code|document (review guidance mode)
 reviewer_context_mode = "fresh" # fresh|persistent (default: fresh)
-watchdog_timeout_minutes = 40
+watchdog_timeout_minutes = 30
 max_rounds = 8
 commit_requires_approval = true
 open_command = "cursor {{worktree_path}}"
@@ -321,7 +323,7 @@ Human/operator commands:
 10. `pairflow bubble open --id <id>` (opens external editor at worktree path)
 11. `pairflow bubble stop --id <id>`
 12. `pairflow bubble resume --id <id>` (operator resumes ping-pong after intervention)
-13. `pairflow bubble watchdog --id <id>` (runs timeout check and escalates to `WAITING_HUMAN` when idle timeout is exceeded)
+13. `pairflow bubble watchdog --id <id>` (runs timeout + pane-quiet-window check and escalates to `WAITING_HUMAN` when the standard `RUNNING` dead-signal gate is met)
 
 Agent-facing commands (invoked from inside agent sessions):
 1. `pairflow pass --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>] [--finding <P0|P1|P2|P3:Title>]... [--no-findings]`
@@ -399,7 +401,7 @@ Acceptance:
 2. Human can answer blocking question and continue.
 3. Commit cannot happen without explicit approval.
 4. Agent-facing commands (`pass/ask-human/converged`) correctly write NDJSON envelopes and trigger tmux delivery notifications.
-5. Watchdog escalation triggers when active agent is idle beyond timeout without protocol command.
+5. Watchdog escalation triggers when active agent is past timeout and the post-timeout dead-signal gate is met.
 6. Convergence command is rejected when reviewer-role alternation evidence is missing in `state.json`.
 
 ### Phase 2: Multi-instance Parallel Usage
@@ -424,7 +426,7 @@ Acceptance:
 
 ## Risks and Mitigations
 1. Agent protocol bypass (agent does not call `pairflow` commands).
-   - Mitigation: startup pane briefing + liveness watchdog escalation if no protocol command arrives within timeout.
+   - Mitigation: startup pane briefing + liveness watchdog escalation if no protocol command arrives within timeout and the pane also goes quiet or unreadable.
 2. Infinite critique loops.
    - Mitigation: `max_rounds`, tie-break policies, human escalation.
 3. Agent drift from task scope.

@@ -35,7 +35,7 @@ describe("bubble config schema", () => {
     expect(config.review_artifact_type).toBe("auto");
     expect(config.pairflow_command_profile).toBe("external");
     expect(config.reviewer_context_mode).toBe("fresh");
-    expect(config.watchdog_timeout_minutes).toBe(40);
+    expect(config.watchdog_timeout_minutes).toBe(30);
     expect(config.work_mode).toBe("worktree");
     expect(config.severity_gate_round).toBe(4);
     expect(config.attach_launcher).toBeUndefined();

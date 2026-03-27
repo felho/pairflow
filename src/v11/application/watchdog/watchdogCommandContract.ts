@@ -8,6 +8,13 @@ import type {
 import type {
   recoverMetaReviewGateFromSnapshot
 } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
+import type {
+  readWatchdogPaneActivity,
+  writeWatchdogPaneActivity
+} from "../../shared/watchdog/watchdogPaneActivityStore.js";
+import type {
+  sampleWatchdogPaneActivity
+} from "../../shared/watchdog/watchdogPaneActivitySampler.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
@@ -23,6 +30,9 @@ export interface BubbleWatchdogDependencies {
   emitBubbleNotification?: typeof emitBubbleNotification;
   readStateSnapshot?: typeof readStateSnapshot;
   recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshot;
+  readWatchdogPaneActivity?: typeof readWatchdogPaneActivity;
+  writeWatchdogPaneActivity?: typeof writeWatchdogPaneActivity;
+  sampleWatchdogPaneActivity?: typeof sampleWatchdogPaneActivity;
 }
 
 export type BubbleWatchdogNoopReason =

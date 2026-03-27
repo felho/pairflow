@@ -13,16 +13,18 @@ const execFileAsync = promisify(execFile);
 const watchdogCaseSources = [
   "tests/contracts/v11/cases/watchdog/watchdog-waiting-human.case.json",
   "tests/contracts/v11/cases/watchdog/watchdog-waiting-human-v11.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-waiting-human-parity.case.json",
   "tests/contracts/v11/cases/watchdog/watchdog-final-state.case.json",
   "tests/contracts/v11/cases/watchdog/watchdog-final-state-v11.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-final-state-parity.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-running-expired.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-running-expired-v11.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-running-expired-parity.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-expired-recent-change-noop.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-expired-recent-change-noop-v11.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-expired-quiet-window-escalates.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-expired-quiet-window-escalates-v11.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-expired-missing-session-escalates.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-expired-missing-session-escalates-v11.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-expired-unreadable-pane-escalates.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-expired-unreadable-pane-escalates-v11.case.json",
   "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-expired.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-expired-v11.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-expired-parity.case.json"
+  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-expired-v11.case.json"
 ] as const;
 
 const watchdogExpectedSourcesSorted = [...watchdogCaseSources].sort();
@@ -51,7 +53,7 @@ describe("v11 watchdog contract harness skeleton", () => {
   });
 
   it(
-    "executes legacy and parity assertions via shared runner",
+    "executes legacy and v11 assertions via shared runner",
     { timeout: CONTRACT_TEST_TIMEOUT.parityHeavyMs },
     async () => {
     const casePaths = watchdogCaseSources.map((source) =>
