@@ -24,6 +24,29 @@ export function normalizeConvergedCommandError(
   }
 
   if (input.error instanceof Error) {
+    const structuredError = input.error as Error & {
+      reasonCode?: string;
+      context?: PairflowCommandErrorContext;
+      cause?: unknown;
+    };
+    if (
+      structuredError.reasonCode !== undefined
+      || structuredError.context !== undefined
+      || structuredError.cause !== undefined
+    ) {
+      return input.createConvergedCommandError({
+        message: structuredError.message,
+        ...(structuredError.reasonCode !== undefined
+          ? { reasonCode: structuredError.reasonCode }
+          : {}),
+        ...(structuredError.context !== undefined
+          ? { context: structuredError.context }
+          : {}),
+        ...(structuredError.cause !== undefined
+          ? { cause: structuredError.cause }
+          : {})
+      });
+    }
     return input.createConvergedCommandError(input.error.message);
   }
 

@@ -30,6 +30,7 @@ export interface ExecuteConvergedExecutionInput {
   findings?: ConvergedStructuredFinding[];
   now: Date;
   convergencePolicyDiagnostics: string[];
+  gatePipelineDiagnostics: string[];
 }
 
 export interface ExecuteConvergedExecutionDependencies {
@@ -85,6 +86,9 @@ async function appendConvergenceEnvelope(
   };
   if (input.convergencePolicyDiagnostics.length > 0) {
     metadata.convergence_policy_diagnostics = input.convergencePolicyDiagnostics;
+  }
+  if (input.gatePipelineDiagnostics.length > 0) {
+    metadata.gate_pipeline_diagnostics = input.gatePipelineDiagnostics;
   }
   return appendEnvelope({
     transcriptPath: input.resolved.bubblePaths.transcriptPath,
