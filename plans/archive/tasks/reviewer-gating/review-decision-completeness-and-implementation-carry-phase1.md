@@ -2,8 +2,13 @@
 artifact_type: task
 artifact_id: task_review_decision_completeness_and_implementation_carry_phase1_v1
 title: "Review Decision-Completeness + Implementation-Carry Gates (Phase 1)"
-status: draft
+status: superseded
 phase: phase1
+superseded_reason: "The proposed resolution_path / implementation-carry model was overtaken by the current structured findings + timing/layer + doc-contract-gate model and no longer matches the v1.1/v11 architecture direction."
+superseded_by:
+  - docs/review-loop-optimization.md
+  - src/core/gates/docContractGates.ts
+  - src/types/findings.ts
 target_files:
   - src/types/findings.ts
   - src/cli/commands/agent/pass.ts

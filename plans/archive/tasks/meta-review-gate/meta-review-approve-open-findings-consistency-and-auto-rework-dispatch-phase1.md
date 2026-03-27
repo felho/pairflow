@@ -2,8 +2,12 @@
 artifact_type: task
 artifact_id: task_meta_review_approve_open_findings_consistency_auto_rework_dispatch_phase1_v1
 title: "Meta-Review Recommendation/Claim Consistency + Auto-Rework Dispatch (Phase 1)"
-status: draft
+status: superseded
 phase: phase1
+superseded_reason: "Current Pairflow semantics explicitly allow recommendation=approve with advisory-only open findings when split-aware parity metadata is valid; this task's fail-closed auto-rework policy is obsolete."
+superseded_by:
+  - plans/archive/tasks/meta-review-gate/meta-review-approve-advisory-open-findings-semantic-support-phase2.md
+  - src/v11/shared/metaReviewGate/metaReviewGateApproveClaimValidation.ts
 target_files:
   - src/core/bubble/metaReview.ts
   - src/core/bubble/metaReviewGate.ts
