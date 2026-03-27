@@ -1,4 +1,0 @@
-# NOTE: docs-only behavior is driven by review_artifact_type=document.
-# enforcement_mode.all_gate remains an explicit repo-level override surface.
-[enforcement_mode]
-all_gate = "advisory"

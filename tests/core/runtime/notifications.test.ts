@@ -34,9 +34,6 @@ function createConfig(overrides: Partial<BubbleConfig> = {}): BubbleConfig {
       waiting_human_sound: "/tmp/sounds/waiting.aiff",
       converged_sound: "/tmp/sounds/converged.aiff"
     },
-    enforcement_mode: {
-      all_gate: "advisory"
-    },
     doc_contract_gates: {
       round_gate_applies_after: 2
     }

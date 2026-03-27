@@ -6,9 +6,7 @@ import {
   assertValidBubbleConfig,
   renderBubbleConfigToml
 } from "../../config/bubbleConfig.js";
-import { loadPairflowRepoConfig } from "../../config/repoConfig.js";
 import {
-  DEFAULT_ENFORCEMENT_MODE_ALL_GATE,
   DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER,
   DEFAULT_MAX_ROUNDS,
   DEFAULT_PAIRFLOW_COMMAND_PROFILE,
@@ -40,7 +38,6 @@ import type {
   BubbleConfig,
   BubbleStateSnapshot,
   CreateReviewArtifactType,
-  GateEnforcementLevel,
   PairflowCommandProfile
 } from "../../types/bubble.js";
 
@@ -776,11 +773,7 @@ function buildBubbleConfig(input: {
   bootstrapCommand?: string;
   openCommand?: string;
   pairflowCommandProfile?: PairflowCommandProfile;
-  enforcementModeAllGate?: GateEnforcementLevel;
 }): BubbleConfig {
-  const allGate =
-    input.enforcementModeAllGate ?? DEFAULT_ENFORCEMENT_MODE_ALL_GATE;
-
   return assertValidBubbleConfig({
     id: input.id,
     bubble_instance_id: input.bubbleInstanceId,
@@ -814,9 +807,6 @@ function buildBubbleConfig(input: {
     },
     notifications: {
       enabled: true
-    },
-    enforcement_mode: {
-      all_gate: allGate
     },
     doc_contract_gates: {
       round_gate_applies_after: DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER
@@ -929,16 +919,6 @@ export async function createBubble(
       });
   const reviewerFocus = extractReviewerFocus(task.content);
   const accuracyCritical = input.accuracyCritical === true;
-  let repoConfigEnforcementAllGate: GateEnforcementLevel | undefined;
-  try {
-    const repoConfig = await loadPairflowRepoConfig(repoPath);
-    repoConfigEnforcementAllGate = repoConfig.enforcement_mode?.all_gate;
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new BubbleCreateError(
-      `Failed to load repository Pairflow config from ${repoPath}/pairflow.toml. Root error: ${reason}`
-    );
-  }
   const reviewerBrief = await resolveReviewerBriefInput({
     ...(input.reviewerBrief !== undefined
       ? { reviewerBrief: input.reviewerBrief }
@@ -985,9 +965,6 @@ export async function createBubble(
   }
   if (input.pairflowCommandProfile !== undefined) {
     bubbleConfigInput.pairflowCommandProfile = input.pairflowCommandProfile;
-  }
-  if (repoConfigEnforcementAllGate !== undefined) {
-    bubbleConfigInput.enforcementModeAllGate = repoConfigEnforcementAllGate;
   }
 
   const config = buildBubbleConfig(bubbleConfigInput);

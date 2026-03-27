@@ -29,26 +29,13 @@ afterEach(async () => {
 });
 
 describe("pairflow repo config", () => {
-  it("parses explicit enforcement_mode values", () => {
+  it("ignores legacy enforcement_mode values", () => {
     const parsed = parsePairflowRepoConfigToml(`
 [enforcement_mode]
 all_gate = "advisory"
 `);
 
-    expect(parsed.enforcement_mode).toEqual({
-      all_gate: "advisory"
-    });
-  });
-
-  it("parses required all_gate without additional normalization", () => {
-    const parsed = parsePairflowRepoConfigToml(`
-[enforcement_mode]
-all_gate = "required"
-`);
-
-    expect(parsed.enforcement_mode).toEqual({
-      all_gate: "required"
-    });
+    expect(parsed).toEqual({});
   });
 
   it("parses empty config as empty object", () => {
@@ -58,20 +45,18 @@ all_gate = "required"
     expect(parsed).toEqual({});
   });
 
-  it("rejects invalid enforcement mode values", () => {
+  it("ignores invalid legacy enforcement mode values", () => {
     const result = validatePairflowRepoConfig({
       enforcement_mode: {
         all_gate: "blocking"
       }
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) {
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
       return;
     }
-    expect(result.errors.some((error) => error.path === "enforcement_mode.all_gate")).toBe(
-      true
-    );
+    expect(result.value).toEqual({});
   });
 
   it("ignores legacy docs_gate values when present in repo config", () => {
@@ -86,25 +71,7 @@ all_gate = "required"
     if (!result.ok) {
       return;
     }
-    expect(result.value).toEqual({
-      enforcement_mode: {
-        all_gate: "required"
-      }
-    });
-  });
-
-  it("rejects scalar enforcement_mode instead of section/object", () => {
-    try {
-      parsePairflowRepoConfigToml(`
-enforcement_mode = "required"
-`);
-      throw new Error("Expected parsePairflowRepoConfigToml to throw.");
-    } catch (error) {
-      expect(error).toBeInstanceOf(SchemaValidationError);
-      expect((error as SchemaValidationError).errors[0]?.message).toMatch(
-        /Must be an object\/section/u
-      );
-    }
+    expect(result.value).toEqual({});
   });
 
   it("rejects array-of-tables parser syntax in repo config", () => {
@@ -151,11 +118,7 @@ enforcement_mode.all_gate = "required"
     );
 
     const loaded = await loadPairflowRepoConfig(repoPath);
-    expect(loaded).toEqual({
-      enforcement_mode: {
-        all_gate: "required"
-      }
-    });
+    expect(loaded).toEqual({});
   });
 
   it("resolves default repository config path to <repo>/pairflow.toml", async () => {

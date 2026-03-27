@@ -58,10 +58,6 @@ export const localOverlayModes = ["symlink", "copy"] as const;
 
 export type LocalOverlayMode = (typeof localOverlayModes)[number];
 
-export const gateEnforcementLevels = ["advisory", "required"] as const;
-
-export type GateEnforcementLevel = (typeof gateEnforcementLevels)[number];
-
 export const gateSignalLevels = ["warning", "info"] as const;
 
 export type GateSignalLevel = (typeof gateSignalLevels)[number];
@@ -140,11 +136,6 @@ export interface BubbleIdeationConfig {
   parse_warning?: string;
 }
 
-export interface BubbleEnforcementModeConfig {
-  all_gate: GateEnforcementLevel;
-  parse_warning?: string;
-}
-
 export interface BubbleFailingGate {
   gate_id: string;
   reason_code: GateReasonCode | (string & {});
@@ -192,7 +183,6 @@ export interface BubbleConfig {
   commands: BubbleCommandsConfig;
   notifications: BubbleNotificationsConfig;
   local_overlay?: BubbleLocalOverlayConfig;
-  enforcement_mode: BubbleEnforcementModeConfig;
   doc_contract_gates: BubbleDocContractGatesConfig;
   ideation?: BubbleIdeationConfig;
 }
@@ -327,13 +317,6 @@ export function isAttachLauncher(value: unknown): value is AttachLauncher {
   return (
     typeof value === "string" &&
     (attachLaunchers as readonly string[]).includes(value)
-  );
-}
-
-export function isGateEnforcementLevel(value: unknown): value is GateEnforcementLevel {
-  return (
-    typeof value === "string"
-    && (gateEnforcementLevels as readonly string[]).includes(value)
   );
 }
 

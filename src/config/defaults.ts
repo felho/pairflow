@@ -1,6 +1,5 @@
 import type {
   AttachLauncher,
-  GateEnforcementLevel,
   LocalOverlayMode,
   PairflowCommandProfile,
   QualityMode,
@@ -27,5 +26,4 @@ export const DEFAULT_LOCAL_OVERLAY_ENTRIES = [
   ".env.local",
   ".env.production"
 ] as const;
-export const DEFAULT_ENFORCEMENT_MODE_ALL_GATE: GateEnforcementLevel = "advisory";
 export const DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER = 2;

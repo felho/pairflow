@@ -38,9 +38,6 @@ function createBubbleConfig(
     notifications: {
       enabled: true
     },
-    enforcement_mode: {
-      all_gate: "advisory"
-    },
     doc_contract_gates: {
       round_gate_applies_after: 2
     }

@@ -11,7 +11,6 @@ import {
 } from "../core/validation.js";
 import {
   DEFAULT_COMMIT_REQUIRES_APPROVAL,
-  DEFAULT_ENFORCEMENT_MODE_ALL_GATE,
   DEFAULT_DOC_CONTRACT_ROUND_GATE_APPLIES_AFTER,
   DEFAULT_LOCAL_OVERLAY_ENABLED,
   DEFAULT_LOCAL_OVERLAY_ENTRIES,
@@ -29,7 +28,6 @@ import {
   isCreateReviewArtifactType,
   isAgentName,
   isAttachLauncher,
-  isGateEnforcementLevel,
   isLocalOverlayMode,
   isPairflowCommandProfile,
   isQualityMode,
@@ -38,8 +36,7 @@ import {
   isWorkMode,
   type AttachLauncher,
   type BubbleConfig,
-  type CreateReviewArtifactType,
-  type GateEnforcementLevel
+  type CreateReviewArtifactType
 } from "../types/bubble.js";
 
 export const TOML_PARSER_LIMITATIONS = [
@@ -626,13 +623,6 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
     errors,
     false
   );
-  const enforcementMode = readObject(
-    input,
-    "enforcement_mode",
-    "enforcement_mode",
-    errors,
-    false
-  );
   const docContractGates = readObject(
     input,
     "doc_contract_gates",
@@ -754,28 +744,6 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
         message:
           "Entries must be normalized relative paths without '.'/'..' segments"
       });
-    }
-  }
-
-  const enforcementConfigWarnings: string[] = [];
-  const existingEnforcementParseWarning = enforcementMode
-    ? readString(
-        enforcementMode,
-        "parse_warning",
-        "enforcement_mode.parse_warning",
-        errors,
-        false
-      )
-    : undefined;
-  const allGateCandidate = enforcementMode?.all_gate;
-  let allGate: GateEnforcementLevel = DEFAULT_ENFORCEMENT_MODE_ALL_GATE;
-  if (allGateCandidate !== undefined) {
-    if (isGateEnforcementLevel(allGateCandidate)) {
-      allGate = allGateCandidate;
-    } else {
-      enforcementConfigWarnings.push(
-        `enforcement_mode.all_gate must be one of: advisory, required. Received ${describeUnknownValue(allGateCandidate)}.`
-      );
     }
   }
 
@@ -917,21 +885,6 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
       mode: localOverlayMode,
       entries: localOverlayEntries
     },
-    enforcement_mode: {
-      all_gate: allGate,
-      ...((existingEnforcementParseWarning !== undefined || enforcementConfigWarnings.length > 0)
-        ? {
-            parse_warning: [
-              existingEnforcementParseWarning,
-              ...(enforcementConfigWarnings.length > 0
-                ? [enforcementConfigWarnings.join(" ")]
-                : [])
-            ]
-              .filter((entry): entry is string => entry !== undefined)
-              .join(" ")
-          }
-        : {})
-    },
     doc_contract_gates: {
       round_gate_applies_after: roundGateAppliesAfter,
       ...((existingDocContractGateParseWarning !== undefined || docContractGateWarnings.length > 0)
@@ -1048,7 +1001,6 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
     mode: DEFAULT_LOCAL_OVERLAY_MODE,
     entries: [...DEFAULT_LOCAL_OVERLAY_ENTRIES]
   };
-  const enforcementMode = config.enforcement_mode;
   const docContractGates = config.doc_contract_gates;
   const ideation = config.ideation;
   const lines: Array<string | undefined> = [
@@ -1100,12 +1052,6 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
     `enabled = ${localOverlay.enabled}`,
     `mode = ${tomlString(localOverlay.mode)}`,
     `entries = ${tomlStringArray(localOverlay.entries)}`,
-    "",
-    "[enforcement_mode]",
-    `all_gate = ${tomlString(enforcementMode.all_gate)}`,
-    enforcementMode.parse_warning !== undefined
-      ? `parse_warning = ${tomlString(enforcementMode.parse_warning)}`
-      : undefined,
     "",
     "[doc_contract_gates]",
     `round_gate_applies_after = ${docContractGates.round_gate_applies_after}`,

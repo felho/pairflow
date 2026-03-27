@@ -49,9 +49,6 @@ describe("bubble config schema", () => {
       ".env.local",
       ".env.production"
     ]);
-    expect(config.enforcement_mode).toEqual({
-      all_gate: "advisory"
-    });
     expect(config.doc_contract_gates.round_gate_applies_after).toBe(2);
   });
 
@@ -84,27 +81,14 @@ describe("bubble config schema", () => {
     );
   });
 
-  it("applies enforcement_mode and doc_contract_gates defaults when sections are omitted", () => {
+  it("applies doc_contract_gates defaults when sections are omitted", () => {
     const config = parseBubbleConfigToml(baseToml);
-    expect(config.enforcement_mode).toEqual({
-      all_gate: "advisory"
-    });
     expect(config.doc_contract_gates).toEqual({
       round_gate_applies_after: 2
     });
   });
 
-  it("accepts explicit enforcement mode values", () => {
-    const requiredForAll = parseBubbleConfigToml(`${baseToml}
-[enforcement_mode]
-all_gate = "required"
-`);
-    expect(requiredForAll.enforcement_mode).toEqual({
-      all_gate: "required"
-    });
-  });
-
-  it("keeps deterministic defaults and emits parse_warning for invalid enforcement values", () => {
+  it("ignores legacy enforcement_mode values and keeps doc gate defaults", () => {
     const config = parseBubbleConfigToml(`${baseToml}
 [enforcement_mode]
 all_gate = "blocking"
@@ -113,14 +97,11 @@ all_gate = "blocking"
 round_gate_applies_after = -1
 `);
 
-    expect(config.enforcement_mode.all_gate).toBe("advisory");
-    expect(config.enforcement_mode.parse_warning).toEqual(expect.any(String));
     expect(config.doc_contract_gates.round_gate_applies_after).toBe(2);
-    expect(config.enforcement_mode.parse_warning).toContain("enforcement_mode.all_gate");
     expect(config.doc_contract_gates.parse_warning).toContain("round_gate_applies_after");
   });
 
-  it("serializes and restores enforcement parse_warning through TOML roundtrip", () => {
+  it("serializes and restores doc gate parse_warning through TOML roundtrip", () => {
     const rendered = renderBubbleConfigToml({
       id: "b_test_parse_warning_roundtrip_01",
       repo_path: "/tmp/repo",
@@ -152,10 +133,6 @@ round_gate_applies_after = -1
         mode: "symlink",
         entries: [".claude"]
       },
-      enforcement_mode: {
-        all_gate: "advisory",
-        parse_warning: "enforcement_mode.all_gate invalid; fallback applied."
-      },
       doc_contract_gates: {
         round_gate_applies_after: 2,
         parse_warning: "doc_contract_gates.round_gate_applies_after invalid; fallback applied."
@@ -164,9 +141,6 @@ round_gate_applies_after = -1
 
     expect(rendered).toContain("parse_warning = ");
     const reparsed = parseBubbleConfigToml(rendered);
-    expect(reparsed.enforcement_mode.parse_warning).toContain(
-      "enforcement_mode.all_gate invalid"
-    );
     expect(reparsed.doc_contract_gates.parse_warning).toContain(
       "doc_contract_gates.round_gate_applies_after invalid"
     );
@@ -261,9 +235,6 @@ round_gate_applies_after = -1
       notifications: {
         enabled: true
       },
-      enforcement_mode: {
-        all_gate: "advisory"
-      },
       doc_contract_gates: {
         round_gate_applies_after: 2
       }
@@ -298,9 +269,6 @@ round_gate_applies_after = -1
       },
       notifications: {
         enabled: true
-      },
-      enforcement_mode: {
-        all_gate: "advisory"
       },
       doc_contract_gates: {
         round_gate_applies_after: 2
@@ -341,9 +309,6 @@ round_gate_applies_after = -1
       },
       notifications: {
         enabled: true
-      },
-      enforcement_mode: {
-        all_gate: "advisory"
       },
       doc_contract_gates: {
         round_gate_applies_after: 2
@@ -646,9 +611,6 @@ typecheck = "pnpm typecheck"
       notifications: {
         enabled: true
       },
-      enforcement_mode: {
-        all_gate: "advisory"
-      },
       doc_contract_gates: {
         round_gate_applies_after: 2
       },
@@ -695,9 +657,6 @@ typecheck = "pnpm typecheck"
       },
       notifications: {
         enabled: true
-      },
-      enforcement_mode: {
-        all_gate: "advisory"
       },
       doc_contract_gates: {
         round_gate_applies_after: 2
@@ -788,9 +747,6 @@ typecheck = "pnpm typecheck"
       notifications: {
         enabled: true
       },
-      enforcement_mode: {
-        all_gate: "advisory"
-      },
       doc_contract_gates: {
         round_gate_applies_after: 2
       }
@@ -832,9 +788,6 @@ typecheck = "pnpm typecheck"
       notifications: {
         enabled: true
       },
-      enforcement_mode: {
-        all_gate: "advisory"
-      },
       doc_contract_gates: {
         round_gate_applies_after: 2
       }
@@ -868,9 +821,6 @@ typecheck = "pnpm typecheck"
       },
       notifications: {
         enabled: true
-      },
-      enforcement_mode: {
-        all_gate: "advisory"
       },
       doc_contract_gates: {
         round_gate_applies_after: 2

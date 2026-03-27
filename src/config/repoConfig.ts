@@ -5,22 +5,12 @@ import {
   SchemaValidationError,
   assertValidation,
   isRecord,
-  validationFail,
   validationOk,
-  type ValidationError,
   type ValidationResult
 } from "../core/validation.js";
-import {
-  isGateEnforcementLevel,
-  type GateEnforcementLevel
-} from "../types/bubble.js";
 import { parseToml } from "./bubbleConfig.js";
 
-export interface PairflowRepoConfig {
-  enforcement_mode?: {
-    all_gate?: GateEnforcementLevel;
-  };
-}
+export type PairflowRepoConfig = Record<string, never>;
 
 export function resolvePairflowRepoConfigPath(repoPath: string): string {
   return join(repoPath, "pairflow.toml");
@@ -29,51 +19,18 @@ export function resolvePairflowRepoConfigPath(repoPath: string): string {
 export function validatePairflowRepoConfig(
   input: unknown
 ): ValidationResult<PairflowRepoConfig> {
-  const errors: ValidationError[] = [];
   if (!isRecord(input)) {
-    return validationFail([
+    return {
+      ok: false,
+      errors: [
       {
         path: "$",
         message: "Config must be an object"
       }
-    ]);
+      ]
+    };
   }
-
-  const enforcementModeRaw = input.enforcement_mode;
-  if (enforcementModeRaw === undefined) {
-    return validationOk({});
-  }
-  if (!isRecord(enforcementModeRaw)) {
-    return validationFail([
-      {
-        path: "enforcement_mode",
-        message: "Must be an object/section"
-      }
-    ]);
-  }
-
-  const allGateRaw = enforcementModeRaw.all_gate;
-  let validatedAllGate: GateEnforcementLevel | undefined;
-  if (allGateRaw !== undefined) {
-    if (isGateEnforcementLevel(allGateRaw)) {
-      validatedAllGate = allGateRaw;
-    } else {
-      errors.push({
-        path: "enforcement_mode.all_gate",
-        message: "Must be one of: advisory, required"
-      });
-    }
-  }
-
-  if (errors.length > 0) {
-    return validationFail(errors);
-  }
-
-  return validationOk({
-    enforcement_mode: {
-      ...(validatedAllGate !== undefined ? { all_gate: validatedAllGate } : {})
-    }
-  });
+  return validationOk({});
 }
 
 export function assertValidPairflowRepoConfig(input: unknown): PairflowRepoConfig {

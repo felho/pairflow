@@ -91,9 +91,6 @@ describe("createBubble", () => {
     expect(result.config.quality_mode).toBe("strict");
     expect(result.config.review_artifact_type).toBe("code");
     expect(result.config.severity_gate_round).toBe(4);
-    expect(result.config.enforcement_mode).toEqual({
-      all_gate: "advisory"
-    });
     expect(result.config.doc_contract_gates.round_gate_applies_after).toBe(2);
     expect(result.config.bubble_instance_id).toMatch(
       /^bi_[A-Za-z0-9_-]{10,}$/u
@@ -105,9 +102,6 @@ describe("createBubble", () => {
     expect(reparsedConfig.notifications.enabled).toBe(true);
     expect(reparsedConfig.review_artifact_type).toBe("code");
     expect(reparsedConfig.severity_gate_round).toBe(4);
-    expect(reparsedConfig.enforcement_mode).toEqual({
-      all_gate: "advisory"
-    });
     expect(reparsedConfig.doc_contract_gates.round_gate_applies_after).toBe(2);
     expect(reparsedConfig.bubble_instance_id).toBe(
       result.config.bubble_instance_id
@@ -169,34 +163,7 @@ describe("createBubble", () => {
     expect(result.config.ideation?.started_at).toEqual(expect.any(String));
   });
 
-  it("inherits all_gate mode from repository pairflow.toml", async () => {
-    const repoPath = await createTempRepo();
-    await writeFile(
-      join(repoPath, "pairflow.toml"),
-      '[enforcement_mode]\nall_gate = "required"\n',
-      "utf8"
-    );
-
-    const result = await createBubble({
-      id: "b_create_repo_mode_01",
-      repoPath,
-      baseBranch: "main",
-      reviewArtifactType: "document",
-      task: "Document task with repo-level gate mode",
-      cwd: repoPath
-    });
-
-    expect(result.config.enforcement_mode).toEqual({
-      all_gate: "required"
-    });
-    const bubbleToml = await readFile(result.paths.bubbleTomlPath, "utf8");
-    const reparsedConfig = parseBubbleConfigToml(bubbleToml);
-    expect(reparsedConfig.enforcement_mode).toEqual({
-      all_gate: "required"
-    });
-  });
-
-  it("ignores legacy docs_gate in repository pairflow.toml", async () => {
+  it("ignores legacy repository pairflow.toml enforcement settings", async () => {
     const repoPath = await createTempRepo();
     await writeFile(
       join(repoPath, "pairflow.toml"),
@@ -213,34 +180,10 @@ describe("createBubble", () => {
       cwd: repoPath
     });
 
-    expect(result.config.enforcement_mode).toEqual({
-      all_gate: "advisory"
-    });
     const bubbleToml = await readFile(result.paths.bubbleTomlPath, "utf8");
     const reparsedConfig = parseBubbleConfigToml(bubbleToml);
-    expect(reparsedConfig.enforcement_mode).toEqual({
-      all_gate: "advisory"
-    });
-  });
-
-  it("fails bubble creation when repository pairflow.toml has invalid all_gate mode", async () => {
-    const repoPath = await createTempRepo();
-    await writeFile(
-      join(repoPath, "pairflow.toml"),
-      '[enforcement_mode]\nall_gate = "invalid-mode"\n',
-      "utf8"
-    );
-
-    await expect(
-      createBubble({
-        id: "b_create_repo_mode_invalid_01",
-        repoPath,
-        baseBranch: "main",
-        reviewArtifactType: "code",
-        task: "Should fail due to invalid repo mode",
-        cwd: repoPath
-      })
-    ).rejects.toThrow(/Failed to load repository Pairflow config/u);
+    expect(bubbleToml).not.toContain("[enforcement_mode]");
+    expect(reparsedConfig).not.toHaveProperty("enforcement_mode");
   });
 
   it("does not persist open_command by default when create input omits it", async () => {
