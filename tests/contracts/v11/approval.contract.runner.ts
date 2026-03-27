@@ -417,7 +417,7 @@ async function executeApprovalCase(input: {
         bubbleId: bubble.bubbleId,
         message:
           input.action.message
-          ?? "Please revise the current implementation with the updated test matrix.",
+          ?? "Please rework the current implementation with the updated test matrix.",
         cwd: repoPath,
         now: new Date("2026-03-20T11:36:00.000Z")
       }, {

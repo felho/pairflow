@@ -38,7 +38,7 @@ export async function maybeApplyPendingReworkIntent(input: {
     type: "APPROVAL_DECISION",
     round: input.state.round,
     payload: {
-      decision: "revise",
+      decision: "rework",
       message: pendingIntent.message
     },
     refs: [`rework-intent://${pendingIntent.intent_id}`]

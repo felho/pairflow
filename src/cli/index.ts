@@ -386,7 +386,7 @@ async function handleBubbleRequestReworkCommand(args: string[]): Promise<number>
   }
   if (result.mode === "immediate") {
     process.stdout.write(
-      `APPROVAL_DECISION recorded for ${result.bubbleId}: ${result.envelope.id} -> revise\n`
+      `APPROVAL_DECISION recorded for ${result.bubbleId}: ${result.envelope.id} -> rework\n`
     );
     return 0;
   }

@@ -1423,7 +1423,7 @@ describe("emitTmuxDeliveryNotification", () => {
         type: "APPROVAL_DECISION",
         round: 2,
         payload: {
-          decision: "revise",
+          decision: "rework",
           message: "Please address reviewer findings."
         }
       }),
@@ -1547,8 +1547,8 @@ describe("emitTmuxDeliveryNotification", () => {
         recipient: "codex",
         type: "APPROVAL_DECISION",
         payload: {
-          decision: "revise",
-          message: "Please revise the docs update."
+          decision: "rework",
+          message: "Please rework the docs update."
         }
       })
     );

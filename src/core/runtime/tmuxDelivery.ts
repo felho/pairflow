@@ -226,16 +226,13 @@ function buildDeliveryMessage(
         ? "Human response received. Continue implementation using this input, then hand off with `pairflow pass --summary` directly. Primary artifact rule (docs-only): refine the referenced source task/document file directly, not only a new standalone review note. Docs-only scope: keep summary and refs consistent; skip-claim means no `.pairflow/evidence/*.log` refs in that PASS."
         : "Human response received. Continue implementation using this input, then hand off with `pairflow pass --summary` directly. Include available `.pairflow/evidence/*.log` refs on PASS.";
     } else if (envelope.type === "APPROVAL_DECISION") {
-      if (envelope.payload.decision === "revise") {
+      if (envelope.payload.decision === "rework") {
         action = docsOnly
           ? "Human requested rework. Continue implementation now and address the requested changes, then hand off with `pairflow pass --summary` directly. Primary artifact rule (docs-only): apply the rework on the referenced source task/document file directly, not only in a new standalone review note. Docs-only scope: keep summary and refs consistent; skip-claim means no `.pairflow/evidence/*.log` refs in that PASS."
           : "Human requested rework. Continue implementation now and address the requested changes, then hand off with `pairflow pass --summary` directly. Include available `.pairflow/evidence/*.log` refs on PASS.";
-      } else if (envelope.payload.decision === "approve") {
-        action =
-          "Human approved this bubble. Wait for commit/merge flow and do not continue new implementation in this round.";
       } else {
         action =
-          "Human approval decision received. Continue according to current bubble state/inbox.";
+          "Human approved this bubble. Wait for commit/merge flow and do not continue new implementation in this round.";
       }
     } else if (envelope.type === "APPROVAL_REQUEST") {
       action =

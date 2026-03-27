@@ -206,7 +206,7 @@ describe("getBubbleInbox", () => {
         type: "APPROVAL_DECISION",
         round: 1,
         payload: {
-          decision: "revise"
+          decision: "rework"
         },
         refs: []
       }

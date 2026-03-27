@@ -13,7 +13,7 @@ import type {
 
 export interface ResolveApprovalNextStateInput {
   state: BubbleStateSnapshot;
-  decision: "approve" | "reject" | "revise";
+  decision: "approve" | "rework";
   nowIso: string;
   implementer: AgentName;
   reviewer: AgentName;

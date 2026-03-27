@@ -1130,7 +1130,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     expect(recovered.state.active_role).toBe("implementer");
     expect(recovered.state.meta_review?.auto_rework_count).toBe(1);
     expect(recovered.gateEnvelope.type).toBe("APPROVAL_DECISION");
-    expect(recovered.gateEnvelope.payload.decision).toBe("revise");
+    expect(recovered.gateEnvelope.payload.decision).toBe("rework");
 
     const autoReworkReportMarkdown = await readFile(
       bubble.paths.metaReviewLastMarkdownArtifactPath,

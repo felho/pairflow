@@ -788,13 +788,13 @@ describe("runBubbleWatchdog", () => {
     expect(result.state.state).toBe("RUNNING");
     expect(result.state.active_role).toBe("implementer");
     expect(result.envelope?.type).toBe("APPROVAL_DECISION");
-    expect(result.envelope?.payload.decision).toBe("revise");
+    expect(result.envelope?.payload.decision).toBe("rework");
     expect(deliveries).toHaveLength(1);
     expect(deliveries[0]).toMatchObject({
       bubbleId: bubble.bubbleId,
       envelopeType: "APPROVAL_DECISION",
       recipient: bubble.config.agents.implementer,
-      decision: "revise"
+      decision: "rework"
     });
   });
 

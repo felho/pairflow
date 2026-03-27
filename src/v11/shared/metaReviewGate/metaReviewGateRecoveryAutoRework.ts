@@ -74,7 +74,7 @@ export async function handleRecoveryAutoReworkRoute(input: {
         type: "APPROVAL_DECISION",
         round: input.context.loaded.state.round,
         payload: {
-          decision: "revise",
+          decision: "rework",
           message: reworkMessage,
           metadata: {
             [deliveryTargetRoleMetadataKey]: "implementer",

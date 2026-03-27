@@ -93,9 +93,9 @@ Allowed transitions:
 7. `META_REVIEW_RUNNING -> READY_FOR_HUMAN_APPROVAL` on successful gate run that requires human decision (approve/inconclusive/budget exhausted/sticky bypass)
 8. `META_REVIEW_RUNNING -> META_REVIEW_FAILED` on meta-review runner execution failure
 9. `READY_FOR_HUMAN_APPROVAL -> APPROVED_FOR_COMMIT` on explicit user approval
-10. `READY_FOR_HUMAN_APPROVAL -> RUNNING` on explicit immediate rework decision (`APPROVAL_DECISION=revise|reject`)
+10. `READY_FOR_HUMAN_APPROVAL -> RUNNING` on explicit immediate rework decision (`APPROVAL_DECISION=rework`)
 11. `META_REVIEW_FAILED -> APPROVED_FOR_COMMIT` on explicit user approval with override
-12. `META_REVIEW_FAILED -> RUNNING` on explicit immediate rework decision (`APPROVAL_DECISION=revise|reject`)
+12. `META_REVIEW_FAILED -> RUNNING` on explicit immediate rework decision (`APPROVAL_DECISION=rework`)
 13. `WAITING_HUMAN` supports deferred deterministic rework intent queue; scheduler consumes pending intent and routes next actionable handoff to implementer (`WAITING_HUMAN -> RUNNING`) without reviewer relay
 14. `APPROVED_FOR_COMMIT -> COMMITTED -> DONE`
 15. Any active state -> `FAILED` on unrecoverable errors
@@ -205,7 +205,7 @@ Required message types:
 4. `HUMAN_REPLY`: user decision/clarification.
 5. `CONVERGENCE`: no-critical-findings claim + evidence.
 6. `APPROVAL_REQUEST`: final package request to user.
-7. `APPROVAL_DECISION`: approve, reject, or revise.
+7. `APPROVAL_DECISION`: approve or rework.
 8. `DONE_PACKAGE`: final summary bundle.
 
 Type assignment rules:

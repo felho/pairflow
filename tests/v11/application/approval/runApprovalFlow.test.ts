@@ -162,7 +162,7 @@ describe("runApprovalDecisionFlow delivery invariant", () => {
     });
   });
 
-  it("emits implementer-targeted delivery on revise decision", async () => {
+  it("emits implementer-targeted delivery on rework decision", async () => {
     const now = new Date("2026-03-20T10:06:00.000Z");
     const nowIso = now.toISOString();
     const flow = createFlowDependencies(nowIso);
@@ -170,7 +170,7 @@ describe("runApprovalDecisionFlow delivery invariant", () => {
     const result = await runApprovalDecisionFlow(
       {
         bubbleId: "b_approval_flow_01",
-        decision: "revise",
+        decision: "rework",
         message: "Please rework.",
         refs: [],
         now,

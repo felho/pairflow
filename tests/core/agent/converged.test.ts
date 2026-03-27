@@ -444,7 +444,7 @@ describe("emitConvergedFromWorkspace", () => {
             type: "APPROVAL_DECISION",
             round: loaded.state.round,
             payload: {
-              decision: "revise",
+              decision: "rework",
               message: "Implement auto-rework patch.",
               metadata: {
                 actor: "meta-review-gate"
@@ -640,7 +640,7 @@ describe("emitConvergedFromWorkspace", () => {
             type: "APPROVAL_DECISION",
             round: loaded.state.round,
             payload: {
-              decision: "revise",
+              decision: "rework",
               message: "Implement retry-safe auto rework patch.",
               metadata: {
                 actor: "meta-review-gate"

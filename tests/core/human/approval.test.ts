@@ -271,7 +271,7 @@ describe("approval decisions", () => {
     ]);
   });
 
-  it("writes APPROVAL_DECISION=revise and resumes RUNNING on implementer", async () => {
+  it("writes APPROVAL_DECISION=rework and resumes RUNNING on implementer", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupReadyForHumanApprovalBubble(repoPath, "b_approval_02");
     const deliveries: Array<{
@@ -314,7 +314,7 @@ describe("approval decisions", () => {
       throw new Error("Expected immediate rework decision result.");
     }
     expect(result.envelope.type).toBe("APPROVAL_DECISION");
-    expect(result.envelope.payload.decision).toBe("revise");
+    expect(result.envelope.payload.decision).toBe("rework");
     expect(result.envelope.payload.message).toContain("tighten validation");
     expect(result.state.state).toBe("RUNNING");
     expect(result.state.active_agent).toBe(bubble.config.agents.implementer);
@@ -331,14 +331,14 @@ describe("approval decisions", () => {
     expect(deliveries[0]).toMatchObject({
       recipient: "orchestrator",
       type: "APPROVAL_DECISION",
-      decision: "revise",
+      decision: "rework",
       messageRef: expectedRef,
       deliveryTargetRole: "status"
     });
     expect(deliveries[1]).toMatchObject({
       recipient: bubble.config.agents.implementer,
       type: "APPROVAL_DECISION",
-      decision: "revise",
+      decision: "rework",
       messageRef: expectedRef,
       deliveryTargetRole: "implementer"
     });
@@ -907,7 +907,7 @@ describe("approval decisions", () => {
     });
   });
 
-  it("keeps override path available after run-failed -> revise -> rerun-failed cycle", async () => {
+  it("keeps override path available after run-failed -> rework -> rerun-failed cycle", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -973,22 +973,22 @@ describe("approval decisions", () => {
       }
     );
 
-    const revised = await emitRequestRework({
+    const reworked = await emitRequestRework({
       bubbleId: bubble.bubbleId,
       message: "Need one more implementation cycle.",
       cwd: repoPath,
       now: new Date("2026-03-08T12:01:00.000Z")
     });
-    expect(revised.mode).toBe("immediate");
-    if (revised.mode !== "immediate") {
-      throw new Error("Expected immediate revise result.");
+    expect(reworked.mode).toBe("immediate");
+    if (reworked.mode !== "immediate") {
+      throw new Error("Expected immediate rework result.");
     }
-    expect(revised.state.state).toBe("RUNNING");
+    expect(reworked.state.state).toBe("RUNNING");
 
     const rerunFailedGate = await applyMetaReviewGateOnConvergence({
       bubbleId: bubble.bubbleId,
       repoPath,
-      summary: "Converged after revise.",
+      summary: "Converged after rework.",
       now: new Date("2026-03-08T12:02:00.000Z")
     });
     expect(rerunFailedGate.route).toBe("human_gate_run_failed");

@@ -67,7 +67,7 @@ export function emitApprovalDecisionDeliverySignals(input: {
     messageRef: input.messageRef
   });
 
-  if (input.decision !== "revise") {
+  if (input.decision !== "rework") {
     return;
   }
 

@@ -223,7 +223,7 @@ describe("finalizeConvergedFlow", () => {
             }
           },
           metaReviewRun: {
-            recommendation: "revise",
+            recommendation: "rework",
             status: "ok",
             rework_target_message: "Fix lint issue",
             warnings: []

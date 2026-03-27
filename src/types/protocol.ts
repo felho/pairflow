@@ -44,7 +44,7 @@ export const findingsClaimSources = [
 
 export type FindingsClaimSource = (typeof findingsClaimSources)[number];
 
-export const approvalDecisions = ["approve", "reject", "revise"] as const;
+export const approvalDecisions = ["approve", "rework"] as const;
 
 export type ApprovalDecision = (typeof approvalDecisions)[number];
 

@@ -21,7 +21,7 @@ export async function runRequestReworkFlowWithContext(
     const immediate = await runApprovalDecisionFlowWithContext({
       flow: {
         bubbleId: input.flow.bubbleId,
-        decision: "revise",
+        decision: "rework",
         message: input.flow.message,
         refs: input.flow.refs,
         repoPath: input.flow.repoPath,

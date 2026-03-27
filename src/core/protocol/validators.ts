@@ -404,7 +404,7 @@ function validatePayloadByType(
     if (!isApprovalDecision(payload.decision)) {
       errors.push({
         path: "payload.decision",
-        message: "APPROVAL_DECISION requires decision: approve|reject|revise"
+        message: "APPROVAL_DECISION requires decision: approve|rework"
       });
     }
   }

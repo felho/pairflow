@@ -82,7 +82,7 @@ describe("approvalResultMapping", () => {
           sticky_human_gate: true
         }
       } as never,
-      decision: "revise",
+      decision: "rework",
       nowIso: "2026-03-19T22:00:00.000Z",
       implementer: "codex",
       reviewer: "claude",
