@@ -671,8 +671,29 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
   const typecheckCommand = commands
     ? readString(commands, "typecheck", "commands.typecheck", errors, true)
     : undefined;
+  const lintCommand = commands
+    ? readString(commands, "lint", "commands.lint", errors, false)
+    : undefined;
   const bootstrapCommand = commands
     ? readString(commands, "bootstrap", "commands.bootstrap", errors, false)
+    : undefined;
+  const validationRequired = commands
+    ? readStringArray(
+        commands,
+        "validation_required",
+        "commands.validation_required",
+        errors,
+        false
+      )
+    : undefined;
+  const validationRequiredExplicit = commands
+    ? readBoolean(
+        commands,
+        "validation_required_explicit",
+        "commands.validation_required_explicit",
+        errors,
+        false
+      )
     : undefined;
 
   const notificationsEnabled = notifications
@@ -876,8 +897,17 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
       ...(bootstrapCommand !== undefined
         ? { bootstrap: bootstrapCommand }
         : {}),
+      ...(lintCommand !== undefined
+        ? { lint: lintCommand }
+        : {}),
       test: testCommand as string,
-      typecheck: typecheckCommand as string
+      typecheck: typecheckCommand as string,
+      ...(validationRequired !== undefined
+        ? { validation_required: validationRequired }
+        : {}),
+      ...(validationRequiredExplicit !== undefined
+        ? { validation_required_explicit: validationRequiredExplicit }
+        : {})
     },
     notifications: validatedNotifications,
     local_overlay: {
@@ -1036,8 +1066,17 @@ export function renderBubbleConfigToml(config: BubbleConfig): string {
     config.commands.bootstrap
       ? `bootstrap = ${tomlString(config.commands.bootstrap)}`
       : undefined,
+    config.commands.lint
+      ? `lint = ${tomlString(config.commands.lint)}`
+      : undefined,
     `test = ${tomlString(config.commands.test)}`,
     `typecheck = ${tomlString(config.commands.typecheck)}`,
+    config.commands.validation_required !== undefined
+      ? `validation_required = ${tomlStringArray(config.commands.validation_required)}`
+      : undefined,
+    config.commands.validation_required_explicit !== undefined
+      ? `validation_required_explicit = ${config.commands.validation_required_explicit}`
+      : undefined,
     "",
     "[notifications]",
     `enabled = ${config.notifications.enabled}`,

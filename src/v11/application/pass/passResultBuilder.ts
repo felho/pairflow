@@ -38,6 +38,7 @@ export interface BuildNormalPassResultInput {
   repeatCleanTrigger: boolean;
   mostRecentPreviousReviewerCleanPassEnvelope: boolean;
   delivery?: PassResultDeliveryLike;
+  passValidationCompatibilityArtifactWriteFailureReason?: string;
   docGateArtifactWriteFailureReason?: string;
 }
 
@@ -77,6 +78,7 @@ export interface NormalPassResult {
   repeatCleanTrigger: boolean;
   mostRecentPreviousReviewerCleanPassEnvelope: boolean;
   delivery?: PassResultDeliveryLike;
+  passValidationCompatibilityArtifactWriteFailureReason?: string;
   docGateArtifactWriteFailureReason?: string;
 }
 
@@ -135,6 +137,12 @@ export function buildNormalPassResult(
     ...(input.delivery !== undefined
       ? {
           delivery: input.delivery
+        }
+      : {}),
+    ...(input.passValidationCompatibilityArtifactWriteFailureReason !== undefined
+      ? {
+          passValidationCompatibilityArtifactWriteFailureReason:
+            input.passValidationCompatibilityArtifactWriteFailureReason
         }
       : {}),
     ...(input.docGateArtifactWriteFailureReason !== undefined

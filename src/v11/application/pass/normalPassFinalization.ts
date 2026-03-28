@@ -37,6 +37,7 @@ export interface FinalizeNormalPassInput {
   repeatCleanTrigger: boolean;
   fallbackMostRecentPreviousReviewerCleanPassEnvelope: boolean;
   reviewerTestDirective?: ReviewerTestExecutionDirective;
+  passValidationCompatibilityArtifactWriteFailureReason?: string;
   findings: Finding[];
   docGateArtifactWriteFailureReason?: string;
   sequence: number;
@@ -86,6 +87,7 @@ export interface FinalizeNormalPassDependencies<TResult> {
       reason?: string;
       retried: boolean;
     };
+    passValidationCompatibilityArtifactWriteFailureReason?: string;
     docGateArtifactWriteFailureReason?: string;
   }) => TResult;
 }
@@ -125,6 +127,12 @@ export async function finalizeNormalPass<TResult>(
       ...(input.reviewerTestDirective !== undefined
         ? { reviewerTestDirective: input.reviewerTestDirective }
         : {}),
+      ...(input.passValidationCompatibilityArtifactWriteFailureReason !== undefined
+        ? {
+            passValidationCompatibilityArtifactWriteFailureReason:
+              input.passValidationCompatibilityArtifactWriteFailureReason
+          }
+        : {}),
       findings: input.findings,
       ...(input.docGateArtifactWriteFailureReason !== undefined
         ? { docGateArtifactWriteFailureReason: input.docGateArtifactWriteFailureReason }
@@ -155,6 +163,12 @@ export async function finalizeNormalPass<TResult>(
     mostRecentPreviousReviewerCleanPassEnvelope,
     ...(deliveryForResult !== undefined
       ? { delivery: deliveryForResult }
+      : {}),
+    ...(input.passValidationCompatibilityArtifactWriteFailureReason !== undefined
+      ? {
+          passValidationCompatibilityArtifactWriteFailureReason:
+            input.passValidationCompatibilityArtifactWriteFailureReason
+        }
       : {}),
     ...(input.docGateArtifactWriteFailureReason !== undefined
       ? { docGateArtifactWriteFailureReason: input.docGateArtifactWriteFailureReason }

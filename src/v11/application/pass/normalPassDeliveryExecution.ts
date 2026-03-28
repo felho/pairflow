@@ -20,6 +20,7 @@ export interface ExecuteNormalPassDeliveryInput {
   reviewerFocusArtifactPath: string;
   recipientRole: "implementer" | "reviewer";
   now: Date;
+  reviewerTestDirective?: ReviewerTestExecutionDirective;
 }
 
 export interface ExecuteNormalPassDeliveryDependencies {
@@ -67,16 +68,18 @@ export async function executeNormalPassDelivery(
   input: ExecuteNormalPassDeliveryInput,
   dependencies: ExecuteNormalPassDeliveryDependencies
 ): Promise<ExecuteNormalPassDeliveryResult> {
-  const reviewerTestDirective = await dependencies.resolveReviewerTestDirectiveForPass({
-    senderRole: input.senderRole,
-    bubbleId: input.bubbleId,
-    bubbleConfig: input.bubbleConfig,
-    envelope: input.envelope,
-    worktreePath: input.worktreePath,
-    repoPath: input.repoPath,
-    artifactsDir: input.artifactsDir,
-    now: input.now
-  });
+  const reviewerTestDirective =
+    input.reviewerTestDirective
+    ?? await dependencies.resolveReviewerTestDirectiveForPass({
+      senderRole: input.senderRole,
+      bubbleId: input.bubbleId,
+      bubbleConfig: input.bubbleConfig,
+      envelope: input.envelope,
+      worktreePath: input.worktreePath,
+      repoPath: input.repoPath,
+      artifactsDir: input.artifactsDir,
+      now: input.now
+    });
 
   const delivery = await dependencies.executePassDelivery(
     {

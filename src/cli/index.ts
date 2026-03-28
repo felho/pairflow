@@ -170,6 +170,14 @@ async function handlePassCommand(args: string[]): Promise<number> {
       `Warning: reviewer doc-gate artifact update failed during PASS handling (reason: ${result.docGateArtifactWriteFailureReason}).\n`
     );
   }
+  if (
+    result.transitionDecision === "normal_pass"
+    && result.passValidationCompatibilityArtifactWriteFailureReason !== undefined
+  ) {
+    process.stderr.write(
+      `Warning: PASS validation compatibility artifact update failed during PASS handling (reason: ${result.passValidationCompatibilityArtifactWriteFailureReason}).\n`
+    );
+  }
   return 0;
 }
 

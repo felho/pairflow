@@ -107,8 +107,11 @@ export interface BubbleAgentsConfig {
 
 export interface BubbleCommandsConfig {
   bootstrap?: string;
+  lint?: string;
   test: string;
   typecheck: string;
+  validation_required?: string[];
+  validation_required_explicit?: boolean;
 }
 
 export interface BubbleNotificationsConfig {

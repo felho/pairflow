@@ -10,6 +10,7 @@ import { prepareNormalPassAppend } from "../../application/pass/normalPassAppend
 import { executeNormalPassDelivery } from "../../application/pass/normalPassDeliveryExecution.js";
 import { finalizeNormalPass } from "../../application/pass/normalPassFinalization.js";
 import { persistNormalPassPostAppend } from "../../application/pass/normalPassPostAppendPersistence.js";
+import { resolvePassValidationForPass } from "../../application/pass/passValidationGate.js";
 import { mapPassResultDelivery } from "../../application/pass/passResultDelivery.js";
 import { buildAutoConvergePassResult, buildNormalPassResult } from "../../application/pass/passResultBuilder.js";
 import { writePostAppendReviewVerificationArtifact } from "../../application/pass/postAppendReviewVerificationWriter.js";
@@ -23,6 +24,13 @@ import { prepareReviewerVerification } from "../../application/pass/reviewerVeri
 import { resolvePassIntent } from "../../application/pass/passIntentResolution.js";
 import { buildPassLifecycleMetricMetadata } from "../../domain/pass/lifecycleMetricMetadata.js";
 import { resolveMostRecentPreviousReviewerPassIsCleanFromMetadata } from "../../domain/pass/repeatCleanMetadata.js";
+import {
+  buildPassValidationEvidenceArtifact,
+  resolvePassValidationPolicy,
+  writePassValidationEvidenceArtifact,
+  writePassValidationReviewerCompatibilityArtifact
+} from "../../../core/runtime/passValidationEvidence.js";
+import { runPassValidationCommand } from "../../../core/runtime/passValidationRunner.js";
 import { buildAutoConvergeFlowDependencies } from "./autoConvergeFlowInvocationBuilders.js";
 import { buildNormalPassFlowDependencies } from "./normalPassFlowInvocationBuilders.js";
 import { buildPassRoutingDependencies } from "./passRoutingInvocationBuilders.js";
@@ -73,6 +81,12 @@ export function createNormalPassFlowDependencies(
   return buildNormalPassFlowDependencies({
     prepareNormalPassAppend,
     executeNormalPassAppend,
+    resolvePassValidationForPass,
+    resolvePassValidationPolicy,
+    runPassValidationCommand,
+    buildPassValidationEvidenceArtifact,
+    writePassValidationEvidenceArtifact,
+    writePassValidationReviewerCompatibilityArtifact,
     persistNormalPassPostAppend,
     writePostAppendReviewVerificationArtifact,
     writePostAppendPassState,
