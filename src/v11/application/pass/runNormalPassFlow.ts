@@ -15,7 +15,10 @@ export type {
 
 function buildFinalizeNormalPassInput<TResult>(input: {
   flowInput: RunNormalPassFlowInput;
+  refsCount: number;
   findingsForPayload: Finding[];
+  reviewerTestDirective?: ReviewerTestExecutionDirective;
+  passValidationCompatibilityArtifactWriteFailureReason?: string;
   docGateArtifactWriteFailureReason?: string;
   mapped: {
     sequence: number;
@@ -28,6 +31,8 @@ function buildFinalizeNormalPassInput<TResult>(input: {
     deliveryRetried: boolean;
   };
 }): Parameters<RunNormalPassFlowDependencies<TResult>["finalizeNormalPass"]>[0] {
+  const reviewerTestDirective =
+    input.reviewerTestDirective ?? input.normalPassDelivery.reviewerTestDirective
   return {
     now: input.flowInput.now,
     repoPath: input.flowInput.repoPath,
@@ -40,7 +45,7 @@ function buildFinalizeNormalPassInput<TResult>(input: {
     sender: input.flowInput.handoff.senderAgent,
     recipient: input.flowInput.handoff.recipientAgent,
     recipientRole: input.flowInput.handoff.recipientRole,
-    refsCount: input.flowInput.refs.length,
+    refsCount: input.refsCount,
     hasFindings: input.flowInput.hasFindings,
     noFindings: input.flowInput.noFindings,
     ...(input.flowInput.reviewerFindingsClaim !== undefined
@@ -57,8 +62,16 @@ function buildFinalizeNormalPassInput<TResult>(input: {
     repeatCleanTrigger: input.flowInput.repeatClean.trigger,
     fallbackMostRecentPreviousReviewerCleanPassEnvelope:
       input.flowInput.repeatClean.mostRecentPreviousReviewerCleanPassEnvelope,
-    ...(input.normalPassDelivery.reviewerTestDirective !== undefined
-      ? { reviewerTestDirective: input.normalPassDelivery.reviewerTestDirective }
+    ...(reviewerTestDirective !== undefined
+      ? {
+          reviewerTestDirective
+        }
+      : {}),
+    ...(input.passValidationCompatibilityArtifactWriteFailureReason !== undefined
+      ? {
+          passValidationCompatibilityArtifactWriteFailureReason:
+            input.passValidationCompatibilityArtifactWriteFailureReason
+        }
       : {}),
     findings: input.flowInput.handoff.senderRole === "reviewer"
       ? input.findingsForPayload
@@ -93,6 +106,17 @@ export async function runNormalPassFlow<TResult>(
   const reviewerGateEvaluation = normalPassAppendPreparation.reviewerGateEvaluation;
   const findingsForPayload = normalPassAppendPreparation.findingsForPayload;
   const lockPath = normalPassAppendPreparation.lockPath;
+  const passValidation = await dependencies.resolvePassValidationForPass({
+    senderRole: input.handoff.senderRole,
+    bubbleId: input.bubbleId,
+    bubbleConfig: input.bubbleConfig,
+    worktreePath: input.paths.worktreePath,
+    artifactsDir: input.paths.artifactsDir,
+    round: input.handoff.envelopeRound,
+    now: input.now,
+    createError: input.createError
+  });
+  const effectiveRefs = [...input.refs, ...passValidation.validationRefs];
 
   const mapped = await dependencies.executeNormalPassAppend({
     transcriptPath: input.paths.transcriptPath,
@@ -102,7 +126,7 @@ export async function runNormalPassFlow<TResult>(
     handoff: input.handoff,
     summary: input.summary,
     passIntent: input.intent,
-    refs: input.refs,
+    refs: effectiveRefs,
     hasFindings: input.hasFindings,
     findingsForPayload,
     ...(input.reviewerFindingsClaim !== undefined
@@ -157,12 +181,25 @@ export async function runNormalPassFlow<TResult>(
     reviewerBriefArtifactPath: input.paths.reviewerBriefArtifactPath,
     reviewerFocusArtifactPath: input.paths.reviewerFocusArtifactPath,
     recipientRole: input.handoff.recipientRole,
-    now: input.now
+    now: input.now,
+    ...(passValidation.reviewerTestDirective !== undefined
+      ? { reviewerTestDirective: passValidation.reviewerTestDirective }
+      : {})
   });
   return dependencies.finalizeNormalPass(
     buildFinalizeNormalPassInput({
       flowInput: input,
+      refsCount: effectiveRefs.length,
       findingsForPayload,
+      ...(passValidation.reviewerTestDirective !== undefined
+        ? { reviewerTestDirective: passValidation.reviewerTestDirective }
+        : {}),
+      ...(passValidation.compatibilityArtifactWriteFailureReason !== undefined
+        ? {
+            passValidationCompatibilityArtifactWriteFailureReason:
+              passValidation.compatibilityArtifactWriteFailureReason
+          }
+        : {}),
       ...(docGateArtifactWriteFailureReason !== undefined
         ? { docGateArtifactWriteFailureReason }
         : {}),

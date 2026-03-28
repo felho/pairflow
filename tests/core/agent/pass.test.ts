@@ -34,7 +34,13 @@ import {
   resolveDocContractGateArtifactPath,
   writeDocContractGateArtifact
 } from "../../../src/core/gates/docContractGates.js";
-import { resolveReviewerTestEvidenceArtifactPath } from "../../../src/core/reviewer/testEvidence.js";
+import {
+  resolveReviewerTestEvidenceArtifactPath,
+  resolveReviewerTestExecutionDirective
+} from "../../../src/core/reviewer/testEvidence.js";
+import {
+  resolvePassValidationReviewerCompatibilityArtifactPath
+} from "../../../src/core/runtime/passValidationEvidence.js";
 import type { EmitTmuxDeliveryNotificationInput } from "../../../src/core/runtime/tmuxDelivery.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -4663,7 +4669,7 @@ present`,
     });
   });
 
-  it("writes reviewer test-evidence verification artifact for implementer PASS", async () => {
+  it("writes reviewer compatibility artifact for implementer PASS when validation policy is missing", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -4685,7 +4691,7 @@ present`,
     });
 
     const rawArtifact = await readFile(
-      join(bubble.paths.artifactsDir, "reviewer-test-verification.json"),
+      resolvePassValidationReviewerCompatibilityArtifactPath(bubble.paths.artifactsDir),
       "utf8"
     );
     const artifact = JSON.parse(rawArtifact) as {
@@ -4694,9 +4700,165 @@ present`,
       reason_code: string;
     };
 
-    expect(artifact.status).toBe("trusted");
-    expect(artifact.decision).toBe("skip_full_rerun");
-    expect(artifact.reason_code).toBe("no_trigger");
+    expect(artifact.status).toBe("untrusted");
+    expect(artifact.decision).toBe("run_checks");
+    expect(artifact.reason_code).toBe("pass_validation_policy_missing");
+  });
+
+  it("writes trusted configured pass-validation artifacts and refs for implementer PASS", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_16_configured",
+      task: "Configured validation happy path"
+    });
+
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        commands: {
+          ...bubble.config.commands,
+          lint: "printf 'lint ok\\n'",
+          typecheck: "printf 'typecheck ok\\n'",
+          test: "printf 'test ok\\n'",
+          validation_required: ["lint", "typecheck", "test"],
+          validation_required_explicit: false
+        }
+      }),
+      "utf8"
+    );
+
+    await emitPassFromWorkspace({
+      summary: "Validation complete",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:05:00.000Z")
+    });
+
+    const rawReviewerArtifact = await readFile(
+      resolvePassValidationReviewerCompatibilityArtifactPath(bubble.paths.artifactsDir),
+      "utf8"
+    );
+    const reviewerArtifact = JSON.parse(rawReviewerArtifact) as {
+      status: string;
+      decision: string;
+      reason_code: string;
+    };
+
+    expect(reviewerArtifact.status).toBe("trusted");
+    expect(reviewerArtifact.decision).toBe("skip_full_rerun");
+    expect(reviewerArtifact.reason_code).toBe("no_trigger");
+
+    const rawPassValidationArtifact = await readFile(
+      join(bubble.paths.artifactsDir, "pass-validation-evidence.json"),
+      "utf8"
+    );
+    const passValidationArtifact = JSON.parse(rawPassValidationArtifact) as {
+      policy_state: string;
+      required_command_set_id: string | null;
+      trust_level: string;
+      commands: Array<{ kind: string; log_path?: string; exit_code?: number }>;
+    };
+
+    expect(passValidationArtifact.policy_state).toBe("policy_configured");
+    expect(passValidationArtifact.required_command_set_id).toBe("lint__typecheck__test");
+    expect(passValidationArtifact.trust_level).toBe("trusted");
+    expect(passValidationArtifact.commands).toHaveLength(3);
+    expect(passValidationArtifact.commands[0]).toMatchObject({
+      kind: "lint",
+      command: "printf 'lint ok\\n'",
+      log_path: ".pairflow/evidence/pass-validation-lint.log",
+      exit_code: 0
+    });
+    expect(passValidationArtifact.commands[1]).toMatchObject({
+      kind: "typecheck",
+      command: "printf 'typecheck ok\\n'",
+      log_path: ".pairflow/evidence/pass-validation-typecheck.log",
+      exit_code: 0
+    });
+    expect(passValidationArtifact.commands[2]).toMatchObject({
+      kind: "test",
+      command: "printf 'test ok\\n'",
+      log_path: ".pairflow/evidence/pass-validation-test.log",
+      exit_code: 0
+    });
+
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    const lastMessage = transcript[transcript.length - 1];
+    expect(lastMessage?.type).toBe("PASS");
+    expect(lastMessage?.refs).toEqual([
+      ".pairflow/evidence/pass-validation-lint.log",
+      ".pairflow/evidence/pass-validation-typecheck.log",
+      ".pairflow/evidence/pass-validation-test.log"
+    ]);
+  });
+
+  it("does not preserve trusted skip via compatibility artifact after the worktree changes", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_16_configured_stale_guard",
+      task: "Configured validation stale guard"
+    });
+
+    await writeFile(
+      bubble.paths.bubbleTomlPath,
+      renderBubbleConfigToml({
+        ...bubble.config,
+        commands: {
+          ...bubble.config.commands,
+          typecheck: "printf 'typecheck ok\\n'",
+          validation_required: ["typecheck"],
+          validation_required_explicit: false
+        }
+      }),
+      "utf8"
+    );
+
+    await emitPassFromWorkspace({
+      summary: "Validation complete",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:06:00.000Z")
+    });
+
+    await writeFile(join(bubble.paths.worktreePath, "post-pass-change.txt"), "x\n", "utf8");
+
+    const directive = await resolveReviewerTestExecutionDirective({
+      artifactPath: resolvePassValidationReviewerCompatibilityArtifactPath(
+        bubble.paths.artifactsDir
+      ),
+      worktreePath: bubble.paths.worktreePath
+    });
+
+    expect(directive.skip_full_rerun).toBe(false);
+    expect(directive.reason_code).toBe("evidence_missing");
+    expect(directive.verification_status).toBe("missing");
+  });
+
+  it("surfaces compatibility-artifact write failure reason in normal PASS results", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_compat_write_warning_01",
+      task: "Compatibility artifact write warning"
+    });
+
+    await mkdir(
+      resolvePassValidationReviewerCompatibilityArtifactPath(bubble.paths.artifactsDir),
+      { recursive: true }
+    );
+
+    const result = await emitPassFromWorkspace({
+      summary: "Validation complete",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-21T12:07:00.000Z")
+    });
+
+    expect(result.transitionDecision).toBe("normal_pass");
+    expect(result.passValidationCompatibilityArtifactWriteFailureReason).toContain(
+      "pass_validation_reviewer_compat_artifact_persist_failed"
+    );
+    expect(result.passValidationCompatibilityArtifactWriteFailureReason).toContain("EISDIR");
   });
 
   it("writes trusted docs-only reviewer artifact and skip directive for document PASS", async () => {
@@ -5021,7 +5183,7 @@ present`,
     expect(result.envelope.refs).toEqual([".pairflow/evidence/lint.log"]);
   });
 
-  it("falls back to run_checks reviewer directive when artifact write fails", async () => {
+  it("fails closed when pass validation artifact write fails", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -5039,38 +5201,23 @@ present`,
       "pnpm typecheck exit=0 found 0 errors\npnpm test exit=0 406 tests passed\n",
     );
 
-    let capturedDirective:
-      | {
-          skip_full_rerun: boolean;
-          reason_code: string;
-          reason_detail: string;
-          verification_status: string;
+    await expect(
+      emitPassFromWorkspace(
+        {
+          summary: "Validation complete",
+          refs: [evidenceLogPath],
+          cwd: bubble.paths.worktreePath,
+          now: new Date("2026-02-21T12:05:00.000Z")
+        },
+        {
+          emitTmuxDeliveryNotification: () =>
+            Promise.resolve({
+              delivered: true,
+              message: "ok"
+            })
         }
-      | undefined;
-    await emitPassFromWorkspace(
-      {
-        summary: "Validation complete",
-        refs: [evidenceLogPath],
-        cwd: bubble.paths.worktreePath,
-        now: new Date("2026-02-21T12:05:00.000Z")
-      },
-      {
-        emitTmuxDeliveryNotification: (input) => {
-          capturedDirective = input.reviewerTestDirective;
-          return Promise.resolve({
-            delivered: true,
-            message: "ok"
-          });
-        }
-      }
-    );
-
-    expect(capturedDirective?.skip_full_rerun).toBe(false);
-    expect(capturedDirective?.reason_code).toBe("evidence_unverifiable");
-    expect(capturedDirective?.reason_detail).toContain(
-      "Failed to resolve reviewer test directive due to verification runtime error."
-    );
-    expect(capturedDirective?.verification_status).toBe("untrusted");
+      )
+    ).rejects.toThrow(/pass_validation_artifact_persist_failed/u);
   });
 
   it("falls back to docs-only skip directive when artifact write fails in document scope", async () => {

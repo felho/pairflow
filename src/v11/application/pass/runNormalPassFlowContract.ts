@@ -104,6 +104,20 @@ export interface RunNormalPassFlowDependencies<TResult> {
     sequence: number;
     envelope: ProtocolEnvelope;
   }>;
+  resolvePassValidationForPass: (input: {
+    senderRole: "implementer" | "reviewer";
+    bubbleId: string;
+    bubbleConfig: BubbleConfig;
+    worktreePath: string;
+    artifactsDir: string;
+    round: number;
+    now: Date;
+    createError: PairflowCreateCommandError;
+  }) => Promise<{
+    reviewerTestDirective?: ReviewerTestExecutionDirective;
+    validationRefs: string[];
+    compatibilityArtifactWriteFailureReason?: string;
+  }>;
   persistNormalPassPostAppend: (input: {
     reviewerVerification: ReviewVerificationInputResolution | undefined;
     bubbleId: string;
@@ -144,6 +158,7 @@ export interface RunNormalPassFlowDependencies<TResult> {
     reviewerFocusArtifactPath: string;
     recipientRole: "implementer" | "reviewer";
     now: Date;
+    reviewerTestDirective?: ReviewerTestExecutionDirective;
   }) => Promise<{
     reviewerTestDirective?: ReviewerTestExecutionDirective;
     deliveryResult: EmitTmuxDeliveryNotificationResult | undefined;
@@ -171,6 +186,7 @@ export interface RunNormalPassFlowDependencies<TResult> {
     repeatCleanTrigger: boolean;
     fallbackMostRecentPreviousReviewerCleanPassEnvelope: boolean;
     reviewerTestDirective?: ReviewerTestExecutionDirective;
+    passValidationCompatibilityArtifactWriteFailureReason?: string;
     findings: Finding[];
     docGateArtifactWriteFailureReason?: string;
     sequence: number;

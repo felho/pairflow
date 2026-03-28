@@ -6,7 +6,7 @@ import type { ReviewerTestExecutionDirective } from "../../../../src/core/review
 import { executeNormalPassDelivery } from "../../../../src/v11/application/pass/normalPassDeliveryExecution.js";
 
 describe("executeNormalPassDelivery", () => {
-  it("resolves reviewer directive and forwards it into delivery execution", async () => {
+  it("forwards pre-resolved reviewer directive into delivery execution", async () => {
     const directive: ReviewerTestExecutionDirective = {
       skip_full_rerun: true,
       reason_code: "evidence_missing",
@@ -35,10 +35,13 @@ describe("executeNormalPassDelivery", () => {
         reviewerBriefArtifactPath: "/tmp/reviewer-brief.md",
         reviewerFocusArtifactPath: "/tmp/reviewer-focus.json",
         recipientRole: "reviewer",
-        now: new Date("2026-03-19T12:00:00.000Z")
+        now: new Date("2026-03-19T12:00:00.000Z"),
+        reviewerTestDirective: directive
       },
       {
-        resolveReviewerTestDirectiveForPass: async () => directive,
+        resolveReviewerTestDirectiveForPass: async () => {
+          throw new Error("should not resolve fallback directive");
+        },
         executePassDelivery: async (input, deps) => {
           capturedDeliveryInput = input;
           capturedDeliveryDependencies = deps;
@@ -72,7 +75,13 @@ describe("executeNormalPassDelivery", () => {
     expect(result.deliveryRetried).toBe(false);
   });
 
-  it("omits reviewer directive from delivery input when resolver returns undefined", async () => {
+  it("falls back to directive resolution when no pre-resolved directive is provided", async () => {
+    const directive: ReviewerTestExecutionDirective = {
+      skip_full_rerun: false,
+      reason_code: "evidence_missing",
+      reason_detail: "run checks",
+      verification_status: "missing"
+    };
     const envelope = { id: "env_2" } as unknown as ProtocolEnvelope;
     const bubbleConfig = {} as BubbleConfig;
     let capturedDeliveryInput:
@@ -95,7 +104,7 @@ describe("executeNormalPassDelivery", () => {
         now: new Date("2026-03-19T12:00:00.000Z")
       },
       {
-        resolveReviewerTestDirectiveForPass: async () => undefined,
+        resolveReviewerTestDirectiveForPass: async () => directive,
         executePassDelivery: async (input) => {
           capturedDeliveryInput = input;
           return {
@@ -111,8 +120,8 @@ describe("executeNormalPassDelivery", () => {
     );
 
     expect(capturedDeliveryInput).toBeDefined();
-    expect("reviewerTestDirective" in (capturedDeliveryInput as object)).toBe(false);
-    expect(result.reviewerTestDirective).toBeUndefined();
+    expect(capturedDeliveryInput?.reviewerTestDirective).toEqual(directive);
+    expect(result.reviewerTestDirective).toEqual(directive);
     expect(result.deliveryResult).toEqual({
       delivered: false,
       reason: "delivery_unconfirmed",

@@ -45,6 +45,7 @@ export interface EmitPassResult {
     reason?: string;
     retried: boolean;
   };
+  passValidationCompatibilityArtifactWriteFailureReason?: string;
   docGateArtifactWriteFailureReason?: string;
 }
 

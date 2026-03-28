@@ -16,6 +16,7 @@ export type ReviewerTestReasonCode =
   | "evidence_missing"
   | "evidence_unverifiable"
   | "evidence_stale"
+  | "pass_validation_policy_missing"
   | "no_trigger"
 
 export type ReviewerTestCommandStatus =
@@ -736,6 +737,8 @@ function summarizeReason(reasonCode: ReviewerTestReasonCode, detail: string): st
       return "Latest implementer evidence could not be verified for command provenance, exit status, or completion markers."
     case "evidence_stale":
       return "Verified evidence no longer matches current worktree fingerprint."
+    case "pass_validation_policy_missing":
+      return "PASS validation policy is not configured in bubble [commands]; reviewer must run checks."
     case "no_trigger":
       return "Evidence is verified, fresh, and complete."
     default:
@@ -1045,9 +1048,32 @@ function isDocsOnlyCompatibilityArtifact(artifact: ReviewerTestEvidenceArtifact)
 export async function resolveReviewerTestExecutionDirective(
   input: ResolveReviewerTestExecutionDirectiveInput
 ): Promise<ReviewerTestExecutionDirective> {
-  let artifact: ReviewerTestEvidenceArtifact | undefined
   try {
-    artifact = await readReviewerTestEvidenceArtifact(input.artifactPath)
+    const artifact = await readReviewerTestEvidenceArtifact(input.artifactPath)
+
+    if (artifact === undefined) {
+      if (input.reviewArtifactType === "document") {
+        return createDocsOnlySkipDirective()
+      }
+
+      return {
+        skip_full_rerun: false,
+        reason_code: "evidence_missing",
+        reason_detail: summarizeReason(
+          "evidence_missing",
+          "No reviewer test verification artifact found for the latest implementer handoff."
+        ),
+        verification_status: "missing"
+      }
+    }
+
+    return resolveReviewerTestExecutionDirectiveFromArtifact({
+      artifact,
+      worktreePath: input.worktreePath,
+      ...(input.reviewArtifactType !== undefined
+        ? { reviewArtifactType: input.reviewArtifactType }
+        : {})
+    })
   } catch (error: unknown) {
     if (input.reviewArtifactType === "document") {
       return createDocsOnlySkipDirective()
@@ -1064,30 +1090,6 @@ export async function resolveReviewerTestExecutionDirective(
       verification_status: "untrusted"
     }
   }
-
-  if (artifact === undefined) {
-    if (input.reviewArtifactType === "document") {
-      return createDocsOnlySkipDirective()
-    }
-
-    return {
-      skip_full_rerun: false,
-      reason_code: "evidence_missing",
-      reason_detail: summarizeReason(
-        "evidence_missing",
-        "No reviewer test verification artifact found for the latest implementer handoff."
-      ),
-      verification_status: "missing"
-    }
-  }
-
-  return resolveReviewerTestExecutionDirectiveFromArtifact({
-    artifact,
-    worktreePath: input.worktreePath,
-    ...(input.reviewArtifactType !== undefined
-      ? { reviewArtifactType: input.reviewArtifactType }
-      : {})
-  })
 }
 
 export async function resolveReviewerTestExecutionDirectiveFromArtifact(input: {

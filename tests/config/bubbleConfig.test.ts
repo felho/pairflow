@@ -81,6 +81,24 @@ describe("bubble config schema", () => {
     );
   });
 
+  it("parses and renders pass validation command policy fields", () => {
+    const config = parseBubbleConfigToml(
+      `${baseToml}lint = "pnpm lint"\nvalidation_required = ["lint", "typecheck", "test"]\nvalidation_required_explicit = false\n`
+    );
+    expect(config.commands.lint).toBe("pnpm lint");
+    expect(config.commands.validation_required).toEqual([
+      "lint",
+      "typecheck",
+      "test"
+    ]);
+    expect(config.commands.validation_required_explicit).toBe(false);
+
+    const rendered = renderBubbleConfigToml(config);
+    expect(rendered).toContain('lint = "pnpm lint"');
+    expect(rendered).toContain('validation_required = ["lint", "typecheck", "test"]');
+    expect(rendered).toContain("validation_required_explicit = false");
+  });
+
   it("applies doc_contract_gates defaults when sections are omitted", () => {
     const config = parseBubbleConfigToml(baseToml);
     expect(config.doc_contract_gates).toEqual({

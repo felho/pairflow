@@ -3,6 +3,9 @@ import type {
   PersistNormalPassPostAppendDependencies
 } from "../../../../src/v11/application/pass/normalPassPostAppendPersistence.js";
 import type {
+  ResolvePassValidationForPassDependencies
+} from "../../../../src/v11/application/pass/passValidationGate.js";
+import type {
   ExecuteNormalPassDeliveryDependencies
 } from "../../../../src/v11/application/pass/normalPassDeliveryExecution.js";
 import type {
@@ -83,6 +86,9 @@ describe("normalPassFlowInvocationBuilders", () => {
     let persistDependencies:
       PersistNormalPassPostAppendDependencies
       | undefined;
+    let passValidationDependencies:
+      ResolvePassValidationForPassDependencies
+      | undefined;
     let deliveryDependencies:
       ExecuteNormalPassDeliveryDependencies
       | undefined;
@@ -93,6 +99,26 @@ describe("normalPassFlowInvocationBuilders", () => {
     const built = buildNormalPassFlowDependencies<{ ok: true }>({
       prepareNormalPassAppend: () => ({}) as never,
       executeNormalPassAppend: async () => ({}) as never,
+      resolvePassValidationForPass: async (_input, dependencies) => {
+        passValidationDependencies = dependencies;
+        return {
+          validationRefs: []
+        };
+      },
+      resolvePassValidationPolicy: () => ({
+        policyState: "policy_missing",
+        commands: [],
+        requiredCommandSetId: null
+      }),
+      runPassValidationCommand: async () => ({
+        command: "pnpm typecheck",
+        exitCode: 0,
+        logPath: ".pairflow/evidence/pass-validation-typecheck.log",
+        durationMs: 1
+      }),
+      buildPassValidationEvidenceArtifact: async () => ({}) as never,
+      writePassValidationEvidenceArtifact: async () => undefined,
+      writePassValidationReviewerCompatibilityArtifact: async () => undefined,
       persistNormalPassPostAppend: async (_input, dependencies) => {
         persistDependencies = dependencies;
         return {
@@ -124,10 +150,19 @@ describe("normalPassFlowInvocationBuilders", () => {
       buildNormalPassResult: () => ({ ok: true })
     });
 
+    await built.resolvePassValidationForPass({} as never);
     await built.persistNormalPassPostAppend({} as never);
     await built.executeNormalPassDelivery({} as never);
     await built.finalizeNormalPass({} as never);
 
+    expect(passValidationDependencies).toBeDefined();
+    expect(typeof passValidationDependencies?.resolvePassValidationPolicy).toBe("function");
+    expect(typeof passValidationDependencies?.runPassValidationCommand).toBe("function");
+    expect(typeof passValidationDependencies?.buildPassValidationEvidenceArtifact).toBe("function");
+    expect(typeof passValidationDependencies?.writePassValidationEvidenceArtifact).toBe("function");
+    expect(
+      typeof passValidationDependencies?.writePassValidationReviewerCompatibilityArtifact
+    ).toBe("function");
     expect(persistDependencies).toBeDefined();
     expect(typeof persistDependencies?.writePostAppendReviewVerificationArtifact).toBe("function");
     expect(typeof persistDependencies?.writePostAppendPassState).toBe("function");

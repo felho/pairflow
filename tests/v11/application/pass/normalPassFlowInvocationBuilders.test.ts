@@ -141,6 +141,23 @@ describe("normalPassFlowInvocationBuilders", () => {
           id: "env_pass_01"
         } as never
       }),
+      resolvePassValidationForPass: async () => ({
+        validationRefs: []
+      }),
+      resolvePassValidationPolicy: () => ({
+        policyState: "policy_missing",
+        commands: [],
+        requiredCommandSetId: null
+      }),
+      runPassValidationCommand: async () => ({
+        command: "pnpm typecheck",
+        exitCode: 0,
+        logPath: ".pairflow/evidence/pass-validation-typecheck.log",
+        durationMs: 1
+      }),
+      buildPassValidationEvidenceArtifact: async () => ({}) as never,
+      writePassValidationEvidenceArtifact: async () => undefined,
+      writePassValidationReviewerCompatibilityArtifact: async () => undefined,
       persistNormalPassPostAppend: async () => ({
         written: {
           state: {
@@ -185,6 +202,7 @@ describe("normalPassFlowInvocationBuilders", () => {
 
     expect(dependencies.prepareNormalPassAppend).toBeTypeOf("function");
     expect(dependencies.executeNormalPassAppend).toBeTypeOf("function");
+    expect(dependencies.resolvePassValidationForPass).toBeTypeOf("function");
     expect(dependencies.persistNormalPassPostAppend).toBeTypeOf("function");
     expect(dependencies.executeNormalPassDelivery).toBeTypeOf("function");
     expect(dependencies.finalizeNormalPass).toBeTypeOf("function");

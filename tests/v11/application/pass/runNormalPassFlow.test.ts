@@ -81,6 +81,12 @@ describe("runNormalPassFlow", () => {
             envelope: { id: "env_1" } as never
           };
         },
+        resolvePassValidationForPass: async () => {
+          callOrder.push("resolve-pass-validation");
+          return {
+            validationRefs: []
+          };
+        },
         persistNormalPassPostAppend: async () => {
           callOrder.push("persist-post-append");
           return {
@@ -107,6 +113,7 @@ describe("runNormalPassFlow", () => {
 
     expect(callOrder).toEqual([
       "prepare-append",
+      "resolve-pass-validation",
       "execute-append",
       "persist-post-append",
       "execute-delivery",
@@ -118,6 +125,9 @@ describe("runNormalPassFlow", () => {
 
   it("uses original findings for implementer sender during finalization", async () => {
     let finalizeFindings: unknown;
+    let appendRefs: string[] | undefined;
+    let deliveryDirective: unknown;
+    let finalizeDirective: unknown;
 
     await runNormalPassFlow(
       {
@@ -176,19 +186,38 @@ describe("runNormalPassFlow", () => {
           findingsForPayload: [{ title: "normalized", priority: "P2" }],
           lockPath: "/tmp/locks/b_123.lock"
         }),
-        executeNormalPassAppend: async () => ({
-          sequence: 12,
-          envelope: { id: "env_2" } as never
+        executeNormalPassAppend: async (appendInput) => {
+          appendRefs = appendInput.refs;
+          return {
+            sequence: 12,
+            envelope: { id: "env_2" } as never
+          };
+        },
+        resolvePassValidationForPass: async () => ({
+          reviewerTestDirective: {
+            skip_full_rerun: true,
+            reason_code: "no_trigger",
+            reason_detail: "validated",
+            verification_status: "trusted"
+          },
+          validationRefs: [".pairflow/evidence/pass-validation-typecheck.log"]
         }),
         persistNormalPassPostAppend: async () => ({
           written: { state: { state: "RUNNING" } } as never
         }),
-        executeNormalPassDelivery: async () => ({
-          deliveryResult: undefined,
-          deliveryRetried: false
-        }),
+        executeNormalPassDelivery: async (deliveryInput) => {
+          deliveryDirective = deliveryInput.reviewerTestDirective;
+          return {
+            deliveryResult: undefined,
+            deliveryRetried: false,
+            ...(deliveryInput.reviewerTestDirective !== undefined
+              ? { reviewerTestDirective: deliveryInput.reviewerTestDirective }
+              : {})
+          };
+        },
         finalizeNormalPass: async (input) => {
           finalizeFindings = input.findings;
+          finalizeDirective = input.reviewerTestDirective;
           return { ok: true };
         }
       }
@@ -197,5 +226,20 @@ describe("runNormalPassFlow", () => {
     expect(finalizeFindings).toEqual([
       { title: "implementer-findings", priority: "P1" }
     ]);
+    expect(appendRefs).toEqual([
+      ".pairflow/evidence/pass-validation-typecheck.log"
+    ]);
+    expect(deliveryDirective).toEqual({
+      skip_full_rerun: true,
+      reason_code: "no_trigger",
+      reason_detail: "validated",
+      verification_status: "trusted"
+    });
+    expect(finalizeDirective).toEqual({
+      skip_full_rerun: true,
+      reason_code: "no_trigger",
+      reason_detail: "validated",
+      verification_status: "trusted"
+    });
   });
 });

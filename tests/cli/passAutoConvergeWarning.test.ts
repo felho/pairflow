@@ -99,6 +99,7 @@ describe("runCli auto-converge warning parity", () => {
       repeatCleanReasonDetail: "base_precondition_not_met",
       repeatCleanTrigger: false,
       mostRecentPreviousReviewerCleanPassEnvelope: false,
+      passValidationCompatibilityArtifactWriteFailureReason: "compat_write_failed",
       delivery: {
         delivered: false,
         reason: "tmux_send_failed",
@@ -123,6 +124,9 @@ describe("runCli auto-converge warning parity", () => {
     );
     expect(stderr).toContain(
       "Warning: handoff delivery to active pane was not confirmed (reason: tmux_send_failed)."
+    );
+    expect(stderr).toContain(
+      "Warning: PASS validation compatibility artifact update failed during PASS handling (reason: compat_write_failed)."
     );
     expect(stderr).toContain(
       "Use `pairflow bubble status --id b_pass_01` and `pairflow bubble resume --id b_pass_01` if the next agent did not start."

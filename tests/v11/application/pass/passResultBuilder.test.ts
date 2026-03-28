@@ -82,7 +82,8 @@ describe("passResultBuilder", () => {
       repeatCleanReasonCode: "REPEAT_CLEAN_TRIGGER_NOT_MET",
       repeatCleanReasonDetail: "base_precondition_not_met",
       repeatCleanTrigger: false,
-      mostRecentPreviousReviewerCleanPassEnvelope: false
+      mostRecentPreviousReviewerCleanPassEnvelope: false,
+      passValidationCompatibilityArtifactWriteFailureReason: "compat_write_failed"
     });
 
     expect(result).toMatchObject({
@@ -93,7 +94,8 @@ describe("passResultBuilder", () => {
       repeatCleanReasonCode: "REPEAT_CLEAN_TRIGGER_NOT_MET",
       repeatCleanReasonDetail: "base_precondition_not_met",
       repeatCleanTrigger: false,
-      mostRecentPreviousReviewerCleanPassEnvelope: false
+      mostRecentPreviousReviewerCleanPassEnvelope: false,
+      passValidationCompatibilityArtifactWriteFailureReason: "compat_write_failed"
     });
     expect("delivery" in result).toBe(false);
     expect("docGateArtifactWriteFailureReason" in result).toBe(false);

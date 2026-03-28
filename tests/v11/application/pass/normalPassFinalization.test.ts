@@ -28,6 +28,7 @@ describe("finalizeNormalPass", () => {
         repeatCleanReasonDetail: "base_precondition_not_met",
         repeatCleanTrigger: false,
         fallbackMostRecentPreviousReviewerCleanPassEnvelope: false,
+        passValidationCompatibilityArtifactWriteFailureReason: "compat_write_failed",
         findings: [],
         sequence: 5,
         envelope: {
@@ -65,7 +66,13 @@ describe("finalizeNormalPass", () => {
 
     expect(emitted).toBe(true);
     expect(capturedMetricInput?.transitionDecision).toBe("normal_pass");
+    expect(capturedMetricInput?.passValidationCompatibilityArtifactWriteFailureReason).toBe(
+      "compat_write_failed"
+    );
     expect(capturedResultInput?.mostRecentPreviousReviewerCleanPassEnvelope).toBe(false);
+    expect(capturedResultInput?.passValidationCompatibilityArtifactWriteFailureReason).toBe(
+      "compat_write_failed"
+    );
     expect(capturedResultInput?.delivery).toEqual({
       delivered: true,
       retried: false

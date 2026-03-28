@@ -37,6 +37,7 @@ export interface BuildPassLifecycleMetricMetadataInput {
   mostRecentPreviousReviewerCleanPassEnvelope: boolean;
   findings: Finding[];
   reviewerTestDirective?: ReviewerTestExecutionDirective;
+  passValidationCompatibilityArtifactWriteFailureReason?: string;
   docGateArtifactWriteFailureReason?: string;
 }
 
@@ -82,6 +83,13 @@ export function buildPassLifecycleMetricMetadata(
           reviewer_test_evidence_reason_code: input.reviewerTestDirective.reason_code,
           reviewer_test_evidence_verification_status:
             input.reviewerTestDirective.verification_status
+        }
+      : {}),
+    ...(input.passValidationCompatibilityArtifactWriteFailureReason !== undefined
+      ? {
+          pass_validation_reviewer_compat_artifact_write_failed: true,
+          pass_validation_reviewer_compat_artifact_write_failure_reason:
+            input.passValidationCompatibilityArtifactWriteFailureReason
         }
       : {}),
     ...buildFindingCounts(input.findings),

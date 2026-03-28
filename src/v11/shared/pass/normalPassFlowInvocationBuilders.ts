@@ -1,6 +1,10 @@
 import type { BubblePaths } from "../../../core/bubble/paths.js";
 import type { PassDeliveryDependencies } from "../../application/pass/reviewerDelivery.js";
 import type {
+  resolvePassValidationForPass as ResolvePassValidationForPassFn,
+  ResolvePassValidationForPassDependencies
+} from "../../application/pass/passValidationGate.js";
+import type {
   ExecuteNormalPassDeliveryDependencies,
   ExecuteNormalPassDeliveryInput,
   ExecuteNormalPassDeliveryResult
@@ -95,6 +99,18 @@ export interface BuildNormalPassFlowDependenciesInput<TResult> {
     RunNormalPassFlowDependencies<TResult>["prepareNormalPassAppend"];
   executeNormalPassAppend:
     RunNormalPassFlowDependencies<TResult>["executeNormalPassAppend"];
+  resolvePassValidationForPass:
+    typeof ResolvePassValidationForPassFn;
+  resolvePassValidationPolicy:
+    ResolvePassValidationForPassDependencies["resolvePassValidationPolicy"];
+  runPassValidationCommand:
+    ResolvePassValidationForPassDependencies["runPassValidationCommand"];
+  buildPassValidationEvidenceArtifact:
+    ResolvePassValidationForPassDependencies["buildPassValidationEvidenceArtifact"];
+  writePassValidationEvidenceArtifact:
+    ResolvePassValidationForPassDependencies["writePassValidationEvidenceArtifact"];
+  writePassValidationReviewerCompatibilityArtifact:
+    ResolvePassValidationForPassDependencies["writePassValidationReviewerCompatibilityArtifact"];
   persistNormalPassPostAppend: (
     input: PersistNormalPassPostAppendInput,
     dependencies: PersistNormalPassPostAppendDependencies
@@ -137,6 +153,33 @@ export function buildNormalPassFlowDependencies<TResult>(
   return {
     prepareNormalPassAppend: input.prepareNormalPassAppend,
     executeNormalPassAppend: input.executeNormalPassAppend,
+    resolvePassValidationForPass: (passValidationInput) =>
+      input.resolvePassValidationForPass(passValidationInput, {
+        ...(input.resolvePassValidationPolicy !== undefined
+          ? { resolvePassValidationPolicy: input.resolvePassValidationPolicy }
+          : {}),
+        ...(input.runPassValidationCommand !== undefined
+          ? { runPassValidationCommand: input.runPassValidationCommand }
+          : {}),
+        ...(input.buildPassValidationEvidenceArtifact !== undefined
+          ? {
+              buildPassValidationEvidenceArtifact:
+                input.buildPassValidationEvidenceArtifact
+            }
+          : {}),
+        ...(input.writePassValidationEvidenceArtifact !== undefined
+          ? {
+              writePassValidationEvidenceArtifact:
+                input.writePassValidationEvidenceArtifact
+            }
+          : {}),
+        ...(input.writePassValidationReviewerCompatibilityArtifact !== undefined
+          ? {
+              writePassValidationReviewerCompatibilityArtifact:
+                input.writePassValidationReviewerCompatibilityArtifact
+            }
+          : {})
+      }),
     persistNormalPassPostAppend: (persistInput) =>
       input.persistNormalPassPostAppend(persistInput, {
         writePostAppendReviewVerificationArtifact:
