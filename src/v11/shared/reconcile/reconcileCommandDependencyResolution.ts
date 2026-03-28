@@ -4,6 +4,9 @@ import {
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  persistPassValidationRecoveryMarker
+} from "../../../core/runtime/passValidationEvidence.js";
+import {
   readRuntimeSessionsRegistry,
   removeRuntimeSessions,
   type RuntimeSessionsRegistry
@@ -20,6 +23,7 @@ export interface ResolvedReconcileRuntimeSessionsDependencies {
   listBubbleIdSet: ListBubbleIdSet;
   readRuntimeSessionsRegistry: typeof readRuntimeSessionsRegistry;
   removeRuntimeSessions: typeof removeRuntimeSessions;
+  persistPassValidationRecoveryMarker: typeof persistPassValidationRecoveryMarker;
   readStateSnapshot: typeof readStateSnapshot;
   isFinalState: typeof isFinalState;
   countRegistryEntries: (registry: RuntimeSessionsRegistry) => number;
@@ -59,6 +63,9 @@ export function resolveReconcileRuntimeSessionsDependencies(
       dependencies.readRuntimeSessionsRegistry ?? readRuntimeSessionsRegistry,
     removeRuntimeSessions:
       dependencies.removeRuntimeSessions ?? removeRuntimeSessions,
+    persistPassValidationRecoveryMarker:
+      dependencies.persistPassValidationRecoveryMarker
+      ?? persistPassValidationRecoveryMarker,
     readStateSnapshot: dependencies.readStateSnapshot ?? readStateSnapshot,
     isFinalState: dependencies.isFinalState ?? isFinalState,
     countRegistryEntries:

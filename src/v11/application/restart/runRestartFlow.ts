@@ -12,6 +12,16 @@ export async function runRestartFlow(
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
   });
 
+  const markerPersistence = await dependencies.persistPassValidationRecoveryMarker({
+    repoPath: resolved.repoPath,
+    bubbleId: resolved.bubbleId,
+    flow: "restart",
+    ...(resolved.bubblePaths.worktreePath !== undefined
+      ? { worktreePath: resolved.bubblePaths.worktreePath }
+      : {}),
+    ...(input.now !== undefined ? { now: input.now } : {})
+  });
+
   const terminated = await dependencies.terminateBubbleTmuxSession({
     bubbleId: resolved.bubbleId
   });
@@ -33,6 +43,9 @@ export async function runRestartFlow(
     tmuxSessionName: started.tmuxSessionName,
     worktreePath: started.worktreePath,
     previousTmuxSessionExisted: terminated.existed,
-    previousRuntimeSessionRemoved: removed
+    previousRuntimeSessionRemoved: removed,
+    ...(markerPersistence.warnings.length > 0
+      ? { warnings: markerPersistence.warnings }
+      : {})
   };
 }

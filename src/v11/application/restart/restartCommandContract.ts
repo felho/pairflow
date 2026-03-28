@@ -1,4 +1,8 @@
 import type { removeRuntimeSession } from "../../../core/runtime/sessionsRegistry.js";
+import type {
+  persistPassValidationRecoveryMarker,
+  PassValidationRecoveryMarkerPersistWarning
+} from "../../../core/runtime/passValidationEvidence.js";
 import type { terminateBubbleTmuxSession } from "../../../core/runtime/tmuxManager.js";
 import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import type {
@@ -20,11 +24,13 @@ export interface RestartBubbleResult {
   worktreePath: string;
   previousTmuxSessionExisted: boolean;
   previousRuntimeSessionRemoved: boolean;
+  warnings?: PassValidationRecoveryMarkerPersistWarning[] | undefined;
 }
 
 export interface RestartBubbleDependencies {
   resolveBubbleById?: typeof resolveBubbleById;
   terminateBubbleTmuxSession?: typeof terminateBubbleTmuxSession;
   removeRuntimeSession?: typeof removeRuntimeSession;
+  persistPassValidationRecoveryMarker?: typeof persistPassValidationRecoveryMarker;
   startBubble?: typeof startBubble;
 }

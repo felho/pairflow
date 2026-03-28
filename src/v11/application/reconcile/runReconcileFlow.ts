@@ -1,8 +1,8 @@
 import { join } from "node:path";
 
 import type {
-  ReconcileRuntimeSessionsAction,
   ReconcileRuntimeSessionsReport,
+  ReconcileRuntimeSessionsAction,
   RuntimeSessionStaleReason,
   TmuxSessionLivenessProbe
 } from "./reconcileCommandContract.js";
@@ -73,6 +73,7 @@ export async function runReconcileFlow(
   const sessionsBefore = dependencies.countRegistryEntries(registry);
   const actions: ReconcileRuntimeSessionsAction[] = [];
   const staleBubbleIds: string[] = [];
+  const staleSessionWorktreePaths = new Map<string, string>();
   const reasonCounts: Partial<Record<RuntimeSessionStaleReason, number>> = {};
 
   for (const bubbleId of Object.keys(registry).sort((a, b) => a.localeCompare(b))) {
@@ -100,13 +101,53 @@ export async function runReconcileFlow(
     });
     reasonCounts[reason] = (reasonCounts[reason] ?? 0) + 1;
     staleBubbleIds.push(bubbleId);
+    staleSessionWorktreePaths.set(bubbleId, session.worktreePath);
   }
 
   let removedCount = 0;
+  const warnings: NonNullable<ReconcileRuntimeSessionsReport["warnings"]> = [];
   if (!input.dryRun && staleBubbleIds.length > 0) {
+    const eligibleForRemoval: string[] = [];
+    const markerBlockedBubbleIds = new Set<string>();
+    for (const staleBubbleId of staleBubbleIds) {
+      const worktreePath = staleSessionWorktreePaths.get(staleBubbleId);
+      const markerPersistence =
+        await dependencies.persistPassValidationRecoveryMarker({
+          repoPath,
+          bubbleId: staleBubbleId,
+          flow: "reconcile",
+          ...(worktreePath !== undefined ? { worktreePath } : {})
+        });
+      warnings.push(...markerPersistence.warnings);
+      if (markerPersistence.persisted_targets.includes("repo:repo_runtime_marker")) {
+        eligibleForRemoval.push(staleBubbleId);
+      } else {
+        markerBlockedBubbleIds.add(staleBubbleId);
+      }
+    }
+
+    for (const action of actions) {
+      if (markerBlockedBubbleIds.has(action.bubbleId)) {
+        action.removalBlockedByRecoveryMarker = true;
+      }
+    }
+
+    if (eligibleForRemoval.length === 0) {
+      return {
+        repoPath,
+        dryRun: input.dryRun,
+        sessionsBefore,
+        sessionsAfter: sessionsBefore,
+        staleCandidates: actions.length,
+        reasonCounts,
+        actions,
+        ...(warnings.length > 0 ? { warnings } : {})
+      };
+    }
+
     const result = await dependencies.removeRuntimeSessions({
       sessionsPath,
-      bubbleIds: staleBubbleIds
+      bubbleIds: eligibleForRemoval
     });
     const removedSet = new Set(result.removedBubbleIds);
     removedCount = result.removedBubbleIds.length;
@@ -123,6 +164,7 @@ export async function runReconcileFlow(
     sessionsAfter: input.dryRun ? sessionsBefore : sessionsBefore - removedCount,
     staleCandidates: actions.length,
     reasonCounts,
-    actions
+    actions,
+    ...(warnings.length > 0 ? { warnings } : {})
   };
 }
