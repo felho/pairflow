@@ -242,6 +242,7 @@ function buildApproveReportJson(input?: {
 describe("notifyMetaReviewerSubmissionRequest", () => {
   it("sends required structured submit command with --report-json parity fields", async () => {
     const tmuxCalls: string[][] = [];
+    let captureCount = 0;
     await notifyMetaReviewerSubmissionRequest(
       {
         bubbleId: "b_meta_gate_notify_01",
@@ -252,8 +253,12 @@ describe("notifyMetaReviewerSubmissionRequest", () => {
         runTmux: async (args) => {
           tmuxCalls.push(args);
           if (args[0] === "capture-pane") {
+            captureCount += 1;
             return {
-              stdout: "trusted pane",
+              stdout:
+                captureCount >= 2
+                  ? "# [pairflow] bubble=b_meta_gate_notify_01 meta-review request round=4."
+                  : "trusted pane",
               stderr: "",
               exitCode: 0
             };
@@ -281,6 +286,37 @@ describe("notifyMetaReviewerSubmissionRequest", () => {
     expect(messageCall?.[4]).toContain("findings_claimed_open_total");
     expect(messageCall?.[4]).toContain("findings_blocking_open_total");
     expect(messageCall?.[4]).toContain("findings_advisory_open_total");
+  });
+
+  it("fails fast when the meta-reviewer pane already fell back to interactive shell", async () => {
+    await expect(
+      notifyMetaReviewerSubmissionRequest(
+        {
+          bubbleId: "b_meta_gate_notify_exit_01",
+          round: 2,
+          targetPane: "pf_meta_structured:0.3"
+        },
+        {
+          runTmux: async (args) => {
+            if (args[0] === "capture-pane") {
+              return {
+                stdout: [
+                  "codex exited (code 0). Dropping to interactive shell.",
+                  "bash-3.2$"
+                ].join("\n"),
+                stderr: "",
+                exitCode: 0
+              };
+            }
+            return {
+              stdout: "",
+              stderr: "",
+              exitCode: 0
+            };
+          }
+        }
+      )
+    ).rejects.toThrow(/interactive shell/u);
   });
 });
 
