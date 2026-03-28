@@ -3,7 +3,7 @@
 ## Status
 - Date: 2026-03-08
 - Owner: felho
-- State: Planned
+- State: Implementable
 
 ## Objective
 Deterministic, orchestrator-owned validation gate bevezetese az implementer `pairflow pass` handoff boundary-n, hogy code bubble atadas csak sikeres, trusted projekt-validacio utan tortenhessen, es a reviewer full rerun csak akkor maradjon meg, ha az orchestrator nem tud biztonsagosan trusted evidence-re tamaszkodni.
@@ -24,10 +24,24 @@ A Pairflow flow-ban ma az implementer gyakran futtat validaciot, majd a reviewer
 3. Authority owner: az orchestrator dont a validacio trust statuszarol; sem az implementer summary-claim, sem a reviewer sajat feltetelezese nem authority.
 4. Kotelezo command forras: bubble config `[commands]`.
 5. Required validation command set: a bubble/project altal PASS boundary-ra explicit modon kijelolt, mar feloldott validation commandok.
-6. Az orchestrator eloszor trusted Pairflow-generated evidence ujrahasznosithatosagat ellenorzi.
-7. Ha a reuse feltetelek nem teljesulnek, az orchestrator maga futtatja a required validation command setet Pairflow-beli belso validation runnerrel, determinisztikus sorrend + fail-fast policy mellett.
-8. A belso runner automatikusan canonical evidence logot es metadata artifactot ir a futtatott required validation commandokhoz.
-9. Null command set csak explicit project/bubble policyval elfogadhato; implicit hiany nem eleg trusted skip alapnak.
+6. Az orchestrator eloszor explicit PASS-boundary policy-allapotot old fel.
+7. `policy_configured` allapotban eloszor trusted Pairflow-generated evidence ujrahasznosithatosagat ellenorzi.
+8. Ha `policy_configured` allapotban a reuse feltetelek nem teljesulnek, az orchestrator maga futtatja a required validation command setet Pairflow-beli belso validation runnerrel, determinisztikus sorrend + fail-fast policy mellett.
+9. A belso runner automatikusan canonical evidence logot es metadata artifactot ir a futtatott required validation commandokhoz.
+10. A PASS-boundary policy feloldasakor a `policy_missing`, `policy_configured` es `policy_explicit_null` allapotok kulonbozoek; ezek nem kezelhetok ekvivalensnek.
+11. Null command set csak explicit project/bubble policyval elfogadhato; implicit hiany vagy meg nem konfiguralt policy nem eleg trusted skip alapnak.
+
+## Execution Sequence (Normative)
+1. A gate eloszor actor + artifact-type alapon eldonti, hogy a Phase 1 hard gate egyaltalan alkalmazando-e; ez csak implementer + `review_artifact_type=code` esetben igaz.
+2. A `[commands]` config/policy alapjan eloszor explicit policy-allapotot old fel: `policy_missing`, `policy_configured` vagy `policy_explicit_null`. Csak ezutan oldja fel az ordered required validation command setet es annak stable coverage markeret (`required_command_set_id` vagy ekvivalens azonosito), ha az adott allapot ezt ertelmezhetove teszi.
+3. Ha az allapot `policy_missing`, a gate ezt onboarding/setup helyzetnek tekinti: nem trusted success, nem explicit null-set success, nem hard fail. Canonical metadata artifactot ir `trust_reason_code=pass_validation_policy_missing` jelzessel, trusted reuse shortcut nelkul, majd a BC7a szerinti untrusted reviewer `run_checks` direktivaval folytatja a PASS handoffot.
+4. Ha az allapot `policy_explicit_null`, a gate runner futtatas nelkul sikeres a BC4c szerinti explicit null-set pathon, canonical metadata artifactot ir `commands=[]` tartalommal, majd a BC7 szerinti normal PASS handoffra lep tovabb.
+5. Ha az allapot `policy_configured`, de a feloldott command set barmely kotelezo eleme hianyzik, invalid, nem futtathato, vagy ervenytelen implicit ures halmazra oldodik, a PASS a BC5/BC6/BC9 szerinti reviewer delivery nelkuli deterministic hard failure-rel megall.
+6. Ha az allapot `policy_configured` es a feloldott command set ervenyes, az orchestrator megprobalja a legfrissebb Pairflow-generated validation evidence reuse-olhatosagat ellenorizni ugyanarra a bubble/round/allapot kombinaciora.
+7. Ha a reuse check sikeres, a gate a canonical metadata artifactot es a hozza tartozo korabbi evidence refeket PASS inputkent ujrahasznositja, majd a normal PASS handoff valtozatlanul folytatodik az orchestrator altal meghatarozott reviewer direktivaval.
+8. Ha a reuse check `stale`, `mismatch` vagy recovery-uncertainty okbol elbukik, az orchestrator ezt a BC3a szerinti reuse-denial diagnosztikakent rogziti, majd determinisztikusan atvalt a BC4 szerinti fallback futtatasra.
+9. Ha a fallback futtatas sikeres, a gate friss canonical evidence logokat + metadata artifactot ir, ezeket a PASS evidence-hez csatolja, majd tovabblep a reviewer deliveryre.
+10. Ha a fallback futtatas barmely kotelezo ponton elbukik, a PASS a BC5/BC6/BC9 szerinti reviewer delivery nelkuli deterministic feedbackkel megall.
 
 ## Out of Scope (Phase 1)
 1. Pre-commit/pre-push hook bevezetese.
@@ -55,6 +69,16 @@ Given bubble config `[commands]`,
 When a PASS boundary-ra required validation command setet feloldjuk,  
 Then a rendszer kizarolag config/policy altal feloldott parancsokat hasznal, repo-hardcode nelkul.
 
+### BC2a - Policy State Separation
+Given a PASS-boundary validation policy a bubble config/policy surface-bol oldodik fel,  
+When az orchestrator a gate-et ertekeli,  
+Then pontosan egy explicit policy-allapot ervenyesul:
+1. `policy_missing` - nincs meg explicit PASS-boundary validation policy konfiguracio,
+2. `policy_configured` - van explicit policy es az legalabb egy kotelezo validation commandot jelol ki,
+3. `policy_explicit_null` - van explicit policy es az szandekosan ures required setet jelol ki,
+4. e harom allapot nem ekvivalens: `policy_missing` nem kezelheto se explicit null-set successkent, se configured hard-failurekent,
+5. kizarolag `policy_configured` allapotban alkalmazhato a BC9 szerinti hard fail, es kizarolag `policy_explicit_null` allapotban ervenyes a BC4c szerinti runner-nelkuli success path.
+
 ### BC3 - Trusted Evidence Reuse Check
 Given letezik Pairflow-generated korabbi validation evidence,  
 When az orchestrator a PASS handoffot ertekeli,  
@@ -66,19 +90,15 @@ Then csak akkor reuse-olhatja azt, ha egyszerre teljesul:
 5. nincs a futas ota watchdog/reconcile recovery jellegu bizonytalansagi esemeny,
 6. es az evidence legfeljebb `30 perc`e keszult.
 
+### BC3a - Reuse Denial Semantics
+Given a reuse check `pass_validation_evidence_stale`, `pass_validation_evidence_mismatch` vagy `pass_validation_evidence_recovery_uncertain` okbol meghiusul,  
+When az orchestrator a PASS handoffot ertekeli,  
+Then ez onmagaban nem terminal gate failure, hanem fallback-trigger: a denial okot metadata/diagnosztika szinten rogziti, majd a gate a BC4 szerinti sajat futtatassal folytatodik.
+
 ### BC4 - Orchestrator Fallback Execution
 Given a trusted evidence reuse check barmely ponton elbukik,  
 When a gate fut,  
 Then az orchestrator Pairflow-beli belso validation runnerrel maga futtatja a feloldott required validation command setet determinisztikus sorrendben es fail-fast policyval.
-
-### BC4b - Fail-Fast Return Policy
-Given a required validation command set tobb commandot tartalmaz,  
-When az orchestrator fallback futtatast vegez,  
-Then:
-1. a commandokat a canonical required-set sorrendben futtatja,
-2. az elso non-zero exit vagy execution error utan azonnal leall,
-3. nem probalja ugyanabban a gate korben a kesobbi commandokat is lefuttatni,
-4. az implementernek a mar lefutott commandok eredmenyeit es az elso bukas deterministic diagnosztikajat adja vissza.
 
 ### BC4a - Internal Runner Contract
 Given egy required validation command futtatasa szukseges,  
@@ -89,25 +109,60 @@ Then:
 3. stabil eredmenyt ad vissza legalabb `command`, `exit_code`, `log_path` mezokkel,
 4. nem probal framework-specifikus CI parser lenni; a gate dontes alapja a runner exit statusza es a sajat futtatasi eredmenye.
 
+### BC4b - Fail-Fast Return Policy
+Given a required validation command set tobb commandot tartalmaz,  
+When az orchestrator fallback futtatast vegez,  
+Then:
+1. a commandokat a canonical required-set sorrendben futtatja,
+2. az elso non-zero exit vagy execution error utan azonnal leall,
+3. nem probalja ugyanabban a gate korben a kesobbi commandokat is lefuttatni,
+4. az implementernek a mar lefutott commandok eredmenyeit es az elso bukas deterministic diagnosztikajat adja vissza.
+
+### BC4c - Explicit Null-Set Success Path
+Given a required validation command set uresre oldodik fel es ezt explicit project/bubble policy engedelyezi,  
+When implementer `pairflow pass` fut code bubble-ben,  
+Then a gate nem tekinti ezt command-hianynak, nem indit fallback runnert, canonical metadata artifactot ir `commands=[]` coverage-gel, es a normal PASS handoff valtozatlanul folytatodik.
+
 ### BC5 - Failure Behavior
 Given barmely required validation command nem sikeres,  
 When az orchestrator-owned gate fut,  
 Then a PASS reviewerhez nem megy tovabb, deterministic feedback megy vissza az implementernek, es a parancs non-zero exittel all le.
 
 ### BC6 - Diagnostics Contract
-Given gate failure,  
-When hiba riportalasa tortenik,  
-Then az uzenet tartalmazza a hibas commandot, exit kodot, evidence/log hivatkozast es stabil, gepileg feldolgozhato reason code-ot a kovetkezo keszletbol:
-1. `pass_validation_command_failed` - required validation command non-zero exit.
-2. `pass_validation_command_missing` - a required validation command set barmely kotelezo eleme hianyzik vagy ures.
-3. `pass_validation_execution_error` - command runner inditasi/runtime hiba (ideertve timeoutot a meglovo runner policy szerint).
-4. `pass_validation_evidence_stale` - letezo Pairflow-generated evidence mar nem reuse-olhato freshness/trust okbol.
-5. `pass_validation_evidence_mismatch` - letezo Pairflow-generated evidence nem ugyanarra a worktree state-re vagy command setre vonatkozik.
+Given terminal gate failure output vagy reuse-denial diagnosztika generalasa,  
+When hiba/diagnosztika riportalasa tortenik,  
+Then:
+1. a terminal gate-failure uzenet tartalmazza a hibas commandot (ha van), exit kodot (ha van), evidence/log hivatkozast (ha van) es stabil, gepileg feldolgozhato terminal reason code-ot,
+2. a canonical Phase 1 reason-code vocabulary normativan harom csoportra valik:
+   - terminal gate-failure kodok:
+     1. `pass_validation_command_failed` - required validation command non-zero exit,
+     2. `pass_validation_command_missing` - `policy_configured` allapotban a feloldott required validation command set barmely kotelezo eleme hianyzik, invalid, nem futtathato, vagy az explicit policy ervenytelen implicit ures halmazra oldodik,
+     3. `pass_validation_execution_error` - command runner inditasi/runtime hiba (ideertve timeoutot a meglovo runner policy szerint),
+   - setup / onboarding diagnosztikak:
+     4. `pass_validation_policy_missing` - nincs meg explicit PASS-boundary validation policy; ez nem trusted success, nem explicit null-set success, nem terminal hard failure, hanem onboarding/setup jelzes, amely reviewer `run_checks` direktivahoz vezet,
+   - reuse-denial / fallback-trigger diagnosztikak:
+     5. `pass_validation_evidence_stale` - letezo Pairflow-generated evidence mar nem reuse-olhato freshness/trust okbol; ez reuse-denial/fallback trigger, nem onallo terminal failure, ha a fallback futtatas sikeres,
+     6. `pass_validation_evidence_mismatch` - letezo Pairflow-generated evidence nem ugyanarra a worktree state-re vagy command setre vonatkozik; ez reuse-denial/fallback trigger, nem onallo terminal failure, ha a fallback futtatas sikeres,
+     7. `pass_validation_evidence_recovery_uncertain` - a reuse ota watchdog/reconcile recovery vagy ezzel ekvivalens runtime-helyreallitasi esemeny tortent, ezert a korabbi evidence trusted reuse-ja tiltott; ez reuse-denial/fallback trigger, nem onallo terminal failure, ha a fallback futtatas sikeres,
+3. `pass_validation_policy_missing`, `pass_validation_evidence_stale`, `pass_validation_evidence_mismatch` es `pass_validation_evidence_recovery_uncertain` nem jelenhet meg terminal gate-failure reason code-kent, ha a handoff a maga allapotaban tovabb folytatodik.
 
 ### BC7 - Success Behavior
-Given a trusted evidence reuse check sikeres vagy minden required orchestrator-run command sikeres,  
+Given a trusted evidence reuse check sikeres, vagy a required validation command set explicit null-set policyval ervenyes `commands=[]` success pathra oldodik fel, vagy minden required orchestrator-run command sikeres,  
 When `pairflow pass` fut,  
-Then a normal PASS handoff valtozatlanul folytatodik, a gate altal eloallitott evidence logok automatikusan canonical PASS refekkent csatolodnak, es a reviewer `skip_full_rerun` vagy `run_checks` direktivat az orchestrator dontese alapjan kapja meg.
+Then a normal PASS handoff valtozatlanul folytatodik, a gate altal eloallitott canonical evidence artifactok automatikusan PASS inputta valnak, es:
+1. ha legalabb egy required command lefutott, a gate altal eloallitott evidence logok canonical PASS refekkent csatolodnak,
+2. ha explicit null-set policy ervenyesult, canonical metadata artifact keszul, de evidence log ref nem kotelezo, mert nem futott command,
+3. a reviewer `skip_full_rerun` vagy `run_checks` direktivat az orchestrator dontese alapjan kapja meg, beleertve az explicit null-set success pathot is.
+
+### BC7a - Missing Policy Onboarding Path
+Given a PASS-boundary policy `policy_missing` allapotra oldodik fel,  
+When implementer `pairflow pass` fut code bubble-ben,  
+Then a gate:
+1. nem tekinti ezt trusted successnek,
+2. nem tekinti ezt explicit null-set successnek,
+3. nem hasznal trusted evidence reuse shortcutot,
+4. canonical metadata artifactot ir `trust_reason_code=pass_validation_policy_missing` jelzessel es onboarding/setup warninggal,
+5. a reviewernek untrusted `run_checks` direktivat ad, es a PASS handoff hard fail nelkul folytatodik.
 
 ### BC8 - Non-Code Safety
 Given `review_artifact_type=document` bubble,  
@@ -115,7 +170,7 @@ When implementer PASS fut,
 Then ez a Phase 1 hard gate nem aktiv.
 
 ### BC9 - Missing Command Safety
-Given a feloldott required validation command set barmely kotelezo eleme hianyzik, ures vagy nem futtathato,  
+Given a policy-allapot `policy_configured`, es a feloldott required validation command set barmely kotelezo eleme hianyzik, invalid vagy nem futtathato, vagy az explicit policy ervenytelen implicit ures halmazra oldodik,  
 When implementer `pairflow pass` fut,  
 Then a command futtatasa helyett azonnali hard fail tortenik `reason_code=pass_validation_command_missing` mellett, PASS envelope append nelkul.
 
@@ -132,8 +187,12 @@ Then ez az implementer boundary hard gate nem valtoztatja a reviewer PASS semant
 5. Canonical lognev policy Phase 1-ben: a runner command-kind vagy stable command-id alapu lognevet hasznal; a pontos fajlnev a feloldott command sethez kotott, nem fixen `typecheck.log`/`test.log`.
 6. Null command set csak explicit project/bubble policyval ervenyes; implicit command-hiany eseten trusted skip nem engedelyezett.
 7. Trusted metadata artifact location: `.pairflow/artifacts/pass-validation-evidence.json`.
+8. A `required_command_set_id` ugyanannak a resolver-outputnak az ordered command-id + resolved `run` string materializaciojabol kepzodik evidence-irasnal es reuse-ellenorzesnel; ad-hoc kulon hash-eles nem elfogadhato. Ugyanez a lezart policy az Implementation Decisions 12-ben is rogzitett.
+9. Explicit null-set policy eseten is canonical metadata artifact jon letre `commands=[]` tartalommal; ilyenkor evidence log hianya nem hiba, mert nem futott command.
 
-### Recommended Config Shape (Phase 1 target)
+### Illustrative Config Shape (Not Required Deliverable For This Phase 1 Task)
+
+Ez a shape csak illustrative target a policy-allapotok szemantikajahoz. A jelen task nem teszi implicit kotelezettsegge a bubble config schema/parser/renderer migraciojat ehhez a formatumhoz; eleg, ha a meglovo config surface determinisztikusan fel tudja oldani a `policy_missing|policy_configured|policy_explicit_null` allapotokat.
 
 Example:
 
@@ -168,7 +227,7 @@ Format rules:
 2. A `commands.validation.<id>.run` shell string a futtatando command.
 3. A `validation_required` csak mar definialt `<id>`-kre hivatkozhat.
 4. `validation_required = []` csak `validation_required_explicit = true` mellett ervenyes.
-5. A Phase 1 target formatum celja a stable command-id + required-set coverage; ha a jelenlegi schema ettol elter, az implementacio reszekent ehhez kell kozeliteni.
+5. Ez az illustrative shape a stable command-id + required-set coverage egyik lehetseges celalakja; ha a jelenlegi schema ettol elter, ez a task nem implicit schema-migracios megbizas.
 
 ## Mechanism Decision
 
@@ -205,6 +264,7 @@ Trusted evidence metadata contract (minimum):
    - `trust_reason_code`
    - `commands[]`
    - `required_command_set_id` vagy ezzel ekvivalens stable coverage marker
+   - `reuse_denied_reason_code`, ha korabbi evidence vizsgalata fallbackre terelte a gate-et; egyebkent `null` (`pass_validation_evidence_stale|pass_validation_evidence_mismatch|pass_validation_evidence_recovery_uncertain`)
 3. `commands[]` minimum mezoi:
    - `kind`
    - `command`
@@ -216,8 +276,12 @@ Trust decision policy:
 1. Az implementer altal Pairflow runnerrel eloallitott evidence csak optimalizacios input lehet.
 2. A reviewer rerun elhagyasarol az orchestrator dont a metadata + freshness/trust szabalyok alapjan.
 3. Ha a reuse check nem sikeres, az orchestrator ujrafuttatja a required validation command setet es csak a sajat gate-altal validalt eredmenyt tekinti authoritative-nek.
+4. Explicit null-set policy eseten nincs runner-futtatas, de az orchestrator altal eloallitott metadata artifact marad az authority arra, hogy ezen a PASS boundary-n nem volt kotelezo futtatando validation command.
+5. `policy_missing` eseten nincs trusted reuse shortcut, a metadata onboarding/setup jelzes marad, es a reviewer direktiva `run_checks`.
 
 ## Change Surface
+Ez a Phase 1 task a gate-orchestration, diagnostics es evidence/trust logika pontositasarol szol. Bubble config schema/parser/renderer migracio az illustrative target shape fele nem implicit resze ennek a required change surface-nek.
+
 Required:
 1. `src/core/agent/pass.ts` - PASS command orchestration entry a gate-be kotve.
 2. `src/v11/application/pass/normalPassDeliveryExecution.ts` vagy a hozzatartozo orchestration/dependency wiring - orchestrator-owned validation decision a reviewer delivery elott.
@@ -230,42 +294,54 @@ Optional (csak ha szukseges a contract-konzisztenciahoz):
 2. `tests/core/reviewer/testEvidence.test.ts` - regresszio.
 3. `src/core/runtime/tmuxDelivery.ts` es kapcsolodo docs - rovid guidance pontositas.
 
+Out of scope here:
+1. Bubble config schema/parser/renderer migracio csak azert, hogy az illustrative target shape fizikailag megegyezzen a dokumentacios peldaval.
+
 ## Acceptance Criteria (Binary)
-1. `review_artifact_type=code` bubble-ben az orchestrator a reviewer delivery elott mindig elvegzi a trusted evidence reuse checket.
-2. Reuse csak akkor engedelyezett, ha egyezik a `head_sha`, a `git_status_hash`, a round, a required validation command set coverage, es az evidence maximum `30 perc`es.
-3. Reuse check bukasa eseten az orchestrator determinisztikusan lefuttatja a required validation command setet fail-fast policyval.
+1. `review_artifact_type=code` bubble-ben az orchestrator a reviewer delivery elott mindig elvegzi a policy-allapot feloldasat, es `policy_configured` allapotban trusted evidence reuse checket is futtat.
+2. Reuse csak `policy_configured` allapotban engedelyezett, ha egyezik a `head_sha`, a `git_status_hash`, a round, a required validation command set coverage, nincs a futas ota recovery-bizonytalansagi esemeny, es az evidence maximum `30 perc`es.
+3. Reuse check bukasa eseten az orchestrator `policy_configured` allapotban determinisztikusan lefuttatja a required validation command setet fail-fast policyval.
 4. Elso bukasnal a futas fail-fast megall, a PASS reviewerhez nem jut el, es deterministic feedback megy vissza az implementernek.
 5. Gate siker eseten a PASS handoff normalisan megtortenik.
 6. Required validation command set forrasa config/policy feloldas; nincs repo-specifikus hardcode fallback.
-7. Failure outputban szerepel: failed command, exit code, evidence/log utvonal, es a Phase 1 reason code keszlet egy eleme (`pass_validation_command_failed|pass_validation_command_missing|pass_validation_execution_error|pass_validation_evidence_stale|pass_validation_evidence_mismatch`).
+7. Terminal gate failure outputban szerepel a failed command/exit code/evidence-log adat, amikor az adott hibatipushoz ertelmezheto, es a canonical reason code keszletbol megfelelo kodot hasznal (`pass_validation_command_failed|pass_validation_command_missing|pass_validation_execution_error`); a `pass_validation_policy_missing|pass_validation_evidence_stale|pass_validation_evidence_mismatch|pass_validation_evidence_recovery_uncertain` kodok nem-terminalis setup/reuse-denial diagnosztikak.
 8. `review_artifact_type=document` bubble viselkedese valtozatlan marad (Phase 1 gate nem fut).
-9. Required validation command set hiany/ures config eseten azonnali hard fail tortenik (`pass_validation_command_missing`) reviewer delivery nelkul, kiveve ha explicit null command set policy van beallitva.
+9. `policy_configured` allapotban required validation command set hiany/invalid/nem futtathato/ervenytelen implicit ures config eseten azonnali hard fail tortenik (`pass_validation_command_missing`) reviewer delivery nelkul.
 10. Composite verify script hasznalat dokumentalt marad (peldaul `commands.verify` jellegu project-defined commanddal).
 11. A gate altal futtatott required validation commandok canonical evidence logjai automatikusan letrejonnek stable `.pairflow/evidence/*.log` utvonalakon.
-12. A trusted metadata artifact canonical formaban letrejon es tartalmazza legalabb: `head_sha`, `git_status_hash`, `round`, `producer_role`, `generated_at`, `commands[]`, es a required command set coverage markeret.
+12. A trusted metadata artifact canonical formaban letrejon es tartalmazza legalabb: `head_sha`, `git_status_hash`, `round`, `producer_role`, `generated_at`, `commands[]`, a required command set coverage markeret, es a conditional `reuse_denied_reason_code` mezot; explicit null-set policy eseten is letrejon `commands=[]` tartalommal.
 13. A reviewer nem nyers metadata trust-logika alapjan dont, hanem az orchestrator `skip_full_rerun` / `run_checks` direktivaja alapjan.
-14. Erintett tesztek lefedik legalabb: reuse success, reuse stale, reuse mismatch, orchestrator fallback run, pass success, pass fail, command source, missing-command, explicit null-set policy, code/document scope split, reviewer-pass regression, evidence-log es metadata artifact letrehozas.
+14. Erintett tesztek lefedik legalabb: reuse success, reuse stale, reuse mismatch, recovery-uncertain reuse denial, orchestrator fallback run, pass success, pass fail, command source, configured-policy missing-command, execution_error, code/document scope split, reviewer-pass regression, evidence-log es metadata artifact letrehozas.
+15. `policy_explicit_null` allapotban a gate kulon binary success case-kent viselkedik: runner futtatasa nelkul sikeres PASS boundary-t enged, canonical metadata artifactot ir `commands=[]` tartalommal, es a reviewer tovabbra is orchestrator-owned `skip_full_rerun` vagy `run_checks` direktivat kap.
+16. `policy_missing` allapotban a gate onboarding/setup warninggal es `trust_reason_code=pass_validation_policy_missing` metadata jelzessel nem-trusted handoffot ad, reviewer `run_checks` direktivaval, trusted reuse shortcut es hard fail nelkul.
 
 ## Test Mapping
 1. AC1/AC2/AC3/AC4/AC5 -> pass flow tests + orchestrator delivery tests
-2. AC6/AC7/AC9 -> pass flow tests (+ opcionisan `tests/core/reviewer/testEvidence.test.ts`)
-3. AC8 -> regresszios eset `review_artifact_type=document` scenariora
-4. AC13/AC14 -> explicit scenario coverage: reviewer isolation, reuse success/failure, missing-command hard fail
+2. AC6 -> command source resolution tests
+3. AC7/AC9/AC16 -> diagnostics + policy-state routing tests, beleertve a terminal failure, setup/onboarding es reuse-denial reason code csoportokat
+4. AC8 -> regresszios eset `review_artifact_type=document` scenariora
 5. AC10 -> docs coverage (task-level command contract pelda)
 6. AC11/AC12 -> runner + metadata artifact tests
+7. AC13 -> reviewer isolation / orchestrator directive routing
+8. AC14 -> explicit scenario coverage: reuse success/failure, recovery-uncertain reuse denial, execution_error, configured-policy missing-command hard fail
+9. AC15 -> explicit null-set success path
 
 ## Implementation Decisions (Resolved in this task)
 1. Multi-command policy: fail-fast.
 2. Command order: a feloldott required validation command set determinisztikus sorrendje; ezt a command-set resolver adja vissza.
 3. Timeout policy: nem vezet be uj override mechanizmust; a meglovo command runner timeout policy ervenyes.
-4. Reason code policy: a Phase 1 gate-hez kotott canonical keszlet `pass_validation_command_failed|pass_validation_command_missing|pass_validation_execution_error|pass_validation_evidence_stale|pass_validation_evidence_mismatch`.
+4. Reason code policy: a Phase 1 gate-hez kotott canonical keszlet `pass_validation_command_failed|pass_validation_command_missing|pass_validation_execution_error|pass_validation_policy_missing|pass_validation_evidence_stale|pass_validation_evidence_mismatch|pass_validation_evidence_recovery_uncertain`.
 5. Evidence-letrehozas policy: a PASS gate runner maga irja a canonical `.pairflow/evidence/*.log` fajlokat; ez nem a projekt scriptjeinek felelossege.
 6. Command execution policy: a runner thin wrapper, nem framework-specifikus parser/proxy.
 7. Authority policy: a reviewer test rerun skipelesehez trusted evidence authority-je az orchestrator.
 8. Freshness policy: maximum `30 perc`, ugyanaz a round, nincs recovery-esemeny a futas utan.
 9. State match policy: reuse-hoz kotelezo a `head_sha` es `git_status_hash` egyezese.
 10. PASS success eseten a gate-generated log refek automatikusan bekerulnek a PASS evidence-be.
-11. Null command set csak explicit project/bubble policyval ervenyes; ez nem lehet implicit config-hiany kovetkezmenye.
+11. Policy-state separation: `policy_missing`, `policy_configured` es `policy_explicit_null` nem ekvivalens allapotok; az elso onboarding path, a masodik enforced policy, a harmadik runner-nelkuli explicit success path.
+12. Coverage marker policy: a `required_command_set_id` ugyanannak a resolver-outputnak az ordered command-id + resolved `run` string materializaciojabol jon letre evidence-irasnal es reuse-ellenorzesnel is. Ez a Configuration Notes 8-ban leirt invarians lezart valtozata.
+13. Reuse-denial policy: a `pass_validation_evidence_stale|pass_validation_evidence_mismatch|pass_validation_evidence_recovery_uncertain` kodok fallback-trigger diagnosztikak, nem vegso gate failure-ok, ha a fallback futtatas sikeres.
+14. Explicit null-set policy: code bubble-ben is sikeres PASS boundary-t jelenthet, de ekkor is canonical metadata artifact keszul `commands=[]` tartalommal.
+15. Missing-policy behavior: `policy_missing` nem trusted success es nem hard failure; onboarding/setup warninggal es reviewer `run_checks` direktivaval folytatja a handoffot.
 
 ## Notes
 Ez a task szandekosan csak PASS-boundary validation hardening. CI/hook tovabbra is opcionlis, masodlagos defense-in-depth retegek maradnak.
