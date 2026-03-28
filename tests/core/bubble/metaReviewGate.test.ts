@@ -298,6 +298,54 @@ describe("notifyMetaReviewerSubmissionRequest", () => {
     expect(messageCall?.[4]).not.toContain("--report-markdown");
   });
 
+  it("accepts a request marker that already scrolled out of the visible viewport", async () => {
+    const tmuxCalls: string[][] = [];
+    await notifyMetaReviewerSubmissionRequest(
+      {
+        bubbleId: "b_meta_gate_notify_history_01",
+        round: 4,
+        targetPane: "pf_meta_structured:0.3"
+      },
+      {
+        runTmux: async (args) => {
+          tmuxCalls.push(args);
+          if (args[0] === "capture-pane") {
+            const capturesScrollback =
+              args.includes("-S") && args.includes("-");
+            return {
+              stdout: capturesScrollback
+                ? [
+                    "# [pairflow] bubble=b_meta_gate_notify_history_01 meta-review request round=4.",
+                    "",
+                    "Thinking through the review..."
+                  ].join("\n")
+                : "Thinking through the review...",
+              stderr: "",
+              exitCode: 0
+            };
+          }
+          return {
+            stdout: "",
+            stderr: "",
+            exitCode: 0
+          };
+        }
+      }
+    );
+
+    const captureCall = tmuxCalls.find(
+      (args) => args[0] === "capture-pane" && args.includes("-S")
+    );
+    expect(captureCall).toEqual([
+      "capture-pane",
+      "-p",
+      "-t",
+      "pf_meta_structured:0.3",
+      "-S",
+      "-"
+    ]);
+  });
+
   it("fails fast when the meta-reviewer pane already fell back to interactive shell", async () => {
     await expect(
       notifyMetaReviewerSubmissionRequest(

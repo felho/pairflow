@@ -78,9 +78,12 @@ async function assertMetaReviewRequestSubmitted(input: {
 }): Promise<void> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     await sleep(800);
-    const capture = await input.runTmux(["capture-pane", "-pt", input.targetPane], {
-      allowFailure: true
-    });
+    const capture = await input.runTmux(
+      ["capture-pane", "-p", "-t", input.targetPane, "-S", "-"],
+      {
+        allowFailure: true
+      }
+    );
     if (capture.exitCode === 0) {
       if (paneShowsExitedCodexShell(capture.stdout)) {
         throw createMetaReviewNotifyError({
