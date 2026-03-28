@@ -1,3 +1,5 @@
+import { buildMetaReviewSubmitUsageLine } from "../../../core/runtime/metaReviewSubmitGuidance.js";
+
 export { parseBubbleMetaReviewCommandOptions } from "./metaReviewCliOptionParser.js";
 export type {
   BubbleMetaReviewCommandOptions,
@@ -16,7 +18,7 @@ export function getBubbleMetaReviewHelpText(): string {
     "  pairflow bubble meta-review status --id <id> [--repo <path>] [--json] [--verbose]",
     "  pairflow bubble meta-review last-report --id <id> [--repo <path>] [--json] [--verbose]",
     "  pairflow bubble meta-review recover --id <id> [--repo <path>] [--json]",
-    "  pairflow bubble meta-review submit --id <id> --round <n> --recommendation approve|rework|inconclusive --summary <text> [--rework-target-message <text>] --report-json <json> [--repo <path>] [--json]",
+    `  ${buildMetaReviewSubmitUsageLine()}`,
     "",
     "Options:",
     "  --id <id>             Bubble id",

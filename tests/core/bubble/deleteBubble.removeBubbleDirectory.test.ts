@@ -39,6 +39,7 @@ function buildDependencies(): DeleteBubbleDependencies {
 
   return {
     resolveBubbleById,
+    pathExists: vi.fn(async () => false),
     branchExists: vi.fn(() => Promise.resolve(false)),
     runTmux: vi.fn(() => Promise.resolve({
       stdout: "",

@@ -4,10 +4,18 @@ import {
   submitTmuxPaneInput
 } from "../../../core/runtime/tmuxInput.js";
 import { runTmux } from "../../../core/runtime/tmuxManager.js";
+import {
+  buildMetaReviewSubmitApproveParityNote,
+  buildMetaReviewSubmitCommandTemplate
+} from "../../../core/runtime/metaReviewSubmitGuidance.js";
 import type {
   NotifyMetaReviewerSubmissionRequestDependencies,
   NotifyMetaReviewerSubmissionRequestInput
 } from "./metaReviewGateTypes.js";
+
+const metaReviewerPaneExitedReasonCode = "META_REVIEWER_PANE_EXITED";
+const metaReviewRequestDeliveryUnconfirmedReasonCode =
+  "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED";
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolvePromise) => {
@@ -53,6 +61,16 @@ function detectSubmittedMarker(text: string, marker: string): MarkerStatus {
   return "stuck_in_input";
 }
 
+function createMetaReviewNotifyError(input: {
+  reasonCode: string;
+  message: string;
+  context: Record<string, unknown>;
+}): Error {
+  return new Error(
+    `${input.reasonCode}: ${input.message} ${JSON.stringify(input.context)}`
+  );
+}
+
 async function assertMetaReviewRequestSubmitted(input: {
   runTmux: typeof runTmux;
   targetPane: string;
@@ -65,9 +83,14 @@ async function assertMetaReviewRequestSubmitted(input: {
     });
     if (capture.exitCode === 0) {
       if (paneShowsExitedCodexShell(capture.stdout)) {
-        throw new Error(
-          "meta-reviewer pane fell back to interactive shell after Codex exit."
-        );
+        throw createMetaReviewNotifyError({
+          reasonCode: metaReviewerPaneExitedReasonCode,
+          message: "meta-reviewer pane fell back to interactive shell after Codex exit.",
+          context: {
+            target_pane: input.targetPane,
+            request_marker: input.marker
+          }
+        });
       }
 
       const markerStatus = detectSubmittedMarker(capture.stdout, input.marker);
@@ -82,9 +105,15 @@ async function assertMetaReviewRequestSubmitted(input: {
     }
   }
 
-  throw new Error(
-    "meta-reviewer pane did not confirm structured submit request delivery."
-  );
+  throw createMetaReviewNotifyError({
+    reasonCode: metaReviewRequestDeliveryUnconfirmedReasonCode,
+    message: "meta-reviewer pane did not confirm structured submit request delivery.",
+    context: {
+      target_pane: input.targetPane,
+      request_marker: input.marker,
+      attempt_limit: 3
+    }
+  });
 }
 
 export async function notifyMetaReviewerSubmissionRequest(
@@ -96,7 +125,7 @@ export async function notifyMetaReviewerSubmissionRequest(
   const message = [
     `# [pairflow] ${requestMarker}`,
     "Perform autonomous meta-review now, then submit through structured Pairflow CLI (no pane markers).",
-    `Required command (include --report-json parity fields): pairflow bubble meta-review submit --id ${input.bubbleId} --round ${input.round} --recommendation <approve|rework|inconclusive> --summary "<summary>" --report-markdown "<markdown>" [--rework-target-message "<message>"] --report-json '{"findings_claim_state":"clean|open_findings|unknown","findings_claim_source":"meta_review_artifact","findings_count":<int>,"findings_claimed_open_total":<int>,"findings_blocking_open_total":<int>,"findings_advisory_open_total":<int>,"findings_artifact_ref":"artifacts/...","meta_review_run_id":"<run-id>","findings_digest_sha256":"<sha256>","findings_artifact_status":"available"}'. For recommendation=approve, split triplet is required, claimed must equal blocking+advisory, and blocking must be 0.`
+    `Required command (include --report-json parity fields): ${buildMetaReviewSubmitCommandTemplate({ bubbleId: input.bubbleId, round: input.round })}. ${buildMetaReviewSubmitApproveParityNote()}`
   ].join(" ");
 
   await maybeAcceptClaudeTrustPrompt(runner, input.targetPane).catch(() => undefined);

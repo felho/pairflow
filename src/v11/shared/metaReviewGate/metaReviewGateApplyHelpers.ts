@@ -1,4 +1,5 @@
 import type { appendProtocolEnvelope, AppendProtocolEnvelopeResult } from "../../../core/protocol/transcriptStore.js";
+import { buildMetaReviewSubmitCommandTemplate } from "../../../core/runtime/metaReviewSubmitGuidance.js";
 import {
   type LoadedStateSnapshot,
   type writeStateSnapshot
@@ -34,7 +35,7 @@ export async function appendMetaReviewKickoffEnvelope(input: {
   const kickoffSummary = [
     `Meta-review gate opened for bubble ${input.bubbleId} round ${input.round}.`,
     "Submit result through structured CLI:",
-    `pairflow bubble meta-review submit --id ${input.bubbleId} --round ${input.round} --recommendation <approve|rework|inconclusive> --summary "<summary>" --report-markdown "<markdown>" [--rework-target-message "<message>"] --report-json '{"findings_claim_state":"clean|open_findings|unknown","findings_claim_source":"meta_review_artifact","findings_count":<int>,"findings_claimed_open_total":<int>,"findings_blocking_open_total":<int>,"findings_advisory_open_total":<int>,"findings_artifact_ref":"artifacts/...","meta_review_run_id":"<run-id>","findings_digest_sha256":"<sha256>","findings_artifact_status":"available"}'.`
+    `${buildMetaReviewSubmitCommandTemplate({ bubbleId: input.bubbleId, round: input.round })}.`
   ].join(" ");
 
   return input.appendEnvelope({

@@ -6,6 +6,7 @@ import {
   resolveDeliveryMessageRef,
   retryStuckAgentInput
 } from "../../../src/core/runtime/tmuxDelivery.js";
+import { buildMetaReviewSubmitCommandTemplate } from "../../../src/core/runtime/metaReviewSubmitGuidance.js";
 import {
   REVIEWER_COMMAND_GATE_FORBIDDEN,
   REVIEWER_COMMAND_GATE_REQ_A,
@@ -232,12 +233,16 @@ describe("emitTmuxDeliveryNotification", () => {
         call[4]?.includes("Meta-review task received.")
     );
     expect(metaReviewMessageCall?.[4]).toContain("--report-json");
+    expect(metaReviewMessageCall?.[4]).toContain(
+      buildMetaReviewSubmitCommandTemplate()
+    );
     expect(metaReviewMessageCall?.[4]).toContain("findings_claim_state");
     expect(metaReviewMessageCall?.[4]).toContain("findings_claim_source");
     expect(metaReviewMessageCall?.[4]).toContain("findings_count");
     expect(metaReviewMessageCall?.[4]).toContain("findings_claimed_open_total");
     expect(metaReviewMessageCall?.[4]).toContain("findings_blocking_open_total");
     expect(metaReviewMessageCall?.[4]).toContain("findings_advisory_open_total");
+    expect(metaReviewMessageCall?.[4]).not.toContain("--report-markdown");
   });
 
   it("falls back to legacy recipient mapping when delivery target role token is invalid", async () => {

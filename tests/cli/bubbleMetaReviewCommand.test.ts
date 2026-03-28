@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { buildMetaReviewSubmitUsageLine } from "../../src/core/runtime/metaReviewSubmitGuidance.js";
 import {
   getBubbleMetaReviewHelpText,
   parseBubbleMetaReviewCommandOptions,
@@ -214,6 +215,8 @@ describe("parseBubbleMetaReviewCommandOptions", () => {
     const parsed = parseBubbleMetaReviewCommandOptions(["--help"]);
     expect(parsed).toEqual({ help: true });
     expect(getBubbleMetaReviewHelpText()).toContain("pairflow bubble meta-review");
+    expect(getBubbleMetaReviewHelpText()).toContain(buildMetaReviewSubmitUsageLine());
+    expect(getBubbleMetaReviewHelpText()).not.toContain("--report-markdown");
   });
 
   it("rejects unknown subcommands", () => {

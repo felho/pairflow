@@ -12,6 +12,10 @@ import {
   buildReviewerScoutExpansionWorkflowGuidance
 } from "../../../core/runtime/reviewerScoutExpansionGuidance.js";
 import {
+  buildMetaReviewSubmitApproveParityNote,
+  buildMetaReviewSubmitCommandTemplate
+} from "../../../core/runtime/metaReviewSubmitGuidance.js";
+import {
   buildReviewerCanonicalCommandGateLines,
   buildReviewerFindingsPassInstruction
 } from "../../../core/runtime/reviewerCommandGateGuidance.js";
@@ -99,8 +103,8 @@ export function buildMetaReviewerStartupPrompt(input: {
     `Pairflow meta-reviewer start for bubble ${input.bubbleId}.`,
     "This is a dedicated static worker pane for autonomous meta-review tasks.",
     "Stay idle until orchestration signals a meta-review run.",
-    "When signaled, submit only through structured Pairflow CLI and always include required report-json parity fields: `pairflow bubble meta-review submit --id <id> --round <n> --recommendation <approve|rework|inconclusive> --summary \"...\" --report-markdown \"...\" --report-json '{\"findings_claim_state\":\"clean|open_findings|unknown\",\"findings_claim_source\":\"meta_review_artifact\",\"findings_count\":<int>,\"findings_claimed_open_total\":<int>,\"findings_blocking_open_total\":<int>,\"findings_advisory_open_total\":<int>,\"findings_artifact_ref\":\"artifacts/...\",\"meta_review_run_id\":\"<run-id>\",\"findings_digest_sha256\":\"<sha256>\",\"findings_artifact_status\":\"available\"}'`.",
-    "Approve semantics are split-aware: for recommendation=approve the split triplet is mandatory, `findings_claimed_open_total = findings_blocking_open_total + findings_advisory_open_total`, and `findings_blocking_open_total` must be 0 (advisory-only open findings are allowed).",
+    `When signaled, submit only through structured Pairflow CLI and always include required report-json parity fields: \`${buildMetaReviewSubmitCommandTemplate()}\`.`,
+    `${buildMetaReviewSubmitApproveParityNote()} Advisory-only open findings are allowed.`,
     "Do not modify transcript/inbox/state files manually.",
     buildPairflowCommandGuidance(
       input.worktreePath,

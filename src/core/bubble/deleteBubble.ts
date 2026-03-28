@@ -57,6 +57,7 @@ export interface DeleteBubbleInput {
 export interface DeleteBubbleDependencies {
   resolveBubbleById?: typeof resolveBubbleById;
   branchExists?: typeof branchExists;
+  pathExists?: typeof pathExists;
   runTmux?: TmuxRunner;
   readRuntimeSessionsRegistry?: typeof readRuntimeSessionsRegistry;
   terminateBubbleTmuxSession?: typeof terminateBubbleTmuxSession;
@@ -162,6 +163,7 @@ export async function deleteBubble(
   const now = input.now ?? new Date();
   const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
   const checkBranchExists = dependencies.branchExists ?? branchExists;
+  const checkPathExists = dependencies.pathExists ?? pathExists;
   const runTmuxCommand = dependencies.runTmux ?? runTmux;
   const readRuntimeSessions =
     dependencies.readRuntimeSessionsRegistry ?? readRuntimeSessionsRegistry;
@@ -199,7 +201,7 @@ export async function deleteBubble(
   });
 
   const [worktreeExists, bubbleBranchExists, runtimeSessions] = await Promise.all([
-    pathExists(resolved.bubblePaths.worktreePath),
+    checkPathExists(resolved.bubblePaths.worktreePath),
     checkBranchExists(resolved.repoPath, resolved.bubbleConfig.bubble_branch),
     readRuntimeSessions(resolved.bubblePaths.sessionsPath, {
       allowMissing: true

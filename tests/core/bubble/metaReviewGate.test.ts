@@ -9,6 +9,9 @@ import {
   applyMetaReviewGateOnConvergence,
   recoverMetaReviewGateFromSnapshot
 } from "../../../src/core/bubble/metaReviewGate.js";
+import {
+  buildMetaReviewSubmitCommandTemplate
+} from "../../../src/core/runtime/metaReviewSubmitGuidance.js";
 import { notifyMetaReviewerSubmissionRequest } from "../../../src/v11/shared/metaReviewGate/metaReviewGateNotify.js";
 import {
   appendProtocolEnvelope,
@@ -279,6 +282,12 @@ describe("notifyMetaReviewerSubmissionRequest", () => {
         args[3] === "-l"
     );
     expect(messageCall?.[4]).toContain("Required command (include --report-json parity fields):");
+    expect(messageCall?.[4]).toContain(
+      buildMetaReviewSubmitCommandTemplate({
+        bubbleId: "b_meta_gate_notify_01",
+        round: 4
+      })
+    );
     expect(messageCall?.[4]).toContain("--report-json");
     expect(messageCall?.[4]).toContain("findings_claim_state");
     expect(messageCall?.[4]).toContain("findings_claim_source");
@@ -286,6 +295,7 @@ describe("notifyMetaReviewerSubmissionRequest", () => {
     expect(messageCall?.[4]).toContain("findings_claimed_open_total");
     expect(messageCall?.[4]).toContain("findings_blocking_open_total");
     expect(messageCall?.[4]).toContain("findings_advisory_open_total");
+    expect(messageCall?.[4]).not.toContain("--report-markdown");
   });
 
   it("fails fast when the meta-reviewer pane already fell back to interactive shell", async () => {
@@ -351,6 +361,12 @@ describe("applyMetaReviewGateOnConvergence", () => {
 
     expect(result.route).toBe("meta_review_running");
     expect(result.gateEnvelope.type).toBe("TASK");
+    expect(result.gateEnvelope.payload.summary).toContain(
+      buildMetaReviewSubmitCommandTemplate({
+        bubbleId: bubble.bubbleId,
+        round: result.state.round
+      })
+    );
     expect(result.gateEnvelope.payload.summary).toContain("--report-json");
     expect(result.gateEnvelope.payload.summary).toContain("findings_claim_state");
     expect(result.gateEnvelope.payload.summary).toContain("findings_claim_source");
@@ -359,6 +375,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
     expect(result.gateEnvelope.payload.summary).toContain("findings_blocking_open_total");
     expect(result.gateEnvelope.payload.summary).toContain("findings_advisory_open_total");
     expect(result.gateEnvelope.payload.summary).not.toContain("[--report-json");
+    expect(result.gateEnvelope.payload.summary).not.toContain("--report-markdown");
     expect(result.gateEnvelope.payload.metadata).toMatchObject({
       [deliveryTargetRoleMetadataKey]: "meta_reviewer"
     });
