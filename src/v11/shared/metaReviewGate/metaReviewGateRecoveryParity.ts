@@ -32,6 +32,8 @@ function mergeRunResultWithParityResolution(input: {
   if (input.metadata !== null) {
     reportJson.findings_claimed_open_total = input.metadata.findings_claimed_open_total;
     reportJson.findings_artifact_open_total = input.metadata.findings_artifact_open_total;
+    reportJson.findings_blocking_open_total = input.metadata.findings_blocking_open_total;
+    reportJson.findings_advisory_open_total = input.metadata.findings_advisory_open_total;
     reportJson.findings_artifact_status = input.metadata.findings_artifact_status;
     reportJson.findings_digest_sha256 = input.metadata.findings_digest_sha256;
     reportJson.meta_review_run_id = input.metadata.meta_review_run_id;

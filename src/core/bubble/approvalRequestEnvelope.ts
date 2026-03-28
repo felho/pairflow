@@ -70,7 +70,12 @@ function resolveStructuredParityMetadataSnapshot(
   const advisorySplitAvailable =
     blockingOpenTotal !== null && advisoryOpenTotal !== null;
 
-  if ((claimed !== null && claimed > 0) || (artifact !== null && artifact > 0)) {
+  if (
+    (claimed !== null && claimed > 0) ||
+    (artifact !== null && artifact > 0) ||
+    (blockingOpenTotal !== null && blockingOpenTotal > 0) ||
+    (advisoryOpenTotal !== null && advisoryOpenTotal > 0)
+  ) {
     return {
       structuredClaim: "open_findings",
       parityProofAvailable,

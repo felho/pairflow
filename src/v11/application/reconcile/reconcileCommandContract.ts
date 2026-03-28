@@ -1,4 +1,8 @@
 import type { resolveRepoPath } from "../../../core/bubble/repoResolution.js";
+import type {
+  persistPassValidationRecoveryMarker,
+  PassValidationRecoveryMarkerPersistWarning
+} from "../../../core/runtime/passValidationEvidence.js";
 import type { readStateSnapshot } from "../../../core/state/stateStore.js";
 import type { isFinalState } from "../../../core/state/transitions.js";
 import type {
@@ -27,6 +31,7 @@ export interface ReconcileRuntimeSessionsAction {
   bubbleId: string;
   reason: RuntimeSessionStaleReason;
   removed: boolean;
+  removalBlockedByRecoveryMarker?: boolean | undefined;
 }
 
 export interface ReconcileRuntimeSessionsReport {
@@ -37,6 +42,7 @@ export interface ReconcileRuntimeSessionsReport {
   staleCandidates: number;
   reasonCounts: Partial<Record<RuntimeSessionStaleReason, number>>;
   actions: ReconcileRuntimeSessionsAction[];
+  warnings?: PassValidationRecoveryMarkerPersistWarning[] | undefined;
 }
 
 export type ListBubbleIdSet = (repoPath: string) => Promise<Set<string>>;
@@ -46,6 +52,7 @@ export interface ReconcileRuntimeSessionsDependencies {
   listBubbleIdSet?: ListBubbleIdSet;
   readRuntimeSessionsRegistry?: typeof readRuntimeSessionsRegistry;
   removeRuntimeSessions?: typeof removeRuntimeSessions;
+  persistPassValidationRecoveryMarker?: typeof persistPassValidationRecoveryMarker;
   readStateSnapshot?: typeof readStateSnapshot;
   isFinalState?: typeof isFinalState;
   countRegistryEntries?: (registry: RuntimeSessionsRegistry) => number;
