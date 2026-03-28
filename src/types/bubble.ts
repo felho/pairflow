@@ -46,7 +46,7 @@ export const pairflowCommandProfiles = ["external", "self_host"] as const;
 
 export type PairflowCommandProfile = (typeof pairflowCommandProfiles)[number];
 
-export const reviewArtifactTypes = ["auto", "code", "document"] as const;
+export const reviewArtifactTypes = ["code", "document"] as const;
 
 export type ReviewArtifactType = (typeof reviewArtifactTypes)[number];
 

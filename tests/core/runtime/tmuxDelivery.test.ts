@@ -28,7 +28,7 @@ const baseConfig: BubbleConfig = {
   bubble_branch: "pf/b_delivery_01",
   work_mode: "worktree",
   quality_mode: "strict",
-  review_artifact_type: "auto",
+  review_artifact_type: "code",
   pairflow_command_profile: "external",
   reviewer_context_mode: "persistent",
   watchdog_timeout_minutes: 5,

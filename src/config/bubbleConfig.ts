@@ -532,7 +532,7 @@ export function validateBubbleConfig(input: unknown): ValidationResult<BubbleCon
   if (!isReviewArtifactType(reviewArtifactType)) {
     errors.push({
       path: "review_artifact_type",
-      message: "Must be one of: auto, code, document"
+      message: "Must be one of: code, document"
     });
   }
 

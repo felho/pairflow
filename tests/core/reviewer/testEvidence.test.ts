@@ -13,10 +13,7 @@ import {
   writeReviewerTestEvidenceArtifact
 } from "../../../src/core/reviewer/testEvidence.js";
 import { initGitRepository } from "../../helpers/git.js";
-import {
-  setupRunningBubbleFixture,
-  setupRunningLegacyAutoBubbleFixture
-} from "../../helpers/bubble.js";
+import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { writeEvidenceLog } from "../../helpers/evidence.js";
 import type { BubbleConfig, ReviewArtifactType } from "../../../src/types/bubble.js";
 
@@ -195,38 +192,6 @@ describe("reviewer test evidence verification", () => {
       repoPath,
       envelope: {
         id: "msg_code_001",
-        ts: "2026-02-27T12:00:00.000Z",
-        bubble_id: bubble.bubbleId,
-        sender: bubble.config.agents.implementer,
-        recipient: bubble.config.agents.reviewer,
-        type: "PASS",
-        round: 1,
-        payload: {
-          summary: "Implementation finished"
-        },
-        refs: []
-      }
-    });
-
-    expect(artifact.status).toBe("untrusted");
-    expect(artifact.reason_code).toBe("evidence_missing");
-  });
-
-  it("keeps strict behavior for explicit auto review_artifact_type", async () => {
-    const repoPath = await createTempRepo();
-    const bubble = await setupRunningLegacyAutoBubbleFixture({
-      repoPath,
-      bubbleId: "b_test_evidence_auto_01",
-      task: "Auto task"
-    });
-
-    const artifact = await verifyImplementerTestEvidence({
-      bubbleId: bubble.bubbleId,
-      bubbleConfig: bubble.config,
-      worktreePath: bubble.paths.worktreePath,
-      repoPath,
-      envelope: {
-        id: "msg_auto_001",
         ts: "2026-02-27T12:00:00.000Z",
         bubble_id: bubble.bubbleId,
         sender: bubble.config.agents.implementer,
@@ -1781,36 +1746,27 @@ describe("reviewer test evidence verification", () => {
     expect(directive.verification_status).toBe("trusted");
   });
 
-  it("keeps strict missing-artifact behavior for code and auto wrapper inputs", async () => {
+  it("keeps strict missing-artifact behavior for code wrapper inputs", async () => {
     const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_test_evidence_wrapper_missing_code",
+      task: "Wrapper missing artifact strict behavior code",
+      reviewArtifactType: "code"
+    });
 
-    for (const reviewArtifactType of ["code", "auto"] as const) {
-      const bubble = reviewArtifactType === "auto"
-        ? await setupRunningLegacyAutoBubbleFixture({
-          repoPath,
-          bubbleId: `b_test_evidence_wrapper_missing_${reviewArtifactType}`,
-          task: `Wrapper missing artifact strict behavior ${reviewArtifactType}`
-        })
-        : await setupRunningBubbleFixture({
-          repoPath,
-          bubbleId: `b_test_evidence_wrapper_missing_${reviewArtifactType}`,
-          task: `Wrapper missing artifact strict behavior ${reviewArtifactType}`,
-          reviewArtifactType
-        });
+    const directive = await resolveReviewerTestExecutionDirective({
+      artifactPath: join(bubble.paths.artifactsDir, "missing-reviewer-evidence.json"),
+      worktreePath: bubble.paths.worktreePath,
+      reviewArtifactType: "code"
+    });
 
-      const directive = await resolveReviewerTestExecutionDirective({
-        artifactPath: join(bubble.paths.artifactsDir, "missing-reviewer-evidence.json"),
-        worktreePath: bubble.paths.worktreePath,
-        reviewArtifactType
-      });
-
-      expect(directive.skip_full_rerun).toBe(false);
-      expect(directive.reason_code).toBe("evidence_missing");
-      expect(directive.verification_status).toBe("missing");
-      expect(directive.reason_detail).toContain(
-        "No reviewer test verification artifact found for the latest implementer handoff."
-      );
-    }
+    expect(directive.skip_full_rerun).toBe(false);
+    expect(directive.reason_code).toBe("evidence_missing");
+    expect(directive.verification_status).toBe("missing");
+    expect(directive.reason_detail).toContain(
+      "No reviewer test verification artifact found for the latest implementer handoff."
+    );
   });
 
   it("returns docs-only skip directive when artifact read fails through wrapper API", async () => {

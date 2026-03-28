@@ -16,11 +16,4 @@ describe("buildReviewerAgentSelectionGuidance", () => {
     expect(guidance).toContain("primarily targets code changes");
     expect(guidance).not.toContain("Runtime checks are not required for document-only scope.");
   });
-
-  it("keeps auto guidance unchanged", () => {
-    const guidance = buildReviewerAgentSelectionGuidance("auto");
-
-    expect(guidance).toContain("Choose review mode by deliverable type");
-    expect(guidance).not.toContain("Runtime checks are not required for document-only scope.");
-  });
 });

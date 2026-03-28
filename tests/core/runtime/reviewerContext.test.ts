@@ -12,7 +12,7 @@ const baseConfig: BubbleConfig = {
   bubble_branch: "bubble/b_reviewer_ctx_01",
   work_mode: "worktree",
   quality_mode: "strict",
-  review_artifact_type: "auto",
+  review_artifact_type: "code",
   pairflow_command_profile: "external",
   reviewer_context_mode: "fresh",
   watchdog_timeout_minutes: 5,

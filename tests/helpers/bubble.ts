@@ -139,17 +139,3 @@ export async function setupRunningBubbleFixture(
 ): Promise<BubbleCreateResult> {
   return setupRunningBubbleFixtureWithOverride(input);
 }
-
-export async function setupRunningLegacyAutoBubbleFixture(
-  input: Omit<SetupRunningBubbleFixtureInput, "reviewArtifactType">
-): Promise<BubbleCreateResult> {
-  return setupRunningBubbleFixtureWithOverride(
-    {
-      ...input,
-      reviewArtifactType: "code"
-    },
-    {
-      configReviewArtifactTypeOverride: "auto"
-    }
-  );
-}

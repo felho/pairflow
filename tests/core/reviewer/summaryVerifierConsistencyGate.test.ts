@@ -169,16 +169,11 @@ describe("evaluateSummaryVerifierConsistencyGate", () => {
     expect(decision.matched_claim_triggers).toEqual([]);
   });
 
-  it("returns not_applicable for code and auto artifact types and bypasses claim detection", () => {
+  it("returns not_applicable for non-document artifact types and bypasses claim detection", () => {
     const codeDecision = evaluateSummaryVerifierConsistencyGate({
       summary: "tests pass and typecheck clean",
       reviewArtifactType: "code",
       verifierStatus: "untrusted"
-    });
-    const autoDecision = evaluateSummaryVerifierConsistencyGate({
-      summary: "tests pass and typecheck clean",
-      reviewArtifactType: "auto",
-      verifierStatus: "trusted"
     });
     const invalidDecision = evaluateSummaryVerifierConsistencyGate({
       summary: "tests pass",
@@ -186,14 +181,14 @@ describe("evaluateSummaryVerifierConsistencyGate", () => {
       verifierStatus: "trusted"
     });
 
-    for (const decision of [codeDecision, autoDecision, invalidDecision]) {
+    for (const decision of [codeDecision, invalidDecision]) {
       expect(decision.gate_decision).toBe("not_applicable");
       expect(decision.reason_code).toBe("not_applicable_non_docs");
       expect(decision.claim_classes_detected).toBe("none");
       expect(decision.matched_claim_triggers).toEqual([]);
       expect(decision).not.toHaveProperty("verifier_origin_reason");
     }
-    expect(invalidDecision.review_artifact_type).toBe("auto");
+    expect(invalidDecision.review_artifact_type).toBe("code");
   });
 
   it("keeps decision matrix invariant under rollback Toggle A/B simulation fixture", () => {
@@ -221,15 +216,8 @@ describe("evaluateSummaryVerifierConsistencyGate", () => {
         reviewArtifactType: "code",
         verifierStatus: "trusted"
       });
-      const autoNotApplicable = evaluateSummaryVerifierConsistencyGate({
-        summary: `tests pass (${fixtureSuffix})`,
-        reviewArtifactType: "auto",
-        verifierStatus: "trusted"
-      });
       expect(codeNotApplicable.gate_decision).toBe("not_applicable");
       expect(codeNotApplicable.reason_code).toBe("not_applicable_non_docs");
-      expect(autoNotApplicable.gate_decision).toBe("not_applicable");
-      expect(autoNotApplicable.reason_code).toBe("not_applicable_non_docs");
     }
   });
 
@@ -284,7 +272,7 @@ describe("evaluateSummaryVerifierConsistencyGate", () => {
       }),
       evaluateSummaryVerifierConsistencyGate({
         summary: "tests pass",
-        reviewArtifactType: "auto",
+        reviewArtifactType: "code",
         verifierStatus: "trusted"
       })
     ];

@@ -32,7 +32,7 @@ describe("bubble config schema", () => {
   it("parses valid TOML and applies defaults", () => {
     const config = parseBubbleConfigToml(baseToml);
     expect(config.quality_mode).toBe("strict");
-    expect(config.review_artifact_type).toBe("auto");
+    expect(config.review_artifact_type).toBe("code");
     expect(config.pairflow_command_profile).toBe("external");
     expect(config.reviewer_context_mode).toBe("fresh");
     expect(config.watchdog_timeout_minutes).toBe(30);
@@ -109,7 +109,7 @@ round_gate_applies_after = -1
       bubble_branch: "bubble/b_test_parse_warning_roundtrip_01",
       work_mode: "worktree",
       quality_mode: "strict",
-      review_artifact_type: "auto",
+      review_artifact_type: "code",
       pairflow_command_profile: "external",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 20,
@@ -355,7 +355,7 @@ round_gate_applies_after = -1
       bubble_branch: "bubble/b_test_01",
       work_mode: "worktree",
       quality_mode: "strict",
-      review_artifact_type: "auto",
+      review_artifact_type: "code",
       pairflow_command_profile: "external",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
@@ -406,7 +406,7 @@ round_gate_applies_after = -1
         bubble_branch: "bubble/b_test_01",
         work_mode: "worktree",
         quality_mode: "strict",
-        review_artifact_type: "auto",
+        review_artifact_type: "code",
       pairflow_command_profile: "external",
         reviewer_context_mode: "fresh",
         watchdog_timeout_minutes: 5,
@@ -442,7 +442,7 @@ round_gate_applies_after = -1
       bubble_branch: "bubble/b_test_01",
       work_mode: "worktree",
       quality_mode: "strict",
-      review_artifact_type: "auto",
+      review_artifact_type: "code",
       pairflow_command_profile: "external",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
@@ -502,7 +502,7 @@ typecheck = "pnpm typecheck"
       bubble_branch: "bubble/b_test_01",
       work_mode: "worktree",
       quality_mode: "strict",
-      review_artifact_type: "auto",
+      review_artifact_type: "code",
       pairflow_command_profile: "external",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
@@ -558,7 +558,7 @@ typecheck = "pnpm typecheck"
       bubble_branch: "bubble/b_test_01",
       work_mode: "worktree",
       quality_mode: "strict",
-      review_artifact_type: "auto",
+      review_artifact_type: "code",
       pairflow_command_profile: "external",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
@@ -591,7 +591,7 @@ typecheck = "pnpm typecheck"
       bubble_branch: "bubble/b_test_01",
       work_mode: "worktree",
       quality_mode: "strict",
-      review_artifact_type: "auto",
+      review_artifact_type: "code",
       pairflow_command_profile: "external",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
@@ -728,7 +728,7 @@ typecheck = "pnpm typecheck"
       bubble_branch: "bubble/b_test_01",
       work_mode: "worktree",
       quality_mode: "strict",
-      review_artifact_type: "auto",
+      review_artifact_type: "code",
       pairflow_command_profile: "external",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
@@ -769,7 +769,7 @@ typecheck = "pnpm typecheck"
       bubble_branch: "bubble/b_test_01",
       work_mode: "worktree",
       quality_mode: "strict",
-      review_artifact_type: "auto",
+      review_artifact_type: "code",
       pairflow_command_profile: "external",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,
@@ -804,7 +804,7 @@ typecheck = "pnpm typecheck"
       bubble_branch: "bubble/b_test_01",
       work_mode: "worktree",
       quality_mode: "strict",
-      review_artifact_type: "auto",
+      review_artifact_type: "code",
       pairflow_command_profile: "external",
       reviewer_context_mode: "fresh",
       watchdog_timeout_minutes: 5,

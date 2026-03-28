@@ -520,7 +520,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -573,7 +573,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -609,7 +609,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -651,7 +651,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -690,7 +690,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -738,7 +738,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -786,7 +786,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -834,7 +834,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -877,7 +877,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -916,7 +916,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -956,7 +956,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 4,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -1009,7 +1009,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 4,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -1062,7 +1062,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -1103,7 +1103,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -1143,7 +1143,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -1183,7 +1183,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 4,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -1231,7 +1231,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -1266,7 +1266,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -1301,7 +1301,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -1340,7 +1340,7 @@ describe("validateConvergencePolicy", () => {
         currentRound: 2,
         reviewer: "claude",
         implementer: "codex",
-        reviewArtifactType: "auto",
+        reviewArtifactType: "code",
         severity_gate_round: 4,
         roundRoleHistory: [
           {
@@ -1376,7 +1376,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -1411,7 +1411,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -1451,7 +1451,7 @@ describe("validateConvergencePolicy", () => {
         currentRound: 2,
         reviewer: "claude",
         implementer: "codex",
-        reviewArtifactType: "auto",
+        reviewArtifactType: "code",
         severity_gate_round: 4,
         roundRoleHistory: [
           {
@@ -1487,7 +1487,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -1522,7 +1522,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -1557,7 +1557,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -1597,7 +1597,7 @@ describe("validateConvergencePolicy", () => {
         currentRound: 2,
         reviewer: "claude",
         implementer: "codex",
-        reviewArtifactType: "auto",
+        reviewArtifactType: "code",
         severity_gate_round: 4,
         roundRoleHistory: [
           {
@@ -1638,7 +1638,7 @@ describe("validateConvergencePolicy", () => {
         currentRound: 2,
         reviewer: "claude",
         implementer: "codex",
-        reviewArtifactType: "auto",
+        reviewArtifactType: "code",
         severity_gate_round: 4,
         roundRoleHistory: [
           {
@@ -1687,7 +1687,7 @@ describe("validateConvergencePolicy", () => {
         currentRound: 2,
         reviewer: "claude",
         implementer: "codex",
-        reviewArtifactType: "auto",
+        reviewArtifactType: "code",
         severity_gate_round: 4,
         roundRoleHistory: [
           {
@@ -1724,7 +1724,7 @@ describe("validateConvergencePolicy", () => {
         currentRound: 2,
         reviewer: "claude",
         implementer: "codex",
-        reviewArtifactType: "auto",
+        reviewArtifactType: "code",
         severity_gate_round: 4,
         roundRoleHistory: [
           {
@@ -1772,7 +1772,7 @@ describe("validateConvergencePolicy", () => {
         currentRound: 2,
         reviewer: "claude",
         implementer: "codex",
-        reviewArtifactType: "auto",
+        reviewArtifactType: "code",
         severity_gate_round: 4,
         roundRoleHistory: [
           {
@@ -1815,7 +1815,7 @@ describe("validateConvergencePolicy", () => {
         currentRound: 2,
         reviewer: "claude",
         implementer: "codex",
-        reviewArtifactType: "auto",
+        reviewArtifactType: "code",
         severity_gate_round: 4,
         roundRoleHistory: [
           {
@@ -1856,7 +1856,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -1896,7 +1896,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -1940,7 +1940,7 @@ describe("validateConvergencePolicy", () => {
         currentRound: 2,
         reviewer: "claude",
         implementer: "codex",
-        reviewArtifactType: "auto",
+        reviewArtifactType: "code",
         severity_gate_round: 4,
         roundRoleHistory: [
           {
@@ -1985,7 +1985,7 @@ describe("validateConvergencePolicy", () => {
         currentRound: 2,
         reviewer: "claude",
         implementer: "codex",
-        reviewArtifactType: "auto",
+        reviewArtifactType: "code",
         severity_gate_round: 4,
         roundRoleHistory: [
           {
@@ -2031,7 +2031,7 @@ describe("validateConvergencePolicy", () => {
         currentRound: 2,
         reviewer: "claude",
         implementer: "codex",
-        reviewArtifactType: "auto",
+        reviewArtifactType: "code",
         severity_gate_round: 4,
         roundRoleHistory: [
           {
@@ -2079,7 +2079,7 @@ describe("validateConvergencePolicy", () => {
         currentRound: 2,
         reviewer: "claude",
         implementer: "codex",
-        reviewArtifactType: "auto",
+        reviewArtifactType: "code",
         severity_gate_round: 4,
         roundRoleHistory: [
           {
@@ -2124,7 +2124,7 @@ describe("validateConvergencePolicy", () => {
         currentRound: 2,
         reviewer: "claude",
         implementer: "codex",
-        reviewArtifactType: "auto",
+        reviewArtifactType: "code",
         severity_gate_round: 4,
         roundRoleHistory: [
           {
@@ -2169,7 +2169,7 @@ describe("validateConvergencePolicy", () => {
         currentRound: 2,
         reviewer: "claude",
         implementer: "codex",
-        reviewArtifactType: "auto",
+        reviewArtifactType: "code",
         severity_gate_round: 4,
         roundRoleHistory: [
           {
@@ -2210,7 +2210,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 3,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -2257,7 +2257,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 4,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -2310,7 +2310,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 5,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -2524,7 +2524,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 1,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -2553,7 +2553,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 3,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 4,
       roundRoleHistory: [
         {
@@ -2591,7 +2591,7 @@ describe("validateConvergencePolicy", () => {
       currentRound: 2,
       reviewer: "claude",
       implementer: "codex",
-      reviewArtifactType: "auto",
+      reviewArtifactType: "code",
       severity_gate_round: 3,
       roundRoleHistory: [
         {

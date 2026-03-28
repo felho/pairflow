@@ -24,7 +24,7 @@ function createBubbleConfig(): BubbleConfig {
     bubble_branch: "bubble/b_gates_01",
     work_mode: "worktree",
     quality_mode: "strict",
-    review_artifact_type: "auto",
+    review_artifact_type: "code",
     pairflow_command_profile: "external",
     reviewer_context_mode: "fresh",
     watchdog_timeout_minutes: 20,

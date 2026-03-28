@@ -37,10 +37,7 @@ import {
 import { resolveReviewerTestEvidenceArtifactPath } from "../../../src/core/reviewer/testEvidence.js";
 import type { EmitTmuxDeliveryNotificationInput } from "../../../src/core/runtime/tmuxDelivery.js";
 import { initGitRepository } from "../../helpers/git.js";
-import {
-  setupRunningBubbleFixture,
-  setupRunningLegacyAutoBubbleFixture
-} from "../../helpers/bubble.js";
+import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { writeEvidenceLog } from "../../helpers/evidence.js";
 
 const tempDirs: string[] = [];
@@ -3276,10 +3273,11 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
 
   it("keeps non-document reviewer findings unchanged at round>2 without doc-gate rewrites", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningLegacyAutoBubbleFixture({
+    const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_pass_scope_non_doc_01",
-      task: "Compatibility scope test"
+      task: "Compatibility scope test",
+      reviewArtifactType: "code"
     });
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
@@ -5025,10 +5023,11 @@ present`,
 
   it("falls back to run_checks reviewer directive when artifact write fails", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningLegacyAutoBubbleFixture({
+    const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_pass_17",
-      task: "Implement pass flow"
+      task: "Implement pass flow",
+      reviewArtifactType: "code"
     });
 
     await rm(bubble.paths.artifactsDir, { recursive: true, force: true });

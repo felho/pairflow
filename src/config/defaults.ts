@@ -10,7 +10,7 @@ import type {
 
 export const DEFAULT_WORK_MODE: WorkMode = "worktree";
 export const DEFAULT_QUALITY_MODE: QualityMode = "strict";
-export const DEFAULT_REVIEW_ARTIFACT_TYPE: ReviewArtifactType = "auto";
+export const DEFAULT_REVIEW_ARTIFACT_TYPE: ReviewArtifactType = "code";
 export const DEFAULT_PAIRFLOW_COMMAND_PROFILE: PairflowCommandProfile = "external";
 export const DEFAULT_REVIEWER_CONTEXT_MODE: ReviewerContextMode = "fresh";
 export const DEFAULT_WATCHDOG_TIMEOUT_MINUTES = 30;

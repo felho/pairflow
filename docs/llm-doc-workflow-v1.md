@@ -156,7 +156,7 @@ Source of truth:
 |---|---|---|---|---|
 | docs-only + no runtime claim | not required | tilos pozitiv test/typecheck/lint pass claim | nincs extra evidence requirement | kotelezo explicit docs-only formula |
 | docs-only + explicit runtime claim | required for that claim | claim csak trusted verifier mellett engedett | claimhez whitelistelt evidence ref kotelezo | claim szovegnek konzisztensnek kell lennie a verifier statusszal |
-| code/auto bubble | existing policy unchanged | existing policy applies | existing policy applies | existing policy applies |
+| code bubble | existing policy unchanged | existing policy applies | existing policy applies | existing policy applies |
 
 Standard docs-only no-claim wording:
 1. `docs-only scope, runtime checks not required in this round`
@@ -197,7 +197,7 @@ Rollout action:
 Exit criteria:
 1. Workflow doc and rollout plan both reference the same P1/2 matrix source-of-truth.
 2. Metrics registry is active (minimum one weekly measured window recorded).
-3. No policy ambiguity remains between docs-only and code/auto paths in team guidance text.
+3. No policy ambiguity remains between docs-only and code paths in team guidance text.
 
 Metrics source/cadence extract (intentional subset for operational quick-reference):
 | metric_id | Source | Cadence |
@@ -260,4 +260,4 @@ Rollback action:
 1. Historical note: the March 2026 WS-D pilot evaluated a phased ladder (`advisory-for-all-gates` -> `required-for-doc-gates` -> `required-for-all-gates`) for rollout analysis.
 2. That ladder is not an active configuration surface after `9fab8f1` and `c55a90c` removed the enforcement config surface on `2026-03-27`.
 3. Current docs-only guidance in this document is the decision matrix and wording policy above.
-4. Code/auto bubbles continue to follow the current runtime behavior; any new rollout model requires a fresh task.
+4. Code bubbles continue to follow the current runtime behavior; any new rollout model requires a fresh task.

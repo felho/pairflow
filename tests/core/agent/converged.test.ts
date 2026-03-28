@@ -23,10 +23,7 @@ import { resolveSummaryVerifierConsistencyGateArtifactPath } from "../../../src/
 import { resolveDocContractGateArtifactPath } from "../../../src/core/gates/docContractGates.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { initGitRepository } from "../../helpers/git.js";
-import {
-  setupRunningBubbleFixture,
-  setupRunningLegacyAutoBubbleFixture
-} from "../../helpers/bubble.js";
+import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
 const tempDirs: string[] = [];
 
@@ -41,23 +38,17 @@ async function setupConvergedCandidateBubble(
   repoPath: string,
   bubbleId: string,
   options?: {
-    reviewArtifactType?: "auto" | "document";
+    reviewArtifactType?: "code" | "document";
   }
 ) {
-  const bubble = options?.reviewArtifactType === "auto"
-    ? await setupRunningLegacyAutoBubbleFixture({
-      repoPath,
-      bubbleId,
-      task: "Implement + review"
-    })
-    : await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId,
-      task: "Implement + review",
-      ...(options?.reviewArtifactType !== undefined
-        ? { reviewArtifactType: options.reviewArtifactType }
-        : {})
-    });
+  const bubble = await setupRunningBubbleFixture({
+    repoPath,
+    bubbleId,
+    task: "Implement + review",
+    ...(options?.reviewArtifactType !== undefined
+      ? { reviewArtifactType: options.reviewArtifactType }
+      : {})
+  });
 
   await emitPassFromWorkspace({
     summary: "Implementation pass 1",
@@ -1905,10 +1896,11 @@ describe("emitConvergedFromWorkspace", () => {
 
   it("keeps non-document convergence blocking semantics unchanged after reviewer PASS", async () => {
     const repoPath = await createTempRepo();
-    const bubble = await setupRunningLegacyAutoBubbleFixture({
+    const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_converged_scope_non_doc_01",
-      task: "Scope compatibility"
+      task: "Scope compatibility",
+      reviewArtifactType: "code"
     });
 
     await emitPassFromWorkspace({

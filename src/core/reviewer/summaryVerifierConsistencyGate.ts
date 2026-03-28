@@ -54,7 +54,7 @@ function normalizeReviewArtifactType(input: unknown): ReviewArtifactType {
   if (isReviewArtifactType(input)) {
     return input;
   }
-  return "auto";
+  return "code";
 }
 
 function normalizeVerifierStatus(input: unknown): "trusted" | "untrusted" {
