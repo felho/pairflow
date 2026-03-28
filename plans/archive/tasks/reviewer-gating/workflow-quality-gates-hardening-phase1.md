@@ -1,9 +1,20 @@
 # Pairflow PASS Handoff Validation Hardening (Phase 1)
 
+## Archive Status
+- State: Superseded
+- Archived On: 2026-03-28
+- Superseded By:
+  - `plans/tasks/workflow-quality-gates-phase1a-pass-validation-gate-core.md`
+  - `plans/tasks/workflow-quality-gates-phase1b-pass-validation-reuse-recovery.md`
+  - `plans/tasks/workflow-quality-gates-phase1c-meta-review-approval-parity.md`
+- Archive Reason:
+  - Az eredeti task tul sok egymasba csuszo concern-t fogott ossze egyetlen implementacios szeletben.
+  - A tovabbi konvergenciahez kisebb, egy-authority-s vertikalis taskokra lett bontva.
+
 ## Status
 - Date: 2026-03-08
 - Owner: felho
-- State: Implementable
+- State: Superseded
 
 ## Objective
 Deterministic, orchestrator-owned validation gate bevezetese az implementer `pairflow pass` handoff boundary-n, hogy code bubble atadas csak sikeres, trusted projekt-validacio utan tortenhessen, es a reviewer full rerun csak akkor maradjon meg, ha az orchestrator nem tud biztonsagosan trusted evidence-re tamaszkodni.
