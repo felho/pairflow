@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -9,6 +9,7 @@ import {
   buildPairflowCommandBootstrap,
   buildPairflowCommandGuidance,
   buildPinnedPairflowCommand,
+  resolveExternalPairflowCommand,
   resolveWorktreePairflowEntrypoint
 } from "../../../src/core/runtime/pairflowCommand.js";
 
@@ -72,6 +73,32 @@ describe("pairflow command path helpers", () => {
     expect(bootstrap.join("\n")).toContain('PAIRFLOW_WRAPPER_DIR');
     expect(bootstrap.join("\n")).toContain('cat > "$PAIRFLOW_WRAPPER_DIR/pairflow"');
     expect(bootstrap.join("\n")).toContain('export PATH="$PAIRFLOW_WRAPPER_DIR:$PATH"');
+  });
+
+  it("resolves external pairflow by ignoring the worktree wrapper directory", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pairflow-command-external-"));
+    tempDirs.push(root);
+    const wrapperDir = join(root, ".pairflow", "bin");
+    const externalDir = join(root, "external-bin");
+    const wrapperCommand = join(wrapperDir, "pairflow");
+    const externalCommand = join(externalDir, "pairflow");
+
+    await mkdir(wrapperDir, { recursive: true });
+    await mkdir(externalDir, { recursive: true });
+    await writeFile(wrapperCommand, "#!/bin/sh\nexit 87\n", "utf8");
+    await writeFile(externalCommand, "#!/bin/sh\nexit 0\n", "utf8");
+    await Promise.all([
+      chmod(wrapperCommand, 0o755),
+      chmod(externalCommand, 0o755)
+    ]);
+
+    const originalPath = process.env.PATH;
+    process.env.PATH = `${wrapperDir}:${externalDir}${originalPath ? `:${originalPath}` : ""}`;
+    try {
+      expect(resolveExternalPairflowCommand(root)).toBe(externalCommand);
+    } finally {
+      process.env.PATH = originalPath;
+    }
   });
 
   it("reports stale when active entrypoint does not match the worktree-local build", () => {

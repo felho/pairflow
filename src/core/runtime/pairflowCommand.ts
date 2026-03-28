@@ -46,12 +46,25 @@ function canonicalizeExistingPath(path: string | null): string | null {
   }
 }
 
+function normalizePathForComparison(path: string): string {
+  const resolvedPath = resolve(path);
+  return process.platform === "win32"
+    ? resolvedPath.toLowerCase()
+    : resolvedPath;
+}
+
 export function resolveWorktreePairflowEntrypoint(worktreePath: string): string {
   return resolve(requireWorktreePath(worktreePath), "dist", "cli", "index.js");
 }
 
-function resolveFirstPathCommand(commandName: string): string | null {
-  const pathValue = process.env.PATH;
+function resolveFirstPathCommand(
+  commandName: string,
+  input: {
+    pathValue?: string | undefined;
+    excludedDirectories?: readonly string[] | undefined;
+  } = {}
+): string | null {
+  const pathValue = input.pathValue ?? process.env.PATH;
   if (typeof pathValue !== "string" || pathValue.trim().length === 0) {
     return null;
   }
@@ -60,7 +73,16 @@ function resolveFirstPathCommand(commandName: string): string | null {
     process.platform === "win32"
       ? [".exe", ".cmd", ".bat", ""]
       : [""];
-  const segments = pathValue.split(delimiter).filter((segment) => segment.length > 0);
+  const excludedDirectories = new Set(
+    (input.excludedDirectories ?? []).map((segment) =>
+      normalizePathForComparison(segment)
+    )
+  );
+  const segments = pathValue.split(delimiter).filter(
+    (segment) =>
+      segment.length > 0
+      && !excludedDirectories.has(normalizePathForComparison(segment))
+  );
 
   for (const segment of segments) {
     for (const suffix of suffixes) {
@@ -79,8 +101,19 @@ function resolveFirstPathCommand(commandName: string): string | null {
 
   return null;
 }
-function isExternalPairflowAvailable(): boolean {
-  return resolveFirstPathCommand("pairflow") !== null;
+
+export function resolveExternalPairflowCommand(worktreePath?: string): string | null {
+  const excludedDirectories =
+    worktreePath === undefined
+      ? []
+      : [resolve(requireWorktreePath(worktreePath), ".pairflow", "bin")];
+  return resolveFirstPathCommand("pairflow", {
+    excludedDirectories
+  });
+}
+
+function isExternalPairflowAvailable(worktreePath?: string): boolean {
+  return resolveExternalPairflowCommand(worktreePath) !== null;
 }
 
 function isPairflowDistCliEntrypoint(path: string | null): boolean {
@@ -148,7 +181,7 @@ export function assessPairflowCommandPath(input: {
   const canonicalActiveEntrypoint = canonicalizeExistingPath(activeEntrypoint);
   const pinnedCommand = buildPinnedPairflowCommand(input.worktreePath, profile);
   const externalPairflowAvailable =
-    input.externalPairflowAvailable ?? isExternalPairflowAvailable();
+    input.externalPairflowAvailable ?? isExternalPairflowAvailable(input.worktreePath);
 
   if (profile === "external") {
     const entrypointConsistency = resolveExternalEntrypointConsistency({
@@ -267,6 +300,10 @@ export function buildPairflowCommandBootstrap(
   const resolvedWorktree = requireWorktreePath(worktreePath);
   const localEntrypoint = resolveWorktreePairflowEntrypoint(resolvedWorktree);
   const wrapperDir = resolve(resolvedWorktree, ".pairflow", "bin");
+  const resolvedExternalCommand =
+    profile === "external"
+      ? resolveExternalPairflowCommand(resolvedWorktree)
+      : null;
   const externalUnavailableMessage =
     "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE: PATH-resolved `pairflow` command is unavailable. " +
     "Install pairflow globally or run with --pairflow-command-profile self_host in Pairflow self-host worktrees.";
@@ -281,7 +318,7 @@ export function buildPairflowCommandBootstrap(
       `export PAIRFLOW_WRAPPER_DIR=${shellQuote(wrapperDir)}`,
       'mkdir -p "$PAIRFLOW_WRAPPER_DIR"',
       'export PAIRFLOW_WRAPPER_PATH="$PAIRFLOW_WRAPPER_DIR/pairflow"',
-      'export PAIRFLOW_EXTERNAL_COMMAND="$(command -v pairflow || true)"',
+      `export PAIRFLOW_EXTERNAL_COMMAND=${shellQuote(resolvedExternalCommand ?? "")}`,
       'if [ "$PAIRFLOW_EXTERNAL_COMMAND" = "$PAIRFLOW_WRAPPER_PATH" ]; then',
       '  export PAIRFLOW_EXTERNAL_COMMAND=""',
       "fi",
