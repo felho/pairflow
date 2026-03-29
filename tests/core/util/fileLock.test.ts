@@ -333,20 +333,31 @@ describe("withFileLock stale lock recovery", () => {
     await setStaleMtime(lockPath);
 
     let executed = false;
-    await expect(
-      withFileLock(
-        {
-          lockPath,
-          timeoutMs: 1,
-          pollMs: 5,
-          staleAfterMs: 20
-        },
-        () => {
-          executed = true;
-          return Promise.resolve(undefined);
-        }
-      )
-    ).rejects.toBeInstanceOf(FileLockTimeoutError);
+    const dateNowSpy = vi.spyOn(Date, "now");
+    dateNowSpy
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(100)
+      .mockReturnValueOnce(100)
+      .mockReturnValueOnce(2);
+    try {
+      await expect(
+        withFileLock(
+          {
+            lockPath,
+            timeoutMs: 1,
+            pollMs: 5,
+            staleAfterMs: 20
+          },
+          () => {
+            executed = true;
+            return Promise.resolve(undefined);
+          }
+        )
+      ).rejects.toBeInstanceOf(FileLockTimeoutError);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
 
     expect(executed).toBe(false);
   });

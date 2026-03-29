@@ -195,7 +195,11 @@ describe("bubble metrics best-effort warnings", () => {
       metadata: {},
       rootPath: root,
       now,
-      lockTimeoutMs: 20,
+      // Keep enough post-recovery budget so this test validates best-effort
+      // recovery behavior rather than the file-lock contract that can still
+      // timeout after a successful stale-lock cleanup under heavy suite load.
+      lockTimeoutMs: 80,
+      staleLockRecoveryAfterMs: 20,
       reportWarning: (message) => {
         warnings.push(message);
       }
