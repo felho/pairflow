@@ -1,10 +1,11 @@
-import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
+import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import { BubbleListError, listBubbles } from "../../../src/core/bubble/listBubbles.js";
 import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
@@ -157,13 +158,24 @@ describe("listBubbles", () => {
       activeSince: null,
       lastCommandAt: "2026-02-22T18:40:00.000Z"
     });
-    const metaRunning = applyStateTransition(readyForApproval, {
-      to: "META_REVIEW_RUNNING",
-      activeAgent: "codex",
-      activeRole: "meta_reviewer",
-      activeSince: "2026-02-22T18:41:00.000Z",
-      lastCommandAt: "2026-02-22T18:41:00.000Z"
-    });
+    const metaRunning = {
+      ...readyForApproval,
+      state: "META_REVIEW_RUNNING" as const,
+      active_agent: "codex" as const,
+      active_role: "meta_reviewer" as const,
+      active_since: "2026-02-22T18:41:00.000Z",
+      last_command_at: "2026-02-22T18:41:00.000Z",
+      meta_review: {
+        ...readyForApproval.meta_review!,
+        execution_context: buildMetaReviewExecutionContext({
+          bubbleId: bubble.bubbleId,
+          round: readyForApproval.round,
+          startedAt: "2026-02-22T18:41:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        })
+      }
+    };
     const humanGate = applyStateTransition(metaRunning, {
       to: "READY_FOR_HUMAN_APPROVAL",
       lastCommandAt: "2026-02-22T18:42:00.000Z"
@@ -176,5 +188,63 @@ describe("listBubbles", () => {
     const listed = await listBubbles({ repoPath });
     expect(listed.byState.READY_FOR_HUMAN_APPROVAL).toBe(1);
     expect(listed.byState.META_REVIEW_RUNNING).toBe(0);
+  });
+
+  it("keeps legacy inspectable META_REVIEW_RUNNING bubbles visible and marks runtime session stale", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_list_legacy_meta_01",
+      task: "Legacy inspectable meta-review state"
+    });
+
+    await writeFile(
+      bubble.paths.statePath,
+      `${JSON.stringify({
+        bubble_id: bubble.bubbleId,
+        state: "META_REVIEW_RUNNING",
+        round: 1,
+        active_agent: "codex",
+        active_since: "2026-02-22T18:41:00.000Z",
+        active_role: "meta_reviewer",
+        round_role_history: [],
+        last_command_at: "2026-02-22T18:41:00.000Z",
+        meta_review: {
+          last_autonomous_run_id: null,
+          last_autonomous_status: null,
+          last_autonomous_recommendation: null,
+          last_autonomous_summary: null,
+          last_autonomous_report_ref: null,
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: null,
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      }, null, 2)}\n`,
+      "utf8"
+    );
+
+    await upsertRuntimeSession({
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      tmuxSessionName: "pf-b_list_legacy_meta_01",
+      now: new Date("2026-02-22T18:45:00.000Z")
+    });
+
+    const listed = await listBubbles({ repoPath });
+
+    expect(listed.byState.META_REVIEW_RUNNING).toBe(1);
+    expect(listed.runtimeSessions.registered).toBe(0);
+    expect(listed.runtimeSessions.stale).toBe(1);
+    expect(listed.bubbles[0]?.stateValidation?.errors).toEqual([
+      {
+        path: "meta_review.execution_context",
+        message:
+          "META_REVIEW_RUNNING state requires canonical meta_review.execution_context authority"
+      }
+    ]);
   });
 });

@@ -117,6 +117,59 @@ describe("getBubbleStatus", () => {
     expect(status.transcript.lastMessageType).toBe("HUMAN_REPLY");
   });
 
+  it("returns inspectable status for legacy META_REVIEW_RUNNING state missing execution_context", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_legacy_meta_01",
+      task: "Legacy inspectable status"
+    });
+
+    await writeFile(
+      bubble.paths.statePath,
+      `${JSON.stringify({
+        bubble_id: bubble.bubbleId,
+        state: "META_REVIEW_RUNNING",
+        round: 1,
+        active_agent: "codex",
+        active_since: "2026-02-22T14:10:00.000Z",
+        active_role: "meta_reviewer",
+        round_role_history: [],
+        last_command_at: "2026-02-22T14:10:00.000Z",
+        meta_review: {
+          last_autonomous_run_id: null,
+          last_autonomous_status: null,
+          last_autonomous_recommendation: null,
+          last_autonomous_summary: null,
+          last_autonomous_report_ref: null,
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: null,
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      }, null, 2)}\n`,
+      "utf8"
+    );
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath,
+      now: new Date("2026-02-22T14:12:00.000Z")
+    });
+
+    expect(status.state).toBe("META_REVIEW_RUNNING");
+    expect(status.watchdog.monitored).toBe(false);
+    expect(status.pendingInboxItems.total).toBe(0);
+    expect(status.stateValidation?.errors).toEqual([
+      {
+        path: "meta_review.execution_context",
+        message:
+          "META_REVIEW_RUNNING state requires canonical meta_review.execution_context authority"
+      }
+    ]);
+  });
+
   it("counts only the latest unresolved approval request as pending", async () => {
     const repoPath = await createTempRepo();
     const bubble = await createBubble({

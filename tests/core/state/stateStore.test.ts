@@ -8,6 +8,7 @@ import { createInitialBubbleState } from "../../../src/core/state/initialState.j
 import {
   StateStoreConflictError,
   createStateSnapshot,
+  inspectStateSnapshot,
   readStateSnapshot,
   writeStateSnapshot
 } from "../../../src/core/state/stateStore.js";
@@ -118,5 +119,49 @@ describe("state store", () => {
         }
       )
     ).rejects.toBeInstanceOf(StateStoreConflictError);
+  });
+
+  it("returns inspectable diagnostics for legacy META_REVIEW_RUNNING state without execution_context", async () => {
+    const dir = await createTempDir();
+    const statePath = join(dir, "state.json");
+
+    await writeFile(
+      statePath,
+      `${JSON.stringify({
+        bubble_id: "b_store_legacy_meta_01",
+        state: "META_REVIEW_RUNNING",
+        round: 2,
+        active_agent: "codex",
+        active_since: "2026-03-08T10:00:00.000Z",
+        active_role: "meta_reviewer",
+        round_role_history: [],
+        last_command_at: "2026-03-08T10:01:00.000Z",
+        meta_review: {
+          last_autonomous_run_id: null,
+          last_autonomous_status: null,
+          last_autonomous_recommendation: null,
+          last_autonomous_summary: null,
+          last_autonomous_report_ref: null,
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: null,
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      }, null, 2)}\n`,
+      "utf8"
+    );
+
+    const inspected = await inspectStateSnapshot(statePath);
+    expect(inspected.state.state).toBe("META_REVIEW_RUNNING");
+    expect(inspected.stateValidation?.errors).toEqual([
+      {
+        path: "meta_review.execution_context",
+        message:
+          "META_REVIEW_RUNNING state requires canonical meta_review.execution_context authority"
+      }
+    ]);
+
+    await expect(readStateSnapshot(statePath)).rejects.toThrow("Invalid bubble state");
   });
 });

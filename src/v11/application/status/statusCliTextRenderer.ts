@@ -24,9 +24,16 @@ function formatStatusEscalationText(status: BubbleStatusView): string {
 
 export function renderBubbleStatusText(status: BubbleStatusView): string {
   const failingGateSummary = formatFailingGateSummaryText(status);
+  const stateValidationSummary =
+    status.stateValidation === null
+      ? "valid"
+      : status.stateValidation.errors
+          .map((error) => `${error.path}: ${error.message}`)
+          .join("; ");
   const lines: string[] = [
     `Bubble: ${status.bubbleId}`,
     `State: ${status.state} (round ${status.round})`,
+    `State validation: ${stateValidationSummary}`,
     `Active: ${status.activeAgent ?? "-"} (${status.activeRole ?? "-"}) since ${status.activeSince ?? "-"}`,
     `Last command: ${status.lastCommandAt ?? "-"}`,
     formatStatusWatchdogText(status),

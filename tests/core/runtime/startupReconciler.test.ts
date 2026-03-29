@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
+import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import { startBubble } from "../../../src/core/bubble/startBubble.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
@@ -221,13 +222,24 @@ describe("reconcileRuntimeSessions", () => {
       activeSince: null,
       lastCommandAt: "2026-02-22T19:40:00.000Z"
     });
-    const transitioned = applyStateTransition(metaRunning, {
-      to: "META_REVIEW_RUNNING",
-      activeAgent: "codex",
-      activeRole: "meta_reviewer",
-      activeSince: "2026-02-22T19:41:00.000Z",
-      lastCommandAt: "2026-02-22T19:41:00.000Z"
-    });
+    const transitioned = {
+      ...metaRunning,
+      state: "META_REVIEW_RUNNING" as const,
+      active_agent: "codex" as const,
+      active_role: "meta_reviewer" as const,
+      active_since: "2026-02-22T19:41:00.000Z",
+      last_command_at: "2026-02-22T19:41:00.000Z",
+      meta_review: {
+        ...metaRunning.meta_review!,
+        execution_context: buildMetaReviewExecutionContext({
+          bubbleId: bubble.bubbleId,
+          round: metaRunning.round,
+          startedAt: "2026-02-22T19:41:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        })
+      }
+    };
     await writeStateSnapshot(bubble.paths.statePath, transitioned, {
       expectedFingerprint: loaded.fingerprint,
       expectedState: "RUNNING"

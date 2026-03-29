@@ -12,6 +12,7 @@ import type {
 } from "../core/bubble/inboxBubble.js";
 import type { ProtocolEnvelopePayload, ProtocolMessageType } from "./protocol.js";
 import type { WatchdogStatus } from "../core/runtime/watchdog.js";
+import type { StateValidationDiagnostics } from "../core/state/stateStore.js";
 
 export interface UiBubbleStateCounts {
   CREATED: number;
@@ -54,6 +55,7 @@ export interface UiBubbleSummary {
   activeRole: string | null;
   activeSince: string | null;
   lastCommandAt: string | null;
+  stateValidation: StateValidationDiagnostics | null;
   runtimeSession: RuntimeSessionRecord | null;
   runtime: UiRuntimeHealth;
   metaReview: UiBubbleMetaReviewSummary;

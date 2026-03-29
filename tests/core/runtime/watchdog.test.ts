@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import { computeWatchdogStatus } from "../../../src/core/runtime/watchdog.js";
 import type { BubbleStateSnapshot } from "../../../src/types/bubble.js";
 
@@ -20,6 +21,19 @@ function createState(partial: Partial<BubbleStateSnapshot>): BubbleStateSnapshot
       }
     ],
     last_command_at: "2026-02-22T12:05:00.000Z",
+    meta_review: {
+      execution_context: null,
+      last_autonomous_run_id: null,
+      last_autonomous_status: null,
+      last_autonomous_recommendation: null,
+      last_autonomous_summary: null,
+      last_autonomous_report_ref: null,
+      last_autonomous_rework_target_message: null,
+      last_autonomous_updated_at: null,
+      auto_rework_count: 0,
+      auto_rework_limit: 5,
+      sticky_human_gate: false
+    },
     ...partial
   };
 }
@@ -73,18 +87,60 @@ describe("computeWatchdogStatus", () => {
     expect(status.remainingSeconds).toBeNull();
   });
 
-  it("treats META_REVIEW_RUNNING as watchdog-monitored (including recovery with null active_agent) while keeping human-only states unmonitored", () => {
+  it("treats META_REVIEW_RUNNING as watchdog-monitored from execution_context authority (including recovery with null active_agent) while keeping human-only states unmonitored", () => {
     const metaRunning = computeWatchdogStatus(
-      createState({ state: "META_REVIEW_RUNNING" }),
+      createState({
+        state: "META_REVIEW_RUNNING",
+        active_since: "2026-02-22T12:07:00.000Z",
+        last_command_at: "2026-02-22T12:08:00.000Z",
+        meta_review: {
+          execution_context: buildMetaReviewExecutionContext({
+            bubbleId: "b_watchdog_01",
+            round: 1,
+            startedAt: "2026-02-22T12:00:00.000Z",
+            watchdogTimeoutMinutes: 5,
+            attempt: 1
+          }),
+          last_autonomous_run_id: null,
+          last_autonomous_status: null,
+          last_autonomous_recommendation: null,
+          last_autonomous_summary: null,
+          last_autonomous_report_ref: null,
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: null,
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      }),
       5,
-      new Date("2026-02-22T12:08:00.000Z")
+      new Date("2026-02-22T12:04:00.000Z")
     );
     const metaRunningRecovery = computeWatchdogStatus(
       createState({
         state: "META_REVIEW_RUNNING",
         active_agent: null,
         active_role: null,
-        active_since: null
+        active_since: null,
+        meta_review: {
+          execution_context: buildMetaReviewExecutionContext({
+            bubbleId: "b_watchdog_01",
+            round: 1,
+            startedAt: "2026-02-22T12:00:00.000Z",
+            watchdogTimeoutMinutes: 5,
+            attempt: 1
+          }),
+          last_autonomous_run_id: null,
+          last_autonomous_status: null,
+          last_autonomous_recommendation: null,
+          last_autonomous_summary: null,
+          last_autonomous_report_ref: null,
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: null,
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
       }),
       5,
       new Date("2026-02-22T12:08:00.000Z")
@@ -101,6 +157,14 @@ describe("computeWatchdogStatus", () => {
     expect(metaRunning.monitoredAgent).toBe("codex");
     expect(metaRunningRecovery.monitoredAgent).toBeNull();
     expect(humanGate.monitoredAgent).toBe("codex");
+    expect(metaRunning.referenceTimestamp).toBe("2026-02-22T12:00:00.000Z");
+    expect(metaRunning.deadlineTimestamp).toBe("2026-02-22T12:05:00.000Z");
+    expect(metaRunning.remainingSeconds).toBe(60);
+    expect(metaRunning.expired).toBe(false);
+    expect(metaRunningRecovery.referenceTimestamp).toBe("2026-02-22T12:00:00.000Z");
+    expect(metaRunningRecovery.deadlineTimestamp).toBe("2026-02-22T12:05:00.000Z");
+    expect(metaRunningRecovery.remainingSeconds).toBe(0);
+    expect(metaRunningRecovery.expired).toBe(true);
   });
 
   it("disables watchdog monitoring for RUNNING ideation round (round=0)", () => {

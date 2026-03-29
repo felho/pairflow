@@ -42,11 +42,19 @@ function renderKeyValueTable(rows: ReadonlyArray<readonly [string, string]>): st
 
 export function renderBubbleStatusTable(status: BubbleStatusView): string {
   const failingGateReasonCodes = status.failing_gates.map((gate) => gate.reason_code);
+  const stateValidationSummary =
+    status.stateValidation === null
+      ? green("valid")
+      : bold(red("invalid"));
   const rows: Array<readonly [string, string]> = [
     ["Bubble", status.bubbleId],
     [
       "Lifecycle",
       `${formatStateLabel(status.state)} r${status.round} | active ${formatActiveOwner(status.activeAgent, status.activeRole)} | since ${dim(formatTableTimestamp(status.activeSince))}`
+    ],
+    [
+      "State validation",
+      stateValidationSummary
     ],
     [
       "Runtime",
@@ -79,6 +87,17 @@ export function renderBubbleStatusTable(status: BubbleStatusView): string {
       "Escalation",
       red(
         `timeout for ${status.watchdog.monitoredAgent ?? "-"} (deadline ${formatTableTimestamp(status.watchdog.deadlineTimestamp)})`
+      )
+    ]);
+  }
+
+  if (status.stateValidation !== null) {
+    rows.push([
+      "Validation detail",
+      red(
+        status.stateValidation.errors
+          .map((error) => `${error.path}: ${error.message}`)
+          .join("; ")
       )
     ]);
   }

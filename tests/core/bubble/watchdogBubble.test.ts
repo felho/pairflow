@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
+import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import { runBubbleWatchdog } from "../../../src/core/bubble/watchdogBubble.js";
 import { MetaReviewGateError } from "../../../src/core/bubble/metaReviewGate.js";
 import { emitAskHumanFromWorkspace } from "../../../src/core/agent/askHuman.js";
@@ -91,13 +92,25 @@ describe("runBubbleWatchdog", () => {
       activeSince: null,
       lastCommandAt: input.lastCommandAtIso
     });
-    const metaReviewRunning = applyStateTransition(readyForApproval, {
-      to: "META_REVIEW_RUNNING",
-      activeAgent: input.activeAgent ?? "codex",
-      activeRole: input.activeAgent === null ? null : "meta_reviewer",
-      activeSince: input.activeSinceIso,
-      lastCommandAt: input.lastCommandAtIso
-    });
+    const metaReviewRunning = {
+      ...readyForApproval,
+      state: "META_REVIEW_RUNNING" as const,
+      active_agent: input.activeAgent ?? "codex",
+      active_role:
+        input.activeAgent === null ? null : ("meta_reviewer" as const),
+      active_since: input.activeAgent === null ? null : input.activeSinceIso,
+      last_command_at: input.lastCommandAtIso,
+      meta_review: {
+        ...readyForApproval.meta_review!,
+        execution_context: buildMetaReviewExecutionContext({
+          bubbleId: loaded.state.bubble_id,
+          round: readyForApproval.round,
+          startedAt: input.activeSinceIso,
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        })
+      }
+    };
     await writeStateSnapshot(input.statePath, metaReviewRunning, {
       expectedFingerprint: loaded.fingerprint,
       expectedState: "RUNNING"
@@ -526,7 +539,7 @@ describe("runBubbleWatchdog", () => {
 
     expect(result.escalated).toBe(true);
     expect(result.reason).toBe("escalated");
-    expect(result.state.state).toBe("META_REVIEW_FAILED");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(result.envelope?.type).toBe("APPROVAL_REQUEST");
   });
 

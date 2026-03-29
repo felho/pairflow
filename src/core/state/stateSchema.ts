@@ -13,10 +13,12 @@ import {
   bubbleLifecycleStates,
   isAgentName,
   isAgentRole,
+  isMetaReviewExecutionContextAwaitedOutputType,
   isBubbleLifecycleState,
   isMetaReviewRecommendation,
   isMetaReviewRunStatus,
   isReworkIntentStatus,
+  type BubbleMetaReviewExecutionContext,
   type BubbleMetaReviewSnapshotState,
   type BubbleReworkIntentRecord,
   type BubbleStateSnapshot,
@@ -245,6 +247,101 @@ function validateMetaReviewSnapshot(
     return undefined;
   }
 
+  const executionContextRaw =
+    input.execution_context === undefined ? null : input.execution_context;
+  let executionContext: BubbleMetaReviewExecutionContext | null = null;
+  if (executionContextRaw !== null) {
+    if (!isRecord(executionContextRaw)) {
+      errors.push({
+        path: `${pathPrefix}.execution_context`,
+        message: "Must be null or an object"
+      });
+    } else {
+      const handoffId = executionContextRaw.handoff_id;
+      if (!isNonEmptyString(handoffId)) {
+        errors.push({
+          path: `${pathPrefix}.execution_context.handoff_id`,
+          message: "Must be a non-empty string"
+        });
+      }
+
+      const round = executionContextRaw.round;
+      if (!isInteger(round) || round < 1) {
+        errors.push({
+          path: `${pathPrefix}.execution_context.round`,
+          message: "Must be a positive integer"
+        });
+      }
+
+      const awaitedOutputType = executionContextRaw.awaited_output_type;
+      if (!isMetaReviewExecutionContextAwaitedOutputType(awaitedOutputType)) {
+        errors.push({
+          path: `${pathPrefix}.execution_context.awaited_output_type`,
+          message: "Must be meta_review_result"
+        });
+      }
+
+      const startedAt = executionContextRaw.started_at;
+      const startedAtValid = isIsoTimestamp(startedAt);
+      if (!startedAtValid) {
+        errors.push({
+          path: `${pathPrefix}.execution_context.started_at`,
+          message: "Must be a valid ISO timestamp"
+        });
+      }
+
+      const deadlineAt = executionContextRaw.deadline_at;
+      const deadlineAtValid = isIsoTimestamp(deadlineAt);
+      if (!deadlineAtValid) {
+        errors.push({
+          path: `${pathPrefix}.execution_context.deadline_at`,
+          message: "Must be a valid ISO timestamp"
+        });
+      }
+
+      const attempt = executionContextRaw.attempt;
+      if (!isInteger(attempt) || attempt < 1) {
+        errors.push({
+          path: `${pathPrefix}.execution_context.attempt`,
+          message: "Must be an integer >= 1"
+        });
+      }
+
+      const startedAtMs = Date.parse(String(startedAt));
+      const deadlineAtMs = Date.parse(String(deadlineAt));
+      if (
+        startedAtValid &&
+        deadlineAtValid &&
+        deadlineAtMs < startedAtMs
+      ) {
+        errors.push({
+          path: `${pathPrefix}.execution_context.deadline_at`,
+          message: "Must be >= started_at"
+        });
+      }
+
+      if (
+        isNonEmptyString(handoffId) &&
+        isInteger(round) &&
+        round >= 1 &&
+        isMetaReviewExecutionContextAwaitedOutputType(awaitedOutputType) &&
+        startedAtValid &&
+        deadlineAtValid &&
+        isInteger(attempt) &&
+        attempt >= 1
+      ) {
+        executionContext = {
+          handoff_id: handoffId,
+          round,
+          awaited_output_type: awaitedOutputType,
+          started_at: startedAt,
+          deadline_at: deadlineAt,
+          attempt
+        };
+      }
+    }
+  }
+
   const lastRunIdRaw = input.last_autonomous_run_id;
   const lastRunId = lastRunIdRaw === undefined ? null : lastRunIdRaw;
   const lastRunIdValid = lastRunId === null || isNonEmptyString(lastRunId);
@@ -458,6 +555,7 @@ function validateMetaReviewSnapshot(
   }
 
   return {
+    execution_context: executionContext,
     last_autonomous_run_id:
       isNonEmptyString(lastRunId) ? lastRunId : null,
     last_autonomous_status: lastStatus as BubbleMetaReviewSnapshotState["last_autonomous_status"],
@@ -511,6 +609,7 @@ export function validateBubbleStateSnapshot(
       message: "Must be a non-negative integer"
     });
   }
+  const validatedRound = isInteger(round) && round >= 0 ? round : null;
 
   const activeAgent = input.active_agent;
   const activeRole = input.active_role;
@@ -656,6 +755,26 @@ export function validateBubbleStateSnapshot(
   }
 
   if (state === "META_REVIEW_RUNNING") {
+    if (
+      metaReview === undefined ||
+      metaReview.execution_context === undefined ||
+      metaReview.execution_context === null
+    ) {
+      errors.push({
+        path: "meta_review.execution_context",
+        message:
+          "META_REVIEW_RUNNING state requires canonical meta_review.execution_context authority"
+      });
+    } else if (
+      validatedRound !== null &&
+      metaReview.execution_context.round !== validatedRound
+    ) {
+      errors.push({
+        path: "meta_review.execution_context.round",
+        message: `Must match state.round (${String(validatedRound)}) while META_REVIEW_RUNNING is active`
+      });
+    }
+
     const metaReviewHasRunSnapshot =
       metaReview !== undefined &&
       metaReview.last_autonomous_status !== null &&

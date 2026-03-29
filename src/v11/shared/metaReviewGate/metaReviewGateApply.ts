@@ -25,8 +25,10 @@ export async function applyMetaReviewGateOnConvergence(
   let metaReviewRunningState: LoadedStateSnapshot;
   try {
     metaReviewRunningState = await stageMetaReviewRunningState({
+      bubbleId: context.resolved.bubbleId,
       readyForApproval: context.readyForApproval,
       nowIso: context.nowIso,
+      watchdogTimeoutMinutes: context.resolved.bubbleConfig.watchdog_timeout_minutes,
       statePath: context.resolved.bubblePaths.statePath,
       writeState: context.writeState
     });

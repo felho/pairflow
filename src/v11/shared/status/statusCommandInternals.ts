@@ -1,5 +1,8 @@
 import { readTranscriptEnvelopes } from "../../../core/protocol/transcriptStore.js";
-import { readStateSnapshot } from "../../../core/state/stateStore.js";
+import {
+  inspectStateSnapshot,
+  type StateValidationDiagnostics
+} from "../../../core/state/stateStore.js";
 import { resolveCanonicalPendingApprovalSignal } from "../../../core/bubble/pendingApprovalSignal.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 export {
@@ -54,11 +57,12 @@ export async function readStatusTranscriptData(
   resolved: ResolvedBubbleStatusContext
 ): Promise<{
   state: BubbleStatusState;
+  stateValidation: StateValidationDiagnostics | null;
   transcript: ProtocolEnvelope[];
   inbox: ProtocolEnvelope[];
 }> {
-  const [{ state }, transcript, inbox] = await Promise.all([
-    readStateSnapshot(resolved.bubblePaths.statePath),
+  const [loadedState, transcript, inbox] = await Promise.all([
+    inspectStateSnapshot(resolved.bubblePaths.statePath),
     readTranscriptEnvelopes(resolved.bubblePaths.transcriptPath, {
       allowMissing: true,
       tolerateInvalidEnvelopeLines: true
@@ -68,5 +72,10 @@ export async function readStatusTranscriptData(
       tolerateInvalidEnvelopeLines: true
     })
   ]);
-  return { state, transcript, inbox };
+  return {
+    state: loadedState.state,
+    stateValidation: loadedState.stateValidation,
+    transcript,
+    inbox
+  };
 }

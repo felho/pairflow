@@ -2,7 +2,10 @@ import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { parseBubbleConfigToml } from "../../config/bubbleConfig.js";
-import { readStateSnapshot } from "../state/stateStore.js";
+import {
+  inspectStateSnapshot,
+  type StateValidationDiagnostics
+} from "../state/stateStore.js";
 import { readRuntimeSessionsRegistry } from "../runtime/sessionsRegistry.js";
 import { getBubblePaths } from "./paths.js";
 import {
@@ -32,6 +35,7 @@ export interface BubbleListEntry {
   activeRole: string | null;
   activeSince: string | null;
   lastCommandAt: string | null;
+  stateValidation: StateValidationDiagnostics | null;
   runtimeSession: RuntimeSessionRecord | null;
   metaReview: {
     actor: "meta-reviewer";
@@ -144,6 +148,7 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
   const byState = createZeroCounts();
   let runtimeRegistered = 0;
   let staleForNonRuntimeStates = 0;
+  let staleForInvalidStates = 0;
 
   for (const bubbleId of bubbleIds) {
     const bubbleTomlPath = join(
@@ -163,7 +168,7 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
 
     const [bubbleToml, stateLoaded] = await Promise.all([
       readFile(bubbleTomlPath, "utf8"),
-      readStateSnapshot(statePath)
+      inspectStateSnapshot(statePath)
     ]);
 
     const config = parseBubbleConfigToml(bubbleToml);
@@ -182,7 +187,9 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
 
     const runtimeSession = sessions[bubbleId] ?? null;
     if (runtimeSession !== null) {
-      if (runtimeSessionExpectedStates.has(stateLoaded.state.state)) {
+      if (stateLoaded.stateValidation !== null) {
+        staleForInvalidStates += 1;
+      } else if (runtimeSessionExpectedStates.has(stateLoaded.state.state)) {
         runtimeRegistered += 1;
       } else {
         staleForNonRuntimeStates += 1;
@@ -200,6 +207,7 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
       activeRole: stateLoaded.state.active_role,
       activeSince: stateLoaded.state.active_since,
       lastCommandAt: stateLoaded.state.last_command_at,
+      stateValidation: stateLoaded.stateValidation,
       runtimeSession,
       metaReview: {
         actor: "meta-reviewer",
@@ -219,7 +227,7 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
   const staleMissingBubble = Object.keys(sessions).filter(
     (bubbleId) => !bubbleIdSet.has(bubbleId)
   ).length;
-  const stale = staleMissingBubble + staleForNonRuntimeStates;
+  const stale = staleMissingBubble + staleForNonRuntimeStates + staleForInvalidStates;
 
   return {
     repoPath,

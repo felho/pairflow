@@ -15,6 +15,7 @@ import {
   renderMetaReviewStatusText,
   runBubbleMetaReviewCommand
 } from "../../src/cli/commands/bubble/metaReview.js";
+import { buildMetaReviewExecutionContext } from "../../src/core/bubble/metaReviewExecutionContext.js";
 import { MetaReviewError } from "../../src/core/bubble/metaReview.js";
 import { appendProtocolEnvelope } from "../../src/core/protocol/transcriptStore.js";
 import { applyStateTransition } from "../../src/core/state/machine.js";
@@ -117,13 +118,24 @@ async function prepareMetaReviewSubmitReadyFixture(input: {
     );
   }
 
-  const metaReviewRunningState = applyStateTransition(current.state, {
-    to: "META_REVIEW_RUNNING",
-    activeAgent: "codex",
-    activeRole: "meta_reviewer",
-    activeSince: transitionTimestamp,
-    lastCommandAt: transitionTimestamp
-  });
+  const metaReviewRunningState = {
+    ...current.state,
+    state: "META_REVIEW_RUNNING" as const,
+    active_agent: "codex" as const,
+    active_role: "meta_reviewer" as const,
+    active_since: transitionTimestamp,
+    last_command_at: transitionTimestamp,
+    meta_review: {
+      ...current.state.meta_review!,
+      execution_context: buildMetaReviewExecutionContext({
+        bubbleId: input.bubbleId,
+        round: current.state.round,
+        startedAt: transitionTimestamp,
+        watchdogTimeoutMinutes: 60 * 24 * 30,
+        attempt: 1
+      })
+    }
+  };
   await writeStateSnapshot(
     input.statePath,
     metaReviewRunningState,
@@ -404,6 +416,13 @@ describe("runBubbleMetaReviewCommand", () => {
         active_role: null,
         active_since: null,
         meta_review: {
+          execution_context: buildMetaReviewExecutionContext({
+            bubbleId: bubble.bubbleId,
+            round: loaded.state.round,
+            startedAt: "2026-03-08T12:29:00.000Z",
+            watchdogTimeoutMinutes: 60,
+            attempt: 1
+          }),
           last_autonomous_run_id: "run_meta_cli_recover_01",
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",
@@ -451,6 +470,13 @@ describe("runBubbleMetaReviewCommand", () => {
         active_role: "meta_reviewer",
         active_since: "2026-03-12T12:36:00.000Z",
         meta_review: {
+          execution_context: buildMetaReviewExecutionContext({
+            bubbleId: bubble.bubbleId,
+            round: loaded.state.round,
+            startedAt: "2026-03-12T12:36:00.000Z",
+            watchdogTimeoutMinutes: 60,
+            attempt: 1
+          }),
           last_autonomous_run_id: null,
           last_autonomous_status: null,
           last_autonomous_recommendation: null,
@@ -690,6 +716,13 @@ describe("runBubbleMetaReviewCommand", () => {
         active_role: null,
         active_since: null,
         meta_review: {
+          execution_context: buildMetaReviewExecutionContext({
+            bubbleId: bubble.bubbleId,
+            round: loaded.state.round,
+            startedAt: "2026-03-08T12:34:00.000Z",
+            watchdogTimeoutMinutes: 60,
+            attempt: 1
+          }),
           last_autonomous_run_id: "run_meta_cli_recover_02",
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",

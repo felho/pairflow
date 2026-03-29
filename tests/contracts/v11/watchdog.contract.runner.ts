@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import { runBubbleWatchdog } from "../../../src/core/bubble/watchdogBubble.js";
 import { runBubbleWatchdogV11 } from "../../../src/v11/application/watchdog/emitWatchdogV11.js";
+import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import {
   writeWatchdogPaneActivity
 } from "../../../src/v11/shared/watchdog/watchdogPaneActivityStore.js";
@@ -206,7 +207,17 @@ async function seedWaitingHumanState(input: {
         active_agent: "codex",
         active_role: "meta_reviewer",
         active_since: "2026-03-20T10:00:00.000Z",
-        last_command_at: "2026-03-20T10:00:00.000Z"
+        last_command_at: "2026-03-20T10:00:00.000Z",
+        meta_review: {
+          ...loaded.state.meta_review!,
+          execution_context: buildMetaReviewExecutionContext({
+            bubbleId: bubble.bubbleId,
+            round: loaded.state.round,
+            startedAt: "2026-03-20T10:00:00.000Z",
+            watchdogTimeoutMinutes: 60,
+            attempt: 1
+          })
+        }
       },
       {
         expectedFingerprint: loaded.fingerprint,

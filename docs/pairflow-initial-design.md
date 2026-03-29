@@ -109,10 +109,13 @@ RUNNING turn tracking (required):
 5. Timeout is configured by `watchdog_timeout_minutes` in `bubble.toml` (default: `30`), then standard `RUNNING` escalation additionally requires either a hard dead-signal (missing session / unreadable pane) or a post-timeout quiet window.
 
 META_REVIEW_RUNNING handoff semantics:
-1. `pairflow bubble meta-review submit` is the normal success-path handoff command. A successful submit persists the canonical result, applies the gate route, advances lifecycle state, and closes meta-reviewer ownership in the same command flow.
-2. A submit that cannot produce a routeable normal handoff must fail closed as a typed submit error; a canonical snapshot alone is not a successful handoff.
-3. The watchdog is not the normal success-path router for canonical meta-review submits before timeout expiry.
-4. Watchdog responsibility for meta-review is limited to timeout/liveness/recovery fallback handling when normal submit handoff did not finish.
+1. `META_REVIEW_RUNNING` must persist a canonical `meta_review.execution_context` block that owns the active gate attempt.
+2. The execution context contains `handoff_id`, `round`, `awaited_output_type=meta_review_result`, `started_at`, `deadline_at`, and `attempt`.
+3. `pairflow bubble meta-review submit` is the normal success-path handoff command. A successful submit validates the active execution context, persists the canonical result, applies the gate route, advances lifecycle state, and closes meta-reviewer ownership in the same command flow.
+4. A submit that cannot produce a routeable normal handoff must fail closed as a typed submit error; a canonical snapshot alone is not a successful handoff.
+5. The watchdog is not the normal success-path router for canonical meta-review submits before timeout expiry.
+6. Watchdog responsibility for meta-review is limited to timeout/liveness/recovery fallback handling when normal submit handoff did not finish.
+7. Meta-review authority must not be inferred from `active_since`, `last_command_at`, resume, restart, or general liveness updates; those fields remain observational and must not extend the canonical submit window.
 
 ## Convergence Policy (Quality-First)
 Each loop round:
@@ -253,7 +256,7 @@ Repository-local control data:
   bubbles/
     <bubble_id>/
       bubble.toml
-      state.json              # includes: state, active_agent, active_since, active_role, round_role_history, last_command_at
+      state.json              # includes: state, active_agent, active_since, active_role, round_role_history, last_command_at, meta_review.execution_context
       transcript.ndjson
       inbox.ndjson
       artifacts/
@@ -363,7 +366,7 @@ Rules:
 6. Status watcher must display `active_agent`, `active_since`, and watchdog countdown for escalation visibility.
 7. Watchdog escalation action is materialized as orchestrator-emitted `HUMAN_QUESTION` and state transition `RUNNING -> WAITING_HUMAN`.
 8. Bubble start injects an initial protocol briefing into implementer/reviewer panes (role, required command set, task/worktree references). Legacy/task bubbles also send implementer kickoff to start round 1 automatically; ideation pending bubbles stay `RUNNING round=0` and require explicit `pairflow bubble kickoff`.
-9. Meta-review execution uses the dedicated meta-reviewer pane as worker context during gate runs.
+9. Meta-review execution uses the dedicated meta-reviewer pane as worker context during gate runs, but the authoritative timeout window comes from persisted `meta_review.execution_context.started_at` and `deadline_at`.
 10. When `reviewer_context_mode = "fresh"`, each implementer -> reviewer `PASS` triggers reviewer pane process respawn so each review round starts from clean agent context.
 
 ## Git Workflow Rules

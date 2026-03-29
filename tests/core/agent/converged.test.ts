@@ -9,6 +9,7 @@ import {
   ConvergedCommandError,
   resolveMetaReviewRolloutBlockingReasonCodes
 } from "../../../src/core/agent/converged.js";
+import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
@@ -796,6 +797,13 @@ describe("emitConvergedFromWorkspace", () => {
               active_role: "meta_reviewer",
               active_since: "2026-02-22T09:04:40.000Z",
               meta_review: {
+                execution_context: buildMetaReviewExecutionContext({
+                  bubbleId: bubble.bubbleId,
+                  round: loaded.state.round,
+                  startedAt: "2026-02-22T09:04:40.000Z",
+                  watchdogTimeoutMinutes: 60,
+                  attempt: 1
+                }),
                 last_autonomous_run_id: "run_converged_recover_01",
                 last_autonomous_status: "success",
                 last_autonomous_recommendation: "approve",

@@ -4,6 +4,7 @@ import {
   ConvergedCommandErrorV11,
   type EmitConvergedV11Result as EmitConvergedResult
 } from "../../src/v11/application/converged/emitConvergedV11.js";
+import { buildMetaReviewExecutionContext } from "../../src/core/bubble/metaReviewExecutionContext.js";
 import * as convergedApp from "../../src/v11/application/converged/emitConvergedV11.js";
 import { parsePassCommandOptions } from "../../src/cli/commands/agent/pass.js";
 import {
@@ -293,6 +294,13 @@ describe("runConvergedCommand", () => {
         last_command_at: "2026-03-12T08:00:01.000Z",
         round_role_history: [],
         meta_review: {
+          execution_context: buildMetaReviewExecutionContext({
+            bubbleId: "b_cli_converged_meta_01",
+            round: 2,
+            startedAt: "2026-03-12T08:00:01.000Z",
+            watchdogTimeoutMinutes: 60,
+            attempt: 1
+          }),
           last_autonomous_run_id: null,
           last_autonomous_status: null,
           last_autonomous_recommendation: null,
@@ -368,6 +376,13 @@ describe("runConvergedCommand", () => {
         last_command_at: "2026-03-12T09:00:01.000Z",
         round_role_history: [],
         meta_review: {
+          execution_context: buildMetaReviewExecutionContext({
+            bubbleId: "b_cli_converged_meta_02",
+            round: 2,
+            startedAt: "2026-03-12T09:00:01.000Z",
+            watchdogTimeoutMinutes: 60,
+            attempt: 1
+          }),
           last_autonomous_run_id: null,
           last_autonomous_status: null,
           last_autonomous_recommendation: null,
