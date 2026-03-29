@@ -14,6 +14,10 @@ import {
   appendProtocolEnvelope,
   type AppendProtocolEnvelopeResult
 } from "../protocol/transcriptStore.js";
+import {
+  readLatestSameRoundReviewerSnapshotFromTranscript,
+  type LatestSameRoundReviewerSnapshot
+} from "../../v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.js";
 
 const approvalSummaryMetadataMismatchReasonCode =
   "META_REVIEW_GATE_APPROVAL_SUMMARY_METADATA_MISMATCH";
@@ -31,6 +35,8 @@ const metaReviewGateRunFailedReasonCode = "META_REVIEW_GATE_RUN_FAILED";
 const metaReviewFindingsParityGuardReasonCode = "META_REVIEW_FINDINGS_PARITY_GUARD";
 const metaReviewApproveBlockingFindingsPresentReasonCode =
   "META_REVIEW_APPROVE_BLOCKING_FINDINGS_PRESENT";
+const metaReviewGateReviewerConvergenceConflictReasonCode =
+  "META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT";
 
 function resolveStructuredParityMetadataSnapshot(
   parityMetadata: FindingsParityMetadata | null | undefined
@@ -245,6 +251,104 @@ function assertAdvisorySplitMetadataWhenRequired(input: {
   }
 }
 
+function resolveSnapshotParityMismatchMessage(input: {
+  parityMetadata: FindingsParityMetadata | null | undefined;
+  snapshot: LatestSameRoundReviewerSnapshot;
+}): string | null {
+  if (!hasApproveFindingsSplitMetadata(input.parityMetadata)) {
+    return null;
+  }
+
+  const mismatchDetails: string[] = [];
+  if (
+    input.snapshot.findings_open_total !== null &&
+    input.parityMetadata.findings_claimed_open_total
+      !== input.snapshot.findings_open_total
+  ) {
+    mismatchDetails.push(
+      `claimed=${input.parityMetadata.findings_claimed_open_total} snapshot_open_total=${input.snapshot.findings_open_total}`
+    );
+  }
+  if (
+    input.snapshot.findings_blocking_open_total !== null &&
+    input.parityMetadata.findings_blocking_open_total
+      !== input.snapshot.findings_blocking_open_total
+  ) {
+    mismatchDetails.push(
+      `blocking=${input.parityMetadata.findings_blocking_open_total} snapshot_blocking=${input.snapshot.findings_blocking_open_total}`
+    );
+  }
+  if (
+    input.snapshot.findings_advisory_open_total !== null &&
+    input.parityMetadata.findings_advisory_open_total
+      !== input.snapshot.findings_advisory_open_total
+  ) {
+    mismatchDetails.push(
+      `advisory=${input.parityMetadata.findings_advisory_open_total} snapshot_advisory=${input.snapshot.findings_advisory_open_total}`
+    );
+  }
+
+  return mismatchDetails.length > 0 ? mismatchDetails.join("; ") : null;
+}
+
+function assertApprovePathConsistentWithReviewerSnapshot(input: {
+  route: string;
+  recommendation: MetaReviewRecommendation | undefined;
+  summary: string;
+  parityMetadata: FindingsParityMetadata | null | undefined;
+  advisoryFindings: ApprovalAdvisoryFinding[] | undefined;
+  advisoryFindingsExplicitlyProvided: boolean;
+  snapshot: LatestSameRoundReviewerSnapshot | undefined;
+}): void {
+  if (input.route !== "human_gate_approve" || input.recommendation !== "approve") {
+    return;
+  }
+  if (input.snapshot === undefined || input.snapshot.findings_open_total === null) {
+    return;
+  }
+
+  const parityMismatch = resolveSnapshotParityMismatchMessage({
+    parityMetadata: input.parityMetadata,
+    snapshot: input.snapshot
+  });
+  if (parityMismatch !== null) {
+    throw new Error(
+      `${metaReviewGateReviewerConvergenceConflictReasonCode}: latest same-round reviewer snapshot (${input.snapshot.envelopeId}) contradicts approval parity metadata (${parityMismatch}).`
+    );
+  }
+
+  if (input.advisoryFindingsExplicitlyProvided) {
+    const advisoryListCount = input.advisoryFindings?.length ?? 0;
+    if (
+      input.snapshot.findings_advisory_open_total !== null &&
+      advisoryListCount !== input.snapshot.findings_advisory_open_total
+    ) {
+      throw new Error(
+        `${metaReviewGateReviewerConvergenceConflictReasonCode}: explicit advisory findings payload (${advisoryListCount}) contradicts latest same-round reviewer snapshot advisory total (${input.snapshot.findings_advisory_open_total}).`
+      );
+    }
+  }
+
+  const noFindingsAssertion = evaluateNoFindingsSummaryFindingsAssertion(input.summary);
+  const advisoryOnlyOpenFindings =
+    input.snapshot.findings_open_total > 0 &&
+    input.snapshot.findings_blocking_open_total === 0 &&
+    input.snapshot.findings_advisory_open_total !== null &&
+    input.snapshot.findings_advisory_open_total === input.snapshot.findings_open_total;
+  if (
+    noFindingsAssertion.hasNoFindingsAssertion &&
+    input.snapshot.findings_open_total > 0 &&
+    !(
+      advisoryOnlyOpenFindings &&
+      !hasGlobalNoFindingsSummaryAssertion(input.summary)
+    )
+  ) {
+    throw new Error(
+      `${metaReviewGateReviewerConvergenceConflictReasonCode}: latest same-round reviewer snapshot (${input.snapshot.envelopeId}) reports open findings, so clean approve summary cannot be emitted.`
+    );
+  }
+}
+
 function resolveApprovalRequestSummaryConsistency(input: {
   summary: string;
   route: string;
@@ -401,14 +505,41 @@ export async function appendHumanApprovalRequestEnvelope(input: {
   recommendation?: MetaReviewRecommendation;
   parityMetadata?: FindingsParityMetadata | null | undefined;
   findings?: ApprovalAdvisoryFinding[];
+  reviewerSnapshot?: LatestSameRoundReviewerSnapshot;
 }): Promise<AppendProtocolEnvelopeResult> {
   const appendEnvelope = input.appendEnvelope ?? appendProtocolEnvelope;
-  const advisoryFindings = normalizeApprovalAdvisoryFindings(input.findings);
+  const advisoryFindingsExplicitlyProvided = Object.prototype.hasOwnProperty.call(
+    input,
+    "findings"
+  );
+  const normalizedInputAdvisoryFindings = normalizeApprovalAdvisoryFindings(
+    input.findings
+  );
+  const reviewerSnapshot =
+    input.reviewerSnapshot ??
+    await readLatestSameRoundReviewerSnapshotFromTranscript(
+      input.transcriptPath,
+      input.round
+    );
+  const advisoryFindings =
+    normalizedInputAdvisoryFindings === undefined &&
+    reviewerSnapshot?.advisoryFindings !== undefined
+      ? reviewerSnapshot.advisoryFindings.map((finding) => ({ ...finding }))
+      : normalizedInputAdvisoryFindings;
   assertAdvisorySplitMetadataWhenRequired({
     route: input.route,
     recommendation: input.recommendation,
     parityMetadata: input.parityMetadata,
     advisoryFindings
+  });
+  assertApprovePathConsistentWithReviewerSnapshot({
+    route: input.route,
+    recommendation: input.recommendation,
+    summary: input.summary,
+    parityMetadata: input.parityMetadata,
+    advisoryFindings,
+    advisoryFindingsExplicitlyProvided,
+    snapshot: reviewerSnapshot
   });
   const summaryConsistency = resolveApprovalRequestSummaryConsistency({
     summary: input.summary,

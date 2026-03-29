@@ -16,8 +16,10 @@ import {
   runBubbleMetaReviewCommand
 } from "../../src/cli/commands/bubble/metaReview.js";
 import { MetaReviewError } from "../../src/core/bubble/metaReview.js";
+import { appendProtocolEnvelope } from "../../src/core/protocol/transcriptStore.js";
 import { applyStateTransition } from "../../src/core/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../src/core/state/stateStore.js";
+import type { Finding } from "../../src/types/findings.js";
 import { initGitRepository } from "../helpers/git.js";
 import { setupRunningBubbleFixture } from "../helpers/bubble.js";
 
@@ -37,6 +39,41 @@ afterEach(async () => {
     )
   );
 });
+
+async function appendReviewerSnapshot(input: {
+  transcriptPath: string;
+  lockPath: string;
+  bubbleId: string;
+  round: number;
+  now: Date;
+  findings?: Finding[];
+  advisoryFindingsOpenTotal?: number;
+}): Promise<void> {
+  await appendProtocolEnvelope({
+    transcriptPath: input.transcriptPath,
+    lockPath: input.lockPath,
+    now: input.now,
+    envelope: {
+      bubble_id: input.bubbleId,
+      sender: "claude",
+      recipient: "orchestrator",
+      type: "CONVERGENCE",
+      round: input.round,
+      payload: {
+        summary: "Reviewer converged snapshot.",
+        ...(input.findings !== undefined ? { findings: input.findings } : {}),
+        ...(input.advisoryFindingsOpenTotal !== undefined
+          ? {
+              metadata: {
+                advisory_findings_open_total: input.advisoryFindingsOpenTotal
+              }
+            }
+          : {})
+      },
+      refs: []
+    }
+  });
+}
 
 async function prepareMetaReviewSubmitReadyFixture(input: {
   statePath: string;
@@ -522,6 +559,52 @@ describe("runBubbleMetaReviewCommand", () => {
     expect(loaded.state.meta_review?.last_autonomous_summary).toBe(
       "Structured CLI submit summary."
     );
+  });
+
+  it("rejects submit command when the latest same-round reviewer snapshot contradicts a clean approve claim", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_cli_submit_snapshot_conflict_01",
+      task: "CLI submit reviewer snapshot conflict"
+    });
+
+    await prepareMetaReviewSubmitReadyFixture({
+      statePath: bubble.paths.statePath,
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath
+    });
+    await appendReviewerSnapshot({
+      transcriptPath: bubble.paths.transcriptPath,
+      lockPath: join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`),
+      bubbleId: bubble.bubbleId,
+      round: 1,
+      now: new Date("2026-03-10T09:00:30.000Z"),
+      findings: [],
+      advisoryFindingsOpenTotal: 1
+    });
+
+    await expect(
+      runBubbleMetaReviewCommand([
+        "submit",
+        "--id",
+        bubble.bubbleId,
+        "--repo",
+        repoPath,
+        "--round",
+        "1",
+        "--recommendation",
+        "approve",
+        "--summary",
+        "No findings remain after this review.",
+        "--report-json",
+        "{\"findings_claim_state\":\"clean\",\"findings_claim_source\":\"meta_review_artifact\",\"findings_count\":0}"
+      ])
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT"
+    });
   });
 
   it("rejects submit command when --report-json is missing", async () => {
