@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { parseBubbleMetaReviewCommandOptions } from "../../../src/cli/commands/bubble/metaReview.js";
+import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import { MetaReviewError, submitMetaReviewResult } from "../../../src/core/bubble/metaReview.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { parseRequiredSubmitReportJson } from "../../../src/v11/application/metaReview/metaReviewCliOptionValueReader.js";
@@ -37,7 +38,17 @@ async function writeMetaReviewRunningState(input: {
       active_agent: input.activeAgent,
       active_role: input.activeRole,
       active_since: input.nowIso,
-      last_command_at: input.nowIso
+      last_command_at: input.nowIso,
+      meta_review: {
+        ...loaded.state.meta_review!,
+        execution_context: buildMetaReviewExecutionContext({
+          bubbleId: loaded.state.bubble_id,
+          round: input.round ?? loaded.state.round,
+          startedAt: input.nowIso,
+          watchdogTimeoutMinutes: 60 * 24 * 30,
+          attempt: 1
+        })
+      }
     },
     {
       expectedFingerprint: loaded.fingerprint,

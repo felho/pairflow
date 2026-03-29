@@ -39,6 +39,7 @@ describe("bubblePresenter", () => {
       activeRole: "implementer",
       activeSince: "2026-02-24T12:00:00.000Z",
       lastCommandAt: "2026-02-24T12:00:30.000Z",
+      stateValidation: null,
       metaReview: {
         actor: "meta-reviewer",
         latestRecommendation: "approve",

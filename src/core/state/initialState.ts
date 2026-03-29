@@ -16,6 +16,7 @@ export function createInitialBubbleState(bubbleId: string): BubbleStateSnapshot 
     pending_rework_intent: null,
     rework_intent_history: [],
     meta_review: {
+      execution_context: null,
       last_autonomous_run_id: null,
       last_autonomous_status: null,
       last_autonomous_recommendation: null,

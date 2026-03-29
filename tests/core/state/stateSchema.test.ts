@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import { createInitialBubbleState } from "../../../src/core/state/initialState.js";
 import { validateBubbleStateSnapshot } from "../../../src/core/state/stateSchema.js";
 
@@ -8,6 +9,7 @@ describe("state schema", () => {
     const state = createInitialBubbleState("b_test_init_meta_01");
 
     expect(state.meta_review).toEqual({
+      execution_context: null,
       last_autonomous_run_id: null,
       last_autonomous_status: null,
       last_autonomous_recommendation: null,
@@ -52,7 +54,26 @@ describe("state schema", () => {
       active_since: "2026-03-08T10:00:00.000Z",
       active_role: "meta_reviewer",
       round_role_history: [],
-      last_command_at: "2026-03-08T10:01:00.000Z"
+      last_command_at: "2026-03-08T10:01:00.000Z",
+      meta_review: {
+        execution_context: buildMetaReviewExecutionContext({
+          bubbleId: "b_test_meta_state_01",
+          round: 2,
+          startedAt: "2026-03-08T10:00:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        }),
+        last_autonomous_run_id: null,
+        last_autonomous_status: null,
+        last_autonomous_recommendation: null,
+        last_autonomous_summary: null,
+        last_autonomous_report_ref: null,
+        last_autonomous_rework_target_message: null,
+        last_autonomous_updated_at: null,
+        auto_rework_count: 0,
+        auto_rework_limit: 5,
+        sticky_human_gate: false
+      }
     });
     const humanGate = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_state_02",
@@ -99,6 +120,13 @@ describe("state schema", () => {
       round_role_history: [],
       last_command_at: "2026-03-08T10:01:00.000Z",
       meta_review: {
+        execution_context: buildMetaReviewExecutionContext({
+          bubbleId: "b_test_meta_state_03b",
+          round: 2,
+          startedAt: "2026-03-08T10:00:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        }),
         last_autonomous_run_id: "run_meta_state_03b",
         last_autonomous_status: "success",
         last_autonomous_recommendation: "approve",
@@ -113,6 +141,51 @@ describe("state schema", () => {
     });
 
     expect(result.ok).toBe(true);
+  });
+
+  it("rejects META_REVIEW_RUNNING when execution_context.round drifts from state.round", () => {
+    const result = validateBubbleStateSnapshot({
+      bubble_id: "b_test_meta_state_round_drift",
+      state: "META_REVIEW_RUNNING",
+      round: 3,
+      active_agent: "codex",
+      active_since: "2026-03-08T10:00:00.000Z",
+      active_role: "meta_reviewer",
+      round_role_history: [],
+      last_command_at: "2026-03-08T10:01:00.000Z",
+      meta_review: {
+        execution_context: buildMetaReviewExecutionContext({
+          bubbleId: "b_test_meta_state_round_drift",
+          round: 2,
+          startedAt: "2026-03-08T10:00:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        }),
+        last_autonomous_run_id: null,
+        last_autonomous_status: null,
+        last_autonomous_recommendation: null,
+        last_autonomous_summary: null,
+        last_autonomous_report_ref: null,
+        last_autonomous_rework_target_message: null,
+        last_autonomous_updated_at: null,
+        auto_rework_count: 0,
+        auto_rework_limit: 5,
+        sticky_human_gate: false
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "meta_review.execution_context.round" &&
+          error.message ===
+            "Must match state.round (3) while META_REVIEW_RUNNING is active"
+      )
+    ).toBe(true);
   });
 
   it("rejects META_REVIEW_RUNNING when active ownership role is not meta_reviewer", () => {

@@ -1,10 +1,12 @@
 import { applyStateTransition } from "../../../core/state/machine.js";
 import { clearLiveMetaReviewSnapshot } from "../../../core/bubble/metaReview.js";
+import { buildMetaReviewExecutionContext } from "../../../core/bubble/metaReviewExecutionContext.js";
 import {
   StateStoreConflictError,
   type LoadedStateSnapshot,
   type writeStateSnapshot
 } from "../../../core/state/stateStore.js";
+import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import { toMetaReviewGateError } from "./metaReviewGateErrorConversion.js";
 import {
   metaReviewGateStagedReadyRestoreAppliedReasonCode,
@@ -99,21 +101,38 @@ export async function restoreRunningAfterStagedReadyFailure(input: {
 }
 
 export async function stageMetaReviewRunningState(input: {
+  bubbleId: string;
   readyForApproval: LoadedStateSnapshot;
   nowIso: string;
+  watchdogTimeoutMinutes: number;
   statePath: string;
   writeState: typeof writeStateSnapshot;
 }): Promise<LoadedStateSnapshot> {
-  const nextMetaReviewRunning = applyStateTransition(input.readyForApproval.state, {
-    to: "META_REVIEW_RUNNING",
-    activeAgent: metaReviewerAgent,
-    activeRole: "meta_reviewer",
-    activeSince: input.nowIso,
-    lastCommandAt: input.nowIso
-  });
+  const previousMetaReview = clearLiveMetaReviewSnapshot(
+    input.readyForApproval.state.meta_review
+  );
+  const attempt = previousMetaReview.auto_rework_count + 1;
+  const nextState: BubbleStateSnapshot = {
+    ...input.readyForApproval.state,
+    state: "META_REVIEW_RUNNING" as const,
+    active_agent: metaReviewerAgent,
+    active_role: "meta_reviewer" as const,
+    active_since: input.nowIso,
+    last_command_at: input.nowIso,
+    meta_review: {
+      ...previousMetaReview,
+      execution_context: buildMetaReviewExecutionContext({
+        bubbleId: input.bubbleId,
+        round: input.readyForApproval.state.round,
+        startedAt: input.nowIso,
+        watchdogTimeoutMinutes: input.watchdogTimeoutMinutes,
+        attempt
+      })
+    }
+  };
   return input.writeState(
     input.statePath,
-    nextMetaReviewRunning,
+    nextState,
     {
       expectedFingerprint: input.readyForApproval.fingerprint,
       expectedState: "READY_FOR_APPROVAL"

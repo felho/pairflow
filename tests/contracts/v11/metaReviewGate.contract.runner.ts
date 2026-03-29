@@ -7,6 +7,7 @@ import {
   applyMetaReviewGateOnConvergence,
   recoverMetaReviewGateFromSnapshot
 } from "../../../src/core/bubble/metaReviewGate.js";
+import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import {
   applyMetaReviewGateOnConvergenceV11,
@@ -623,23 +624,27 @@ async function executeMetaReviewGateCase(input: {
           active_role: "meta_reviewer",
           active_since: "2026-03-19T10:03:30.000Z",
           last_command_at: "2026-03-19T10:03:30.000Z",
-          ...(isBudgetExhaustedScenario
-            ? {
-                meta_review: {
-                  ...metaReviewSnapshot,
+          meta_review: {
+            ...metaReviewSnapshot,
+            execution_context: buildMetaReviewExecutionContext({
+              bubbleId: bubble.bubbleId,
+              round: loaded.state.round,
+              startedAt: "2026-03-19T10:03:30.000Z",
+              watchdogTimeoutMinutes: 60,
+              attempt: 1
+            }),
+            ...(isBudgetExhaustedScenario
+              ? {
                   auto_rework_limit: autoReworkLimit,
                   auto_rework_count: autoReworkLimit
                 }
-              }
-            : isAutoReworkScenario
-              ? {
-                  meta_review: {
-                    ...metaReviewSnapshot,
+              : isAutoReworkScenario
+                ? {
                     auto_rework_limit: autoReworkLimit,
                     auto_rework_count: Math.max(0, autoReworkLimit - 1)
                   }
-                }
-            : {})
+                : {})
+          }
         },
         {
           expectedFingerprint: loaded.fingerprint,

@@ -31,14 +31,15 @@ export function isRuntimeSessionExpected(state: BubbleLifecycleState): boolean {
 
 export function presentRuntimeHealth(
   state: BubbleLifecycleState,
-  runtimeSession: RuntimeSessionRecord | null
+  runtimeSession: RuntimeSessionRecord | null,
+  stateValidation: BubbleListEntry["stateValidation"] | BubbleStatusView["stateValidation"] = null
 ): UiRuntimeHealth {
   const expected = isRuntimeSessionExpected(state);
   const present = runtimeSession !== null;
   return {
     expected,
     present,
-    stale: expected !== present
+    stale: stateValidation !== null || expected !== present
   };
 }
 
@@ -55,8 +56,13 @@ export function presentBubbleSummaryFromListEntry(
     activeRole: entry.activeRole,
     activeSince: entry.activeSince,
     lastCommandAt: entry.lastCommandAt,
+    stateValidation: entry.stateValidation,
     runtimeSession: entry.runtimeSession,
-    runtime: presentRuntimeHealth(entry.state, entry.runtimeSession),
+    runtime: presentRuntimeHealth(
+      entry.state,
+      entry.runtimeSession,
+      entry.stateValidation
+    ),
     metaReview: entry.metaReview
   };
 }
@@ -95,8 +101,13 @@ export function presentBubbleDetail(input: {
     activeRole: input.status.activeRole,
     activeSince: input.status.activeSince,
     lastCommandAt: input.status.lastCommandAt,
+    stateValidation: input.status.stateValidation,
     runtimeSession: input.runtimeSession,
-    runtime: presentRuntimeHealth(input.status.state, input.runtimeSession),
+    runtime: presentRuntimeHealth(
+      input.status.state,
+      input.runtimeSession,
+      input.status.stateValidation
+    ),
     metaReview: input.status.metaReview,
     watchdog: input.status.watchdog,
     pendingInboxItems: input.status.pendingInboxItems,

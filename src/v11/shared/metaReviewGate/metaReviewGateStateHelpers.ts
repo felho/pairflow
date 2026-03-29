@@ -1,4 +1,5 @@
 import { applyStateTransition } from "../../../core/state/machine.js";
+import { clearLiveMetaReviewSnapshot } from "../../../core/bubble/metaReview.js";
 import {
   type BubbleStateSnapshot,
   type MetaReviewRecommendation,
@@ -52,7 +53,7 @@ export function transitionToGateState(input: {
     lastCommandAt: input.nowIso
   });
 
-  const metaReview = normalizeMetaReviewSnapshot(transitioned.meta_review);
+  const metaReview = clearLiveMetaReviewSnapshot(transitioned.meta_review);
   const shouldHydrateFromRunResult = input.metaReviewRun !== undefined;
   const runResult = input.metaReviewRun;
   const shouldHydrateFallbackRecommendation =

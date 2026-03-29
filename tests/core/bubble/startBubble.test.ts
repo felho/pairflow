@@ -6,6 +6,7 @@ import { spawn } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
+import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { startBubble, StartBubbleError } from "../../../src/core/bubble/startBubble.js";
 import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
@@ -2155,7 +2156,17 @@ describe("startBubble", () => {
       ...current,
       state: "META_REVIEW_RUNNING",
       active_agent: "codex",
-      active_role: "meta_reviewer"
+      active_role: "meta_reviewer",
+      meta_review: {
+        ...current.meta_review!,
+        execution_context: buildMetaReviewExecutionContext({
+          bubbleId: current.bubble_id,
+          round: current.round,
+          startedAt: current.active_since ?? "2026-02-23T09:00:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        })
+      }
     }));
 
     await startBubble(

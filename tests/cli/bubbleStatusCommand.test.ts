@@ -63,6 +63,7 @@ describe("renderBubbleStatusText", () => {
       activeRole: "implementer",
       activeSince: "2026-02-22T12:00:00.000Z",
       lastCommandAt: "2026-02-22T12:05:00.000Z",
+      stateValidation: null,
       watchdog: {
         monitored: true,
         monitoredAgent: "codex",
@@ -221,6 +222,7 @@ describe("renderBubbleStatusTable", () => {
       activeRole: "implementer",
       activeSince: "2026-03-08T21:29:15.948Z",
       lastCommandAt: "2026-03-08T21:29:15.948Z",
+      stateValidation: null,
       watchdog: {
         monitored: true,
         monitoredAgent: "codex",

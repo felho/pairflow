@@ -1,4 +1,5 @@
 import { BubbleLookupError, resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import type { WatchdogStatus } from "../../../core/runtime/watchdog.js";
 import {
   countPendingHumanQuestions,
   readStatusTranscriptData,
@@ -34,21 +35,51 @@ export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleS
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
   });
-  const { state, transcript, inbox } = await readStatusTranscriptData(resolved);
-  const pendingQuestions = countPendingHumanQuestions(inbox);
-  const pendingApprovals = resolvePendingApprovalCount(resolved, state, inbox);
-  const accuracyCritical = resolved.bubbleConfig.accuracy_critical === true;
-  const verificationStatus = await resolveReviewVerificationState(
-    resolved,
+  const {
     state,
-    accuracyCritical
-  );
-  const gateState = await resolveStatusGateState(resolved, state.round);
-  gateState.failingGates = withAccuracyCriticalVerificationGate(
-    gateState.failingGates,
-    accuracyCritical,
-    verificationStatus
-  );
+    stateValidation,
+    transcript,
+    inbox
+  } = await readStatusTranscriptData(resolved);
+  const pendingQuestions = countPendingHumanQuestions(inbox);
+  const accuracyCritical = resolved.bubbleConfig.accuracy_critical === true;
+  const pendingApprovals =
+    stateValidation === null
+      ? resolvePendingApprovalCount(resolved, state, inbox)
+      : 0;
+  const verificationStatus =
+    stateValidation === null
+      ? await resolveReviewVerificationState(
+          resolved,
+          state,
+          accuracyCritical
+        )
+      : "missing";
+  const gateState =
+    stateValidation === null
+      ? await resolveStatusGateState(resolved, state.round)
+      : {
+          failingGates: [],
+          specLockState: {
+            state: "IMPLEMENTABLE" as const,
+            open_blocker_count: 0,
+            open_required_now_count: 0
+          },
+          roundGateState: {
+            applies: false,
+            violated: false,
+            round: state.round
+          }
+        };
+  if (stateValidation === null) {
+    gateState.failingGates = withAccuracyCriticalVerificationGate(
+      gateState.failingGates,
+      accuracyCritical,
+      verificationStatus
+    );
+  }
+
+  const now = input.now ?? new Date();
 
   return buildBubbleStatusView({
     resolved,
@@ -59,7 +90,8 @@ export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleS
     accuracyCritical,
     verificationStatus,
     gateState,
-    now: input.now ?? new Date()
+    stateValidation,
+    now
   });
 }
 

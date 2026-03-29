@@ -23,6 +23,9 @@ import {
   isNonEmptyString,
   isRecord
 } from "../validation.js";
+import {
+  validateActiveMetaReviewExecutionContext
+} from "./metaReviewExecutionContext.js";
 import { readRuntimeSessionsRegistry } from "../runtime/sessionsRegistry.js";
 import { runtimePaneIndices, runTmux } from "../runtime/tmuxManager.js";
 import {
@@ -232,6 +235,7 @@ function normalizeMetaReviewSnapshot(
 ): BubbleMetaReviewSnapshotState {
   if (snapshot === undefined) {
     return {
+      execution_context: null,
       last_autonomous_run_id: null,
       last_autonomous_status: null,
       last_autonomous_recommendation: null,
@@ -254,6 +258,7 @@ export function clearLiveMetaReviewSnapshot(
   const normalized = normalizeMetaReviewSnapshot(snapshot);
   return {
     ...normalized,
+    execution_context: null,
     last_autonomous_run_id: null,
     last_autonomous_status: null,
     last_autonomous_recommendation: null,
@@ -847,7 +852,10 @@ export function hasCanonicalSubmitForActiveMetaReviewRound(input: {
   state: BubbleStateSnapshot;
   snapshot: BubbleMetaReviewSnapshotState;
 }): boolean {
-  if (input.state.state !== "META_REVIEW_RUNNING") {
+  const executionContextResult = validateActiveMetaReviewExecutionContext(
+    input.state
+  );
+  if (!executionContextResult.ok) {
     return false;
   }
   if (
@@ -858,16 +866,31 @@ export function hasCanonicalSubmitForActiveMetaReviewRound(input: {
   ) {
     return false;
   }
-  if (!isNonEmptyString(input.state.active_since)) {
-    return false;
-  }
 
-  const activeSinceMs = Date.parse(input.state.active_since);
+  const activeSinceMs = Date.parse(executionContextResult.value.started_at);
+  const deadlineAtMs = Date.parse(executionContextResult.value.deadline_at);
   const updatedAtMs = Date.parse(input.snapshot.last_autonomous_updated_at);
-  if (Number.isNaN(activeSinceMs) || Number.isNaN(updatedAtMs)) {
+  if (
+    Number.isNaN(activeSinceMs) ||
+    Number.isNaN(deadlineAtMs) ||
+    Number.isNaN(updatedAtMs)
+  ) {
     return false;
   }
-  return updatedAtMs >= activeSinceMs;
+  return updatedAtMs >= activeSinceMs && updatedAtMs <= deadlineAtMs;
+}
+
+function assertActiveMetaReviewExecutionContext(
+  state: BubbleStateSnapshot
+) {
+  const executionContextResult = validateActiveMetaReviewExecutionContext(state);
+  if (executionContextResult.ok) {
+    return executionContextResult.value;
+  }
+  throw new MetaReviewError(
+    "META_REVIEW_STATE_INVALID",
+    `meta-review canonical execution context is invalid (${executionContextResult.errors.map((error) => `${error.path}: ${error.message}`).join("; ")}).`
+  );
 }
 
 async function assertMetaReviewSubmitterOwnership(input: {
@@ -876,6 +899,8 @@ async function assertMetaReviewSubmitterOwnership(input: {
   readRuntimeSessions: typeof readRuntimeSessionsRegistry;
   state: BubbleStateSnapshot;
 }): Promise<void> {
+  assertActiveMetaReviewExecutionContext(input.state);
+
   if (input.state.state !== "META_REVIEW_RUNNING") {
     throw new MetaReviewError(
       "META_REVIEW_STATE_INVALID",
@@ -891,14 +916,12 @@ async function assertMetaReviewSubmitterOwnership(input: {
   }
 
   if (
-    input.state.active_agent !== metaReviewerSubmitterAgent ||
-    input.state.active_since === null
+    input.state.active_agent !== metaReviewerSubmitterAgent
   ) {
     const activeAgent = input.state.active_agent ?? "null";
-    const activeSince = input.state.active_since ?? "null";
     throw new MetaReviewError(
       "META_REVIEW_SENDER_MISMATCH",
-      `meta-review submit rejected: active meta-review ownership is missing or stale (active_agent=${activeAgent}, active_since=${activeSince}; expected active_agent=${metaReviewerSubmitterAgent} with non-null active_since).`
+      `meta-review submit rejected: active meta-review ownership is missing or stale (active_agent=${activeAgent}; expected active_agent=${metaReviewerSubmitterAgent}).`
     );
   }
 
@@ -1732,6 +1755,24 @@ export async function submitMetaReviewResult(
     summary,
     reportJson: canonicalReportJson
   });
+  const executionContext = assertActiveMetaReviewExecutionContext(
+    loadedState.state
+  );
+  const updatedAtMs = Date.parse(updatedAt);
+  const startedAtMs = Date.parse(executionContext.started_at);
+  const deadlineAtMs = Date.parse(executionContext.deadline_at);
+  if (
+    Number.isNaN(updatedAtMs) ||
+    Number.isNaN(startedAtMs) ||
+    Number.isNaN(deadlineAtMs) ||
+    updatedAtMs < startedAtMs ||
+    updatedAtMs > deadlineAtMs
+  ) {
+    throw new MetaReviewError(
+      "META_REVIEW_STATE_INVALID",
+      `meta-review submit rejected: canonical authority window is closed for ${executionContext.handoff_id} (${executionContext.started_at} -> ${executionContext.deadline_at}).`
+    );
+  }
 
   const previousMetaReview = normalizeMetaReviewSnapshot(loadedState.state.meta_review);
   if (
@@ -1747,6 +1788,7 @@ export async function submitMetaReviewResult(
   }
   const nextMetaReview: BubbleMetaReviewSnapshotState = {
     ...previousMetaReview,
+    execution_context: executionContext,
     last_autonomous_run_id: runId,
     last_autonomous_status: status,
     last_autonomous_recommendation: recommendation,
@@ -1991,6 +2033,7 @@ export async function runMetaReview(
     : loadedState.state;
   const nextMetaReview: BubbleMetaReviewSnapshotState = {
     ...previousMetaReview,
+    execution_context: previousMetaReview.execution_context ?? null,
     last_autonomous_run_id: runId,
     last_autonomous_status: status,
     last_autonomous_recommendation: recommendation,

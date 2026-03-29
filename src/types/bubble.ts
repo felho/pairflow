@@ -80,6 +80,13 @@ export const metaReviewRecommendations = [
 
 export type MetaReviewRecommendation = (typeof metaReviewRecommendations)[number];
 
+export const metaReviewExecutionContextAwaitedOutputTypes = [
+  "meta_review_result"
+] as const;
+
+export type MetaReviewExecutionContextAwaitedOutputType =
+  (typeof metaReviewExecutionContextAwaitedOutputTypes)[number];
+
 export type GateReasonCode =
   | "DOC_CONTRACT_PARSE_WARNING"
   | "REVIEW_SCHEMA_WARNING"
@@ -215,7 +222,17 @@ export interface BubbleReworkIntentRecord {
   superseded_by_intent_id?: string;
 }
 
+export interface BubbleMetaReviewExecutionContext {
+  handoff_id: string;
+  round: number;
+  awaited_output_type: MetaReviewExecutionContextAwaitedOutputType;
+  started_at: string;
+  deadline_at: string;
+  attempt: number;
+}
+
 export interface BubbleMetaReviewSnapshotState {
+  execution_context?: BubbleMetaReviewExecutionContext | null;
   last_autonomous_run_id: string | null;
   last_autonomous_status: MetaReviewRunStatus | null;
   last_autonomous_recommendation: MetaReviewRecommendation | null;
@@ -345,5 +362,16 @@ export function isMetaReviewRecommendation(
   return (
     typeof value === "string" &&
     (metaReviewRecommendations as readonly string[]).includes(value)
+  );
+}
+
+export function isMetaReviewExecutionContextAwaitedOutputType(
+  value: unknown
+): value is MetaReviewExecutionContextAwaitedOutputType {
+  return (
+    typeof value === "string" &&
+    (
+      metaReviewExecutionContextAwaitedOutputTypes as readonly string[]
+    ).includes(value)
   );
 }

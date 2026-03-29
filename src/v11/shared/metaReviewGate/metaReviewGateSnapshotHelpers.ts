@@ -19,6 +19,7 @@ export function normalizeMetaReviewSnapshot(
   }
 
   return {
+    execution_context: null,
     last_autonomous_run_id: null,
     last_autonomous_status: null,
     last_autonomous_recommendation: null,

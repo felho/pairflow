@@ -80,8 +80,10 @@ export function renderBubbleListText(view: BubbleListView): string {
   lines.push("Bubble details:");
   for (const bubble of view.bubbles) {
     const session = bubble.runtimeSession?.tmuxSessionName ?? "-";
+    const validationSuffix =
+      bubble.stateValidation === null ? "" : " state_validation=invalid";
     lines.push(
-      `- ${bubble.bubbleId}: state=${bubble.state}, round=${bubble.round}, active=${bubble.activeAgent ?? "-"}(${bubble.activeRole ?? "-"}), session=${session}`
+      `- ${bubble.bubbleId}: state=${bubble.state}, round=${bubble.round}, active=${bubble.activeAgent ?? "-"}(${bubble.activeRole ?? "-"}), session=${session}${validationSuffix}`
     );
   }
 

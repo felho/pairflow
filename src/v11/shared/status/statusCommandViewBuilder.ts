@@ -1,5 +1,6 @@
 import { computeWatchdogStatus, type WatchdogStatus } from "../../../core/runtime/watchdog.js";
 import { type ReviewVerificationState } from "../../../core/reviewer/reviewVerification.js";
+import type { StateValidationDiagnostics } from "../../../core/state/stateStore.js";
 import type {
   BubbleFailingGate,
   BubbleLifecycleState,
@@ -63,6 +64,7 @@ export interface BubbleStatusView {
   failing_gates: BubbleFailingGate[];
   spec_lock_state: BubbleSpecLockState;
   round_gate_state: BubbleRoundGateState;
+  stateValidation: StateValidationDiagnostics | null;
 }
 
 export function buildBubbleStatusView({
@@ -74,6 +76,7 @@ export function buildBubbleStatusView({
   accuracyCritical,
   verificationStatus,
   gateState,
+  stateValidation,
   now
 }: {
   resolved: ResolvedBubbleStatusContext;
@@ -84,9 +87,26 @@ export function buildBubbleStatusView({
   accuracyCritical: boolean;
   verificationStatus: ReviewVerificationState;
   gateState: StatusGateState;
+  stateValidation: StateValidationDiagnostics | null;
   now: Date;
 }): BubbleStatusView {
   const lastMessage = transcript[transcript.length - 1] ?? null;
+  const watchdog =
+    stateValidation === null
+      ? computeWatchdogStatus(
+          state,
+          resolved.bubbleConfig.watchdog_timeout_minutes,
+          now
+        )
+      : {
+          monitored: false,
+          monitoredAgent: state.active_agent,
+          timeoutMinutes: resolved.bubbleConfig.watchdog_timeout_minutes,
+          referenceTimestamp: state.last_command_at ?? state.active_since,
+          deadlineTimestamp: null,
+          remainingSeconds: null,
+          expired: false
+        };
   return {
     bubbleId: resolved.bubbleId,
     repoPath: resolved.repoPath,
@@ -97,11 +117,7 @@ export function buildBubbleStatusView({
     activeRole: state.active_role,
     activeSince: state.active_since,
     lastCommandAt: state.last_command_at,
-    watchdog: computeWatchdogStatus(
-      state,
-      resolved.bubbleConfig.watchdog_timeout_minutes,
-      now
-    ),
+    watchdog,
     pendingInboxItems: {
       humanQuestions: pendingQuestions,
       approvalRequests: pendingApprovals,
@@ -126,6 +142,7 @@ export function buildBubbleStatusView({
     last_review_verification: verificationStatus,
     failing_gates: gateState.failingGates,
     spec_lock_state: gateState.specLockState,
-    round_gate_state: gateState.roundGateState
+    round_gate_state: gateState.roundGateState,
+    stateValidation
   };
 }

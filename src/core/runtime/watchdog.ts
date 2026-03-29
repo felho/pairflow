@@ -1,4 +1,6 @@
 import type { BubbleLifecycleState, BubbleStateSnapshot } from "../../types/bubble.js";
+import { SchemaValidationError } from "../validation.js";
+import { validateActiveMetaReviewExecutionContext } from "../bubble/metaReviewExecutionContext.js";
 
 export interface WatchdogStatus {
   monitored: boolean;
@@ -42,7 +44,20 @@ export function computeWatchdogStatus(
     trackedState &&
     !watchdogNonAgentMonitoredStates.has(state.state) &&
     (!requiresActiveAgent || state.active_agent !== null);
-  const referenceTimestamp = state.last_command_at ?? state.active_since;
+  let referenceTimestamp = state.last_command_at ?? state.active_since;
+  let deadlineTimestamp: string | null = null;
+
+  if (state.state === "META_REVIEW_RUNNING") {
+    const executionContextResult = validateActiveMetaReviewExecutionContext(state);
+    if (!executionContextResult.ok) {
+      throw new SchemaValidationError(
+        "Invalid META_REVIEW_RUNNING execution context",
+        executionContextResult.errors
+      );
+    }
+    referenceTimestamp = executionContextResult.value.started_at;
+    deadlineTimestamp = executionContextResult.value.deadline_at;
+  }
 
   if (!monitored || referenceTimestamp === null) {
     return {
@@ -50,7 +65,7 @@ export function computeWatchdogStatus(
       monitoredAgent: state.active_agent,
       timeoutMinutes: watchdogTimeoutMinutes,
       referenceTimestamp,
-      deadlineTimestamp: null,
+      deadlineTimestamp,
       remainingSeconds: null,
       expired: false
     };
@@ -70,8 +85,21 @@ export function computeWatchdogStatus(
     };
   }
 
-  const timeoutMs = watchdogTimeoutMinutes * 60_000;
-  const deadlineMs = referenceMs + timeoutMs;
+  const deadlineMs =
+    deadlineTimestamp === null
+      ? referenceMs + watchdogTimeoutMinutes * 60_000
+      : Date.parse(deadlineTimestamp);
+  if (Number.isNaN(deadlineMs)) {
+    return {
+      monitored,
+      monitoredAgent: state.active_agent,
+      timeoutMinutes: watchdogTimeoutMinutes,
+      referenceTimestamp,
+      deadlineTimestamp,
+      remainingSeconds: null,
+      expired: false
+    };
+  }
   const remainingMs = deadlineMs - now.getTime();
   const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1_000));
 
@@ -80,7 +108,8 @@ export function computeWatchdogStatus(
     monitoredAgent: state.active_agent,
     timeoutMinutes: watchdogTimeoutMinutes,
     referenceTimestamp,
-    deadlineTimestamp: new Date(deadlineMs).toISOString(),
+    deadlineTimestamp:
+      deadlineTimestamp ?? new Date(deadlineMs).toISOString(),
     remainingSeconds,
     expired: remainingMs <= 0
   };

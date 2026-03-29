@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { startBubble } from "../../../src/core/bubble/startBubble.js";
+import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import {
   readRuntimeSessionsRegistry,
   upsertRuntimeSession
@@ -108,13 +109,24 @@ describe("restart recovery", () => {
       activeSince: null,
       lastCommandAt: "2026-02-23T11:00:00.000Z"
     });
-    const metaReviewRunning = applyStateTransition(readyForApproval, {
-      to: "META_REVIEW_RUNNING",
-      activeAgent: "codex",
-      activeRole: "meta_reviewer",
-      activeSince: "2026-02-23T11:01:00.000Z",
-      lastCommandAt: "2026-02-23T11:01:00.000Z"
-    });
+    const metaReviewRunning = {
+      ...readyForApproval,
+      state: "META_REVIEW_RUNNING" as const,
+      active_agent: "codex" as const,
+      active_role: "meta_reviewer" as const,
+      active_since: "2026-02-23T11:01:00.000Z",
+      last_command_at: "2026-02-23T11:01:00.000Z",
+      meta_review: {
+        ...readyForApproval.meta_review!,
+        execution_context: buildMetaReviewExecutionContext({
+          bubbleId: bubble.bubbleId,
+          round: readyForApproval.round,
+          startedAt: "2026-02-23T11:01:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        })
+      }
+    };
     await writeStateSnapshot(bubble.paths.statePath, metaReviewRunning, {
       expectedFingerprint: loaded.fingerprint,
       expectedState: "RUNNING"

@@ -8,6 +8,19 @@ import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { BubbleWatchdogResult } from "../../application/watchdog/watchdogCommandContract.js";
 import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
+import { SchemaValidationError } from "../../../core/validation.js";
+import { validateActiveMetaReviewExecutionContext } from "../../../core/bubble/metaReviewExecutionContext.js";
+
+function assertMetaReviewExecutionContext(state: BubbleStateSnapshot): void {
+  const result = validateActiveMetaReviewExecutionContext(state);
+  if (result.ok) {
+    return;
+  }
+  throw new SchemaValidationError(
+    "Invalid META_REVIEW_RUNNING execution context",
+    result.errors
+  );
+}
 
 async function recoverMetaReviewRouteWithConflictGuard(input: {
   resolved: Awaited<ReturnType<typeof resolveBubbleById>>;
@@ -102,6 +115,7 @@ export function maybeRouteMetaReviewBeforeExpiry(input: {
   if (input.state.state !== "META_REVIEW_RUNNING") {
     return null;
   }
+  assertMetaReviewExecutionContext(input.state);
   return {
     bubbleId: input.resolved.bubbleId,
     escalated: false,
@@ -121,6 +135,7 @@ export async function maybeRouteMetaReviewOnExpiry(input: {
   if (input.state.state !== "META_REVIEW_RUNNING") {
     return null;
   }
+  assertMetaReviewExecutionContext(input.state);
   const recovered = await recoverMetaReviewRouteWithConflictGuard({
     resolved: input.resolved,
     now: input.now,

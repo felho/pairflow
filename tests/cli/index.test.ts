@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import { runCli } from "../../src/cli/index.js";
+import { buildMetaReviewExecutionContext } from "../../src/core/bubble/metaReviewExecutionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../src/core/state/stateStore.js";
 import { setupRunningBubbleFixture } from "../helpers/bubble.js";
 import { initGitRepository } from "../helpers/git.js";
@@ -483,6 +484,13 @@ describe("runCli", () => {
         active_role: "meta_reviewer",
         active_since: "2026-03-08T12:49:00.000Z",
         meta_review: {
+          execution_context: buildMetaReviewExecutionContext({
+            bubbleId: bubble.bubbleId,
+            round: loaded.state.round,
+            startedAt: "2026-03-08T12:49:00.000Z",
+            watchdogTimeoutMinutes: 60,
+            attempt: 1
+          }),
           last_autonomous_run_id: "run_meta_review_cli_json_05",
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",
