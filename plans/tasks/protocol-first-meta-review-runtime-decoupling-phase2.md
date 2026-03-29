@@ -42,6 +42,7 @@ owners:
 
 Levlasztani a meta-review runtime notify/delivery bizonytalansagat a domain route-rol ugy, hogy a durable handoff utan a bubble domain tovabbra is az explicit execution context authorityhoz kotott aktiv meta-review allapotban maradjon.
 Phase 2 sikeres, ha a meta-review kickoff utan a hamis notify-path fail route megszunik, a runtime uncertainty kulon surface-re kerul, es a submit, watchdog, recovery ugyanazt a rogzitett execution contextet es ugyanazt a durable result authorityt olvassa.
+Az authority precedence sorrendje ebben a korben rogzitett: Phase 1 `meta_review.execution_context` -> current-round durable `meta_review_result` -> runtime uncertainty diagnostics. Ettol a task nem terhet el.
 
 ### Context
 
@@ -83,6 +84,7 @@ Ez a kor a Phase 1-ben bevezetett explicit `meta_review.execution_context` autho
 3. A timeout tovabbra is fail-closed a canonical execution context deadline-jara, de kizarolag akkor, ha a vart durable `meta_review_result` nem erkezett meg hataridore.
 4. Recovery nem nyithat uj execution contextet es nem szintetizalhat uj authority ablakot notify bizonytalansag miatt.
 5. Submit acceptance vagy reject kizarolag a canonical execution contextre, a durable transcript allapotra es a handoff/round egyezesre epulhet; korabbi notify eredmeny nem lehet blockolo gate.
+6. A duplicate current-context result es a stale/replaced-context late result kulon diagnosztikai kategoriak, de egyik sem mutalhatja az aktiv authority contextet vagy route-ot.
 
 ### Contract Boundary / Blast Radius
 
@@ -122,6 +124,7 @@ Ez a kor a Phase 1-ben bevezetett explicit `meta_review.execution_context` autho
 3. A notify/apply result contractnak structured delivery observabilityt kell hordoznia; puszta `throw` nem eleg ott, ahol a durable handoff mar sikeres.
 4. A current-round durable `meta_review_result` transcript authority erosebb, mint barmely korabbi notify bizonytalansag.
 5. `META_REVIEW_FAILED` Phase 2-ben megmaradhat compatibility statekent mas okokbol, de nem johet letre pusztan a notify confirmation hianya vagy pane-level false negative miatt a durable handoff utan.
+6. Phase 2-ben a duplicate same-context result es a late stale-context result kezelese meta-review-specifikus contract marad; ezt nem szabad generic actor output unificationnekkent vagy uj lifecycle shape-kent keretezni.
 
 ## L1 - Change Contract
 
@@ -132,9 +135,9 @@ Ez a kor a Phase 1-ben bevezetett explicit `meta_review.execution_context` autho
 | CS1 | `src/types/bubble.ts` + `src/core/state/initialState.ts` + `src/core/state/stateSchema.ts` | meta-review persisted shape | `BubbleMetaReviewSnapshotState` es state validation/defaulting -> type definitions / validation | `meta_review` schema alatt | A state explicitten kulonitse el az authority execution contextet a runtime notify/delivery observability surface-tol; az uj runtime mezok nem lehetnek authorityk | P1 | required-now | Phase 2 kulon runtime surface-et kovetel |
 | CS2 | `src/v11/shared/metaReviewGate/metaReviewGateTypes.ts` + `src/v11/shared/metaReviewGate/metaReviewGateNotify.ts` | notify delivery contract | `notifyMetaReviewerSubmissionRequest(input, dependencies) -> Promise<...>` | notify result shape | A notify path structured delivery observabilityt adjon vissza `confirmed|uncertain|failed` statuszokkal, es a durable handoff utan ne csak `throw`-al jelezzen hamis negativ runtime allapotot | P1 | required-now | a jelenlegi `Promise<void>` + `throw` domain couplingot okoz |
 | CS3 | `src/v11/shared/metaReviewGate/metaReviewGateApply.ts` + `src/v11/shared/metaReviewGate/metaReviewGateApplyRunRouting.ts` | convergence -> meta-review kickoff route | `applyMetaReviewGateOnConvergence(input, dependencies) -> Promise<MetaReviewGateResult>` | kickoff utani apply path | Ha a durable kickoff envelope es a canonical execution context mar letrejott, a meta-review route maradjon `meta_review_running`; a notify bizonytalansag csak runtime surface-en jelenjen meg | P1 | required-now | ma a notify warning/failure `META_REVIEW_FAILED` route-ra tud esni |
-| CS4 | `src/core/bubble/metaReview.ts` | submit acceptance | `submitMetaReviewResult(input, dependencies) -> Promise<MetaReviewSubmitResult>` | active-window validation + current-round authority check | A submit elfogadhato legyen akkor is, ha korabban a notify `uncertain` vagy `failed` volt, feltetelezve hogy a canonical execution context aktiv es a result current-round durable authority | P1 | required-now | false negative notify nem blokkolhatja a domain eredmenyt |
-| CS5 | `src/v11/shared/metaReviewGate/metaReviewGateRecovery.ts` + `src/v11/shared/metaReviewGate/metaReviewGateRecoveryContext.ts` | recovery routing | `recoverMetaReviewGateFromSnapshot(input, dependencies) -> Promise<MetaReviewGateResult>` | snapshot-based recovery decision branch | Recovery ugyanazt az aktiv execution contextet es ugyanazt a durable current-round result authorityt olvassa, mint a submit/watchdog; runtime notify status nem lehet recovery-fail shortcut | P1 | required-now | a plan kifejezetten kozos authorityt kovetel submit/watchdog/recovery kozott |
-| CS6 | `src/core/runtime/watchdog.ts` + `src/v11/shared/watchdog/watchdogMetaReviewRouting.ts` | expiry routing | `computeWatchdogStatus(...) -> WatchdogStatus`, `maybeRouteMetaReviewBeforeExpiry(...)`, `maybeRouteMetaReviewOnExpiry(...)` | meta-review timeout es expiry route | Timeout kizarolag a canonical `deadline_at` + hianyzo durable `meta_review_result` alapjan tortenhet; runtime uncertainty nem szamithat implicit timeoutnak vagy fail route-nak | P1 | required-now | Phase 2 exit criteria explicit | 
+| CS4 | `src/core/bubble/metaReview.ts` | submit acceptance | `submitMetaReviewResult(input, dependencies) -> Promise<MetaReviewSubmitResult>` | active-window validation + current-round authority check | A submit elfogadhato legyen akkor is, ha korabban a notify `uncertain` vagy `failed` volt, feltetelezve hogy a canonical execution context aktiv es a result current-round durable authority; duplicate same-context es late stale-context submit kulon, determinisztikus kimenetet kapjon | P1 | required-now | false negative notify nem blokkolhatja a domain eredmenyt, es a duplicate/late path nem sodorhat authority driftbe |
+| CS5 | `src/v11/shared/metaReviewGate/metaReviewGateRecovery.ts` + `src/v11/shared/metaReviewGate/metaReviewGateRecoveryContext.ts` | recovery routing | `recoverMetaReviewGateFromSnapshot(input, dependencies) -> Promise<MetaReviewGateResult>` | snapshot-based recovery decision branch | Recovery ugyanazt az aktiv execution contextet es ugyanazt a durable current-round result authorityt olvassa, mint a submit/watchdog; runtime notify status nem lehet recovery-fail shortcut, es recovery nem reopenolhat lecserelt contextet keso result miatt | P1 | required-now | a plan kifejezetten kozos authorityt kovetel submit/watchdog/recovery kozott |
+| CS6 | `src/core/runtime/watchdog.ts` + `src/v11/shared/watchdog/watchdogMetaReviewRouting.ts` | expiry routing | `computeWatchdogStatus(...) -> WatchdogStatus`, `maybeRouteMetaReviewBeforeExpiry(...)`, `maybeRouteMetaReviewOnExpiry(...)` | meta-review timeout es expiry route | Timeout kizarolag a canonical `deadline_at` + hianyzo durable `meta_review_result` alapjan tortenhet; runtime uncertainty, restart/rebind vagy korabbi notify hiba nem szamithat implicit timeoutnak vagy fail route-nak | P1 | required-now | Phase 2 exit criteria explicit |
 | CS7 | `src/v11/shared/status/statusCommandViewBuilder.ts` | operator visibility | `buildBubbleStatusView(...) -> BubbleStatusView` | metaReview status projection | A status felulet kulon mutassa a runtime uncertainty surface-t es ne lifecycle state-kent kommunikalja a notify false negative-et | P2 | required-now | operatori diagnosztika es rollback-biztonsag |
 | CS8 | `docs/pairflow-initial-design.md` | lifecycle/spec sync | markdown | meta-review runtime / transport notes | A docs kimondja, hogy durable handoff utan a delivery confirmation nem domain authority; a timeout a hianyzo durable resultbol kovetkezik | P2 | required-now | plan/spec sync kotelezo |
 
@@ -143,7 +146,7 @@ Ez a kor a Phase 1-ben bevezetett explicit `meta_review.execution_context` autho
 | Contract | Current | Target | Required Fields | Optional Fields | Compatibility | Priority | Timing |
 | -------- | ------- | ------ | --------------- | --------------- | ------------- | -------- | ------ |
 | Meta-review authority state | explicit `meta_review.execution_context` Phase 1-ben | valtozatlan authority blokk | `handoff_id`, `round`, `awaited_output_type`, `started_at`, `deadline_at`, `attempt` | none az authority reszben | unchanged from Phase 1 | P1 | required-now |
-| Runtime uncertainty state | implicit warning/throw vagy `META_REVIEW_FAILED` route | explicit non-authority `meta_review` alatti runtime observability blokk | `delivery_status`, `updated_at` | `reason_code`, `message`, `target_pane`, `attempt_count` | additive adapter shape | P1 | required-now |
+| Runtime uncertainty state | implicit warning/throw vagy `META_REVIEW_FAILED` route | explicit non-authority `meta_review` alatti runtime observability blokk | `delivery_status`, `updated_at` | `reason_code`, `message`, `target_pane`, `attempt_count`, `observed_for_handoff_id`, `observed_for_round` | additive adapter shape | P1 | required-now |
 | Notify API contract | `Promise<void>` es exceptional flow | structured notify result object | `delivery_status` | `reason_code`, `message`, `target_pane`, `attempt_count` | behavior change | P1 | required-now |
 | Apply/kickoff route contract | notify-hibatol fuggoen `meta_review_running` vagy `human_gate_run_failed` jellegu fallback | durable handoff utan mindig `meta_review_running`, runtime surface-szel | canonical state + gate envelope + delivery observability | warning metadata | behavior tightening | P1 | required-now |
 | Submit acceptance authority | canonical context + current submit path, de notify bizonytalansag implicit side effect lehet | canonical context + durable result authority; notify status irrelevans gate input | active execution context, matching round, active deadline window | diagnostics for duplicate/late suppression | behavior clarification | P1 | required-now |
@@ -160,6 +163,9 @@ Normative rules:
 6. `META_REVIEW_FAILED` compatibility state Phase 2-ben sem jelenthet notify confirmation hianyabol szarmazo domain fail route-ot a durable handoff utan.
 7. Az uj runtime observability blokk explicit adapter/home-ja `state.meta_review`; nem emelheto authority mezok koze, es nem helyettesitheti az execution contextet.
 8. Duplicate vagy late meta-review submit nem nyithat uj route-ot a mar lezart vagy lecserelt handoffhoz; typed reject vagy deterministic suppresszio szukseges.
+9. Ha a runtime uncertainty blokk hordoz handoff/round-korrelacios mezot, az kizárólag diagnostic binding; authority forrassa tovabbra is az execution context + transcript marad.
+10. A duplicate same-context es a late stale-context kezeles traceabilityben kulon scenario es kulon evidence elvaras marad; egyetlen "mixed suppression" teszt nem eleg.
+11. Ha az `observed_for_handoff_id` vagy `observed_for_round` nem egyezik az aktiv execution contexttel, a runtime uncertainty record stale diagnosticnak minosul; ezt sem status projection, sem recovery, sem watchdog nem kezelheti aktiv contexthez tartozo signalnak.
 
 ### 3) Side Effects Contract
 
@@ -169,8 +175,13 @@ Normative rules:
 | Notify/runtime path | structured delivery observability visszaadasa | durable handoff utani notify bizonytalansag miatti domain `META_REVIEW_FAILED` route | false negative notify Phase 2 fo kockazata | P1 | required-now |
 | Kickoff/apply | `meta_review_running` route megtartasa delivery bizonytalansag mellett | fail-closed domain route tisztan pane-level confirm hiany miatt | delivery sikeresseg nem domain prerequisite a kickoff utan | P1 | required-now |
 | Submit path | canonical result acceptance aktiv contextben | notify status miatti reject, ha a canonical context es result ervenyes | submit a durable transcriptbol dolgozik | P1 | required-now |
+| Duplicate same-context submit | determinisztikus reject vagy suppresszio ugyanarra az aktiv `handoff_id` + `round` parra | masodik authority result vagy uj route nyitasa | a duplicate path kulon contract marad, nem olvadhat bele a generic late-result kezelesbe | P1 | required-now |
+| Late stale-context submit | typed late reject lecserelt vagy lejart contextre | lecserelt context reopenja vagy route mutation | a stale contextre erkezo result csak rejectelheto/diagnosztizalhato | P1 | required-now |
 | Recovery | transcript/state alapjan deterministic route | notify log alapjan special-case fail route | recovery authority submit/watchdog parityt kovet | P1 | required-now |
+| Recovery stale-result handling | csak aktiv context vagy current-round durable result alapjan route-ol | keso stale resultbol context-reopen vagy recovery-only branch | recoverynek ugyanazt a stale/current hatart kell tartania, mint a submit pathnak | P1 | required-now |
 | Watchdog | deadline + hianyzo result alapu timeout | delivery uncertain/failed implicit timeoutnak kezelese | Phase 2 exit criteria | P1 | required-now |
+| Watchdog restart/rebind boundary | restart/rebind utan is az eredeti execution context deadline marad authority | restart/rebind vagy stale runtime diagnostics miatti timeout-deferral vagy timeout-trigger | watchdog authority nem csuszhat vissza activity/runtime surface-re | P1 | required-now |
+| Runtime uncertainty correlation | `observed_for_*` csak az aktiv contextre egyezoen projektalhato operatori surface-re | stale diagnostic aktiv warningkent vetitese az uj contextre | a korrelacios mezok guardkent szolgalnak, nem uj authority mezokent | P2 | required-now |
 | Status/UI | runtime uncertainty kulon megjelenitese | lifecycle state osszemosasa a runtime warninggal | operatori lathatosag fontos | P2 | required-now |
 | Docs/spec | runtime/domain boundary leirasa | hallgato docs drift a regi fail-closed notify modellrol | docs required | P2 | required-now |
 
@@ -184,11 +195,13 @@ Constraint: ha az implementation a notify/runtime problema kezelest puszta log w
 | durable kickoff envelope appendje sikeres, de a meta-reviewer pane kilepett vagy shellre esett vissza | tmux capture | result | `delivery_status=failed` vagy `uncertain` explicit reasonnal, state marad `META_REVIEW_RUNNING`, operator-visible runtime diagnostics | existing `META_REVIEWER_PANE_EXITED` vagy normalized runtime reason | warn/error | P1 | required-now |
 | notify path a durable handoff boundary elott hibazik | transcript append / state transition | throw | nincs partial kickoff success; a domain nem allhat hamisan aktiv contextbe | normalized transition/runtime error | error | P1 | required-now |
 | submit erkezik aktiv execution contextben, mikozben runtime uncertainty all fenn | submit path | accept | canonical current-round result authority alapjan normal route | N/A | info | P1 | required-now |
-| submit erkezik lejart vagy lecserelt handoffra | submit path | explicit reject | typed submit error; nincs route mutation | existing round/state invalid reason vagy new duplicate/late reason | error | P1 | required-now |
+| submit erkezik ugyanarra az aktiv contextre, amelyhez mar canonical result lett rogzitve | execution context + transcript current-round authority | explicit reject or suppress | deterministic no-op vagy typed duplicate submit hiba; nincs route mutation es nincs masodik authority result | normalized duplicate result reason | warn/error | P1 | required-now |
+| submit erkezik lejart vagy lecserelt handoffra | submit path | explicit reject | typed submit error; nincs route mutation es nincs context-reopen | existing round/state invalid reason vagy normalized late result reason | error | P1 | required-now |
 | recovery fut aktiv contextben runtime uncertainty mellett, de a durable result mar jelen van | transcript authority | result | recovery a canonical resultbol routol tovabb; korabbi notify status csak diagnostic | N/A | info | P1 | required-now |
 | recovery fut aktiv contextben runtime uncertainty mellett, es nincs durable result, de a deadline meg nem jart le | execution context | result | no fail route; bubble marad aktiv meta-review allapotban runtime diagnostics-szal | N/A | info | P1 | required-now |
+| recovery snapshot stale `observed_for_*` runtime uncertainty recordot lat, mikozben az execution context mar lecserelodott vagy lejart | execution context + runtime correlation guard | result | stale diagnostic ignoralt vagy archival-only; nincs context-reopen es nincs recovery route mutation | normalized stale runtime diagnostic reason | info | P1 | required-now |
 | watchdog lejarat aktiv contextben durable result nelkul | execution context + transcript | escalate | canonical timeout summary, recovery/human gate route a transcript/state authoritybol | existing timeout summary / normalized reason | warn/error | P1 | required-now |
-| duplicate vagy keso result masodszor is appendelodne ugyanarra a contextre | transcript/state | explicit reject or suppress | deterministic no-op vagy typed reject, de nincs uj route | normalized duplicate/late result reason | warn/error | P1 | required-now |
+| watchdog fut restart/rebind utan, mikozben az aktiv context deadline-ja valtozatlan es csak runtime surface frissult | execution context + restart/rebind invariants | result/escalate | deadline elott no-op, deadline utan timeout ugyanazzal az eredeti contexttel; restart nem tolhatja el a timeout authorityt | normalized restart/rebind boundary reason | info/warn | P1 | required-now |
 | docs/spec update elmarad protocol valtozas mellett | docs sync | fallback | task nem tekintheto kesznek docs update nelkul | N/A | warn | P2 | required-now |
 
 Path-specific failure semantics:
@@ -206,8 +219,11 @@ Path-specific failure semantics:
 | must-use | durable transcript handoff/result envelope model | P1 | required-now |
 | must-use | kozos authority reasoning submit/watchdog/recovery kozott | P1 | required-now |
 | must-use | operator-visible runtime uncertainty surface a `meta_review` namespace alatt | P1 | required-now |
+| must-use | `observed_for_handoff_id` / `observed_for_round` csak diagnostic correlation guardkent hasznalhato | P1 | required-now |
+| must-use | duplicate same-context es late stale-context traceability kulon scenario/evidence kovetelmennyel | P1 | required-now |
 | must-not-use | notify confirmation hianya mint domain `META_REVIEW_FAILED` trigger a durable handoff utan | P1 | required-now |
 | must-not-use | runtime uncertainty mezok timeout vagy submit authoritykent | P1 | required-now |
+| must-not-use | stale `observed_for_*` record kivetitese aktiv runtime uncertainty warningkent uj vagy lecserelt contextre | P1 | required-now |
 | must-not-use | Phase 3 generic `RUNNING(active_role=...)` bevezetese ebben a korben | P1 | required-now |
 | must-not-use | Phase 4 actor-CLI unification scope vagy command retirement | P2 | required-now |
 | must-not-use | olyan compatibility shortcut, amely recoveryben vagy watchdogban visszahozza a notify-driven fail route-ot | P1 | required-now |
@@ -222,15 +238,21 @@ Path-specific failure semantics:
 | T4  | timeout only on missing durable result at deadline | aktiv meta-review context, runtime uncertainty jelen lehet, durable result nincs | watchdog a canonical `deadline_at` utan fut | timeout/escalation tortenik, es ennek oka a hianyzo durable result + lejart context, nem a notify status | P1 | required-now | automated test |
 | T5  | recovery uses same authority as submit/watchdog | aktiv meta-review context, notify bizonytalansag utan a transcriptben jelen van a current-round result | recovery fut snapshotbol | recovery a canonical resultbol routol tovabb ugyanarra a round/contextre, es nem recovery-only failure shortcutot valaszt | P1 | required-now | automated test |
 | T6  | restart preserves context and uncertainty surface | aktiv meta-review context es runtime uncertainty jelen van | restart/rebind/recover flow fut | execution context valtozatlan marad, runtime uncertainty surface megorizheto vagy determinisztikusan ujraepitheto, nincs uj handoff | P1 | required-now | automated test |
-| T7  | duplicate or late result suppression | egy current-round canonical result mar elfogadva lett, vagy a context lecserelodott/lejart | ujabb submit erkezik ugyanarra vagy regi handoffra | typed reject vagy deterministic suppresszio tortenik; nincs uj route es nincs authority drift | P1 | required-now | automated test |
-| T8  | status surface shows runtime uncertainty separately | aktiv meta-review context runtime notify warninggal | status/list/inspection view epul | a view kulon mutatja a runtime uncertainty mezot, es nem lifecycle failurekent prezentalja | P2 | required-now | automated test |
-| T9  | docs/spec parity | implementation updates merged | doc review | a docs kimondja, hogy a delivery confirmation observability signal, nem domain authority; timeout durable result hianyabol kovetkezik | P2 | required-now | doc review |
+| T7  | duplicate current-context result suppression | egy aktiv execution contexthoz mar current-round canonical result lett rogzitve | ujabb submit erkezik ugyanarra a `handoff_id` + `round` parra | typed duplicate reject vagy deterministic suppresszio tortenik; nincs masodik authority result, nincs uj route | P1 | required-now | automated test |
+| T8  | late stale-context result rejection | az elozo meta-review context lecserelodott vagy lejart, es uj authority context mar aktiv vagy a bubble tovabblépett | keso submit erkezik a regi `handoff_id`-ra vagy roundra | typed late reject tortenik; nincs context-reopen, nincs route mutation, nincs authority drift | P1 | required-now | automated test |
+| T9  | status surface shows runtime uncertainty separately | aktiv meta-review context runtime notify warninggal | status/list/inspection view epul | a view kulon mutatja a runtime uncertainty mezot, es nem lifecycle failurekent prezentalja; ha van handoff/round korrelacio, az diagnostic-only labelkent jelenik meg | P2 | required-now | automated test |
+| T10 | stale runtime uncertainty guard propagation | elozo contexthez tartozo `observed_for_*` runtime uncertainty record jelen van, de az aktiv execution context mar masik handoff/round | status/recovery/watchdog projection lefut | a stale runtime uncertainty nem jelenik meg aktiv warningkent, nem befolyasolja a recovery/watchdog dontest, es legfeljebb archival/diagnostic surface-re kerul | P1 | required-now | automated test |
+| T11 | recovery ignores stale late-result diagnostics | az elozo contexthez kapcsolodo keso result vagy stale runtime diagnostic jelen van, mikozben uj authority context aktiv | recovery fut snapshotbol | recovery csak az aktiv execution contextet es a current-round durable resultot olvassa; stale input nem reopenol es nem routol | P1 | required-now | automated test |
+| T12 | watchdog ignores restart/rebind as timeout authority | aktiv meta-review context fut, restart/rebind megtortent, runtime surface frissult, de a durable result tovabbra sincs meg | watchdog deadline elott majd deadline utan lefut | deadline elott nincs timeout, deadline utan timeout ugyanazzal a canonical contexttel; restart/rebind nem hosszabbitja meg es nem roviditi a deadline authorityt | P1 | required-now | automated test |
+| T13 | docs/spec parity | implementation updates merged | doc review | a docs kimondja, hogy a delivery confirmation observability signal, nem domain authority; timeout durable result hianyabol kovetkezik | P2 | required-now | doc review |
 
 Verification note:
 
-1. A `T1`, `T5` es `T7` szcenarioknak explicitten current-round handoff/round alapon kell igazolniuk a durable result authorityt; nem eleg csak a "submit succeeded/failed" allitas.
+1. A `T1`, `T5`, `T7`, `T8` es `T11` szcenarioknak explicitten current-round vagy stale handoff/round alapon kell igazolniuk a durable result authorityt; nem eleg csak a "submit succeeded/failed" allitas.
 2. A `T2`, `T3` es `T4` teszteknek kulon kell ellenorizniuk a runtime uncertainty surface-et es a lifecycle allapotot, hogy a ket reteg ne mosodjon ossze.
 3. A `T6` restart/recovery tesztnek bizonyitania kell, hogy Phase 1 execution context invariansok valtozatlanok maradnak, es a Phase 2 runtime surface nem vezeti vissza az activity-driven authorityt.
+4. A `T7` es `T8` nem vonhato ossze ugyanabba a fixture-be, ha ez eltakarja a same-context duplicate es a stale-context late kulon kimenetelet.
+5. A `T10`-`T12` szcenarioknak explicitten igazolniuk kell, hogy az `observed_for_*` korrelacios mezok guardkent mukodnek, es restart/rebind utan sem valnak timeout authorityva.
 
 ### Acceptance Criteria
 
@@ -239,20 +261,22 @@ Verification note:
 3. AC3: A submit, watchdog es recovery ugyanazt a Phase 1-ben bevezetett canonical execution contextet es ugyanazt a durable result authorityt olvassa.
 4. AC4: Timeout kizarolag a canonical `deadline_at` + hianyzo durable `meta_review_result` kombinaciobol kovetkezhet.
 5. AC5: False negative notify utan a current-round canonical meta-review result tovabbra is elfogadhato es vegigviheti a route-ot.
-6. AC6: Duplicate vagy late result nem okozhat uj route-ot vagy authority driftet.
-7. AC7: A docs/spec egyertelmuen rogzitik a runtime/domain boundaryt Phase 2-re.
+6. AC6: Duplicate same-context result nem okozhat masodik authority eredmenyt, uj route-ot vagy authority driftet.
+7. AC7: Late stale-context result nem reopenolhat lecserelt/lejart authority contextet, es nem mutalhat route-ot.
+8. AC8: A docs/spec egyertelmuen rogzitik a runtime/domain boundaryt Phase 2-re.
 
 ### Acceptance Traceability
 
 | AC  | Primary Call Sites | Mandatory Tests |
 | --- | ------------------ | --------------- |
-| AC1 | CS2, CS3           | T2              |
-| AC2 | CS1, CS2, CS7      | T2, T8          |
-| AC3 | CS4, CS5, CS6      | T1, T3, T5, T6  |
-| AC4 | CS6                | T3, T4          |
+| AC1 | CS2, CS3           | T1, T2          |
+| AC2 | CS1, CS2, CS7      | T2, T9, T10     |
+| AC3 | CS4, CS5, CS6      | T1, T3, T5, T6, T11, T12 |
+| AC4 | CS6                | T3, T4, T12     |
 | AC5 | CS2, CS3, CS4      | T1              |
-| AC6 | CS4, CS5           | T7              |
-| AC7 | CS8                | T9              |
+| AC6 | CS4                | T7              |
+| AC7 | CS4, CS5           | T8, T11         |
+| AC8 | CS8                | T13             |
 
 ## L2 - Implementation Notes (Optional)
 
