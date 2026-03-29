@@ -1,15 +1,37 @@
-import { describe, expect, it } from "vitest";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { afterEach, describe, expect, it } from "vitest";
 
 import { appendHumanApprovalRequestEnvelope } from "../../../src/core/bubble/approvalRequestEnvelope.js";
+import type { Finding } from "../../../src/types/findings.js";
 import {
   deliveryTargetRoleMetadataKey,
   type FindingsParityMetadata,
   type ProtocolEnvelope
 } from "../../../src/types/protocol.js";
 import {
+  appendProtocolEnvelope,
   type AppendProtocolEnvelopeResult,
   type AppendProtocolEnvelopeInput
 } from "../../../src/core/protocol/transcriptStore.js";
+
+const tempDirs: string[] = [];
+
+async function createTempDir(): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), "pairflow-approval-envelope-"));
+  tempDirs.push(root);
+  return root;
+}
+
+afterEach(async () => {
+  await Promise.all(
+    tempDirs.splice(0).map((path) =>
+      rm(path, { recursive: true, force: true })
+    )
+  );
+});
 
 function createAppendEnvelopeStub(now: Date): {
   appendEnvelope: (input: AppendProtocolEnvelopeInput) => Promise<AppendProtocolEnvelopeResult>;
@@ -32,6 +54,41 @@ function createAppendEnvelopeStub(now: Date): {
     },
     calls
   };
+}
+
+async function appendReviewerSnapshot(input: {
+  transcriptPath: string;
+  lockPath: string;
+  bubbleId: string;
+  round: number;
+  now: Date;
+  findings?: Finding[];
+  advisoryFindingsOpenTotal?: number;
+}): Promise<void> {
+  await appendProtocolEnvelope({
+    transcriptPath: input.transcriptPath,
+    lockPath: input.lockPath,
+    now: input.now,
+    envelope: {
+      bubble_id: input.bubbleId,
+      sender: "claude",
+      recipient: "orchestrator",
+      type: "CONVERGENCE",
+      round: input.round,
+      payload: {
+        summary: "Reviewer converged snapshot.",
+        ...(input.findings !== undefined ? { findings: input.findings } : {}),
+        ...(input.advisoryFindingsOpenTotal !== undefined
+          ? {
+              metadata: {
+                advisory_findings_open_total: input.advisoryFindingsOpenTotal
+              }
+            }
+          : {})
+      },
+      refs: []
+    }
+  });
 }
 
 describe("appendHumanApprovalRequestEnvelope", () => {
@@ -113,6 +170,47 @@ describe("appendHumanApprovalRequestEnvelope", () => {
       approval_summary_normalization_original_summary: "R18 review: 2 findings remain open.",
       meta_review_gate_route: "human_gate_approve"
     });
+  });
+
+  it("fails closed when the latest same-round reviewer snapshot reports metadata-only open findings", async () => {
+    const now = new Date("2026-03-14T12:31:15.000Z");
+    const stub = createAppendEnvelopeStub(now);
+    const root = await createTempDir();
+    const transcriptPath = join(root, "transcript.ndjson");
+    const lockPath = join(root, "bubble.lock");
+
+    await appendReviewerSnapshot({
+      transcriptPath,
+      lockPath,
+      bubbleId: "b_approval_env_snapshot_metadata_only_01",
+      round: 18,
+      now: new Date("2026-03-14T12:31:10.000Z"),
+      findings: [],
+      advisoryFindingsOpenTotal: 1
+    });
+
+    await expect(
+      appendHumanApprovalRequestEnvelope({
+        appendEnvelope: stub.appendEnvelope,
+        transcriptPath,
+        inboxPath: join(root, "inbox.ndjson"),
+        lockPath,
+        now,
+        bubbleId: "b_approval_env_snapshot_metadata_only_01",
+        round: 18,
+        summary: "No findings remain after this review.",
+        route: "human_gate_approve",
+        refs: [],
+        recommendation: "approve",
+        parityMetadata: {
+          findings_claimed_open_total: 0,
+          findings_artifact_open_total: 0,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 0,
+          findings_parity_status: "ok"
+        }
+      })
+    ).rejects.toThrow("META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT");
   });
 
   it("keeps open-findings summary unchanged via structured-open-findings suppression branch even when parity status is mismatch", async () => {
@@ -383,6 +481,57 @@ describe("appendHumanApprovalRequestEnvelope", () => {
     });
   });
 
+  it("reuses advisory findings from the latest same-round reviewer snapshot when the input omits them", async () => {
+    const now = new Date("2026-03-14T12:35:20.000Z");
+    const stub = createAppendEnvelopeStub(now);
+    const root = await createTempDir();
+    const transcriptPath = join(root, "transcript.ndjson");
+    const lockPath = join(root, "bubble.lock");
+
+    await appendReviewerSnapshot({
+      transcriptPath,
+      lockPath,
+      bubbleId: "b_approval_env_snapshot_fallback_01",
+      round: 18,
+      now: new Date("2026-03-14T12:35:10.000Z"),
+      findings: [
+        {
+          severity: "P2",
+          title: "Follow-up regression test coverage"
+        }
+      ],
+      advisoryFindingsOpenTotal: 1
+    });
+
+    const result = await appendHumanApprovalRequestEnvelope({
+      appendEnvelope: stub.appendEnvelope,
+      transcriptPath,
+      inboxPath: join(root, "inbox.ndjson"),
+      lockPath,
+      now,
+      bubbleId: "b_approval_env_snapshot_fallback_01",
+      round: 18,
+      summary: "1 advisory finding remains open.",
+      route: "human_gate_approve",
+      refs: [],
+      recommendation: "approve",
+      parityMetadata: {
+        findings_claimed_open_total: 1,
+        findings_artifact_open_total: 1,
+        findings_blocking_open_total: 0,
+        findings_advisory_open_total: 1,
+        findings_parity_status: "ok"
+      }
+    });
+
+    expect(result.envelope.payload.findings).toEqual([
+      {
+        severity: "P2",
+        title: "Follow-up regression test coverage"
+      }
+    ]);
+  });
+
   it("does not normalize summary for consistent advisory-only approve split when list count differs", async () => {
     const now = new Date("2026-03-14T12:35:30.000Z");
     const stub = createAppendEnvelopeStub(now);
@@ -595,6 +744,53 @@ describe("appendHumanApprovalRequestEnvelope", () => {
     expect(
       Object.prototype.hasOwnProperty.call(metadata, "findings_digest_sha256")
     ).toBe(false);
+  });
+
+  it("fails closed when an explicit empty advisory list contradicts the latest same-round reviewer snapshot", async () => {
+    const now = new Date("2026-03-14T12:38:30.000Z");
+    const stub = createAppendEnvelopeStub(now);
+    const root = await createTempDir();
+    const transcriptPath = join(root, "transcript.ndjson");
+    const lockPath = join(root, "bubble.lock");
+
+    await appendReviewerSnapshot({
+      transcriptPath,
+      lockPath,
+      bubbleId: "b_approval_env_snapshot_empty_list_conflict_01",
+      round: 18,
+      now: new Date("2026-03-14T12:38:20.000Z"),
+      findings: [
+        {
+          severity: "P2",
+          title: "Follow-up regression test coverage"
+        }
+      ],
+      advisoryFindingsOpenTotal: 1
+    });
+
+    await expect(
+      appendHumanApprovalRequestEnvelope({
+        appendEnvelope: stub.appendEnvelope,
+        transcriptPath,
+        inboxPath: join(root, "inbox.ndjson"),
+        lockPath,
+        now,
+        bubbleId: "b_approval_env_snapshot_empty_list_conflict_01",
+        round: 18,
+        summary: "1 advisory finding remains open.",
+        route: "human_gate_approve",
+        refs: [],
+        recommendation: "approve",
+        findings: [],
+        parityMetadata: {
+          findings_claimed_open_total: 1,
+          findings_artifact_open_total: 1,
+          findings_blocking_open_total: 0,
+          findings_advisory_open_total: 1,
+          findings_parity_status: "ok"
+        }
+      })
+    ).rejects.toThrow("META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT");
   });
 
   it("fails closed when advisory_v1 routing metadata is incomplete", async () => {

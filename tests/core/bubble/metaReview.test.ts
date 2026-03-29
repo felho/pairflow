@@ -32,6 +32,7 @@ import {
 } from "../../../src/core/state/stateStore.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
 import { SchemaValidationError } from "../../../src/core/validation.js";
+import type { Finding } from "../../../src/types/findings.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -52,6 +53,42 @@ afterEach(async () => {
     )
   );
 });
+
+async function appendReviewerSnapshot(input: {
+  bubble: Awaited<ReturnType<typeof setupRunningBubbleFixture>>;
+  nowIso: string;
+  findings?: Finding[];
+  advisoryFindingsOpenTotal?: number;
+  round?: number;
+}): Promise<void> {
+  await appendProtocolEnvelope({
+    transcriptPath: input.bubble.paths.transcriptPath,
+    lockPath: join(
+      input.bubble.paths.locksDir,
+      `${input.bubble.bubbleId}.lock`
+    ),
+    now: new Date(input.nowIso),
+    envelope: {
+      bubble_id: input.bubble.bubbleId,
+      sender: "claude",
+      recipient: "orchestrator",
+      type: "CONVERGENCE",
+      round: input.round ?? 1,
+      payload: {
+        summary: "Reviewer converged snapshot.",
+        ...(input.findings !== undefined ? { findings: input.findings } : {}),
+        ...(input.advisoryFindingsOpenTotal !== undefined
+          ? {
+              metadata: {
+                advisory_findings_open_total: input.advisoryFindingsOpenTotal
+              }
+            }
+          : {})
+      },
+      refs: []
+    }
+  });
+}
 
 describe("meta-review paths", () => {
   it("exposes rolling artifact paths", () => {
@@ -740,6 +777,67 @@ describe("meta-review run", () => {
     expect(String((thrown as Error).message)).toContain(
       "CONVERGED_ADVISORY_METADATA_REQUIRED"
     );
+
+    const afterFailedRun = await readStateSnapshot(bubble.paths.statePath);
+    expect(afterFailedRun.state).toEqual(beforeRun.state);
+  });
+
+  it("fails closed on approve refresh when the latest same-round reviewer snapshot reports metadata-only open findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_run_refresh_snapshot_metadata_only_01",
+      task: "Meta refresh reviewer snapshot metadata-only conflict"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "READY_FOR_HUMAN_APPROVAL",
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        last_command_at: "2026-03-08T12:04:30.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+    await appendReviewerSnapshot({
+      bubble,
+      nowIso: "2026-03-08T12:04:45.000Z",
+      findings: [],
+      advisoryFindingsOpenTotal: 1
+    });
+    const beforeRun = await readStateSnapshot(bubble.paths.statePath);
+
+    await expect(
+      runMetaReview(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          depth: "deep"
+        },
+        {
+          randomUUID: () => "run_meta_refresh_snapshot_metadata_only_01",
+          now: new Date("2026-03-08T12:05:00.000Z"),
+          runLiveReview: async () => ({
+            recommendation: "approve",
+            summary: "No findings remain after this review.",
+            report_json: {
+              findings_claim_state: "clean",
+              findings_claim_source: "meta_review_artifact",
+              findings_count: 0
+            }
+          })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_GATE_RUN_FAILED"
+    });
 
     const afterFailedRun = await readStateSnapshot(bubble.paths.statePath);
     expect(afterFailedRun.state).toEqual(beforeRun.state);
@@ -1580,6 +1678,111 @@ describe("meta-review submit", () => {
       activeAgent: "codex",
       activeRole: "meta_reviewer",
       nowIso: "2026-03-09T09:09:56.000Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "No findings remain after this review.",
+          report_json: buildStructuredSubmitReportJson({
+            findingsClaimState: "clean",
+            findingsCount: 0
+          })
+        },
+        {
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).resolves.toMatchObject({
+      status: "success",
+      recommendation: "approve"
+    });
+  });
+
+  it("fails closed on approve submit when the latest same-round reviewer snapshot reports metadata-only open findings", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_snapshot_metadata_only_01",
+      task: "Meta submit reviewer snapshot metadata-only conflict"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:09:56.250Z"
+    });
+    await appendReviewerSnapshot({
+      bubble,
+      nowIso: "2026-03-09T09:09:56.300Z",
+      findings: [],
+      advisoryFindingsOpenTotal: 1
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "No findings remain after this review.",
+          report_json: buildStructuredSubmitReportJson({
+            findingsClaimState: "clean",
+            findingsCount: 0
+          })
+        },
+        {
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT"
+    });
+  });
+
+  it("uses the latest same-round reviewer snapshot instead of older open snapshots on approve submit", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_snapshot_latest_wins_01",
+      task: "Meta submit latest reviewer snapshot wins"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:09:56.400Z"
+    });
+    await appendReviewerSnapshot({
+      bubble,
+      nowIso: "2026-03-09T09:09:56.450Z",
+      findings: [
+        {
+          severity: "P2",
+          title: "Older advisory"
+        }
+      ],
+      advisoryFindingsOpenTotal: 1
+    });
+    await appendReviewerSnapshot({
+      bubble,
+      nowIso: "2026-03-09T09:09:56.500Z",
+      findings: []
     });
 
     await expect(

@@ -38,14 +38,18 @@ import type {
   MetaReviewRunStatus
 } from "../../types/bubble.js";
 import {
+  hasApproveFindingsSplitMetadata,
   isFindingsClaimState,
   type FindingsParityStatus,
   type MetaReviewSubmissionPayload,
   type ProtocolEnvelope
 } from "../../types/protocol.js";
 import {
+  type LatestSameRoundReviewerSnapshot,
+  readLatestSameRoundReviewerSnapshotFromTranscript,
   resolveAdvisoryFindingsFromReportJson,
-  resolveFindingsOpenSplitFromReportJson
+  resolveFindingsOpenSplitFromReportJson,
+  resolveFindingsParityMetadataFromReportJson
 } from "../../v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.js";
 import {
   resolveStructuredMetaReviewClaimFromReportJson
@@ -205,6 +209,7 @@ export type MetaReviewErrorReasonCode =
   | "META_REVIEW_SCHEMA_INVALID"
   | "META_REVIEW_SUMMARY_STRUCTURED_MISMATCH"
   | "META_REVIEW_SCHEMA_INVALID_COMBINATION"
+  | "META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT"
   | "META_REVIEW_GATE_RUN_FAILED"
   | "META_REVIEW_IO_ERROR"
   | "META_REVIEW_UNKNOWN_ERROR";
@@ -674,6 +679,89 @@ function readApprovalAdvisoryFindingsSnapshot(
   reportJson: Record<string, unknown> | undefined
 ): ApprovalAdvisoryFinding[] | undefined {
   return resolveAdvisoryFindingsFromReportJson(reportJson);
+}
+
+function assertApproveRecommendationConsistentWithReviewerSnapshot(
+  input: {
+    summary: string;
+    reportJson: Record<string, unknown>;
+    latestSnapshot: LatestSameRoundReviewerSnapshot | undefined;
+  }
+): void {
+  const latestSnapshot = input.latestSnapshot;
+  if (latestSnapshot === undefined || latestSnapshot.findings_open_total === null) {
+    return;
+  }
+
+  const parityMetadata = resolveFindingsParityMetadataFromReportJson(input.reportJson);
+  if (parityMetadata === null || !hasApproveFindingsSplitMetadata(parityMetadata)) {
+    return;
+  }
+
+  const mismatchDetails: string[] = [];
+  if (parityMetadata.findings_claimed_open_total !== latestSnapshot.findings_open_total) {
+    mismatchDetails.push(
+      `claimed=${parityMetadata.findings_claimed_open_total} snapshot_open_total=${latestSnapshot.findings_open_total}`
+    );
+  }
+  if (
+    latestSnapshot.findings_blocking_open_total !== null &&
+    parityMetadata.findings_blocking_open_total
+      !== latestSnapshot.findings_blocking_open_total
+  ) {
+    mismatchDetails.push(
+      `blocking=${parityMetadata.findings_blocking_open_total} snapshot_blocking=${latestSnapshot.findings_blocking_open_total}`
+    );
+  }
+  if (
+    latestSnapshot.findings_advisory_open_total !== null &&
+    parityMetadata.findings_advisory_open_total
+      !== latestSnapshot.findings_advisory_open_total
+  ) {
+    mismatchDetails.push(
+      `advisory=${parityMetadata.findings_advisory_open_total} snapshot_advisory=${latestSnapshot.findings_advisory_open_total}`
+    );
+  }
+  if (mismatchDetails.length > 0) {
+    throw new MetaReviewError(
+      "META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT",
+      `META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT: latest same-round reviewer snapshot (${latestSnapshot.envelopeId}) contradicts approve report_json (${mismatchDetails.join("; ")}).`
+    );
+  }
+
+  const noFindingsAssertion = evaluateNoFindingsSummaryFindingsAssertion(input.summary);
+  const advisoryOnlyOpenFindings =
+    latestSnapshot.findings_open_total > 0 &&
+    latestSnapshot.findings_blocking_open_total === 0 &&
+    latestSnapshot.findings_advisory_open_total !== null &&
+    latestSnapshot.findings_advisory_open_total === latestSnapshot.findings_open_total;
+  if (
+    noFindingsAssertion.hasNoFindingsAssertion &&
+    latestSnapshot.findings_open_total > 0 &&
+    !(
+      advisoryOnlyOpenFindings &&
+      !hasGlobalNoFindingsSummaryAssertion(input.summary)
+    )
+  ) {
+    throw new MetaReviewError(
+      "META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT",
+      `META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT: latest same-round reviewer snapshot (${latestSnapshot.envelopeId}) reports open findings, so clean approve summary cannot be emitted.`
+    );
+  }
+}
+
+async function readLatestApproveReviewerSnapshot(input: {
+  recommendation: MetaReviewRecommendation;
+  transcriptPath: string;
+  round: number;
+}): Promise<LatestSameRoundReviewerSnapshot | undefined> {
+  if (input.recommendation !== "approve") {
+    return undefined;
+  }
+  return readLatestSameRoundReviewerSnapshotFromTranscript(
+    input.transcriptPath,
+    input.round
+  );
 }
 
 function shouldRefreshApprovalRequest(
@@ -1634,6 +1722,16 @@ export async function submitMetaReviewResult(
     reportJson,
     runId
   });
+  const latestReviewerSnapshot = await readLatestApproveReviewerSnapshot({
+    recommendation,
+    transcriptPath: resolved.bubblePaths.transcriptPath,
+    round: input.round
+  });
+  assertApproveRecommendationConsistentWithReviewerSnapshot({
+    latestSnapshot: latestReviewerSnapshot,
+    summary,
+    reportJson: canonicalReportJson
+  });
 
   const previousMetaReview = normalizeMetaReviewSnapshot(loadedState.state.meta_review);
   if (
@@ -1991,6 +2089,11 @@ export async function runMetaReview(
     const approvalFindings = readApprovalAdvisoryFindingsSnapshot(
       canonicalReportJson
     );
+    const latestReviewerSnapshot = await readLatestApproveReviewerSnapshot({
+      recommendation,
+      transcriptPath: resolved.bubblePaths.transcriptPath,
+      round: written.state.round
+    });
     const approvalRefreshRoute =
       recommendation === "approve"
         ? "human_gate_approve"
@@ -1998,6 +2101,13 @@ export async function runMetaReview(
           ? "human_gate_budget_exhausted"
           : "human_gate_inconclusive";
     try {
+      assertApproveRecommendationConsistentWithReviewerSnapshot({
+        latestSnapshot: latestReviewerSnapshot,
+        summary:
+          summary ??
+          `Meta-review completed with recommendation ${recommendation}.`,
+        reportJson: canonicalReportJson
+      });
       await appendHumanApprovalRequestEnvelope({
         appendEnvelope,
         transcriptPath: resolved.bubblePaths.transcriptPath,
@@ -2016,6 +2126,9 @@ export async function runMetaReview(
         refs: [CANONICAL_META_REVIEW_REPORT_REF],
         recommendation,
         parityMetadata: parity,
+        ...(latestReviewerSnapshot !== undefined
+          ? { reviewerSnapshot: latestReviewerSnapshot }
+          : {}),
         ...(approvalFindings !== undefined
           ? { findings: approvalFindings }
           : {})
