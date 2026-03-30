@@ -24,7 +24,11 @@ const watchdogCaseSources = [
   "tests/contracts/v11/cases/watchdog/watchdog-expired-unreadable-pane-escalates.case.json",
   "tests/contracts/v11/cases/watchdog/watchdog-expired-unreadable-pane-escalates-v11.case.json",
   "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-expired.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-expired-v11.case.json"
+  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-expired-v11.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-before-deadline-delivery-failed.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-before-deadline-delivery-failed-v11.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-expired-after-rebind.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-expired-after-rebind-v11.case.json"
 ] as const;
 
 const watchdogExpectedSourcesSorted = [...watchdogCaseSources].sort();

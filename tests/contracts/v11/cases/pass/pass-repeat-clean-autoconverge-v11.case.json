@@ -13,7 +13,7 @@
     "reasonCode": "PASS_AUTO_CONVERGED",
     "envelopeType": "CONVERGENCE",
     "stateSubset": {
-      "state": "META_REVIEW_FAILED"
+      "state": "META_REVIEW_RUNNING"
     }
   },
   "tags": [

@@ -244,4 +244,122 @@ describe("v11 meta-review submit contract", () => {
       lifecycle_state: "READY_FOR_HUMAN_APPROVAL"
     });
   });
+
+  it("accepts valid submit contract without restored runtime pane binding when execution_context is still current", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_contract_submit_restart_accept_01",
+      task: "Contract: restart-recovered submit without pane binding"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-24T10:33:00.000Z"
+    });
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "approve",
+          summary: "Canonical submit remains allowed after restart recovery.",
+          report_json: {
+            findings_claim_state: "clean",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 0
+          }
+        },
+        {
+          readRuntimeSessionsRegistry: async () => ({})
+        }
+      )
+    ).resolves.toMatchObject({
+      status: "success",
+      recommendation: "approve",
+      gate_route: "human_gate_approve",
+      lifecycle_state: "READY_FOR_HUMAN_APPROVAL"
+    });
+  });
+
+  it("accepts valid submit contract when live ownership is absent in recovery state", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_contract_submit_recovery_ownership_01",
+      task: "Contract: recovery submit without live ownership"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "META_REVIEW_RUNNING",
+        round: loaded.state.round,
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        last_command_at: "2026-03-24T10:34:30.000Z",
+        meta_review: {
+          ...loaded.state.meta_review!,
+          execution_context: buildMetaReviewExecutionContext({
+            bubbleId: loaded.state.bubble_id,
+            round: loaded.state.round,
+            startedAt: "2026-03-24T10:34:00.000Z",
+            watchdogTimeoutMinutes: 60 * 24 * 30,
+            attempt: 1
+          }),
+          runtime_delivery: {
+            status: "failed",
+            reason_code: "META_REVIEWER_PANE_EXITED",
+            message: "meta-reviewer pane exited after durable kickoff",
+            observed_at: "2026-03-24T10:34:10.000Z",
+            observed_for_handoff_id:
+              `meta_review:${loaded.state.bubble_id}:round:${loaded.state.round}:attempt:1`,
+            observed_for_round: loaded.state.round
+          },
+          last_autonomous_run_id: "run_meta_contract_prev_recovery_01",
+          last_autonomous_status: "error",
+          last_autonomous_recommendation: "inconclusive",
+          last_autonomous_summary: "Previous recovery snapshot.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-03-24T10:33:00.000Z"
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: loaded.state.round,
+          recommendation: "approve",
+          summary: "Canonical submit remains allowed in recovery state.",
+          report_json: {
+            findings_claim_state: "clean",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 0
+          }
+        },
+        {
+          readRuntimeSessionsRegistry: async () => ({})
+        }
+      )
+    ).resolves.toMatchObject({
+      status: "success",
+      recommendation: "approve",
+      gate_route: "human_gate_approve",
+      lifecycle_state: "READY_FOR_HUMAN_APPROVAL"
+    });
+  });
 });

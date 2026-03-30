@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { parseBubbleConfigToml } from "../../config/bubbleConfig.js";
+import { resolveActiveMetaReviewRuntimeDelivery } from "./metaReview.js";
 import {
   inspectStateSnapshot,
   type StateValidationDiagnostics
@@ -16,6 +17,7 @@ import {
 import type { BubbleLifecycleState } from "../../types/bubble.js";
 import type { RuntimeSessionRecord } from "../runtime/sessionsRegistry.js";
 import type {
+  MetaReviewRuntimeDeliveryStatus,
   MetaReviewRecommendation,
   MetaReviewRunStatus
 } from "../../types/bubble.js";
@@ -44,6 +46,14 @@ export interface BubbleListEntry {
     latestSummary: string | null;
     latestReportRef: string | null;
     latestUpdatedAt: string | null;
+    runtimeDelivery: {
+      status: MetaReviewRuntimeDeliveryStatus;
+      reasonCode: string | null;
+      message: string;
+      observedAt: string;
+      observedForHandoffId: string | null;
+      observedForRound: number | null;
+    } | null;
   };
 }
 
@@ -196,6 +206,10 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
       }
     }
 
+    const activeRuntimeDelivery = resolveActiveMetaReviewRuntimeDelivery({
+      executionContext: stateLoaded.state.meta_review?.execution_context,
+      runtimeDelivery: stateLoaded.state.meta_review?.runtime_delivery
+    });
     byState[stateLoaded.state.state] += 1;
     bubbles.push({
       bubbleId,
@@ -218,7 +232,18 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
         latestReportRef:
           stateLoaded.state.meta_review?.last_autonomous_report_ref ?? null,
         latestUpdatedAt:
-          stateLoaded.state.meta_review?.last_autonomous_updated_at ?? null
+          stateLoaded.state.meta_review?.last_autonomous_updated_at ?? null,
+        runtimeDelivery:
+          activeRuntimeDelivery === null
+            ? null
+            : {
+                status: activeRuntimeDelivery.status,
+                reasonCode: activeRuntimeDelivery.reason_code,
+                message: activeRuntimeDelivery.message,
+                observedAt: activeRuntimeDelivery.observed_at,
+                observedForHandoffId: activeRuntimeDelivery.observed_for_handoff_id,
+                observedForRound: activeRuntimeDelivery.observed_for_round
+              }
       }
     });
   }

@@ -8,8 +8,10 @@ import {
   type EmitConvergedInput,
   type EmitConvergedResult
 } from "../../../src/core/agent/converged.js";
+import { applyMetaReviewGateOnConvergence } from "../../../src/core/bubble/metaReviewGate.js";
 import { resolveConvergedSummaryFindingsContradiction } from "../../../src/core/convergence/policy.js";
 import { emitConvergedFromWorkspaceV11 } from "../../../src/v11/application/converged/emitConvergedV11.js";
+import { applyMetaReviewGateOnConvergenceV11 } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
 import {
   isConvergedStructuredFindingSeverity,
   type ConvergedStructuredFinding
@@ -19,6 +21,7 @@ import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import type { ContractCase, ContractCaseExpected } from "./schema.js";
+import type { RuntimeSessionRecord } from "../../../src/core/runtime/sessionsRegistry.js";
 
 type DeliveryRefKind = "external" | "none" | "transcript";
 
@@ -521,9 +524,9 @@ function assertConvergedScenarioInvariant(input: {
       `converged contract case=${input.caseId}: delivery_partial_failure expected delivery.delivered=false.`
     );
   }
-  if (input.result.delivery.reason !== "partial_delivery_failed") {
+  if (input.result.delivery.reason !== "delivery_unconfirmed") {
     throw new Error(
-      `converged contract case=${input.caseId}: delivery_partial_failure expected reason=partial_delivery_failed (actual=${input.result.delivery.reason ?? "none"}).`
+      `converged contract case=${input.caseId}: delivery_partial_failure expected reason=delivery_unconfirmed (actual=${input.result.delivery.reason ?? "none"}).`
     );
   }
 }
@@ -718,6 +721,7 @@ function assertFixtureRuntimeBinding(input: {
 async function executeConvergedCase(input: {
   caseDef: ContractCase;
   executor: typeof emitConvergedFromWorkspace;
+  applyMetaReviewGateExecutor?: EmitConvergedDependencies["applyMetaReviewGateOnConvergence"];
 }): Promise<ConvergedContractOutput> {
   const repoPath = await mkdtemp(join(tmpdir(), "pairflow-converged-contract-"));
   try {
@@ -733,6 +737,20 @@ async function executeConvergedCase(input: {
     });
     await seedConvergedCandidate(bubble.paths.worktreePath);
     const deliveries: CapturedConvergedDelivery[] = [];
+    const nowIso = "2026-02-22T09:05:00.000Z";
+    const activeMetaReviewerRecord: RuntimeSessionRecord = {
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      tmuxSessionName: "pf-converged-contract",
+      updatedAt: nowIso,
+      metaReviewerPane: {
+        role: "meta-reviewer",
+        paneIndex: 3,
+        active: true,
+        updatedAt: nowIso
+      }
+    };
     const emitDelivery: NonNullable<
       EmitConvergedDependencies["emitTmuxDeliveryNotification"]
     > = (deliveryInput) => {
@@ -743,10 +761,7 @@ async function executeConvergedCase(input: {
         targetRole: typeof targetRoleRaw === "string" ? targetRoleRaw : null,
         refKind: classifyDeliveryRefKind(deliveryInput.messageRef)
       });
-      if (
-        parsedInput.scenario === "delivery_partial_failure"
-        && deliveryInput.envelope.recipient === bubble.config.agents.reviewer
-      ) {
+      if (parsedInput.scenario === "delivery_partial_failure" && deliveries.length === 1) {
         return Promise.resolve({
           delivered: false,
           message: "delivery failed",
@@ -758,13 +773,32 @@ async function executeConvergedCase(input: {
         message: "ok"
       });
     };
+    const applyMetaReviewGateOnConvergence: NonNullable<
+      EmitConvergedDependencies["applyMetaReviewGateOnConvergence"]
+    > = (gateInput) =>
+      (input.applyMetaReviewGateExecutor ?? (() => {
+        throw new Error("missing applyMetaReviewGateOnConvergence executor");
+      }))(gateInput, {
+        setMetaReviewerPaneBinding: () =>
+          Promise.resolve({
+            updated: true as const,
+            record: activeMetaReviewerRecord
+          }),
+        notifyMetaReviewerSubmissionRequest: () =>
+          Promise.resolve({
+            status: "confirmed" as const,
+            reasonCode: null,
+            message: "ok"
+          })
+      });
 
     const result = await input.executor({
       ...parsedInput.convergedInput,
       cwd: bubble.paths.worktreePath,
-      now: new Date("2026-02-22T09:05:00.000Z")
+      now: new Date(nowIso)
     }, {
-      emitTmuxDeliveryNotification: emitDelivery
+      emitTmuxDeliveryNotification: emitDelivery,
+      applyMetaReviewGateOnConvergence
     });
     assertConvergedScenarioInvariant({
       result,
@@ -794,7 +828,8 @@ export async function runConvergedContractCase(
   if (caseDef.mode === "legacy") {
     const legacy = await executeConvergedCase({
       caseDef,
-      executor: emitConvergedFromWorkspace
+      executor: emitConvergedFromWorkspace,
+      applyMetaReviewGateExecutor: applyMetaReviewGateOnConvergence
     });
     assertContractExpectedSubset({
       output: legacy,
@@ -810,7 +845,8 @@ export async function runConvergedContractCase(
   if (caseDef.mode === "v11") {
     const v11 = await executeConvergedCase({
       caseDef,
-      executor: emitConvergedFromWorkspaceV11
+      executor: emitConvergedFromWorkspaceV11,
+      applyMetaReviewGateExecutor: applyMetaReviewGateOnConvergenceV11
     });
     assertContractExpectedSubset({
       output: v11,
@@ -825,11 +861,13 @@ export async function runConvergedContractCase(
 
   const legacy = await executeConvergedCase({
     caseDef,
-    executor: emitConvergedFromWorkspace
+    executor: emitConvergedFromWorkspace,
+    applyMetaReviewGateExecutor: applyMetaReviewGateOnConvergence
   });
   const v11 = await executeConvergedCase({
     caseDef,
-    executor: emitConvergedFromWorkspaceV11
+    executor: emitConvergedFromWorkspaceV11,
+    applyMetaReviewGateExecutor: applyMetaReviewGateOnConvergenceV11
   });
   assertContractExpectedSubset({
     output: legacy,

@@ -35,6 +35,8 @@ import {
 import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../types/bubble.js";
 import type {
   AgentName,
+  BubbleMetaReviewExecutionContext,
+  BubbleMetaReviewRuntimeDeliveryState,
   BubbleMetaReviewSnapshotState,
   BubbleStateSnapshot,
   MetaReviewRecommendation,
@@ -236,6 +238,7 @@ function normalizeMetaReviewSnapshot(
   if (snapshot === undefined) {
     return {
       execution_context: null,
+      runtime_delivery: null,
       last_autonomous_run_id: null,
       last_autonomous_status: null,
       last_autonomous_recommendation: null,
@@ -259,6 +262,7 @@ export function clearLiveMetaReviewSnapshot(
   return {
     ...normalized,
     execution_context: null,
+    runtime_delivery: null,
     last_autonomous_run_id: null,
     last_autonomous_status: null,
     last_autonomous_recommendation: null,
@@ -268,6 +272,34 @@ export function clearLiveMetaReviewSnapshot(
     last_autonomous_updated_at: null,
     sticky_human_gate: false
   };
+}
+
+export function resolveActiveMetaReviewRuntimeDelivery(input: {
+  executionContext: BubbleMetaReviewExecutionContext | null | undefined;
+  runtimeDelivery: BubbleMetaReviewRuntimeDeliveryState | null | undefined;
+}): BubbleMetaReviewRuntimeDeliveryState | null {
+  const executionContext = input.executionContext ?? null;
+  const runtimeDelivery = input.runtimeDelivery ?? null;
+  if (executionContext === null || runtimeDelivery === null) {
+    return null;
+  }
+  if (
+    runtimeDelivery.observed_for_handoff_id === null ||
+    runtimeDelivery.observed_for_round === null
+  ) {
+    return null;
+  }
+  if (
+    runtimeDelivery.observed_for_handoff_id !== executionContext.handoff_id
+  ) {
+    return null;
+  }
+  if (
+    runtimeDelivery.observed_for_round !== executionContext.round
+  ) {
+    return null;
+  }
+  return runtimeDelivery;
 }
 
 function normalizeOptionalText(value: string | undefined): string | null {
@@ -893,7 +925,7 @@ function assertActiveMetaReviewExecutionContext(
   );
 }
 
-async function assertMetaReviewSubmitterOwnership(input: {
+async function assertMetaReviewSubmitterAuthority(input: {
   bubbleId: string;
   sessionsPath: string;
   readRuntimeSessions: typeof readRuntimeSessionsRegistry;
@@ -906,6 +938,33 @@ async function assertMetaReviewSubmitterOwnership(input: {
       "META_REVIEW_STATE_INVALID",
       `meta-review submit requires META_REVIEW_RUNNING state (current: ${input.state.state}).`
     );
+  }
+
+  const hasAnyActiveOwnership =
+    input.state.active_agent !== null ||
+    input.state.active_role !== null ||
+    input.state.active_since !== null;
+  const hasCompleteActiveOwnership =
+    input.state.active_agent !== null &&
+    input.state.active_role !== null &&
+    input.state.active_since !== null;
+
+  if (hasAnyActiveOwnership && !hasCompleteActiveOwnership) {
+    throw new MetaReviewError(
+      "META_REVIEW_STATE_INVALID",
+      "meta-review submit rejected: active ownership fields are partially populated."
+    );
+  }
+
+  if (!hasAnyActiveOwnership) {
+    // Recovery state may temporarily lose live ownership while the canonical
+    // execution context remains valid. In that case submit authority stays on
+    // the durable execution context rather than active runtime bindings.
+    const sessions = await input.readRuntimeSessions(input.sessionsPath, {
+      allowMissing: true
+    });
+    void sessions[input.bubbleId]?.metaReviewerPane;
+    return;
   }
 
   if (input.state.active_role !== "meta_reviewer") {
@@ -925,28 +984,13 @@ async function assertMetaReviewSubmitterOwnership(input: {
     );
   }
 
+  // The durable execution context is the primary submit authority.
+  // If live ownership is present it must still be coherent, but missing/stale
+  // pane binding after delivery failure or restart must not block submit.
   const sessions = await input.readRuntimeSessions(input.sessionsPath, {
     allowMissing: true
   });
-  const record = sessions[input.bubbleId];
-  if (
-    record?.metaReviewerPane?.role === "meta-reviewer" &&
-    record.metaReviewerPane.active !== true
-  ) {
-    throw new MetaReviewError(
-      "META_REVIEW_STATE_INVALID",
-      "meta-review submit window closed: meta-reviewer pane ownership was deactivated by gate progression."
-    );
-  }
-  if (
-    record?.metaReviewerPane?.role !== "meta-reviewer" ||
-    record.metaReviewerPane.active !== true
-  ) {
-    throw new MetaReviewError(
-      "META_REVIEW_SENDER_MISMATCH",
-      "meta-review submit rejected: meta-reviewer pane ownership is not active in runtime session."
-    );
-  }
+  void sessions[input.bubbleId]?.metaReviewerPane;
 }
 
 function resolveReportArtifactPath(input: {
@@ -1670,7 +1714,7 @@ export async function submitMetaReviewResult(
   });
 
   const loadedState = await readState(resolved.bubblePaths.statePath);
-  await assertMetaReviewSubmitterOwnership({
+  await assertMetaReviewSubmitterAuthority({
     bubbleId: resolved.bubbleId,
     sessionsPath: resolved.bubblePaths.sessionsPath,
     readRuntimeSessions,

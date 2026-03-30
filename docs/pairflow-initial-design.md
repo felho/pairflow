@@ -91,7 +91,7 @@ Allowed transitions:
 5. `READY_FOR_APPROVAL -> META_REVIEW_RUNNING` when autonomous meta-review gate starts
 6. `META_REVIEW_RUNNING -> RUNNING` on autonomous rework dispatch
 7. `META_REVIEW_RUNNING -> READY_FOR_HUMAN_APPROVAL` on successful gate run that requires human decision (approve/inconclusive/budget exhausted/sticky bypass)
-8. `META_REVIEW_RUNNING -> META_REVIEW_FAILED` on meta-review runner execution failure
+8. `META_REVIEW_RUNNING -> META_REVIEW_FAILED` on meta-review runner execution failure that occurs before durable kickoff is established, or on unrecoverable gate failure outside runtime-delivery uncertainty
 9. `READY_FOR_HUMAN_APPROVAL -> APPROVED_FOR_COMMIT` on explicit user approval
 10. `READY_FOR_HUMAN_APPROVAL -> RUNNING` on explicit immediate rework decision (`APPROVAL_DECISION=rework`)
 11. `META_REVIEW_FAILED -> APPROVED_FOR_COMMIT` on explicit user approval with override
@@ -116,6 +116,12 @@ META_REVIEW_RUNNING handoff semantics:
 5. The watchdog is not the normal success-path router for canonical meta-review submits before timeout expiry.
 6. Watchdog responsibility for meta-review is limited to timeout/liveness/recovery fallback handling when normal submit handoff did not finish.
 7. Meta-review authority must not be inferred from `active_since`, `last_command_at`, resume, restart, or general liveness updates; those fields remain observational and must not extend the canonical submit window.
+8. After the durable kickoff envelope is appended, runtime delivery confirmation is observability only. Pane-marker uncertainty or pane availability problems must not, by themselves, route the bubble out of `META_REVIEW_RUNNING`.
+9. `state.json` may persist `meta_review.runtime_delivery` as a non-authority diagnostic block with `status = confirmed|uncertain|failed`, optional `reason_code`/`message`, `observed_at`, and correlation fields such as `observed_for_handoff_id` and `observed_for_round`.
+10. `meta_review.runtime_delivery` must never extend or replace the canonical authority model. Submit acceptance, recovery, and timeout decisions remain anchored to `meta_review.execution_context` plus the current-round durable `meta_review_result`.
+11. Canonical `pairflow bubble meta-review submit` authorization must not depend on runtime pane-binding freshness. Missing or deactivated `metaReviewerPane` state after delivery failure, restart, or resume is a runtime diagnostic, not a submit gate, as long as the current-round execution context is still valid.
+12. Recovery may temporarily clear live `active_agent` / `active_role` ownership while keeping `META_REVIEW_RUNNING` plus a valid `meta_review.execution_context`. In that state canonical submit remains allowed; conflicting live ownership is still rejected, but missing live ownership is not an authority failure by itself.
+13. Status and recovery surfaces must project runtime-delivery diagnostics only when their correlation fields still match the active execution context; stale diagnostics are archival only.
 
 ## Convergence Policy (Quality-First)
 Each loop round:
@@ -256,7 +262,7 @@ Repository-local control data:
   bubbles/
     <bubble_id>/
       bubble.toml
-      state.json              # includes: state, active_agent, active_since, active_role, round_role_history, last_command_at, meta_review.execution_context
+      state.json              # includes: state, active_agent, active_since, active_role, round_role_history, last_command_at, meta_review.execution_context, meta_review.runtime_delivery
       transcript.ndjson
       inbox.ndjson
       artifacts/
@@ -367,7 +373,8 @@ Rules:
 7. Watchdog escalation action is materialized as orchestrator-emitted `HUMAN_QUESTION` and state transition `RUNNING -> WAITING_HUMAN`.
 8. Bubble start injects an initial protocol briefing into implementer/reviewer panes (role, required command set, task/worktree references). Legacy/task bubbles also send implementer kickoff to start round 1 automatically; ideation pending bubbles stay `RUNNING round=0` and require explicit `pairflow bubble kickoff`.
 9. Meta-review execution uses the dedicated meta-reviewer pane as worker context during gate runs, but the authoritative timeout window comes from persisted `meta_review.execution_context.started_at` and `deadline_at`.
-10. When `reviewer_context_mode = "fresh"`, each implementer -> reviewer `PASS` triggers reviewer pane process respawn so each review round starts from clean agent context.
+10. Runtime delivery confirmation for that pane is best-effort operator telemetry after durable kickoff. Missing confirmation or a transient pane fault may populate `meta_review.runtime_delivery`, but it does not replace transcript-backed handoff authority, require pane rebinding for canonical submit, require restored live ownership before canonical submit, or delay timeout evaluation.
+11. When `reviewer_context_mode = "fresh"`, each implementer -> reviewer `PASS` triggers reviewer pane process respawn so each review round starts from clean agent context.
 
 ## Git Workflow Rules
 1. Create bubble branch from selected base branch.

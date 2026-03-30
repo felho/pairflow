@@ -1,0 +1,20 @@
+{
+  "id": "watchdog-meta-review-running-expired-after-rebind",
+  "command": "watchdog",
+  "mode": "legacy",
+  "description": "Seed watchdog contract case for META_REVIEW_RUNNING timeout after restart/rebind without deadline deferral.",
+  "input": {
+    "fixture": {
+      "scenario": "meta_review_running_expired_after_rebind"
+    }
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "WATCHDOG_EVALUATED",
+    "commandReason": "escalated",
+    "stateSubset": {
+      "state": "READY_FOR_HUMAN_APPROVAL"
+    }
+  },
+  "tags": ["seed", "m0", "watchdog", "guard-path", "meta-review-phase2"]
+}

@@ -20,6 +20,7 @@ import type {
 
 export interface ApplyMetaReviewGateExecutionContext {
   appendEnvelope: typeof appendProtocolEnvelope;
+  readState: typeof readStateSnapshot;
   writeState: typeof writeStateSnapshot;
   setMetaReviewerPane: typeof setMetaReviewerPaneBinding;
   notifySubmissionRequest: NotifyMetaReviewerSubmissionRequest;
@@ -80,6 +81,7 @@ export async function initializeApplyMetaReviewGateExecutionContext(
 
   return {
     appendEnvelope,
+    readState,
     writeState,
     setMetaReviewerPane,
     notifySubmissionRequest,

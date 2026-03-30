@@ -5,6 +5,7 @@ import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
+import { CONTRACT_TEST_TIMEOUT } from "./contractTestTimeouts.js";
 import { runStartContractCase } from "./start.contract.runner.js";
 import { readContractCase } from "./runner.js";
 
@@ -49,7 +50,10 @@ describe("v11 start contract harness skeleton", () => {
     expect(caseDef.expected.status).toBe("ok");
   });
 
-  it("executes legacy and parity assertions via shared runner", async () => {
+  it(
+    "executes legacy and parity assertions via shared runner",
+    { timeout: CONTRACT_TEST_TIMEOUT.parityStandardMs },
+    async () => {
     const casePaths = startCaseSources.map((source) =>
       resolve(process.cwd(), source)
     );
@@ -78,7 +82,8 @@ describe("v11 start contract harness skeleton", () => {
       expect(run.v11).toBeDefined();
       expect(run.legacy).toEqual(run.v11);
     }
-  });
+    }
+  );
 
   it("includes start seed entries in corpus manifest", async () => {
     const manifestPath = resolve(

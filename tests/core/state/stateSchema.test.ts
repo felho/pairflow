@@ -10,6 +10,7 @@ describe("state schema", () => {
 
     expect(state.meta_review).toEqual({
       execution_context: null,
+      runtime_delivery: null,
       last_autonomous_run_id: null,
       last_autonomous_status: null,
       last_autonomous_recommendation: null,

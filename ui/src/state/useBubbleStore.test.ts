@@ -307,7 +307,8 @@ describe("createBubbleStore", () => {
       latestStatus: null,
       latestSummary: null,
       latestReportRef: null,
-      latestUpdatedAt: null
+      latestUpdatedAt: null,
+      runtimeDelivery: null
     });
   });
 

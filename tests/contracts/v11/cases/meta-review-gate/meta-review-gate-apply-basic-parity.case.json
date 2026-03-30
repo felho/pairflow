@@ -10,9 +10,9 @@
   },
   "expected": {
     "status": "ok",
-    "gateRoute": "human_gate_run_failed",
+    "gateRoute": "meta_review_running",
     "stateSubset": {
-      "state": "META_REVIEW_FAILED"
+      "state": "META_REVIEW_RUNNING"
     }
   },
   "tags": [
@@ -22,4 +22,3 @@
     "parity"
   ]
 }
-

@@ -90,7 +90,8 @@ describe("renderBubbleStatusText", () => {
         latestStatus: "inconclusive",
         latestSummary: "No deterministic recommendation.",
         latestReportRef: "artifacts/meta-review-last.json",
-        latestUpdatedAt: "2026-02-22T12:04:59.000Z"
+        latestUpdatedAt: "2026-02-22T12:04:59.000Z",
+        runtimeDelivery: null
       },
       commandPath: {
         status: "worktree_local",
@@ -206,6 +207,33 @@ describe("renderBubbleStatusText", () => {
       "Command path: stale profile=self_host reason=PAIRFLOW_COMMAND_PATH_STALE"
     );
   });
+
+  it("renders runtime delivery diagnostics in text mode", () => {
+    const rendered = renderBubbleStatusText(
+      createStatusView({
+        metaReview: {
+          actor: "meta-reviewer",
+          latestRecommendation: "inconclusive",
+          latestStatus: "inconclusive",
+          latestSummary: "No deterministic recommendation.",
+          latestReportRef: "artifacts/meta-review-last.json",
+          latestUpdatedAt: "2026-02-22T12:04:59.000Z",
+          runtimeDelivery: {
+            status: "uncertain",
+            reasonCode: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
+            message: "pane delivery not confirmed",
+            observedAt: "2026-02-22T12:05:30.000Z",
+            observedForHandoffId: "meta_review:b_status_render_01:round:2:attempt:1",
+            observedForRound: 2
+          }
+        }
+      })
+    );
+
+    expect(rendered).toContain("Meta-review runtime delivery: uncertain");
+    expect(rendered).toContain("reason=META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED");
+    expect(rendered).toContain("message=pane delivery not confirmed");
+  });
 });
 
 describe("renderBubbleStatusTable", () => {
@@ -249,7 +277,8 @@ describe("renderBubbleStatusTable", () => {
         latestStatus: "success",
         latestSummary: "Autonomous recommendation approve.",
         latestReportRef: "artifacts/meta-review-last.json",
-        latestUpdatedAt: "2026-03-08T21:29:00.000Z"
+        latestUpdatedAt: "2026-03-08T21:29:00.000Z",
+        runtimeDelivery: null
       },
       commandPath: {
         status: "worktree_local",
@@ -332,5 +361,31 @@ describe("renderBubbleStatusTable", () => {
     );
 
     expect(rendered).toContain("PAIRFLOW_COMMAND_PATH_STALE");
+  });
+
+  it("renders runtime delivery diagnostics in table mode", () => {
+    const rendered = renderBubbleStatusTable(
+      createStatusView({
+        metaReview: {
+          actor: "meta-reviewer",
+          latestRecommendation: "approve",
+          latestStatus: "success",
+          latestSummary: "Autonomous recommendation approve.",
+          latestReportRef: "artifacts/meta-review-last.json",
+          latestUpdatedAt: "2026-03-08T21:29:00.000Z",
+          runtimeDelivery: {
+            status: "failed",
+            reasonCode: "META_REVIEW_REQUEST_DELIVERY_FAILED",
+            message: "tmux send failed",
+            observedAt: "2026-03-08T21:29:10.000Z",
+            observedForHandoffId: "meta_review:b_status_render_01:round:5:attempt:1",
+            observedForRound: 5
+          }
+        }
+      })
+    );
+
+    expect(rendered).toContain("| Meta-review");
+    expect(rendered).toContain("runtime_delivery=failed/META_REVIEW_REQUEST_DELIVERY_FAILED");
   });
 });

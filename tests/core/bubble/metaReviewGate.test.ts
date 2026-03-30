@@ -14,14 +14,19 @@ import {
 } from "../../../src/core/runtime/metaReviewSubmitGuidance.js";
 import { notifyMetaReviewerSubmissionRequest } from "../../../src/v11/shared/metaReviewGate/metaReviewGateNotify.js";
 import {
+  appendHumanApprovalRequestEnvelope
+} from "../../../src/core/bubble/approvalRequestEnvelope.js";
+import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
 } from "../../../src/core/protocol/transcriptStore.js";
+import { serializeEnvelopeLine } from "../../../src/core/protocol/envelope.js";
 import {
   readStateSnapshot,
   StateStoreConflictError,
   writeStateSnapshot
 } from "../../../src/core/state/stateStore.js";
+import { applyStateTransition } from "../../../src/core/state/machine.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import type { BubbleMetaReviewSnapshotState } from "../../../src/types/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -70,6 +75,8 @@ function buildBoundMetaReviewerPaneResult(input: {
 
 function defaultMetaReviewSnapshot(): BubbleMetaReviewSnapshotState {
   return {
+    execution_context: null,
+    runtime_delivery: null,
     last_autonomous_run_id: null,
     last_autonomous_status: null,
     last_autonomous_recommendation: null,
@@ -105,7 +112,11 @@ async function startAsyncMetaReviewGate(input: {
           worktreePath: input.worktreePath,
           active
         }),
-      notifyMetaReviewerSubmissionRequest: async () => {}
+      notifyMetaReviewerSubmissionRequest: async () => ({
+        status: "confirmed",
+        reasonCode: null,
+        message: "ok"
+      })
     }
   );
 }
@@ -246,7 +257,7 @@ describe("notifyMetaReviewerSubmissionRequest", () => {
   it("sends required structured submit command with --report-json parity fields", async () => {
     const tmuxCalls: string[][] = [];
     let captureCount = 0;
-    await notifyMetaReviewerSubmissionRequest(
+    const result = await notifyMetaReviewerSubmissionRequest(
       {
         bubbleId: "b_meta_gate_notify_01",
         round: 4,
@@ -274,6 +285,11 @@ describe("notifyMetaReviewerSubmissionRequest", () => {
         }
       }
     );
+    expect(result).toEqual({
+      status: "confirmed",
+      reasonCode: null,
+      message: "meta-review submit request delivery confirmed from pane scrollback."
+    });
 
     const messageCall = tmuxCalls.find(
       (args) =>
@@ -300,7 +316,7 @@ describe("notifyMetaReviewerSubmissionRequest", () => {
 
   it("accepts a request marker that already scrolled out of the visible viewport", async () => {
     const tmuxCalls: string[][] = [];
-    await notifyMetaReviewerSubmissionRequest(
+    const result = await notifyMetaReviewerSubmissionRequest(
       {
         bubbleId: "b_meta_gate_notify_history_01",
         round: 4,
@@ -332,6 +348,7 @@ describe("notifyMetaReviewerSubmissionRequest", () => {
         }
       }
     );
+    expect(result.status).toBe("confirmed");
 
     const captureCall = tmuxCalls.find(
       (args) => args[0] === "capture-pane" && args.includes("-S")
@@ -374,7 +391,10 @@ describe("notifyMetaReviewerSubmissionRequest", () => {
           }
         }
       )
-    ).rejects.toThrow(/interactive shell/u);
+    ).resolves.toMatchObject({
+      status: "failed",
+      reasonCode: "META_REVIEWER_PANE_EXITED"
+    });
   });
 });
 
@@ -386,7 +406,11 @@ describe("applyMetaReviewGateOnConvergence", () => {
       bubbleId: "b_meta_gate_async_start_01",
       task: "Async gate start"
     });
-    const notifySpy = vi.fn(async () => {});
+    const notifySpy = vi.fn(async () => ({
+      status: "confirmed" as const,
+      reasonCode: null,
+      message: "ok"
+    }));
 
     const result = await applyMetaReviewGateOnConvergence(
       {
@@ -429,7 +453,20 @@ describe("applyMetaReviewGateOnConvergence", () => {
     });
     expect(result.state.state).toBe("META_REVIEW_RUNNING");
     expect(result.state.active_role).toBe("meta_reviewer");
+    expect(result.state.meta_review?.runtime_delivery).toMatchObject({
+      status: "confirmed",
+      reason_code: null,
+      message: "ok"
+    });
     expect(notifySpy).toHaveBeenCalledTimes(1);
+
+    const persisted = await readStateSnapshot(bubble.paths.statePath);
+    expect(persisted.state.state).toBe("META_REVIEW_RUNNING");
+    expect(persisted.state.meta_review?.runtime_delivery).toMatchObject({
+      status: "confirmed",
+      reason_code: null,
+      message: "ok"
+    });
   });
 
   it("routes to human_gate_run_failed when pane binding is unavailable", async () => {
@@ -455,12 +492,13 @@ describe("applyMetaReviewGateOnConvergence", () => {
       }
     );
 
-    expect(result.route).toBe("human_gate_run_failed");
-    expect(result.gateEnvelope.type).toBe("APPROVAL_REQUEST");
-    expect(result.state.state).toBe("META_REVIEW_FAILED");
-    expect(result.gateEnvelope.payload.summary).toContain(
-      "META_REVIEW_GATE_RUN_FAILED"
-    );
+    expect(result.route).toBe("meta_review_running");
+    expect(result.gateEnvelope.type).toBe("TASK");
+    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.meta_review?.runtime_delivery).toMatchObject({
+      status: "failed",
+      reason_code: "META_REVIEWER_PANE_UNAVAILABLE"
+    });
   });
 
   it("routes to human_gate_run_failed when structured submit request delivery fails", async () => {
@@ -489,19 +527,220 @@ describe("applyMetaReviewGateOnConvergence", () => {
             active
           });
         },
-        notifyMetaReviewerSubmissionRequest: async () => {
-          throw new Error("tmux send failed");
-        }
+        notifyMetaReviewerSubmissionRequest: async () => ({
+          status: "failed",
+          reasonCode: "META_REVIEW_REQUEST_DELIVERY_FAILED",
+          message: "tmux send failed"
+        })
       }
     );
 
-    expect(result.route).toBe("human_gate_run_failed");
-    expect(result.gateEnvelope.type).toBe("APPROVAL_REQUEST");
-    expect(result.state.state).toBe("META_REVIEW_FAILED");
+    expect(result.route).toBe("meta_review_running");
+    expect(result.gateEnvelope.type).toBe("TASK");
+    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.meta_review?.runtime_delivery).toMatchObject({
+      status: "failed",
+      reason_code: "META_REVIEW_REQUEST_DELIVERY_FAILED"
+    });
     expect(setPaneCalls).toEqual([true, false]);
   });
 
-  it("deactivates meta-reviewer pane when TASK append fails then fallback route succeeds", async () => {
+  it("tolerates runtime delivery persistence CAS conflicts without suppressing the durable handoff", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_async_start_runtime_conflict_01",
+      task: "Async gate runtime delivery persistence conflict"
+    });
+
+    const writeStateWithInjectedConflict: typeof writeStateSnapshot = async (
+      statePath,
+      state,
+      options
+    ) => {
+      if (
+        options?.expectedState === "META_REVIEW_RUNNING" &&
+        state.state === "META_REVIEW_RUNNING" &&
+        state.meta_review?.runtime_delivery !== null
+      ) {
+        throw new StateStoreConflictError("simulated runtime delivery CAS conflict");
+      }
+      return writeStateSnapshot(statePath, state, options);
+    };
+
+    const result = await applyMetaReviewGateOnConvergence(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        summary: "Converged for meta-review.",
+        now: new Date("2026-03-12T12:02:15.000Z")
+      },
+      {
+        writeStateSnapshot: writeStateWithInjectedConflict,
+        setMetaReviewerPaneBinding: async ({ bubbleId: targetBubbleId, active }) =>
+          buildBoundMetaReviewerPaneResult({
+            bubbleId: targetBubbleId,
+            repoPath,
+            worktreePath: bubble.paths.worktreePath,
+            active
+          }),
+        notifyMetaReviewerSubmissionRequest: async () => ({
+          status: "uncertain",
+          reasonCode: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
+          message: "pane delivery not confirmed"
+        })
+      }
+    );
+
+    expect(result.route).toBe("meta_review_running");
+    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.meta_review?.runtime_delivery).toBeNull();
+
+    const persisted = await readStateSnapshot(bubble.paths.statePath);
+    expect(persisted.state.state).toBe("META_REVIEW_RUNNING");
+    expect(persisted.state.meta_review?.runtime_delivery).toBeNull();
+  });
+
+  it("returns the newer persisted lifecycle state when runtime delivery persistence loses a CAS race to a progressed writer", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_async_start_runtime_progressed_01",
+      task: "Async gate runtime delivery persistence progressed race"
+    });
+
+    let injected = false;
+    const writeStateWithProgressedRace: typeof writeStateSnapshot = async (
+      statePath,
+      state,
+      options
+    ) => {
+      if (
+        !injected &&
+        options?.expectedState === "META_REVIEW_RUNNING" &&
+        state.state === "META_REVIEW_RUNNING" &&
+        state.meta_review?.runtime_delivery !== null
+      ) {
+        injected = true;
+        const latest = await readStateSnapshot(statePath);
+        const progressed = applyStateTransition(latest.state, {
+          to: "READY_FOR_HUMAN_APPROVAL",
+          activeAgent: null,
+          activeRole: null,
+          activeSince: null,
+          lastCommandAt: "2026-03-12T12:02:16.000Z"
+        });
+        await writeStateSnapshot(statePath, progressed, {
+          expectedFingerprint: latest.fingerprint,
+          expectedState: "META_REVIEW_RUNNING"
+        });
+        await appendHumanApprovalRequestEnvelope({
+          transcriptPath: bubble.paths.transcriptPath,
+          inboxPath: bubble.paths.inboxPath,
+          lockPath: join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`),
+          now: new Date("2026-03-12T12:02:16.500Z"),
+          bubbleId: bubble.bubbleId,
+          round: latest.state.round,
+          summary: "Converged. Meta-review result needs human confirmation.",
+          route: "human_gate_inconclusive",
+          refs: []
+        });
+        throw new StateStoreConflictError("simulated runtime delivery CAS conflict");
+      }
+      return writeStateSnapshot(statePath, state, options);
+    };
+
+    const result = await applyMetaReviewGateOnConvergence(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        summary: "Converged for meta-review.",
+        now: new Date("2026-03-12T12:02:15.000Z")
+      },
+      {
+        writeStateSnapshot: writeStateWithProgressedRace,
+        setMetaReviewerPaneBinding: async ({ bubbleId: targetBubbleId, active }) =>
+          buildBoundMetaReviewerPaneResult({
+            bubbleId: targetBubbleId,
+            repoPath,
+            worktreePath: bubble.paths.worktreePath,
+            active
+          }),
+        notifyMetaReviewerSubmissionRequest: async () => ({
+          status: "uncertain",
+          reasonCode: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
+          message: "pane delivery not confirmed"
+        })
+      }
+    );
+
+    expect(result.route).toBe("human_gate_inconclusive");
+    expect(result.gateEnvelope.type).toBe("APPROVAL_REQUEST");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(result.gateEnvelope.payload.metadata).toMatchObject({
+      meta_review_gate_route: "human_gate_inconclusive"
+    });
+
+    const persisted = await readStateSnapshot(bubble.paths.statePath);
+    expect(persisted.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+  });
+
+  it("deactivates the meta-review pane when runtime delivery persistence fails after durable kickoff", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_async_start_runtime_write_failure_01",
+      task: "Async gate runtime delivery persistence write failure"
+    });
+    const setPaneCalls: boolean[] = [];
+
+    const writeStateWithInjectedFailure: typeof writeStateSnapshot = async (
+      statePath,
+      state,
+      options
+    ) => {
+      if (
+        options?.expectedState === "META_REVIEW_RUNNING" &&
+        state.state === "META_REVIEW_RUNNING" &&
+        state.meta_review?.runtime_delivery !== null
+      ) {
+        throw new Error("simulated runtime delivery persistence failure");
+      }
+      return writeStateSnapshot(statePath, state, options);
+    };
+
+    await expect(
+      applyMetaReviewGateOnConvergence(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          summary: "Converged for meta-review.",
+          now: new Date("2026-03-12T12:02:18.000Z")
+        },
+        {
+          writeStateSnapshot: writeStateWithInjectedFailure,
+          setMetaReviewerPaneBinding: async ({ bubbleId: targetBubbleId, active }) => {
+            setPaneCalls.push(active);
+            return buildBoundMetaReviewerPaneResult({
+              bubbleId: targetBubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath,
+              active
+            });
+          },
+          notifyMetaReviewerSubmissionRequest: async () => ({
+            status: "confirmed",
+            reasonCode: null,
+            message: "ok"
+          })
+        }
+      )
+    ).rejects.toThrow("simulated runtime delivery persistence failure");
+
+    expect(setPaneCalls).toEqual([true, false]);
+  });
+
+  it("does not touch pane binding when TASK append fails before durable handoff", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -527,7 +766,11 @@ describe("applyMetaReviewGateOnConvergence", () => {
             active
           });
         },
-        notifyMetaReviewerSubmissionRequest: async () => {},
+        notifyMetaReviewerSubmissionRequest: async () => ({
+          status: "confirmed",
+          reasonCode: null,
+          message: "ok"
+        }),
         appendProtocolEnvelope: async (input) => {
           if (input.envelope.type === "TASK") {
             throw new Error("simulated TASK append failure");
@@ -540,7 +783,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
     expect(result.route).toBe("human_gate_run_failed");
     expect(result.gateEnvelope.type).toBe("APPROVAL_REQUEST");
     expect(result.state.state).toBe("META_REVIEW_FAILED");
-    expect(setPaneCalls).toEqual([true, false]);
+    expect(setPaneCalls).toEqual([]);
   });
 
   it("requires a fresh meta-review run when legacy sticky state leaks into a later round", async () => {
@@ -737,7 +980,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
 });
 
 describe("recoverMetaReviewGateFromSnapshot", () => {
-  it("hydrates empty snapshot during recover and writes canonical artifacts", async () => {
+  it("keeps META_REVIEW_RUNNING during recover when no durable result exists before deadline", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -759,32 +1002,52 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:09:02.000Z")
     });
-    expect(recovered.route).toBe("human_gate_run_failed");
-    expect(recovered.state.state).toBe("META_REVIEW_FAILED");
-    expect(recovered.state.meta_review).toMatchObject({
-      last_autonomous_status: "error",
-      last_autonomous_recommendation: "inconclusive",
-      last_autonomous_summary: "Converged.",
-      last_autonomous_report_ref: "artifacts/meta-review-last.json"
-    });
-    expect(recovered.state.meta_review?.last_autonomous_updated_at).not.toBeNull();
+    expect(recovered.route).toBe("meta_review_running");
+    expect(recovered.state.state).toBe("META_REVIEW_RUNNING");
+    expect(recovered.state.meta_review?.execution_context).not.toBeNull();
+    await expect(
+      readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
+    ).rejects.toMatchObject({ code: "ENOENT" });
+  });
 
-    const reportJsonRaw = await readFile(
-      bubble.paths.metaReviewLastJsonArtifactPath,
+  it("rejects before-deadline recovery when only a generic TASK remains and the meta-review kickoff envelope is missing", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_missing_kickoff_01",
+      task: "Recover should not reuse generic TASK as meta-review kickoff"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:09:00.000Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath, {
+      allowMissing: false
+    });
+    const withoutMetaReviewKickoff = transcript.filter(
+      (envelope) => envelope.payload.metadata?.actor !== "meta-review-gate"
+    );
+    await writeFileFs(
+      bubble.paths.transcriptPath,
+      withoutMetaReviewKickoff.map((envelope) => serializeEnvelopeLine(envelope)).join(""),
       "utf8"
     );
-    const reportJson = JSON.parse(reportJsonRaw) as {
-      summary: string;
-      recommendation: string;
-      status: string;
-      report_ref: string;
-    };
 
-    expect(reportJson).toMatchObject({
-      summary: "Converged.",
-      recommendation: "inconclusive",
-      status: "error",
-      report_ref: "artifacts/meta-review-last.json"
+    await expect(
+      recoverMetaReviewGateFromSnapshot({
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        summary: "Converged.",
+        now: new Date("2026-03-12T12:09:02.000Z")
+      })
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
     });
   });
 

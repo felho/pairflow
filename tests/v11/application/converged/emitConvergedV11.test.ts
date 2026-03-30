@@ -81,11 +81,11 @@ describe("emitConvergedFromWorkspaceV11", () => {
 
     expect(v11).toEqual(legacy);
     expect(v11.convergenceEnvelopeType).toBe("CONVERGENCE");
-    expect(v11.approvalRequestEnvelopeType).toBe("APPROVAL_REQUEST");
-    expect(v11.approvalRequestRecipient).toBe("human");
+    expect(v11.approvalRequestEnvelopeType).toBe("TASK");
+    expect(v11.approvalRequestRecipient).toBe("codex");
     expect(v11.approvalRequestSender).toBe("orchestrator");
-    expect(v11.gateRoute).toBe("human_gate_run_failed");
-    expect(v11.state).toBe("META_REVIEW_FAILED");
+    expect(v11.gateRoute).toBe("meta_review_running");
+    expect(v11.state).toBe("META_REVIEW_RUNNING");
   });
 
   it("matches legacy converged behavior on document-scope seeded scenario", async () => {
@@ -102,11 +102,11 @@ describe("emitConvergedFromWorkspaceV11", () => {
 
     expect(v11).toEqual(legacy);
     expect(v11.convergenceEnvelopeType).toBe("CONVERGENCE");
-    expect(v11.approvalRequestEnvelopeType).toBe("APPROVAL_REQUEST");
-    expect(v11.approvalRequestRecipient).toBe("human");
+    expect(v11.approvalRequestEnvelopeType).toBe("TASK");
+    expect(v11.approvalRequestRecipient).toBe("codex");
     expect(v11.approvalRequestSender).toBe("orchestrator");
-    expect(v11.gateRoute).toBe("human_gate_run_failed");
-    expect(v11.state).toBe("META_REVIEW_FAILED");
+    expect(v11.gateRoute).toBe("meta_review_running");
+    expect(v11.state).toBe("META_REVIEW_RUNNING");
   });
 
   it("rejects when bubble is not RUNNING", async () => {

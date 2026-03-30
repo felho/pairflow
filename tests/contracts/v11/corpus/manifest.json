@@ -627,6 +627,30 @@
       "kind": "seed_case"
     },
     {
+      "id": "watchdog-meta-review-running-before-deadline-delivery-failed",
+      "command": "watchdog",
+      "source": "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-before-deadline-delivery-failed.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "watchdog-meta-review-running-before-deadline-delivery-failed-v11",
+      "command": "watchdog",
+      "source": "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-before-deadline-delivery-failed-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "watchdog-meta-review-running-expired-after-rebind",
+      "command": "watchdog",
+      "source": "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-expired-after-rebind.case.json",
+      "kind": "seed_case"
+    },
+    {
+      "id": "watchdog-meta-review-running-expired-after-rebind-v11",
+      "command": "watchdog",
+      "source": "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-expired-after-rebind-v11.case.json",
+      "kind": "seed_case"
+    },
+    {
       "id": "commit-basic",
       "command": "commit",
       "source": "tests/contracts/v11/cases/commit/commit-basic.case.json",

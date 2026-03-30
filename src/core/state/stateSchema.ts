@@ -17,8 +17,10 @@ import {
   isBubbleLifecycleState,
   isMetaReviewRecommendation,
   isMetaReviewRunStatus,
+  isMetaReviewRuntimeDeliveryStatus,
   isReworkIntentStatus,
   type BubbleMetaReviewExecutionContext,
+  type BubbleMetaReviewRuntimeDeliveryState,
   type BubbleMetaReviewSnapshotState,
   type BubbleReworkIntentRecord,
   type BubbleStateSnapshot,
@@ -342,6 +344,98 @@ function validateMetaReviewSnapshot(
     }
   }
 
+  const runtimeDeliveryRaw =
+    input.runtime_delivery === undefined ? null : input.runtime_delivery;
+  let runtimeDelivery: BubbleMetaReviewRuntimeDeliveryState | null = null;
+  if (runtimeDeliveryRaw !== null) {
+    if (!isRecord(runtimeDeliveryRaw)) {
+      errors.push({
+        path: `${pathPrefix}.runtime_delivery`,
+        message: "Must be null or an object"
+      });
+    } else {
+      const status = runtimeDeliveryRaw.status;
+      if (!isMetaReviewRuntimeDeliveryStatus(status)) {
+        errors.push({
+          path: `${pathPrefix}.runtime_delivery.status`,
+          message: "Must be one of: confirmed, uncertain, failed"
+        });
+      }
+
+      const reasonCode = runtimeDeliveryRaw.reason_code;
+      if (!(reasonCode === null || isNonEmptyString(reasonCode))) {
+        errors.push({
+          path: `${pathPrefix}.runtime_delivery.reason_code`,
+          message: "Must be null or a non-empty string"
+        });
+      }
+
+      const message = runtimeDeliveryRaw.message;
+      if (!isNonEmptyString(message)) {
+        errors.push({
+          path: `${pathPrefix}.runtime_delivery.message`,
+          message: "Must be a non-empty string"
+        });
+      }
+
+      const observedAt = runtimeDeliveryRaw.observed_at;
+      const observedAtValid = isIsoTimestamp(observedAt);
+      if (!observedAtValid) {
+        errors.push({
+          path: `${pathPrefix}.runtime_delivery.observed_at`,
+          message: "Must be a valid ISO timestamp"
+        });
+      }
+
+      const observedForHandoffId = runtimeDeliveryRaw.observed_for_handoff_id;
+      if (
+        !(
+          observedForHandoffId === null ||
+          observedForHandoffId === undefined ||
+          isNonEmptyString(observedForHandoffId)
+        )
+      ) {
+        errors.push({
+          path: `${pathPrefix}.runtime_delivery.observed_for_handoff_id`,
+          message: "Must be null or a non-empty string"
+        });
+      }
+
+      const observedForRound = runtimeDeliveryRaw.observed_for_round;
+      if (
+        !(
+          observedForRound === null ||
+          observedForRound === undefined ||
+          (isInteger(observedForRound) && observedForRound >= 1)
+        )
+      ) {
+        errors.push({
+          path: `${pathPrefix}.runtime_delivery.observed_for_round`,
+          message: "Must be null or a positive integer"
+        });
+      }
+
+      if (
+        isMetaReviewRuntimeDeliveryStatus(status) &&
+        isNonEmptyString(message) &&
+        observedAtValid
+      ) {
+        runtimeDelivery = {
+          status,
+          reason_code: isNonEmptyString(reasonCode) ? reasonCode : null,
+          message,
+          observed_at: observedAt,
+          observed_for_handoff_id:
+            isNonEmptyString(observedForHandoffId) ? observedForHandoffId : null,
+          observed_for_round:
+            isInteger(observedForRound) && observedForRound >= 1
+              ? observedForRound
+              : null
+        };
+      }
+    }
+  }
+
   const lastRunIdRaw = input.last_autonomous_run_id;
   const lastRunId = lastRunIdRaw === undefined ? null : lastRunIdRaw;
   const lastRunIdValid = lastRunId === null || isNonEmptyString(lastRunId);
@@ -556,6 +650,7 @@ function validateMetaReviewSnapshot(
 
   return {
     execution_context: executionContext,
+    runtime_delivery: runtimeDelivery,
     last_autonomous_run_id:
       isNonEmptyString(lastRunId) ? lastRunId : null,
     last_autonomous_status: lastStatus as BubbleMetaReviewSnapshotState["last_autonomous_status"],

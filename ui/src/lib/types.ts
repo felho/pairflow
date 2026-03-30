@@ -138,6 +138,7 @@ export interface UiBubbleTranscriptSummary {
 
 export type MetaReviewRecommendation = "rework" | "approve" | "inconclusive";
 export type MetaReviewRunStatus = "success" | "error" | "inconclusive";
+export type MetaReviewRuntimeDeliveryStatus = "confirmed" | "uncertain" | "failed";
 
 export interface UiBubbleMetaReviewSummary {
   actor: "meta-reviewer";
@@ -146,6 +147,14 @@ export interface UiBubbleMetaReviewSummary {
   latestSummary: string | null;
   latestReportRef: string | null;
   latestUpdatedAt: string | null;
+  runtimeDelivery: {
+    status: MetaReviewRuntimeDeliveryStatus;
+    reasonCode: string | null;
+    message: string;
+    observedAt: string;
+    observedForHandoffId: string | null;
+    observedForRound: number | null;
+  } | null;
 }
 
 export interface UiBubbleSummary {

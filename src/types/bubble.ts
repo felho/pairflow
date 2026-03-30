@@ -87,6 +87,15 @@ export const metaReviewExecutionContextAwaitedOutputTypes = [
 export type MetaReviewExecutionContextAwaitedOutputType =
   (typeof metaReviewExecutionContextAwaitedOutputTypes)[number];
 
+export const metaReviewRuntimeDeliveryStatuses = [
+  "confirmed",
+  "uncertain",
+  "failed"
+] as const;
+
+export type MetaReviewRuntimeDeliveryStatus =
+  (typeof metaReviewRuntimeDeliveryStatuses)[number];
+
 export type GateReasonCode =
   | "DOC_CONTRACT_PARSE_WARNING"
   | "REVIEW_SCHEMA_WARNING"
@@ -231,8 +240,18 @@ export interface BubbleMetaReviewExecutionContext {
   attempt: number;
 }
 
+export interface BubbleMetaReviewRuntimeDeliveryState {
+  status: MetaReviewRuntimeDeliveryStatus;
+  reason_code: string | null;
+  message: string;
+  observed_at: string;
+  observed_for_handoff_id: string | null;
+  observed_for_round: number | null;
+}
+
 export interface BubbleMetaReviewSnapshotState {
   execution_context?: BubbleMetaReviewExecutionContext | null;
+  runtime_delivery?: BubbleMetaReviewRuntimeDeliveryState | null;
   last_autonomous_run_id: string | null;
   last_autonomous_status: MetaReviewRunStatus | null;
   last_autonomous_recommendation: MetaReviewRecommendation | null;
@@ -362,6 +381,15 @@ export function isMetaReviewRecommendation(
   return (
     typeof value === "string" &&
     (metaReviewRecommendations as readonly string[]).includes(value)
+  );
+}
+
+export function isMetaReviewRuntimeDeliveryStatus(
+  value: unknown
+): value is MetaReviewRuntimeDeliveryStatus {
+  return (
+    typeof value === "string" &&
+    (metaReviewRuntimeDeliveryStatuses as readonly string[]).includes(value)
   );
 }
 

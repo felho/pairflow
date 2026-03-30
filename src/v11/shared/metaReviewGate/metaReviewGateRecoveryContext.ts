@@ -1,6 +1,9 @@
 import type { readFile, writeFile } from "node:fs/promises";
 
-import type { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
+import type {
+  appendProtocolEnvelope,
+  readTranscriptEnvelopes
+} from "../../../core/protocol/transcriptStore.js";
 import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import type {
   readStateSnapshot,
@@ -51,6 +54,7 @@ export interface RecoverMetaReviewExecutionContext {
   lockPath: string;
   loaded: LoadedStateSnapshot;
   appendEnvelope: typeof appendProtocolEnvelope;
+  readTranscript: typeof readTranscriptEnvelopes;
   writeState: typeof writeStateSnapshot;
   readState: typeof readStateSnapshot;
   readFileFn: typeof readFile;
@@ -106,6 +110,7 @@ export async function initializeRecoverMetaReviewExecutionContext(
     lockPath,
     loaded,
     appendEnvelope: resolvedDependencies.appendEnvelope,
+    readTranscript: resolvedDependencies.readTranscript,
     writeState: resolvedDependencies.writeState,
     readState: resolvedDependencies.readState,
     readFileFn: resolvedDependencies.readFileFn,

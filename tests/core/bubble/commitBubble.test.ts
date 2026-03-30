@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { emitConvergedFromWorkspace } from "../../../src/core/agent/converged.js";
 import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
 import { commitBubble, BubbleCommitError } from "../../../src/core/bubble/commitBubble.js";
+import { submitMetaReviewResult } from "../../../src/core/bubble/metaReview.js";
 import { emitApprove } from "../../../src/core/human/approval.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { readStateSnapshot } from "../../../src/core/state/stateStore.js";
@@ -22,6 +23,28 @@ async function createTempRepo(): Promise<string> {
   tempDirs.push(root);
   await initGitRepository(root);
   return root;
+}
+
+function buildActiveMetaReviewerSession(input: {
+  bubbleId: string;
+  repoPath: string;
+  worktreePath: string;
+}) {
+  return {
+    [input.bubbleId]: {
+      bubbleId: input.bubbleId,
+      repoPath: input.repoPath,
+      worktreePath: input.worktreePath,
+      tmuxSessionName: "pf_commit_bubble_fixture",
+      updatedAt: "2026-02-22T15:03:00.000Z",
+      metaReviewerPane: {
+        role: "meta-reviewer" as const,
+        paneIndex: 3,
+        active: true,
+        updatedAt: "2026-02-22T15:03:00.000Z"
+      }
+    }
+  };
 }
 
 async function setupApprovedBubble(repoPath: string, bubbleId: string) {
@@ -47,15 +70,38 @@ async function setupApprovedBubble(repoPath: string, bubbleId: string) {
     cwd: bubble.paths.worktreePath,
     now: new Date("2026-02-22T15:02:00.000Z")
   });
-  await emitConvergedFromWorkspace({
+  const converged = await emitConvergedFromWorkspace({
     summary: "Ready for approval",
     cwd: bubble.paths.worktreePath,
     now: new Date("2026-02-22T15:03:00.000Z")
   });
+  await submitMetaReviewResult(
+    {
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      round: converged.state.round,
+      recommendation: "approve",
+      summary: "No findings remain after this review.",
+      report_json: {
+        findings_claim_state: "clean",
+        findings_claim_source: "meta_review_artifact",
+        findings_count: 0
+      }
+    },
+    {
+      now: new Date("2026-02-22T15:03:30.000Z"),
+      readRuntimeSessionsRegistry: async () => {
+        await Promise.resolve();
+        return buildActiveMetaReviewerSession({
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          worktreePath: bubble.paths.worktreePath
+        });
+      }
+    }
+  );
   await emitApprove({
     bubbleId: bubble.bubbleId,
-    overrideNonApprove: true,
-    overrideReason: "Human override for commit-flow fixture setup.",
     cwd: repoPath,
     now: new Date("2026-02-22T15:04:00.000Z")
   });

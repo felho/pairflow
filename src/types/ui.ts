@@ -4,6 +4,7 @@ import type {
 } from "./bubble.js";
 import type {
   MetaReviewRecommendation,
+  MetaReviewRuntimeDeliveryStatus,
   MetaReviewRunStatus
 } from "./bubble.js";
 import type {
@@ -43,6 +44,14 @@ export interface UiBubbleMetaReviewSummary {
   latestSummary: string | null;
   latestReportRef: string | null;
   latestUpdatedAt: string | null;
+  runtimeDelivery: {
+    status: MetaReviewRuntimeDeliveryStatus;
+    reasonCode: string | null;
+    message: string;
+    observedAt: string;
+    observedForHandoffId: string | null;
+    observedForRound: number | null;
+  } | null;
 }
 
 export interface UiBubbleSummary {

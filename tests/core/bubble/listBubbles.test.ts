@@ -190,6 +190,59 @@ describe("listBubbles", () => {
     expect(listed.byState.META_REVIEW_RUNNING).toBe(0);
   });
 
+  it("surfaces active meta-review runtime delivery diagnostics in list summaries", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_list_runtime_delivery_01",
+      task: "Runtime delivery visible in list summary"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const metaRunning = {
+      ...loaded.state,
+      state: "META_REVIEW_RUNNING" as const,
+      active_agent: "codex" as const,
+      active_role: "meta_reviewer" as const,
+      active_since: "2026-02-22T18:41:00.000Z",
+      last_command_at: "2026-02-22T18:41:00.000Z",
+      meta_review: {
+        ...loaded.state.meta_review!,
+        execution_context: buildMetaReviewExecutionContext({
+          bubbleId: bubble.bubbleId,
+          round: loaded.state.round,
+          startedAt: "2026-02-22T18:41:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        }),
+        runtime_delivery: {
+          status: "failed" as const,
+          reason_code: "META_REVIEW_REQUEST_DELIVERY_FAILED",
+          message: "tmux send failed",
+          observed_at: "2026-02-22T18:41:05.000Z",
+          observed_for_handoff_id:
+            `meta_review:${bubble.bubbleId}:round:${loaded.state.round}:attempt:1`,
+          observed_for_round: loaded.state.round
+        }
+      }
+    };
+    await writeStateSnapshot(bubble.paths.statePath, metaRunning, {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "RUNNING"
+    });
+
+    const listed = await listBubbles({ repoPath });
+    expect(listed.bubbles[0]?.metaReview.runtimeDelivery).toEqual({
+      status: "failed",
+      reasonCode: "META_REVIEW_REQUEST_DELIVERY_FAILED",
+      message: "tmux send failed",
+      observedAt: "2026-02-22T18:41:05.000Z",
+      observedForHandoffId:
+        `meta_review:${bubble.bubbleId}:round:${loaded.state.round}:attempt:1`,
+      observedForRound: loaded.state.round
+    });
+  });
+
   it("keeps legacy inspectable META_REVIEW_RUNNING bubbles visible and marks runtime session stale", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({

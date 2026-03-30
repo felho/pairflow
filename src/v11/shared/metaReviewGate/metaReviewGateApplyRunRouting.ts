@@ -23,6 +23,9 @@ export async function routeMetaReviewKickoffOrRunFailed(
       now: input.context.now,
       bubbleId: input.context.resolved.bubbleId,
       round: input.metaReviewRunningState.state.round,
+      handoffId:
+        input.metaReviewRunningState.state.meta_review?.execution_context?.handoff_id ??
+        `meta_review:${input.context.resolved.bubbleId}:round:${input.metaReviewRunningState.state.round}`,
       refs: input.context.refs
     });
 

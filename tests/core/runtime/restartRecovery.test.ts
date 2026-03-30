@@ -4,6 +4,11 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { emitConvergedFromWorkspace } from "../../../src/core/agent/converged.js";
+import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
+import { createBubble } from "../../../src/core/bubble/createBubble.js";
+import { submitMetaReviewResult } from "../../../src/core/bubble/metaReview.js";
+import { applyMetaReviewGateOnConvergence } from "../../../src/core/bubble/metaReviewGate.js";
 import { startBubble } from "../../../src/core/bubble/startBubble.js";
 import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import {
@@ -249,5 +254,152 @@ describe("restart recovery", () => {
 
     expect(started.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(started.state.round).toBe(humanGate.round);
+  });
+
+  it("keeps canonical meta-review submit routeable after delivery failure, restart recovery, and missing pane rebinding", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_restart_meta_submit_smoke_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Smoke meta-review restart recovery submit",
+      cwd: repoPath
+    });
+
+    await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        now: new Date("2026-02-23T13:00:00.000Z")
+      },
+      {
+        launchBubbleTmuxSession: () =>
+          Promise.resolve({ sessionName: "pf-b_restart_meta_submit_smoke_01" })
+      }
+    );
+
+    const emitDelivery = () =>
+      Promise.resolve({
+        delivered: true,
+        sessionName: "pf-b_restart_meta_submit_smoke_01",
+        message: "ok"
+      });
+
+    await emitPassFromWorkspace({
+      summary: "Implementer handoff round 1",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-23T13:01:00.000Z")
+    }, {
+      emitTmuxDeliveryNotification: () => emitDelivery(),
+      refreshReviewerContext: () => Promise.resolve({ refreshed: false })
+    });
+    await emitPassFromWorkspace({
+      summary: "Reviewer clean handoff round 1",
+      noFindings: true,
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-23T13:02:00.000Z")
+    }, {
+      emitTmuxDeliveryNotification: () => emitDelivery(),
+      refreshReviewerContext: () => Promise.resolve({ refreshed: false })
+    });
+    await emitPassFromWorkspace({
+      summary: "Implementer handoff round 2",
+      cwd: bubble.paths.worktreePath,
+      now: new Date("2026-02-23T13:03:00.000Z")
+    }, {
+      emitTmuxDeliveryNotification: () => emitDelivery(),
+      refreshReviewerContext: () => Promise.resolve({ refreshed: false })
+    });
+
+    const converged = await emitConvergedFromWorkspace(
+      {
+        summary: "Ready for approval after restart smoke path",
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-23T13:04:00.000Z")
+      },
+      {
+        applyMetaReviewGateOnConvergence: (input, dependencies = {}) =>
+          applyMetaReviewGateOnConvergence(input, {
+            ...dependencies,
+            notifyMetaReviewerSubmissionRequest: async () => ({
+              status: "failed",
+              reasonCode: "META_REVIEWER_PANE_EXITED",
+              message: "meta-reviewer pane exited after durable kickoff"
+            })
+          }),
+        emitTmuxDeliveryNotification: () => emitDelivery(),
+        emitBubbleNotification: async (_config, kind) => ({
+          kind,
+          attempted: false,
+          delivered: false,
+          soundPath: null,
+          reason: "disabled"
+        })
+      }
+    );
+
+    expect(converged.state.state).toBe("META_REVIEW_RUNNING");
+
+    const afterFailureState = await readStateSnapshot(bubble.paths.statePath);
+    expect(afterFailureState.state.meta_review?.runtime_delivery).toMatchObject({
+      status: "failed",
+      reason_code: "META_REVIEWER_PANE_EXITED"
+    });
+
+    const failedRegistry = await readRuntimeSessionsRegistry(
+      bubble.paths.sessionsPath,
+      { allowMissing: false }
+    );
+    expect(failedRegistry[bubble.bubbleId]?.metaReviewerPane?.active).toBe(false);
+
+    await reconcileRuntimeSessions({
+      repoPath,
+      isTmuxSessionAlive: () => Promise.resolve(false)
+    });
+
+    const restarted = await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        now: new Date("2026-02-23T13:05:00.000Z")
+      },
+      {
+        launchBubbleTmuxSession: () =>
+          Promise.resolve({ sessionName: "pf-b_restart_meta_submit_smoke_01" })
+      }
+    );
+
+    expect(restarted.state.state).toBe("META_REVIEW_RUNNING");
+
+    const restartedRegistry = await readRuntimeSessionsRegistry(
+      bubble.paths.sessionsPath,
+      { allowMissing: false }
+    );
+    expect(restartedRegistry[bubble.bubbleId]?.metaReviewerPane).toBeUndefined();
+
+    const submitted = await submitMetaReviewResult(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        round: restarted.state.round,
+        recommendation: "approve",
+        summary: "No findings remain after restart recovery smoke.",
+        report_json: {
+          findings_claim_state: "clean",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 0
+        }
+      },
+      {
+        now: new Date("2026-02-23T13:05:30.000Z")
+      }
+    );
+
+    expect(submitted.gate_route).toBe("human_gate_approve");
+    expect(submitted.lifecycle_state).toBe("READY_FOR_HUMAN_APPROVAL");
+
+    const finalState = await readStateSnapshot(bubble.paths.statePath);
+    expect(finalState.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
   });
 });

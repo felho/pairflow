@@ -22,6 +22,14 @@ function formatStatusEscalationText(status: BubbleStatusView): string {
   return `Escalation: watchdog timeout exceeded for active agent ${status.watchdog.monitoredAgent ?? "-"} (deadline ${status.watchdog.deadlineTimestamp ?? "-"})`;
 }
 
+function formatRuntimeDeliveryText(status: BubbleStatusView): string {
+  const runtimeDelivery = status.metaReview.runtimeDelivery;
+  if (runtimeDelivery === null) {
+    return "Meta-review runtime delivery: -";
+  }
+  return `Meta-review runtime delivery: ${runtimeDelivery.status} observed=${runtimeDelivery.observedAt} handoff=${runtimeDelivery.observedForHandoffId ?? "-"} round=${runtimeDelivery.observedForRound ?? "-"}${runtimeDelivery.reasonCode !== null ? ` reason=${runtimeDelivery.reasonCode}` : ""} message=${runtimeDelivery.message}`;
+}
+
 export function renderBubbleStatusText(status: BubbleStatusView): string {
   const failingGateSummary = formatFailingGateSummaryText(status);
   const stateValidationSummary =
@@ -40,6 +48,7 @@ export function renderBubbleStatusText(status: BubbleStatusView): string {
     `Inbox pending: questions=${status.pendingInboxItems.humanQuestions}, approvals=${status.pendingInboxItems.approvalRequests}, total=${status.pendingInboxItems.total}`,
     `Transcript: messages=${status.transcript.totalMessages}, last=${status.transcript.lastMessageType ?? "-"} @ ${status.transcript.lastMessageTs ?? "-"}`,
     formatStatusCommandPathText(status),
+    formatRuntimeDeliveryText(status),
     `Accuracy critical: ${status.accuracy_critical ? "yes" : "no"}`,
     `Last review verification: ${status.accuracy_critical ? status.last_review_verification : "n/a"}`,
     `Failing gates: ${failingGateSummary}`,
