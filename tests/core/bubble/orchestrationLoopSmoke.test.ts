@@ -234,7 +234,8 @@ describe("bubble orchestration loop smoke", () => {
       }
     );
 
-    expect(converged.state.state).toBe("META_REVIEW_FAILED");
+    expect(converged.state.state).toBe("META_REVIEW_RUNNING");
+    expect(converged.approvalRequestEnvelope.type).toBe("TASK");
 
     const transcript = await readTranscriptEnvelopes(loopBubble.paths.transcriptPath);
     expect(transcript.map((entry) => entry.type)).toEqual([
@@ -243,13 +244,13 @@ describe("bubble orchestration loop smoke", () => {
       "PASS",
       "PASS",
       "CONVERGENCE",
-      "APPROVAL_REQUEST"
+      "TASK"
     ]);
 
     const loadedState = await readStateSnapshot(loopBubble.paths.statePath);
-    expect(loadedState.state.state).toBe("META_REVIEW_FAILED");
-    expect(loadedState.state.active_role).toBeNull();
-    expect(loadedState.state.active_agent).toBeNull();
+    expect(loadedState.state.state).toBe("META_REVIEW_RUNNING");
+    expect(loadedState.state.active_role).toBe("meta_reviewer");
+    expect(loadedState.state.active_agent).toBe("codex");
 
     expect(passDeliveryCalls).toEqual([
       {
@@ -271,18 +272,8 @@ describe("bubble orchestration loop smoke", () => {
     expect(convergenceDeliveryCalls).toEqual([
       {
         bubbleId: loopBubble.bubbleId,
-        recipient: "human",
-        type: "APPROVAL_REQUEST"
-      },
-      {
-        bubbleId: loopBubble.bubbleId,
-        recipient: loopBubble.config.agents.implementer,
-        type: "APPROVAL_REQUEST"
-      },
-      {
-        bubbleId: loopBubble.bubbleId,
-        recipient: loopBubble.config.agents.reviewer,
-        type: "APPROVAL_REQUEST"
+        recipient: "codex",
+        type: "TASK"
       }
     ]);
     expect(bubbleNotificationKinds).toEqual(["converged"]);

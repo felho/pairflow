@@ -12,6 +12,7 @@ import {
   extractMetaReviewDelimitedBlock,
   hasCanonicalSubmitForActiveMetaReviewRound,
   MetaReviewError,
+  resolveActiveMetaReviewRuntimeDelivery,
   getMetaReviewLastReport,
   getMetaReviewStatus,
   parseMetaReviewRunnerOutput,
@@ -142,6 +143,7 @@ describe("meta-review run", () => {
     expect(loaded.state.state).toBe("RUNNING");
     expect(loaded.state.meta_review).toEqual({
       execution_context: null,
+      runtime_delivery: null,
       last_autonomous_run_id: "run_meta_01",
       last_autonomous_status: "success",
       last_autonomous_recommendation: "rework",
@@ -2994,7 +2996,7 @@ describe("meta-review submit", () => {
     });
   });
 
-  it("rejects submit when runtime session ownership is missing and does not mutate snapshot", async () => {
+  it("accepts submit when runtime session ownership is missing and keeps canonical authority on execution_context", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -3009,29 +3011,33 @@ describe("meta-review submit", () => {
     });
     const before = await readStateSnapshot(bubble.paths.statePath);
 
-    await expect(
-      submitMetaReviewResult(
-        {
-          bubbleId: bubble.bubbleId,
-          repoPath,
-          round: 1,
-          recommendation: "approve",
-          summary: "Should fail sender check.",
-          report_json: buildStructuredSubmitReportJson()
-        },
-        {
-          readRuntimeSessionsRegistry: async () => ({})
-        }
-      )
-    ).rejects.toMatchObject({
-      reasonCode: "META_REVIEW_SENDER_MISMATCH"
+    const result = await submitMetaReviewResult(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        round: 1,
+        recommendation: "approve",
+        summary: "Should succeed from canonical authority without runtime pane ownership.",
+        report_json: buildStructuredSubmitReportJson()
+      },
+      {
+        readRuntimeSessionsRegistry: async () => ({})
+      }
+    );
+
+    expect(result).toMatchObject({
+      status: "success",
+      recommendation: "approve",
+      gate_route: "human_gate_approve",
+      lifecycle_state: "READY_FOR_HUMAN_APPROVAL"
     });
 
     const after = await readStateSnapshot(bubble.paths.statePath);
-    expect(after.fingerprint).toBe(before.fingerprint);
+    expect(after.fingerprint).not.toBe(before.fingerprint);
+    expect(after.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
   });
 
-  it("rejects submit when runtime pane ownership is not active and does not mutate snapshot", async () => {
+  it("accepts submit when runtime pane ownership is not active and does not treat deactivation as authority", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -3046,14 +3052,13 @@ describe("meta-review submit", () => {
     });
     const before = await readStateSnapshot(bubble.paths.statePath);
 
-    let rejection: unknown;
-    await submitMetaReviewResult(
+    const result = await submitMetaReviewResult(
       {
         bubbleId: bubble.bubbleId,
         repoPath,
         round: 1,
         recommendation: "approve",
-        summary: "Should fail runtime pane ownership check.",
+        summary: "Should succeed despite inactive runtime pane ownership.",
         report_json: buildStructuredSubmitReportJson()
       },
       {
@@ -3073,18 +3078,18 @@ describe("meta-review submit", () => {
           }
         })
       }
-    ).catch((error: unknown) => {
-      rejection = error;
+    );
+
+    expect(result).toMatchObject({
+      status: "success",
+      recommendation: "approve",
+      gate_route: "human_gate_approve",
+      lifecycle_state: "READY_FOR_HUMAN_APPROVAL"
     });
-    expect(rejection).toMatchObject({
-      reasonCode: "META_REVIEW_STATE_INVALID"
-    });
-    if (rejection instanceof Error) {
-      expect(rejection.message).toContain("submit window closed");
-    }
 
     const after = await readStateSnapshot(bubble.paths.statePath);
-    expect(after.fingerprint).toBe(before.fingerprint);
+    expect(after.fingerprint).not.toBe(before.fingerprint);
+    expect(after.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
   });
 
   it("accepts submit when active runtime pane binding has no gate run identity", async () => {
@@ -4259,6 +4264,87 @@ describe("meta-review reads", () => {
     expect(after.state.meta_review?.last_autonomous_recommendation).toBe("approve");
   });
 
+  it("accepts submit when live meta-review ownership is absent but execution_context remains valid", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_recovery_ownership_01",
+      task: "Meta submit recovery ownership fallback"
+    });
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "META_REVIEW_RUNNING",
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        last_command_at: "2026-03-09T09:41:00.000Z",
+        meta_review: {
+          ...loaded.state.meta_review!,
+          execution_context: buildMetaReviewExecutionContext({
+            bubbleId: bubble.bubbleId,
+            round: loaded.state.round,
+            startedAt: "2026-03-09T09:40:00.000Z",
+            watchdogTimeoutMinutes: 60 * 24 * 30,
+            attempt: 1
+          }),
+          runtime_delivery: {
+            status: "failed",
+            reason_code: "META_REVIEWER_PANE_EXITED",
+            message: "meta-reviewer pane exited after durable kickoff",
+            observed_at: "2026-03-09T09:40:30.000Z",
+            observed_for_handoff_id:
+              `meta_review:${bubble.bubbleId}:round:${loaded.state.round}:attempt:1`,
+            observed_for_round: loaded.state.round
+          },
+          last_autonomous_run_id: "run_meta_prev_recovery_01",
+          last_autonomous_status: "error",
+          last_autonomous_recommendation: "inconclusive",
+          last_autonomous_summary: "Previous recovery snapshot.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-03-09T09:39:00.000Z"
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const result = await submitMetaReviewResult(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        round: loaded.state.round,
+        recommendation: "approve",
+        summary: "Recovery-state submit stays routeable without live ownership.",
+        report_json: {
+          findings_claim_state: "clean",
+          findings_claim_source: "meta_review_artifact",
+          findings_count: 0
+        }
+      },
+      {
+        now: new Date("2026-03-09T09:42:00.000Z"),
+        readRuntimeSessionsRegistry: async () => ({})
+      }
+    );
+
+    expect(result.status).toBe("success");
+    expect(result.gate_route).toBe("human_gate_approve");
+    expect(result.lifecycle_state).toBe("READY_FOR_HUMAN_APPROVAL");
+
+    const after = await readStateSnapshot(bubble.paths.statePath);
+    expect(after.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(after.state.meta_review?.last_autonomous_summary).toBe(
+      "Recovery-state submit stays routeable without live ownership."
+    );
+    expect(after.state.meta_review?.last_autonomous_recommendation).toBe("approve");
+  });
+
   it("wraps invalid run payloads with MetaReviewError", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -4280,6 +4366,111 @@ describe("meta-review reads", () => {
         }
       )
     ).rejects.toBeInstanceOf(MetaReviewError);
+  });
+});
+
+describe("meta-review runtime delivery resolution", () => {
+  it("returns runtime delivery when handoff id and round match the active execution context", () => {
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: "b_meta_runtime_delivery_01",
+      round: 3,
+      startedAt: "2026-03-08T12:40:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
+
+    const resolved = resolveActiveMetaReviewRuntimeDelivery({
+      executionContext,
+      runtimeDelivery: {
+        status: "uncertain",
+        reason_code: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
+        message: "pane delivery not confirmed",
+        observed_at: "2026-03-08T12:41:00.000Z",
+        observed_for_handoff_id: executionContext.handoff_id,
+        observed_for_round: executionContext.round
+      }
+    });
+
+    expect(resolved).toEqual({
+      status: "uncertain",
+      reason_code: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
+      message: "pane delivery not confirmed",
+      observed_at: "2026-03-08T12:41:00.000Z",
+      observed_for_handoff_id: executionContext.handoff_id,
+      observed_for_round: executionContext.round
+    });
+  });
+
+  it("returns null when runtime delivery belongs to a different handoff", () => {
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: "b_meta_runtime_delivery_02",
+      round: 3,
+      startedAt: "2026-03-08T12:40:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
+
+    const resolved = resolveActiveMetaReviewRuntimeDelivery({
+      executionContext,
+      runtimeDelivery: {
+        status: "failed",
+        reason_code: "META_REVIEW_REQUEST_DELIVERY_FAILED",
+        message: "tmux send failed",
+        observed_at: "2026-03-08T12:41:00.000Z",
+        observed_for_handoff_id: "handoff_other_01",
+        observed_for_round: executionContext.round
+      }
+    });
+
+    expect(resolved).toBeNull();
+  });
+
+  it("returns null when runtime delivery belongs to a different round", () => {
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: "b_meta_runtime_delivery_03",
+      round: 3,
+      startedAt: "2026-03-08T12:40:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
+
+    const resolved = resolveActiveMetaReviewRuntimeDelivery({
+      executionContext,
+      runtimeDelivery: {
+        status: "confirmed",
+        reason_code: null,
+        message: "confirmed",
+        observed_at: "2026-03-08T12:41:00.000Z",
+        observed_for_handoff_id: executionContext.handoff_id,
+        observed_for_round: executionContext.round + 1
+      }
+    });
+
+    expect(resolved).toBeNull();
+  });
+
+  it("returns null when runtime delivery correlation fields are absent", () => {
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: "b_meta_runtime_delivery_04",
+      round: 3,
+      startedAt: "2026-03-08T12:40:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
+
+    const resolved = resolveActiveMetaReviewRuntimeDelivery({
+      executionContext,
+      runtimeDelivery: {
+        status: "uncertain",
+        reason_code: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
+        message: "pane delivery not confirmed",
+        observed_at: "2026-03-08T12:41:00.000Z",
+        observed_for_handoff_id: null,
+        observed_for_round: null
+      }
+    });
+
+    expect(resolved).toBeNull();
   });
 });
 

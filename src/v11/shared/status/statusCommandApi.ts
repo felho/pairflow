@@ -1,5 +1,4 @@
 import { BubbleLookupError, resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import type { WatchdogStatus } from "../../../core/runtime/watchdog.js";
 import {
   countPendingHumanQuestions,
   readStatusTranscriptData,

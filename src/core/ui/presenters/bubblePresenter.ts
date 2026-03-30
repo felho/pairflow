@@ -32,7 +32,7 @@ export function isRuntimeSessionExpected(state: BubbleLifecycleState): boolean {
 export function presentRuntimeHealth(
   state: BubbleLifecycleState,
   runtimeSession: RuntimeSessionRecord | null,
-  stateValidation: BubbleListEntry["stateValidation"] | BubbleStatusView["stateValidation"] = null
+  stateValidation: BubbleListEntry["stateValidation"] = null
 ): UiRuntimeHealth {
   const expected = isRuntimeSessionExpected(state);
   const present = runtimeSession !== null;

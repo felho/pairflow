@@ -315,7 +315,7 @@ function buildSyntheticMetaReviewRunInconclusive(input: {
   };
 }
 
-function buildSyntheticMetaReviewRunReworkBudgetExhausted(input: {
+function buildSyntheticMetaReviewRunReworkOpenFindings(input: {
   bubbleId: string;
   runId: string;
   findingsCount: number;
@@ -603,7 +603,11 @@ async function executeMetaReviewGateCase(input: {
                 }
               : noRuntimeSessionBindingResult
           ),
-          notifyMetaReviewerSubmissionRequest: () => Promise.resolve()
+          notifyMetaReviewerSubmissionRequest: () => Promise.resolve({
+            status: "confirmed" as const,
+            reasonCode: null,
+            message: "ok"
+          })
         }
       );
     } else {
@@ -690,7 +694,7 @@ async function executeMetaReviewGateCase(input: {
         const findingsDigestSha256 = createHash("sha256")
           .update(findingsArtifactRaw, "utf8")
           .digest("hex");
-        runResult = buildSyntheticMetaReviewRunReworkBudgetExhausted({
+        runResult = buildSyntheticMetaReviewRunReworkOpenFindings({
           bubbleId: bubble.bubbleId,
           runId: "meta-review-run-contract-1",
           findingsCount,
@@ -718,7 +722,7 @@ async function executeMetaReviewGateCase(input: {
         const findingsDigestSha256 = createHash("sha256")
           .update(findingsArtifactRaw, "utf8")
           .digest("hex");
-        runResult = buildSyntheticMetaReviewRunReworkBudgetExhausted({
+        runResult = buildSyntheticMetaReviewRunReworkOpenFindings({
           bubbleId: bubble.bubbleId,
           runId: "meta-review-run-contract-auto-rework",
           findingsCount,

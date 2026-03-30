@@ -1,4 +1,5 @@
 import { computeWatchdogStatus, type WatchdogStatus } from "../../../core/runtime/watchdog.js";
+import { resolveActiveMetaReviewRuntimeDelivery } from "../../../core/bubble/metaReview.js";
 import { type ReviewVerificationState } from "../../../core/reviewer/reviewVerification.js";
 import type { StateValidationDiagnostics } from "../../../core/state/stateStore.js";
 import type {
@@ -6,6 +7,7 @@ import type {
   BubbleLifecycleState,
   BubbleRoundGateState,
   BubbleSpecLockState,
+  MetaReviewRuntimeDeliveryStatus,
   MetaReviewRecommendation,
   MetaReviewRunStatus
 } from "../../../types/bubble.js";
@@ -46,6 +48,14 @@ export interface BubbleStatusView {
     latestSummary: string | null;
     latestReportRef: string | null;
     latestUpdatedAt: string | null;
+    runtimeDelivery: {
+      status: MetaReviewRuntimeDeliveryStatus;
+      reasonCode: string | null;
+      message: string;
+      observedAt: string;
+      observedForHandoffId: string | null;
+      observedForRound: number | null;
+    } | null;
   };
   commandPath: {
     status: "worktree_local" | "external" | "stale" | "missing" | "unknown";
@@ -107,6 +117,10 @@ export function buildBubbleStatusView({
           remainingSeconds: null,
           expired: false
         };
+  const activeRuntimeDelivery = resolveActiveMetaReviewRuntimeDelivery({
+    executionContext: state.meta_review?.execution_context,
+    runtimeDelivery: state.meta_review?.runtime_delivery
+  });
   return {
     bubbleId: resolved.bubbleId,
     repoPath: resolved.repoPath,
@@ -135,7 +149,18 @@ export function buildBubbleStatusView({
       latestStatus: state.meta_review?.last_autonomous_status ?? null,
       latestSummary: state.meta_review?.last_autonomous_summary ?? null,
       latestReportRef: state.meta_review?.last_autonomous_report_ref ?? null,
-      latestUpdatedAt: state.meta_review?.last_autonomous_updated_at ?? null
+      latestUpdatedAt: state.meta_review?.last_autonomous_updated_at ?? null,
+      runtimeDelivery:
+        activeRuntimeDelivery === null
+          ? null
+          : {
+              status: activeRuntimeDelivery.status,
+              reasonCode: activeRuntimeDelivery.reason_code,
+              message: activeRuntimeDelivery.message,
+              observedAt: activeRuntimeDelivery.observed_at,
+              observedForHandoffId: activeRuntimeDelivery.observed_for_handoff_id,
+              observedForRound: activeRuntimeDelivery.observed_for_round
+            }
     },
     commandPath: toStatusCommandPathView(resolved),
     accuracy_critical: accuracyCritical,

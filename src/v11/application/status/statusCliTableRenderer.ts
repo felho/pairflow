@@ -65,6 +65,12 @@ export function renderBubbleStatusTable(status: BubbleStatusView): string {
       formatCommandPath(status.commandPath)
     ],
     [
+      "Meta-review",
+      status.metaReview.runtimeDelivery === null
+        ? `status=${status.metaReview.latestStatus ?? "-"} | recommendation=${status.metaReview.latestRecommendation ?? "-"} | runtime_delivery=-`
+        : `status=${status.metaReview.latestStatus ?? "-"} | recommendation=${status.metaReview.latestRecommendation ?? "-"} | runtime_delivery=${status.metaReview.runtimeDelivery.status}${status.metaReview.runtimeDelivery.reasonCode !== null ? `/${status.metaReview.runtimeDelivery.reasonCode}` : ""} @ ${dim(formatTableTimestamp(status.metaReview.runtimeDelivery.observedAt))}`
+    ],
+    [
       "Review",
       `accuracy=${status.accuracy_critical ? bold(red("yes")) : green("no")} | verification=${formatDisplayedReviewVerification(status)} | failing=${formatFailingGateSummary(failingGateReasonCodes)}`
     ],

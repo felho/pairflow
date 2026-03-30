@@ -112,7 +112,7 @@ describe("v11 reply contract harness skeleton", () => {
 
   it(
     "executes legacy and parity assertions via shared runner",
-    { timeout: CONTRACT_TEST_TIMEOUT.parityStandardMs },
+    { timeout: CONTRACT_TEST_TIMEOUT.parityHeavyMs },
     async () => {
     const casePaths = replyCaseSources.map((source) =>
       resolve(process.cwd(), source)

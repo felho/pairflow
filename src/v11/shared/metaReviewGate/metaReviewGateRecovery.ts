@@ -2,13 +2,18 @@ import { handleRecoveryAutoReworkRoute } from "./metaReviewGateRecoveryAutoRewor
 import {
   assertRecoveredRunResolutionConsistency,
   initializeRecoverMetaReviewExecutionContext,
+  type RecoverMetaReviewExecutionContext,
   persistRecoveryDispatchFailedHumanRoute,
   persistRecoveryResolvedHumanRoute,
   persistRecoveryRunFailedHumanRoute,
   resolveRecoveredRunResolution,
   resolveRecoveryParityRouting
 } from "./metaReviewGateRecoveryContext.js";
-import { metaReviewGatePaneDeactivationUnavoidableReasonCode } from "./metaReviewGateShared.js";
+import {
+  metaReviewGatePaneDeactivationUnavoidableReasonCode,
+  metaReviewerAgent
+} from "./metaReviewGateShared.js";
+import { deliveryTargetRoleMetadataKey, type ProtocolEnvelope } from "../../../types/protocol.js";
 import { toMetaReviewGateError } from "./metaReviewGateErrorConversion.js";
 import {
   MetaReviewGateError,
@@ -16,6 +21,68 @@ import {
   type RecoverMetaReviewGateFromSnapshotDependencies,
   type RecoverMetaReviewGateFromSnapshotInput
 } from "./metaReviewGateTypes.js";
+
+const metaReviewHandoffIdMetadataKey = "meta_review_handoff_id";
+
+function isMetaReviewKickoffEnvelope(input: {
+  envelope: ProtocolEnvelope;
+  round: number;
+}): boolean {
+  const metadata = input.envelope.payload.metadata;
+  return (
+    input.envelope.type === "TASK" &&
+    input.envelope.sender === "orchestrator" &&
+    input.envelope.recipient === metaReviewerAgent &&
+    input.envelope.round === input.round &&
+    metadata?.actor === "meta-review-gate" &&
+    metadata?.actor_agent === "orchestrator" &&
+    metadata?.lifecycle_state === "META_REVIEW_RUNNING" &&
+    metadata?.[deliveryTargetRoleMetadataKey] === "meta_reviewer"
+  );
+}
+
+async function resolveLatestKickoffEnvelope(
+  context: RecoverMetaReviewExecutionContext
+): Promise<{ envelope: MetaReviewGateResult["gateEnvelope"]; sequence: number } | null> {
+  const transcript = await context.readTranscript(
+    context.resolved.bubblePaths.transcriptPath,
+    {
+      allowMissing: true,
+      tolerateInvalidEnvelopeLines: true
+    }
+  );
+  const executionContext = context.loaded.state.meta_review?.execution_context ?? null;
+  const round = executionContext?.round ?? context.loaded.state.round;
+  const fallbackCandidates: Array<{
+    envelope: MetaReviewGateResult["gateEnvelope"];
+    sequence: number;
+  }> = [];
+  for (let index = transcript.length - 1; index >= 0; index -= 1) {
+    const envelope = transcript[index]!;
+    if (!isMetaReviewKickoffEnvelope({ envelope, round })) {
+      continue;
+    }
+    const handoffId = envelope.payload.metadata?.[metaReviewHandoffIdMetadataKey];
+    if (
+      executionContext !== null &&
+      typeof handoffId === "string" &&
+      handoffId === executionContext.handoff_id
+    ) {
+      return {
+        envelope,
+        sequence: index + 1
+      };
+    }
+    fallbackCandidates.push({
+      envelope,
+      sequence: index + 1
+    });
+  }
+  if (fallbackCandidates.length === 1) {
+    return fallbackCandidates[0] ?? null;
+  }
+  return null;
+}
 
 export async function recoverMetaReviewGateFromSnapshot(
   input: RecoverMetaReviewGateFromSnapshotInput,
@@ -25,6 +92,14 @@ export async function recoverMetaReviewGateFromSnapshot(
     input,
     dependencies
   );
+  const executionContext = context.loaded.state.meta_review?.execution_context ?? null;
+  const deadlineAtMs = executionContext === null
+    ? Number.NaN
+    : Date.parse(executionContext.deadline_at);
+  const isBeforeDeadline =
+    executionContext !== null &&
+    Number.isFinite(deadlineAtMs) &&
+    context.now.getTime() < deadlineAtMs;
   try {
     const runResolution = await resolveRecoveredRunResolution({
       context,
@@ -39,6 +114,27 @@ export async function recoverMetaReviewGateFromSnapshot(
       snapshot: runResolution.snapshot,
       runResult: runResolution.runResult
     });
+
+    if (
+      input.runResult === undefined &&
+      !runResolution.snapshotHasCanonicalSubmitInActiveWindow &&
+      isBeforeDeadline
+    ) {
+      const kickoff = await resolveLatestKickoffEnvelope(context);
+      if (kickoff === null) {
+        throw new MetaReviewGateError(
+          "META_REVIEW_GATE_TRANSITION_INVALID",
+          "META_REVIEW_GATE_TRANSITION_INVALID: active meta-review recovery could not locate kickoff envelope before deadline."
+        );
+      }
+      return {
+        bubbleId: context.resolved.bubbleId,
+        route: "meta_review_running",
+        gateSequence: kickoff.sequence,
+        gateEnvelope: kickoff.envelope,
+        state: context.loaded.state
+      };
+    }
 
     if (runResolution.runResult.status === "error") {
       return context.finishWithPaneDeactivation(

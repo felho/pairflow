@@ -164,4 +164,77 @@ describe("state store", () => {
 
     await expect(readStateSnapshot(statePath)).rejects.toThrow("Invalid bubble state");
   });
+
+  it("preserves runtime_delivery in inspect fallback snapshots", async () => {
+    const dir = await createTempDir();
+    const statePath = join(dir, "state.json");
+
+    await writeFile(
+      statePath,
+      `${JSON.stringify({
+        bubble_id: "b_store_runtime_delivery_01",
+        state: "META_REVIEW_RUNNING",
+        round: 2,
+        active_agent: "codex",
+        active_since: "2026-03-08T10:00:00.000Z",
+        active_role: "meta_reviewer",
+        round_role_history: [],
+        last_command_at: 42,
+        meta_review: {
+          execution_context: {
+            handoff_id: "meta_review:b_store_runtime_delivery_01:round:2:attempt:1",
+            round: 2,
+            awaited_output_type: "meta_review_result",
+            started_at: "2026-03-08T10:00:00.000Z",
+            deadline_at: "2026-03-08T11:00:00.000Z",
+            attempt: 1
+          },
+          runtime_delivery: {
+            status: "uncertain",
+            reason_code: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
+            message: "handoff delivery not confirmed",
+            observed_at: "2026-03-08T10:01:00.000Z",
+            observed_for_handoff_id: "handoff_meta_01",
+            observed_for_round: 2
+          },
+          last_autonomous_run_id: null,
+          last_autonomous_status: null,
+          last_autonomous_recommendation: null,
+          last_autonomous_summary: null,
+          last_autonomous_report_ref: null,
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: null,
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      }, null, 2)}\n`,
+      "utf8"
+    );
+
+    const inspected = await inspectStateSnapshot(statePath);
+
+    expect(inspected.state.meta_review?.runtime_delivery).toEqual({
+      status: "uncertain",
+      reason_code: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
+      message: "handoff delivery not confirmed",
+      observed_at: "2026-03-08T10:01:00.000Z",
+      observed_for_handoff_id: "handoff_meta_01",
+      observed_for_round: 2
+    });
+    expect(inspected.state.meta_review?.execution_context).toEqual({
+      handoff_id: "meta_review:b_store_runtime_delivery_01:round:2:attempt:1",
+      round: 2,
+      awaited_output_type: "meta_review_result",
+      started_at: "2026-03-08T10:00:00.000Z",
+      deadline_at: "2026-03-08T11:00:00.000Z",
+      attempt: 1
+    });
+    expect(inspected.stateValidation?.errors).toEqual([
+      {
+        path: "last_command_at",
+        message: "Must be null or a valid ISO timestamp"
+      }
+    ]);
+  });
 });

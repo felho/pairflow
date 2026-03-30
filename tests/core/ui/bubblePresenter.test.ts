@@ -46,7 +46,8 @@ describe("bubblePresenter", () => {
         latestStatus: "success",
         latestSummary: "Autonomous review clean.",
         latestReportRef: "artifacts/meta-review-last.json",
-        latestUpdatedAt: "2026-02-24T12:00:30.000Z"
+        latestUpdatedAt: "2026-02-24T12:00:30.000Z",
+        runtimeDelivery: null
       },
       runtimeSession: {
         bubbleId: "b_attach_01",
@@ -62,7 +63,8 @@ describe("bubblePresenter", () => {
     expect(presented.runtimeSession?.tmuxSessionName).toBe("pf-b_attach_01");
     expect(presented.metaReview).toMatchObject({
       actor: "meta-reviewer",
-      latestRecommendation: "approve"
+      latestRecommendation: "approve",
+      runtimeDelivery: null
     });
   });
 });

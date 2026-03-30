@@ -2476,10 +2476,10 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     );
     expect(result.repeatCleanReasonDetail).toBe("previous_reviewer_pass_clean");
     expect(result.autoConverged).toBeDefined();
-    expect(result.autoConverged?.gateRoute).toBe("human_gate_run_failed");
+    expect(result.autoConverged?.gateRoute).toBe("meta_review_running");
     expect(result.autoConverged?.convergenceEnvelope.type).toBe("CONVERGENCE");
-    expect(result.autoConverged?.approvalRequestEnvelope.type).toBe("APPROVAL_REQUEST");
-    expect(result.state.state).toBe("META_REVIEW_FAILED");
+    expect(result.autoConverged?.approvalRequestEnvelope.type).toBe("TASK");
+    expect(result.state.state).toBe("META_REVIEW_RUNNING");
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
     expect(transcript.map((entry) => entry.type)).toEqual([
@@ -2488,7 +2488,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       "PASS",
       "PASS",
       "CONVERGENCE",
-      "APPROVAL_REQUEST"
+      "TASK"
     ]);
   });
 
@@ -2620,7 +2620,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     });
 
     expect(result.transitionDecision).toBe("auto_converge");
-    expect(result.state.state).toBe("META_REVIEW_FAILED");
+    expect(result.state.state).toBe("META_REVIEW_RUNNING");
 
     const artifact = await readDocContractGateArtifact(gateArtifactPath);
     expect(artifact?.updated_at).toBe(now.toISOString());
@@ -2675,15 +2675,10 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
 
     expect(result.transitionDecision).toBe("auto_converge");
     expect(result.delivery).toEqual({
-      delivered: false,
-      reason: "partial_delivery_failed",
+      delivered: true,
       retried: false
     });
-    expect(deliveryRecipients).toEqual([
-      "human",
-      bubble.config.agents.implementer,
-      bubble.config.agents.reviewer
-    ]);
+    expect(deliveryRecipients).toEqual(["codex"]);
   });
 
   it("surfaces auto-converge doc-gate artifact write failure reason in result metadata", async () => {
@@ -2708,7 +2703,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     });
 
     expect(result.transitionDecision).toBe("auto_converge");
-    expect(result.state.state).toBe("META_REVIEW_FAILED");
+    expect(result.state.state).toBe("META_REVIEW_RUNNING");
     expect(result.docGateArtifactWriteFailureReason).toContain("EISDIR");
   });
 
@@ -2925,7 +2920,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     expect(result.repeatCleanReasonCode).toBe(
       repeatCleanAutoconvergeTriggeredReasonCode
     );
-    expect(result.state.state).toBe("META_REVIEW_FAILED");
+    expect(result.state.state).toBe("META_REVIEW_RUNNING");
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
     expect(transcript.map((entry) => entry.type)).toEqual([
@@ -2934,7 +2929,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
       "PASS",
       "PASS",
       "CONVERGENCE",
-      "APPROVAL_REQUEST"
+      "TASK"
     ]);
 
     const verificationArtifactRaw = await readFile(

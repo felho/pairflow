@@ -9,6 +9,7 @@ import {
   buildMetaReviewSubmitCommandTemplate
 } from "../../../core/runtime/metaReviewSubmitGuidance.js";
 import type {
+  MetaReviewRuntimeDeliveryObservation,
   NotifyMetaReviewerSubmissionRequestDependencies,
   NotifyMetaReviewerSubmissionRequestInput
 } from "./metaReviewGateTypes.js";
@@ -61,21 +62,11 @@ function detectSubmittedMarker(text: string, marker: string): MarkerStatus {
   return "stuck_in_input";
 }
 
-function createMetaReviewNotifyError(input: {
-  reasonCode: string;
-  message: string;
-  context: Record<string, unknown>;
-}): Error {
-  return new Error(
-    `${input.reasonCode}: ${input.message} ${JSON.stringify(input.context)}`
-  );
-}
-
 async function assertMetaReviewRequestSubmitted(input: {
   runTmux: typeof runTmux;
   targetPane: string;
   marker: string;
-}): Promise<void> {
+}): Promise<MetaReviewRuntimeDeliveryObservation> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     await sleep(800);
     const capture = await input.runTmux(
@@ -86,19 +77,22 @@ async function assertMetaReviewRequestSubmitted(input: {
     );
     if (capture.exitCode === 0) {
       if (paneShowsExitedCodexShell(capture.stdout)) {
-        throw createMetaReviewNotifyError({
+        return {
+          status: "failed",
           reasonCode: metaReviewerPaneExitedReasonCode,
-          message: "meta-reviewer pane fell back to interactive shell after Codex exit.",
-          context: {
-            target_pane: input.targetPane,
-            request_marker: input.marker
-          }
-        });
+          message:
+            "meta-reviewer pane fell back to interactive shell after Codex exit."
+        };
       }
 
       const markerStatus = detectSubmittedMarker(capture.stdout, input.marker);
       if (markerStatus === "submitted") {
-        return;
+        return {
+          status: "confirmed",
+          reasonCode: null,
+          message:
+            "meta-review submit request delivery confirmed from pane scrollback."
+        };
       }
     }
 
@@ -108,21 +102,17 @@ async function assertMetaReviewRequestSubmitted(input: {
     }
   }
 
-  throw createMetaReviewNotifyError({
+  return {
+    status: "uncertain",
     reasonCode: metaReviewRequestDeliveryUnconfirmedReasonCode,
-    message: "meta-reviewer pane did not confirm structured submit request delivery.",
-    context: {
-      target_pane: input.targetPane,
-      request_marker: input.marker,
-      attempt_limit: 3
-    }
-  });
+    message: "meta-reviewer pane did not confirm structured submit request delivery."
+  };
 }
 
 export async function notifyMetaReviewerSubmissionRequest(
   input: NotifyMetaReviewerSubmissionRequestInput,
   dependencies: NotifyMetaReviewerSubmissionRequestDependencies = {}
-): Promise<void> {
+): Promise<MetaReviewRuntimeDeliveryObservation> {
   const runner = dependencies.runTmux ?? runTmux;
   const requestMarker = `bubble=${input.bubbleId} meta-review request round=${input.round}.`;
   const message = [
@@ -132,8 +122,16 @@ export async function notifyMetaReviewerSubmissionRequest(
   ].join(" ");
 
   await maybeAcceptClaudeTrustPrompt(runner, input.targetPane).catch(() => undefined);
-  await sendAndSubmitTmuxPaneMessage(runner, input.targetPane, message);
-  await assertMetaReviewRequestSubmitted({
+  try {
+    await sendAndSubmitTmuxPaneMessage(runner, input.targetPane, message);
+  } catch (error) {
+    return {
+      status: "failed",
+      reasonCode: "META_REVIEW_REQUEST_DELIVERY_FAILED",
+      message: error instanceof Error ? error.message : String(error)
+    };
+  }
+  return assertMetaReviewRequestSubmitted({
     runTmux: runner,
     targetPane: input.targetPane,
     marker: requestMarker

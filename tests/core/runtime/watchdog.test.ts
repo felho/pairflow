@@ -23,6 +23,7 @@ function createState(partial: Partial<BubbleStateSnapshot>): BubbleStateSnapshot
     last_command_at: "2026-02-22T12:05:00.000Z",
     meta_review: {
       execution_context: null,
+      runtime_delivery: null,
       last_autonomous_run_id: null,
       last_autonomous_status: null,
       last_autonomous_recommendation: null,
@@ -180,5 +181,103 @@ describe("computeWatchdogStatus", () => {
     expect(status.monitored).toBe(false);
     expect(status.remainingSeconds).toBeNull();
     expect(status.expired).toBe(false);
+  });
+
+  it("ignores failed runtime delivery before the canonical meta-review deadline", () => {
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: "b_watchdog_01",
+      round: 1,
+      startedAt: "2026-02-22T12:00:00.000Z",
+      watchdogTimeoutMinutes: 5,
+      attempt: 1
+    });
+
+    const status = computeWatchdogStatus(
+      createState({
+        state: "META_REVIEW_RUNNING",
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        last_command_at: "2026-02-22T12:04:30.000Z",
+        meta_review: {
+          execution_context: executionContext,
+          runtime_delivery: {
+            status: "failed",
+            reason_code: "META_REVIEWER_PANE_EXITED",
+            message: "meta-reviewer pane exited after durable kickoff",
+            observed_at: "2026-02-22T12:04:30.000Z",
+            observed_for_handoff_id: executionContext.handoff_id,
+            observed_for_round: executionContext.round
+          },
+          last_autonomous_run_id: null,
+          last_autonomous_status: "error",
+          last_autonomous_recommendation: "inconclusive",
+          last_autonomous_summary: "Runtime delivery failed after durable kickoff.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-02-22T12:04:30.000Z",
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      }),
+      5,
+      new Date("2026-02-22T12:04:45.000Z")
+    );
+
+    expect(status.monitored).toBe(true);
+    expect(status.referenceTimestamp).toBe("2026-02-22T12:00:00.000Z");
+    expect(status.deadlineTimestamp).toBe("2026-02-22T12:05:00.000Z");
+    expect(status.remainingSeconds).toBe(15);
+    expect(status.expired).toBe(false);
+  });
+
+  it("keeps the original execution-context deadline after restart/rebind activity", () => {
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: "b_watchdog_01",
+      round: 1,
+      startedAt: "2026-02-22T12:00:00.000Z",
+      watchdogTimeoutMinutes: 5,
+      attempt: 1
+    });
+
+    const status = computeWatchdogStatus(
+      createState({
+        state: "META_REVIEW_RUNNING",
+        active_agent: "codex",
+        active_role: "meta_reviewer",
+        active_since: "2026-02-22T12:04:30.000Z",
+        last_command_at: "2026-02-22T12:04:45.000Z",
+        meta_review: {
+          execution_context: executionContext,
+          runtime_delivery: {
+            status: "uncertain",
+            reason_code: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
+            message: "meta-reviewer pane did not confirm structured submit request delivery",
+            observed_at: "2026-02-22T12:04:45.000Z",
+            observed_for_handoff_id: executionContext.handoff_id,
+            observed_for_round: executionContext.round
+          },
+          last_autonomous_run_id: null,
+          last_autonomous_status: "error",
+          last_autonomous_recommendation: "inconclusive",
+          last_autonomous_summary: "Runtime delivery still uncertain after restart.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-02-22T12:04:45.000Z",
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      }),
+      5,
+      new Date("2026-02-22T12:05:30.000Z")
+    );
+
+    expect(status.monitored).toBe(true);
+    expect(status.referenceTimestamp).toBe("2026-02-22T12:00:00.000Z");
+    expect(status.deadlineTimestamp).toBe("2026-02-22T12:05:00.000Z");
+    expect(status.remainingSeconds).toBe(0);
+    expect(status.expired).toBe(true);
   });
 });

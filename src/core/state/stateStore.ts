@@ -13,14 +13,19 @@ import {
   isAgentName,
   isAgentRole,
   isBubbleLifecycleState,
+  isMetaReviewExecutionContextAwaitedOutputType,
   isMetaReviewRecommendation,
   isMetaReviewRunStatus,
+  isMetaReviewRuntimeDeliveryStatus,
+  type BubbleMetaReviewExecutionContext,
   type BubbleLifecycleState,
+  type BubbleMetaReviewRuntimeDeliveryState,
   type BubbleMetaReviewSnapshotState,
   type BubbleStateSnapshot
 } from "../../types/bubble.js";
 import {
   isInteger,
+  isIsoTimestamp,
   isNonEmptyString,
   isRecord,
   SchemaValidationError,
@@ -65,6 +70,101 @@ function serializeState(state: BubbleStateSnapshot): string {
   return `${JSON.stringify(state, null, 2)}\n`;
 }
 
+function normalizeInspectableMetaReviewExecutionContext(
+  value: unknown
+): BubbleMetaReviewExecutionContext | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const handoffId = value.handoff_id;
+  const round = value.round;
+  const awaitedOutputType = value.awaited_output_type;
+  const startedAt = value.started_at;
+  const deadlineAt = value.deadline_at;
+  const attempt = value.attempt;
+
+  if (!isNonEmptyString(handoffId)) {
+    return null;
+  }
+  if (!isInteger(round) || round <= 0) {
+    return null;
+  }
+  if (!isMetaReviewExecutionContextAwaitedOutputType(awaitedOutputType)) {
+    return null;
+  }
+  if (!isIsoTimestamp(startedAt) || !isIsoTimestamp(deadlineAt)) {
+    return null;
+  }
+  if (!isInteger(attempt) || attempt <= 0) {
+    return null;
+  }
+
+  return {
+    handoff_id: handoffId,
+    round,
+    awaited_output_type: awaitedOutputType,
+    started_at: startedAt,
+    deadline_at: deadlineAt,
+    attempt
+  };
+}
+
+function normalizeInspectableMetaReviewRuntimeDelivery(
+  value: unknown
+): BubbleMetaReviewRuntimeDeliveryState | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const status = value.status;
+  const reasonCode = value.reason_code;
+  const message = value.message;
+  const observedAt = value.observed_at;
+  const observedForHandoffId = value.observed_for_handoff_id;
+  const observedForRound = value.observed_for_round;
+
+  if (!isMetaReviewRuntimeDeliveryStatus(status)) {
+    return null;
+  }
+  if (reasonCode !== null && !isNonEmptyString(reasonCode)) {
+    return null;
+  }
+  if (!isNonEmptyString(message)) {
+    return null;
+  }
+  if (!isIsoTimestamp(observedAt)) {
+    return null;
+  }
+  if (
+    observedForHandoffId !== null &&
+    !isNonEmptyString(observedForHandoffId)
+  ) {
+    return null;
+  }
+  if (
+    observedForRound !== null &&
+    (!isInteger(observedForRound) || observedForRound <= 0)
+  ) {
+    return null;
+  }
+
+  return {
+    status,
+    reason_code: reasonCode,
+    message,
+    observed_at: observedAt,
+    observed_for_handoff_id: observedForHandoffId,
+    observed_for_round: observedForRound
+  };
+}
+
 function normalizeInspectableMetaReviewSnapshot(
   value: unknown
 ): BubbleMetaReviewSnapshotState | undefined {
@@ -75,6 +175,7 @@ function normalizeInspectableMetaReviewSnapshot(
   if (!isRecord(value)) {
     return {
       execution_context: null,
+      runtime_delivery: null,
       last_autonomous_run_id: null,
       last_autonomous_status: null,
       last_autonomous_recommendation: null,
@@ -98,7 +199,12 @@ function normalizeInspectableMetaReviewSnapshot(
       : DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT;
 
   return {
-    execution_context: null,
+    execution_context: normalizeInspectableMetaReviewExecutionContext(
+      value.execution_context
+    ),
+    runtime_delivery: normalizeInspectableMetaReviewRuntimeDelivery(
+      value.runtime_delivery
+    ),
     last_autonomous_run_id: isNonEmptyString(value.last_autonomous_run_id)
       ? value.last_autonomous_run_id.trim()
       : null,

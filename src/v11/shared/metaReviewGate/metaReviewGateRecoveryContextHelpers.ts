@@ -1,6 +1,9 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
+import {
+  appendProtocolEnvelope,
+  readTranscriptEnvelopes
+} from "../../../core/protocol/transcriptStore.js";
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
 import {
@@ -20,6 +23,7 @@ export interface ResolvedRecoveryContextDependencies {
   readState: typeof readStateSnapshot;
   writeState: typeof writeStateSnapshot;
   appendEnvelope: typeof appendProtocolEnvelope;
+  readTranscript: typeof readTranscriptEnvelopes;
   setMetaReviewerPane: typeof setMetaReviewerPaneBinding;
   readFileFn: typeof readFile;
   writeFileFn: typeof writeFile;
@@ -33,6 +37,7 @@ export function resolveRecoveryContextDependencies(
     readState: dependencies.readStateSnapshot ?? readStateSnapshot,
     writeState: dependencies.writeStateSnapshot ?? writeStateSnapshot,
     appendEnvelope: dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope,
+    readTranscript: dependencies.readTranscriptEnvelopes ?? readTranscriptEnvelopes,
     setMetaReviewerPane:
       dependencies.setMetaReviewerPaneBinding ?? setMetaReviewerPaneBinding,
     readFileFn: dependencies.readFile ?? readFile,

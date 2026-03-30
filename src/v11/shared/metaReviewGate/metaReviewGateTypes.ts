@@ -1,6 +1,9 @@
 import type { readFile, writeFile } from "node:fs/promises";
 
-import type { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
+import type {
+  appendProtocolEnvelope,
+  readTranscriptEnvelopes
+} from "../../../core/protocol/transcriptStore.js";
 import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import type { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
 import type { runTmux } from "../../../core/runtime/tmuxManager.js";
@@ -38,10 +41,16 @@ export interface NotifyMetaReviewerSubmissionRequestDependencies {
   runTmux?: typeof runTmux;
 }
 
+export interface MetaReviewRuntimeDeliveryObservation {
+  status: "confirmed" | "uncertain" | "failed";
+  reasonCode: string | null;
+  message: string;
+}
+
 export type NotifyMetaReviewerSubmissionRequest = (
   input: NotifyMetaReviewerSubmissionRequestInput,
   dependencies?: NotifyMetaReviewerSubmissionRequestDependencies
-) => Promise<void>;
+) => Promise<MetaReviewRuntimeDeliveryObservation>;
 
 export interface ApplyMetaReviewGateOnConvergenceInput {
   bubbleId: string;
@@ -83,6 +92,7 @@ export interface RecoverMetaReviewGateFromSnapshotDependencies {
   readStateSnapshot?: typeof readStateSnapshot;
   writeStateSnapshot?: typeof writeStateSnapshot;
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;
+  readTranscriptEnvelopes?: typeof readTranscriptEnvelopes;
   setMetaReviewerPaneBinding?: typeof setMetaReviewerPaneBinding;
   readFile?: typeof readFile;
   writeFile?: typeof writeFile;

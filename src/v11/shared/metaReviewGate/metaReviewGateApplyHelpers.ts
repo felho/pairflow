@@ -30,6 +30,7 @@ export async function appendMetaReviewKickoffEnvelope(input: {
   now: Date;
   bubbleId: string;
   round: number;
+  handoffId: string;
   refs: string[];
 }): Promise<AppendProtocolEnvelopeResult> {
   const kickoffSummary = [
@@ -55,7 +56,8 @@ export async function appendMetaReviewKickoffEnvelope(input: {
           [deliveryTargetRoleMetadataKey]: "meta_reviewer",
           actor: "meta-review-gate",
           actor_agent: "orchestrator",
-          lifecycle_state: "META_REVIEW_RUNNING"
+          lifecycle_state: "META_REVIEW_RUNNING",
+          meta_review_handoff_id: input.handoffId
         }
       },
       refs: input.refs

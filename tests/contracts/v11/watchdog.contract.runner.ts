@@ -42,7 +42,9 @@ type WatchdogContractExtendedScenario =
   | "expired_quiet_window_escalates"
   | "expired_missing_session_escalates"
   | "expired_unreadable_pane_escalates"
-  | "meta_review_running_expired";
+  | "meta_review_running_expired"
+  | "meta_review_running_before_deadline_delivery_failed"
+  | "meta_review_running_expired_after_rebind";
 
 interface ParsedWatchdogCaseInput {
   scenario: WatchdogContractExtendedScenario;
@@ -69,10 +71,12 @@ function parseWatchdogCaseInput(input: ContractCase["input"]): ParsedWatchdogCas
       scenarioRaw !== "expired_quiet_window_escalates" &&
       scenarioRaw !== "expired_missing_session_escalates" &&
       scenarioRaw !== "expired_unreadable_pane_escalates" &&
-      scenarioRaw !== "meta_review_running_expired"
+      scenarioRaw !== "meta_review_running_expired" &&
+      scenarioRaw !== "meta_review_running_before_deadline_delivery_failed" &&
+      scenarioRaw !== "meta_review_running_expired_after_rebind"
     ) {
       throw new Error(
-        "watchdog contract input.fixture.scenario must be one of: waiting_human, final_state, expired_recent_change_noop, expired_quiet_window_escalates, expired_missing_session_escalates, expired_unreadable_pane_escalates, meta_review_running_expired."
+        "watchdog contract input.fixture.scenario must be one of: waiting_human, final_state, expired_recent_change_noop, expired_quiet_window_escalates, expired_missing_session_escalates, expired_unreadable_pane_escalates, meta_review_running_expired, meta_review_running_before_deadline_delivery_failed, meta_review_running_expired_after_rebind."
       );
     }
     scenario = scenarioRaw ?? "waiting_human";
@@ -226,6 +230,97 @@ async function seedWaitingHumanState(input: {
     );
     return bubble;
   }
+  if (input.scenario === "meta_review_running_before_deadline_delivery_failed") {
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: bubble.bubbleId,
+      round: loaded.state.round,
+      startedAt: "2026-03-20T12:00:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "META_REVIEW_RUNNING",
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        last_command_at: "2026-03-20T12:44:30.000Z",
+        meta_review: {
+          ...loaded.state.meta_review!,
+          execution_context: executionContext,
+          runtime_delivery: {
+            status: "failed",
+            reason_code: "META_REVIEWER_PANE_EXITED",
+            message: "meta-reviewer pane exited after durable kickoff",
+            observed_at: "2026-03-20T12:44:30.000Z",
+            observed_for_handoff_id: executionContext.handoff_id,
+            observed_for_round: executionContext.round
+          },
+          last_autonomous_run_id: "run_watchdog_before_deadline_contract_01",
+          last_autonomous_status: "error",
+          last_autonomous_recommendation: "inconclusive",
+          last_autonomous_summary: "Runtime delivery failed after durable kickoff.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-03-20T12:44:30.000Z"
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+    return bubble;
+  }
+  if (input.scenario === "meta_review_running_expired_after_rebind") {
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: bubble.bubbleId,
+      round: loaded.state.round,
+      startedAt: "2026-03-20T12:00:00.000Z",
+      watchdogTimeoutMinutes: 30,
+      attempt: 1
+    });
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        state: "META_REVIEW_RUNNING",
+        active_agent: "codex",
+        active_role: "meta_reviewer",
+        active_since: "2026-03-20T12:44:00.000Z",
+        last_command_at: "2026-03-20T12:44:30.000Z",
+        meta_review: {
+          ...loaded.state.meta_review!,
+          execution_context: executionContext,
+          runtime_delivery: {
+            status: "uncertain",
+            reason_code: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
+            message:
+              "meta-reviewer pane did not confirm structured submit request delivery",
+            observed_at: "2026-03-20T12:44:30.000Z",
+            observed_for_handoff_id: executionContext.handoff_id,
+            observed_for_round: executionContext.round
+          },
+          last_autonomous_run_id: "run_watchdog_rebind_contract_01",
+          last_autonomous_status: "error",
+          last_autonomous_recommendation: "inconclusive",
+          last_autonomous_summary: "Runtime delivery remained uncertain after restart/rebind.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-03-20T12:44:30.000Z"
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+    return bubble;
+  }
   const loaded = await readStateSnapshot(bubble.paths.statePath);
   const transitioned = applyStateTransition(loaded.state, {
     to: "WAITING_HUMAN",
@@ -350,6 +445,7 @@ async function executeWatchdogCase(input: {
         now: new Date("2026-03-20T12:45:00.000Z")
       },
       parsedInput.scenario === "meta_review_running_expired"
+      || parsedInput.scenario === "meta_review_running_expired_after_rebind"
         ? {
             recoverMetaReviewGateFromSnapshot: async () => {
               recoverCalled = true;
@@ -385,7 +481,13 @@ async function executeWatchdogCase(input: {
           }
         : scenarioDependencies
     );
-    if (parsedInput.scenario === "meta_review_running_expired" && !recoverCalled) {
+    if (
+      (
+        parsedInput.scenario === "meta_review_running_expired"
+        || parsedInput.scenario === "meta_review_running_expired_after_rebind"
+      )
+      && !recoverCalled
+    ) {
       throw new Error(
         `watchdog contract case=${input.caseDef.id}: expected meta-review recovery dependency to be invoked.`
       );

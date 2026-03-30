@@ -131,7 +131,8 @@ function defaultMetaReviewSummary(): UiBubbleSummary["metaReview"] {
     latestStatus: null,
     latestSummary: null,
     latestReportRef: null,
-    latestUpdatedAt: null
+    latestUpdatedAt: null,
+    runtimeDelivery: null
   };
 }
 
@@ -165,7 +166,36 @@ function normalizeBubbleSummary(input: UiBubbleSummary): UiBubbleSummary {
       latestReportRef:
         typeof meta.latestReportRef === "string" ? meta.latestReportRef : null,
       latestUpdatedAt:
-        typeof meta.latestUpdatedAt === "string" ? meta.latestUpdatedAt : null
+        typeof meta.latestUpdatedAt === "string" ? meta.latestUpdatedAt : null,
+      runtimeDelivery:
+        meta.runtimeDelivery !== null &&
+        meta.runtimeDelivery !== undefined &&
+        typeof meta.runtimeDelivery === "object" &&
+        (
+          meta.runtimeDelivery.status === "confirmed" ||
+          meta.runtimeDelivery.status === "uncertain" ||
+          meta.runtimeDelivery.status === "failed"
+        ) &&
+        typeof meta.runtimeDelivery.message === "string" &&
+        typeof meta.runtimeDelivery.observedAt === "string"
+          ? {
+              status: meta.runtimeDelivery.status,
+              reasonCode:
+                typeof meta.runtimeDelivery.reasonCode === "string"
+                  ? meta.runtimeDelivery.reasonCode
+                  : null,
+              message: meta.runtimeDelivery.message,
+              observedAt: meta.runtimeDelivery.observedAt,
+              observedForHandoffId:
+                typeof meta.runtimeDelivery.observedForHandoffId === "string"
+                  ? meta.runtimeDelivery.observedForHandoffId
+                  : null,
+              observedForRound:
+                typeof meta.runtimeDelivery.observedForRound === "number"
+                  ? meta.runtimeDelivery.observedForRound
+                  : null
+            }
+          : null
     }
   };
 }

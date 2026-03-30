@@ -315,7 +315,7 @@ describe("v11 pass contract harness skeleton", () => {
       expect(seenEnvelopeTypes.has("PASS")).toBe(true);
       expect(seenEnvelopeTypes.has("CONVERGENCE")).toBe(true);
       expect(seenStates.has("RUNNING")).toBe(true);
-      expect(seenStates.has("META_REVIEW_FAILED")).toBe(true);
+      expect(seenStates.has("META_REVIEW_RUNNING")).toBe(true);
     }
   );
 

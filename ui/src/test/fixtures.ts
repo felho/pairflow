@@ -73,7 +73,8 @@ export function bubbleSummary(input: {
       latestStatus: "success",
       latestSummary: "Looks good.",
       latestReportRef: "artifacts/meta-review-last.json",
-      latestUpdatedAt: "2026-02-24T12:00:00.000Z"
+      latestUpdatedAt: "2026-02-24T12:00:00.000Z",
+      runtimeDelivery: null
     }
   };
 }

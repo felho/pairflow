@@ -95,7 +95,7 @@ describe("runBubbleWatchdog", () => {
     const metaReviewRunning = {
       ...readyForApproval,
       state: "META_REVIEW_RUNNING" as const,
-      active_agent: input.activeAgent ?? "codex",
+      active_agent: input.activeAgent === undefined ? "codex" : input.activeAgent,
       active_role:
         input.activeAgent === null ? null : ("meta_reviewer" as const),
       active_since: input.activeAgent === null ? null : input.activeSinceIso,
@@ -115,6 +115,23 @@ describe("runBubbleWatchdog", () => {
       expectedFingerprint: loaded.fingerprint,
       expectedState: "RUNNING"
     });
+  }
+
+  function buildRuntimeDelivery(input: {
+    executionContext: ReturnType<typeof buildMetaReviewExecutionContext>;
+    status: "confirmed" | "uncertain" | "failed";
+    reasonCode: string | null;
+    message: string;
+    observedAt: string;
+  }) {
+    return {
+      status: input.status,
+      reason_code: input.reasonCode,
+      message: input.message,
+      observed_at: input.observedAt,
+      observed_for_handoff_id: input.executionContext.handoff_id,
+      observed_for_round: input.executionContext.round
+    };
   }
 
   it("applies pending deferred rework intent in WAITING_HUMAN after confirmed delivery", async () => {
@@ -462,6 +479,81 @@ describe("runBubbleWatchdog", () => {
     expect(inbox.at(-1)?.type).toBe("APPROVAL_REQUEST");
   });
 
+  it("keeps META_REVIEW_RUNNING before deadline even when runtime delivery failed", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_meta_timeout_before_deadline_01",
+      task: "Meta-review watchdog ignores runtime delivery before deadline",
+      startedAt: "2026-02-22T12:00:00.000Z"
+    });
+    await moveToMetaReviewRunning({
+      statePath: bubble.paths.statePath,
+      activeSinceIso: "2026-02-22T12:00:00.000Z",
+      lastCommandAtIso: "2026-02-22T12:00:00.000Z"
+    });
+
+    const running = await readStateSnapshot(bubble.paths.statePath);
+    const executionContext = running.state.meta_review?.execution_context;
+    if (executionContext === null || executionContext === undefined) {
+      throw new Error("Expected active meta-review execution context.");
+    }
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...running.state,
+        active_agent: null,
+        active_role: null,
+        active_since: null,
+        meta_review: {
+          ...running.state.meta_review!,
+          runtime_delivery: buildRuntimeDelivery({
+            executionContext,
+            status: "failed",
+            reasonCode: "META_REVIEWER_PANE_EXITED",
+            message: "meta-reviewer pane exited after durable kickoff",
+            observedAt: "2026-02-22T12:04:30.000Z"
+          }),
+          last_autonomous_run_id: "run_watchdog_before_deadline_01",
+          last_autonomous_status: "error",
+          last_autonomous_recommendation: "inconclusive",
+          last_autonomous_summary: "Runtime delivery failed after durable kickoff.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-02-22T12:04:30.000Z"
+        }
+      },
+      {
+        expectedFingerprint: running.fingerprint,
+        expectedState: "META_REVIEW_RUNNING"
+      }
+    );
+
+    let recoverCalled = false;
+    const result = await runBubbleWatchdog(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:04:45.000Z")
+      },
+      {
+        recoverMetaReviewGateFromSnapshot: async () => {
+          recoverCalled = true;
+          throw new Error("recover should not be called before deadline");
+        }
+      }
+    );
+
+    expect(recoverCalled).toBe(false);
+    expect(result.escalated).toBe(false);
+    expect(result.reason).toBe("not_expired");
+    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.meta_review?.runtime_delivery).toMatchObject({
+      status: "failed",
+      reason_code: "META_REVIEWER_PANE_EXITED"
+    });
+  });
+
   it("still monitors META_REVIEW_RUNNING when active_agent is null in recovery state", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -540,6 +632,69 @@ describe("runBubbleWatchdog", () => {
     expect(result.escalated).toBe(true);
     expect(result.reason).toBe("escalated");
     expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(result.envelope?.type).toBe("APPROVAL_REQUEST");
+  });
+
+  it("routes timeout from the original execution-context deadline after restart/rebind activity", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_meta_timeout_rebind_01",
+      task: "Meta-review watchdog restart/rebind deadline authority",
+      startedAt: "2026-02-22T12:00:00.000Z"
+    });
+    await moveToMetaReviewRunning({
+      statePath: bubble.paths.statePath,
+      activeSinceIso: "2026-02-22T12:00:00.000Z",
+      lastCommandAtIso: "2026-02-22T12:00:00.000Z"
+    });
+
+    const running = await readStateSnapshot(bubble.paths.statePath);
+    const executionContext = running.state.meta_review?.execution_context;
+    if (executionContext === null || executionContext === undefined) {
+      throw new Error("Expected active meta-review execution context.");
+    }
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...running.state,
+        active_agent: "codex",
+        active_role: "meta_reviewer",
+        active_since: "2026-02-22T12:59:00.000Z",
+        last_command_at: "2026-02-22T12:59:30.000Z",
+        meta_review: {
+          ...running.state.meta_review!,
+          runtime_delivery: buildRuntimeDelivery({
+            executionContext,
+            status: "uncertain",
+            reasonCode: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
+            message: "meta-reviewer pane did not confirm structured submit request delivery",
+            observedAt: "2026-02-22T12:59:30.000Z"
+          }),
+          last_autonomous_run_id: "run_watchdog_rebind_01",
+          last_autonomous_status: "error",
+          last_autonomous_recommendation: "inconclusive",
+          last_autonomous_summary: "Runtime delivery still uncertain after restart/rebind.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: "2026-02-22T12:59:30.000Z"
+        }
+      },
+      {
+        expectedFingerprint: running.fingerprint,
+        expectedState: "META_REVIEW_RUNNING"
+      }
+    );
+
+    const result = await runBubbleWatchdog({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath,
+      now: new Date("2026-02-22T13:01:00.000Z")
+    });
+
+    expect(result.escalated).toBe(true);
+    expect(result.reason).toBe("escalated");
+    expect(result.state.state).toBe("META_REVIEW_FAILED");
     expect(result.envelope?.type).toBe("APPROVAL_REQUEST");
   });
 

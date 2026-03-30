@@ -88,7 +88,11 @@ async function setupReadyForHumanApprovalBubble(repoPath: string, bubbleId: stri
             }
           }
         }),
-        notifyMetaReviewerSubmissionRequest: async () => {}
+        notifyMetaReviewerSubmissionRequest: async () => ({
+          status: "confirmed",
+          reasonCode: null,
+          message: "ok"
+        })
       })
   });
 
@@ -875,11 +879,14 @@ describe("approval decisions", () => {
             }
           }
         }),
-        notifyMetaReviewerSubmissionRequest: async () => {
-          throw new MetaReviewGateError(
-            "META_REVIEW_GATE_RUN_FAILED",
-            "simulated runner invocation failure"
-          );
+        appendProtocolEnvelope: async (input) => {
+          if (input.envelope.type === "TASK") {
+            throw new MetaReviewGateError(
+              "META_REVIEW_GATE_RUN_FAILED",
+              "simulated runner invocation failure"
+            );
+          }
+          return appendProtocolEnvelope(input);
         }
       }
     );
@@ -939,11 +946,14 @@ describe("approval decisions", () => {
             }
           }
         }),
-        notifyMetaReviewerSubmissionRequest: async () => {
-          throw new MetaReviewGateError(
-            "META_REVIEW_GATE_RUN_FAILED",
-            "simulated runner invocation failure"
-          );
+        appendProtocolEnvelope: async (input) => {
+          if (input.envelope.type === "TASK") {
+            throw new MetaReviewGateError(
+              "META_REVIEW_GATE_RUN_FAILED",
+              "simulated runner invocation failure"
+            );
+          }
+          return appendProtocolEnvelope(input);
         }
       }
     );
@@ -985,12 +995,25 @@ describe("approval decisions", () => {
     }
     expect(reworked.state.state).toBe("RUNNING");
 
-    const rerunFailedGate = await applyMetaReviewGateOnConvergence({
-      bubbleId: bubble.bubbleId,
-      repoPath,
-      summary: "Converged after rework.",
-      now: new Date("2026-03-08T12:02:00.000Z")
-    });
+    const rerunFailedGate = await applyMetaReviewGateOnConvergence(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        summary: "Converged after rework.",
+        now: new Date("2026-03-08T12:02:00.000Z")
+      },
+      {
+        appendProtocolEnvelope: async (input) => {
+          if (input.envelope.type === "TASK") {
+            throw new MetaReviewGateError(
+              "META_REVIEW_GATE_RUN_FAILED",
+              "simulated runner invocation failure"
+            );
+          }
+          return appendProtocolEnvelope(input);
+        }
+      }
+    );
     expect(rerunFailedGate.route).toBe("human_gate_run_failed");
     expect(rerunFailedGate.state.state).toBe("META_REVIEW_FAILED");
     expect(rerunFailedGate.state.meta_review?.sticky_human_gate).toBe(false);
@@ -1322,11 +1345,14 @@ describe("approval decisions", () => {
             }
           }
         }),
-        notifyMetaReviewerSubmissionRequest: async () => {
-          throw new MetaReviewGateError(
-            "META_REVIEW_GATE_RUN_FAILED",
-            "simulated runner invocation failure"
-          );
+        appendProtocolEnvelope: async (input) => {
+          if (input.envelope.type === "TASK") {
+            throw new MetaReviewGateError(
+              "META_REVIEW_GATE_RUN_FAILED",
+              "simulated runner invocation failure"
+            );
+          }
+          return appendProtocolEnvelope(input);
         }
       }
     );
@@ -1472,7 +1498,11 @@ describe("approval decisions", () => {
           }
         }
       }),
-      notifyMetaReviewerSubmissionRequest: async () => {}
+      notifyMetaReviewerSubmissionRequest: async () => ({
+        status: "confirmed",
+        reasonCode: null,
+        message: "ok"
+      })
     });
     expect(gate.route).toBe("meta_review_running");
 

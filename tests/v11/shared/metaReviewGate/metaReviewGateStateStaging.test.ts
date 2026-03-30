@@ -20,6 +20,14 @@ function createReadyForApprovalState(
       last_command_at: "2026-03-19T10:00:00.000Z",
       meta_review: {
         execution_context: null,
+        runtime_delivery: {
+          status: "uncertain",
+          reason_code: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
+          message: "previous delivery not confirmed",
+          observed_at: "2026-03-19T10:00:00.000Z",
+          observed_for_handoff_id: "meta_review:b_meta_gate_stage_01:round:4:attempt:2",
+          observed_for_round: 4
+        },
         last_autonomous_run_id: "run_prev",
         last_autonomous_status: "success",
         last_autonomous_recommendation: "rework",
@@ -78,6 +86,7 @@ describe("stageMetaReviewRunningState", () => {
       attempt: 3
     });
     expect(result.state.meta_review?.auto_rework_count).toBe(2);
+    expect(result.state.meta_review?.runtime_delivery).toBeNull();
     expect(result.state.meta_review?.last_autonomous_run_id).toBeNull();
     expect(result.state.meta_review?.last_autonomous_status).toBeNull();
     expect(result.state.meta_review?.last_autonomous_recommendation).toBeNull();
@@ -120,6 +129,7 @@ describe("stageMetaReviewRunningState", () => {
         deadline_at: "2026-03-19T10:18:30.000Z",
         attempt: 1
       },
+      runtime_delivery: null,
       last_autonomous_run_id: null,
       last_autonomous_status: null,
       last_autonomous_recommendation: null,
