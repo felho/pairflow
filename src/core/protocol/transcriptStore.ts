@@ -70,6 +70,7 @@ interface ParsedTranscript {
   envelopes: ProtocolEnvelope[];
   normalizedRaw: string;
   droppedTrailingPartialLine: boolean;
+  droppedInvalidEnvelopeLines: number;
 }
 
 export class ProtocolTranscriptError extends Error {
@@ -118,6 +119,7 @@ function parseTranscript(raw: string, options: ReadTranscriptOptions): ParsedTra
   const hasTrailingNewline = raw.endsWith("\n");
 
   let droppedTrailingPartialLine = false;
+  let droppedInvalidEnvelopeLines = 0;
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
@@ -145,6 +147,7 @@ function parseTranscript(raw: string, options: ReadTranscriptOptions): ParsedTra
         error instanceof Error &&
         /Invalid protocol envelope/u.test(error.message)
       ) {
+        droppedInvalidEnvelopeLines += 1;
         continue;
       }
 
@@ -157,7 +160,8 @@ function parseTranscript(raw: string, options: ReadTranscriptOptions): ParsedTra
   return {
     envelopes,
     normalizedRaw,
-    droppedTrailingPartialLine
+    droppedTrailingPartialLine,
+    droppedInvalidEnvelopeLines
   };
 }
 
@@ -292,13 +296,17 @@ export async function appendProtocolEnvelopes(
         const raw = await readTranscriptRaw(input.transcriptPath, true);
         const parsed = parseTranscript(raw, {
           allowMissing: true,
-          toleratePartialFinalLine: true
+          toleratePartialFinalLine: true,
+          tolerateInvalidEnvelopeLines: true
         });
 
-        if (parsed.droppedTrailingPartialLine) {
-          // Recovery mode: truncate the syntactically broken tail first, then append
-          // the new lines below. A crash between these writes may shorten transcript
-          // by one invalid partial line, but keeps it parseable and append-safe.
+        if (
+          parsed.droppedTrailingPartialLine
+          || parsed.droppedInvalidEnvelopeLines > 0
+        ) {
+          // Recovery mode: normalize away parse-invalid tail content and any
+          // legacy/forward-incompatible envelope lines before appending. This
+          // keeps sequence allocation deterministic and future mutations append-safe.
           await writeFile(input.transcriptPath, parsed.normalizedRaw, {
             encoding: "utf8"
           });

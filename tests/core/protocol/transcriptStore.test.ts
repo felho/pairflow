@@ -304,6 +304,55 @@ describe("appendProtocolEnvelope", () => {
     expect(recovered[1]?.id).toBe("msg_20260221_002");
   });
 
+  it("drops invalid envelope lines during append recovery before allocating next sequence", async () => {
+    const root = await createTempRoot();
+    const transcriptPath = join(root, "transcript.ndjson");
+    const lockPath = join(root, "b_protocol_01.lock");
+    const now = new Date("2026-02-21T12:10:00.000Z");
+
+    await writeFile(
+      transcriptPath,
+      `${JSON.stringify({
+        id: "msg_20260221_001",
+        ts: "2026-02-21T12:00:00.000Z",
+        bubble_id: "b_protocol_01",
+        sender: "orchestrator",
+        recipient: "codex",
+        type: "TASK",
+        round: 0,
+        payload: { summary: "Task" },
+        refs: []
+      })}\n${JSON.stringify({
+        id: "msg_20260221_002",
+        ts: "2026-02-21T12:05:00.000Z",
+        bubble_id: "b_protocol_01",
+        sender: "codex",
+        recipient: "claude",
+        type: "PASS",
+        round: 1,
+        payload: {
+          summary: "Legacy invalid pass",
+          findings_claim_state: "open_findings"
+        },
+        refs: []
+      })}\n`,
+      "utf8"
+    );
+
+    await appendProtocolEnvelope({
+      transcriptPath,
+      lockPath,
+      envelope: createDraft({ round: 2 }),
+      now
+    });
+
+    const recovered = await readTranscriptEnvelopes(transcriptPath);
+    expect(recovered).toHaveLength(2);
+    expect(recovered[0]?.id).toBe("msg_20260221_001");
+    expect(recovered[1]?.id).toBe("msg_20260221_002");
+    expect(recovered[1]?.payload.summary).toBe("handoff");
+  });
+
   it("provides an or-throw reader for explicit missing-file handling", async () => {
     const root = await createTempRoot();
     const transcriptPath = join(root, "missing.ndjson");

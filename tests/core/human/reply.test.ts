@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -119,6 +119,46 @@ describe("emitHumanReply", () => {
       `${bubble.paths.transcriptPath}#${result.envelope.id}`
     ]);
     expect(deliveryRefs[0]?.startsWith("transcript.ndjson#")).toBe(false);
+  });
+
+  it("recovers from legacy invalid transcript lines before appending HUMAN_REPLY", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupWaitingHumanBubble(repoPath, "b_human_reply_legacy_01");
+    const invalidLegacyLine = JSON.stringify({
+      id: "msg_20260221_999",
+      ts: "2026-02-21T12:06:00.000Z",
+      bubble_id: bubble.bubbleId,
+      sender: "reviewer",
+      recipient: "human",
+      type: "PASS",
+      round: 1,
+      payload: {
+        summary: "Legacy sender role line should be dropped during mutation recovery."
+      },
+      refs: []
+    });
+    await writeFile(
+      bubble.paths.transcriptPath,
+      `${invalidLegacyLine}\n`,
+      { encoding: "utf8", flag: "a" }
+    );
+
+    const result = await emitHumanReply({
+      bubbleId: bubble.bubbleId,
+      message: "Proceed after manual intervention.",
+      cwd: repoPath,
+      now: new Date("2026-02-21T12:08:00.000Z")
+    });
+
+    expect(result.sequence).toBe(3);
+
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
+    expect(transcript.map((entry) => entry.type)).toEqual([
+      "TASK",
+      "HUMAN_QUESTION",
+      "HUMAN_REPLY"
+    ]);
+    expect(transcript.some((entry) => entry.id === "msg_20260221_999")).toBe(false);
   });
 
   it("derives delivery target role from active_role for shared-identity collision safety", async () => {
