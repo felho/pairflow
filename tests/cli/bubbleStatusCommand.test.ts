@@ -91,6 +91,9 @@ describe("renderBubbleStatusText", () => {
         latestSummary: "No deterministic recommendation.",
         latestReportRef: "artifacts/meta-review-last.json",
         latestUpdatedAt: "2026-02-22T12:04:59.000Z",
+        latestRoute: null,
+        latestRouteReasonCode: null,
+        latestRouteObservedAt: null,
         runtimeDelivery: null
       },
       commandPath: {
@@ -184,6 +187,9 @@ describe("renderBubbleStatusText", () => {
     expect(rendered).toContain(
       "pinned=node '/tmp/worktree/dist/cli/index.js'"
     );
+    expect(rendered).toContain(
+      "Meta-review: status=inconclusive recommendation=inconclusive route=-"
+    );
     expect(rendered).toContain("Last review verification: n/a");
   });
 
@@ -218,6 +224,9 @@ describe("renderBubbleStatusText", () => {
           latestSummary: "No deterministic recommendation.",
           latestReportRef: "artifacts/meta-review-last.json",
           latestUpdatedAt: "2026-02-22T12:04:59.000Z",
+          latestRoute: "human_gate_dispatch_failed",
+          latestRouteReasonCode: null,
+          latestRouteObservedAt: "2026-02-22T12:05:10.000Z",
           runtimeDelivery: {
             status: "uncertain",
             reasonCode: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
@@ -231,6 +240,9 @@ describe("renderBubbleStatusText", () => {
     );
 
     expect(rendered).toContain("Meta-review runtime delivery: uncertain");
+    expect(rendered).toContain(
+      "Meta-review: status=inconclusive recommendation=inconclusive route=human_gate_dispatch_failed"
+    );
     expect(rendered).toContain("reason=META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED");
     expect(rendered).toContain("message=pane delivery not confirmed");
   });
@@ -278,6 +290,9 @@ describe("renderBubbleStatusTable", () => {
         latestSummary: "Autonomous recommendation approve.",
         latestReportRef: "artifacts/meta-review-last.json",
         latestUpdatedAt: "2026-03-08T21:29:00.000Z",
+        latestRoute: null,
+        latestRouteReasonCode: null,
+        latestRouteObservedAt: null,
         runtimeDelivery: null
       },
       commandPath: {
@@ -373,6 +388,9 @@ describe("renderBubbleStatusTable", () => {
           latestSummary: "Autonomous recommendation approve.",
           latestReportRef: "artifacts/meta-review-last.json",
           latestUpdatedAt: "2026-03-08T21:29:00.000Z",
+          latestRoute: "human_gate_dispatch_failed",
+          latestRouteReasonCode: null,
+          latestRouteObservedAt: "2026-03-08T21:29:05.000Z",
           runtimeDelivery: {
             status: "failed",
             reasonCode: "META_REVIEW_REQUEST_DELIVERY_FAILED",
@@ -386,6 +404,7 @@ describe("renderBubbleStatusTable", () => {
     );
 
     expect(rendered).toContain("| Meta-review");
+    expect(rendered).toContain("route=human_gate_dispatch_failed");
     expect(rendered).toContain("runtime_delivery=failed/META_REVIEW_REQUEST_DELIVERY_FAILED");
   });
 });

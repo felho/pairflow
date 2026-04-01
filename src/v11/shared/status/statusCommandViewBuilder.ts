@@ -2,6 +2,7 @@ import { computeWatchdogStatus, type WatchdogStatus } from "../../../core/runtim
 import { resolveActiveMetaReviewRuntimeDelivery } from "../../../core/bubble/metaReview.js";
 import { type ReviewVerificationState } from "../../../core/reviewer/reviewVerification.js";
 import type { StateValidationDiagnostics } from "../../../core/state/stateStore.js";
+import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateTypes.js";
 import type {
   BubbleFailingGate,
   BubbleLifecycleState,
@@ -18,6 +19,58 @@ import type {
   StatusGateState
 } from "./statusCommandInternals.js";
 import { toStatusCommandPathView } from "./statusCommandInternals.js";
+
+const metaReviewHumanGateRoutes = new Set<Exclude<MetaReviewGateRoute, "meta_review_running" | "auto_rework">>([
+  "human_gate_sticky_bypass",
+  "human_gate_approve",
+  "human_gate_budget_exhausted",
+  "human_gate_inconclusive",
+  "human_gate_run_failed",
+  "human_gate_dispatch_failed"
+]);
+
+function resolveLatestMetaReviewRoute(transcript: ProtocolEnvelope[]): {
+  route: MetaReviewGateRoute;
+  reasonCode: string | null;
+  observedAt: string;
+} | null {
+  for (let index = transcript.length - 1; index >= 0; index -= 1) {
+    const envelope = transcript[index]!;
+    const metadata = envelope.payload.metadata;
+    if (
+      envelope.type === "APPROVAL_REQUEST" &&
+      envelope.sender === "orchestrator" &&
+      envelope.recipient === "human" &&
+      metadata?.actor === "meta-reviewer"
+    ) {
+      const route = metadata.meta_review_gate_route;
+      if (typeof route === "string" && metaReviewHumanGateRoutes.has(route as never)) {
+        const reasonCode =
+          typeof metadata.meta_review_gate_reason_code === "string"
+            ? metadata.meta_review_gate_reason_code
+            : null;
+        return {
+          route: route as Exclude<MetaReviewGateRoute, "meta_review_running" | "auto_rework">,
+          reasonCode,
+          observedAt: envelope.ts
+        };
+      }
+    }
+    if (
+      envelope.type === "APPROVAL_DECISION" &&
+      envelope.sender === "orchestrator" &&
+      envelope.payload.decision === "rework" &&
+      metadata?.actor === "meta-reviewer"
+    ) {
+      return {
+        route: "auto_rework",
+        reasonCode: null,
+        observedAt: envelope.ts
+      };
+    }
+  }
+  return null;
+}
 
 export interface BubbleStatusView {
   bubbleId: string;
@@ -48,6 +101,9 @@ export interface BubbleStatusView {
     latestSummary: string | null;
     latestReportRef: string | null;
     latestUpdatedAt: string | null;
+    latestRoute: MetaReviewGateRoute | null;
+    latestRouteReasonCode: string | null;
+    latestRouteObservedAt: string | null;
     runtimeDelivery: {
       status: MetaReviewRuntimeDeliveryStatus;
       reasonCode: string | null;
@@ -121,6 +177,7 @@ export function buildBubbleStatusView({
     executionContext: state.meta_review?.execution_context,
     runtimeDelivery: state.meta_review?.runtime_delivery
   });
+  const latestMetaReviewRoute = resolveLatestMetaReviewRoute(transcript);
   return {
     bubbleId: resolved.bubbleId,
     repoPath: resolved.repoPath,
@@ -150,6 +207,9 @@ export function buildBubbleStatusView({
       latestSummary: state.meta_review?.last_autonomous_summary ?? null,
       latestReportRef: state.meta_review?.last_autonomous_report_ref ?? null,
       latestUpdatedAt: state.meta_review?.last_autonomous_updated_at ?? null,
+      latestRoute: latestMetaReviewRoute?.route ?? null,
+      latestRouteReasonCode: latestMetaReviewRoute?.reasonCode ?? null,
+      latestRouteObservedAt: latestMetaReviewRoute?.observedAt ?? null,
       runtimeDelivery:
         activeRuntimeDelivery === null
           ? null

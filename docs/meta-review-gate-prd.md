@@ -192,6 +192,7 @@ Pairflow-facing output contract from a live review run:
 1. Decision recommendation: `rework|approve|inconclusive`.
 2. Detailed report payload/artifact for human inspection.
 3. `rework_target_message` when recommendation is `rework` (optional advisory text may exist for other recommendations).
+4. When recommendation is `rework`, `report_json.findings_artifact_ref` must reference a structured JSON findings artifact under `artifacts/`; the human-readable report may be a separate artifact.
 
 ## Persistence Model (Last Autonomous Snapshot)
 

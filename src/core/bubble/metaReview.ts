@@ -59,6 +59,12 @@ import {
 import {
   resolveStructuredMetaReviewClaimFromReportJson
 } from "../../v11/shared/metaReviewGate/metaReviewGateFindingsClaimParsing.js";
+import {
+  resolveReworkFindingsParityInput
+} from "../../v11/shared/metaReviewGate/metaReviewGateFindingsParityInput.js";
+import {
+  validateFindingsArtifactParity
+} from "../../v11/shared/metaReviewGate/metaReviewGateFindingsParityHelpers.js";
 import type {
   MetaReviewGateRoute,
   RecoverMetaReviewGateFromSnapshotDependencies,
@@ -1694,6 +1700,40 @@ function assertSubmitRecommendationRouteable(
   );
 }
 
+async function assertSubmitReworkFindingsArtifactContract(input: {
+  bubbleDir: string;
+  artifactsDir: string;
+  runResult: MetaReviewRunResult;
+  reportJson: Record<string, unknown>;
+  readFileFn: typeof readFile;
+}): Promise<void> {
+  if (input.runResult.recommendation !== "rework") {
+    return;
+  }
+
+  const parityInput = resolveReworkFindingsParityInput({
+    reportJson: input.reportJson,
+    runResult: input.runResult,
+    bubbleDir: input.bubbleDir,
+    artifactsDir: input.artifactsDir
+  });
+  if (!parityInput.ok) {
+    throw new MetaReviewError("META_REVIEW_SCHEMA_INVALID", parityInput.reason);
+  }
+
+  const artifactParity = await validateFindingsArtifactParity({
+    artifactPath: parityInput.value.artifactPath,
+    findingsCount: parityInput.value.findingsCount,
+    digest: parityInput.value.digest,
+    artifactStatus: parityInput.value.artifactStatus,
+    metaReviewRunId: parityInput.value.metaReviewRunId,
+    readFileFn: input.readFileFn
+  });
+  if (!artifactParity.ok) {
+    throw new MetaReviewError("META_REVIEW_SCHEMA_INVALID", artifactParity.reason);
+  }
+}
+
 export async function submitMetaReviewResult(
   input: MetaReviewSubmitInput,
   dependencies: MetaReviewDependencies = {}
@@ -1703,6 +1743,7 @@ export async function submitMetaReviewResult(
   const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
   const readRuntimeSessions =
     dependencies.readRuntimeSessionsRegistry ?? readRuntimeSessionsRegistry;
+  const readFileFn = dependencies.readFile ?? readFile;
   const writeFileFn = dependencies.writeFile ?? writeFile;
   const randomUuidFn = dependencies.randomUUID ?? randomUUID;
   const now = dependencies.now ?? new Date();
@@ -1935,6 +1976,14 @@ export async function submitMetaReviewResult(
     updatedAt,
     warnings,
     reportJson: canonicalReportJson
+  });
+
+  await assertSubmitReworkFindingsArtifactContract({
+    bubbleDir: resolved.bubblePaths.bubbleDir,
+    artifactsDir: resolved.bubblePaths.artifactsDir,
+    runResult: canonicalRunResult,
+    reportJson: canonicalReportJson,
+    readFileFn
   });
 
   assertSubmitRecommendationRouteable(recommendation);

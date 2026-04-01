@@ -120,6 +120,14 @@ export function resolveReworkFindingsParityInput(input: {
   }
 
   const normalizedArtifactRef = artifactRef.trim();
+  if (!normalizedArtifactRef.endsWith(".json")) {
+    return {
+      ok: false,
+      reason:
+        `${metaReviewFindingsParityGuardReasonCode}: findings_artifact_ref (${normalizedArtifactRef}) must reference a JSON artifact.`,
+      metadata: metadata("guard_failed")
+    };
+  }
   const artifactPath = resolveFindingsArtifactPath({
     bubbleDir: input.bubbleDir,
     artifactsDir: input.artifactsDir,

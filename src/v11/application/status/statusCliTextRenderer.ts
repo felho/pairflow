@@ -30,6 +30,10 @@ function formatRuntimeDeliveryText(status: BubbleStatusView): string {
   return `Meta-review runtime delivery: ${runtimeDelivery.status} observed=${runtimeDelivery.observedAt} handoff=${runtimeDelivery.observedForHandoffId ?? "-"} round=${runtimeDelivery.observedForRound ?? "-"}${runtimeDelivery.reasonCode !== null ? ` reason=${runtimeDelivery.reasonCode}` : ""} message=${runtimeDelivery.message}`;
 }
 
+function formatMetaReviewText(status: BubbleStatusView): string {
+  return `Meta-review: status=${status.metaReview.latestStatus ?? "-"} recommendation=${status.metaReview.latestRecommendation ?? "-"} route=${status.metaReview.latestRoute ?? "-"}${status.metaReview.latestRouteReasonCode !== null ? ` reason=${status.metaReview.latestRouteReasonCode}` : ""} updated=${status.metaReview.latestUpdatedAt ?? "-"} route_at=${status.metaReview.latestRouteObservedAt ?? "-"} report=${status.metaReview.latestReportRef ?? "-"}`;
+}
+
 export function renderBubbleStatusText(status: BubbleStatusView): string {
   const failingGateSummary = formatFailingGateSummaryText(status);
   const stateValidationSummary =
@@ -48,6 +52,7 @@ export function renderBubbleStatusText(status: BubbleStatusView): string {
     `Inbox pending: questions=${status.pendingInboxItems.humanQuestions}, approvals=${status.pendingInboxItems.approvalRequests}, total=${status.pendingInboxItems.total}`,
     `Transcript: messages=${status.transcript.totalMessages}, last=${status.transcript.lastMessageType ?? "-"} @ ${status.transcript.lastMessageTs ?? "-"}`,
     formatStatusCommandPathText(status),
+    formatMetaReviewText(status),
     formatRuntimeDeliveryText(status),
     `Accuracy critical: ${status.accuracy_critical ? "yes" : "no"}`,
     `Last review verification: ${status.accuracy_critical ? status.last_review_verification : "n/a"}`,

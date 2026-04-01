@@ -108,7 +108,7 @@ Gate-critical routing must use canonical claim fields, not prose parsing:
    - `findings_claim_state=open_findings`
    - `findings_claim_source=meta_review_artifact`
    - `findings_count>0`
-   - non-empty `findings_artifact_ref`
+   - non-empty `findings_artifact_ref` pointing to a structured JSON findings artifact under `artifacts/`
    - non-empty `meta_review_run_id` (must match `run_id` when present)
    - non-empty `findings_digest_sha256` (must match artifact digest)
    - non-empty `findings_artifact_status`

@@ -1,5 +1,5 @@
 const metaReviewSubmitReportJsonParityFields =
-  '{"findings_claim_state":"clean|open_findings|unknown","findings_claim_source":"meta_review_artifact","findings_count":<int>,"findings_claimed_open_total":<int>,"findings_blocking_open_total":<int>,"findings_advisory_open_total":<int>,"findings_artifact_ref":"artifacts/...","meta_review_run_id":"<run-id>","findings_digest_sha256":"<sha256>","findings_artifact_status":"available"}';
+  '{"findings_claim_state":"clean|open_findings|unknown","findings_claim_source":"meta_review_artifact","findings_count":<int>,"findings_claimed_open_total":<int>,"findings_blocking_open_total":<int>,"findings_advisory_open_total":<int>,"findings_artifact_ref":"artifacts/<findings>.json","meta_review_run_id":"<run-id>","findings_digest_sha256":"<sha256>","findings_artifact_status":"available"}';
 
 const metaReviewSubmitApproveParityNote =
   "For recommendation=approve, split fields are mandatory, findings_claimed_open_total = findings_blocking_open_total + findings_advisory_open_total, and findings_blocking_open_total must be 0.";

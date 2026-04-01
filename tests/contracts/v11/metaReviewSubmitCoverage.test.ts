@@ -1,6 +1,7 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createHash } from "node:crypto";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -242,6 +243,58 @@ describe("v11 meta-review submit contract", () => {
       recommendation: "approve",
       gate_route: "human_gate_approve",
       lifecycle_state: "READY_FOR_HUMAN_APPROVAL"
+    });
+  });
+
+  it("rejects rework submit when findings_artifact_ref is not a JSON artifact", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_contract_submit_rework_markdown_ref_01",
+      task: "Contract: rework findings artifact must be json"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-24T10:32:30.000Z"
+    });
+
+    const markdownDigest = createHash("sha256")
+      .update("# Meta Review Report\n", "utf8")
+      .digest("hex");
+
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "rework",
+          summary: "Blocking findings remain in this run.",
+          rework_target_message: "Fix the blocking issues.",
+          report_json: {
+            findings_claim_state: "open_findings",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 1,
+            findings_artifact_ref: "artifacts/meta-review-round-1.md",
+            meta_review_run_id: "b_meta_contract_submit_rework_markdown_ref_01",
+            findings_digest_sha256: markdownDigest,
+            findings_artifact_status: "available"
+          }
+        },
+        {
+          randomUUID: () => "b_meta_contract_submit_rework_markdown_ref_01",
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID"
     });
   });
 

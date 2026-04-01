@@ -227,6 +227,54 @@ describe("getBubbleStatus", () => {
     expect(status.transcript.lastMessageType).toBe("APPROVAL_REQUEST");
   });
 
+  it("surfaces latest meta-review gate route from transcript metadata", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await createBubble({
+      id: "b_status_meta_route_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Status meta-review route",
+      cwd: repoPath
+    });
+    const lockPath = join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`);
+
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      mirrorPaths: [bubble.paths.inboxPath],
+      lockPath,
+      now: new Date("2026-02-22T14:14:00.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: "human",
+        type: "APPROVAL_REQUEST",
+        round: 0,
+        payload: {
+          summary: "Meta-review parity guard blocked auto rework.",
+          metadata: {
+            actor: "meta-reviewer",
+            actor_agent: "codex",
+            latest_recommendation: "rework",
+            meta_review_gate_route: "human_gate_dispatch_failed"
+          }
+        },
+        refs: []
+      }
+    });
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath
+    });
+
+    expect(status.metaReview.latestRoute).toBe("human_gate_dispatch_failed");
+    expect(status.metaReview.latestRouteReasonCode).toBeNull();
+    expect(status.metaReview.latestRouteObservedAt).toBe(
+      "2026-02-22T14:14:00.000Z"
+    );
+  });
+
   it("reports accuracy-critical missing verification gate status", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({

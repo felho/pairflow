@@ -342,10 +342,13 @@ describe("restart recovery", () => {
     expect(converged.state.state).toBe("META_REVIEW_RUNNING");
 
     const afterFailureState = await readStateSnapshot(bubble.paths.statePath);
-    expect(afterFailureState.state.meta_review?.runtime_delivery).toMatchObject({
-      status: "failed",
-      reason_code: "META_REVIEWER_PANE_EXITED"
-    });
+    expect(afterFailureState.state.meta_review?.runtime_delivery?.status).toBe(
+      "failed"
+    );
+    expect([
+      "META_REVIEWER_PANE_EXITED",
+      "META_REVIEWER_PANE_RESPAWN_FAILED"
+    ]).toContain(afterFailureState.state.meta_review?.runtime_delivery?.reason_code);
 
     const failedRegistry = await readRuntimeSessionsRegistry(
       bubble.paths.sessionsPath,

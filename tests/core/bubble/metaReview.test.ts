@@ -1627,6 +1627,23 @@ describe("meta-review submit", () => {
       activeRole: "meta_reviewer",
       nowIso: "2026-03-09T09:09:50.000Z"
     });
+    const findingsRaw = `${JSON.stringify(
+      {
+        open_total: 1,
+        findings: [{ id: "f_summary_open_01", status: "open" }]
+      },
+      null,
+      2
+    )}\n`;
+    const findingsArtifactRef = "artifacts/summary-open-findings.json";
+    await writeFileFs(
+      join(bubble.paths.artifactsDir, "summary-open-findings.json"),
+      findingsRaw,
+      "utf8"
+    );
+    const findingsDigest = createHash("sha256")
+      .update(findingsRaw, "utf8")
+      .digest("hex");
 
     await expect(
       submitMetaReviewResult(
@@ -1640,7 +1657,10 @@ describe("meta-review submit", () => {
           report_json: buildStructuredSubmitReportJson({
             findingsClaimState: "open_findings",
             findingsCount: 1,
-            metaReviewRunId: "run_meta_submit_summary_open_aligned_01"
+            metaReviewRunId: "run_meta_submit_summary_open_aligned_01",
+            findingsArtifactRef,
+            findingsDigestSha256: findingsDigest,
+            findingsArtifactStatus: "available"
           })
         },
         {
@@ -1860,6 +1880,26 @@ describe("meta-review submit", () => {
       activeRole: "meta_reviewer",
       nowIso: "2026-03-09T09:09:56.500Z"
     });
+    const findingsRaw = `${JSON.stringify(
+      {
+        open_total: 2,
+        findings: [
+          { id: "f_ambiguous_open_01", status: "open" },
+          { id: "f_ambiguous_open_02", status: "open" }
+        ]
+      },
+      null,
+      2
+    )}\n`;
+    const findingsArtifactRef = "artifacts/ambiguous-open-findings.json";
+    await writeFileFs(
+      join(bubble.paths.artifactsDir, "ambiguous-open-findings.json"),
+      findingsRaw,
+      "utf8"
+    );
+    const findingsDigest = createHash("sha256")
+      .update(findingsRaw, "utf8")
+      .digest("hex");
 
     await expect(
       submitMetaReviewResult(
@@ -1873,7 +1913,10 @@ describe("meta-review submit", () => {
           report_json: buildStructuredSubmitReportJson({
             findingsClaimState: "open_findings",
             findingsCount: 2,
-            metaReviewRunId: "run_meta_submit_summary_ambiguous_open_01"
+            metaReviewRunId: "run_meta_submit_summary_ambiguous_open_01",
+            findingsArtifactRef,
+            findingsDigestSha256: findingsDigest,
+            findingsArtifactStatus: "available"
           })
         },
         {
@@ -2626,12 +2669,12 @@ describe("meta-review submit", () => {
     });
   });
 
-  it("normalizes markdown findings_artifact_ref to json artifact for rework submit", async () => {
+  it("rejects rework submit when findings_artifact_ref points to the markdown report artifact", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_meta_submit_03",
-      task: "Meta submit rework findings artifact normalization"
+      task: "Meta submit rework findings artifact contract"
     });
     await writeMetaReviewRunningState({
       statePath: bubble.paths.statePath,
@@ -2640,43 +2683,39 @@ describe("meta-review submit", () => {
       nowIso: "2026-03-09T09:22:00.000Z"
     });
 
-    await submitMetaReviewResult(
-      {
-        bubbleId: bubble.bubbleId,
-        repoPath,
-        round: 1,
-        recommendation: "rework",
-        summary: "Needs another pass.",
-        rework_target_message: "Fix parity artifact path.",
-        report_json: buildStructuredSubmitReportJson({
-          findingsClaimState: "open_findings",
-          findingsCount: 1,
-          metaReviewRunId: "run_meta_submit_03",
-          findingsArtifactRef: "artifacts/meta-review-last.json"
-        })
-      },
-      {
-        randomUUID: () => "run_generated_submit_03",
-        now: new Date("2026-03-09T09:22:30.000Z"),
-        readRuntimeSessionsRegistry: async () =>
-          buildActiveMetaReviewerSession({
-            bubbleId: bubble.bubbleId,
-            repoPath,
-            worktreePath: bubble.paths.worktreePath
+    await expect(
+      submitMetaReviewResult(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          round: 1,
+          recommendation: "rework",
+          summary: "Needs another pass.",
+          rework_target_message: "Fix parity artifact path.",
+          report_json: buildStructuredSubmitReportJson({
+            findingsClaimState: "open_findings",
+            findingsCount: 1,
+            metaReviewRunId: "run_meta_submit_03",
+            findingsDigestSha256:
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            findingsArtifactStatus: "available",
+            findingsArtifactRef: "artifacts/meta-review-round-1.md"
           })
-      }
-    );
-
-    const reportJson = JSON.parse(
-      await readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
-    ) as {
-      report_json?: {
-        findings_artifact_ref?: string;
-      };
-    };
-    expect(reportJson.report_json?.findings_artifact_ref).toBe(
-      "artifacts/meta-review-last.json"
-    );
+        },
+        {
+          randomUUID: () => "run_meta_submit_03",
+          now: new Date("2026-03-09T09:22:30.000Z"),
+          readRuntimeSessionsRegistry: async () =>
+            buildActiveMetaReviewerSession({
+              bubbleId: bubble.bubbleId,
+              repoPath,
+              worktreePath: bubble.paths.worktreePath
+            })
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID"
+    });
   });
 
   it("rejects rework submit when report_json run-link metadata is missing", async () => {
