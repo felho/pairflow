@@ -73,6 +73,14 @@ function buildBoundMetaReviewerPaneResult(input: {
   };
 }
 
+async function runSuccessfulMetaReviewerRespawn() {
+  return {
+    stdout: "",
+    stderr: "",
+    exitCode: 0
+  };
+}
+
 function defaultMetaReviewSnapshot(): BubbleMetaReviewSnapshotState {
   return {
     execution_context: null,
@@ -112,6 +120,7 @@ async function startAsyncMetaReviewGate(input: {
           worktreePath: input.worktreePath,
           active
         }),
+      runTmux: async () => runSuccessfulMetaReviewerRespawn(),
       notifyMetaReviewerSubmissionRequest: async () => ({
         status: "confirmed",
         reasonCode: null,
@@ -427,6 +436,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
             worktreePath: bubble.paths.worktreePath,
             active
           }),
+        runTmux: async () => runSuccessfulMetaReviewerRespawn(),
         notifyMetaReviewerSubmissionRequest: notifySpy
       }
     );
@@ -467,6 +477,51 @@ describe("applyMetaReviewGateOnConvergence", () => {
       reason_code: null,
       message: "ok"
     });
+  });
+
+  it("respawns the meta-reviewer pane before sending the submission request", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_async_respawn_01",
+      task: "Async gate respawn"
+    });
+    const tmuxCalls: string[][] = [];
+    const notifySpy = vi.fn(async () => ({
+      status: "confirmed" as const,
+      reasonCode: null,
+      message: "ok"
+    }));
+
+    const result = await applyMetaReviewGateOnConvergence(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        summary: "Converged for meta-review.",
+        now: new Date("2026-03-12T12:00:30.000Z")
+      },
+      {
+        setMetaReviewerPaneBinding: async ({ bubbleId: targetBubbleId, active }) =>
+          buildBoundMetaReviewerPaneResult({
+            bubbleId: targetBubbleId,
+            repoPath,
+            worktreePath: bubble.paths.worktreePath,
+            active
+          }),
+        notifyMetaReviewerSubmissionRequest: notifySpy,
+        runTmux: async (args) => {
+          tmuxCalls.push(args);
+          return runSuccessfulMetaReviewerRespawn();
+        }
+      }
+    );
+
+    expect(result.route).toBe("meta_review_running");
+    expect(notifySpy).toHaveBeenCalledTimes(1);
+    const respawnCall = tmuxCalls.find((args) => args[0] === "respawn-pane");
+    expect(respawnCall).toBeDefined();
+    expect(respawnCall?.[3]).toBe("pf_meta_structured:0.3");
+    expect(respawnCall?.at(-1)).toContain("Pairflow meta-reviewer start");
   });
 
   it("routes to human_gate_run_failed when pane binding is unavailable", async () => {
@@ -527,6 +582,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
             active
           });
         },
+        runTmux: async () => runSuccessfulMetaReviewerRespawn(),
         notifyMetaReviewerSubmissionRequest: async () => ({
           status: "failed",
           reasonCode: "META_REVIEW_REQUEST_DELIVERY_FAILED",
@@ -584,6 +640,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
             worktreePath: bubble.paths.worktreePath,
             active
           }),
+        runTmux: async () => runSuccessfulMetaReviewerRespawn(),
         notifyMetaReviewerSubmissionRequest: async () => ({
           status: "uncertain",
           reasonCode: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
@@ -666,6 +723,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
             worktreePath: bubble.paths.worktreePath,
             active
           }),
+        runTmux: async () => runSuccessfulMetaReviewerRespawn(),
         notifyMetaReviewerSubmissionRequest: async () => ({
           status: "uncertain",
           reasonCode: "META_REVIEW_REQUEST_DELIVERY_UNCONFIRMED",
@@ -728,6 +786,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
               active
             });
           },
+          runTmux: async () => runSuccessfulMetaReviewerRespawn(),
           notifyMetaReviewerSubmissionRequest: async () => ({
             status: "confirmed",
             reasonCode: null,
@@ -766,6 +825,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
             active
           });
         },
+        runTmux: async () => runSuccessfulMetaReviewerRespawn(),
         notifyMetaReviewerSubmissionRequest: async () => ({
           status: "confirmed",
           reasonCode: null,

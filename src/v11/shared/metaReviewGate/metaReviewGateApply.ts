@@ -235,7 +235,9 @@ export async function applyMetaReviewGateOnConvergence(
     sessionsPath: context.resolved.bubblePaths.sessionsPath,
     bubbleId: context.resolved.bubbleId,
     round: kickoffResult.state.round,
-    now: context.now
+    now: context.now,
+    taskArtifactPath: context.resolved.bubblePaths.taskArtifactPath,
+    pairflowCommandProfile: context.resolved.bubbleConfig.pairflow_command_profile
   });
   if (paneBinding.shouldDeactivate && paneBinding.delivery.status !== "confirmed") {
     await context.deactivateMetaReviewerPane();
