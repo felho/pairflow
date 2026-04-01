@@ -338,6 +338,10 @@ export function resolveFindingsArtifactOpenTotalFromArtifact(
       return candidate;
     }
   }
+  const derived = deriveFindingsOpenSplit(artifact.findings);
+  if (derived !== null) {
+    return derived.blockingOpenTotal + derived.advisoryOpenTotal;
+  }
   return undefined;
 }
 

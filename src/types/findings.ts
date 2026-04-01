@@ -1,5 +1,8 @@
 export const findingPriorities = ["P0", "P1", "P2", "P3"] as const;
 export const findingSeverities = findingPriorities;
+const findingSeverityAliases = {
+  blocking: "P1"
+} as const;
 
 export type FindingPriority = (typeof findingPriorities)[number];
 export type FindingSeverity = FindingPriority;
@@ -59,6 +62,14 @@ export function resolveFindingPriority(
   }
   if (isFindingSeverity(finding.severity)) {
     return finding.severity;
+  }
+  if (typeof finding.severity === "string") {
+    const alias = findingSeverityAliases[
+      finding.severity.trim().toLowerCase() as keyof typeof findingSeverityAliases
+    ];
+    if (alias !== undefined) {
+      return alias;
+    }
   }
   return undefined;
 }

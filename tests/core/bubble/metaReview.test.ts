@@ -2562,6 +2562,86 @@ describe("meta-review submit", () => {
     expect(reportJson.report_json?.findings_artifact_ref).toBe(findingsArtifactRef);
   });
 
+  it("derives rework artifact open_total from blocking findings and auto-reworks", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_blocking_alias_01",
+      task: "Meta submit blocking alias parity"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:22:00.000Z"
+    });
+    const findingsRaw = `${JSON.stringify(
+      {
+        findings: [
+          { id: "f_1", severity: "blocking", title: "blocking-a" },
+          { id: "f_2", priority: "P1", title: "blocking-b" }
+        ]
+      },
+      null,
+      2
+    )}\n`;
+    const findingsArtifactRef = "artifacts/rework-findings-blocking-alias.json";
+    await writeFileFs(
+      join(bubble.paths.artifactsDir, "rework-findings-blocking-alias.json"),
+      findingsRaw,
+      "utf8"
+    );
+    const findingsDigest = createHash("sha256")
+      .update(findingsRaw, "utf8")
+      .digest("hex");
+
+    const result = await submitMetaReviewResult(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        round: 1,
+        recommendation: "rework",
+        summary: "Blocking findings remain open.",
+        rework_target_message: "Close the remaining blocking findings.",
+        report_json: buildStructuredSubmitReportJson({
+          findingsClaimState: "open_findings",
+          findingsCount: 2,
+          metaReviewRunId: "run_meta_submit_blocking_alias_01",
+          findingsArtifactRef,
+          findingsDigestSha256: findingsDigest,
+          findingsArtifactStatus: "available"
+        })
+      },
+      {
+        randomUUID: () => "run_meta_submit_blocking_alias_01",
+        now: new Date("2026-03-09T09:23:00.000Z"),
+        readRuntimeSessionsRegistry: async () =>
+          buildActiveMetaReviewerSession({
+            bubbleId: bubble.bubbleId,
+            repoPath,
+            worktreePath: bubble.paths.worktreePath
+          })
+      }
+    );
+
+    expect(result.status).toBe("success");
+    expect(result.gate_route).toBe("auto_rework");
+    expect(result.lifecycle_state).toBe("RUNNING");
+
+    const reportJson = JSON.parse(
+      await readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
+    ) as {
+      report_json?: {
+        findings_artifact_open_total?: number | null;
+        findings_parity_status?: string | null;
+      };
+    };
+    expect(reportJson.report_json).toMatchObject({
+      findings_artifact_open_total: 2,
+      findings_parity_status: "ok"
+    });
+  });
+
   it("fails closed when submit routing fails after canonical snapshot persist", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({

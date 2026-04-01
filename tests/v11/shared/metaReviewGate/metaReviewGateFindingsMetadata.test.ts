@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   resolveLatestSameRoundReviewerSnapshot,
   resolveAdvisoryFindingsFromReportJson,
+  resolveFindingsArtifactOpenTotalFromArtifact,
   resolveFindingsOpenSplitFromReportJson,
   resolveSameRoundReviewerSnapshotFromEnvelope,
   resolveFindingsParityMetadataFromReportJson
@@ -110,6 +111,20 @@ describe("resolveFindingsOpenSplitFromReportJson", () => {
       findings_blocking_open_total: 1,
       findings_advisory_open_total: 2
     });
+  });
+});
+
+describe("resolveFindingsArtifactOpenTotalFromArtifact", () => {
+  it("derives open_total from findings when explicit totals are absent", () => {
+    const openTotal = resolveFindingsArtifactOpenTotalFromArtifact({
+      findings: [
+        { severity: "blocking", title: "blocking-a" },
+        { priority: "P2", title: "advisory-a" },
+        { severity: "P3", title: "advisory-b" }
+      ]
+    });
+
+    expect(openTotal).toBe(3);
   });
 });
 

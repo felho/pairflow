@@ -19,6 +19,10 @@ describe("deriveFindingsOpenSplit", () => {
         title: "blocking-1"
       },
       {
+        severity: "blocking",
+        title: "blocking-alias"
+      },
+      {
         severity: "P2",
         title: "advisory-2"
       },
@@ -32,7 +36,7 @@ describe("deriveFindingsOpenSplit", () => {
     ]);
 
     expect(split).toEqual({
-      blockingOpenTotal: 2,
+      blockingOpenTotal: 3,
       advisoryOpenTotal: 2
     });
   });
