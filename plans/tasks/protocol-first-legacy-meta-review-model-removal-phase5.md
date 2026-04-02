@@ -1,89 +1,77 @@
 ---
 artifact_type: task
-artifact_id: task_protocol_first_legacy_meta_review_model_removal_phase5_v1
+artifact_id: task_protocol_first_legacy_meta_review_model_removal_phase5_v3
 title: "Protocol-First Legacy Meta-Review Model Removal (Phase 5)"
-status: draft
+status: implementable
 phase: phase5
 target_files:
   - src/types/bubble.ts
-  - src/types/protocol.ts
-  - src/cli/commands/agent/emit.ts
-  - src/core/state/initialState.ts
-  - src/core/state/stateSchema.ts
-  - src/core/state/stateStore.ts
-  - src/core/state/machine.ts
-  - src/core/state/transitions.ts
-  - src/core/state/executionContext.ts
-  - src/core/runtime/watchdog.ts
-  - src/core/runtime/pairflowCommand.ts
-  - src/core/bubble/workspaceResolution.ts
-  - src/core/bubble/bubbleLookup.ts
-  - src/core/bubble/repoResolution.ts
+  - src/types/ui.ts
+  - src/core/state/**
   - src/core/bubble/metaReview.ts
   - src/core/bubble/metaReviewExecutionContext.ts
   - src/core/bubble/statusBubble.ts
+  - src/core/bubble/listBubbles.ts
+  - src/core/bubble/pendingApprovalSignal.ts
+  - src/core/bubble/deleteBubble.ts
+  - src/core/bubble/workspaceResolution.ts
+  - src/core/bubble/bubbleLookup.ts
+  - src/core/bubble/repoResolution.ts
+  - src/core/runtime/watchdog.ts
+  - src/core/runtime/pairflowCommand.ts
+  - src/core/runtime/reviewerCommandGateGuidance.ts
+  - src/core/runtime/tmuxDelivery.ts
   - src/core/ui/presenters/bubblePresenter.ts
+  - src/core/ui/router.ts
   - src/cli/index.ts
+  - src/index.ts
   - src/cli/orchestra.ts
+  - src/cli/commands/agent/emit.ts
+  - src/cli/commands/agent/pass.ts
+  - src/cli/commands/agent/askHuman.ts
+  - src/cli/commands/agent/converged.ts
   - src/cli/commands/bubble/metaReview.ts
   - src/cli/commands/bubble/approve.ts
   - src/cli/commands/bubble/requestRework.ts
-  - src/cli/commands/bubble/status.ts
-  - src/v11/application/metaReview/metaReviewCliCommand.ts
-  - src/v11/application/metaReview/metaReviewCliOptions.ts
-  - src/v11/application/metaReview/metaReviewCliDispatcher.ts
-  - src/v11/application/pass/passCommandContract.ts
-  - src/v11/application/converged/runConvergedFlowContract.ts
-  - src/v11/application/status/statusCliRenderers.ts
-  - src/v11/shared/askHuman/askHumanCommandContract.ts
-  - src/v11/shared/converged/convergedCommandTypes.ts
-  - src/v11/shared/status/statusCommandViewBuilder.ts
-  - src/v11/shared/status/statusCommandGateState.ts
-  - src/v11/shared/metaReview/metaReviewCommandApi.ts
-  - src/v11/shared/metaReview/metaReviewCommandContract.ts
-  - src/v11/shared/metaReviewGate/metaReviewGateApply.ts
-  - src/v11/shared/metaReviewGate/metaReviewGateApplyRunRouting.ts
-  - src/v11/shared/metaReviewGate/metaReviewGateRecovery.ts
-  - src/v11/shared/metaReviewGate/metaReviewGateRecoveryContext.ts
-  - src/v11/shared/metaReviewGate/metaReviewGateHumanGatePersistence.ts
-  - ui/src/lib/types.ts
-  - ui/src/lib/actionAvailability.ts
-  - ui/src/lib/attachAvailability.ts
-  - ui/src/state/useBubbleStore.ts
-  - ui/src/components/actions/ActionBar.tsx
-  - ui/src/components/canvas/BubbleExpandedCard.tsx
-  - ui/src/components/canvas/ConnectedBubbleExpandedCard.tsx
-  - ui/src/components/canvas/stateVisuals.ts
+  - src/v11/application/metaReview/**
+  - src/v11/application/list/**
+  - src/v11/application/pass/**
+  - src/v11/application/reconcile/**
+  - src/v11/application/status/**
+  - src/v11/application/askHuman/**
+  - src/v11/application/converged/**
+  - src/v11/domain/pass/**
+  - src/v11/shared/metaReview/**
+  - src/v11/shared/metaReviewGate/**
+  - src/v11/shared/approval/**
+  - src/v11/shared/askHuman/**
+  - src/v11/shared/converged/**
+  - src/v11/shared/status/**
+  - src/v11/shared/start/**
+  - src/v11/shared/watchdog/**
+  - ui/src/**
+  - README.md
   - docs/pairflow-initial-design.md
   - docs/pairflow-ui-prd.md
   - docs/meta-review-gate-prd.md
   - docs/meta-review-gate-rollout-runbook.md
   - docs/meta-review-gate-e2e-validation.md
-  - README.md
-  - tests/core/state/stateSchema.test.ts
-  - tests/core/state/machine.test.ts
-  - tests/core/state/transitions.test.ts
-  - tests/core/runtime/watchdog.test.ts
-  - tests/core/runtime/pairflowCommand.test.ts
-  - tests/core/bubble/metaReview.test.ts
-  - tests/core/bubble/metaReviewExecutionContext.test.ts
-  - tests/core/bubble/workspaceResolution.test.ts
-  - tests/core/bubble/bubbleLookup.test.ts
-  - tests/core/bubble/statusBubble.test.ts
-  - tests/core/ui/bubblePresenter.test.ts
-  - tests/cli/bubbleMetaReviewCommand.test.ts
-  - tests/cli/orchestra.test.ts
-  - tests/contracts/v11/metaReviewGate.contract.runner.ts
-  - tests/contracts/v11/metaReviewSubmitCoverage.test.ts
-  - tests/contracts/v11/watchdog.contract.runner.ts
-  - ui/src/lib/actionAvailability.test.ts
-  - ui/src/lib/attachAvailability.test.ts
-  - ui/src/components/actions/ActionBar.test.tsx
-  - ui/src/components/canvas/BubbleExpandedCard.test.tsx
-  - ui/src/components/canvas/ConnectedBubbleExpandedCard.test.tsx
+  - tests/core/state/**
+  - tests/core/bubble/**
+  - tests/core/human/**
+  - tests/core/runtime/**
+  - tests/core/ui/**
+  - tests/cli/**
+  - tests/contracts/v11/**
+  - tests/v11/application/approval/**
+  - tests/v11/application/askHuman/**
+  - tests/v11/application/converged/**
 prd_ref: null
 plan_ref: plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
+normative_refs:
+  - plans/archive/tasks/protocol-first-cli-and-protocol-surface-unification-phase4.md
+  - plans/archive/tasks/protocol-first-cli-and-protocol-surface-unification-phase4-retained-submit-callers.md
 owners:
   - "felho"
 ---
@@ -94,222 +82,241 @@ owners:
 
 ### Goal
 
-Eltavolitani az osszes megmaradt meta-review special-case lifecycle, CLI, UI es docs compatibility reteget ugy, hogy a vegso codebase mar csak a protocol-first, role-neutral bubble modellre epuljon.
-Phase 5 sikeres, ha a `meta_reviewer` mar sem domain allapotkent, sem kulon CLI subtree-kent, sem UI/status special case-kent nincs kiemelve, hanem ugyanannak az altalanos actor/runtime modellnek a szereploje, mint az implementer es a reviewer.
+Eltavolitani a Phase 4 utan is aktiv legacy meta-review lifecycle, approval-compatibility, CLI alias, UI/status es docs maradvanyokat ugy, hogy a runtime, a UI es az active docs mar csak a protocol-first, role-neutral bubble modellrol beszeljenek.
+
+Phase 5 akkor sikeres, ha:
+
+1. nincs canonical `META_REVIEW_RUNNING`, `META_REVIEW_FAILED` vagy `READY_FOR_APPROVAL` domain allapot,
+2. nincs actor-facing retained `pass`, `ask-human`, `converged` vagy `orchestra` compatibility path,
+3. a canonical actor write path csak explicit `repo` + `bubble_id` + `handoff_id` authorityval mukodik,
+4. active docs, help, UI es fixtures nem tanitjak vagy renderelik a legacy modellt.
 
 ### Context
 
-1. Phase 1-4 celja kifejezetten az volt, hogy a meta-review ne maradjon kulon lifecycle-kivetel vagy kulon actor-command semantics.
-2. A Phase 3-ban a generic running authority modell mar kivaltja a kulon meta-review execution home-ot.
-3. A Phase 4-ben a meta-review result mar nem maradhat kulon actor-submit special case; a legacy actor commandok adapterre szukulnek.
-4. Emiatt ami ezutan megmarad, az mar nem architecturally indokolt, hanem compatibility vagy rollout-maradvany.
-5. A plan explicit vegallapota az, hogy ne legyen tartos backward-compatibility code path, es a codebase a lean protocol-first modellre redukalodjon.
+1. A plan Phase 5 exit criteria-je a legacy lifecycle es compatibility branch-ek teljes kivezeteset irja elo.
+2. A checked-in Phase 4 inventory mar rogzitette, hogy a retained `bubble meta-review submit` write path nem maradt vedheto, ezert azt Phase 5-ben nem szabad ujranyitni vagy implicit opciokent kezelni.
+3. A jelenlegi repo gyors inventory-ja szerint a legacy `META_REVIEW_*` es `READY_FOR_APPROVAL` modell tovabbra is aktiv surface-eken latszik:
+   - domain/state/runtime code,
+   - core UI presenter/router/list/detail es UI state vocabulary/action matrix,
+   - approval eligibility/pending signal projection,
+   - status/list/reconcile/delete projection surface-ek,
+   - retained agent command/export/help/prompt es reviewer runtime guidance surface-ek,
+   - README es active docs,
+   - CLI/status/help szovegek es contract fixtures.
+4. Emiatt a Phase 5 feladat mar nem architectura-tervezes, hanem inventory-first cleanup es contract tightening.
 
 ### In Scope
 
-1. `META_REVIEW_*` lifecycle special case-ek teljes eltavolitasa a canonical state machine-bol, status projectionbol es UI surface-ekrol.
-2. `READY_FOR_APPROVAL` approval-compatibility branch-ek es transcript-context legacy guardok cleanupja.
-3. A megmaradt meta-review-dedikalt operatori subtree (`bubble meta-review ...`) vegso rendezese:
-   - vagy generic operator surface-re olvad,
-   - vagy megszunik,
-   - de kulon meta-review subtree mint tartos modellelem nem maradhat.
-4. Actor-command aliasok es retained compatibility adapterek (`pass`, `ask-human`, `converged`, `orchestra`, retained submit aliases) eltavolitasa, ha a Phase 4 canonical surface stabil.
-5. A Phase 4-ben meg retained implicit actor-context inference (`cwd`, worktree ancestry, env fallback) kivezetese a canonical actor-write pathbol, hogy a vegso actor surface csak explicit `repo`/`bubble_id`/`handoff_id` authorityval mukodjon.
-6. UI, status, action availability es attach availability feluletek atallitasa az uj canonical allapot- es actor-modellre.
-7. Docs, runbookok, PRD-k, help text-ek es test fixtures cleanupja a regi modellekrol.
+1. A canonical lifecycle enum, schema, transition es status projection Phase 5 vegallapotra szukitese:
+   - nincs `META_REVIEW_*`,
+   - nincs `READY_FOR_APPROVAL`,
+   - a meta-review actor legfeljebb generic running context/projection.
+2. Approval es request-rework cleanup:
+   - nincs legacy approval-compatibility branch,
+   - nincs transcript- vagy status-level fallback a regi allapotokra.
+3. Actor-facing CLI cleanup:
+   - removed marad a `bubble meta-review submit`,
+   - a retained `pass`, `ask-human`, `converged`, `orchestra` aliases kivezetese vagy explicit removal errorra allitasa.
+4. Canonical actor-context cleanup:
+   - a `pairflow agent emit` es minden canonical actor write path explicit contextet kovetel,
+   - nincs actor-write fallback `cwd`, worktree ancestry vagy env alapjan.
+5. UI/store/presenter/action matrix cleanup a final canonical state vocabulary-ra.
+6. Active docs/help/runbook cleanup:
+   - a README es active docs mar nem tanitjak a Phase 4 compatibility surface-t,
+   - historical hivatkozas legfeljebb archive/reference kontextusban maradhat.
+7. Test, fixture es parity cleanup:
+   - nincs olyan golden path vagy contract case, amely mar csak legacy compatibilityt ved.
+8. Active runtime guidance es retained export surface cleanup:
+   - a startup/resume/tmux guidance nem tanithat retained alias commandot canonical vagy co-canonical utnak,
+   - a retained top-level export/help surface-ek explicit removal policyval vagy fail-closed coverage-del zarulnak.
+
+### Explicit Phase 5 Decision
+
+1. A `bubble meta-review submit` write path nem Phase 5 decision point; Phase 4-ben mar removednek tekintendo, es erre Phase 5-ben regresszio-orzo coverage kell, nem uj design vita.
+2. A `bubble meta-review run|status|last-report|recover` operator surface Phase 5-ben csak akkor maradhat a jelenlegi spellinggel, ha:
+   - operator-only marad,
+   - nem kovetel legacy lifecycle allapotot,
+   - nem tanit actor-facing vagy state-special-case semantics-et,
+   - status/recovery outputja a final canonical state vocabularyt projekciozza.
+3. Ha a fenti feltetelek nem tarthatok, ugyanebben a taskban generic operator surface-re kell atvezetni vagy el kell tavolitani a subtree-t.
+4. A task nem kovetel uj operator UX kitalalasat a cleanupon tul; a default elvaras a meglvo surface minimalis, fail-closed, role-neutral letisztitasa.
 
 ### Out of Scope
 
-1. Uj protocol output kind vagy uj actor-szereplo bevezetese.
-2. Uj operatori UX vagy uj dashboard feature tervezese a cleanupon tul.
-3. A future-improvement actor adapter runtime megvalositasa.
-4. A Phase 1-4 contractok ujranyitasa, hacsak cleanup kozben tenyleges ellentmondas nem derul ki.
-5. Barmilyen hosszu tavu dual-path vagy deprecation period meghosszabbitasa.
+1. Uj actor role, uj output kind vagy uj lifecycle state bevezetese.
+2. Uj dashboard vagy UI feature tervezese.
+3. Kulon archival migration utility implementalasa.
+4. Olyan historical docs takaritasa, amelyek archive/reference scope-ban maradnak es nem active operator guidance.
+5. A Phase 1-4 contractok ujranyitasa, kiveve ha Phase 5 cleanup kozben explicit ellentmondas derul ki.
 
 ### Safety Defaults
 
-1. Phase 5 vegallapota no-backcompat cleanup: ha egy legacy path mar csak compatibility celbol el, torolheto.
-2. Nincs tartos `META_REVIEW_RUNNING`, `META_REVIEW_FAILED`, `READY_FOR_APPROVAL` canonical lifecycle.
-3. Nincs tartos meta-review-dedikalt CLI/domain/UI branch csak azert, mert tortenetileg igy alakult.
-4. Ha egy retained command vagy state csak rollout-biztonsag miatt maradt Phase 4-ben, itt explicit inventory alapjan kivezetendo.
-5. A cleanup nem hozhat vissza role-specific authorityt, CLI-semantikat vagy runtime couplingot.
-6. Ha egy megmaradt special case valoban szuksegesnek tunik, azt explicit first-principle indoklassal kell bizonyitani; torteneti ok nem eleg.
-7. A vegso canonical actor-write path nem epulhet implicit shell-context inference-re; `cwd`, worktree ancestry vagy env helper legfeljebb operatori convenience vagy archival tooling maradhat, actor write authority nem.
+1. Phase 5 no-backcompat cleanup fazis: ha egy path mar csak compatibility celbol el, alapertelmezetten torlendo.
+2. A canonical runtime nem normalizalhatja csendben a legacy state-et final state-re.
+3. A canonical actor path nem hasznalhat implicit shell-context authorityt.
+4. Active docs nem mutathatnak retained alias commandot primary vagy co-canonical peldakent.
+5. Ha valamely legacy branch megtartasa mellett ervel valaki, explicit first-principle indoklas kell; torteneti kenyelem nem eleg.
 
 ### Contract Boundary / Blast Radius
 
 1. `contract_boundary_override`: `yes`
-2. Impacted contracts:
-   - bubble lifecycle enum es state-transition contract,
-   - approval es human-gate contract,
+2. Erintett contractok:
+   - bubble lifecycle enum es transition contract,
+   - approval/human-gate contract,
+   - actor CLI/public contract,
    - status/UI rendering contract,
-   - public CLI/help/docs contract,
-   - regression, contract es parity fixture contract.
-
-### Normative Reference Policy
-
-1. `plan_ref`: `plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md`
-   - Ez a canonical forras a Phase 5 cleanup scope-hoz es a no-backcompat vegallapothoz.
-2. `system_context_ref`: `docs/pairflow-initial-design.md`
-   - A dokumentacio ebben a korben mar koveto artifact: ha a Phase 5 cleanup a korabbi design szoveggel ellentmond, a docs-ot kell frissiteni a vegso modellre.
-3. Precedence rule:
-   - ha Phase 4 utan barmely state, CLI, UI vagy docs special case csak historical compatibilitybol maradt eletben,
-   - Phase 5-ben az eltavolitas az alapertelmezett, nem a megtartas.
+   - active docs/help contract,
+   - regression/parity/fixture contract.
 
 ### Terminology Lock
 
-1. `legacy meta-review model` = a kulon `META_REVIEW_*` lifecycle, kulon meta-review subtree, kulon UI/status branch vagy kulon command-semantics retegek osszessege.
-2. `legacy approval compatibility` = minden olyan `READY_FOR_APPROVAL` vagy hasonlo branch, amely mar nem resze a canonical flow-nak, de atmeneti kompatibilitaskent megmaradt.
-3. `final canonical model` = generic running authority + generic actor emission + role-neutral approval/human-gate semantics.
-4. `cleanup-ready compatibility path` = olyan retained branch, amelynek Phase 4 utan mar nincs sajat first-principle indoklasa.
-5. `meta-review operator subtree` = a `bubble meta-review run|status|last-report|recover` surface es a mogotte allo kulon command topology.
-6. `implicit actor-context inference` = barmely olyan actor-write path, amely a `repo`, `bubble_id` vagy `handoff_id` authorityt `cwd`, worktree ancestry, tmux-pane worktree vagy env helper alapjan kovetkezteti ki, ahelyett hogy explicit canonical inputkent kapna meg.
-
-### Phase 5 Removal Decision
-
-1. A Phase 5 vegallapotban a canonical bubble lifecycle ne tartalmazzon `META_REVIEW_RUNNING`, `META_REVIEW_FAILED`, sem `READY_FOR_APPROVAL` allapotot.
-2. A meta-reviewer actor Phase 5-ben mar csak `RUNNING(active_role=meta_reviewer)` vagy azzal kompatibilis role-neutral projectionban jelenhet meg.
-3. A `bubble meta-review` kulon operatori subtree csak akkor maradhat fenn, ha a Phase 5 implementacio explicitten bizonyitja, hogy generic operator surface-re nem oldhato at veszteseg nelkul; alapertelmezett policy a megszuntetes vagy genericre olvasztas.
-4. A Phase 4-ben retained actor-command adapterek Phase 5-ben torlendok, ha a canonical actor surface lefedi oket.
-5. A Phase 5 vegallapotban a canonical actor-write path csak explicit actor-context contracttal (`repo`, `bubble_id`, `handoff_id` es a szukseges fail-closed guard mezokkel) mukodhet; nincs implicit actor-context inference a canonical actor surface-ben.
-6. UI, docs es tests nem tartalmazhatnak mar active-flow leirast vagy golden-path fixture-t a legacy meta-review modellrol.
+1. `legacy meta-review model` = a `META_REVIEW_*` lifecycle, a `READY_FOR_APPROVAL` compatibility branch-ek, a retained actor aliases, es minden olyan UI/docs projection, amely ezeket canonicalnak mutatja.
+2. `final canonical model` = generic running authority + explicit actor emit context + role-neutral approval/human-gate semantics.
+3. `active docs` = `README.md`, `docs/pairflow-initial-design.md`, `docs/pairflow-ui-prd.md`, `docs/meta-review-gate-*.md`; nem tartozik ide `plans/archive/**` vagy mas historical memo.
+4. `inventory-first cleanup` = az implementacio elejen explicit, checked diff- vagy grep-alapu inventory keszul arrol, mely aktiv file-ok hivatkoznak meg legacy state-et, alias-t vagy docs wordingot; csak ezutan torolhetoek a pathok.
+5. `residual inventory clean rerun surface` = pontosan `src/**`, `ui/src/**`, `tests/**`, `README.md`, valamint az `active docs` definicioban felsorolt file-ok; minden ezen kivuli historical/reference tree explicit out-of-scope az E1/T11 cleanliness claimhez.
 
 ## L1 - Change Contract
 
 ### 1) Call-site Matrix
 
-| ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
-|---|---|---|---|---|---|---|---|---|
-| CS1 | `src/types/bubble.ts` + `src/core/state/initialState.ts` + `src/core/state/stateSchema.ts` + `src/core/state/machine.ts` + `src/core/state/transitions.ts` + `src/core/state/executionContext.ts` | final lifecycle/state cleanup | lifecycle enums, schema validation/defaulting, transition guards -> types / validators / transitions | canonical bubble state contract | Eltavolitja a `META_REVIEW_*` es `READY_FOR_APPROVAL` canonical lifecycle shape-et; a state machine mar csak a final generic modellel mukodik, legacy compatibility guardok nelkul | P1 | required-now | plan Phase 5 coverage checklist explicit cleanupot kovetel |
-| CS2 | `src/core/runtime/watchdog.ts` + `src/core/bubble/statusBubble.ts` + `src/v11/shared/status/statusCommandViewBuilder.ts` + `src/v11/shared/status/statusCommandGateState.ts` + `src/v11/application/status/statusCliRenderers.ts` | runtime/status projections | watchdog/status builders -> typed results/views | status, watchdog, gate-state projection | A runtime es status projection mar nem ismeri a legacy meta-review lifecycle state-eket vagy approval-compat branch-eket; minden projection a final canonical modelrol dolgozik | P1 | required-now | a legacy lifecycle-ek status/UI special case-jeit is ki kell vezetni |
-| CS3 | `src/core/bubble/metaReview.ts` + `src/core/bubble/metaReviewExecutionContext.ts` + `src/v11/shared/metaReviewGate/*` | meta-review core cleanup | meta-review helpers, gate apply/recovery/human-gate persistence -> typed results | megmaradt meta-review legacy internals | A megmaradt kulon meta-review lifecycle/home/compatibility pathok torlodnek vagy generic helperre olvadnak; meta-review actor mar nem kulon domain-branchkent jelenik meg | P1 | required-now | Phase 5 vegallapot no-special-case policy |
-| CS4 | `src/cli/index.ts` + `src/cli/orchestra.ts` + `src/cli/commands/agent/emit.ts` + `src/cli/commands/bubble/metaReview.ts` + `src/cli/commands/bubble/approve.ts` + `src/cli/commands/bubble/requestRework.ts` + `src/v11/application/metaReview/metaReviewCliCommand.ts` + `src/v11/application/metaReview/metaReviewCliOptions.ts` + `src/v11/application/metaReview/metaReviewCliDispatcher.ts` + `src/v11/application/pass/passCommandContract.ts` + `src/v11/shared/askHuman/askHumanCommandContract.ts` + `src/v11/shared/converged/convergedCommandTypes.ts` + `src/v11/application/converged/runConvergedFlowContract.ts` | CLI topology cleanup | CLI routing + help/renderers -> `Promise<number>` / parsed option types | public CLI surface | A Phase 4 utan retained legacy actor adapters es meta-review-specific subtree torlodik vagy generic bubble/operator illetve canonical actor surface-re olvad; nincs kulon meta-review command topology pusztan historical okbol, es a canonical actor surface explicit context contractot kovetel, nem implicit shell-context authorityt | P1 | required-now | user-facing cleanup Phase 5 kotelezo resze |
-| CS4b | `src/core/bubble/workspaceResolution.ts` + `src/core/bubble/bubbleLookup.ts` + `src/core/bubble/repoResolution.ts` + `src/core/runtime/pairflowCommand.ts` | implicit actor-context cleanup | context resolution helpers -> typed results / helper functions | canonical actor-write authority boundary | A Phase 4-ben retained `cwd`/worktree/env bubble-context inference kikerul a canonical actor-write pathbol; ha ilyen helper megmarad, az nem actor write authorityra, hanem operatori convenience-re vagy archival toolingra korlatozodik | P1 | required-now | no-backcompat cleanup explicit resze |
-| CS5 | `src/core/ui/presenters/bubblePresenter.ts` + `ui/src/lib/types.ts` + `ui/src/lib/actionAvailability.ts` + `ui/src/lib/attachAvailability.ts` + `ui/src/state/useBubbleStore.ts` + `ui/src/components/actions/ActionBar.tsx` + `ui/src/components/canvas/BubbleExpandedCard.tsx` + `ui/src/components/canvas/ConnectedBubbleExpandedCard.tsx` + `ui/src/components/canvas/stateVisuals.ts` | UI final-state cleanup | presenters/view models/components -> UI models/rendered state | web UI lifecycle rendering es action matrix | A UI mar nem renderel legacy `META_REVIEW_*` vagy `READY_FOR_APPROVAL` allapotokat, es nem tart fenn action special-case-et rajuk | P1 | required-now | plan explicitten emliti state/UI legacy surface-ek eltavolitasat |
-| CS6 | `docs/pairflow-initial-design.md` + `docs/pairflow-ui-prd.md` + `docs/meta-review-gate-prd.md` + `docs/meta-review-gate-rollout-runbook.md` + `docs/meta-review-gate-e2e-validation.md` + `README.md` | docs/runbook cleanup | markdown | architecture, runbook, UI PRD, README | Minden active-flow dokumentacio a vegso protocol-first modellre all at; historical meta-review special case legfeljebb archive-ban maradhat | P2 | required-now | docs cleanup Phase 5 checklist resze |
-| CS7 | `tests/core/state/*` + `tests/core/runtime/watchdog.test.ts` + `tests/core/bubble/*` + `tests/cli/bubbleMetaReviewCommand.test.ts` + `tests/cli/orchestra.test.ts` + `tests/contracts/v11/metaReviewGate.contract.runner.ts` + `tests/contracts/v11/metaReviewSubmitCoverage.test.ts` + `tests/contracts/v11/watchdog.contract.runner.ts` + UI tests | regression and fixture cleanup | vitest / contract runners / UI tests | final canonical model regression set | A contract fixtures, parity tests es UI/state regressionek mar nem tarthatnak fenn legacy state-et, retained alias-t vagy meta-review special-case arany mintat | P1 | required-now | plan explicitten emliti fixtures/parity/test cleanupot |
+| ID | File(s) | Contract Area | Expected Behavior | Priority | Timing | Evidence |
+|---|---|---|---|---|---|---|
+| CS1 | `src/types/bubble.ts`, `src/core/state/**` | canonical lifecycle cleanup | A canonical bubble state contractbol kikerul a `META_REVIEW_RUNNING`, `META_REVIEW_FAILED`, `READY_FOR_APPROVAL`; validator, initial state, transition es execution-context projection csak a final modellel mukodik | P1 | required-now | T1, T2 |
+| CS2 | `src/core/bubble/statusBubble.ts`, `src/core/bubble/listBubbles.ts`, `src/core/bubble/pendingApprovalSignal.ts`, `src/core/bubble/deleteBubble.ts`, `src/v11/application/list/**`, `src/v11/application/status/**`, `src/v11/application/reconcile/**`, `src/v11/shared/status/**`, `src/v11/shared/approval/**`, `src/core/runtime/watchdog.ts`, `src/v11/shared/watchdog/**` | status/watchdog/approval projection cleanup | Status, list, reconcile, delete-stop policy, watchdog, pending-approval projection es approval-eligibility routing nem targyal legacy lifecycle state-eket canonical branchkent; a meta-review actor generic running/gate diagnosticskent jelenik meg, es nincs `READY_FOR_APPROVAL` fallback acceptance a canonical approval surface-en | P1 | required-now | T2, T3, T5, T6 |
+| CS3 | `src/core/bubble/metaReview.ts`, `src/core/bubble/metaReviewExecutionContext.ts`, `src/v11/shared/metaReview/**`, `src/v11/shared/metaReviewGate/**`, `src/v11/application/metaReview/**` | meta-review domain cleanup | A megmaradt meta-review gate/recovery logika nem kovetel legacy lifecycle shape-et; `bubble meta-review submit` removed marad; operator surface csak state-neutral projekcioval maradhat | P1 | required-now | T3, T4, T6 |
+| CS4 | `src/cli/index.ts`, `src/index.ts`, `src/cli/orchestra.ts`, `src/cli/commands/agent/emit.ts`, `src/cli/commands/agent/pass.ts`, `src/cli/commands/agent/askHuman.ts`, `src/cli/commands/agent/converged.ts`, `src/cli/commands/bubble/metaReview.ts`, `src/cli/commands/bubble/approve.ts`, `src/cli/commands/bubble/requestRework.ts`, `src/v11/application/pass/**`, `src/v11/application/askHuman/**`, `src/v11/application/converged/**`, `src/v11/shared/askHuman/**`, `src/v11/shared/converged/**` | CLI/public contract cleanup | A legacy actor aliases explicit removalra vagy fail-closed migration errorra allnak; approval/request-rework csak final canonical allapotokrol dolgozik; actor-facing write path mar csak canonical `agent emit`; a retained top-level/namespace/export surface-ek nem maradhatnak implicit compatibility teachinggel | P1 | required-now | T4, T5, T6, T10 |
+| CS4b | `src/core/bubble/workspaceResolution.ts`, `src/core/bubble/bubbleLookup.ts`, `src/core/bubble/repoResolution.ts`, `src/core/runtime/pairflowCommand.ts`, `src/cli/commands/agent/emit.ts` | explicit actor-context authority cleanup | A canonical actor emit path nem materializalhat authorityt `cwd`, worktree ancestry vagy env fallback alapjan; ha retained operator vagy diagnostics helper megmarad, az nem valhat actor-write authority forrassa | P1 | required-now | T10 |
+| CS5 | `src/types/ui.ts`, `src/core/ui/presenters/bubblePresenter.ts`, `src/core/ui/router.ts`, `ui/src/**` | UI state vocabulary cleanup | Core UI tipusok, presenter/router modellek, attach/action availability es komponensek nem tartalmaznak `META_REVIEW_*` vagy `READY_FOR_APPROVAL` render/availability branch-et, es a list/detail surface-ek ugyanazt a final canonical vocabularyt hasznaljak | P1 | required-now | T7 |
+| CS6 | `src/core/runtime/reviewerCommandGateGuidance.ts`, `src/core/runtime/tmuxDelivery.ts`, `src/v11/domain/pass/**`, `src/v11/shared/start/**`, `README.md`, `docs/pairflow-initial-design.md`, `docs/pairflow-ui-prd.md`, `docs/meta-review-gate-prd.md`, `docs/meta-review-gate-rollout-runbook.md`, `docs/meta-review-gate-e2e-validation.md` | docs/help/runtime-guidance cleanup | Active docs, reviewer runtime guidance, startup/resume/tmux guidance es help text canonical-only wordingre allnak at; a removed aliases vagy legacy states legfeljebb explicit migration/archive contextben maradnak | P1 | required-now | T8, T11 |
+| CS7 | `tests/core/state/**`, `tests/core/bubble/**`, `tests/core/human/**`, `tests/core/runtime/**`, `tests/core/ui/**`, `tests/cli/**`, `tests/contracts/v11/**`, `tests/v11/application/approval/**`, `tests/v11/application/askHuman/**`, `tests/v11/application/converged/**` | regression and fixture cleanup | Tesztek es fixtures nem fednek vagy vednek mar legacy state-et, alias-t vagy approval compatibility branch-et; kulon regression marad arra, hogy a removed path fail-closed maradjon, beleertve a retained agent namespace/export/help/prompt es reviewer-command guidance surface-eket is | P1 | required-now | T1-T7, T9-T10 |
 
 ### 2) Data and Interface Contract
 
 | Contract | Current | Target | Required Fields | Optional Fields | Compatibility | Priority | Timing |
 |---|---|---|---|---|---|---|---|
-| Bubble lifecycle enum | tartalmazza `READY_FOR_APPROVAL`, `META_REVIEW_RUNNING`, `META_REVIEW_FAILED`, `READY_FOR_HUMAN_APPROVAL` | csak final canonical states maradnak; nincs meta-review-specific lifecycle | canonical final lifecycle enum | UI-only derived labels, ha szukseges | breaking cleanup by design | P1 | required-now |
-| Meta-review running representation | kulon lifecycle-label + compatibility mirrors | generic running context role-neutral projectionja | `execution_context.active_role=meta_reviewer` amikor aktiv | operator diagnostics | compatibility removed | P1 | required-now |
-| Approval/human-gate routing | legacy `READY_FOR_APPROVAL` branch-ek es compatibility accept pathok | csak final canonical approval/human-gate semantics | final approval state contract | none | breaking cleanup by design | P1 | required-now |
-| Meta-review operator commands | kulon `bubble meta-review ...` subtree | generic operator surface vagy command removal | only retained generic operator inputs, ha indokolt | none | compatibility removed unless explicitly justified | P1 | required-now |
-| Legacy actor aliases | retained `pass`, `ask-human`, `converged`, `orchestra`, retained submit aliases | canonical actor surface only | canonical actor emit inputs | none | compatibility removed | P1 | required-now |
-| Actor context resolution | Phase 4-ben a retained adapterek meg hasznalhatnak implicit `cwd`/worktree/env bubble-context inference-t | a final canonical actor surface csak explicit actor-context contracttal mukodik | `repo`, `bubble_id`, `handoff_id` | `expected_role`, `expected_round`, `expected_state_fingerprint` | compatibility removed a canonical actor pathbol | P1 | required-now |
-| UI state vocabulary | legacy lifecycle labels es color/action matrices | final canonical state vocabulary | final state ids | optional derived badges | compatibility removed | P1 | required-now |
+| Bubble lifecycle enum | tartalmaz legacy meta-review es approval compatibility state-eket | csak final canonical lifecycle marad | final canonical states | role-level diagnostics | breaking cleanup by design | P1 | required-now |
+| Meta-review projection | kulon lifecycle state + kulon status wording | generic running/gate projection | `execution_context.active_role=meta_reviewer` vagy ezzel ekvivalens role projection | operator diagnostics | legacy lifecycle removed | P1 | required-now |
+| Approval/request-rework gating | legacy `READY_FOR_APPROVAL` compatible branch-ek | csak final canonical gate states | final state contract | explicit override fields, ha mar resze a final contractnak | legacy branch removed | P1 | required-now |
+| Actor-facing CLI surface | canonical `agent emit` mellett legacy aliases meg szerepelnek | canonical `agent emit` az egyetlen actor write surface | `repo`, `bubble_id`, `handoff_id` | fail-closed guard mezok (`expected_role`, `expected_round`, `expected_state_fingerprint`) | legacy aliases removed | P1 | required-now |
+| Actor-context authority | retained pathok reszben implicit shell/worktree/env contextet hasznalnak | canonical actor write path csak explicit authorityval mukodik | `repo`, `bubble_id`, `handoff_id` | guard fields | implicit fallback removed a canonical pathbol | P1 | required-now |
+| Operator meta-review surface | historical naming es legacy lifecycle wording mix | operator-only, state-neutral surface vagy removal | operator command inputs | cached diagnostics | naming retained only if semantics already neutralized | P1 | required-now |
+| Active docs/help contract | kevert Phase 4 compatibility + final canonical wording | canonical-only guidance | final command examples, final state names | migration note | legacy teaching removed | P1 | required-now |
 
 Normative rules:
 
-1. Phase 5 utan nincs canonical `META_REVIEW_*` lifecycle allapot.
-2. Phase 5 utan nincs canonical `READY_FOR_APPROVAL` state vagy approval-compatibility branch.
-3. A meta-review actor nem jelenhet meg kulon lifecycle-kategoriakent; csak role-level projection lehet.
-4. A kulon `bubble meta-review` subtree Phase 5-ben alapertelmezetten eltunendo historical compatibility.
-5. Ha barmely meta-review operator command megmarad, azt generic operator commandkent kell ujrakeretezni, nem meta-review special case-kent.
-6. Historical references active docsban nem maradhatnak; ha szuksegesek, archive/reference contextbe kell mozgatni oket.
-7. Legacy aliases es fixtures megtartasa csak akkor megengedett, ha van explicit first-party runtime consumer; enelkul torlendo.
-8. A canonical actor surface Phase 5 utan nem kovetkeztetheti ki a `repo`, `bubble_id` vagy `handoff_id` authorityt `cwd`, worktree ancestry vagy env helper alapjan.
+1. Phase 5 utan nincs canonical `META_REVIEW_*` lifecycle state.
+2. Phase 5 utan nincs canonical `READY_FOR_APPROVAL` branch.
+3. A `bubble meta-review submit` removed path marad.
+4. A canonical actor write path explicit context nelkul fail-closed hibaval megall.
+5. Retained operator naming csak akkor elfogadhato, ha nem hordoz legacy state semantics-et.
+6. Active docsban Phase 4 compatibility adapters nem szerepelhetnek primer hasznalatkent.
 
 ### 3) Side Effects Contract
 
 | Area | Allowed | Forbidden | Notes | Priority | Timing |
 |---|---|---|---|---|---|
-| State machine | legacy states torlese, final enum szukitese | dual-state support fenntartasa | Phase 5 vegallapot no-backcompat | P1 | required-now |
-| CLI surface | legacy aliases/subtrees torlese vagy genericre olvasztasa | retained historical command topology | kulon meta-review subtree ne maradjon ok nelkul | P1 | required-now |
-| Actor context resolution | explicit actor-context contract megtartasa a canonical actor pathon | implicit `cwd`/worktree/env authority inference retained canonical actor write pathkent | a canonical actor API ne fuggjon shell allapottol | P1 | required-now |
-| UI/status | final canonical labels es action matrix | legacy state render vagy hidden fallback branch | UI sem lehet migration museum | P1 | required-now |
-| Docs/runbooks | active-flow rewrite a final modellre | historical wording active docsban hagyasa | archival content kulon mehet | P2 | required-now |
-| Tests/fixtures | legacy contract cases torlese/atirasa | parity tests, amelyek mar csak compatibilityt vedik | test corpus is canonical-only legyen | P1 | required-now |
-
-Constraint:
-
-1. Ha egy Phase 5 implementacio utan barmely active path meg mindig `META_REVIEW_*` vagy `READY_FOR_APPROVAL` state-et hasznal canonical domain donteshez, a cleanup sikertelen.
+| State machine | legacy state torles, transition simplify | dual-state support vagy silent normalization | no-backcompat cleanup | P1 | required-now |
+| CLI/public surface | removed aliases fail-closed behavior, help cleanup | retained alias adapter fenntartasa historical okbol | canonical actor surface marad az egyetlen write path | P1 | required-now |
+| Actor context resolution | explicit authority contract enforce | implicit `cwd`/worktree/env actor write fallback | adapter-only helper sem maradhat canonical pathban | P1 | required-now |
+| Operator meta-review surface | state-neutral operator semantics vagy removal | actor submit semantics vagy legacy lifecycle wording megtartasa | naming only if semantics clean | P1 | required-now |
+| UI/status | final canonical labels, action matrix, badges | hidden legacy render branch vagy compat fallback | UI sem lehet migration museum | P1 | required-now |
+| Docs/runbooks | active docs rewrite, migration notes where needed | historical wording primary guidancekent | archive kulon maradhat | P1 | required-now |
+| Tests/fixtures | canonical-only fixtures + removal-regression tests | compatibility-only parity corpus eletben tartasa | removed pathokra csak fail-closed guard maradhat | P1 | required-now |
 
 ### 4) Error and Fallback Contract
 
-| Trigger | Dependency (if any) | Behavior (`throw|result|fallback`) | Fallback Value/Action | Reason Code | Log Level | Priority | Timing |
-|---|---|---|---|---|---|---|---|
-| legacy persisted snapshot vagy test fixture `META_REVIEW_*` allapotot adna be a final runtime-nak | state loader / test harness | throw | explicit invalid-state/fixture error; nincs runtime backcompat normalizacio | `LEGACY_META_REVIEW_STATE_UNSUPPORTED` | error | P1 | required-now |
-| CLI user legacy actor aliasra vagy kulon meta-review subtree commandra hivna, amelyet Phase 5 torolt | CLI router | throw | explicit unsupported-command error, canonical replacement hinttel | `LEGACY_COMMAND_REMOVED` | error | P1 | required-now |
-| canonical actor command explicit `repo`/`bubble_id`/`handoff_id` authority nelkul hivodik, vagy a runtime implicit shell-context fallbackot probalna hasznalni actor write pathon | actor CLI boundary | throw | explicit unsupported implicit-context error; nincs `cwd`/env actor-write fallback | `LEGACY_IMPLICIT_ACTOR_CONTEXT_UNSUPPORTED` | error | P1 | required-now |
-| docs/runbook active utmutato meg legacy lifecycle-re vagy commandra hivatkozik | docs review | fallback | task nem kesz docs cleanup nelkul | N/A | warn | P2 | required-now |
-| UI/store legacy state-et kap | UI model/parser | throw | explicit unsupported-state error; nincs silent fallback badge | `LEGACY_UI_STATE_UNSUPPORTED` | error | P1 | required-now |
-| historical archive compatibility igeny merul fel cleanup kozben | user/archive tooling | fallback | nem runtime backcompat, hanem kulon archival adapter vagy kulon follow-up task | N/A | info | P2 | required-now |
-
-Path-specific failure semantics:
-
-1. `throw` itt azt jelenti, hogy Phase 5-ben a runtime mar nem rejt el legacy allapotot compatibility normalizacioval.
-2. `fallback` archival igenynel nem jelent silent supportot; kulon adapter vagy kulon task kell hozza.
-3. Phase 5-ben nincs soft deprecation a canonical runtime-ban: a torolt path torolt path.
+| Trigger | Dependency | Behavior | Fallback / Action | Reason Code | Priority | Timing |
+|---|---|---|---|---|---|---|
+| Persisted state vagy fixture legacy `META_REVIEW_*` allapotot ad a final runtime-nak | state loader / parser | throw | explicit unsupported-state hiba; nincs auto-normalization | `LEGACY_META_REVIEW_STATE_UNSUPPORTED` | P1 | required-now |
+| Persisted state vagy fixture `READY_FOR_APPROVAL` allapotot hasznal canonical branchkent | state loader / parser | throw | explicit unsupported-state hiba | `LEGACY_APPROVAL_STATE_UNSUPPORTED` | P1 | required-now |
+| User removed alias vagy removed `bubble meta-review submit` pathot hiv | CLI router | throw | explicit migration-guided hiba a canonical pathra mutatva | `LEGACY_COMMAND_REMOVED` | P1 | required-now |
+| Canonical actor emit explicit authority nelkul fut | actor CLI boundary | throw | explicit unsupported implicit-context hiba | `LEGACY_IMPLICIT_ACTOR_CONTEXT_UNSUPPORTED` | P1 | required-now |
+| UI/store legacy state-et kap | UI parser/store | throw | explicit unsupported-state hiba; nincs fallback badge | `LEGACY_UI_STATE_UNSUPPORTED` | P1 | required-now |
+| Active doc cleanup utan historical anyag megis kell | docs/archive workflow | fallback | archive/reference documentumba mozgas, nem runtime/docs backcompat | N/A | P2 | later-hardening |
 
 ### 5) Dependency Constraints
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
 | must-use | `plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` Phase 5 exit criteria | P1 | required-now |
-| must-use | Phase 3 generic running authority modell | P1 | required-now |
-| must-use | Phase 4 canonical actor-facing surface mint egyetlen actor write path | P1 | required-now |
-| must-use | explicit actor-context contract a canonical actor surface-en (`repo`, `bubble_id`, `handoff_id`; fail-closed guard mezkent `expected_role`, `expected_round`, `expected_state_fingerprint` vagy ekvivalens canonical mezok) | P1 | required-now |
-| must-use | explicit inventory minden megmaradt legacy state/CLI/UI/docs/test pathrol a torles elott | P1 | required-now |
-| must-not-use | dual-write vagy dual-state compatibility Phase 5 utan | P1 | required-now |
-| must-not-use | meta-review special case retained "just in case" alapon | P1 | required-now |
-| must-not-use | implicit `cwd`/worktree/env actor-context inference a canonical actor write pathban | P1 | required-now |
-| must-not-use | active docsban archived command/state semantics | P1 | required-now |
-| must-not-use | historical reason alapjan retained CLI alias vagy subtree | P1 | required-now |
+| must-use | `plans/archive/tasks/protocol-first-cli-and-protocol-surface-unification-phase4.md` Phase 4 actor/operator boundary | P1 | required-now |
+| must-use | `plans/archive/tasks/protocol-first-cli-and-protocol-surface-unification-phase4-retained-submit-callers.md` zero-caller decision a removed submit pathra | P1 | required-now |
+| must-use | inventory-first grep/diff evidence a cleanup elejen, hogy az aktualis residual surface explicit legyen, kulon a core UI/router/list/detail, approval eligibility/pending signal, status/list/reconcile/delete projection, retained alias/export/help/prompt, reviewer runtime guidance es active docs surface-ekre | P1 | required-now |
+| must-not-use | Phase 4-ben mar removed `bubble meta-review submit` ujranyitasa | P1 | required-now |
+| must-not-use | retained actor aliases historical convenience alapjan | P1 | required-now |
+| must-not-use | implicit actor-context authority a canonical pathon | P1 | required-now |
+| must-not-use | active docsban Phase 4 compatibility adapters primer peldakent | P1 | required-now |
 
-### 6) Test Matrix
+### 6) Evidence Expectations
+
+| Evidence ID | What must be shown | Minimum acceptable proof | Priority | Timing |
+|---|---|---|---|---|
+| E1 | residual inventory baseline | grep vagy equivalent inventory a legacy state/alias/docs hit-ekrol a `residual inventory clean rerun surface` teljes scope-jaban a cleanup elott | P1 | required-now |
+| E2 | lifecycle/state cleanup | state/schema/transition/status/watchdog test output vagy diff-anchored proof | P1 | required-now |
+| E3 | CLI removal enforcement | CLI tests vagy targeted failure-path evidence arra, hogy removed aliases fail-closed maradnak | P1 | required-now |
+| E4 | UI/docs cleanup | UI tests + doc diff review, amely igazolja hogy active docsbol es runtime guidance szovegekbol eltuntek a legacy state-ek es alias primary references | P1 | required-now |
+| E5 | canonical explicit context enforcement | actor emit boundary test vagy equivalent regression proof | P1 | required-now |
+
+### 7) Test Matrix
 
 | ID | Scenario | Given | When | Then | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|
-| T1 | final lifecycle enum excludes legacy states | final state types/schema betoltodik | type/schema tests futnak | `META_REVIEW_*` es `READY_FOR_APPROVAL` nincs canonical state-kent jelen | P1 | required-now | automated test |
-| T2 | state machine no longer routes through legacy meta-review states | bubble final canonical flow fut | transition tests futnak | nincs meta-review-specific lifecycle branch vagy approval-compat branch | P1 | required-now | automated test |
-| T3 | meta-review actor appears only as generic running role | aktiv meta-review actor scenario | status/state projection epul | a projection role-neutral running modellt mutat, nem kulon lifecycle state-et | P1 | required-now | automated test |
-| T4 | legacy operator subtree removed or genericized | CLI invocation tortenik a Phase 5 szerint torolt/reworked `bubble meta-review` utra | command fut | explicit unsupported-command vagy generic replacement behavior jelenik meg, nincs historical subtree semantics | P1 | required-now | automated test |
-| T5 | legacy actor aliases removed | `pass` / `ask-human` / `converged` / `orchestra` retained alias hivas tortenne | CLI fut | explicit removal vagy canonical-only behavior a task dontese szerint, de nincs retained compatibility adapter | P1 | required-now | automated test |
-| T6 | approval actions no longer rely on `READY_FOR_APPROVAL` compatibility | approval/request-rework flow fut final state-ekkel | CLI es state tests futnak | approval branch csak final canonical state-ekrol dolgozik | P1 | required-now | automated test |
-| T7 | UI renders only final canonical state vocabulary | UI store es presenter final state-eket kap | component/presenter tests futnak | nincs legacy badge, action matrix vagy fallback render `META_REVIEW_*`/`READY_FOR_APPROVAL` allapotra | P1 | required-now | automated test |
-| T8 | docs and runbooks no longer teach legacy model | README/design/runbook review | docs diff ellenorzes | active docs nem tanitjak a regi meta-review lifecycle-et, subtree-t vagy alias commandokat | P2 | required-now | doc review |
-| T9 | contract fixtures no longer encode compatibility model | contract runners es fixtures frissitettek | contract suite fut | nincs parity case vagy golden fixture csak compatibility vedelmere | P1 | required-now | automated test |
-| T10 | canonical actor surface requires explicit context only | Phase 5 utani actor command invocation | canonical actor path `repo`/`bubble_id`/`handoff_id` nelkul vagy implicit shell-contextre tamaszkodva futna | explicit `LEGACY_IMPLICIT_ACTOR_CONTEXT_UNSUPPORTED` vagy ekvivalens hiba jelenik meg, es nincs actor-write fallback `cwd`/env alapjan | P1 | required-now | automated test |
+| T1 | final lifecycle enum excludes legacy states | final state types/schema load | state tests run | `META_REVIEW_RUNNING`, `META_REVIEW_FAILED`, `READY_FOR_APPROVAL` nincs canonical state-kent jelen | P1 | required-now | E2 |
+| T2 | state machine and status/reconcile/watchdog projections do not route through legacy states | canonical flow and recovery path run | transition/status/list/reconcile/watchdog tests run | nincs legacy lifecycle branch vagy approval compatibility route a runtime vagy operator projectionokban | P1 | required-now | E2 |
+| T3 | meta-review actor appears only as role projection | active meta-review scenario | status/projection builds | a projection role-neutral running/gate modellt mutat, nem kulon lifecycle state-et | P1 | required-now | E2 |
+| T4 | removed actor aliases and removed submit path fail closed | user legacy commandot probal | CLI runs | explicit migration-guided `LEGACY_COMMAND_REMOVED` vagy ekvivalens hiba jon vissza | P1 | required-now | E3 |
+| T5 | approval actions rely only on final canonical states | approve/request-rework flow runs | CLI and state tests run | nincs `READY_FOR_APPROVAL` compatibility acceptance | P1 | required-now | E2, E3 |
+| T6 | operator meta-review surface is state-neutral | `bubble meta-review run|status|last-report|recover` retained vagy genericized path aktiv | command/test runs | a surface nem kovetel legacy lifecycle state-et, es final canonical vocabularyt projekcioz | P1 | required-now | E2, E3 |
+| T7 | UI renders only final canonical vocabulary | UI store/presenter/list/detail surfaces receive final states | UI tests run | nincs legacy badge, action matrix, attach availability, list-count vagy router branch | P1 | required-now | E4 |
+| T8 | active docs and runtime guidance no longer teach the legacy model | README/design/runbook/startup-resume/reviewer guidance review | doc diff review + targeted guidance checks | active docs, reviewer command guidance, startup/resume promptok es tmux guidance nem tanitjak a legacy lifecycle-et vagy Phase 4 compatibility adaptereket primer feluletkent | P1 | required-now | E4 |
+| T9 | fixtures no longer preserve compatibility model | contract fixtures and parity tests update | contract suite runs | nincs compatibility-only fixture vagy golden path a legacy modelhez | P1 | required-now | E2, E3 |
+| T10 | canonical actor surface requires explicit context | canonical actor emit path invoked explicit authority nelkul | CLI/boundary tests run | explicit `LEGACY_IMPLICIT_ACTOR_CONTEXT_UNSUPPORTED` vagy ekvivalens hiba jelenik meg; nincs shell-context fallback | P1 | required-now | E5 |
+| T11 | residual inventory clean rerun surface is clean | Phase 5 cleanup kesz | residual inventory rerun a `residual inventory clean rerun surface` scope-jaban | a rerun scope-ban nincs mar legacy state/alias/docs hit; historical/reference tree-k nem keverednek bele a cleanliness claimbe | P1 | required-now | E1, E4 |
+
+## Acceptance Criteria
+
+1. AC1: A canonical lifecycle/state contractbol teljesen kikerulnek a legacy meta-review es approval compatibility state-ek.
+2. AC2: A canonical actor write path explicit authority nelkul nem futtathato.
+3. AC3: A removed actor aliases es a removed `bubble meta-review submit` path fail-closed maradnak.
+4. AC4: Az operator meta-review surface vagy state-neutralra tisztul, vagy ugyanebben a taskban genericizalva/removolve lesz.
+5. AC5: UI, status, active docs es runtime guidance csak a final canonical modellt mutatjak.
+6. AC6: A teszt- es fixture corpus nem tart fenn legacy compatibility-only coverage-et.
+7. AC7: A Phase 4 archived decisions, kulonosen a removed submit path, nem nyilnak ujra.
+
+### Acceptance Traceability
+
+| Acceptance Criterion | Call Sites | Tests | Evidence |
+|---|---|---|---|
+| AC1 | CS1, CS2, CS3, CS4 | T1, T2, T3, T5 | E2, E3 |
+| AC2 | CS4, CS4b | T10 | E5 |
+| AC3 | CS3, CS4, CS7 | T4 | E3 |
+| AC4 | CS3, CS4 | T6 | E2, E3 |
+| AC5 | CS2, CS5, CS6 | T7, T8, T11 | E1, E4 |
+| AC6 | CS7 | T9, T11 | E1, E2, E4 |
+| AC7 | CS3, CS4, CS6 | T4, T8 | E3, E4 |
 
 ## L2 - Implementation Notes (Optional)
 
-1. [later-hardening] Ha archival olvasashoz megis kell legacy snapshot parser, azt kulon offline migration/inspection utilkent erdemes tartani, nem runtime canonical pathkent.
-2. [later-hardening] A docs historical anyagait erdemes archive prefix ala mozgatni, hogy ne keveredjenek az active canonical leirassal.
-
-## Assumptions
-
-1. A Phase 4-re a canonical actor-facing surface mar eleg stabil ahhoz, hogy a retained aliases Phase 5-ben tenyleg torolhetoek legyenek.
-2. A meta-review operatori subtree nem hordoz olyan first-principle kulonbseget, ami miatt kulon topologiakent meg kellene maradnia.
-3. Historical compatibility runtime-szinten nem kovetelmeny; ha archival tamogatas kell, az kulon utility scope.
-
-## Open Questions
-
-1. A `bubble meta-review run|status|last-report|recover` teljesen megszunjon, vagy generic `bubble review-*` / `bubble gate-*` operatori surface-re erdemes atemelni? Phase 5-ben kulon meta-review subtree egyik esetben sem maradhat.
-
-## Hardening Backlog
-
-| ID | Item | Layer | Priority | Timing | Source | Proposed Action |
-|---|---|---|---|---|---|---|
-| HB1 | Historical archive tooling for old snapshots | L2 | P3 | later-hardening | archival concern | Keszitsunk kulon offline inspector/migrator utilityt, ha tenyleges archive-igeny merul fel |
-| HB2 | Doc archive reorganization | L2 | P3 | later-hardening | docs cleanup follow-up | A legacy meta-review gate doksikat archive ala mozgatni az active docs tisztitasa utan |
+1. [required-now] A megvalositas elso commit-szelete inventory-only lehet, de a task csak akkor teljes, ha a cleanup es a coverage ugyanabban a vegso korben lezarul.
+2. [required-now] A grep-based residual inventory nem "minden aktiv tree minusz nehany kivetel" alapon fusson, hanem pontosan a `residual inventory clean rerun surface` scope-jara legyen kotve; minden historical/reference subtree ezen kivul marad.
+3. [later-hardening] Ha historical archive snapshot olvasasra megis kell legacy parser, az kulon offline utility/task scope legyen, nem runtime backcompat.
 
 ## Review Control
 
-1. Ne fogadjunk el olyan Phase 5 implementaciot, amely a `META_REVIEW_*` lifecycle-et csak atnevezi, de special-case branchkent megtartja.
-2. Ne fogadjunk el retained `bubble meta-review` subtree-t pusztan torteneti vagy kenyelmi okbol.
-3. Ne fogadjunk el docs/test cleanup nelkuli code cleanupot; Phase 5 csak teljes vegallapottal tekintheto kesznek.
-4. Ha barmely legacy path megtartasa mellett ervel valaki, explicit first-principle indoklas kell; "eddig is igy volt" nem erv.
+1. Ne fogadjunk el olyan implementaciot, amely csak atnevezi a legacy state-et, de special-case branchkent megtartja.
+2. Ne fogadjunk el olyan docs cleanupot, amely a README-bol kiveszi a legacy wordingot, de az active runbookokban bent hagyja.
+3. Ne fogadjunk el retained actor alias pathot explicit removal policy nelkul.
+4. Ne fogadjunk el olyan operator meta-review surface-et, amely meg mindig `META_REVIEW_*` state vocabularyra epit.
+5. Ne fogadjunk el olyan explicit-context cleanupot, amely a canonical pathrol levagja a fallbackot, de egy masik hidden resolveren keresztul visszahozza.
+6. Ne fogadjunk el olyan Phase 5 megoldast, amely a Phase 4 archived submit decisiont ujranyitja.
 
 ## Spec Lock
 
-Task allapot `IMPLEMENTABLE`, ha:
+Task `IMPLEMENTABLE`, ha:
 
-1. a canonical runtime mar nem tartalmaz `META_REVIEW_*` vagy `READY_FOR_APPROVAL` lifecycle state-et,
-2. a meta-review actor mar nem kulon lifecycle vagy CLI special case,
-3. a retained actor aliases es historical subtree-k el vannak tavolitva vagy generic operator surface-re olvasztva,
-4. a UI, docs es contract fixtures csak a final protocol-first modellt tukrozik,
-5. nincs tartos backward-compatibility code path a legacy meta-review modellhez,
-6. a canonical actor surface nem hasznal implicit `cwd`/worktree/env actor-context inference-t; az actor write authority kizarolag explicit context contractbol szarmazik.
+1. a Phase 4 archived decisions es a Phase 5 plan exit criteria nem mondanak egymasnak ellent a task szovegeben,
+2. a required-now cleanup scope inventory-first, fail-closed es tesztelheto,
+3. az operator meta-review surface-re van explicit Phase 5 decision,
+4. az evidence elvarasok kulon kezelik az inventory, a runtime/CLI, a UI es a docs cleanup proofot,
+5. a task mar nem hagy nyitva olyan kerdest, amely nelkul az implementernek architectura-dontest kellene improvizalnia.
