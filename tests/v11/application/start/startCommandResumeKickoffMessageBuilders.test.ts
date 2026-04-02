@@ -71,8 +71,15 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
     });
 
     expect(message).toContain("resume kickoff (reviewer)");
-    expect(message).toContain("If blocker findings remain under current scope policy, keep using `pairflow pass --finding`.");
-    expect(message).toContain("Routing matrix (copy-paste)");
+    expect(message).toContain(
+      "Before direct canonical emit, refresh actor authority from this worktree with `pairflow bubble status --id b_start_resume_projection_01 --json`"
+    );
+    expect(message).toContain(
+      "If blocker findings remain under current scope policy, keep using `pairflow agent emit --kind pass ... --finding ...`."
+    );
+    expect(message).toContain(
+      "Routing matrix (copy-paste after resolving `executionContext` from `pairflow bubble status --json`)"
+    );
   });
 
   it("renders round<=1 kickoff with pass-only explicit findings declaration line", () => {
@@ -86,10 +93,15 @@ describe("startCommandResumeKickoffMessageBuilders", () => {
     });
 
     expect(message).toContain("State is RUNNING at round 1.");
-    expect(message).toContain("If review round is 1: do not use `pairflow converged`");
-    expect(message).toContain("In round 1, use `pairflow pass --summary ...` and declare findings explicitly");
+    expect(message).toContain("If review round is 1: do not use canonical convergence emit yet");
+    expect(message).toContain(
+      "Repeat this before each emit because authority can change after every successful handoff"
+    );
+    expect(message).toContain(
+      "In round 1, use `pairflow agent emit --kind pass ...` and declare findings explicitly"
+    );
     expect(message).not.toContain(
-      "Document scope: `pairflow pass --finding` for blockers is valid only"
+      "Document scope: canonical `pairflow agent emit --kind pass ... --finding ...` for blockers is valid only"
     );
   });
 });

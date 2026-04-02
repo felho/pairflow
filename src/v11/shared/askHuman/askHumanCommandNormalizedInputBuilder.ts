@@ -8,6 +8,7 @@ export function buildNormalizedAskHumanCommandInput(
     question: commandInput.question,
     refs: commandInput.refs,
     cwd: commandInput.cwd,
+    authoritativeContext: commandInput.authoritativeContext,
     now: commandInput.now
   });
 }

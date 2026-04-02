@@ -9,6 +9,7 @@ export function buildAskHumanOrchestrationInput(
     question: normalizedInput.question,
     refs: normalizedInput.refs,
     cwd: normalizedInput.cwd,
+    authoritativeContext: normalizedInput.authoritativeContext,
     now: normalizedInput.now,
     createError
   };

@@ -5,12 +5,21 @@ function formatResumeStateValue(value: string | number | null): string {
 }
 
 export function buildResumeContextLine(state: BubbleStateSnapshot): string {
-  return [
+  const parts = [
     `state=${state.state}`,
     `round=${state.round}`,
     `active_agent=${formatResumeStateValue(state.active_agent)}`,
     `active_role=${formatResumeStateValue(state.active_role)}`
-  ].join(", ");
+  ];
+  const executionContext = state.execution_context;
+  if (executionContext !== null && executionContext !== undefined) {
+    parts.push(
+      `execution_context.handoff_id=${executionContext.handoff_id}`,
+      `execution_context.awaited_output_type=${executionContext.awaited_output_type}`,
+      `execution_context.attempt=${executionContext.attempt}`
+    );
+  }
+  return parts.join(", ");
 }
 
 export function appendKickoffDiagnosticLine(

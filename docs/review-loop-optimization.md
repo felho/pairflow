@@ -8,7 +8,7 @@ Canonical severity policy:
 - `docs/reviewer-severity-ontology.md`
 
 Terminology mapping (historical -> current):
-- "Approve with notes" / `APPROVE_WITH_NOTES` references in this tracker map to `pairflow converged --summary ...` + notes artifact flow.
+- "Approve with notes" / `APPROVE_WITH_NOTES` references in this tracker map to canonical convergence emit (`pairflow agent emit --kind convergence --summary ...`) + notes artifact flow; historical `pairflow converged` mentions refer to the retained compatibility adapter for the same behavior.
 
 ## Problem Statement
 
@@ -32,7 +32,7 @@ The reviewer produces high-quality findings (real bugs, race conditions, event o
 | 5 | Combined flow | Not implemented | Depends on #1-#4. |
 | 6 | Skip redundant reviewer test runs | Implemented | Orchestrator verifies implementer evidence and emits reviewer skip/run directive. |
 | 7 | Task-level acceptance criteria boundary | In progress | Used operationally in tasking; hard enforcement not implemented yet. |
-| 8 | Round-based severity gate | Implemented (Phase 1) | Doc-contract gate keeps advisory round-policy normalization (`ROUND_GATE_AUTODEMOTE`/`ROUND_GATE_WARNING`) with status diagnostics, and reviewer `pairflow pass` is hard-stopped post-gate for clean/non-blocking outcomes via command routing policy (`pairflow converged` required). |
+| 8 | Round-based severity gate | Implemented (Phase 1) | Doc-contract gate keeps advisory round-policy normalization (`ROUND_GATE_AUTODEMOTE`/`ROUND_GATE_WARNING`) with status diagnostics, and reviewer canonical pass emit (`pairflow agent emit --kind pass ...`) is hard-stopped post-gate for clean/non-blocking outcomes via canonical convergence routing (`pairflow agent emit --kind convergence ...` required). Legacy `pairflow pass` / `pairflow converged` remain compatibility adapters only. |
 | 9 | Issue-class expansion scan | Implemented (Phase 1 prompt-level experiment) | Reviewer startup/resume/handoff guidance now enforces scout -> dedupe/classify -> conditional class expansion -> consolidation, with local-scope guardrails and required PASS output contract. Runtime/orchestrator automation remains out of scope. |
 
 Recent control-plane improvement:
@@ -55,7 +55,7 @@ Provide explicit severity definitions to reduce misclassification:
 
 ### 2. "Good Enough" Threshold — Converge with Notes
 
-When a review round finds **only P2/P3 issues and no P0/P1**, the reviewer should use a "converged with notes" path (`pairflow converged --summary ...` + suggestions artifact) instead of `fix_request`:
+When a review round finds **only P2/P3 issues and no P0/P1**, the reviewer should use a "converged with notes" path (`pairflow agent emit --kind convergence --summary ...` + suggestions artifact) instead of `fix_request`:
 
 - P2/P3 findings go into a `suggestions.md` artifact
 - Implementer can optionally address them
@@ -120,9 +120,9 @@ The optimized review flow per round:
    - Adds concrete fix suggestion
 
 4. DECISION
-   If `P0/P1` findings exist → PASS with fix_request (blockers + P2s)
-   If only P2/P3 findings exist → `pairflow converged --summary ...` + suggestions.md notes (same converged command path)
-   If clean (no findings) → `pairflow converged --summary ...`
+   If `P0/P1` findings exist → canonical PASS emit with fix_request (`pairflow agent emit --kind pass ...`) for blockers + P2s
+   If only P2/P3 findings exist → `pairflow agent emit --kind convergence --summary ...` + suggestions.md notes
+   If clean (no findings) → `pairflow agent emit --kind convergence --summary ...`
 ```
 
 ### Trade-offs
@@ -480,8 +480,8 @@ corepack bootstrap, or multi-package-manager detection.
 
 Complementary to "converge with notes" (#2): introduce an explicit severity gate tied to round number.
 
-**Rule:** From round N onward (for example `N=4`, i.e. `round >= N`), only blocker findings (`P0/P1`) trigger a new fix+review cycle. P2/P3 findings are logged to `suggestions.md` and the reviewer issues `converged`.
-Reviewer `pairflow pass --no-findings` is also treated as post-gate clean intent and must route to `pairflow converged`.
+**Rule:** From round N onward (for example `N=4`, i.e. `round >= N`), only blocker findings (`P0/P1`) trigger a new fix+review cycle. P2/P3 findings are logged to `suggestions.md` and the reviewer issues canonical convergence emit.
+Reviewer canonical pass emit with `--no-findings` (`pairflow agent emit --kind pass ... --no-findings`) is also treated as post-gate clean intent and must route to canonical convergence emit (`pairflow agent emit --kind convergence ...`).
 Document-scope qualifier: blocker semantics are strict (`P0/P1` + `timing=required-now` + `layer=L1`); unqualified CLI `--finding` entries are advisory for post-gate routing.
 
 This is different from #2 ("converge with notes after N consecutive P2-only rounds") because:
@@ -621,7 +621,7 @@ Companion design document for durable measurement/storage:
 
 ### Top 3 Priorities (Current)
 
-1. **Converge with notes** (`pairflow converged` + notes behavior)
+1. **Converge with notes** (canonical `pairflow agent emit --kind convergence ...` + notes behavior)
 2. **Severity + scope calibration** (reduce P2 inflation and out-of-scope fix loops)
 3. **Task-level acceptance criteria boundary** (explicit "done" contract)
 
@@ -844,5 +844,5 @@ This keeps safety high while preventing open-ended hardening cycles.
 - How to handle the orchestrator disagreeing with all 3 agents on severity?
 - Should deep exploration have a token/time budget to prevent runaway analysis?
 - Is there value in the reviewer seeing its own prior findings (breaking fresh context mode) to prevent rediscovery?
-- Should `pairflow converged` be a hard stop? The delete-bubble reviewer converged 3 times then kept finding new issues — should convergence be irrevocable?
+- Should canonical convergence emit (`pairflow agent emit --kind convergence ...`) be a hard stop? The delete-bubble reviewer converged 3 times then kept finding new issues — should convergence be irrevocable?
 - Should there be a maximum round cap (e.g., 20) that forces convergence regardless of findings?

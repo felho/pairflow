@@ -14,6 +14,9 @@ export function normalizeAskHumanCommandInput(
     ...(input.cwd !== undefined
       ? { cwd: input.cwd }
       : {}),
+    ...(input.authoritativeContext !== undefined
+      ? { authoritativeContext: input.authoritativeContext }
+      : {}),
     now: input.now ?? new Date()
   };
 }

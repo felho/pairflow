@@ -1,4 +1,4 @@
-import type { MetaReviewRecommendation } from "./bubble.js";
+import type { AgentRole, MetaReviewRecommendation } from "./bubble.js";
 import type { Finding } from "./findings.js";
 
 export const protocolParticipants = [
@@ -186,6 +186,64 @@ export interface MetaReviewSubmissionPayload {
   report_json: Record<string, unknown>;
 }
 
+export const actorOutputKinds = [
+  "pass",
+  "human_question",
+  "convergence",
+  "meta_review_result"
+] as const;
+
+export type ActorOutputKind = (typeof actorOutputKinds)[number];
+
+export interface ActorEmitBaseInput {
+  kind: ActorOutputKind;
+  repo: string;
+  bubble_id: string;
+  handoff_id: string;
+  refs?: string[];
+  expected_role?: AgentRole;
+  expected_round?: number;
+  expected_state_fingerprint?: string;
+}
+
+export interface PassActorEmitInput extends ActorEmitBaseInput {
+  kind: "pass";
+  summary: string;
+  intent?: PassIntent;
+  findings?: Finding[];
+  no_findings?: boolean;
+}
+
+export interface HumanQuestionActorEmitInput extends ActorEmitBaseInput {
+  kind: "human_question";
+  question: string;
+}
+
+export interface ConvergenceActorEmitInput extends ActorEmitBaseInput {
+  kind: "convergence";
+  summary: string;
+  findings?: Array<{
+    severity: "P2" | "P3";
+    title: string;
+    refs?: string[];
+  }>;
+}
+
+export interface MetaReviewResultActorEmitInput extends ActorEmitBaseInput {
+  kind: "meta_review_result";
+  round: number;
+  recommendation: MetaReviewRecommendation;
+  summary: string;
+  rework_target_message?: string | null;
+  report_json: Record<string, unknown>;
+}
+
+export type ActorEmitInput =
+  | PassActorEmitInput
+  | HumanQuestionActorEmitInput
+  | ConvergenceActorEmitInput
+  | MetaReviewResultActorEmitInput;
+
 export function isProtocolParticipant(
   value: unknown
 ): value is ProtocolParticipant {
@@ -238,6 +296,13 @@ export function isDeliveryTargetRole(value: unknown): value is DeliveryTargetRol
   return (
     typeof value === "string" &&
     (deliveryTargetRoles as readonly string[]).includes(value)
+  );
+}
+
+export function isActorOutputKind(value: unknown): value is ActorOutputKind {
+  return (
+    typeof value === "string"
+    && (actorOutputKinds as readonly string[]).includes(value)
   );
 }
 

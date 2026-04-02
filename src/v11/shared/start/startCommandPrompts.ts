@@ -92,6 +92,13 @@ function formatStatusPaneWorktreePath(worktreePath: string): string {
   return worktreePath;
 }
 
+function buildCanonicalActorEmitLookupGuidance(input: {
+  bubbleId: string;
+  repoPath: string;
+}): string {
+  return `Before direct canonical emit, fetch fresh actor authority via \`pairflow bubble status --id ${input.bubbleId} --repo ${input.repoPath} --json\` and copy \`executionContext.handoffId\` (plus optional guards) from the JSON output. If no explicit authority snapshot is available yet, use the retained worktree-local compatibility adapter until one exists.`;
+}
+
 export function buildMetaReviewerStartupPrompt(input: {
   bubbleId: string;
   repoPath: string;
@@ -108,6 +115,10 @@ export function buildMetaReviewerStartupPrompt(input: {
     "In findings artifacts, use canonical finding severity/priority values only: `P0`, `P1`, `P2`, `P3`.",
     "Do not emit alias severities such as `blocking` or `advisory` in findings artifact entries.",
     "Do not modify transcript/inbox/state files manually.",
+    buildCanonicalActorEmitLookupGuidance({
+      bubbleId: input.bubbleId,
+      repoPath: input.repoPath
+    }),
     buildPairflowCommandGuidance(
       input.worktreePath,
       input.pairflowCommandProfile
@@ -152,6 +163,10 @@ export function buildReviewerStartupPrompt(input: {
     ...(input.reviewerFocus?.status === "present"
       ? [formatReviewerFocusBridgeBlock(input.reviewerFocus)]
       : []),
+    buildCanonicalActorEmitLookupGuidance({
+      bubbleId: input.bubbleId,
+      repoPath: input.repoPath
+    }),
     buildReviewerFindingsPassInstruction(input.reviewArtifactType),
     ...buildReviewerCanonicalCommandGateLines(),
     "Execute pairflow commands directly from this worktree (do not ask for confirmation first).",

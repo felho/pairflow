@@ -6,7 +6,20 @@ import type {
 export async function prepareAskHumanWorkspaceContext(
   input: PrepareAskHumanWorkspaceContextInput
 ): Promise<PreparedAskHumanWorkspaceContext> {
-  const resolved = await input.dependencies.resolveBubble(input.cwd);
+  const authoritativeResolved: PreparedAskHumanWorkspaceContext["resolved"] | undefined =
+    input.authoritativeContext === undefined
+      ? undefined
+      : {
+          bubbleId: input.authoritativeContext.bubble_id,
+          repoPath: input.authoritativeContext.repo,
+          bubblePaths: input.authoritativeContext.resolved.bubblePaths,
+          bubbleConfig: input.authoritativeContext.resolved.bubbleConfig,
+          worktreePath: input.authoritativeContext.worktree_path,
+          cwd: input.authoritativeContext.worktree_path
+        };
+  const resolved =
+    authoritativeResolved
+    ?? await input.dependencies.resolveBubble(input.cwd);
   const bubbleIdentity = await input.dependencies.ensureBubbleIdentity({
     bubbleId: resolved.bubbleId,
     repoPath: resolved.repoPath,
@@ -16,9 +29,9 @@ export async function prepareAskHumanWorkspaceContext(
   });
   resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
 
-  const loadedState = await input.dependencies.readState(
-    resolved.bubblePaths.statePath
-  );
+  const loadedState =
+    input.authoritativeContext?.loaded_state
+    ?? await input.dependencies.readState(resolved.bubblePaths.statePath);
 
   return {
     resolved,

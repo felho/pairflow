@@ -37,7 +37,7 @@ function buildPostGateConvergedGuidance(input: {
   round: number;
   severityGateRound: number;
 }): string {
-  return `Use \`pairflow converged --summary "..."\` instead (round ${input.round} >= severity_gate_round ${input.severityGateRound}).`;
+  return `Use canonical convergence emit (\`pairflow agent emit --kind convergence ...\`) instead (round ${input.round} >= severity_gate_round ${input.severityGateRound}). Legacy \`pairflow converged\` remains a compatibility adapter only.`;
 }
 
 export function inferReviewerPassIntent(input: {
@@ -80,7 +80,7 @@ export function validateReviewerPassGate(input: {
 }): void {
   const postGate = input.round >= input.severityGateRound;
   const invalidPayloadGuidance = postGate
-    ? `Provide structured findings with severity/title (and optional refs), or use \`pairflow converged --summary "..."\` for clean/non-blocking outcomes. ${buildPostGateConvergedGuidance({
+    ? `Provide structured findings with severity/title (and optional refs), or use canonical convergence emit (\`pairflow agent emit --kind convergence ...\`) for clean/non-blocking outcomes. ${buildPostGateConvergedGuidance({
       round: input.round,
       severityGateRound: input.severityGateRound
     })}`

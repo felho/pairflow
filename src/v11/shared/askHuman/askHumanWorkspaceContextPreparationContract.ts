@@ -1,6 +1,7 @@
 import type {
   EnsureBubbleInstanceIdForMutationResult
 } from "../../../core/bubble/bubbleInstanceId.js";
+import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
 import type { ResolvedBubbleWorkspace } from "../../../core/bubble/workspaceResolution.js";
 import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
@@ -8,6 +9,7 @@ import type { ResolvedAskHumanRoutingPreparationDependencies } from "./askHumanR
 
 export interface PrepareAskHumanWorkspaceContextInput {
   cwd?: string | undefined;
+  authoritativeContext?: ActorEmitContextSnapshot | undefined;
   now: Date;
   dependencies: ResolvedAskHumanRoutingPreparationDependencies;
 }

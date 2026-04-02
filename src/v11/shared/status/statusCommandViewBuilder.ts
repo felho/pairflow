@@ -5,6 +5,7 @@ import type { StateValidationDiagnostics } from "../../../core/state/stateStore.
 import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateTypes.js";
 import type {
   BubbleFailingGate,
+  BubbleExecutionContext,
   BubbleLifecycleState,
   BubbleRoundGateState,
   BubbleSpecLockState,
@@ -82,6 +83,15 @@ export interface BubbleStatusView {
   activeRole: string | null;
   activeSince: string | null;
   lastCommandAt: string | null;
+  executionContext: {
+    activeRole: BubbleExecutionContext["active_role"];
+    awaitedOutputType: BubbleExecutionContext["awaited_output_type"];
+    handoffId: string;
+    round: number;
+    startedAt: string;
+    deadlineAt: string;
+    attempt: number;
+  } | null;
   watchdog: WatchdogStatus;
   pendingInboxItems: {
     humanQuestions: number;
@@ -188,6 +198,18 @@ export function buildBubbleStatusView({
     activeRole: state.active_role,
     activeSince: state.active_since,
     lastCommandAt: state.last_command_at,
+    executionContext:
+      state.execution_context === null || state.execution_context === undefined
+        ? null
+        : {
+            activeRole: state.execution_context.active_role,
+            awaitedOutputType: state.execution_context.awaited_output_type,
+            handoffId: state.execution_context.handoff_id,
+            round: state.execution_context.round,
+            startedAt: state.execution_context.started_at,
+            deadlineAt: state.execution_context.deadline_at,
+            attempt: state.execution_context.attempt
+          },
     watchdog,
     pendingInboxItems: {
       humanQuestions: pendingQuestions,

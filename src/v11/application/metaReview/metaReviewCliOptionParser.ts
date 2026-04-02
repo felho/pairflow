@@ -1,47 +1,16 @@
 import {
-  invalidMetaReviewCliOptionsWithContext as invalidMetaReviewCliOptions,
   parseDepth,
   parseMetaReviewCliOptionValues,
-  parseOptionalReworkTarget,
-  parseRequiredSubmitReportJson,
-  parseRequiredSubmitText,
-  parseSubmitRecommendation,
-  parseSubmitRound,
-  type ParsedMetaReviewOptionValues,
 } from "./metaReviewCliOptionValueReader.js";
-import type {
-  BubbleMetaReviewCommandOptions,
-  BubbleMetaReviewSubmitCommandOptions
-} from "./metaReviewCliOptionTypes.js";
+import type { BubbleMetaReviewCommandOptions } from "./metaReviewCliOptionTypes.js";
 import {
   assertRunOnlyDepthAllowed,
   assertSubmitOnlyOptionsAllowed,
   buildMetaReviewReadonlyCommandOptions,
   createMetaReviewBaseOptions,
   parseMetaReviewCliArgs,
-  parseMetaReviewSubcommand,
-  type BubbleMetaReviewBaseOptions
+  parseMetaReviewSubcommand
 } from "./metaReviewCliOptionParserHelpers.js";
-
-function buildMetaReviewSubmitOptions(
-  base: BubbleMetaReviewBaseOptions,
-  values: ParsedMetaReviewOptionValues
-): BubbleMetaReviewSubmitCommandOptions {
-  if (values.depth !== undefined) {
-    invalidMetaReviewCliOptions(
-      "--depth is only supported for meta-review run."
-    );
-  }
-  return {
-    ...base,
-    command: "submit",
-    round: parseSubmitRound(values.round),
-    recommendation: parseSubmitRecommendation(values.recommendation),
-    summary: parseRequiredSubmitText(values.summary, "--summary"),
-    reworkTargetMessage: parseOptionalReworkTarget(values.reworkTargetMessage),
-    reportJson: parseRequiredSubmitReportJson(values.reportJson)
-  };
-}
 
 export function parseBubbleMetaReviewCommandOptions(
   args: string[]
@@ -66,9 +35,6 @@ export function parseBubbleMetaReviewCommandOptions(
       command: "run",
       depth: parseDepth(values.depth)
     };
-  }
-  if (subcommand === "submit") {
-    return buildMetaReviewSubmitOptions(base, values);
   }
 
   assertSubmitOnlyOptionsAllowed(values);

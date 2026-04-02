@@ -31,6 +31,7 @@ export async function prepareAskHumanRouting(
 
   const workspace = await prepareAskHumanWorkspaceContext({
     cwd: input.cwd,
+    authoritativeContext: input.authoritativeContext,
     now: input.now,
     dependencies: resolvedDependencies
   });

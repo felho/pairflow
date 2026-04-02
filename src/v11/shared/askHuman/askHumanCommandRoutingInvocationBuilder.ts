@@ -9,6 +9,7 @@ export function buildAskHumanRoutingInputFromCommandOrchestration(
     question: input.question,
     refs: input.refs,
     cwd: input.cwd,
+    authoritativeContext: input.authoritativeContext,
     now: input.now,
     createError: input.createError
   });

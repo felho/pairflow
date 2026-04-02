@@ -1,6 +1,7 @@
 import type { AgentRole } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent } from "../../../types/protocol.js";
+import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
 import { preparePassRouting, type PreparePassRoutingDependencies } from "../../application/pass/passRoutingPreparation.js";
 import type { BuildFlowBaseInput } from "./flowInvocationBuilderBase.js";
 import { createPassRoutingDependencies } from "./passFlowDependencyWiring.js";
@@ -16,6 +17,7 @@ export interface EmitPassContextCommandInput {
   findings?: Finding[];
   noFindings?: boolean;
   cwd?: string;
+  authoritativeContext?: ActorEmitContextSnapshot;
   now?: Date;
 }
 
@@ -71,6 +73,7 @@ export async function buildEmitPassContext(
 
   const workspaceContext = await dependencies.preparePassWorkspaceContext({
     cwd: input.commandInput.cwd,
+    authoritativeContext: input.commandInput.authoritativeContext,
     now,
     nowIso,
     createError: input.createError

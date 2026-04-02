@@ -41,7 +41,7 @@ Components:
    - Creates and manages per-bubble git worktrees (or optional full clone mode).
 3. Agent Runners (Claude/Codex adapters)
    - Starts CLI sessions and monitors health/liveness.
-   - Message transport is command-driven (`pairflow pass|ask-human|converged`), not raw stdout scraping.
+   - Message transport is command-driven through canonical actor emit (`pairflow agent emit --kind ...`) plus retained compatibility adapters, not raw stdout scraping.
    - Optional telemetry tap may capture outputs for diagnostics, but it is not authoritative for protocol flow.
 4. Protocol Bus
    - Persists message envelopes and artifacts as append-only logs.
@@ -114,7 +114,7 @@ META_REVIEW_RUNNING handoff semantics:
 1. `META_REVIEW_RUNNING` must persist the same canonical top-level `execution_context` authority used by generic `RUNNING`.
 2. `meta_review.execution_context` may remain as a compatibility mirror, but it is no longer a separate primary authority source.
 3. The active meta-review execution context contains `active_role=meta_reviewer`, `handoff_id`, `round`, `awaited_output_type=meta_review_result`, `started_at`, `deadline_at`, and `attempt`.
-4. `pairflow bubble meta-review submit` is the normal success-path handoff command. A successful submit validates the active execution context, persists the canonical result, applies the gate route, advances lifecycle state, and closes meta-reviewer ownership in the same command flow.
+4. `pairflow agent emit --kind meta_review_result` is the canonical success-path handoff command. A successful submit validates the active execution context, persists the canonical result, applies the gate route, advances lifecycle state, and closes meta-reviewer ownership in the same command flow.
 5. A submit that cannot produce a routeable normal handoff must fail closed as a typed submit error; a canonical snapshot alone is not a successful handoff.
 6. The watchdog is not the normal success-path router for canonical meta-review submits before timeout expiry.
 7. Watchdog responsibility for meta-review is limited to timeout/liveness/recovery fallback handling when normal submit handoff did not finish.
@@ -122,7 +122,7 @@ META_REVIEW_RUNNING handoff semantics:
 9. After the durable kickoff envelope is appended, runtime delivery confirmation is observability only. Pane-marker uncertainty or pane availability problems must not, by themselves, route the bubble out of `META_REVIEW_RUNNING`.
 10. `state.json` may persist `meta_review.runtime_delivery` as a non-authority diagnostic block with `status = confirmed|uncertain|failed`, optional `reason_code`/`message`, `observed_at`, and correlation fields such as `observed_for_handoff_id` and `observed_for_round`.
 11. `meta_review.runtime_delivery` must never extend or replace the canonical authority model. Submit acceptance, recovery, and timeout decisions remain anchored to top-level `execution_context` plus the current-round durable `meta_review_result`.
-12. Canonical `pairflow bubble meta-review submit` authorization must not depend on runtime pane-binding freshness. Missing or deactivated `metaReviewerPane` state after delivery failure, restart, or resume is a runtime diagnostic, not a submit gate, as long as the current-round execution context is still valid.
+12. Canonical `pairflow agent emit --kind meta_review_result` authorization must not depend on runtime pane-binding freshness. Missing or deactivated `metaReviewerPane` state after delivery failure, restart, or resume is a runtime diagnostic, not a submit gate, as long as the current-round execution context is still valid.
 13. Recovery may temporarily clear live `active_agent` / `active_role` ownership while keeping `META_REVIEW_RUNNING` plus a valid canonical execution context. In that state canonical submit remains allowed; conflicting live ownership is still rejected, but missing live ownership is not an authority failure by itself.
 14. Status and recovery surfaces must project runtime-delivery diagnostics only when their correlation fields still match the active execution context; stale diagnostics are archival only.
 
@@ -146,7 +146,7 @@ Convergence criteria (MVP):
 5. No unresolved human questions.
 
 Convergence command policy:
-1. `pairflow converged` may be invoked only by the agent currently assigned as reviewer for that round.
+1. Canonical convergence emit (`pairflow agent emit --kind convergence ...`) may be invoked only by the agent currently assigned as reviewer for that round. Retained `pairflow converged` is a compatibility adapter onto the same boundary.
 2. `pairflow` CLI validates transcript and state evidence before accepting convergence transition.
 3. Validation must include reviewer-role alternation evidence (`round_role_history`) per policy.
 4. If criteria are not met, CLI rejects the command and logs a protocol warning in `transcript.ndjson`.
@@ -161,7 +161,7 @@ When `accuracy_critical=true` in `bubble.toml`:
 6. Cross-check is enforced:
    - `overall=fail` is allowed only with reviewer `fix_request` + open findings.
    - `overall=pass` is allowed only for clean reviewer handoff (`review` + no findings).
-7. `pairflow converged` is blocked unless latest persisted reviewer verification is `pass`.
+7. Canonical convergence emit (`pairflow agent emit --kind convergence ...`) is blocked unless latest persisted reviewer verification is `pass`.
 8. `pairflow bubble status --json` exposes:
    - `accuracy_critical`
    - `last_review_verification` (`pass|fail|missing|invalid`)
@@ -227,13 +227,13 @@ Required message types:
 8. `DONE_PACKAGE`: final summary bundle.
 
 Type assignment rules:
-1. `pairflow pass` always emits `PASS` in MVP (no required type choice for agents).
+1. Canonical `pairflow agent emit --kind pass` emits `PASS` in MVP; retained `pairflow pass` is only a compatibility adapter onto the same boundary.
 2. Optional `--intent <task|review|fix_request>` may be provided; if omitted, CLI infers `payload.pass_intent` from active role.
-3. Reviewer-origin `pairflow pass` must explicitly declare findings via `--finding` (repeatable) or `--no-findings`; this is persisted as `PASS.payload.findings[]` (possibly empty).
-4. Implementer-origin `pairflow pass` does not carry findings payload.
-5. `pairflow ask-human` always emits `HUMAN_QUESTION`.
+3. Reviewer-origin canonical pass emit must explicitly declare findings via `--finding` (repeatable) or `--no-findings`; this is persisted as `PASS.payload.findings[]` (possibly empty).
+4. Implementer-origin canonical pass emit does not carry findings payload.
+5. Canonical `pairflow agent emit --kind human_question` emits `HUMAN_QUESTION`; retained `pairflow ask-human` is only a compatibility adapter.
 6. `pairflow bubble reply` always emits `HUMAN_REPLY`.
-7. `pairflow converged` always emits `CONVERGENCE` only after policy validation.
+7. Canonical `pairflow agent emit --kind convergence` emits `CONVERGENCE` only after policy validation; retained `pairflow converged` is only a compatibility adapter.
 8. Agents never infer/write envelope types directly; type is validated and persisted by CLI.
 
 Transport and UX rules:
@@ -253,7 +253,7 @@ Runtime delivery-target contract:
 5. Human/orchestrator delivery semantics remain status-pane based (either via explicit `status` target or legacy recipient fallback).
 
 Incoming delivery contract:
-1. `pairflow pass` writes artifact + NDJSON envelope first.
+1. Canonical actor emit writes artifact + NDJSON envelope first.
 2. Then runtime resolves target pane by `payload.metadata.delivery_target_role` first (when present/valid), otherwise by legacy recipient-agent mapping.
 3. Runtime sends a short tmux notification to the resolved pane containing the round and message file reference.
 4. Recipient agent reads referenced artifact(s), performs work/review, and responds via `pairflow` commands.
@@ -344,17 +344,18 @@ Human/operator commands:
 13. `pairflow bubble watchdog --id <id>` (runs timeout + pane-quiet-window check and escalates to `WAITING_HUMAN` when the standard `RUNNING` dead-signal gate is met)
 
 Agent-facing commands (invoked from inside agent sessions):
-1. `pairflow pass --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>] [--finding <P0|P1|P2|P3:Title>]... [--no-findings]`
-2. `pairflow ask-human --question "<text>"`
-3. `pairflow converged --summary "<text>"`
+1. `pairflow agent emit --kind pass --repo <path> --bubble-id <id> --handoff-id <id> --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>] [--finding <P0|P1|P2|P3:Title>]... [--no-findings]`
+2. `pairflow agent emit --kind human_question --repo <path> --bubble-id <id> --handoff-id <id> --question "<text>"`
+3. `pairflow agent emit --kind convergence --repo <path> --bubble-id <id> --handoff-id <id> --summary "<text>"`
 4. Ideation pending guard: `pass` and `converged` are rejected while bubble is `RUNNING` at `round=0` with `ideation.task_pending=true`.
+5. Direct `agent emit` requires an explicit authority snapshot. `pairflow bubble status --id <id> --repo <path> --json` must surface the active `executionContext`, including `handoffId`, so agents or operators can copy the current authority values without reading state files directly.
 
-`pairflow pass` reference rules:
+Canonical pass emit reference rules:
 1. `--ref` is optional and repeatable (`0..N`).
 2. Use `--ref` when the message points to concrete artifacts/files; omit for purely conceptual feedback.
 
 Compatibility option:
-1. Provide `orchestra` as a thin alias wrapper for agent-facing commands to reduce adoption friction.
+1. Provide `orchestra` as a thin retained alias wrapper for agent-facing commands to reduce adoption friction during migration.
 
 Operational note:
 Step-1 MVP can run multiple bubbles by launching multiple `pairflow bubble start` processes in separate terminals.
@@ -396,7 +397,7 @@ Human is involved at three points:
 
 Resume ownership rule:
 1. Only the operator/user resumes paused ping-pong (`pairflow bubble resume --id <id>`).
-2. Agents request pause/escalation via `pairflow ask-human` but do not self-resume.
+2. Agents request pause/escalation via canonical actor emit (`pairflow agent emit --kind human_question ...`); retained `pairflow ask-human` remains a compatibility adapter and does not change resume ownership.
 
 Approval package must contain:
 1. What changed.

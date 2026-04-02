@@ -1,8 +1,7 @@
 import {
   getMetaReviewLastReportV11 as getMetaReviewLastReport,
   getMetaReviewStatusV11 as getMetaReviewStatus,
-  runMetaReviewV11 as runMetaReview,
-  submitMetaReviewResultV11 as submitMetaReviewResult
+  runMetaReviewV11 as runMetaReview
 } from "./emitMetaReviewV11.js";
 import { recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot } from "../metaReviewGate/emitMetaReviewGateV11.js";
 import type {
@@ -29,26 +28,6 @@ async function runMetaReviewRunCommand(input: {
   return {
     command: "run",
     run
-  };
-}
-
-async function runMetaReviewSubmitCommand(input: {
-  options: Extract<BubbleMetaReviewExecutableCommandOptions, { command: "submit" }>;
-  cwd: string;
-}): Promise<BubbleMetaReviewCommandResult> {
-  const submit = await submitMetaReviewResult({
-    bubbleId: input.options.id,
-    ...toRepoPathOption(input.options.repo),
-    round: input.options.round,
-    recommendation: input.options.recommendation,
-    summary: input.options.summary,
-    rework_target_message: input.options.reworkTargetMessage,
-    report_json: input.options.reportJson,
-    cwd: input.cwd
-  });
-  return {
-    command: "submit",
-    submit
   };
 }
 
@@ -103,12 +82,6 @@ export async function dispatchMetaReviewCommand(input: {
 }): Promise<BubbleMetaReviewCommandResult> {
   if (input.options.command === "run") {
     return runMetaReviewRunCommand({
-      options: input.options,
-      cwd: input.cwd
-    });
-  }
-  if (input.options.command === "submit") {
-    return runMetaReviewSubmitCommand({
       options: input.options,
       cwd: input.cwd
     });

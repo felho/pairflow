@@ -710,13 +710,13 @@ describe("startBubble", () => {
     expect(reviewerCommand).toContain("document/task artifacts");
     expect(reviewerCommand).toContain("Do not force `feature-dev:code-reviewer`");
     expect(reviewerCommand).toContain(
-      "Document scope: `pairflow pass --finding` for blockers is valid only when structured findings include strict qualifiers (`timing=required-now` + `layer=L1`)."
+      "Document scope: canonical `pairflow agent emit --kind pass ... --finding ...` for blockers is valid only when structured findings include strict qualifiers (`timing=required-now` + `layer=L1`)."
     );
     expect(reviewerCommand).toContain(
       "CLI `--finding` cannot encode these qualifiers"
     );
     expect(reviewerCommand).toContain(
-      "`pairflow converged --finding` (`P2/P3` only)"
+      "`pairflow agent emit --kind convergence ... --finding ...` (`P2/P3` only)"
     );
     expect(reviewerCommand).toContain(REVIEWER_COMMAND_GATE_REQ_F);
     expect(reviewerCommand).toContain(

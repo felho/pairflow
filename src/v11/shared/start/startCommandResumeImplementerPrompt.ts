@@ -28,7 +28,7 @@ function buildIdeationPendingPromptLines(input: {
     "This bubble is ideation-pending (`RUNNING`, `round=0`).",
     "Do nothing now. Stay idle.",
     "Do not read task files, scan the repository, or search for kickoff sources.",
-    "Do not run lifecycle/protocol commands (`pairflow bubble kickoff`, `pairflow pass`, `pairflow ask-human`, `pairflow converged`) unless explicit human instruction arrives.",
+    "Do not run lifecycle/protocol commands (`pairflow bubble kickoff`, `pairflow agent emit`, legacy `pairflow pass`, legacy `pairflow ask-human`, legacy `pairflow converged`) unless explicit human instruction arrives.",
     "Wait for explicit human instruction that contains a concrete kickoff task.",
     `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`
   ];
@@ -85,7 +85,7 @@ export function buildResumeImplementerStartupPrompt(input: {
       : [
           `Provide a concrete task via \`pairflow bubble kickoff --id ${input.bubbleId} --task "<text>"\` or \`--task-file <path>\`.`,
           "Do not use the current placeholder artifact as kickoff input.",
-          "If no concrete task source is available, send a blocker with `pairflow ask-human --question \"...\"`."
+          "If no concrete task source is available, send a blocker with `pairflow agent emit --kind human_question --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --question \"...\"`."
         ]),
     resolveImplementerRoleInstruction(input.state)
   ];

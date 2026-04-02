@@ -10,7 +10,7 @@ import type {
   BubbleMetaReviewStatusCommandOptions
 } from "./metaReviewCliOptionTypes.js";
 
-export type MetaReviewSubcommand = "run" | "status" | "last-report" | "recover" | "submit";
+export type MetaReviewSubcommand = "run" | "status" | "last-report" | "recover";
 
 export type BubbleMetaReviewBaseOptions = {
   id: string;
@@ -26,17 +26,21 @@ export function parseMetaReviewSubcommand(
   if (value === undefined) {
     return null;
   }
+  if (value === "submit") {
+    return invalidMetaReviewCliOptions(
+      "Legacy `pairflow bubble meta-review submit` was removed in Phase 4. Use canonical `pairflow agent emit --kind meta_review_result ...` instead."
+    );
+  }
   if (
     value === "run" ||
     value === "status" ||
     value === "last-report" ||
-    value === "recover" ||
-    value === "submit"
+    value === "recover"
   ) {
     return value;
   }
   return invalidMetaReviewCliOptions(
-    "Unknown meta-review subcommand. Use one of: run, status, last-report, recover, submit."
+    "Unknown meta-review subcommand. Use one of: run, status, last-report, recover."
   );
 }
 
@@ -116,7 +120,7 @@ export function assertSubmitOnlyOptionsAllowed(
 ): void {
   if (hasSubmitOnlyOptions(values)) {
     invalidMetaReviewCliOptions(
-      "--round/--recommendation/--summary/--rework-target-message/--report-json are only supported for meta-review submit."
+      "--round/--recommendation/--summary/--rework-target-message/--report-json are only supported for canonical `pairflow agent emit --kind meta_review_result`."
     );
   }
 }
@@ -131,7 +135,7 @@ export function assertRunOnlyDepthAllowed(depth: string | undefined): void {
 
 export function buildMetaReviewReadonlyCommandOptions(
   base: BubbleMetaReviewBaseOptions,
-  subcommand: Exclude<MetaReviewSubcommand, "run" | "submit">
+  subcommand: Exclude<MetaReviewSubcommand, "run">
 ): BubbleMetaReviewStatusCommandOptions
   | BubbleMetaReviewLastReportCommandOptions
   | BubbleMetaReviewRecoverCommandOptions {

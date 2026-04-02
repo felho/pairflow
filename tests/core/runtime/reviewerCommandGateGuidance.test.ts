@@ -30,9 +30,9 @@ describe("reviewerCommandGateGuidance", () => {
     expect(text).toContain("advisory findings must be passed as structured `--finding` entries and are limited to `P2/P3`");
     expect(text).toContain("Forbidden consistency patterns: summary-only finding claims without structured `--finding`");
     expect(text).toContain("clean/no findings");
-    expect(text).toContain("blocker -> `pairflow pass --summary");
-    expect(text).toContain("advisory-only (`P2/P3`) -> `pairflow converged --summary");
-    expect(text).toContain("clean -> `pairflow converged --summary");
+    expect(text).toContain("blocker -> `pairflow agent emit --kind pass");
+    expect(text).toContain("advisory-only (`P2/P3`) -> `pairflow agent emit --kind convergence");
+    expect(text).toContain("clean -> `pairflow agent emit --kind convergence");
     expect(text).not.toContain(REVIEWER_COMMAND_GATE_REQ_E);
   });
 
@@ -112,16 +112,22 @@ describe("reviewerCommandGateGuidance", () => {
   it("documents document-scope blocker vs advisory command routing", () => {
     const instruction = buildReviewerFindingsPassInstruction("document");
 
-    expect(instruction).toContain("`pairflow pass --finding` for blockers is valid only");
-    expect(instruction).toContain("`pairflow converged --finding` (`P2/P3` only)");
-    expect(instruction).toContain("plain `pairflow converged` when clean");
+    expect(instruction).toContain(
+      "canonical `pairflow agent emit --kind pass ... --finding ...` for blockers is valid only"
+    );
+    expect(instruction).toContain(
+      "`pairflow agent emit --kind convergence ... --finding ...` (`P2/P3` only)"
+    );
+    expect(instruction).toContain("plain canonical convergence when clean");
   });
 
   it("keeps explicit pass-with-finding guidance for code scope blockers", () => {
     const instruction = buildReviewerFindingsPassInstruction("code");
 
     expect(instruction).toContain("If blocker findings (`P0/P1`) remain");
-    expect(instruction).toContain("`pairflow pass --summary ... --finding 'P1:...|artifact://...'`");
+    expect(instruction).toContain(
+      "`pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --summary ... --finding 'P1:...|artifact://...'`"
+    );
   });
 
   it("retains known forbidden command phrases for drift detection", () => {

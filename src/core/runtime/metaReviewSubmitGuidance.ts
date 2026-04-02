@@ -5,7 +5,7 @@ const metaReviewSubmitApproveParityNote =
   "For recommendation=approve, split fields are mandatory, findings_claimed_open_total = findings_blocking_open_total + findings_advisory_open_total, and findings_blocking_open_total must be 0.";
 
 export function buildMetaReviewSubmitUsageLine(): string {
-  return "pairflow bubble meta-review submit --id <id> --round <n> --recommendation approve|rework|inconclusive --summary <text> [--rework-target-message <text>] --report-json <json> [--repo <path>] [--json]";
+  return "pairflow agent emit --kind meta_review_result --repo <path> --bubble-id <id> --handoff-id <id> --round <n> --recommendation approve|rework|inconclusive --summary <text> [--rework-target-message <text>] --report-json <json> [--ref <artifact-path>]...";
 }
 
 export function buildMetaReviewSubmitCommandTemplate(input?: {
@@ -14,7 +14,7 @@ export function buildMetaReviewSubmitCommandTemplate(input?: {
 }): string {
   const bubbleId = input?.bubbleId ?? "<id>";
   const round = input?.round === undefined ? "<n>" : String(input.round);
-  return `pairflow bubble meta-review submit --id ${bubbleId} --round ${round} --recommendation <approve|rework|inconclusive> --summary "<summary>" [--rework-target-message "<message>"] --report-json '${metaReviewSubmitReportJsonParityFields}'`;
+  return `pairflow agent emit --kind meta_review_result --repo <repo> --bubble-id ${bubbleId} --handoff-id <handoff-id> --round ${round} --recommendation <approve|rework|inconclusive> --summary "<summary>" [--rework-target-message "<message>"] --report-json '${metaReviewSubmitReportJsonParityFields}'`;
 }
 
 export function buildMetaReviewSubmitApproveParityNote(): string {

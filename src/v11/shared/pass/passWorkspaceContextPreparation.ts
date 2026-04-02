@@ -11,11 +11,13 @@ import {
   type ResolvedBubbleWorkspace
 } from "../../../core/bubble/workspaceResolution.js";
 import { readStateSnapshot, type LoadedStateSnapshot } from "../../../core/state/stateStore.js";
+import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
 import { resolvePassHandoff, type ResolvedPassHandoff } from "../../domain/pass/handoff.js";
 import type { AgentName, BubbleStateSnapshot } from "../../../types/bubble.js";
 
 export interface PreparePassWorkspaceContextInput {
   cwd?: string | undefined;
+  authoritativeContext?: ActorEmitContextSnapshot | undefined;
   now: Date;
   nowIso: string;
   createError: PairflowCreateCommandError;
@@ -52,7 +54,20 @@ export async function preparePassWorkspaceContext(
     dependencies.resolveIdeationMetadata ?? resolveIdeationMetadata;
   const resolveHandoff = dependencies.resolvePassHandoff ?? resolvePassHandoff;
 
-  const resolved = await resolveBubble(input.cwd);
+  const authoritativeResolved: ResolvedBubbleWorkspace | undefined =
+    input.authoritativeContext === undefined
+      ? undefined
+      : {
+          bubbleId: input.authoritativeContext.bubble_id,
+          bubbleConfig: input.authoritativeContext.resolved.bubbleConfig,
+          bubblePaths: input.authoritativeContext.resolved.bubblePaths,
+          repoPath: input.authoritativeContext.repo,
+          worktreePath: input.authoritativeContext.worktree_path,
+          cwd: input.authoritativeContext.worktree_path
+        };
+  const resolved =
+    authoritativeResolved
+    ?? await resolveBubble(input.cwd);
   const bubbleIdentity = await ensureBubbleIdentity({
     bubbleId: resolved.bubbleId,
     repoPath: resolved.repoPath,
@@ -62,7 +77,9 @@ export async function preparePassWorkspaceContext(
   });
   resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
 
-  const loadedState = await readState(resolved.bubblePaths.statePath);
+  const loadedState =
+    input.authoritativeContext?.loaded_state
+    ?? await readState(resolved.bubblePaths.statePath);
   const state = loadedState.state;
   const ideationMetadata = resolveIdeation(resolved.bubbleConfig);
   if (
