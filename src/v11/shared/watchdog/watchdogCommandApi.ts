@@ -1,4 +1,7 @@
-import { computeWatchdogStatus } from "../../../core/runtime/watchdog.js";
+import {
+  computeWatchdogStatus,
+  type WatchdogStatus
+} from "../../../core/runtime/watchdog.js";
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
@@ -18,6 +21,10 @@ import {
   type ReadWatchdogPaneActivityResult,
   type WatchdogPaneActivityRecord
 } from "./watchdogPaneActivityStore.js";
+import {
+  appendWatchdogTrace,
+  type WatchdogTraceEntry
+} from "./watchdogTraceStore.js";
 import type {
   BubbleWatchdogDependencies,
   BubbleWatchdogInput,
@@ -77,6 +84,17 @@ export async function runBubbleWatchdog(
     emitDelivery: context.emitDelivery
   });
   if (pendingRework !== null) {
+    await appendWatchdogTrace({
+      runtimeDir: resolved.bubblePaths.runtimeDir,
+      bubbleId: resolved.bubbleId,
+      entry: buildWatchdogTraceEntry({
+        nowIso,
+        state,
+        watchdog: null,
+        paneActivity: null,
+        result: pendingRework
+      })
+    });
     return pendingRework;
   }
 
@@ -92,12 +110,24 @@ export async function runBubbleWatchdog(
     writePaneActivity,
     samplePaneActivity
   });
-  return resolveWatchdogLifecycleRoute({
+  const result = await resolveWatchdogLifecycleRoute({
     context,
     monitored: watchdog.monitored,
     expired: watchdog.expired,
     paneActivity
   });
+  await appendWatchdogTrace({
+    runtimeDir: resolved.bubblePaths.runtimeDir,
+    bubbleId: resolved.bubbleId,
+    entry: buildWatchdogTraceEntry({
+      nowIso,
+      state,
+      watchdog,
+      paneActivity,
+      result
+    })
+  });
+  return result;
 }
 
 export function asBubbleWatchdogError(error: unknown): never {
@@ -252,5 +282,123 @@ async function maybeMonitorWatchdogPaneActivity(input: {
     readStatus: readResult.status,
     currentRecord,
     sampleResult
+  };
+}
+
+function buildWatchdogTraceEntry(input: {
+  nowIso: string;
+  state: BubbleWatchdogResult["state"];
+  watchdog: WatchdogStatus | null;
+  paneActivity:
+    | {
+        readStatus: "ok" | "missing" | "invalid";
+        currentRecord: WatchdogPaneActivityRecord | null;
+        sampleResult: PaneActivitySampleResult | null;
+      }
+    | null;
+  result: BubbleWatchdogResult;
+}): WatchdogTraceEntry {
+  return {
+    ts: input.nowIso,
+    bubble_id: input.state.bubble_id,
+    state: input.state.state,
+    active_agent: input.state.active_agent,
+    active_role: input.state.active_role,
+    ...(input.watchdog !== null
+      ? {
+          watchdog: {
+            monitored: input.watchdog.monitored,
+            expired: input.watchdog.expired,
+            timeout_minutes: input.watchdog.timeoutMinutes,
+            reference_timestamp: input.watchdog.referenceTimestamp,
+            deadline_timestamp: input.watchdog.deadlineTimestamp
+          }
+        }
+      : {}),
+    ...(input.paneActivity !== null
+      ? {
+          pane_activity: buildWatchdogTracePaneActivity(input.paneActivity)
+        }
+      : {}),
+    result: {
+      escalated: input.result.escalated,
+      reason: input.result.reason,
+      state: input.result.state.state,
+      ...(input.result.sequence !== undefined
+        ? { sequence: input.result.sequence }
+        : {})
+    }
+  };
+}
+
+function buildWatchdogTracePaneActivity(input: {
+  readStatus: "ok" | "missing" | "invalid";
+  currentRecord: WatchdogPaneActivityRecord | null;
+  sampleResult: PaneActivitySampleResult | null;
+}): NonNullable<WatchdogTraceEntry["pane_activity"]> {
+  const sampleResult = input.sampleResult;
+  if (sampleResult === null) {
+    return {
+      read_status: input.readStatus,
+      sample_status: "skipped",
+      ...(input.currentRecord !== null
+        ? {
+            current_sampled_at: input.currentRecord.sampled_at,
+            current_last_changed_at: input.currentRecord.last_changed_at,
+            ...(input.currentRecord.last_sample_status !== undefined
+              ? {
+                  current_last_sample_status: input.currentRecord.last_sample_status
+                }
+              : {})
+          }
+        : {})
+    };
+  }
+
+  if (sampleResult.status === "sampled") {
+    return {
+      read_status: input.readStatus,
+      sample_status: "sampled",
+      changed: sampleResult.changed,
+      sampled_at: sampleResult.sampled_at,
+      pane_hash: sampleResult.pane_hash,
+      session_name: sampleResult.session_name,
+      target_pane: sampleResult.target_pane,
+      ...(input.currentRecord !== null
+        ? {
+            current_sampled_at: input.currentRecord.sampled_at,
+            current_last_changed_at: input.currentRecord.last_changed_at,
+            ...(input.currentRecord.last_sample_status !== undefined
+              ? {
+                  current_last_sample_status: input.currentRecord.last_sample_status
+                }
+              : {})
+          }
+        : {})
+    };
+  }
+
+  return {
+    read_status: input.readStatus,
+    sample_status: sampleResult.status,
+    sampled_at: sampleResult.sampled_at,
+    sample_error: sampleResult.error,
+    ...(sampleResult.status === "pane_unreadable"
+      ? {
+          session_name: sampleResult.session_name,
+          target_pane: sampleResult.target_pane
+        }
+      : {}),
+    ...(input.currentRecord !== null
+      ? {
+          current_sampled_at: input.currentRecord.sampled_at,
+          current_last_changed_at: input.currentRecord.last_changed_at,
+          ...(input.currentRecord.last_sample_status !== undefined
+            ? {
+                current_last_sample_status: input.currentRecord.last_sample_status
+              }
+            : {})
+        }
+      : {})
   };
 }

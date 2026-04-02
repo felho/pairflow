@@ -16,6 +16,9 @@ import {
   readWatchdogPaneActivity,
   writeWatchdogPaneActivity
 } from "../../../../src/v11/shared/watchdog/watchdogPaneActivityStore.js";
+import {
+  getWatchdogTracePath
+} from "../../../../src/v11/shared/watchdog/watchdogTraceStore.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { initGitRepository } from "../../../helpers/git.js";
 
@@ -37,6 +40,18 @@ afterEach(async () => {
 });
 
 describe("watchdogCommandApi", () => {
+  async function readWatchdogTraceEntries(
+    runtimeDir: string,
+    bubbleId: string
+  ): Promise<Record<string, unknown>[]> {
+    const raw = await readFile(getWatchdogTracePath(runtimeDir, bubbleId), "utf8");
+    return raw
+      .trim()
+      .split("\n")
+      .filter((line) => line.trim().length > 0)
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+  }
+
   function sampledPaneActivity(
     sampledAt: string,
     paneHash: string,
@@ -116,6 +131,39 @@ describe("watchdogCommandApi", () => {
     expect(stored.record.pane_hash).toBe("pane-hash-01");
     expect(stored.record.last_changed_at).toBe("2026-02-22T12:03:00.000Z");
     expect(stored.record.last_sample_status).toBe("sampled");
+
+    const traceEntries = await readWatchdogTraceEntries(
+      bubble.paths.runtimeDir,
+      bubble.bubbleId
+    );
+    expect(traceEntries).toHaveLength(1);
+    expect(traceEntries[0]).toMatchObject({
+      ts: "2026-02-22T12:03:00.000Z",
+      bubble_id: bubble.bubbleId,
+      state: "RUNNING",
+      active_role: "implementer",
+      watchdog: {
+        monitored: true,
+        expired: false,
+        timeout_minutes: bubble.config.watchdog_timeout_minutes
+      },
+      pane_activity: {
+        read_status: "missing",
+        sample_status: "sampled",
+        changed: true,
+        sampled_at: "2026-02-22T12:03:00.000Z",
+        pane_hash: "pane-hash-01",
+        target_pane: "pf-watchdog-v11:0.1",
+        current_sampled_at: "2026-02-22T12:03:00.000Z",
+        current_last_changed_at: "2026-02-22T12:03:00.000Z",
+        current_last_sample_status: "sampled"
+      },
+      result: {
+        escalated: false,
+        reason: "not_expired",
+        state: "RUNNING"
+      }
+    });
   });
 
   it("rate-limits pane sampling to once per minute", async () => {
@@ -169,6 +217,32 @@ describe("watchdogCommandApi", () => {
     }
     expect(stored.record.sampled_at).toBe("2026-02-22T12:03:00.000Z");
     expect(stored.record.pane_hash).toBe("pane-hash-01");
+
+    const traceEntries = await readWatchdogTraceEntries(
+      bubble.paths.runtimeDir,
+      bubble.bubbleId
+    );
+    expect(traceEntries).toHaveLength(2);
+    expect(traceEntries[0]?.pane_activity).toMatchObject({
+      sample_status: "sampled",
+      sampled_at: "2026-02-22T12:03:00.000Z"
+    });
+    expect(traceEntries[1]).toMatchObject({
+      ts: "2026-02-22T12:03:30.000Z",
+      bubble_id: bubble.bubbleId,
+      pane_activity: {
+        read_status: "ok",
+        sample_status: "skipped",
+        current_sampled_at: "2026-02-22T12:03:00.000Z",
+        current_last_changed_at: "2026-02-22T12:03:00.000Z",
+        current_last_sample_status: "sampled"
+      },
+      result: {
+        escalated: false,
+        reason: "not_expired",
+        state: "RUNNING"
+      }
+    });
   });
 
   it("keeps RUNNING bubble active after timeout when pane changed recently", async () => {
