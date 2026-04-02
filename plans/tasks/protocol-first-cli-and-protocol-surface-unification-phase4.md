@@ -14,16 +14,24 @@ target_files:
   - src/cli/commands/agent/shared/findingParser.ts
   - src/cli/commands/bubble/metaReview.ts
   - src/v11/application/actorProtocol/emitActorProtocolV11.ts
+  - src/v11/application/pass/passCommandContract.ts
+  - src/v11/application/converged/runConvergedFlowContract.ts
   - src/v11/application/metaReview/metaReviewCliCommand.ts
   - src/v11/application/metaReview/metaReviewCliOptions.ts
   - src/v11/application/metaReview/metaReviewCliDispatcher.ts
+  - src/v11/shared/askHuman/askHumanCommandContract.ts
+  - src/v11/shared/converged/convergedCommandTypes.ts
   - src/types/protocol.ts
   - src/core/protocol/envelope.ts
   - src/core/protocol/validators.ts
   - src/core/agent/pass.ts
   - src/core/agent/askHuman.ts
   - src/core/agent/converged.ts
+  - src/core/bubble/workspaceResolution.ts
+  - src/core/bubble/bubbleLookup.ts
+  - src/core/bubble/repoResolution.ts
   - src/core/bubble/metaReview.ts
+  - src/core/runtime/pairflowCommand.ts
   - src/core/runtime/metaReviewSubmitGuidance.ts
   - src/core/runtime/tmuxDelivery.ts
   - src/v11/shared/start/startCommandPrompts.ts
@@ -43,6 +51,9 @@ target_files:
   - tests/contracts/v11/askHuman.contract.runner.ts
   - tests/contracts/v11/converged.contract.runner.ts
   - tests/contracts/v11/metaReviewSubmitCoverage.test.ts
+  - tests/core/bubble/workspaceResolution.test.ts
+  - tests/core/bubble/bubbleLookup.test.ts
+  - tests/core/runtime/pairflowCommand.test.ts
 prd_ref: null
 plan_ref: plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
@@ -67,6 +78,7 @@ Ez a fazis surface-unification fazis: a retained compatibility call-spellingek P
 3. `pass`, `ask-human` es `converged` kulon parser/help/dispatch formaban elnek, mikozben a meta-review submit tovabbra is operatori `bubble` namespace alatt maradt, noha actor output.
 4. Runtime promptok, help text-ek es README peldak meg mindig actor-specifikus commandokat ajanlanak primer surface-kent.
 5. Ez parser driftet, docs driftet es meta-review special-case gondolkodast tart eletben, ami Phase 5 cleanup elott felesleges compatibility feluleteket hagy a rendszerben.
+6. A jelenlegi actor-write pathok reszben tovabbra is implicit shell/worktree contextbol (`cwd`, worktree ancestry, env fallback) probaljak feloldani a bubble/repo authorityt, ami runtime-couplingot es lifecycle-beragadasnak latszo hibakat okozhat, ha a subprocess elveszti a vart munkakonyvtarat.
 
 ### In Scope
 
@@ -96,6 +108,7 @@ Ez a fazis surface-unification fazis: a retained compatibility call-spellingek P
 6. Ha a canonical actor surface nem tudja veszteseg nelkul lekepezni valamely jelenlegi actor output contractot, a task nincs keszen; silent downgrade nem engedett.
 7. Minden retained legacy spellingrol explicitten ki kell mondani, hogy transitional compatibility path; Phase 4-ben nem maradhat olyan legacy surface, amelyet a docs/help/prompt primary vagy vele egyenrangu ajanlaskent tanit.
 8. A meta-review actor output kulon kezelese csak explicit first-principle indoklassal maradhatna fenn; torteneti namespace vagy rollout-inercia onmagaban nem erv.
+9. A canonical actor write contract explicit context contract legyen: a repo/bubble/handoff authority ne a shell `cwd`-jebol vagy env-bol kovetkezzen, hanem explicit canonical input mezokent jelenjen meg.
 
 ### Contract Boundary / Blast Radius
 
@@ -133,18 +146,21 @@ Ez a fazis surface-unification fazis: a retained compatibility call-spellingek P
 7. `first-principle justification` = olyan explicit erveles, amely bizonyitja, hogy egy retained command path kulon letezese a target modellben is szukseges a payload-shape, operator workflow, kulso integracio vagy biztonsagi boundary miatt; puszta torteneti elozo allapot nem eleg.
 8. `retained legacy spelling` = olyan korabbi command-spelling vagy alias, amely futtathato maradhat, de csak adapter-only transitional compatibility command pathkent.
 9. `caller-compatibility inventory` = explicit required-now evidence, amely felsorolja a meg letezo runtime/scripted caller-eket, megindokolja, miert nem migralhatok Phase 4-ben, es rogzitett Phase 5 migration/removal pathot ad minden retained kivetelhez; ennek canonical checked-in home-ja ebben a taskban a `plans/tasks/protocol-first-cli-and-protocol-surface-unification-phase4-retained-submit-callers.md`.
+10. `explicit actor context` = a canonical actor-emission input kozos authority-resze: legalabb `repo`, `bubble_id`, `handoff_id`, valamint fail-closed guard mezkent `expected_role`, `expected_round`, `expected_state_fingerprint` vagy ezekkel ekvivalens canonical mezok.
 
 ### Phase 4 Surface Decision
 
 1. A Phase 4 canonical actor-facing CLI-je `pairflow agent emit` legyen.
 2. `pairflow pass`, `pairflow ask-human`, `pairflow converged`, `pairflow agent pass|ask-human|converged`, `pairflow bubble meta-review submit`, valamint `orchestra pass|ask-human|converged` Phase 4-ben legfeljebb transitional compatibility adapterkent maradhatnak.
 3. `pairflow bubble meta-review run|status|last-report|recover` operatori `bubble` surface marad; ezek nem actor-emission entrypointok.
-4. A canonical emit input legalabb egy role-neutral `kind` mezot, kozos `refs[]` surface-t es explicit kind-specific payload contractot hordozzon.
-5. A `meta_review_result` ugyanazon shared emission boundaryn menjen at, mint a tobbi actor output; nem maradhat kulon bubble-submit special case.
-6. Runtime guidance, promptok, help text-ek es docs primary peldai a canonical actor surface-re mutassanak; retained legacy formak legfeljebb explicit transitional compatibility megjegyzesben szerepelhetnek.
-7. A top-level vagy alias actor commandok nem tarthatnak meg sajat policy-validaciot, sajat dispatch-agat vagy sajat domain error-szemantikat.
-8. Phase 4 nem vezethet be uj meta-review-specifikus actor-facing subtree-t vagy uj bubble-namespace actor write pathot.
-9. Az `orchestra` retained alias surface csak a meglevo `pass|ask-human|converged` actor outputokra terjedhet ki; nem nohet generic `emit`, operatori `bubble`, vagy meta-review-specifikus write surface iranyaba.
+4. A canonical emit input legalabb egy role-neutral `kind` mezot, kozos `refs[]` surface-t, explicit kind-specific payload contractot, valamint explicit actor-context authority mezoket hordozzon.
+5. Az explicit actor-context authority Phase 4 canonical minimuma: `repo`, `bubble_id`, `handoff_id`; fail-closed guardkent `expected_role`, `expected_round`, `expected_state_fingerprint` vagy ezekkel ekvivalens canonical mezok is tamogatottak legyenek.
+6. A canonical actor surface primer szerzodeskent ne tamaszkodjon `cwd`, worktree ancestry vagy env-feloldasra; az ilyen bubble-context inference legfeljebb transitional compatibility fallback lehet.
+7. A `meta_review_result` ugyanazon shared emission boundaryn menjen at, mint a tobbi actor output; nem maradhat kulon bubble-submit special case.
+8. Runtime guidance, promptok, help text-ek es docs primary peldai a canonical actor surface-re mutassanak; retained legacy formak legfeljebb explicit transitional compatibility megjegyzesben szerepelhetnek.
+9. A top-level vagy alias actor commandok nem tarthatnak meg sajat policy-validaciot, sajat dispatch-agat vagy sajat domain error-szemantikat.
+10. Phase 4 nem vezethet be uj meta-review-specifikus actor-facing subtree-t vagy uj bubble-namespace actor write pathot.
+11. Az `orchestra` retained alias surface csak a meglevo `pass|ask-human|converged` actor outputokra terjedhet ki; nem nohet generic `emit`, operatori `bubble`, vagy meta-review-specifikus write surface iranyaba.
 
 ### Transitional Compatibility Policy
 
@@ -154,13 +170,14 @@ Ez a fazis surface-unification fazis: a retained compatibility call-spellingek P
 4. `TCP4`: A retained aliasok vagy subcommandok teljes torlese nem Phase 4 acceptance criterion, kiveve ha egy adott pathrol kiderul, hogy nem mappelheto first-principle szerint a canonical actor surface-re.
 5. `TCP5`: Ha a `bubble meta-review submit` barmilyen Phase 4 retained formaja megmarad, annak indoklasat a lossless adapter-szerep es a Phase 5 removal-path szintjen kell leirni; kulon meta-review domain branch nem maradhat.
 6. `TCP6`: Az `orchestra` retained surface Phase 4-ben csak bounded alias-layer lehet: a scope-ja explicit inventoryval rogzitett, es minden ezen kivuli command explicit unsupported marad.
+7. `TCP7`: A legacy adapterek ideiglenesen hasznalhatnak `cwd`/worktree/env alapjan bubble-context feloldast ahhoz, hogy explicit canonical actor-contextet allitsanak elo, de ez nem valhat a canonical `agent emit` szerzodes reszeve, es Phase 5-re cleanup scope.
 
 ### Retained Submit Justification
 
 1. A retained `bubble meta-review submit` Phase 4-ben csak explicit first-principle justification mellett elfogadhato.
 2. A justification ebben a taskban a kovetkezo:
    - a Phase 4 cel a canonical actor-emission boundary bevezetese, nem pedig a meglevo meta-review automation, scriptelt caller-ek es kulso integraciok egyideju torese; a runtime guidance/prompt/help cleanup kulon docs-migracios kotelezettseg marad, nem retained caller-bizonyitek;
-   - a retained `bubble meta-review submit` adapterkent lehetove teszi, hogy a meglevo caller-ek ugyanazt a canonical `meta_review_result` pathot erjek el valtozatlan command spellinggel;
+   - a retained `bubble meta-review submit` adapterkent lehetove teszi, hogy a meglevo caller-ek ugyanazt a canonical `meta_review_result` pathot erjek el valtozatlan command spellinggel, mikozben a bubble/repo/handoff authority mar explicit canonical contextkent megy tovabb a shared boundaryra;
    - ez leválasztja a domain/surface unification kockazatat a Phase 5-re tartozó caller-migracio es alias-cleanup kockazatarol.
 3. A retained `bubble meta-review submit` emiatt nem operatori canonical path, hanem explicit compatibility exception, amely:
    - nem tarthat fenn kulon parser/domain/persistence branch-et,
@@ -180,11 +197,11 @@ Ez a fazis surface-unification fazis: a retained compatibility call-spellingek P
 
 | ID | File | Function/Entry | Exact Signature (args -> return) | Insertion Point | Expected Behavior | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|---|
-| CS1 | `src/cli/index.ts` + `src/cli/commands/agent/emit.ts` | canonical actor CLI routing | `runCli(argv: string[]) -> Promise<number>`, `runAgentEmitCommand(args: string[], cwd?: string) -> Promise<ActorEmitResult | null>` | top-level CLI dispatch + uj `agent emit` entrypoint | Bevezeti a canonical actor-facing `agent emit` entrypointot; a legacy actor command family innentol ugyanarra a shared emission boundaryra route-ol, es nem tarthat fenn kulon domain dispatch pathot | P1 | required-now | Phase 4 coverage checklist explicit actor entrypoint unificationt kovetel |
-| CS2 | `src/cli/commands/agent/pass.ts` + `src/cli/commands/agent/askHuman.ts` + `src/cli/commands/agent/converged.ts` + `src/cli/commands/agent/shared/findingParser.ts` + `src/cli/orchestra.ts` | legacy actor adapters | legacy `parse...CommandOptions(...)`, `run...Command(...)` helpers -> parsed input / result | legacy top-level, `agent ...`, valamint `orchestra ...` surfaces | A legacy actor commandok csak compatibility adapterkent maradnak: sajat UX-parse megtarthato, de a vegso normalized input ugyanarra a canonical emit boundaryra menjen, es sem parseren tulmutato validation, sem sajat domain dispatch ne maradjon bennuk; a shared finding parser scope-ja is ide tartozik, mert a `pass`/`converged` adapter parity es fail-closed mapping contractjat kozosen hordozza | P1 | required-now | Phase 4 retirement cel: actor-specifikus command semantics megszuntetese |
+| CS1 | `src/cli/index.ts` + `src/cli/commands/agent/emit.ts` + `src/v11/application/pass/passCommandContract.ts` + `src/v11/shared/askHuman/askHumanCommandContract.ts` + `src/v11/shared/converged/convergedCommandTypes.ts` + `src/v11/application/converged/runConvergedFlowContract.ts` | canonical actor CLI routing and context contract | `runCli(argv: string[]) -> Promise<number>`, `runAgentEmitCommand(args: string[], cwd?: string) -> Promise<ActorEmitResult | null>` | top-level CLI dispatch + uj `agent emit` entrypoint | Bevezeti a canonical actor-facing `agent emit` entrypointot explicit actor-context contracttal; a legacy actor command family innentol ugyanarra a shared emission boundaryra route-ol, es nem tarthat fenn kulon domain dispatch pathot vagy implicit shell-contextre epulo canonical authority-feloldast | P1 | required-now | Phase 4 coverage checklist explicit actor entrypoint unificationt kovetel |
+| CS2 | `src/cli/commands/agent/pass.ts` + `src/cli/commands/agent/askHuman.ts` + `src/cli/commands/agent/converged.ts` + `src/cli/commands/agent/shared/findingParser.ts` + `src/cli/orchestra.ts` | legacy actor adapters | legacy `parse...CommandOptions(...)`, `run...Command(...)` helpers -> parsed input / result | legacy top-level, `agent ...`, valamint `orchestra ...` surfaces | A legacy actor commandok csak compatibility adapterkent maradnak: sajat UX-parse megtarthato, de a vegso normalized input ugyanarra a canonical emit boundaryra menjen, es sem parseren tulmutato validation, sem sajat domain dispatch ne maradjon bennuk; a shared finding parser scope-ja is ide tartozik, mert a `pass`/`converged` adapter parity es fail-closed mapping contractjat kozosen hordozza. A retained adaptereknek a legacy shell/worktree contextbol is explicit canonical `repo`/`bubble_id`/`handoff_id` mezoket kell eloallitaniuk a shared boundary elott. | P1 | required-now | Phase 4 retirement cel: actor-specifikus command semantics megszuntetese |
 | CS3 | `src/cli/commands/bubble/metaReview.ts` + `src/v11/application/metaReview/metaReviewCliCommand.ts` + `src/v11/application/metaReview/metaReviewCliOptions.ts` + `src/v11/application/metaReview/metaReviewCliDispatcher.ts` | meta-review operator vs actor split | `runBubbleMetaReviewCommand(args, cwd?) -> Promise<BubbleMetaReviewCommandResult | null>` | `bubble meta-review` subcommand family | A `run|status|last-report|recover` operatori surface maradjon a `bubble` namespace alatt; a `submit` nem lehet tovabb primer actor-facing path, legfeljebb compatibility adapter, amely 1:1 a canonical `agent emit --kind meta_review_result` inputra mappel, es retained exceptionkent csak explicit caller-compatibility inventory mellett maradhat | P1 | required-now | Phase 4 explicitten rendezi a human-facing vs actor-facing CLI boundaryt |
-| CS4 | `src/v11/application/actorProtocol/emitActorProtocolV11.ts` + `src/types/protocol.ts` + `src/core/protocol/envelope.ts` + `src/core/protocol/validators.ts` | canonical actor emit schema anchor | `emitActorProtocolFromWorkspace(input: ActorEmitInput, deps?) -> Promise<ActorEmitResult>` | uj kozos actor-emission application boundary + protocol validation | Az `ActorEmitInput` vagy vele ekvivalens canonical input-union legyen az egyetlen schema-anchor a `pass`, `human_question`, `convergence` es `meta_review_result` output kindokhoz, kozos mezokkel (`kind`, opcionális `refs[]`) es kind-specifikus payloadokkal; nincs kulon meta-review submit parser/domain shortcut | P1 | required-now | Phase 4 target: same generic surface fedje a result es human-escalation emissiont |
-| CS5 | `src/core/agent/pass.ts` + `src/core/agent/askHuman.ts` + `src/core/agent/converged.ts` + `src/core/bubble/metaReview.ts` | shared execution backend ownership | actor-output writers / submit executors -> typed results | durable protocol emit es meta-review result persistence backend | A jelenlegi actor-specific core pathok kozos kind-handler vagy adapter szerepre szukoljenek; a meta-review submit authority ugyanazon shared actor-emission policyhoz igazodjon, mint a tobbi actor output | P1 | required-now | meta-review submit Phase 4-ben nem maradhat kulon submit/gate special case |
+| CS4 | `src/v11/application/actorProtocol/emitActorProtocolV11.ts` + `src/types/protocol.ts` + `src/core/protocol/envelope.ts` + `src/core/protocol/validators.ts` | canonical actor emit schema anchor | `emitActorProtocolFromWorkspace(input: ActorEmitInput, deps?) -> Promise<ActorEmitResult>` | uj kozos actor-emission application boundary + protocol validation | Az `ActorEmitInput` vagy vele ekvivalens canonical input-union legyen az egyetlen schema-anchor a `pass`, `human_question`, `convergence` es `meta_review_result` output kindokhoz, kozos mezokkel (`kind`, `repo`, `bubble_id`, `handoff_id`, opcionális `refs[]`) es kind-specifikus payloadokkal; fail-closed guard mezkent `expected_role`, `expected_round`, `expected_state_fingerprint` vagy ezekkel ekvivalens canonical mezok is tamogatottak legyenek. Nincs kulon meta-review submit parser/domain shortcut es nincs implicit `cwd`-authority a canonical schema reszekent. | P1 | required-now | Phase 4 target: same generic surface fedje a result es human-escalation emissiont |
+| CS5 | `src/core/agent/pass.ts` + `src/core/agent/askHuman.ts` + `src/core/agent/converged.ts` + `src/core/bubble/metaReview.ts` + `src/core/bubble/workspaceResolution.ts` + `src/core/bubble/bubbleLookup.ts` + `src/core/bubble/repoResolution.ts` + `src/core/runtime/pairflowCommand.ts` | shared execution backend ownership and transitional context fallback | actor-output writers / submit executors -> typed results | durable protocol emit, meta-review result persistence backend, transitional context-resolution helpers | A jelenlegi actor-specific core pathok kozos kind-handler vagy adapter szerepre szukoljenek; a meta-review submit authority ugyanazon shared actor-emission policyhoz igazodjon, mint a tobbi actor output. Ha Phase 4-ben retained adapterek meg implicit bubble-context feloldast hasznalnak, az csak transitional helper lehet az explicit canonical actor-context eloallitasahoz; a canonical actor path nem lehet ettol fuggo. | P1 | required-now | meta-review submit Phase 4-ben nem maradhat kulon submit/gate special case, es a shell-context inference csak compatibility lehet |
 | CS6 | `src/core/runtime/metaReviewSubmitGuidance.ts` + `src/core/runtime/tmuxDelivery.ts` + `src/v11/shared/start/startCommandPrompts.ts` + `src/v11/shared/start/startCommandImplementerPrompts.ts` + `src/v11/shared/start/startCommandResumeKickoffMessageBuilders.ts` + `src/v11/shared/start/startCommandResumeImplementerPrompt.ts` | runtime guidance and prompt text | prompt/help text builders -> `string` | startup promptok, resume promptok, tmux delivery guidance, meta-review submit usage text | Minden runtime guidance a canonical actor surface-t ajanlja primer utnak; legacy command family legfeljebb compatibility note-kent jelenhet meg, actor-specifikus primer command-ajnalas nem maradhat | P1 | required-now | Phase 4 coverage checklist explicitten emliti a guidance/prompt/help text cleanupot |
 | CS7 | `README.md` + `docs/pairflow-initial-design.md` | docs and help boundary sync | markdown | user-facing usage es architecture leiras | A docs rogzitsek, hogy a human-facing bubble lifecycle surface kulon all az actor-emission surface-tol, es hogy a canonical actor output immar egyetlen generic emit boundaryn megy at | P1 | required-now | docs drift itt mar contract-level blocker |
 | CS8 | `tests/cli/passCommand.test.ts` + `tests/cli/askHumanCommand.test.ts` + `tests/cli/convergedCommand.test.ts` + `tests/cli/orchestra.test.ts` + `tests/cli/bubbleMetaReviewCommand.test.ts` + `tests/v11/application/metaReview/metaReviewCliEntrypointParity.test.ts` + `tests/contracts/v11/pass.contract.runner.ts` + `tests/contracts/v11/askHuman.contract.runner.ts` + `tests/contracts/v11/converged.contract.runner.ts` + `tests/contracts/v11/metaReviewSubmitCoverage.test.ts` | regression and contract coverage | vitest / contract runners | CLI parity, adapter parity, canonical emit contract | A tesztek igazoljak, hogy a canonical emit boundary az egyetlen domain path, a legacy parancsok csak adapterek, es a meta-review submit ugyanarra a contractra all at, mint a tobbi actor output | P1 | required-now | Phase 4 exit criteria csak explicit CLI/contract coverage mellett ellenorizheto |
@@ -194,8 +211,9 @@ Ez a fazis surface-unification fazis: a retained compatibility call-spellingek P
 
 | Contract | Current | Target | Required Fields | Optional Fields | Compatibility | Priority | Timing |
 |---|---|---|---|---|---|---|---|
-| Canonical actor-facing CLI entrypoint | tobb kulon actor command family (`pass`, `ask-human`, `converged`, `bubble meta-review submit`) | egyetlen canonical `pairflow agent emit` entrypoint | `kind` | `refs`, `json` vagy mas output-mode kapcsolo, ha szukseges | additive in Phase 4, legacy commands adapter-only | P1 | required-now |
-| Canonical actor emit input schema | kindonkent szetszort CLI/payload elvarasok | egyetlen schema-anchor (`ActorEmitInput` vagy ekvivalens canonical input-union) | kozos: `kind`; `pass`: `summary`; `human_question`: `question`; `convergence`: `summary`; `meta_review_result`: `round`, `recommendation`, `summary`, `report_json` | kozos: `refs[]`; `pass`: `intent`, `findings`, `no_findings`; `convergence`: `findings`; `meta_review_result`: `rework_target_message` | legacy spellings ugyanebbe a schema-anchorba mapelnek | P1 | required-now |
+| Canonical actor-facing CLI entrypoint | tobb kulon actor command family (`pass`, `ask-human`, `converged`, `bubble meta-review submit`) | egyetlen canonical `pairflow agent emit` entrypoint | `kind`, `repo`, `bubble_id`, `handoff_id` | `refs`, `json` vagy mas output-mode kapcsolo, `expected_role`, `expected_round`, `expected_state_fingerprint` | additive in Phase 4, legacy commands adapter-only | P1 | required-now |
+| Canonical actor emit input schema | kindonkent szetszort CLI/payload elvarasok + implicit shell/worktree contextfeloldas | egyetlen schema-anchor (`ActorEmitInput` vagy ekvivalens canonical input-union) | kozos: `kind`, `repo`, `bubble_id`, `handoff_id`; `pass`: `summary`; `human_question`: `question`; `convergence`: `summary`; `meta_review_result`: `round`, `recommendation`, `summary`, `report_json` | kozos: `refs[]`, `expected_role`, `expected_round`, `expected_state_fingerprint`; `pass`: `intent`, `findings`, `no_findings`; `convergence`: `findings`; `meta_review_result`: `rework_target_message` | legacy spellings ugyanebbe a schema-anchorba mapelnek | P1 | required-now |
+| Canonical actor context authority | a repo/bubble authority reszben implicit `cwd`/worktree/env inference-bol szarmazik | explicit actor-context contract az egyetlen canonical actor write authority | `repo`, `bubble_id`, `handoff_id` | `expected_role`, `expected_round`, `expected_state_fingerprint` | implicit inference legfeljebb transitional adapter helper lehet | P1 | required-now |
 | Handoff output kind | `pairflow pass` command-specific payload | `agent emit --kind pass` vagy ezzel ekvivalens canonical input | `summary` | `intent`, `findings`, `no_findings`, `refs` | legacy `pass` adapter only | P1 | required-now |
 | Human escalation output kind | `pairflow ask-human` command-specific payload | `agent emit --kind human_question` vagy ezzel ekvivalens canonical input | `question` | `refs` | legacy `ask-human` adapter only | P1 | required-now |
 | Convergence output kind | `pairflow converged` command-specific payload | `agent emit --kind convergence` vagy ezzel ekvivalens canonical input | `summary` | `findings(P2/P3 only)`, `refs` | legacy `converged` adapter only | P1 | required-now |
@@ -224,6 +242,7 @@ Normative rules:
 13. Az operator-only tiltas a canonical `bubble meta-review run|status|last-report|recover` surface-re vonatkozik; a retained `bubble meta-review submit` Phase 4-ben kulon, adapter-only compatibility exception, nem operator canonical path.
 14. A retained `bubble meta-review submit` csak akkor megengedett, ha explicit first-principle justification es kulso caller-compatibility erv tamasztja ala; enelkul a retained exception Phase 4-ben sem tarthato fenn.
 15. A kulso caller-compatibility erv csak akkor elegseges, ha a checked-in `plans/tasks/protocol-first-cli-and-protocol-surface-unification-phase4-retained-submit-callers.md` inventory bizonyitja, mely runtime/scripted caller-ek maradnak retained spellingsen, miert nem migralhatok Phase 4-ben, es hogyan szunnek meg legkesobb Phase 5-ben.
+16. A canonical `agent emit` primer szerzodeskent nem tamaszkodhat `cwd`, worktree ancestry vagy env-bol kovetkeztetett bubble authorityra; ha retained adapterhez ilyen helper kell, azt explicit transitional compatibility helperkent kell megnevezni.
 
 ### 3) Side Effects Contract
 
@@ -250,7 +269,9 @@ Constraint:
 | Trigger | Dependency (if any) | Behavior (`throw|result|fallback`) | Fallback Value/Action | Reason Code | Log Level | Priority | Timing |
 |---|---|---|---|---|---|---|---|
 | canonical `agent emit` hivasbol hianyzik vagy ervenytelen a `kind` | CLI parser | throw | explicit schema/option error; nincs legacy commandra valo visszaeses | `ACTOR_EMIT_OPTIONS_INVALID` | error | P1 | required-now |
+| canonical `agent emit` hivasbol hianyzik a `repo`, `bubble_id` vagy `handoff_id` | CLI parser | throw | explicit authority-contract error; nincs implicit `cwd`/env bubble lookup a canonical pathon | `ACTOR_EMIT_CONTEXT_REQUIRED` | error | P1 | required-now |
 | kind-specific kotelezo mezo hianyzik (`summary`, `question`, `report_json`, stb.) | shared emission validator | throw | explicit typed validation error; nincs command-specific fallback | `ACTOR_EMIT_SCHEMA_INVALID` | error | P1 | required-now |
+| canonical actor emit guard mezo (`expected_role`, `expected_round`, `expected_state_fingerprint`) stale vagy nem egyezik | shared emission validator + domain policy | throw | explicit stale-authority error; nincs shell-context retry vagy legacy bypass | `ACTOR_EMIT_CONTEXT_STALE` | error | P1 | required-now |
 | legacy adapter nem tud 1:1 canonical inputot generalni | compatibility adapter | throw | explicit adapter error; tilos a regi kozvetlen domain pathot meghivni | `ACTOR_EMIT_COMPAT_ADAPTER_INVALID` | error | P1 | required-now |
 | actor-originated output operatori-only bubble commandon keresztul erne a domain pathot | CLI boundary | throw | reject; actor output csak canonical actor surface-en vagy annak compatibility adapteren mehet | `ACTOR_EMIT_OPERATOR_SURFACE_FORBIDDEN` | error | P1 | required-now |
 | `bubble meta-review submit` retained compatibility path hivodik | compatibility adapter | result | ugyanaz a canonical shared emit result terjen vissza, nincs kulon bubble-submit domain branch | N/A | info | P1 | required-now |
@@ -274,6 +295,7 @@ Path-specific failure semantics:
 | must-use | `plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` Phase 4 target architecture es coverage checklist | P1 | required-now |
 | must-use | Phase 3 generic running authority contract, mint Phase 4 normativ elo-feltetel; ha a branchen meg nincs teljesen leszallitva, azt explicit compatibility elofeltetelként kell kezelni, nem csendes tenykent | P1 | required-now |
 | must-use | egyetlen shared actor-emission normalization/validation/dispatch boundary | P1 | required-now |
+| must-use | explicit actor-context contract a canonical `agent emit` surface-en (`repo`, `bubble_id`, `handoff_id`; fail-closed guard mezokkel vagy azokkal ekvivalens canonical mezokkel) | P1 | required-now |
 | must-use | explicit actor-facing vs operatori CLI boundary | P1 | required-now |
 | must-use | runtime prompt/help/docs canonical surface-re allitasa | P1 | required-now |
 | must-use | explicit transitional compatibility labeling minden retained actor commandhoz es doc/help emliteshez | P1 | required-now |
@@ -281,6 +303,7 @@ Path-specific failure semantics:
 | must-not-use | kulon domain path `pass`, `ask-human`, `converged`, `bubble meta-review submit`, vagy `orchestra` szerint | P1 | required-now |
 | must-not-use | `bubble meta-review submit` mint primer actor-facing command Phase 4 utan | P1 | required-now |
 | must-not-use | olyan compatibility adapter, amely sajat policy-validaciot vagy sajat routingot tart meg | P1 | required-now |
+| must-not-use | implicit `cwd`/worktree/env bubble-context inference mint canonical actor-write contract | P1 | required-now |
 | must-not-use | Phase 5 vegleges command/alias torlesenek elorehozatala, ha az megneheziti a biztonsagos atallast | P2 | required-now |
 | must-not-use | docs/prompt text, amely tovabbra is a legacy actor command family-t nevezi canonical utnak | P1 | required-now |
 | must-not-use | meta-review retained special case explicit first-principle justification nelkul | P1 | required-now |
@@ -289,10 +312,10 @@ Path-specific failure semantics:
 
 | ID | Scenario | Given | When | Then | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|
-| T1 | canonical handoff emit path | aktiv implementer vagy reviewer context | `pairflow agent emit --kind pass ...` fut | ugyanaz a PASS durable output es routing jon letre, mint a jelenlegi handoff semantics szerint | P1 | required-now | automated test |
-| T2 | canonical human escalation emit path | aktiv actor context | `pairflow agent emit --kind human_question ...` fut | HUMAN_QUESTION durable output jon letre a shared boundaryn at | P1 | required-now | automated test |
-| T3 | canonical convergence emit path | aktiv reviewer context | `pairflow agent emit --kind convergence ...` fut | a convergence ugyanazt a policy-validaciot es routingot kapja, mint a legacy converged, beleertve a finding-severity guardokat | P1 | required-now | automated test |
-| T4 | canonical meta-review result emit path | aktiv `meta_reviewer` context Phase 3 authorityval | `pairflow agent emit --kind meta_review_result ...` fut | a meta-review result ugyanazon canonical actor-emission boundaryn at persistalodik, es nincs kulon bubble-submit special case | P1 | required-now | automated test |
+| T1 | canonical handoff emit path | aktiv implementer vagy reviewer context explicit `repo` + `bubble_id` + `handoff_id` authorityval | `pairflow agent emit --kind pass ...` fut | ugyanaz a PASS durable output es routing jon letre, mint a jelenlegi handoff semantics szerint | P1 | required-now | automated test |
+| T2 | canonical human escalation emit path | aktiv actor context explicit actor-context authorityval | `pairflow agent emit --kind human_question ...` fut | HUMAN_QUESTION durable output jon letre a shared boundaryn at | P1 | required-now | automated test |
+| T3 | canonical convergence emit path | aktiv reviewer context explicit actor-context authorityval | `pairflow agent emit --kind convergence ...` fut | a convergence ugyanazt a policy-validaciot es routingot kapja, mint a legacy converged, beleertve a finding-severity guardokat | P1 | required-now | automated test |
+| T4 | canonical meta-review result emit path | aktiv `meta_reviewer` context Phase 3 authorityval es explicit actor-context mezokkel | `pairflow agent emit --kind meta_review_result ...` fut | a meta-review result ugyanazon canonical actor-emission boundaryn at persistalodik, es nincs kulon bubble-submit special case | P1 | required-now | automated test |
 | T5 | legacy pass adapter parity | aktiv actor context | `pairflow pass ...` vagy `pairflow agent pass ...` fut | a legacy entrypoint ugyanarra a canonical emit pathra mapel, es domain-level parity fennmarad | P1 | required-now | automated test |
 | T6 | legacy meta-review submit adapter parity | aktiv meta-review context | `pairflow bubble meta-review submit ...` fut | a legacy bubble-submit csak adapter, a canonical `meta_review_result` path kimenetevel byte-levelen vagy szemantikailag egyezo eredmenyt ad | P1 | required-now | automated test |
 | T7 | orchestra alias compatibility | aktiv actor context | `orchestra pass|ask-human|converged ...` fut | az alias surface nem tart fenn kulon domain logikat, es a canonical emit pathra megy at | P2 | required-now | automated test |
@@ -309,6 +332,8 @@ Path-specific failure semantics:
 | T18 | invalid compatibility adapter mapping rejects legacy path | retained legacy path canonical schema-hiany vagy nem 1:1 mappelheto payload mellett futna | adapter validation fut | a CLI explicit `ACTOR_EMIT_COMPAT_ADAPTER_INVALID` vagy azzal ekvivalens shared adapter-hibat ad, es nem hiv legacy domain branch-et | P1 | required-now | automated test |
 | T19 | retained meta-review adapter missing canonical mapping fails closed | retained `bubble meta-review submit` olyan payloadot kap, amely nem fejezheto ki a canonical `meta_review_result` schema-ban | adapter mapping/validation fut | a CLI explicit `META_REVIEW_RESULT_CANONICAL_MAPPING_MISSING` vagy azzal ekvivalens typed hibat ad, es nem tart fenn silent meta-review special-case-et | P1 | required-now | automated test |
 | T20 | retained meta-review caller inventory gates the exception | retained `bubble meta-review submit` tovabbra is callable Phase 4-ben | docs/artifact review vagy dedicated inventory check lefut | a checked-in `plans/tasks/protocol-first-cli-and-protocol-surface-unification-phase4-retained-submit-callers.md` inventory felsorolja az aktualis runtime/scripted caller-eket, mindegyikhez rogzitett Phase 4 first-principle okot es Phase 5 migration/removal pathot; inventory hianyaban a retained exception nem elfogadhato | P1 | required-now | doc review or artifact review |
+| T21 | canonical actor emit rejects missing explicit context | canonical actor emit invocationbol hianyzik `repo`, `bubble_id` vagy `handoff_id` | CLI/schema validation fut | explicit `ACTOR_EMIT_CONTEXT_REQUIRED` vagy azzal ekvivalens shared hiba keletkezik, es nincs implicit `cwd`/env bubble lookup | P1 | required-now | automated test |
+| T22 | transitional context fallback stays non-canonical | retained legacy adapter bubble-pane-ben fut, de a subprocess elveszti a vart `cwd`-t | compatibility helper bubble-contextet old fel es canonical emit inputot allit elo | a legacy adapter meg tudja alkotni az explicit canonical contextet compatibility helperrel, de a canonical `agent emit` szerzodes tovabbra sem fugg implicit shell-contexttol | P1 | required-now | automated test |
 
 ## L2 - Implementation Notes (Optional)
 
@@ -351,8 +376,8 @@ Path-specific failure semantics:
 
 Task allapot `IMPLEMENTABLE`, ha:
 
-1. `CS1` + `CS4` + `T1-T4` alapjan az actor-facing protocol emission egyetlen canonical CLI boundaryn megy at, es ehhez egyetlen schema-anchor tartozik.
-2. `CS2` + `CS5` + `CS8` + `T5-T8` + `T13` + `T15` + `T16` + `T18` + `T19` alapjan a canonical schema, validator es regression coverage bizonyitja, hogy a legacy `pass` / `ask-human` / `converged` / retained `bubble meta-review submit` surfaces legfeljebb explicit transitional compatibility adapterek, vesztesegmentes canonical mappinggel vagy explicit fail-closed hibaval.
+1. `CS1` + `CS4` + `T1-T4` + `T21` alapjan az actor-facing protocol emission egyetlen canonical CLI boundaryn megy at, ehhez egyetlen schema-anchor tartozik, es a canonical actor-write contract explicit contextet kovetel.
+2. `CS2` + `CS5` + `CS8` + `T5-T8` + `T13` + `T15` + `T16` + `T18` + `T19` + `T22` alapjan a canonical schema, validator es regression coverage bizonyitja, hogy a legacy `pass` / `ask-human` / `converged` / retained `bubble meta-review submit` surfaces legfeljebb explicit transitional compatibility adapterek, vesztesegmentes canonical mappinggel vagy explicit fail-closed hibaval; barmely implicit bubble-context helper csak adapter-level transitional fallback marad.
 3. `TCP1` + `TCP2` + `TCP3` + `CS6` + `CS7` + `T10-T12` alapjan a retained legacy spellings explicit transitional statuszt kapnak, canonical mappinghez kotottek, es a runtime prompt/help/docs primary peldai tovabbra is a canonical actor surface-re mutatnak.
 4. `CS3` + `T9` + `T14` alapjan a `bubble meta-review run|status|last-report|recover` canonical operator surface marad, es actor outputot nem fogad el; a retained `submit` kulon adapter-exception, nem operatori write path.
 5. `CS3` + `CS9` + `TCP4` + `TCP5` + `Retained Submit Justification` + `T13` + `T19` + `T20` alapjan a retained alias/subcommand megtartas csak addig ervenyes, ameddig lossless canonical mappinggel vagy explicit fail-closed gapjelzessel first-principle szerint vedheto; a retained `bubble meta-review submit` exception kulso caller-compatibility inventoryval is bizonyitott.
