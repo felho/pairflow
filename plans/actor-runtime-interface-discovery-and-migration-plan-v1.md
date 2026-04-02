@@ -38,6 +38,10 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
 14. Migration policy: a vart atallasi minta strangler jellegu legyen. Eloszor wrapper/adapter boundary jelenjen meg a meglevo canonical surface folott, es csak kesobb migralodjanak ra fokozatosan az egyes actor implementaciok.
 15. Rewrite avoidance policy: a cel nem uj actor framework egyszeri nagy atirassal, hanem kis lepeses refaktorok sorozata, amelyek minden lepesnel megtartjak a canonical protocol behavior parityt.
 16. Phase dependency: a tenyleges actor runtime cutover Phase 4 es Phase 5 utan kezdodhet. A discovery, simulation es migration-spine tervezes viszont mar most elkezdheto, ha nem valtoztatja meg a Phase 4/5 immediate acceptance contractjat.
+17. Trigger policy: az actor-runtime target modellben az uj munka atadasanak triggerje explicit gepi boundary legyen (`deliver`, inbox-event, local IPC vagy ezzel ekvivalens structured signal), ne TUI-input submit, `tmux send-keys`, prompt allapot vagy pane-capture alapjan feltetelezett feldolgozas.
+18. Acknowledgement policy: a jovobeli actor runtime interface-nek explicit atveteli/allapot-visszajelzesi szerzodest kell adnia (`accepted`, `running`, `rejected`, `failed_to_start` vagy ezekkel ekvivalens typed statuszok). Domain state progression nem alapulhat pusztan azon, hogy a pane-ben latszik-e valami.
+19. Observability-vs-control policy: a `tmux` vagy barmely mas operatori felulet targetben observability/debug surface. Nem lehet a canonical delivery-ack, actor-ownership vagy input-feldolgozasi siker authority forrasa.
+20. Topology policy: a discovery fazisnak explicitten vizsgalnia kell legalabb harom delivery topologyt: hosszu eletu actor-runner + inbox trigger, explicit `exec`-szeru on-demand inditas, valamint local IPC/API alapu `deliver` boundary. A contractot ugy kell tervezni, hogy ne egjen bele egyetlen topology a core actor interface-be.
 
 ## Target Architecture Hypothesis
 
@@ -47,6 +51,45 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
 2. Az actor ne shell-contextbol, `cwd`-bol vagy legacy helper-ekbol talalja ki a bubble authorityt.
 3. Az actor kimenete ne role-specifikus command legyen, hanem canonical actor output, human input request vagy typed artifact write.
 4. A boundary tervezesi celja legyen, hogy a mai CLI-parancsok kesobb legfeljebb vekony wrapperkent EventEnvelope-szeru vagy azzal ekvivalens canonical boundaryra forditsanak.
+
+### Delivery Trigger and Acknowledgement Model
+
+1. A target modellben kulon boundary a `durable handoff persistence` es kulon boundary az `actor delivery trigger`.
+2. A durable transcript/state append mar onmagaban nem eleg bizonyitek arra, hogy az actor tenylegesen atvette vagy elkezdte a munkat.
+3. A delivery trigger explicit muvelet legyen:
+   - inbox watch event,
+   - local `deliver(envelope_ref)` hivasi boundary,
+   - vagy ezzel ekvivalens structured relay.
+4. A trigger sikerehez a runtime oldalon explicit ack tartozzon, minimum ilyen szemantikaval:
+   - `accepted`: a runtime atvette a munkat es vallalja a feldolgozast,
+   - `running`: a runtime mar elinditotta az actor-stepet,
+   - `rejected`: a munka nem fogadhato be ebben az allapotban vagy ezzel a contexttel,
+   - `failed_to_start`: a runtime megprobalta, de a concrete actor launch nem indult el.
+5. A discoverynek kulon ki kell mondania, hogy mely workflow state transitionok varhatnak `accepted` szintu ackra, es melyek maradhatnak durable-but-unacknowledged modban operatori recoveryvel.
+6. Az input-submit, prompt-visible text, shell marker vagy pane-capture legfeljebb observability signal lehet; ezek nem egyenertekuek a runtime ackkal.
+
+### Runtime Topology Hypothesis
+
+1. A target actor runtime contractnak topology-semlegesnek kell maradnia.
+2. Vizsgalando fo topologyk:
+   - hosszu eletu actor-runner, amely inboxot vagy relay queue-t figyel,
+   - on-demand actor inditas minden handoffhoz (`exec`-szeru modell),
+   - local IPC/API boundary, ahol az orchestrator explicit `deliver` hivast kuld a runnernek.
+3. A discovery outputnak rogzitenie kell, hogy:
+   - mely topology az alapertelmezett jelolt,
+   - milyen parity/tradeoff van a tobbi topologyhoz kepest,
+   - melyik reteg felel az ack eloallitasert es a duplicate delivery elkeruleseert.
+4. A topology valasztas nem valtoztathatja meg a canonical actor input/output contractot; legfeljebb az executor/delivery adapter reteg implementacios dontese marad.
+
+### Tmux Role in the Target Model
+
+1. A `tmux` megtarthato operatori feluletnek, lokalis debug surface-nek vagy human-observable session nezetnek.
+2. A `tmux` targetben nem control bus:
+   - nem o a canonical `deliver`,
+   - nem o adja az authority-ackot,
+   - nem o bizonyitja, hogy az actor elolvasta a handoffot.
+3. A pane elvesztese, shell fallbackja vagy TUI driftje runtime diagnosztika maradjon, ne protocol-level success/failure bizonyitek.
+4. A migration spine kulon vizsgalja azt a vegetallapotot, ahol a `tmux` retained operatori nezet, mikozben a vezerles mar adapteres runtime boundaryn megy.
 
 ### Capability Model
 
@@ -110,6 +153,7 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
    - `Role` / `Actor` / `AgentConfig` szetvalasztasa a jelenlegi codepathokban,
    - actor-specifikus validation/policy,
    - runtime/context lookup es helperek,
+   - delivery trigger mechanizmusok es implicit/explicit ack pontok,
    - durable protocol emit pathok,
    - event/relay normalizalas vagy annak hianya,
    - executor-fuggosegek (workspace, sync, process, relay, liveness),
@@ -129,6 +173,7 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
    - milyen input authority es input artifact kell az actor futasahoz,
    - hogyan valik el a `Role`, `Actor` es `AgentConfig`,
    - milyen canonical outputokat bocsathat ki,
+   - mi a canonical delivery trigger es mi a canonical ack boundary,
    - milyen normalizalt event vagy relay boundaryra epit,
    - milyen side effectek engedettek,
    - milyen muveletek tilosak az actor boundaryn,
@@ -147,8 +192,11 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
    - stale authority,
    - conflicting context,
    - restart/recovery kornyezet,
+   - durable handoff letrejott, de actor trigger vagy ack hianyzik,
+   - duplicate `deliver` vagy duplicate ack ugyanarra a handoffra,
    - duplicate relay vagy duplicate intent,
    - stale intent egy mar tovabblepett workflow-stepre,
+   - `tmux` pane elveszik, mikozben a runtime mar `accepted` vagy `running` allapotot adott,
    - artifact-heavy output,
    - optional extensionnel kiegeszitett actor behavior,
    - retained compatibility adapter path.
@@ -157,6 +205,7 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
    - mely capability-k szuksegesek,
    - milyen output keletkezik,
    - milyen provenance es idempotency kovetelmeny jelenik meg,
+   - milyen trigger/ack szemantika kell hozza,
    - core capability vagy extension pont kell-e hozza,
    - van-e megmarado szerepspecifikus policy,
    - eleg-e a javasolt interface,
@@ -169,6 +218,7 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
    - canonical actor-emission surface stabilizalasa Phase 4-ben,
    - legacy cleanup Phase 5-ben,
    - belso actor runtime contract bevezetese wrapperkent,
+   - explicit delivery-trigger es ack boundary bevezetese a retained tmux launch fole,
    - minimalis core capability-k befagyasztasa,
    - bounded extension pontok kijelolese,
    - actor-boundary es executor-boundary explicit szetvalasztasa,
@@ -178,6 +228,7 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
    - mi az elozetes feltetel,
    - milyen parity evidence kell,
    - mi marad transitional adapter,
+   - mely topology marad retained observability-only felulet,
    - mi torolheto a kovetkezo fazisban.
 
 ## Phase Breakdown
@@ -219,8 +270,9 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
 1. Docs validation: a planbol kovetkezo taskok kulon artifactokban bizonyitsak a current-state inventory, a capability contract, a scenario matrix es a migration spine teljességet.
 2. Traceability validation: minden current-state behavior kapjon minositest (`common`, `role-specific`, `transitional`, `accidental`) es target-dontest (`core`, `extension`, `adapt`, `remove`).
 3. Scenario validation: a simulation matrix bizonyitsa, hogy a javasolt interface a mai fo use-case-eket lefedi, vagy explicit gapet jelez; kulon kezelje az idempotency, stale-intent, provenance es core-vs-extension kovetelmenyeket.
-4. Migration validation: a kesobbi taskokban minden migration stephez parity evidence es cleanup ownership tartozzon.
-5. Architectural validation: a vegleges actor runtime interface ne sertse a protocol-first plan authority- es routing-invariansait, mar a discovery szinten se mossa ossze az actor boundaryt az executor boundaryval, es ne szervezzen ki kernel-felelossegeket extension retegbe.
+4. Trigger/ack validation: a kesobbi artifactok explicitten mondjak ki, hogy mi szamit delivery triggernek, mi szamit actor-acknak, es mely mai `tmux`/TUI jelek maradnak pusztan observability kategoriaban.
+5. Migration validation: a kesobbi taskokban minden migration stephez parity evidence es cleanup ownership tartozzon.
+6. Architectural validation: a vegleges actor runtime interface ne sertse a protocol-first plan authority- es routing-invariansait, mar a discovery szinten se mossa ossze az actor boundaryt az executor boundaryval, ne szervezzen ki kernel-felelossegeket extension retegbe, es ne tegye a `tmux` pane-t authority- vagy ack-source-sza.
 
 ## Assumptions
 
