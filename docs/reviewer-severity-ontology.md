@@ -94,14 +94,14 @@ Reviewer PASS with any `P0/P1` finding must have evidence bound at finding level
 
 ## Decision Mapping
 
-1. Round `< severity_gate_round` (default `4`): reviewer `pairflow pass` remains allowed (including non-blocking findings), while `pairflow converged` is still allowed when policy preconditions are met.
-2. Round `>= severity_gate_round` with blocker findings under scope policy: reviewer should request a fix cycle with `pairflow pass`.
+1. Round `< severity_gate_round` (default `4`): reviewer canonical pass emit (`pairflow agent emit --kind pass ...`) remains allowed (including non-blocking findings), while canonical convergence emit (`pairflow agent emit --kind convergence ...`) is still allowed when policy preconditions are met. Legacy `pairflow pass` and `pairflow converged` remain compatibility adapters only.
+2. Round `>= severity_gate_round` with blocker findings under scope policy: reviewer should request a fix cycle with canonical pass emit (`pairflow agent emit --kind pass ...`).
    Document scope blocker means `P0/P1` with strict qualifiers (`timing=required-now` + `layer=L1`).
-   Operational command form: `pairflow pass --summary "..." --finding "P1:Title|artifact://ref"` (repeat `--finding` as needed).
-3. Round `>= severity_gate_round` with only non-blocking findings (`P2/P3`) or clean result: reviewer should use `pairflow converged`.
+   Operational command form: `pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --summary "..." --finding "P1:Title|artifact://ref"` (repeat `--finding` as needed).
+3. Round `>= severity_gate_round` with only non-blocking findings (`P2/P3`) or clean result: reviewer should use canonical convergence emit (`pairflow agent emit --kind convergence ...`).
    Operational command forms:
-   - Advisory-only (`P2/P3`): `pairflow converged --summary "..." --finding "P2:Title|artifact://ref"`.
-   - Clean (no findings): `pairflow converged --summary "..."` (without `--finding`).
+   - Advisory-only (`P2/P3`): `pairflow agent emit --kind convergence --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --summary "..." --finding "P2:Title|artifact://ref"`.
+   - Clean (no findings): `pairflow agent emit --kind convergence --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --summary "..."` (without `--finding`).
 
 ## Command Consistency Guardrails
 

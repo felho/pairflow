@@ -10,6 +10,9 @@ export {
   AskHumanCommandErrorV11 as AskHumanCommandError
 } from "./v11/application/askHuman/emitAskHumanV11.js";
 export {
+  emitActorProtocolFromWorkspaceV11 as emitActorProtocolFromWorkspace
+} from "./v11/application/actorProtocol/emitActorProtocolV11.js";
+export {
   asConvergedCommandErrorV11 as asConvergedCommandError,
   emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace,
   ConvergedCommandErrorV11 as ConvergedCommandError

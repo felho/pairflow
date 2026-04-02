@@ -112,7 +112,17 @@ describe("listBubbles", () => {
 
   it("rejects when cwd is not inside a git repository", async () => {
     const dir = await createTempDir();
-    await expect(listBubbles({ cwd: dir })).rejects.toBeInstanceOf(BubbleListError);
+    const previousWorktreeRoot = process.env.PAIRFLOW_WORKTREE_ROOT;
+    delete process.env.PAIRFLOW_WORKTREE_ROOT;
+    try {
+      await expect(listBubbles({ cwd: dir })).rejects.toBeInstanceOf(BubbleListError);
+    } finally {
+      if (previousWorktreeRoot === undefined) {
+        delete process.env.PAIRFLOW_WORKTREE_ROOT;
+      } else {
+        process.env.PAIRFLOW_WORKTREE_ROOT = previousWorktreeRoot;
+      }
+    }
   });
 
   it("counts runtime session on non-runtime state bubble as stale", async () => {

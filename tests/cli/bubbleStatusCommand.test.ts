@@ -63,6 +63,15 @@ describe("renderBubbleStatusText", () => {
       activeRole: "implementer",
       activeSince: "2026-02-22T12:00:00.000Z",
       lastCommandAt: "2026-02-22T12:05:00.000Z",
+      executionContext: {
+        activeRole: "implementer",
+        awaitedOutputType: "pass_result",
+        handoffId: "implementer:b_status_render_01:round:2:attempt:1",
+        round: 2,
+        startedAt: "2026-02-22T12:00:00.000Z",
+        deadlineAt: "2026-02-22T12:10:00.000Z",
+        attempt: 1
+      },
       stateValidation: null,
       watchdog: {
         monitored: true,
@@ -185,6 +194,9 @@ describe("renderBubbleStatusText", () => {
       "Command path: worktree_local profile=self_host active=/tmp/worktree/dist/cli/index.js expected=/tmp/worktree/dist/cli/index.js"
     );
     expect(rendered).toContain(
+      "Execution context: role=implementer awaited=pass_result handoff=implementer:b_status_render_01:round:2:attempt:1 round=2 attempt=1"
+    );
+    expect(rendered).toContain(
       "pinned=node '/tmp/worktree/dist/cli/index.js'"
     );
     expect(rendered).toContain(
@@ -262,6 +274,15 @@ describe("renderBubbleStatusTable", () => {
       activeRole: "implementer",
       activeSince: "2026-03-08T21:29:15.948Z",
       lastCommandAt: "2026-03-08T21:29:15.948Z",
+      executionContext: {
+        activeRole: "implementer",
+        awaitedOutputType: "pass_result",
+        handoffId: "implementer:b_status_render_01:round:5:attempt:1",
+        round: 5,
+        startedAt: "2026-03-08T21:29:15.948Z",
+        deadlineAt: "2026-03-08T21:49:15.948Z",
+        attempt: 1
+      },
       stateValidation: null,
       watchdog: {
         monitored: true,

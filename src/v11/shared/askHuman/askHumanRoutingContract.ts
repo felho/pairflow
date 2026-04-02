@@ -1,6 +1,7 @@
 import type {
   ensureBubbleInstanceIdForMutation
 } from "../../../core/bubble/bubbleInstanceId.js";
+import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
 import type {
   resolveBubbleFromWorkspaceCwd
 } from "../../../core/bubble/workspaceResolution.js";
@@ -13,6 +14,7 @@ export interface PrepareAskHumanRoutingInput {
   question: string;
   refs?: string[];
   cwd?: string;
+  authoritativeContext?: ActorEmitContextSnapshot;
   now: Date;
   createError: PairflowCreateCommandError;
 }

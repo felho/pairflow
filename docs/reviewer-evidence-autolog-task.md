@@ -27,7 +27,7 @@ Instead:
 1. Reuse existing project scripts (`typecheck`, `test`, `lint`, `check`).
 2. Make these scripts emit stable evidence logs under `.pairflow/evidence/`.
 3. Ensure implementer workflow uses these scripts as the default validation path.
-4. Require passing generated evidence logs as `--ref` in `pairflow pass`.
+4. Require passing generated evidence logs as `--ref` in canonical PASS emit (`pairflow agent emit --kind pass ...`).
 
 This keeps Pairflow agnostic while improving this repository's local integration quality.
 
@@ -68,7 +68,7 @@ Add explicit rule in `AGENTS.md`:
 Target handoff pattern:
 
 ```bash
-pairflow pass --summary "..." \
+pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --summary "..." \
   --ref .pairflow/evidence/lint.log \
   --ref .pairflow/evidence/typecheck.log \
   --ref .pairflow/evidence/test.log
@@ -78,7 +78,7 @@ pairflow pass --summary "..." \
 
 Update implementer startup/resume handoff guidance so it explicitly states:
 
-1. If evidence logs exist, include them as `--ref` on PASS.
+1. If evidence logs exist, include them as `--ref` on canonical PASS emit (`pairflow agent emit --kind pass ...`).
 2. Missing expected evidence logs should be treated as incomplete validation packaging.
 3. When only a subset of validation commands ran, attach refs for the commands that actually ran and state what was intentionally not executed.
 

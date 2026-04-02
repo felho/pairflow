@@ -48,6 +48,13 @@ describe("runCli", () => {
     expect(stdoutSpy).toHaveBeenCalled();
   });
 
+  it("supports agent emit namespace", async () => {
+    const exitCode = await runCli(["agent", "emit", "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalled();
+  });
+
   it("supports top-level ask-human help", async () => {
     const exitCode = await runCli(["ask-human", "--help"]);
 

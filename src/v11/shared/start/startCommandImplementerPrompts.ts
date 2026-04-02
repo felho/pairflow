@@ -6,6 +6,13 @@ import type {
   ReviewArtifactType
 } from "../../../types/bubble.js";
 
+function buildCanonicalActorEmitLookupGuidance(input: {
+  bubbleId: string;
+  repoPath: string;
+}): string {
+  return `Before direct canonical emit, fetch fresh actor authority via \`pairflow bubble status --id ${input.bubbleId} --repo ${input.repoPath} --json\` and copy \`executionContext.handoffId\` (plus optional guards) from the JSON output. If you do not have an explicit authority snapshot yet, use the retained worktree-local compatibility adapter instead.`;
+}
+
 export function buildImplementerStartupPrompt(input: {
   bubbleId: string;
   repoPath: string;
@@ -22,7 +29,7 @@ export function buildImplementerStartupPrompt(input: {
       "This bubble is ideation-pending (`round=0`).",
       "Do nothing now. Stay idle.",
       "Do not read task files, scan the repository, or search for kickoff sources.",
-      "Do not run lifecycle/protocol commands (`pairflow bubble kickoff`, `pairflow pass`, `pairflow ask-human`, `pairflow converged`) unless explicit human instruction arrives.",
+      "Do not run lifecycle/protocol commands (`pairflow bubble kickoff`, `pairflow agent emit`, legacy `pairflow pass`, legacy `pairflow ask-human`, legacy `pairflow converged`) unless explicit human instruction arrives.",
       "Wait for explicit human instruction that contains a concrete kickoff task.",
       `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`
     ].join(" ");
@@ -44,8 +51,12 @@ export function buildImplementerStartupPrompt(input: {
     `Keep done package updated at: ${input.donePackagePath}.`,
     "Done package should summarize changes + validation results for final commit handoff.",
     `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`,
-    "When done, run `pairflow pass --summary \"<what changed + validation>\"` with available evidence `--ref` attachments.",
-    "Use `pairflow ask-human --question \"...\"` only for blockers."
+    buildCanonicalActorEmitLookupGuidance({
+      bubbleId: input.bubbleId,
+      repoPath: input.repoPath
+    }),
+    "When done, run `pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --summary \"<what changed + validation>\"` with available evidence `--ref` attachments. Legacy `pairflow pass` remains accepted as a transitional adapter.",
+    "Use `pairflow agent emit --kind human_question --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --question \"...\"` only for blockers."
   ].join(" ");
 }
 
@@ -65,7 +76,11 @@ export function buildImplementerKickoffMessage(input: {
       input.pairflowCommandProfile
     ),
     buildImplementerEvidenceHandoffGuidance(input.reviewArtifactType),
-    "When done with validation, hand off with `pairflow pass --summary \"<what changed + validation>\"` and include available evidence `--ref` log paths."
+    buildCanonicalActorEmitLookupGuidance({
+      bubbleId: input.bubbleId,
+      repoPath: "<repo>"
+    }),
+    "When done with validation, hand off with `pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --summary \"<what changed + validation>\"` and include available evidence `--ref` log paths."
   ].join(" ");
 }
 
@@ -99,7 +114,7 @@ export function buildImplementerEvidenceHandoffGuidance(
 
   return [
     "Run validation via `pnpm lint`, `pnpm typecheck`, `pnpm test`, or `pnpm check` so evidence logs are written to `.pairflow/evidence/`.",
-    "If evidence logs exist, include them as `--ref` when running `pairflow pass`.",
+    "If evidence logs exist, include them as `--ref` when running `pairflow agent emit --kind pass` (legacy `pairflow pass` remains available as a transitional adapter).",
     "If only a subset of validation commands ran, attach refs for the commands that actually ran and state what was intentionally not executed.",
     "Missing expected evidence logs should be treated as incomplete validation packaging."
   ].join(" ");

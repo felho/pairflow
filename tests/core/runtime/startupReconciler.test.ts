@@ -171,9 +171,19 @@ describe("reconcileRuntimeSessions", () => {
 
   it("rejects when cwd is not inside a git repository", async () => {
     const dir = await createTempDir();
-    await expect(
-      reconcileRuntimeSessions({ cwd: dir })
-    ).rejects.toBeInstanceOf(StartupReconcilerError);
+    const previousWorktreeRoot = process.env.PAIRFLOW_WORKTREE_ROOT;
+    delete process.env.PAIRFLOW_WORKTREE_ROOT;
+    try {
+      await expect(
+        reconcileRuntimeSessions({ cwd: dir })
+      ).rejects.toBeInstanceOf(StartupReconcilerError);
+    } finally {
+      if (previousWorktreeRoot === undefined) {
+        delete process.env.PAIRFLOW_WORKTREE_ROOT;
+      } else {
+        process.env.PAIRFLOW_WORKTREE_ROOT = previousWorktreeRoot;
+      }
+    }
   });
 
   it("treats missing tmux session as stale for runtime states", async () => {

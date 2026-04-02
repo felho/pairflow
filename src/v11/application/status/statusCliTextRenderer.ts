@@ -22,6 +22,14 @@ function formatStatusEscalationText(status: BubbleStatusView): string {
   return `Escalation: watchdog timeout exceeded for active agent ${status.watchdog.monitoredAgent ?? "-"} (deadline ${status.watchdog.deadlineTimestamp ?? "-"})`;
 }
 
+function formatExecutionContextText(status: BubbleStatusView): string {
+  const context = status.executionContext;
+  if (context === null) {
+    return "Execution context: -";
+  }
+  return `Execution context: role=${context.activeRole} awaited=${context.awaitedOutputType} handoff=${context.handoffId} round=${context.round} attempt=${context.attempt} started=${context.startedAt} deadline=${context.deadlineAt}`;
+}
+
 function formatRuntimeDeliveryText(status: BubbleStatusView): string {
   const runtimeDelivery = status.metaReview.runtimeDelivery;
   if (runtimeDelivery === null) {
@@ -48,6 +56,7 @@ export function renderBubbleStatusText(status: BubbleStatusView): string {
     `State validation: ${stateValidationSummary}`,
     `Active: ${status.activeAgent ?? "-"} (${status.activeRole ?? "-"}) since ${status.activeSince ?? "-"}`,
     `Last command: ${status.lastCommandAt ?? "-"}`,
+    formatExecutionContextText(status),
     formatStatusWatchdogText(status),
     `Inbox pending: questions=${status.pendingInboxItems.humanQuestions}, approvals=${status.pendingInboxItems.approvalRequests}, total=${status.pendingInboxItems.total}`,
     `Transcript: messages=${status.transcript.totalMessages}, last=${status.transcript.lastMessageType ?? "-"} @ ${status.transcript.lastMessageTs ?? "-"}`,

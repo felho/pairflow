@@ -223,17 +223,17 @@ function buildDeliveryMessage(
     const docsOnly = bubbleConfig.review_artifact_type === "document";
     if (envelope.type === "PASS") {
       action = docsOnly
-        ? "Reviewer feedback received. Implement fixes, then hand off with `pairflow pass --summary` directly (no confirmation prompt). Primary artifact rule (docs-only): when the task references an existing source document/task file, refine that file directly (in-place) as the main output. Do not replace primary artifact refinement with a new standalone review/synthesis document unless the task explicitly requests creating a new file path. Docs-only scope: choose one mode and keep it consistent in the same PASS. Mode A (skip-claim): summary says runtime checks were intentionally not executed -> attach no `.pairflow/evidence/*.log` refs. Mode B (checks executed): attach refs only for commands actually run and do not claim checks were intentionally not executed."
-        : "Reviewer feedback received. Implement fixes, then hand off with `pairflow pass --summary` directly (no confirmation prompt). If `.pairflow/evidence/*.log` files exist, include them as `--ref` (lint/typecheck/test). If only a subset ran, attach refs for that subset and state what was intentionally not executed.";
+        ? "Reviewer feedback received. Implement fixes, then hand off with canonical actor emit (`pairflow agent emit --kind pass ...`) directly (no confirmation prompt). Legacy `pairflow pass` remains a compatibility adapter only. Primary artifact rule (docs-only): when the task references an existing source document/task file, refine that file directly (in-place) as the main output. Do not replace primary artifact refinement with a new standalone review/synthesis document unless the task explicitly requests creating a new file path. Docs-only scope: choose one mode and keep it consistent in the same PASS. Mode A (skip-claim): summary says runtime checks were intentionally not executed -> attach no `.pairflow/evidence/*.log` refs. Mode B (checks executed): attach refs only for commands actually run and do not claim checks were intentionally not executed."
+        : "Reviewer feedback received. Implement fixes, then hand off with canonical actor emit (`pairflow agent emit --kind pass ...`) directly (no confirmation prompt). Legacy `pairflow pass` remains a compatibility adapter only. If `.pairflow/evidence/*.log` files exist, include them as `--ref` (lint/typecheck/test). If only a subset ran, attach refs for that subset and state what was intentionally not executed.";
     } else if (envelope.type === "HUMAN_REPLY") {
       action = docsOnly
-        ? "Human response received. Continue implementation using this input, then hand off with `pairflow pass --summary` directly. Primary artifact rule (docs-only): refine the referenced source task/document file directly, not only a new standalone review note. Docs-only scope: keep summary and refs consistent; skip-claim means no `.pairflow/evidence/*.log` refs in that PASS."
-        : "Human response received. Continue implementation using this input, then hand off with `pairflow pass --summary` directly. Include available `.pairflow/evidence/*.log` refs on PASS.";
+        ? "Human response received. Continue implementation using this input, then hand off with canonical actor emit (`pairflow agent emit --kind pass ...`) directly. Legacy `pairflow pass` remains a compatibility adapter only. Primary artifact rule (docs-only): refine the referenced source task/document file directly, not only a new standalone review note. Docs-only scope: keep summary and refs consistent; skip-claim means no `.pairflow/evidence/*.log` refs in that PASS."
+        : "Human response received. Continue implementation using this input, then hand off with canonical actor emit (`pairflow agent emit --kind pass ...`) directly. Legacy `pairflow pass` remains a compatibility adapter only. Include available `.pairflow/evidence/*.log` refs on PASS.";
     } else if (envelope.type === "APPROVAL_DECISION") {
       if (envelope.payload.decision === "rework") {
         action = docsOnly
-          ? "Human requested rework. Continue implementation now and address the requested changes, then hand off with `pairflow pass --summary` directly. Primary artifact rule (docs-only): apply the rework on the referenced source task/document file directly, not only in a new standalone review note. Docs-only scope: keep summary and refs consistent; skip-claim means no `.pairflow/evidence/*.log` refs in that PASS."
-          : "Human requested rework. Continue implementation now and address the requested changes, then hand off with `pairflow pass --summary` directly. Include available `.pairflow/evidence/*.log` refs on PASS.";
+          ? "Human requested rework. Continue implementation now and address the requested changes, then hand off with canonical actor emit (`pairflow agent emit --kind pass ...`) directly. Legacy `pairflow pass` remains a compatibility adapter only. Primary artifact rule (docs-only): apply the rework on the referenced source task/document file directly, not only in a new standalone review note. Docs-only scope: keep summary and refs consistent; skip-claim means no `.pairflow/evidence/*.log` refs in that PASS."
+          : "Human requested rework. Continue implementation now and address the requested changes, then hand off with canonical actor emit (`pairflow agent emit --kind pass ...`) directly. Legacy `pairflow pass` remains a compatibility adapter only. Include available `.pairflow/evidence/*.log` refs on PASS.";
       } else {
         action =
           "Human approved this bubble. Wait for commit/merge flow and do not continue new implementation in this round.";
@@ -241,8 +241,8 @@ function buildDeliveryMessage(
     } else if (envelope.type === "APPROVAL_REQUEST") {
       action =
         actorLabel === "meta-reviewer"
-          ? "Meta-reviewer requested human gate decision. Stop coding and wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now."
-          : "Bubble is READY_FOR_HUMAN_APPROVAL. Stop coding and wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now.";
+          ? "Meta-reviewer requested human gate decision. Stop coding and wait for human decision (`bubble approve` or `bubble request-rework`). Do not run canonical pass emit now."
+          : "Bubble is READY_FOR_HUMAN_APPROVAL. Stop coding and wait for human decision (`bubble approve` or `bubble request-rework`). Do not run canonical pass emit now.";
     }
   } else if (recipientRole === "reviewer") {
     if (envelope.type === "PASS") {
@@ -266,7 +266,7 @@ function buildDeliveryMessage(
       });
       const findingsDetailInstruction =
         envelope.round <= 1
-          ? "In round 1, use `pairflow pass --summary ...` and declare findings explicitly (`--finding` when findings exist, `--no-findings` only when truly clean)."
+          ? "In round 1, use canonical pass emit (`pairflow agent emit --kind pass ...`) and declare findings explicitly (`--finding` when findings exist, `--no-findings` only when truly clean). Legacy `pairflow pass` remains a compatibility adapter only."
           : buildReviewerFindingsPassInstruction(
             bubbleConfig.review_artifact_type
           );
@@ -299,8 +299,8 @@ function buildDeliveryMessage(
     } else if (envelope.type === "APPROVAL_REQUEST") {
       action =
         actorLabel === "meta-reviewer"
-          ? "Meta-reviewer requested human gate decision. Wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now."
-          : "Bubble is READY_FOR_HUMAN_APPROVAL. Review is complete; wait for human decision (`bubble approve` or `bubble request-rework`). Do not run `pairflow pass` now.";
+          ? "Meta-reviewer requested human gate decision. Wait for human decision (`bubble approve` or `bubble request-rework`). Do not run canonical pass emit now."
+          : "Bubble is READY_FOR_HUMAN_APPROVAL. Review is complete; wait for human decision (`bubble approve` or `bubble request-rework`). Do not run canonical pass emit now.";
     }
   } else if (recipientRole === "meta-reviewer") {
     action =

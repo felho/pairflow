@@ -10,7 +10,7 @@ export function getOrchestraHelpText(): string {
     "Usage:",
     "  orchestra <command> [options]",
     "",
-    "Supported commands (alias to pairflow agent commands):",
+    "Supported commands (transitional compatibility aliases to pairflow actor emit commands):",
     "  pass",
     "  ask-human",
     "  converged",

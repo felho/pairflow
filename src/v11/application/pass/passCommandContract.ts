@@ -6,6 +6,7 @@ import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { ProtocolEnvelope, PassIntent } from "../../../types/protocol.js";
 import type { PassDeliveryDependencies } from "./reviewerDelivery.js";
+import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
 import type {
   EmitConvergedDependencies,
   EmitConvergedResult
@@ -18,6 +19,7 @@ export interface EmitPassInput {
   findings?: Finding[];
   noFindings?: boolean;
   cwd?: string;
+  authoritativeContext?: ActorEmitContextSnapshot;
   now?: Date;
 }
 

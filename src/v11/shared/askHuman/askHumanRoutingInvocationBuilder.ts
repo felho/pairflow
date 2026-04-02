@@ -12,6 +12,9 @@ export function buildAskHumanRoutingInput(
     ...(input.cwd !== undefined
       ? { cwd: input.cwd }
       : {}),
+    ...(input.authoritativeContext !== undefined
+      ? { authoritativeContext: input.authoritativeContext }
+      : {}),
     now: input.now,
     createError: input.createError
   };

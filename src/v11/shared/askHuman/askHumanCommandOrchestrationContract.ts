@@ -1,5 +1,6 @@
 import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
+import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
 import type {
   RunAskHumanFlowDependencies,
   RunAskHumanFlowFn,
@@ -11,6 +12,7 @@ export interface AskHumanCommandOrchestrationInput {
   question: string;
   refs?: string[] | undefined;
   cwd?: string | undefined;
+  authoritativeContext?: ActorEmitContextSnapshot | undefined;
   now: Date;
   createError: PairflowCreateCommandError;
 }

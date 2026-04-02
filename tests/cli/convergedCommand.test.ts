@@ -5,7 +5,8 @@ import {
   type EmitConvergedV11Result as EmitConvergedResult
 } from "../../src/v11/application/converged/emitConvergedV11.js";
 import { buildMetaReviewExecutionContext } from "../../src/core/bubble/metaReviewExecutionContext.js";
-import * as convergedApp from "../../src/v11/application/converged/emitConvergedV11.js";
+import * as actorEmitContextModule from "../../src/core/bubble/actorEmitContext.js";
+import * as actorProtocolModule from "../../src/v11/application/actorProtocol/emitActorProtocolV11.js";
 import { parsePassCommandOptions } from "../../src/cli/commands/agent/pass.js";
 import {
   getConvergedHelpText,
@@ -56,6 +57,7 @@ describe("parseConvergedCommandOptions", () => {
     const parsed = parseConvergedCommandOptions(["--help"]);
     const help = getConvergedHelpText();
     expect(parsed.help).toBe(true);
+    expect(help).toContain("pairflow agent emit --kind convergence");
     expect(help).toContain("pairflow converged");
     expect(help).toContain("CONVERGED_BLOCKER_FINDINGS_FORBIDDEN");
     expect(help).toContain(
@@ -315,20 +317,60 @@ describe("runConvergedCommand", () => {
       }
     } satisfies EmitConvergedResult;
 
+    vi.spyOn(
+      actorEmitContextModule,
+      "resolveCompatActorEmitContextFromWorkspace"
+    ).mockResolvedValue({
+      repo: "/tmp/pairflow-repo",
+      bubble_id: "b_cli_converged_meta_01",
+      handoff_id: "reviewer:b_cli_converged_meta_01:round:2:attempt:1",
+      expected_role: "reviewer",
+      expected_round: 2,
+      expected_state_fingerprint: "fp_cli_converged_meta_01",
+      worktree_path: "/tmp/pairflow-repo/.pairflow-worktrees/b_cli_converged_meta_01",
+      resolved: {} as never,
+      loaded_state: {} as never,
+      execution_context: {} as never
+    });
     const emitSpy = vi
-      .spyOn(convergedApp, "emitConvergedFromWorkspaceV11")
-      .mockResolvedValue(mocked);
+      .spyOn(actorProtocolModule, "emitActorProtocolFromWorkspaceV11")
+      .mockResolvedValue({
+        kind: "convergence",
+        convergence: mocked
+      });
 
     const result = await runConvergedCommand(
       ["--summary", "Ready for approval."],
       "/tmp/pairflow-repo"
     );
 
-    expect(emitSpy).toHaveBeenCalledWith({
-      summary: "Ready for approval.",
-      refs: [],
-      cwd: "/tmp/pairflow-repo"
-    });
+    expect(emitSpy).toHaveBeenCalledWith(
+      {
+        input: {
+          kind: "convergence",
+          repo: "/tmp/pairflow-repo",
+          bubble_id: "b_cli_converged_meta_01",
+          handoff_id: "reviewer:b_cli_converged_meta_01:round:2:attempt:1",
+          summary: "Ready for approval.",
+          refs: [],
+          expected_round: 2,
+          expected_role: "reviewer",
+          expected_state_fingerprint: "fp_cli_converged_meta_01"
+        },
+        authoritativeContext: {
+          repo: "/tmp/pairflow-repo",
+          bubble_id: "b_cli_converged_meta_01",
+          handoff_id: "reviewer:b_cli_converged_meta_01:round:2:attempt:1",
+          expected_role: "reviewer",
+          expected_round: 2,
+          expected_state_fingerprint: "fp_cli_converged_meta_01",
+          worktree_path: "/tmp/pairflow-repo/.pairflow-worktrees/b_cli_converged_meta_01",
+          resolved: {} as never,
+          loaded_state: {} as never,
+          execution_context: {} as never
+        }
+      }
+    );
     expect(result?.gateRoute).toBe("meta_review_running");
     expect(result?.approvalRequestEnvelope.type).toBe("TASK");
     expect(result?.state.state).toBe("META_REVIEW_RUNNING");
@@ -397,9 +439,27 @@ describe("runConvergedCommand", () => {
       }
     } satisfies EmitConvergedResult;
 
+    vi.spyOn(
+      actorEmitContextModule,
+      "resolveCompatActorEmitContextFromWorkspace"
+    ).mockResolvedValue({
+      repo: "/tmp/pairflow-repo",
+      bubble_id: "b_cli_converged_meta_02",
+      handoff_id: "reviewer:b_cli_converged_meta_02:round:2:attempt:1",
+      expected_role: "reviewer",
+      expected_round: 2,
+      expected_state_fingerprint: "fp_cli_converged_meta_02",
+      worktree_path: "/tmp/pairflow-repo/.pairflow-worktrees/b_cli_converged_meta_02",
+      resolved: {} as never,
+      loaded_state: {} as never,
+      execution_context: {} as never
+    });
     const emitSpy = vi
-      .spyOn(convergedApp, "emitConvergedFromWorkspaceV11")
-      .mockResolvedValue(mocked);
+      .spyOn(actorProtocolModule, "emitActorProtocolFromWorkspaceV11")
+      .mockResolvedValue({
+        kind: "convergence",
+        convergence: mocked
+      });
 
     const result = await runConvergedCommand(
       [
@@ -411,18 +471,40 @@ describe("runConvergedCommand", () => {
       "/tmp/pairflow-repo"
     );
 
-    expect(emitSpy).toHaveBeenCalledWith({
-      summary: "P2 findings remain open.",
-      refs: [],
-      findings: [
-        {
-          severity: "P2",
-          title: "Follow-up item",
-          refs: ["artifact://review/findings.md"]
+    expect(emitSpy).toHaveBeenCalledWith(
+      {
+        input: {
+          kind: "convergence",
+          repo: "/tmp/pairflow-repo",
+          bubble_id: "b_cli_converged_meta_02",
+          handoff_id: "reviewer:b_cli_converged_meta_02:round:2:attempt:1",
+          summary: "P2 findings remain open.",
+          refs: [],
+          findings: [
+            {
+              severity: "P2",
+              title: "Follow-up item",
+              refs: ["artifact://review/findings.md"]
+            }
+          ],
+          expected_round: 2,
+          expected_role: "reviewer",
+          expected_state_fingerprint: "fp_cli_converged_meta_02"
+        },
+        authoritativeContext: {
+          repo: "/tmp/pairflow-repo",
+          bubble_id: "b_cli_converged_meta_02",
+          handoff_id: "reviewer:b_cli_converged_meta_02:round:2:attempt:1",
+          expected_role: "reviewer",
+          expected_round: 2,
+          expected_state_fingerprint: "fp_cli_converged_meta_02",
+          worktree_path: "/tmp/pairflow-repo/.pairflow-worktrees/b_cli_converged_meta_02",
+          resolved: {} as never,
+          loaded_state: {} as never,
+          execution_context: {} as never
         }
-      ],
-      cwd: "/tmp/pairflow-repo"
-    });
+      }
+    );
     expect(result?.gateRoute).toBe("meta_review_running");
     expect(result?.state.state).toBe("META_REVIEW_RUNNING");
     expect(result?.convergenceEnvelope.payload.summary).toBe("converged");

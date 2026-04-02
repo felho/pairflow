@@ -1,5 +1,4 @@
 import type { MetaReviewDepthV11 as MetaReviewDepth } from "./emitMetaReviewV11.js";
-import type { MetaReviewSubmissionPayload } from "../../../types/protocol.js";
 
 interface BubbleMetaReviewCommandBase {
   id: string;
@@ -30,16 +29,6 @@ export interface BubbleMetaReviewRecoverCommandOptions
   command: "recover";
 }
 
-export interface BubbleMetaReviewSubmitCommandOptions
-  extends BubbleMetaReviewCommandBase {
-  command: "submit";
-  round: number;
-  recommendation: MetaReviewSubmissionPayload["recommendation"];
-  summary: string;
-  reworkTargetMessage: string | null;
-  reportJson: Record<string, unknown>;
-}
-
 export interface BubbleMetaReviewHelpCommandOptions {
   help: true;
 }
@@ -49,5 +38,4 @@ export type BubbleMetaReviewCommandOptions =
   | BubbleMetaReviewStatusCommandOptions
   | BubbleMetaReviewLastReportCommandOptions
   | BubbleMetaReviewRecoverCommandOptions
-  | BubbleMetaReviewSubmitCommandOptions
   | BubbleMetaReviewHelpCommandOptions;

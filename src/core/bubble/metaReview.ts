@@ -23,6 +23,7 @@ import {
   isNonEmptyString,
   isRecord
 } from "../validation.js";
+import { normalizeStringList } from "../util/normalize.js";
 import {
   validateActiveMetaReviewExecutionContext
 } from "./metaReviewExecutionContext.js";
@@ -96,6 +97,11 @@ export interface MetaReviewSubmitInput extends MetaReviewReadInput {
   summary: string;
   rework_target_message?: string | null;
   report_json: Record<string, unknown>;
+  refs?: string[];
+  expectedHandoffId?: string;
+  expectedRole?: "implementer" | "reviewer" | "meta_reviewer";
+  expectedRound?: number;
+  expectedStateFingerprint?: string;
 }
 
 export interface MetaReviewLiveRunnerInput {
@@ -1844,6 +1850,42 @@ export async function submitMetaReviewResult(
   const executionContext = assertActiveMetaReviewExecutionContext(
     loadedState.state
   );
+  if (
+    input.expectedStateFingerprint !== undefined
+    && loadedState.fingerprint !== input.expectedStateFingerprint
+  ) {
+    throw new MetaReviewError(
+      "META_REVIEW_STATE_INVALID",
+      "meta-review submit rejected: canonical actor state fingerprint mismatch."
+    );
+  }
+  if (
+    input.expectedHandoffId !== undefined
+    && executionContext.handoff_id !== input.expectedHandoffId
+  ) {
+    throw new MetaReviewError(
+      "META_REVIEW_STATE_INVALID",
+      `meta-review submit rejected: canonical actor handoff mismatch (active: ${executionContext.handoff_id}, received: ${input.expectedHandoffId}).`
+    );
+  }
+  if (
+    input.expectedRole !== undefined
+    && executionContext.active_role !== input.expectedRole
+  ) {
+    throw new MetaReviewError(
+      "META_REVIEW_STATE_INVALID",
+      `meta-review submit rejected: canonical actor role mismatch (active: ${executionContext.active_role}, received: ${input.expectedRole}).`
+    );
+  }
+  if (
+    input.expectedRound !== undefined
+    && executionContext.round !== input.expectedRound
+  ) {
+    throw new MetaReviewError(
+      "META_REVIEW_ROUND_MISMATCH",
+      `meta-review submit rejected: canonical actor round mismatch (active: ${executionContext.round}, received: ${input.expectedRound}).`
+    );
+  }
   const updatedAtMs = Date.parse(updatedAt);
   const startedAtMs = Date.parse(executionContext.started_at);
   const deadlineAtMs = Date.parse(executionContext.deadline_at);
@@ -1938,6 +1980,7 @@ export async function submitMetaReviewResult(
     summary,
     report_ref: CANONICAL_META_REVIEW_REPORT_REF,
     report_json_ref: CANONICAL_META_REVIEW_REPORT_REF,
+    refs: normalizeStringList(input.refs ?? []),
     rework_target_message: reworkTargetMessage,
     warnings,
     report_json: canonicalReportJson

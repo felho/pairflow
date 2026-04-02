@@ -399,10 +399,14 @@ pairflow bubble merge --id <id> --repo <repo> --push --delete-remote
 Agent-side commands from the bubble worktree:
 
 ```bash
-pairflow pass --summary "<handoff>" [--ref ...] [--finding ... | --no-findings]
-pairflow ask-human --question "<question>" [--ref ...]
-pairflow converged --summary "<convergence summary>" [--ref ...]
+pairflow agent emit --kind pass --repo /path/to/repo --bubble-id <id> --handoff-id <handoff-id> --summary "<handoff>" [--ref ...] [--finding ... | --no-findings]
+pairflow agent emit --kind human_question --repo /path/to/repo --bubble-id <id> --handoff-id <handoff-id> --question "<question>" [--ref ...]
+pairflow agent emit --kind convergence --repo /path/to/repo --bubble-id <id> --handoff-id <handoff-id> --summary "<convergence summary>" [--ref ...]
 ```
+
+Direct `pairflow agent emit` requires the active authority snapshot. Resolve it first with `pairflow bubble status --id <id> --repo /path/to/repo --json` and copy `executionContext.handoffId` from the JSON output. In normal pane-driven worktree use, the retained compatibility adapters remain the shortest path because they materialize that context for you.
+
+Legacy compatibility adapters remain available in Phase 4: `pairflow pass`, `pairflow ask-human`, `pairflow converged`, and `orchestra pass|ask-human|converged`.
 
 ---
 
@@ -442,14 +446,21 @@ By default, reviewer context mode is **fresh**: when the implementer hands off (
 
 ```bash
 # 3. Implementer finishes first pass, hands off to reviewer
-#    (run FROM the worktree directory — bubble is auto-detected from CWD)
-pairflow pass --summary "Login form implemented with email regex validation; validation run: lint/typecheck/test" \
+pairflow bubble status --id feat_login --repo /path/to/myapp --json
+#    → copy executionContext.handoffId from the JSON output
+
+pairflow agent emit --kind pass --repo /path/to/myapp --bubble-id feat_login --handoff-id <handoff-id> \
+  --summary "Login form implemented with email regex validation; validation run: lint/typecheck/test" \
   --ref .pairflow/evidence/lint.log \
   --ref .pairflow/evidence/typecheck.log \
   --ref .pairflow/evidence/test.log
 
 # 4. Reviewer reviews and sends feedback back
-pairflow pass --summary "Missing: password strength indicator, error messages not i18n-ready" \
+pairflow bubble status --id feat_login --repo /path/to/myapp --json
+#    → refresh executionContext.handoffId; do this before every direct agent emit
+
+pairflow agent emit --kind pass --repo /path/to/myapp --bubble-id feat_login --handoff-id <handoff-id> \
+  --summary "Missing: password strength indicator, error messages not i18n-ready" \
   --finding "P1:Password strength indicator missing|artifact://review/password-strength-proof.md" \
   --finding "P2:i18n error keys missing"
 
@@ -460,7 +471,11 @@ pairflow pass --summary "Missing: password strength indicator, error messages no
 # they do not satisfy blocker finding evidence binding.
 
 # 5. Implementer fixes issues, hands off again
-pairflow pass --summary "Added password strength meter and i18n error keys; reran lint/typecheck/test" \
+pairflow bubble status --id feat_login --repo /path/to/myapp --json
+#    → refresh executionContext.handoffId again; the previous handoff changed authority
+
+pairflow agent emit --kind pass --repo /path/to/myapp --bubble-id feat_login --handoff-id <handoff-id> \
+  --summary "Added password strength meter and i18n error keys; reran lint/typecheck/test" \
   --ref .pairflow/evidence/lint.log \
   --ref .pairflow/evidence/typecheck.log \
   --ref .pairflow/evidence/test.log
@@ -469,7 +484,11 @@ pairflow pass --summary "Added password strength meter and i18n error keys; rera
 # commands and state skipped checks explicitly in the summary.
 
 # 6. Reviewer is satisfied — signals convergence
-pairflow converged --summary "All review criteria met, code is clean"
+pairflow bubble status --id feat_login --repo /path/to/myapp --json
+#    → refresh executionContext.handoffId again before convergence
+
+pairflow agent emit --kind convergence --repo /path/to/myapp --bubble-id feat_login --handoff-id <handoff-id> \
+  --summary "All review criteria met, code is clean"
 #    → State becomes READY_FOR_APPROVAL
 #    → An approval request appears in your inbox
 
@@ -499,7 +518,11 @@ Sometimes an agent needs clarification. This pauses the flow until you respond.
 
 ```bash
 # Agent hits an ambiguity and asks you
-pairflow ask-human --question "Should password validation happen server-side too, or client-only?"
+pairflow bubble status --id feat_login --repo /path/to/myapp --json
+#    → refresh executionContext.handoffId before direct human_question emit
+
+pairflow agent emit --kind human_question --repo /path/to/myapp --bubble-id feat_login --handoff-id <handoff-id> \
+  --question "Should password validation happen server-side too, or client-only?"
 #    → State becomes WAITING_HUMAN
 
 # You can see pending questions in the inbox
@@ -510,6 +533,7 @@ pairflow bubble reply --id feat_login --repo /path/to/myapp \
   --message "Both. Add server-side validation in the /auth/login endpoint too."
 #    → State goes back to RUNNING
 #    → Agent continues with your answer
+#    → any later direct `pairflow agent emit` must fetch a fresh status snapshot first
 ```
 
 You can also attach file references to your reply for context:
@@ -831,17 +855,18 @@ The registry is stored at `~/.pairflow/repos.json` (override with `PAIRFLOW_REPO
 |---------|-------------|
 | `metrics report --from <date> --to <date> [--repo <path>] [--format table\|json]` | Generate loop-quality and throughput metrics from local event shards |
 
-#### Agent-facing commands (auto-detected from CWD)
+#### Agent-facing commands
 
-These commands don't require `--id` or `--repo` — they detect the bubble from the current working directory (the worktree).
+Canonical actor emission uses explicit authority (`--repo`, `--bubble-id`, `--handoff-id`). Resolve the active snapshot first with `pairflow bubble status --id <id> --repo <path> --json`, then copy `executionContext.handoffId` from the JSON output.
 
 | Command | Description |
 |---------|-------------|
-| `pass --summary <text> [--ref <path>]... [--intent <task\|review\|fix_request>] [--finding <P0\|P1\|P2\|P3:Title>]... [--no-findings]` | Hand off to the other agent (reviewer must declare findings explicitly; in `accuracy-critical` bubbles reviewer PASS requires `--ref` to `review-verification-input.json`) |
-| `ask-human --question <text> [--ref <path>]...` | Ask the human a question |
-| `converged --summary <text> [--ref <path>]...` | Signal convergence (reviewer only) |
+| `agent emit --kind pass --repo <path> --bubble-id <id> --handoff-id <id> --summary <text> [--ref <path>]... [--intent <task\|review\|fix_request>] [--finding <P0\|P1\|P2\|P3:Title>]... [--no-findings]` | Canonical pass emit (reviewer must declare findings explicitly; in `accuracy-critical` bubbles reviewer PASS requires `--ref` to `review-verification-input.json`) |
+| `agent emit --kind human_question --repo <path> --bubble-id <id> --handoff-id <id> --question <text> [--ref <path>]...` | Canonical human-question emit |
+| `agent emit --kind convergence --repo <path> --bubble-id <id> --handoff-id <id> --summary <text> [--ref <path>]...` | Canonical convergence emit (reviewer only) |
+| `agent emit --kind meta_review_result --repo <path> --bubble-id <id> --handoff-id <id> --round <n> --recommendation approve\|rework\|inconclusive --summary <text> --report-json <json> [--ref <path>]...` | Canonical meta-review submit |
 
-Aliases: `pairflow agent pass/ask-human/converged` or `orchestra pass/ask-human/converged`
+Compatibility adapters: `pairflow pass|ask-human|converged` and `orchestra pass|ask-human|converged`. These retained paths may still materialize context from the worktree, but they are transitional adapters, not the primary contract.
 
 ---
 
@@ -1084,7 +1109,7 @@ pnpm check      # All of the above
 pnpm dev:ui     # Rebuild CLI + restart web UI server on port 4173
 ```
 
-Validation commands write evidence logs to `.pairflow/evidence/` (lint/typecheck/test), which can be attached in `pairflow pass --ref ...`.
+Validation commands write evidence logs to `.pairflow/evidence/` (lint/typecheck/test), which can be attached in canonical actor emit refs such as `pairflow agent emit --kind pass ... --ref ...`. Legacy `pairflow pass` remains available as a compatibility adapter during Phase 4.
 
 ### CI (milestone-aware fitness gate)
 

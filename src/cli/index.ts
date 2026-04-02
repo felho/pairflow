@@ -9,6 +9,10 @@ import {
   runConvergedCommand
 } from "./commands/agent/converged.js";
 import {
+  getAgentEmitHelpText,
+  runAgentEmitCommand
+} from "./commands/agent/emit.js";
+import {
   getBubbleApproveHelpText,
   runBubbleApproveCommand
 } from "./commands/bubble/approve.js";
@@ -131,6 +135,7 @@ import {
   toMetaReviewError
 } from "../core/bubble/metaReview.js";
 import { isMainCliEntrypoint } from "./isMainCliEntrypoint.js";
+import type { ActorEmitResultV11 } from "../v11/application/actorProtocol/emitActorProtocolV11.js";
 
 async function handlePassCommand(args: string[]): Promise<number> {
   const result = await runPassCommand(args);
@@ -138,6 +143,13 @@ async function handlePassCommand(args: string[]): Promise<number> {
     process.stdout.write(`${getPassHelpText()}\n`);
     return 0;
   }
+  writePassResult(result);
+  return 0;
+}
+
+function writePassResult(
+  result: NonNullable<Awaited<ReturnType<typeof runPassCommand>>>
+): void {
   let outputLine: string;
   if (result.transitionDecision === "auto_converge") {
     if (result.autoConverged === undefined) {
@@ -178,7 +190,6 @@ async function handlePassCommand(args: string[]): Promise<number> {
       `Warning: PASS validation compatibility artifact update failed during PASS handling (reason: ${result.passValidationCompatibilityArtifactWriteFailureReason}).\n`
     );
   }
-  return 0;
 }
 
 async function handleAskHumanCommand(args: string[]): Promise<number> {
@@ -187,10 +198,16 @@ async function handleAskHumanCommand(args: string[]): Promise<number> {
     process.stdout.write(`${getAskHumanHelpText()}\n`);
     return 0;
   }
+  writeAskHumanResult(result);
+  return 0;
+}
+
+function writeAskHumanResult(
+  result: NonNullable<Awaited<ReturnType<typeof runAskHumanCommand>>>
+): void {
   process.stdout.write(
     `HUMAN_QUESTION recorded for ${result.bubbleId}: ${result.envelope.id}\n`
   );
-  return 0;
 }
 
 async function handleConvergedCommand(args: string[]): Promise<number> {
@@ -199,6 +216,13 @@ async function handleConvergedCommand(args: string[]): Promise<number> {
     process.stdout.write(`${getConvergedHelpText()}\n`);
     return 0;
   }
+  writeConvergedResult(result);
+  return 0;
+}
+
+function writeConvergedResult(
+  result: NonNullable<Awaited<ReturnType<typeof runConvergedCommand>>>
+): void {
   const handoffDescription =
     result.approvalRequestEnvelope.type === "APPROVAL_REQUEST"
       ? `human gate requested: ${result.approvalRequestEnvelope.id}`
@@ -215,7 +239,36 @@ async function handleConvergedCommand(args: string[]): Promise<number> {
       `Warning: handoff delivery to active pane was not confirmed (reason: ${result.delivery.reason ?? "unknown"}${result.delivery.retried ? ", retried" : ""}). ${guidance}\n`
     );
   }
+}
+
+async function handleAgentEmitCommand(args: string[]): Promise<number> {
+  const result = await runAgentEmitCommand(args);
+  if (result === null) {
+    process.stdout.write(`${getAgentEmitHelpText()}\n`);
+    return 0;
+  }
+
+  writeAgentEmitResult(result);
   return 0;
+}
+
+function writeAgentEmitResult(result: Awaited<ActorEmitResultV11>): void {
+  if (result.kind === "pass") {
+    writePassResult(result.pass);
+    return;
+  }
+  if (result.kind === "human_question") {
+    writeAskHumanResult(result.human_question);
+    return;
+  }
+  if (result.kind === "convergence") {
+    writeConvergedResult(result.convergence);
+    return;
+  }
+
+  process.stdout.write(
+    `${renderMetaReviewSubmitText(result.meta_review_result)}\n`
+  );
 }
 
 function waitForShutdownSignal(closeServer: () => Promise<void>): Promise<void> {
@@ -320,8 +373,8 @@ async function handleMetricsReportCommand(args: string[]): Promise<number> {
   }
 }
 
-type AgentCommandName = "pass" | "ask-human" | "converged";
-const agentCommandNames = ["pass", "ask-human", "converged"] as const;
+type AgentCommandName = "pass" | "ask-human" | "converged" | "emit";
+const agentCommandNames = ["pass", "ask-human", "converged", "emit"] as const;
 
 function resolveAgentCommandArgs(
   command: string | undefined,
@@ -329,7 +382,7 @@ function resolveAgentCommandArgs(
   rest: string[],
   expected: AgentCommandName
 ): string[] | null {
-  if (command === expected) {
+  if (expected !== "emit" && command === expected) {
     return [subcommand, ...rest].filter((part) => part !== undefined);
   }
   if (command === "agent" && subcommand === expected) {
@@ -662,10 +715,6 @@ async function handleBubbleMetaReviewCommand(args: string[]): Promise<number> {
         process.stdout.write(`${JSON.stringify(result.run, null, 2)}\n`);
         return 0;
       }
-      if (result.command === "submit") {
-        process.stdout.write(`${JSON.stringify(result.submit, null, 2)}\n`);
-        return 0;
-      }
       if (result.command === "status") {
         process.stdout.write(`${JSON.stringify(result.status, null, 2)}\n`);
         return 0;
@@ -682,10 +731,6 @@ async function handleBubbleMetaReviewCommand(args: string[]): Promise<number> {
 
     if (result.command === "run") {
       process.stdout.write(`${renderMetaReviewRunText(result.run)}\n`);
-      return 0;
-    }
-    if (result.command === "submit") {
-      process.stdout.write(`${renderMetaReviewSubmitText(result.submit)}\n`);
       return 0;
     }
     if (result.command === "status") {
@@ -789,7 +834,9 @@ function buildSupportedCommandsText(): string {
   const metricsCommands = Object.keys(metricsSubcommandHandlers).map(
     (subcommand) => `metrics ${subcommand}`
   );
-  const topLevelAgentCommands = [...agentCommandNames];
+  const topLevelAgentCommands = agentCommandNames.filter(
+    (commandName) => commandName !== "emit"
+  );
   const namespacedAgentCommands = agentCommandNames.map(
     (commandName) => `agent ${commandName}`
   );
@@ -829,6 +876,11 @@ export async function runCli(argv: string[]): Promise<number> {
   );
   if (convergedArgs !== null) {
     return handleConvergedCommand(convergedArgs);
+  }
+
+  const emitArgs = resolveAgentCommandArgs(command, subcommand, rest, "emit");
+  if (emitArgs !== null) {
+    return handleAgentEmitCommand(emitArgs);
   }
 
   if (command === "ui") {

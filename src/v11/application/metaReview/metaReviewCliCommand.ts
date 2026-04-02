@@ -22,8 +22,7 @@ export type {
   BubbleMetaReviewLastReportCommandOptions,
   BubbleMetaReviewRecoverCommandOptions,
   BubbleMetaReviewRunCommandOptions,
-  BubbleMetaReviewStatusCommandOptions,
-  BubbleMetaReviewSubmitCommandOptions
+  BubbleMetaReviewStatusCommandOptions
 } from "./metaReviewCliOptions.js";
 export type { BubbleMetaReviewCommandResult } from "./metaReviewCliTypes.js";
 

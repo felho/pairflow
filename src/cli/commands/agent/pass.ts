@@ -2,9 +2,12 @@ import { parseArgs } from "node:util";
 
 import {
   asPassCommandErrorV11 as asPassCommandError,
-  emitPassFromWorkspaceV11 as emitPassFromWorkspace,
   type EmitPassV11Result as EmitPassResult
 } from "../../../v11/application/pass/emitPassV11.js";
+import {
+  resolveCompatActorEmitContextFromWorkspace
+} from "../../../core/bubble/actorEmitContext.js";
+import { emitActorProtocolFromWorkspaceV11 } from "../../../v11/application/actorProtocol/emitActorProtocolV11.js";
 import { CliFindingParseError, parseCliFinding } from "./shared/findingParser.js";
 import { isPassIntent, type PassIntent } from "../../../types/protocol.js";
 import {
@@ -61,6 +64,8 @@ const passParseOptions = {
 export function getPassHelpText(): string {
   return [
     "Usage:",
+    '  pairflow agent emit --kind pass --repo <path> --bubble-id <id> --handoff-id <id> --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>] [--finding <P0|P1|P2|P3:Title[|ref1,ref2]>]... [--no-findings]',
+    "  Compatibility adapter:",
     '  pairflow pass --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>] [--finding <P0|P1|P2|P3:Title[|ref1,ref2]>]... [--no-findings]',
     "",
     "Options:",
@@ -163,14 +168,28 @@ export async function runPassCommand(
       return null;
     }
 
-    return await emitPassFromWorkspace({
-      summary: options.summary,
-      refs: options.refs,
-      ...(options.intent !== undefined ? { intent: options.intent } : {}),
-      ...(options.findings.length > 0 ? { findings: options.findings } : {}),
-      ...(options.noFindings ? { noFindings: true } : {}),
-      cwd
+    const context = await resolveCompatActorEmitContextFromWorkspace(cwd);
+    const result = await emitActorProtocolFromWorkspaceV11({
+      input: {
+        kind: "pass",
+        repo: context.repo,
+        bubble_id: context.bubble_id,
+        handoff_id: context.handoff_id,
+        refs: options.refs,
+        expected_role: context.expected_role,
+        expected_round: context.expected_round,
+        expected_state_fingerprint: context.expected_state_fingerprint,
+        summary: options.summary,
+        ...(options.intent !== undefined ? { intent: options.intent } : {}),
+        ...(options.findings.length > 0 ? { findings: options.findings } : {}),
+        ...(options.noFindings ? { no_findings: true } : {})
+      },
+      authoritativeContext: context
     });
+    if (result.kind !== "pass") {
+      throw new Error("ACTOR_EMIT_RESULT_KIND_INVALID: expected pass result.");
+    }
+    return result.pass;
   } catch (error) {
     asPassCommandError(error);
   }
