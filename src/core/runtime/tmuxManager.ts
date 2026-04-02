@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
-import { maybeAcceptClaudeTrustPrompt, sendAndSubmitTmuxPaneMessage } from "./tmuxInput.js";
+import {
+  maybeAcceptClaudeTrustPrompt,
+  sendAndSubmitTmuxPaneMessage,
+  submitTmuxPaneInput
+} from "./tmuxInput.js";
 
 export const runtimePaneIndices = {
   status: 0,
@@ -39,6 +43,9 @@ export interface LaunchBubbleTmuxSessionInput {
   implementerBootstrapMessage?: string;
   reviewerBootstrapMessage?: string;
   metaReviewerBootstrapMessage?: string;
+  implementerSubmitStartupPrompt?: boolean;
+  reviewerSubmitStartupPrompt?: boolean;
+  metaReviewerSubmitStartupPrompt?: boolean;
   implementerKickoffMessage?: string;
   reviewerKickoffMessage?: string;
   metaReviewerKickoffMessage?: string;
@@ -362,6 +369,24 @@ export async function launchBubbleTmuxSession(
     `run-shell "${hookLayoutScript}"`
   ]);
   await runner(["run-shell", layoutScript]);
+  const sleep = (ms: number): Promise<void> =>
+    new Promise((resolvePromise) => {
+      setTimeout(resolvePromise, ms);
+    });
+  const submitStartupPrompt = async (
+    targetPane: string,
+    shouldSubmit: boolean | undefined
+  ): Promise<void> => {
+    if (!shouldSubmit) {
+      return;
+    }
+
+    // Codex currently prefills the initial prompt in interactive mode but
+    // does not reliably auto-submit it. Give the TUI a moment to boot, then
+    // press Enter once so the seeded startup prompt begins executing.
+    await sleep(1500);
+    await submitTmuxPaneInput(runner, targetPane);
+  };
   const sendPaneMessage = async (
     targetPane: string,
     message: string | undefined
@@ -377,6 +402,18 @@ export async function launchBubbleTmuxSession(
     await sendAndSubmitTmuxPaneMessage(runner, targetPane, message as string);
   };
 
+  await submitStartupPrompt(
+    implementerPaneId,
+    input.implementerSubmitStartupPrompt
+  );
+  await submitStartupPrompt(
+    reviewerPaneId,
+    input.reviewerSubmitStartupPrompt
+  );
+  await submitStartupPrompt(
+    metaReviewerPaneId,
+    input.metaReviewerSubmitStartupPrompt
+  );
   await sendPaneMessage(implementerPaneId, input.implementerBootstrapMessage);
   await sendPaneMessage(reviewerPaneId, input.reviewerBootstrapMessage);
   await sendPaneMessage(metaReviewerPaneId, input.metaReviewerBootstrapMessage);

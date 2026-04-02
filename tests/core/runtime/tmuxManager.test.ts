@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   buildBubbleTmuxSessionName,
@@ -389,6 +389,51 @@ describe("launchBubbleTmuxSession", () => {
     for (const send of failedSends) {
       expect(send.allowFailure).toBe(true);
     }
+  });
+
+  it("submits codex startup prompt before sending kickoff when requested", async () => {
+    vi.useFakeTimers();
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args: string[]) => {
+      calls.push(args);
+      return Promise.resolve({
+        stdout: buildSplitPaneStdout(args),
+        stderr: "",
+        exitCode: args[0] === "has-session" ? 1 : 0
+      });
+    };
+
+    const launchPromise = launchBubbleTmuxSession({
+      bubbleId: "b_start_submit_prompt",
+      worktreePath: "/tmp/worktree",
+      statusCommand: "status",
+      implementerCommand: "codex 'seeded prompt'",
+      reviewerCommand: "claude",
+      implementerSubmitStartupPrompt: true,
+      implementerKickoffMessage: "kickoff message",
+      runner
+    });
+
+    await vi.advanceTimersByTimeAsync(2000);
+    await launchPromise;
+    vi.useRealTimers();
+
+    const implementerSendKeys = calls.filter(
+      (call) => call[0] === "send-keys" && call[2] === "%11"
+    );
+    expect(implementerSendKeys[0]).toEqual([
+      "send-keys",
+      "-t",
+      "%11",
+      "Enter"
+    ]);
+    expect(implementerSendKeys).toContainEqual([
+      "send-keys",
+      "-t",
+      "%11",
+      "-l",
+      "kickoff message"
+    ]);
   });
 
   it("fails when session already exists", async () => {

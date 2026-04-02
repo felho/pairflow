@@ -16,6 +16,10 @@ import type { resolveResumeKickoffMessages } from "./startCommandResumePrompts.j
 import type { ResolvedStartBubbleDependencies } from "./startCommandOrchestration.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
 
+function shouldSubmitStartupPrompt(agentName: "codex" | "claude"): boolean {
+  return agentName === "codex";
+}
+
 export async function launchFreshTmuxSession(input: {
   context: StartExecutionContext;
   deps: ResolvedStartBubbleDependencies;
@@ -34,6 +38,13 @@ export async function launchFreshTmuxSession(input: {
     implementerPaneLabel: `[${input.context.resolved.bubbleConfig.agents.implementer}/implementer]`,
     reviewerPaneLabel: `[${input.context.resolved.bubbleConfig.agents.reviewer}/reviewer]`,
     metaReviewerPaneLabel: "[codex/meta-reviewer]",
+    implementerSubmitStartupPrompt: shouldSubmitStartupPrompt(
+      input.context.resolved.bubbleConfig.agents.implementer
+    ),
+    reviewerSubmitStartupPrompt: shouldSubmitStartupPrompt(
+      input.context.resolved.bubbleConfig.agents.reviewer
+    ),
+    metaReviewerSubmitStartupPrompt: true,
     implementerCommand: buildAgentCommand({
       agentName: input.context.resolved.bubbleConfig.agents.implementer,
       bubbleId: input.context.resolved.bubbleId,
@@ -125,6 +136,13 @@ export async function launchResumeTmuxSession(input: {
     implementerPaneLabel: `[${input.context.resolved.bubbleConfig.agents.implementer}/implementer]`,
     reviewerPaneLabel: `[${input.context.resolved.bubbleConfig.agents.reviewer}/reviewer]`,
     metaReviewerPaneLabel: "[codex/meta-reviewer]",
+    implementerSubmitStartupPrompt: shouldSubmitStartupPrompt(
+      input.context.resolved.bubbleConfig.agents.implementer
+    ),
+    reviewerSubmitStartupPrompt: shouldSubmitStartupPrompt(
+      input.context.resolved.bubbleConfig.agents.reviewer
+    ),
+    metaReviewerSubmitStartupPrompt: true,
     implementerCommand: buildAgentCommand({
       agentName: input.context.resolved.bubbleConfig.agents.implementer,
       bubbleId: input.context.resolved.bubbleId,

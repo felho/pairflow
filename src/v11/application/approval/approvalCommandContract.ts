@@ -1,4 +1,7 @@
-import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
+import type {
+  emitTmuxDeliveryNotification,
+  EmitTmuxDeliveryNotificationResult
+} from "../../../core/runtime/tmuxDelivery.js";
 import type {
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
@@ -9,6 +12,11 @@ import type {
 
 export interface EmitApprovalDecisionDependencies {
   emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
+}
+
+export interface ApprovalDecisionDeliverySignalsResult {
+  statusDelivery: EmitTmuxDeliveryNotificationResult;
+  implementerDelivery?: EmitTmuxDeliveryNotificationResult;
 }
 
 export interface EmitApprovalDecisionInput {
@@ -28,6 +36,7 @@ export interface EmitApprovalDecisionResult {
   sequence: number;
   envelope: ProtocolEnvelope;
   state: BubbleStateSnapshot;
+  delivery?: ApprovalDecisionDeliverySignalsResult;
 }
 
 export interface EmitApproveInput {

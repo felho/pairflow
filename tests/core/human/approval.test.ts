@@ -328,6 +328,16 @@ describe("approval decisions", () => {
     expect(result.state.active_agent).toBe(bubble.config.agents.implementer);
     expect(result.state.active_role).toBe("implementer");
     expect(result.state.round).toBe(3);
+    expect(result.delivery).toEqual({
+      statusDelivery: {
+        delivered: true,
+        message: "ok"
+      },
+      implementerDelivery: {
+        delivered: true,
+        message: "ok"
+      }
+    });
     expect(result.state.round_role_history.some((entry) => entry.round === 3)).toBe(
       true
     );

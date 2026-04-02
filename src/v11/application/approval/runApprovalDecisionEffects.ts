@@ -8,6 +8,8 @@ import type {
 import {
   resolveApprovalDecisionMetadata
 } from "../../shared/approval/approvalRoutingEligibility.js";
+import type { ApprovalDecisionDeliverySignalsResult } from "./approvalCommandContract.js";
+import type { EmitTmuxDeliveryNotificationResult } from "../../../core/runtime/tmuxDelivery.js";
 
 type ApprovalDecisionFlowShape = Pick<
   NormalizedApprovalDecisionInput,
@@ -51,24 +53,38 @@ export async function buildApprovalDecisionEnvelopePayload(input: {
   return envelopePayload;
 }
 
-export function emitApprovalDecisionDeliverySignals(input: {
+function buildFallbackDeliveryResult(message: string): EmitTmuxDeliveryNotificationResult {
+  return {
+    delivered: false,
+    message,
+    reason: "tmux_send_failed"
+  };
+}
+
+export async function emitApprovalDecisionDeliverySignals(input: {
   decision: ApprovalDecisionFlowShape["decision"];
   resolved: Awaited<ReturnType<ResolvedApprovalCommandDependencies["resolveBubbleById"]>>;
   appendedEnvelope: ProtocolEnvelope;
   messageRef: string;
   dependencies: ResolvedApprovalCommandDependencies;
-}): void {
+}): Promise<ApprovalDecisionDeliverySignalsResult> {
   // Optional UX signal; never block protocol/state progression on notification failure.
-  void input.dependencies.emitTmuxDeliveryNotification({
+  const statusDelivery = await input.dependencies.emitTmuxDeliveryNotification({
     bubbleId: input.resolved.bubbleId,
     bubbleConfig: input.resolved.bubbleConfig,
     sessionsPath: input.resolved.bubblePaths.sessionsPath,
     envelope: input.appendedEnvelope,
     messageRef: input.messageRef
-  });
+  }).catch(() =>
+    buildFallbackDeliveryResult(
+      `Failed to deliver approval decision ${input.appendedEnvelope.id} to status pane.`
+    )
+  );
 
   if (input.decision !== "rework") {
-    return;
+    return {
+      statusDelivery
+    };
   }
 
   // Rework requests must reach the implementer pane explicitly, otherwise
@@ -78,7 +94,7 @@ export function emitApprovalDecisionDeliverySignals(input: {
     input.appendedEnvelope.payload.metadata !== null
       ? input.appendedEnvelope.payload.metadata
       : {};
-  void input.dependencies.emitTmuxDeliveryNotification({
+  const implementerDelivery = await input.dependencies.emitTmuxDeliveryNotification({
     bubbleId: input.resolved.bubbleId,
     bubbleConfig: input.resolved.bubbleConfig,
     sessionsPath: input.resolved.bubblePaths.sessionsPath,
@@ -94,7 +110,16 @@ export function emitApprovalDecisionDeliverySignals(input: {
       }
     },
     messageRef: input.messageRef
-  });
+  }).catch(() =>
+    buildFallbackDeliveryResult(
+      `Failed to deliver approval decision ${input.appendedEnvelope.id} to implementer pane.`
+    )
+  );
+
+  return {
+    statusDelivery,
+    implementerDelivery
+  };
 }
 
 export async function emitApprovalDecisionLifecycleEvent(input: {

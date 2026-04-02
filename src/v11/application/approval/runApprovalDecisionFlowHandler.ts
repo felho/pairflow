@@ -99,7 +99,7 @@ export async function runApprovalDecisionFlowWithContext(
     envelope: appended.envelope
   });
 
-  emitApprovalDecisionDeliverySignals({
+  const delivery = await emitApprovalDecisionDeliverySignals({
     decision: input.flow.decision,
     resolved: input.execution.resolved,
     appendedEnvelope: appended.envelope,
@@ -122,6 +122,7 @@ export async function runApprovalDecisionFlowWithContext(
     bubbleId: input.execution.resolved.bubbleId,
     sequence: appended.sequence,
     envelope: appended.envelope,
-    state: written.state
+    state: written.state,
+    delivery
   };
 }
