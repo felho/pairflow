@@ -1,6 +1,7 @@
 import { applyStateTransition } from "../../../core/state/machine.js";
 import { clearLiveMetaReviewSnapshot } from "../../../core/bubble/metaReview.js";
 import { buildMetaReviewExecutionContext } from "../../../core/bubble/metaReviewExecutionContext.js";
+import { metaReviewExecutionContextToRunningContext } from "../../../core/state/executionContext.js";
 import {
   StateStoreConflictError,
   type LoadedStateSnapshot,
@@ -112,6 +113,13 @@ export async function stageMetaReviewRunningState(input: {
     input.readyForApproval.state.meta_review
   );
   const attempt = previousMetaReview.auto_rework_count + 1;
+  const metaReviewExecutionContext = buildMetaReviewExecutionContext({
+    bubbleId: input.bubbleId,
+    round: input.readyForApproval.state.round,
+    startedAt: input.nowIso,
+    watchdogTimeoutMinutes: input.watchdogTimeoutMinutes,
+    attempt
+  });
   const nextState: BubbleStateSnapshot = {
     ...input.readyForApproval.state,
     state: "META_REVIEW_RUNNING" as const,
@@ -121,15 +129,11 @@ export async function stageMetaReviewRunningState(input: {
     last_command_at: input.nowIso,
     meta_review: {
       ...previousMetaReview,
-      execution_context: buildMetaReviewExecutionContext({
-        bubbleId: input.bubbleId,
-        round: input.readyForApproval.state.round,
-        startedAt: input.nowIso,
-        watchdogTimeoutMinutes: input.watchdogTimeoutMinutes,
-        attempt
-      })
+      execution_context: metaReviewExecutionContext
     }
   };
+  nextState.execution_context =
+    metaReviewExecutionContextToRunningContext(metaReviewExecutionContext);
   return input.writeState(
     input.statePath,
     nextState,

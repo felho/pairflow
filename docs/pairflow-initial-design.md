@@ -104,24 +104,27 @@ Allowed transitions:
 RUNNING turn tracking (required):
 1. `state.json` must track `active_agent` (`claude` | `codex`) and `active_since` timestamp.
 2. `state.json` must track round-role metadata: `active_role` (`implementer` | `reviewer`) and `round_role_history`.
-3. The status pane shows high-level state, active turn owner, and active role.
-4. Liveness watchdog uses `active_agent` context and pane activity sampling; timeout alone is not enough for standard `RUNNING` escalation.
-5. Timeout is configured by `watchdog_timeout_minutes` in `bubble.toml` (default: `30`), then standard `RUNNING` escalation additionally requires either a hard dead-signal (missing session / unreadable pane) or a post-timeout quiet window.
+3. Active autonomous work must persist a canonical top-level `execution_context` authority block with `active_role`, `handoff_id`, `round`, `awaited_output_type`, `started_at`, `deadline_at`, and `attempt`.
+4. `active_role` remains a lifecycle/status mirror, but authority belongs to `execution_context.active_role`.
+5. The status pane shows high-level state, active turn owner, active role, and compatibility labels when present.
+6. Liveness watchdog uses canonical `execution_context.started_at` / `deadline_at` whenever an active execution context exists; runtime activity remains observational.
+7. Timeout is configured by `watchdog_timeout_minutes` in `bubble.toml` (default: `30`), then standard `RUNNING` escalation additionally requires either a hard dead-signal (missing session / unreadable pane) or a post-timeout quiet window.
 
 META_REVIEW_RUNNING handoff semantics:
-1. `META_REVIEW_RUNNING` must persist a canonical `meta_review.execution_context` block that owns the active gate attempt.
-2. The execution context contains `handoff_id`, `round`, `awaited_output_type=meta_review_result`, `started_at`, `deadline_at`, and `attempt`.
-3. `pairflow bubble meta-review submit` is the normal success-path handoff command. A successful submit validates the active execution context, persists the canonical result, applies the gate route, advances lifecycle state, and closes meta-reviewer ownership in the same command flow.
-4. A submit that cannot produce a routeable normal handoff must fail closed as a typed submit error; a canonical snapshot alone is not a successful handoff.
-5. The watchdog is not the normal success-path router for canonical meta-review submits before timeout expiry.
-6. Watchdog responsibility for meta-review is limited to timeout/liveness/recovery fallback handling when normal submit handoff did not finish.
-7. Meta-review authority must not be inferred from `active_since`, `last_command_at`, resume, restart, or general liveness updates; those fields remain observational and must not extend the canonical submit window.
-8. After the durable kickoff envelope is appended, runtime delivery confirmation is observability only. Pane-marker uncertainty or pane availability problems must not, by themselves, route the bubble out of `META_REVIEW_RUNNING`.
-9. `state.json` may persist `meta_review.runtime_delivery` as a non-authority diagnostic block with `status = confirmed|uncertain|failed`, optional `reason_code`/`message`, `observed_at`, and correlation fields such as `observed_for_handoff_id` and `observed_for_round`.
-10. `meta_review.runtime_delivery` must never extend or replace the canonical authority model. Submit acceptance, recovery, and timeout decisions remain anchored to `meta_review.execution_context` plus the current-round durable `meta_review_result`.
-11. Canonical `pairflow bubble meta-review submit` authorization must not depend on runtime pane-binding freshness. Missing or deactivated `metaReviewerPane` state after delivery failure, restart, or resume is a runtime diagnostic, not a submit gate, as long as the current-round execution context is still valid.
-12. Recovery may temporarily clear live `active_agent` / `active_role` ownership while keeping `META_REVIEW_RUNNING` plus a valid `meta_review.execution_context`. In that state canonical submit remains allowed; conflicting live ownership is still rejected, but missing live ownership is not an authority failure by itself.
-13. Status and recovery surfaces must project runtime-delivery diagnostics only when their correlation fields still match the active execution context; stale diagnostics are archival only.
+1. `META_REVIEW_RUNNING` must persist the same canonical top-level `execution_context` authority used by generic `RUNNING`.
+2. `meta_review.execution_context` may remain as a compatibility mirror, but it is no longer a separate primary authority source.
+3. The active meta-review execution context contains `active_role=meta_reviewer`, `handoff_id`, `round`, `awaited_output_type=meta_review_result`, `started_at`, `deadline_at`, and `attempt`.
+4. `pairflow bubble meta-review submit` is the normal success-path handoff command. A successful submit validates the active execution context, persists the canonical result, applies the gate route, advances lifecycle state, and closes meta-reviewer ownership in the same command flow.
+5. A submit that cannot produce a routeable normal handoff must fail closed as a typed submit error; a canonical snapshot alone is not a successful handoff.
+6. The watchdog is not the normal success-path router for canonical meta-review submits before timeout expiry.
+7. Watchdog responsibility for meta-review is limited to timeout/liveness/recovery fallback handling when normal submit handoff did not finish.
+8. Meta-review authority must not be inferred from `active_since`, `last_command_at`, resume, restart, or general liveness updates; those fields remain observational and must not extend the canonical submit window.
+9. After the durable kickoff envelope is appended, runtime delivery confirmation is observability only. Pane-marker uncertainty or pane availability problems must not, by themselves, route the bubble out of `META_REVIEW_RUNNING`.
+10. `state.json` may persist `meta_review.runtime_delivery` as a non-authority diagnostic block with `status = confirmed|uncertain|failed`, optional `reason_code`/`message`, `observed_at`, and correlation fields such as `observed_for_handoff_id` and `observed_for_round`.
+11. `meta_review.runtime_delivery` must never extend or replace the canonical authority model. Submit acceptance, recovery, and timeout decisions remain anchored to top-level `execution_context` plus the current-round durable `meta_review_result`.
+12. Canonical `pairflow bubble meta-review submit` authorization must not depend on runtime pane-binding freshness. Missing or deactivated `metaReviewerPane` state after delivery failure, restart, or resume is a runtime diagnostic, not a submit gate, as long as the current-round execution context is still valid.
+13. Recovery may temporarily clear live `active_agent` / `active_role` ownership while keeping `META_REVIEW_RUNNING` plus a valid canonical execution context. In that state canonical submit remains allowed; conflicting live ownership is still rejected, but missing live ownership is not an authority failure by itself.
+14. Status and recovery surfaces must project runtime-delivery diagnostics only when their correlation fields still match the active execution context; stale diagnostics are archival only.
 
 ## Convergence Policy (Quality-First)
 Each loop round:
@@ -262,7 +265,7 @@ Repository-local control data:
   bubbles/
     <bubble_id>/
       bubble.toml
-      state.json              # includes: state, active_agent, active_since, active_role, round_role_history, last_command_at, meta_review.execution_context, meta_review.runtime_delivery
+      state.json              # includes: state, active_agent, active_since, active_role, execution_context, round_role_history, last_command_at, meta_review.execution_context (compat), meta_review.runtime_delivery
       transcript.ndjson
       inbox.ndjson
       artifacts/

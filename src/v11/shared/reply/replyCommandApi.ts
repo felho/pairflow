@@ -2,6 +2,7 @@ import { join } from "node:path";
 
 import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
 import { applyStateTransition } from "../../../core/state/machine.js";
+import { buildRunningExecutionContext } from "../../../core/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../core/state/stateStore.js";
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import {
@@ -78,6 +79,14 @@ export async function emitHumanReply(
 
   const nextState = applyStateTransition(state, {
     to: "RUNNING",
+    executionContext: buildRunningExecutionContext({
+      bubbleId: resolved.bubbleId,
+      round: state.round,
+      activeRole: state.active_role,
+      startedAt: nowIso,
+      watchdogTimeoutMinutes: resolved.bubbleConfig.watchdog_timeout_minutes
+    }),
+    activeSince: nowIso,
     lastCommandAt: nowIso
   });
 

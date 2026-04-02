@@ -80,6 +80,14 @@ export const metaReviewRecommendations = [
 
 export type MetaReviewRecommendation = (typeof metaReviewRecommendations)[number];
 
+export const bubbleExecutionContextAwaitedOutputTypes = [
+  "pass_result",
+  "meta_review_result"
+] as const;
+
+export type BubbleExecutionContextAwaitedOutputType =
+  (typeof bubbleExecutionContextAwaitedOutputTypes)[number];
+
 export const metaReviewExecutionContextAwaitedOutputTypes = [
   "meta_review_result"
 ] as const;
@@ -240,6 +248,16 @@ export interface BubbleMetaReviewExecutionContext {
   attempt: number;
 }
 
+export interface BubbleExecutionContext {
+  active_role: AgentRole;
+  awaited_output_type: BubbleExecutionContextAwaitedOutputType;
+  handoff_id: string;
+  round: number;
+  started_at: string;
+  deadline_at: string;
+  attempt: number;
+}
+
 export interface BubbleMetaReviewRuntimeDeliveryState {
   status: MetaReviewRuntimeDeliveryStatus;
   reason_code: string | null;
@@ -271,6 +289,7 @@ export interface BubbleStateSnapshot {
   active_agent: AgentName | null;
   active_since: string | null;
   active_role: AgentRole | null;
+  execution_context?: BubbleExecutionContext | null;
   round_role_history: RoundRoleHistoryEntry[];
   last_command_at: string | null;
   pending_rework_intent?: BubbleReworkIntentRecord | null;
@@ -400,6 +419,17 @@ export function isMetaReviewExecutionContextAwaitedOutputType(
     typeof value === "string" &&
     (
       metaReviewExecutionContextAwaitedOutputTypes as readonly string[]
+    ).includes(value)
+  );
+}
+
+export function isBubbleExecutionContextAwaitedOutputType(
+  value: unknown
+): value is BubbleExecutionContextAwaitedOutputType {
+  return (
+    typeof value === "string"
+    && (
+      bubbleExecutionContextAwaitedOutputTypes as readonly string[]
     ).includes(value)
   );
 }

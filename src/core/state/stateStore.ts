@@ -12,17 +12,25 @@ import {
   DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
   isAgentName,
   isAgentRole,
+  isBubbleExecutionContextAwaitedOutputType,
   isBubbleLifecycleState,
   isMetaReviewExecutionContextAwaitedOutputType,
   isMetaReviewRecommendation,
   isMetaReviewRunStatus,
   isMetaReviewRuntimeDeliveryStatus,
+  isReworkIntentStatus,
+  type BubbleExecutionContext,
   type BubbleMetaReviewExecutionContext,
   type BubbleLifecycleState,
   type BubbleMetaReviewRuntimeDeliveryState,
   type BubbleMetaReviewSnapshotState,
+  type BubbleReworkIntentRecord,
+  type RoundRoleHistoryEntry,
   type BubbleStateSnapshot
 } from "../../types/bubble.js";
+import {
+  metaReviewExecutionContextToRunningContext
+} from "./executionContext.js";
 import {
   isInteger,
   isIsoTimestamp,
@@ -104,6 +112,54 @@ function normalizeInspectableMetaReviewExecutionContext(
   }
 
   return {
+    handoff_id: handoffId,
+    round,
+    awaited_output_type: awaitedOutputType,
+    started_at: startedAt,
+    deadline_at: deadlineAt,
+    attempt
+  };
+}
+
+function normalizeInspectableExecutionContext(
+  value: unknown
+): BubbleExecutionContext | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const activeRole = value.active_role;
+  const handoffId = value.handoff_id;
+  const round = value.round;
+  const awaitedOutputType = value.awaited_output_type;
+  const startedAt = value.started_at;
+  const deadlineAt = value.deadline_at;
+  const attempt = value.attempt;
+
+  if (!isAgentRole(activeRole)) {
+    return null;
+  }
+  if (!isNonEmptyString(handoffId)) {
+    return null;
+  }
+  if (!isInteger(round) || round <= 0) {
+    return null;
+  }
+  if (!isBubbleExecutionContextAwaitedOutputType(awaitedOutputType)) {
+    return null;
+  }
+  if (!isIsoTimestamp(startedAt) || !isIsoTimestamp(deadlineAt)) {
+    return null;
+  }
+  if (!isInteger(attempt) || attempt <= 0) {
+    return null;
+  }
+
+  return {
+    active_role: activeRole,
     handoff_id: handoffId,
     round,
     awaited_output_type: awaitedOutputType,
@@ -237,6 +293,82 @@ function normalizeInspectableMetaReviewSnapshot(
   };
 }
 
+function normalizeInspectableRoundRoleEntry(
+  value: unknown
+): RoundRoleHistoryEntry | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  if (!isInteger(value.round) || value.round <= 0) {
+    return null;
+  }
+  if (!isAgentName(value.implementer) || !isAgentName(value.reviewer)) {
+    return null;
+  }
+  if (!isIsoTimestamp(value.switched_at)) {
+    return null;
+  }
+
+  return {
+    round: value.round,
+    implementer: value.implementer,
+    reviewer: value.reviewer,
+    switched_at: value.switched_at
+  };
+}
+
+function normalizeInspectableReworkIntentRecord(
+  value: unknown
+): BubbleReworkIntentRecord | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  if (!isNonEmptyString(value.intent_id) || !isNonEmptyString(value.message)) {
+    return null;
+  }
+  if (!isNonEmptyString(value.requested_by) || !isIsoTimestamp(value.requested_at)) {
+    return null;
+  }
+  if (!isReworkIntentStatus(value.status)) {
+    return null;
+  }
+
+  const refs =
+    value.refs === undefined
+      ? undefined
+      : (
+          Array.isArray(value.refs)
+          && value.refs.every((ref) => isNonEmptyString(ref))
+            ? value.refs.map((ref) => ref.trim())
+            : null
+        );
+  if (refs === null) {
+    return null;
+  }
+
+  if (
+    value.superseded_by_intent_id !== undefined
+    && value.superseded_by_intent_id !== null
+    && !isNonEmptyString(value.superseded_by_intent_id)
+  ) {
+    return null;
+  }
+
+  return {
+    intent_id: value.intent_id.trim(),
+    message: value.message,
+    ...(refs !== undefined ? { refs } : {}),
+    requested_by: value.requested_by.trim(),
+    requested_at: value.requested_at,
+    status: value.status,
+    ...(isNonEmptyString(value.superseded_by_intent_id)
+      ? { superseded_by_intent_id: value.superseded_by_intent_id.trim() }
+      : {})
+  };
+}
+
 function coerceInspectableBubbleStateSnapshot(
   value: unknown
 ): BubbleStateSnapshot | null {
@@ -253,6 +385,25 @@ function coerceInspectableBubbleStateSnapshot(
   }
 
   const metaReview = normalizeInspectableMetaReviewSnapshot(value.meta_review);
+  const executionContext =
+    normalizeInspectableExecutionContext(value.execution_context)
+    ?? metaReviewExecutionContextToRunningContext(
+      metaReview?.execution_context ?? null
+    );
+  const roundRoleHistory = Array.isArray(value.round_role_history)
+    ? value.round_role_history.flatMap((entry) => {
+      const normalized = normalizeInspectableRoundRoleEntry(entry);
+      return normalized === null ? [] : [normalized];
+    })
+    : [];
+  const pendingReworkIntent =
+    normalizeInspectableReworkIntentRecord(value.pending_rework_intent);
+  const reworkIntentHistory = Array.isArray(value.rework_intent_history)
+    ? value.rework_intent_history.flatMap((entry) => {
+      const normalized = normalizeInspectableReworkIntentRecord(entry);
+      return normalized === null ? [] : [normalized];
+    })
+    : [];
   return {
     bubble_id: value.bubble_id.trim(),
     state: value.state,
@@ -261,11 +412,12 @@ function coerceInspectableBubbleStateSnapshot(
     active_since:
       typeof value.active_since === "string" ? value.active_since : null,
     active_role: isAgentRole(value.active_role) ? value.active_role : null,
-    round_role_history: [],
+    execution_context: executionContext,
+    round_role_history: roundRoleHistory,
     last_command_at:
       typeof value.last_command_at === "string" ? value.last_command_at : null,
-    pending_rework_intent: null,
-    rework_intent_history: [],
+    pending_rework_intent: pendingReworkIntent,
+    rework_intent_history: reworkIntentHistory,
     ...(metaReview !== undefined ? { meta_review: metaReview } : {})
   };
 }

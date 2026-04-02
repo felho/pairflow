@@ -71,6 +71,7 @@ export async function maybeApplyPendingReworkIntent(input: {
     state: input.state,
     implementer: input.resolved.bubbleConfig.agents.implementer,
     reviewer: input.resolved.bubbleConfig.agents.reviewer,
+    watchdogTimeoutMinutes: input.resolved.bubbleConfig.watchdog_timeout_minutes,
     now: input.now
   });
   if (appliedTransition === null) {

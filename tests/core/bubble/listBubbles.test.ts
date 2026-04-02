@@ -8,6 +8,7 @@ import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import { BubbleListError, listBubbles } from "../../../src/core/bubble/listBubbles.js";
 import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
+import { metaReviewExecutionContextToRunningContext } from "../../../src/core/state/executionContext.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -206,6 +207,15 @@ describe("listBubbles", () => {
       active_role: "meta_reviewer" as const,
       active_since: "2026-02-22T18:41:00.000Z",
       last_command_at: "2026-02-22T18:41:00.000Z",
+      execution_context: metaReviewExecutionContextToRunningContext(
+        buildMetaReviewExecutionContext({
+          bubbleId: bubble.bubbleId,
+          round: loaded.state.round,
+          startedAt: "2026-02-22T18:41:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        })
+      ),
       meta_review: {
         ...loaded.state.meta_review!,
         execution_context: buildMetaReviewExecutionContext({
@@ -293,6 +303,11 @@ describe("listBubbles", () => {
     expect(listed.runtimeSessions.registered).toBe(0);
     expect(listed.runtimeSessions.stale).toBe(1);
     expect(listed.bubbles[0]?.stateValidation?.errors).toEqual([
+      {
+        path: "execution_context",
+        message:
+          "META_REVIEW_RUNNING state requires canonical execution_context authority"
+      },
       {
         path: "meta_review.execution_context",
         message:

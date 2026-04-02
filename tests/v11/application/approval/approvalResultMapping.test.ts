@@ -18,6 +18,7 @@ describe("approvalResultMapping", () => {
       nowIso: "2026-03-19T22:00:00.000Z",
       implementer: "codex",
       reviewer: "claude",
+      watchdogTimeoutMinutes: 60,
       applyStateTransition: ((state: unknown, transition: unknown) => {
         transitions.push(transition);
         return {
@@ -65,8 +66,10 @@ describe("approvalResultMapping", () => {
   });
 
   it("clears live meta-review authority when human rework starts the next round", () => {
+    const transitions: unknown[] = [];
     const next = resolveApprovalNextState({
       state: {
+        bubble_id: "b_approval_03",
         state: "READY_FOR_HUMAN_APPROVAL",
         round: 2,
         meta_review: {
@@ -86,11 +89,15 @@ describe("approvalResultMapping", () => {
       nowIso: "2026-03-19T22:00:00.000Z",
       implementer: "codex",
       reviewer: "claude",
-      applyStateTransition: ((state: Record<string, unknown>) => ({
-        ...state,
-        state: "RUNNING",
-        round: 3
-      })) as never
+      watchdogTimeoutMinutes: 60,
+      applyStateTransition: ((state: Record<string, unknown>, transition: unknown) => {
+        transitions.push(transition);
+        return {
+          ...state,
+          state: "RUNNING",
+          round: 3
+        };
+      }) as never
     });
 
     expect(next.meta_review).toMatchObject({
@@ -105,5 +112,30 @@ describe("approvalResultMapping", () => {
       auto_rework_limit: 5,
       sticky_human_gate: false
     });
+    expect(transitions).toEqual([
+      {
+        to: "RUNNING",
+        round: 3,
+        activeAgent: "codex",
+        activeRole: "implementer",
+        executionContext: {
+          active_role: "implementer",
+          awaited_output_type: "pass_result",
+          handoff_id: "implementer:b_approval_03:round:3:attempt:1",
+          round: 3,
+          started_at: "2026-03-19T22:00:00.000Z",
+          deadline_at: "2026-03-19T23:00:00.000Z",
+          attempt: 1
+        },
+        activeSince: "2026-03-19T22:00:00.000Z",
+        lastCommandAt: "2026-03-19T22:00:00.000Z",
+        appendRoundRoleEntry: {
+          round: 3,
+          implementer: "codex",
+          reviewer: "claude",
+          switched_at: "2026-03-19T22:00:00.000Z"
+        }
+      }
+    ]);
   });
 });

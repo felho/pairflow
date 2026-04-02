@@ -26,6 +26,7 @@ import {
 import {
   validateActiveMetaReviewExecutionContext
 } from "./metaReviewExecutionContext.js";
+import { toMetaReviewExecutionContext } from "../state/executionContext.js";
 import { readRuntimeSessionsRegistry } from "../runtime/sessionsRegistry.js";
 import { runtimePaneIndices, runTmux } from "../runtime/tmuxManager.js";
 import {
@@ -1873,7 +1874,7 @@ export async function submitMetaReviewResult(
   }
   const nextMetaReview: BubbleMetaReviewSnapshotState = {
     ...previousMetaReview,
-    execution_context: executionContext,
+    execution_context: toMetaReviewExecutionContext(executionContext),
     last_autonomous_run_id: runId,
     last_autonomous_status: status,
     last_autonomous_recommendation: recommendation,
@@ -1885,6 +1886,7 @@ export async function submitMetaReviewResult(
 
   const nextState: BubbleStateSnapshot = {
     ...loadedState.state,
+    execution_context: executionContext,
     meta_review: nextMetaReview
   };
 

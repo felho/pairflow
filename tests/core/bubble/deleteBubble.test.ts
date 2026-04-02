@@ -441,6 +441,7 @@ describe("deleteBubble", () => {
       {
         ...loadedState.state,
         state: "COMMITTED",
+        execution_context: null,
         active_agent: null,
         active_role: null,
         active_since: null

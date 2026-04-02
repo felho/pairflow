@@ -73,8 +73,19 @@ describe("emitHumanReply", () => {
     expect(state.state.state).toBe("RUNNING");
     expect(state.state.active_agent).toBe("codex");
     expect(state.state.active_role).toBe("implementer");
-    expect(state.state.active_since).toBe("2026-02-21T12:00:00.000Z");
+    expect(state.state.active_since).toBe(now.toISOString());
     expect(state.state.last_command_at).toBe(now.toISOString());
+    expect(state.state.execution_context).toEqual({
+      active_role: "implementer",
+      awaited_output_type: "pass_result",
+      handoff_id: `implementer:${bubble.bubbleId}:round:1:attempt:1`,
+      round: 1,
+      started_at: now.toISOString(),
+      deadline_at: new Date(
+        now.getTime() + bubble.config.watchdog_timeout_minutes * 60_000
+      ).toISOString(),
+      attempt: 1
+    });
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
     expect(transcript.map((entry) => entry.type)).toEqual([
@@ -171,7 +182,8 @@ describe("emitHumanReply", () => {
         ...loaded.state,
         state: "WAITING_HUMAN",
         active_agent: bubble.config.agents.implementer,
-        active_role: "reviewer"
+        active_role: "reviewer",
+        execution_context: null
       },
       {
         expectedFingerprint: loaded.fingerprint,
@@ -201,6 +213,20 @@ describe("emitHumanReply", () => {
     );
 
     expect(deliveries).toEqual(["reviewer"]);
+
+    const state = await readStateSnapshot(bubble.paths.statePath);
+    expect(state.state.execution_context).toEqual({
+      active_role: "reviewer",
+      awaited_output_type: "pass_result",
+      handoff_id: `reviewer:${bubble.bubbleId}:round:1:attempt:1`,
+      round: 1,
+      started_at: "2026-02-21T12:10:00.000Z",
+      deadline_at: new Date(
+        Date.parse("2026-02-21T12:10:00.000Z")
+          + bubble.config.watchdog_timeout_minutes * 60_000
+      ).toISOString(),
+      attempt: 1
+    });
   });
 
   it("rejects reply when bubble is not WAITING_HUMAN", async () => {

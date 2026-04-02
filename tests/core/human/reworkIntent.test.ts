@@ -37,6 +37,7 @@ describe("applyDeferredReworkIntent", () => {
       },
       implementer: "codex",
       reviewer: "claude",
+      watchdogTimeoutMinutes: 60,
       now: new Date("2026-03-21T10:05:00.000Z")
     });
 

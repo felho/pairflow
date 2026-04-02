@@ -7,6 +7,10 @@ import { runBubbleWatchdog } from "../../../src/core/bubble/watchdogBubble.js";
 import { runBubbleWatchdogV11 } from "../../../src/v11/application/watchdog/emitWatchdogV11.js";
 import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import {
+  buildRunningExecutionContext,
+  metaReviewExecutionContextToRunningContext
+} from "../../../src/core/state/executionContext.js";
+import {
   writeWatchdogPaneActivity
 } from "../../../src/v11/shared/watchdog/watchdogPaneActivityStore.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -165,6 +169,7 @@ async function seedWaitingHumanState(input: {
       {
         ...loaded.state,
         state: "DONE",
+        execution_context: null,
         active_agent: null,
         active_role: null,
         active_since: null,
@@ -184,6 +189,7 @@ async function seedWaitingHumanState(input: {
     || input.scenario === "expired_unreadable_pane_escalates"
   ) {
     const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const startedAt = "2026-03-20T10:00:00.000Z";
     await writeStateSnapshot(
       bubble.paths.statePath,
       {
@@ -191,8 +197,16 @@ async function seedWaitingHumanState(input: {
         state: "RUNNING",
         active_agent: loaded.state.active_agent ?? "codex",
         active_role: loaded.state.active_role ?? "implementer",
-        active_since: loaded.state.active_since ?? "2026-03-20T10:00:00.000Z",
-        last_command_at: "2026-03-20T10:00:00.000Z"
+        active_since: startedAt,
+        execution_context: buildRunningExecutionContext({
+          bubbleId: bubble.bubbleId,
+          round: loaded.state.round,
+          activeRole: loaded.state.active_role ?? "implementer",
+          startedAt,
+          watchdogTimeoutMinutes: bubble.config.watchdog_timeout_minutes,
+          attempt: loaded.state.execution_context?.attempt ?? 1
+        }),
+        last_command_at: startedAt
       },
       {
         expectedFingerprint: loaded.fingerprint,
@@ -212,6 +226,15 @@ async function seedWaitingHumanState(input: {
         active_role: "meta_reviewer",
         active_since: "2026-03-20T10:00:00.000Z",
         last_command_at: "2026-03-20T10:00:00.000Z",
+        execution_context: metaReviewExecutionContextToRunningContext(
+          buildMetaReviewExecutionContext({
+            bubbleId: bubble.bubbleId,
+            round: loaded.state.round,
+            startedAt: "2026-03-20T10:00:00.000Z",
+            watchdogTimeoutMinutes: 60,
+            attempt: 1
+          })
+        ),
         meta_review: {
           ...loaded.state.meta_review!,
           execution_context: buildMetaReviewExecutionContext({
@@ -248,6 +271,9 @@ async function seedWaitingHumanState(input: {
         active_role: null,
         active_since: null,
         last_command_at: "2026-03-20T12:44:30.000Z",
+        execution_context: metaReviewExecutionContextToRunningContext(
+          executionContext
+        ),
         meta_review: {
           ...loaded.state.meta_review!,
           execution_context: executionContext,
@@ -293,6 +319,9 @@ async function seedWaitingHumanState(input: {
         active_role: "meta_reviewer",
         active_since: "2026-03-20T12:44:00.000Z",
         last_command_at: "2026-03-20T12:44:30.000Z",
+        execution_context: metaReviewExecutionContextToRunningContext(
+          executionContext
+        ),
         meta_review: {
           ...loaded.state.meta_review!,
           execution_context: executionContext,

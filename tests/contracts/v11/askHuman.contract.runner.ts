@@ -12,6 +12,7 @@ import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../../src/core/state/stateStore.js";
+import { buildRunningExecutionContext } from "../../../src/core/state/executionContext.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -341,9 +342,10 @@ async function executeAskHumanCase(input: {
         {
           ...loaded.state,
           state: "WAITING_HUMAN",
-          active_agent: loaded.state.active_agent ?? "codex",
-          active_role: loaded.state.active_role ?? "implementer",
-          active_since: loaded.state.active_since ?? "2026-03-19T10:01:00.000Z",
+          execution_context: null,
+          active_agent: null,
+          active_role: null,
+          active_since: null,
           last_command_at: "2026-03-19T10:01:00.000Z"
         },
         {
@@ -360,6 +362,7 @@ async function executeAskHumanCase(input: {
         {
           ...loaded.state,
           round: 0,
+          execution_context: null,
           last_command_at: "2026-03-19T10:01:15.000Z"
         },
         {
@@ -378,7 +381,15 @@ async function executeAskHumanCase(input: {
           active_agent: "codex",
           active_role: "meta_reviewer",
           active_since: "2026-03-19T10:01:45.000Z",
-          last_command_at: "2026-03-19T10:01:45.000Z"
+          last_command_at: "2026-03-19T10:01:45.000Z",
+          execution_context: buildRunningExecutionContext({
+            bubbleId: loaded.state.bubble_id,
+            round: loaded.state.round,
+            activeRole: "meta_reviewer",
+            startedAt: "2026-03-19T10:01:45.000Z",
+            watchdogTimeoutMinutes: 60,
+            attempt: loaded.state.execution_context?.attempt ?? 1
+          })
         },
         {
           expectedFingerprint: loaded.fingerprint,

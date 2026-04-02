@@ -11,6 +11,7 @@ export function createInitialBubbleState(bubbleId: string): BubbleStateSnapshot 
     active_agent: null,
     active_since: null,
     active_role: null,
+    execution_context: null,
     round_role_history: [],
     last_command_at: null,
     pending_rework_intent: null,

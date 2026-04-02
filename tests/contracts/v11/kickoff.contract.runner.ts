@@ -8,6 +8,7 @@ import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { kickoffBubble } from "../../../src/core/bubble/kickoffBubble.js";
 import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
 import type { EmitTmuxDeliveryNotificationResult } from "../../../src/core/runtime/tmuxDelivery.js";
+import { buildRunningExecutionContext } from "../../../src/core/state/executionContext.js";
 import {
   readStateSnapshot,
   StateStoreConflictError,
@@ -442,6 +443,17 @@ async function setupKickoffFixture(
       ...loaded.state,
       state: "RUNNING",
       round: fixture.round,
+      execution_context:
+        fixture.round === 0
+          ? null
+          : buildRunningExecutionContext({
+              bubbleId: bubble.bubbleId,
+              round: fixture.round,
+              activeRole: "implementer",
+              startedAt,
+              watchdogTimeoutMinutes: 60,
+              attempt: 1
+            }),
       active_agent: "codex",
       active_role: "implementer",
       active_since: startedAt,

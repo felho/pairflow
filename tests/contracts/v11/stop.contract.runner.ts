@@ -215,6 +215,7 @@ async function executeStopCase(input: {
         {
           ...loaded.state,
           state: "DONE",
+          execution_context: null,
           active_agent: null,
           active_role: null,
           active_since: null,

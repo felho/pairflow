@@ -13,7 +13,14 @@ import {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata
 } from "../../../src/core/agent/pass.js";
 import { IDEATION_PASS_BLOCKED } from "../../../src/core/bubble/ideation.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
+import {
+  buildRunningExecutionContext,
+  metaReviewExecutionContextToRunningContext
+} from "../../../src/core/state/executionContext.js";
+import {
+  readStateSnapshot,
+  writeStateSnapshot as rawWriteStateSnapshot
+} from "../../../src/core/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/core/workspace/worktreeManager.js";
 import {
   appendProtocolEnvelope,
@@ -47,6 +54,79 @@ import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { writeEvidenceLog } from "../../helpers/evidence.js";
 
 const tempDirs: string[] = [];
+const defaultWatchdogTimeoutMinutes = 60;
+
+function resolveWatchdogTimeoutMinutes(
+  state: Parameters<typeof rawWriteStateSnapshot>[1]
+): number {
+  const executionContext =
+    state.state === "META_REVIEW_RUNNING"
+      ? metaReviewExecutionContextToRunningContext(
+          state.meta_review?.execution_context ?? null
+        )
+      : state.execution_context;
+  if (executionContext === null || executionContext === undefined) {
+    return defaultWatchdogTimeoutMinutes;
+  }
+  const startedAtMs = Date.parse(executionContext.started_at);
+  const deadlineAtMs = Date.parse(executionContext.deadline_at);
+  const deltaMinutes = (deadlineAtMs - startedAtMs) / 60_000;
+  return Number.isFinite(deltaMinutes) && deltaMinutes > 0
+    ? deltaMinutes
+    : defaultWatchdogTimeoutMinutes;
+}
+
+function normalizeTestStateForWrite(
+  state: Parameters<typeof rawWriteStateSnapshot>[1]
+): Parameters<typeof rawWriteStateSnapshot>[1] {
+  if (state.state === "META_REVIEW_RUNNING") {
+    return {
+      ...state,
+      execution_context: metaReviewExecutionContextToRunningContext(
+        state.meta_review?.execution_context ?? null
+      )
+    };
+  }
+
+  if (state.state === "RUNNING") {
+    if (state.round === 0) {
+      return {
+        ...state,
+        execution_context: null
+      };
+    }
+    if (state.active_role !== null && state.active_since !== null) {
+      return {
+        ...state,
+        execution_context: buildRunningExecutionContext({
+          bubbleId: state.bubble_id,
+          round: state.round,
+          activeRole: state.active_role,
+          startedAt: state.active_since,
+          watchdogTimeoutMinutes: resolveWatchdogTimeoutMinutes(state),
+          attempt: state.execution_context?.attempt ?? 1
+        })
+      };
+    }
+  }
+
+  return {
+    ...state,
+    execution_context: null
+  };
+}
+
+async function writeStateSnapshot(
+  statePath: Parameters<typeof rawWriteStateSnapshot>[0],
+  state: Parameters<typeof rawWriteStateSnapshot>[1],
+  options?: Parameters<typeof rawWriteStateSnapshot>[2]
+): ReturnType<typeof rawWriteStateSnapshot> {
+  return rawWriteStateSnapshot(
+    statePath,
+    normalizeTestStateForWrite(state),
+    options
+  );
+}
 
 async function createTempRepo(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "pairflow-pass-command-"));

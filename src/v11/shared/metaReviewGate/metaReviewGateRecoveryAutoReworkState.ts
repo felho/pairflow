@@ -1,4 +1,5 @@
 import { applyStateTransition } from "../../../core/state/machine.js";
+import { buildRunningExecutionContext } from "../../../core/state/executionContext.js";
 import {
   StateStoreConflictError,
   type LoadedStateSnapshot
@@ -23,6 +24,13 @@ export async function transitionRecoveryToRunningForAutoRework(input: {
     round: nextRound,
     activeAgent: input.context.resolved.bubbleConfig.agents.implementer,
     activeRole: "implementer",
+    executionContext: buildRunningExecutionContext({
+      bubbleId: input.loaded.state.bubble_id,
+      round: nextRound,
+      activeRole: "implementer",
+      startedAt: input.context.nowIso,
+      watchdogTimeoutMinutes: input.context.resolved.bubbleConfig.watchdog_timeout_minutes
+    }),
     activeSince: input.context.nowIso,
     lastCommandAt: input.context.nowIso,
     appendRoundRoleEntry: {

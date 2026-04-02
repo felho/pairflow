@@ -8,6 +8,7 @@ import {
   recoverMetaReviewGateFromSnapshot
 } from "../../../src/core/bubble/metaReviewGate.js";
 import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
+import { metaReviewExecutionContextToRunningContext } from "../../../src/core/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import {
   applyMetaReviewGateOnConvergenceV11,
@@ -628,6 +629,15 @@ async function executeMetaReviewGateCase(input: {
           active_role: "meta_reviewer",
           active_since: "2026-03-19T10:03:30.000Z",
           last_command_at: "2026-03-19T10:03:30.000Z",
+          execution_context: metaReviewExecutionContextToRunningContext(
+            buildMetaReviewExecutionContext({
+              bubbleId: bubble.bubbleId,
+              round: loaded.state.round,
+              startedAt: "2026-03-19T10:03:30.000Z",
+              watchdogTimeoutMinutes: 60,
+              attempt: 1
+            })
+          ),
           meta_review: {
             ...metaReviewSnapshot,
             execution_context: buildMetaReviewExecutionContext({

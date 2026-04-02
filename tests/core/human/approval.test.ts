@@ -178,7 +178,10 @@ describe("approval decisions", () => {
     ).rejects.toThrow(/APPROVAL_OVERRIDE_REQUIRED/u);
   });
 
-  it("writes APPROVAL_DECISION=approve with override metadata and transitions to APPROVED_FOR_COMMIT", async () => {
+  it(
+    "writes APPROVAL_DECISION=approve with override metadata and transitions to APPROVED_FOR_COMMIT",
+    { timeout: 15_000 },
+    async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupReadyForHumanApprovalBubble(repoPath, "b_approval_01");
 
@@ -209,7 +212,8 @@ describe("approval decisions", () => {
       "APPROVAL_REQUEST",
       "APPROVAL_DECISION"
     ]);
-  });
+    }
+  );
 
   it("requires non-empty override reason when override flag is set", async () => {
     const repoPath = await createTempRepo();

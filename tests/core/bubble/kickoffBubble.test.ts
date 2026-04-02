@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { kickoffBubble } from "../../../src/core/bubble/kickoffBubble.js";
+import { buildRunningExecutionContext } from "../../../src/core/state/executionContext.js";
 import {
   IDEATION_ALREADY_ACTIVE,
   IDEATION_KICKOFF_NOT_ALLOWED,
@@ -49,6 +50,7 @@ async function setIdeationRunningRoundZero(statePath: string): Promise<void> {
       ...loaded.state,
       state: "RUNNING",
       round: 0,
+      execution_context: null,
       active_agent: "codex",
       active_role: "implementer",
       active_since: "2026-03-15T12:00:00.000Z",
@@ -226,6 +228,14 @@ describe("kickoffBubble", () => {
       created.paths.statePath,
       {
         ...loaded.state,
+        execution_context: buildRunningExecutionContext({
+          bubbleId: created.bubbleId,
+          round: 1,
+          activeRole: loaded.state.active_role ?? "implementer",
+          startedAt: loaded.state.active_since ?? "2026-03-15T12:00:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        }),
         round: 1
       },
       {
@@ -262,6 +272,7 @@ describe("kickoffBubble", () => {
       created.paths.statePath,
       {
         ...resetLoaded.state,
+        execution_context: null,
         round: 0
       },
       {

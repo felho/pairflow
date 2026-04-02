@@ -32,6 +32,10 @@ import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../../src/core/state/stateStore.js";
+import {
+  buildRunningExecutionContext,
+  metaReviewExecutionContextToRunningContext
+} from "../../../src/core/state/executionContext.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
 import { SchemaValidationError } from "../../../src/core/validation.js";
 import type { Finding } from "../../../src/types/findings.js";
@@ -490,6 +494,7 @@ describe("meta-review run", () => {
       {
         ...loaded.state,
         state: "READY_FOR_HUMAN_APPROVAL",
+        execution_context: null,
         active_agent: null,
         active_role: null,
         active_since: null,
@@ -652,6 +657,7 @@ describe("meta-review run", () => {
       {
         ...loaded.state,
         state: "READY_FOR_HUMAN_APPROVAL",
+        execution_context: null,
         active_agent: null,
         active_role: null,
         active_since: null,
@@ -736,6 +742,7 @@ describe("meta-review run", () => {
       {
         ...loaded.state,
         state: "READY_FOR_HUMAN_APPROVAL",
+        execution_context: null,
         active_agent: null,
         active_role: null,
         active_since: null,
@@ -800,6 +807,7 @@ describe("meta-review run", () => {
       {
         ...loaded.state,
         state: "READY_FOR_HUMAN_APPROVAL",
+        execution_context: null,
         active_agent: null,
         active_role: null,
         active_since: null,
@@ -861,6 +869,7 @@ describe("meta-review run", () => {
       {
         ...loaded.state,
         state: "READY_FOR_HUMAN_APPROVAL",
+        execution_context: null,
         active_agent: null,
         active_role: null,
         active_since: null,
@@ -918,6 +927,7 @@ describe("meta-review run", () => {
       {
         ...loaded.state,
         state: "READY_FOR_HUMAN_APPROVAL",
+        execution_context: null,
         active_agent: null,
         active_role: null,
         active_since: null,
@@ -1025,6 +1035,7 @@ describe("meta-review run", () => {
       {
         ...loaded.state,
         state: "READY_FOR_HUMAN_APPROVAL",
+        execution_context: null,
         active_agent: null,
         active_role: null,
         active_since: null,
@@ -1122,6 +1133,15 @@ describe("meta-review run", () => {
       active_role: "meta_reviewer" as const,
       active_since: "2026-03-08T12:10:30.000Z",
       last_command_at: "2026-03-08T12:10:30.000Z",
+      execution_context: metaReviewExecutionContextToRunningContext(
+        buildMetaReviewExecutionContext({
+          bubbleId: bubble.bubbleId,
+          round: readyForApproval.round,
+          startedAt: "2026-03-08T12:10:30.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        })
+      ),
       meta_review: {
         ...readyForApproval.meta_review!,
         execution_context: buildMetaReviewExecutionContext({
@@ -1176,6 +1196,15 @@ describe("meta-review submit", () => {
         active_role: input.activeRole,
         active_since: input.nowIso,
         last_command_at: input.nowIso,
+        execution_context: metaReviewExecutionContextToRunningContext(
+          buildMetaReviewExecutionContext({
+            bubbleId: loaded.state.bubble_id,
+            round: input.round ?? loaded.state.round,
+            startedAt: input.nowIso,
+            watchdogTimeoutMinutes: 60 * 24 * 30,
+            attempt: 1
+          })
+        ),
         meta_review: {
           ...loaded.state.meta_review!,
           execution_context: buildMetaReviewExecutionContext({
@@ -1307,6 +1336,7 @@ describe("meta-review submit", () => {
       hasCanonicalSubmitForActiveMetaReviewRound({
         state: {
           ...loaded.state,
+          execution_context: null,
           meta_review: {
             ...loaded.state.meta_review!,
             execution_context: null
@@ -1347,6 +1377,10 @@ describe("meta-review submit", () => {
       hasCanonicalSubmitForActiveMetaReviewRound({
         state: {
           ...loaded.state,
+          execution_context: {
+            ...loaded.state.execution_context!,
+            started_at: "not-a-timestamp"
+          },
           meta_review: {
             ...loaded.state.meta_review!,
             execution_context: {
@@ -2952,6 +2986,15 @@ describe("meta-review submit", () => {
       active_role: "implementer" as const,
       active_since: "2026-03-09T09:35:00.000Z",
       last_command_at: "2026-03-09T09:35:00.000Z",
+      execution_context: metaReviewExecutionContextToRunningContext(
+        buildMetaReviewExecutionContext({
+          bubbleId: bubble.bubbleId,
+          round: loaded.state.round,
+          startedAt: "2026-03-09T09:35:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        })
+      ),
       meta_review: {
         ...loaded.state.meta_review!,
         execution_context: buildMetaReviewExecutionContext({
@@ -3004,6 +3047,7 @@ describe("meta-review submit", () => {
       active_role: "meta_reviewer" as const,
       active_since: null,
       last_command_at: "2026-03-09T09:36:00.000Z",
+      execution_context: null,
       meta_review: {
         ...loaded.state.meta_review!,
         execution_context: null
@@ -3276,6 +3320,11 @@ describe("meta-review submit", () => {
       bubble.paths.statePath,
       {
         ...loaded.state,
+        execution_context: {
+          ...loaded.state.execution_context!,
+          started_at: "2026-03-09T09:48:00.000Z",
+          deadline_at: "2026-03-09T09:48:10.000Z"
+        },
         meta_review: {
           ...loaded.state.meta_review!,
           execution_context: {
@@ -3366,6 +3415,15 @@ describe("meta-review submit", () => {
         active_role: "meta_reviewer",
         active_since: "2026-03-09T09:48:21.500Z",
         last_command_at: "2026-03-09T09:48:21.500Z",
+        execution_context: metaReviewExecutionContextToRunningContext(
+          buildMetaReviewExecutionContext({
+            bubbleId: bubble.bubbleId,
+            round: routed.state.round,
+            startedAt: "2026-03-09T09:48:21.500Z",
+            watchdogTimeoutMinutes: 60,
+            attempt: 1
+          })
+        ),
         meta_review: {
           ...routed.state.meta_review!,
           execution_context: buildMetaReviewExecutionContext({
@@ -3468,6 +3526,7 @@ describe("meta-review submit", () => {
                 statePath,
                 {
                   ...readyForHuman,
+                  execution_context: null,
                   meta_review: {
                     ...(current.state.meta_review ?? {
                       last_autonomous_run_id: null,
@@ -3481,6 +3540,7 @@ describe("meta-review submit", () => {
                       auto_rework_limit: 5,
                       sticky_human_gate: false
                     }),
+                    execution_context: null,
                     last_autonomous_run_id: runId,
                     last_autonomous_status: "success",
                     last_autonomous_recommendation: "approve",
@@ -3878,6 +3938,17 @@ describe("meta-review reads", () => {
       bubble.paths.statePath,
       {
         ...loaded.state,
+        execution_context: buildRunningExecutionContext({
+          bubbleId: bubble.bubbleId,
+          round: 11,
+          activeRole: loaded.state.execution_context?.active_role ?? "implementer",
+          startedAt:
+            loaded.state.execution_context?.started_at
+            ?? loaded.state.active_since
+            ?? "2026-03-08T11:28:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: loaded.state.execution_context?.attempt ?? 1
+        }),
         round: 11
       },
       {
@@ -3954,6 +4025,17 @@ describe("meta-review reads", () => {
       bubble.paths.statePath,
       {
         ...loaded.state,
+        execution_context: buildRunningExecutionContext({
+          bubbleId: bubble.bubbleId,
+          round: 12,
+          activeRole: loaded.state.execution_context?.active_role ?? "implementer",
+          startedAt:
+            loaded.state.execution_context?.started_at
+            ?? loaded.state.active_since
+            ?? "2026-03-08T11:29:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: loaded.state.execution_context?.attempt ?? 1
+        }),
         round: 12
       },
       {
@@ -4249,6 +4331,15 @@ describe("meta-review reads", () => {
       active_role: "meta_reviewer" as const,
       active_since: "2026-03-08T12:41:00.000Z",
       last_command_at: "2026-03-08T12:41:00.000Z",
+      execution_context: metaReviewExecutionContextToRunningContext(
+        buildMetaReviewExecutionContext({
+          bubbleId: bubble.bubbleId,
+          round: failed.round,
+          startedAt: "2026-03-08T12:41:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        })
+      ),
       meta_review: {
         ...failed.meta_review!,
         execution_context: buildMetaReviewExecutionContext({
@@ -4267,7 +4358,10 @@ describe("meta-review reads", () => {
       activeSince: null,
       lastCommandAt: "2026-03-08T12:42:00.000Z"
     });
-    await writeStateSnapshot(bubble.paths.statePath, failedState, {
+    await writeStateSnapshot(bubble.paths.statePath, {
+      ...failedState,
+      execution_context: null
+    }, {
       expectedFingerprint: before.fingerprint,
       expectedState: "RUNNING"
     });
@@ -4320,6 +4414,15 @@ describe("meta-review reads", () => {
         active_role: null,
         active_since: null,
         last_command_at: "2026-03-09T09:41:00.000Z",
+        execution_context: metaReviewExecutionContextToRunningContext(
+          buildMetaReviewExecutionContext({
+            bubbleId: bubble.bubbleId,
+            round: loaded.state.round,
+            startedAt: "2026-03-09T09:40:00.000Z",
+            watchdogTimeoutMinutes: 60 * 24 * 30,
+            attempt: 1
+          })
+        ),
         meta_review: {
           ...loaded.state.meta_review!,
           execution_context: buildMetaReviewExecutionContext({

@@ -209,6 +209,7 @@ async function executeRestartCase(input: {
         {
           ...loaded.state,
           state: "FAILED",
+          execution_context: null,
           active_agent: null,
           active_role: null,
           active_since: null,

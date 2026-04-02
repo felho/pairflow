@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { parseBubbleMetaReviewCommandOptions } from "../../../src/cli/commands/bubble/metaReview.js";
 import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import { MetaReviewError, submitMetaReviewResult } from "../../../src/core/bubble/metaReview.js";
+import { metaReviewExecutionContextToRunningContext } from "../../../src/core/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { parseRequiredSubmitReportJson } from "../../../src/v11/application/metaReview/metaReviewCliOptionValueReader.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
@@ -40,6 +41,15 @@ async function writeMetaReviewRunningState(input: {
       active_role: input.activeRole,
       active_since: input.nowIso,
       last_command_at: input.nowIso,
+      execution_context: metaReviewExecutionContextToRunningContext(
+        buildMetaReviewExecutionContext({
+          bubbleId: loaded.state.bubble_id,
+          round: input.round ?? loaded.state.round,
+          startedAt: input.nowIso,
+          watchdogTimeoutMinutes: 60 * 24 * 30,
+          attempt: 1
+        })
+      ),
       meta_review: {
         ...loaded.state.meta_review!,
         execution_context: buildMetaReviewExecutionContext({
@@ -357,6 +367,15 @@ describe("v11 meta-review submit contract", () => {
         active_role: null,
         active_since: null,
         last_command_at: "2026-03-24T10:34:30.000Z",
+        execution_context: metaReviewExecutionContextToRunningContext(
+          buildMetaReviewExecutionContext({
+            bubbleId: loaded.state.bubble_id,
+            round: loaded.state.round,
+            startedAt: "2026-03-24T10:34:00.000Z",
+            watchdogTimeoutMinutes: 60 * 24 * 30,
+            attempt: 1
+          })
+        ),
         meta_review: {
           ...loaded.state.meta_review!,
           execution_context: buildMetaReviewExecutionContext({

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
+import { buildRunningExecutionContext } from "../../../src/core/state/executionContext.js";
 import { createInitialBubbleState } from "../../../src/core/state/initialState.js";
 import { validateBubbleStateSnapshot } from "../../../src/core/state/stateSchema.js";
 
@@ -32,6 +33,13 @@ describe("state schema", () => {
       active_agent: "codex",
       active_since: "2026-02-21T12:00:00.000Z",
       active_role: "implementer",
+      execution_context: buildRunningExecutionContext({
+        bubbleId: "b_test_01",
+        round: 2,
+        activeRole: "implementer",
+        startedAt: "2026-02-21T12:00:00.000Z",
+        watchdogTimeoutMinutes: 30
+      }),
       round_role_history: [
         {
           round: 1,
@@ -88,6 +96,25 @@ describe("state schema", () => {
     });
 
     expect(metaRunning.ok).toBe(true);
+    if (metaRunning.ok) {
+      expect(metaRunning.value.execution_context).toEqual({
+        active_role: "meta_reviewer",
+        awaited_output_type: "meta_review_result",
+        handoff_id: "meta_review:b_test_meta_state_01:round:2:attempt:1",
+        round: 2,
+        started_at: "2026-03-08T10:00:00.000Z",
+        deadline_at: "2026-03-08T11:00:00.000Z",
+        attempt: 1
+      });
+      expect(metaRunning.value.meta_review?.execution_context).toEqual({
+        handoff_id: "meta_review:b_test_meta_state_01:round:2:attempt:1",
+        round: 2,
+        awaited_output_type: "meta_review_result",
+        started_at: "2026-03-08T10:00:00.000Z",
+        deadline_at: "2026-03-08T11:00:00.000Z",
+        attempt: 1
+      });
+    }
     expect(humanGate.ok).toBe(true);
   });
 
@@ -244,6 +271,144 @@ describe("state schema", () => {
       return;
     }
     expect(result.errors.some((error) => error.path === "active_*")).toBe(true);
+  });
+
+  it("rejects RUNNING state without canonical execution_context when round >= 1", () => {
+    const result = validateBubbleStateSnapshot({
+      bubble_id: "b_test_running_no_ctx",
+      state: "RUNNING",
+      round: 1,
+      active_agent: "codex",
+      active_since: "2026-02-21T12:00:00.000Z",
+      active_role: "implementer",
+      round_role_history: [],
+      last_command_at: "2026-02-21T12:05:00.000Z"
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "execution_context" &&
+          error.message ===
+            "RUNNING state requires canonical execution_context authority when round >= 1"
+      )
+    ).toBe(true);
+  });
+
+  it("rejects RUNNING round=0 ideation snapshots with execution_context", () => {
+    const result = validateBubbleStateSnapshot({
+      bubble_id: "b_test_running_ideation_ctx",
+      state: "RUNNING",
+      round: 0,
+      active_agent: "codex",
+      active_since: "2026-02-21T12:00:00.000Z",
+      active_role: "implementer",
+      execution_context: buildRunningExecutionContext({
+        bubbleId: "b_test_running_ideation_ctx",
+        round: 1,
+        activeRole: "implementer",
+        startedAt: "2026-02-21T12:00:00.000Z",
+        watchdogTimeoutMinutes: 30
+      }),
+      round_role_history: [],
+      last_command_at: "2026-02-21T12:05:00.000Z"
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "execution_context" &&
+          error.message ===
+            "RUNNING round=0 ideation state must not persist execution_context authority"
+      )
+    ).toBe(true);
+  });
+
+  it("rejects stale top-level execution_context on inactive lifecycle states", () => {
+    const result = validateBubbleStateSnapshot({
+      bubble_id: "b_test_waiting_human_stale_ctx",
+      state: "WAITING_HUMAN",
+      round: 1,
+      active_agent: "codex",
+      active_since: "2026-02-21T12:00:00.000Z",
+      active_role: "implementer",
+      execution_context: buildRunningExecutionContext({
+        bubbleId: "b_test_waiting_human_stale_ctx",
+        round: 1,
+        activeRole: "implementer",
+        startedAt: "2026-02-21T12:00:00.000Z",
+        watchdogTimeoutMinutes: 30
+      }),
+      round_role_history: [],
+      last_command_at: "2026-02-21T12:05:00.000Z"
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "execution_context" &&
+          error.message ===
+            "execution_context must be null while lifecycle state WAITING_HUMAN is inactive"
+      )
+    ).toBe(true);
+  });
+
+  it("rejects stale nested meta_review.execution_context on non-meta-review lifecycle states", () => {
+    const result = validateBubbleStateSnapshot({
+      bubble_id: "b_test_waiting_human_stale_meta_ctx",
+      state: "WAITING_HUMAN",
+      round: 1,
+      active_agent: "codex",
+      active_since: "2026-02-21T12:00:00.000Z",
+      active_role: "implementer",
+      execution_context: null,
+      round_role_history: [],
+      last_command_at: "2026-02-21T12:05:00.000Z",
+      meta_review: {
+        execution_context: buildMetaReviewExecutionContext({
+          bubbleId: "b_test_waiting_human_stale_meta_ctx",
+          round: 1,
+          startedAt: "2026-02-21T12:00:00.000Z",
+          watchdogTimeoutMinutes: 30,
+          attempt: 1
+        }),
+        last_autonomous_run_id: null,
+        last_autonomous_status: null,
+        last_autonomous_recommendation: null,
+        last_autonomous_summary: null,
+        last_autonomous_report_ref: null,
+        last_autonomous_rework_target_message: null,
+        last_autonomous_updated_at: null,
+        auto_rework_count: 0,
+        auto_rework_limit: 5,
+        sticky_human_gate: false
+      }
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(
+      result.errors.some(
+        (error) =>
+          error.path === "meta_review.execution_context" &&
+          error.message ===
+            "meta_review.execution_context must be null while lifecycle state WAITING_HUMAN is not META_REVIEW_RUNNING"
+      )
+    ).toBe(true);
   });
 
   it("rejects partially populated active fields", () => {
