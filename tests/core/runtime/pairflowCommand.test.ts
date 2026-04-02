@@ -73,6 +73,7 @@ describe("pairflow command path helpers", () => {
     expect(bootstrap.join("\n")).toContain('PAIRFLOW_WRAPPER_DIR');
     expect(bootstrap.join("\n")).toContain('cat > "$PAIRFLOW_WRAPPER_DIR/pairflow"');
     expect(bootstrap.join("\n")).toContain('export PATH="$PAIRFLOW_WRAPPER_DIR:$PATH"');
+    expect(bootstrap.join("\n")).toContain("export PAIRFLOW_WORKTREE_ROOT='/tmp/pairflow-worktree'");
   });
 
   it("resolves external pairflow by ignoring the worktree wrapper directory", async () => {
@@ -249,6 +250,15 @@ describe("pairflow command path helpers", () => {
     expect(assessment.status).toBe("missing");
     expect(assessment.reasonCode).toBe("PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE");
     expect(assessment.message).toContain("Active entrypoint was resolved");
+  });
+
+  it("documents PAIRFLOW_WORKTREE_ROOT fallback in runtime guidance", () => {
+    expect(buildPairflowCommandGuidance("/tmp/pairflow-worktree")).toContain(
+      "PAIRFLOW_WORKTREE_ROOT"
+    );
+    expect(
+      buildPairflowCommandGuidance("/tmp/pairflow-worktree", "self_host")
+    ).toContain("PAIRFLOW_WORKTREE_ROOT");
   });
 
   it("reports unresolved status when self_host active entrypoint cannot be resolved", () => {

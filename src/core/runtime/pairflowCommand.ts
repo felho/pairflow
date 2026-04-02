@@ -380,6 +380,7 @@ export function buildPairflowCommandGuidance(
     return [
       "Default command profile is `external`; Pairflow commands are resolved from PATH.",
       "In bubble panes, the command wrapper delegates to the PATH-resolved external `pairflow`; a worktree-local `dist/cli/index.js` is diagnostic only and never becomes implicit authority under `external`.",
+      "Bubble panes also export `PAIRFLOW_WORKTREE_ROOT`, so bubble-scoped Pairflow commands can still resolve the active worktree if a child process loses its current directory.",
       "If external CLI is unavailable, install it globally or recreate the bubble with `--pairflow-command-profile self_host` in a Pairflow self-host worktree.",
       `Self-host local entrypoint (for opt-in only): ${localEntrypoint}.`
     ].join(" ");
@@ -387,6 +388,7 @@ export function buildPairflowCommandGuidance(
   return [
     `Use the worktree-local Pairflow CLI pinned in this pane (${localEntrypoint}).`,
     "The pane prepends a worktree-local `pairflow` wrapper to `PATH`; if a child process bypasses that wrapper, run the local entrypoint directly.",
+    "Bubble panes also export `PAIRFLOW_WORKTREE_ROOT`, so bubble-scoped Pairflow commands can still resolve the active worktree if a child process loses its current directory.",
     "If startup prints `PAIRFLOW_COMMAND_PATH_STALE`, treat rollout readiness as blocked and rebuild/use the local worktree entrypoint before trusting Pairflow commands."
   ].join(" ");
 }

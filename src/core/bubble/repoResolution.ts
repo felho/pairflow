@@ -2,6 +2,7 @@ import { realpath } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { runGit } from "../workspace/git.js";
+import { listPairflowWorkspaceCandidateCwds } from "./commandWorkspaceFallback.js";
 
 export interface ResolveRepoPathInput {
   repoPath?: string | undefined;
@@ -26,21 +27,27 @@ export async function resolveRepoPath(
     return normalizeRepoPath(resolve(input.repoPath));
   }
 
-  const cwd = resolve(input.cwd ?? process.cwd());
-  const result = await runGit(["rev-parse", "--show-toplevel"], {
-    cwd,
-    allowFailure: true
-  });
-  if (result.exitCode !== 0) {
-    throw new RepoResolutionError(
-      `Could not resolve repository root from cwd: ${cwd}`
-    );
+  const candidateCwds = listPairflowWorkspaceCandidateCwds(input.cwd);
+  const requestedCwd = resolve(input.cwd ?? process.cwd());
+
+  for (const cwd of candidateCwds) {
+    const result = await runGit(["rev-parse", "--git-common-dir"], {
+      cwd,
+      allowFailure: true
+    });
+    if (result.exitCode !== 0) {
+      continue;
+    }
+
+    const raw = result.stdout.trim();
+    if (raw.length === 0) {
+      continue;
+    }
+
+    return normalizeRepoPath(resolve(cwd, raw, ".."));
   }
 
-  const raw = result.stdout.trim();
-  if (raw.length === 0) {
-    throw new RepoResolutionError(`Git repository root is empty for cwd: ${cwd}`);
-  }
-
-  return normalizeRepoPath(resolve(cwd, raw));
+  throw new RepoResolutionError(
+    `Could not resolve repository root from cwd: ${requestedCwd}`
+  );
 }

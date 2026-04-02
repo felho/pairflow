@@ -22,6 +22,7 @@ async function createTempRepo(): Promise<string> {
 }
 
 afterEach(async () => {
+  delete process.env.PAIRFLOW_WORKTREE_ROOT;
   await Promise.all(
     tempDirs.splice(0).map((path) =>
       rm(path, { recursive: true, force: true })
@@ -97,5 +98,36 @@ describe("resolveBubbleFromWorkspaceCwd", () => {
     await expect(
       resolveBubbleFromWorkspaceCwd(repoPath)
     ).rejects.toThrow(/No bubble config found/u);
+  });
+
+  it("falls back to PAIRFLOW_WORKTREE_ROOT when cwd is outside the repository", async () => {
+    const repoPath = await createTempRepo();
+    const outsideDir = await mkdtemp(join(tmpdir(), "pairflow-workspace-resolution-outside-"));
+    tempDirs.push(outsideDir);
+
+    const bubble = await createBubble({
+      id: "b_resolve_03",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Task",
+      cwd: repoPath
+    });
+
+    await bootstrapWorktreeWorkspace({
+      repoPath,
+      baseBranch: "main",
+      bubbleBranch: bubble.config.bubble_branch,
+      worktreePath: bubble.paths.worktreePath
+    });
+
+    process.env.PAIRFLOW_WORKTREE_ROOT = bubble.paths.worktreePath;
+
+    const resolved = await resolveBubbleFromWorkspaceCwd(outsideDir);
+
+    expect(resolved.bubbleId).toBe("b_resolve_03");
+    expect(await realpath(resolved.worktreePath)).toBe(
+      await realpath(bubble.paths.worktreePath)
+    );
   });
 });

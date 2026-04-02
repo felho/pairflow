@@ -5,6 +5,8 @@ import { dirname, join, resolve } from "node:path";
 import { parseBubbleConfigToml } from "../../config/bubbleConfig.js";
 import { getBubblePaths, type BubblePaths } from "./paths.js";
 import type { BubbleConfig } from "../../types/bubble.js";
+import { listPairflowWorkspaceCandidateCwds } from "./commandWorkspaceFallback.js";
+import { resolveRepoPath } from "./repoResolution.js";
 
 export interface ResolvedBubbleById {
   bubbleId: string;
@@ -30,27 +32,49 @@ async function findRepoPathForBubbleFromCwd(
   cwdInput: string,
   bubbleId: string
 ): Promise<string | undefined> {
-  let current = resolve(cwdInput);
+  for (const candidateCwd of listPairflowWorkspaceCandidateCwds(cwdInput)) {
+    let current = candidateCwd;
 
-  while (true) {
-    const candidate = join(
-      current,
+    while (true) {
+      const candidate = join(
+        current,
+        ".pairflow",
+        "bubbles",
+        bubbleId,
+        "bubble.toml"
+      );
+      if (await fileExists(candidate)) {
+        return current;
+      }
+
+      const parent = dirname(current);
+      if (parent === current) {
+        break;
+      }
+
+      current = parent;
+    }
+
+    const resolvedRepoPath = await resolveRepoPath({
+      cwd: candidateCwd
+    }).catch(() => undefined);
+    if (resolvedRepoPath === undefined) {
+      continue;
+    }
+
+    const repoCandidate = join(
+      resolvedRepoPath,
       ".pairflow",
       "bubbles",
       bubbleId,
       "bubble.toml"
     );
-    if (await fileExists(candidate)) {
-      return current;
+    if (await fileExists(repoCandidate)) {
+      return resolvedRepoPath;
     }
-
-    const parent = dirname(current);
-    if (parent === current) {
-      return undefined;
-    }
-
-    current = parent;
   }
+
+  return undefined;
 }
 
 async function normalizePath(path: string): Promise<string> {

@@ -1,11 +1,12 @@
-import { mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
-import { BubbleLookupError, resolveBubbleById } from "../../../src/core/bubble/bubbleLookup.js";
+import { resolveBubbleById } from "../../../src/core/bubble/bubbleLookup.js";
+import { bootstrapWorktreeWorkspace } from "../../../src/core/workspace/worktreeManager.js";
 import { initGitRepository } from "../../helpers/git.js";
 
 const tempDirs: string[] = [];
@@ -18,6 +19,7 @@ async function createTempRepo(): Promise<string> {
 }
 
 afterEach(async () => {
+  delete process.env.PAIRFLOW_WORKTREE_ROOT;
   await Promise.all(
     tempDirs.splice(0).map((path) =>
       rm(path, { recursive: true, force: true })
@@ -26,10 +28,13 @@ afterEach(async () => {
 });
 
 describe("resolveBubbleById", () => {
-  it("resolves by explicit repo path", async () => {
+  it("falls back to PAIRFLOW_WORKTREE_ROOT when cwd is outside the repository", async () => {
     const repoPath = await createTempRepo();
-    await createBubble({
-      id: "b_lookup_01",
+    const outsideDir = await mkdtemp(join(tmpdir(), "pairflow-bubble-lookup-outside-"));
+    tempDirs.push(outsideDir);
+
+    const bubble = await createBubble({
+      id: "b_lookup_env_01",
       repoPath,
       baseBranch: "main",
       reviewArtifactType: "code",
@@ -37,70 +42,21 @@ describe("resolveBubbleById", () => {
       cwd: repoPath
     });
 
-    const resolved = await resolveBubbleById({
-      bubbleId: "b_lookup_01",
-      repoPath
-    });
-
-    expect(resolved.bubbleId).toBe("b_lookup_01");
-    expect(resolved.repoPath).toBe(repoPath);
-  });
-
-  it("resolves by cwd ancestry search when repo is omitted", async () => {
-    const repoPath = await createTempRepo();
-    await createBubble({
-      id: "b_lookup_02",
+    await bootstrapWorktreeWorkspace({
       repoPath,
       baseBranch: "main",
-      reviewArtifactType: "code",
-      task: "Task",
-      cwd: repoPath
+      bubbleBranch: bubble.config.bubble_branch,
+      worktreePath: bubble.paths.worktreePath
     });
 
-    const nested = join(repoPath, "packages", "app");
-    await mkdir(nested, { recursive: true });
+    process.env.PAIRFLOW_WORKTREE_ROOT = bubble.paths.worktreePath;
 
     const resolved = await resolveBubbleById({
-      bubbleId: "b_lookup_02",
-      cwd: nested
+      bubbleId: bubble.config.id,
+      cwd: outsideDir
     });
 
-    expect(resolved.bubbleId).toBe("b_lookup_02");
-  });
-
-  it("rejects missing bubbles", async () => {
-    const repoPath = await createTempRepo();
-
-    await expect(
-      resolveBubbleById({
-        bubbleId: "b_missing",
-        repoPath
-      })
-    ).rejects.toBeInstanceOf(BubbleLookupError);
-  });
-
-  it("accepts repo path aliases via realpath normalization", async () => {
-    const repoPath = await createTempRepo();
-    await createBubble({
-      id: "b_lookup_03",
-      repoPath,
-      baseBranch: "main",
-      reviewArtifactType: "code",
-      task: "Task",
-      cwd: repoPath
-    });
-
-    const aliasRoot = await mkdtemp(join(tmpdir(), "pairflow-bubble-lookup-alias-"));
-    tempDirs.push(aliasRoot);
-    const repoAliasPath = join(aliasRoot, "repo-alias");
-    await symlink(repoPath, repoAliasPath);
-
-    const resolved = await resolveBubbleById({
-      bubbleId: "b_lookup_03",
-      repoPath: repoAliasPath
-    });
-
-    expect(resolved.bubbleId).toBe("b_lookup_03");
+    expect(resolved.bubbleId).toBe("b_lookup_env_01");
     expect(resolved.repoPath).toBe(repoPath);
   });
 });

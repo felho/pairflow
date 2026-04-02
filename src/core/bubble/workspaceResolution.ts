@@ -5,6 +5,7 @@ import { parseBubbleConfigToml } from "../../config/bubbleConfig.js";
 import { getBubblePaths, type BubblePaths } from "./paths.js";
 import { runGit } from "../workspace/git.js";
 import type { BubbleConfig } from "../../types/bubble.js";
+import { listPairflowWorkspaceCandidateCwds } from "./commandWorkspaceFallback.js";
 
 export interface ResolvedBubbleWorkspace {
   bubbleId: string;
@@ -175,8 +176,37 @@ async function listBubbleConfigs(repoPath: string): Promise<Array<{ config: Bubb
 export async function resolveBubbleFromWorkspaceCwd(
   cwdInput: string = process.cwd()
 ): Promise<ResolvedBubbleWorkspace> {
-  const cwd = resolve(cwdInput);
-  const { repoPath, worktreePath, currentBranch } = await resolveRepositoryPaths(cwd);
+  let cwd: string | undefined;
+  let repoPath: string | undefined;
+  let worktreePath: string | undefined;
+  let currentBranch: string | undefined;
+  let firstError: unknown;
+
+  for (const candidateCwd of listPairflowWorkspaceCandidateCwds(cwdInput)) {
+    try {
+      const resolvedRepository = await resolveRepositoryPaths(candidateCwd);
+      cwd = candidateCwd;
+      repoPath = resolvedRepository.repoPath;
+      worktreePath = resolvedRepository.worktreePath;
+      currentBranch = resolvedRepository.currentBranch;
+      break;
+    } catch (error) {
+      firstError ??= error;
+    }
+  }
+
+  if (
+    cwd === undefined
+    || repoPath === undefined
+    || worktreePath === undefined
+  ) {
+    if (firstError instanceof Error) {
+      throw firstError;
+    }
+    throw new WorkspaceResolutionError(
+      `Could not resolve bubble workspace from cwd: ${resolve(cwdInput)}`
+    );
+  }
 
   const normalizedRepoPath = await normalizePath(repoPath);
   const normalizedWorktreePath = await normalizePath(worktreePath);
