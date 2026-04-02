@@ -4,6 +4,7 @@ import {
   buildMetaReviewExecutionContext,
   validateActiveMetaReviewExecutionContext
 } from "../../../src/core/bubble/metaReviewExecutionContext.js";
+import { metaReviewExecutionContextToRunningContext } from "../../../src/core/state/executionContext.js";
 import type { BubbleStateSnapshot } from "../../../src/types/bubble.js";
 
 function createMetaReviewRunningState(
@@ -16,6 +17,15 @@ function createMetaReviewRunningState(
     active_agent: "codex",
     active_since: "2026-03-08T10:00:00.000Z",
     active_role: "meta_reviewer",
+    execution_context: metaReviewExecutionContextToRunningContext(
+      buildMetaReviewExecutionContext({
+        bubbleId: "b_meta_execctx_test_01",
+        round: 2,
+        startedAt: "2026-03-08T10:00:00.000Z",
+        watchdogTimeoutMinutes: 30,
+        attempt: 1
+      })
+    ),
     round_role_history: [],
     last_command_at: "2026-03-08T10:00:00.000Z",
     meta_review: {
@@ -83,7 +93,7 @@ describe("validateActiveMetaReviewExecutionContext", () => {
         attempt: 1
       })
     ).toThrowError(
-      "meta-review execution context requires a finite watchdog timeout: NaN"
+      "meta-review execution context requires a positive finite watchdog timeout: NaN"
     );
   });
 
@@ -96,7 +106,7 @@ describe("validateActiveMetaReviewExecutionContext", () => {
       return;
     }
 
-    expect(result.value).toEqual(state.meta_review!.execution_context);
+    expect(result.value).toEqual(state.execution_context);
   });
 
   it("rejects non-meta-review lifecycle states before inspecting context", () => {
@@ -120,6 +130,7 @@ describe("validateActiveMetaReviewExecutionContext", () => {
   it("rejects missing execution context for META_REVIEW_RUNNING", () => {
     const result = validateActiveMetaReviewExecutionContext(
       createMetaReviewRunningState({
+        execution_context: null,
         meta_review: {
           ...createMetaReviewRunningState().meta_review!,
           execution_context: null
@@ -134,9 +145,9 @@ describe("validateActiveMetaReviewExecutionContext", () => {
 
     expect(result.errors).toEqual([
       {
-        path: "meta_review.execution_context",
+        path: "execution_context",
         message:
-          "META_REVIEW_RUNNING state requires canonical meta_review.execution_context authority."
+          "META_REVIEW_RUNNING state requires canonical execution_context authority."
       }
     ]);
   });
@@ -144,6 +155,15 @@ describe("validateActiveMetaReviewExecutionContext", () => {
   it("rejects malformed authority fields and round drift", () => {
     const result = validateActiveMetaReviewExecutionContext(
       createMetaReviewRunningState({
+        execution_context: {
+          ...createMetaReviewRunningState().execution_context!,
+          handoff_id: "",
+          round: 3,
+          awaited_output_type:
+            "review_result" as unknown as "meta_review_result",
+          attempt: 0,
+          deadline_at: "2026-03-08T09:59:59.000Z"
+        },
         meta_review: {
           ...createMetaReviewRunningState().meta_review!,
           execution_context: {
@@ -166,23 +186,23 @@ describe("validateActiveMetaReviewExecutionContext", () => {
 
     expect(result.errors).toEqual([
       {
-        path: "meta_review.execution_context.handoff_id",
+        path: "execution_context.handoff_id",
         message: "Must be a non-empty string"
       },
       {
-        path: "meta_review.execution_context.round",
+        path: "execution_context.round",
         message: "Must match state.round (2) while META_REVIEW_RUNNING is active"
       },
       {
-        path: "meta_review.execution_context.awaited_output_type",
+        path: "execution_context.awaited_output_type",
         message: "Must be meta_review_result"
       },
       {
-        path: "meta_review.execution_context.attempt",
+        path: "execution_context.attempt",
         message: "Must be an integer >= 1"
       },
       {
-        path: "meta_review.execution_context.deadline_at",
+        path: "execution_context.deadline_at",
         message: "Must be >= started_at"
       }
     ]);

@@ -227,7 +227,8 @@ async function seedRuntimeSessionsFixture(input: {
         : "PREPARING_WORKSPACE";
     const nextState = {
       ...loaded.state,
-      state: targetState
+      state: targetState,
+      execution_context: null
     };
     await writeStateSnapshot(bubble.paths.statePath, nextState, {
       expectedFingerprint: loaded.fingerprint,

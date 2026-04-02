@@ -61,6 +61,7 @@ describe("emitAskHumanFromWorkspace", () => {
     expect(state.state.state).toBe("WAITING_HUMAN");
     expect(state.state.active_agent).toBe("codex");
     expect(state.state.active_role).toBe("implementer");
+    expect(state.state.execution_context).toBeNull();
     expect(state.state.last_command_at).toBe(now.toISOString());
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);

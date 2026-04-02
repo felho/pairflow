@@ -86,7 +86,8 @@ function createFlowDependencies(nowIso: string) {
           agents: {
             implementer: "codex",
             reviewer: "claude"
-          }
+          },
+          watchdog_timeout_minutes: 60
         }
       })),
       ensureBubbleInstanceIdForMutation: vi.fn(async (input: {
@@ -95,6 +96,7 @@ function createFlowDependencies(nowIso: string) {
             implementer: "codex";
             reviewer: "claude";
           };
+          watchdog_timeout_minutes: number;
         };
       }) => ({
         bubbleInstanceId: "bi_approval_01",

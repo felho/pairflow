@@ -13,9 +13,40 @@ export interface StateTransitionInput {
   round?: number;
   activeAgent?: AgentName | null;
   activeRole?: AgentRole | null;
+  executionContext?: BubbleStateSnapshot["execution_context"];
   activeSince?: string | null;
   lastCommandAt?: string | null;
   appendRoundRoleEntry?: RoundRoleHistoryEntry;
+}
+
+const statesThatClearExecutionContext = new Set<BubbleLifecycleState>([
+  "CREATED",
+  "PREPARING_WORKSPACE",
+  "WAITING_HUMAN",
+  "READY_FOR_APPROVAL",
+  "META_REVIEW_FAILED",
+  "READY_FOR_HUMAN_APPROVAL",
+  "APPROVED_FOR_COMMIT",
+  "COMMITTED",
+  "DONE",
+  "FAILED",
+  "CANCELLED"
+]);
+
+function clearCompatibilityMetaReviewExecutionContext(
+  state: BubbleStateSnapshot
+): BubbleStateSnapshot {
+  if (state.state === "META_REVIEW_RUNNING" || state.meta_review === undefined) {
+    return state;
+  }
+
+  return {
+    ...state,
+    meta_review: {
+      ...state.meta_review,
+      execution_context: null
+    }
+  };
 }
 
 export function applyStateTransition(
@@ -41,6 +72,11 @@ export function applyStateTransition(
   if (input.activeRole !== undefined) {
     next.active_role = input.activeRole;
   }
+  if (input.executionContext !== undefined) {
+    next.execution_context = input.executionContext;
+  } else if (statesThatClearExecutionContext.has(input.to)) {
+    next.execution_context = null;
+  }
   if (input.activeSince !== undefined) {
     next.active_since = input.activeSince;
   }
@@ -48,5 +84,7 @@ export function applyStateTransition(
     next.last_command_at = input.lastCommandAt;
   }
 
-  return assertValidBubbleStateSnapshot(next);
+  return assertValidBubbleStateSnapshot(
+    clearCompatibilityMetaReviewExecutionContext(next)
+  );
 }

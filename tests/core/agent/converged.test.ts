@@ -17,7 +17,14 @@ import { IDEATION_CONVERGED_BLOCKED } from "../../../src/core/bubble/ideation.js
 import { readTranscriptEnvelopes, appendProtocolEnvelope } from "../../../src/core/protocol/transcriptStore.js";
 import { applyMetaReviewGateOnConvergence } from "../../../src/core/bubble/metaReviewGate.js";
 import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
+import {
+  buildRunningExecutionContext,
+  metaReviewExecutionContextToRunningContext
+} from "../../../src/core/state/executionContext.js";
+import {
+  readStateSnapshot,
+  writeStateSnapshot as rawWriteStateSnapshot
+} from "../../../src/core/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/core/workspace/worktreeManager.js";
 import { resolveReviewerTestEvidenceArtifactPath } from "../../../src/core/reviewer/testEvidence.js";
 import { resolveSummaryVerifierConsistencyGateArtifactPath } from "../../../src/core/reviewer/summaryVerifierConsistencyGate.js";
@@ -27,6 +34,79 @@ import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
 const tempDirs: string[] = [];
+const defaultWatchdogTimeoutMinutes = 60;
+
+function resolveWatchdogTimeoutMinutes(
+  state: Parameters<typeof rawWriteStateSnapshot>[1]
+): number {
+  const executionContext =
+    state.state === "META_REVIEW_RUNNING"
+      ? metaReviewExecutionContextToRunningContext(
+          state.meta_review?.execution_context ?? null
+        )
+      : state.execution_context;
+  if (executionContext === null || executionContext === undefined) {
+    return defaultWatchdogTimeoutMinutes;
+  }
+  const startedAtMs = Date.parse(executionContext.started_at);
+  const deadlineAtMs = Date.parse(executionContext.deadline_at);
+  const deltaMinutes = (deadlineAtMs - startedAtMs) / 60_000;
+  return Number.isFinite(deltaMinutes) && deltaMinutes > 0
+    ? deltaMinutes
+    : defaultWatchdogTimeoutMinutes;
+}
+
+function normalizeTestStateForWrite(
+  state: Parameters<typeof rawWriteStateSnapshot>[1]
+): Parameters<typeof rawWriteStateSnapshot>[1] {
+  if (state.state === "META_REVIEW_RUNNING") {
+    return {
+      ...state,
+      execution_context: metaReviewExecutionContextToRunningContext(
+        state.meta_review?.execution_context ?? null
+      )
+    };
+  }
+
+  if (state.state === "RUNNING") {
+    if (state.round === 0) {
+      return {
+        ...state,
+        execution_context: null
+      };
+    }
+    if (state.active_role !== null && state.active_since !== null) {
+      return {
+        ...state,
+        execution_context: buildRunningExecutionContext({
+          bubbleId: state.bubble_id,
+          round: state.round,
+          activeRole: state.active_role,
+          startedAt: state.active_since,
+          watchdogTimeoutMinutes: resolveWatchdogTimeoutMinutes(state),
+          attempt: state.execution_context?.attempt ?? 1
+        })
+      };
+    }
+  }
+
+  return {
+    ...state,
+    execution_context: null
+  };
+}
+
+async function writeStateSnapshot(
+  statePath: Parameters<typeof rawWriteStateSnapshot>[0],
+  state: Parameters<typeof rawWriteStateSnapshot>[1],
+  options?: Parameters<typeof rawWriteStateSnapshot>[2]
+): ReturnType<typeof rawWriteStateSnapshot> {
+  return rawWriteStateSnapshot(
+    statePath,
+    normalizeTestStateForWrite(state),
+    options
+  );
+}
 
 async function createTempRepo(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "pairflow-converged-"));
@@ -312,7 +392,10 @@ describe("emitConvergedFromWorkspace", () => {
     expect(selfHostUnresolvedCodes).toContain("PAIRFLOW_COMMAND_PATH_UNRESOLVED");
   });
 
-  it("emits approval wait notifications to human + implementer + reviewer panes", async () => {
+  it(
+    "emits approval wait notifications to human + implementer + reviewer panes",
+    { timeout: 15_000 },
+    async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupConvergedCandidateBubble(repoPath, "b_converged_notify_01");
     const loaded = await readStateSnapshot(bubble.paths.statePath);
@@ -408,9 +491,13 @@ describe("emitConvergedFromWorkspace", () => {
       delivered: true,
       retried: false
     });
-  });
+    }
+  );
 
-  it("emits auto-rework delivery only to implementer pane", async () => {
+  it(
+    "emits auto-rework delivery only to implementer pane",
+    { timeout: 15_000 },
+    async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupConvergedCandidateBubble(repoPath, "b_converged_notify_03");
     const deliveries: string[] = [];
@@ -474,7 +561,8 @@ describe("emitConvergedFromWorkspace", () => {
       delivered: true,
       retried: false
     });
-  });
+    }
+  );
 
   it("persists convergence-policy diagnostics into CONVERGENCE payload metadata", async () => {
     const repoPath = await createTempRepo();
@@ -792,6 +880,13 @@ describe("emitConvergedFromWorkspace", () => {
       {
         applyMetaReviewGateOnConvergence: async () => {
           const loaded = await readStateSnapshot(bubble.paths.statePath);
+          const executionContext = buildMetaReviewExecutionContext({
+            bubbleId: bubble.bubbleId,
+            round: loaded.state.round,
+            startedAt: "2026-02-22T09:04:40.000Z",
+            watchdogTimeoutMinutes: 60,
+            attempt: 1
+          });
           await writeStateSnapshot(
             bubble.paths.statePath,
             {
@@ -800,14 +895,10 @@ describe("emitConvergedFromWorkspace", () => {
               active_agent: "codex",
               active_role: "meta_reviewer",
               active_since: "2026-02-22T09:04:40.000Z",
+              execution_context:
+                metaReviewExecutionContextToRunningContext(executionContext),
               meta_review: {
-                execution_context: buildMetaReviewExecutionContext({
-                  bubbleId: bubble.bubbleId,
-                  round: loaded.state.round,
-                  startedAt: "2026-02-22T09:04:40.000Z",
-                  watchdogTimeoutMinutes: 60,
-                  attempt: 1
-                }),
+                execution_context: executionContext,
                 last_autonomous_run_id: "run_converged_recover_01",
                 last_autonomous_status: "success",
                 last_autonomous_recommendation: "approve",

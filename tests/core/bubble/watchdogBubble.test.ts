@@ -17,6 +17,7 @@ import {
   setMetaReviewerPaneBinding,
   upsertRuntimeSession
 } from "../../../src/core/runtime/sessionsRegistry.js";
+import { metaReviewExecutionContextToRunningContext } from "../../../src/core/state/executionContext.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -100,6 +101,15 @@ describe("runBubbleWatchdog", () => {
         input.activeAgent === null ? null : ("meta_reviewer" as const),
       active_since: input.activeAgent === null ? null : input.activeSinceIso,
       last_command_at: input.lastCommandAtIso,
+      execution_context: metaReviewExecutionContextToRunningContext(
+        buildMetaReviewExecutionContext({
+          bubbleId: loaded.state.bubble_id,
+          round: readyForApproval.round,
+          startedAt: input.activeSinceIso,
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        })
+      ),
       meta_review: {
         ...readyForApproval.meta_review!,
         execution_context: buildMetaReviewExecutionContext({
@@ -403,6 +413,7 @@ describe("runBubbleWatchdog", () => {
       bubble.paths.statePath,
       {
         ...loaded.state,
+        execution_context: null,
         round: 0
       },
       {

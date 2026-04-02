@@ -49,6 +49,7 @@ export interface PersistNormalPassPostAppendDependencies {
       "nextRound" | "recipientAgent" | "recipientRole" | "appendRoundRoleEntry"
     >;
     nowIso: string;
+    watchdogTimeoutMinutes: number;
     expectedFingerprint: string;
     envelopeId: string;
     createError: PairflowCreateCommandError;
@@ -90,6 +91,7 @@ export async function persistNormalPassPostAppend(
     state: input.state,
     handoff: input.handoff,
     nowIso: input.generatedAt,
+    watchdogTimeoutMinutes: input.bubbleConfig.watchdog_timeout_minutes,
     expectedFingerprint: input.expectedFingerprint,
     envelopeId: input.appendEnvelopeId,
     createError: input.createError

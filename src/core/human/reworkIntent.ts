@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { clearLiveMetaReviewSnapshot } from "../bubble/metaReview.js";
+import { buildRunningExecutionContext } from "../state/executionContext.js";
 import { applyStateTransition } from "../state/machine.js";
 import type {
   AgentName,
@@ -26,6 +27,7 @@ export interface ApplyDeferredReworkIntentInput {
   state: BubbleStateSnapshot;
   implementer: AgentName;
   reviewer: AgentName;
+  watchdogTimeoutMinutes: number;
   now: Date;
 }
 
@@ -118,6 +120,13 @@ export function applyDeferredReworkIntent(
     round: nextRound,
     activeAgent: input.implementer,
     activeRole: "implementer",
+    executionContext: buildRunningExecutionContext({
+      bubbleId: input.state.bubble_id,
+      round: nextRound,
+      activeRole: "implementer",
+      startedAt: nowIso,
+      watchdogTimeoutMinutes: input.watchdogTimeoutMinutes
+    }),
     activeSince: nowIso,
     lastCommandAt: nowIso,
     ...(hasRoundEntry

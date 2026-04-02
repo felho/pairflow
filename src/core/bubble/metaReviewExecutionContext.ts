@@ -8,12 +8,20 @@ import {
   type ValidationResult
 } from "../validation.js";
 import {
-  isMetaReviewExecutionContextAwaitedOutputType,
+  isAgentRole,
+  isBubbleExecutionContextAwaitedOutputType,
+  type BubbleExecutionContext,
   type BubbleMetaReviewExecutionContext,
   type BubbleStateSnapshot
 } from "../../types/bubble.js";
+import {
+  buildRunningExecutionContext,
+  metaReviewExecutionContextToRunningContext,
+  toMetaReviewExecutionContext
+} from "../state/executionContext.js";
 
 export const metaReviewExecutionContextPath = "meta_review.execution_context";
+export const runningExecutionContextPath = "execution_context";
 
 export function buildMetaReviewExecutionContext(input: {
   bubbleId: string;
@@ -22,38 +30,37 @@ export function buildMetaReviewExecutionContext(input: {
   watchdogTimeoutMinutes: number;
   attempt: number;
 }): BubbleMetaReviewExecutionContext {
-  const startedAtMs = Date.parse(input.startedAt);
-  if (Number.isNaN(startedAtMs)) {
-    throw new RangeError(
-      `meta-review execution context requires a valid startedAt timestamp: ${input.startedAt}`
-    );
+  let executionContext: BubbleExecutionContext;
+  try {
+    executionContext = buildRunningExecutionContext({
+      bubbleId: input.bubbleId,
+      round: input.round,
+      activeRole: "meta_reviewer",
+      startedAt: input.startedAt,
+      watchdogTimeoutMinutes: input.watchdogTimeoutMinutes,
+      attempt: input.attempt
+    });
+  } catch (error) {
+    if (error instanceof RangeError) {
+      throw new RangeError(
+        error.message.replace(
+          "running execution context",
+          "meta-review execution context"
+        )
+      );
+    }
+    throw error;
   }
-
-  const watchdogTimeoutMs = input.watchdogTimeoutMinutes * 60_000;
-  if (!Number.isFinite(watchdogTimeoutMs)) {
-    throw new RangeError(
-      `meta-review execution context requires a finite watchdog timeout: ${String(input.watchdogTimeoutMinutes)}`
-    );
+  const metaReviewExecutionContext = toMetaReviewExecutionContext(executionContext);
+  if (metaReviewExecutionContext === null) {
+    throw new Error("Failed to build meta-review execution context.");
   }
-
-  const deadlineAt = new Date(
-    startedAtMs + watchdogTimeoutMs
-  ).toISOString();
-
-  return {
-    handoff_id:
-      `meta_review:${input.bubbleId}:round:${input.round}:attempt:${input.attempt}`,
-    round: input.round,
-    awaited_output_type: "meta_review_result",
-    started_at: input.startedAt,
-    deadline_at: deadlineAt,
-    attempt: input.attempt
-  };
+  return metaReviewExecutionContext;
 }
 
 export function validateActiveMetaReviewExecutionContext(
   state: BubbleStateSnapshot
-): ValidationResult<BubbleMetaReviewExecutionContext> {
+): ValidationResult<BubbleExecutionContext> {
   const errors: ValidationError[] = [];
 
   if (state.state !== "META_REVIEW_RUNNING") {
@@ -65,43 +72,60 @@ export function validateActiveMetaReviewExecutionContext(
     ]);
   }
 
-  const executionContext = state.meta_review?.execution_context;
-  if (executionContext === undefined || executionContext === null) {
+  const executionContext =
+    state.execution_context
+    ?? metaReviewExecutionContextToRunningContext(
+      state.meta_review?.execution_context ?? null
+    );
+  if (executionContext === null) {
     return validationFail([
       {
-        path: metaReviewExecutionContextPath,
+        path: runningExecutionContextPath,
         message:
-          "META_REVIEW_RUNNING state requires canonical meta_review.execution_context authority."
+          "META_REVIEW_RUNNING state requires canonical execution_context authority."
       }
     ]);
   }
 
+  if (!isAgentRole(executionContext.active_role)) {
+    errors.push({
+      path: `${runningExecutionContextPath}.active_role`,
+      message: "Must be one of: implementer, reviewer, meta_reviewer"
+    });
+  } else if (executionContext.active_role !== "meta_reviewer") {
+    errors.push({
+      path: `${runningExecutionContextPath}.active_role`,
+      message: "Must be meta_reviewer while META_REVIEW_RUNNING is active"
+    });
+  }
+
   if (!isNonEmptyString(executionContext.handoff_id)) {
     errors.push({
-      path: `${metaReviewExecutionContextPath}.handoff_id`,
+      path: `${runningExecutionContextPath}.handoff_id`,
       message: "Must be a non-empty string"
     });
   }
 
   if (!isInteger(executionContext.round) || executionContext.round < 1) {
     errors.push({
-      path: `${metaReviewExecutionContextPath}.round`,
+      path: `${runningExecutionContextPath}.round`,
       message: "Must be a positive integer"
     });
   } else if (executionContext.round !== state.round) {
     errors.push({
-      path: `${metaReviewExecutionContextPath}.round`,
+      path: `${runningExecutionContextPath}.round`,
       message: `Must match state.round (${state.round}) while META_REVIEW_RUNNING is active`
     });
   }
 
-  if (
-    !isMetaReviewExecutionContextAwaitedOutputType(
-      executionContext.awaited_output_type
-    )
-  ) {
+  if (!isBubbleExecutionContextAwaitedOutputType(executionContext.awaited_output_type)) {
     errors.push({
-      path: `${metaReviewExecutionContextPath}.awaited_output_type`,
+      path: `${runningExecutionContextPath}.awaited_output_type`,
+      message: "Must be meta_review_result"
+    });
+  } else if (executionContext.awaited_output_type !== "meta_review_result") {
+    errors.push({
+      path: `${runningExecutionContextPath}.awaited_output_type`,
       message: "Must be meta_review_result"
     });
   }
@@ -109,7 +133,7 @@ export function validateActiveMetaReviewExecutionContext(
   const startedAtValid = isIsoTimestamp(executionContext.started_at);
   if (!startedAtValid) {
     errors.push({
-      path: `${metaReviewExecutionContextPath}.started_at`,
+      path: `${runningExecutionContextPath}.started_at`,
       message: "Must be a valid ISO timestamp"
     });
   }
@@ -117,14 +141,14 @@ export function validateActiveMetaReviewExecutionContext(
   const deadlineAtValid = isIsoTimestamp(executionContext.deadline_at);
   if (!deadlineAtValid) {
     errors.push({
-      path: `${metaReviewExecutionContextPath}.deadline_at`,
+      path: `${runningExecutionContextPath}.deadline_at`,
       message: "Must be a valid ISO timestamp"
     });
   }
 
   if (!isInteger(executionContext.attempt) || executionContext.attempt < 1) {
     errors.push({
-      path: `${metaReviewExecutionContextPath}.attempt`,
+      path: `${runningExecutionContextPath}.attempt`,
       message: "Must be an integer >= 1"
     });
   }
@@ -137,7 +161,7 @@ export function validateActiveMetaReviewExecutionContext(
     deadlineAtMs < startedAtMs
   ) {
     errors.push({
-      path: `${metaReviewExecutionContextPath}.deadline_at`,
+      path: `${runningExecutionContextPath}.deadline_at`,
       message: "Must be >= started_at"
     });
   }

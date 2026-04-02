@@ -63,6 +63,8 @@ export async function runApprovalDecisionFlowWithContext(
     nowIso: input.execution.nowIso,
     implementer: input.execution.resolved.bubbleConfig.agents.implementer,
     reviewer: input.execution.resolved.bubbleConfig.agents.reviewer,
+    watchdogTimeoutMinutes:
+      input.execution.resolved.bubbleConfig.watchdog_timeout_minutes,
     applyStateTransition: input.dependencies.applyStateTransition
   });
 

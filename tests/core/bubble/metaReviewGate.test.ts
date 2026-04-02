@@ -26,6 +26,7 @@ import {
   StateStoreConflictError,
   writeStateSnapshot
 } from "../../../src/core/state/stateStore.js";
+import { buildRunningExecutionContext } from "../../../src/core/state/executionContext.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import type { BubbleMetaReviewSnapshotState } from "../../../src/types/bubble.js";
@@ -860,6 +861,17 @@ describe("applyMetaReviewGateOnConvergence", () => {
       {
         ...loaded.state,
         round: 4,
+        execution_context: buildRunningExecutionContext({
+          bubbleId: bubble.bubbleId,
+          round: 4,
+          activeRole: loaded.state.execution_context?.active_role ?? "implementer",
+          startedAt:
+            loaded.state.execution_context?.started_at
+            ?? loaded.state.active_since
+            ?? "2026-03-12T12:03:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: loaded.state.execution_context?.attempt ?? 1
+        }),
         meta_review: {
           ...(loaded.state.meta_review ?? defaultMetaReviewSnapshot()),
           sticky_human_gate: true,
@@ -933,6 +945,17 @@ describe("applyMetaReviewGateOnConvergence", () => {
       {
         ...loaded.state,
         round: 5,
+        execution_context: buildRunningExecutionContext({
+          bubbleId: bubble.bubbleId,
+          round: 5,
+          activeRole: loaded.state.execution_context?.active_role ?? "implementer",
+          startedAt:
+            loaded.state.execution_context?.started_at
+            ?? loaded.state.active_since
+            ?? "2026-03-13T12:03:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: loaded.state.execution_context?.attempt ?? 1
+        }),
         meta_review: {
           ...(loaded.state.meta_review ?? defaultMetaReviewSnapshot()),
           sticky_human_gate: true,

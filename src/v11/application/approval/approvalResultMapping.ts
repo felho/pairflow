@@ -1,5 +1,6 @@
 import type { applyStateTransition } from "../../../core/state/machine.js";
 import { clearLiveMetaReviewSnapshot } from "../../../core/bubble/metaReview.js";
+import { buildRunningExecutionContext } from "../../../core/state/executionContext.js";
 import type {
   AgentName,
   BubbleReworkIntentRecord,
@@ -17,6 +18,7 @@ export interface ResolveApprovalNextStateInput {
   nowIso: string;
   implementer: AgentName;
   reviewer: AgentName;
+  watchdogTimeoutMinutes: number;
   applyStateTransition: typeof applyStateTransition;
 }
 
@@ -36,6 +38,13 @@ export function resolveApprovalNextState(
     round: nextRound,
     activeAgent: input.implementer,
     activeRole: "implementer",
+    executionContext: buildRunningExecutionContext({
+      bubbleId: input.state.bubble_id,
+      round: nextRound,
+      activeRole: "implementer",
+      startedAt: input.nowIso,
+      watchdogTimeoutMinutes: input.watchdogTimeoutMinutes
+    }),
     activeSince: input.nowIso,
     lastCommandAt: input.nowIso,
     appendRoundRoleEntry: {

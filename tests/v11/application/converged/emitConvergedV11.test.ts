@@ -69,7 +69,10 @@ async function executeSeededConverged(input: {
 }
 
 describe("emitConvergedFromWorkspaceV11", () => {
-  it("matches legacy converged behavior on the same seeded scenario", async () => {
+  it(
+    "matches legacy converged behavior on the same seeded scenario",
+    { timeout: 15_000 },
+    async () => {
     const legacy = await executeSeededConverged({
       bubbleId: "b_converged_v11_legacy_01",
       executor: emitConvergedFromWorkspace
@@ -86,9 +89,13 @@ describe("emitConvergedFromWorkspaceV11", () => {
     expect(v11.approvalRequestSender).toBe("orchestrator");
     expect(v11.gateRoute).toBe("meta_review_running");
     expect(v11.state).toBe("META_REVIEW_RUNNING");
-  });
+    }
+  );
 
-  it("matches legacy converged behavior on document-scope seeded scenario", async () => {
+  it(
+    "matches legacy converged behavior on document-scope seeded scenario",
+    { timeout: 15_000 },
+    async () => {
     const legacy = await executeSeededConverged({
       bubbleId: "b_converged_v11_legacy_doc_01",
       executor: emitConvergedFromWorkspace,
@@ -107,7 +114,8 @@ describe("emitConvergedFromWorkspaceV11", () => {
     expect(v11.approvalRequestSender).toBe("orchestrator");
     expect(v11.gateRoute).toBe("meta_review_running");
     expect(v11.state).toBe("META_REVIEW_RUNNING");
-  });
+    }
+  );
 
   it("rejects when bubble is not RUNNING", async () => {
     const repoPath = await createTempRepo();

@@ -6,6 +6,7 @@ import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import { runCli } from "../../src/cli/index.js";
 import { buildMetaReviewExecutionContext } from "../../src/core/bubble/metaReviewExecutionContext.js";
+import { metaReviewExecutionContextToRunningContext } from "../../src/core/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../src/core/state/stateStore.js";
 import { setupRunningBubbleFixture } from "../helpers/bubble.js";
 import { initGitRepository } from "../helpers/git.js";
@@ -483,6 +484,15 @@ describe("runCli", () => {
         active_agent: "codex",
         active_role: "meta_reviewer",
         active_since: "2026-03-08T12:49:00.000Z",
+        execution_context: metaReviewExecutionContextToRunningContext(
+          buildMetaReviewExecutionContext({
+            bubbleId: bubble.bubbleId,
+            round: loaded.state.round,
+            startedAt: "2026-03-08T12:49:00.000Z",
+            watchdogTimeoutMinutes: 60,
+            attempt: 1
+          })
+        ),
         meta_review: {
           execution_context: buildMetaReviewExecutionContext({
             bubbleId: bubble.bubbleId,

@@ -163,6 +163,11 @@ describe("getBubbleStatus", () => {
     expect(status.pendingInboxItems.total).toBe(0);
     expect(status.stateValidation?.errors).toEqual([
       {
+        path: "execution_context",
+        message:
+          "META_REVIEW_RUNNING state requires canonical execution_context authority"
+      },
+      {
         path: "meta_review.execution_context",
         message:
           "META_REVIEW_RUNNING state requires canonical meta_review.execution_context authority"

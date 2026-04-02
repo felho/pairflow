@@ -60,6 +60,7 @@ describe("writePostAppendPassState", () => {
           recipientRole: "reviewer"
         },
         nowIso: "2026-03-19T12:00:00.000Z",
+        watchdogTimeoutMinutes: 60,
         expectedFingerprint: "fp_1",
         envelopeId: "msg_1",
         createError
@@ -87,6 +88,15 @@ describe("writePostAppendPassState", () => {
       round: 2,
       active_agent: "claude",
       active_role: "reviewer",
+      execution_context: {
+        active_role: "reviewer",
+        awaited_output_type: "pass_result",
+        handoff_id: "reviewer:b_123:round:2:attempt:1",
+        round: 2,
+        started_at: "2026-03-19T12:00:00.000Z",
+        deadline_at: "2026-03-19T13:00:00.000Z",
+        attempt: 1
+      },
       active_since: "2026-03-19T12:00:00.000Z",
       last_command_at: "2026-03-19T12:00:00.000Z"
     });
@@ -111,6 +121,7 @@ describe("writePostAppendPassState", () => {
           }
         },
         nowIso: "2026-03-19T12:00:00.000Z",
+        watchdogTimeoutMinutes: 60,
         expectedFingerprint: "fp_1",
         envelopeId: "msg_1",
         createError
@@ -147,6 +158,7 @@ describe("writePostAppendPassState", () => {
             recipientRole: "reviewer"
           },
           nowIso: "2026-03-19T12:00:00.000Z",
+          watchdogTimeoutMinutes: 60,
           expectedFingerprint: "fp_1",
           envelopeId: "msg_1",
           createError

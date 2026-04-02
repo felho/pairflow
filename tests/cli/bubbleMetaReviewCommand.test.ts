@@ -18,6 +18,10 @@ import {
 import { buildMetaReviewExecutionContext } from "../../src/core/bubble/metaReviewExecutionContext.js";
 import { MetaReviewError } from "../../src/core/bubble/metaReview.js";
 import { appendProtocolEnvelope } from "../../src/core/protocol/transcriptStore.js";
+import {
+  buildRunningExecutionContext,
+  metaReviewExecutionContextToRunningContext
+} from "../../src/core/state/executionContext.js";
 import { applyStateTransition } from "../../src/core/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../src/core/state/stateStore.js";
 import type { Finding } from "../../src/types/findings.js";
@@ -91,6 +95,14 @@ async function prepareMetaReviewSubmitReadyFixture(input: {
       to: "RUNNING",
       activeAgent: "codex",
       activeRole: "implementer",
+      executionContext: buildRunningExecutionContext({
+        bubbleId: input.bubbleId,
+        round: current.state.round,
+        activeRole: "implementer",
+        startedAt: transitionTimestamp,
+        watchdogTimeoutMinutes: 60,
+        attempt: current.state.execution_context?.attempt ?? 1
+      }),
       activeSince: transitionTimestamp,
       lastCommandAt: transitionTimestamp
     });
@@ -125,6 +137,15 @@ async function prepareMetaReviewSubmitReadyFixture(input: {
     active_role: "meta_reviewer" as const,
     active_since: transitionTimestamp,
     last_command_at: transitionTimestamp,
+    execution_context: metaReviewExecutionContextToRunningContext(
+      buildMetaReviewExecutionContext({
+        bubbleId: input.bubbleId,
+        round: current.state.round,
+        startedAt: transitionTimestamp,
+        watchdogTimeoutMinutes: 60 * 24 * 30,
+        attempt: 1
+      })
+    ),
     meta_review: {
       ...current.state.meta_review!,
       execution_context: buildMetaReviewExecutionContext({
@@ -415,6 +436,15 @@ describe("runBubbleMetaReviewCommand", () => {
         active_agent: null,
         active_role: null,
         active_since: null,
+        execution_context: metaReviewExecutionContextToRunningContext(
+          buildMetaReviewExecutionContext({
+            bubbleId: bubble.bubbleId,
+            round: loaded.state.round,
+            startedAt: "2026-03-08T12:29:00.000Z",
+            watchdogTimeoutMinutes: 60,
+            attempt: 1
+          })
+        ),
         meta_review: {
           execution_context: buildMetaReviewExecutionContext({
             bubbleId: bubble.bubbleId,
@@ -469,6 +499,15 @@ describe("runBubbleMetaReviewCommand", () => {
         active_agent: "codex",
         active_role: "meta_reviewer",
         active_since: "2026-03-12T12:36:00.000Z",
+        execution_context: metaReviewExecutionContextToRunningContext(
+          buildMetaReviewExecutionContext({
+            bubbleId: bubble.bubbleId,
+            round: loaded.state.round,
+            startedAt: "2026-03-12T12:36:00.000Z",
+            watchdogTimeoutMinutes: 60,
+            attempt: 1
+          })
+        ),
         meta_review: {
           execution_context: buildMetaReviewExecutionContext({
             bubbleId: bubble.bubbleId,
@@ -715,6 +754,15 @@ describe("runBubbleMetaReviewCommand", () => {
         active_agent: null,
         active_role: null,
         active_since: null,
+        execution_context: metaReviewExecutionContextToRunningContext(
+          buildMetaReviewExecutionContext({
+            bubbleId: bubble.bubbleId,
+            round: loaded.state.round,
+            startedAt: "2026-03-08T12:34:00.000Z",
+            watchdogTimeoutMinutes: 60,
+            attempt: 1
+          })
+        ),
         meta_review: {
           execution_context: buildMetaReviewExecutionContext({
             bubbleId: bubble.bubbleId,

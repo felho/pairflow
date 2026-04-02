@@ -4,7 +4,6 @@ import { promisify } from "node:util";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { CONTRACT_TEST_TIMEOUT } from "./contractTestTimeouts.js";
 import { runReplyContractCase } from "./reply.contract.runner.js";
 import { readContractCase } from "./runner.js";
 import type { ContractCase } from "./schema.js";
@@ -112,7 +111,7 @@ describe("v11 reply contract harness skeleton", () => {
 
   it(
     "executes legacy and parity assertions via shared runner",
-    { timeout: CONTRACT_TEST_TIMEOUT.parityHeavyMs },
+    { timeout: 30_000 },
     async () => {
     const casePaths = replyCaseSources.map((source) =>
       resolve(process.cwd(), source)

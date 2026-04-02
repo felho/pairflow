@@ -231,7 +231,10 @@ describe("v11 pass contract harness skeleton", () => {
     }
   });
 
-  it("builds corpus output manifest with pass seed entries", async () => {
+  it(
+    "builds corpus output manifest with pass seed entries",
+    { timeout: CONTRACT_TEST_TIMEOUT.parityStandardMs },
+    async () => {
     await execFileAsync("pnpm", [
       "exec",
       "tsx",
@@ -250,7 +253,8 @@ describe("v11 pass contract harness skeleton", () => {
     const passSources = parsePassSourcesFromManifest(outputRaw);
 
     expect(passSources).toEqual(expectedSources);
-  });
+    }
+  );
 
   it(
     "executes legacy, v11 and parity assertions via shared runner",

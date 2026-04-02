@@ -44,10 +44,11 @@ export function computeWatchdogStatus(
     trackedState &&
     !watchdogNonAgentMonitoredStates.has(state.state) &&
     (!requiresActiveAgent || state.active_agent !== null);
-  let referenceTimestamp = state.last_command_at ?? state.active_since;
-  let deadlineTimestamp: string | null = null;
+  let referenceTimestamp =
+    state.execution_context?.started_at ?? state.last_command_at ?? state.active_since;
+  let deadlineTimestamp: string | null = state.execution_context?.deadline_at ?? null;
 
-  if (state.state === "META_REVIEW_RUNNING") {
+  if (state.state === "META_REVIEW_RUNNING" && state.execution_context == null) {
     const executionContextResult = validateActiveMetaReviewExecutionContext(state);
     if (!executionContextResult.ok) {
       throw new SchemaValidationError(

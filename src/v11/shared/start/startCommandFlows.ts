@@ -1,6 +1,7 @@
 import { applyStateTransition } from "../../../core/state/machine.js";
 import { writeStateSnapshot } from "../../../core/state/stateStore.js";
 import { resolveIdeationMetadata } from "../../../core/bubble/ideation.js";
+import { buildRunningExecutionContext } from "../../../core/state/executionContext.js";
 import {
   launchFreshTmuxSession,
   launchResumeTmuxSession
@@ -25,6 +26,62 @@ interface ResumeStartResult {
 export interface FreshStartProgress {
   workspaceBootstrapped: boolean;
   preparingState: BubbleStateSnapshot | null;
+}
+
+function buildResumedState(input: {
+  state: BubbleStateSnapshot;
+  bubbleId: string;
+  nowIso: string;
+  watchdogTimeoutMinutes: number;
+}): BubbleStateSnapshot {
+  if (
+    input.state.state === "RUNNING"
+    && input.state.round >= 1
+    && input.state.active_role !== null
+  ) {
+    const executionContext = input.state.execution_context;
+    if (executionContext === null || executionContext === undefined) {
+      throw new Error(
+        "RUNNING resume requires persisted execution_context authority."
+      );
+    }
+    return {
+      ...input.state,
+      execution_context: executionContext,
+      active_since: input.nowIso,
+      last_command_at: input.nowIso
+    };
+  }
+
+  if (input.state.state === "META_REVIEW_RUNNING") {
+    const executionContext = input.state.execution_context;
+    const metaReviewExecutionContext = input.state.meta_review?.execution_context ?? null;
+    if (
+      executionContext === null
+      || executionContext === undefined
+      || metaReviewExecutionContext === null
+    ) {
+      throw new Error(
+        "META_REVIEW_RUNNING resume requires persisted execution_context authority."
+      );
+    }
+
+    return {
+      ...input.state,
+      execution_context: executionContext,
+      active_since: input.nowIso,
+      last_command_at: input.nowIso,
+      meta_review: {
+        ...input.state.meta_review!,
+        execution_context: metaReviewExecutionContext
+      }
+    };
+  }
+
+  return {
+    ...input.state,
+    last_command_at: input.nowIso
+  };
 }
 
 export async function runFreshStartFlow(input: {
@@ -83,6 +140,17 @@ export async function runFreshStartFlow(input: {
     round: ideationPending ? 0 : 1,
     activeAgent: input.context.resolved.bubbleConfig.agents.implementer,
     activeRole: "implementer",
+    executionContext:
+      ideationPending
+        ? null
+        : buildRunningExecutionContext({
+            bubbleId: input.context.resolved.bubbleId,
+            round: 1,
+            activeRole: "implementer",
+            startedAt: input.context.nowIso,
+            watchdogTimeoutMinutes:
+              input.context.resolved.bubbleConfig.watchdog_timeout_minutes
+          }),
     activeSince: input.context.nowIso,
     lastCommandAt: input.context.nowIso,
     ...(ideationPending
@@ -133,10 +201,13 @@ export async function runResumeStartFlow(input: {
     resumeKickoffMessages
   });
 
-  const resumed = {
-    ...input.context.loadedState.state,
-    last_command_at: input.context.nowIso
-  };
+  const resumed = buildResumedState({
+    state: input.context.loadedState.state,
+    bubbleId: input.context.resolved.bubbleId,
+    nowIso: input.context.nowIso,
+    watchdogTimeoutMinutes:
+      input.context.resolved.bubbleConfig.watchdog_timeout_minutes
+  });
   const written = await writeStateSnapshot(
     input.context.resolved.bubblePaths.statePath,
     resumed,

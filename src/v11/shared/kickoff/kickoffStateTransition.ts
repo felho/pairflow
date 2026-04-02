@@ -1,9 +1,10 @@
 import { assertValidBubbleStateSnapshot } from "../../../core/state/stateSchema.js";
+import { buildRunningExecutionContext } from "../../../core/state/executionContext.js";
 import type { BubbleConfig, BubbleStateSnapshot } from "../../../types/bubble.js";
 
 export interface BuildKickoffNextStateInput {
   state: BubbleStateSnapshot;
-  bubbleConfig: Pick<BubbleConfig, "agents">;
+  bubbleConfig: Pick<BubbleConfig, "agents" | "watchdog_timeout_minutes">;
   nowIso: string;
 }
 
@@ -32,9 +33,17 @@ export function buildKickoffNextState(
 ): BubbleStateSnapshot {
   return assertValidBubbleStateSnapshot({
     ...input.state,
+    state: "RUNNING",
     round: 1,
     active_agent: input.bubbleConfig.agents.implementer,
     active_role: "implementer",
+    execution_context: buildRunningExecutionContext({
+      bubbleId: input.state.bubble_id,
+      round: 1,
+      activeRole: "implementer",
+      startedAt: input.nowIso,
+      watchdogTimeoutMinutes: input.bubbleConfig.watchdog_timeout_minutes
+    }),
     active_since: input.nowIso,
     last_command_at: input.nowIso,
     round_role_history: buildKickoffRoundOneRoleHistory({

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { buildRunningExecutionContext } from "../../../src/core/state/executionContext.js";
 import { SchemaValidationError } from "../../../src/core/validation.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
 import { createInitialBubbleState } from "../../../src/core/state/initialState.js";
@@ -53,6 +54,13 @@ describe("state machine", () => {
       round: 1,
       activeAgent: "codex",
       activeRole: "implementer",
+      executionContext: buildRunningExecutionContext({
+        bubbleId: "b_test_01",
+        round: 1,
+        activeRole: "implementer",
+        startedAt: "2026-02-21T12:00:00Z",
+        watchdogTimeoutMinutes: 30
+      }),
       activeSince: "2026-02-21T12:00:00Z",
       appendRoundRoleEntry: {
         round: 1,
@@ -66,6 +74,9 @@ describe("state machine", () => {
     expect(running.state).toBe("RUNNING");
     expect(running.round).toBe(1);
     expect(running.active_agent).toBe("codex");
+    expect(running.execution_context?.handoff_id).toBe(
+      "implementer:b_test_01:round:1:attempt:1"
+    );
     expect(running.round_role_history).toHaveLength(1);
     expect(running.last_command_at).toBe("2026-02-21T12:01:00Z");
   });
@@ -79,6 +90,13 @@ describe("state machine", () => {
       round: 1,
       activeAgent: "codex",
       activeRole: "implementer",
+      executionContext: buildRunningExecutionContext({
+        bubbleId: "b_test_01",
+        round: 1,
+        activeRole: "implementer",
+        startedAt: "2026-02-21T12:00:00Z",
+        watchdogTimeoutMinutes: 30
+      }),
       activeSince: "2026-02-21T12:00:00Z",
       lastCommandAt: "2026-02-21T12:01:00Z"
     });
@@ -91,6 +109,7 @@ describe("state machine", () => {
     expect(waitingHuman.active_agent).toBe("codex");
     expect(waitingHuman.active_role).toBe("implementer");
     expect(waitingHuman.active_since).toBe("2026-02-21T12:00:00Z");
+    expect(waitingHuman.execution_context).toBeNull();
     expect(waitingHuman.last_command_at).toBe("2026-02-21T12:02:00Z");
   });
 
@@ -103,6 +122,13 @@ describe("state machine", () => {
       round: 1,
       activeAgent: "codex",
       activeRole: "implementer",
+      executionContext: buildRunningExecutionContext({
+        bubbleId: "b_test_01",
+        round: 1,
+        activeRole: "implementer",
+        startedAt: "2026-02-21T12:00:00Z",
+        watchdogTimeoutMinutes: 30
+      }),
       activeSince: "2026-02-21T12:00:00Z",
       lastCommandAt: "2026-02-21T12:01:00Z"
     });
@@ -118,6 +144,7 @@ describe("state machine", () => {
     expect(readyForApproval.active_agent).toBeNull();
     expect(readyForApproval.active_role).toBeNull();
     expect(readyForApproval.active_since).toBeNull();
+    expect(readyForApproval.execution_context).toBeNull();
     expect(readyForApproval.last_command_at).toBe("2026-02-21T12:03:00Z");
   });
 });

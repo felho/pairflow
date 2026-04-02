@@ -7,6 +7,10 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
+import {
+  buildRunningExecutionContext,
+  metaReviewExecutionContextToRunningContext
+} from "../../../src/core/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { startBubble, StartBubbleError } from "../../../src/core/bubble/startBubble.js";
 import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry.js";
@@ -92,9 +96,45 @@ async function updateBubbleState(
   updater: (current: BubbleStateSnapshot) => BubbleStateSnapshot
 ): Promise<void> {
   const loaded = await readStateSnapshot(statePath);
+  const nextState = updater(loaded.state);
+  let normalizedState = nextState;
+
+  if (nextState.state === "META_REVIEW_RUNNING") {
+    normalizedState = {
+      ...nextState,
+      execution_context: metaReviewExecutionContextToRunningContext(
+        nextState.meta_review?.execution_context ?? null
+      )
+    };
+  } else if (nextState.state === "RUNNING") {
+    if (nextState.round === 0) {
+      normalizedState = {
+        ...nextState,
+        execution_context: null
+      };
+    } else if (nextState.active_role !== null && nextState.active_since !== null) {
+      normalizedState = {
+        ...nextState,
+        execution_context: buildRunningExecutionContext({
+          bubbleId: nextState.bubble_id,
+          round: nextState.round,
+          activeRole: nextState.active_role,
+          startedAt: nextState.active_since,
+          watchdogTimeoutMinutes: 60,
+          attempt: nextState.execution_context?.attempt ?? 1
+        })
+      };
+    }
+  } else {
+    normalizedState = {
+      ...nextState,
+      execution_context: null
+    };
+  }
+
   await writeStateSnapshot(
     statePath,
-    updater(loaded.state),
+    normalizedState,
     {
       expectedFingerprint: loaded.fingerprint,
       expectedState: loaded.state.state
@@ -1538,7 +1578,17 @@ describe("startBubble", () => {
     expect(bootstrapCalled).toBe(false);
     expect(summaryPath).toBe(bubble.paths.transcriptPath);
     expect(result.state.state).toBe("RUNNING");
+    expect(result.state.active_since).toBe("2026-02-23T09:00:00.000Z");
     expect(result.state.last_command_at).toBe("2026-02-23T09:00:00.000Z");
+    expect(result.state.execution_context).toEqual({
+      active_role: "implementer",
+      awaited_output_type: "pass_result",
+      handoff_id: `implementer:${bubble.bubbleId}:round:1:attempt:1`,
+      round: 1,
+      started_at: "2026-02-21T12:00:00.000Z",
+      deadline_at: "2026-02-21T12:30:00.000Z",
+      attempt: 1
+    });
   });
 
   it("skips reviewer focus injection in resume mode when reviewer-focus artifact is schema-invalid", async () => {
@@ -2169,7 +2219,7 @@ describe("startBubble", () => {
       }
     }));
 
-    await startBubble(
+    const result = await startBubble(
       {
         bubbleId: bubble.bubbleId,
         cwd: repoPath,
@@ -2193,6 +2243,26 @@ describe("startBubble", () => {
         }
       }
     );
+
+    expect(result.state.active_since).toBe("2026-02-23T09:07:30.000Z");
+    expect(result.state.last_command_at).toBe("2026-02-23T09:07:30.000Z");
+    expect(result.state.execution_context).toEqual({
+      active_role: "meta_reviewer",
+      awaited_output_type: "meta_review_result",
+      handoff_id: `meta_review:${bubble.bubbleId}:round:1:attempt:1`,
+      round: 1,
+      started_at: "2026-02-21T12:00:00.000Z",
+      deadline_at: "2026-02-21T13:00:00.000Z",
+      attempt: 1
+    });
+    expect(result.state.meta_review?.execution_context).toEqual({
+      handoff_id: `meta_review:${bubble.bubbleId}:round:1:attempt:1`,
+      round: 1,
+      awaited_output_type: "meta_review_result",
+      started_at: "2026-02-21T12:00:00.000Z",
+      deadline_at: "2026-02-21T13:00:00.000Z",
+      attempt: 1
+    });
   });
 
   it("keeps resume start robust when injected summary builder throws", async () => {

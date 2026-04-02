@@ -2,6 +2,7 @@ import {
   type LoadedStateSnapshot,
   writeStateSnapshot
 } from "../../../core/state/stateStore.js";
+import { buildRunningExecutionContext } from "../../../core/state/executionContext.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ResolvedPassHandoff } from "../../domain/pass/handoff.js";
 import { raisePostAppendStateWriteFailed } from "../../domain/pass/postAppendStateWriteFailure.js";
@@ -14,6 +15,7 @@ export interface WritePostAppendPassStateInput {
     "nextRound" | "recipientAgent" | "recipientRole" | "appendRoundRoleEntry"
   >;
   nowIso: string;
+  watchdogTimeoutMinutes: number;
   expectedFingerprint: string;
   envelopeId: string;
   createError: PairflowCreateCommandError;
@@ -34,6 +36,13 @@ export async function writePostAppendPassState(
     round: input.handoff.nextRound,
     active_agent: input.handoff.recipientAgent,
     active_role: input.handoff.recipientRole,
+    execution_context: buildRunningExecutionContext({
+      bubbleId: input.state.bubble_id,
+      round: input.handoff.nextRound,
+      activeRole: input.handoff.recipientRole,
+      startedAt: input.nowIso,
+      watchdogTimeoutMinutes: input.watchdogTimeoutMinutes
+    }),
     active_since: input.nowIso,
     last_command_at: input.nowIso,
     round_role_history:
@@ -51,7 +60,7 @@ export async function writePostAppendPassState(
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    raisePostAppendStateWriteFailed({
+    return raisePostAppendStateWriteFailed({
       envelopeId: input.envelopeId,
       reason,
       createError: input.createError

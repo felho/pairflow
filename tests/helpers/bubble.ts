@@ -3,6 +3,7 @@ import { writeFile } from "node:fs/promises";
 
 import { renderBubbleConfigToml } from "../../src/config/bubbleConfig.js";
 import { createBubble, type BubbleCreateResult } from "../../src/core/bubble/createBubble.js";
+import { buildRunningExecutionContext } from "../../src/core/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../src/core/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../src/core/workspace/worktreeManager.js";
 import type {
@@ -114,6 +115,13 @@ async function setupRunningBubbleFixtureWithOverride(
       round: 1,
       active_agent: created.config.agents.implementer,
       active_role: "implementer",
+      execution_context: buildRunningExecutionContext({
+        bubbleId: created.bubbleId,
+        round: 1,
+        activeRole: "implementer",
+        startedAt,
+        watchdogTimeoutMinutes: created.config.watchdog_timeout_minutes
+      }),
       active_since: startedAt,
       last_command_at: startedAt,
       round_role_history: [

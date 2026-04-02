@@ -13,12 +13,14 @@ import {
   bubbleLifecycleStates,
   isAgentName,
   isAgentRole,
+  isBubbleExecutionContextAwaitedOutputType,
   isMetaReviewExecutionContextAwaitedOutputType,
   isBubbleLifecycleState,
   isMetaReviewRecommendation,
   isMetaReviewRunStatus,
   isMetaReviewRuntimeDeliveryStatus,
   isReworkIntentStatus,
+  type BubbleExecutionContext,
   type BubbleMetaReviewExecutionContext,
   type BubbleMetaReviewRuntimeDeliveryState,
   type BubbleMetaReviewSnapshotState,
@@ -26,6 +28,11 @@ import {
   type BubbleStateSnapshot,
   type RoundRoleHistoryEntry
 } from "../../types/bubble.js";
+import {
+  executionContextsEqual,
+  metaReviewExecutionContextToRunningContext,
+  toMetaReviewExecutionContext
+} from "./executionContext.js";
 
 function isSafeArtifactsRef(value: string): boolean {
   return (
@@ -673,6 +680,115 @@ function validateMetaReviewSnapshot(
   };
 }
 
+function validateExecutionContext(
+  input: unknown,
+  pathPrefix: string,
+  errors: ValidationError[]
+): BubbleExecutionContext | null {
+  if (input === undefined || input === null) {
+    return null;
+  }
+
+  if (!isRecord(input)) {
+    errors.push({
+      path: pathPrefix,
+      message: "Must be null or an object"
+    });
+    return null;
+  }
+
+  const activeRole = input.active_role;
+  if (!isAgentRole(activeRole)) {
+    errors.push({
+      path: `${pathPrefix}.active_role`,
+      message: "Must be one of: implementer, reviewer, meta_reviewer"
+    });
+  }
+
+  const handoffId = input.handoff_id;
+  if (!isNonEmptyString(handoffId)) {
+    errors.push({
+      path: `${pathPrefix}.handoff_id`,
+      message: "Must be a non-empty string"
+    });
+  }
+
+  const round = input.round;
+  if (!isInteger(round) || round < 1) {
+    errors.push({
+      path: `${pathPrefix}.round`,
+      message: "Must be a positive integer"
+    });
+  }
+
+  const awaitedOutputType = input.awaited_output_type;
+  if (!isBubbleExecutionContextAwaitedOutputType(awaitedOutputType)) {
+    errors.push({
+      path: `${pathPrefix}.awaited_output_type`,
+      message: "Must be one of: pass_result, meta_review_result"
+    });
+  }
+
+  const startedAt = input.started_at;
+  const startedAtValid = isIsoTimestamp(startedAt);
+  if (!startedAtValid) {
+    errors.push({
+      path: `${pathPrefix}.started_at`,
+      message: "Must be a valid ISO timestamp"
+    });
+  }
+
+  const deadlineAt = input.deadline_at;
+  const deadlineAtValid = isIsoTimestamp(deadlineAt);
+  if (!deadlineAtValid) {
+    errors.push({
+      path: `${pathPrefix}.deadline_at`,
+      message: "Must be a valid ISO timestamp"
+    });
+  }
+
+  const attempt = input.attempt;
+  if (!isInteger(attempt) || attempt < 1) {
+    errors.push({
+      path: `${pathPrefix}.attempt`,
+      message: "Must be an integer >= 1"
+    });
+  }
+
+  const startedAtMs = Date.parse(String(startedAt));
+  const deadlineAtMs = Date.parse(String(deadlineAt));
+  if (startedAtValid && deadlineAtValid && deadlineAtMs < startedAtMs) {
+    errors.push({
+      path: `${pathPrefix}.deadline_at`,
+      message: "Must be >= started_at"
+    });
+  }
+
+  if (
+    !isAgentRole(activeRole)
+    || !isNonEmptyString(handoffId)
+    || !isInteger(round)
+    || round < 1
+    || !isBubbleExecutionContextAwaitedOutputType(awaitedOutputType)
+    || !startedAtValid
+    || !deadlineAtValid
+    || !isInteger(attempt)
+    || attempt < 1
+  ) {
+    return null;
+  }
+
+  return {
+    active_role: activeRole,
+    handoff_id: handoffId,
+    round,
+    awaited_output_type: awaitedOutputType,
+    started_at: startedAt,
+    deadline_at: deadlineAt,
+    attempt
+  };
+}
+
 export function validateBubbleStateSnapshot(
   input: unknown
 ): ValidationResult<BubbleStateSnapshot> {
@@ -710,6 +826,11 @@ export function validateBubbleStateSnapshot(
   const activeRole = input.active_role;
   const activeSince = input.active_since;
   const lastCommandAt = input.last_command_at;
+  let executionContext = validateExecutionContext(
+    input.execution_context,
+    "execution_context",
+    errors
+  );
 
   if (!(activeAgent === null || isAgentName(activeAgent))) {
     errors.push({
@@ -832,6 +953,31 @@ export function validateBubbleStateSnapshot(
     activeAgent !== null || activeRole !== null || activeSince !== null;
   const hasAllActiveFields =
     activeAgent !== null && activeRole !== null && activeSince !== null;
+  const runningExecutionLifecycleActive =
+    state === "RUNNING" || state === "META_REVIEW_RUNNING";
+
+  if (
+    executionContext !== null &&
+    validatedRound !== null &&
+    executionContext.round !== validatedRound
+  ) {
+    errors.push({
+      path: "execution_context.round",
+      message: `Must match state.round (${String(validatedRound)}) while execution_context is active`
+    });
+  }
+
+  if (
+    executionContext !== null &&
+    activeRole !== null &&
+    executionContext.active_role !== activeRole
+  ) {
+    errors.push({
+      path: "active_role",
+      message:
+        "active_role must match execution_context.active_role when execution_context is present"
+    });
+  }
 
   if (hasAnyActiveField && !hasAllActiveFields) {
     errors.push({
@@ -849,7 +995,60 @@ export function validateBubbleStateSnapshot(
     });
   }
 
+  if (state === "RUNNING") {
+    if (validatedRound === 0) {
+      if (executionContext !== null) {
+        errors.push({
+          path: "execution_context",
+          message:
+            "RUNNING round=0 ideation state must not persist execution_context authority"
+        });
+      }
+    } else if (executionContext === null) {
+      errors.push({
+        path: "execution_context",
+        message:
+          "RUNNING state requires canonical execution_context authority when round >= 1"
+      });
+    }
+  }
+
   if (state === "META_REVIEW_RUNNING") {
+    const mirroredMetaReviewExecutionContext =
+      metaReviewExecutionContextToRunningContext(
+        metaReview?.execution_context ?? null
+      );
+    if (executionContext === null) {
+      executionContext = mirroredMetaReviewExecutionContext;
+    } else if (
+      mirroredMetaReviewExecutionContext !== null &&
+      !executionContextsEqual(executionContext, mirroredMetaReviewExecutionContext)
+    ) {
+      errors.push({
+        path: "execution_context",
+        message:
+          "execution_context must match meta_review.execution_context when META_REVIEW_RUNNING is active"
+      });
+    }
+
+    if (executionContext === null) {
+      errors.push({
+        path: "execution_context",
+        message:
+          "META_REVIEW_RUNNING state requires canonical execution_context authority"
+      });
+    } else if (executionContext.active_role !== "meta_reviewer") {
+      errors.push({
+        path: "execution_context.active_role",
+        message: "Must be meta_reviewer while META_REVIEW_RUNNING is active"
+      });
+    } else if (executionContext.awaited_output_type !== "meta_review_result") {
+      errors.push({
+        path: "execution_context.awaited_output_type",
+        message: "Must be meta_review_result while META_REVIEW_RUNNING is active"
+      });
+    }
+
     if (
       metaReview === undefined ||
       metaReview.execution_context === undefined ||
@@ -901,9 +1100,57 @@ export function validateBubbleStateSnapshot(
     }
   }
 
+  if (
+    state !== "META_REVIEW_RUNNING"
+    && metaReview?.execution_context !== undefined
+    && metaReview.execution_context !== null
+  ) {
+    errors.push({
+      path: "meta_review.execution_context",
+      message:
+        `meta_review.execution_context must be null while lifecycle state ${String(state)} is not META_REVIEW_RUNNING`
+    });
+  }
+
+  if (
+    !runningExecutionLifecycleActive &&
+    executionContext !== null
+  ) {
+    errors.push({
+      path: "execution_context",
+      message:
+        `execution_context must be null while lifecycle state ${String(state)} is inactive`
+    });
+  }
+
   if (errors.length > 0) {
     return validationFail(errors);
   }
+
+  const normalizedMetaReview =
+    metaReview === undefined
+      ? undefined
+      : {
+          ...metaReview,
+          execution_context:
+            state === "META_REVIEW_RUNNING"
+              ? (
+                  metaReview.execution_context
+                  ?? (() => {
+                    const normalizedExecutionContext =
+                      executionContext === null
+                        ? null
+                        : toMetaReviewExecutionContext(executionContext);
+                    if (normalizedExecutionContext === null) {
+                      throw new Error(
+                        "Validated META_REVIEW_RUNNING state lost meta-review execution_context during normalization."
+                      );
+                    }
+                    return normalizedExecutionContext;
+                  })()
+                )
+              : (metaReview.execution_context ?? null)
+        };
 
   return validationOk({
     bubble_id: bubbleId as string,
@@ -912,11 +1159,12 @@ export function validateBubbleStateSnapshot(
     active_agent: activeAgent as BubbleStateSnapshot["active_agent"],
     active_since: activeSince as BubbleStateSnapshot["active_since"],
     active_role: activeRole as BubbleStateSnapshot["active_role"],
+    execution_context: executionContext,
     round_role_history: roundRoleHistory,
     last_command_at: lastCommandAt as BubbleStateSnapshot["last_command_at"],
     pending_rework_intent: pendingReworkIntent,
     rework_intent_history: reworkIntentHistory,
-    ...(metaReview !== undefined ? { meta_review: metaReview } : {})
+    ...(normalizedMetaReview !== undefined ? { meta_review: normalizedMetaReview } : {})
   });
 }
 

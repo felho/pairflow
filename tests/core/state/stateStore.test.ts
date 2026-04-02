@@ -156,6 +156,11 @@ describe("state store", () => {
     expect(inspected.state.state).toBe("META_REVIEW_RUNNING");
     expect(inspected.stateValidation?.errors).toEqual([
       {
+        path: "execution_context",
+        message:
+          "META_REVIEW_RUNNING state requires canonical execution_context authority"
+      },
+      {
         path: "meta_review.execution_context",
         message:
           "META_REVIEW_RUNNING state requires canonical meta_review.execution_context authority"
@@ -230,6 +235,84 @@ describe("state store", () => {
       deadline_at: "2026-03-08T11:00:00.000Z",
       attempt: 1
     });
+    expect(inspected.stateValidation?.errors).toEqual([
+      {
+        path: "last_command_at",
+        message: "Must be null or a valid ISO timestamp"
+      }
+    ]);
+  });
+
+  it("preserves round role and rework intent diagnostics in inspect fallback snapshots", async () => {
+    const dir = await createTempDir();
+    const statePath = join(dir, "state.json");
+
+    await writeFile(
+      statePath,
+      `${JSON.stringify({
+        bubble_id: "b_store_inspect_preserve_01",
+        state: "WAITING_HUMAN",
+        round: 2,
+        active_agent: null,
+        active_since: null,
+        active_role: null,
+        round_role_history: [
+          {
+            round: 1,
+            implementer: "codex",
+            reviewer: "claude",
+            switched_at: "2026-03-08T10:00:00.000Z"
+          }
+        ],
+        last_command_at: 42,
+        pending_rework_intent: {
+          intent_id: "intent_waiting_human_01",
+          message: "Need canonical authority follow-up",
+          refs: ["artifacts/review.md"],
+          requested_by: "claude",
+          requested_at: "2026-03-08T10:05:00.000Z",
+          status: "pending"
+        },
+        rework_intent_history: [
+          {
+            intent_id: "intent_applied_01",
+            message: "Previous follow-up",
+            requested_by: "claude",
+            requested_at: "2026-03-08T09:30:00.000Z",
+            status: "applied"
+          }
+        ]
+      }, null, 2)}\n`,
+      "utf8"
+    );
+
+    const inspected = await inspectStateSnapshot(statePath);
+
+    expect(inspected.state.round_role_history).toEqual([
+      {
+        round: 1,
+        implementer: "codex",
+        reviewer: "claude",
+        switched_at: "2026-03-08T10:00:00.000Z"
+      }
+    ]);
+    expect(inspected.state.pending_rework_intent).toEqual({
+      intent_id: "intent_waiting_human_01",
+      message: "Need canonical authority follow-up",
+      refs: ["artifacts/review.md"],
+      requested_by: "claude",
+      requested_at: "2026-03-08T10:05:00.000Z",
+      status: "pending"
+    });
+    expect(inspected.state.rework_intent_history).toEqual([
+      {
+        intent_id: "intent_applied_01",
+        message: "Previous follow-up",
+        requested_by: "claude",
+        requested_at: "2026-03-08T09:30:00.000Z",
+        status: "applied"
+      }
+    ]);
     expect(inspected.stateValidation?.errors).toEqual([
       {
         path: "last_command_at",
