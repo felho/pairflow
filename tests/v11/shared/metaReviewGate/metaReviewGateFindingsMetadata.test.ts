@@ -126,6 +126,18 @@ describe("resolveFindingsArtifactOpenTotalFromArtifact", () => {
 
     expect(openTotal).toBe(3);
   });
+
+  it("accepts advisory severity alias when deriving open_total from findings artifacts", () => {
+    const openTotal = resolveFindingsArtifactOpenTotalFromArtifact({
+      findings: [
+        { severity: "blocking", title: "blocking-a" },
+        { severity: "advisory", title: "advisory-alias-a" },
+        { severity: "advisory", title: "advisory-alias-b" }
+      ]
+    });
+
+    expect(openTotal).toBe(3);
+  });
 });
 
 describe("resolveFindingsParityMetadataFromReportJson", () => {

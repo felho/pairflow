@@ -1,7 +1,8 @@
 export const findingPriorities = ["P0", "P1", "P2", "P3"] as const;
 export const findingSeverities = findingPriorities;
 const findingSeverityAliases = {
-  blocking: "P1"
+  blocking: "P1",
+  advisory: "P2"
 } as const;
 
 export type FindingPriority = (typeof findingPriorities)[number];

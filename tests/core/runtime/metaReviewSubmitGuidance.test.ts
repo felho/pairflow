@@ -19,6 +19,8 @@ describe("metaReviewSubmitGuidance", () => {
 
     expect(prompt).toContain(buildMetaReviewSubmitCommandTemplate());
     expect(prompt).not.toContain("--report-markdown");
+    expect(prompt).toContain("`P0`, `P1`, `P2`, `P3`");
+    expect(prompt).toContain("Do not emit alias severities such as `blocking` or `advisory`");
   });
 
   it("keeps CLI help aligned with the shared submit usage line", () => {
