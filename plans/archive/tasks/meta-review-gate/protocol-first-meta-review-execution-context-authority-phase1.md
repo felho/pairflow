@@ -25,7 +25,7 @@ target_files:
   - tests/contracts/v11/watchdog.contract.runner.ts
   - tests/core/state/stateSchema.test.ts
 prd_ref: null
-plan_ref: plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md
+plan_ref: plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -91,7 +91,7 @@ Ez a kor kizarolag azt a canonical authority modellt vezeti be, amelyre a kesobb
 
 ### Normative Reference Policy
 
-1. `plan_ref`: `plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md`
+1. `plan_ref`: `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md`
    - Ez a Phase 1 authority-first sorrend canonical forrasa.
 2. `system_context_ref`: `docs/pairflow-initial-design.md`
    - A bubble lifecycle alapmodell tovabbra is innen jon, amig a task explicitten felul nem ir egy authority szabalyt.
@@ -196,7 +196,7 @@ Path-specific failure semantics:
 
 | Type         | Items                                                                                                                                                                 | Priority | Timing       |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------ |
-| must-use     | `plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` authority-first invariansai                                                              | P1       | required-now |
+| must-use     | `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` authority-first invariansai                                                              | P1       | required-now |
 | must-use     | jelenlegi bubble state schema/store mint canonical persisted domain source                                                                                            | P1       | required-now |
 | must-use     | a meglevo `meta_review` namespace mint Phase 1 adapter-home az execution contexthez                                                                                   | P1       | required-now |
 | must-use     | a jelenlegi meta-review activation, submit es watchdog call-siteok, mint authority-konzisztencia felulet                                                              | P1       | required-now |

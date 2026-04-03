@@ -2,7 +2,7 @@
 artifact_type: plan
 artifact_id: plan_protocol_first_bubble_runtime_and_meta_review_unification_v1
 title: "Protocol-First Bubble Runtime and Meta-Review Unification (Phase Plan)"
-status: draft
+status: completed
 prd_ref: null
 owners:
   - "felho"
@@ -196,11 +196,11 @@ Elso elvbol ujrarendezni a bubble runtime szemantikajat ugy, hogy:
 
 ## Task List
 
-1. `plans/tasks/protocol-first-meta-review-execution-context-authority-phase1.md` (uj task)
-2. `plans/tasks/protocol-first-meta-review-runtime-decoupling-phase2.md` (uj task)
-3. `plans/tasks/protocol-first-running-execution-context-unification-phase3.md` (kesobbi task)
-4. `plans/tasks/protocol-first-cli-and-protocol-surface-unification-phase4.md` (kesobbi task)
-5. `plans/tasks/protocol-first-legacy-meta-review-model-removal-phase5.md` (kesobbi task)
+1. `plans/archive/tasks/meta-review-gate/protocol-first-meta-review-execution-context-authority-phase1.md` (completed task)
+2. `plans/archive/tasks/meta-review-gate/protocol-first-meta-review-runtime-decoupling-phase2.md` (completed task)
+3. `plans/archive/tasks/protocol-first-running-execution-context-unification-phase3.md` (completed task)
+4. `plans/archive/tasks/protocol-first-cli-and-protocol-surface-unification-phase4.md` (completed task)
+5. `plans/archive/tasks/protocol-first-legacy-meta-review-model-removal-phase5.md` (completed task)
 
 ## Dependencies
 

@@ -54,7 +54,7 @@ target_files:
   - ui/src/components/canvas/BubbleExpandedCard.test.tsx
   - ui/src/components/actions/ActionBar.test.tsx
 prd_ref: null
-plan_ref: plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md
+plan_ref: plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -125,7 +125,7 @@ Ez a kor kizarolag a domain state shape es runtime authority modell kozositeset 
 
 ### Normative Reference Policy
 
-1. `plan_ref`: `plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md`
+1. `plan_ref`: `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md`
    - Ez a canonical forras a generic `RUNNING` authority modellhez es a Phase 3 exit criteriahoz.
 2. `system_context_ref`: `docs/pairflow-initial-design.md`
    - A bubble lifecycle compatibility modell tovabbra is innen jon, amig Phase 3 explicitten felul nem ir egy state-shape vagy authority szabaly.
@@ -240,7 +240,7 @@ Path-specific failure semantics:
 
 | Type | Items | Priority | Timing |
 | ---- | ----- | -------- | ------ |
-| must-use | `plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` Phase 3 target architecture es exit criteria | P1 | required-now |
+| must-use | `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` Phase 3 target architecture es exit criteria | P1 | required-now |
 | must-use | Phase 1-2 execution-context authority invariansai | P1 | required-now |
 | must-use | top-level persisted running authority shape mint canonical domain source | P1 | required-now |
 | must-use | explicit compatibility adapter a legacy `META_REVIEW_*` labelshez | P1 | required-now |

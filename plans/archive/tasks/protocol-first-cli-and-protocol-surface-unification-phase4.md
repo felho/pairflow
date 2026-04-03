@@ -55,7 +55,7 @@ target_files:
   - tests/core/bubble/bubbleLookup.test.ts
   - tests/core/runtime/pairflowCommand.test.ts
 prd_ref: null
-plan_ref: plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md
+plan_ref: plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -127,7 +127,7 @@ Ez a fazis surface-unification fazis: a retained compatibility call-spellingek P
 
 ### Normative Reference Policy
 
-1. `plan_ref`: `plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md`
+1. `plan_ref`: `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md`
    - Ez a canonical forras a Phase 4 actor-facing vs human-facing CLI boundaryhoz es az actor-command retirement celhoz.
 2. `system_context_ref`: `docs/pairflow-initial-design.md`
    - A bubble lifecycle policy tovabbra is innen jon, ameddig a Phase 4 task explicitten csak a command boundaryt es protocol emission shape-et rendezi at.
@@ -305,7 +305,7 @@ Path-specific failure semantics:
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` Phase 4 target architecture es coverage checklist | P1 | required-now |
+| must-use | `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` Phase 4 target architecture es coverage checklist | P1 | required-now |
 | must-use | Phase 3 generic running authority contract, mint Phase 4 normativ elo-feltetel; ha a branchen meg nincs teljesen leszallitva, azt explicit compatibility elofeltetelként kell kezelni, nem csendes tenykent | P1 | required-now |
 | must-use | egyetlen shared actor-emission normalization/validation/dispatch boundary | P1 | required-now |
 | must-use | explicit actor-context contract a canonical `agent emit` surface-en (`repo`, `bubble_id`, `handoff_id`; fail-closed guard mezokkel vagy azokkal ekvivalens canonical mezokkel) | P1 | required-now |

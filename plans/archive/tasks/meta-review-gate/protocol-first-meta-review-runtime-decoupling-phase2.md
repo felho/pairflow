@@ -28,7 +28,7 @@ target_files:
   - tests/contracts/v11/metaReviewSubmitCoverage.test.ts
   - tests/contracts/v11/watchdog.contract.runner.ts
 prd_ref: null
-plan_ref: plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md
+plan_ref: plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 owners:
   - "felho"
@@ -100,7 +100,7 @@ Ez a kor a Phase 1-ben bevezetett explicit `meta_review.execution_context` autho
 
 ### Normative Reference Policy
 
-1. `plan_ref`: `plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md`
+1. `plan_ref`: `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md`
    - Ez a canonical Phase 2 source a transport uncertainty es domain routing szetvalasztasara.
 2. `system_context_ref`: `docs/pairflow-initial-design.md`
    - A bubble lifecycle compatibility modell tovabbra is innen jon, amig a task explicit Phase 2 szaballyal felul nem irja.
@@ -214,7 +214,7 @@ Path-specific failure semantics:
 
 | Type | Items | Priority | Timing |
 | ---- | ----- | -------- | ------ |
-| must-use | `plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` Phase 2 exit criteria es transport-uncertainty policy | P1 | required-now |
+| must-use | `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` Phase 2 exit criteria es transport-uncertainty policy | P1 | required-now |
 | must-use | Phase 1 `meta_review.execution_context` authority contract | P1 | required-now |
 | must-use | durable transcript handoff/result envelope model | P1 | required-now |
 | must-use | kozos authority reasoning submit/watchdog/recovery kozott | P1 | required-now |

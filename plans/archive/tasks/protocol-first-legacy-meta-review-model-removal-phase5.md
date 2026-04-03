@@ -2,7 +2,7 @@
 artifact_type: task
 artifact_id: task_protocol_first_legacy_meta_review_model_removal_phase5_v3
 title: "Protocol-First Legacy Meta-Review Model Removal (Phase 5)"
-status: implementable
+status: completed
 phase: phase5
 target_files:
   - src/types/bubble.ts
@@ -67,7 +67,7 @@ target_files:
   - tests/v11/application/askHuman/**
   - tests/v11/application/converged/**
 prd_ref: null
-plan_ref: plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md
+plan_ref: plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
   - plans/archive/tasks/protocol-first-cli-and-protocol-surface-unification-phase4.md
@@ -239,7 +239,7 @@ Normative rules:
 
 | Type | Items | Priority | Timing |
 |---|---|---|---|
-| must-use | `plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` Phase 5 exit criteria | P1 | required-now |
+| must-use | `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` Phase 5 exit criteria | P1 | required-now |
 | must-use | `plans/archive/tasks/protocol-first-cli-and-protocol-surface-unification-phase4.md` Phase 4 actor/operator boundary | P1 | required-now |
 | must-use | `plans/archive/tasks/protocol-first-cli-and-protocol-surface-unification-phase4-retained-submit-callers.md` zero-caller decision a removed submit pathra | P1 | required-now |
 | must-use | inventory-first grep/diff evidence a cleanup elejen, hogy az aktualis residual surface explicit legyen, kulon a core UI/router/list/detail, approval eligibility/pending signal, status/list/reconcile/delete projection, retained alias/export/help/prompt, reviewer runtime guidance es active docs surface-ekre | P1 | required-now |
