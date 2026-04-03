@@ -349,19 +349,29 @@ describe("renderBubbleStatusTable", () => {
     const rendered = renderBubbleStatusTable(createStatusView({}));
 
     expect(rendered).toContain("| Bubble");
+    expect(rendered).toContain("b_status_render_01 | state: valid | cli path: worktree_local");
     expect(rendered).toContain("| Lifecycle");
+    expect(rendered).not.toContain("| State validation");
+    expect(rendered).not.toContain("| Command path");
     expect(rendered).toContain("| Runtime");
-    expect(rendered).toContain("| Command path");
     expect(rendered).toContain("| Inbox");
+    expect(rendered).toContain("| Meta-review");
+    expect(rendered).toContain("status=success | recommendation=approve");
+    expect(rendered).toContain("route=- | runtime_delivery=-");
     expect(rendered).toContain("| Review");
     expect(rendered).toContain("| Gates");
     expect(rendered).toContain("| Transcript");
     expect(rendered).toContain("verification=n/a");
+    expect(rendered).toContain("runtime_delivery=-");
     expect(rendered).not.toContain("Failing gates:");
     expect(rendered).not.toContain("Spec lock:");
     expect(rendered).not.toContain("Round gate:");
     expect(rendered).toContain("03-08T21:29:15Z");
     expect(rendered).not.toContain("2026-03-08T21:29:15.948Z");
+
+    const inboxIndex = rendered.indexOf("| Inbox");
+    const metaReviewIndex = rendered.indexOf("| Meta-review");
+    expect(metaReviewIndex).toBeGreaterThan(inboxIndex);
   });
 
   it("adds escalation section when watchdog is expired", () => {
@@ -399,7 +409,9 @@ describe("renderBubbleStatusTable", () => {
       })
     );
 
-    expect(rendered).toContain("PAIRFLOW_COMMAND_PATH_STALE");
+    expect(rendered).toContain(
+      "cli path: PAIRFLOW_COMMAND_PATH_STALE"
+    );
   });
 
   it("renders runtime delivery diagnostics in table mode", () => {
@@ -429,7 +441,10 @@ describe("renderBubbleStatusTable", () => {
     );
 
     expect(rendered).toContain("| Meta-review");
-    expect(rendered).toContain("route=human_gate_dispatch_failed");
-    expect(rendered).toContain("runtime_delivery=failed/META_REVIEW_REQUEST_DELIVERY_FAILED");
+    expect(rendered).toContain("status=success | recommendation=approve");
+    expect(rendered).toContain(
+      "route=human_gate_dispatch_failed | runtime_delivery=failed/META_REVIEW_REQUEST_DELIVERY_FAILED"
+    );
+    expect(rendered).toContain("03-08T21:29:10Z");
   });
 });

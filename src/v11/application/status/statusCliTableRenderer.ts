@@ -46,29 +46,24 @@ export function renderBubbleStatusTable(status: BubbleStatusView): string {
     status.stateValidation === null
       ? green("valid")
       : bold(red("invalid"));
+  const commandPathSummary = formatCommandPath(status.commandPath);
+  const metaReviewRoute = `${status.metaReview.latestRoute ?? "-"}${status.metaReview.latestRouteReasonCode !== null ? `/${status.metaReview.latestRouteReasonCode}` : ""}`;
+  const metaReviewSecondLine =
+    status.metaReview.runtimeDelivery === null
+      ? `route=${metaReviewRoute} | runtime_delivery=-`
+      : `route=${metaReviewRoute} | runtime_delivery=${status.metaReview.runtimeDelivery.status}${status.metaReview.runtimeDelivery.reasonCode !== null ? `/${status.metaReview.runtimeDelivery.reasonCode}` : ""} @ ${dim(formatTableTimestamp(status.metaReview.runtimeDelivery.observedAt))}`;
   const rows: Array<readonly [string, string]> = [
-    ["Bubble", status.bubbleId],
+    [
+      "Bubble",
+      `${status.bubbleId} | state: ${stateValidationSummary} | cli path: ${commandPathSummary}`
+    ],
     [
       "Lifecycle",
       `${formatStateLabel(status.state)} r${status.round} | active ${formatActiveOwner(status.activeAgent, status.activeRole)} | since ${dim(formatTableTimestamp(status.activeSince))}`
     ],
     [
-      "State validation",
-      stateValidationSummary
-    ],
-    [
       "Runtime",
       `last ${dim(formatTableTimestamp(status.lastCommandAt))} | watchdog ${status.watchdog.monitored ? green("on") : dim("off")} ${status.watchdog.timeoutMinutes}m rem=${formatWatchdogRemaining(status.watchdog)} exp=${status.watchdog.expired ? bold(red("yes")) : green("no")}`
-    ],
-    [
-      "Command path",
-      formatCommandPath(status.commandPath)
-    ],
-    [
-      "Meta-review",
-      status.metaReview.runtimeDelivery === null
-        ? `status=${status.metaReview.latestStatus ?? "-"} | recommendation=${status.metaReview.latestRecommendation ?? "-"} | route=${status.metaReview.latestRoute ?? "-"}${status.metaReview.latestRouteReasonCode !== null ? `/${status.metaReview.latestRouteReasonCode}` : ""} | runtime_delivery=-`
-        : `status=${status.metaReview.latestStatus ?? "-"} | recommendation=${status.metaReview.latestRecommendation ?? "-"} | route=${status.metaReview.latestRoute ?? "-"}${status.metaReview.latestRouteReasonCode !== null ? `/${status.metaReview.latestRouteReasonCode}` : ""} | runtime_delivery=${status.metaReview.runtimeDelivery.status}${status.metaReview.runtimeDelivery.reasonCode !== null ? `/${status.metaReview.runtimeDelivery.reasonCode}` : ""} @ ${dim(formatTableTimestamp(status.metaReview.runtimeDelivery.observedAt))}`
     ],
     [
       "Review",
@@ -85,6 +80,14 @@ export function renderBubbleStatusTable(status: BubbleStatusView): string {
     [
       "Inbox",
       formatInboxSummary(status.pendingInboxItems)
+    ],
+    [
+      "Meta-review",
+      `status=${status.metaReview.latestStatus ?? "-"} | recommendation=${status.metaReview.latestRecommendation ?? "-"}`
+    ],
+    [
+      "",
+      metaReviewSecondLine
     ]
   ];
 
