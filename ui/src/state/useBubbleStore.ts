@@ -599,6 +599,8 @@ export function createBubbleStore(
 
   let eventsClient: RealtimeEventsClient | null = null;
   let latestInitializeId = 0;
+  let latestAppliedEventId = 0;
+  let latestAppliedSnapshotTs = "";
 
   const store = createStore<BubbleStoreState>((set, get) => {
     const syncExpandedFromSummary = (
@@ -763,6 +765,26 @@ export function createBubbleStore(
       eventsClient = createEventsClient({
         getRepos: () => get().selectedRepos,
         onEvent: (event) => {
+          const isSnapshot = event.type === "snapshot";
+          const isOlderThanAppliedSnapshot =
+            !isSnapshot &&
+            (
+              event.id <= latestAppliedEventId ||
+              (
+                latestAppliedSnapshotTs.length > 0 &&
+                event.ts < latestAppliedSnapshotTs
+              )
+            );
+
+          if (isOlderThanAppliedSnapshot) {
+            return;
+          }
+
+          latestAppliedEventId = Math.max(latestAppliedEventId, event.id);
+          if (isSnapshot && event.ts > latestAppliedSnapshotTs) {
+            latestAppliedSnapshotTs = event.ts;
+          }
+
           set((state) => {
             switch (event.type) {
               case "snapshot": {
@@ -1008,6 +1030,8 @@ export function createBubbleStore(
       async initialize(): Promise<void> {
         const initializeId = latestInitializeId + 1;
         latestInitializeId = initializeId;
+        latestAppliedEventId = 0;
+        latestAppliedSnapshotTs = "";
         set({ isLoading: true, error: null });
 
         try {
@@ -1134,6 +1158,8 @@ export function createBubbleStore(
 
       stopRealtime(): void {
         latestInitializeId += 1;
+        latestAppliedEventId = 0;
+        latestAppliedSnapshotTs = "";
         if (eventsClient !== null) {
           eventsClient.stop();
           eventsClient = null;
