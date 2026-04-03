@@ -120,11 +120,12 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
   }, [stopDrag]);
 
   const visual = stateVisuals[props.bubble.state];
+  const attachSource = props.detail ?? props.bubble;
   const attach = getAttachAvailability({
-    bubbleId: props.bubble.bubbleId,
-    state: props.bubble.state,
-    hasRuntimeSession: props.bubble.hasRuntimeSession,
-    runtime: props.bubble.runtime
+    bubbleId: attachSource.bubbleId,
+    state: attachSource.state,
+    hasRuntimeSession: attachSource.runtimeSession !== null,
+    runtime: attachSource.runtime
   });
 
   const [timelineCompact, setTimelineCompact] = useState(true);

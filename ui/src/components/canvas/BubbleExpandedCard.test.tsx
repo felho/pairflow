@@ -17,6 +17,7 @@ interface RenderExpandedCardOverrides {
   onPositionChange?: (position: { x: number; y: number }) => void;
   onPositionCommit?: () => void;
   onClose?: () => void;
+  bubble?: ReturnType<typeof bubbleCard>;
   detail?: ReturnType<typeof bubbleDetail> | null;
   bubbleState?: "READY_FOR_HUMAN_APPROVAL";
 }
@@ -24,13 +25,16 @@ interface RenderExpandedCardOverrides {
 function renderExpandedCard(overrides: RenderExpandedCardOverrides = {}): void {
   render(
     <BubbleExpandedCard
-      bubble={bubbleCard({
-        bubbleId: "b-expanded-1",
-        repoPath: "/repo-a",
-        ...(overrides.bubbleState !== undefined
-          ? { state: overrides.bubbleState }
-          : {})
-      })}
+      bubble={
+        overrides.bubble ??
+        bubbleCard({
+          bubbleId: "b-expanded-1",
+          repoPath: "/repo-a",
+          ...(overrides.bubbleState !== undefined
+            ? { state: overrides.bubbleState }
+            : {})
+        })
+      }
       detail={overrides.detail ?? null}
       timeline={null}
       position={{
@@ -89,6 +93,25 @@ describe("BubbleExpandedCard", () => {
 
     expect(screen.queryByText("Meta Review")).not.toBeInTheDocument();
     expect(screen.getByText("Approval Package")).toBeInTheDocument();
+  });
+
+  it("prefers fresh detail runtime health over stale summary for attach hint", () => {
+    renderExpandedCard({
+      bubble: bubbleCard({
+        bubbleId: "b-expanded-1",
+        repoPath: "/repo-a",
+        runtimeSession: null,
+        stale: true
+      }),
+      detail: bubbleDetail({
+        bubbleId: "b-expanded-1",
+        repoPath: "/repo-a",
+        stale: false
+      })
+    });
+
+    expect(screen.queryByText(/Runtime session unavailable/u)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Attach" })).toBeInTheDocument();
   });
 
   it("copies bubble review prompt on double click of expanded bubble id label", async () => {
