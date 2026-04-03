@@ -214,6 +214,22 @@ function toBubbleCardModelFromDetail(detail: UiBubbleDetail): BubbleCardModel {
   return toBubbleCardModel(detail);
 }
 
+function mergeExpandedDetailWithSummary(
+  detail: UiBubbleDetail,
+  bubble: BubbleCardModel
+): UiBubbleDetail {
+  return {
+    ...detail,
+    ...bubble,
+    // Expanded cards should keep their last confirmed runtime snapshot until the
+    // follow-up detail refresh lands, otherwise realtime summary jitter can
+    // briefly show a false "runtime unavailable" hint while the session is
+    // actually still running.
+    runtimeSession: detail.runtimeSession,
+    runtime: detail.runtime
+  };
+}
+
 function getStorageFromWindow(): StorageLike | null {
   if (typeof window === "undefined") {
     return null;
@@ -614,10 +630,7 @@ export function createBubbleStore(
           delete next[bubbleId];
           continue;
         }
-        next[bubbleId] = {
-          ...detail,
-          ...bubble
-        };
+        next[bubbleId] = mergeExpandedDetailWithSummary(detail, bubble);
       }
       return next;
     };
@@ -875,10 +888,10 @@ export function createBubbleStore(
                     ? state.bubbleDetails
                     : {
                         ...state.bubbleDetails,
-                        [event.bubbleId]: {
-                          ...existingDetail,
-                          ...event.bubble
-                        }
+                        [event.bubbleId]: mergeExpandedDetailWithSummary(
+                          existingDetail,
+                          toBubbleCardModel(event.bubble)
+                        )
                       };
                 return {
                   bubblesById,

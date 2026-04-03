@@ -1286,6 +1286,72 @@ describe("createBubbleStore", () => {
     // Detail was fetched for the expanded bubble
     expect(api.getBubble).toHaveBeenCalledWith("/repo-a", "b-a");
   });
+
+  it("keeps expanded detail runtime state while realtime summary temporarily regresses", async () => {
+    const initialSummary = bubbleSummary({
+      bubbleId: "b-a",
+      repoPath: "/repo-a"
+    });
+    const healthyDetail = bubbleDetail({
+      bubbleId: "b-a",
+      repoPath: "/repo-a"
+    });
+    const deferredDetail = createDeferred<typeof healthyDetail>();
+
+    const getBubble = vi
+      .fn<(repoPath: string, bubbleId: string) => Promise<typeof healthyDetail>>()
+      .mockResolvedValueOnce(healthyDetail)
+      .mockImplementationOnce(async () => deferredDetail.promise);
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [initialSummary]
+      })),
+      getBubble,
+      getBubbleTimeline: vi.fn(async () => [])
+    });
+
+    let emitEvent: (event: UiEvent) => void = () => undefined;
+    const store = createBubbleStore({
+      api,
+      createEventsClient: (input) => {
+        emitEvent = input.onEvent;
+        return {
+          start: () => undefined,
+          stop: () => undefined,
+          refresh: () => undefined
+        };
+      }
+    });
+
+    await store.getState().initialize();
+    await store.getState().toggleBubbleExpanded("b-a");
+
+    emitEvent({
+      id: 200,
+      ts: "2026-02-25T12:05:00.000Z",
+      type: "bubble.updated",
+      repoPath: "/repo-a",
+      bubbleId: "b-a",
+      bubble: bubbleSummary({
+        bubbleId: "b-a",
+        repoPath: "/repo-a",
+        runtimeSession: null,
+        stale: true
+      })
+    });
+
+    expect(store.getState().bubblesById["b-a"]?.runtimeSession).toBeNull();
+    expect(store.getState().bubbleDetails["b-a"]?.runtimeSession).toEqual(
+      healthyDetail.runtimeSession
+    );
+    expect(store.getState().bubbleDetails["b-a"]?.runtime.stale).toBe(false);
+
+    deferredDetail.resolve(healthyDetail);
+    await Promise.resolve();
+  });
 });
 
 describe("deleteBubble store method", () => {
