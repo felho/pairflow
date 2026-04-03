@@ -253,8 +253,8 @@ Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 le
 ## Dependencies
 
 1. [protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md](/Users/felho/dev/pairflow/plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md)
-2. [protocol-first-cli-and-protocol-surface-unification-phase4.md](/Users/felho/dev/pairflow/plans/tasks/protocol-first-cli-and-protocol-surface-unification-phase4.md)
-3. [protocol-first-legacy-meta-review-model-removal-phase5.md](/Users/felho/dev/pairflow/plans/archive/tasks/protocol-first-legacy-meta-review-model-removal-phase5.md)
+2. [protocol-first-cli-and-protocol-surface-unification-phase4.md](/Users/felho/dev/pairflow/plans/archive/tasks/protocol-first/protocol-first-cli-and-protocol-surface-unification-phase4.md)
+3. [protocol-first-legacy-meta-review-model-removal-phase5.md](/Users/felho/dev/pairflow/plans/archive/tasks/protocol-first/protocol-first-legacy-meta-review-model-removal-phase5.md)
 4. `docs/pairflow-initial-design.md`
 5. A jelenlegi actor CLI entrypointok, runtime helper-ek, prompt/guidance builder-ek es protocol persistence pathok codebase inventoryja.
 

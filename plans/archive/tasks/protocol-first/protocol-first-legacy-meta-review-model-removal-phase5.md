@@ -70,8 +70,8 @@ prd_ref: null
 plan_ref: plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md
 system_context_ref: docs/pairflow-initial-design.md
 normative_refs:
-  - plans/archive/tasks/protocol-first-cli-and-protocol-surface-unification-phase4.md
-  - plans/archive/tasks/protocol-first-cli-and-protocol-surface-unification-phase4-retained-submit-callers.md
+  - plans/archive/tasks/protocol-first/protocol-first-cli-and-protocol-surface-unification-phase4.md
+  - plans/archive/tasks/protocol-first/protocol-first-cli-and-protocol-surface-unification-phase4-retained-submit-callers.md
 owners:
   - "felho"
 ---
@@ -240,8 +240,8 @@ Normative rules:
 | Type | Items | Priority | Timing |
 |---|---|---|---|
 | must-use | `plans/archive/plans/protocol-first-bubble-runtime-and-meta-review-unification-plan-v1.md` Phase 5 exit criteria | P1 | required-now |
-| must-use | `plans/archive/tasks/protocol-first-cli-and-protocol-surface-unification-phase4.md` Phase 4 actor/operator boundary | P1 | required-now |
-| must-use | `plans/archive/tasks/protocol-first-cli-and-protocol-surface-unification-phase4-retained-submit-callers.md` zero-caller decision a removed submit pathra | P1 | required-now |
+| must-use | `plans/archive/tasks/protocol-first/protocol-first-cli-and-protocol-surface-unification-phase4.md` Phase 4 actor/operator boundary | P1 | required-now |
+| must-use | `plans/archive/tasks/protocol-first/protocol-first-cli-and-protocol-surface-unification-phase4-retained-submit-callers.md` zero-caller decision a removed submit pathra | P1 | required-now |
 | must-use | inventory-first grep/diff evidence a cleanup elejen, hogy az aktualis residual surface explicit legyen, kulon a core UI/router/list/detail, approval eligibility/pending signal, status/list/reconcile/delete projection, retained alias/export/help/prompt, reviewer runtime guidance es active docs surface-ekre | P1 | required-now |
 | must-not-use | Phase 4-ben mar removed `bubble meta-review submit` ujranyitasa | P1 | required-now |
 | must-not-use | retained actor aliases historical convenience alapjan | P1 | required-now |

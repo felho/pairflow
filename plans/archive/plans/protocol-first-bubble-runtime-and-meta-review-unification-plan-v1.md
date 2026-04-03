@@ -198,9 +198,9 @@ Elso elvbol ujrarendezni a bubble runtime szemantikajat ugy, hogy:
 
 1. `plans/archive/tasks/meta-review-gate/protocol-first-meta-review-execution-context-authority-phase1.md` (completed task)
 2. `plans/archive/tasks/meta-review-gate/protocol-first-meta-review-runtime-decoupling-phase2.md` (completed task)
-3. `plans/archive/tasks/protocol-first-running-execution-context-unification-phase3.md` (completed task)
-4. `plans/archive/tasks/protocol-first-cli-and-protocol-surface-unification-phase4.md` (completed task)
-5. `plans/archive/tasks/protocol-first-legacy-meta-review-model-removal-phase5.md` (completed task)
+3. `plans/archive/tasks/protocol-first/protocol-first-running-execution-context-unification-phase3.md` (completed task)
+4. `plans/archive/tasks/protocol-first/protocol-first-cli-and-protocol-surface-unification-phase4.md` (completed task)
+5. `plans/archive/tasks/protocol-first/protocol-first-legacy-meta-review-model-removal-phase5.md` (completed task)
 
 ## Dependencies
 
