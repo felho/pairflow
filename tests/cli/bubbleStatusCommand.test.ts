@@ -57,6 +57,7 @@ describe("renderBubbleStatusText", () => {
       bubbleId: "b_status_render_01",
       repoPath: "/tmp/repo",
       worktreePath: "/tmp/worktree",
+      bubbleStartedAt: "2026-02-22T11:58:00.000Z",
       state: "RUNNING",
       round: 2,
       activeAgent: "codex",
@@ -214,6 +215,7 @@ describe("renderBubbleStatusText", () => {
     expect(rendered).toContain(
       "Meta-review: status=inconclusive recommendation=inconclusive route=-"
     );
+    expect(rendered).toContain("Bubble start: 2026-02-22T11:58:00.000Z");
     expect(rendered).toContain(
       "Pane activity: last=12:04:00 age=120s"
     );
@@ -284,6 +286,7 @@ describe("renderBubbleStatusTable", () => {
       bubbleId: "b_status_render_01",
       repoPath: "/tmp/repo",
       worktreePath: "/tmp/worktree",
+      bubbleStartedAt: "2026-03-08T21:20:00.000Z",
       state: "RUNNING",
       round: 5,
       activeAgent: "codex",
@@ -374,7 +377,7 @@ describe("renderBubbleStatusTable", () => {
     const rendered = renderBubbleStatusTable(createStatusView({}));
 
     expect(rendered).toContain("| Bubble");
-    expect(rendered).toContain("b_status_render_01 | state: valid | cli path: worktree_local");
+    expect(rendered).toContain("b_status_render_01 | state: valid | cli path: worktree_local | start: 21:20:00");
     expect(rendered).toContain("| Lifecycle");
     expect(rendered).toContain("since 21:29:15");
     expect(rendered).not.toContain("| State validation");

@@ -67,6 +67,7 @@ export function renderBubbleStatusText(status: BubbleStatusView): string {
           .join("; ");
   const lines: string[] = [
     `Bubble: ${status.bubbleId}`,
+    `Bubble start: ${status.bubbleStartedAt ?? "-"}`,
     `State: ${status.state} (round ${status.round})`,
     `State validation: ${stateValidationSummary}`,
     `Active: ${status.activeAgent ?? "-"} (${status.activeRole ?? "-"}) since ${status.activeSince ?? "-"}`,

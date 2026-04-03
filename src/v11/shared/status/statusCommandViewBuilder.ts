@@ -79,6 +79,7 @@ export interface BubbleStatusView {
   bubbleId: string;
   repoPath: string;
   worktreePath: string;
+  bubbleStartedAt: string | null;
   state: BubbleLifecycleState;
   round: number;
   activeAgent: string | null;
@@ -240,6 +241,9 @@ export function buildBubbleStatusView({
     bubbleId: resolved.bubbleId,
     repoPath: resolved.repoPath,
     worktreePath: resolved.bubblePaths.worktreePath,
+    bubbleStartedAt: inferBubbleStartedAtFromInstanceId(
+      resolved.bubbleConfig.bubble_instance_id
+    ),
     state: state.state,
     round: state.round,
     activeAgent: state.active_agent,
@@ -316,4 +320,34 @@ function resolveElapsedSeconds(
     return null;
   }
   return Math.max(0, Math.ceil((now.getTime() - parsed) / 1_000));
+}
+
+function inferBubbleStartedAtFromInstanceId(
+  bubbleInstanceId: string | undefined
+): string | null {
+  if (bubbleInstanceId === undefined) {
+    return null;
+  }
+
+  const segments = bubbleInstanceId.split("_");
+  if (segments.length < 3 || segments[0] !== "bi") {
+    return null;
+  }
+
+  const encodedTimestamp = segments[1];
+  if (encodedTimestamp === undefined || !/^[0-9a-z]+$/u.test(encodedTimestamp)) {
+    return null;
+  }
+
+  const timestampMs = Number.parseInt(encodedTimestamp, 36);
+  if (!Number.isSafeInteger(timestampMs) || timestampMs < 0) {
+    return null;
+  }
+
+  const startedAt = new Date(timestampMs);
+  if (Number.isNaN(startedAt.getTime())) {
+    return null;
+  }
+
+  return startedAt.toISOString();
 }

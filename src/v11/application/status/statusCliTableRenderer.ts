@@ -57,7 +57,7 @@ export function renderBubbleStatusTable(status: BubbleStatusView): string {
   const rows: Array<readonly [string, string]> = [
     [
       "Bubble",
-      `${status.bubbleId} | state: ${stateValidationSummary} | cli path: ${commandPathSummary}`
+      `${status.bubbleId} | state: ${stateValidationSummary} | cli path: ${commandPathSummary} | start: ${dim(formatClockTimestamp(status.bubbleStartedAt))}`
     ],
     [
       "Lifecycle",
