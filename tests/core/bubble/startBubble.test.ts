@@ -1343,6 +1343,8 @@ describe("startBubble", () => {
     expect(statusScript).toContain("set +e");
     expect(statusScript).toContain("prev_signature=''");
     expect(statusScript).toContain("next_signature=$(");
+    expect(statusScript).toContain("TMUX_PANE");
+    expect(statusScript).toContain("#{pane_width}x#{pane_height}");
     expect(statusScript).toContain("if [ \"$next_signature\" != \"$prev_signature\" ]; then");
     expect(statusScript).toContain("pairflow bubble status --id");
     expect(statusScript).not.toContain("clear;");

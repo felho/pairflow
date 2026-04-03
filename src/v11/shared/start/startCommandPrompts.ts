@@ -50,6 +50,7 @@ export function buildStatusPaneCommand(
   const watchdogCommand = `${pairflowCommand} bubble watchdog --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)} >/dev/null 2>&1 || true`;
   const statusCommand = `${pairflowCommand} bubble status --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)}`;
   const statusSignatureCommand = `${pairflowCommand} bubble status --id ${shellQuote(bubbleId)} --repo ${shellQuote(repoPath)} --json`;
+  const paneSizeSignatureCommand = "if [ -n \"${TMUX_PANE:-}\" ]; then tmux display-message -p -t \"$TMUX_PANE\" '#{pane_width}x#{pane_height}' 2>/dev/null || true; fi";
   const worktreeLine = shellQuote(displayWorktreePath);
   const loopScript = [
     "set +e",
@@ -60,6 +61,7 @@ export function buildStatusPaneCommand(
     `  ${watchdogCommand}`,
     "  next_signature=$(",
     `    ${statusSignatureCommand}`,
+    `    ${paneSizeSignatureCommand}`,
     `    printf '%s\\n' ${worktreeLine}`,
     "  )",
     "  if [ \"$next_signature\" != \"$prev_signature\" ]; then",
