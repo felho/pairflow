@@ -12,6 +12,7 @@ import {
   resolveDeliveryInitialDelayMs,
   shouldRetryPassDelivery
 } from "./reviewerDeliveryHelpers.js";
+import { executeImplementerHandoffDelivery } from "../../shared/delivery/implementerHandoffDelivery.js";
 
 export interface PassDeliveryDependencies {
   emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
@@ -39,6 +40,21 @@ export async function executePassDelivery(
   input: ExecutePassDeliveryInput,
   dependencies: PassDeliveryDependencies = {}
 ): Promise<ExecutePassDeliveryResult> {
+  const emitDelivery =
+    dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
+  if (input.recipientRole === "implementer") {
+    const deliveryInput = buildPassDeliveryInput({
+      executeInput: input,
+      reviewerBriefText: undefined,
+      reviewerFocus: undefined,
+      initialDelayMs: undefined
+    });
+    return executeImplementerHandoffDelivery({
+      deliveryInput,
+      emitDelivery
+    });
+  }
+
   const {
     reviewerBriefText,
     reviewerFocus,
@@ -56,8 +72,6 @@ export async function executePassDelivery(
     refreshReviewer
   });
 
-  const emitDelivery =
-    dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
   const deliveryInput = buildPassDeliveryInput({
     executeInput: input,
     reviewerBriefText,

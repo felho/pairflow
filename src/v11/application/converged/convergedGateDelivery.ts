@@ -11,6 +11,7 @@ import {
   type DeliveryTargetRole,
   type ProtocolEnvelope
 } from "../../../types/protocol.js";
+import { executeImplementerHandoffDelivery } from "../../shared/delivery/implementerHandoffDelivery.js";
 
 export interface ConvergedDeliveryResult {
   delivered: boolean;
@@ -124,6 +125,26 @@ export async function executeGateDelivery(input: {
       reason: "tmux_send_failed"
     }));
 
+  if (input.gateResult.route === "auto_rework") {
+    const autoReworkDeliveryInput = {
+      bubbleId: input.resolved.bubbleId,
+      bubbleConfig: input.resolved.bubbleConfig,
+      sessionsPath: input.resolved.bubblePaths.sessionsPath,
+      envelope: input.gateResult.gateEnvelope,
+      messageRef: gateRef
+    } as const;
+    const autoReworkDelivery = await executeImplementerHandoffDelivery({
+      deliveryInput: autoReworkDeliveryInput,
+      emitDelivery: input.emitDelivery
+    });
+    return buildConvergedDelivery(
+      [
+        autoReworkDelivery.result
+      ],
+      autoReworkDelivery.retried
+    );
+  }
+
   const recipientEnvelopes =
     input.gateResult.gateEnvelope.type === "APPROVAL_REQUEST"
       ? [
@@ -138,32 +159,10 @@ export async function executeGateDelivery(input: {
           }, "reviewer")
         ]
       : [input.gateResult.gateEnvelope];
-  let deliveryResults = await Promise.all(
+
+  const deliveryResults = await Promise.all(
     recipientEnvelopes.map((envelope) => emitDeliverySafe(envelope))
   );
-  let deliveryRetried = false;
 
-  const primaryAutoReworkDelivery = deliveryResults[0];
-  const shouldRetryAutoReworkDelivery =
-    input.gateResult.route === "auto_rework" &&
-    recipientEnvelopes.length === 1 &&
-    primaryAutoReworkDelivery !== undefined &&
-    !primaryAutoReworkDelivery.delivered &&
-    (
-      primaryAutoReworkDelivery.reason === "delivery_unconfirmed" ||
-      primaryAutoReworkDelivery.reason === "tmux_send_failed"
-    );
-  if (shouldRetryAutoReworkDelivery) {
-    deliveryRetried = true;
-    deliveryResults = [
-      await emitDeliverySafe(recipientEnvelopes[0]!, {
-        // Auto-rework target pane can still be spinning up after gate routing.
-        // Give the CLI extra warm-up + probe attempts before giving up.
-        initialDelayMs: 5000,
-        deliveryAttempts: 6
-      })
-    ];
-  }
-
-  return buildConvergedDelivery(deliveryResults, deliveryRetried);
+  return buildConvergedDelivery(deliveryResults, false);
 }
