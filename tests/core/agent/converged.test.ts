@@ -40,7 +40,7 @@ function resolveWatchdogTimeoutMinutes(
   state: Parameters<typeof rawWriteStateSnapshot>[1]
 ): number {
   const executionContext =
-    state.state === "META_REVIEW_RUNNING"
+    state.state === "RUNNING"
       ? metaReviewExecutionContextToRunningContext(
           state.meta_review?.execution_context ?? null
         )
@@ -59,7 +59,7 @@ function resolveWatchdogTimeoutMinutes(
 function normalizeTestStateForWrite(
   state: Parameters<typeof rawWriteStateSnapshot>[1]
 ): Parameters<typeof rawWriteStateSnapshot>[1] {
-  if (state.state === "META_REVIEW_RUNNING") {
+  if (state.state === "RUNNING" && state.active_role === "meta_reviewer") {
     return {
       ...state,
       execution_context: metaReviewExecutionContextToRunningContext(
@@ -787,7 +787,7 @@ describe("emitConvergedFromWorkspace", () => {
   });
 
   it(
-    "enters META_REVIEW_RUNNING without synchronous gate-timeout ownership when structured channel is available",
+    "enters RUNNING meta-review authority without synchronous gate-timeout ownership when structured channel is available",
     { timeout: 10_000 },
     async () => {
     const repoPath = await createTempRepo();
@@ -822,7 +822,7 @@ describe("emitConvergedFromWorkspace", () => {
 
     expect(result.gateRoute).toBe("meta_review_running");
     expect(result.approvalRequestEnvelope.type).toBe("TASK");
-      expect(result.state.state).toBe("META_REVIEW_RUNNING");
+      expect(result.state.state).toBe("RUNNING");
     }
   );
 
@@ -859,7 +859,7 @@ describe("emitConvergedFromWorkspace", () => {
     );
 
     expect(result.gateRoute).toBe("meta_review_running");
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
     expect(result.delivery).toEqual({
       delivered: false,
       reason: "delivery_unconfirmed",
@@ -867,7 +867,7 @@ describe("emitConvergedFromWorkspace", () => {
     });
   });
 
-  it("recovers from gate-routing failure by replaying route from META_REVIEW_RUNNING snapshot", async () => {
+  it("recovers from gate-routing failure by replaying route from RUNNING meta-review snapshot", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupConvergedCandidateBubble(repoPath, "b_converged_recover_01");
 
@@ -891,7 +891,7 @@ describe("emitConvergedFromWorkspace", () => {
             bubble.paths.statePath,
             {
               ...loaded.state,
-              state: "META_REVIEW_RUNNING",
+              state: "RUNNING",
               active_agent: "codex",
               active_role: "meta_reviewer",
               active_since: "2026-02-22T09:04:40.000Z",
@@ -949,7 +949,7 @@ describe("emitConvergedFromWorkspace", () => {
     expect(finalState.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
   });
 
-  it("writes CONVERGENCE + APPROVAL_REQUEST and moves RUNNING -> READY_FOR_APPROVAL when meta-review run fails", async () => {
+  it("writes CONVERGENCE + APPROVAL_REQUEST and moves RUNNING -> READY_FOR_HUMAN_APPROVAL when meta-review run fails", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupConvergedCandidateBubble(repoPath, "b_converged_01");
     const now = new Date("2026-02-22T09:05:00.000Z");
@@ -966,7 +966,7 @@ describe("emitConvergedFromWorkspace", () => {
     expect(result.gateRoute).toBe("meta_review_running");
     expect(result.approvalRequestEnvelope.type).toBe("TASK");
     expect(result.approvalRequestEnvelope.recipient).toBe("codex");
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
     expect(result.state.last_command_at).toBe(now.toISOString());
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
@@ -1057,7 +1057,7 @@ describe("emitConvergedFromWorkspace", () => {
       now: new Date("2026-02-22T09:04:00.000Z")
     });
 
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
     const gateArtifactPath = resolveSummaryVerifierConsistencyGateArtifactPath(
       bubble.paths.artifactsDir
     );
@@ -1092,7 +1092,7 @@ describe("emitConvergedFromWorkspace", () => {
       now: new Date("2026-02-22T09:04:00.000Z")
     });
 
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
     const gateArtifactPath = resolveSummaryVerifierConsistencyGateArtifactPath(
       bubble.paths.artifactsDir
     );
@@ -1156,7 +1156,7 @@ describe("emitConvergedFromWorkspace", () => {
       now: new Date("2026-02-22T09:04:00.000Z")
     });
 
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
   });
 
   it("records auditable metadata when doc-gate artifact is unreadable during docs-scope convergence", async () => {
@@ -1327,7 +1327,7 @@ describe("emitConvergedFromWorkspace", () => {
       now: new Date("2026-02-22T09:04:00.000Z")
     });
 
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
   });
 
   it("blocks convergence in accuracy-critical bubbles when latest review verification artifact is from a stale round", async () => {
@@ -1762,7 +1762,7 @@ describe("emitConvergedFromWorkspace", () => {
       summary: "Round 5 reconvergence after requested rework",
       cwd: bubble.paths.worktreePath
     });
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
   });
 
   it("rejects when unresolved human question exists in transcript", async () => {
@@ -1994,7 +1994,7 @@ describe("emitConvergedFromWorkspace", () => {
       summary: "Round 4 converged after blocker fix",
       cwd: bubble.paths.worktreePath
     });
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
   });
 
   it("keeps non-document convergence blocking semantics unchanged after reviewer PASS", async () => {
@@ -2130,7 +2130,7 @@ describe("emitConvergedFromWorkspace", () => {
       summary: "Round 3 convergence with non-blocking findings",
       cwd: bubble.paths.worktreePath
     });
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
   });
 
   it("allows in round 2 when previous reviewer PASS has only P2 findings", async () => {
@@ -2217,7 +2217,7 @@ describe("emitConvergedFromWorkspace", () => {
       summary: "Round 2 convergence with non-blocking findings",
       cwd: bubble.paths.worktreePath
     });
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
   });
 
   it("supports converged integration with non-default severity_gate_round config", async () => {
@@ -2325,6 +2325,6 @@ describe("emitConvergedFromWorkspace", () => {
       summary: "Converged with non-default gate config",
       cwd: bubble.paths.worktreePath
     });
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
   });
 });

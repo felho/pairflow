@@ -1,8 +1,8 @@
 {
   "id": "kickoff-task-file-placeholder",
   "command": "kickoff",
-  "mode": "legacy",
-  "description": "Seed kickoff legacy contract case for placeholder marker in task-file content.",
+  "mode": "baseline",
+  "description": "Seed kickoff baseline contract case for placeholder marker in task-file content.",
   "input": {
     "task": "metadata_source: ideation_placeholder",
     "fixture": {

@@ -53,7 +53,7 @@ export interface ConvergedContractOutput {
 
 export interface ConvergedContractRunResult {
   mode: ContractCase["mode"];
-  legacy?: ConvergedContractOutput;
+  baseline?: ConvergedContractOutput;
   v11?: ConvergedContractOutput;
 }
 
@@ -77,9 +77,9 @@ interface ParsedConvergedCaseInput {
     forbiddenPatterns?: ReviewerRoutingForbiddenPattern[];
   };
   rolloutContract?: {
-    kickoffContractVersion?: "legacy_inflight" | "advisory_v1";
+    kickoffContractVersion?: "baseline_inflight" | "advisory_v1";
     inflightPolicy?: "kickoff_pinned_until_close";
-    gracePeriodGate?: "required_for_new_rollout_signoff" | "legacy_only_within_window";
+    gracePeriodGate?: "required_for_new_rollout_signoff" | "baseline_only_within_window";
   };
 }
 
@@ -279,14 +279,14 @@ function parseConvergedCaseInput(input: ContractCase["input"]): ParsedConvergedC
       }
       const rolloutRecord = rolloutRaw as Record<string, unknown>;
       const kickoffContractVersionRaw = rolloutRecord.kickoff_contract_version;
-      let kickoffContractVersion: "legacy_inflight" | "advisory_v1" | undefined;
+      let kickoffContractVersion: "baseline_inflight" | "advisory_v1" | undefined;
       if (
         kickoffContractVersionRaw !== undefined
-        && kickoffContractVersionRaw !== "legacy_inflight"
+        && kickoffContractVersionRaw !== "baseline_inflight"
         && kickoffContractVersionRaw !== "advisory_v1"
       ) {
         throw new Error(
-          "converged contract fixture rollout_contract.kickoff_contract_version must be legacy_inflight or advisory_v1 when provided."
+          "converged contract fixture rollout_contract.kickoff_contract_version must be baseline_inflight or advisory_v1 when provided."
         );
       }
       if (kickoffContractVersionRaw !== undefined) {
@@ -308,15 +308,15 @@ function parseConvergedCaseInput(input: ContractCase["input"]): ParsedConvergedC
       const gracePeriodGateRaw = rolloutRecord.grace_period_gate;
       let gracePeriodGate:
         | "required_for_new_rollout_signoff"
-        | "legacy_only_within_window"
+        | "baseline_only_within_window"
         | undefined;
       if (
         gracePeriodGateRaw !== undefined
         && gracePeriodGateRaw !== "required_for_new_rollout_signoff"
-        && gracePeriodGateRaw !== "legacy_only_within_window"
+        && gracePeriodGateRaw !== "baseline_only_within_window"
       ) {
         throw new Error(
-          "converged contract fixture rollout_contract.grace_period_gate must be required_for_new_rollout_signoff or legacy_only_within_window when provided."
+          "converged contract fixture rollout_contract.grace_period_gate must be required_for_new_rollout_signoff or baseline_only_within_window when provided."
         );
       }
       if (gracePeriodGateRaw !== undefined) {
@@ -500,13 +500,13 @@ function assertContractExpectedSubset(input: {
 }
 
 function assertParityEquivalent(input: {
-  legacy: ConvergedContractOutput;
+  baseline: ConvergedContractOutput;
   v11: ConvergedContractOutput;
   caseId: string;
 }): void {
-  if (JSON.stringify(input.legacy) !== JSON.stringify(input.v11)) {
+  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
     throw new Error(
-      `converged parity mismatch for case=${input.caseId}: legacy=${JSON.stringify(input.legacy)} v11=${JSON.stringify(input.v11)}`
+      `converged parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
     );
   }
 }
@@ -708,11 +708,11 @@ function assertFixtureRuntimeBinding(input: {
       );
     }
     if (
-      rollout.gracePeriodGate === "legacy_only_within_window"
-      && rollout.kickoffContractVersion !== "legacy_inflight"
+      rollout.gracePeriodGate === "baseline_only_within_window"
+      && rollout.kickoffContractVersion !== "baseline_inflight"
     ) {
       throw new Error(
-        `converged contract case=${input.caseId}: grace_period_gate=legacy_only_within_window requires kickoff_contract_version=legacy_inflight.`
+        `converged contract case=${input.caseId}: grace_period_gate=baseline_only_within_window requires kickoff_contract_version=baseline_inflight.`
       );
     }
   }
@@ -825,20 +825,20 @@ export async function runConvergedContractCase(
     );
   }
 
-  if (caseDef.mode === "legacy") {
-    const legacy = await executeConvergedCase({
+  if (caseDef.mode === "baseline") {
+    const baseline = await executeConvergedCase({
       caseDef,
       executor: emitConvergedFromWorkspace,
       applyMetaReviewGateExecutor: applyMetaReviewGateOnConvergence
     });
     assertContractExpectedSubset({
-      output: legacy,
+      output: baseline,
       expected: caseDef.expected,
-      label: "legacy"
+      label: "baseline"
     });
     return {
       mode: caseDef.mode,
-      legacy
+      baseline
     };
   }
 
@@ -859,7 +859,7 @@ export async function runConvergedContractCase(
     };
   }
 
-  const legacy = await executeConvergedCase({
+  const baseline = await executeConvergedCase({
     caseDef,
     executor: emitConvergedFromWorkspace,
     applyMetaReviewGateExecutor: applyMetaReviewGateOnConvergence
@@ -870,9 +870,9 @@ export async function runConvergedContractCase(
     applyMetaReviewGateExecutor: applyMetaReviewGateOnConvergenceV11
   });
   assertContractExpectedSubset({
-    output: legacy,
+    output: baseline,
     expected: caseDef.expected,
-    label: "parity/legacy"
+    label: "parity/baseline"
   });
   assertContractExpectedSubset({
     output: v11,
@@ -880,13 +880,13 @@ export async function runConvergedContractCase(
     label: "parity/v11"
   });
   assertParityEquivalent({
-    legacy,
+    baseline,
     v11,
     caseId: caseDef.id
   });
   return {
     mode: caseDef.mode,
-    legacy,
+    baseline,
     v11
   };
 }

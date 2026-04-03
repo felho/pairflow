@@ -2,7 +2,7 @@
   "id": "approval-rework-immediate-parity",
   "command": "approval",
   "mode": "parity",
-  "description": "Seed approval immediate-rework parity contract case for READY_FOR_APPROVAL baseline.",
+  "description": "Seed approval immediate-rework parity contract case for READY_FOR_HUMAN_APPROVAL baseline.",
   "input": {
     "action": "request_rework_immediate",
     "message": "Please rework based on the current review notes."

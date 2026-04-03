@@ -9,7 +9,10 @@ import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { BubbleWatchdogResult } from "../../application/watchdog/watchdogCommandContract.js";
 import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import { SchemaValidationError } from "../../../core/validation.js";
-import { validateActiveMetaReviewExecutionContext } from "../../../core/bubble/metaReviewExecutionContext.js";
+import {
+  isMetaReviewExecutionContextActiveState,
+  validateActiveMetaReviewExecutionContext
+} from "../../../core/bubble/metaReviewExecutionContext.js";
 
 function assertMetaReviewExecutionContext(state: BubbleStateSnapshot): void {
   const result = validateActiveMetaReviewExecutionContext(state);
@@ -17,7 +20,7 @@ function assertMetaReviewExecutionContext(state: BubbleStateSnapshot): void {
     return;
   }
   throw new SchemaValidationError(
-    "Invalid META_REVIEW_RUNNING execution context",
+    "Invalid active meta-review execution context",
     result.errors
   );
 }
@@ -69,7 +72,7 @@ function mapRecoveredMetaReviewResult(input: {
     return {
       bubbleId: input.bubbleId,
       escalated: false,
-      reason: latestState.state === "META_REVIEW_RUNNING"
+      reason: isMetaReviewExecutionContextActiveState(latestState)
         ? "not_expired"
         : "state_not_running",
       state: latestState
@@ -112,7 +115,7 @@ export function maybeRouteMetaReviewBeforeExpiry(input: {
   recoverMetaReviewRoute: typeof recoverMetaReviewGateFromSnapshot;
   emitDelivery: typeof emitTmuxDeliveryNotification;
 }): BubbleWatchdogResult | null {
-  if (input.state.state !== "META_REVIEW_RUNNING") {
+  if (!isMetaReviewExecutionContextActiveState(input.state)) {
     return null;
   }
   assertMetaReviewExecutionContext(input.state);
@@ -132,7 +135,7 @@ export async function maybeRouteMetaReviewOnExpiry(input: {
   recoverMetaReviewRoute: typeof recoverMetaReviewGateFromSnapshot;
   emitDelivery: typeof emitTmuxDeliveryNotification;
 }): Promise<BubbleWatchdogResult | null> {
-  if (input.state.state !== "META_REVIEW_RUNNING") {
+  if (!isMetaReviewExecutionContextActiveState(input.state)) {
     return null;
   }
   assertMetaReviewExecutionContext(input.state);

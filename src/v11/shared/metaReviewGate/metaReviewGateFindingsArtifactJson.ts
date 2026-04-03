@@ -12,17 +12,7 @@ function resolveMetaReviewReportJsonObject(
   if (isRecord(source.report_json)) {
     return source.report_json;
   }
-  const hasFlatClaimFields =
-    source.findings_claim_state !== undefined ||
-    source.findings_claim_source !== undefined ||
-    source.findings_count !== undefined ||
-    source.findings_artifact_ref !== undefined ||
-    source.findings_run_id !== undefined ||
-    source.meta_review_run_id !== undefined ||
-    source.findings_digest_sha256 !== undefined ||
-    source.findings_artifact_status !== undefined ||
-    source.findings_parity_status !== undefined;
-  return hasFlatClaimFields ? source : undefined;
+  return undefined;
 }
 
 export function resolveFindingsArtifactPath(input: {

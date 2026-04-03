@@ -1,7 +1,7 @@
 {
   "id": "watchdog-waiting-human",
   "command": "watchdog",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed watchdog contract case for WAITING_HUMAN no-op baseline.",
   "input": {},
   "expected": {

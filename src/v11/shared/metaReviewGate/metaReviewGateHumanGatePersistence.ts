@@ -58,10 +58,7 @@ export interface PersistHumanGateRouteInput {
   parityMetadata?: FindingsParityMetadata | null;
   findings?: MetaReviewGateAdvisoryFinding[];
   fallbackRecommendation?: MetaReviewRecommendation;
-  targetState?:
-    | "READY_FOR_HUMAN_APPROVAL"
-    | "READY_FOR_APPROVAL"
-    | "META_REVIEW_FAILED";
+  targetState?: "READY_FOR_HUMAN_APPROVAL";
   stickyHumanGate?: boolean;
   rollbackStateOnAppendFailure?: BubbleStateSnapshot;
 }

@@ -88,7 +88,7 @@ describe("emitConvergedFromWorkspaceV11", () => {
     expect(v11.approvalRequestRecipient).toBe("codex");
     expect(v11.approvalRequestSender).toBe("orchestrator");
     expect(v11.gateRoute).toBe("meta_review_running");
-    expect(v11.state).toBe("META_REVIEW_RUNNING");
+    expect(v11.state).toBe("RUNNING");
     }
   );
 
@@ -113,7 +113,7 @@ describe("emitConvergedFromWorkspaceV11", () => {
     expect(v11.approvalRequestRecipient).toBe("codex");
     expect(v11.approvalRequestSender).toBe("orchestrator");
     expect(v11.gateRoute).toBe("meta_review_running");
-    expect(v11.state).toBe("META_REVIEW_RUNNING");
+    expect(v11.state).toBe("RUNNING");
     }
   );
 

@@ -133,7 +133,7 @@ describe("v11 CLI entrypoint parity coverage", () => {
     }
   });
 
-  it("keeps the direct legacy bubble CLI shim inventory explicit", async () => {
+  it("keeps the direct baseline-mode bubble CLI shim inventory explicit", async () => {
     const actualShimCommands = await listDirectBubbleCliShimCommands();
     expect(actualShimCommands).toEqual([...directBubbleCliShimCommands].sort());
   });

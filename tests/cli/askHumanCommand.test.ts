@@ -1,10 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { AskHumanCommandErrorV11 } from "../../src/v11/application/askHuman/emitAskHumanV11.js";
+import * as actorEmitContextModule from "../../src/core/bubble/actorEmitContext.js";
+import * as actorProtocolModule from "../../src/v11/application/actorProtocol/emitActorProtocolV11.js";
 import {
   getAskHumanHelpText,
   parseAskHumanCommandOptions,
   runAskHumanCommand
 } from "../../src/cli/commands/agent/askHuman.js";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("parseAskHumanCommandOptions", () => {
   it("parses question and refs", () => {
@@ -45,5 +52,40 @@ describe("runAskHumanCommand", () => {
   it("returns null on help", async () => {
     const result = await runAskHumanCommand(["--help"]);
     expect(result).toBeNull();
+  });
+
+  it("fails closed with removal guidance instead of invoking the legacy ask-human flow", async () => {
+    const resolveSpy = vi.spyOn(
+      actorEmitContextModule,
+      "resolveCompatActorEmitContextFromWorkspace"
+    );
+    const emitSpy = vi.spyOn(
+      actorProtocolModule,
+      "emitActorProtocolFromWorkspaceV11"
+    );
+
+    expect(() =>
+      runAskHumanCommand(
+        ["--question", "Need decision"],
+        "/tmp/pairflow-repo"
+      )
+    ).toThrowError(AskHumanCommandErrorV11);
+    expect(() =>
+      runAskHumanCommand(
+        ["--question", "Need decision"],
+        "/tmp/pairflow-repo"
+      )
+    ).toThrow(/LEGACY_COMMAND_REMOVED/u);
+    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(emitSpy).not.toHaveBeenCalled();
+  });
+
+  it("fails closed with removal guidance even when legacy args are missing", async () => {
+    expect(() => runAskHumanCommand([], "/tmp/pairflow-repo")).toThrowError(
+      AskHumanCommandErrorV11
+    );
+    expect(() => runAskHumanCommand([], "/tmp/pairflow-repo")).toThrow(
+      /LEGACY_COMMAND_REMOVED/u
+    );
   });
 });

@@ -1,7 +1,7 @@
 {
   "id": "resume-basic",
   "command": "resume",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed resume contract case for WAITING_HUMAN to RUNNING baseline.",
   "input": {},
   "expected": {

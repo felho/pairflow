@@ -20,7 +20,7 @@
     "approvalRequestRecipient": "codex",
     "approvalRequestSender": "orchestrator",
     "stateSubset": {
-      "state": "META_REVIEW_RUNNING"
+      "state": "RUNNING"
     },
     "deliveryCount": 1,
     "deliveryRecipients": [

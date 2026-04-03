@@ -144,19 +144,20 @@ describe("BubbleCanvas", () => {
     expect(onPositionCommit).not.toHaveBeenCalled();
   });
 
-  it("renders Phase 3 lifecycle state messaging for meta-review running/failed and human gate", () => {
+  it("renders canonical running, failed, and human-gate lifecycle messaging", () => {
     render(
       <BubbleCanvas
         bubbles={[
           bubbleCard({
             bubbleId: "b-meta-run",
             repoPath: "/repo-a",
-            state: "META_REVIEW_RUNNING"
+            state: "RUNNING",
+            activeRole: "meta_reviewer"
           }),
           bubbleCard({
             bubbleId: "b-meta-failed",
             repoPath: "/repo-a",
-            state: "META_REVIEW_FAILED"
+            state: "FAILED"
           }),
           bubbleCard({
             bubbleId: "b-human-gate",
@@ -176,12 +177,49 @@ describe("BubbleCanvas", () => {
     expect(
       screen.getByText("meta-reviewer running autonomous gate analysis.")
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("Meta-review failed. Manual decision required.")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Failed — manual intervention needed.")).toBeInTheDocument();
     expect(
       screen.getByText(
         /Waiting for human decision after meta-reviewer recommendation/u
+      )
+    ).toBeInTheDocument();
+  });
+
+  it("renders meta-review authority messaging during recovery even when live activeRole is cleared", () => {
+    render(
+      <BubbleCanvas
+        bubbles={[
+          bubbleCard({
+            bubbleId: "b-meta-recovery",
+            repoPath: "/repo-a",
+            state: "RUNNING",
+            activeAgent: null,
+            activeRole: null,
+            metaReview: {
+              authorityActive: true,
+              runtimeDelivery: {
+                status: "uncertain",
+                reasonCode: "META_REVIEW_REQUEST_DELIVERY_UNCERTAIN",
+                message: "pane not confirmed",
+                observedAt: "2026-02-24T12:00:00.000Z",
+                observedForHandoffId: "meta_review:b-meta-recovery:round:3:attempt:1",
+                observedForRound: 3
+              }
+            }
+          })
+        ]}
+        positions={{}}
+        expandedBubbleIds={[]}
+        onPositionChange={() => undefined}
+        onPositionCommit={() => undefined}
+        onToggleExpand={() => undefined}
+        onDelete={(bubbleId) => Promise.resolve(deletedResult(bubbleId))}
+      />
+    );
+
+    expect(
+      screen.getByText(
+        "meta-reviewer running autonomous gate analysis (uncertain delivery)."
       )
     ).toBeInTheDocument();
   });

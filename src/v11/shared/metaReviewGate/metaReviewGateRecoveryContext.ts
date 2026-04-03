@@ -135,11 +135,11 @@ export async function persistRecoveryRunFailedHumanRoute(input: {
       metaReviewRun: input.runResult
     }),
     loaded: input.context.loaded,
-    expectedState: "META_REVIEW_RUNNING",
+    expectedState: "RUNNING",
     route: "human_gate_run_failed",
     runResultForRouting: input.runResult,
     parityMetadata: null,
-    targetState: "META_REVIEW_FAILED",
+    targetState: "READY_FOR_HUMAN_APPROVAL",
     stickyHumanGate: false
   }));
 }
@@ -186,7 +186,7 @@ export async function persistRecoveryResolvedHumanRoute(input: {
       metaReviewRun: input.runResultForRouting
     }),
     loaded: input.context.loaded,
-    expectedState: "META_REVIEW_RUNNING",
+    expectedState: "RUNNING",
     route: resolveHumanGateRoute(input.recommendation, input.budgetAvailable),
     runResultForRouting: input.runResultForRouting,
     parityMetadata: input.parityMetadata

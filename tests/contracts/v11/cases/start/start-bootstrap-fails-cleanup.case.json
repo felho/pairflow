@@ -1,7 +1,7 @@
 {
   "id": "start-bootstrap-fails-cleanup",
   "command": "start",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Start contract case for bootstrap failure path with cleanup and FAILED transition.",
   "input": {
     "fixture": {

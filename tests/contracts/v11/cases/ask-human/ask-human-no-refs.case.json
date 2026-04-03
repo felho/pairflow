@@ -1,8 +1,8 @@
 {
   "id": "ask-human-no-refs",
   "command": "askHuman",
-  "mode": "legacy",
-  "description": "ask-human legacy contract accepts omitted refs and emits HUMAN_QUESTION.",
+  "mode": "baseline",
+  "description": "ask-human baseline contract accepts omitted refs and emits HUMAN_QUESTION.",
   "input": {
     "question": "Need product clarification on rollout strategy?"
   },
@@ -25,6 +25,6 @@
   "tags": [
     "ask-human",
     "v11-contract",
-    "legacy"
+    "baseline"
   ]
 }

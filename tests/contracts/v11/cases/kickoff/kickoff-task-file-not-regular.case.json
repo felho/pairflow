@@ -1,8 +1,8 @@
 {
   "id": "kickoff-task-file-not-regular",
   "command": "kickoff",
-  "mode": "legacy",
-  "description": "Seed kickoff legacy contract case for task-file path that is not a regular file.",
+  "mode": "baseline",
+  "description": "Seed kickoff baseline contract case for task-file path that is not a regular file.",
   "input": {
     "task": "Ignored content for non-regular task-file path",
     "fixture": {

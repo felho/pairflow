@@ -146,8 +146,7 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
       ? props.detail.inbox.items.find((item) => item.type === "HUMAN_QUESTION") ?? null
       : null;
   const timelineExtras =
-    (props.bubble.state === "READY_FOR_APPROVAL" ||
-      props.bubble.state === "READY_FOR_HUMAN_APPROVAL") &&
+    props.bubble.state === "READY_FOR_HUMAN_APPROVAL" &&
     props.detail !== null ? (
       <div className="space-y-2 pb-1">
         <div className="rounded-[10px] border border-emerald-500/15 bg-emerald-500/[0.05] px-3 py-2.5">
@@ -155,9 +154,7 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
             Approval Package
           </div>
           <div className="text-[10px] leading-relaxed text-[#888]">
-            {props.bubble.state === "READY_FOR_HUMAN_APPROVAL"
-              ? "Human gate is active after meta-reviewer. Approve or request rework."
-              : "Reviewer found no issues. Review and approve to proceed."}
+            Human gate is active after meta-reviewer. Approve or request rework.
           </div>
         </div>
       </div>

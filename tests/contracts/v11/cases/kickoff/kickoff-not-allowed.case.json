@@ -1,8 +1,8 @@
 {
   "id": "kickoff-not-allowed",
   "command": "kickoff",
-  "mode": "legacy",
-  "description": "Seed kickoff legacy contract case for non-ideation bubble rejection.",
+  "mode": "baseline",
+  "description": "Seed kickoff baseline contract case for non-ideation bubble rejection.",
   "input": {
     "task": "Should reject kickoff on non-ideation bubble",
     "fixture": {

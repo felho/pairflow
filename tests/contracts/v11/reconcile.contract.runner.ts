@@ -29,7 +29,7 @@ export interface ReconcileContractOutput {
 
 export interface ReconcileContractRunResult {
   mode: ContractCase["mode"];
-  legacy?: ReconcileContractOutput;
+  baseline?: ReconcileContractOutput;
   v11?: ReconcileContractOutput;
 }
 
@@ -188,13 +188,13 @@ function assertContractExpectedSubset(input: {
 }
 
 function assertParityEquivalent(input: {
-  legacy: ReconcileContractOutput;
+  baseline: ReconcileContractOutput;
   v11: ReconcileContractOutput;
   caseId: string;
 }): void {
-  if (JSON.stringify(input.legacy) !== JSON.stringify(input.v11)) {
+  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
     throw new Error(
-      `reconcile parity mismatch for case=${input.caseId}: legacy=${JSON.stringify(input.legacy)} v11=${JSON.stringify(input.v11)}`
+      `reconcile parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
     );
   }
 }
@@ -290,19 +290,19 @@ export async function runReconcileContractCase(
     );
   }
 
-  if (caseDef.mode === "legacy") {
-    const legacy = await executeReconcileCase({
+  if (caseDef.mode === "baseline") {
+    const baseline = await executeReconcileCase({
       caseDef,
       executor: reconcileRuntimeSessions
     });
     assertContractExpectedSubset({
-      output: legacy,
+      output: baseline,
       expected: caseDef.expected,
-      label: "legacy"
+      label: "baseline"
     });
     return {
       mode: caseDef.mode,
-      legacy
+      baseline
     };
   }
 
@@ -322,7 +322,7 @@ export async function runReconcileContractCase(
     };
   }
 
-  const legacy = await executeReconcileCase({
+  const baseline = await executeReconcileCase({
     caseDef,
     executor: reconcileRuntimeSessions
   });
@@ -331,9 +331,9 @@ export async function runReconcileContractCase(
     executor: reconcileRuntimeSessionsV11
   });
   assertContractExpectedSubset({
-    output: legacy,
+    output: baseline,
     expected: caseDef.expected,
-    label: "parity/legacy"
+    label: "parity/baseline"
   });
   assertContractExpectedSubset({
     output: v11,
@@ -341,13 +341,13 @@ export async function runReconcileContractCase(
     label: "parity/v11"
   });
   assertParityEquivalent({
-    legacy,
+    baseline,
     v11,
     caseId: caseDef.id
   });
   return {
     mode: caseDef.mode,
-    legacy,
+    baseline,
     v11
   };
 }

@@ -1,7 +1,7 @@
 {
   "id": "start-state-not-startable",
   "command": "start",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed start contract case for rejection when state cannot be started.",
   "input": {
     "fixture": {

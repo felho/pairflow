@@ -1,7 +1,7 @@
 {
   "id": "resume-state-not-waiting-human",
   "command": "resume",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed resume contract case for rejection when state is not WAITING_HUMAN.",
   "input": {
     "fixture": {

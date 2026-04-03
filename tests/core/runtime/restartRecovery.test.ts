@@ -98,7 +98,7 @@ describe("restart recovery", () => {
     expect(registry[bubble.bubbleId]?.tmuxSessionName).toBe("pf-b_restart_01");
   });
 
-  it("preserves META_REVIEW_RUNNING on restart and keeps worktree-local pairflow bootstrap active", async () => {
+  it("preserves RUNNING meta-review authority on restart and keeps worktree-local pairflow bootstrap active", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -108,7 +108,7 @@ describe("restart recovery", () => {
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const readyForApproval = applyStateTransition(loaded.state, {
-      to: "READY_FOR_APPROVAL",
+      to: "READY_FOR_HUMAN_APPROVAL",
       activeAgent: null,
       activeRole: null,
       activeSince: null,
@@ -116,7 +116,7 @@ describe("restart recovery", () => {
     });
     const metaReviewRunning = {
       ...readyForApproval,
-      state: "META_REVIEW_RUNNING" as const,
+      state: "RUNNING" as const,
       active_agent: "codex" as const,
       active_role: "meta_reviewer" as const,
       active_since: "2026-02-23T11:01:00.000Z",
@@ -186,7 +186,7 @@ describe("restart recovery", () => {
       }
     );
 
-    expect(started.state.state).toBe("META_REVIEW_RUNNING");
+    expect(started.state.state).toBe("RUNNING");
     expect(launchInput?.implementerCommand).toContain("PAIRFLOW_EXTERNAL_COMMAND");
     expect(launchInput?.implementerCommand).toContain(
       "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE"
@@ -207,13 +207,13 @@ describe("restart recovery", () => {
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const readyForApproval = applyStateTransition(loaded.state, {
-      to: "READY_FOR_APPROVAL",
+      to: "READY_FOR_HUMAN_APPROVAL",
       lastCommandAt: "2026-02-23T12:00:00.000Z"
     });
-    const humanGate = applyStateTransition(readyForApproval, {
-      to: "READY_FOR_HUMAN_APPROVAL",
-      lastCommandAt: "2026-02-23T12:01:00.000Z"
-    });
+    const humanGate = {
+      ...readyForApproval,
+      last_command_at: "2026-02-23T12:01:00.000Z"
+    };
     await writeStateSnapshot(bubble.paths.statePath, humanGate, {
       expectedFingerprint: loaded.fingerprint,
       expectedState: "RUNNING"
@@ -339,7 +339,7 @@ describe("restart recovery", () => {
       }
     );
 
-    expect(converged.state.state).toBe("META_REVIEW_RUNNING");
+    expect(converged.state.state).toBe("RUNNING");
 
     const afterFailureState = await readStateSnapshot(bubble.paths.statePath);
     expect(afterFailureState.state.meta_review?.runtime_delivery?.status).toBe(
@@ -373,7 +373,7 @@ describe("restart recovery", () => {
       }
     );
 
-    expect(restarted.state.state).toBe("META_REVIEW_RUNNING");
+    expect(restarted.state.state).toBe("RUNNING");
 
     const restartedRegistry = await readRuntimeSessionsRegistry(
       bubble.paths.sessionsPath,

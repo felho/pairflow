@@ -9,6 +9,7 @@ import {
   applyMetaReviewGateOnConvergence,
   recoverMetaReviewGateFromSnapshot
 } from "../../../src/core/bubble/metaReviewGate.js";
+import { clearLiveMetaReviewSnapshot } from "../../../src/core/bubble/metaReview.js";
 import {
   buildMetaReviewSubmitCommandTemplate
 } from "../../../src/core/runtime/metaReviewSubmitGuidance.js";
@@ -158,7 +159,7 @@ async function writeCanonicalMetaReviewSnapshot(input: {
     },
     {
       expectedFingerprint: loaded.fingerprint,
-      expectedState: "META_REVIEW_RUNNING"
+      expectedState: "RUNNING"
     }
   );
   const bubbleDir = dirname(input.statePath);
@@ -462,7 +463,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
     expect(result.gateEnvelope.payload.metadata).toMatchObject({
       [deliveryTargetRoleMetadataKey]: "meta_reviewer"
     });
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
     expect(result.state.active_role).toBe("meta_reviewer");
     expect(result.state.meta_review?.runtime_delivery).toMatchObject({
       status: "confirmed",
@@ -472,7 +473,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
     expect(notifySpy).toHaveBeenCalledTimes(1);
 
     const persisted = await readStateSnapshot(bubble.paths.statePath);
-    expect(persisted.state.state).toBe("META_REVIEW_RUNNING");
+    expect(persisted.state.state).toBe("RUNNING");
     expect(persisted.state.meta_review?.runtime_delivery).toMatchObject({
       status: "confirmed",
       reason_code: null,
@@ -550,7 +551,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
 
     expect(result.route).toBe("meta_review_running");
     expect(result.gateEnvelope.type).toBe("TASK");
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
     expect(result.state.meta_review?.runtime_delivery).toMatchObject({
       status: "failed",
       reason_code: "META_REVIEWER_PANE_UNAVAILABLE"
@@ -594,7 +595,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
 
     expect(result.route).toBe("meta_review_running");
     expect(result.gateEnvelope.type).toBe("TASK");
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
     expect(result.state.meta_review?.runtime_delivery).toMatchObject({
       status: "failed",
       reason_code: "META_REVIEW_REQUEST_DELIVERY_FAILED"
@@ -616,8 +617,8 @@ describe("applyMetaReviewGateOnConvergence", () => {
       options
     ) => {
       if (
-        options?.expectedState === "META_REVIEW_RUNNING" &&
-        state.state === "META_REVIEW_RUNNING" &&
+        options?.expectedState === "RUNNING" &&
+        state.state === "RUNNING" &&
         state.meta_review?.runtime_delivery !== null
       ) {
         throw new StateStoreConflictError("simulated runtime delivery CAS conflict");
@@ -651,11 +652,11 @@ describe("applyMetaReviewGateOnConvergence", () => {
     );
 
     expect(result.route).toBe("meta_review_running");
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
     expect(result.state.meta_review?.runtime_delivery).toBeNull();
 
     const persisted = await readStateSnapshot(bubble.paths.statePath);
-    expect(persisted.state.state).toBe("META_REVIEW_RUNNING");
+    expect(persisted.state.state).toBe("RUNNING");
     expect(persisted.state.meta_review?.runtime_delivery).toBeNull();
   });
 
@@ -675,8 +676,8 @@ describe("applyMetaReviewGateOnConvergence", () => {
     ) => {
       if (
         !injected &&
-        options?.expectedState === "META_REVIEW_RUNNING" &&
-        state.state === "META_REVIEW_RUNNING" &&
+        options?.expectedState === "RUNNING" &&
+        state.state === "RUNNING" &&
         state.meta_review?.runtime_delivery !== null
       ) {
         injected = true;
@@ -690,7 +691,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
         });
         await writeStateSnapshot(statePath, progressed, {
           expectedFingerprint: latest.fingerprint,
-          expectedState: "META_REVIEW_RUNNING"
+          expectedState: "RUNNING"
         });
         await appendHumanApprovalRequestEnvelope({
           transcriptPath: bubble.paths.transcriptPath,
@@ -759,8 +760,8 @@ describe("applyMetaReviewGateOnConvergence", () => {
       options
     ) => {
       if (
-        options?.expectedState === "META_REVIEW_RUNNING" &&
-        state.state === "META_REVIEW_RUNNING" &&
+        options?.expectedState === "RUNNING" &&
+        state.state === "RUNNING" &&
         state.meta_review?.runtime_delivery !== null
       ) {
         throw new Error("simulated runtime delivery persistence failure");
@@ -843,7 +844,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
 
     expect(result.route).toBe("human_gate_run_failed");
     expect(result.gateEnvelope.type).toBe("APPROVAL_REQUEST");
-    expect(result.state.state).toBe("META_REVIEW_FAILED");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(setPaneCalls).toEqual([]);
   });
 
@@ -916,7 +917,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
     });
 
     expect(result.route).toBe("meta_review_running");
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
     expect(result.gateEnvelope.type).toBe("TASK");
 
     const after = await readStateSnapshot(bubble.paths.statePath);
@@ -988,7 +989,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
     expect(transcript.some((entry) => entry.type === "APPROVAL_REQUEST")).toBe(false);
   });
 
-  it("keeps cleared live meta-review state when META_REVIEW_RUNNING staging fails", async () => {
+  it("does not persist a transient READY_FOR_HUMAN_APPROVAL stage when RUNNING meta-review staging loses a CAS race", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -1018,15 +1019,49 @@ describe("applyMetaReviewGateOnConvergence", () => {
       }
     );
 
+    const writeCalls: Array<{
+      expectedState: string | undefined;
+      state: string;
+      activeRole: string | null | undefined;
+    }> = [];
+    let injected = false;
     const stageFailureWriteState: typeof writeStateSnapshot = async (
       statePath,
       state,
       options
     ) => {
+      writeCalls.push({
+        expectedState: options?.expectedState,
+        state: state.state,
+        activeRole: state.active_role
+      });
       if (
-        options?.expectedState === "READY_FOR_APPROVAL" &&
-        state.state === "META_REVIEW_RUNNING"
+        !injected &&
+        options?.expectedState === "RUNNING" &&
+        state.state === "RUNNING" &&
+        state.active_role === "meta_reviewer" &&
+        state.meta_review?.execution_context !== null
       ) {
+        injected = true;
+        const latest = await readStateSnapshot(statePath);
+        const progressed = applyStateTransition(latest.state, {
+          to: "READY_FOR_HUMAN_APPROVAL",
+          activeAgent: null,
+          activeRole: null,
+          activeSince: null,
+          lastCommandAt: "2026-03-13T12:03:12.500Z"
+        });
+        await writeStateSnapshot(
+          statePath,
+          {
+            ...progressed,
+            meta_review: clearLiveMetaReviewSnapshot(progressed.meta_review)
+          },
+          {
+            expectedFingerprint: latest.fingerprint,
+            expectedState: "RUNNING"
+          }
+        );
         throw new StateStoreConflictError("simulated meta-review-running stage failure");
       }
       return writeStateSnapshot(statePath, state, options);
@@ -1049,7 +1084,7 @@ describe("applyMetaReviewGateOnConvergence", () => {
     });
 
     const after = await readStateSnapshot(bubble.paths.statePath);
-    expect(after.state.state).toBe("RUNNING");
+    expect(after.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(after.state.meta_review).toMatchObject({
       sticky_human_gate: false,
       last_autonomous_run_id: null,
@@ -1059,11 +1094,18 @@ describe("applyMetaReviewGateOnConvergence", () => {
       last_autonomous_report_ref: null,
       last_autonomous_updated_at: null
     });
+    expect(writeCalls).toEqual([
+      {
+        expectedState: "RUNNING",
+        state: "RUNNING",
+        activeRole: "meta_reviewer"
+      }
+    ]);
   });
 });
 
 describe("recoverMetaReviewGateFromSnapshot", () => {
-  it("keeps META_REVIEW_RUNNING during recover when no durable result exists before deadline", async () => {
+  it("keeps RUNNING meta-review authority during recover when no durable result exists before deadline", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -1086,7 +1128,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       now: new Date("2026-03-12T12:09:02.000Z")
     });
     expect(recovered.route).toBe("meta_review_running");
-    expect(recovered.state.state).toBe("META_REVIEW_RUNNING");
+    expect(recovered.state.state).toBe("RUNNING");
     expect(recovered.state.meta_review?.execution_context).not.toBeNull();
     await expect(
       readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
@@ -1228,7 +1270,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/custom-approve-report.md",
         rework_target_message: null,
         updated_at: "2026-03-12T12:10:11.000Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "clean",
@@ -1295,7 +1337,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/custom-approve-report.md",
         rework_target_message: null,
         updated_at: "2026-03-12T12:10:21.000Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: []
       }
     });
@@ -1339,7 +1381,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/custom-approve-report.md",
         rework_target_message: null,
         updated_at: "2026-03-12T12:10:31.000Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -1397,7 +1439,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/custom-approve-report.md",
         rework_target_message: null,
         updated_at: "2026-03-12T12:10:35.000Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "clean",
@@ -1454,7 +1496,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/custom-approve-report.md",
         rework_target_message: null,
         updated_at: "2026-03-12T12:10:41.000Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "clean",
@@ -1594,7 +1636,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     });
   });
 
-  it("hydrates current run metadata into READY_FOR_APPROVAL restore when auto-rework dispatch append fails", async () => {
+  it("hydrates current run metadata into READY_FOR_HUMAN_APPROVAL restore when auto-rework dispatch append fails", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -1630,7 +1672,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       },
       {
         expectedFingerprint: loaded.fingerprint,
-        expectedState: "META_REVIEW_RUNNING"
+        expectedState: "RUNNING"
       }
     );
 
@@ -1677,7 +1719,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           report_ref: "artifacts/meta-review-last.json",
           rework_target_message: "Re-run implementer hardening flow.",
           updated_at: runUpdatedAt,
-          lifecycle_state: "META_REVIEW_RUNNING",
+          lifecycle_state: "RUNNING",
           warnings: [],
           report_json: buildReworkReportJson({
             runId,
@@ -1712,7 +1754,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     const restoredReadyWrite = writeCalls.find(
       (call) =>
         call.expectedState === "RUNNING" &&
-        call.state === "READY_FOR_APPROVAL"
+        call.state === "READY_FOR_HUMAN_APPROVAL"
     );
     expect(restoredReadyWrite).toBeDefined();
     expect(restoredReadyWrite?.metaReview).toMatchObject({
@@ -1761,7 +1803,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       },
       {
         expectedFingerprint: loaded.fingerprint,
-        expectedState: "META_REVIEW_RUNNING"
+        expectedState: "RUNNING"
       }
     );
 
@@ -1792,7 +1834,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
             report_ref: "artifacts/meta-review-last.json",
             rework_target_message: "Re-run implementer hardening flow.",
             updated_at: runUpdatedAt,
-            lifecycle_state: "META_REVIEW_RUNNING",
+            lifecycle_state: "RUNNING",
             warnings: [],
             report_json: buildReworkReportJson({
               runId,
@@ -1836,11 +1878,11 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     ).toMatchObject({
       rollbackReasonCode: "META_REVIEW_GATE_ROLLBACK_APPLIED",
       rollbackOutcome: "applied",
-      rollbackTargetState: "READY_FOR_APPROVAL"
+      rollbackTargetState: "READY_FOR_HUMAN_APPROVAL"
     });
 
     const finalState = await readStateSnapshot(bubble.paths.statePath);
-    expect(finalState.state.state).toBe("READY_FOR_APPROVAL");
+    expect(finalState.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(finalState.state.meta_review).toMatchObject({
       last_autonomous_run_id: runId,
       last_autonomous_status: "success",
@@ -1887,7 +1929,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/custom-run-report.md",
         rework_target_message: "Inject rework message.",
         updated_at: "2026-03-12T12:12:31.000Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: buildReworkReportJson({
           runId: "run_recover_rework_injected_01",
@@ -2000,7 +2042,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
             report_ref: "artifacts/meta-review-last.json",
             rework_target_message: "Retry with deterministic invariant checks.",
             updated_at: "2026-03-13T12:20:01.000Z",
-            lifecycle_state: "META_REVIEW_RUNNING",
+            lifecycle_state: "RUNNING",
             warnings: [],
             report_json: buildReworkReportJson({
               runId: "run_recover_rework_cas_round_drift_01",
@@ -2109,7 +2151,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
             report_ref: "artifacts/meta-review-last.json",
             rework_target_message: "Retry with deterministic identity invariant checks.",
             updated_at: "2026-03-13T12:20:06.000Z",
-            lifecycle_state: "META_REVIEW_RUNNING",
+            lifecycle_state: "RUNNING",
             warnings: [],
             report_json: buildReworkReportJson({
               runId: "run_recover_rework_cas_run_identity_drift_01",
@@ -2217,7 +2259,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           report_ref: "artifacts/meta-review-last.json",
           rework_target_message: "Retry deterministically.",
           updated_at: "2026-03-13T12:20:08.500Z",
-          lifecycle_state: "META_REVIEW_RUNNING",
+          lifecycle_state: "RUNNING",
           warnings: [],
           report_json: buildReworkReportJson({
             runId: "run_recover_rework_cas_run_identity_absent_01",
@@ -2322,7 +2364,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           report_ref: "artifacts/meta-review-last.json",
           rework_target_message: "Proceed with deterministic retry acceptance.",
           updated_at: "2026-03-13T12:20:11.000Z",
-          lifecycle_state: "META_REVIEW_RUNNING",
+          lifecycle_state: "RUNNING",
           warnings: [],
           report_json: buildReworkReportJson({
             runId: "run_recover_rework_cas_compatible_01",
@@ -2386,7 +2428,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       report_ref: "artifacts/custom-report.md",
       rework_target_message: "Retry after reviewer follow-up.",
       updated_at: "2026-03-12T12:12:36.000Z",
-      lifecycle_state: "META_REVIEW_RUNNING" as const,
+      lifecycle_state: "RUNNING" as const,
       warnings: [...providedWarnings],
       report_json: buildReworkReportJson({
         runId: "run_recover_rework_parser_divergence_01",
@@ -2469,7 +2511,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/custom-report.md",
         rework_target_message: "Retry after follow-up.",
         updated_at: "2026-03-12T12:12:39.000Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: buildReworkReportJson({
           runId: "run_recover_rework_parser_aligned_01",
@@ -2525,7 +2567,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Retry.",
         updated_at: "2026-03-12T12:12:42.000Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "opened",
@@ -2573,7 +2615,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Retry.",
         updated_at: "2026-03-12T12:12:45.000Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -2621,7 +2663,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:48.000Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -2672,7 +2714,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:50.000Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -2744,7 +2786,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:51.100Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -2805,7 +2847,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:52.300Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -2866,7 +2908,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:52.700Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -2918,7 +2960,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:51.500Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -2969,7 +3011,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:52.700Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3020,7 +3062,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:53.650Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3072,7 +3114,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:53.700Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3124,7 +3166,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:54.750Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3176,7 +3218,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:54.800Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3227,7 +3269,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:55.850Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3282,7 +3324,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:56.900Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3337,7 +3379,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:57.950Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3392,7 +3434,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:58.300Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "clean",
@@ -3448,7 +3490,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       },
       {
         expectedFingerprint: loaded.fingerprint,
-        expectedState: "META_REVIEW_RUNNING"
+        expectedState: "RUNNING"
       }
     );
     const findingsArtifact = await writeReworkFindingsArtifact({
@@ -3471,7 +3513,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Would rework if budget allowed.",
         updated_at: "2026-03-12T12:12:41.000Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: buildReworkReportJson({
           runId: "run_recover_budget_exhausted_01",
@@ -3523,7 +3565,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Need another revision.",
         updated_at: "2026-03-12T12:12:51.000Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3575,7 +3617,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Need another revision.",
         updated_at: "2026-03-12T12:12:53.500Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3630,7 +3672,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Need another revision.",
         updated_at: "2026-03-12T12:12:54.100Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3690,7 +3732,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Need another revision.",
         updated_at: "2026-03-12T12:12:55.000Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3765,7 +3807,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           report_ref: "artifacts/meta-review-last.json",
           rework_target_message: "Need another revision.",
           updated_at: "2026-03-12T12:12:56.000Z",
-          lifecycle_state: "META_REVIEW_RUNNING",
+          lifecycle_state: "RUNNING",
           warnings: [],
           report_json: {
             findings_claim_state: "open_findings",
@@ -3847,7 +3889,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           report_ref: "artifacts/meta-review-last.json",
           rework_target_message: "Need another revision.",
           updated_at: "2026-03-12T12:12:56.100Z",
-          lifecycle_state: "META_REVIEW_RUNNING",
+          lifecycle_state: "RUNNING",
           warnings: [],
           report_json: {
             findings_claim_state: "open_findings",
@@ -3920,7 +3962,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Need another revision.",
         updated_at: "2026-03-12T12:12:56.100Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3999,7 +4041,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Need another revision.",
         updated_at: "2026-03-12T12:12:57.200Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -4015,12 +4057,12 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
 
     expect(recovered.route).toBe("human_gate_dispatch_failed");
     expect(recovered.gateEnvelope.payload.summary).toContain(
-      "META_REVIEW_FINDINGS_PARITY_GUARD"
+      "META_REVIEW_FINDINGS_COUNT_MISMATCH"
     );
     expect(recovered.gateEnvelope.payload.metadata).toMatchObject({
       findings_claimed_open_total: 1,
-      findings_artifact_open_total: null,
-      findings_parity_status: "guard_failed"
+      findings_artifact_open_total: 0,
+      findings_parity_status: "mismatch"
     });
   });
 
@@ -4060,7 +4102,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Need another revision.",
         updated_at: "2026-03-12T12:12:56.000Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -4116,7 +4158,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Need another revision.",
         updated_at: "2026-03-12T12:12:58.500Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -4181,7 +4223,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           report_ref: "artifacts/meta-review-last.json",
           rework_target_message: null,
           updated_at: "2026-03-12T12:13:01.000Z",
-          lifecycle_state: "META_REVIEW_RUNNING",
+          lifecycle_state: "RUNNING",
           warnings: []
         }
       }
@@ -4217,7 +4259,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     });
   });
 
-  it("routes error status to META_REVIEW_FAILED with human_gate_run_failed", async () => {
+  it("routes error status to READY_FOR_HUMAN_APPROVAL with human_gate_run_failed", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -4256,13 +4298,13 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           report_ref: "artifacts/meta-review-last.json",
           rework_target_message: null,
           updated_at: "2026-03-12T12:14:01.000Z",
-          lifecycle_state: "META_REVIEW_RUNNING",
+          lifecycle_state: "RUNNING",
           warnings: []
         }
       }
     );
     expect(recovered.route).toBe("human_gate_run_failed");
-    expect(recovered.state.state).toBe("META_REVIEW_FAILED");
+    expect(recovered.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(recovered.gateEnvelope.type).toBe("APPROVAL_REQUEST");
     expect(recovered.gateEnvelope.payload.metadata).toMatchObject({
       meta_review_gate_route: "human_gate_run_failed",
@@ -4311,7 +4353,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/recovered-report-custom.md",
         rework_target_message: null,
         updated_at: "2026-03-12T12:14:31.000Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: buildApproveReportJson()
       }
@@ -4366,7 +4408,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           report_ref: "artifacts/non-canonical.md",
           rework_target_message: null,
           updated_at: "2026-03-12T12:14:41.000Z",
-          lifecycle_state: "META_REVIEW_RUNNING",
+          lifecycle_state: "RUNNING",
           warnings: [],
           report_json: buildApproveReportJson()
         }
@@ -4431,7 +4473,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           report_ref: "artifacts/meta-review-last.json",
           rework_target_message: null,
           updated_at: "2026-03-12T12:14:41.000Z",
-          lifecycle_state: "META_REVIEW_RUNNING",
+          lifecycle_state: "RUNNING",
           warnings: [],
           report_json: buildApproveReportJson()
         }
@@ -4500,7 +4542,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:14:51.000Z",
-        lifecycle_state: "META_REVIEW_RUNNING",
+        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: buildApproveReportJson()
       }
@@ -4557,7 +4599,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           report_ref: "artifacts/meta-review-last.json",
           rework_target_message: null,
           updated_at: "2026-03-12T12:15:05.000Z",
-          lifecycle_state: "META_REVIEW_RUNNING",
+          lifecycle_state: "RUNNING",
           warnings: []
         }
       })
@@ -4765,7 +4807,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     ).toBe(true);
   });
 
-  it("rejects recovery when lifecycle is not META_REVIEW_RUNNING", async () => {
+  it("rejects recovery when lifecycle is not RUNNING with meta-review authority", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,

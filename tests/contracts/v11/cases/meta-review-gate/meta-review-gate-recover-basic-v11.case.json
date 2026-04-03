@@ -11,7 +11,7 @@
     "status": "ok",
     "gateRoute": "human_gate_run_failed",
     "stateSubset": {
-      "state": "META_REVIEW_FAILED"
+      "state": "READY_FOR_HUMAN_APPROVAL"
     }
   },
   "tags": [

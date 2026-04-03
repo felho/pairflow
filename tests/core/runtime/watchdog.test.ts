@@ -88,10 +88,10 @@ describe("computeWatchdogStatus", () => {
     expect(status.remainingSeconds).toBeNull();
   });
 
-  it("treats META_REVIEW_RUNNING as watchdog-monitored from execution_context authority (including recovery with null active_agent) while keeping human-only states unmonitored", () => {
+  it("treats RUNNING meta-review authority as watchdog-monitored from execution_context authority (including recovery with null active_agent) while keeping human-only states unmonitored", () => {
     const metaRunning = computeWatchdogStatus(
       createState({
-        state: "META_REVIEW_RUNNING",
+        state: "RUNNING",
         active_since: "2026-02-22T12:07:00.000Z",
         last_command_at: "2026-02-22T12:08:00.000Z",
         meta_review: {
@@ -119,7 +119,7 @@ describe("computeWatchdogStatus", () => {
     );
     const metaRunningRecovery = computeWatchdogStatus(
       createState({
-        state: "META_REVIEW_RUNNING",
+        state: "RUNNING",
         active_agent: null,
         active_role: null,
         active_since: null,
@@ -194,7 +194,7 @@ describe("computeWatchdogStatus", () => {
 
     const status = computeWatchdogStatus(
       createState({
-        state: "META_REVIEW_RUNNING",
+        state: "RUNNING",
         active_agent: null,
         active_role: null,
         active_since: null,
@@ -243,7 +243,7 @@ describe("computeWatchdogStatus", () => {
 
     const status = computeWatchdogStatus(
       createState({
-        state: "META_REVIEW_RUNNING",
+        state: "RUNNING",
         active_agent: "codex",
         active_role: "meta_reviewer",
         active_since: "2026-02-22T12:04:30.000Z",

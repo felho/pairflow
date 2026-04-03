@@ -18,7 +18,7 @@ interface RenderExpandedCardOverrides {
   onPositionCommit?: () => void;
   onClose?: () => void;
   detail?: ReturnType<typeof bubbleDetail> | null;
-  bubbleState?: "READY_FOR_APPROVAL" | "READY_FOR_HUMAN_APPROVAL";
+  bubbleState?: "READY_FOR_HUMAN_APPROVAL";
 }
 
 function renderExpandedCard(overrides: RenderExpandedCardOverrides = {}): void {

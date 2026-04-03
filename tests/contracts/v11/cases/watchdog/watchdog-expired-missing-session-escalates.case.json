@@ -1,7 +1,7 @@
 {
   "id": "watchdog-expired-missing-session-escalates",
   "command": "watchdog",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Watchdog escalates after timeout when the runtime session is missing.",
   "input": {
     "fixture": {

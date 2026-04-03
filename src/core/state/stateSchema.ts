@@ -34,6 +34,12 @@ import {
   toMetaReviewExecutionContext
 } from "./executionContext.js";
 
+const legacyLifecycleStateReasonCodeByState = new Map<string, string>([
+  ["READY_FOR_APPROVAL", "LEGACY_APPROVAL_STATE_UNSUPPORTED"],
+  ["META_REVIEW_RUNNING", "LEGACY_META_REVIEW_STATE_UNSUPPORTED"],
+  ["META_REVIEW_FAILED", "LEGACY_META_REVIEW_STATE_UNSUPPORTED"]
+]);
+
 function isSafeArtifactsRef(value: string): boolean {
   return (
     value.startsWith("artifacts/") &&
@@ -806,7 +812,16 @@ export function validateBubbleStateSnapshot(
   }
 
   const state = input.state;
-  if (!isBubbleLifecycleState(state)) {
+  const legacyLifecycleReasonCode =
+    typeof state === "string"
+      ? legacyLifecycleStateReasonCodeByState.get(state) ?? null
+      : null;
+  if (legacyLifecycleReasonCode !== null) {
+    errors.push({
+      path: "state",
+      message: `${legacyLifecycleReasonCode}: lifecycle state ${String(state)} is unsupported in the Phase 5 canonical model`
+    });
+  } else if (!isBubbleLifecycleState(state)) {
     errors.push({
       path: "state",
       message: `Must be one of: ${bubbleLifecycleStates.join(", ")}`
@@ -953,8 +968,18 @@ export function validateBubbleStateSnapshot(
     activeAgent !== null || activeRole !== null || activeSince !== null;
   const hasAllActiveFields =
     activeAgent !== null && activeRole !== null && activeSince !== null;
-  const runningExecutionLifecycleActive =
-    state === "RUNNING" || state === "META_REVIEW_RUNNING";
+  const runningExecutionLifecycleActive = state === "RUNNING";
+  const mirroredMetaReviewExecutionContext =
+    metaReviewExecutionContextToRunningContext(
+      metaReview?.execution_context ?? null
+    );
+  const metaReviewAuthorityActive =
+    state === "RUNNING" &&
+    (
+      activeRole === "meta_reviewer" ||
+      executionContext?.active_role === "meta_reviewer" ||
+      mirroredMetaReviewExecutionContext !== null
+    );
 
   if (
     executionContext !== null &&
@@ -987,7 +1012,7 @@ export function validateBubbleStateSnapshot(
     });
   }
 
-  if (state === "RUNNING" && !hasAllActiveFields) {
+  if (state === "RUNNING" && !metaReviewAuthorityActive && !hasAllActiveFields) {
     errors.push({
       path: "active_*",
       message:
@@ -995,7 +1020,7 @@ export function validateBubbleStateSnapshot(
     });
   }
 
-  if (state === "RUNNING") {
+  if (state === "RUNNING" && !metaReviewAuthorityActive) {
     if (validatedRound === 0) {
       if (executionContext !== null) {
         errors.push({
@@ -1013,11 +1038,7 @@ export function validateBubbleStateSnapshot(
     }
   }
 
-  if (state === "META_REVIEW_RUNNING") {
-    const mirroredMetaReviewExecutionContext =
-      metaReviewExecutionContextToRunningContext(
-        metaReview?.execution_context ?? null
-      );
+  if (metaReviewAuthorityActive) {
     if (executionContext === null) {
       executionContext = mirroredMetaReviewExecutionContext;
     } else if (
@@ -1027,7 +1048,7 @@ export function validateBubbleStateSnapshot(
       errors.push({
         path: "execution_context",
         message:
-          "execution_context must match meta_review.execution_context when META_REVIEW_RUNNING is active"
+          "execution_context must match meta_review.execution_context while meta-review authority is active"
       });
     }
 
@@ -1035,17 +1056,17 @@ export function validateBubbleStateSnapshot(
       errors.push({
         path: "execution_context",
         message:
-          "META_REVIEW_RUNNING state requires canonical execution_context authority"
+          "RUNNING meta-review state requires canonical execution_context authority"
       });
     } else if (executionContext.active_role !== "meta_reviewer") {
       errors.push({
         path: "execution_context.active_role",
-        message: "Must be meta_reviewer while META_REVIEW_RUNNING is active"
+        message: "Must be meta_reviewer while meta-review authority is active"
       });
     } else if (executionContext.awaited_output_type !== "meta_review_result") {
       errors.push({
         path: "execution_context.awaited_output_type",
-        message: "Must be meta_review_result while META_REVIEW_RUNNING is active"
+        message: "Must be meta_review_result while meta-review authority is active"
       });
     }
 
@@ -1057,7 +1078,7 @@ export function validateBubbleStateSnapshot(
       errors.push({
         path: "meta_review.execution_context",
         message:
-          "META_REVIEW_RUNNING state requires canonical meta_review.execution_context authority"
+          "RUNNING meta-review state requires canonical meta_review.execution_context authority"
       });
     } else if (
       validatedRound !== null &&
@@ -1065,7 +1086,7 @@ export function validateBubbleStateSnapshot(
     ) {
       errors.push({
         path: "meta_review.execution_context.round",
-        message: `Must match state.round (${String(validatedRound)}) while META_REVIEW_RUNNING is active`
+        message: `Must match state.round (${String(validatedRound)}) while meta-review authority is active`
       });
     }
 
@@ -1079,7 +1100,7 @@ export function validateBubbleStateSnapshot(
       errors.push({
         path: "active_*",
         message:
-          "META_REVIEW_RUNNING state requires active_agent, active_role, and active_since unless recovering from an existing meta-review snapshot"
+          "RUNNING meta-review state requires active_agent, active_role, and active_since unless recovering from an existing meta-review snapshot"
       });
     }
 
@@ -1087,7 +1108,7 @@ export function validateBubbleStateSnapshot(
       errors.push({
         path: "active_role",
         message:
-          "META_REVIEW_RUNNING state requires active_role=meta_reviewer when active ownership is present"
+          "RUNNING meta-review state requires active_role=meta_reviewer when active ownership is present"
       });
     }
 
@@ -1095,20 +1116,20 @@ export function validateBubbleStateSnapshot(
       errors.push({
         path: "active_agent",
         message:
-          "META_REVIEW_RUNNING state requires active_agent=codex when active_role=meta_reviewer"
+          "RUNNING meta-review state requires active_agent=codex when active_role=meta_reviewer"
       });
     }
   }
 
   if (
-    state !== "META_REVIEW_RUNNING"
+    !metaReviewAuthorityActive
     && metaReview?.execution_context !== undefined
     && metaReview.execution_context !== null
   ) {
     errors.push({
       path: "meta_review.execution_context",
       message:
-        `meta_review.execution_context must be null while lifecycle state ${String(state)} is not META_REVIEW_RUNNING`
+        "meta_review.execution_context must be null while meta-review authority is inactive"
     });
   }
 
@@ -1133,7 +1154,7 @@ export function validateBubbleStateSnapshot(
       : {
           ...metaReview,
           execution_context:
-            state === "META_REVIEW_RUNNING"
+            metaReviewAuthorityActive
               ? (
                   metaReview.execution_context
                   ?? (() => {
@@ -1143,7 +1164,7 @@ export function validateBubbleStateSnapshot(
                         : toMetaReviewExecutionContext(executionContext);
                     if (normalizedExecutionContext === null) {
                       throw new Error(
-                        "Validated META_REVIEW_RUNNING state lost meta-review execution_context during normalization."
+                        "Validated RUNNING meta-review state lost meta-review execution_context during normalization."
                       );
                     }
                     return normalizedExecutionContext;

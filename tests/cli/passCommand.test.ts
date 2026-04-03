@@ -1,11 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PassCommandErrorV11 } from "../../src/v11/application/pass/emitPassV11.js";
+import * as actorEmitContextModule from "../../src/core/bubble/actorEmitContext.js";
+import * as actorProtocolModule from "../../src/v11/application/actorProtocol/emitActorProtocolV11.js";
 import {
   getPassHelpText,
   parsePassCommandOptions,
   runPassCommand
 } from "../../src/cli/commands/agent/pass.js";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("parsePassCommandOptions", () => {
   it("parses summary, envelope refs, intent and finding-level refs", () => {
@@ -198,47 +204,44 @@ describe("runPassCommand", () => {
     expect(result).toBeNull();
   });
 
-  it("wraps missing-summary parse-phase error through pass command error normalization", async () => {
-    await expect(runPassCommand([])).rejects.toBeInstanceOf(PassCommandErrorV11);
-    await expect(runPassCommand([])).rejects.toThrow(/PASS_OPTIONS_INVALID/u);
-    await expect(runPassCommand([])).rejects.toThrow(/Missing required option/u);
+  it("fails closed with removal guidance instead of invoking the legacy pass flow", async () => {
+    const resolveSpy = vi.spyOn(
+      actorEmitContextModule,
+      "resolveCompatActorEmitContextFromWorkspace"
+    );
+    const emitSpy = vi.spyOn(
+      actorProtocolModule,
+      "emitActorProtocolFromWorkspaceV11"
+    );
+
+    expect(() =>
+      runPassCommand(
+        ["--summary", "handoff complete"],
+        "/tmp/pairflow-repo"
+      )
+    ).toThrowError(PassCommandErrorV11);
+    expect(() =>
+      runPassCommand(
+        ["--summary", "handoff complete"],
+        "/tmp/pairflow-repo"
+      )
+    ).toThrow(/LEGACY_COMMAND_REMOVED/u);
+    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(emitSpy).not.toHaveBeenCalled();
   });
 
-  it("wraps malformed-finding parse-phase error through pass command error normalization", async () => {
-    await expect(
-      runPassCommand([
-        "--summary",
-        "handoff",
-        "--finding",
-        "bad-format"
-      ])
-    ).rejects.toBeInstanceOf(PassCommandErrorV11);
-    await expect(
-      runPassCommand([
-        "--summary",
-        "handoff",
-        "--finding",
-        "bad-format"
-      ])
-    ).rejects.toThrow(/PASS_FINDINGS_INVALID/u);
-  });
-
-  it("wraps invalid-intent parse-phase error through pass command error normalization", async () => {
-    await expect(
-      runPassCommand([
-        "--summary",
-        "handoff",
-        "--intent",
-        "unknown"
-      ])
-    ).rejects.toBeInstanceOf(PassCommandErrorV11);
-    await expect(
-      runPassCommand([
-        "--summary",
-        "handoff",
-        "--intent",
-        "unknown"
-      ])
-    ).rejects.toThrow(/PASS_OPTIONS_INVALID/u);
+  it("fails closed with removal guidance even when legacy args are missing or malformed", async () => {
+    for (const args of [
+      [],
+      ["--summary", "handoff", "--finding", "bad-format"],
+      ["--summary", "handoff", "--intent", "unknown"]
+    ]) {
+      expect(() => runPassCommand(args, "/tmp/pairflow-repo")).toThrowError(
+        PassCommandErrorV11
+      );
+      expect(() => runPassCommand(args, "/tmp/pairflow-repo")).toThrow(
+        /LEGACY_COMMAND_REMOVED/u
+      );
+    }
   });
 });

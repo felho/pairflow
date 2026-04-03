@@ -1,7 +1,7 @@
 {
   "id": "meta-review-gate-recover-basic",
   "command": "metaReviewGate",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed contract case for meta-review gate recover baseline.",
   "input": {
     "route": "recover",
@@ -11,7 +11,7 @@
     "status": "ok",
     "gateRoute": "human_gate_run_failed",
     "stateSubset": {
-      "state": "META_REVIEW_FAILED"
+      "state": "READY_FOR_HUMAN_APPROVAL"
     }
   },
   "tags": [

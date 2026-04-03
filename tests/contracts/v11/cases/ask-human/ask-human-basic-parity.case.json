@@ -2,7 +2,7 @@
   "id": "ask-human-basic-parity",
   "command": "askHuman",
   "mode": "parity",
-  "description": "ask-human v11 wrapper matches legacy behavior.",
+  "description": "ask-human v11 wrapper matches baseline behavior.",
   "input": {
     "question": "Need product clarification on rollout strategy?",
     "refs": [

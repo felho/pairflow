@@ -1,7 +1,7 @@
 {
   "id": "merge-repo-dirty",
   "command": "merge",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed merge contract case for repository dirty guard.",
   "input": {
     "tmuxSessionExisted": false,

@@ -1,7 +1,7 @@
 {
   "id": "commit-staged-files-empty",
   "command": "commit",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed commit contract case for rejection when no staged files exist and auto stage is disabled.",
   "input": {
     "auto": false,

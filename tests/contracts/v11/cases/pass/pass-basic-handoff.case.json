@@ -1,7 +1,7 @@
 {
   "id": "pass-basic-handoff",
   "command": "pass",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed contract case for PASS handoff baseline in M0.",
   "input": {
     "summary": "Implementer pass seed case",

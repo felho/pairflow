@@ -1,7 +1,7 @@
 {
   "id": "start-basic",
   "command": "start",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed start contract case for CREATED to RUNNING baseline.",
   "input": {},
   "expected": {

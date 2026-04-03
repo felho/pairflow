@@ -1,8 +1,8 @@
 {
   "id": "approval-approve-basic",
   "command": "approval",
-  "mode": "legacy",
-  "description": "Seed approval approve contract case for READY_FOR_APPROVAL baseline.",
+  "mode": "baseline",
+  "description": "Seed approval approve contract case for READY_FOR_HUMAN_APPROVAL baseline.",
   "input": {
     "action": "approve"
   },

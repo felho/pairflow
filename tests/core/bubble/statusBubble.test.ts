@@ -117,7 +117,7 @@ describe("getBubbleStatus", () => {
     expect(status.transcript.lastMessageType).toBe("HUMAN_REPLY");
   });
 
-  it("returns inspectable status for legacy META_REVIEW_RUNNING state missing execution_context", async () => {
+  it("returns inspectable status for RUNNING meta-review authority missing execution_context", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -129,7 +129,7 @@ describe("getBubbleStatus", () => {
       bubble.paths.statePath,
       `${JSON.stringify({
         bubble_id: bubble.bubbleId,
-        state: "META_REVIEW_RUNNING",
+        state: "RUNNING",
         round: 1,
         active_agent: "codex",
         active_since: "2026-02-22T14:10:00.000Z",
@@ -158,19 +158,19 @@ describe("getBubbleStatus", () => {
       now: new Date("2026-02-22T14:12:00.000Z")
     });
 
-    expect(status.state).toBe("META_REVIEW_RUNNING");
+    expect(status.state).toBe("RUNNING");
     expect(status.watchdog.monitored).toBe(false);
     expect(status.pendingInboxItems.total).toBe(0);
     expect(status.stateValidation?.errors).toEqual([
       {
         path: "execution_context",
         message:
-          "META_REVIEW_RUNNING state requires canonical execution_context authority"
+          "RUNNING meta-review state requires canonical execution_context authority"
       },
       {
         path: "meta_review.execution_context",
         message:
-          "META_REVIEW_RUNNING state requires canonical meta_review.execution_context authority"
+          "RUNNING meta-review state requires canonical meta_review.execution_context authority"
       }
     ]);
   });

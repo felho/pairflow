@@ -1,7 +1,7 @@
 {
   "id": "reconcile-stale-reason-non-runtime-state",
   "command": "reconcile",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Reconcile marks runtime session stale when bubble state is non-runtime.",
   "input": {
     "fixture": {

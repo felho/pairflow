@@ -2,7 +2,7 @@
   "id": "gate-apply-basic-parity",
   "command": "gate",
   "mode": "parity",
-  "description": "Seed contract case for gate alias apply legacy-v11 parity baseline.",
+  "description": "Seed contract case for gate alias apply baseline-v11 parity baseline.",
   "input": {
     "route": "apply",
     "summary": "Seed gate alias apply contract summary",
@@ -12,7 +12,7 @@
     "status": "ok",
     "gateRoute": "meta_review_running",
     "stateSubset": {
-      "state": "META_REVIEW_RUNNING"
+      "state": "RUNNING"
     }
   },
   "tags": [

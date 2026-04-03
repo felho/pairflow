@@ -9,9 +9,8 @@ import {
 } from "../../../types/protocol.js";
 export { resolveMetaReviewerPaneWarning } from "./metaReviewGatePaneBinding.js";
 export {
-  restoreRunningAfterStagedReadyFailure,
   stageMetaReviewRunningState,
-  stageReadyForApprovalState
+  throwMetaReviewRunningStageFailure
 } from "./metaReviewGateStateStaging.js";
 import {
   buildHumanGateSummary,
@@ -56,7 +55,7 @@ export async function appendMetaReviewKickoffEnvelope(input: {
           [deliveryTargetRoleMetadataKey]: "meta_reviewer",
           actor: "meta-review-gate",
           actor_agent: "orchestrator",
-          lifecycle_state: "META_REVIEW_RUNNING",
+          lifecycle_state: "RUNNING",
           meta_review_handoff_id: input.handoffId
         }
       },
@@ -96,10 +95,10 @@ export async function persistMetaReviewRunFailedRoute(input: {
     }),
     refs: input.refs,
     loaded: input.loaded,
-    expectedState: "META_REVIEW_RUNNING",
+    expectedState: "RUNNING",
     route: "human_gate_run_failed",
     fallbackRecommendation: "inconclusive",
-    targetState: "META_REVIEW_FAILED",
+    targetState: "READY_FOR_HUMAN_APPROVAL",
     stickyHumanGate: false
   });
 }

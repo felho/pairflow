@@ -20,7 +20,7 @@ describe("state machine", () => {
     const initial = createInitialBubbleState("b_test_01");
     expect(() =>
       applyStateTransition(initial, {
-        to: "READY_FOR_APPROVAL"
+        to: "READY_FOR_HUMAN_APPROVAL"
       })
     ).toThrow(/bubble b_test_01/u);
   });
@@ -134,7 +134,7 @@ describe("state machine", () => {
     });
 
     const readyForApproval = applyStateTransition(running, {
-      to: "READY_FOR_APPROVAL",
+      to: "READY_FOR_HUMAN_APPROVAL",
       activeAgent: null,
       activeRole: null,
       activeSince: null,

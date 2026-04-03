@@ -44,7 +44,7 @@ export type ResumeContractOutput =
 
 export interface ResumeContractRunResult {
   mode: ContractCase["mode"];
-  legacy?: ResumeContractOutput;
+  baseline?: ResumeContractOutput;
   v11?: ResumeContractOutput;
 }
 
@@ -151,13 +151,13 @@ function assertContractExpectedSubset(input: {
 }
 
 function assertParityEquivalent(input: {
-  legacy: ResumeContractOutput;
+  baseline: ResumeContractOutput;
   v11: ResumeContractOutput;
   caseId: string;
 }): void {
-  if (JSON.stringify(input.legacy) !== JSON.stringify(input.v11)) {
+  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
     throw new Error(
-      `resume parity mismatch for case=${input.caseId}: legacy=${JSON.stringify(input.legacy)} v11=${JSON.stringify(input.v11)}`
+      `resume parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
     );
   }
 }
@@ -276,19 +276,19 @@ export async function runResumeContractCase(
     );
   }
 
-  if (caseDef.mode === "legacy") {
-    const legacy = await executeResumeCase({
+  if (caseDef.mode === "baseline") {
+    const baseline = await executeResumeCase({
       caseDef,
       executor: resumeBubble
     });
     assertContractExpectedSubset({
-      output: legacy,
+      output: baseline,
       expected: caseDef.expected,
-      label: "legacy"
+      label: "baseline"
     });
     return {
       mode: caseDef.mode,
-      legacy
+      baseline
     };
   }
 
@@ -308,7 +308,7 @@ export async function runResumeContractCase(
     };
   }
 
-  const legacy = await executeResumeCase({
+  const baseline = await executeResumeCase({
     caseDef,
     executor: resumeBubble
   });
@@ -317,9 +317,9 @@ export async function runResumeContractCase(
     executor: resumeBubbleV11
   });
   assertContractExpectedSubset({
-    output: legacy,
+    output: baseline,
     expected: caseDef.expected,
-    label: "parity/legacy"
+    label: "parity/baseline"
   });
   assertContractExpectedSubset({
     output: v11,
@@ -327,13 +327,13 @@ export async function runResumeContractCase(
     label: "parity/v11"
   });
   assertParityEquivalent({
-    legacy,
+    baseline,
     v11,
     caseId: caseDef.id
   });
   return {
     mode: caseDef.mode,
-    legacy,
+    baseline,
     v11
   };
 }

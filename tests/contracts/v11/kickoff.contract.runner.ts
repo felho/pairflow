@@ -58,7 +58,7 @@ export interface KickoffContractOutput {
 
 export interface KickoffContractRunResult {
   mode: ContractCase["mode"];
-  legacy?: KickoffContractOutput;
+  baseline?: KickoffContractOutput;
   v11?: KickoffContractOutput;
 }
 
@@ -105,7 +105,7 @@ function parseKickoffFixtureInput(
       taskFileDirectory: false,
       taskInputConflict: false,
       taskInputMissing: false,
-      bubbleTask: "Legacy kickoff fixture task"
+      bubbleTask: "Baseline kickoff fixture task"
     };
   }
   if (!isRecord(fixtureRaw)) {
@@ -240,7 +240,7 @@ function parseKickoffFixtureInput(
     taskFileDirectory: taskFileDirectoryRaw ?? false,
     taskInputConflict: taskInputConflictRaw ?? false,
     taskInputMissing: taskInputMissingRaw ?? false,
-    bubbleTask: bubbleTaskRaw?.trim() ?? "Legacy kickoff fixture task"
+    bubbleTask: bubbleTaskRaw?.trim() ?? "Baseline kickoff fixture task"
   };
 }
 
@@ -358,13 +358,13 @@ function assertContractExpectedSubset(input: {
 }
 
 function assertParityEquivalent(input: {
-  legacy: KickoffContractOutput;
+  baseline: KickoffContractOutput;
   v11: KickoffContractOutput;
   caseId: string;
 }): void {
-  if (JSON.stringify(input.legacy) !== JSON.stringify(input.v11)) {
+  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
     throw new Error(
-      `kickoff parity mismatch for case=${input.caseId}: legacy=${JSON.stringify(input.legacy)} v11=${JSON.stringify(input.v11)}`
+      `kickoff parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
     );
   }
 }
@@ -569,19 +569,19 @@ export async function runKickoffContractCase(
     throw new Error(`Unsupported command for kickoff contract runner: ${caseDef.command}`);
   }
 
-  if (caseDef.mode === "legacy") {
-    const legacy = await executeKickoffCase({
+  if (caseDef.mode === "baseline") {
+    const baseline = await executeKickoffCase({
       caseDef,
       executor: kickoffBubble
     });
     assertContractExpectedSubset({
-      output: legacy,
+      output: baseline,
       expected: caseDef.expected,
-      label: "legacy"
+      label: "baseline"
     });
     return {
       mode: caseDef.mode,
-      legacy
+      baseline
     };
   }
 
@@ -601,7 +601,7 @@ export async function runKickoffContractCase(
     };
   }
 
-  const legacy = await executeKickoffCase({
+  const baseline = await executeKickoffCase({
     caseDef,
     executor: kickoffBubble
   });
@@ -610,9 +610,9 @@ export async function runKickoffContractCase(
     executor: kickoffBubbleV11
   });
   assertContractExpectedSubset({
-    output: legacy,
+    output: baseline,
     expected: caseDef.expected,
-    label: "parity/legacy"
+    label: "parity/baseline"
   });
   assertContractExpectedSubset({
     output: v11,
@@ -620,13 +620,13 @@ export async function runKickoffContractCase(
     label: "parity/v11"
   });
   assertParityEquivalent({
-    legacy,
+    baseline,
     v11,
     caseId: caseDef.id
   });
   return {
     mode: caseDef.mode,
-    legacy,
+    baseline,
     v11
   };
 }

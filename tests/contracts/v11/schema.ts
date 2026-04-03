@@ -1,4 +1,4 @@
-export type CommandMigrationState = "legacy" | "parity" | "v11";
+export type CommandMigrationState = "baseline" | "parity" | "v11";
 
 export interface ContractCaseExpected {
   status: string;
@@ -46,8 +46,8 @@ export function assertContractCaseShape(value: unknown): asserts value is Contra
   if (typeof value.command !== "string" || value.command.length === 0) {
     throw new Error("Contract case command must be a non-empty string.");
   }
-  if (value.mode !== "legacy" && value.mode !== "parity" && value.mode !== "v11") {
-    throw new Error("Contract case mode must be one of: legacy, parity, v11.");
+  if (value.mode !== "baseline" && value.mode !== "parity" && value.mode !== "v11") {
+    throw new Error("Contract case mode must be one of: baseline, parity, v11.");
   }
   if (typeof value.description !== "string" || value.description.length === 0) {
     throw new Error("Contract case description must be a non-empty string.");

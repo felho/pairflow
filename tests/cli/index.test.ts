@@ -34,18 +34,24 @@ describe("runCli", () => {
     stderrSpy.mockRestore();
   });
 
-  it("supports top-level pass help", async () => {
+  it("routes top-level pass help to removal guidance", async () => {
     const exitCode = await runCli(["pass", "--help"]);
 
     expect(exitCode).toBe(0);
     expect(stdoutSpy).toHaveBeenCalled();
+    const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+    expect(output).toContain("Removed legacy alias:");
+    expect(output).toContain("pairflow pass");
   });
 
-  it("supports agent pass namespace", async () => {
+  it("routes agent pass help to removal guidance", async () => {
     const exitCode = await runCli(["agent", "pass", "--help"]);
 
     expect(exitCode).toBe(0);
     expect(stdoutSpy).toHaveBeenCalled();
+    const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+    expect(output).toContain("Removed legacy alias:");
+    expect(output).toContain("pairflow pass");
   });
 
   it("supports agent emit namespace", async () => {
@@ -55,18 +61,24 @@ describe("runCli", () => {
     expect(stdoutSpy).toHaveBeenCalled();
   });
 
-  it("supports top-level ask-human help", async () => {
+  it("routes top-level ask-human help to removal guidance", async () => {
     const exitCode = await runCli(["ask-human", "--help"]);
 
     expect(exitCode).toBe(0);
     expect(stdoutSpy).toHaveBeenCalled();
+    const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+    expect(output).toContain("Removed legacy alias:");
+    expect(output).toContain("pairflow ask-human");
   });
 
-  it("supports agent ask-human namespace", async () => {
+  it("routes agent ask-human help to removal guidance", async () => {
     const exitCode = await runCli(["agent", "ask-human", "--help"]);
 
     expect(exitCode).toBe(0);
     expect(stdoutSpy).toHaveBeenCalled();
+    const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+    expect(output).toContain("Removed legacy alias:");
+    expect(output).toContain("pairflow ask-human");
   });
 
   it("supports bubble reply help", async () => {
@@ -181,18 +193,24 @@ describe("runCli", () => {
     expect(stdoutSpy).toHaveBeenCalled();
   });
 
-  it("supports top-level converged help", async () => {
+  it("routes top-level converged help to removal guidance", async () => {
     const exitCode = await runCli(["converged", "--help"]);
 
     expect(exitCode).toBe(0);
     expect(stdoutSpy).toHaveBeenCalled();
+    const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+    expect(output).toContain("Removed legacy alias:");
+    expect(output).toContain("pairflow converged");
   });
 
-  it("supports agent converged namespace", async () => {
+  it("routes agent converged help to removal guidance", async () => {
     const exitCode = await runCli(["agent", "converged", "--help"]);
 
     expect(exitCode).toBe(0);
     expect(stdoutSpy).toHaveBeenCalled();
+    const output = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+    expect(output).toContain("Removed legacy alias:");
+    expect(output).toContain("pairflow converged");
   });
 
   it("supports bubble approve help", async () => {
@@ -241,6 +259,12 @@ describe("runCli", () => {
 
     expect(exitCode).toBe(1);
     expect(stderrSpy).toHaveBeenCalled();
+    const output = stderrSpy.mock.calls.map((call) => String(call[0])).join("");
+    expect(output).toContain("agent emit");
+    expect(output).not.toContain("agent pass");
+    expect(output).not.toContain("agent ask-human");
+    expect(output).not.toContain("agent converged");
+    expect(output).not.toContain(", pass,");
   });
 
   it("rejects unknown bubble subcommand", async () => {
@@ -487,7 +511,7 @@ describe("runCli", () => {
       join(repoPath, ".pairflow", "bubbles", bubble.bubbleId, "state.json"),
       {
         ...loaded.state,
-        state: "META_REVIEW_RUNNING",
+        state: "RUNNING",
         active_agent: "codex",
         active_role: "meta_reviewer",
         active_since: "2026-03-08T12:49:00.000Z",
@@ -587,7 +611,8 @@ describe("runCli", () => {
     expect(errorText).toContain("bubble watchdog");
     expect(errorText).toContain("repo list");
     expect(errorText).toContain("metrics report");
-    expect(errorText).toContain("agent converged");
+    expect(errorText).toContain("agent emit");
+    expect(errorText).not.toContain("agent converged");
   });
 
   it("returns non-zero for bubble delete when confirmation is required", async () => {

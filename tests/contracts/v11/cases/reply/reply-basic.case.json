@@ -1,7 +1,7 @@
 {
   "id": "reply-basic",
   "command": "reply",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed contract case for HUMAN_REPLY baseline in M0.",
   "input": {
     "message": "Acknowledged. Continue with the current plan.",

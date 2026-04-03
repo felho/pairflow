@@ -92,7 +92,7 @@ Spec lock:
    - keeps blocker boundary (`P0/P1`) strict.
 4. Engineer
    - responds in `WAITING_HUMAN`,
-   - decides approve/rework in `READY_FOR_APPROVAL`,
+   - decides approve/rework in `READY_FOR_HUMAN_APPROVAL`,
    - closes bubble.
 
 ## Pairflow Lifecycle Command Order

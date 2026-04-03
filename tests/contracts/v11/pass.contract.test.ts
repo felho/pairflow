@@ -92,7 +92,7 @@ const passInvalidInputCases: Array<{
     caseDef: {
       id: "pass-invalid-empty-summary",
       command: "pass",
-      mode: "legacy",
+      mode: "baseline",
       description: "invalid empty summary validation",
       input: {
         summary: "   ",
@@ -110,7 +110,7 @@ const passInvalidInputCases: Array<{
     caseDef: {
       id: "pass-invalid-refs",
       command: "pass",
-      mode: "legacy",
+      mode: "baseline",
       description: "invalid refs validation",
       input: {
         summary: "Valid summary",
@@ -147,7 +147,7 @@ const passInvalidInputCases: Array<{
     caseDef: {
       id: "pass-invalid-no-findings",
       command: "pass",
-      mode: "legacy",
+      mode: "baseline",
       description: "invalid noFindings validation",
       input: {
         summary: "Valid summary",
@@ -189,7 +189,7 @@ describe("v11 pass contract harness skeleton", () => {
     );
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("pass");
-    expect(caseDef.mode).toBe("legacy");
+    expect(caseDef.mode).toBe("baseline");
     expect(caseDef.expected.status).toBe("ok");
   });
 
@@ -257,7 +257,7 @@ describe("v11 pass contract harness skeleton", () => {
   );
 
   it(
-    "executes legacy, v11 and parity assertions via shared runner",
+    "executes baseline, v11 and parity assertions via shared runner",
     { timeout: CONTRACT_TEST_TIMEOUT.parityExhaustiveMs },
     async () => {
       const casePaths = await listPassCasePaths();
@@ -271,17 +271,17 @@ describe("v11 pass contract harness skeleton", () => {
         const caseDef = await readContractCase(casePath);
         seenModes.add(caseDef.mode);
         const run = await runPassContractCase(caseDef);
-        if (caseDef.mode === "legacy") {
-          expect(run.legacy?.status).toBe(caseDef.expected.status);
+        if (caseDef.mode === "baseline") {
+          expect(run.baseline?.status).toBe(caseDef.expected.status);
           if (caseDef.expected.reasonCode !== undefined) {
-            expect(run.legacy?.reasonCode).toBe(caseDef.expected.reasonCode);
+            expect(run.baseline?.reasonCode).toBe(caseDef.expected.reasonCode);
           }
           expect(run.v11).toBeUndefined();
-          seenReasonCodes.add(run.legacy?.reasonCode ?? "");
-          if (run.legacy?.status === "ok") {
-            seenEnvelopeTypes.add(run.legacy.envelopeType);
+          seenReasonCodes.add(run.baseline?.reasonCode ?? "");
+          if (run.baseline?.status === "ok") {
+            seenEnvelopeTypes.add(run.baseline.envelopeType);
           }
-          seenStates.add(run.legacy?.stateSubset.state ?? "");
+          seenStates.add(run.baseline?.stateSubset.state ?? "");
           continue;
         }
         if (caseDef.mode === "v11") {
@@ -289,7 +289,7 @@ describe("v11 pass contract harness skeleton", () => {
           if (caseDef.expected.reasonCode !== undefined) {
             expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
           }
-          expect(run.legacy).toBeUndefined();
+          expect(run.baseline).toBeUndefined();
           seenReasonCodes.add(run.v11?.reasonCode ?? "");
           if (run.v11?.status === "ok") {
             seenEnvelopeTypes.add(run.v11.envelopeType);
@@ -298,20 +298,20 @@ describe("v11 pass contract harness skeleton", () => {
           continue;
         }
 
-        expect(run.legacy).toBeDefined();
+        expect(run.baseline).toBeDefined();
         expect(run.v11).toBeDefined();
-        expect(run.legacy).toEqual(run.v11);
-        expect(run.legacy?.status).toBe(caseDef.expected.status);
+        expect(run.baseline).toEqual(run.v11);
+        expect(run.baseline?.status).toBe(caseDef.expected.status);
         if (caseDef.expected.reasonCode !== undefined) {
-          expect(run.legacy?.reasonCode).toBe(caseDef.expected.reasonCode);
+          expect(run.baseline?.reasonCode).toBe(caseDef.expected.reasonCode);
         }
-        seenReasonCodes.add(run.legacy?.reasonCode ?? "");
-        if (run.legacy?.status === "ok") {
-          seenEnvelopeTypes.add(run.legacy.envelopeType);
+        seenReasonCodes.add(run.baseline?.reasonCode ?? "");
+        if (run.baseline?.status === "ok") {
+          seenEnvelopeTypes.add(run.baseline.envelopeType);
         }
-        seenStates.add(run.legacy?.stateSubset.state ?? "");
+        seenStates.add(run.baseline?.stateSubset.state ?? "");
       }
-      expect(seenModes.has("legacy")).toBe(true);
+      expect(seenModes.has("baseline")).toBe(true);
       expect(seenModes.has("v11")).toBe(true);
       expect(seenModes.has("parity")).toBe(true);
       expect(seenReasonCodes.has("PASS_ACCEPTED")).toBe(true);
@@ -319,7 +319,7 @@ describe("v11 pass contract harness skeleton", () => {
       expect(seenEnvelopeTypes.has("PASS")).toBe(true);
       expect(seenEnvelopeTypes.has("CONVERGENCE")).toBe(true);
       expect(seenStates.has("RUNNING")).toBe(true);
-      expect(seenStates.has("META_REVIEW_RUNNING")).toBe(true);
+      expect(seenStates.has("RUNNING")).toBe(true);
     }
   );
 
@@ -336,7 +336,7 @@ describe("v11 pass contract harness skeleton", () => {
       runPassContractCase({
         id: "pass-unsupported-command",
         command: "converged",
-        mode: "legacy",
+        mode: "baseline",
         description: "Wrong command routed to pass runner",
         input: {
           summary: "Should not execute",

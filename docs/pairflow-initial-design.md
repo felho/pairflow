@@ -41,7 +41,7 @@ Components:
    - Creates and manages per-bubble git worktrees (or optional full clone mode).
 3. Agent Runners (Claude/Codex adapters)
    - Starts CLI sessions and monitors health/liveness.
-   - Message transport is command-driven through canonical actor emit (`pairflow agent emit --kind ...`) plus retained compatibility adapters, not raw stdout scraping.
+   - Message transport is command-driven through canonical actor emit (`pairflow agent emit --kind ...`), not raw stdout scraping.
    - Optional telemetry tap may capture outputs for diagnostics, but it is not authoritative for protocol flow.
 4. Protocol Bus
    - Persists message envelopes and artifacts as append-only logs.
@@ -52,9 +52,9 @@ Components:
 
 ## Merged v1.1 Delivery Strategy
 Balanced merge of the two planning passes:
-1. Keep fast local primitives from `orchestra` (tmux + file-backed exchange + simple launcher workflow).
+1. Keep fast local tmux + file-backed exchange + simple launcher workflow primitives.
 2. Keep strict orchestration guarantees from this spec (state machine ownership, convergence policy, commit gates).
-3. Use agent-friendly short commands (`pass`, `ask-human`, `converged`) but map them to validated structured envelopes.
+3. Use canonical actor emit commands (`pairflow agent emit --kind pass|human_question|convergence`) with validated structured envelopes.
 4. Build minimal first, but never bypass mandatory checks for quality-first goals.
 
 ## Bubble Isolation Model
@@ -73,31 +73,24 @@ Bubble-level states:
 2. `PREPARING_WORKSPACE`
 3. `RUNNING`
 4. `WAITING_HUMAN`
-5. `READY_FOR_APPROVAL`
-6. `META_REVIEW_RUNNING`
-7. `META_REVIEW_FAILED`
-8. `READY_FOR_HUMAN_APPROVAL`
-9. `APPROVED_FOR_COMMIT`
-10. `COMMITTED`
-11. `DONE`
-12. `FAILED`
-13. `CANCELLED`
+5. `READY_FOR_HUMAN_APPROVAL`
+6. `APPROVED_FOR_COMMIT`
+7. `COMMITTED`
+8. `DONE`
+9. `FAILED`
+10. `CANCELLED`
 
 Allowed transitions:
 1. `CREATED -> PREPARING_WORKSPACE -> RUNNING`
 2. `RUNNING -> WAITING_HUMAN` when either agent emits `HUMAN_QUESTION`
 3. `WAITING_HUMAN -> RUNNING` after human reply
-4. `RUNNING -> READY_FOR_APPROVAL` on reviewer convergence criteria pass
-5. `READY_FOR_APPROVAL -> META_REVIEW_RUNNING` when autonomous meta-review gate starts
-6. `META_REVIEW_RUNNING -> RUNNING` on autonomous rework dispatch
-7. `META_REVIEW_RUNNING -> READY_FOR_HUMAN_APPROVAL` on successful gate run that requires human decision (approve/inconclusive/budget exhausted/sticky bypass)
-8. `META_REVIEW_RUNNING -> META_REVIEW_FAILED` on meta-review runner execution failure that occurs before durable kickoff is established, or on unrecoverable gate failure outside runtime-delivery uncertainty
-9. `READY_FOR_HUMAN_APPROVAL -> APPROVED_FOR_COMMIT` on explicit user approval
-10. `READY_FOR_HUMAN_APPROVAL -> RUNNING` on explicit immediate rework decision (`APPROVAL_DECISION=rework`)
-11. `META_REVIEW_FAILED -> APPROVED_FOR_COMMIT` on explicit user approval with override
-12. `META_REVIEW_FAILED -> RUNNING` on explicit immediate rework decision (`APPROVAL_DECISION=rework`)
-13. `WAITING_HUMAN` supports deferred deterministic rework intent queue; scheduler consumes pending intent and routes next actionable handoff to implementer (`WAITING_HUMAN -> RUNNING`) without reviewer relay
-14. `APPROVED_FOR_COMMIT -> COMMITTED -> DONE`
+4. `RUNNING -> RUNNING` on reviewer convergence criteria pass when autonomous meta-review gate starts (`execution_context.active_role=meta_reviewer` while lifecycle remains `RUNNING`)
+5. `RUNNING -> RUNNING` on autonomous rework dispatch
+6. `RUNNING -> READY_FOR_HUMAN_APPROVAL` when convergence must hand back to a human decision (approve/inconclusive/budget exhausted/run-failed diagnostics/sticky human gate)
+7. `READY_FOR_HUMAN_APPROVAL -> APPROVED_FOR_COMMIT` on explicit user approval
+8. `READY_FOR_HUMAN_APPROVAL -> RUNNING` on explicit immediate rework decision (`APPROVAL_DECISION=rework`)
+9. `WAITING_HUMAN` supports deferred deterministic rework intent queue; scheduler consumes pending intent and routes next actionable handoff to implementer (`WAITING_HUMAN -> RUNNING`) without reviewer relay
+10. `APPROVED_FOR_COMMIT -> COMMITTED -> DONE`
 15. Any active state -> `FAILED` on unrecoverable errors
 16. Any non-final state -> `CANCELLED` on user stop
 
@@ -106,24 +99,24 @@ RUNNING turn tracking (required):
 2. `state.json` must track round-role metadata: `active_role` (`implementer` | `reviewer`) and `round_role_history`.
 3. Active autonomous work must persist a canonical top-level `execution_context` authority block with `active_role`, `handoff_id`, `round`, `awaited_output_type`, `started_at`, `deadline_at`, and `attempt`.
 4. `active_role` remains a lifecycle/status mirror, but authority belongs to `execution_context.active_role`.
-5. The status pane shows high-level state, active turn owner, active role, and compatibility labels when present.
+5. The status pane shows high-level state, active turn owner, active role, and meta-review diagnostics when present.
 6. Liveness watchdog uses canonical `execution_context.started_at` / `deadline_at` whenever an active execution context exists; runtime activity remains observational.
 7. Timeout is configured by `watchdog_timeout_minutes` in `bubble.toml` (default: `30`), then standard `RUNNING` escalation additionally requires either a hard dead-signal (missing session / unreadable pane) or a post-timeout quiet window.
 
-META_REVIEW_RUNNING handoff semantics:
-1. `META_REVIEW_RUNNING` must persist the same canonical top-level `execution_context` authority used by generic `RUNNING`.
-2. `meta_review.execution_context` may remain as a compatibility mirror, but it is no longer a separate primary authority source.
+Meta-review authority while lifecycle remains `RUNNING`:
+1. `RUNNING` must persist the same canonical top-level `execution_context` authority used by generic `RUNNING`.
+2. `meta_review.execution_context` may remain as a cached diagnostic mirror, but it is no longer a separate primary authority source.
 3. The active meta-review execution context contains `active_role=meta_reviewer`, `handoff_id`, `round`, `awaited_output_type=meta_review_result`, `started_at`, `deadline_at`, and `attempt`.
 4. `pairflow agent emit --kind meta_review_result` is the canonical success-path handoff command. A successful submit validates the active execution context, persists the canonical result, applies the gate route, advances lifecycle state, and closes meta-reviewer ownership in the same command flow.
 5. A submit that cannot produce a routeable normal handoff must fail closed as a typed submit error; a canonical snapshot alone is not a successful handoff.
 6. The watchdog is not the normal success-path router for canonical meta-review submits before timeout expiry.
 7. Watchdog responsibility for meta-review is limited to timeout/liveness/recovery fallback handling when normal submit handoff did not finish.
 8. Meta-review authority must not be inferred from `active_since`, `last_command_at`, resume, restart, or general liveness updates; those fields remain observational and must not extend the canonical submit window.
-9. After the durable kickoff envelope is appended, runtime delivery confirmation is observability only. Pane-marker uncertainty or pane availability problems must not, by themselves, route the bubble out of `META_REVIEW_RUNNING`.
+9. After the durable kickoff envelope is appended, runtime delivery confirmation is observability only. Pane-marker uncertainty or pane availability problems must not, by themselves, route the bubble out of canonical `RUNNING`.
 10. `state.json` may persist `meta_review.runtime_delivery` as a non-authority diagnostic block with `status = confirmed|uncertain|failed`, optional `reason_code`/`message`, `observed_at`, and correlation fields such as `observed_for_handoff_id` and `observed_for_round`.
 11. `meta_review.runtime_delivery` must never extend or replace the canonical authority model. Submit acceptance, recovery, and timeout decisions remain anchored to top-level `execution_context` plus the current-round durable `meta_review_result`.
 12. Canonical `pairflow agent emit --kind meta_review_result` authorization must not depend on runtime pane-binding freshness. Missing or deactivated `metaReviewerPane` state after delivery failure, restart, or resume is a runtime diagnostic, not a submit gate, as long as the current-round execution context is still valid.
-13. Recovery may temporarily clear live `active_agent` / `active_role` ownership while keeping `META_REVIEW_RUNNING` plus a valid canonical execution context. In that state canonical submit remains allowed; conflicting live ownership is still rejected, but missing live ownership is not an authority failure by itself.
+13. Recovery may temporarily clear live `active_agent` / `active_role` ownership while keeping `RUNNING` plus a valid canonical execution context. In that state canonical submit remains allowed; conflicting live ownership is still rejected, but missing live ownership is not an authority failure by itself.
 14. Status and recovery surfaces must project runtime-delivery diagnostics only when their correlation fields still match the active execution context; stale diagnostics are archival only.
 
 ## Convergence Policy (Quality-First)
@@ -146,7 +139,7 @@ Convergence criteria (MVP):
 5. No unresolved human questions.
 
 Convergence command policy:
-1. Canonical convergence emit (`pairflow agent emit --kind convergence ...`) may be invoked only by the agent currently assigned as reviewer for that round. Retained `pairflow converged` is a compatibility adapter onto the same boundary.
+1. Canonical convergence emit (`pairflow agent emit --kind convergence ...`) may be invoked only by the agent currently assigned as reviewer for that round.
 2. `pairflow` CLI validates transcript and state evidence before accepting convergence transition.
 3. Validation must include reviewer-role alternation evidence (`round_role_history`) per policy.
 4. If criteria are not met, CLI rejects the command and logs a protocol warning in `transcript.ndjson`.
@@ -227,13 +220,13 @@ Required message types:
 8. `DONE_PACKAGE`: final summary bundle.
 
 Type assignment rules:
-1. Canonical `pairflow agent emit --kind pass` emits `PASS` in MVP; retained `pairflow pass` is only a compatibility adapter onto the same boundary.
+1. Canonical `pairflow agent emit --kind pass` emits `PASS` in MVP.
 2. Optional `--intent <task|review|fix_request>` may be provided; if omitted, CLI infers `payload.pass_intent` from active role.
 3. Reviewer-origin canonical pass emit must explicitly declare findings via `--finding` (repeatable) or `--no-findings`; this is persisted as `PASS.payload.findings[]` (possibly empty).
 4. Implementer-origin canonical pass emit does not carry findings payload.
-5. Canonical `pairflow agent emit --kind human_question` emits `HUMAN_QUESTION`; retained `pairflow ask-human` is only a compatibility adapter.
+5. Canonical `pairflow agent emit --kind human_question` emits `HUMAN_QUESTION`.
 6. `pairflow bubble reply` always emits `HUMAN_REPLY`.
-7. Canonical `pairflow agent emit --kind convergence` emits `CONVERGENCE` only after policy validation; retained `pairflow converged` is only a compatibility adapter.
+7. Canonical `pairflow agent emit --kind convergence` emits `CONVERGENCE` only after policy validation.
 8. Agents never infer/write envelope types directly; type is validated and persisted by CLI.
 
 Transport and UX rules:
@@ -248,13 +241,13 @@ Runtime delivery-target contract:
 2. Allowed token domain is fixed: `implementer | reviewer | meta_reviewer | status`.
 3. Resolver precedence is role-first:
    - valid + mapped `delivery_target_role` routes to role pane
-   - missing/invalid/unmapped role token falls back to legacy recipient-agent routing
-4. Legacy fallback remains required for backward-compatible envelopes without `delivery_target_role`.
-5. Human/orchestrator delivery semantics remain status-pane based (either via explicit `status` target or legacy recipient fallback).
+   - explicit `status` target routes to the status pane
+4. Canonical actor emits must provide `delivery_target_role`; any compatibility fallback for older persisted envelopes is runtime-internal and not part of the canonical authoring contract.
+5. Human/orchestrator delivery semantics remain status-pane based.
 
 Incoming delivery contract:
 1. Canonical actor emit writes artifact + NDJSON envelope first.
-2. Then runtime resolves target pane by `payload.metadata.delivery_target_role` first (when present/valid), otherwise by legacy recipient-agent mapping.
+2. Then runtime resolves target pane by `payload.metadata.delivery_target_role`; compatibility handling for older envelopes without that metadata stays internal to the runtime.
 3. Runtime sends a short tmux notification to the resolved pane containing the round and message file reference.
 4. Recipient agent reads referenced artifact(s), performs work/review, and responds via `pairflow` commands.
 
@@ -354,9 +347,6 @@ Canonical pass emit reference rules:
 1. `--ref` is optional and repeatable (`0..N`).
 2. Use `--ref` when the message points to concrete artifacts/files; omit for purely conceptual feedback.
 
-Compatibility option:
-1. Provide `orchestra` as a thin retained alias wrapper for agent-facing commands to reduce adoption friction during migration.
-
 Operational note:
 Step-1 MVP can run multiple bubbles by launching multiple `pairflow bubble start` processes in separate terminals.
 
@@ -397,7 +387,7 @@ Human is involved at three points:
 
 Resume ownership rule:
 1. Only the operator/user resumes paused ping-pong (`pairflow bubble resume --id <id>`).
-2. Agents request pause/escalation via canonical actor emit (`pairflow agent emit --kind human_question ...`); retained `pairflow ask-human` remains a compatibility adapter and does not change resume ownership.
+2. Agents request pause/escalation via canonical actor emit (`pairflow agent emit --kind human_question ...`); this does not change resume ownership.
 
 Approval package must contain:
 1. What changed.
@@ -412,7 +402,7 @@ Approval package must contain:
 1. Bubble config + state machine.
 2. Worktree manager.
 3. tmux launcher with interactive pane layout (status + implementer + reviewer, later extended with dedicated meta-reviewer pane).
-4. One implement-review loop with agent-facing `pass/ask-human/converged`.
+4. One implement-review loop with canonical actor emits for `pass`, `human_question`, and `convergence`.
 5. Human question and approval gates.
 6. Commit gating.
 
@@ -420,7 +410,7 @@ Acceptance:
 1. End-to-end one bubble run with at least one review loop.
 2. Human can answer blocking question and continue.
 3. Commit cannot happen without explicit approval.
-4. Agent-facing commands (`pass/ask-human/converged`) correctly write NDJSON envelopes and trigger tmux delivery notifications.
+4. Canonical actor emits correctly write NDJSON envelopes and trigger tmux delivery notifications.
 5. Watchdog escalation triggers when active agent is past timeout and the post-timeout dead-signal gate is met.
 6. Convergence command is rejected when reviewer-role alternation evidence is missing in `state.json`.
 

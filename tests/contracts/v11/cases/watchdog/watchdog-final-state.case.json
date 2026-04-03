@@ -1,7 +1,7 @@
 {
   "id": "watchdog-final-state",
   "command": "watchdog",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed watchdog contract case for final-state non-monitored route.",
   "input": {
     "fixture": {

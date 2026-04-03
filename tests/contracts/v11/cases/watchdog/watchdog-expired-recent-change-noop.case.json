@@ -1,7 +1,7 @@
 {
   "id": "watchdog-expired-recent-change-noop",
   "command": "watchdog",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Watchdog keeps RUNNING after timeout when the pane changed within the quiet window.",
   "input": {
     "fixture": {

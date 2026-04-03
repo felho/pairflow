@@ -15,8 +15,6 @@ export {
 } from "./approvalTranscriptContext.js";
 
 export const canonicalHumanApprovalState = "READY_FOR_HUMAN_APPROVAL" as const;
-export const legacyHumanApprovalState = "READY_FOR_APPROVAL" as const;
-export const metaReviewFailedHumanState = "META_REVIEW_FAILED" as const;
 
 export const approvalOverrideRequiredReasonCode = "APPROVAL_OVERRIDE_REQUIRED";
 export const approvalOverrideReasonRequiredReasonCode =
@@ -46,15 +44,8 @@ export interface ResolveApprovalDecisionMetadataInput {
 
 export function isHumanApprovalState(
   state: BubbleStateSnapshot["state"]
-): state is
-  | typeof canonicalHumanApprovalState
-  | typeof legacyHumanApprovalState
-  | typeof metaReviewFailedHumanState {
-  return (
-    state === canonicalHumanApprovalState ||
-    state === legacyHumanApprovalState ||
-    state === metaReviewFailedHumanState
-  );
+): state is typeof canonicalHumanApprovalState {
+  return state === canonicalHumanApprovalState;
 }
 
 export function assertApprovalDecisionEligibility(
@@ -65,7 +56,7 @@ export function assertApprovalDecisionEligibility(
     throw createError({
       reasonCode: APPROVAL_DECISION_STATE_INELIGIBLE,
       message:
-        `approval decision can only be used while bubble is ${canonicalHumanApprovalState} or ${metaReviewFailedHumanState} (legacy compatibility: ${legacyHumanApprovalState}) (current: ${state.state}).`,
+        `approval decision can only be used while bubble is ${canonicalHumanApprovalState} (current: ${state.state}).`,
       context: {
         command_name: "approval",
         current_state: state.state
@@ -89,14 +80,6 @@ function resolveLatestApprovalRecommendation(
   state: BubbleStateSnapshot,
   createError: PairflowCreateCommandError
 ): MetaReviewRecommendation {
-  if (
-    state.state === legacyHumanApprovalState &&
-    state.meta_review === undefined
-  ) {
-    // Legacy compatibility path: bubbles created before Phase 3 may not have
-    // meta_review snapshot data yet. Preserve prior READY_FOR_APPROVAL behavior.
-    return "approve";
-  }
   const recommendation = state.meta_review?.last_autonomous_recommendation ?? null;
   if (
     recommendation === "approve" ||
@@ -105,14 +88,9 @@ function resolveLatestApprovalRecommendation(
   ) {
     return recommendation;
   }
-  if (state.state === metaReviewFailedHumanState) {
-    return "inconclusive";
-  }
-  const isCompatibilityLegacyWithMetaReview =
-    state.state === legacyHumanApprovalState && state.meta_review !== undefined;
   const stickyHumanGateRoute =
     state.meta_review?.sticky_human_gate === true &&
-    (state.state === canonicalHumanApprovalState || isCompatibilityLegacyWithMetaReview);
+    state.state === canonicalHumanApprovalState;
   if (stickyHumanGateRoute) {
     return "inconclusive";
   }

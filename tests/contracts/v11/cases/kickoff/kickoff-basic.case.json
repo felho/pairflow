@@ -1,7 +1,7 @@
 {
   "id": "kickoff-basic",
   "command": "kickoff",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed kickoff contract case for ideation RUNNING round 0 activation baseline.",
   "input": {
     "task": "Implement kickoff contract baseline"

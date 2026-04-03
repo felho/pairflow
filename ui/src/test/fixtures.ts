@@ -15,9 +15,6 @@ export function repoSummary(repoPath: string): UiRepoSummary {
       PREPARING_WORKSPACE: 0,
       RUNNING: 1,
       WAITING_HUMAN: 0,
-      READY_FOR_APPROVAL: 0,
-      META_REVIEW_RUNNING: 0,
-      META_REVIEW_FAILED: 0,
       READY_FOR_HUMAN_APPROVAL: 0,
       APPROVED_FOR_COMMIT: 0,
       COMMITTED: 0,
@@ -38,6 +35,10 @@ export function bubbleSummary(input: {
   state?: UiBubbleSummary["state"];
   runtimeSession?: UiBubbleSummary["runtimeSession"];
   stale?: boolean;
+  round?: number;
+  activeAgent?: UiBubbleSummary["activeAgent"];
+  activeRole?: UiBubbleSummary["activeRole"];
+  metaReview?: Partial<UiBubbleSummary["metaReview"]>;
 }): UiBubbleSummary {
   const state = input.state ?? "RUNNING";
   const runtimeSession =
@@ -56,9 +57,9 @@ export function bubbleSummary(input: {
     repoPath: input.repoPath,
     worktreePath: `/tmp/${input.bubbleId}`,
     state,
-    round: 3,
-    activeAgent: "codex",
-    activeRole: "implementer",
+    round: input.round ?? 3,
+    activeAgent: input.activeAgent ?? "codex",
+    activeRole: input.activeRole ?? "implementer",
     activeSince: "2026-02-24T11:50:00.000Z",
     lastCommandAt: "2026-02-24T12:00:00.000Z",
     runtimeSession,
@@ -69,12 +70,14 @@ export function bubbleSummary(input: {
     },
     metaReview: {
       actor: "meta-reviewer",
+      authorityActive: state === "RUNNING" && (input.activeRole ?? "implementer") === "meta_reviewer",
       latestRecommendation: "approve",
       latestStatus: "success",
       latestSummary: "Looks good.",
       latestReportRef: "artifacts/meta-review-last.json",
       latestUpdatedAt: "2026-02-24T12:00:00.000Z",
-      runtimeDelivery: null
+      runtimeDelivery: null,
+      ...input.metaReview
     }
   };
 }
@@ -85,6 +88,10 @@ export function bubbleCard(input: {
   state?: UiBubbleSummary["state"];
   runtimeSession?: UiBubbleSummary["runtimeSession"];
   stale?: boolean;
+  round?: number;
+  activeAgent?: UiBubbleSummary["activeAgent"];
+  activeRole?: UiBubbleSummary["activeRole"];
+  metaReview?: Partial<UiBubbleSummary["metaReview"]>;
 }): BubbleCardModel {
   const bubble = bubbleSummary(input);
   return {

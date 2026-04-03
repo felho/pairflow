@@ -3,7 +3,7 @@ import { mapImmediateReworkResult, mapQueuedReworkResult } from "./approvalResul
 import { emitDeferredReworkIntentLifecycleEvents, persistDeferredReworkIntentState } from "./runApprovalDeferredRework.js";
 import type { RunRequestReworkFlowInput } from "./runApprovalFlowContract.js";
 import type { ResolvedApprovalCommandDependencies } from "../../shared/approval/approvalCommandDependencyResolution.js";
-import { canonicalHumanApprovalState, isHumanApprovalState, legacyHumanApprovalState, metaReviewFailedHumanState } from "../../shared/approval/approvalRoutingEligibility.js";
+import { canonicalHumanApprovalState, isHumanApprovalState } from "../../shared/approval/approvalRoutingEligibility.js";
 import type { ApprovalFlowExecutionContext } from "./runApprovalFlowContext.js";
 import { runApprovalDecisionFlowWithContext } from "./runApprovalDecisionFlowHandler.js";
 export { runApprovalDecisionFlowWithContext } from "./runApprovalDecisionFlowHandler.js";
@@ -39,7 +39,7 @@ export async function runRequestReworkFlowWithContext(
     throw input.flow.createError({
       reasonCode: "APPROVAL_REQUEST_REWORK_STATE_INELIGIBLE",
       message:
-        `bubble request-rework can only be used while bubble is ${canonicalHumanApprovalState}, ${metaReviewFailedHumanState} (legacy compatibility: ${legacyHumanApprovalState}) or WAITING_HUMAN (current: ${state.state}).`,
+        `bubble request-rework can only be used while bubble is ${canonicalHumanApprovalState} or WAITING_HUMAN (current: ${state.state}).`,
       context: {
         command_name: "approval",
         current_state: state.state

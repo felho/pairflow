@@ -81,7 +81,7 @@ Bubbles are fully isolated from each other — you can run multiple bubbles in p
 
 ### How does the flow work?
 
-Pairflow does **not** autonomously decide technical content between agents. Instead, agents advance the flow through protocol commands (`pass`, `ask-human`, `converged`). Pairflow acts as the referee + state/protocol engine, injects an initial protocol briefing into agent panes at bubble start, and auto-sends an initial kickoff prompt to the implementer pane (or, for `--ideation` bubbles, a kickoff instruction to run `pairflow bubble kickoff` first).
+Pairflow does **not** autonomously decide technical content between agents. Instead, agents advance the flow through canonical actor emits (`pairflow agent emit --kind pass|human_question|convergence`). Pairflow acts as the referee + state/protocol engine, injects an initial protocol briefing into agent panes at bubble start, and auto-sends an initial kickoff prompt to the implementer pane (or, for `--ideation` bubbles, a kickoff instruction to run `pairflow bubble kickoff` first).
 
 ```
 ┌──────────┐    pass     ┌──────────┐    pass     ┌──────────┐          ┌──────────┐
@@ -110,7 +110,7 @@ Pairflow does **not** autonomously decide technical content between agents. Inst
                                           └──────────┘
 ```
 
-At any point, agents can call `ask-human` to pause the flow and ask for your input.
+At any point, agents can emit `human_question` to pause the flow and ask for your input.
 
 ### Roles
 
@@ -404,9 +404,7 @@ pairflow agent emit --kind human_question --repo /path/to/repo --bubble-id <id> 
 pairflow agent emit --kind convergence --repo /path/to/repo --bubble-id <id> --handoff-id <handoff-id> --summary "<convergence summary>" [--ref ...]
 ```
 
-Direct `pairflow agent emit` requires the active authority snapshot. Resolve it first with `pairflow bubble status --id <id> --repo /path/to/repo --json` and copy `executionContext.handoffId` from the JSON output. In normal pane-driven worktree use, the retained compatibility adapters remain the shortest path because they materialize that context for you.
-
-Legacy compatibility adapters remain available in Phase 4: `pairflow pass`, `pairflow ask-human`, `pairflow converged`, and `orchestra pass|ask-human|converged`.
+Direct `pairflow agent emit` requires the active authority snapshot. Resolve it first with `pairflow bubble status --id <id> --repo /path/to/repo --json` and copy `executionContext.handoffId` from the JSON output. If no current handoff is available yet, refresh status and wait for the orchestrated handoff instead of guessing context.
 
 ---
 
@@ -489,7 +487,7 @@ pairflow bubble status --id feat_login --repo /path/to/myapp --json
 
 pairflow agent emit --kind convergence --repo /path/to/myapp --bubble-id feat_login --handoff-id <handoff-id> \
   --summary "All review criteria met, code is clean"
-#    → State becomes READY_FOR_APPROVAL
+#    → State remains RUNNING while autonomous meta-review authority completes
 #    → An approval request appears in your inbox
 
 # 7. You review and approve
@@ -651,14 +649,14 @@ The restart is safe because:
 - `bubble start` detects an existing bubble in a runtime state and reattaches instead of bootstrapping from scratch
 - Resume start injects bounded transcript/state context into both agent panes; in `RUNNING` it sends kickoff to the currently active role pane
 
-If the bubble stays in `META_REVIEW_RUNNING` after restart (for example, meta-review run wrote snapshot data but routing did not finish), recover deterministically from the stored snapshot:
+If the bubble stays in `RUNNING` with active meta-review authority after restart (for example, meta-review run wrote snapshot data but routing did not finish), recover deterministically from the stored snapshot:
 
 ```bash
 pairflow bubble meta-review recover --id feat_login --repo .
 pairflow bubble status --id feat_login --repo . --json
 ```
 
-`meta-review recover` does not run a new review. It replays routing from the latest persisted autonomous snapshot and routes to `RUNNING`, `READY_FOR_HUMAN_APPROVAL`, or `META_REVIEW_FAILED`.
+`meta-review recover` does not run a new review. It replays routing from the latest persisted autonomous snapshot and routes to `RUNNING` or `READY_FOR_HUMAN_APPROVAL` with the preserved diagnostics for the current round.
 
 ### Scenario 8: Stopping or cancelling a bubble
 
@@ -778,17 +776,12 @@ Default timeout is 40 minutes (`watchdog_timeout_minutes` in `bubble.toml`).
 
 ```
 CREATED -> PREPARING_WORKSPACE -> RUNNING <-> WAITING_HUMAN
-RUNNING --converged--> READY_FOR_APPROVAL
-READY_FOR_APPROVAL --meta-review gate--> META_REVIEW_RUNNING
-META_REVIEW_RUNNING --autonomous rework dispatch--> RUNNING
-META_REVIEW_RUNNING --human decision required--> READY_FOR_HUMAN_APPROVAL
-META_REVIEW_RUNNING --runner failure--> META_REVIEW_FAILED
-META_REVIEW_RUNNING --snapshot route recovery (`meta-review recover`)--> RUNNING | READY_FOR_HUMAN_APPROVAL | META_REVIEW_FAILED
+RUNNING --reviewer convergence with sticky_human_gate=false--> RUNNING (meta-review authority active)
+RUNNING --autonomous rework dispatch--> RUNNING
+RUNNING --human decision required--> READY_FOR_HUMAN_APPROVAL
+RUNNING --snapshot route recovery (`meta-review recover`)--> RUNNING | READY_FOR_HUMAN_APPROVAL
 READY_FOR_HUMAN_APPROVAL --approve--> APPROVED_FOR_COMMIT
 READY_FOR_HUMAN_APPROVAL --request-rework--> RUNNING
-META_REVIEW_FAILED --approve (override)--> APPROVED_FOR_COMMIT
-META_REVIEW_FAILED --request-rework--> RUNNING
-READY_FOR_APPROVAL also accepts approve/request-rework for legacy compatibility.
 APPROVED_FOR_COMMIT -> COMMITTED -> DONE
 
 Any active state -> FAILED
@@ -820,8 +813,8 @@ Ideation note:
 | `bubble list [--repo <path>] [--json]` | List all bubbles |
 | `bubble inbox --id <id> [--repo <path>] [--json]` | Show pending human actions |
 | `bubble reply --id <id> --message <text> [--repo <path>] [--ref <path>]...` | Answer a human question |
-| `bubble approve --id <id> [--override-non-approve] [--override-reason <text>] [--repo <path>] [--ref <path>]...` | Approve for commit (`READY_FOR_HUMAN_APPROVAL`/`META_REVIEW_FAILED`; legacy `READY_FOR_APPROVAL` compatible) |
-| `bubble request-rework --id <id> --message <text> [--repo <path>] [--ref <path>]...` | Send back for rework (`READY_FOR_HUMAN_APPROVAL`/`META_REVIEW_FAILED`: immediate; `WAITING_HUMAN`: queues deferred deterministic rework intent; legacy `READY_FOR_APPROVAL` compatible) |
+| `bubble approve --id <id> [--override-non-approve] [--override-reason <text>] [--repo <path>] [--ref <path>]...` | Approve for commit from `READY_FOR_HUMAN_APPROVAL` |
+| `bubble request-rework --id <id> --message <text> [--repo <path>] [--ref <path>]...` | Send back for rework (`READY_FOR_HUMAN_APPROVAL`: immediate; `WAITING_HUMAN`: queues deferred deterministic rework intent) |
 | `bubble commit --id <id> [--repo <path>] [--message <text>] [--ref <path>]...` | Commit and finalize |
 | `bubble merge --id <id> [--repo <path>] [--push] [--delete-remote]` | Merge bubble branch and clean up |
 | `bubble reconcile [--repo <path>] [--dry-run] [--json]` | Clean up stale sessions |
@@ -829,7 +822,7 @@ Ideation note:
 | `bubble meta-review run --id <id> [--repo <path>] [--depth standard\|deep] [--json]` | Run autonomous meta-review for the bubble |
 | `bubble meta-review status --id <id> [--repo <path>] [--json] [--verbose]` | Read latest cached meta-review snapshot/status |
 | `bubble meta-review last-report --id <id> [--repo <path>] [--json] [--verbose]` | Read latest cached meta-review report |
-| `bubble meta-review recover --id <id> [--repo <path>] [--json]` | Recover routing from the latest meta-review snapshot when bubble is stuck in `META_REVIEW_RUNNING` |
+| `bubble meta-review recover --id <id> [--repo <path>] [--json]` | Recover routing from the latest meta-review snapshot when bubble is stuck in `RUNNING` with active meta-review authority |
 
 #### Repo registry
 
@@ -866,7 +859,7 @@ Canonical actor emission uses explicit authority (`--repo`, `--bubble-id`, `--ha
 | `agent emit --kind convergence --repo <path> --bubble-id <id> --handoff-id <id> --summary <text> [--ref <path>]...` | Canonical convergence emit (reviewer only) |
 | `agent emit --kind meta_review_result --repo <path> --bubble-id <id> --handoff-id <id> --round <n> --recommendation approve\|rework\|inconclusive --summary <text> --report-json <json> [--ref <path>]...` | Canonical meta-review submit |
 
-Compatibility adapters: `pairflow pass|ask-human|converged` and `orchestra pass|ask-human|converged`. These retained paths may still materialize context from the worktree, but they are transitional adapters, not the primary contract.
+Actor emits must always use explicit repo, bubble, and handoff authority from the current status snapshot.
 
 ---
 
@@ -1094,7 +1087,7 @@ pairflow bubble start --id <id> --repo <repo>
 
 ### Agent ignores protocol
 
-Pairflow now injects startup protocol instructions into both agent panes, but agents must still call protocol commands explicitly. If they drift, use `bubble status`, `bubble inbox`, and watchdog escalation to recover, then continue via `pass` / `ask-human` / `converged`.
+Pairflow now injects startup protocol instructions into both agent panes, but agents must still call canonical actor emits explicitly. If they drift, use `bubble status`, `bubble inbox`, and watchdog escalation to recover, then continue via `pairflow agent emit`.
 
 ---
 
@@ -1109,7 +1102,7 @@ pnpm check      # All of the above
 pnpm dev:ui     # Rebuild CLI + restart web UI server on port 4173
 ```
 
-Validation commands write evidence logs to `.pairflow/evidence/` (lint/typecheck/test), which can be attached in canonical actor emit refs such as `pairflow agent emit --kind pass ... --ref ...`. Legacy `pairflow pass` remains available as a compatibility adapter during Phase 4.
+Validation commands write evidence logs to `.pairflow/evidence/` (lint/typecheck/test), which can be attached in canonical actor emit refs such as `pairflow agent emit --kind pass ... --ref ...`.
 
 ### CI (milestone-aware fitness gate)
 

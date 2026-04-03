@@ -1,10 +1,10 @@
 {
   "id": "converged-basic",
   "command": "converged",
-  "mode": "legacy",
-  "description": "converged emits CONVERGENCE and approval routing envelope from legacy entrypoint.",
+  "mode": "baseline",
+  "description": "converged emits CONVERGENCE and approval routing envelope from baseline entrypoint.",
   "input": {
-    "summary": "Converged baseline legacy run.",
+    "summary": "Converged baseline baseline run.",
     "refs": []
   },
   "expected": {
@@ -17,7 +17,7 @@
     "approvalRequestRecipient": "codex",
     "approvalRequestSender": "orchestrator",
     "stateSubset": {
-      "state": "META_REVIEW_RUNNING"
+      "state": "RUNNING"
     },
     "deliveryCount": 1,
     "deliveryRecipients": [
@@ -30,6 +30,6 @@
   "tags": [
     "converged",
     "v11-contract",
-    "legacy"
+    "baseline"
   ]
 }

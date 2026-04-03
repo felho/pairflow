@@ -1,7 +1,7 @@
 {
   "id": "watchdog-expired-unreadable-pane-escalates",
   "command": "watchdog",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Watchdog escalates after timeout when the target pane cannot be read.",
   "input": {
     "fixture": {

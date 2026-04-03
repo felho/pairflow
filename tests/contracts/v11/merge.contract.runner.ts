@@ -46,7 +46,7 @@ export type MergeContractOutput =
 
 export interface MergeContractRunResult {
   mode: ContractCase["mode"];
-  legacy?: MergeContractOutput;
+  baseline?: MergeContractOutput;
   v11?: MergeContractOutput;
 }
 
@@ -173,13 +173,13 @@ function assertContractExpectedSubset(input: {
 }
 
 function assertParityEquivalent(input: {
-  legacy: MergeContractOutput;
+  baseline: MergeContractOutput;
   v11: MergeContractOutput;
   caseId: string;
 }): void {
-  if (JSON.stringify(input.legacy) !== JSON.stringify(input.v11)) {
+  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
     throw new Error(
-      `merge parity mismatch for case=${input.caseId}: legacy=${JSON.stringify(input.legacy)} v11=${JSON.stringify(input.v11)}`
+      `merge parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
     );
   }
 }
@@ -428,19 +428,19 @@ export async function runMergeContractCase(
     throw new Error(`Unsupported command for merge contract runner: ${caseDef.command}`);
   }
 
-  if (caseDef.mode === "legacy") {
-    const legacy = await executeMergeCase({
+  if (caseDef.mode === "baseline") {
+    const baseline = await executeMergeCase({
       caseDef,
       executor: mergeBubble
     });
     assertContractExpectedSubset({
-      output: legacy,
+      output: baseline,
       expected: caseDef.expected,
-      label: "legacy"
+      label: "baseline"
     });
     return {
       mode: caseDef.mode,
-      legacy
+      baseline
     };
   }
 
@@ -460,7 +460,7 @@ export async function runMergeContractCase(
     };
   }
 
-  const legacy = await executeMergeCase({
+  const baseline = await executeMergeCase({
     caseDef,
     executor: mergeBubble
   });
@@ -469,9 +469,9 @@ export async function runMergeContractCase(
     executor: mergeBubbleV11
   });
   assertContractExpectedSubset({
-    output: legacy,
+    output: baseline,
     expected: caseDef.expected,
-    label: "parity/legacy"
+    label: "parity/baseline"
   });
   assertContractExpectedSubset({
     output: v11,
@@ -479,13 +479,13 @@ export async function runMergeContractCase(
     label: "parity/v11"
   });
   assertParityEquivalent({
-    legacy,
+    baseline,
     v11,
     caseId: caseDef.id
   });
   return {
     mode: caseDef.mode,
-    legacy,
+    baseline,
     v11
   };
 }

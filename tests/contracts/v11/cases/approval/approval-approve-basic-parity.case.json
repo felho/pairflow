@@ -2,7 +2,7 @@
   "id": "approval-approve-basic-parity",
   "command": "approval",
   "mode": "parity",
-  "description": "Seed approval approve parity contract case for READY_FOR_APPROVAL baseline.",
+  "description": "Seed approval approve parity contract case for READY_FOR_HUMAN_APPROVAL baseline.",
   "input": {
     "action": "approve"
   },

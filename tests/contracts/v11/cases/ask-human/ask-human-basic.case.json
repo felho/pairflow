@@ -1,7 +1,7 @@
 {
   "id": "ask-human-basic",
   "command": "askHuman",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "ask-human emits HUMAN_QUESTION and transitions to WAITING_HUMAN.",
   "input": {
     "question": "Need product clarification on rollout strategy?",
@@ -28,6 +28,6 @@
   "tags": [
     "ask-human",
     "v11-contract",
-    "legacy"
+    "baseline"
   ]
 }

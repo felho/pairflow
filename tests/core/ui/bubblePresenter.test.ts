@@ -42,6 +42,7 @@ describe("bubblePresenter", () => {
       stateValidation: null,
       metaReview: {
         actor: "meta-reviewer",
+        authorityActive: false,
         latestRecommendation: "approve",
         latestStatus: "success",
         latestSummary: "Autonomous review clean.",

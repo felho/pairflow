@@ -1,7 +1,7 @@
 {
   "id": "reconcile-stale-reason-final-state",
   "command": "reconcile",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Reconcile marks runtime session stale when bubble state is final.",
   "input": {
     "fixture": {

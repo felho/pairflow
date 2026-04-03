@@ -1110,7 +1110,7 @@ describe("meta-review run", () => {
     ).toBe(false);
   });
 
-  it("rejects legacy run invocation while META_REVIEW_RUNNING submit channel is active", async () => {
+  it("rejects legacy run invocation while RUNNING meta-review submit channel is active", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -1120,7 +1120,7 @@ describe("meta-review run", () => {
 
     const before = await readStateSnapshot(bubble.paths.statePath);
     const readyForApproval = applyStateTransition(before.state, {
-      to: "READY_FOR_APPROVAL",
+      to: "READY_FOR_HUMAN_APPROVAL",
       activeAgent: null,
       activeRole: null,
       activeSince: null,
@@ -1128,7 +1128,7 @@ describe("meta-review run", () => {
     });
     const metaReviewRunning = {
       ...readyForApproval,
-      state: "META_REVIEW_RUNNING" as const,
+      state: "RUNNING" as const,
       active_agent: "codex" as const,
       active_role: "meta_reviewer" as const,
       active_since: "2026-03-08T12:10:30.000Z",
@@ -1190,7 +1190,7 @@ describe("meta-review submit", () => {
       input.statePath,
       {
         ...loaded.state,
-        state: "META_REVIEW_RUNNING",
+        state: "RUNNING",
         round: input.round ?? loaded.state.round,
         active_agent: input.activeAgent,
         active_role: input.activeRole,
@@ -2722,7 +2722,7 @@ describe("meta-review submit", () => {
     });
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
-    expect(loaded.state.state).toBe("META_REVIEW_RUNNING");
+    expect(loaded.state.state).toBe("RUNNING");
     expect(loaded.state.meta_review).toMatchObject({
       last_autonomous_run_id: "run_meta_submit_route_fail_01",
       last_autonomous_recommendation: "approve",
@@ -2775,7 +2775,7 @@ describe("meta-review submit", () => {
     });
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
-    expect(loaded.state.state).toBe("META_REVIEW_RUNNING");
+    expect(loaded.state.state).toBe("RUNNING");
     expect(loaded.state.meta_review).toMatchObject({
       last_autonomous_run_id: "run_meta_submit_inconclusive_01",
       last_autonomous_recommendation: "inconclusive",
@@ -3022,7 +3022,7 @@ describe("meta-review submit", () => {
     }
   });
 
-  it("rejects submit when lifecycle is not META_REVIEW_RUNNING", async () => {
+  it("rejects submit when lifecycle is not RUNNING with meta-review authority", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -3061,7 +3061,7 @@ describe("meta-review submit", () => {
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const mockedState = {
       ...loaded.state,
-      state: "META_REVIEW_RUNNING" as const,
+      state: "RUNNING" as const,
       active_agent: "codex" as const,
       active_role: "implementer" as const,
       active_since: "2026-03-09T09:35:00.000Z",
@@ -3122,7 +3122,7 @@ describe("meta-review submit", () => {
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const mockedState = {
       ...loaded.state,
-      state: "META_REVIEW_RUNNING" as const,
+      state: "RUNNING" as const,
       active_agent: "codex" as const,
       active_role: "meta_reviewer" as const,
       active_since: null,
@@ -3416,7 +3416,7 @@ describe("meta-review submit", () => {
       },
       {
         expectedFingerprint: loaded.fingerprint,
-        expectedState: "META_REVIEW_RUNNING"
+        expectedState: "RUNNING"
       }
     );
     const before = await readStateSnapshot(bubble.paths.statePath);
@@ -3490,7 +3490,7 @@ describe("meta-review submit", () => {
       bubble.paths.statePath,
       {
         ...routed.state,
-        state: "META_REVIEW_RUNNING",
+        state: "RUNNING",
         active_agent: "codex",
         active_role: "meta_reviewer",
         active_since: "2026-03-09T09:48:21.500Z",
@@ -3546,7 +3546,7 @@ describe("meta-review submit", () => {
     );
   });
 
-  it("classifies same-run duplicate on CAS conflict even after lifecycle left META_REVIEW_RUNNING", async () => {
+  it("classifies same-run duplicate on CAS conflict even after lifecycle left RUNNING meta-review authority", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -3632,7 +3632,7 @@ describe("meta-review submit", () => {
                 },
                 {
                   expectedFingerprint: current.fingerprint,
-                  expectedState: "META_REVIEW_RUNNING"
+                  expectedState: "RUNNING"
                 }
               );
               throw new StateStoreConflictError("simulated duplicate race conflict");
@@ -4388,7 +4388,7 @@ describe("meta-review reads", () => {
     expect(after.state.state).toBe("RUNNING");
   });
 
-  it("recovers META_REVIEW_FAILED to READY_FOR_HUMAN_APPROVAL on successful rerun", async () => {
+  it("recovers run-failed human gate to READY_FOR_HUMAN_APPROVAL on successful rerun", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -4398,7 +4398,7 @@ describe("meta-review reads", () => {
 
     const before = await readStateSnapshot(bubble.paths.statePath);
     const failed = applyStateTransition(before.state, {
-      to: "READY_FOR_APPROVAL",
+      to: "READY_FOR_HUMAN_APPROVAL",
       activeAgent: null,
       activeRole: null,
       activeSince: null,
@@ -4406,7 +4406,7 @@ describe("meta-review reads", () => {
     });
     const failedAfterMeta = {
       ...failed,
-      state: "META_REVIEW_RUNNING" as const,
+      state: "RUNNING" as const,
       active_agent: "codex" as const,
       active_role: "meta_reviewer" as const,
       active_since: "2026-03-08T12:41:00.000Z",
@@ -4432,7 +4432,7 @@ describe("meta-review reads", () => {
       }
     };
     const failedState = applyStateTransition(failedAfterMeta, {
-      to: "META_REVIEW_FAILED",
+      to: "READY_FOR_HUMAN_APPROVAL",
       activeAgent: null,
       activeRole: null,
       activeSince: null,
@@ -4489,7 +4489,7 @@ describe("meta-review reads", () => {
       bubble.paths.statePath,
       {
         ...loaded.state,
-        state: "META_REVIEW_RUNNING",
+        state: "RUNNING",
         active_agent: null,
         active_role: null,
         active_since: null,

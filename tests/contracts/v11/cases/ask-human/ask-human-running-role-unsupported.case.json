@@ -1,7 +1,7 @@
 {
   "id": "ask-human-running-role-unsupported",
   "command": "askHuman",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "ask-human rejects RUNNING state when active role is meta_reviewer.",
   "input": {
     "question": "Need clarification from product.",
@@ -20,7 +20,7 @@
   "tags": [
     "ask-human",
     "v11-contract",
-    "legacy",
+    "baseline",
     "error-path"
   ]
 }

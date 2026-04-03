@@ -1,7 +1,7 @@
 {
   "id": "reply-state-not-waiting-human",
   "command": "reply",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Reply contract case for rejecting non-WAITING_HUMAN lifecycle state.",
   "input": {
     "message": "Acknowledged.",

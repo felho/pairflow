@@ -15,7 +15,6 @@ import {
   writeStateSnapshot,
   type LoadedStateSnapshot
 } from "../state/stateStore.js";
-import { applyStateTransition } from "../state/machine.js";
 import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
 import {
   SchemaValidationError,
@@ -25,6 +24,7 @@ import {
 } from "../validation.js";
 import { normalizeStringList } from "../util/normalize.js";
 import {
+  isMetaReviewExecutionContextActiveState,
   validateActiveMetaReviewExecutionContext
 } from "./metaReviewExecutionContext.js";
 import { toMetaReviewExecutionContext } from "../state/executionContext.js";
@@ -817,11 +817,7 @@ async function readLatestApproveReviewerSnapshot(input: {
 function shouldRefreshApprovalRequest(
   state: BubbleStateSnapshot["state"]
 ): boolean {
-  return (
-    state === "READY_FOR_HUMAN_APPROVAL"
-    || state === "READY_FOR_APPROVAL"
-    || state === "META_REVIEW_FAILED"
-  );
+  return state === "READY_FOR_HUMAN_APPROVAL";
 }
 
 function mapRecommendationToStatus(
@@ -945,13 +941,6 @@ async function assertMetaReviewSubmitterAuthority(input: {
   state: BubbleStateSnapshot;
 }): Promise<void> {
   assertActiveMetaReviewExecutionContext(input.state);
-
-  if (input.state.state !== "META_REVIEW_RUNNING") {
-    throw new MetaReviewError(
-      "META_REVIEW_STATE_INVALID",
-      `meta-review submit requires META_REVIEW_RUNNING state (current: ${input.state.state}).`
-    );
-  }
 
   const hasAnyActiveOwnership =
     input.state.active_agent !== null ||
@@ -1689,7 +1678,7 @@ function buildCanonicalSubmitRunResult(input: {
     report_ref: CANONICAL_META_REVIEW_REPORT_REF,
     rework_target_message: input.reworkTargetMessage,
     updated_at: input.updatedAt,
-    lifecycle_state: "META_REVIEW_RUNNING",
+    lifecycle_state: "RUNNING",
     warnings: [...input.warnings],
     report_json: input.reportJson
   };
@@ -1935,15 +1924,15 @@ export async function submitMetaReviewResult(
   try {
     await writeState(resolved.bubblePaths.statePath, nextState, {
       expectedFingerprint: loadedState.fingerprint,
-      expectedState: "META_REVIEW_RUNNING"
+      expectedState: "RUNNING"
     });
   } catch (error) {
     if (error instanceof StateStoreConflictError) {
       const latest = await readState(resolved.bubblePaths.statePath);
-      if (latest.state.state !== "META_REVIEW_RUNNING") {
+      if (!isMetaReviewExecutionContextActiveState(latest.state)) {
         throw new MetaReviewError(
           "META_REVIEW_STATE_INVALID",
-          `meta-review submit requires META_REVIEW_RUNNING state (current: ${latest.state.state}).`
+          `meta-review submit requires RUNNING state with active meta-review authority (current: ${latest.state.state}).`
         );
       }
       if (latest.state.round !== input.round) {
@@ -2096,12 +2085,12 @@ export async function runMetaReview(
 
   const loadedState = await readState(resolved.bubblePaths.statePath);
   if (
-    loadedState.state.state === "META_REVIEW_RUNNING"
+    isMetaReviewExecutionContextActiveState(loadedState.state)
     && dependencies.allowMetaReviewRunningState !== true
   ) {
     throw new MetaReviewError(
       "META_REVIEW_STATE_INVALID",
-      "meta-review run is disabled while META_REVIEW_RUNNING submit channel is active"
+      "meta-review run is disabled while the active submit channel is reserved for an in-flight meta-review authority window"
     );
   }
   const runId = makeUuid();
@@ -2158,17 +2147,7 @@ export async function runMetaReview(
   });
 
   const previousMetaReview = normalizeMetaReviewSnapshot(loadedState.state.meta_review);
-  const shouldRecoverFromRunFailedHumanGate =
-    loadedState.state.state === "META_REVIEW_FAILED" && status === "success";
-  const lifecycleBaseState = shouldRecoverFromRunFailedHumanGate
-    ? applyStateTransition(loadedState.state, {
-        to: "READY_FOR_HUMAN_APPROVAL",
-        activeAgent: null,
-        activeRole: null,
-        activeSince: null,
-        lastCommandAt: updatedAt
-      })
-    : loadedState.state;
+  const lifecycleBaseState = loadedState.state;
   const nextMetaReview: BubbleMetaReviewSnapshotState = {
     ...previousMetaReview,
     execution_context: previousMetaReview.execution_context ?? null,
@@ -2179,7 +2158,9 @@ export async function runMetaReview(
     last_autonomous_report_ref: CANONICAL_META_REVIEW_REPORT_REF,
     last_autonomous_rework_target_message: reworkTargetMessage,
     last_autonomous_updated_at: updatedAt,
-    ...(shouldRecoverFromRunFailedHumanGate ? { sticky_human_gate: true } : {})
+    ...(loadedState.state.state === "READY_FOR_HUMAN_APPROVAL" && status === "success"
+      ? { sticky_human_gate: true }
+      : {})
   };
 
   const nextState: BubbleStateSnapshot = {

@@ -41,7 +41,7 @@ describe("buildReviewerSeverityOntologyReminder", () => {
       "Document scope blocker means `P0/P1` with strict qualifiers (`timing=required-now` + `layer=L1`)."
     );
     expect(reviewerSeverityOntologyFullPromptText).toContain(
-      "Legacy `pairflow pass` and `pairflow converged` remain compatibility adapters only."
+      "Round `>= severity_gate_round` with only non-blocking findings (`P2/P3`) or clean result: reviewer should use canonical convergence emit (`pairflow agent emit --kind convergence ...`)."
     );
     expect(reviewerSeverityOntologyFullPromptText).not.toContain(
       "pairflow:runtime-reminder:start"

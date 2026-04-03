@@ -65,7 +65,7 @@ export function synthesizeMetaReviewRunResultFromSnapshot(input: {
     report_ref: reportRef,
     rework_target_message: reworkTargetMessage,
     updated_at: updatedAt,
-    lifecycle_state: "META_REVIEW_RUNNING",
+    lifecycle_state: "RUNNING",
     warnings: [],
     ...(runId !== undefined ? { run_id: runId } : {})
   };
@@ -85,7 +85,7 @@ export function synthesizeMetaReviewRunFailure(input: {
     report_ref: metaReviewFallbackReportRef,
     rework_target_message: null,
     updated_at: input.nowIso,
-    lifecycle_state: "META_REVIEW_RUNNING",
+    lifecycle_state: "RUNNING",
     warnings: []
   };
 }

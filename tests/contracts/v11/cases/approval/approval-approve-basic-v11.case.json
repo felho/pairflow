@@ -2,7 +2,7 @@
   "id": "approval-approve-basic-v11",
   "command": "approval",
   "mode": "v11",
-  "description": "Seed approval approve v11 contract case for READY_FOR_APPROVAL baseline.",
+  "description": "Seed approval approve v11 contract case for READY_FOR_HUMAN_APPROVAL baseline.",
   "input": {
     "action": "approve"
   },

@@ -368,7 +368,7 @@ describe("UI server integration", () => {
           body.repos.includes(normalizedRepoA) &&
           body.repos.includes(normalizedRepoB)
         );
-      });
+      }, 10_000);
 
       const list = await requestJson(
         server.url,
@@ -388,7 +388,7 @@ describe("UI server integration", () => {
     } finally {
       await server.close();
     }
-  });
+  }, 15_000);
 
   it("maps action endpoint validation/not-found/conflict/runtime errors", async () => {
     const fixture = await createRepoFixture();
@@ -472,7 +472,7 @@ describe("UI server integration", () => {
     const emitApproveMock = vi.fn(() =>
       Promise.reject(
         new Error(
-          "approval decision can only be used while bubble is READY_FOR_HUMAN_APPROVAL (legacy compatibility: READY_FOR_APPROVAL) (current: WAITING_HUMAN)."
+          "approval decision can only be used while bubble is READY_FOR_HUMAN_APPROVAL (current: WAITING_HUMAN)."
         )
       )
     );

@@ -30,9 +30,7 @@ export interface FreshStartProgress {
 
 function buildResumedState(input: {
   state: BubbleStateSnapshot;
-  bubbleId: string;
   nowIso: string;
-  watchdogTimeoutMinutes: number;
 }): BubbleStateSnapshot {
   if (
     input.state.state === "RUNNING"
@@ -50,31 +48,6 @@ function buildResumedState(input: {
       execution_context: executionContext,
       active_since: input.nowIso,
       last_command_at: input.nowIso
-    };
-  }
-
-  if (input.state.state === "META_REVIEW_RUNNING") {
-    const executionContext = input.state.execution_context;
-    const metaReviewExecutionContext = input.state.meta_review?.execution_context ?? null;
-    if (
-      executionContext === null
-      || executionContext === undefined
-      || metaReviewExecutionContext === null
-    ) {
-      throw new Error(
-        "META_REVIEW_RUNNING resume requires persisted execution_context authority."
-      );
-    }
-
-    return {
-      ...input.state,
-      execution_context: executionContext,
-      active_since: input.nowIso,
-      last_command_at: input.nowIso,
-      meta_review: {
-        ...input.state.meta_review!,
-        execution_context: metaReviewExecutionContext
-      }
     };
   }
 
@@ -203,10 +176,7 @@ export async function runResumeStartFlow(input: {
 
   const resumed = buildResumedState({
     state: input.context.loadedState.state,
-    bubbleId: input.context.resolved.bubbleId,
-    nowIso: input.context.nowIso,
-    watchdogTimeoutMinutes:
-      input.context.resolved.bubbleConfig.watchdog_timeout_minutes
+    nowIso: input.context.nowIso
   });
   const written = await writeStateSnapshot(
     input.context.resolved.bubblePaths.statePath,

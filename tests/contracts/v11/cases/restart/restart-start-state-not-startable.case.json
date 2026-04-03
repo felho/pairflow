@@ -1,7 +1,7 @@
 {
   "id": "restart-start-state-not-startable",
   "command": "restart",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed restart contract case for start failure when bubble state is not startable.",
   "input": {
     "fixture": {

@@ -13,7 +13,7 @@
     "status": "ok",
     "gateRoute": "meta_review_running",
     "stateSubset": {
-      "state": "META_REVIEW_RUNNING"
+      "state": "RUNNING"
     }
   },
   "tags": [

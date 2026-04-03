@@ -1,7 +1,7 @@
 {
   "id": "resume-waiting-human-round-invalid",
   "command": "resume",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Resume rejects WAITING_HUMAN state when round is invalid.",
   "input": {
     "fixture": {

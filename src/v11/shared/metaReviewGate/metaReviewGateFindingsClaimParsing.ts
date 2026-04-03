@@ -15,17 +15,6 @@ export function resolveFindingsCountFromMetaReviewReportJson(
   ) {
     return explicitCount;
   }
-  const findingsRaw = reportJson.findings;
-  if (
-    typeof findingsRaw === "number" &&
-    Number.isInteger(findingsRaw) &&
-    findingsRaw >= 0
-  ) {
-    return findingsRaw;
-  }
-  if (Array.isArray(findingsRaw)) {
-    return findingsRaw.length;
-  }
   return undefined;
 }
 

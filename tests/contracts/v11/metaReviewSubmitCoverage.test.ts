@@ -35,7 +35,7 @@ async function writeMetaReviewRunningState(input: {
     input.statePath,
     {
       ...loaded.state,
-      state: "META_REVIEW_RUNNING",
+      state: "RUNNING",
       round: input.round ?? loaded.state.round,
       active_agent: input.activeAgent,
       active_role: input.activeRole,
@@ -137,8 +137,8 @@ describe("v11 meta-review submit contract", () => {
     if (!(thrown instanceof MetaReviewError)) {
       throw new Error("Expected MetaReviewError for missing --report-json.");
     }
-    expect(thrown.reasonCode).toBe("META_REVIEW_SCHEMA_INVALID");
-    expect(thrown.message).toContain("Missing required option: --report-json");
+    expect(thrown.message).toContain("was removed");
+    expect(thrown.message).toContain("pairflow agent emit --kind meta_review_result");
   });
 
   it("rejects submit command when --report-json is not a JSON object", () => {
@@ -165,8 +165,8 @@ describe("v11 meta-review submit contract", () => {
     if (!(thrown instanceof MetaReviewError)) {
       throw new Error("Expected MetaReviewError for invalid --report-json shape.");
     }
-    expect(thrown.reasonCode).toBe("META_REVIEW_SCHEMA_INVALID");
-    expect(thrown.message).toContain("Must be a JSON object");
+    expect(thrown.message).toContain("was removed");
+    expect(thrown.message).toContain("pairflow agent emit --kind meta_review_result");
   });
 
   it("rejects summary/structured mismatch on submit", async () => {
@@ -361,7 +361,7 @@ describe("v11 meta-review submit contract", () => {
       bubble.paths.statePath,
       {
         ...loaded.state,
-        state: "META_REVIEW_RUNNING",
+        state: "RUNNING",
         round: loaded.state.round,
         active_agent: null,
         active_role: null,

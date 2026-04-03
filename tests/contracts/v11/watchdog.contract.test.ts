@@ -23,12 +23,12 @@ const watchdogCaseSources = [
   "tests/contracts/v11/cases/watchdog/watchdog-expired-missing-session-escalates-v11.case.json",
   "tests/contracts/v11/cases/watchdog/watchdog-expired-unreadable-pane-escalates.case.json",
   "tests/contracts/v11/cases/watchdog/watchdog-expired-unreadable-pane-escalates-v11.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-expired.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-expired-v11.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-before-deadline-delivery-failed.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-before-deadline-delivery-failed-v11.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-expired-after-rebind.case.json",
-  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-running-expired-after-rebind-v11.case.json"
+  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-authority-expired.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-authority-expired-v11.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-authority-before-deadline-delivery-failed.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-authority-before-deadline-delivery-failed-v11.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-authority-expired-after-rebind.case.json",
+  "tests/contracts/v11/cases/watchdog/watchdog-meta-review-authority-expired-after-rebind-v11.case.json"
 ] as const;
 
 const watchdogExpectedSourcesSorted = [...watchdogCaseSources].sort();
@@ -52,12 +52,12 @@ describe("v11 watchdog contract harness skeleton", () => {
     const casePath = resolve(process.cwd(), watchdogCaseSources[0]);
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("watchdog");
-    expect(caseDef.mode).toBe("legacy");
+    expect(caseDef.mode).toBe("baseline");
     expect(caseDef.expected.status).toBe("ok");
   });
 
   it(
-    "executes legacy and v11 assertions via shared runner",
+    "executes baseline and v11 assertions via shared runner",
     { timeout: CONTRACT_TEST_TIMEOUT.parityHeavyMs },
     async () => {
     const casePaths = watchdogCaseSources.map((source) =>
@@ -67,10 +67,10 @@ describe("v11 watchdog contract harness skeleton", () => {
     for (const casePath of casePaths) {
       const caseDef = await readContractCase(casePath);
       const run = await runWatchdogContractCase(caseDef);
-      if (caseDef.mode === "legacy") {
-        expect(run.legacy?.status).toBe(caseDef.expected.status);
+      if (caseDef.mode === "baseline") {
+        expect(run.baseline?.status).toBe(caseDef.expected.status);
         if (caseDef.expected.reasonCode !== undefined) {
-          expect(run.legacy?.reasonCode).toBe(caseDef.expected.reasonCode);
+          expect(run.baseline?.reasonCode).toBe(caseDef.expected.reasonCode);
         }
         expect(run.v11).toBeUndefined();
         continue;
@@ -80,13 +80,13 @@ describe("v11 watchdog contract harness skeleton", () => {
         if (caseDef.expected.reasonCode !== undefined) {
           expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
         }
-        expect(run.legacy).toBeUndefined();
+        expect(run.baseline).toBeUndefined();
         continue;
       }
 
-      expect(run.legacy).toBeDefined();
+      expect(run.baseline).toBeDefined();
       expect(run.v11).toBeDefined();
-      expect(run.legacy).toEqual(run.v11);
+      expect(run.baseline).toEqual(run.v11);
     }
     }
   );

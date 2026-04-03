@@ -127,6 +127,7 @@ function resolveAttachCopyCommand(result: AttachActionResult): string | null {
 function defaultMetaReviewSummary(): UiBubbleSummary["metaReview"] {
   return {
     actor: "meta-reviewer",
+    authorityActive: false,
     latestRecommendation: null,
     latestStatus: null,
     latestSummary: null,
@@ -151,6 +152,7 @@ function normalizeBubbleSummary(input: UiBubbleSummary): UiBubbleSummary {
     ...input,
     metaReview: {
       actor: "meta-reviewer",
+      authorityActive: meta.authorityActive === true,
       latestRecommendation:
         recommendation === "approve" ||
           recommendation === "rework" ||

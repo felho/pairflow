@@ -14,7 +14,7 @@ import {
 } from "./metaReviewGateRecoveryContext.js";
 import {
   persistAutoReworkCounterAfterRecoveryDispatch,
-  restoreReadyForApprovalAfterDispatchFailure,
+  restoreHumanGateAfterDispatchFailure,
   transitionRecoveryToRunningForAutoRework
 } from "./metaReviewGateRecoveryAutoReworkState.js";
 
@@ -43,7 +43,7 @@ export async function handleRecoveryAutoReworkRoute(input: {
       fallbackReason:
         "META_REVIEW_GATE_REWORK_DISPATCH_FAILED: missing rework target message for autonomous dispatch",
       loaded: input.context.loaded,
-      expectedState: "META_REVIEW_RUNNING",
+      expectedState: "RUNNING",
       runResultForRouting: input.runResultForRouting,
       parityMetadata: input.parityMetadata,
       rollbackStateOnAppendFailure: input.context.loaded.state
@@ -92,7 +92,7 @@ export async function handleRecoveryAutoReworkRoute(input: {
     });
   } catch (error) {
     const appendReason = error instanceof Error ? error.message : String(error);
-    const restored = await restoreReadyForApprovalAfterDispatchFailure({
+    const restored = await restoreHumanGateAfterDispatchFailure({
       context: input.context,
       loaded: input.context.loaded,
       resumedWritten,
@@ -104,11 +104,11 @@ export async function handleRecoveryAutoReworkRoute(input: {
       summary: input.summary,
       fallbackReason:
         `META_REVIEW_GATE_REWORK_DISPATCH_FAILED: append_error=${appendReason}; ${restored.restoreOutcome}`,
-      loaded: restored.readyForApproval,
-      expectedState: "READY_FOR_APPROVAL",
+      loaded: restored.readyForHumanApproval,
+      expectedState: "READY_FOR_HUMAN_APPROVAL",
       runResultForRouting: input.runResultForRouting,
       parityMetadata: input.parityMetadata,
-      rollbackStateOnAppendFailure: restored.readyForApproval.state
+      rollbackStateOnAppendFailure: restored.readyForHumanApproval.state
     });
   }
 

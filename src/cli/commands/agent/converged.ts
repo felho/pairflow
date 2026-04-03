@@ -24,9 +24,9 @@ import {
   resolveConvergedSummaryFindingsContradiction
 } from "../../../core/convergence/policy.js";
 import {
-  resolveCompatActorEmitContextFromWorkspace
-} from "../../../core/bubble/actorEmitContext.js";
-import { emitActorProtocolFromWorkspaceV11 } from "../../../v11/application/actorProtocol/emitActorProtocolV11.js";
+  buildLegacyActorCommandRemovedError,
+  isLegacyActorCommandHelpRequest
+} from "./legacyActorCommandRemoval.js";
 
 export interface ConvergedCommandOptions {
   summary: string;
@@ -124,8 +124,8 @@ export function getConvergedHelpText(): string {
   return [
     "Usage:",
     '  pairflow agent emit --kind convergence --repo <path> --bubble-id <id> --handoff-id <id> --summary "<text>" [--ref <artifact-path>]... [--finding <P2|P3:Title[|ref1,ref2]>]...',
-    "  Compatibility adapter:",
-    '  pairflow converged --summary "<text>" [--ref <artifact-path>]... [--finding <P2|P3:Title[|ref1,ref2]>]...',
+    "  Removed legacy alias:",
+    "  pairflow converged",
     "",
     "Options:",
     "  --summary <text>      Required convergence summary",
@@ -193,38 +193,20 @@ function parseConvergedArgs(args: string[]) {
   }
 }
 
-export async function runConvergedCommand(
+export function runConvergedCommand(
   args: string[],
   cwd: string = process.cwd()
 ): Promise<EmitConvergedResult | null> {
   try {
-    const options = parseConvergedCommandOptions(args);
-    if (options.help) {
-      return null;
+    void cwd;
+    if (isLegacyActorCommandHelpRequest(args)) {
+      return Promise.resolve(null);
     }
-
-    const context = await resolveCompatActorEmitContextFromWorkspace(cwd);
-    const result = await emitActorProtocolFromWorkspaceV11({
-      input: {
-        kind: "convergence",
-        repo: context.repo,
-        bubble_id: context.bubble_id,
-        handoff_id: context.handoff_id,
-        refs: options.refs,
-        expected_role: context.expected_role,
-        expected_round: context.expected_round,
-        expected_state_fingerprint: context.expected_state_fingerprint,
-        summary: options.summary,
-        ...(options.findings.length > 0 ? { findings: options.findings } : {})
-      },
-      authoritativeContext: context
+    throw buildLegacyActorCommandRemovedError({
+      command: "converged",
+      canonicalCommand:
+        "pairflow agent emit --kind convergence --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --summary <text>"
     });
-    if (result.kind !== "convergence") {
-      throw new Error(
-        "ACTOR_EMIT_RESULT_KIND_INVALID: expected convergence result."
-      );
-    }
-    return result.convergence;
   } catch (error) {
     asConvergedCommandError(error);
   }

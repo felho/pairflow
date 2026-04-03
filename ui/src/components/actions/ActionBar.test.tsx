@@ -35,9 +35,6 @@ const expectedMatrix: Record<BubbleLifecycleState, BubbleActionKind[]> = {
   PREPARING_WORKSPACE: ["stop"],
   RUNNING: ["restart", "open", "stop"],
   WAITING_HUMAN: ["request-rework", "reply", "resume", "restart", "open", "stop"],
-  READY_FOR_APPROVAL: ["approve", "request-rework", "restart", "open", "stop"],
-  META_REVIEW_RUNNING: ["restart", "open", "stop"],
-  META_REVIEW_FAILED: ["approve", "request-rework", "restart", "open", "stop"],
   READY_FOR_HUMAN_APPROVAL: ["approve", "request-rework", "restart", "open", "stop"],
   APPROVED_FOR_COMMIT: ["commit", "restart", "open", "stop"],
   COMMITTED: ["restart", "open", "stop"],
@@ -99,7 +96,7 @@ describe("ActionBar", () => {
         bubble={bubbleCard({
           bubbleId: "b-ready",
           repoPath: "/repo-a",
-          state: "READY_FOR_APPROVAL"
+          state: "READY_FOR_HUMAN_APPROVAL"
         })}
         attach={{
           visible: false,

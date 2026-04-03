@@ -1,5 +1,7 @@
+import { clearLiveMetaReviewSnapshot } from "../../../core/bubble/metaReview.js";
 import { applyStateTransition } from "../../../core/state/machine.js";
 import { buildRunningExecutionContext } from "../../../core/state/executionContext.js";
+import { assertValidBubbleStateSnapshot } from "../../../core/state/stateSchema.js";
 import {
   StateStoreConflictError,
   type LoadedStateSnapshot
@@ -19,44 +21,49 @@ export async function transitionRecoveryToRunningForAutoRework(input: {
   loaded: LoadedStateSnapshot;
 }): Promise<LoadedStateSnapshot> {
   const nextRound = input.loaded.state.round + 1;
-  const resumed = applyStateTransition(input.loaded.state, {
-    to: "RUNNING",
+  const resumed = assertValidBubbleStateSnapshot({
+    ...input.loaded.state,
+    state: "RUNNING",
     round: nextRound,
-    activeAgent: input.context.resolved.bubbleConfig.agents.implementer,
-    activeRole: "implementer",
-    executionContext: buildRunningExecutionContext({
+    active_agent: input.context.resolved.bubbleConfig.agents.implementer,
+    active_role: "implementer",
+    execution_context: buildRunningExecutionContext({
       bubbleId: input.loaded.state.bubble_id,
       round: nextRound,
       activeRole: "implementer",
       startedAt: input.context.nowIso,
       watchdogTimeoutMinutes: input.context.resolved.bubbleConfig.watchdog_timeout_minutes
     }),
-    activeSince: input.context.nowIso,
-    lastCommandAt: input.context.nowIso,
-    appendRoundRoleEntry: {
-      round: nextRound,
-      implementer: input.context.resolved.bubbleConfig.agents.implementer,
-      reviewer: input.context.resolved.bubbleConfig.agents.reviewer,
-      switched_at: input.context.nowIso
-    }
+    active_since: input.context.nowIso,
+    last_command_at: input.context.nowIso,
+    round_role_history: [
+      ...input.loaded.state.round_role_history,
+      {
+        round: nextRound,
+        implementer: input.context.resolved.bubbleConfig.agents.implementer,
+        reviewer: input.context.resolved.bubbleConfig.agents.reviewer,
+        switched_at: input.context.nowIso
+      }
+    ],
+    meta_review: clearLiveMetaReviewSnapshot(input.loaded.state.meta_review)
   });
   return input.context.writeState(input.context.resolved.bubblePaths.statePath, resumed, {
     expectedFingerprint: input.loaded.fingerprint,
-    expectedState: "META_REVIEW_RUNNING"
+    expectedState: "RUNNING"
   });
 }
 
-export async function restoreReadyForApprovalAfterDispatchFailure(input: {
+export async function restoreHumanGateAfterDispatchFailure(input: {
   context: RecoverMetaReviewExecutionContext;
   loaded: LoadedStateSnapshot;
   resumedWritten: LoadedStateSnapshot;
   runResultForRouting: MetaReviewRunResult;
   appendReason: string;
-}): Promise<{ readyForApproval: LoadedStateSnapshot; restoreOutcome: string }> {
+}): Promise<{ readyForHumanApproval: LoadedStateSnapshot; restoreOutcome: string }> {
   let restoreOutcome = "restore_outcome=not_attempted";
   try {
     const backToReady = applyStateTransition(input.resumedWritten.state, {
-      to: "READY_FOR_APPROVAL",
+      to: "READY_FOR_HUMAN_APPROVAL",
       activeAgent: null,
       activeRole: null,
       activeSince: null,
@@ -71,7 +78,7 @@ export async function restoreReadyForApprovalAfterDispatchFailure(input: {
         runResult: input.runResultForRouting
       })
     };
-    const readyForApproval = await input.context.writeState(
+    const readyForHumanApproval = await input.context.writeState(
       input.context.resolved.bubblePaths.statePath,
       restoredCounterReady,
       {
@@ -80,7 +87,7 @@ export async function restoreReadyForApprovalAfterDispatchFailure(input: {
       }
     );
     restoreOutcome = "restore_outcome=applied";
-    return { readyForApproval, restoreOutcome };
+    return { readyForHumanApproval, restoreOutcome };
   } catch (recoveryError) {
     const restoreReason =
       recoveryError instanceof Error ? recoveryError.message : String(recoveryError);
@@ -88,7 +95,7 @@ export async function restoreReadyForApprovalAfterDispatchFailure(input: {
     if (recoveryError instanceof StateStoreConflictError) {
       throw new MetaReviewGateError(
         "META_REVIEW_GATE_STATE_CONFLICT",
-        `META_REVIEW_GATE_STATE_CONFLICT: auto-rework dispatch append failed (append_error=${input.appendReason}) and restore to READY_FOR_APPROVAL failed (${restoreOutcome}).`,
+        `META_REVIEW_GATE_STATE_CONFLICT: auto-rework dispatch append failed (append_error=${input.appendReason}) and restore to READY_FOR_HUMAN_APPROVAL failed (${restoreOutcome}).`,
         {
           stageReasonCode: "META_REVIEW_GATE_STATE_CONFLICT"
         }
@@ -96,7 +103,7 @@ export async function restoreReadyForApprovalAfterDispatchFailure(input: {
     }
     throw new MetaReviewGateError(
       "META_REVIEW_GATE_TRANSITION_INVALID",
-      `META_REVIEW_GATE_TRANSITION_INVALID: auto-rework dispatch append failed (append_error=${input.appendReason}) and restore to READY_FOR_APPROVAL failed (${restoreOutcome}).`,
+      `META_REVIEW_GATE_TRANSITION_INVALID: auto-rework dispatch append failed (append_error=${input.appendReason}) and restore to READY_FOR_HUMAN_APPROVAL failed (${restoreOutcome}).`,
       {
         stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
       }

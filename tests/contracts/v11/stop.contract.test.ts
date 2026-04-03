@@ -50,7 +50,7 @@ const stopInvalidInputCases: Array<{
     caseDef: {
       id: "stop-invalid-tmux-session-existed",
       command: "stop",
-      mode: "legacy",
+      mode: "baseline",
       description: "invalid tmuxSessionExisted validation",
       input: {
         tmuxSessionExisted: "yes"
@@ -66,7 +66,7 @@ const stopInvalidInputCases: Array<{
     caseDef: {
       id: "stop-invalid-runtime-session-removed",
       command: "stop",
-      mode: "legacy",
+      mode: "baseline",
       description: "invalid runtimeSessionRemoved validation",
       input: {
         runtimeSessionRemoved: "no"
@@ -102,12 +102,12 @@ describe("v11 stop contract harness skeleton", () => {
     const casePath = resolve(process.cwd(), stopCaseSources[0]);
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("stop");
-    expect(caseDef.mode).toBe("legacy");
+    expect(caseDef.mode).toBe("baseline");
     expect(caseDef.expected.status).toBe("ok");
   });
 
   it(
-    "executes legacy and parity assertions via shared runner",
+    "executes baseline and parity assertions via shared runner",
     { timeout: CONTRACT_TEST_TIMEOUT.parityHeavyMs },
     async () => {
     const casePaths = stopCaseSources.map((source) =>
@@ -117,10 +117,10 @@ describe("v11 stop contract harness skeleton", () => {
     for (const casePath of casePaths) {
       const caseDef = await readContractCase(casePath);
       const run = await runStopContractCase(caseDef);
-      if (caseDef.mode === "legacy") {
-        expect(run.legacy?.status).toBe(caseDef.expected.status);
+      if (caseDef.mode === "baseline") {
+        expect(run.baseline?.status).toBe(caseDef.expected.status);
         if (caseDef.expected.reasonCode !== undefined) {
-          expect(run.legacy?.reasonCode).toBe(caseDef.expected.reasonCode);
+          expect(run.baseline?.reasonCode).toBe(caseDef.expected.reasonCode);
         }
         expect(run.v11).toBeUndefined();
         continue;
@@ -130,13 +130,13 @@ describe("v11 stop contract harness skeleton", () => {
         if (caseDef.expected.reasonCode !== undefined) {
           expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
         }
-        expect(run.legacy).toBeUndefined();
+        expect(run.baseline).toBeUndefined();
         continue;
       }
 
-      expect(run.legacy).toBeDefined();
+      expect(run.baseline).toBeDefined();
       expect(run.v11).toBeDefined();
-      expect(run.legacy).toEqual(run.v11);
+      expect(run.baseline).toEqual(run.v11);
     }
     }
   );

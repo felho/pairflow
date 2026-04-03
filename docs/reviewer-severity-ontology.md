@@ -94,7 +94,7 @@ Reviewer PASS with any `P0/P1` finding must have evidence bound at finding level
 
 ## Decision Mapping
 
-1. Round `< severity_gate_round` (default `4`): reviewer canonical pass emit (`pairflow agent emit --kind pass ...`) remains allowed (including non-blocking findings), while canonical convergence emit (`pairflow agent emit --kind convergence ...`) is still allowed when policy preconditions are met. Legacy `pairflow pass` and `pairflow converged` remain compatibility adapters only.
+1. Round `< severity_gate_round` (default `4`): reviewer canonical pass emit (`pairflow agent emit --kind pass ...`) remains allowed (including non-blocking findings), while canonical convergence emit (`pairflow agent emit --kind convergence ...`) is still allowed when policy preconditions are met.
 2. Round `>= severity_gate_round` with blocker findings under scope policy: reviewer should request a fix cycle with canonical pass emit (`pairflow agent emit --kind pass ...`).
    Document scope blocker means `P0/P1` with strict qualifiers (`timing=required-now` + `layer=L1`).
    Operational command form: `pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --summary "..." --finding "P1:Title|artifact://ref"` (repeat `--finding` as needed).

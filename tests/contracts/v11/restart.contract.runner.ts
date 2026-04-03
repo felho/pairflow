@@ -43,7 +43,7 @@ export type RestartContractOutput =
 
 export interface RestartContractRunResult {
   mode: ContractCase["mode"];
-  legacy?: RestartContractOutput;
+  baseline?: RestartContractOutput;
   v11?: RestartContractOutput;
 }
 
@@ -177,13 +177,13 @@ function assertContractExpectedSubset(input: {
 }
 
 function assertParityEquivalent(input: {
-  legacy: RestartContractOutput;
+  baseline: RestartContractOutput;
   v11: RestartContractOutput;
   caseId: string;
 }): void {
-  if (JSON.stringify(input.legacy) !== JSON.stringify(input.v11)) {
+  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
     throw new Error(
-      `restart parity mismatch for case=${input.caseId}: legacy=${JSON.stringify(input.legacy)} v11=${JSON.stringify(input.v11)}`
+      `restart parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
     );
   }
 }
@@ -271,19 +271,19 @@ export async function runRestartContractCase(
     );
   }
 
-  if (caseDef.mode === "legacy") {
-    const legacy = await executeRestartCase({
+  if (caseDef.mode === "baseline") {
+    const baseline = await executeRestartCase({
       caseDef,
       executor: restartBubble
     });
     assertContractExpectedSubset({
-      output: legacy,
+      output: baseline,
       expected: caseDef.expected,
-      label: "legacy"
+      label: "baseline"
     });
     return {
       mode: caseDef.mode,
-      legacy
+      baseline
     };
   }
 
@@ -303,7 +303,7 @@ export async function runRestartContractCase(
     };
   }
 
-  const legacy = await executeRestartCase({
+  const baseline = await executeRestartCase({
     caseDef,
     executor: restartBubble
   });
@@ -312,9 +312,9 @@ export async function runRestartContractCase(
     executor: restartBubbleV11
   });
   assertContractExpectedSubset({
-    output: legacy,
+    output: baseline,
     expected: caseDef.expected,
-    label: "parity/legacy"
+    label: "parity/baseline"
   });
   assertContractExpectedSubset({
     output: v11,
@@ -322,13 +322,13 @@ export async function runRestartContractCase(
     label: "parity/v11"
   });
   assertParityEquivalent({
-    legacy,
+    baseline,
     v11,
     caseId: caseDef.id
   });
   return {
     mode: caseDef.mode,
-    legacy,
+    baseline,
     v11
   };
 }

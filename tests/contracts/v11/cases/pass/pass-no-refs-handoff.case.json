@@ -1,8 +1,8 @@
 {
   "id": "pass-no-refs-handoff",
   "command": "pass",
-  "mode": "legacy",
-  "description": "PASS legacy baseline with omitted refs input.",
+  "mode": "baseline",
+  "description": "PASS baseline baseline with omitted refs input.",
   "input": {
     "summary": "Implementer pass without refs",
     "intent": "task"
@@ -18,7 +18,7 @@
   "tags": [
     "seed",
     "m1",
-    "legacy",
+    "baseline",
     "no-refs",
     "pass"
   ]

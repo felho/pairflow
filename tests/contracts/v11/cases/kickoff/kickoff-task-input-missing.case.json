@@ -1,8 +1,8 @@
 {
   "id": "kickoff-task-input-missing",
   "command": "kickoff",
-  "mode": "legacy",
-  "description": "Seed kickoff legacy contract case for missing task input validation.",
+  "mode": "baseline",
+  "description": "Seed kickoff baseline contract case for missing task input validation.",
   "input": {
     "task": "Ignored content for missing task-input fixture",
     "fixture": {

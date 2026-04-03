@@ -4,10 +4,6 @@ import {
   asPassCommandErrorV11 as asPassCommandError,
   type EmitPassV11Result as EmitPassResult
 } from "../../../v11/application/pass/emitPassV11.js";
-import {
-  resolveCompatActorEmitContextFromWorkspace
-} from "../../../core/bubble/actorEmitContext.js";
-import { emitActorProtocolFromWorkspaceV11 } from "../../../v11/application/actorProtocol/emitActorProtocolV11.js";
 import { CliFindingParseError, parseCliFinding } from "./shared/findingParser.js";
 import { isPassIntent, type PassIntent } from "../../../types/protocol.js";
 import {
@@ -15,6 +11,10 @@ import {
   type FindingLayer,
   type FindingTiming
 } from "../../../types/findings.js";
+import {
+  buildLegacyActorCommandRemovedError,
+  isLegacyActorCommandHelpRequest
+} from "./legacyActorCommandRemoval.js";
 
 export interface PassCommandOptions {
   summary: string;
@@ -65,8 +65,8 @@ export function getPassHelpText(): string {
   return [
     "Usage:",
     '  pairflow agent emit --kind pass --repo <path> --bubble-id <id> --handoff-id <id> --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>] [--finding <P0|P1|P2|P3:Title[|ref1,ref2]>]... [--no-findings]',
-    "  Compatibility adapter:",
-    '  pairflow pass --summary "<text>" [--ref <artifact-path>]... [--intent <task|review|fix_request>] [--finding <P0|P1|P2|P3:Title[|ref1,ref2]>]... [--no-findings]',
+    "  Removed legacy alias:",
+    "  pairflow pass",
     "",
     "Options:",
     "  --summary <text>      Required handoff summary",
@@ -158,38 +158,20 @@ function parsePassArgs(args: string[]) {
   }
 }
 
-export async function runPassCommand(
+export function runPassCommand(
   args: string[],
   cwd: string = process.cwd()
 ): Promise<EmitPassResult | null> {
   try {
-    const options = parsePassCommandOptions(args);
-    if (options.help) {
-      return null;
+    void cwd;
+    if (isLegacyActorCommandHelpRequest(args)) {
+      return Promise.resolve(null);
     }
-
-    const context = await resolveCompatActorEmitContextFromWorkspace(cwd);
-    const result = await emitActorProtocolFromWorkspaceV11({
-      input: {
-        kind: "pass",
-        repo: context.repo,
-        bubble_id: context.bubble_id,
-        handoff_id: context.handoff_id,
-        refs: options.refs,
-        expected_role: context.expected_role,
-        expected_round: context.expected_round,
-        expected_state_fingerprint: context.expected_state_fingerprint,
-        summary: options.summary,
-        ...(options.intent !== undefined ? { intent: options.intent } : {}),
-        ...(options.findings.length > 0 ? { findings: options.findings } : {}),
-        ...(options.noFindings ? { no_findings: true } : {})
-      },
-      authoritativeContext: context
+    throw buildLegacyActorCommandRemovedError({
+      command: "pass",
+      canonicalCommand:
+        "pairflow agent emit --kind pass --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --summary <text>"
     });
-    if (result.kind !== "pass") {
-      throw new Error("ACTOR_EMIT_RESULT_KIND_INVALID: expected pass result.");
-    }
-    return result.pass;
   } catch (error) {
     asPassCommandError(error);
   }

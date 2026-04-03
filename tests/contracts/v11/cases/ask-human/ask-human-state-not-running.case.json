@@ -1,7 +1,7 @@
 {
   "id": "ask-human-state-not-running",
   "command": "askHuman",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "ask-human rejects when bubble is not RUNNING.",
   "input": {
     "question": "Need clarification from product.",
@@ -20,7 +20,7 @@
   "tags": [
     "ask-human",
     "v11-contract",
-    "legacy",
+    "baseline",
     "error-path"
   ]
 }

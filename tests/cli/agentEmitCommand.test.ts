@@ -44,7 +44,7 @@ describe("parseAgentEmitCommandOptions", () => {
     const parsed = parseAgentEmitCommandOptions(["--help"]);
     expect(parsed).toEqual({ help: true });
     expect(getAgentEmitHelpText()).toContain("pairflow agent emit --kind pass");
-    expect(getAgentEmitHelpText()).toContain("Compatibility note:");
+    expect(getAgentEmitHelpText()).toContain("Phase 5 note:");
   });
 
   it("parses meta-review result payload", () => {
@@ -337,7 +337,7 @@ describe("runAgentEmitCommand", () => {
       bubble.paths.statePath,
       {
         ...loaded.state,
-        state: "META_REVIEW_RUNNING",
+        state: "RUNNING",
         active_agent: null,
         active_role: null,
         active_since: null,

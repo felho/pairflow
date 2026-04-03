@@ -5,9 +5,9 @@ import {
   type EmitAskHumanV11Result as EmitAskHumanResult
 } from "../../../v11/application/askHuman/emitAskHumanV11.js";
 import {
-  resolveCompatActorEmitContextFromWorkspace
-} from "../../../core/bubble/actorEmitContext.js";
-import { emitActorProtocolFromWorkspaceV11 } from "../../../v11/application/actorProtocol/emitActorProtocolV11.js";
+  buildLegacyActorCommandRemovedError,
+  isLegacyActorCommandHelpRequest
+} from "./legacyActorCommandRemoval.js";
 
 export interface AskHumanCommandOptions {
   question: string;
@@ -28,8 +28,8 @@ export function getAskHumanHelpText(): string {
   return [
     "Usage:",
     '  pairflow agent emit --kind human_question --repo <path> --bubble-id <id> --handoff-id <id> --question "<text>" [--ref <artifact-path>]...',
-    "  Compatibility adapter:",
-    '  pairflow ask-human --question "<text>" [--ref <artifact-path>]...',
+    "  Removed legacy alias:",
+    "  pairflow ask-human",
     "",
     "Options:",
     "  --question <text>     Required human question",
@@ -81,37 +81,20 @@ export function parseAskHumanCommandOptions(
   };
 }
 
-export async function runAskHumanCommand(
+export function runAskHumanCommand(
   args: string[],
   cwd: string = process.cwd()
 ): Promise<EmitAskHumanResult | null> {
-  const options = parseAskHumanCommandOptions(args);
-  if (options.help) {
-    return null;
-  }
-
   try {
-    const context = await resolveCompatActorEmitContextFromWorkspace(cwd);
-    const result = await emitActorProtocolFromWorkspaceV11({
-      input: {
-        kind: "human_question",
-        repo: context.repo,
-        bubble_id: context.bubble_id,
-        handoff_id: context.handoff_id,
-        refs: options.refs,
-        expected_role: context.expected_role,
-        expected_round: context.expected_round,
-        expected_state_fingerprint: context.expected_state_fingerprint,
-        question: options.question
-      },
-      authoritativeContext: context
-    });
-    if (result.kind !== "human_question") {
-      throw new Error(
-        "ACTOR_EMIT_RESULT_KIND_INVALID: expected human_question result."
-      );
+    void cwd;
+    if (isLegacyActorCommandHelpRequest(args)) {
+      return Promise.resolve(null);
     }
-    return result.human_question;
+    throw buildLegacyActorCommandRemovedError({
+      command: "ask-human",
+      canonicalCommand:
+        "pairflow agent emit --kind human_question --repo <repo> --bubble-id <id> --handoff-id <handoff-id> --question <text>"
+    });
   } catch (error) {
     asAskHumanCommandError(error);
   }

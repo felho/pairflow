@@ -37,7 +37,7 @@ function buildPostGateConvergedGuidance(input: {
   round: number;
   severityGateRound: number;
 }): string {
-  return `Use canonical convergence emit (\`pairflow agent emit --kind convergence ...\`) instead (round ${input.round} >= severity_gate_round ${input.severityGateRound}). Legacy \`pairflow converged\` remains a compatibility adapter only.`;
+  return `Use canonical convergence emit (\`pairflow agent emit --kind convergence ...\`) instead (round ${input.round} >= severity_gate_round ${input.severityGateRound}).`;
 }
 
 export function inferReviewerPassIntent(input: {

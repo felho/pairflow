@@ -35,7 +35,7 @@ export interface WatchdogContractOutput {
 
 export interface WatchdogContractRunResult {
   mode: ContractCase["mode"];
-  legacy?: WatchdogContractOutput;
+  baseline?: WatchdogContractOutput;
   v11?: WatchdogContractOutput;
 }
 
@@ -46,9 +46,9 @@ type WatchdogContractExtendedScenario =
   | "expired_quiet_window_escalates"
   | "expired_missing_session_escalates"
   | "expired_unreadable_pane_escalates"
-  | "meta_review_running_expired"
-  | "meta_review_running_before_deadline_delivery_failed"
-  | "meta_review_running_expired_after_rebind";
+  | "meta_review_authority_expired"
+  | "meta_review_authority_before_deadline_delivery_failed"
+  | "meta_review_authority_expired_after_rebind";
 
 interface ParsedWatchdogCaseInput {
   scenario: WatchdogContractExtendedScenario;
@@ -75,12 +75,12 @@ function parseWatchdogCaseInput(input: ContractCase["input"]): ParsedWatchdogCas
       scenarioRaw !== "expired_quiet_window_escalates" &&
       scenarioRaw !== "expired_missing_session_escalates" &&
       scenarioRaw !== "expired_unreadable_pane_escalates" &&
-      scenarioRaw !== "meta_review_running_expired" &&
-      scenarioRaw !== "meta_review_running_before_deadline_delivery_failed" &&
-      scenarioRaw !== "meta_review_running_expired_after_rebind"
+      scenarioRaw !== "meta_review_authority_expired" &&
+      scenarioRaw !== "meta_review_authority_before_deadline_delivery_failed" &&
+      scenarioRaw !== "meta_review_authority_expired_after_rebind"
     ) {
       throw new Error(
-        "watchdog contract input.fixture.scenario must be one of: waiting_human, final_state, expired_recent_change_noop, expired_quiet_window_escalates, expired_missing_session_escalates, expired_unreadable_pane_escalates, meta_review_running_expired, meta_review_running_before_deadline_delivery_failed, meta_review_running_expired_after_rebind."
+        "watchdog contract input.fixture.scenario must be one of: waiting_human, final_state, expired_recent_change_noop, expired_quiet_window_escalates, expired_missing_session_escalates, expired_unreadable_pane_escalates, meta_review_authority_expired, meta_review_authority_before_deadline_delivery_failed, meta_review_authority_expired_after_rebind."
       );
     }
     scenario = scenarioRaw ?? "waiting_human";
@@ -141,13 +141,13 @@ function assertContractExpectedSubset(input: {
 }
 
 function assertParityEquivalent(input: {
-  legacy: WatchdogContractOutput;
+  baseline: WatchdogContractOutput;
   v11: WatchdogContractOutput;
   caseId: string;
 }): void {
-  if (JSON.stringify(input.legacy) !== JSON.stringify(input.v11)) {
+  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
     throw new Error(
-      `watchdog parity mismatch for case=${input.caseId}: legacy=${JSON.stringify(input.legacy)} v11=${JSON.stringify(input.v11)}`
+      `watchdog parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
     );
   }
 }
@@ -215,13 +215,13 @@ async function seedWaitingHumanState(input: {
     );
     return bubble;
   }
-  if (input.scenario === "meta_review_running_expired") {
+  if (input.scenario === "meta_review_authority_expired") {
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     await writeStateSnapshot(
       bubble.paths.statePath,
       {
         ...loaded.state,
-        state: "META_REVIEW_RUNNING",
+        state: "RUNNING",
         active_agent: "codex",
         active_role: "meta_reviewer",
         active_since: "2026-03-20T10:00:00.000Z",
@@ -253,7 +253,7 @@ async function seedWaitingHumanState(input: {
     );
     return bubble;
   }
-  if (input.scenario === "meta_review_running_before_deadline_delivery_failed") {
+  if (input.scenario === "meta_review_authority_before_deadline_delivery_failed") {
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const executionContext = buildMetaReviewExecutionContext({
       bubbleId: bubble.bubbleId,
@@ -266,7 +266,7 @@ async function seedWaitingHumanState(input: {
       bubble.paths.statePath,
       {
         ...loaded.state,
-        state: "META_REVIEW_RUNNING",
+        state: "RUNNING",
         active_agent: null,
         active_role: null,
         active_since: null,
@@ -301,7 +301,7 @@ async function seedWaitingHumanState(input: {
     );
     return bubble;
   }
-  if (input.scenario === "meta_review_running_expired_after_rebind") {
+  if (input.scenario === "meta_review_authority_expired_after_rebind") {
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const executionContext = buildMetaReviewExecutionContext({
       bubbleId: bubble.bubbleId,
@@ -314,7 +314,7 @@ async function seedWaitingHumanState(input: {
       bubble.paths.statePath,
       {
         ...loaded.state,
-        state: "META_REVIEW_RUNNING",
+        state: "RUNNING",
         active_agent: "codex",
         active_role: "meta_reviewer",
         active_since: "2026-03-20T12:44:00.000Z",
@@ -473,8 +473,8 @@ async function executeWatchdogCase(input: {
         cwd: repoPath,
         now: new Date("2026-03-20T12:45:00.000Z")
       },
-      parsedInput.scenario === "meta_review_running_expired"
-      || parsedInput.scenario === "meta_review_running_expired_after_rebind"
+      parsedInput.scenario === "meta_review_authority_expired"
+      || parsedInput.scenario === "meta_review_authority_expired_after_rebind"
         ? {
             recoverMetaReviewGateFromSnapshot: async () => {
               recoverCalled = true;
@@ -512,8 +512,8 @@ async function executeWatchdogCase(input: {
     );
     if (
       (
-        parsedInput.scenario === "meta_review_running_expired"
-        || parsedInput.scenario === "meta_review_running_expired_after_rebind"
+        parsedInput.scenario === "meta_review_authority_expired"
+        || parsedInput.scenario === "meta_review_authority_expired_after_rebind"
       )
       && !recoverCalled
     ) {
@@ -536,19 +536,19 @@ export async function runWatchdogContractCase(
     );
   }
 
-  if (caseDef.mode === "legacy") {
-    const legacy = await executeWatchdogCase({
+  if (caseDef.mode === "baseline") {
+    const baseline = await executeWatchdogCase({
       caseDef,
       executor: runBubbleWatchdog
     });
     assertContractExpectedSubset({
-      output: legacy,
+      output: baseline,
       expected: caseDef.expected,
-      label: "legacy"
+      label: "baseline"
     });
     return {
       mode: caseDef.mode,
-      legacy
+      baseline
     };
   }
 
@@ -568,7 +568,7 @@ export async function runWatchdogContractCase(
     };
   }
 
-  const legacy = await executeWatchdogCase({
+  const baseline = await executeWatchdogCase({
     caseDef,
     executor: runBubbleWatchdog
   });
@@ -577,9 +577,9 @@ export async function runWatchdogContractCase(
     executor: runBubbleWatchdogV11
   });
   assertContractExpectedSubset({
-    output: legacy,
+    output: baseline,
     expected: caseDef.expected,
-    label: "parity/legacy"
+    label: "parity/baseline"
   });
   assertContractExpectedSubset({
     output: v11,
@@ -587,13 +587,13 @@ export async function runWatchdogContractCase(
     label: "parity/v11"
   });
   assertParityEquivalent({
-    legacy,
+    baseline,
     v11,
     caseId: caseDef.id
   });
   return {
     mode: caseDef.mode,
-    legacy,
+    baseline,
     v11
   };
 }

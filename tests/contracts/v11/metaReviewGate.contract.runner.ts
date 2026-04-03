@@ -36,7 +36,7 @@ export interface MetaReviewGateContractOutput {
 
 export interface MetaReviewGateContractRunResult {
   mode: ContractCase["mode"];
-  legacy?: MetaReviewGateContractOutput;
+  baseline?: MetaReviewGateContractOutput;
   v11?: MetaReviewGateContractOutput;
 }
 
@@ -199,7 +199,7 @@ function buildSyntheticMetaReviewRunError(input: {
     report_ref: "artifacts/meta-review-last.json",
     rework_target_message: null,
     updated_at: "2026-03-19T10:03:00.000Z",
-    lifecycle_state: "META_REVIEW_RUNNING",
+    lifecycle_state: "RUNNING",
     warnings: [
       {
         reason_code: "META_REVIEW_RUNNER_ERROR",
@@ -224,7 +224,7 @@ function buildSyntheticMetaReviewRunApprove(input: {
     report_ref: "artifacts/meta-review-last.json",
     rework_target_message: null,
     updated_at: "2026-03-19T10:03:00.000Z",
-    lifecycle_state: "META_REVIEW_RUNNING",
+    lifecycle_state: "RUNNING",
     warnings: [],
     report_json: {
       findings_claim_state: "clean",
@@ -249,7 +249,7 @@ function buildSyntheticMetaReviewRunApproveAdvisory(input: {
     report_ref: "artifacts/meta-review-last.json",
     rework_target_message: null,
     updated_at: "2026-03-19T10:03:00.000Z",
-    lifecycle_state: "META_REVIEW_RUNNING",
+    lifecycle_state: "RUNNING",
     warnings: [],
     report_json: {
       findings_claim_state: "open_findings",
@@ -285,7 +285,7 @@ function buildSyntheticMetaReviewRunApproveAdvisoryWithArtifact(input: {
     report_ref: "artifacts/meta-review-last.json",
     rework_target_message: null,
     updated_at: "2026-03-19T10:03:00.000Z",
-    lifecycle_state: "META_REVIEW_RUNNING",
+    lifecycle_state: "RUNNING",
     warnings: [],
     report_json: {
       findings_claim_state: "open_findings",
@@ -311,7 +311,7 @@ function buildSyntheticMetaReviewRunInconclusive(input: {
     report_ref: "artifacts/meta-review-last.json",
     rework_target_message: null,
     updated_at: "2026-03-19T10:03:00.000Z",
-    lifecycle_state: "META_REVIEW_RUNNING",
+    lifecycle_state: "RUNNING",
     warnings: []
   };
 }
@@ -333,7 +333,7 @@ function buildSyntheticMetaReviewRunReworkOpenFindings(input: {
     report_ref: "artifacts/meta-review-last.json",
     rework_target_message: "Fix the remaining blocker findings.",
     updated_at: "2026-03-19T10:03:00.000Z",
-    lifecycle_state: "META_REVIEW_RUNNING",
+    lifecycle_state: "RUNNING",
     warnings: [],
     report_json: {
       findings_claim_state: "open_findings",
@@ -359,7 +359,7 @@ function buildSyntheticMetaReviewRunReworkDispatchFailed(input: {
     report_ref: "artifacts/meta-review-last.json",
     rework_target_message: "Fix the blocker findings before retry.",
     updated_at: "2026-03-19T10:03:00.000Z",
-    lifecycle_state: "META_REVIEW_RUNNING",
+    lifecycle_state: "RUNNING",
     warnings: []
   };
 }
@@ -498,15 +498,15 @@ function assertContractExpectedSubset(input: {
 }
 
 function assertParityEquivalent(input: {
-  legacy: MetaReviewGateContractOutput;
+  baseline: MetaReviewGateContractOutput;
   v11: MetaReviewGateContractOutput;
   caseId: string;
 }): void {
-  const normalizedLegacy = normalizeParityComparableValue(input.legacy);
+  const normalizedBaseline = normalizeParityComparableValue(input.baseline);
   const normalizedV11 = normalizeParityComparableValue(input.v11);
-  if (JSON.stringify(normalizedLegacy) !== JSON.stringify(normalizedV11)) {
+  if (JSON.stringify(normalizedBaseline) !== JSON.stringify(normalizedV11)) {
     throw new Error(
-      `metaReviewGate parity mismatch for case=${input.caseId}: legacy=${JSON.stringify(input.legacy)} v11=${JSON.stringify(input.v11)}`
+      `metaReviewGate parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
     );
   }
 }
@@ -624,7 +624,7 @@ async function executeMetaReviewGateCase(input: {
         bubble.paths.statePath,
         {
           ...loaded.state,
-          state: "META_REVIEW_RUNNING",
+          state: "RUNNING",
           active_agent: "codex",
           active_role: "meta_reviewer",
           active_since: "2026-03-19T10:03:30.000Z",
@@ -773,20 +773,20 @@ export async function runMetaReviewGateContractCase(
     );
   }
 
-  if (caseDef.mode === "legacy") {
-    const legacy = await executeMetaReviewGateCase({
+  if (caseDef.mode === "baseline") {
+    const baseline = await executeMetaReviewGateCase({
       caseDef,
       applyExecutor: applyMetaReviewGateOnConvergence,
       recoverExecutor: recoverMetaReviewGateFromSnapshot
     });
     assertContractExpectedSubset({
-      output: legacy,
+      output: baseline,
       expected: caseDef.expected,
-      label: "legacy"
+      label: "baseline"
     });
     return {
       mode: caseDef.mode,
-      legacy
+      baseline
     };
   }
 
@@ -807,7 +807,7 @@ export async function runMetaReviewGateContractCase(
     };
   }
 
-  const legacy = await executeMetaReviewGateCase({
+  const baseline = await executeMetaReviewGateCase({
     caseDef,
     applyExecutor: applyMetaReviewGateOnConvergence,
     recoverExecutor: recoverMetaReviewGateFromSnapshot
@@ -818,9 +818,9 @@ export async function runMetaReviewGateContractCase(
     recoverExecutor: recoverMetaReviewGateFromSnapshotV11
   });
   assertContractExpectedSubset({
-    output: legacy,
+    output: baseline,
     expected: caseDef.expected,
-    label: "parity/legacy"
+    label: "parity/baseline"
   });
   assertContractExpectedSubset({
     output: v11,
@@ -828,13 +828,13 @@ export async function runMetaReviewGateContractCase(
     label: "parity/v11"
   });
   assertParityEquivalent({
-    legacy,
+    baseline,
     v11,
     caseId: caseDef.id
   });
   return {
     mode: caseDef.mode,
-    legacy,
+    baseline,
     v11
   };
 }

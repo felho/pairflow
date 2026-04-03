@@ -99,7 +99,7 @@ async function updateBubbleState(
   const nextState = updater(loaded.state);
   let normalizedState = nextState;
 
-  if (nextState.state === "META_REVIEW_RUNNING") {
+  if (nextState.state === "RUNNING" && nextState.active_role === "meta_reviewer") {
     normalizedState = {
       ...nextState,
       execution_context: metaReviewExecutionContextToRunningContext(
@@ -2153,7 +2153,6 @@ describe("startBubble", () => {
     const repoPath = await createTempRepo();
     const resumableStates = [
       "WAITING_HUMAN",
-      "READY_FOR_APPROVAL",
       "READY_FOR_HUMAN_APPROVAL",
       "APPROVED_FOR_COMMIT",
       "COMMITTED"
@@ -2194,7 +2193,7 @@ describe("startBubble", () => {
     }
   });
 
-  it("sends explicit meta-reviewer kickoff when resuming META_REVIEW_RUNNING", async () => {
+  it("sends explicit meta-reviewer kickoff when resuming RUNNING meta-review authority", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -2204,7 +2203,7 @@ describe("startBubble", () => {
 
     await updateBubbleState(bubble.paths.statePath, (current) => ({
       ...current,
-      state: "META_REVIEW_RUNNING",
+      state: "RUNNING",
       active_agent: "codex",
       active_role: "meta_reviewer",
       meta_review: {
@@ -2227,7 +2226,7 @@ describe("startBubble", () => {
       },
       {
         buildResumeTranscriptSummary: () =>
-          Promise.resolve("resume-summary: state=META_REVIEW_RUNNING"),
+          Promise.resolve("resume-summary: state=RUNNING(meta_review_authority)"),
         launchBubbleTmuxSession: (input) => {
           expect(input.implementerKickoffMessage).toBeUndefined();
           expect(input.reviewerKickoffMessage).toBeUndefined();
@@ -2235,7 +2234,7 @@ describe("startBubble", () => {
             "resume kickoff (meta-reviewer)"
           );
           expect(input.metaReviewerKickoffMessage).toContain(
-            "META_REVIEW_RUNNING"
+            "RUNNING"
           );
           return Promise.resolve({
             sessionName: "pf-b_start_resume_meta_01"

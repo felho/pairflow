@@ -37,7 +37,7 @@ export type PassContractOutput =
 
 export interface PassContractRunResult {
   mode: ContractCase["mode"];
-  legacy?: PassContractOutput;
+  baseline?: PassContractOutput;
   v11?: PassContractOutput;
 }
 
@@ -176,13 +176,13 @@ function assertContractExpectedSubset(input: {
 }
 
 function assertParityEquivalent(input: {
-  legacy: PassContractOutput;
+  baseline: PassContractOutput;
   v11: PassContractOutput;
   caseId: string;
 }): void {
-  if (JSON.stringify(input.legacy) !== JSON.stringify(input.v11)) {
+  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
     throw new Error(
-      `PASS parity mismatch for case=${input.caseId}: legacy=${JSON.stringify(input.legacy)} v11=${JSON.stringify(input.v11)}`
+      `PASS parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
     );
   }
 }
@@ -249,19 +249,19 @@ export async function runPassContractCase(
     throw new Error(`Unsupported command for PASS contract runner: ${caseDef.command}`);
   }
 
-  if (caseDef.mode === "legacy") {
-    const legacy = await executePassCase({
+  if (caseDef.mode === "baseline") {
+    const baseline = await executePassCase({
       caseDef,
       executor: emitPassFromWorkspace
     });
     assertContractExpectedSubset({
-      output: legacy,
+      output: baseline,
       expected: caseDef.expected,
-      label: "legacy"
+      label: "baseline"
     });
     return {
       mode: caseDef.mode,
-      legacy
+      baseline
     };
   }
 
@@ -281,7 +281,7 @@ export async function runPassContractCase(
     };
   }
 
-  const legacy = await executePassCase({
+  const baseline = await executePassCase({
     caseDef,
     executor: emitPassFromWorkspace
   });
@@ -290,9 +290,9 @@ export async function runPassContractCase(
     executor: emitPassFromWorkspaceV11
   });
   assertContractExpectedSubset({
-    output: legacy,
+    output: baseline,
     expected: caseDef.expected,
-    label: "parity/legacy"
+    label: "parity/baseline"
   });
   assertContractExpectedSubset({
     output: v11,
@@ -300,13 +300,13 @@ export async function runPassContractCase(
     label: "parity/v11"
   });
   assertParityEquivalent({
-    legacy,
+    baseline,
     v11,
     caseId: caseDef.id
   });
   return {
     mode: caseDef.mode,
-    legacy,
+    baseline,
     v11
   };
 }

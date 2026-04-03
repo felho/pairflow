@@ -255,7 +255,7 @@ Error codes:
 **Example — CapabilityProfile matrix:**
 
 ```
-                  | RUNNING        | WAITING_HUMAN  | HELP_PENDING   | READY_FOR_APPROVAL |
+                  | RUNNING        | WAITING_HUMAN  | HELP_PENDING   | READY_FOR_HUMAN_APPROVAL |
 ------------------+----------------+----------------+----------------+--------------------+
 implementer       | pass           | -              | -              | -                  |
                   | ask-human      |                |                |                    |
@@ -675,9 +675,9 @@ subflows:
   WAITING_HUMAN --> RUNNING : decision received
   RUNNING --> HELP_PENDING : help subflow spawned
   HELP_PENDING --> RUNNING : help resolved
-  RUNNING --> READY_FOR_APPROVAL : all gates passed
-  READY_FOR_APPROVAL --> RUNNING : rework requested
-  READY_FOR_APPROVAL --> APPROVED : approve
+  RUNNING --> READY_FOR_HUMAN_APPROVAL : all gates passed
+  READY_FOR_HUMAN_APPROVAL --> RUNNING : rework requested
+  READY_FOR_HUMAN_APPROVAL --> APPROVED : approve
   APPROVED --> COMMITTING : commit action
   COMMITTING --> DONE : success
   RUNNING --> FAILED : unrecoverable error
@@ -775,7 +775,7 @@ template:
       RUNNING: [reply, stop, resume]
       WAITING_HUMAN: [reply, stop, resume]
       HELP_PENDING: [reply, stop]
-      READY_FOR_APPROVAL: [approve, request-rework, stop]
+      READY_FOR_HUMAN_APPROVAL: [approve, request-rework, stop]
 
   steps:
     - id: review-loop

@@ -28,7 +28,7 @@ function buildIdeationPendingPromptLines(input: {
     "This bubble is ideation-pending (`RUNNING`, `round=0`).",
     "Do nothing now. Stay idle.",
     "Do not read task files, scan the repository, or search for kickoff sources.",
-    "Do not run lifecycle/protocol commands (`pairflow bubble kickoff`, `pairflow agent emit`, legacy `pairflow pass`, legacy `pairflow ask-human`, legacy `pairflow converged`) unless explicit human instruction arrives.",
+    "Do not run lifecycle/protocol commands (`pairflow bubble kickoff`, `pairflow agent emit`) unless explicit human instruction arrives.",
     "Wait for explicit human instruction that contains a concrete kickoff task.",
     `Repository: ${input.repoPath}. Worktree: ${input.worktreePath}.`
   ];

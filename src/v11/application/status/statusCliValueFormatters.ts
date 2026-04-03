@@ -9,14 +9,10 @@ export function formatStateLabel(value: string): string {
     return bold(yellow(value));
   }
   if (
-    value === "READY_FOR_APPROVAL"
-    || value === "READY_FOR_HUMAN_APPROVAL"
+    value === "READY_FOR_HUMAN_APPROVAL"
     || value === "APPROVED_FOR_COMMIT"
   ) {
     return bold(cyan(value));
-  }
-  if (value === "META_REVIEW_FAILED") {
-    return bold(red(value));
   }
   if (value === "DONE" || value === "MERGED") {
     return bold(blue(value));

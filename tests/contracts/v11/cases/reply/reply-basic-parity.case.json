@@ -2,7 +2,7 @@
   "id": "reply-basic-parity",
   "command": "reply",
   "mode": "parity",
-  "description": "Seed contract case for HUMAN_REPLY legacy-v11 parity baseline in M0.",
+  "description": "Seed contract case for HUMAN_REPLY baseline-v11 parity baseline in M0.",
   "input": {
     "message": "Acknowledged. Continue with the current plan.",
     "refs": [

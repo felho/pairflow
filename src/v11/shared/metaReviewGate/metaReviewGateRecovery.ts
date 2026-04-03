@@ -36,7 +36,7 @@ function isMetaReviewKickoffEnvelope(input: {
     input.envelope.round === input.round &&
     metadata?.actor === "meta-review-gate" &&
     metadata?.actor_agent === "orchestrator" &&
-    metadata?.lifecycle_state === "META_REVIEW_RUNNING" &&
+    metadata?.lifecycle_state === "RUNNING" &&
     metadata?.[deliveryTargetRoleMetadataKey] === "meta_reviewer"
   );
 }
@@ -159,7 +159,7 @@ export async function recoverMetaReviewGateFromSnapshot(
           fallbackReason:
             `META_REVIEW_GATE_REWORK_DISPATCH_FAILED: ${parityResolution.reason}`,
           loaded: context.loaded,
-          expectedState: "META_REVIEW_RUNNING",
+          expectedState: "RUNNING",
           runResultForRouting: parityResolution.runResultForRouting,
           parityMetadata: parityResolution.parityMetadata
         })

@@ -12,7 +12,7 @@ function createMetaReviewRunningState(
 ): BubbleStateSnapshot {
   return {
     bubble_id: "b_meta_execctx_test_01",
-    state: "META_REVIEW_RUNNING",
+    state: "RUNNING",
     round: 2,
     active_agent: "codex",
     active_since: "2026-03-08T10:00:00.000Z",
@@ -97,7 +97,7 @@ describe("validateActiveMetaReviewExecutionContext", () => {
     );
   });
 
-  it("accepts canonical META_REVIEW_RUNNING execution context", () => {
+  it("accepts canonical RUNNING meta-review authority execution context", () => {
     const state = createMetaReviewRunningState();
     const result = validateActiveMetaReviewExecutionContext(state);
 
@@ -111,7 +111,7 @@ describe("validateActiveMetaReviewExecutionContext", () => {
 
   it("rejects non-meta-review lifecycle states before inspecting context", () => {
     const result = validateActiveMetaReviewExecutionContext(
-      createMetaReviewRunningState({ state: "RUNNING" })
+      createMetaReviewRunningState({ state: "WAITING_HUMAN" })
     );
 
     expect(result.ok).toBe(false);
@@ -122,12 +122,13 @@ describe("validateActiveMetaReviewExecutionContext", () => {
     expect(result.errors).toEqual([
       {
         path: "state",
-        message: "Expected META_REVIEW_RUNNING state, received RUNNING."
+        message:
+          "Expected RUNNING state with active meta-review authority, received WAITING_HUMAN."
       }
     ]);
   });
 
-  it("rejects missing execution context for META_REVIEW_RUNNING", () => {
+  it("rejects missing execution context for RUNNING meta-review authority", () => {
     const result = validateActiveMetaReviewExecutionContext(
       createMetaReviewRunningState({
         execution_context: null,
@@ -147,7 +148,7 @@ describe("validateActiveMetaReviewExecutionContext", () => {
       {
         path: "execution_context",
         message:
-          "META_REVIEW_RUNNING state requires canonical execution_context authority."
+          "RUNNING meta-review state requires canonical execution_context authority."
       }
     ]);
   });
@@ -191,7 +192,7 @@ describe("validateActiveMetaReviewExecutionContext", () => {
       },
       {
         path: "execution_context.round",
-        message: "Must match state.round (2) while META_REVIEW_RUNNING is active"
+        message: "Must match state.round (2) while meta-review authority is active"
       },
       {
         path: "execution_context.awaited_output_type",

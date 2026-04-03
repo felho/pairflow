@@ -1,7 +1,7 @@
 {
   "id": "commit-done-package-invariant",
   "command": "commit",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Commit preserves done package invariant and commit artifacts.",
   "input": {
     "auto": true,

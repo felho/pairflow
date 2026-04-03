@@ -1,7 +1,7 @@
 {
   "id": "stop-cleanup-invariant",
   "command": "stop",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Stop cleanup invariant keeps runtime registry cleanup and CANCELLED state.",
   "input": {
     "tmuxSessionExisted": false,

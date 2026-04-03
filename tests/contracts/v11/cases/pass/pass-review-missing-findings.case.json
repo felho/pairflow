@@ -1,7 +1,7 @@
 {
   "id": "pass-review-missing-findings",
   "command": "pass",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Reviewer PASS rejects missing findings declaration when --no-findings is omitted.",
   "input": {
     "summary": "Reviewer follow-up without explicit findings payload",

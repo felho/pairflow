@@ -28,7 +28,7 @@ export function parseMetaReviewSubcommand(
   }
   if (value === "submit") {
     return invalidMetaReviewCliOptions(
-      "Legacy `pairflow bubble meta-review submit` was removed in Phase 4. Use canonical `pairflow agent emit --kind meta_review_result ...` instead."
+      "Legacy `pairflow bubble meta-review submit` was removed. Use canonical `pairflow agent emit --kind meta_review_result ...` instead."
     );
   }
   if (

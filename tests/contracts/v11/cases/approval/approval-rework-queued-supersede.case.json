@@ -1,7 +1,7 @@
 {
   "id": "approval-rework-queued-supersede",
   "command": "approval",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Queued rework supersedes an existing deferred rework intent in WAITING_HUMAN.",
   "input": {
     "action": "request_rework_queued",

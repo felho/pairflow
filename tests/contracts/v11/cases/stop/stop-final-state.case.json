@@ -1,7 +1,7 @@
 {
   "id": "stop-final-state",
   "command": "stop",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed stop contract case for rejection when bubble state is already final.",
   "input": {
     "fixture": {

@@ -17,6 +17,7 @@ import {
   type MetaReviewGateResult,
   type RecoverMetaReviewGateFromSnapshotDependencies
 } from "./metaReviewGateTypes.js";
+import { isMetaReviewExecutionContextActiveState } from "../../../core/bubble/metaReviewExecutionContext.js";
 
 export interface ResolvedRecoveryContextDependencies {
   resolveBubble: typeof resolveBubbleById;
@@ -107,11 +108,11 @@ export function buildFinishWithPaneDeactivation(input: {
 export function assertRecoverableMetaReviewState(
   loaded: LoadedStateSnapshot
 ): void {
-  if (loaded.state.state !== "META_REVIEW_RUNNING") {
+  if (!isMetaReviewExecutionContextActiveState(loaded.state)) {
     // reason_code=META_REVIEW_GATE_TRANSITION_INVALID expected_state current_state
     throw new MetaReviewGateError(
       "META_REVIEW_GATE_TRANSITION_INVALID",
-      `META_REVIEW_GATE_TRANSITION_INVALID: meta-review gate recovery requires META_REVIEW_RUNNING state (current: ${loaded.state.state}).`,
+      `META_REVIEW_GATE_TRANSITION_INVALID: meta-review gate recovery requires RUNNING state with active meta-review authority (current: ${loaded.state.state}).`,
       {
         stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
       }

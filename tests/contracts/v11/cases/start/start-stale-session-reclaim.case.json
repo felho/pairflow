@@ -1,7 +1,7 @@
 {
   "id": "start-stale-session-reclaim",
   "command": "start",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Start contract case for stale runtime session reclaim before successful start.",
   "input": {
     "fixture": {

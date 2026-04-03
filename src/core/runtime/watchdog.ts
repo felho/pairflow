@@ -15,20 +15,13 @@ export interface WatchdogStatus {
 const watchdogTrackedStates = new Set<BubbleLifecycleState>([
   "RUNNING",
   "WAITING_HUMAN",
-  "READY_FOR_APPROVAL",
-  "META_REVIEW_RUNNING",
-  "META_REVIEW_FAILED",
   "READY_FOR_HUMAN_APPROVAL",
   "APPROVED_FOR_COMMIT",
   "COMMITTED"
 ]);
 
 const watchdogNonAgentMonitoredStates = new Set<BubbleLifecycleState>([
-  "META_REVIEW_FAILED",
   "READY_FOR_HUMAN_APPROVAL"
-]);
-const watchdogAgentOptionalStates = new Set<BubbleLifecycleState>([
-  "META_REVIEW_RUNNING"
 ]);
 
 export function computeWatchdogStatus(
@@ -38,26 +31,34 @@ export function computeWatchdogStatus(
 ): WatchdogStatus {
   const ideationRoundPending = state.state === "RUNNING" && state.round === 0;
   const trackedState = watchdogTrackedStates.has(state.state);
-  const requiresActiveAgent = !watchdogAgentOptionalStates.has(state.state);
+  const metaReviewExecutionContextResult = validateActiveMetaReviewExecutionContext(state);
+  const metaReviewAuthorityMonitored = metaReviewExecutionContextResult.ok;
   const monitored =
     !ideationRoundPending &&
     trackedState &&
     !watchdogNonAgentMonitoredStates.has(state.state) &&
-    (!requiresActiveAgent || state.active_agent !== null);
+    (
+      state.active_agent !== null ||
+      metaReviewAuthorityMonitored
+    );
   let referenceTimestamp =
     state.execution_context?.started_at ?? state.last_command_at ?? state.active_since;
   let deadlineTimestamp: string | null = state.execution_context?.deadline_at ?? null;
-
-  if (state.state === "META_REVIEW_RUNNING" && state.execution_context == null) {
-    const executionContextResult = validateActiveMetaReviewExecutionContext(state);
-    if (!executionContextResult.ok) {
-      throw new SchemaValidationError(
-        "Invalid META_REVIEW_RUNNING execution context",
-        executionContextResult.errors
-      );
-    }
-    referenceTimestamp = executionContextResult.value.started_at;
-    deadlineTimestamp = executionContextResult.value.deadline_at;
+  if (
+    state.execution_context == null &&
+    metaReviewExecutionContextResult.ok
+  ) {
+    referenceTimestamp = metaReviewExecutionContextResult.value.started_at;
+    deadlineTimestamp = metaReviewExecutionContextResult.value.deadline_at;
+  } else if (
+    state.active_role === "meta_reviewer" &&
+    state.execution_context == null &&
+    !metaReviewExecutionContextResult.ok
+  ) {
+    throw new SchemaValidationError(
+      "Invalid meta-review execution context",
+      metaReviewExecutionContextResult.errors
+    );
   }
 
   if (!monitored || referenceTimestamp === null) {

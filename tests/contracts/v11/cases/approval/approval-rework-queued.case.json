@@ -1,7 +1,7 @@
 {
   "id": "approval-rework-queued",
   "command": "approval",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed approval queued-rework contract case for WAITING_HUMAN baseline.",
   "input": {
     "action": "request_rework_queued",

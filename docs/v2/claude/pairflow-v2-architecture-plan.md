@@ -213,7 +213,7 @@ Capability Engine must NEVER:
 **Example — CapabilityProfile matrix:**
 
 ```
-                  | RUNNING        | WAITING_HUMAN  | READY_FOR_APPROVAL |
+                  | RUNNING        | WAITING_HUMAN  | READY_FOR_HUMAN_APPROVAL |
 ------------------+----------------+----------------+--------------------+
 implementer       | pass           | -              | -                  |
                   | ask-human      |                |                    |
@@ -573,7 +573,7 @@ template:
     operator:
       RUNNING: [reply, stop, resume]
       WAITING_HUMAN: [reply, stop, resume]
-      READY_FOR_APPROVAL: [approve, request-rework, stop]
+      READY_FOR_HUMAN_APPROVAL: [approve, request-rework, stop]
 
   steps:
     - id: review-loop

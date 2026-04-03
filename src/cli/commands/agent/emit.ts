@@ -266,8 +266,8 @@ export function getAgentEmitHelpText(): string {
     "  --expected-state-fingerprint <value>  Optional guard: active state fingerprint",
     "  -h, --help                     Show this help",
     "",
-    "Compatibility note:",
-    "  `pairflow pass`, `pairflow ask-human`, and `pairflow converged` remain transitional adapter paths in Phase 4."
+    "Phase 5 note:",
+    "  `pairflow pass`, `pairflow ask-human`, `pairflow converged`, and `orchestra` actor aliases were removed. Use `pairflow agent emit` only."
   ].join("\n");
 }
 

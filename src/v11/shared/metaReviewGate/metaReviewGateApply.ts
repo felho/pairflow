@@ -1,13 +1,14 @@
 import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
 import { StateStoreConflictError } from "../../../core/state/stateStore.js";
 import { resolveActiveMetaReviewRuntimeDelivery } from "../../../core/bubble/metaReview.js";
+import { isMetaReviewExecutionContextActiveState } from "../../../core/bubble/metaReviewExecutionContext.js";
 import { readTranscriptEnvelopes } from "../../../core/protocol/transcriptStore.js";
 import type { BubbleMetaReviewRuntimeDeliveryState } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import {
   resolveMetaReviewerPaneWarning,
-  restoreRunningAfterStagedReadyFailure,
-  stageMetaReviewRunningState
+  stageMetaReviewRunningState,
+  throwMetaReviewRunningStageFailure
 } from "./metaReviewGateApplyHelpers.js";
 import { routeMetaReviewKickoffOrRunFailed } from "./metaReviewGateApplyRunRouting.js";
 import {
@@ -48,7 +49,7 @@ async function reconcileObservedGateResult(input: {
   kickoffResult: MetaReviewGateResult;
   observedState: LoadedStateSnapshot;
 }): Promise<MetaReviewGateResult> {
-  if (input.observedState.state.state === "META_REVIEW_RUNNING") {
+  if (isMetaReviewExecutionContextActiveState(input.observedState.state)) {
     return {
       ...input.kickoffResult,
       state: input.observedState.state
@@ -88,9 +89,7 @@ async function reconcileObservedGateResult(input: {
   }
 
   if (
-    input.observedState.state.state === "READY_FOR_HUMAN_APPROVAL" ||
-    input.observedState.state.state === "READY_FOR_APPROVAL" ||
-    input.observedState.state.state === "META_REVIEW_FAILED"
+    input.observedState.state.state === "READY_FOR_HUMAN_APPROVAL"
   ) {
     for (let index = transcript.length - 1; index >= 0; index -= 1) {
       const envelope = transcript[index]!;
@@ -141,7 +140,7 @@ async function persistRuntimeDeliveryObservation(input: {
       },
       {
         expectedFingerprint: input.loaded.fingerprint,
-        expectedState: "META_REVIEW_RUNNING"
+        expectedState: "RUNNING"
       }
     );
   } catch (error) {
@@ -151,7 +150,7 @@ async function persistRuntimeDeliveryObservation(input: {
     const latest = await input.context.readState(
       input.context.resolved.bubblePaths.statePath
     );
-    if (latest.state.state !== "META_REVIEW_RUNNING") {
+    if (!isMetaReviewExecutionContextActiveState(latest.state)) {
       return latest;
     }
     const latestMetaReview = latest.state.meta_review;
@@ -176,7 +175,7 @@ async function persistRuntimeDeliveryObservation(input: {
         },
         {
           expectedFingerprint: latest.fingerprint,
-          expectedState: "META_REVIEW_RUNNING"
+          expectedState: "RUNNING"
         }
       );
     } catch (retryError) {
@@ -201,20 +200,16 @@ export async function applyMetaReviewGateOnConvergence(
   try {
     metaReviewRunningState = await stageMetaReviewRunningState({
       bubbleId: context.resolved.bubbleId,
-      readyForApproval: context.readyForApproval,
+      loadedRunning: context.loadedRunning,
       nowIso: context.nowIso,
       watchdogTimeoutMinutes: context.resolved.bubbleConfig.watchdog_timeout_minutes,
       statePath: context.resolved.bubblePaths.statePath,
       writeState: context.writeState
     });
   } catch (error) {
-    return restoreRunningAfterStagedReadyFailure({
+    return throwMetaReviewRunningStageFailure({
       rootError: error,
-      stageReasonCode: "META_REVIEW_GATE_META_REVIEW_STAGE_TRANSITION_FAILED",
-      writeState: context.writeState,
-      statePath: context.resolved.bubblePaths.statePath,
-      loadedRunning: context.loadedRunning,
-      readyForApproval: context.readyForApproval
+      stageReasonCode: "META_REVIEW_GATE_META_REVIEW_STAGE_TRANSITION_FAILED"
     });
   }
 

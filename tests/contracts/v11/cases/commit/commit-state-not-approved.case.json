@@ -1,7 +1,7 @@
 {
   "id": "commit-state-not-approved",
   "command": "commit",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed commit contract case for state guard when bubble is not APPROVED_FOR_COMMIT.",
   "input": {
     "auto": false,

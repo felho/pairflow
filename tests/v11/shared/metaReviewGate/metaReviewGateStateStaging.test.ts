@@ -4,18 +4,18 @@ import { stageMetaReviewRunningState } from "../../../../src/v11/shared/metaRevi
 import type { LoadedStateSnapshot } from "../../../../src/core/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../../src/types/bubble.js";
 
-function createReadyForApprovalState(
+function createLoadedRunningState(
   partial: Partial<BubbleStateSnapshot> = {}
 ): LoadedStateSnapshot {
   return {
     fingerprint: "ready-fingerprint",
     state: {
       bubble_id: "b_meta_gate_stage_01",
-      state: "READY_FOR_APPROVAL",
+      state: "RUNNING",
       round: 4,
-      active_agent: null,
-      active_since: null,
-      active_role: null,
+      active_agent: "claude",
+      active_since: "2026-03-19T10:00:00.000Z",
+      active_role: "reviewer",
       round_role_history: [],
       last_command_at: "2026-03-19T10:00:00.000Z",
       meta_review: {
@@ -64,7 +64,7 @@ describe("stageMetaReviewRunningState", () => {
 
     const result = await stageMetaReviewRunningState({
       bubbleId: "b_meta_gate_stage_01",
-      readyForApproval: createReadyForApprovalState(),
+      loadedRunning: createLoadedRunningState(),
       nowIso: "2026-03-19T10:03:30.000Z",
       watchdogTimeoutMinutes: 15,
       statePath: "/tmp/b_meta_gate_stage_01/state.json",
@@ -74,9 +74,9 @@ describe("stageMetaReviewRunningState", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]?.options).toEqual({
       expectedFingerprint: "ready-fingerprint",
-      expectedState: "READY_FOR_APPROVAL"
+      expectedState: "RUNNING"
     });
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
     expect(result.state.meta_review?.execution_context).toEqual({
       handoff_id: "meta_review:b_meta_gate_stage_01:round:4:attempt:3",
       round: 4,
@@ -98,14 +98,14 @@ describe("stageMetaReviewRunningState", () => {
   });
 
   it("creates a first-run execution context from empty meta-review state defaults", async () => {
-    const readyForApproval = createReadyForApprovalState();
-    const stateWithoutMetaReview = { ...readyForApproval.state };
+    const loadedRunning = createLoadedRunningState();
+    const stateWithoutMetaReview = { ...loadedRunning.state };
     delete stateWithoutMetaReview.meta_review;
 
     const result = await stageMetaReviewRunningState({
       bubbleId: "b_meta_gate_stage_01",
-      readyForApproval: {
-        ...readyForApproval,
+      loadedRunning: {
+        ...loadedRunning,
         state: stateWithoutMetaReview
       },
       nowIso: "2026-03-19T10:03:30.000Z",

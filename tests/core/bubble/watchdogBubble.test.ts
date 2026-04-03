@@ -87,7 +87,7 @@ describe("runBubbleWatchdog", () => {
   }): Promise<void> {
     const loaded = await readStateSnapshot(input.statePath);
     const readyForApproval = applyStateTransition(loaded.state, {
-      to: "READY_FOR_APPROVAL",
+      to: "READY_FOR_HUMAN_APPROVAL",
       activeAgent: null,
       activeRole: null,
       activeSince: null,
@@ -95,7 +95,7 @@ describe("runBubbleWatchdog", () => {
     });
     const metaReviewRunning = {
       ...readyForApproval,
-      state: "META_REVIEW_RUNNING" as const,
+      state: "RUNNING" as const,
       active_agent: input.activeAgent === undefined ? "codex" : input.activeAgent,
       active_role:
         input.activeAgent === null ? null : ("meta_reviewer" as const),
@@ -456,7 +456,7 @@ describe("runBubbleWatchdog", () => {
     expect(result.state.state).toBe("CREATED");
   });
 
-  it("routes META_REVIEW_RUNNING timeout to META_REVIEW_FAILED with APPROVAL_REQUEST", async () => {
+  it("routes RUNNING meta-review authority timeout to READY_FOR_HUMAN_APPROVAL with APPROVAL_REQUEST", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -478,7 +478,7 @@ describe("runBubbleWatchdog", () => {
 
     expect(result.escalated).toBe(true);
     expect(result.reason).toBe("escalated");
-    expect(result.state.state).toBe("META_REVIEW_FAILED");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(result.envelope?.type).toBe("APPROVAL_REQUEST");
     const summary = result.envelope?.payload.summary;
     expect(typeof summary).toBe("string");
@@ -490,7 +490,7 @@ describe("runBubbleWatchdog", () => {
     expect(inbox.at(-1)?.type).toBe("APPROVAL_REQUEST");
   });
 
-  it("keeps META_REVIEW_RUNNING before deadline even when runtime delivery failed", async () => {
+  it("keeps RUNNING meta-review authority before deadline even when runtime delivery failed", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -536,7 +536,7 @@ describe("runBubbleWatchdog", () => {
       },
       {
         expectedFingerprint: running.fingerprint,
-        expectedState: "META_REVIEW_RUNNING"
+        expectedState: "RUNNING"
       }
     );
 
@@ -558,14 +558,14 @@ describe("runBubbleWatchdog", () => {
     expect(recoverCalled).toBe(false);
     expect(result.escalated).toBe(false);
     expect(result.reason).toBe("not_expired");
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
     expect(result.state.meta_review?.runtime_delivery).toMatchObject({
       status: "failed",
       reason_code: "META_REVIEWER_PANE_EXITED"
     });
   });
 
-  it("still monitors META_REVIEW_RUNNING when active_agent is null in recovery state", async () => {
+  it("still monitors RUNNING meta-review authority when active_agent is null in recovery state", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -610,7 +610,7 @@ describe("runBubbleWatchdog", () => {
       },
       {
         expectedFingerprint: running.fingerprint,
-        expectedState: "META_REVIEW_RUNNING"
+        expectedState: "RUNNING"
       }
     );
     await writeFile(
@@ -693,7 +693,7 @@ describe("runBubbleWatchdog", () => {
       },
       {
         expectedFingerprint: running.fingerprint,
-        expectedState: "META_REVIEW_RUNNING"
+        expectedState: "RUNNING"
       }
     );
 
@@ -705,7 +705,7 @@ describe("runBubbleWatchdog", () => {
 
     expect(result.escalated).toBe(true);
     expect(result.reason).toBe("escalated");
-    expect(result.state.state).toBe("META_REVIEW_FAILED");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(result.envelope?.type).toBe("APPROVAL_REQUEST");
   });
 
@@ -750,7 +750,7 @@ describe("runBubbleWatchdog", () => {
     expect(sessions[bubble.bubbleId]?.metaReviewerPane?.active).toBe(false);
   });
 
-  it("does not route canonical META_REVIEW_RUNNING submit snapshot before timeout expiry", async () => {
+  it("does not route canonical RUNNING meta-review submit snapshot before timeout expiry", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -793,7 +793,7 @@ describe("runBubbleWatchdog", () => {
       },
       {
         expectedFingerprint: running.fingerprint,
-        expectedState: "META_REVIEW_RUNNING"
+        expectedState: "RUNNING"
       }
     );
     await writeFile(
@@ -825,7 +825,7 @@ describe("runBubbleWatchdog", () => {
 
     expect(result.escalated).toBe(false);
     expect(result.reason).toBe("not_expired");
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
     expect(result.envelope).toBeUndefined();
   });
 
@@ -872,7 +872,7 @@ describe("runBubbleWatchdog", () => {
       },
       {
         expectedFingerprint: running.fingerprint,
-        expectedState: "META_REVIEW_RUNNING"
+        expectedState: "RUNNING"
       }
     );
     const runId = "run_watchdog_meta_submit_rework_01";
@@ -963,7 +963,7 @@ describe("runBubbleWatchdog", () => {
 
     expect(result.escalated).toBe(false);
     expect(result.reason).toBe("not_expired");
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
     expect(result.envelope).toBeUndefined();
     expect(deliveries).toHaveLength(0);
   });
@@ -1011,7 +1011,7 @@ describe("runBubbleWatchdog", () => {
       },
       {
         expectedFingerprint: running.fingerprint,
-        expectedState: "META_REVIEW_RUNNING"
+        expectedState: "RUNNING"
       }
     );
 
@@ -1023,10 +1023,10 @@ describe("runBubbleWatchdog", () => {
 
     expect(result.escalated).toBe(false);
     expect(result.reason).toBe("not_expired");
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
   });
 
-  it("routes timeout to META_REVIEW_FAILED when only stale snapshot exists outside active window", async () => {
+  it("routes timeout to READY_FOR_HUMAN_APPROVAL when only stale snapshot exists outside active window", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -1069,7 +1069,7 @@ describe("runBubbleWatchdog", () => {
       },
       {
         expectedFingerprint: running.fingerprint,
-        expectedState: "META_REVIEW_RUNNING"
+        expectedState: "RUNNING"
       }
     );
 
@@ -1081,7 +1081,7 @@ describe("runBubbleWatchdog", () => {
 
     expect(result.escalated).toBe(true);
     expect(result.reason).toBe("escalated");
-    expect(result.state.state).toBe("META_REVIEW_FAILED");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(result.envelope?.type).toBe("APPROVAL_REQUEST");
     expect(result.envelope?.payload.summary).toContain("META_REVIEW_GATE_RUN_FAILED");
   });
@@ -1128,7 +1128,7 @@ describe("runBubbleWatchdog", () => {
       },
       {
         expectedFingerprint: running.fingerprint,
-        expectedState: "META_REVIEW_RUNNING"
+        expectedState: "RUNNING"
       }
     );
 
@@ -1150,7 +1150,7 @@ describe("runBubbleWatchdog", () => {
 
     expect(result.escalated).toBe(false);
     expect(result.reason).toBe("not_expired");
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
   });
 
   it("does not fail watchdog cycle when timeout routing sees state conflict and lifecycle already progressed", async () => {
@@ -1169,7 +1169,7 @@ describe("runBubbleWatchdog", () => {
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const progressed = applyStateTransition(loaded.state, {
-      to: "META_REVIEW_FAILED",
+      to: "READY_FOR_HUMAN_APPROVAL",
       activeAgent: null,
       activeRole: null,
       activeSince: null,
@@ -1205,6 +1205,6 @@ describe("runBubbleWatchdog", () => {
 
     expect(result.escalated).toBe(false);
     expect(result.reason).toBe("state_not_running");
-    expect(result.state.state).toBe("META_REVIEW_FAILED");
+    expect(result.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
   });
 });

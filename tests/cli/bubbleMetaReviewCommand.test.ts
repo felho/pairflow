@@ -250,7 +250,7 @@ describe("runBubbleMetaReviewCommand", () => {
       bubble.paths.statePath,
       {
         ...loaded.state,
-        state: "META_REVIEW_RUNNING",
+        state: "RUNNING",
         active_agent: null,
         active_role: null,
         active_since: null,
@@ -313,7 +313,7 @@ describe("runBubbleMetaReviewCommand", () => {
       bubble.paths.statePath,
       {
         ...loaded.state,
-        state: "META_REVIEW_RUNNING",
+        state: "RUNNING",
         active_agent: "codex",
         active_role: "meta_reviewer",
         active_since: "2026-03-12T12:36:00.000Z",
@@ -437,7 +437,7 @@ describe("runBubbleMetaReviewCommand", () => {
       bubble.paths.statePath,
       {
         ...loaded.state,
-        state: "META_REVIEW_RUNNING",
+        state: "RUNNING",
         active_agent: null,
         active_role: null,
         active_since: null,

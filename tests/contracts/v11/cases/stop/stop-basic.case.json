@@ -1,7 +1,7 @@
 {
   "id": "stop-basic",
   "command": "stop",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed contract case for STOP baseline in M0.",
   "input": {
     "tmuxSessionExisted": true,

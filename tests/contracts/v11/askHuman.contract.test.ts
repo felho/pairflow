@@ -46,7 +46,7 @@ const askHumanInvalidInputCases: Array<{
     caseDef: {
       id: "ask-human-invalid-empty-question",
       command: "askHuman",
-      mode: "legacy",
+      mode: "baseline",
       description: "invalid question validation",
       input: {
         question: "   ",
@@ -64,7 +64,7 @@ const askHumanInvalidInputCases: Array<{
     caseDef: {
       id: "ask-human-invalid-refs",
       command: "askHuman",
-      mode: "legacy",
+      mode: "baseline",
       description: "invalid refs validation",
       input: {
         question: "Need clarification",
@@ -141,12 +141,12 @@ describe("v11 askHuman contract harness skeleton", () => {
     const casePath = resolve(process.cwd(), askHumanCaseSources[0]);
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("askHuman");
-    expect(caseDef.mode).toBe("legacy");
+    expect(caseDef.mode).toBe("baseline");
     expect(caseDef.expected.status).toBe("ok");
   });
 
   it(
-    "executes legacy and parity assertions via shared runner",
+    "executes baseline and parity assertions via shared runner",
     { timeout: CONTRACT_TEST_TIMEOUT.parityHeavyMs },
     async () => {
     const casePaths = askHumanCaseSources.map((source) =>
@@ -156,10 +156,10 @@ describe("v11 askHuman contract harness skeleton", () => {
     for (const casePath of casePaths) {
       const caseDef = await readContractCase(casePath);
       const run = await runAskHumanContractCase(caseDef);
-      if (caseDef.mode === "legacy") {
-        expect(run.legacy?.status).toBe(caseDef.expected.status);
+      if (caseDef.mode === "baseline") {
+        expect(run.baseline?.status).toBe(caseDef.expected.status);
         if (caseDef.expected.reasonCode !== undefined) {
-          expect(run.legacy?.reasonCode).toBe(caseDef.expected.reasonCode);
+          expect(run.baseline?.reasonCode).toBe(caseDef.expected.reasonCode);
         }
         expect(run.v11).toBeUndefined();
         continue;
@@ -169,13 +169,13 @@ describe("v11 askHuman contract harness skeleton", () => {
         if (caseDef.expected.reasonCode !== undefined) {
           expect(run.v11?.reasonCode).toBe(caseDef.expected.reasonCode);
         }
-        expect(run.legacy).toBeUndefined();
+        expect(run.baseline).toBeUndefined();
         continue;
       }
 
-      expect(run.legacy).toBeDefined();
+      expect(run.baseline).toBeDefined();
       expect(run.v11).toBeDefined();
-      expect(run.legacy).toEqual(run.v11);
+      expect(run.baseline).toEqual(run.v11);
     }
     }
   );

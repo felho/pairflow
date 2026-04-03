@@ -1,7 +1,7 @@
 {
   "id": "reconcile-mutate-stale-session",
   "command": "reconcile",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed reconcile contract case for stale-session removal mutation flow.",
   "input": {
     "dryRun": false

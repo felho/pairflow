@@ -55,7 +55,7 @@ export interface ApprovalContractOutput {
 
 export interface ApprovalContractRunResult {
   mode: ContractCase["mode"];
-  legacy?: ApprovalContractOutput;
+  baseline?: ApprovalContractOutput;
   v11?: ApprovalContractOutput;
 }
 
@@ -152,13 +152,13 @@ function assertContractExpectedSubset(input: {
 }
 
 function assertParityEquivalent(input: {
-  legacy: ApprovalContractOutput;
+  baseline: ApprovalContractOutput;
   v11: ApprovalContractOutput;
   caseId: string;
 }): void {
-  if (JSON.stringify(input.legacy) !== JSON.stringify(input.v11)) {
+  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
     throw new Error(
-      `approval parity mismatch for case=${input.caseId}: legacy=${JSON.stringify(input.legacy)} v11=${JSON.stringify(input.v11)}`
+      `approval parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
     );
   }
 }
@@ -174,14 +174,39 @@ async function seedReadyForHumanApprovalState(input: {
   });
   const loaded = await readStateSnapshot(bubble.paths.statePath);
   const transitioned = applyStateTransition(loaded.state, {
-    to: "READY_FOR_APPROVAL",
+    to: "READY_FOR_HUMAN_APPROVAL",
     lastCommandAt: "2026-03-20T11:30:00.000Z"
   });
-  const legacyStateWithoutMetaReview = { ...transitioned };
-  delete legacyStateWithoutMetaReview.meta_review;
   await writeStateSnapshot(
     bubble.paths.statePath,
-    legacyStateWithoutMetaReview,
+    {
+      ...transitioned,
+      meta_review: {
+        ...(transitioned.meta_review ?? {
+          execution_context: null,
+          runtime_delivery: null,
+          last_autonomous_run_id: null,
+          last_autonomous_status: null,
+          last_autonomous_recommendation: null,
+          last_autonomous_summary: null,
+          last_autonomous_report_ref: null,
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: null,
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }),
+        execution_context: null,
+        runtime_delivery: null,
+        last_autonomous_run_id: "run_contract_approval_ready_01",
+        last_autonomous_status: "success",
+        last_autonomous_recommendation: "approve",
+        last_autonomous_summary: "Autonomous approval recommendation is ready.",
+        last_autonomous_report_ref: "artifacts/meta-review-last.json",
+        last_autonomous_rework_target_message: null,
+        last_autonomous_updated_at: "2026-03-20T11:29:30.000Z"
+      }
+    },
     {
       expectedFingerprint: loaded.fingerprint,
       expectedState: "RUNNING"
@@ -485,22 +510,22 @@ export async function runApprovalContractCase(
   }
   const parsedInput = parseApprovalCaseInput(caseDef.input);
 
-  if (caseDef.mode === "legacy") {
-    const legacy = await executeApprovalCase({
+  if (caseDef.mode === "baseline") {
+    const baseline = await executeApprovalCase({
       caseDef,
       action: parsedInput,
       emitApproveFn: emitApprove,
       emitRequestReworkFn: emitRequestRework,
-      label: "legacy"
+      label: "baseline"
     });
     assertContractExpectedSubset({
-      output: legacy,
+      output: baseline,
       expected: caseDef.expected,
-      label: "legacy"
+      label: "baseline"
     });
     return {
       mode: caseDef.mode,
-      legacy
+      baseline
     };
   }
 
@@ -523,12 +548,12 @@ export async function runApprovalContractCase(
     };
   }
 
-  const legacy = await executeApprovalCase({
+  const baseline = await executeApprovalCase({
     caseDef,
     action: parsedInput,
     emitApproveFn: emitApprove,
     emitRequestReworkFn: emitRequestRework,
-    label: "parity/legacy"
+    label: "parity/baseline"
   });
   const v11 = await executeApprovalCase({
     caseDef,
@@ -538,9 +563,9 @@ export async function runApprovalContractCase(
     label: "parity/v11"
   });
   assertContractExpectedSubset({
-    output: legacy,
+    output: baseline,
     expected: caseDef.expected,
-    label: "parity/legacy"
+    label: "parity/baseline"
   });
   assertContractExpectedSubset({
     output: v11,
@@ -548,13 +573,13 @@ export async function runApprovalContractCase(
     label: "parity/v11"
   });
   assertParityEquivalent({
-    legacy,
+    baseline,
     v11,
     caseId: caseDef.id
   });
   return {
     mode: caseDef.mode,
-    legacy,
+    baseline,
     v11
   };
 }

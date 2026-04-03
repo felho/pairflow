@@ -1,5 +1,6 @@
 import { computeWatchdogStatus, type WatchdogStatus } from "../../../core/runtime/watchdog.js";
 import { resolveActiveMetaReviewRuntimeDelivery } from "../../../core/bubble/metaReview.js";
+import { isMetaReviewExecutionContextActiveState } from "../../../core/bubble/metaReviewExecutionContext.js";
 import { type ReviewVerificationState } from "../../../core/reviewer/reviewVerification.js";
 import type { StateValidationDiagnostics } from "../../../core/state/stateStore.js";
 import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateTypes.js";
@@ -106,6 +107,7 @@ export interface BubbleStatusView {
   };
   metaReview: {
     actor: "meta-reviewer";
+    authorityActive: boolean;
     latestRecommendation: MetaReviewRecommendation | null;
     latestStatus: MetaReviewRunStatus | null;
     latestSummary: string | null;
@@ -224,6 +226,7 @@ export function buildBubbleStatusView({
     },
     metaReview: {
       actor: "meta-reviewer",
+      authorityActive: isMetaReviewExecutionContextActiveState(state),
       latestRecommendation: state.meta_review?.last_autonomous_recommendation ?? null,
       latestStatus: state.meta_review?.last_autonomous_status ?? null,
       latestSummary: state.meta_review?.last_autonomous_summary ?? null,

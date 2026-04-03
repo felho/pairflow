@@ -40,7 +40,7 @@ export type CommitContractOutput =
 
 export interface CommitContractRunResult {
   mode: ContractCase["mode"];
-  legacy?: CommitContractOutput;
+  baseline?: CommitContractOutput;
   v11?: CommitContractOutput;
 }
 
@@ -165,13 +165,13 @@ function assertContractExpectedSubset(input: {
 }
 
 function assertParityEquivalent(input: {
-  legacy: CommitContractOutput;
+  baseline: CommitContractOutput;
   v11: CommitContractOutput;
   caseId: string;
 }): void {
-  if (JSON.stringify(input.legacy) !== JSON.stringify(input.v11)) {
+  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
     throw new Error(
-      `commit parity mismatch for case=${input.caseId}: legacy=${JSON.stringify(input.legacy)} v11=${JSON.stringify(input.v11)}`
+      `commit parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
     );
   }
 }
@@ -351,19 +351,19 @@ export async function runCommitContractCase(
     throw new Error(`Unsupported command for commit contract runner: ${caseDef.command}`);
   }
 
-  if (caseDef.mode === "legacy") {
-    const legacy = await executeCommitCase({
+  if (caseDef.mode === "baseline") {
+    const baseline = await executeCommitCase({
       caseDef,
       executor: commitBubble
     });
     assertContractExpectedSubset({
-      output: legacy,
+      output: baseline,
       expected: caseDef.expected,
-      label: "legacy"
+      label: "baseline"
     });
     return {
       mode: caseDef.mode,
-      legacy
+      baseline
     };
   }
 
@@ -383,7 +383,7 @@ export async function runCommitContractCase(
     };
   }
 
-  const legacy = await executeCommitCase({
+  const baseline = await executeCommitCase({
     caseDef,
     executor: commitBubble
   });
@@ -392,9 +392,9 @@ export async function runCommitContractCase(
     executor: commitBubbleV11
   });
   assertContractExpectedSubset({
-    output: legacy,
+    output: baseline,
     expected: caseDef.expected,
-    label: "parity/legacy"
+    label: "parity/baseline"
   });
   assertContractExpectedSubset({
     output: v11,
@@ -402,13 +402,13 @@ export async function runCommitContractCase(
     label: "parity/v11"
   });
   assertParityEquivalent({
-    legacy,
+    baseline,
     v11,
     caseId: caseDef.id
   });
   return {
     mode: caseDef.mode,
-    legacy,
+    baseline,
     v11
   };
 }

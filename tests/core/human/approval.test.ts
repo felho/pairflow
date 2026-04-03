@@ -126,7 +126,7 @@ async function setupReadyForHumanApprovalBubble(repoPath: string, bubbleId: stri
     },
     {
       expectedFingerprint: loaded.fingerprint,
-      expectedState: "META_REVIEW_RUNNING"
+      expectedState: "RUNNING"
     }
   );
 
@@ -408,16 +408,16 @@ describe("approval decisions", () => {
     expect(lastReport.report_ref).toBeNull();
   });
 
-  it("accepts legacy READY_FOR_APPROVAL as compatibility input path", async () => {
+  it("rejects approval when READY_FOR_HUMAN_APPROVAL lacks meta-review recommendation context", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_approval_legacy_01",
-      task: "Legacy approval state compatibility"
+      task: "Missing approval recommendation context"
     });
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const legacyReadyState = applyStateTransition(loaded.state, {
-      to: "READY_FOR_APPROVAL",
+      to: "READY_FOR_HUMAN_APPROVAL",
       lastCommandAt: "2026-02-22T12:04:00.000Z"
     });
     const legacyStateWithoutMetaReview = { ...legacyReadyState };
@@ -427,24 +427,25 @@ describe("approval decisions", () => {
       expectedState: "RUNNING"
     });
 
-    const approved = await emitApprove({
-      bubbleId: bubble.bubbleId,
-      cwd: repoPath,
-      now: new Date("2026-02-22T12:05:00.000Z")
-    });
-    expect(approved.state.state).toBe("APPROVED_FOR_COMMIT");
+    await expect(
+      emitApprove({
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:05:00.000Z")
+      })
+    ).rejects.toThrow(/APPROVAL_RECOMMENDATION_UNAVAILABLE/u);
   });
 
-  it("keeps parity override guard active in legacy READY_FOR_APPROVAL compatibility path", async () => {
+  it("keeps parity override guard active for human-gate approval metadata", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_approval_legacy_parity_override_01",
-      task: "Legacy READY_FOR_APPROVAL parity override"
+      task: "Human-gate approval parity override"
     });
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const legacyReadyState = applyStateTransition(loaded.state, {
-      to: "READY_FOR_APPROVAL",
+      to: "READY_FOR_HUMAN_APPROVAL",
       lastCommandAt: "2026-02-22T12:04:00.000Z"
     });
     await writeStateSnapshot(
@@ -464,10 +465,10 @@ describe("approval decisions", () => {
             auto_rework_limit: 5,
             sticky_human_gate: false
           }),
-          last_autonomous_run_id: "run_legacy_parity_override_01",
+          last_autonomous_run_id: "run_human_gate_parity_override_01",
           last_autonomous_status: "success",
           last_autonomous_recommendation: "approve",
-          last_autonomous_summary: "Legacy READY_FOR_APPROVAL parity guard.",
+          last_autonomous_summary: "Human-gate parity guard.",
           last_autonomous_report_ref: "artifacts/meta-review-last.json",
           last_autonomous_updated_at: "2026-02-22T12:03:59.000Z"
         }
@@ -490,7 +491,7 @@ describe("approval decisions", () => {
         type: "APPROVAL_REQUEST",
         round: legacyReadyState.round,
         payload: {
-          summary: "Legacy readiness with parity inconsistency metadata.",
+          summary: "Human-gate readiness with parity inconsistency metadata.",
           metadata: {
             [deliveryTargetRoleMetadataKey]: "status",
             actor: "meta-reviewer",
@@ -514,7 +515,7 @@ describe("approval decisions", () => {
     const approved = await emitApprove({
       bubbleId: bubble.bubbleId,
       overrideNonApprove: true,
-      overrideReason: "Legacy parity inconsistency manually accepted.",
+      overrideReason: "Findings parity inconsistency manually accepted.",
       cwd: repoPath,
       now: new Date("2026-02-22T12:05:01.000Z")
     });
@@ -525,16 +526,16 @@ describe("approval decisions", () => {
     });
   });
 
-  it("keeps sticky run-failed override behavior symmetric in legacy READY_FOR_APPROVAL compatibility path", async () => {
+  it("keeps sticky run-failed override behavior symmetric in READY_FOR_HUMAN_APPROVAL", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_approval_legacy_sticky_run_failed_01",
-      task: "Legacy READY_FOR_APPROVAL sticky run-failed compatibility"
+      task: "READY_FOR_HUMAN_APPROVAL sticky run-failed flow"
     });
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const legacyReadyState = applyStateTransition(loaded.state, {
-      to: "READY_FOR_APPROVAL",
+      to: "READY_FOR_HUMAN_APPROVAL",
       lastCommandAt: "2026-02-22T12:04:00.000Z"
     });
     await writeStateSnapshot(
@@ -620,11 +621,11 @@ describe("approval decisions", () => {
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_approval_legacy_sticky_missing_recommendation_01",
-      task: "Legacy READY_FOR_APPROVAL sticky compatibility fallback"
+      task: "READY_FOR_HUMAN_APPROVAL sticky missing recommendation"
     });
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const legacyReadyState = applyStateTransition(loaded.state, {
-      to: "READY_FOR_APPROVAL",
+      to: "READY_FOR_HUMAN_APPROVAL",
       lastCommandAt: "2026-02-22T12:04:00.000Z"
     });
     await writeStateSnapshot(
@@ -993,7 +994,7 @@ describe("approval decisions", () => {
       },
       {
         expectedFingerprint: afterFailedGate.fingerprint,
-        expectedState: "META_REVIEW_FAILED"
+        expectedState: "READY_FOR_HUMAN_APPROVAL"
       }
     );
 
@@ -1029,7 +1030,7 @@ describe("approval decisions", () => {
       }
     );
     expect(rerunFailedGate.route).toBe("human_gate_run_failed");
-    expect(rerunFailedGate.state.state).toBe("META_REVIEW_FAILED");
+    expect(rerunFailedGate.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(rerunFailedGate.state.meta_review?.sticky_human_gate).toBe(false);
     expect(rerunFailedGate.gateEnvelope.payload.summary).toContain(
       "META_REVIEW_GATE_RUN_FAILED"
@@ -1326,12 +1327,12 @@ describe("approval decisions", () => {
     ).rejects.toThrow(/APPROVAL_PARITY_OVERRIDE_REQUIRED/u);
   });
 
-  it("keeps parity override guard active for META_REVIEW_FAILED approvals", async () => {
+  it("keeps parity override guard active for run-failed human-gate approvals", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_approval_meta_review_failed_parity_override_01",
-      task: "META_REVIEW_FAILED parity override guard"
+      task: "Run-failed human-gate parity override guard"
     });
     const lockPath = join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`);
 
@@ -1339,7 +1340,7 @@ describe("approval decisions", () => {
       {
         bubbleId: bubble.bubbleId,
         repoPath,
-        summary: "Converged for META_REVIEW_FAILED parity guard.",
+        summary: "Converged for run-failed human-gate parity guard.",
         now: new Date("2026-02-22T12:05:34.000Z")
       },
       {
@@ -1372,9 +1373,9 @@ describe("approval decisions", () => {
     );
 
     const failedLoaded = await readStateSnapshot(bubble.paths.statePath);
-    expect(failedLoaded.state.state).toBe("META_REVIEW_FAILED");
+    expect(failedLoaded.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     if (failedLoaded.state.meta_review === undefined) {
-      throw new Error("Expected meta_review snapshot to exist in META_REVIEW_FAILED.");
+      throw new Error("Expected meta_review snapshot to exist in READY_FOR_HUMAN_APPROVAL.");
     }
 
     await appendProtocolEnvelope({
@@ -1389,7 +1390,7 @@ describe("approval decisions", () => {
         type: "APPROVAL_REQUEST",
         round: failedLoaded.state.round,
         payload: {
-          summary: "META_REVIEW_FAILED route with unresolved findings parity.",
+          summary: "Run-failed human-gate route with unresolved findings parity.",
           metadata: {
             [deliveryTargetRoleMetadataKey]: "status",
             actor: "meta-reviewer",
@@ -1413,7 +1414,7 @@ describe("approval decisions", () => {
     const approved = await emitApprove({
       bubbleId: bubble.bubbleId,
       overrideNonApprove: true,
-      overrideReason: "META_REVIEW_FAILED parity inconsistency manually accepted.",
+      overrideReason: "Run-failed human-gate parity inconsistency manually accepted.",
       cwd: repoPath,
       now: new Date("2026-02-22T12:05:38.000Z")
     });
@@ -1548,7 +1549,7 @@ describe("approval decisions", () => {
       },
       {
         expectedFingerprint: gatedState.fingerprint,
-        expectedState: "META_REVIEW_RUNNING"
+        expectedState: "RUNNING"
       }
     );
 

@@ -35,7 +35,7 @@ Core intent:
 1. `max_auto_rework_rounds = 5`.
 2. If recommendation is `rework`, Pairflow auto-executes `request-rework` (no human confirmation required).
 3. Auto-rework applies regardless of severity (`P0`-`P3`).
-4. Every transition to `READY_FOR_APPROVAL` triggers autonomous review while budget remains and `sticky_human_gate=false`.
+4. Every reviewer convergence while `sticky_human_gate=false` triggers autonomous review while lifecycle remains `RUNNING`.
 5. When budget is exhausted, flow moves to `READY_FOR_HUMAN_APPROVAL`.
 6. `approve` is never auto-executed in MVP; final approval remains human-driven.
 7. A dedicated meta-reviewer pane runs autonomous review execution and shows live progress.
@@ -43,14 +43,14 @@ Core intent:
    - `run`: Pairflow-invoked live autonomous review, lifecycle actions allowed.
    - `status`: cached last-autonomous snapshot read (no live review execution).
    - `last-report`: cached last-autonomous report read (no live review execution).
-   - `recover`: deterministic lifecycle routing replay from cached snapshot when bubble is already in `META_REVIEW_RUNNING`.
+   - `recover`: deterministic lifecycle routing replay from cached snapshot when bubble is already in `RUNNING` with active meta-review authority.
 9. Latest review recommendation must be readable from state/artifacts without rerun.
 10. Once bubble reaches `READY_FOR_HUMAN_APPROVAL`, it enters sticky human-gate mode for the remainder of that bubble lifecycle.
 
 ## Problem Statement
 
 Current behavior:
-1. Bubble reaches `READY_FOR_APPROVAL`.
+1. Bubble reaches reviewer convergence in `RUNNING`.
 2. Human (often in Codex context) runs deep review workflow manually.
 3. Reviewer recommends `rework` or `approve`.
 4. Human still has to manually issue lifecycle decision.
@@ -81,33 +81,26 @@ Pain points:
 ### States
 
 1. `RUNNING`
-2. `READY_FOR_APPROVAL`
-3. `META_REVIEW_RUNNING`
-4. `READY_FOR_HUMAN_APPROVAL`
-5. `META_REVIEW_FAILED`
-6. `APPROVED_FOR_COMMIT`
+2. `READY_FOR_HUMAN_APPROVAL`
+3. `APPROVED_FOR_COMMIT`
 
 ### Transition Rules
 
-1. `RUNNING -> READY_FOR_APPROVAL`
+1. `RUNNING -> RUNNING`
    - Trigger: internal loop converges AND `sticky_human_gate=false`.
+   - Action: autonomous meta review starts by switching canonical authority to `execution_context.active_role=meta_reviewer` while lifecycle remains `RUNNING`.
 2. `RUNNING -> READY_FOR_HUMAN_APPROVAL`
    - Trigger: internal loop converges AND `sticky_human_gate=true`.
    - Action: skip autonomous review; hand back to human gate directly.
-3. `READY_FOR_APPROVAL -> META_REVIEW_RUNNING`
-   - Trigger: autonomous meta review start.
-4. `META_REVIEW_RUNNING -> RUNNING`
+3. `RUNNING -> RUNNING`
    - Condition: recommendation `rework` AND `auto_rework_count < auto_rework_limit`.
    - Action: Pairflow issues `request-rework` automatically.
-5. `META_REVIEW_RUNNING -> READY_FOR_HUMAN_APPROVAL`
-   - Condition: recommendation `approve`, OR recommendation `rework` with exhausted budget, OR review `inconclusive` (non-error completion).
-   - Action: set `sticky_human_gate=true`.
-6. `META_REVIEW_RUNNING -> META_REVIEW_FAILED`
-   - Condition: autonomous meta-review execution failed (`status=error`, runner unavailable, or invocation failure).
-   - Action: persist run-failed diagnostics/recommendation snapshot in fail-closed state.
-7. `META_REVIEW_FAILED -> RUNNING`
+4. `RUNNING -> READY_FOR_HUMAN_APPROVAL`
+   - Condition: recommendation `approve`, OR recommendation `rework` with exhausted budget, OR review `inconclusive`, OR run-failed diagnostics.
+   - Action: set `sticky_human_gate=true` and persist the current-round recommendation snapshot/diagnostics.
+5. `READY_FOR_HUMAN_APPROVAL -> RUNNING`
    - Trigger: human requests rework.
-8. `META_REVIEW_FAILED -> APPROVED_FOR_COMMIT`
+6. `READY_FOR_HUMAN_APPROVAL -> APPROVED_FOR_COMMIT`
    - Trigger: human approves (explicit override policy applies on non-approve recommendation paths).
 9. `READY_FOR_HUMAN_APPROVAL -> RUNNING`
    - Trigger: human requests rework.
@@ -119,7 +112,7 @@ Pain points:
 1. `auto_rework_limit` default: `5`.
 2. `auto_rework_count` increments only when Pairflow successfully dispatches automatic `request-rework`.
 3. Manual human-triggered rework does not increment `auto_rework_count`.
-4. Auto-review trigger repeats on each new `READY_FOR_APPROVAL` transition until budget is exhausted.
+4. Auto-review trigger repeats on each new reviewer convergence while lifecycle remains `RUNNING` until budget is exhausted.
 5. When `auto_rework_count >= auto_rework_limit`, `rework` recommendation no longer auto-dispatches; route to `READY_FOR_HUMAN_APPROVAL`.
 6. After `sticky_human_gate=true`, autonomous trigger path is disabled for the same bubble; future convergences return directly to `READY_FOR_HUMAN_APPROVAL`.
 
@@ -142,7 +135,7 @@ Boundary contract (skill vs Pairflow CLI):
 | `meta-review run` | Pairflow lifecycle trigger | Allowed (`request-rework`, state updates) | Full report + recommendation + rework target message (if `rework`) | Automated gate in production flow |
 | `meta-review status` | User command | None | Cached latest autonomous recommendation + counters | Low-cost decision/status retrieval |
 | `meta-review last-report` | User command | None | Cached latest autonomous report summary/reference | Low-cost report retrieval |
-| `meta-review recover` | User/operator recovery trigger | Allowed (route replay only from persisted snapshot) | Deterministic routing result (`RUNNING` / `READY_FOR_HUMAN_APPROVAL` / `META_REVIEW_FAILED`) + emitted gate envelope | Recover from partial gate failure without rerunning review |
+| `meta-review recover` | User/operator recovery trigger | Allowed (route replay only from persisted snapshot) | Deterministic routing result (`RUNNING` / `READY_FOR_HUMAN_APPROVAL`) + emitted gate envelope | Recover from partial gate failure without rerunning review |
 
 Rules:
 1. Pairflow CLI command set is intentionally minimal: two lifecycle commands (`run`, `recover`) and two retrieval commands (`status`, `last-report`).
@@ -176,7 +169,7 @@ Routing semantics:
 
 Execution error semantics:
 1. `status=error` is not treated as a successful inconclusive review outcome.
-2. On `status=error`, route to `META_REVIEW_FAILED` (fail-closed) with explicit run-failed diagnostics, then require explicit human decision (`request-rework` or override-aware `approve`).
+2. On `status=error`, route to `READY_FOR_HUMAN_APPROVAL` with explicit run-failed diagnostics, then require explicit human decision (`request-rework` or override-aware `approve`).
 
 ## Input Surface for Meta Review
 
@@ -230,15 +223,15 @@ Requirements:
 3. `pairflow bubble meta-review last-report --id <id>`
    - Returns the latest stored report reference/content summary.
 4. `pairflow bubble meta-review recover --id <id> [--json]`
-   - Requires lifecycle state `META_REVIEW_RUNNING`.
+   - Requires lifecycle state `RUNNING` with active meta-review authority/current-round snapshot.
    - Does not run a new review.
    - Replays deterministic routing from the latest persisted autonomous snapshot.
 
 Behavioral requirement:
 1. `meta-review status` and `meta-review last-report` must be cheap and non-generative.
 2. Retrieval commands are read-only by contract: no mutation of canonical snapshot, counters, or lifecycle state.
-3. `meta-review recover` must fail fast if lifecycle state is not `META_REVIEW_RUNNING`.
-4. If convergence gate execution partially fails after persisting snapshot/run result, orchestrator may invoke the same recovery route automatically to avoid stuck `META_REVIEW_RUNNING`.
+3. `meta-review recover` must fail fast if lifecycle state is not `RUNNING` with active meta-review authority/current-round snapshot.
+4. If convergence gate execution partially fails after persisting snapshot/run result, orchestrator may invoke the same recovery route automatically to avoid stuck `RUNNING` meta-review authority.
 
 ## Meta-Reviewer Pane Requirement
 
@@ -250,7 +243,7 @@ Behavioral requirement:
 
 ## UI Impact (PRD-level)
 
-1. UI must recognize and render the meta-review lifecycle states used by this feature (at minimum `META_REVIEW_RUNNING`, `READY_FOR_HUMAN_APPROVAL`, and `META_REVIEW_FAILED`).
+1. UI must recognize and render meta-review authority while lifecycle stays `RUNNING`, plus `READY_FOR_HUMAN_APPROVAL`.
 2. UI must recognize and render `meta-reviewer` as a first-class actor/role anywhere active role or timeline role is shown.
 3. Severity/finding tags should remain actor-agnostic: existing severity tag behavior (for example `P0`-`P3`) must continue to work for meta-reviewer findings when findings are present.
 4. UI should display the latest autonomous recommendation (`rework|approve|inconclusive`) from the canonical snapshot in a clearly visible bubble/detail surface.
@@ -258,11 +251,11 @@ Behavioral requirement:
 
 ## Approval and Human Gate Rules
 
-1. Human approval decisions happen from `READY_FOR_HUMAN_APPROVAL` and `META_REVIEW_FAILED`.
+1. Human approval decisions happen from `READY_FOR_HUMAN_APPROVAL`.
 2. If latest recommendation is not `approve`, CLI should require explicit override flag for approval attempt.
 3. Override reason is mandatory and auditable.
 4. On first entry to `READY_FOR_HUMAN_APPROVAL`, set `sticky_human_gate=true`.
-5. While `sticky_human_gate=true`, new convergence must route directly to `READY_FOR_HUMAN_APPROVAL` (skip `READY_FOR_APPROVAL` + autonomous trigger).
+5. While `sticky_human_gate=true`, new convergence must route directly to `READY_FOR_HUMAN_APPROVAL` (skip autonomous trigger).
 6. User may still invoke manual deep review directly in user Codex session (outside Pairflow CLI) before deciding `rework` or `approve`.
 
 ## Metrics
@@ -292,34 +285,34 @@ Fleet-level:
 
 ### Phase 2: Autonomous Rework Loop
 
-1. Add lifecycle trigger on `READY_FOR_APPROVAL`.
+1. Add reviewer-convergence lifecycle trigger inside `RUNNING`.
 2. Add budget contract with default limit `5`.
 3. Add automatic `request-rework` dispatch in autonomous mode.
 
 ### Phase 3: Human Gate Hardening + Meta-Reviewer Pane
 
-1. Add `READY_FOR_HUMAN_APPROVAL` + `META_REVIEW_FAILED` decision wiring.
+1. Add `READY_FOR_HUMAN_APPROVAL` decision wiring with preserved run-failed diagnostics.
 2. Add explicit override path for non-approve recommendations.
 3. Ship meta-reviewer pane observability.
 4. Ship UI state/role/recommendation rendering for meta-review flow.
 
 ## Acceptance Criteria
 
-1. Each transition to `READY_FOR_APPROVAL` triggers autonomous review while `sticky_human_gate=false` and until auto-rework budget is exhausted.
+1. Each reviewer convergence triggers autonomous review while `sticky_human_gate=false` and until auto-rework budget is exhausted.
 2. `rework` recommendation auto-dispatches `request-rework` without human confirmation when budget allows.
 3. Auto-rework budget default is `5`, and dispatch stops automatically at limit.
 4. Final approval is never auto-executed in MVP.
 5. `meta-review status` and `meta-review last-report` return latest autonomous snapshot data without running a new review.
 6. Pairflow CLI supports `run`, `status`, `last-report`, and `recover`; fresh manual deep review remains an external workflow.
 7. When budget is exhausted or review is inconclusive, bubble routes to `READY_FOR_HUMAN_APPROVAL` and sets sticky human gate.
-8. Autonomous run execution failure routes bubble to `META_REVIEW_FAILED` with persisted run-failed diagnostics.
-9. Human decision paths from `META_REVIEW_FAILED` remain explicit (`request-rework` or override-aware `approve`).
+8. Autonomous run execution failure routes bubble to `READY_FOR_HUMAN_APPROVAL` with persisted run-failed diagnostics.
+9. Human decision paths remain explicit (`request-rework` or override-aware `approve`).
 10. After sticky human gate is set, future convergences route directly back to `READY_FOR_HUMAN_APPROVAL`.
 11. Meta-reviewer pane exposes live review progress and final routing outcome.
 12. All automated rework decisions are reflected in current state/snapshot.
-13. UI renders `META_REVIEW_RUNNING`, `READY_FOR_HUMAN_APPROVAL`, and `META_REVIEW_FAILED` states without fallback/unknown behavior.
+13. UI renders `RUNNING` with active meta-review authority plus `READY_FOR_HUMAN_APPROVAL` without fallback/unknown behavior.
 14. UI renders `meta-reviewer` actor and latest autonomous recommendation from the canonical snapshot.
-15. If gate execution fails after snapshot persistence, recovery path (`meta-review recover` or equivalent automatic replay) routes deterministically from `META_REVIEW_RUNNING` without requiring a new review run.
+15. If gate execution fails after snapshot persistence, recovery path (`meta-review recover` or equivalent automatic replay) routes deterministically from `RUNNING` meta-review authority without requiring a new review run.
 
 ## Risks and Mitigations
 
@@ -331,7 +324,7 @@ Fleet-level:
    - Mitigation: explicit cached `meta-review status` and `meta-review last-report` commands.
 4. Risk: autonomous flow opacity.
    - Mitigation: meta-reviewer pane + persisted last autonomous snapshot.
-5. Risk: bubble stuck in `META_REVIEW_RUNNING` after partial gate failure.
+5. Risk: bubble stuck in `RUNNING` with meta-review authority after partial gate failure.
    - Mitigation: deterministic snapshot-route recovery command (`meta-review recover`) and converged-path automatic recovery fallback.
 
 ## Resolved Decisions (from PRD discussion)

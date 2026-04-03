@@ -6,11 +6,10 @@ import { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegist
 import { runTmux } from "../../../core/runtime/tmuxManager.js";
 import {
   readStateSnapshot,
-  writeStateSnapshot,
-  type LoadedStateSnapshot
+  type LoadedStateSnapshot,
+  writeStateSnapshot
 } from "../../../core/state/stateStore.js";
 import { notifyMetaReviewerSubmissionRequest } from "./metaReviewGateNotify.js";
-import { stageReadyForApprovalState } from "./metaReviewGateApplyHelpers.js";
 import { assertRunningConvergenceState, buildGateLockPath } from "./metaReviewGateShared.js";
 import type {
   ApplyMetaReviewGateOnConvergenceDependencies,
@@ -33,7 +32,6 @@ export interface ApplyMetaReviewGateExecutionContext {
   lockPath: string;
   deactivateMetaReviewerPane: () => Promise<void>;
   loadedRunning: LoadedStateSnapshot;
-  readyForApproval: LoadedStateSnapshot;
 }
 
 export async function initializeApplyMetaReviewGateExecutionContext(
@@ -72,12 +70,6 @@ export async function initializeApplyMetaReviewGateExecutionContext(
   };
   const loadedRunning = await readState(resolved.bubblePaths.statePath);
   assertRunningConvergenceState(loadedRunning.state);
-  const readyForApproval = await stageReadyForApprovalState({
-    loadedRunning,
-    nowIso,
-    statePath: resolved.bubblePaths.statePath,
-    writeState
-  });
 
   return {
     appendEnvelope,
@@ -93,7 +85,6 @@ export async function initializeApplyMetaReviewGateExecutionContext(
     resolved,
     lockPath,
     deactivateMetaReviewerPane,
-    loadedRunning,
-    readyForApproval
+    loadedRunning
   };
 }

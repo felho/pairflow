@@ -589,7 +589,7 @@
       <span class="header-stat"><span class="led led-cyan" style="width:5px;height:5px"></span> PREPARING_WORKSPACE 1</span>
       <span class="header-stat"><span class="led led-blue" style="width:5px;height:5px"></span> RUNNING 3</span>
       <span class="header-stat"><span class="led led-amber" style="width:5px;height:5px"></span> WAITING_HUMAN 1</span>
-      <span class="header-stat"><span class="led led-green" style="width:5px;height:5px"></span> READY_FOR_APPROVAL 1</span>
+      <span class="header-stat"><span class="led led-green" style="width:5px;height:5px"></span> READY_FOR_HUMAN_APPROVAL 1</span>
       <span class="header-stat"><span class="led led-green" style="width:5px;height:5px"></span> APPROVED_FOR_COMMIT 1</span>
       <span class="header-stat"><span class="led led-teal led-teal-pulse" style="width:5px;height:5px"></span> COMMITTED 1</span>
       <span class="header-stat"><span class="led led-gray" style="width:5px;height:5px"></span> DONE 1</span>
@@ -633,12 +633,12 @@
     </div>
   </div>
 
-  <!-- Bubble 2: READY_FOR_APPROVAL (compact) -->
+  <!-- Bubble 2: READY_FOR_HUMAN_APPROVAL (compact) -->
   <div class="bubble approval" id="b2" style="left: 100px; top: 50px; width: 260px; height: 120px;" onclick="toggleExpand('b2')">
     <div class="bubble-compact">
       <div class="bubble-header">
         <span class="bubble-id">fix-auth-token</span>
-        <span class="state-badge"><span class="led led-green"></span> READY_FOR_APPROVAL</span>
+        <span class="state-badge"><span class="led led-green"></span> READY_FOR_HUMAN_APPROVAL</span>
       </div>
       <div class="bubble-summary">Reviewer found no issues. Ready for approval.</div>
       <div class="bubble-meta">
@@ -810,7 +810,7 @@
           <span class="bubble-repo" style="margin-left: 8px;">bob &middot; main &middot; R4</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span class="state-badge"><span class="led led-green"></span> READY_FOR_APPROVAL</span>
+          <span class="state-badge"><span class="led led-green"></span> READY_FOR_HUMAN_APPROVAL</span>
           <button class="close-btn" onclick="event.stopPropagation();closeExpanded('b2');">&times;</button>
         </div>
       </div>
@@ -996,7 +996,7 @@
     <div class="matrix-row"><span class="matrix-state">PREPARING_WORKSPACE</span><span class="matrix-actions">Stop</span></div>
     <div class="matrix-row"><span class="matrix-state">RUNNING</span><span class="matrix-actions">Open, Stop</span></div>
     <div class="matrix-row"><span class="matrix-state">WAITING_HUMAN</span><span class="matrix-actions">Queue Rework (message required), Reply (message required), Resume, Open, Stop</span></div>
-    <div class="matrix-row"><span class="matrix-state">READY_FOR_APPROVAL</span><span class="matrix-actions">Approve, Request Rework (message required), Open, Stop</span></div>
+    <div class="matrix-row"><span class="matrix-state">READY_FOR_HUMAN_APPROVAL</span><span class="matrix-actions">Approve, Request Rework (message required), Open, Stop</span></div>
     <div class="matrix-row"><span class="matrix-state">APPROVED_FOR_COMMIT</span><span class="matrix-actions">Commit, Open, Stop</span></div>
     <div class="matrix-row"><span class="matrix-state">COMMITTED</span><span class="matrix-actions">Open, Stop</span></div>
     <div class="matrix-row"><span class="matrix-state">DONE</span><span class="matrix-actions">Merge (includes runtime/worktree cleanup), Open</span></div>

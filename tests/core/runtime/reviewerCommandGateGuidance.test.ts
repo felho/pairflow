@@ -132,10 +132,10 @@ describe("reviewerCommandGateGuidance", () => {
 
   it("retains known forbidden command phrases for drift detection", () => {
     expect(REVIEWER_COMMAND_GATE_FORBIDDEN).toContain(
-      "If review round is 2 or higher and you have blocker findings: use `pairflow converged`."
+      "If review round is 2 or higher and you have blocker findings: use `pairflow agent emit --kind convergence ...`."
     );
     expect(REVIEWER_COMMAND_GATE_FORBIDDEN).toContain(
-      "Use `pairflow pass --no-findings` for clean path in round 2 or higher."
+      "Use `pairflow agent emit --kind pass ... --no-findings` for clean path in round 2 or higher."
     );
   });
 });

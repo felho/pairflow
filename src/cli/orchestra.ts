@@ -1,28 +1,20 @@
 #!/usr/bin/env node
 
 import { isMainCliEntrypoint } from "./isMainCliEntrypoint.js";
-import { runCli } from "./index.js";
-
-const supportedOrchestraCommands = new Set(["pass", "ask-human", "converged"]);
+import { buildLegacyActorCommandRemovedError } from "./commands/agent/legacyActorCommandRemoval.js";
 
 export function getOrchestraHelpText(): string {
   return [
     "Usage:",
     "  orchestra <command> [options]",
     "",
-    "Supported commands (transitional compatibility aliases to pairflow actor emit commands):",
-    "  pass",
-    "  ask-human",
-    "  converged",
-    "",
-    "Examples:",
-    "  orchestra pass --summary \"Implemented feature\"",
-    "  orchestra ask-human --question \"Need product decision\"",
-    "  orchestra converged --summary \"Ready for approval\""
+    "Phase 5 removal:",
+    "  `orchestra` actor aliases were removed.",
+    "  Use `pairflow agent emit --kind <pass|human_question|convergence> ...`."
   ].join("\n");
 }
 
-export async function runOrchestraCli(argv: string[]): Promise<number> {
+export function runOrchestraCli(argv: string[]): Promise<number> {
   const [command, ...rest] = argv;
 
   if (
@@ -32,17 +24,16 @@ export async function runOrchestraCli(argv: string[]): Promise<number> {
     command.trim().length === 0
   ) {
     process.stdout.write(`${getOrchestraHelpText()}\n`);
-    return 0;
+    return Promise.resolve(0);
   }
-
-  if (supportedOrchestraCommands.has(command)) {
-    return runCli(["agent", command, ...rest]);
-  }
-
-  process.stderr.write(
-    "Unknown orchestra command. Supported: pass, ask-human, converged\n"
+  void rest;
+  return Promise.reject(
+    buildLegacyActorCommandRemovedError({
+      command: "orchestra",
+      canonicalCommand:
+        "pairflow agent emit --kind <pass|human_question|convergence> --repo <repo> --bubble-id <id> --handoff-id <handoff-id> ..."
+    })
   );
-  return 1;
 }
 
 if (isMainCliEntrypoint(import.meta.url, process.argv[1])) {

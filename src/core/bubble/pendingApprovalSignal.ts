@@ -21,11 +21,7 @@ function deriveApprovalSummary(payload: Record<string, unknown>): string {
 }
 
 export function isHumanApprovalState(state: BubbleLifecycleState): boolean {
-  return (
-    state === "READY_FOR_HUMAN_APPROVAL"
-    || state === "READY_FOR_APPROVAL"
-    || state === "META_REVIEW_FAILED"
-  );
+  return state === "READY_FOR_HUMAN_APPROVAL";
 }
 
 export function resolveLatestPendingApprovalRequest(

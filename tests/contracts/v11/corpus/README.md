@@ -5,7 +5,7 @@ Scope: M0 skeleton
 
 ## Purpose
 
-This corpus drives deterministic replay/parity comparisons for legacy vs v11 command behavior.
+This corpus drives deterministic replay/parity comparisons for baseline vs v11 command behavior.
 
 ## Source Policy
 

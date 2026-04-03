@@ -2,7 +2,7 @@
   "id": "pass-basic-handoff-parity",
   "command": "pass",
   "mode": "parity",
-  "description": "M1 parity baseline case for PASS legacy-v11 shadow runner.",
+  "description": "M1 parity baseline case for PASS baseline-v11 shadow runner.",
   "input": {
     "summary": "Implementer pass parity baseline",
     "intent": "task",

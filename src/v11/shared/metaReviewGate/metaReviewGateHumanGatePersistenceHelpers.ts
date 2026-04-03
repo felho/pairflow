@@ -30,7 +30,7 @@ export interface ResolveRollbackAfterGateAppendFailureInput {
   statePath: string;
   rollbackState: BubbleStateSnapshot;
   expectedFingerprint: string;
-  expectedState: "READY_FOR_HUMAN_APPROVAL" | "READY_FOR_APPROVAL" | "META_REVIEW_FAILED";
+  expectedState: "READY_FOR_HUMAN_APPROVAL" | "RUNNING";
 }
 
 export interface ResolveRollbackAfterGateAppendFailureResult {

@@ -2,7 +2,7 @@
   "id": "ask-human-no-refs-parity",
   "command": "askHuman",
   "mode": "parity",
-  "description": "ask-human parity contract accepts omitted refs and matches legacy-v11 output.",
+  "description": "ask-human parity contract accepts omitted refs and matches baseline-v11 output.",
   "input": {
     "question": "Need product clarification on rollout strategy?"
   },

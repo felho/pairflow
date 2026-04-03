@@ -100,7 +100,7 @@ describe("v11 converged contract harness skeleton", () => {
     );
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("converged");
-    expect(caseDef.mode).toBe("legacy");
+    expect(caseDef.mode).toBe("baseline");
     expect(caseDef.expected.status).toBe("ok");
   });
 
@@ -198,13 +198,13 @@ describe("v11 converged contract harness skeleton", () => {
       inflightFixture.reviewer_routing_contract?.requires_no_structured_findings
     ).toBe(true);
     expect(inflightFixture.rollout_contract?.kickoff_contract_version).toBe(
-      "legacy_inflight"
+      "baseline_inflight"
     );
     expect(inflightFixture.rollout_contract?.inflight_policy).toBe(
       "kickoff_pinned_until_close"
     );
     expect(inflightFixture.rollout_contract?.grace_period_gate).toBe(
-      "legacy_only_within_window"
+      "baseline_only_within_window"
     );
     expect(inflightFixture.reviewer_routing_contract?.forbidden_patterns).toEqual(
       advisoryFixture.reviewer_routing_contract?.forbidden_patterns
@@ -245,12 +245,12 @@ describe("v11 converged contract harness skeleton", () => {
       }
     });
 
-    expect(run.legacy).toBeUndefined();
+    expect(run.baseline).toBeUndefined();
     expect(run.v11?.status).toBe("ok");
   });
 
   it(
-    "executes legacy, v11 and parity assertions via shared runner",
+    "executes baseline, v11 and parity assertions via shared runner",
     { timeout: CONTRACT_TEST_TIMEOUT.parityExhaustiveMs },
     async () => {
       const casePaths = await listConvergedCasePaths();
@@ -261,22 +261,22 @@ describe("v11 converged contract harness skeleton", () => {
         const caseDef = await readContractCase(casePath);
         seenModes.add(caseDef.mode);
         const run = await runConvergedContractCase(caseDef);
-        if (caseDef.mode === "legacy") {
-          expect(run.legacy?.status).toBe("ok");
+        if (caseDef.mode === "baseline") {
+          expect(run.baseline?.status).toBe("ok");
           expect(run.v11).toBeUndefined();
           continue;
         }
         if (caseDef.mode === "v11") {
           expect(run.v11?.status).toBe("ok");
-          expect(run.legacy).toBeUndefined();
+          expect(run.baseline).toBeUndefined();
           continue;
         }
 
-        expect(run.legacy).toBeDefined();
+        expect(run.baseline).toBeDefined();
         expect(run.v11).toBeDefined();
-        expect(run.legacy).toEqual(run.v11);
+        expect(run.baseline).toEqual(run.v11);
       }
-      expect(seenModes.has("legacy")).toBe(true);
+      expect(seenModes.has("baseline")).toBe(true);
       expect(seenModes.has("v11")).toBe(true);
       expect(seenModes.has("parity")).toBe(true);
     }
@@ -287,7 +287,7 @@ describe("v11 converged contract harness skeleton", () => {
       runConvergedContractCase({
         id: "converged-invalid-review-artifact-type",
         command: "converged",
-        mode: "legacy",
+        mode: "baseline",
         description: "Invalid converged contract input shape",
         input: {
           summary: "Invalid case",
@@ -305,7 +305,7 @@ describe("v11 converged contract harness skeleton", () => {
       runConvergedContractCase({
         id: "converged-invalid-empty-summary",
         command: "converged",
-        mode: "legacy",
+        mode: "baseline",
         description: "Invalid converged contract summary",
         input: {
           summary: "   "
@@ -322,7 +322,7 @@ describe("v11 converged contract harness skeleton", () => {
       runConvergedContractCase({
         id: "converged-invalid-refs",
         command: "converged",
-        mode: "legacy",
+        mode: "baseline",
         description: "Invalid converged contract refs input",
         input: {
           summary: "Valid summary",
@@ -364,7 +364,7 @@ describe("v11 converged contract harness skeleton", () => {
       runConvergedContractCase({
         id: "converged-unsupported-command",
         command: "pass",
-        mode: "legacy",
+        mode: "baseline",
         description: "Wrong command routed to converged runner",
         input: {
           summary: "Should not execute"

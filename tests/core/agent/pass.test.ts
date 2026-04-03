@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
-import { runPassCommand } from "../../../src/cli/commands/agent/pass.js";
+import { parsePassCommandOptions } from "../../../src/cli/commands/agent/pass.js";
 import {
   emitPassFromWorkspace,
   PassCommandError,
@@ -60,7 +60,7 @@ function resolveWatchdogTimeoutMinutes(
   state: Parameters<typeof rawWriteStateSnapshot>[1]
 ): number {
   const executionContext =
-    state.state === "META_REVIEW_RUNNING"
+    state.state === "RUNNING"
       ? metaReviewExecutionContextToRunningContext(
           state.meta_review?.execution_context ?? null
         )
@@ -79,7 +79,7 @@ function resolveWatchdogTimeoutMinutes(
 function normalizeTestStateForWrite(
   state: Parameters<typeof rawWriteStateSnapshot>[1]
 ): Parameters<typeof rawWriteStateSnapshot>[1] {
-  if (state.state === "META_REVIEW_RUNNING") {
+  if (state.state === "RUNNING" && state.active_role === "meta_reviewer") {
     return {
       ...state,
       execution_context: metaReviewExecutionContextToRunningContext(
@@ -2242,20 +2242,19 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
 
     await setReviewerActive(bubble.paths.statePath, bubble.config.agents.reviewer);
 
-    const result = await runPassCommand(
-      [
-        "--summary",
-        "Document scope shorthand-compatible finding",
-        "--finding",
-        "P2:Compatibility defaults applied by CLI shorthand|docs/reviewer-severity-ontology.md#runtime-pass-evidence-binding"
-      ],
-      bubble.paths.worktreePath
-    );
-
-    expect(result).not.toBeNull();
-    if (result === null) {
-      throw new Error("Expected PASS result from CLI shorthand integration path");
+    const options = parsePassCommandOptions([
+      "--summary",
+      "Document scope shorthand-compatible finding",
+      "--finding",
+      "P2:Compatibility defaults applied by CLI shorthand|docs/reviewer-severity-ontology.md#runtime-pass-evidence-binding"
+    ]);
+    if (options.help) {
+      throw new Error("Expected parsed PASS options instead of help output");
     }
+    const result = await emitPassFromWorkspace({
+      ...options,
+      cwd: bubble.paths.worktreePath
+    });
 
     expect(result.envelope.payload.findings).toEqual([
       {
@@ -2297,20 +2296,19 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
 
     await setReviewerActive(bubble.paths.statePath, bubble.config.agents.reviewer);
 
-    const result = await runPassCommand(
-      [
-        "--summary",
-        "Document scope shorthand advisory blocker candidate",
-        "--finding",
-        "P1:Shorthand P1 remains advisory after default timing|docs/reviewer-severity-ontology.md#runtime-pass-evidence-binding"
-      ],
-      bubble.paths.worktreePath
-    );
-
-    expect(result).not.toBeNull();
-    if (result === null) {
-      throw new Error("Expected PASS result from CLI shorthand P1 path");
+    const options = parsePassCommandOptions([
+      "--summary",
+      "Document scope shorthand advisory blocker candidate",
+      "--finding",
+      "P1:Shorthand P1 remains advisory after default timing|docs/reviewer-severity-ontology.md#runtime-pass-evidence-binding"
+    ]);
+    if (options.help) {
+      throw new Error("Expected parsed PASS options instead of help output");
     }
+    const result = await emitPassFromWorkspace({
+      ...options,
+      cwd: bubble.paths.worktreePath
+    });
 
     expect(result.envelope.payload.findings).toEqual([
       {
@@ -2559,7 +2557,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     expect(result.autoConverged?.gateRoute).toBe("meta_review_running");
     expect(result.autoConverged?.convergenceEnvelope.type).toBe("CONVERGENCE");
     expect(result.autoConverged?.approvalRequestEnvelope.type).toBe("TASK");
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
     expect(transcript.map((entry) => entry.type)).toEqual([
@@ -2700,7 +2698,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     });
 
     expect(result.transitionDecision).toBe("auto_converge");
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
 
     const artifact = await readDocContractGateArtifact(gateArtifactPath);
     expect(artifact?.updated_at).toBe(now.toISOString());
@@ -2783,7 +2781,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     });
 
     expect(result.transitionDecision).toBe("auto_converge");
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
     expect(result.docGateArtifactWriteFailureReason).toContain("EISDIR");
   });
 
@@ -3000,7 +2998,7 @@ describe("emitPassFromWorkspace", { timeout: 20_000 }, () => {
     expect(result.repeatCleanReasonCode).toBe(
       repeatCleanAutoconvergeTriggeredReasonCode
     );
-    expect(result.state.state).toBe("META_REVIEW_RUNNING");
+    expect(result.state.state).toBe("RUNNING");
 
     const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath);
     expect(transcript.map((entry) => entry.type)).toEqual([

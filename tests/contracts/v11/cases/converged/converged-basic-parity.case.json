@@ -2,7 +2,7 @@
   "id": "converged-basic-parity",
   "command": "converged",
   "mode": "parity",
-  "description": "converged v11 wrapper matches legacy behavior.",
+  "description": "converged v11 wrapper matches baseline behavior.",
   "input": {
     "summary": "Converged baseline parity run.",
     "refs": []
@@ -17,7 +17,7 @@
     "approvalRequestRecipient": "codex",
     "approvalRequestSender": "orchestrator",
     "stateSubset": {
-      "state": "META_REVIEW_RUNNING"
+      "state": "RUNNING"
     },
     "deliveryCount": 1,
     "deliveryRecipients": [

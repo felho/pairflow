@@ -1,10 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  ConvergedCommandErrorV11,
-  type EmitConvergedV11Result as EmitConvergedResult
+  ConvergedCommandErrorV11
 } from "../../src/v11/application/converged/emitConvergedV11.js";
-import { buildMetaReviewExecutionContext } from "../../src/core/bubble/metaReviewExecutionContext.js";
 import * as actorEmitContextModule from "../../src/core/bubble/actorEmitContext.js";
 import * as actorProtocolModule from "../../src/v11/application/actorProtocol/emitActorProtocolV11.js";
 import { parsePassCommandOptions } from "../../src/cli/commands/agent/pass.js";
@@ -58,6 +56,7 @@ describe("parseConvergedCommandOptions", () => {
     const help = getConvergedHelpText();
     expect(parsed.help).toBe(true);
     expect(help).toContain("pairflow agent emit --kind convergence");
+    expect(help).toContain("Removed legacy alias:");
     expect(help).toContain("pairflow converged");
     expect(help).toContain("CONVERGED_BLOCKER_FINDINGS_FORBIDDEN");
     expect(help).toContain(
@@ -226,287 +225,37 @@ describe("runConvergedCommand", () => {
     expect(result).toBeNull();
   });
 
-  it("wraps parse-phase option errors with converged reason-code style", async () => {
-    await expect(runConvergedCommand([])).rejects.toBeInstanceOf(
-      ConvergedCommandErrorV11
-    );
-    await expect(runConvergedCommand([])).rejects.toThrow(
-      /CONVERGED_OPTIONS_INVALID/u
-    );
-  });
-
-  it("wraps parse-phase finding errors with converged reason-code style", async () => {
-    await expect(
-      runConvergedCommand([
-        "--summary",
-        "ready",
-        "--finding",
-        "bad-format"
-      ])
-    ).rejects.toBeInstanceOf(ConvergedCommandErrorV11);
-    await expect(
-      runConvergedCommand([
-        "--summary",
-        "ready",
-        "--finding",
-        "bad-format"
-      ])
-    ).rejects.toThrow(/CONVERGED_FINDINGS_INVALID/u);
-  });
-
-  it("returns meta-review-running handoff result from converged flow", async () => {
-    const mocked = {
-      bubbleId: "b_cli_converged_meta_01",
-      convergenceSequence: 11,
-      convergenceEnvelope: {
-        id: "env_conv",
-        ts: "2026-03-12T08:00:00.000Z",
-        bubble_id: "b_cli_converged_meta_01",
-        sender: "codex",
-        recipient: "orchestrator",
-        type: "CONVERGENCE",
-        round: 2,
-        payload: {
-          summary: "converged"
-        },
-        refs: []
-      },
-      gateRoute: "meta_review_running",
-      approvalRequestSequence: 12,
-      approvalRequestEnvelope: {
-        id: "env_gate",
-        ts: "2026-03-12T08:00:01.000Z",
-        bubble_id: "b_cli_converged_meta_01",
-        sender: "orchestrator",
-        recipient: "codex",
-        type: "TASK",
-        round: 2,
-        payload: {
-          summary: "meta review kickoff"
-        },
-        refs: []
-      },
-      state: {
-        bubble_id: "b_cli_converged_meta_01",
-        state: "META_REVIEW_RUNNING",
-        round: 2,
-        active_agent: "codex",
-        active_role: "meta_reviewer",
-        active_since: "2026-03-12T08:00:01.000Z",
-        last_command_at: "2026-03-12T08:00:01.000Z",
-        round_role_history: [],
-        meta_review: {
-          execution_context: buildMetaReviewExecutionContext({
-            bubbleId: "b_cli_converged_meta_01",
-            round: 2,
-            startedAt: "2026-03-12T08:00:01.000Z",
-            watchdogTimeoutMinutes: 60,
-            attempt: 1
-          }),
-          last_autonomous_run_id: null,
-          last_autonomous_status: null,
-          last_autonomous_recommendation: null,
-          last_autonomous_summary: null,
-          last_autonomous_report_ref: null,
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: null,
-          auto_rework_count: 0,
-          auto_rework_limit: 5,
-          sticky_human_gate: false
-        }
-      }
-    } satisfies EmitConvergedResult;
-
-    vi.spyOn(
+  it("fails closed with removal guidance instead of invoking the legacy converged flow", async () => {
+    const resolveSpy = vi.spyOn(
       actorEmitContextModule,
       "resolveCompatActorEmitContextFromWorkspace"
-    ).mockResolvedValue({
-      repo: "/tmp/pairflow-repo",
-      bubble_id: "b_cli_converged_meta_01",
-      handoff_id: "reviewer:b_cli_converged_meta_01:round:2:attempt:1",
-      expected_role: "reviewer",
-      expected_round: 2,
-      expected_state_fingerprint: "fp_cli_converged_meta_01",
-      worktree_path: "/tmp/pairflow-repo/.pairflow-worktrees/b_cli_converged_meta_01",
-      resolved: {} as never,
-      loaded_state: {} as never,
-      execution_context: {} as never
-    });
-    const emitSpy = vi
-      .spyOn(actorProtocolModule, "emitActorProtocolFromWorkspaceV11")
-      .mockResolvedValue({
-        kind: "convergence",
-        convergence: mocked
-      });
-
-    const result = await runConvergedCommand(
-      ["--summary", "Ready for approval."],
-      "/tmp/pairflow-repo"
+    );
+    const emitSpy = vi.spyOn(
+      actorProtocolModule,
+      "emitActorProtocolFromWorkspaceV11"
     );
 
-    expect(emitSpy).toHaveBeenCalledWith(
-      {
-        input: {
-          kind: "convergence",
-          repo: "/tmp/pairflow-repo",
-          bubble_id: "b_cli_converged_meta_01",
-          handoff_id: "reviewer:b_cli_converged_meta_01:round:2:attempt:1",
-          summary: "Ready for approval.",
-          refs: [],
-          expected_round: 2,
-          expected_role: "reviewer",
-          expected_state_fingerprint: "fp_cli_converged_meta_01"
-        },
-        authoritativeContext: {
-          repo: "/tmp/pairflow-repo",
-          bubble_id: "b_cli_converged_meta_01",
-          handoff_id: "reviewer:b_cli_converged_meta_01:round:2:attempt:1",
-          expected_role: "reviewer",
-          expected_round: 2,
-          expected_state_fingerprint: "fp_cli_converged_meta_01",
-          worktree_path: "/tmp/pairflow-repo/.pairflow-worktrees/b_cli_converged_meta_01",
-          resolved: {} as never,
-          loaded_state: {} as never,
-          execution_context: {} as never
-        }
-      }
-    );
-    expect(result?.gateRoute).toBe("meta_review_running");
-    expect(result?.approvalRequestEnvelope.type).toBe("TASK");
-    expect(result?.state.state).toBe("META_REVIEW_RUNNING");
+    expect(() =>
+      runConvergedCommand(
+        ["--summary", "Ready for approval."],
+        "/tmp/pairflow-repo"
+      )
+    ).toThrow(/LEGACY_COMMAND_REMOVED/u);
+    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(emitSpy).not.toHaveBeenCalled();
   });
 
-  it("forwards parsed findings to converged flow emit path", async () => {
-    const mocked = {
-      bubbleId: "b_cli_converged_meta_02",
-      convergenceSequence: 21,
-      convergenceEnvelope: {
-        id: "env_conv_2",
-        ts: "2026-03-12T09:00:00.000Z",
-        bubble_id: "b_cli_converged_meta_02",
-        sender: "codex",
-        recipient: "orchestrator",
-        type: "CONVERGENCE",
-        round: 2,
-        payload: {
-          summary: "converged"
-        },
-        refs: []
-      },
-      gateRoute: "meta_review_running",
-      approvalRequestSequence: 22,
-      approvalRequestEnvelope: {
-        id: "env_gate_2",
-        ts: "2026-03-12T09:00:01.000Z",
-        bubble_id: "b_cli_converged_meta_02",
-        sender: "orchestrator",
-        recipient: "codex",
-        type: "TASK",
-        round: 2,
-        payload: {
-          summary: "meta review kickoff"
-        },
-        refs: []
-      },
-      state: {
-        bubble_id: "b_cli_converged_meta_02",
-        state: "META_REVIEW_RUNNING",
-        round: 2,
-        active_agent: "codex",
-        active_role: "meta_reviewer",
-        active_since: "2026-03-12T09:00:01.000Z",
-        last_command_at: "2026-03-12T09:00:01.000Z",
-        round_role_history: [],
-        meta_review: {
-          execution_context: buildMetaReviewExecutionContext({
-            bubbleId: "b_cli_converged_meta_02",
-            round: 2,
-            startedAt: "2026-03-12T09:00:01.000Z",
-            watchdogTimeoutMinutes: 60,
-            attempt: 1
-          }),
-          last_autonomous_run_id: null,
-          last_autonomous_status: null,
-          last_autonomous_recommendation: null,
-          last_autonomous_summary: null,
-          last_autonomous_report_ref: null,
-          last_autonomous_rework_target_message: null,
-          last_autonomous_updated_at: null,
-          auto_rework_count: 0,
-          auto_rework_limit: 5,
-          sticky_human_gate: false
-        }
-      }
-    } satisfies EmitConvergedResult;
-
-    vi.spyOn(
-      actorEmitContextModule,
-      "resolveCompatActorEmitContextFromWorkspace"
-    ).mockResolvedValue({
-      repo: "/tmp/pairflow-repo",
-      bubble_id: "b_cli_converged_meta_02",
-      handoff_id: "reviewer:b_cli_converged_meta_02:round:2:attempt:1",
-      expected_role: "reviewer",
-      expected_round: 2,
-      expected_state_fingerprint: "fp_cli_converged_meta_02",
-      worktree_path: "/tmp/pairflow-repo/.pairflow-worktrees/b_cli_converged_meta_02",
-      resolved: {} as never,
-      loaded_state: {} as never,
-      execution_context: {} as never
-    });
-    const emitSpy = vi
-      .spyOn(actorProtocolModule, "emitActorProtocolFromWorkspaceV11")
-      .mockResolvedValue({
-        kind: "convergence",
-        convergence: mocked
-      });
-
-    const result = await runConvergedCommand(
-      [
-        "--summary",
-        "P2 findings remain open.",
-        "--finding",
-        "P2:Follow-up item|artifact://review/findings.md"
-      ],
-      "/tmp/pairflow-repo"
-    );
-
-    expect(emitSpy).toHaveBeenCalledWith(
-      {
-        input: {
-          kind: "convergence",
-          repo: "/tmp/pairflow-repo",
-          bubble_id: "b_cli_converged_meta_02",
-          handoff_id: "reviewer:b_cli_converged_meta_02:round:2:attempt:1",
-          summary: "P2 findings remain open.",
-          refs: [],
-          findings: [
-            {
-              severity: "P2",
-              title: "Follow-up item",
-              refs: ["artifact://review/findings.md"]
-            }
-          ],
-          expected_round: 2,
-          expected_role: "reviewer",
-          expected_state_fingerprint: "fp_cli_converged_meta_02"
-        },
-        authoritativeContext: {
-          repo: "/tmp/pairflow-repo",
-          bubble_id: "b_cli_converged_meta_02",
-          handoff_id: "reviewer:b_cli_converged_meta_02:round:2:attempt:1",
-          expected_role: "reviewer",
-          expected_round: 2,
-          expected_state_fingerprint: "fp_cli_converged_meta_02",
-          worktree_path: "/tmp/pairflow-repo/.pairflow-worktrees/b_cli_converged_meta_02",
-          resolved: {} as never,
-          loaded_state: {} as never,
-          execution_context: {} as never
-        }
-      }
-    );
-    expect(result?.gateRoute).toBe("meta_review_running");
-    expect(result?.state.state).toBe("META_REVIEW_RUNNING");
-    expect(result?.convergenceEnvelope.payload.summary).toBe("converged");
+  it("fails closed with removal guidance even when legacy args are missing or malformed", async () => {
+    for (const args of [
+      [],
+      ["--summary", "ready", "--finding", "bad-format"]
+    ]) {
+      expect(() => runConvergedCommand(args, "/tmp/pairflow-repo")).toThrowError(
+        ConvergedCommandErrorV11
+      );
+      expect(() => runConvergedCommand(args, "/tmp/pairflow-repo")).toThrow(
+        /LEGACY_COMMAND_REMOVED/u
+      );
+    }
   });
 });

@@ -226,7 +226,7 @@ describe("reconcileRuntimeSessions", () => {
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const metaRunning = applyStateTransition(loaded.state, {
-      to: "READY_FOR_APPROVAL",
+      to: "READY_FOR_HUMAN_APPROVAL",
       activeAgent: null,
       activeRole: null,
       activeSince: null,
@@ -234,7 +234,7 @@ describe("reconcileRuntimeSessions", () => {
     });
     const transitioned = {
       ...metaRunning,
-      state: "META_REVIEW_RUNNING" as const,
+      state: "RUNNING" as const,
       active_agent: "codex" as const,
       active_role: "meta_reviewer" as const,
       active_since: "2026-02-22T19:41:00.000Z",

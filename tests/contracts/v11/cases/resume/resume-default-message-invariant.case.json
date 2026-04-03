@@ -1,7 +1,7 @@
 {
   "id": "resume-default-message-invariant",
   "command": "resume",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Resume emits the default resume message payload invariant.",
   "input": {
     "fixture": {

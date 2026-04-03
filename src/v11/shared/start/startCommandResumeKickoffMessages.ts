@@ -28,11 +28,11 @@ export function resolveResumeKickoffMessages(input: {
   metaReviewerKickoffMessage?: string;
   kickoffDiagnostic?: string;
 } {
-  if (input.state.state === "META_REVIEW_RUNNING") {
-    if (
-      input.state.active_role === "meta_reviewer" &&
-      input.state.active_agent === "codex"
-    ) {
+  if (
+    input.state.state === "RUNNING" &&
+    input.state.active_role === "meta_reviewer"
+  ) {
+    if (input.state.active_agent === "codex") {
       return {
         metaReviewerKickoffMessage: buildResumeMetaReviewerKickoffMessage({
           bubbleId: input.bubbleId,
@@ -44,7 +44,7 @@ export function resolveResumeKickoffMessages(input: {
     }
     return {
       kickoffDiagnostic: [
-        "META_REVIEW_RUNNING state active context is inconsistent;",
+        "RUNNING meta-review state active context is inconsistent;",
         `active_role=${formatResumeStateValue(input.state.active_role)},`,
         `active_agent=${formatResumeStateValue(input.state.active_agent)}.`,
         "No meta-review kickoff was sent; continue from transcript/state and reconcile lifecycle ownership before acting."

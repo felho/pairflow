@@ -1,7 +1,7 @@
 {
   "id": "converged-delivery-partial-failure",
   "command": "converged",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "converged remains successful when one delivery target fails and reports partial delivery.",
   "input": {
     "summary": "Converged with partial delivery failure.",
@@ -20,7 +20,7 @@
     "approvalRequestRecipient": "codex",
     "approvalRequestSender": "orchestrator",
     "stateSubset": {
-      "state": "META_REVIEW_RUNNING"
+      "state": "RUNNING"
     },
     "deliveryCount": 1,
     "deliveryRecipients": [
@@ -33,7 +33,7 @@
   "tags": [
     "converged",
     "v11-contract",
-    "legacy",
+    "baseline",
     "delivery-partial-failure"
   ]
 }

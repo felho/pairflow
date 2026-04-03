@@ -374,7 +374,6 @@ async function handleMetricsReportCommand(args: string[]): Promise<number> {
 }
 
 type AgentCommandName = "pass" | "ask-human" | "converged" | "emit";
-const agentCommandNames = ["pass", "ask-human", "converged", "emit"] as const;
 
 function resolveAgentCommandArgs(
   command: string | undefined,
@@ -839,19 +838,12 @@ function buildSupportedCommandsText(): string {
   const metricsCommands = Object.keys(metricsSubcommandHandlers).map(
     (subcommand) => `metrics ${subcommand}`
   );
-  const topLevelAgentCommands = agentCommandNames.filter(
-    (commandName) => commandName !== "emit"
-  );
-  const namespacedAgentCommands = agentCommandNames.map(
-    (commandName) => `agent ${commandName}`
-  );
   return [
     "ui",
     ...bubbleCommands,
     ...repoCommands,
     ...metricsCommands,
-    ...topLevelAgentCommands,
-    ...namespacedAgentCommands
+    "agent emit"
   ].join(", ");
 }
 

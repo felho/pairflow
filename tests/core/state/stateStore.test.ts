@@ -121,7 +121,7 @@ describe("state store", () => {
     ).rejects.toBeInstanceOf(StateStoreConflictError);
   });
 
-  it("returns inspectable diagnostics for legacy META_REVIEW_RUNNING state without execution_context", async () => {
+  it("returns inspectable diagnostics for RUNNING meta-review authority state without execution_context", async () => {
     const dir = await createTempDir();
     const statePath = join(dir, "state.json");
 
@@ -129,7 +129,7 @@ describe("state store", () => {
       statePath,
       `${JSON.stringify({
         bubble_id: "b_store_legacy_meta_01",
-        state: "META_REVIEW_RUNNING",
+        state: "RUNNING",
         round: 2,
         active_agent: "codex",
         active_since: "2026-03-08T10:00:00.000Z",
@@ -153,17 +153,17 @@ describe("state store", () => {
     );
 
     const inspected = await inspectStateSnapshot(statePath);
-    expect(inspected.state.state).toBe("META_REVIEW_RUNNING");
+    expect(inspected.state.state).toBe("RUNNING");
     expect(inspected.stateValidation?.errors).toEqual([
       {
         path: "execution_context",
         message:
-          "META_REVIEW_RUNNING state requires canonical execution_context authority"
+          "RUNNING meta-review state requires canonical execution_context authority"
       },
       {
         path: "meta_review.execution_context",
         message:
-          "META_REVIEW_RUNNING state requires canonical meta_review.execution_context authority"
+          "RUNNING meta-review state requires canonical meta_review.execution_context authority"
       }
     ]);
 
@@ -178,7 +178,7 @@ describe("state store", () => {
       statePath,
       `${JSON.stringify({
         bubble_id: "b_store_runtime_delivery_01",
-        state: "META_REVIEW_RUNNING",
+        state: "RUNNING",
         round: 2,
         active_agent: "codex",
         active_since: "2026-03-08T10:00:00.000Z",

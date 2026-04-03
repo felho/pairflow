@@ -85,7 +85,6 @@ describe("listBubbles", () => {
     ]);
     expect(listed.byState.CREATED).toBe(1);
     expect(listed.byState.RUNNING).toBe(1);
-    expect(listed.byState.META_REVIEW_RUNNING).toBe(0);
     expect(listed.byState.READY_FOR_HUMAN_APPROVAL).toBe(0);
     expect(listed.runtimeSessions.registered).toBe(1);
     expect(listed.runtimeSessions.stale).toBe(1);
@@ -163,7 +162,7 @@ describe("listBubbles", () => {
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const readyForApproval = applyStateTransition(loaded.state, {
-      to: "READY_FOR_APPROVAL",
+      to: "READY_FOR_HUMAN_APPROVAL",
       activeAgent: null,
       activeRole: null,
       activeSince: null,
@@ -171,11 +170,20 @@ describe("listBubbles", () => {
     });
     const metaRunning = {
       ...readyForApproval,
-      state: "META_REVIEW_RUNNING" as const,
+      state: "RUNNING" as const,
       active_agent: "codex" as const,
       active_role: "meta_reviewer" as const,
       active_since: "2026-02-22T18:41:00.000Z",
       last_command_at: "2026-02-22T18:41:00.000Z",
+      execution_context: metaReviewExecutionContextToRunningContext(
+        buildMetaReviewExecutionContext({
+          bubbleId: bubble.bubbleId,
+          round: readyForApproval.round,
+          startedAt: "2026-02-22T18:41:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        })
+      ),
       meta_review: {
         ...readyForApproval.meta_review!,
         execution_context: buildMetaReviewExecutionContext({
@@ -189,6 +197,9 @@ describe("listBubbles", () => {
     };
     const humanGate = applyStateTransition(metaRunning, {
       to: "READY_FOR_HUMAN_APPROVAL",
+      activeAgent: null,
+      activeRole: null,
+      activeSince: null,
       lastCommandAt: "2026-02-22T18:42:00.000Z"
     });
     await writeStateSnapshot(bubble.paths.statePath, humanGate, {
@@ -198,7 +209,7 @@ describe("listBubbles", () => {
 
     const listed = await listBubbles({ repoPath });
     expect(listed.byState.READY_FOR_HUMAN_APPROVAL).toBe(1);
-    expect(listed.byState.META_REVIEW_RUNNING).toBe(0);
+    expect(listed.byState.RUNNING).toBe(0);
   });
 
   it("surfaces active meta-review runtime delivery diagnostics in list summaries", async () => {
@@ -212,7 +223,7 @@ describe("listBubbles", () => {
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     const metaRunning = {
       ...loaded.state,
-      state: "META_REVIEW_RUNNING" as const,
+      state: "RUNNING" as const,
       active_agent: "codex" as const,
       active_role: "meta_reviewer" as const,
       active_since: "2026-02-22T18:41:00.000Z",
@@ -263,7 +274,7 @@ describe("listBubbles", () => {
     });
   });
 
-  it("keeps legacy inspectable META_REVIEW_RUNNING bubbles visible and marks runtime session stale", async () => {
+  it("keeps inspectable RUNNING meta-review authority bubbles visible and marks runtime session stale", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -275,7 +286,7 @@ describe("listBubbles", () => {
       bubble.paths.statePath,
       `${JSON.stringify({
         bubble_id: bubble.bubbleId,
-        state: "META_REVIEW_RUNNING",
+        state: "RUNNING",
         round: 1,
         active_agent: "codex",
         active_since: "2026-02-22T18:41:00.000Z",
@@ -309,19 +320,19 @@ describe("listBubbles", () => {
 
     const listed = await listBubbles({ repoPath });
 
-    expect(listed.byState.META_REVIEW_RUNNING).toBe(1);
+    expect(listed.byState.RUNNING).toBe(1);
     expect(listed.runtimeSessions.registered).toBe(0);
     expect(listed.runtimeSessions.stale).toBe(1);
     expect(listed.bubbles[0]?.stateValidation?.errors).toEqual([
       {
         path: "execution_context",
         message:
-          "META_REVIEW_RUNNING state requires canonical execution_context authority"
+          "RUNNING meta-review state requires canonical execution_context authority"
       },
       {
         path: "meta_review.execution_context",
         message:
-          "META_REVIEW_RUNNING state requires canonical meta_review.execution_context authority"
+          "RUNNING meta-review state requires canonical meta_review.execution_context authority"
       }
     ]);
   });

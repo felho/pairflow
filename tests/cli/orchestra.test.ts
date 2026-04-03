@@ -23,33 +23,27 @@ describe("runOrchestraCli", () => {
     expect(stdoutSpy).toHaveBeenCalledWith(`${getOrchestraHelpText()}\n`);
   });
 
-  it("routes pass command to pairflow agent namespace", async () => {
-    const exitCode = await runOrchestraCli(["pass", "--help"]);
-
-    expect(exitCode).toBe(0);
-    expect(stdoutSpy).toHaveBeenCalled();
+  it("fails closed for removed pass alias", async () => {
+    await expect(runOrchestraCli(["pass", "--help"])).rejects.toThrow(
+      /LEGACY_COMMAND_REMOVED/u
+    );
   });
 
-  it("routes ask-human command to pairflow agent namespace", async () => {
-    const exitCode = await runOrchestraCli(["ask-human", "--help"]);
-
-    expect(exitCode).toBe(0);
-    expect(stdoutSpy).toHaveBeenCalled();
+  it("fails closed for removed ask-human alias", async () => {
+    await expect(runOrchestraCli(["ask-human", "--help"])).rejects.toThrow(
+      /LEGACY_COMMAND_REMOVED/u
+    );
   });
 
-  it("routes converged command to pairflow agent namespace", async () => {
-    const exitCode = await runOrchestraCli(["converged", "--help"]);
-
-    expect(exitCode).toBe(0);
-    expect(stdoutSpy).toHaveBeenCalled();
+  it("fails closed for removed converged alias", async () => {
+    await expect(runOrchestraCli(["converged", "--help"])).rejects.toThrow(
+      /LEGACY_COMMAND_REMOVED/u
+    );
   });
 
-  it("rejects unsupported commands", async () => {
-    const exitCode = await runOrchestraCli(["bubble", "status"]);
-
-    expect(exitCode).toBe(1);
-    expect(stderrSpy).toHaveBeenCalledWith(
-      "Unknown orchestra command. Supported: pass, ask-human, converged\n"
+  it("fails closed for any removed orchestra subcommand", async () => {
+    await expect(runOrchestraCli(["bubble", "status"])).rejects.toThrow(
+      /LEGACY_COMMAND_REMOVED/u
     );
   });
 });

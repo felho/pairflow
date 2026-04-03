@@ -1,7 +1,7 @@
 {
   "id": "merge-cleanup-invariant",
   "command": "merge",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Merge cleanup invariant with tmux/runtime/worktree cleanup.",
   "input": {
     "tmuxSessionExisted": true,

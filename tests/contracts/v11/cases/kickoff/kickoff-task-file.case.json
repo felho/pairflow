@@ -1,8 +1,8 @@
 {
   "id": "kickoff-task-file",
   "command": "kickoff",
-  "mode": "legacy",
-  "description": "Seed kickoff legacy contract case for task-file input success path.",
+  "mode": "baseline",
+  "description": "Seed kickoff baseline contract case for task-file input success path.",
   "input": {
     "task": "Implement kickoff from task file",
     "fixture": {

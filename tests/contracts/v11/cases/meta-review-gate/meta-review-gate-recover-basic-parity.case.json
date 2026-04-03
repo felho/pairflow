@@ -2,7 +2,7 @@
   "id": "meta-review-gate-recover-basic-parity",
   "command": "metaReviewGate",
   "mode": "parity",
-  "description": "Seed contract case for meta-review gate recover legacy-v11 parity baseline.",
+  "description": "Seed contract case for meta-review gate recover baseline-v11 parity baseline.",
   "input": {
     "route": "recover",
     "refs": []
@@ -11,7 +11,7 @@
     "status": "ok",
     "gateRoute": "human_gate_run_failed",
     "stateSubset": {
-      "state": "META_REVIEW_FAILED"
+      "state": "READY_FOR_HUMAN_APPROVAL"
     }
   },
   "tags": [

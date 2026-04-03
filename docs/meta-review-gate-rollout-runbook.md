@@ -103,7 +103,7 @@ For this runbook, "persisted historical artifacts" means prior-round transcript 
 Gate-critical routing must use canonical claim fields, not prose parsing:
 
 1. PASS payloads must carry `findings_claim_state` and `findings_claim_source` from structured signals.
-2. `legacy_summary_parser` is compatibility-only and cannot be the sole approval gate source.
+2. Non-canonical claim sources are rejected for gate-critical routing; only structured canonical fields are accepted.
 3. Meta-review `recommendation=rework` requires structured `report_json` linkage:
    - `findings_claim_state=open_findings`
    - `findings_claim_source=meta_review_artifact`
@@ -133,16 +133,13 @@ Gate-critical routing must use canonical claim fields, not prose parsing:
    - `META_REVIEW_APPROVE_ADVISORY_ONLY`
    - Meaning: recommendation stays `approve`, `findings_blocking_open_total=0`, advisory open findings are allowed and must remain split-consistent.
 
-## Compatibility Fallbacks (Documented)
+## Canonical Artifact Shape
 
-During transition, recover-path report parsing intentionally supports legacy-compatible shapes, but these are treated as compatibility surfaces only:
+Recover-path report parsing is fail-closed and accepts only the canonical artifact schema:
 
-1. `artifacts/meta-review-last.json` may expose claim fields as flat top-level keys (not only nested under `report_json`).
-2. `findings_count` may be derived from:
-   - explicit integer `findings_count`,
-   - explicit integer `findings`,
-   - array length when `findings` is an array.
-3. Structured claim enums remain strict (`findings_claim_state`, `findings_claim_source`); invalid/half-pair values fail closed.
+1. `artifacts/meta-review-last.json` must carry claim fields under `report_json`.
+2. `report_json.findings_count` must be present as an explicit non-negative integer.
+3. Structured claim enums remain strict (`findings_claim_state`, `findings_claim_source`); invalid, incomplete, or non-canonical claim tuples fail closed.
 
 ## Smoke Checklist
 
@@ -191,7 +188,7 @@ Run each command from the release worktree root and capture the command, timesta
 
 7. `<pairflow-command> bubble meta-review recover --id <bubble-id> --repo <repo-path>`
    Preconditions:
-   bubble is in `META_REVIEW_RUNNING` and has canonical current-round meta-review output already persisted for recovery.
+   bubble is in `RUNNING` with canonical current-round meta-review output already persisted for recovery.
    Expected markers:
    `route=...`
    `Lifecycle state: ...`
@@ -200,7 +197,7 @@ Run each command from the release worktree root and capture the command, timesta
 
 8. `<pairflow-command> bubble meta-review recover --id <bubble-id> --repo <repo-path>`
    Preconditions:
-   bubble is in `META_REVIEW_RUNNING`, but only prior-round meta-review output is available for diagnosis.
+   bubble is in `RUNNING`, but only prior-round meta-review output is available for diagnosis.
    Expected markers:
    `META_REVIEW_RECOVERY_REQUIRES_CURRENT_ROUND_RESULT`
    no recovered current-round route is claimed
@@ -259,8 +256,8 @@ If a blocking reason code appears during rollout:
 2. attach the raw evidence/log reference that triggered the block,
 3. keep lifecycle fail-safe routing explicit:
    - default fail-safe path is `READY_FOR_HUMAN_APPROVAL`,
-   - meta-review execution failure (`META_REVIEW_GATE_RUN_FAILED` / `META_REVIEW_RUNNER_ERROR`) routes to `META_REVIEW_FAILED` with run-failed diagnostics for explicit human override handling,
-   - if the bubble is stuck in `META_REVIEW_RUNNING` after snapshot persistence, execute `bubble meta-review recover` before declaring manual escalation,
+   - meta-review execution failure (`META_REVIEW_GATE_RUN_FAILED` / `META_REVIEW_RUNNER_ERROR`) routes to `READY_FOR_HUMAN_APPROVAL` with run-failed diagnostics for explicit human override handling,
+   - if the bubble is stuck in `RUNNING` with active meta-review authority after snapshot persistence, execute `bubble meta-review recover` before declaring manual escalation,
 4. resolve the blocking condition before re-running the smoke checklist.
 
 If the block is `PAIRFLOW_COMMAND_PATH_STALE`:

@@ -66,7 +66,7 @@ export type ReplyContractResultOutput =
 
 export interface ReplyContractRunResult {
   mode: ContractCase["mode"];
-  legacy?: ReplyContractResultOutput;
+  baseline?: ReplyContractResultOutput;
   v11?: ReplyContractResultOutput;
 }
 
@@ -320,13 +320,13 @@ function assertContractExpectedSubset(input: {
 }
 
 function assertParityEquivalent(input: {
-  legacy: ReplyContractResultOutput;
+  baseline: ReplyContractResultOutput;
   v11: ReplyContractResultOutput;
   caseId: string;
 }): void {
-  if (JSON.stringify(input.legacy) !== JSON.stringify(input.v11)) {
+  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
     throw new Error(
-      `reply parity mismatch for case=${input.caseId}: legacy=${JSON.stringify(input.legacy)} v11=${JSON.stringify(input.v11)}`
+      `reply parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
     );
   }
 }
@@ -446,20 +446,20 @@ export async function runReplyContractCase(
     throw new Error(`Unsupported command for reply contract runner: ${caseDef.command}`);
   }
 
-  if (caseDef.mode === "legacy") {
-    const legacy = await executeReplyCase({
+  if (caseDef.mode === "baseline") {
+    const baseline = await executeReplyCase({
       caseDef,
       executor: emitHumanReply,
-      label: "legacy"
+      label: "baseline"
     });
     assertContractExpectedSubset({
-      output: legacy,
+      output: baseline,
       expected: caseDef.expected,
-      label: "legacy"
+      label: "baseline"
     });
     return {
       mode: caseDef.mode,
-      legacy
+      baseline
     };
   }
 
@@ -480,10 +480,10 @@ export async function runReplyContractCase(
     };
   }
 
-  const legacy = await executeReplyCase({
+  const baseline = await executeReplyCase({
     caseDef,
     executor: emitHumanReply,
-    label: "parity/legacy"
+    label: "parity/baseline"
   });
   const v11 = await executeReplyCase({
     caseDef,
@@ -491,9 +491,9 @@ export async function runReplyContractCase(
     label: "parity/v11"
   });
   assertContractExpectedSubset({
-    output: legacy,
+    output: baseline,
     expected: caseDef.expected,
-    label: "parity/legacy"
+    label: "parity/baseline"
   });
   assertContractExpectedSubset({
     output: v11,
@@ -501,13 +501,13 @@ export async function runReplyContractCase(
     label: "parity/v11"
   });
   assertParityEquivalent({
-    legacy,
+    baseline,
     v11,
     caseId: caseDef.id
   });
   return {
     mode: caseDef.mode,
-    legacy,
+    baseline,
     v11
   };
 }

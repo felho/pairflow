@@ -69,12 +69,12 @@ describe("v11 metaReviewGate contract harness", () => {
     );
     const caseDef = await readContractCase(casePath);
     expect(caseDef.command).toBe("metaReviewGate");
-    expect(caseDef.mode).toBe("legacy");
+    expect(caseDef.mode).toBe("baseline");
     expect(caseDef.expected.status).toBe("ok");
   });
 
   it(
-    "executes legacy and parity assertions via shared runner",
+    "executes baseline and parity assertions via shared runner",
     { timeout: CONTRACT_TEST_TIMEOUT.parityLargeCorpusMs },
     async () => {
       const casePaths = metaReviewGateCaseSources.map((source) =>
@@ -84,20 +84,20 @@ describe("v11 metaReviewGate contract harness", () => {
       for (const casePath of casePaths) {
         const caseDef = await readContractCase(casePath);
         const run = await runMetaReviewGateContractCase(caseDef);
-        if (caseDef.mode === "legacy") {
-          expect(run.legacy?.status).toBe("ok");
+        if (caseDef.mode === "baseline") {
+          expect(run.baseline?.status).toBe("ok");
           expect(run.v11).toBeUndefined();
           continue;
         }
         if (caseDef.mode === "v11") {
           expect(run.v11?.status).toBe("ok");
-          expect(run.legacy).toBeUndefined();
+          expect(run.baseline).toBeUndefined();
           continue;
         }
 
-        expect(run.legacy).toBeDefined();
+        expect(run.baseline).toBeDefined();
         expect(run.v11).toBeDefined();
-        expect(run.legacy).toEqual(run.v11);
+        expect(run.baseline).toEqual(run.v11);
       }
     }
   );

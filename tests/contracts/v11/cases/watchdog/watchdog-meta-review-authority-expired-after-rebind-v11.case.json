@@ -1,0 +1,20 @@
+{
+  "id": "watchdog-meta-review-authority-expired-after-rebind-v11",
+  "command": "watchdog",
+  "mode": "v11",
+  "description": "Seed watchdog v11 contract case for RUNNING meta-review authority timeout after restart/rebind without deadline deferral.",
+  "input": {
+    "fixture": {
+      "scenario": "meta_review_authority_expired_after_rebind"
+    }
+  },
+  "expected": {
+    "status": "ok",
+    "reasonCode": "WATCHDOG_EVALUATED",
+    "commandReason": "escalated",
+    "stateSubset": {
+      "state": "READY_FOR_HUMAN_APPROVAL"
+    }
+  },
+  "tags": ["seed", "m0", "watchdog", "v11", "guard-path", "meta-review-authority"]
+}

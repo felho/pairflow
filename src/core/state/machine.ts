@@ -23,8 +23,6 @@ const statesThatClearExecutionContext = new Set<BubbleLifecycleState>([
   "CREATED",
   "PREPARING_WORKSPACE",
   "WAITING_HUMAN",
-  "READY_FOR_APPROVAL",
-  "META_REVIEW_FAILED",
   "READY_FOR_HUMAN_APPROVAL",
   "APPROVED_FOR_COMMIT",
   "COMMITTED",
@@ -36,7 +34,11 @@ const statesThatClearExecutionContext = new Set<BubbleLifecycleState>([
 function clearCompatibilityMetaReviewExecutionContext(
   state: BubbleStateSnapshot
 ): BubbleStateSnapshot {
-  if (state.state === "META_REVIEW_RUNNING" || state.meta_review === undefined) {
+  if (
+    state.meta_review === undefined ||
+    state.active_role === "meta_reviewer" ||
+    state.execution_context?.active_role === "meta_reviewer"
+  ) {
     return state;
   }
 

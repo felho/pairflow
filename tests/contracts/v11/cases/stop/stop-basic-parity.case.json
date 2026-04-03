@@ -2,7 +2,7 @@
   "id": "stop-basic-parity",
   "command": "stop",
   "mode": "parity",
-  "description": "Seed contract case for STOP legacy-v11 parity baseline in M0.",
+  "description": "Seed contract case for STOP baseline-v11 parity baseline in M0.",
   "input": {
     "tmuxSessionExisted": true,
     "runtimeSessionRemoved": true

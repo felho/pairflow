@@ -2,7 +2,7 @@
   "id": "approval-rework-immediate-v11",
   "command": "approval",
   "mode": "v11",
-  "description": "Seed approval immediate-rework v11 contract case for READY_FOR_APPROVAL baseline.",
+  "description": "Seed approval immediate-rework v11 contract case for READY_FOR_HUMAN_APPROVAL baseline.",
   "input": {
     "action": "request_rework_immediate",
     "message": "Please rework based on the current review notes."

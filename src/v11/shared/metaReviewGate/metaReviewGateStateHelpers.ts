@@ -1,5 +1,6 @@
 import { applyStateTransition } from "../../../core/state/machine.js";
 import { clearLiveMetaReviewSnapshot } from "../../../core/bubble/metaReview.js";
+import { assertValidBubbleStateSnapshot } from "../../../core/state/stateSchema.js";
 import {
   type BubbleStateSnapshot,
   type MetaReviewRecommendation,
@@ -36,22 +37,30 @@ export const metaReviewGateAutoReworkRetryRunIdentityInvariantReasonCode =
 export function transitionToGateState(input: {
   current: BubbleStateSnapshot;
   nowIso: string;
-  targetState:
-    | "READY_FOR_HUMAN_APPROVAL"
-    | "READY_FOR_APPROVAL"
-    | "META_REVIEW_FAILED";
+  targetState: "READY_FOR_HUMAN_APPROVAL";
   stickyHumanGate: boolean;
   metaReviewRun?: MetaReviewRunResult;
   fallbackRecommendation?: MetaReviewRecommendation;
   fallbackSummary?: string;
 }): BubbleStateSnapshot {
-  const transitioned = applyStateTransition(input.current, {
-    to: input.targetState,
-    activeAgent: null,
-    activeRole: null,
-    activeSince: null,
-    lastCommandAt: input.nowIso
-  });
+  const transitioned =
+    input.current.state === input.targetState
+      ? assertValidBubbleStateSnapshot({
+          ...input.current,
+          active_agent: null,
+          active_role: null,
+          active_since: null,
+          execution_context: null,
+          last_command_at: input.nowIso,
+          meta_review: clearLiveMetaReviewSnapshot(input.current.meta_review)
+        })
+      : applyStateTransition(input.current, {
+          to: input.targetState,
+          activeAgent: null,
+          activeRole: null,
+          activeSince: null,
+          lastCommandAt: input.nowIso
+        });
 
   const metaReview = clearLiveMetaReviewSnapshot(transitioned.meta_review);
   const shouldHydrateFromRunResult = input.metaReviewRun !== undefined;

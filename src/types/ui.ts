@@ -20,9 +20,6 @@ export interface UiBubbleStateCounts {
   PREPARING_WORKSPACE: number;
   RUNNING: number;
   WAITING_HUMAN: number;
-  READY_FOR_APPROVAL: number;
-  META_REVIEW_RUNNING: number;
-  META_REVIEW_FAILED: number;
   READY_FOR_HUMAN_APPROVAL: number;
   APPROVED_FOR_COMMIT: number;
   COMMITTED: number;
@@ -39,6 +36,7 @@ export interface UiRuntimeHealth {
 
 export interface UiBubbleMetaReviewSummary {
   actor: "meta-reviewer";
+  authorityActive: boolean;
   latestRecommendation: MetaReviewRecommendation | null;
   latestStatus: MetaReviewRunStatus | null;
   latestSummary: string | null;

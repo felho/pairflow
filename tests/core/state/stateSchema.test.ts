@@ -57,7 +57,7 @@ describe("state schema", () => {
   it("accepts phase-2 lifecycle states", () => {
     const metaRunning = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_state_01",
-      state: "META_REVIEW_RUNNING",
+      state: "RUNNING",
       round: 2,
       active_agent: "codex",
       active_since: "2026-03-08T10:00:00.000Z",
@@ -118,10 +118,39 @@ describe("state schema", () => {
     expect(humanGate.ok).toBe(true);
   });
 
-  it("rejects META_REVIEW_RUNNING with cleared active agent context when no recovery snapshot exists", () => {
+  it.each([
+    ["READY_FOR_APPROVAL", "LEGACY_APPROVAL_STATE_UNSUPPORTED"],
+    ["META_REVIEW_RUNNING", "LEGACY_META_REVIEW_STATE_UNSUPPORTED"],
+    ["META_REVIEW_FAILED", "LEGACY_META_REVIEW_STATE_UNSUPPORTED"]
+  ] as const)(
+    "rejects legacy lifecycle state %s with explicit Phase 5 reason code",
+    (legacyState, reasonCode) => {
+      const result = validateBubbleStateSnapshot({
+        bubble_id: "b_test_legacy_state_reject",
+        state: legacyState,
+        round: 2,
+        active_agent: null,
+        active_since: null,
+        active_role: null,
+        round_role_history: [],
+        last_command_at: "2026-03-08T10:01:00.000Z"
+      });
+
+      expect(result.ok).toBe(false);
+      if (result.ok) {
+        return;
+      }
+      expect(result.errors).toContainEqual({
+        path: "state",
+        message: `${reasonCode}: lifecycle state ${legacyState} is unsupported in the Phase 5 canonical model`
+      });
+    }
+  );
+
+  it("rejects RUNNING meta-review authority with cleared active agent context when no recovery snapshot exists", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_state_03",
-      state: "META_REVIEW_RUNNING",
+      state: "RUNNING",
       round: 2,
       active_agent: null,
       active_since: null,
@@ -137,10 +166,10 @@ describe("state schema", () => {
     expect(result.errors.some((error) => error.path === "active_*")).toBe(true);
   });
 
-  it("accepts META_REVIEW_RUNNING with cleared active context when recovering from an existing snapshot", () => {
+  it("accepts RUNNING meta-review authority with cleared active context when recovering from an existing snapshot", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_state_03b",
-      state: "META_REVIEW_RUNNING",
+      state: "RUNNING",
       round: 2,
       active_agent: null,
       active_since: null,
@@ -171,10 +200,10 @@ describe("state schema", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("rejects META_REVIEW_RUNNING when execution_context.round drifts from state.round", () => {
+  it("rejects RUNNING meta-review authority when execution_context.round drifts from state.round", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_state_round_drift",
-      state: "META_REVIEW_RUNNING",
+      state: "RUNNING",
       round: 3,
       active_agent: "codex",
       active_since: "2026-03-08T10:00:00.000Z",
@@ -211,21 +240,47 @@ describe("state schema", () => {
         (error) =>
           error.path === "meta_review.execution_context.round" &&
           error.message ===
-            "Must match state.round (3) while META_REVIEW_RUNNING is active"
+            "Must match state.round (3) while meta-review authority is active"
       )
     ).toBe(true);
   });
 
-  it("rejects META_REVIEW_RUNNING when active ownership role is not meta_reviewer", () => {
+  it("rejects RUNNING meta-review authority when active ownership role is not meta_reviewer", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_state_04",
-      state: "META_REVIEW_RUNNING",
+      state: "RUNNING",
       round: 2,
       active_agent: "claude",
       active_since: "2026-03-08T10:00:00.000Z",
       active_role: "reviewer",
       round_role_history: [],
-      last_command_at: "2026-03-08T10:01:00.000Z"
+      last_command_at: "2026-03-08T10:01:00.000Z",
+      execution_context: buildRunningExecutionContext({
+        bubbleId: "b_test_meta_state_04",
+        round: 2,
+        activeRole: "meta_reviewer",
+        startedAt: "2026-03-08T10:00:00.000Z",
+        watchdogTimeoutMinutes: 60
+      }),
+      meta_review: {
+        execution_context: buildMetaReviewExecutionContext({
+          bubbleId: "b_test_meta_state_04",
+          round: 2,
+          startedAt: "2026-03-08T10:00:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        }),
+        last_autonomous_run_id: null,
+        last_autonomous_status: null,
+        last_autonomous_recommendation: null,
+        last_autonomous_summary: null,
+        last_autonomous_report_ref: null,
+        last_autonomous_rework_target_message: null,
+        last_autonomous_updated_at: null,
+        auto_rework_count: 0,
+        auto_rework_limit: 5,
+        sticky_human_gate: false
+      }
     });
 
     expect(result.ok).toBe(false);
@@ -235,10 +290,10 @@ describe("state schema", () => {
     expect(result.errors.some((error) => error.path === "active_role")).toBe(true);
   });
 
-  it("rejects META_REVIEW_RUNNING when meta_reviewer ownership is not bound to codex", () => {
+  it("rejects RUNNING meta-review authority when meta_reviewer ownership is not bound to codex", () => {
     const result = validateBubbleStateSnapshot({
       bubble_id: "b_test_meta_state_04b",
-      state: "META_REVIEW_RUNNING",
+      state: "RUNNING",
       round: 2,
       active_agent: "claude",
       active_since: "2026-03-08T10:00:00.000Z",
@@ -406,7 +461,7 @@ describe("state schema", () => {
         (error) =>
           error.path === "meta_review.execution_context" &&
           error.message ===
-            "meta_review.execution_context must be null while lifecycle state WAITING_HUMAN is not META_REVIEW_RUNNING"
+            "meta_review.execution_context must be null while meta-review authority is inactive"
       )
     ).toBe(true);
   });

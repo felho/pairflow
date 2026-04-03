@@ -95,6 +95,7 @@ describe("renderBubbleStatusText", () => {
       },
       metaReview: {
         actor: "meta-reviewer",
+        authorityActive: true,
         latestRecommendation: "inconclusive",
         latestStatus: "inconclusive",
         latestSummary: "No deterministic recommendation.",
@@ -231,6 +232,7 @@ describe("renderBubbleStatusText", () => {
       createStatusView({
         metaReview: {
           actor: "meta-reviewer",
+          authorityActive: false,
           latestRecommendation: "inconclusive",
           latestStatus: "inconclusive",
           latestSummary: "No deterministic recommendation.",
@@ -306,6 +308,7 @@ describe("renderBubbleStatusTable", () => {
       },
       metaReview: {
         actor: "meta-reviewer",
+        authorityActive: false,
         latestRecommendation: "approve",
         latestStatus: "success",
         latestSummary: "Autonomous recommendation approve.",
@@ -404,6 +407,7 @@ describe("renderBubbleStatusTable", () => {
       createStatusView({
         metaReview: {
           actor: "meta-reviewer",
+          authorityActive: false,
           latestRecommendation: "approve",
           latestStatus: "success",
           latestSummary: "Autonomous recommendation approve.",

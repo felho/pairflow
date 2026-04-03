@@ -285,9 +285,9 @@ stateDiagram-v2
   WAITING_HUMAN --> RUNNING: human_reply
   RUNNING --> HELP_PENDING: subflow.start
   HELP_PENDING --> RUNNING: subflow.resolved
-  RUNNING --> READY_FOR_APPROVAL: converge_pass
-  READY_FOR_APPROVAL --> RUNNING: rework
-  READY_FOR_APPROVAL --> APPROVED: approve
+  RUNNING --> READY_FOR_HUMAN_APPROVAL: converge_pass
+  READY_FOR_HUMAN_APPROVAL --> RUNNING: rework
+  READY_FOR_HUMAN_APPROVAL --> APPROVED: approve
   APPROVED --> COMMITTING
   COMMITTING --> DONE
   RUNNING --> FAILED
@@ -354,7 +354,7 @@ template:
       RUNNING: [pass, ask-human, converged]
     operator:
       WAITING_HUMAN: [reply, stop, resume]
-      READY_FOR_APPROVAL: [approve, request-rework, stop]
+      READY_FOR_HUMAN_APPROVAL: [approve, request-rework, stop]
 
   steps:
     - id: review_loop

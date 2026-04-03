@@ -1,7 +1,7 @@
 {
   "id": "merge-state-not-done",
   "command": "merge",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed merge contract case for rejection when state is not DONE.",
   "input": {
     "tmuxSessionExisted": false,

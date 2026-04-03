@@ -1,7 +1,7 @@
 {
   "id": "reply-no-refs",
   "command": "reply",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed contract case for HUMAN_REPLY without refs.",
   "input": {
     "message": "Proceed without additional artifacts."

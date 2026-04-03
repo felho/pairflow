@@ -1,7 +1,7 @@
 {
   "id": "reply-waiting-human-context-incomplete",
   "command": "reply",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Reply contract case for rejecting WAITING_HUMAN states with missing active context.",
   "input": {
     "message": "Acknowledged.",

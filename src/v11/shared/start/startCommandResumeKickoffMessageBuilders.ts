@@ -118,7 +118,7 @@ export function buildResumeMetaReviewerKickoffMessage(input: {
 }): string {
   return [
     `# [pairflow] bubble=${input.bubbleId} resume kickoff (meta-reviewer).`,
-    `State is META_REVIEW_RUNNING at round ${input.round}.`,
+    `State is RUNNING with active meta-review authority at round ${input.round}.`,
     buildPairflowCommandGuidance(
       input.worktreePath,
       input.pairflowCommandProfile

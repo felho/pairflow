@@ -1,7 +1,7 @@
 {
   "id": "reply-waiting-human-round-invalid",
   "command": "reply",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Reply contract case for rejecting WAITING_HUMAN states with invalid round.",
   "input": {
     "message": "Acknowledged.",

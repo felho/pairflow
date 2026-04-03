@@ -303,6 +303,7 @@ describe("createBubbleStore", () => {
       store.getState().bubblesById["b-legacy-payload"]?.metaReview
     ).toEqual({
       actor: "meta-reviewer",
+      authorityActive: false,
       latestRecommendation: null,
       latestStatus: null,
       latestSummary: null,

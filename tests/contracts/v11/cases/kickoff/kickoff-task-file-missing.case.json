@@ -1,8 +1,8 @@
 {
   "id": "kickoff-task-file-missing",
   "command": "kickoff",
-  "mode": "legacy",
-  "description": "Seed kickoff legacy contract case for missing task-file rejection.",
+  "mode": "baseline",
+  "description": "Seed kickoff baseline contract case for missing task-file rejection.",
   "input": {
     "task": "Ignored content for missing task-file path",
     "fixture": {

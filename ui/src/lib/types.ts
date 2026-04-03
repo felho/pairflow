@@ -3,9 +3,6 @@ export const bubbleLifecycleStates = [
   "PREPARING_WORKSPACE",
   "RUNNING",
   "WAITING_HUMAN",
-  "READY_FOR_APPROVAL",
-  "META_REVIEW_RUNNING",
-  "META_REVIEW_FAILED",
   "READY_FOR_HUMAN_APPROVAL",
   "APPROVED_FOR_COMMIT",
   "COMMITTED",
@@ -142,6 +139,7 @@ export type MetaReviewRuntimeDeliveryStatus = "confirmed" | "uncertain" | "faile
 
 export interface UiBubbleMetaReviewSummary {
   actor: "meta-reviewer";
+  authorityActive: boolean;
   latestRecommendation: MetaReviewRecommendation | null;
   latestStatus: MetaReviewRunStatus | null;
   latestSummary: string | null;
@@ -180,9 +178,6 @@ export interface UiRepoSummary {
     PREPARING_WORKSPACE: number;
     RUNNING: number;
     WAITING_HUMAN: number;
-    READY_FOR_APPROVAL: number;
-    META_REVIEW_RUNNING: number;
-    META_REVIEW_FAILED: number;
     READY_FOR_HUMAN_APPROVAL: number;
     APPROVED_FOR_COMMIT: number;
     COMMITTED: number;

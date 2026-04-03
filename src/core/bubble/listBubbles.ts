@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 
 import { parseBubbleConfigToml } from "../../config/bubbleConfig.js";
 import { resolveActiveMetaReviewRuntimeDelivery } from "./metaReview.js";
+import { isMetaReviewExecutionContextActiveState } from "./metaReviewExecutionContext.js";
 import {
   inspectStateSnapshot,
   type StateValidationDiagnostics
@@ -41,6 +42,7 @@ export interface BubbleListEntry {
   runtimeSession: RuntimeSessionRecord | null;
   metaReview: {
     actor: "meta-reviewer";
+    authorityActive: boolean;
     latestRecommendation: MetaReviewRecommendation | null;
     latestStatus: MetaReviewRunStatus | null;
     latestSummary: string | null;
@@ -62,9 +64,6 @@ export interface BubbleListStateCounts {
   PREPARING_WORKSPACE: number;
   RUNNING: number;
   WAITING_HUMAN: number;
-  READY_FOR_APPROVAL: number;
-  META_REVIEW_RUNNING: number;
-  META_REVIEW_FAILED: number;
   READY_FOR_HUMAN_APPROVAL: number;
   APPROVED_FOR_COMMIT: number;
   COMMITTED: number;
@@ -97,9 +96,6 @@ function createZeroCounts(): BubbleListStateCounts {
     PREPARING_WORKSPACE: 0,
     RUNNING: 0,
     WAITING_HUMAN: 0,
-    READY_FOR_APPROVAL: 0,
-    META_REVIEW_RUNNING: 0,
-    META_REVIEW_FAILED: 0,
     READY_FOR_HUMAN_APPROVAL: 0,
     APPROVED_FOR_COMMIT: 0,
     COMMITTED: 0,
@@ -112,9 +108,6 @@ function createZeroCounts(): BubbleListStateCounts {
 const runtimeSessionExpectedStates = new Set<BubbleLifecycleState>([
   "RUNNING",
   "WAITING_HUMAN",
-  "READY_FOR_APPROVAL",
-  "META_REVIEW_RUNNING",
-  "META_REVIEW_FAILED",
   "READY_FOR_HUMAN_APPROVAL",
   "APPROVED_FOR_COMMIT",
   "COMMITTED"
@@ -225,6 +218,9 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
       runtimeSession,
       metaReview: {
         actor: "meta-reviewer",
+        authorityActive: isMetaReviewExecutionContextActiveState(
+          stateLoaded.state
+        ),
         latestRecommendation:
           stateLoaded.state.meta_review?.last_autonomous_recommendation ?? null,
         latestStatus: stateLoaded.state.meta_review?.last_autonomous_status ?? null,

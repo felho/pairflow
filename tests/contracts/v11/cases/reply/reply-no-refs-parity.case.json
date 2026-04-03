@@ -2,7 +2,7 @@
   "id": "reply-no-refs-parity",
   "command": "reply",
   "mode": "parity",
-  "description": "Seed contract case for HUMAN_REPLY legacy-v11 parity without refs.",
+  "description": "Seed contract case for HUMAN_REPLY baseline-v11 parity without refs.",
   "input": {
     "message": "Proceed without additional artifacts."
   },

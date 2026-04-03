@@ -1,7 +1,7 @@
 {
   "id": "restart-basic",
   "command": "restart",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed restart contract case for runtime restart parity baseline.",
   "input": {
     "previousTmuxSessionExisted": false,

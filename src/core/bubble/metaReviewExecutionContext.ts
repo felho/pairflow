@@ -23,6 +23,25 @@ import {
 export const metaReviewExecutionContextPath = "meta_review.execution_context";
 export const runningExecutionContextPath = "execution_context";
 
+export function isMetaReviewExecutionContextActiveState(
+  state: BubbleStateSnapshot
+): boolean {
+  if (state.state !== "RUNNING") {
+    return false;
+  }
+
+  const executionContext =
+    state.execution_context
+    ?? metaReviewExecutionContextToRunningContext(
+      state.meta_review?.execution_context ?? null
+    );
+  return (
+    executionContext !== null &&
+    executionContext.active_role === "meta_reviewer" &&
+    executionContext.awaited_output_type === "meta_review_result"
+  );
+}
+
 export function buildMetaReviewExecutionContext(input: {
   bubbleId: string;
   round: number;
@@ -63,11 +82,11 @@ export function validateActiveMetaReviewExecutionContext(
 ): ValidationResult<BubbleExecutionContext> {
   const errors: ValidationError[] = [];
 
-  if (state.state !== "META_REVIEW_RUNNING") {
+  if (state.state !== "RUNNING") {
     return validationFail([
       {
         path: "state",
-        message: `Expected META_REVIEW_RUNNING state, received ${state.state}.`
+        message: `Expected RUNNING state with active meta-review authority, received ${state.state}.`
       }
     ]);
   }
@@ -82,7 +101,7 @@ export function validateActiveMetaReviewExecutionContext(
       {
         path: runningExecutionContextPath,
         message:
-          "META_REVIEW_RUNNING state requires canonical execution_context authority."
+          "RUNNING meta-review state requires canonical execution_context authority."
       }
     ]);
   }
@@ -95,7 +114,7 @@ export function validateActiveMetaReviewExecutionContext(
   } else if (executionContext.active_role !== "meta_reviewer") {
     errors.push({
       path: `${runningExecutionContextPath}.active_role`,
-      message: "Must be meta_reviewer while META_REVIEW_RUNNING is active"
+      message: "Must be meta_reviewer while meta-review authority is active"
     });
   }
 
@@ -114,7 +133,7 @@ export function validateActiveMetaReviewExecutionContext(
   } else if (executionContext.round !== state.round) {
     errors.push({
       path: `${runningExecutionContextPath}.round`,
-      message: `Must match state.round (${state.round}) while META_REVIEW_RUNNING is active`
+      message: `Must match state.round (${state.round}) while meta-review authority is active`
     });
   }
 

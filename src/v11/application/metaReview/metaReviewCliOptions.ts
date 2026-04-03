@@ -18,7 +18,7 @@ export function getBubbleMetaReviewHelpText(): string {
     "  pairflow bubble meta-review status --id <id> [--repo <path>] [--json] [--verbose]",
     "  pairflow bubble meta-review last-report --id <id> [--repo <path>] [--json] [--verbose]",
     "  pairflow bubble meta-review recover --id <id> [--repo <path>] [--json]",
-    "  Canonical actor submit (Phase 4):",
+    "  Canonical actor submit:",
     `  ${buildMetaReviewSubmitUsageLine()}`,
     "  Legacy `pairflow bubble meta-review submit` was removed; use the canonical actor emit command above.",
     "",

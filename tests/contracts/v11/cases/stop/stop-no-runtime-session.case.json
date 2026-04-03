@@ -1,7 +1,7 @@
 {
   "id": "stop-no-runtime-session",
   "command": "stop",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Seed contract case for STOP when no runtime session exists.",
   "input": {
     "tmuxSessionExisted": false,

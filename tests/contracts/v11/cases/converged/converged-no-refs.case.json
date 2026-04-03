@@ -1,10 +1,10 @@
 {
   "id": "converged-no-refs",
   "command": "converged",
-  "mode": "legacy",
-  "description": "converged legacy baseline with omitted refs input.",
+  "mode": "baseline",
+  "description": "converged baseline baseline with omitted refs input.",
   "input": {
-    "summary": "Converged legacy with omitted refs."
+    "summary": "Converged baseline with omitted refs."
   },
   "expected": {
     "status": "ok",
@@ -16,7 +16,7 @@
     "approvalRequestRecipient": "codex",
     "approvalRequestSender": "orchestrator",
     "stateSubset": {
-      "state": "META_REVIEW_RUNNING"
+      "state": "RUNNING"
     },
     "deliveryCount": 1,
     "deliveryRecipients": [
@@ -29,7 +29,7 @@
   "tags": [
     "converged",
     "v11-contract",
-    "legacy",
+    "baseline",
     "no-refs"
   ]
 }

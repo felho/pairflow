@@ -13,6 +13,7 @@ import {
   writeStateSnapshot
 } from "../../../src/core/state/stateStore.js";
 import { buildRunningExecutionContext } from "../../../src/core/state/executionContext.js";
+import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -66,7 +67,7 @@ export type AskHumanContractResultOutput =
 
 export interface AskHumanContractRunResult {
   mode: ContractCase["mode"];
-  legacy?: AskHumanContractResultOutput;
+  baseline?: AskHumanContractResultOutput;
   v11?: AskHumanContractResultOutput;
 }
 
@@ -309,13 +310,13 @@ function assertContractExpectedSubset(input: {
 }
 
 function assertParityEquivalent(input: {
-  legacy: AskHumanContractResultOutput;
+  baseline: AskHumanContractResultOutput;
   v11: AskHumanContractResultOutput;
   caseId: string;
 }): void {
-  if (JSON.stringify(input.legacy) !== JSON.stringify(input.v11)) {
+  if (JSON.stringify(input.baseline) !== JSON.stringify(input.v11)) {
     throw new Error(
-      `askHuman parity mismatch for case=${input.caseId}: legacy=${JSON.stringify(input.legacy)} v11=${JSON.stringify(input.v11)}`
+      `askHuman parity mismatch for case=${input.caseId}: baseline=${JSON.stringify(input.baseline)} v11=${JSON.stringify(input.v11)}`
     );
   }
 }
@@ -374,6 +375,13 @@ async function executeAskHumanCase(input: {
 
     if (askHumanInput.scenario === "running_role_unsupported") {
       const loaded = await readStateSnapshot(bubble.paths.statePath);
+      const metaReviewExecutionContext = buildMetaReviewExecutionContext({
+        bubbleId: loaded.state.bubble_id,
+        round: loaded.state.round,
+        startedAt: "2026-03-19T10:01:45.000Z",
+        watchdogTimeoutMinutes: 60,
+        attempt: loaded.state.execution_context?.attempt ?? 1
+      });
       await writeStateSnapshot(
         bubble.paths.statePath,
         {
@@ -389,7 +397,24 @@ async function executeAskHumanCase(input: {
             startedAt: "2026-03-19T10:01:45.000Z",
             watchdogTimeoutMinutes: 60,
             attempt: loaded.state.execution_context?.attempt ?? 1
-          })
+          }),
+          meta_review: {
+            ...(loaded.state.meta_review ?? {
+              execution_context: null,
+              runtime_delivery: null,
+              last_autonomous_run_id: null,
+              last_autonomous_status: null,
+              last_autonomous_recommendation: null,
+              last_autonomous_summary: null,
+              last_autonomous_report_ref: null,
+              last_autonomous_rework_target_message: null,
+              last_autonomous_updated_at: null,
+              auto_rework_count: 0,
+              auto_rework_limit: 5,
+              sticky_human_gate: false
+            }),
+            execution_context: metaReviewExecutionContext
+          }
         },
         {
           expectedFingerprint: loaded.fingerprint,
@@ -455,20 +480,20 @@ export async function runAskHumanContractCase(
     );
   }
 
-  if (caseDef.mode === "legacy") {
-    const legacy = await executeAskHumanCase({
+  if (caseDef.mode === "baseline") {
+    const baseline = await executeAskHumanCase({
       caseDef,
       executor: emitAskHumanFromWorkspace,
-      label: "legacy"
+      label: "baseline"
     });
     assertContractExpectedSubset({
-      output: legacy,
+      output: baseline,
       expected: caseDef.expected,
-      label: "legacy"
+      label: "baseline"
     });
     return {
       mode: caseDef.mode,
-      legacy
+      baseline
     };
   }
 
@@ -489,10 +514,10 @@ export async function runAskHumanContractCase(
     };
   }
 
-  const legacy = await executeAskHumanCase({
+  const baseline = await executeAskHumanCase({
     caseDef,
     executor: emitAskHumanFromWorkspace,
-    label: "parity/legacy"
+    label: "parity/baseline"
   });
   const v11 = await executeAskHumanCase({
     caseDef,
@@ -500,9 +525,9 @@ export async function runAskHumanContractCase(
     label: "parity/v11"
   });
   assertContractExpectedSubset({
-    output: legacy,
+    output: baseline,
     expected: caseDef.expected,
-    label: "parity/legacy"
+    label: "parity/baseline"
   });
   assertContractExpectedSubset({
     output: v11,
@@ -510,13 +535,13 @@ export async function runAskHumanContractCase(
     label: "parity/v11"
   });
   assertParityEquivalent({
-    legacy,
+    baseline,
     v11,
     caseId: caseDef.id
   });
   return {
     mode: caseDef.mode,
-    legacy,
+    baseline,
     v11
   };
 }

@@ -234,7 +234,7 @@ describe("bubble orchestration loop smoke", () => {
       }
     );
 
-    expect(converged.state.state).toBe("META_REVIEW_RUNNING");
+    expect(converged.state.state).toBe("RUNNING");
     expect(converged.approvalRequestEnvelope.type).toBe("TASK");
 
     const transcript = await readTranscriptEnvelopes(loopBubble.paths.transcriptPath);
@@ -248,7 +248,7 @@ describe("bubble orchestration loop smoke", () => {
     ]);
 
     const loadedState = await readStateSnapshot(loopBubble.paths.statePath);
-    expect(loadedState.state.state).toBe("META_REVIEW_RUNNING");
+    expect(loadedState.state.state).toBe("RUNNING");
     expect(loadedState.state.active_role).toBe("meta_reviewer");
     expect(loadedState.state.active_agent).toBe("codex");
 

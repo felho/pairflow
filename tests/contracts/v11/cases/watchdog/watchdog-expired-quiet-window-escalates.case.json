@@ -1,7 +1,7 @@
 {
   "id": "watchdog-expired-quiet-window-escalates",
   "command": "watchdog",
-  "mode": "legacy",
+  "mode": "baseline",
   "description": "Watchdog escalates after timeout when the pane stays quiet for the full post-timeout window.",
   "input": {
     "fixture": {
