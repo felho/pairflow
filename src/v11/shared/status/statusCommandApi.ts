@@ -7,6 +7,7 @@ import {
   resolveStatusGateState,
   withAccuracyCriticalVerificationGate
 } from "./statusCommandInternals.js";
+import { readWatchdogPaneActivity } from "../watchdog/watchdogPaneActivityStore.js";
 import {
   buildBubbleStatusView,
   type BubbleStatusView
@@ -79,6 +80,10 @@ export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleS
   }
 
   const now = input.now ?? new Date();
+  const paneActivityRead = await readWatchdogPaneActivity({
+    runtimeDir: resolved.bubblePaths.runtimeDir,
+    bubbleId: resolved.bubbleId
+  });
 
   return buildBubbleStatusView({
     resolved,
@@ -90,6 +95,7 @@ export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleS
     verificationStatus,
     gateState,
     stateValidation,
+    paneActivityRead,
     now
   });
 }

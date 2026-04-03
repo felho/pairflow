@@ -93,6 +93,24 @@ export function formatTableTimestamp(value: string | null): string {
   return iso.slice(5, 19) + "Z";
 }
 
+export function formatClockTimestamp(value: string | null): string {
+  if (value === null) {
+    return "-";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toISOString().slice(11, 19);
+}
+
+export function formatElapsedSeconds(value: number | null): string {
+  if (value === null) {
+    return "-";
+  }
+  return `${value}s`;
+}
+
 export function formatInboxSummary(input: BubbleStatusView["pendingInboxItems"]): string {
   const q = input.humanQuestions;
   const a = input.approvalRequests;

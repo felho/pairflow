@@ -1,4 +1,8 @@
 import type { BubbleStatusV11View as BubbleStatusView } from "./emitStatusV11.js";
+import {
+  formatClockTimestamp,
+  formatElapsedSeconds
+} from "./statusCliValueFormatters.js";
 
 function formatFailingGateSummaryText(status: BubbleStatusView): string {
   return status.failing_gates.length > 0
@@ -42,6 +46,17 @@ function formatMetaReviewText(status: BubbleStatusView): string {
   return `Meta-review: status=${status.metaReview.latestStatus ?? "-"} recommendation=${status.metaReview.latestRecommendation ?? "-"} route=${status.metaReview.latestRoute ?? "-"}${status.metaReview.latestRouteReasonCode !== null ? ` reason=${status.metaReview.latestRouteReasonCode}` : ""} updated=${status.metaReview.latestUpdatedAt ?? "-"} route_at=${status.metaReview.latestRouteObservedAt ?? "-"} report=${status.metaReview.latestReportRef ?? "-"}`;
 }
 
+function formatPaneActivityText(status: BubbleStatusView): string {
+  const paneActivity = status.paneActivity;
+  if (paneActivity.readStatus === "missing") {
+    return "Pane activity: missing";
+  }
+  if (paneActivity.readStatus === "invalid") {
+    return `Pane activity: invalid${paneActivity.lastSampleError !== null ? ` error=${paneActivity.lastSampleError}` : ""}`;
+  }
+  return `Pane activity: last=${formatClockTimestamp(paneActivity.lastChangedAt)} age=${formatElapsedSeconds(paneActivity.sinceLastChangedSeconds)}${paneActivity.lastSampleError !== null ? ` error=${paneActivity.lastSampleError}` : ""}`;
+}
+
 export function renderBubbleStatusText(status: BubbleStatusView): string {
   const failingGateSummary = formatFailingGateSummaryText(status);
   const stateValidationSummary =
@@ -56,6 +71,7 @@ export function renderBubbleStatusText(status: BubbleStatusView): string {
     `State validation: ${stateValidationSummary}`,
     `Active: ${status.activeAgent ?? "-"} (${status.activeRole ?? "-"}) since ${status.activeSince ?? "-"}`,
     `Last command: ${status.lastCommandAt ?? "-"}`,
+    formatPaneActivityText(status),
     formatExecutionContextText(status),
     formatStatusWatchdogText(status),
     `Inbox pending: questions=${status.pendingInboxItems.humanQuestions}, approvals=${status.pendingInboxItems.approvalRequests}, total=${status.pendingInboxItems.total}`,

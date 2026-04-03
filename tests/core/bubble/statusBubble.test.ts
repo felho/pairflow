@@ -12,6 +12,7 @@ import { getBubbleStatus } from "../../../src/core/bubble/statusBubble.js";
 import { resolveDocContractGateArtifactPath } from "../../../src/core/gates/docContractGates.js";
 import { appendProtocolEnvelope } from "../../../src/core/protocol/transcriptStore.js";
 import { resolveWorktreePairflowEntrypoint } from "../../../src/core/runtime/pairflowCommand.js";
+import { writeWatchdogPaneActivity } from "../../../src/v11/shared/watchdog/watchdogPaneActivityStore.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -115,6 +116,42 @@ describe("getBubbleStatus", () => {
     expect(status.state).toBe("RUNNING");
     expect(status.pendingInboxItems.humanQuestions).toBe(0);
     expect(status.transcript.lastMessageType).toBe("HUMAN_REPLY");
+  });
+
+  it("surfaces watchdog pane activity timing from runtime health record", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_status_pane_activity_01",
+      task: "Status pane activity task"
+    });
+
+    await writeWatchdogPaneActivity({
+      runtimeDir: bubble.paths.runtimeDir,
+      bubbleId: bubble.bubbleId,
+      record: {
+        bubble_id: bubble.bubbleId,
+        sampled_at: "2026-02-22T14:02:30.000Z",
+        pane_hash: "pane-hash-01",
+        last_changed_at: "2026-02-22T13:59:40.000Z",
+        session_name: "pf-b_status_pane_activity_01",
+        target_pane: "pf-b_status_pane_activity_01:0.1",
+        last_sample_status: "sampled"
+      }
+    });
+
+    const status = await getBubbleStatus({
+      bubbleId: bubble.bubbleId,
+      cwd: repoPath,
+      now: new Date("2026-02-22T14:03:00.000Z")
+    });
+
+    expect(status.paneActivity.readStatus).toBe("ok");
+    expect(status.paneActivity.lastChangedAt).toBe("2026-02-22T13:59:40.000Z");
+    expect(status.paneActivity.sampledAt).toBe("2026-02-22T14:02:30.000Z");
+    expect(status.paneActivity.sinceLastChangedSeconds).toBe(200);
+    expect(status.paneActivity.sinceSampledSeconds).toBe(30);
+    expect(status.paneActivity.lastSampleStatus).toBe("sampled");
   });
 
   it("returns inspectable status for RUNNING meta-review authority missing execution_context", async () => {

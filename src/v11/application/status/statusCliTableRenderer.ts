@@ -10,8 +10,10 @@ import {
 } from "./statusCliAnsi.js";
 import {
   formatActiveOwner,
+  formatClockTimestamp,
   formatCommandPath,
   formatDisplayedReviewVerification,
+  formatElapsedSeconds,
   formatFailingGateSummary,
   formatInboxSummary,
   formatRoundGate,
@@ -59,11 +61,11 @@ export function renderBubbleStatusTable(status: BubbleStatusView): string {
     ],
     [
       "Lifecycle",
-      `${formatStateLabel(status.state)} r${status.round} | active ${formatActiveOwner(status.activeAgent, status.activeRole)} | since ${dim(formatTableTimestamp(status.activeSince))}`
+      `${formatStateLabel(status.state)} r${status.round} | active ${formatActiveOwner(status.activeAgent, status.activeRole)} | since ${dim(formatClockTimestamp(status.activeSince))}`
     ],
     [
       "Runtime",
-      `last ${dim(formatTableTimestamp(status.lastCommandAt))} | watchdog ${status.watchdog.monitored ? green("on") : dim("off")} ${status.watchdog.timeoutMinutes}m rem=${formatWatchdogRemaining(status.watchdog)} exp=${status.watchdog.expired ? bold(red("yes")) : green("no")}`
+      `last ${dim(formatClockTimestamp(status.paneActivity.lastChangedAt))} | age=${dim(formatElapsedSeconds(status.paneActivity.sinceLastChangedSeconds))} | watchdog ${status.watchdog.monitored ? green("on") : dim("off")} ${status.watchdog.timeoutMinutes}m rem=${formatWatchdogRemaining(status.watchdog)}`
     ],
     [
       "Review",
@@ -75,7 +77,7 @@ export function renderBubbleStatusTable(status: BubbleStatusView): string {
     ],
     [
       "Transcript",
-      `messages=${bold(String(status.transcript.totalMessages))} | last=${status.transcript.lastMessageType ?? "-"} @ ${dim(formatTableTimestamp(status.transcript.lastMessageTs))}`
+      `messages=${bold(String(status.transcript.totalMessages))} | last=${status.transcript.lastMessageType ?? "-"} @ ${dim(formatClockTimestamp(status.transcript.lastMessageTs))}`
     ],
     [
       "Inbox",

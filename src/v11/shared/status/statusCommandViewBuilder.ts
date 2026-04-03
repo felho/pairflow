@@ -3,6 +3,7 @@ import { resolveActiveMetaReviewRuntimeDelivery } from "../../../core/bubble/met
 import { isMetaReviewExecutionContextActiveState } from "../../../core/bubble/metaReviewExecutionContext.js";
 import { type ReviewVerificationState } from "../../../core/reviewer/reviewVerification.js";
 import type { StateValidationDiagnostics } from "../../../core/state/stateStore.js";
+import type { ReadWatchdogPaneActivityResult } from "../watchdog/watchdogPaneActivityStore.js";
 import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateTypes.js";
 import type {
   BubbleFailingGate,
@@ -84,6 +85,17 @@ export interface BubbleStatusView {
   activeRole: string | null;
   activeSince: string | null;
   lastCommandAt: string | null;
+  paneActivity: {
+    readStatus: ReadWatchdogPaneActivityResult["status"];
+    lastChangedAt: string | null;
+    sampledAt: string | null;
+    sinceLastChangedSeconds: number | null;
+    sinceSampledSeconds: number | null;
+    lastSampleStatus: "sampled" | "no_session" | "pane_unreadable" | null;
+    lastSampleError: string | null;
+    sessionName: string | null;
+    targetPane: string | null;
+  };
   executionContext: {
     activeRole: BubbleExecutionContext["active_role"];
     awaitedOutputType: BubbleExecutionContext["awaited_output_type"];
@@ -155,6 +167,7 @@ export function buildBubbleStatusView({
   verificationStatus,
   gateState,
   stateValidation,
+  paneActivityRead,
   now
 }: {
   resolved: ResolvedBubbleStatusContext;
@@ -166,6 +179,7 @@ export function buildBubbleStatusView({
   verificationStatus: ReviewVerificationState;
   gateState: StatusGateState;
   stateValidation: StateValidationDiagnostics | null;
+  paneActivityRead: ReadWatchdogPaneActivityResult;
   now: Date;
 }): BubbleStatusView {
   const lastMessage = transcript[transcript.length - 1] ?? null;
@@ -190,6 +204,38 @@ export function buildBubbleStatusView({
     runtimeDelivery: state.meta_review?.runtime_delivery
   });
   const latestMetaReviewRoute = resolveLatestMetaReviewRoute(transcript);
+  const paneActivity =
+    paneActivityRead.status === "ok"
+      ? {
+          readStatus: paneActivityRead.status,
+          lastChangedAt: paneActivityRead.record.last_changed_at,
+          sampledAt: paneActivityRead.record.sampled_at,
+          sinceLastChangedSeconds: resolveElapsedSeconds(
+            paneActivityRead.record.last_changed_at,
+            now
+          ),
+          sinceSampledSeconds: resolveElapsedSeconds(
+            paneActivityRead.record.sampled_at,
+            now
+          ),
+          lastSampleStatus: paneActivityRead.record.last_sample_status ?? null,
+          lastSampleError: paneActivityRead.record.last_sample_error ?? null,
+          sessionName: paneActivityRead.record.session_name ?? null,
+          targetPane: paneActivityRead.record.target_pane ?? null
+        }
+      : {
+          readStatus: paneActivityRead.status,
+          lastChangedAt: null,
+          sampledAt: null,
+          sinceLastChangedSeconds: null,
+          sinceSampledSeconds: null,
+          lastSampleStatus: null,
+          lastSampleError: paneActivityRead.status === "invalid"
+            ? paneActivityRead.error
+            : null,
+          sessionName: null,
+          targetPane: null
+        };
   return {
     bubbleId: resolved.bubbleId,
     repoPath: resolved.repoPath,
@@ -200,6 +246,7 @@ export function buildBubbleStatusView({
     activeRole: state.active_role,
     activeSince: state.active_since,
     lastCommandAt: state.last_command_at,
+    paneActivity,
     executionContext:
       state.execution_context === null || state.execution_context === undefined
         ? null
@@ -255,4 +302,18 @@ export function buildBubbleStatusView({
     round_gate_state: gateState.roundGateState,
     stateValidation
   };
+}
+
+function resolveElapsedSeconds(
+  value: string | null,
+  now: Date
+): number | null {
+  if (value === null) {
+    return null;
+  }
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) {
+    return null;
+  }
+  return Math.max(0, Math.ceil((now.getTime() - parsed) / 1_000));
 }

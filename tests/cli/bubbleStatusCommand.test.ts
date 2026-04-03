@@ -63,6 +63,17 @@ describe("renderBubbleStatusText", () => {
       activeRole: "implementer",
       activeSince: "2026-02-22T12:00:00.000Z",
       lastCommandAt: "2026-02-22T12:05:00.000Z",
+      paneActivity: {
+        readStatus: "ok",
+        lastChangedAt: "2026-02-22T12:04:00.000Z",
+        sampledAt: "2026-02-22T12:05:30.000Z",
+        sinceLastChangedSeconds: 120,
+        sinceSampledSeconds: 30,
+        lastSampleStatus: "sampled",
+        lastSampleError: null,
+        sessionName: "pf-b_status_render_01",
+        targetPane: "pf-b_status_render_01:0.1"
+      },
       executionContext: {
         activeRole: "implementer",
         awaitedOutputType: "pass_result",
@@ -203,6 +214,9 @@ describe("renderBubbleStatusText", () => {
     expect(rendered).toContain(
       "Meta-review: status=inconclusive recommendation=inconclusive route=-"
     );
+    expect(rendered).toContain(
+      "Pane activity: last=12:04:00 age=120s"
+    );
     expect(rendered).toContain("Last review verification: n/a");
   });
 
@@ -276,6 +290,17 @@ describe("renderBubbleStatusTable", () => {
       activeRole: "implementer",
       activeSince: "2026-03-08T21:29:15.948Z",
       lastCommandAt: "2026-03-08T21:29:15.948Z",
+      paneActivity: {
+        readStatus: "ok",
+        lastChangedAt: "2026-03-08T21:25:00.000Z",
+        sampledAt: "2026-03-08T21:28:45.000Z",
+        sinceLastChangedSeconds: 255,
+        sinceSampledSeconds: 30,
+        lastSampleStatus: "sampled",
+        lastSampleError: null,
+        sessionName: "pf-b_status_render_01",
+        targetPane: "pf-b_status_render_01:0.1"
+      },
       executionContext: {
         activeRole: "implementer",
         awaitedOutputType: "pass_result",
@@ -351,6 +376,7 @@ describe("renderBubbleStatusTable", () => {
     expect(rendered).toContain("| Bubble");
     expect(rendered).toContain("b_status_render_01 | state: valid | cli path: worktree_local");
     expect(rendered).toContain("| Lifecycle");
+    expect(rendered).toContain("since 21:29:15");
     expect(rendered).not.toContain("| State validation");
     expect(rendered).not.toContain("| Command path");
     expect(rendered).toContain("| Runtime");
@@ -363,10 +389,14 @@ describe("renderBubbleStatusTable", () => {
     expect(rendered).toContain("| Transcript");
     expect(rendered).toContain("verification=n/a");
     expect(rendered).toContain("runtime_delivery=-");
+    expect(rendered).toContain("last 21:25:00");
+    expect(rendered).toContain("age=255s");
+    expect(rendered).not.toContain("sample=");
+    expect(rendered).not.toContain("exp=");
     expect(rendered).not.toContain("Failing gates:");
     expect(rendered).not.toContain("Spec lock:");
     expect(rendered).not.toContain("Round gate:");
-    expect(rendered).toContain("03-08T21:29:15Z");
+    expect(rendered).toContain("last=APPROVAL_DECISION @ 21:29:15");
     expect(rendered).not.toContain("2026-03-08T21:29:15.948Z");
 
     const inboxIndex = rendered.indexOf("| Inbox");
