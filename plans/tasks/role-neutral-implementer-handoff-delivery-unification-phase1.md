@@ -10,6 +10,7 @@ target_files:
   - src/v11/application/converged/convergedGateDelivery.ts
   - src/v11/shared/metaReviewGate/metaReviewGateRecoveryAutoRework.ts
   - src/core/runtime/tmuxDelivery.ts
+  - tests/v11/application/pass/reviewerDelivery.test.ts
   - tests/v11/application/pass/normalPassDeliveryExecution.test.ts
   - tests/v11/application/converged/convergedExecution.test.ts
   - tests/core/runtime/tmuxDelivery.test.ts
@@ -53,6 +54,12 @@ Why this matters:
 3. a mostani bug nem topology-csere vagy uj actor runtime initiative, hanem konkret internal delivery drift,
 4. ezt a driftet ugy kell megszuntetni, hogy a reviewer-ág ne romoljon el.
 
+Task positioning / traceability:
+1. Ez a task szandekosan standalone bugfix/follow-up scope, nem umbrella task a nagyobb actor/runtime cleanup iranyhoz.
+2. A cleaner actor/runtime direction legfeljebb hatter-heurisztika; nem engedelyez kulon initiative-szintu boundary vagy topology munkat ebben a taskban.
+3. `plan_ref: null` jelenleg tudatos allapot, mert ebben a taskban nincs bizonyitott contract-boundary override trigger.
+4. Ha implementacio kozben barmely override trigger tenylegesen felmerul es bizonyitott lesz, azt blockerscope-kent kell jelezni, es kulon plan/task vonalon kell kezelni, nem ennek a tasknak a csendes scope-bovitesekent.
+
 ### In Scope
 
 1. Közös implementer-handoff delivery helper bevezetese a reviewer PASS es a meta auto-rework kozos vegpontjakent.
@@ -90,7 +97,8 @@ Why this matters:
 Rationale:
 1. Ez a task alapertelmezetten belso bugfix scope.
 2. A public protocol schema, envelope family es canonical actor CLI surface nem valtozik required-now modon.
-3. Ha implementacio kozben megis elkerulhetetlennek latszik public event/payload contract modositas, azt kulon blockerscope-kent kell jelezni, es ezt a taskot nem szabad csendben contract-change taskka novelni.
+3. Az implementernek lathato tmux-delivery action text required-now bugfixkent pontosodhat, de ez onmagaban nem public protocol-, envelope-schema- vagy CLI-contract modositas.
+4. Ha implementacio kozben megis elkerulhetetlennek latszik public event/payload contract modositas, azt kulon blockerscope-kent kell jelezni, es ezt a taskot nem szabad csendben contract-change taskka novelni.
 
 ### Terminology Lock
 
@@ -112,7 +120,7 @@ Rationale:
 | CS3 | `src/v11/application/converged/convergedGateDelivery.ts` | meta gate delivery orchestration | existing `executeGateDelivery(...) -> Promise<ConvergedDeliveryResult>` | auto-rework delivery branch | Az `auto_rework` implementer-target branch ugyanazt a shared implementer delivery helper-t hasznalja, mint a reviewer reference path; route-specifikus retry special-case ne maradjon itt | P1 | required-now | meta parity tests |
 | CS4 | `src/v11/shared/metaReviewGate/metaReviewGateRecoveryAutoRework.ts` | auto-rework route persistence | existing `handleRecoveryAutoReworkRoute(...) -> Promise<MetaReviewGateResult>` | recovery route output boundary | A route tovabbra is persisted gate resultet adjon, de ne hordozzon sajat, kulon implementer-target delivery szemantikat; delivery oldalon a kozos helper legyen authoritative | P1 | required-now | route/delivery separation |
 | CS5 | `src/core/runtime/tmuxDelivery.ts` | implementer-target action text rendering | existing `buildDeliveryMessage(...) -> string` | implementer `APPROVAL_DECISION` / origin-aware branch | Implementer felé meta origin eseten ne "Human requested rework" uzenet jelenjen meg csak az envelope tipusa miatt; a szoveg origin-aware legyen, reviewer-path regresszio nelkul | P1 | required-now | delivery text tests |
-| CS6 | `tests/v11/application/pass/normalPassDeliveryExecution.test.ts` + `tests/core/agent/pass.test.ts` | reviewer reference characterization | existing test surfaces | reviewer regression coverage | A jelenlegi reviewer implementer handoff retry/confirm/result semantics karakterizalva es befagyasztva marad | P1 | required-now | automated tests |
+| CS6 | `tests/v11/application/pass/reviewerDelivery.test.ts` + `tests/v11/application/pass/normalPassDeliveryExecution.test.ts` + `tests/core/agent/pass.test.ts` | reviewer reference characterization | existing test surfaces | reviewer regression coverage | A reviewer direct delivery wrapper kulon oracle coverage-t kap, mikozben a reviewer -> implementer referenciaut retry/confirm/result semantics a pass-flow es agent-szintu oracle-okkal egyutt marad befagyasztva | P1 | required-now | automated tests |
 | CS7 | `tests/v11/application/converged/convergedExecution.test.ts` + `tests/core/agent/converged.test.ts` | meta auto-rework parity coverage | existing meta convergence surfaces | meta handoff coverage | A meta auto-rework ugyanazt a target-delivery semantics-ot adja, mint a reviewer implementer handoff, origin-specifikus message kulonbseggel | P1 | required-now | automated tests |
 | CS8 | `tests/core/runtime/tmuxDelivery.test.ts` | runtime delivery message assertions | existing tmux delivery tests | implementer-target text + confirm parity | A shared implementer handoff helper es az origin-aware message rendering explicit coverage-t kapjon | P1 | required-now | automated tests |
 
@@ -120,10 +128,10 @@ Rationale:
 
 | Contract | Current | Target | Required Fields | Optional Fields | Compatibility | Priority | Timing |
 |---|---|---|---|---|---|---|---|
-| Implementer-target delivery primitive | reviewer es meta ág kulon wrapper/path semantics | egyetlen kozos implementer-target delivery primitive | `bubbleId`, `bubbleConfig`, `sessionsPath`, `envelope`, `recipientRole=implementer` vagy ezzel ekvivalens target input | `initialDelayMs`, `deliveryAttempts`, origin metadata, message context | belso refactor only | P1 | required-now |
+| Implementer-target delivery primitive | reviewer es meta ág kulon wrapper/path semantics | egyetlen kozos implementer-target delivery primitive | `bubbleId`, `bubbleConfig`, `sessionsPath`, `envelope`, `recipientRole=implementer` vagy ezzel ekvivalens target input | `initialDelayMs`, `deliveryAttempts`, `origin` vagy ezzel ekvivalens bizonyitott source metadata, message context | belso refactor only | P1 | required-now |
 | Reviewer reference semantics | reviewer wrapperben lokalisan definialt retry policy | befagyasztott referencia semantics | current retry trigger semantics, current result shape | reviewer-only prep inputs | behavior-preserving | P1 | required-now |
 | Meta auto-rework implementer delivery | converged gate special-case retry branch | reviewer-reference parity szerint mukodo shared helper usage | same delivery result shape as reviewer path | origin label / route metadata | behavior fix | P1 | required-now |
-| Implementer action text | `APPROVAL_DECISION` tipus eseten ma human-biased wording is elofordul | origin-aware implementer action text | target role, decision kind, origin metadata | docs-only variant, worktree hint, evidence hint | behavior fix | P1 | required-now |
+| Implementer action text | `APPROVAL_DECISION` tipus eseten ma human-biased wording is elofordul | origin-aware implementer action text, origin-hiany eseten semleges fallbackkal | target role, decision kind | origin metadata vagy bizonyitott origin-equivalent input, docs-only variant, worktree hint, evidence hint | behavior fix | P1 | required-now |
 | Delivery result mapping | reviewer vs meta ágban reszben kulon orchestration | unified result contract | `delivered`, `retried` | `reason` | behavior parity | P1 | required-now |
 
 Normative rules:
@@ -133,14 +141,16 @@ Normative rules:
 3. A helper nem valtoztathatja meg a persisted transcript envelope append sorrendjet required-now modon.
 4. A helper nem tehet uj public protocol mezot kotelezove required-now modon.
 5. Implementer-target retry policy origin-fuggetlen kell legyen, kiveve ha explicit reviewer characterization test bizonyitja, hogy a reviewer reference path mast csinal.
-6. Az implementer action text forrasa nem lehet kizarolag az envelope tipusa; az origin metadata first-class input.
+6. Az implementer action text forrasa nem lehet kizarolag az envelope tipusa; az origin metadata first-class optional input, ha bizonyitottan rendelkezesre all.
+7. Ha bizonyitott meta-origin metadata rendelkezesre all, a renderernek meta-origin-aware wordinget kell hasznalnia, es nem eshet vissza neutral fallbackra.
+8. Neutral fallback csak akkor megengedett, ha az origin nem all rendelkezesre bizonyitott formaban; ilyenkor a renderer uj implementer kort vagy review-feedback miatti tovabblepest jelezhet, de nem allithat human-requested rework vagy mas konkret source forrast.
 
 ### 3) Side Effects Contract
 
 | Area | Allowed | Forbidden | Notes | Priority | Timing |
 |---|---|---|---|---|---|
 | Internal delivery orchestration | helper extraction, wrapper unification, retry path consolidation | reviewer behavior silent megvaltoztatasa | reviewer parity first | P1 | required-now |
-| Message rendering | origin-aware implementer wording javitas | envelope family public atnevezese csak wording miatt | metadata-driven rendering preferred | P1 | required-now |
+| Message rendering | origin-aware implementer wording javitas, valamint origin-hiany eseten explicit neutral fallback rendering | envelope family public atnevezese csak wording miatt | metadata-driven rendering preferred; bizonyitott meta-origin mellett meta-origin-aware wording kotelezo, neutral fallback sem embert, sem konkret source origint nem allithat | P1 | required-now |
 | Meta route handling | route-delivery separation tisztazasa | meta domain behavior atcsusztatasa a reviewer wrapperbe | keep boundaries narrow | P1 | required-now |
 | Test coverage | characterization + parity tests bovítese | laza, csak high-level smoke tesztekre szukites | parity evidence mandatory | P1 | required-now |
 
@@ -156,7 +166,7 @@ Constraints:
 |---|---|---|---|---|---|---|---|
 | reviewer characterization test elter az extraction utan | reviewer regression tests | throw | stop; helper API or extraction incorrect | `IMPLEMENTER_HANDOFF_REVIEWER_REGRESSION` | error | P1 | required-now |
 | meta auto-rework tovabbra is `delivery_unconfirmed` parity driftet mutat reviewerhez kepest | meta parity tests | result | fail task until explicit parity or explained divergence | `IMPLEMENTER_HANDOFF_META_PARITY_UNRESOLVED` | error | P1 | required-now |
-| action text origin nelkul legacy human wordingre esik vissza | tmux delivery message rendering | fallback | render explicit meta-origin implementer wording | `IMPLEMENTER_HANDOFF_ORIGIN_TEXT_FALLBACK` | warn | P1 | required-now |
+| renderer nem kap bizonyitott origin inputot, es az aktualis branch egyebkent human-attribution wordingre esne vissza | tmux delivery message rendering | fallback | render origin-semleges implementer wordinget, amely uj implementer kor/review-feedback folytatast jelez, de nem allit human-requested rework vagy konkret source forrast | `IMPLEMENTER_HANDOFF_ORIGIN_TEXT_FALLBACK` | warn | P1 | required-now |
 | shared helper bevezetese public protocol vagy CLI contract modositas nelkul nem oldhato meg | implementation discovery | result | stop and escalate separate contract-change taskra | `IMPLEMENTER_HANDOFF_CONTRACT_CHANGE_REQUIRED` | warn/error | P1 | required-now |
 
 ### 5) Dependency Constraints
@@ -175,21 +185,22 @@ Constraints:
 
 | ID | Scenario | Given | When | Then | Priority | Timing | Evidence |
 |---|---|---|---|---|---|---|---|
-| T1 | reviewer reference delivery unchanged | current reviewer -> implementer PASS path | helper extraction + wrapper migration lefut | delivery result shape, retry trigger, retry parameters es target-delivery semantics valtozatlan | P1 | required-now | automated test |
-| T2 | reviewer unconfirmed retry unchanged | reviewer implementer handoff elso delivery `delivery_unconfirmed` | flow fut | ugyanazzal a retry policyval ujraprobal, mint elotte | P1 | required-now | automated test |
+| T1 | reviewer reference delivery unchanged | current reviewer -> implementer PASS path, a direct reviewer delivery wrapper oracle es a pass-flow/agent szintu reviewer-reference oracle-ok egyuttesen | helper extraction + wrapper migration lefut | a reviewer reference path ugyanazt a delivery result shape-et tartja meg (`delivered`, `reason`, `retried`), es nem vezet be uj retry-agat ott, ahol korabban nem volt | P1 | required-now | automated test |
+| T2 | reviewer unconfirmed retry unchanged | reviewer implementer handoff elso delivery `delivery_unconfirmed`, a direct wrapper oracle es a reviewer pass-flow/agent oracle-ok alapjan | flow fut | pontosan egy retry tortenik reviewer-reference parity mellett, a retry warm-up `initialDelayMs=5000`, `deliveryAttempts=6`, es nem jelenik meg masodik extra retry-ag | P1 | required-now | automated test |
 | T3 | meta auto-rework uses shared helper | meta gate route `auto_rework` | convergence flow fut | implementer-target delivery a shared helperen keresztul megy, nem kulon special-case branchben | P1 | required-now | automated test |
 | T4 | meta auto-rework retry parity | meta auto-rework elso delivery `delivery_unconfirmed` | flow fut | ugyanaz a retry semantics ervenyesul, mint reviewer implementer handoffnal | P1 | required-now | automated test |
-| T5 | implementer meta-origin text is correct | meta-origin implementer-target delivery | message render fut | az action text nem allitja, hogy human kert reworkot; meta-origin explicit vagy semleges wording jelenik meg | P1 | required-now | automated test |
+| T5 | implementer meta-origin text is correct | implementer-target deliveryhez bizonyitott `meta_review_auto_rework` origin metadata all rendelkezesre | message render fut | az action text meta-origin-aware wordinget hasznal, nem allitja, hogy human kert reworkot, es nem esik vissza neutral fallbackra | P1 | required-now | automated test |
 | T6 | reviewer text not regressed | reviewer-origin implementer-target delivery | message render fut | a reviewer implementer handoff wording tovabbra is megfelel a jelenlegi reviewer policynek | P1 | required-now | automated test |
 | T7 | delivery result mapping parity | reviewer-origin es meta-origin implementer-target handoff ugyanazzal a low-level delivery kimenettel | result mapping fut | mindket ág azonos `delivered`/`reason`/`retried` semantics-ot ad | P1 | required-now | automated test |
-| T8 | no required-now protocol contract change | implementation diff ellenorizve | code review fut | nincs uj kotelezo envelope field, nincs uj public CLI parameter, nincs lifecycle schema modositas | P1 | required-now | diff review |
+| T8 | origin missing fallback is safe | implementer-target `APPROVAL_DECISION` deliverynel hianyzik a bizonyitott origin metadata, es csak az envelope tipusa all rendelkezesre | a message renderer lefut | az output explicit implementer-kovetkezo-kor/review-feedback semantics-ot ad, nem tartalmaz `Human requested rework` allitast, es nem nevez meg konkret human/reviewer/meta-reviewer forrast | P1 | required-now | automated test |
+| T9 | no required-now protocol contract change | implementation diff ellenorizve | code review fut | nincs uj kotelezo envelope field, nincs uj public CLI parameter, nincs lifecycle schema modositas | P1 | required-now | diff review |
 
 ## Acceptance Criteria
 
 1. AC1: Reviewer -> implementer es meta-reviewer -> implementer handoff ugyanazt a kozos implementer delivery primitive-et hasznalja.
 2. AC2: A reviewer reference behavior explicit regresszio nelkul megmarad.
 3. AC3: A meta auto-rework delivery semantics reviewer parityre zarul.
-4. AC4: Az implementer oldali meta-origin handoff message nem legacy human-rework wordinggel renderelodik.
+4. AC4: Az implementer oldali meta-origin handoff message nem legacy human-rework wordinggel renderelodik, es origin-veszteseg eseten is csak olyan origin-semleges fallback engedelyezett, amely uj implementer kort vagy review-feedback folytatast jelez, de nem allit konkret source forrast.
 5. AC5: A task required-now scope-jaban nincs public protocol vagy CLI contract change.
 
 ## L2 - Implementation Notes (Optional)
@@ -218,6 +229,7 @@ Constraints:
 1. A low-level tmux delivery reteg kozossege miatt a most latott drift fo oka a wrapper/orchestration aszimmetria.
 2. A reviewer implementer handoff jelenlegi viselkedese eleg stabil ahhoz, hogy referencia-oracle-kent szolgaljon.
 3. A meta auto-rework bugfix required-now scope-ban megoldhato belso helper- es wrapper-unificationnel public contract modositas nelkul.
+4. Jelen dokumentum szerint nincs bizonyitott contract-boundary override, ezert `plan_ref: null` tovabbra is ervenyes.
 
 ## Spec Lock
 
