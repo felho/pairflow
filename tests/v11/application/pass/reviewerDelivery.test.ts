@@ -194,16 +194,31 @@ describe("executePassDelivery", () => {
     });
   });
 
-  it("does not retry when sender role is reviewer", async () => {
+  it("retries once on unconfirmed delivery during reviewer->implementer handoff", async () => {
     const calls: unknown[] = [];
+    const refreshCalls: unknown[] = [];
     const emitTmuxDeliveryNotification: NonNullable<
       PassDeliveryDependencies["emitTmuxDeliveryNotification"]
     > = async (input) => {
       calls.push(input);
+      if (calls.length === 1) {
+        return {
+          delivered: false,
+          reason: "delivery_unconfirmed",
+          message: "first attempt unconfirmed"
+        };
+      }
       return {
-        delivered: false,
-        reason: "delivery_unconfirmed",
-        message: "not retried"
+        delivered: true,
+        message: "second attempt confirmed"
+      };
+    };
+    const refreshReviewerContext: NonNullable<
+      PassDeliveryDependencies["refreshReviewerContext"]
+    > = async (input) => {
+      refreshCalls.push(input);
+      return {
+        refreshed: true
       };
     };
 
@@ -219,18 +234,23 @@ describe("executePassDelivery", () => {
         recipientRole: "implementer"
       },
       {
-        emitTmuxDeliveryNotification
+        emitTmuxDeliveryNotification,
+        refreshReviewerContext
       }
     );
 
-    expect(calls).toHaveLength(1);
+    expect(refreshCalls).toHaveLength(0);
+    expect(calls).toHaveLength(2);
+    expect(calls[1]).toMatchObject({
+      initialDelayMs: 5000,
+      deliveryAttempts: 6
+    });
     expect(result).toEqual({
       result: {
-        delivered: false,
-        reason: "delivery_unconfirmed",
-        message: "not retried"
+        delivered: true,
+        message: "second attempt confirmed"
       },
-      retried: false
+      retried: true
     });
   });
 });

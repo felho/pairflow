@@ -1391,7 +1391,7 @@ describe("emitTmuxDeliveryNotification", () => {
     );
   });
 
-  it("routes rework approval decision to implementer pane with rework instruction", async () => {
+  it("uses origin-neutral rework instruction when implementer delivery lacks explicit origin metadata", async () => {
     const reworkRef = buildTranscriptFallbackRef(
       "b_delivery_01",
       "/tmp/repo/.pairflow/runtime/sessions.json",
@@ -1442,13 +1442,124 @@ describe("emitTmuxDeliveryNotification", () => {
         call[3] === "-l" &&
         call[4]?.includes("APPROVAL_DECISION human->codex")
     );
-    expect(approvalCall?.[4]).toContain("Human requested rework.");
+    expect(approvalCall?.[4]).toContain("Rework received.");
+    expect(approvalCall?.[4]).not.toContain("Human requested rework.");
+    expect(approvalCall?.[4]).not.toContain("reviewer requested rework");
+    expect(approvalCall?.[4]).not.toContain("Meta-review");
     expect(calls).toContainEqual([
       "send-keys",
       "-t",
       "pf-b_delivery_01:0.1",
       "Enter"
     ]);
+  });
+
+  it("uses meta-origin-aware implementer rework guidance for meta auto-rework delivery", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r2 APPROVAL_DECISION orchestrator->codex msg=msg_20260222_103 ref=artifact://auto-rework.md.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        id: "msg_20260222_103",
+        sender: "orchestrator",
+        recipient: "codex",
+        type: "APPROVAL_DECISION",
+        round: 2,
+        payload: {
+          decision: "rework",
+          message: "Please address meta-review findings.",
+          metadata: {
+            actor: "meta-reviewer"
+          }
+        },
+        refs: ["artifact://auto-rework.md"]
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result.delivered).toBe(true);
+    const approvalCall = calls.find(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.1" &&
+        call[3] === "-l" &&
+        call[4]?.includes("APPROVAL_DECISION orchestrator->codex")
+    );
+    expect(approvalCall?.[4]).toContain("Meta-review auto-rework received.");
+    expect(approvalCall?.[4]).not.toContain("Rework received.");
+    expect(approvalCall?.[4]).not.toContain("Human requested rework.");
+  });
+
+  it("uses meta-origin-aware guidance for meta-review-gate actor metadata as well", async () => {
+    const calls: string[][] = [];
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r2 APPROVAL_DECISION orchestrator->codex msg=msg_20260222_104 ref=artifact://gate-auto-rework.md.",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        id: "msg_20260222_104",
+        sender: "orchestrator",
+        recipient: "codex",
+        type: "APPROVAL_DECISION",
+        round: 2,
+        payload: {
+          decision: "rework",
+          message: "Please address gate-routed findings.",
+          metadata: {
+            actor: "meta-review-gate"
+          }
+        },
+        refs: ["artifact://gate-auto-rework.md"]
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    const approvalCall = calls.find(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "pf-b_delivery_01:0.1" &&
+        call[3] === "-l" &&
+        call[4]?.includes("APPROVAL_DECISION orchestrator->codex")
+    );
+    expect(approvalCall?.[4]).toContain("Meta-review auto-rework received.");
+    expect(approvalCall?.[4]).not.toContain("Human requested rework.");
   });
 
   it("uses docs-only implementer guidance that avoids skip-claim and runtime-log-ref contradiction", async () => {
@@ -1559,6 +1670,8 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(reworkMessage).toContain(
       "Primary artifact rule (docs-only): apply the rework on the referenced source task/document file directly, not only in a new standalone review note."
     );
+    expect(reworkMessage).toContain("Rework received.");
+    expect(reworkMessage).not.toContain("Human requested rework.");
     expect(reworkMessage).not.toContain(
       "Include available `.pairflow/evidence/*.log` refs on PASS."
     );
@@ -1609,6 +1722,10 @@ describe("emitTmuxDeliveryNotification", () => {
         call[2] === "pf-b_delivery_01:0.1" &&
         call[3] === "-l" &&
         call[4]?.includes("PASS claude->codex")
+    );
+    expect(passToImplementerCall?.[4]).toContain("Reviewer feedback received.");
+    expect(passToImplementerCall?.[4]).toContain(
+      "Implement fixes, then hand off with canonical actor emit"
     );
     expect(passToImplementerCall?.[4]).toContain(
       "If `.pairflow/evidence/*.log` files exist, include them as `--ref` (lint/typecheck/test)."

@@ -199,6 +199,32 @@ function resolvePayloadActor(envelope: ProtocolEnvelope): string | null {
   return typeof actor === "string" && actor.trim().length > 0 ? actor : null;
 }
 
+function resolveImplementerReworkOrigin(
+  envelope: ProtocolEnvelope
+): "meta_review_auto_rework" | "unknown" {
+  const actorLabel = resolvePayloadActor(envelope);
+  if (
+    actorLabel === "meta-reviewer" ||
+    actorLabel === "meta-review-gate"
+  ) {
+    return "meta_review_auto_rework";
+  }
+  return "unknown";
+}
+
+function buildImplementerReworkActionText(input: {
+  docsOnly: boolean;
+  origin: "meta_review_auto_rework" | "unknown";
+}): string {
+  const intro =
+    input.origin === "meta_review_auto_rework"
+      ? "Meta-review auto-rework received."
+      : "Rework received.";
+  return input.docsOnly
+    ? `${intro} Continue implementation now and address the requested changes, then hand off with canonical actor emit (\`pairflow agent emit --kind pass ...\`) directly. Primary artifact rule (docs-only): apply the rework on the referenced source task/document file directly, not only in a new standalone review note. Docs-only scope: keep summary and refs consistent; skip-claim means no \`.pairflow/evidence/*.log\` refs in that PASS.`
+    : `${intro} Continue implementation now and address the requested changes, then hand off with canonical actor emit (\`pairflow agent emit --kind pass ...\`) directly. Include available \`.pairflow/evidence/*.log\` refs on PASS.`;
+}
+
 function buildDeliveryMessage(
   envelope: ProtocolEnvelope,
   messageRef: string,
@@ -231,9 +257,10 @@ function buildDeliveryMessage(
         : "Human response received. Continue implementation using this input, then hand off with canonical actor emit (`pairflow agent emit --kind pass ...`) directly. Include available `.pairflow/evidence/*.log` refs on PASS.";
     } else if (envelope.type === "APPROVAL_DECISION") {
       if (envelope.payload.decision === "rework") {
-        action = docsOnly
-          ? "Human requested rework. Continue implementation now and address the requested changes, then hand off with canonical actor emit (`pairflow agent emit --kind pass ...`) directly. Primary artifact rule (docs-only): apply the rework on the referenced source task/document file directly, not only in a new standalone review note. Docs-only scope: keep summary and refs consistent; skip-claim means no `.pairflow/evidence/*.log` refs in that PASS."
-          : "Human requested rework. Continue implementation now and address the requested changes, then hand off with canonical actor emit (`pairflow agent emit --kind pass ...`) directly. Include available `.pairflow/evidence/*.log` refs on PASS.";
+        action = buildImplementerReworkActionText({
+          docsOnly,
+          origin: resolveImplementerReworkOrigin(envelope)
+        });
       } else {
         action =
           "Human approved this bubble. Wait for commit/merge flow and do not continue new implementation in this round.";

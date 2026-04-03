@@ -4555,6 +4555,84 @@ present`,
     expect(hasReviewerFocusField).toBe(false);
   });
 
+  it("retries reviewer-origin implementer handoff once when delivery is initially unconfirmed", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_pass_reviewer_delivery_retry_01",
+      task: "Reviewer-origin implementer retry parity"
+    });
+    await setReviewerActive(
+      bubble.paths.statePath,
+      bubble.config.agents.reviewer
+    );
+
+    const deliveryCalls: Array<{
+      round: number;
+      initialDelayMs?: number;
+      deliveryAttempts?: number;
+    }> = [];
+    let callCount = 0;
+
+    const result = await emitPassFromWorkspace(
+      {
+        summary: "Reviewer requested follow-up changes",
+        findings: [
+          {
+            severity: "P2",
+            title: "Follow-up"
+          }
+        ],
+        cwd: bubble.paths.worktreePath,
+        now: new Date("2026-02-21T12:06:30.000Z")
+      },
+      {
+        emitTmuxDeliveryNotification: (input: {
+          envelope: { round: number };
+          initialDelayMs?: number;
+          deliveryAttempts?: number;
+        }) => {
+          deliveryCalls.push({
+            round: input.envelope.round,
+            ...(input.initialDelayMs !== undefined
+              ? { initialDelayMs: input.initialDelayMs }
+              : {}),
+            ...(input.deliveryAttempts !== undefined
+              ? { deliveryAttempts: input.deliveryAttempts }
+              : {})
+          });
+          callCount += 1;
+          if (callCount === 1) {
+            return Promise.resolve({
+              delivered: false,
+              message: "unconfirmed",
+              reason: "delivery_unconfirmed"
+            });
+          }
+          return Promise.resolve({
+            delivered: true,
+            message: "ok"
+          });
+        }
+      }
+    );
+
+    expect(deliveryCalls).toEqual([
+      {
+        round: 1
+      },
+      {
+        round: 1,
+        initialDelayMs: 5000,
+        deliveryAttempts: 6
+      }
+    ]);
+    expect(result.delivery).toEqual({
+      delivered: true,
+      retried: true
+    });
+  });
+
   it("keeps PASS fail-open when optional reviewer artifacts are unreadable after state update", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
