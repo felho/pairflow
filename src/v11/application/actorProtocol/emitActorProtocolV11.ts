@@ -26,6 +26,7 @@ import type {
   ActorEmitInput,
   ConvergenceActorEmitInput,
   HumanQuestionActorEmitInput,
+  MetaReviewResultActorEmitInput,
   PassActorEmitInput
 } from "../../../types/protocol.js";
 
@@ -59,6 +60,11 @@ interface ResolvedImplementerPilotActorEmitInputV11 {
 
 interface ResolvedReviewerActorEmitInputV11 {
   input: PassActorEmitInput | ConvergenceActorEmitInput;
+  authoritativeContext: ActorEmitContextSnapshot;
+}
+
+interface ResolvedMetaReviewerActorEmitInputV11 {
+  input: MetaReviewResultActorEmitInput;
   authoritativeContext: ActorEmitContextSnapshot;
 }
 
@@ -196,6 +202,77 @@ export const reviewerActorProtocolV11 = {
   emit: emitReviewerActorProtocolV11
 } as const;
 
+function requireMetaReviewerAuthority(
+  context: ActorEmitContextSnapshot
+): void {
+  if (context.expected_role !== "meta_reviewer") {
+    throw new ActorEmitContextError(
+      "ACTOR_EMIT_CONTEXT_INVALID",
+      "ACTOR_EMIT_CONTEXT_INVALID: meta-reviewer wrapper requires meta_reviewer authority."
+    );
+  }
+
+  const activeAgent = context.loaded_state.state.active_agent;
+  if (activeAgent === null) {
+    // Recovery may keep canonical execution authority while clearing live ownership.
+    return;
+  }
+  if (activeAgent !== "codex") {
+    throw new ActorEmitContextError(
+      "ACTOR_EMIT_CONTEXT_INVALID",
+      `ACTOR_EMIT_CONTEXT_INVALID: canonical meta-reviewer authority requires codex when active_agent is present (active_agent=${activeAgent}).`
+    );
+  }
+}
+
+export async function emitMetaReviewerActorProtocolV11(
+  resolvedInput: ResolvedMetaReviewerActorEmitInputV11
+): Promise<Extract<
+  ActorEmitResultV11,
+  { kind: "meta_review_result" }
+>> {
+  const { input, authoritativeContext: context } = resolvedInput;
+  assertActorEmitContextMatches({
+    context,
+    handoffId: input.handoff_id,
+    ...(input.expected_role !== undefined
+      ? { expectedRole: input.expected_role }
+      : {}),
+    ...(input.expected_round !== undefined
+      ? { expectedRound: input.expected_round }
+      : {}),
+    ...(input.expected_state_fingerprint !== undefined
+      ? { expectedStateFingerprint: input.expected_state_fingerprint }
+      : {})
+  });
+  requireMetaReviewerAuthority(context);
+
+  return {
+    kind: "meta_review_result",
+    meta_review_result: await submitMetaReviewResult({
+      bubbleId: input.bubble_id,
+      repoPath: input.repo,
+      cwd: context.worktree_path,
+      round: input.round,
+      recommendation: input.recommendation,
+      summary: input.summary,
+      ...(input.rework_target_message !== undefined
+        ? { rework_target_message: input.rework_target_message }
+        : {}),
+      report_json: input.report_json,
+      ...(input.refs !== undefined ? { refs: input.refs } : {}),
+      expectedHandoffId: context.handoff_id,
+      expectedRole: context.expected_role,
+      expectedRound: context.expected_round,
+      expectedStateFingerprint: context.expected_state_fingerprint
+    })
+  };
+}
+
+export const metaReviewerActorProtocolV11 = {
+  emit: emitMetaReviewerActorProtocolV11
+} as const;
+
 export async function emitActorProtocolFromWorkspaceV11(
   resolvedInput: ResolvedActorEmitInputV11
 ): Promise<ActorEmitResultV11> {
@@ -218,6 +295,15 @@ export async function emitActorProtocolFromWorkspaceV11(
       authoritativeContext: context
     });
   }
+  if (
+    context.expected_role === "meta_reviewer"
+    && input.kind === "meta_review_result"
+  ) {
+    return metaReviewerActorProtocolV11.emit({
+      input,
+      authoritativeContext: context
+    });
+  }
 
   assertActorEmitContextMatches({
     context,
@@ -232,6 +318,13 @@ export async function emitActorProtocolFromWorkspaceV11(
       ? { expectedStateFingerprint: input.expected_state_fingerprint }
       : {})
   });
+
+  if (context.expected_role === "meta_reviewer") {
+    throw new ActorEmitContextError(
+      "ACTOR_EMIT_CONTEXT_INVALID",
+      "ACTOR_EMIT_CONTEXT_INVALID: meta_reviewer authority only supports meta_review_result emits."
+    );
+  }
 
   if (input.kind === "pass") {
     return {
@@ -275,29 +368,15 @@ export async function emitActorProtocolFromWorkspaceV11(
     };
   }
 
-  return {
-    kind: "meta_review_result",
-    meta_review_result: await submitMetaReviewResult({
-      bubbleId: input.bubble_id,
-      repoPath: input.repo,
-      round: input.round,
-      recommendation: input.recommendation,
-      summary: input.summary,
-      ...(input.rework_target_message !== undefined
-        ? { rework_target_message: input.rework_target_message }
-        : {}),
-      report_json: input.report_json,
-      ...(input.refs !== undefined ? { refs: input.refs } : {}),
-      expectedHandoffId: input.handoff_id,
-      ...(input.expected_role !== undefined
-        ? { expectedRole: input.expected_role }
-        : {}),
-      ...(input.expected_round !== undefined
-        ? { expectedRound: input.expected_round }
-        : {}),
-      ...(input.expected_state_fingerprint !== undefined
-        ? { expectedStateFingerprint: input.expected_state_fingerprint }
-        : {})
-    })
-  };
+  if (input.kind === "meta_review_result") {
+    throw new ActorEmitContextError(
+      "ACTOR_EMIT_CONTEXT_INVALID",
+      "ACTOR_EMIT_CONTEXT_INVALID: meta-reviewer wrapper requires meta_reviewer authority."
+    );
+  }
+
+  throw new ActorEmitContextError(
+    "ACTOR_EMIT_CONTEXT_INVALID",
+    "ACTOR_EMIT_CONTEXT_INVALID: unsupported actor emit kind."
+  );
 }

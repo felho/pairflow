@@ -11,7 +11,13 @@ import type { AgentName } from "../../../../src/types/bubble.js";
 import type {
   ActorEmitContextError
 } from "../../../../src/core/bubble/actorEmitContext.js";
-import { buildRunningExecutionContext } from "../../../../src/core/state/executionContext.js";
+import {
+  buildMetaReviewExecutionContext
+} from "../../../../src/core/bubble/metaReviewExecutionContext.js";
+import {
+  buildRunningExecutionContext,
+  metaReviewExecutionContextToRunningContext
+} from "../../../../src/core/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../../src/core/state/stateStore.js";
 import * as actorProtocolModule from "../../../../src/v11/application/actorProtocol/emitActorProtocolV11.js";
 import { seedConvergedCandidate } from "../converged/convergedSeedFixture.js";
@@ -60,6 +66,85 @@ async function switchFixtureToReviewerAuthority(input: {
   );
 }
 
+async function switchFixtureToMetaReviewerAuthority(input: {
+  bubbleId: string;
+  statePath: string;
+  startedAt?: string;
+  activeAgent?: "codex" | "claude" | null;
+}): Promise<void> {
+  const loaded = await readStateSnapshot(input.statePath);
+  const startedAt = input.startedAt ?? "2026-03-25T10:18:00.000Z";
+  const activeAgent =
+    input.activeAgent === undefined ? "codex" : input.activeAgent;
+  const executionContext = buildMetaReviewExecutionContext({
+    bubbleId: input.bubbleId,
+    round: loaded.state.round,
+    startedAt,
+    watchdogTimeoutMinutes: 60 * 24 * 30,
+    attempt: 1
+  });
+  await writeStateSnapshot(
+    input.statePath,
+    {
+      ...loaded.state,
+      active_agent: activeAgent,
+      active_role: activeAgent === null ? null : "meta_reviewer",
+      execution_context:
+        metaReviewExecutionContextToRunningContext(executionContext),
+      active_since: activeAgent === null ? null : startedAt,
+      last_command_at: startedAt,
+      meta_review: {
+        ...(loaded.state.meta_review ?? {
+          execution_context: null,
+          runtime_delivery: null,
+          last_autonomous_run_id: null,
+          last_autonomous_status: null,
+          last_autonomous_recommendation: null,
+          last_autonomous_summary: null,
+          last_autonomous_report_ref: null,
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: null,
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }),
+        execution_context: executionContext
+      }
+    },
+    {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "RUNNING"
+    }
+  );
+}
+
+function buildApproveMetaReviewReportJson(runId: string): {
+  findings_claim_state: "clean";
+  findings_claim_source: "meta_review_artifact";
+  findings_count: number;
+  findings_claimed_open_total: number;
+  findings_blocking_open_total: number;
+  findings_advisory_open_total: number;
+  findings_artifact_ref: string;
+  meta_review_run_id: string;
+  findings_digest_sha256: string;
+  findings_artifact_status: "available";
+} {
+  return {
+    findings_claim_state: "clean",
+    findings_claim_source: "meta_review_artifact",
+    findings_count: 0,
+    findings_claimed_open_total: 0,
+    findings_blocking_open_total: 0,
+    findings_advisory_open_total: 0,
+    findings_artifact_ref: "artifacts/meta-review-findings-round-3.json",
+    meta_review_run_id: runId,
+    findings_digest_sha256:
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    findings_artifact_status: "available"
+  };
+}
+
 afterEach(async () => {
   await Promise.all(
     tempDirs.splice(0).map((path) =>
@@ -68,7 +153,7 @@ afterEach(async () => {
   );
 });
 
-describe("emitImplementerPilotActorProtocolV11", () => {
+describe("emitActorProtocolV11 wrappers", () => {
   it("routes direct pass wrapper calls through canonical implementer authority", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -374,6 +459,185 @@ describe("emitImplementerPilotActorProtocolV11", () => {
     expect(result.convergence.approvalRequestEnvelope.type).toBe("TASK");
   });
 
+  it("routes direct meta-review wrapper calls through canonical meta-reviewer authority", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_actor_protocol_meta_review_01",
+      task: "Direct meta-reviewer wrapper parity"
+    });
+    await switchFixtureToMetaReviewerAuthority({
+      bubbleId: bubble.bubbleId,
+      statePath: bubble.paths.statePath
+    });
+    const authoritativeContext = await resolveActorEmitContextByBubbleId({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+
+    const result = await actorProtocolModule.emitMetaReviewerActorProtocolV11({
+      input: {
+        kind: "meta_review_result",
+        repo: repoPath,
+        bubble_id: bubble.bubbleId,
+        handoff_id: authoritativeContext.handoff_id,
+        round: authoritativeContext.expected_round,
+        recommendation: "approve",
+        summary: "Meta-review wrapper approve parity",
+        report_json: buildApproveMetaReviewReportJson(
+          "meta-review-wrapper-approve-parity"
+        ),
+        refs: ["artifacts/meta-review-last.json"]
+      },
+      authoritativeContext
+    });
+
+    expect(result.kind).toBe("meta_review_result");
+    if (result.kind !== "meta_review_result") {
+      throw new Error("Expected meta_review_result.");
+    }
+    expect(result.meta_review_result.gate_route).toBe("human_gate_approve");
+    expect(result.meta_review_result.lifecycle_state).toBe(
+      "READY_FOR_HUMAN_APPROVAL"
+    );
+    expect(result.meta_review_result.summary).toBe(
+      "Meta-review wrapper approve parity"
+    );
+  });
+
+  it("rejects direct meta-review wrapper calls when authority is not meta-reviewer", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_actor_protocol_meta_review_reject_01",
+      task: "Direct meta-reviewer wrapper role rejection"
+    });
+    const authoritativeContext = await resolveActorEmitContextByBubbleId({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+
+    await expect(
+      actorProtocolModule.emitMetaReviewerActorProtocolV11({
+        input: {
+          kind: "meta_review_result",
+          repo: repoPath,
+          bubble_id: bubble.bubbleId,
+          handoff_id: authoritativeContext.handoff_id,
+          round: authoritativeContext.expected_round,
+          recommendation: "approve",
+          summary: "Should reject meta-review authority mismatch",
+          report_json: buildApproveMetaReviewReportJson(
+            "meta-review-wrapper-authority-mismatch"
+          )
+        },
+        authoritativeContext
+      })
+    ).rejects.toMatchObject({
+      name: "ActorEmitContextError",
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID"
+    } satisfies Partial<ActorEmitContextError>);
+  });
+
+  it("accepts direct meta-review wrapper calls when recovery keeps execution authority but clears live ownership", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_actor_protocol_meta_review_recovery_01",
+      task: "Direct meta-reviewer wrapper recovery parity"
+    });
+    await switchFixtureToMetaReviewerAuthority({
+      bubbleId: bubble.bubbleId,
+      statePath: bubble.paths.statePath
+    });
+    const authoritativeContextBase = await resolveActorEmitContextByBubbleId({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+    const authoritativeContext = {
+      ...authoritativeContextBase,
+      loaded_state: {
+        ...authoritativeContextBase.loaded_state,
+        state: {
+          ...authoritativeContextBase.loaded_state.state,
+          active_agent: null,
+          active_role: null,
+          active_since: null
+        }
+      }
+    };
+
+    const result = await actorProtocolModule.emitMetaReviewerActorProtocolV11({
+      input: {
+        kind: "meta_review_result",
+        repo: repoPath,
+        bubble_id: bubble.bubbleId,
+        handoff_id: authoritativeContext.handoff_id,
+        round: authoritativeContext.expected_round,
+        recommendation: "approve",
+        summary: "Meta-review wrapper recovery parity",
+        report_json: buildApproveMetaReviewReportJson(
+          "meta-review-wrapper-recovery-parity"
+        )
+      },
+      authoritativeContext
+    });
+
+    expect(result.kind).toBe("meta_review_result");
+    if (result.kind !== "meta_review_result") {
+      throw new Error("Expected meta_review_result.");
+    }
+    expect(result.meta_review_result.gate_route).toBe("human_gate_approve");
+  });
+
+  it("rejects direct meta-review wrapper calls when a non-codex live agent claims meta-review authority", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_actor_protocol_meta_review_agent_reject_01",
+      task: "Direct meta-reviewer wrapper agent rejection"
+    });
+    await switchFixtureToMetaReviewerAuthority({
+      bubbleId: bubble.bubbleId,
+      statePath: bubble.paths.statePath
+    });
+    const authoritativeContextBase = await resolveActorEmitContextByBubbleId({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+    const authoritativeContext = {
+      ...authoritativeContextBase,
+      loaded_state: {
+        ...authoritativeContextBase.loaded_state,
+        state: {
+          ...authoritativeContextBase.loaded_state.state,
+          active_agent: "claude" as const
+        }
+      }
+    };
+
+    await expect(
+      actorProtocolModule.emitMetaReviewerActorProtocolV11({
+        input: {
+          kind: "meta_review_result",
+          repo: repoPath,
+          bubble_id: bubble.bubbleId,
+          handoff_id: authoritativeContext.handoff_id,
+          round: authoritativeContext.expected_round,
+          recommendation: "approve",
+          summary: "Should reject non-codex live meta-review authority",
+          report_json: buildApproveMetaReviewReportJson(
+            "meta-review-wrapper-live-agent-reject"
+          )
+        },
+        authoritativeContext
+      })
+    ).rejects.toMatchObject({
+      name: "ActorEmitContextError",
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID"
+    } satisfies Partial<ActorEmitContextError>);
+  });
+
   it("routes implementer human_question through the Phase E wrapper from the outer dispatcher", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
@@ -507,5 +771,159 @@ describe("emitImplementerPilotActorProtocolV11", () => {
     expect(result.convergence.convergenceEnvelope.payload.summary).toBe(
       "Should outer dispatcher use the reviewer convergence wrapper?"
     );
+  });
+
+  it("routes meta_review_result through the Phase E wrapper from the outer dispatcher", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_actor_protocol_dispatch_meta_review_01",
+      task: "Outer dispatcher should use meta-reviewer wrapper"
+    });
+    await switchFixtureToMetaReviewerAuthority({
+      bubbleId: bubble.bubbleId,
+      statePath: bubble.paths.statePath,
+      startedAt: "2026-03-25T10:20:00.000Z"
+    });
+    const authoritativeContext = await resolveActorEmitContextByBubbleId({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+    const wrapperSpy = vi.spyOn(
+      actorProtocolModule.metaReviewerActorProtocolV11,
+      "emit"
+    );
+
+    const result = await actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+      input: {
+        kind: "meta_review_result",
+        repo: repoPath,
+        bubble_id: bubble.bubbleId,
+        handoff_id: authoritativeContext.handoff_id,
+        round: authoritativeContext.expected_round,
+        recommendation: "approve",
+        summary: "Should outer dispatcher use the meta-reviewer wrapper?",
+        report_json: buildApproveMetaReviewReportJson(
+          "meta-review-wrapper-outer-dispatch"
+        )
+      },
+      authoritativeContext
+    });
+
+    expect(wrapperSpy).toHaveBeenCalledOnce();
+    expect(result.kind).toBe("meta_review_result");
+    if (result.kind !== "meta_review_result") {
+      throw new Error("Expected meta_review_result.");
+    }
+    expect(result.meta_review_result.summary).toBe(
+      "Should outer dispatcher use the meta-reviewer wrapper?"
+    );
+    expect(result.meta_review_result.gate_route).toBe("human_gate_approve");
+  });
+
+  it("rejects meta_review_result from the outer dispatcher when authority is not meta-reviewer", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_actor_protocol_dispatch_meta_review_reject_01",
+      task: "Outer dispatcher should reject wrong-role meta-review emits"
+    });
+    const authoritativeContext = await resolveActorEmitContextByBubbleId({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+
+    await expect(
+      actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+        input: {
+          kind: "meta_review_result",
+          repo: repoPath,
+          bubble_id: bubble.bubbleId,
+          handoff_id: authoritativeContext.handoff_id,
+          round: authoritativeContext.expected_round,
+          recommendation: "approve",
+          summary: "Should reject wrong-role outer-dispatch meta-review submit",
+          report_json: buildApproveMetaReviewReportJson(
+            "meta-review-wrapper-outer-dispatch-reject"
+          )
+        },
+        authoritativeContext
+      })
+    ).rejects.toMatchObject({
+      name: "ActorEmitContextError",
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID"
+    } satisfies Partial<ActorEmitContextError>);
+  });
+
+  it("rejects pass from the outer dispatcher when authority is meta-reviewer", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_actor_protocol_dispatch_meta_review_pass_reject_01",
+      task: "Outer dispatcher should reject pass under meta-reviewer authority"
+    });
+    await switchFixtureToMetaReviewerAuthority({
+      bubbleId: bubble.bubbleId,
+      statePath: bubble.paths.statePath,
+      startedAt: "2026-03-25T10:21:00.000Z"
+    });
+    const authoritativeContext = await resolveActorEmitContextByBubbleId({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+
+    await expect(
+      actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+        input: {
+          kind: "pass",
+          repo: repoPath,
+          bubble_id: bubble.bubbleId,
+          handoff_id: authoritativeContext.handoff_id,
+          summary: "Should reject pass under meta-reviewer authority"
+        },
+        authoritativeContext
+      })
+    ).rejects.toMatchObject({
+      name: "ActorEmitContextError",
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+      message:
+        "ACTOR_EMIT_CONTEXT_INVALID: meta_reviewer authority only supports meta_review_result emits."
+    } satisfies Partial<ActorEmitContextError>);
+  });
+
+  it("rejects convergence from the outer dispatcher when authority is meta-reviewer", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_actor_protocol_dispatch_meta_review_convergence_reject_01",
+      task: "Outer dispatcher should reject convergence under meta-reviewer authority"
+    });
+    await switchFixtureToMetaReviewerAuthority({
+      bubbleId: bubble.bubbleId,
+      statePath: bubble.paths.statePath,
+      startedAt: "2026-03-25T10:22:00.000Z"
+    });
+    const authoritativeContext = await resolveActorEmitContextByBubbleId({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+
+    await expect(
+      actorProtocolModule.emitActorProtocolFromWorkspaceV11({
+        input: {
+          kind: "convergence",
+          repo: repoPath,
+          bubble_id: bubble.bubbleId,
+          handoff_id: authoritativeContext.handoff_id,
+          summary: "Should reject convergence under meta-reviewer authority"
+        },
+        authoritativeContext
+      })
+    ).rejects.toMatchObject({
+      name: "ActorEmitContextError",
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+      message:
+        "ACTOR_EMIT_CONTEXT_INVALID: meta_reviewer authority only supports meta_review_result emits."
+    } satisfies Partial<ActorEmitContextError>);
   });
 });
