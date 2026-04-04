@@ -1,4 +1,5 @@
 import type { AgentName } from "../../../types/bubble.js";
+import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
 import type { ConvergedStructuredFinding } from "./convergedCommandTypes.js";
 import { executeConvergedExecution } from "../../application/converged/convergedExecution.js";
 import { finalizeConvergedFlow } from "../../application/converged/convergedFinalization.js";
@@ -16,6 +17,7 @@ export interface BuildConvergedFlowInputInput {
   findings?: ConvergedStructuredFinding[] | undefined;
   now: Date;
   cwd?: string | undefined;
+  authoritativeContext?: ActorEmitContextSnapshot | undefined;
   expectedStateFingerprint?: string | undefined;
   expectedRound?: number | undefined;
   expectedReviewer?: AgentName | undefined;
@@ -36,6 +38,9 @@ export function buildConvergedFlowInput(
     now: input.now,
     ...(input.cwd !== undefined
       ? { cwd: input.cwd }
+      : {}),
+    ...(input.authoritativeContext !== undefined
+      ? { authoritativeContext: input.authoritativeContext }
       : {}),
     ...(input.expectedStateFingerprint !== undefined
       ? { expectedStateFingerprint: input.expectedStateFingerprint }
@@ -134,6 +139,7 @@ export interface BuildConvergedCommandFlowInvocationInput {
   findings?: ConvergedStructuredFinding[] | undefined;
   now: Date;
   cwd?: string | undefined;
+  authoritativeContext?: ActorEmitContextSnapshot | undefined;
   expectedStateFingerprint?: string | undefined;
   expectedRound?: number | undefined;
   expectedReviewer?: AgentName | undefined;
@@ -158,6 +164,7 @@ export function buildConvergedCommandFlowInvocation(
       findings: input.findings,
       now: input.now,
       cwd: input.cwd,
+      authoritativeContext: input.authoritativeContext,
       expectedStateFingerprint: input.expectedStateFingerprint,
       expectedRound: input.expectedRound,
       expectedReviewer: input.expectedReviewer,

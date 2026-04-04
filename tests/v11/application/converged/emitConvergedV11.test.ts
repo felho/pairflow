@@ -4,10 +4,14 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { resolveActorEmitContextByBubbleId } from "../../../../src/core/bubble/actorEmitContext.js";
+import type { AgentName } from "../../../../src/types/bubble.js";
 import {
   emitConvergedFromWorkspace,
   type EmitConvergedInput
 } from "../../../../src/core/agent/converged.js";
+import { buildRunningExecutionContext } from "../../../../src/core/state/executionContext.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../../../src/core/state/stateStore.js";
 import {
   ConvergedCommandErrorV11,
   emitConvergedFromWorkspaceV11
@@ -25,6 +29,37 @@ async function createTempRepo(): Promise<string> {
   tempDirs.push(root);
   await initGitRepository(root);
   return root;
+}
+
+async function switchFixtureToReviewerAuthority(input: {
+  bubbleId: string;
+  statePath: string;
+  reviewer: AgentName;
+  watchdogTimeoutMinutes: number;
+}): Promise<void> {
+  const loaded = await readStateSnapshot(input.statePath);
+  const startedAt = "2026-02-22T09:04:00.000Z";
+  await writeStateSnapshot(
+    input.statePath,
+    {
+      ...loaded.state,
+      active_agent: input.reviewer,
+      active_role: "reviewer",
+      execution_context: buildRunningExecutionContext({
+        bubbleId: input.bubbleId,
+        round: loaded.state.round,
+        activeRole: "reviewer",
+        startedAt,
+        watchdogTimeoutMinutes: input.watchdogTimeoutMinutes
+      }),
+      active_since: startedAt,
+      last_command_at: startedAt
+    },
+    {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "RUNNING"
+    }
+  );
 }
 
 afterEach(async () => {
@@ -140,5 +175,37 @@ describe("emitConvergedFromWorkspaceV11", () => {
         cwd: bubble.paths.worktreePath
       })
     ).rejects.toBeInstanceOf(ConvergedCommandErrorV11);
+  });
+
+  it("accepts authoritative reviewer context without relying on cwd resolution", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_converged_v11_authority_01",
+      task: "Converged v11 authoritative context parity"
+    });
+    await seedConvergedCandidate(bubble.paths.worktreePath);
+    await switchFixtureToReviewerAuthority({
+      bubbleId: bubble.bubbleId,
+      statePath: bubble.paths.statePath,
+      reviewer: bubble.config.agents.reviewer,
+      watchdogTimeoutMinutes: bubble.config.watchdog_timeout_minutes
+    });
+    const authoritativeContext = await resolveActorEmitContextByBubbleId({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+
+    const result = await emitConvergedFromWorkspaceV11({
+      summary: "Reviewer convergence via authoritative context.",
+      refs: ["artifact://done-package.md"],
+      authoritativeContext,
+      cwd: "/repo/should/not/be/resolved",
+      now: new Date("2026-02-22T09:05:00.000Z")
+    });
+
+    expect(result.convergenceEnvelope.type).toBe("CONVERGENCE");
+    expect(result.approvalRequestEnvelope.type).toBe("TASK");
+    expect(result.state.state).toBe("RUNNING");
   });
 });

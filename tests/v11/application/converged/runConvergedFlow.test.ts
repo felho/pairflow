@@ -12,6 +12,9 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 describe("runConvergedFlow", () => {
   it("orchestrates routing -> policy -> validation -> execution -> finalization in order", async () => {
     const callOrder: string[] = [];
+    const authoritativeContext = {
+      bubble_id: "b_run_001"
+    } as never;
 
     const result = await runConvergedFlow(
       {
@@ -26,6 +29,7 @@ describe("runConvergedFlow", () => {
         ],
         now: new Date("2026-03-19T19:30:00.000Z"),
         cwd: "/repo/worktree",
+        authoritativeContext,
         expectedStateFingerprint: "fp_1",
         expectedRound: 3,
         expectedReviewer: "claude",
@@ -36,6 +40,7 @@ describe("runConvergedFlow", () => {
         prepareConvergedRouting: async (input) => {
           callOrder.push("prepareConvergedRouting");
           expect(input.cwd).toBe("/repo/worktree");
+          expect(input.authoritativeContext).toBe(authoritativeContext);
           expect(input.expectedStateFingerprint).toBe("fp_1");
           return {
             resolved: {

@@ -19,6 +19,9 @@ describe("convergedFlowInvocationBuilders", () => {
     const now = new Date("2026-03-19T20:05:00.000Z");
     const createError = (input: PairflowCommandErrorInput) => new Error(toErrorMessage(input));
     const resolveMetaReviewRolloutBlockingReasonCodes = () => ["CODE_A"];
+    const authoritativeContext = {
+      bubble_id: "b_conv_builder_01"
+    } as never;
 
     const input = buildConvergedFlowInput({
       summary: "ready for converged",
@@ -30,6 +33,7 @@ describe("convergedFlowInvocationBuilders", () => {
         }
       ],
       now,
+      authoritativeContext,
       expectedRound: 4,
       createError,
       resolveMetaReviewRolloutBlockingReasonCodes
@@ -45,11 +49,13 @@ describe("convergedFlowInvocationBuilders", () => {
         }
       ],
       now,
+      authoritativeContext,
       expectedRound: 4,
       createError,
       resolveMetaReviewRolloutBlockingReasonCodes
     });
     expect("cwd" in input).toBe(false);
+    expect(input.authoritativeContext).toBe(authoritativeContext);
     expect("expectedStateFingerprint" in input).toBe(false);
     expect("expectedReviewer" in input).toBe(false);
   });
@@ -62,6 +68,7 @@ describe("convergedFlowInvocationBuilders", () => {
       refs: [],
       now,
       cwd: undefined,
+      authoritativeContext: undefined,
       expectedStateFingerprint: undefined,
       expectedRound: undefined,
       expectedReviewer: undefined,
@@ -70,6 +77,7 @@ describe("convergedFlowInvocationBuilders", () => {
     });
 
     expect("cwd" in input).toBe(false);
+    expect("authoritativeContext" in input).toBe(false);
     expect("expectedStateFingerprint" in input).toBe(false);
     expect("expectedRound" in input).toBe(false);
     expect("expectedReviewer" in input).toBe(false);
