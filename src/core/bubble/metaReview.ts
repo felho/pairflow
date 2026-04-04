@@ -31,6 +31,10 @@ import { toMetaReviewExecutionContext } from "../state/executionContext.js";
 import { readRuntimeSessionsRegistry } from "../runtime/sessionsRegistry.js";
 import { runtimePaneIndices, runTmux } from "../runtime/tmuxManager.js";
 import {
+  emitTmuxDeliveryNotification,
+  resolveDeliveryMessageRef
+} from "../runtime/tmuxDelivery.js";
+import {
   maybeAcceptClaudeTrustPrompt,
   sendAndSubmitTmuxPaneMessage
 } from "../runtime/tmuxInput.js";
@@ -72,6 +76,9 @@ import type {
   RecoverMetaReviewGateFromSnapshotDependencies,
   recoverMetaReviewGateFromSnapshot
 } from "../../v11/shared/metaReviewGate/metaReviewGateCommandApi.js";
+import {
+  executeImplementerHandoffDelivery
+} from "../../v11/shared/delivery/implementerHandoffDelivery.js";
 import {
   evaluateNoFindingsSummaryFindingsAssertion,
   hasGlobalNoFindingsSummaryAssertion,
@@ -206,6 +213,7 @@ export interface MetaReviewDependencies {
   writeStateSnapshot?: typeof writeStateSnapshot;
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;
   readRuntimeSessionsRegistry?: typeof readRuntimeSessionsRegistry;
+  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
   runLiveReview?: (
     input: MetaReviewLiveRunnerInput
   ) => Promise<MetaReviewLiveRunnerOutput>;
@@ -1730,6 +1738,35 @@ async function assertSubmitReworkFindingsArtifactContract(input: {
   }
 }
 
+async function emitSubmitAutoReworkDelivery(input: {
+  resolved: Awaited<ReturnType<typeof resolveBubbleById>>;
+  routed: Awaited<ReturnType<RecoverMetaReviewGateFromSnapshotFn>>;
+  dependencies: MetaReviewDependencies;
+}): Promise<void> {
+  if (input.routed.route !== "auto_rework") {
+    return;
+  }
+
+  const emitDelivery =
+    input.dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
+  const messageRef = resolveDeliveryMessageRef({
+    bubbleId: input.resolved.bubbleId,
+    sessionsPath: input.resolved.bubblePaths.sessionsPath,
+    envelope: input.routed.gateEnvelope
+  });
+
+  await executeImplementerHandoffDelivery({
+    deliveryInput: {
+      bubbleId: input.resolved.bubbleId,
+      bubbleConfig: input.resolved.bubbleConfig,
+      sessionsPath: input.resolved.bubblePaths.sessionsPath,
+      envelope: input.routed.gateEnvelope,
+      messageRef
+    },
+    emitDelivery
+  });
+}
+
 export async function submitMetaReviewResult(
   input: MetaReviewSubmitInput,
   dependencies: MetaReviewDependencies = {}
@@ -2041,6 +2078,12 @@ export async function submitMetaReviewResult(
   } catch (error) {
     throw toMetaReviewError(error);
   }
+
+  await emitSubmitAutoReworkDelivery({
+    resolved,
+    routed,
+    dependencies
+  });
 
   const finalizedRunResult = routed.metaReviewRun ?? canonicalRunResult;
   return {

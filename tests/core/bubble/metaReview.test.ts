@@ -1712,6 +1712,112 @@ describe("meta-review submit", () => {
     });
   });
 
+  it("delivers auto-rework kickoff to the implementer pane after successful submit routing", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_submit_rework_delivery_01",
+      task: "Meta submit should wake implementer after rework routing"
+    });
+    await writeMetaReviewRunningState({
+      statePath: bubble.paths.statePath,
+      activeAgent: "codex",
+      activeRole: "meta_reviewer",
+      nowIso: "2026-03-09T09:09:51.000Z"
+    });
+    const findingsRaw = `${JSON.stringify(
+      {
+        open_total: 1,
+        findings: [{ id: "f_submit_delivery_01", status: "open" }]
+      },
+      null,
+      2
+    )}\n`;
+    const findingsArtifactRef = "artifacts/submit-rework-delivery-findings.json";
+    await writeFileFs(
+      join(bubble.paths.artifactsDir, "submit-rework-delivery-findings.json"),
+      findingsRaw,
+      "utf8"
+    );
+    const findingsDigest = createHash("sha256")
+      .update(findingsRaw, "utf8")
+      .digest("hex");
+    const deliveryCalls: Array<{
+      recipient: string;
+      messageRef?: string;
+      initialDelayMs?: number;
+      deliveryAttempts?: number;
+    }> = [];
+
+    const result = await submitMetaReviewResult(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        round: 1,
+        recommendation: "rework",
+        summary: "1 open finding remains in this run.",
+        rework_target_message: "Resolve the remaining open finding.",
+        report_json: buildStructuredSubmitReportJson({
+          findingsClaimState: "open_findings",
+          findingsCount: 1,
+          metaReviewRunId: "run_meta_submit_rework_delivery_01",
+          findingsArtifactRef,
+          findingsDigestSha256: findingsDigest,
+          findingsArtifactStatus: "available"
+        })
+      },
+      {
+        readRuntimeSessionsRegistry: async () =>
+          buildActiveMetaReviewerSession({
+            bubbleId: bubble.bubbleId,
+            repoPath,
+            worktreePath: bubble.paths.worktreePath
+          }),
+        emitTmuxDeliveryNotification: async (deliveryInput) => {
+          deliveryCalls.push({
+            recipient: deliveryInput.envelope.recipient,
+            ...(deliveryInput.messageRef !== undefined
+              ? { messageRef: deliveryInput.messageRef }
+              : {}),
+            ...(deliveryInput.initialDelayMs !== undefined
+              ? { initialDelayMs: deliveryInput.initialDelayMs }
+              : {}),
+            ...(deliveryInput.deliveryAttempts !== undefined
+              ? { deliveryAttempts: deliveryInput.deliveryAttempts }
+              : {})
+          });
+          if (deliveryCalls.length === 1) {
+            return {
+              delivered: false,
+              sessionName: "pf_meta_submit_test",
+              message: "not confirmed",
+              reason: "delivery_unconfirmed"
+            };
+          }
+          return {
+            delivered: true,
+            sessionName: "pf_meta_submit_test",
+            message: "ok"
+          };
+        }
+      }
+    );
+
+    expect(result.gate_route).toBe("auto_rework");
+    expect(deliveryCalls).toHaveLength(2);
+    expect(deliveryCalls[0]).toMatchObject({
+      recipient: bubble.config.agents.implementer
+    });
+    expect(deliveryCalls[0]?.messageRef).toContain(
+      `${bubble.paths.transcriptPath}#`
+    );
+    expect(deliveryCalls[1]).toMatchObject({
+      recipient: bubble.config.agents.implementer,
+      initialDelayMs: 5000,
+      deliveryAttempts: 6
+    });
+  });
+
   it("accepts submit when summary is ambiguous and structured payload is clean", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
