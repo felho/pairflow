@@ -1,4 +1,4 @@
-import type { BubbleLifecycleState } from "../../lib/types";
+import type { BubbleCardModel, BubbleLifecycleState } from "../../lib/types";
 
 export interface StateVisual {
   led: string;
@@ -69,3 +69,13 @@ export const stateVisuals: Record<BubbleLifecycleState, StateVisual> = {
     stateText: "text-slate-300"
   }
 };
+
+const metaReviewRunningBorder =
+  "border-fuchsia-500 shadow-[0_0_24px_rgba(217,70,239,0.18)]";
+
+export function resolveBubbleBorder(bubble: Pick<BubbleCardModel, "state" | "metaReview">): string {
+  if (bubble.state === "RUNNING" && bubble.metaReview.authorityActive) {
+    return metaReviewRunningBorder;
+  }
+  return stateVisuals[bubble.state].border;
+}

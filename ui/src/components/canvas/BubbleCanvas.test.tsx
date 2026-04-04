@@ -145,7 +145,7 @@ describe("BubbleCanvas", () => {
   });
 
   it("renders canonical running, failed, and human-gate lifecycle messaging", () => {
-    render(
+    const { container } = render(
       <BubbleCanvas
         bubbles={[
           bubbleCard({
@@ -177,6 +177,9 @@ describe("BubbleCanvas", () => {
     expect(
       screen.getByText("meta-reviewer running autonomous gate analysis.")
     ).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-bubble-id="b-meta-run"]')
+    ).toHaveClass("border-fuchsia-500");
     expect(screen.getByText("Failed — manual intervention needed.")).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -186,7 +189,7 @@ describe("BubbleCanvas", () => {
   });
 
   it("renders meta-review authority messaging during recovery even when live activeRole is cleared", () => {
-    render(
+    const { container } = render(
       <BubbleCanvas
         bubbles={[
           bubbleCard({
@@ -222,6 +225,9 @@ describe("BubbleCanvas", () => {
         "meta-reviewer running autonomous gate analysis (uncertain delivery)."
       )
     ).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-bubble-id="b-meta-recovery"]')
+    ).toHaveClass("border-fuchsia-500");
   });
 
   it("resets drag status after mouseup", () => {

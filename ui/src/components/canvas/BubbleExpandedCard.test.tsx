@@ -95,6 +95,19 @@ describe("BubbleExpandedCard", () => {
     expect(screen.getByText("Approval Package")).toBeInTheDocument();
   });
 
+  it("adds meta-review running border while bubble remains in running state", () => {
+    renderExpandedCard({
+      bubble: bubbleCard({
+        bubbleId: "b-expanded-1",
+        repoPath: "/repo-a",
+        state: "RUNNING",
+        activeRole: "meta_reviewer"
+      })
+    });
+
+    expect(screen.getByRole("article")).toHaveClass("border-fuchsia-500");
+  });
+
   it("prefers fresh detail runtime health over stale summary for attach hint", () => {
     renderExpandedCard({
       bubble: bubbleCard({

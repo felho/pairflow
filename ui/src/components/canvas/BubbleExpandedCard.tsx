@@ -15,7 +15,7 @@ import { cn } from "../../lib/utils";
 import type { RunBubbleActionInput } from "../../state/useBubbleStore";
 import { ActionBar } from "../actions/ActionBar";
 import { BubbleTimeline } from "../expanded/BubbleTimeline";
-import { stateVisuals } from "./stateVisuals";
+import { resolveBubbleBorder, stateVisuals } from "./stateVisuals";
 
 interface DragState {
   originX: number;
@@ -120,6 +120,7 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
   }, [stopDrag]);
 
   const visual = stateVisuals[props.bubble.state];
+  const borderClass = resolveBubbleBorder(props.bubble);
   const attachSource = props.detail ?? props.bubble;
   const attach = getAttachAvailability({
     bubbleId: attachSource.bubbleId,
@@ -167,7 +168,7 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
     <article
       className={cn(
         "absolute flex flex-col overflow-hidden rounded-[20px] border bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] transition-shadow",
-        visual.border,
+        borderClass,
         dragging ? "z-40" : "z-30"
       )}
       style={{

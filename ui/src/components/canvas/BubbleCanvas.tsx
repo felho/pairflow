@@ -22,7 +22,7 @@ import {
 import { cn } from "../../lib/utils";
 import { ConnectedBubbleExpandedCard } from "./ConnectedBubbleExpandedCard";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
-import { stateVisuals } from "./stateVisuals";
+import { resolveBubbleBorder, stateVisuals } from "./stateVisuals";
 
 interface DragState {
   originX: number;
@@ -170,6 +170,7 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
   ]);
 
   const visual = stateVisuals[props.bubble.state];
+  const borderClass = resolveBubbleBorder(props.bubble);
 
   const beginDrag = useCallback(
     (clientX: number, clientY: number) => {
@@ -223,7 +224,7 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
     <article
       className={cn(
         "absolute rounded-[20px] border bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] p-4 transition-shadow",
-        visual.border,
+        borderClass,
         visual.cardTone,
         dragging ? "cursor-grabbing" : "cursor-grab"
       )}
