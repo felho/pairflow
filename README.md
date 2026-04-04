@@ -518,6 +518,8 @@ Sometimes an agent needs clarification. This pauses the flow until you respond.
 # Agent hits an ambiguity and asks you
 pairflow bubble status --id feat_login --repo /path/to/myapp --json
 #    → refresh executionContext.handoffId before direct human_question emit
+#    → after a bubble restart/recovery, refresh again; implementer authority
+#      advances to a new `attempt`, and the pre-restart handoff becomes stale
 
 pairflow agent emit --kind human_question --repo /path/to/myapp --bubble-id feat_login --handoff-id <handoff-id> \
   --question "Should password validation happen server-side too, or client-only?"

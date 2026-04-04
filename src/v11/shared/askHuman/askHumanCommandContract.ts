@@ -1,5 +1,9 @@
 import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
-import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
+import type {
+  DeliveryTargetReasonCode,
+  EmitTmuxDeliveryNotificationResult,
+  emitTmuxDeliveryNotification
+} from "../../../core/runtime/tmuxDelivery.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
@@ -18,6 +22,12 @@ export interface EmitAskHumanResult {
   envelope: ProtocolEnvelope;
   state: BubbleStateSnapshot;
   inferredRecipient: "human";
+  delivery?: {
+    delivered: boolean;
+    message?: string;
+    reason?: Exclude<EmitTmuxDeliveryNotificationResult["reason"], undefined>;
+    deliveryTargetReasonCode?: DeliveryTargetReasonCode;
+  };
 }
 
 export interface EmitAskHumanDependencies {

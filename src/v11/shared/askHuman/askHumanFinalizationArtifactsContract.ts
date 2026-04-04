@@ -1,5 +1,6 @@
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type { EmitTmuxDeliveryNotificationResult } from "../../../core/runtime/tmuxDelivery.js";
 
 export interface AskHumanLifecycleMetricMetadataInput {
   sender: string;
@@ -12,4 +13,5 @@ export interface BuildAskHumanFinalizationResultInput {
   sequence: number;
   envelope: ProtocolEnvelope;
   state: BubbleStateSnapshot;
+  deliveryResult?: EmitTmuxDeliveryNotificationResult;
 }

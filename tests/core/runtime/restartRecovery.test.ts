@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { emitConvergedFromWorkspace } from "../../../src/core/agent/converged.js";
 import { emitPassFromWorkspace } from "../../../src/core/agent/pass.js";
+import { runAgentEmitCommand } from "../../../src/cli/commands/agent/emit.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { submitMetaReviewResult } from "../../../src/core/bubble/metaReview.js";
 import { applyMetaReviewGateOnConvergence } from "../../../src/core/bubble/metaReviewGate.js";
@@ -17,6 +18,7 @@ import {
 } from "../../../src/core/runtime/sessionsRegistry.js";
 import { reconcileRuntimeSessions } from "../../../src/core/runtime/startupReconciler.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
+import { buildRunningExecutionContext } from "../../../src/core/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -254,6 +256,198 @@ describe("restart recovery", () => {
 
     expect(started.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(started.state.round).toBe(humanGate.round);
+  });
+
+  it("mints fresh implementer authority on restart and rejects the pre-restart handoff", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_restart_impl_01",
+      task: "Restart recovery implementer authority task"
+    });
+    const beforeRestart = await readStateSnapshot(bubble.paths.statePath);
+    const oldHandoffId = beforeRestart.state.execution_context?.handoff_id;
+    expect(oldHandoffId).toBe(
+      "implementer:b_restart_impl_01:round:1:attempt:1"
+    );
+
+    await upsertRuntimeSession({
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      tmuxSessionName: "pf-b_restart_impl_01",
+      now: new Date("2026-02-23T12:02:00.000Z")
+    });
+
+    await reconcileRuntimeSessions({
+      repoPath,
+      isTmuxSessionAlive: () => Promise.resolve(false)
+    });
+
+    const restarted = await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        now: new Date("2026-02-23T12:05:00.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () =>
+          Promise.resolve({
+            repoPath,
+            baseRef: "refs/heads/main",
+            bubbleBranch: bubble.config.bubble_branch,
+            worktreePath: bubble.paths.worktreePath
+          }),
+        launchBubbleTmuxSession: () =>
+          Promise.resolve({ sessionName: "pf-b_restart_impl_01" })
+      }
+    );
+
+    expect(restarted.state.execution_context?.handoff_id).toBe(
+      "implementer:b_restart_impl_01:round:1:attempt:2"
+    );
+    expect(restarted.state.execution_context?.attempt).toBe(2);
+
+    await expect(
+      runAgentEmitCommand([
+        "--kind",
+        "human_question",
+        "--repo",
+        repoPath,
+        "--bubble-id",
+        bubble.bubbleId,
+        "--handoff-id",
+        String(oldHandoffId),
+        "--question",
+        "Is the stale authority still valid?"
+      ])
+    ).rejects.toThrow(/Canonical actor emit handoff mismatch/u);
+
+    const result = await runAgentEmitCommand([
+      "--kind",
+      "human_question",
+      "--repo",
+      repoPath,
+      "--bubble-id",
+      bubble.bubbleId,
+      "--handoff-id",
+      "implementer:b_restart_impl_01:round:1:attempt:2",
+      "--question",
+      "Use the fresh post-restart authority."
+    ]);
+
+    expect(result?.kind).toBe("human_question");
+    if (result === null || result.kind !== "human_question") {
+      throw new Error("Expected human_question result.");
+    }
+    expect(result.human_question.delivery?.delivered).toBe(false);
+  });
+
+  it("mints fresh reviewer authority on restart and rejects the pre-restart handoff", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_restart_reviewer_01",
+      task: "Restart recovery reviewer authority task"
+    });
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const reviewerExecutionContext = buildRunningExecutionContext({
+      bubbleId: bubble.bubbleId,
+      round: loaded.state.round,
+      activeRole: "reviewer",
+      startedAt: "2026-02-23T12:03:00.000Z",
+      watchdogTimeoutMinutes: bubble.config.watchdog_timeout_minutes
+    });
+
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        execution_context: reviewerExecutionContext,
+        active_since: "2026-02-23T12:03:00.000Z",
+        last_command_at: "2026-02-23T12:03:00.000Z"
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await upsertRuntimeSession({
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      tmuxSessionName: "pf-b_restart_reviewer_01",
+      now: new Date("2026-02-23T12:04:00.000Z")
+    });
+
+    await reconcileRuntimeSessions({
+      repoPath,
+      isTmuxSessionAlive: () => Promise.resolve(false)
+    });
+
+    const restarted = await startBubble(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        now: new Date("2026-02-23T12:05:00.000Z")
+      },
+      {
+        bootstrapWorktreeWorkspace: () =>
+          Promise.resolve({
+            repoPath,
+            baseRef: "refs/heads/main",
+            bubbleBranch: bubble.config.bubble_branch,
+            worktreePath: bubble.paths.worktreePath
+          }),
+        launchBubbleTmuxSession: () =>
+          Promise.resolve({ sessionName: "pf-b_restart_reviewer_01" })
+      }
+    );
+
+    expect(restarted.state.active_role).toBe("reviewer");
+    expect(restarted.state.execution_context?.handoff_id).toBe(
+      "reviewer:b_restart_reviewer_01:round:1:attempt:2"
+    );
+    expect(restarted.state.execution_context?.attempt).toBe(2);
+
+    await expect(
+      runAgentEmitCommand([
+        "--kind",
+        "human_question",
+        "--repo",
+        repoPath,
+        "--bubble-id",
+        bubble.bubbleId,
+        "--handoff-id",
+        reviewerExecutionContext.handoff_id,
+        "--question",
+        "Is the stale reviewer authority still valid?"
+      ])
+    ).rejects.toThrow(/Canonical actor emit handoff mismatch/u);
+
+    const result = await runAgentEmitCommand([
+      "--kind",
+      "human_question",
+      "--repo",
+      repoPath,
+      "--bubble-id",
+      bubble.bubbleId,
+      "--handoff-id",
+      "reviewer:b_restart_reviewer_01:round:1:attempt:2",
+      "--question",
+      "Use the fresh reviewer authority after resume."
+    ]);
+
+    expect(result?.kind).toBe("human_question");
+    if (result === null || result.kind !== "human_question") {
+      throw new Error("Expected human_question result.");
+    }
+    expect(result.human_question.delivery?.delivered).toBe(false);
   });
 
   it("keeps canonical meta-review submit routeable after delivery failure, restart recovery, and missing pane rebinding", async () => {

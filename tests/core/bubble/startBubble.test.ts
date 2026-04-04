@@ -40,6 +40,7 @@ import {
   reviewerPolicySnapshotFileName,
   reviewerPolicySnapshotUnavailableReasonCode
 } from "../../../src/v11/shared/start/startCommandContext.js";
+import { buildResumedState } from "../../../src/v11/shared/start/startCommandFlows.js";
 
 const tempDirs: string[] = [];
 
@@ -1590,11 +1591,11 @@ describe("startBubble", () => {
     expect(result.state.execution_context).toEqual({
       active_role: "implementer",
       awaited_output_type: "pass_result",
-      handoff_id: `implementer:${bubble.bubbleId}:round:1:attempt:1`,
+      handoff_id: `implementer:${bubble.bubbleId}:round:1:attempt:2`,
       round: 1,
-      started_at: "2026-02-21T12:00:00.000Z",
-      deadline_at: "2026-02-21T12:30:00.000Z",
-      attempt: 1
+      started_at: "2026-02-23T09:00:00.000Z",
+      deadline_at: "2026-02-23T09:30:00.000Z",
+      attempt: 2
     });
   });
 
@@ -2326,6 +2327,22 @@ describe("startBubble", () => {
 
     const loaded = await readStateSnapshot(bubble.paths.statePath);
     expect(loaded.state.state).toBe("RUNNING");
+  });
+
+  it("fails closed when RUNNING resume is missing persisted execution_context authority", () => {
+    expect(() =>
+      buildResumedState({
+        state: {
+          state: "RUNNING",
+          bubble_id: "b_start_resume_missing_ctx_01",
+          round: 1,
+          active_role: "implementer",
+          execution_context: null
+        } as never,
+        nowIso: "2026-02-23T16:00:00.000Z",
+        watchdogTimeoutMinutes: 60
+      })
+    ).toThrow(/RUNNING resume requires persisted execution_context authority/u);
   });
 
   it("rejects start when runtime session is already registered for bubble", async () => {

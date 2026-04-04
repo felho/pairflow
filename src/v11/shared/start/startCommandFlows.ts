@@ -1,7 +1,10 @@
 import { applyStateTransition } from "../../../core/state/machine.js";
 import { writeStateSnapshot } from "../../../core/state/stateStore.js";
 import { resolveIdeationMetadata } from "../../../core/bubble/ideation.js";
-import { buildRunningExecutionContext } from "../../../core/state/executionContext.js";
+import {
+  buildRestartedExecutionContext,
+  buildRunningExecutionContext
+} from "../../../core/state/executionContext.js";
 import {
   launchFreshTmuxSession,
   launchResumeTmuxSession
@@ -28,9 +31,10 @@ export interface FreshStartProgress {
   preparingState: BubbleStateSnapshot | null;
 }
 
-function buildResumedState(input: {
+export function buildResumedState(input: {
   state: BubbleStateSnapshot;
   nowIso: string;
+  watchdogTimeoutMinutes: number;
 }): BubbleStateSnapshot {
   if (
     input.state.state === "RUNNING"
@@ -43,9 +47,21 @@ function buildResumedState(input: {
         "RUNNING resume requires persisted execution_context authority."
       );
     }
+    const resumedExecutionContext =
+      input.state.active_role === "implementer"
+      || input.state.active_role === "reviewer"
+        ? buildRestartedExecutionContext({
+            bubbleId: input.state.bubble_id,
+            round: input.state.round,
+            activeRole: input.state.active_role,
+            restartedAt: input.nowIso,
+            watchdogTimeoutMinutes: input.watchdogTimeoutMinutes,
+            previousExecutionContext: executionContext
+          })
+        : executionContext;
     return {
       ...input.state,
-      execution_context: executionContext,
+      execution_context: resumedExecutionContext,
       active_since: input.nowIso,
       last_command_at: input.nowIso
     };
@@ -176,7 +192,9 @@ export async function runResumeStartFlow(input: {
 
   const resumed = buildResumedState({
     state: input.context.loadedState.state,
-    nowIso: input.context.nowIso
+    nowIso: input.context.nowIso,
+    watchdogTimeoutMinutes:
+      input.context.resolved.bubbleConfig.watchdog_timeout_minutes
   });
   const written = await writeStateSnapshot(
     input.context.resolved.bubblePaths.statePath,

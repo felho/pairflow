@@ -235,6 +235,27 @@ describe("parseAgentEmitCommandOptions", () => {
       "ACTOR_EMIT_OPTIONS_INVALID: --expected-round must be a positive integer."
     );
   });
+
+  it("rejects unknown target-authority override options", () => {
+    expect(() =>
+      parseAgentEmitCommandOptions([
+        "--kind",
+        "pass",
+        "--repo",
+        "/tmp/repo",
+        "--bubble-id",
+        "b_agent_emit_override_01",
+        "--handoff-id",
+        "implementer:b_agent_emit_override_01:round:1:attempt:1",
+        "--summary",
+        "Should fail",
+        "--execution-id",
+        "exec_123"
+      ])
+    ).toThrow(
+      "ACTOR_EMIT_OPTIONS_INVALID: Unknown option '--execution-id'"
+    );
+  });
 });
 
 describe("runAgentEmitCommand", () => {
@@ -269,6 +290,46 @@ describe("runAgentEmitCommand", () => {
     }
     expect(result.pass.bubbleId).toBe(bubble.bubbleId);
     expect(result.pass.envelope.payload.summary).toBe("Implemented canonical pass");
+  });
+
+  it("rejects duplicate implementer emits after authority already advanced", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_agent_emit_pass_dup_01",
+      task: "Canonical duplicate pass emit"
+    });
+    const loadedState = await readStateSnapshot(bubble.paths.statePath);
+    const handoffId = loadedState.state.execution_context?.handoff_id;
+    expect(handoffId).toBeDefined();
+
+    await runAgentEmitCommand([
+      "--kind",
+      "pass",
+      "--repo",
+      repoPath,
+      "--bubble-id",
+      bubble.bubbleId,
+      "--handoff-id",
+      String(handoffId),
+      "--summary",
+      "First canonical pass"
+    ]);
+
+    await expect(
+      runAgentEmitCommand([
+        "--kind",
+        "pass",
+        "--repo",
+        repoPath,
+        "--bubble-id",
+        bubble.bubbleId,
+        "--handoff-id",
+        String(handoffId),
+        "--summary",
+        "Duplicate canonical pass"
+      ])
+    ).rejects.toThrow(/Canonical actor emit handoff mismatch/u);
   });
 
   it("rejects convergence emit when reviewer authority lacks an active reviewer agent", async () => {
