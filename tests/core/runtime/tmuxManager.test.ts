@@ -122,7 +122,7 @@ describe("launchBubbleTmuxSession", () => {
       "-t",
       "pf-b_start_01:0",
       "pane-border-format",
-      "#{?#{==:#{pane_index},0},[orchestrator/status],#{?#{==:#{pane_index},1},[codex/implementer],#{?#{==:#{pane_index},2},[claude/reviewer],#{?#{==:#{pane_index},3},[codex/meta-reviewer],pane-#{pane_index}}}}}"
+      "#{?#{==:#{pane_index},0},[orchestrator/status]-[b_start_01],#{?#{==:#{pane_index},1},[codex/implementer],#{?#{==:#{pane_index},2},[claude/reviewer],#{?#{==:#{pane_index},3},[codex/meta-reviewer],pane-#{pane_index}}}}}"
     ]);
     // Unset CLAUDECODE from server global env and session env.
     expect(calls[5]?.args).toEqual([

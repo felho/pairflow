@@ -56,6 +56,10 @@ export interface LaunchBubbleTmuxSessionResult {
   sessionName: string;
 }
 
+function buildStatusPaneLabel(bubbleId: string): string {
+  return `[orchestrator/status]-[${bubbleId}]`;
+}
+
 export interface TerminateBubbleTmuxSessionInput {
   bubbleId?: string;
   sessionName?: string;
@@ -189,7 +193,7 @@ export async function launchBubbleTmuxSession(
   const statusPaneHeight = 13;
   const tmuxPaneSeparators = 4;
   const metaReviewerCommand = input.metaReviewerCommand ?? input.reviewerCommand;
-  const statusPaneLabel = input.statusPaneLabel ?? "[orchestrator/status]";
+  const statusPaneLabel = input.statusPaneLabel ?? buildStatusPaneLabel(input.bubbleId);
   const implementerPaneLabel = input.implementerPaneLabel ?? "[codex/implementer]";
   const reviewerPaneLabel = input.reviewerPaneLabel ?? "[claude/reviewer]";
   const metaReviewerPaneLabel =

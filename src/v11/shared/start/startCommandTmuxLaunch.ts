@@ -20,6 +20,10 @@ function shouldSubmitStartupPrompt(agentName: "codex" | "claude"): boolean {
   return agentName === "codex";
 }
 
+function buildStatusPaneLabel(bubbleId: string): string {
+  return `[orchestrator/status]-[${bubbleId}]`;
+}
+
 export async function launchFreshTmuxSession(input: {
   context: StartExecutionContext;
   deps: ResolvedStartBubbleDependencies;
@@ -34,7 +38,7 @@ export async function launchFreshTmuxSession(input: {
       input.context.resolved.bubblePaths.worktreePath,
       input.context.resolved.bubbleConfig.pairflow_command_profile
     ),
-    statusPaneLabel: "[orchestrator/status]",
+    statusPaneLabel: buildStatusPaneLabel(input.context.resolved.bubbleId),
     implementerPaneLabel: `[${input.context.resolved.bubbleConfig.agents.implementer}/implementer]`,
     reviewerPaneLabel: `[${input.context.resolved.bubbleConfig.agents.reviewer}/reviewer]`,
     metaReviewerPaneLabel: "[codex/meta-reviewer]",
@@ -132,7 +136,7 @@ export async function launchResumeTmuxSession(input: {
       input.context.resolved.bubblePaths.worktreePath,
       input.context.resolved.bubbleConfig.pairflow_command_profile
     ),
-    statusPaneLabel: "[orchestrator/status]",
+    statusPaneLabel: buildStatusPaneLabel(input.context.resolved.bubbleId),
     implementerPaneLabel: `[${input.context.resolved.bubbleConfig.agents.implementer}/implementer]`,
     reviewerPaneLabel: `[${input.context.resolved.bubbleConfig.agents.reviewer}/reviewer]`,
     metaReviewerPaneLabel: "[codex/meta-reviewer]",

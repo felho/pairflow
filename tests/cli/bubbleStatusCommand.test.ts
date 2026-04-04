@@ -377,7 +377,8 @@ describe("renderBubbleStatusTable", () => {
     const rendered = renderBubbleStatusTable(createStatusView({}));
 
     expect(rendered).toContain("| Bubble");
-    expect(rendered).toContain("b_status_render_01 | state: valid | cli path: worktree_local | start: 21:20:00");
+    expect(rendered).toContain("state: valid | cli path: worktree_local | start: 21:20:00");
+    expect(rendered).not.toContain("b_status_render_01 | state:");
     expect(rendered).toContain("| Lifecycle");
     expect(rendered).toContain("since 21:29:15");
     expect(rendered).not.toContain("| State validation");
