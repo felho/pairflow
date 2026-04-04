@@ -218,6 +218,16 @@ function mergeExpandedDetailWithSummary(
   detail: UiBubbleDetail,
   bubble: BubbleCardModel
 ): UiBubbleDetail {
+  const summaryRuntimeHealthy =
+    bubble.runtimeSession !== null &&
+    bubble.runtime.present &&
+    !bubble.runtime.stale;
+  const detailRuntimeHealthy =
+    detail.runtimeSession !== null &&
+    detail.runtime.present &&
+    !detail.runtime.stale;
+  const preserveDetailRuntime = detailRuntimeHealthy && !summaryRuntimeHealthy;
+
   return {
     ...detail,
     ...bubble,
@@ -225,8 +235,10 @@ function mergeExpandedDetailWithSummary(
     // follow-up detail refresh lands, otherwise realtime summary jitter can
     // briefly show a false "runtime unavailable" hint while the session is
     // actually still running.
-    runtimeSession: detail.runtimeSession,
-    runtime: detail.runtime
+    runtimeSession: preserveDetailRuntime
+      ? detail.runtimeSession
+      : bubble.runtimeSession,
+    runtime: preserveDetailRuntime ? detail.runtime : bubble.runtime
   };
 }
 

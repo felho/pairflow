@@ -1352,6 +1352,62 @@ describe("createBubbleStore", () => {
     deferredDetail.resolve(healthyDetail);
     await Promise.resolve();
   });
+
+  it("lets expanded detail recover when realtime summary becomes healthy again", async () => {
+    const healthySummary = bubbleSummary({
+      bubbleId: "b-a",
+      repoPath: "/repo-a"
+    });
+    const staleDetail = bubbleDetail({
+      bubbleId: "b-a",
+      repoPath: "/repo-a",
+      runtimeSession: null,
+      stale: true
+    });
+
+    const api = createApiStub({
+      getRepos: vi.fn(async () => ["/repo-a"]),
+      getBubbles: vi.fn(async () => ({
+        repo: repoSummary("/repo-a"),
+        bubbles: [healthySummary]
+      })),
+      getBubble: vi.fn(async () => staleDetail),
+      getBubbleTimeline: vi.fn(async () => [])
+    });
+
+    let emitEvent: (event: UiEvent) => void = () => undefined;
+    const store = createBubbleStore({
+      api,
+      createEventsClient: (input) => {
+        emitEvent = input.onEvent;
+        return {
+          start: () => undefined,
+          stop: () => undefined,
+          refresh: () => undefined
+        };
+      }
+    });
+
+    await store.getState().initialize();
+    await store.getState().toggleBubbleExpanded("b-a");
+
+    expect(store.getState().bubbleDetails["b-a"]?.runtimeSession).toBeNull();
+    expect(store.getState().bubbleDetails["b-a"]?.runtime.stale).toBe(true);
+
+    emitEvent({
+      id: 201,
+      ts: "2026-02-25T12:06:00.000Z",
+      type: "bubble.updated",
+      repoPath: "/repo-a",
+      bubbleId: "b-a",
+      bubble: healthySummary
+    });
+
+    expect(store.getState().bubbleDetails["b-a"]?.runtimeSession).toEqual(
+      healthySummary.runtimeSession
+    );
+    expect(store.getState().bubbleDetails["b-a"]?.runtime.stale).toBe(false);
+  });
 });
 
 describe("deleteBubble store method", () => {
