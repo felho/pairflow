@@ -85,8 +85,8 @@ describe("finalizeAskHumanFlow", () => {
 
     expect(callOrder).toEqual([
       "resolveDeliveryMessageRef",
-      "emitTmuxDeliveryNotification",
       "emitBubbleNotification",
+      "emitTmuxDeliveryNotification",
       "emitBubbleLifecycleEventBestEffort"
     ]);
     expect(result).toMatchObject({
@@ -96,7 +96,165 @@ describe("finalizeAskHumanFlow", () => {
       state: {
         state: "WAITING_HUMAN"
       },
-      inferredRecipient: "human"
+      inferredRecipient: "human",
+      delivery: {
+        delivered: true,
+        message: "ok"
+      }
     });
+  });
+
+  it("surfaces the tmux_send_failed sentinel at finalization level when delivery notification throws", async () => {
+    const result = await finalizeAskHumanFlow(
+      {
+        now: new Date("2026-02-21T12:20:00.000Z"),
+        routing: {
+          question: "Need fallback decision?",
+          refs: [],
+          resolved: {
+            bubbleId: "b_ask_human_02",
+            repoPath: "/repo",
+            bubblePaths: {
+              sessionsPath: "/repo/.pairflow/bubbles/b_ask_human_02/runtime/sessions.json"
+            },
+            bubbleConfig: {
+              id: "b_ask_human_02"
+            }
+          },
+          bubbleIdentity: {
+            bubbleInstanceId: "bi_1234567890_abcdef0123456790"
+          },
+          state: {
+            round: 2,
+            active_agent: "codex",
+            active_role: "implementer"
+          }
+        } as never,
+        appended: {
+          envelope: {
+            id: "msg_20260221_002"
+          } as never,
+          sequence: 4
+        } as never,
+        written: {
+          state: {
+            state: "WAITING_HUMAN"
+          }
+        } as never
+      },
+      {
+        resolveDeliveryMessageRef: () => "transcript-ref#msg_20260221_002",
+        emitTmuxDeliveryNotification: async () => {
+          throw new Error("tmux boom");
+        },
+        emitBubbleNotification: async () => ({
+          kind: "waiting-human",
+          attempted: false,
+          delivered: false,
+          soundPath: null,
+          reason: "disabled"
+        }),
+        emitBubbleLifecycleEventBestEffort: async () => undefined
+      }
+    );
+
+    expect(result.delivery).toEqual({
+      delivered: false,
+      message: "tmux delivery notification failed: tmux boom",
+      reason: "tmux_send_failed"
+    });
+  });
+
+  it("returns after tmux delivery resolves even if the UX-only bubble notification is still pending", async () => {
+    let resolveBubbleNotification: (() => void) | undefined;
+    let bubbleNotificationSettled = false;
+    let deliveryResolve:
+      | ((value: {
+          delivered: boolean;
+          message: string;
+        }) => void)
+      | undefined;
+
+    const bubbleNotificationPromise = new Promise<void>((resolvePromise) => {
+      resolveBubbleNotification = () => {
+        bubbleNotificationSettled = true;
+        resolvePromise();
+      };
+    });
+    const deliveryPromise = new Promise<{
+      delivered: boolean;
+      message: string;
+    }>((resolvePromise) => {
+      deliveryResolve = resolvePromise;
+    });
+
+    const resultPromise = finalizeAskHumanFlow(
+      {
+        now: new Date("2026-02-21T12:30:00.000Z"),
+        routing: {
+          question: "Need release timing?",
+          refs: [],
+          resolved: {
+            bubbleId: "b_ask_human_03",
+            repoPath: "/repo",
+            bubblePaths: {
+              sessionsPath: "/repo/.pairflow/bubbles/b_ask_human_03/runtime/sessions.json"
+            },
+            bubbleConfig: {
+              id: "b_ask_human_03"
+            }
+          },
+          bubbleIdentity: {
+            bubbleInstanceId: "bi_1234567890_abcdef0123456791"
+          },
+          state: {
+            round: 2,
+            active_agent: "codex",
+            active_role: "implementer"
+          }
+        } as never,
+        appended: {
+          envelope: {
+            id: "msg_20260221_003"
+          } as never,
+          sequence: 5
+        } as never,
+        written: {
+          state: {
+            state: "WAITING_HUMAN"
+          }
+        } as never
+      },
+      {
+        resolveDeliveryMessageRef: () => "transcript-ref#msg_20260221_003",
+        emitTmuxDeliveryNotification: async () => deliveryPromise,
+        emitBubbleNotification: async () => {
+          await bubbleNotificationPromise;
+          return {
+            kind: "waiting-human",
+            attempted: false,
+            delivered: false,
+            soundPath: null,
+            reason: "disabled"
+          };
+        },
+        emitBubbleLifecycleEventBestEffort: async () => undefined
+      }
+    );
+
+    deliveryResolve?.({
+      delivered: true,
+      message: "ok"
+    });
+
+    const result = await resultPromise;
+    expect(result.delivery).toEqual({
+      delivered: true,
+      message: "ok"
+    });
+    expect(bubbleNotificationSettled).toBe(false);
+
+    resolveBubbleNotification?.();
+    await bubbleNotificationPromise;
   });
 });

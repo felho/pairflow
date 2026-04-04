@@ -56,6 +56,12 @@ describe("emitAskHumanFromWorkspaceV11", () => {
     expect(result.envelope.sender).toBe("codex");
     expect(result.envelope.recipient).toBe("human");
     expect(result.state.state).toBe("WAITING_HUMAN");
+    expect(result.delivery).toMatchObject({
+      delivered: false,
+      reason: "no_runtime_session",
+      deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_ABSENT"
+    });
+    expect(result.delivery?.message).toContain("HUMAN_QUESTION codex->human");
 
     const state = await readStateSnapshot(bubble.paths.statePath);
     expect(state.state.state).toBe("WAITING_HUMAN");
@@ -141,6 +147,10 @@ describe("emitAskHumanFromWorkspaceV11", () => {
       `${bubble.paths.transcriptPath}#${result.envelope.id}`
     ]);
     expect(deliveryRefs[0]?.startsWith("transcript.ndjson#")).toBe(false);
+    expect(result.delivery).toEqual({
+      delivered: true,
+      message: "ok"
+    });
   });
 });
 

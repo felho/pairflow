@@ -342,6 +342,7 @@ Agent-facing commands (invoked from inside agent sessions):
 3. `pairflow agent emit --kind convergence --repo <path> --bubble-id <id> --handoff-id <id> --summary "<text>"`
 4. Ideation pending guard: `pass` and `converged` are rejected while bubble is `RUNNING` at `round=0` with `ideation.task_pending=true`.
 5. Direct `agent emit` requires an explicit authority snapshot. `pairflow bubble status --id <id> --repo <path> --json` must surface the active `executionContext`, including `handoffId`, so agents or operators can copy the current authority values without reading state files directly.
+6. Implementer restart recovery advances authority to a fresh `executionContext.attempt`/`handoffId`. Any pre-restart implementer handoff becomes stale and must be refreshed from a new `bubble status --json` snapshot before direct `agent emit`.
 
 Canonical pass emit reference rules:
 1. `--ref` is optional and repeatable (`0..N`).

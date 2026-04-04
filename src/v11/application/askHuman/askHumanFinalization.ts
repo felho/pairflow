@@ -31,7 +31,7 @@ export async function finalizeAskHumanFlow(
     envelope: input.appended.envelope
   });
 
-  emitOptionalAskHumanNotifications(
+  const notifications = await emitOptionalAskHumanNotifications(
     buildAskHumanFinalizationNotificationInput(input, messageRef),
     {
       emitTmuxDeliveryNotification:
@@ -48,6 +48,9 @@ export async function finalizeAskHumanFlow(
     bubbleId: input.routing.resolved.bubbleId,
     sequence: input.appended.sequence,
     envelope: input.appended.envelope,
-    state: input.written.state
+    state: input.written.state,
+    ...(notifications.deliveryResult !== undefined
+      ? { deliveryResult: notifications.deliveryResult }
+      : {})
   });
 }

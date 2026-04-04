@@ -9,7 +9,9 @@ import type {
 } from "../../../core/state/stateStore.js";
 import type { applyStateTransition } from "../../../core/state/machine.js";
 import type {
+  DeliveryTargetReasonCode,
   emitTmuxDeliveryNotification,
+  EmitTmuxDeliveryNotificationResult,
   resolveDeliveryMessageRef
 } from "../../../core/runtime/tmuxDelivery.js";
 import type { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
@@ -60,6 +62,16 @@ export interface RunAskHumanFlowResult {
   envelope: ProtocolEnvelope;
   state: BubbleStateSnapshot;
   inferredRecipient: "human";
+  delivery?: {
+    delivered: boolean;
+    message?: string;
+    reason?: Exclude<EmitTmuxDeliveryNotificationResult["reason"], undefined>;
+    deliveryTargetReasonCode?: DeliveryTargetReasonCode;
+  };
+}
+
+export interface AskHumanDeliveryResult {
+  deliveryResult: EmitTmuxDeliveryNotificationResult | undefined;
 }
 
 export interface RunAskHumanFlowDependencies {

@@ -21,6 +21,25 @@ export function buildAskHumanFinalizationResult(
     sequence: input.sequence,
     envelope: input.envelope,
     state: input.state,
-    inferredRecipient: "human" as const
+    inferredRecipient: "human" as const,
+    ...(input.deliveryResult !== undefined
+        ? {
+          delivery: {
+            delivered: input.deliveryResult.delivered,
+            ...(input.deliveryResult.message.length > 0
+              ? { message: input.deliveryResult.message }
+              : {}),
+            ...(input.deliveryResult.reason !== undefined
+              ? { reason: input.deliveryResult.reason }
+              : {}),
+            ...(input.deliveryResult.deliveryTargetReasonCode !== undefined
+              ? {
+                  deliveryTargetReasonCode:
+                    input.deliveryResult.deliveryTargetReasonCode
+                }
+              : {})
+          }
+        }
+      : {})
   };
 }

@@ -44,4 +44,38 @@ describe("askHumanFinalizationArtifacts", () => {
       inferredRecipient: "human"
     });
   });
+
+  it("omits empty-string delivery messages from the finalization projection by contract", () => {
+    expect(
+      buildAskHumanFinalizationResult({
+        bubbleId: "b_ask_human_02",
+        sequence: 4,
+        envelope: {
+          id: "msg_20260221_002"
+        } as never,
+        state: {
+          state: "WAITING_HUMAN"
+        } as never,
+        deliveryResult: {
+          delivered: false,
+          message: "",
+          reason: "tmux_send_failed"
+        }
+      })
+    ).toEqual({
+      bubbleId: "b_ask_human_02",
+      sequence: 4,
+      envelope: {
+        id: "msg_20260221_002"
+      },
+      state: {
+        state: "WAITING_HUMAN"
+      },
+      inferredRecipient: "human",
+      delivery: {
+        delivered: false,
+        reason: "tmux_send_failed"
+      }
+    });
+  });
 });

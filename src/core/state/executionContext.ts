@@ -76,6 +76,41 @@ export function buildRunningExecutionContext(input: {
   };
 }
 
+export function buildRestartedExecutionContext(input: {
+  bubbleId: string;
+  round: number;
+  activeRole: AgentRole;
+  restartedAt: string;
+  watchdogTimeoutMinutes: number;
+  previousExecutionContext: BubbleExecutionContext;
+}): BubbleExecutionContext {
+  const awaitedOutputType = resolveAwaitedOutputTypeForRole(input.activeRole);
+  if (input.previousExecutionContext.active_role !== input.activeRole) {
+    throw new RangeError(
+      `restarted execution context requires matching active role: ${input.previousExecutionContext.active_role} !== ${input.activeRole}`
+    );
+  }
+  if (input.previousExecutionContext.round !== input.round) {
+    throw new RangeError(
+      `restarted execution context requires matching round: ${String(input.previousExecutionContext.round)} !== ${String(input.round)}`
+    );
+  }
+  if (input.previousExecutionContext.awaited_output_type !== awaitedOutputType) {
+    throw new RangeError(
+      "restarted execution context requires matching awaited output type."
+    );
+  }
+
+  return buildRunningExecutionContext({
+    bubbleId: input.bubbleId,
+    round: input.round,
+    activeRole: input.activeRole,
+    startedAt: input.restartedAt,
+    watchdogTimeoutMinutes: input.watchdogTimeoutMinutes,
+    attempt: input.previousExecutionContext.attempt + 1
+  });
+}
+
 export function toMetaReviewExecutionContext(
   executionContext: BubbleExecutionContext | null | undefined
 ): BubbleMetaReviewExecutionContext | null {

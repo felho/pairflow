@@ -16,12 +16,17 @@ import {
   emitPassFromWorkspaceV11 as emitPassFromWorkspace
 } from "../pass/emitPassV11.js";
 import {
+  ActorEmitContextError,
   assertActorEmitContextMatches
 } from "../../../core/bubble/actorEmitContext.js";
 import type {
   ActorEmitContextSnapshot
 } from "../../../core/bubble/actorEmitContext.js";
-import type { ActorEmitInput } from "../../../types/protocol.js";
+import type {
+  ActorEmitInput,
+  HumanQuestionActorEmitInput,
+  PassActorEmitInput
+} from "../../../types/protocol.js";
 
 export type ActorEmitResultV11 =
   | {
@@ -46,6 +51,68 @@ export interface ResolvedActorEmitInputV11 {
   authoritativeContext: ActorEmitContextSnapshot;
 }
 
+interface ResolvedImplementerPilotActorEmitInputV11 {
+  input: PassActorEmitInput | HumanQuestionActorEmitInput;
+  authoritativeContext: ActorEmitContextSnapshot;
+}
+
+export async function emitImplementerPilotActorProtocolV11(
+  resolvedInput: ResolvedImplementerPilotActorEmitInputV11
+): Promise<Extract<
+  ActorEmitResultV11,
+  { kind: "pass" } | { kind: "human_question" }
+>> {
+  const { input, authoritativeContext: context } = resolvedInput;
+  assertActorEmitContextMatches({
+    context,
+    handoffId: input.handoff_id,
+    ...(input.expected_role !== undefined
+      ? { expectedRole: input.expected_role }
+      : {}),
+    ...(input.expected_round !== undefined
+      ? { expectedRound: input.expected_round }
+      : {}),
+    ...(input.expected_state_fingerprint !== undefined
+      ? { expectedStateFingerprint: input.expected_state_fingerprint }
+      : {})
+  });
+  if (context.expected_role !== "implementer") {
+    throw new ActorEmitContextError(
+      "ACTOR_EMIT_CONTEXT_INVALID",
+      "ACTOR_EMIT_CONTEXT_INVALID: implementer pilot wrapper requires implementer authority."
+    );
+  }
+
+  if (input.kind === "pass") {
+    return {
+      kind: "pass",
+      pass: await emitPassFromWorkspace({
+        summary: input.summary,
+        ...(input.refs !== undefined ? { refs: input.refs } : {}),
+        ...(input.intent !== undefined ? { intent: input.intent } : {}),
+        ...(input.findings !== undefined ? { findings: input.findings } : {}),
+        ...(input.no_findings ? { noFindings: true } : {}),
+        authoritativeContext: context,
+        cwd: context.worktree_path
+      })
+    };
+  }
+
+  return {
+    kind: "human_question",
+    human_question: await emitAskHumanFromWorkspace({
+      question: input.question,
+      ...(input.refs !== undefined ? { refs: input.refs } : {}),
+      authoritativeContext: context,
+      cwd: context.worktree_path
+    })
+  };
+}
+
+export const implementerPilotActorProtocolV11 = {
+  emit: emitImplementerPilotActorProtocolV11
+} as const;
+
 function resolveExpectedReviewer(input: {
   activeRole: ActorEmitInput["expected_role"];
   activeAgent: AgentName | null;
@@ -65,6 +132,16 @@ export async function emitActorProtocolFromWorkspaceV11(
   resolvedInput: ResolvedActorEmitInputV11
 ): Promise<ActorEmitResultV11> {
   const { input, authoritativeContext: context } = resolvedInput;
+  if (
+    context.expected_role === "implementer"
+    && (input.kind === "pass" || input.kind === "human_question")
+  ) {
+    return implementerPilotActorProtocolV11.emit({
+      input,
+      authoritativeContext: context
+    });
+  }
+
   assertActorEmitContextMatches({
     context,
     handoffId: input.handoff_id,
