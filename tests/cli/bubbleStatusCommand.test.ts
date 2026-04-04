@@ -480,6 +480,31 @@ describe("renderBubbleStatusTable", () => {
     expect(rendered).toContain("timeout for codex");
   });
 
+  it("renders inactive runtime summary when watchdog monitoring is off", () => {
+    const rendered = renderBubbleStatusTable(
+      createStatusView({
+        state: "READY_FOR_HUMAN_APPROVAL",
+        activeAgent: null,
+        activeRole: null,
+        activeSince: null,
+        watchdog: {
+          monitored: false,
+          monitoredAgent: null,
+          timeoutMinutes: 20,
+          referenceTimestamp: "2026-03-08T21:29:15.948Z",
+          deadlineTimestamp: null,
+          remainingSeconds: null,
+          expired: false
+        }
+      })
+    );
+
+    expect(rendered).toContain("| Runtime");
+    expect(rendered).toContain("inactive | last observed");
+    expect(rendered).not.toContain("age=255s");
+    expect(rendered).toContain("watchdog off 20m rem=-");
+  });
+
   it("renders stale command-path warning in table mode", () => {
     const rendered = renderBubbleStatusTable(
       createStatusView({

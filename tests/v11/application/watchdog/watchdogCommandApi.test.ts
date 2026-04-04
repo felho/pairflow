@@ -21,6 +21,8 @@ import {
 } from "../../../../src/v11/shared/watchdog/watchdogTraceStore.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { initGitRepository } from "../../../helpers/git.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../../../src/core/state/stateStore.js";
+import { buildRunningExecutionContext } from "../../../../src/core/state/executionContext.js";
 
 const tempDirs: string[] = [];
 
@@ -243,6 +245,86 @@ describe("watchdogCommandApi", () => {
         state: "RUNNING"
       }
     });
+  });
+
+  it("re-samples immediately when the active role switches to a different pane target", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_watchdog_v11_role_switch_01",
+      task: "Watchdog v11 immediate pane resample on role switch",
+      startedAt: "2026-02-22T12:00:00.000Z"
+    });
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        active_agent: bubble.config.agents.reviewer,
+        active_role: "reviewer",
+        active_since: "2026-02-22T12:03:20.000Z",
+        last_command_at: "2026-02-22T12:03:20.000Z",
+        execution_context: buildRunningExecutionContext({
+          bubbleId: bubble.bubbleId,
+          round: 1,
+          activeRole: "reviewer",
+          startedAt: "2026-02-22T12:03:20.000Z",
+          watchdogTimeoutMinutes: bubble.config.watchdog_timeout_minutes
+        })
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+    await writeWatchdogPaneActivity({
+      runtimeDir: bubble.paths.runtimeDir,
+      bubbleId: bubble.bubbleId,
+      record: {
+        bubble_id: bubble.bubbleId,
+        sampled_at: "2026-02-22T12:03:00.000Z",
+        pane_hash: "pane-hash-implementer",
+        last_changed_at: "2026-02-22T12:03:00.000Z",
+        session_name: "pf-watchdog-v11",
+        target_pane: "pf-watchdog-v11:0.1",
+        last_sample_status: "sampled"
+      }
+    });
+    let sampleCalls = 0;
+
+    await runBubbleWatchdogV11(
+      {
+        bubbleId: bubble.bubbleId,
+        cwd: repoPath,
+        now: new Date("2026-02-22T12:03:30.000Z")
+      },
+      baseDependencies({
+        sampleWatchdogPaneActivity: async () => {
+          sampleCalls += 1;
+          return {
+            status: "sampled",
+            sampled_at: "2026-02-22T12:03:30.000Z",
+            pane_hash: "pane-hash-reviewer",
+            changed: true,
+            session_name: "pf-watchdog-v11",
+            target_pane: "pf-watchdog-v11:0.2"
+          };
+        }
+      })
+    );
+
+    expect(sampleCalls).toBe(1);
+    const stored = await readWatchdogPaneActivity({
+      runtimeDir: bubble.paths.runtimeDir,
+      bubbleId: bubble.bubbleId
+    });
+    expect(stored.status).toBe("ok");
+    if (stored.status !== "ok") {
+      return;
+    }
+    expect(stored.record.target_pane).toBe("pf-watchdog-v11:0.2");
+    expect(stored.record.sampled_at).toBe("2026-02-22T12:03:30.000Z");
+    expect(stored.record.last_changed_at).toBe("2026-02-22T12:03:30.000Z");
   });
 
   it("keeps RUNNING bubble active after timeout when pane changed recently", async () => {

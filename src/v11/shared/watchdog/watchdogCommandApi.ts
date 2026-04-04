@@ -144,9 +144,20 @@ function parseIsoTimestamp(value: string | undefined): number | null {
 
 function shouldSamplePaneActivity(
   readResult: ReadWatchdogPaneActivityResult,
-  now: Date
+  now: Date,
+  activeRole: "implementer" | "reviewer" | "meta_reviewer"
 ): boolean {
   if (readResult.status !== "ok") {
+    return true;
+  }
+  const expectedTargetPane = resolveExpectedTargetPane(
+    readResult.record.session_name,
+    activeRole
+  );
+  if (
+    expectedTargetPane !== null
+    && readResult.record.target_pane !== expectedTargetPane
+  ) {
     return true;
   }
   const sampledAtMs = parseIsoTimestamp(readResult.record.sampled_at);
@@ -154,6 +165,22 @@ function shouldSamplePaneActivity(
     return true;
   }
   return now.getTime() - sampledAtMs >= WATCHDOG_PANE_ACTIVITY_SAMPLE_INTERVAL_MS;
+}
+
+function resolveExpectedTargetPane(
+  sessionName: string | undefined,
+  activeRole: "implementer" | "reviewer" | "meta_reviewer"
+): string | null {
+  if (sessionName === undefined || sessionName.trim().length === 0) {
+    return null;
+  }
+  const paneIndex =
+    activeRole === "implementer"
+      ? 1
+      : activeRole === "reviewer"
+        ? 2
+        : 3;
+  return `${sessionName}:0.${paneIndex}`;
 }
 
 function buildNextPaneActivityRecord(input: {
@@ -230,7 +257,11 @@ async function maybeMonitorWatchdogPaneActivity(input: {
   });
   let currentRecord = readResult.status === "ok" ? readResult.record : null;
 
-  if (!shouldSamplePaneActivity(readResult, input.context.now)) {
+  if (!shouldSamplePaneActivity(
+    readResult,
+    input.context.now,
+    input.context.state.active_role
+  )) {
     return {
       readStatus: readResult.status,
       currentRecord,

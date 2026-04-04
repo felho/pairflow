@@ -100,6 +100,9 @@ export function renderBubbleStatusTable(
     status.metaReview.runtimeDelivery === null
       ? `route=${metaReviewRoute} | runtime_delivery=-`
       : `route=${metaReviewRoute} | runtime_delivery=${status.metaReview.runtimeDelivery.status}${status.metaReview.runtimeDelivery.reasonCode !== null ? `/${status.metaReview.runtimeDelivery.reasonCode}` : ""} @ ${dim(formatTableTimestamp(status.metaReview.runtimeDelivery.observedAt))}`;
+  const runtimeSummary = status.watchdog.monitored
+    ? `last ${dim(formatClockTimestamp(status.paneActivity.lastChangedAt))} | age=${dim(formatElapsedSeconds(status.paneActivity.sinceLastChangedSeconds))} | watchdog ${green("on")} ${status.watchdog.timeoutMinutes}m rem=${formatWatchdogRemaining(status.watchdog)}`
+    : `inactive | last observed ${dim(formatClockTimestamp(status.paneActivity.lastChangedAt))} | watchdog ${dim("off")} ${status.watchdog.timeoutMinutes}m rem=${formatWatchdogRemaining(status.watchdog)}`;
   const rows: Array<readonly [string, string]> = [
     [
       "Bubble",
@@ -111,7 +114,7 @@ export function renderBubbleStatusTable(
     ],
     [
       "Runtime",
-      `last ${dim(formatClockTimestamp(status.paneActivity.lastChangedAt))} | age=${dim(formatElapsedSeconds(status.paneActivity.sinceLastChangedSeconds))} | watchdog ${status.watchdog.monitored ? green("on") : dim("off")} ${status.watchdog.timeoutMinutes}m rem=${formatWatchdogRemaining(status.watchdog)}`
+      runtimeSummary
     ],
     [
       "Review",
