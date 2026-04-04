@@ -58,7 +58,9 @@ export function buildStatusPaneCommand(
     "prev_signature=''",
     "printf '\\033[2J\\033[H'",
     "while true; do",
-    "  heartbeat_bucket=$(date -u '+%Y-%m-%dT%H:%M' 2>/dev/null || printf '?')",
+    // Include seconds so relative runtime/watchdog fields do not appear frozen
+    // between minute boundaries when the lifecycle state itself is unchanged.
+    "  heartbeat_bucket=$(date -u '+%Y-%m-%dT%H:%M:%S' 2>/dev/null || printf '?')",
     `  ${watchdogCommand}`,
     `  status_json="$(${statusSignatureCommand} 2>&1)"`,
     "  status_json_exit=$?",

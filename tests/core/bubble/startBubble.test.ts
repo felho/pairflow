@@ -1343,7 +1343,7 @@ describe("startBubble", () => {
     expect(statusScript).toContain(`printf '%s\\n' ${shellQuote(expectedDisplayWorktreePath)}`);
     expect(statusScript).toContain("set +e");
     expect(statusScript).toContain("prev_signature=''");
-    expect(statusScript).toContain("heartbeat_bucket=$(date -u '+%Y-%m-%dT%H:%M'");
+    expect(statusScript).toContain("heartbeat_bucket=$(date -u '+%Y-%m-%dT%H:%M:%S'");
     expect(statusScript).toContain("next_signature=$(");
     expect(statusScript).toContain("status_json_exit=$?");
     expect(statusScript).toContain("__heartbeat_bucket__=");
