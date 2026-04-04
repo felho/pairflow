@@ -481,4 +481,24 @@ describe("renderBubbleStatusTable", () => {
     );
     expect(rendered).toContain("03-08T21:29:10Z");
   });
+
+  it("clips rendered table lines to the provided width", () => {
+    const rendered = renderBubbleStatusTable(createStatusView({}), {
+      maxWidth: 48
+    });
+
+    const lines = rendered.split("\n");
+    expect(lines.every((line) => line.length <= 48)).toBe(true);
+    expect(rendered).toContain("| Bubble");
+    expect(rendered).not.toContain("21:20:00 |");
+  });
+
+  it("pads rendered table lines to the provided width", () => {
+    const rendered = renderBubbleStatusTable(createStatusView({}), {
+      maxWidth: 140
+    });
+
+    const lines = rendered.split("\n");
+    expect(lines.every((line) => line.length === 140)).toBe(true);
+  });
 });

@@ -3,6 +3,7 @@ import {
   blue,
   bold,
   dim,
+  fitToVisibleWidth,
   green,
   padRightVisible,
   visibleLength,
@@ -23,7 +24,49 @@ import {
   formatWatchdogRemaining
 } from "./statusCliValueFormatters.js";
 
-function renderKeyValueTable(rows: ReadonlyArray<readonly [string, string]>): string {
+export interface RenderBubbleStatusTableOptions {
+  maxWidth?: number;
+}
+
+function resolveRenderWidth(maxWidth?: number): number | undefined {
+  if (
+    maxWidth !== undefined &&
+    Number.isFinite(maxWidth) &&
+    maxWidth > 0
+  ) {
+    return Math.floor(maxWidth);
+  }
+
+  if (
+    process.stdout.isTTY &&
+    typeof process.stdout.columns === "number" &&
+    Number.isFinite(process.stdout.columns) &&
+    process.stdout.columns > 0
+  ) {
+    return Math.floor(process.stdout.columns);
+  }
+
+  return undefined;
+}
+
+function fitRenderedLines(
+  lines: ReadonlyArray<string>,
+  maxWidth?: number
+): string {
+  const renderWidth = resolveRenderWidth(maxWidth);
+  if (renderWidth === undefined) {
+    return lines.join("\n");
+  }
+
+  return lines
+    .map((line) => fitToVisibleWidth(line, renderWidth))
+    .join("\n");
+}
+
+function renderKeyValueTable(
+  rows: ReadonlyArray<readonly [string, string]>,
+  options: RenderBubbleStatusTableOptions = {}
+): string {
   const labelWidth = rows.reduce((max, [label]) => Math.max(max, label.length), 0);
   const valueWidth = rows.reduce(
     (max, [, value]) => Math.max(max, visibleLength(value)),
@@ -39,10 +82,13 @@ function renderKeyValueTable(rows: ReadonlyArray<readonly [string, string]>): st
     return `| ${paddedLabel} | ${paddedValue} |`;
   });
 
-  return [horizontal, ...body, horizontal].join("\n");
+  return fitRenderedLines([horizontal, ...body, horizontal], options.maxWidth);
 }
 
-export function renderBubbleStatusTable(status: BubbleStatusView): string {
+export function renderBubbleStatusTable(
+  status: BubbleStatusView,
+  options: RenderBubbleStatusTableOptions = {}
+): string {
   const failingGateReasonCodes = status.failing_gates.map((gate) => gate.reason_code);
   const stateValidationSummary =
     status.stateValidation === null
@@ -113,5 +159,5 @@ export function renderBubbleStatusTable(status: BubbleStatusView): string {
     ]);
   }
 
-  return renderKeyValueTable(rows);
+  return renderKeyValueTable(rows, options);
 }
