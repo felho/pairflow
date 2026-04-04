@@ -9,6 +9,51 @@ import {
 } from "../../src/cli/commands/bubble/status.js";
 import type { BubbleStatusView } from "../../src/core/bubble/statusBubble.js";
 
+function formatLocalClock(value: string): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23"
+  }).formatToParts(new Date(value));
+  const hour = parts.find((part) => part.type === "hour")?.value;
+  const minute = parts.find((part) => part.type === "minute")?.value;
+  const second = parts.find((part) => part.type === "second")?.value;
+  if (hour === undefined || minute === undefined || second === undefined) {
+    throw new Error(`Failed to format local clock timestamp: ${value}`);
+  }
+  return `${hour}:${minute}:${second}`;
+}
+
+function formatLocalTableTimestamp(value: string): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+    timeZoneName: "shortOffset"
+  }).formatToParts(new Date(value));
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+  const hour = parts.find((part) => part.type === "hour")?.value;
+  const minute = parts.find((part) => part.type === "minute")?.value;
+  const second = parts.find((part) => part.type === "second")?.value;
+  const timeZoneName = parts.find((part) => part.type === "timeZoneName")?.value;
+  if (
+    month === undefined
+    || day === undefined
+    || hour === undefined
+    || minute === undefined
+    || second === undefined
+    || timeZoneName === undefined
+  ) {
+    throw new Error(`Failed to format local table timestamp: ${value}`);
+  }
+  return `${month}-${day}T${hour}:${minute}:${second} ${timeZoneName}`;
+}
+
 describe("parseBubbleStatusCommandOptions", () => {
   it("parses required and optional flags", () => {
     const parsed = parseBubbleStatusCommandOptions([
@@ -217,7 +262,7 @@ describe("renderBubbleStatusText", () => {
     );
     expect(rendered).toContain("Bubble start: 2026-02-22T11:58:00.000Z");
     expect(rendered).toContain(
-      "Pane activity: last=12:04:00 age=120s"
+      `Pane activity: last=${formatLocalClock("2026-02-22T12:04:00.000Z")} age=120s`
     );
     expect(rendered).toContain("Last review verification: n/a");
   });
@@ -377,10 +422,14 @@ describe("renderBubbleStatusTable", () => {
     const rendered = renderBubbleStatusTable(createStatusView({}));
 
     expect(rendered).toContain("| Bubble");
-    expect(rendered).toContain("state: valid | cli path: worktree_local | start: 21:20:00");
+    expect(rendered).toContain(
+      `state: valid | cli path: worktree_local | start: ${formatLocalClock("2026-03-08T21:20:00.000Z")}`
+    );
     expect(rendered).not.toContain("b_status_render_01 | state:");
     expect(rendered).toContain("| Lifecycle");
-    expect(rendered).toContain("since 21:29:15");
+    expect(rendered).toContain(
+      `since ${formatLocalClock("2026-03-08T21:29:15.948Z")}`
+    );
     expect(rendered).not.toContain("| State validation");
     expect(rendered).not.toContain("| Command path");
     expect(rendered).toContain("| Runtime");
@@ -393,14 +442,18 @@ describe("renderBubbleStatusTable", () => {
     expect(rendered).toContain("| Transcript");
     expect(rendered).toContain("verification=n/a");
     expect(rendered).toContain("runtime_delivery=-");
-    expect(rendered).toContain("last 21:25:00");
+    expect(rendered).toContain(
+      `last ${formatLocalClock("2026-03-08T21:25:00.000Z")}`
+    );
     expect(rendered).toContain("age=255s");
     expect(rendered).not.toContain("sample=");
     expect(rendered).not.toContain("exp=");
     expect(rendered).not.toContain("Failing gates:");
     expect(rendered).not.toContain("Spec lock:");
     expect(rendered).not.toContain("Round gate:");
-    expect(rendered).toContain("last=APPROVAL_DECISION @ 21:29:15");
+    expect(rendered).toContain(
+      `last=APPROVAL_DECISION @ ${formatLocalClock("2026-03-08T21:29:15.948Z")}`
+    );
     expect(rendered).not.toContain("2026-03-08T21:29:15.948Z");
 
     const inboxIndex = rendered.indexOf("| Inbox");
@@ -479,7 +532,9 @@ describe("renderBubbleStatusTable", () => {
     expect(rendered).toContain(
       "route=human_gate_dispatch_failed | runtime_delivery=failed/META_REVIEW_REQUEST_DELIVERY_FAILED"
     );
-    expect(rendered).toContain("03-08T21:29:10Z");
+    expect(rendered).toContain(
+      formatLocalTableTimestamp("2026-03-08T21:29:10.000Z")
+    );
   });
 
   it("clips rendered table lines to the provided width", () => {
@@ -490,7 +545,9 @@ describe("renderBubbleStatusTable", () => {
     const lines = rendered.split("\n");
     expect(lines.every((line) => line.length <= 48)).toBe(true);
     expect(rendered).toContain("| Bubble");
-    expect(rendered).not.toContain("21:20:00 |");
+    expect(rendered).not.toContain(
+      `${formatLocalClock("2026-03-08T21:20:00.000Z")} |`
+    );
   });
 
   it("pads rendered table lines to the provided width", () => {

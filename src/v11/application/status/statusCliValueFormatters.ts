@@ -1,6 +1,13 @@
 import { blue, bold, cyan, dim, green, red, white, yellow } from "./statusCliAnsi.js";
 import type { BubbleStatusV11View as BubbleStatusView } from "./emitStatusV11.js";
 
+export interface StatusTimestampFormatOptions {
+  timeZone?: string;
+}
+
+const clockFormatterCache = new Map<string, Intl.DateTimeFormat>();
+const tableFormatterCache = new Map<string, Intl.DateTimeFormat>();
+
 export function formatStateLabel(value: string): string {
   if (value.includes("RUNNING")) {
     return bold(green(value));
@@ -81,19 +88,57 @@ export function formatWatchdogRemaining(status: BubbleStatusView["watchdog"]): s
   return green(`${remaining}s`);
 }
 
-export function formatTableTimestamp(value: string | null): string {
-  if (value === null) {
-    return "-";
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  const iso = parsed.toISOString();
-  return iso.slice(5, 19) + "Z";
+function resolveFormatterTimeZone(
+  options: StatusTimestampFormatOptions = {}
+): string {
+  return options.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone ?? "UTC";
 }
 
-export function formatClockTimestamp(value: string | null): string {
+function readTimestampPart(parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes): string | null {
+  return parts.find((part) => part.type === type)?.value ?? null;
+}
+
+function getClockFormatter(timeZone: string): Intl.DateTimeFormat {
+  let formatter = clockFormatterCache.get(timeZone);
+  if (formatter !== undefined) {
+    return formatter;
+  }
+
+  formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23"
+  });
+  clockFormatterCache.set(timeZone, formatter);
+  return formatter;
+}
+
+function getTableFormatter(timeZone: string): Intl.DateTimeFormat {
+  let formatter = tableFormatterCache.get(timeZone);
+  if (formatter !== undefined) {
+    return formatter;
+  }
+
+  formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+    timeZoneName: "shortOffset"
+  });
+  tableFormatterCache.set(timeZone, formatter);
+  return formatter;
+}
+
+export function formatTableTimestamp(
+  value: string | null,
+  options: StatusTimestampFormatOptions = {}
+): string {
   if (value === null) {
     return "-";
   }
@@ -101,7 +146,45 @@ export function formatClockTimestamp(value: string | null): string {
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return parsed.toISOString().slice(11, 19);
+  const parts = getTableFormatter(resolveFormatterTimeZone(options)).formatToParts(parsed);
+  const month = readTimestampPart(parts, "month");
+  const day = readTimestampPart(parts, "day");
+  const hour = readTimestampPart(parts, "hour");
+  const minute = readTimestampPart(parts, "minute");
+  const second = readTimestampPart(parts, "second");
+  const timeZoneName = readTimestampPart(parts, "timeZoneName");
+  if (
+    month === null
+    || day === null
+    || hour === null
+    || minute === null
+    || second === null
+    || timeZoneName === null
+  ) {
+    return value;
+  }
+  return `${month}-${day}T${hour}:${minute}:${second} ${timeZoneName}`;
+}
+
+export function formatClockTimestamp(
+  value: string | null,
+  options: StatusTimestampFormatOptions = {}
+): string {
+  if (value === null) {
+    return "-";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  const parts = getClockFormatter(resolveFormatterTimeZone(options)).formatToParts(parsed);
+  const hour = readTimestampPart(parts, "hour");
+  const minute = readTimestampPart(parts, "minute");
+  const second = readTimestampPart(parts, "second");
+  if (hour === null || minute === null || second === null) {
+    return value;
+  }
+  return `${hour}:${minute}:${second}`;
 }
 
 export function formatElapsedSeconds(value: number | null): string {
