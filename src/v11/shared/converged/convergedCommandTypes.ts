@@ -2,6 +2,7 @@ import type { AgentName } from "../../../types/bubble.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
+import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
   applyMetaReviewGateOnConvergence,
@@ -34,6 +35,7 @@ export interface EmitConvergedInput {
   findings?: ConvergedStructuredFinding[];
   cwd?: string;
   now?: Date;
+  authoritativeContext?: ActorEmitContextSnapshot;
   expectedStateFingerprint?: string;
   expectedRound?: number;
   expectedReviewer?: AgentName;

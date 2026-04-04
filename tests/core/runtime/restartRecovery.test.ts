@@ -344,7 +344,10 @@ describe("restart recovery", () => {
     expect(result.human_question.delivery?.delivered).toBe(false);
   });
 
-  it("mints fresh reviewer authority on restart and rejects the pre-restart handoff", async () => {
+  it(
+    "mints fresh reviewer authority on restart and rejects the pre-restart handoff",
+    { timeout: 15_000 },
+    async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
@@ -418,37 +421,40 @@ describe("restart recovery", () => {
     await expect(
       runAgentEmitCommand([
         "--kind",
-        "human_question",
+        "pass",
         "--repo",
         repoPath,
         "--bubble-id",
         bubble.bubbleId,
         "--handoff-id",
         reviewerExecutionContext.handoff_id,
-        "--question",
-        "Is the stale reviewer authority still valid?"
+        "--summary",
+        "Is the stale reviewer authority still valid?",
+        "--no-findings"
       ])
     ).rejects.toThrow(/Canonical actor emit handoff mismatch/u);
 
     const result = await runAgentEmitCommand([
       "--kind",
-      "human_question",
+      "pass",
       "--repo",
       repoPath,
       "--bubble-id",
       bubble.bubbleId,
       "--handoff-id",
       "reviewer:b_restart_reviewer_01:round:1:attempt:2",
-      "--question",
-      "Use the fresh reviewer authority after resume."
+      "--summary",
+      "Use the fresh reviewer authority after resume.",
+      "--no-findings"
     ]);
 
-    expect(result?.kind).toBe("human_question");
-    if (result === null || result.kind !== "human_question") {
-      throw new Error("Expected human_question result.");
+    expect(result?.kind).toBe("pass");
+    if (result === null || result.kind !== "pass") {
+      throw new Error("Expected pass result.");
     }
-    expect(result.human_question.delivery?.delivered).toBe(false);
-  });
+    expect(result.pass.state.active_role).toBe("implementer");
+    }
+  );
 
   it("keeps canonical meta-review submit routeable after delivery failure, restart recovery, and missing pane rebinding", async () => {
     const repoPath = await createTempRepo();

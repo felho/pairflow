@@ -5,11 +5,13 @@ import {
 } from "../../../core/bubble/ideation.js";
 import { resolveBubbleFromWorkspaceCwd } from "../../../core/bubble/workspaceResolution.js";
 import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
+import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
 import type { AgentName, BubbleStateSnapshot } from "../../../types/bubble.js";
 
 export interface PrepareConvergedRoutingInput {
   cwd?: string;
   now: Date;
+  authoritativeContext?: ActorEmitContextSnapshot;
   expectedStateFingerprint?: string;
   expectedRound?: number;
   expectedReviewer?: AgentName;
@@ -106,7 +108,20 @@ export async function prepareConvergedRouting(
   const resolveIdeationMetadataFn =
     dependencies.resolveIdeationMetadata ?? resolveIdeationMetadata;
 
-  const resolved = await resolveBubbleFromWorkspace(input.cwd);
+  const authoritativeResolved =
+    input.authoritativeContext === undefined
+      ? undefined
+      : {
+          bubbleId: input.authoritativeContext.bubble_id,
+          repoPath: input.authoritativeContext.repo,
+          bubblePaths: input.authoritativeContext.resolved.bubblePaths,
+          bubbleConfig: input.authoritativeContext.resolved.bubbleConfig,
+          worktreePath: input.authoritativeContext.worktree_path,
+          cwd: input.authoritativeContext.worktree_path
+        };
+  const resolved =
+    authoritativeResolved
+    ?? await resolveBubbleFromWorkspace(input.cwd);
   const bubbleIdentity = await ensureBubbleIdentity({
     bubbleId: resolved.bubbleId,
     repoPath: resolved.repoPath,
@@ -116,6 +131,8 @@ export async function prepareConvergedRouting(
   });
   resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
 
+  // Even when the caller provides authoritative actor context, convergence must
+  // independently re-read the persisted state before applying stale guards.
   const loadedState = await readStateSnapshotFn(resolved.bubblePaths.statePath);
   if (
     input.expectedStateFingerprint !== undefined

@@ -1,5 +1,6 @@
 import type { EnsureBubbleInstanceIdForMutationResult } from "../../../core/bubble/bubbleInstanceId.js";
 import type { ResolvedBubbleWorkspace } from "../../../core/bubble/workspaceResolution.js";
+import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
 import type { ConvergencePolicyResult } from "../../../core/convergence/policy.js";
 import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import type { PairflowCommandPathAssessment } from "../../../core/runtime/pairflowCommand.js";
@@ -33,6 +34,7 @@ export interface RunConvergedFlowInput {
   findings?: ConvergedStructuredFinding[];
   now: Date;
   cwd?: string;
+  authoritativeContext?: ActorEmitContextSnapshot;
   expectedStateFingerprint?: string;
   expectedRound?: number;
   expectedReviewer?: AgentName;
@@ -92,6 +94,7 @@ export interface RunConvergedFlowDependencies
   prepareConvergedRouting: (input: {
     cwd?: string;
     now: Date;
+    authoritativeContext?: ActorEmitContextSnapshot;
     expectedStateFingerprint?: string;
     expectedRound?: number;
     expectedReviewer?: AgentName;

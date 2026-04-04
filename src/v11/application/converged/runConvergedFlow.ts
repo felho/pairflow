@@ -200,6 +200,9 @@ function buildRoutingInput(input: RunConvergedFlowInput): Parameters<
     ...(input.cwd !== undefined
       ? { cwd: input.cwd }
       : {}),
+    ...(input.authoritativeContext !== undefined
+      ? { authoritativeContext: input.authoritativeContext }
+      : {}),
     ...(input.expectedStateFingerprint !== undefined
       ? { expectedStateFingerprint: input.expectedStateFingerprint }
       : {}),

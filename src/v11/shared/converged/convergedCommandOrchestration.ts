@@ -32,6 +32,7 @@ export async function emitConvergedFromWorkspaceCommandOrchestration(
     ...(normalized.findings.length > 0 ? { findings: normalized.findings } : {}),
     now: normalized.now,
     cwd: input.cwd,
+    authoritativeContext: input.authoritativeContext,
     expectedStateFingerprint: input.expectedStateFingerprint,
     expectedRound: input.expectedRound,
     expectedReviewer: input.expectedReviewer,

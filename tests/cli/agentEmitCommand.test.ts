@@ -17,9 +17,11 @@ import {
   buildMetaReviewExecutionContext
 } from "../../src/core/bubble/metaReviewExecutionContext.js";
 import {
+  buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
 } from "../../src/core/state/executionContext.js";
 import { writeStateSnapshot } from "../../src/core/state/stateStore.js";
+import type { AgentName } from "../../src/types/bubble.js";
 
 const tempDirs: string[] = [];
 
@@ -28,6 +30,38 @@ async function createTempRepo(): Promise<string> {
   tempDirs.push(root);
   await initGitRepository(root);
   return root;
+}
+
+async function switchFixtureToReviewerAuthority(input: {
+  bubbleId: string;
+  statePath: string;
+  reviewer: AgentName;
+  watchdogTimeoutMinutes: number;
+  startedAt?: string;
+}): Promise<void> {
+  const loaded = await readStateSnapshot(input.statePath);
+  const startedAt = input.startedAt ?? "2026-03-24T10:10:00.000Z";
+  await writeStateSnapshot(
+    input.statePath,
+    {
+      ...loaded.state,
+      active_agent: input.reviewer,
+      active_role: "reviewer",
+      execution_context: buildRunningExecutionContext({
+        bubbleId: input.bubbleId,
+        round: loaded.state.round,
+        activeRole: "reviewer",
+        startedAt,
+        watchdogTimeoutMinutes: input.watchdogTimeoutMinutes
+      }),
+      active_since: startedAt,
+      last_command_at: startedAt
+    },
+    {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "RUNNING"
+    }
+  );
 }
 
 afterEach(async () => {
@@ -328,6 +362,55 @@ describe("runAgentEmitCommand", () => {
         String(handoffId),
         "--summary",
         "Duplicate canonical pass"
+      ])
+    ).rejects.toThrow(/Canonical actor emit handoff mismatch/u);
+  });
+
+  it("rejects duplicate reviewer pass emits after authority already advanced", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_agent_emit_reviewer_pass_dup_01",
+      task: "Canonical duplicate reviewer pass emit"
+    });
+    await switchFixtureToReviewerAuthority({
+      bubbleId: bubble.bubbleId,
+      statePath: bubble.paths.statePath,
+      reviewer: bubble.config.agents.reviewer,
+      watchdogTimeoutMinutes: bubble.config.watchdog_timeout_minutes
+    });
+
+    const loadedState = await readStateSnapshot(bubble.paths.statePath);
+    const handoffId = loadedState.state.execution_context?.handoff_id;
+    expect(handoffId).toBeDefined();
+
+    await runAgentEmitCommand([
+      "--kind",
+      "pass",
+      "--repo",
+      repoPath,
+      "--bubble-id",
+      bubble.bubbleId,
+      "--handoff-id",
+      String(handoffId),
+      "--summary",
+      "First canonical reviewer pass",
+      "--no-findings"
+    ]);
+
+    await expect(
+      runAgentEmitCommand([
+        "--kind",
+        "pass",
+        "--repo",
+        repoPath,
+        "--bubble-id",
+        bubble.bubbleId,
+        "--handoff-id",
+        String(handoffId),
+        "--summary",
+        "Duplicate canonical reviewer pass",
+        "--no-findings"
       ])
     ).rejects.toThrow(/Canonical actor emit handoff mismatch/u);
   });

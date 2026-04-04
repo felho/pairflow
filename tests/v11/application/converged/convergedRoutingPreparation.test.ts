@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { IDEATION_CONVERGED_BLOCKED } from "../../../../src/core/bubble/ideation.js";
+import type { AgentName } from "../../../../src/types/bubble.js";
 import { prepareConvergedRouting } from "../../../../src/v11/application/converged/convergedRoutingPreparation.js";
 
 function toErrorMessage(input: PairflowCommandErrorInput): string {
@@ -146,6 +147,110 @@ describe("prepareConvergedRouting", () => {
     );
   });
 
+  it("throws stale-state error when expected round mismatches", async () => {
+    await expect(
+      prepareConvergedRouting(
+        {
+          now: new Date("2026-03-19T10:00:00.000Z"),
+          expectedRound: 2,
+          createError: (input) => new Error(toErrorMessage(input))
+        },
+        {
+          resolveBubbleFromWorkspaceCwd: async () => ({
+            bubbleId: "b_test_round_mismatch",
+            repoPath: "/repo",
+            bubblePaths: {
+              statePath: "/repo/.pairflow/state.json"
+            },
+            bubbleConfig: {
+              agents: {
+                implementer: "codex",
+                reviewer: "claude"
+              }
+            }
+          }) as never,
+          ensureBubbleInstanceIdForMutation: async () => ({
+            bubbleInstanceId: "bi_test_round_mismatch",
+            bubbleConfig: {
+              agents: {
+                implementer: "codex",
+                reviewer: "claude"
+              }
+            }
+          }) as never,
+          readStateSnapshot: async () => ({
+            fingerprint: "fp-round",
+            state: {
+              state: "RUNNING",
+              round: 3,
+              active_role: "reviewer",
+              active_agent: "claude",
+              active_since: "2026-03-19T09:50:00.000Z"
+            }
+          }) as never,
+          resolveIdeationMetadata: () => ({
+            mode: false,
+            taskPending: false
+          })
+        }
+      )
+    ).rejects.toThrow(
+      "AUTO_CONVERGE_STATE_STALE: Convergence validation failed: expected round 2, got 3."
+    );
+  });
+
+  it("throws stale-state error when expected reviewer mismatches", async () => {
+    await expect(
+      prepareConvergedRouting(
+        {
+          now: new Date("2026-03-19T10:00:00.000Z"),
+          expectedReviewer: "other-reviewer" as AgentName,
+          createError: (input) => new Error(toErrorMessage(input))
+        },
+        {
+          resolveBubbleFromWorkspaceCwd: async () => ({
+            bubbleId: "b_test_reviewer_mismatch",
+            repoPath: "/repo",
+            bubblePaths: {
+              statePath: "/repo/.pairflow/state.json"
+            },
+            bubbleConfig: {
+              agents: {
+                implementer: "codex",
+                reviewer: "claude"
+              }
+            }
+          }) as never,
+          ensureBubbleInstanceIdForMutation: async () => ({
+            bubbleInstanceId: "bi_test_reviewer_mismatch",
+            bubbleConfig: {
+              agents: {
+                implementer: "codex",
+                reviewer: "claude"
+              }
+            }
+          }) as never,
+          readStateSnapshot: async () => ({
+            fingerprint: "fp-reviewer",
+            state: {
+              state: "RUNNING",
+              round: 3,
+              active_role: "reviewer",
+              active_agent: "claude",
+              active_since: "2026-03-19T09:50:00.000Z"
+            }
+          }) as never,
+          resolveIdeationMetadata: () => ({
+            mode: false,
+            taskPending: false
+          })
+        }
+      )
+    ).rejects.toThrow(
+      "AUTO_CONVERGE_STATE_STALE: Convergence validation failed: expected reviewer other-reviewer, got claude."
+    );
+  });
+
   it("blocks converged when ideation kickoff is pending", async () => {
     await expect(
       prepareConvergedRouting(
@@ -193,5 +298,96 @@ describe("prepareConvergedRouting", () => {
         }
       )
     ).rejects.toThrow(new RegExp(IDEATION_CONVERGED_BLOCKED, "u"));
+  });
+
+  it("reuses authoritative actor context without re-resolving workspace and still revalidates persisted state", async () => {
+    const now = new Date("2026-03-19T10:05:00.000Z");
+    let resolveBubbleCalls = 0;
+    let readStateCalls = 0;
+
+    const prepared = await prepareConvergedRouting(
+      {
+        now,
+        authoritativeContext: {
+          repo: "/repo",
+          bubble_id: "b_conv_ctx_01",
+          handoff_id: "reviewer:b_conv_ctx_01:round:3:attempt:1",
+          expected_role: "reviewer",
+          expected_round: 3,
+          expected_state_fingerprint: "fp_conv_ctx_01",
+          worktree_path: "/repo/.pairflow/worktrees/b_conv_ctx_01",
+          resolved: {
+            bubbleId: "b_conv_ctx_01",
+            repoPath: "/repo",
+            bubblePaths: {
+              statePath: "/repo/.pairflow/bubbles/b_conv_ctx_01/state.json",
+              worktreePath: "/repo/.pairflow/worktrees/b_conv_ctx_01"
+            },
+            bubbleConfig: {
+              agents: {
+                implementer: "codex",
+                reviewer: "claude"
+              }
+            }
+          } as never,
+          loaded_state: {
+            fingerprint: "fp_conv_ctx_01",
+            state: {
+              state: "RUNNING",
+              round: 3,
+              active_role: "reviewer",
+              active_agent: "claude",
+              active_since: "2026-03-19T09:55:00.000Z"
+            }
+          } as never,
+          execution_context: {
+            handoff_id: "reviewer:b_conv_ctx_01:round:3:attempt:1",
+            round: 3
+          } as never
+        },
+        expectedStateFingerprint: "fp_conv_ctx_01",
+        expectedRound: 3,
+        expectedReviewer: "claude",
+        createError: (input) => new Error(toErrorMessage(input))
+      },
+      {
+        resolveBubbleFromWorkspaceCwd: async () => {
+          resolveBubbleCalls += 1;
+          throw new Error("resolveBubbleFromWorkspaceCwd should not run");
+        },
+        ensureBubbleInstanceIdForMutation: async () => ({
+          bubbleInstanceId: "bi_conv_ctx_01",
+          bubbleConfig: {
+            agents: {
+              implementer: "codex",
+              reviewer: "claude"
+            }
+          }
+        }) as never,
+        readStateSnapshot: async (statePath) => {
+          readStateCalls += 1;
+          expect(statePath).toBe("/repo/.pairflow/bubbles/b_conv_ctx_01/state.json");
+          return {
+            fingerprint: "fp_conv_ctx_01",
+            state: {
+              state: "RUNNING",
+              round: 3,
+              active_role: "reviewer",
+              active_agent: "claude",
+              active_since: "2026-03-19T09:55:00.000Z"
+            }
+          } as never;
+        },
+        resolveIdeationMetadata: () => ({
+          mode: false,
+          taskPending: false
+        })
+      }
+    );
+
+    expect(resolveBubbleCalls).toBe(0);
+    expect(readStateCalls).toBe(1);
+    expect(prepared.state.round).toBe(3);
+    expect(prepared.resolved.cwd).toBe("/repo/.pairflow/worktrees/b_conv_ctx_01");
   });
 });
