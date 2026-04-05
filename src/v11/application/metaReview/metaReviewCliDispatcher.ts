@@ -31,7 +31,7 @@ async function runMetaReviewRunCommand(input: {
   };
 }
 
-async function runMetaReviewStatusCommand(input: {
+async function runMetaReviewStatusProjectionCommand(input: {
   options: Extract<BubbleMetaReviewExecutableCommandOptions, { command: "status" }>;
   cwd: string;
 }): Promise<BubbleMetaReviewCommandResult> {
@@ -46,7 +46,7 @@ async function runMetaReviewStatusCommand(input: {
   };
 }
 
-async function runMetaReviewLastReportCommand(input: {
+async function runMetaReviewLastReportProjectionCommand(input: {
   options: Extract<BubbleMetaReviewExecutableCommandOptions, { command: "last-report" }>;
   cwd: string;
 }): Promise<BubbleMetaReviewCommandResult> {
@@ -61,7 +61,7 @@ async function runMetaReviewLastReportCommand(input: {
   };
 }
 
-async function runMetaReviewRecoverCommand(input: {
+async function runMetaReviewRecoverSnapshotReplayCommand(input: {
   options: Extract<BubbleMetaReviewExecutableCommandOptions, { command: "recover" }>;
   cwd: string;
 }): Promise<BubbleMetaReviewCommandResult> {
@@ -87,19 +87,19 @@ export async function dispatchMetaReviewCommand(input: {
     });
   }
   if (input.options.command === "status") {
-    return runMetaReviewStatusCommand({
+    return runMetaReviewStatusProjectionCommand({
       options: input.options,
       cwd: input.cwd
     });
   }
   if (input.options.command === "last-report") {
-    return runMetaReviewLastReportCommand({
+    return runMetaReviewLastReportProjectionCommand({
       options: input.options,
       cwd: input.cwd
     });
   }
   if (input.options.command === "recover") {
-    return runMetaReviewRecoverCommand({
+    return runMetaReviewRecoverSnapshotReplayCommand({
       options: input.options,
       cwd: input.cwd
     });

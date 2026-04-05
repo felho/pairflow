@@ -17,7 +17,8 @@ import {
   appendMetaReviewStatusVerboseLines,
   buildMetaReviewOutcomeHeaderLines,
   buildMetaReviewRecoverText,
-  buildMetaReviewStatusHeaderLines
+  buildMetaReviewStatusHeaderLines,
+  formatMetaReviewProjectionFreshness
 } from "./metaReviewCliRenderersHelpers.js";
 
 export function renderMetaReviewRunText(result: MetaReviewRunResult): string {
@@ -72,7 +73,8 @@ export function renderMetaReviewLastReportText(
   verbose: boolean
 ): string {
   const lines = [
-    `Meta-review last report for ${view.bubbleId}: has_report=${view.has_report ? "yes" : "no"}`,
+    `Meta-review last-report projection for ${view.bubbleId}: has_report=${view.has_report ? "yes" : "no"}, freshness=${formatMetaReviewProjectionFreshness(view.projection_freshness)}`,
+    "Operator surface: projection-only read path (no live rerun, no operator-origin submit authority)",
     `Report ref: ${view.report_ref ?? "-"}`,
     `Summary: ${view.summary ?? "-"}`,
     `Updated: ${view.updated_at ?? "-"}`,

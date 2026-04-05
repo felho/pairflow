@@ -15,6 +15,7 @@ import {
   renderMetaReviewStatusText,
   runBubbleMetaReviewCommand
 } from "../../src/cli/commands/bubble/metaReview.js";
+import { formatMetaReviewProjectionFreshness } from "../../src/v11/application/metaReview/metaReviewCliRenderersHelpers.js";
 import { buildMetaReviewExecutionContext } from "../../src/core/bubble/metaReviewExecutionContext.js";
 import { MetaReviewError } from "../../src/core/bubble/metaReview.js";
 import {
@@ -91,11 +92,18 @@ describe("parseBubbleMetaReviewCommandOptions", () => {
     const parsed = parseBubbleMetaReviewCommandOptions(["--help"]);
     expect(parsed).toEqual({ help: true });
     expect(getBubbleMetaReviewHelpText()).toContain("pairflow bubble meta-review");
+    expect(getBubbleMetaReviewHelpText()).toContain("Operator live-run command");
+    expect(getBubbleMetaReviewHelpText()).toContain(
+      "Operator projection/recovery commands"
+    );
     expect(getBubbleMetaReviewHelpText()).toContain(
       "pairflow agent emit --kind meta_review_result"
     );
     expect(getBubbleMetaReviewHelpText()).toContain(
       "Legacy `pairflow bubble meta-review submit` was removed"
+    );
+    expect(getBubbleMetaReviewHelpText()).toContain(
+      "`status` and `last-report` are read-only projections"
     );
     expect(getBubbleMetaReviewHelpText()).toContain(buildMetaReviewSubmitUsageLine());
     expect(getBubbleMetaReviewHelpText()).not.toContain("--report-markdown");
@@ -593,7 +601,9 @@ describe("runBubbleMetaReviewCommand", () => {
       "last_autonomous_summary",
       "last_autonomous_updated_at",
       "meta_review_run_id",
+      "operator_surface",
       "parity_diagnostics",
+      "projection_freshness",
       "sticky_human_gate"
     ]);
 
@@ -612,7 +622,9 @@ describe("runBubbleMetaReviewCommand", () => {
       "findings_parity_status",
       "has_report",
       "meta_review_run_id",
+      "operator_surface",
       "parity_diagnostics",
+      "projection_freshness",
       "report_json",
       "report_ref",
       "summary",
@@ -688,6 +700,8 @@ describe("meta-review render helpers", () => {
       {
         bubbleId: "b_meta_cli_render_02",
         has_run: false,
+        operator_surface: "projection_only",
+        projection_freshness: "no_snapshot",
         auto_rework_count: 0,
         auto_rework_limit: 5,
         sticky_human_gate: false,
@@ -712,12 +726,16 @@ describe("meta-review render helpers", () => {
     );
 
     expect(compact).toContain("has_run=no");
+    expect(compact).toContain("freshness=no_snapshot");
+    expect(compact).toContain("projection-only read path");
     expect(compact).toContain("Last autonomous status: -");
 
     const verbose = renderMetaReviewStatusText(
       {
         bubbleId: "b_meta_cli_render_03",
         has_run: true,
+        operator_surface: "projection_only",
+        projection_freshness: "current_round",
         auto_rework_count: 1,
         auto_rework_limit: 5,
         sticky_human_gate: true,
@@ -751,6 +769,8 @@ describe("meta-review render helpers", () => {
       {
         bubbleId: "b_meta_cli_render_04",
         has_report: false,
+        operator_surface: "projection_only",
+        projection_freshness: "no_snapshot",
         report_ref: null,
         summary: null,
         updated_at: null,
@@ -768,11 +788,15 @@ describe("meta-review render helpers", () => {
       false
     );
     expect(empty).toContain("has_report=no");
+    expect(empty).toContain("freshness=no_snapshot");
+    expect(empty).toContain("projection-only read path");
 
     const verbose = renderMetaReviewLastReportText(
       {
         bubbleId: "b_meta_cli_render_05",
         has_report: true,
+        operator_surface: "projection_only",
+        projection_freshness: "current_round",
         report_ref: "artifacts/meta-review-last.json",
         summary: "Latest",
         updated_at: "2026-03-08T12:10:00.000Z",
@@ -799,6 +823,8 @@ describe("meta-review render helpers", () => {
       {
         bubbleId: "b_meta_cli_render_diag_01",
         has_run: true,
+        operator_surface: "projection_only",
+        projection_freshness: "ahead",
         auto_rework_count: 0,
         auto_rework_limit: 5,
         sticky_human_gate: false,
@@ -819,22 +845,27 @@ describe("meta-review render helpers", () => {
         findings_parity_status: null,
         parity_diagnostics: [
           "META_REVIEW_PARITY_ARTIFACT_PARSE_FAILED",
-          "META_REVIEW_SNAPSHOT_ROUND_STALE:snapshot_round=3;current_round=11"
+          "META_REVIEW_SNAPSHOT_ROUND_AHEAD:snapshot_round=11;current_round=3"
         ]
       },
       false
     );
     expect(statusRendered).toContain(
+      "freshness=ahead"
+    );
+    expect(statusRendered).toContain(
       "Parity diagnostics: META_REVIEW_PARITY_ARTIFACT_PARSE_FAILED"
     );
     expect(statusRendered).toContain(
-      "META_REVIEW_SNAPSHOT_ROUND_STALE:snapshot_round=3;current_round=11"
+      "META_REVIEW_SNAPSHOT_ROUND_AHEAD:snapshot_round=11;current_round=3"
     );
 
     const reportRendered = renderMetaReviewLastReportText(
       {
         bubbleId: "b_meta_cli_render_diag_02",
         has_report: true,
+        operator_surface: "projection_only",
+        projection_freshness: "unknown",
         report_ref: "artifacts/meta-review-last.json",
         summary: "Summary",
         updated_at: "2026-03-08T12:12:10.000Z",
@@ -860,6 +891,12 @@ describe("meta-review render helpers", () => {
     expect(reportRendered).toContain(
       "META_REVIEW_SNAPSHOT_ROUND_STALE:snapshot_round=2;current_round=4"
     );
+  });
+
+  it("fails loudly for unexpected projection freshness values", () => {
+    expect(() =>
+      formatMetaReviewProjectionFreshness("future_round" as never)
+    ).toThrow(/META_REVIEW_PROJECTION_FRESHNESS_UNEXPECTED/u);
   });
 
   it("renders recover output", () => {
@@ -907,6 +944,7 @@ describe("meta-review render helpers", () => {
     });
 
     expect(rendered).toContain("route=human_gate_approve");
+    expect(rendered).toContain("snapshot-route replay only");
     expect(rendered).toContain("APPROVAL_REQUEST msg_meta_recover_01");
     expect(rendered).toContain("READY_FOR_HUMAN_APPROVAL");
   });

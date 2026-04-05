@@ -41,7 +41,7 @@ function isMetaReviewKickoffEnvelope(input: {
   );
 }
 
-async function resolveLatestKickoffEnvelope(
+async function resolveLatestKickoffEnvelopeForSnapshotReplay(
   context: RecoverMetaReviewExecutionContext
 ): Promise<{ envelope: MetaReviewGateResult["gateEnvelope"]; sequence: number } | null> {
   const transcript = await context.readTranscript(
@@ -53,6 +53,12 @@ async function resolveLatestKickoffEnvelope(
   );
   const executionContext = context.loaded.state.meta_review?.execution_context ?? null;
   const round = executionContext?.round ?? context.loaded.state.round;
+  const activeHandoffId =
+    executionContext !== null &&
+    typeof executionContext.handoff_id === "string" &&
+    executionContext.handoff_id.trim().length > 0
+      ? executionContext.handoff_id
+      : null;
   const fallbackCandidates: Array<{
     envelope: MetaReviewGateResult["gateEnvelope"];
     sequence: number;
@@ -63,15 +69,14 @@ async function resolveLatestKickoffEnvelope(
       continue;
     }
     const handoffId = envelope.payload.metadata?.[metaReviewHandoffIdMetadataKey];
-    if (
-      executionContext !== null &&
-      typeof handoffId === "string" &&
-      handoffId === executionContext.handoff_id
-    ) {
-      return {
-        envelope,
-        sequence: index + 1
-      };
+    if (activeHandoffId !== null) {
+      if (typeof handoffId === "string" && handoffId === activeHandoffId) {
+        return {
+          envelope,
+          sequence: index + 1
+        };
+      }
+      continue;
     }
     fallbackCandidates.push({
       envelope,
@@ -120,7 +125,9 @@ export async function recoverMetaReviewGateFromSnapshot(
       !runResolution.snapshotHasCanonicalSubmitInActiveWindow &&
       isBeforeDeadline
     ) {
-      const kickoff = await resolveLatestKickoffEnvelope(context);
+      // Before canonical submit exists, recovery may only replay the persisted
+      // kickoff route for the active execution window.
+      const kickoff = await resolveLatestKickoffEnvelopeForSnapshotReplay(context);
       if (kickoff === null) {
         throw new MetaReviewGateError(
           "META_REVIEW_GATE_TRANSITION_INVALID",

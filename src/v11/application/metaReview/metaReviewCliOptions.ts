@@ -13,13 +13,15 @@ export type {
 export function getBubbleMetaReviewHelpText(): string {
   return [
     "Usage:",
-    "  Operator commands:",
+    "  Operator live-run command:",
     "  pairflow bubble meta-review run --id <id> [--repo <path>] [--depth standard|deep] [--json]",
+    "  Operator projection/recovery commands:",
     "  pairflow bubble meta-review status --id <id> [--repo <path>] [--json] [--verbose]",
     "  pairflow bubble meta-review last-report --id <id> [--repo <path>] [--json] [--verbose]",
     "  pairflow bubble meta-review recover --id <id> [--repo <path>] [--json]",
     "  Canonical actor submit:",
     `  ${buildMetaReviewSubmitUsageLine()}`,
+    "  `status` and `last-report` are read-only projections; `recover` replays persisted snapshot routing only.",
     "  Legacy `pairflow bubble meta-review submit` was removed; use the canonical actor emit command above.",
     "",
     "Options:",
