@@ -672,6 +672,101 @@ describe("emitTmuxDeliveryNotification", () => {
     expect(messageCall?.[4]).not.toContain("reviewer-focus.json):");
   });
 
+  it("keeps delivery success transport-only even when confirmed pane output contains acceptance-like tokens", async () => {
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "# [pairflow] r1 PASS codex->claude msg=msg_20260222_101 ref=artifact://handoff.md. Action: Implementer handoff received.\naccepted=true running=true handoff_id=handoff_advanced_02 actor acknowledged work",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        payload: {
+          summary: "handoff",
+          metadata: {
+            [deliveryTargetRoleMetadataKey]: "reviewer"
+          }
+        }
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry())
+    });
+
+    expect(result).toEqual({
+      delivered: true,
+      sessionName: "pf-b_delivery_01",
+      targetPaneIndex: 2,
+      message: expect.stringContaining(
+        "Implementer handoff received. Run a fresh review now."
+      )
+    });
+    expect(result).not.toHaveProperty("reason");
+    expect(Object.keys(result).sort()).toEqual([
+      "delivered",
+      "message",
+      "sessionName",
+      "targetPaneIndex"
+    ]);
+  });
+
+  it("does not treat acceptance-like pane output as canonical delivery when the pairflow marker is missing", { timeout: 5_000 }, async () => {
+    const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {
+      if (args[0] === "capture-pane") {
+        return Promise.resolve({
+          stdout:
+            "accepted=true running=true handoff_id=handoff_advanced_02 actor acknowledged work",
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      });
+    };
+
+    const result = await emitTmuxDeliveryNotification({
+      bubbleId: "b_delivery_01",
+      bubbleConfig: baseConfig,
+      sessionsPath: "/tmp/repo/.pairflow/runtime/sessions.json",
+      envelope: createEnvelope({
+        payload: {
+          summary: "handoff",
+          metadata: {
+            [deliveryTargetRoleMetadataKey]: "reviewer"
+          }
+        }
+      }),
+      runner,
+      readSessionsRegistry: () => Promise.resolve(createRegistry()),
+      deliveryAttempts: 1
+    });
+
+    expect(result).toEqual({
+      delivered: false,
+      sessionName: "pf-b_delivery_01",
+      targetPaneIndex: 2,
+      message: expect.stringContaining(
+        "Implementer handoff received. Run a fresh review now."
+      ),
+      reason: "delivery_unconfirmed"
+    });
+  });
+
   it("renders docs-only skip directive reason without extra tmux formatting changes", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args): Promise<TmuxRunResult> => {

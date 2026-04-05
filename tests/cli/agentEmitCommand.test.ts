@@ -350,6 +350,12 @@ describe("runAgentEmitCommand", () => {
       "First canonical pass"
     ]);
 
+    const afterFirstPass = await readStateSnapshot(bubble.paths.statePath);
+    const reviewerHandoffId = afterFirstPass.state.execution_context?.handoff_id;
+    expect(reviewerHandoffId).toBeDefined();
+    expect(reviewerHandoffId).not.toBe(String(handoffId));
+    expect(afterFirstPass.state.active_role).toBe("reviewer");
+
     await expect(
       runAgentEmitCommand([
         "--kind",
@@ -364,6 +370,13 @@ describe("runAgentEmitCommand", () => {
         "Duplicate canonical pass"
       ])
     ).rejects.toThrow(/Canonical actor emit handoff mismatch/u);
+
+    const afterDuplicateReject = await readStateSnapshot(bubble.paths.statePath);
+    expect(afterDuplicateReject.fingerprint).toBe(afterFirstPass.fingerprint);
+    expect(afterDuplicateReject.state.execution_context?.handoff_id).toBe(
+      reviewerHandoffId
+    );
+    expect(afterDuplicateReject.state.active_role).toBe("reviewer");
   });
 
   it("rejects duplicate reviewer pass emits after authority already advanced", async () => {
@@ -398,6 +411,13 @@ describe("runAgentEmitCommand", () => {
       "--no-findings"
     ]);
 
+    const afterFirstReviewerPass = await readStateSnapshot(bubble.paths.statePath);
+    const implementerHandoffId = afterFirstReviewerPass.state.execution_context?.handoff_id;
+    expect(implementerHandoffId).toBeDefined();
+    expect(implementerHandoffId).not.toBe(String(handoffId));
+    expect(afterFirstReviewerPass.state.active_role).toBe("implementer");
+    expect(afterFirstReviewerPass.state.round).toBe(2);
+
     await expect(
       runAgentEmitCommand([
         "--kind",
@@ -413,6 +433,16 @@ describe("runAgentEmitCommand", () => {
         "--no-findings"
       ])
     ).rejects.toThrow(/Canonical actor emit handoff mismatch/u);
+
+    const afterDuplicateReviewerReject = await readStateSnapshot(bubble.paths.statePath);
+    expect(afterDuplicateReviewerReject.fingerprint).toBe(
+      afterFirstReviewerPass.fingerprint
+    );
+    expect(afterDuplicateReviewerReject.state.execution_context?.handoff_id).toBe(
+      implementerHandoffId
+    );
+    expect(afterDuplicateReviewerReject.state.active_role).toBe("implementer");
+    expect(afterDuplicateReviewerReject.state.round).toBe(2);
   });
 
   it("rejects convergence emit when reviewer authority lacks an active reviewer agent", async () => {
