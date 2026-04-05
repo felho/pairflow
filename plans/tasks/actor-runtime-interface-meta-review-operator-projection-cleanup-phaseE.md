@@ -32,6 +32,44 @@ owners:
 3. A task review-stabil csak akkor, ha a diff vegig megtartja a canonical actor submit authority kulonallasat: `pairflow agent emit --kind meta_review_result` marad az egyetlen canonical actor write path.
 4. `README.md` es `docs/pairflow-initial-design.md` csak felteteles target: kizarolag akkor touched, ha a retained operator surface user-visible szemantikaja tenylegesen pontosodik.
 
+## Tracking Snapshot (2026-04-05)
+
+### Commit Basis
+
+1. A status-tracking snapshot az elozo Phase E es kapcsolodo operator-projection munkak utolso relevans commitjaira epul, kulonosen:
+   - `29f5acd` `bubble(ari-phasee-implementer-pilot): finalize`
+   - `345d54f` `bubble(ari-phasee-reviewer-cutover): finalize`
+   - `f01e0d6` `bubble(ari-meta-reviewer-cutover): finalize`
+   - `12f61ce` `Merge branch 'bubble/ari-meta-review-op-cleanup'`
+   - `413e532` `Merge branch 'bubble/imp-meta-review-ops-phasee'`
+2. Ez a blokk task-scope trackingot ad; nem override-olja az alatti L0/L1/L2 contractot, csak explicitte teszi, hogy mely szeletek tekinthetok lezartnak, reszben lezartnak vagy nyitottnak.
+
+### Upstream Phase E Preconditions
+
+| Scope | Status | Evidence | Notes |
+|---|---|---|---|
+| `implementer` pilot cutover | done | `29f5acd` | Phase E actor-first pilot lezart; ez mar nem resze ennek a tasknak. |
+| `reviewer` cutover | done | `345d54f` | Reviewer actor-runtime cutover lezart; ez a task mar a retained operator cleanup lane. |
+| `meta-reviewer` cutover | done | `f01e0d6` | A canonical meta-review submit authority kulonallasa mar le van zarva; ez a task ennek retained operator cleanup folytatasa. |
+
+### Task Slice Status
+
+| Slice | Contract Rows / Tests | Status | Evidence | Tracking Note |
+|---|---|---|---|---|
+| 1. `status` + `last-report` projection-only closure | `CS1(status|last-report)` + `CS2` + `T1-T3` | partial | `12f61ce` | Initial operator cleanup mar landed a read/projection surface-en, de task-level closure meg mindig kell a current-round freshness/parity + renderer/provenance oldalon. |
+| 2. `recover` snapshot-route replay closure | `CS1(recover)` + `CS3` + `T4-T6` | done | `12f61ce`, `413e532` | A recovery retained operator path explicit snapshot-route replay marad; a follow-up commit canonical top-level `execution_context` authorityra szukitette a recovery source-of-truth-t. |
+| 3. `run` non-regression + renderer boundary stabilization | `CS1(run guard)` + `CS4` + `T7` | pending | none beyond indirect prior coverage | Ez marad a kovetkezo kotelezo implementation slice, egyutt a retained `run|status|last-report|recover` namespace boundary explicit regresszioorzesével. |
+| 4. Docs decision gate | `CS6` + `CS7` + `T8/T9` | pending | none | Csak a fenti kotelezo szeletek utan zarhato le; ha nincs bizonyitott user-visible semantics delta, akkor `T9` docs-omission closure kell. |
+
+### Remaining Closure Target
+
+1. A kovetkezo bounded implementation lepes ennek a tasknak a maradekaban:
+   - `status` / `last-report` projection-only semantics explicit task-level lezárása,
+   - current-round freshness/parity es renderer/provenance boundary tisztitasa,
+   - retained `run` non-regression guard + `T7` evidence,
+   - vegul `T8` vagy `T9` docs decision closure.
+2. Amig a fenti blokk nincs explicitten lezárva, addig ez a task nem tekintheto teljesen kesznek, akkor sem, ha a `recover` szelet mar lezart.
+
 ## L0 - Policy
 
 ### Goal
