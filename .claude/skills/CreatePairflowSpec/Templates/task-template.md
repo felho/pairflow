@@ -38,6 +38,23 @@ owners:
 1. `contract_boundary_override`: `yes|no`
 2. If `yes`, list impacted contracts (DB/API/event/auth/config) and keep `plan_ref` non-null.
 
+### Complexity Risk Gate
+
+1. `authority_risk`: `0|1|2`
+2. `surface_spread`: `0|1|2`
+3. `activation_coupling`: `0|1|2`
+4. `prerequisite_risk`: `0|1|2`
+5. `acceptance_multiplicity`: `0|1|2`
+6. `risk_score`: `<0-10>`
+7. `single-task allowed`: `yes|no`
+8. If `no`, required split:
+   - `foundation/refactor`
+   - `delivery`
+   - `activation/rollout` (optional)
+9. Authority/source-of-truth note:
+   - canonical source: `<text>`
+   - forbidden secondary sources: `<text>`
+
 ## L1 - Change Contract
 
 ### 1) Call-site Matrix

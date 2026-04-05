@@ -41,6 +41,25 @@ Override policy:
 2. `plan_ref` must not be `null`.
 3. L1 must explicitly capture the changed interface contract and test coverage.
 
+## Complexity-Risk Gate (Mandatory)
+
+Before drafting implementation-oriented Plan or Task artifacts, run the `Complexity Risk Gate`.
+
+Use `references/Complexity-Risk-Gate.md` and score these axes:
+1. `authority_risk`
+2. `surface_spread`
+3. `activation_coupling`
+4. `prerequisite_risk`
+5. `acceptance_multiplicity`
+
+Policy:
+1. `0-3`: single task is generally acceptable.
+2. `4-6`: split is strongly recommended; prefer `Plan -> Task`.
+3. `7-10`: refactor-first split is mandatory; do not keep the scope as one feature-delivery task.
+4. If a hard-stop rule from the reference applies, split regardless of total score.
+5. If the task introduces a canonical source-of-truth and also activates runtime behavior, default to `foundation -> delivery -> activation`.
+6. If future milestone-gated behavior is involved, document the contract now but keep activation in a later task.
+
 ## Core Principles
 
 1. Context-first: load known context before asking questions.
@@ -50,6 +69,8 @@ Override policy:
 5. Blocker severity is evidence-based (`P0/P1` only with concrete proof).
 6. Avoid review-loop inflation: prioritize `required-now` vs `later-hardening` tagging.
 7. Identifier discipline first: cross-reference IDs must be canonical, exact-match, and auditable.
+8. Split before implementation when boundary risk is high; do not use a single task to carry foundation, delivery, and activation together.
+9. New canonical authority boundaries should be specified before new behavior is attached to them.
 
 ## Minimum Contract Rules
 
@@ -66,6 +87,12 @@ Override policy:
 9. Test matrix rows must be self-contained for required-now assertions:
    - no hidden dependency on another test row unless explicitly declared as a normative dependency note.
 10. If one row depends on another row for shared invariants, the dependency must be explicit and machine-auditable (for example: `depends_on: T2d for REQ_C/REQ_D`).
+11. Implementation-oriented Task outputs must record complexity-risk triage explicitly:
+   - `risk_score`,
+   - split decision,
+   - authority/source-of-truth note when applicable.
+12. High-risk scopes (`4+`) should prefer an explicit Plan even if work type would otherwise allow task-only.
+13. Very high-risk scopes (`7+` or hard-stop) must not be emitted as direct feature-delivery tasks without an explicit foundation phase.
 
 ## Templates and References
 
@@ -74,6 +101,7 @@ Override policy:
 - PRD template: `Templates/prd-template.md`
 - L1 boundaries checklist: `references/L1-Contract-Boundaries.md`
 - Reviewer tags snippet: `references/Reviewer-Guidelines.md`
+- Complexity risk gate: `references/Complexity-Risk-Gate.md`
 
 ## Examples
 

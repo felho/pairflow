@@ -26,6 +26,8 @@ Teams often have enough context already, but lose time in long interviews or end
 5. Work type determines minimum artifact chain (`task-only` vs `PRD -> Plan -> Task`).
 6. `later-hardening` items are emitted in a standard Hardening Backlog block.
 7. Contract-boundary override forces at least `Plan -> Task` even for small features.
+8. Complexity-risk triage runs before implementation-oriented Plan/Task drafting.
+9. High boundary-risk scopes should split into `foundation -> delivery -> activation` rather than one broad task.
 
 ## Directory layout
 

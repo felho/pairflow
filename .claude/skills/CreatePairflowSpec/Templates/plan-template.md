@@ -14,6 +14,18 @@ owners:
 
 <What this plan delivers and what success means.>
 
+## Complexity / Split Rationale
+
+1. `risk_score`: `<0-10>`
+2. Why a plan is needed:
+   - `<boundary risk / contract override / prerequisite / phase split>`
+3. Split decision:
+   - `foundation/refactor`
+   - `delivery`
+   - `activation/rollout` (optional)
+4. Milestone-gated behavior to defer:
+   - `<text or N/A>`
+
 ## Phase Breakdown
 
 | Phase | Goal | Inputs | Outputs | Exit Criteria |
