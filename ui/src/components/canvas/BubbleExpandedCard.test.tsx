@@ -108,6 +108,29 @@ describe("BubbleExpandedCard", () => {
     expect(screen.getByRole("article")).toHaveClass("border-fuchsia-500");
   });
 
+  it("renders attention badge and border when an issue is present", () => {
+    renderExpandedCard({
+      bubble: bubbleCard({
+        bubbleId: "b-expanded-1",
+        repoPath: "/repo-a",
+        attention: {
+          code: "runtime_missing",
+          severity: "critical",
+          label: "No session",
+          detail: "Runtime session is expected for the current lifecycle state, but none is registered."
+        }
+      })
+    });
+
+    expect(screen.getByRole("article")).toHaveClass("border-rose-500");
+    expect(screen.getAllByText("No session").length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(
+        "Runtime session is expected for the current lifecycle state, but none is registered."
+      )
+    ).toBeInTheDocument();
+  });
+
   it("prefers fresh detail runtime health over stale summary for attach hint", () => {
     renderExpandedCard({
       bubble: bubbleCard({

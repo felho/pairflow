@@ -72,8 +72,15 @@ export const stateVisuals: Record<BubbleLifecycleState, StateVisual> = {
 
 const metaReviewRunningBorder =
   "border-fuchsia-500 shadow-[0_0_24px_rgba(217,70,239,0.18)]";
+const attentionBorder =
+  "border-rose-500 shadow-[0_0_24px_rgba(244,63,94,0.2)]";
 
-export function resolveBubbleBorder(bubble: Pick<BubbleCardModel, "state" | "metaReview">): string {
+export function resolveBubbleBorder(
+  bubble: Pick<BubbleCardModel, "state" | "metaReview" | "attention">
+): string {
+  if (bubble.attention !== null) {
+    return attentionBorder;
+  }
   if (bubble.state === "RUNNING" && bubble.metaReview.authorityActive) {
     return metaReviewRunningBorder;
   }

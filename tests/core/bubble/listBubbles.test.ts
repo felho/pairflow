@@ -11,6 +11,7 @@ import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry
 import { metaReviewExecutionContextToRunningContext } from "../../../src/core/state/executionContext.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
+import { writeWatchdogPaneActivity } from "../../../src/v11/shared/watchdog/watchdogPaneActivityStore.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -210,6 +211,69 @@ describe("listBubbles", () => {
     const listed = await listBubbles({ repoPath });
     expect(listed.byState.READY_FOR_HUMAN_APPROVAL).toBe(1);
     expect(listed.byState.RUNNING).toBe(0);
+  });
+
+  it("surfaces runtime-missing attention in runtime-expected state", async () => {
+    const repoPath = await createTempRepo();
+    await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_list_attention_missing_01",
+      task: "Runtime missing attention"
+    });
+
+    const listed = await listBubbles({
+      repoPath,
+      now: new Date("2026-02-22T18:45:00.000Z")
+    });
+
+    expect(listed.bubbles[0]?.attention).toMatchObject({
+      code: "runtime_missing",
+      severity: "critical",
+      label: "No session"
+    });
+  });
+
+  it("surfaces quiet-pane attention after two quiet minutes", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_list_attention_quiet_01",
+      task: "Quiet pane attention",
+      startedAt: "2026-02-22T18:22:00.000Z"
+    });
+
+    await upsertRuntimeSession({
+      sessionsPath: bubble.paths.sessionsPath,
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      tmuxSessionName: "pf-b_list_attention_quiet_01",
+      now: new Date("2026-02-22T18:30:00.000Z")
+    });
+    await writeWatchdogPaneActivity({
+      runtimeDir: bubble.paths.runtimeDir,
+      bubbleId: bubble.bubbleId,
+      record: {
+        bubble_id: bubble.bubbleId,
+        sampled_at: "2026-02-22T18:29:50.000Z",
+        pane_hash: "hash-quiet",
+        last_changed_at: "2026-02-22T18:20:00.000Z",
+        session_name: "pf-b_list_attention_quiet_01",
+        target_pane: "pf-b_list_attention_quiet_01:0.1",
+        last_sample_status: "sampled"
+      }
+    });
+
+    const listed = await listBubbles({
+      repoPath,
+      now: new Date("2026-02-22T18:30:00.000Z")
+    });
+
+    expect(listed.bubbles[0]?.attention).toMatchObject({
+      code: "quiet_pane",
+      severity: "warning",
+      label: "Quiet 10m"
+    });
   });
 
   it("surfaces active meta-review runtime delivery diagnostics in list summaries", async () => {

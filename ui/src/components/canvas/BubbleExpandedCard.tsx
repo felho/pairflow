@@ -119,9 +119,10 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
     };
   }, [stopDrag]);
 
-  const visual = stateVisuals[props.bubble.state];
-  const borderClass = resolveBubbleBorder(props.bubble);
   const attachSource = props.detail ?? props.bubble;
+  const attention = attachSource.attention;
+  const visual = stateVisuals[attachSource.state];
+  const borderClass = resolveBubbleBorder(attachSource);
   const attach = getAttachAvailability({
     bubbleId: attachSource.bubbleId,
     state: attachSource.state,
@@ -261,11 +262,22 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
           <span className="flex items-center gap-1.5">
             <span className={cn("inline-block h-[7px] w-[7px] rounded-full", visual.led)} />
             <span className={cn("text-[10px] font-medium tracking-wide", visual.stateText)}>
-              {formatStateLabel(props.bubble.state)}
+              {formatStateLabel(attachSource.state)}
             </span>
+            {attention !== null ? (
+              <span className="rounded-full border border-rose-400/70 bg-rose-950/70 px-1.5 py-px text-[8px] font-semibold uppercase tracking-wide text-rose-200">
+                {attention.label}
+              </span>
+            ) : null}
           </span>
         </div>
       </div>
+
+      {attention !== null ? (
+        <div className="mx-4 mb-2 rounded-[10px] border border-rose-500/30 bg-rose-950/30 px-3 py-2 text-[10px] leading-relaxed text-rose-100">
+          {attention.detail ?? attention.label}
+        </div>
+      ) : null}
 
       {copyError !== null ? (
         <div className="mx-4 mb-2 rounded-[10px] border border-amber-500/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-100">

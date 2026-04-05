@@ -137,6 +137,27 @@ function defaultMetaReviewSummary(): UiBubbleSummary["metaReview"] {
   };
 }
 
+function normalizeAttention(
+  input: UiBubbleSummary["attention"] | undefined
+): UiBubbleSummary["attention"] {
+  if (input === undefined || input === null || typeof input !== "object") {
+    return null;
+  }
+  if (
+    typeof input.code !== "string"
+    || (input.severity !== "warning" && input.severity !== "critical")
+    || typeof input.label !== "string"
+  ) {
+    return null;
+  }
+  return {
+    code: input.code,
+    severity: input.severity,
+    label: input.label,
+    ...(typeof input.detail === "string" ? { detail: input.detail } : {})
+  };
+}
+
 function normalizeBubbleSummary(input: UiBubbleSummary): UiBubbleSummary {
   const candidate = (input as Partial<UiBubbleSummary>).metaReview;
   if (candidate === undefined || candidate === null || typeof candidate !== "object") {
@@ -150,6 +171,7 @@ function normalizeBubbleSummary(input: UiBubbleSummary): UiBubbleSummary {
   const status = meta.latestStatus;
   return {
     ...input,
+    attention: normalizeAttention((input as Partial<UiBubbleSummary>).attention),
     metaReview: {
       actor: "meta-reviewer",
       authorityActive: meta.authorityActive === true,
@@ -211,7 +233,17 @@ function toBubbleCardModel(bubble: UiBubbleSummary): BubbleCardModel {
 }
 
 function toBubbleCardModelFromDetail(detail: UiBubbleDetail): BubbleCardModel {
-  return toBubbleCardModel(detail);
+  return toBubbleCardModel({
+    ...detail,
+    attention: normalizeAttention(detail.attention)
+  });
+}
+
+function normalizeBubbleDetail(detail: UiBubbleDetail): UiBubbleDetail {
+  return {
+    ...detail,
+    ...normalizeBubbleSummary(detail)
+  };
 }
 
 function mergeExpandedDetailWithSummary(
@@ -744,7 +776,7 @@ export function createBubbleStore(
         };
 
         if (detailResult.status === "fulfilled") {
-          const detail = detailResult.value;
+          const detail = normalizeBubbleDetail(detailResult.value);
           next.bubbleDetails = {
             ...state.bubbleDetails,
             [bubbleId]: detail

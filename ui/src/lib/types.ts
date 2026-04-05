@@ -93,6 +93,23 @@ export interface UiRuntimeHealth {
   stale: boolean;
 }
 
+export type UiBubbleAttentionCode =
+  | "state_invalid"
+  | "runtime_missing"
+  | "runtime_mismatch"
+  | "no_session"
+  | "pane_unreadable"
+  | "pane_activity_invalid"
+  | "watchdog_expired"
+  | "quiet_pane";
+
+export interface UiBubbleAttention {
+  code: UiBubbleAttentionCode;
+  severity: "warning" | "critical";
+  label: string;
+  detail?: string;
+}
+
 export interface UiPendingInboxCounts {
   humanQuestions: number;
   approvalRequests: number;
@@ -167,6 +184,7 @@ export interface UiBubbleSummary {
   lastCommandAt: string | null;
   runtimeSession: RuntimeSessionRecord | null;
   runtime: UiRuntimeHealth;
+  attention: UiBubbleAttention | null;
   metaReview: UiBubbleMetaReviewSummary;
 }
 

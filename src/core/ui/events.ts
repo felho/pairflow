@@ -139,12 +139,22 @@ async function bubbleFingerprint(
           entry.runtimeSession.updatedAt,
           entry.runtimeSession.tmuxSessionName
         ].join(":");
+  const attentionSig =
+    entry.attention === null
+      ? "none"
+      : [
+          entry.attention.code,
+          entry.attention.severity,
+          entry.attention.label,
+          entry.attention.detail ?? ""
+        ].join(":");
 
   return [
     stateSig,
     inboxSig,
     transcriptSig,
     runtimeSig,
+    attentionSig,
     entry.state,
     String(entry.round)
   ].join("|");

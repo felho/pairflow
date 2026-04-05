@@ -38,6 +38,7 @@ export function bubbleSummary(input: {
   round?: number;
   activeAgent?: UiBubbleSummary["activeAgent"];
   activeRole?: UiBubbleSummary["activeRole"];
+  attention?: UiBubbleSummary["attention"];
   metaReview?: Partial<UiBubbleSummary["metaReview"]>;
 }): UiBubbleSummary {
   const state = input.state ?? "RUNNING";
@@ -68,6 +69,7 @@ export function bubbleSummary(input: {
       present: runtimeSession !== null,
       stale: input.stale ?? false
     },
+    attention: input.attention ?? null,
     metaReview: {
       actor: "meta-reviewer",
       authorityActive: state === "RUNNING" && (input.activeRole ?? "implementer") === "meta_reviewer",
@@ -91,6 +93,7 @@ export function bubbleCard(input: {
   round?: number;
   activeAgent?: UiBubbleSummary["activeAgent"];
   activeRole?: UiBubbleSummary["activeRole"];
+  attention?: UiBubbleSummary["attention"];
   metaReview?: Partial<UiBubbleSummary["metaReview"]>;
 }): BubbleCardModel {
   const bubble = bubbleSummary(input);
@@ -106,6 +109,7 @@ export function bubbleDetail(input: {
   state?: UiBubbleSummary["state"];
   runtimeSession?: UiBubbleSummary["runtimeSession"];
   stale?: boolean;
+  attention?: UiBubbleSummary["attention"];
 }): UiBubbleDetail {
   const summary = bubbleSummary(input);
   return {

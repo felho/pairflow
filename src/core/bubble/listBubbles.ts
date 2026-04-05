@@ -9,12 +9,15 @@ import {
   type StateValidationDiagnostics
 } from "../state/stateStore.js";
 import { readRuntimeSessionsRegistry } from "../runtime/sessionsRegistry.js";
+import { computeWatchdogStatus } from "../runtime/watchdog.js";
+import { resolveBubbleAttention } from "../ui/bubbleAttention.js";
 import { getBubblePaths } from "./paths.js";
 import {
   normalizeRepoPath,
   RepoResolutionError,
   resolveRepoPath
 } from "./repoResolution.js";
+import { readWatchdogPaneActivity } from "../../v11/shared/watchdog/watchdogPaneActivityStore.js";
 import type { BubbleLifecycleState } from "../../types/bubble.js";
 import type { RuntimeSessionRecord } from "../runtime/sessionsRegistry.js";
 import type {
@@ -22,10 +25,12 @@ import type {
   MetaReviewRecommendation,
   MetaReviewRunStatus
 } from "../../types/bubble.js";
+import type { UiBubbleAttention } from "../../types/ui.js";
 
 export interface BubbleListInput {
   repoPath?: string | undefined;
   cwd?: string | undefined;
+  now?: Date | undefined;
 }
 
 export interface BubbleListEntry {
@@ -40,6 +45,7 @@ export interface BubbleListEntry {
   lastCommandAt: string | null;
   stateValidation: StateValidationDiagnostics | null;
   runtimeSession: RuntimeSessionRecord | null;
+  attention: UiBubbleAttention | null;
   metaReview: {
     actor: "meta-reviewer";
     authorityActive: boolean;
@@ -146,6 +152,7 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
     allowMissing: true
   });
   const normalizedRepoPath = await normalizeRepoPath(repoPath);
+  const now = input.now ?? new Date();
 
   const bubbles: BubbleListEntry[] = [];
   const byState = createZeroCounts();
@@ -154,24 +161,15 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
   let staleForInvalidStates = 0;
 
   for (const bubbleId of bubbleIds) {
-    const bubbleTomlPath = join(
-      repoPath,
-      ".pairflow",
-      "bubbles",
-      bubbleId,
-      "bubble.toml"
-    );
-    const statePath = join(
-      repoPath,
-      ".pairflow",
-      "bubbles",
-      bubbleId,
-      "state.json"
-    );
+    const bubblePaths = getBubblePaths(repoPath, bubbleId);
 
-    const [bubbleToml, stateLoaded] = await Promise.all([
-      readFile(bubbleTomlPath, "utf8"),
-      inspectStateSnapshot(statePath)
+    const [bubbleToml, stateLoaded, paneActivityRead] = await Promise.all([
+      readFile(bubblePaths.bubbleTomlPath, "utf8"),
+      inspectStateSnapshot(bubblePaths.statePath),
+      readWatchdogPaneActivity({
+        runtimeDir: bubblePaths.runtimeDir,
+        bubbleId
+      })
     ]);
 
     const config = parseBubbleConfigToml(bubbleToml);
@@ -203,11 +201,28 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
       executionContext: stateLoaded.state.meta_review?.execution_context,
       runtimeDelivery: stateLoaded.state.meta_review?.runtime_delivery
     });
+    const watchdog =
+      stateLoaded.stateValidation === null
+        ? computeWatchdogStatus(
+            stateLoaded.state,
+            config.watchdog_timeout_minutes,
+            now
+          )
+        : {
+            monitored: false,
+            monitoredAgent: stateLoaded.state.active_agent,
+            timeoutMinutes: config.watchdog_timeout_minutes,
+            referenceTimestamp:
+              stateLoaded.state.last_command_at ?? stateLoaded.state.active_since,
+            deadlineTimestamp: null,
+            remainingSeconds: null,
+            expired: false
+          };
     byState[stateLoaded.state.state] += 1;
     bubbles.push({
       bubbleId,
       repoPath,
-      worktreePath: getBubblePaths(repoPath, bubbleId).worktreePath,
+      worktreePath: bubblePaths.worktreePath,
       state: stateLoaded.state.state,
       round: stateLoaded.state.round,
       activeAgent: stateLoaded.state.active_agent,
@@ -216,6 +231,14 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
       lastCommandAt: stateLoaded.state.last_command_at,
       stateValidation: stateLoaded.stateValidation,
       runtimeSession,
+      attention: resolveBubbleAttention({
+        state: stateLoaded.state.state,
+        runtimeSession,
+        stateValidation: stateLoaded.stateValidation,
+        watchdog,
+        paneActivityRead,
+        now
+      }),
       metaReview: {
         actor: "meta-reviewer",
         authorityActive: isMetaReviewExecutionContextActiveState(

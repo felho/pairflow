@@ -307,12 +307,19 @@ function BubbleCard(props: BubbleCardProps): JSX.Element {
           <span className={cn("text-[10px] font-medium tracking-wide", visual.stateText)}>
             {formatStateLabel(props.bubble.state)}
           </span>
+          {props.bubble.attention !== null ? (
+            <span className="rounded-full border border-rose-400/70 bg-rose-950/70 px-1.5 py-px text-[8px] font-semibold uppercase tracking-wide text-rose-200">
+              {props.bubble.attention.label}
+            </span>
+          ) : null}
         </span>
       </button>
 
       <div className="mb-2 text-[11px] leading-relaxed text-[#888]">
-        {props.bubble.runtime.stale
-          ? "Stale runtime — may need manual intervention."
+        {props.bubble.attention !== null
+          ? (props.bubble.attention.detail ?? props.bubble.attention.label)
+          : props.bubble.runtime.stale
+            ? "Stale runtime — may need manual intervention."
           : props.bubble.state === "RUNNING" && props.bubble.metaReview.authorityActive
               ? (
                   props.bubble.metaReview.runtimeDelivery === null

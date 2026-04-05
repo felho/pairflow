@@ -13,17 +13,13 @@ import type {
   UiRuntimeHealth
 } from "../../../types/ui.js";
 import { mapPendingInboxItems } from "../../../types/ui.js";
-
-const runtimeExpectedStates = new Set<BubbleLifecycleState>([
-  "RUNNING",
-  "WAITING_HUMAN",
-  "READY_FOR_HUMAN_APPROVAL",
-  "APPROVED_FOR_COMMIT",
-  "COMMITTED"
-]);
+import {
+  isRuntimeSessionExpectedState,
+  resolveBubbleAttention
+} from "../bubbleAttention.js";
 
 export function isRuntimeSessionExpected(state: BubbleLifecycleState): boolean {
-  return runtimeExpectedStates.has(state);
+  return isRuntimeSessionExpectedState(state);
 }
 
 export function presentRuntimeHealth(
@@ -60,6 +56,7 @@ export function presentBubbleSummaryFromListEntry(
       entry.runtimeSession,
       entry.stateValidation
     ),
+    attention: entry.attention,
     metaReview: entry.metaReview
   };
 }
@@ -105,6 +102,44 @@ export function presentBubbleDetail(input: {
       input.runtimeSession,
       input.status.stateValidation
     ),
+    attention: resolveBubbleAttention({
+      state: input.status.state,
+      runtimeSession: input.runtimeSession,
+      stateValidation: input.status.stateValidation,
+      watchdog: input.status.watchdog,
+      paneActivityRead:
+        input.status.paneActivity.readStatus === "ok"
+          ? {
+              status: "ok",
+              record: {
+                bubble_id: input.status.bubbleId,
+                sampled_at: input.status.paneActivity.sampledAt ?? "",
+                pane_hash: "status-view",
+                last_changed_at: input.status.paneActivity.lastChangedAt ?? "",
+                ...(input.status.paneActivity.sessionName !== null
+                  ? { session_name: input.status.paneActivity.sessionName }
+                  : {}),
+                ...(input.status.paneActivity.targetPane !== null
+                  ? { target_pane: input.status.paneActivity.targetPane }
+                  : {}),
+                ...(input.status.paneActivity.lastSampleStatus !== null
+                  ? { last_sample_status: input.status.paneActivity.lastSampleStatus }
+                  : {}),
+                ...(input.status.paneActivity.lastSampleError !== null
+                  ? { last_sample_error: input.status.paneActivity.lastSampleError }
+                  : {})
+              }
+            }
+          : input.status.paneActivity.readStatus === "invalid"
+            ? {
+                status: "invalid",
+                error: input.status.paneActivity.lastSampleError ?? "Invalid pane activity"
+              }
+            : {
+                status: "missing"
+              },
+      now: new Date()
+    }),
     metaReview: input.status.metaReview,
     watchdog: input.status.watchdog,
     pendingInboxItems: input.status.pendingInboxItems,

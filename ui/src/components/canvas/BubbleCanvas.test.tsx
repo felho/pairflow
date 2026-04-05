@@ -188,6 +188,41 @@ describe("BubbleCanvas", () => {
     ).toBeInTheDocument();
   });
 
+  it("prioritizes attention border and badge over meta-review border", () => {
+    const { container } = render(
+      <BubbleCanvas
+        bubbles={[
+          bubbleCard({
+            bubbleId: "b-attention",
+            repoPath: "/repo-a",
+            state: "RUNNING",
+            activeRole: "meta_reviewer",
+            attention: {
+              code: "quiet_pane",
+              severity: "warning",
+              label: "Quiet 8m",
+              detail: "No pane activity was observed for 8 minutes."
+            }
+          })
+        ]}
+        positions={{}}
+        expandedBubbleIds={[]}
+        onPositionChange={() => undefined}
+        onPositionCommit={() => undefined}
+        onToggleExpand={() => undefined}
+        onDelete={(bubbleId) => Promise.resolve(deletedResult(bubbleId))}
+      />
+    );
+
+    expect(screen.getByText("Quiet 8m")).toBeInTheDocument();
+    expect(
+      screen.getByText("No pane activity was observed for 8 minutes.")
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-bubble-id="b-attention"]')
+    ).toHaveClass("border-rose-500");
+  });
+
   it("renders meta-review authority messaging during recovery even when live activeRole is cleared", () => {
     const { container } = render(
       <BubbleCanvas

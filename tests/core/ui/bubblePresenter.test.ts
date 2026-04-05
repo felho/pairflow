@@ -50,6 +50,7 @@ describe("bubblePresenter", () => {
         latestUpdatedAt: "2026-02-24T12:00:30.000Z",
         runtimeDelivery: null
       },
+      attention: null,
       runtimeSession: {
         bubbleId: "b_attach_01",
         repoPath: "/tmp/repo",
@@ -62,6 +63,7 @@ describe("bubblePresenter", () => {
     expect(presented.runtime.present).toBe(true);
     expect(presented.runtime.stale).toBe(false);
     expect(presented.runtimeSession?.tmuxSessionName).toBe("pf-b_attach_01");
+    expect(presented.attention).toBeNull();
     expect(presented.metaReview).toMatchObject({
       actor: "meta-reviewer",
       latestRecommendation: "approve",
