@@ -418,3 +418,183 @@ Task akkor `IMPLEMENTABLE`, ha:
 5. a `T1`-`T7` contract/regression evidence teljesul,
 6. a docs delta csak conditionalis es cleanup-szintu user-visible semanticsra korlatozodik,
 7. docs-omission eseten a `CS7` altal owned `T9` scope-containment gate is teljesul a primary artifact completion-summary contractja szerint.
+
+## Appendix A - 2026-04-05 Bubble Retrospective and Re-slicing Note
+
+### Purpose
+
+1. Ez az appendix annak rogzitesere szolgál, hogy a jelen Phase E retained meta-review operator cleanup lane miert akadt el tobb egymas utani P1 regresszioban, es milyen iranyban erdemes a fennmarado munkat ujraszeletelni.
+2. Az appendix nem override-olja az L0-L1-L2 contractot, hanem implementation retrospektivakent rogzit egy fontos tanulsagot: a jelen task gyakorlati blast radiusa nagyobbnek bizonyult, mint amit a bounded read-surface cleanup framing sugallt.
+
+### Bubble-Level Evidence Snapshot
+
+1. A `ari-meta-read-surface-phasee-imp` bubble-ben a bubble indulasa ota egyetlen nagy, uncommitted diff gyult ossze a bubble worktree-ben, koztes stabilizalt implementacios checkpoint nelkul.
+2. A bubble diff nagysagrendje:
+   - `22` modositott file
+   - kb. `2031` insert, `262` delete
+3. A jelen parent task deklaralt implementation surface-ehez kepest a bubble diff szignifikans scope-spillover-t mutatott:
+   - a deklaralt `target_files` a meta-review dispatcher/read/render/test surface-re koncentralt,
+   - a tenyleges diff viszont approval, inbox, list, status, pending approval synthesis es state-schema file-okat is erintett.
+4. Ez eros jel arra, hogy a feladat nem egyszeruen "nehez", hanem rosszul szeletelt: a retained operator read-surface cleanup implementation kozben policy- es consumer-migration karaktert kapott.
+
+### Root Cause Analysis
+
+#### A) A task framing es a tenyleges kodhatas nem egyezik
+
+1. A task deklaralt celja bounded retained operator cleanup:
+   - `status`
+   - `last-report`
+   - renderer/provenance
+   - retained `run` non-regression
+2. A bubble implementacio kozben a read-surface projection logika belső domain-inputta valt a kovetkezo fogyasztoknal:
+   - approval dontesi logika
+   - bubble status summary
+   - bubble inbox pending approval synthesis
+   - bubble list meta-review summary
+3. Ettol a ponttol a task mar nem puszta operator surface cleanup, hanem belso policy-consumer migration is lett, anelkul hogy ezt a task explicitten vallalta volna.
+
+#### B) Hianyzik a kulon seam az operator projection es a belso domain projection kozott
+
+1. A kodbazis jelenlegi retained meta-review read surface-e eredetileg manual operator CLI feluletkent lett kialakitva.
+2. A bubble-ben megjelent regressziok tipikus mintaja az volt, hogy az operator-facing fail-closed projection policy atszivargott belso rendszerallapot- vagy approval-dontesi policyva.
+3. Emiatt minden "read-surface hardening" valtozas valojaban tobb downstream viselkedest is ujradefiniált:
+   - mit lathat a human/operator,
+   - mit tekint ervenyes recommendation source-nak az approval,
+   - mikor jelenjen meg pending approval,
+   - mikor nullazodjon ki egy summary.
+
+#### C) Nincs egyetlen egyertelmu compatibility contract a `report_ref` korul
+
+1. A bubble egyik legfontosabb blocker regresszioja a safe non-canonical `artifacts/*` `report_ref` kezelesebol jott elo.
+2. A bubble altal feltart regresszio azt mutatta, hogy ket kulon szerzodes egyszerre igaz a kodbazis kulonbozo retegeiben:
+   - a schema es recover/hydration logika safe `artifacts/*` refeket tovabbra is kompatibilisnek kezelt,
+   - az uj projection olvaso reteg viszont fail-closed modon csak a canonical `artifacts/meta-review-last.json` refet akarta ervenyesnek tekinteni.
+3. Ez nem lokalis bug, hanem nem-eldontott retained-compatibility policy. Amig ez a policy nincs expliciten kivezetve vagy megorizve, addig a retained operator cleanup korok ujra es ujra policy/regression korbe futnak.
+
+#### D) A `bubble meta-review` namespace valojaban heterogen retained surface
+
+1. A retained subcommandok nem azonos termeszetuek:
+   - `run` = manual operator trigger
+   - `status` = cached projection read
+   - `last-report` = cached artifact read
+   - `recover` = operational route replay
+2. Ezeket egyetlen bounded cleanup taskban egyszerre stabilizalni nagy valoszinuseggel ujabb scope-csuszashoz vezet, mert kulonbozo authority- es compatibility-kockazatokat hordoznak.
+
+#### E) Koztes commitolt stabil checkpoint hianya
+
+1. A bubble-ben nem alakult ki olyan implementacios ritmus, amelyben a retained read-surface vagy renderer boundary kulon, zart szeletkent landed volna.
+2. Emiatt minden tovabbi hardening valtozas mar egyszerre mozgatta:
+   - a pure read feluletet,
+   - a manual operator UX-et,
+   - a belso approval/status fogyasztokat,
+   - a compatibility expectationt.
+
+### Usage Audit - Erdemes-e egyaltalan megtartani a `bubble meta-review` retained commandokat?
+
+#### Observed current usage in the codebase
+
+1. A `bubble meta-review` parancscsalad tovabbra is teljes CLI exposure-kent jelen van:
+   - `src/cli/index.ts`
+   - `src/v11/application/metaReview/metaReviewCliCommand.ts`
+   - `src/v11/application/metaReview/metaReviewCliDispatcher.ts`
+2. Dokumentacio szinten is first-class feluletkent szerepel:
+   - `README.md`
+   - `docs/meta-review-gate-prd.md`
+   - `docs/meta-review-gate-rollout-runbook.md`
+   - `docs/meta-review-gate-e2e-validation.md`
+3. Teszt coverage is jelentos mennyisegben van korulotte:
+   - parser/CLI tests
+   - core meta-review tests
+   - parity/contract tests
+
+#### What was not observed
+
+1. Nem latszik olyan belso runtime/orchestration call path, amely a retained `bubble meta-review status|last-report|run|recover` parancsokat a normal bubble lifecycle reszekent automatikusan hivna.
+2. A main kodban a read APIs (`getMetaReviewStatus`, `getMetaReviewLastReport`) elsodleges explicit hivoja a meta-review CLI dispatcher.
+3. A retained parancsok jelenleg sokkal inkabb manual operator surface-kent latszanak, mint a napi canonical Pairflow flow szerves reszekent.
+
+#### Practical interpretation
+
+1. A retained meta-review operator surface letezik, dokumentalt, es tesztelt.
+2. Ugyanakkor a kodbazis alapjan ez nem tunik first-class, mindennapi runtime dependency-nek.
+3. Ha a rendszer valos hasznalata soran ezek a parancsok nincsenek tenylegesen operatori workflow-ban hasznalva, akkor a retained surface tovabbi hardeningje valoszinuleg gyengebb ROI-t ad, mint a kivezetese.
+
+### Re-slicing Recommendation
+
+#### Recommendation summary
+
+1. A jelen parent taskot nem erdemes tovabb egyben, "minden retained meta-review operator boundaryt zarjunk le" framinggel vegigvinni.
+2. Ket realis irany van:
+   - `retain-and-refactor`
+   - `deprecate-and-remove`
+3. A bubble-level tanulsagok es a valos hasznalatrol adott operatori jelzes alapjan az elso preferalt irany a `deprecate-and-remove`.
+
+### Option 1 - Retain and Refactor
+
+#### When this option makes sense
+
+1. Akkor vedheto, ha a `bubble meta-review` retained operator surface-nek tenyleges operatori erteke van, amelyet a csapat tudatosan meg akar tartani.
+
+#### Required precondition
+
+1. Elobb explicit separation seam kell a kovetkezo ket reteg koze:
+   - operator CLI projection/recovery surface
+   - belso domain-facing summary/policy projection
+
+#### Suggested sub-slices
+
+1. `Slice R1`: pure internal projection helper extraction
+   - egyetlen feladat: snapshot/artifact -> internal projection shape
+   - explicit compatibility policy a safe non-canonical refekrol
+2. `Slice R2`: operator CLI adapter stabilization
+   - csak help/parser/renderer/CLI read behavior
+   - nincs approval/status/inbox/list consumer migration
+3. `Slice R3`: internal consumer migration
+   - approval/status/inbox/list kulon internal adaptert kap
+   - explicit dontes, hogy operator CLI fail-closed semantics atveheto-e vagy sem
+4. `Slice R4`: retained namespace decision
+   - `run|status|last-report|recover` tovabbi eletciklusa
+5. `Slice R5`: docs decision / deprecation wording
+
+#### Why this is safer than the current task
+
+1. Eloszor szetvalasztja a retained operator UX-et a belso policy-dependens retegtol.
+2. Megelozi, hogy egy renderer/read hardening valtozas approval-regressionne valjon.
+
+### Option 2 - Deprecate and Remove
+
+#### Why this currently looks stronger
+
+1. A bubble retrospektiva azt mutatja, hogy a retained meta-review operator surface tul nagy compatibility-terhet hordoz a valos napi runtime-ertekehez kepest.
+2. A bubble-ben feltart regressziok nagy resze nem a canonical actor pathban volt, hanem a retained operator diagnostics/projection surface es a belso fogyasztok osszekeveresebol jott.
+3. Ha a retained parancsok nem reszei a tenyleges operatori workflow-nak, akkor a kivezetes egyszerubb, tisztabb es olcsobb, mint a tovabbi hardening.
+
+#### Recommended removal order
+
+1. `D1_USAGE_AUDIT`
+   - explicit repo-level note: a `bubble meta-review` retained parancsok jelenleg manual surface-ek, nem canonical runtime dependencies
+2. `D2_REMOVE_READ_COMMANDS`
+   - `status`
+   - `last-report`
+   - CLI exposure, help, README, runbook, tests
+3. `D3_DECIDE_RUN_AND_RECOVER`
+   - kulon dontes a `run` es `recover` retained sorsarol
+   - ezek operationalisan mas termeszetuek, mint a read parancsok
+4. `D4_REMOVE_RUN`
+   - ha a canonical actor emit path mellett a retained manual trigger sem kell
+5. `D5_REMOVE_RECOVER`
+   - csak ha mar van elegendo mas recovery/operator ut, es a retained replay surface sem kell
+
+#### Guardrails for a deprecate/remove path
+
+1. A canonical actor path (`pairflow agent emit --kind meta_review_result`) nem serulhet.
+2. A bubble status top-level summary, approval routing, es human approval visibility nem epulhet retained CLI subcommandokra.
+3. Ha barmelyik belso consumer ma retained projection logikara epul, azt elobb expliciten internal seamre kell tenni, nem pedig a retained CLI surface-hez hagyni kotve.
+
+### Explicit note for follow-up planning
+
+1. A jelen appendix alapjan eros default ajanlas:
+   - ne a jelen task tovabbi incremental hardeningje legyen a kovetkezo lepes,
+   - hanem kulon planning / task-slicing dontes a retained meta-review operator surface jovojet illetoen.
+2. Ha a product/operatori dontes a retained surface kivezetese fele megy, akkor ezt a parent taskot nem tovabbi implementation patch-ekkel, hanem explicit deprecation/removal utvonalra bontott follow-up taskokkal erdemes folytatni.
+3. Ha a retained surface megis marad, akkor a jelen parent taskot kisebb, file- es contract-disjoint refactor szeletekre kell ujrairni; a mostani egyben tartott "projection cleanup" framing a bubble evidence alapjan nem eleg stabil.
