@@ -233,7 +233,7 @@ describe("listBubbles", () => {
     });
   });
 
-  it("surfaces quiet-pane attention after two quiet minutes", async () => {
+  it("surfaces quiet-pane attention after five quiet minutes", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,

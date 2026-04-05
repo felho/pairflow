@@ -5,7 +5,7 @@ import type { StateValidationDiagnostics } from "../state/stateStore.js";
 import type { WatchdogStatus } from "../runtime/watchdog.js";
 import type { ReadWatchdogPaneActivityResult } from "../../v11/shared/watchdog/watchdogPaneActivityStore.js";
 
-const quietPaneThresholdSeconds = 2 * 60;
+const quietPaneThresholdSeconds = 5 * 60;
 
 const runtimeExpectedStates = new Set<BubbleLifecycleState>([
   "RUNNING",
