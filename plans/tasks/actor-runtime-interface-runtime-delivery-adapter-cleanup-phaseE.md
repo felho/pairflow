@@ -7,11 +7,13 @@ phase: phaseE
 target_files:
   - src/core/runtime/tmuxDelivery.ts
   - src/core/runtime/watchdog.ts
+  - src/v11/shared/status/statusCommandApi.ts
   - src/v11/shared/status/statusCommandViewBuilder.ts
   - src/v11/shared/watchdog/watchdogCommandFlow.ts
   - src/v11/shared/watchdog/watchdogPaneActivitySampler.ts
   - src/v11/application/watchdog/watchdogCommandContract.ts
   - src/v11/application/restart/runRestartFlow.ts
+  - tests/cli/bubbleStatusCommand.test.ts
   - tests/core/runtime/tmuxDelivery.test.ts
   - tests/core/runtime/watchdog.test.ts
   - tests/core/runtime/restartRecovery.test.ts
@@ -127,7 +129,7 @@ Ez a task akkor sikeres, ha:
 2. A kotelezo bizonyitas az automated parity evidence a `T1`-`T8` matrix szerint; a task nem zarhato le puszta commentekkel vagy narrativ "tmux is just observability" allitassal.
 3. `README.md` es `docs/pairflow-initial-design.md` csak akkor kotelezoen touched, ha a runtime/operator delivery semantics user-visible modon pontosodik.
 4. Nem kotelezo minden `target_files` elemet modositani; a lista implementation surface-budget.
-5. Ha a cleanup user-visible semantics valtozas nelkul valosul meg, a docs diff elhagyhato, de ezt a completion summarynek explicitten allitania kell.
+5. Ha a cleanup user-visible semantics valtozas nelkul valosul meg, a docs diff elhagyhato, de ez csak a `README.md` es a `docs/pairflow-initial-design.md` diff elhagyasara vonatkozhat; a required-now runtime parity evidence ettol fuggetlenul kotelezo marad.
 
 ## L1 - Change Contract
 
@@ -137,11 +139,11 @@ Ez a task akkor sikeres, ha:
 |---|---|---|---|---|---|---|
 | CS1 | `src/core/runtime/tmuxDelivery.ts` | `emitTmuxDeliveryNotification`, envelope target resolution, delivery result shaping | A retained delivery adapter explicitten transport/projection reteg maradjon: send-success, session-presence vagy pane-capture ne alljon ossze canonical `accepted` / `running` szemantikava; duplicate masodik deliveryre bounded reject/no-op viselkedes kell | P1 | required-now | T1, T2, T4 |
 | CS2 | `src/core/runtime/watchdog.ts` | `computeWatchdogStatus` | A watchdog reference/deadline projection explicit execution-contexthez kotodjon; pane activity vagy session lathatosag ne lehessen elfogadasi bizonyitek, csak liveness/diagnostics input | P1 | required-now | T3, T5 |
-| CS3 | `src/v11/shared/status/statusCommandViewBuilder.ts` | `buildBubbleStatusView` runtime/pane/delivery projection | A status view runtimeDelivery/paneActivity/watchdog mezoit ugy kell projektalni, hogy az explicit ack es az observability-only signal ne mosodjon ossze | P1 | required-now | T3, T5, T8 |
+| CS3 | `src/v11/shared/status/statusCommandViewBuilder.ts`, `src/v11/shared/status/statusCommandApi.ts` | `buildBubbleStatusView`, status projection assembly | A status view runtimeDelivery/paneActivity/watchdog mezoit ugy kell projektalni, hogy az explicit ack es az observability-only signal ne mosodjon ossze; a public status assembly ne adjon vissza erossebb currentness/allapot-allitast, mint amit az explicit ack boundary bizonyit | P1 | required-now | T3, T5, T8 |
 | CS4 | `src/v11/shared/watchdog/watchdogPaneActivitySampler.ts`, `src/v11/shared/watchdog/watchdogCommandFlow.ts` | pane sampling + escalation flow | A sampling eredmenye explicitten diagnostics input maradjon; delayed/missing ack eseten az escalation ne allitson canonical delivery sikert vagy actor ownershipet | P1 | required-now | T5, T6 |
-| CS5 | `src/v11/application/watchdog/watchdogCommandContract.ts` | watchdog output/view contract | A contract explicitten kulonböztesse meg a typed ack projectiont es a pane-derived observability adatot; ne hagyjon implicit authority-olvasatot | P2 | required-now | T5, T8 |
+| CS5 | `src/v11/application/watchdog/watchdogCommandContract.ts` | watchdog output/view contract | A public watchdog contract-shape alapesetben erintetlen marad ebben a sliceban; csak kulon follow-upban szukitheto, ha a base `required-now` parity a meglevo contracttal nem vedheto. Ebben a taskban ne nyisson uj public vocabularyt vagy UI-shape redesign-t | P2 | later-hardening | HB3 |
 | CS6 | `src/v11/application/restart/runRestartFlow.ts` | restart utani runtime relaunch es recovery marker path | Restart utan csak uj explicit delivery authority maradjon ervenyes; a regi executionhez kotott delivery projection ne maradjon current-kent ertelmezheto | P1 | required-now | T6, T7 |
-| CS7 | `tests/core/runtime/tmuxDelivery.test.ts`, `tests/core/runtime/watchdog.test.ts`, `tests/core/runtime/restartRecovery.test.ts`, `tests/v11/shared/watchdog/watchdogPaneActivitySampler.test.ts`, `tests/v11/application/watchdog/watchdogCommandApi.test.ts`, `tests/v11/application/watchdog/watchdogFacadeParity.test.ts`, `tests/v11/application/restart/runRestartFlow.test.ts`, `tests/contracts/v11/watchdog.contract.test.ts` | retained runtime regression surface | Kotelezo tesztfedezet kell a typed-ack vs pane-observability split, duplicate delivery suppression, restart utani uj authority es status/watchdog projection korul | P1 | required-now | T1-T8 |
+| CS7 | `tests/cli/bubbleStatusCommand.test.ts`, `tests/core/runtime/tmuxDelivery.test.ts`, `tests/core/runtime/watchdog.test.ts`, `tests/core/runtime/restartRecovery.test.ts`, `tests/v11/shared/watchdog/watchdogPaneActivitySampler.test.ts`, `tests/v11/application/watchdog/watchdogCommandApi.test.ts`, `tests/v11/application/watchdog/watchdogFacadeParity.test.ts`, `tests/v11/application/restart/runRestartFlow.test.ts`, `tests/contracts/v11/watchdog.contract.test.ts` | retained runtime regression surface | Kotelezo tesztfedezet kell a typed-ack vs pane-observability split, duplicate delivery suppression, restart utani uj authority es status/watchdog projection korul; a status-command public projectionet explicitten vedeni kell | P1 | required-now | T1-T8 |
 | CS8 | `README.md`, `docs/pairflow-initial-design.md` | runtime/operator semantics | Csak akkor frissitendo, ha a delivery/ack vagy watchdog/status projection user-visible szemantikaja tenylegesen pontosodik | P2 | conditional-now | T9 |
 
 ### 2) Data and Interface Contract
@@ -167,6 +169,7 @@ Normative rules:
 
 | Source | This task must realize | Why this is binding here | Evidence |
 |---|---|---|---|
+| Phase B `Actor Input Authority Contract` + `Core Capability Invariants` | az explicit ack/currentness projection soha nem vezethet vissza pane-derived vagy send-successbol levezetett authorityra | ez a canonical explicit-authority szabaly, amelyet a retained runtime adapter cleanup nem lazithat | T1, T3, T6 |
 | Phase D `S2_DELIVERY_ACK_BOUNDARY` | explicit delivery/ack boundary megerositese a retained `tmux` launch felett | ez a migration spine egyik konkret Phase E implementacios policy pontja | T1, T3, T5 |
 | Phase D `Policy Ownership Matrix` duplicate delivery row | duplicate delivery suppression executor + kernel bounded policy maradjon | ez akadalyozza meg a masodik successful current launchot ugyanarra a handoffra | T2, T4 |
 | Phase D `Retained Adapter Ownership and Cleanup` `tmux launch + pane delivery` row | a `tmux` retained transport/observability reteg maradjon, ne acceptance-forras | ez a cleanup trigger kozvetlen targya | T1, T5, T8 |
@@ -181,7 +184,6 @@ Normative rules:
 1. Ha tobb implementacios ut vedheto, azt a valtozatot kell valasztani, amelyik explicittebbé teszi a typed ack es az observability-only signal kulonvalasztasat uj abstraction layer nelkul.
 2. A duplicate delivery traceability minimuma explicitten mutassa meg, hogy az elso deliveryn kivul nincs masodik successful current execution.
 3. A watchdog/status traceability minimuma explicitten mutassa meg, hogy a projection currentness nem pane-derived authority.
-
 ### 3) Side Effects Contract
 
 | Area | Allowed | Forbidden | Notes | Priority | Timing |
@@ -241,11 +243,33 @@ Normative rules:
 | T8 | watchdog/status contract parity megmarad a v11 surface-en | runtime adapter cleanup megtortent | watchdog facade/contract es status-related tests futnak | a public contract kovetkezetes marad a typed ack vs observability split mellett | P1 | required-now | automated test |
 | T9 | docs csak akkor valtoznak, ha user-visible delivery semantics pontosodik | a runtime/operator delivery semantics tenylegesen lathatoan modosul | docs diff keszul | a dokumentacio csak a typed ack vs observability splitet es a retained adapter szerepet irja le, topology-redesign nelkul | P2 | conditional-now | doc diff |
 
+### 6.5) Review Stability Gates
+
+1. Uj `required-now` item csak akkor hozhato be reviewban, ha egyszerre megnevezi a megfelelo Phase A/B/C/D source row-t, egy konkret `target_files` elemet, es legalabb egy `T*` bizonyitek-sorhoz kotheto.
+2. `CS5` nem resze a base `required-now` parity-szeletnek. `T8`-at a meglevo public contract-shape mellett kell tudni vedeni; ha ez megsem tarthato, azt `HB3` follow-upkent kell rogizteni ahelyett, hogy ez a task opportunistaan kiszelesedne.
+3. `README.md` es `docs/pairflow-initial-design.md` diff nem kerheto reviewban pusztan explanatory vagy topology-narrative okbol; csak bizonyitott user-visible semantics delta eseten.
+4. A status-surface review nem terjedhet ki altalanos UI copy, table layout vagy presentation polish valtoztatasokra, ha azok nem valtoztatjak a typed ack vs observability boundaryt.
+5. A duplicate delivery konkret alakja lehet explicit `rejected` vagy suppresszalt no-op, ha:
+   - nincs masodik successful current launch,
+   - a current execution authority nem cserelodik,
+   - a valasztott alak nem vezet be uj typed runtime outcome csaladot.
+
+### 6.75) Completion Summary Contract
+
+1. Az implementacios completion summarynek kotelezoen ki kell mondania:
+   - hogy a retained runtime adapter cleanup mely boundaryt szukitette (`tmuxDelivery`, watchdog, status projection, restart/recovery, duplicate delivery),
+   - hogy a `T1`-`T8` required-now parityhoz milyen tenylegesen futtatott checkek es teszt-szeletek szolgaltattak evidence-et,
+   - es hogy a docs diff megtortent-e vagy explicitten nem volt szukseges.
+2. Az implementacios completion summary nem zarhato le `docs-only skip-claim` wordinggel, mert ez a task `T1`-`T8` automated evidence-et kovetel. A summarynek a tenylegesen futtatott validationt kell megneveznie, es az elerheto evidence refeket vagy azok implementation-equivalent helyet is kozolnie kell.
+3. Ha a docs diff elmarad, a summarynek neveznie kell a ket ellenorzott dokumentumot (`README.md`, `docs/pairflow-initial-design.md`) es azt az okot, hogy miert nem volt bizonyitott user-visible delivery/ack vagy watchdog/status semantics delta.
+4. A docs-omission claim nem ertelmezheto ugy, mint validation-omission claim: csak a dokumentacios diff elhagyasarol szolhat, nem a required-now runtime parity checks kihagyasarol.
+
 ## L2 - Implementation Notes (Optional)
 
 1. [later-hardening] Ha a runtime delivery projectionhez kulon typed view-model indokolt, azt kulon follow-upban erdemes bevezetni, nem ebben a cleanup-szeletben.
 2. [later-hardening] A retained `tmux` delivery es a status/watchdog projection kesobbi teljes egyszerusitese kulon Phase E vagy utani taskba keruljon, miutan a typed ack boundary tobb actoron stabil.
 3. [later-hardening] Ha a watchdog/status contractbol kulon operator-facing "uncertain/degraded" vocabulary adodik, azt kulon bounded taskban erdemes formalizalni.
+4. [later-hardening] Ha a public watchdog/status contract-shape valos szuk keresztmetszetnek bizonyul, kulon follow-up taskban erdemes formalizalni a most kifejezetten kesobbre tolt vocabulary-szukitest.
 
 ## Assumptions
 
@@ -263,6 +287,7 @@ Normative rules:
 |---|---|---|---|---|---|---|
 | HB1 | Kulon typed runtime-delivery projection model formalizalasa | L2 | P2 | later-hardening | task draft | Nyiss kulon follow-up taskot, ha a cleanup utan is tobb helyen marad string-heavy projection logika |
 | HB2 | Watchdog/status operator-facing degraded vocabulary szukebb formalizalasa | L2 | P3 | later-hardening | task draft | Csak akkor nyisd meg, ha a mostani cleanup utan is marad review-instabil projection-szoveg |
+| HB3 | Public watchdog/status contract-shape tovabbi szukitese | L2 | P2 | later-hardening | `CS5`, `T5`, `T8` | Csak kulon follow-up taskban nyisd meg, ha a parity a mostani cleanup utan sem vedheto a meglevo public contracttal |
 
 ## Review Control
 
@@ -271,7 +296,8 @@ Normative rules:
 3. After round 2, new `required-now` is allowed only for evidence-backed `P0/P1`.
 4. Items outside L1 blocker scope must be tagged `later-hardening`.
 5. If `contract_boundary_override=yes`, `plan_ref` is mandatory and must align with L1 contract rows.
+6. Completion summary claim nem lehet ellentmondasban a `6.75) Completion Summary Contract` resszel: implementacios lezarasnal a docs diff elhagyasa nem hasznalhato a required-now evidence helyettesitesere.
 
 ## Spec Lock
 
-Mark task as `IMPLEMENTABLE` when all `P0/P1 + required-now` items are closed.
+Mark task as `IMPLEMENTABLE` when all `P0/P1 + required-now` items are closed, es a completion summary contract egyertelmuen teljesitheto review-loop nelkul.
