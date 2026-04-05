@@ -1040,7 +1040,11 @@ export function validateBubbleStateSnapshot(
 
   if (metaReviewAuthorityActive) {
     if (executionContext === null) {
-      executionContext = mirroredMetaReviewExecutionContext;
+      errors.push({
+        path: "execution_context",
+        message:
+          "RUNNING meta-review state requires canonical execution_context authority"
+      });
     } else if (
       mirroredMetaReviewExecutionContext !== null &&
       !executionContextsEqual(executionContext, mirroredMetaReviewExecutionContext)
@@ -1052,18 +1056,15 @@ export function validateBubbleStateSnapshot(
       });
     }
 
-    if (executionContext === null) {
-      errors.push({
-        path: "execution_context",
-        message:
-          "RUNNING meta-review state requires canonical execution_context authority"
-      });
-    } else if (executionContext.active_role !== "meta_reviewer") {
+    if (executionContext !== null && executionContext.active_role !== "meta_reviewer") {
       errors.push({
         path: "execution_context.active_role",
         message: "Must be meta_reviewer while meta-review authority is active"
       });
-    } else if (executionContext.awaited_output_type !== "meta_review_result") {
+    } else if (
+      executionContext !== null &&
+      executionContext.awaited_output_type !== "meta_review_result"
+    ) {
       errors.push({
         path: "execution_context.awaited_output_type",
         message: "Must be meta_review_result while meta-review authority is active"

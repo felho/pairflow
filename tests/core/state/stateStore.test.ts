@@ -154,6 +154,7 @@ describe("state store", () => {
 
     const inspected = await inspectStateSnapshot(statePath);
     expect(inspected.state.state).toBe("RUNNING");
+    expect(inspected.state.execution_context).toBeNull();
     expect(inspected.stateValidation?.errors).toEqual([
       {
         path: "execution_context",
@@ -235,10 +236,16 @@ describe("state store", () => {
       deadline_at: "2026-03-08T11:00:00.000Z",
       attempt: 1
     });
+    expect(inspected.state.execution_context).toBeNull();
     expect(inspected.stateValidation?.errors).toEqual([
       {
         path: "last_command_at",
         message: "Must be null or a valid ISO timestamp"
+      },
+      {
+        path: "execution_context",
+        message:
+          "RUNNING meta-review state requires canonical execution_context authority"
       }
     ]);
   });

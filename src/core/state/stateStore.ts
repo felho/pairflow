@@ -385,11 +385,9 @@ function coerceInspectableBubbleStateSnapshot(
   }
 
   const metaReview = normalizeInspectableMetaReviewSnapshot(value.meta_review);
-  const executionContext =
-    normalizeInspectableExecutionContext(value.execution_context)
-    ?? metaReviewExecutionContextToRunningContext(
-      metaReview?.execution_context ?? null
-    );
+  const executionContext = normalizeInspectableExecutionContext(
+    value.execution_context
+  );
   const roundRoleHistory = Array.isArray(value.round_role_history)
     ? value.round_role_history.flatMap((entry) => {
       const normalized = normalizeInspectableRoundRoleEntry(entry);

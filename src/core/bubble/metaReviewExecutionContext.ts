@@ -16,7 +16,6 @@ import {
 } from "../../types/bubble.js";
 import {
   buildRunningExecutionContext,
-  metaReviewExecutionContextToRunningContext,
   toMetaReviewExecutionContext
 } from "../state/executionContext.js";
 
@@ -30,11 +29,7 @@ export function isMetaReviewExecutionContextActiveState(
     return false;
   }
 
-  const executionContext =
-    state.execution_context
-    ?? metaReviewExecutionContextToRunningContext(
-      state.meta_review?.execution_context ?? null
-    );
+  const executionContext = state.execution_context ?? null;
   return (
     executionContext !== null &&
     executionContext.active_role === "meta_reviewer" &&
@@ -91,11 +86,7 @@ export function validateActiveMetaReviewExecutionContext(
     ]);
   }
 
-  const executionContext =
-    state.execution_context
-    ?? metaReviewExecutionContextToRunningContext(
-      state.meta_review?.execution_context ?? null
-    );
+  const executionContext = state.execution_context ?? null;
   if (executionContext === null) {
     return validationFail([
       {

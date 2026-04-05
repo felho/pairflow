@@ -25,7 +25,10 @@ import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
 } from "../../../src/core/protocol/transcriptStore.js";
-import { MetaReviewGateError } from "../../../src/core/bubble/metaReviewGate.js";
+import {
+  MetaReviewGateError,
+  recoverMetaReviewGateFromSnapshot
+} from "../../../src/core/bubble/metaReviewGate.js";
 import {
   type LoadedStateSnapshot,
   StateStoreConflictError,
@@ -40,6 +43,7 @@ import { applyStateTransition } from "../../../src/core/state/machine.js";
 import { SchemaValidationError } from "../../../src/core/validation.js";
 import type { Finding } from "../../../src/types/findings.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
+import { metaReviewerAgent } from "../../../src/v11/shared/metaReviewGate/metaReviewGateShared.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -4687,6 +4691,285 @@ describe("meta-review reads", () => {
     expect(after.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(after.state.meta_review?.sticky_human_gate).toBe(true);
     expect(after.state.meta_review?.last_autonomous_recommendation).toBe("approve");
+  });
+
+  it("replays the persisted kickoff route from canonical execution_context before deadline", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_recover_canonical_ctx_01",
+      task: "Meta recover canonical execution context replay"
+    });
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const metaReviewExecutionContext = buildMetaReviewExecutionContext({
+      bubbleId: bubble.bubbleId,
+      round: loaded.state.round,
+      startedAt: "2026-03-08T12:36:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
+    const canonicalExecutionContext = metaReviewExecutionContextToRunningContext(
+      metaReviewExecutionContext
+    );
+    if (canonicalExecutionContext === null) {
+      throw new Error("Expected canonical execution context.");
+    }
+
+    const mockedState = {
+      ...loaded.state,
+      state: "RUNNING" as const,
+      active_agent: "codex" as const,
+      active_role: "meta_reviewer" as const,
+      active_since: "2026-03-08T12:36:00.000Z",
+      last_command_at: "2026-03-08T12:36:00.000Z",
+      execution_context: canonicalExecutionContext,
+      meta_review: {
+        ...loaded.state.meta_review!,
+        execution_context: null,
+        runtime_delivery: null,
+        last_autonomous_run_id: null,
+        last_autonomous_status: null,
+        last_autonomous_recommendation: null,
+        last_autonomous_summary: null,
+        last_autonomous_report_ref: null,
+        last_autonomous_rework_target_message: null,
+        last_autonomous_updated_at: null,
+        auto_rework_count: 0,
+        auto_rework_limit: 5,
+        sticky_human_gate: false
+      }
+    };
+
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      lockPath: join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`),
+      now: new Date("2026-03-08T12:36:30.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: metaReviewerAgent,
+        type: "TASK",
+        round: loaded.state.round,
+        payload: {
+          summary: "Meta-review kickoff replay.",
+          metadata: {
+            actor: "meta-review-gate",
+            actor_agent: "orchestrator",
+            lifecycle_state: "RUNNING",
+            [deliveryTargetRoleMetadataKey]: "meta_reviewer",
+            meta_review_handoff_id: canonicalExecutionContext.handoff_id
+          }
+        },
+        refs: []
+      }
+    });
+
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath, {
+      allowMissing: false,
+      tolerateInvalidEnvelopeLines: false
+    });
+    const kickoff = transcript[transcript.length - 1];
+    if (kickoff === undefined) {
+      throw new Error("Expected persisted kickoff envelope.");
+    }
+
+    const result = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      now: new Date("2026-03-08T12:37:00.000Z")
+    }, {
+      readStateSnapshot: async () => ({
+        fingerprint: loaded.fingerprint,
+        state: mockedState
+      })
+    });
+
+    expect(result.route).toBe("meta_review_running");
+    expect(result.gateSequence).toBe(transcript.length);
+    expect(result.gateEnvelope.id).toBe(kickoff.id);
+    expect(result.state.state).toBe("RUNNING");
+  });
+
+  it("fails closed when recovery top-level execution_context has an invalid handoff_id", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_recover_invalid_ctx_01",
+      task: "Meta recover invalid execution context"
+    });
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const metaReviewExecutionContext = buildMetaReviewExecutionContext({
+      bubbleId: bubble.bubbleId,
+      round: loaded.state.round,
+      startedAt: "2026-03-08T12:38:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
+    const canonicalExecutionContext = metaReviewExecutionContextToRunningContext(
+      metaReviewExecutionContext
+    );
+    if (canonicalExecutionContext === null) {
+      throw new Error("Expected canonical execution context.");
+    }
+
+    const mockedState = {
+      ...loaded.state,
+      state: "RUNNING" as const,
+      active_agent: "codex" as const,
+      active_role: "meta_reviewer" as const,
+      active_since: "2026-03-08T12:38:00.000Z",
+      last_command_at: "2026-03-08T12:38:00.000Z",
+      execution_context: {
+        ...canonicalExecutionContext,
+        handoff_id: "   "
+      },
+      meta_review: {
+        ...loaded.state.meta_review!,
+        execution_context: null,
+        runtime_delivery: null,
+        last_autonomous_run_id: null,
+        last_autonomous_status: null,
+        last_autonomous_recommendation: null,
+        last_autonomous_summary: null,
+        last_autonomous_report_ref: null,
+        last_autonomous_rework_target_message: null,
+        last_autonomous_updated_at: null,
+        auto_rework_count: 0,
+        auto_rework_limit: 5,
+        sticky_human_gate: false
+      }
+    };
+
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      lockPath: join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`),
+      now: new Date("2026-03-08T12:38:30.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: metaReviewerAgent,
+        type: "TASK",
+        round: loaded.state.round,
+        payload: {
+          summary: "Meta-review kickoff replay.",
+          metadata: {
+            actor: "meta-review-gate",
+            actor_agent: "orchestrator",
+            lifecycle_state: "RUNNING",
+            [deliveryTargetRoleMetadataKey]: "meta_reviewer",
+            meta_review_handoff_id: "handoff_meta_valid_only_in_transcript"
+          }
+        },
+        refs: []
+      }
+    });
+
+    const beforeRecover = await readStateSnapshot(bubble.paths.statePath);
+
+    const recoveryPromise = recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      now: new Date("2026-03-08T12:39:00.000Z")
+    }, {
+      readStateSnapshot: async () => ({
+        fingerprint: loaded.fingerprint,
+        state: mockedState
+      })
+    });
+    await expect(recoveryPromise).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
+    });
+    await expect(recoveryPromise).rejects.toThrow(/execution_context\.handoff_id/u);
+
+    const afterRecover = await readStateSnapshot(bubble.paths.statePath);
+    expect(afterRecover.fingerprint).toBe(beforeRecover.fingerprint);
+  });
+
+  it("fails closed when recovery only has nested meta_review.execution_context authority", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_recover_nested_only_01",
+      task: "Meta recover nested execution context alias only"
+    });
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const nestedExecutionContext = buildMetaReviewExecutionContext({
+      bubbleId: bubble.bubbleId,
+      round: loaded.state.round,
+      startedAt: "2026-03-08T12:40:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
+
+    const persistedInvalidState = {
+      ...loaded.state,
+      state: "RUNNING" as const,
+      active_agent: "codex" as const,
+      active_role: "meta_reviewer" as const,
+      active_since: "2026-03-08T12:40:00.000Z",
+      last_command_at: "2026-03-08T12:40:00.000Z",
+      execution_context: null,
+      meta_review: {
+        ...loaded.state.meta_review!,
+        execution_context: nestedExecutionContext,
+        runtime_delivery: null,
+        last_autonomous_run_id: null,
+        last_autonomous_status: null,
+        last_autonomous_recommendation: null,
+        last_autonomous_summary: null,
+        last_autonomous_report_ref: null,
+        last_autonomous_rework_target_message: null,
+        last_autonomous_updated_at: null,
+        auto_rework_count: 0,
+        auto_rework_limit: 5,
+        sticky_human_gate: false
+      }
+    };
+    const persistedInvalidStateJson = `${JSON.stringify(persistedInvalidState, null, 2)}\n`;
+
+    await appendProtocolEnvelope({
+      transcriptPath: bubble.paths.transcriptPath,
+      lockPath: join(bubble.paths.locksDir, `${bubble.bubbleId}.lock`),
+      now: new Date("2026-03-08T12:40:30.000Z"),
+      envelope: {
+        bubble_id: bubble.bubbleId,
+        sender: "orchestrator",
+        recipient: metaReviewerAgent,
+        type: "TASK",
+        round: loaded.state.round,
+        payload: {
+          summary: "Meta-review kickoff replay.",
+          metadata: {
+            actor: "meta-review-gate",
+            actor_agent: "orchestrator",
+            lifecycle_state: "RUNNING",
+            [deliveryTargetRoleMetadataKey]: "meta_reviewer",
+            meta_review_handoff_id: nestedExecutionContext.handoff_id
+          }
+        },
+        refs: []
+      }
+    });
+
+    await writeFileFs(
+      bubble.paths.statePath,
+      persistedInvalidStateJson,
+      "utf8"
+    );
+
+    const recoveryPromise = recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      now: new Date("2026-03-08T12:41:00.000Z")
+    });
+    await expect(recoveryPromise).rejects.toMatchObject({
+      name: "SchemaValidationError"
+    });
+    await expect(recoveryPromise).rejects.toThrow(/Invalid bubble state/u);
+
+    expect(await readFile(bubble.paths.statePath, "utf8")).toBe(
+      persistedInvalidStateJson
+    );
   });
 
   it("accepts submit when live meta-review ownership is absent but execution_context remains valid", async () => {
