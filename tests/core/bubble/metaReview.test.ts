@@ -3871,6 +3871,8 @@ describe("meta-review reads", () => {
 
     expect(before.fingerprint).toBe(after.fingerprint);
     expect(status.has_run).toBe(true);
+    expect(status.operator_surface).toBe("projection_only");
+    expect(status.projection_freshness).toBe("current_round");
     expect(status.last_autonomous_run_id).toBe("run_meta_read_01");
     expect(status.last_autonomous_recommendation).toBe("approve");
   });
@@ -3907,6 +3909,8 @@ describe("meta-review reads", () => {
 
     expect(before.fingerprint).toBe(after.fingerprint);
     expect(lastReport.has_report).toBe(true);
+    expect(lastReport.operator_surface).toBe("projection_only");
+    expect(lastReport.projection_freshness).toBe("current_round");
     expect(lastReport.summary).toBe("Report exists");
     expect(lastReport.report_json).toMatchObject({
       findings_claim_state: "clean",
@@ -4011,9 +4015,11 @@ describe("meta-review reads", () => {
     expect(status.parity_diagnostics).toContain(
       "META_REVIEW_PARITY_ARTIFACT_PARSE_FAILED"
     );
+    expect(status.projection_freshness).toBe("unknown");
     expect(lastReport.parity_diagnostics).toContain(
       "META_REVIEW_PARITY_ARTIFACT_PARSE_FAILED"
     );
+    expect(lastReport.projection_freshness).toBe("unknown");
     expect(lastReport.has_report).toBe(true);
     expect(lastReport.report_json).toBeNull();
     expect(lastReport.summary).toBe("Parity diagnostics parse case");
@@ -4076,9 +4082,11 @@ describe("meta-review reads", () => {
     expect(status.parity_diagnostics).toContain(
       "META_REVIEW_PARITY_ARTIFACT_READ_FAILED:EACCES"
     );
+    expect(status.projection_freshness).toBe("unknown");
     expect(lastReport.parity_diagnostics).toContain(
       "META_REVIEW_PARITY_ARTIFACT_READ_FAILED:EACCES"
     );
+    expect(lastReport.projection_freshness).toBe("unknown");
     expect(lastReport.has_report).toBe(true);
     expect(lastReport.report_json).toBeNull();
     expect(lastReport.summary).toBe("Parity diagnostics read case");
@@ -4156,6 +4164,7 @@ describe("meta-review reads", () => {
       "META_REVIEW_SNAPSHOT_ROUND_STALE:snapshot_round=3;current_round=11"
     );
     expect(status.has_run).toBe(false);
+    expect(status.projection_freshness).toBe("stale");
     expect(status.last_autonomous_recommendation).toBeNull();
     expect(status.last_autonomous_report_ref).toBeNull();
     expect(status.sticky_human_gate).toBe(false);
@@ -4166,6 +4175,94 @@ describe("meta-review reads", () => {
       "META_REVIEW_SNAPSHOT_ROUND_STALE:snapshot_round=3;current_round=11"
     ]);
     expect(lastReport.has_report).toBe(false);
+    expect(lastReport.projection_freshness).toBe("stale");
+    expect(lastReport.report_ref).toBeNull();
+    expect(lastReport.summary).toBeNull();
+    expect(lastReport.updated_at).toBeNull();
+  });
+
+  it("fails closed when parity artifact round is ahead of the current bubble round", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_read_snapshot_round_ahead_01",
+      task: "Meta future-round snapshot skew"
+    });
+
+    await runMetaReview(
+      {
+        bubbleId: bubble.bubbleId,
+        repoPath
+      },
+      {
+        randomUUID: () => "run_meta_read_snapshot_round_ahead_01",
+        now: new Date("2026-03-08T11:28:30.000Z"),
+        runLiveReview: async () => ({
+          recommendation: "approve",
+          summary: "Future-round skew case",
+        })
+      }
+    );
+
+    const reportPayloadRaw = await readFile(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      "utf8"
+    );
+    const reportPayload = JSON.parse(reportPayloadRaw) as Record<string, unknown>;
+    reportPayload.round = 9;
+    await writeFileFs(
+      bubble.paths.metaReviewLastJsonArtifactPath,
+      `${JSON.stringify(reportPayload, null, 2)}\n`,
+      "utf8"
+    );
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    await writeStateSnapshot(
+      bubble.paths.statePath,
+      {
+        ...loaded.state,
+        execution_context: buildRunningExecutionContext({
+          bubbleId: bubble.bubbleId,
+          round: 4,
+          activeRole: loaded.state.execution_context?.active_role ?? "implementer",
+          startedAt:
+            loaded.state.execution_context?.started_at
+            ?? loaded.state.active_since
+            ?? "2026-03-08T11:28:30.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: loaded.state.execution_context?.attempt ?? 1
+        }),
+        round: 4
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const status = await getMetaReviewStatus({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+    const lastReport = await getMetaReviewLastReport({
+      bubbleId: bubble.bubbleId,
+      repoPath
+    });
+
+    expect(status.parity_diagnostics).toEqual([
+      "META_REVIEW_SNAPSHOT_ROUND_AHEAD:snapshot_round=9;current_round=4"
+    ]);
+    expect(status.has_run).toBe(false);
+    expect(status.projection_freshness).toBe("ahead");
+    expect(status.last_autonomous_recommendation).toBeNull();
+    expect(status.last_autonomous_report_ref).toBeNull();
+    expect(status.sticky_human_gate).toBe(false);
+
+    expect(lastReport.parity_diagnostics).toEqual([
+      "META_REVIEW_SNAPSHOT_ROUND_AHEAD:snapshot_round=9;current_round=4"
+    ]);
+    expect(lastReport.has_report).toBe(false);
+    expect(lastReport.projection_freshness).toBe("ahead");
     expect(lastReport.report_ref).toBeNull();
     expect(lastReport.summary).toBeNull();
     expect(lastReport.updated_at).toBeNull();
@@ -4243,6 +4340,7 @@ describe("meta-review reads", () => {
       "META_REVIEW_SNAPSHOT_ROUND_MISSING:current_round=12"
     ]);
     expect(status.has_run).toBe(false);
+    expect(status.projection_freshness).toBe("round_missing");
     expect(status.last_autonomous_recommendation).toBeNull();
     expect(status.last_autonomous_report_ref).toBeNull();
     expect(status.sticky_human_gate).toBe(false);
@@ -4251,6 +4349,7 @@ describe("meta-review reads", () => {
       "META_REVIEW_SNAPSHOT_ROUND_MISSING:current_round=12"
     ]);
     expect(lastReport.has_report).toBe(false);
+    expect(lastReport.projection_freshness).toBe("round_missing");
     expect(lastReport.report_ref).toBeNull();
     expect(lastReport.summary).toBeNull();
     expect(lastReport.updated_at).toBeNull();
@@ -4270,6 +4369,8 @@ describe("meta-review reads", () => {
     });
 
     expect(lastReport.has_report).toBe(false);
+    expect(lastReport.operator_surface).toBe("projection_only");
+    expect(lastReport.projection_freshness).toBe("no_snapshot");
     expect(lastReport.report_ref).toBeNull();
   });
 
@@ -4301,10 +4402,14 @@ describe("meta-review reads", () => {
 
     expect(before.fingerprint).toBe(after.fingerprint);
     expect(status.has_run).toBe(false);
+    expect(status.operator_surface).toBe("projection_only");
+    expect(status.projection_freshness).toBe("no_snapshot");
     expect(status.auto_rework_count).toBe(0);
     expect(status.auto_rework_limit).toBe(5);
     expect(status.sticky_human_gate).toBe(false);
     expect(lastReport.has_report).toBe(false);
+    expect(lastReport.operator_surface).toBe("projection_only");
+    expect(lastReport.projection_freshness).toBe("no_snapshot");
   });
 
   it("returns no-report success when state has report_ref but artifact is missing", async () => {
@@ -4338,6 +4443,7 @@ describe("meta-review reads", () => {
     });
 
     expect(lastReport.has_report).toBe(false);
+    expect(lastReport.projection_freshness).toBe("unknown");
     expect(lastReport.report_ref).toBe("artifacts/meta-review-last.json");
     expect(lastReport.summary).toBe("Generated then removed");
     expect(lastReport.updated_at).toBe("2026-03-08T11:30:00.000Z");

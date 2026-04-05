@@ -22,6 +22,29 @@ interface MetaReviewRenderedResultLike {
   }>;
 }
 
+export function formatMetaReviewProjectionFreshness(
+  freshness: MetaReviewStatusView["projection_freshness"]
+): string {
+  switch (freshness) {
+    case "no_snapshot":
+      return "no_snapshot";
+    case "current_round":
+      return "current_round";
+    case "stale":
+      return "stale";
+    case "ahead":
+      return "ahead";
+    case "round_missing":
+      return "round_missing";
+    case "unknown":
+      return "unknown";
+  }
+  const unreachable: never = freshness;
+  throw new Error(
+    `META_REVIEW_PROJECTION_FRESHNESS_UNEXPECTED: ${String(unreachable)}`
+  );
+}
+
 export function appendMetaReviewOptionalRunId(
   lines: string[],
   runId: string | undefined
@@ -99,7 +122,8 @@ export function buildMetaReviewOutcomeHeaderLines(input: {
 
 export function buildMetaReviewStatusHeaderLines(view: MetaReviewStatusView): string[] {
   return [
-    `Meta-review status for ${view.bubbleId}: has_run=${view.has_run ? "yes" : "no"}`,
+    `Meta-review status projection for ${view.bubbleId}: has_run=${view.has_run ? "yes" : "no"}, freshness=${formatMetaReviewProjectionFreshness(view.projection_freshness)}`,
+    "Operator surface: projection-only read path (no live rerun, no operator-origin submit authority)",
     `Auto rework: ${view.auto_rework_count}/${view.auto_rework_limit}`,
     `Sticky human gate: ${view.sticky_human_gate ? "yes" : "no"}`
   ];
@@ -168,6 +192,7 @@ export function appendMetaReviewLastReportVerboseLines(
 export function buildMetaReviewRecoverText(result: MetaReviewGateResult): string[] {
   return [
     `Meta-review recovery for ${result.bubbleId}: route=${result.route}`,
+    "Recovery mode: snapshot-route replay only (no live rerun, no operator-origin submit authority)",
     `Gate envelope: ${result.gateEnvelope.type} ${result.gateEnvelope.id}`,
     `Lifecycle state: ${result.state.state}`
   ];

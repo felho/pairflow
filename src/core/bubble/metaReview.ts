@@ -133,6 +133,14 @@ export interface MetaReviewLiveRunnerOutput {
 export interface MetaReviewStatusView {
   bubbleId: string;
   has_run: boolean;
+  operator_surface: "projection_only";
+  projection_freshness:
+    | "no_snapshot"
+    | "current_round"
+    | "stale"
+    | "ahead"
+    | "round_missing"
+    | "unknown";
   auto_rework_count: number;
   auto_rework_limit: number;
   sticky_human_gate: boolean;
@@ -157,6 +165,14 @@ export interface MetaReviewStatusView {
 export interface MetaReviewLastReportView {
   bubbleId: string;
   has_report: boolean;
+  operator_surface: "projection_only";
+  projection_freshness:
+    | "no_snapshot"
+    | "current_round"
+    | "stale"
+    | "ahead"
+    | "round_missing"
+    | "unknown";
   report_ref: string | null;
   summary: string | null;
   updated_at: string | null;
@@ -1039,6 +1055,7 @@ function resolveReportArtifactPath(input: {
 function createMetaReviewStatusView(
   bubbleId: string,
   snapshot: BubbleMetaReviewSnapshotState,
+  projectionFreshness: MetaReviewStatusView["projection_freshness"],
   parity: MetaReviewFindingsParitySnapshot = emptyMetaReviewFindingsParitySnapshot,
   parityDiagnostics: string[] = []
 ): MetaReviewStatusView {
@@ -1049,6 +1066,8 @@ function createMetaReviewStatusView(
   return {
     bubbleId,
     has_run: hasRun,
+    operator_surface: "projection_only",
+    projection_freshness: projectionFreshness,
     auto_rework_count: snapshot.auto_rework_count,
     auto_rework_limit: snapshot.auto_rework_limit,
     sticky_human_gate: snapshot.sticky_human_gate,
@@ -1072,7 +1091,7 @@ function createMetaReviewStatusView(
   };
 }
 
-function isRoundLocalMetaReviewSnapshotStale(input: {
+function isRoundLocalMetaReviewSnapshotOutsideCurrentRound(input: {
   currentRound: number;
   snapshotRound: number | null;
   snapshotRoundIdentity: "present" | "missing" | "unavailable";
@@ -1081,7 +1100,8 @@ function isRoundLocalMetaReviewSnapshotStale(input: {
     isInteger(input.currentRound) &&
     input.currentRound > 0 &&
     ((input.snapshotRoundIdentity === "missing" && input.snapshotRound === null) ||
-      (input.snapshotRound !== null && input.snapshotRound < input.currentRound))
+      (input.snapshotRound !== null &&
+        input.snapshotRound !== input.currentRound))
   );
 }
 
@@ -2429,7 +2449,11 @@ export async function getMetaReviewStatus(
   const loadedState = await readState(resolved.bubblePaths.statePath);
   const snapshot = normalizeMetaReviewSnapshot(loadedState.state.meta_review);
   if (!isNonEmptyString(snapshot.last_autonomous_report_ref)) {
-    return createMetaReviewStatusView(resolved.bubbleId, snapshot);
+    return createMetaReviewStatusView(
+      resolved.bubbleId,
+      snapshot,
+      "no_snapshot"
+    );
   }
   const parityRead = await readMetaReviewParitySnapshotFromArtifact({
     artifactPath: resolved.bubblePaths.metaReviewLastJsonArtifactPath,
@@ -2441,7 +2465,7 @@ export async function getMetaReviewStatus(
     snapshotRoundIdentity: parityRead.snapshotRoundIdentity
   });
   if (
-    isRoundLocalMetaReviewSnapshotStale({
+    isRoundLocalMetaReviewSnapshotOutsideCurrentRound({
       currentRound: loadedState.state.round,
       snapshotRound: parityRead.snapshotRound,
       snapshotRoundIdentity: parityRead.snapshotRoundIdentity
@@ -2450,6 +2474,13 @@ export async function getMetaReviewStatus(
     return createMetaReviewStatusView(
       resolved.bubbleId,
       clearLiveMetaReviewSnapshot(snapshot),
+      resolveMetaReviewProjectionFreshness({
+        hasSnapshot: true,
+        currentRound: loadedState.state.round,
+        snapshotRound: parityRead.snapshotRound,
+        snapshotRoundIdentity: parityRead.snapshotRoundIdentity,
+        diagnostics: [...parityRead.diagnostics, ...freshnessDiagnostics]
+      }),
       emptyMetaReviewFindingsParitySnapshot,
       [...parityRead.diagnostics, ...freshnessDiagnostics]
     );
@@ -2458,6 +2489,13 @@ export async function getMetaReviewStatus(
   return createMetaReviewStatusView(
     resolved.bubbleId,
     snapshot,
+    resolveMetaReviewProjectionFreshness({
+      hasSnapshot: true,
+      currentRound: loadedState.state.round,
+      snapshotRound: parityRead.snapshotRound,
+      snapshotRoundIdentity: parityRead.snapshotRoundIdentity,
+      diagnostics: [...parityRead.diagnostics, ...freshnessDiagnostics]
+    }),
     parityRead.parity,
     [...parityRead.diagnostics, ...freshnessDiagnostics]
   );
@@ -2480,6 +2518,7 @@ const metaReviewParityArtifactShapeInvalidReasonCode =
 const metaReviewParityArtifactReportJsonInvalidReasonCode =
   "META_REVIEW_PARITY_REPORT_JSON_INVALID";
 const metaReviewSnapshotRoundStaleReasonCode = "META_REVIEW_SNAPSHOT_ROUND_STALE";
+const metaReviewSnapshotRoundAheadReasonCode = "META_REVIEW_SNAPSHOT_ROUND_AHEAD";
 const metaReviewSnapshotRoundMissingReasonCode =
   "META_REVIEW_SNAPSHOT_ROUND_MISSING";
 
@@ -2490,6 +2529,57 @@ interface MetaReviewParityArtifactReadResult {
   diagnostics: string[];
   snapshotRound: number | null;
   snapshotRoundIdentity: MetaReviewSnapshotRoundIdentity;
+}
+
+function resolveMetaReviewProjectionFreshness(input: {
+  hasSnapshot: boolean;
+  currentRound: number;
+  snapshotRound: number | null;
+  snapshotRoundIdentity: MetaReviewSnapshotRoundIdentity;
+  diagnostics?: string[];
+}): MetaReviewStatusView["projection_freshness"] {
+  if (!input.hasSnapshot) {
+    return "no_snapshot";
+  }
+  if (input.snapshotRoundIdentity === "unavailable") {
+    return "unknown";
+  }
+  if (
+    input.snapshotRoundIdentity === "missing" &&
+    input.snapshotRound === null &&
+    isInteger(input.currentRound) &&
+    input.currentRound > 0
+  ) {
+    return "round_missing";
+  }
+  if (
+    input.snapshotRoundIdentity === "missing" ||
+    !isInteger(input.currentRound) ||
+    input.currentRound < 1 ||
+    (input.snapshotRoundIdentity === "present" && input.snapshotRound === null)
+  ) {
+    return "unknown";
+  }
+  if (
+    input.snapshotRound !== null &&
+    isInteger(input.currentRound) &&
+    input.currentRound > 0 &&
+    input.snapshotRound < input.currentRound
+  ) {
+    return "stale";
+  }
+  if (
+    input.snapshotRound !== null &&
+    isInteger(input.currentRound) &&
+    input.currentRound > 0 &&
+    input.snapshotRound > input.currentRound
+  ) {
+    return "ahead";
+  }
+  if ((input.diagnostics ?? []).length > 0) {
+    return "unknown";
+  }
+  return "current_round";
 }
 
 function resolveParityArtifactReadErrorCode(error: unknown): string {
@@ -2576,6 +2666,11 @@ function resolveSnapshotFreshnessDiagnostics(input: {
       `${metaReviewSnapshotRoundStaleReasonCode}:snapshot_round=${input.snapshotRound};current_round=${input.currentRound}`
     ];
   }
+  if (input.snapshotRound > input.currentRound) {
+    return [
+      `${metaReviewSnapshotRoundAheadReasonCode}:snapshot_round=${input.snapshotRound};current_round=${input.currentRound}`
+    ];
+  }
   return [];
 }
 
@@ -2622,6 +2717,8 @@ export async function getMetaReviewLastReport(
     return {
       bubbleId: resolved.bubbleId,
       has_report: false,
+      operator_surface: "projection_only",
+      projection_freshness: "no_snapshot",
       report_ref: null,
       summary: snapshot.last_autonomous_summary,
       updated_at: snapshot.last_autonomous_updated_at,
@@ -2658,20 +2755,23 @@ export async function getMetaReviewLastReport(
     })
   ];
   if (
-    isRoundLocalMetaReviewSnapshotStale({
+    isRoundLocalMetaReviewSnapshotOutsideCurrentRound({
       currentRound: loadedState.state.round,
       snapshotRound: parityRead.snapshotRound,
       snapshotRoundIdentity: parityRead.snapshotRoundIdentity
     })
   ) {
-    const freshnessDiagnostics = resolveSnapshotFreshnessDiagnostics({
-      currentRound: loadedState.state.round,
-      snapshotRound: parityRead.snapshotRound,
-      snapshotRoundIdentity: parityRead.snapshotRoundIdentity
-    });
     return {
       bubbleId: resolved.bubbleId,
       has_report: false,
+      operator_surface: "projection_only",
+      projection_freshness: resolveMetaReviewProjectionFreshness({
+        hasSnapshot: true,
+        currentRound: loadedState.state.round,
+        snapshotRound: parityRead.snapshotRound,
+        snapshotRoundIdentity: parityRead.snapshotRoundIdentity,
+        diagnostics: parityDiagnostics
+      }),
       report_ref: null,
       summary: null,
       updated_at: null,
@@ -2684,7 +2784,7 @@ export async function getMetaReviewLastReport(
       findings_digest_sha256: null,
       meta_review_run_id: null,
       findings_parity_status: null,
-      parity_diagnostics: freshnessDiagnostics
+      parity_diagnostics: parityDiagnostics
     };
   }
 
@@ -2702,6 +2802,14 @@ export async function getMetaReviewLastReport(
       return {
         bubbleId: resolved.bubbleId,
         has_report: false,
+        operator_surface: "projection_only",
+        projection_freshness: resolveMetaReviewProjectionFreshness({
+          hasSnapshot: true,
+          currentRound: loadedState.state.round,
+          snapshotRound: parityRead.snapshotRound,
+          snapshotRoundIdentity: parityRead.snapshotRoundIdentity,
+          diagnostics: parityDiagnostics
+        }),
         report_ref: reportRef,
         summary: snapshot.last_autonomous_summary,
         updated_at: snapshot.last_autonomous_updated_at,
@@ -2720,6 +2828,14 @@ export async function getMetaReviewLastReport(
     return {
       bubbleId: resolved.bubbleId,
       has_report: true,
+      operator_surface: "projection_only",
+      projection_freshness: resolveMetaReviewProjectionFreshness({
+        hasSnapshot: true,
+        currentRound: loadedState.state.round,
+        snapshotRound: parityRead.snapshotRound,
+        snapshotRoundIdentity: parityRead.snapshotRoundIdentity,
+        diagnostics: parityDiagnostics
+      }),
       report_ref: reportRef,
       summary: snapshot.last_autonomous_summary,
       updated_at: snapshot.last_autonomous_updated_at,
@@ -2739,6 +2855,14 @@ export async function getMetaReviewLastReport(
   return {
     bubbleId: resolved.bubbleId,
     has_report: true,
+    operator_surface: "projection_only",
+    projection_freshness: resolveMetaReviewProjectionFreshness({
+      hasSnapshot: true,
+      currentRound: loadedState.state.round,
+      snapshotRound: parityRead.snapshotRound,
+      snapshotRoundIdentity: parityRead.snapshotRoundIdentity,
+      diagnostics: parityDiagnostics
+    }),
     report_ref: reportRef,
     summary: snapshot.last_autonomous_summary,
     updated_at: snapshot.last_autonomous_updated_at,

@@ -1176,6 +1176,60 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     });
   });
 
+  it("rejects before-deadline recovery when the only kickoff envelope carries a different handoff id than the active execution context", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_handoff_mismatch_01",
+      task: "Recover should not replay kickoff from a different meta-review handoff"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:09:00.000Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const transcript = await readTranscriptEnvelopes(bubble.paths.transcriptPath, {
+      allowMissing: false
+    });
+    const withMutatedKickoff = transcript.map((envelope) => {
+      if (envelope.payload.metadata?.actor !== "meta-review-gate") {
+        return envelope;
+      }
+      return {
+        ...envelope,
+        payload: {
+          ...envelope.payload,
+          metadata: {
+            ...envelope.payload.metadata,
+            meta_review_handoff_id:
+              "meta_review:b_meta_gate_recover_handoff_mismatch_01:round:1:attempt:999"
+          }
+        }
+      };
+    });
+    await writeFileFs(
+      bubble.paths.transcriptPath,
+      withMutatedKickoff.map((envelope) => serializeEnvelopeLine(envelope)).join(""),
+      "utf8"
+    );
+
+    await expect(
+      recoverMetaReviewGateFromSnapshot({
+        bubbleId: bubble.bubbleId,
+        repoPath,
+        summary: "Converged.",
+        now: new Date("2026-03-12T12:09:02.000Z")
+      })
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
+    });
+  });
+
   it("routes approve snapshot to human gate", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({

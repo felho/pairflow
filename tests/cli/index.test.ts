@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile, chmod } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile, chmod } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -6,7 +6,10 @@ import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import { runCli } from "../../src/cli/index.js";
 import { buildMetaReviewExecutionContext } from "../../src/core/bubble/metaReviewExecutionContext.js";
-import { metaReviewExecutionContextToRunningContext } from "../../src/core/state/executionContext.js";
+import {
+  buildRunningExecutionContext,
+  metaReviewExecutionContextToRunningContext
+} from "../../src/core/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../src/core/state/stateStore.js";
 import { setupRunningBubbleFixture } from "../helpers/bubble.js";
 import { initGitRepository } from "../helpers/git.js";
@@ -366,9 +369,16 @@ describe("runCli", () => {
 
     expect(exitCode).toBe(0);
     const stdoutText = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
-    const parsed = JSON.parse(stdoutText) as { bubbleId: string; has_run: boolean };
+    const parsed = JSON.parse(stdoutText) as {
+      bubbleId: string;
+      has_run: boolean;
+      operator_surface: string;
+      projection_freshness: string;
+    };
     expect(parsed.bubbleId).toBe(bubble.bubbleId);
     expect(parsed.has_run).toBe(false);
+    expect(parsed.operator_surface).toBe("projection_only");
+    expect(parsed.projection_freshness).toBe("no_snapshot");
   });
 
   it("renders meta-review run as JSON through runCli", async () => {
@@ -446,11 +456,15 @@ describe("runCli", () => {
     const parsed = JSON.parse(stdoutText) as {
       bubbleId: string;
       has_report: boolean;
+      operator_surface: string;
+      projection_freshness: string;
       report_ref: string | null;
       report_json: Record<string, unknown> | null;
     };
     expect(parsed.bubbleId).toBe(bubble.bubbleId);
     expect(parsed.has_report).toBe(true);
+    expect(parsed.operator_surface).toBe("projection_only");
+    expect(parsed.projection_freshness).toBe("current_round");
     expect(parsed.report_ref).toBe("artifacts/meta-review-last.json");
     expect(parsed.report_json).toBeTruthy();
   });
@@ -481,13 +495,110 @@ describe("runCli", () => {
     const parsed = JSON.parse(stdoutText) as {
       bubbleId: string;
       has_report: boolean;
+      operator_surface: string;
+      projection_freshness: string;
       report_ref: string | null;
       report_json: Record<string, unknown> | null;
     };
     expect(parsed.bubbleId).toBe(bubble.bubbleId);
     expect(parsed.has_report).toBe(false);
+    expect(parsed.operator_surface).toBe("projection_only");
+    expect(parsed.projection_freshness).toBe("no_snapshot");
     expect(parsed.report_ref).toBeNull();
     expect(parsed.report_json).toBeNull();
+  });
+
+  it("fails closed in meta-review last-report JSON when parity artifact round is ahead of the current bubble round", async () => {
+    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-meta-review-json-last-ahead-"));
+    tempDirs.push(repoPath);
+    await initGitRepository(repoPath);
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_review_cli_json_04b",
+      task: "meta-review json last-report ahead"
+    });
+
+    const runExitCode = await runCli([
+      "bubble",
+      "meta-review",
+      "run",
+      "--id",
+      bubble.bubbleId,
+      "--repo",
+      repoPath
+    ]);
+    expect(runExitCode).toBe(0);
+    stdoutSpy.mockClear();
+
+    const artifactPath = join(
+      repoPath,
+      ".pairflow",
+      "bubbles",
+      bubble.bubbleId,
+      "artifacts",
+      "meta-review-last.json"
+    );
+    const artifactRaw = await readFile(artifactPath, "utf8");
+    const artifact = JSON.parse(artifactRaw) as Record<string, unknown>;
+    artifact.round = 9;
+    await writeFile(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
+
+    const statePath = join(repoPath, ".pairflow", "bubbles", bubble.bubbleId, "state.json");
+    const loaded = await readStateSnapshot(statePath);
+    await writeStateSnapshot(
+      statePath,
+      {
+        ...loaded.state,
+        execution_context: buildRunningExecutionContext({
+          bubbleId: bubble.bubbleId,
+          round: 4,
+          activeRole: loaded.state.execution_context?.active_role ?? "implementer",
+          startedAt:
+            loaded.state.execution_context?.started_at
+            ?? loaded.state.active_since
+            ?? "2026-03-08T11:30:30.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: loaded.state.execution_context?.attempt ?? 1
+        }),
+        round: 4
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    const exitCode = await runCli([
+      "bubble",
+      "meta-review",
+      "last-report",
+      "--id",
+      bubble.bubbleId,
+      "--repo",
+      repoPath,
+      "--json"
+    ]);
+
+    expect(exitCode).toBe(0);
+    const stdoutText = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+    const parsed = JSON.parse(stdoutText) as {
+      bubbleId: string;
+      has_report: boolean;
+      operator_surface: string;
+      projection_freshness: string;
+      report_ref: string | null;
+      report_json: Record<string, unknown> | null;
+      parity_diagnostics: string[];
+    };
+    expect(parsed.bubbleId).toBe(bubble.bubbleId);
+    expect(parsed.has_report).toBe(false);
+    expect(parsed.operator_surface).toBe("projection_only");
+    expect(parsed.projection_freshness).toBe("ahead");
+    expect(parsed.report_ref).toBeNull();
+    expect(parsed.report_json).toBeNull();
+    expect(parsed.parity_diagnostics).toEqual([
+      "META_REVIEW_SNAPSHOT_ROUND_AHEAD:snapshot_round=9;current_round=4"
+    ]);
   });
 
   it("renders meta-review recover as JSON through runCli", async () => {
