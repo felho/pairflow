@@ -108,7 +108,7 @@ describe("BubbleExpandedCard", () => {
     expect(screen.getByRole("article")).toHaveClass("border-fuchsia-500");
   });
 
-  it("renders attention badge and border when an issue is present", () => {
+  it("renders attention message and border when an issue is present", () => {
     renderExpandedCard({
       bubble: bubbleCard({
         bubbleId: "b-expanded-1",
@@ -123,7 +123,6 @@ describe("BubbleExpandedCard", () => {
     });
 
     expect(screen.getByRole("article")).toHaveClass("border-rose-500");
-    expect(screen.getAllByText("No session").length).toBeGreaterThan(0);
     expect(
       screen.getByText(
         "Runtime session is expected for the current lifecycle state, but none is registered."

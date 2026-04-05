@@ -264,11 +264,6 @@ export function BubbleExpandedCard(props: BubbleExpandedCardProps): JSX.Element 
             <span className={cn("text-[10px] font-medium tracking-wide", visual.stateText)}>
               {formatStateLabel(attachSource.state)}
             </span>
-            {attention !== null ? (
-              <span className="rounded-full border border-rose-400/70 bg-rose-950/70 px-1.5 py-px text-[8px] font-semibold uppercase tracking-wide text-rose-200">
-                {attention.label}
-              </span>
-            ) : null}
           </span>
         </div>
       </div>

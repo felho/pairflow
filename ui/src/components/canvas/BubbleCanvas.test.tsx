@@ -188,7 +188,7 @@ describe("BubbleCanvas", () => {
     ).toBeInTheDocument();
   });
 
-  it("prioritizes attention border and badge over meta-review border", () => {
+  it("prioritizes attention border over meta-review border", () => {
     const { container } = render(
       <BubbleCanvas
         bubbles={[
@@ -214,7 +214,6 @@ describe("BubbleCanvas", () => {
       />
     );
 
-    expect(screen.getByText("Quiet 8m")).toBeInTheDocument();
     expect(
       screen.getByText("No pane activity was observed for 8 minutes.")
     ).toBeInTheDocument();
