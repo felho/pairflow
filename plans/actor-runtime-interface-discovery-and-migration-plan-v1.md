@@ -20,6 +20,18 @@ Elokesziteni egy olyan actor runtime interface-et vagy actor adapter contractot,
 
 Ez a plan discovery- es preparation-jellegu. Nem celja a Phase 4 vagy Phase 5 leszallitasi scope-janak felulirasa vagy kiszelesitese.
 
+## Direction Change Note (2026-04-05)
+
+1. A retained meta-review operator cleanup Phase E lane-en a `bubble meta-review run|status|last-report|recover` subtree eredetileg egyben kezelt cleanup-target volt.
+2. A 2026-04-05-i review/implementation tapasztalat alapjan ez a framing nem bizonyult eleg stabilnak: a lane tobb, egymast erosito P1 regresszioba futott, es a valos blast radius nagyobbnak latszik egy egyszeru retained operator cleanupnal.
+3. Ideiglenes iranyvaltas:
+   - a `status` es `last-report` retained olvaso/operator surface most tudatosan befagyasztva marad, es nem nyitunk rajta uj implementacios szeletet addig, amig a `run` removal es a `recover` refaktor le nem zarul,
+   - a public `meta-review run` kivezetese kulon bounded taskkent kezelendo,
+   - a `recover` iranyat kulon recovery/reconcile refaktor draftban kell ujragondolni.
+4. A jelenlegi munkahipotézis szerint ez jobban illeszkedik a plan eredeti celjahoz is, mert csokkenti a retained role-specifikus operator surface-et, mikozben kozelebb visz egy kozosebb actor emit / reconcile kernelhez.
+5. A `run` removal es a `recover` refaktor utan explicit decision checkpoint kovetkezik: tudatosan ujra kell nezni, maradt-e barmilyen indokolt tovabbi munka a `status` / `last-report` korul, vagy azok valtozatlanul retained maradhatnak.
+6. Ennek megfeleloen a korabbi egyben kezelt Phase E operator cleanup task historical parent artifactkent marad meg, de nem tekintendo a jelenlegi legjobb aktiv implementation targetnek.
+
 ## Decision Baseline
 
 1. Terminologia: a javasolt uj boundary munkaneve `actor runtime interface`; ezzel ekvivalens elfogadhato terminus az `actor adapter contract` vagy `actor driver contract`. Nem pusztan TypeScript interface-rol van szo, hanem egy teljes runtime/domain boundaryrol.

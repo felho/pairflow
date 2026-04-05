@@ -1,8 +1,8 @@
 ---
 artifact_type: task
 artifact_id: task_actor_runtime_interface_meta_review_operator_projection_cleanup_phaseE_v1
-title: "Actor Runtime Interface Meta-Review Operator Projection Cleanup (Phase E)"
-status: implementable
+title: "Actor Runtime Interface Meta-Review Operator Projection Cleanup (Phase E, Superseded Parent)"
+status: superseded
 phase: phaseE
 target_files:
   - src/core/bubble/metaReview.ts
@@ -25,12 +25,23 @@ owners:
 
 # Task: Actor Runtime Interface Meta-Review Operator Projection Cleanup (Phase E)
 
+## Direction Change Note (2026-04-05)
+
+1. Ez a task historical parent artifactkent marad meg, de a 2026-04-05-i iranyvaltas utan nem ez a javasolt aktiv implementation target.
+2. A retained `bubble meta-review` namespace egyben kezelt cleanupja a gyakorlatban nem bizonyult eleg boundednek.
+3. A jelenlegi szetvalasztott kovetkezo lepesek:
+   - [actor-runtime-interface-meta-review-run-removal-phaseE.md](/Users/felho/dev/pairflow/plans/tasks/actor-runtime-interface-meta-review-run-removal-phaseE.md): kulon bounded task a public `meta-review run` kivezetesere
+   - [actor-runtime-interface-meta-review-recovery-reconcile-refactor-draft.md](/Users/felho/dev/pairflow/plans/tasks/actor-runtime-interface-meta-review-recovery-reconcile-refactor-draft.md): draft a `recover` recovery/reconcile iranyanak ujrakeretezesehez
+4. A `status` es `last-report` retained olvaso/operator surface most tudatosan befagyasztva marad; erre addig nem nyilik uj implementation slice, amig a `run` removal es a `recover` refaktor le nem zarul.
+5. A ket fenti lepes utan explicit decision checkpoint kell: kulon el kell donteni, maradt-e tenyleges additional work a `status` / `last-report` korul, vagy nincs tovabbi teendo.
+6. Ez a file torles helyett azert marad meg, hogy megorizze a korabbi contract- es review-historyt, de a maradek munkat mar ne egyben tartott parent cleanup framing alatt kezeljuk.
+
 ## Executive Summary
 
-1. Ez a Phase E task nem uj meta-review alrendszert tervez, hanem a mar retained `bubble meta-review status|last-report|recover` operator surface bounded cleanupjat zarja le.
-2. A kotelezo eredmeny az, hogy a retrieval pathok explicit projection-only olvaso surface-k maradjanak, a `recover` pedig explicit snapshot-route replay maradjon live rerun vagy operator-origin authority nelkul.
-3. A task review-stabil csak akkor, ha a diff vegig megtartja a canonical actor submit authority kulonallasat: `pairflow agent emit --kind meta_review_result` marad az egyetlen canonical actor write path.
-4. `README.md` es `docs/pairflow-initial-design.md` csak felteteles target: kizarolag akkor touched, ha a retained operator surface user-visible szemantikaja tenylegesen pontosodik.
+1. Ez a Phase E task eredetileg egyben kezelte a retained `bubble meta-review run|status|last-report|recover` operator lane maradek cleanupjat.
+2. A 2026-04-05-i direction change utan ez a framing superseded lett: a `run` kulon removal taskot kap, a `recover` kulon recovery/reconcile refaktor draftot kap, a `status` es `last-report` pedig most befagyasztott retained surface, amelyrol a ket lepes utan kulon dontes szuletik.
+3. A historical contract lenyege tovabbra is fontos: a canonical actor submit authority kulon maradjon (`pairflow agent emit --kind meta_review_result`), es a retained operator surface ne nyisson ujra actor-facing special-case write pathot.
+4. `README.md` es `docs/pairflow-initial-design.md` tovabbra is csak felteteles target marad, de ez a parent artifact mar nem hordoz aktiv implementation ownershipot.
 
 ## Tracking Snapshot (2026-04-05)
 
