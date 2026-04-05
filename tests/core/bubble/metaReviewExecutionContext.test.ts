@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildMetaReviewExecutionContext,
+  isMetaReviewExecutionContextActiveState,
   validateActiveMetaReviewExecutionContext
 } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import { metaReviewExecutionContextToRunningContext } from "../../../src/core/state/executionContext.js";
@@ -109,6 +110,14 @@ describe("validateActiveMetaReviewExecutionContext", () => {
     expect(result.value).toEqual(state.execution_context);
   });
 
+  it("does not treat nested-only meta-review execution context as active authority", () => {
+    const state = createMetaReviewRunningState({
+      execution_context: null
+    });
+
+    expect(isMetaReviewExecutionContextActiveState(state)).toBe(false);
+  });
+
   it("rejects non-meta-review lifecycle states before inspecting context", () => {
     const result = validateActiveMetaReviewExecutionContext(
       createMetaReviewRunningState({ state: "WAITING_HUMAN" })
@@ -132,10 +141,6 @@ describe("validateActiveMetaReviewExecutionContext", () => {
     const result = validateActiveMetaReviewExecutionContext(
       createMetaReviewRunningState({
         execution_context: null,
-        meta_review: {
-          ...createMetaReviewRunningState().meta_review!,
-          execution_context: null
-        }
       })
     );
 

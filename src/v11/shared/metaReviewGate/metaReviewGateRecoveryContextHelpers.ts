@@ -17,7 +17,13 @@ import {
   type MetaReviewGateResult,
   type RecoverMetaReviewGateFromSnapshotDependencies
 } from "./metaReviewGateTypes.js";
-import { isMetaReviewExecutionContextActiveState } from "../../../core/bubble/metaReviewExecutionContext.js";
+import { toMetaReviewGateError } from "./metaReviewGateErrorConversion.js";
+import {
+  runningExecutionContextPath,
+  validateActiveMetaReviewExecutionContext
+} from "../../../core/bubble/metaReviewExecutionContext.js";
+import type { BubbleExecutionContext } from "../../../types/bubble.js";
+import { metaReviewGatePaneDeactivationUnavoidableReasonCode } from "./metaReviewGateShared.js";
 
 export interface ResolvedRecoveryContextDependencies {
   resolveBubble: typeof resolveBubbleById;
@@ -105,17 +111,58 @@ export function buildFinishWithPaneDeactivation(input: {
   };
 }
 
-export function assertRecoverableMetaReviewState(
-  loaded: LoadedStateSnapshot
-): void {
-  if (!isMetaReviewExecutionContextActiveState(loaded.state)) {
-    // reason_code=META_REVIEW_GATE_TRANSITION_INVALID expected_state current_state
+export async function rethrowAfterMetaReviewerPaneDeactivation(input: {
+  error: unknown;
+  deactivateMetaReviewerPane: () => Promise<string | null>;
+  failureContext: string;
+}): Promise<never> {
+  const deactivationError = await input.deactivateMetaReviewerPane();
+  if (deactivationError !== null) {
+    const root = toMetaReviewGateError(input.error);
     throw new MetaReviewGateError(
       "META_REVIEW_GATE_TRANSITION_INVALID",
-      `META_REVIEW_GATE_TRANSITION_INVALID: meta-review gate recovery requires RUNNING state with active meta-review authority (current: ${loaded.state.state}).`,
+      `META_REVIEW_GATE_TRANSITION_INVALID: ${metaReviewGatePaneDeactivationUnavoidableReasonCode}: ${input.failureContext} and pane deactivation could not be confirmed (deactivation_error=${deactivationError}). Root error: ${root.message}`,
       {
-        stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
+        ...root.diagnostics,
+        stageReasonCode: metaReviewGatePaneDeactivationUnavoidableReasonCode
       }
     );
   }
+
+  throw input.error;
+}
+
+function buildMissingTopLevelExecutionContextError(): MetaReviewGateError {
+  return new MetaReviewGateError(
+    "META_REVIEW_GATE_TRANSITION_INVALID",
+    "META_REVIEW_GATE_TRANSITION_INVALID: meta-review gate recovery requires a valid top-level execution_context; nested meta_review.execution_context aliases are not accepted.",
+    {
+      stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
+    }
+  );
+}
+
+export function requireRecoverableMetaReviewExecutionContext(
+  loaded: LoadedStateSnapshot
+): BubbleExecutionContext {
+  const topLevelExecutionContext = loaded.state.execution_context ?? null;
+  const executionContextResult = validateActiveMetaReviewExecutionContext(loaded.state);
+  if (topLevelExecutionContext === null) {
+    throw buildMissingTopLevelExecutionContextError();
+  }
+
+  if (executionContextResult.ok) {
+    return executionContextResult.value;
+  }
+
+  const details = executionContextResult.errors
+    .map((error) => `${error.path}: ${error.message}`)
+    .join("; ");
+  throw new MetaReviewGateError(
+    "META_REVIEW_GATE_TRANSITION_INVALID",
+    `META_REVIEW_GATE_TRANSITION_INVALID: meta-review gate recovery requires RUNNING state with a valid top-level ${runningExecutionContextPath} (${details}).`,
+    {
+      stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
+    }
+  );
 }

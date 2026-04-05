@@ -34,9 +34,9 @@ import {
   type RecoverMetaReviewGateFromSnapshotInput
 } from "./metaReviewGateTypes.js";
 import {
-  assertRecoverableMetaReviewState,
   buildDeactivateMetaReviewerPane,
   buildFinishWithPaneDeactivation,
+  rethrowAfterMetaReviewerPaneDeactivation,
   resolveRecoveryContextDependencies
 } from "./metaReviewGateRecoveryContextHelpers.js";
 import { buildRecoveryHumanRoutePersistenceInput } from "./metaReviewGateRecoveryHumanRouteInput.js";
@@ -99,8 +99,15 @@ export async function initializeRecoverMetaReviewExecutionContext(
     deactivateMetaReviewerPane
   });
 
-  const loaded = await resolvedDependencies.readState(resolved.bubblePaths.statePath);
-  assertRecoverableMetaReviewState(loaded);
+  const loaded = await resolvedDependencies.readState(
+    resolved.bubblePaths.statePath
+  ).catch((error: unknown) =>
+    rethrowAfterMetaReviewerPaneDeactivation({
+      error,
+      deactivateMetaReviewerPane,
+      failureContext: "recovery initialization failed"
+    })
+  );
 
   return {
     resolved,

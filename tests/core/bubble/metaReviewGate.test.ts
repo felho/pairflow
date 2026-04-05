@@ -29,6 +29,7 @@ import {
 } from "../../../src/core/state/stateStore.js";
 import { buildRunningExecutionContext } from "../../../src/core/state/executionContext.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
+import { SchemaValidationError } from "../../../src/core/validation.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import type { BubbleMetaReviewSnapshotState } from "../../../src/types/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -1133,6 +1134,44 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     await expect(
       readFile(bubble.paths.metaReviewLastJsonArtifactPath, "utf8")
     ).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("routes after-deadline recovery without a durable result to human_gate_run_failed", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_expired_empty_snapshot_01",
+      task: "Recover expired empty snapshot"
+    });
+
+    const started = await startAsyncMetaReviewGate({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      worktreePath: bubble.paths.worktreePath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T12:09:00.000Z")
+    });
+    expect(started.route).toBe("meta_review_running");
+
+    const recovered = await recoverMetaReviewGateFromSnapshot({
+      bubbleId: bubble.bubbleId,
+      repoPath,
+      summary: "Converged.",
+      now: new Date("2026-03-12T14:09:02.000Z")
+    });
+
+    expect(recovered.route).toBe("human_gate_run_failed");
+    expect(recovered.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
+    expect(recovered.gateEnvelope.type).toBe("APPROVAL_REQUEST");
+    expect(recovered.gateEnvelope.payload.metadata).toMatchObject({
+      meta_review_gate_route: "human_gate_run_failed",
+      meta_review_gate_reason_code: "META_REVIEW_GATE_RUN_FAILED",
+      meta_review_gate_run_failed: true
+    });
+    expect(recovered.state.meta_review).toMatchObject({
+      last_autonomous_status: "error",
+      last_autonomous_recommendation: "inconclusive"
+    });
   });
 
   it("rejects before-deadline recovery when only a generic TASK remains and the meta-review kickoff envelope is missing", async () => {
@@ -4858,6 +4897,125 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
     );
     expect(
       setPaneWithDeactivateFailure.mock.calls.some(([args]) => args.active === false)
+    ).toBe(true);
+  });
+
+  it("deactivates the meta-reviewer pane when recovery fails during execution_context validation", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_invalid_ctx_deactivate_01",
+      task: "Recover execution context validation cleanup"
+    });
+
+    const loaded = await readStateSnapshot(bubble.paths.statePath);
+    const setPaneSpy = vi.fn(async ({ bubbleId: targetBubbleId, active }: {
+      bubbleId: string;
+      active: boolean;
+    }) =>
+      buildBoundMetaReviewerPaneResult({
+        bubbleId: targetBubbleId,
+        repoPath,
+        worktreePath: bubble.paths.worktreePath,
+        active
+      })
+    );
+
+    const invalidState = {
+      ...loaded.state,
+      state: "RUNNING" as const,
+      active_agent: "codex" as const,
+      active_role: "meta_reviewer" as const,
+      active_since: "2026-03-12T12:16:20.000Z",
+      last_command_at: "2026-03-12T12:16:20.000Z",
+      execution_context: {
+        ...buildRunningExecutionContext({
+          bubbleId: bubble.bubbleId,
+          round: loaded.state.round,
+          activeRole: "meta_reviewer",
+          startedAt: "2026-03-12T12:16:20.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        }),
+        handoff_id: "   "
+      },
+      meta_review: defaultMetaReviewSnapshot()
+    };
+
+    await expect(
+      recoverMetaReviewGateFromSnapshot(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          summary: "Converged.",
+          now: new Date("2026-03-12T12:16:21.000Z")
+        },
+        {
+          readStateSnapshot: async () => ({
+            fingerprint: loaded.fingerprint,
+            state: invalidState
+          }),
+          setMetaReviewerPaneBinding: setPaneSpy
+        }
+      )
+    ).rejects.toMatchObject({
+      reasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
+    });
+
+    expect(setPaneSpy).toHaveBeenCalled();
+    expect(
+      setPaneSpy.mock.calls.some(([args]) => args.active === false)
+    ).toBe(true);
+  });
+
+  it("deactivates the meta-reviewer pane when recovery initialization fails while reading state", async () => {
+    const repoPath = await createTempRepo();
+    const bubble = await setupRunningBubbleFixture({
+      repoPath,
+      bubbleId: "b_meta_gate_recover_init_read_failure_01",
+      task: "Recover init read failure cleanup"
+    });
+
+    const setPaneSpy = vi.fn(async ({ bubbleId: targetBubbleId, active }: {
+      bubbleId: string;
+      active: boolean;
+    }) =>
+      buildBoundMetaReviewerPaneResult({
+        bubbleId: targetBubbleId,
+        repoPath,
+        worktreePath: bubble.paths.worktreePath,
+        active
+      })
+    );
+
+    await expect(
+      recoverMetaReviewGateFromSnapshot(
+        {
+          bubbleId: bubble.bubbleId,
+          repoPath,
+          summary: "Converged.",
+          now: new Date("2026-03-12T12:16:21.000Z")
+        },
+        {
+          readStateSnapshot: async () => {
+            throw new SchemaValidationError("Invalid bubble state", [
+              {
+                path: "execution_context",
+                message:
+                  "RUNNING meta-review state requires canonical execution_context authority"
+              }
+            ]);
+          },
+          setMetaReviewerPaneBinding: setPaneSpy
+        }
+      )
+    ).rejects.toMatchObject({
+      name: "SchemaValidationError"
+    });
+
+    expect(setPaneSpy).toHaveBeenCalled();
+    expect(
+      setPaneSpy.mock.calls.some(([args]) => args.active === false)
     ).toBe(true);
   });
 
