@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
 import {
+  confirmTmuxPaneMarkerSubmission,
   maybeAcceptClaudeTrustPrompt,
   sendAndSubmitTmuxPaneMessage,
   submitTmuxPaneInput
@@ -58,6 +59,11 @@ export interface LaunchBubbleTmuxSessionResult {
 
 function buildStatusPaneLabel(bubbleId: string): string {
   return `[orchestrator/status]-[${bubbleId}]`;
+}
+
+function resolvePairflowPaneMessageMarker(message: string): string | undefined {
+  const match = /\[pairflow\]\s+bubble=\S+/u.exec(message);
+  return match?.[0];
 }
 
 export interface TerminateBubbleTmuxSessionInput {
@@ -403,7 +409,16 @@ export async function launchBubbleTmuxSession(
     // Best effort auto-accept keeps startup fully non-interactive.
     await maybeAcceptClaudeTrustPrompt(runner, targetPane).catch(() => undefined);
 
-    await sendAndSubmitTmuxPaneMessage(runner, targetPane, message as string);
+    const concreteMessage = message as string;
+    await sendAndSubmitTmuxPaneMessage(runner, targetPane, concreteMessage);
+    const marker = resolvePairflowPaneMessageMarker(concreteMessage);
+    if (marker !== undefined) {
+      await confirmTmuxPaneMarkerSubmission({
+        runner,
+        targetPane,
+        marker
+      });
+    }
   };
 
   await submitStartupPrompt(

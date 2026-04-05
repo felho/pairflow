@@ -2,7 +2,13 @@ import { basename, dirname, join } from "node:path";
 
 import { readRuntimeSessionsRegistry } from "./sessionsRegistry.js";
 import { runTmux, runtimePaneIndices, type TmuxRunner } from "./tmuxManager.js";
-import { maybeAcceptClaudeTrustPrompt, sendAndSubmitTmuxPaneMessage, submitTmuxPaneInput } from "./tmuxInput.js";
+import {
+  checkTmuxPaneMarkerStatus,
+  confirmTmuxPaneMarkerSubmission,
+  maybeAcceptClaudeTrustPrompt,
+  sendAndSubmitTmuxPaneMessage,
+  submitTmuxPaneInput
+} from "./tmuxInput.js";
 import { buildReviewerAgentSelectionGuidance } from "./reviewerGuidance.js";
 import { buildReviewerSeverityOntologyReminder } from "./reviewerSeverityOntology.js";
 import {
@@ -380,68 +386,6 @@ function sleep(ms: number): Promise<void> {
   });
 }
 
-type MarkerStatus = "submitted" | "stuck_in_input" | "not_found";
-
-/**
- * Check whether a delivery marker appears in a tmux pane's visible content.
- *
- * `capture-pane -p` returns both the output area AND the current input buffer.
- * If the marker only appears after the last `>` prompt indicator, the message
- * is still sitting in the input buffer (Enter didn't submit).  We distinguish:
- *
- * - "submitted":       marker found in the output area (before the prompt)
- * - "stuck_in_input":  marker found only after the last `>` prompt line
- * - "not_found":       marker not present at all
- */
-async function checkMarkerStatus(
-  runner: TmuxRunner,
-  targetPane: string,
-  marker: string
-): Promise<MarkerStatus> {
-  const capture = await runner(["capture-pane", "-pt", targetPane], {
-    allowFailure: true
-  });
-  if (capture.exitCode !== 0) {
-    return "not_found";
-  }
-  const output = capture.stdout;
-  if (!output.includes(marker)) {
-    return "not_found";
-  }
-
-  // Find the last prompt line.  Claude Code renders `>` (or `❯`) at the start
-  // of its input area.  Everything after that line is the current input buffer.
-  const lines = output.split("\n");
-  const lastPromptIdx = findLastIndex(lines, isAgentPromptLine);
-  if (lastPromptIdx < 0) {
-    // No prompt visible — marker is in output area.
-    return "submitted";
-  }
-
-  const beforePrompt = lines.slice(0, lastPromptIdx).join("\n");
-  if (beforePrompt.includes(marker)) {
-    return "submitted";
-  }
-
-  // Marker only appears in/after the prompt line → stuck in input buffer.
-  return "stuck_in_input";
-}
-
-function findLastIndex(arr: string[], predicate: (item: string) => boolean): number {
-  for (let i = arr.length - 1; i >= 0; i--) {
-    if (predicate(arr[i]!)) {
-      return i;
-    }
-  }
-  return -1;
-}
-
-function isAgentPromptLine(line: string): boolean {
-  // Some terminal layouts prefix prompt lines with pane border glyphs (for
-  // example: `│ ❯`). Treat those as prompt lines too.
-  return /^\s*(?:[|│┃]\s*)*[>❯]/u.test(line);
-}
-
 export async function emitTmuxDeliveryNotification(
   input: EmitTmuxDeliveryNotificationInput
 ): Promise<EmitTmuxDeliveryNotificationResult> {
@@ -547,28 +491,20 @@ export async function emitTmuxDeliveryNotification(
     if ((input.initialDelayMs ?? 0) > 0) {
       await sleep(input.initialDelayMs as number);
     }
-    const attempts = Math.max(1, input.deliveryAttempts ?? 3);
-    let confirmed = false;
     await maybeAcceptClaudeTrustPrompt(runner, targetPane).catch(() => undefined);
     // Delivery is best-effort, but an explicit tmux write/submit failure should
     // still map to `tmux_send_failed` instead of degrading into unconfirmed.
     await sendAndSubmitTmuxPaneMessage(runner, targetPane, message, {
       requireSuccess: true
     });
-    for (let attempt = 0; attempt < attempts; attempt += 1) {
-      // Allow UI flush then check where the marker appears.
-      await sleep(800);
-      const status = await checkMarkerStatus(runner, targetPane, input.envelope.id);
-      if (status === "submitted") {
-        confirmed = true;
-        break;
-      }
-      if (attempt < attempts - 1) {
-        // "stuck_in_input" or "not_found" — retry with a bare Enter.
-        await sleep(900);
-        await submitTmuxPaneInput(runner, targetPane);
-      }
-    }
+    const confirmed = await confirmTmuxPaneMarkerSubmission({
+      runner,
+      targetPane,
+      marker: input.envelope.id,
+      ...(input.deliveryAttempts !== undefined
+        ? { attempts: input.deliveryAttempts }
+        : {})
+    });
     if (!confirmed) {
       return {
         delivered: false,
@@ -674,16 +610,13 @@ export async function retryStuckAgentInput(
 
   // Check if the [pairflow] marker is stuck in the input buffer
   // (after the last prompt line) rather than in the output area.
-  const lines = output.split("\n");
-  const lastPromptIdx = findLastIndex(lines, isAgentPromptLine);
-  if (lastPromptIdx < 0) {
-    // No prompt visible — marker is in output area, not stuck.
-    return { retried: false, reason: "not_stuck" };
-  }
-
-  const beforePrompt = lines.slice(0, lastPromptIdx).join("\n");
-  if (beforePrompt.includes("[pairflow]")) {
-    // Marker is in the output area — already submitted.
+  const markerStatus = await checkTmuxPaneMarkerStatus(
+    runner,
+    targetPane,
+    "[pairflow]"
+  );
+  if (markerStatus !== "stuck_in_input") {
+    // Marker is either already submitted or not present in the live input area.
     return { retried: false, reason: "not_stuck" };
   }
 

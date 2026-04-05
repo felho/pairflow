@@ -293,6 +293,74 @@ describe("launchBubbleTmuxSession", () => {
     expect(reviewerSendKeysByPaneId).toHaveLength(0);
   });
 
+  it("retries Enter when kickoff remains stuck in the implementer input buffer", async () => {
+    vi.useFakeTimers();
+    const calls: string[][] = [];
+    let captureCount = 0;
+    const kickoffMessage =
+      "# [pairflow] bubble=b_start_kickoff_retry kickoff. Start implementation now.";
+    const runner: TmuxRunner = (args: string[]) => {
+      calls.push(args);
+      if (args[0] === "capture-pane") {
+        captureCount += 1;
+        if (captureCount === 1) {
+          return Promise.resolve({
+            stdout: "Codex ready.",
+            stderr: "",
+            exitCode: 0
+          });
+        }
+        if (captureCount === 2) {
+          return Promise.resolve({
+            stdout: [
+              "Codex ready.",
+              "",
+              `❯ ${kickoffMessage}`
+            ].join("\n"),
+            stderr: "",
+            exitCode: 0
+          });
+        }
+        return Promise.resolve({
+          stdout: [
+            kickoffMessage,
+            "",
+            "❯"
+          ].join("\n"),
+          stderr: "",
+          exitCode: 0
+        });
+      }
+      return Promise.resolve({
+        stdout: buildSplitPaneStdout(args),
+        stderr: "",
+        exitCode: args[0] === "has-session" ? 1 : 0
+      });
+    };
+
+    const launchPromise = launchBubbleTmuxSession({
+      bubbleId: "b_start_kickoff_retry",
+      worktreePath: "/tmp/worktree",
+      statusCommand: "status",
+      implementerCommand: "codex",
+      reviewerCommand: "claude",
+      implementerKickoffMessage: kickoffMessage,
+      runner
+    });
+
+    await vi.advanceTimersByTimeAsync(4000);
+    await launchPromise;
+    vi.useRealTimers();
+
+    const implementerEnterCalls = calls.filter(
+      (call) =>
+        call[0] === "send-keys" &&
+        call[2] === "%11" &&
+        call[3] === "Enter"
+    );
+    expect(implementerEnterCalls.length).toBeGreaterThanOrEqual(2);
+  });
+
   it("sends kickoff message to reviewer pane when provided", async () => {
     const calls: string[][] = [];
     const runner: TmuxRunner = (args: string[]) => {

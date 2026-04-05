@@ -10,6 +10,17 @@ export interface SendAndSubmitTmuxPaneMessageOptions {
   requireSuccess?: boolean;
 }
 
+export type TmuxPaneMarkerStatus = "submitted" | "stuck_in_input" | "not_found";
+
+export interface ConfirmTmuxPaneMarkerSubmissionInput {
+  runner: TmuxRunner;
+  targetPane: string;
+  marker: string;
+  attempts?: number;
+  settleDelayMs?: number;
+  retryDelayMs?: number;
+}
+
 /**
  * Send a message to a tmux pane and submit it via Enter.
  *
@@ -62,6 +73,78 @@ export async function submitTmuxPaneInput(
   await runner(["send-keys", "-t", targetPane, "Enter"], {
     allowFailure: true
   });
+}
+
+function findLastIndex(arr: string[], predicate: (item: string) => boolean): number {
+  for (let i = arr.length - 1; i >= 0; i--) {
+    if (predicate(arr[i]!)) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function isAgentPromptLine(line: string): boolean {
+  // Some terminal layouts prefix prompt lines with pane border glyphs
+  // (for example `│ ❯`). Treat those as prompt lines too.
+  return /^\s*(?:[|│┃]\s*)*[>❯]/u.test(line);
+}
+
+export async function checkTmuxPaneMarkerStatus(
+  runner: TmuxRunner,
+  targetPane: string,
+  marker: string
+): Promise<TmuxPaneMarkerStatus> {
+  const capture = await runner(["capture-pane", "-pt", targetPane], {
+    allowFailure: true
+  });
+  if (capture.exitCode !== 0) {
+    return "not_found";
+  }
+
+  const output = capture.stdout;
+  if (!output.includes(marker)) {
+    return "not_found";
+  }
+
+  const lines = output.split("\n");
+  const lastPromptIdx = findLastIndex(lines, isAgentPromptLine);
+  if (lastPromptIdx < 0) {
+    return "submitted";
+  }
+
+  const beforePrompt = lines.slice(0, lastPromptIdx).join("\n");
+  if (beforePrompt.includes(marker)) {
+    return "submitted";
+  }
+
+  return "stuck_in_input";
+}
+
+export async function confirmTmuxPaneMarkerSubmission(
+  input: ConfirmTmuxPaneMarkerSubmissionInput
+): Promise<boolean> {
+  const attempts = Math.max(1, input.attempts ?? 3);
+  const settleDelayMs = input.settleDelayMs ?? 800;
+  const retryDelayMs = input.retryDelayMs ?? 900;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    await sleep(settleDelayMs);
+    const status = await checkTmuxPaneMarkerStatus(
+      input.runner,
+      input.targetPane,
+      input.marker
+    );
+    if (status === "submitted") {
+      return true;
+    }
+    if (attempt < attempts - 1) {
+      await sleep(retryDelayMs);
+      await submitTmuxPaneInput(input.runner, input.targetPane);
+    }
+  }
+
+  return false;
 }
 
 export async function maybeAcceptClaudeTrustPrompt(
