@@ -233,6 +233,45 @@ describe("listBubbles", () => {
     });
   });
 
+  it("does not surface runtime-mismatch attention during PREPARING_WORKSPACE", async () => {
+    const repoPath = await createTempRepo();
+    const created = await createBubble({
+      id: "b_list_preparing_runtime_01",
+      repoPath,
+      baseBranch: "main",
+      reviewArtifactType: "code",
+      task: "Preparing workspace transient runtime session",
+      cwd: repoPath
+    });
+
+    const loaded = await readStateSnapshot(created.paths.statePath);
+    const preparing = applyStateTransition(loaded.state, {
+      to: "PREPARING_WORKSPACE",
+      lastCommandAt: "2026-02-22T18:45:00.000Z"
+    });
+    await writeStateSnapshot(created.paths.statePath, preparing, {
+      expectedFingerprint: loaded.fingerprint,
+      expectedState: "CREATED"
+    });
+
+    await upsertRuntimeSession({
+      sessionsPath: created.paths.sessionsPath,
+      bubbleId: created.bubbleId,
+      repoPath,
+      worktreePath: created.paths.worktreePath,
+      tmuxSessionName: "pf-b_list_preparing_runtime_01",
+      now: new Date("2026-02-22T18:45:01.000Z")
+    });
+
+    const listed = await listBubbles({
+      repoPath,
+      now: new Date("2026-02-22T18:45:02.000Z")
+    });
+
+    expect(listed.bubbles[0]?.state).toBe("PREPARING_WORKSPACE");
+    expect(listed.bubbles[0]?.attention).toBeNull();
+  });
+
   it("surfaces quiet-pane attention after five quiet minutes", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({

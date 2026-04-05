@@ -14,6 +14,9 @@ const runtimeExpectedStates = new Set<BubbleLifecycleState>([
   "APPROVED_FOR_COMMIT",
   "COMMITTED"
 ]);
+const runtimeMismatchSuppressedStates = new Set<BubbleLifecycleState>([
+  "PREPARING_WORKSPACE"
+]);
 
 function resolveElapsedSeconds(
   timestamp: string | null | undefined,
@@ -66,7 +69,11 @@ export function resolveBubbleAttention(input: {
     };
   }
 
-  if (!runtimeExpected && input.runtimeSession !== null) {
+  if (
+    !runtimeExpected
+    && input.runtimeSession !== null
+    && !runtimeMismatchSuppressedStates.has(input.state)
+  ) {
     return {
       code: "runtime_mismatch",
       severity: "warning",
