@@ -172,7 +172,7 @@ Ez a task akkor sikeres, ha:
    - `docs/pairflow-initial-design.md`
 3. Declared completion-summary surface:
    - a primary artifact completion-summary contractja ebben a task file-ban
-   - a canonical PASS summary, amely ezt a contractot teljesiti
+   - a Pairflow done-package / equivalent completion artifact, amely ezt a contractot teljesiti
    - Ez nem szamit uj product/docs file-csaladnak; a summary evidence primary-source ownershipja ebben a taskban marad.
 4. A task nem igenyel uj file-csaladot a fenti surface-eken kivul. Ha mas path erintese latszik szuksegesnek, azt elobb scope-breakkent kell kezelni, nem csendes kiterjeszteskent.
 
@@ -186,7 +186,7 @@ Ez a task akkor sikeres, ha:
 | CS4 | `src/v11/application/metaReview/metaReviewCliRenderers.ts`, `src/v11/application/metaReview/metaReviewCliRenderersHelpers.ts` | `renderMetaReviewStatusText`, `renderMetaReviewLastReportText`, `renderMetaReviewRecoverText` | `renderMetaReviewStatusText(view: MetaReviewStatusView, verbose: boolean) -> string`; `renderMetaReviewLastReportText(view: MetaReviewLastReportView, verbose: boolean) -> string`; `renderMetaReviewRecoverText(result: MetaReviewGateResult) -> string` | A rendering projection/provenance szintet mutasson, ne canonical actor authorityt; stale/hianyos snapshot esetet deterministicen jelolje; a text ne tanitson acceptance- vagy co-canonical semantics-et | P2 | required-now | T3, T7 |
 | CS5 | `tests/cli/bubbleMetaReviewCommand.test.ts`, `tests/core/bubble/metaReview.test.ts`, `tests/contracts/v11/metaReviewGate.contract.test.ts`, `tests/v11/application/metaReview/metaReviewFacadeParity.test.ts` | retained operator regression surface | `vitest` coverage on command dispatch + projection read paths + recovery replay invariants | Kotelezo coverage kell a read-only retrievalre, snapshot-route replayre, stale/current-round projectionre, es az operator-only boundary regresszioorzesere | P1 | required-now | T1-T7 |
 | CS6 | `README.md`, `docs/pairflow-initial-design.md` | operator-facing semantics | conditional docs delta only; no new runtime/API signature introduced in this slice | Csak akkor frissitendo, ha a retained operator surface user-visible semanticsa pontosodik; a task nem dokumentalhat uj actor-facing submit utat vagy uj operator UX-ot | P2 | conditional-now | T8 |
-| CS7 | `plans/tasks/actor-runtime-interface-meta-review-operator-projection-cleanup-phaseE.md` + canonical PASS summary | docs-omission / completion summary contract | task artifact contract + PASS summary assertions -> review evidence | Ha nincs bizonyitott user-visible semantics delta, akkor a docs diff elhagyasanak oka, a scope-containment, es a conditional docs budgeten belul maradas explicitten a primary artifact altal deklaralt completion-summary contract szerint rogzitendo; a PASS summary ennek runtime bizonyiteka. | P2 | conditional-now | T9 |
+| CS7 | `plans/tasks/actor-runtime-interface-meta-review-operator-projection-cleanup-phaseE.md` + Pairflow done-package / completion artifact | docs-omission / completion summary contract | task artifact contract + completion artifact assertions -> review evidence | Ha nincs bizonyitott user-visible semantics delta, akkor a docs diff elhagyasanak oka, a scope-containment, es a conditional docs budgeten belul maradas explicitten a primary artifact altal deklaralt completion-summary contract szerint rogzitendo; a Pairflow done-package / completion artifact ennek default review-evidence hordozoja, de ezzel ekvivalens completion artifact is elfogadhato. | P2 | conditional-now | T9 |
 
 ### 2) Data and Interface Contract
 
@@ -224,7 +224,8 @@ Normative rules:
 1. Ha tobb cleanup-ut is vedheto, azt a valtozatot kell valasztani, amelyik a `status|last-report|recover` surface-et kozelebb viszi az explicit projection/replay boundaryhoz uj namespace, uj command family vagy uj core primitive nelkul.
 2. A task review-stabil csak akkor, ha a completion summary explicitten vissza tud mutatni arra, hogy a retained operator subtree tovabbra sem lett actor authority vagy canonical submit path.
 3. A `recover` traceability minimuma explicitten le kell fedje: nincs live rerun, nincs pane-derived authority, es a route persisted snapshotbol reprodukalhato.
-4. Ha docs-omission ut aktiv, a completion-summary ownership nem maradhat implicit: a primary artifactnak explicitten deklaralnia kell, mit kell a canonical PASS summarynek allitania a scope-containmentrol.
+4. Ha docs-omission ut aktiv, a completion-summary ownership nem maradhat implicit: a primary artifactnak explicitten deklaralnia kell, mit kell a Pairflow done-package / completion artifactnak allitania a scope-containmentrol.
+5. A bubble-szintu implementer handoff default completion artefaktja a Pairflow done-package / completion artifact; ezzel ekvivalens completion artifact is elfogadhato, ha ugyanilyen auditálhatóan hordozza a docs-decision es scope-containment allitasokat.
 
 ### 3) Side Effects Contract
 
@@ -285,12 +286,42 @@ Normative rules:
 
 ### 5.6) Completion Summary Contract
 
-1. Ha `CS6` nem triggerel docs diffet, a canonical PASS summarynek explicitten tartalmaznia kell:
+1. Ha `CS6` nem triggerel docs diffet, a Pairflow done-package / completion artifactnak explicitten tartalmaznia kell:
    - hogy `README.md` es `docs/pairflow-initial-design.md` miert maradt untouched,
    - hogy a scope a primary artifact + conditional docs budgeten belul maradt,
    - hogy a docs-omission nem jelent user-visible semantics delta elhagyast.
-2. Ha `CS6` triggerel docs diffet, a canonical PASS summarynek explicitten azt kell mondania, mely user-visible operator semantics pontosodott, es mely conditional-now docs surface lett touched.
+2. Ha `CS6` triggerel docs diffet, a Pairflow done-package / completion artifactnak explicitten azt kell mondania, mely user-visible operator semantics pontosodott, es mely conditional-now docs surface lett touched.
 3. Ez a contract a primary artifact review-surface-e; a bubble artifactok vagy egyeb protocol-owned file-ok csak masodlagos handoff segedletek lehetnek, nem canonical source-of-truth a `T9` ownershiphoz.
+4. A Pairflow done-package / completion artifact ebben a bubble-ben a default `T9` closure surface; ettol kulon allo PASS summary vagy mas handoff-uzenet csak konzisztens masodlagos kiserotext lehet, es nem mondhat ellent a completion artifactnak vagy a primary artifact docs-decisionjainak.
+
+### 5.7) Docs Decision Gate
+
+1. `T8` akkor aktiv, ha a diff bizonyithatoan user-visible retained operator semantics pontositast vagy valtozast hoz ebben a slice-ban, fuggetlenul attol, hogy ez code/renderer/recovery vagy dokumentacios feluleten jelentkezik eloszor.
+2. Ha az 1. pont szerinti user-visible semantics delta fennall, akkor a `README.md` vagy a `docs/pairflow-initial-design.md` megfelelo retained operator leirasa kotelezo docs closure surface lesz; ilyen esetben `T9` nem hasznalhato.
+3. Puszta belso kontraktusszigoritas, traceability-javitas vagy review-stability hardening onmagaban nem eleg `T8` triggerhez, ha a user-visible retained operator semantics valtozatlan marad.
+4. Ha `T8` nem aktiv, akkor `T9` kotelezo, es a Pairflow done-package / completion artifactnak explicitten allitania kell:
+   - hogy nincs bizonyitott user-visible operator semantics delta,
+   - hogy a `README.md` es a `docs/pairflow-initial-design.md` erintetlen maradt,
+   - hogy a scope a primary artifact + conditional docs budgeten belul maradt.
+5. `T8` es `T9` ugyanabban a zaro allapotban kolcsonosen kizarjak egymast; a review nem fogadhat el olyan handoffot, amely mindkettot implicitten, reszben vagy egyszerre teljesultkent allitja.
+
+### 5.8) Evidence Mapping Lock
+
+| Contract Row | Must Be Closed By | Minimum Review Claim |
+|---|---|---|
+| `CS1` | `T1`, `T2`, `T4`, `T7` | a dispatcher szetvalasztva tartja a projection-only read pathokat, a snapshot-route replayt, es a retained `run` non-regression boundaryt |
+| `CS2` | `T1`, `T2`, `T3` | a read surface read-only marad, es a freshness/parity projection nem csuszik authorityallitasba |
+| `CS3` | `T4`, `T5`, `T6` | a `recover` csak persisted snapshot + active execution context alapjan route-ol, live rerun es authority-synthesis nelkul |
+| `CS4` | `T3`, `T7` | a renderer/provenance layer projection-only diagnosticsot tanit, nem canonical actor authorityt |
+| `CS5` | `T1`-`T7` | a retained operator subtree teljes regression csomagja le van fedve, beleertve a `run|status|last-report|recover` boundary-egyuttallast |
+| `CS6` | `T8` | csak valos user-visible operator semantics delta kerul docs diffbe |
+| `CS7` | `T9` | docs-omission es scope-containment explicit a primary artifact plusz Pairflow done-package / equivalent completion artifact parban; kulon PASS summary csak konzisztens masodlagos kiserotext lehet |
+
+Normative rules:
+
+1. P1 `required-now` contract row nem zarhato le kizárólag P2 docs evidence-szel.
+2. Ha egy review finding `CS6` vagy `CS7` closure-jat tamadja, explicitten meg kell neveznie, hogy `T8` vagy `T9` miert hianyzik vagy miert aktiv helytelenul; altalanos "docs maybe needed" megjegyzes nem elegendo.
+3. Ha a completion artifact mellett kulon PASS summary vagy mas handoff-uzenet is jelen van, annak docs-decision allitasa szo szerint nem kell azonos legyen, de szemantikailag nem mondhat ellent a completion artifactnak, es nem helyezheti at a `T9` closure ownershipot sajat magara.
 
 ### 6) Test Matrix
 
@@ -304,7 +335,7 @@ Normative rules:
 | T6 | `recover` fail-closed ineligible contextnel | nincs recoverable state, vagy kickoff/snapshot ellentmondasos | `recover` fut | explicit error/transition invalid jon; nincs hidden fallback submit vagy rerun | P1 | required-now | automated test |
 | T7 | retained operator subtree boundaryje stabil marad | retained `bubble meta-review` namespace aktiv | parser/dispatch coverage a `run|status|last-report|recover` subtree-t es a canonical actor submit boundaryt egyutt vizsgalja | a `run` retained live-review trigger marad, a `status|last-report` read-only projection marad, a `recover` snapshot-route replay marad, es a namespace nem nyitja ujra a removed `submit` pathot | P1 | required-now | automated test |
 | T8 | docs csak cleanup-szintu semanticsot pontositanak | user-visible operator semantics tenylegesen valtozik vagy pontosodik | docs diff keszul | a dokumentacio csak a retained operator projection/recovery szerepet irja le, actor submit redesign vagy uj operator UX nelkul | P2 | conditional-now | doc diff |
-| T9 | docs-omission es scope containment explicit marad | nincs bizonyitott user-visible operator semantics delta | a task docs diff nelkul zarul | a primary artifact `Completion Summary Contract` szekcioja explicitten megkoveteli, hogy a canonical PASS summary kimondja a docs diff elhagyasanak okat, es a scope a primary artifact + conditional docs budgeten belul marad | P2 | conditional-now | task contract review |
+| T9 | docs-omission es scope containment explicit marad | nincs bizonyitott user-visible operator semantics delta | a task docs diff nelkul zarul | a primary artifact `Completion Summary Contract` szekcioja explicitten megkoveteli, hogy a Pairflow done-package / equivalent completion artifact kimondja a docs diff elhagyasanak okat, es a scope a primary artifact + conditional docs budgeten belul marad | P2 | conditional-now | task contract review |
 
 ## L2 - Implementation Notes (Optional)
 
@@ -337,6 +368,7 @@ Normative rules:
 3. After round 2, new `required-now` is allowed only for evidence-backed `P0/P1`.
 4. Items outside L1 blocker scope must be tagged `later-hardening`.
 5. Because `contract_boundary_override=yes`, `plan_ref` is mandatory and must align with the L1 contract rows.
+6. `CS6`/`T8` es `CS7`/`T9` review closure kolcsonosen kizaro docs-decision par; a reviewer nem hagyhatja nyitva, nem allithatja teljesultnek, es nem kezelheti reszben aktivnak egyszerre mindkettot.
 
 ## Spec Lock
 
