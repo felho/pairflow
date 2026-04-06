@@ -55,6 +55,7 @@ Fajlszintu inventory rogzitese a meg elo `src/core/**` low-level technikai owner
 2. Protocol szemantika es canonical contract nem megy automatikusan infrastruktura ala.
 3. A megmaradt open kerdesek csak mini-design szintu finomitasok lehetnek; blocker-szintu topology bizonytalansag nem maradhat.
 4. Delete-jelolt csak akkor kaphat `delete` besorolast, ha nincs elore lathato aktiv `v11` consumer vagy bridge-szukseglet. Ebben a korben ilyen jelolt nem maradt.
+5. Vegyes legacy file-oknal a topology lock ownership-slice szinten ertendo; nem kotelezo, hogy minden mai `core` file egyetlen Phase 5 capability ala essen, ha a jelenlegi file shape mar most tobb capability concernjet hordozza.
 
 ### Contract Boundary / Blast Radius
 
@@ -96,7 +97,7 @@ Fajlszintu inventory rogzitese a meg elo `src/core/**` low-level technikai owner
 | `src/core/runtime/tmuxManager.ts` | `v11/infrastructure/channel` | C1 | Tmux session lifecycle primitive. Javasolt concrete home: `src/v11/infrastructure/channel/tmux/**`. |
 | `src/core/runtime/tmuxInput.ts` | `v11/infrastructure/channel` | C1 | Tmux pane input/send-confirm primitive, ugyanabban a tmux capabilityben. |
 | `src/core/runtime/tmuxDelivery.ts` | `v11/infrastructure/channel` | C1 | Runtime delivery adapter tmux iranyba; magas fan-in (`tmuxDelivery`: 38). |
-| `src/core/runtime/sessionsRegistry.ts` | `v11/infrastructure/channel` | C1 | Runtime session registry a tmux/runtime csatorna allapotahoz kotott; ne menjen altalanos `state/` ala. |
+| `src/core/runtime/sessionsRegistry.ts` | `v11/infrastructure/channel` + `v11/infrastructure/executor` | E1 + C1 | Vegyes ownership. Default felbontas: `metaReviewerPane` es egyeb tmux pane binding concern `channel/tmux`, mig `bubbleId/repoPath/worktreePath/tmuxSessionName` runtime session lifecycle ownership `executor/session-runtime`. Ne lockoljuk egyben `channel` ala. |
 | `src/core/runtime/notifications.ts` | `v11/infrastructure/channel` | C1 | Operator notification adapter (hang/signal). |
 | `src/core/runtime/reviewerContext.ts` | `v11/infrastructure/channel` | C1 | Reviewer pane respawn/context refresh a tmux runtimehoz kotve. |
 | `src/core/runtime/pairflowCommand.ts` | `v11/infrastructure/executor` | E1 | CLI entrypoint pinning/bootstrap es active-path assessment. |
@@ -176,8 +177,8 @@ Ezek a Phase 4 inventory szempontjabol mar megfelelnek a "shim-only vagy explici
 | S1 - State kernel lock | state contract + persistence boundary | `stateStore.ts`, `stateSchema.ts`, `machine.ts`, `transitions.ts`, `executionContext.ts`, `initialState.ts` | none | Ez legyen az elso, mert a legnagyobb fan-in innen jon. Egy agentbatchkent ajanlott. |
 | A1 - Transcript contract split | protocol contract + transcript persistence | `transcriptStore.ts`, `envelope.ts`, `validators.ts`, `sequenceAllocator.ts` | S1 only for naming alignment, not for runtime behavior | S1 utan kulon agentnek adhato. |
 | A2 - Archive + bubble artifact layout | archive persistence + bubble filesystem topology | `archivePaths.ts`, `archiveSnapshot.ts`, `archiveIndex.ts`, `paths.ts`, `bubbleInstanceId.ts` | A1 path/layout naming lock ajanlott | Parhuzamosan mehet E1-gyel, ha a `bubble/**` artifact path-nevek rogzitettek. |
-| E1 - Workspace/executor topology | repo/worktree/bubble lookup + command bootstrap | `repoResolution.ts`, `commandWorkspaceFallback.ts`, `workspaceResolution.ts`, `bubbleLookup.ts`, `pairflowCommand.ts`, `agentCommand.ts` | `paths.ts` target-nevek ismertsege | Kulon agent lane, magas ertek/fan-in. |
-| C1 - Channel/tmux runtime | tmux es runtime session channel | `tmuxManager.ts`, `tmuxInput.ts`, `tmuxDelivery.ts`, `sessionsRegistry.ts`, `notifications.ts`, `reviewerContext.ts` | E1 command bootstrap contract, A2 runtime path lock | Kulon agent lane. `reviewerContext.ts` miatt E1 contract freeze utan inditsd. |
+| E1 - Workspace/executor topology | repo/worktree/bubble lookup + command bootstrap + runtime session lifecycle slice | `repoResolution.ts`, `commandWorkspaceFallback.ts`, `workspaceResolution.ts`, `bubbleLookup.ts`, `pairflowCommand.ts`, `agentCommand.ts`, `sessionsRegistry.ts` (session lifecycle slice) | `paths.ts` target-nevek ismertsege | Kulon agent lane, magas ertek/fan-in. `sessionsRegistry.ts` itt a `bubbleId/repoPath/worktreePath/tmuxSessionName` ownership miatt erintett. |
+| C1 - Channel/tmux runtime | tmux es channel-facing pane binding/runtime delivery | `tmuxManager.ts`, `tmuxInput.ts`, `tmuxDelivery.ts`, `sessionsRegistry.ts` (tmux pane binding slice), `notifications.ts`, `reviewerContext.ts` | E1 command bootstrap contract, A2 runtime path lock | Kulon agent lane. `reviewerContext.ts` miatt E1 contract freeze utan inditsd. `sessionsRegistry.ts` channel-oldala csak a pane binding concern. |
 | E2 - Validation execution | validation command runtime | `passValidationRunner.ts` | E1 | Kicsi, jo kulon agentnek. |
 | A3 - Validation artifacts | validation evidence + recovery markers | `passValidationEvidence.ts` | E2 optional, de nem blocker | Kulon agent lane vagy A2 melle rakhato. |
 | S2/X2 - Shared closure helpers | nem-infra shared/domain helper-ek | `watchdog.ts`, `metaReviewExecutionContext.ts`, `actorEmitContext.ts`, `approvalRequestEnvelope.ts`, `resumeSummary.ts` | S1 + A1 + E1 | Parhuzamos utobatch; a topology mar lockolt, de a helper-ek valodi home-ja ekkor tisztul. |
@@ -198,8 +199,8 @@ Ezek a Phase 4 inventory szempontjabol mar megfelelnek a "shim-only vagy explici
 | Agent A - `state/` | `src/v11/infrastructure/state/**`, `src/v11/shared/state/**`, `src/v11/domain/state/**`, related import sites | Magas fan-in, de jol korulhatarolhato. |
 | Agent B - `artifact/transcript` | `src/v11/infrastructure/artifact/transcript/**`, `src/v11/shared/protocol/**` | Protocol semantics es transcript persistence szetszedese utan tiszta write set. |
 | Agent C - `artifact/archive` | `src/v11/infrastructure/artifact/archive/**`, `src/v11/infrastructure/artifact/bubble/**` | Archive + bubble layout kozos artifact capability. |
-| Agent D - `executor/workspace` | `src/v11/infrastructure/executor/**` | Git/worktree/command bootstrap ownership egyseges. |
-| Agent E - `channel/tmux` | `src/v11/infrastructure/channel/**` | Tmux + runtime session channel jol izolalhato. |
+| Agent D - `executor/workspace` | `src/v11/infrastructure/executor/**` + `sessionsRegistry` executor/session-runtime slice | Git/worktree/command bootstrap ownership egyseges; ide kerul a runtime session lifecycle adat ownership is. |
+| Agent E - `channel/tmux` | `src/v11/infrastructure/channel/**` + `sessionsRegistry` channel/tmux slice | Tmux + pane binding ownership jol izolalhato; a sessions registry tmux-oldala itt marad. |
 | Agent F - `shared/reviewer-meta-review` | `src/v11/shared/reviewer/**`, `src/v11/shared/metaReview/**`, `src/v11/shared/actorProtocol/**` | Nem-infra helper/text contract lane, minimalis runtime overlap. |
 
 ### 5) Mini-Design Decisions Still Needed
@@ -210,6 +211,7 @@ Ezek mar nem blocker-szintu nyitott kerdesek; a Phase 5 elindithato. A donteseke
 |---|---|---|
 | `sequenceAllocator.ts` shared vs artifact split | Default home `v11/shared/protocol`, de az allocator-resz maradhat transcript-adjacent helper, ha a concrete ID-allocation algorithm nem emelkedik canonical contractte. | A top-level capability mar lockolt: protocol semantics nem infra, transcript persistence artifact. |
 | `bubbleInstanceId.ts` artifact vs state | Default `artifact/bubble/**`. | Mindket opcio low-level tech capability; a top-level infra capability nem kerdeses. |
+| `sessionsRegistry.ts` channel vs executor split | Default split: tmux/pane binding `channel/tmux`, runtime session lifecycle record `executor/session-runtime`. | A top-level capability mar lockolt; itt mar csak a file belso szeletelese a kerdes, nem a topology. |
 | `passValidationEvidence.ts` egyben maradjon-e | Default egyben `artifact` alatt induljon. | Keso-bbi belso split (policy vs persistence) nem erinti a top-level topologyt. |
 | `approvalRequestEnvelope.ts` pontos nem-infra home-ja | Default `shared/metaReviewGate/**`, alternativ `shared/approval/**`. | Mindketto nem-infra, a capability lock nem serul. |
 | Reviewer guidance cluster vegso csomagolasa | Default `shared/reviewer/**`, prompt registry redesign nelkul. | A Phase 5 non-goal explicit modon tiltja a nagyobb redesign-t. |
@@ -218,8 +220,9 @@ Ezek mar nem blocker-szintu nyitott kerdesek; a Phase 5 elindithato. A donteseke
 
 1. A `v11/infrastructure` top-level capability-lock most mar eleg explicit: `state`, `channel`, `executor`, `artifact`.
 2. A protocol semantics es canonical contracts nem mennek default infra ala.
-3. A `src/core/**` Phase 5 utani maradek allapota minden erintett file-nal vagy `shim/temporary bridge`, vagy kiuritett legacy facade kell legyen.
-4. Blocker-szintu nyitott architekturalis kerdes nem maradt az infra execution elott.
+3. Vegyes legacy file Phase 5-ben szetvaghato ket capability koze, ha a jelenlegi file shape mar most is kevert ownershipet hordoz; a topology lock ezt nem tiltja.
+4. A `src/core/**` Phase 5 utani maradek allapota minden erintett file-nal vagy `shim/temporary bridge`, vagy kiuritett legacy facade kell legyen.
+5. Blocker-szintu nyitott architekturalis kerdes nem maradt az infra execution elott.
 
 ## L2 - Implementation Notes (Optional)
 
