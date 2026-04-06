@@ -1,4 +1,3 @@
-import { clearLiveMetaReviewSnapshot } from "../../../core/bubble/metaReview.js";
 import { applyStateTransition } from "../../domain/state/machine.js";
 import { buildRunningExecutionContext } from "../../shared/state/executionContext.js";
 import { assertValidBubbleStateSnapshot } from "../../shared/state/stateSchema.js";
@@ -12,6 +11,7 @@ import {
   buildHydratedMetaReviewSnapshotFromRunResult,
   normalizeMetaReviewSnapshot
 } from "./metaReviewGateShared.js";
+import { clearLiveMetaReviewSnapshot } from "../metaReview/metaReviewSnapshot.js";
 import { MetaReviewGateError } from "./metaReviewGateTypes.js";
 import type { RecoverMetaReviewExecutionContext } from "./metaReviewGateRecoveryContext.js";
 export { persistAutoReworkCounterAfterRecoveryDispatch } from "./metaReviewGateRecoveryAutoReworkCounter.js";

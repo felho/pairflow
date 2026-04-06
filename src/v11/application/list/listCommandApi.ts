@@ -7,8 +7,8 @@ import {
   RepoResolutionError,
   resolveRepoPath
 } from "../../infrastructure/executor/workspace/repoResolution.js";
-import { resolveActiveMetaReviewRuntimeDelivery } from "../../../core/bubble/metaReview.js";
 import { isMetaReviewExecutionContextActiveState } from "../../shared/metaReview/metaReviewExecutionContext.js";
+import { resolveActiveMetaReviewRuntimeDelivery } from "../../shared/metaReview/metaReviewSnapshot.js";
 import { getBubblePaths } from "../../infrastructure/artifact/bubble/paths.js";
 import { inspectStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import { readRuntimeSessionsRegistry } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";

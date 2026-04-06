@@ -1,10 +1,10 @@
 export {
   getMetaReviewLastReport,
   getMetaReviewStatus,
-  MetaReviewError,
   submitMetaReviewResult,
   toMetaReviewError
 } from "../../../core/bubble/metaReview.js";
+export { MetaReviewError } from "./metaReviewError.js";
 export type {
   MetaReviewLastReportView,
   MetaReviewStatusView,

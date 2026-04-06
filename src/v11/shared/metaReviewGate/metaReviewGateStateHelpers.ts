@@ -1,5 +1,4 @@
 import { applyStateTransition } from "../../domain/state/machine.js";
-import { clearLiveMetaReviewSnapshot } from "../../../core/bubble/metaReview.js";
 import { assertValidBubbleStateSnapshot } from "../../shared/state/stateSchema.js";
 import {
   type BubbleStateSnapshot,
@@ -16,6 +15,7 @@ import {
   metaReviewFallbackReportRef,
   normalizeMetaReviewSnapshot
 } from "./metaReviewGateSnapshotHelpers.js";
+import { clearLiveMetaReviewSnapshot } from "../metaReview/metaReviewSnapshot.js";
 export {
   buildHumanGateSummary,
   buildHydratedMetaReviewSnapshotFromRunResult,

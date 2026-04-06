@@ -1,7 +1,7 @@
 import type { LoadedStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import { StateStoreConflictError } from "../../infrastructure/state/stateStore.js";
-import { resolveActiveMetaReviewRuntimeDelivery } from "../../../core/bubble/metaReview.js";
 import { isMetaReviewExecutionContextActiveState } from "../metaReview/metaReviewExecutionContext.js";
+import { resolveActiveMetaReviewRuntimeDelivery } from "../metaReview/metaReviewSnapshot.js";
 import { readTranscriptEnvelopes } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type { BubbleMetaReviewRuntimeDeliveryState } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";

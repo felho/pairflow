@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { clearLiveMetaReviewSnapshot } from "../bubble/metaReview.js";
+import { clearLiveMetaReviewSnapshot } from "../../v11/shared/metaReview/metaReviewSnapshot.js";
 import { buildRunningExecutionContext } from "../state/executionContext.js";
 import { applyStateTransition } from "../state/machine.js";
 import type {

@@ -1,5 +1,5 @@
 import { computeWatchdogStatus, type WatchdogStatus } from "../watchdog/watchdogStatus.js";
-import { resolveActiveMetaReviewRuntimeDelivery } from "../../../core/bubble/metaReview.js";
+import { resolveActiveMetaReviewRuntimeDelivery } from "../metaReview/metaReviewSnapshot.js";
 import { isMetaReviewExecutionContextActiveState } from "../metaReview/metaReviewExecutionContext.js";
 import { type ReviewVerificationState } from "../../../core/reviewer/reviewVerification.js";
 import type { StateValidationDiagnostics } from "../../infrastructure/state/stateStore.js";
