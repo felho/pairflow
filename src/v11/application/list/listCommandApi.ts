@@ -13,7 +13,7 @@ import { getBubblePaths } from "../../infrastructure/artifact/bubble/paths.js";
 import { inspectStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import { readRuntimeSessionsRegistry } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { computeWatchdogStatus } from "../../shared/watchdog/watchdogStatus.js";
-import { resolveBubbleAttention } from "../../../core/ui/bubbleAttention.js";
+import { resolveBubbleAttention } from "../../shared/status/bubbleAttention.js";
 import { readWatchdogPaneActivity } from "../../shared/watchdog/watchdogPaneActivityStore.js";
 import type { BubbleLifecycleState } from "../../../types/bubble.js";
 import type {
