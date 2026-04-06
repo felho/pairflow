@@ -1,10 +1,10 @@
 import { parseArgs } from "node:util";
 
 import {
-  asOpenBubbleError,
-  openBubble,
+  asOpenBubbleErrorV11 as asOpenBubbleError,
+  openBubbleV11 as openBubble,
   type OpenBubbleResult
-} from "../../../core/bubble/openBubble.js";
+} from "./emitOpenV11.js";
 
 export interface BubbleOpenCommandOptions {
   id: string;

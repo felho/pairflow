@@ -1,0 +1,219 @@
+import { constants as fsConstants } from "node:fs";
+import { access } from "node:fs/promises";
+import { spawn } from "node:child_process";
+
+import { loadPairflowGlobalConfig } from "../../../config/pairflowConfig.js";
+import { SchemaValidationError } from "../../../core/validation.js";
+import {
+  BubbleLookupError,
+  resolveBubbleById
+} from "../../../core/bubble/bubbleLookup.js";
+import { shellQuote } from "../../../core/util/shellQuote.js";
+
+const worktreePathPlaceholder = "{{worktree_path}}";
+const defaultOpenCommandTemplate = `cursor ${worktreePathPlaceholder}`;
+
+export interface OpenBubbleInput {
+  bubbleId: string;
+  repoPath?: string | undefined;
+  cwd?: string | undefined;
+}
+
+export interface OpenBubbleResult {
+  bubbleId: string;
+  worktreePath: string;
+  command: string;
+}
+
+export interface OpenCommandExecutionInput {
+  command: string;
+  cwd: string;
+}
+
+export interface OpenCommandExecutionResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+}
+
+export type OpenCommandExecutor = (
+  input: OpenCommandExecutionInput
+) => Promise<OpenCommandExecutionResult>;
+
+export interface OpenBubbleDependencies {
+  executeOpenCommand?: OpenCommandExecutor;
+  resolveBubbleById?: typeof resolveBubbleById;
+  assertWorktreeExists?: (worktreePath: string) => Promise<void>;
+  loadPairflowGlobalConfig?: () => ReturnType<typeof loadPairflowGlobalConfig>;
+}
+
+export type OpenBubbleV11Input = OpenBubbleInput;
+export type OpenBubbleV11Result = OpenBubbleResult;
+export type OpenBubbleV11Dependencies = OpenBubbleDependencies;
+
+export class OpenBubbleError extends Error {
+  public constructor(message: string) {
+    super(message);
+    this.name = "OpenBubbleError";
+  }
+}
+
+export { OpenBubbleError as OpenBubbleErrorV11 };
+
+function renderOpenCommand(
+  commandTemplate: string,
+  worktreePath: string
+): string {
+  const template = commandTemplate.trim();
+  if (template.length === 0) {
+    throw new OpenBubbleError("open_command cannot be empty.");
+  }
+
+  const quotedWorktreePath = shellQuote(worktreePath);
+  if (template.includes(worktreePathPlaceholder)) {
+    return template.split(worktreePathPlaceholder).join(quotedWorktreePath);
+  }
+
+  return `${template} ${quotedWorktreePath}`;
+}
+
+export const executeOpenCommand: OpenCommandExecutor = async (
+  input: OpenCommandExecutionInput
+): Promise<OpenCommandExecutionResult> =>
+  new Promise((resolvePromise, rejectPromise) => {
+    const child = spawn("bash", ["-lc", input.command], {
+      cwd: input.cwd,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk: string) => {
+      stderr += chunk;
+    });
+
+    child.on("error", (error) => {
+      rejectPromise(error);
+    });
+
+    child.on("close", (exitCode) => {
+      resolvePromise({
+        exitCode: exitCode ?? 1,
+        stdout,
+        stderr
+      });
+    });
+  });
+
+async function assertWorktreeExistsDefault(worktreePath: string): Promise<void> {
+  await access(worktreePath, fsConstants.F_OK).catch(
+    (error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") {
+        throw new OpenBubbleError(
+          `Bubble worktree does not exist yet: ${worktreePath}. Start the bubble before opening it.`
+        );
+      }
+      throw error;
+    }
+  );
+}
+
+async function resolveOpenCommandTemplate(input: {
+  bubbleId: string;
+  bubbleOpenCommand: string | undefined;
+  loadPairflowGlobalConfig: () => ReturnType<typeof loadPairflowGlobalConfig>;
+}): Promise<string> {
+  if (input.bubbleOpenCommand !== undefined) {
+    return input.bubbleOpenCommand;
+  }
+
+  try {
+    const globalConfig = await input.loadPairflowGlobalConfig();
+    if (globalConfig.open_command !== undefined) {
+      return globalConfig.open_command;
+    }
+  } catch (error) {
+    if (error instanceof SchemaValidationError) {
+      throw new OpenBubbleError(
+        `Invalid global Pairflow config while opening bubble '${input.bubbleId}': ${error.message}`
+      );
+    }
+
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new OpenBubbleError(
+      `Failed to load global Pairflow config while opening bubble '${input.bubbleId}': ${reason}`
+    );
+  }
+
+  return defaultOpenCommandTemplate;
+}
+
+export async function openBubble(
+  input: OpenBubbleInput,
+  dependencies: OpenBubbleDependencies = {}
+): Promise<OpenBubbleResult> {
+  const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
+  const assertWorktreeExists =
+    dependencies.assertWorktreeExists ?? assertWorktreeExistsDefault;
+  const loadGlobalConfig =
+    dependencies.loadPairflowGlobalConfig ?? loadPairflowGlobalConfig;
+
+  const resolved = await resolveBubble({
+    bubbleId: input.bubbleId,
+    ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
+    ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
+  });
+
+  const worktreePath = resolved.bubblePaths.worktreePath;
+  await assertWorktreeExists(worktreePath);
+
+  const commandTemplate = await resolveOpenCommandTemplate({
+    bubbleId: resolved.bubbleId,
+    bubbleOpenCommand: resolved.bubbleConfig.open_command,
+    loadPairflowGlobalConfig: loadGlobalConfig
+  });
+  const command = renderOpenCommand(commandTemplate, worktreePath);
+  const runCommand = dependencies.executeOpenCommand ?? executeOpenCommand;
+  const executed = await runCommand({
+    command,
+    cwd: resolved.repoPath
+  });
+
+  if (executed.exitCode !== 0) {
+    const details = executed.stderr.trim() || executed.stdout.trim();
+    throw new OpenBubbleError(
+      details.length > 0
+        ? `Open command failed with exit code ${executed.exitCode}: ${details}`
+        : `Open command failed with exit code ${executed.exitCode}.`
+    );
+  }
+
+  return {
+    bubbleId: resolved.bubbleId,
+    worktreePath,
+    command
+  };
+}
+
+export { openBubble as openBubbleV11 };
+
+export function asOpenBubbleError(error: unknown): never {
+  if (error instanceof OpenBubbleError) {
+    throw error;
+  }
+  if (error instanceof BubbleLookupError) {
+    throw new OpenBubbleError(error.message);
+  }
+  if (error instanceof Error) {
+    throw new OpenBubbleError(error.message);
+  }
+  throw error;
+}
+
+export { asOpenBubbleError as asOpenBubbleErrorV11 };
