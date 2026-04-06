@@ -1,4 +1,4 @@
-import { assessPairflowCommandPath } from "../../../core/runtime/pairflowCommand.js";
+import { assessPairflowCommandPath } from "../../infrastructure/executor/command/pairflowCommand.js";
 import type { ResolvedBubbleStatusContext } from "./statusCommandTypes.js";
 
 export function toStatusCommandPathView(

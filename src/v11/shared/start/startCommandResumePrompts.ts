@@ -9,7 +9,7 @@ import {
 import { buildReviewerSeverityOntologyReminder } from "../../../core/runtime/reviewerSeverityOntology.js";
 import {
   buildPairflowCommandGuidance
-} from "../../../core/runtime/pairflowCommand.js";
+} from "../../infrastructure/executor/command/pairflowCommand.js";
 import {
   buildReviewerDecisionMatrixReminder
 } from "../../../core/reviewer/testEvidence.js";

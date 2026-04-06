@@ -3,7 +3,7 @@ import type { ResolvedBubbleWorkspace } from "../../../core/bubble/workspaceReso
 import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
 import type { ConvergencePolicyResult } from "../../../core/convergence/policy.js";
 import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
-import type { PairflowCommandPathAssessment } from "../../../core/runtime/pairflowCommand.js";
+import type { PairflowCommandPathAssessment } from "../../infrastructure/executor/command/pairflowCommand.js";
 import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import type { SummaryVerifierConsistencyGateDecisionRecord } from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
 import type { ConvergedStructuredFinding } from "../../shared/converged/convergedCommandTypes.js";

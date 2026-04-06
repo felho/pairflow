@@ -3,7 +3,7 @@ import {
   respawnTmuxPaneCommand
 } from "../../../core/runtime/tmuxManager.js";
 import type { TmuxRunner } from "../../../core/runtime/tmuxManager.js";
-import { buildAgentCommand } from "../../../core/runtime/agentCommand.js";
+import { buildAgentCommand } from "../../infrastructure/executor/command/agentCommand.js";
 import type { PairflowCommandProfile } from "../../../types/bubble.js";
 import { buildMetaReviewerStartupPrompt } from "../start/startCommandPrompts.js";
 import type {

@@ -4,7 +4,7 @@ import { shellQuote } from "../../../core/util/shellQuote.js";
 import {
   buildPairflowCommandGuidance,
   buildPinnedPairflowCommand
-} from "../../../core/runtime/pairflowCommand.js";
+} from "../../infrastructure/executor/command/pairflowCommand.js";
 import { buildReviewerAgentSelectionGuidance } from "../../../core/runtime/reviewerGuidance.js";
 import { buildReviewerSeverityOntologyReminder } from "../../../core/runtime/reviewerSeverityOntology.js";
 import {

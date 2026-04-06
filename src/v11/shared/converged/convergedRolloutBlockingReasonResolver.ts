@@ -1,4 +1,4 @@
-import type { PairflowCommandPathAssessment } from "../../../core/runtime/pairflowCommand.js";
+import type { PairflowCommandPathAssessment } from "../../infrastructure/executor/command/pairflowCommand.js";
 import {
   resolveMetaReviewRolloutBlockingReasonCodesV11
 } from "../../application/converged/metaReviewRolloutBlockingReasonCodes.js";
