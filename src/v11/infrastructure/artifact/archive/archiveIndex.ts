@@ -4,8 +4,15 @@ import { dirname, join, resolve } from "node:path";
 
 import type { ArchiveIndexDocument, ArchiveIndexEntry, ArchiveStatus } from "../../../../types/archive.js";
 import { archiveSchemaVersion, archiveStatuses } from "../../../../types/archive.js";
-import { FileLockTimeoutError, withFileLock } from "../../../../core/util/fileLock.js";
-import { isIsoTimestamp, isNonEmptyString, isRecord } from "../../../../core/validation.js";
+import {
+  FileLockTimeoutError,
+  withFileLock
+} from "../../foundation/fs/fileLock.js";
+import {
+  isIsoTimestamp,
+  isNonEmptyString,
+  isRecord
+} from "../../../shared/validation/primitives.js";
 import { resolveArchivePaths } from "./archivePaths.js";
 
 const archiveIndexLockTimeoutMs = 5_000;

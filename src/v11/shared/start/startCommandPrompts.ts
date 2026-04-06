@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
 
-import { shellQuote } from "../../../core/util/shellQuote.js";
+import { shellQuote } from "../../infrastructure/foundation/shell/shellQuote.js";
 import {
   buildPairflowCommandGuidance,
   buildPinnedPairflowCommand

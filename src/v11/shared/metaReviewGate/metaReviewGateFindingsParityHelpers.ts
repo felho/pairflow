@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { readFile } from "node:fs/promises";
 
-import { isRecord } from "../../../core/validation.js";
+import { isRecord } from "../validation/primitives.js";
 import type { MetaReviewRecommendation } from "../../../types/bubble.js";
 import { type FindingsParityMetadata, type FindingsParityStatus } from "../../../types/protocol.js";
 import {

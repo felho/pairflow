@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 
 import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import { normalizeStringList } from "../../../core/util/normalize.js";
+import { normalizeStringList } from "../normalization/stringNormalization.js";
 import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
 import type {

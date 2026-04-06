@@ -4,7 +4,7 @@ import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubble
 import { appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { applyStateTransition } from "../../domain/state/machine.js";
 import { writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import { normalizeStringList } from "../../../core/util/normalize.js";
+import { normalizeStringList } from "../normalization/stringNormalization.js";
 import { deriveDonePackageSummary } from "./commitDonePackage.js";
 import { BubbleCommitError } from "./commitCommandRuntime.js";
 import type {

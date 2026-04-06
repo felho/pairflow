@@ -1,7 +1,7 @@
 import { accessSync, constants, existsSync, realpathSync } from "node:fs";
 import { resolve, delimiter } from "node:path";
 
-import { shellQuote } from "../../../../core/util/shellQuote.js";
+import { shellQuote } from "../../foundation/shell/shellQuote.js";
 import type { PairflowCommandProfile } from "../../../../types/bubble.js";
 
 export type PairflowCommandPathStatus =

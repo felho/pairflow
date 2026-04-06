@@ -22,7 +22,7 @@ async function createTempRepo(): Promise<string> {
 }
 
 afterEach(async () => {
-  vi.doUnmock("../../../src/core/util/fileLock.js");
+  vi.doUnmock("../../../src/v11/infrastructure/foundation/fs/fileLock.js");
   vi.resetModules();
   await Promise.all(
     tempDirs.splice(0).map((path) => rm(path, { recursive: true, force: true }))
@@ -36,7 +36,7 @@ describe("archive locking", () => {
       task()
     );
     class MockFileLockTimeoutError extends Error {}
-    vi.doMock("../../../src/core/util/fileLock.js", () => ({
+    vi.doMock("../../../src/v11/infrastructure/foundation/fs/fileLock.js", () => ({
       withFileLock: withFileLockMock,
       FileLockTimeoutError: MockFileLockTimeoutError
     }));
@@ -107,7 +107,7 @@ describe("archive locking", () => {
     const withFileLockMock = vi.fn(() => {
       throw new MockFileLockTimeoutError("timeout");
     });
-    vi.doMock("../../../src/core/util/fileLock.js", () => ({
+    vi.doMock("../../../src/v11/infrastructure/foundation/fs/fileLock.js", () => ({
       withFileLock: withFileLockMock,
       FileLockTimeoutError: MockFileLockTimeoutError
     }));

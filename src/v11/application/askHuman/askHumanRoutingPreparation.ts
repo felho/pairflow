@@ -1,7 +1,7 @@
 import {
   normalizeStringList,
   requireNonEmptyString
-} from "../../../core/util/normalize.js";
+} from "../../shared/normalization/stringNormalization.js";
 import { resolveAskHumanRoutingPreparationDependencies } from "../../shared/askHuman/askHumanRoutingPreparationDependencyResolution.js";
 import { assertAskHumanRunningState } from "../../shared/askHuman/askHumanRunningStateValidation.js";
 import { prepareAskHumanWorkspaceContext } from "../../shared/askHuman/askHumanWorkspaceContextPreparation.js";

@@ -1,8 +1,8 @@
 import {
   normalizeStringList,
   requireNonEmptyString
-} from "../../../core/util/normalize.js";
-import { isLikelyStructuredRef } from "../../../core/util/structuredRef.js";
+} from "../normalization/stringNormalization.js";
+import { isLikelyStructuredRef } from "../reference/structuredRef.js";
 import {
   resolveConvergedSummaryFindingsContradiction
 } from "../../../core/convergence/policy.js";

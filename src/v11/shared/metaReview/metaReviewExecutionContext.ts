@@ -6,7 +6,7 @@ import {
   validationOk,
   type ValidationError,
   type ValidationResult
-} from "../../../core/validation.js";
+} from "../validation/primitives.js";
 import {
   isAgentRole,
   isBubbleExecutionContextAwaitedOutputType,

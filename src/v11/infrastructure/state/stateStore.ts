@@ -7,7 +7,10 @@ import {
   assertValidBubbleStateSnapshot,
   validateBubbleStateSnapshot
 } from "../../shared/state/stateSchema.js";
-import { FileLockTimeoutError, withFileLock } from "../../../core/util/fileLock.js";
+import {
+  FileLockTimeoutError,
+  withFileLock
+} from "../foundation/fs/fileLock.js";
 import {
   DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
   isAgentName,
@@ -29,16 +32,13 @@ import {
   type BubbleStateSnapshot
 } from "../../../types/bubble.js";
 import {
-  metaReviewExecutionContextToRunningContext
-} from "../../shared/state/executionContext.js";
-import {
   isInteger,
   isIsoTimestamp,
   isNonEmptyString,
   isRecord,
   SchemaValidationError,
   type ValidationError
-} from "../../../core/validation.js";
+} from "../../shared/validation/primitives.js";
 
 export interface LoadedStateSnapshot {
   state: BubbleStateSnapshot;

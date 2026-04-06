@@ -4,9 +4,16 @@ import { dirname, join, resolve } from "node:path";
 
 import type { ArchiveManifest } from "../../../../types/archive.js";
 import { archiveSchemaVersion } from "../../../../types/archive.js";
-import { FileLockTimeoutError, withFileLock } from "../../../../core/util/fileLock.js";
-import { pathExists } from "../../../../core/util/pathExists.js";
-import { isIsoTimestamp, isNonEmptyString, isRecord } from "../../../../core/validation.js";
+import {
+  FileLockTimeoutError,
+  withFileLock
+} from "../../foundation/fs/fileLock.js";
+import { pathExists } from "../../foundation/fs/pathExists.js";
+import {
+  isIsoTimestamp,
+  isNonEmptyString,
+  isRecord
+} from "../../../shared/validation/primitives.js";
 import { resolveArchivePaths } from "./archivePaths.js";
 
 const archiveManifestFileName = "archive-manifest.json";

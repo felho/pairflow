@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import { startBubble } from "../../../src/core/bubble/startBubble.js";
+import { metaReviewExecutionContextToRunningContext } from "../../../src/core/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
 import {
@@ -239,6 +240,15 @@ describe("reconcileRuntimeSessions", () => {
       active_role: "meta_reviewer" as const,
       active_since: "2026-02-22T19:41:00.000Z",
       last_command_at: "2026-02-22T19:41:00.000Z",
+      execution_context: metaReviewExecutionContextToRunningContext(
+        buildMetaReviewExecutionContext({
+          bubbleId: bubble.bubbleId,
+          round: metaRunning.round,
+          startedAt: "2026-02-22T19:41:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        })
+      ),
       meta_review: {
         ...metaRunning.meta_review!,
         execution_context: buildMetaReviewExecutionContext({

@@ -1,7 +1,7 @@
 import {
   normalizeStringList,
   requireNonEmptyString
-} from "../../../core/util/normalize.js";
+} from "../normalization/stringNormalization.js";
 
 export interface NormalizePassCommandInputInput {
   summary: string;

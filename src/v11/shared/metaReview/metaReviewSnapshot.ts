@@ -5,7 +5,7 @@ import type {
   BubbleMetaReviewSnapshotState,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
-import { isNonEmptyString } from "../../../core/validation.js";
+import { isNonEmptyString } from "../validation/primitives.js";
 import { validateActiveMetaReviewExecutionContext } from "./metaReviewExecutionContext.js";
 
 export function normalizeMetaReviewSnapshot(

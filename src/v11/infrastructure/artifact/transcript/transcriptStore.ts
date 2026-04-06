@@ -7,7 +7,10 @@ import {
   TranscriptSequenceError
 } from "../../../shared/protocol/sequenceAllocator.js";
 import { assertValidProtocolEnvelope } from "../../../shared/protocol/validators.js";
-import { FileLockTimeoutError, withFileLock } from "../../../../core/util/fileLock.js";
+import {
+  FileLockTimeoutError,
+  withFileLock
+} from "../../foundation/fs/fileLock.js";
 import type {
   ProtocolEnvelope,
   ProtocolEnvelopePayload,

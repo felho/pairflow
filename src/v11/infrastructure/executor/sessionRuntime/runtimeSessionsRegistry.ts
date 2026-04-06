@@ -2,7 +2,10 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-import { FileLockTimeoutError, withFileLock } from "../../../../core/util/fileLock.js";
+import {
+  FileLockTimeoutError,
+  withFileLock
+} from "../../foundation/fs/fileLock.js";
 
 export interface RuntimeMetaReviewerPaneBinding {
   role: "meta-reviewer";

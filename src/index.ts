@@ -283,7 +283,7 @@ export {
   isRecord,
   validationFail,
   validationOk
-} from "./core/validation.js";
+} from "./v11/shared/validation/primitives.js";
 export {
   assertValidBubbleStateSnapshot,
   validateBubbleStateSnapshot
@@ -694,4 +694,4 @@ export type {
   ValidationFail,
   ValidationOk,
   ValidationResult
-} from "./core/validation.js";
+} from "./v11/shared/validation/primitives.js";

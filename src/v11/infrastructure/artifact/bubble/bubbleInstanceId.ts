@@ -5,7 +5,10 @@ import { join } from "node:path";
 import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../../config/bubbleConfig.js";
 import type { BubbleConfig } from "../../../../types/bubble.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../../core/metrics/bubbleEvents.js";
-import { FileLockTimeoutError, withFileLock } from "../../../../core/util/fileLock.js";
+import {
+  FileLockTimeoutError,
+  withFileLock
+} from "../../foundation/fs/fileLock.js";
 
 import type { BubblePaths } from "./paths.js";
 

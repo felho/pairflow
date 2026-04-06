@@ -1,4 +1,4 @@
-import { isRecord } from "../../../core/validation.js";
+import { isRecord } from "../validation/primitives.js";
 import { readTranscriptEnvelopes } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { resolveFindingPriority } from "../../../types/findings.js";
 import {

@@ -8,7 +8,7 @@ import {
   validationOk,
   type ValidationError,
   type ValidationResult
-} from "../../../core/validation.js";
+} from "../validation/primitives.js";
 import {
   bubbleLifecycleStates,
   isAgentName,
@@ -840,7 +840,7 @@ export function validateBubbleStateSnapshot(
   const activeRole = input.active_role;
   const activeSince = input.active_since;
   const lastCommandAt = input.last_command_at;
-  let executionContext = validateExecutionContext(
+  const executionContext = validateExecutionContext(
     input.execution_context,
     "execution_context",
     errors

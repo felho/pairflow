@@ -1,5 +1,5 @@
-import { normalizeStringList } from "../../../core/util/normalize.js";
-import { isRecord } from "../../../core/validation.js";
+import { normalizeStringList } from "../../shared/normalization/stringNormalization.js";
+import { isRecord } from "../../shared/validation/primitives.js";
 import {
   isFindingLayer,
   isFindingTiming,

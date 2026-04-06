@@ -1,4 +1,4 @@
-import { isRecord } from "../../../core/validation.js";
+import { isRecord } from "../../shared/validation/primitives.js";
 import type {
   MetaReviewLastReportViewV11 as MetaReviewLastReportView,
   MetaReviewStatusViewV11 as MetaReviewStatusView

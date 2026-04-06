@@ -3,12 +3,12 @@ import { access } from "node:fs/promises";
 import { spawn } from "node:child_process";
 
 import { loadPairflowGlobalConfig } from "../../../config/pairflowConfig.js";
-import { SchemaValidationError } from "../../../core/validation.js";
+import { SchemaValidationError } from "../../shared/validation/primitives.js";
 import {
   BubbleLookupError,
   resolveBubbleById
 } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { shellQuote } from "../../../core/util/shellQuote.js";
+import { shellQuote } from "../../infrastructure/foundation/shell/shellQuote.js";
 
 const worktreePathPlaceholder = "{{worktree_path}}";
 const defaultOpenCommandTemplate = `cursor ${worktreePathPlaceholder}`;

@@ -1,4 +1,7 @@
-import { normalizeStringList, requireNonEmptyString } from "../../../core/util/normalize.js";
+import {
+  normalizeStringList,
+  requireNonEmptyString
+} from "../normalization/stringNormalization.js";
 
 export interface NormalizeReplyCommandInputInput {
   message: string;

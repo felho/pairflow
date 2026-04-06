@@ -1,4 +1,4 @@
-import { isNonEmptyString } from "../../../core/validation.js";
+import { isNonEmptyString } from "../validation/primitives.js";
 
 export type KickoffTaskInputMode =
   | {

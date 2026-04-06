@@ -25,7 +25,7 @@ import {
   terminateBubbleTmuxSession,
   type TmuxRunner
 } from "../../infrastructure/channel/tmux/tmuxManager.js";
-import { pathExists } from "../../../core/util/pathExists.js";
+import { pathExists } from "../../infrastructure/foundation/fs/pathExists.js";
 import { branchExists } from "../../../core/workspace/git.js";
 import { cleanupWorktreeWorkspace } from "../../../core/workspace/worktreeManager.js";
 import { stopBubbleV11 as stopBubble } from "../stop/emitStopV11.js";

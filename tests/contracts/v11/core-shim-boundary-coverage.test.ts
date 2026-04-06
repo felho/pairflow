@@ -7,7 +7,13 @@ const forbiddenCoreShimTargets = new Set([
   "src/core/agent/converged.ts",
   "src/core/bubble/createBubble.ts",
   "src/core/bubble/startBubble.ts",
-  "src/core/human/reply.ts"
+  "src/core/human/reply.ts",
+  "src/core/validation.ts",
+  "src/core/util/fileLock.ts",
+  "src/core/util/normalize.ts",
+  "src/core/util/pathExists.ts",
+  "src/core/util/shellQuote.ts",
+  "src/core/util/structuredRef.ts"
 ]);
 
 async function listTypeScriptFiles(root: string): Promise<string[]> {
@@ -44,7 +50,7 @@ async function resolveImportTarget(
 }
 
 describe("v11 residual core shim boundary coverage", () => {
-  it("keeps retired shim-only core facades out of src/v11 imports", async () => {
+  it("keeps retired core shims and temporary foundation bridges out of src/v11 imports", async () => {
     const repoRoot = process.cwd();
     const v11Root = resolve(repoRoot, "src/v11");
     const files = await listTypeScriptFiles(v11Root);

@@ -8,7 +8,7 @@ import type { resolveBubbleById } from "../../infrastructure/executor/workspace/
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { BubbleWatchdogResult } from "../../application/watchdog/watchdogCommandContract.js";
 import type { emitTmuxDeliveryNotification } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
-import { SchemaValidationError } from "../../../core/validation.js";
+import { SchemaValidationError } from "../validation/primitives.js";
 import {
   isMetaReviewExecutionContextActiveState,
   validateActiveMetaReviewExecutionContext

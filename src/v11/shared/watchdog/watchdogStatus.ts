@@ -1,5 +1,5 @@
 import type { BubbleLifecycleState, BubbleStateSnapshot } from "../../../types/bubble.js";
-import { SchemaValidationError } from "../../../core/validation.js";
+import { SchemaValidationError } from "../validation/primitives.js";
 import { metaReviewExecutionContextToRunningContext } from "../state/executionContext.js";
 import { validateActiveMetaReviewExecutionContext } from "../metaReview/metaReviewExecutionContext.js";
 

@@ -1,5 +1,5 @@
 import type { AgentName, PairflowCommandProfile } from "../../../../types/bubble.js";
-import { shellQuote } from "../../../../core/util/shellQuote.js";
+import { shellQuote } from "../../foundation/shell/shellQuote.js";
 import { buildPairflowCommandBootstrap } from "./pairflowCommand.js";
 
 export interface BuildAgentCommandInput {

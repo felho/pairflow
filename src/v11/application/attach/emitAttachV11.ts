@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { spawn } from "node:child_process";
 
-import { SchemaValidationError } from "../../../core/validation.js";
+import { SchemaValidationError } from "../../shared/validation/primitives.js";
 import { DEFAULT_ATTACH_LAUNCHER } from "../../../config/defaults.js";
 import {
   loadPairflowGlobalConfig,
@@ -15,7 +15,7 @@ import {
   resolveBubbleById
 } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { buildBubbleTmuxSessionName } from "../../infrastructure/channel/tmux/tmuxManager.js";
-import { shellQuote } from "../../../core/util/shellQuote.js";
+import { shellQuote } from "../../infrastructure/foundation/shell/shellQuote.js";
 
 type ExplicitAttachLauncher = Exclude<AttachLauncher, "auto">;
 type GuiAttachLauncher = Exclude<ExplicitAttachLauncher, "copy">;

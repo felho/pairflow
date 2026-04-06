@@ -21,7 +21,7 @@ import type {
   CreateReviewArtifactType,
   PairflowCommandProfile
 } from "../../../types/bubble.js";
-import { isNonEmptyString } from "../../../core/validation.js";
+import { isNonEmptyString } from "../../shared/validation/primitives.js";
 import {
   GitRepositoryError,
   assertGitRepository

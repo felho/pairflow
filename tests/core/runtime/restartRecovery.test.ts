@@ -18,7 +18,10 @@ import {
 } from "../../../src/core/runtime/sessionsRegistry.js";
 import { reconcileRuntimeSessions } from "../../../src/core/runtime/startupReconciler.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
-import { buildRunningExecutionContext } from "../../../src/core/state/executionContext.js";
+import {
+  buildRunningExecutionContext,
+  metaReviewExecutionContextToRunningContext
+} from "../../../src/core/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
@@ -123,6 +126,15 @@ describe("restart recovery", () => {
       active_role: "meta_reviewer" as const,
       active_since: "2026-02-23T11:01:00.000Z",
       last_command_at: "2026-02-23T11:01:00.000Z",
+      execution_context: metaReviewExecutionContextToRunningContext(
+        buildMetaReviewExecutionContext({
+          bubbleId: bubble.bubbleId,
+          round: readyForApproval.round,
+          startedAt: "2026-02-23T11:01:00.000Z",
+          watchdogTimeoutMinutes: 60,
+          attempt: 1
+        })
+      ),
       meta_review: {
         ...readyForApproval.meta_review!,
         execution_context: buildMetaReviewExecutionContext({
