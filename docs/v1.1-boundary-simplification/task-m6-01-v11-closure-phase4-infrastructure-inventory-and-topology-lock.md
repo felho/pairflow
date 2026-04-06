@@ -235,6 +235,22 @@ Ezek mar nem blocker-szintu nyitott kerdesek; a Phase 5 elindithato. A donteseke
    - `core/metaReview` es a hozza kapcsolodo approval/list/status shared seam: meg elo `v11` fogyasztok vannak, ezert csak kulon meta-review closure batchben szukitheto tovabb.
    - `core/{validation,util,workspace/git,reviewer,metrics/gates,convergence}` helper cluster-ek: ezek tovabbi szukitese mar ownership-extract vagy facade-retire dontest igenyel, nem residual sweep mikrokort.
 
+## Final Explicit Bridge Inventory (2026-04-07)
+
+| Category | Relation | Why it remains now | Active consumer(s) | Delete trigger |
+|---|---|---|---|---|
+| remove-now | `src/cli/index.ts -> src/core/bubble/metaReview.ts` | Nem kellett mar kozvetlen `core` import: a CLI error mapping ugyanazon v11 facade-n at elerheto. | `src/cli/index.ts` meta-review stderr handling | Elvegezve ebben a batchben; a CLI most mar `src/v11/application/metaReview/emitMetaReviewV11.ts`-re mutat. |
+| needs-separate-follow-up | `src/v11/shared/metaReview/metaReviewCommandApi.ts -> src/core/bubble/metaReview.ts` | A meta-review command/status/last-report runtime tovabbra is a `core` implementacioban el, a `v11` oldalrol ez mar explicit bridge-kent latszik. | `src/v11/application/metaReview/**`, ezen keresztul a CLI meta-review parancs es a public meta-review exportok | Kulon meta-review closure/extract batch utan torolheto, amikor a command API canonical `v11` ownerre koltozik vagy a facade teljesen kiurul. |
+| documented-legacy-bridge | `src/v11/infrastructure/ui/server.ts -> src/core/ui/server.ts` | A UI server public/CLI edge mar `v11` feluleten keresztul latszik, de a futtathato implementacio meg a `core/ui/server.ts` alatt lakik. | `src/cli/commands/ui/server.ts`, `src/index.ts` | Kulon UI server ownership/extract batch utan torolheto, amikor a runtime implementacio is `v11/infrastructure` canonical ownerre kerul vagy a legacy facade megszunik. |
+| test-only-compat | `tests/** -> src/core/**` meta-review es mas parity/contract shim importok | Ezek szandekos parity/compat coverage-t adnak a meg letezo legacy seam-ekre; nem runtime/public fogyasztok. | pl. `tests/v11/application/metaReview/metaReviewFacadeParity.test.ts`, `tests/cli/bubbleMetaReviewCommand.test.ts`, `tests/contracts/v11/*.runner.ts` | Akkor torolhetok vagy irhatoak at, amikor az adott legacy bridge/facade mar megszunt es a parity coverage elveszti a celjat. |
+
+Closure guard note:
+1. A `tests/contracts/v11/core-shim-boundary-coverage.test.ts` innentol explicit allowlistre zarja a `src/v11/**` es `src/cli/**` oldali kozvetlen `core` importokat.
+2. Az allowlist jelenlegi, tudatos vegallapota pontosan ket nem-teszt oldali relation:
+   - `src/v11/shared/metaReview/metaReviewCommandApi.ts -> src/core/bubble/metaReview.ts`
+   - `src/v11/infrastructure/ui/server.ts -> src/core/ui/server.ts`
+3. `src/index.ts` tovabbra is tiltott kozvetlen `core` re-export felulet marad.
+
 ## L2 - Implementation Notes (Optional)
 
 1. A legnagyobb ertek/fan-in celpontok: `stateStore.ts`, `transcriptStore.ts`, `bubbleLookup.ts`, `tmuxDelivery.ts`, `tmuxManager.ts`, `sessionsRegistry.ts`.

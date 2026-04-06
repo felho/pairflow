@@ -130,9 +130,9 @@ import {
   runMetricsReportCommand
 } from "./commands/metrics/report.js";
 import {
-  MetaReviewError,
-  toMetaReviewError
-} from "../core/bubble/metaReview.js";
+  MetaReviewErrorV11 as MetaReviewError,
+  toMetaReviewErrorV11 as toMetaReviewError
+} from "../v11/application/metaReview/emitMetaReviewV11.js";
 import { isMainCliEntrypoint } from "./isMainCliEntrypoint.js";
 import type { ActorEmitResultV11 } from "../v11/application/actorProtocol/emitActorProtocolV11.js";
 

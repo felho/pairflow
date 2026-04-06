@@ -33,6 +33,11 @@ const forbiddenCoreShimTargets = new Set([
   "src/core/util/structuredRef.ts"
 ]);
 
+const allowedResidualCoreBridgeImports = [
+  "src/v11/infrastructure/ui/server.ts -> src/core/ui/server.ts",
+  "src/v11/shared/metaReview/metaReviewCommandApi.ts -> src/core/bubble/metaReview.ts"
+].sort();
+
 async function listTypeScriptFiles(root: string): Promise<string[]> {
   const entries = await readdir(root, {
     withFileTypes: true,
@@ -45,6 +50,14 @@ async function listTypeScriptFiles(root: string): Promise<string[]> {
     .sort();
 }
 
+function toTypeScriptSourceCandidate(resolvedImportPath: string): string {
+  const extension = extname(resolvedImportPath);
+  if (extension === ".js" || extension === ".mjs" || extension === ".cjs") {
+    return `${resolvedImportPath.slice(0, -extension.length)}.ts`;
+  }
+  return `${resolvedImportPath}.ts`;
+}
+
 async function resolveImportTarget(
   fromFile: string,
   specifier: string
@@ -54,7 +67,11 @@ async function resolveImportTarget(
   }
 
   const base = resolve(dirname(fromFile), specifier);
-  const candidates = [`${base}.ts`, resolve(base, "index.ts")];
+  const candidates = [
+    toTypeScriptSourceCandidate(base),
+    `${base}.ts`,
+    resolve(base, "index.ts")
+  ];
   for (const candidate of candidates) {
     try {
       await access(candidate);
@@ -66,38 +83,66 @@ async function resolveImportTarget(
   return null;
 }
 
+async function collectDirectCoreImports(
+  files: string[],
+  repoRoot: string
+): Promise<string[]> {
+  const importPattern =
+    /(?:^|\n)\s*(?:import|export)\b[\s\S]*?\bfrom\s+["']([^"']+)["']/gu;
+  const directCoreImports = new Set<string>();
+
+  for (const filePath of files) {
+    const content = await readFile(filePath, "utf8");
+    for (const match of content.matchAll(importPattern)) {
+      const specifier = match[1];
+      if (specifier === undefined) {
+        continue;
+      }
+
+      const target = await resolveImportTarget(filePath, specifier);
+      if (target === null) {
+        continue;
+      }
+
+      const relativeFilePath = relative(repoRoot, filePath).replaceAll("\\", "/");
+      const relativeTarget = relative(repoRoot, target).replaceAll("\\", "/");
+      if (relativeTarget.startsWith("src/core/")) {
+        directCoreImports.add(`${relativeFilePath} -> ${relativeTarget}`);
+      }
+    }
+  }
+
+  return [...directCoreImports].sort();
+}
+
 describe("v11 residual core shim boundary coverage", () => {
   it("keeps retired core shims and temporary foundation bridges out of src/v11 imports", async () => {
     const repoRoot = process.cwd();
     const v11Root = resolve(repoRoot, "src/v11");
     const files = await listTypeScriptFiles(v11Root);
-    const importPattern =
-      /(?:^|\n)\s*(?:import|export)\b[\s\S]*?\bfrom\s+["']([^"']+)["']/gu;
     const violations: string[] = [];
+    const directCoreImports = await collectDirectCoreImports(files, repoRoot);
 
-    for (const filePath of files) {
-      const content = await readFile(filePath, "utf8");
-      for (const match of content.matchAll(importPattern)) {
-        const specifier = match[1];
-        if (specifier === undefined) {
-          continue;
-        }
-
-        const target = await resolveImportTarget(filePath, specifier);
-        if (target === null) {
-          continue;
-        }
-
-        const relativeTarget = relative(repoRoot, target).replaceAll("\\", "/");
-        if (forbiddenCoreShimTargets.has(relativeTarget)) {
-          violations.push(
-            `${relative(repoRoot, filePath).replaceAll("\\", "/")} -> ${relativeTarget}`
-          );
-        }
+    for (const relation of directCoreImports) {
+      const [, relativeTarget] = relation.split(" -> ");
+      if (relativeTarget !== undefined && forbiddenCoreShimTargets.has(relativeTarget)) {
+        violations.push(relation);
       }
     }
 
     expect(violations).toEqual([]);
+  });
+
+  it("locks src/v11 and src/cli direct core imports to the final explicit bridge inventory", async () => {
+    const repoRoot = process.cwd();
+    const v11Files = await listTypeScriptFiles(resolve(repoRoot, "src/v11"));
+    const cliFiles = await listTypeScriptFiles(resolve(repoRoot, "src/cli"));
+    const directCoreImports = await collectDirectCoreImports(
+      [...v11Files, ...cliFiles],
+      repoRoot
+    );
+
+    expect(directCoreImports).toEqual(allowedResidualCoreBridgeImports);
   });
 
   it("keeps the public src/index.ts surface off core shim re-exports", async () => {
