@@ -12,7 +12,7 @@ import { SchemaValidationError } from "../../../core/validation.js";
 import {
   isMetaReviewExecutionContextActiveState,
   validateActiveMetaReviewExecutionContext
-} from "../../../core/bubble/metaReviewExecutionContext.js";
+} from "../metaReview/metaReviewExecutionContext.js";
 
 function assertMetaReviewExecutionContext(state: BubbleStateSnapshot): void {
   const result = validateActiveMetaReviewExecutionContext(state);

@@ -1,5 +1,5 @@
 import { clearLiveMetaReviewSnapshot } from "../../../core/bubble/metaReview.js";
-import { buildMetaReviewExecutionContext } from "../../../core/bubble/metaReviewExecutionContext.js";
+import { buildMetaReviewExecutionContext } from "../metaReview/metaReviewExecutionContext.js";
 import { metaReviewExecutionContextToRunningContext } from "../../shared/state/executionContext.js";
 import {
   type LoadedStateSnapshot,

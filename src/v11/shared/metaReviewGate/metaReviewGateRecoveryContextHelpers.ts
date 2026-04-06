@@ -21,7 +21,7 @@ import { toMetaReviewGateError } from "./metaReviewGateErrorConversion.js";
 import {
   runningExecutionContextPath,
   validateActiveMetaReviewExecutionContext
-} from "../../../core/bubble/metaReviewExecutionContext.js";
+} from "../metaReview/metaReviewExecutionContext.js";
 import type { BubbleExecutionContext } from "../../../types/bubble.js";
 import { metaReviewGatePaneDeactivationUnavoidableReasonCode } from "./metaReviewGateShared.js";
 

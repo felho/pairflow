@@ -1,4 +1,4 @@
-import { appendHumanApprovalRequestEnvelope } from "../../../core/bubble/approvalRequestEnvelope.js";
+import { appendHumanApprovalRequestEnvelope } from "./approvalRequestEnvelope.js";
 import {
   StateStoreConflictError,
   type writeStateSnapshot
