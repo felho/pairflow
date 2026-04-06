@@ -16,7 +16,7 @@ import {
 } from "../../../../src/v11/application/metaReview/emitMetaReviewV11.js";
 
 describe("meta-review facade parity", () => {
-  it("keeps v11 meta-review exports aligned with core source-of-truth", () => {
+  it("keeps core legacy bridge exports aligned with the canonical v11 runtime", () => {
     expect(submitMetaReviewResultV11).toBe(submitMetaReviewResult);
     expect(getMetaReviewStatusV11).toBe(getMetaReviewStatus);
     expect(getMetaReviewLastReportV11).toBe(getMetaReviewLastReport);
