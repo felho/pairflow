@@ -3,8 +3,8 @@ import {
   inspectStateSnapshot,
   type StateValidationDiagnostics
 } from "../../../core/state/stateStore.js";
-import { resolveCanonicalPendingApprovalSignal } from "../../../core/bubble/pendingApprovalSignal.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import { resolveCanonicalPendingApprovalSignal } from "../approval/pendingApprovalSignal.js";
 export {
   resolveReviewVerificationState,
   resolveStatusGateState,
