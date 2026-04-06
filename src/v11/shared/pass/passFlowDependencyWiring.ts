@@ -29,7 +29,7 @@ import {
   resolvePassValidationPolicy,
   writePassValidationEvidenceArtifact,
   writePassValidationReviewerCompatibilityArtifact
-} from "../../../core/runtime/passValidationEvidence.js";
+} from "../../infrastructure/artifact/validation/passValidationEvidence.js";
 import { runPassValidationCommand } from "../../infrastructure/executor/validation/passValidationCommandRunner.js";
 import { buildAutoConvergeFlowDependencies } from "./autoConvergeFlowInvocationBuilders.js";
 import { buildNormalPassFlowDependencies } from "./normalPassFlowInvocationBuilders.js";

@@ -5,7 +5,7 @@ import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import {
   persistPassValidationRecoveryMarker
-} from "../../../core/runtime/passValidationEvidence.js";
+} from "../../infrastructure/artifact/validation/passValidationEvidence.js";
 import {
   readRuntimeSessionsRegistry,
   removeRuntimeSessions,

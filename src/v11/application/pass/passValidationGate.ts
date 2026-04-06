@@ -8,7 +8,7 @@ import {
   writePassValidationEvidenceArtifact,
   writePassValidationReviewerCompatibilityArtifact,
   type PassValidationCommandResult
-} from "../../../core/runtime/passValidationEvidence.js"
+} from "../../infrastructure/artifact/validation/passValidationEvidence.js"
 import {
   runPassValidationCommand,
   PassValidationRunnerExecutionError

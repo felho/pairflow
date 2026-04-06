@@ -8,7 +8,7 @@ import { runRestartFlow } from "../../../../src/v11/application/restart/runResta
 import {
   persistPassValidationRecoveryMarker,
   resolvePassValidationRecoveryRepoMarkerPath
-} from "../../../../src/core/runtime/passValidationEvidence.js"
+} from "../../../../src/v11/infrastructure/artifact/validation/passValidationEvidence.js"
 import type { ResolvedRestartBubbleDependencies } from "../../../../src/v11/shared/restart/restartCommandDependencyResolution.js"
 
 const tempDirs: string[] = []

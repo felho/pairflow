@@ -2,7 +2,7 @@ import type { resolveRepoPath } from "../../infrastructure/executor/workspace/re
 import type {
   persistPassValidationRecoveryMarker,
   PassValidationRecoveryMarkerPersistWarning
-} from "../../../core/runtime/passValidationEvidence.js";
+} from "../../infrastructure/artifact/validation/passValidationEvidence.js";
 import type { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import type { isFinalState } from "../../domain/state/transitions.js";
 import type {

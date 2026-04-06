@@ -2,7 +2,7 @@ import { spawn } from "node:child_process"
 import { mkdir, open, type FileHandle } from "node:fs/promises"
 import { join } from "node:path"
 
-import type { PassValidationCommandId } from "../../../../core/runtime/passValidationEvidence.js"
+import type { PassValidationCommandId } from "../../artifact/validation/passValidationEvidence.js"
 
 export class PassValidationRunnerExecutionError extends Error {
   public readonly kind: PassValidationCommandId

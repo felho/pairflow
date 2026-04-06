@@ -2,7 +2,7 @@ import type { removeRuntimeSession } from "../../infrastructure/executor/session
 import type {
   persistPassValidationRecoveryMarker,
   PassValidationRecoveryMarkerPersistWarning
-} from "../../../core/runtime/passValidationEvidence.js";
+} from "../../infrastructure/artifact/validation/passValidationEvidence.js";
 import type { terminateBubbleTmuxSession } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import type { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import type {
