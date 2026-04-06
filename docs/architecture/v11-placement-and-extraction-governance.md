@@ -2,13 +2,13 @@
 
 Status: active  
 Owner: architecture/runtime  
-Scope: retained code that is moved into `src/v11/**`
+Scope: code that is introduced or moved into `src/v11/**`
 
 ## Purpose
 
 This document defines how new or migrated code should be placed inside `src/v11/**`.
 
-The goal is not only to move code out of `src/core/**`, but to ensure that retained code lands in a clear, reviewable, quality-enforced boundary with explicit ownership.
+The goal is not only to move code out of `src/core/**`, but to ensure that kept code lands in a clear, reviewable, quality-enforced boundary with explicit ownership.
 
 This is a positive placement policy:
 
@@ -24,7 +24,7 @@ This policy applies when:
 - an existing `v11` lane is refactored into smaller submodules,
 - a command is claimed to be migrated or `v11` source-of-truth.
 
-This policy does not require every low-level retained kernel helper to move immediately. It governs the structure of code that does move into `v11`.
+This policy does not require every low-level technical primitive to move immediately. It governs the structure of code that does move into `v11`.
 
 ## Layer Meanings
 
@@ -82,7 +82,28 @@ Use for:
 - FS/git/tmux/process/storage integration,
 - technology-facing helpers that should not be treated as domain or command policy.
 
-If a retained low-level capability is moved into `v11`, infrastructure is the default home unless it is clearly command-local.
+If a low-level technical capability is moved into `v11`, infrastructure is the default home unless it is clearly command-local.
+
+Default top-level organization for infrastructure is capability-based.
+
+Preferred top-level capabilities:
+
+- `state/`
+- `channel/`
+- `executor/`
+- `artifact/`
+
+Examples:
+
+- `channel/tmux/**` for tmux delivery, pane interaction, and other channel-facing tmux adapters,
+- `executor/**` for execution-environment lifecycle and runtime execution primitives,
+- `artifact/archive/**` for archive-specific artifact persistence helpers.
+
+Do not create `infrastructure/protocol/**` by default only because a module mentions protocol concepts.
+
+- protocol meaning, canonical payload contracts, and envelope semantics are usually not infrastructure concerns,
+- these should normally live under `shared` or another non-infrastructure canonical owner,
+- only protocol-specific I/O or persistence mechanics belong under infrastructure, and even then under the narrowest concrete capability.
 
 ## Default Placement Rule
 
@@ -93,7 +114,7 @@ Default order:
 1. command-local `application/<command>/...`
 2. `domain/...` if the logic is pure policy or derivation
 3. `shared/...` only with explicit multi-lane justification
-4. `infrastructure/...` for retained technical adapters
+4. `infrastructure/...` for technical adapters and platform primitives
 
 Do not move code directly into `shared` only because:
 
@@ -135,7 +156,7 @@ Implicit boundaries are not acceptable. Reviewers should not need to reconstruct
 
 ## Source-of-Truth Rule
 
-Each retained canonical concern must have one explicit owner inside `v11`.
+Each canonical concern that is kept in the system must have one explicit owner inside `v11`.
 
 Examples:
 
@@ -151,6 +172,7 @@ Examples of bad states:
 - canonical type remains in `core`, but `v11` claims source-of-truth,
 - normalization meaning is split between `shared`, `application`, and legacy `core`,
 - command migration is declared complete while the authoritative contract still lives elsewhere.
+- protocol semantics are buried under infrastructure even though the real concern is a shared/kernel contract.
 
 ## Temporary Adapter Rule
 
@@ -168,7 +190,7 @@ Temporary bridges must not silently become permanent architecture.
 
 A lane should be considered truly migrated only when all are true:
 
-1. retained logic for that lane lives under `src/v11/**`,
+1. kept logic for that lane lives under `src/v11/**`,
 2. any remaining `src/core/**` entry is only a thin shim or explicit temporary bridge,
 3. the canonical contract for the lane is owned by `v11`,
 4. parity tests are green,
