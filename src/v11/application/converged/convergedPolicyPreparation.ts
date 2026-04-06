@@ -1,7 +1,7 @@
 import {
   readTranscriptEnvelopes,
   type ReadTranscriptOptions
-} from "../../../core/protocol/transcriptStore.js";
+} from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import {
   validateConvergencePolicy,
   type ConvergencePolicyResult

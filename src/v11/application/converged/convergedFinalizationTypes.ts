@@ -1,7 +1,7 @@
 import { type EnsureBubbleInstanceIdForMutationResult } from "../../../core/bubble/bubbleInstanceId.js";
 import { type ResolvedBubbleWorkspace } from "../../../core/bubble/workspaceResolution.js";
 import { type SummaryVerifierConsistencyGateDecisionRecord } from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
-import { type appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
+import { type appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { type assessPairflowCommandPath } from "../../../core/runtime/pairflowCommand.js";
 import { type emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
 import { type MetaReviewGateRoute } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";

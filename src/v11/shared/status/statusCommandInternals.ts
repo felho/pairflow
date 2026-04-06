@@ -1,4 +1,4 @@
-import { readTranscriptEnvelopes } from "../../../core/protocol/transcriptStore.js";
+import { readTranscriptEnvelopes } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import {
   inspectStateSnapshot,
   type StateValidationDiagnostics

@@ -3,7 +3,7 @@ import type {
   RepeatCleanAutoconvergeReasonDetail
 } from "../../../core/convergence/repeatCleanAutoconverge.js";
 import { claimParserDivergenceDiagnosticReasonCode } from "../../../core/convergence/policy.js";
-import type { ProtocolEnvelopeDraft } from "../../../core/protocol/transcriptStore.js";
+import type { ProtocolEnvelopeDraft } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type { Finding } from "../../../types/findings.js";
 import {
   deliveryTargetRoleMetadataKey,

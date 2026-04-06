@@ -1,5 +1,5 @@
 import type { AgentName } from "../../../types/bubble.js";
-import type { ProtocolEnvelopeDraft } from "../../../core/protocol/transcriptStore.js";
+import type { ProtocolEnvelopeDraft } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ResolvedKickoffTaskInput } from "./kickoffTaskInputResolution.js";
 import { renderKickoffTaskArtifact } from "./kickoffTaskInputResolution.js";

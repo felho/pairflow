@@ -3,7 +3,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
-} from "../../../core/protocol/transcriptStore.js";
+} from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
 import {

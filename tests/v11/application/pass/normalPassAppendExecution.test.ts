@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ProtocolEnvelopeDraft } from "../../../../src/core/protocol/transcriptStore.js";
+import type { ProtocolEnvelopeDraft } from "../../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { executeNormalPassAppend } from "../../../../src/v11/application/pass/normalPassAppendExecution.js";
 
 describe("executeNormalPassAppend", () => {

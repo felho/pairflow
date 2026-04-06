@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
+import { appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { applyStateTransition } from "../../domain/state/machine.js";
 import { buildRunningExecutionContext } from "../../shared/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../infrastructure/state/stateStore.js";

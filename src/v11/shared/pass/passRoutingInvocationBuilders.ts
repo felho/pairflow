@@ -1,4 +1,4 @@
-import type { ReadTranscriptOptions } from "../../../core/protocol/transcriptStore.js";
+import type { ReadTranscriptOptions } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent, ProtocolEnvelope } from "../../../types/protocol.js";

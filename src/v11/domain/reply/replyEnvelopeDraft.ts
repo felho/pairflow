@@ -1,4 +1,4 @@
-import type { ProtocolEnvelopeDraft } from "../../../core/protocol/transcriptStore.js";
+import type { ProtocolEnvelopeDraft } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type { AgentName, AgentRole } from "../../../types/bubble.js";
 import { deliveryTargetRoleMetadataKey } from "../../../types/protocol.js";
 

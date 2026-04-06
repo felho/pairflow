@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
+import { appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
 import { runTmux } from "../../../core/runtime/tmuxManager.js";

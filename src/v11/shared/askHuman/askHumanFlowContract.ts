@@ -2,7 +2,7 @@ import type { emitBubbleNotification } from "../../../core/runtime/notifications
 import type {
   appendProtocolEnvelope,
   AppendProtocolEnvelopeResult
-} from "../../../core/protocol/transcriptStore.js";
+} from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type {
   writeStateSnapshot,
   LoadedStateSnapshot
