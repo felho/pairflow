@@ -1,10 +1,10 @@
 import { parseArgs } from "node:util";
 
 import {
-  asBubbleInboxError,
-  getBubbleInbox,
-  type BubbleInboxView
-} from "../../../core/bubble/inboxBubble.js";
+  asBubbleInboxErrorV11 as asBubbleInboxError,
+  getBubbleInboxV11 as getBubbleInbox,
+  type BubbleInboxV11View as BubbleInboxView
+} from "./emitInboxV11.js";
 
 export interface BubbleInboxCommandOptions {
   id: string;
