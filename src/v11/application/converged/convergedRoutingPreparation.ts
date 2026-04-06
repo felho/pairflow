@@ -7,7 +7,7 @@ import {
 } from "../../domain/ideation/ideationMetadata.js";
 import { resolveBubbleFromWorkspaceCwd } from "../../infrastructure/executor/workspace/workspaceResolution.js";
 import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
-import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
+import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
 import type { AgentName, BubbleStateSnapshot } from "../../../types/bubble.js";
 
 export interface PrepareConvergedRoutingInput {

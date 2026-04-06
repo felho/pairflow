@@ -1,7 +1,7 @@
 import type { AgentRole } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent } from "../../../types/protocol.js";
-import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
+import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext.js";
 import { preparePassRouting, type PreparePassRoutingDependencies } from "../../application/pass/passRoutingPreparation.js";
 import type { BuildFlowBaseInput } from "./flowInvocationBuilderBase.js";
 import { createPassRoutingDependencies } from "./passFlowDependencyWiring.js";

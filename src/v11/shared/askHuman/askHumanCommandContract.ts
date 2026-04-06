@@ -6,7 +6,7 @@ import type {
 } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
-import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
+import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext.js";
 
 export interface EmitAskHumanInput {
   question: string;

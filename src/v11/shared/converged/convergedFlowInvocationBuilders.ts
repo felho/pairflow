@@ -1,5 +1,5 @@
 import type { AgentName } from "../../../types/bubble.js";
-import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
+import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext.js";
 import type { ConvergedStructuredFinding } from "./convergedCommandTypes.js";
 import { executeConvergedExecution } from "../../application/converged/convergedExecution.js";
 import { finalizeConvergedFlow } from "../../application/converged/convergedFinalization.js";

@@ -10,7 +10,7 @@ import type {
   claimRuntimeSession,
   removeRuntimeSession
 } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
-import type { buildResumeTranscriptSummary } from "../../../core/protocol/resumeSummary.js";
+import type { buildResumeTranscriptSummary } from "../../shared/protocol/resumeSummary.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 
 export interface StartBubbleInput {

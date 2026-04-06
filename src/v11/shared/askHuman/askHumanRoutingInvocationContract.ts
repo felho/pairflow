@@ -1,4 +1,4 @@
-import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
+import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext.js";
 
 export interface BuildAskHumanRoutingInputInput {
   question: string;

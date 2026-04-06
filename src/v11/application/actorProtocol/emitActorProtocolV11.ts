@@ -18,10 +18,10 @@ import {
 import {
   ActorEmitContextError,
   assertActorEmitContextMatches
-} from "../../../core/bubble/actorEmitContext.js";
+} from "../../shared/actorProtocol/actorEmitContext.js";
 import type {
   ActorEmitContextSnapshot
-} from "../../../core/bubble/actorEmitContext.js";
+} from "../../shared/actorProtocol/actorEmitContext.js";
 import type {
   ActorEmitInput,
   ConvergenceActorEmitInput,
