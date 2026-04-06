@@ -26,7 +26,7 @@ export {
 export {
   BubbleLookupError,
   resolveBubbleById
-} from "./core/bubble/bubbleLookup.js";
+} from "./v11/infrastructure/executor/workspace/bubbleLookup.js";
 export {
   asBubbleInboxError,
   BubbleInboxError,
@@ -101,7 +101,7 @@ export {
 export {
   resolveBubbleFromWorkspaceCwd,
   WorkspaceResolutionError
-} from "./core/bubble/workspaceResolution.js";
+} from "./v11/infrastructure/executor/workspace/workspaceResolution.js";
 export { getBubblePaths } from "./core/bubble/paths.js";
 export { createInitialBubbleState } from "./core/state/initialState.js";
 export { runCli } from "./cli/index.js";
@@ -427,7 +427,7 @@ export type {
 } from "./v11/application/merge/emitMergeV11.js";
 export type {
   ResolvedBubbleById
-} from "./core/bubble/bubbleLookup.js";
+} from "./v11/infrastructure/executor/workspace/bubbleLookup.js";
 export type {
   OpenBubbleDependencies,
   OpenBubbleInput,
@@ -479,7 +479,7 @@ export type {
 } from "./v11/application/watchdog/emitWatchdogV11.js";
 export type {
   ResolvedBubbleWorkspace
-} from "./core/bubble/workspaceResolution.js";
+} from "./v11/infrastructure/executor/workspace/workspaceResolution.js";
 export type {
   BubbleCreateInput,
   BubbleCreateResult,
