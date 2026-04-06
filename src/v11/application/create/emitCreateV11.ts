@@ -1,13 +1,9 @@
 export {
-  BubbleCreateError as BubbleCreateErrorV11
-} from "./createCommandRuntime.js";
-export {
-  runCreateBubbleFlow as createBubbleV11,
-  runCreateBubbleFlow as createBubble
-} from "./runCreateBubbleFlow.js";
-export {
+  BubbleCreateError as BubbleCreateErrorV11,
+  createBubble as createBubbleV11,
+  createBubble,
   extractReviewerFocus as extractReviewerFocusV11
-} from "./createReviewerFocus.js";
+} from "./createCommandApi.js";
 export type {
   BubbleCreateDependencies as BubbleCreateV11Dependencies,
   BubbleCreateInput as BubbleCreateV11Input,
