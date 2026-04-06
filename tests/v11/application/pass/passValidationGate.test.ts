@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { BubbleConfig } from "../../../../src/types/bubble.js";
-import { PassValidationRunnerExecutionError } from "../../../../src/core/runtime/passValidationRunner.js";
+import { PassValidationRunnerExecutionError } from "../../../../src/v11/infrastructure/executor/validation/passValidationCommandRunner.js";
 import { resolvePassValidationForPass } from "../../../../src/v11/application/pass/passValidationGate.js";
 
 function toErrorMessage(input: PairflowCommandErrorInput): string {

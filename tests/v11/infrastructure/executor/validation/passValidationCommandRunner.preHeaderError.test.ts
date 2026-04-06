@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { runPassValidationCommand } from "../../../src/core/runtime/passValidationRunner.js";
+import { runPassValidationCommand } from "../../../../../src/v11/infrastructure/executor/validation/passValidationCommandRunner.js";
 
 describe("runPassValidationCommand pre-header error", () => {
   it("fails before spawn when log bootstrap cannot be written", async () => {

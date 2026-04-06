@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { runPassValidationCommand } from "../../../src/core/runtime/passValidationRunner.js";
+import { runPassValidationCommand } from "../../../../../src/v11/infrastructure/executor/validation/passValidationCommandRunner.js";
 
 const cleanupPaths: string[] = [];
 
