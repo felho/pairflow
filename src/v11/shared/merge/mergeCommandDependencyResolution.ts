@@ -2,7 +2,7 @@ import { readStateSnapshot, writeStateSnapshot } from "../../infrastructure/stat
 import { branchExists, runGit } from "../../../core/workspace/git.js";
 import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { cleanupWorktreeWorkspace } from "../../../core/workspace/worktreeManager.js";
-import { terminateBubbleTmuxSession } from "../../../core/runtime/tmuxManager.js";
+import { terminateBubbleTmuxSession } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import { removeRuntimeSession } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";

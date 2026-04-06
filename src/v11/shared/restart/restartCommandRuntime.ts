@@ -3,7 +3,7 @@ import {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
 } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
-import { TmuxCommandError } from "../../../core/runtime/tmuxManager.js";
+import { TmuxCommandError } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import {
   asStartBubbleError,
   StartBubbleError

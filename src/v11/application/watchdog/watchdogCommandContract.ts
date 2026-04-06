@@ -1,7 +1,7 @@
-import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
+import type { emitBubbleNotification } from "../../infrastructure/channel/notifications.js";
 import type {
   emitTmuxDeliveryNotification
-} from "../../../core/runtime/tmuxDelivery.js";
+} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 import type {
   readStateSnapshot
 } from "../../infrastructure/state/stateStore.js";

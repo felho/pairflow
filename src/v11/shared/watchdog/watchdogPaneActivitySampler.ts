@@ -7,7 +7,7 @@ import {
   runTmux,
   runtimePaneIndices,
   type TmuxRunner
-} from "../../../core/runtime/tmuxManager.js";
+} from "../../infrastructure/channel/tmux/tmuxManager.js";
 import type { AgentRole, BubbleConfig } from "../../../types/bubble.js";
 import { createBubbleWatchdogError } from "./watchdogCommandRuntime.js";
 

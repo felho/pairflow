@@ -2,7 +2,7 @@ import {
   resolveDeliveryMessageRef,
   type EmitTmuxDeliveryNotificationInput,
   type EmitTmuxDeliveryNotificationResult
-} from "../../../core/runtime/tmuxDelivery.js";
+} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 import {
   formatReviewerBriefPrompt,
   formatReviewerFocusBridgeBlock,
@@ -10,7 +10,7 @@ import {
   readReviewerFocusArtifact,
   type ReviewerFocusExtractionResult
 } from "../../../core/reviewer/reviewerBrief.js";
-import { type refreshReviewerContext } from "../../../core/runtime/reviewerContext.js";
+import { type refreshReviewerContext } from "../../infrastructure/channel/tmux/reviewerContext.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ReviewerTestExecutionDirective } from "../../../core/reviewer/testEvidence.js";

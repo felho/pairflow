@@ -1,7 +1,7 @@
 import type {
   emitTmuxDeliveryNotification,
   EmitTmuxDeliveryNotificationResult
-} from "../../../core/runtime/tmuxDelivery.js";
+} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 import type {
   BubbleStateSnapshot
 } from "../../../types/bubble.js";

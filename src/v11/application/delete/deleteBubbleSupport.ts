@@ -24,7 +24,7 @@ import {
   runTmux,
   terminateBubbleTmuxSession,
   type TmuxRunner
-} from "../../../core/runtime/tmuxManager.js";
+} from "../../infrastructure/channel/tmux/tmuxManager.js";
 import { pathExists } from "../../../core/util/pathExists.js";
 import { branchExists } from "../../../core/workspace/git.js";
 import { cleanupWorktreeWorkspace } from "../../../core/workspace/worktreeManager.js";

@@ -3,7 +3,7 @@ import type {
 } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import type {
   terminateBubbleTmuxSession
-} from "../../../core/runtime/tmuxManager.js";
+} from "../../infrastructure/channel/tmux/tmuxManager.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 
 export interface StopBubbleInput {

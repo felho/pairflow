@@ -1,8 +1,8 @@
 import {
   emitTmuxDeliveryNotification,
   type EmitTmuxDeliveryNotificationResult
-} from "../../../core/runtime/tmuxDelivery.js";
-import { refreshReviewerContext } from "../../../core/runtime/reviewerContext.js";
+} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
+import { refreshReviewerContext } from "../../infrastructure/channel/tmux/reviewerContext.js";
 import type { ReviewerTestExecutionDirective } from "../../../core/reviewer/testEvidence.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";

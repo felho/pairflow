@@ -3,7 +3,7 @@ import type {
   persistPassValidationRecoveryMarker,
   PassValidationRecoveryMarkerPersistWarning
 } from "../../../core/runtime/passValidationEvidence.js";
-import type { terminateBubbleTmuxSession } from "../../../core/runtime/tmuxManager.js";
+import type { terminateBubbleTmuxSession } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import type { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import type {
   startBubble,

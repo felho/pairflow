@@ -1,4 +1,4 @@
-import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
+import type { emitTmuxDeliveryNotification } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 

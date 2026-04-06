@@ -1,9 +1,9 @@
 import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
-import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
+import { emitBubbleNotification } from "../../infrastructure/channel/notifications.js";
 import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef
-} from "../../../core/runtime/tmuxDelivery.js";
+} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 
 export const askHumanFinalizationDependencyDefaults = {
   emitTmuxDeliveryNotification,
