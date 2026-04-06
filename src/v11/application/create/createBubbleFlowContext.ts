@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 
-import { getBubblePaths, type BubblePaths } from "../../../core/bubble/paths.js";
+import { getBubblePaths, type BubblePaths } from "../../infrastructure/artifact/bubble/paths.js";
 import type { ReviewerFocusExtractionResult } from "../../../core/reviewer/reviewerBrief.js";
 import { createInitialBubbleState } from "../../domain/state/initialState.js";
 import {

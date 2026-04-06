@@ -2,7 +2,7 @@ import { readdir, readFile, realpath } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 
 import { parseBubbleConfigToml } from "../../../../config/bubbleConfig.js";
-import { getBubblePaths, type BubblePaths } from "../../../../core/bubble/paths.js";
+import { getBubblePaths, type BubblePaths } from "../../artifact/bubble/paths.js";
 import { runGit } from "../../../../core/workspace/git.js";
 import type { BubbleConfig } from "../../../../types/bubble.js";
 import { listPairflowWorkspaceCandidateCwds } from "./commandWorkspaceFallback.js";

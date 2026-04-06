@@ -3,7 +3,7 @@ import { constants as fsConstants } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 import { parseBubbleConfigToml } from "../../../../config/bubbleConfig.js";
-import { getBubblePaths, type BubblePaths } from "../../../../core/bubble/paths.js";
+import { getBubblePaths, type BubblePaths } from "../../artifact/bubble/paths.js";
 import type { BubbleConfig } from "../../../../types/bubble.js";
 import { listPairflowWorkspaceCandidateCwds } from "./commandWorkspaceFallback.js";
 import { resolveRepoPath } from "./repoResolution.js";

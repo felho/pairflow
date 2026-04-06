@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import type { BubblePaths } from "../../../core/bubble/paths.js";
+import type { BubblePaths } from "../../infrastructure/artifact/bubble/paths.js";
 import {
   createDocContractGateArtifact,
   isDocContractGateScopeActive,

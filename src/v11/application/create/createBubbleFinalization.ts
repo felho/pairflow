@@ -3,7 +3,7 @@ import type {
   BubbleCreateResult,
   ResolvedTaskInput
 } from "./createCommandContract.js";
-import type { BubblePaths } from "../../../core/bubble/paths.js";
+import type { BubblePaths } from "../../infrastructure/artifact/bubble/paths.js";
 import type {
   BubbleConfig,
   BubbleStateSnapshot
