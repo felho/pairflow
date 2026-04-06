@@ -87,7 +87,7 @@ export {
   asDeleteBubbleError,
   DeleteBubbleError,
   deleteBubble
-} from "./core/bubble/deleteBubble.js";
+} from "./v11/application/delete/deleteBubble.js";
 export {
   asBubbleStatusError,
   BubbleStatusError,
