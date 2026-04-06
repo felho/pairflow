@@ -11,6 +11,7 @@ const facadeParityTestsByCommand: Record<string, readonly string[]> = {
   converged: ["tests/v11/application/converged/convergedFacadeParity.test.ts"],
   approval: ["tests/v11/application/approval/approvalFacadeParity.test.ts"],
   inbox: ["tests/v11/application/inbox/inboxFacadeParity.test.ts"],
+  open: ["tests/v11/application/open/openFacadeParity.test.ts"],
   metaReviewGate: [
     "tests/v11/application/metaReviewGate/metaReviewGateFacadeParity.test.ts"
   ],

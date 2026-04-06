@@ -111,6 +111,12 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
     notes: "Core facade now delegates to v11 inbox runtime seams; v11 is the source of truth."
   },
   {
+    command: "open",
+    state: "v11",
+    owner: "runtime",
+    notes: "Core facade now delegates to v11 open runtime seams; v11 is the source of truth."
+  },
+  {
     command: "status",
     state: "v11",
     owner: "runtime",
