@@ -2,8 +2,8 @@ import {
   maybeAcceptClaudeTrustPrompt,
   sendAndSubmitTmuxPaneMessage,
   submitTmuxPaneInput
-} from "../../../core/runtime/tmuxInput.js";
-import { runTmux } from "../../../core/runtime/tmuxManager.js";
+} from "../../infrastructure/channel/tmux/tmuxInput.js";
+import { runTmux } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import {
   buildMetaReviewSubmitApproveParityNote,
   buildMetaReviewSubmitCommandTemplate

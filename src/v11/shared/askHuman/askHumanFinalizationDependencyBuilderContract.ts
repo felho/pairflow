@@ -1,9 +1,9 @@
 import type { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
-import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
+import type { emitBubbleNotification } from "../../infrastructure/channel/notifications.js";
 import type {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef
-} from "../../../core/runtime/tmuxDelivery.js";
+} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 
 export interface AskHumanFinalizationDependencySource {
   emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification | undefined;

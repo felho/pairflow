@@ -3,7 +3,7 @@ import type {
   EmitOptionalAskHumanNotificationsInput
 } from "./askHumanNotificationEmissionContract.js";
 import type { AskHumanDeliveryResult } from "./askHumanFlowContract.js";
-import type { EmitTmuxDeliveryNotificationResult } from "../../../core/runtime/tmuxDelivery.js";
+import type { EmitTmuxDeliveryNotificationResult } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 
 function describeDetachedBubbleNotificationFailure(error: unknown): void {
   void error;

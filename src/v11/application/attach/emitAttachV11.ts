@@ -14,7 +14,7 @@ import {
   BubbleLookupError,
   resolveBubbleById
 } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { buildBubbleTmuxSessionName } from "../../../core/runtime/tmuxManager.js";
+import { buildBubbleTmuxSessionName } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import { shellQuote } from "../../../core/util/shellQuote.js";
 
 type ExplicitAttachLauncher = Exclude<AttachLauncher, "auto">;

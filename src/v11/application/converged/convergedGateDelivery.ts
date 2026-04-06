@@ -2,7 +2,7 @@ import type {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef,
   EmitTmuxDeliveryNotificationResult
-} from "../../../core/runtime/tmuxDelivery.js";
+} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 import type { applyMetaReviewGateOnConvergence } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
 import type { ResolvedBubbleWorkspace } from "../../infrastructure/executor/workspace/workspaceResolution.js";
 import type { AgentName } from "../../../types/bubble.js";

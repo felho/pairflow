@@ -5,7 +5,7 @@ import {
   readTranscriptEnvelopes
 } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
+import { setMetaReviewerPaneBinding } from "../../infrastructure/channel/tmux/metaReviewerPaneBinding.js";
 import {
   readStateSnapshot,
   writeStateSnapshot,

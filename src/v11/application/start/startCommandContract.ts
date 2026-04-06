@@ -5,7 +5,7 @@ import type {
 import type {
   launchBubbleTmuxSession,
   terminateBubbleTmuxSession
-} from "../../../core/runtime/tmuxManager.js";
+} from "../../infrastructure/channel/tmux/tmuxManager.js";
 import type {
   claimRuntimeSession,
   removeRuntimeSession
