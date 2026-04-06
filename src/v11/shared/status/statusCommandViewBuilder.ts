@@ -1,4 +1,4 @@
-import { computeWatchdogStatus, type WatchdogStatus } from "../../../core/runtime/watchdog.js";
+import { computeWatchdogStatus, type WatchdogStatus } from "../watchdog/watchdogStatus.js";
 import { resolveActiveMetaReviewRuntimeDelivery } from "../../../core/bubble/metaReview.js";
 import { isMetaReviewExecutionContextActiveState } from "../metaReview/metaReviewExecutionContext.js";
 import { type ReviewVerificationState } from "../../../core/reviewer/reviewVerification.js";
