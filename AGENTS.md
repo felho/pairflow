@@ -19,6 +19,9 @@
 
 - Language: TypeScript-first.
 - Keep architecture aligned with `docs/pairflow-initial-design.md`.
+- When moving retained code into `src/v11/**`, follow `docs/architecture/v11-placement-and-extraction-governance.md`.
+- Default new `v11` extracts to the narrowest correct scope; do not promote code into `shared` without explicit multi-lane justification.
+- Important `v11` extracts must have explicit typed boundaries; do not rely on implicit meaning reconstructed from call sites.
 - If protocol or state machine behavior changes, update the spec in the same work.
 
 ## Verification Before Commit
