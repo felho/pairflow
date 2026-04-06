@@ -10,7 +10,7 @@ import type { ReviewerFocusExtractionResult } from "../../../core/reviewer/revie
 import {
   reviewerSeverityOntologyFullMarkdown,
   reviewerSeverityOntologySourceDoc
-} from "../../../core/runtime/reviewerSeverityOntology.generated.js";
+} from "../reviewer/reviewerSeverityOntology.generated.js";
 import type { StartBubbleInput } from "../../application/start/startCommandContract.js";
 import { resolveStartBubbleMode } from "./startCommandOrchestration.js";
 import { createStartBubbleError } from "./startCommandRuntime.js";

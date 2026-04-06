@@ -5,12 +5,12 @@ import {
   buildPairflowCommandGuidance,
   buildPinnedPairflowCommand
 } from "../../infrastructure/executor/command/pairflowCommand.js";
-import { buildReviewerAgentSelectionGuidance } from "../../../core/runtime/reviewerGuidance.js";
-import { buildReviewerSeverityOntologyReminder } from "../../../core/runtime/reviewerSeverityOntology.js";
+import { buildReviewerAgentSelectionGuidance } from "../reviewer/reviewerGuidance.js";
+import { buildReviewerSeverityOntologyReminder } from "../reviewer/reviewerSeverityOntology.js";
 import {
   buildReviewerPassOutputContractGuidance,
   buildReviewerScoutExpansionWorkflowGuidance
-} from "../../../core/runtime/reviewerScoutExpansionGuidance.js";
+} from "../reviewer/reviewerScoutExpansionGuidance.js";
 import {
   buildMetaReviewSubmitApproveParityNote,
   buildMetaReviewSubmitCommandTemplate
@@ -18,7 +18,7 @@ import {
 import {
   buildReviewerCanonicalCommandGateLines,
   buildReviewerFindingsPassInstruction
-} from "../../../core/runtime/reviewerCommandGateGuidance.js";
+} from "../reviewer/reviewerCommandGateGuidance.js";
 import { buildReviewerDecisionMatrixReminder } from "../../../core/reviewer/testEvidence.js";
 import {
   formatReviewerFocusBridgeBlock,

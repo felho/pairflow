@@ -9,17 +9,17 @@ import {
   sendAndSubmitTmuxPaneMessage,
   submitTmuxPaneInput
 } from "./tmuxInput.js";
-import { buildReviewerAgentSelectionGuidance } from "../../../../core/runtime/reviewerGuidance.js";
-import { buildReviewerSeverityOntologyReminder } from "../../../../core/runtime/reviewerSeverityOntology.js";
+import { buildReviewerAgentSelectionGuidance } from "../../../shared/reviewer/reviewerGuidance.js";
+import { buildReviewerSeverityOntologyReminder } from "../../../shared/reviewer/reviewerSeverityOntology.js";
 import {
   buildReviewerPassOutputContractGuidance,
   buildReviewerScoutExpansionWorkflowGuidance
-} from "../../../../core/runtime/reviewerScoutExpansionGuidance.js";
+} from "../../../shared/reviewer/reviewerScoutExpansionGuidance.js";
 import {
   buildReviewerFindingsPassInstruction,
   buildReviewerRoundCommandGateProjection,
   type ReviewerCommandGateProjectionVariant
-} from "../../../../core/runtime/reviewerCommandGateGuidance.js";
+} from "../../../shared/reviewer/reviewerCommandGateGuidance.js";
 import {
   buildReviewerDecisionMatrixReminder,
   formatReviewerTestExecutionDirective,

@@ -8,7 +8,7 @@ const runtimeReminderStartMarker = "<!-- pairflow:runtime-reminder:start -->";
 const runtimeReminderEndMarker = "<!-- pairflow:runtime-reminder:end -->";
 const sourceDocRelativePath = "docs/reviewer-severity-ontology.md";
 const generatedModuleRelativePath =
-  "src/core/runtime/reviewerSeverityOntology.generated.ts";
+  "src/v11/shared/reviewer/reviewerSeverityOntology.generated.ts";
 
 function readRuntimeReminderBlock(markdown) {
   const startIndex = markdown.indexOf(runtimeReminderStartMarker);

@@ -11,7 +11,7 @@ export default tseslint.config(
       "eslint.config.mjs",
       "ui/postcss.config.js",
       "scripts/generate-reviewer-severity-ontology.mjs",
-      "src/core/runtime/reviewerSeverityOntology.generated.ts"
+      "src/v11/shared/reviewer/reviewerSeverityOntology.generated.ts"
     ]
   },
   js.configs.recommended,

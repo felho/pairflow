@@ -1047,8 +1047,8 @@ Reviewer ontology reminder content is sourced as:
 3. Build/codegen step (`pnpm codegen:reviewer-ontology`) embeds both:
    - full canonical ontology markdown
    - runtime reminder text derived from the marker block
-   into `src/core/runtime/reviewerSeverityOntology.generated.ts`.
-4. Runtime prompt helper (`src/core/runtime/reviewerSeverityOntology.ts`)
+   into `src/v11/shared/reviewer/reviewerSeverityOntology.generated.ts`.
+4. Runtime prompt helper (`src/v11/shared/reviewer/reviewerSeverityOntology.ts`)
    consumes generated constants, so runtime delivery does not require reading
    markdown files from disk.
 

@@ -1,26 +1,4 @@
-import {
-  reviewerSeverityOntologyFullPromptText,
-  reviewerSeverityOntologyRuntimeReminderText,
-  reviewerSeverityOntologySourceDoc
-} from "./reviewerSeverityOntology.generated.js";
-
-export interface ReviewerSeverityOntologyReminderOptions {
-  includeFullOntology?: boolean;
-}
-
-export function buildReviewerSeverityOntologyReminder(
-  options: ReviewerSeverityOntologyReminderOptions = {}
-): string {
-  const includeFullOntology = options.includeFullOntology ?? false;
-  const parts = [
-    `Severity Ontology v1 reminder (embedded from canonical docs at build-time: \`${reviewerSeverityOntologySourceDoc}#runtime-reminder\`): ${reviewerSeverityOntologyRuntimeReminderText}`
-  ];
-
-  if (includeFullOntology) {
-    parts.push(
-      `Full canonical ontology (embedded from \`${reviewerSeverityOntologySourceDoc}\`): ${reviewerSeverityOntologyFullPromptText}`
-    );
-  }
-
-  return parts.join(" ");
-}
+// Temporary bridge: Phase 5 X1 moved canonical reviewer severity ontology
+// runtime ownership to `src/v11/shared/reviewer/reviewerSeverityOntology.ts`.
+// Remove this shim once legacy core imports are migrated.
+export * from "../../v11/shared/reviewer/reviewerSeverityOntology.js";

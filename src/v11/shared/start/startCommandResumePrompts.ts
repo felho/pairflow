@@ -1,12 +1,12 @@
 import {
   buildReviewerCanonicalCommandGateLines
-} from "../../../core/runtime/reviewerCommandGateGuidance.js";
-import { buildReviewerAgentSelectionGuidance } from "../../../core/runtime/reviewerGuidance.js";
+} from "../reviewer/reviewerCommandGateGuidance.js";
+import { buildReviewerAgentSelectionGuidance } from "../reviewer/reviewerGuidance.js";
 import {
   buildReviewerPassOutputContractGuidance,
   buildReviewerScoutExpansionWorkflowGuidance
-} from "../../../core/runtime/reviewerScoutExpansionGuidance.js";
-import { buildReviewerSeverityOntologyReminder } from "../../../core/runtime/reviewerSeverityOntology.js";
+} from "../reviewer/reviewerScoutExpansionGuidance.js";
+import { buildReviewerSeverityOntologyReminder } from "../reviewer/reviewerSeverityOntology.js";
 import {
   buildPairflowCommandGuidance
 } from "../../infrastructure/executor/command/pairflowCommand.js";
