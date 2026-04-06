@@ -27,6 +27,16 @@ import {
   isMetaReviewExecutionContextActiveState,
   validateActiveMetaReviewExecutionContext
 } from "./metaReviewExecutionContext.js";
+import {
+  clearLiveMetaReviewSnapshot,
+  hasCanonicalSubmitForActiveMetaReviewRound,
+  normalizeMetaReviewSnapshot,
+  resolveActiveMetaReviewRuntimeDelivery
+} from "../../v11/shared/metaReview/metaReviewSnapshot.js";
+import {
+  MetaReviewError,
+  type MetaReviewErrorReasonCode
+} from "../../v11/shared/metaReview/metaReviewError.js";
 import { toMetaReviewExecutionContext } from "../state/executionContext.js";
 import { readRuntimeSessionsRegistry } from "../runtime/sessionsRegistry.js";
 import { runtimePaneIndices, runTmux } from "../runtime/tmuxManager.js";
@@ -38,11 +48,8 @@ import {
   maybeAcceptClaudeTrustPrompt,
   sendAndSubmitTmuxPaneMessage
 } from "../runtime/tmuxInput.js";
-import { DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT } from "../../types/bubble.js";
 import type {
   AgentName,
-  BubbleMetaReviewExecutionContext,
-  BubbleMetaReviewRuntimeDeliveryState,
   BubbleMetaReviewSnapshotState,
   BubbleStateSnapshot,
   MetaReviewRecommendation,
@@ -52,8 +59,7 @@ import {
   hasApproveFindingsSplitMetadata,
   isFindingsClaimState,
   type FindingsParityStatus,
-  type MetaReviewSubmissionPayload,
-  type ProtocolEnvelope
+  type MetaReviewSubmissionPayload
 } from "../../types/protocol.js";
 import {
   type LatestSameRoundReviewerSnapshot,
@@ -72,7 +78,6 @@ import {
   validateFindingsArtifactParity
 } from "../../v11/shared/metaReviewGate/metaReviewGateFindingsParityHelpers.js";
 import type {
-  MetaReviewGateRoute,
   RecoverMetaReviewGateFromSnapshotDependencies,
   recoverMetaReviewGateFromSnapshot
 } from "../../v11/shared/metaReviewGate/metaReviewGateCommandApi.js";
@@ -103,6 +108,14 @@ export type MetaReviewLastReportView = MetaReviewLastReportViewV11;
 export type MetaReviewResult = MetaReviewResultV11;
 export type MetaReviewRunWarning = MetaReviewRunWarningV11;
 export type MetaReviewSubmitResult = MetaReviewSubmitResultV11;
+export type { MetaReviewErrorReasonCode };
+export {
+  clearLiveMetaReviewSnapshot,
+  hasCanonicalSubmitForActiveMetaReviewRound,
+  MetaReviewError,
+  normalizeMetaReviewSnapshot,
+  resolveActiveMetaReviewRuntimeDelivery
+};
 
 interface MetaReviewLiveRunnerOutput {
   recommendation: MetaReviewRecommendation;
@@ -164,104 +177,6 @@ export interface MetaReviewDependencies {
   randomUUID?: () => string;
   allowMetaReviewRunningState?: boolean;
   recoverMetaReviewGateFromSnapshot?: RecoverMetaReviewGateFromSnapshotFn;
-}
-
-export type MetaReviewErrorReasonCode =
-  | "META_REVIEW_REWORK_MESSAGE_INVALID"
-  | "META_REVIEW_STATE_INVALID"
-  | "META_REVIEW_SENDER_MISMATCH"
-  | "META_REVIEW_ROUND_MISMATCH"
-  | "META_REVIEW_SNAPSHOT_WRITE_CONFLICT"
-  | "META_REVIEW_BUBBLE_LOOKUP_FAILED"
-  | "META_REVIEW_SCHEMA_INVALID"
-  | "META_REVIEW_SUMMARY_STRUCTURED_MISMATCH"
-  | "META_REVIEW_SCHEMA_INVALID_COMBINATION"
-  | "META_REVIEW_GATE_REVIEWER_CONVERGENCE_CONFLICT"
-  | "META_REVIEW_GATE_RUN_FAILED"
-  | "META_REVIEW_IO_ERROR"
-  | "META_REVIEW_UNKNOWN_ERROR";
-
-export class MetaReviewError extends Error {
-  public readonly reasonCode: MetaReviewErrorReasonCode;
-
-  public constructor(
-    reasonCode: MetaReviewErrorReasonCode,
-    message: string
-  ) {
-    super(message);
-    this.name = "MetaReviewError";
-    this.reasonCode = reasonCode;
-  }
-}
-
-function normalizeMetaReviewSnapshot(
-  snapshot: BubbleMetaReviewSnapshotState | undefined
-): BubbleMetaReviewSnapshotState {
-  if (snapshot === undefined) {
-    return {
-      execution_context: null,
-      runtime_delivery: null,
-      last_autonomous_run_id: null,
-      last_autonomous_status: null,
-      last_autonomous_recommendation: null,
-      last_autonomous_summary: null,
-      last_autonomous_report_ref: null,
-      last_autonomous_rework_target_message: null,
-      last_autonomous_updated_at: null,
-      auto_rework_count: 0,
-      auto_rework_limit: DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
-      sticky_human_gate: false
-    };
-  }
-
-  return snapshot;
-}
-
-export function clearLiveMetaReviewSnapshot(
-  snapshot: BubbleMetaReviewSnapshotState | undefined
-): BubbleMetaReviewSnapshotState {
-  const normalized = normalizeMetaReviewSnapshot(snapshot);
-  return {
-    ...normalized,
-    execution_context: null,
-    runtime_delivery: null,
-    last_autonomous_run_id: null,
-    last_autonomous_status: null,
-    last_autonomous_recommendation: null,
-    last_autonomous_summary: null,
-    last_autonomous_report_ref: null,
-    last_autonomous_rework_target_message: null,
-    last_autonomous_updated_at: null,
-    sticky_human_gate: false
-  };
-}
-
-export function resolveActiveMetaReviewRuntimeDelivery(input: {
-  executionContext: BubbleMetaReviewExecutionContext | null | undefined;
-  runtimeDelivery: BubbleMetaReviewRuntimeDeliveryState | null | undefined;
-}): BubbleMetaReviewRuntimeDeliveryState | null {
-  const executionContext = input.executionContext ?? null;
-  const runtimeDelivery = input.runtimeDelivery ?? null;
-  if (executionContext === null || runtimeDelivery === null) {
-    return null;
-  }
-  if (
-    runtimeDelivery.observed_for_handoff_id === null ||
-    runtimeDelivery.observed_for_round === null
-  ) {
-    return null;
-  }
-  if (
-    runtimeDelivery.observed_for_handoff_id !== executionContext.handoff_id
-  ) {
-    return null;
-  }
-  if (
-    runtimeDelivery.observed_for_round !== executionContext.round
-  ) {
-    return null;
-  }
-  return runtimeDelivery;
 }
 
 function normalizeOptionalText(value: string | undefined): string | null {
@@ -836,38 +751,6 @@ function normalizeRequiredSubmitText(
     );
   }
   return value.trim();
-}
-
-export function hasCanonicalSubmitForActiveMetaReviewRound(input: {
-  state: BubbleStateSnapshot;
-  snapshot: BubbleMetaReviewSnapshotState;
-}): boolean {
-  const executionContextResult = validateActiveMetaReviewExecutionContext(
-    input.state
-  );
-  if (!executionContextResult.ok) {
-    return false;
-  }
-  if (
-    input.snapshot.last_autonomous_status === null ||
-    input.snapshot.last_autonomous_recommendation === null ||
-    !isNonEmptyString(input.snapshot.last_autonomous_report_ref) ||
-    !isNonEmptyString(input.snapshot.last_autonomous_updated_at)
-  ) {
-    return false;
-  }
-
-  const activeSinceMs = Date.parse(executionContextResult.value.started_at);
-  const deadlineAtMs = Date.parse(executionContextResult.value.deadline_at);
-  const updatedAtMs = Date.parse(input.snapshot.last_autonomous_updated_at);
-  if (
-    Number.isNaN(activeSinceMs) ||
-    Number.isNaN(deadlineAtMs) ||
-    Number.isNaN(updatedAtMs)
-  ) {
-    return false;
-  }
-  return updatedAtMs >= activeSinceMs && updatedAtMs <= deadlineAtMs;
 }
 
 function assertActiveMetaReviewExecutionContext(

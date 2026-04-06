@@ -1,6 +1,6 @@
 import type { applyStateTransition } from "../../domain/state/machine.js";
-import { clearLiveMetaReviewSnapshot } from "../../../core/bubble/metaReview.js";
 import { buildRunningExecutionContext } from "../../shared/state/executionContext.js";
+import { clearLiveMetaReviewSnapshot } from "../../shared/metaReview/metaReviewSnapshot.js";
 import type {
   AgentName,
   BubbleReworkIntentRecord,
