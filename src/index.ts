@@ -69,10 +69,10 @@ export {
   startBubbleV11 as startBubble
 } from "./v11/application/start/emitStartV11.js";
 export {
-  asBubbleListError,
-  BubbleListError,
-  listBubbles
-} from "./core/bubble/listBubbles.js";
+  asBubbleListErrorV11 as asBubbleListError,
+  BubbleListErrorV11 as BubbleListError,
+  listBubblesV11 as listBubbles
+} from "./v11/application/list/emitListV11.js";
 export {
   asStartupReconcilerError,
   reconcileRuntimeSessions,
@@ -457,11 +457,11 @@ export type {
   StopBubbleV11Result as StopBubbleResult
 } from "./v11/application/stop/emitStopV11.js";
 export type {
-  BubbleListInput,
-  BubbleListEntry,
-  BubbleListStateCounts,
-  BubbleListView
-} from "./core/bubble/listBubbles.js";
+  BubbleListV11Input as BubbleListInput,
+  BubbleListV11Entry as BubbleListEntry,
+  BubbleListV11StateCounts as BubbleListStateCounts,
+  BubbleListV11View as BubbleListView
+} from "./v11/application/list/emitListV11.js";
 export type {
   ReconcileRuntimeSessionsAction,
   ReconcileRuntimeSessionsInput,

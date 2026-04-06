@@ -14,6 +14,7 @@ const facadeParityTestsByCommand: Record<string, readonly string[]> = {
   delete: ["tests/v11/application/delete/deleteFacadeParity.test.ts"],
   inbox: ["tests/v11/application/inbox/inboxFacadeParity.test.ts"],
   open: ["tests/v11/application/open/openFacadeParity.test.ts"],
+  list: ["tests/v11/application/list/listFacadeParity.test.ts"],
   metaReviewGate: [
     "tests/v11/application/metaReviewGate/metaReviewGateFacadeParity.test.ts"
   ],

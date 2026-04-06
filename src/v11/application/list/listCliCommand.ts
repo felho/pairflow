@@ -2,9 +2,9 @@ import { parseArgs } from "node:util";
 
 import {
   asBubbleListError,
-  listBubbles,
-  type BubbleListView
-} from "../../../core/bubble/listBubbles.js";
+  listBubbles
+} from "./listCommandApi.js";
+import type { BubbleListView } from "./listCommandContract.js";
 
 export interface BubbleListCommandOptions {
   repo?: string;
