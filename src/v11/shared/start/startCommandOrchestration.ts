@@ -2,7 +2,7 @@ import { buildResumeTranscriptSummary } from "../protocol/resumeSummary.js";
 import {
   bootstrapWorktreeWorkspace,
   cleanupWorktreeWorkspace
-} from "../../../core/workspace/worktreeManager.js";
+} from "../../infrastructure/workspace/worktreeManager.js";
 import {
   launchBubbleTmuxSession,
   terminateBubbleTmuxSession

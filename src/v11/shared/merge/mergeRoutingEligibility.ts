@@ -1,5 +1,5 @@
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
-import type { GitRunResult } from "../../../core/workspace/git.js";
+import type { GitRunResult } from "../../infrastructure/workspace/git.js";
 
 export interface MergeBranchValidationInput {
   baseBranch: string;

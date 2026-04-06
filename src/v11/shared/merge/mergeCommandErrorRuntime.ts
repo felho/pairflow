@@ -1,6 +1,6 @@
 import { BubbleLookupError } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { GitCommandError } from "../../../core/workspace/git.js";
-import { WorkspaceCleanupError } from "../../../core/workspace/worktreeManager.js";
+import { GitCommandError } from "../../infrastructure/workspace/git.js";
+import { WorkspaceCleanupError } from "../../infrastructure/workspace/worktreeManager.js";
 import { TmuxCommandError } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import {
   RuntimeSessionsRegistryError,

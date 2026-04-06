@@ -317,7 +317,7 @@ export {
   WorkspaceError,
   bootstrapWorktreeWorkspace,
   cleanupWorktreeWorkspace
-} from "./core/workspace/worktreeManager.js";
+} from "./v11/infrastructure/workspace/worktreeManager.js";
 export {
   allocateNextProtocolSequence,
   formatProtocolEnvelopeId,
@@ -604,7 +604,7 @@ export type {
   WorktreeCleanupResult,
   WorktreeBootstrapInput,
   WorktreeBootstrapResult
-} from "./core/workspace/worktreeManager.js";
+} from "./v11/infrastructure/workspace/worktreeManager.js";
 export type { Finding, FindingSeverity } from "./types/findings.js";
 export type {
   ProtocolSequenceAllocationOptions,

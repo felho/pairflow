@@ -1,6 +1,6 @@
 import type {
   cleanupWorktreeWorkspace
-} from "../../../core/workspace/worktreeManager.js";
+} from "../../infrastructure/workspace/worktreeManager.js";
 import type {
   removeRuntimeSession
 } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
@@ -9,7 +9,7 @@ import type {
 } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import type {
   GitRunResult
-} from "../../../core/workspace/git.js";
+} from "../../infrastructure/workspace/git.js";
 
 export interface MergeBubbleInput {
   bubbleId: string;

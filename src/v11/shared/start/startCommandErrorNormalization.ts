@@ -1,5 +1,5 @@
 import type { BubbleLookupError } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import type { WorkspaceBootstrapError } from "../../../core/workspace/worktreeManager.js";
+import type { WorkspaceBootstrapError } from "../../infrastructure/workspace/worktreeManager.js";
 import type {
   TmuxCommandError,
   TmuxSessionExistsError

@@ -1,5 +1,5 @@
 import { BubbleLookupError } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { GitCommandError } from "../../../core/workspace/git.js";
+import { GitCommandError } from "../../infrastructure/workspace/git.js";
 import {
   BubbleCommitError,
   createBubbleCommitError,

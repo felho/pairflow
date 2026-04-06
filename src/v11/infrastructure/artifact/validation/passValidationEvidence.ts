@@ -4,7 +4,7 @@ import { access, mkdir, readFile, realpath, stat, writeFile } from "node:fs/prom
 import { dirname, isAbsolute, join, resolve } from "node:path"
 
 import type { ReviewerTestExecutionDirective } from "../../../../core/reviewer/testEvidence.js"
-import { runGit } from "../../../../core/workspace/git.js"
+import { runGit } from "../../workspace/git.js"
 import type { BubbleConfig } from "../../../../types/bubble.js"
 
 export const passValidationEvidenceSchemaVersion = 1 as const

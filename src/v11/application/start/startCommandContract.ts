@@ -1,7 +1,7 @@
 import type {
   bootstrapWorktreeWorkspace,
   cleanupWorktreeWorkspace
-} from "../../../core/workspace/worktreeManager.js";
+} from "../../infrastructure/workspace/worktreeManager.js";
 import type {
   launchBubbleTmuxSession,
   terminateBubbleTmuxSession

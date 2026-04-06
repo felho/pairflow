@@ -3,7 +3,7 @@ import { dirname, join, relative, resolve } from "node:path";
 
 import { parseBubbleConfigToml } from "../../../../config/bubbleConfig.js";
 import { getBubblePaths, type BubblePaths } from "../../artifact/bubble/paths.js";
-import { runGit } from "../../../../core/workspace/git.js";
+import { runGit } from "../../workspace/git.js";
 import type { BubbleConfig } from "../../../../types/bubble.js";
 import { listPairflowWorkspaceCandidateCwds } from "./commandWorkspaceFallback.js";
 

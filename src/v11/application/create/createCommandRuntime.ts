@@ -25,7 +25,7 @@ import { isNonEmptyString } from "../../shared/validation/primitives.js";
 import {
   GitRepositoryError,
   assertGitRepository
-} from "../../../core/workspace/git.js";
+} from "../../infrastructure/workspace/git.js";
 import type { ResolvedTaskInput } from "./createCommandContract.js";
 
 export class BubbleCreateError extends Error {

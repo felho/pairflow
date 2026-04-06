@@ -1,7 +1,7 @@
 import { realpath } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { runGit } from "../../../../core/workspace/git.js";
+import { runGit } from "../../workspace/git.js";
 import { listPairflowWorkspaceCandidateCwds } from "./commandWorkspaceFallback.js";
 
 export interface ResolveRepoPathInput {
