@@ -1,20 +1,11 @@
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 
-import { renderBubbleConfigToml } from "../../../config/bubbleConfig.js";
 import { getBubblePaths } from "../../../core/bubble/paths.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
 import {
   assertValidBubbleStateSnapshot
 } from "../../../core/state/stateSchema.js";
 import { createInitialBubbleState } from "../../../core/state/initialState.js";
-import {
-  createDocContractGateArtifact,
-  isDocContractGateScopeActive,
-  resolveDocContractGateArtifactPath,
-  writeDocContractGateArtifact
-} from "../../../core/gates/docContractGates.js";
 import { generateBubbleInstanceId } from "../../../core/bubble/bubbleInstanceId.js";
 import type {
   BubbleCreateDependencies,
@@ -27,8 +18,6 @@ import {
   buildIdeationPlaceholderTaskContent,
   ensureBubbleDoesNotExist,
   ensureRepoPathIsGitRepo,
-  ensureRuntimeSessionFile,
-  renderTaskArtifact,
   resolveCreateReviewArtifactType,
   resolveReviewerBriefInput,
   resolveTaskInput,
@@ -36,6 +25,7 @@ import {
   validateBubbleId
 } from "./createCommandRuntime.js";
 import { extractReviewerFocus } from "./createReviewerFocus.js";
+import { persistCreatedBubbleArtifacts } from "./createBubblePersistence.js";
 
 export async function createBubbleV11(
   input: BubbleCreateInput,
@@ -120,103 +110,18 @@ export async function createBubbleV11(
 
   const config = buildBubbleConfig(bubbleConfigInput);
   const state = assertValidBubbleStateSnapshot(createInitialBubbleState(input.id));
-
-  await mkdir(paths.messageArtifactsDir, { recursive: true });
-  await mkdir(paths.locksDir, { recursive: true });
-  await mkdir(paths.runtimeDir, { recursive: true });
-
-  await writeFile(paths.bubbleTomlPath, renderBubbleConfigToml(config), {
-    encoding: "utf8",
-    flag: "wx"
+  const reviewerFocusArtifactPersist = await persistCreatedBubbleArtifacts({
+    bubbleId: input.id,
+    createdAt,
+    paths,
+    config,
+    state,
+    task,
+    reviewerFocus,
+    ...(reviewerBrief !== undefined ? { reviewerBrief } : {}),
+    ideationMode,
+    dependencies
   });
-  await writeFile(paths.statePath, `${JSON.stringify(state, null, 2)}\n`, {
-    encoding: "utf8",
-    flag: "wx"
-  });
-  await writeFile(paths.transcriptPath, "", {
-    encoding: "utf8",
-    flag: "wx"
-  });
-  await writeFile(paths.inboxPath, "", {
-    encoding: "utf8",
-    flag: "wx"
-  });
-  await writeFile(paths.taskArtifactPath, renderTaskArtifact(task), {
-    encoding: "utf8",
-    flag: "wx"
-  });
-
-  let reviewerFocusArtifactWriteStatus: "written" | "write_failed" = "written";
-  let reviewerFocusArtifactWriteErrorCode: string | undefined;
-  const writeReviewerFocusArtifact =
-    dependencies.writeReviewerFocusArtifact ?? writeFile;
-  await writeReviewerFocusArtifact(
-    paths.reviewerFocusArtifactPath,
-    `${JSON.stringify(reviewerFocus, null, 2)}\n`,
-    {
-      encoding: "utf8",
-      flag: "wx"
-    }
-  ).catch((error: NodeJS.ErrnoException) => {
-    reviewerFocusArtifactWriteStatus = "write_failed";
-    reviewerFocusArtifactWriteErrorCode =
-      error.code ?? error.name ?? "unknown_write_failure";
-  });
-
-  if (
-    isDocContractGateScopeActive({
-      reviewArtifactType: config.review_artifact_type
-    })
-  ) {
-    await writeDocContractGateArtifact(
-      resolveDocContractGateArtifactPath(paths.artifactsDir),
-      createDocContractGateArtifact({
-        now: createdAt,
-        bubbleConfig: config,
-        taskContent: task.content
-      })
-    ).catch(() => undefined);
-  }
-
-  if (reviewerBrief !== undefined) {
-    await writeFile(paths.reviewerBriefArtifactPath, `${reviewerBrief.content}\n`, {
-      encoding: "utf8",
-      flag: "wx"
-    });
-  }
-  await ensureRuntimeSessionFile(paths.sessionsPath);
-
-  if (!ideationMode) {
-    try {
-      await appendProtocolEnvelope({
-        transcriptPath: paths.transcriptPath,
-        lockPath: join(paths.locksDir, `${input.id}.lock`),
-        now: createdAt,
-        envelope: {
-          bubble_id: input.id,
-          sender: "orchestrator",
-          recipient: config.agents.implementer,
-          type: "TASK",
-          round: state.round,
-          payload: {
-            summary: task.content,
-            metadata: {
-              source: task.source,
-              ...(task.sourcePath !== undefined
-                ? { source_path: task.sourcePath }
-                : {})
-            }
-          },
-          refs: [paths.taskArtifactPath]
-        }
-      });
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      throw new BubbleCreateError(
-        `Failed to append initial TASK envelope for bubble ${input.id}. Root error: ${reason}`
-      );
-    }
-  }
 
   await emitBubbleLifecycleEventBestEffort({
     repoPath,
@@ -233,11 +138,11 @@ export async function createBubbleV11(
       ideation_mode: ideationMode,
       ideation_task_pending: ideationMode,
       reviewer_focus_status: reviewerFocus.status,
-      reviewer_focus_artifact_write: reviewerFocusArtifactWriteStatus,
-      ...(reviewerFocusArtifactWriteErrorCode !== undefined
+      reviewer_focus_artifact_write: reviewerFocusArtifactPersist.status,
+      ...(reviewerFocusArtifactPersist.errorCode !== undefined
         ? {
             reviewer_focus_artifact_write_error_code:
-              reviewerFocusArtifactWriteErrorCode
+              reviewerFocusArtifactPersist.errorCode
           }
         : {})
     },
@@ -251,13 +156,7 @@ export async function createBubbleV11(
     state,
     task,
     reviewerFocus,
-    reviewerFocusArtifactPersist: {
-      status: reviewerFocusArtifactWriteStatus,
-      artifactPath: paths.reviewerFocusArtifactPath,
-      ...(reviewerFocusArtifactWriteErrorCode !== undefined
-        ? { errorCode: reviewerFocusArtifactWriteErrorCode }
-        : {})
-    },
+    reviewerFocusArtifactPersist,
     ...(reviewerBrief !== undefined ? { reviewerBrief } : {})
   };
 }
