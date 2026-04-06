@@ -60,9 +60,9 @@ export {
   restartBubble
 } from "./core/bubble/restartBubble.js";
 export {
-  BubbleCreateError,
-  createBubble
-} from "./core/bubble/createBubble.js";
+  BubbleCreateErrorV11 as BubbleCreateError,
+  createBubbleV11 as createBubble
+} from "./v11/application/create/emitCreateV11.js";
 export {
   asStartBubbleErrorV11 as asStartBubbleError,
   StartBubbleErrorV11 as StartBubbleError,

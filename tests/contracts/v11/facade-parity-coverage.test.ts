@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { commandMigrationMap } from "./migration-map.js";
 
 const facadeParityTestsByCommand: Record<string, readonly string[]> = {
+  create: ["tests/v11/application/create/createFacadeParity.test.ts"],
   pass: ["tests/v11/application/pass/passFacadeParity.test.ts"],
   kickoff: ["tests/v11/application/kickoff/kickoffFacadeParity.test.ts"],
   converged: ["tests/v11/application/converged/convergedFacadeParity.test.ts"],
