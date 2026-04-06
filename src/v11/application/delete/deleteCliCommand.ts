@@ -4,7 +4,7 @@ import {
   asDeleteBubbleError,
   deleteBubble,
   type DeleteBubbleResult
-} from "../../../core/bubble/deleteBubble.js";
+} from "./deleteBubble.js";
 
 export interface BubbleDeleteCommandOptions {
   id: string;
