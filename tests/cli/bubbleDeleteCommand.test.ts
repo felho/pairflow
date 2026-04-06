@@ -5,7 +5,7 @@ import {
   parseBubbleDeleteCommandOptions,
   runBubbleDeleteCommand
 } from "../../src/cli/commands/bubble/delete.js";
-import { asDeleteBubbleError } from "../../src/core/bubble/deleteBubble.js";
+import { asDeleteBubbleError } from "../../src/v11/application/delete/deleteBubble.js";
 
 describe("parseBubbleDeleteCommandOptions", () => {
   it("parses required and optional options", () => {
@@ -48,7 +48,7 @@ describe("runBubbleDeleteCommand", () => {
 
   it("converts unexpected delete failures into DeleteBubbleError", async () => {
     vi.resetModules();
-    vi.doMock("../../src/core/bubble/deleteBubble.js", () => {
+    vi.doMock("../../src/v11/application/delete/deleteBubble.js", () => {
       return {
         asDeleteBubbleError,
         deleteBubble: vi.fn(() => {
@@ -66,7 +66,7 @@ describe("runBubbleDeleteCommand", () => {
         message: "boom"
       });
     } finally {
-      vi.doUnmock("../../src/core/bubble/deleteBubble.js");
+      vi.doUnmock("../../src/v11/application/delete/deleteBubble.js");
       vi.resetModules();
     }
   });
