@@ -11,7 +11,7 @@ import {
 } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
-import { queueDeferredReworkIntent } from "../../../core/human/reworkIntent.js";
+import { queueDeferredReworkIntent } from "./reworkIntent.js";
 
 export interface ApprovalCommandDependencies {
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;
