@@ -5,7 +5,7 @@ import {
 import {
   validateConvergencePolicy,
   type ConvergencePolicyResult
-} from "../../../core/convergence/policy.js";
+} from "../../../v11/domain/convergence/policy.js";
 import type {
   AgentName,
   ReviewArtifactType,

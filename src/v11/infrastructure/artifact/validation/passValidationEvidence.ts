@@ -3,7 +3,7 @@ import { constants as fsConstants } from "node:fs"
 import { access, mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises"
 import { dirname, isAbsolute, join, resolve } from "node:path"
 
-import type { ReviewerTestExecutionDirective } from "../../../../core/reviewer/testEvidence.js"
+import type { ReviewerTestExecutionDirective } from "../../../../v11/shared/reviewer/testEvidence.js"
 import { runGit } from "../../workspace/git.js"
 import type { BubbleConfig } from "../../../../types/bubble.js"
 

@@ -22,7 +22,7 @@ import {
 } from "./shared/findingParser.js";
 import {
   resolveConvergedSummaryFindingsContradiction
-} from "../../../core/convergence/policy.js";
+} from "../../../v11/domain/convergence/policy.js";
 import {
   buildLegacyActorCommandRemovedError,
   isLegacyActorCommandHelpRequest

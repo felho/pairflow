@@ -14,7 +14,7 @@ import type {
   EmitTmuxDeliveryNotificationResult,
   resolveDeliveryMessageRef
 } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
-import type { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
+import type { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { AskHumanRoutingContext } from "./askHumanRoutingContext.js";

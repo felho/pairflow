@@ -1,4 +1,4 @@
-import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
+import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import { emitBubbleNotification } from "../../infrastructure/channel/notifications.js";
 import {
   emitTmuxDeliveryNotification,

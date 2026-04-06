@@ -3,7 +3,7 @@ import { join } from "node:path";
 import {
   evaluateReviewerGateWarnings,
   isDocContractGateScopeActive
-} from "../../../core/gates/docContractGates.js";
+} from "../../../v11/shared/gates/docContractGates.js";
 import type { ReviewArtifactType } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 

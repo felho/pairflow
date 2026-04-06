@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   formatMetricsReportJson,
   formatMetricsReportTable
-} from "../../../../src/core/metrics/report/format.js";
-import type { MetricsReportResult } from "../../../../src/core/metrics/report/types.js";
+} from "../../../../../src/v11/shared/metrics/report/format.js";
+import type { MetricsReportResult } from "../../../../../src/v11/shared/metrics/report/types.js";
 
 function createReportFixture(): MetricsReportResult {
   return {

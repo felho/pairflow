@@ -2,18 +2,18 @@ import type {
   isDocContractGateScopeActive,
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath
-} from "../../../core/gates/docContractGates.js";
-import type { readReviewVerificationArtifactStatus } from "../../../core/reviewer/reviewVerification.js";
+} from "../../../v11/shared/gates/docContractGates.js";
+import type { readReviewVerificationArtifactStatus } from "../../../v11/shared/reviewer/reviewVerification.js";
 import type {
   evaluateSummaryVerifierConsistencyGate,
   resolveSummaryVerifierConsistencyGateArtifactPath,
   writeSummaryVerifierConsistencyGateArtifact,
   SummaryVerifierConsistencyGateDecisionRecord
-} from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
+} from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import type {
   resolveReviewerTestEvidenceArtifactPath,
   resolveReviewerTestExecutionDirective
-} from "../../../core/reviewer/testEvidence.js";
+} from "../../../v11/shared/reviewer/testEvidence.js";
 import type { ResolvedBubbleWorkspace } from "../../infrastructure/executor/workspace/workspaceResolution.js";
 import type {
   AgentName,

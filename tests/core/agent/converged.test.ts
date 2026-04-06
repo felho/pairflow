@@ -26,9 +26,9 @@ import {
   writeStateSnapshot as rawWriteStateSnapshot
 } from "../../../src/core/state/stateStore.js";
 import { bootstrapWorktreeWorkspace } from "../../../src/core/workspace/worktreeManager.js";
-import { resolveReviewerTestEvidenceArtifactPath } from "../../../src/core/reviewer/testEvidence.js";
-import { resolveSummaryVerifierConsistencyGateArtifactPath } from "../../../src/core/reviewer/summaryVerifierConsistencyGate.js";
-import { resolveDocContractGateArtifactPath } from "../../../src/core/gates/docContractGates.js";
+import { resolveReviewerTestEvidenceArtifactPath } from "../../../src/v11/shared/reviewer/testEvidence.js";
+import { resolveSummaryVerifierConsistencyGateArtifactPath } from "../../../src/v11/shared/reviewer/summaryVerifierConsistencyGate.js";
+import { resolveDocContractGateArtifactPath } from "../../../src/v11/shared/gates/docContractGates.js";
 import { deliveryTargetRoleMetadataKey } from "../../../src/types/protocol.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";

@@ -3,7 +3,7 @@ import {
   resolveReviewVerificationInputFromRefs,
   ReviewVerificationError,
   type ReviewVerificationInputResolution
-} from "../../../core/reviewer/reviewVerification.js";
+} from "../../../v11/shared/reviewer/reviewVerification.js";
 
 const reviewerVerificationResolutionFailedReasonCode =
   "REVIEWER_VERIFICATION_RESOLUTION_FAILED";

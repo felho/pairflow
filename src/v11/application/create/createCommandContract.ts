@@ -1,5 +1,5 @@
 import type { BubblePaths } from "../../infrastructure/artifact/bubble/paths.js";
-import type { ReviewerFocusExtractionResult } from "../../../core/reviewer/reviewerBrief.js";
+import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
 import type {
   AgentName,
   BubbleConfig,

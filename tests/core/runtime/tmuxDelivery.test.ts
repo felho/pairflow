@@ -18,7 +18,7 @@ import {
 } from "../../../src/core/runtime/reviewerCommandGateGuidance.js";
 import type { RuntimeSessionsRegistry } from "../../../src/core/runtime/sessionsRegistry.js";
 import { runtimePaneIndices, type TmuxRunResult, type TmuxRunner } from "../../../src/core/runtime/tmuxManager.js";
-import type { ReviewerTestExecutionDirective } from "../../../src/core/reviewer/testEvidence.js";
+import type { ReviewerTestExecutionDirective } from "../../../src/v11/shared/reviewer/testEvidence.js";
 import type { BubbleConfig } from "../../../src/types/bubble.js";
 import { deliveryTargetRoleMetadataKey, type ProtocolEnvelope } from "../../../src/types/protocol.js";
 

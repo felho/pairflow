@@ -10,7 +10,7 @@ import {
   MetricsEventLockError,
   MetricsEventValidationError,
   resolveMetricsShardPath
-} from "../../../src/core/metrics/events.js";
+} from "../../../../src/v11/shared/metrics/events.js";
 
 const tempDirs: string[] = [];
 

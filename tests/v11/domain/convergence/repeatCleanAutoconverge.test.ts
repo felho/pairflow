@@ -8,8 +8,8 @@ import {
   repeatCleanPreviousNotCleanReasonCode,
   repeatCleanRound1DisabledReasonCode,
   repeatCleanTriggerNotMetReasonCode
-} from "../../../src/core/convergence/repeatCleanAutoconverge.js";
-import type { ProtocolEnvelope } from "../../../src/types/protocol.js";
+} from "../../../../src/v11/domain/convergence/repeatCleanAutoconverge.js";
+import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
 
 function createReviewerPass(input: {
   id: string;

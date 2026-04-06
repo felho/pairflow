@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { BubbleConfig } from "../../../../src/types/bubble.js";
 import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
-import type { ReviewerTestExecutionDirective } from "../../../../src/core/reviewer/testEvidence.js";
+import type { ReviewerTestExecutionDirective } from "../../../../src/v11/shared/reviewer/testEvidence.js";
 import { executeNormalPassDelivery } from "../../../../src/v11/application/pass/normalPassDeliveryExecution.js";
 
 describe("executeNormalPassDelivery", () => {

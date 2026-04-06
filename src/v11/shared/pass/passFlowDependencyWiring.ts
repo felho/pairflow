@@ -1,4 +1,4 @@
-import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
+import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import type { AgentRole } from "../../../types/bubble.js";
 import type { PassIntent } from "../../../types/protocol.js";
 import {

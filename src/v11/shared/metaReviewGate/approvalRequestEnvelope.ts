@@ -9,7 +9,7 @@ import {
   evaluateNoFindingsSummaryFindingsAssertion,
   hasGlobalNoFindingsSummaryAssertion,
   evaluatePositiveSummaryFindingsAssertion
-} from "../../../core/convergence/policy.js";
+} from "../../../v11/domain/convergence/policy.js";
 import {
   appendProtocolEnvelope,
   type AppendProtocolEnvelopeResult

@@ -24,12 +24,12 @@ import {
   buildReviewerDecisionMatrixReminder,
   formatReviewerTestExecutionDirective,
   type ReviewerTestExecutionDirective
-} from "../../../../core/reviewer/testEvidence.js";
+} from "../../../../v11/shared/reviewer/testEvidence.js";
 import {
   formatReviewerBriefDeliveryReminder,
   formatReviewerFocusDeliveryReminder,
   type ReviewerFocusExtractionResult
-} from "../../../../core/reviewer/reviewerBrief.js";
+} from "../../../../v11/shared/reviewer/reviewerBrief.js";
 import { buildPairflowCommandGuidance } from "../../executor/command/pairflowCommand.js";
 import {
   buildMetaReviewSubmitApproveParityNote,

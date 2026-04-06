@@ -10,7 +10,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 import {
   REVIEW_VERIFICATION_SCHEMA,
   type ReviewVerificationInputResolution
-} from "../../../../src/core/reviewer/reviewVerification.js";
+} from "../../../../src/v11/shared/reviewer/reviewVerification.js";
 import { prepareReviewerVerification } from "../../../../src/v11/application/pass/reviewerVerificationPreparation.js";
 
 describe("prepareReviewerVerification", () => {

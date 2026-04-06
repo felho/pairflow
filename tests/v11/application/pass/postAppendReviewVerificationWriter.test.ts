@@ -11,7 +11,7 @@ import {
   REVIEW_VERIFICATION_SCHEMA,
   type ReviewVerificationArtifact,
   type ReviewVerificationInputResolution
-} from "../../../../src/core/reviewer/reviewVerification.js";
+} from "../../../../src/v11/shared/reviewer/reviewVerification.js";
 import { writePostAppendReviewVerificationArtifact } from "../../../../src/v11/application/pass/postAppendReviewVerificationWriter.js";
 
 class TestPostAppendReviewVerificationWriterError extends Error {

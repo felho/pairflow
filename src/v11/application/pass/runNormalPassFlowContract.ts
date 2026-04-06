@@ -1,10 +1,10 @@
 import type {
   RepeatCleanAutoconvergeReasonCode,
   RepeatCleanAutoconvergeReasonDetail
-} from "../../../core/convergence/repeatCleanAutoconverge.js";
+} from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
 import type { EmitTmuxDeliveryNotificationResult } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
-import type { ReviewerTestExecutionDirective } from "../../../core/reviewer/testEvidence.js";
-import type { ReviewVerificationInputResolution } from "../../../core/reviewer/reviewVerification.js";
+import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
+import type { ReviewVerificationInputResolution } from "../../../v11/shared/reviewer/reviewVerification.js";
 import type { LoadedStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import type { AgentName, BubbleConfig, BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
@@ -14,7 +14,7 @@ import type {
   ReviewerFindingsClaim,
   ReviewerFindingsClaimParserMetadata
 } from "../../domain/pass/reviewerFindingsClaim.js";
-import type { evaluateReviewerGateWarnings } from "../../../core/gates/docContractGates.js";
+import type { evaluateReviewerGateWarnings } from "../../../v11/shared/gates/docContractGates.js";
 
 interface NormalPassPathsInput {
   transcriptPath: string;

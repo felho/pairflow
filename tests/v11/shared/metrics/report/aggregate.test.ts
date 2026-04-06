@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { MetricsReportAggregator } from "../../../../src/core/metrics/report/aggregate.js";
-import type { MetricsReportEvent } from "../../../../src/core/metrics/report/types.js";
+import { MetricsReportAggregator } from "../../../../../src/v11/shared/metrics/report/aggregate.js";
+import type { MetricsReportEvent } from "../../../../../src/v11/shared/metrics/report/types.js";
 
 interface AggregatorInternals {
   pendingImplementerPassByRound: Map<string, number[]>;

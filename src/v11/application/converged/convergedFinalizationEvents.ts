@@ -1,5 +1,5 @@
 import { type assessPairflowCommandPath } from "../../infrastructure/executor/command/pairflowCommand.js";
-import { type emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
+import { type emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import {
   buildConvergedEventMetadata,
   buildMetaReviewRoutedMetadata

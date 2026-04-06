@@ -1,4 +1,4 @@
-import type { ReviewerTestExecutionDirective } from "../../../core/reviewer/testEvidence.js"
+import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js"
 import {
   buildPassValidationEvidenceArtifact,
   createPassValidationReviewerDirective,

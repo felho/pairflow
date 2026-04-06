@@ -2,7 +2,7 @@ import {
   createReviewVerificationArtifact,
   type ReviewVerificationInputResolution,
   writeReviewVerificationArtifactAtomic
-} from "../../../core/reviewer/reviewVerification.js";
+} from "../../../v11/shared/reviewer/reviewVerification.js";
 import type { AgentName } from "../../../types/bubble.js";
 import { raisePostAppendReviewVerificationWriteFailed } from "../../domain/pass/postAppendReviewVerificationWriteFailure.js";
 

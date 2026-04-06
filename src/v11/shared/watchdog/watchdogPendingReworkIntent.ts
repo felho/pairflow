@@ -1,7 +1,7 @@
 import { writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import type { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import type { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
+import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import {
   resolveDeliveryMessageRef,
   type emitTmuxDeliveryNotification

@@ -15,7 +15,7 @@ import {
   REVIEW_ARTIFACT_TYPE_AUTO_REMOVED,
   parseBubbleConfigToml
 } from "../../../src/config/bubbleConfig.js";
-import { resolveDocContractGateArtifactPath } from "../../../src/core/gates/docContractGates.js";
+import { resolveDocContractGateArtifactPath } from "../../../src/v11/shared/gates/docContractGates.js";
 import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
 import { validateBubbleStateSnapshot } from "../../../src/core/state/stateSchema.js";
 import { initGitRepository } from "../../helpers/git.js";

@@ -1,9 +1,9 @@
-import { validateConvergencePolicy } from "../../../core/convergence/policy.js";
+import { validateConvergencePolicy } from "../../../v11/domain/convergence/policy.js";
 import {
   createReviewVerificationArtifact,
   type ReviewVerificationInputResolution,
   writeReviewVerificationArtifactAtomic
-} from "../../../core/reviewer/reviewVerification.js";
+} from "../../../v11/shared/reviewer/reviewVerification.js";
 import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import type { AgentName, BubbleStateSnapshot, ReviewArtifactType } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";

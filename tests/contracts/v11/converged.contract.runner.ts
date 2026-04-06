@@ -9,7 +9,7 @@ import {
   type EmitConvergedResult
 } from "../../../src/core/agent/converged.js";
 import { applyMetaReviewGateOnConvergence } from "../../../src/core/bubble/metaReviewGate.js";
-import { resolveConvergedSummaryFindingsContradiction } from "../../../src/core/convergence/policy.js";
+import { resolveConvergedSummaryFindingsContradiction } from "../../../src/v11/domain/convergence/policy.js";
 import { emitConvergedFromWorkspaceV11 } from "../../../src/v11/application/converged/emitConvergedV11.js";
 import { applyMetaReviewGateOnConvergenceV11 } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
 import {

@@ -1,4 +1,4 @@
-import type { SummaryVerifierConsistencyGateDecisionRecord } from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
+import type { SummaryVerifierConsistencyGateDecisionRecord } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import type { assessPairflowCommandPath } from "../../infrastructure/executor/command/pairflowCommand.js";
 import { type MetaReviewGateRoute } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 import type {

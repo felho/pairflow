@@ -7,7 +7,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }
 
-import type { ReviewVerificationInputResolution } from "../../../../src/core/reviewer/reviewVerification.js";
+import type { ReviewVerificationInputResolution } from "../../../../src/v11/shared/reviewer/reviewVerification.js";
 import { prepareRepeatCleanAutoConverge } from "../../../../src/v11/application/pass/autoConvergePreparation.js";
 
 class TestAutoConvergePreparationError extends Error {

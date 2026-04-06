@@ -1,4 +1,4 @@
-import type { ReviewerFocusExtractionResult } from "../../../core/reviewer/reviewerBrief.js";
+import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
 
 const reviewerFocusHeadingMatch = "reviewer focus";
 

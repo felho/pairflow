@@ -1,8 +1,8 @@
 import type {
   RepeatCleanAutoconvergeReasonCode,
   RepeatCleanAutoconvergeReasonDetail
-} from "../../../core/convergence/repeatCleanAutoconverge.js";
-import type { ReviewerTestExecutionDirective } from "../../../core/reviewer/testEvidence.js";
+} from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
+import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent } from "../../../types/protocol.js";
 import type { AgentName } from "../../../types/bubble.js";

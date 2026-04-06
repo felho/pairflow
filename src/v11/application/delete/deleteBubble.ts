@@ -4,7 +4,7 @@ import type {
 } from "../../../contracts/deleteBubble.js";
 import { BubbleLookupError } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
-import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
+import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError

@@ -4,7 +4,7 @@ import {
   incrementWarningCount,
   mergeWarningCounts,
   toWarningSummary
-} from "../../../../src/core/metrics/report/warnings.js";
+} from "../../../../../src/v11/shared/metrics/report/warnings.js";
 
 describe("metrics report warnings", () => {
   it("sorts warning keys alphabetically in summary output", () => {

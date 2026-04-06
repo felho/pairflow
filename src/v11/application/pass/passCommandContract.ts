@@ -1,7 +1,7 @@
 import type {
   RepeatCleanAutoconvergeReasonCode,
   RepeatCleanAutoconvergeReasonDetail
-} from "../../../core/convergence/repeatCleanAutoconverge.js";
+} from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { ProtocolEnvelope, PassIntent } from "../../../types/protocol.js";

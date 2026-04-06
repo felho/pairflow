@@ -5,16 +5,16 @@ import { normalizeRepoPath } from "../../../core/bubble/repoResolution.js";
 import {
   formatMetricsReportJson,
   formatMetricsReportTable
-} from "../../../core/metrics/report/format.js";
+} from "../../../v11/shared/metrics/report/format.js";
 import {
   MetricsReportError,
   generateMetricsReport
-} from "../../../core/metrics/report/report.js";
-import { MetricsReportDateRangeError } from "../../../core/metrics/report/selectShards.js";
+} from "../../../v11/shared/metrics/report/report.js";
+import { MetricsReportDateRangeError } from "../../../v11/shared/metrics/report/selectShards.js";
 import type {
   MetricsReportFormat,
   MetricsReportResult
-} from "../../../core/metrics/report/types.js";
+} from "../../../v11/shared/metrics/report/types.js";
 import { isIsoTimestamp } from "../../../core/validation.js";
 
 export interface MetricsReportCommandOptions {

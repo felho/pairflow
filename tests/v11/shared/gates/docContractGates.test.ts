@@ -10,9 +10,9 @@ import {
   evaluateReviewerGateWarnings,
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath
-} from "../../../src/core/gates/docContractGates.js";
-import type { BubbleConfig } from "../../../src/types/bubble.js";
-import type { Finding } from "../../../src/types/findings.js";
+} from "../../../../src/v11/shared/gates/docContractGates.js";
+import type { BubbleConfig } from "../../../../src/types/bubble.js";
+import type { Finding } from "../../../../src/types/findings.js";
 
 const tempDirs: string[] = [];
 

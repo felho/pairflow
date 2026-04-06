@@ -3,7 +3,7 @@ import {
   formatReviewerTestExecutionDirective,
   resolveReviewerTestEvidenceArtifactPath,
   resolveReviewerTestExecutionDirective
-} from "../../../core/reviewer/testEvidence.js";
+} from "../../../v11/shared/reviewer/testEvidence.js";
 import { resolveResumeKickoffMessages } from "./startCommandResumePrompts.js";
 import type { ResolvedStartBubbleDependencies } from "./startCommandOrchestration.js";
 import type { StartExecutionContext } from "./startCommandContext.js";

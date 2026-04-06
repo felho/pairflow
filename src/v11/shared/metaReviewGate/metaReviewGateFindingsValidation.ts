@@ -2,7 +2,7 @@ import type { readFile } from "node:fs/promises";
 
 import {
   resolveLegacySummaryFindingsClaimState
-} from "../../../core/convergence/policy.js";
+} from "../../../v11/domain/convergence/policy.js";
 import type { MetaReviewRecommendation } from "../../../types/bubble.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import { type FindingsParityMetadata } from "../../../types/protocol.js";

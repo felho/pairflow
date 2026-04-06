@@ -10,7 +10,7 @@ import {
   formatReviewerFocusDeliveryReminder,
   readReviewerFocusArtifact,
   isReviewerFocusExtractionResult
-} from "../../../src/core/reviewer/reviewerBrief.js";
+} from "../../../../src/v11/shared/reviewer/reviewerBrief.js";
 import {
   createReviewVerificationArtifact,
   readReviewVerificationArtifactStatus,
@@ -18,7 +18,7 @@ import {
   validateReviewVerificationArtifact,
   validateReviewVerificationPayload,
   writeReviewVerificationArtifactAtomic
-} from "../../../src/core/reviewer/reviewVerification.js";
+} from "../../../../src/v11/shared/reviewer/reviewVerification.js";
 
 const tempDirs: string[] = [];
 

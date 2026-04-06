@@ -5,7 +5,7 @@ import { cleanupWorktreeWorkspace } from "../../infrastructure/workspace/worktre
 import { terminateBubbleTmuxSession } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import { removeRuntimeSession } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
-import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
+import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import type { MergeBubbleDependencies } from "../../application/merge/mergeCommandContract.js";
 
 export interface MergeCommandDependencies extends MergeBubbleDependencies {

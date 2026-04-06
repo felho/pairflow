@@ -1,6 +1,6 @@
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
-import type { ReviewerTestExecutionDirective } from "../../../core/reviewer/testEvidence.js";
+import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
 import type {
   EmitTmuxDeliveryNotificationResult,
   emitTmuxDeliveryNotification

@@ -12,12 +12,12 @@ import {
 } from "../../infrastructure/executor/command/pairflowCommand.js";
 import {
   buildReviewerDecisionMatrixReminder
-} from "../../../core/reviewer/testEvidence.js";
+} from "../../../v11/shared/reviewer/testEvidence.js";
 import {
   formatReviewerFocusBridgeBlock,
   formatReviewerBriefPrompt,
   type ReviewerFocusExtractionResult
-} from "../../../core/reviewer/reviewerBrief.js";
+} from "../../../v11/shared/reviewer/reviewerBrief.js";
 import type {
   BubbleStateSnapshot,
   PairflowCommandProfile,

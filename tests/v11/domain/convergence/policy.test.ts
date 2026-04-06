@@ -6,8 +6,8 @@ import {
   evaluateReviewerFindingsAggregate,
   resolveConvergedSummaryFindingsContradiction,
   validateConvergencePolicy
-} from "../../../src/core/convergence/policy.js";
-import type { ProtocolEnvelope } from "../../../src/types/protocol.js";
+} from "../../../../src/v11/domain/convergence/policy.js";
+import type { ProtocolEnvelope } from "../../../../src/types/protocol.js";
 
 function createPassEnvelope(
   partial: Partial<ProtocolEnvelope>

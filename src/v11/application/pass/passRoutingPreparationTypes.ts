@@ -1,12 +1,12 @@
 import {
   type evaluateRepeatCleanAutoconvergeTrigger,
   type RepeatCleanAutoconvergeTriggerResult
-} from "../../../core/convergence/repeatCleanAutoconverge.js";
+} from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
 import {
   type readTranscriptEnvelopes,
   type ReadTranscriptOptions
 } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
-import type { ReviewVerificationInputResolution } from "../../../core/reviewer/reviewVerification.js";
+import type { ReviewVerificationInputResolution } from "../../../v11/shared/reviewer/reviewVerification.js";
 import type { AgentName, AgentRole, BubbleConfig } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent, ProtocolEnvelope } from "../../../types/protocol.js";

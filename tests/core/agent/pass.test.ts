@@ -34,17 +34,17 @@ import {
   repeatCleanPreviousNotCleanReasonCode,
   repeatCleanRound1DisabledReasonCode,
   repeatCleanTriggerNotMetReasonCode
-} from "../../../src/core/convergence/repeatCleanAutoconverge.js";
+} from "../../../src/v11/domain/convergence/repeatCleanAutoconverge.js";
 import {
   createDocContractGateArtifact,
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath,
   writeDocContractGateArtifact
-} from "../../../src/core/gates/docContractGates.js";
+} from "../../../src/v11/shared/gates/docContractGates.js";
 import {
   resolveReviewerTestEvidenceArtifactPath,
   resolveReviewerTestExecutionDirective
-} from "../../../src/core/reviewer/testEvidence.js";
+} from "../../../src/v11/shared/reviewer/testEvidence.js";
 import {
   resolvePassValidationReviewerCompatibilityArtifactPath
 } from "../../../src/core/runtime/passValidationEvidence.js";

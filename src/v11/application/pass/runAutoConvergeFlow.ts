@@ -1,8 +1,8 @@
 import type {
   RepeatCleanAutoconvergeReasonCode,
   RepeatCleanAutoconvergeReasonDetail
-} from "../../../core/convergence/repeatCleanAutoconverge.js";
-import type { ReviewVerificationInputResolution } from "../../../core/reviewer/reviewVerification.js";
+} from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
+import type { ReviewVerificationInputResolution } from "../../../v11/shared/reviewer/reviewVerification.js";
 import type {
   AgentName,
   BubbleConfig,

@@ -4,7 +4,7 @@ import {
   type ReviewerTestExecutionDirective,
   verifyImplementerTestEvidence,
   writeReviewerTestEvidenceArtifact
-} from "../../../core/reviewer/testEvidence.js";
+} from "../../../v11/shared/reviewer/testEvidence.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 

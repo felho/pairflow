@@ -1,5 +1,5 @@
 import { assessPairflowCommandPath } from "../../infrastructure/executor/command/pairflowCommand.js";
-import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
+import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import {
   buildFinalizeConvergedFlowResult,
   emitConvergedFinalizationEvents

@@ -2,18 +2,18 @@ import {
   isDocContractGateScopeActive,
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath
-} from "../../../core/gates/docContractGates.js";
-import { readReviewVerificationArtifactStatus } from "../../../core/reviewer/reviewVerification.js";
+} from "../../../v11/shared/gates/docContractGates.js";
+import { readReviewVerificationArtifactStatus } from "../../../v11/shared/reviewer/reviewVerification.js";
 import {
   evaluateSummaryVerifierConsistencyGate,
   resolveSummaryVerifierConsistencyGateArtifactPath,
   writeSummaryVerifierConsistencyGateArtifact
-} from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
+} from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import {
   resolveReviewerTestEvidenceArtifactPath,
   resolveReviewerTestExecutionDirective
-} from "../../../core/reviewer/testEvidence.js";
-import type { ReviewerTestReasonCode } from "../../../core/reviewer/testEvidence.js";
+} from "../../../v11/shared/reviewer/testEvidence.js";
+import type { ReviewerTestReasonCode } from "../../../v11/shared/reviewer/testEvidence.js";
 import type {
   BubbleRoundGateState,
   BubbleSpecLockState

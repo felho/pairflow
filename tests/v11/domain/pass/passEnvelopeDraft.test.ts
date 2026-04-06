@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { claimParserDivergenceDiagnosticReasonCode } from "../../../../src/core/convergence/policy.js";
+import { claimParserDivergenceDiagnosticReasonCode } from "../../../../src/v11/domain/convergence/policy.js";
 import { buildPassEnvelopeDraft } from "../../../../src/v11/domain/pass/passEnvelopeDraft.js";
 
 describe("buildPassEnvelopeDraft", () => {

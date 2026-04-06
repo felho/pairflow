@@ -11,7 +11,7 @@ import {
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath,
   writeDocContractGateArtifact
-} from "../../../core/gates/docContractGates.js";
+} from "../../../v11/shared/gates/docContractGates.js";
 
 export interface UpdateReviewerDocGateArtifactInput {
   now: Date;

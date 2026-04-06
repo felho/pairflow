@@ -1,4 +1,4 @@
-import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
+import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import type {
   BubbleCreateResult,
   ResolvedTaskInput
@@ -8,7 +8,7 @@ import type {
   BubbleConfig,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
-import type { ReviewerFocusExtractionResult } from "../../../core/reviewer/reviewerBrief.js";
+import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
 import type { ReviewerFocusArtifactPersistResult } from "./createBubblePersistence.js";
 
 export async function emitCreateBubbleLifecycleEvent(input: {

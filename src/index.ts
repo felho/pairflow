@@ -335,7 +335,7 @@ export {
 } from "./v11/infrastructure/artifact/transcript/transcriptStore.js";
 export {
   validateConvergencePolicy
-} from "./core/convergence/policy.js";
+} from "./v11/domain/convergence/policy.js";
 export {
   buildBubbleTmuxSessionName,
   launchBubbleTmuxSession,
@@ -657,7 +657,7 @@ export type {
 export type {
   ConvergencePolicyInput,
   ConvergencePolicyResult
-} from "./core/convergence/policy.js";
+} from "./v11/domain/convergence/policy.js";
 export type {
   AppendProtocolEnvelopeBatchEntry,
   AppendProtocolEnvelopeInput,

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   evaluateSummaryVerifierConsistencyGate,
   type SummaryVerifierConsistencyGateDecisionRecord
-} from "../../../src/core/reviewer/summaryVerifierConsistencyGate.js";
+} from "../../../../src/v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 
 function expectAuditShape(record: SummaryVerifierConsistencyGateDecisionRecord): void {
   expect(record).toHaveProperty("gate_decision");
