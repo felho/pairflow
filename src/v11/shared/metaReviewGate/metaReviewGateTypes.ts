@@ -12,7 +12,10 @@ import type {
   writeStateSnapshot
 } from "../../../core/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
-import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
+import type {
+  MetaReviewResult,
+  MetaReviewRetainedRunResult
+} from "../metaReview/metaReviewTypes.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
 export type MetaReviewGateRoute =
@@ -77,6 +80,10 @@ export interface ApplyMetaReviewGateOnConvergenceDependencies {
   readFile?: typeof readFile;
 }
 
+export type RecoverMetaReviewGateRunResultInput =
+  | MetaReviewResult
+  | MetaReviewRetainedRunResult;
+
 export interface RecoverMetaReviewGateFromSnapshotInput {
   bubbleId: string;
   refs?: string[];
@@ -84,7 +91,7 @@ export interface RecoverMetaReviewGateFromSnapshotInput {
   repoPath?: string;
   cwd?: string;
   now?: Date;
-  runResult?: MetaReviewRunResult;
+  runResult?: RecoverMetaReviewGateRunResultInput;
 }
 
 export interface RecoverMetaReviewGateFromSnapshotDependencies {
@@ -105,7 +112,7 @@ export interface MetaReviewGateResult {
   gateSequence: number;
   gateEnvelope: ProtocolEnvelope;
   state: BubbleStateSnapshot;
-  metaReviewRun?: MetaReviewRunResult;
+  metaReviewRun?: MetaReviewResult;
 }
 
 export interface MetaReviewGateErrorDiagnostics {

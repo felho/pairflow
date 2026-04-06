@@ -7,7 +7,7 @@ import type {
   BubbleStateSnapshot,
   MetaReviewRecommendation
 } from "../../../types/bubble.js";
-import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
+import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import type { FindingsParityMetadata } from "../../../types/protocol.js";
 import type {
   appendProtocolEnvelope,
@@ -54,7 +54,7 @@ export interface PersistHumanGateRouteInput {
   loaded: LoadedStateSnapshot;
   expectedState: BubbleStateSnapshot["state"];
   route: MetaReviewGateRoute;
-  metaReviewRun?: MetaReviewRunResult;
+  metaReviewRun?: MetaReviewResult;
   parityMetadata?: FindingsParityMetadata | null;
   findings?: MetaReviewGateAdvisoryFinding[];
   fallbackRecommendation?: MetaReviewRecommendation;

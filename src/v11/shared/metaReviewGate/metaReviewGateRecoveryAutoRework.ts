@@ -1,6 +1,6 @@
 import type { BubbleMetaReviewSnapshotState } from "../../../types/bubble.js";
 import { deliveryTargetRoleMetadataKey, type FindingsParityMetadata } from "../../../types/protocol.js";
-import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
+import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import { StateStoreConflictError } from "../../../core/state/stateStore.js";
 import {
   resolveFindingsParityMetadataForEnvelope,
@@ -22,7 +22,7 @@ export async function handleRecoveryAutoReworkRoute(input: {
   context: RecoverMetaReviewExecutionContext;
   snapshot: BubbleMetaReviewSnapshotState;
   summary: string;
-  runResultForRouting: MetaReviewRunResult;
+  runResultForRouting: MetaReviewResult;
   parityMetadata: FindingsParityMetadata | null;
 }): Promise<MetaReviewGateResult> {
   if (input.snapshot.sticky_human_gate) {

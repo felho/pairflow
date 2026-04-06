@@ -2,7 +2,7 @@ import type {
   BubbleMetaReviewSnapshotState
 } from "../../../types/bubble.js";
 import type { FindingsParityMetadata } from "../../../types/protocol.js";
-import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
+import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import type { readFile } from "node:fs/promises";
 import { validateStructuredMetaReviewPositiveClaim } from "./metaReviewGateFindingsValidation.js";
 
@@ -10,21 +10,21 @@ export type RecoveryParityResolution =
   | {
       ok: true;
       budgetAvailable: boolean;
-      runResultForRouting: MetaReviewRunResult;
+      runResultForRouting: MetaReviewResult;
       parityMetadata: FindingsParityMetadata | null;
     }
   | {
       ok: false;
       reason: string;
-      runResultForRouting: MetaReviewRunResult;
+      runResultForRouting: MetaReviewResult;
       parityMetadata: FindingsParityMetadata | null;
     };
 
 function mergeRunResultWithParityResolution(input: {
-  runResult: MetaReviewRunResult;
+  runResult: MetaReviewResult;
   metadata: FindingsParityMetadata | null;
   diagnostics: string[];
-}): MetaReviewRunResult {
+}): MetaReviewResult {
   if (input.metadata === null && input.diagnostics.length === 0) {
     return input.runResult;
   }
@@ -66,7 +66,7 @@ export async function resolveRecoveryParityRouting(input: {
     sleepForRetryMs?: (delayMs: number) => Promise<void>;
   };
   snapshot: BubbleMetaReviewSnapshotState;
-  runResult: MetaReviewRunResult;
+  runResult: MetaReviewResult;
 }): Promise<RecoveryParityResolution> {
   const positiveClaimParity = await validateStructuredMetaReviewPositiveClaim({
     runResult: input.runResult,

@@ -1,4 +1,5 @@
-import type { MetaReviewRunResult, MetaReviewRunWarning } from "../metaReview/metaReviewTypes.js";
+import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { MetaReviewResult, MetaReviewRunWarning } from "../metaReview/metaReviewTypes.js";
 
 export const metaReviewFallbackReportRef = "artifacts/meta-review-last.json";
 
@@ -16,22 +17,23 @@ export function buildRecoveredMetaReviewReportPayload(input: {
   bubbleId: string;
   round: number;
   nowIso: string;
-  runResult: MetaReviewRunResult;
+  lifecycleState: BubbleStateSnapshot["state"];
+  runResult: MetaReviewResult;
   recoveredWarnings: MetaReviewRunWarning[];
 }): {
   bubble_id: string;
   round: number;
   generated_at: string;
-  status: MetaReviewRunResult["status"];
-  recommendation: MetaReviewRunResult["recommendation"];
-  summary: MetaReviewRunResult["summary"];
-  report_ref: MetaReviewRunResult["report_ref"];
+  status: MetaReviewResult["status"];
+  recommendation: MetaReviewResult["recommendation"];
+  summary: MetaReviewResult["summary"];
+  report_ref: MetaReviewResult["report_ref"];
   report_json_ref: string;
   warnings: MetaReviewRunWarning[];
   run_id?: string;
-  rework_target_message: MetaReviewRunResult["rework_target_message"];
-  lifecycle_state: MetaReviewRunResult["lifecycle_state"];
-  report_json?: MetaReviewRunResult["report_json"];
+  rework_target_message: MetaReviewResult["rework_target_message"];
+  lifecycle_state: BubbleStateSnapshot["state"];
+  report_json?: MetaReviewResult["report_json"];
 } {
   return {
     bubble_id: input.bubbleId,
@@ -50,7 +52,7 @@ export function buildRecoveredMetaReviewReportPayload(input: {
       ? { run_id: input.runResult.run_id }
       : {}),
     rework_target_message: input.runResult.rework_target_message,
-    lifecycle_state: input.runResult.lifecycle_state,
+    lifecycle_state: input.lifecycleState,
     ...(input.runResult.report_json !== undefined
       ? { report_json: input.runResult.report_json }
       : {})

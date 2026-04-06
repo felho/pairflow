@@ -89,6 +89,7 @@ export function buildFinishWithPaneDeactivation(input: {
         bubbleId: input.bubbleId,
         round: result.state.round,
         nowIso: input.nowIso,
+        lifecycleState: result.state.state,
         runResult: result.metaReviewRun,
         paths: input.artifactsPaths,
         writeFileFn: input.writeFileFn

@@ -7,7 +7,7 @@ import {
   type LoadedStateSnapshot
 } from "../../../core/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
-import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
+import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import {
   buildHydratedMetaReviewSnapshotFromRunResult,
   normalizeMetaReviewSnapshot
@@ -57,7 +57,7 @@ export async function restoreHumanGateAfterDispatchFailure(input: {
   context: RecoverMetaReviewExecutionContext;
   loaded: LoadedStateSnapshot;
   resumedWritten: LoadedStateSnapshot;
-  runResultForRouting: MetaReviewRunResult;
+  runResultForRouting: MetaReviewResult;
   appendReason: string;
 }): Promise<{ readyForHumanApproval: LoadedStateSnapshot; restoreOutcome: string }> {
   let restoreOutcome = "restore_outcome=not_attempted";

@@ -1,8 +1,12 @@
 import { writeFile } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 
-import type { BubbleMetaReviewSnapshotState, MetaReviewRunStatus } from "../../../types/bubble.js";
-import type { MetaReviewRunResult, MetaReviewRunWarning } from "../metaReview/metaReviewTypes.js";
+import type {
+  BubbleMetaReviewSnapshotState,
+  BubbleStateSnapshot,
+  MetaReviewRunStatus
+} from "../../../types/bubble.js";
+import type { MetaReviewResult, MetaReviewRunWarning } from "../metaReview/metaReviewTypes.js";
 import {
   buildMetaReviewArtifactWriteWarning,
   buildRecoveredMetaReviewReportPayload,
@@ -40,7 +44,7 @@ export function synthesizeMetaReviewRunResultFromSnapshot(input: {
   nowIso: string;
   snapshot: BubbleMetaReviewSnapshotState;
   fallbackSummary: string;
-}): MetaReviewRunResult {
+}): MetaReviewResult {
   const recommendation = input.snapshot.last_autonomous_recommendation ?? "inconclusive";
   const status: MetaReviewRunStatus =
     input.snapshot.last_autonomous_status ?? "error";
@@ -57,15 +61,13 @@ export function synthesizeMetaReviewRunResultFromSnapshot(input: {
     : null;
 
   return {
-    bubbleId: input.bubbleId,
-    depth: "standard",
+    bubble_id: input.bubbleId,
     status,
     recommendation,
     summary,
     report_ref: reportRef,
     rework_target_message: reworkTargetMessage,
     updated_at: updatedAt,
-    lifecycle_state: "RUNNING",
     warnings: [],
     ...(runId !== undefined ? { run_id: runId } : {})
   };
@@ -75,17 +77,15 @@ export function synthesizeMetaReviewRunFailure(input: {
   bubbleId: string;
   nowIso: string;
   fallbackSummary: string;
-}): MetaReviewRunResult {
+}): MetaReviewResult {
   return {
-    bubbleId: input.bubbleId,
-    depth: "standard",
+    bubble_id: input.bubbleId,
     status: "error",
     recommendation: "inconclusive",
     summary: input.fallbackSummary,
     report_ref: metaReviewFallbackReportRef,
     rework_target_message: null,
     updated_at: input.nowIso,
-    lifecycle_state: "RUNNING",
     warnings: []
   };
 }
@@ -94,10 +94,10 @@ export function normalizeRecoveredMetaReviewRunResult(input: {
   bubbleId: string;
   nowIso: string;
   fallbackSummary: string;
-  runResult: MetaReviewRunResult;
+  runResult: MetaReviewResult;
   bubbleDir: string;
   artifactsDir: string;
-}): MetaReviewRunResult {
+}): MetaReviewResult {
   const normalizedSummary =
     typeof input.runResult.summary === "string"
       && input.runResult.summary.trim().length > 0
@@ -119,7 +119,7 @@ export function normalizeRecoveredMetaReviewRunResult(input: {
 
   return {
     ...input.runResult,
-    bubbleId: input.bubbleId,
+    bubble_id: input.bubbleId,
     summary: normalizedSummary,
     report_ref: normalizedReportRef,
     updated_at: normalizedUpdatedAt,
@@ -135,7 +135,8 @@ export async function writeRecoveredMetaReviewArtifacts(input: {
   bubbleId: string;
   round: number;
   nowIso: string;
-  runResult: MetaReviewRunResult;
+  lifecycleState: BubbleStateSnapshot["state"];
+  runResult: MetaReviewResult;
   paths: {
     metaReviewLastJsonArtifactPath: string;
   };
@@ -148,6 +149,7 @@ export async function writeRecoveredMetaReviewArtifacts(input: {
     bubbleId: input.bubbleId,
     round: input.round,
     nowIso: input.nowIso,
+    lifecycleState: input.lifecycleState,
     runResult: input.runResult,
     recoveredWarnings: warnings
   });

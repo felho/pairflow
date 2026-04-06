@@ -1,4 +1,4 @@
-import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
+import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import type { FindingsParityMetadata, FindingsParityStatus } from "../../../types/protocol.js";
 import {
   resolveFindingsArtifactPath,
@@ -47,7 +47,7 @@ export function buildFindingsParityMetadata(input: {
 
 export function resolveReworkFindingsParityInput(input: {
   reportJson: Record<string, unknown>;
-  runResult: MetaReviewRunResult;
+  runResult: MetaReviewResult;
   bubbleDir: string;
   artifactsDir: string;
 }):

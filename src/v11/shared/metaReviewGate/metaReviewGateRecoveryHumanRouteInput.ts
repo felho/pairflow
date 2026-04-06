@@ -1,5 +1,5 @@
 import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
-import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
+import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { FindingsParityMetadata } from "../../../types/protocol.js";
 import { resolveFindingsParityMetadataFromReportJson } from "./metaReviewGateFindingsMetadata.js";
@@ -28,7 +28,7 @@ export function buildRecoveryHumanRoutePersistenceInput(input: {
   loaded: LoadedStateSnapshot;
   expectedState: BubbleStateSnapshot["state"];
   route: PersistHumanGateRouteInput["route"];
-  runResultForRouting: MetaReviewRunResult;
+  runResultForRouting: MetaReviewResult;
   parityMetadata: FindingsParityMetadata | null;
   targetState?: PersistHumanGateRouteInput["targetState"];
   stickyHumanGate?: PersistHumanGateRouteInput["stickyHumanGate"];

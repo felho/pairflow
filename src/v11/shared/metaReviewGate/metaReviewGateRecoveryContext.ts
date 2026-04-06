@@ -15,7 +15,7 @@ import type {
   MetaReviewRecommendation
 } from "../../../types/bubble.js";
 import type { FindingsParityMetadata } from "../../../types/protocol.js";
-import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
+import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 export {
   resolveRecoveryParityRouting,
   type RecoveryParityResolution
@@ -131,7 +131,7 @@ export async function initializeRecoverMetaReviewExecutionContext(
 export async function persistRecoveryRunFailedHumanRoute(input: {
   context: RecoverMetaReviewExecutionContext;
   summary: string;
-  runResult: MetaReviewRunResult;
+  runResult: MetaReviewResult;
 }): Promise<MetaReviewGateResult> {
   return persistHumanGateRoute(buildRecoveryHumanRoutePersistenceInput({
     context: input.context,
@@ -155,7 +155,7 @@ export async function persistRecoveryDispatchFailedHumanRoute(input: {
   fallbackReason: string;
   loaded: LoadedStateSnapshot;
   expectedState: BubbleStateSnapshot["state"];
-  runResultForRouting: MetaReviewRunResult;
+  runResultForRouting: MetaReviewResult;
   parityMetadata: FindingsParityMetadata | null;
   rollbackStateOnAppendFailure?: BubbleStateSnapshot;
 }): Promise<MetaReviewGateResult> {
@@ -179,7 +179,7 @@ export async function persistRecoveryDispatchFailedHumanRoute(input: {
 export async function persistRecoveryResolvedHumanRoute(input: {
   context: RecoverMetaReviewExecutionContext;
   summary: string;
-  runResultForRouting: MetaReviewRunResult;
+  runResultForRouting: MetaReviewResult;
   recommendation: MetaReviewRecommendation;
   budgetAvailable: boolean;
   parityMetadata: FindingsParityMetadata | null;

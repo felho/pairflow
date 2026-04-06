@@ -3,7 +3,7 @@ import {
   evaluatePositiveSummaryFindingsAssertion,
   hasGlobalNoFindingsSummaryAssertion
 } from "../../../core/convergence/policy.js";
-import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
+import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import type { FindingsParityMetadata } from "../../../types/protocol.js";
 import { resolveNonNegativeIntegerField } from "./metaReviewGateFindingsClaimParsing.js";
 import {
@@ -238,7 +238,7 @@ function resolveApproveDiagnostics(split: ApproveSplitTriplet): string[] {
 }
 
 export function validateApproveStructuredMetaReviewClaim(input: {
-  runResult: MetaReviewRunResult;
+  runResult: MetaReviewResult;
   reportJson: Record<string, unknown>;
   claimState: "clean" | "open_findings";
 }): ApproveClaimValidationResult {

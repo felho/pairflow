@@ -2,7 +2,7 @@ import {
   DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
   type BubbleMetaReviewSnapshotState
 } from "../../../types/bubble.js";
-import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
+import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import {
   resolveFindingsParityMetadataForEnvelope as resolveFindingsParityMetadataForEnvelopeFromProtocol,
   type FindingsParityMetadata
@@ -36,7 +36,7 @@ export function normalizeMetaReviewSnapshot(
 
 export function buildHumanGateSummary(input: {
   convergenceSummary: string;
-  metaReviewRun?: MetaReviewRunResult;
+  metaReviewRun?: MetaReviewResult;
   fallbackReason?: string;
 }): string {
   if (input.fallbackReason !== undefined) {
@@ -57,7 +57,7 @@ export function resolveFindingsParityMetadataForEnvelope(
 
 export function buildHydratedMetaReviewSnapshotFromRunResult(input: {
   metaReview: BubbleMetaReviewSnapshotState;
-  runResult: MetaReviewRunResult;
+  runResult: MetaReviewResult;
 }): BubbleMetaReviewSnapshotState {
   return {
     ...input.metaReview,

@@ -3,7 +3,7 @@ import {
   type LoadedStateSnapshot
 } from "../../../core/state/stateStore.js";
 import type { BubbleMetaReviewSnapshotState, BubbleStateSnapshot } from "../../../types/bubble.js";
-import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
+import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import {
   buildHydratedMetaReviewSnapshotFromRunResult,
   incrementAutoReworkCount,
@@ -21,7 +21,7 @@ export async function persistAutoReworkCounterAfterRecoveryDispatch(input: {
   context: RecoverMetaReviewExecutionContext;
   snapshot: BubbleMetaReviewSnapshotState;
   resumedWritten: LoadedStateSnapshot;
-  runResultForRouting: MetaReviewRunResult;
+  runResultForRouting: MetaReviewResult;
 }): Promise<LoadedStateSnapshot> {
   let written: LoadedStateSnapshot | undefined;
   try {

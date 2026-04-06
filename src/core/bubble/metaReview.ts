@@ -87,19 +87,19 @@ import {
 import type {
   MetaReviewDepth as MetaReviewDepthV11,
   MetaReviewLastReportView as MetaReviewLastReportViewV11,
-  MetaReviewRunResult as MetaReviewRunResultV11,
+  MetaReviewRetainedRunResult as MetaReviewRunResultV11,
   MetaReviewRunWarning as MetaReviewRunWarningV11,
   MetaReviewStatusView as MetaReviewStatusViewV11
 } from "../../v11/shared/metaReview/metaReviewTypes.js";
 import type { MetaReviewSubmitResult as MetaReviewSubmitResultV11 } from "../../v11/shared/metaReview/metaReviewCommandContract.js";
 import type { MetaReviewReviewerVerdict as MetaReviewReviewerVerdictV11 } from "../../v11/domain/metaReview/metaReviewReviewerVerdict.js";
-import type { MetaReviewRunnerOutput as MetaReviewRunnerOutputV11 } from "../../v11/application/metaReview/metaReviewRunnerOutput.js";
+import type { MetaReviewLiveRunnerOutputBridge as MetaReviewLiveRunnerOutputV11 } from "../../v11/application/metaReview/metaReviewRunnerOutput.js";
 
 const CANONICAL_META_REVIEW_REPORT_REF = "artifacts/meta-review-last.json";
 
 export type MetaReviewDepth = MetaReviewDepthV11;
 export type MetaReviewReviewerVerdict = MetaReviewReviewerVerdictV11;
-export type MetaReviewLiveRunnerOutput = MetaReviewRunnerOutputV11;
+export type MetaReviewLiveRunnerOutput = MetaReviewLiveRunnerOutputV11;
 export type MetaReviewStatusView = MetaReviewStatusViewV11;
 export type MetaReviewLastReportView = MetaReviewLastReportViewV11;
 export type MetaReviewRunWarning = MetaReviewRunWarningV11;
@@ -1606,6 +1606,7 @@ function buildCanonicalSubmitRunResult(input: {
 }): MetaReviewRunResult {
   return {
     bubbleId: input.bubbleId,
+    bubble_id: input.bubbleId,
     depth: "standard",
     run_id: input.runId,
     status: input.status,
@@ -1645,7 +1646,22 @@ async function assertSubmitReworkFindingsArtifactContract(input: {
 
   const parityInput = resolveReworkFindingsParityInput({
     reportJson: input.reportJson,
-    runResult: input.runResult,
+    runResult: {
+      bubble_id: input.runResult.bubble_id ?? input.runResult.bubbleId,
+      ...(input.runResult.run_id !== undefined
+        ? { run_id: input.runResult.run_id }
+        : {}),
+      status: input.runResult.status,
+      recommendation: input.runResult.recommendation,
+      summary: input.runResult.summary,
+      report_ref: input.runResult.report_ref,
+      rework_target_message: input.runResult.rework_target_message,
+      updated_at: input.runResult.updated_at,
+      warnings: [...input.runResult.warnings],
+      ...(input.runResult.report_json !== undefined
+        ? { report_json: input.runResult.report_json }
+        : {})
+    },
     bubbleDir: input.bubbleDir,
     artifactsDir: input.artifactsDir
   });
@@ -2333,6 +2349,7 @@ export async function runMetaReview(
 
   return {
     bubbleId: resolved.bubbleId,
+    bubble_id: resolved.bubbleId,
     depth,
     run_id: runId,
     status,

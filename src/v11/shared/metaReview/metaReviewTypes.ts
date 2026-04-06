@@ -28,10 +28,11 @@ export interface MetaReviewResult {
   report_json?: Record<string, unknown>;
 }
 
-type MetaReviewResultFields = Omit<MetaReviewResult, "bubble_id">;
+type MetaReviewCanonicalResultFields = Omit<MetaReviewResult, "bubble_id">;
 
-export interface MetaReviewRunResult extends MetaReviewResultFields {
+export interface MetaReviewRetainedRunResult extends MetaReviewCanonicalResultFields {
   bubbleId: string;
+  bubble_id?: string;
   depth: MetaReviewDepth;
   lifecycle_state: BubbleStateSnapshot["state"];
 }

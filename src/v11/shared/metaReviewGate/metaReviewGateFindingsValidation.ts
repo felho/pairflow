@@ -4,7 +4,7 @@ import {
   resolveLegacySummaryFindingsClaimState
 } from "../../../core/convergence/policy.js";
 import type { MetaReviewRecommendation } from "../../../types/bubble.js";
-import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
+import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import { type FindingsParityMetadata } from "../../../types/protocol.js";
 import { resolveStructuredMetaReviewClaimFromReportJson } from "./metaReviewGateFindingsMetadata.js";
 import {
@@ -129,7 +129,7 @@ function validateStructuredMetaReviewClaimPreflight(input: {
 }
 
 export async function validateStructuredMetaReviewPositiveClaim(input: {
-  runResult: MetaReviewRunResult;
+  runResult: MetaReviewResult;
   reportJson?: Record<string, unknown>;
   bubbleDir: string;
   artifactsDir: string;

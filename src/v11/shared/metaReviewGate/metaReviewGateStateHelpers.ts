@@ -6,7 +6,7 @@ import {
   type MetaReviewRecommendation,
   type MetaReviewRunStatus
 } from "../../../types/bubble.js";
-import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
+import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import {
   MetaReviewGateError,
   type MetaReviewGateRoute
@@ -39,7 +39,7 @@ export function transitionToGateState(input: {
   nowIso: string;
   targetState: "READY_FOR_HUMAN_APPROVAL";
   stickyHumanGate: boolean;
-  metaReviewRun?: MetaReviewRunResult;
+  metaReviewRun?: MetaReviewResult;
   fallbackRecommendation?: MetaReviewRecommendation;
   fallbackSummary?: string;
 }): BubbleStateSnapshot {

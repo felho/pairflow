@@ -3,7 +3,8 @@ import {
 } from "../../../core/bubble/metaReview.js";
 import type { readFile } from "node:fs/promises";
 import type { BubbleMetaReviewSnapshotState } from "../../../types/bubble.js";
-import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
+import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
+import type { RecoverMetaReviewGateRunResultInput } from "./metaReviewGateTypes.js";
 import { readMetaReviewReportJsonArtifact } from "./metaReviewGateFindingsMetadata.js";
 import {
   normalizeRecoveredMetaReviewRunResult,
@@ -32,14 +33,40 @@ interface RecoveryRunResolutionContext {
 
 export interface RecoveredRunResolution {
   snapshot: BubbleMetaReviewSnapshotState;
-  runResult: MetaReviewRunResult;
+  runResult: MetaReviewResult;
   summary: string;
   snapshotHasCanonicalSubmitInActiveWindow: boolean;
 }
 
+function normalizeRequestedRunResult(input: {
+  bubbleId: string;
+  runResult: RecoverMetaReviewGateRunResultInput;
+}): MetaReviewResult {
+  return {
+    bubble_id:
+      typeof input.runResult.bubble_id === "string" &&
+      input.runResult.bubble_id.trim().length > 0
+        ? input.runResult.bubble_id
+        : input.bubbleId,
+    ...(input.runResult.run_id !== undefined
+      ? { run_id: input.runResult.run_id }
+      : {}),
+    status: input.runResult.status,
+    recommendation: input.runResult.recommendation,
+    summary: input.runResult.summary,
+    report_ref: input.runResult.report_ref,
+    rework_target_message: input.runResult.rework_target_message,
+    updated_at: input.runResult.updated_at,
+    warnings: [...input.runResult.warnings],
+    ...(input.runResult.report_json !== undefined
+      ? { report_json: input.runResult.report_json }
+      : {})
+  };
+}
+
 export async function resolveRecoveredRunResolution(input: {
   context: RecoveryRunResolutionContext;
-  requestedRunResult?: MetaReviewRunResult;
+  requestedRunResult?: RecoverMetaReviewGateRunResultInput;
   requestedSummary?: string;
 }): Promise<RecoveredRunResolution> {
   const snapshot = normalizeMetaReviewSnapshot(input.context.loaded.state.meta_review);
@@ -55,6 +82,12 @@ export async function resolveRecoveredRunResolution(input: {
     artifactPath: input.context.resolved.bubblePaths.metaReviewLastJsonArtifactPath,
     readFileFn: input.context.readFileFn
   });
+  const requestedRunResult = input.requestedRunResult === undefined
+    ? undefined
+    : normalizeRequestedRunResult({
+        bubbleId: input.context.resolved.bubbleId,
+        runResult: input.requestedRunResult
+      });
 
   const runResultBase = normalizeRecoveredMetaReviewRunResult({
     bubbleId: input.context.resolved.bubbleId,
@@ -62,7 +95,7 @@ export async function resolveRecoveredRunResolution(input: {
     fallbackSummary,
     bubbleDir: input.context.resolved.bubblePaths.bubbleDir,
     artifactsDir: input.context.resolved.bubblePaths.artifactsDir,
-    runResult: input.requestedRunResult ?? (
+    runResult: requestedRunResult ?? (
       snapshotHasCanonicalSubmitInActiveWindow
         ? synthesizeMetaReviewRunResultFromSnapshot({
             bubbleId: input.context.resolved.bubbleId,
@@ -77,7 +110,7 @@ export async function resolveRecoveredRunResolution(input: {
           })
     )
   });
-  const runResultResolvedFromSnapshot: MetaReviewRunResult =
+  const runResultResolvedFromSnapshot: MetaReviewResult =
     runResultBase.report_json !== undefined
       ? runResultBase
       : {
@@ -86,7 +119,7 @@ export async function resolveRecoveredRunResolution(input: {
             ? { report_json: reportJsonArtifactRead.reportJson }
             : {})
         };
-  const runResult: MetaReviewRunResult =
+  const runResult: MetaReviewResult =
     reportJsonArtifactRead.diagnostics.length === 0
       ? runResultResolvedFromSnapshot
       : {
@@ -117,16 +150,26 @@ export async function resolveRecoveredRunResolution(input: {
 }
 
 export function assertRecoveredRunResolutionConsistency(input: {
-  requestedRunResult?: MetaReviewRunResult;
+  requestedRunResult?: RecoverMetaReviewGateRunResultInput;
   snapshotHasCanonicalSubmitInActiveWindow: boolean;
   snapshot: BubbleMetaReviewSnapshotState;
-  runResult: MetaReviewRunResult;
+  runResult: MetaReviewResult;
 }): void {
   const snapshotUpdatedAtMs = Date.parse(input.snapshot.last_autonomous_updated_at ?? "");
   const runResultUpdatedAtMs = Date.parse(input.runResult.updated_at);
   const hasComparableTimestamps =
     Number.isFinite(snapshotUpdatedAtMs) && Number.isFinite(runResultUpdatedAtMs);
-  const updatedAtChanged = input.requestedRunResult === undefined
+  const normalizedRequestedRunResult = input.requestedRunResult === undefined
+    ? undefined
+    : normalizeRequestedRunResult({
+        bubbleId:
+          typeof input.runResult.bubble_id === "string" &&
+          input.runResult.bubble_id.trim().length > 0
+            ? input.runResult.bubble_id
+            : "",
+        runResult: input.requestedRunResult
+      });
+  const updatedAtChanged = normalizedRequestedRunResult === undefined
     ? false
     : (hasComparableTimestamps
         ? snapshotUpdatedAtMs !== runResultUpdatedAtMs
