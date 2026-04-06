@@ -33,10 +33,7 @@ const forbiddenCoreShimTargets = new Set([
   "src/core/util/structuredRef.ts"
 ]);
 
-const allowedResidualCoreBridgeImports = [
-  "src/v11/infrastructure/ui/server.ts -> src/core/ui/server.ts",
-  "src/v11/shared/metaReview/metaReviewCommandApi.ts -> src/core/bubble/metaReview.ts"
-].sort();
+const allowedResidualCoreBridgeImports: string[] = [];
 
 async function listTypeScriptFiles(root: string): Promise<string[]> {
   const entries = await readdir(root, {
