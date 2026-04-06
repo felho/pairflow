@@ -453,6 +453,24 @@ Exit criterion:
 - a live-run seam megszunt,
 - a meta-review lane publikus es belso ownershipje konzisztens.
 
+### Phase 2C: Meta-review compat bridge removal
+
+Cel:
+
+- a Phase 2B utan visszamaradt, explicit compat bridge-ek teljes eltakaritasa,
+- kulonosen a teszt- es parity-fixture inputok kanonikus `MetaReviewResult` alakra huzasa.
+
+Jelleg:
+
+- migration-tail cleanup,
+- nem uj architekturális dontes, hanem a mar rogzitett cel vegigvitele.
+
+Exit criterion:
+
+- a retained `runMetaReview`-alakú compat inputok megszuntek,
+- a recovery/parity fixture-k kanonikus `MetaReviewResult` payloadokat seedelnek,
+- a Phase 2B-ben kommentben dokumentalt deletion triggerek teljesultek es a bridge-ek torolve lettek.
+
 ### Phase 3: List/read-model closure
 
 Cel:
@@ -530,15 +548,18 @@ Exit criterion:
 3. `plans/tasks/v11-closure-meta-review-live-run-seam-phase2b.md`
    - `runMetaReview` deletion order/cleanup
 
-4. `plans/tasks/v11-closure-list-read-model-phase3.md`
+4. `plans/tasks/v11-closure-meta-review-compat-bridge-removal-phase2c.md`
+   - retained compat bridge-ek es fixture-seedek kanonikus result shape-re huzasa
+
+5. `plans/tasks/v11-closure-list-read-model-phase3.md`
    - read-model closure after meta-review ownership resolution
 
-5. `plans/tasks/v11-infrastructure-topology-and-migration-plan-phase4.md`
+6. `plans/tasks/v11-infrastructure-topology-and-migration-plan-phase4.md`
    - concrete `v11/infrastructure` topology
 
-6. `plans/tasks/v11-infrastructure-runtime-primitives-phase4a.md`
-7. `plans/tasks/v11-infrastructure-state-protocol-phase4b.md`
-8. `plans/tasks/v11-infrastructure-archive-phase4c.md`
+7. `plans/tasks/v11-infrastructure-runtime-primitives-phase4a.md`
+8. `plans/tasks/v11-infrastructure-state-protocol-phase4b.md`
+9. `plans/tasks/v11-infrastructure-archive-phase4c.md`
 
 ## Validation Strategy
 
