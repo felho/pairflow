@@ -1,4 +1,4 @@
-import type { registerRepoInRegistry } from "../../../core/repo/registry.js";
+import type { registerRepoInRegistry } from "../../infrastructure/executor/workspace/repoRegistry.js";
 import {
   buildCreateBubbleInput,
   registerRepoAfterCreateBestEffort,

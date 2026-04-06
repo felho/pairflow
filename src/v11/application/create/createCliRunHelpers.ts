@@ -1,8 +1,8 @@
 import { resolve } from "node:path";
 
-import { registerRepoInRegistry } from "../../../core/repo/registry.js";
 import { DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER } from "../../../config/bubbleConfig.js";
 import type { CreateReviewArtifactType } from "../../../types/bubble.js";
+import { registerRepoInRegistry } from "../../infrastructure/executor/workspace/repoRegistry.js";
 import { createBubble } from "./createCommandApi.js";
 import type {
   BubbleCreateInput,

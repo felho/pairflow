@@ -367,7 +367,7 @@ export {
   resolveRepoRegistryPath,
   RepoRegistryError,
   RepoRegistryLockError
-} from "./core/repo/registry.js";
+} from "./v11/infrastructure/executor/workspace/repoRegistry.js";
 export {
   computeWatchdogStatus
 } from "./core/runtime/watchdog.js";
@@ -645,7 +645,7 @@ export type {
   RemoveRepoInput,
   RemoveRepoResult,
   RepoRegistryEntry
-} from "./core/repo/registry.js";
+} from "./v11/infrastructure/executor/workspace/repoRegistry.js";
 export type {
   EmitTmuxDeliveryNotificationInput,
   EmitTmuxDeliveryNotificationResult,
