@@ -4,8 +4,8 @@ import {
   BubbleLookupError,
   resolveBubbleById
 } from "../../../core/bubble/bubbleLookup.js";
-import { resolveCanonicalPendingApprovalSignal } from "../../../core/bubble/pendingApprovalSignal.js";
 import type { BubbleLifecycleState } from "../../../types/bubble.js";
+import { resolveCanonicalPendingApprovalSignal } from "../approval/pendingApprovalSignal.js";
 
 export type PendingInboxItemType = "HUMAN_QUESTION" | "APPROVAL_REQUEST";
 
