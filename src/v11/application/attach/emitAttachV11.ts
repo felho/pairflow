@@ -13,7 +13,7 @@ import type { AttachLauncher } from "../../../types/bubble.js";
 import {
   BubbleLookupError,
   resolveBubbleById
-} from "../../../core/bubble/bubbleLookup.js";
+} from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { buildBubbleTmuxSessionName } from "../../../core/runtime/tmuxManager.js";
 import { shellQuote } from "../../../core/util/shellQuote.js";
 

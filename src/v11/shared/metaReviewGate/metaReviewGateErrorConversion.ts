@@ -1,4 +1,4 @@
-import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
+import { BubbleLookupError } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { MetaReviewError } from "../../../core/bubble/metaReview.js";
 import { StateStoreConflictError } from "../../infrastructure/state/stateStore.js";
 import { MetaReviewGateError } from "./metaReviewGateTypes.js";

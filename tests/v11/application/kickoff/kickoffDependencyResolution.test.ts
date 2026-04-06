@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 
 import { describe, expect, it } from "vitest";
 
-import { resolveBubbleById } from "../../../../src/core/bubble/bubbleLookup.js";
+import { resolveBubbleById } from "../../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 import { appendProtocolEnvelope } from "../../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { emitTmuxDeliveryNotification } from "../../../../src/core/runtime/tmuxDelivery.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";

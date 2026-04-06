@@ -1,4 +1,4 @@
-import { RepoResolutionError } from "../../../core/bubble/repoResolution.js";
+import { RepoResolutionError } from "../../infrastructure/executor/workspace/repoResolution.js";
 import { runReconcileFlow } from "../../application/reconcile/runReconcileFlow.js";
 import type {
   ReconcileRuntimeSessionsDependencies,

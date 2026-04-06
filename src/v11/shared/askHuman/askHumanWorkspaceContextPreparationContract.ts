@@ -2,7 +2,7 @@ import type {
   EnsureBubbleInstanceIdForMutationResult
 } from "../../../core/bubble/bubbleInstanceId.js";
 import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
-import type { ResolvedBubbleWorkspace } from "../../../core/bubble/workspaceResolution.js";
+import type { ResolvedBubbleWorkspace } from "../../infrastructure/executor/workspace/workspaceResolution.js";
 import type { LoadedStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ResolvedAskHumanRoutingPreparationDependencies } from "./askHumanRoutingPreparationDependencyResolutionContract.js";

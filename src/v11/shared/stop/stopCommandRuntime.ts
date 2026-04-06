@@ -1,4 +1,4 @@
-import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
+import { BubbleLookupError } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { TmuxCommandError } from "../../../core/runtime/tmuxManager.js";
 import {
   RuntimeSessionsRegistryError,

@@ -15,7 +15,7 @@ import {
   upsertDeletedArchiveIndexEntry,
   type UpsertDeletedArchiveIndexEntryInput
 } from "../../../core/archive/archiveIndex.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import {
   readRuntimeSessionsRegistry,
   removeRuntimeSession

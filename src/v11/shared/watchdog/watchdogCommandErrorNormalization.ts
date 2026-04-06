@@ -1,4 +1,4 @@
-import type { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
+import type { BubbleLookupError } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 
 export interface NormalizeBubbleWatchdogErrorInput {
   error: unknown;

@@ -13,7 +13,7 @@ import {
 import type {
   ConvergedStructuredFinding
 } from "../../shared/converged/convergedCommandTypes.js";
-import type { ResolvedBubbleWorkspace } from "../../../core/bubble/workspaceResolution.js";
+import type { ResolvedBubbleWorkspace } from "../../infrastructure/executor/workspace/workspaceResolution.js";
 import type { AgentName, BubbleStateSnapshot } from "../../../types/bubble.js";
 import {
   executeGateDelivery,

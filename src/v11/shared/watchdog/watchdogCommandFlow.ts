@@ -7,7 +7,7 @@ import type { readStateSnapshot } from "../../infrastructure/state/stateStore.js
 import { retryStuckAgentInput, resolveDeliveryMessageRef } from "../../../core/runtime/tmuxDelivery.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { BubbleWatchdogResult } from "../../application/watchdog/watchdogCommandContract.js";
-import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import type { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import { BubbleWatchdogError } from "./watchdogCommandRuntime.js";

@@ -11,7 +11,7 @@ import {
 import {
   resolveBubbleFromWorkspaceCwd,
   type ResolvedBubbleWorkspace
-} from "../../../core/bubble/workspaceResolution.js";
+} from "../../infrastructure/executor/workspace/workspaceResolution.js";
 import { readStateSnapshot, type LoadedStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
 import { resolvePassHandoff, type ResolvedPassHandoff } from "../../domain/pass/handoff.js";

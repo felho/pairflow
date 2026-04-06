@@ -3,7 +3,7 @@ import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import {
   BubbleLookupError,
   resolveBubbleById
-} from "../../../core/bubble/bubbleLookup.js";
+} from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import type { BubbleLifecycleState } from "../../../types/bubble.js";
 import { resolveCanonicalPendingApprovalSignal } from "../approval/pendingApprovalSignal.js";
 

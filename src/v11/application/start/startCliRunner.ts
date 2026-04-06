@@ -16,7 +16,7 @@ import {
 import {
   resolveBubbleById,
   type ResolvedBubbleById
-} from "../../../core/bubble/bubbleLookup.js";
+} from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { registerRepoInRegistry } from "../../../core/repo/registry.js";
 import { parseBubbleStartCommandOptions } from "./startCliOptions.js";
 

@@ -14,7 +14,7 @@ import type {
   resolveReviewerTestEvidenceArtifactPath,
   resolveReviewerTestExecutionDirective
 } from "../../../core/reviewer/testEvidence.js";
-import type { ResolvedBubbleWorkspace } from "../../../core/bubble/workspaceResolution.js";
+import type { ResolvedBubbleWorkspace } from "../../infrastructure/executor/workspace/workspaceResolution.js";
 import type {
   AgentName,
   BubbleRoundGateState,

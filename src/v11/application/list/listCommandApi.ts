@@ -6,7 +6,7 @@ import {
   normalizeRepoPath,
   RepoResolutionError,
   resolveRepoPath
-} from "../../../core/bubble/repoResolution.js";
+} from "../../infrastructure/executor/workspace/repoResolution.js";
 import { resolveActiveMetaReviewRuntimeDelivery } from "../../../core/bubble/metaReview.js";
 import { isMetaReviewExecutionContextActiveState } from "../../../core/bubble/metaReviewExecutionContext.js";
 import { getBubblePaths } from "../../../core/bubble/paths.js";

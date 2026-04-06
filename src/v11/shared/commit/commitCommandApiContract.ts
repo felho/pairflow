@@ -1,7 +1,7 @@
 import type { appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type { readStateSnapshot, writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import type { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
-import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import type { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 
 export type ResolvedBubbleContext = Awaited<ReturnType<typeof resolveBubbleById>>;
 export type BubbleIdentity = Awaited<ReturnType<typeof ensureBubbleInstanceIdForMutation>>;

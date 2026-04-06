@@ -4,7 +4,7 @@ import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
 } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
 import {
   readStateSnapshot,

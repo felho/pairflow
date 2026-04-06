@@ -1,5 +1,5 @@
 import type { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
-import type { resolveBubbleFromWorkspaceCwd } from "../../../core/bubble/workspaceResolution.js";
+import type { resolveBubbleFromWorkspaceCwd } from "../../infrastructure/executor/workspace/workspaceResolution.js";
 import type { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 
 export interface ResolveAskHumanRoutingPreparationDependenciesInput {

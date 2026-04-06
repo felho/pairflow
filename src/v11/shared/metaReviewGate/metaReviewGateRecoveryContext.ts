@@ -4,7 +4,7 @@ import type {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
 } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
-import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import type { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import type {
   readStateSnapshot,
   writeStateSnapshot,

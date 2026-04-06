@@ -4,7 +4,7 @@ import {
 } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { applyStateTransition } from "../../domain/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef

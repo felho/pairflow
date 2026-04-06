@@ -4,7 +4,7 @@ import {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../infrastructure/state/stateStore.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import {
   removeRuntimeSession
 } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";

@@ -1,6 +1,6 @@
 import {
   resolveRepoPath
-} from "../../../core/bubble/repoResolution.js";
+} from "../../infrastructure/executor/workspace/repoResolution.js";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import {

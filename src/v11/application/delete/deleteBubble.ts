@@ -2,7 +2,7 @@ import type {
   DeleteBubbleArtifacts,
   DeleteBubbleResult
 } from "../../../contracts/deleteBubble.js";
-import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
+import { BubbleLookupError } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
 import {

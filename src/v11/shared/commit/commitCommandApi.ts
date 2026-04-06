@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 
 import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import { normalizeStringList } from "../../../core/util/normalize.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import type {
   CommitBubbleInput,

@@ -7,7 +7,7 @@ import { SchemaValidationError } from "../../../core/validation.js";
 import {
   BubbleLookupError,
   resolveBubbleById
-} from "../../../core/bubble/bubbleLookup.js";
+} from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { shellQuote } from "../../../core/util/shellQuote.js";
 
 const worktreePathPlaceholder = "{{worktree_path}}";

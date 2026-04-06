@@ -2,7 +2,7 @@ import {
   computeWatchdogStatus,
   type WatchdogStatus
 } from "../../../core/runtime/watchdog.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";

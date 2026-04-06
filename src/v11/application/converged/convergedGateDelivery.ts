@@ -4,7 +4,7 @@ import type {
   EmitTmuxDeliveryNotificationResult
 } from "../../../core/runtime/tmuxDelivery.js";
 import type { applyMetaReviewGateOnConvergence } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
-import type { ResolvedBubbleWorkspace } from "../../../core/bubble/workspaceResolution.js";
+import type { ResolvedBubbleWorkspace } from "../../infrastructure/executor/workspace/workspaceResolution.js";
 import type { AgentName } from "../../../types/bubble.js";
 import {
   deliveryTargetRoleMetadataKey,

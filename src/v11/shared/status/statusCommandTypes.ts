@@ -1,4 +1,4 @@
-import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import type { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import type {
   BubbleFailingGate,
   BubbleRoundGateState,

@@ -4,7 +4,7 @@ import {
 } from "../metaReviewGate/metaReviewGateCommandApi.js";
 import type { recoverMetaReviewGateFromSnapshot } from "../metaReviewGate/metaReviewGateCommandApi.js";
 import type { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import type { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { BubbleWatchdogResult } from "../../application/watchdog/watchdogCommandContract.js";
 import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";

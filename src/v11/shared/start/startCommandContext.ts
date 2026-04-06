@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
 import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { buildBubbleTmuxSessionName } from "../../../core/runtime/tmuxManager.js";
 import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import { readReviewerBriefArtifact, readReviewerFocusArtifact } from "../../../core/reviewer/reviewerBrief.js";

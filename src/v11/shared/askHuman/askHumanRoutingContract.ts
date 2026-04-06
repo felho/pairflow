@@ -4,7 +4,7 @@ import type {
 import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
 import type {
   resolveBubbleFromWorkspaceCwd
-} from "../../../core/bubble/workspaceResolution.js";
+} from "../../infrastructure/executor/workspace/workspaceResolution.js";
 import type {
   readStateSnapshot
 } from "../../infrastructure/state/stateStore.js";

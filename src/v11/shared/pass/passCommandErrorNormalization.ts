@@ -1,4 +1,4 @@
-import { WorkspaceResolutionError } from "../../../core/bubble/workspaceResolution.js";
+import { WorkspaceResolutionError } from "../../infrastructure/executor/workspace/workspaceResolution.js";
 
 export interface NormalizePassCommandErrorInput {
   error: unknown;

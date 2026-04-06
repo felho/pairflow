@@ -1,6 +1,6 @@
 import { writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import type { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import type { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
 import {
   resolveDeliveryMessageRef,

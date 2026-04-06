@@ -1,4 +1,4 @@
-import type { resolveRepoPath } from "../../../core/bubble/repoResolution.js";
+import type { resolveRepoPath } from "../../infrastructure/executor/workspace/repoResolution.js";
 import type {
   persistPassValidationRecoveryMarker,
   PassValidationRecoveryMarkerPersistWarning

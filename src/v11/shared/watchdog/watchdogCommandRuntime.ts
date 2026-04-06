@@ -1,4 +1,4 @@
-import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
+import { BubbleLookupError } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { normalizeBubbleWatchdogError } from "./watchdogCommandErrorNormalization.js";
 import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
 

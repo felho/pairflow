@@ -4,7 +4,7 @@ import { appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/tra
 import { applyStateTransition } from "../../domain/state/machine.js";
 import { buildRunningExecutionContext } from "../../shared/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef
