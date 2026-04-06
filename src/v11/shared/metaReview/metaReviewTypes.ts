@@ -1,5 +1,4 @@
 import type {
-  BubbleStateSnapshot,
   MetaReviewRecommendation,
   MetaReviewRunStatus
 } from "../../../types/bubble.js";
@@ -26,15 +25,6 @@ export interface MetaReviewResult {
   updated_at: string;
   warnings: MetaReviewRunWarning[];
   report_json?: Record<string, unknown>;
-}
-
-type MetaReviewCanonicalResultFields = Omit<MetaReviewResult, "bubble_id">;
-
-export interface MetaReviewRetainedRunResult extends MetaReviewCanonicalResultFields {
-  bubbleId: string;
-  bubble_id?: string;
-  depth: MetaReviewDepth;
-  lifecycle_state: BubbleStateSnapshot["state"];
 }
 
 export interface MetaReviewStatusView {

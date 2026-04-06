@@ -87,24 +87,49 @@ import {
 import type {
   MetaReviewDepth as MetaReviewDepthV11,
   MetaReviewLastReportView as MetaReviewLastReportViewV11,
-  MetaReviewRetainedRunResult as MetaReviewRunResultV11,
   MetaReviewRunWarning as MetaReviewRunWarningV11,
   MetaReviewStatusView as MetaReviewStatusViewV11
 } from "../../v11/shared/metaReview/metaReviewTypes.js";
 import type { MetaReviewSubmitResult as MetaReviewSubmitResultV11 } from "../../v11/shared/metaReview/metaReviewCommandContract.js";
 import type { MetaReviewReviewerVerdict as MetaReviewReviewerVerdictV11 } from "../../v11/domain/metaReview/metaReviewReviewerVerdict.js";
-import type { MetaReviewLiveRunnerOutputBridge as MetaReviewLiveRunnerOutputV11 } from "../../v11/application/metaReview/metaReviewRunnerOutput.js";
 
 const CANONICAL_META_REVIEW_REPORT_REF = "artifacts/meta-review-last.json";
 
 export type MetaReviewDepth = MetaReviewDepthV11;
 export type MetaReviewReviewerVerdict = MetaReviewReviewerVerdictV11;
-export type MetaReviewLiveRunnerOutput = MetaReviewLiveRunnerOutputV11;
 export type MetaReviewStatusView = MetaReviewStatusViewV11;
 export type MetaReviewLastReportView = MetaReviewLastReportViewV11;
 export type MetaReviewRunWarning = MetaReviewRunWarningV11;
-export type MetaReviewRunResult = MetaReviewRunResultV11;
 export type MetaReviewSubmitResult = MetaReviewSubmitResultV11;
+
+interface MetaReviewLiveRunnerOutput {
+  recommendation: MetaReviewRecommendation;
+  summary?: string;
+  rework_target_message?: string | null;
+  report_json?: Record<string, unknown>;
+}
+
+// Compat-only retained result for the legacy live-run test seam.
+// Concrete remaining consumers after Phase 2B: direct core tests and recovery
+// parity fixtures that still seed `runMetaReview`-shaped results.
+// Deletion trigger: remove or rewrite the remaining tests to seed canonical
+// `MetaReviewResult` snapshots directly instead of calling/constructing the
+// retained live-run path.
+export interface MetaReviewRunResult {
+  bubbleId: string;
+  bubble_id?: string;
+  depth: MetaReviewDepth;
+  run_id?: string;
+  status: MetaReviewRunStatus;
+  recommendation: MetaReviewRecommendation;
+  summary: string | null;
+  report_ref: string;
+  rework_target_message: string | null;
+  updated_at: string;
+  lifecycle_state: BubbleStateSnapshot["state"];
+  warnings: MetaReviewRunWarning[];
+  report_json?: Record<string, unknown>;
+}
 
 export interface MetaReviewReadInput {
   bubbleId: string;

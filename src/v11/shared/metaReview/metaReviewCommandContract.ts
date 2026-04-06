@@ -7,7 +7,6 @@ export type {
   MetaReviewDepth,
   MetaReviewLastReportView,
   MetaReviewResult,
-  MetaReviewRetainedRunResult,
   MetaReviewRunWarning,
   MetaReviewStatusView
 } from "./metaReviewTypes.js";
