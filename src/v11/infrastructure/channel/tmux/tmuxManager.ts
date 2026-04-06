@@ -1,0 +1,512 @@
+import { createHash } from "node:crypto";
+import { spawn } from "node:child_process";
+import {
+  confirmTmuxPaneMarkerSubmission,
+  maybeAcceptClaudeTrustPrompt,
+  sendAndSubmitTmuxPaneMessage,
+  submitTmuxPaneInput
+} from "./tmuxInput.js";
+
+export const runtimePaneIndices = {
+  status: 0,
+  implementer: 1,
+  reviewer: 2,
+  metaReviewer: 3
+} as const;
+
+export interface TmuxRunResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+}
+
+export interface TmuxRunOptions {
+  cwd?: string;
+  allowFailure?: boolean;
+}
+
+export type TmuxRunner = (
+  args: string[],
+  options?: TmuxRunOptions
+) => Promise<TmuxRunResult>;
+
+export interface LaunchBubbleTmuxSessionInput {
+  bubbleId: string;
+  worktreePath: string;
+  statusCommand: string;
+  implementerCommand: string;
+  reviewerCommand: string;
+  metaReviewerCommand?: string;
+  statusPaneLabel?: string;
+  implementerPaneLabel?: string;
+  reviewerPaneLabel?: string;
+  metaReviewerPaneLabel?: string;
+  implementerBootstrapMessage?: string;
+  reviewerBootstrapMessage?: string;
+  metaReviewerBootstrapMessage?: string;
+  implementerSubmitStartupPrompt?: boolean;
+  reviewerSubmitStartupPrompt?: boolean;
+  metaReviewerSubmitStartupPrompt?: boolean;
+  implementerKickoffMessage?: string;
+  reviewerKickoffMessage?: string;
+  metaReviewerKickoffMessage?: string;
+  runner?: TmuxRunner;
+}
+
+export interface LaunchBubbleTmuxSessionResult {
+  sessionName: string;
+}
+
+function buildStatusPaneLabel(bubbleId: string): string {
+  return `[orchestrator/status]-[${bubbleId}]`;
+}
+
+function resolvePairflowPaneMessageMarker(message: string): string | undefined {
+  const match = /\[pairflow\]\s+bubble=\S+/u.exec(message);
+  return match?.[0];
+}
+
+export interface TerminateBubbleTmuxSessionInput {
+  bubbleId?: string;
+  sessionName?: string;
+  runner?: TmuxRunner;
+}
+
+export interface TerminateBubbleTmuxSessionResult {
+  sessionName: string;
+  existed: boolean;
+}
+
+export interface RespawnTmuxPaneCommandInput {
+  sessionName: string;
+  paneIndex: number;
+  cwd: string;
+  command: string;
+  runner?: TmuxRunner;
+}
+
+export class TmuxCommandError extends Error {
+  public readonly args: string[];
+  public readonly exitCode: number;
+  public readonly stderr: string;
+
+  public constructor(args: string[], exitCode: number, stderr: string) {
+    super(
+      `tmux command failed (exit ${exitCode}): tmux ${args.join(" ")}\n${stderr.trim()}`
+    );
+    this.name = "TmuxCommandError";
+    this.args = args;
+    this.exitCode = exitCode;
+    this.stderr = stderr;
+  }
+}
+
+export class TmuxSessionExistsError extends Error {
+  public readonly sessionName: string;
+
+  public constructor(sessionName: string) {
+    super(`tmux session already exists: ${sessionName}`);
+    this.name = "TmuxSessionExistsError";
+    this.sessionName = sessionName;
+  }
+}
+
+function parseTmuxPaneId(stdout: string, command: string[]): string {
+  const paneId = stdout.trim();
+  if (!/^%[0-9]+$/u.test(paneId)) {
+    throw new Error(
+      `tmux did not return a pane id for command: tmux ${command.join(" ")} (stdout=${JSON.stringify(stdout)})`
+    );
+  }
+  return paneId;
+}
+
+function normalizeSessionComponent(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_-]/gu, "-").replace(/-+/gu, "-");
+}
+
+export function buildBubbleTmuxSessionName(bubbleId: string): string {
+  const maxSessionNameLength = 32;
+  const sessionPrefix = "pf-";
+  const normalized = normalizeSessionComponent(bubbleId.trim());
+  if (normalized.length === 0) {
+    throw new Error("Bubble id cannot be empty for tmux session naming.");
+  }
+
+  const directName = `${sessionPrefix}${normalized}`;
+  if (directName.length <= maxSessionNameLength) {
+    return directName;
+  }
+
+  const hashSuffix = createHash("sha1")
+    .update(normalized)
+    .digest("hex")
+    .slice(0, 8);
+  const headMaxLength = maxSessionNameLength - sessionPrefix.length - 1 - hashSuffix.length;
+  const head = normalized.slice(0, Math.max(1, headMaxLength)).replace(/-+$/gu, "");
+  return `${sessionPrefix}${head}-${hashSuffix}`;
+}
+
+export const runTmux: TmuxRunner = async (
+  args: string[],
+  options: TmuxRunOptions = {}
+): Promise<TmuxRunResult> =>
+  new Promise((resolvePromise, rejectPromise) => {
+    const env = { ...process.env };
+    delete env.CLAUDECODE;
+    const child = spawn("tmux", args, {
+      cwd: options.cwd,
+      env,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk: string) => {
+      stderr += chunk;
+    });
+
+    child.on("error", (error) => {
+      rejectPromise(error);
+    });
+
+    child.on("close", (exitCode) => {
+      const code = exitCode ?? 1;
+      if (code !== 0 && !options.allowFailure) {
+        rejectPromise(new TmuxCommandError(args, code, stderr));
+        return;
+      }
+
+      resolvePromise({
+        stdout,
+        stderr,
+        exitCode: code
+      });
+    });
+  });
+
+export async function launchBubbleTmuxSession(
+  input: LaunchBubbleTmuxSessionInput
+): Promise<LaunchBubbleTmuxSessionResult> {
+  const runner = input.runner ?? runTmux;
+  const sessionName = buildBubbleTmuxSessionName(input.bubbleId);
+  const statusPaneHeight = 13;
+  const tmuxPaneSeparators = 4;
+  const metaReviewerCommand = input.metaReviewerCommand ?? input.reviewerCommand;
+  const statusPaneLabel = input.statusPaneLabel ?? buildStatusPaneLabel(input.bubbleId);
+  const implementerPaneLabel = input.implementerPaneLabel ?? "[codex/implementer]";
+  const reviewerPaneLabel = input.reviewerPaneLabel ?? "[claude/reviewer]";
+  const metaReviewerPaneLabel =
+    input.metaReviewerPaneLabel ?? "[codex/meta-reviewer]";
+
+  const hasSession = await runner(["has-session", "-t", sessionName], {
+    allowFailure: true
+  });
+  if (hasSession.exitCode === 0) {
+    throw new TmuxSessionExistsError(sessionName);
+  }
+
+  await runner([
+    "new-session",
+    "-d",
+    "-s",
+    sessionName,
+    "-c",
+    input.worktreePath,
+    input.statusCommand
+  ]);
+  // Keep pane indices stable even if one startup command exits unexpectedly.
+  // Runtime routing depends on fixed 0/1/2/3 pane positions.
+  await runner([
+    "set-option",
+    "-t",
+    `${sessionName}:0`,
+    "remain-on-exit",
+    "on"
+  ]);
+  const paneBorderFormat = [
+    "#{?#{==:#{pane_index},0},",
+    statusPaneLabel,
+    ",#{?#{==:#{pane_index},1},",
+    implementerPaneLabel,
+    ",#{?#{==:#{pane_index},2},",
+    reviewerPaneLabel,
+    ",#{?#{==:#{pane_index},3},",
+    metaReviewerPaneLabel,
+    ",pane-#{pane_index}}}}}"
+  ].join("");
+  await runner([
+    "set-window-option",
+    "-t",
+    `${sessionName}:0`,
+    "pane-border-status",
+    "top"
+  ]);
+  await runner([
+    "set-window-option",
+    "-t",
+    `${sessionName}:0`,
+    "pane-border-format",
+    paneBorderFormat
+  ]);
+  // Strip selected env vars from both tmux server-global and session env.
+  // The client-side env is not enough: panes inherit from the tmux server.
+  // - CLAUDECODE: prevents nested Claude Code false-positive detection.
+  // - NO_COLOR: allows status-pane ANSI colors by default in tmux.
+  const envVarsToUnset = ["CLAUDECODE", "NO_COLOR"] as const;
+  for (const variableName of envVarsToUnset) {
+    await runner(["set-environment", "-g", "-u", variableName]);
+    await runner(["set-environment", "-t", sessionName, "-u", variableName]);
+  }
+  const statusPane = `${sessionName}:0.0`;
+  // Split status pane to create implementer pane.
+  const implementerSplitCommand = [
+    "split-window",
+    "-v",
+    "-P",
+    "-F",
+    "#{pane_id}",
+    "-t",
+    statusPane,
+    "-c",
+    input.worktreePath,
+    input.implementerCommand
+  ];
+  const implementerSplit = await runner(implementerSplitCommand);
+  const implementerPaneId = parseTmuxPaneId(implementerSplit.stdout, implementerSplitCommand);
+  // Fix status pane to 13 lines BEFORE splitting for reviewer, so the
+  // subsequent 50/50 split divides the remaining space equally.
+  await runner([
+    "resize-pane",
+    "-t",
+    statusPane,
+    "-y",
+    String(statusPaneHeight)
+  ]);
+  // Split implementer pane in half for reviewer.
+  const reviewerSplitCommand = [
+    "split-window",
+    "-v",
+    "-P",
+    "-F",
+    "#{pane_id}",
+    "-t",
+    implementerPaneId,
+    "-p",
+    "50",
+    "-c",
+    input.worktreePath,
+    input.reviewerCommand
+  ];
+  const reviewerSplit = await runner(reviewerSplitCommand);
+  const reviewerPaneId = parseTmuxPaneId(reviewerSplit.stdout, reviewerSplitCommand);
+  // Split reviewer pane in half for dedicated meta-reviewer pane.
+  const metaReviewerSplitCommand = [
+    "split-window",
+    "-v",
+    "-P",
+    "-F",
+    "#{pane_id}",
+    "-t",
+    reviewerPaneId,
+    "-p",
+    "50",
+    "-c",
+    input.worktreePath,
+    metaReviewerCommand
+  ];
+  const metaReviewerSplit = await runner(metaReviewerSplitCommand);
+  const metaReviewerPaneId = parseTmuxPaneId(
+    metaReviewerSplit.stdout,
+    metaReviewerSplitCommand
+  );
+  // Re-fix status pane after the second split — the split may have
+  // redistributed vertical space away from the initial 13-line resize.
+  await runner([
+    "resize-pane",
+    "-t",
+    statusPane,
+    "-y",
+    String(statusPaneHeight)
+  ]);
+  // Keep the status pane fixed at 13 lines when the terminal is resized.
+  // We avoid after-resize-pane (which would recurse on its own resize).
+  // client-resized fires when an attached client's terminal changes size.
+  // window-resized fires when the window dimensions change (including on
+  // initial client attach to a detached session).
+  // #{window_height} is expanded by tmux before passing to run-shell.
+  // All resize logic runs inside a single run-shell to avoid spawn quoting issues.
+  const layoutScript = [
+    `tmux resize-pane -t ${statusPane} -y ${statusPaneHeight} 2>/dev/null || true`,
+    `WINDOW_HEIGHT=$(tmux display-message -p -t ${sessionName}:0 '#{window_height}' 2>/dev/null || echo 0)`,
+    "case \"$WINDOW_HEIGHT\" in ''|*[!0-9]*) WINDOW_HEIGHT=0 ;; esac",
+    `REMAIN=$((WINDOW_HEIGHT - ${statusPaneHeight + tmuxPaneSeparators}))`,
+    "if [ $REMAIN -lt 3 ]; then REMAIN=3; fi",
+    "ROW=$((REMAIN / 3))",
+    "if [ $ROW -lt 1 ]; then ROW=1; fi",
+    "ROW_LAST=$((REMAIN - (ROW * 2)))",
+    "if [ $ROW_LAST -lt 1 ]; then ROW_LAST=1; fi",
+    `tmux resize-pane -t ${implementerPaneId} -y $ROW 2>/dev/null || true`,
+    `tmux resize-pane -t ${reviewerPaneId} -y $ROW 2>/dev/null || true`,
+    `tmux resize-pane -t ${metaReviewerPaneId} -y $ROW_LAST 2>/dev/null || true`
+  ].join("; ");
+  // For hooks, escape bare $VAR and embedded " so they survive tmux's
+  // double-quote expansion in the set-hook run-shell argument.
+  // Without this, tmux expands $VAR as tmux env variables (empty) at
+  // set-hook time, breaking the resize calculations.
+  const hookLayoutScript = layoutScript
+    .replace(/"/g, '\\"')
+    .replace(/\$([A-Z_][A-Z_0-9]*)(?!\()/g, "\\$$$1");
+  const s = sessionName;
+  await runner([
+    "set-hook",
+    "-t",
+    s,
+    "client-resized",
+    `run-shell "${hookLayoutScript}"`
+  ]);
+  await runner([
+    "set-hook",
+    "-t",
+    s,
+    "window-resized",
+    `run-shell "${hookLayoutScript}"`
+  ]);
+  await runner(["run-shell", layoutScript]);
+  const sleep = (ms: number): Promise<void> =>
+    new Promise((resolvePromise) => {
+      setTimeout(resolvePromise, ms);
+    });
+  const submitStartupPrompt = async (
+    targetPane: string,
+    shouldSubmit: boolean | undefined
+  ): Promise<void> => {
+    if (!shouldSubmit) {
+      return;
+    }
+
+    // Codex currently prefills the initial prompt in interactive mode but
+    // does not reliably auto-submit it. Give the TUI a moment to boot, then
+    // press Enter once so the seeded startup prompt begins executing.
+    await sleep(1500);
+    await submitTmuxPaneInput(runner, targetPane);
+  };
+  const sendPaneMessage = async (
+    targetPane: string,
+    message: string | undefined
+  ): Promise<void> => {
+    if ((message?.trim().length ?? 0) === 0) {
+      return;
+    }
+
+    // Claude can pause on first-use trust prompt for each worktree.
+    // Best effort auto-accept keeps startup fully non-interactive.
+    await maybeAcceptClaudeTrustPrompt(runner, targetPane).catch(() => undefined);
+
+    const concreteMessage = message as string;
+    await sendAndSubmitTmuxPaneMessage(runner, targetPane, concreteMessage);
+    const marker = resolvePairflowPaneMessageMarker(concreteMessage);
+    if (marker !== undefined) {
+      await confirmTmuxPaneMarkerSubmission({
+        runner,
+        targetPane,
+        marker
+      });
+    }
+  };
+
+  await submitStartupPrompt(
+    implementerPaneId,
+    input.implementerSubmitStartupPrompt
+  );
+  await submitStartupPrompt(
+    reviewerPaneId,
+    input.reviewerSubmitStartupPrompt
+  );
+  await submitStartupPrompt(
+    metaReviewerPaneId,
+    input.metaReviewerSubmitStartupPrompt
+  );
+  await sendPaneMessage(implementerPaneId, input.implementerBootstrapMessage);
+  await sendPaneMessage(reviewerPaneId, input.reviewerBootstrapMessage);
+  await sendPaneMessage(metaReviewerPaneId, input.metaReviewerBootstrapMessage);
+  await sendPaneMessage(implementerPaneId, input.implementerKickoffMessage);
+  await sendPaneMessage(reviewerPaneId, input.reviewerKickoffMessage);
+  await sendPaneMessage(metaReviewerPaneId, input.metaReviewerKickoffMessage);
+
+  return {
+    sessionName
+  };
+}
+
+function isTmuxMissingSessionError(output: string): boolean {
+  const normalized = output.toLowerCase();
+  return (
+    normalized.includes("can't find session") ||
+    normalized.includes("no server running") ||
+    normalized.includes("no current target")
+  );
+}
+
+export async function terminateBubbleTmuxSession(
+  input: TerminateBubbleTmuxSessionInput
+): Promise<TerminateBubbleTmuxSessionResult> {
+  const runner = input.runner ?? runTmux;
+  const sessionName =
+    input.sessionName ?? (input.bubbleId !== undefined
+      ? buildBubbleTmuxSessionName(input.bubbleId)
+      : undefined);
+
+  if (sessionName === undefined) {
+    throw new Error(
+      "terminateBubbleTmuxSession requires either sessionName or bubbleId."
+    );
+  }
+
+  const result = await runner(["kill-session", "-t", sessionName], {
+    allowFailure: true
+  });
+
+  if (result.exitCode === 0) {
+    return {
+      sessionName,
+      existed: true
+    };
+  }
+
+  const combinedOutput = `${result.stderr}\n${result.stdout}`;
+  if (isTmuxMissingSessionError(combinedOutput)) {
+    return {
+      sessionName,
+      existed: false
+    };
+  }
+
+  throw new TmuxCommandError(
+    ["kill-session", "-t", sessionName],
+    result.exitCode,
+    result.stderr
+  );
+}
+
+export async function respawnTmuxPaneCommand(
+  input: RespawnTmuxPaneCommandInput
+): Promise<void> {
+  const runner = input.runner ?? runTmux;
+  const targetPane = `${input.sessionName}:0.${input.paneIndex}`;
+  await runner([
+    "respawn-pane",
+    "-k",
+    "-t",
+    targetPane,
+    "-c",
+    input.cwd,
+    input.command
+  ]);
+}
