@@ -2,7 +2,7 @@ import type {
   RepeatCleanAutoconvergeReasonCode,
   RepeatCleanAutoconvergeReasonDetail
 } from "../../../core/convergence/repeatCleanAutoconverge.js";
-import type { EmitTmuxDeliveryNotificationResult } from "../../../core/runtime/tmuxDelivery.js";
+import type { EmitTmuxDeliveryNotificationResult } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 import type { ReviewerTestExecutionDirective } from "../../../core/reviewer/testEvidence.js";
 import type { ReviewVerificationInputResolution } from "../../../core/reviewer/reviewVerification.js";
 import type { LoadedStateSnapshot } from "../../infrastructure/state/stateStore.js";

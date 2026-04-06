@@ -3,7 +3,7 @@ import type {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
 } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
-import type { TmuxCommandError } from "../../../core/runtime/tmuxManager.js";
+import type { TmuxCommandError } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import type { StartBubbleError } from "../../../core/bubble/startBubble.js";
 
 export interface NormalizeRestartBubbleErrorInput {

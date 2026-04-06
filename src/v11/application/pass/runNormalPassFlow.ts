@@ -1,4 +1,4 @@
-import type { EmitTmuxDeliveryNotificationResult } from "../../../core/runtime/tmuxDelivery.js";
+import type { EmitTmuxDeliveryNotificationResult } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 import type { LoadedStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import type { ReviewerTestExecutionDirective } from "../../../core/reviewer/testEvidence.js";
 import type { Finding } from "../../../types/findings.js";

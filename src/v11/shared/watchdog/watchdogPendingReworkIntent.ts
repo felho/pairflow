@@ -5,7 +5,7 @@ import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubble
 import {
   resolveDeliveryMessageRef,
   type emitTmuxDeliveryNotification
-} from "../../../core/runtime/tmuxDelivery.js";
+} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import { applyDeferredReworkIntent } from "../../../core/human/reworkIntent.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";

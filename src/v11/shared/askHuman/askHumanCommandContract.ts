@@ -1,9 +1,9 @@
-import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
+import type { emitBubbleNotification } from "../../infrastructure/channel/notifications.js";
 import type {
   DeliveryTargetReasonCode,
   EmitTmuxDeliveryNotificationResult,
   emitTmuxDeliveryNotification
-} from "../../../core/runtime/tmuxDelivery.js";
+} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";

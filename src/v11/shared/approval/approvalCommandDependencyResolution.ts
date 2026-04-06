@@ -8,7 +8,7 @@ import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbl
 import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef
-} from "../../../core/runtime/tmuxDelivery.js";
+} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
 import { queueDeferredReworkIntent } from "../../../core/human/reworkIntent.js";

@@ -1,11 +1,11 @@
 import { join } from "node:path";
 
 import { appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
-import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
+import { emitBubbleNotification } from "../../infrastructure/channel/notifications.js";
 import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef,
-} from "../../../core/runtime/tmuxDelivery.js";
+} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 import {
   applyMetaReviewGateOnConvergence,
   recoverMetaReviewGateFromSnapshot

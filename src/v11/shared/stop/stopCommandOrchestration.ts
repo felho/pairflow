@@ -10,7 +10,7 @@ import {
 } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import {
   terminateBubbleTmuxSession
-} from "../../../core/runtime/tmuxManager.js";
+} from "../../infrastructure/channel/tmux/tmuxManager.js";
 import type {
   StopBubbleDependencies,
   StopBubbleInput,

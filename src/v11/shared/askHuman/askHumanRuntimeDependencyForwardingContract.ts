@@ -1,5 +1,5 @@
-import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
-import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
+import type { emitBubbleNotification } from "../../infrastructure/channel/notifications.js";
+import type { emitTmuxDeliveryNotification } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 
 export interface AskHumanRuntimeNotificationDependencies {
   emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification | undefined;

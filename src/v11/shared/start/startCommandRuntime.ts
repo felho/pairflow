@@ -3,7 +3,7 @@ import { WorkspaceBootstrapError } from "../../../core/workspace/worktreeManager
 import {
   TmuxCommandError,
   TmuxSessionExistsError
-} from "../../../core/runtime/tmuxManager.js";
+} from "../../infrastructure/channel/tmux/tmuxManager.js";
 import {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError

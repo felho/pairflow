@@ -4,8 +4,8 @@ import type { ReviewerTestExecutionDirective } from "../../../core/reviewer/test
 import type {
   EmitTmuxDeliveryNotificationResult,
   emitTmuxDeliveryNotification
-} from "../../../core/runtime/tmuxDelivery.js";
-import type { refreshReviewerContext } from "../../../core/runtime/reviewerContext.js";
+} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
+import type { refreshReviewerContext } from "../../infrastructure/channel/tmux/reviewerContext.js";
 
 export interface ExecuteNormalPassDeliveryInput {
   senderRole: "implementer" | "reviewer";

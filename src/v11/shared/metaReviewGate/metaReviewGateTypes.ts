@@ -5,8 +5,8 @@ import type {
   readTranscriptEnvelopes
 } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import type { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
-import type { runTmux } from "../../../core/runtime/tmuxManager.js";
+import type { setMetaReviewerPaneBinding } from "../../infrastructure/channel/tmux/metaReviewerPaneBinding.js";
+import type { runTmux } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import type {
   readStateSnapshot,
   writeStateSnapshot
