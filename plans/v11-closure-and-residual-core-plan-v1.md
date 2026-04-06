@@ -548,18 +548,15 @@ Exit criterion:
 3. `plans/tasks/v11-closure-meta-review-live-run-seam-phase2b.md`
    - `runMetaReview` deletion order/cleanup
 
-4. `plans/tasks/v11-closure-meta-review-compat-bridge-removal-phase2c.md`
-   - retained compat bridge-ek es fixture-seedek kanonikus result shape-re huzasa
-
-5. `plans/tasks/v11-closure-list-read-model-phase3.md`
+4. `plans/tasks/v11-closure-list-read-model-phase3.md`
    - read-model closure after meta-review ownership resolution
 
-6. `plans/tasks/v11-infrastructure-topology-and-migration-plan-phase4.md`
+5. `plans/tasks/v11-infrastructure-topology-and-migration-plan-phase4.md`
    - concrete `v11/infrastructure` topology
 
-7. `plans/tasks/v11-infrastructure-runtime-primitives-phase4a.md`
-8. `plans/tasks/v11-infrastructure-state-protocol-phase4b.md`
-9. `plans/tasks/v11-infrastructure-archive-phase4c.md`
+6. `plans/tasks/v11-infrastructure-runtime-primitives-phase4a.md`
+7. `plans/tasks/v11-infrastructure-state-protocol-phase4b.md`
+8. `plans/tasks/v11-infrastructure-archive-phase4c.md`
 
 ## Validation Strategy
 
