@@ -6,7 +6,7 @@ import {
   type MetaReviewRecommendation,
   type MetaReviewRunStatus
 } from "../../../types/bubble.js";
-import type { MetaReviewRunResult } from "../../../core/bubble/metaReview.js";
+import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
 import {
   MetaReviewGateError,
   type MetaReviewGateRoute

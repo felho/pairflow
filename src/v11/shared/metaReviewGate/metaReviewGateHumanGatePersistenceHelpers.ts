@@ -7,7 +7,7 @@ import type {
   BubbleStateSnapshot,
   MetaReviewRecommendation
 } from "../../../types/bubble.js";
-import type { MetaReviewRunResult } from "../../../core/bubble/metaReview.js";
+import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
 import type { FindingsParityMetadata } from "../../../types/protocol.js";
 import type {
   appendProtocolEnvelope,

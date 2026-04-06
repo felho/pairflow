@@ -1,5 +1,5 @@
 import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
-import type { MetaReviewRunResult } from "../../../core/bubble/metaReview.js";
+import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { FindingsParityMetadata } from "../../../types/protocol.js";
 import { resolveFindingsParityMetadataFromReportJson } from "./metaReviewGateFindingsMetadata.js";

@@ -1,4 +1,4 @@
-import type { MetaReviewRunResult } from "../../../core/bubble/metaReview.js";
+import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
 import type { FindingsParityMetadata, FindingsParityStatus } from "../../../types/protocol.js";
 import {
   resolveFindingsArtifactPath,

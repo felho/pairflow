@@ -1,9 +1,9 @@
 import {
-  hasCanonicalSubmitForActiveMetaReviewRound,
-  type MetaReviewRunResult
+  hasCanonicalSubmitForActiveMetaReviewRound
 } from "../../../core/bubble/metaReview.js";
 import type { readFile } from "node:fs/promises";
 import type { BubbleMetaReviewSnapshotState } from "../../../types/bubble.js";
+import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
 import { readMetaReviewReportJsonArtifact } from "./metaReviewGateFindingsMetadata.js";
 import {
   normalizeRecoveredMetaReviewRunResult,

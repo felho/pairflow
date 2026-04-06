@@ -2,7 +2,7 @@ import type {
   BubbleMetaReviewSnapshotState
 } from "../../../types/bubble.js";
 import type { FindingsParityMetadata } from "../../../types/protocol.js";
-import type { MetaReviewRunResult } from "../../../core/bubble/metaReview.js";
+import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
 import type { readFile } from "node:fs/promises";
 import { validateStructuredMetaReviewPositiveClaim } from "./metaReviewGateFindingsValidation.js";
 

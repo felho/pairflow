@@ -2,7 +2,7 @@ import {
   DEFAULT_META_REVIEW_AUTO_REWORK_LIMIT,
   type BubbleMetaReviewSnapshotState
 } from "../../../types/bubble.js";
-import type { MetaReviewRunResult } from "../../../core/bubble/metaReview.js";
+import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
 import {
   resolveFindingsParityMetadataForEnvelope as resolveFindingsParityMetadataForEnvelopeFromProtocol,
   type FindingsParityMetadata

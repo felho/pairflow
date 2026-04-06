@@ -84,9 +84,27 @@ import {
   hasGlobalNoFindingsSummaryAssertion,
   evaluatePositiveSummaryFindingsAssertion
 } from "../convergence/policy.js";
+import type {
+  MetaReviewDepth as MetaReviewDepthV11,
+  MetaReviewLastReportView as MetaReviewLastReportViewV11,
+  MetaReviewRunResult as MetaReviewRunResultV11,
+  MetaReviewRunWarning as MetaReviewRunWarningV11,
+  MetaReviewStatusView as MetaReviewStatusViewV11
+} from "../../v11/shared/metaReview/metaReviewTypes.js";
+import type { MetaReviewSubmitResult as MetaReviewSubmitResultV11 } from "../../v11/shared/metaReview/metaReviewCommandContract.js";
+import type { MetaReviewReviewerVerdict as MetaReviewReviewerVerdictV11 } from "../../v11/domain/metaReview/metaReviewReviewerVerdict.js";
+import type { MetaReviewRunnerOutput as MetaReviewRunnerOutputV11 } from "../../v11/application/metaReview/metaReviewRunnerOutput.js";
+
 const CANONICAL_META_REVIEW_REPORT_REF = "artifacts/meta-review-last.json";
 
-export type MetaReviewDepth = "standard" | "deep";
+export type MetaReviewDepth = MetaReviewDepthV11;
+export type MetaReviewReviewerVerdict = MetaReviewReviewerVerdictV11;
+export type MetaReviewLiveRunnerOutput = MetaReviewRunnerOutputV11;
+export type MetaReviewStatusView = MetaReviewStatusViewV11;
+export type MetaReviewLastReportView = MetaReviewLastReportViewV11;
+export type MetaReviewRunWarning = MetaReviewRunWarningV11;
+export type MetaReviewRunResult = MetaReviewRunResultV11;
+export type MetaReviewSubmitResult = MetaReviewSubmitResultV11;
 
 export interface MetaReviewReadInput {
   bubbleId: string;
@@ -122,104 +140,6 @@ export interface MetaReviewLiveRunnerInput {
   runId: string;
   now: Date;
 }
-
-export interface MetaReviewLiveRunnerOutput {
-  recommendation: MetaReviewRecommendation;
-  summary?: string;
-  report_json?: Record<string, unknown>;
-  rework_target_message?: string;
-}
-
-export interface MetaReviewStatusView {
-  bubbleId: string;
-  has_run: boolean;
-  operator_surface: "projection_only";
-  projection_freshness:
-    | "no_snapshot"
-    | "current_round"
-    | "stale"
-    | "ahead"
-    | "round_missing"
-    | "unknown";
-  auto_rework_count: number;
-  auto_rework_limit: number;
-  sticky_human_gate: boolean;
-  last_autonomous_run_id: string | null;
-  last_autonomous_status: MetaReviewRunStatus | null;
-  last_autonomous_recommendation: MetaReviewRecommendation | null;
-  last_autonomous_summary: string | null;
-  last_autonomous_report_ref: string | null;
-  last_autonomous_rework_target_message: string | null;
-  last_autonomous_updated_at: string | null;
-  findings_claimed_open_total: number | null;
-  findings_artifact_open_total: number | null;
-  findings_blocking_open_total: number | null;
-  findings_advisory_open_total: number | null;
-  findings_artifact_status: string | null;
-  findings_digest_sha256: string | null;
-  meta_review_run_id: string | null;
-  findings_parity_status: FindingsParityStatus | null;
-  parity_diagnostics: string[];
-}
-
-export interface MetaReviewLastReportView {
-  bubbleId: string;
-  has_report: boolean;
-  operator_surface: "projection_only";
-  projection_freshness:
-    | "no_snapshot"
-    | "current_round"
-    | "stale"
-    | "ahead"
-    | "round_missing"
-    | "unknown";
-  report_ref: string | null;
-  summary: string | null;
-  updated_at: string | null;
-  report_json: Record<string, unknown> | null;
-  findings_claimed_open_total: number | null;
-  findings_artifact_open_total: number | null;
-  findings_blocking_open_total: number | null;
-  findings_advisory_open_total: number | null;
-  findings_artifact_status: string | null;
-  findings_digest_sha256: string | null;
-  meta_review_run_id: string | null;
-  findings_parity_status: FindingsParityStatus | null;
-  parity_diagnostics: string[];
-}
-
-export interface MetaReviewRunWarning {
-  reason_code:
-    | "META_REVIEW_RUNNER_ERROR"
-    | "META_REVIEW_ARTIFACT_WRITE_WARNING"
-    | "META_REVIEWER_PANE_UNAVAILABLE";
-  message: string;
-}
-
-export interface MetaReviewRunResult {
-  bubbleId: string;
-  depth: MetaReviewDepth;
-  run_id?: string;
-  status: MetaReviewRunStatus;
-  recommendation: MetaReviewRecommendation;
-  summary: string | null;
-  report_ref: string;
-  rework_target_message: string | null;
-  updated_at: string;
-  lifecycle_state: BubbleStateSnapshot["state"];
-  warnings: MetaReviewRunWarning[];
-  report_json?: Record<string, unknown>;
-}
-
-export type MetaReviewSubmitResult = Omit<
-  MetaReviewRunResult,
-  "depth" | "report_json"
-> & {
-  report_json: Record<string, unknown>;
-  gate_route: MetaReviewGateRoute;
-  gate_sequence: number;
-  gate_envelope_type: ProtocolEnvelope["type"];
-};
 
 type RecoverMetaReviewGateFromSnapshotFn = typeof recoverMetaReviewGateFromSnapshot;
 
@@ -1289,11 +1209,7 @@ function buildPaneMetaReviewPrompt(input: MetaReviewLiveRunnerInput): string {
 
 export function parseMetaReviewRunnerOutput(
   raw: string
-): {
-  recommendation: MetaReviewRecommendation;
-  summary: string;
-  reworkTargetMessage: string | null;
-} {
+): MetaReviewReviewerVerdict {
   const normalizeJsonControlCharactersInStrings = (input: string): string => {
     let output = "";
     let inString = false;
@@ -1409,7 +1325,7 @@ export function parseMetaReviewRunnerOutput(
   return {
     recommendation,
     summary,
-    reworkTargetMessage
+    rework_target_message: reworkTargetMessage
   };
 }
 
@@ -1549,18 +1465,14 @@ async function runCodexAgentLiveReview(
     const parsed = parseMetaReviewRunnerOutput(rawOutput.trim());
 
     return {
-      recommendation: parsed.recommendation,
-      summary: parsed.summary,
+      ...parsed,
       report_json: {
         source: "codex-exec",
         mode: "agent",
         depth: input.depth,
         bubble_id: input.bubbleId,
         run_id: input.runId
-      },
-      ...(parsed.reworkTargetMessage !== null
-        ? { rework_target_message: parsed.reworkTargetMessage }
-        : {})
+      }
     };
   } finally {
     await rm(scratchDir, { recursive: true, force: true }).catch(() => undefined);
@@ -1594,18 +1506,14 @@ async function runCodexPaneLiveReview(
   const parsed = parseMetaReviewRunnerOutput(rawOutput);
 
   return {
-    recommendation: parsed.recommendation,
-    summary: parsed.summary,
+    ...parsed,
     report_json: {
       source: "codex-pane",
       mode: "agent",
       depth: input.depth,
       bubble_id: input.bubbleId,
       run_id: input.runId
-    },
-    ...(parsed.reworkTargetMessage !== null
-      ? { rework_target_message: parsed.reworkTargetMessage }
-      : {})
+    }
   };
 }
 
@@ -2187,7 +2095,9 @@ export async function runMetaReview(
     recommendation = output.recommendation;
     status = mapRecommendationToStatus(recommendation);
     summary = normalizeOptionalText(output.summary);
-    reworkTargetMessage = normalizeOptionalText(output.rework_target_message);
+    reworkTargetMessage = normalizeOptionalText(
+      output.rework_target_message ?? undefined
+    );
     reportJson = output.report_json;
   } catch (error) {
     const failure = formatRunnerFailure(error);

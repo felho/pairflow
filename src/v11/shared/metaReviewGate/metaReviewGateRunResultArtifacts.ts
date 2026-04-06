@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 
 import type { BubbleMetaReviewSnapshotState, MetaReviewRunStatus } from "../../../types/bubble.js";
-import type { MetaReviewRunResult, MetaReviewRunWarning } from "../../../core/bubble/metaReview.js";
+import type { MetaReviewRunResult, MetaReviewRunWarning } from "../metaReview/metaReviewTypes.js";
 import {
   buildMetaReviewArtifactWriteWarning,
   buildRecoveredMetaReviewReportPayload,

@@ -1,4 +1,4 @@
-import type { MetaReviewRunResult, MetaReviewRunWarning } from "../../../core/bubble/metaReview.js";
+import type { MetaReviewRunResult, MetaReviewRunWarning } from "../metaReview/metaReviewTypes.js";
 
 export const metaReviewFallbackReportRef = "artifacts/meta-review-last.json";
 

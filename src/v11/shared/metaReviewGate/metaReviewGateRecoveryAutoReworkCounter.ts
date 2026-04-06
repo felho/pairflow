@@ -3,7 +3,7 @@ import {
   type LoadedStateSnapshot
 } from "../../../core/state/stateStore.js";
 import type { BubbleMetaReviewSnapshotState, BubbleStateSnapshot } from "../../../types/bubble.js";
-import type { MetaReviewRunResult } from "../../../core/bubble/metaReview.js";
+import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
 import {
   buildHydratedMetaReviewSnapshotFromRunResult,
   incrementAutoReworkCount,

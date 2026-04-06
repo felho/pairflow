@@ -3838,7 +3838,7 @@ line two","rework_target_message":null}`;
 
     expect(parsed.recommendation).toBe("approve");
     expect(parsed.summary).toBe("line one\nline two");
-    expect(parsed.reworkTargetMessage).toBeNull();
+    expect(parsed.rework_target_message).toBeNull();
   });
 });
 

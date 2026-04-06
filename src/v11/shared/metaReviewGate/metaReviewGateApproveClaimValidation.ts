@@ -3,7 +3,7 @@ import {
   evaluatePositiveSummaryFindingsAssertion,
   hasGlobalNoFindingsSummaryAssertion
 } from "../../../core/convergence/policy.js";
-import type { MetaReviewRunResult } from "../../../core/bubble/metaReview.js";
+import type { MetaReviewRunResult } from "../metaReview/metaReviewTypes.js";
 import type { FindingsParityMetadata } from "../../../types/protocol.js";
 import { resolveNonNegativeIntegerField } from "./metaReviewGateFindingsClaimParsing.js";
 import {
