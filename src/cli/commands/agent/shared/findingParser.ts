@@ -1,5 +1,5 @@
 import { isFindingSeverity, type FindingSeverity } from "../../../../types/findings.js";
-import { isLikelyStructuredRef } from "../../../../core/util/structuredRef.js";
+import { isLikelyStructuredRef } from "../../../../v11/shared/reference/structuredRef.js";
 
 export interface ParsedCliFinding {
   severity: FindingSeverity;

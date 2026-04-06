@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import * as actorEmitContextModule from "../../src/core/bubble/actorEmitContext.js";
+import * as actorEmitContextModule from "../../src/v11/shared/actorProtocol/actorEmitContext.js";
 import {
   getAgentEmitHelpText,
   parseAgentEmitCommandOptions,

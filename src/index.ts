@@ -323,7 +323,7 @@ export {
   formatProtocolEnvelopeId,
   TranscriptSequenceError
 } from "./v11/shared/protocol/sequenceAllocator.js";
-export { startUiServer } from "./core/ui/server.js";
+export { startUiServer } from "./v11/infrastructure/ui/server.js";
 export {
   appendProtocolEnvelopes,
   appendProtocolEnvelope,

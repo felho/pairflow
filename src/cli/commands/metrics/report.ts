@@ -1,7 +1,6 @@
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 
-import { normalizeRepoPath } from "../../../core/bubble/repoResolution.js";
 import {
   formatMetricsReportJson,
   formatMetricsReportTable
@@ -15,7 +14,8 @@ import type {
   MetricsReportFormat,
   MetricsReportResult
 } from "../../../v11/shared/metrics/report/types.js";
-import { isIsoTimestamp } from "../../../core/validation.js";
+import { normalizeRepoPath } from "../../../v11/infrastructure/executor/workspace/repoResolution.js";
+import { isIsoTimestamp } from "../../../v11/shared/validation/primitives.js";
 
 export interface MetricsReportCommandOptions {
   from: Date;

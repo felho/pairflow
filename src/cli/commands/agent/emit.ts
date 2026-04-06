@@ -23,7 +23,7 @@ import {
 import { emitActorProtocolFromWorkspaceV11 } from "../../../v11/application/actorProtocol/emitActorProtocolV11.js";
 import {
   resolveActorEmitContextByBubbleId
-} from "../../../core/bubble/actorEmitContext.js";
+} from "../../../v11/shared/actorProtocol/actorEmitContext.js";
 import { CliFindingParseError, parseCliFinding } from "./shared/findingParser.js";
 
 export interface AgentEmitHelpCommandOptions {

@@ -4,8 +4,11 @@ import { parseArgs } from "node:util";
 import {
   registerRepoInRegistry,
   type RegisterRepoResult
-} from "../../../core/repo/registry.js";
-import { assertGitRepository, GitRepositoryError } from "../../../core/workspace/git.js";
+} from "../../../v11/infrastructure/executor/workspace/repoRegistry.js";
+import {
+  assertGitRepository,
+  GitRepositoryError
+} from "../../../v11/infrastructure/workspace/git.js";
 
 export interface RepoAddCommandOptions {
   repoPath: string;

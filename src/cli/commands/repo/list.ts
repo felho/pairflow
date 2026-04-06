@@ -3,8 +3,8 @@ import { parseArgs } from "node:util";
 import {
   readRepoRegistry,
   type RepoRegistryEntry
-} from "../../../core/repo/registry.js";
-import { pathExists } from "../../../core/util/pathExists.js";
+} from "../../../v11/infrastructure/executor/workspace/repoRegistry.js";
+import { pathExists } from "../../../v11/infrastructure/foundation/fs/pathExists.js";
 
 export interface RepoListEntry extends RepoRegistryEntry {
   status: "exists" | "missing";

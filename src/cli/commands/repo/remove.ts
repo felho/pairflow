@@ -1,11 +1,11 @@
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 
-import { normalizeRepoPath } from "../../../core/bubble/repoResolution.js";
+import { normalizeRepoPath } from "../../../v11/infrastructure/executor/workspace/repoResolution.js";
 import {
   removeRepoFromRegistry,
   type RemoveRepoResult
-} from "../../../core/repo/registry.js";
+} from "../../../v11/infrastructure/executor/workspace/repoRegistry.js";
 
 export interface RepoRemoveCommandOptions {
   repoPath: string;
