@@ -10,7 +10,7 @@ import {
 } from "./createBubbleFinalization.js";
 import { prepareCreateBubbleFlowContext } from "./createBubbleFlowContext.js";
 
-export async function createBubbleV11(
+export async function runCreateBubbleFlow(
   input: BubbleCreateInput,
   dependencies: BubbleCreateDependencies = {}
 ): Promise<BubbleCreateResult> {

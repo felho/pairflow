@@ -2,8 +2,8 @@ export {
   BubbleCreateError as BubbleCreateErrorV11
 } from "./createCommandRuntime.js";
 export {
-  createBubbleV11,
-  createBubbleV11 as createBubble
+  runCreateBubbleFlow as createBubbleV11,
+  runCreateBubbleFlow as createBubble
 } from "./runCreateBubbleFlow.js";
 export {
   extractReviewerFocus as extractReviewerFocusV11
