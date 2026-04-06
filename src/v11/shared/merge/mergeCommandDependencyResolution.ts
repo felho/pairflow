@@ -4,7 +4,7 @@ import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbl
 import { cleanupWorktreeWorkspace } from "../../../core/workspace/worktreeManager.js";
 import { terminateBubbleTmuxSession } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import { removeRuntimeSession } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
-import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
+import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
 import type { MergeBubbleDependencies } from "../../application/merge/mergeCommandContract.js";
 

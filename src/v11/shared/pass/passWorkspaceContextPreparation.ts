@@ -7,7 +7,7 @@ import {
 import {
   ensureBubbleInstanceIdForMutation,
   type EnsureBubbleInstanceIdForMutationResult
-} from "../../../core/bubble/bubbleInstanceId.js";
+} from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
 import {
   resolveBubbleFromWorkspaceCwd,
   type ResolvedBubbleWorkspace

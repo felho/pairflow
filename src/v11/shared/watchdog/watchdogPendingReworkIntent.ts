@@ -6,7 +6,7 @@ import {
   resolveDeliveryMessageRef,
   type emitTmuxDeliveryNotification
 } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
-import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
+import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
 import { applyDeferredReworkIntent } from "../../../core/human/reworkIntent.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";

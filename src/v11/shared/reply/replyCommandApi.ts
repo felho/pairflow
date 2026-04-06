@@ -9,7 +9,7 @@ import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef
 } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
-import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
+import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
 import { ensureReplyWaitingHumanState } from "../../domain/reply/waitingHumanStateGuard.js";
 import { buildHumanReplyEnvelopeDraft } from "../../domain/reply/replyEnvelopeDraft.js";

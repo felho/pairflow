@@ -1,4 +1,4 @@
-import { type EnsureBubbleInstanceIdForMutationResult } from "../../../core/bubble/bubbleInstanceId.js";
+import { type EnsureBubbleInstanceIdForMutationResult } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
 import { type ResolvedBubbleWorkspace } from "../../infrastructure/executor/workspace/workspaceResolution.js";
 import { type SummaryVerifierConsistencyGateDecisionRecord } from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
 import { type appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";

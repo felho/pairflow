@@ -1,4 +1,4 @@
-import { generateBubbleInstanceId } from "../../../core/bubble/bubbleInstanceId.js";
+import { generateBubbleInstanceId } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
 import type {
   BubbleCreateInput,
   ResolvedTaskInput

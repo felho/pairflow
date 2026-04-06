@@ -1,6 +1,6 @@
 import type {
   ensureBubbleInstanceIdForMutation
-} from "../../../core/bubble/bubbleInstanceId.js";
+} from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
 import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";
 import type {
   resolveBubbleFromWorkspaceCwd

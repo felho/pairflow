@@ -3,7 +3,7 @@ import type {
   DeleteBubbleResult
 } from "../../../contracts/deleteBubble.js";
 import { BubbleLookupError } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
+import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
 import {
   RuntimeSessionsRegistryError,
