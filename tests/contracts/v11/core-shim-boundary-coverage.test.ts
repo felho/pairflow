@@ -99,4 +99,18 @@ describe("v11 residual core shim boundary coverage", () => {
 
     expect(violations).toEqual([]);
   });
+
+  it("keeps the public src/index.ts surface off core shim re-exports", async () => {
+    const repoRoot = process.cwd();
+    const indexPath = resolve(repoRoot, "src/index.ts");
+    const content = await readFile(indexPath, "utf8");
+    const importPattern =
+      /(?:^|\n)\s*(?:import|export)\b[\s\S]*?\bfrom\s+["']([^"']+)["']/gu;
+    const coreSpecifiers = [...content.matchAll(importPattern)]
+      .map((match) => match[1])
+      .filter((specifier): specifier is string => specifier !== undefined)
+      .filter((specifier) => specifier.startsWith("./core/"));
+
+    expect(coreSpecifiers).toEqual([]);
+  });
 });

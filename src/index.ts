@@ -28,10 +28,10 @@ export {
   resolveBubbleById
 } from "./v11/infrastructure/executor/workspace/bubbleLookup.js";
 export {
-  asBubbleInboxError,
-  BubbleInboxError,
-  getBubbleInbox
-} from "./core/bubble/inboxBubble.js";
+  asBubbleInboxErrorV11 as asBubbleInboxError,
+  BubbleInboxErrorV11 as BubbleInboxError,
+  getBubbleInboxV11 as getBubbleInbox
+} from "./v11/application/inbox/emitInboxV11.js";
 export {
   asBubbleCommitErrorV11 as asBubbleCommitError,
   BubbleCommitErrorV11 as BubbleCommitError,
@@ -47,7 +47,7 @@ export {
   executeOpenCommand,
   openBubble,
   OpenBubbleError
-} from "./core/bubble/openBubble.js";
+} from "./v11/application/open/emitOpenV11.js";
 export {
   asResumeBubbleErrorV11 as asResumeBubbleError,
   DEFAULT_RESUME_MESSAGE,
@@ -58,7 +58,7 @@ export {
   asRestartBubbleError,
   RestartBubbleError,
   restartBubble
-} from "./core/bubble/restartBubble.js";
+} from "./v11/application/restart/emitRestartV11.js";
 export {
   BubbleCreateError,
   createBubble
@@ -74,10 +74,10 @@ export {
   listBubblesV11 as listBubbles
 } from "./v11/application/list/emitListV11.js";
 export {
-  asStartupReconcilerError,
-  reconcileRuntimeSessions,
-  StartupReconcilerError
-} from "./core/runtime/startupReconciler.js";
+  asStartupReconcilerErrorV11 as asStartupReconcilerError,
+  reconcileRuntimeSessionsV11 as reconcileRuntimeSessions,
+  StartupReconcilerErrorV11 as StartupReconcilerError
+} from "./v11/application/reconcile/emitReconcileV11.js";
 export {
   asStopBubbleErrorV11 as asStopBubbleError,
   StopBubbleErrorV11 as StopBubbleError,
@@ -89,10 +89,10 @@ export {
   deleteBubble
 } from "./v11/application/delete/deleteBubble.js";
 export {
-  asBubbleStatusError,
-  BubbleStatusError,
-  getBubbleStatus
-} from "./core/bubble/statusBubble.js";
+  asBubbleStatusErrorV11 as asBubbleStatusError,
+  BubbleStatusErrorV11 as BubbleStatusError,
+  getBubbleStatusV11 as getBubbleStatus
+} from "./v11/application/status/emitStatusV11.js";
 export {
   asBubbleWatchdogErrorV11 as asBubbleWatchdogError,
   BubbleWatchdogErrorV11 as BubbleWatchdogError,
@@ -103,7 +103,7 @@ export {
   WorkspaceResolutionError
 } from "./v11/infrastructure/executor/workspace/workspaceResolution.js";
 export { getBubblePaths } from "./v11/infrastructure/artifact/bubble/paths.js";
-export { createInitialBubbleState } from "./core/state/initialState.js";
+export { createInitialBubbleState } from "./v11/domain/state/initialState.js";
 export { runCli } from "./cli/index.js";
 export { getOrchestraHelpText, runOrchestraCli } from "./cli/orchestra.js";
 export {
@@ -287,7 +287,7 @@ export {
 export {
   assertValidBubbleStateSnapshot,
   validateBubbleStateSnapshot
-} from "./core/state/stateSchema.js";
+} from "./v11/shared/state/stateSchema.js";
 export type {
   UiApiErrorBody,
   UiBubbleDetail,
@@ -301,15 +301,15 @@ export {
   createStateSnapshot,
   readStateSnapshot,
   writeStateSnapshot
-} from "./core/state/stateStore.js";
-export { applyStateTransition } from "./core/state/machine.js";
+} from "./v11/infrastructure/state/stateStore.js";
+export { applyStateTransition } from "./v11/domain/state/machine.js";
 export {
   assertTransitionAllowed,
   canTransition,
   getAllowedTransitions,
   isActiveState,
   isFinalState
-} from "./core/state/transitions.js";
+} from "./v11/domain/state/transitions.js";
 export {
   GitCommandError,
   WorkspaceCleanupError,
@@ -343,7 +343,7 @@ export {
   terminateBubbleTmuxSession,
   TmuxCommandError,
   TmuxSessionExistsError
-} from "./core/runtime/tmuxManager.js";
+} from "./v11/infrastructure/channel/tmux/tmuxManager.js";
 export {
   claimRuntimeSession,
   readRuntimeSessionsRegistry,
@@ -356,10 +356,10 @@ export {
 export {
   emitBubbleNotification,
   playSoundWithAfplay
-} from "./core/runtime/notifications.js";
+} from "./v11/infrastructure/channel/notifications.js";
 export {
   emitTmuxDeliveryNotification
-} from "./core/runtime/tmuxDelivery.js";
+} from "./v11/infrastructure/channel/tmux/tmuxDelivery.js";
 export {
   readRepoRegistry,
   registerRepoInRegistry,
@@ -370,7 +370,7 @@ export {
 } from "./v11/infrastructure/executor/workspace/repoRegistry.js";
 export {
   computeWatchdogStatus
-} from "./core/runtime/watchdog.js";
+} from "./v11/shared/watchdog/watchdogStatus.js";
 export {
   assertValidProtocolEnvelope,
   validateProtocolEnvelope
@@ -412,11 +412,11 @@ export type {
   EmitPassResult
 } from "./v11/application/pass/passCommandContract.js";
 export type {
-  BubbleInboxInput,
-  BubbleInboxView,
-  PendingInboxItem,
-  PendingInboxItemType
-} from "./core/bubble/inboxBubble.js";
+  BubbleInboxV11Input as BubbleInboxInput,
+  BubbleInboxV11View as BubbleInboxView,
+  PendingInboxItemV11 as PendingInboxItem,
+  PendingInboxItemV11Type as PendingInboxItemType
+} from "./v11/application/inbox/emitInboxV11.js";
 export type {
   CommitBubbleV11Input as CommitBubbleInput,
   CommitBubbleV11Result as CommitBubbleResult
@@ -435,7 +435,7 @@ export type {
   OpenCommandExecutionInput,
   OpenCommandExecutionResult,
   OpenCommandExecutor
-} from "./core/bubble/openBubble.js";
+} from "./v11/application/open/emitOpenV11.js";
 export type {
   ResumeBubbleV11Dependencies as ResumeBubbleDependencies,
   ResumeBubbleV11Input as ResumeBubbleInput,
@@ -445,7 +445,7 @@ export type {
   RestartBubbleDependencies,
   RestartBubbleInput,
   RestartBubbleResult
-} from "./core/bubble/restartBubble.js";
+} from "./v11/application/restart/emitRestartV11.js";
 export type {
   StartBubbleV11Dependencies as StartBubbleDependencies,
   StartBubbleV11Input as StartBubbleInput,
@@ -463,15 +463,15 @@ export type {
   BubbleListV11View as BubbleListView
 } from "./v11/application/list/emitListV11.js";
 export type {
-  ReconcileRuntimeSessionsAction,
-  ReconcileRuntimeSessionsInput,
-  ReconcileRuntimeSessionsReport,
-  RuntimeSessionStaleReason
-} from "./core/runtime/startupReconciler.js";
+  ReconcileRuntimeSessionsActionV11 as ReconcileRuntimeSessionsAction,
+  ReconcileRuntimeSessionsInputV11 as ReconcileRuntimeSessionsInput,
+  ReconcileRuntimeSessionsReportV11 as ReconcileRuntimeSessionsReport,
+  RuntimeSessionStaleReasonV11 as RuntimeSessionStaleReason
+} from "./v11/application/reconcile/emitReconcileV11.js";
 export type {
-  BubbleStatusInput,
-  BubbleStatusView
-} from "./core/bubble/statusBubble.js";
+  BubbleStatusV11Input as BubbleStatusInput,
+  BubbleStatusV11View as BubbleStatusView
+} from "./v11/application/status/emitStatusV11.js";
 export type {
   BubbleWatchdogV11Input as BubbleWatchdogInput,
   BubbleWatchdogV11NoopReason as BubbleWatchdogNoopReason,
@@ -594,11 +594,11 @@ export type {
   RoundRoleHistoryEntry,
   WorkMode
 } from "./types/bubble.js";
-export type { StateTransitionInput } from "./core/state/machine.js";
+export type { StateTransitionInput } from "./v11/domain/state/machine.js";
 export type {
   LoadedStateSnapshot,
   WriteStateSnapshotOptions
-} from "./core/state/stateStore.js";
+} from "./v11/infrastructure/state/stateStore.js";
 export type {
   WorktreeCleanupInput,
   WorktreeCleanupResult,
@@ -618,7 +618,7 @@ export type {
   TmuxRunOptions,
   TmuxRunResult,
   TmuxRunner
-} from "./core/runtime/tmuxManager.js";
+} from "./v11/infrastructure/channel/tmux/tmuxManager.js";
 export type {
   ClaimRuntimeSessionInput,
   ClaimRuntimeSessionResult,
@@ -636,7 +636,7 @@ export type {
   BubbleNotificationResult,
   NotificationPathExists,
   NotificationSoundPlayer
-} from "./core/runtime/notifications.js";
+} from "./v11/infrastructure/channel/notifications.js";
 export type {
   ReadRepoRegistryInput,
   ReadRepoRegistryResult,
@@ -650,10 +650,10 @@ export type {
   EmitTmuxDeliveryNotificationInput,
   EmitTmuxDeliveryNotificationResult,
   TmuxDeliveryFailureReason
-} from "./core/runtime/tmuxDelivery.js";
+} from "./v11/infrastructure/channel/tmux/tmuxDelivery.js";
 export type {
   WatchdogStatus
-} from "./core/runtime/watchdog.js";
+} from "./v11/shared/watchdog/watchdogStatus.js";
 export type {
   ConvergencePolicyInput,
   ConvergencePolicyResult
