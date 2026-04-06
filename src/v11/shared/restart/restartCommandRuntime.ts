@@ -5,9 +5,9 @@ import {
 } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { TmuxCommandError } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import {
-  asStartBubbleError,
-  StartBubbleError
-} from "../../../core/bubble/startBubble.js";
+  asStartBubbleErrorV11 as asStartBubbleError,
+  StartBubbleErrorV11 as StartBubbleError
+} from "../../application/start/emitStartV11.js";
 import { normalizeRestartBubbleError } from "./restartCommandErrorNormalization.js";
 import {
   normalizePairflowCommandErrorInput,

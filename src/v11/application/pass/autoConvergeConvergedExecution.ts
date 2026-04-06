@@ -1,8 +1,8 @@
 import type { AgentName } from "../../../types/bubble.js";
 import type {
-  EmitConvergedDependencies,
-  EmitConvergedResult
-} from "../../../core/agent/converged.js";
+  EmitConvergedV11Dependencies as EmitConvergedDependencies,
+  EmitConvergedV11Result as EmitConvergedResult
+} from "../converged/emitConvergedV11.js";
 
 export interface ExecuteAutoConvergeConvergedInput {
   summary: string;

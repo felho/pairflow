@@ -1,4 +1,3 @@
-import type { EmitConvergedResult } from "../../../core/agent/converged.js";
 import type {
   RepeatCleanAutoconvergeReasonCode,
   RepeatCleanAutoconvergeReasonDetail
@@ -11,6 +10,7 @@ import type {
 } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent, ProtocolEnvelope } from "../../../types/protocol.js";
+import type { EmitConvergedV11Result as EmitConvergedResult } from "../converged/emitConvergedV11.js";
 import type { ResolvedPassHandoff } from "../../domain/pass/handoff.js";
 import type {
   ReviewerFindingsClaim,

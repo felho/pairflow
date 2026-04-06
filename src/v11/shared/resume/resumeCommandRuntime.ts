@@ -1,4 +1,4 @@
-import { asHumanReplyCommandError } from "../../../core/human/reply.js";
+import { asHumanReplyCommandErrorV11 as asHumanReplyCommandError } from "../../application/reply/emitReplyV11.js";
 import { normalizeResumeBubbleError } from "./resumeCommandErrorNormalization.js";
 import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
 

@@ -1,8 +1,8 @@
-import type { EmitConvergedDependencies } from "../../../core/agent/converged.js";
 import type {
   ExecuteAutoConvergeConvergedDependencies,
   ExecuteAutoConvergeConvergedInput
 } from "../../application/pass/autoConvergeConvergedExecution.js";
+import type { EmitConvergedV11Dependencies as EmitConvergedDependencies } from "../../application/converged/emitConvergedV11.js";
 import type {
   FinalizeAutoConvergePassDependencies,
   FinalizeAutoConvergePassInput

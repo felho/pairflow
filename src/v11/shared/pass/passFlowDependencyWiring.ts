@@ -1,7 +1,10 @@
-import { type EmitConvergedDependencies, emitConvergedFromWorkspace } from "../../../core/agent/converged.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
 import type { AgentRole } from "../../../types/bubble.js";
 import type { PassIntent } from "../../../types/protocol.js";
+import {
+  type EmitConvergedV11Dependencies as EmitConvergedDependencies,
+  emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace
+} from "../../application/converged/emitConvergedV11.js";
 import { executeAutoConvergeConverged } from "../../application/pass/autoConvergeConvergedExecution.js";
 import { finalizeAutoConvergePass } from "../../application/pass/autoConvergeFinalization.js";
 import { prepareRepeatCleanAutoConverge } from "../../application/pass/autoConvergePreparation.js";

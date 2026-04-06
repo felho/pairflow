@@ -2,7 +2,7 @@ import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbl
 import { persistPassValidationRecoveryMarker } from "../../infrastructure/artifact/validation/passValidationEvidence.js";
 import { removeRuntimeSession } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { terminateBubbleTmuxSession } from "../../infrastructure/channel/tmux/tmuxManager.js";
-import { startBubble } from "../../../core/bubble/startBubble.js";
+import { startBubbleV11 as startBubble } from "../../application/start/emitStartV11.js";
 import type { RestartBubbleDependencies } from "../../application/restart/restartCommandContract.js";
 
 export interface ResolvedRestartBubbleDependencies {

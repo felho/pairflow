@@ -13,7 +13,6 @@ target_files:
   - "src/core/bubble/approvalRequestEnvelope.ts"
   - "src/core/bubble/bubbleInstanceId.ts"
   - "src/core/bubble/bubbleLookup.ts"
-  - "src/core/bubble/commandWorkspaceFallback.ts"
   - "src/core/bubble/metaReviewExecutionContext.ts"
   - "src/core/bubble/paths.ts"
   - "src/core/bubble/repoResolution.ts"
@@ -138,7 +137,6 @@ Fajlszintu inventory rogzitese a meg elo `src/core/**` low-level technikai owner
 | `src/core/bubble/paths.ts` | `v11/infrastructure/artifact` | A2 | Bubble filesystem topology/layout authority. Javasolt concrete home: `src/v11/infrastructure/artifact/bubble/**`. |
 | `src/core/bubble/bubbleInstanceId.ts` | `v11/infrastructure/artifact` | A2 | Bubble metadata persistence/backfill a `bubble.toml` felett; artifact-default. |
 | `src/core/bubble/repoResolution.ts` | `v11/infrastructure/executor` | E1 | Git/worktree repo root resolution primitive. |
-| `src/core/bubble/commandWorkspaceFallback.ts` | `v11/infrastructure/executor` | E1 | Worktree fallback cwd strategy/env adapter. |
 | `src/core/bubble/workspaceResolution.ts` | `v11/infrastructure/executor` | E1 | Bubble workspace resolution Git + bubble config alapjan. |
 | `src/core/bubble/bubbleLookup.ts` | `v11/infrastructure/executor` | E1 | Bubble-by-id lookup repo/workspace contexttal; magas fan-in (`bubbleLookup`: 42). |
 | `src/core/bubble/actorEmitContext.ts` | `v11/shared` | X2 | Canonical actor-emit context assembly, tobb lane fogyasztja; javasolt home `src/v11/shared/actorProtocol/**`. |
@@ -177,7 +175,7 @@ Ezek a Phase 4 inventory szempontjabol mar megfelelnek a "shim-only vagy explici
 | S1 - State kernel lock | state contract + persistence boundary | `stateStore.ts`, `stateSchema.ts`, `machine.ts`, `transitions.ts`, `executionContext.ts`, `initialState.ts` | none | Ez legyen az elso, mert a legnagyobb fan-in innen jon. Egy agentbatchkent ajanlott. |
 | A1 - Transcript contract split | protocol contract + transcript persistence | `transcriptStore.ts`, `envelope.ts`, `validators.ts`, `sequenceAllocator.ts` | S1 only for naming alignment, not for runtime behavior | S1 utan kulon agentnek adhato. |
 | A2 - Archive + bubble artifact layout | archive persistence + bubble filesystem topology | `archivePaths.ts`, `archiveSnapshot.ts`, `archiveIndex.ts`, `paths.ts`, `bubbleInstanceId.ts` | A1 path/layout naming lock ajanlott | Parhuzamosan mehet E1-gyel, ha a `bubble/**` artifact path-nevek rogzitettek. |
-| E1 - Workspace/executor topology | repo/worktree/bubble lookup + command bootstrap + runtime session lifecycle slice | `repoResolution.ts`, `commandWorkspaceFallback.ts`, `workspaceResolution.ts`, `bubbleLookup.ts`, `pairflowCommand.ts`, `agentCommand.ts`, `sessionsRegistry.ts` (session lifecycle slice) | `paths.ts` target-nevek ismertsege | Kulon agent lane, magas ertek/fan-in. `sessionsRegistry.ts` itt a `bubbleId/repoPath/worktreePath/tmuxSessionName` ownership miatt erintett. |
+| E1 - Workspace/executor topology | repo/worktree/bubble lookup + command bootstrap + runtime session lifecycle slice | `repoResolution.ts`, `workspaceResolution.ts`, `bubbleLookup.ts`, `pairflowCommand.ts`, `agentCommand.ts`, `sessionsRegistry.ts` (session lifecycle slice) | `paths.ts` target-nevek ismertsege | Kulon agent lane, magas ertek/fan-in. `sessionsRegistry.ts` itt a `bubbleId/repoPath/worktreePath/tmuxSessionName` ownership miatt erintett. |
 | C1 - Channel/tmux runtime | tmux es channel-facing pane binding/runtime delivery | `tmuxManager.ts`, `tmuxInput.ts`, `tmuxDelivery.ts`, `sessionsRegistry.ts` (tmux pane binding slice), `notifications.ts`, `reviewerContext.ts` | E1 command bootstrap contract, A2 runtime path lock | Kulon agent lane. `reviewerContext.ts` miatt E1 contract freeze utan inditsd. `sessionsRegistry.ts` channel-oldala csak a pane binding concern. |
 | E2 - Validation execution | validation command runtime | `passValidationRunner.ts` | E1 | Kicsi, jo kulon agentnek. |
 | A3 - Validation artifacts | validation evidence + recovery markers | `passValidationEvidence.ts` | E2 optional, de nem blocker | Kulon agent lane vagy A2 melle rakhato. |
@@ -223,6 +221,19 @@ Ezek mar nem blocker-szintu nyitott kerdesek; a Phase 5 elindithato. A donteseke
 3. Vegyes legacy file Phase 5-ben szetvaghato ket capability koze, ha a jelenlegi file shape mar most is kevert ownershipet hordoz; a topology lock ezt nem tiltja.
 4. A `src/core/**` Phase 5 utani maradek allapota minden erintett file-nal vagy `shim/temporary bridge`, vagy kiuritett legacy facade kell legyen.
 5. Blocker-szintu nyitott architekturalis kerdes nem maradt az infra execution elott.
+
+## Residual Sweep Delta (2026-04-06)
+
+1. `src/core/bubble/commandWorkspaceFallback.ts` torolve lett, mert mar nem volt elo runtime, CLI, public vagy teszten kivuli fogyasztoja; a canonical workspace fallback mar kozvetlenul a `src/v11/infrastructure/executor/workspace/commandWorkspaceFallback.ts`.
+2. A `src/v11/**` oldalon megszunt a shim-only `core` facadek kozvetlen hasznalata a kovetkezo maradvanyokra:
+   - `src/core/bubble/createBubble.ts`
+   - `src/core/bubble/startBubble.ts`
+   - `src/core/agent/converged.ts`
+   - `src/core/human/reply.ts`
+3. Ezekre guard kerult a `tests/contracts/v11/core-shim-boundary-coverage.test.ts` alatt, hogy a `v11 -> core` ownership visszacsuszas ne jojjon vissza ugyanebben a formaban.
+4. Megmarado, kulon batch-et igenylo residual cluster-ek:
+   - `core/metaReview` es a hozza kapcsolodo approval/list/status shared seam: meg elo `v11` fogyasztok vannak, ezert csak kulon meta-review closure batchben szukitheto tovabb.
+   - `core/{validation,util,workspace/git,reviewer,metrics/gates,convergence}` helper cluster-ek: ezek tovabbi szukitese mar ownership-extract vagy facade-retire dontest igenyel, nem residual sweep mikrokort.
 
 ## L2 - Implementation Notes (Optional)
 

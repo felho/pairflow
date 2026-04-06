@@ -1,10 +1,10 @@
-import { emitHumanReply } from "../../../core/human/reply.js";
 import {
   DEFAULT_RESUME_MESSAGE,
   type ResumeBubbleDependencies,
   type ResumeBubbleInput,
   type ResumeBubbleResult
 } from "../../application/resume/resumeCommandContract.js";
+import { emitHumanReplyV11 as emitHumanReply } from "../../application/reply/emitReplyV11.js";
 
 export async function resumeBubbleCommandOrchestration(
   input: ResumeBubbleInput,

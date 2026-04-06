@@ -6,9 +6,9 @@ import type {
 import type { terminateBubbleTmuxSession } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import type { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import type {
-  startBubble,
-  StartBubbleResult
-} from "../../../core/bubble/startBubble.js";
+  startBubbleV11 as startBubble,
+  StartBubbleV11Result as StartBubbleResult
+} from "../start/emitStartV11.js";
 
 export interface RestartBubbleInput {
   bubbleId: string;

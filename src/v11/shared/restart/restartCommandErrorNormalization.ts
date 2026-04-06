@@ -4,7 +4,7 @@ import type {
   RuntimeSessionsRegistryLockError
 } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import type { TmuxCommandError } from "../../infrastructure/channel/tmux/tmuxManager.js";
-import type { StartBubbleError } from "../../../core/bubble/startBubble.js";
+import type { StartBubbleErrorV11 as StartBubbleError } from "../../application/start/emitStartV11.js";
 
 export interface NormalizeRestartBubbleErrorInput {
   error: unknown;

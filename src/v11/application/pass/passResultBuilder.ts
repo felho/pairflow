@@ -3,9 +3,9 @@ import {
   type RepeatCleanAutoconvergeReasonCode,
   type RepeatCleanAutoconvergeReasonDetail
 } from "../../../core/convergence/repeatCleanAutoconverge.js";
-import type { EmitConvergedResult } from "../../../core/agent/converged.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type { EmitConvergedV11Result as EmitConvergedResult } from "../converged/emitConvergedV11.js";
 
 export interface PassResultDeliveryLike {
   delivered: boolean;
