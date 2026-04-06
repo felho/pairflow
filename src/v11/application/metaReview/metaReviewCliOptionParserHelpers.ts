@@ -10,7 +10,7 @@ import type {
   BubbleMetaReviewStatusCommandOptions
 } from "./metaReviewCliOptionTypes.js";
 
-export type MetaReviewSubcommand = "run" | "status" | "last-report" | "recover";
+export type MetaReviewSubcommand = "status" | "last-report" | "recover";
 
 export type BubbleMetaReviewBaseOptions = {
   id: string;
@@ -31,8 +31,12 @@ export function parseMetaReviewSubcommand(
       "Legacy `pairflow bubble meta-review submit` was removed. Use canonical `pairflow agent emit --kind meta_review_result ...` instead."
     );
   }
+  if (value === "run") {
+    return invalidMetaReviewCliOptions(
+      "`pairflow bubble meta-review run` was removed. Use canonical `pairflow agent emit --kind meta_review_result ...` for actor writes. Retained operator commands: status, last-report, recover."
+    );
+  }
   if (
-    value === "run" ||
     value === "status" ||
     value === "last-report" ||
     value === "recover"
@@ -40,7 +44,7 @@ export function parseMetaReviewSubcommand(
     return value;
   }
   return invalidMetaReviewCliOptions(
-    "Unknown meta-review subcommand. Use one of: run, status, last-report, recover."
+    "Unknown meta-review subcommand. Use one of: status, last-report, recover."
   );
 }
 
@@ -125,17 +129,17 @@ export function assertSubmitOnlyOptionsAllowed(
   }
 }
 
-export function assertRunOnlyDepthAllowed(depth: string | undefined): void {
+export function assertDepthOptionRemoved(depth: string | undefined): void {
   if (depth !== undefined) {
     invalidMetaReviewCliOptions(
-      "--depth is only supported for meta-review run."
+      "`--depth` is no longer supported because `pairflow bubble meta-review run` was removed. Retained operator commands: status, last-report, recover."
     );
   }
 }
 
 export function buildMetaReviewReadonlyCommandOptions(
   base: BubbleMetaReviewBaseOptions,
-  subcommand: Exclude<MetaReviewSubcommand, "run">
+  subcommand: MetaReviewSubcommand
 ): BubbleMetaReviewStatusCommandOptions
   | BubbleMetaReviewLastReportCommandOptions
   | BubbleMetaReviewRecoverCommandOptions {

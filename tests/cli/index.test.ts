@@ -7,7 +7,6 @@ import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { runCli } from "../../src/cli/index.js";
 import { buildMetaReviewExecutionContext } from "../../src/core/bubble/metaReviewExecutionContext.js";
 import {
-  buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
 } from "../../src/core/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../src/core/state/stateStore.js";
@@ -36,6 +35,104 @@ describe("runCli", () => {
     stdoutSpy.mockRestore();
     stderrSpy.mockRestore();
   });
+
+  async function seedMetaReviewSnapshotProjection(input: {
+    repoPath: string;
+    bubbleId: string;
+    round?: number;
+    runId?: string;
+    summary?: string;
+  }): Promise<void> {
+    const statePath = join(
+      input.repoPath,
+      ".pairflow",
+      "bubbles",
+      input.bubbleId,
+      "state.json"
+    );
+    const loaded = await readStateSnapshot(statePath);
+    const round = input.round ?? loaded.state.round;
+    const runId = input.runId ?? "run_meta_review_cli_seed_01";
+    const updatedAt = "2026-03-08T12:50:00.000Z";
+    const executionContext = buildMetaReviewExecutionContext({
+      bubbleId: input.bubbleId,
+      round,
+      startedAt: "2026-03-08T12:49:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
+    await writeStateSnapshot(
+      statePath,
+      {
+        ...loaded.state,
+        round,
+        state: "RUNNING",
+        active_agent: "codex",
+        active_role: "meta_reviewer",
+        active_since: "2026-03-08T12:49:00.000Z",
+        execution_context: metaReviewExecutionContextToRunningContext(
+          executionContext
+        ),
+        meta_review: {
+          execution_context: executionContext,
+          last_autonomous_run_id: runId,
+          last_autonomous_status: "success",
+          last_autonomous_recommendation: "approve",
+          last_autonomous_summary:
+            input.summary ?? "Seeded meta-review snapshot for CLI projection tests.",
+          last_autonomous_report_ref: "artifacts/meta-review-last.json",
+          last_autonomous_rework_target_message: null,
+          last_autonomous_updated_at: updatedAt,
+          auto_rework_count: 0,
+          auto_rework_limit: 5,
+          sticky_human_gate: false
+        }
+      },
+      {
+        expectedFingerprint: loaded.fingerprint,
+        expectedState: "RUNNING"
+      }
+    );
+
+    await writeFile(
+      join(
+        input.repoPath,
+        ".pairflow",
+        "bubbles",
+        input.bubbleId,
+        "artifacts",
+        "meta-review-last.json"
+      ),
+      `${JSON.stringify(
+        {
+          bubble_id: input.bubbleId,
+          run_id: runId,
+          round,
+          generated_at: updatedAt,
+          depth: "standard",
+          status: "success",
+          recommendation: "approve",
+          summary:
+            input.summary ?? "Seeded meta-review snapshot for CLI projection tests.",
+          report_ref: "artifacts/meta-review-last.json",
+          report_json_ref: "artifacts/meta-review-last.json",
+          rework_target_message: null,
+          warnings: [],
+          report_json: {
+            findings_claim_state: "clean",
+            findings_claim_source: "meta_review_artifact",
+            findings_count: 0,
+            findings_claimed_open_total: 0,
+            findings_blocking_open_total: 0,
+            findings_advisory_open_total: 0
+          }
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
+  }
 
   it("routes top-level pass help to removal guidance", async () => {
     const exitCode = await runCli(["pass", "--help"]);
@@ -297,20 +394,38 @@ describe("runCli", () => {
       "meta-review",
       "run",
       "--id",
-      "b_invalid_meta_review",
-      "--depth",
-      "extreme"
+      "b_invalid_meta_review"
     ]);
 
     expect(exitCode).toBe(1);
     expect(stderrSpy).toHaveBeenCalled();
+    const stderrText = stderrSpy.mock.calls.map((call) => String(call[0])).join("");
+    expect(stderrText).toContain("pairflow bubble meta-review run");
+    expect(stderrText).toContain("was removed");
+  });
+
+  it("fails closed for removed meta-review run even when --help is present", async () => {
+    const exitCode = await runCli([
+      "bubble",
+      "meta-review",
+      "run",
+      "--help"
+    ]);
+
+    expect(exitCode).toBe(1);
+    expect(stderrSpy).toHaveBeenCalled();
+    const stderrText = stderrSpy.mock.calls.map((call) => String(call[0])).join("");
+    expect(stderrText).toContain("pairflow bubble meta-review run");
+    expect(stderrText).toContain("was removed");
+    const stdoutText = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
+    expect(stdoutText).toBe("");
   });
 
   it("prints structured schema-invalid stderr format for meta-review parse errors", async () => {
     const exitCode = await runCli([
       "bubble",
       "meta-review",
-      "run",
+      "status",
       "--id",
       "b_invalid_meta_review_schema",
       "--depth",
@@ -381,43 +496,6 @@ describe("runCli", () => {
     expect(parsed.projection_freshness).toBe("no_snapshot");
   });
 
-  it("renders meta-review run as JSON through runCli", async () => {
-    const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-meta-review-json-run-"));
-    tempDirs.push(repoPath);
-    await initGitRepository(repoPath);
-    const bubble = await setupRunningBubbleFixture({
-      repoPath,
-      bubbleId: "b_meta_review_cli_json_02",
-      task: "meta-review json run"
-    });
-
-    const exitCode = await runCli([
-      "bubble",
-      "meta-review",
-      "run",
-      "--id",
-      bubble.bubbleId,
-      "--repo",
-      repoPath,
-      "--json"
-    ]);
-
-    expect(exitCode).toBe(0);
-    const stdoutText = stdoutSpy.mock.calls.map((call) => String(call[0])).join("");
-    const parsed = JSON.parse(stdoutText) as {
-      bubbleId: string;
-      run_id: string;
-      status: string;
-      recommendation: string;
-      report_ref: string;
-    };
-    expect(parsed.bubbleId).toBe(bubble.bubbleId);
-    expect(parsed.run_id.length).toBeGreaterThan(0);
-    expect(parsed.status).toBe("error");
-    expect(parsed.recommendation).toBe("inconclusive");
-    expect(parsed.report_ref).toBe("artifacts/meta-review-last.json");
-  });
-
   it("renders meta-review last-report as JSON through runCli", async () => {
     const repoPath = await mkdtemp(join(tmpdir(), "pairflow-cli-meta-review-json-last-"));
     tempDirs.push(repoPath);
@@ -428,16 +506,12 @@ describe("runCli", () => {
       task: "meta-review json last-report"
     });
 
-    const runExitCode = await runCli([
-      "bubble",
-      "meta-review",
-      "run",
-      "--id",
-      bubble.bubbleId,
-      "--repo",
-      repoPath
-    ]);
-    expect(runExitCode).toBe(0);
+    await seedMetaReviewSnapshotProjection({
+      repoPath,
+      bubbleId: bubble.bubbleId,
+      runId: "run_meta_review_cli_json_03",
+      summary: "Seeded last-report projection."
+    });
     stdoutSpy.mockClear();
 
     const lastReportExitCode = await runCli([
@@ -518,16 +592,12 @@ describe("runCli", () => {
       task: "meta-review json last-report ahead"
     });
 
-    const runExitCode = await runCli([
-      "bubble",
-      "meta-review",
-      "run",
-      "--id",
-      bubble.bubbleId,
-      "--repo",
-      repoPath
-    ]);
-    expect(runExitCode).toBe(0);
+    await seedMetaReviewSnapshotProjection({
+      repoPath,
+      bubbleId: bubble.bubbleId,
+      runId: "run_meta_review_cli_json_04b",
+      summary: "Seeded ahead projection."
+    });
     stdoutSpy.mockClear();
 
     const artifactPath = join(
@@ -545,21 +615,30 @@ describe("runCli", () => {
 
     const statePath = join(repoPath, ".pairflow", "bubbles", bubble.bubbleId, "state.json");
     const loaded = await readStateSnapshot(statePath);
+    if (loaded.state.meta_review === undefined) {
+      throw new Error("Expected meta_review snapshot before ahead-round mutation.");
+    }
+    const nextExecutionContext = buildMetaReviewExecutionContext({
+      bubbleId: bubble.bubbleId,
+      round: 4,
+      startedAt: "2026-03-08T12:49:00.000Z",
+      watchdogTimeoutMinutes: 60,
+      attempt: 1
+    });
     await writeStateSnapshot(
       statePath,
       {
         ...loaded.state,
-        execution_context: buildRunningExecutionContext({
-          bubbleId: bubble.bubbleId,
-          round: 4,
-          activeRole: loaded.state.execution_context?.active_role ?? "implementer",
-          startedAt:
-            loaded.state.execution_context?.started_at
-            ?? loaded.state.active_since
-            ?? "2026-03-08T11:30:30.000Z",
-          watchdogTimeoutMinutes: 60,
-          attempt: loaded.state.execution_context?.attempt ?? 1
-        }),
+        active_agent: "codex",
+        active_role: "meta_reviewer",
+        active_since: "2026-03-08T12:49:00.000Z",
+        execution_context: metaReviewExecutionContextToRunningContext(
+          nextExecutionContext
+        ),
+        meta_review: {
+          ...loaded.state.meta_review,
+          execution_context: nextExecutionContext
+        },
         round: 4
       },
       {

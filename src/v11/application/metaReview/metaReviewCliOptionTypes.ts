@@ -1,17 +1,9 @@
-import type { MetaReviewDepthV11 as MetaReviewDepth } from "./emitMetaReviewV11.js";
-
 interface BubbleMetaReviewCommandBase {
   id: string;
   repo?: string;
   json: boolean;
   verbose: boolean;
   help: false;
-}
-
-export interface BubbleMetaReviewRunCommandOptions
-  extends BubbleMetaReviewCommandBase {
-  command: "run";
-  depth: MetaReviewDepth;
 }
 
 export interface BubbleMetaReviewStatusCommandOptions
@@ -34,7 +26,6 @@ export interface BubbleMetaReviewHelpCommandOptions {
 }
 
 export type BubbleMetaReviewCommandOptions =
-  | BubbleMetaReviewRunCommandOptions
   | BubbleMetaReviewStatusCommandOptions
   | BubbleMetaReviewLastReportCommandOptions
   | BubbleMetaReviewRecoverCommandOptions

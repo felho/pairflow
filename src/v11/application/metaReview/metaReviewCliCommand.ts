@@ -13,7 +13,6 @@ export {
 export {
   renderMetaReviewLastReportText,
   renderMetaReviewRecoverText,
-  renderMetaReviewRunText,
   renderMetaReviewStatusText,
   renderMetaReviewSubmitText
 } from "./metaReviewCliRenderers.js";
@@ -21,7 +20,6 @@ export type {
   BubbleMetaReviewHelpCommandOptions,
   BubbleMetaReviewLastReportCommandOptions,
   BubbleMetaReviewRecoverCommandOptions,
-  BubbleMetaReviewRunCommandOptions,
   BubbleMetaReviewStatusCommandOptions
 } from "./metaReviewCliOptions.js";
 export type { BubbleMetaReviewCommandResult } from "./metaReviewCliTypes.js";

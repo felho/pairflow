@@ -1,10 +1,9 @@
 import {
-  parseDepth,
   parseMetaReviewCliOptionValues,
 } from "./metaReviewCliOptionValueReader.js";
 import type { BubbleMetaReviewCommandOptions } from "./metaReviewCliOptionTypes.js";
 import {
-  assertRunOnlyDepthAllowed,
+  assertDepthOptionRemoved,
   assertSubmitOnlyOptionsAllowed,
   buildMetaReviewReadonlyCommandOptions,
   createMetaReviewBaseOptions,
@@ -16,11 +15,10 @@ export function parseBubbleMetaReviewCommandOptions(
   args: string[]
 ): BubbleMetaReviewCommandOptions {
   const parsed = parseMetaReviewCliArgs(args);
+  const subcommand = parseMetaReviewSubcommand(parsed.positionals[0]);
   if (parsed.values.help ?? false) {
     return { help: true };
   }
-
-  const subcommand = parseMetaReviewSubcommand(parsed.positionals[0]);
   if (subcommand === null) {
     return { help: true };
   }
@@ -29,15 +27,7 @@ export function parseBubbleMetaReviewCommandOptions(
     parsed.values as Record<string, unknown>
   );
   const base = createMetaReviewBaseOptions(values);
-  if (subcommand === "run") {
-    return {
-      ...base,
-      command: "run",
-      depth: parseDepth(values.depth)
-    };
-  }
-
   assertSubmitOnlyOptionsAllowed(values);
-  assertRunOnlyDepthAllowed(values.depth);
+  assertDepthOptionRemoved(values.depth);
   return buildMetaReviewReadonlyCommandOptions(base, subcommand);
 }

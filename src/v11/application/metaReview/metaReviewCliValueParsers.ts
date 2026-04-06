@@ -1,22 +1,6 @@
 import type { MetaReviewSubmissionPayload } from "../../../types/protocol.js";
-import type { MetaReviewDepthV11 as MetaReviewDepth } from "./emitMetaReviewV11.js";
 
 type RaiseInvalidMetaReviewOption = (message: string) => never;
-
-export function parseDepth(
-  value: string | undefined,
-  raiseInvalidOption: RaiseInvalidMetaReviewOption
-): MetaReviewDepth {
-  if (value === undefined || value === "standard") {
-    return "standard";
-  }
-  if (value === "deep") {
-    return "deep";
-  }
-  return raiseInvalidOption(
-    "Invalid --depth value. Use one of: standard, deep."
-  );
-}
 
 export function parseSubmitRound(
   value: string | undefined,

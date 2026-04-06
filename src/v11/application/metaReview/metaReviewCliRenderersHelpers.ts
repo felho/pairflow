@@ -101,22 +101,23 @@ export function appendMetaReviewOptionalWarnings(
   }
 }
 
-export function buildMetaReviewOutcomeHeaderLines(input: {
-  label: "run" | "submit";
-  result: MetaReviewRenderedResultLike;
-  depth?: string;
-}): string[] {
-  const { label, result, depth } = input;
+export function buildMetaReviewSubmitHeaderLines(
+  result: MetaReviewRenderedResultLike
+): string[] {
   const lines = [
-    `Meta-review ${label} for ${result.bubbleId}: status=${result.status}, recommendation=${result.recommendation}${label === "run" ? `, depth=${depth ?? "standard"}` : ""}`,
+    `Meta-review submit for ${result.bubbleId}: status=${result.status}, recommendation=${result.recommendation}`,
     `Updated: ${result.updated_at}`,
     `Summary: ${result.summary ?? "-"}`,
     `Report ref: ${result.report_ref}`
   ];
-  if (label === "submit" && typeof result.gate_route === "string") {
+  if (typeof result.gate_route === "string") {
     lines.splice(2, 0, `Gate route: ${result.gate_route}`);
   }
-  lines.splice(typeof result.gate_route === "string" && label === "submit" ? 3 : 2, 0, `Lifecycle state: ${result.lifecycle_state}`);
+  lines.splice(
+    typeof result.gate_route === "string" ? 3 : 2,
+    0,
+    `Lifecycle state: ${result.lifecycle_state}`
+  );
   return lines;
 }
 

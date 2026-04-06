@@ -71,7 +71,6 @@ import {
   parseBubbleMetaReviewCommandOptions,
   renderMetaReviewLastReportText,
   renderMetaReviewRecoverText,
-  renderMetaReviewRunText,
   renderMetaReviewSubmitText,
   renderMetaReviewStatusText,
   runBubbleMetaReviewCommand
@@ -715,10 +714,6 @@ async function handleBubbleMetaReviewCommand(args: string[]): Promise<number> {
     }
 
     if (parsed.json) {
-      if (result.command === "run") {
-        process.stdout.write(`${JSON.stringify(result.run, null, 2)}\n`);
-        return 0;
-      }
       if (result.command === "status") {
         process.stdout.write(`${JSON.stringify(result.status, null, 2)}\n`);
         return 0;
@@ -733,10 +728,6 @@ async function handleBubbleMetaReviewCommand(args: string[]): Promise<number> {
       }
     }
 
-    if (result.command === "run") {
-      process.stdout.write(`${renderMetaReviewRunText(result.run)}\n`);
-      return 0;
-    }
     if (result.command === "status") {
       process.stdout.write(
         `${renderMetaReviewStatusText(result.status, parsed.verbose)}\n`
