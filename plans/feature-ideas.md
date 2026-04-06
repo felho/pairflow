@@ -2,3 +2,4 @@
 - We need to go back to that topic that the transcript should contain ID for the agent sessions.
 - The commit messages should contain the buble id.
 - https://github.com/addyosmani/agent-skills --> check this
+- https://github.com/vladikk/modularity --> check this
