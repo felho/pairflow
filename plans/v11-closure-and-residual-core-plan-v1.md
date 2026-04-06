@@ -387,6 +387,20 @@ Az alabbi pontokat ez a plan mar lezart baseline-kent kezeli.
 
 ## Recommended Work Order
 
+### Phase 0: Governance lock
+
+Cel:
+
+- a `v11` target boundary, placement governance, migration semantics, meta-review canonical contract defaultjai es infrastructure-defaultok lockolasa.
+
+Status:
+
+- kesz baseline.
+
+Exit criterion:
+
+- nincs blocker-szintu nyitott architekturális kerdes a vegrehajtasi munka elott.
+
 ### Phase 1: Closure baseline and low-risk residuals
 
 Cel:
@@ -402,7 +416,12 @@ Jelleg:
 
 - tobbnyire mechanikai strangler munka
 
-### Phase 2: Meta-review ownership closure
+Exit criterion:
+
+- legalabb 1-2 low-risk residual lane ownership-cutover szinten lezarva,
+- a mostani governance szerinti strangler workflow a gyakorlatban validalva.
+
+### Phase 2A: Meta-review contract ownership closure
 
 Cel:
 
@@ -413,6 +432,26 @@ Jelleg:
 
 - ownership refaktor,
 - nem pusztan mechanikai command migration.
+
+Exit criterion:
+
+- `MetaReviewReviewerVerdict`, `MetaReviewRunnerOutput` es `MetaReviewResult` `v11` owner ala kerult,
+- a `v11/shared/metaReviewGate/**` mar nem a `core/bubble/metaReview.ts` canonical tipusaira tamaszkodik.
+
+### Phase 2B: Meta-review live-run seam cleanup
+
+Cel:
+
+- a `runMetaReview` es a kapcsolodo live-run-only wiring, helper-ek, valamint dead legacy maradvanyok torlese a 2A utan.
+
+Jelleg:
+
+- ownership utani dead-code es seam cleanup.
+
+Exit criterion:
+
+- a live-run seam megszunt,
+- a meta-review lane publikus es belso ownershipje konzisztens.
 
 ### Phase 3: List/read-model closure
 
@@ -425,17 +464,60 @@ Jelleg:
 - reszben mechanikai,
 - de a helyes sorrend miatt a Phase 2 utan.
 
-### Phase 4: Infrastructure migration planning and execution
+Exit criterion:
+
+- a `list` lane ownership-cutover szinten lezarhato a Phase 2 utan.
+
+### Phase 4: Infrastructure inventory and topology lock
 
 Cel:
 
-- low-level technikai infrastructure primitivek athelyezese `src/v11/infrastructure/**` ala.
+- a megmaradt `core` low-level technikai primitivek fajlszintu inventoryja es capability-alapu celhome-jaik konkretizalasa.
 
 Jelleg:
 
-- vegyes: reszben mechanikai, reszben package/topology dontes.
+- planning es klasszifikacios fazis.
 
-Ezt nem erdemes command-by-command improvizalni. Elobb capability-csoportok szerint kell konkretizalni.
+Exit criterion:
+
+- konkret, fajlszintu infrastructure migration split all rendelkezesre,
+- egyertelmu, hogy mi megy `channel/tmux`, `executor`, `state`, `artifact` vagy mas nem-infra `v11` owner ala.
+
+### Phase 5: Infrastructure migration execution
+
+Cel:
+
+- a retained low-level technikai primitivek capability-alapu athelyezese `src/v11/infrastructure/**` ala.
+
+Javasolt sorrend:
+
+1. `artifact/archive`
+2. `channel/tmux`
+3. `executor`
+4. `state`
+5. a megmarado protocol-mechanics jellegu szeletek, ahol szukseges
+
+Jelleg:
+
+- capability-alapu strangler migration.
+
+Exit criterion:
+
+- a megtartott low-level technikai ownership `v11/infrastructure/**` vagy mas kanonikus `v11` boundary alatt van,
+- `core` oldalon legfeljebb shim vagy explicit ideiglenes bridge maradt.
+
+### Phase 6: Final core closure
+
+Cel:
+
+- residual `core` sweep,
+- maradek dead code torles,
+- migration-map/parity/fitness olvasat vegso osszehangolasa.
+
+Exit criterion:
+
+- a `src/core/**` gyakorlati vegallapota shim-only,
+- nincs rejtett, nem-shim retained ownership a `core` alatt.
 
 ## Proposed Task Split
 
