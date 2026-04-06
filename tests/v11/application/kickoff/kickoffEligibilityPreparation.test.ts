@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../../src/core/bubble/createBubble.js";
-import { IDEATION_KICKOFF_NOT_ALLOWED } from "../../../../src/core/bubble/ideation.js";
+import { IDEATION_KICKOFF_NOT_ALLOWED } from "../../../../src/v11/shared/ideation/ideationReasonCodes.js";
 import { readStateSnapshot } from "../../../../src/core/state/stateStore.js";
 import { prepareKickoffEligibility } from "../../../../src/v11/shared/kickoff/kickoffEligibilityPreparation.js";
 import { initGitRepository } from "../../../helpers/git.js";

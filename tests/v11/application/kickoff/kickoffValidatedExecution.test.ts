@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createBubble } from "../../../../src/core/bubble/createBubble.js";
-import { IDEATION_KICKOFF_STATE_CONFLICT } from "../../../../src/core/bubble/ideation.js";
+import { IDEATION_KICKOFF_STATE_CONFLICT } from "../../../../src/v11/shared/ideation/ideationReasonCodes.js";
 import { renderBubbleConfigToml } from "../../../../src/config/bubbleConfig.js";
 import type { BubbleStateSnapshot } from "../../../../src/types/bubble.js";
 import type { ResolvedKickoffDependencies } from "../../../../src/v11/shared/kickoff/kickoffDependencyResolution.js";

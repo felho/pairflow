@@ -1,4 +1,4 @@
-import { IDEATION_KICKOFF_TASK_INVALID } from "../../../core/bubble/ideation.js";
+import { IDEATION_KICKOFF_TASK_INVALID } from "../ideation/ideationReasonCodes.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import {
   buildKickoffFailureResult,

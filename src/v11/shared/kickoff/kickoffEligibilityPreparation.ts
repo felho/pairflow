@@ -1,5 +1,5 @@
-import { resolveIdeationMetadata } from "../../../core/bubble/ideation.js";
 import type { BubbleConfig, BubbleStateSnapshot } from "../../../types/bubble.js";
+import { resolveIdeationMetadata } from "../../domain/ideation/ideationMetadata.js";
 import { resolveKickoffEligibilityFailureReason } from "./kickoffEligibility.js";
 
 export interface KickoffEligibilityPreparationInput {

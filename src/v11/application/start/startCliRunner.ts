@@ -8,9 +8,11 @@ import {
   type StartBubbleV11Result as StartBubbleResult
 } from "./emitStartV11.js";
 import {
-  IDEATION_METADATA_PARSE_WARNING,
+  IDEATION_METADATA_PARSE_WARNING
+} from "../../shared/ideation/ideationReasonCodes.js";
+import {
   hasIdeationMetadataParseWarning
-} from "../../../core/bubble/ideation.js";
+} from "../../domain/ideation/ideationMetadata.js";
 import {
   resolveBubbleById,
   type ResolvedBubbleById

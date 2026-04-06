@@ -1,7 +1,9 @@
 import {
-  IDEATION_PASS_BLOCKED,
-  resolveIdeationMetadata
-} from "../../../core/bubble/ideation.js";
+  IDEATION_PASS_BLOCKED
+} from "../ideation/ideationReasonCodes.js";
+import {
+  resolveIdeationMetadata as resolveV11IdeationMetadata
+} from "../../domain/ideation/ideationMetadata.js";
 import {
   ensureBubbleInstanceIdForMutation,
   type EnsureBubbleInstanceIdForMutationResult
@@ -27,7 +29,7 @@ export interface PreparePassWorkspaceContextDependencies {
   resolveBubbleFromWorkspaceCwd?: typeof resolveBubbleFromWorkspaceCwd;
   ensureBubbleInstanceIdForMutation?: typeof ensureBubbleInstanceIdForMutation;
   readStateSnapshot?: typeof readStateSnapshot;
-  resolveIdeationMetadata?: typeof resolveIdeationMetadata;
+  resolveIdeationMetadata?: typeof resolveV11IdeationMetadata;
   resolvePassHandoff?: typeof resolvePassHandoff;
 }
 
@@ -51,7 +53,7 @@ export async function preparePassWorkspaceContext(
     dependencies.ensureBubbleInstanceIdForMutation ?? ensureBubbleInstanceIdForMutation;
   const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
   const resolveIdeation =
-    dependencies.resolveIdeationMetadata ?? resolveIdeationMetadata;
+    dependencies.resolveIdeationMetadata ?? resolveV11IdeationMetadata;
   const resolveHandoff = dependencies.resolvePassHandoff ?? resolvePassHandoff;
 
   const authoritativeResolved: ResolvedBubbleWorkspace | undefined =

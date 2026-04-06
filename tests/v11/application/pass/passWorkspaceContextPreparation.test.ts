@@ -7,7 +7,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }
 
-import { IDEATION_PASS_BLOCKED } from "../../../../src/core/bubble/ideation.js";
+import { IDEATION_PASS_BLOCKED } from "../../../../src/v11/shared/ideation/ideationReasonCodes.js";
 import { preparePassWorkspaceContext } from "../../../../src/v11/shared/pass/passWorkspaceContextPreparation.js";
 
 class SyntheticPassCommandError extends Error {

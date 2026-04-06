@@ -1,4 +1,4 @@
-import { IDEATION_KICKOFF_STATE_CONFLICT } from "../../../core/bubble/ideation.js";
+import { IDEATION_KICKOFF_STATE_CONFLICT } from "../ideation/ideationReasonCodes.js";
 import type { ResolvedKickoffDependencies } from "./kickoffDependencyResolution.js";
 import type { KickoffPreparedValidation } from "./kickoffValidationPreparation.js";
 import type { buildKickoffNextState } from "./kickoffStateTransition.js";

@@ -1,8 +1,10 @@
 import { readStateSnapshot } from "../../../core/state/stateStore.js";
 import {
-  IDEATION_CONVERGED_BLOCKED,
+  IDEATION_CONVERGED_BLOCKED
+} from "../../shared/ideation/ideationReasonCodes.js";
+import {
   resolveIdeationMetadata
-} from "../../../core/bubble/ideation.js";
+} from "../../domain/ideation/ideationMetadata.js";
 import { resolveBubbleFromWorkspaceCwd } from "../../../core/bubble/workspaceResolution.js";
 import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import type { ActorEmitContextSnapshot } from "../../../core/bubble/actorEmitContext.js";

@@ -38,6 +38,7 @@ import {
   type BubbleConfig,
   type CreateReviewArtifactType
 } from "../types/bubble.js";
+import { IDEATION_METADATA_PARSE_WARNING } from "../v11/shared/ideation/ideationReasonCodes.js";
 
 export const TOML_PARSER_LIMITATIONS = [
   "No multiline strings (\"\"\"...\"\"\" / '''...''')",
@@ -58,8 +59,6 @@ export const DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER =
   "DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER" as const;
 export const SEVERITY_GATE_ROUND_INVALID =
   "SEVERITY_GATE_ROUND_INVALID" as const;
-const IDEATION_METADATA_PARSE_WARNING =
-  "IDEATION_METADATA_PARSE_WARNING" as const;
 
 function formatCreateReviewArtifactTypeError(
   reasonCode:

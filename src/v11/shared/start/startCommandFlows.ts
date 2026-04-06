@@ -1,10 +1,10 @@
 import { applyStateTransition } from "../../../core/state/machine.js";
 import { writeStateSnapshot } from "../../../core/state/stateStore.js";
-import { resolveIdeationMetadata } from "../../../core/bubble/ideation.js";
 import {
   buildRestartedExecutionContext,
   buildRunningExecutionContext
 } from "../../../core/state/executionContext.js";
+import { resolveIdeationMetadata } from "../../domain/ideation/ideationMetadata.js";
 import {
   launchFreshTmuxSession,
   launchResumeTmuxSession

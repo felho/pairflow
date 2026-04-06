@@ -5,7 +5,7 @@ import {
   IDEATION_KICKOFF_NOT_ALLOWED,
   IDEATION_KICKOFF_NOT_ELIGIBLE,
   IDEATION_KICKOFF_REQUIRES_RUNNING
-} from "../../../../src/core/bubble/ideation.js";
+} from "../../../../src/v11/shared/ideation/ideationReasonCodes.js";
 import type { BubbleStateSnapshot } from "../../../../src/types/bubble.js";
 import { resolveKickoffEligibilityFailureReason } from "../../../../src/v11/shared/kickoff/kickoffEligibility.js";
 

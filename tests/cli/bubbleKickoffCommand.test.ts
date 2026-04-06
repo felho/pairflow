@@ -6,7 +6,7 @@ import {
   IDEATION_METADATA_PARSE_WARNING,
   IDEATION_REVIEW_ARTIFACT_TYPE_IMMUTABLE,
   IDEATION_TASK_INPUT_CONFLICT
-} from "../../src/core/bubble/ideation.js";
+} from "../../src/v11/shared/ideation/ideationReasonCodes.js";
 import {
   type BubbleKickoffCommandDependencies,
   getBubbleKickoffHelpText,

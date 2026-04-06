@@ -1,7 +1,7 @@
 import {
   IDEATION_TASK_INPUT_CONFLICT,
   IDEATION_TASK_REQUIRED
-} from "../../../core/bubble/ideation.js";
+} from "../../shared/ideation/ideationReasonCodes.js";
 import type { BubbleCreateCommandOptions } from "./createCliOptionTypes.js";
 import {
   appendMissingOption,

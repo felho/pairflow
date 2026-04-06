@@ -10,7 +10,7 @@ import {
 import {
   IDEATION_TASK_INPUT_CONFLICT,
   IDEATION_TASK_REQUIRED
-} from "../../src/core/bubble/ideation.js";
+} from "../../src/v11/shared/ideation/ideationReasonCodes.js";
 import {
   type BubbleCreateCommandDependencies,
   getBubbleCreateHelpText,

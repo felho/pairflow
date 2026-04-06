@@ -4,7 +4,7 @@ import {
   IDEATION_KICKOFF_TASK_INVALID,
   IDEATION_REVIEW_ARTIFACT_TYPE_IMMUTABLE,
   IDEATION_TASK_INPUT_CONFLICT
-} from "../../../core/bubble/ideation.js";
+} from "../../shared/ideation/ideationReasonCodes.js";
 
 export interface BubbleKickoffCommandOptions {
   id: string;

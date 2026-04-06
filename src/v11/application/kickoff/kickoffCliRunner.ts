@@ -2,9 +2,11 @@ import type { ResolvedBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import {
   IDEATION_KICKOFF_NOT_ALLOWED,
   IDEATION_KICKOFF_TASK_INVALID,
-  IDEATION_METADATA_PARSE_WARNING,
+  IDEATION_METADATA_PARSE_WARNING
+} from "../../shared/ideation/ideationReasonCodes.js";
+import {
   hasIdeationMetadataParseWarning
-} from "../../../core/bubble/ideation.js";
+} from "../../domain/ideation/ideationMetadata.js";
 import {
   kickoffBubbleV11 as kickoffBubble,
   type KickoffBubbleV11Result as KickoffBubbleResult
