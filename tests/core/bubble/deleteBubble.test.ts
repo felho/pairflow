@@ -10,7 +10,7 @@ import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import {
   deleteBubble,
   type DeleteBubbleDependencies
-} from "../../../src/core/bubble/deleteBubble.js";
+} from "../../../src/v11/application/delete/deleteBubble.js";
 import {
   readRuntimeSessionsRegistry,
   removeRuntimeSession,

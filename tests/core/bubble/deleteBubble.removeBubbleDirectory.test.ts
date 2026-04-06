@@ -13,7 +13,7 @@ vi.mock("node:fs/promises", async () => {
 import {
   deleteBubble,
   type DeleteBubbleDependencies
-} from "../../../src/core/bubble/deleteBubble.js";
+} from "../../../src/v11/application/delete/deleteBubble.js";
 
 function buildDependencies(): DeleteBubbleDependencies {
   const resolveBubbleById: NonNullable<DeleteBubbleDependencies["resolveBubbleById"]> =
