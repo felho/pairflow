@@ -1354,8 +1354,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:10:12.000Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_approve_parity_metadata_01",
         status: "success",
         recommendation: "approve",
@@ -1363,7 +1362,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/custom-approve-report.md",
         rework_target_message: null,
         updated_at: "2026-03-12T12:10:11.000Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "clean",
@@ -1421,8 +1419,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:10:22.000Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_approve_summary_no_parity_01",
         status: "success",
         recommendation: "approve",
@@ -1430,7 +1427,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/custom-approve-report.md",
         rework_target_message: null,
         updated_at: "2026-03-12T12:10:21.000Z",
-        lifecycle_state: "RUNNING",
         warnings: []
       }
     });
@@ -1465,8 +1461,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:10:32.000Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_approve_summary_consistent_01",
         status: "success",
         recommendation: "approve",
@@ -1474,7 +1469,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/custom-approve-report.md",
         rework_target_message: null,
         updated_at: "2026-03-12T12:10:31.000Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -1523,8 +1517,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:10:36.000Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_approve_summary_inconsistent_01",
         status: "success",
         recommendation: "approve",
@@ -1532,7 +1525,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/custom-approve-report.md",
         rework_target_message: null,
         updated_at: "2026-03-12T12:10:35.000Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "clean",
@@ -1580,8 +1572,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:10:42.000Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_approve_summary_no_trigger_01",
         status: "success",
         recommendation: "approve",
@@ -1589,7 +1580,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/custom-approve-report.md",
         rework_target_message: null,
         updated_at: "2026-03-12T12:10:41.000Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "clean",
@@ -1803,8 +1793,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         summary: "Converged.",
         now: new Date("2026-03-14T10:01:02.000Z"),
         runResult: {
-          bubbleId: bubble.bubbleId,
-          depth: "standard",
+          bubble_id: bubble.bubbleId,
           run_id: runId,
           status: "success",
           recommendation: "rework",
@@ -1812,7 +1801,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           report_ref: "artifacts/meta-review-last.json",
           rework_target_message: "Re-run implementer hardening flow.",
           updated_at: runUpdatedAt,
-          lifecycle_state: "RUNNING",
           warnings: [],
           report_json: buildReworkReportJson({
             runId,
@@ -1918,8 +1906,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           summary: "Converged.",
           now: new Date("2026-03-14T10:02:02.000Z"),
           runResult: {
-            bubbleId: bubble.bubbleId,
-            depth: "standard",
+            bubble_id: bubble.bubbleId,
             run_id: runId,
             status: "success",
             recommendation: "rework",
@@ -1927,7 +1914,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
             report_ref: "artifacts/meta-review-last.json",
             rework_target_message: "Re-run implementer hardening flow.",
             updated_at: runUpdatedAt,
-            lifecycle_state: "RUNNING",
             warnings: [],
             report_json: buildReworkReportJson({
               runId,
@@ -2013,8 +1999,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:32.000Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_rework_injected_01",
         status: "success",
         recommendation: "rework",
@@ -2022,7 +2007,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/custom-run-report.md",
         rework_target_message: "Inject rework message.",
         updated_at: "2026-03-12T12:12:31.000Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: buildReworkReportJson({
           runId: "run_recover_rework_injected_01",
@@ -2126,8 +2110,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           summary: "Converged.",
           now: new Date("2026-03-13T12:20:02.000Z"),
           runResult: {
-            bubbleId: bubble.bubbleId,
-            depth: "standard",
+            bubble_id: bubble.bubbleId,
             run_id: "run_recover_rework_cas_round_drift_01",
             status: "success",
             recommendation: "rework",
@@ -2135,7 +2118,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
             report_ref: "artifacts/meta-review-last.json",
             rework_target_message: "Retry with deterministic invariant checks.",
             updated_at: "2026-03-13T12:20:01.000Z",
-            lifecycle_state: "RUNNING",
             warnings: [],
             report_json: buildReworkReportJson({
               runId: "run_recover_rework_cas_round_drift_01",
@@ -2235,8 +2217,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           summary: "Converged.",
           now: new Date("2026-03-13T12:20:07.000Z"),
           runResult: {
-            bubbleId: bubble.bubbleId,
-            depth: "standard",
+            bubble_id: bubble.bubbleId,
             run_id: "run_recover_rework_cas_run_identity_drift_01",
             status: "success",
             recommendation: "rework",
@@ -2244,7 +2225,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
             report_ref: "artifacts/meta-review-last.json",
             rework_target_message: "Retry with deterministic identity invariant checks.",
             updated_at: "2026-03-13T12:20:06.000Z",
-            lifecycle_state: "RUNNING",
             warnings: [],
             report_json: buildReworkReportJson({
               runId: "run_recover_rework_cas_run_identity_drift_01",
@@ -2344,15 +2324,13 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         summary: "Converged.",
         now: new Date("2026-03-13T12:20:09.000Z"),
         runResult: {
-          bubbleId: bubble.bubbleId,
-          depth: "standard",
+          bubble_id: bubble.bubbleId,
           status: "success",
           recommendation: "rework",
           summary: "Rework with CAS retry but missing run identity.",
           report_ref: "artifacts/meta-review-last.json",
           rework_target_message: "Retry deterministically.",
           updated_at: "2026-03-13T12:20:08.500Z",
-          lifecycle_state: "RUNNING",
           warnings: [],
           report_json: buildReworkReportJson({
             runId: "run_recover_rework_cas_run_identity_absent_01",
@@ -2448,8 +2426,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         summary: "Converged.",
         now: new Date("2026-03-13T12:20:12.000Z"),
         runResult: {
-          bubbleId: bubble.bubbleId,
-          depth: "standard",
+          bubble_id: bubble.bubbleId,
           run_id: "run_recover_rework_cas_compatible_01",
           status: "success",
           recommendation: "rework",
@@ -2457,7 +2434,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           report_ref: "artifacts/meta-review-last.json",
           rework_target_message: "Proceed with deterministic retry acceptance.",
           updated_at: "2026-03-13T12:20:11.000Z",
-          lifecycle_state: "RUNNING",
           warnings: [],
           report_json: buildReworkReportJson({
             runId: "run_recover_rework_cas_compatible_01",
@@ -2512,8 +2488,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       }
     ];
     const providedRunResult = {
-      bubbleId: bubble.bubbleId,
-      depth: "standard" as const,
+      bubble_id: bubble.bubbleId,
       run_id: "run_recover_rework_parser_divergence_01",
       status: "success" as const,
       recommendation: "rework" as const,
@@ -2521,7 +2496,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       report_ref: "artifacts/custom-report.md",
       rework_target_message: "Retry after reviewer follow-up.",
       updated_at: "2026-03-12T12:12:36.000Z",
-      lifecycle_state: "RUNNING" as const,
       warnings: [...providedWarnings],
       report_json: buildReworkReportJson({
         runId: "run_recover_rework_parser_divergence_01",
@@ -2595,8 +2569,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:40.000Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_rework_parser_aligned_01",
         status: "success",
         recommendation: "rework",
@@ -2604,7 +2577,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/custom-report.md",
         rework_target_message: "Retry after follow-up.",
         updated_at: "2026-03-12T12:12:39.000Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: buildReworkReportJson({
           runId: "run_recover_rework_parser_aligned_01",
@@ -2651,8 +2623,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:43.000Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_rework_invalid_state_enum_01",
         status: "success",
         recommendation: "rework",
@@ -2660,7 +2631,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Retry.",
         updated_at: "2026-03-12T12:12:42.000Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "opened",
@@ -2699,8 +2669,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:46.000Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_rework_invalid_source_enum_01",
         status: "success",
         recommendation: "rework",
@@ -2708,7 +2677,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Retry.",
         updated_at: "2026-03-12T12:12:45.000Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -2747,8 +2715,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:49.000Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_approve_open_claim_01",
         status: "success",
         recommendation: "approve",
@@ -2756,7 +2723,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:48.000Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -2798,8 +2764,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:50.500Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_approve_advisory_only_01",
         status: "success",
         recommendation: "approve",
@@ -2807,7 +2772,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:50.000Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -2870,8 +2834,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:51.700Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_approve_advisory_no_artifact_total_01",
         status: "success",
         recommendation: "approve",
@@ -2879,7 +2842,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:51.100Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -2931,8 +2893,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:52.900Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_approve_advisory_null_artifact_total_01",
         status: "success",
         recommendation: "approve",
@@ -2940,7 +2901,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:52.300Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -2992,8 +2952,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:53.200Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_approve_advisory_null_summary_01",
         status: "success",
         recommendation: "approve",
@@ -3001,7 +2960,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:52.700Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3044,8 +3002,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:52.000Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_approve_blocking_present_01",
         status: "success",
         recommendation: "approve",
@@ -3053,7 +3010,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:51.500Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3095,8 +3051,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:53.100Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_approve_split_arithmetic_01",
         status: "success",
         recommendation: "approve",
@@ -3104,7 +3059,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:52.700Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3146,8 +3100,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:54.150Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_approve_artifact_invariant_01",
         status: "success",
         recommendation: "approve",
@@ -3155,7 +3108,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:53.650Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3198,8 +3150,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:54.200Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_approve_summary_structured_mismatch_01",
         status: "success",
         recommendation: "approve",
@@ -3207,7 +3158,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:53.700Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3250,8 +3200,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:55.250Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_approve_no_blocking_summary_01",
         status: "success",
         recommendation: "approve",
@@ -3259,7 +3208,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:54.750Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3302,8 +3250,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:55.300Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_approve_split_format_01",
         status: "success",
         recommendation: "approve",
@@ -3311,7 +3258,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:54.800Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3353,8 +3299,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:56.350Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_approve_blocking_precedence_01",
         status: "success",
         recommendation: "approve",
@@ -3362,7 +3307,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:55.850Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3408,8 +3352,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:57.400Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_approve_artifact_format_01",
         status: "success",
         recommendation: "approve",
@@ -3417,7 +3360,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:56.900Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3463,8 +3405,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:58.450Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_approve_split_precedes_artifact_format_01",
         status: "success",
         recommendation: "approve",
@@ -3472,7 +3413,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:57.950Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3518,8 +3458,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:58.800Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_approve_claim_state_precedence_01",
         status: "success",
         recommendation: "approve",
@@ -3527,7 +3466,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:12:58.300Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "clean",
@@ -3597,8 +3535,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:42.000Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_budget_exhausted_01",
         status: "success",
         recommendation: "rework",
@@ -3606,7 +3543,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Would rework if budget allowed.",
         updated_at: "2026-03-12T12:12:41.000Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: buildReworkReportJson({
           runId: "run_recover_budget_exhausted_01",
@@ -3649,8 +3585,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:52.000Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_artifact_required_01",
         status: "success",
         recommendation: "rework",
@@ -3658,7 +3593,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Need another revision.",
         updated_at: "2026-03-12T12:12:51.000Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3701,8 +3635,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:54.000Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_run_link_missing_01",
         status: "success",
         recommendation: "rework",
@@ -3710,7 +3643,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Need another revision.",
         updated_at: "2026-03-12T12:12:53.500Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3756,8 +3688,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:54.600Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_run_link_mismatch_01",
         status: "success",
         recommendation: "rework",
@@ -3765,7 +3696,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Need another revision.",
         updated_at: "2026-03-12T12:12:54.100Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3816,8 +3746,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:55.500Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_parity_guard_01",
         status: "success",
         recommendation: "rework",
@@ -3825,7 +3754,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Need another revision.",
         updated_at: "2026-03-12T12:12:55.000Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -3891,8 +3819,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         summary: "Converged.",
         now: new Date("2026-03-12T12:12:56.550Z"),
         runResult: {
-          bubbleId: bubble.bubbleId,
-          depth: "standard",
+          bubble_id: bubble.bubbleId,
           run_id: "run_recover_read_retry_success_01",
           status: "success",
           recommendation: "rework",
@@ -3900,7 +3827,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           report_ref: "artifacts/meta-review-last.json",
           rework_target_message: "Need another revision.",
           updated_at: "2026-03-12T12:12:56.000Z",
-          lifecycle_state: "RUNNING",
           warnings: [],
           report_json: {
             findings_claim_state: "open_findings",
@@ -3973,8 +3899,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         summary: "Converged.",
         now: new Date("2026-03-12T12:12:56.650Z"),
         runResult: {
-          bubbleId: bubble.bubbleId,
-          depth: "standard",
+          bubble_id: bubble.bubbleId,
           run_id: "run_recover_read_retry_exhausted_01",
           status: "success",
           recommendation: "rework",
@@ -3982,7 +3907,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           report_ref: "artifacts/meta-review-last.json",
           rework_target_message: "Need another revision.",
           updated_at: "2026-03-12T12:12:56.100Z",
-          lifecycle_state: "RUNNING",
           warnings: [],
           report_json: {
             findings_claim_state: "open_findings",
@@ -4046,8 +3970,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:56.700Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_digest_mismatch_01",
         status: "success",
         recommendation: "rework",
@@ -4055,7 +3978,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Need another revision.",
         updated_at: "2026-03-12T12:12:56.100Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -4125,8 +4047,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:57.800Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_array_open_total_missing_01",
         status: "success",
         recommendation: "rework",
@@ -4134,7 +4055,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Need another revision.",
         updated_at: "2026-03-12T12:12:57.200Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -4186,8 +4106,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:57.000Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_count_mismatch_01",
         status: "success",
         recommendation: "rework",
@@ -4195,7 +4114,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Need another revision.",
         updated_at: "2026-03-12T12:12:56.000Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -4242,8 +4160,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:12:59.000Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_count_mismatch_post_digest_01",
         status: "success",
         recommendation: "rework",
@@ -4251,7 +4168,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: "Need another revision.",
         updated_at: "2026-03-12T12:12:58.500Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: {
           findings_claim_state: "open_findings",
@@ -4308,15 +4224,13 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         summary: "Converged.",
         now: new Date("2026-03-12T12:13:02.000Z"),
         runResult: {
-          bubbleId: bubble.bubbleId,
-          depth: "standard",
+          bubble_id: bubble.bubbleId,
           status: "success",
           recommendation: "rework",
           summary: "Run result is missing rework message.",
           report_ref: "artifacts/meta-review-last.json",
           rework_target_message: null,
           updated_at: "2026-03-12T12:13:01.000Z",
-          lifecycle_state: "RUNNING",
           warnings: []
         }
       }
@@ -4383,15 +4297,13 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         summary: "Converged.",
         now: new Date("2026-03-12T12:14:02.000Z"),
         runResult: {
-          bubbleId: bubble.bubbleId,
-          depth: "standard",
+          bubble_id: bubble.bubbleId,
           status: "error",
           recommendation: "inconclusive",
           summary: "Runner failed.",
           report_ref: "artifacts/meta-review-last.json",
           rework_target_message: null,
           updated_at: "2026-03-12T12:14:01.000Z",
-          lifecycle_state: "RUNNING",
           warnings: []
         }
       }
@@ -4437,8 +4349,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:14:32.000Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_provided_01",
         status: "success",
         recommendation: "approve",
@@ -4446,7 +4357,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/recovered-report-custom.md",
         rework_target_message: null,
         updated_at: "2026-03-12T12:14:31.000Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: buildApproveReportJson()
       }
@@ -4492,8 +4402,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         summary: "Converged.",
         now: new Date("2026-03-12T12:14:42.000Z"),
         runResult: {
-          bubbleId: bubble.bubbleId,
-          depth: "standard",
+          bubble_id: bubble.bubbleId,
           run_id: "run_recover_partial_warning_01",
           status: "success",
           recommendation: "approve",
@@ -4501,7 +4410,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           report_ref: "artifacts/non-canonical.md",
           rework_target_message: null,
           updated_at: "2026-03-12T12:14:41.000Z",
-          lifecycle_state: "RUNNING",
           warnings: [],
           report_json: buildApproveReportJson()
         }
@@ -4557,8 +4465,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         summary: "Converged.",
         now: new Date("2026-03-12T12:14:42.000Z"),
         runResult: {
-          bubbleId: bubble.bubbleId,
-          depth: "standard",
+          bubble_id: bubble.bubbleId,
           run_id: "run_recover_warning_01",
           status: "success",
           recommendation: "approve",
@@ -4566,7 +4473,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
           report_ref: "artifacts/meta-review-last.json",
           rework_target_message: null,
           updated_at: "2026-03-12T12:14:41.000Z",
-          lifecycle_state: "RUNNING",
           warnings: [],
           report_json: buildApproveReportJson()
         }
@@ -4626,8 +4532,7 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
       summary: "Converged.",
       now: new Date("2026-03-12T12:14:52.000Z"),
       runResult: {
-        bubbleId: bubble.bubbleId,
-        depth: "standard",
+        bubble_id: bubble.bubbleId,
         run_id: "run_recover_artifact_parse_diag_01",
         status: "success",
         recommendation: "approve",
@@ -4635,7 +4540,6 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         report_ref: "artifacts/meta-review-last.json",
         rework_target_message: null,
         updated_at: "2026-03-12T12:14:51.000Z",
-        lifecycle_state: "RUNNING",
         warnings: [],
         report_json: buildApproveReportJson()
       }
@@ -4684,15 +4588,13 @@ describe("recoverMetaReviewGateFromSnapshot", () => {
         summary: "Converged.",
         now: new Date("2026-03-12T12:15:02.000Z"),
         runResult: {
-          bubbleId: bubble.bubbleId,
-          depth: "standard",
+          bubble_id: bubble.bubbleId,
           status: "success",
           recommendation: "approve",
           summary: "Approve recommendation.",
           report_ref: "artifacts/meta-review-last.json",
           rework_target_message: null,
           updated_at: "2026-03-12T12:15:05.000Z",
-          lifecycle_state: "RUNNING",
           warnings: []
         }
       })

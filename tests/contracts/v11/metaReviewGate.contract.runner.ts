@@ -14,9 +14,9 @@ import {
   applyMetaReviewGateOnConvergenceV11,
   recoverMetaReviewGateFromSnapshotV11
 } from "../../../src/v11/application/metaReviewGate/emitMetaReviewGateV11.js";
+import type { MetaReviewResult } from "../../../src/v11/shared/metaReview/metaReviewTypes.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
-import type { MetaReviewRunResult } from "../../../src/core/bubble/metaReview.js";
 import type {
   RuntimeSessionRecord,
   SetMetaReviewerPaneBindingResult
@@ -189,17 +189,15 @@ function normalizeMetaReviewSnapshotForContract(
 
 function buildSyntheticMetaReviewRunError(input: {
   bubbleId: string;
-}): MetaReviewRunResult {
+}): MetaReviewResult {
   return {
-    bubbleId: input.bubbleId,
-    depth: "standard",
+    bubble_id: input.bubbleId,
     status: "error",
     recommendation: "inconclusive",
     summary: "Seed meta-review recover contract failure snapshot.",
     report_ref: "artifacts/meta-review-last.json",
     rework_target_message: null,
     updated_at: "2026-03-19T10:03:00.000Z",
-    lifecycle_state: "RUNNING",
     warnings: [
       {
         reason_code: "META_REVIEW_RUNNER_ERROR",
@@ -214,17 +212,15 @@ function buildSyntheticMetaReviewRunError(input: {
 
 function buildSyntheticMetaReviewRunApprove(input: {
   bubbleId: string;
-}): MetaReviewRunResult {
+}): MetaReviewResult {
   return {
-    bubbleId: input.bubbleId,
-    depth: "standard",
+    bubble_id: input.bubbleId,
     status: "success",
     recommendation: "approve",
     summary: "Seed meta-review recover contract approve snapshot.",
     report_ref: "artifacts/meta-review-last.json",
     rework_target_message: null,
     updated_at: "2026-03-19T10:03:00.000Z",
-    lifecycle_state: "RUNNING",
     warnings: [],
     report_json: {
       findings_claim_state: "clean",
@@ -239,17 +235,15 @@ function buildSyntheticMetaReviewRunApprove(input: {
 
 function buildSyntheticMetaReviewRunApproveAdvisory(input: {
   bubbleId: string;
-}): MetaReviewRunResult {
+}): MetaReviewResult {
   return {
-    bubbleId: input.bubbleId,
-    depth: "standard",
+    bubble_id: input.bubbleId,
     status: "success",
     recommendation: "approve",
     summary: "No open P0/P1 findings remain.",
     report_ref: "artifacts/meta-review-last.json",
     rework_target_message: null,
     updated_at: "2026-03-19T10:03:00.000Z",
-    lifecycle_state: "RUNNING",
     warnings: [],
     report_json: {
       findings_claim_state: "open_findings",
@@ -275,17 +269,15 @@ function buildSyntheticMetaReviewRunApproveAdvisory(input: {
 
 function buildSyntheticMetaReviewRunApproveAdvisoryWithArtifact(input: {
   bubbleId: string;
-}): MetaReviewRunResult {
+}): MetaReviewResult {
   return {
-    bubbleId: input.bubbleId,
-    depth: "standard",
+    bubble_id: input.bubbleId,
     status: "success",
     recommendation: "approve",
     summary: "Seed meta-review recover contract approve/advisory+artifact snapshot.",
     report_ref: "artifacts/meta-review-last.json",
     rework_target_message: null,
     updated_at: "2026-03-19T10:03:00.000Z",
-    lifecycle_state: "RUNNING",
     warnings: [],
     report_json: {
       findings_claim_state: "open_findings",
@@ -301,17 +293,15 @@ function buildSyntheticMetaReviewRunApproveAdvisoryWithArtifact(input: {
 
 function buildSyntheticMetaReviewRunInconclusive(input: {
   bubbleId: string;
-}): MetaReviewRunResult {
+}): MetaReviewResult {
   return {
-    bubbleId: input.bubbleId,
-    depth: "standard",
+    bubble_id: input.bubbleId,
     status: "success",
     recommendation: "inconclusive",
     summary: "Seed meta-review recover contract inconclusive snapshot.",
     report_ref: "artifacts/meta-review-last.json",
     rework_target_message: null,
     updated_at: "2026-03-19T10:03:00.000Z",
-    lifecycle_state: "RUNNING",
     warnings: []
   };
 }
@@ -322,10 +312,9 @@ function buildSyntheticMetaReviewRunReworkOpenFindings(input: {
   findingsCount: number;
   findingsArtifactRef: string;
   findingsDigestSha256: string;
-}): MetaReviewRunResult {
+}): MetaReviewResult {
   return {
-    bubbleId: input.bubbleId,
-    depth: "standard",
+    bubble_id: input.bubbleId,
     run_id: input.runId,
     status: "success",
     recommendation: "rework",
@@ -333,7 +322,6 @@ function buildSyntheticMetaReviewRunReworkOpenFindings(input: {
     report_ref: "artifacts/meta-review-last.json",
     rework_target_message: "Fix the remaining blocker findings.",
     updated_at: "2026-03-19T10:03:00.000Z",
-    lifecycle_state: "RUNNING",
     warnings: [],
     report_json: {
       findings_claim_state: "open_findings",
@@ -349,17 +337,15 @@ function buildSyntheticMetaReviewRunReworkOpenFindings(input: {
 
 function buildSyntheticMetaReviewRunReworkDispatchFailed(input: {
   bubbleId: string;
-}): MetaReviewRunResult {
+}): MetaReviewResult {
   return {
-    bubbleId: input.bubbleId,
-    depth: "standard",
+    bubble_id: input.bubbleId,
     status: "success",
     recommendation: "rework",
     summary: "Seed meta-review recover contract rework dispatch failed snapshot.",
     report_ref: "artifacts/meta-review-last.json",
     rework_target_message: "Fix the blocker findings before retry.",
     updated_at: "2026-03-19T10:03:00.000Z",
-    lifecycle_state: "RUNNING",
     warnings: []
   };
 }
@@ -666,7 +652,7 @@ async function executeMetaReviewGateCase(input: {
         }
       );
 
-      let runResult: MetaReviewRunResult;
+      let runResult: MetaReviewResult;
       if (caseInput.recoverScenario === "approve") {
         runResult = buildSyntheticMetaReviewRunApprove({
           bubbleId: bubble.bubbleId

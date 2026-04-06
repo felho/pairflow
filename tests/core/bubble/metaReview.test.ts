@@ -574,7 +574,6 @@ describe("meta-review run", () => {
     });
     const after = await readStateSnapshot(bubble.paths.statePath);
 
-    expect(result.lifecycle_state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(after.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(after.state.meta_review?.last_autonomous_recommendation).toBe("approve");
     expect(after.state.meta_review?.last_autonomous_summary).toBe(
@@ -702,9 +701,9 @@ describe("meta-review run", () => {
     );
 
     expect(result.status).toBe("success");
-    expect(result.lifecycle_state).toBe("READY_FOR_HUMAN_APPROVAL");
 
     const after = await readStateSnapshot(bubble.paths.statePath);
+    expect(after.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(after.state.meta_review?.last_autonomous_summary).toBe(refreshedSummary);
     expect(after.state.meta_review?.last_autonomous_summary).not.toContain("R10");
 
@@ -4600,7 +4599,6 @@ describe("meta-review reads", () => {
     const after = await readStateSnapshot(bubble.paths.statePath);
 
     expect(before.state.state).toBe("RUNNING");
-    expect(result.lifecycle_state).toBe("RUNNING");
     expect(after.state.state).toBe("RUNNING");
   });
 
@@ -4687,7 +4685,6 @@ describe("meta-review reads", () => {
     const after = await readStateSnapshot(bubble.paths.statePath);
 
     expect(result.status).toBe("success");
-    expect(result.lifecycle_state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(after.state.state).toBe("READY_FOR_HUMAN_APPROVAL");
     expect(after.state.meta_review?.sticky_human_gate).toBe(true);
     expect(after.state.meta_review?.last_autonomous_recommendation).toBe("approve");

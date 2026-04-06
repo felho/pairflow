@@ -87,6 +87,7 @@ import {
 import type {
   MetaReviewDepth as MetaReviewDepthV11,
   MetaReviewLastReportView as MetaReviewLastReportViewV11,
+  MetaReviewResult as MetaReviewResultV11,
   MetaReviewRunWarning as MetaReviewRunWarningV11,
   MetaReviewStatusView as MetaReviewStatusViewV11
 } from "../../v11/shared/metaReview/metaReviewTypes.js";
@@ -99,6 +100,7 @@ export type MetaReviewDepth = MetaReviewDepthV11;
 export type MetaReviewReviewerVerdict = MetaReviewReviewerVerdictV11;
 export type MetaReviewStatusView = MetaReviewStatusViewV11;
 export type MetaReviewLastReportView = MetaReviewLastReportViewV11;
+export type MetaReviewResult = MetaReviewResultV11;
 export type MetaReviewRunWarning = MetaReviewRunWarningV11;
 export type MetaReviewSubmitResult = MetaReviewSubmitResultV11;
 
@@ -106,28 +108,6 @@ interface MetaReviewLiveRunnerOutput {
   recommendation: MetaReviewRecommendation;
   summary?: string;
   rework_target_message?: string | null;
-  report_json?: Record<string, unknown>;
-}
-
-// Compat-only retained result for the legacy live-run test seam.
-// Concrete remaining consumers after Phase 2B: direct core tests and recovery
-// parity fixtures that still seed `runMetaReview`-shaped results.
-// Deletion trigger: remove or rewrite the remaining tests to seed canonical
-// `MetaReviewResult` snapshots directly instead of calling/constructing the
-// retained live-run path.
-export interface MetaReviewRunResult {
-  bubbleId: string;
-  bubble_id?: string;
-  depth: MetaReviewDepth;
-  run_id?: string;
-  status: MetaReviewRunStatus;
-  recommendation: MetaReviewRecommendation;
-  summary: string | null;
-  report_ref: string;
-  rework_target_message: string | null;
-  updated_at: string;
-  lifecycle_state: BubbleStateSnapshot["state"];
-  warnings: MetaReviewRunWarning[];
   report_json?: Record<string, unknown>;
 }
 
@@ -1628,11 +1608,9 @@ function buildCanonicalSubmitRunResult(input: {
   updatedAt: string;
   warnings: MetaReviewRunWarning[];
   reportJson: Record<string, unknown>;
-}): MetaReviewRunResult {
+}): MetaReviewResult {
   return {
-    bubbleId: input.bubbleId,
     bubble_id: input.bubbleId,
-    depth: "standard",
     run_id: input.runId,
     status: input.status,
     recommendation: input.recommendation,
@@ -1640,7 +1618,6 @@ function buildCanonicalSubmitRunResult(input: {
     report_ref: CANONICAL_META_REVIEW_REPORT_REF,
     rework_target_message: input.reworkTargetMessage,
     updated_at: input.updatedAt,
-    lifecycle_state: "RUNNING",
     warnings: [...input.warnings],
     report_json: input.reportJson
   };
@@ -1661,7 +1638,7 @@ function assertSubmitRecommendationRouteable(
 async function assertSubmitReworkFindingsArtifactContract(input: {
   bubbleDir: string;
   artifactsDir: string;
-  runResult: MetaReviewRunResult;
+  runResult: MetaReviewResult;
   reportJson: Record<string, unknown>;
   readFileFn: typeof readFile;
 }): Promise<void> {
@@ -1671,22 +1648,7 @@ async function assertSubmitReworkFindingsArtifactContract(input: {
 
   const parityInput = resolveReworkFindingsParityInput({
     reportJson: input.reportJson,
-    runResult: {
-      bubble_id: input.runResult.bubble_id ?? input.runResult.bubbleId,
-      ...(input.runResult.run_id !== undefined
-        ? { run_id: input.runResult.run_id }
-        : {}),
-      status: input.runResult.status,
-      recommendation: input.runResult.recommendation,
-      summary: input.runResult.summary,
-      report_ref: input.runResult.report_ref,
-      rework_target_message: input.runResult.rework_target_message,
-      updated_at: input.runResult.updated_at,
-      warnings: [...input.runResult.warnings],
-      ...(input.runResult.report_json !== undefined
-        ? { report_json: input.runResult.report_json }
-        : {})
-    },
+    runResult: input.runResult,
     bubbleDir: input.bubbleDir,
     artifactsDir: input.artifactsDir
   });
@@ -2082,7 +2044,7 @@ export async function submitMetaReviewResult(
 export async function runMetaReview(
   input: MetaReviewRunInput,
   dependencies: MetaReviewDependencies = {}
-): Promise<MetaReviewRunResult> {
+): Promise<MetaReviewResult> {
   const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
   const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
   const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
@@ -2373,9 +2335,7 @@ export async function runMetaReview(
   }
 
   return {
-    bubbleId: resolved.bubbleId,
     bubble_id: resolved.bubbleId,
-    depth,
     run_id: runId,
     status,
     recommendation,
@@ -2383,7 +2343,6 @@ export async function runMetaReview(
     report_ref: CANONICAL_META_REVIEW_REPORT_REF,
     rework_target_message: reworkTargetMessage,
     updated_at: updatedAt,
-    lifecycle_state: written.state.state,
     warnings,
     report_json: canonicalReportJson
   };

@@ -13,7 +13,6 @@ import type {
 } from "../../../core/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type {
-  MetaReviewDepth,
   MetaReviewResult
 } from "../metaReview/metaReviewTypes.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
@@ -80,30 +79,6 @@ export interface ApplyMetaReviewGateOnConvergenceDependencies {
   readFile?: typeof readFile;
 }
 
-// Compat-only bridge for recovery/test inputs that still mirror the retained
-// `runMetaReview` result shape. Concrete remaining consumers are retained
-// meta-review gate parity fixtures. Deletion trigger: once recovery fixtures
-// seed canonical `MetaReviewResult` payloads directly, remove this bridge.
-export interface MetaReviewRecoveryCompatRunResult {
-  bubbleId: string;
-  bubble_id?: string;
-  depth: MetaReviewDepth;
-  run_id?: string;
-  status: MetaReviewResult["status"];
-  recommendation: MetaReviewResult["recommendation"];
-  summary: MetaReviewResult["summary"];
-  report_ref: MetaReviewResult["report_ref"];
-  rework_target_message: MetaReviewResult["rework_target_message"];
-  updated_at: MetaReviewResult["updated_at"];
-  lifecycle_state: BubbleStateSnapshot["state"];
-  warnings: MetaReviewResult["warnings"];
-  report_json?: MetaReviewResult["report_json"];
-}
-
-export type RecoverMetaReviewGateRunResultInput =
-  | MetaReviewResult
-  | MetaReviewRecoveryCompatRunResult;
-
 export interface RecoverMetaReviewGateFromSnapshotInput {
   bubbleId: string;
   refs?: string[];
@@ -111,7 +86,7 @@ export interface RecoverMetaReviewGateFromSnapshotInput {
   repoPath?: string;
   cwd?: string;
   now?: Date;
-  runResult?: RecoverMetaReviewGateRunResultInput;
+  runResult?: MetaReviewResult;
 }
 
 export interface RecoverMetaReviewGateFromSnapshotDependencies {

@@ -4,7 +4,6 @@ import {
 import type { readFile } from "node:fs/promises";
 import type { BubbleMetaReviewSnapshotState } from "../../../types/bubble.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
-import type { RecoverMetaReviewGateRunResultInput } from "./metaReviewGateTypes.js";
 import { readMetaReviewReportJsonArtifact } from "./metaReviewGateFindingsMetadata.js";
 import {
   normalizeRecoveredMetaReviewRunResult,
@@ -40,7 +39,7 @@ export interface RecoveredRunResolution {
 
 function normalizeRequestedRunResult(input: {
   bubbleId: string;
-  runResult: RecoverMetaReviewGateRunResultInput;
+  runResult: MetaReviewResult;
 }): MetaReviewResult {
   return {
     bubble_id:
@@ -66,7 +65,7 @@ function normalizeRequestedRunResult(input: {
 
 export async function resolveRecoveredRunResolution(input: {
   context: RecoveryRunResolutionContext;
-  requestedRunResult?: RecoverMetaReviewGateRunResultInput;
+  requestedRunResult?: MetaReviewResult;
   requestedSummary?: string;
 }): Promise<RecoveredRunResolution> {
   const snapshot = normalizeMetaReviewSnapshot(input.context.loaded.state.meta_review);
@@ -150,7 +149,7 @@ export async function resolveRecoveredRunResolution(input: {
 }
 
 export function assertRecoveredRunResolutionConsistency(input: {
-  requestedRunResult?: RecoverMetaReviewGateRunResultInput;
+  requestedRunResult?: MetaReviewResult;
   snapshotHasCanonicalSubmitInActiveWindow: boolean;
   snapshot: BubbleMetaReviewSnapshotState;
   runResult: MetaReviewResult;
