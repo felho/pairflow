@@ -1,0 +1,390 @@
+import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
+
+import { parseEnvelopeLine, serializeEnvelopeLine } from "../../../shared/protocol/envelope.js";
+import {
+  allocateNextProtocolSequence,
+  TranscriptSequenceError
+} from "../../../shared/protocol/sequenceAllocator.js";
+import { assertValidProtocolEnvelope } from "../../../shared/protocol/validators.js";
+import { FileLockTimeoutError, withFileLock } from "../../../../core/util/fileLock.js";
+import type {
+  ProtocolEnvelope,
+  ProtocolEnvelopePayload,
+  ProtocolMessageType,
+  ProtocolParticipant
+} from "../../../../types/protocol.js";
+
+export interface ProtocolEnvelopeDraft {
+  bubble_id: string;
+  sender: ProtocolParticipant;
+  recipient: ProtocolParticipant;
+  type: ProtocolMessageType;
+  round: number;
+  payload: ProtocolEnvelopePayload;
+  refs: string[];
+}
+
+export interface AppendProtocolEnvelopeInput {
+  transcriptPath: string;
+  mirrorPaths?: string[];
+  lockPath: string;
+  envelope: ProtocolEnvelopeDraft;
+  now?: Date;
+  lockTimeoutMs?: number;
+}
+
+export interface AppendProtocolEnvelopeBatchEntry {
+  envelope: ProtocolEnvelopeDraft;
+  mirrorPaths?: string[] | undefined;
+}
+
+export interface AppendProtocolEnvelopesInput {
+  transcriptPath: string;
+  lockPath: string;
+  entries: AppendProtocolEnvelopeBatchEntry[];
+  now?: Date | undefined;
+  lockTimeoutMs?: number | undefined;
+}
+
+export interface ProtocolMirrorWriteFailure {
+  path: string;
+  message: string;
+  code?: string;
+}
+
+export interface AppendProtocolEnvelopeResult {
+  envelope: ProtocolEnvelope;
+  sequence: number;
+  mirrorWriteFailures: ProtocolMirrorWriteFailure[];
+}
+
+export interface AppendProtocolEnvelopesResult {
+  entries: AppendProtocolEnvelopeResult[];
+}
+
+export interface ReadTranscriptOptions {
+  allowMissing?: boolean;
+  toleratePartialFinalLine?: boolean;
+  tolerateInvalidEnvelopeLines?: boolean;
+}
+
+interface ParsedTranscript {
+  envelopes: ProtocolEnvelope[];
+  normalizedRaw: string;
+  droppedTrailingPartialLine: boolean;
+  droppedInvalidEnvelopeLines: number;
+}
+
+export class ProtocolTranscriptError extends Error {
+  public constructor(message: string) {
+    super(message);
+    this.name = "ProtocolTranscriptError";
+  }
+}
+
+export class ProtocolTranscriptLockError extends ProtocolTranscriptError {
+  public constructor(message: string) {
+    super(message);
+    this.name = "ProtocolTranscriptLockError";
+  }
+}
+
+export class ProtocolTranscriptValidationError extends ProtocolTranscriptError {
+  public constructor(message: string) {
+    super(message);
+    this.name = "ProtocolTranscriptValidationError";
+  }
+}
+
+async function ensureDirForFile(path: string): Promise<void> {
+  await mkdir(dirname(path), { recursive: true });
+}
+
+async function readTranscriptRaw(
+  transcriptPath: string,
+  allowMissing: boolean
+): Promise<string> {
+  return readFile(transcriptPath, "utf8").catch((error: NodeJS.ErrnoException) => {
+    if (allowMissing && error.code === "ENOENT") {
+      return "";
+    }
+    throw error;
+  });
+}
+
+function parseTranscript(raw: string, options: ReadTranscriptOptions): ParsedTranscript {
+  const lines = raw.split(/\r?\n/u);
+  const envelopes: ProtocolEnvelope[] = [];
+
+  const toleratePartialFinalLine = options.toleratePartialFinalLine ?? true;
+  const tolerateInvalidEnvelopeLines = options.tolerateInvalidEnvelopeLines ?? false;
+  const hasTrailingNewline = raw.endsWith("\n");
+
+  let droppedTrailingPartialLine = false;
+  let droppedInvalidEnvelopeLines = 0;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (line === undefined || line.trim().length === 0) {
+      continue;
+    }
+
+    try {
+      envelopes.push(parseEnvelopeLine(line));
+    } catch (error) {
+      const isLastLine = index === lines.length - 1;
+      const canDropTrailingPartialLine =
+        toleratePartialFinalLine &&
+        isLastLine &&
+        !hasTrailingNewline &&
+        error instanceof SyntaxError;
+
+      if (canDropTrailingPartialLine) {
+        droppedTrailingPartialLine = true;
+        continue;
+      }
+
+      if (
+        tolerateInvalidEnvelopeLines &&
+        error instanceof Error &&
+        /Invalid protocol envelope/u.test(error.message)
+      ) {
+        droppedInvalidEnvelopeLines += 1;
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  const normalizedRaw = envelopes.map((envelope) => serializeEnvelopeLine(envelope)).join("");
+
+  return {
+    envelopes,
+    normalizedRaw,
+    droppedTrailingPartialLine,
+    droppedInvalidEnvelopeLines
+  };
+}
+
+export async function readTranscriptEnvelopes(
+  transcriptPath: string,
+  options: ReadTranscriptOptions = {}
+): Promise<ProtocolEnvelope[]> {
+  const raw = await readTranscriptRaw(
+    transcriptPath,
+    options.allowMissing ?? true
+  );
+
+  return parseTranscript(raw, options).envelopes;
+}
+
+export async function readTranscriptEnvelopesOrThrow(
+  transcriptPath: string,
+  options: Omit<ReadTranscriptOptions, "allowMissing"> = {}
+): Promise<ProtocolEnvelope[]> {
+  return readTranscriptEnvelopes(transcriptPath, {
+    ...options,
+    allowMissing: false
+  });
+}
+
+function ensureTranscriptBubbleConsistency(
+  existing: readonly ProtocolEnvelope[],
+  bubbleId: string
+): void {
+  for (const envelope of existing) {
+    if (envelope.bubble_id !== bubbleId) {
+      throw new ProtocolTranscriptValidationError(
+        `Transcript contains envelope for different bubble: expected ${bubbleId}, found ${envelope.bubble_id}`
+      );
+    }
+  }
+}
+
+function buildValidatedEnvelope(
+  draft: ProtocolEnvelopeDraft,
+  id: string,
+  now: Date
+): ProtocolEnvelope {
+  return assertValidProtocolEnvelope({
+    ...draft,
+    id,
+    ts: now.toISOString()
+  });
+}
+
+function mapTranscriptProcessingError(error: unknown): never {
+  if (error instanceof TranscriptSequenceError) {
+    throw new ProtocolTranscriptValidationError(error.message);
+  }
+
+  if (error instanceof ProtocolTranscriptError) {
+    throw error;
+  }
+
+  if (error instanceof Error) {
+    throw new ProtocolTranscriptValidationError(error.message);
+  }
+
+  throw error;
+}
+
+function toMirrorWriteFailure(
+  mirrorPath: string,
+  error: unknown
+): ProtocolMirrorWriteFailure {
+  if (error instanceof Error) {
+    const typedError = error as NodeJS.ErrnoException;
+    return {
+      path: mirrorPath,
+      message: error.message,
+      ...(typedError.code !== undefined ? { code: typedError.code } : {})
+    };
+  }
+
+  return {
+    path: mirrorPath,
+    message: String(error)
+  };
+}
+
+export async function appendProtocolEnvelope(
+  input: AppendProtocolEnvelopeInput
+): Promise<AppendProtocolEnvelopeResult> {
+  const batchResult = await appendProtocolEnvelopes({
+    transcriptPath: input.transcriptPath,
+    lockPath: input.lockPath,
+    entries: [
+      {
+        envelope: input.envelope,
+        mirrorPaths: input.mirrorPaths
+      }
+    ],
+    now: input.now,
+    lockTimeoutMs: input.lockTimeoutMs
+  });
+
+  const first = batchResult.entries[0];
+  if (first === undefined) {
+    throw new ProtocolTranscriptValidationError(
+      "Batch append unexpectedly returned no entry."
+    );
+  }
+
+  return first;
+}
+
+export async function appendProtocolEnvelopes(
+  input: AppendProtocolEnvelopesInput
+): Promise<AppendProtocolEnvelopesResult> {
+  if (input.entries.length === 0) {
+    throw new ProtocolTranscriptValidationError(
+      "appendProtocolEnvelopes requires at least one entry."
+    );
+  }
+
+  try {
+    const entries = await withFileLock(
+      {
+        lockPath: input.lockPath,
+        timeoutMs: input.lockTimeoutMs ?? 5_000,
+        ensureParentDir: true
+      },
+      async () => {
+        const now = input.now ?? new Date();
+
+        await ensureDirForFile(input.transcriptPath);
+        const raw = await readTranscriptRaw(input.transcriptPath, true);
+        const parsed = parseTranscript(raw, {
+          allowMissing: true,
+          toleratePartialFinalLine: true,
+          tolerateInvalidEnvelopeLines: true
+        });
+
+        if (
+          parsed.droppedTrailingPartialLine
+          || parsed.droppedInvalidEnvelopeLines > 0
+        ) {
+          // Recovery mode: normalize away parse-invalid tail content and any
+          // legacy/forward-incompatible envelope lines before appending. This
+          // keeps sequence allocation deterministic and future mutations append-safe.
+          await writeFile(input.transcriptPath, parsed.normalizedRaw, {
+            encoding: "utf8"
+          });
+        }
+
+        const existing = [...parsed.envelopes];
+        const firstEntry = input.entries[0];
+        if (firstEntry === undefined) {
+          throw new ProtocolTranscriptValidationError(
+            "appendProtocolEnvelopes requires at least one entry."
+          );
+        }
+
+        const bubbleId = firstEntry.envelope.bubble_id;
+        ensureTranscriptBubbleConsistency(existing, bubbleId);
+        for (const entry of input.entries) {
+          if (entry.envelope.bubble_id !== bubbleId) {
+            throw new ProtocolTranscriptValidationError(
+              `Batch append cannot mix bubble ids: expected ${bubbleId}, found ${entry.envelope.bubble_id}`
+            );
+          }
+        }
+
+        const lines: string[] = [];
+        const results: AppendProtocolEnvelopeResult[] = [];
+        for (const entry of input.entries) {
+          const allocation = allocateNextProtocolSequence(existing, now);
+          const envelope = buildValidatedEnvelope(
+            entry.envelope,
+            allocation.messageId,
+            now
+          );
+          existing.push(envelope);
+          lines.push(serializeEnvelopeLine(envelope));
+          results.push({
+            envelope,
+            sequence: allocation.sequence,
+            mirrorWriteFailures: []
+          });
+        }
+
+        await appendFile(input.transcriptPath, lines.join(""), {
+          encoding: "utf8"
+        });
+
+        for (let index = 0; index < input.entries.length; index += 1) {
+          const entry = input.entries[index];
+          const line = lines[index];
+          const result = results[index];
+          if (entry === undefined || line === undefined || result === undefined) {
+            continue;
+          }
+
+          for (const mirrorPath of entry.mirrorPaths ?? []) {
+            try {
+              await ensureDirForFile(mirrorPath);
+              await appendFile(mirrorPath, line, { encoding: "utf8" });
+            } catch (error) {
+              result.mirrorWriteFailures.push(toMirrorWriteFailure(mirrorPath, error));
+            }
+          }
+        }
+
+        return results;
+      }
+    );
+
+    return { entries };
+  } catch (error) {
+    if (error instanceof FileLockTimeoutError) {
+      throw new ProtocolTranscriptLockError(
+        `Could not acquire protocol lock within timeout: ${input.lockPath}`
+      );
+    }
+
+    mapTranscriptProcessingError(error);
+  }
+}

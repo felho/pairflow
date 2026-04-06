@@ -1,17 +1,4 @@
-import { assertValidProtocolEnvelope } from "./validators.js";
-import type { ProtocolEnvelope } from "../../types/protocol.js";
-
-export function parseEnvelopeLine(line: string): ProtocolEnvelope {
-  const trimmed = line.trim();
-  if (trimmed.length === 0) {
-    throw new Error("Cannot parse an empty NDJSON line");
-  }
-
-  const parsed = JSON.parse(trimmed) as unknown;
-  return assertValidProtocolEnvelope(parsed);
-}
-
-export function serializeEnvelopeLine(envelope: ProtocolEnvelope): string {
-  const validated = assertValidProtocolEnvelope(envelope);
-  return `${JSON.stringify(validated)}\n`;
-}
+// Temporary bridge: Phase 5 A1 moved canonical protocol envelope semantics to
+// `src/v11/shared/protocol/envelope.ts`. Remove this shim once legacy
+// `src/core/**` callers are migrated.
+export * from "../../v11/shared/protocol/envelope.js";

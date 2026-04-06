@@ -322,7 +322,7 @@ export {
   allocateNextProtocolSequence,
   formatProtocolEnvelopeId,
   TranscriptSequenceError
-} from "./core/protocol/sequenceAllocator.js";
+} from "./v11/shared/protocol/sequenceAllocator.js";
 export { startUiServer } from "./core/ui/server.js";
 export {
   appendProtocolEnvelopes,
@@ -332,7 +332,7 @@ export {
   ProtocolTranscriptValidationError,
   readTranscriptEnvelopesOrThrow,
   readTranscriptEnvelopes
-} from "./core/protocol/transcriptStore.js";
+} from "./v11/infrastructure/artifact/transcript/transcriptStore.js";
 export {
   validateConvergencePolicy
 } from "./core/convergence/policy.js";
@@ -374,8 +374,8 @@ export {
 export {
   assertValidProtocolEnvelope,
   validateProtocolEnvelope
-} from "./core/protocol/validators.js";
-export { parseEnvelopeLine, serializeEnvelopeLine } from "./core/protocol/envelope.js";
+} from "./v11/shared/protocol/validators.js";
+export { parseEnvelopeLine, serializeEnvelopeLine } from "./v11/shared/protocol/envelope.js";
 export {
   agentNames,
   agentRoles,
@@ -609,7 +609,7 @@ export type { Finding, FindingSeverity } from "./types/findings.js";
 export type {
   ProtocolSequenceAllocationOptions,
   ProtocolSequenceAllocation
-} from "./core/protocol/sequenceAllocator.js";
+} from "./v11/shared/protocol/sequenceAllocator.js";
 export type {
   LaunchBubbleTmuxSessionInput,
   LaunchBubbleTmuxSessionResult,
@@ -667,7 +667,7 @@ export type {
   ProtocolMirrorWriteFailure,
   ReadTranscriptOptions,
   ProtocolEnvelopeDraft
-} from "./core/protocol/transcriptStore.js";
+} from "./v11/infrastructure/artifact/transcript/transcriptStore.js";
 export type {
   EmitApprovalDecisionV11Input as EmitApprovalDecisionInput,
   EmitApprovalDecisionV11Result as EmitApprovalDecisionResult,
