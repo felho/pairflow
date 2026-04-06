@@ -2,7 +2,7 @@ import type { appendProtocolEnvelope } from "../../../core/protocol/transcriptSt
 import type {
   writeStateSnapshot,
   WriteStateSnapshotOptions
-} from "../../../core/state/stateStore.js";
+} from "../../infrastructure/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import { buildAskHumanEnvelope } from "./askHumanExecutionArtifacts.js";
 import type { ExecuteAskHumanExecutionInput } from "./askHumanFlowContract.js";

@@ -11,8 +11,8 @@ import {
   removeRuntimeSessions,
   type RuntimeSessionsRegistry
 } from "../../../core/runtime/sessionsRegistry.js";
-import { readStateSnapshot } from "../../../core/state/stateStore.js";
-import { isFinalState } from "../../../core/state/transitions.js";
+import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
+import { isFinalState } from "../../domain/state/transitions.js";
 import type {
   ListBubbleIdSet,
   ReconcileRuntimeSessionsDependencies

@@ -1,9 +1,9 @@
-import { applyStateTransition } from "../../../core/state/machine.js";
-import { writeStateSnapshot } from "../../../core/state/stateStore.js";
+import { applyStateTransition } from "../../domain/state/machine.js";
+import { writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import {
   buildRestartedExecutionContext,
   buildRunningExecutionContext
-} from "../../../core/state/executionContext.js";
+} from "../../shared/state/executionContext.js";
 import { resolveIdeationMetadata } from "../../domain/ideation/ideationMetadata.js";
 import {
   launchFreshTmuxSession,

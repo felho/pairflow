@@ -1,6 +1,6 @@
 import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
 import { MetaReviewError } from "../../../core/bubble/metaReview.js";
-import { StateStoreConflictError } from "../../../core/state/stateStore.js";
+import { StateStoreConflictError } from "../../infrastructure/state/stateStore.js";
 import { MetaReviewGateError } from "./metaReviewGateTypes.js";
 import { toConflictError } from "./metaReviewGateShared.js";
 

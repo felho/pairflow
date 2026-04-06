@@ -14,7 +14,7 @@ import {
   TmuxCommandError,
   type TmuxRunner
 } from "../../../core/runtime/tmuxManager.js";
-import { readStateSnapshot } from "../../../core/state/stateStore.js";
+import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import { WorkspaceCleanupError } from "../../../core/workspace/worktreeManager.js";
 import { StopBubbleErrorV11 as StopBubbleError } from "../stop/emitStopV11.js";
 import {

@@ -7,7 +7,7 @@ import type {
 } from "../../../core/bubble/workspaceResolution.js";
 import type {
   readStateSnapshot
-} from "../../../core/state/stateStore.js";
+} from "../../infrastructure/state/stateStore.js";
 import type { AskHumanRoutingContext } from "./askHumanRoutingContext.js";
 
 export interface PrepareAskHumanRoutingInput {

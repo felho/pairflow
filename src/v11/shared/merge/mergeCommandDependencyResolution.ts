@@ -1,4 +1,4 @@
-import { readStateSnapshot, writeStateSnapshot } from "../../../core/state/stateStore.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import { branchExists, runGit } from "../../../core/workspace/git.js";
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { cleanupWorktreeWorkspace } from "../../../core/workspace/worktreeManager.js";

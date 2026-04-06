@@ -10,7 +10,7 @@ import {
   readStateSnapshot,
   writeStateSnapshot,
   type LoadedStateSnapshot
-} from "../../../core/state/stateStore.js";
+} from "../../infrastructure/state/stateStore.js";
 import { writeRecoveredMetaReviewArtifacts } from "./metaReviewGateRunResultArtifacts.js";
 import {
   MetaReviewGateError,

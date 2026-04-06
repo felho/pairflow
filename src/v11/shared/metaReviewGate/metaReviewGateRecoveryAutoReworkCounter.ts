@@ -1,7 +1,7 @@
 import {
   StateStoreConflictError,
   type LoadedStateSnapshot
-} from "../../../core/state/stateStore.js";
+} from "../../infrastructure/state/stateStore.js";
 import type { BubbleMetaReviewSnapshotState, BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import {

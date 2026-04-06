@@ -2,8 +2,8 @@ import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
 } from "../../../core/protocol/transcriptStore.js";
-import { applyStateTransition } from "../../../core/state/machine.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../core/state/stateStore.js";
+import { applyStateTransition } from "../../domain/state/machine.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import {
   emitTmuxDeliveryNotification,

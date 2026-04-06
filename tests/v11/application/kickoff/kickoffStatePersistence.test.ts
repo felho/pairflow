@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { StateStoreConflictError } from "../../../../src/core/state/stateStore.js";
+import { StateStoreConflictError } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../../src/types/bubble.js";
 import { persistKickoffState } from "../../../../src/v11/shared/kickoff/kickoffStatePersistence.js";
 

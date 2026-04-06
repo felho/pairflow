@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { applyStateTransition } from "../../../../src/core/state/machine.js";
+import { applyStateTransition } from "../../../../src/v11/domain/state/machine.js";
 import { deliveryTargetRoleMetadataKey } from "../../../../src/types/protocol.js";
 import { runApprovalDecisionFlow } from "../../../../src/v11/application/approval/runApprovalFlow.js";
 

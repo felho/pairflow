@@ -3,8 +3,8 @@ import type {
   persistPassValidationRecoveryMarker,
   PassValidationRecoveryMarkerPersistWarning
 } from "../../../core/runtime/passValidationEvidence.js";
-import type { readStateSnapshot } from "../../../core/state/stateStore.js";
-import type { isFinalState } from "../../../core/state/transitions.js";
+import type { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
+import type { isFinalState } from "../../domain/state/transitions.js";
 import type {
   readRuntimeSessionsRegistry,
   removeRuntimeSessions,

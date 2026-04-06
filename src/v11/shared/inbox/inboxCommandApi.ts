@@ -1,5 +1,5 @@
 import { readTranscriptEnvelopes } from "../../../core/protocol/transcriptStore.js";
-import { readStateSnapshot } from "../../../core/state/stateStore.js";
+import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import {
   BubbleLookupError,
   resolveBubbleById

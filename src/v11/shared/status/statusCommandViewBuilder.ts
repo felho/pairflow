@@ -2,7 +2,7 @@ import { computeWatchdogStatus, type WatchdogStatus } from "../../../core/runtim
 import { resolveActiveMetaReviewRuntimeDelivery } from "../../../core/bubble/metaReview.js";
 import { isMetaReviewExecutionContextActiveState } from "../../../core/bubble/metaReviewExecutionContext.js";
 import { type ReviewVerificationState } from "../../../core/reviewer/reviewVerification.js";
-import type { StateValidationDiagnostics } from "../../../core/state/stateStore.js";
+import type { StateValidationDiagnostics } from "../../infrastructure/state/stateStore.js";
 import type { ReadWatchdogPaneActivityResult } from "../watchdog/watchdogPaneActivityStore.js";
 import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateTypes.js";
 import type {

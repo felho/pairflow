@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { stageMetaReviewRunningState } from "../../../../src/v11/shared/metaReviewGate/metaReviewGateStateStaging.js";
-import type { LoadedStateSnapshot } from "../../../../src/core/state/stateStore.js";
+import type { LoadedStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../../src/types/bubble.js";
 
 function createLoadedRunningState(

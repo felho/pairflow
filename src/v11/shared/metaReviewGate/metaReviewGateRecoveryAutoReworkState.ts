@@ -1,11 +1,11 @@
 import { clearLiveMetaReviewSnapshot } from "../../../core/bubble/metaReview.js";
-import { applyStateTransition } from "../../../core/state/machine.js";
-import { buildRunningExecutionContext } from "../../../core/state/executionContext.js";
-import { assertValidBubbleStateSnapshot } from "../../../core/state/stateSchema.js";
+import { applyStateTransition } from "../../domain/state/machine.js";
+import { buildRunningExecutionContext } from "../../shared/state/executionContext.js";
+import { assertValidBubbleStateSnapshot } from "../../shared/state/stateSchema.js";
 import {
   StateStoreConflictError,
   type LoadedStateSnapshot
-} from "../../../core/state/stateStore.js";
+} from "../../infrastructure/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import {

@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { resolveBubbleById } from "../../../../src/core/bubble/bubbleLookup.js";
 import { appendProtocolEnvelope } from "../../../../src/core/protocol/transcriptStore.js";
 import { emitTmuxDeliveryNotification } from "../../../../src/core/runtime/tmuxDelivery.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../../src/core/state/stateStore.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import { resolveKickoffDependencies } from "../../../../src/v11/shared/kickoff/kickoffDependencyResolution.js";
 
 describe("kickoffDependencyResolution", () => {

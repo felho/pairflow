@@ -21,8 +21,8 @@ import {
 } from "../../../../src/v11/shared/watchdog/watchdogTraceStore.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { initGitRepository } from "../../../helpers/git.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../../src/core/state/stateStore.js";
-import { buildRunningExecutionContext } from "../../../../src/core/state/executionContext.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
+import { buildRunningExecutionContext } from "../../../../src/v11/shared/state/executionContext.js";
 
 const tempDirs: string[] = [];
 

@@ -2,10 +2,10 @@ import { resolve } from "node:path";
 
 import { getBubblePaths, type BubblePaths } from "../../../core/bubble/paths.js";
 import type { ReviewerFocusExtractionResult } from "../../../core/reviewer/reviewerBrief.js";
-import { createInitialBubbleState } from "../../../core/state/initialState.js";
+import { createInitialBubbleState } from "../../domain/state/initialState.js";
 import {
   assertValidBubbleStateSnapshot
-} from "../../../core/state/stateSchema.js";
+} from "../../shared/state/stateSchema.js";
 import type {
   BubbleConfig,
   BubbleStateSnapshot

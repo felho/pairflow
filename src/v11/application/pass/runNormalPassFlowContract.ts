@@ -5,7 +5,7 @@ import type {
 import type { EmitTmuxDeliveryNotificationResult } from "../../../core/runtime/tmuxDelivery.js";
 import type { ReviewerTestExecutionDirective } from "../../../core/reviewer/testEvidence.js";
 import type { ReviewVerificationInputResolution } from "../../../core/reviewer/reviewVerification.js";
-import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
+import type { LoadedStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import type { AgentName, BubbleConfig, BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent, ProtocolEnvelope } from "../../../types/protocol.js";

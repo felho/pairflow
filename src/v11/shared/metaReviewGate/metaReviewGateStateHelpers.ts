@@ -1,6 +1,6 @@
-import { applyStateTransition } from "../../../core/state/machine.js";
+import { applyStateTransition } from "../../domain/state/machine.js";
 import { clearLiveMetaReviewSnapshot } from "../../../core/bubble/metaReview.js";
-import { assertValidBubbleStateSnapshot } from "../../../core/state/stateSchema.js";
+import { assertValidBubbleStateSnapshot } from "../../shared/state/stateSchema.js";
 import {
   type BubbleStateSnapshot,
   type MetaReviewRecommendation,

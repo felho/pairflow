@@ -1,4 +1,4 @@
-import { readStateSnapshot } from "../../../core/state/stateStore.js";
+import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import {
   IDEATION_CONVERGED_BLOCKED
 } from "../../shared/ideation/ideationReasonCodes.js";

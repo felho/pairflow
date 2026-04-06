@@ -10,8 +10,8 @@ import {
   emitConvergedFromWorkspace,
   type EmitConvergedInput
 } from "../../../../src/core/agent/converged.js";
-import { buildRunningExecutionContext } from "../../../../src/core/state/executionContext.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../../src/core/state/stateStore.js";
+import { buildRunningExecutionContext } from "../../../../src/v11/shared/state/executionContext.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import {
   ConvergedCommandErrorV11,
   emitConvergedFromWorkspaceV11

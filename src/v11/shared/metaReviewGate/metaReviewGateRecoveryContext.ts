@@ -9,7 +9,7 @@ import type {
   readStateSnapshot,
   writeStateSnapshot,
   LoadedStateSnapshot
-} from "../../../core/state/stateStore.js";
+} from "../../infrastructure/state/stateStore.js";
 import type {
   BubbleStateSnapshot,
   MetaReviewRecommendation

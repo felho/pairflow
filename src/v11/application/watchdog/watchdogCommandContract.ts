@@ -4,7 +4,7 @@ import type {
 } from "../../../core/runtime/tmuxDelivery.js";
 import type {
   readStateSnapshot
-} from "../../../core/state/stateStore.js";
+} from "../../infrastructure/state/stateStore.js";
 import type {
   recoverMetaReviewGateFromSnapshot
 } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";

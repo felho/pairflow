@@ -1,4 +1,4 @@
-import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
+import type { LoadedStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { FindingsParityMetadata } from "../../../types/protocol.js";

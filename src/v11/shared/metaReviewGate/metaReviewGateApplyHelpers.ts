@@ -3,7 +3,7 @@ import { buildMetaReviewSubmitCommandTemplate } from "../../../core/runtime/meta
 import {
   type LoadedStateSnapshot,
   type writeStateSnapshot
-} from "../../../core/state/stateStore.js";
+} from "../../infrastructure/state/stateStore.js";
 import {
   deliveryTargetRoleMetadataKey
 } from "../../../types/protocol.js";

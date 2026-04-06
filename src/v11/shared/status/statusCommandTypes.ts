@@ -4,7 +4,7 @@ import type {
   BubbleRoundGateState,
   BubbleSpecLockState
 } from "../../../types/bubble.js";
-import type { readStateSnapshot } from "../../../core/state/stateStore.js";
+import type { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 
 export type ResolvedBubbleStatusContext = Awaited<ReturnType<typeof resolveBubbleById>>;
 export type BubbleStatusState = Awaited<ReturnType<typeof readStateSnapshot>>["state"];

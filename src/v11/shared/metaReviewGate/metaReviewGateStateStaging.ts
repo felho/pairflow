@@ -1,10 +1,10 @@
 import { clearLiveMetaReviewSnapshot } from "../../../core/bubble/metaReview.js";
 import { buildMetaReviewExecutionContext } from "../../../core/bubble/metaReviewExecutionContext.js";
-import { metaReviewExecutionContextToRunningContext } from "../../../core/state/executionContext.js";
+import { metaReviewExecutionContextToRunningContext } from "../../shared/state/executionContext.js";
 import {
   type LoadedStateSnapshot,
   type writeStateSnapshot
-} from "../../../core/state/stateStore.js";
+} from "../../infrastructure/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import { toMetaReviewGateError } from "./metaReviewGateErrorConversion.js";
 import {

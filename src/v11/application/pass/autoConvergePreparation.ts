@@ -4,7 +4,7 @@ import {
   type ReviewVerificationInputResolution,
   writeReviewVerificationArtifactAtomic
 } from "../../../core/reviewer/reviewVerification.js";
-import { readStateSnapshot } from "../../../core/state/stateStore.js";
+import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import type { AgentName, BubbleStateSnapshot, ReviewArtifactType } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import {

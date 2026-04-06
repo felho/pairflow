@@ -1,5 +1,5 @@
-import { writeStateSnapshot } from "../../../core/state/stateStore.js";
-import type { readStateSnapshot } from "../../../core/state/stateStore.js";
+import { writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
+import type { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
 import {

@@ -5,7 +5,7 @@ import {
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
-import { readStateSnapshot } from "../../../core/state/stateStore.js";
+import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import {
   recoverMetaReviewGateFromSnapshot
 } from "../metaReviewGate/metaReviewGateCommandApi.js";

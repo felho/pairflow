@@ -6,8 +6,8 @@ import type {
 import type {
   writeStateSnapshot,
   LoadedStateSnapshot
-} from "../../../core/state/stateStore.js";
-import type { applyStateTransition } from "../../../core/state/machine.js";
+} from "../../infrastructure/state/stateStore.js";
+import type { applyStateTransition } from "../../domain/state/machine.js";
 import type {
   DeliveryTargetReasonCode,
   emitTmuxDeliveryNotification,

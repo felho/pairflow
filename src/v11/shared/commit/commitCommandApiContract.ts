@@ -1,5 +1,5 @@
 import type { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import type { readStateSnapshot, writeStateSnapshot } from "../../../core/state/stateStore.js";
+import type { readStateSnapshot, writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import type { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 

@@ -8,7 +8,7 @@ import {
   readStateSnapshot,
   type LoadedStateSnapshot,
   writeStateSnapshot
-} from "../../../core/state/stateStore.js";
+} from "../../infrastructure/state/stateStore.js";
 import { notifyMetaReviewerSubmissionRequest } from "./metaReviewGateNotify.js";
 import { assertRunningConvergenceState, buildGateLockPath } from "./metaReviewGateShared.js";
 import type {

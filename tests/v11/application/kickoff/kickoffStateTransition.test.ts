@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../../src/core/bubble/createBubble.js";
-import { readStateSnapshot } from "../../../../src/core/state/stateStore.js";
+import { readStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import { buildKickoffNextState } from "../../../../src/v11/shared/kickoff/kickoffStateTransition.js";
 import { initGitRepository } from "../../../helpers/git.js";
 

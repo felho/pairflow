@@ -2,7 +2,7 @@ import { appendHumanApprovalRequestEnvelope } from "../../../core/bubble/approva
 import {
   StateStoreConflictError,
   type writeStateSnapshot
-} from "../../../core/state/stateStore.js";
+} from "../../infrastructure/state/stateStore.js";
 import type {
   BubbleStateSnapshot,
   MetaReviewRecommendation

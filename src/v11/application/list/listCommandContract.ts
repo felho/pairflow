@@ -1,4 +1,4 @@
-import type { StateValidationDiagnostics } from "../../../core/state/stateStore.js";
+import type { StateValidationDiagnostics } from "../../infrastructure/state/stateStore.js";
 import type { RuntimeSessionRecord } from "../../../core/runtime/sessionsRegistry.js";
 import type {
   BubbleLifecycleState,

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ensureBubbleInstanceIdForMutation } from "../../../../src/core/bubble/bubbleInstanceId.js";
 import { resolveBubbleFromWorkspaceCwd } from "../../../../src/core/bubble/workspaceResolution.js";
-import { readStateSnapshot } from "../../../../src/core/state/stateStore.js";
+import { readStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import { resolveAskHumanRoutingPreparationDependencies } from "../../../../src/v11/shared/askHuman/askHumanRoutingPreparationDependencyResolution.js";
 
 describe("askHumanRoutingPreparationDependencyResolution", () => {

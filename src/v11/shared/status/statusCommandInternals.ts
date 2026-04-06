@@ -2,7 +2,7 @@ import { readTranscriptEnvelopes } from "../../../core/protocol/transcriptStore.
 import {
   inspectStateSnapshot,
   type StateValidationDiagnostics
-} from "../../../core/state/stateStore.js";
+} from "../../infrastructure/state/stateStore.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import { resolveCanonicalPendingApprovalSignal } from "../approval/pendingApprovalSignal.js";
 export {

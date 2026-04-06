@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 
 import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
 import { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../core/state/stateStore.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 
 export interface KickoffDependencyOverrides {

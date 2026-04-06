@@ -1,5 +1,5 @@
 import type { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import type { writeStateSnapshot } from "../../../core/state/stateStore.js";
+import type { writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
 
 type AppendProtocolEnvelopeInput = Parameters<typeof appendProtocolEnvelope>[0];
 type AppendProtocolEnvelopeResult = Awaited<ReturnType<typeof appendProtocolEnvelope>>;

@@ -1,5 +1,5 @@
 import type { EmitTmuxDeliveryNotificationResult } from "../../../core/runtime/tmuxDelivery.js";
-import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
+import type { LoadedStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import type { ReviewerTestExecutionDirective } from "../../../core/reviewer/testEvidence.js";
 import type { Finding } from "../../../types/findings.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";

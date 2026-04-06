@@ -17,8 +17,8 @@ import {
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext
-} from "../../../../src/core/state/executionContext.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../../../src/core/state/stateStore.js";
+} from "../../../../src/v11/shared/state/executionContext.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import * as actorProtocolModule from "../../../../src/v11/application/actorProtocol/emitActorProtocolV11.js";
 import { seedConvergedCandidate } from "../converged/convergedSeedFixture.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";

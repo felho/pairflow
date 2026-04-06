@@ -1,9 +1,9 @@
 import { join } from "node:path";
 
 import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import { applyStateTransition } from "../../../core/state/machine.js";
-import { writeStateSnapshot } from "../../../core/state/stateStore.js";
-import type { readStateSnapshot } from "../../../core/state/stateStore.js";
+import { applyStateTransition } from "../../domain/state/machine.js";
+import { writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
+import type { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import { retryStuckAgentInput, resolveDeliveryMessageRef } from "../../../core/runtime/tmuxDelivery.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { BubbleWatchdogResult } from "../../application/watchdog/watchdogCommandContract.js";

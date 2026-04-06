@@ -10,7 +10,7 @@ import type { runTmux } from "../../../core/runtime/tmuxManager.js";
 import type {
   readStateSnapshot,
   writeStateSnapshot
-} from "../../../core/state/stateStore.js";
+} from "../../infrastructure/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type {
   MetaReviewResult
