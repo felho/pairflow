@@ -6,15 +6,12 @@ export type {
   BubbleMetaReviewHelpCommandOptions,
   BubbleMetaReviewLastReportCommandOptions,
   BubbleMetaReviewRecoverCommandOptions,
-  BubbleMetaReviewRunCommandOptions,
   BubbleMetaReviewStatusCommandOptions
 } from "./metaReviewCliOptionTypes.js";
 
 export function getBubbleMetaReviewHelpText(): string {
   return [
     "Usage:",
-    "  Operator live-run command:",
-    "  pairflow bubble meta-review run --id <id> [--repo <path>] [--depth standard|deep] [--json]",
     "  Operator projection/recovery commands:",
     "  pairflow bubble meta-review status --id <id> [--repo <path>] [--json] [--verbose]",
     "  pairflow bubble meta-review last-report --id <id> [--repo <path>] [--json] [--verbose]",
@@ -22,12 +19,12 @@ export function getBubbleMetaReviewHelpText(): string {
     "  Canonical actor submit:",
     `  ${buildMetaReviewSubmitUsageLine()}`,
     "  `status` and `last-report` are read-only projections; `recover` replays persisted snapshot routing only.",
+    "  `pairflow bubble meta-review run` was removed; there is no operator live-run replacement.",
     "  Legacy `pairflow bubble meta-review submit` was removed; use the canonical actor emit command above.",
     "",
     "Options:",
     "  --id <id>             Bubble id",
     "  --repo <path>         Optional repository path (defaults to cwd ancestry lookup)",
-    "  --depth <value>       run-only depth profile: standard|deep (default: standard)",
     "  --json                Print structured JSON output",
     "  --verbose             Include additional detail in text output",
     "  -h, --help            Show this help"

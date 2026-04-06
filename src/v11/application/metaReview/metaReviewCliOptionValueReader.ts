@@ -1,6 +1,5 @@
-import { MetaReviewErrorV11 as MetaReviewError, type MetaReviewDepthV11 as MetaReviewDepth } from "./emitMetaReviewV11.js";
+import { MetaReviewErrorV11 as MetaReviewError } from "./emitMetaReviewV11.js";
 import {
-  parseDepth as parseDepthValue,
   parseOptionalReworkTarget as parseOptionalReworkTargetValue,
   parseRequiredSubmitText as parseRequiredSubmitTextValue,
   parseSubmitRecommendation as parseSubmitRecommendationValue,
@@ -29,10 +28,6 @@ function invalidMetaReviewCliOptions(message: string): never {
     "META_REVIEW_SCHEMA_INVALID",
     `${message} context: command_name=meta-review.`
   );
-}
-
-export function parseDepth(value: string | undefined): MetaReviewDepth {
-  return parseDepthValue(value, invalidMetaReviewCliOptions);
 }
 
 export function parseSubmitRound(value: string | undefined): number {

@@ -516,7 +516,7 @@ function assertSummaryStructuredParity(input: {
   }
 }
 
-// Shared by submit and runner paths:
+// Shared by submit and retained core test paths:
 // - submit always provides reportJson (already schema-validated),
 // - runMetaReview may canonicalize runner output without report_json.
 function resolveCanonicalMetaReviewReportJson(input: {
@@ -2126,6 +2126,10 @@ export async function submitMetaReviewResult(
   };
 }
 
+// Retained temporarily as a core-internal/test seam after operator/v11 live-run removal.
+// There is no remaining `src/**` runtime caller through the public CLI or shared v11 facade.
+// Full deletion is deferred to a focused follow-up because current core tests still exercise
+// the live-run service directly while retained snapshot/recovery types remain in use.
 export async function runMetaReview(
   input: MetaReviewRunInput,
   dependencies: MetaReviewDependencies = {}

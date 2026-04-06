@@ -1,6 +1,5 @@
 import type {
   MetaReviewLastReportViewV11 as MetaReviewLastReportView,
-  MetaReviewRunResultV11 as MetaReviewRunResult,
   MetaReviewStatusViewV11 as MetaReviewStatusView,
   MetaReviewSubmitResultV11 as MetaReviewSubmitResult
 } from "./emitMetaReviewV11.js";
@@ -15,31 +14,14 @@ import {
   appendMetaReviewParityDiagnostics,
   appendMetaReviewStatusRunLines,
   appendMetaReviewStatusVerboseLines,
-  buildMetaReviewOutcomeHeaderLines,
   buildMetaReviewRecoverText,
+  buildMetaReviewSubmitHeaderLines,
   buildMetaReviewStatusHeaderLines,
   formatMetaReviewProjectionFreshness
 } from "./metaReviewCliRenderersHelpers.js";
 
-export function renderMetaReviewRunText(result: MetaReviewRunResult): string {
-  const lines = buildMetaReviewOutcomeHeaderLines({
-    label: "run",
-    result,
-    depth: result.depth
-  });
-  appendMetaReviewOptionalRunId(lines, result.run_id);
-  appendMetaReviewOptionalReworkTarget(lines, result.rework_target_message);
-  appendMetaReviewOptionalFindingsParityLine(lines, result.report_json);
-  appendMetaReviewOptionalWarnings(lines, result.warnings);
-
-  return lines.join("\n");
-}
-
 export function renderMetaReviewSubmitText(result: MetaReviewSubmitResult): string {
-  const lines = buildMetaReviewOutcomeHeaderLines({
-    label: "submit",
-    result
-  });
+  const lines = buildMetaReviewSubmitHeaderLines(result);
   appendMetaReviewOptionalRunId(lines, result.run_id);
   appendMetaReviewOptionalReworkTarget(lines, result.rework_target_message);
   appendMetaReviewOptionalFindingsParityLine(lines, result.report_json);

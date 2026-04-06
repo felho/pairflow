@@ -1,7 +1,6 @@
 import {
   getMetaReviewLastReportV11 as getMetaReviewLastReport,
-  getMetaReviewStatusV11 as getMetaReviewStatus,
-  runMetaReviewV11 as runMetaReview
+  getMetaReviewStatusV11 as getMetaReviewStatus
 } from "./emitMetaReviewV11.js";
 import { recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot } from "../metaReviewGate/emitMetaReviewGateV11.js";
 import type {
@@ -13,22 +12,6 @@ function toRepoPathOption(repo: string | undefined): {
   repoPath?: string;
 } {
   return repo !== undefined ? { repoPath: repo } : {};
-}
-
-async function runMetaReviewRunCommand(input: {
-  options: Extract<BubbleMetaReviewExecutableCommandOptions, { command: "run" }>;
-  cwd: string;
-}): Promise<BubbleMetaReviewCommandResult> {
-  const run = await runMetaReview({
-    bubbleId: input.options.id,
-    ...toRepoPathOption(input.options.repo),
-    depth: input.options.depth,
-    cwd: input.cwd
-  });
-  return {
-    command: "run",
-    run
-  };
 }
 
 async function runMetaReviewStatusProjectionCommand(input: {
@@ -80,12 +63,6 @@ export async function dispatchMetaReviewCommand(input: {
   options: BubbleMetaReviewExecutableCommandOptions;
   cwd: string;
 }): Promise<BubbleMetaReviewCommandResult> {
-  if (input.options.command === "run") {
-    return runMetaReviewRunCommand({
-      options: input.options,
-      cwd: input.cwd
-    });
-  }
   if (input.options.command === "status") {
     return runMetaReviewStatusProjectionCommand({
       options: input.options,

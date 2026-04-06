@@ -10,7 +10,6 @@ import {
   parseBubbleMetaReviewCommandOptions,
   renderMetaReviewLastReportText,
   renderMetaReviewRecoverText,
-  renderMetaReviewRunText,
   renderMetaReviewSubmitText,
   renderMetaReviewStatusText,
   runBubbleMetaReviewCommand
@@ -43,27 +42,16 @@ afterEach(async () => {
 });
 
 describe("parseBubbleMetaReviewCommandOptions", () => {
-  it("parses run options with depth/json", () => {
-    const parsed = parseBubbleMetaReviewCommandOptions([
-      "run",
-      "--id",
-      "b_meta_cli_01",
-      "--repo",
-      "/tmp/repo",
-      "--depth",
-      "deep",
-      "--json"
-    ]);
-
-    expect(parsed.help).toBe(false);
-    if (parsed.help || parsed.command !== "run") {
-      throw new Error("Expected run command options.");
-    }
-
-    expect(parsed.id).toBe("b_meta_cli_01");
-    expect(parsed.repo).toBe("/tmp/repo");
-    expect(parsed.depth).toBe("deep");
-    expect(parsed.json).toBe(true);
+  it("rejects removed run subcommand with explicit guidance", () => {
+    expect(() =>
+      parseBubbleMetaReviewCommandOptions([
+        "run",
+        "--id",
+        "b_meta_cli_removed_run_01",
+        "--repo",
+        "/tmp/repo"
+      ])
+    ).toThrow(/pairflow bubble meta-review run` was removed/u);
   });
 
   it("parses status options with verbose", () => {
@@ -92,7 +80,6 @@ describe("parseBubbleMetaReviewCommandOptions", () => {
     const parsed = parseBubbleMetaReviewCommandOptions(["--help"]);
     expect(parsed).toEqual({ help: true });
     expect(getBubbleMetaReviewHelpText()).toContain("pairflow bubble meta-review");
-    expect(getBubbleMetaReviewHelpText()).toContain("Operator live-run command");
     expect(getBubbleMetaReviewHelpText()).toContain(
       "Operator projection/recovery commands"
     );
@@ -105,8 +92,21 @@ describe("parseBubbleMetaReviewCommandOptions", () => {
     expect(getBubbleMetaReviewHelpText()).toContain(
       "`status` and `last-report` are read-only projections"
     );
+    expect(getBubbleMetaReviewHelpText()).toContain(
+      "`pairflow bubble meta-review run` was removed"
+    );
     expect(getBubbleMetaReviewHelpText()).toContain(buildMetaReviewSubmitUsageLine());
+    expect(getBubbleMetaReviewHelpText()).not.toContain("--depth");
     expect(getBubbleMetaReviewHelpText()).not.toContain("--report-markdown");
+  });
+
+  it("fails closed for removed run subcommand even when --help is present", () => {
+    expect(() =>
+      parseBubbleMetaReviewCommandOptions([
+        "run",
+        "--help"
+      ])
+    ).toThrow(/pairflow bubble meta-review run` was removed/u);
   });
 
   it("rejects unknown subcommands", () => {
@@ -136,7 +136,7 @@ describe("parseBubbleMetaReviewCommandOptions", () => {
     expect(parsed.id).toBe("b_meta_cli_recover_01");
   });
 
-  it("rejects invalid depth values", () => {
+  it("rejects removed run subcommand even when --depth is present", () => {
     expect(() =>
       parseBubbleMetaReviewCommandOptions([
         "run",
@@ -145,10 +145,10 @@ describe("parseBubbleMetaReviewCommandOptions", () => {
         "--depth",
         "extreme"
       ])
-    ).toThrow(/Invalid --depth value/u);
+    ).toThrow(/pairflow bubble meta-review run` was removed/u);
   });
 
-  it("rejects --depth for non-run subcommands", () => {
+  it("rejects --depth for retained status subcommand with removal guidance", () => {
     expect(() =>
       parseBubbleMetaReviewCommandOptions([
         "status",
@@ -157,7 +157,7 @@ describe("parseBubbleMetaReviewCommandOptions", () => {
         "--depth",
         "deep"
       ])
-    ).toThrow(/--depth is only supported for meta-review run/u);
+    ).toThrow(/--depth` is no longer supported/u);
   });
 
   it("rejects --depth for last-report subcommand", () => {
@@ -169,8 +169,35 @@ describe("parseBubbleMetaReviewCommandOptions", () => {
         "--depth",
         "deep"
       ])
-    ).toThrow(/--depth is only supported for meta-review run/u);
+    ).toThrow(/--depth` is no longer supported/u);
   });
+
+  it.each([
+    "status",
+    "last-report",
+    "recover"
+  ])(
+    "rejects submit-only flags for retained %s subcommand with canonical actor guidance",
+    (subcommand) => {
+      expect(() =>
+        parseBubbleMetaReviewCommandOptions([
+          subcommand,
+          "--id",
+          "b_meta_cli_submit_only_flags_01",
+          "--round",
+          "1",
+          "--recommendation",
+          "approve",
+          "--summary",
+          "Should be rejected on retained operator command",
+          "--rework-target-message",
+          "Not allowed here",
+          "--report-json",
+          "{\"findings_claim_state\":\"clean\",\"findings_claim_source\":\"meta_review_artifact\",\"findings_count\":0}"
+        ])
+      ).toThrow(/pairflow agent emit --kind meta_review_result/u);
+    }
+  );
 
   it("requires --id and throws typed schema-invalid error", () => {
     let thrown: unknown;
@@ -215,23 +242,13 @@ describe("runBubbleMetaReviewCommand", () => {
     expect(result).toBeNull();
   });
 
-  it("routes run/status/last-report/recover commands", async () => {
+  it("routes status/last-report/recover commands", async () => {
     const repoPath = await createTempRepo();
     const bubble = await setupRunningBubbleFixture({
       repoPath,
       bubbleId: "b_meta_cli_run_01",
       task: "CLI routing"
     });
-
-    const runResult = await runBubbleMetaReviewCommand([
-      "run",
-      "--id",
-      bubble.bubbleId,
-      "--repo",
-      repoPath
-    ]);
-    expect(runResult).not.toBeNull();
-    expect(runResult?.command).toBe("run");
 
     const statusResult = await runBubbleMetaReviewCommand([
       "status",
@@ -410,16 +427,6 @@ describe("runBubbleMetaReviewCommand", () => {
       task: "CLI parsed overload"
     });
 
-    await runBubbleMetaReviewCommand({
-      help: false,
-      command: "run",
-      id: bubble.bubbleId,
-      repo: repoPath,
-      depth: "standard",
-      json: false,
-      verbose: false
-    });
-
     const statusResult = await runBubbleMetaReviewCommand({
       help: false,
       command: "status",
@@ -540,7 +547,7 @@ describe("runBubbleMetaReviewCommand", () => {
   it("maps CLI parse errors to META_REVIEW_SCHEMA_INVALID", async () => {
     await expect(
       runBubbleMetaReviewCommand([
-        "run",
+        "status",
         "--id",
         "b_meta_parse_invalid",
         "--depth",
@@ -634,38 +641,6 @@ describe("runBubbleMetaReviewCommand", () => {
 });
 
 describe("meta-review render helpers", () => {
-  it("renders run output with warnings", () => {
-    const rendered = renderMetaReviewRunText({
-      bubbleId: "b_meta_cli_render_01",
-      depth: "standard",
-      run_id: "run_1",
-      status: "error",
-      recommendation: "inconclusive",
-      summary: "Runner failed",
-      report_ref: "artifacts/meta-review-last.json",
-      rework_target_message: null,
-      updated_at: "2026-03-08T12:00:00.000Z",
-      lifecycle_state: "RUNNING",
-      report_json: {
-        findings_claimed_open_total: 2,
-        findings_artifact_open_total: 1,
-        findings_parity_status: "mismatch"
-      },
-      warnings: [
-        {
-          reason_code: "META_REVIEW_RUNNER_ERROR",
-          message: "runner unavailable"
-        }
-      ]
-    });
-
-    expect(rendered).toContain("status=error");
-    expect(rendered).toContain(
-      "Findings parity: claimed=2, artifact=1, status=mismatch"
-    );
-    expect(rendered).toContain("Warnings: META_REVIEW_RUNNER_ERROR");
-  });
-
   it("renders submit output", () => {
     const rendered = renderMetaReviewSubmitText({
       bubbleId: "b_meta_cli_render_submit_01",
