@@ -7,7 +7,7 @@ import { runTmux } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import {
   buildMetaReviewSubmitApproveParityNote,
   buildMetaReviewSubmitCommandTemplate
-} from "../../../core/runtime/metaReviewSubmitGuidance.js";
+} from "../metaReview/metaReviewSubmitGuidance.js";
 import type {
   MetaReviewRuntimeDeliveryObservation,
   NotifyMetaReviewerSubmissionRequestDependencies,

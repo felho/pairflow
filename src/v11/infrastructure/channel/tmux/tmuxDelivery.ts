@@ -34,7 +34,7 @@ import { buildPairflowCommandGuidance } from "../../executor/command/pairflowCom
 import {
   buildMetaReviewSubmitApproveParityNote,
   buildMetaReviewSubmitCommandTemplate
-} from "../../../../core/runtime/metaReviewSubmitGuidance.js";
+} from "../../../shared/metaReview/metaReviewSubmitGuidance.js";
 import type { BubbleConfig } from "../../../../types/bubble.js";
 import type { AgentName } from "../../../../types/bubble.js";
 import {

@@ -1,4 +1,4 @@
-import { buildMetaReviewSubmitUsageLine } from "../../../core/runtime/metaReviewSubmitGuidance.js";
+import { buildMetaReviewSubmitUsageLine } from "../../shared/metaReview/metaReviewSubmitGuidance.js";
 
 export { parseBubbleMetaReviewCommandOptions } from "./metaReviewCliOptionParser.js";
 export type {

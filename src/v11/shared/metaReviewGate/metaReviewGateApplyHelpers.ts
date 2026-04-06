@@ -1,5 +1,5 @@
 import type { appendProtocolEnvelope, AppendProtocolEnvelopeResult } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
-import { buildMetaReviewSubmitCommandTemplate } from "../../../core/runtime/metaReviewSubmitGuidance.js";
+import { buildMetaReviewSubmitCommandTemplate } from "../metaReview/metaReviewSubmitGuidance.js";
 import {
   type LoadedStateSnapshot,
   type writeStateSnapshot

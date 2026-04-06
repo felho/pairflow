@@ -14,7 +14,7 @@ import {
 import {
   buildMetaReviewSubmitApproveParityNote,
   buildMetaReviewSubmitCommandTemplate
-} from "../../../core/runtime/metaReviewSubmitGuidance.js";
+} from "../metaReview/metaReviewSubmitGuidance.js";
 import {
   buildReviewerCanonicalCommandGateLines,
   buildReviewerFindingsPassInstruction
