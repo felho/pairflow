@@ -4,7 +4,7 @@ export {
 export {
   createBubbleV11,
   createBubbleV11 as createBubble
-} from "./createBubbleV11.js";
+} from "./runCreateBubbleFlow.js";
 export {
   extractReviewerFocus as extractReviewerFocusV11
 } from "./createReviewerFocus.js";
