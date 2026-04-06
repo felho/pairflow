@@ -651,7 +651,7 @@ The restart is safe because:
 - `bubble start` detects an existing bubble in a runtime state and reattaches instead of bootstrapping from scratch
 - Resume start injects bounded transcript/state context into both agent panes; in `RUNNING` it sends kickoff to the currently active role pane
 
-If the bubble stays in `RUNNING` with active meta-review authority after restart (for example, meta-review run wrote snapshot data but routing did not finish), recover deterministically from the stored snapshot:
+If the bubble stays in `RUNNING` with active meta-review authority after restart (for example, autonomous meta-review already persisted snapshot data but routing did not finish), recover deterministically from the stored snapshot:
 
 ```bash
 pairflow bubble meta-review recover --id feat_login --repo .
@@ -821,10 +821,11 @@ Ideation note:
 | `bubble merge --id <id> [--repo <path>] [--push] [--delete-remote]` | Merge bubble branch and clean up |
 | `bubble reconcile [--repo <path>] [--dry-run] [--json]` | Clean up stale sessions |
 | `bubble watchdog --id <id> [--repo <path>] [--json]` | Check for stuck agents |
-| `bubble meta-review run --id <id> [--repo <path>] [--depth standard\|deep] [--json]` | Run autonomous meta-review for the bubble |
 | `bubble meta-review status --id <id> [--repo <path>] [--json] [--verbose]` | Read latest cached meta-review snapshot/status |
 | `bubble meta-review last-report --id <id> [--repo <path>] [--json] [--verbose]` | Read latest cached meta-review report |
 | `bubble meta-review recover --id <id> [--repo <path>] [--json]` | Recover routing from the latest meta-review snapshot when bubble is stuck in `RUNNING` with active meta-review authority |
+
+`bubble meta-review` is now a projection/recovery-only operator surface. Autonomous meta-review results are submitted through the canonical actor channel: `pairflow agent emit --kind meta_review_result ...`.
 
 #### Repo registry
 

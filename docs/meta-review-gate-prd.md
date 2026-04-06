@@ -120,7 +120,7 @@ Pain points:
 
 Review execution engine:
 1. The review computation must reuse the existing `UsePairflow/ReviewBubble` workflow logic.
-2. Pairflow CLI covers autonomous execution and cached retrieval; fresh manual deep review remains an external workflow in user Codex session.
+2. Pairflow CLI covers canonical result submission, cached retrieval, and recovery routing; fresh manual deep review remains an external workflow in user Codex session.
 3. Cached retrieval commands (`status`, `last-report`) do not execute a new review; they only read persisted latest autonomous output.
 
 Boundary contract (skill vs Pairflow CLI):
@@ -132,19 +132,19 @@ Boundary contract (skill vs Pairflow CLI):
 
 | Command | Trigger | Side Effects | Expected Output | Primary Use |
 |---|---|---|---|---|
-| `meta-review run` | Pairflow lifecycle trigger | Allowed (`request-rework`, state updates) | Full report + recommendation + rework target message (if `rework`) | Automated gate in production flow |
+| `agent emit --kind meta_review_result` | Structured actor submission | Allowed (`request-rework`, state updates) | Full report + recommendation + rework target message (if `rework`) | Canonical autonomous gate write path in production flow |
 | `meta-review status` | User command | None | Cached latest autonomous recommendation + counters | Low-cost decision/status retrieval |
 | `meta-review last-report` | User command | None | Cached latest autonomous report summary/reference | Low-cost report retrieval |
 | `meta-review recover` | User/operator recovery trigger | Allowed (route replay only from persisted snapshot) | Deterministic routing result (`RUNNING` / `READY_FOR_HUMAN_APPROVAL`) + emitted gate envelope | Recover from partial gate failure without rerunning review |
 
 Rules:
-1. Pairflow CLI command set is intentionally minimal: two lifecycle commands (`run`, `recover`) and two retrieval commands (`status`, `last-report`).
-2. `meta-review run` executes autonomous review and may perform lifecycle actions from live output.
+1. Pairflow CLI command set is intentionally minimal: one canonical actor write command (`agent emit --kind meta_review_result`), one recovery command (`recover`), and two retrieval commands (`status`, `last-report`).
+2. Public operator `meta-review run` is removed; autonomous review execution happens outside the public operator CLI and submits results through the canonical actor emit path.
 3. `meta-review recover` never executes a new review; it may perform lifecycle actions only by replaying route decisions from the latest persisted autonomous snapshot.
 4. Retrieval commands must be non-generative and near-constant-cost.
 
 Reviewer output payload contract:
-1. Every autonomous live review (`run`) must produce a detailed human-readable report artifact/body.
+1. Every autonomous live review submitted through the canonical actor path must produce a detailed human-readable report artifact/body.
 2. Every autonomous live review must produce exactly one recommendation: `rework|approve|inconclusive`.
 3. If recommendation is `rework`, output must include a targeted rework instruction payload (`rework_target_message`) suitable for implementer handoff.
 4. `rework_target_message` should be actionable and issue-linked (what to fix and why), not only a generic "please rework" text.
@@ -160,7 +160,7 @@ Allowed recommendation values:
 
 Routing semantics:
 1. `rework`:
-   - run: auto `request-rework` if budget allows, using `rework_target_message`.
+   - canonical submit path: auto `request-rework` if budget allows, using `rework_target_message`.
 2. `approve`:
    - never auto-approve in MVP; move/keep in human gate state.
    - optional `rework_target_message` (if present) is advisory and human-consumed only.
@@ -181,7 +181,7 @@ Execution error semantics:
 
 Review internals are treated as a black box in this PRD.
 
-Pairflow-facing output contract from a live review run:
+Pairflow-facing output contract from an autonomous review submission:
 1. Decision recommendation: `rework|approve|inconclusive`.
 2. Detailed report payload/artifact for human inspection.
 3. `rework_target_message` when recommendation is `rework` (optional advisory text may exist for other recommendations).
@@ -191,7 +191,7 @@ Pairflow-facing output contract from a live review run:
 
 Canonical persistence policy:
 1. Pairflow persists only the latest autonomous review snapshot.
-2. Each new `run` overwrites the previous snapshot.
+2. Each new autonomous submission overwrites the previous snapshot.
 3. Retrieval commands read the canonical autonomous snapshot only.
 
 Canonical artifact/state footprint:
@@ -212,10 +212,10 @@ Requirements:
 1. Latest autonomous recommendation must be queryable without triggering a new review run.
 2. Persisted snapshot must be session-independent and readable from any client context (tmux pane, user Codex session, CLI call).
 
-## CLI Additions (MVP)
+## CLI Surface (MVP)
 
-1. `pairflow bubble meta-review run --id <id> [--depth <standard|deep>]`
-   - Executes live autonomous review.
+1. `pairflow agent emit --kind meta_review_result --repo <path> --bubble-id <id> --handoff-id <id> --round <n> --recommendation approve|rework|inconclusive --summary <text> [--rework-target-message <text>] --report-json <json> [--ref <artifact-path>]...`
+   - Canonical autonomous review result submission path.
    - CLI must persist returned review output before applying any lifecycle action.
 2. `pairflow bubble meta-review status --id <id> [--json] [--verbose]`
    - Returns cached latest autonomous recommendation snapshot and counters only (no new run).
