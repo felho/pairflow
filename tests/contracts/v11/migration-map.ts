@@ -33,6 +33,12 @@ export const commandMigrationMap: readonly CommandMigrationEntry[] = [
     notes: "Core facade now delegates to v11 approval orchestration seams; v11 is the source of truth."
   },
   {
+    command: "delete",
+    state: "v11",
+    owner: "runtime",
+    notes: "Core facade now delegates to v11 delete runtime; v11 is the source of truth."
+  },
+  {
     command: "metaReviewGate",
     state: "v11",
     owner: "runtime",

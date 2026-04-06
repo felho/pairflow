@@ -10,6 +10,7 @@ const facadeParityTestsByCommand: Record<string, readonly string[]> = {
   kickoff: ["tests/v11/application/kickoff/kickoffFacadeParity.test.ts"],
   converged: ["tests/v11/application/converged/convergedFacadeParity.test.ts"],
   approval: ["tests/v11/application/approval/approvalFacadeParity.test.ts"],
+  delete: ["tests/v11/application/delete/deleteFacadeParity.test.ts"],
   inbox: ["tests/v11/application/inbox/inboxFacadeParity.test.ts"],
   open: ["tests/v11/application/open/openFacadeParity.test.ts"],
   metaReviewGate: [
