@@ -1,17 +1,17 @@
-import type {
-  BubbleCreateResult,
-  createBubble
-} from "../../../core/bubble/createBubble.js";
 import type { registerRepoInRegistry } from "../../../core/repo/registry.js";
 import {
   buildCreateBubbleInput,
   registerRepoAfterCreateBestEffort,
   resolveBubbleCreateCommandDependencies
 } from "./createCliRunHelpers.js";
+import type {
+  BubbleCreateResult,
+  CreateBubbleImplementation
+} from "./createCommandContract.js";
 import { parseBubbleCreateCommandOptions } from "./createCliOptions.js";
 
 export interface BubbleCreateCommandDependencies {
-  createBubble?: typeof createBubble;
+  createBubble?: CreateBubbleImplementation;
   registerRepoInRegistry?: typeof registerRepoInRegistry;
   reportRegistryRegistrationWarning?:
     | ((message: string) => void)

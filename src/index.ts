@@ -484,7 +484,7 @@ export type {
   BubbleCreateInput,
   BubbleCreateResult,
   ResolvedTaskInput
-} from "./core/bubble/createBubble.js";
+} from "./v11/application/create/createCommandContract.js";
 export type { BubblePaths } from "./core/bubble/paths.js";
 export type {
   AskHumanCommandOptions,

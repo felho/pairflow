@@ -40,53 +40,18 @@ import type {
   CreateReviewArtifactType,
   PairflowCommandProfile
 } from "../../types/bubble.js";
-
-export interface BubbleCreateInput {
-  id: string;
-  repoPath: string;
-  baseBranch: string;
-  reviewArtifactType: CreateReviewArtifactType;
-  ideation?: boolean;
-  task?: string;
-  taskFile?: string;
-  reviewerBrief?: string;
-  reviewerBriefFile?: string;
-  accuracyCritical?: boolean;
-  cwd?: string;
-  now?: Date;
-  implementer?: AgentName;
-  reviewer?: AgentName;
-  testCommand?: string;
-  typecheckCommand?: string;
-  bootstrapCommand?: string;
-  openCommand?: string;
-  pairflowCommandProfile?: PairflowCommandProfile;
-}
-
-export interface ResolvedTaskInput {
-  content: string;
-  source: "inline" | "file" | "ideation_placeholder";
-  sourcePath?: string;
-}
-
-export interface BubbleCreateResult {
-  bubbleId: string;
-  paths: BubblePaths;
-  config: BubbleConfig;
-  state: BubbleStateSnapshot;
-  task: ResolvedTaskInput;
-  reviewerFocus: ReviewerFocusExtractionResult;
-  reviewerFocusArtifactPersist: {
-    status: "written" | "write_failed";
-    artifactPath: string;
-    errorCode?: string;
-  };
-  reviewerBrief?: ResolvedTaskInput;
-}
-
-export interface BubbleCreateDependencies {
-  writeReviewerFocusArtifact?: typeof writeFile;
-}
+import type {
+  BubbleCreateDependencies,
+  BubbleCreateInput,
+  BubbleCreateResult,
+  ResolvedTaskInput
+} from "../../v11/application/create/createCommandContract.js";
+export type {
+  BubbleCreateDependencies,
+  BubbleCreateInput,
+  BubbleCreateResult,
+  ResolvedTaskInput
+} from "../../v11/application/create/createCommandContract.js";
 
 export class BubbleCreateError extends Error {
   public constructor(message: string) {

@@ -4,6 +4,10 @@ import { createBubble } from "../../../core/bubble/createBubble.js";
 import { registerRepoInRegistry } from "../../../core/repo/registry.js";
 import { DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER } from "../../../config/bubbleConfig.js";
 import type { CreateReviewArtifactType } from "../../../types/bubble.js";
+import type {
+  BubbleCreateInput,
+  CreateBubbleImplementation
+} from "./createCommandContract.js";
 
 export interface BubbleCreateCommandRuntimeOptions {
   id?: string;
@@ -16,12 +20,12 @@ export interface BubbleCreateCommandRuntimeOptions {
   reviewerBrief?: string;
   reviewerBriefFile?: string;
   bootstrapCommand?: string;
-  pairflowCommandProfile?: Parameters<typeof createBubble>[0]["pairflowCommandProfile"];
+  pairflowCommandProfile?: BubbleCreateInput["pairflowCommandProfile"];
   accuracyCritical?: boolean;
 }
 
 export interface BubbleCreateCommandRuntimeDependencies {
-  createBubble?: typeof createBubble;
+  createBubble?: CreateBubbleImplementation;
   registerRepoInRegistry?: typeof registerRepoInRegistry;
   reportRegistryRegistrationWarning?:
     | ((message: string) => void)
@@ -29,7 +33,7 @@ export interface BubbleCreateCommandRuntimeDependencies {
 }
 
 interface ResolvedBubbleCreateCommandDependencies {
-  create: typeof createBubble;
+  create: CreateBubbleImplementation;
   register: typeof registerRepoInRegistry;
   reportWarning: (message: string) => void;
 }
@@ -53,10 +57,10 @@ export function buildCreateBubbleInput(
   cwd: string
 ): {
   repoPath: string;
-  input: Parameters<typeof createBubble>[0];
+  input: BubbleCreateInput;
 } {
   const repoPath = resolve(cwd, options.repo as string);
-  const input: Parameters<typeof createBubble>[0] = {
+  const input: BubbleCreateInput = {
     id: options.id as string,
     repoPath,
     baseBranch: options.base as string,
