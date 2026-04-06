@@ -3,7 +3,7 @@ import { Readable } from "node:stream";
 
 import { describe, expect, it } from "vitest";
 
-import { runPassValidationCommand } from "../../../src/core/runtime/passValidationRunner.js";
+import { runPassValidationCommand } from "../../../../../src/v11/infrastructure/executor/validation/passValidationCommandRunner.js";
 
 describe("runPassValidationCommand spawn error", () => {
   it("raises pass_validation_execution_error-compatible runner failure on spawn error", async () => {
