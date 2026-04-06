@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
+import { appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";

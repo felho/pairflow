@@ -1,4 +1,4 @@
-import { readTranscriptEnvelopes } from "../../../core/protocol/transcriptStore.js";
+import { readTranscriptEnvelopes } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import {
   BubbleLookupError,

@@ -12,7 +12,7 @@ import type { FindingsParityMetadata } from "../../../types/protocol.js";
 import type {
   appendProtocolEnvelope,
   AppendProtocolEnvelopeResult
-} from "../../../core/protocol/transcriptStore.js";
+} from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import {
   MetaReviewGateError,
   type MetaReviewGateResult,

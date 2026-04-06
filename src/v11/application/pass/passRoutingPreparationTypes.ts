@@ -5,7 +5,7 @@ import {
 import {
   type readTranscriptEnvelopes,
   type ReadTranscriptOptions
-} from "../../../core/protocol/transcriptStore.js";
+} from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type { ReviewVerificationInputResolution } from "../../../core/reviewer/reviewVerification.js";
 import type { AgentName, AgentRole, BubbleConfig } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";

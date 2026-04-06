@@ -8,7 +8,7 @@ import {
   resolveDocContractGateArtifactPath,
   writeDocContractGateArtifact
 } from "../../../core/gates/docContractGates.js";
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
+import { appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { renderBubbleConfigToml } from "../../../config/bubbleConfig.js";
 import type {
   BubbleConfig,

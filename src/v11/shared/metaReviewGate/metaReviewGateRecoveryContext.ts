@@ -3,7 +3,7 @@ import type { readFile, writeFile } from "node:fs/promises";
 import type {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
-} from "../../../core/protocol/transcriptStore.js";
+} from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import type {
   readStateSnapshot,

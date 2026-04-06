@@ -3,7 +3,7 @@ import { dirname } from "node:path";
 
 import {
   readTranscriptEnvelopes
-} from "../../../core/protocol/transcriptStore.js";
+} from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import { BubbleCommitError } from "./commitCommandRuntime.js";
 

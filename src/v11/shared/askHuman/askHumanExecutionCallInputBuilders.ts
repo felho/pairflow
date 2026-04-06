@@ -1,4 +1,4 @@
-import type { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
+import type { appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type {
   writeStateSnapshot,
   WriteStateSnapshotOptions

@@ -1,7 +1,7 @@
 import {
   appendProtocolEnvelope,
   type AppendProtocolEnvelopeResult
-} from "../../../core/protocol/transcriptStore.js";
+} from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type {
   RepeatCleanAutoconvergeReasonCode,
   RepeatCleanAutoconvergeReasonDetail

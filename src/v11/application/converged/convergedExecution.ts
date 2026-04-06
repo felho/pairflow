@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
+import { appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import {
   emitTmuxDeliveryNotification,

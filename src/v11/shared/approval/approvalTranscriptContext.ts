@@ -1,4 +1,4 @@
-import type { readTranscriptEnvelopes } from "../../../core/protocol/transcriptStore.js";
+import type { readTranscriptEnvelopes } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
 const metaReviewRunFailedSummaryPrefix = "META_REVIEW_GATE_RUN_FAILED:";

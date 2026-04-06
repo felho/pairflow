@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { parseBubbleConfigToml, renderBubbleConfigToml } from "../../../src/config/bubbleConfig.js";
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { kickoffBubble } from "../../../src/core/bubble/kickoffBubble.js";
-import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
+import { readTranscriptEnvelopes } from "../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type { EmitTmuxDeliveryNotificationResult } from "../../../src/core/runtime/tmuxDelivery.js";
 import { buildRunningExecutionContext } from "../../../src/core/state/executionContext.js";
 import {
