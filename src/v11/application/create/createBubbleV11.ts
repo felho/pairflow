@@ -1,12 +1,10 @@
 import { resolve } from "node:path";
 
 import { getBubblePaths } from "../../../core/bubble/paths.js";
-import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
 import {
   assertValidBubbleStateSnapshot
 } from "../../../core/state/stateSchema.js";
 import { createInitialBubbleState } from "../../../core/state/initialState.js";
-import { generateBubbleInstanceId } from "../../../core/bubble/bubbleInstanceId.js";
 import type {
   BubbleCreateDependencies,
   BubbleCreateInput,
@@ -21,11 +19,15 @@ import {
   resolveCreateReviewArtifactType,
   resolveReviewerBriefInput,
   resolveTaskInput,
-  type CreateBubbleConfigInput,
   validateBubbleId
 } from "./createCommandRuntime.js";
 import { extractReviewerFocus } from "./createReviewerFocus.js";
 import { persistCreatedBubbleArtifacts } from "./createBubblePersistence.js";
+import { prepareCreateBubbleInput } from "./createBubblePreparation.js";
+import {
+  buildCreateBubbleResult,
+  emitCreateBubbleLifecycleEvent
+} from "./createBubbleFinalization.js";
 
 export async function createBubbleV11(
   input: BubbleCreateInput,
@@ -45,8 +47,6 @@ export async function createBubbleV11(
 
   const paths = getBubblePaths(repoPath, input.id);
   await ensureBubbleDoesNotExist(paths.bubbleDir);
-
-  const bubbleBranch = `bubble/${input.id}`;
   const ideationMode = input.ideation === true;
   const task = ideationMode
     ? {
@@ -67,48 +67,19 @@ export async function createBubbleV11(
     ...(input.reviewerBriefFile !== undefined
       ? { reviewerBriefFile: input.reviewerBriefFile }
       : {}),
-    accuracyCritical,
+    accuracyCritical: input.accuracyCritical === true,
     cwd: input.cwd ?? process.cwd()
   });
-
-  const bubbleConfigInput: CreateBubbleConfigInput = {
-    id: input.id,
-    bubbleInstanceId: generateBubbleInstanceId(createdAt),
+  const prepared = prepareCreateBubbleInput({
+    command: input,
+    createdAt,
     repoPath,
     baseBranch,
-    bubbleBranch,
-    accuracyCritical,
     reviewArtifactType,
-    ...(ideationMode
-      ? {
-          ideationMode: true,
-          ideationStartedAt: createdAt.toISOString()
-        }
-      : {})
-  };
-  if (input.implementer !== undefined) {
-    bubbleConfigInput.implementer = input.implementer;
-  }
-  if (input.reviewer !== undefined) {
-    bubbleConfigInput.reviewer = input.reviewer;
-  }
-  if (input.testCommand !== undefined) {
-    bubbleConfigInput.testCommand = input.testCommand;
-  }
-  if (input.typecheckCommand !== undefined) {
-    bubbleConfigInput.typecheckCommand = input.typecheckCommand;
-  }
-  if (input.bootstrapCommand !== undefined) {
-    bubbleConfigInput.bootstrapCommand = input.bootstrapCommand;
-  }
-  if (input.openCommand !== undefined) {
-    bubbleConfigInput.openCommand = input.openCommand;
-  }
-  if (input.pairflowCommandProfile !== undefined) {
-    bubbleConfigInput.pairflowCommandProfile = input.pairflowCommandProfile;
-  }
+    task
+  });
 
-  const config = buildBubbleConfig(bubbleConfigInput);
+  const config = buildBubbleConfig(prepared.bubbleConfigInput);
   const state = assertValidBubbleStateSnapshot(createInitialBubbleState(input.id));
   const reviewerFocusArtifactPersist = await persistCreatedBubbleArtifacts({
     bubbleId: input.id,
@@ -119,37 +90,23 @@ export async function createBubbleV11(
     task,
     reviewerFocus,
     ...(reviewerBrief !== undefined ? { reviewerBrief } : {}),
-    ideationMode,
+    ideationMode: prepared.ideationMode,
     dependencies
   });
 
-  await emitBubbleLifecycleEventBestEffort({
+  await emitCreateBubbleLifecycleEvent({
     repoPath,
     bubbleId: input.id,
-    bubbleInstanceId: bubbleConfigInput.bubbleInstanceId,
-    eventType: "bubble_created",
-    round: null,
-    actorRole: "orchestrator",
-    metadata: {
-      base_branch: config.base_branch,
-      bubble_branch: config.bubble_branch,
-      review_artifact_type: config.review_artifact_type,
-      task_source: task.source,
-      ideation_mode: ideationMode,
-      ideation_task_pending: ideationMode,
-      reviewer_focus_status: reviewerFocus.status,
-      reviewer_focus_artifact_write: reviewerFocusArtifactPersist.status,
-      ...(reviewerFocusArtifactPersist.errorCode !== undefined
-        ? {
-            reviewer_focus_artifact_write_error_code:
-              reviewerFocusArtifactPersist.errorCode
-          }
-        : {})
-    },
-    now: createdAt
+    bubbleInstanceId: prepared.bubbleConfigInput.bubbleInstanceId,
+    config,
+    task,
+    reviewerFocus,
+    reviewerFocusArtifactPersist,
+    ideationMode: prepared.ideationMode,
+    createdAt
   });
 
-  return {
+  return buildCreateBubbleResult({
     bubbleId: input.id,
     paths,
     config,
@@ -158,5 +115,5 @@ export async function createBubbleV11(
     reviewerFocus,
     reviewerFocusArtifactPersist,
     ...(reviewerBrief !== undefined ? { reviewerBrief } : {})
-  };
+  });
 }
