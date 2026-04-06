@@ -352,7 +352,7 @@ export {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError,
   upsertRuntimeSession
-} from "./core/runtime/sessionsRegistry.js";
+} from "./v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 export {
   emitBubbleNotification,
   playSoundWithAfplay
@@ -629,7 +629,7 @@ export type {
   RuntimeSessionRecord,
   RuntimeSessionsRegistry,
   UpsertRuntimeSessionInput
-} from "./core/runtime/sessionsRegistry.js";
+} from "./v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 export type {
   BubbleNotificationDependencies,
   BubbleNotificationKind,

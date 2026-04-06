@@ -8,7 +8,7 @@ import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubble
 import {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
-} from "../../../core/runtime/sessionsRegistry.js";
+} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import {
   buildBubbleTmuxSessionName,
   TmuxCommandError,

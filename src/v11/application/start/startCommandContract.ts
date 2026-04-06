@@ -9,7 +9,7 @@ import type {
 import type {
   claimRuntimeSession,
   removeRuntimeSession
-} from "../../../core/runtime/sessionsRegistry.js";
+} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import type { buildResumeTranscriptSummary } from "../../../core/protocol/resumeSummary.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 

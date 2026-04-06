@@ -3,7 +3,7 @@ import { TmuxCommandError } from "../../../core/runtime/tmuxManager.js";
 import {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
-} from "../../../core/runtime/sessionsRegistry.js";
+} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { normalizeStopBubbleError } from "./stopCommandErrorNormalization.js";
 import {
   normalizePairflowCommandErrorInput,

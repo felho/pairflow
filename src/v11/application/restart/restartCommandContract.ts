@@ -1,4 +1,4 @@
-import type { removeRuntimeSession } from "../../../core/runtime/sessionsRegistry.js";
+import type { removeRuntimeSession } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import type {
   persistPassValidationRecoveryMarker,
   PassValidationRecoveryMarkerPersistWarning

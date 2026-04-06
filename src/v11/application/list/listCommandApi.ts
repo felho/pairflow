@@ -11,7 +11,7 @@ import { resolveActiveMetaReviewRuntimeDelivery } from "../../../core/bubble/met
 import { isMetaReviewExecutionContextActiveState } from "../../../core/bubble/metaReviewExecutionContext.js";
 import { getBubblePaths } from "../../../core/bubble/paths.js";
 import { inspectStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import { readRuntimeSessionsRegistry } from "../../../core/runtime/sessionsRegistry.js";
+import { readRuntimeSessionsRegistry } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { computeWatchdogStatus } from "../../../core/runtime/watchdog.js";
 import { resolveBubbleAttention } from "../../../core/ui/bubbleAttention.js";
 import { readWatchdogPaneActivity } from "../../shared/watchdog/watchdogPaneActivityStore.js";

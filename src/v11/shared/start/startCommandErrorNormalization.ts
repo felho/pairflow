@@ -7,7 +7,7 @@ import type {
 import type {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
-} from "../../../core/runtime/sessionsRegistry.js";
+} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 
 export interface NormalizeStartBubbleErrorInput {
   error: unknown;

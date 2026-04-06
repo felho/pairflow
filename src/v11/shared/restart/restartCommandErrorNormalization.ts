@@ -2,7 +2,7 @@ import type { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
 import type {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
-} from "../../../core/runtime/sessionsRegistry.js";
+} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import type { TmuxCommandError } from "../../../core/runtime/tmuxManager.js";
 import type { StartBubbleError } from "../../../core/bubble/startBubble.js";
 

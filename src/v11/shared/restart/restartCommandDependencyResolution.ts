@@ -1,6 +1,6 @@
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { persistPassValidationRecoveryMarker } from "../../../core/runtime/passValidationEvidence.js";
-import { removeRuntimeSession } from "../../../core/runtime/sessionsRegistry.js";
+import { removeRuntimeSession } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { terminateBubbleTmuxSession } from "../../../core/runtime/tmuxManager.js";
 import { startBubble } from "../../../core/bubble/startBubble.js";
 import type { RestartBubbleDependencies } from "../../application/restart/restartCommandContract.js";

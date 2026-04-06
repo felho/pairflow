@@ -3,7 +3,7 @@ import type {
 } from "../../../core/workspace/worktreeManager.js";
 import type {
   removeRuntimeSession
-} from "../../../core/runtime/sessionsRegistry.js";
+} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import type {
   terminateBubbleTmuxSession
 } from "../../../core/runtime/tmuxManager.js";

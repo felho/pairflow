@@ -10,7 +10,7 @@ import {
   readRuntimeSessionsRegistry,
   removeRuntimeSessions,
   type RuntimeSessionsRegistry
-} from "../../../core/runtime/sessionsRegistry.js";
+} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import { isFinalState } from "../../domain/state/transitions.js";
 import type {

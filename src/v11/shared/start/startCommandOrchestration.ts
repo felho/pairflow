@@ -10,7 +10,7 @@ import {
 import {
   claimRuntimeSession,
   removeRuntimeSession
-} from "../../../core/runtime/sessionsRegistry.js";
+} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type {
   StartBubbleDependencies,

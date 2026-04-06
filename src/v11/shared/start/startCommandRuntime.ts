@@ -7,7 +7,7 @@ import {
 import {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
-} from "../../../core/runtime/sessionsRegistry.js";
+} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { normalizeStartBubbleError } from "./startCommandErrorNormalization.js";
 import {
   normalizePairflowCommandErrorInput,

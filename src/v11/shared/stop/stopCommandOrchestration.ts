@@ -7,7 +7,7 @@ import {
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import {
   removeRuntimeSession
-} from "../../../core/runtime/sessionsRegistry.js";
+} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import {
   terminateBubbleTmuxSession
 } from "../../../core/runtime/tmuxManager.js";

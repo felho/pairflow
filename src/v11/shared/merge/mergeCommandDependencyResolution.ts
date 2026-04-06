@@ -3,7 +3,7 @@ import { branchExists, runGit } from "../../../core/workspace/git.js";
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { cleanupWorktreeWorkspace } from "../../../core/workspace/worktreeManager.js";
 import { terminateBubbleTmuxSession } from "../../../core/runtime/tmuxManager.js";
-import { removeRuntimeSession } from "../../../core/runtime/sessionsRegistry.js";
+import { removeRuntimeSession } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../core/metrics/bubbleEvents.js";
 import type { MergeBubbleDependencies } from "../../application/merge/mergeCommandContract.js";

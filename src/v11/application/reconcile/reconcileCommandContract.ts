@@ -9,7 +9,7 @@ import type {
   readRuntimeSessionsRegistry,
   removeRuntimeSessions,
   RuntimeSessionsRegistry
-} from "../../../core/runtime/sessionsRegistry.js";
+} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 
 export type RuntimeSessionStaleReason =
   | "missing_bubble"

@@ -1,5 +1,5 @@
 import type { StateValidationDiagnostics } from "../../infrastructure/state/stateStore.js";
-import type { RuntimeSessionRecord } from "../../../core/runtime/sessionsRegistry.js";
+import type { RuntimeSessionRecord } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import type {
   BubbleLifecycleState,
   MetaReviewRecommendation,

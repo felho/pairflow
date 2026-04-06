@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import {
   readRuntimeSessionsRegistry
-} from "../../../core/runtime/sessionsRegistry.js";
+} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import {
   runTmux,
   runtimePaneIndices,
