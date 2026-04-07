@@ -1,5 +1,3 @@
-import { readFile, writeFile } from "node:fs/promises";
-
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
@@ -51,9 +49,33 @@ export function resolveRecoveryContextDependencies(
     readTranscript: dependencies.readTranscriptEnvelopes ?? readTranscriptEnvelopes,
     setMetaReviewerPane:
       dependencies.setMetaReviewerPaneBinding ?? setMetaReviewerPaneBinding,
-    readFileFn: dependencies.readFile ?? readFile,
-    writeFileFn: dependencies.writeFile ?? writeFile
+    readFileFn: requireRecoveryArtifactReadPort(dependencies),
+    writeFileFn: requireRecoveryArtifactWritePort(dependencies)
   };
+}
+
+function requireRecoveryArtifactReadPort(
+  dependencies: RecoverMetaReviewGateFromSnapshotDependencies
+): MetaReviewArtifactReadPort {
+  if (dependencies.readFile !== undefined) {
+    return dependencies.readFile;
+  }
+  throw new MetaReviewGateError(
+    "META_REVIEW_GATE_TRANSITION_INVALID",
+    "META_REVIEW_GATE_TRANSITION_INVALID: meta-review gate recovery artifact read capability is unavailable."
+  );
+}
+
+function requireRecoveryArtifactWritePort(
+  dependencies: RecoverMetaReviewGateFromSnapshotDependencies
+): MetaReviewArtifactWritePort {
+  if (dependencies.writeFile !== undefined) {
+    return dependencies.writeFile;
+  }
+  throw new MetaReviewGateError(
+    "META_REVIEW_GATE_TRANSITION_INVALID",
+    "META_REVIEW_GATE_TRANSITION_INVALID: meta-review gate recovery artifact write capability is unavailable."
+  );
 }
 
 export function buildDeactivateMetaReviewerPane(input: {

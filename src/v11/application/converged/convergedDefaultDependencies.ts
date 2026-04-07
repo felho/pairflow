@@ -1,7 +1,7 @@
 import {
-  applyMetaReviewGateOnConvergence,
-  recoverMetaReviewGateFromSnapshot
-} from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
+  applyMetaReviewGateOnConvergenceV11 as applyMetaReviewGateOnConvergence,
+  recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
+} from "../metaReviewGate/emitMetaReviewGateV11.js";
 import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
 import { assessPairflowCommandPath } from "../../../core/runtime/pairflowCommand.js";
 import { emitBubbleNotification } from "../../../core/runtime/notifications.js";

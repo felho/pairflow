@@ -1,10 +1,35 @@
+import { readFile, writeFile } from "node:fs/promises";
+
+import {
+  applyMetaReviewGateOnConvergence,
+  asMetaReviewGateError,
+  MetaReviewGateError,
+  recoverMetaReviewGateFromSnapshot,
+  toMetaReviewGateError
+} from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
+import type {
+  ApplyMetaReviewGateOnConvergenceDependencies,
+  ApplyMetaReviewGateOnConvergenceInput,
+  MetaReviewGateResult,
+  RecoverMetaReviewGateFromSnapshotDependencies,
+  RecoverMetaReviewGateFromSnapshotInput
+} from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
+
+function withMetaReviewGateRecoveryDefaults(
+  dependencies: RecoverMetaReviewGateFromSnapshotDependencies = {}
+): RecoverMetaReviewGateFromSnapshotDependencies {
+  return {
+    readFile,
+    writeFile,
+    ...dependencies
+  };
+}
+
 export {
-  applyMetaReviewGateOnConvergence as applyMetaReviewGateOnConvergenceV11,
   asMetaReviewGateError as asMetaReviewGateErrorV11,
   MetaReviewGateError as MetaReviewGateErrorV11,
-  recoverMetaReviewGateFromSnapshot as recoverMetaReviewGateFromSnapshotV11,
   toMetaReviewGateError as toMetaReviewGateErrorV11
-} from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
+};
 export {
   notifyMetaReviewerSubmissionRequest as notifyMetaReviewerSubmissionRequestV11
 } from "./metaReviewGateNotify.js";
@@ -19,3 +44,20 @@ export type {
   RecoverMetaReviewGateFromSnapshotDependencies as RecoverMetaReviewGateFromSnapshotV11Dependencies,
   RecoverMetaReviewGateFromSnapshotInput as RecoverMetaReviewGateFromSnapshotV11Input
 } from "./metaReviewGateCommandContract.js";
+
+export async function applyMetaReviewGateOnConvergenceV11(
+  input: ApplyMetaReviewGateOnConvergenceInput,
+  dependencies: ApplyMetaReviewGateOnConvergenceDependencies = {}
+): Promise<MetaReviewGateResult> {
+  return applyMetaReviewGateOnConvergence(input, dependencies);
+}
+
+export async function recoverMetaReviewGateFromSnapshotV11(
+  input: RecoverMetaReviewGateFromSnapshotInput,
+  dependencies: RecoverMetaReviewGateFromSnapshotDependencies = {}
+): Promise<MetaReviewGateResult> {
+  return recoverMetaReviewGateFromSnapshot(
+    input,
+    withMetaReviewGateRecoveryDefaults(dependencies)
+  );
+}

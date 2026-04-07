@@ -10,8 +10,8 @@ import { readWatchdogPaneActivity } from "../../../core/watchdog/watchdogPaneAct
 import { writeWatchdogPaneActivity } from "../../../core/watchdog/watchdogPaneActivityStore.js";
 import { appendWatchdogTrace } from "../../../core/watchdog/watchdogTraceStore.js";
 import {
-  recoverMetaReviewGateFromSnapshot
-} from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
+  recoverMetaReviewGateFromSnapshotV11 as recoverMetaReviewGateFromSnapshot
+} from "../metaReviewGate/emitMetaReviewGateV11.js";
 import { maybeApplyPendingReworkIntent } from "./watchdogPendingReworkIntent.js";
 import {
   sampleWatchdogPaneActivity,
