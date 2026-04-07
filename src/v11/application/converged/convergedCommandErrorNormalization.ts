@@ -1,4 +1,4 @@
-import { toMetaReviewGateError } from "../metaReviewGate/metaReviewGateCommandApi.js";
+import { toMetaReviewGateError } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
 import { WorkspaceResolutionError } from "../../infrastructure/executor/workspace/workspaceResolution.js";
 
 export interface NormalizeConvergedCommandErrorInput {

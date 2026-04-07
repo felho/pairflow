@@ -1,13 +1,13 @@
 export {
   emitConvergedFromWorkspaceCommandOrchestration as emitConvergedFromWorkspaceV11,
   throwAsConvergedCommandError as asConvergedCommandErrorV11
-} from "../../shared/converged/convergedCommandOrchestration.js";
+} from "./convergedCommandOrchestration.js";
 export {
   ConvergedCommandError as ConvergedCommandErrorV11
 } from "../../shared/converged/convergedCommandError.js";
 export {
   resolveConvergedRolloutBlockingReasonCodes as resolveMetaReviewRolloutBlockingReasonCodesV11
-} from "../../shared/converged/convergedRolloutBlockingReasonResolver.js";
+} from "./convergedRolloutBlockingReasonResolver.js";
 export type {
   EmitConvergedDependencies as EmitConvergedV11Dependencies,
   EmitConvergedInput as EmitConvergedV11Input,

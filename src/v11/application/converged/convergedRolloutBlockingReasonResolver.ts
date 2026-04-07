@@ -1,8 +1,8 @@
-import type { PairflowCommandPathAssessment } from "../ports/pairflowCommand.js";
+import type { PairflowCommandPathAssessment } from "../../shared/ports/pairflowCommand.js";
 import {
   resolveMetaReviewRolloutBlockingReasonCodesV11
-} from "../../application/converged/metaReviewRolloutBlockingReasonCodes.js";
-import { type MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateCommandContract.js";
+} from "./metaReviewRolloutBlockingReasonCodes.js";
+import { type MetaReviewGateRoute } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 
 export interface ResolveConvergedRolloutBlockingReasonCodesInput {
   gateRoute: MetaReviewGateRoute;

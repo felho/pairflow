@@ -1,18 +1,18 @@
 import type { AgentName } from "../../../types/bubble.js";
-import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext.js";
-import type { ConvergedStructuredFinding } from "./convergedCommandTypes.js";
-import { executeConvergedExecution } from "../../application/converged/convergedExecution.js";
+import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
+import type { ConvergedStructuredFinding } from "../../shared/converged/convergedCommandTypes.js";
+import { executeConvergedExecution } from "./convergedExecution.js";
 import type {
   FinalizeConvergedFlowDependencies
-} from "../../application/converged/convergedFinalizationTypes.js";
-import { finalizeConvergedFlow } from "../../application/converged/convergedFinalization.js";
-import { prepareConvergedPolicy } from "../../application/converged/convergedPolicyPreparation.js";
-import { prepareConvergedRouting } from "../../application/converged/convergedRoutingPreparation.js";
-import { prepareConvergedValidation } from "../../application/converged/convergedValidationPreparation.js";
+} from "./convergedFinalizationTypes.js";
+import { finalizeConvergedFlow } from "./convergedFinalization.js";
+import { prepareConvergedPolicy } from "./convergedPolicyPreparation.js";
+import { prepareConvergedRouting } from "./convergedRoutingPreparation.js";
+import { prepareConvergedValidation } from "./convergedValidationPreparation.js";
 import {
   applyMetaReviewGateOnConvergence,
   recoverMetaReviewGateFromSnapshot
-} from "../metaReviewGate/metaReviewGateCommandApi.js";
+} from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
@@ -23,20 +23,20 @@ import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef
 } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
-import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
-import type { EmitBubbleNotificationPort } from "../ports/notifications.js";
+import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
+import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
 import type {
   AppendProtocolEnvelopePort,
   ReadTranscriptEnvelopesPort
-} from "../ports/transcript.js";
+} from "../../shared/ports/transcript.js";
 import type {
   EmitTmuxDeliveryNotificationPort,
   ResolveDeliveryMessageRefPort
-} from "../ports/tmuxDelivery.js";
+} from "../../shared/ports/tmuxDelivery.js";
 import type {
   RunConvergedFlowDependencies,
   RunConvergedFlowInput
-} from "../../application/converged/runConvergedFlow.js";
+} from "./runConvergedFlow.js";
 
 export interface BuildConvergedFlowInputInput {
   summary: string;

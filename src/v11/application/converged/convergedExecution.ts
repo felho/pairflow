@@ -2,10 +2,10 @@ import { join } from "node:path";
 
 import {
   buildDefaultConvergedExecutionDependencies
-} from "../../shared/converged/convergedFlowInvocationBuilders.js";
+} from "./convergedFlowInvocationBuilders.js";
 import type {
   ResolvedConvergedExecutionDependencies
-} from "../../shared/converged/convergedFlowInvocationBuilders.js";
+} from "./convergedFlowInvocationBuilders.js";
 import type {
   ConvergedStructuredFinding
 } from "../../shared/converged/convergedCommandTypes.js";

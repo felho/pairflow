@@ -7,7 +7,7 @@ import {
   buildDefaultConvergedFlowDependencies,
   buildConvergedFlowDependencies,
   buildConvergedFlowInput
-} from "../../../../src/v11/shared/converged/convergedFlowInvocationBuilders.js";
+} from "../../../../src/v11/application/converged/convergedFlowInvocationBuilders.js";
 
 function toErrorMessage(input: PairflowCommandErrorInput): string {
   if (typeof input === "string") {

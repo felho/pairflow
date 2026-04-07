@@ -13,7 +13,7 @@ import { executeImplementerHandoffDelivery } from "../../shared/delivery/impleme
 import {
   buildDefaultConvergedGateDeliveryDependencies,
   type ResolvedConvergedGateDeliveryDependencies
-} from "../../shared/converged/convergedFlowInvocationBuilders.js";
+} from "./convergedFlowInvocationBuilders.js";
 
 export interface ConvergedDeliveryResult {
   delivered: boolean;

@@ -7,7 +7,7 @@ import type {
   FinalizeConvergedFlowInput,
   FinalizeConvergedFlowResult
 } from "./convergedFinalizationTypes.js";
-import { buildDefaultConvergedFinalizationDependencies } from "../../shared/converged/convergedFlowInvocationBuilders.js";
+import { buildDefaultConvergedFinalizationDependencies } from "./convergedFlowInvocationBuilders.js";
 
 export async function finalizeConvergedFlow(
   input: FinalizeConvergedFlowInput,

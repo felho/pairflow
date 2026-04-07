@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { resolveMetaReviewRolloutBlockingReasonCodesV11 } from "../../../../src/v11/application/converged/metaReviewRolloutBlockingReasonCodes.js";
-import { resolveConvergedRolloutBlockingReasonCodes } from "../../../../src/v11/shared/converged/convergedRolloutBlockingReasonResolver.js";
+import { resolveConvergedRolloutBlockingReasonCodes } from "../../../../src/v11/application/converged/convergedRolloutBlockingReasonResolver.js";
 
 describe("convergedRolloutBlockingReasonResolver", () => {
   it("delegates stale self_host command path to v11 resolver", () => {

@@ -1,18 +1,18 @@
-import { runConvergedFlow } from "../../application/converged/runConvergedFlow.js";
+import { runConvergedFlow } from "./runConvergedFlow.js";
 import {
   buildConvergedCommandFlowInvocation
 } from "./convergedFlowInvocationBuilders.js";
 import { normalizeConvergedCommandError } from "./convergedCommandErrorNormalization.js";
-import { normalizeConvergedCommandInput } from "./convergedCommandInputNormalization.js";
+import { normalizeConvergedCommandInput } from "../../shared/converged/convergedCommandInputNormalization.js";
 import {
   createConvergedCommandError,
   isConvergedCommandError
-} from "./convergedCommandError.js";
+} from "../../shared/converged/convergedCommandError.js";
 import type {
   EmitConvergedDependencies,
   EmitConvergedInput,
   EmitConvergedResult
-} from "./convergedCommandTypes.js";
+} from "../../shared/converged/convergedCommandTypes.js";
 import { resolveConvergedRolloutBlockingReasonCodes } from "./convergedRolloutBlockingReasonResolver.js";
 
 export async function emitConvergedFromWorkspaceCommandOrchestration(
