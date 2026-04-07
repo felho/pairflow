@@ -16,6 +16,7 @@ import type {
   RecoverMetaReviewGateFromSnapshotInput
 } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 import { notifyMetaReviewerSubmissionRequest } from "./metaReviewGateNotify.js";
+import { resolveMetaReviewerPaneWarning } from "./metaReviewGatePaneBinding.js";
 
 function withMetaReviewGateApplyDefaults(
   dependencies: ApplyMetaReviewGateOnConvergenceDependencies = {}
@@ -24,6 +25,7 @@ function withMetaReviewGateApplyDefaults(
     readFile,
     runTmux,
     notifyMetaReviewerSubmissionRequest,
+    resolveMetaReviewerPaneWarning,
     ...dependencies
   };
 }

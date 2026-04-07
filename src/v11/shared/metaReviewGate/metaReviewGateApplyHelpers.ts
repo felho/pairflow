@@ -10,7 +10,6 @@ import {
 import {
   deliveryTargetRoleMetadataKey
 } from "../../../types/protocol.js";
-export { resolveMetaReviewerPaneWarning } from "./metaReviewGatePaneBinding.js";
 export {
   stageMetaReviewRunningState,
   throwMetaReviewRunningStageFailure

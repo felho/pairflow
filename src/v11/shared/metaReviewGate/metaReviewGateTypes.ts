@@ -14,6 +14,7 @@ import type {
 } from "../metaReview/metaReviewArtifactIo.js";
 import type { MetaReviewGateTmuxRunner } from "./metaReviewGateTmuxCapabilities.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { PairflowCommandProfile } from "../../../types/bubble.js";
 import type {
   MetaReviewResult
 } from "../metaReview/metaReviewTypes.js";
@@ -56,6 +57,25 @@ export type NotifyMetaReviewerSubmissionRequest = (
   dependencies?: NotifyMetaReviewerSubmissionRequestDependencies
 ) => Promise<MetaReviewRuntimeDeliveryObservation>;
 
+export interface ResolveMetaReviewerPaneWarningInput {
+  setMetaReviewerPane: typeof setMetaReviewerPaneBinding;
+  notifySubmissionRequest: NotifyMetaReviewerSubmissionRequest;
+  runTmuxRunner: MetaReviewGateTmuxRunner;
+  sessionsPath: string;
+  bubbleId: string;
+  round: number;
+  now: Date;
+  taskArtifactPath: string;
+  pairflowCommandProfile: PairflowCommandProfile;
+}
+
+export type ResolveMetaReviewerPaneWarning = (
+  input: ResolveMetaReviewerPaneWarningInput
+) => Promise<{
+  delivery: MetaReviewRuntimeDeliveryObservation;
+  shouldDeactivate: boolean;
+}>;
+
 export interface ApplyMetaReviewGateOnConvergenceInput {
   bubbleId: string;
   summary: string;
@@ -77,6 +97,7 @@ export interface ApplyMetaReviewGateOnConvergenceDependencies {
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;
   setMetaReviewerPaneBinding?: typeof setMetaReviewerPaneBinding;
   notifyMetaReviewerSubmissionRequest?: NotifyMetaReviewerSubmissionRequest;
+  resolveMetaReviewerPaneWarning?: ResolveMetaReviewerPaneWarning;
   runTmux?: MetaReviewGateTmuxRunner;
   readFile?: MetaReviewArtifactReadPort;
 }

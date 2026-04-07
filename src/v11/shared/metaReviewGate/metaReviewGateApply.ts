@@ -1,7 +1,6 @@
 import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
 import type { BubbleMetaReviewRuntimeDeliveryState } from "../../../types/bubble.js";
 import {
-  resolveMetaReviewerPaneWarning,
   stageMetaReviewRunningState,
   throwMetaReviewRunningStageFailure
 } from "./metaReviewGateApplyHelpers.js";
@@ -53,7 +52,7 @@ export async function applyMetaReviewGateOnConvergence(
     return kickoffResult;
   }
 
-  const paneBinding = await resolveMetaReviewerPaneWarning({
+  const paneBinding = await context.resolvePaneWarning({
     setMetaReviewerPane: context.setMetaReviewerPane,
     notifySubmissionRequest: context.notifySubmissionRequest,
     runTmuxRunner: context.runTmuxRunner,
