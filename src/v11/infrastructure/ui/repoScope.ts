@@ -42,6 +42,13 @@ function uniqueSorted(values: string[]): string[] {
   return [...new Set(values)].sort((left, right) => left.localeCompare(right));
 }
 
+function sameStringArray(left: string[], right: string[]): boolean {
+  return (
+    left.length === right.length &&
+    left.every((value, index) => value === right[index])
+  );
+}
+
 function diffRepos(previous: string[], next: string[]): {
   added: string[];
   removed: string[];
@@ -83,6 +90,18 @@ export async function resolveUiRepoScope(
     });
   const explicitRepoPaths = input.repoPaths ?? [];
   let explicitRepoFilter: Set<string> | undefined;
+  const normalizeRepoList = async (repoPaths: Iterable<string>): Promise<string[]> =>
+    uniqueSorted(await Promise.all(
+      [...repoPaths].map((repoPath) => normalizeRepoPath(resolve(repoPath)))
+    ));
+  const refreshExplicitRepoFilter = async (): Promise<void> => {
+    if (explicitRepoFilter === undefined) {
+      return;
+    }
+    explicitRepoFilter = new Set(
+      await normalizeRepoList(explicitRepoFilter)
+    );
+  };
   if (explicitRepoPaths.length > 0) {
     const normalizedExplicitRepoPaths = uniqueSorted(await Promise.all(
       explicitRepoPaths.map((repoPath) =>
@@ -135,6 +154,7 @@ export async function resolveUiRepoScope(
       allowMissing: true,
       normalizePaths: true
     });
+    await refreshExplicitRepoFilter();
     const refreshedRegistryRepos = refreshed.entries.map((entry) => entry.repoPath);
     const nextRepos = resolveReposFromRegistry({
       registryRepos: refreshedRegistryRepos,
@@ -175,7 +195,25 @@ export async function resolveUiRepoScope(
     registryPath,
     async has(repoPath: string): Promise<boolean> {
       const normalized = await normalizeRepoPath(resolve(scopeCwd, repoPath));
-      return repoSet.has(normalized);
+      if (repoSet.has(normalized)) {
+        return true;
+      }
+
+      await refreshExplicitRepoFilter();
+      const renormalizedRepos = await normalizeRepoList(resolvedRepos);
+      if (!sameStringArray(resolvedRepos, renormalizedRepos)) {
+        resolvedRepos =
+          explicitRepoFilter === undefined
+            ? renormalizedRepos
+            : renormalizedRepos.filter((repoPath) =>
+                explicitRepoFilter?.has(repoPath) ?? false
+              );
+        repoSet = new Set(resolvedRepos);
+      }
+      if (repoSet.has(normalized)) {
+        return true;
+      }
+      return false;
     },
     async refreshFromRegistry(
       this: void
