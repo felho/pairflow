@@ -7,8 +7,8 @@ import { SchemaValidationError } from "../../shared/validation/primitives.js";
 import {
   BubbleLookupError,
   resolveBubbleById
-} from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { shellQuote } from "../../infrastructure/foundation/shell/shellQuote.js";
+} from "../../../core/bubble/bubbleLookup.js";
+import { shellQuote } from "../../../core/util/shellQuote.js";
 
 const worktreePathPlaceholder = "{{worktree_path}}";
 const defaultOpenCommandTemplate = `cursor ${worktreePathPlaceholder}`;
