@@ -10,7 +10,7 @@ export {
   type RecoverMetaReviewGateFromSnapshotDependencies,
   type RecoverMetaReviewGateFromSnapshotInput
 } from "./metaReviewGateTypes.js";
-export { notifyMetaReviewerSubmissionRequest } from "./metaReviewGateNotify.js";
+export { notifyMetaReviewerSubmissionRequest } from "../../application/metaReviewGate/metaReviewGateNotify.js";
 export { recoverMetaReviewGateFromSnapshot } from "./metaReviewGateRecovery.js";
 export { applyMetaReviewGateOnConvergence } from "./metaReviewGateApply.js";
 export { asMetaReviewGateError, toMetaReviewGateError } from "./metaReviewGateErrorConversion.js";

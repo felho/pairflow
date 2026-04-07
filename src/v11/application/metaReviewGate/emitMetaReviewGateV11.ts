@@ -2,10 +2,12 @@ export {
   applyMetaReviewGateOnConvergence as applyMetaReviewGateOnConvergenceV11,
   asMetaReviewGateError as asMetaReviewGateErrorV11,
   MetaReviewGateError as MetaReviewGateErrorV11,
-  notifyMetaReviewerSubmissionRequest as notifyMetaReviewerSubmissionRequestV11,
   recoverMetaReviewGateFromSnapshot as recoverMetaReviewGateFromSnapshotV11,
   toMetaReviewGateError as toMetaReviewGateErrorV11
 } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
+export {
+  notifyMetaReviewerSubmissionRequest as notifyMetaReviewerSubmissionRequestV11
+} from "./metaReviewGateNotify.js";
 export type {
   ApplyMetaReviewGateOnConvergenceDependencies as ApplyMetaReviewGateOnConvergenceV11Dependencies,
   ApplyMetaReviewGateOnConvergenceInput as ApplyMetaReviewGateOnConvergenceV11Input,
