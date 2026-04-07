@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ResumeBubbleError,
   createResumeBubbleError
-} from "../../../../src/v11/shared/resume/resumeCommandRuntime.js";
+} from "../../../../src/v11/application/resume/resumeCommandRuntime.js";
 import { normalizeResumeBubbleError } from "../../../../src/v11/shared/resume/resumeCommandErrorNormalization.js";
 
 describe("resumeCommandErrorNormalization", () => {

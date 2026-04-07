@@ -3,8 +3,8 @@ import {
   type ResumeBubbleDependencies,
   type ResumeBubbleInput,
   type ResumeBubbleResult
-} from "../../application/resume/resumeCommandContract.js";
-import { emitHumanReplyV11 as emitHumanReply } from "../../application/reply/emitReplyV11.js";
+} from "./resumeCommandContract.js";
+import { emitHumanReplyV11 as emitHumanReply } from "../reply/emitReplyV11.js";
 
 export async function resumeBubbleCommandOrchestration(
   input: ResumeBubbleInput,

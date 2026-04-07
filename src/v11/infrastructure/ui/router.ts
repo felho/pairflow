@@ -14,7 +14,7 @@ import {
   emitRequestRework
 } from "../../../core/human/approval.js";
 import { emitHumanReply } from "../../../core/human/reply.js";
-import { resumeBubbleCommandOrchestration as resumeBubble } from "../../shared/resume/resumeCommandOrchestration.js";
+import { resumeBubbleCommandOrchestration as resumeBubble } from "../../application/resume/resumeCommandOrchestration.js";
 import { commitBubble } from "../../../core/bubble/commitBubble.js";
 import { mergeBubble } from "../../../core/bubble/mergeBubble.js";
 import { openBubble } from "../../../core/bubble/openBubble.js";

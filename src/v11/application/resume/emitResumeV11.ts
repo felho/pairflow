@@ -6,8 +6,8 @@ export {
 } from "./resumeCommandContract.js";
 export {
   resumeBubbleCommandOrchestration as resumeBubbleV11
-} from "../../shared/resume/resumeCommandOrchestration.js";
+} from "./resumeCommandOrchestration.js";
 export {
   ResumeBubbleError as ResumeBubbleErrorV11,
   throwAsResumeBubbleError as asResumeBubbleErrorV11
-} from "../../shared/resume/resumeCommandRuntime.js";
+} from "./resumeCommandRuntime.js";

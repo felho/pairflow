@@ -5,7 +5,7 @@ import type { PassIntent, ProtocolEnvelope } from "../../../types/protocol.js";
 import {
   type PreparePassRoutingDependencies,
   type PreparePassRoutingInput
-} from "../../application/pass/passRoutingPreparation.js";
+} from "./passRoutingPreparation.js";
 
 export interface BuildPassRoutingInputInput {
   senderRole: "implementer" | "reviewer";

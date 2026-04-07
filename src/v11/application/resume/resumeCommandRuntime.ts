@@ -1,6 +1,6 @@
-import { asHumanReplyCommandErrorV11 as asHumanReplyCommandError } from "../../application/reply/emitReplyV11.js";
-import { normalizeResumeBubbleError } from "./resumeCommandErrorNormalization.js";
-import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
+import { normalizePairflowCommandErrorInput } from "../../shared/errors/commandErrorDetails.js";
+import { normalizeResumeBubbleError } from "../../shared/resume/resumeCommandErrorNormalization.js";
+import { asHumanReplyCommandErrorV11 as asHumanReplyCommandError } from "../reply/emitReplyV11.js";
 
 export class ResumeBubbleError extends Error {
   public readonly reasonCode: string | undefined;

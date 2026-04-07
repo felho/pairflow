@@ -27,6 +27,7 @@ import { resolveReviewerVerification } from "./reviewerVerificationResolver.js";
 import { prepareReviewerVerification } from "./reviewerVerificationPreparation.js";
 import { buildPassLifecycleMetricMetadata } from "../../domain/pass/lifecycleMetricMetadata.js";
 import { resolveMostRecentPreviousReviewerPassIsCleanFromMetadata } from "../../domain/pass/repeatCleanMetadata.js";
+import { buildPassRoutingDependencies } from "./passRoutingInvocationBuilders.js";
 import {
   buildPassValidationEvidenceArtifact,
   resolvePassValidationPolicy,
@@ -36,7 +37,6 @@ import {
 import { runPassValidationCommand } from "../../../core/runtime/passValidationRunner.js";
 import { buildAutoConvergeFlowDependencies } from "./autoConvergeFlowInvocationBuilders.js";
 import { buildNormalPassFlowDependencies } from "./normalPassFlowInvocationBuilders.js";
-import { buildPassRoutingDependencies } from "../../shared/pass/passRoutingInvocationBuilders.js";
 
 export interface PassFlowRuntimeDependencies extends PassDeliveryDependencies {
   emitBubbleNotification?: EmitConvergedDependencies["emitBubbleNotification"];

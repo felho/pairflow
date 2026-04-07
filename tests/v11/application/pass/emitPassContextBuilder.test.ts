@@ -11,7 +11,7 @@ import {
   buildEmitPassContext,
   type BuildEmitPassContextDependencies
 } from "../../../../src/v11/application/pass/emitPassContextBuilder.js";
-import type { BuildPassRoutingInputInput } from "../../../../src/v11/shared/pass/passRoutingInvocationBuilders.js";
+import type { BuildPassRoutingInputInput } from "../../../../src/v11/application/pass/passRoutingInvocationBuilders.js";
 
 describe("emitPassContextBuilder", () => {
   it("builds flow context from normalized command, payload and workspace data", async () => {

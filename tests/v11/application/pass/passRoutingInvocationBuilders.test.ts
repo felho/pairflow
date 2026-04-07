@@ -10,7 +10,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 import {
   buildPassRoutingDependencies,
   buildPassRoutingInput
-} from "../../../../src/v11/shared/pass/passRoutingInvocationBuilders.js";
+} from "../../../../src/v11/application/pass/passRoutingInvocationBuilders.js";
 
 describe("passRoutingInvocationBuilders", () => {
   it("builds preparePassRouting input and omits undefined optional fields", () => {
