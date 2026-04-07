@@ -104,30 +104,19 @@ export interface PassValidationReuseDecision {
     required_command_set_id: string | null
   }
 }
+import type {
+  PersistPassValidationRecoveryMarkerInput,
+  PersistPassValidationRecoveryMarkerPort,
+  PersistPassValidationRecoveryMarkerResult
+} from "../../../shared/ports/passValidationRecovery.js"
 
-export interface PassValidationRecoveryMarkerPersistWarningMetadata {
-  flow: PassValidationRecoverySource
-  marker_scope: "repo" | "worktree"
-  target_path_kind: "repo_runtime_marker" | "worktree_marker"
-  target_path_exists: boolean
-  error_code?: string
-  failed_targets: string[]
-  persisted_targets: string[]
-  repo_marker_path: string
-  worktree_marker_path?: string
-  worktreePathRequested: boolean
-}
-
-export interface PassValidationRecoveryMarkerPersistWarning {
-  reason_code: "pass_validation_recovery_marker_persist_failed"
-  message: string
-  metadata: PassValidationRecoveryMarkerPersistWarningMetadata
-}
-
-export interface PersistPassValidationRecoveryMarkerResult {
-  persisted_targets: string[]
-  warnings: PassValidationRecoveryMarkerPersistWarning[]
-}
+export type {
+  PassValidationRecoveryMarkerPersistWarning,
+  PassValidationRecoveryMarkerPersistWarningMetadata,
+  PersistPassValidationRecoveryMarkerInput,
+  PersistPassValidationRecoveryMarkerPort,
+  PersistPassValidationRecoveryMarkerResult
+} from "../../../shared/ports/passValidationRecovery.js"
 
 interface RecoveryMarkerCandidatePath {
   marker_scope: "repo" | "worktree"
@@ -902,13 +891,9 @@ export async function evaluatePassValidationEvidenceReuse(input: {
   }
 }
 
-export async function persistPassValidationRecoveryMarker(input: {
-  repoPath: string
-  bubbleId: string
-  flow: PassValidationRecoverySource
-  now?: Date
-  worktreePath?: string
-}): Promise<PersistPassValidationRecoveryMarkerResult> {
+export const persistPassValidationRecoveryMarker: PersistPassValidationRecoveryMarkerPort = async (
+  input: PersistPassValidationRecoveryMarkerInput
+): Promise<PersistPassValidationRecoveryMarkerResult> => {
   const occurredAt = (input.now ?? new Date()).toISOString()
   const repoMarkerPath = resolvePassValidationRecoveryRepoMarkerPath(
     input.repoPath,

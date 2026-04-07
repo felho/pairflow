@@ -3,17 +3,20 @@ import { constants as fsConstants } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 import { parseBubbleConfigToml } from "../../../../config/bubbleConfig.js";
-import { getBubblePaths, type BubblePaths } from "../../artifact/bubble/paths.js";
-import type { BubbleConfig } from "../../../../types/bubble.js";
+import { getBubblePaths } from "../../artifact/bubble/paths.js";
 import { listPairflowWorkspaceCandidateCwds } from "./commandWorkspaceFallback.js";
 import { resolveRepoPath } from "./repoResolution.js";
+import type {
+  ResolveBubbleByIdInput,
+  ResolveBubbleByIdPort,
+  ResolvedBubbleById
+} from "../../../shared/ports/bubbleLookup.js";
 
-export interface ResolvedBubbleById {
-  bubbleId: string;
-  bubbleConfig: BubbleConfig;
-  bubblePaths: BubblePaths;
-  repoPath: string;
-}
+export type {
+  ResolveBubbleByIdInput,
+  ResolveBubbleByIdPort,
+  ResolvedBubbleById
+} from "../../../shared/ports/bubbleLookup.js";
 
 export class BubbleLookupError extends Error {
   public constructor(message: string) {
@@ -81,11 +84,9 @@ async function normalizePath(path: string): Promise<string> {
   return realpath(path).catch(() => resolve(path));
 }
 
-export async function resolveBubbleById(input: {
-  bubbleId: string;
-  repoPath?: string;
-  cwd?: string;
-}): Promise<ResolvedBubbleById> {
+export const resolveBubbleById: ResolveBubbleByIdPort = async (
+  input: ResolveBubbleByIdInput
+): Promise<ResolvedBubbleById> => {
   const bubbleId = input.bubbleId.trim();
   if (bubbleId.length === 0) {
     throw new BubbleLookupError("Bubble id cannot be empty.");
@@ -145,4 +146,4 @@ export async function resolveBubbleById(input: {
     bubblePaths,
     repoPath: configRepoPath
   };
-}
+};

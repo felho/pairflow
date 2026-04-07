@@ -1,10 +1,16 @@
-import type { removeRuntimeSession } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import type {
-  persistPassValidationRecoveryMarker,
-  PassValidationRecoveryMarkerPersistWarning
-} from "../../infrastructure/artifact/validation/passValidationEvidence.js";
-import type { terminateBubbleTmuxSession } from "../../infrastructure/channel/tmux/tmuxManager.js";
-import type { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
+  PassValidationRecoveryMarkerPersistWarning,
+  PersistPassValidationRecoveryMarkerPort
+} from "../../shared/ports/passValidationRecovery.js";
+import type {
+  RemoveRuntimeSessionPort
+} from "../../shared/ports/runtimeSessions.js";
+import type {
+  ResolveBubbleByIdPort
+} from "../../shared/ports/bubbleLookup.js";
+import type {
+  TerminateBubbleTmuxSessionPort
+} from "../../shared/ports/tmuxSessions.js";
 import type {
   startBubbleV11 as startBubble,
   StartBubbleV11Result as StartBubbleResult
@@ -28,9 +34,9 @@ export interface RestartBubbleResult {
 }
 
 export interface RestartBubbleDependencies {
-  resolveBubbleById?: typeof resolveBubbleById;
-  terminateBubbleTmuxSession?: typeof terminateBubbleTmuxSession;
-  removeRuntimeSession?: typeof removeRuntimeSession;
-  persistPassValidationRecoveryMarker?: typeof persistPassValidationRecoveryMarker;
+  resolveBubbleById?: ResolveBubbleByIdPort;
+  terminateBubbleTmuxSession?: TerminateBubbleTmuxSessionPort;
+  removeRuntimeSession?: RemoveRuntimeSessionPort;
+  persistPassValidationRecoveryMarker?: PersistPassValidationRecoveryMarkerPort;
   startBubble?: typeof startBubble;
 }

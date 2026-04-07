@@ -39,11 +39,15 @@ import {
   SchemaValidationError,
   type ValidationError
 } from "../../shared/validation/primitives.js";
+import type {
+  LoadedStateSnapshot,
+  ReadStateSnapshotPort
+} from "../../shared/ports/stateSnapshots.js";
 
-export interface LoadedStateSnapshot {
-  state: BubbleStateSnapshot;
-  fingerprint: string;
-}
+export type {
+  LoadedStateSnapshot,
+  ReadStateSnapshotPort
+} from "../../shared/ports/stateSnapshots.js";
 
 export interface StateValidationDiagnostics {
   message: string;
@@ -454,9 +458,9 @@ async function loadStateSnapshot(
   };
 }
 
-export async function readStateSnapshot(
+export const readStateSnapshot: ReadStateSnapshotPort = async (
   statePath: string
-): Promise<LoadedStateSnapshot> {
+): Promise<LoadedStateSnapshot> => {
   const loaded = await loadStateSnapshot(statePath);
   if (loaded.stateValidation !== null) {
     throw new SchemaValidationError(
@@ -468,7 +472,7 @@ export async function readStateSnapshot(
     state: loaded.state,
     fingerprint: loaded.fingerprint
   };
-}
+};
 
 export async function inspectStateSnapshot(
   statePath: string

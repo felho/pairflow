@@ -3,11 +3,15 @@ import { resolve } from "node:path";
 
 import { runGit } from "../../workspace/git.js";
 import { listPairflowWorkspaceCandidateCwds } from "./commandWorkspaceFallback.js";
+import type {
+  ResolveRepoPathInput,
+  ResolveRepoPathPort
+} from "../../../shared/ports/repoResolution.js";
 
-export interface ResolveRepoPathInput {
-  repoPath?: string | undefined;
-  cwd?: string | undefined;
-}
+export type {
+  ResolveRepoPathInput,
+  ResolveRepoPathPort
+} from "../../../shared/ports/repoResolution.js";
 
 export class RepoResolutionError extends Error {
   public constructor(message: string) {
@@ -20,9 +24,9 @@ export async function normalizeRepoPath(path: string): Promise<string> {
   return realpath(path).catch(() => resolve(path));
 }
 
-export async function resolveRepoPath(
+export const resolveRepoPath: ResolveRepoPathPort = async (
   input: ResolveRepoPathInput = {}
-): Promise<string> {
+): Promise<string> => {
   if (input.repoPath !== undefined) {
     return normalizeRepoPath(resolve(input.repoPath));
   }
@@ -50,4 +54,4 @@ export async function resolveRepoPath(
   throw new RepoResolutionError(
     `Could not resolve repository root from cwd: ${requestedCwd}`
   );
-}
+};

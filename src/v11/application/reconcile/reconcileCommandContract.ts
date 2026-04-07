@@ -1,15 +1,15 @@
-import type { resolveRepoPath } from "../../infrastructure/executor/workspace/repoResolution.js";
 import type {
-  persistPassValidationRecoveryMarker,
-  PassValidationRecoveryMarkerPersistWarning
-} from "../../infrastructure/artifact/validation/passValidationEvidence.js";
-import type { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
+  PassValidationRecoveryMarkerPersistWarning,
+  PersistPassValidationRecoveryMarkerPort
+} from "../../shared/ports/passValidationRecovery.js";
+import type { ResolveRepoPathPort } from "../../shared/ports/repoResolution.js";
+import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
 import type { isFinalState } from "../../domain/state/transitions.js";
 import type {
-  readRuntimeSessionsRegistry,
-  removeRuntimeSessions,
+  ReadRuntimeSessionsRegistryPort,
+  RemoveRuntimeSessionsPort,
   RuntimeSessionsRegistry
-} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+} from "../../shared/ports/runtimeSessions.js";
 
 export type RuntimeSessionStaleReason =
   | "missing_bubble"
@@ -48,12 +48,12 @@ export interface ReconcileRuntimeSessionsReport {
 export type ListBubbleIdSet = (repoPath: string) => Promise<Set<string>>;
 
 export interface ReconcileRuntimeSessionsDependencies {
-  resolveRepoPath?: typeof resolveRepoPath;
+  resolveRepoPath?: ResolveRepoPathPort;
   listBubbleIdSet?: ListBubbleIdSet;
-  readRuntimeSessionsRegistry?: typeof readRuntimeSessionsRegistry;
-  removeRuntimeSessions?: typeof removeRuntimeSessions;
-  persistPassValidationRecoveryMarker?: typeof persistPassValidationRecoveryMarker;
-  readStateSnapshot?: typeof readStateSnapshot;
+  readRuntimeSessionsRegistry?: ReadRuntimeSessionsRegistryPort;
+  removeRuntimeSessions?: RemoveRuntimeSessionsPort;
+  persistPassValidationRecoveryMarker?: PersistPassValidationRecoveryMarkerPort;
+  readStateSnapshot?: ReadStateSnapshotPort;
   isFinalState?: typeof isFinalState;
   countRegistryEntries?: (registry: RuntimeSessionsRegistry) => number;
 }
