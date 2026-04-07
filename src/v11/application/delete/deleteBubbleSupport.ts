@@ -10,11 +10,11 @@ import type { BubbleLifecycleState } from "../../../types/bubble.js";
 import {
   createArchiveSnapshot,
   type CreateArchiveSnapshotInput
-} from "../../infrastructure/artifact/archive/archiveSnapshot.js";
+} from "../../../core/archive/archiveSnapshot.js";
 import {
   upsertDeletedArchiveIndexEntry,
   type UpsertDeletedArchiveIndexEntryInput
-} from "../../infrastructure/artifact/archive/archiveIndex.js";
+} from "../../../core/archive/archiveIndex.js";
 import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import {
   readRuntimeSessionsRegistry,

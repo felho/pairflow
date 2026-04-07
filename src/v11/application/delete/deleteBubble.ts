@@ -3,7 +3,6 @@ import type {
   DeleteBubbleResult
 } from "../../../contracts/deleteBubble.js";
 import { BubbleLookupError } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import {
   RuntimeSessionsRegistryError,
@@ -16,6 +15,7 @@ import {
 } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import { WorkspaceCleanupError } from "../../infrastructure/workspace/worktreeManager.js";
+import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import { StopBubbleErrorV11 as StopBubbleError } from "../stop/emitStopV11.js";
 import {
   buildDeleteConfirmationResult,
