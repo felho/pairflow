@@ -187,6 +187,30 @@ contracts, not thin wrappers.
 - Fitness delta:
 - Commit:
 
+## Warning Frontier Snapshot
+
+Current ownership-warning frontier after `0a4b3693`:
+
+- `metaReviewGate`: 14
+- `askHuman`: 12
+- `metaReview`: 12
+- `kickoff`: 3
+- `merge`: 3
+- `metrics`: 2 visible in the truncated report details, but the cluster still includes the report slice plus `events.ts`
+- singleton residuals: `approval`, `converged`, `gates`, `other`
+
+Current bounded next-wave decisions:
+
+- `askHuman`:
+  - first worker narrowed to tmux-owned shared contract/defaults shell cleanup under `application/askHuman`
+- `metrics`:
+  - narrowed from full metrics owner rehome to `shared/metrics/report/{archiveContext,readEvents,selectShards,report}.ts`
+  - `shared/metrics/events.ts` explicitly deferred to a second stage because it needs a separate event-store boundary split
+- `metaReview`:
+  - next good batches are `liveRun` infra cut or command runtime rehome
+- `metaReviewGate`:
+  - next good batches are recovery shell relocation or findings artifact read boundary split
+
 ## Current Next Decision
 
 Current best next moves:
