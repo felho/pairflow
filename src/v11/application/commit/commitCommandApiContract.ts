@@ -1,13 +1,19 @@
-import type { appendProtocolEnvelope } from "../../infrastructure/artifact/transcript/transcriptStore.js";
-import type { readStateSnapshot, writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import type { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
-import type { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
+import type {
+  EnsureBubbleInstanceIdForMutationResult
+} from "../../shared/ports/bubbleIdentity.js";
+import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
+import type {
+  LoadedStateSnapshot
+} from "../../shared/ports/stateSnapshots.js";
+import type {
+  AppendProtocolEnvelopeResult
+} from "../../shared/ports/transcript.js";
 
-export type ResolvedBubbleContext = Awaited<ReturnType<typeof resolveBubbleById>>;
-export type BubbleIdentity = Awaited<ReturnType<typeof ensureBubbleInstanceIdForMutation>>;
-export type LoadedState = Awaited<ReturnType<typeof readStateSnapshot>>;
-export type AppendedEnvelope = Awaited<ReturnType<typeof appendProtocolEnvelope>>;
-export type WrittenState = Awaited<ReturnType<typeof writeStateSnapshot>>;
+export type ResolvedBubbleContext = ResolvedBubbleById;
+export type BubbleIdentity = EnsureBubbleInstanceIdForMutationResult;
+export type LoadedState = LoadedStateSnapshot;
+export type AppendedEnvelope = AppendProtocolEnvelopeResult;
+export type WrittenState = LoadedStateSnapshot;
 
 export interface CommitRuntimeContext {
   resolved: ResolvedBubbleContext;

@@ -1,5 +1,3 @@
-import { BubbleLookupError } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { GitCommandError } from "../../infrastructure/workspace/git.js";
 import {
   BubbleCommitError,
   createBubbleCommitError,
@@ -9,12 +7,18 @@ import { normalizeBubbleCommitError } from "../../shared/commit/commitCommandErr
 
 export { BubbleCommitError };
 
+function isNamedError(candidate: unknown, expectedName: string): boolean {
+  return candidate instanceof Error && candidate.name === expectedName;
+}
+
 export function throwAsBubbleCommitError(error: unknown): never {
   throw normalizeBubbleCommitError({
     error,
     isBubbleCommitError,
     createBubbleCommitError,
-    isBubbleLookupError: (candidate) => candidate instanceof BubbleLookupError,
-    isGitCommandError: (candidate) => candidate instanceof GitCommandError
+    isBubbleLookupError: (candidate) =>
+      isNamedError(candidate, "BubbleLookupError"),
+    isGitCommandError: (candidate) =>
+      isNamedError(candidate, "GitCommandError")
   });
 }
