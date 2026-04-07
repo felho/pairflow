@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `f4c51857`.
+Last updated from `main` at `827b111c`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `311 fail / 69 warn`
+- Dependency report at this checkpoint: `309 fail / 69 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -60,7 +60,11 @@ contracts, not thin wrappers.
   - `64b389ac` watchdog shared runtime compat cleanup
   - `c2dfe90d` askHuman command shell moved into application
   - `3a8c1099` watchdog pane sampling through ports
+  - `a988a045` watchdog runtime defaults threaded through application
+  - `ac7c2aa6` watchdog default wiring moved out of layers
+  - `bef38d5e` obsolete watchdog infrastructure wrapper removed
   - `f4c51857` reply runtime compat dependency resolution
+  - `827b111c` askHuman routing prep relocation
 
 ## Wave Ledger
 
@@ -88,7 +92,9 @@ contracts, not thin wrappers.
 | W10 | `watchdog` shared runtime compat cleanup | `completed` | orchestrator | Shared watchdog runtime now routes through compat bridges; cluster no longer appears in the dependency findings |
 | W11 | `askHuman` shared shell relocation | `completed` | orchestrator | Shared orchestration/default wiring shells moved into `application`; the remaining askHuman findings disappeared from the dependency report |
 | W12 | `reply` runtime compat dependency resolution | `completed` | orchestrator | Reply runtime now resolves transcript/state/bubble lookup/delivery defaults through explicit compat dependency resolution instead of direct application -> infrastructure imports |
-| W13 | residual shared runtime clusters (`askHuman` routing, watchdog core compat, others) | `pending` | orchestrator | Next frontier after reply cleanup; choose the next smallest file-disjoint shared/runtime cluster |
+| W13 | `watchdog` pane sampling + default wiring cleanup | `completed` | orchestrator | Sampler now uses ports and default adapter wiring lives only in the core compat facade; no remaining watchdog dependency finding is reported |
+| W14 | `askHuman` routing prep relocation | `completed` | orchestrator | Routing-prep defaults, dependency resolution, and workspace context prep now live in `application`; shared contracts use structural types instead of core or ports |
+| W15 | residual shared runtime clusters (`reply`, remaining askHuman execution/finalization, others) | `pending` | orchestrator | Current top frontier is `replyCommandApi`, then the next smallest shared/runtime residual lane |
 
 ## Parallelization Rules
 
@@ -119,6 +125,6 @@ contracts, not thin wrappers.
 
 Current best next moves:
 
-1. close the isolated `ProtocolEnvelopeDraft` type cleanup if it stays green,
-2. remeasure the dependency frontier from the new `311 fail / 69 warn` baseline,
-3. pick the next smallest file-disjoint residual cluster from shared/runtime wiring.
+1. open the `replyCommandApi` wave from the current `309 fail / 69 warn` baseline,
+2. then reassess the remaining `askHuman` execution/finalization residuals,
+3. keep this file updated after each merged micro-batch to survive context compaction.
