@@ -1,10 +1,10 @@
-import type { EnsureBubbleInstanceIdForMutationResult } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
-import type { ResolvedBubbleWorkspace } from "../../infrastructure/executor/workspace/workspaceResolution.js";
+import type { EnsureBubbleInstanceIdForMutationResult } from "../../shared/ports/bubbleIdentity.js";
+import type { ResolvedBubbleWorkspace } from "../../shared/ports/workspaceResolution.js";
 import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
 import type { ConvergencePolicyResult } from "../../../v11/domain/convergence/policy.js";
-import type { emitBubbleNotification } from "../../infrastructure/channel/notifications.js";
-import type { PairflowCommandPathAssessment } from "../../infrastructure/executor/command/pairflowCommand.js";
-import type { emitTmuxDeliveryNotification } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
+import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
+import type { PairflowCommandPathAssessment } from "../../shared/ports/pairflowCommand.js";
+import type { EmitTmuxDeliveryNotificationPort } from "../../shared/ports/tmuxDelivery.js";
 import type { SummaryVerifierConsistencyGateDecisionRecord } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import type { ConvergedStructuredFinding } from "../../shared/converged/convergedCommandTypes.js";
 import type {
@@ -22,8 +22,8 @@ import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { PrepareConvergedValidationResult } from "./convergedValidationPreparationContract.js";
 
 export interface ExecuteConvergedExecutionDependencies {
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
-  emitBubbleNotification?: typeof emitBubbleNotification;
+  emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
+  emitBubbleNotification?: EmitBubbleNotificationPort;
   applyMetaReviewGateOnConvergence?: typeof applyMetaReviewGateOnConvergence;
   recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshot;
 }

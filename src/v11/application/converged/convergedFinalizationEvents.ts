@@ -1,4 +1,4 @@
-import { type assessPairflowCommandPath } from "../../infrastructure/executor/command/pairflowCommand.js";
+import type { PairflowCommandPathAssessment } from "../../shared/ports/pairflowCommand.js";
 import { type emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import {
   buildConvergedEventMetadata,
@@ -43,7 +43,7 @@ function resolveAdvisoryFindingsOpenTotal(
 async function emitConvergedAndRoutedEvents(input: {
   flow: FinalizeConvergedFlowInput;
   emitLifecycle: typeof emitBubbleLifecycleEventBestEffort;
-  commandPathStatus: ReturnType<typeof assessPairflowCommandPath>;
+  commandPathStatus: PairflowCommandPathAssessment;
   blockingReasonCodes: string[];
 }): Promise<void> {
   const advisoryFindingsOpenTotal = resolveAdvisoryFindingsOpenTotal(
@@ -95,7 +95,7 @@ async function emitConvergedAndRoutedEvents(input: {
 async function emitOptionalMetaReviewEvents(input: {
   flow: FinalizeConvergedFlowInput;
   emitLifecycle: typeof emitBubbleLifecycleEventBestEffort;
-  commandPathStatus: ReturnType<typeof assessPairflowCommandPath>;
+  commandPathStatus: PairflowCommandPathAssessment;
   blockingReasonCodes: string[];
 }): Promise<void> {
   if (input.flow.gateResult.route === "auto_rework") {
@@ -158,7 +158,7 @@ async function emitOptionalMetaReviewEvents(input: {
 export async function emitConvergedFinalizationEvents(input: {
   flow: FinalizeConvergedFlowInput;
   emitLifecycle: typeof emitBubbleLifecycleEventBestEffort;
-  commandPathStatus: ReturnType<typeof assessPairflowCommandPath>;
+  commandPathStatus: PairflowCommandPathAssessment;
   blockingReasonCodes: string[];
 }): Promise<void> {
   await emitConvergedAndRoutedEvents(input);

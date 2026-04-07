@@ -1,5 +1,5 @@
 import type { SummaryVerifierConsistencyGateDecisionRecord } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
-import type { assessPairflowCommandPath } from "../../infrastructure/executor/command/pairflowCommand.js";
+import type { PairflowCommandPathAssessment } from "../../shared/ports/pairflowCommand.js";
 import { type MetaReviewGateRoute } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 import type {
   BubbleRoundGateState,
@@ -24,7 +24,7 @@ export function buildConvergedEventMetadata(input: {
       rework_target_message?: string | null;
     };
   };
-  commandPathStatus: ReturnType<typeof assessPairflowCommandPath>;
+  commandPathStatus: PairflowCommandPathAssessment;
   blockingReasonCodes: string[];
   summaryVerifierGateDecision: SummaryVerifierConsistencyGateDecisionRecord;
   specLockState: BubbleSpecLockState;
@@ -103,7 +103,7 @@ export function buildMetaReviewRoutedMetadata(input: {
     };
   };
   blockingReasonCodes: string[];
-  commandPathStatus: ReturnType<typeof assessPairflowCommandPath>;
+  commandPathStatus: PairflowCommandPathAssessment;
 }): Record<string, unknown> {
   return {
     gate_route: input.gateResult.route,

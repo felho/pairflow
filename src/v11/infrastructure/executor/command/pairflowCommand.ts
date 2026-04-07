@@ -3,29 +3,12 @@ import { resolve, delimiter } from "node:path";
 
 import { shellQuote } from "../../foundation/shell/shellQuote.js";
 import type { PairflowCommandProfile } from "../../../../types/bubble.js";
+import type { PairflowCommandPathAssessment } from "../../../shared/ports/pairflowCommand.js";
 
-export type PairflowCommandPathStatus =
-  | "worktree_local"
-  | "external"
-  | "stale"
-  | "missing"
-  | "unknown";
-
-export interface PairflowCommandPathAssessment {
-  status: PairflowCommandPathStatus;
-  reasonCode?:
-    | "PAIRFLOW_COMMAND_PATH_STALE"
-    | "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE"
-    | "PAIRFLOW_COMMAND_PATH_UNRESOLVED";
-  profile: PairflowCommandProfile;
-  localEntrypoint: string;
-  activeEntrypoint: string | null;
-  localEntrypointExists: boolean;
-  externalPairflowAvailable: boolean;
-  pinnedCommand: string;
-  entrypointConsistency?: "consistent" | "inconsistent" | "unknown";
-  message: string;
-}
+export type {
+  PairflowCommandPathAssessment,
+  PairflowCommandPathStatus
+} from "../../../shared/ports/pairflowCommand.js";
 
 function requireWorktreePath(worktreePath: string): string {
   const trimmed = worktreePath.trim();

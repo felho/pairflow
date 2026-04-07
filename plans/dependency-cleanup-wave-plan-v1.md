@@ -26,15 +26,16 @@ contracts, not thin wrappers.
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
   - `5cd500f8` restart + reconcile port contracts
+  - converged type-first contract cleanup: `460 fail / 83 warn` after local validation
 
 ## Wave Ledger
 
 | Wave | Cluster | Status | Owner | Notes |
 | --- | --- | --- | --- | --- |
-| W1 | `converged` contract/type leakage audit | `in_progress` | subagent | Need first bounded batch recommendation |
+| W1 | `converged` contract/type leakage audit | `completed` | orchestrator | Bounded type-first batch identified around workspace/bubble identity, pairflow command, transcript append, and notification delivery contracts |
 | W1 | `delete` contract/runtime leakage audit | `in_progress` | subagent | Need first bounded batch recommendation |
 | W1 | `create` post-helper residual audit | `in_progress` | subagent | Need first bounded batch recommendation |
-| W2 | `converged` first bounded cleanup | `pending` | orchestrator/worker | Depends on W1 audit |
+| W2 | `converged` first bounded cleanup | `completed` | orchestrator | Converged contract files now use app-facing shared ports/contracts instead of direct infra types |
 | W2 | `delete` first bounded cleanup | `pending` | orchestrator/worker | Depends on W1 audit |
 | W2 | `create` next bounded cleanup | `pending` | orchestrator/worker | Depends on W1 audit |
 | W3 | shared runtime wiring clusters (`approval`, `reply`, `watchdog`, `merge`) | `pending` | orchestrator | Only after app-side ports are seeded enough |
@@ -66,8 +67,7 @@ contracts, not thin wrappers.
 
 ## Current Next Decision
 
-Wait for the three W1 explorer audits, then choose:
+`converged` W2 is complete. Next choose between:
 
-1. the largest safe file-disjoint pair for parallel worker execution, or
-2. one serial seed batch if the recommended batches still collide on the same
-   `shared/ports/**` surface.
+1. `create` type/capability port batch (`repoRegistry`, `gitRepository`, later transcript append), or
+2. `delete` first bounded contract/runtime separation batch after a tighter classification pass.

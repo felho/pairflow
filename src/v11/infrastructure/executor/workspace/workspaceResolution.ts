@@ -4,17 +4,11 @@ import { dirname, join, relative, resolve } from "node:path";
 import { parseBubbleConfigToml } from "../../../../config/bubbleConfig.js";
 import { getBubblePaths, type BubblePaths } from "../../artifact/bubble/paths.js";
 import { runGit } from "../../workspace/git.js";
-import type { BubbleConfig } from "../../../../types/bubble.js";
 import { listPairflowWorkspaceCandidateCwds } from "./commandWorkspaceFallback.js";
+import type { BubbleConfig } from "../../../../types/bubble.js";
+import type { ResolvedBubbleWorkspace } from "../../../shared/ports/workspaceResolution.js";
 
-export interface ResolvedBubbleWorkspace {
-  bubbleId: string;
-  bubbleConfig: BubbleConfig;
-  bubblePaths: BubblePaths;
-  repoPath: string;
-  worktreePath: string;
-  cwd: string;
-}
+export type { ResolvedBubbleWorkspace } from "../../../shared/ports/workspaceResolution.js";
 
 interface ResolvedRepositoryPaths {
   repoPath: string;

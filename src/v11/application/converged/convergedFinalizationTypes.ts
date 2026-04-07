@@ -1,8 +1,13 @@
-import { type EnsureBubbleInstanceIdForMutationResult } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
-import { type ResolvedBubbleWorkspace } from "../../infrastructure/executor/workspace/workspaceResolution.js";
+import type { EnsureBubbleInstanceIdForMutationResult } from "../../shared/ports/bubbleIdentity.js";
+import type { ResolvedBubbleWorkspace } from "../../shared/ports/workspaceResolution.js";
+import type {
+  AppendProtocolEnvelopeResult
+} from "../../shared/ports/transcript.js";
+import type {
+  AssessPairflowCommandPathPort,
+  PairflowCommandPathAssessment
+} from "../../shared/ports/pairflowCommand.js";
 import { type SummaryVerifierConsistencyGateDecisionRecord } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
-import { type appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
-import { type assessPairflowCommandPath } from "../../infrastructure/executor/command/pairflowCommand.js";
 import { type emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import { type MetaReviewGateRoute } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
 import type {
@@ -25,7 +30,7 @@ export interface FinalizeConvergedFlowInput {
   summary: string;
   refs: string[];
   now: Date;
-  convergence: Awaited<ReturnType<typeof appendProtocolEnvelope>>;
+  convergence: AppendProtocolEnvelopeResult;
   gateResult: {
     route: MetaReviewGateRoute;
     gateSequence: number;
@@ -46,12 +51,12 @@ export interface FinalizeConvergedFlowInput {
 }
 
 export interface FinalizeConvergedFlowDependencies {
-  assessPairflowCommandPath?: typeof assessPairflowCommandPath;
+  assessPairflowCommandPath?: AssessPairflowCommandPathPort;
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
   resolveMetaReviewRolloutBlockingReasonCodes: (input: {
     gateRoute: MetaReviewGateRoute;
     metaReviewWarnings: Array<{ reason_code: string }>;
-    commandPathStatus: ReturnType<typeof assessPairflowCommandPath>;
+    commandPathStatus: PairflowCommandPathAssessment;
   }) => string[];
   activeEntrypoint?: string;
 }

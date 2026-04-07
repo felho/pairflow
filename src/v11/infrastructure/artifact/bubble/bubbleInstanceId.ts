@@ -14,6 +14,9 @@ import {
   isBubbleInstanceId
 } from "../../../shared/bubble/bubbleInstanceId.js";
 import type { BubblePaths } from "../../../shared/bubble/bubblePaths.js";
+import type { EnsureBubbleInstanceIdForMutationResult } from "../../../shared/ports/bubbleIdentity.js";
+
+export type { EnsureBubbleInstanceIdForMutationResult } from "../../../shared/ports/bubbleIdentity.js";
 
 export interface EnsureBubbleInstanceIdForMutationInput {
   bubbleId: string;
@@ -21,12 +24,6 @@ export interface EnsureBubbleInstanceIdForMutationInput {
   bubblePaths: BubblePaths;
   bubbleConfig: BubbleConfig;
   now?: Date;
-}
-
-export interface EnsureBubbleInstanceIdForMutationResult {
-  bubbleInstanceId: string;
-  bubbleConfig: BubbleConfig;
-  backfilled: boolean;
 }
 
 export class BubbleInstanceIdError extends Error {
