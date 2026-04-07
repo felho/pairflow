@@ -1,4 +1,4 @@
-import { BubbleLookupError, resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
+import { BubbleLookupError, resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import {
   countPendingHumanQuestions,
   readStatusTranscriptData,

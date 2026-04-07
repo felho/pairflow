@@ -1,8 +1,8 @@
-import { readTranscriptEnvelopes } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
+import { readTranscriptEnvelopes } from "../../../core/protocol/transcriptStore.js";
 import {
   inspectStateSnapshot,
   type StateValidationDiagnostics
-} from "../../infrastructure/state/stateStore.js";
+} from "../../../core/state/stateStore.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import { resolveCanonicalPendingApprovalSignal } from "../approval/pendingApprovalSignal.js";
 export {
