@@ -2,10 +2,10 @@ import {
   computeWatchdogStatus,
   type WatchdogStatus
 } from "./watchdogStatus.js";
-import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { emitBubbleNotification } from "../../infrastructure/channel/notifications.js";
-import { emitTmuxDeliveryNotification } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
-import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
+import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
+import { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
+import { readStateSnapshot } from "../../../core/state/stateStore.js";
 import {
   recoverMetaReviewGateFromSnapshot
 } from "../metaReviewGate/metaReviewGateCommandApi.js";

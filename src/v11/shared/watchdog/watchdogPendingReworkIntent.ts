@@ -1,12 +1,12 @@
-import { writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import type { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import type { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
+import { writeStateSnapshot } from "../../../core/state/stateStore.js";
+import type { readStateSnapshot } from "../../../core/state/stateStore.js";
+import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import {
   resolveDeliveryMessageRef,
   type emitTmuxDeliveryNotification
-} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
-import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
+} from "../../../core/runtime/tmuxDelivery.js";
+import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import { applyDeferredReworkIntent } from "../approval/reworkIntent.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";

@@ -1,15 +1,15 @@
 import { join } from "node:path";
 
-import { appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
+import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
 import { applyStateTransition } from "../../domain/state/machine.js";
-import { writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import type { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import { retryStuckAgentInput, resolveDeliveryMessageRef } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
+import { writeStateSnapshot } from "../../../core/state/stateStore.js";
+import type { readStateSnapshot } from "../../../core/state/stateStore.js";
+import { retryStuckAgentInput, resolveDeliveryMessageRef } from "../../../core/runtime/tmuxDelivery.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { BubbleWatchdogResult } from "../../application/watchdog/watchdogCommandContract.js";
-import type { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import type { emitBubbleNotification } from "../../infrastructure/channel/notifications.js";
-import type { emitTmuxDeliveryNotification } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
+import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
+import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import { BubbleWatchdogError } from "./watchdogCommandRuntime.js";
 import type { recoverMetaReviewGateFromSnapshot } from "../metaReviewGate/metaReviewGateCommandApi.js";
 
