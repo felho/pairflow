@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `991cdd40`.
+Last updated from `main` at `004e40a3`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `292 fail / 70 warn`
+- Dependency report at this checkpoint: `267 fail / 67 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -69,6 +69,8 @@ contracts, not thin wrappers.
   - `febcfec8` reply mutation execution moved into shared
   - `50220080` create initial task append extract
   - `991cdd40` converged orchestration moved into application
+  - `74dc8448` commit runtime routed through core compat bridges
+  - `004e40a3` kickoff dependency defaults moved into application
 
 ## Wave Ledger
 
@@ -100,8 +102,10 @@ contracts, not thin wrappers.
 | W14 | `askHuman` routing prep relocation | `completed` | orchestrator | Routing-prep defaults, dependency resolution, and workspace context prep now live in `application`; shared contracts use structural types instead of core or ports |
 | W15 | residual shared runtime clusters (`reply`, remaining askHuman execution/finalization, others) | `completed` | orchestrator | Reply direct transcript/state mutation moved behind shared mutation execution; create initial TASK append no longer writes transcript directly from `application` |
 | W16 | `converged` residual shared runtime cluster | `completed` | orchestrator | Converged orchestration/builder ownership moved into `application`; the old shared orchestration files are gone |
-| W17 | `commit` shared runtime cluster | `pending` | orchestrator | Current largest frontier: `shared/commit/**` still imports infrastructure and a small `shared -> application` edge remains |
-| W17 | `attach` + `ui` residual edge audit | `pending` | orchestrator | Small bounded frontier around `emitAttachV11.ts` and `infrastructure/ui/**` cross-layer imports |
+| W17 | `commit` application runtime compat cleanup | `completed` | orchestrator | Commit app lane now routes state/transcript/git/bubble lookup reads through explicit core compat bridges; remaining commit findings are direct write evidence, not dependency-layer imports |
+| W18 | `kickoff` dependency relocation | `completed` | orchestrator | Dependency defaults moved into `application`, shared kickoff now depends on a core-compat contract instead of direct infra or shared-port edges |
+| W19 | `attach` + `ui` residual edge audit | `pending` | orchestrator | Current largest frontier by file count is `infrastructure/ui/router.ts`, with `attach` as a small companion lane |
+| W19 | `converged` default wiring follow-up | `pending` | orchestrator | Remaining converged findings are application-owned default infra wiring in `convergedFlowInvocationBuilders.ts` |
 
 ## Parallelization Rules
 
@@ -132,6 +136,6 @@ contracts, not thin wrappers.
 
 Current best next moves:
 
-1. open the `commit` residual cluster from the current `292 fail / 70 warn` baseline,
-2. run a parallel bounded audit on the small `attach/ui` frontier if the write set stays disjoint,
+1. open the `attach/ui` frontier from the current `267 fail / 67 warn` baseline,
+2. follow with the small `converged` default-wiring cleanup,
 3. keep this file updated after each merged micro-batch to survive context compaction.
