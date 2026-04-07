@@ -1,8 +1,7 @@
-import { applyStateTransition } from "../../domain/state/machine.js";
-import { writeStateSnapshot } from "../../../core/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ResolvedStartBubbleDependencies } from "./startCommandOrchestration.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
+import { executeStartFailedCleanupMutation } from "../../shared/start/startStateMutation.js";
 
 export async function cleanupFailedStart(input: {
   context: StartExecutionContext;
@@ -33,15 +32,11 @@ export async function cleanupFailedStart(input: {
   }
 
   if (input.context.startMode === "fresh" && input.preparingState !== null) {
-    const failed = applyStateTransition(input.preparingState, {
-      to: "FAILED",
-      activeAgent: null,
-      activeRole: null,
-      activeSince: null,
-      lastCommandAt: input.context.nowIso
-    });
-    await writeStateSnapshot(input.context.resolved.bubblePaths.statePath, failed, {
-      expectedState: "PREPARING_WORKSPACE"
+    await executeStartFailedCleanupMutation({
+      statePath: input.context.resolved.bubblePaths.statePath,
+      preparingState: input.preparingState,
+      nowIso: input.context.nowIso,
+      writeStateSnapshot: input.deps.writeState
     }).catch(() => undefined);
   }
 }

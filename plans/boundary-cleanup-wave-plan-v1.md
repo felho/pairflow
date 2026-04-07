@@ -13,8 +13,8 @@ Current baseline on `main`:
 
 Current validated progress on `main`:
 
-- `boundary`: `7 fail`
-- `mutation`: `4 warn`
+- `boundary`: `pass`
+- `mutation`: `pass`
 - `transition`: `pass`
 
 These three are partially coupled, so each batch must validate all three.
@@ -28,12 +28,7 @@ These three are partially coupled, so each batch must validate all three.
 
 ## Current Boundary Frontier
 
-1. `src/v11/application/commit/commitCommandFinalization.ts`
-   - transcript append + state writes
-2. `src/v11/application/start/startCommandCleanup.ts`
-   - direct failed-state persistence
-3. `src/v11/application/start/startCommandFlows.ts`
-   - multiple direct state writes during startup flow
+No remaining `boundary` frontier on `main`.
 
 ## Working Rules
 
@@ -52,8 +47,8 @@ These three are partially coupled, so each batch must validate all three.
 | B1 | `watchdogPendingReworkIntent` transition/boundary cleanup | validated | Pending rework state persist now goes through a dedicated shared watchdog mutation helper; baseline moved to `boundary=10 fail`, `mutation=5 warn`, `transition=pass` |
 | B2 | `watchdogCommandFlow` transcript/state write extraction | validated | Escalation transcript/state writes now go through a dedicated shared watchdog escalation mutation helper; baseline moved to `boundary=8 fail`, `mutation=5 warn`, `transition=pass` |
 | B3 | `stopCommandOrchestration` cancelled-state persistence extraction | validated | Stop orchestration now delegates the CANCELLED state persist to a shared stop mutation helper; baseline moved to `boundary=7 fail`, `mutation=4 warn`, `transition=pass` |
-| B4 | `startCommandCleanup` + `startCommandFlows` write-path extraction | planned | Multi-write cluster; keep after watchdog/stop patterns are proven |
-| B5 | `commitCommandFinalization` transcript/state boundary extraction | planned | Likely needs its own mutation/finalization helper |
+| B4 | `startCommandCleanup` + `startCommandFlows` write-path extraction | validated | Start lifecycle persists now delegate to a shared start mutation helper; baseline moved to `boundary=pass`, `mutation=pass`, `transition=pass` |
+| B5 | `commitCommandFinalization` transcript/state boundary extraction | already satisfied | The shared finalization mutation extract had already landed; the earlier frontier entry was stale and was removed once the report was rerun after B4 validation |
 
 ## Initial Hypothesis
 
@@ -86,3 +81,11 @@ These three are partially coupled, so each batch must validate all three.
   - `boundary`: `8 fail` -> `7 fail`
   - `mutation`: `5 warn` -> `4 warn`
   - `transition`: `pass` -> `pass`
+- B4 result on `main`:
+  - `boundary`: `7 fail` -> `pass`
+  - `mutation`: `4 warn` -> `pass`
+  - `transition`: `pass` -> `pass`
+- The earlier `commitCommandFinalization.ts` frontier note was stale by the time
+  this wave closed; the shared commit finalization mutation already owned the
+  transcript/state writes, and only a type-shape fix was needed in this session
+  to keep `pnpm typecheck` green.

@@ -1,6 +1,10 @@
 import { resolve } from "node:path";
 
-import { readStateSnapshot } from "../../../core/state/stateStore.js";
+import {
+  readStateSnapshot,
+  writeStateSnapshot
+} from "../../../core/state/stateStore.js";
+import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
 import { normalizeStringList } from "../../shared/normalization/stringNormalization.js";
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
@@ -71,6 +75,8 @@ async function prepareCommitRuntimeContext(input: {
     bubbleIdentity,
     loadedState,
     state,
+    appendProtocolEnvelope,
+    writeStateSnapshot,
     donePackagePath,
     donePackageContent
   };

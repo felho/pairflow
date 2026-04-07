@@ -10,6 +10,7 @@ import type {
   ClaimRuntimeSessionPort,
   RemoveRuntimeSessionPort
 } from "../../shared/ports/runtimeSessions.js";
+import type { WriteStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
 import type { buildResumeTranscriptSummary } from "./startCommandResumeSummary.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 
@@ -44,5 +45,6 @@ export interface StartBubbleDependencies {
   isTmuxSessionAlive?: ((sessionName: string) => Promise<boolean>) | undefined;
   claimRuntimeSession?: ClaimRuntimeSessionPort;
   removeRuntimeSession?: RemoveRuntimeSessionPort;
+  writeStateSnapshot?: WriteStateSnapshotPort;
   buildResumeTranscriptSummary?: typeof buildResumeTranscriptSummary;
 }

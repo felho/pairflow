@@ -72,7 +72,8 @@ export async function startBubble(
   let tmuxSessionName: string | null = null;
   const freshProgress: FreshStartProgress = {
     workspaceBootstrapped: false,
-    preparingState: null
+    preparingState: null,
+    preparingFingerprint: null
   };
 
   try {

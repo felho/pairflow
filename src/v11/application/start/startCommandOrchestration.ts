@@ -11,6 +11,7 @@ import {
   claimRuntimeSession,
   removeRuntimeSession
 } from "../../../core/runtime/sessionsRegistry.js";
+import { writeStateSnapshot } from "../../../core/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type {
   StartBubbleDependencies,
@@ -39,6 +40,7 @@ export interface ResolvedStartBubbleDependencies {
   isTmuxSessionAlive: NonNullable<StartBubbleDependencies["isTmuxSessionAlive"]>;
   claimSession: NonNullable<StartBubbleDependencies["claimRuntimeSession"]>;
   removeSession: NonNullable<StartBubbleDependencies["removeRuntimeSession"]>;
+  writeState: NonNullable<StartBubbleDependencies["writeStateSnapshot"]>;
   buildResumeSummary:
     NonNullable<StartBubbleDependencies["buildResumeTranscriptSummary"]>;
 }
@@ -69,6 +71,7 @@ export function resolveStartBubbleDependencies(
       dependencies.isTmuxSessionAlive ?? input.isTmuxSessionAliveDefault,
     claimSession: dependencies.claimRuntimeSession ?? claimRuntimeSession,
     removeSession: dependencies.removeRuntimeSession ?? removeRuntimeSession,
+    writeState: dependencies.writeStateSnapshot ?? writeStateSnapshot,
     buildResumeSummary:
       dependencies.buildResumeTranscriptSummary ?? buildResumeTranscriptSummary
   };

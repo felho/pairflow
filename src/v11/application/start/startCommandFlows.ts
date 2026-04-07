@@ -1,9 +1,3 @@
-import { applyStateTransition } from "../../domain/state/machine.js";
-import { writeStateSnapshot } from "../../../core/state/stateStore.js";
-import {
-  buildRestartedExecutionContext,
-  buildRunningExecutionContext
-} from "../../shared/state/executionContext.js";
 import { resolveIdeationMetadata } from "../../domain/ideation/ideationMetadata.js";
 import {
   launchFreshTmuxSession,
@@ -13,8 +7,14 @@ import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ResolvedStartBubbleDependencies } from "./startCommandOrchestration.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
 import { prepareResumeLaunchInput } from "./startCommandResumeFlowPreparation.js";
+import {
+  executeStartPreparingMutation,
+  executeStartResumeMutation,
+  executeStartRunningMutation,
+  type StartLoadedStateSnapshot
+} from "../../shared/start/startStateMutation.js";
 
-type StartWrittenState = Awaited<ReturnType<typeof writeStateSnapshot>>;
+type StartWrittenState = StartLoadedStateSnapshot;
 
 interface FreshStartResult {
   written: StartWrittenState;
@@ -29,48 +29,7 @@ interface ResumeStartResult {
 export interface FreshStartProgress {
   workspaceBootstrapped: boolean;
   preparingState: BubbleStateSnapshot | null;
-}
-
-export function buildResumedState(input: {
-  state: BubbleStateSnapshot;
-  nowIso: string;
-  watchdogTimeoutMinutes: number;
-}): BubbleStateSnapshot {
-  if (
-    input.state.state === "RUNNING"
-    && input.state.round >= 1
-    && input.state.active_role !== null
-  ) {
-    const executionContext = input.state.execution_context;
-    if (executionContext === null || executionContext === undefined) {
-      throw new Error(
-        "RUNNING resume requires persisted execution_context authority."
-      );
-    }
-    const resumedExecutionContext =
-      input.state.active_role === "implementer"
-      || input.state.active_role === "reviewer"
-        ? buildRestartedExecutionContext({
-            bubbleId: input.state.bubble_id,
-            round: input.state.round,
-            activeRole: input.state.active_role,
-            restartedAt: input.nowIso,
-            watchdogTimeoutMinutes: input.watchdogTimeoutMinutes,
-            previousExecutionContext: executionContext
-          })
-        : executionContext;
-    return {
-      ...input.state,
-      execution_context: resumedExecutionContext,
-      active_since: input.nowIso,
-      last_command_at: input.nowIso
-    };
-  }
-
-  return {
-    ...input.state,
-    last_command_at: input.nowIso
-  };
+  preparingFingerprint: string | null;
 }
 
 export async function runFreshStartFlow(input: {
@@ -78,19 +37,14 @@ export async function runFreshStartFlow(input: {
   deps: ResolvedStartBubbleDependencies;
   progress: FreshStartProgress;
 }): Promise<FreshStartResult> {
-  const preparing = applyStateTransition(input.context.loadedState.state, {
-    to: "PREPARING_WORKSPACE",
-    lastCommandAt: input.context.nowIso
+  const preparingWritten = await executeStartPreparingMutation({
+    statePath: input.context.resolved.bubblePaths.statePath,
+    loadedState: input.context.loadedState,
+    nowIso: input.context.nowIso,
+    writeStateSnapshot: input.deps.writeState
   });
-  input.progress.preparingState = preparing;
-  const preparingWritten = await writeStateSnapshot(
-    input.context.resolved.bubblePaths.statePath,
-    preparing,
-    {
-      expectedFingerprint: input.context.loadedState.fingerprint,
-      expectedState: "CREATED"
-    }
-  );
+  input.progress.preparingState = preparingWritten.state;
+  input.progress.preparingFingerprint = preparingWritten.fingerprint;
 
   await input.deps.bootstrap({
     repoPath: input.context.resolved.repoPath,
@@ -124,43 +78,19 @@ export async function runFreshStartFlow(input: {
     ideationPending
   });
 
-  const running = applyStateTransition(preparing, {
-    to: "RUNNING",
-    round: ideationPending ? 0 : 1,
-    activeAgent: input.context.resolved.bubbleConfig.agents.implementer,
-    activeRole: "implementer",
-    executionContext:
-      ideationPending
-        ? null
-        : buildRunningExecutionContext({
-            bubbleId: input.context.resolved.bubbleId,
-            round: 1,
-            activeRole: "implementer",
-            startedAt: input.context.nowIso,
-            watchdogTimeoutMinutes:
-              input.context.resolved.bubbleConfig.watchdog_timeout_minutes
-          }),
-    activeSince: input.context.nowIso,
-    lastCommandAt: input.context.nowIso,
-    ...(ideationPending
-      ? {}
-      : {
-          appendRoundRoleEntry: {
-            round: 1,
-            implementer: input.context.resolved.bubbleConfig.agents.implementer,
-            reviewer: input.context.resolved.bubbleConfig.agents.reviewer,
-            switched_at: input.context.nowIso
-          }
-        })
+  const written = await executeStartRunningMutation({
+    statePath: input.context.resolved.bubblePaths.statePath,
+    preparingState: preparingWritten.state,
+    preparingFingerprint: preparingWritten.fingerprint,
+    nowIso: input.context.nowIso,
+    bubbleId: input.context.resolved.bubbleId,
+    implementer: input.context.resolved.bubbleConfig.agents.implementer,
+    reviewer: input.context.resolved.bubbleConfig.agents.reviewer,
+    watchdogTimeoutMinutes:
+      input.context.resolved.bubbleConfig.watchdog_timeout_minutes,
+    ideationPending,
+    writeStateSnapshot: input.deps.writeState
   });
-  const written = await writeStateSnapshot(
-    input.context.resolved.bubblePaths.statePath,
-    running,
-    {
-      expectedFingerprint: preparingWritten.fingerprint,
-      expectedState: "PREPARING_WORKSPACE"
-    }
-  );
 
   return {
     written,
@@ -190,20 +120,14 @@ export async function runResumeStartFlow(input: {
     resumeKickoffMessages
   });
 
-  const resumed = buildResumedState({
-    state: input.context.loadedState.state,
+  const written = await executeStartResumeMutation({
+    statePath: input.context.resolved.bubblePaths.statePath,
+    loadedState: input.context.loadedState,
     nowIso: input.context.nowIso,
     watchdogTimeoutMinutes:
-      input.context.resolved.bubbleConfig.watchdog_timeout_minutes
+      input.context.resolved.bubbleConfig.watchdog_timeout_minutes,
+    writeStateSnapshot: input.deps.writeState
   });
-  const written = await writeStateSnapshot(
-    input.context.resolved.bubblePaths.statePath,
-    resumed,
-    {
-      expectedFingerprint: input.context.loadedState.fingerprint,
-      expectedState: input.context.loadedState.state.state
-    }
-  );
 
   return {
     written,
@@ -212,3 +136,4 @@ export async function runResumeStartFlow(input: {
 }
 
 export { cleanupFailedStart } from "./startCommandCleanup.js";
+export { buildResumedState } from "../../shared/start/startStateMutation.js";

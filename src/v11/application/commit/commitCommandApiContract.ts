@@ -6,6 +6,10 @@ import type {
   LoadedStateSnapshot
 } from "../../shared/ports/stateSnapshots.js";
 import type {
+  WriteStateSnapshotPort
+} from "../../shared/ports/stateSnapshots.js";
+import type {
+  AppendProtocolEnvelopePort,
   AppendProtocolEnvelopeResult
 } from "../../shared/ports/transcript.js";
 
@@ -20,6 +24,8 @@ export interface CommitRuntimeContext {
   bubbleIdentity: BubbleIdentity;
   loadedState: LoadedState;
   state: LoadedState["state"];
+  appendProtocolEnvelope: AppendProtocolEnvelopePort;
+  writeStateSnapshot: WriteStateSnapshotPort;
   donePackagePath: string;
   donePackageContent: string;
 }

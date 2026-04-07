@@ -1,17 +1,15 @@
-import { join } from "node:path";
-
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
-import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import { applyStateTransition } from "../../domain/state/machine.js";
-import { writeStateSnapshot } from "../../../core/state/stateStore.js";
 import { normalizeStringList } from "../../shared/normalization/stringNormalization.js";
 import { deriveDonePackageSummary } from "./commitDonePackage.js";
-import { BubbleCommitError } from "./commitCommandRuntime.js";
 import type {
   AppendedEnvelope,
   CommitRuntimeContext,
   WrittenState
 } from "./commitCommandApiContract.js";
+import {
+  appendDonePackageEnvelopeMutation,
+  persistCommittedThenDoneStateMutation
+} from "../../shared/commit/commitCommandFinalizationMutation.js";
 
 export async function appendDonePackageEnvelope(input: {
   context: CommitRuntimeContext;
@@ -21,32 +19,24 @@ export async function appendDonePackageEnvelope(input: {
   commitMessage: string;
   commitSha: string;
 }): Promise<AppendedEnvelope> {
-  const envelopeRefs = normalizeStringList([...input.refs, input.context.donePackagePath]);
-  const lockPath = join(
-    input.context.resolved.bubblePaths.locksDir,
-    `${input.context.resolved.bubbleId}.lock`
-  );
-  return appendProtocolEnvelope({
-    transcriptPath: input.context.resolved.bubblePaths.transcriptPath,
-    lockPath,
-    now: input.now,
-    envelope: {
-      bubble_id: input.context.resolved.bubbleId,
-      sender: "orchestrator",
-      recipient: "human",
-      type: "DONE_PACKAGE",
-      round: input.context.state.round,
-      payload: {
-        summary: deriveDonePackageSummary(input.context.donePackageContent),
-        metadata: {
-          done_package_path: input.context.donePackagePath,
-          staged_files: input.stagedFiles,
-          commit_message: input.commitMessage,
-          commit_sha: input.commitSha
-        }
+  return appendDonePackageEnvelopeMutation({
+    context: {
+      bubbleId: input.context.resolved.bubbleId,
+      bubblePaths: {
+        locksDir: input.context.resolved.bubblePaths.locksDir,
+        statePath: input.context.resolved.bubblePaths.statePath,
+        transcriptPath: input.context.resolved.bubblePaths.transcriptPath
       },
-      refs: envelopeRefs
-    }
+      donePackagePath: input.context.donePackagePath,
+      round: input.context.state.round
+    },
+    refs: input.refs,
+    now: input.now,
+    stagedFiles: input.stagedFiles,
+    commitMessage: input.commitMessage,
+    commitSha: input.commitSha,
+    donePackageSummary: deriveDonePackageSummary(input.context.donePackageContent),
+    appendProtocolEnvelope: input.context.appendProtocolEnvelope
   });
 }
 
@@ -56,38 +46,17 @@ export async function persistCommittedThenDoneState(input: {
   appended: AppendedEnvelope;
   commitSha: string;
 }): Promise<WrittenState> {
-  const committed = applyStateTransition(input.context.state, {
-    to: "COMMITTED",
-    lastCommandAt: input.nowIso
+  return persistCommittedThenDoneStateMutation({
+    context: {
+      statePath: input.context.resolved.bubblePaths.statePath,
+      state: input.context.state,
+      loadedState: input.context.loadedState
+    },
+    nowIso: input.nowIso,
+    appended: input.appended,
+    commitSha: input.commitSha,
+    writeStateSnapshot: input.context.writeStateSnapshot
   });
-  const committedWritten = await writeStateSnapshot(
-    input.context.resolved.bubblePaths.statePath,
-    committed,
-    {
-      expectedFingerprint: input.context.loadedState.fingerprint,
-      expectedState: "APPROVED_FOR_COMMIT"
-    }
-  );
-
-  const done = applyStateTransition(committedWritten.state, {
-    to: "DONE",
-    activeAgent: null,
-    activeRole: null,
-    activeSince: null,
-    lastCommandAt: input.nowIso
-  });
-
-  try {
-    return await writeStateSnapshot(input.context.resolved.bubblePaths.statePath, done, {
-      expectedFingerprint: committedWritten.fingerprint,
-      expectedState: "COMMITTED"
-    });
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new BubbleCommitError(
-      `DONE_PACKAGE ${input.appended.envelope.id} was appended and git commit ${input.commitSha} completed, but DONE transition failed after COMMITTED state persisted. Transcript remains canonical; recover state from transcript tail. Root error: ${reason}`
-    );
-  }
 }
 
 export async function emitCommitLifecycleEvent(input: {
