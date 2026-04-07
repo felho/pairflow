@@ -296,14 +296,19 @@ Miért ez a sorrend:
   - `application -> shared-ports` engedett
   - `shared-ports -> infrastructure` tiltott
   - `infrastructure -> shared-ports` engedett
-- Kovetkezo vegrehajtasi kor: Batch 2.
+- Batch 2 kesz:
+  - a dependency checker kulon anti-circumvention findingot ad a nyilvanvalo
+    `shared/**` infra re-exportokra
+  - kulon findingot ad a nyilvanvalo `shared/ports/**` thin forwarding
+    wrapper mintakra
+- Kovetkezo vegrehajtasi kor: Batch 3.
 
 ### Progress checklist
 
 - [x] Canonical docs baseline letrehozva
 - [x] Docs vs implementation audit megtortent
 - [x] Batch 1 complete
-- [ ] Batch 2 complete
+- [x] Batch 2 complete
 - [ ] Batch 3 complete
 - [ ] Batch 4 complete
 - [ ] Batch 5 complete

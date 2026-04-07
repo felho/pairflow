@@ -17,7 +17,11 @@ interface ImportEdge {
 }
 
 interface DependencyViolation {
-  kind: "forbidden_layer_import" | "cycle_detected";
+  kind:
+    | "forbidden_layer_import"
+    | "cycle_detected"
+    | "anti_circumvention_reexport"
+    | "anti_circumvention_wrapper";
   severity: "fail";
   message: string;
   fromRelative: string | undefined;
@@ -505,6 +509,226 @@ function detectCycles(input: {
   return violations;
 }
 
+function getImportBindingNames(clause: ts.ImportClause): string[] {
+  const names: string[] = [];
+  if (clause.name !== undefined) {
+    names.push(clause.name.text);
+  }
+  if (clause.namedBindings === undefined) {
+    return names;
+  }
+  if (ts.isNamespaceImport(clause.namedBindings)) {
+    names.push(clause.namedBindings.name.text);
+    return names;
+  }
+  for (const element of clause.namedBindings.elements) {
+    names.push(element.name.text);
+  }
+  return names;
+}
+
+function isDirectInfraForwarderExpression(
+  expression: ts.Expression,
+  importedBindings: ReadonlySet<string>
+): boolean {
+  const unwrapped = ts.isParenthesizedExpression(expression)
+    ? expression.expression
+    : expression;
+
+  if (ts.isIdentifier(unwrapped)) {
+    return importedBindings.has(unwrapped.text);
+  }
+
+  if (ts.isArrowFunction(unwrapped) || ts.isFunctionExpression(unwrapped)) {
+    const body = unwrapped.body;
+    if (ts.isCallExpression(body) && ts.isIdentifier(body.expression)) {
+      return importedBindings.has(body.expression.text);
+    }
+    if (ts.isBlock(body) && body.statements.length === 1) {
+      const onlyStatement = body.statements[0];
+      if (onlyStatement === undefined) {
+        return false;
+      }
+      if (
+        ts.isReturnStatement(onlyStatement)
+        && onlyStatement.expression !== undefined
+        && ts.isCallExpression(onlyStatement.expression)
+        && ts.isIdentifier(onlyStatement.expression.expression)
+      ) {
+        return importedBindings.has(onlyStatement.expression.expression.text);
+      }
+    }
+  }
+
+  return false;
+}
+
+function detectAntiCircumventionViolations(input: {
+  repoRoot: string;
+  files: readonly string[];
+  sourceByPath: ReadonlyMap<string, string>;
+}): DependencyViolation[] {
+  const knownFiles = new Set(input.files);
+  const violations: DependencyViolation[] = [];
+
+  for (const filePath of input.files) {
+    const fromRelative = normalizePathToPosix(relative(input.repoRoot, filePath));
+    const fromLayer = layerFromRelativePath(fromRelative);
+    if (fromLayer !== "shared" && fromLayer !== "shared-ports") {
+      continue;
+    }
+
+    const sourceText = input.sourceByPath.get(filePath) ?? "";
+    const sourceFile = ts.createSourceFile(
+      filePath,
+      sourceText,
+      ts.ScriptTarget.Latest,
+      true
+    );
+    const importedInfraBindings = new Set<string>();
+    const topLevelForwarderStatements = new Set<ts.Statement>();
+    let hasMeaningfulNonForwarderStatement = false;
+
+    for (const statement of sourceFile.statements) {
+      if (ts.isImportDeclaration(statement)) {
+        if (
+          statement.importClause === undefined
+          || !ts.isStringLiteral(statement.moduleSpecifier)
+        ) {
+          continue;
+        }
+        const target = resolveRelativeImportTarget({
+          importerPath: filePath,
+          specifier: statement.moduleSpecifier.text,
+          knownFiles
+        });
+        if (target === undefined) {
+          continue;
+        }
+        const toRelative = normalizePathToPosix(relative(input.repoRoot, target));
+        if (layerFromRelativePath(toRelative) !== "infrastructure") {
+          continue;
+        }
+        for (const bindingName of getImportBindingNames(statement.importClause)) {
+          importedInfraBindings.add(bindingName);
+        }
+        continue;
+      }
+
+      if (
+        ts.isExportDeclaration(statement)
+        && statement.moduleSpecifier !== undefined
+        && ts.isStringLiteral(statement.moduleSpecifier)
+      ) {
+        const target = resolveRelativeImportTarget({
+          importerPath: filePath,
+          specifier: statement.moduleSpecifier.text,
+          knownFiles
+        });
+        if (target === undefined) {
+          continue;
+        }
+        const toRelative = normalizePathToPosix(relative(input.repoRoot, target));
+        if (layerFromRelativePath(toRelative) !== "infrastructure") {
+          continue;
+        }
+        const line =
+          sourceFile.getLineAndCharacterOfPosition(statement.getStart(sourceFile)).line + 1;
+        violations.push({
+          kind: "anti_circumvention_reexport",
+          severity: "fail",
+          message:
+            `${fromRelative}:${String(line)} anti-circumvention: ${fromLayer} re-exports infrastructure module ${toRelative}`,
+          fromRelative,
+          toRelative,
+          cycleNodes: undefined
+        });
+        continue;
+      }
+    }
+
+    if (importedInfraBindings.size === 0) {
+      continue;
+    }
+
+    for (const statement of sourceFile.statements) {
+      if (ts.isImportDeclaration(statement)) {
+        continue;
+      }
+
+      if (
+        ts.isExportDeclaration(statement)
+        && statement.moduleSpecifier === undefined
+        && statement.exportClause !== undefined
+        && ts.isNamedExports(statement.exportClause)
+      ) {
+        const isForwarder = statement.exportClause.elements.every((element) =>
+          importedInfraBindings.has((element.propertyName ?? element.name).text)
+        );
+        if (isForwarder) {
+          topLevelForwarderStatements.add(statement);
+          continue;
+        }
+      }
+
+      if (ts.isVariableStatement(statement)) {
+        const isExported = statement.modifiers?.some(
+          (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword
+        ) ?? false;
+        if (!isExported) {
+          hasMeaningfulNonForwarderStatement = true;
+          continue;
+        }
+        const allForwarders = statement.declarationList.declarations.every(
+          (declaration) =>
+            declaration.initializer !== undefined
+            && isDirectInfraForwarderExpression(
+              declaration.initializer,
+              importedInfraBindings
+            )
+        );
+        if (allForwarders) {
+          topLevelForwarderStatements.add(statement);
+          continue;
+        }
+      }
+
+      if (
+        (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement))
+        && (statement.modifiers?.some(
+          (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword
+        ) ?? false)
+      ) {
+        hasMeaningfulNonForwarderStatement = true;
+        continue;
+      }
+
+      hasMeaningfulNonForwarderStatement = true;
+    }
+
+    if (
+      topLevelForwarderStatements.size > 0
+      && !hasMeaningfulNonForwarderStatement
+    ) {
+      for (const statement of topLevelForwarderStatements) {
+        const line =
+          sourceFile.getLineAndCharacterOfPosition(statement.getStart(sourceFile)).line + 1;
+        violations.push({
+          kind: "anti_circumvention_wrapper",
+          severity: "fail",
+          message:
+            `${fromRelative}:${String(line)} anti-circumvention: ${fromLayer} acts as a thin forwarding wrapper over infrastructure imports`,
+          fromRelative,
+          toRelative: undefined,
+          cycleNodes: undefined
+        });
+      }
+    }
+  }
+
+  return violations;
+}
+
 function summarizeDependencyViolations(
   violations: readonly DependencyViolation[]
 ): string[] {
@@ -630,6 +854,11 @@ export async function buildDependencyCheckReport({
     ...detectForbiddenLayerImports({
       repoRoot,
       edges
+    }),
+    ...detectAntiCircumventionViolations({
+      repoRoot,
+      files,
+      sourceByPath
     }),
     ...detectCycles({
       repoRoot,

@@ -282,6 +282,82 @@ describe("dependency fitness check", () => {
     ).toBe(false);
   });
 
+  it("fails on shared direct infrastructure re-export camouflage", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/infrastructure/foundation/fs/pathExists.ts",
+      "export const pathExists = async (): Promise<boolean> => true;\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/fs/pathExists.ts",
+      "export { pathExists } from '../../infrastructure/foundation/fs/pathExists.js';\n"
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+      currentMilestone: undefined
+    });
+
+    expect(report.status).toBe("fail");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("anti-circumvention: shared re-exports infrastructure module")
+      )
+    ).toBe(true);
+  });
+
+  it("fails on shared ports thin forwarding wrapper over infrastructure", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/infrastructure/executor/workspace/repoRegistry.ts",
+      "export const registerRepo = async (name: string): Promise<string> => name;\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/ports/repoRegistry.ts",
+      [
+        "import { registerRepo } from '../../infrastructure/executor/workspace/repoRegistry.js';",
+        "export const register = registerRepo;",
+        ""
+      ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+      currentMilestone: undefined
+    });
+
+    expect(report.status).toBe("fail");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("anti-circumvention: shared-ports acts as a thin forwarding wrapper")
+      )
+    ).toBe(true);
+  });
+
   it("applies allow-edge exception for forbidden layer import", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
