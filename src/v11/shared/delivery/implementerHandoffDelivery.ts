@@ -1,7 +1,7 @@
 import type {
   EmitTmuxDeliveryNotificationInput,
   EmitTmuxDeliveryNotificationResult
-} from "../../../core/runtime/tmuxDelivery.js";
+} from "./tmuxDeliveryContract.js";
 
 export interface ExecuteImplementerHandoffDeliveryResult {
   result: EmitTmuxDeliveryNotificationResult;

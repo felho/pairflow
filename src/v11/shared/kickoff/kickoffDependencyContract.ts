@@ -5,7 +5,10 @@ import type {
   writeStateSnapshot
 } from "../../../core/state/stateStore.js";
 import type { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
+import type {
+  EmitTmuxDeliveryNotificationInput,
+  EmitTmuxDeliveryNotificationResult
+} from "../delivery/tmuxDeliveryContract.js";
 
 export type KickoffReadFile = (
   path: string,
@@ -18,6 +21,10 @@ export type KickoffWriteFile = (
   options: { encoding: "utf8" }
 ) => Promise<unknown>;
 
+export type KickoffEmitDelivery = (
+  input: EmitTmuxDeliveryNotificationInput
+) => Promise<EmitTmuxDeliveryNotificationResult>;
+
 export interface KickoffDependencyOverrides {
   resolveBubbleById?: typeof resolveBubbleById;
   readStateSnapshot?: typeof readStateSnapshot;
@@ -25,7 +32,7 @@ export interface KickoffDependencyOverrides {
   readFile?: KickoffReadFile;
   writeFile?: KickoffWriteFile;
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
+  emitTmuxDeliveryNotification?: KickoffEmitDelivery;
 }
 
 export interface ResolvedKickoffDependencies {
@@ -35,7 +42,7 @@ export interface ResolvedKickoffDependencies {
   readFileFn: KickoffReadFile;
   writeFileFn: KickoffWriteFile;
   appendEnvelope: typeof appendProtocolEnvelope;
-  emitDelivery: typeof emitTmuxDeliveryNotification;
+  emitDelivery: KickoffEmitDelivery;
 }
 
 export type KickoffProtocolEnvelopeDraft = ProtocolEnvelopeDraft;

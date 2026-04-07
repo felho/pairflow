@@ -1,5 +1,5 @@
-import type { EmitTmuxDeliveryNotificationResult } from "../../../core/runtime/tmuxDelivery.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type { EmitTmuxDeliveryNotificationResult } from "../delivery/tmuxDeliveryContract.js";
 import type { ResolvedKickoffDependencies } from "./kickoffDependencyContract.js";
 import type { KickoffResultDelivery } from "./kickoffResultBuilders.js";
 import type { KickoffPreparedValidation } from "./kickoffValidationPreparation.js";

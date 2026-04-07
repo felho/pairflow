@@ -1,8 +1,11 @@
 import type { AgentName } from "../../../types/bubble.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
-import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
-import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext.js";
+import type { EmitBubbleNotification } from "../delivery/bubbleNotificationContract.js";
+import type {
+  EmitTmuxDeliveryNotificationInput,
+  EmitTmuxDeliveryNotificationResult
+} from "../delivery/tmuxDeliveryContract.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
   applyMetaReviewGateOnConvergence,
@@ -42,8 +45,10 @@ export interface EmitConvergedInput {
 }
 
 export interface EmitConvergedDependencies {
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
-  emitBubbleNotification?: typeof emitBubbleNotification;
+  emitTmuxDeliveryNotification?: (
+    input: EmitTmuxDeliveryNotificationInput
+  ) => Promise<EmitTmuxDeliveryNotificationResult>;
+  emitBubbleNotification?: EmitBubbleNotification;
   applyMetaReviewGateOnConvergence?: typeof applyMetaReviewGateOnConvergence;
   recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshot;
 }

@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `0 fail / 39 warn`
+- Dependency report at this checkpoint: `0 fail / 35 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -169,6 +169,7 @@ contracts, not thin wrappers.
 | W49 | `metrics/events` ownership split | `completed` | worker + orchestrator validation | Pure metrics event builder/validation stayed in `shared`; the fs-backed append/lock/store owner moved into infrastructure behind a core legacy bridge, and the dependency report no longer shows the metrics shared warning |
 | W50 | `watchdog` persistence inversion prep | `in_progress` | explorer-complete + worker | Explorer mapped the smallest correct batch as `watchdog stores + list/status read rewiring + outer default wiring`; the implementation worker confirmed the bounded design but has not yet produced a full validatable batch, so no partial diff is accepted on `main` |
 | W51 | `reviewer` warning frontier prep | `ready` | explorer-complete | Explorer ranked the next bounded reviewer batches: `reviewerBrief` first, then `summaryVerifier` only with ports + outer wiring, then `reviewVerification`, then `testEvidence` |
+| W52 | `shared` delivery contract extraction | `validated` | orchestrator | Boundary-neutral tmux and bubble-notification contracts moved under `shared/delivery`, shared kickoff/converged/delivery helpers stopped importing core runtime delivery types, and the dependency report dropped from `0 fail / 39 warn` to `0 fail / 35 warn` |
 
 ## Parallelization Rules
 
@@ -197,17 +198,17 @@ contracts, not thin wrappers.
 
 ## Warning Frontier Snapshot
 
-Current ownership-warning frontier after W49 metrics validation:
+Current ownership-warning frontier after W52 shared-delivery contract extraction:
 
 - `metaReviewGate`: 14
 - `askHuman`: 0 in the visible report after W47
 - `metaReview`: 12
-- `kickoff`: 3
+- `kickoff`: 1
 - `merge`: 3
 - `metrics`: the shared event builder is now clean; only the core legacy bridge plus the infrastructure store remain
 - `reviewer`: 4
 - `watchdog`: 2
-- singleton residuals: `approval`, `converged`, `gates`, `other`
+- singleton residuals: `approval`, `gates`, `other`
 
 Current bounded next-wave decisions:
 
@@ -218,6 +219,8 @@ Current bounded next-wave decisions:
   - `reviewerBrief` is the best first bounded reviewer batch
 - `watchdog`:
   - the two shared file-backed stores look bounded, but only after the consumer injection/default-wiring seam is mapped cleanly
+- `kickoff`:
+  - the remaining warning is the real file-backed task input read path in `kickoffTaskFileInputResolution.ts`; the tmux type-only residuals are now closed via shared delivery contracts
 - `metaReview`:
   - next good batches are `liveRun` infra cut or command runtime rehome
 - `metaReviewGate`:
