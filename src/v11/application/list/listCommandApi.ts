@@ -6,12 +6,12 @@ import {
   normalizeRepoPath,
   RepoResolutionError,
   resolveRepoPath
-} from "../../infrastructure/executor/workspace/repoResolution.js";
+} from "../../../core/bubble/repoResolution.js";
+import { inspectStateSnapshot } from "../../../core/state/stateStore.js";
+import { readRuntimeSessionsRegistry } from "../../../core/runtime/sessionsRegistry.js";
 import { isMetaReviewExecutionContextActiveState } from "../../shared/metaReview/metaReviewExecutionContext.js";
 import { resolveActiveMetaReviewRuntimeDelivery } from "../../shared/metaReview/metaReviewSnapshot.js";
 import { getBubblePaths } from "../../shared/bubble/bubblePaths.js";
-import { inspectStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import { readRuntimeSessionsRegistry } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { computeWatchdogStatus } from "../../shared/watchdog/watchdogStatus.js";
 import { resolveBubbleAttention } from "../../shared/status/bubbleAttention.js";
 import { readWatchdogPaneActivity } from "../../shared/watchdog/watchdogPaneActivityStore.js";
