@@ -7,4 +7,4 @@ export {
   StopBubbleError as StopBubbleErrorV11,
   stopBubbleCommandOrchestration as stopBubbleV11,
   throwAsStopBubbleError as asStopBubbleErrorV11
-} from "../../shared/stop/stopCommandOrchestration.js";
+} from "./stopCommandOrchestration.js";

@@ -5,7 +5,7 @@ import { BubbleMergeError } from "../../../src/v11/shared/merge/mergeCommandErro
 import { StartupReconcilerError } from "../../../src/v11/shared/reconcile/reconcileCommandRuntime.js";
 import { RestartBubbleError } from "../../../src/v11/application/restart/restartCommandRuntime.js";
 import { StartBubbleError } from "../../../src/v11/application/start/startCommandRuntime.js";
-import { StopBubbleError } from "../../../src/v11/shared/stop/stopCommandRuntime.js";
+import { StopBubbleError } from "../../../src/v11/application/stop/stopCommandRuntime.js";
 
 describe("errorBoundaryContextSchema", () => {
   it("injects minimum command_name context for top operational error families", () => {

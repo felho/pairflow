@@ -1,14 +1,14 @@
-import { BubbleLookupError } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { TmuxCommandError } from "../../infrastructure/channel/tmux/tmuxManager.js";
+import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
+import { TmuxCommandError } from "../../../core/runtime/tmuxManager.js";
 import {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
-} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
-import { normalizeStopBubbleError } from "./stopCommandErrorNormalization.js";
+} from "../../../core/runtime/sessionsRegistry.js";
 import {
   normalizePairflowCommandErrorInput,
   withRequiredCommandContext
-} from "../errors/commandErrorDetails.js";
+} from "../../shared/errors/commandErrorDetails.js";
+import { normalizeStopBubbleError } from "./stopCommandErrorNormalization.js";
 
 export class StopBubbleError extends Error {
   public readonly reasonCode: string | undefined;

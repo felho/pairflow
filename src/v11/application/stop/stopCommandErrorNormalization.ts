@@ -1,9 +1,9 @@
-import type { BubbleLookupError } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import type { TmuxCommandError } from "../../infrastructure/channel/tmux/tmuxManager.js";
+import type { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
+import type { TmuxCommandError } from "../../../core/runtime/tmuxManager.js";
 import type {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
-} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+} from "../../../core/runtime/sessionsRegistry.js";
 
 export interface NormalizeStopBubbleErrorInput {
   error: unknown;

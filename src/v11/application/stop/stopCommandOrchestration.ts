@@ -3,19 +3,19 @@ import { isFinalState } from "../../domain/state/transitions.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
-} from "../../infrastructure/state/stateStore.js";
-import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
+} from "../../../core/state/stateStore.js";
+import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import {
   removeRuntimeSession
-} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+} from "../../../core/runtime/sessionsRegistry.js";
 import {
   terminateBubbleTmuxSession
-} from "../../infrastructure/channel/tmux/tmuxManager.js";
+} from "../../../core/runtime/tmuxManager.js";
 import type {
   StopBubbleDependencies,
   StopBubbleInput,
   StopBubbleResult
-} from "../../application/stop/stopCommandContract.js";
+} from "./stopCommandContract.js";
 import {
   StopBubbleError,
   createStopBubbleError,

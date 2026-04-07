@@ -9,8 +9,8 @@ import type {
 import {
   StopBubbleError,
   createStopBubbleError
-} from "../../../../src/v11/shared/stop/stopCommandRuntime.js";
-import { normalizeStopBubbleError } from "../../../../src/v11/shared/stop/stopCommandErrorNormalization.js";
+} from "../../../../src/v11/application/stop/stopCommandRuntime.js";
+import { normalizeStopBubbleError } from "../../../../src/v11/application/stop/stopCommandErrorNormalization.js";
 
 describe("stopCommandErrorNormalization", () => {
   it("preserves existing StopBubbleError", () => {
