@@ -1,4 +1,4 @@
-import type { emitTmuxDeliveryNotification } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
+import type { EmitTmuxDeliveryNotificationPort } from "../../shared/ports/tmuxDelivery.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 
@@ -19,5 +19,5 @@ export interface EmitHumanReplyResult {
 }
 
 export interface EmitHumanReplyDependencies {
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
+  emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
 }
