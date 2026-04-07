@@ -1,4 +1,4 @@
-import type { BubbleWatchdogResult } from "../../application/watchdog/watchdogCommandContract.js";
+import type { BubbleWatchdogResult } from "./watchdogCommandContract.js";
 import type { WatchdogRuntimeContext } from "./watchdogCommandFlow.js";
 import {
   WATCHDOG_PANE_QUIET_WINDOW_MS,
@@ -6,7 +6,7 @@ import {
 } from "./watchdogPaneActivitySampler.js";
 import type {
   WatchdogPaneActivityRecord
-} from "./watchdogPaneActivityStore.js";
+} from "../../shared/watchdog/watchdogPaneActivityStore.js";
 import {
   buildNotExpiredResult,
   escalateRunningWatchdog

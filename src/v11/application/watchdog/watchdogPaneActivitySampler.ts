@@ -3,11 +3,11 @@ import { createHash } from "node:crypto";
 import type { AgentRole, BubbleConfig } from "../../../types/bubble.js";
 import type {
   ReadRuntimeSessionsRegistryPort
-} from "../ports/runtimeSessions.js";
+} from "../../shared/ports/runtimeSessions.js";
 import {
   runtimePaneIndices,
   type TmuxRunner
-} from "../ports/tmuxSessions.js";
+} from "../../shared/ports/tmuxSessions.js";
 import { createBubbleWatchdogError } from "./watchdogCommandRuntime.js";
 
 export const WATCHDOG_PANE_ACTIVITY_SAMPLE_INTERVAL_MS = 60_000;

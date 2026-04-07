@@ -1,16 +1,16 @@
 import { writeStateSnapshot } from "../../../core/state/stateStore.js";
 import type { readStateSnapshot } from "../../../core/state/stateStore.js";
 import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
+import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import {
   resolveDeliveryMessageRef,
   type emitTmuxDeliveryNotification
 } from "../../../core/runtime/tmuxDelivery.js";
 import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
-import { applyDeferredReworkIntent } from "../approval/reworkIntent.js";
+import { applyDeferredReworkIntent } from "../../shared/approval/reworkIntent.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
-import type { BubbleWatchdogResult } from "../../application/watchdog/watchdogCommandContract.js";
+import type { BubbleWatchdogResult } from "./watchdogCommandContract.js";
 import { BubbleWatchdogError } from "./watchdogCommandRuntime.js";
 
 export async function maybeApplyPendingReworkIntent(input: {

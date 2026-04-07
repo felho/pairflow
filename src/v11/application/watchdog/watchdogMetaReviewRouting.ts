@@ -1,18 +1,18 @@
 import { resolveDeliveryMessageRef } from "../../../core/runtime/tmuxDelivery.js";
 import {
   MetaReviewGateError
-} from "../metaReviewGate/metaReviewGateCommandApi.js";
-import type { recoverMetaReviewGateFromSnapshot } from "../metaReviewGate/metaReviewGateCommandApi.js";
+} from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
+import type { recoverMetaReviewGateFromSnapshot } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
 import type { readStateSnapshot } from "../../../core/state/stateStore.js";
 import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
-import type { BubbleWatchdogResult } from "../../application/watchdog/watchdogCommandContract.js";
+import type { BubbleWatchdogResult } from "./watchdogCommandContract.js";
 import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
-import { SchemaValidationError } from "../validation/primitives.js";
+import { SchemaValidationError } from "../../shared/validation/primitives.js";
 import {
   isMetaReviewExecutionContextActiveState,
   validateActiveMetaReviewExecutionContext
-} from "../metaReview/metaReviewExecutionContext.js";
+} from "../../shared/metaReview/metaReviewExecutionContext.js";
 
 function assertMetaReviewExecutionContext(state: BubbleStateSnapshot): void {
   const result = validateActiveMetaReviewExecutionContext(state);

@@ -1,5 +1,3 @@
-import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
-import { normalizeBubbleWatchdogError } from "./watchdogCommandErrorNormalization.js";
 import { normalizePairflowCommandErrorInput } from "../errors/commandErrorDetails.js";
 
 export class BubbleWatchdogError extends Error {
@@ -19,14 +17,4 @@ export function createBubbleWatchdogError(
   input: PairflowCommandErrorInput
 ): BubbleWatchdogError {
   return new BubbleWatchdogError(input);
-}
-
-export function throwAsBubbleWatchdogError(error: unknown): never {
-  throw normalizeBubbleWatchdogError({
-    error,
-    isBubbleWatchdogError: (candidate) => candidate instanceof BubbleWatchdogError,
-    createBubbleWatchdogError,
-    isBubbleLookupError: (candidate): candidate is BubbleLookupError =>
-      candidate instanceof BubbleLookupError
-  });
 }

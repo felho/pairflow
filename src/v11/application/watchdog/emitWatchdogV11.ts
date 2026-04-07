@@ -1,4 +1,4 @@
-import { runBubbleWatchdog } from "../../shared/watchdog/watchdogCommandApi.js";
+import { runBubbleWatchdog } from "./watchdogCommandApi.js";
 import type {
   BubbleWatchdogDependencies,
   BubbleWatchdogInput,
@@ -8,7 +8,7 @@ import type {
 export {
   asBubbleWatchdogError as asBubbleWatchdogErrorV11,
   BubbleWatchdogError as BubbleWatchdogErrorV11
-} from "../../shared/watchdog/watchdogCommandApi.js";
+} from "./watchdogCommandApi.js";
 
 export async function runBubbleWatchdogV11(
   input: BubbleWatchdogInput,

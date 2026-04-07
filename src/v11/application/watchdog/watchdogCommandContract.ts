@@ -12,7 +12,7 @@ import type {
 } from "../../shared/watchdog/watchdogPaneActivityStore.js";
 import type {
   sampleWatchdogPaneActivity
-} from "../../shared/watchdog/watchdogPaneActivitySampler.js";
+} from "./watchdogPaneActivitySampler.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 

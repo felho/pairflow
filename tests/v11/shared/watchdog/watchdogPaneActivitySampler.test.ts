@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   sampleWatchdogPaneActivity
-} from "../../../../src/v11/shared/watchdog/watchdogPaneActivitySampler.js";
+} from "../../../../src/v11/application/watchdog/watchdogPaneActivitySampler.js";
 import type { TmuxRunner } from "../../../../src/v11/shared/ports/tmuxSessions.js";
 import type { BubbleConfig } from "../../../../src/types/bubble.js";
 

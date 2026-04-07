@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { createBubbleWatchdogError } from "./watchdogCommandRuntime.js";
+import { createBubbleWatchdogError } from "./watchdogCommandError.js";
 
 export interface WatchdogPaneActivityRecord {
   bubble_id: string;

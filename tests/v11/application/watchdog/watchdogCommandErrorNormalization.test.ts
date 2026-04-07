@@ -4,8 +4,8 @@ import { BubbleLookupError } from "../../../../src/v11/infrastructure/executor/w
 import {
   BubbleWatchdogError,
   createBubbleWatchdogError
-} from "../../../../src/v11/shared/watchdog/watchdogCommandRuntime.js";
-import { normalizeBubbleWatchdogError } from "../../../../src/v11/shared/watchdog/watchdogCommandErrorNormalization.js";
+} from "../../../../src/v11/application/watchdog/watchdogCommandRuntime.js";
+import { normalizeBubbleWatchdogError } from "../../../../src/v11/application/watchdog/watchdogCommandErrorNormalization.js";
 
 describe("watchdogCommandErrorNormalization", () => {
   it("preserves BubbleWatchdogError instances", () => {

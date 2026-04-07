@@ -1,14 +1,14 @@
 import {
   computeWatchdogStatus,
   type WatchdogStatus
-} from "./watchdogStatus.js";
+} from "../../shared/watchdog/watchdogStatus.js";
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import { readStateSnapshot } from "../../../core/state/stateStore.js";
 import {
   recoverMetaReviewGateFromSnapshot
-} from "../metaReviewGate/metaReviewGateCommandApi.js";
+} from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
 import { maybeApplyPendingReworkIntent } from "./watchdogPendingReworkIntent.js";
 import {
   sampleWatchdogPaneActivity,
@@ -20,16 +20,16 @@ import {
   writeWatchdogPaneActivity,
   type ReadWatchdogPaneActivityResult,
   type WatchdogPaneActivityRecord
-} from "./watchdogPaneActivityStore.js";
+} from "../../shared/watchdog/watchdogPaneActivityStore.js";
 import {
   appendWatchdogTrace,
   type WatchdogTraceEntry
-} from "./watchdogTraceStore.js";
+} from "../../shared/watchdog/watchdogTraceStore.js";
 import type {
   BubbleWatchdogDependencies,
   BubbleWatchdogInput,
   BubbleWatchdogResult
-} from "../../application/watchdog/watchdogCommandContract.js";
+} from "./watchdogCommandContract.js";
 import {
   BubbleWatchdogError,
   throwAsBubbleWatchdogError

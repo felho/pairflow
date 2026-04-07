@@ -11,7 +11,7 @@ import {
 import type { RuntimeSessionsRegistry } from "../../../../src/v11/shared/ports/runtimeSessions.js";
 import type {
   PaneActivitySampleResult
-} from "../../../../src/v11/shared/watchdog/watchdogPaneActivitySampler.js";
+} from "../../../../src/v11/application/watchdog/watchdogPaneActivitySampler.js";
 import {
   getWatchdogPaneActivityPath,
   readWatchdogPaneActivity,

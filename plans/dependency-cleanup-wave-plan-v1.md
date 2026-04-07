@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `5547d1d9`.
+Last updated from `main` at `2db572e6`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `21 fail / 42 warn`
+- Dependency report at this checkpoint: `10 fail / 39 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -89,6 +89,7 @@ contracts, not thin wrappers.
   - `6723f79a` pass routing + resume shell relocation
   - `051af87e` start shell relocation
   - `5547d1d9` status core-compat cleanup
+  - `validated (local)` watchdog shell relocation
   - `validated (local)` metaReviewGate state/transcript compat cleanup
   - `validated (local)` stop shell relocation
   - `validated (local)` reconcile dependency-resolution shell relocation
@@ -145,6 +146,7 @@ contracts, not thin wrappers.
 | W35 | `start` shell relocation | `validated` | orchestrator | `startCommand*` shell files now live in `application/start`, UI/meta-review consumers were retargeted, the old `shared/start` surface was removed, and the dependency baseline dropped to `49 fail / 45 warn` |
 | W36 | `status` core-compat cleanup | `validated` | orchestrator | `shared/status` now routes bubble lookup, transcript/state reads, pairflow command path resolution, and status view types through explicit core compat boundaries; dependency baseline dropped to `29 fail / 42 warn` |
 | W37 | `metaReviewGate` state/transcript compat cleanup | `validated` | orchestrator | `shared/metaReviewGate` state/transcript type-read edges now route through explicit core compat boundaries; the cluster dropped out of forbidden dependency findings and the baseline fell to `21 fail / 42 warn` |
+| W38 | `watchdog` shell relocation | `validated` | orchestrator | Watchdog command API, flow, routing, pending rework intent, and sampler now live in `application/watchdog`; the pane-activity store uses a shared error helper instead of an application runtime import, and the dependency baseline dropped to `10 fail / 39 warn` |
 
 ## Parallelization Rules
 
@@ -175,6 +177,6 @@ contracts, not thin wrappers.
 
 Current best next moves:
 
-1. take the next bounded dependency wave from the `shared/watchdog` frontier,
-2. then sweep the smaller `metrics`, `reply`, and `infrastructure/ui` residuals,
+1. take the next bounded dependency wave from the `metrics` frontier,
+2. then sweep `reply`, `resumeSummary`, and `infrastructure/ui` residuals,
 3. defer ownership-signal-only cleanup until the forbidden dependency front is materially smaller.
