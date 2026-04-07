@@ -15,17 +15,17 @@ import {
   upsertDeletedArchiveIndexEntry,
   type UpsertDeletedArchiveIndexEntryInput
 } from "../../../core/archive/archiveIndex.js";
-import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
+import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import {
   readRuntimeSessionsRegistry,
   removeRuntimeSession
-} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+} from "../../../core/runtime/sessionsRegistry.js";
 import {
   runTmux,
   terminateBubbleTmuxSession,
   type TmuxRunner
-} from "../../infrastructure/channel/tmux/tmuxManager.js";
-import { cleanupWorktreeWorkspace } from "../../infrastructure/workspace/worktreeManager.js";
+} from "../../../core/runtime/tmuxManager.js";
+import { cleanupWorktreeWorkspace } from "../../../core/workspace/worktreeManager.js";
 import { pathExists } from "../../../core/util/pathExists.js";
 import { branchExists } from "../../../core/workspace/git.js";
 import type { BranchExistsPort } from "../../shared/ports/git.js";
