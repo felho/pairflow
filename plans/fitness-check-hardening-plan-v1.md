@@ -315,7 +315,11 @@ Miért ez a sorrend:
     mezo, hanem explicit outcome-shape alapjan szamit ervenyesnek
   - a checker mar nem fogad el gyenge vagy ures `delivery` payloadokat
     pozitiv evidenciakent
-- Kovetkezo vegrehajtasi kor: Batch 6.
+- Batch 6 kesz:
+  - a docs mar a tenyleges checker-erettseget irja le
+  - a CI-teszt explicit vedelmet kapott arra, hogy a report-only
+    ownership-signal warningok ne blokkolo findingkent viselkedjenek
+- Kovetkezo vegrehajtasi kor: nincs; a terv jelenlegi scope-ja teljesult.
 
 ### Progress checklist
 
@@ -326,7 +330,7 @@ Miért ez a sorrend:
 - [x] Batch 3 complete
 - [x] Batch 4 complete
 - [x] Batch 5 complete
-- [ ] Batch 6 complete
+- [x] Batch 6 complete
 
 ## Risks And Guardrails
 

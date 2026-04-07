@@ -271,4 +271,90 @@ describe("fitness:check:ci milestone gate behavior", () => {
     },
     30_000
   );
+
+  it(
+    "does not block CI when dependency check emits warn-only ownership-signal findings",
+    async () => {
+      const root = await createTempRoot();
+      const policyPath = join(root, "policy.json");
+      const reportPath = join(root, "fitness-report.json");
+      const scriptPath = resolve(process.cwd(), "scripts/fitness-check-ci.sh");
+
+      const fixtureDir = await mkdtemp(
+        join(process.cwd(), "src/v11/shared/.fitness-dependency-ci-")
+      );
+      tempRepoArtifacts.push(fixtureDir);
+      const fixtureRelativePath = fixtureDir
+        .replace(`${process.cwd()}/`, "")
+        .replaceAll("\\", "/");
+      const fixtureFilePath = join(fixtureDir, "pathExists.ts");
+      await writeFile(
+        fixtureFilePath,
+        [
+          "import { access } from 'node:fs/promises';",
+          "export const pathExists = async (path: string): Promise<boolean> => {",
+          "  await access(path);",
+          "  return true;",
+          "};",
+          ""
+        ].join("\n"),
+        "utf8"
+      );
+
+      await writeFile(
+        policyPath,
+        JSON.stringify(
+          {
+            version: 1,
+            defaults: {
+              mode: "report-only",
+              current_milestone: "M6"
+            },
+            checks: [
+              {
+                id: "dependency",
+                metric: "cycle and forbidden import direction detection",
+                mode: "report-only",
+                mode_by_milestone: {
+                  M2: "soft-fail",
+                  M3: "hard-fail"
+                },
+                owner: "architecture",
+                scope: [`${fixtureRelativePath}/**`],
+                exceptions: []
+              }
+            ]
+          },
+          null,
+          2
+        ),
+        "utf8"
+      );
+
+      const run = await runCommand({
+        command: "bash",
+        args: [scriptPath],
+        cwd: process.cwd(),
+        env: {
+          ...process.env,
+          PAIRFLOW_FITNESS_POLICY_PATH: policyPath,
+          PAIRFLOW_FITNESS_REPORT_PATH: reportPath,
+          PAIRFLOW_CI_MILESTONE: "M6"
+        }
+      });
+
+      expect(run.exitCode).toBe(0);
+      expect(run.stderr).not.toContain("blocked");
+      expect(run.stdout).toContain("milestone=M6");
+
+      const report = JSON.parse(await readFile(reportPath, "utf8")) as {
+        checks: Array<{ id: string; mode: string; status: string; summary: string }>;
+      };
+      const dependency = report.checks.find((check) => check.id === "dependency");
+      expect(dependency?.mode).toBe("hard-fail");
+      expect(dependency?.status).toBe("warn");
+      expect(dependency?.summary).toContain("report-only ownership");
+    },
+    30_000
+  );
 });

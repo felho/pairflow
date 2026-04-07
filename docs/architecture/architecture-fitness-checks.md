@@ -150,11 +150,17 @@ Implementation maturity by check:
   hard-coded in the checker, not policy-configurable
 - `contract_timeout_policy`: TypeScript AST-based check for raw timeout literals and
   non-standard timeout references in contract tests
-- `dependency`: AST-based import graph and cycle detection, but still limited to the
-  currently implemented layer model and relative import resolution
-- `critical_side_effect`: AST-based evidence scan, currently implemented for the
-  seed command set `kickoff`, `pass`, `converged`, `approval`, `reply`,
-  `askHuman`
+- `dependency`: AST-based import graph and cycle detection with:
+  - ports-aware `shared/ports/**` layer handling
+  - explicit anti-circumvention findings for obvious re-export / thin-wrapper camouflage
+  - report-only ownership-signal warnings for strong infra-like behavior under `shared/**`
+  - still limited by relative import resolution and heuristic ownership detection
+- `critical_side_effect`: AST-based invariant scan with:
+  - explicit command matrix for the seed command set `kickoff`, `pass`,
+    `converged`, `approval`, `reply`, `askHuman`
+  - adapter-call evidence
+  - explicit result-side outcome-shape evidence
+  - still narrower than full command-semantic proof
 
 This means the current system is fully executable, but several checks still rely
 on heuristics rather than complete semantic proof.
@@ -175,11 +181,10 @@ Current implementation limits to keep in mind:
 
 - it resolves only relative intra-scope imports, not arbitrary alias/module
   boundaries
-- it derives layer from the first path segment under `src/v11/`
-- because of that, it does **not** yet implement the documented
-  `src/v11/shared/ports/**` model semantically
-- it does **not** yet implement anti-circumvention checks
-- it does **not** yet implement ownership-type detection
+- ownership-signal detection is still heuristic and report-only
+- anti-circumvention currently catches only obvious wrapper/re-export forms
+- the checker still reasons from path/category + local AST patterns, not full
+  cross-module semantic intent
 
 This creates a real failure mode:
 
