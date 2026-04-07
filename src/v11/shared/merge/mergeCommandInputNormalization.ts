@@ -1,5 +1,13 @@
 import { requireNonEmptyString } from "../normalization/stringNormalization.js";
-import type { MergeBubbleInput } from "../../application/merge/mergeCommandContract.js";
+
+export interface MergeBubbleInputLike {
+  bubbleId: string;
+  repoPath?: string | undefined;
+  cwd?: string | undefined;
+  push?: boolean | undefined;
+  deleteRemote?: boolean | undefined;
+  now?: Date | undefined;
+}
 
 export interface NormalizedMergeBubbleInput {
   bubbleId: string;
@@ -12,7 +20,7 @@ export interface NormalizedMergeBubbleInput {
 }
 
 export function normalizeMergeBubbleInput(
-  input: MergeBubbleInput,
+  input: MergeBubbleInputLike,
   createError: PairflowCreateCommandError
 ): NormalizedMergeBubbleInput {
   const now = input.now ?? new Date();

@@ -1,5 +1,5 @@
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
-import type { RunGitPort } from "../ports/git.js";
+import type { runGit } from "../../../core/workspace/git.js";
 
 const MERGE_STATE_DONE_REQUIRED = "MERGE_STATE_DONE_REQUIRED";
 const MERGE_BASE_BRANCH_NOT_FOUND = "MERGE_BASE_BRANCH_NOT_FOUND";
@@ -78,7 +78,7 @@ export function assertMergeBranchEligibility(
 
 export async function assertCleanRepoWorkingTree(
   repoPath: string,
-  runGitCommand: RunGitPort,
+  runGitCommand: typeof runGit,
   createError: PairflowCreateCommandError
 ): Promise<void> {
   const status = await runGitCommand(["status", "--porcelain"], {
@@ -110,7 +110,7 @@ export async function assertCleanRepoWorkingTree(
 
 export async function ensureOriginRemote(
   repoPath: string,
-  runGitCommand: RunGitPort,
+  runGitCommand: typeof runGit,
   createError: PairflowCreateCommandError
 ): Promise<void> {
   const origin = await runGitCommand(["remote", "get-url", "origin"], {
@@ -132,7 +132,7 @@ export async function ensureOriginRemote(
 export async function remoteBranchExists(input: {
   repoPath: string;
   branch: string;
-  runGitCommand: RunGitPort;
+  runGitCommand: typeof runGit;
 }): Promise<boolean> {
   const result = await input.runGitCommand(
     ["ls-remote", "--heads", "origin", input.branch],
