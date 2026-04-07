@@ -31,6 +31,13 @@ export interface PrepareConvergedPolicyResult {
   convergencePolicyDiagnostics: string[];
 }
 
+export class PrepareConvergedPolicyDependencyError extends Error {
+  public constructor(message: string) {
+    super(message);
+    this.name = "PrepareConvergedPolicyDependencyError";
+  }
+}
+
 export async function prepareConvergedPolicy(
   input: PrepareConvergedPolicyInput,
   dependencies: PrepareConvergedPolicyDependencies = {}
@@ -40,7 +47,7 @@ export async function prepareConvergedPolicy(
     dependencies.validateConvergencePolicy ?? validateConvergencePolicy;
 
   if (readTranscript === undefined) {
-    throw new Error(
+    throw new PrepareConvergedPolicyDependencyError(
       "prepareConvergedPolicy requires readTranscriptEnvelopes dependency."
     );
   }
