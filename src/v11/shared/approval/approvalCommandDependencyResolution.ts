@@ -1,44 +1,60 @@
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
-} from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
+} from "../../../core/protocol/transcriptStore.js";
+import type {
+  AppendProtocolEnvelopePort,
+  ReadTranscriptEnvelopesPort
+} from "../ports/transcript.js";
 import { applyStateTransition } from "../../domain/state/machine.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../../core/state/stateStore.js";
+import type {
+  ReadStateSnapshotPort,
+  WriteStateSnapshotPort
+} from "../ports/stateSnapshots.js";
+import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import type { ResolveBubbleByIdPort } from "../ports/bubbleLookup.js";
 import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef
-} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
-import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
+} from "../../../core/runtime/tmuxDelivery.js";
+import type {
+  EmitTmuxDeliveryNotificationPort,
+  ResolveDeliveryMessageRefPort
+} from "../ports/tmuxDelivery.js";
+import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
+import type {
+  EnsureBubbleInstanceIdForMutationPort
+} from "../ports/bubbleIdentity.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import { queueDeferredReworkIntent } from "./reworkIntent.js";
 
 export interface ApprovalCommandDependencies {
-  appendProtocolEnvelope?: typeof appendProtocolEnvelope;
+  appendProtocolEnvelope?: AppendProtocolEnvelopePort;
   applyStateTransition?: typeof applyStateTransition;
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
-  ensureBubbleInstanceIdForMutation?: typeof ensureBubbleInstanceIdForMutation;
+  emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
+  ensureBubbleInstanceIdForMutation?: EnsureBubbleInstanceIdForMutationPort;
   queueDeferredReworkIntent?: typeof queueDeferredReworkIntent;
-  readStateSnapshot?: typeof readStateSnapshot;
-  readTranscriptEnvelopes?: typeof readTranscriptEnvelopes;
-  resolveBubbleById?: typeof resolveBubbleById;
-  resolveDeliveryMessageRef?: typeof resolveDeliveryMessageRef;
-  writeStateSnapshot?: typeof writeStateSnapshot;
+  readStateSnapshot?: ReadStateSnapshotPort;
+  readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
+  resolveBubbleById?: ResolveBubbleByIdPort;
+  resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
+  writeStateSnapshot?: WriteStateSnapshotPort;
 }
 
 export interface ResolvedApprovalCommandDependencies {
-  appendProtocolEnvelope: typeof appendProtocolEnvelope;
+  appendProtocolEnvelope: AppendProtocolEnvelopePort;
   applyStateTransition: typeof applyStateTransition;
   emitBubbleLifecycleEventBestEffort: typeof emitBubbleLifecycleEventBestEffort;
-  emitTmuxDeliveryNotification: typeof emitTmuxDeliveryNotification;
-  ensureBubbleInstanceIdForMutation: typeof ensureBubbleInstanceIdForMutation;
+  emitTmuxDeliveryNotification: EmitTmuxDeliveryNotificationPort;
+  ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
   queueDeferredReworkIntent: typeof queueDeferredReworkIntent;
-  readStateSnapshot: typeof readStateSnapshot;
-  readTranscriptEnvelopes: typeof readTranscriptEnvelopes;
-  resolveBubbleById: typeof resolveBubbleById;
-  resolveDeliveryMessageRef: typeof resolveDeliveryMessageRef;
-  writeStateSnapshot: typeof writeStateSnapshot;
+  readStateSnapshot: ReadStateSnapshotPort;
+  readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
+  resolveBubbleById: ResolveBubbleByIdPort;
+  resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
+  writeStateSnapshot: WriteStateSnapshotPort;
 }
 
 export function resolveApprovalCommandDependencies(

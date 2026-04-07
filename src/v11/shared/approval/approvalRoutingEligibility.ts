@@ -1,9 +1,9 @@
-import type { readTranscriptEnvelopes } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type { BubbleStateSnapshot, MetaReviewRecommendation } from "../../../types/bubble.js";
 import {
   deliveryTargetRoleMetadataKey,
   type ApprovalDecision
 } from "../../../types/protocol.js";
+import type { readTranscriptEnvelopes } from "../../../core/protocol/transcriptStore.js";
 import {
   hasParityInconsistencyMetadata,
   readApprovalTranscriptContext

@@ -1,7 +1,7 @@
 import type {
-  emitTmuxDeliveryNotification,
+  EmitTmuxDeliveryNotificationPort,
   EmitTmuxDeliveryNotificationResult
-} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
+} from "../../shared/ports/tmuxDelivery.js";
 import type {
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
@@ -11,7 +11,7 @@ import type {
 } from "../../../types/protocol.js";
 
 export interface EmitApprovalDecisionDependencies {
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
+  emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
 }
 
 export interface ApprovalDecisionDeliverySignalsResult {

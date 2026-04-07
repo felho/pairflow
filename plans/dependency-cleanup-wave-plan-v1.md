@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `66fd4394`.
+Last updated from `main` at `12d9d532`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `427 fail / 84 warn`
+- Dependency report at this checkpoint: `396 fail / 83 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -39,6 +39,18 @@ contracts, not thin wrappers.
   - `14c043e4` converged policy stable dependency error
   - `bb32bfe7` converged transcript import collapse
   - `66fd4394` list compat-bridge cleanup
+  - `7b161389` start registry lookup compat bridges
+  - `715c6e9e` delete cleanup error compat bridge
+  - `735dbe9f` delete support compat bridges
+  - `403a3735` kickoff bubble lookup compat bridge
+  - `9f883bc5` delete runtime error compat bridges
+  - `7eca98e4` converged routing compat bridges
+  - `e7478bcd` converged policy transcript reads through ports
+  - `ac4b16fd` merge state snapshot type via shared ports
+  - `e645db13` open lookup and shell compat bridges
+  - `0852e587` stop contract ports
+  - `5896a634` kickoff explicit delivery evidence
+  - approval compat/contract cleanup (pending commit in current worktree)
 
 ## Wave Ledger
 
@@ -56,9 +68,11 @@ contracts, not thin wrappers.
 | W4 | `converged` execution + gate-delivery cleanup | `completed` | orchestrator | Execution, gate delivery, and policy transcript wiring now avoid direct app->infra transcript reads |
 | W4 | `pass` second bounded cleanup | `completed` | orchestrator | Delivery/routing read-side pass flow now routes through seeded shared ports |
 | W5 | `list` compat-bridge cleanup | `completed` | orchestrator | `listCommandApi` and `listCommandContract` now use explicit core compat bridges / shared port types instead of direct infra imports |
-| W5 | `delete` runtime cleanup consumer rewiring | `pending` | orchestrator | Highest-yield remaining app lane; likely next bounded batch around tmux naming, readStateSnapshot, and error boundary leakage |
-| W5 | `converged` routing preparation cleanup | `pending` | orchestrator | Small remaining converged cluster with three direct infra edges |
-| W6 | shared runtime wiring clusters (`approval`, `reply`, `watchdog`, `merge`) | `pending` | orchestrator | Only after app-side lanes are reduced further |
+| W5 | `delete` runtime cleanup consumer rewiring | `completed` | orchestrator | Delete runtime and support paths now route through explicit compat bridges instead of direct infra imports |
+| W5 | `converged` routing preparation cleanup | `completed` | orchestrator | Remaining converged routing edges now use explicit compat bridges / ports |
+| W6 | `start` / `open` / `stop` / `merge` bounded cleanups | `completed` | orchestrator | Small app-lane type/runtime leaks removed with compat bridges or shared port contracts |
+| W6 | `approval` contract + dependency cleanup | `in_progress` | orchestrator | Approval app-side delivery types and shared default wiring now avoid direct infra imports; only shared->application orchestration seam remains |
+| W7 | shared runtime wiring clusters (`approval`, `askHuman`, `watchdog`, `reply`) | `pending` | orchestrator | Next frontier once bounded approval orchestration seam is classified |
 
 ## Parallelization Rules
 
@@ -87,8 +101,8 @@ contracts, not thin wrappers.
 
 ## Current Next Decision
 
-`list`, `converged`, and both `pass` waves are complete. Next choose between:
+Current best next moves:
 
-1. `delete` runtime cleanup + error-boundary follow-up,
-2. `converged` routing preparation cleanup, or
-3. early shared wiring follow-up in `approval` / `watchdog`.
+1. finish `approval` by removing the remaining `shared -> application` orchestration seam,
+2. take the next bounded shared wiring batch in `askHuman` or `watchdog` based on explorer classification,
+3. keep large cross-cutting `metaReviewGate` / `reply` clusters for later once the smaller shared orchestration seams are down.

@@ -9,7 +9,7 @@ import {
   resolveApprovalDecisionMetadata
 } from "../../shared/approval/approvalRoutingEligibility.js";
 import type { ApprovalDecisionDeliverySignalsResult } from "./approvalCommandContract.js";
-import type { EmitTmuxDeliveryNotificationResult } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
+import type { EmitTmuxDeliveryNotificationResult } from "../../shared/ports/tmuxDelivery.js";
 
 type ApprovalDecisionFlowShape = Pick<
   NormalizedApprovalDecisionInput,
