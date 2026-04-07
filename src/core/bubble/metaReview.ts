@@ -11,23 +11,32 @@ import {
   MetaReviewError,
   type MetaReviewErrorReasonCode
 } from "../../v11/shared/metaReview/metaReviewError.js";
+import { resolveMetaReviewRunnerMode } from "../../v11/shared/metaReview/liveRun/metaReviewLiveRunnerConfig.js";
+import {
+  runMetaReview as runMetaReviewShared
+} from "../../v11/shared/metaReview/liveRun/metaReviewLiveRunRuntime.js";
+import {
+  runCodexAgentLiveReview,
+  runCodexPaneLiveReview
+} from "../../v11/infrastructure/executor/sessionRuntime/metaReviewLiveRunnerRuntime.js";
+import type {
+  MetaReviewDependencies,
+  MetaReviewResult,
+  MetaReviewRunInput
+} from "../../v11/shared/metaReview/liveRun/metaReviewLiveRunContract.js";
 
 export type {
   MetaReviewDepth,
-  MetaReviewDependencies,
   MetaReviewLastReportView,
   MetaReviewLiveRunnerInput,
   MetaReviewReadInput,
-  MetaReviewResult,
   MetaReviewReviewerVerdict,
-  MetaReviewRunInput,
   MetaReviewRunWarning,
   MetaReviewStatusView,
   MetaReviewSubmitInput,
   MetaReviewSubmitResult
 } from "../../v11/shared/metaReview/liveRun/metaReviewLiveRunContract.js";
 export type { MetaReviewErrorReasonCode };
-export { runMetaReview } from "../../v11/shared/metaReview/liveRun/metaReviewLiveRunRuntime.js";
 export {
   extractMetaReviewDelimitedBlock,
   parseMetaReviewRunnerOutput
@@ -45,6 +54,29 @@ export {
   normalizeMetaReviewSnapshot,
   resolveActiveMetaReviewRuntimeDelivery
 };
+
+export async function runMetaReview(
+  input: MetaReviewRunInput,
+  dependencies: MetaReviewDependencies = {}
+): Promise<MetaReviewResult> {
+  const runLiveReview =
+    dependencies.runLiveReview ??
+    (async (liveInput) => {
+      const mode = resolveMetaReviewRunnerMode();
+      if (mode === "unavailable") {
+        throw new Error("Meta-review runner adapter is unavailable.");
+      }
+      if (mode === "agent") {
+        return runCodexAgentLiveReview(liveInput);
+      }
+      return runCodexPaneLiveReview(liveInput);
+    });
+
+  return runMetaReviewShared(input, {
+    ...dependencies,
+    runLiveReview
+  });
+}
 
 export function asMetaReviewError(error: unknown): never {
   throw toMetaReviewErrorV11(error);

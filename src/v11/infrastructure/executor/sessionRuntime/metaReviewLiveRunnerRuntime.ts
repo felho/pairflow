@@ -2,38 +2,38 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { runTmux } from "../../../../core/runtime/tmuxManager.js";
 import {
   maybeAcceptClaudeTrustPrompt,
   sendAndSubmitTmuxPaneMessage
-} from "../../../../core/runtime/tmuxInput.js";
-import { isNonEmptyString } from "../../validation/primitives.js";
-import type {
-  MetaReviewLiveRunnerInput,
-  MetaReviewLiveRunnerOutput
-} from "./metaReviewLiveRunContract.js";
-import { runMetaReviewCommand } from "./metaReviewLiveRunnerCommand.js";
-import {
-  buildMetaReviewPaneMarkers,
-  resolveMetaReviewRunnerTimeoutMs
-} from "./metaReviewLiveRunnerConfig.js";
-import {
-  parseMetaReviewRunnerOutput,
-  truncateForErrorOutput
-} from "./metaReviewLiveRunnerParsing.js";
+} from "../../channel/tmux/tmuxInput.js";
+import { runTmux } from "../../channel/tmux/tmuxManager.js";
 import {
   resolveMetaReviewerPaneTarget,
   waitForMetaReviewPaneOutput
-} from "./metaReviewLiveRunnerPane.js";
+} from "../../channel/tmux/metaReviewLiveRunnerPane.js";
+import { runMetaReviewCommand } from "../command/metaReviewLiveRunnerCommand.js";
+import { isNonEmptyString } from "../../../shared/validation/primitives.js";
+import type {
+  MetaReviewLiveRunnerInput,
+  MetaReviewLiveRunnerOutput
+} from "../../../shared/metaReview/liveRun/metaReviewLiveRunContract.js";
+import {
+  buildMetaReviewPaneMarkers,
+  resolveMetaReviewRunnerTimeoutMs
+} from "../../../shared/metaReview/liveRun/metaReviewLiveRunnerConfig.js";
+import {
+  parseMetaReviewRunnerOutput,
+  truncateForErrorOutput
+} from "../../../shared/metaReview/liveRun/metaReviewLiveRunnerParsing.js";
 import {
   buildCodexMetaReviewSchema,
   buildMetaReviewPrompt,
   buildPaneMetaReviewPrompt
-} from "./metaReviewLiveRunnerPrompt.js";
+} from "../../../shared/metaReview/liveRun/metaReviewLiveRunnerPrompt.js";
 import {
   buildCodexExecRunnerReport,
   buildCodexPaneRunnerReport
-} from "./metaReviewLiveRunnerReport.js";
+} from "../../../shared/metaReview/liveRun/metaReviewLiveRunnerReport.js";
 
 async function readAndParseMetaReviewOutputFile(outputPath: string): Promise<
   ReturnType<typeof parseMetaReviewRunnerOutput>

@@ -6,9 +6,6 @@ import {
   isMetaReviewExecutionContextActiveState
 } from "../metaReviewExecutionContext.js";
 import {
-  defaultLiveRunner
-} from "./metaReviewLiveRunner.js";
-import {
   refreshMetaReviewApprovalRequest
 } from "./metaReviewLiveRunApprovalRefresh.js";
 import {
@@ -42,10 +39,15 @@ import type {
 } from "../../../../types/bubble.js";
 import type {
   MetaReviewDependencies,
+  MetaReviewLiveRunnerOutput,
   MetaReviewResult,
   MetaReviewRunInput,
   MetaReviewRunWarning
 } from "./metaReviewLiveRunContract.js";
+
+function unavailableLiveRunner(): Promise<MetaReviewLiveRunnerOutput> {
+  return Promise.reject(new Error("Meta-review runner adapter is unavailable."));
+}
 
 export async function runMetaReview(
   input: MetaReviewRunInput,
@@ -55,7 +57,7 @@ export async function runMetaReview(
   const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
   const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
   const appendEnvelope = dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
-  const runLiveReview = dependencies.runLiveReview ?? defaultLiveRunner;
+  const runLiveReview = dependencies.runLiveReview ?? unavailableLiveRunner;
   const readFileFn = dependencies.readFile ?? readFile;
   const writeFileFn = dependencies.writeFile ?? writeFile;
   const now = dependencies.now ?? new Date();
