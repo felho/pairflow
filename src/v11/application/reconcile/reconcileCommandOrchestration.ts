@@ -1,11 +1,11 @@
-import { RepoResolutionError } from "../../infrastructure/executor/workspace/repoResolution.js";
-import { runReconcileFlow } from "../../application/reconcile/runReconcileFlow.js";
+import { RepoResolutionError } from "../../../core/bubble/repoResolution.js";
+import { runReconcileFlow } from "./runReconcileFlow.js";
 import type {
   ReconcileRuntimeSessionsDependencies,
   ReconcileRuntimeSessionsInput,
   ReconcileRuntimeSessionsReport
-} from "../../application/reconcile/reconcileCommandContract.js";
-import { createStartupReconcilerError } from "./reconcileCommandRuntime.js";
+} from "./reconcileCommandContract.js";
+import { createStartupReconcilerError } from "../../shared/reconcile/reconcileCommandRuntime.js";
 import {
   normalizeReconcileRuntimeSessionsInput
 } from "./reconcileCommandInputNormalization.js";

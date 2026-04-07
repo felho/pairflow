@@ -1,22 +1,20 @@
-import {
-  resolveRepoPath
-} from "../../infrastructure/executor/workspace/repoResolution.js";
+import { resolveRepoPath } from "../../../core/bubble/repoResolution.js";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import {
   persistPassValidationRecoveryMarker
-} from "../../infrastructure/artifact/validation/passValidationEvidence.js";
+} from "../../../core/runtime/passValidationEvidence.js";
 import {
+  type RuntimeSessionsRegistry,
   readRuntimeSessionsRegistry,
-  removeRuntimeSessions,
-  type RuntimeSessionsRegistry
-} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
-import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
+  removeRuntimeSessions
+} from "../../../core/runtime/sessionsRegistry.js";
+import { readStateSnapshot } from "../../../core/state/stateStore.js";
 import { isFinalState } from "../../domain/state/transitions.js";
 import type {
   ListBubbleIdSet,
   ReconcileRuntimeSessionsDependencies
-} from "../../application/reconcile/reconcileCommandContract.js";
+} from "./reconcileCommandContract.js";
 
 export interface ResolvedReconcileRuntimeSessionsDependencies {
   resolveRepoPath: typeof resolveRepoPath;
@@ -64,8 +62,8 @@ export function resolveReconcileRuntimeSessionsDependencies(
     removeRuntimeSessions:
       dependencies.removeRuntimeSessions ?? removeRuntimeSessions,
     persistPassValidationRecoveryMarker:
-      dependencies.persistPassValidationRecoveryMarker
-      ?? persistPassValidationRecoveryMarker,
+      dependencies.persistPassValidationRecoveryMarker ??
+      persistPassValidationRecoveryMarker,
     readStateSnapshot: dependencies.readStateSnapshot ?? readStateSnapshot,
     isFinalState: dependencies.isFinalState ?? isFinalState,
     countRegistryEntries:
