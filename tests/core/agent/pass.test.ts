@@ -44,7 +44,7 @@ import {
 import {
   resolveReviewerTestEvidenceArtifactPath,
   resolveReviewerTestExecutionDirective
-} from "../../../src/v11/shared/reviewer/testEvidence.js";
+} from "../../../src/core/reviewer/testEvidence.js";
 import {
   resolvePassValidationReviewerCompatibilityArtifactPath
 } from "../../../src/core/runtime/passValidationEvidence.js";

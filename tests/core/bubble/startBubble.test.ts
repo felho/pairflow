@@ -27,7 +27,7 @@ import {
   resolveReviewerTestEvidenceArtifactPath,
   verifyImplementerTestEvidence,
   writeReviewerTestEvidenceArtifact
-} from "../../../src/v11/shared/reviewer/testEvidence.js";
+} from "../../../src/core/reviewer/testEvidence.js";
 import {
   reviewerSeverityOntologyFullMarkdown
 } from "../../../src/core/runtime/reviewerSeverityOntology.generated.js";

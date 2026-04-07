@@ -178,6 +178,7 @@ contracts, not thin wrappers.
 | W55 | `merge` dependency + error classification relocation | `validated` | orchestrator | Merge dependency resolution moved into `application/merge`, adapter-aware error classification left `shared`, and the dependency baseline dropped to `0 fail / 29 warn` |
 | W56 | `watchdog` store ownership inversion | `validated` | worker + orchestrator validation | Pane-activity and trace stores moved under infrastructure ownership, shared status/watchdog retained only boundary-neutral types/path helpers, core compat bridges provide default read/write wiring, and the dependency baseline dropped to `0 fail / 26 warn` |
 | W57 | `reviewVerification` artifact boundary split | `validated` | worker + orchestrator validation | Review-verification schema/validation stayed shared, artifact IO moved behind an explicit shared port + infrastructure owner with core compat defaults, and the visible reviewer warning frontier now excludes `reviewVerification` |
+| W58 | `reviewer` testEvidence runtime/artifact split | `validated` | worker + orchestrator validation | Shared reviewer test-evidence schema/path helpers stayed pure, runtime and artifact IO moved behind an explicit shared port plus infrastructure owner, core keeps only the compat bridge, and the dependency baseline dropped to `0 fail / 25 warn` |
 
 ## Parallelization Rules
 
@@ -206,7 +207,7 @@ contracts, not thin wrappers.
 
 ## Warning Frontier Snapshot
 
-Current ownership-warning frontier after W57 reviewVerification artifact boundary split:
+Current ownership-warning frontier after W58 reviewer testEvidence runtime/artifact split:
 
 - `metaReviewGate`: 14
 - `askHuman`: 0 in the visible report after W47
@@ -214,7 +215,7 @@ Current ownership-warning frontier after W57 reviewVerification artifact boundar
 - `kickoff`: 0
 - `merge`: 0
 - `metrics`: the shared event builder is now clean; only the core legacy bridge plus the infrastructure store remain
-- `reviewer`: 1
+- `reviewer`: 0
 - `watchdog`: 0
 - singleton residuals: `approval`, `gates`, `other`
 
@@ -223,8 +224,7 @@ Current bounded next-wave decisions:
 - `metrics`:
   - the shared metrics builder is clean; any follow-up is now about the remaining core bridge or a later review of the infra store owner
 - `reviewer`:
-  - `summaryVerifierConsistencyGate`, `reviewerBrief`, and `reviewVerification` ownership warnings are now closed on `main`
-  - the remaining reviewer frontier is `testEvidence`
+  - `summaryVerifierConsistencyGate`, `reviewerBrief`, `reviewVerification`, and `testEvidence` ownership warnings are now closed on `main`
 - `watchdog`:
   - the shared file-backed store warnings are now closed on `main`
 - `kickoff`:
@@ -240,6 +240,6 @@ Current bounded next-wave decisions:
 
 Current best next moves:
 
-1. take the next bounded real-owner batch from the current frontier (`testEvidence` or a metaReview split),
-2. run the next two disjoint warned-owner batches in parallel after prep: `testEvidence` and the next metaReview follow-up,
+1. take the next bounded real-owner batch from the current frontier (a metaReview split or the next reviewer/metaReviewGate follow-up),
+2. run the next two disjoint warned-owner batches in parallel after prep: the next reviewer follow-up and the next metaReview follow-up,
 3. keep checker-hardening and warning-cleanup as separate commits so baseline shifts stay auditable.

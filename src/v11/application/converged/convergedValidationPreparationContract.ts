@@ -14,10 +14,10 @@ import type {
 import type {
   writeSummaryVerifierConsistencyGateArtifact
 } from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
+import type { resolveReviewerTestEvidenceArtifactPath } from "../../../v11/shared/reviewer/testEvidence.js";
 import type {
-  resolveReviewerTestEvidenceArtifactPath,
-  resolveReviewerTestExecutionDirective
-} from "../../../v11/shared/reviewer/testEvidence.js";
+  ResolveReviewerTestExecutionDirectivePort
+} from "../../../v11/shared/ports/reviewerTestEvidenceArtifacts.js";
 import type { ResolvedBubbleWorkspace } from "../../shared/ports/workspaceResolution.js";
 import type {
   AgentName,
@@ -42,7 +42,7 @@ export interface PrepareConvergedValidationDependencies {
   resolveDocContractGateArtifactPath?: typeof resolveDocContractGateArtifactPath;
   readReviewVerificationArtifactStatus?: ReadReviewVerificationArtifactStatusPort;
   resolveReviewerTestEvidenceArtifactPath?: typeof resolveReviewerTestEvidenceArtifactPath;
-  resolveReviewerTestExecutionDirective?: typeof resolveReviewerTestExecutionDirective;
+  resolveReviewerTestExecutionDirective?: ResolveReviewerTestExecutionDirectivePort;
   evaluateSummaryVerifierConsistencyGate?: typeof evaluateSummaryVerifierConsistencyGate;
   resolveSummaryVerifierConsistencyGateArtifactPath?:
     typeof resolveSummaryVerifierConsistencyGateArtifactPath;

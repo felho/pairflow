@@ -1,12 +1,19 @@
 import {
   resolveReviewerTestEvidenceArtifactPath,
+  type ReviewerTestExecutionDirective
+} from "../../../v11/shared/reviewer/testEvidence.js";
+import {
   resolveReviewerTestExecutionDirectiveFromArtifact,
-  type ReviewerTestExecutionDirective,
   verifyImplementerTestEvidence,
   writeReviewerTestEvidenceArtifact
-} from "../../../v11/shared/reviewer/testEvidence.js";
+} from "../../../core/reviewer/testEvidence.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type {
+  ResolveReviewerTestExecutionDirectiveFromArtifactPort,
+  VerifyImplementerTestEvidencePort,
+  WriteReviewerTestEvidenceArtifactPort
+} from "../../../v11/shared/ports/reviewerTestEvidenceArtifacts.js";
 
 export interface ResolveReviewerTestDirectiveForPassInput {
   senderRole: "implementer" | "reviewer";
@@ -20,10 +27,10 @@ export interface ResolveReviewerTestDirectiveForPassInput {
 }
 
 export interface ResolveReviewerTestDirectiveForPassDependencies {
-  verifyImplementerTestEvidence?: typeof verifyImplementerTestEvidence;
-  writeReviewerTestEvidenceArtifact?: typeof writeReviewerTestEvidenceArtifact;
+  verifyImplementerTestEvidence?: VerifyImplementerTestEvidencePort;
+  writeReviewerTestEvidenceArtifact?: WriteReviewerTestEvidenceArtifactPort;
   resolveReviewerTestExecutionDirectiveFromArtifact?:
-    typeof resolveReviewerTestExecutionDirectiveFromArtifact;
+    ResolveReviewerTestExecutionDirectiveFromArtifactPort;
 }
 
 export async function resolveReviewerTestDirectiveForPass(

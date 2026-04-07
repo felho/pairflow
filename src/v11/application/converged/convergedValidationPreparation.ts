@@ -15,10 +15,12 @@ import {
 } from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
 import { readReviewVerificationArtifactStatus } from "../../../core/reviewer/reviewVerificationArtifacts.js";
 import {
-  resolveReviewerTestEvidenceArtifactPath,
-  resolveReviewerTestExecutionDirective
+  resolveReviewerTestEvidenceArtifactPath
 } from "../../../v11/shared/reviewer/testEvidence.js";
 import type { ReviewerTestReasonCode } from "../../../v11/shared/reviewer/testEvidence.js";
+import {
+  resolveReviewerTestExecutionDirective
+} from "../../../core/reviewer/testEvidence.js";
 import type {
   BubbleRoundGateState,
   BubbleSpecLockState

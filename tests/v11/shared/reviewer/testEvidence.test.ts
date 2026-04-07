@@ -6,16 +6,18 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   readReviewerTestEvidenceArtifact,
-  resolveReviewerTestEvidenceArtifactPath,
   resolveReviewerTestExecutionDirective,
   resolveReviewerTestExecutionDirectiveFromArtifact,
   verifyImplementerTestEvidence,
   writeReviewerTestEvidenceArtifact
+} from "../../../../src/v11/infrastructure/artifact/reviewer/testEvidenceRuntime.js";
+import {
+  resolveReviewerTestEvidenceArtifactPath,
 } from "../../../../src/v11/shared/reviewer/testEvidence.js";
+import type { BubbleConfig, ReviewArtifactType } from "../../../../src/types/bubble.js";
 import { initGitRepository } from "../../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { writeEvidenceLog } from "../../../helpers/evidence.js";
-import type { BubbleConfig, ReviewArtifactType } from "../../../../src/types/bubble.js";
 
 const tempDirs: string[] = [];
 
