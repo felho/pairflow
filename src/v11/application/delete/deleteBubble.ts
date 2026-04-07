@@ -2,18 +2,18 @@ import type {
   DeleteBubbleArtifacts,
   DeleteBubbleResult
 } from "../../../contracts/deleteBubble.js";
-import { BubbleLookupError } from "../../infrastructure/executor/workspace/bubbleLookup.js";
+import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
-} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+} from "../../../core/runtime/sessionsRegistry.js";
 import {
   buildBubbleTmuxSessionName,
   TmuxCommandError,
   type TmuxRunner
-} from "../../infrastructure/channel/tmux/tmuxManager.js";
-import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
+} from "../../../core/runtime/tmuxManager.js";
+import { readStateSnapshot } from "../../../core/state/stateStore.js";
 import { WorkspaceCleanupError } from "../../infrastructure/workspace/worktreeManager.js";
 import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import { StopBubbleErrorV11 as StopBubbleError } from "../stop/emitStopV11.js";
