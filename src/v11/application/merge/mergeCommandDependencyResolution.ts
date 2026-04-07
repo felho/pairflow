@@ -1,24 +1,12 @@
+import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../core/state/stateStore.js";
 import { branchExists, runGit } from "../../../core/workspace/git.js";
-import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { cleanupWorktreeWorkspace } from "../../../core/workspace/worktreeManager.js";
 import { terminateBubbleTmuxSession } from "../../../core/runtime/tmuxManager.js";
 import { removeRuntimeSession } from "../../../core/runtime/sessionsRegistry.js";
-import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
-import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
-
-export interface MergeCommandDependencies {
-  runGit?: typeof runGit;
-  terminateBubbleTmuxSession?: typeof terminateBubbleTmuxSession;
-  removeRuntimeSession?: typeof removeRuntimeSession;
-  cleanupWorktreeWorkspace?: typeof cleanupWorktreeWorkspace;
-  resolveBubbleById?: typeof resolveBubbleById;
-  readStateSnapshot?: typeof readStateSnapshot;
-  writeStateSnapshot?: typeof writeStateSnapshot;
-  branchExists?: typeof branchExists;
-  ensureBubbleInstanceIdForMutation?: typeof ensureBubbleInstanceIdForMutation;
-  emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
-}
+import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
+import type { MergeBubbleDependencies } from "./mergeCommandContract.js";
 
 export interface ResolvedMergeCommandDependencies {
   runGit: typeof runGit;
@@ -34,7 +22,7 @@ export interface ResolvedMergeCommandDependencies {
 }
 
 export function resolveMergeCommandDependencies(
-  dependencies: MergeCommandDependencies = {}
+  dependencies: MergeBubbleDependencies = {}
 ): ResolvedMergeCommandDependencies {
   return {
     runGit: dependencies.runGit ?? runGit,

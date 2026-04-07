@@ -8,6 +8,14 @@ import type {
   TerminateBubbleTmuxSessionPort
 } from "../../shared/ports/tmuxSessions.js";
 import type { RunGitPort } from "../../shared/ports/git.js";
+import type { ResolveBubbleByIdPort } from "../../shared/ports/bubbleLookup.js";
+import type {
+  ReadStateSnapshotPort,
+  WriteStateSnapshotPort
+} from "../../shared/ports/stateSnapshots.js";
+import type { BranchExistsPort } from "../../shared/ports/git.js";
+import type { EnsureBubbleInstanceIdForMutationPort } from "../../shared/ports/bubbleIdentity.js";
+import type { EmitBubbleLifecycleEventBestEffortPort } from "../../shared/metrics/bubbleEvents.js";
 
 export interface MergeBubbleInput {
   bubbleId: string;
@@ -37,4 +45,10 @@ export interface MergeBubbleDependencies {
   removeRuntimeSession?: RemoveRuntimeSessionPort;
   cleanupWorktreeWorkspace?: CleanupWorktreeWorkspacePort;
   runGit?: RunGitPort;
+  resolveBubbleById?: ResolveBubbleByIdPort;
+  readStateSnapshot?: ReadStateSnapshotPort;
+  writeStateSnapshot?: WriteStateSnapshotPort;
+  branchExists?: BranchExistsPort;
+  ensureBubbleInstanceIdForMutation?: EnsureBubbleInstanceIdForMutationPort;
+  emitBubbleLifecycleEventBestEffort?: EmitBubbleLifecycleEventBestEffortPort;
 }

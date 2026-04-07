@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveMergeCommandDependencies } from "../../../../src/v11/shared/merge/mergeCommandDependencyResolution.js";
+import { resolveMergeCommandDependencies } from "../../../../src/v11/application/merge/mergeCommandDependencyResolution.js";
 
 describe("mergeCommandDependencyResolution", () => {
   it("preserves explicit dependency overrides", () => {

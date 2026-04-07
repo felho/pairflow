@@ -5,11 +5,11 @@ import type {
 } from "./mergeCommandContract.js";
 import {
   BubbleMergeError,
-  createBubbleMergeError,
-  throwAsBubbleMergeError
+  createBubbleMergeError
 } from "../../shared/merge/mergeCommandErrorRuntime.js";
+import { throwAsBubbleMergeError } from "./mergeCommandErrorClassification.js";
 import { normalizeMergeBubbleInput } from "../../shared/merge/mergeCommandInputNormalization.js";
-import { resolveMergeCommandDependencies } from "../../shared/merge/mergeCommandDependencyResolution.js";
+import { resolveMergeCommandDependencies } from "./mergeCommandDependencyResolution.js";
 import { runMergeFlow } from "./runMergeFlow.js";
 
 export async function mergeBubbleCommandOrchestration(

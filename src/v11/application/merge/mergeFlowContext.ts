@@ -6,7 +6,7 @@ import {
   assertMergeBranchEligibility,
   assertMergeStateEligibility
 } from "../../shared/merge/mergeRoutingEligibility.js";
-import type { ResolvedMergeCommandDependencies } from "../../shared/merge/mergeCommandDependencyResolution.js";
+import type { ResolvedMergeCommandDependencies } from "./mergeCommandDependencyResolution.js";
 import type { RunMergeFlowInput } from "./mergeFlowTypes.js";
 
 export interface MergeFlowExecutionContext {

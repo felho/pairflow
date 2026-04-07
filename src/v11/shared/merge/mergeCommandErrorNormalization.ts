@@ -1,24 +1,13 @@
-import type { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
-import type { GitCommandError } from "../../../core/workspace/git.js";
-import type { WorkspaceCleanupError } from "../../../core/workspace/worktreeManager.js";
-import type { TmuxCommandError } from "../../../core/runtime/tmuxManager.js";
-import type {
-  RuntimeSessionsRegistryError,
-  RuntimeSessionsRegistryLockError
-} from "../../../core/runtime/sessionsRegistry.js";
-
 export interface NormalizeBubbleMergeErrorInput {
   error: unknown;
   isBubbleMergeError: (candidate: unknown) => boolean;
   createBubbleMergeError: PairflowCreateCommandError;
-  isBubbleLookupError: (candidate: unknown) => candidate is BubbleLookupError;
-  isGitCommandError: (candidate: unknown) => candidate is GitCommandError;
-  isWorkspaceCleanupError: (candidate: unknown) => candidate is WorkspaceCleanupError;
-  isTmuxCommandError: (candidate: unknown) => candidate is TmuxCommandError;
-  isRuntimeSessionsRegistryError:
-    (candidate: unknown) => candidate is RuntimeSessionsRegistryError;
-  isRuntimeSessionsRegistryLockError:
-    (candidate: unknown) => candidate is RuntimeSessionsRegistryLockError;
+  isBubbleLookupError?: (candidate: unknown) => boolean;
+  isGitCommandError?: (candidate: unknown) => boolean;
+  isWorkspaceCleanupError?: (candidate: unknown) => boolean;
+  isTmuxCommandError?: (candidate: unknown) => boolean;
+  isRuntimeSessionsRegistryError?: (candidate: unknown) => boolean;
+  isRuntimeSessionsRegistryLockError?: (candidate: unknown) => boolean;
 }
 
 export function normalizeBubbleMergeError(
@@ -28,14 +17,17 @@ export function normalizeBubbleMergeError(
     return input.error;
   }
   if (
-    input.isBubbleLookupError(input.error) ||
-    input.isGitCommandError(input.error) ||
-    input.isWorkspaceCleanupError(input.error) ||
-    input.isTmuxCommandError(input.error) ||
-    input.isRuntimeSessionsRegistryError(input.error) ||
-    input.isRuntimeSessionsRegistryLockError(input.error)
+    input.isBubbleLookupError?.(input.error) === true ||
+    input.isGitCommandError?.(input.error) === true ||
+    input.isWorkspaceCleanupError?.(input.error) === true ||
+    input.isTmuxCommandError?.(input.error) === true ||
+    input.isRuntimeSessionsRegistryError?.(input.error) === true ||
+    input.isRuntimeSessionsRegistryLockError?.(input.error) === true
   ) {
-    return input.createBubbleMergeError(input.error.message);
+    if (input.error instanceof Error) {
+      return input.createBubbleMergeError(input.error.message);
+    }
+    return input.createBubbleMergeError(String(input.error));
   }
   if (input.error instanceof Error) {
     return input.createBubbleMergeError(input.error.message);

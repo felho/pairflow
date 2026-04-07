@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `1a971ff7`.
+Last updated from `main` at `340e5326`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `0 fail / 32 warn`
+- Dependency report at this checkpoint: `0 fail / 29 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -103,6 +103,7 @@ contracts, not thin wrappers.
   - `validated (local)` stop shell relocation
   - `validated (local)` reconcile dependency-resolution shell relocation
   - `validated (local)` restart orchestration shell relocation
+  - `validated (local)` merge dependency and error classification relocation
 
 ## Wave Ledger
 
@@ -172,6 +173,7 @@ contracts, not thin wrappers.
 | W52 | `shared` delivery contract extraction | `validated` | orchestrator | Boundary-neutral tmux and bubble-notification contracts moved under `shared/delivery`, shared kickoff/converged/delivery helpers stopped importing core runtime delivery types, and the dependency report dropped from `0 fail / 39 warn` to `0 fail / 35 warn` |
 | W53 | `summaryVerifier` artifact write split | `validated` | orchestrator | The file-backed summary-verifier gate writer moved under `infrastructure/artifact/reviewer`, the shared gate module dropped direct fs ownership, and converged validation now uses the explicit core compat boundary for the default writer; dependency baseline dropped to `0 fail / 33 warn` |
 | W54 | `kickoff` task-file capability injection | `validated` | orchestrator | The remaining kickoff file-input read path now consumes explicit `readFileFn` + `statFileFn` capabilities through the existing kickoff dependency contract, removing direct fs ownership from `kickoffTaskFileInputResolution.ts` and dropping the dependency baseline to `0 fail / 32 warn` |
+| W55 | `merge` dependency + error classification relocation | `validated` | orchestrator | Merge dependency resolution moved into `application/merge`, adapter-aware error classification left `shared`, and the dependency baseline dropped to `0 fail / 29 warn` |
 
 ## Parallelization Rules
 
@@ -200,13 +202,13 @@ contracts, not thin wrappers.
 
 ## Warning Frontier Snapshot
 
-Current ownership-warning frontier after W54 kickoff task-file capability injection:
+Current ownership-warning frontier after W55 merge dependency + error classification relocation:
 
 - `metaReviewGate`: 14
 - `askHuman`: 0 in the visible report after W47
 - `metaReview`: 12
 - `kickoff`: 0
-- `merge`: 3
+- `merge`: 0
 - `metrics`: the shared event builder is now clean; only the core legacy bridge plus the infrastructure store remain
 - `reviewer`: 2
 - `watchdog`: 2
@@ -234,6 +236,6 @@ Current bounded next-wave decisions:
 
 Current best next moves:
 
-1. take the next bounded real-owner batch from the current frontier (`watchdog` persistence inversion first),
-2. run the next two disjoint warned-owner batches in parallel after prep: `watchdog` persistence inversion and `reviewerBrief` artifact read split,
+1. take the next bounded real-owner batch from the current frontier (`watchdog` persistence inversion or `reviewVerification` artifact boundary split),
+2. run the next two disjoint warned-owner batches in parallel after prep: `watchdog` persistence inversion and `reviewVerification` artifact boundary split,
 3. keep checker-hardening and warning-cleanup as separate commits so baseline shifts stay auditable.

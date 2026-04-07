@@ -27,6 +27,10 @@ export interface EmitBubbleLifecycleEventBestEffortInput
   reportWarning?: (message: string) => void;
 }
 
+export type EmitBubbleLifecycleEventBestEffortPort = (
+  input: EmitBubbleLifecycleEventBestEffortInput
+) => Promise<void>;
+
 function defaultWarningReporter(message: string): void {
   process.stderr.write(`${message}\n`);
 }
