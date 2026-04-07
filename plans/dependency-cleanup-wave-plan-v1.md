@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `0 fail / 33 warn`
+- Dependency report at this checkpoint: `0 fail / 32 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -171,6 +171,7 @@ contracts, not thin wrappers.
 | W51 | `reviewer` warning frontier prep | `ready` | explorer-complete | Explorer ranked the next bounded reviewer batches: `reviewerBrief` first, then `summaryVerifier` only with ports + outer wiring, then `reviewVerification`, then `testEvidence` |
 | W52 | `shared` delivery contract extraction | `validated` | orchestrator | Boundary-neutral tmux and bubble-notification contracts moved under `shared/delivery`, shared kickoff/converged/delivery helpers stopped importing core runtime delivery types, and the dependency report dropped from `0 fail / 39 warn` to `0 fail / 35 warn` |
 | W53 | `summaryVerifier` artifact write split | `validated` | orchestrator | The file-backed summary-verifier gate writer moved under `infrastructure/artifact/reviewer`, the shared gate module dropped direct fs ownership, and converged validation now uses the explicit core compat boundary for the default writer; dependency baseline dropped to `0 fail / 33 warn` |
+| W54 | `kickoff` task-file capability injection | `validated` | orchestrator | The remaining kickoff file-input read path now consumes explicit `readFileFn` + `statFileFn` capabilities through the existing kickoff dependency contract, removing direct fs ownership from `kickoffTaskFileInputResolution.ts` and dropping the dependency baseline to `0 fail / 32 warn` |
 
 ## Parallelization Rules
 
@@ -199,12 +200,12 @@ contracts, not thin wrappers.
 
 ## Warning Frontier Snapshot
 
-Current ownership-warning frontier after W53 summary-verifier artifact split:
+Current ownership-warning frontier after W54 kickoff task-file capability injection:
 
 - `metaReviewGate`: 14
 - `askHuman`: 0 in the visible report after W47
 - `metaReview`: 12
-- `kickoff`: 1
+- `kickoff`: 0
 - `merge`: 3
 - `metrics`: the shared event builder is now clean; only the core legacy bridge plus the infrastructure store remain
 - `reviewer`: 2
@@ -221,7 +222,7 @@ Current bounded next-wave decisions:
 - `watchdog`:
   - the two shared file-backed stores look bounded, but only after the consumer injection/default-wiring seam is mapped cleanly
 - `kickoff`:
-  - the remaining warning is the real file-backed task input read path in `kickoffTaskFileInputResolution.ts`; the tmux type-only residuals are now closed via shared delivery contracts
+  - the task-file input warning is now closed; any follow-up would be architecture hardening only, not dependency warning cleanup
 - `metaReview`:
   - next good batches are `liveRun` infra cut or command runtime rehome
 - `metaReviewGate`:

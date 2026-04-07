@@ -44,6 +44,12 @@ function createDependencies(config: BubbleConfig, state: BubbleStateSnapshot): R
       void args;
       return Promise.resolve("");
     }) as unknown as ResolvedKickoffDependencies["readFileFn"],
+    statFileFn: ((...args: unknown[]) => {
+      void args;
+      return Promise.resolve({
+        isFile: () => true
+      });
+    }) as unknown as ResolvedKickoffDependencies["statFileFn"],
     writeFileFn: ((...args: unknown[]) => {
       void args;
       return Promise.resolve(undefined);

@@ -56,7 +56,11 @@ export async function prepareKickoffValidation(
     validationInput: input,
     resolvedBubbleId: resolved.bubbleId,
     state,
-    markersBefore
+    markersBefore,
+    dependencies: {
+      readFileFn: dependencies.readFileFn,
+      statFileFn: dependencies.statFileFn
+    }
   });
   if (taskOrFailure.kind === "failure") {
     return taskOrFailure.result;

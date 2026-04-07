@@ -1,4 +1,5 @@
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import type { ResolvedKickoffDependencies } from "./kickoffDependencyContract.js";
 import type { ResolvedKickoffTaskInput } from "./kickoffTaskInputResolution.js";
 import { resolveKickoffTask } from "./kickoffTaskResolution.js";
 import type {
@@ -19,6 +20,7 @@ interface PrepareKickoffTaskOrFailureInput {
   resolvedBubbleId: string;
   state: BubbleStateSnapshot;
   markersBefore: KickoffIdeationMarkers;
+  dependencies: Pick<ResolvedKickoffDependencies, "readFileFn" | "statFileFn">;
 }
 
 export type PrepareKickoffTaskOrFailureResult =
@@ -38,7 +40,11 @@ export async function prepareKickoffTaskOrFailure(
   input: PrepareKickoffTaskOrFailureInput
 ): Promise<PrepareKickoffTaskOrFailureResult> {
   const taskResolution = await resolveKickoffTask(
-    buildKickoffTaskResolutionInput(input.validationInput)
+    {
+      ...buildKickoffTaskResolutionInput(input.validationInput),
+      readFile: input.dependencies.readFileFn,
+      statFile: input.dependencies.statFileFn
+    }
   );
   if (taskResolution.kind === "invalid") {
     return {

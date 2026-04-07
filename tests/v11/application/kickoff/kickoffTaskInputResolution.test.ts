@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -31,7 +31,9 @@ describe("resolveKickoffTaskInput", () => {
     const cwd = await createTempDir();
     const resolved = await resolveKickoffTaskInput({
       task: "  Implement kickoff seam  ",
-      cwd
+      cwd,
+      readFile,
+      statFile: stat
     });
 
     expect(resolved).toEqual({
@@ -47,7 +49,9 @@ describe("resolveKickoffTaskInput", () => {
 
     const resolved = await resolveKickoffTaskInput({
       taskFile: "task.md",
-      cwd
+      cwd,
+      readFile,
+      statFile: stat
     });
 
     expect(resolved).toEqual({
@@ -72,41 +76,53 @@ describe("resolveKickoffTaskInput", () => {
       resolveKickoffTaskInput({
         task: "inline",
         taskFile: "task.md",
-        cwd
+        cwd,
+        readFile,
+        statFile: stat
       })
     ).rejects.toBeInstanceOf(KickoffTaskInputValidationError);
 
     await expect(
       resolveKickoffTaskInput({
-        cwd
+        cwd,
+        readFile,
+        statFile: stat
       })
     ).rejects.toBeInstanceOf(KickoffTaskInputValidationError);
 
     await expect(
       resolveKickoffTaskInput({
         taskFile: "missing.md",
-        cwd
+        cwd,
+        readFile,
+        statFile: stat
       })
     ).rejects.toBeInstanceOf(KickoffTaskInputValidationError);
 
     await expect(
       resolveKickoffTaskInput({
         taskFile: "empty.md",
-        cwd
+        cwd,
+        readFile,
+        statFile: stat
       })
     ).rejects.toBeInstanceOf(KickoffTaskInputValidationError);
 
     await expect(
       resolveKickoffTaskInput({
         taskFile: "placeholder.md",
-        cwd
+        cwd,
+        readFile,
+        statFile: stat
       })
     ).rejects.toBeInstanceOf(KickoffTaskInputValidationError);
 
     await expect(
       resolveKickoffTaskInput({
         task: "metadata_source: ideation_placeholder",
-        cwd
+        cwd,
+        readFile,
+        statFile: stat
       })
     ).rejects.toBeInstanceOf(KickoffTaskInputValidationError);
   });

@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, stat, writeFile } from "node:fs/promises";
 
 import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
 import { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
@@ -15,6 +15,7 @@ function buildKickoffDefaultDependencies(): ResolvedKickoffDependencies {
     readState: readStateSnapshot,
     writeState: writeStateSnapshot,
     readFileFn: readFile,
+    statFileFn: stat,
     writeFileFn: writeFile,
     appendEnvelope: appendProtocolEnvelope,
     emitDelivery: emitTmuxDeliveryNotification
@@ -30,6 +31,7 @@ export function resolveKickoffDependencies(
     readState: overrides.readStateSnapshot ?? defaults.readState,
     writeState: overrides.writeStateSnapshot ?? defaults.writeState,
     readFileFn: overrides.readFile ?? defaults.readFileFn,
+    statFileFn: overrides.statFile ?? defaults.statFileFn,
     writeFileFn: overrides.writeFile ?? defaults.writeFileFn,
     appendEnvelope: overrides.appendProtocolEnvelope ?? defaults.appendEnvelope,
     emitDelivery: overrides.emitTmuxDeliveryNotification ?? defaults.emitDelivery

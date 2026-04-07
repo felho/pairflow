@@ -3,11 +3,17 @@ import {
   type ResolvedKickoffTaskInput,
   resolveKickoffTaskInput
 } from "./kickoffTaskInputResolution.js";
+import type {
+  KickoffReadFile,
+  KickoffStatFile
+} from "./kickoffDependencyContract.js";
 
 export interface ResolveKickoffTaskInput {
   task?: string;
   taskFile?: string;
   cwd: string;
+  readFile: KickoffReadFile;
+  statFile: KickoffStatFile;
 }
 
 export type ResolveKickoffTaskResult =
@@ -25,7 +31,9 @@ function buildKickoffTaskInputResolutionInput(
   return {
     ...(input.task !== undefined ? { task: input.task } : {}),
     ...(input.taskFile !== undefined ? { taskFile: input.taskFile } : {}),
-    cwd: input.cwd
+    cwd: input.cwd,
+    readFile: input.readFile,
+    statFile: input.statFile
   };
 }
 

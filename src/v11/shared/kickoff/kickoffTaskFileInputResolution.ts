@@ -1,7 +1,10 @@
-import { readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { assertKickoffTaskContentIsValid } from "./kickoffTaskContentValidation.js";
+import type {
+  KickoffReadFile,
+  KickoffStatFile
+} from "./kickoffDependencyContract.js";
 
 interface ResolveKickoffTaskFromFileInputResult {
   content: string;
@@ -12,10 +15,12 @@ interface ResolveKickoffTaskFromFileInputResult {
 export async function resolveKickoffTaskFromFileInput(input: {
   taskFile: string;
   cwd: string;
+  readFile: KickoffReadFile;
+  statFile: KickoffStatFile;
   createValidationError: PairflowCreateCommandError;
 }): Promise<ResolveKickoffTaskFromFileInputResult> {
   const candidatePath = resolve(input.cwd, input.taskFile);
-  const taskStats = await stat(candidatePath).catch((error: NodeJS.ErrnoException) => {
+  const taskStats = await input.statFile(candidatePath).catch((error: NodeJS.ErrnoException) => {
     if (error.code === "ENOENT") {
       // reason_code=KICKOFF_TASK_FILE_NOT_FOUND context=kickoff_task_input_validation
       throw input.createValidationError(`Task file does not exist: ${candidatePath}`);
@@ -27,7 +32,7 @@ export async function resolveKickoffTaskFromFileInput(input: {
     throw input.createValidationError(`Task path is not a file: ${candidatePath}`);
   }
 
-  const content = await readFile(candidatePath, "utf8");
+  const content = await input.readFile(candidatePath, "utf8");
   const normalizedContent = content.trimEnd();
   assertKickoffTaskContentIsValid({
     content: normalizedContent,

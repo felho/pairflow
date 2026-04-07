@@ -21,6 +21,14 @@ export type KickoffWriteFile = (
   options: { encoding: "utf8" }
 ) => Promise<unknown>;
 
+export interface KickoffStatResult {
+  isFile(): boolean;
+}
+
+export type KickoffStatFile = (
+  path: string
+) => Promise<KickoffStatResult>;
+
 export type KickoffEmitDelivery = (
   input: EmitTmuxDeliveryNotificationInput
 ) => Promise<EmitTmuxDeliveryNotificationResult>;
@@ -30,6 +38,7 @@ export interface KickoffDependencyOverrides {
   readStateSnapshot?: typeof readStateSnapshot;
   writeStateSnapshot?: typeof writeStateSnapshot;
   readFile?: KickoffReadFile;
+  statFile?: KickoffStatFile;
   writeFile?: KickoffWriteFile;
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;
   emitTmuxDeliveryNotification?: KickoffEmitDelivery;
@@ -40,6 +49,7 @@ export interface ResolvedKickoffDependencies {
   readState: typeof readStateSnapshot;
   writeState: typeof writeStateSnapshot;
   readFileFn: KickoffReadFile;
+  statFileFn: KickoffStatFile;
   writeFileFn: KickoffWriteFile;
   appendEnvelope: typeof appendProtocolEnvelope;
   emitDelivery: KickoffEmitDelivery;

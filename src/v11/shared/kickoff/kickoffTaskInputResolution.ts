@@ -1,4 +1,8 @@
 import { renderKickoffTaskArtifactFromInput } from "./kickoffTaskArtifactRendering.js";
+import type {
+  KickoffReadFile,
+  KickoffStatFile
+} from "./kickoffDependencyContract.js";
 import { resolveKickoffTaskInputMode, type KickoffTaskInputMode } from "./kickoffTaskInputMode.js";
 import { resolveKickoffTaskFromFileInput } from "./kickoffTaskFileInputResolution.js";
 import { resolveKickoffTaskFromInlineInput } from "./kickoffTaskInlineInputResolution.js";
@@ -21,11 +25,15 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 async function resolveKickoffTaskFromInputMode(input: {
   mode: KickoffTaskInputMode;
   cwd: string;
+  readFile: KickoffReadFile;
+  statFile: KickoffStatFile;
 }): Promise<ResolvedKickoffTaskInput> {
   if (input.mode.kind === "file") {
     return resolveKickoffTaskFromFileInput({
       taskFile: input.mode.taskFile,
       cwd: input.cwd,
+      readFile: input.readFile,
+      statFile: input.statFile,
       createValidationError: (message) =>
         new KickoffTaskInputValidationError(toErrorMessage(message))
     });
@@ -46,6 +54,8 @@ export async function resolveKickoffTaskInput(input: {
   task?: string;
   taskFile?: string;
   cwd: string;
+  readFile: KickoffReadFile;
+  statFile: KickoffStatFile;
 }): Promise<ResolvedKickoffTaskInput> {
   return resolveKickoffTaskFromInputMode({
     mode: resolveKickoffTaskInputMode({
@@ -53,6 +63,8 @@ export async function resolveKickoffTaskInput(input: {
       createValidationError: (message) =>
         new KickoffTaskInputValidationError(toErrorMessage(message))
     }),
-    cwd: input.cwd
+    cwd: input.cwd,
+    readFile: input.readFile,
+    statFile: input.statFile
   });
 }
