@@ -12,7 +12,7 @@ import {
 } from "../../../src/core/state/executionContext.js";
 import {
   writeWatchdogPaneActivity
-} from "../../../src/v11/shared/watchdog/watchdogPaneActivityStore.js";
+} from "../../../src/v11/infrastructure/artifact/watchdog/watchdogPaneActivityStore.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";

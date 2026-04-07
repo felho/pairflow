@@ -9,7 +9,7 @@ import {
   getWatchdogPaneActivityPath,
   readWatchdogPaneActivity,
   writeWatchdogPaneActivity
-} from "../../../../src/v11/shared/watchdog/watchdogPaneActivityStore.js";
+} from "../../../../src/v11/infrastructure/artifact/watchdog/watchdogPaneActivityStore.js";
 
 const tempDirs: string[] = [];
 

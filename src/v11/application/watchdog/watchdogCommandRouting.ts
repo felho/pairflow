@@ -4,9 +4,7 @@ import {
   WATCHDOG_PANE_QUIET_WINDOW_MS,
   type PaneActivitySampleResult
 } from "./watchdogPaneActivitySampler.js";
-import type {
-  WatchdogPaneActivityRecord
-} from "../../shared/watchdog/watchdogPaneActivityStore.js";
+import type { WatchdogPaneActivityRecord } from "../../shared/ports/watchdogPaneActivity.js";
 import {
   buildNotExpiredResult,
   escalateRunningWatchdog

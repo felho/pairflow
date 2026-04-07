@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `340e5326`.
+Last updated from `main` at `5d1b036c`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `0 fail / 29 warn`
+- Dependency report at this checkpoint: `0 fail / 26 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -104,6 +104,7 @@ contracts, not thin wrappers.
   - `validated (local)` reconcile dependency-resolution shell relocation
   - `validated (local)` restart orchestration shell relocation
   - `validated (local)` merge dependency and error classification relocation
+  - `validated (local)` watchdog store ownership inversion
 
 ## Wave Ledger
 
@@ -174,6 +175,7 @@ contracts, not thin wrappers.
 | W53 | `summaryVerifier` artifact write split | `validated` | orchestrator | The file-backed summary-verifier gate writer moved under `infrastructure/artifact/reviewer`, the shared gate module dropped direct fs ownership, and converged validation now uses the explicit core compat boundary for the default writer; dependency baseline dropped to `0 fail / 33 warn` |
 | W54 | `kickoff` task-file capability injection | `validated` | orchestrator | The remaining kickoff file-input read path now consumes explicit `readFileFn` + `statFileFn` capabilities through the existing kickoff dependency contract, removing direct fs ownership from `kickoffTaskFileInputResolution.ts` and dropping the dependency baseline to `0 fail / 32 warn` |
 | W55 | `merge` dependency + error classification relocation | `validated` | orchestrator | Merge dependency resolution moved into `application/merge`, adapter-aware error classification left `shared`, and the dependency baseline dropped to `0 fail / 29 warn` |
+| W56 | `watchdog` store ownership inversion | `validated` | worker + orchestrator validation | Pane-activity and trace stores moved under infrastructure ownership, shared status/watchdog retained only boundary-neutral types/path helpers, core compat bridges provide default read/write wiring, and the dependency baseline dropped to `0 fail / 26 warn` |
 
 ## Parallelization Rules
 
@@ -202,7 +204,7 @@ contracts, not thin wrappers.
 
 ## Warning Frontier Snapshot
 
-Current ownership-warning frontier after W55 merge dependency + error classification relocation:
+Current ownership-warning frontier after W56 watchdog store ownership inversion:
 
 - `metaReviewGate`: 14
 - `askHuman`: 0 in the visible report after W47
@@ -211,7 +213,7 @@ Current ownership-warning frontier after W55 merge dependency + error classifica
 - `merge`: 0
 - `metrics`: the shared event builder is now clean; only the core legacy bridge plus the infrastructure store remain
 - `reviewer`: 2
-- `watchdog`: 2
+- `watchdog`: 0
 - singleton residuals: `approval`, `gates`, `other`
 
 Current bounded next-wave decisions:
@@ -222,7 +224,7 @@ Current bounded next-wave decisions:
   - `summaryVerifierConsistencyGate` and `reviewerBrief` ownership warnings are now closed on `main`
   - the remaining reviewer frontier is `reviewVerification` and `testEvidence`
 - `watchdog`:
-  - the two shared file-backed stores look bounded, but only after the consumer injection/default-wiring seam is mapped cleanly
+  - the shared file-backed store warnings are now closed on `main`
 - `kickoff`:
   - the task-file input warning is now closed; any follow-up would be architecture hardening only, not dependency warning cleanup
 - `metaReview`:
@@ -236,6 +238,6 @@ Current bounded next-wave decisions:
 
 Current best next moves:
 
-1. take the next bounded real-owner batch from the current frontier (`watchdog` persistence inversion or `reviewVerification` artifact boundary split),
-2. run the next two disjoint warned-owner batches in parallel after prep: `watchdog` persistence inversion and `reviewVerification` artifact boundary split,
+1. take the next bounded real-owner batch from the current frontier (`reviewVerification` artifact boundary split),
+2. run the next two disjoint warned-owner batches in parallel after prep: `reviewVerification` artifact boundary split and the next metaReview or reviewer follow-up,
 3. keep checker-hardening and warning-cleanup as separate commits so baseline shifts stay auditable.

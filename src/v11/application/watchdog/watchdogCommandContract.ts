@@ -7,9 +7,10 @@ import type {
   recoverMetaReviewGateFromSnapshot
 } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
 import type {
-  readWatchdogPaneActivity,
-  writeWatchdogPaneActivity
-} from "../../shared/watchdog/watchdogPaneActivityStore.js";
+  ReadWatchdogPaneActivityPort,
+  WriteWatchdogPaneActivityPort
+} from "../../shared/ports/watchdogPaneActivity.js";
+import type { AppendWatchdogTracePort } from "../../shared/ports/watchdogTrace.js";
 import type {
   sampleWatchdogPaneActivity
 } from "./watchdogPaneActivitySampler.js";
@@ -28,8 +29,9 @@ export interface BubbleWatchdogDependencies {
   emitBubbleNotification?: EmitBubbleNotificationPort;
   readStateSnapshot?: ReadStateSnapshotPort;
   recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshot;
-  readWatchdogPaneActivity?: typeof readWatchdogPaneActivity;
-  writeWatchdogPaneActivity?: typeof writeWatchdogPaneActivity;
+  readWatchdogPaneActivity?: ReadWatchdogPaneActivityPort;
+  writeWatchdogPaneActivity?: WriteWatchdogPaneActivityPort;
+  appendWatchdogTrace?: AppendWatchdogTracePort;
   sampleWatchdogPaneActivity?: typeof sampleWatchdogPaneActivity;
   readRuntimeSessionsRegistry?: ReadRuntimeSessionsRegistryPort;
   runTmux?: TmuxRunner;

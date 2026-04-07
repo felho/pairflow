@@ -9,12 +9,12 @@ import {
 } from "../../../core/bubble/repoResolution.js";
 import { inspectStateSnapshot } from "../../../core/state/stateStore.js";
 import { readRuntimeSessionsRegistry } from "../../../core/runtime/sessionsRegistry.js";
+import { readWatchdogPaneActivity } from "../../../core/watchdog/watchdogPaneActivityStore.js";
 import { isMetaReviewExecutionContextActiveState } from "../../shared/metaReview/metaReviewExecutionContext.js";
 import { resolveActiveMetaReviewRuntimeDelivery } from "../../shared/metaReview/metaReviewSnapshot.js";
 import { getBubblePaths } from "../../shared/bubble/bubblePaths.js";
 import { computeWatchdogStatus } from "../../shared/watchdog/watchdogStatus.js";
 import { resolveBubbleAttention } from "../../shared/status/bubbleAttention.js";
-import { readWatchdogPaneActivity } from "../../shared/watchdog/watchdogPaneActivityStore.js";
 import type { BubbleLifecycleState } from "../../../types/bubble.js";
 import type {
   BubbleListEntry,

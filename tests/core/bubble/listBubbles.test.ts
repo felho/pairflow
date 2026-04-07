@@ -11,7 +11,7 @@ import { upsertRuntimeSession } from "../../../src/core/runtime/sessionsRegistry
 import { metaReviewExecutionContextToRunningContext } from "../../../src/core/state/executionContext.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
-import { writeWatchdogPaneActivity } from "../../../src/v11/shared/watchdog/watchdogPaneActivityStore.js";
+import { writeWatchdogPaneActivity } from "../../../src/core/watchdog/watchdogPaneActivityStore.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 

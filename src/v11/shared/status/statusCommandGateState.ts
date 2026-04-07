@@ -1,10 +1,11 @@
-import { readReviewVerificationArtifactStatus, type ReviewVerificationState } from "../../../v11/shared/reviewer/reviewVerification.js";
+import type { ReviewVerificationState } from "../../../v11/shared/reviewer/reviewVerification.js";
 import {
   collectFailingGatesFromArtifact,
   isDocContractGateScopeActive,
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath
 } from "../../../v11/shared/gates/docContractGates.js";
+import { readReviewVerificationArtifactStatus } from "../../../core/reviewer/reviewVerificationArtifacts.js";
 import type { BubbleFailingGate } from "../../../types/bubble.js";
 import type {
   BubbleStatusState,

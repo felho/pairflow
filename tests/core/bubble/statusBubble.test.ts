@@ -12,7 +12,7 @@ import { getBubbleStatus } from "../../../src/core/bubble/statusBubble.js";
 import { resolveDocContractGateArtifactPath } from "../../../src/v11/shared/gates/docContractGates.js";
 import { appendProtocolEnvelope } from "../../../src/core/protocol/transcriptStore.js";
 import { resolveWorktreePairflowEntrypoint } from "../../../src/core/runtime/pairflowCommand.js";
-import { writeWatchdogPaneActivity } from "../../../src/v11/shared/watchdog/watchdogPaneActivityStore.js";
+import { writeWatchdogPaneActivity } from "../../../src/core/watchdog/watchdogPaneActivityStore.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 

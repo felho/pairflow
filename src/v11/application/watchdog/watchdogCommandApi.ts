@@ -6,6 +6,9 @@ import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import { readStateSnapshot } from "../../../core/state/stateStore.js";
+import { readWatchdogPaneActivity } from "../../../core/watchdog/watchdogPaneActivityStore.js";
+import { writeWatchdogPaneActivity } from "../../../core/watchdog/watchdogPaneActivityStore.js";
+import { appendWatchdogTrace } from "../../../core/watchdog/watchdogTraceStore.js";
 import {
   recoverMetaReviewGateFromSnapshot
 } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
@@ -16,15 +19,11 @@ import {
   type PaneActivitySampleResult
 } from "./watchdogPaneActivitySampler.js";
 import {
-  readWatchdogPaneActivity,
-  writeWatchdogPaneActivity,
   type ReadWatchdogPaneActivityResult,
   type WatchdogPaneActivityRecord
-} from "../../shared/watchdog/watchdogPaneActivityStore.js";
-import {
-  appendWatchdogTrace,
-  type WatchdogTraceEntry
-} from "../../shared/watchdog/watchdogTraceStore.js";
+} from "../../shared/ports/watchdogPaneActivity.js";
+import type { AppendWatchdogTracePort } from "../../shared/ports/watchdogTrace.js";
+import type { WatchdogTraceEntry } from "../../shared/ports/watchdogTrace.js";
 import type {
   BubbleWatchdogDependencies,
   BubbleWatchdogInput,
@@ -64,6 +63,8 @@ export async function runBubbleWatchdog(
     dependencies.readWatchdogPaneActivity ?? readWatchdogPaneActivity;
   const writePaneActivity =
     dependencies.writeWatchdogPaneActivity ?? writeWatchdogPaneActivity;
+  const appendTrace: AppendWatchdogTracePort =
+    dependencies.appendWatchdogTrace ?? appendWatchdogTrace;
   const samplePaneActivity =
     dependencies.sampleWatchdogPaneActivity ?? sampleWatchdogPaneActivity;
   const readRuntimeSessionsRegistry =
@@ -90,7 +91,7 @@ export async function runBubbleWatchdog(
     emitDelivery: context.emitDelivery
   });
   if (pendingRework !== null) {
-    await appendWatchdogTrace({
+    await appendTrace({
       runtimeDir: resolved.bubblePaths.runtimeDir,
       bubbleId: resolved.bubbleId,
       entry: buildWatchdogTraceEntry({
@@ -124,7 +125,7 @@ export async function runBubbleWatchdog(
     expired: watchdog.expired,
     paneActivity
   });
-  await appendWatchdogTrace({
+  await appendTrace({
     runtimeDir: resolved.bubblePaths.runtimeDir,
     bubbleId: resolved.bubbleId,
     entry: buildWatchdogTraceEntry({

@@ -3,7 +3,7 @@ import { join, resolve, sep } from "node:path";
 
 import { getBubbleInbox } from "../../shared/inbox/inboxCommandApi.js";
 import { listBubbles } from "../../../core/bubble/listBubbles.js";
-import { getBubbleStatus } from "../../shared/status/statusCommandApi.js";
+import { getBubbleStatus } from "../../../core/bubble/statusBubble.js";
 import {
   readRuntimeSessionsRegistry,
   type RuntimeSessionRecord

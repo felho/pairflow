@@ -7,11 +7,14 @@ import {
   resolveStatusGateState,
   withAccuracyCriticalVerificationGate
 } from "./statusCommandInternals.js";
-import { readWatchdogPaneActivity } from "../watchdog/watchdogPaneActivityStore.js";
 import {
   buildBubbleStatusView,
   type BubbleStatusView
 } from "./statusCommandViewBuilder.js";
+import type {
+  ReadWatchdogPaneActivity,
+  ReadWatchdogPaneActivityResult
+} from "../watchdog/watchdogPaneActivityStore.js";
 
 export interface BubbleStatusInput {
   bubbleId: string;
@@ -22,6 +25,10 @@ export interface BubbleStatusInput {
 
 export type { BubbleStatusView } from "./statusCommandViewBuilder.js";
 
+export interface BubbleStatusDependencies {
+  readWatchdogPaneActivity: ReadWatchdogPaneActivity;
+}
+
 export class BubbleStatusError extends Error {
   public constructor(message: string) {
     super(message);
@@ -29,7 +36,10 @@ export class BubbleStatusError extends Error {
   }
 }
 
-export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleStatusView> {
+export async function getBubbleStatus(
+  input: BubbleStatusInput,
+  dependencies: BubbleStatusDependencies
+): Promise<BubbleStatusView> {
   const resolved = await resolveBubbleById({
     bubbleId: input.bubbleId,
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
@@ -80,7 +90,8 @@ export async function getBubbleStatus(input: BubbleStatusInput): Promise<BubbleS
   }
 
   const now = input.now ?? new Date();
-  const paneActivityRead = await readWatchdogPaneActivity({
+  const paneActivityRead: ReadWatchdogPaneActivityResult =
+    await dependencies.readWatchdogPaneActivity({
     runtimeDir: resolved.bubblePaths.runtimeDir,
     bubbleId: resolved.bubbleId
   });

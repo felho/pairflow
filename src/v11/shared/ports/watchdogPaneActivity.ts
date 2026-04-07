@@ -1,5 +1,3 @@
-import { join } from "node:path";
-
 export interface WatchdogPaneActivityRecord {
   bubble_id: string;
   sampled_at: string;
@@ -24,16 +22,17 @@ export type ReadWatchdogPaneActivityResult =
       error: string;
     };
 
-export type ReadWatchdogPaneActivity = (
+export type ReadWatchdogPaneActivityPort = (
   input: {
     runtimeDir: string;
     bubbleId: string;
   }
 ) => Promise<ReadWatchdogPaneActivityResult>;
 
-export function getWatchdogPaneActivityPath(
-  runtimeDir: string,
-  bubbleId: string
-): string {
-  return join(runtimeDir, "watchdog-health", `${bubbleId}.json`);
-}
+export type WriteWatchdogPaneActivityPort = (
+  input: {
+    runtimeDir: string;
+    bubbleId: string;
+    record: WatchdogPaneActivityRecord;
+  }
+) => Promise<string>;

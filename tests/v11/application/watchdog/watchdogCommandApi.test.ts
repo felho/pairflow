@@ -16,10 +16,10 @@ import {
   getWatchdogPaneActivityPath,
   readWatchdogPaneActivity,
   writeWatchdogPaneActivity
-} from "../../../../src/v11/shared/watchdog/watchdogPaneActivityStore.js";
+} from "../../../../src/v11/infrastructure/artifact/watchdog/watchdogPaneActivityStore.js";
 import {
   getWatchdogTracePath
-} from "../../../../src/v11/shared/watchdog/watchdogTraceStore.js";
+} from "../../../../src/v11/infrastructure/artifact/watchdog/watchdogTraceStore.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { initGitRepository } from "../../../helpers/git.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
