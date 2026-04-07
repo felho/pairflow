@@ -4,7 +4,7 @@ import { metaReviewExecutionContextToRunningContext } from "../../shared/state/e
 import {
   type LoadedStateSnapshot,
   type writeStateSnapshot
-} from "../../infrastructure/state/stateStore.js";
+} from "../../../core/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import { toMetaReviewGateError } from "./metaReviewGateErrorConversion.js";
 import {

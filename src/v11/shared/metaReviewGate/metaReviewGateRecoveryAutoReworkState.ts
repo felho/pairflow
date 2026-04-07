@@ -4,7 +4,7 @@ import { assertValidBubbleStateSnapshot } from "../../shared/state/stateSchema.j
 import {
   StateStoreConflictError,
   type LoadedStateSnapshot
-} from "../../infrastructure/state/stateStore.js";
+} from "../../../core/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import {

@@ -1,7 +1,7 @@
 import type { BubbleMetaReviewSnapshotState } from "../../../types/bubble.js";
 import { deliveryTargetRoleMetadataKey, type FindingsParityMetadata } from "../../../types/protocol.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
-import { StateStoreConflictError } from "../../infrastructure/state/stateStore.js";
+import { StateStoreConflictError } from "../../../core/state/stateStore.js";
 import {
   resolveFindingsParityMetadataForEnvelope,
   toConflictError,

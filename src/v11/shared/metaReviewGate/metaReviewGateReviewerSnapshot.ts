@@ -1,5 +1,5 @@
 import { isRecord } from "../validation/primitives.js";
-import { readTranscriptEnvelopes } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
+import { readTranscriptEnvelopes } from "../../../core/protocol/transcriptStore.js";
 import {
   type ProtocolEnvelope
 } from "../../../types/protocol.js";
