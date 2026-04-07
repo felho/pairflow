@@ -1,4 +1,3 @@
-import { applyStateTransition } from "../../domain/state/machine.js";
 import { isFinalState } from "../../domain/state/transitions.js";
 import {
   readStateSnapshot,
@@ -16,6 +15,7 @@ import type {
   StopBubbleInput,
   StopBubbleResult
 } from "./stopCommandContract.js";
+import { executeStopCancellationMutation } from "../../shared/stop/stopCancellationMutation.js";
 import {
   StopBubbleError,
   createStopBubbleError,
@@ -32,6 +32,7 @@ export async function stopBubbleCommandOrchestration(
   const terminateTmux =
     dependencies.terminateBubbleTmuxSession ?? terminateBubbleTmuxSession;
   const removeSession = dependencies.removeRuntimeSession ?? removeRuntimeSession;
+  const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
 
   const resolved = await resolveBubbleById({
     bubbleId: input.bubbleId,
@@ -56,18 +57,13 @@ export async function stopBubbleCommandOrchestration(
     bubbleId: resolved.bubbleId
   });
 
-  const cancelled = applyStateTransition(loaded.state, {
-    to: "CANCELLED",
-    activeAgent: null,
-    activeRole: null,
-    activeSince: null,
-    lastCommandAt: nowIso
-  });
-
   let written;
   try {
-    written = await writeStateSnapshot(resolved.bubblePaths.statePath, cancelled, {
-      expectedFingerprint: loaded.fingerprint
+    written = await executeStopCancellationMutation({
+      statePath: resolved.bubblePaths.statePath,
+      loadedState: loaded,
+      nowIso,
+      writeStateSnapshot: writeState
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);

@@ -13,8 +13,8 @@ Current baseline on `main`:
 
 Current validated progress on `main`:
 
-- `boundary`: `8 fail`
-- `mutation`: `5 warn`
+- `boundary`: `7 fail`
+- `mutation`: `4 warn`
 - `transition`: `pass`
 
 These three are partially coupled, so each batch must validate all three.
@@ -53,7 +53,7 @@ These three are partially coupled, so each batch must validate all three.
 | --- | --- | --- | --- |
 | B1 | `watchdogPendingReworkIntent` transition/boundary cleanup | validated | Pending rework state persist now goes through a dedicated shared watchdog mutation helper; baseline moved to `boundary=10 fail`, `mutation=5 warn`, `transition=pass` |
 | B2 | `watchdogCommandFlow` transcript/state write extraction | validated | Escalation transcript/state writes now go through a dedicated shared watchdog escalation mutation helper; baseline moved to `boundary=8 fail`, `mutation=5 warn`, `transition=pass` |
-| B3 | `stopCommandOrchestration` cancelled-state persistence extraction | planned | Single-file, lower blast radius |
+| B3 | `stopCommandOrchestration` cancelled-state persistence extraction | validated | Stop orchestration now delegates the CANCELLED state persist to a shared stop mutation helper; baseline moved to `boundary=7 fail`, `mutation=4 warn`, `transition=pass` |
 | B4 | `startCommandCleanup` + `startCommandFlows` write-path extraction | planned | Multi-write cluster; keep after watchdog/stop patterns are proven |
 | B5 | `commitCommandFinalization` transcript/state boundary extraction | planned | Likely needs its own mutation/finalization helper |
 
@@ -83,4 +83,8 @@ These three are partially coupled, so each batch must validate all three.
 - B2 result on `main`:
   - `boundary`: `10 fail` -> `8 fail`
   - `mutation`: `5 warn` -> `5 warn`
+  - `transition`: `pass` -> `pass`
+- B3 result on `main`:
+  - `boundary`: `8 fail` -> `7 fail`
+  - `mutation`: `5 warn` -> `4 warn`
   - `transition`: `pass` -> `pass`

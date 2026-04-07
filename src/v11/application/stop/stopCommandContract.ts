@@ -1,4 +1,5 @@
 import type { RemoveRuntimeSessionPort } from "../../shared/ports/runtimeSessions.js";
+import type { WriteStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
 import type { TerminateBubbleTmuxSessionPort } from "../../shared/ports/tmuxSessions.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 
@@ -20,4 +21,5 @@ export interface StopBubbleResult {
 export interface StopBubbleDependencies {
   terminateBubbleTmuxSession?: TerminateBubbleTmuxSessionPort;
   removeRuntimeSession?: RemoveRuntimeSessionPort;
+  writeStateSnapshot?: WriteStateSnapshotPort;
 }
