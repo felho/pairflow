@@ -428,4 +428,49 @@ describe("resolveScopedRepoPath", () => {
       process.chdir(originalCwd);
     }
   });
+
+  it("re-normalizes scoped repo aliases when the repo becomes realpath-resolvable later", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pairflow-ui-scope-late-realpath-"));
+    tempDirs.push(root);
+    const repoPath = join(root, "repo");
+    const registryPath = join(root, "repos.json");
+    const lateAliasPath = repoPath.replace(/^\/private/u, "");
+    await writeFile(
+      registryPath,
+      `${JSON.stringify(
+        {
+          version: 1,
+          repos: [
+            {
+              repoPath: lateAliasPath,
+              addedAt: "2026-04-07T10:00:00.000Z"
+            }
+          ]
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
+
+    const scope = await resolveUiRepoScope({
+      registryPath
+    });
+
+    expect(scope.repos).toEqual([lateAliasPath]);
+
+    await mkdir(repoPath, {
+      recursive: true
+    });
+    await initGitRepository(repoPath);
+
+    const canonicalRepoPath = await normalizeRepoPath(repoPath);
+    const resolved = await resolveScopedRepoPath({
+      scope,
+      repoParam: lateAliasPath
+    });
+
+    expect(resolved).toBe(canonicalRepoPath);
+    expect(scope.repos).toEqual([canonicalRepoPath]);
+  });
 });
