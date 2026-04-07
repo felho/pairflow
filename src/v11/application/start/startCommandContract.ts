@@ -10,7 +10,7 @@ import type {
   ClaimRuntimeSessionPort,
   RemoveRuntimeSessionPort
 } from "../../shared/ports/runtimeSessions.js";
-import type { buildResumeTranscriptSummary } from "../../shared/protocol/resumeSummary.js";
+import type { buildResumeTranscriptSummary } from "./startCommandResumeSummary.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 
 export interface StartBubbleInput {

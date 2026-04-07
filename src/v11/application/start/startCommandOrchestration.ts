@@ -1,4 +1,4 @@
-import { buildResumeTranscriptSummary } from "../../../core/protocol/resumeSummary.js";
+import { buildResumeTranscriptSummary } from "./startCommandResumeSummary.js";
 import {
   bootstrapWorktreeWorkspace,
   cleanupWorktreeWorkspace

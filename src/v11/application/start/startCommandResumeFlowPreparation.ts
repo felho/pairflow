@@ -1,4 +1,4 @@
-import { buildResumeTranscriptSummaryFallback } from "../../../core/protocol/resumeSummary.js";
+import { buildResumeTranscriptSummaryFallback } from "./startCommandResumeSummary.js";
 import {
   formatReviewerTestExecutionDirective,
   resolveReviewerTestEvidenceArtifactPath,
