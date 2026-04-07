@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `3 fail / 39 warn`
+- Dependency report at this checkpoint: `1 fail / 39 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -94,6 +94,7 @@ contracts, not thin wrappers.
   - `validated (local)` reply dependency cleanup
   - `validated (local)` resume summary + reviewer evidence compat cleanup
   - `validated (local)` forbidden dependency frontier cleanup
+  - `validated (local)` tmux cycle cleanup
   - `validated (local)` metaReviewGate state/transcript compat cleanup
   - `validated (local)` stop shell relocation
   - `validated (local)` reconcile dependency-resolution shell relocation
@@ -155,6 +156,7 @@ contracts, not thin wrappers.
 | W40 | `reply` dependency cleanup | `validated` | orchestrator | Reply default dependency wiring now lives in `application/reply`, shared mutation code uses a narrow structural dependency shape, and reply error normalization now depends on the core bubble lookup compat bridge; dependency baseline dropped to `8 fail / 39 warn` |
 | W41 | `resumeSummary` + `reviewer/testEvidence` compat cleanup | `validated` | orchestrator | Resume transcript reads and reviewer evidence git inspection now route through explicit core compat bridges; dependency baseline dropped to `6 fail / 39 warn` |
 | W42 | forbidden dependency frontier cleanup | `validated` | orchestrator | Resume summary ownership moved into `application/start`, UI router now goes through core bubble facades for start/resume, meta-review submit persistence routes through core state compat, and bubble watchdog CLI now targets the v11 application surface; the dependency report no longer has forbidden layer-import findings and only import cycles + ownership warnings remain (`3 fail / 39 warn`) |
+| W43 | `tmux` import-cycle cleanup | `validated` | orchestrator | `tmuxInput.ts` now consumes `TmuxRunner` from the shared port contract instead of `tmuxManager.ts`; the two-file tmux infrastructure cycle disappeared and the dependency checker is down to a single remaining cycle (`1 fail / 39 warn`) |
 
 ## Parallelization Rules
 
@@ -185,6 +187,6 @@ contracts, not thin wrappers.
 
 Current best next moves:
 
-1. decide whether the next dependency phase targets import cycles or ownership-signal warnings,
-2. keep ownership-signal-only cleanup separate from the now-closed forbidden dependency frontier,
-3. treat the dependency checker’s remaining `3 fail` as cycle work, not layer-boundary work.
+1. clear the final `converged` import cycle,
+2. then decide whether the next dependency phase targets remaining ownership-signal warnings,
+3. keep ownership-signal-only cleanup separate from the now-closed forbidden dependency frontier.
