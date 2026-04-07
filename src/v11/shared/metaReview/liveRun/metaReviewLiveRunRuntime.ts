@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { readFile, writeFile } from "node:fs/promises";
 
 import { resolveBubbleById } from "../../../../core/bubble/bubbleLookup.js";
 import {
@@ -49,6 +48,30 @@ function unavailableLiveRunner(): Promise<MetaReviewLiveRunnerOutput> {
   return Promise.reject(new Error("Meta-review runner adapter is unavailable."));
 }
 
+function resolveMetaReviewArtifactReadPort(
+  dependencies: MetaReviewDependencies
+): NonNullable<MetaReviewDependencies["readFile"]> {
+  if (dependencies.readFile !== undefined) {
+    return dependencies.readFile;
+  }
+  throw new MetaReviewError(
+    "META_REVIEW_UNKNOWN_ERROR",
+    "meta-review live-run artifact read capability is unavailable."
+  );
+}
+
+function resolveMetaReviewArtifactWritePort(
+  dependencies: MetaReviewDependencies
+): NonNullable<MetaReviewDependencies["writeFile"]> {
+  if (dependencies.writeFile !== undefined) {
+    return dependencies.writeFile;
+  }
+  throw new MetaReviewError(
+    "META_REVIEW_UNKNOWN_ERROR",
+    "meta-review live-run artifact write capability is unavailable."
+  );
+}
+
 export async function runMetaReview(
   input: MetaReviewRunInput,
   dependencies: MetaReviewDependencies = {}
@@ -58,8 +81,8 @@ export async function runMetaReview(
   const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
   const appendEnvelope = dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
   const runLiveReview = dependencies.runLiveReview ?? unavailableLiveRunner;
-  const readFileFn = dependencies.readFile ?? readFile;
-  const writeFileFn = dependencies.writeFile ?? writeFile;
+  const readFileFn = resolveMetaReviewArtifactReadPort(dependencies);
+  const writeFileFn = resolveMetaReviewArtifactWritePort(dependencies);
   const now = dependencies.now ?? new Date();
   const makeUuid = dependencies.randomUUID ?? randomUUID;
 
@@ -196,7 +219,10 @@ export async function runMetaReview(
     now,
     appendEnvelope,
     writeFileFn,
-    writeStateFn: writeState
+    writeStateFn: writeState,
+    ...(dependencies.removeFile !== undefined
+      ? { removeFileFn: dependencies.removeFile }
+      : {})
   });
 
   return buildMetaReviewRunResult({

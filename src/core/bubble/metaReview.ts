@@ -1,3 +1,5 @@
+import { readFile, rm, writeFile } from "node:fs/promises";
+
 import {
   toMetaReviewErrorV11
 } from "../../v11/application/metaReview/emitMetaReviewV11.js";
@@ -73,6 +75,13 @@ export async function runMetaReview(
     });
 
   return runMetaReviewShared(input, {
+    readFile: dependencies.readFile ?? readFile,
+    writeFile: dependencies.writeFile ?? writeFile,
+    removeFile:
+      dependencies.removeFile ??
+      (async (artifactPath: string) => {
+        await rm(artifactPath, { force: true });
+      }),
     ...dependencies,
     runLiveReview
   });

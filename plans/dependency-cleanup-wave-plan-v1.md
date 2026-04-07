@@ -112,6 +112,7 @@ contracts, not thin wrappers.
   - `44e82564` stale metaReview live-run import drop
   - `35745032` explicit metaReviewGate recovered artifact writer
   - `validated (local)` metaReview command-runtime capability cleanup
+  - `validated (local)` metaReview live-run filesystem capability cleanup
 
 ## Wave Ledger
 
@@ -190,6 +191,7 @@ contracts, not thin wrappers.
 | W61 | `metaReview` artifact capability decoupling | `completed` | orchestrator | Shared metaReview command/live-run read-write capability types now route through a canonical shared artifact IO contract, removing direct fs type-coupling from the command and live-run surfaces and lowering the baseline to `0 fail / 16 warn` |
 | W62 | `metaReviewGate` explicit artifact writer | `completed` | orchestrator | Recovered artifact writes no longer fall back to implicit `fs.writeFile`; the helper requires an explicit writer capability and the dependency baseline is now `0 fail / 12 warn` |
 | W63 | `metaReview` command-runtime capability cleanup | `validated` | orchestrator | Shared metaReview command read/submit runtime no longer owns default fs/tmux wiring; local shared delivery capability types plus application/core edge defaults removed the command-runtime ownership warnings and lowered the baseline to `0 fail / 8 warn` |
+| W64 | `metaReview` live-run filesystem capability cleanup | `validated` | orchestrator | Shared live-run runtime/rollback no longer owns default fs read/write/delete wiring; the `core` facade now supplies explicit artifact capabilities, removing the last `metaReview` ownership warnings and lowering the baseline to `0 fail / 6 warn` |
 
 ## Parallelization Rules
 
@@ -218,11 +220,11 @@ contracts, not thin wrappers.
 
 ## Warning Frontier Snapshot
 
-Current ownership-warning frontier after W63 metaReview command-runtime capability cleanup:
+Current ownership-warning frontier after W64 metaReview live-run filesystem capability cleanup:
 
 - `metaReviewGate`: 5
 - `askHuman`: 0 in the visible report after W47
-- `metaReview`: 2
+- `metaReview`: 0
 - `kickoff`: 0
 - `merge`: 0
 - `metrics`: the shared event builder is now clean; only the core legacy bridge plus the infrastructure store remain
@@ -241,7 +243,7 @@ Current bounded next-wave decisions:
 - `kickoff`:
   - the task-file input warning is now closed; any follow-up would be architecture hardening only, not dependency warning cleanup
 - `metaReview`:
-  - next good batches are live-run filesystem boundary tightening and approval-rollback artifact delete inversion
+  - no remaining dependency-warning backlog; any follow-up here would now be architecture hardening only
 - `metaReviewGate`:
   - next good batches are tmux/runtime dependency tightening around apply/notify/pane-binding or the remaining recovery helper filesystem ownership
 - `askHuman`:
@@ -252,7 +254,8 @@ Current bounded next-wave decisions:
 - Run parallel explorer classification on the remaining `metaReviewGate` and `metaReview` warning clusters.
 - Prefer the next bounded batch between:
   - `metaReviewGate` tmux/runtime owner cleanup (`ApplyContext` / `Notify` / `PaneBinding` / `Types`)
-  - `metaReview` live-run filesystem cleanup (`LiveRunRuntime` / `ApprovalRollback`)
+  - `metaReviewGate` recovery helper filesystem cleanup (`RecoveryContextHelpers`)
+  - `reply` state/transcript ownership split (`replyMutationExecution`)
 
 Current best next moves:
 

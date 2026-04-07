@@ -54,5 +54,6 @@ export interface MetaReviewDependencies extends MetaReviewCommandDependenciesV11
   runLiveReview?: (
     input: MetaReviewLiveRunnerInput
   ) => Promise<MetaReviewLiveRunnerOutput>;
+  removeFile?: (artifactPath: string) => Promise<void>;
   allowMetaReviewRunningState?: boolean;
 }

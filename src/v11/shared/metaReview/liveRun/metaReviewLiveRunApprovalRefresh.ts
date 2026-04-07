@@ -57,6 +57,7 @@ export async function refreshMetaReviewApprovalRequest(input: {
   now: Date;
   appendEnvelope: NonNullable<MetaReviewDependencies["appendProtocolEnvelope"]>;
   writeFileFn: NonNullable<MetaReviewDependencies["writeFile"]>;
+  removeFileFn?: NonNullable<MetaReviewDependencies["removeFile"]>;
   writeStateFn: NonNullable<MetaReviewDependencies["writeStateSnapshot"]>;
 }): Promise<void> {
   if (!shouldRefreshApprovalRequest(input.state)) {
@@ -109,7 +110,10 @@ export async function refreshMetaReviewApprovalRequest(input: {
       written: input.written,
       artifactBackup: input.artifactBackup,
       writeStateFn: input.writeStateFn,
-      writeFileFn: input.writeFileFn
+      writeFileFn: input.writeFileFn,
+      ...(input.removeFileFn !== undefined
+        ? { removeFileFn: input.removeFileFn }
+        : {})
     });
     throw new MetaReviewError(
       "META_REVIEW_GATE_RUN_FAILED",

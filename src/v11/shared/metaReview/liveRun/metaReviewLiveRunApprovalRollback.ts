@@ -1,9 +1,8 @@
-import { rm } from "node:fs/promises";
-
 import {
   StateStoreConflictError,
   type LoadedStateSnapshot
 } from "../../../../core/state/stateStore.js";
+import { MetaReviewError } from "../metaReviewError.js";
 import type { MetaReviewDependencies } from "./metaReviewLiveRunContract.js";
 
 type GateReasonCode =
@@ -37,13 +36,14 @@ export interface ApprovalRefreshRollbackContext {
 
 export async function restoreRollingArtifactBackup(
   artifactBackup: RollingArtifactBackupEntry[],
-  writeFileFn: NonNullable<MetaReviewDependencies["writeFile"]>
+  writeFileFn: NonNullable<MetaReviewDependencies["writeFile"]>,
+  removeFileFn: NonNullable<MetaReviewDependencies["removeFile"]>
 ): Promise<void> {
   await Promise.all(
     artifactBackup.map((artifact) =>
       artifact.existed
         ? writeFileFn(artifact.artifactPath, artifact.contents ?? "", "utf8")
-        : rm(artifact.artifactPath, { force: true })
+        : removeFileFn(artifact.artifactPath)
     )
   );
 }
@@ -55,6 +55,7 @@ export async function resolveApprovalRefreshRollbackContext(input: {
   artifactBackup: RollingArtifactBackupEntry[];
   writeStateFn: NonNullable<MetaReviewDependencies["writeStateSnapshot"]>;
   writeFileFn: NonNullable<MetaReviewDependencies["writeFile"]>;
+  removeFileFn?: NonNullable<MetaReviewDependencies["removeFile"]>;
 }): Promise<ApprovalRefreshRollbackContext> {
   let rollbackReasonCode: RollbackReasonCode =
     "META_REVIEW_GATE_REFRESH_APPROVAL_ROLLBACK_NOT_ATTEMPTED";
@@ -87,7 +88,17 @@ export async function resolveApprovalRefreshRollbackContext(input: {
 
   if (rollbackReasonCode === "META_REVIEW_GATE_REFRESH_APPROVAL_ROLLBACK_APPLIED") {
     try {
-      await restoreRollingArtifactBackup(input.artifactBackup, input.writeFileFn);
+      if (input.removeFileFn === undefined) {
+        throw new MetaReviewError(
+          "META_REVIEW_UNKNOWN_ERROR",
+          "meta-review artifact delete capability is unavailable."
+        );
+      }
+      await restoreRollingArtifactBackup(
+        input.artifactBackup,
+        input.writeFileFn,
+        input.removeFileFn
+      );
       artifactRestoreReasonCode =
         "META_REVIEW_GATE_REFRESH_APPROVAL_ARTIFACT_RESTORE_APPLIED";
       artifactRestoreContext = "artifact_restore_outcome=applied";
