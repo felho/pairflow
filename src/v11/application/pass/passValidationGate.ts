@@ -1,4 +1,4 @@
-import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js"
+import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
 import {
   buildPassValidationEvidenceArtifact,
   createPassValidationReviewerDirective,
@@ -8,12 +8,12 @@ import {
   writePassValidationEvidenceArtifact,
   writePassValidationReviewerCompatibilityArtifact,
   type PassValidationCommandResult
-} from "../../infrastructure/artifact/validation/passValidationEvidence.js"
+} from "../../../core/runtime/passValidationEvidence.js";
 import {
   runPassValidationCommand,
   PassValidationRunnerExecutionError
-} from "../../infrastructure/executor/validation/passValidationCommandRunner.js"
-import type { BubbleConfig } from "../../../types/bubble.js"
+} from "../../../core/runtime/passValidationRunner.js";
+import type { BubbleConfig } from "../../../types/bubble.js";
 
 export interface ResolvePassValidationForPassInput {
   senderRole: "implementer" | "reviewer"

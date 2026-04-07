@@ -2,11 +2,8 @@ import {
   type evaluateRepeatCleanAutoconvergeTrigger,
   type RepeatCleanAutoconvergeTriggerResult
 } from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
-import {
-  type readTranscriptEnvelopes,
-  type ReadTranscriptOptions
-} from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type { ReviewVerificationInputResolution } from "../../../v11/shared/reviewer/reviewVerification.js";
+import type { ReadTranscriptEnvelopesPort } from "../../../v11/shared/ports/transcript.js";
 import type { AgentName, AgentRole, BubbleConfig } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent, ProtocolEnvelope } from "../../../types/protocol.js";
@@ -103,11 +100,8 @@ export interface PreparePassRoutingDependencies {
     worktreePath: string;
     createError: PairflowCreateCommandError;
   }) => Promise<ReviewVerificationInputResolution | undefined>;
-  readTranscriptEnvelopes?: (
-    transcriptPath: string,
-    options?: ReadTranscriptOptions
-  ) => Promise<ProtocolEnvelope[]>;
+  readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
   evaluateRepeatCleanAutoconvergeTrigger?: typeof evaluateRepeatCleanAutoconvergeTrigger;
 }
 
-export type PassRoutingTranscriptReader = typeof readTranscriptEnvelopes;
+export type PassRoutingTranscriptReader = ReadTranscriptEnvelopesPort;

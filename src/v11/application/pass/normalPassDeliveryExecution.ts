@@ -2,10 +2,10 @@ import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
 import type {
-  EmitTmuxDeliveryNotificationResult,
-  emitTmuxDeliveryNotification
-} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
-import type { refreshReviewerContext } from "../../infrastructure/channel/tmux/reviewerContext.js";
+  EmitTmuxDeliveryNotificationPort,
+  EmitTmuxDeliveryNotificationResult
+} from "../../../v11/shared/ports/tmuxDelivery.js";
+import type { RefreshReviewerContextPort } from "../../../v11/shared/ports/reviewerContext.js";
 
 export interface ExecuteNormalPassDeliveryInput {
   senderRole: "implementer" | "reviewer";
@@ -47,15 +47,15 @@ export interface ExecuteNormalPassDeliveryDependencies {
       reviewerTestDirective?: ReviewerTestExecutionDirective;
     },
     dependencies?: {
-      emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
-      refreshReviewerContext?: typeof refreshReviewerContext;
+      emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
+      refreshReviewerContext?: RefreshReviewerContextPort;
     }
   ) => Promise<{
     result: EmitTmuxDeliveryNotificationResult | undefined;
     retried: boolean;
   }>;
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
-  refreshReviewerContext?: typeof refreshReviewerContext;
+  emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
+  refreshReviewerContext?: RefreshReviewerContextPort;
 }
 
 export interface ExecuteNormalPassDeliveryResult {

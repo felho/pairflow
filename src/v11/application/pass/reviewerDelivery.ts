@@ -1,11 +1,17 @@
 import {
-  emitTmuxDeliveryNotification,
+  emitTmuxDeliveryNotification as defaultEmitTmuxDeliveryNotification,
   type EmitTmuxDeliveryNotificationResult
-} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
-import { refreshReviewerContext } from "../../infrastructure/channel/tmux/reviewerContext.js";
+} from "../../../core/runtime/tmuxDelivery.js";
+import {
+  refreshReviewerContext as defaultRefreshReviewerContext
+} from "../../../core/runtime/reviewerContext.js";
 import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type {
+  EmitTmuxDeliveryNotificationPort
+} from "../../../v11/shared/ports/tmuxDelivery.js";
+import type { RefreshReviewerContextPort } from "../../../v11/shared/ports/reviewerContext.js";
 import {
   buildPassDeliveryInput,
   loadReviewerStartupPrompt,
@@ -15,8 +21,8 @@ import {
 import { executeImplementerHandoffDelivery } from "../../shared/delivery/implementerHandoffDelivery.js";
 
 export interface PassDeliveryDependencies {
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
-  refreshReviewerContext?: typeof refreshReviewerContext;
+  emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
+  refreshReviewerContext?: RefreshReviewerContextPort;
 }
 
 export interface ExecutePassDeliveryInput {
@@ -41,7 +47,8 @@ export async function executePassDelivery(
   dependencies: PassDeliveryDependencies = {}
 ): Promise<ExecutePassDeliveryResult> {
   const emitDelivery =
-    dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
+    dependencies.emitTmuxDeliveryNotification
+    ?? defaultEmitTmuxDeliveryNotification;
   if (input.recipientRole === "implementer") {
     const deliveryInput = buildPassDeliveryInput({
       executeInput: input,
@@ -65,7 +72,7 @@ export async function executePassDelivery(
   });
 
   const refreshReviewer =
-    dependencies.refreshReviewerContext ?? refreshReviewerContext;
+    dependencies.refreshReviewerContext ?? defaultRefreshReviewerContext;
   const deliveryInitialDelayMs = await resolveDeliveryInitialDelayMs({
     executeInput: input,
     reviewerStartupPrompt,

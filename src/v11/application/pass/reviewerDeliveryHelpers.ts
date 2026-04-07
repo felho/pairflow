@@ -2,7 +2,7 @@ import {
   resolveDeliveryMessageRef,
   type EmitTmuxDeliveryNotificationInput,
   type EmitTmuxDeliveryNotificationResult
-} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
+} from "../../../core/runtime/tmuxDelivery.js";
 import {
   formatReviewerBriefPrompt,
   formatReviewerFocusBridgeBlock,
@@ -10,7 +10,7 @@ import {
   readReviewerFocusArtifact,
   type ReviewerFocusExtractionResult
 } from "../../../v11/shared/reviewer/reviewerBrief.js";
-import { type refreshReviewerContext } from "../../infrastructure/channel/tmux/reviewerContext.js";
+import type { RefreshReviewerContextPort } from "../../../v11/shared/ports/reviewerContext.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
@@ -66,7 +66,7 @@ export async function resolveDeliveryInitialDelayMs(input: {
     sessionsPath: string;
   };
   reviewerStartupPrompt: string | undefined;
-  refreshReviewer: typeof refreshReviewerContext;
+  refreshReviewer: RefreshReviewerContextPort;
 }): Promise<number | undefined> {
   if (!shouldRefreshReviewerContext(input.executeInput)) {
     return undefined;

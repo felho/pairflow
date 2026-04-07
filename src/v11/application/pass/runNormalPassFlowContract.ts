@@ -2,10 +2,10 @@ import type {
   RepeatCleanAutoconvergeReasonCode,
   RepeatCleanAutoconvergeReasonDetail
 } from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
-import type { EmitTmuxDeliveryNotificationResult } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
 import type { ReviewVerificationInputResolution } from "../../../v11/shared/reviewer/reviewVerification.js";
-import type { LoadedStateSnapshot } from "../../infrastructure/state/stateStore.js";
+import type { EmitTmuxDeliveryNotificationResult } from "../../../v11/shared/ports/tmuxDelivery.js";
+import type { LoadedStateSnapshot } from "../../../v11/shared/ports/stateSnapshots.js";
 import type { AgentName, BubbleConfig, BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent, ProtocolEnvelope } from "../../../types/protocol.js";
