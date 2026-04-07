@@ -10,8 +10,10 @@ import {
   type FindingsParityStatus
 } from "../../../types/protocol.js";
 import {
-  type LatestSameRoundReviewerSnapshot,
   readLatestSameRoundReviewerSnapshotFromTranscript,
+  type LatestSameRoundReviewerSnapshot
+} from "../metaReviewGate/metaReviewGateReviewerSnapshot.js";
+import {
   resolveFindingsParityMetadataFromReportJson
 } from "../metaReviewGate/metaReviewGateFindingsMetadata.js";
 import {

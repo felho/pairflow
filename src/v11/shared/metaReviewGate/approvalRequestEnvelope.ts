@@ -11,7 +11,7 @@ import {
 import {
   readLatestSameRoundReviewerSnapshotFromTranscript,
   type LatestSameRoundReviewerSnapshot
-} from "./metaReviewGateFindingsMetadata.js";
+} from "./metaReviewGateReviewerSnapshot.js";
 import {
   assertAdvisorySplitMetadataWhenRequired,
   assertApprovePathConsistentWithReviewerSnapshot,

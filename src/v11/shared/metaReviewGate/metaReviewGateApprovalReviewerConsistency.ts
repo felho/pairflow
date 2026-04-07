@@ -7,7 +7,7 @@ import {
   evaluateNoFindingsSummaryFindingsAssertion,
   hasGlobalNoFindingsSummaryAssertion
 } from "../../../v11/domain/convergence/policy.js";
-import type { LatestSameRoundReviewerSnapshot } from "./metaReviewGateFindingsMetadata.js";
+import type { LatestSameRoundReviewerSnapshot } from "./metaReviewGateReviewerSnapshot.js";
 import {
   assertAdvisorySplitMetadataWhenRequired,
   hasConsistentApproveAdvisoryOnlySplit,

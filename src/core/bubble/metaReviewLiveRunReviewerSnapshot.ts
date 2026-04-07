@@ -10,8 +10,10 @@ import {
   hasApproveFindingsSplitMetadata
 } from "../../types/protocol.js";
 import {
-  type LatestSameRoundReviewerSnapshot,
   readLatestSameRoundReviewerSnapshotFromTranscript,
+  type LatestSameRoundReviewerSnapshot
+} from "../../v11/shared/metaReviewGate/metaReviewGateReviewerSnapshot.js";
+import {
   resolveFindingsParityMetadataFromReportJson
 } from "../../v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.js";
 

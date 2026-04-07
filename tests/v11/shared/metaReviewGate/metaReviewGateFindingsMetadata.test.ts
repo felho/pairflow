@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  resolveLatestSameRoundReviewerSnapshot,
   resolveFindingsArtifactOpenTotalFromArtifact,
-  resolveSameRoundReviewerSnapshotFromEnvelope,
   resolveFindingsParityMetadataFromReportJson
 } from "../../../../src/v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.js";
+import {
+  resolveLatestSameRoundReviewerSnapshot,
+  resolveSameRoundReviewerSnapshotFromEnvelope
+} from "../../../../src/v11/shared/metaReviewGate/metaReviewGateReviewerSnapshot.js";
 
 describe("resolveFindingsArtifactOpenTotalFromArtifact", () => {
   it("derives open_total from findings when explicit totals are absent", () => {
