@@ -7,4 +7,4 @@ export {
   BubbleMergeError as BubbleMergeErrorV11,
   mergeBubbleCommandOrchestration as mergeBubbleV11,
   throwAsBubbleMergeError as asBubbleMergeErrorV11
-} from "../../shared/merge/mergeCommandOrchestration.js";
+} from "./mergeCommandOrchestration.js";

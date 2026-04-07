@@ -1,18 +1,18 @@
-import { readFile, writeFile } from "node:fs/promises";
+import type { readFile, writeFile } from "node:fs/promises";
 
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type {
   MetaReviewSubmissionPayload,
   ProtocolEnvelope
 } from "../../../types/protocol.js";
-import type { appendProtocolEnvelope } from "../../infrastructure/artifact/transcript/transcriptStore.js";
-import type { emitTmuxDeliveryNotification } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
-import type { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import type { readRuntimeSessionsRegistry } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+import type { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
+import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
+import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import type { readRuntimeSessionsRegistry } from "../../../core/runtime/sessionsRegistry.js";
 import type {
   readStateSnapshot,
   writeStateSnapshot
-} from "../../infrastructure/state/stateStore.js";
+} from "../../../core/state/stateStore.js";
 import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateTypes.js";
 import type { recoverMetaReviewGateFromSnapshot } from "../metaReviewGate/metaReviewGateRecovery.js";
 import type { MetaReviewResult } from "./metaReviewTypes.js";

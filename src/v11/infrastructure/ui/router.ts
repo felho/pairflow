@@ -16,7 +16,7 @@ import {
 import { emitHumanReply } from "../../../core/human/reply.js";
 import { resumeBubbleCommandOrchestration as resumeBubble } from "../../shared/resume/resumeCommandOrchestration.js";
 import { commitBubble } from "../../../core/bubble/commitBubble.js";
-import { mergeBubbleCommandOrchestration as mergeBubble } from "../../shared/merge/mergeCommandOrchestration.js";
+import { mergeBubble } from "../../../core/bubble/mergeBubble.js";
 import { openBubble } from "../../../core/bubble/openBubble.js";
 import {
   attachBubble,
