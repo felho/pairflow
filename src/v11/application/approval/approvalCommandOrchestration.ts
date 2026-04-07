@@ -1,29 +1,31 @@
 import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
 import type {
+  ApprovalCommandDependencies
+} from "../../shared/approval/approvalCommandDependencyResolution.js";
+import {
+  resolveApprovalCommandDependencies
+} from "../../shared/approval/approvalCommandDependencyResolution.js";
+import {
+  createApprovalCommandError,
+  isApprovalCommandError
+} from "../../shared/approval/approvalCommandError.js";
+import { normalizeApprovalCommandError } from "../../shared/approval/approvalCommandErrorNormalization.js";
+import {
+  normalizeApprovalDecisionInput,
+  normalizeRequestReworkInput
+} from "../../shared/approval/approvalCommandInputNormalization.js";
+import {
+  runApprovalDecisionFlow,
+  runRequestReworkFlow
+} from "./runApprovalFlow.js";
+import type {
   EmitApprovalDecisionDependencies,
   EmitApprovalDecisionInput,
   EmitApprovalDecisionResult,
   EmitApproveInput,
   EmitRequestReworkInput,
   EmitRequestReworkResult
-} from "../../application/approval/approvalCommandContract.js";
-import {
-  runApprovalDecisionFlow,
-  runRequestReworkFlow
-} from "../../application/approval/runApprovalFlow.js";
-import {
-  type ApprovalCommandDependencies,
-  resolveApprovalCommandDependencies
-} from "./approvalCommandDependencyResolution.js";
-import {
-  createApprovalCommandError,
-  isApprovalCommandError
-} from "./approvalCommandError.js";
-import { normalizeApprovalCommandError } from "./approvalCommandErrorNormalization.js";
-import {
-  normalizeApprovalDecisionInput,
-  normalizeRequestReworkInput
-} from "./approvalCommandInputNormalization.js";
+} from "./approvalCommandContract.js";
 
 type ApprovalRuntimeDependencies = EmitApprovalDecisionDependencies
   & Omit<ApprovalCommandDependencies, "emitTmuxDeliveryNotification">;

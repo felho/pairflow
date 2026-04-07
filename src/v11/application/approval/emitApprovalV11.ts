@@ -3,7 +3,7 @@ export {
   emitApproveCommandOrchestration as emitApproveV11,
   emitRequestReworkCommandOrchestration as emitRequestReworkV11,
   throwAsApprovalCommandError as asApprovalCommandErrorV11
-} from "../../shared/approval/approvalCommandOrchestration.js";
+} from "./approvalCommandOrchestration.js";
 export {
   ApprovalCommandError as ApprovalCommandErrorV11
 } from "../../shared/approval/approvalCommandError.js";

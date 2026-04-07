@@ -12,7 +12,7 @@ import { startBubble } from "../../shared/start/startCommandApi.js";
 import {
   emitApproveCommandOrchestration as emitApprove,
   emitRequestReworkCommandOrchestration as emitRequestRework
-} from "../../shared/approval/approvalCommandOrchestration.js";
+} from "../../application/approval/approvalCommandOrchestration.js";
 import { emitHumanReply } from "../../shared/reply/replyCommandApi.js";
 import { resumeBubbleCommandOrchestration as resumeBubble } from "../../shared/resume/resumeCommandOrchestration.js";
 import { commitBubble } from "../../shared/commit/commitCommandApi.js";
