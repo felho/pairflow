@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `026ff66f`.
+Last updated from `main` at `cf45b9b5`.
 
 ## Goal
 
@@ -21,13 +21,14 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `456 fail / 83 warn`
+- Dependency report at this checkpoint: `454 fail / 83 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
   - `5cd500f8` restart + reconcile port contracts
   - `026ff66f` converged port contracts
-  - create capability port batch: `456 fail / 83 warn` after local validation
+  - `cf45b9b5` create capability port batch
+  - delete preflight contract batch: `454 fail / 83 warn` after local validation
 
 ## Wave Ledger
 
@@ -37,7 +38,7 @@ contracts, not thin wrappers.
 | W1 | `delete` contract/runtime leakage audit | `completed` | subagent | First safe batch classified around `pathExists` + `branchExists` plus existing delete support ports |
 | W1 | `create` post-helper residual audit | `completed` | orchestrator | Capability edges classified around repo registry, git-repository assertion, and transcript append |
 | W2 | `converged` first bounded cleanup | `completed` | orchestrator | Converged contract files now use app-facing shared ports/contracts instead of direct infra types |
-| W2 | `delete` first bounded cleanup | `pending` | orchestrator/worker | First candidate is preflight read-contract batch (`pathExists` + `branchExists`) |
+| W2 | `delete` first bounded cleanup | `completed` | orchestrator | Delete support now uses app-facing `PathExistsPort` and `BranchExistsPort` contracts instead of direct infra types |
 | W2 | `create` capability port cleanup | `completed` | orchestrator | Create flow now uses app-facing git-repository, transcript, and repo-registry ports; legacy CLI parity preserved |
 | W3 | shared runtime wiring clusters (`approval`, `reply`, `watchdog`, `merge`) | `pending` | orchestrator | Only after app-side ports are seeded enough |
 
@@ -68,7 +69,7 @@ contracts, not thin wrappers.
 
 ## Current Next Decision
 
-`converged` and `create` W2 are complete. Next choose between:
+`converged`, `create`, and `delete` W2 are complete. Next choose between:
 
-1. `delete` preflight contract batch (`pathExists` + `branchExists`) on top of the existing port surface, or
-2. `converged` runtime capability rewiring (`convergedExecution` / `convergedFinalization` / `convergedGateDelivery`) as a separate bounded lane.
+1. `converged` runtime capability rewiring (`convergedExecution` / `convergedFinalization` / `convergedGateDelivery`) as a separate bounded lane, or
+2. the next delete batch around archive snapshot/index capabilities and bubble instance mutation identity.
