@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `0e3fa911`.
+Last updated from `main` at `841c7b30`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `0 fail / 59 warn`
+- Dependency report at this checkpoint: `0 fail / 44 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -97,6 +97,8 @@ contracts, not thin wrappers.
   - `validated (local)` small dependency cycle cleanup
   - `validated (local)` converged dependency cycle cleanup
   - `validated (local)` tmux ownership-signal tightening
+  - `841c7b30` metrics report infra rehome
+  - `0f1e450a` askHuman finalization notification slice
   - `validated (local)` metaReviewGate state/transcript compat cleanup
   - `validated (local)` stop shell relocation
   - `validated (local)` reconcile dependency-resolution shell relocation
@@ -161,6 +163,8 @@ contracts, not thin wrappers.
 | W43 | small dependency cycle cleanup | `validated` | orchestrator | The metaReviewGate approval parity cycle was broken by moving the shared advisory type to the state-side module, and the tmux infrastructure cycle is gone on the current head; the dependency checker is down to a single remaining cycle (`1 fail / 39 warn`) |
 | W44 | `converged` dependency cycle cleanup | `validated` | orchestrator | Default adapter wiring moved out of the flow builder back-edge, `convergedExecution`/`convergedFinalization`/`convergedGateDelivery` now depend on `convergedDefaultDependencies`, and the dependency report is reduced to report-only ownership warnings (`0 fail / 39 warn`) |
 | W45 | tmux ownership-signal checker tightening | `validated` | orchestrator | The dependency checker now treats concrete tmux runtime imports/calls as ownership signals instead of generic `tmux` wording; this raised the visible report-only backlog to `0 fail / 59 warn`, surfacing previously hidden shared-vs-runtime contracts |
+| W46 | `metrics` report infra rehome | `completed` | worker + orchestrator validation | The fs-heavy metrics report pipeline moved from `shared/metrics/report/**` to `infrastructure/artifact/metrics/report/**`; core shims and CLI were retargeted, and the visible warning frontier dropped |
+| W47 | `askHuman` finalization notification slice | `completed` | worker + orchestrator validation | Tmux-owned finalization/notification shells moved into `application/askHuman`, and the shared surface now keeps only boundary-neutral contracts via a local askHuman delivery port contract |
 
 ## Parallelization Rules
 
@@ -189,27 +193,26 @@ contracts, not thin wrappers.
 
 ## Warning Frontier Snapshot
 
-Current ownership-warning frontier after `0a4b3693`:
+Current ownership-warning frontier after `0f1e450a`:
 
 - `metaReviewGate`: 14
-- `askHuman`: 12
+- `askHuman`: 0 in the visible report after W47
 - `metaReview`: 12
 - `kickoff`: 3
 - `merge`: 3
-- `metrics`: 2 visible in the truncated report details, but the cluster still includes the report slice plus `events.ts`
+- `metrics`: the report slice is closed; `events.ts` remains as the next metrics-specific residual
 - singleton residuals: `approval`, `converged`, `gates`, `other`
 
 Current bounded next-wave decisions:
 
-- `askHuman`:
-  - first worker narrowed to tmux-owned shared contract/defaults shell cleanup under `application/askHuman`
 - `metrics`:
-  - narrowed from full metrics owner rehome to `shared/metrics/report/{archiveContext,readEvents,selectShards,report}.ts`
-  - `shared/metrics/events.ts` explicitly deferred to a second stage because it needs a separate event-store boundary split
+  - `shared/metrics/events.ts` remains explicitly deferred because it needs a separate event-store boundary split around `bubbleEvents.ts`
 - `metaReview`:
   - next good batches are `liveRun` infra cut or command runtime rehome
 - `metaReviewGate`:
   - next good batches are recovery shell relocation or findings artifact read boundary split
+- `askHuman`:
+  - next slice only if needed: remaining shared contracts around flow/runtime forwarding, but the high-signal tmux-owned warning cluster is closed
 
 ## Current Next Decision
 
