@@ -1,4 +1,7 @@
-import type { BubbleStateSnapshot } from "../../../types/bubble.js";
+import type {
+  BubbleLifecycleState,
+  BubbleStateSnapshot
+} from "../../../types/bubble.js";
 
 export interface LoadedStateSnapshot {
   state: BubbleStateSnapshot;
@@ -7,4 +10,16 @@ export interface LoadedStateSnapshot {
 
 export type ReadStateSnapshotPort = (
   statePath: string
+) => Promise<LoadedStateSnapshot>;
+
+export interface WriteStateSnapshotOptions {
+  expectedFingerprint?: string;
+  expectedState?: BubbleLifecycleState;
+  lockTimeoutMs?: number;
+}
+
+export type WriteStateSnapshotPort = (
+  statePath: string,
+  state: BubbleStateSnapshot,
+  options?: WriteStateSnapshotOptions
 ) => Promise<LoadedStateSnapshot>;
