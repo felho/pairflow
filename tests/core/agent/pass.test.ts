@@ -35,12 +35,12 @@ import {
   repeatCleanRound1DisabledReasonCode,
   repeatCleanTriggerNotMetReasonCode
 } from "../../../src/v11/domain/convergence/repeatCleanAutoconverge.js";
+import { createDocContractGateArtifact } from "../../../src/v11/shared/gates/docContractGates.js";
 import {
-  createDocContractGateArtifact,
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath,
   writeDocContractGateArtifact
-} from "../../../src/v11/shared/gates/docContractGates.js";
+} from "../../../src/core/gates/docContractGateArtifacts.js";
 import {
   resolveReviewerTestEvidenceArtifactPath,
   resolveReviewerTestExecutionDirective

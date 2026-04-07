@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../../src/v11/shared/gates/docContractGates.js", async (importOriginal) => {
+vi.mock("../../../src/core/gates/docContractGateArtifacts.js", async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...(actual as Record<string, unknown>),
@@ -15,7 +15,7 @@ vi.mock("../../../src/v11/shared/gates/docContractGates.js", async (importOrigin
 });
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
-import * as docContractGates from "../../../src/v11/shared/gates/docContractGates.js";
+import * as docContractGates from "../../../src/core/gates/docContractGateArtifacts.js";
 import { readTranscriptEnvelopes } from "../../../src/core/protocol/transcriptStore.js";
 import { initGitRepository } from "../../helpers/git.js";
 

@@ -1,10 +1,12 @@
 import type { ReviewVerificationState } from "../../../v11/shared/reviewer/reviewVerification.js";
 import {
   collectFailingGatesFromArtifact,
-  isDocContractGateScopeActive,
+  isDocContractGateScopeActive
+} from "../../../v11/shared/gates/docContractGates.js";
+import {
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath
-} from "../../../v11/shared/gates/docContractGates.js";
+} from "../../../core/gates/docContractGateArtifacts.js";
 import { readReviewVerificationArtifactStatus } from "../../../core/reviewer/reviewVerificationArtifacts.js";
 import type { BubbleFailingGate } from "../../../types/bubble.js";
 import type {

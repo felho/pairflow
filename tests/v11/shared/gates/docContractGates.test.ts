@@ -8,9 +8,11 @@ import {
   createDocContractGateArtifact,
   evaluateTaskContractWarnings,
   evaluateReviewerGateWarnings,
+} from "../../../../src/v11/shared/gates/docContractGates.js";
+import {
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath
-} from "../../../../src/v11/shared/gates/docContractGates.js";
+} from "../../../../src/core/gates/docContractGateArtifacts.js";
 import type { BubbleConfig } from "../../../../src/types/bubble.js";
 import type { Finding } from "../../../../src/types/findings.js";
 

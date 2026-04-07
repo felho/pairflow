@@ -1,6 +1,3 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-
 import type {
   BubbleConfig,
   BubbleFailingGate,
@@ -529,10 +526,6 @@ function extractRoundFromFindingKey(findingKey: string): number | undefined {
   return Math.max(0, Math.trunc(parsedRound));
 }
 
-export function resolveDocContractGateArtifactPath(artifactsDir: string): string {
-  return join(artifactsDir, "doc-contract-gates.json");
-}
-
 export function createDocContractGateArtifact(input: {
   now: Date;
   bubbleConfig: BubbleConfig;
@@ -678,7 +671,7 @@ function normalizeSpecLockState(raw: unknown): BubbleSpecLockState {
   };
 }
 
-function normalizeArtifact(raw: unknown): DocContractGateArtifact {
+export function normalizeDocContractGateArtifact(raw: unknown): DocContractGateArtifact {
   if (!isRecord(raw)) {
     throw new DocContractGateArtifactError("Doc contract gate artifact must be an object.");
   }
@@ -718,38 +711,6 @@ function normalizeArtifact(raw: unknown): DocContractGateArtifact {
     round_gate_state: normalizedRoundGate,
     spec_lock_state: normalizedSpecLock
   };
-}
-
-export async function readDocContractGateArtifact(
-  artifactPath: string
-): Promise<DocContractGateArtifact | undefined> {
-  const raw = await readFile(artifactPath, "utf8").catch((error: NodeJS.ErrnoException) => {
-    if (error.code === "ENOENT") {
-      return undefined;
-    }
-    throw error;
-  });
-  if (raw === undefined) {
-    return undefined;
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (error) {
-    throw new DocContractGateArtifactError(
-      `Invalid JSON in doc contract gate artifact: ${error instanceof Error ? error.message : String(error)}`
-    );
-  }
-  return normalizeArtifact(parsed);
-}
-
-export async function writeDocContractGateArtifact(
-  artifactPath: string,
-  artifact: DocContractGateArtifact
-): Promise<void> {
-  await mkdir(dirname(artifactPath), { recursive: true });
-  await writeFile(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
 }
 
 export function mergeArtifactWithReviewerEvaluation(input: {

@@ -3,9 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import type { BubblePaths } from "../../shared/bubble/bubblePaths.js";
 import {
   createDocContractGateArtifact,
-  isDocContractGateScopeActive,
-  resolveDocContractGateArtifactPath,
-  writeDocContractGateArtifact
+  isDocContractGateScopeActive
 } from "../../../v11/shared/gates/docContractGates.js";
 import { appendInitialTaskEnvelope } from "../../shared/create/createInitialTaskEnvelopeAppend.js";
 import { renderBubbleConfigToml } from "../../../config/bubbleConfig.js";
@@ -19,6 +17,10 @@ import type {
 } from "./createCommandContract.js";
 import { BubbleCreateError, ensureRuntimeSessionFile, renderTaskArtifact } from "./createCommandRuntime.js";
 import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
+import {
+  resolveDocContractGateArtifactPath,
+  writeDocContractGateArtifact
+} from "../../../core/gates/docContractGateArtifacts.js";
 
 export interface CreateBubblePersistenceInput {
   bubbleId: string;

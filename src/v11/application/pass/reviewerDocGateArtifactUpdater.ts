@@ -8,10 +8,12 @@ import {
   evaluateReviewerGateWarnings,
   isDocContractGateScopeActive,
   mergeArtifactWithReviewerEvaluation,
+} from "../../../v11/shared/gates/docContractGates.js";
+import {
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath,
   writeDocContractGateArtifact
-} from "../../../v11/shared/gates/docContractGates.js";
+} from "../../../core/gates/docContractGateArtifacts.js";
 
 export interface UpdateReviewerDocGateArtifactInput {
   now: Date;

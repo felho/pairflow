@@ -1,11 +1,13 @@
 import {
   isDocContractGateScopeActive,
-  readDocContractGateArtifact,
-  resolveDocContractGateArtifactPath
 } from "../../../v11/shared/gates/docContractGates.js";
 import type {
   ReadReviewVerificationArtifactStatusPort
 } from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
+import {
+  readDocContractGateArtifact,
+  resolveDocContractGateArtifactPath
+} from "../../../core/gates/docContractGateArtifacts.js";
 import {
   evaluateSummaryVerifierConsistencyGate,
   resolveSummaryVerifierConsistencyGateArtifactPath
