@@ -1,30 +1,69 @@
 import { join } from "node:path";
 
-import { buildRunningExecutionContext } from "../../shared/state/executionContext.js";
+import { buildRunningExecutionContext } from "../state/executionContext.js";
+import type { BubblePaths } from "../bubble/bubblePaths.js";
 import { applyStateTransition } from "../../domain/state/machine.js";
 import { buildHumanReplyEnvelopeDraft } from "../../domain/reply/replyEnvelopeDraft.js";
-import { raiseReplyPostAppendStateWriteFailed } from "../../domain/reply/postAppendStateWriteFailure.js";
-import type { ResolvedReplyCommandDependencies } from "../../shared/reply/replyCommandDependencyResolution.js";
-import type { ResolvedBubbleById } from "../../shared/ports/bubbleLookup.js";
+import {
+  raiseReplyPostAppendStateWriteFailed
+} from "../../domain/reply/postAppendStateWriteFailure.js";
+import type { ResolvedReplyCommandDependencies } from "./replyCommandDependencyResolution.js";
 import type { ReplyWaitingHumanState } from "../../domain/reply/waitingHumanStateGuard.js";
-import type { LoadedStateSnapshot } from "../../shared/ports/stateSnapshots.js";
-import type { AppendProtocolEnvelopeResult } from "../../shared/ports/transcript.js";
-import { createHumanReplyCommandError } from "../../shared/reply/replyCommandError.js";
+import type {
+  BubbleConfig,
+  BubbleLifecycleState,
+  BubbleStateSnapshot
+} from "../../../types/bubble.js";
+import type { ProtocolEnvelope, ProtocolEnvelopeDraft } from "../../../types/protocol.js";
+
+export interface ReplyResolvedBubble {
+  bubbleId: string;
+  bubbleConfig: BubbleConfig;
+  bubblePaths: BubblePaths;
+  repoPath: string;
+}
+
+export interface ReplyLoadedStateSnapshot {
+  state: BubbleStateSnapshot;
+  fingerprint: string;
+}
+
+export interface ReplyAppendProtocolEnvelopeInput {
+  transcriptPath: string;
+  mirrorPaths?: string[];
+  lockPath: string;
+  envelope: ProtocolEnvelopeDraft;
+  now?: Date;
+}
+
+export interface ReplyAppendProtocolEnvelopeResult {
+  envelope: ProtocolEnvelope;
+  sequence: number;
+}
+
+export interface ReplyWriteStateSnapshotOptions {
+  expectedFingerprint?: string;
+  expectedState?: BubbleLifecycleState;
+}
 
 export interface ExecuteReplyMutationInput {
-  resolved: ResolvedBubbleById;
-  loadedState: LoadedStateSnapshot;
+  resolved: ReplyResolvedBubble;
+  loadedState: ReplyLoadedStateSnapshot;
   state: ReplyWaitingHumanState;
   message: string;
   refs: string[];
   now: Date;
   nowIso: string;
-  dependencies: ResolvedReplyCommandDependencies;
+  dependencies: Pick<
+    ResolvedReplyCommandDependencies,
+    "appendProtocolEnvelope" | "writeStateSnapshot"
+  >;
+  createError: PairflowCreateCommandError;
 }
 
 export interface ExecuteReplyMutationResult {
-  appended: Pick<AppendProtocolEnvelopeResult, "envelope" | "sequence">;
-  written: LoadedStateSnapshot;
+  appended: Pick<ReplyAppendProtocolEnvelopeResult, "envelope" | "sequence">;
+  written: ReplyLoadedStateSnapshot;
 }
 
 export async function executeReplyMutation(
@@ -84,7 +123,7 @@ export async function executeReplyMutation(
     raiseReplyPostAppendStateWriteFailed({
       envelopeId: appended.envelope.id,
       reason,
-      createError: createHumanReplyCommandError
+      createError: input.createError
     });
   }
 }

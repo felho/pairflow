@@ -11,7 +11,7 @@ import {
 } from "../../shared/reply/replyCommandError.js";
 import { resolveReplyCommandDependencies } from "../../shared/reply/replyCommandDependencyResolution.js";
 import { normalizeReplyCommandInput } from "../../shared/reply/replyCommandInputNormalization.js";
-import { executeReplyMutation } from "./replyMutationExecution.js";
+import { executeReplyMutation } from "../../shared/reply/replyMutationExecution.js";
 
 export async function emitHumanReply(
   input: EmitHumanReplyInput,
@@ -59,7 +59,8 @@ export async function emitHumanReply(
     refs,
     now,
     nowIso,
-    dependencies: resolvedDependencies
+    dependencies: resolvedDependencies,
+    createError: createHumanReplyCommandError
   });
 
   const messageRef = resolvedDependencies.resolveDeliveryMessageRef({
