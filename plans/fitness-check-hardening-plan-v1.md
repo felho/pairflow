@@ -310,7 +310,12 @@ Miért ez a sorrend:
     definiciokbol dolgozik
   - a seed command set mar nem szetszort konstansokra, hanem
     formalizalt matrix-szeru definiciora epul
-- Kovetkezo vegrehajtasi kor: Batch 5.
+- Batch 5 kesz:
+  - a result-oldali side-effect evidencia mar nem barmilyen `delivery`
+    mezo, hanem explicit outcome-shape alapjan szamit ervenyesnek
+  - a checker mar nem fogad el gyenge vagy ures `delivery` payloadokat
+    pozitiv evidenciakent
+- Kovetkezo vegrehajtasi kor: Batch 6.
 
 ### Progress checklist
 
@@ -320,7 +325,7 @@ Miért ez a sorrend:
 - [x] Batch 2 complete
 - [x] Batch 3 complete
 - [x] Batch 4 complete
-- [ ] Batch 5 complete
+- [x] Batch 5 complete
 - [ ] Batch 6 complete
 
 ## Risks And Guardrails

@@ -324,4 +324,120 @@ describe("critical side-effect fitness check", () => {
     expect(report.status).toBe("pass");
     expect(report.summary).toContain("all 6 command invariant(s) covered");
   });
+
+  it("does not treat weak delivery payloads as explicit result evidence", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/kickoff/runKickoffFlow.ts",
+      "export const result = { delivery: {} };\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/pass/runPassFlow.ts",
+      "export const result = { delivery: note };\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/converged/runConvergedFlow.ts",
+      "const delivery = { delivered: true };\nexport const result = { delivery };\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/approval/runApprovalFlow.ts",
+      "export const note = 'missing';\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/reply/runReplyFlow.ts",
+      "export const note = 'missing';\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/askHuman/runAskHumanFlow.ts",
+      "export const note = 'missing';\n"
+    );
+
+    const report = await buildCriticalSideEffectCheckReport({
+      check: {
+        id: "critical_side_effect",
+        metric: "critical command side-effect invariant coverage",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture/runtime",
+        scope: ["src/v11/application/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only"
+    });
+
+    expect(report.status).toBe("fail");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("kickoff: missing delivery invariant evidence")
+      )
+    ).toBe(true);
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("pass: missing delivery invariant evidence")
+      )
+    ).toBe(true);
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("converged: missing delivery invariant evidence")
+      )
+    ).toBe(true);
+  });
+
+  it("treats explicit delivery outcome shape as result evidence", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/kickoff/runKickoffFlow.ts",
+      "export const result = { delivery: { status: 'failed', reasonCode: 'delivery_failed' } };\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/pass/runPassFlow.ts",
+      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/converged/runConvergedFlow.ts",
+      "export const result = { delivery: { delivered: true } };\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/approval/runApprovalFlow.ts",
+      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/reply/runReplyFlow.ts",
+      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/askHuman/runAskHumanFlow.ts",
+      "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
+    );
+
+    const report = await buildCriticalSideEffectCheckReport({
+      check: {
+        id: "critical_side_effect",
+        metric: "critical command side-effect invariant coverage",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture/runtime",
+        scope: ["src/v11/application/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only"
+    });
+
+    expect(report.status).toBe("pass");
+    expect(report.summary).toContain("all 6 command invariant(s) covered");
+  });
 });

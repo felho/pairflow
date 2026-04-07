@@ -13,6 +13,7 @@ interface CommandInvariantDefinition {
   folderScopes: readonly string[];
   adapterNames: readonly string[];
   resultPropertyNames: readonly string[];
+  acceptedOutcomePropertyNames: readonly string[];
 }
 
 interface CommandInvariantResult {
@@ -26,37 +27,43 @@ const commandInvariantDefinitions: readonly CommandInvariantDefinition[] = [
     command: "kickoff",
     folderScopes: ["application", "shared"],
     adapterNames: ["emitTmuxDeliveryNotification"],
-    resultPropertyNames: ["delivery"]
+    resultPropertyNames: ["delivery"],
+    acceptedOutcomePropertyNames: ["delivered", "status", "failure", "error", "reason_code", "reasonCode"]
   },
   {
     command: "pass",
     folderScopes: ["application", "shared"],
     adapterNames: ["emitTmuxDeliveryNotification"],
-    resultPropertyNames: ["delivery"]
+    resultPropertyNames: ["delivery"],
+    acceptedOutcomePropertyNames: ["delivered", "status", "failure", "error", "reason_code", "reasonCode"]
   },
   {
     command: "converged",
     folderScopes: ["application", "shared"],
     adapterNames: ["emitTmuxDeliveryNotification"],
-    resultPropertyNames: ["delivery"]
+    resultPropertyNames: ["delivery"],
+    acceptedOutcomePropertyNames: ["delivered", "status", "failure", "error", "reason_code", "reasonCode"]
   },
   {
     command: "approval",
     folderScopes: ["application", "shared"],
     adapterNames: ["emitTmuxDeliveryNotification"],
-    resultPropertyNames: ["delivery"]
+    resultPropertyNames: ["delivery"],
+    acceptedOutcomePropertyNames: ["delivered", "status", "failure", "error", "reason_code", "reasonCode"]
   },
   {
     command: "reply",
     folderScopes: ["application", "shared"],
     adapterNames: ["emitTmuxDeliveryNotification"],
-    resultPropertyNames: ["delivery"]
+    resultPropertyNames: ["delivery"],
+    acceptedOutcomePropertyNames: ["delivered", "status", "failure", "error", "reason_code", "reasonCode"]
   },
   {
     command: "askHuman",
     folderScopes: ["application", "shared"],
     adapterNames: ["emitTmuxDeliveryNotification"],
-    resultPropertyNames: ["delivery"]
+    resultPropertyNames: ["delivery"],
+    acceptedOutcomePropertyNames: ["delivered", "status", "failure", "error", "reason_code", "reasonCode"]
   }
 ] as const;
 
@@ -89,6 +96,29 @@ function isContractOnlyEvidencePath(relativePath: string): boolean {
     return true;
   }
   return false;
+}
+
+function hasAcceptedOutcomeShape(input: {
+  definition: CommandInvariantDefinition;
+  expression: ts.Expression;
+}): boolean {
+  if (!ts.isObjectLiteralExpression(input.expression)) {
+    return false;
+  }
+
+  return input.expression.properties.some((property) => {
+    if (!ts.isPropertyAssignment(property)) {
+      return false;
+    }
+    const propertyName =
+      ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)
+        ? property.name.text
+        : ts.isNumericLiteral(property.name)
+          ? property.name.text
+          : undefined;
+    return propertyName !== undefined
+      && input.definition.acceptedOutcomePropertyNames.includes(propertyName);
+  });
 }
 
 function collectMatchEvidence(input: {
@@ -191,15 +221,13 @@ function collectMatchEvidence(input: {
           && input.definition.resultPropertyNames.includes(
             propertyNameText(property.name) ?? ""
           )
+          && hasAcceptedOutcomeShape({
+            definition: input.definition,
+            expression: property.initializer
+          })
         ) {
           result.add(`${input.relativePath}:${String(lineOf(property))} result`);
           continue;
-        }
-        if (
-          ts.isShorthandPropertyAssignment(property)
-          && input.definition.resultPropertyNames.includes(property.name.text)
-        ) {
-          result.add(`${input.relativePath}:${String(lineOf(property))} result`);
         }
       }
     }
