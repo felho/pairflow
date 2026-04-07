@@ -142,7 +142,6 @@ contracts, not thin wrappers.
 | W32 | `pass` orchestration shell relocation | `validated` | orchestrator | `passFlowDependencyWiring`, flow builders, dispatch, emit-context, and command orchestration now live in `application/pass`; batch is locally green and drops the dependency baseline to `109 fail / 58 warn` |
 | W33 | `reconcile` dependency-resolution shell relocation | `validated` | orchestrator | Reconcile input normalization, dependency resolution, and orchestration now live in `application/reconcile`; batch is locally green and drops the dependency baseline to `78 fail / 53 warn` |
 | W35 | `start` shell relocation | `validated` | orchestrator | `startCommand*` shell files now live in `application/start`, UI/meta-review consumers were retargeted, the old `shared/start` surface was removed, and the dependency baseline dropped to `49 fail / 45 warn` |
-| W36 | `status` core-compat cleanup | `validated` | orchestrator | `shared/status` now routes bubble lookup, transcript/state reads, pairflow command path resolution, and status view types through explicit core compat boundaries; dependency baseline dropped to `29 fail / 42 warn` |
 | W36 | `stop` shell relocation | `validated` | orchestrator | `stopCommand*` shell files now live in `application/stop`, emit/error-boundary consumers were retargeted, and the dependency baseline dropped to `29 fail / 42 warn` |
 
 ## Parallelization Rules
@@ -174,6 +173,6 @@ contracts, not thin wrappers.
 
 Current best next moves:
 
-1. take the next bounded dependency wave from the `shared/stop` frontier,
+1. take the next bounded dependency wave from the `shared/status` frontier,
 2. then clean the `metaReviewGate` residuals (`PaneBinding`, recovery/apply helpers) so `shared` stops depending on `application` and `infrastructure`,
 3. after that, sweep the smaller `metrics`, `reply`, and `watchdog` residuals.
