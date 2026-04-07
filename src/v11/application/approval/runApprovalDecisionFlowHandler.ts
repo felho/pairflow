@@ -2,7 +2,7 @@ import type { EmitApprovalDecisionResult } from "./approvalCommandContract.js";
 import { buildApprovalDecisionEnvelopePayload, emitApprovalDecisionDeliverySignals, emitApprovalDecisionLifecycleEvent } from "./runApprovalDecisionEffects.js";
 import { resolveApprovalNextState } from "./approvalResultMapping.js";
 import type { RunApprovalDecisionFlowInput } from "./runApprovalFlowContract.js";
-import type { ResolvedApprovalCommandDependencies } from "../../shared/approval/approvalCommandDependencyResolution.js";
+import type { ResolvedApprovalCommandDependencies } from "./approvalCommandDependencyResolution.js";
 import { appendEnvelopeViaMutationBoundary, persistStateViaMutationBoundary } from "../../shared/mutation/mutationBoundaryIO.js";
 import { assertApprovalDecisionEligibility } from "../../shared/approval/approvalRoutingEligibility.js";
 import type { ApprovalFlowExecutionContext } from "./runApprovalFlowContext.js";

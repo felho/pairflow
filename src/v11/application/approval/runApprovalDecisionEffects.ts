@@ -4,7 +4,7 @@ import type {
 } from "../../shared/approval/approvalCommandInputNormalization.js";
 import type {
   ResolvedApprovalCommandDependencies
-} from "../../shared/approval/approvalCommandDependencyResolution.js";
+} from "./approvalCommandDependencyResolution.js";
 import {
   resolveApprovalDecisionMetadata
 } from "../../shared/approval/approvalRoutingEligibility.js";

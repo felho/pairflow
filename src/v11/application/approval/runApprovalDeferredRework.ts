@@ -1,5 +1,5 @@
 import type { QueueDeferredReworkIntentResult } from "../../shared/approval/reworkIntent.js";
-import type { ResolvedApprovalCommandDependencies } from "../../shared/approval/approvalCommandDependencyResolution.js";
+import type { ResolvedApprovalCommandDependencies } from "./approvalCommandDependencyResolution.js";
 import { persistStateViaMutationBoundary } from "../../shared/mutation/mutationBoundaryIO.js";
 
 export async function persistDeferredReworkIntentState(input: {

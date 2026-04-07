@@ -6,7 +6,7 @@ import type {
   RunApprovalDecisionFlowInput,
   RunRequestReworkFlowInput
 } from "./runApprovalFlowContract.js";
-import type { ResolvedApprovalCommandDependencies } from "../../shared/approval/approvalCommandDependencyResolution.js";
+import type { ResolvedApprovalCommandDependencies } from "./approvalCommandDependencyResolution.js";
 import { initializeApprovalFlowExecutionContext } from "./runApprovalFlowContext.js";
 import {
   runApprovalDecisionFlowWithContext,

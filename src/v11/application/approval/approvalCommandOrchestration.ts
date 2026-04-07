@@ -1,10 +1,10 @@
 import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
 import type {
   ApprovalCommandDependencies
-} from "../../shared/approval/approvalCommandDependencyResolution.js";
+} from "./approvalCommandDependencyResolution.js";
 import {
   resolveApprovalCommandDependencies
-} from "../../shared/approval/approvalCommandDependencyResolution.js";
+} from "./approvalCommandDependencyResolution.js";
 import {
   createApprovalCommandError,
   isApprovalCommandError

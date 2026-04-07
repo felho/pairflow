@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveApprovalCommandDependencies } from "../../../../src/v11/shared/approval/approvalCommandDependencyResolution.js";
+import { resolveApprovalCommandDependencies } from "../../../../src/v11/application/approval/approvalCommandDependencyResolution.js";
 
 describe("approvalCommandDependencyResolution", () => {
   it("preserves explicit dependency overrides", () => {

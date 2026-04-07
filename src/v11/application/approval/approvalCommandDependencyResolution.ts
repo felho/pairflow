@@ -10,8 +10,8 @@ import {
   resolveDeliveryMessageRef
 } from "../../../core/runtime/tmuxDelivery.js";
 import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
-import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
-import { queueDeferredReworkIntent } from "./reworkIntent.js";
+import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
+import { queueDeferredReworkIntent } from "../../shared/approval/reworkIntent.js";
 
 export interface ApprovalCommandDependencies {
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;

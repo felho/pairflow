@@ -1,5 +1,5 @@
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
-import type { ResolvedApprovalCommandDependencies } from "../../shared/approval/approvalCommandDependencyResolution.js";
+import type { ResolvedApprovalCommandDependencies } from "./approvalCommandDependencyResolution.js";
 import type { RunApprovalDecisionFlowInput, RunRequestReworkFlowInput } from "./runApprovalFlowContract.js";
 
 export interface ApprovalFlowExecutionContext {
