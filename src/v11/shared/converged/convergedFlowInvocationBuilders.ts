@@ -13,8 +13,10 @@ import {
   applyMetaReviewGateOnConvergence,
   recoverMetaReviewGateFromSnapshot
 } from "../metaReviewGate/metaReviewGateCommandApi.js";
-import { appendProtocolEnvelope } from "../../infrastructure/artifact/transcript/transcriptStore.js";
-import { readTranscriptEnvelopes } from "../../infrastructure/artifact/transcript/transcriptStore.js";
+import {
+  appendProtocolEnvelope,
+  readTranscriptEnvelopes
+} from "../../infrastructure/artifact/transcript/transcriptStore.js";
 import { assessPairflowCommandPath } from "../../infrastructure/executor/command/pairflowCommand.js";
 import { emitBubbleNotification } from "../../infrastructure/channel/notifications.js";
 import {
@@ -23,8 +25,10 @@ import {
 } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import type { EmitBubbleNotificationPort } from "../ports/notifications.js";
-import type { AppendProtocolEnvelopePort } from "../ports/transcript.js";
-import type { ReadTranscriptEnvelopesPort } from "../ports/transcript.js";
+import type {
+  AppendProtocolEnvelopePort,
+  ReadTranscriptEnvelopesPort
+} from "../ports/transcript.js";
 import type {
   EmitTmuxDeliveryNotificationPort,
   ResolveDeliveryMessageRefPort
