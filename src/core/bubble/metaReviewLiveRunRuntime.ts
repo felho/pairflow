@@ -17,10 +17,13 @@ import {
   resolveCanonicalMetaReviewReportJson
 } from "./metaReviewLiveRunReport.js";
 import {
+  buildMetaReviewLastJsonArtifactPayload,
+  persistMetaReviewLastJsonArtifact
+} from "./metaReviewLiveRunArtifacts.js";
+import {
   assertRunPayloadInvariants,
   formatRunnerFailure,
   mapRecommendationToStatus,
-  isMissingFileError,
   stateWriteConflictToMetaReviewError
 } from "./metaReviewLiveRunErrors.js";
 import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
@@ -47,35 +50,6 @@ import type {
   MetaReviewRunWarning
 } from "./metaReviewLiveRunContract.js";
 
-interface RollingArtifactBackupEntry {
-  artifactPath: string;
-  existed: boolean;
-  contents: string | null;
-}
-
-async function readRollingArtifactBackup(
-  artifactPath: string,
-  readFileFn: NonNullable<MetaReviewDependencies["readFile"]>
-): Promise<RollingArtifactBackupEntry> {
-  try {
-    const contents = await readFileFn(artifactPath, "utf8");
-    return {
-      artifactPath,
-      existed: true,
-      contents
-    };
-  } catch (error) {
-    if (isMissingFileError(error)) {
-      return {
-        artifactPath,
-        existed: false,
-        contents: null
-      };
-    }
-    throw error;
-  }
-}
-
 export async function runMetaReview(
   input: MetaReviewRunInput,
   dependencies: MetaReviewDependencies = {}
@@ -85,6 +59,8 @@ export async function runMetaReview(
   const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
   const appendEnvelope = dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
   const runLiveReview = dependencies.runLiveReview ?? defaultLiveRunner;
+  const readFileFn = dependencies.readFile ?? readFile;
+  const writeFileFn = dependencies.writeFile ?? writeFile;
   const now = dependencies.now ?? new Date();
   const makeUuid = dependencies.randomUUID ?? randomUUID;
 
@@ -195,52 +171,30 @@ export async function runMetaReview(
     throw error;
   }
 
-  const reportPayload = {
-    bubble_id: resolved.bubbleId,
-    run_id: runId,
+  const reportPayload = buildMetaReviewLastJsonArtifactPayload({
+    bubbleId: resolved.bubbleId,
+    runId,
     round: written.state.round,
-    generated_at: updatedAt,
+    generatedAt: updatedAt,
     depth,
     status,
     recommendation,
     summary,
-    report_ref: CANONICAL_META_REVIEW_REPORT_REF,
-    report_json_ref: CANONICAL_META_REVIEW_REPORT_REF,
-    rework_target_message: reworkTargetMessage,
+    reportRef: CANONICAL_META_REVIEW_REPORT_REF,
+    reworkTargetMessage,
     warnings,
-    report_json: canonicalReportJson
-  };
+    canonicalReportJson
+  });
 
-  const artifactBackup = await Promise.all([
-    readRollingArtifactBackup(
-      resolved.bubblePaths.metaReviewLastJsonArtifactPath,
-      dependencies.readFile ?? readFile
-    )
-  ]);
-
-  const artifactWrites = await Promise.allSettled([
-    (dependencies.writeFile ?? writeFile)(
-      resolved.bubblePaths.metaReviewLastJsonArtifactPath,
-      `${JSON.stringify(reportPayload, null, 2)}\n`,
-      "utf8"
-    )
-  ]);
-
-  const failedArtifactWrites = artifactWrites.filter(
-    (result): result is PromiseRejectedResult => result.status === "rejected"
-  );
-  if (failedArtifactWrites.length > 0) {
-    const message = failedArtifactWrites
-      .map((result) =>
-        result.reason instanceof Error
-          ? result.reason.message
-          : String(result.reason)
-      )
-      .join("; ");
-    warnings.push({
-      reason_code: "META_REVIEW_ARTIFACT_WRITE_WARNING",
-      message
+  const { artifactBackup, writeWarning } =
+    await persistMetaReviewLastJsonArtifact({
+      artifactPath: resolved.bubblePaths.metaReviewLastJsonArtifactPath,
+      reportPayload,
+      readFileFn,
+      writeFileFn
     });
+  if (writeWarning !== null) {
+    warnings.push(writeWarning);
   }
 
   await refreshMetaReviewApprovalRequest({
@@ -259,7 +213,7 @@ export async function runMetaReview(
     written,
     now,
     appendEnvelope,
-    writeFileFn: dependencies.writeFile ?? writeFile,
+    writeFileFn,
     writeStateFn: writeState
   });
 
