@@ -7,7 +7,7 @@ import {
   isNonEmptyString,
   isRecord
 } from "../../validation/primitives.js";
-import { resolveArchiveRootPath } from "../../../infrastructure/artifact/archive/archivePaths.js";
+import { resolveArchiveRootPath } from "../../../../core/archive/archivePaths.js";
 import type {
   MetricsReportArchiveContext,
   MetricsReportWarningCounts

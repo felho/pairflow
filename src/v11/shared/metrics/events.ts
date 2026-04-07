@@ -12,7 +12,7 @@ import {
 import {
   FileLockTimeoutError,
   withFileLock
-} from "../../infrastructure/foundation/fs/fileLock.js";
+} from "../../../core/util/fileLock.js";
 
 const defaultLockTimeoutMs = 5_000;
 const defaultStaleLockRecoveryAfterMs = 1_000;

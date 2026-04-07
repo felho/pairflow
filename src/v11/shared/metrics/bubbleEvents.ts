@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 
 import { type MetricsActorRole } from "../../../types/metrics.js";
-import { normalizeRepoPath } from "../../infrastructure/executor/workspace/repoResolution.js";
+import { normalizeRepoPath } from "../../../core/bubble/repoResolution.js";
 import {
   appendMetricsEvent,
   createMetricsEvent,

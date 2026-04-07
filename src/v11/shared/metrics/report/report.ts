@@ -1,4 +1,4 @@
-import { resolveArchiveRootPath } from "../../../infrastructure/artifact/archive/archivePaths.js";
+import { resolveArchiveRootPath } from "../../../../core/archive/archivePaths.js";
 import { MetricsReportAggregator } from "./aggregate.js";
 import { readArchiveReportContext } from "./archiveContext.js";
 import { readMetricsEvents } from "./readEvents.js";
