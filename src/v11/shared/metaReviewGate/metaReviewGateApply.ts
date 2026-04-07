@@ -8,7 +8,7 @@ import {
 import { routeMetaReviewKickoffOrRunFailed } from "./metaReviewGateApplyRunRouting.js";
 import {
   initializeApplyMetaReviewGateExecutionContext
-} from "../../application/metaReviewGate/metaReviewGateApplyContext.js";
+} from "./metaReviewGateApplyContext.js";
 import { reconcileObservedGateResult } from "./metaReviewGateApplyObservation.js";
 import { persistRuntimeDeliveryObservation } from "./metaReviewGateApplyPersistence.js";
 import type {
