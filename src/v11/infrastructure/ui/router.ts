@@ -13,7 +13,7 @@ import {
   emitApproveCommandOrchestration as emitApprove,
   emitRequestReworkCommandOrchestration as emitRequestRework
 } from "../../application/approval/approvalCommandOrchestration.js";
-import { emitHumanReply } from "../../shared/reply/replyCommandApi.js";
+import { emitHumanReply } from "../../application/reply/replyCommandApi.js";
 import { resumeBubbleCommandOrchestration as resumeBubble } from "../../shared/resume/resumeCommandOrchestration.js";
 import { commitBubble } from "../../shared/commit/commitCommandApi.js";
 import { mergeBubbleCommandOrchestration as mergeBubble } from "../../shared/merge/mergeCommandOrchestration.js";

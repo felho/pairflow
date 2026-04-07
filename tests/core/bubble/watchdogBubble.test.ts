@@ -7,7 +7,6 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { createBubble } from "../../../src/core/bubble/createBubble.js";
 import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
-import { runBubbleWatchdog } from "../../../src/core/bubble/watchdogBubble.js";
 import { MetaReviewGateError } from "../../../src/core/bubble/metaReviewGate.js";
 import { emitAskHumanFromWorkspace } from "../../../src/core/agent/askHuman.js";
 import { emitRequestRework } from "../../../src/core/human/approval.js";
@@ -20,6 +19,8 @@ import {
 import { metaReviewExecutionContextToRunningContext } from "../../../src/core/state/executionContext.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
+import { runBubbleWatchdogV11 as runBubbleWatchdog } from "../../../src/v11/application/watchdog/emitWatchdogV11.js";
+import type { EmitTmuxDeliveryNotificationPort } from "../../../src/v11/shared/ports/tmuxDelivery.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";
 
@@ -290,7 +291,9 @@ describe("runBubbleWatchdog", () => {
         now: new Date("2026-02-22T12:23:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: (input) => {
+        emitTmuxDeliveryNotification: (
+          input: Parameters<EmitTmuxDeliveryNotificationPort>[0]
+        ) => {
           if (input.messageRef === undefined) {
             throw new Error("Expected messageRef for deferred rework-intent delivery.");
           }
@@ -338,7 +341,9 @@ describe("runBubbleWatchdog", () => {
       cwd: repoPath,
       now: escalatedAt
     }, {
-      emitTmuxDeliveryNotification: (input) => {
+      emitTmuxDeliveryNotification: (
+        input: Parameters<EmitTmuxDeliveryNotificationPort>[0]
+      ) => {
         if (input.messageRef !== undefined) {
           deliveryRefs.push(input.messageRef);
         }
@@ -942,7 +947,9 @@ describe("runBubbleWatchdog", () => {
         now: new Date("2026-02-22T12:02:00.000Z")
       },
       {
-        emitTmuxDeliveryNotification: async (input) => {
+        emitTmuxDeliveryNotification: async (
+          input: Parameters<EmitTmuxDeliveryNotificationPort>[0]
+        ) => {
           deliveries.push({
             bubbleId: input.bubbleId,
             envelopeType: input.envelope.type,

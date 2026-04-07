@@ -61,7 +61,7 @@ describe("critical side-effect fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/reply/replyCommandApi.ts",
+      "src/v11/application/reply/replyCommandApi.ts",
       "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
     );
     await writeRepoFile(
@@ -116,7 +116,7 @@ describe("critical side-effect fitness check", () => {
     );
     await writeRepoFile(
       repoRoot,
-      "src/v11/shared/reply/replyCommandApi.ts",
+      "src/v11/application/reply/replyCommandApi.ts",
       "export const emit = (): void => { emitTmuxDeliveryNotification(); };\n"
     );
     await writeRepoFile(

@@ -1,6 +1,8 @@
 import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
 import type { EmitTmuxDeliveryNotificationPort } from "../../shared/ports/tmuxDelivery.js";
 import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
+import type { ReadRuntimeSessionsRegistryPort } from "../../shared/ports/runtimeSessions.js";
+import type { TmuxRunner } from "../../shared/ports/tmuxSessions.js";
 import type {
   recoverMetaReviewGateFromSnapshot
 } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
@@ -29,6 +31,8 @@ export interface BubbleWatchdogDependencies {
   readWatchdogPaneActivity?: typeof readWatchdogPaneActivity;
   writeWatchdogPaneActivity?: typeof writeWatchdogPaneActivity;
   sampleWatchdogPaneActivity?: typeof sampleWatchdogPaneActivity;
+  readRuntimeSessionsRegistry?: ReadRuntimeSessionsRegistryPort;
+  runTmux?: TmuxRunner;
 }
 
 export type BubbleWatchdogNoopReason =

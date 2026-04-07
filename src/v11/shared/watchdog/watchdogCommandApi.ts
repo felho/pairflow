@@ -6,8 +6,6 @@ import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import { readStateSnapshot } from "../../../core/state/stateStore.js";
-import { readRuntimeSessionsRegistry } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
-import { runTmux } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import {
   recoverMetaReviewGateFromSnapshot
 } from "../metaReviewGate/metaReviewGateCommandApi.js";
@@ -32,7 +30,10 @@ import type {
   BubbleWatchdogInput,
   BubbleWatchdogResult
 } from "../../application/watchdog/watchdogCommandContract.js";
-import { throwAsBubbleWatchdogError } from "./watchdogCommandRuntime.js";
+import {
+  BubbleWatchdogError,
+  throwAsBubbleWatchdogError
+} from "./watchdogCommandRuntime.js";
 import { type WatchdogRuntimeContext } from "./watchdogCommandFlow.js";
 import { resolveWatchdogLifecycleRoute } from "./watchdogCommandRouting.js";
 export { BubbleWatchdogError } from "./watchdogCommandRuntime.js";
@@ -65,6 +66,9 @@ export async function runBubbleWatchdog(
     dependencies.writeWatchdogPaneActivity ?? writeWatchdogPaneActivity;
   const samplePaneActivity =
     dependencies.sampleWatchdogPaneActivity ?? sampleWatchdogPaneActivity;
+  const readRuntimeSessionsRegistry =
+    dependencies.readRuntimeSessionsRegistry;
+  const runTmux = dependencies.runTmux;
   const context: WatchdogRuntimeContext = {
     now,
     nowIso,
@@ -110,7 +114,9 @@ export async function runBubbleWatchdog(
     monitored: watchdog.monitored,
     readPaneActivity,
     writePaneActivity,
-    samplePaneActivity
+    samplePaneActivity,
+    readRuntimeSessionsRegistry,
+    runTmux
   });
   const result = await resolveWatchdogLifecycleRoute({
     context,
@@ -240,6 +246,8 @@ async function maybeMonitorWatchdogPaneActivity(input: {
   readPaneActivity: typeof readWatchdogPaneActivity;
   writePaneActivity: typeof writeWatchdogPaneActivity;
   samplePaneActivity: typeof sampleWatchdogPaneActivity;
+  readRuntimeSessionsRegistry: BubbleWatchdogDependencies["readRuntimeSessionsRegistry"];
+  runTmux: BubbleWatchdogDependencies["runTmux"];
 }): Promise<{
   readStatus: "ok" | "missing" | "invalid";
   currentRecord: WatchdogPaneActivityRecord | null;
@@ -271,6 +279,15 @@ async function maybeMonitorWatchdogPaneActivity(input: {
     };
   }
 
+  if (
+    input.readRuntimeSessionsRegistry === undefined
+    || input.runTmux === undefined
+  ) {
+    throw new BubbleWatchdogError(
+      "Watchdog runtime dependencies missing: readRuntimeSessionsRegistry or runTmux."
+    );
+  }
+
   const sampleResult = await input.samplePaneActivity({
     bubbleId: input.context.resolved.bubbleId,
     bubbleConfig: input.context.resolved.bubbleConfig,
@@ -278,8 +295,8 @@ async function maybeMonitorWatchdogPaneActivity(input: {
     activeRole: input.context.state.active_role,
     ...(currentRecord !== null ? { priorPaneHash: currentRecord.pane_hash } : {}),
     now: input.context.now,
-    readSessionsRegistry: readRuntimeSessionsRegistry,
-    runner: runTmux
+    readSessionsRegistry: input.readRuntimeSessionsRegistry,
+    runner: input.runTmux
   });
 
   if (sampleResult.status === "sampled") {

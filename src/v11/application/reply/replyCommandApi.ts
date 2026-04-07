@@ -1,16 +1,16 @@
 import { join } from "node:path";
 
-import { appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
-import { applyStateTransition } from "../../domain/state/machine.js";
-import { buildRunningExecutionContext } from "../../shared/state/executionContext.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
+import { appendProtocolEnvelope } from "../../infrastructure/artifact/transcript/transcriptStore.js";
+import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
 import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef
 } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
-import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
-import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
+import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
+import { buildRunningExecutionContext } from "../../shared/state/executionContext.js";
+import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
+import { applyStateTransition } from "../../domain/state/machine.js";
 import { ensureReplyWaitingHumanState } from "../../domain/reply/waitingHumanStateGuard.js";
 import { buildHumanReplyEnvelopeDraft } from "../../domain/reply/replyEnvelopeDraft.js";
 import { raiseReplyPostAppendStateWriteFailed } from "../../domain/reply/postAppendStateWriteFailure.js";
@@ -18,12 +18,12 @@ import type {
   EmitHumanReplyDependencies,
   EmitHumanReplyInput,
   EmitHumanReplyResult
-} from "../../application/reply/replyCommandContract.js";
+} from "./replyCommandContract.js";
 import {
   createHumanReplyCommandError,
   throwAsHumanReplyCommandError
-} from "./replyCommandError.js";
-import { normalizeReplyCommandInput } from "./replyCommandInputNormalization.js";
+} from "../../shared/reply/replyCommandError.js";
+import { normalizeReplyCommandInput } from "../../shared/reply/replyCommandInputNormalization.js";
 
 export async function emitHumanReply(
   input: EmitHumanReplyInput,
