@@ -1,7 +1,7 @@
 export {
   asAskHumanCommandError,
   emitAskHumanFromWorkspace
-} from "../../v11/shared/askHuman/askHumanCommandApi.js";
+} from "../../v11/application/askHuman/askHumanCommandApi.js";
 export { AskHumanCommandError } from "../../v11/shared/askHuman/askHumanCommandRuntime.js";
 export type {
   EmitAskHumanDependencies,

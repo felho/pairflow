@@ -2,7 +2,7 @@ import { resolveAskHumanCommandOrchestrationDependencyDefaults } from "./askHuma
 import type {
   ResolvedAskHumanCommandOrchestrationDependencies,
   ResolveAskHumanCommandOrchestrationDependenciesInput
-} from "./askHumanCommandOrchestrationDependencyResolutionContract.js";
+} from "../../shared/askHuman/askHumanCommandOrchestrationDependencyResolutionContract.js";
 
 export function resolveAskHumanCommandOrchestrationDependencies(
   input: ResolveAskHumanCommandOrchestrationDependenciesInput

@@ -1,9 +1,9 @@
-import { buildAskHumanCommandContext } from "./askHumanCommandContextBuilder.js";
+import { buildAskHumanCommandContext } from "../../shared/askHuman/askHumanCommandContextBuilder.js";
 import { buildAskHumanCommandOrchestrationDependencies } from "./askHumanCommandOrchestrationDependencyBuilder.js";
 import type {
   AskHumanCommandOrchestrationInvocation,
   BuildAskHumanCommandOrchestrationInvocationInput
-} from "./askHumanCommandOrchestrationInvocationContract.js";
+} from "../../shared/askHuman/askHumanCommandOrchestrationInvocationContract.js";
 
 export function buildAskHumanCommandOrchestrationInvocation(
   input: BuildAskHumanCommandOrchestrationInvocationInput

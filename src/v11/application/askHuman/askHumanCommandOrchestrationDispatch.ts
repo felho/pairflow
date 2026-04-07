@@ -2,9 +2,9 @@ import type {
   EmitAskHumanDependencies,
   EmitAskHumanInput,
   EmitAskHumanResult
-} from "./askHumanCommandContract.js";
-import { buildAskHumanCommandDispatchInvocation } from "./askHumanCommandDispatchInvocationBuilder.js";
-import { buildAskHumanCommandOrchestrationCallInput } from "./askHumanCommandOrchestrationCallInputBuilder.js";
+} from "../../shared/askHuman/askHumanCommandContract.js";
+import { buildAskHumanCommandDispatchInvocation } from "../../shared/askHuman/askHumanCommandDispatchInvocationBuilder.js";
+import { buildAskHumanCommandOrchestrationCallInput } from "../../shared/askHuman/askHumanCommandOrchestrationCallInputBuilder.js";
 import { buildAskHumanCommandOrchestrationInvocation } from "./askHumanCommandOrchestrationInvocationBuilder.js";
 import { orchestrateAskHumanCommand } from "./askHumanCommandOrchestration.js";
 

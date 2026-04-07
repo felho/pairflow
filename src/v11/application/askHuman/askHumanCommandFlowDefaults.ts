@@ -1,4 +1,4 @@
-import type { AskHumanCommandFlowDefaults } from "./askHumanCommandFlowDefaultsContract.js";
+import type { AskHumanCommandFlowDefaults } from "../../shared/askHuman/askHumanCommandFlowDefaultsContract.js";
 import { askHumanCommandFlowDefaultImplementations } from "./askHumanCommandFlowDefaultImplementations.js";
 
 export function createAskHumanCommandFlowDefaults(): AskHumanCommandFlowDefaults {

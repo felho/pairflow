@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { prepareAskHumanRouting } from "../../../../src/v11/application/askHuman/askHumanRoutingPreparation.js";
 import { runAskHumanFlow } from "../../../../src/v11/application/askHuman/runAskHumanFlow.js";
-import { resolveAskHumanCommandOrchestrationDependencies } from "../../../../src/v11/shared/askHuman/askHumanCommandOrchestrationDependencyResolution.js";
+import { resolveAskHumanCommandOrchestrationDependencies } from "../../../../src/v11/application/askHuman/askHumanCommandOrchestrationDependencyResolution.js";
 
 describe("askHumanCommandOrchestrationDependencyResolution", () => {
   it("uses default implementations when overrides are omitted", () => {

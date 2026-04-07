@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { executeAskHumanExecution } from "../../../../src/v11/application/askHuman/askHumanExecution.js";
 import { finalizeAskHumanFlow } from "../../../../src/v11/application/askHuman/askHumanFinalization.js";
-import { buildAskHumanCommandOrchestrationDependencies } from "../../../../src/v11/shared/askHuman/askHumanCommandOrchestrationDependencyBuilder.js";
+import { buildAskHumanCommandOrchestrationDependencies } from "../../../../src/v11/application/askHuman/askHumanCommandOrchestrationDependencyBuilder.js";
 
 describe("askHumanCommandOrchestrationDependencyBuilder", () => {
   it("builds default orchestration flow dependencies", () => {

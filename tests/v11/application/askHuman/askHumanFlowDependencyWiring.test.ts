@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { executeAskHumanExecution } from "../../../../src/v11/application/askHuman/askHumanExecution.js";
 import { finalizeAskHumanFlow } from "../../../../src/v11/application/askHuman/askHumanFinalization.js";
-import { createAskHumanCommandOrchestrationDependencies } from "../../../../src/v11/shared/askHuman/askHumanFlowDependencyWiring.js";
+import { createAskHumanCommandOrchestrationDependencies } from "../../../../src/v11/application/askHuman/askHumanFlowDependencyWiring.js";
 
 describe("askHumanFlowDependencyWiring", () => {
   it("wires execution and finalization implementations", () => {

@@ -9,7 +9,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 
 import { executeAskHumanExecution } from "../../../../src/v11/application/askHuman/askHumanExecution.js";
 import { finalizeAskHumanFlow } from "../../../../src/v11/application/askHuman/askHumanFinalization.js";
-import { buildAskHumanCommandOrchestrationInvocation } from "../../../../src/v11/shared/askHuman/askHumanCommandOrchestrationInvocationBuilder.js";
+import { buildAskHumanCommandOrchestrationInvocation } from "../../../../src/v11/application/askHuman/askHumanCommandOrchestrationInvocationBuilder.js";
 
 describe("askHumanCommandOrchestrationInvocationBuilder", () => {
   it("builds orchestration input from command payload", () => {
