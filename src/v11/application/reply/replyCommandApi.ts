@@ -1,13 +1,5 @@
 import { join } from "node:path";
 
-import { appendProtocolEnvelope } from "../../infrastructure/artifact/transcript/transcriptStore.js";
-import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
-import {
-  emitTmuxDeliveryNotification,
-  resolveDeliveryMessageRef
-} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
-import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { readStateSnapshot, writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import { buildRunningExecutionContext } from "../../shared/state/executionContext.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import { applyStateTransition } from "../../domain/state/machine.js";
@@ -23,12 +15,14 @@ import {
   createHumanReplyCommandError,
   throwAsHumanReplyCommandError
 } from "../../shared/reply/replyCommandError.js";
+import { resolveReplyCommandDependencies } from "../../shared/reply/replyCommandDependencyResolution.js";
 import { normalizeReplyCommandInput } from "../../shared/reply/replyCommandInputNormalization.js";
 
 export async function emitHumanReply(
   input: EmitHumanReplyInput,
   dependencies: EmitHumanReplyDependencies = {}
 ): Promise<EmitHumanReplyResult> {
+  const resolvedDependencies = resolveReplyCommandDependencies(dependencies);
   const normalizedInput = normalizeReplyCommandInput({
     message: input.message,
     refs: input.refs,
@@ -40,12 +34,12 @@ export async function emitHumanReply(
   const message = normalizedInput.message;
   const refs = normalizedInput.refs;
 
-  const resolved = await resolveBubbleById({
+  const resolved = await resolvedDependencies.resolveBubbleById({
     bubbleId: input.bubbleId,
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
   });
-  const bubbleIdentity = await ensureBubbleInstanceIdForMutation({
+  const bubbleIdentity = await resolvedDependencies.ensureBubbleInstanceIdForMutation({
     bubbleId: resolved.bubbleId,
     repoPath: resolved.repoPath,
     bubblePaths: resolved.bubblePaths,
@@ -54,7 +48,9 @@ export async function emitHumanReply(
   });
   resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
 
-  const loadedState = await readStateSnapshot(resolved.bubblePaths.statePath);
+  const loadedState = await resolvedDependencies.readStateSnapshot(
+    resolved.bubblePaths.statePath
+  );
   const state = ensureReplyWaitingHumanState({
     state: loadedState.state,
     createError: createHumanReplyCommandError
@@ -62,7 +58,7 @@ export async function emitHumanReply(
 
   const lockPath = join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`);
 
-  const appended = await appendProtocolEnvelope({
+  const appended = await resolvedDependencies.appendProtocolEnvelope({
     transcriptPath: resolved.bubblePaths.transcriptPath,
     mirrorPaths: [resolved.bubblePaths.inboxPath],
     lockPath,
@@ -92,10 +88,14 @@ export async function emitHumanReply(
 
   let written;
   try {
-    written = await writeStateSnapshot(resolved.bubblePaths.statePath, nextState, {
-      expectedFingerprint: loadedState.fingerprint,
-      expectedState: "WAITING_HUMAN"
-    });
+    written = await resolvedDependencies.writeStateSnapshot(
+      resolved.bubblePaths.statePath,
+      nextState,
+      {
+        expectedFingerprint: loadedState.fingerprint,
+        expectedState: "WAITING_HUMAN"
+      }
+    );
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     raiseReplyPostAppendStateWriteFailed({
@@ -105,16 +105,14 @@ export async function emitHumanReply(
     });
   }
 
-  const emitDelivery =
-    dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
-  const messageRef = resolveDeliveryMessageRef({
+  const messageRef = resolvedDependencies.resolveDeliveryMessageRef({
     bubbleId: resolved.bubbleId,
     sessionsPath: resolved.bubblePaths.sessionsPath,
     envelope: appended.envelope
   });
 
   // Optional UX signal; never block protocol/state progression on notification failure.
-  void emitDelivery({
+  void resolvedDependencies.emitTmuxDeliveryNotification({
     bubbleId: resolved.bubbleId,
     bubbleConfig: resolved.bubbleConfig,
     sessionsPath: resolved.bubblePaths.sessionsPath,
