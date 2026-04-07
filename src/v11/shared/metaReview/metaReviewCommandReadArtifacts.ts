@@ -1,4 +1,3 @@
-import type { readFile } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 
 import {
@@ -11,6 +10,7 @@ import {
 } from "./metaReviewRuntimeParity.js";
 import { isMissingFileError } from "./metaReviewCommandErrorMapping.js";
 import { MetaReviewError } from "./metaReviewError.js";
+import type { MetaReviewArtifactReadPort } from "./metaReviewArtifactIo.js";
 
 const metaReviewParityArtifactReadFailedReasonCode =
   "META_REVIEW_PARITY_ARTIFACT_READ_FAILED";
@@ -126,7 +126,7 @@ export function readMetaReviewParitySnapshotFromArtifactRaw(
 
 export async function readMetaReviewParitySnapshotFromArtifact(input: {
   artifactPath: string;
-  readFileFn: typeof readFile;
+  readFileFn: MetaReviewArtifactReadPort;
 }): Promise<MetaReviewParityArtifactReadResult> {
   let artifactRaw: string;
   try {
@@ -147,7 +147,7 @@ export async function readMetaReviewParitySnapshotFromArtifact(input: {
 
 export async function readMetaReviewReportJsonArtifact(input: {
   artifactPath: string;
-  readFileFn: typeof readFile;
+  readFileFn: MetaReviewArtifactReadPort;
 }): Promise<{
   hasReport: boolean;
   reportJson: Record<string, unknown> | null;

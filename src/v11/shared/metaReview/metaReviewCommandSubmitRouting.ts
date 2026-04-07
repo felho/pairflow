@@ -41,26 +41,32 @@ async function resolveMetaReviewGateRecoveryExecutor(
 function buildMetaReviewGateRecoveryDependencies(
   dependencies: MetaReviewCommandDependencies
 ): RecoverMetaReviewGateFromSnapshotDependencies {
-  return {
-    ...(dependencies.resolveBubbleById !== undefined
-      ? { resolveBubbleById: dependencies.resolveBubbleById }
-      : {}),
-    ...(dependencies.readStateSnapshot !== undefined
-      ? { readStateSnapshot: dependencies.readStateSnapshot }
-      : {}),
-    ...(dependencies.writeStateSnapshot !== undefined
-      ? { writeStateSnapshot: dependencies.writeStateSnapshot }
-      : {}),
-    ...(dependencies.appendProtocolEnvelope !== undefined
-      ? { appendProtocolEnvelope: dependencies.appendProtocolEnvelope }
-      : {}),
-    ...(dependencies.readFile !== undefined
-      ? { readFile: dependencies.readFile }
-      : {}),
-    ...(dependencies.writeFile !== undefined
-      ? { writeFile: dependencies.writeFile }
-      : {})
-  };
+  const resolved: RecoverMetaReviewGateFromSnapshotDependencies = {};
+  if (dependencies.resolveBubbleById !== undefined) {
+    resolved.resolveBubbleById = dependencies.resolveBubbleById;
+  }
+  if (dependencies.readStateSnapshot !== undefined) {
+    resolved.readStateSnapshot = dependencies.readStateSnapshot;
+  }
+  if (dependencies.writeStateSnapshot !== undefined) {
+    resolved.writeStateSnapshot = dependencies.writeStateSnapshot;
+  }
+  if (dependencies.appendProtocolEnvelope !== undefined) {
+    resolved.appendProtocolEnvelope = dependencies.appendProtocolEnvelope;
+  }
+  if (dependencies.readFile !== undefined) {
+    resolved.readFile =
+      dependencies.readFile as NonNullable<
+        RecoverMetaReviewGateFromSnapshotDependencies["readFile"]
+      >;
+  }
+  if (dependencies.writeFile !== undefined) {
+    resolved.writeFile =
+      dependencies.writeFile as NonNullable<
+        RecoverMetaReviewGateFromSnapshotDependencies["writeFile"]
+      >;
+  }
+  return resolved;
 }
 
 export function assertSubmitRecommendationRouteable(

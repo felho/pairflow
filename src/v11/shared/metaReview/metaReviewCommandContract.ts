@@ -1,5 +1,3 @@
-import type { readFile, writeFile } from "node:fs/promises";
-
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type {
   MetaReviewSubmissionPayload,
@@ -15,6 +13,10 @@ import type {
 } from "../../../core/state/stateStore.js";
 import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateTypes.js";
 import type { recoverMetaReviewGateFromSnapshot } from "../metaReviewGate/metaReviewGateRecovery.js";
+import type {
+  MetaReviewArtifactReadPort,
+  MetaReviewArtifactWritePort
+} from "./metaReviewArtifactIo.js";
 import type { MetaReviewResult } from "./metaReviewTypes.js";
 
 export type {
@@ -51,8 +53,8 @@ export interface MetaReviewCommandDependencies {
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;
   readRuntimeSessionsRegistry?: typeof readRuntimeSessionsRegistry;
   emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
-  readFile?: typeof readFile;
-  writeFile?: typeof writeFile;
+  readFile?: MetaReviewArtifactReadPort;
+  writeFile?: MetaReviewArtifactWritePort;
   now?: Date;
   randomUUID?: () => string;
   recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshot;

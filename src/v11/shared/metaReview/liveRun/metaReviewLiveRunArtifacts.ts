@@ -1,10 +1,12 @@
-import type { readFile, writeFile } from "node:fs/promises";
-
 import { isMissingFileError } from "./metaReviewLiveRunErrors.js";
 import type {
   MetaReviewDependencies,
   MetaReviewRunWarning
 } from "./metaReviewLiveRunContract.js";
+import type {
+  MetaReviewArtifactReadPort,
+  MetaReviewArtifactWritePort
+} from "../metaReviewArtifactIo.js";
 import type {
   MetaReviewRecommendation,
   MetaReviewRunStatus
@@ -53,7 +55,7 @@ export function buildMetaReviewLastJsonArtifactPayload(
 
 async function readRollingArtifactBackup(
   artifactPath: string,
-  readFileFn: NonNullable<MetaReviewDependencies["readFile"]>
+  readFileFn: MetaReviewArtifactReadPort
 ): Promise<RollingArtifactBackupEntry> {
   try {
     const contents = await readFileFn(artifactPath, "utf8");
@@ -96,8 +98,8 @@ function buildArtifactWriteWarning(
 export async function persistMetaReviewLastJsonArtifact(input: {
   artifactPath: string;
   reportPayload: Record<string, unknown>;
-  readFileFn: NonNullable<MetaReviewDependencies["readFile"]>;
-  writeFileFn: NonNullable<MetaReviewDependencies["writeFile"]>;
+  readFileFn: MetaReviewArtifactReadPort;
+  writeFileFn: MetaReviewArtifactWritePort;
 }): Promise<{
   artifactBackup: RollingArtifactBackupEntry[];
   writeWarning: MetaReviewRunWarning | null;
@@ -124,5 +126,5 @@ export async function persistMetaReviewLastJsonArtifact(input: {
   };
 }
 
-export type MetaReviewReadFileFn = typeof readFile;
-export type MetaReviewWriteFileFn = typeof writeFile;
+export type MetaReviewReadFileFn = MetaReviewArtifactReadPort;
+export type MetaReviewWriteFileFn = MetaReviewArtifactWritePort;
