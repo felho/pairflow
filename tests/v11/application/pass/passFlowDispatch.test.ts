@@ -11,8 +11,8 @@ import {
   dispatchPassFlow,
   type DispatchPassFlowInput,
   type PassFlowDispatchDependencies
-} from "../../../../src/v11/shared/pass/passFlowDispatch.js";
-import type { PassFlowRuntimeDependencies } from "../../../../src/v11/shared/pass/passFlowDependencyWiring.js";
+} from "../../../../src/v11/application/pass/passFlowDispatch.js";
+import type { PassFlowRuntimeDependencies } from "../../../../src/v11/application/pass/passFlowDependencyWiring.js";
 
 function createDispatchInput(trigger: boolean): DispatchPassFlowInput {
   return {

@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace
 } from "../../../../src/v11/application/converged/emitConvergedV11.js";
-import { emitPassFromWorkspace } from "../../../../src/v11/shared/pass/passCommandOrchestration.js";
+import { emitPassFromWorkspace } from "../../../../src/v11/application/pass/passCommandOrchestration.js";
 import { submitMetaReviewResult } from "../../../../src/v11/shared/metaReview/metaReviewCommandRuntime.js";
 import { emitApproveV11 as emitApprove } from "../../../../src/v11/application/approval/emitApprovalV11.js";
 import { commitBubbleV11 } from "../../../../src/v11/application/commit/emitCommitV11.js";

@@ -10,7 +10,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 import {
   buildEmitPassContext,
   type BuildEmitPassContextDependencies
-} from "../../../../src/v11/shared/pass/emitPassContextBuilder.js";
+} from "../../../../src/v11/application/pass/emitPassContextBuilder.js";
 import type { BuildPassRoutingInputInput } from "../../../../src/v11/shared/pass/passRoutingInvocationBuilders.js";
 
 describe("emitPassContextBuilder", () => {

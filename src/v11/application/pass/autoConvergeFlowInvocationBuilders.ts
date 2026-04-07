@@ -1,17 +1,17 @@
+import type { EmitConvergedV11Dependencies as EmitConvergedDependencies } from "../converged/emitConvergedV11.js";
+import type { BuildFlowBaseInput } from "./flowInvocationBuilderBase.js";
 import type {
   ExecuteAutoConvergeConvergedDependencies,
   ExecuteAutoConvergeConvergedInput
-} from "../../application/pass/autoConvergeConvergedExecution.js";
-import type { EmitConvergedV11Dependencies as EmitConvergedDependencies } from "../../application/converged/emitConvergedV11.js";
+} from "./autoConvergeConvergedExecution.js";
 import type {
   FinalizeAutoConvergePassDependencies,
   FinalizeAutoConvergePassInput
-} from "../../application/pass/autoConvergeFinalization.js";
+} from "./autoConvergeFinalization.js";
 import type {
   RunAutoConvergeFlowDependencies,
   RunAutoConvergeFlowInput
-} from "../../application/pass/runAutoConvergeFlow.js";
-import type { BuildFlowBaseInput } from "./flowInvocationBuilderBase.js";
+} from "./runAutoConvergeFlow.js";
 
 export interface BuildAutoConvergeFlowInputInput extends BuildFlowBaseInput {
   onDownstreamRejected: (reason: string) => never;

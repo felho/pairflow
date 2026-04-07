@@ -15,7 +15,7 @@ import type {
 import {
   buildNormalPassFlowDependencies,
   buildNormalPassFlowInput
-} from "../../../../src/v11/shared/pass/normalPassFlowInvocationBuilders.js";
+} from "../../../../src/v11/application/pass/normalPassFlowInvocationBuilders.js";
 
 function toErrorMessage(input: PairflowCommandErrorInput): string {
   if (typeof input === "string") {

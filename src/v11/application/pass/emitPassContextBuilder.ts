@@ -1,14 +1,14 @@
 import type { AgentRole } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent } from "../../../types/protocol.js";
-import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext.js";
-import { preparePassRouting, type PreparePassRoutingDependencies } from "../../application/pass/passRoutingPreparation.js";
+import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
+import { buildPassRoutingInput, type BuildPassRoutingInputInput } from "../../shared/pass/passRoutingInvocationBuilders.js";
+import { normalizePassCommandInput } from "../../shared/pass/passCommandInputNormalization.js";
+import { normalizePassCommandPayload } from "../../shared/pass/passCommandPayloadNormalization.js";
+import { preparePassWorkspaceContext } from "../../shared/pass/passWorkspaceContextPreparation.js";
 import type { BuildFlowBaseInput } from "./flowInvocationBuilderBase.js";
 import { createPassRoutingDependencies } from "./passFlowDependencyWiring.js";
-import { buildPassRoutingInput, type BuildPassRoutingInputInput } from "./passRoutingInvocationBuilders.js";
-import { normalizePassCommandInput } from "./passCommandInputNormalization.js";
-import { normalizePassCommandPayload } from "./passCommandPayloadNormalization.js";
-import { preparePassWorkspaceContext } from "./passWorkspaceContextPreparation.js";
+import { preparePassRouting, type PreparePassRoutingDependencies } from "./passRoutingPreparation.js";
 
 export interface EmitPassContextCommandInput {
   summary: string;

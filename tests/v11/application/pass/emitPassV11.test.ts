@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { emitPassFromWorkspace } from "../../../../src/v11/shared/pass/passCommandOrchestration.js";
+import { emitPassFromWorkspace } from "../../../../src/v11/application/pass/passCommandOrchestration.js";
 import type { EmitPassInput } from "../../../../src/v11/application/pass/passCommandContract.js";
 import {
   asPassCommandErrorV11,

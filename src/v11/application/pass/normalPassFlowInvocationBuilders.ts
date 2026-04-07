@@ -1,28 +1,28 @@
-import type { BubblePaths } from "../bubble/bubblePaths.js";
-import type { PassDeliveryDependencies } from "../../application/pass/reviewerDelivery.js";
+import type { BubblePaths } from "../../shared/bubble/bubblePaths.js";
+import type { BuildFlowBaseInput } from "./flowInvocationBuilderBase.js";
+import type { PassDeliveryDependencies } from "./reviewerDelivery.js";
 import type {
   resolvePassValidationForPass as ResolvePassValidationForPassFn,
   ResolvePassValidationForPassDependencies
-} from "../../application/pass/passValidationGate.js";
+} from "./passValidationGate.js";
 import type {
   ExecuteNormalPassDeliveryDependencies,
   ExecuteNormalPassDeliveryInput,
   ExecuteNormalPassDeliveryResult
-} from "../../application/pass/normalPassDeliveryExecution.js";
+} from "./normalPassDeliveryExecution.js";
 import type {
   FinalizeNormalPassDependencies,
   FinalizeNormalPassInput
-} from "../../application/pass/normalPassFinalization.js";
+} from "./normalPassFinalization.js";
 import type {
   PersistNormalPassPostAppendDependencies,
   PersistNormalPassPostAppendInput,
   PersistNormalPassPostAppendResult
-} from "../../application/pass/normalPassPostAppendPersistence.js";
+} from "./normalPassPostAppendPersistence.js";
 import type {
   RunNormalPassFlowDependencies,
   RunNormalPassFlowInput
-} from "../../application/pass/runNormalPassFlow.js";
-import type { BuildFlowBaseInput } from "./flowInvocationBuilderBase.js";
+} from "./runNormalPassFlow.js";
 
 export type BuildNormalPassFlowInputInput = BuildFlowBaseInput;
 

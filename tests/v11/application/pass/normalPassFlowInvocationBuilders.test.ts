@@ -12,7 +12,7 @@ import {
   type BuildNormalPassFlowInputInput,
   buildNormalPassFlowDependencies,
   buildNormalPassFlowInput
-} from "../../../../src/v11/shared/pass/normalPassFlowInvocationBuilders.js";
+} from "../../../../src/v11/application/pass/normalPassFlowInvocationBuilders.js";
 
 function createNormalBaseInput(
   passRoutingOverrides?: Partial<BuildNormalPassFlowInputInput["passRouting"]>

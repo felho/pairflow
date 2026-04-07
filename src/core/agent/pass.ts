@@ -2,7 +2,7 @@ export {
   asPassCommandError,
   emitPassFromWorkspace,
   inferPassIntent
-} from "../../v11/shared/pass/passCommandOrchestration.js";
+} from "../../v11/application/pass/passCommandOrchestration.js";
 export { PassCommandError } from "../../v11/shared/pass/passCommandError.js";
 export {
   resolveMostRecentPreviousReviewerPassIsCleanFromMetadata

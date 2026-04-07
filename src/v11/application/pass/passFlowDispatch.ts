@@ -1,9 +1,4 @@
-import { runAutoConvergeFlow } from "../../application/pass/runAutoConvergeFlow.js";
-import { runNormalPassFlow } from "../../application/pass/runNormalPassFlow.js";
-import type {
-  AutoConvergePassResult,
-  NormalPassResult
-} from "../../application/pass/passResultBuilder.js";
+import type { BuildFlowBaseInput } from "./flowInvocationBuilderBase.js";
 import { buildAutoConvergeFlowInput } from "./autoConvergeFlowInvocationBuilders.js";
 import { buildNormalPassFlowInput } from "./normalPassFlowInvocationBuilders.js";
 import {
@@ -11,7 +6,12 @@ import {
   createNormalPassFlowDependencies,
   type PassFlowRuntimeDependencies
 } from "./passFlowDependencyWiring.js";
-import type { BuildFlowBaseInput } from "./flowInvocationBuilderBase.js";
+import type {
+  AutoConvergePassResult,
+  NormalPassResult
+} from "./passResultBuilder.js";
+import { runAutoConvergeFlow } from "./runAutoConvergeFlow.js";
+import { runNormalPassFlow } from "./runNormalPassFlow.js";
 
 export interface DispatchPassFlowInput extends BuildFlowBaseInput {
   onDownstreamRejected: (reason: string) => never;

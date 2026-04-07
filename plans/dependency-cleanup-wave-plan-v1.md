@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `3fe74ce8`.
+Last updated from `main` at `4a3cd1ea`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `153 fail / 58 warn`
+- Dependency report at this checkpoint: `109 fail / 58 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -83,7 +83,8 @@ contracts, not thin wrappers.
   - `4a03fa06` metaReviewGate recovery-context compat batch
   - `48f1b195` metaReview live-run compat batch
   - `3fe74ce8` metaReviewGate residual compat batch
-  - `pending` metaReviewGate types + mutation compat batch
+  - `4a3cd1ea` metaReviewGate types + mutation compat batch
+  - `pass shell relocation (working tree)` application-owned pass orchestration shell relocation
 
 ## Wave Ledger
 
@@ -130,6 +131,7 @@ contracts, not thin wrappers.
 | W29 | `metaReview` live-run compat batch | `completed` | orchestrator | Live-run runtime, pane/runtime helpers, and approval refresh/persistence files now use explicit core compat bridges; baseline dropped to `174 fail / 59 warn` |
 | W30 | `metaReviewGate` residual compat batch | `completed` | orchestrator | Apply observation/persistence, error conversion, human-gate persistence, and notify files now use explicit core compat bridges; baseline dropped to `162 fail / 58 warn` |
 | W31 | `metaReviewGate` types + mutation compat batch | `completed` | orchestrator | Gate types, approval request envelope, gate apply shell, and mutation boundary IO now use explicit core compat bridges; baseline dropped to `153 fail / 58 warn` |
+| W32 | `pass` orchestration shell relocation | `validated` | orchestrator | `passFlowDependencyWiring`, flow builders, dispatch, emit-context, and command orchestration now live in `application/pass`; batch is locally green and drops the dependency baseline to `109 fail / 58 warn` |
 
 ## Parallelization Rules
 
@@ -160,6 +162,6 @@ contracts, not thin wrappers.
 
 Current best next moves:
 
-1. reassess the remaining `pass` residuals and the UI complexity frontier from the current `153 fail / 58 warn` baseline,
-2. then choose between another bounded dependency cluster and the first UI complexity breakup,
-3. keep this file updated after each merged micro-batch to survive context compaction.
+1. land W32 and then split the new frontier into `restart` and `reconcile` bounded dependency-resolution batches,
+2. keep `passWorkspaceContextPreparation` as the remaining pass-specific follow-up after the shell move,
+3. defer UI complexity breakup until the dependency frontier is materially smaller.
