@@ -1,4 +1,4 @@
-import type { ProtocolEnvelopeDraft } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
+import type { ProtocolEnvelopeDraft } from "../../../types/protocol.js";
 import type { AgentName, BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ExecuteKickoffMutationRollbackInput } from "./kickoffMutationRollback.js";

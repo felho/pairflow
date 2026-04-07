@@ -1,4 +1,4 @@
-import type { ResolvedKickoffDependencies } from "./kickoffDependencyResolution.js";
+import type { ResolvedKickoffDependencies } from "./kickoffDependencyContract.js";
 import { buildKickoffResolveBubbleInput } from "./kickoffValidationInputBuilders.js";
 
 export interface KickoffValidationBubbleInput {

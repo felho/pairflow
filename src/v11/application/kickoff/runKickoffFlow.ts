@@ -1,4 +1,4 @@
-import type { ResolvedKickoffDependencies } from "../../shared/kickoff/kickoffDependencyResolution.js";
+import type { ResolvedKickoffDependencies } from "../../shared/kickoff/kickoffDependencyContract.js";
 import type {
   RunKickoffFlowInput,
   RunKickoffFlowResult

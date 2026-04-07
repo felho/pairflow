@@ -1,8 +1,10 @@
 import { join } from "node:path";
 
-import type { ProtocolEnvelopeDraft } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type { AgentName } from "../../../types/bubble.js";
-import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type {
+  ProtocolEnvelope,
+  ProtocolEnvelopeDraft
+} from "../../../types/protocol.js";
 import type { ResolvedKickoffTaskInput } from "./kickoffTaskInputResolution.js";
 import { buildKickoffTaskEnvelope } from "./kickoffTaskEnvelope.js";
 

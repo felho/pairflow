@@ -1,5 +1,5 @@
 import type { ResolvedKickoffTaskInput } from "./kickoffTaskInputResolution.js";
-import type { ResolvedKickoffDependencies } from "./kickoffDependencyResolution.js";
+import type { ResolvedKickoffDependencies } from "./kickoffDependencyContract.js";
 import {
   type KickoffBubbleResultShape,
   type KickoffIdeationMarkers,

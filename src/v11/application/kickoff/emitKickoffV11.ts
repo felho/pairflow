@@ -1,8 +1,8 @@
 import {
   resolveKickoffDependencies,
-  type KickoffDependencyOverrides
-} from "../../shared/kickoff/kickoffDependencyResolution.js";
+} from "./kickoffDependencyResolution.js";
 import { buildKickoffEntrypointInvocation } from "../../shared/kickoff/kickoffEntrypointInvocationBuilder.js";
+import type { KickoffDependencyOverrides } from "../../shared/kickoff/kickoffDependencyContract.js";
 import type { RunKickoffFlowResult } from "../../shared/kickoff/kickoffFlowContract.js";
 import { runKickoffFlow } from "./runKickoffFlow.js";
 

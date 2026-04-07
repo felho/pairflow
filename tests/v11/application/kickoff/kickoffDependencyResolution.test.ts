@@ -6,7 +6,7 @@ import { resolveBubbleById } from "../../../../src/v11/infrastructure/executor/w
 import { appendProtocolEnvelope } from "../../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { emitTmuxDeliveryNotification } from "../../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
-import { resolveKickoffDependencies } from "../../../../src/v11/shared/kickoff/kickoffDependencyResolution.js";
+import { resolveKickoffDependencies } from "../../../../src/v11/application/kickoff/kickoffDependencyResolution.js";
 
 describe("kickoffDependencyResolution", () => {
   it("uses kickoff defaults when overrides are omitted", () => {

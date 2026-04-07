@@ -1,5 +1,5 @@
 import { IDEATION_KICKOFF_STATE_CONFLICT } from "../ideation/ideationReasonCodes.js";
-import type { ResolvedKickoffDependencies } from "./kickoffDependencyResolution.js";
+import type { ResolvedKickoffDependencies } from "./kickoffDependencyContract.js";
 import type { KickoffPreparedValidation } from "./kickoffValidationPreparation.js";
 import type { buildKickoffNextState } from "./kickoffStateTransition.js";
 import { persistKickoffState } from "./kickoffStatePersistence.js";

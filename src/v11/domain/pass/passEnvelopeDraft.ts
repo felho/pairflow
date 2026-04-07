@@ -3,11 +3,11 @@ import type {
   RepeatCleanAutoconvergeReasonDetail
 } from "../../../v11/domain/convergence/repeatCleanAutoconverge.js";
 import { claimParserDivergenceDiagnosticReasonCode } from "../../../v11/domain/convergence/policy.js";
-import type { ProtocolEnvelopeDraft } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type { Finding } from "../../../types/findings.js";
 import {
   deliveryTargetRoleMetadataKey,
-  type PassIntent
+  type PassIntent,
+  type ProtocolEnvelopeDraft
 } from "../../../types/protocol.js";
 import type { ResolvedPassHandoff } from "./handoff.js";
 import type {
