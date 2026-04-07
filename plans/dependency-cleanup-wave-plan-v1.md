@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `841c7b30`.
+Last updated from `main` at `1a971ff7`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `0 fail / 44 warn`
+- Dependency report at this checkpoint: `0 fail / 39 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -167,7 +167,7 @@ contracts, not thin wrappers.
 | W47 | `askHuman` finalization notification slice | `completed` | worker + orchestrator validation | Tmux-owned finalization/notification shells moved into `application/askHuman`, and the shared surface now keeps only boundary-neutral contracts via a local askHuman delivery port contract |
 | W48 | reviewer summary-verifier artifact split | `aborted` | orchestrator | The attempted `summaryVerifierConsistencyGate` infra rehome removed a shared filesystem warning but introduced new `application -> infrastructure` fails in `converged`; the batch was intentionally rolled back to baseline rather than forcing a semantically wrong wrapper fix |
 | W49 | `metrics/events` ownership split | `completed` | worker + orchestrator validation | Pure metrics event builder/validation stayed in `shared`; the fs-backed append/lock/store owner moved into infrastructure behind a core legacy bridge, and the dependency report no longer shows the metrics shared warning |
-| W50 | `watchdog` persistence inversion prep | `ready` | explorer-complete | Explorer mapped the smallest correct batch as `watchdog stores + list/status read rewiring + outer default wiring`; no direct move is acceptable without ports |
+| W50 | `watchdog` persistence inversion prep | `in_progress` | explorer-complete + worker | Explorer mapped the smallest correct batch as `watchdog stores + list/status read rewiring + outer default wiring`; the implementation worker confirmed the bounded design but has not yet produced a full validatable batch, so no partial diff is accepted on `main` |
 | W51 | `reviewer` warning frontier prep | `ready` | explorer-complete | Explorer ranked the next bounded reviewer batches: `reviewerBrief` first, then `summaryVerifier` only with ports + outer wiring, then `reviewVerification`, then `testEvidence` |
 
 ## Parallelization Rules
@@ -197,7 +197,7 @@ contracts, not thin wrappers.
 
 ## Warning Frontier Snapshot
 
-Current ownership-warning frontier after the clean rollback of W48:
+Current ownership-warning frontier after W49 metrics validation:
 
 - `metaReviewGate`: 14
 - `askHuman`: 0 in the visible report after W47
