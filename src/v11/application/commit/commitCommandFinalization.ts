@@ -1,10 +1,10 @@
 import { join } from "node:path";
 
-import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
-import { appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
+import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
+import { appendProtocolEnvelope } from "../../infrastructure/artifact/transcript/transcriptStore.js";
 import { applyStateTransition } from "../../domain/state/machine.js";
 import { writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import { normalizeStringList } from "../normalization/stringNormalization.js";
+import { normalizeStringList } from "../../shared/normalization/stringNormalization.js";
 import { deriveDonePackageSummary } from "./commitDonePackage.js";
 import { BubbleCommitError } from "./commitCommandRuntime.js";
 import type {

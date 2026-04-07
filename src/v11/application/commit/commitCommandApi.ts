@@ -1,13 +1,13 @@
 import { resolve } from "node:path";
 
 import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import { normalizeStringList } from "../normalization/stringNormalization.js";
+import { normalizeStringList } from "../../shared/normalization/stringNormalization.js";
 import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
 import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
 import type {
   CommitBubbleInput,
   CommitBubbleResult
-} from "../../application/commit/commitCommandContract.js";
+} from "./commitCommandContract.js";
 import {
   BubbleCommitError,
   throwAsBubbleCommitError

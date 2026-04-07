@@ -4,8 +4,8 @@ import {
   BubbleCommitError,
   createBubbleCommitError,
   isBubbleCommitError
-} from "./commitCommandError.js";
-import { normalizeBubbleCommitError } from "./commitCommandErrorNormalization.js";
+} from "../../shared/commit/commitCommandError.js";
+import { normalizeBubbleCommitError } from "../../shared/commit/commitCommandErrorNormalization.js";
 
 export { BubbleCommitError };
 

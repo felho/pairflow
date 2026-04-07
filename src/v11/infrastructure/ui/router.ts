@@ -15,7 +15,7 @@ import {
 } from "../../application/approval/approvalCommandOrchestration.js";
 import { emitHumanReply } from "../../application/reply/replyCommandApi.js";
 import { resumeBubbleCommandOrchestration as resumeBubble } from "../../shared/resume/resumeCommandOrchestration.js";
-import { commitBubble } from "../../shared/commit/commitCommandApi.js";
+import { commitBubbleV11 as commitBubble } from "../../application/commit/emitCommitV11.js";
 import { mergeBubbleCommandOrchestration as mergeBubble } from "../../shared/merge/mergeCommandOrchestration.js";
 import { openBubble } from "../../application/open/emitOpenV11.js";
 import {
