@@ -25,13 +25,13 @@ export type {
   MetaReviewStatusView,
   MetaReviewSubmitInput,
   MetaReviewSubmitResult
-} from "./metaReviewLiveRunContract.js";
+} from "../../v11/shared/metaReview/liveRun/metaReviewLiveRunContract.js";
 export type { MetaReviewErrorReasonCode };
-export { runMetaReview } from "./metaReviewLiveRunRuntime.js";
+export { runMetaReview } from "../../v11/shared/metaReview/liveRun/metaReviewLiveRunRuntime.js";
 export {
   extractMetaReviewDelimitedBlock,
   parseMetaReviewRunnerOutput
-} from "./metaReviewLiveRunner.js";
+} from "../../v11/shared/metaReview/liveRun/metaReviewLiveRunner.js";
 export {
   getMetaReviewLastReport,
   getMetaReviewStatus,
