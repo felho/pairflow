@@ -752,7 +752,8 @@ const ownershipSignalMatchers: readonly {
   },
   {
     signal: "tmux-runtime",
-    matcher: /\btmux\b/u
+    matcher:
+      /\bfrom\s+["'][^"']*(?:core\/runtime\/tmux|v11\/infrastructure\/channel\/tmux)[^"']*["']|\b(?:emitTmuxDeliveryNotification|resolveDeliveryMessageRef|respawnTmuxPaneCommand|runInTmuxPane|runTmuxAttach|checkSession)\s*\(/u
   }
 ] as const;
 

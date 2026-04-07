@@ -432,6 +432,119 @@ describe("dependency fitness check", () => {
     ).toBe(true);
   });
 
+  it("does not warn on generic tmux wording under shared", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/restart/restartCommandCliOptions.ts",
+      [
+        "export function getHelp(): string {",
+        "  return 'Restarts bubble runtime by terminating the existing tmux session/runtime ownership.';",
+        "}",
+        ""
+      ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+      currentMilestone: undefined
+    });
+
+    expect(report.status).toBe("pass");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("ownership-signal warning: shared module shows strong infrastructure signals (tmux-runtime)")
+      )
+    ).toBe(false);
+  });
+
+  it("still warns on concrete tmux runtime capability under shared", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/askHuman/emit.ts",
+      [
+        "import type { EmitTmuxDeliveryNotificationResult } from '../../../core/runtime/tmuxDelivery.js';",
+        "export function fallback(): EmitTmuxDeliveryNotificationResult {",
+        "  return { delivered: false, message: '', reason: 'tmux_send_failed' };",
+        "}",
+        ""
+      ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+      currentMilestone: undefined
+    });
+
+    expect(report.status).toBe("warn");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("ownership-signal warning: shared module shows strong infrastructure signals (tmux-runtime)")
+      )
+    ).toBe(true);
+  });
+
+  it("does not warn on tmux port types under shared ports", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/ports/tmuxDelivery.ts",
+      "export type EmitTmuxDeliveryNotificationPort = (input: { bubbleId: string }) => Promise<{ delivered: boolean }>;\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/ports/askHumanDelivery.ts",
+      [
+        "import type { EmitTmuxDeliveryNotificationPort } from './tmuxDelivery.js';",
+        "export interface Deps { emit: EmitTmuxDeliveryNotificationPort; }",
+        ""
+      ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+      currentMilestone: undefined
+    });
+
+    expect(report.status).toBe("pass");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("ownership-signal warning: shared module shows strong infrastructure signals (tmux-runtime)")
+      )
+    ).toBe(false);
+  });
+
   it("applies allow-edge exception for forbidden layer import", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(
