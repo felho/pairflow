@@ -21,25 +21,22 @@ import {
   persistMetaReviewLastJsonArtifact
 } from "./metaReviewLiveRunArtifacts.js";
 import {
+  buildMetaReviewRunResult,
+  buildNextMetaReviewStateSnapshot,
+  persistMetaReviewStateSnapshot
+} from "./metaReviewLiveRunPersistence.js";
+import {
   assertRunPayloadInvariants,
   formatRunnerFailure,
-  mapRecommendationToStatus,
-  stateWriteConflictToMetaReviewError
+  mapRecommendationToStatus
 } from "./metaReviewLiveRunErrors.js";
 import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
 import {
-  StateStoreConflictError,
   readStateSnapshot,
-  writeStateSnapshot,
-  type LoadedStateSnapshot
+  writeStateSnapshot
 } from "../state/stateStore.js";
-import {
-  normalizeMetaReviewSnapshot
-} from "../../v11/shared/metaReview/metaReviewSnapshot.js";
 import { MetaReviewError } from "../../v11/shared/metaReview/metaReviewError.js";
 import type {
-  BubbleMetaReviewSnapshotState,
-  BubbleStateSnapshot,
   MetaReviewRecommendation,
   MetaReviewRunStatus
 } from "../../types/bubble.js";
@@ -136,40 +133,23 @@ export async function runMetaReview(
     reworkTargetMessage
   });
 
-  const previousMetaReview = normalizeMetaReviewSnapshot(loadedState.state.meta_review);
-  const lifecycleBaseState = loadedState.state;
-  const nextMetaReview: BubbleMetaReviewSnapshotState = {
-    ...previousMetaReview,
-    execution_context: previousMetaReview.execution_context ?? null,
-    last_autonomous_run_id: runId,
-    last_autonomous_status: status,
-    last_autonomous_recommendation: recommendation,
-    last_autonomous_summary: summary,
-    last_autonomous_report_ref: CANONICAL_META_REVIEW_REPORT_REF,
-    last_autonomous_rework_target_message: reworkTargetMessage,
-    last_autonomous_updated_at: updatedAt,
-    ...(loadedState.state.state === "READY_FOR_HUMAN_APPROVAL" && status === "success"
-      ? { sticky_human_gate: true }
-      : {})
-  };
+  const nextState = buildNextMetaReviewStateSnapshot({
+    loadedState,
+    runId,
+    status,
+    recommendation,
+    summary,
+    reworkTargetMessage,
+    updatedAt,
+    reportRef: CANONICAL_META_REVIEW_REPORT_REF
+  });
 
-  const nextState: BubbleStateSnapshot = {
-    ...lifecycleBaseState,
-    meta_review: nextMetaReview
-  };
-
-  let written: LoadedStateSnapshot;
-  try {
-    written = await writeState(resolved.bubblePaths.statePath, nextState, {
-      expectedFingerprint: loadedState.fingerprint,
-      expectedState: loadedState.state.state
-    });
-  } catch (error) {
-    if (error instanceof StateStoreConflictError) {
-      throw stateWriteConflictToMetaReviewError(error);
-    }
-    throw error;
-  }
+  const written = await persistMetaReviewStateSnapshot({
+    statePath: resolved.bubblePaths.statePath,
+    loadedState,
+    nextState,
+    writeStateFn: writeState
+  });
 
   const reportPayload = buildMetaReviewLastJsonArtifactPayload({
     bubbleId: resolved.bubbleId,
@@ -217,16 +197,16 @@ export async function runMetaReview(
     writeStateFn: writeState
   });
 
-  return {
-    bubble_id: resolved.bubbleId,
-    run_id: runId,
+  return buildMetaReviewRunResult({
+    bubbleId: resolved.bubbleId,
+    runId,
     status,
     recommendation,
     summary,
-    report_ref: CANONICAL_META_REVIEW_REPORT_REF,
-    rework_target_message: reworkTargetMessage,
-    updated_at: updatedAt,
+    reportRef: CANONICAL_META_REVIEW_REPORT_REF,
+    reworkTargetMessage,
+    updatedAt,
     warnings,
-    report_json: canonicalReportJson
-  };
+    canonicalReportJson
+  });
 }
