@@ -1,9 +1,5 @@
-import type {
-  removeRuntimeSession
-} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
-import type {
-  terminateBubbleTmuxSession
-} from "../../infrastructure/channel/tmux/tmuxManager.js";
+import type { RemoveRuntimeSessionPort } from "../../shared/ports/runtimeSessions.js";
+import type { TerminateBubbleTmuxSessionPort } from "../../shared/ports/tmuxSessions.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 
 export interface StopBubbleInput {
@@ -22,6 +18,6 @@ export interface StopBubbleResult {
 }
 
 export interface StopBubbleDependencies {
-  terminateBubbleTmuxSession?: typeof terminateBubbleTmuxSession;
-  removeRuntimeSession?: typeof removeRuntimeSession;
+  terminateBubbleTmuxSession?: TerminateBubbleTmuxSessionPort;
+  removeRuntimeSession?: RemoveRuntimeSessionPort;
 }
