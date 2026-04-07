@@ -1,3 +1,1 @@
-export function shellQuote(value: string): string {
-  return `'${value.replace(/'/gu, "'\\''")}'`;
-}
+export { shellQuote } from "../../../shared/foundation/shellQuote.js";

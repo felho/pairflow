@@ -3,7 +3,7 @@ import { dirname, join, resolve } from "node:path";
 
 import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { buildBubbleTmuxSessionName } from "../../infrastructure/channel/tmux/tmuxManager.js";
+import { buildBubbleTmuxSessionName } from "../bubble/tmuxSessionName.js";
 import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
 import { readReviewerBriefArtifact, readReviewerFocusArtifact } from "../../../v11/shared/reviewer/reviewerBrief.js";
 import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
