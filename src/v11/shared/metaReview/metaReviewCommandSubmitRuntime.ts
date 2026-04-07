@@ -25,13 +25,19 @@ import {
 } from "./metaReviewRuntimeParity.js";
 import {
   assertActiveMetaReviewExecutionContext,
-  assertMetaReviewSubmitterAuthority,
+  assertMetaReviewSubmitterAuthority
+} from "./metaReviewCommandSubmitAuthority.js";
+import {
   assertRunPayloadInvariants,
-  assertSummaryStructuredParity,
   mapRecommendationToStatus,
-  normalizeRequiredSubmitText,
+  normalizeRequiredSubmitText
+} from "./metaReviewCommandSubmitValidation.js";
+import {
+  assertSummaryStructuredParity,
+} from "./metaReviewCommandSubmitParity.js";
+import {
   resolveSubmitCanonicalRunId
-} from "./metaReviewCommandSubmitSupport.js";
+} from "./metaReviewCommandSubmitLink.js";
 import {
   assertSubmitReworkFindingsArtifactContract,
   buildCanonicalSubmitRunResult,
