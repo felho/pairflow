@@ -1,16 +1,25 @@
-import { mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  utimes,
+  writeFile
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  appendMetricsEvent,
   createMetricsEvent,
-  MetricsEventLockError,
   MetricsEventValidationError,
   resolveMetricsShardPath
 } from "../../../../src/v11/shared/metrics/events.js";
+import {
+  appendMetricsEvent,
+  MetricsEventLockError
+} from "../../../../src/v11/infrastructure/artifact/metrics/eventsStore.js";
 
 const tempDirs: string[] = [];
 

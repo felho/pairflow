@@ -2,11 +2,11 @@ import { resolve } from "node:path";
 
 import { type MetricsActorRole } from "../../../types/metrics.js";
 import { normalizeRepoPath } from "../../../core/bubble/repoResolution.js";
+import { resolveDefaultMetricsEventStorePort } from "../../../core/metrics/events.js";
+import { createMetricsEvent } from "./events.js";
 import {
-  appendMetricsEvent,
-  createMetricsEvent,
   type AppendMetricsEventResult
-} from "./events.js";
+} from "./eventsStorePort.js";
 
 export interface EmitBubbleLifecycleEventInput {
   repoPath: string;
@@ -45,6 +45,7 @@ export async function emitBubbleLifecycleEvent(
   input: EmitBubbleLifecycleEventInput
 ): Promise<AppendMetricsEventResult> {
   const normalizedRepoPath = await normalizeRepoPath(resolve(input.repoPath));
+  const appendMetricsEvent = await resolveDefaultMetricsEventStorePort();
   return appendMetricsEvent({
     event: createMetricsEvent({
       repo_path: normalizedRepoPath,
@@ -56,9 +57,7 @@ export async function emitBubbleLifecycleEvent(
       metadata: input.metadata,
       ...(input.now !== undefined ? { now: input.now } : {})
     }),
-    ...(input.rootPath !== undefined
-      ? { rootPath: input.rootPath }
-      : {}),
+    ...(input.rootPath !== undefined ? { rootPath: input.rootPath } : {}),
     ...(input.lockTimeoutMs !== undefined
       ? { lockTimeoutMs: input.lockTimeoutMs }
       : {}),
@@ -74,7 +73,7 @@ export async function emitBubbleLifecycleEventBestEffort(
   const reportWarning = input.reportWarning ?? defaultWarningReporter;
   const lockTimeoutMs = input.lockTimeoutMs ?? defaultBestEffortLockTimeoutMs;
   // Best-effort always forwards staleLockRecoveryAfterMs explicitly so this
-  // layer's default (100ms) overrides appendMetricsEvent's deeper default.
+  // layer's default (100ms) overrides the deeper store default.
   const staleLockRecoveryAfterMs =
     input.staleLockRecoveryAfterMs === undefined
       ? defaultBestEffortStaleLockRecoveryAfterMs

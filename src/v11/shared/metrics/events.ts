@@ -1,21 +1,18 @@
-import { appendFile, mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 
-import { metricsActorRoles, metricsSchemaVersion, type PairflowMetricsEvent } from "../../../types/metrics.js";
+import {
+  metricsActorRoles,
+  metricsSchemaVersion,
+  type PairflowMetricsEvent
+} from "../../../types/metrics.js";
 import {
   isInteger,
   isIsoTimestamp,
   isNonEmptyString,
   isRecord
 } from "../validation/primitives.js";
-import {
-  FileLockTimeoutError,
-  withFileLock
-} from "../../../core/util/fileLock.js";
 
-const defaultLockTimeoutMs = 5_000;
-const defaultStaleLockRecoveryAfterMs = 1_000;
 const metricsEventsRootEnvVar = "PAIRFLOW_METRICS_EVENTS_ROOT";
 
 export interface ResolveMetricsShardPathInput {
@@ -42,34 +39,7 @@ export interface CreateMetricsEventInput {
   now?: Date;
 }
 
-export interface AppendMetricsEventInput {
-  event: PairflowMetricsEvent;
-  rootPath?: string;
-  lockTimeoutMs?: number;
-  // Metrics-layer name; forwarded to withFileLock's staleAfterMs option.
-  staleLockRecoveryAfterMs?: number | null;
-}
-
-export interface AppendMetricsEventResult {
-  event: PairflowMetricsEvent;
-  shardPath: MetricsShardPath;
-}
-
-export class MetricsEventStoreError extends Error {
-  public constructor(message: string) {
-    super(message);
-    this.name = "MetricsEventStoreError";
-  }
-}
-
-export class MetricsEventLockError extends MetricsEventStoreError {
-  public constructor(message: string) {
-    super(message);
-    this.name = "MetricsEventLockError";
-  }
-}
-
-export class MetricsEventValidationError extends MetricsEventStoreError {
+export class MetricsEventValidationError extends Error {
   public readonly errors: string[];
 
   public constructor(errors: string[]) {
@@ -194,59 +164,4 @@ export function assertValidMetricsEvent(event: unknown): PairflowMetricsEvent {
   }
 
   return event as unknown as PairflowMetricsEvent;
-}
-
-export async function appendMetricsEvent(
-  input: AppendMetricsEventInput
-): Promise<AppendMetricsEventResult> {
-  const event = assertValidMetricsEvent(input.event);
-  const timestamp = new Date(event.ts);
-  const shardPath = resolveMetricsShardPath({
-    at: timestamp,
-    ...(input.rootPath !== undefined ? { rootPath: input.rootPath } : {})
-  });
-
-  try {
-    const staleLockRecoveryAfterMs =
-      input.staleLockRecoveryAfterMs === undefined
-        ? defaultStaleLockRecoveryAfterMs
-        : input.staleLockRecoveryAfterMs;
-
-    await withFileLock(
-      {
-        lockPath: shardPath.lockPath,
-        timeoutMs: input.lockTimeoutMs ?? defaultLockTimeoutMs,
-        ...(staleLockRecoveryAfterMs !== null
-          ? { staleAfterMs: staleLockRecoveryAfterMs }
-          : {}),
-        ensureParentDir: true
-      },
-      async () => {
-        await mkdir(dirname(shardPath.filePath), { recursive: true });
-        await appendFile(shardPath.filePath, `${JSON.stringify(event)}\n`, {
-          encoding: "utf8"
-        });
-      }
-    );
-  } catch (error) {
-    if (error instanceof FileLockTimeoutError) {
-      throw new MetricsEventLockError(
-        `Could not acquire metrics shard lock: ${shardPath.lockPath}`
-      );
-    }
-
-    if (error instanceof MetricsEventStoreError) {
-      throw error;
-    }
-
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new MetricsEventStoreError(
-      `Failed to append metrics event into ${shardPath.filePath}: ${reason}`
-    );
-  }
-
-  return {
-    event,
-    shardPath
-  };
 }
