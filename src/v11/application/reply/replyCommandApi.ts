@@ -1,11 +1,5 @@
-import { join } from "node:path";
-
-import { buildRunningExecutionContext } from "../../shared/state/executionContext.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
-import { applyStateTransition } from "../../domain/state/machine.js";
 import { ensureReplyWaitingHumanState } from "../../domain/reply/waitingHumanStateGuard.js";
-import { buildHumanReplyEnvelopeDraft } from "../../domain/reply/replyEnvelopeDraft.js";
-import { raiseReplyPostAppendStateWriteFailed } from "../../domain/reply/postAppendStateWriteFailure.js";
 import type {
   EmitHumanReplyDependencies,
   EmitHumanReplyInput,
@@ -17,6 +11,7 @@ import {
 } from "../../shared/reply/replyCommandError.js";
 import { resolveReplyCommandDependencies } from "../../shared/reply/replyCommandDependencyResolution.js";
 import { normalizeReplyCommandInput } from "../../shared/reply/replyCommandInputNormalization.js";
+import { executeReplyMutation } from "./replyMutationExecution.js";
 
 export async function emitHumanReply(
   input: EmitHumanReplyInput,
@@ -56,54 +51,16 @@ export async function emitHumanReply(
     createError: createHumanReplyCommandError
   });
 
-  const lockPath = join(resolved.bubblePaths.locksDir, `${resolved.bubbleId}.lock`);
-
-  const appended = await resolvedDependencies.appendProtocolEnvelope({
-    transcriptPath: resolved.bubblePaths.transcriptPath,
-    mirrorPaths: [resolved.bubblePaths.inboxPath],
-    lockPath,
+  const { appended, written } = await executeReplyMutation({
+    resolved,
+    loadedState,
+    state,
+    message,
+    refs,
     now,
-    envelope: buildHumanReplyEnvelopeDraft({
-      bubbleId: resolved.bubbleId,
-      recipient: state.active_agent,
-      recipientRole: state.active_role,
-      round: state.round,
-      message,
-      refs
-    })
+    nowIso,
+    dependencies: resolvedDependencies
   });
-
-  const nextState = applyStateTransition(state, {
-    to: "RUNNING",
-    executionContext: buildRunningExecutionContext({
-      bubbleId: resolved.bubbleId,
-      round: state.round,
-      activeRole: state.active_role,
-      startedAt: nowIso,
-      watchdogTimeoutMinutes: resolved.bubbleConfig.watchdog_timeout_minutes
-    }),
-    activeSince: nowIso,
-    lastCommandAt: nowIso
-  });
-
-  let written;
-  try {
-    written = await resolvedDependencies.writeStateSnapshot(
-      resolved.bubblePaths.statePath,
-      nextState,
-      {
-        expectedFingerprint: loadedState.fingerprint,
-        expectedState: "WAITING_HUMAN"
-      }
-    );
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    raiseReplyPostAppendStateWriteFailed({
-      envelopeId: appended.envelope.id,
-      reason,
-      createError: createHumanReplyCommandError
-    });
-  }
 
   const messageRef = resolvedDependencies.resolveDeliveryMessageRef({
     bubbleId: resolved.bubbleId,
