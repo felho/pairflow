@@ -2,7 +2,7 @@ import type { BubbleInboxView } from "../../../shared/inbox/inboxCommandApi.js";
 import type {
   BubbleListEntry,
   BubbleListView
-} from "../../../application/list/listCommandApi.js";
+} from "../../../../core/bubble/listBubbles.js";
 import type { BubbleStatusView } from "../../../shared/status/statusCommandApi.js";
 import type { RuntimeSessionRecord } from "../../executor/sessionRuntime/runtimeSessionsRegistry.js";
 import type { BubbleLifecycleState } from "../../../../types/bubble.js";

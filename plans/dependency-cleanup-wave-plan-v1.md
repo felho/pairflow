@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `93aa2ce4`.
+Last updated from `main` at `2f63e84c`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `236 fail / 64 warn`
+- Dependency report at this checkpoint: `225 fail / 64 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -75,6 +75,7 @@ contracts, not thin wrappers.
   - `e3e52348` actor and inbox reads routed through core compat
   - `4207ba75` converged defaults routed through core compat
   - `93aa2ce4` merge dependencies routed through core compat
+  - `pending` UI compat bridge routing batch
 
 ## Wave Ledger
 
@@ -112,7 +113,7 @@ contracts, not thin wrappers.
 | W20 | `actorProtocol` + `inbox` read compat cleanup | `completed` | orchestrator | Shared actor/inbox read paths now use core compat bridges instead of direct v11 infrastructure imports |
 | W21 | `converged` default wiring follow-up | `completed` | orchestrator | Remaining converged application-owned default adapter imports now route through explicit core compat bridges |
 | W22 | `merge` dependency/runtime compat cleanup | `completed` | orchestrator | Merge shared dependency resolution and error runtime now route through explicit core compat bridges; only orchestration/types residuals remain |
-| W23 | `ui/router` residual infrastructure cluster | `pending` | orchestrator | Current largest frontier by file count is still `infrastructure/ui/router.ts`, with small companion `events` / `presenters` edges |
+| W23 | `ui/router` residual infrastructure cluster | `completed` | orchestrator | Router/events/presenter application imports now route through explicit core compat bridges; remaining UI debt is complexity/file-budget, not dependency layering |
 
 ## Parallelization Rules
 
@@ -143,6 +144,6 @@ contracts, not thin wrappers.
 
 Current best next moves:
 
-1. open the `ui/router` residual infrastructure cluster from the current `236 fail / 64 warn` baseline,
-2. then reassess the remaining small `shared/converged` and `metaReview/liveRun` residuals,
+1. clean up the remaining small `shared/converged`, `kickoff`, `delivery`, `merge`, and `metaReview/liveRun` residuals from the current `225 fail / 64 warn` baseline,
+2. then reassess whether the next best wave is UI complexity breakup or another bounded dependency cluster,
 3. keep this file updated after each merged micro-batch to survive context compaction.

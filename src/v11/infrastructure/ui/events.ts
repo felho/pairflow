@@ -7,7 +7,7 @@ import {
   listBubbles,
   type BubbleListEntry,
   type BubbleListView
-} from "../../application/list/listCommandApi.js";
+} from "../../../core/bubble/listBubbles.js";
 import type {
   UiBubbleRemovedEvent,
   UiBubbleSummary,

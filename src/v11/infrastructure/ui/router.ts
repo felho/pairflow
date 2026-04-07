@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { join, resolve, sep } from "node:path";
 
 import { getBubbleInbox } from "../../shared/inbox/inboxCommandApi.js";
-import { listBubbles } from "../../application/list/listCommandApi.js";
+import { listBubbles } from "../../../core/bubble/listBubbles.js";
 import { getBubbleStatus } from "../../shared/status/statusCommandApi.js";
 import {
   readRuntimeSessionsRegistry,
@@ -10,22 +10,22 @@ import {
 } from "../executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { startBubble } from "../../shared/start/startCommandApi.js";
 import {
-  emitApproveCommandOrchestration as emitApprove,
-  emitRequestReworkCommandOrchestration as emitRequestRework
-} from "../../application/approval/approvalCommandOrchestration.js";
-import { emitHumanReply } from "../../application/reply/replyCommandApi.js";
+  emitApprove,
+  emitRequestRework
+} from "../../../core/human/approval.js";
+import { emitHumanReply } from "../../../core/human/reply.js";
 import { resumeBubbleCommandOrchestration as resumeBubble } from "../../shared/resume/resumeCommandOrchestration.js";
-import { commitBubbleV11 as commitBubble } from "../../application/commit/emitCommitV11.js";
+import { commitBubble } from "../../../core/bubble/commitBubble.js";
 import { mergeBubbleCommandOrchestration as mergeBubble } from "../../shared/merge/mergeCommandOrchestration.js";
-import { openBubble } from "../../application/open/emitOpenV11.js";
+import { openBubble } from "../../../core/bubble/openBubble.js";
 import {
   attachBubble,
   AttachBubbleError,
   type AttachBubbleResult
-} from "../../application/attach/emitAttachV11.js";
-import { restartBubble } from "../../application/restart/emitRestartV11.js";
-import { deleteBubble } from "../../application/delete/deleteBubble.js";
-import { stopBubbleV11 as stopBubble } from "../../application/stop/emitStopV11.js";
+} from "../../../core/bubble/attachBubble.js";
+import { restartBubble } from "../../../core/bubble/restartBubble.js";
+import { deleteBubble } from "../../../core/bubble/deleteBubble.js";
+import { stopBubble } from "../../../core/bubble/stopBubble.js";
 import type { BubbleLifecycleState } from "../../../types/bubble.js";
 import type {
   UiApiErrorBody,
