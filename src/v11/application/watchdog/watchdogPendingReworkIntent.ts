@@ -1,4 +1,3 @@
-import { writeStateSnapshot } from "../../../core/state/stateStore.js";
 import type { readStateSnapshot } from "../../../core/state/stateStore.js";
 import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
@@ -8,10 +7,10 @@ import {
 } from "../../../core/runtime/tmuxDelivery.js";
 import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import { applyDeferredReworkIntent } from "../../shared/approval/reworkIntent.js";
+import { persistPendingReworkIntentState } from "../../shared/watchdog/watchdogPendingReworkMutation.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { BubbleWatchdogResult } from "./watchdogCommandContract.js";
-import { BubbleWatchdogError } from "./watchdogCommandRuntime.js";
 
 export async function maybeApplyPendingReworkIntent(input: {
   now: Date;
@@ -19,6 +18,14 @@ export async function maybeApplyPendingReworkIntent(input: {
   resolved: Awaited<ReturnType<typeof resolveBubbleById>>;
   loadedState: Awaited<ReturnType<typeof readStateSnapshot>>;
   state: BubbleStateSnapshot;
+  writeState: (
+    statePath: string,
+    state: BubbleStateSnapshot,
+    options?: {
+      expectedFingerprint?: string;
+      expectedState?: BubbleStateSnapshot["state"];
+    }
+  ) => Promise<Awaited<ReturnType<typeof readStateSnapshot>>>;
   emitDelivery: typeof emitTmuxDeliveryNotification;
 }): Promise<BubbleWatchdogResult | null> {
   if (input.state.state !== "WAITING_HUMAN") {
@@ -92,22 +99,13 @@ export async function maybeApplyPendingReworkIntent(input: {
   });
   input.resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
 
-  let written;
-  try {
-    written = await writeStateSnapshot(
-      input.resolved.bubblePaths.statePath,
-      appliedTransition.state,
-      {
-        expectedFingerprint: input.loadedState.fingerprint,
-        expectedState: "WAITING_HUMAN"
-      }
-    );
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new BubbleWatchdogError(
-      `Pending rework intent ${pendingIntent.intent_id} delivery succeeded but state update failed. Root error: ${reason}`
-    );
-  }
+  const written = await persistPendingReworkIntentState({
+    statePath: input.resolved.bubblePaths.statePath,
+    nextState: appliedTransition.state,
+    loadedState: input.loadedState,
+    intentId: pendingIntent.intent_id,
+    writeStateSnapshot: input.writeState
+  });
 
   await emitBubbleLifecycleEventBestEffort({
     repoPath: input.resolved.repoPath,

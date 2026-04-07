@@ -49,7 +49,7 @@ These three are partially coupled, so each batch must validate all three.
 
 | Wave | Scope | Status | Notes |
 | --- | --- | --- | --- |
-| B1 | `watchdogPendingReworkIntent` transition/boundary cleanup | planned | Highest leverage because it hits `boundary`, `mutation`, and `transition` together |
+| B1 | `watchdogPendingReworkIntent` transition/boundary cleanup | validated | Pending rework state persist now goes through a dedicated shared watchdog mutation helper; baseline moved to `boundary=10 fail`, `mutation=5 warn`, `transition=pass` |
 | B2 | `watchdogCommandFlow` transcript/state write extraction | planned | Likely pairs naturally with B1 once watchdog write boundary is clearer |
 | B3 | `stopCommandOrchestration` cancelled-state persistence extraction | planned | Single-file, lower blast radius |
 | B4 | `startCommandCleanup` + `startCommandFlows` write-path extraction | planned | Multi-write cluster; keep after watchdog/stop patterns are proven |
@@ -57,10 +57,10 @@ These three are partially coupled, so each batch must validate all three.
 
 ## Initial Hypothesis
 
-- `watchdogPendingReworkIntent.ts` is the best next bounded batch because:
-  - it is the only current `transition` fail
-  - it also contributes to `boundary` and `mutation`
-  - solving it should clarify the target mutation pattern for the rest
+- `watchdogPendingReworkIntent.ts` proved to be the right first batch:
+  - it removed the only `transition` fail
+  - it reduced `boundary` and `mutation` together
+  - it established the shared watchdog mutation-helper pattern for follow-up batches
 
 ## Validation Checklist
 
@@ -74,3 +74,7 @@ These three are partially coupled, so each batch must validate all three.
 - Dependency backlog closed on `main` before starting this plan.
 - Do not mix boundary-wave commits with unrelated checker-hardening unless a
   false positive is proven.
+- B1 result on `main`:
+  - `boundary`: `11 fail` -> `10 fail`
+  - `mutation`: `6 warn` -> `5 warn`
+  - `transition`: `1 fail` -> `pass`

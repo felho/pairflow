@@ -5,7 +5,7 @@ import {
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
-import { readStateSnapshot } from "../../../core/state/stateStore.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../../core/state/stateStore.js";
 import { readWatchdogPaneActivity } from "../../../core/watchdog/watchdogPaneActivityStore.js";
 import { writeWatchdogPaneActivity } from "../../../core/watchdog/watchdogPaneActivityStore.js";
 import { appendWatchdogTrace } from "../../../core/watchdog/watchdogTraceStore.js";
@@ -51,6 +51,7 @@ export async function runBubbleWatchdog(
     }
   );
   const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
+  const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
   const recoverMetaReviewRoute =
     dependencies.recoverMetaReviewGateFromSnapshot ?? recoverMetaReviewGateFromSnapshot;
   const loadedState = await readState(resolved.bubblePaths.statePath);
@@ -88,6 +89,7 @@ export async function runBubbleWatchdog(
     resolved: context.resolved,
     loadedState: context.loadedState,
     state: context.state,
+    writeState,
     emitDelivery: context.emitDelivery
   });
   if (pendingRework !== null) {

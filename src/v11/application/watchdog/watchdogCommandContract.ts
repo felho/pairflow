@@ -1,6 +1,9 @@
 import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
 import type { EmitTmuxDeliveryNotificationPort } from "../../shared/ports/tmuxDelivery.js";
-import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
+import type {
+  ReadStateSnapshotPort,
+  WriteStateSnapshotPort
+} from "../../shared/ports/stateSnapshots.js";
 import type { ReadRuntimeSessionsRegistryPort } from "../../shared/ports/runtimeSessions.js";
 import type { TmuxRunner } from "../../shared/ports/tmuxSessions.js";
 import type {
@@ -28,6 +31,7 @@ export interface BubbleWatchdogDependencies {
   emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
   emitBubbleNotification?: EmitBubbleNotificationPort;
   readStateSnapshot?: ReadStateSnapshotPort;
+  writeStateSnapshot?: WriteStateSnapshotPort;
   recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshot;
   readWatchdogPaneActivity?: ReadWatchdogPaneActivityPort;
   writeWatchdogPaneActivity?: WriteWatchdogPaneActivityPort;
