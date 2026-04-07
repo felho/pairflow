@@ -1,4 +1,3 @@
-import { writeFile } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 
 import type {
@@ -141,9 +140,8 @@ export async function writeRecoveredMetaReviewArtifacts(input: {
   paths: {
     metaReviewLastJsonArtifactPath: string;
   };
-  writeFileFn?: MetaReviewArtifactWritePort;
+  writeFileFn: MetaReviewArtifactWritePort;
 }): Promise<{ warnings: MetaReviewRunWarning[] }> {
-  const writer = input.writeFileFn ?? writeFile;
   const warnings: MetaReviewRunWarning[] = [];
 
   const reportPayload = buildRecoveredMetaReviewReportPayload({
@@ -156,7 +154,7 @@ export async function writeRecoveredMetaReviewArtifacts(input: {
   });
 
   try {
-    await writer(
+    await input.writeFileFn(
       input.paths.metaReviewLastJsonArtifactPath,
       `${JSON.stringify(reportPayload, null, 2)}\n`,
       "utf8"
