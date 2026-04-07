@@ -13,20 +13,26 @@ import {
   defaultLiveRunner
 } from "./metaReviewLiveRunner.js";
 import {
-  assertApproveRecommendationConsistentWithReviewerSnapshot,
-  assertRunPayloadInvariants,
   CANONICAL_META_REVIEW_REPORT_REF,
+  normalizeOptionalText,
+  resolveCanonicalMetaReviewReportJson
+} from "./metaReviewLiveRunReport.js";
+import {
+  readApprovalAdvisoryFindingsSnapshot,
+  readMetaReviewFindingsParitySnapshot
+} from "./metaReviewLiveRunParity.js";
+import {
+  assertApproveRecommendationConsistentWithReviewerSnapshot,
+  readLatestApproveReviewerSnapshot
+} from "./metaReviewLiveRunReviewerSnapshot.js";
+import {
+  assertRunPayloadInvariants,
   formatRunnerFailure,
   isMissingFileError,
   mapRecommendationToStatus,
-  normalizeOptionalText,
-  readApprovalAdvisoryFindingsSnapshot,
-  readLatestApproveReviewerSnapshot,
-  readMetaReviewFindingsParitySnapshot,
-  resolveCanonicalMetaReviewReportJson,
   shouldRefreshApprovalRequest,
   stateWriteConflictToMetaReviewError
-} from "./metaReviewLiveRunSupport.js";
+} from "./metaReviewLiveRunErrors.js";
 import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
 import {
   StateStoreConflictError,
