@@ -6,6 +6,29 @@ import {
   sendAndSubmitTmuxPaneMessage,
   submitTmuxPaneInput
 } from "./tmuxInput.js";
+import type {
+  LaunchBubbleTmuxSessionInput,
+  LaunchBubbleTmuxSessionPort,
+  LaunchBubbleTmuxSessionResult,
+  TerminateBubbleTmuxSessionInput,
+  TerminateBubbleTmuxSessionPort,
+  TerminateBubbleTmuxSessionResult,
+  TmuxRunOptions,
+  TmuxRunResult,
+  TmuxRunner
+} from "../../../shared/ports/tmuxSessions.js";
+
+export type {
+  LaunchBubbleTmuxSessionInput,
+  LaunchBubbleTmuxSessionPort,
+  LaunchBubbleTmuxSessionResult,
+  TerminateBubbleTmuxSessionInput,
+  TerminateBubbleTmuxSessionPort,
+  TerminateBubbleTmuxSessionResult,
+  TmuxRunOptions,
+  TmuxRunResult,
+  TmuxRunner
+} from "../../../shared/ports/tmuxSessions.js";
 
 export const runtimePaneIndices = {
   status: 0,
@@ -14,49 +37,6 @@ export const runtimePaneIndices = {
   metaReviewer: 3
 } as const;
 
-export interface TmuxRunResult {
-  stdout: string;
-  stderr: string;
-  exitCode: number;
-}
-
-export interface TmuxRunOptions {
-  cwd?: string;
-  allowFailure?: boolean;
-}
-
-export type TmuxRunner = (
-  args: string[],
-  options?: TmuxRunOptions
-) => Promise<TmuxRunResult>;
-
-export interface LaunchBubbleTmuxSessionInput {
-  bubbleId: string;
-  worktreePath: string;
-  statusCommand: string;
-  implementerCommand: string;
-  reviewerCommand: string;
-  metaReviewerCommand?: string;
-  statusPaneLabel?: string;
-  implementerPaneLabel?: string;
-  reviewerPaneLabel?: string;
-  metaReviewerPaneLabel?: string;
-  implementerBootstrapMessage?: string;
-  reviewerBootstrapMessage?: string;
-  metaReviewerBootstrapMessage?: string;
-  implementerSubmitStartupPrompt?: boolean;
-  reviewerSubmitStartupPrompt?: boolean;
-  metaReviewerSubmitStartupPrompt?: boolean;
-  implementerKickoffMessage?: string;
-  reviewerKickoffMessage?: string;
-  metaReviewerKickoffMessage?: string;
-  runner?: TmuxRunner;
-}
-
-export interface LaunchBubbleTmuxSessionResult {
-  sessionName: string;
-}
-
 function buildStatusPaneLabel(bubbleId: string): string {
   return `[orchestrator/status]-[${bubbleId}]`;
 }
@@ -64,17 +44,6 @@ function buildStatusPaneLabel(bubbleId: string): string {
 function resolvePairflowPaneMessageMarker(message: string): string | undefined {
   const match = /\[pairflow\]\s+bubble=\S+/u.exec(message);
   return match?.[0];
-}
-
-export interface TerminateBubbleTmuxSessionInput {
-  bubbleId?: string;
-  sessionName?: string;
-  runner?: TmuxRunner;
-}
-
-export interface TerminateBubbleTmuxSessionResult {
-  sessionName: string;
-  existed: boolean;
 }
 
 export interface RespawnTmuxPaneCommandInput {
@@ -191,9 +160,9 @@ export const runTmux: TmuxRunner = async (
     });
   });
 
-export async function launchBubbleTmuxSession(
+export const launchBubbleTmuxSession: LaunchBubbleTmuxSessionPort = async (
   input: LaunchBubbleTmuxSessionInput
-): Promise<LaunchBubbleTmuxSessionResult> {
+): Promise<LaunchBubbleTmuxSessionResult> => {
   const runner = input.runner ?? runTmux;
   const sessionName = buildBubbleTmuxSessionName(input.bubbleId);
   const statusPaneHeight = 13;
@@ -443,7 +412,7 @@ export async function launchBubbleTmuxSession(
   return {
     sessionName
   };
-}
+};
 
 function isTmuxMissingSessionError(output: string): boolean {
   const normalized = output.toLowerCase();
@@ -454,9 +423,9 @@ function isTmuxMissingSessionError(output: string): boolean {
   );
 }
 
-export async function terminateBubbleTmuxSession(
+export const terminateBubbleTmuxSession: TerminateBubbleTmuxSessionPort = async (
   input: TerminateBubbleTmuxSessionInput
-): Promise<TerminateBubbleTmuxSessionResult> {
+): Promise<TerminateBubbleTmuxSessionResult> => {
   const runner = input.runner ?? runTmux;
   const sessionName =
     input.sessionName ?? (input.bubbleId !== undefined
@@ -493,7 +462,7 @@ export async function terminateBubbleTmuxSession(
     result.exitCode,
     result.stderr
   );
-}
+};
 
 export async function respawnTmuxPaneCommand(
   input: RespawnTmuxPaneCommandInput

@@ -1,13 +1,5 @@
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
-import type { GitRunResult } from "../../infrastructure/workspace/git.js";
-
-export interface MergeBranchValidationInput {
-  baseBranch: string;
-  bubbleBranch: string;
-  baseBranchExists: boolean;
-  bubbleBranchExists: boolean;
-  createError: PairflowCreateCommandError;
-}
+import type { RunGitPort } from "../ports/git.js";
 
 const MERGE_STATE_DONE_REQUIRED = "MERGE_STATE_DONE_REQUIRED";
 const MERGE_BASE_BRANCH_NOT_FOUND = "MERGE_BASE_BRANCH_NOT_FOUND";
@@ -16,10 +8,13 @@ const MERGE_BRANCHES_IDENTICAL = "MERGE_BRANCHES_IDENTICAL";
 const MERGE_REPO_DIRTY = "MERGE_REPO_DIRTY";
 const MERGE_ORIGIN_REMOTE_REQUIRED = "MERGE_ORIGIN_REMOTE_REQUIRED";
 
-export type GitRunner = (
-  args: string[],
-  options: { cwd: string; allowFailure?: boolean }
-) => Promise<GitRunResult>;
+export interface MergeBranchValidationInput {
+  baseBranch: string;
+  bubbleBranch: string;
+  baseBranchExists: boolean;
+  bubbleBranchExists: boolean;
+  createError: PairflowCreateCommandError;
+}
 
 export function hasOriginRemoteError(stderr: string): boolean {
   const normalized = stderr.toLowerCase();
@@ -83,7 +78,7 @@ export function assertMergeBranchEligibility(
 
 export async function assertCleanRepoWorkingTree(
   repoPath: string,
-  runGitCommand: GitRunner,
+  runGitCommand: RunGitPort,
   createError: PairflowCreateCommandError
 ): Promise<void> {
   const status = await runGitCommand(["status", "--porcelain"], {
@@ -115,7 +110,7 @@ export async function assertCleanRepoWorkingTree(
 
 export async function ensureOriginRemote(
   repoPath: string,
-  runGitCommand: GitRunner,
+  runGitCommand: RunGitPort,
   createError: PairflowCreateCommandError
 ): Promise<void> {
   const origin = await runGitCommand(["remote", "get-url", "origin"], {
@@ -137,7 +132,7 @@ export async function ensureOriginRemote(
 export async function remoteBranchExists(input: {
   repoPath: string;
   branch: string;
-  runGitCommand: GitRunner;
+  runGitCommand: RunGitPort;
 }): Promise<boolean> {
   const result = await input.runGitCommand(
     ["ls-remote", "--heads", "origin", input.branch],

@@ -1,15 +1,13 @@
 import type {
-  cleanupWorktreeWorkspace
-} from "../../infrastructure/workspace/worktreeManager.js";
+  CleanupWorktreeWorkspacePort
+} from "../../shared/ports/worktreeWorkspace.js";
 import type {
-  removeRuntimeSession
-} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+  RemoveRuntimeSessionPort
+} from "../../shared/ports/runtimeSessions.js";
 import type {
-  terminateBubbleTmuxSession
-} from "../../infrastructure/channel/tmux/tmuxManager.js";
-import type {
-  GitRunResult
-} from "../../infrastructure/workspace/git.js";
+  TerminateBubbleTmuxSessionPort
+} from "../../shared/ports/tmuxSessions.js";
+import type { RunGitPort } from "../../shared/ports/git.js";
 
 export interface MergeBubbleInput {
   bubbleId: string;
@@ -35,11 +33,8 @@ export interface MergeBubbleResult {
 }
 
 export interface MergeBubbleDependencies {
-  terminateBubbleTmuxSession?: typeof terminateBubbleTmuxSession;
-  removeRuntimeSession?: typeof removeRuntimeSession;
-  cleanupWorktreeWorkspace?: typeof cleanupWorktreeWorkspace;
-  runGit?: (
-    args: string[],
-    options: { cwd: string; allowFailure?: boolean }
-  ) => Promise<GitRunResult>;
+  terminateBubbleTmuxSession?: TerminateBubbleTmuxSessionPort;
+  removeRuntimeSession?: RemoveRuntimeSessionPort;
+  cleanupWorktreeWorkspace?: CleanupWorktreeWorkspacePort;
+  runGit?: RunGitPort;
 }

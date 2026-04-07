@@ -1,4 +1,11 @@
 import { spawn } from "node:child_process";
+import type {
+  GitRunOptions,
+  GitRunResult,
+  RunGitPort
+} from "../../shared/ports/git.js";
+
+export type { GitRunOptions, GitRunResult, RunGitPort } from "../../shared/ports/git.js";
 
 export class GitCommandError extends Error {
   public readonly args: string[];
@@ -26,21 +33,10 @@ export class GitRepositoryError extends Error {
   }
 }
 
-export interface GitRunOptions {
-  cwd: string;
-  allowFailure?: boolean;
-}
-
-export interface GitRunResult {
-  stdout: string;
-  stderr: string;
-  exitCode: number;
-}
-
-export async function runGit(
+export const runGit: RunGitPort = async (
   args: string[],
   options: GitRunOptions
-): Promise<GitRunResult> {
+): Promise<GitRunResult> => {
   return new Promise((resolvePromise, rejectPromise) => {
     const child = spawn("git", args, {
       cwd: options.cwd,
@@ -78,7 +74,7 @@ export async function runGit(
       });
     });
   });
-}
+};
 
 export async function assertGitRepository(repoPath: string): Promise<void> {
   const insideWorktree = await runGit(["rev-parse", "--is-inside-work-tree"], {

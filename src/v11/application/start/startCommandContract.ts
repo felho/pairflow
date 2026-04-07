@@ -1,15 +1,15 @@
 import type {
-  bootstrapWorktreeWorkspace,
-  cleanupWorktreeWorkspace
-} from "../../infrastructure/workspace/worktreeManager.js";
+  BootstrapWorktreeWorkspacePort,
+  CleanupWorktreeWorkspacePort
+} from "../../shared/ports/worktreeWorkspace.js";
 import type {
-  launchBubbleTmuxSession,
-  terminateBubbleTmuxSession
-} from "../../infrastructure/channel/tmux/tmuxManager.js";
+  LaunchBubbleTmuxSessionPort,
+  TerminateBubbleTmuxSessionPort
+} from "../../shared/ports/tmuxSessions.js";
 import type {
-  claimRuntimeSession,
-  removeRuntimeSession
-} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+  ClaimRuntimeSessionPort,
+  RemoveRuntimeSessionPort
+} from "../../shared/ports/runtimeSessions.js";
 import type { buildResumeTranscriptSummary } from "../../shared/protocol/resumeSummary.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 
@@ -34,15 +34,15 @@ export interface RunWorktreeBootstrapCommandInput {
 }
 
 export interface StartBubbleDependencies {
-  bootstrapWorktreeWorkspace?: typeof bootstrapWorktreeWorkspace;
-  cleanupWorktreeWorkspace?: typeof cleanupWorktreeWorkspace;
+  bootstrapWorktreeWorkspace?: BootstrapWorktreeWorkspacePort;
+  cleanupWorktreeWorkspace?: CleanupWorktreeWorkspacePort;
   runWorktreeBootstrapCommand?:
     | ((input: RunWorktreeBootstrapCommandInput) => Promise<void>)
     | undefined;
-  launchBubbleTmuxSession?: typeof launchBubbleTmuxSession;
-  terminateBubbleTmuxSession?: typeof terminateBubbleTmuxSession;
+  launchBubbleTmuxSession?: LaunchBubbleTmuxSessionPort;
+  terminateBubbleTmuxSession?: TerminateBubbleTmuxSessionPort;
   isTmuxSessionAlive?: ((sessionName: string) => Promise<boolean>) | undefined;
-  claimRuntimeSession?: typeof claimRuntimeSession;
-  removeRuntimeSession?: typeof removeRuntimeSession;
+  claimRuntimeSession?: ClaimRuntimeSessionPort;
+  removeRuntimeSession?: RemoveRuntimeSessionPort;
   buildResumeTranscriptSummary?: typeof buildResumeTranscriptSummary;
 }

@@ -6,28 +6,37 @@ import {
   FileLockTimeoutError,
   withFileLock
 } from "../../foundation/fs/fileLock.js";
+import type {
+  ClaimRuntimeSessionInput,
+  ClaimRuntimeSessionPort,
+  ClaimRuntimeSessionResult,
+  ReadRuntimeSessionsOptions,
+  ReadRuntimeSessionsRegistryPort,
+  RemoveRuntimeSessionInput,
+  RemoveRuntimeSessionPort,
+  RemoveRuntimeSessionsInput,
+  RemoveRuntimeSessionsPort,
+  RemoveRuntimeSessionsResult,
+  RuntimeMetaReviewerPaneBinding,
+  RuntimeSessionRecord,
+  RuntimeSessionsRegistry
+} from "../../../shared/ports/runtimeSessions.js";
 
-export interface RuntimeMetaReviewerPaneBinding {
-  role: "meta-reviewer";
-  paneIndex: number;
-  active: boolean;
-  updatedAt: string;
-}
-
-export interface RuntimeSessionRecord {
-  bubbleId: string;
-  repoPath: string;
-  worktreePath: string;
-  tmuxSessionName: string;
-  updatedAt: string;
-  metaReviewerPane?: RuntimeMetaReviewerPaneBinding;
-}
-
-export type RuntimeSessionsRegistry = Record<string, RuntimeSessionRecord>;
-
-export interface ReadRuntimeSessionsOptions {
-  allowMissing?: boolean;
-}
+export type {
+  ClaimRuntimeSessionInput,
+  ClaimRuntimeSessionPort,
+  ClaimRuntimeSessionResult,
+  ReadRuntimeSessionsOptions,
+  ReadRuntimeSessionsRegistryPort,
+  RemoveRuntimeSessionInput,
+  RemoveRuntimeSessionPort,
+  RemoveRuntimeSessionsInput,
+  RemoveRuntimeSessionsPort,
+  RemoveRuntimeSessionsResult,
+  RuntimeMetaReviewerPaneBinding,
+  RuntimeSessionRecord,
+  RuntimeSessionsRegistry
+} from "../../../shared/ports/runtimeSessions.js";
 
 export interface UpsertRuntimeSessionInput {
   sessionsPath: string;
@@ -37,38 +46,6 @@ export interface UpsertRuntimeSessionInput {
   tmuxSessionName: string;
   now?: Date;
   lockTimeoutMs?: number;
-}
-
-export interface ClaimRuntimeSessionInput {
-  sessionsPath: string;
-  bubbleId: string;
-  repoPath: string;
-  worktreePath: string;
-  tmuxSessionName: string;
-  now?: Date;
-  lockTimeoutMs?: number;
-}
-
-export interface ClaimRuntimeSessionResult {
-  claimed: boolean;
-  record: RuntimeSessionRecord;
-}
-
-export interface RemoveRuntimeSessionInput {
-  sessionsPath: string;
-  bubbleId: string;
-  lockTimeoutMs?: number;
-}
-
-export interface RemoveRuntimeSessionsInput {
-  sessionsPath: string;
-  bubbleIds: string[];
-  lockTimeoutMs?: number;
-}
-
-export interface RemoveRuntimeSessionsResult {
-  removedBubbleIds: string[];
-  missingBubbleIds: string[];
 }
 
 export class RuntimeSessionsRegistryError extends Error {
@@ -290,10 +267,10 @@ export async function withRuntimeSessionsRegistryLock<T>(
   }
 }
 
-export async function readRuntimeSessionsRegistry(
+export const readRuntimeSessionsRegistry: ReadRuntimeSessionsRegistryPort = async (
   sessionsPath: string,
   options: ReadRuntimeSessionsOptions = {}
-): Promise<RuntimeSessionsRegistry> {
+): Promise<RuntimeSessionsRegistry> => {
   let raw: string;
   try {
     raw = await readFile(sessionsPath, "utf8");
@@ -306,7 +283,7 @@ export async function readRuntimeSessionsRegistry(
   }
 
   return parseRegistry(raw);
-}
+};
 
 export async function upsertRuntimeSession(
   input: UpsertRuntimeSessionInput
@@ -327,9 +304,9 @@ export async function upsertRuntimeSession(
   );
 }
 
-export async function claimRuntimeSession(
+export const claimRuntimeSession: ClaimRuntimeSessionPort = async (
   input: ClaimRuntimeSessionInput
-): Promise<ClaimRuntimeSessionResult> {
+): Promise<ClaimRuntimeSessionResult> => {
   return withRuntimeSessionsRegistryLock(
     input.sessionsPath,
     input.lockTimeoutMs ?? 5_000,
@@ -356,11 +333,11 @@ export async function claimRuntimeSession(
       };
     }
   );
-}
+};
 
-export async function removeRuntimeSession(
+export const removeRuntimeSession: RemoveRuntimeSessionPort = async (
   input: RemoveRuntimeSessionInput
-): Promise<boolean> {
+): Promise<boolean> => {
   const result = await removeRuntimeSessions({
     sessionsPath: input.sessionsPath,
     bubbleIds: [input.bubbleId],
@@ -369,11 +346,11 @@ export async function removeRuntimeSession(
       : {})
   });
   return result.removedBubbleIds.length > 0;
-}
+};
 
-export async function removeRuntimeSessions(
+export const removeRuntimeSessions: RemoveRuntimeSessionsPort = async (
   input: RemoveRuntimeSessionsInput
-): Promise<RemoveRuntimeSessionsResult> {
+): Promise<RemoveRuntimeSessionsResult> => {
   const normalizedBubbleIds = Array.from(
     new Set(
       input.bubbleIds.map((bubbleId) =>
@@ -412,4 +389,4 @@ export async function removeRuntimeSessions(
       };
     }
   );
-}
+};

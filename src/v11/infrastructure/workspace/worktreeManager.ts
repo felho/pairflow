@@ -13,9 +13,26 @@ import {
   DEFAULT_LOCAL_OVERLAY_ENTRIES,
   DEFAULT_LOCAL_OVERLAY_MODE
 } from "../../../config/defaults.js";
-import type { LocalOverlayMode } from "../../../types/bubble.js";
+import type {
+  BootstrapWorktreeWorkspacePort,
+  CleanupWorktreeWorkspacePort,
+  LocalOverlayConfig,
+  WorktreeBootstrapInput,
+  WorktreeBootstrapResult,
+  WorktreeCleanupInput,
+  WorktreeCleanupResult
+} from "../../shared/ports/worktreeWorkspace.js";
 
 export { GitCommandError } from "./git.js";
+export type {
+  BootstrapWorktreeWorkspacePort,
+  CleanupWorktreeWorkspacePort,
+  LocalOverlayConfig,
+  WorktreeBootstrapInput,
+  WorktreeBootstrapResult,
+  WorktreeCleanupInput,
+  WorktreeCleanupResult
+} from "../../shared/ports/worktreeWorkspace.js";
 
 export class WorkspaceError extends Error {
   public constructor(message: string) {
@@ -36,41 +53,6 @@ export class WorkspaceCleanupError extends WorkspaceError {
     super(message);
     this.name = "WorkspaceCleanupError";
   }
-}
-
-export interface WorktreeBootstrapInput {
-  repoPath: string;
-  baseBranch: string;
-  bubbleBranch: string;
-  worktreePath: string;
-  localOverlay?: LocalOverlayConfig | undefined;
-}
-
-export interface WorktreeBootstrapResult {
-  repoPath: string;
-  baseRef: string;
-  bubbleBranch: string;
-  worktreePath: string;
-}
-
-export interface WorktreeCleanupInput {
-  repoPath: string;
-  bubbleBranch: string;
-  worktreePath: string;
-}
-
-export interface WorktreeCleanupResult {
-  repoPath: string;
-  bubbleBranch: string;
-  worktreePath: string;
-  removedWorktree: boolean;
-  removedBranch: boolean;
-}
-
-export interface LocalOverlayConfig {
-  enabled: boolean;
-  mode: LocalOverlayMode;
-  entries: string[];
 }
 
 async function assertGitRepositoryForBootstrap(repoPath: string): Promise<void> {
@@ -247,9 +229,9 @@ async function isWorktreeRegistered(repoPath: string, worktreePath: string): Pro
   return false;
 }
 
-export async function bootstrapWorktreeWorkspace(
+export const bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort = async (
   input: WorktreeBootstrapInput
-): Promise<WorktreeBootstrapResult> {
+): Promise<WorktreeBootstrapResult> => {
   const repoPath = resolve(input.repoPath);
   const worktreePath = resolve(input.worktreePath);
 
@@ -296,11 +278,11 @@ export async function bootstrapWorktreeWorkspace(
     bubbleBranch: input.bubbleBranch,
     worktreePath
   };
-}
+};
 
-export async function cleanupWorktreeWorkspace(
+export const cleanupWorktreeWorkspace: CleanupWorktreeWorkspacePort = async (
   input: WorktreeCleanupInput
-): Promise<WorktreeCleanupResult> {
+): Promise<WorktreeCleanupResult> => {
   const repoPath = resolve(input.repoPath);
   const worktreePath = resolve(input.worktreePath);
 
@@ -329,4 +311,4 @@ export async function cleanupWorktreeWorkspace(
     removedWorktree,
     removedBranch
   };
-}
+};
