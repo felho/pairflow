@@ -174,6 +174,114 @@ describe("dependency fitness check", () => {
     ).toBe(false);
   });
 
+  it("passes on application to shared ports imports", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/ports/repoRegistry.ts",
+      "export interface RepoRegistryPort { register(name: string): Promise<void>; }\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/application/create/use-case.ts",
+      "import type { RepoRegistryPort } from '../../shared/ports/repoRegistry.js';\nexport type Deps = { repoRegistry: RepoRegistryPort };\n"
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+      currentMilestone: undefined
+    });
+
+    expect(report.status).toBe("pass");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("forbidden layer import application -> shared-ports")
+      )
+    ).toBe(false);
+  });
+
+  it("fails on shared ports to infrastructure import", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/infrastructure/executor/workspace/repoRegistry.ts",
+      "export const registerRepo = async (): Promise<void> => {};\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/ports/repoRegistry.ts",
+      "import { registerRepo } from '../../infrastructure/executor/workspace/repoRegistry.js';\nexport const register = registerRepo;\n"
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+      currentMilestone: undefined
+    });
+
+    expect(report.status).toBe("fail");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("forbidden layer import shared-ports -> infrastructure")
+      )
+    ).toBe(true);
+  });
+
+  it("passes on infrastructure to shared ports import", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/ports/repoRegistry.ts",
+      "export interface RepoRegistryPort { register(name: string): Promise<void>; }\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/infrastructure/executor/workspace/repoRegistry.ts",
+      "import type { RepoRegistryPort } from '../../../shared/ports/repoRegistry.js';\nexport const repoRegistry: RepoRegistryPort = { register: async () => {} };\n"
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+      currentMilestone: undefined
+    });
+
+    expect(report.status).toBe("pass");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("forbidden layer import infrastructure -> shared-ports")
+      )
+    ).toBe(false);
+  });
+
   it("applies allow-edge exception for forbidden layer import", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(

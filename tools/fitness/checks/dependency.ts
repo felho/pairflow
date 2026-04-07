@@ -42,16 +42,40 @@ interface ExceptionLifecycleStatus {
   currentMilestone: string | undefined;
 }
 
-const layerImportAllowlist: Record<string, readonly string[]> = {
+type DependencyLayer =
+  | "application"
+  | "domain"
+  | "shared"
+  | "shared-ports"
+  | "infrastructure"
+  | "legacy-compat";
+
+const layerImportAllowlist: Record<DependencyLayer, readonly DependencyLayer[]> = {
   domain: ["domain", "shared"],
-  application: ["application", "domain", "ports", "shared"],
-  "legacy-compat": ["application", "ports", "shared", "legacy-compat"]
+  application: ["application", "domain", "shared", "shared-ports"],
+  shared: ["domain", "shared"],
+  "shared-ports": ["domain", "shared", "shared-ports"],
+  infrastructure: ["domain", "shared", "shared-ports", "infrastructure"],
+  "legacy-compat": ["application", "shared", "shared-ports", "legacy-compat"]
 };
 
-function layerFromRelativePath(path: string): string | undefined {
+function layerFromRelativePath(path: string): DependencyLayer | undefined {
   const normalized = normalizePathToPosix(path);
-  const match = normalized.match(/^src\/v11\/([^/]+)\//u);
-  return match?.[1];
+  if (/^src\/v11\/shared\/ports(?:\/|$)/u.test(normalized)) {
+    return "shared-ports";
+  }
+  const match = normalized.match(/^src\/v11\/([^/]+)(?:\/|$)/u);
+  const layer = match?.[1];
+  if (
+    layer === "application"
+    || layer === "domain"
+    || layer === "shared"
+    || layer === "infrastructure"
+    || layer === "legacy-compat"
+  ) {
+    return layer;
+  }
+  return undefined;
 }
 
 function normalizeRelativePolicyPath(

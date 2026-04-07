@@ -291,14 +291,18 @@ Miért ez a sorrend:
   - [v11-ports-governance.md](/Users/felho/dev/pairflow/docs/architecture/v11-ports-governance.md)
   - [v11-placement-and-extraction-governance.md](/Users/felho/dev/pairflow/docs/architecture/v11-placement-and-extraction-governance.md)
 - Implementacios audit megtortent.
-- Fobb gap-ek azonositasra kerultek.
-- Kovetkezo vegrehajtasi kor: Batch 1.
+- Batch 1 kesz:
+  - a dependency checker mar kulon kezeli a `shared/ports/**` reteget mint `shared-ports`
+  - `application -> shared-ports` engedett
+  - `shared-ports -> infrastructure` tiltott
+  - `infrastructure -> shared-ports` engedett
+- Kovetkezo vegrehajtasi kor: Batch 2.
 
 ### Progress checklist
 
 - [x] Canonical docs baseline letrehozva
 - [x] Docs vs implementation audit megtortent
-- [ ] Batch 1 complete
+- [x] Batch 1 complete
 - [ ] Batch 2 complete
 - [ ] Batch 3 complete
 - [ ] Batch 4 complete
