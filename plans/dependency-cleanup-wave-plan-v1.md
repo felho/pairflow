@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `370 fail / 76 warn`
+- Dependency report at this checkpoint: `356 fail / 72 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -54,7 +54,8 @@ contracts, not thin wrappers.
   - `b06a7d30` approval mutation port contracts
   - `65d75ff1` approval shared runtime kept off shared ports
   - `51a23c70` approval orchestration relocation
-  - askHuman contract/defaults compat cleanup (pending commit in current worktree)
+  - `ec15f86f` askHuman notification/flow compat cleanup
+  - watchdog contract ports cleanup (current pending batch)
 
 ## Wave Ledger
 
@@ -76,8 +77,9 @@ contracts, not thin wrappers.
 | W5 | `converged` routing preparation cleanup | `completed` | orchestrator | Remaining converged routing edges now use explicit compat bridges / ports |
 | W6 | `start` / `open` / `stop` / `merge` bounded cleanups | `completed` | orchestrator | Small app-lane type/runtime leaks removed with compat bridges or shared port contracts |
 | W6 | `approval` contract + dependency cleanup | `completed` | orchestrator | Approval cluster is gone from the dependency violation list after orchestration relocation |
-| W7 | `askHuman` contract/defaults cleanup | `in_progress` | orchestrator | High-yield contract/default compat pass is pending commit in current worktree; remaining askHuman issues are now routing/wiring/runtime-facing seams |
-| W8 | shared runtime wiring clusters (`askHuman`, `watchdog`, `reply`) | `pending` | orchestrator | Next frontier after the current askHuman contract/default batch lands |
+| W7 | `askHuman` notification/flow compat cleanup | `completed` | orchestrator | Notification, flow-contract, and execution/finalization dependency contracts now route through explicit core compat bridges; remaining askHuman issues are routing/workspace seams plus small shared->application wrappers |
+| W8 | `watchdog` contract ports cleanup | `in_progress` | orchestrator | Application contract now routes delivery/notification/state capability types through shared ports; shared watchdog runtime still needs a follow-up wave |
+| W9 | shared runtime wiring clusters (`askHuman`, `watchdog`, `reply`) | `pending` | orchestrator | Next frontier after the current watchdog contract batch lands |
 
 ## Parallelization Rules
 
@@ -108,6 +110,6 @@ contracts, not thin wrappers.
 
 Current best next moves:
 
-1. close the pending askHuman contract/default compat commit and mark that sub-wave landed,
-2. choose the next askHuman bounded runtime/wiring batch or a file-disjoint watchdog mini-batch,
+1. close the pending watchdog contract batch and mark that sub-wave landed,
+2. choose the next askHuman bounded runtime/wiring batch or a file-disjoint watchdog shared-flow mini-batch,
 3. keep large cross-cutting `metaReviewGate` / `reply` clusters for later once the smaller shared orchestration seams are down.

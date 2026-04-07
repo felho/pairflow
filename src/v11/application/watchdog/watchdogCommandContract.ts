@@ -1,10 +1,6 @@
-import type { emitBubbleNotification } from "../../infrastructure/channel/notifications.js";
-import type {
-  emitTmuxDeliveryNotification
-} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
-import type {
-  readStateSnapshot
-} from "../../infrastructure/state/stateStore.js";
+import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
+import type { EmitTmuxDeliveryNotificationPort } from "../../shared/ports/tmuxDelivery.js";
+import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
 import type {
   recoverMetaReviewGateFromSnapshot
 } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
@@ -26,9 +22,9 @@ export interface BubbleWatchdogInput {
 }
 
 export interface BubbleWatchdogDependencies {
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
-  emitBubbleNotification?: typeof emitBubbleNotification;
-  readStateSnapshot?: typeof readStateSnapshot;
+  emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
+  emitBubbleNotification?: EmitBubbleNotificationPort;
+  readStateSnapshot?: ReadStateSnapshotPort;
   recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshot;
   readWatchdogPaneActivity?: typeof readWatchdogPaneActivity;
   writeWatchdogPaneActivity?: typeof writeWatchdogPaneActivity;
