@@ -6,6 +6,8 @@ import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import { readStateSnapshot } from "../../../core/state/stateStore.js";
+import { readRuntimeSessionsRegistry } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+import { runTmux } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import {
   recoverMetaReviewGateFromSnapshot
 } from "../metaReviewGate/metaReviewGateCommandApi.js";
@@ -275,7 +277,9 @@ async function maybeMonitorWatchdogPaneActivity(input: {
     sessionsPath: input.context.resolved.bubblePaths.sessionsPath,
     activeRole: input.context.state.active_role,
     ...(currentRecord !== null ? { priorPaneHash: currentRecord.pane_hash } : {}),
-    now: input.context.now
+    now: input.context.now,
+    readSessionsRegistry: readRuntimeSessionsRegistry,
+    runner: runTmux
   });
 
   if (sampleResult.status === "sampled") {

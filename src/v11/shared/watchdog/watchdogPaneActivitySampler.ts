@@ -1,14 +1,13 @@
 import { createHash } from "node:crypto";
 
+import type { AgentRole, BubbleConfig } from "../../../types/bubble.js";
+import type {
+  ReadRuntimeSessionsRegistryPort
+} from "../ports/runtimeSessions.js";
 import {
-  readRuntimeSessionsRegistry
-} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
-import {
-  runTmux,
   runtimePaneIndices,
   type TmuxRunner
-} from "../../infrastructure/channel/tmux/tmuxManager.js";
-import type { AgentRole, BubbleConfig } from "../../../types/bubble.js";
+} from "../ports/tmuxSessions.js";
 import { createBubbleWatchdogError } from "./watchdogCommandRuntime.js";
 
 export const WATCHDOG_PANE_ACTIVITY_SAMPLE_INTERVAL_MS = 60_000;
@@ -69,17 +68,16 @@ export async function sampleWatchdogPaneActivity(input: {
   bubbleConfig: BubbleConfig;
   sessionsPath: string;
   activeRole: AgentRole;
+  readSessionsRegistry: ReadRuntimeSessionsRegistryPort;
+  runner: TmuxRunner;
   priorPaneHash?: string;
   now?: Date;
-  runner?: TmuxRunner;
-  readSessionsRegistry?: typeof readRuntimeSessionsRegistry;
 }): Promise<PaneActivitySampleResult> {
   const sampledAt = (input.now ?? new Date()).toISOString();
-  const readSessions = input.readSessionsRegistry ?? readRuntimeSessionsRegistry;
 
   let sessionName: string | undefined;
   try {
-    const sessions = await readSessions(input.sessionsPath, {
+    const sessions = await input.readSessionsRegistry(input.sessionsPath, {
       allowMissing: true
     });
     sessionName = sessions[input.bubbleId]?.tmuxSessionName;
@@ -104,8 +102,7 @@ export async function sampleWatchdogPaneActivity(input: {
     input.activeRole
   );
   const targetPane = `${sessionName}:0.${paneIndex}`;
-  const runner = input.runner ?? runTmux;
-  const capture = await runner(["capture-pane", "-pt", targetPane], {
+  const capture = await input.runner(["capture-pane", "-pt", targetPane], {
     allowFailure: true
   });
   if (capture.exitCode !== 0) {
