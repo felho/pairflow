@@ -3,14 +3,14 @@ import type { readFile, writeFile } from "node:fs/promises";
 import type {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
-} from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
-import type { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import type { setMetaReviewerPaneBinding } from "../../infrastructure/channel/tmux/metaReviewerPaneBinding.js";
-import type { runTmux } from "../../infrastructure/channel/tmux/tmuxManager.js";
+} from "../../../core/protocol/transcriptStore.js";
+import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import type { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
+import type { runTmux } from "../../../core/runtime/tmuxManager.js";
 import type {
   readStateSnapshot,
   writeStateSnapshot
-} from "../../infrastructure/state/stateStore.js";
+} from "../../../core/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type {
   MetaReviewResult

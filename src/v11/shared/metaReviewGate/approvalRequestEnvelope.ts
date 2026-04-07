@@ -7,7 +7,7 @@ import {
 import {
   appendProtocolEnvelope,
   type AppendProtocolEnvelopeResult
-} from "../../infrastructure/artifact/transcript/transcriptStore.js";
+} from "../../../core/protocol/transcriptStore.js";
 import {
   readLatestSameRoundReviewerSnapshotFromTranscript,
   type LatestSameRoundReviewerSnapshot
