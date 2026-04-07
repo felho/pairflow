@@ -1,4 +1,4 @@
-import type { AppendProtocolEnvelopeResult } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
+import type { AppendProtocolEnvelopeResult } from "../../../core/protocol/transcriptStore.js";
 
 export function buildAskHumanStateWriteFailureMessage(
   appendResult: AppendProtocolEnvelopeResult,

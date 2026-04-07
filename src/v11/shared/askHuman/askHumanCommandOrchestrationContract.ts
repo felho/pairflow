@@ -1,5 +1,5 @@
-import type { emitBubbleNotification } from "../../infrastructure/channel/notifications.js";
-import type { emitTmuxDeliveryNotification } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
+import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
+import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext.js";
 import type {
   RunAskHumanFlowDependencies,

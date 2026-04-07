@@ -1,8 +1,8 @@
-import type { appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
+import type { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
 import type {
   writeStateSnapshot,
   WriteStateSnapshotOptions
-} from "../../infrastructure/state/stateStore.js";
+} from "../../../core/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import { buildAskHumanEnvelope } from "./askHumanExecutionArtifacts.js";
 import type { ExecuteAskHumanExecutionInput } from "./askHumanFlowContract.js";

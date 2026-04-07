@@ -1,19 +1,19 @@
-import type { emitBubbleNotification } from "../../infrastructure/channel/notifications.js";
+import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import type {
   appendProtocolEnvelope,
   AppendProtocolEnvelopeResult
-} from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
+} from "../../../core/protocol/transcriptStore.js";
 import type {
   writeStateSnapshot,
   LoadedStateSnapshot
-} from "../../infrastructure/state/stateStore.js";
+} from "../../../core/state/stateStore.js";
 import type { applyStateTransition } from "../../domain/state/machine.js";
 import type {
   DeliveryTargetReasonCode,
   emitTmuxDeliveryNotification,
   EmitTmuxDeliveryNotificationResult,
   resolveDeliveryMessageRef
-} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
+} from "../../../core/runtime/tmuxDelivery.js";
 import type { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";

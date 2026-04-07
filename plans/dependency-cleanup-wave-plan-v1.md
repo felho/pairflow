@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `65d75ff1`.
+Last updated from `main` at `51a23c70`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `395 fail / 83 warn`
+- Dependency report at this checkpoint: `370 fail / 76 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -53,7 +53,8 @@ contracts, not thin wrappers.
   - `7bc07718` approval dependency compat boundaries
   - `b06a7d30` approval mutation port contracts
   - `65d75ff1` approval shared runtime kept off shared ports
-  - approval orchestration relocation (pending commit in current worktree)
+  - `51a23c70` approval orchestration relocation
+  - askHuman contract/defaults compat cleanup (pending commit in current worktree)
 
 ## Wave Ledger
 
@@ -74,8 +75,9 @@ contracts, not thin wrappers.
 | W5 | `delete` runtime cleanup consumer rewiring | `completed` | orchestrator | Delete runtime and support paths now route through explicit compat bridges instead of direct infra imports |
 | W5 | `converged` routing preparation cleanup | `completed` | orchestrator | Remaining converged routing edges now use explicit compat bridges / ports |
 | W6 | `start` / `open` / `stop` / `merge` bounded cleanups | `completed` | orchestrator | Small app-lane type/runtime leaks removed with compat bridges or shared port contracts |
-| W6 | `approval` contract + dependency cleanup | `in_progress` | orchestrator | Approval app-side delivery types and shared default wiring are clean; orchestration relocation is pending commit in current worktree |
-| W7 | shared runtime wiring clusters (`approval`, `askHuman`, `watchdog`, `reply`) | `pending` | orchestrator | Next frontier once bounded approval orchestration seam is classified |
+| W6 | `approval` contract + dependency cleanup | `completed` | orchestrator | Approval cluster is gone from the dependency violation list after orchestration relocation |
+| W7 | `askHuman` contract/defaults cleanup | `in_progress` | orchestrator | High-yield contract/default compat pass is pending commit in current worktree; remaining askHuman issues are now routing/wiring/runtime-facing seams |
+| W8 | shared runtime wiring clusters (`askHuman`, `watchdog`, `reply`) | `pending` | orchestrator | Next frontier after the current askHuman contract/default batch lands |
 
 ## Parallelization Rules
 
@@ -106,6 +108,6 @@ contracts, not thin wrappers.
 
 Current best next moves:
 
-1. close the pending approval orchestration relocation commit and mark `approval` completed,
-2. take the next bounded shared wiring batch in `askHuman` or `watchdog` based on explorer classification,
+1. close the pending askHuman contract/default compat commit and mark that sub-wave landed,
+2. choose the next askHuman bounded runtime/wiring batch or a file-disjoint watchdog mini-batch,
 3. keep large cross-cutting `metaReviewGate` / `reply` clusters for later once the smaller shared orchestration seams are down.
