@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { runBubbleWatchdog } from "../../../src/core/bubble/watchdogBubble.js";
-import { runBubbleWatchdogV11 } from "../../../src/v11/application/watchdog/emitWatchdogV11.js";
+import { runBubbleWatchdogV11 } from "../../../src/v11/infrastructure/watchdog/emitWatchdogV11.js";
 import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import {
   buildRunningExecutionContext,

@@ -4,7 +4,7 @@ import {
   asBubbleWatchdogErrorV11 as asBubbleWatchdogError,
   runBubbleWatchdogV11 as runBubbleWatchdog,
   type BubbleWatchdogV11Result as BubbleWatchdogResult
-} from "../../../v11/application/watchdog/emitWatchdogV11.js";
+} from "../../../v11/infrastructure/watchdog/emitWatchdogV11.js";
 
 export interface BubbleWatchdogCommandOptions {
   id: string;

@@ -8,6 +8,7 @@ import {
   runBubbleWatchdogV11,
   type BubbleWatchdogV11Dependencies
 } from "../../../../src/v11/application/watchdog/emitWatchdogV11.js";
+import type { RuntimeSessionsRegistry } from "../../../../src/v11/shared/ports/runtimeSessions.js";
 import type {
   PaneActivitySampleResult
 } from "../../../../src/v11/shared/watchdog/watchdogPaneActivitySampler.js";
@@ -85,6 +86,14 @@ describe("watchdogCommandApi", () => {
           delivered: false,
           soundPath: null,
           reason: "disabled" as const
+        }),
+      readRuntimeSessionsRegistry: () =>
+        Promise.resolve({} satisfies RuntimeSessionsRegistry),
+      runTmux: () =>
+        Promise.resolve({
+          stdout: "",
+          stderr: "",
+          exitCode: 0
         }),
       ...(input.sampleWatchdogPaneActivity !== undefined
         ? {

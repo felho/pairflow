@@ -19,7 +19,7 @@ import {
 import { metaReviewExecutionContextToRunningContext } from "../../../src/core/state/executionContext.js";
 import { applyStateTransition } from "../../../src/core/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/core/state/stateStore.js";
-import { runBubbleWatchdogV11 as runBubbleWatchdog } from "../../../src/v11/application/watchdog/emitWatchdogV11.js";
+import { runBubbleWatchdog } from "../../../src/core/bubble/watchdogBubble.js";
 import type { EmitTmuxDeliveryNotificationPort } from "../../../src/v11/shared/ports/tmuxDelivery.js";
 import { initGitRepository } from "../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../helpers/bubble.js";

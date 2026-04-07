@@ -1,5 +1,3 @@
-import { readRuntimeSessionsRegistry } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
-import { runTmux } from "../../infrastructure/channel/tmux/tmuxManager.js";
 import { runBubbleWatchdog } from "../../shared/watchdog/watchdogCommandApi.js";
 import type {
   BubbleWatchdogDependencies,
@@ -16,12 +14,7 @@ export async function runBubbleWatchdogV11(
   input: BubbleWatchdogInput,
   dependencies: BubbleWatchdogDependencies = {}
 ): Promise<BubbleWatchdogResult> {
-  return runBubbleWatchdog(input, {
-    ...dependencies,
-    readRuntimeSessionsRegistry:
-      dependencies.readRuntimeSessionsRegistry ?? readRuntimeSessionsRegistry,
-    runTmux: dependencies.runTmux ?? runTmux
-  });
+  return runBubbleWatchdog(input, dependencies);
 }
 
 export type {
