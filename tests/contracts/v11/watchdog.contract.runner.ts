@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { runBubbleWatchdog } from "../../../src/core/bubble/watchdogBubble.js";
-import { runBubbleWatchdogV11 } from "../../../src/v11/infrastructure/watchdog/emitWatchdogV11.js";
+import { runBubbleWatchdogV11 } from "../../../src/v11/application/watchdog/emitWatchdogV11.js";
 import { buildMetaReviewExecutionContext } from "../../../src/core/bubble/metaReviewExecutionContext.js";
 import {
   buildRunningExecutionContext,
@@ -394,8 +394,19 @@ async function seedWatchdogPaneActivityFixture(input: {
 function buildWatchdogScenarioDependencies(
   scenario: WatchdogContractExtendedScenario
 ) {
+  const baseDependencies = {
+    readRuntimeSessionsRegistry: () => Promise.resolve({}),
+    runTmux: () =>
+      Promise.resolve({
+        stdout: "",
+        stderr: "",
+        exitCode: 0
+      })
+  };
+
   if (scenario === "expired_recent_change_noop") {
     return {
+      ...baseDependencies,
       sampleWatchdogPaneActivity: () => Promise.resolve({
         status: "sampled" as const,
         sampled_at: "2026-03-20T12:45:00.000Z",
@@ -409,6 +420,7 @@ function buildWatchdogScenarioDependencies(
 
   if (scenario === "expired_quiet_window_escalates") {
     return {
+      ...baseDependencies,
       sampleWatchdogPaneActivity: () => Promise.resolve({
         status: "sampled" as const,
         sampled_at: "2026-03-20T12:45:00.000Z",
@@ -422,6 +434,7 @@ function buildWatchdogScenarioDependencies(
 
   if (scenario === "expired_missing_session_escalates") {
     return {
+      ...baseDependencies,
       sampleWatchdogPaneActivity: () => Promise.resolve({
         status: "no_session" as const,
         sampled_at: "2026-03-20T12:45:00.000Z",
@@ -432,6 +445,7 @@ function buildWatchdogScenarioDependencies(
 
   if (scenario === "expired_unreadable_pane_escalates") {
     return {
+      ...baseDependencies,
       sampleWatchdogPaneActivity: () => Promise.resolve({
         status: "pane_unreadable" as const,
         sampled_at: "2026-03-20T12:45:00.000Z",
@@ -442,7 +456,7 @@ function buildWatchdogScenarioDependencies(
     };
   }
 
-  return undefined;
+  return baseDependencies;
 }
 
 async function executeWatchdogCase(input: {

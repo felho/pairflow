@@ -94,10 +94,10 @@ export {
   getBubbleStatusV11 as getBubbleStatus
 } from "./v11/application/status/emitStatusV11.js";
 export {
-  asBubbleWatchdogErrorV11 as asBubbleWatchdogError,
-  BubbleWatchdogErrorV11 as BubbleWatchdogError,
-  runBubbleWatchdogV11 as runBubbleWatchdog
-} from "./v11/infrastructure/watchdog/emitWatchdogV11.js";
+  asBubbleWatchdogError,
+  BubbleWatchdogError,
+  runBubbleWatchdog
+} from "./core/bubble/watchdogBubble.js";
 export {
   resolveBubbleFromWorkspaceCwd,
   WorkspaceResolutionError
@@ -473,10 +473,10 @@ export type {
   BubbleStatusV11View as BubbleStatusView
 } from "./v11/application/status/emitStatusV11.js";
 export type {
-  BubbleWatchdogV11Input as BubbleWatchdogInput,
-  BubbleWatchdogV11NoopReason as BubbleWatchdogNoopReason,
-  BubbleWatchdogV11Result as BubbleWatchdogResult
-} from "./v11/infrastructure/watchdog/emitWatchdogV11.js";
+  BubbleWatchdogInput,
+  BubbleWatchdogNoopReason,
+  BubbleWatchdogResult
+} from "./core/bubble/watchdogBubble.js";
 export type {
   ResolvedBubbleWorkspace
 } from "./v11/infrastructure/executor/workspace/workspaceResolution.js";

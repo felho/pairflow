@@ -1,10 +1,10 @@
 import { parseArgs } from "node:util";
 
 import {
-  asBubbleWatchdogErrorV11 as asBubbleWatchdogError,
-  runBubbleWatchdogV11 as runBubbleWatchdog,
-  type BubbleWatchdogV11Result as BubbleWatchdogResult
-} from "../../../v11/infrastructure/watchdog/emitWatchdogV11.js";
+  asBubbleWatchdogError,
+  runBubbleWatchdog,
+  type BubbleWatchdogResult
+} from "../../../core/bubble/watchdogBubble.js";
 
 export interface BubbleWatchdogCommandOptions {
   id: string;
