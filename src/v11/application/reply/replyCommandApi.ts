@@ -9,7 +9,7 @@ import {
   createHumanReplyCommandError,
   throwAsHumanReplyCommandError
 } from "../../shared/reply/replyCommandError.js";
-import { resolveReplyCommandDependencies } from "../../shared/reply/replyCommandDependencyResolution.js";
+import { resolveReplyCommandDependencies } from "./replyCommandDependencyResolution.js";
 import { normalizeReplyCommandInput } from "../../shared/reply/replyCommandInputNormalization.js";
 import { executeReplyMutation } from "../../shared/reply/replyMutationExecution.js";
 

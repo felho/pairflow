@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `10 fail / 39 warn`
+- Dependency report at this checkpoint: `8 fail / 39 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -91,6 +91,7 @@ contracts, not thin wrappers.
   - `5547d1d9` status core-compat cleanup
   - `validated (local)` metrics compat cleanup
   - `validated (local)` watchdog shell relocation
+  - `validated (local)` reply dependency cleanup
   - `validated (local)` metaReviewGate state/transcript compat cleanup
   - `validated (local)` stop shell relocation
   - `validated (local)` reconcile dependency-resolution shell relocation
@@ -149,6 +150,7 @@ contracts, not thin wrappers.
 | W37 | `metaReviewGate` state/transcript compat cleanup | `validated` | orchestrator | `shared/metaReviewGate` state/transcript type-read edges now route through explicit core compat boundaries; the cluster dropped out of forbidden dependency findings and the baseline fell to `21 fail / 42 warn` |
 | W38 | `watchdog` shell relocation | `validated` | orchestrator | Watchdog command API, flow, routing, pending rework intent, and sampler now live in `application/watchdog`; the pane-activity store uses a shared error helper instead of an application runtime import, and the dependency baseline dropped to `10 fail / 39 warn` |
 | W39 | `metrics` compat cleanup | `validated` | orchestrator | Metrics event, archive-context, and report helpers now route repo/archive/lock support through explicit core compat bridges; baseline stays at `10 fail / 39 warn` but the uncommitted compat surface is retired |
+| W40 | `reply` dependency cleanup | `validated` | orchestrator | Reply default dependency wiring now lives in `application/reply`, shared mutation code uses a narrow structural dependency shape, and reply error normalization now depends on the core bubble lookup compat bridge; dependency baseline dropped to `8 fail / 39 warn` |
 
 ## Parallelization Rules
 
@@ -179,6 +181,6 @@ contracts, not thin wrappers.
 
 Current best next moves:
 
-1. take the next bounded dependency wave from the `reply` frontier,
-2. then sweep `resumeSummary`, `metaReviewCommandSubmitPersistence`, `reviewer/testEvidence`, and `infrastructure/ui` residuals,
+1. take the next bounded dependency wave from the `resumeSummary` + `reviewer/testEvidence` frontier,
+2. then sweep `metaReviewCommandSubmitPersistence` and `infrastructure/ui` residuals,
 3. defer ownership-signal-only cleanup until the forbidden dependency front is materially smaller.

@@ -7,8 +7,8 @@ import {
   resolveDeliveryMessageRef
 } from "../../../core/runtime/tmuxDelivery.js";
 import type {
-  EmitHumanReplyDependencies
-} from "../../application/reply/replyCommandContract.js";
+  EmitHumanReplyDependencies,
+} from "./replyCommandContract.js";
 
 export interface ResolvedReplyCommandDependencies {
   appendProtocolEnvelope: NonNullable<EmitHumanReplyDependencies["appendProtocolEnvelope"]>;

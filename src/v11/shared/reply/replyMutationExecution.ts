@@ -7,7 +7,6 @@ import { buildHumanReplyEnvelopeDraft } from "../../domain/reply/replyEnvelopeDr
 import {
   raiseReplyPostAppendStateWriteFailed
 } from "../../domain/reply/postAppendStateWriteFailure.js";
-import type { ResolvedReplyCommandDependencies } from "./replyCommandDependencyResolution.js";
 import type { ReplyWaitingHumanState } from "../../domain/reply/waitingHumanStateGuard.js";
 import type {
   BubbleConfig,
@@ -54,10 +53,16 @@ export interface ExecuteReplyMutationInput {
   refs: string[];
   now: Date;
   nowIso: string;
-  dependencies: Pick<
-    ResolvedReplyCommandDependencies,
-    "appendProtocolEnvelope" | "writeStateSnapshot"
-  >;
+  dependencies: {
+    appendProtocolEnvelope: (
+      input: ReplyAppendProtocolEnvelopeInput
+    ) => Promise<ReplyAppendProtocolEnvelopeResult>;
+    writeStateSnapshot: (
+      statePath: string,
+      state: BubbleStateSnapshot,
+      options?: ReplyWriteStateSnapshotOptions
+    ) => Promise<ReplyLoadedStateSnapshot>;
+  };
   createError: PairflowCreateCommandError;
 }
 
