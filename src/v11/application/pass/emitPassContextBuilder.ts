@@ -5,9 +5,9 @@ import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorE
 import { buildPassRoutingInput, type BuildPassRoutingInputInput } from "../../shared/pass/passRoutingInvocationBuilders.js";
 import { normalizePassCommandInput } from "../../shared/pass/passCommandInputNormalization.js";
 import { normalizePassCommandPayload } from "../../shared/pass/passCommandPayloadNormalization.js";
-import { preparePassWorkspaceContext } from "../../shared/pass/passWorkspaceContextPreparation.js";
 import type { BuildFlowBaseInput } from "./flowInvocationBuilderBase.js";
 import { createPassRoutingDependencies } from "./passFlowDependencyWiring.js";
+import { preparePassWorkspaceContext } from "./passWorkspaceContextPreparation.js";
 import { preparePassRouting, type PreparePassRoutingDependencies } from "./passRoutingPreparation.js";
 
 export interface EmitPassContextCommandInput {

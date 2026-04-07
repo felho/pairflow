@@ -1,5 +1,5 @@
 import { toMetaReviewGateError } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
-import { WorkspaceResolutionError } from "../../infrastructure/executor/workspace/workspaceResolution.js";
+import { WorkspaceResolutionError } from "../../../core/bubble/workspaceResolution.js";
 
 export interface NormalizeConvergedCommandErrorInput {
   error: unknown;

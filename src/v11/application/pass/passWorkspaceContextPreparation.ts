@@ -1,21 +1,22 @@
+import type { LoadedStateSnapshot } from "../../shared/ports/stateSnapshots.js";
 import {
   IDEATION_PASS_BLOCKED
-} from "../ideation/ideationReasonCodes.js";
-import {
-  resolveIdeationMetadata as resolveV11IdeationMetadata
-} from "../../domain/ideation/ideationMetadata.js";
+} from "../../shared/ideation/ideationReasonCodes.js";
+import type { ActorEmitContextSnapshot } from "../../shared/actorProtocol/actorEmitContext.js";
 import {
   ensureBubbleInstanceIdForMutation,
   type EnsureBubbleInstanceIdForMutationResult
-} from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
+} from "../../../core/bubble/bubbleInstanceId.js";
 import {
   resolveBubbleFromWorkspaceCwd,
   type ResolvedBubbleWorkspace
-} from "../../infrastructure/executor/workspace/workspaceResolution.js";
-import { readStateSnapshot, type LoadedStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext.js";
-import { resolvePassHandoff, type ResolvedPassHandoff } from "../../domain/pass/handoff.js";
+} from "../../../core/bubble/workspaceResolution.js";
+import { readStateSnapshot } from "../../../core/state/stateStore.js";
 import type { AgentName, BubbleStateSnapshot } from "../../../types/bubble.js";
+import {
+  resolveIdeationMetadata as resolveV11IdeationMetadata
+} from "../../domain/ideation/ideationMetadata.js";
+import { resolvePassHandoff, type ResolvedPassHandoff } from "../../domain/pass/handoff.js";
 
 export interface PreparePassWorkspaceContextInput {
   cwd?: string | undefined;

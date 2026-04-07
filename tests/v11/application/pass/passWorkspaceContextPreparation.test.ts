@@ -8,7 +8,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 }
 
 import { IDEATION_PASS_BLOCKED } from "../../../../src/v11/shared/ideation/ideationReasonCodes.js";
-import { preparePassWorkspaceContext } from "../../../../src/v11/shared/pass/passWorkspaceContextPreparation.js";
+import { preparePassWorkspaceContext } from "../../../../src/v11/application/pass/passWorkspaceContextPreparation.js";
 
 class SyntheticPassCommandError extends Error {
   public constructor(message: string) {
