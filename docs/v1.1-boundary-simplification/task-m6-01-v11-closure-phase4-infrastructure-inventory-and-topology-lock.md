@@ -242,7 +242,7 @@ Ezek mar nem blocker-szintu nyitott kerdesek; a Phase 5 elindithato. A donteseke
 | remove-now | `src/cli/index.ts -> src/core/bubble/metaReview.ts` | Nem kellett mar kozvetlen `core` import: a CLI error mapping ugyanazon v11 facade-n at elerheto. | `src/cli/index.ts` meta-review stderr handling | Elvegezve ebben a batchben; a CLI most mar `src/v11/application/metaReview/emitMetaReviewV11.ts`-re mutat. |
 | needs-separate-follow-up | `src/v11/shared/metaReview/metaReviewCommandApi.ts -> src/core/bubble/metaReview.ts` | A meta-review command/status/last-report runtime tovabbra is a `core` implementacioban el, a `v11` oldalrol ez mar explicit bridge-kent latszik. | `src/v11/application/metaReview/**`, ezen keresztul a CLI meta-review parancs es a public meta-review exportok | Kulon meta-review closure/extract batch utan torolheto, amikor a command API canonical `v11` ownerre koltozik vagy a facade teljesen kiurul. |
 | documented-legacy-bridge | `src/v11/infrastructure/ui/server.ts -> src/core/ui/server.ts` | A UI server public/CLI edge mar `v11` feluleten keresztul latszik, de a futtathato implementacio meg a `core/ui/server.ts` alatt lakik. | `src/cli/commands/ui/server.ts`, `src/index.ts` | Kulon UI server ownership/extract batch utan torolheto, amikor a runtime implementacio is `v11/infrastructure` canonical ownerre kerul vagy a legacy facade megszunik. |
-| test-only-compat | `tests/** -> src/core/**` meta-review es mas parity/contract shim importok | Ezek szandekos parity/compat coverage-t adnak a meg letezo legacy seam-ekre; nem runtime/public fogyasztok. | pl. `tests/v11/application/metaReview/metaReviewFacadeParity.test.ts`, `tests/cli/bubbleMetaReviewCommand.test.ts`, `tests/contracts/v11/*.runner.ts` | Akkor torolhetok vagy irhatoak at, amikor az adott legacy bridge/facade mar megszunt es a parity coverage elveszti a celjat. |
+| test-only-compat | `tests/** -> src/core/**` parity/contract harness residualok | A nem-parity `tests/v11/**` shim importok es a standalone `tests/contracts/v11/metaReviewSubmitCoverage.test.ts` mar canonical `src/v11` ownerre lettek atkotve; ami megmaradt, az mar tudatos baseline/parity coverage. | `tests/v11/**/*FacadeParity.test.ts`, `tests/v11/application/reply/replyFacadeParity.test.ts`, `tests/contracts/v11/*.contract.runner.ts`, `tests/cli/bubbleMetaReviewCommand.test.ts` | Akkor torolhetok vagy irhatoak at, amikor az adott legacy bridge/facade vagy baseline harness teljesen megszunik, es a parity coverage elveszti a celjat. |
 
 Closure guard note:
 1. A `tests/contracts/v11/core-shim-boundary-coverage.test.ts` innentol explicit allowlistre zarja a `src/v11/**` es `src/cli/**` oldali kozvetlen `core` importokat.
@@ -250,6 +250,15 @@ Closure guard note:
    - `src/v11/shared/metaReview/metaReviewCommandApi.ts -> src/core/bubble/metaReview.ts`
    - `src/v11/infrastructure/ui/server.ts -> src/core/ui/server.ts`
 3. `src/index.ts` tovabbra is tiltott kozvetlen `core` re-export felulet marad.
+
+## Test-side Residual Audit (2026-04-07)
+
+| Category | Scope | Why it stays / changed now |
+|---|---|---|
+| keep-parity | `tests/v11/**/*FacadeParity.test.ts`, `tests/v11/application/reply/replyFacadeParity.test.ts`, `tests/v11/application/metaReview/metaReviewFacadeParity.test.ts` | Ezek direkt a legacy `core` facade es a canonical `v11` owner kozotti export- vagy viselkedesparitast merik. A `core` import eltuntetese megszuntetne a parity celjat. |
+| keep-contract-harness | `tests/contracts/v11/*.contract.runner.ts` | Ezek a baseline harness reszekent a `core` seamet futtatjak a `v11` implementacioval parban. Atirasuk most kivenne a baseline oldalt a contract osszehasonlitasbol. |
+| rewrite-now | `tests/v11/**` minden nem-parity shim-importalo tesztje, valamint `tests/contracts/v11/metaReviewSubmitCoverage.test.ts` | Ezeknel a `core` import mar csak torteneti shim volt; a szimbolumok ugyanazzal a kontraktussal elerhetok a canonical `src/v11` ownerrol, parity intent-serules nelkul. |
+| needs-follow-up | jelenleg nincs uj test-side tetel | A kovetkezo torlesi kor mar csak akkor nyilik, ha az erintett legacy facade vagy contract baseline maga is megszunik. |
 
 ## L2 - Implementation Notes (Optional)
 

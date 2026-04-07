@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildMetaReviewExecutionContext } from "../../../../src/core/bubble/metaReviewExecutionContext.js";
+import { buildMetaReviewExecutionContext } from "../../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext

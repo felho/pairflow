@@ -1,4 +1,4 @@
-import { emitPassFromWorkspace } from "../../../../src/core/agent/pass.js";
+import { emitPassFromWorkspace } from "../../../../src/v11/shared/pass/passCommandOrchestration.js";
 
 export async function seedConvergedCandidate(cwd: string): Promise<void> {
   await emitPassFromWorkspace({

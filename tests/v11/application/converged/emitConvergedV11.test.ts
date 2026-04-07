@@ -4,20 +4,18 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { resolveActorEmitContextByBubbleId } from "../../../../src/core/bubble/actorEmitContext.js";
+import { resolveActorEmitContextByBubbleId } from "../../../../src/v11/shared/actorProtocol/actorEmitContext.js";
 import type { AgentName } from "../../../../src/types/bubble.js";
-import {
-  emitConvergedFromWorkspace,
-  type EmitConvergedInput
-} from "../../../../src/core/agent/converged.js";
 import { buildRunningExecutionContext } from "../../../../src/v11/shared/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import {
   ConvergedCommandErrorV11,
-  emitConvergedFromWorkspaceV11
+  emitConvergedFromWorkspaceV11,
+  emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace,
+  type EmitConvergedV11Input as EmitConvergedInput
 } from "../../../../src/v11/application/converged/emitConvergedV11.js";
-import { createBubble } from "../../../../src/core/bubble/createBubble.js";
-import { bootstrapWorktreeWorkspace } from "../../../../src/core/workspace/worktreeManager.js";
+import { createBubble } from "../../../../src/v11/application/create/createCommandApi.js";
+import { bootstrapWorktreeWorkspace } from "../../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { initGitRepository } from "../../../helpers/git.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { seedConvergedCandidate } from "./convergedSeedFixture.js";

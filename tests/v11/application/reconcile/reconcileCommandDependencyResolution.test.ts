@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { RuntimeSessionsRegistry } from "../../../../src/core/runtime/sessionsRegistry.js";
+import type { RuntimeSessionsRegistry } from "../../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { resolveReconcileRuntimeSessionsDependencies } from "../../../../src/v11/shared/reconcile/reconcileCommandDependencyResolution.js";
 
 describe("reconcileCommandDependencyResolution", () => {

@@ -4,10 +4,12 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { emitConvergedFromWorkspace } from "../../../../src/core/agent/converged.js";
-import { emitPassFromWorkspace } from "../../../../src/core/agent/pass.js";
-import { submitMetaReviewResult } from "../../../../src/core/bubble/metaReview.js";
-import { emitApprove } from "../../../../src/core/human/approval.js";
+import {
+  emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace
+} from "../../../../src/v11/application/converged/emitConvergedV11.js";
+import { emitPassFromWorkspace } from "../../../../src/v11/shared/pass/passCommandOrchestration.js";
+import { submitMetaReviewResult } from "../../../../src/v11/shared/metaReview/metaReviewCommandRuntime.js";
+import { emitApproveV11 as emitApprove } from "../../../../src/v11/application/approval/emitApprovalV11.js";
 import { commitBubbleV11 } from "../../../../src/v11/application/commit/emitCommitV11.js";
 import { readStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import { readTranscriptEnvelopes } from "../../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";

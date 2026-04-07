@@ -9,9 +9,9 @@ import {
   AskHumanCommandErrorV11,
   emitAskHumanFromWorkspaceV11
 } from "../../../../src/v11/application/askHuman/emitAskHumanV11.js";
-import { WorkspaceResolutionError } from "../../../../src/core/bubble/workspaceResolution.js";
-import { createBubble } from "../../../../src/core/bubble/createBubble.js";
-import { bootstrapWorktreeWorkspace } from "../../../../src/core/workspace/worktreeManager.js";
+import { WorkspaceResolutionError } from "../../../../src/v11/infrastructure/executor/workspace/workspaceResolution.js";
+import { createBubble } from "../../../../src/v11/application/create/createCommandApi.js";
+import { bootstrapWorktreeWorkspace } from "../../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { readStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import { readTranscriptEnvelopes } from "../../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { initGitRepository } from "../../../helpers/git.js";

@@ -6,14 +6,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   resolveActorEmitContextByBubbleId
-} from "../../../../src/core/bubble/actorEmitContext.js";
+} from "../../../../src/v11/shared/actorProtocol/actorEmitContext.js";
 import type { AgentName } from "../../../../src/types/bubble.js";
 import type {
   ActorEmitContextError
-} from "../../../../src/core/bubble/actorEmitContext.js";
+} from "../../../../src/v11/shared/actorProtocol/actorEmitContext.js";
 import {
   buildMetaReviewExecutionContext
-} from "../../../../src/core/bubble/metaReviewExecutionContext.js";
+} from "../../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import {
   buildRunningExecutionContext,
   metaReviewExecutionContextToRunningContext

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { EmitConvergedResult } from "../../../../src/core/agent/converged.js";
+import type { EmitConvergedResult } from "../../../../src/v11/shared/converged/convergedCommandTypes.js";
 import { executeAutoConvergeConverged } from "../../../../src/v11/application/pass/autoConvergeConvergedExecution.js";
 
 function buildConvergedResult(): EmitConvergedResult {

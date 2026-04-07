@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BubbleLookupError } from "../../../../src/core/bubble/bubbleLookup.js";
+import { BubbleLookupError } from "../../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
 import { normalizeReplyCommandError } from "../../../../src/v11/shared/reply/replyCommandErrorNormalization.js";
 
 class SyntheticReplyCommandError extends Error {

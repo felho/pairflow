@@ -5,7 +5,7 @@ import {
   createAskHumanCommandError,
   throwAsAskHumanCommandError
 } from "../../../../src/v11/shared/askHuman/askHumanCommandRuntime.js";
-import { WorkspaceResolutionError } from "../../../../src/core/bubble/workspaceResolution.js";
+import { WorkspaceResolutionError } from "../../../../src/v11/infrastructure/executor/workspace/workspaceResolution.js";
 
 describe("askHumanCommandRuntime", () => {
   it("creates AskHumanCommandError instances with stable name", () => {

@@ -4,7 +4,7 @@ import {
   DEFAULT_RESUME_MESSAGE,
   resumeBubbleV11
 } from "../../../../src/v11/application/resume/emitResumeV11.js";
-import type { EmitHumanReplyResult } from "../../../../src/core/human/reply.js";
+import type { EmitHumanReplyResult } from "../../../../src/v11/application/reply/replyCommandContract.js";
 
 function createResumeResultFixture(): EmitHumanReplyResult {
   return {

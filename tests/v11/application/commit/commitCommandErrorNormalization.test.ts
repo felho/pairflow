@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { BubbleLookupError } from "../../../../src/core/bubble/bubbleLookup.js";
-import { GitCommandError } from "../../../../src/core/workspace/git.js";
+import { BubbleLookupError } from "../../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
+import { GitCommandError } from "../../../../src/v11/infrastructure/workspace/git.js";
 import {
   BubbleCommitError,
   createBubbleCommitError,

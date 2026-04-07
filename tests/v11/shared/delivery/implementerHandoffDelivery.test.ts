@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { EmitTmuxDeliveryNotificationInput } from "../../../../src/core/runtime/tmuxDelivery.js";
+import type { EmitTmuxDeliveryNotificationInput } from "../../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
 import {
   executeImplementerHandoffDelivery,
   shouldRetryImplementerHandoffDelivery

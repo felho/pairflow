@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { emitBubbleLifecycleEventBestEffort } from "../../../../src/v11/shared/metrics/bubbleEvents.js";
-import { emitBubbleNotification } from "../../../../src/core/runtime/notifications.js";
+import { emitBubbleNotification } from "../../../../src/v11/infrastructure/channel/notifications.js";
 import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef
-} from "../../../../src/core/runtime/tmuxDelivery.js";
+} from "../../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
 import { resolveAskHumanFinalizationDependencies } from "../../../../src/v11/shared/askHuman/askHumanFinalizationDependencyResolution.js";
 
 describe("askHumanFinalizationDependencyResolution", () => {

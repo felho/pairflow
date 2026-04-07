@@ -8,7 +8,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
 }
 
 import { prepareAskHumanRouting } from "../../../../src/v11/application/askHuman/askHumanRoutingPreparation.js";
-import type { ResolvedBubbleWorkspace } from "../../../../src/core/bubble/workspaceResolution.js";
+import type { ResolvedBubbleWorkspace } from "../../../../src/v11/infrastructure/executor/workspace/workspaceResolution.js";
 
 class AskHumanRoutingTestError extends Error {
   public constructor(message: string) {

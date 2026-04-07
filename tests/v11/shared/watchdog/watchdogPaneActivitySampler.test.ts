@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { describe, expect, it, vi } from "vitest";
 
-import type { TmuxRunner } from "../../../../src/core/runtime/tmuxManager.js";
+import type { TmuxRunner } from "../../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
 import {
   sampleWatchdogPaneActivity
 } from "../../../../src/v11/shared/watchdog/watchdogPaneActivitySampler.js";

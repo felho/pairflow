@@ -7,7 +7,7 @@ function toErrorMessage(input: PairflowCommandErrorInput): string {
   return (input.reasonCode !== undefined ? input.reasonCode + ": " : "") + input.message;
 }
 
-import type { EmitConvergedResult } from "../../../../src/core/agent/converged.js";
+import type { EmitConvergedResult } from "../../../../src/v11/shared/converged/convergedCommandTypes.js";
 import { finalizeAutoConvergePass } from "../../../../src/v11/application/pass/autoConvergeFinalization.js";
 
 function buildConvergedResult(): EmitConvergedResult {

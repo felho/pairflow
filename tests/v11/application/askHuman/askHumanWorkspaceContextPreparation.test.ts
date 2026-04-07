@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { prepareAskHumanWorkspaceContext } from "../../../../src/v11/shared/askHuman/askHumanWorkspaceContextPreparation.js";
-import type { ResolvedBubbleWorkspace } from "../../../../src/core/bubble/workspaceResolution.js";
+import type { ResolvedBubbleWorkspace } from "../../../../src/v11/infrastructure/executor/workspace/workspaceResolution.js";
 import type { LoadedStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 
 describe("prepareAskHumanWorkspaceContext", () => {

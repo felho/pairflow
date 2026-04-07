@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { emitAskHumanFromWorkspace } from "../../../../src/core/agent/askHuman.js";
+import { emitAskHumanFromWorkspace } from "../../../../src/v11/shared/askHuman/askHumanCommandApi.js";
 import { readTranscriptEnvelopes } from "../../../../src/v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { readStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
 import { deliveryTargetRoleMetadataKey } from "../../../../src/types/protocol.js";

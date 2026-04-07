@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { BubbleLookupError } from "../../../../src/core/bubble/bubbleLookup.js";
-import type { GitCommandError } from "../../../../src/core/workspace/git.js";
-import type { WorkspaceCleanupError } from "../../../../src/core/workspace/worktreeManager.js";
-import type { TmuxCommandError } from "../../../../src/core/runtime/tmuxManager.js";
+import { BubbleLookupError } from "../../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
+import type { GitCommandError } from "../../../../src/v11/infrastructure/workspace/git.js";
+import type { WorkspaceCleanupError } from "../../../../src/v11/infrastructure/workspace/worktreeManager.js";
+import type { TmuxCommandError } from "../../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
 import type {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
-} from "../../../../src/core/runtime/sessionsRegistry.js";
+} from "../../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import {
   BubbleMergeError,
   createBubbleMergeError

@@ -4,7 +4,7 @@ import { getBubblePaths } from "../../../../src/v11/infrastructure/artifact/bubb
 import {
   attachBubbleV11
 } from "../../../../src/v11/application/attach/emitAttachV11.js";
-import { SchemaValidationError } from "../../../../src/core/validation.js";
+import { SchemaValidationError } from "../../../../src/v11/shared/validation/primitives.js";
 import type {
   AttachBubbleError,
   LauncherAvailabilityInput

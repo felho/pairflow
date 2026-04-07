@@ -4,19 +4,17 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  emitPassFromWorkspace,
-  type EmitPassInput
-} from "../../../../src/core/agent/pass.js";
+import { emitPassFromWorkspace } from "../../../../src/v11/shared/pass/passCommandOrchestration.js";
+import type { EmitPassInput } from "../../../../src/v11/application/pass/passCommandContract.js";
 import {
   asPassCommandErrorV11,
   emitPassFromWorkspaceV11,
   inferPassIntentV11,
   PassCommandErrorV11
 } from "../../../../src/v11/application/pass/emitPassV11.js";
-import { WorkspaceResolutionError } from "../../../../src/core/bubble/workspaceResolution.js";
-import { createBubble } from "../../../../src/core/bubble/createBubble.js";
-import { bootstrapWorktreeWorkspace } from "../../../../src/core/workspace/worktreeManager.js";
+import { WorkspaceResolutionError } from "../../../../src/v11/infrastructure/executor/workspace/workspaceResolution.js";
+import { createBubble } from "../../../../src/v11/application/create/createCommandApi.js";
+import { bootstrapWorktreeWorkspace } from "../../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import { setupRunningBubbleFixture } from "../../../helpers/bubble.js";
 import { initGitRepository } from "../../../helpers/git.js";
 

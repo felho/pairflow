@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { parseBubbleConfigToml } from "../../../../src/config/bubbleConfig.js";
-import { createBubble } from "../../../../src/core/bubble/createBubble.js";
+import { createBubble } from "../../../../src/v11/application/create/createCommandApi.js";
 import { prepareKickoffPersistence } from "../../../../src/v11/shared/kickoff/kickoffPersistencePreparation.js";
 import { initGitRepository } from "../../../helpers/git.js";
 

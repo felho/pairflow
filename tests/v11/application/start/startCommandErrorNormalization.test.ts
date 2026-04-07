@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { BubbleLookupError } from "../../../../src/core/bubble/bubbleLookup.js";
-import { WorkspaceBootstrapError } from "../../../../src/core/workspace/worktreeManager.js";
+import { BubbleLookupError } from "../../../../src/v11/infrastructure/executor/workspace/bubbleLookup.js";
+import { WorkspaceBootstrapError } from "../../../../src/v11/infrastructure/workspace/worktreeManager.js";
 import {
   TmuxCommandError,
   TmuxSessionExistsError
-} from "../../../../src/core/runtime/tmuxManager.js";
+} from "../../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
 import {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
-} from "../../../../src/core/runtime/sessionsRegistry.js";
+} from "../../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import {
   StartBubbleError,
   throwAsStartBubbleError
