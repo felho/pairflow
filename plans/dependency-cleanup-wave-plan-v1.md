@@ -258,11 +258,5 @@ Current bounded next-wave decisions:
 
 ## Current Next Decision
 
-- Run parallel explorer classification on the remaining `metaReviewGate` and `reply` warning clusters.
-- Prefer the next bounded batch from the next failing checker family (`boundary`, `transition`, `error`, `complexity`, `contract_timeout_policy`) rather than dependency.
-
-Current best next moves:
-
-1. take the next bounded real-owner batch from the current frontier (a metaReview split or the next reviewer/metaReviewGate follow-up),
-2. run the next two disjoint warned-owner batches in parallel after prep: the next reviewer follow-up and the next metaReview follow-up,
-3. keep checker-hardening and warning-cleanup as separate commits so baseline shifts stay auditable.
+- Dependency is closed on `main`.
+- Continue from the next failing checker family (`boundary`, `transition`, `error`, `complexity`, `contract_timeout_policy`) rather than opening new dependency batches.
