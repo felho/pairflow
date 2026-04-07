@@ -3,13 +3,13 @@ import type { readFile, writeFile } from "node:fs/promises";
 import type {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
-} from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
-import type { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
+} from "../../../core/protocol/transcriptStore.js";
+import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import type {
   readStateSnapshot,
   writeStateSnapshot,
   LoadedStateSnapshot
-} from "../../infrastructure/state/stateStore.js";
+} from "../../../core/state/stateStore.js";
 import type {
   BubbleStateSnapshot,
   MetaReviewRecommendation

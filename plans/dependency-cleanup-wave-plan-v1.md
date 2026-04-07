@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `205a94a3`.
+Last updated from `main` at `533a3113`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `191 fail / 60 warn`
+- Dependency report at this checkpoint: `184 fail / 60 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -79,7 +79,8 @@ contracts, not thin wrappers.
   - `6a294194` shared converged/merge/kickoff/delivery helper compat batch
   - `529e52ad` merge shell relocation + metaReview contract compat batch
   - `205a94a3` metaReviewGate apply-context compat batch
-  - `pending` metaReview command-runtime compat batch
+  - `533a3113` metaReview command-runtime compat batch
+  - `pending` metaReviewGate recovery-context compat batch
 
 ## Wave Ledger
 
@@ -122,6 +123,7 @@ contracts, not thin wrappers.
 | W25 | `merge` shared shell relocation + `metaReviewCommandContract` compat | `completed` | orchestrator + worker | Merge orchestration ownership moved into `application`, UI router now uses the core merge facade, and the shared meta-review command contract no longer imports `v11/infrastructure/**` directly |
 | W26 | `metaReviewGate` apply-context compat batch | `completed` | orchestrator | Apply-context, apply-helper, and pane-binding shared files now depend on explicit core compat bridges instead of direct `v11/infrastructure/**` imports; baseline dropped to `200 fail / 61 warn` |
 | W27 | `metaReview` command-runtime compat batch | `completed` | orchestrator | Submit/read runtime, error mapping, and submit routing now use explicit core compat bridges; baseline dropped to `191 fail / 60 warn` |
+| W28 | `metaReviewGate` recovery-context compat batch | `completed` | orchestrator | Recovery context and helper files now use explicit core compat bridges for transcript/state/bubble lookup/pane bindings; baseline dropped to `184 fail / 60 warn` |
 
 ## Parallelization Rules
 
@@ -152,6 +154,6 @@ contracts, not thin wrappers.
 
 Current best next moves:
 
-1. reassess the remaining `metaReview/liveRun`, `metaReviewGate recovery`, and the UI complexity frontier from the current `191 fail / 60 warn` baseline,
+1. reassess the remaining `metaReview/liveRun`, `metaReviewGate` residuals, and the UI complexity frontier from the current `184 fail / 60 warn` baseline,
 2. then choose between another bounded dependency cluster and the first UI complexity breakup,
 3. keep this file updated after each merged micro-batch to survive context compaction.

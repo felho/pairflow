@@ -3,14 +3,14 @@ import { readFile, writeFile } from "node:fs/promises";
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
-} from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
-import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { setMetaReviewerPaneBinding } from "../../infrastructure/channel/tmux/metaReviewerPaneBinding.js";
+} from "../../../core/protocol/transcriptStore.js";
+import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
 import {
   readStateSnapshot,
   writeStateSnapshot,
   type LoadedStateSnapshot
-} from "../../infrastructure/state/stateStore.js";
+} from "../../../core/state/stateStore.js";
 import { writeRecoveredMetaReviewArtifacts } from "./metaReviewGateRunResultArtifacts.js";
 import {
   MetaReviewGateError,
