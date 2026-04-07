@@ -2,11 +2,11 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { runTmux } from "../../../infrastructure/channel/tmux/tmuxManager.js";
+import { runTmux } from "../../../../core/runtime/tmuxManager.js";
 import {
   maybeAcceptClaudeTrustPrompt,
   sendAndSubmitTmuxPaneMessage
-} from "../../../infrastructure/channel/tmux/tmuxInput.js";
+} from "../../../../core/runtime/tmuxInput.js";
 import { isNonEmptyString } from "../../validation/primitives.js";
 import type {
   MetaReviewLiveRunnerInput,

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 
-import { resolveBubbleById } from "../../../infrastructure/executor/workspace/bubbleLookup.js";
+import { resolveBubbleById } from "../../../../core/bubble/bubbleLookup.js";
 import {
   isMetaReviewExecutionContextActiveState
 } from "../metaReviewExecutionContext.js";
@@ -30,11 +30,11 @@ import {
   formatRunnerFailure,
   mapRecommendationToStatus
 } from "./metaReviewLiveRunErrors.js";
-import { appendProtocolEnvelope } from "../../../infrastructure/artifact/transcript/transcriptStore.js";
+import { appendProtocolEnvelope } from "../../../../core/protocol/transcriptStore.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
-} from "../../../infrastructure/state/stateStore.js";
+} from "../../../../core/state/stateStore.js";
 import { MetaReviewError } from "../metaReviewError.js";
 import type {
   MetaReviewRecommendation,

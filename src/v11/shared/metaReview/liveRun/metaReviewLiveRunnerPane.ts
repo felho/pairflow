@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
-import { readRuntimeSessionsRegistry } from "../../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
-import { runtimePaneIndices, runTmux } from "../../../infrastructure/channel/tmux/tmuxManager.js";
+import { readRuntimeSessionsRegistry } from "../../../../core/runtime/sessionsRegistry.js";
+import { runtimePaneIndices, runTmux } from "../../../../core/runtime/tmuxManager.js";
 import { extractMetaReviewDelimitedBlock } from "./metaReviewLiveRunnerParsing.js";
 
 const defaultMetaReviewPanePollIntervalMs = 800;

@@ -1,6 +1,9 @@
 import { rm } from "node:fs/promises";
 
-import { StateStoreConflictError, type LoadedStateSnapshot } from "../../../infrastructure/state/stateStore.js";
+import {
+  StateStoreConflictError,
+  type LoadedStateSnapshot
+} from "../../../../core/state/stateStore.js";
 import type { MetaReviewDependencies } from "./metaReviewLiveRunContract.js";
 
 type GateReasonCode =

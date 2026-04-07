@@ -1,7 +1,7 @@
 import {
   StateStoreConflictError,
   type LoadedStateSnapshot
-} from "../../../infrastructure/state/stateStore.js";
+} from "../../../../core/state/stateStore.js";
 import {
   normalizeMetaReviewSnapshot
 } from "../metaReviewSnapshot.js";

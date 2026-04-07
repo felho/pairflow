@@ -1,7 +1,7 @@
 import {
   appendHumanApprovalRequestEnvelope
 } from "../../metaReviewGate/approvalRequestEnvelope.js";
-import { type LoadedStateSnapshot } from "../../../infrastructure/state/stateStore.js";
+import { type LoadedStateSnapshot } from "../../../../core/state/stateStore.js";
 import {
   readApprovalAdvisoryFindingsSnapshot,
   readMetaReviewFindingsParitySnapshot
@@ -22,9 +22,7 @@ import { MetaReviewError } from "../metaReviewError.js";
 import type {
   MetaReviewRecommendation
 } from "../../../../types/bubble.js";
-import type {
-  MetaReviewDependencies,
-} from "./metaReviewLiveRunContract.js";
+import type { MetaReviewDependencies } from "./metaReviewLiveRunContract.js";
 
 function resolveApprovalRefreshRoute(
   recommendation: MetaReviewRecommendation
