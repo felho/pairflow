@@ -16,13 +16,13 @@ import {
 import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
-} from "../../infrastructure/artifact/transcript/transcriptStore.js";
-import { assessPairflowCommandPath } from "../../infrastructure/executor/command/pairflowCommand.js";
-import { emitBubbleNotification } from "../../infrastructure/channel/notifications.js";
+} from "../../../core/protocol/transcriptStore.js";
+import { assessPairflowCommandPath } from "../../../core/runtime/pairflowCommand.js";
+import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef
-} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
+} from "../../../core/runtime/tmuxDelivery.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
 import type {
