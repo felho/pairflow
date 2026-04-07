@@ -1,10 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { readFile, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { readFile, writeFile } from "node:fs/promises";
 
-import {
-  appendHumanApprovalRequestEnvelope
-} from "./approvalRequestEnvelope.js";
 import { resolveBubbleById } from "./bubbleLookup.js";
 import {
   isMetaReviewExecutionContextActiveState
@@ -13,24 +9,18 @@ import {
   defaultLiveRunner
 } from "./metaReviewLiveRunner.js";
 import {
+  refreshMetaReviewApprovalRequest
+} from "./metaReviewLiveRunApprovalRefresh.js";
+import {
   CANONICAL_META_REVIEW_REPORT_REF,
   normalizeOptionalText,
   resolveCanonicalMetaReviewReportJson
 } from "./metaReviewLiveRunReport.js";
 import {
-  readApprovalAdvisoryFindingsSnapshot,
-  readMetaReviewFindingsParitySnapshot
-} from "./metaReviewLiveRunParity.js";
-import {
-  assertApproveRecommendationConsistentWithReviewerSnapshot,
-  readLatestApproveReviewerSnapshot
-} from "./metaReviewLiveRunReviewerSnapshot.js";
-import {
   assertRunPayloadInvariants,
   formatRunnerFailure,
-  isMissingFileError,
   mapRecommendationToStatus,
-  shouldRefreshApprovalRequest,
+  isMissingFileError,
   stateWriteConflictToMetaReviewError
 } from "./metaReviewLiveRunErrors.js";
 import { appendProtocolEnvelope } from "../protocol/transcriptStore.js";
@@ -86,31 +76,6 @@ async function readRollingArtifactBackup(
   }
 }
 
-async function restoreRollingArtifactBackup(
-  artifactBackup: RollingArtifactBackupEntry[],
-  writeFileFn: NonNullable<MetaReviewDependencies["writeFile"]>
-): Promise<void> {
-  await Promise.all(
-    artifactBackup.map((artifact) =>
-      artifact.existed
-        ? writeFileFn(artifact.artifactPath, artifact.contents ?? "", "utf8")
-        : rm(artifact.artifactPath, { force: true })
-    )
-  );
-}
-
-function resolveApprovalRefreshRoute(
-  recommendation: MetaReviewRecommendation
-): "human_gate_approve" | "human_gate_budget_exhausted" | "human_gate_inconclusive" {
-  if (recommendation === "approve") {
-    return "human_gate_approve";
-  }
-  if (recommendation === "rework") {
-    return "human_gate_budget_exhausted";
-  }
-  return "human_gate_inconclusive";
-}
-
 export async function runMetaReview(
   input: MetaReviewRunInput,
   dependencies: MetaReviewDependencies = {}
@@ -120,8 +85,6 @@ export async function runMetaReview(
   const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
   const appendEnvelope = dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
   const runLiveReview = dependencies.runLiveReview ?? defaultLiveRunner;
-  const readFileFn = dependencies.readFile ?? readFile;
-  const writeFileFn = dependencies.writeFile ?? writeFile;
   const now = dependencies.now ?? new Date();
   const makeUuid = dependencies.randomUUID ?? randomUUID;
 
@@ -251,12 +214,12 @@ export async function runMetaReview(
   const artifactBackup = await Promise.all([
     readRollingArtifactBackup(
       resolved.bubblePaths.metaReviewLastJsonArtifactPath,
-      readFileFn
+      dependencies.readFile ?? readFile
     )
   ]);
 
   const artifactWrites = await Promise.allSettled([
-    writeFileFn(
+    (dependencies.writeFile ?? writeFile)(
       resolved.bubblePaths.metaReviewLastJsonArtifactPath,
       `${JSON.stringify(reportPayload, null, 2)}\n`,
       "utf8"
@@ -280,100 +243,25 @@ export async function runMetaReview(
     });
   }
 
-  if (shouldRefreshApprovalRequest(written.state.state)) {
-    const parity = readMetaReviewFindingsParitySnapshot(canonicalReportJson);
-    const approvalFindings = readApprovalAdvisoryFindingsSnapshot(
-      canonicalReportJson
-    );
-    const latestReviewerSnapshot = await readLatestApproveReviewerSnapshot({
-      recommendation,
-      transcriptPath: resolved.bubblePaths.transcriptPath,
-      round: written.state.round
-    });
-    const approvalSummary =
-      summary ??
-      `Meta-review completed with recommendation ${recommendation}.`;
-    try {
-      assertApproveRecommendationConsistentWithReviewerSnapshot({
-        latestSnapshot: latestReviewerSnapshot,
-        summary: approvalSummary,
-        reportJson: canonicalReportJson
-      });
-      await appendHumanApprovalRequestEnvelope({
-        appendEnvelope,
-        transcriptPath: resolved.bubblePaths.transcriptPath,
-        inboxPath: resolved.bubblePaths.inboxPath,
-        lockPath: join(
-          resolved.bubblePaths.locksDir,
-          `${resolved.bubbleId}.lock`
-        ),
-        now,
-        bubbleId: resolved.bubbleId,
-        round: written.state.round,
-        summary: approvalSummary,
-        route: resolveApprovalRefreshRoute(recommendation),
-        refs: [CANONICAL_META_REVIEW_REPORT_REF],
-        recommendation,
-        parityMetadata: parity,
-        ...(latestReviewerSnapshot !== undefined
-          ? { reviewerSnapshot: latestReviewerSnapshot }
-          : {}),
-        ...(approvalFindings !== undefined
-          ? { findings: approvalFindings }
-          : {})
-      });
-    } catch (appendError) {
-      const appendReason =
-        appendError instanceof Error ? appendError.message : String(appendError);
-      let rollbackReasonCode = "META_REVIEW_GATE_REFRESH_APPROVAL_ROLLBACK_NOT_ATTEMPTED";
-      let rollbackContext = "rollback_outcome=not_attempted";
-      let artifactRestoreReasonCode =
-        "META_REVIEW_GATE_REFRESH_APPROVAL_ARTIFACT_RESTORE_NOT_ATTEMPTED";
-      let artifactRestoreContext = "artifact_restore_outcome=not_attempted";
-      let gateReasonCode: "META_REVIEW_GATE_STATE_CONFLICT" | "META_REVIEW_GATE_TRANSITION_INVALID" =
-        "META_REVIEW_GATE_TRANSITION_INVALID";
-      try {
-        await writeState(resolved.bubblePaths.statePath, loadedState.state, {
-          expectedFingerprint: written.fingerprint,
-          expectedState: written.state.state
-        });
-        rollbackReasonCode = "META_REVIEW_GATE_REFRESH_APPROVAL_ROLLBACK_APPLIED";
-        rollbackContext = "rollback_outcome=applied";
-      } catch (rollbackError) {
-        const rollbackReason =
-          rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
-        rollbackContext = `rollback_outcome=failed rollback_error=${rollbackReason}`;
-        if (rollbackError instanceof StateStoreConflictError) {
-          gateReasonCode = "META_REVIEW_GATE_STATE_CONFLICT";
-          rollbackReasonCode = "META_REVIEW_GATE_REFRESH_APPROVAL_ROLLBACK_STATE_CONFLICT";
-        } else {
-          rollbackReasonCode =
-            "META_REVIEW_GATE_REFRESH_APPROVAL_ROLLBACK_TRANSITION_INVALID";
-        }
-      }
-      if (rollbackReasonCode === "META_REVIEW_GATE_REFRESH_APPROVAL_ROLLBACK_APPLIED") {
-        try {
-          await restoreRollingArtifactBackup(artifactBackup, writeFileFn);
-          artifactRestoreReasonCode =
-            "META_REVIEW_GATE_REFRESH_APPROVAL_ARTIFACT_RESTORE_APPLIED";
-          artifactRestoreContext = "artifact_restore_outcome=applied";
-        } catch (artifactRestoreError) {
-          const artifactRestoreReason =
-            artifactRestoreError instanceof Error
-              ? artifactRestoreError.message
-              : String(artifactRestoreError);
-          artifactRestoreReasonCode =
-            "META_REVIEW_GATE_REFRESH_APPROVAL_ARTIFACT_RESTORE_FAILED";
-          artifactRestoreContext =
-            `artifact_restore_outcome=failed artifact_restore_error=${artifactRestoreReason}`;
-        }
-      }
-      throw new MetaReviewError(
-        "META_REVIEW_GATE_RUN_FAILED",
-        `${gateReasonCode}: approval refresh append failed after state/artifact writes (append_error=${appendReason}; rollback_reason_code=${rollbackReasonCode}; rollback_target_state=${loadedState.state.state}; ${rollbackContext}; artifact_restore_reason_code=${artifactRestoreReasonCode}; ${artifactRestoreContext}).`
-      );
-    }
-  }
+  await refreshMetaReviewApprovalRequest({
+    bubbleId: resolved.bubbleId,
+    artifactBackup,
+    statePath: resolved.bubblePaths.statePath,
+    state: written.state.state,
+    round: written.state.round,
+    recommendation,
+    summary,
+    canonicalReportJson,
+    transcriptPath: resolved.bubblePaths.transcriptPath,
+    inboxPath: resolved.bubblePaths.inboxPath,
+    lockPath: `${resolved.bubblePaths.locksDir}/${resolved.bubbleId}.lock`,
+    loadedState,
+    written,
+    now,
+    appendEnvelope,
+    writeFileFn: dependencies.writeFile ?? writeFile,
+    writeStateFn: writeState
+  });
 
   return {
     bubble_id: resolved.bubbleId,
