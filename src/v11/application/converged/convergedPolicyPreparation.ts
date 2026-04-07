@@ -1,7 +1,4 @@
-import {
-  readTranscriptEnvelopes,
-  type ReadTranscriptOptions
-} from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
+import { type ReadTranscriptEnvelopesPort } from "../../shared/ports/transcript.js";
 import {
   validateConvergencePolicy,
   type ConvergencePolicyResult
@@ -24,10 +21,7 @@ export interface PrepareConvergedPolicyInput {
 }
 
 export interface PrepareConvergedPolicyDependencies {
-  readTranscriptEnvelopes?: (
-    transcriptPath: string,
-    options?: ReadTranscriptOptions
-  ) => Promise<ProtocolEnvelope[]>;
+  readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
   validateConvergencePolicy?: typeof validateConvergencePolicy;
 }
 
@@ -41,10 +35,15 @@ export async function prepareConvergedPolicy(
   input: PrepareConvergedPolicyInput,
   dependencies: PrepareConvergedPolicyDependencies = {}
 ): Promise<PrepareConvergedPolicyResult> {
-  const readTranscript =
-    dependencies.readTranscriptEnvelopes ?? readTranscriptEnvelopes;
+  const readTranscript = dependencies.readTranscriptEnvelopes;
   const validatePolicy =
     dependencies.validateConvergencePolicy ?? validateConvergencePolicy;
+
+  if (readTranscript === undefined) {
+    throw new Error(
+      "prepareConvergedPolicy requires readTranscriptEnvelopes dependency."
+    );
+  }
 
   const transcript = await readTranscript(input.transcriptPath, {
     allowMissing: true,

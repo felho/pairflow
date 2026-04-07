@@ -14,6 +14,7 @@ import {
   recoverMetaReviewGateFromSnapshot
 } from "../metaReviewGate/metaReviewGateCommandApi.js";
 import { appendProtocolEnvelope } from "../../infrastructure/artifact/transcript/transcriptStore.js";
+import { readTranscriptEnvelopes } from "../../infrastructure/artifact/transcript/transcriptStore.js";
 import { assessPairflowCommandPath } from "../../infrastructure/executor/command/pairflowCommand.js";
 import { emitBubbleNotification } from "../../infrastructure/channel/notifications.js";
 import {
@@ -23,6 +24,7 @@ import {
 import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import type { EmitBubbleNotificationPort } from "../ports/notifications.js";
 import type { AppendProtocolEnvelopePort } from "../ports/transcript.js";
+import type { ReadTranscriptEnvelopesPort } from "../ports/transcript.js";
 import type {
   EmitTmuxDeliveryNotificationPort,
   ResolveDeliveryMessageRefPort
@@ -81,7 +83,7 @@ export function buildConvergedFlowInput(
 export interface BuildConvergedFlowDependenciesInput {
   prepareConvergedRouting:
     RunConvergedFlowDependencies["prepareConvergedRouting"];
-  prepareConvergedPolicy: RunConvergedFlowDependencies["prepareConvergedPolicy"];
+  prepareConvergedPolicy: typeof prepareConvergedPolicy;
   prepareConvergedValidation:
     RunConvergedFlowDependencies["prepareConvergedValidation"];
   executeConvergedExecution:
@@ -95,6 +97,7 @@ export interface BuildConvergedFlowDependenciesInput {
     RunConvergedFlowDependencies["emitTmuxDeliveryNotification"];
   emitBubbleNotification?:
     RunConvergedFlowDependencies["emitBubbleNotification"];
+  readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
 }
 
 export function buildConvergedFlowDependencies(
@@ -102,7 +105,12 @@ export function buildConvergedFlowDependencies(
 ): RunConvergedFlowDependencies {
   return {
     prepareConvergedRouting: input.prepareConvergedRouting,
-    prepareConvergedPolicy: input.prepareConvergedPolicy,
+    prepareConvergedPolicy: (policyInput) =>
+      input.prepareConvergedPolicy(policyInput, {
+        ...(input.readTranscriptEnvelopes !== undefined
+          ? { readTranscriptEnvelopes: input.readTranscriptEnvelopes }
+          : { readTranscriptEnvelopes })
+      }),
     prepareConvergedValidation: input.prepareConvergedValidation,
     executeConvergedExecution: input.executeConvergedExecution,
     finalizeConvergedFlow: input.finalizeConvergedFlow,
@@ -136,6 +144,7 @@ export interface BuildDefaultConvergedFlowDependenciesInput {
     RunConvergedFlowDependencies["emitTmuxDeliveryNotification"];
   emitBubbleNotification?:
     RunConvergedFlowDependencies["emitBubbleNotification"];
+  readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
 }
 
 export interface ResolvedConvergedExecutionDependencies {
@@ -216,7 +225,10 @@ export function buildDefaultConvergedFlowDependencies(
     applyMetaReviewGateOnConvergence: input.applyMetaReviewGateOnConvergence,
     recoverMetaReviewGateFromSnapshot: input.recoverMetaReviewGateFromSnapshot,
     emitTmuxDeliveryNotification: input.emitTmuxDeliveryNotification,
-    emitBubbleNotification: input.emitBubbleNotification
+    emitBubbleNotification: input.emitBubbleNotification,
+    ...(input.readTranscriptEnvelopes !== undefined
+      ? { readTranscriptEnvelopes: input.readTranscriptEnvelopes }
+      : {})
   });
 }
 
