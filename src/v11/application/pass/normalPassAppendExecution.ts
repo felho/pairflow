@@ -1,7 +1,6 @@
 import {
-  appendProtocolEnvelope,
-  type AppendProtocolEnvelopeResult
-} from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
+  appendProtocolEnvelope
+} from "../../../core/protocol/transcriptStore.js";
 import type {
   RepeatCleanAutoconvergeReasonCode,
   RepeatCleanAutoconvergeReasonDetail
@@ -14,6 +13,10 @@ import type {
   ReviewerFindingsClaim,
   ReviewerFindingsClaimParserMetadata
 } from "../../domain/pass/reviewerFindingsClaim.js";
+import type {
+  AppendProtocolEnvelopePort,
+  AppendProtocolEnvelopeResult
+} from "../../shared/ports/transcript.js";
 
 export interface ExecuteNormalPassAppendInput {
   transcriptPath: string;
@@ -38,7 +41,7 @@ export interface ExecuteNormalPassAppendInput {
 }
 
 export interface ExecuteNormalPassAppendDependencies {
-  appendProtocolEnvelope?: typeof appendProtocolEnvelope;
+  appendProtocolEnvelope?: AppendProtocolEnvelopePort;
   buildPassEnvelopeDraft?: typeof buildPassEnvelopeDraft;
 }
 

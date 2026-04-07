@@ -4,7 +4,8 @@ import {
   type ReviewVerificationInputResolution,
   writeReviewVerificationArtifactAtomic
 } from "../../../v11/shared/reviewer/reviewVerification.js";
-import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
+import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
+import { readStateSnapshot } from "../../../core/state/stateStore.js";
 import type { AgentName, BubbleStateSnapshot, ReviewArtifactType } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import {
@@ -33,7 +34,7 @@ export interface PrepareRepeatCleanAutoConvergeInput {
 
 export interface PrepareRepeatCleanAutoConvergeDependencies {
   validateConvergencePolicy?: typeof validateConvergencePolicy;
-  readStateSnapshot?: typeof readStateSnapshot;
+  readStateSnapshot?: ReadStateSnapshotPort;
   createReviewVerificationArtifact?: typeof createReviewVerificationArtifact;
   writeReviewVerificationArtifactAtomic?: typeof writeReviewVerificationArtifactAtomic;
 }

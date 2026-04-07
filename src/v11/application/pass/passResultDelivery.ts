@@ -1,4 +1,4 @@
-import type { EmitTmuxDeliveryNotificationResult } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
+import type { EmitTmuxDeliveryNotificationResult } from "../../shared/ports/tmuxDelivery.js";
 
 export interface PassResultDelivery {
   delivered: boolean;

@@ -2,7 +2,7 @@ import type { ReviewVerificationInputResolution } from "../../../v11/shared/revi
 import type { BubbleConfig, BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { ResolvedPassHandoff } from "../../domain/pass/handoff.js";
-import type { LoadedStateSnapshot } from "../../infrastructure/state/stateStore.js";
+import type { LoadedStateSnapshot } from "../../shared/ports/stateSnapshots.js";
 import type { evaluateReviewerGateWarnings } from "../../../v11/shared/gates/docContractGates.js";
 
 export interface PersistNormalPassPostAppendInput {

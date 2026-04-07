@@ -1,4 +1,3 @@
-import type { EmitTmuxDeliveryNotificationResult } from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { Finding } from "../../../types/findings.js";
 import type { PassIntent, ProtocolEnvelope } from "../../../types/protocol.js";
@@ -14,6 +13,7 @@ import type {
   ReviewerFindingsClaim,
   ReviewerFindingsClaimParserMetadata
 } from "../../domain/pass/reviewerFindingsClaim.js";
+import type { EmitTmuxDeliveryNotificationResult } from "../../shared/ports/tmuxDelivery.js";
 
 export interface FinalizeNormalPassInput {
   now: Date;
