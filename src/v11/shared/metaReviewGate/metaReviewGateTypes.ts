@@ -4,7 +4,6 @@ import type {
 } from "../../../core/protocol/transcriptStore.js";
 import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import type { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
-import type { runTmux } from "../../../core/runtime/tmuxManager.js";
 import type {
   readStateSnapshot,
   writeStateSnapshot
@@ -13,6 +12,7 @@ import type {
   MetaReviewArtifactReadPort,
   MetaReviewArtifactWritePort
 } from "../metaReview/metaReviewArtifactIo.js";
+import type { MetaReviewGateTmuxRunner } from "./metaReviewGateTmuxCapabilities.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type {
   MetaReviewResult
@@ -42,7 +42,7 @@ export interface NotifyMetaReviewerSubmissionRequestInput {
 }
 
 export interface NotifyMetaReviewerSubmissionRequestDependencies {
-  runTmux?: typeof runTmux;
+  runTmux?: MetaReviewGateTmuxRunner;
 }
 
 export interface MetaReviewRuntimeDeliveryObservation {
@@ -77,7 +77,7 @@ export interface ApplyMetaReviewGateOnConvergenceDependencies {
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;
   setMetaReviewerPaneBinding?: typeof setMetaReviewerPaneBinding;
   notifyMetaReviewerSubmissionRequest?: NotifyMetaReviewerSubmissionRequest;
-  runTmux?: typeof runTmux;
+  runTmux?: MetaReviewGateTmuxRunner;
   readFile?: MetaReviewArtifactReadPort;
 }
 

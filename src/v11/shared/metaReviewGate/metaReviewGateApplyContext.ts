@@ -1,15 +1,11 @@
-import { readFile } from "node:fs/promises";
-
 import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
-import { runTmux } from "../../../core/runtime/tmuxManager.js";
 import {
   readStateSnapshot,
   type LoadedStateSnapshot,
   writeStateSnapshot
 } from "../../../core/state/stateStore.js";
-import { notifyMetaReviewerSubmissionRequest } from "./metaReviewGateNotify.js";
 import {
   assertRunningConvergenceState,
   buildGateLockPath
@@ -20,6 +16,7 @@ import type {
   ApplyMetaReviewGateOnConvergenceInput,
   NotifyMetaReviewerSubmissionRequest
 } from "./metaReviewGateTypes.js";
+import { MetaReviewGateError } from "./metaReviewGateTypes.js";
 
 export interface ApplyMetaReviewGateExecutionContext {
   appendEnvelope: typeof appendProtocolEnvelope;
@@ -27,7 +24,7 @@ export interface ApplyMetaReviewGateExecutionContext {
   writeState: typeof writeStateSnapshot;
   setMetaReviewerPane: typeof setMetaReviewerPaneBinding;
   notifySubmissionRequest: NotifyMetaReviewerSubmissionRequest;
-  runTmuxRunner: typeof runTmux;
+  runTmuxRunner: NonNullable<ApplyMetaReviewGateOnConvergenceDependencies["runTmux"]>;
   readFileFn: MetaReviewArtifactReadPort;
   now: Date;
   nowIso: string;
@@ -49,9 +46,9 @@ export async function initializeApplyMetaReviewGateExecutionContext(
   const setMetaReviewerPane =
     dependencies.setMetaReviewerPaneBinding ?? setMetaReviewerPaneBinding;
   const notifySubmissionRequest =
-    dependencies.notifyMetaReviewerSubmissionRequest ?? notifyMetaReviewerSubmissionRequest;
-  const runTmuxRunner = dependencies.runTmux ?? runTmux;
-  const readFileFn = dependencies.readFile ?? readFile;
+    requireApplyNotifySubmissionRequest(dependencies);
+  const runTmuxRunner = requireApplyTmuxRunner(dependencies);
+  const readFileFn = requireApplyArtifactReadPort(dependencies);
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
   const refs = input.refs ?? [];
@@ -91,4 +88,44 @@ export async function initializeApplyMetaReviewGateExecutionContext(
     deactivateMetaReviewerPane,
     loadedRunning
   };
+}
+
+function requireApplyNotifySubmissionRequest(
+  dependencies: ApplyMetaReviewGateOnConvergenceDependencies
+): NotifyMetaReviewerSubmissionRequest {
+  if (dependencies.notifyMetaReviewerSubmissionRequest !== undefined) {
+    return dependencies.notifyMetaReviewerSubmissionRequest;
+  }
+  return buildMissingApplyCapabilityError(
+    "meta-review gate notify capability is unavailable."
+  );
+}
+
+function requireApplyTmuxRunner(
+  dependencies: ApplyMetaReviewGateOnConvergenceDependencies
+): NonNullable<ApplyMetaReviewGateOnConvergenceDependencies["runTmux"]> {
+  if (dependencies.runTmux !== undefined) {
+    return dependencies.runTmux;
+  }
+  return buildMissingApplyCapabilityError(
+    "meta-review gate tmux capability is unavailable."
+  );
+}
+
+function requireApplyArtifactReadPort(
+  dependencies: ApplyMetaReviewGateOnConvergenceDependencies
+): MetaReviewArtifactReadPort {
+  if (dependencies.readFile !== undefined) {
+    return dependencies.readFile;
+  }
+  return buildMissingApplyCapabilityError(
+    "meta-review gate artifact read capability is unavailable."
+  );
+}
+
+function buildMissingApplyCapabilityError(message: string): never {
+  throw new MetaReviewGateError(
+    "META_REVIEW_GATE_TRANSITION_INVALID",
+    `META_REVIEW_GATE_TRANSITION_INVALID: ${message}`
+  );
 }

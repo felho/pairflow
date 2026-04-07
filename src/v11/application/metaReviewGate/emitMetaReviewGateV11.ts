@@ -1,4 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { runTmux } from "../../../core/runtime/tmuxManager.js";
 
 import {
   applyMetaReviewGateOnConvergence,
@@ -14,6 +15,18 @@ import type {
   RecoverMetaReviewGateFromSnapshotDependencies,
   RecoverMetaReviewGateFromSnapshotInput
 } from "../../shared/metaReviewGate/metaReviewGateCommandContract.js";
+import { notifyMetaReviewerSubmissionRequest } from "./metaReviewGateNotify.js";
+
+function withMetaReviewGateApplyDefaults(
+  dependencies: ApplyMetaReviewGateOnConvergenceDependencies = {}
+): ApplyMetaReviewGateOnConvergenceDependencies {
+  return {
+    readFile,
+    runTmux,
+    notifyMetaReviewerSubmissionRequest,
+    ...dependencies
+  };
+}
 
 function withMetaReviewGateRecoveryDefaults(
   dependencies: RecoverMetaReviewGateFromSnapshotDependencies = {}
@@ -32,7 +45,7 @@ export {
 };
 export {
   notifyMetaReviewerSubmissionRequest as notifyMetaReviewerSubmissionRequestV11
-} from "./metaReviewGateNotify.js";
+};
 export type {
   ApplyMetaReviewGateOnConvergenceDependencies as ApplyMetaReviewGateOnConvergenceV11Dependencies,
   ApplyMetaReviewGateOnConvergenceInput as ApplyMetaReviewGateOnConvergenceV11Input,
@@ -49,7 +62,10 @@ export async function applyMetaReviewGateOnConvergenceV11(
   input: ApplyMetaReviewGateOnConvergenceInput,
   dependencies: ApplyMetaReviewGateOnConvergenceDependencies = {}
 ): Promise<MetaReviewGateResult> {
-  return applyMetaReviewGateOnConvergence(input, dependencies);
+  return applyMetaReviewGateOnConvergence(
+    input,
+    withMetaReviewGateApplyDefaults(dependencies)
+  );
 }
 
 export async function recoverMetaReviewGateFromSnapshotV11(
