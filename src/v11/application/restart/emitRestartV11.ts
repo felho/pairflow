@@ -9,10 +9,10 @@ export type {
 export {
   RestartBubbleError,
   RestartBubbleError as RestartBubbleErrorV11
-} from "../../shared/restart/restartCommandRuntime.js";
+} from "./restartCommandRuntime.js";
 export {
   restartBubbleCommandOrchestration as restartBubble,
   restartBubbleCommandOrchestration as restartBubbleV11,
   throwAsRestartBubbleError as asRestartBubbleError,
   throwAsRestartBubbleError as asRestartBubbleErrorV11
-} from "../../shared/restart/restartCommandOrchestration.js";
+} from "./restartCommandOrchestration.js";

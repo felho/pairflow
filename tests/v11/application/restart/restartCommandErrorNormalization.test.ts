@@ -10,8 +10,8 @@ import type { StartBubbleError } from "../../../../src/v11/shared/start/startCom
 import {
   RestartBubbleError,
   createRestartBubbleError
-} from "../../../../src/v11/shared/restart/restartCommandRuntime.js";
-import { normalizeRestartBubbleError } from "../../../../src/v11/shared/restart/restartCommandErrorNormalization.js";
+} from "../../../../src/v11/application/restart/restartCommandRuntime.js";
+import { normalizeRestartBubbleError } from "../../../../src/v11/application/restart/restartCommandErrorNormalization.js";
 
 describe("restartCommandErrorNormalization", () => {
   it("preserves restart bubble errors", () => {

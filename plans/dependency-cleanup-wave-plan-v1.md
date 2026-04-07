@@ -86,6 +86,7 @@ contracts, not thin wrappers.
   - `4a3cd1ea` metaReviewGate types + mutation compat batch
   - `pass shell relocation (working tree)` application-owned pass orchestration shell relocation
   - `reconcile shell relocation (working tree)` application-owned reconcile dependency-resolution shell relocation
+  - `restart shell relocation (working tree)` application-owned restart orchestration shell relocation
 
 ## Wave Ledger
 
@@ -118,6 +119,7 @@ contracts, not thin wrappers.
 | W15 | residual shared runtime clusters (`reply`, remaining askHuman execution/finalization, others) | `completed` | orchestrator | Reply direct transcript/state mutation moved behind shared mutation execution; create initial TASK append no longer writes transcript directly from `application` |
 | W16 | `converged` residual shared runtime cluster | `completed` | orchestrator | Converged orchestration/builder ownership moved into `application`; the old shared orchestration files are gone |
 | W17 | `commit` application runtime compat cleanup | `completed` | orchestrator | Commit app lane now routes state/transcript/git/bubble lookup reads through explicit core compat bridges; remaining commit findings are direct write evidence, not dependency-layer imports |
+| W33 | `restart` orchestration shell relocation | `validated` | orchestrator | Restart dependency resolution, error/runtime normalization, and orchestration now live in `application/restart`; batch is locally green and drops the dependency baseline to `78 fail / 53 warn` |
 | W18 | `kickoff` dependency relocation | `completed` | orchestrator | Dependency defaults moved into `application`, shared kickoff now depends on a core-compat contract instead of direct infra or shared-port edges |
 | W19 | `attach` lookup compat cleanup | `completed` | orchestrator | The remaining attach application -> infrastructure lookup edge now routes through the explicit core compat bridge |
 | W20 | `actorProtocol` + `inbox` read compat cleanup | `completed` | orchestrator | Shared actor/inbox read paths now use core compat bridges instead of direct v11 infrastructure imports |

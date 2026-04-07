@@ -1,6 +1,6 @@
 import type { RestartBubbleResult } from "./restartCommandContract.js";
-import type { NormalizedRestartBubbleInput } from "../../shared/restart/restartCommandInputNormalization.js";
-import type { ResolvedRestartBubbleDependencies } from "../../shared/restart/restartCommandDependencyResolution.js";
+import type { NormalizedRestartBubbleInput } from "./restartCommandInputNormalization.js";
+import type { ResolvedRestartBubbleDependencies } from "./restartCommandDependencyResolution.js";
 
 export async function runRestartFlow(
   input: NormalizedRestartBubbleInput,

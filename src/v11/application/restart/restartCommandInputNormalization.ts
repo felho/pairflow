@@ -1,5 +1,5 @@
-import { requireNonEmptyString } from "../normalization/stringNormalization.js";
-import type { RestartBubbleInput } from "../../application/restart/restartCommandContract.js";
+import { requireNonEmptyString } from "../../shared/normalization/stringNormalization.js";
+import type { RestartBubbleInput } from "./restartCommandContract.js";
 
 export interface NormalizedRestartBubbleInput {
   bubbleId: string;
