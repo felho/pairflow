@@ -1,10 +1,12 @@
-import { resolveArchiveRootPath } from "../../../../core/archive/archivePaths.js";
-import { MetricsReportAggregator } from "./aggregate.js";
+import { resolveArchiveRootPath } from "../../archive/archivePaths.js";
+import { MetricsReportAggregator } from "../../../../shared/metrics/report/aggregate.js";
+import type { MetricsReportInput, MetricsReportResult } from "../../../../shared/metrics/report/types.js";
+import { mergeWarningCounts, toWarningSummary } from "../../../../shared/metrics/report/warnings.js";
 import { readArchiveReportContext } from "./archiveContext.js";
 import { readMetricsEvents } from "./readEvents.js";
 import { MetricsReportDateRangeError, selectMetricsShards } from "./selectShards.js";
-import type { MetricsReportInput, MetricsReportResult } from "./types.js";
-import { mergeWarningCounts, toWarningSummary } from "./warnings.js";
+
+export { MetricsReportDateRangeError } from "./selectShards.js";
 
 export class MetricsReportError extends Error {
   public constructor(message: string) {

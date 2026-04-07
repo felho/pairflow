@@ -1,7 +1,7 @@
 import { access } from "node:fs/promises";
 import { join } from "node:path";
 
-import { resolveMetricsEventsRoot } from "../events.js";
+import { resolveMetricsEventsRoot } from "../../../../shared/metrics/events.js";
 
 export interface SelectMetricsShardsInput {
   from: Date;
@@ -60,7 +60,6 @@ export async function selectMetricsShards(
       `events-${year}-${month}.ndjson`
     );
 
-    // Only existing shards are scanned.
     await access(shardPath)
       .then(() => {
         shardPaths.push(shardPath);

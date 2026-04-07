@@ -1,4 +1,4 @@
 // Temporary bridge: canonical metrics report ownership moved to
-// `src/v11/shared/metrics/report/selectShards.ts`. Remove this shim once
+// `src/v11/infrastructure/artifact/metrics/report/selectShards.ts`. Remove this shim once
 // legacy core imports are migrated.
-export * from "../../../v11/shared/metrics/report/selectShards.js";
+export * from "../../../v11/infrastructure/artifact/metrics/report/selectShards.js";

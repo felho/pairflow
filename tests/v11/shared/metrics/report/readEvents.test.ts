@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { readMetricsEvents } from "../../../../../src/v11/shared/metrics/report/readEvents.js";
+import { readMetricsEvents } from "../../../../../src/v11/infrastructure/artifact/metrics/report/readEvents.js";
 import type { MetricsReportEvent } from "../../../../../src/v11/shared/metrics/report/types.js";
 
 const tempDirs: string[] = [];

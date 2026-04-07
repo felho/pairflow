@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   MetricsReportDateRangeError,
   selectMetricsShards
-} from "../../../../../src/v11/shared/metrics/report/selectShards.js";
+} from "../../../../../src/v11/infrastructure/artifact/metrics/report/selectShards.js";
 
 const tempDirs: string[] = [];
 

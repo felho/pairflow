@@ -2,15 +2,18 @@ import { createReadStream } from "node:fs";
 import { isAbsolute } from "node:path";
 import { createInterface, type Interface } from "node:readline";
 
-import { metricsActorRoles, metricsSchemaVersion } from "../../../../types/metrics.js";
+import { metricsActorRoles, metricsSchemaVersion } from "../../../../../types/metrics.js";
 import {
   isInteger,
   isIsoTimestamp,
   isNonEmptyString,
   isRecord
-} from "../../validation/primitives.js";
-import type { MetricsReportEvent, MetricsReportWarningCounts } from "./types.js";
-import { incrementWarningCount } from "./warnings.js";
+} from "../../../../shared/validation/primitives.js";
+import type {
+  MetricsReportEvent,
+  MetricsReportWarningCounts
+} from "../../../../shared/metrics/report/types.js";
+import { incrementWarningCount } from "../../../../shared/metrics/report/warnings.js";
 
 export interface ReadMetricsEventsInput {
   shardPaths: string[];
@@ -218,7 +221,6 @@ export async function readMetricsEvents(
           continue;
         }
 
-        // Count successfully parsed known-schema events across scanned shards.
         parsedEventCount += 1;
 
         if (
@@ -245,7 +247,6 @@ export async function readMetricsEvents(
       }
       throw error;
     } finally {
-      // Ensure handles are not left open when read fails mid-stream.
       lineReader?.close();
       stream?.destroy();
     }

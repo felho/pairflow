@@ -1,18 +1,18 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { archiveSchemaVersion, archiveStatuses } from "../../../../types/archive.js";
+import { archiveSchemaVersion, archiveStatuses } from "../../../../../types/archive.js";
 import {
   isIsoTimestamp,
   isNonEmptyString,
   isRecord
-} from "../../validation/primitives.js";
-import { resolveArchiveRootPath } from "../../../../core/archive/archivePaths.js";
+} from "../../../../shared/validation/primitives.js";
+import { resolveArchiveRootPath } from "../../archive/archivePaths.js";
 import type {
   MetricsReportArchiveContext,
   MetricsReportWarningCounts
-} from "./types.js";
-import { incrementWarningCount } from "./warnings.js";
+} from "../../../../shared/metrics/report/types.js";
+import { incrementWarningCount } from "../../../../shared/metrics/report/warnings.js";
 
 export interface ReadArchiveReportContextInput {
   archiveRootPath?: string;

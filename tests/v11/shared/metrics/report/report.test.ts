@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { generateMetricsReport } from "../../../../../src/v11/shared/metrics/report/report.js";
+import { generateMetricsReport } from "../../../../../src/v11/infrastructure/artifact/metrics/report/report.js";
 
 const tempDirs: string[] = [];
 

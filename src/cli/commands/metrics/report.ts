@@ -8,8 +8,8 @@ import {
 import {
   MetricsReportError,
   generateMetricsReport
-} from "../../../v11/shared/metrics/report/report.js";
-import { MetricsReportDateRangeError } from "../../../v11/shared/metrics/report/selectShards.js";
+} from "../../../v11/infrastructure/artifact/metrics/report/report.js";
+import { MetricsReportDateRangeError } from "../../../v11/infrastructure/artifact/metrics/report/selectShards.js";
 import type {
   MetricsReportFormat,
   MetricsReportResult
