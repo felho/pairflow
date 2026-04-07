@@ -16,15 +16,21 @@ const defaultLockTimeoutMs = 5_000;
 const defaultStaleLockRecoveryAfterMs = 1_000;
 
 export class MetricsEventStoreError extends Error {
-  public constructor(message: string) {
+  public readonly context: Record<string, unknown> | undefined;
+
+  public constructor(
+    message: string,
+    context?: Record<string, unknown>
+  ) {
     super(message);
     this.name = "MetricsEventStoreError";
+    this.context = context;
   }
 }
 
 export class MetricsEventLockError extends MetricsEventStoreError {
-  public constructor(message: string) {
-    super(message);
+  public constructor(message: string, context?: Record<string, unknown>) {
+    super(message, context);
     this.name = "MetricsEventLockError";
   }
 }
@@ -63,7 +69,13 @@ export const appendMetricsEvent: AppendMetricsEventPort = async (
   } catch (error) {
     if (error instanceof FileLockTimeoutError) {
       throw new MetricsEventLockError(
-        `Could not acquire metrics shard lock: ${shardPath.lockPath}`
+        `Could not acquire metrics shard lock: ${shardPath.lockPath}`,
+        {
+          context: {
+            reason_code: "metrics_event_lock_timeout",
+            lock_path: shardPath.lockPath
+          }
+        }
       );
     }
 
@@ -73,7 +85,13 @@ export const appendMetricsEvent: AppendMetricsEventPort = async (
 
     const reason = error instanceof Error ? error.message : String(error);
     throw new MetricsEventStoreError(
-      `Failed to append metrics event into ${shardPath.filePath}: ${reason}`
+      `Failed to append metrics event into ${shardPath.filePath}: ${reason}`,
+      {
+        context: {
+          reason_code: "metrics_event_store_append_failed",
+          file_path: shardPath.filePath
+        }
+      }
     );
   }
 
