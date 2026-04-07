@@ -11,15 +11,15 @@ import {
   FileLockTimeoutError,
   withFileLock
 } from "../../foundation/fs/fileLock.js";
-import type {
-  ProtocolEnvelope,
-} from "../../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../types/protocol.js";
 import type {
   AppendProtocolEnvelopeInput,
   AppendProtocolEnvelopePort,
   AppendProtocolEnvelopeResult,
   ProtocolEnvelopeDraft,
-  ProtocolMirrorWriteFailure
+  ProtocolMirrorWriteFailure,
+  ReadTranscriptEnvelopesPort,
+  ReadTranscriptOptions
 } from "../../../shared/ports/transcript.js";
 
 export type {
@@ -27,7 +27,9 @@ export type {
   AppendProtocolEnvelopePort,
   AppendProtocolEnvelopeResult,
   ProtocolEnvelopeDraft,
-  ProtocolMirrorWriteFailure
+  ProtocolMirrorWriteFailure,
+  ReadTranscriptEnvelopesPort,
+  ReadTranscriptOptions
 } from "../../../shared/ports/transcript.js";
 
 export interface AppendProtocolEnvelopeBatchEntry {
@@ -45,12 +47,6 @@ export interface AppendProtocolEnvelopesInput {
 
 export interface AppendProtocolEnvelopesResult {
   entries: AppendProtocolEnvelopeResult[];
-}
-
-export interface ReadTranscriptOptions {
-  allowMissing?: boolean;
-  toleratePartialFinalLine?: boolean;
-  tolerateInvalidEnvelopeLines?: boolean;
 }
 
 interface ParsedTranscript {
@@ -152,17 +148,17 @@ function parseTranscript(raw: string, options: ReadTranscriptOptions): ParsedTra
   };
 }
 
-export async function readTranscriptEnvelopes(
+export const readTranscriptEnvelopes: ReadTranscriptEnvelopesPort = async (
   transcriptPath: string,
   options: ReadTranscriptOptions = {}
-): Promise<ProtocolEnvelope[]> {
+): Promise<ProtocolEnvelope[]> => {
   const raw = await readTranscriptRaw(
     transcriptPath,
     options.allowMissing ?? true
   );
 
   return parseTranscript(raw, options).envelopes;
-}
+};
 
 export async function readTranscriptEnvelopesOrThrow(
   transcriptPath: string,

@@ -1,4 +1,3 @@
-import { type BubbleConfig } from "../../../../types/bubble.js";
 import { readRuntimeSessionsRegistry } from "../../executor/sessionRuntime/runtimeSessionsRegistry.js";
 import {
   respawnTmuxPaneCommand,
@@ -7,28 +6,25 @@ import {
   type TmuxRunner
 } from "./tmuxManager.js";
 import { buildAgentCommand } from "../../executor/command/agentCommand.js";
+import type {
+  RefreshReviewerContextInput,
+  RefreshReviewerContextResult
+} from "../../../shared/ports/reviewerContext.js";
 
-export interface RefreshReviewerContextInput {
-  bubbleId: string;
-  bubbleConfig: BubbleConfig;
-  sessionsPath: string;
-  reviewerStartupPrompt?: string;
+export type {
+  RefreshReviewerContextFailureReason,
+  RefreshReviewerContextInput,
+  RefreshReviewerContextPort,
+  RefreshReviewerContextResult
+} from "../../../shared/ports/reviewerContext.js";
+
+interface RefreshReviewerContextInternalInput extends RefreshReviewerContextInput {
   runner?: TmuxRunner;
   readSessionsRegistry?: typeof readRuntimeSessionsRegistry;
 }
 
-export type RefreshReviewerContextFailureReason =
-  | "no_runtime_session"
-  | "registry_read_failed"
-  | "tmux_respawn_failed";
-
-export interface RefreshReviewerContextResult {
-  refreshed: boolean;
-  reason?: RefreshReviewerContextFailureReason;
-}
-
 export async function refreshReviewerContext(
-  input: RefreshReviewerContextInput
+  input: RefreshReviewerContextInternalInput
 ): Promise<RefreshReviewerContextResult> {
   const readSessions = input.readSessionsRegistry ?? readRuntimeSessionsRegistry;
 

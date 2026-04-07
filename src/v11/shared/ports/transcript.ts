@@ -36,6 +36,17 @@ export interface AppendProtocolEnvelopeResult {
   mirrorWriteFailures: ProtocolMirrorWriteFailure[];
 }
 
+export interface ReadTranscriptOptions {
+  allowMissing?: boolean;
+  toleratePartialFinalLine?: boolean;
+  tolerateInvalidEnvelopeLines?: boolean;
+}
+
+export type ReadTranscriptEnvelopesPort = (
+  transcriptPath: string,
+  options?: ReadTranscriptOptions
+) => Promise<ProtocolEnvelope[]>;
+
 export type AppendProtocolEnvelopePort = (
   input: AppendProtocolEnvelopeInput
 ) => Promise<AppendProtocolEnvelopeResult>;
