@@ -8,36 +8,74 @@ import type { FitnessPolicyCheck, FitnessReportCheck } from "../types.js";
 
 type InvariantStatus = "covered" | "missing" | "absent";
 
-interface CommandInvariantResult {
+interface CommandInvariantDefinition {
   command: "kickoff" | "pass" | "converged" | "approval" | "reply" | "askHuman";
+  folderScopes: readonly string[];
+  adapterNames: readonly string[];
+  resultPropertyNames: readonly string[];
+}
+
+interface CommandInvariantResult {
+  command: CommandInvariantDefinition["command"];
   status: InvariantStatus;
   evidence: string[];
 }
 
-const criticalCommands: readonly CommandInvariantResult["command"][] = [
-  "kickoff",
-  "pass",
-  "converged",
-  "approval",
-  "reply",
-  "askHuman"
+const commandInvariantDefinitions: readonly CommandInvariantDefinition[] = [
+  {
+    command: "kickoff",
+    folderScopes: ["application", "shared"],
+    adapterNames: ["emitTmuxDeliveryNotification"],
+    resultPropertyNames: ["delivery"]
+  },
+  {
+    command: "pass",
+    folderScopes: ["application", "shared"],
+    adapterNames: ["emitTmuxDeliveryNotification"],
+    resultPropertyNames: ["delivery"]
+  },
+  {
+    command: "converged",
+    folderScopes: ["application", "shared"],
+    adapterNames: ["emitTmuxDeliveryNotification"],
+    resultPropertyNames: ["delivery"]
+  },
+  {
+    command: "approval",
+    folderScopes: ["application", "shared"],
+    adapterNames: ["emitTmuxDeliveryNotification"],
+    resultPropertyNames: ["delivery"]
+  },
+  {
+    command: "reply",
+    folderScopes: ["application", "shared"],
+    adapterNames: ["emitTmuxDeliveryNotification"],
+    resultPropertyNames: ["delivery"]
+  },
+  {
+    command: "askHuman",
+    folderScopes: ["application", "shared"],
+    adapterNames: ["emitTmuxDeliveryNotification"],
+    resultPropertyNames: ["delivery"]
+  }
 ] as const;
 
 function commandFolderPatterns(
-  command: CommandInvariantResult["command"]
+  definition: CommandInvariantDefinition
 ): RegExp[] {
-  return [
-    new RegExp(`/src/v11/application/${command}/`, "u"),
-    new RegExp(`/src/v11/shared/${command}/`, "u")
-  ];
+  return definition.folderScopes.map((scope) =>
+    new RegExp(`/src/v11/${scope}/${definition.command}/`, "u")
+  );
 }
 
 function buildCriticalSideEffectSearchScope(
   scope: string[]
 ): string[] {
   const expanded = new Set(scope);
-  for (const command of criticalCommands) {
-    expanded.add(`src/v11/shared/${command}/**`);
+  for (const definition of commandInvariantDefinitions) {
+    for (const folderScope of definition.folderScopes) {
+      expanded.add(`src/v11/${folderScope}/${definition.command}/**`);
+    }
   }
   return [...expanded];
 }
@@ -54,6 +92,7 @@ function isContractOnlyEvidencePath(relativePath: string): boolean {
 }
 
 function collectMatchEvidence(input: {
+  definition: CommandInvariantDefinition;
   relativePath: string;
   fileContent: string;
 }): { adapter: string[]; result: string[] } {
@@ -90,10 +129,10 @@ function collectMatchEvidence(input: {
   const isDeliveryAdapterCall = (node: ts.CallExpression): boolean => {
     const expression = node.expression;
     if (ts.isIdentifier(expression)) {
-      return expression.text === "emitTmuxDeliveryNotification";
+      return input.definition.adapterNames.includes(expression.text);
     }
     if (ts.isPropertyAccessExpression(expression)) {
-      return expression.name.text === "emitTmuxDeliveryNotification";
+      return input.definition.adapterNames.includes(expression.name.text);
     }
     return false;
   };
@@ -108,14 +147,14 @@ function collectMatchEvidence(input: {
       }
       if (
         ts.isIdentifier(candidate)
-        && candidate.text === "emitTmuxDeliveryNotification"
+        && input.definition.adapterNames.includes(candidate.text)
       ) {
         found = true;
         return;
       }
       if (
         ts.isPropertyAccessExpression(candidate)
-        && candidate.name.text === "emitTmuxDeliveryNotification"
+        && input.definition.adapterNames.includes(candidate.name.text)
       ) {
         found = true;
         return;
@@ -149,14 +188,16 @@ function collectMatchEvidence(input: {
       for (const property of node.properties) {
         if (
           ts.isPropertyAssignment(property)
-          && propertyNameText(property.name) === "delivery"
+          && input.definition.resultPropertyNames.includes(
+            propertyNameText(property.name) ?? ""
+          )
         ) {
           result.add(`${input.relativePath}:${String(lineOf(property))} result`);
           continue;
         }
         if (
           ts.isShorthandPropertyAssignment(property)
-          && property.name.text === "delivery"
+          && input.definition.resultPropertyNames.includes(property.name.text)
         ) {
           result.add(`${input.relativePath}:${String(lineOf(property))} result`);
         }
@@ -257,15 +298,15 @@ export async function buildCriticalSideEffectCheckReport({
   }
 
   const results: CommandInvariantResult[] = [];
-  for (const command of criticalCommands) {
+  for (const definition of commandInvariantDefinitions) {
     const commandFiles = files.filter((absolutePath) =>
-      commandFolderPatterns(command).some((pattern) =>
+      commandFolderPatterns(definition).some((pattern) =>
         pattern.test(normalizePathToPosix(absolutePath))
       )
     );
     if (commandFiles.length === 0) {
       results.push({
-        command,
+        command: definition.command,
         status: "absent",
         evidence: []
       });
@@ -278,6 +319,7 @@ export async function buildCriticalSideEffectCheckReport({
       const relativePath = normalizePathToPosix(relative(repoRoot, absolutePath));
       const source = sourceByPath.get(absolutePath) ?? "";
       const evidence = collectMatchEvidence({
+        definition,
         relativePath,
         fileContent: source
       });
@@ -287,7 +329,7 @@ export async function buildCriticalSideEffectCheckReport({
 
     const combinedEvidence = [...adapterEvidence, ...resultEvidence];
     results.push({
-      command,
+      command: definition.command,
       status: combinedEvidence.length > 0 ? "covered" : "missing",
       evidence: combinedEvidence
     });

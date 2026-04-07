@@ -305,7 +305,12 @@ Miért ez a sorrend:
   - report-only ownership-signal warningot ad `shared/**` es
     `shared/ports/**` alatti eros infra-jelekre
   - a findingok nem blokkoloak, de a rossz placementet lathatova teszik
-- Kovetkezo vegrehajtasi kor: Batch 4.
+- Batch 4 kesz:
+  - a `critical_side_effect` checker mar explicit command-invariant
+    definiciokbol dolgozik
+  - a seed command set mar nem szetszort konstansokra, hanem
+    formalizalt matrix-szeru definiciora epul
+- Kovetkezo vegrehajtasi kor: Batch 5.
 
 ### Progress checklist
 
@@ -314,7 +319,7 @@ Miért ez a sorrend:
 - [x] Batch 1 complete
 - [x] Batch 2 complete
 - [x] Batch 3 complete
-- [ ] Batch 4 complete
+- [x] Batch 4 complete
 - [ ] Batch 5 complete
 - [ ] Batch 6 complete
 
