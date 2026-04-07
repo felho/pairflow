@@ -1,14 +1,14 @@
 import { readFile } from "node:fs/promises";
 
-import { appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
-import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { setMetaReviewerPaneBinding } from "../../infrastructure/channel/tmux/metaReviewerPaneBinding.js";
-import { runTmux } from "../../infrastructure/channel/tmux/tmuxManager.js";
+import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
+import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
+import { runTmux } from "../../../core/runtime/tmuxManager.js";
 import {
   readStateSnapshot,
   type LoadedStateSnapshot,
   writeStateSnapshot
-} from "../../infrastructure/state/stateStore.js";
+} from "../../../core/state/stateStore.js";
 import { notifyMetaReviewerSubmissionRequest } from "./metaReviewGateNotify.js";
 import { assertRunningConvergenceState, buildGateLockPath } from "./metaReviewGateShared.js";
 import type {

@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `6a294194`.
+Last updated from `main` at `529e52ad`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `211 fail / 62 warn`
+- Dependency report at this checkpoint: `200 fail / 61 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -77,7 +77,8 @@ contracts, not thin wrappers.
   - `93aa2ce4` merge dependencies routed through core compat
   - `e0a27f12` UI compat bridge routing batch
   - `6a294194` shared converged/merge/kickoff/delivery helper compat batch
-  - `pending` merge shell relocation + metaReview contract compat batch
+  - `529e52ad` merge shell relocation + metaReview contract compat batch
+  - `pending` metaReviewGate apply-context compat batch
 
 ## Wave Ledger
 
@@ -118,6 +119,7 @@ contracts, not thin wrappers.
 | W23 | `ui/router` residual infrastructure cluster | `completed` | orchestrator | Router/events/presenter application imports now route through explicit core compat bridges; remaining UI debt is complexity/file-budget, not dependency layering |
 | W24 | small `shared` helper residuals (`converged`, `merge`, `kickoff`, `delivery`) | `completed` | orchestrator | Shared helper files now route through core compat or local structural input types; the batch dropped the baseline to `218 fail / 62 warn` without widening ownership |
 | W25 | `merge` shared shell relocation + `metaReviewCommandContract` compat | `completed` | orchestrator + worker | Merge orchestration ownership moved into `application`, UI router now uses the core merge facade, and the shared meta-review command contract no longer imports `v11/infrastructure/**` directly |
+| W26 | `metaReviewGate` apply-context compat batch | `completed` | orchestrator | Apply-context, apply-helper, and pane-binding shared files now depend on explicit core compat bridges instead of direct `v11/infrastructure/**` imports; baseline dropped to `200 fail / 61 warn` |
 
 ## Parallelization Rules
 
@@ -148,6 +150,6 @@ contracts, not thin wrappers.
 
 Current best next moves:
 
-1. reassess the remaining `metaReview/liveRun`, `metaReviewGate`, and residual UI/read-model frontier from the current `211 fail / 62 warn` baseline,
+1. reassess the remaining `metaReview/liveRun`, `metaReviewGate` residuals, and the UI complexity frontier from the current `200 fail / 61 warn` baseline,
 2. then choose between another bounded dependency cluster and the first UI complexity breakup,
 3. keep this file updated after each merged micro-batch to survive context compaction.

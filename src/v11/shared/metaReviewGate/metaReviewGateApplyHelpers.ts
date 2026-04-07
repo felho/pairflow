@@ -1,9 +1,12 @@
-import type { appendProtocolEnvelope, AppendProtocolEnvelopeResult } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
+import type {
+  appendProtocolEnvelope,
+  AppendProtocolEnvelopeResult
+} from "../../../core/protocol/transcriptStore.js";
 import { buildMetaReviewSubmitCommandTemplate } from "../metaReview/metaReviewSubmitGuidance.js";
 import {
   type LoadedStateSnapshot,
   type writeStateSnapshot
-} from "../../infrastructure/state/stateStore.js";
+} from "../../../core/state/stateStore.js";
 import {
   deliveryTargetRoleMetadataKey
 } from "../../../types/protocol.js";
@@ -17,9 +20,7 @@ import {
   metaReviewerAgent,
   persistHumanGateRoute
 } from "./metaReviewGateShared.js";
-import type {
-  MetaReviewGateResult
-} from "./metaReviewGateTypes.js";
+import type { MetaReviewGateResult } from "./metaReviewGateTypes.js";
 
 export async function appendMetaReviewKickoffEnvelope(input: {
   appendEnvelope: typeof appendProtocolEnvelope;

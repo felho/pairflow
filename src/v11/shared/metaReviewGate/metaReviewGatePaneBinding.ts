@@ -1,9 +1,9 @@
-import type { setMetaReviewerPaneBinding } from "../../infrastructure/channel/tmux/metaReviewerPaneBinding.js";
+import type { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
 import {
   respawnTmuxPaneCommand
-} from "../../infrastructure/channel/tmux/tmuxManager.js";
-import type { TmuxRunner } from "../../infrastructure/channel/tmux/tmuxManager.js";
-import { buildAgentCommand } from "../../infrastructure/executor/command/agentCommand.js";
+} from "../../../core/runtime/tmuxManager.js";
+import type { TmuxRunner } from "../../../core/runtime/tmuxManager.js";
+import { buildAgentCommand } from "../../../core/runtime/agentCommand.js";
 import type { PairflowCommandProfile } from "../../../types/bubble.js";
 import { buildMetaReviewerStartupPrompt } from "../start/startCommandPrompts.js";
 import type {
