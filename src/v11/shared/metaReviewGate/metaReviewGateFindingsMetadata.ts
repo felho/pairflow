@@ -4,13 +4,16 @@ import {
   type FindingsParityStatus
 } from "../../../types/protocol.js";
 import {
-  resolveFindingsCountFromMetaReviewReportJson,
-  resolveNonNegativeIntegerField
+  resolveFindingsCountFromMetaReviewReportJson as resolveFindingsCountFromMetaReviewReportJsonImpl,
+  resolveNonNegativeIntegerField as resolveNonNegativeIntegerFieldImpl
 } from "./metaReviewGateFindingsClaimParsing.js";
 import {
   deriveFindingsOpenSplit,
   resolveFindingsOpenSplitFromReportJson
 } from "./metaReviewGateFindingsSplit.js";
+import type {
+  MetaReviewGateArtifactReadFn as MetaReviewGateArtifactReadFnFromJson
+} from "./metaReviewGateFindingsArtifactJson.js";
 export {
   type LatestSameRoundReviewerSnapshot,
   isReviewerSnapshotEnvelope,
@@ -23,9 +26,12 @@ export {
   readMetaReviewReportJsonArtifact,
   resolveFindingsArtifactPath
 } from "./metaReviewGateFindingsArtifactJson.js";
+export type MetaReviewGateArtifactReadFn = MetaReviewGateArtifactReadFnFromJson;
 export {
   resolveFindingsCountFromMetaReviewReportJson,
-  resolveNonNegativeIntegerField,
+  resolveNonNegativeIntegerField
+} from "./metaReviewGateFindingsClaimParsing.js";
+export {
   resolveStructuredMetaReviewClaimFromReportJson
 } from "./metaReviewGateFindingsClaimParsing.js";
 
@@ -130,15 +136,15 @@ export function resolveFindingsParityMetadataFromReportJson(
   if (reportJson === undefined) {
     return null;
   }
-  const explicitClaimedCount = resolveNonNegativeIntegerField(
+  const explicitClaimedCount = resolveNonNegativeIntegerFieldImpl(
     reportJson,
     "findings_claimed_open_total"
   );
-  const derivedClaimCount = resolveFindingsCountFromMetaReviewReportJson(reportJson);
+  const derivedClaimCount = resolveFindingsCountFromMetaReviewReportJsonImpl(reportJson);
   const claimCount = explicitClaimedCount === undefined
     ? (derivedClaimCount ?? null)
     : explicitClaimedCount;
-  const artifactCount = resolveNonNegativeIntegerField(
+  const artifactCount = resolveNonNegativeIntegerFieldImpl(
     reportJson,
     "findings_artifact_open_total"
   );

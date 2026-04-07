@@ -1,7 +1,11 @@
-import { readFile } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 
 import { isRecord } from "../validation/primitives.js";
+
+export type MetaReviewGateArtifactReadFn = (
+  artifactPath: string,
+  encoding: "utf8"
+) => Promise<string>;
 
 function resolveMetaReviewReportJsonObject(
   source: Record<string, unknown> | undefined
@@ -41,13 +45,13 @@ export function resolveFindingsArtifactPath(input: {
 
 export async function readMetaReviewReportJsonArtifact(input: {
   artifactPath: string;
-  readFileFn?: typeof readFile;
+  readFileFn: MetaReviewGateArtifactReadFn;
 }): Promise<{
   reportJson?: Record<string, unknown>;
   diagnostics: string[];
 }> {
   const diagnostics: string[] = [];
-  const reader = input.readFileFn ?? readFile;
+  const reader = input.readFileFn;
   let raw: string;
   try {
     raw = await reader(input.artifactPath, "utf8");

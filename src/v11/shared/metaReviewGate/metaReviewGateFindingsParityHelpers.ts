@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import type { readFile } from "node:fs/promises";
 
 import { isRecord } from "../validation/primitives.js";
 import type { MetaReviewRecommendation } from "../../../types/bubble.js";
@@ -15,6 +14,9 @@ import {
   formatReadErrorDetail,
   readFindingsArtifactWithRetry
 } from "./metaReviewGateFindingsArtifactReadRetry.js";
+import type {
+  MetaReviewGateArtifactReadFn
+} from "./metaReviewGateFindingsMetadata.js";
 import {
   buildFindingsParityMetadata,
   metaReviewFindingsCountMismatchReasonCode,
@@ -44,7 +46,7 @@ export async function validateFindingsArtifactParity(input: {
   digest: string;
   artifactStatus: string;
   metaReviewRunId: string;
-  readFileFn: typeof readFile;
+  readFileFn: MetaReviewGateArtifactReadFn;
   sleepForRetryMs?: (delayMs: number) => Promise<void>;
 }): Promise<
   | { ok: true; artifactOpenTotal: number }

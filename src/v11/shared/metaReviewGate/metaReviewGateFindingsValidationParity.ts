@@ -1,8 +1,7 @@
-import type { readFile } from "node:fs/promises";
-
 import { resolveLegacySummaryFindingsClaimState } from "../../../v11/domain/convergence/policy.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import { type FindingsParityMetadata } from "../../../types/protocol.js";
+import type { MetaReviewGateArtifactReadFn } from "./metaReviewGateFindingsMetadata.js";
 import {
   buildFindingsParityMetadata,
   resolveReworkFindingsParityInput,
@@ -21,7 +20,7 @@ export async function validateStructuredMetaReviewPositiveClaimReworkPath(input:
   reportJson: Record<string, unknown>;
   bubbleDir: string;
   artifactsDir: string;
-  readFileFn: typeof readFile;
+  readFileFn: MetaReviewGateArtifactReadFn;
   sleepForRetryMs?: (delayMs: number) => Promise<void>;
 }): Promise<
   | { ok: true; diagnostics: string[]; metadata: FindingsParityMetadata | null }

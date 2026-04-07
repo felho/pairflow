@@ -1,4 +1,4 @@
-import type { readFile } from "node:fs/promises";
+import type { MetaReviewGateArtifactReadFn } from "./metaReviewGateFindingsMetadata.js";
 
 const findingsArtifactReadRetryableErrorCodes = new Set([
   "ENOENT",
@@ -48,7 +48,7 @@ export function formatReadErrorDetail(error: unknown): string {
 
 export async function readFindingsArtifactWithRetry(input: {
   artifactPath: string;
-  readFileFn: typeof readFile;
+  readFileFn: MetaReviewGateArtifactReadFn;
   sleepForRetryMs?: (delayMs: number) => Promise<void>;
 }): Promise<
   | { ok: true; raw: string; attempts: number }

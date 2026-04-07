@@ -1,7 +1,6 @@
-import type { readFile } from "node:fs/promises";
-
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 import { type FindingsParityMetadata } from "../../../types/protocol.js";
+import type { MetaReviewGateArtifactReadFn } from "./metaReviewGateFindingsMetadata.js";
 import {
   validateApproveStructuredMetaReviewClaim
 } from "./metaReviewGateApproveClaimValidation.js";
@@ -25,7 +24,7 @@ export async function validateStructuredMetaReviewPositiveClaim(input: {
   reportJson?: Record<string, unknown>;
   bubbleDir: string;
   artifactsDir: string;
-  readFileFn: typeof readFile;
+  readFileFn: MetaReviewGateArtifactReadFn;
   sleepForRetryMs?: (delayMs: number) => Promise<void>;
 }): Promise<
   | { ok: true; diagnostics: string[]; metadata: FindingsParityMetadata | null }
