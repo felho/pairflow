@@ -1,6 +1,5 @@
 import { isMissingFileError } from "./metaReviewLiveRunErrors.js";
 import type {
-  MetaReviewDependencies,
   MetaReviewRunWarning
 } from "./metaReviewLiveRunContract.js";
 import type {
