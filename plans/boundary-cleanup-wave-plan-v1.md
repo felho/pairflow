@@ -34,8 +34,6 @@ These three are partially coupled, so each batch must validate all three.
    - direct failed-state persistence
 3. `src/v11/application/start/startCommandFlows.ts`
    - multiple direct state writes during startup flow
-4. `src/v11/application/stop/stopCommandOrchestration.ts`
-   - direct cancelled-state persistence
 
 ## Working Rules
 
