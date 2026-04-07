@@ -301,7 +301,11 @@ Miért ez a sorrend:
     `shared/**` infra re-exportokra
   - kulon findingot ad a nyilvanvalo `shared/ports/**` thin forwarding
     wrapper mintakra
-- Kovetkezo vegrehajtasi kor: Batch 3.
+- Batch 3 kesz:
+  - report-only ownership-signal warningot ad `shared/**` es
+    `shared/ports/**` alatti eros infra-jelekre
+  - a findingok nem blokkoloak, de a rossz placementet lathatova teszik
+- Kovetkezo vegrehajtasi kor: Batch 4.
 
 ### Progress checklist
 
@@ -309,7 +313,7 @@ Miért ez a sorrend:
 - [x] Docs vs implementation audit megtortent
 - [x] Batch 1 complete
 - [x] Batch 2 complete
-- [ ] Batch 3 complete
+- [x] Batch 3 complete
 - [ ] Batch 4 complete
 - [ ] Batch 5 complete
 - [ ] Batch 6 complete

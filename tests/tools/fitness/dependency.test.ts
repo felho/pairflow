@@ -358,6 +358,80 @@ describe("dependency fitness check", () => {
     ).toBe(true);
   });
 
+  it("warns on strong infrastructure ownership signal under shared", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/fs/pathExists.ts",
+      [
+        "import { access } from 'node:fs/promises';",
+        "export const pathExists = async (path: string): Promise<boolean> => {",
+        "  await access(path);",
+        "  return true;",
+        "};",
+        ""
+      ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+      currentMilestone: undefined
+    });
+
+    expect(report.status).toBe("warn");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("ownership-signal warning: shared module shows strong infrastructure signals (filesystem-persistence)")
+      )
+    ).toBe(true);
+  });
+
+  it("warns on state/transcript persistence signal under shared ports", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/ports/transcript.ts",
+      [
+        "export const append = async (): Promise<void> => {",
+        "  await appendProtocolEnvelope({});",
+        "};",
+        ""
+      ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+      currentMilestone: undefined
+    });
+
+    expect(report.status).toBe("warn");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("ownership-signal warning: shared-ports module shows strong infrastructure signals (transcript-persistence)")
+      )
+    ).toBe(true);
+  });
+
   it("applies allow-edge exception for forbidden layer import", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(

@@ -21,8 +21,9 @@ interface DependencyViolation {
     | "forbidden_layer_import"
     | "cycle_detected"
     | "anti_circumvention_reexport"
-    | "anti_circumvention_wrapper";
-  severity: "fail";
+    | "anti_circumvention_wrapper"
+    | "ownership_signal_shared_infra";
+  severity: "fail" | "warn";
   message: string;
   fromRelative: string | undefined;
   toRelative: string | undefined;
@@ -729,6 +730,68 @@ function detectAntiCircumventionViolations(input: {
   return violations;
 }
 
+const ownershipSignalMatchers: readonly {
+  signal: string;
+  matcher: RegExp;
+}[] = [
+  {
+    signal: "filesystem-persistence",
+    matcher: /\bfrom\s+["']node:fs(?:\/promises)?["']|\bfrom\s+["']fs(?:\/promises)?["']/u
+  },
+  {
+    signal: "child-process-execution",
+    matcher: /\bfrom\s+["']node:child_process["']|\bfrom\s+["']child_process["']/u
+  },
+  {
+    signal: "state-persistence",
+    matcher: /\bwriteStateSnapshot\s*\(/u
+  },
+  {
+    signal: "transcript-persistence",
+    matcher: /\bappendProtocolEnvelope\s*\(/u
+  },
+  {
+    signal: "tmux-runtime",
+    matcher: /\btmux\b/u
+  }
+] as const;
+
+function detectOwnershipSignalViolations(input: {
+  repoRoot: string;
+  files: readonly string[];
+  sourceByPath: ReadonlyMap<string, string>;
+}): DependencyViolation[] {
+  const violations: DependencyViolation[] = [];
+
+  for (const filePath of input.files) {
+    const fromRelative = normalizePathToPosix(relative(input.repoRoot, filePath));
+    const fromLayer = layerFromRelativePath(fromRelative);
+    if (fromLayer !== "shared" && fromLayer !== "shared-ports") {
+      continue;
+    }
+
+    const sourceText = input.sourceByPath.get(filePath) ?? "";
+    const signals = ownershipSignalMatchers
+      .filter(({ matcher }) => matcher.test(sourceText))
+      .map(({ signal }) => signal);
+    if (signals.length === 0) {
+      continue;
+    }
+
+    violations.push({
+      kind: "ownership_signal_shared_infra",
+      severity: "warn",
+      message:
+        `${fromRelative}: ownership-signal warning: ${fromLayer} module shows strong infrastructure signals (${signals.join(", ")})`,
+      fromRelative,
+      toRelative: undefined,
+      cycleNodes: undefined
+    });
+  }
+
+  return violations;
+}
+
 function summarizeDependencyViolations(
   violations: readonly DependencyViolation[]
 ): string[] {
@@ -860,6 +923,11 @@ export async function buildDependencyCheckReport({
       files,
       sourceByPath
     }),
+    ...detectOwnershipSignalViolations({
+      repoRoot,
+      files,
+      sourceByPath
+    }),
     ...detectCycles({
       repoRoot,
       files,
@@ -872,8 +940,10 @@ export async function buildDependencyCheckReport({
     cycleAllowlist: parsedExceptions.cycleAllowlist
   });
   const violations = filtered.violations;
+  const failViolations = violations.filter((violation) => violation.severity === "fail");
+  const warnViolations = violations.filter((violation) => violation.severity === "warn");
 
-  if (violations.length === 0) {
+  if (failViolations.length === 0 && warnViolations.length === 0) {
     const details = [
       `scope=${scope.join(", ")}`,
       `files_scanned=${String(files.length)}`,
@@ -972,12 +1042,27 @@ export async function buildDependencyCheckReport({
     details.push(`exceptions_applied_ids=${filtered.appliedExceptionIds.join(", ")}`);
   }
 
+  if (failViolations.length === 0) {
+    return {
+      id: check.id,
+      owner: check.owner ?? "unknown",
+      mode,
+      status: "warn",
+      summary: `Dependency check warning: ${String(warnViolations.length)} report-only ownership/circumvention warning(s) detected.`,
+      metric: check.metric,
+      details
+    };
+  }
+
   return {
     id: check.id,
     owner: check.owner ?? "unknown",
     mode,
     status: "fail",
-    summary: `Dependency check failed: ${String(violations.length)} violation(s) detected (cycles/forbidden-layer imports).`,
+    summary:
+      failViolations.length === violations.length
+        ? `Dependency check failed: ${String(failViolations.length)} violation(s) detected (cycles/forbidden-layer imports).`
+        : `Dependency check failed: ${String(failViolations.length)} fail violation(s) and ${String(warnViolations.length)} warning(s) detected.`,
     metric: check.metric,
     details
   };
