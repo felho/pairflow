@@ -8,9 +8,11 @@ import {
   formatReviewerBriefPrompt,
   formatReviewerFocusBridgeBlock,
   formatReviewerFocusDeliveryReminder,
-  readReviewerFocusArtifact,
   isReviewerFocusExtractionResult
 } from "../../../../src/v11/shared/reviewer/reviewerBrief.js";
+import {
+  readReviewerFocusArtifact
+} from "../../../../src/core/reviewer/reviewerBrief.js";
 import {
   createReviewVerificationArtifact,
   readReviewVerificationArtifactStatus,

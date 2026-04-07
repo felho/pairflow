@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `0 fail / 35 warn`
+- Dependency report at this checkpoint: `0 fail / 33 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -170,6 +170,7 @@ contracts, not thin wrappers.
 | W50 | `watchdog` persistence inversion prep | `in_progress` | explorer-complete + worker | Explorer mapped the smallest correct batch as `watchdog stores + list/status read rewiring + outer default wiring`; the implementation worker confirmed the bounded design but has not yet produced a full validatable batch, so no partial diff is accepted on `main` |
 | W51 | `reviewer` warning frontier prep | `ready` | explorer-complete | Explorer ranked the next bounded reviewer batches: `reviewerBrief` first, then `summaryVerifier` only with ports + outer wiring, then `reviewVerification`, then `testEvidence` |
 | W52 | `shared` delivery contract extraction | `validated` | orchestrator | Boundary-neutral tmux and bubble-notification contracts moved under `shared/delivery`, shared kickoff/converged/delivery helpers stopped importing core runtime delivery types, and the dependency report dropped from `0 fail / 39 warn` to `0 fail / 35 warn` |
+| W53 | `summaryVerifier` artifact write split | `validated` | orchestrator | The file-backed summary-verifier gate writer moved under `infrastructure/artifact/reviewer`, the shared gate module dropped direct fs ownership, and converged validation now uses the explicit core compat boundary for the default writer; dependency baseline dropped to `0 fail / 33 warn` |
 
 ## Parallelization Rules
 
@@ -198,7 +199,7 @@ contracts, not thin wrappers.
 
 ## Warning Frontier Snapshot
 
-Current ownership-warning frontier after W52 shared-delivery contract extraction:
+Current ownership-warning frontier after W53 summary-verifier artifact split:
 
 - `metaReviewGate`: 14
 - `askHuman`: 0 in the visible report after W47
@@ -206,7 +207,7 @@ Current ownership-warning frontier after W52 shared-delivery contract extraction
 - `kickoff`: 1
 - `merge`: 3
 - `metrics`: the shared event builder is now clean; only the core legacy bridge plus the infrastructure store remain
-- `reviewer`: 4
+- `reviewer`: 2
 - `watchdog`: 2
 - singleton residuals: `approval`, `gates`, `other`
 
@@ -215,8 +216,8 @@ Current bounded next-wave decisions:
 - `metrics`:
   - the shared metrics builder is clean; any follow-up is now about the remaining core bridge or a later review of the infra store owner
 - `reviewer`:
-  - `summaryVerifierConsistencyGate` is not a safe direct infra rehome without a wider converged dependency inversion; prefer either a ports-backed batch or a different reviewer slice first
-  - `reviewerBrief` is the best first bounded reviewer batch
+  - `summaryVerifierConsistencyGate` and `reviewerBrief` ownership warnings are now closed on `main`
+  - the remaining reviewer frontier is `reviewVerification` and `testEvidence`
 - `watchdog`:
   - the two shared file-backed stores look bounded, but only after the consumer injection/default-wiring seam is mapped cleanly
 - `kickoff`:

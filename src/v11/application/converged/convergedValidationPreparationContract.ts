@@ -7,9 +7,11 @@ import type { readReviewVerificationArtifactStatus } from "../../../v11/shared/r
 import type {
   evaluateSummaryVerifierConsistencyGate,
   resolveSummaryVerifierConsistencyGateArtifactPath,
-  writeSummaryVerifierConsistencyGateArtifact,
   SummaryVerifierConsistencyGateDecisionRecord
 } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
+import type {
+  writeSummaryVerifierConsistencyGateArtifact
+} from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
 import type {
   resolveReviewerTestEvidenceArtifactPath,
   resolveReviewerTestExecutionDirective

@@ -1,5 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 
 import { isReviewArtifactType, type ReviewArtifactType } from "../../../types/bubble.js";
 
@@ -217,6 +216,6 @@ export async function writeSummaryVerifierConsistencyGateArtifact(
   artifactPath: string,
   artifact: SummaryVerifierConsistencyGateArtifact
 ): Promise<void> {
-  await mkdir(dirname(artifactPath), { recursive: true });
-  await writeFile(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
+  const compat = await import("../../../core/reviewer/summaryVerifierConsistencyGate.js");
+  return compat.writeSummaryVerifierConsistencyGateArtifact(artifactPath, artifact);
 }

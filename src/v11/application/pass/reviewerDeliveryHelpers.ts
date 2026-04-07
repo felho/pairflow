@@ -6,11 +6,14 @@ import {
 import {
   formatReviewerBriefPrompt,
   formatReviewerFocusBridgeBlock,
-  readReviewerBriefArtifact,
-  readReviewerFocusArtifact,
   type ReviewerFocusExtractionResult
 } from "../../../v11/shared/reviewer/reviewerBrief.js";
+import {
+  readReviewerBriefArtifact,
+  readReviewerFocusArtifact
+} from "../../../core/reviewer/reviewerBrief.js";
 import type { RefreshReviewerContextPort } from "../../../v11/shared/ports/reviewerContext.js";
+import type { ReadReviewerFocusArtifactPort } from "../../../v11/shared/ports/reviewerArtifacts.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
@@ -20,7 +23,7 @@ export async function loadReviewerStartupPrompt(input: {
   reviewerFocusArtifactPath: string;
 }): Promise<{
   reviewerBriefText: string | undefined;
-  reviewerFocus: Awaited<ReturnType<typeof readReviewerFocusArtifact>> | undefined;
+  reviewerFocus: Awaited<ReturnType<ReadReviewerFocusArtifactPort>> | undefined;
   reviewerStartupPrompt: string | undefined;
 }> {
   const reviewerBriefText = await readReviewerBriefArtifact(
@@ -98,7 +101,7 @@ export function buildPassDeliveryInput(input: {
     reviewerTestDirective?: ReviewerTestExecutionDirective;
   };
   reviewerBriefText: string | undefined;
-  reviewerFocus: Awaited<ReturnType<typeof readReviewerFocusArtifact>> | undefined;
+  reviewerFocus: Awaited<ReturnType<ReadReviewerFocusArtifactPort>> | undefined;
   initialDelayMs: number | undefined;
 }): EmitTmuxDeliveryNotificationInput {
   const reviewerFocusForDelivery: ReviewerFocusExtractionResult | undefined = (

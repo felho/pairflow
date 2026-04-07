@@ -6,9 +6,11 @@ import {
 import { readReviewVerificationArtifactStatus } from "../../../v11/shared/reviewer/reviewVerification.js";
 import {
   evaluateSummaryVerifierConsistencyGate,
-  resolveSummaryVerifierConsistencyGateArtifactPath,
-  writeSummaryVerifierConsistencyGateArtifact
+  resolveSummaryVerifierConsistencyGateArtifactPath
 } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
+import {
+  writeSummaryVerifierConsistencyGateArtifact
+} from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
 import {
   resolveReviewerTestEvidenceArtifactPath,
   resolveReviewerTestExecutionDirective

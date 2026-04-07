@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-
 export const REVIEWER_BRIEF_ARTIFACT_FILENAME = "reviewer-brief.md";
 export const REVIEWER_FOCUS_ARTIFACT_FILENAME = "reviewer-focus.json";
 
@@ -201,66 +199,4 @@ export function formatReviewerFocusDeliveryReminder(
   }
   const condensed = focus.focus_text.replaceAll(/\s+/gu, " ").trim();
   return `Reviewer focus reminder (bridged from reviewer-focus.json): ${condensed}`;
-}
-
-export async function readReviewerBriefArtifact(
-  artifactPath: string
-): Promise<string | undefined> {
-  const raw = await readFile(artifactPath, "utf8").catch(
-    (error: NodeJS.ErrnoException) => {
-      if (
-        error.code === "ENOENT"
-        || error.code === "EISDIR"
-        || error.code === "ENOTDIR"
-      ) {
-        return undefined;
-      }
-      throw error;
-    }
-  );
-  if (raw === undefined) {
-    return undefined;
-  }
-
-  const trimmed = raw.trim();
-  if (trimmed.length === 0) {
-    return undefined;
-  }
-
-  return raw.trimEnd();
-}
-
-export async function readReviewerFocusArtifact(
-  artifactPath: string
-): Promise<ReviewerFocusExtractionResult | undefined> {
-  const raw = await readFile(artifactPath, "utf8").catch(
-    (error: NodeJS.ErrnoException) => {
-      if (
-        error.code === "ENOENT"
-        || error.code === "EISDIR"
-        || error.code === "ENOTDIR"
-      ) {
-        return undefined;
-      }
-      throw error;
-    }
-  );
-  if (raw === undefined) {
-    return undefined;
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw) as unknown;
-  } catch {
-    return {
-      status: "invalid",
-      source: "none",
-      reason_code: "REVIEWER_FOCUS_PARSE_WARNING"
-    };
-  }
-  if (!isReviewerFocusExtractionResult(parsed)) {
-    return undefined;
-  }
-  return parsed;
 }
