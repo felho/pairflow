@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `cf45b9b5`.
+Last updated from `main` at `7a00ba30`.
 
 ## Goal
 
@@ -21,14 +21,16 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `454 fail / 83 warn`
+- Dependency report at this checkpoint: `451 fail / 83 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
   - `5cd500f8` restart + reconcile port contracts
   - `026ff66f` converged port contracts
   - `cf45b9b5` create capability port batch
-  - delete preflight contract batch: `454 fail / 83 warn` after local validation
+  - `2fcbc566` delete preflight contract batch
+  - `9adad19e` converged finalization default-wiring extract
+  - `7a00ba30` pass shared-port routing batch
 
 ## Wave Ledger
 
@@ -40,7 +42,12 @@ contracts, not thin wrappers.
 | W2 | `converged` first bounded cleanup | `completed` | orchestrator | Converged contract files now use app-facing shared ports/contracts instead of direct infra types |
 | W2 | `delete` first bounded cleanup | `completed` | orchestrator | Delete support now uses app-facing `PathExistsPort` and `BranchExistsPort` contracts instead of direct infra types |
 | W2 | `create` capability port cleanup | `completed` | orchestrator | Create flow now uses app-facing git-repository, transcript, and repo-registry ports; legacy CLI parity preserved |
-| W3 | shared runtime wiring clusters (`approval`, `reply`, `watchdog`, `merge`) | `pending` | orchestrator | Only after app-side ports are seeded enough |
+| W3 | `converged` finalization default-wiring cleanup | `completed` | orchestrator | `convergedFinalization.ts` no longer owns infra default wiring; dependency surface carries the port |
+| W3 | `pass` first bounded cleanup | `completed` | orchestrator | Initial pass flow files now route through existing shared ports instead of direct infra imports |
+| W4 | `delete` archive + mutation follow-up | `pending` | orchestrator/worker | Next bounded delete batch around archive snapshot/index and bubble identity capability edges |
+| W4 | `converged` execution + gate-delivery cleanup | `pending` | orchestrator/worker | Keep `policyPreparation` and `routingPreparation` out of scope for the first runtime batch |
+| W4 | `pass` second bounded cleanup | `pending` | orchestrator/worker | Focus on `normalPassDeliveryExecution` + `passRoutingPreparation*` + supporting read-side ports |
+| W5 | shared runtime wiring clusters (`approval`, `reply`, `watchdog`, `merge`) | `pending` | orchestrator | Only after app-side ports are seeded enough |
 
 ## Parallelization Rules
 
@@ -69,7 +76,8 @@ contracts, not thin wrappers.
 
 ## Current Next Decision
 
-`converged`, `create`, and `delete` W2 are complete. Next choose between:
+`create`, `delete`, `converged`, and the first `pass` batch are complete. Next choose between:
 
-1. `converged` runtime capability rewiring (`convergedExecution` / `convergedFinalization` / `convergedGateDelivery`) as a separate bounded lane, or
-2. the next delete batch around archive snapshot/index capabilities and bubble instance mutation identity.
+1. `delete` archive snapshot/index + bubble identity follow-up,
+2. `converged` execution + gate-delivery cleanup, or
+3. `pass` second batch around delivery/routing read-side capabilities.
