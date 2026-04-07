@@ -2,59 +2,43 @@ import {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
 } from "../../../core/protocol/transcriptStore.js";
-import type {
-  AppendProtocolEnvelopePort,
-  ReadTranscriptEnvelopesPort
-} from "../ports/transcript.js";
 import { applyStateTransition } from "../../domain/state/machine.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../core/state/stateStore.js";
-import type {
-  ReadStateSnapshotPort,
-  WriteStateSnapshotPort
-} from "../ports/stateSnapshots.js";
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import type { ResolveBubbleByIdPort } from "../ports/bubbleLookup.js";
 import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef
 } from "../../../core/runtime/tmuxDelivery.js";
-import type {
-  EmitTmuxDeliveryNotificationPort,
-  ResolveDeliveryMessageRefPort
-} from "../ports/tmuxDelivery.js";
 import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
-import type {
-  EnsureBubbleInstanceIdForMutationPort
-} from "../ports/bubbleIdentity.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import { queueDeferredReworkIntent } from "./reworkIntent.js";
 
 export interface ApprovalCommandDependencies {
-  appendProtocolEnvelope?: AppendProtocolEnvelopePort;
+  appendProtocolEnvelope?: typeof appendProtocolEnvelope;
   applyStateTransition?: typeof applyStateTransition;
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
-  emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
-  ensureBubbleInstanceIdForMutation?: EnsureBubbleInstanceIdForMutationPort;
+  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
+  ensureBubbleInstanceIdForMutation?: typeof ensureBubbleInstanceIdForMutation;
   queueDeferredReworkIntent?: typeof queueDeferredReworkIntent;
-  readStateSnapshot?: ReadStateSnapshotPort;
-  readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
-  resolveBubbleById?: ResolveBubbleByIdPort;
-  resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
-  writeStateSnapshot?: WriteStateSnapshotPort;
+  readStateSnapshot?: typeof readStateSnapshot;
+  readTranscriptEnvelopes?: typeof readTranscriptEnvelopes;
+  resolveBubbleById?: typeof resolveBubbleById;
+  resolveDeliveryMessageRef?: typeof resolveDeliveryMessageRef;
+  writeStateSnapshot?: typeof writeStateSnapshot;
 }
 
 export interface ResolvedApprovalCommandDependencies {
-  appendProtocolEnvelope: AppendProtocolEnvelopePort;
+  appendProtocolEnvelope: typeof appendProtocolEnvelope;
   applyStateTransition: typeof applyStateTransition;
   emitBubbleLifecycleEventBestEffort: typeof emitBubbleLifecycleEventBestEffort;
-  emitTmuxDeliveryNotification: EmitTmuxDeliveryNotificationPort;
-  ensureBubbleInstanceIdForMutation: EnsureBubbleInstanceIdForMutationPort;
+  emitTmuxDeliveryNotification: typeof emitTmuxDeliveryNotification;
+  ensureBubbleInstanceIdForMutation: typeof ensureBubbleInstanceIdForMutation;
   queueDeferredReworkIntent: typeof queueDeferredReworkIntent;
-  readStateSnapshot: ReadStateSnapshotPort;
-  readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
-  resolveBubbleById: ResolveBubbleByIdPort;
-  resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
-  writeStateSnapshot: WriteStateSnapshotPort;
+  readStateSnapshot: typeof readStateSnapshot;
+  readTranscriptEnvelopes: typeof readTranscriptEnvelopes;
+  resolveBubbleById: typeof resolveBubbleById;
+  resolveDeliveryMessageRef: typeof resolveDeliveryMessageRef;
+  writeStateSnapshot: typeof writeStateSnapshot;
 }
 
 export function resolveApprovalCommandDependencies(
