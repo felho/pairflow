@@ -1,4 +1,4 @@
-import { GitCommandError } from "../../infrastructure/workspace/git.js";
+import { GitCommandError } from "../../../core/workspace/git.js";
 import type { MergeBubbleResult } from "./mergeCommandContract.js";
 import { buildMergeBubbleResult } from "./mergeResultMapping.js";
 import type { ResolvedMergeCommandDependencies } from "../../shared/merge/mergeCommandDependencyResolution.js";

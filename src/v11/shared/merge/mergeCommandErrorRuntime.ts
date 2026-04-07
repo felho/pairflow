@@ -1,11 +1,11 @@
-import { BubbleLookupError } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { GitCommandError } from "../../infrastructure/workspace/git.js";
-import { WorkspaceCleanupError } from "../../infrastructure/workspace/worktreeManager.js";
-import { TmuxCommandError } from "../../infrastructure/channel/tmux/tmuxManager.js";
+import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
+import { GitCommandError } from "../../../core/workspace/git.js";
+import { WorkspaceCleanupError } from "../../../core/workspace/worktreeManager.js";
+import { TmuxCommandError } from "../../../core/runtime/tmuxManager.js";
 import {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
-} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+} from "../../../core/runtime/sessionsRegistry.js";
 import { normalizeBubbleMergeError } from "./mergeCommandErrorNormalization.js";
 import {
   normalizePairflowCommandErrorInput,

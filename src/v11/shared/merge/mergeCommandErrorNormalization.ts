@@ -1,11 +1,11 @@
-import type { BubbleLookupError } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import type { GitCommandError } from "../../infrastructure/workspace/git.js";
-import type { WorkspaceCleanupError } from "../../infrastructure/workspace/worktreeManager.js";
-import type { TmuxCommandError } from "../../infrastructure/channel/tmux/tmuxManager.js";
+import type { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
+import type { GitCommandError } from "../../../core/workspace/git.js";
+import type { WorkspaceCleanupError } from "../../../core/workspace/worktreeManager.js";
+import type { TmuxCommandError } from "../../../core/runtime/tmuxManager.js";
 import type {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
-} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+} from "../../../core/runtime/sessionsRegistry.js";
 
 export interface NormalizeBubbleMergeErrorInput {
   error: unknown;

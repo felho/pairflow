@@ -1,14 +1,17 @@
-import { readStateSnapshot, writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import { branchExists, runGit } from "../../infrastructure/workspace/git.js";
-import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { cleanupWorktreeWorkspace } from "../../infrastructure/workspace/worktreeManager.js";
-import { terminateBubbleTmuxSession } from "../../infrastructure/channel/tmux/tmuxManager.js";
-import { removeRuntimeSession } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
-import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
+import { readStateSnapshot, writeStateSnapshot } from "../../../core/state/stateStore.js";
+import { branchExists, runGit } from "../../../core/workspace/git.js";
+import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import { cleanupWorktreeWorkspace } from "../../../core/workspace/worktreeManager.js";
+import { terminateBubbleTmuxSession } from "../../../core/runtime/tmuxManager.js";
+import { removeRuntimeSession } from "../../../core/runtime/sessionsRegistry.js";
+import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
-import type { MergeBubbleDependencies } from "../../application/merge/mergeCommandContract.js";
 
-export interface MergeCommandDependencies extends MergeBubbleDependencies {
+export interface MergeCommandDependencies {
+  runGit?: typeof runGit;
+  terminateBubbleTmuxSession?: typeof terminateBubbleTmuxSession;
+  removeRuntimeSession?: typeof removeRuntimeSession;
+  cleanupWorktreeWorkspace?: typeof cleanupWorktreeWorkspace;
   resolveBubbleById?: typeof resolveBubbleById;
   readStateSnapshot?: typeof readStateSnapshot;
   writeStateSnapshot?: typeof writeStateSnapshot;
