@@ -1,6 +1,6 @@
-import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
-import { resolveBubbleFromWorkspaceCwd } from "../../infrastructure/executor/workspace/workspaceResolution.js";
-import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
+import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
+import { resolveBubbleFromWorkspaceCwd } from "../../../core/bubble/workspaceResolution.js";
+import { readStateSnapshot } from "../../../core/state/stateStore.js";
 
 export const askHumanRoutingPreparationDependencyDefaults = {
   resolveBubbleFromWorkspaceCwd,

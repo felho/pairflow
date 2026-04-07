@@ -1,6 +1,6 @@
-import type { EnsureBubbleInstanceIdForMutationResult } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
-import type { ResolvedBubbleWorkspace } from "../../infrastructure/executor/workspace/workspaceResolution.js";
-import type { LoadedStateSnapshot } from "../../infrastructure/state/stateStore.js";
+import type { EnsureBubbleInstanceIdForMutationResult } from "../../../core/bubble/bubbleInstanceId.js";
+import type { ResolvedBubbleWorkspace } from "../../../core/bubble/workspaceResolution.js";
+import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
 import type { AgentName, AgentRole, BubbleStateSnapshot } from "../../../types/bubble.js";
 
 type AskHumanActiveRole = Exclude<AgentRole, "meta_reviewer">;

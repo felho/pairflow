@@ -1,4 +1,4 @@
-import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
+import type { LoadedStateSnapshot } from "../../shared/ports/stateSnapshots.js";
 import {
   buildAskHumanLockPath,
   buildAskHumanStateWriteFailureMessage

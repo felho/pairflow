@@ -1,13 +1,13 @@
 import type {
   ensureBubbleInstanceIdForMutation
-} from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
+} from "../../../core/bubble/bubbleInstanceId.js";
 import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext.js";
 import type {
   resolveBubbleFromWorkspaceCwd
-} from "../../infrastructure/executor/workspace/workspaceResolution.js";
+} from "../../../core/bubble/workspaceResolution.js";
 import type {
   readStateSnapshot
-} from "../../infrastructure/state/stateStore.js";
+} from "../../../core/state/stateStore.js";
 import type { AskHumanRoutingContext } from "./askHumanRoutingContext.js";
 
 export interface PrepareAskHumanRoutingInput {
