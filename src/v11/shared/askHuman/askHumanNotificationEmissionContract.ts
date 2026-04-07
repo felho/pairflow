@@ -1,16 +1,19 @@
-import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
-import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
+import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type {
+  EmitAskHumanBubbleNotificationPort,
+  EmitAskHumanTmuxDeliveryNotificationPort
+} from "./askHumanDeliveryPortsContract.js";
 
 export interface EmitOptionalAskHumanNotificationsInput {
   bubbleId: string;
-  bubbleConfig: Parameters<typeof emitBubbleNotification>[0];
+  bubbleConfig: BubbleConfig;
   sessionsPath: string;
   envelope: ProtocolEnvelope;
   messageRef: string;
 }
 
 export interface EmitOptionalAskHumanNotificationsDependencies {
-  emitTmuxDeliveryNotification: typeof emitTmuxDeliveryNotification;
-  emitBubbleNotification: typeof emitBubbleNotification;
+  emitTmuxDeliveryNotification: EmitAskHumanTmuxDeliveryNotificationPort;
+  emitBubbleNotification: EmitAskHumanBubbleNotificationPort;
 }

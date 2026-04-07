@@ -9,8 +9,8 @@ import type {
   RunAskHumanFlowResult
 } from "../../shared/askHuman/askHumanFlowContract.js";
 import { buildAskHumanFinalizationNotificationInput } from "../../shared/askHuman/askHumanFinalizationNotificationInputBuilder.js";
-import { emitOptionalAskHumanNotifications } from "../../shared/askHuman/askHumanNotificationEmission.js";
-import { resolveAskHumanFinalizationDependencies } from "../../shared/askHuman/askHumanFinalizationDependencyResolution.js";
+import { emitOptionalAskHumanNotifications } from "./askHumanNotificationEmission.js";
+import { resolveAskHumanFinalizationDependencies } from "./askHumanFinalizationDependencyResolution.js";
 export type {
   FinalizeAskHumanFlowDependencies,
   FinalizeAskHumanFlowInput,

@@ -6,7 +6,7 @@ import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef
 } from "../../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
-import { resolveAskHumanFinalizationDependencies } from "../../../../src/v11/shared/askHuman/askHumanFinalizationDependencyResolution.js";
+import { resolveAskHumanFinalizationDependencies } from "../../../../src/v11/application/askHuman/askHumanFinalizationDependencyResolution.js";
 
 describe("askHumanFinalizationDependencyResolution", () => {
   it("uses finalization defaults when overrides are omitted", () => {

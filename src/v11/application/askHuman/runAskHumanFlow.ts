@@ -1,5 +1,4 @@
 import { buildAskHumanExecutionDependencies } from "../../shared/askHuman/askHumanExecutionDependencyBuilder.js";
-import { buildAskHumanFinalizationDependencies } from "../../shared/askHuman/askHumanFinalizationDependencyBuilder.js";
 import {
   buildAskHumanExecutionStepInput,
   buildAskHumanFinalizationStepInput
@@ -9,6 +8,7 @@ import type {
   RunAskHumanFlowInput,
   RunAskHumanFlowResult
 } from "../../shared/askHuman/askHumanFlowContract.js";
+import { buildAskHumanFinalizationDependencies } from "./askHumanFinalizationDependencyBuilder.js";
 
 export async function runAskHumanFlow(
   input: RunAskHumanFlowInput,

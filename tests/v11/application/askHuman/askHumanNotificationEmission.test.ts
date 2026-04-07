@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { emitOptionalAskHumanNotifications } from "../../../../src/v11/shared/askHuman/askHumanNotificationEmission.js";
+import { emitOptionalAskHumanNotifications } from "../../../../src/v11/application/askHuman/askHumanNotificationEmission.js";
 
 describe("askHumanNotificationEmission", () => {
   it("emits optional tmux delivery and bubble notification signals", async () => {

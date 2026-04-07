@@ -1,7 +1,9 @@
-import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
-import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import type { RunAskHumanFlowDependencies } from "./askHumanFlowContract.js";
 import type { AskHumanRoutingContext } from "./askHumanRoutingContext.js";
+import type {
+  EmitAskHumanBubbleNotificationPort,
+  EmitAskHumanTmuxDeliveryNotificationPort
+} from "./askHumanDeliveryPortsContract.js";
 
 export interface BuildAskHumanFlowInputInput {
   now: Date;
@@ -23,6 +25,8 @@ export interface BuildAskHumanFlowDependenciesInput {
   applyStateTransition?:
     | RunAskHumanFlowDependencies["applyStateTransition"]
     | undefined;
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification | undefined;
-  emitBubbleNotification?: typeof emitBubbleNotification | undefined;
+  emitTmuxDeliveryNotification?:
+    | EmitAskHumanTmuxDeliveryNotificationPort
+    | undefined;
+  emitBubbleNotification?: EmitAskHumanBubbleNotificationPort | undefined;
 }

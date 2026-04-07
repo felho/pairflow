@@ -1,4 +1,3 @@
-import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import type {
   appendProtocolEnvelope,
   AppendProtocolEnvelopeResult
@@ -9,11 +8,12 @@ import type {
 } from "../../../core/state/stateStore.js";
 import type { applyStateTransition } from "../../domain/state/machine.js";
 import type {
-  DeliveryTargetReasonCode,
-  emitTmuxDeliveryNotification,
-  EmitTmuxDeliveryNotificationResult,
-  resolveDeliveryMessageRef
-} from "../../../core/runtime/tmuxDelivery.js";
+  AskHumanDeliveryTargetReasonCode,
+  AskHumanEmitTmuxDeliveryNotificationResult,
+  EmitAskHumanBubbleNotificationPort,
+  EmitAskHumanTmuxDeliveryNotificationPort,
+  ResolveAskHumanDeliveryMessageRefPort
+} from "./askHumanDeliveryPortsContract.js";
 import type { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
@@ -50,9 +50,9 @@ export interface FinalizeAskHumanFlowInput {
 }
 
 export interface FinalizeAskHumanFlowDependencies {
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
-  emitBubbleNotification?: typeof emitBubbleNotification;
-  resolveDeliveryMessageRef?: typeof resolveDeliveryMessageRef;
+  emitTmuxDeliveryNotification?: EmitAskHumanTmuxDeliveryNotificationPort;
+  emitBubbleNotification?: EmitAskHumanBubbleNotificationPort;
+  resolveDeliveryMessageRef?: ResolveAskHumanDeliveryMessageRefPort;
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
 }
 
@@ -65,13 +65,16 @@ export interface RunAskHumanFlowResult {
   delivery?: {
     delivered: boolean;
     message?: string;
-    reason?: Exclude<EmitTmuxDeliveryNotificationResult["reason"], undefined>;
-    deliveryTargetReasonCode?: DeliveryTargetReasonCode;
+    reason?: Exclude<
+      AskHumanEmitTmuxDeliveryNotificationResult["reason"],
+      undefined
+    >;
+    deliveryTargetReasonCode?: AskHumanDeliveryTargetReasonCode;
   };
 }
 
 export interface AskHumanDeliveryResult {
-  deliveryResult: EmitTmuxDeliveryNotificationResult | undefined;
+  deliveryResult: AskHumanEmitTmuxDeliveryNotificationResult | undefined;
 }
 
 export interface RunAskHumanFlowDependencies {
@@ -86,8 +89,8 @@ export interface RunAskHumanFlowDependencies {
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;
   writeStateSnapshot?: typeof writeStateSnapshot;
   applyStateTransition?: typeof applyStateTransition;
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
-  emitBubbleNotification?: typeof emitBubbleNotification;
+  emitTmuxDeliveryNotification?: EmitAskHumanTmuxDeliveryNotificationPort;
+  emitBubbleNotification?: EmitAskHumanBubbleNotificationPort;
   resolveDeliveryMessageRef?: FinalizeAskHumanFlowDependencies["resolveDeliveryMessageRef"];
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
 }

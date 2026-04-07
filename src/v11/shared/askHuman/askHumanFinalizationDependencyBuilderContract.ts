@@ -1,22 +1,26 @@
 import type { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
-import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import type {
-  emitTmuxDeliveryNotification,
-  resolveDeliveryMessageRef
-} from "../../../core/runtime/tmuxDelivery.js";
+  EmitAskHumanBubbleNotificationPort,
+  EmitAskHumanTmuxDeliveryNotificationPort,
+  ResolveAskHumanDeliveryMessageRefPort
+} from "./askHumanDeliveryPortsContract.js";
 
 export interface AskHumanFinalizationDependencySource {
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification | undefined;
-  emitBubbleNotification?: typeof emitBubbleNotification | undefined;
-  resolveDeliveryMessageRef?: typeof resolveDeliveryMessageRef | undefined;
+  emitTmuxDeliveryNotification?:
+    | EmitAskHumanTmuxDeliveryNotificationPort
+    | undefined;
+  emitBubbleNotification?: EmitAskHumanBubbleNotificationPort | undefined;
+  resolveDeliveryMessageRef?:
+    | ResolveAskHumanDeliveryMessageRefPort
+    | undefined;
   emitBubbleLifecycleEventBestEffort?:
     | typeof emitBubbleLifecycleEventBestEffort
     | undefined;
 }
 
 export interface AskHumanFinalizationDependencies {
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
-  emitBubbleNotification?: typeof emitBubbleNotification;
-  resolveDeliveryMessageRef?: typeof resolveDeliveryMessageRef;
+  emitTmuxDeliveryNotification?: EmitAskHumanTmuxDeliveryNotificationPort;
+  emitBubbleNotification?: EmitAskHumanBubbleNotificationPort;
+  resolveDeliveryMessageRef?: ResolveAskHumanDeliveryMessageRefPort;
   emitBubbleLifecycleEventBestEffort?: typeof emitBubbleLifecycleEventBestEffort;
 }

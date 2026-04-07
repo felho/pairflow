@@ -1,6 +1,8 @@
-import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
-import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext.js";
+import type {
+  EmitAskHumanBubbleNotificationPort,
+  EmitAskHumanTmuxDeliveryNotificationPort
+} from "./askHumanDeliveryPortsContract.js";
 import type {
   RunAskHumanFlowDependencies,
   RunAskHumanFlowFn,
@@ -22,8 +24,10 @@ export interface AskHumanCommandOrchestrationDependencies {
     RunAskHumanFlowDependencies["executeAskHumanExecution"];
   finalizeAskHumanFlow:
     RunAskHumanFlowDependencies["finalizeAskHumanFlow"];
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification | undefined;
-  emitBubbleNotification?: typeof emitBubbleNotification | undefined;
+  emitTmuxDeliveryNotification?:
+    | EmitAskHumanTmuxDeliveryNotificationPort
+    | undefined;
+  emitBubbleNotification?: EmitAskHumanBubbleNotificationPort | undefined;
   prepareAskHumanRouting?: PrepareAskHumanRoutingFn;
   runAskHumanFlow?: RunAskHumanFlowFn;
 }

@@ -7,7 +7,7 @@ import {
 } from "../../../../src/v11/infrastructure/channel/tmux/tmuxDelivery.js";
 import {
   buildAskHumanFinalizationDependencies
-} from "../../../../src/v11/shared/askHuman/askHumanFinalizationDependencyBuilder.js";
+} from "../../../../src/v11/application/askHuman/askHumanFinalizationDependencyBuilder.js";
 
 describe("askHumanFinalizationDependencyBuilder", () => {
   it("injects default finalization dependencies when overrides are omitted", () => {

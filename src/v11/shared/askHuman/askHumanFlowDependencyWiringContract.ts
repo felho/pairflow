@@ -1,7 +1,11 @@
-import type { emitBubbleNotification } from "../../../core/runtime/notifications.js";
-import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
+import type {
+  EmitAskHumanBubbleNotificationPort,
+  EmitAskHumanTmuxDeliveryNotificationPort
+} from "./askHumanDeliveryPortsContract.js";
 
 export interface AskHumanFlowRuntimeDependencies {
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification | undefined;
-  emitBubbleNotification?: typeof emitBubbleNotification | undefined;
+  emitTmuxDeliveryNotification?:
+    | EmitAskHumanTmuxDeliveryNotificationPort
+    | undefined;
+  emitBubbleNotification?: EmitAskHumanBubbleNotificationPort | undefined;
 }
