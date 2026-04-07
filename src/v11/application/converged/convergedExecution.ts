@@ -1,11 +1,5 @@
 import { join } from "node:path";
 
-import {
-  buildDefaultConvergedExecutionDependencies
-} from "./convergedFlowInvocationBuilders.js";
-import type {
-  ResolvedConvergedExecutionDependencies
-} from "./convergedFlowInvocationBuilders.js";
 import type {
   ConvergedStructuredFinding
 } from "../../shared/converged/convergedCommandTypes.js";
@@ -15,6 +9,20 @@ import {
   executeGateDelivery,
   type ConvergedDeliveryResult
 } from "./convergedGateDelivery.js";
+import type {
+  AppendProtocolEnvelopePort
+} from "../../shared/ports/transcript.js";
+import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
+import type {
+  EmitTmuxDeliveryNotificationPort,
+  ResolveDeliveryMessageRefPort
+} from "../../shared/ports/tmuxDelivery.js";
+import {
+  buildDefaultConvergedExecutionDependencies
+} from "./convergedDefaultDependencies.js";
+import type {
+  ResolvedConvergedExecutionDependencies
+} from "./convergedDefaultDependencies.js";
 
 export interface ExecuteConvergedExecutionInput {
   resolved: ResolvedBubbleWorkspace;
@@ -30,12 +38,14 @@ export interface ExecuteConvergedExecutionInput {
 }
 
 export interface ExecuteConvergedExecutionDependencies {
-  appendProtocolEnvelope?: ResolvedConvergedExecutionDependencies["appendProtocolEnvelope"];
-  applyMetaReviewGateOnConvergence?: ResolvedConvergedExecutionDependencies["applyMetaReviewGateOnConvergence"];
-  recoverMetaReviewGateFromSnapshot?: ResolvedConvergedExecutionDependencies["recoverMetaReviewGateFromSnapshot"];
-  emitTmuxDeliveryNotification?: ResolvedConvergedExecutionDependencies["emitTmuxDeliveryNotification"];
-  emitBubbleNotification?: ResolvedConvergedExecutionDependencies["emitBubbleNotification"];
-  resolveDeliveryMessageRef?: ResolvedConvergedExecutionDependencies["resolveDeliveryMessageRef"];
+  appendProtocolEnvelope?: AppendProtocolEnvelopePort;
+  applyMetaReviewGateOnConvergence?:
+    ResolvedConvergedExecutionDependencies["applyMetaReviewGateOnConvergence"];
+  recoverMetaReviewGateFromSnapshot?:
+    ResolvedConvergedExecutionDependencies["recoverMetaReviewGateFromSnapshot"];
+  emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
+  emitBubbleNotification?: EmitBubbleNotificationPort;
+  resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
 }
 
 export interface ExecuteConvergedExecutionResult {
@@ -45,12 +55,13 @@ export interface ExecuteConvergedExecutionResult {
 }
 
 interface ResolvedExecutionDependencies {
-  appendEnvelope: ResolvedConvergedExecutionDependencies["appendProtocolEnvelope"];
+  appendEnvelope: AppendProtocolEnvelopePort;
   applyGate: ResolvedConvergedExecutionDependencies["applyMetaReviewGateOnConvergence"];
-  recoverGate: ResolvedConvergedExecutionDependencies["recoverMetaReviewGateFromSnapshot"];
-  emitDelivery: ResolvedConvergedExecutionDependencies["emitTmuxDeliveryNotification"];
-  emitNotification: ResolvedConvergedExecutionDependencies["emitBubbleNotification"];
-  resolveMessageRef: ResolvedConvergedExecutionDependencies["resolveDeliveryMessageRef"];
+  recoverGate:
+    ResolvedConvergedExecutionDependencies["recoverMetaReviewGateFromSnapshot"];
+  emitDelivery: EmitTmuxDeliveryNotificationPort;
+  emitNotification: EmitBubbleNotificationPort;
+  resolveMessageRef: ResolveDeliveryMessageRefPort;
 }
 
 function resolveExecutionDependencies(

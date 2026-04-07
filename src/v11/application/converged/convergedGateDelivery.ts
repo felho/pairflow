@@ -1,5 +1,5 @@
 import type {
-  EmitTmuxDeliveryNotificationResult
+  EmitTmuxDeliveryNotificationResult,
 } from "../../shared/ports/tmuxDelivery.js";
 import type { applyMetaReviewGateOnConvergence } from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
 import type { ResolvedBubbleWorkspace } from "../../shared/ports/workspaceResolution.js";
@@ -13,7 +13,7 @@ import { executeImplementerHandoffDelivery } from "../../shared/delivery/impleme
 import {
   buildDefaultConvergedGateDeliveryDependencies,
   type ResolvedConvergedGateDeliveryDependencies
-} from "./convergedFlowInvocationBuilders.js";
+} from "./convergedDefaultDependencies.js";
 
 export interface ConvergedDeliveryResult {
   delivered: boolean;

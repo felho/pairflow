@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `ac5b070a`.
+Last updated from `main` at `598bee29`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `1 fail / 39 warn`
+- Dependency report at this checkpoint: `0 fail / 39 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -95,6 +95,7 @@ contracts, not thin wrappers.
   - `validated (local)` resume summary + reviewer evidence compat cleanup
   - `validated (local)` forbidden dependency frontier cleanup
   - `validated (local)` small dependency cycle cleanup
+  - `validated (local)` converged dependency cycle cleanup
   - `validated (local)` metaReviewGate state/transcript compat cleanup
   - `validated (local)` stop shell relocation
   - `validated (local)` reconcile dependency-resolution shell relocation
@@ -157,6 +158,7 @@ contracts, not thin wrappers.
 | W41 | `resumeSummary` + `reviewer/testEvidence` compat cleanup | `validated` | orchestrator | Resume transcript reads and reviewer evidence git inspection now route through explicit core compat bridges; dependency baseline dropped to `6 fail / 39 warn` |
 | W42 | forbidden dependency frontier cleanup | `validated` | orchestrator | Resume summary ownership moved into `application/start`, UI router now goes through core bubble facades for start/resume, meta-review submit persistence routes through core state compat, and bubble watchdog CLI now targets the v11 application surface; the dependency report no longer has forbidden layer-import findings and only import cycles + ownership warnings remain (`3 fail / 39 warn`) |
 | W43 | small dependency cycle cleanup | `validated` | orchestrator | The metaReviewGate approval parity cycle was broken by moving the shared advisory type to the state-side module, and the tmux infrastructure cycle is gone on the current head; the dependency checker is down to a single remaining cycle (`1 fail / 39 warn`) |
+| W44 | `converged` dependency cycle cleanup | `validated` | orchestrator | Default adapter wiring moved out of the flow builder back-edge, `convergedExecution`/`convergedFinalization`/`convergedGateDelivery` now depend on `convergedDefaultDependencies`, and the dependency report is reduced to report-only ownership warnings (`0 fail / 39 warn`) |
 
 ## Parallelization Rules
 
@@ -187,6 +189,6 @@ contracts, not thin wrappers.
 
 Current best next moves:
 
-1. clear the final `converged` import cycle,
-2. then decide whether the next dependency phase targets remaining ownership-signal warnings,
-3. keep ownership-signal-only cleanup separate from the now-closed forbidden dependency frontier.
+1. classify the remaining `39` ownership/circumvention warnings by cluster and payoff,
+2. run bounded cleanup waves only where the warning reflects a real placement problem rather than a deliberate legacy bridge,
+3. keep warning cleanup separate from the already-closed forbidden dependency frontier.
