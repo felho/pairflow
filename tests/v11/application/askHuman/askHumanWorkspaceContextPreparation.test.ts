@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { prepareAskHumanWorkspaceContext } from "../../../../src/v11/shared/askHuman/askHumanWorkspaceContextPreparation.js";
-import type { ResolvedBubbleWorkspace } from "../../../../src/v11/infrastructure/executor/workspace/workspaceResolution.js";
-import type { LoadedStateSnapshot } from "../../../../src/v11/infrastructure/state/stateStore.js";
+import { prepareAskHumanWorkspaceContext } from "../../../../src/v11/application/askHuman/askHumanWorkspaceContextPreparation.js";
+import type {
+  AskHumanLoadedStateSnapshot as LoadedStateSnapshot,
+  AskHumanResolvedBubbleWorkspace as ResolvedBubbleWorkspace
+} from "../../../../src/v11/shared/askHuman/askHumanRoutingPreparationDependencyResolutionContract.js";
 
 describe("prepareAskHumanWorkspaceContext", () => {
   it("resolves bubble context, updates config from identity, and loads state", async () => {

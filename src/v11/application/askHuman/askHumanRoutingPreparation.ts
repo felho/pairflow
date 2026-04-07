@@ -2,14 +2,14 @@ import {
   normalizeStringList,
   requireNonEmptyString
 } from "../../shared/normalization/stringNormalization.js";
-import { resolveAskHumanRoutingPreparationDependencies } from "../../shared/askHuman/askHumanRoutingPreparationDependencyResolution.js";
 import { assertAskHumanRunningState } from "../../shared/askHuman/askHumanRunningStateValidation.js";
-import { prepareAskHumanWorkspaceContext } from "../../shared/askHuman/askHumanWorkspaceContextPreparation.js";
 import type {
   PrepareAskHumanRoutingDependencies,
   PrepareAskHumanRoutingInput,
   PrepareAskHumanRoutingResult
 } from "../../shared/askHuman/askHumanRoutingContract.js";
+import { resolveAskHumanRoutingPreparationDependencies } from "./askHumanRoutingPreparationDependencyResolution.js";
+import { prepareAskHumanWorkspaceContext } from "./askHumanWorkspaceContextPreparation.js";
 
 export async function prepareAskHumanRouting(
   input: PrepareAskHumanRoutingInput,
