@@ -1,6 +1,6 @@
 import { isAbsolute, resolve } from "node:path";
 
-import { runGit } from "../../infrastructure/workspace/git.js";
+import { runGit } from "../../../core/workspace/git.js";
 import { BubbleCommitError } from "./commitCommandRuntime.js";
 
 function isPathInside(parentPath: string, childPath: string): boolean {

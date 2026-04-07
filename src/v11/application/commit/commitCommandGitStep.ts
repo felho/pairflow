@@ -1,4 +1,4 @@
-import { runGit } from "../../infrastructure/workspace/git.js";
+import { runGit } from "../../../core/workspace/git.js";
 import type { CommitBubbleInput } from "./commitCommandContract.js";
 import type {
   CommitGitResult,
