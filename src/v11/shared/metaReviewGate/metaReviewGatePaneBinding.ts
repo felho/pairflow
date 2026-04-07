@@ -5,7 +5,7 @@ import {
 import type { TmuxRunner } from "../../../core/runtime/tmuxManager.js";
 import { buildAgentCommand } from "../../../core/runtime/agentCommand.js";
 import type { PairflowCommandProfile } from "../../../types/bubble.js";
-import { buildMetaReviewerStartupPrompt } from "../start/startCommandPrompts.js";
+import { buildMetaReviewerStartupPrompt } from "../../application/start/startCommandPrompts.js";
 import type {
   MetaReviewRuntimeDeliveryObservation,
   NotifyMetaReviewerSubmissionRequest

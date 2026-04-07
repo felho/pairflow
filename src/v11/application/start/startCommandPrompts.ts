@@ -1,30 +1,30 @@
 import { homedir } from "node:os";
 
-import { shellQuote } from "../foundation/shellQuote.js";
+import { shellQuote } from "../../shared/foundation/shellQuote.js";
 import {
   buildPairflowCommandGuidance,
   buildPinnedPairflowCommand
-} from "../../infrastructure/executor/command/pairflowCommand.js";
-import { buildReviewerAgentSelectionGuidance } from "../reviewer/reviewerGuidance.js";
-import { buildReviewerSeverityOntologyReminder } from "../reviewer/reviewerSeverityOntology.js";
+} from "../../../core/runtime/pairflowCommand.js";
+import { buildReviewerAgentSelectionGuidance } from "../../shared/reviewer/reviewerGuidance.js";
+import { buildReviewerSeverityOntologyReminder } from "../../shared/reviewer/reviewerSeverityOntology.js";
 import {
   buildReviewerPassOutputContractGuidance,
   buildReviewerScoutExpansionWorkflowGuidance
-} from "../reviewer/reviewerScoutExpansionGuidance.js";
+} from "../../shared/reviewer/reviewerScoutExpansionGuidance.js";
 import {
   buildMetaReviewSubmitApproveParityNote,
   buildMetaReviewSubmitCommandTemplate
-} from "../metaReview/metaReviewSubmitGuidance.js";
+} from "../../shared/metaReview/metaReviewSubmitGuidance.js";
 import {
   buildReviewerCanonicalCommandGateLines,
   buildReviewerFindingsPassInstruction
-} from "../reviewer/reviewerCommandGateGuidance.js";
-import { buildReviewerDecisionMatrixReminder } from "../../../v11/shared/reviewer/testEvidence.js";
+} from "../../shared/reviewer/reviewerCommandGateGuidance.js";
+import { buildReviewerDecisionMatrixReminder } from "../../shared/reviewer/testEvidence.js";
 import {
   formatReviewerFocusBridgeBlock,
   formatReviewerBriefPrompt,
   type ReviewerFocusExtractionResult
-} from "../../../v11/shared/reviewer/reviewerBrief.js";
+} from "../../shared/reviewer/reviewerBrief.js";
 import type {
   PairflowCommandProfile,
   ReviewArtifactType

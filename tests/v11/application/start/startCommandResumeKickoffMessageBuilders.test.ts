@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildResumeReviewerKickoffMessage,
   inferResumeReviewerProjectionVariant
-} from "../../../../src/v11/shared/start/startCommandResumeKickoffMessageBuilders.js";
+} from "../../../../src/v11/application/start/startCommandResumeKickoffMessageBuilders.js";
 
 describe("startCommandResumeKickoffMessageBuilders", () => {
   it("keeps clean projection for round<=1 regardless of summary tokens", () => {

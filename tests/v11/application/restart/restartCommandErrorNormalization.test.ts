@@ -6,7 +6,7 @@ import type {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
 } from "../../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
-import type { StartBubbleError } from "../../../../src/v11/shared/start/startCommandApi.js";
+import type { StartBubbleError } from "../../../../src/v11/application/start/startCommandApi.js";
 import {
   RestartBubbleError,
   createRestartBubbleError

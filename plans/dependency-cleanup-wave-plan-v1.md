@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `9e8747ba`.
+Last updated from `main` at `6723f79a`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `78 fail / 53 warn`
+- Dependency report at this checkpoint: `49 fail / 45 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -85,6 +85,9 @@ contracts, not thin wrappers.
   - `3fe74ce8` metaReviewGate residual compat batch
   - `4a3cd1ea` metaReviewGate types + mutation compat batch
   - `9e8747ba` pass orchestration shell relocation
+  - `f2d05a0b` pass workspace context relocation
+  - `6723f79a` pass routing + resume shell relocation
+  - `validated (local)` start shell relocation
   - `validated (local)` reconcile dependency-resolution shell relocation
   - `validated (local)` restart orchestration shell relocation
 
@@ -136,6 +139,7 @@ contracts, not thin wrappers.
 | W31 | `metaReviewGate` types + mutation compat batch | `completed` | orchestrator | Gate types, approval request envelope, gate apply shell, and mutation boundary IO now use explicit core compat bridges; baseline dropped to `153 fail / 58 warn` |
 | W32 | `pass` orchestration shell relocation | `validated` | orchestrator | `passFlowDependencyWiring`, flow builders, dispatch, emit-context, and command orchestration now live in `application/pass`; batch is locally green and drops the dependency baseline to `109 fail / 58 warn` |
 | W33 | `reconcile` dependency-resolution shell relocation | `validated` | orchestrator | Reconcile input normalization, dependency resolution, and orchestration now live in `application/reconcile`; batch is locally green and drops the dependency baseline to `78 fail / 53 warn` |
+| W35 | `start` shell relocation | `validated` | orchestrator | `startCommand*` shell files now live in `application/start`, UI/meta-review consumers were retargeted, the old `shared/start` surface was removed, and the dependency baseline dropped to `49 fail / 45 warn` |
 
 ## Parallelization Rules
 
@@ -166,6 +170,6 @@ contracts, not thin wrappers.
 
 Current best next moves:
 
-1. take the next bounded dependency wave from the `start` cluster, which is now the largest remaining frontier,
-2. then sweep the small residuals in `passRoutingInvocationBuilders`, `reply`, and `resume`,
+1. take the next bounded dependency wave from the `shared/status` + `shared/stop` frontier, which is now the densest remaining shared -> infrastructure cluster,
+2. then clean the `metaReviewGate` residuals (`PaneBinding`, recovery/apply helpers) so `shared` stops depending on `application` and `infrastructure`,
 3. defer UI complexity breakup until the dependency frontier is materially smaller.

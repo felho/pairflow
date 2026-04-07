@@ -1,17 +1,20 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
-import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { buildBubbleTmuxSessionName } from "../bubble/tmuxSessionName.js";
-import { ensureBubbleInstanceIdForMutation } from "../../infrastructure/artifact/bubble/bubbleInstanceId.js";
-import { readReviewerBriefArtifact, readReviewerFocusArtifact } from "../../../v11/shared/reviewer/reviewerBrief.js";
-import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
+import { readStateSnapshot } from "../../../core/state/stateStore.js";
+import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import { buildBubbleTmuxSessionName } from "../../shared/bubble/tmuxSessionName.js";
+import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
+import {
+  readReviewerBriefArtifact,
+  readReviewerFocusArtifact
+} from "../../shared/reviewer/reviewerBrief.js";
+import type { ReviewerFocusExtractionResult } from "../../shared/reviewer/reviewerBrief.js";
 import {
   reviewerSeverityOntologyFullMarkdown,
   reviewerSeverityOntologySourceDoc
-} from "../reviewer/reviewerSeverityOntology.generated.js";
-import type { StartBubbleInput } from "../../application/start/startCommandContract.js";
+} from "../../shared/reviewer/reviewerSeverityOntology.generated.js";
+import type { StartBubbleInput } from "./startCommandContract.js";
 import { resolveStartBubbleMode } from "./startCommandOrchestration.js";
 import { createStartBubbleError } from "./startCommandRuntime.js";
 

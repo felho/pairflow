@@ -1,23 +1,23 @@
 import {
   buildReviewerCanonicalCommandGateLines
-} from "../reviewer/reviewerCommandGateGuidance.js";
-import { buildReviewerAgentSelectionGuidance } from "../reviewer/reviewerGuidance.js";
+} from "../../shared/reviewer/reviewerCommandGateGuidance.js";
+import { buildReviewerAgentSelectionGuidance } from "../../shared/reviewer/reviewerGuidance.js";
 import {
   buildReviewerPassOutputContractGuidance,
   buildReviewerScoutExpansionWorkflowGuidance
-} from "../reviewer/reviewerScoutExpansionGuidance.js";
-import { buildReviewerSeverityOntologyReminder } from "../reviewer/reviewerSeverityOntology.js";
+} from "../../shared/reviewer/reviewerScoutExpansionGuidance.js";
+import { buildReviewerSeverityOntologyReminder } from "../../shared/reviewer/reviewerSeverityOntology.js";
 import {
   buildPairflowCommandGuidance
-} from "../../infrastructure/executor/command/pairflowCommand.js";
+} from "../../../core/runtime/pairflowCommand.js";
 import {
   buildReviewerDecisionMatrixReminder
-} from "../../../v11/shared/reviewer/testEvidence.js";
+} from "../../shared/reviewer/testEvidence.js";
 import {
   formatReviewerFocusBridgeBlock,
   formatReviewerBriefPrompt,
   type ReviewerFocusExtractionResult
-} from "../../../v11/shared/reviewer/reviewerBrief.js";
+} from "../../shared/reviewer/reviewerBrief.js";
 import type {
   BubbleStateSnapshot,
   PairflowCommandProfile,

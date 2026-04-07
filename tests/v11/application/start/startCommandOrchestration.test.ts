@@ -1,24 +1,24 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { buildResumeTranscriptSummary } from "../../../../src/v11/shared/protocol/resumeSummary.js";
+import { buildResumeTranscriptSummary } from "../../../../src/core/protocol/resumeSummary.js";
 import {
   bootstrapWorktreeWorkspace,
   cleanupWorktreeWorkspace
-} from "../../../../src/v11/infrastructure/workspace/worktreeManager.js";
+} from "../../../../src/core/workspace/worktreeManager.js";
 import {
   launchBubbleTmuxSession,
   terminateBubbleTmuxSession
-} from "../../../../src/v11/infrastructure/channel/tmux/tmuxManager.js";
+} from "../../../../src/core/runtime/tmuxManager.js";
 import {
   claimRuntimeSession,
   removeRuntimeSession
-} from "../../../../src/v11/infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
-import { StartBubbleError } from "../../../../src/v11/shared/start/startCommandRuntime.js";
+} from "../../../../src/core/runtime/sessionsRegistry.js";
+import { StartBubbleError } from "../../../../src/v11/application/start/startCommandRuntime.js";
 import {
   mapStartBubbleResult,
   resolveStartBubbleDependencies,
   resolveStartBubbleMode
-} from "../../../../src/v11/shared/start/startCommandOrchestration.js";
+} from "../../../../src/v11/application/start/startCommandOrchestration.js";
 
 describe("startCommandOrchestration", () => {
   it("resolves default dependencies when no override is provided", () => {

@@ -1,4 +1,4 @@
-import { buildAgentCommand } from "../../infrastructure/executor/command/agentCommand.js";
+import { buildAgentCommand } from "../../../core/runtime/agentCommand.js";
 import {
   buildImplementerIdeationKickoffMessage,
   buildImplementerKickoffMessage,

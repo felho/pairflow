@@ -1,6 +1,6 @@
 import {
   buildPairflowCommandGuidance
-} from "../../infrastructure/executor/command/pairflowCommand.js";
+} from "../../../core/runtime/pairflowCommand.js";
 import type {
   PairflowCommandProfile,
   ReviewArtifactType

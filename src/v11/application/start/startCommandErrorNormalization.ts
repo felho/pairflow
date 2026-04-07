@@ -1,13 +1,13 @@
-import type { BubbleLookupError } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import type { WorkspaceBootstrapError } from "../../infrastructure/workspace/worktreeManager.js";
+import type { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
+import type { WorkspaceBootstrapError } from "../../../core/workspace/worktreeManager.js";
 import type {
   TmuxCommandError,
   TmuxSessionExistsError
-} from "../../infrastructure/channel/tmux/tmuxManager.js";
+} from "../../../core/runtime/tmuxManager.js";
 import type {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
-} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+} from "../../../core/runtime/sessionsRegistry.js";
 
 export interface NormalizeStartBubbleErrorInput {
   error: unknown;

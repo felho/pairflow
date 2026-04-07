@@ -1,21 +1,21 @@
-import { buildResumeTranscriptSummary } from "../protocol/resumeSummary.js";
+import { buildResumeTranscriptSummary } from "../../../core/protocol/resumeSummary.js";
 import {
   bootstrapWorktreeWorkspace,
   cleanupWorktreeWorkspace
-} from "../../infrastructure/workspace/worktreeManager.js";
+} from "../../../core/workspace/worktreeManager.js";
 import {
   launchBubbleTmuxSession,
   terminateBubbleTmuxSession
-} from "../../infrastructure/channel/tmux/tmuxManager.js";
+} from "../../../core/runtime/tmuxManager.js";
 import {
   claimRuntimeSession,
   removeRuntimeSession
-} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+} from "../../../core/runtime/sessionsRegistry.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type {
   StartBubbleDependencies,
   StartBubbleResult
-} from "../../application/start/startCommandContract.js";
+} from "./startCommandContract.js";
 import { createStartBubbleError } from "./startCommandRuntime.js";
 
 export type StartBubbleMode = "fresh" | "resume";

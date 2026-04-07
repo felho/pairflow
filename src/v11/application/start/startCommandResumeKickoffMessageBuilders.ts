@@ -2,8 +2,8 @@ import {
   buildReviewerFindingsPassInstruction,
   buildReviewerRoundCommandGateProjection,
   type ReviewerCommandGateProjectionVariant
-} from "../reviewer/reviewerCommandGateGuidance.js";
-import { buildPairflowCommandGuidance } from "../../infrastructure/executor/command/pairflowCommand.js";
+} from "../../shared/reviewer/reviewerCommandGateGuidance.js";
+import { buildPairflowCommandGuidance } from "../../../core/runtime/pairflowCommand.js";
 import type {
   PairflowCommandProfile,
   ReviewArtifactType

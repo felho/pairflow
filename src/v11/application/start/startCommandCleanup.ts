@@ -1,5 +1,5 @@
 import { applyStateTransition } from "../../domain/state/machine.js";
-import { writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
+import { writeStateSnapshot } from "../../../core/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { ResolvedStartBubbleDependencies } from "./startCommandOrchestration.js";
 import type { StartExecutionContext } from "./startCommandContext.js";

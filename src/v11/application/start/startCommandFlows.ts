@@ -1,5 +1,5 @@
 import { applyStateTransition } from "../../domain/state/machine.js";
-import { writeStateSnapshot } from "../../infrastructure/state/stateStore.js";
+import { writeStateSnapshot } from "../../../core/state/stateStore.js";
 import {
   buildRestartedExecutionContext,
   buildRunningExecutionContext

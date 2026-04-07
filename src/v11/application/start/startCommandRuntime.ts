@@ -1,18 +1,18 @@
-import { BubbleLookupError } from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { WorkspaceBootstrapError } from "../../infrastructure/workspace/worktreeManager.js";
+import { BubbleLookupError } from "../../../core/bubble/bubbleLookup.js";
+import { WorkspaceBootstrapError } from "../../../core/workspace/worktreeManager.js";
 import {
   TmuxCommandError,
   TmuxSessionExistsError
-} from "../../infrastructure/channel/tmux/tmuxManager.js";
+} from "../../../core/runtime/tmuxManager.js";
 import {
   RuntimeSessionsRegistryError,
   RuntimeSessionsRegistryLockError
-} from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+} from "../../../core/runtime/sessionsRegistry.js";
 import { normalizeStartBubbleError } from "./startCommandErrorNormalization.js";
 import {
   normalizePairflowCommandErrorInput,
   withRequiredCommandContext
-} from "../errors/commandErrorDetails.js";
+} from "../../shared/errors/commandErrorDetails.js";
 
 export class StartBubbleError extends Error {
   public readonly reasonCode: string | undefined;

@@ -8,7 +8,7 @@ import {
   readRuntimeSessionsRegistry,
   type RuntimeSessionRecord
 } from "../executor/sessionRuntime/runtimeSessionsRegistry.js";
-import { startBubble } from "../../shared/start/startCommandApi.js";
+import { startBubble } from "../../application/start/startCommandApi.js";
 import {
   emitApprove,
   emitRequestRework

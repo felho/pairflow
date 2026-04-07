@@ -39,8 +39,8 @@ import { writeEvidenceLog } from "../../helpers/evidence.js";
 import {
   reviewerPolicySnapshotFileName,
   reviewerPolicySnapshotUnavailableReasonCode
-} from "../../../src/v11/shared/start/startCommandContext.js";
-import { buildResumedState } from "../../../src/v11/shared/start/startCommandFlows.js";
+} from "../../../src/v11/application/start/startCommandContext.js";
+import { buildResumedState } from "../../../src/v11/application/start/startCommandFlows.js";
 
 const tempDirs: string[] = [];
 

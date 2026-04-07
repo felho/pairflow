@@ -1,9 +1,9 @@
-import { buildResumeTranscriptSummaryFallback } from "../protocol/resumeSummary.js";
+import { buildResumeTranscriptSummaryFallback } from "../../../core/protocol/resumeSummary.js";
 import {
   formatReviewerTestExecutionDirective,
   resolveReviewerTestEvidenceArtifactPath,
   resolveReviewerTestExecutionDirective
-} from "../../../v11/shared/reviewer/testEvidence.js";
+} from "../../shared/reviewer/testEvidence.js";
 import { resolveResumeKickoffMessages } from "./startCommandResumePrompts.js";
 import type { ResolvedStartBubbleDependencies } from "./startCommandOrchestration.js";
 import type { StartExecutionContext } from "./startCommandContext.js";

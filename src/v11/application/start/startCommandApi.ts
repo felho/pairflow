@@ -1,9 +1,9 @@
-import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
+import { emitBubbleLifecycleEventBestEffort } from "../../shared/metrics/bubbleEvents.js";
 import type {
   StartBubbleDependencies,
   StartBubbleInput,
   StartBubbleResult
-} from "../../application/start/startCommandContract.js";
+} from "./startCommandContract.js";
 import {
   mapStartBubbleResult,
   resolveStartBubbleDependencies
@@ -26,7 +26,7 @@ export type {
   StartBubbleDependencies,
   StartBubbleInput,
   StartBubbleResult
-} from "../../application/start/startCommandContract.js";
+} from "./startCommandContract.js";
 export { StartBubbleError };
 
 export async function startBubble(
