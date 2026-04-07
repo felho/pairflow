@@ -8,13 +8,13 @@ import {
   readRuntimeSessionsRegistry,
   type RuntimeSessionRecord
 } from "../executor/sessionRuntime/runtimeSessionsRegistry.js";
-import { startBubble } from "../../application/start/startCommandApi.js";
+import { startBubble } from "../../../core/bubble/startBubble.js";
 import {
   emitApprove,
   emitRequestRework
 } from "../../../core/human/approval.js";
 import { emitHumanReply } from "../../../core/human/reply.js";
-import { resumeBubbleCommandOrchestration as resumeBubble } from "../../application/resume/resumeCommandOrchestration.js";
+import { resumeBubble } from "../../../core/bubble/resumeBubble.js";
 import { commitBubble } from "../../../core/bubble/commitBubble.js";
 import { mergeBubble } from "../../../core/bubble/mergeBubble.js";
 import { openBubble } from "../../../core/bubble/openBubble.js";
