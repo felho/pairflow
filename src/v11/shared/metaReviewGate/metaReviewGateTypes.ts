@@ -1,5 +1,3 @@
-import type { readFile, writeFile } from "node:fs/promises";
-
 import type {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
@@ -11,6 +9,10 @@ import type {
   readStateSnapshot,
   writeStateSnapshot
 } from "../../../core/state/stateStore.js";
+import type {
+  MetaReviewArtifactReadPort,
+  MetaReviewArtifactWritePort
+} from "../metaReview/metaReviewArtifactIo.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type {
   MetaReviewResult
@@ -76,7 +78,7 @@ export interface ApplyMetaReviewGateOnConvergenceDependencies {
   setMetaReviewerPaneBinding?: typeof setMetaReviewerPaneBinding;
   notifyMetaReviewerSubmissionRequest?: NotifyMetaReviewerSubmissionRequest;
   runTmux?: typeof runTmux;
-  readFile?: typeof readFile;
+  readFile?: MetaReviewArtifactReadPort;
 }
 
 export interface RecoverMetaReviewGateFromSnapshotInput {
@@ -96,8 +98,8 @@ export interface RecoverMetaReviewGateFromSnapshotDependencies {
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;
   readTranscriptEnvelopes?: typeof readTranscriptEnvelopes;
   setMetaReviewerPaneBinding?: typeof setMetaReviewerPaneBinding;
-  readFile?: typeof readFile;
-  writeFile?: typeof writeFile;
+  readFile?: MetaReviewArtifactReadPort;
+  writeFile?: MetaReviewArtifactWritePort;
   sleepForRetryMs?: (delayMs: number) => Promise<void>;
 }
 

@@ -17,6 +17,10 @@ import {
   type MetaReviewGateResult,
   type RecoverMetaReviewGateFromSnapshotDependencies
 } from "./metaReviewGateTypes.js";
+import type {
+  MetaReviewArtifactReadPort,
+  MetaReviewArtifactWritePort
+} from "../metaReview/metaReviewArtifactIo.js";
 import { toMetaReviewGateError } from "./metaReviewGateErrorConversion.js";
 import {
   runningExecutionContextPath,
@@ -32,8 +36,8 @@ export interface ResolvedRecoveryContextDependencies {
   appendEnvelope: typeof appendProtocolEnvelope;
   readTranscript: typeof readTranscriptEnvelopes;
   setMetaReviewerPane: typeof setMetaReviewerPaneBinding;
-  readFileFn: typeof readFile;
-  writeFileFn: typeof writeFile;
+  readFileFn: MetaReviewArtifactReadPort;
+  writeFileFn: MetaReviewArtifactWritePort;
 }
 
 export function resolveRecoveryContextDependencies(
@@ -76,7 +80,7 @@ export function buildDeactivateMetaReviewerPane(input: {
 export function buildFinishWithPaneDeactivation(input: {
   bubbleId: string;
   nowIso: string;
-  writeFileFn: typeof writeFile;
+  writeFileFn: MetaReviewArtifactWritePort;
   artifactsPaths: {
     metaReviewLastJsonArtifactPath: string;
   };

@@ -6,6 +6,7 @@ import type {
   BubbleStateSnapshot,
   MetaReviewRunStatus
 } from "../../../types/bubble.js";
+import type { MetaReviewArtifactWritePort } from "../metaReview/metaReviewArtifactIo.js";
 import type { MetaReviewResult, MetaReviewRunWarning } from "../metaReview/metaReviewTypes.js";
 import {
   buildMetaReviewArtifactWriteWarning,
@@ -140,7 +141,7 @@ export async function writeRecoveredMetaReviewArtifacts(input: {
   paths: {
     metaReviewLastJsonArtifactPath: string;
   };
-  writeFileFn?: typeof writeFile;
+  writeFileFn?: MetaReviewArtifactWritePort;
 }): Promise<{ warnings: MetaReviewRunWarning[] }> {
   const writer = input.writeFileFn ?? writeFile;
   const warnings: MetaReviewRunWarning[] = [];

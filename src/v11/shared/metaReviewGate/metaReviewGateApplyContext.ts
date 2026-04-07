@@ -14,6 +14,7 @@ import {
   assertRunningConvergenceState,
   buildGateLockPath
 } from "./metaReviewGateShared.js";
+import type { MetaReviewArtifactReadPort } from "../metaReview/metaReviewArtifactIo.js";
 import type {
   ApplyMetaReviewGateOnConvergenceDependencies,
   ApplyMetaReviewGateOnConvergenceInput,
@@ -27,7 +28,7 @@ export interface ApplyMetaReviewGateExecutionContext {
   setMetaReviewerPane: typeof setMetaReviewerPaneBinding;
   notifySubmissionRequest: NotifyMetaReviewerSubmissionRequest;
   runTmuxRunner: typeof runTmux;
-  readFileFn: typeof readFile;
+  readFileFn: MetaReviewArtifactReadPort;
   now: Date;
   nowIso: string;
   refs: string[];

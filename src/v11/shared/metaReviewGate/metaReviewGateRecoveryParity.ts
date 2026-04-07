@@ -3,7 +3,7 @@ import type {
 } from "../../../types/bubble.js";
 import type { FindingsParityMetadata } from "../../../types/protocol.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
-import type { readFile } from "node:fs/promises";
+import type { MetaReviewArtifactReadPort } from "../metaReview/metaReviewArtifactIo.js";
 import { validateStructuredMetaReviewPositiveClaim } from "./metaReviewGateFindingsValidation.js";
 
 export type RecoveryParityResolution =
@@ -62,7 +62,7 @@ export async function resolveRecoveryParityRouting(input: {
         artifactsDir: string;
       };
     };
-    readFileFn: typeof readFile;
+    readFileFn: MetaReviewArtifactReadPort;
     sleepForRetryMs?: (delayMs: number) => Promise<void>;
   };
   snapshot: BubbleMetaReviewSnapshotState;

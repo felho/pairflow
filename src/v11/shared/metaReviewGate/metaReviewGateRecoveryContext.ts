@@ -1,5 +1,3 @@
-import type { readFile, writeFile } from "node:fs/promises";
-
 import type {
   appendProtocolEnvelope,
   readTranscriptEnvelopes
@@ -15,6 +13,10 @@ import type {
   MetaReviewRecommendation
 } from "../../../types/bubble.js";
 import type { FindingsParityMetadata } from "../../../types/protocol.js";
+import type {
+  MetaReviewArtifactReadPort,
+  MetaReviewArtifactWritePort
+} from "../metaReview/metaReviewArtifactIo.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
 export {
   resolveRecoveryParityRouting,
@@ -55,8 +57,8 @@ export interface RecoverMetaReviewExecutionContext {
   readTranscript: typeof readTranscriptEnvelopes;
   writeState: typeof writeStateSnapshot;
   readState: typeof readStateSnapshot;
-  readFileFn: typeof readFile;
-  writeFileFn: typeof writeFile;
+  readFileFn: MetaReviewArtifactReadPort;
+  writeFileFn: MetaReviewArtifactWritePort;
   sleepForRetryMs?: (delayMs: number) => Promise<void>;
   deactivateMetaReviewerPane: () => Promise<string | null>;
   finishWithPaneDeactivation: (result: MetaReviewGateResult) => Promise<MetaReviewGateResult>;

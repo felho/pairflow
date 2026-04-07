@@ -1,6 +1,6 @@
-import type { readFile } from "node:fs/promises";
 import type { BubbleMetaReviewSnapshotState } from "../../../types/bubble.js";
 import type { MetaReviewResult } from "../metaReview/metaReviewTypes.js";
+import type { MetaReviewArtifactReadPort } from "../metaReview/metaReviewArtifactIo.js";
 import { hasCanonicalSubmitForActiveMetaReviewRound } from "../metaReview/metaReviewSnapshot.js";
 import { readMetaReviewReportJsonArtifact } from "./metaReviewGateFindingsMetadata.js";
 import {
@@ -17,7 +17,7 @@ interface RecoveryRunResolutionContext {
     state: BubbleStateSnapshot;
   };
   nowIso: string;
-  readFileFn: typeof readFile;
+  readFileFn: MetaReviewArtifactReadPort;
   resolved: {
     bubbleId: string;
     bubblePaths: {
