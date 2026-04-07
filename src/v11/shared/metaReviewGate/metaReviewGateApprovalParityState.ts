@@ -3,7 +3,12 @@ import {
   hasApproveFindingsSplitMetadata,
   type FindingsParityMetadata
 } from "../../../types/protocol.js";
-import type { ApprovalAdvisoryFinding } from "./metaReviewGateApprovalParitySnapshot.js";
+
+export interface ApprovalAdvisoryFinding {
+  severity: "P2" | "P3";
+  title: string;
+  refs?: string[];
+}
 
 export function resolveStructuredParityMetadataSnapshot(
   parityMetadata: FindingsParityMetadata | null | undefined

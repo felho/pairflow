@@ -1,4 +1,4 @@
-import type { ApprovalAdvisoryFinding } from "../../metaReviewGate/metaReviewGateApprovalParitySnapshot.js";
+import type { ApprovalAdvisoryFinding } from "../../metaReviewGate/metaReviewGateApprovalParityState.js";
 import {
   isNonEmptyString
 } from "../../validation/primitives.js";

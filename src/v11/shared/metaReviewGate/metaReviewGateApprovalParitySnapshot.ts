@@ -4,10 +4,12 @@ import {
   type FindingsParityMetadata
 } from "../../../types/protocol.js";
 import {
+  type ApprovalAdvisoryFinding,
   resolveAdvisoryContractInvariant,
   resolveStructuredParityMetadataSnapshot
 } from "./metaReviewGateApprovalParityState.js";
 export {
+  type ApprovalAdvisoryFinding,
   hasConsistentApproveAdvisoryOnlySplit,
   resolveAdvisoryContractInvariant,
   resolveStructuredParityMetadataSnapshot
@@ -18,12 +20,6 @@ const convergedAdvisoryMetadataRequiredReasonCode =
 const metaReviewFindingsParityGuardReasonCode = "META_REVIEW_FINDINGS_PARITY_GUARD";
 const metaReviewApproveBlockingFindingsPresentReasonCode =
   "META_REVIEW_APPROVE_BLOCKING_FINDINGS_PRESENT";
-
-export interface ApprovalAdvisoryFinding {
-  severity: "P2" | "P3";
-  title: string;
-  refs?: string[];
-}
 
 export function normalizeApprovalAdvisoryFindings(
   findings: ApprovalAdvisoryFinding[] | undefined

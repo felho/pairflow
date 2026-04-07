@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `d8650a35`.
+Last updated from `main` at `ac5b070a`.
 
 ## Goal
 
@@ -94,7 +94,7 @@ contracts, not thin wrappers.
   - `validated (local)` reply dependency cleanup
   - `validated (local)` resume summary + reviewer evidence compat cleanup
   - `validated (local)` forbidden dependency frontier cleanup
-  - `validated (local)` tmux cycle cleanup
+  - `validated (local)` small dependency cycle cleanup
   - `validated (local)` metaReviewGate state/transcript compat cleanup
   - `validated (local)` stop shell relocation
   - `validated (local)` reconcile dependency-resolution shell relocation
@@ -156,7 +156,7 @@ contracts, not thin wrappers.
 | W40 | `reply` dependency cleanup | `validated` | orchestrator | Reply default dependency wiring now lives in `application/reply`, shared mutation code uses a narrow structural dependency shape, and reply error normalization now depends on the core bubble lookup compat bridge; dependency baseline dropped to `8 fail / 39 warn` |
 | W41 | `resumeSummary` + `reviewer/testEvidence` compat cleanup | `validated` | orchestrator | Resume transcript reads and reviewer evidence git inspection now route through explicit core compat bridges; dependency baseline dropped to `6 fail / 39 warn` |
 | W42 | forbidden dependency frontier cleanup | `validated` | orchestrator | Resume summary ownership moved into `application/start`, UI router now goes through core bubble facades for start/resume, meta-review submit persistence routes through core state compat, and bubble watchdog CLI now targets the v11 application surface; the dependency report no longer has forbidden layer-import findings and only import cycles + ownership warnings remain (`3 fail / 39 warn`) |
-| W43 | `tmux` import-cycle cleanup | `validated` | orchestrator | `tmuxInput.ts` now consumes `TmuxRunner` from the shared port contract instead of `tmuxManager.ts`; the two-file tmux infrastructure cycle disappeared and the dependency checker is down to a single remaining cycle (`1 fail / 39 warn`) |
+| W43 | small dependency cycle cleanup | `validated` | orchestrator | The metaReviewGate approval parity cycle was broken by moving the shared advisory type to the state-side module, and the tmux infrastructure cycle is gone on the current head; the dependency checker is down to a single remaining cycle (`1 fail / 39 warn`) |
 
 ## Parallelization Rules
 
