@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `004e40a3`.
+Last updated from `main` at `93aa2ce4`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `267 fail / 67 warn`
+- Dependency report at this checkpoint: `236 fail / 64 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -71,6 +71,10 @@ contracts, not thin wrappers.
   - `991cdd40` converged orchestration moved into application
   - `74dc8448` commit runtime routed through core compat bridges
   - `004e40a3` kickoff dependency defaults moved into application
+  - `35b52a75` attach lookup routed through core compat
+  - `e3e52348` actor and inbox reads routed through core compat
+  - `4207ba75` converged defaults routed through core compat
+  - `93aa2ce4` merge dependencies routed through core compat
 
 ## Wave Ledger
 
@@ -104,8 +108,11 @@ contracts, not thin wrappers.
 | W16 | `converged` residual shared runtime cluster | `completed` | orchestrator | Converged orchestration/builder ownership moved into `application`; the old shared orchestration files are gone |
 | W17 | `commit` application runtime compat cleanup | `completed` | orchestrator | Commit app lane now routes state/transcript/git/bubble lookup reads through explicit core compat bridges; remaining commit findings are direct write evidence, not dependency-layer imports |
 | W18 | `kickoff` dependency relocation | `completed` | orchestrator | Dependency defaults moved into `application`, shared kickoff now depends on a core-compat contract instead of direct infra or shared-port edges |
-| W19 | `attach` + `ui` residual edge audit | `pending` | orchestrator | Current largest frontier by file count is `infrastructure/ui/router.ts`, with `attach` as a small companion lane |
-| W19 | `converged` default wiring follow-up | `pending` | orchestrator | Remaining converged findings are application-owned default infra wiring in `convergedFlowInvocationBuilders.ts` |
+| W19 | `attach` lookup compat cleanup | `completed` | orchestrator | The remaining attach application -> infrastructure lookup edge now routes through the explicit core compat bridge |
+| W20 | `actorProtocol` + `inbox` read compat cleanup | `completed` | orchestrator | Shared actor/inbox read paths now use core compat bridges instead of direct v11 infrastructure imports |
+| W21 | `converged` default wiring follow-up | `completed` | orchestrator | Remaining converged application-owned default adapter imports now route through explicit core compat bridges |
+| W22 | `merge` dependency/runtime compat cleanup | `completed` | orchestrator | Merge shared dependency resolution and error runtime now route through explicit core compat bridges; only orchestration/types residuals remain |
+| W23 | `ui/router` residual infrastructure cluster | `pending` | orchestrator | Current largest frontier by file count is still `infrastructure/ui/router.ts`, with small companion `events` / `presenters` edges |
 
 ## Parallelization Rules
 
@@ -136,6 +143,6 @@ contracts, not thin wrappers.
 
 Current best next moves:
 
-1. open the `attach/ui` frontier from the current `267 fail / 67 warn` baseline,
-2. follow with the small `converged` default-wiring cleanup,
+1. open the `ui/router` residual infrastructure cluster from the current `236 fail / 64 warn` baseline,
+2. then reassess the remaining small `shared/converged` and `metaReview/liveRun` residuals,
 3. keep this file updated after each merged micro-batch to survive context compaction.
