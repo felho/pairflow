@@ -1,9 +1,7 @@
-import { readFile, writeFile } from "node:fs/promises";
+import type * as fsPromises from "node:fs/promises";
 
-import {
-  StateStoreConflictError,
-  type LoadedStateSnapshot
-} from "../../infrastructure/state/stateStore.js";
+import * as coreStateStore from "../../../core/state/stateStore.js";
+import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
 import {
   isMetaReviewExecutionContextActiveState
 } from "./metaReviewExecutionContext.js";
@@ -32,6 +30,9 @@ import type {
   MetaReviewRunWarning,
   MetaReviewSubmitInput
 } from "./metaReviewCommandContract.js";
+
+type ReadFileFn = typeof fsPromises.readFile;
+type WriteFileFn = typeof fsPromises.writeFile;
 
 export function buildCanonicalSubmitRunResult(input: {
   bubbleId: string;
@@ -110,7 +111,7 @@ export async function writeCanonicalSubmitState(input: {
       expectedState: "RUNNING"
     });
   } catch (error) {
-    if (error instanceof StateStoreConflictError) {
+    if (error instanceof coreStateStore.StateStoreConflictError) {
       const latest = await input.readState(input.resolved.bubblePaths.statePath);
       if (!isMetaReviewExecutionContextActiveState(latest.state)) {
         throw new MetaReviewError(
@@ -152,7 +153,7 @@ export async function writeCanonicalSubmitReportArtifact(input: {
   summary: string;
   reworkTargetMessage: string | null;
   canonicalReportJson: Record<string, unknown>;
-  writeFileFn: typeof writeFile;
+  writeFileFn: WriteFileFn;
 }): Promise<MetaReviewRunWarning[]> {
   const warnings: MetaReviewRunWarning[] = [];
   const reportPayload = {
@@ -204,7 +205,7 @@ export async function assertSubmitReworkFindingsArtifactContract(input: {
   artifactsDir: string;
   runResult: MetaReviewResult;
   reportJson: Record<string, unknown>;
-  readFileFn: typeof readFile;
+  readFileFn: ReadFileFn;
 }): Promise<void> {
   const { resolveReworkFindingsParityInput } = await import(
     "../metaReviewGate/metaReviewGateFindingsParityInput.js"
