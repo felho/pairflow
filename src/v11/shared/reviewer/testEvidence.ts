@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises"
 import { dirname, isAbsolute, join, relative, resolve } from "node:path"
 
-import { runGit } from "../../infrastructure/workspace/git.js"
+import { runGit } from "../../../core/workspace/git.js"
 import type { BubbleConfig, ReviewArtifactType } from "../../../types/bubble.js"
 import type { ProtocolEnvelope } from "../../../types/protocol.js"
 
