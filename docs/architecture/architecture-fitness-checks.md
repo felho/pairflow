@@ -130,6 +130,35 @@ Rules:
 - intent: parity is not enough; critical runtime effects must have explicit regression coverage
 - owner: architecture/runtime
 
+## Current Implementation Status
+
+All policy-declared checks are currently wired to executable runners in
+`tools/fitness/checks/**`.
+
+The fallback `not_implemented` report path exists in the runtime, but no current
+policy check ID uses it.
+
+Implementation maturity by check:
+
+- `boundary`: lightweight line-pattern heuristic; detects direct
+  `writeStateSnapshot(...)` and `appendProtocolEnvelope(...)` calls by regex
+- `mutation`: TypeScript AST-assisted heuristic with metadata-only persist carveout
+- `transition`: TypeScript AST-assisted heuristic with validation-marker detection
+- `error`: TypeScript AST-assisted heuristic around throw sites, structured wrappers,
+  code/context evidence, and warn/fail split
+- `complexity`: AST-derived file/function metrics; thresholds are currently
+  hard-coded in the checker, not policy-configurable
+- `contract_timeout_policy`: TypeScript AST-based check for raw timeout literals and
+  non-standard timeout references in contract tests
+- `dependency`: AST-based import graph and cycle detection, but still limited to the
+  currently implemented layer model and relative import resolution
+- `critical_side_effect`: AST-based evidence scan, currently implemented for the
+  seed command set `kickoff`, `pass`, `converged`, `approval`, `reply`,
+  `askHuman`
+
+This means the current system is fully executable, but several checks still rely
+on heuristics rather than complete semantic proof.
+
 ## Dependency Fitness: Current Problem Statement
 
 The current dependency fitness rule is useful but incomplete.
@@ -138,8 +167,19 @@ It correctly catches:
 
 - direct `application -> infrastructure` imports
 - cycles inside `src/v11/**`
+- relative import edges inside the scanned `src/v11/**` graph
 
 But by itself it does **not** prove that the replacement architecture is correct.
+
+Current implementation limits to keep in mind:
+
+- it resolves only relative intra-scope imports, not arbitrary alias/module
+  boundaries
+- it derives layer from the first path segment under `src/v11/`
+- because of that, it does **not** yet implement the documented
+  `src/v11/shared/ports/**` model semantically
+- it does **not** yet implement anti-circumvention checks
+- it does **not** yet implement ownership-type detection
 
 This creates a real failure mode:
 
