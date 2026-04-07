@@ -8,7 +8,7 @@ import type {
 import {
   resolveAdvisoryFindingsFromReportJson,
   resolveFindingsOpenSplitFromReportJson
-} from "../../v11/shared/metaReviewGate/metaReviewGateFindingsMetadata.js";
+} from "../../v11/shared/metaReviewGate/metaReviewGateFindingsSplit.js";
 
 export interface MetaReviewFindingsParitySnapshot {
   findings_claimed_open_total: number | null;

@@ -10,7 +10,7 @@ import {
 } from "../../../types/protocol.js";
 import {
   resolveFindingsOpenSplitFromReportJson
-} from "../metaReviewGate/metaReviewGateFindingsMetadata.js";
+} from "../metaReviewGate/metaReviewGateFindingsSplit.js";
 
 export const CANONICAL_META_REVIEW_REPORT_REF = "artifacts/meta-review-last.json";
 

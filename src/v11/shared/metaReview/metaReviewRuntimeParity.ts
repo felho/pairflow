@@ -12,9 +12,11 @@ import {
 import {
   type LatestSameRoundReviewerSnapshot,
   readLatestSameRoundReviewerSnapshotFromTranscript,
-  resolveFindingsOpenSplitFromReportJson,
   resolveFindingsParityMetadataFromReportJson
 } from "../metaReviewGate/metaReviewGateFindingsMetadata.js";
+import {
+  resolveFindingsOpenSplitFromReportJson
+} from "../metaReviewGate/metaReviewGateFindingsSplit.js";
 import {
   evaluateNoFindingsSummaryFindingsAssertion,
   hasGlobalNoFindingsSummaryAssertion

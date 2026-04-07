@@ -30,7 +30,7 @@ import {
 import {
   resolveAdvisoryFindingsFromReportJson,
   type MetaReviewGateAdvisoryFinding
-} from "./metaReviewGateFindingsMetadata.js";
+} from "./metaReviewGateFindingsSplit.js";
 
 export {
   metaReviewGateRollbackAppliedReasonCode,

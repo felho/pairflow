@@ -14,7 +14,7 @@ import type {
   AppendProtocolEnvelopeResult
 } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import type { MetaReviewGateRoute } from "./metaReviewGateTypes.js";
-import type { MetaReviewGateAdvisoryFinding } from "./metaReviewGateFindingsMetadata.js";
+import type { MetaReviewGateAdvisoryFinding } from "./metaReviewGateFindingsSplit.js";
 
 export const metaReviewGateRollbackNotAttemptedReasonCode =
   "META_REVIEW_GATE_ROLLBACK_NOT_ATTEMPTED";

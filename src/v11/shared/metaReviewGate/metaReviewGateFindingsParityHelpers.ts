@@ -6,7 +6,9 @@ import type { MetaReviewRecommendation } from "../../../types/bubble.js";
 import { type FindingsParityMetadata, type FindingsParityStatus } from "../../../types/protocol.js";
 import {
   deriveFindingsOpenSplit as deriveFindingsOpenSplitFromMetadata,
-  type FindingsOpenSplit,
+  type FindingsOpenSplit
+} from "./metaReviewGateFindingsSplit.js";
+import {
   resolveFindingsArtifactOpenTotalFromArtifact
 } from "./metaReviewGateFindingsMetadata.js";
 import {

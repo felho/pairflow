@@ -7,7 +7,7 @@ import {
 } from "../metaReviewGate/metaReviewGateFindingsClaimParsing.js";
 import {
   resolveFindingsOpenSplitFromReportJson
-} from "../metaReviewGate/metaReviewGateFindingsMetadata.js";
+} from "../metaReviewGate/metaReviewGateFindingsSplit.js";
 import {
   evaluateNoFindingsSummaryFindingsAssertion,
   evaluatePositiveSummaryFindingsAssertion,
