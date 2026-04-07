@@ -1,4 +1,4 @@
-import type { ResolvedBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
+import type { ResolvedBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import {
   IDEATION_KICKOFF_NOT_ALLOWED,
   IDEATION_KICKOFF_TASK_INVALID,
@@ -11,7 +11,7 @@ import {
   kickoffBubbleV11 as kickoffBubble,
   type KickoffBubbleV11Result as KickoffBubbleResult
 } from "./emitKickoffV11.js";
-import { resolveBubbleById } from "../../infrastructure/executor/workspace/bubbleLookup.js";
+import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { parseBubbleKickoffCommandOptions } from "./kickoffCliOptions.js";
 
 export interface BubbleKickoffCommandDependencies {
