@@ -1,19 +1,8 @@
 import type {
-  ProtocolEnvelope,
-  ProtocolEnvelopePayload,
-  ProtocolMessageType,
-  ProtocolParticipant
+  ProtocolEnvelopeDraft,
+  ProtocolEnvelope
 } from "../../../types/protocol.js";
-
-export interface ProtocolEnvelopeDraft {
-  bubble_id: string;
-  sender: ProtocolParticipant;
-  recipient: ProtocolParticipant;
-  type: ProtocolMessageType;
-  round: number;
-  payload: ProtocolEnvelopePayload;
-  refs: string[];
-}
+export type { ProtocolEnvelopeDraft };
 
 export interface AppendProtocolEnvelopeInput {
   transcriptPath: string;

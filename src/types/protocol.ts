@@ -165,6 +165,16 @@ export interface ProtocolEnvelopePayload {
   metadata?: Record<string, unknown> & FindingsParityMetadata;
 }
 
+export interface ProtocolEnvelopeDraft {
+  bubble_id: string;
+  sender: ProtocolParticipant;
+  recipient: ProtocolParticipant;
+  type: ProtocolMessageType;
+  round: number;
+  payload: ProtocolEnvelopePayload;
+  refs: string[];
+}
+
 export interface ProtocolEnvelope {
   id: string;
   ts: string;

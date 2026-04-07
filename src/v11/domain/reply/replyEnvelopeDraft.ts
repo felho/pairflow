@@ -1,6 +1,8 @@
 import type { AgentName, AgentRole } from "../../../types/bubble.js";
-import { deliveryTargetRoleMetadataKey } from "../../../types/protocol.js";
-import type { ProtocolEnvelopeDraft } from "../../shared/ports/transcript.js";
+import {
+  deliveryTargetRoleMetadataKey,
+  type ProtocolEnvelopeDraft
+} from "../../../types/protocol.js";
 
 export interface BuildHumanReplyEnvelopeDraftInput {
   bubbleId: string;
