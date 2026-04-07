@@ -14,7 +14,7 @@ import {
   type TmuxRunner
 } from "../../../core/runtime/tmuxManager.js";
 import { readStateSnapshot } from "../../../core/state/stateStore.js";
-import { WorkspaceCleanupError } from "../../infrastructure/workspace/worktreeManager.js";
+import { WorkspaceCleanupError } from "../../../core/workspace/worktreeManager.js";
 import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
 import { StopBubbleErrorV11 as StopBubbleError } from "../stop/emitStopV11.js";
 import {
