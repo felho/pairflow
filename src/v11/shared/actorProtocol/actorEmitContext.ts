@@ -1,11 +1,11 @@
-import type { LoadedStateSnapshot } from "../../infrastructure/state/stateStore.js";
-import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
+import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
+import { readStateSnapshot } from "../../../core/state/stateStore.js";
 import type { AgentRole, BubbleExecutionContext } from "../../../types/bubble.js";
 import {
   resolveBubbleById,
   type ResolvedBubbleById
-} from "../../infrastructure/executor/workspace/bubbleLookup.js";
-import { resolveBubbleFromWorkspaceCwd } from "../../infrastructure/executor/workspace/workspaceResolution.js";
+} from "../../../core/bubble/bubbleLookup.js";
+import { resolveBubbleFromWorkspaceCwd } from "../../../core/bubble/workspaceResolution.js";
 
 export type ActorEmitContextErrorReasonCode =
   | "ACTOR_EMIT_COMPAT_ADAPTER_INVALID"

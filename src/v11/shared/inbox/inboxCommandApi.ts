@@ -1,9 +1,9 @@
-import { readTranscriptEnvelopes } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
-import { readStateSnapshot } from "../../infrastructure/state/stateStore.js";
+import { readTranscriptEnvelopes } from "../../../core/protocol/transcriptStore.js";
+import { readStateSnapshot } from "../../../core/state/stateStore.js";
 import {
   BubbleLookupError,
   resolveBubbleById
-} from "../../infrastructure/executor/workspace/bubbleLookup.js";
+} from "../../../core/bubble/bubbleLookup.js";
 import type { BubbleLifecycleState } from "../../../types/bubble.js";
 import { resolveCanonicalPendingApprovalSignal } from "../approval/pendingApprovalSignal.js";
 
