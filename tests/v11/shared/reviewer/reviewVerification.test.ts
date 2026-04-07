@@ -15,12 +15,14 @@ import {
 } from "../../../../src/core/reviewer/reviewerBrief.js";
 import {
   createReviewVerificationArtifact,
+  validateReviewVerificationArtifact,
+  validateReviewVerificationPayload
+} from "../../../../src/v11/shared/reviewer/reviewVerification.js";
+import {
   readReviewVerificationArtifactStatus,
   resolveReviewVerificationInputFromRefs,
-  validateReviewVerificationArtifact,
-  validateReviewVerificationPayload,
   writeReviewVerificationArtifactAtomic
-} from "../../../../src/v11/shared/reviewer/reviewVerification.js";
+} from "../../../../src/core/reviewer/reviewVerificationArtifacts.js";
 
 const tempDirs: string[] = [];
 

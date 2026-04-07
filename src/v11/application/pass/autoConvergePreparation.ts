@@ -2,8 +2,10 @@ import { validateConvergencePolicy } from "../../../v11/domain/convergence/polic
 import {
   createReviewVerificationArtifact,
   type ReviewVerificationInputResolution,
-  writeReviewVerificationArtifactAtomic
 } from "../../../v11/shared/reviewer/reviewVerification.js";
+import type {
+  WriteReviewVerificationArtifactAtomicPort
+} from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
 import type { ReadStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
 import { readStateSnapshot } from "../../../core/state/stateStore.js";
 import type { AgentName, BubbleStateSnapshot, ReviewArtifactType } from "../../../types/bubble.js";
@@ -13,6 +15,7 @@ import {
   raiseRepeatCleanPolicyGateRejected,
   raiseRepeatCleanReviewVerificationWriteFailed
 } from "../../domain/pass/repeatCleanPolicyRejection.js";
+import { writeReviewVerificationArtifactAtomic } from "../../../core/reviewer/reviewVerificationArtifacts.js";
 
 export interface PrepareRepeatCleanAutoConvergeInput {
   round: number;
@@ -36,7 +39,7 @@ export interface PrepareRepeatCleanAutoConvergeDependencies {
   validateConvergencePolicy?: typeof validateConvergencePolicy;
   readStateSnapshot?: ReadStateSnapshotPort;
   createReviewVerificationArtifact?: typeof createReviewVerificationArtifact;
-  writeReviewVerificationArtifactAtomic?: typeof writeReviewVerificationArtifactAtomic;
+  writeReviewVerificationArtifactAtomic?: WriteReviewVerificationArtifactAtomicPort;
 }
 
 export interface PrepareRepeatCleanAutoConvergeResult {

@@ -1,10 +1,13 @@
 import {
   createReviewVerificationArtifact,
   type ReviewVerificationInputResolution,
-  writeReviewVerificationArtifactAtomic
 } from "../../../v11/shared/reviewer/reviewVerification.js";
+import type {
+  WriteReviewVerificationArtifactAtomicPort
+} from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
 import type { AgentName } from "../../../types/bubble.js";
 import { raisePostAppendReviewVerificationWriteFailed } from "../../domain/pass/postAppendReviewVerificationWriteFailure.js";
+import { writeReviewVerificationArtifactAtomic } from "../../../core/reviewer/reviewVerificationArtifacts.js";
 
 export interface WritePostAppendReviewVerificationArtifactInput {
   reviewerVerification: ReviewVerificationInputResolution | undefined;
@@ -19,7 +22,7 @@ export interface WritePostAppendReviewVerificationArtifactInput {
 
 export interface WritePostAppendReviewVerificationArtifactDependencies {
   createReviewVerificationArtifact?: typeof createReviewVerificationArtifact;
-  writeReviewVerificationArtifactAtomic?: typeof writeReviewVerificationArtifactAtomic;
+  writeReviewVerificationArtifactAtomic?: WriteReviewVerificationArtifactAtomicPort;
 }
 
 export async function writePostAppendReviewVerificationArtifact(

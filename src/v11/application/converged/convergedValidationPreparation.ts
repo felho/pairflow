@@ -3,7 +3,9 @@ import {
   readDocContractGateArtifact,
   resolveDocContractGateArtifactPath
 } from "../../../v11/shared/gates/docContractGates.js";
-import { readReviewVerificationArtifactStatus } from "../../../v11/shared/reviewer/reviewVerification.js";
+import type {
+  ReadReviewVerificationArtifactStatusPort
+} from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
 import {
   evaluateSummaryVerifierConsistencyGate,
   resolveSummaryVerifierConsistencyGateArtifactPath
@@ -11,6 +13,7 @@ import {
 import {
   writeSummaryVerifierConsistencyGateArtifact
 } from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
+import { readReviewVerificationArtifactStatus } from "../../../core/reviewer/reviewVerificationArtifacts.js";
 import {
   resolveReviewerTestEvidenceArtifactPath,
   resolveReviewerTestExecutionDirective
@@ -48,7 +51,7 @@ interface ResolvedValidationDependencies {
   isDocGateScopeActive: typeof isDocContractGateScopeActive;
   readDocGateArtifact: typeof readDocContractGateArtifact;
   resolveDocGateArtifactPath: typeof resolveDocContractGateArtifactPath;
-  readVerificationArtifactStatus: typeof readReviewVerificationArtifactStatus;
+  readVerificationArtifactStatus: ReadReviewVerificationArtifactStatusPort;
   resolveTestEvidenceArtifactPath: typeof resolveReviewerTestEvidenceArtifactPath;
   resolveReviewerDirective: (
     input: { artifactPath: string; worktreePath: string }

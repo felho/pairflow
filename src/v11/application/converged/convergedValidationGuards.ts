@@ -9,7 +9,9 @@ import type {
 import type {
   writeSummaryVerifierConsistencyGateArtifact
 } from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
-import type { readReviewVerificationArtifactStatus } from "../../../v11/shared/reviewer/reviewVerification.js";
+import type {
+  ReadReviewVerificationArtifactStatusPort
+} from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
 import type {
   resolveReviewerTestEvidenceArtifactPath
 } from "../../../v11/shared/reviewer/testEvidence.js";
@@ -51,7 +53,7 @@ export function isConvergedValidationBlockError(
 
 export async function assertAccuracyCriticalVerification(input: {
   validation: PrepareConvergedValidationInput;
-  readVerificationArtifactStatus: typeof readReviewVerificationArtifactStatus;
+  readVerificationArtifactStatus: ReadReviewVerificationArtifactStatusPort;
 }): Promise<void> {
   if (input.validation.resolved.bubbleConfig.accuracy_critical === true) {
     const verification = await input.readVerificationArtifactStatus(

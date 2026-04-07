@@ -1,9 +1,12 @@
 import type { AgentRole } from "../../../types/bubble.js";
 import {
-  resolveReviewVerificationInputFromRefs,
   ReviewVerificationError,
   type ReviewVerificationInputResolution
 } from "../../../v11/shared/reviewer/reviewVerification.js";
+import type {
+  ResolveReviewVerificationInputFromRefsPort
+} from "../../../v11/shared/ports/reviewVerificationArtifacts.js";
+import { resolveReviewVerificationInputFromRefs } from "../../../core/reviewer/reviewVerificationArtifacts.js";
 
 const reviewerVerificationResolutionFailedReasonCode =
   "REVIEWER_VERIFICATION_RESOLUTION_FAILED";
@@ -14,12 +17,7 @@ interface ResolveReviewerVerificationInput {
   refs: string[];
   worktreePath: string;
   createError: PairflowCreateCommandError;
-  resolveInputFromRefs?: (
-    input: {
-      refs: string[];
-      worktreePath: string;
-    }
-  ) => Promise<ReviewVerificationInputResolution>;
+  resolveInputFromRefs?: ResolveReviewVerificationInputFromRefsPort;
 }
 
 function raiseReviewerVerificationResolverError(
