@@ -1,4 +1,5 @@
 import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
+import type { AppendProtocolEnvelopePort } from "../../shared/ports/transcript.js";
 import type { EmitTmuxDeliveryNotificationPort } from "../../shared/ports/tmuxDelivery.js";
 import type {
   ReadStateSnapshotPort,
@@ -28,6 +29,7 @@ export interface BubbleWatchdogInput {
 }
 
 export interface BubbleWatchdogDependencies {
+  appendProtocolEnvelope?: AppendProtocolEnvelopePort;
   emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
   emitBubbleNotification?: EmitBubbleNotificationPort;
   readStateSnapshot?: ReadStateSnapshotPort;

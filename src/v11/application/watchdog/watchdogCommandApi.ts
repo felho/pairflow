@@ -2,6 +2,7 @@ import {
   computeWatchdogStatus,
   type WatchdogStatus
 } from "../../shared/watchdog/watchdogStatus.js";
+import { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { emitBubbleNotification } from "../../../core/runtime/notifications.js";
 import { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
@@ -51,6 +52,8 @@ export async function runBubbleWatchdog(
     }
   );
   const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
+  const appendEnvelope =
+    dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
   const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
   const recoverMetaReviewRoute =
     dependencies.recoverMetaReviewGateFromSnapshot ?? recoverMetaReviewGateFromSnapshot;
@@ -76,6 +79,8 @@ export async function runBubbleWatchdog(
     nowIso,
     resolved,
     readState,
+    appendEnvelope,
+    writeState,
     recoverMetaReviewRoute,
     loadedState,
     state,
@@ -89,7 +94,7 @@ export async function runBubbleWatchdog(
     resolved: context.resolved,
     loadedState: context.loadedState,
     state: context.state,
-    writeState,
+    writeState: context.writeState,
     emitDelivery: context.emitDelivery
   });
   if (pendingRework !== null) {

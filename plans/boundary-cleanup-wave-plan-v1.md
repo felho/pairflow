@@ -11,6 +11,12 @@ Current baseline on `main`:
 - `mutation`: `6 warn`
 - `transition`: `1 fail`
 
+Current validated progress on `main`:
+
+- `boundary`: `8 fail`
+- `mutation`: `5 warn`
+- `transition`: `pass`
+
 These three are partially coupled, so each batch must validate all three.
 
 ## Source Of Truth
@@ -30,10 +36,6 @@ These three are partially coupled, so each batch must validate all three.
    - multiple direct state writes during startup flow
 4. `src/v11/application/stop/stopCommandOrchestration.ts`
    - direct cancelled-state persistence
-5. `src/v11/application/watchdog/watchdogCommandFlow.ts`
-   - transcript append + state write
-6. `src/v11/application/watchdog/watchdogPendingReworkIntent.ts`
-   - direct state write and also current `transition` fail
 
 ## Working Rules
 
@@ -50,7 +52,7 @@ These three are partially coupled, so each batch must validate all three.
 | Wave | Scope | Status | Notes |
 | --- | --- | --- | --- |
 | B1 | `watchdogPendingReworkIntent` transition/boundary cleanup | validated | Pending rework state persist now goes through a dedicated shared watchdog mutation helper; baseline moved to `boundary=10 fail`, `mutation=5 warn`, `transition=pass` |
-| B2 | `watchdogCommandFlow` transcript/state write extraction | planned | Likely pairs naturally with B1 once watchdog write boundary is clearer |
+| B2 | `watchdogCommandFlow` transcript/state write extraction | validated | Escalation transcript/state writes now go through a dedicated shared watchdog escalation mutation helper; baseline moved to `boundary=8 fail`, `mutation=5 warn`, `transition=pass` |
 | B3 | `stopCommandOrchestration` cancelled-state persistence extraction | planned | Single-file, lower blast radius |
 | B4 | `startCommandCleanup` + `startCommandFlows` write-path extraction | planned | Multi-write cluster; keep after watchdog/stop patterns are proven |
 | B5 | `commitCommandFinalization` transcript/state boundary extraction | planned | Likely needs its own mutation/finalization helper |
@@ -78,3 +80,7 @@ These three are partially coupled, so each batch must validate all three.
   - `boundary`: `11 fail` -> `10 fail`
   - `mutation`: `6 warn` -> `5 warn`
   - `transition`: `1 fail` -> `pass`
+- B2 result on `main`:
+  - `boundary`: `10 fail` -> `8 fail`
+  - `mutation`: `5 warn` -> `5 warn`
+  - `transition`: `pass` -> `pass`
