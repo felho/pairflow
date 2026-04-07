@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `6 fail / 39 warn`
+- Dependency report at this checkpoint: `3 fail / 39 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -93,6 +93,7 @@ contracts, not thin wrappers.
   - `validated (local)` watchdog shell relocation
   - `validated (local)` reply dependency cleanup
   - `validated (local)` resume summary + reviewer evidence compat cleanup
+  - `validated (local)` forbidden dependency frontier cleanup
   - `validated (local)` metaReviewGate state/transcript compat cleanup
   - `validated (local)` stop shell relocation
   - `validated (local)` reconcile dependency-resolution shell relocation
@@ -153,6 +154,7 @@ contracts, not thin wrappers.
 | W39 | `metrics` compat cleanup | `validated` | orchestrator | Metrics event, archive-context, and report helpers now route repo/archive/lock support through explicit core compat bridges; baseline stays at `10 fail / 39 warn` but the uncommitted compat surface is retired |
 | W40 | `reply` dependency cleanup | `validated` | orchestrator | Reply default dependency wiring now lives in `application/reply`, shared mutation code uses a narrow structural dependency shape, and reply error normalization now depends on the core bubble lookup compat bridge; dependency baseline dropped to `8 fail / 39 warn` |
 | W41 | `resumeSummary` + `reviewer/testEvidence` compat cleanup | `validated` | orchestrator | Resume transcript reads and reviewer evidence git inspection now route through explicit core compat bridges; dependency baseline dropped to `6 fail / 39 warn` |
+| W42 | forbidden dependency frontier cleanup | `validated` | orchestrator | Resume summary ownership moved into `application/start`, UI router now goes through core bubble facades for start/resume, meta-review submit persistence routes through core state compat, and bubble watchdog CLI now targets the v11 application surface; the dependency report no longer has forbidden layer-import findings and only import cycles + ownership warnings remain (`3 fail / 39 warn`) |
 
 ## Parallelization Rules
 
@@ -183,6 +185,6 @@ contracts, not thin wrappers.
 
 Current best next moves:
 
-1. take the next bounded dependency wave from the `metaReviewCommandSubmitPersistence` frontier,
-2. then sweep the `infrastructure/ui/router` residuals,
-3. defer ownership-signal-only cleanup until the forbidden dependency front is materially smaller.
+1. decide whether the next dependency phase targets import cycles or ownership-signal warnings,
+2. keep ownership-signal-only cleanup separate from the now-closed forbidden dependency frontier,
+3. treat the dependency checker’s remaining `3 fail` as cycle work, not layer-boundary work.
