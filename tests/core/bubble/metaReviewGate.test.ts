@@ -13,7 +13,7 @@ import { clearLiveMetaReviewSnapshot } from "../../../src/core/bubble/metaReview
 import {
   buildMetaReviewSubmitCommandTemplate
 } from "../../../src/core/runtime/metaReviewSubmitGuidance.js";
-import { notifyMetaReviewerSubmissionRequest } from "../../../src/v11/shared/metaReviewGate/metaReviewGateNotify.js";
+import { notifyMetaReviewerSubmissionRequest } from "../../../src/v11/application/metaReviewGate/metaReviewGateNotify.js";
 import {
   appendHumanApprovalRequestEnvelope
 } from "../../../src/core/bubble/approvalRequestEnvelope.js";

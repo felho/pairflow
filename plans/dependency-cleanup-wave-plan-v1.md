@@ -194,6 +194,7 @@ contracts, not thin wrappers.
 | W64 | `metaReview` live-run filesystem capability cleanup | `validated` | orchestrator | Shared live-run runtime/rollback no longer owns default fs read/write/delete wiring; the `core` facade now supplies explicit artifact capabilities, removing the last `metaReview` ownership warnings and lowering the baseline to `0 fail / 6 warn` |
 | W65 | `metaReviewGate` recovery artifact capability cleanup | `validated` | orchestrator | Shared recovery context helpers no longer own implicit fs read/write defaults; the `application/core` gate facades now supply recovery artifact IO defaults, removing the recovery-helper ownership warning and lowering the baseline to `0 fail / 5 warn` |
 | W66 | `metaReviewGate` apply capability cleanup | `validated` | orchestrator | Shared apply context no longer owns implicit artifact-read/tmux/notify defaults; the `application/core` gate facades now inject those defaults, removing the apply-context and type-coupling warnings and lowering the baseline to `0 fail / 3 warn` |
+| W67 | `metaReviewGate` notify owner move | `validated` | orchestrator | The tmux-backed notify runtime moved out of `shared/metaReviewGate` into the application edge, shared command runtime/api stopped exporting the runtime notify function, and the dependency baseline is now `0 fail / 2 warn` |
 
 ## Parallelization Rules
 
@@ -222,9 +223,9 @@ contracts, not thin wrappers.
 
 ## Warning Frontier Snapshot
 
-Current ownership-warning frontier after W66 metaReviewGate apply capability cleanup:
+Current ownership-warning frontier after W67 metaReviewGate notify owner move:
 
-- `metaReviewGate`: 2
+- `metaReviewGate`: 1
 - `askHuman`: 0 in the visible report after W47
 - `metaReview`: 0
 - `kickoff`: 0
@@ -247,7 +248,7 @@ Current bounded next-wave decisions:
 - `metaReview`:
   - no remaining dependency-warning backlog; any follow-up here would now be architecture hardening only
 - `metaReviewGate`:
-  - next good batches are tmux/runtime dependency tightening around notify/pane-binding
+  - next good batch is the remaining tmux/runtime pane-binding owner cleanup
 - `askHuman`:
   - next slice only if needed: remaining shared contracts around flow/runtime forwarding, but the high-signal tmux-owned warning cluster is closed
 
@@ -255,7 +256,7 @@ Current bounded next-wave decisions:
 
 - Run parallel explorer classification on the remaining `metaReviewGate` and `reply` warning clusters.
 - Prefer the next bounded batch between:
-  - `metaReviewGate` tmux/runtime owner cleanup (`Notify` / `PaneBinding`)
+  - `metaReviewGate` tmux/runtime owner cleanup (`PaneBinding`)
   - `reply` state/transcript ownership split (`replyMutationExecution`)
 
 Current best next moves:

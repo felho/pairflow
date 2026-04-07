@@ -2,7 +2,6 @@ export {
   applyMetaReviewGateOnConvergence,
   asMetaReviewGateError,
   MetaReviewGateError,
-  notifyMetaReviewerSubmissionRequest,
   recoverMetaReviewGateFromSnapshot,
   toMetaReviewGateError
 } from "./metaReviewGateCommandRuntime.js";
