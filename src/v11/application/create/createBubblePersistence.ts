@@ -1,5 +1,4 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 
 import type { BubblePaths } from "../../shared/bubble/bubblePaths.js";
 import {
@@ -8,6 +7,7 @@ import {
   resolveDocContractGateArtifactPath,
   writeDocContractGateArtifact
 } from "../../../v11/shared/gates/docContractGates.js";
+import { appendInitialTaskEnvelope } from "../../shared/create/createInitialTaskEnvelopeAppend.js";
 import { renderBubbleConfigToml } from "../../../config/bubbleConfig.js";
 import type {
   BubbleConfig,
@@ -121,35 +121,16 @@ export async function persistCreatedBubbleArtifacts(
         "Missing required create bubble dependency: appendProtocolEnvelope."
       );
     }
-    try {
-      await input.dependencies.appendProtocolEnvelope({
-        transcriptPath: input.paths.transcriptPath,
-        lockPath: join(input.paths.locksDir, `${input.bubbleId}.lock`),
-        now: input.createdAt,
-        envelope: {
-          bubble_id: input.bubbleId,
-          sender: "orchestrator",
-          recipient: input.config.agents.implementer,
-          type: "TASK",
-          round: input.state.round,
-          payload: {
-            summary: input.task.content,
-            metadata: {
-              source: input.task.source,
-              ...(input.task.sourcePath !== undefined
-                ? { source_path: input.task.sourcePath }
-                : {})
-            }
-          },
-          refs: [input.paths.taskArtifactPath]
-        }
-      });
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      throw new BubbleCreateError(
-        `Failed to append initial TASK envelope for bubble ${input.bubbleId}. Root error: ${reason}`
-      );
-    }
+    await appendInitialTaskEnvelope({
+      bubbleId: input.bubbleId,
+      createdAt: input.createdAt,
+      paths: input.paths,
+      config: input.config,
+      round: input.state.round,
+      task: input.task,
+      appendEnvelope: input.dependencies.appendProtocolEnvelope,
+      createError: (message) => new BubbleCreateError(message)
+    });
   }
 
   return {
