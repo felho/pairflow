@@ -5,9 +5,11 @@ import type {
   RunGitPort
 } from "../../shared/ports/git.js";
 import type { AssertGitRepositoryPort } from "../../shared/ports/gitRepository.js";
+import type { BranchExistsPort } from "../../shared/ports/git.js";
 import { GitRepositoryError } from "../../shared/ports/gitRepository.js";
 
 export type { GitRunOptions, GitRunResult, RunGitPort } from "../../shared/ports/git.js";
+export type { BranchExistsPort } from "../../shared/ports/git.js";
 export { GitRepositoryError } from "../../shared/ports/gitRepository.js";
 export type { AssertGitRepositoryPort } from "../../shared/ports/gitRepository.js";
 
@@ -92,7 +94,10 @@ export const assertGitRepository: AssertGitRepositoryPort = async (
   throw new GitRepositoryError(repoPath);
 };
 
-export async function branchExists(repoPath: string, branch: string): Promise<boolean> {
+export const branchExists: BranchExistsPort = async (
+  repoPath: string,
+  branch: string
+): Promise<boolean> => {
   const result = await runGit(
     ["show-ref", "--verify", "--quiet", `refs/heads/${branch}`],
     {
@@ -101,7 +106,7 @@ export async function branchExists(repoPath: string, branch: string): Promise<bo
     }
   );
   return result.exitCode === 0;
-}
+};
 
 export async function refExists(repoPath: string, ref: string): Promise<boolean> {
   const result = await runGit(["show-ref", "--verify", "--quiet", ref], {

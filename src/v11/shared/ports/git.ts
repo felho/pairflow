@@ -13,3 +13,8 @@ export type RunGitPort = (
   args: string[],
   options: GitRunOptions
 ) => Promise<GitRunResult>;
+
+export type BranchExistsPort = (
+  repoPath: string,
+  branch: string
+) => Promise<boolean>;

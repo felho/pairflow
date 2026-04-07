@@ -25,9 +25,11 @@ import {
   terminateBubbleTmuxSession,
   type TmuxRunner
 } from "../../infrastructure/channel/tmux/tmuxManager.js";
-import { pathExists } from "../../infrastructure/foundation/fs/pathExists.js";
-import { branchExists } from "../../infrastructure/workspace/git.js";
 import { cleanupWorktreeWorkspace } from "../../infrastructure/workspace/worktreeManager.js";
+import { pathExists } from "../../../core/util/pathExists.js";
+import { branchExists } from "../../../core/workspace/git.js";
+import type { BranchExistsPort } from "../../shared/ports/git.js";
+import type { PathExistsPort } from "../../shared/ports/pathExists.js";
 import { stopBubbleV11 as stopBubble } from "../stop/emitStopV11.js";
 
 export interface DeleteBubbleInput {
@@ -41,8 +43,8 @@ export interface DeleteBubbleInput {
 
 export interface DeleteBubbleDependencies {
   resolveBubbleById?: typeof resolveBubbleById;
-  branchExists?: typeof branchExists;
-  pathExists?: typeof pathExists;
+  branchExists?: BranchExistsPort;
+  pathExists?: PathExistsPort;
   runTmux?: TmuxRunner;
   readRuntimeSessionsRegistry?: typeof readRuntimeSessionsRegistry;
   terminateBubbleTmuxSession?: typeof terminateBubbleTmuxSession;
@@ -60,8 +62,8 @@ export interface DeleteBubbleDependencies {
 
 export interface ResolvedDeleteDependencies {
   resolveBubbleById: typeof resolveBubbleById;
-  branchExists: typeof branchExists;
-  pathExists: typeof pathExists;
+  branchExists: BranchExistsPort;
+  pathExists: PathExistsPort;
   runTmux: TmuxRunner;
   readRuntimeSessionsRegistry: typeof readRuntimeSessionsRegistry;
   terminateBubbleTmuxSession: typeof terminateBubbleTmuxSession;
