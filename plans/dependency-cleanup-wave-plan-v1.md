@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `4a03fa06`.
+Last updated from `main` at `48f1b195`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `174 fail / 59 warn`
+- Dependency report at this checkpoint: `162 fail / 58 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -81,7 +81,8 @@ contracts, not thin wrappers.
   - `205a94a3` metaReviewGate apply-context compat batch
   - `533a3113` metaReview command-runtime compat batch
   - `4a03fa06` metaReviewGate recovery-context compat batch
-  - `pending` metaReview live-run compat batch
+  - `48f1b195` metaReview live-run compat batch
+  - `pending` metaReviewGate residual compat batch
 
 ## Wave Ledger
 
@@ -126,6 +127,7 @@ contracts, not thin wrappers.
 | W27 | `metaReview` command-runtime compat batch | `completed` | orchestrator | Submit/read runtime, error mapping, and submit routing now use explicit core compat bridges; baseline dropped to `191 fail / 60 warn` |
 | W28 | `metaReviewGate` recovery-context compat batch | `completed` | orchestrator | Recovery context and helper files now use explicit core compat bridges for transcript/state/bubble lookup/pane bindings; baseline dropped to `184 fail / 60 warn` |
 | W29 | `metaReview` live-run compat batch | `completed` | orchestrator | Live-run runtime, pane/runtime helpers, and approval refresh/persistence files now use explicit core compat bridges; baseline dropped to `174 fail / 59 warn` |
+| W30 | `metaReviewGate` residual compat batch | `completed` | orchestrator | Apply observation/persistence, error conversion, human-gate persistence, and notify files now use explicit core compat bridges; baseline dropped to `162 fail / 58 warn` |
 
 ## Parallelization Rules
 
@@ -156,6 +158,6 @@ contracts, not thin wrappers.
 
 Current best next moves:
 
-1. reassess the remaining `metaReviewGate` residuals and the UI complexity frontier from the current `174 fail / 59 warn` baseline,
+1. reassess the remaining `pass` / `metaReviewGateTypes` residuals and the UI complexity frontier from the current `162 fail / 58 warn` baseline,
 2. then choose between another bounded dependency cluster and the first UI complexity breakup,
 3. keep this file updated after each merged micro-batch to survive context compaction.

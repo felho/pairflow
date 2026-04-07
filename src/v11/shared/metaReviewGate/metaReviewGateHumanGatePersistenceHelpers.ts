@@ -2,7 +2,7 @@ import { appendHumanApprovalRequestEnvelope } from "./approvalRequestEnvelope.js
 import {
   StateStoreConflictError,
   type writeStateSnapshot
-} from "../../infrastructure/state/stateStore.js";
+} from "../../../core/state/stateStore.js";
 import type {
   BubbleStateSnapshot,
   MetaReviewRecommendation
@@ -12,7 +12,7 @@ import type { FindingsParityMetadata } from "../../../types/protocol.js";
 import type {
   appendProtocolEnvelope,
   AppendProtocolEnvelopeResult
-} from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
+} from "../../../core/protocol/transcriptStore.js";
 import type { MetaReviewGateRoute } from "./metaReviewGateTypes.js";
 import type { MetaReviewGateAdvisoryFinding } from "./metaReviewGateFindingsSplit.js";
 

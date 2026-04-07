@@ -1,6 +1,6 @@
-import type { LoadedStateSnapshot } from "../../infrastructure/state/stateStore.js";
+import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
 import { isMetaReviewExecutionContextActiveState } from "../metaReview/metaReviewExecutionContext.js";
-import { readTranscriptEnvelopes } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
+import { readTranscriptEnvelopes } from "../../../core/protocol/transcriptStore.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
   MetaReviewGateRoute,
