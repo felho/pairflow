@@ -11,6 +11,7 @@ import type {
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
 import type {
+  BubbleCreateDependencies,
   BubbleCreateInput,
   ResolvedTaskInput
 } from "./createCommandContract.js";
@@ -45,6 +46,7 @@ export interface CreateBubbleFlowContext {
 export async function prepareCreateBubbleFlowContext(input: {
   command: BubbleCreateInput;
   createdAt: Date;
+  dependencies: BubbleCreateDependencies;
 }): Promise<CreateBubbleFlowContext> {
   validateBubbleId(input.command.id);
   const reviewArtifactType = resolveCreateReviewArtifactType(
@@ -52,7 +54,15 @@ export async function prepareCreateBubbleFlowContext(input: {
   );
 
   const repoPath = resolve(input.command.repoPath);
-  await ensureRepoPathIsGitRepo(repoPath);
+  if (input.dependencies.assertGitRepository === undefined) {
+    throw new BubbleCreateError(
+      "Missing required create bubble dependency: assertGitRepository."
+    );
+  }
+  await ensureRepoPathIsGitRepo(
+    repoPath,
+    input.dependencies.assertGitRepository
+  );
 
   const baseBranch = input.command.baseBranch.trim();
   if (baseBranch.length === 0) {

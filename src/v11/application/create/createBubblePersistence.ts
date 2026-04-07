@@ -8,7 +8,6 @@ import {
   resolveDocContractGateArtifactPath,
   writeDocContractGateArtifact
 } from "../../../v11/shared/gates/docContractGates.js";
-import { appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
 import { renderBubbleConfigToml } from "../../../config/bubbleConfig.js";
 import type {
   BubbleConfig,
@@ -117,8 +116,13 @@ export async function persistCreatedBubbleArtifacts(
   await ensureRuntimeSessionFile(input.paths.sessionsPath);
 
   if (!input.ideationMode) {
+    if (input.dependencies.appendProtocolEnvelope === undefined) {
+      throw new BubbleCreateError(
+        "Missing required create bubble dependency: appendProtocolEnvelope."
+      );
+    }
     try {
-      await appendProtocolEnvelope({
+      await input.dependencies.appendProtocolEnvelope({
         transcriptPath: input.paths.transcriptPath,
         lockPath: join(input.paths.locksDir, `${input.bubbleId}.lock`),
         now: input.createdAt,

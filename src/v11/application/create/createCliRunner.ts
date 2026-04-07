@@ -1,4 +1,4 @@
-import type { registerRepoInRegistry } from "../../infrastructure/executor/workspace/repoRegistry.js";
+import type { RegisterRepoInRegistryPort } from "../../shared/ports/repoRegistry.js";
 import {
   buildCreateBubbleInput,
   registerRepoAfterCreateBestEffort,
@@ -12,7 +12,7 @@ import { parseBubbleCreateCommandOptions } from "./createCliOptions.js";
 
 export interface BubbleCreateCommandDependencies {
   createBubble?: CreateBubbleImplementation;
-  registerRepoInRegistry?: typeof registerRepoInRegistry;
+  registerRepoInRegistry?: RegisterRepoInRegistryPort;
   reportRegistryRegistrationWarning?:
     | ((message: string) => void)
     | undefined;
@@ -33,7 +33,9 @@ export async function runBubbleCreateCommand(
   const created = await resolvedDependencies.create(createInput.input);
   await registerRepoAfterCreateBestEffort({
     repoPath: createInput.repoPath,
-    register: resolvedDependencies.register,
+    ...(resolvedDependencies.register !== undefined
+      ? { register: resolvedDependencies.register }
+      : {}),
     reportWarning: resolvedDependencies.reportWarning
   });
   return created;

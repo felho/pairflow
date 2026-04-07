@@ -9,6 +9,19 @@ import {
 } from "../../foundation/fs/fileLock.js";
 import { isIsoTimestamp } from "../../../shared/validation/primitives.js";
 import { normalizeRepoPath } from "./repoResolution.js";
+import type {
+  RegisterRepoInRegistryPort,
+  RegisterRepoInput,
+  RegisterRepoResult,
+  RepoRegistryEntry
+} from "../../../shared/ports/repoRegistry.js";
+
+export type {
+  RegisterRepoInRegistryPort,
+  RegisterRepoInput,
+  RegisterRepoResult,
+  RepoRegistryEntry
+} from "../../../shared/ports/repoRegistry.js";
 
 const registryVersion = 1;
 const defaultLockTimeoutMs = 5_000;
@@ -17,12 +30,6 @@ const registryPathEnvVar = "PAIRFLOW_REPO_REGISTRY_PATH";
 interface RepoRegistryDocument {
   version: number;
   repos: RepoRegistryEntry[];
-}
-
-export interface RepoRegistryEntry {
-  repoPath: string;
-  addedAt: string;
-  label?: string | undefined;
 }
 
 export interface ReadRepoRegistryInput {
@@ -37,20 +44,6 @@ export interface ReadRepoRegistryInput {
 export interface ReadRepoRegistryResult {
   registryPath: string;
   entries: RepoRegistryEntry[];
-}
-
-export interface RegisterRepoInput {
-  repoPath: string;
-  label?: string | undefined;
-  now?: Date | undefined;
-  registryPath?: string | undefined;
-  lockTimeoutMs?: number | undefined;
-}
-
-export interface RegisterRepoResult {
-  added: boolean;
-  entry: RepoRegistryEntry;
-  registryPath: string;
 }
 
 export interface RemoveRepoInput {
@@ -337,9 +330,9 @@ export async function readRepoRegistry(
   };
 }
 
-export async function registerRepoInRegistry(
+export const registerRepoInRegistry: RegisterRepoInRegistryPort = async (
   input: RegisterRepoInput
-): Promise<RegisterRepoResult> {
+): Promise<RegisterRepoResult> => {
   const registryPath = resolveRepoRegistryPath(input.registryPath);
   const normalizedRepoPath = await normalizeRepoPath(resolve(input.repoPath));
   const label = normalizeLabel(input.label);
@@ -379,7 +372,7 @@ export async function registerRepoInRegistry(
       };
     }
   );
-}
+};
 
 export async function removeRepoFromRegistry(
   input: RemoveRepoInput

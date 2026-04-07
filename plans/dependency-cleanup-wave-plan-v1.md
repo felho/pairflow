@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `5cd500f8`.
+Last updated from `main` at `026ff66f`.
 
 ## Goal
 
@@ -21,23 +21,24 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `473 fail / 84 warn`
+- Dependency report at this checkpoint: `456 fail / 83 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
   - `5cd500f8` restart + reconcile port contracts
-  - converged type-first contract cleanup: `460 fail / 83 warn` after local validation
+  - `026ff66f` converged port contracts
+  - create capability port batch: `456 fail / 83 warn` after local validation
 
 ## Wave Ledger
 
 | Wave | Cluster | Status | Owner | Notes |
 | --- | --- | --- | --- | --- |
 | W1 | `converged` contract/type leakage audit | `completed` | orchestrator | Bounded type-first batch identified around workspace/bubble identity, pairflow command, transcript append, and notification delivery contracts |
-| W1 | `delete` contract/runtime leakage audit | `in_progress` | subagent | Need first bounded batch recommendation |
-| W1 | `create` post-helper residual audit | `in_progress` | subagent | Need first bounded batch recommendation |
+| W1 | `delete` contract/runtime leakage audit | `completed` | subagent | First safe batch classified around `pathExists` + `branchExists` plus existing delete support ports |
+| W1 | `create` post-helper residual audit | `completed` | orchestrator | Capability edges classified around repo registry, git-repository assertion, and transcript append |
 | W2 | `converged` first bounded cleanup | `completed` | orchestrator | Converged contract files now use app-facing shared ports/contracts instead of direct infra types |
-| W2 | `delete` first bounded cleanup | `pending` | orchestrator/worker | Depends on W1 audit |
-| W2 | `create` next bounded cleanup | `pending` | orchestrator/worker | Depends on W1 audit |
+| W2 | `delete` first bounded cleanup | `pending` | orchestrator/worker | First candidate is preflight read-contract batch (`pathExists` + `branchExists`) |
+| W2 | `create` capability port cleanup | `completed` | orchestrator | Create flow now uses app-facing git-repository, transcript, and repo-registry ports; legacy CLI parity preserved |
 | W3 | shared runtime wiring clusters (`approval`, `reply`, `watchdog`, `merge`) | `pending` | orchestrator | Only after app-side ports are seeded enough |
 
 ## Parallelization Rules
@@ -67,7 +68,7 @@ contracts, not thin wrappers.
 
 ## Current Next Decision
 
-`converged` W2 is complete. Next choose between:
+`converged` and `create` W2 are complete. Next choose between:
 
-1. `create` type/capability port batch (`repoRegistry`, `gitRepository`, later transcript append), or
-2. `delete` first bounded contract/runtime separation batch after a tighter classification pass.
+1. `delete` preflight contract batch (`pathExists` + `branchExists`) on top of the existing port surface, or
+2. `converged` runtime capability rewiring (`convergedExecution` / `convergedFinalization` / `convergedGateDelivery`) as a separate bounded lane.

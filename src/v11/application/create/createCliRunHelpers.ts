@@ -2,12 +2,13 @@ import { resolve } from "node:path";
 
 import { DEPENDENCY_FAIL_REPO_REGISTRY_REGISTER } from "../../../config/bubbleConfig.js";
 import type { CreateReviewArtifactType } from "../../../types/bubble.js";
-import { registerRepoInRegistry } from "../../infrastructure/executor/workspace/repoRegistry.js";
+import { registerRepoInRegistry } from "../../../core/repo/registry.js";
 import { createBubble } from "./createCommandApi.js";
 import type {
   BubbleCreateInput,
   CreateBubbleImplementation
 } from "./createCommandContract.js";
+import type { RegisterRepoInRegistryPort } from "../../shared/ports/repoRegistry.js";
 
 export interface BubbleCreateCommandRuntimeOptions {
   id?: string;
@@ -26,7 +27,7 @@ export interface BubbleCreateCommandRuntimeOptions {
 
 export interface BubbleCreateCommandRuntimeDependencies {
   createBubble?: CreateBubbleImplementation;
-  registerRepoInRegistry?: typeof registerRepoInRegistry;
+  registerRepoInRegistry?: RegisterRepoInRegistryPort;
   reportRegistryRegistrationWarning?:
     | ((message: string) => void)
     | undefined;
@@ -34,7 +35,7 @@ export interface BubbleCreateCommandRuntimeDependencies {
 
 interface ResolvedBubbleCreateCommandDependencies {
   create: CreateBubbleImplementation;
-  register: typeof registerRepoInRegistry;
+  register?: RegisterRepoInRegistryPort;
   reportWarning: (message: string) => void;
 }
 
@@ -91,9 +92,13 @@ export function buildCreateBubbleInput(
 
 export async function registerRepoAfterCreateBestEffort(input: {
   repoPath: string;
-  register: typeof registerRepoInRegistry;
+  register?: RegisterRepoInRegistryPort;
   reportWarning: (message: string) => void;
 }): Promise<void> {
+  if (input.register === undefined) {
+    return;
+  }
+
   try {
     await input.register({
       repoPath: input.repoPath

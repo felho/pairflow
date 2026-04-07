@@ -1,6 +1,8 @@
 import type { writeFile } from "node:fs/promises";
 
 import type { BubblePaths } from "../../shared/bubble/bubblePaths.js";
+import type { AssertGitRepositoryPort } from "../../shared/ports/gitRepository.js";
+import type { AppendProtocolEnvelopePort } from "../../shared/ports/transcript.js";
 import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
 import type {
   AgentName,
@@ -55,6 +57,8 @@ export interface BubbleCreateResult {
 
 export interface BubbleCreateDependencies {
   writeReviewerFocusArtifact?: typeof writeFile;
+  assertGitRepository?: AssertGitRepositoryPort;
+  appendProtocolEnvelope?: AppendProtocolEnvelopePort;
 }
 
 export type CreateBubbleImplementation = (

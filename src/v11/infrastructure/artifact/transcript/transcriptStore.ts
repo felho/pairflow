@@ -13,29 +13,22 @@ import {
 } from "../../foundation/fs/fileLock.js";
 import type {
   ProtocolEnvelope,
-  ProtocolEnvelopePayload,
-  ProtocolMessageType,
-  ProtocolParticipant
 } from "../../../../types/protocol.js";
+import type {
+  AppendProtocolEnvelopeInput,
+  AppendProtocolEnvelopePort,
+  AppendProtocolEnvelopeResult,
+  ProtocolEnvelopeDraft,
+  ProtocolMirrorWriteFailure
+} from "../../../shared/ports/transcript.js";
 
-export interface ProtocolEnvelopeDraft {
-  bubble_id: string;
-  sender: ProtocolParticipant;
-  recipient: ProtocolParticipant;
-  type: ProtocolMessageType;
-  round: number;
-  payload: ProtocolEnvelopePayload;
-  refs: string[];
-}
-
-export interface AppendProtocolEnvelopeInput {
-  transcriptPath: string;
-  mirrorPaths?: string[];
-  lockPath: string;
-  envelope: ProtocolEnvelopeDraft;
-  now?: Date;
-  lockTimeoutMs?: number;
-}
+export type {
+  AppendProtocolEnvelopeInput,
+  AppendProtocolEnvelopePort,
+  AppendProtocolEnvelopeResult,
+  ProtocolEnvelopeDraft,
+  ProtocolMirrorWriteFailure
+} from "../../../shared/ports/transcript.js";
 
 export interface AppendProtocolEnvelopeBatchEntry {
   envelope: ProtocolEnvelopeDraft;
@@ -48,18 +41,6 @@ export interface AppendProtocolEnvelopesInput {
   entries: AppendProtocolEnvelopeBatchEntry[];
   now?: Date | undefined;
   lockTimeoutMs?: number | undefined;
-}
-
-export interface ProtocolMirrorWriteFailure {
-  path: string;
-  message: string;
-  code?: string;
-}
-
-export interface AppendProtocolEnvelopeResult {
-  envelope: ProtocolEnvelope;
-  sequence: number;
-  mirrorWriteFailures: ProtocolMirrorWriteFailure[];
 }
 
 export interface AppendProtocolEnvelopesResult {
@@ -253,9 +234,9 @@ function toMirrorWriteFailure(
   };
 }
 
-export async function appendProtocolEnvelope(
+export const appendProtocolEnvelope: AppendProtocolEnvelopePort = async (
   input: AppendProtocolEnvelopeInput
-): Promise<AppendProtocolEnvelopeResult> {
+): Promise<AppendProtocolEnvelopeResult> => {
   const batchResult = await appendProtocolEnvelopes({
     transcriptPath: input.transcriptPath,
     lockPath: input.lockPath,
@@ -277,7 +258,7 @@ export async function appendProtocolEnvelope(
   }
 
   return first;
-}
+};
 
 export async function appendProtocolEnvelopes(
   input: AppendProtocolEnvelopesInput

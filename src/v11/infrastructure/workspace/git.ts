@@ -4,8 +4,12 @@ import type {
   GitRunResult,
   RunGitPort
 } from "../../shared/ports/git.js";
+import type { AssertGitRepositoryPort } from "../../shared/ports/gitRepository.js";
+import { GitRepositoryError } from "../../shared/ports/gitRepository.js";
 
 export type { GitRunOptions, GitRunResult, RunGitPort } from "../../shared/ports/git.js";
+export { GitRepositoryError } from "../../shared/ports/gitRepository.js";
+export type { AssertGitRepositoryPort } from "../../shared/ports/gitRepository.js";
 
 export class GitCommandError extends Error {
   public readonly args: string[];
@@ -20,16 +24,6 @@ export class GitCommandError extends Error {
     this.args = args;
     this.exitCode = exitCode;
     this.stderr = stderr;
-  }
-}
-
-export class GitRepositoryError extends Error {
-  public readonly repoPath: string;
-
-  public constructor(repoPath: string) {
-    super(`Not a git repository or bare repository: ${repoPath}`);
-    this.name = "GitRepositoryError";
-    this.repoPath = repoPath;
   }
 }
 
@@ -76,7 +70,9 @@ export const runGit: RunGitPort = async (
   });
 };
 
-export async function assertGitRepository(repoPath: string): Promise<void> {
+export const assertGitRepository: AssertGitRepositoryPort = async (
+  repoPath: string
+): Promise<void> => {
   const insideWorktree = await runGit(["rev-parse", "--is-inside-work-tree"], {
     cwd: repoPath,
     allowFailure: true
@@ -94,7 +90,7 @@ export async function assertGitRepository(repoPath: string): Promise<void> {
   }
 
   throw new GitRepositoryError(repoPath);
-}
+};
 
 export async function branchExists(repoPath: string, branch: string): Promise<boolean> {
   const result = await runGit(

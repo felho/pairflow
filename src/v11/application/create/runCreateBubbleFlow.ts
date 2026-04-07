@@ -17,7 +17,8 @@ export async function runCreateBubbleFlow(
   const createdAt = input.now ?? new Date();
   const flowContext = await prepareCreateBubbleFlowContext({
     command: input,
-    createdAt
+    createdAt,
+    dependencies
   });
   const reviewerFocusArtifactPersist = await persistCreatedBubbleArtifacts({
     bubbleId: input.id,

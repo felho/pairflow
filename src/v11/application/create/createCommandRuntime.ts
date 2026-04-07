@@ -21,11 +21,9 @@ import type {
   CreateReviewArtifactType,
   PairflowCommandProfile
 } from "../../../types/bubble.js";
+import { GitRepositoryError } from "../../shared/ports/gitRepository.js";
+import type { AssertGitRepositoryPort } from "../../shared/ports/gitRepository.js";
 import { isNonEmptyString } from "../../shared/validation/primitives.js";
-import {
-  GitRepositoryError,
-  assertGitRepository
-} from "../../infrastructure/workspace/git.js";
 import type { ResolvedTaskInput } from "./createCommandContract.js";
 
 export class BubbleCreateError extends Error {
@@ -62,7 +60,10 @@ export function validateBubbleId(id: string): void {
   }
 }
 
-export async function ensureRepoPathIsGitRepo(repoPath: string): Promise<void> {
+export async function ensureRepoPathIsGitRepo(
+  repoPath: string,
+  assertGitRepository: AssertGitRepositoryPort
+): Promise<void> {
   try {
     await assertGitRepository(repoPath);
   } catch (error) {
