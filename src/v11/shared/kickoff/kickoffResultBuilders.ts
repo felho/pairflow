@@ -97,7 +97,15 @@ export function buildKickoffSuccessResult(
     state_before: input.stateBefore,
     state_after: input.stateAfter,
     ...(input.delivery !== undefined
-      ? { delivery: input.delivery }
+      ? {
+          delivery: {
+            delivered: input.delivery.delivered,
+            ...(input.delivery.reason !== undefined
+              ? { reason: input.delivery.reason }
+              : {}),
+            retried: input.delivery.retried
+          }
+        }
       : {})
   };
 }
