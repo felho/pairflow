@@ -191,7 +191,7 @@ Minimum szabaly:
 ### Affected Documents
 
 - `v1.1-implementation-roadmap.md` — 4.2.3 policy + M2 shield hardening gate.
-- `docs/architecture-fitness-checks.md` — cross-cutting critical side-effect invariant overlay.
+- `docs/architecture/architecture-fitness-checks.md` — cross-cutting critical side-effect invariant overlay.
 - `orchestration-matrix-annex.md` — review evidence kovetelmeny kiegeszitese side-effect invarianttal.
 
 ---
@@ -242,7 +242,7 @@ Kotelezo guardrailok:
 
 ### Affected Documents
 
-- `docs/architecture-fitness-checks.md` — evolution history + triage matrix + operational workflow
+- `docs/architecture/architecture-fitness-checks.md` — evolution history + triage matrix + operational workflow
 - `docs/v1.1-boundary-simplification/v1.1-implementation-roadmap.md` — W2 hardening/triage workflow
 
 ---
@@ -289,5 +289,5 @@ Ha egyik admission feltetel sem teljesul, az uj case backlog varians, nem migrat
 
 ### Affected Documents
 
-- `docs/architecture-fitness-checks.md` — Contract Case "Good Enough" Baseline + Case Admission Policy
+- `docs/architecture/architecture-fitness-checks.md` — Contract Case "Good Enough" Baseline + Case Admission Policy
 - `docs/v1.1-boundary-simplification/v1.1-implementation-roadmap.md` — Rules section updated with mandatory good-enough stop-gate reference

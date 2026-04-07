@@ -67,12 +67,15 @@ Use for:
 - truly multi-lane contracts,
 - boundary-neutral shared helper modules,
 - shared adapters or helper seams used by more than one command path.
+- explicit capability contracts under `shared/ports/**` when `application`
+  must depend on a typed boundary instead of a concrete infrastructure adapter
 
 Do not use for:
 
 - command-specific helpers that only happen to be called "helper",
 - temporary parking for code with unclear ownership,
 - hidden domain ownership that should live in `domain` or a command-local boundary.
+- fake port/wrapper modules that only disguise infrastructure ownership
 
 ### `src/v11/infrastructure/**`
 
@@ -104,6 +107,9 @@ Do not create `infrastructure/protocol/**` by default only because a module ment
 - protocol meaning, canonical payload contracts, and envelope semantics are usually not infrastructure concerns,
 - these should normally live under `shared` or another non-infrastructure canonical owner,
 - only protocol-specific I/O or persistence mechanics belong under infrastructure, and even then under the narrowest concrete capability.
+
+For explicit capability-boundary rules between `application` and
+`infrastructure`, see [v11-ports-governance.md](/Users/felho/dev/pairflow/docs/architecture/v11-ports-governance.md).
 
 ## Default Placement Rule
 
