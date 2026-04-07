@@ -2,10 +2,15 @@ import type { AgentName } from "../../../types/bubble.js";
 import type { ActorEmitContextSnapshot } from "../actorProtocol/actorEmitContext.js";
 import type { ConvergedStructuredFinding } from "./convergedCommandTypes.js";
 import { executeConvergedExecution } from "../../application/converged/convergedExecution.js";
+import type {
+  FinalizeConvergedFlowDependencies
+} from "../../application/converged/convergedFinalizationTypes.js";
 import { finalizeConvergedFlow } from "../../application/converged/convergedFinalization.js";
 import { prepareConvergedPolicy } from "../../application/converged/convergedPolicyPreparation.js";
 import { prepareConvergedRouting } from "../../application/converged/convergedRoutingPreparation.js";
 import { prepareConvergedValidation } from "../../application/converged/convergedValidationPreparation.js";
+import { assessPairflowCommandPath } from "../../infrastructure/executor/command/pairflowCommand.js";
+import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import type {
   RunConvergedFlowDependencies,
   RunConvergedFlowInput
@@ -131,6 +136,33 @@ export function buildDefaultConvergedFlowDependencies(
     emitTmuxDeliveryNotification: input.emitTmuxDeliveryNotification,
     emitBubbleNotification: input.emitBubbleNotification
   });
+}
+
+export interface BuildDefaultConvergedFinalizationDependenciesInput {
+  resolveMetaReviewRolloutBlockingReasonCodes:
+    FinalizeConvergedFlowDependencies["resolveMetaReviewRolloutBlockingReasonCodes"];
+  activeEntrypoint?: string | undefined;
+  assessPairflowCommandPath?:
+    FinalizeConvergedFlowDependencies["assessPairflowCommandPath"];
+  emitBubbleLifecycleEventBestEffort?:
+    FinalizeConvergedFlowDependencies["emitBubbleLifecycleEventBestEffort"];
+}
+
+export function buildDefaultConvergedFinalizationDependencies(
+  input: BuildDefaultConvergedFinalizationDependenciesInput
+): FinalizeConvergedFlowDependencies {
+  return {
+    resolveMetaReviewRolloutBlockingReasonCodes:
+      input.resolveMetaReviewRolloutBlockingReasonCodes,
+    ...(input.activeEntrypoint !== undefined
+      ? { activeEntrypoint: input.activeEntrypoint }
+      : {}),
+    assessPairflowCommandPath:
+      input.assessPairflowCommandPath ?? assessPairflowCommandPath,
+    emitBubbleLifecycleEventBestEffort:
+      input.emitBubbleLifecycleEventBestEffort ??
+      emitBubbleLifecycleEventBestEffort
+  };
 }
 
 export interface BuildConvergedCommandFlowInvocationInput {

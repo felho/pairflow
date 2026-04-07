@@ -1,5 +1,3 @@
-import { assessPairflowCommandPath } from "../../infrastructure/executor/command/pairflowCommand.js";
-import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
 import {
   buildFinalizeConvergedFlowResult,
   emitConvergedFinalizationEvents
@@ -9,16 +7,36 @@ import type {
   FinalizeConvergedFlowInput,
   FinalizeConvergedFlowResult
 } from "./convergedFinalizationTypes.js";
+import { buildDefaultConvergedFinalizationDependencies } from "../../shared/converged/convergedFlowInvocationBuilders.js";
 
 export async function finalizeConvergedFlow(
   input: FinalizeConvergedFlowInput,
   dependencies: FinalizeConvergedFlowDependencies
 ): Promise<FinalizeConvergedFlowResult> {
-  const assessCommandPath =
-    dependencies.assessPairflowCommandPath ?? assessPairflowCommandPath;
+  const resolvedDependencies = buildDefaultConvergedFinalizationDependencies({
+    resolveMetaReviewRolloutBlockingReasonCodes:
+      dependencies.resolveMetaReviewRolloutBlockingReasonCodes,
+    ...(dependencies.activeEntrypoint !== undefined
+      ? { activeEntrypoint: dependencies.activeEntrypoint }
+      : {}),
+    ...(dependencies.assessPairflowCommandPath !== undefined
+      ? {
+          assessPairflowCommandPath:
+            dependencies.assessPairflowCommandPath
+        }
+      : {}),
+    ...(dependencies.emitBubbleLifecycleEventBestEffort !== undefined
+      ? {
+          emitBubbleLifecycleEventBestEffort:
+            dependencies.emitBubbleLifecycleEventBestEffort
+        }
+      : {})
+  });
+  const assessCommandPath = resolvedDependencies.assessPairflowCommandPath!;
   const emitLifecycle =
-    dependencies.emitBubbleLifecycleEventBestEffort ?? emitBubbleLifecycleEventBestEffort;
-  const activeEntrypoint = dependencies.activeEntrypoint ?? process.argv[1];
+    resolvedDependencies.emitBubbleLifecycleEventBestEffort!;
+  const activeEntrypoint =
+    resolvedDependencies.activeEntrypoint ?? process.argv[1];
 
   const commandPathStatus = assessCommandPath({
     worktreePath: input.resolved.bubblePaths.worktreePath,
