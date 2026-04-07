@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `12d9d532`.
+Last updated from `main` at `65d75ff1`.
 
 ## Goal
 
@@ -50,7 +50,9 @@ contracts, not thin wrappers.
   - `e645db13` open lookup and shell compat bridges
   - `0852e587` stop contract ports
   - `5896a634` kickoff explicit delivery evidence
-  - approval compat/contract cleanup (pending commit in current worktree)
+  - `7bc07718` approval dependency compat boundaries
+  - `b06a7d30` approval mutation port contracts
+  - `65d75ff1` approval shared runtime kept off shared ports
 
 ## Wave Ledger
 
@@ -71,7 +73,7 @@ contracts, not thin wrappers.
 | W5 | `delete` runtime cleanup consumer rewiring | `completed` | orchestrator | Delete runtime and support paths now route through explicit compat bridges instead of direct infra imports |
 | W5 | `converged` routing preparation cleanup | `completed` | orchestrator | Remaining converged routing edges now use explicit compat bridges / ports |
 | W6 | `start` / `open` / `stop` / `merge` bounded cleanups | `completed` | orchestrator | Small app-lane type/runtime leaks removed with compat bridges or shared port contracts |
-| W6 | `approval` contract + dependency cleanup | `in_progress` | orchestrator | Approval app-side delivery types and shared default wiring now avoid direct infra imports; only shared->application orchestration seam remains |
+| W6 | `approval` contract + dependency cleanup | `completed` | orchestrator | Approval app-side delivery types and shared default wiring now avoid direct infra imports; only shared->application orchestration seam remains |
 | W7 | shared runtime wiring clusters (`approval`, `askHuman`, `watchdog`, `reply`) | `pending` | orchestrator | Next frontier once bounded approval orchestration seam is classified |
 
 ## Parallelization Rules
