@@ -2,10 +2,10 @@ import { readFile } from "node:fs/promises";
 
 import {
   resolveBubbleById
-} from "../../infrastructure/executor/workspace/bubbleLookup.js";
+} from "../../../core/bubble/bubbleLookup.js";
 import {
   readStateSnapshot
-} from "../../infrastructure/state/stateStore.js";
+} from "../../../core/state/stateStore.js";
 import {
   clearLiveMetaReviewSnapshot,
   normalizeMetaReviewSnapshot

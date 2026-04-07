@@ -3,12 +3,12 @@ import { readFile, writeFile } from "node:fs/promises";
 
 import {
   resolveBubbleById
-} from "../../infrastructure/executor/workspace/bubbleLookup.js";
+} from "../../../core/bubble/bubbleLookup.js";
 import {
   readStateSnapshot,
   writeStateSnapshot
-} from "../../infrastructure/state/stateStore.js";
-import { readRuntimeSessionsRegistry } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
+} from "../../../core/state/stateStore.js";
+import { readRuntimeSessionsRegistry } from "../../../core/runtime/sessionsRegistry.js";
 import {
   isInteger,
   isNonEmptyString,

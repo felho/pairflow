@@ -1,9 +1,9 @@
 import {
   BubbleLookupError
-} from "../../infrastructure/executor/workspace/bubbleLookup.js";
+} from "../../../core/bubble/bubbleLookup.js";
 import {
   StateStoreConflictError
-} from "../../infrastructure/state/stateStore.js";
+} from "../../../core/state/stateStore.js";
 import {
   SchemaValidationError
 } from "../validation/primitives.js";

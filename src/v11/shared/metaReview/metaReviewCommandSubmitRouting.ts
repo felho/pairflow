@@ -1,10 +1,8 @@
 import {
   emitTmuxDeliveryNotification,
   resolveDeliveryMessageRef
-} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
-import {
-  resolveBubbleById
-} from "../../infrastructure/executor/workspace/bubbleLookup.js";
+} from "../../../core/runtime/tmuxDelivery.js";
+import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import {
   executeImplementerHandoffDelivery
 } from "../delivery/implementerHandoffDelivery.js";
