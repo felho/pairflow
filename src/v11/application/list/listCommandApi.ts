@@ -9,7 +9,7 @@ import {
 } from "../../infrastructure/executor/workspace/repoResolution.js";
 import { isMetaReviewExecutionContextActiveState } from "../../shared/metaReview/metaReviewExecutionContext.js";
 import { resolveActiveMetaReviewRuntimeDelivery } from "../../shared/metaReview/metaReviewSnapshot.js";
-import { getBubblePaths } from "../../infrastructure/artifact/bubble/paths.js";
+import { getBubblePaths } from "../../shared/bubble/bubblePaths.js";
 import { inspectStateSnapshot } from "../../infrastructure/state/stateStore.js";
 import { readRuntimeSessionsRegistry } from "../../infrastructure/executor/sessionRuntime/runtimeSessionsRegistry.js";
 import { computeWatchdogStatus } from "../../shared/watchdog/watchdogStatus.js";

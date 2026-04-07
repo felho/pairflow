@@ -1,4 +1,4 @@
-import type { BubblePaths } from "../../infrastructure/artifact/bubble/paths.js";
+import type { BubblePaths } from "../bubble/bubblePaths.js";
 import type { PassDeliveryDependencies } from "../../application/pass/reviewerDelivery.js";
 import type {
   resolvePassValidationForPass as ResolvePassValidationForPassFn,

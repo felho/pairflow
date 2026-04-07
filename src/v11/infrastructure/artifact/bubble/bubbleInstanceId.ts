@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -10,10 +9,11 @@ import {
   withFileLock
 } from "../../foundation/fs/fileLock.js";
 
-import type { BubblePaths } from "./paths.js";
-
-const bubbleInstanceIdPattern =
-  /^[A-Za-z0-9][A-Za-z0-9_-]{9,127}$/u;
+import {
+  generateBubbleInstanceId,
+  isBubbleInstanceId
+} from "../../../shared/bubble/bubbleInstanceId.js";
+import type { BubblePaths } from "../../../shared/bubble/bubblePaths.js";
 
 export interface EnsureBubbleInstanceIdForMutationInput {
   bubbleId: string;
@@ -36,16 +36,7 @@ export class BubbleInstanceIdError extends Error {
   }
 }
 
-export function isBubbleInstanceId(value: unknown): value is string {
-  return typeof value === "string" && bubbleInstanceIdPattern.test(value);
-}
-
-export function generateBubbleInstanceId(now: Date = new Date()): string {
-  // Time-prefixed opaque identifier for stable cross-lifecycle analytics joins.
-  const timestamp = now.getTime().toString(36).padStart(10, "0");
-  const entropy = randomBytes(10).toString("hex");
-  return `bi_${timestamp}_${entropy}`;
-}
+export { generateBubbleInstanceId, isBubbleInstanceId };
 
 export async function ensureBubbleInstanceIdForMutation(
   input: EnsureBubbleInstanceIdForMutationInput

@@ -1,4 +1,6 @@
-import type { BubblePaths } from "../../infrastructure/artifact/bubble/paths.js";
+import type { writeFile } from "node:fs/promises";
+
+import type { BubblePaths } from "../../shared/bubble/bubblePaths.js";
 import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
 import type {
   AgentName,
@@ -52,7 +54,7 @@ export interface BubbleCreateResult {
 }
 
 export interface BubbleCreateDependencies {
-  writeReviewerFocusArtifact?: typeof import("node:fs/promises").writeFile;
+  writeReviewerFocusArtifact?: typeof writeFile;
 }
 
 export type CreateBubbleImplementation = (
