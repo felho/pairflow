@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `827b111c`.
+Last updated from `main` at `991cdd40`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `309 fail / 69 warn`
+- Dependency report at this checkpoint: `292 fail / 70 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -65,6 +65,10 @@ contracts, not thin wrappers.
   - `bef38d5e` obsolete watchdog infrastructure wrapper removed
   - `f4c51857` reply runtime compat dependency resolution
   - `827b111c` askHuman routing prep relocation
+  - `6841b5ec` reply mutation execution extract
+  - `febcfec8` reply mutation execution moved into shared
+  - `50220080` create initial task append extract
+  - `991cdd40` converged orchestration moved into application
 
 ## Wave Ledger
 
@@ -94,7 +98,10 @@ contracts, not thin wrappers.
 | W12 | `reply` runtime compat dependency resolution | `completed` | orchestrator | Reply runtime now resolves transcript/state/bubble lookup/delivery defaults through explicit compat dependency resolution instead of direct application -> infrastructure imports |
 | W13 | `watchdog` pane sampling + default wiring cleanup | `completed` | orchestrator | Sampler now uses ports and default adapter wiring lives only in the core compat facade; no remaining watchdog dependency finding is reported |
 | W14 | `askHuman` routing prep relocation | `completed` | orchestrator | Routing-prep defaults, dependency resolution, and workspace context prep now live in `application`; shared contracts use structural types instead of core or ports |
-| W15 | residual shared runtime clusters (`reply`, remaining askHuman execution/finalization, others) | `pending` | orchestrator | Current top frontier is `replyCommandApi`, then the next smallest shared/runtime residual lane |
+| W15 | residual shared runtime clusters (`reply`, remaining askHuman execution/finalization, others) | `completed` | orchestrator | Reply direct transcript/state mutation moved behind shared mutation execution; create initial TASK append no longer writes transcript directly from `application` |
+| W16 | `converged` residual shared runtime cluster | `completed` | orchestrator | Converged orchestration/builder ownership moved into `application`; the old shared orchestration files are gone |
+| W17 | `commit` shared runtime cluster | `pending` | orchestrator | Current largest frontier: `shared/commit/**` still imports infrastructure and a small `shared -> application` edge remains |
+| W17 | `attach` + `ui` residual edge audit | `pending` | orchestrator | Small bounded frontier around `emitAttachV11.ts` and `infrastructure/ui/**` cross-layer imports |
 
 ## Parallelization Rules
 
@@ -125,6 +132,6 @@ contracts, not thin wrappers.
 
 Current best next moves:
 
-1. open the `replyCommandApi` wave from the current `309 fail / 69 warn` baseline,
-2. then reassess the remaining `askHuman` execution/finalization residuals,
+1. open the `commit` residual cluster from the current `292 fail / 70 warn` baseline,
+2. run a parallel bounded audit on the small `attach/ui` frontier if the write set stays disjoint,
 3. keep this file updated after each merged micro-batch to survive context compaction.
