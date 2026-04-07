@@ -4,7 +4,6 @@ import type {
   ProtocolEnvelope
 } from "../../../types/protocol.js";
 import type { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import type { emitTmuxDeliveryNotification } from "../../../core/runtime/tmuxDelivery.js";
 import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import type { readRuntimeSessionsRegistry } from "../../../core/runtime/sessionsRegistry.js";
 import type {
@@ -13,6 +12,10 @@ import type {
 } from "../../../core/state/stateStore.js";
 import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateTypes.js";
 import type { recoverMetaReviewGateFromSnapshot } from "../metaReviewGate/metaReviewGateRecovery.js";
+import type {
+  MetaReviewDeliveryEmitter,
+  MetaReviewDeliveryMessageRefBuilder
+} from "./metaReviewDeliveryCapabilities.js";
 import type {
   MetaReviewArtifactReadPort,
   MetaReviewArtifactWritePort
@@ -52,7 +55,8 @@ export interface MetaReviewCommandDependencies {
   writeStateSnapshot?: typeof writeStateSnapshot;
   appendProtocolEnvelope?: typeof appendProtocolEnvelope;
   readRuntimeSessionsRegistry?: typeof readRuntimeSessionsRegistry;
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
+  emitDeliveryNotification?: MetaReviewDeliveryEmitter;
+  buildDeliveryMessageRef?: MetaReviewDeliveryMessageRefBuilder;
   readFile?: MetaReviewArtifactReadPort;
   writeFile?: MetaReviewArtifactWritePort;
   now?: Date;

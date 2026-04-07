@@ -1,6 +1,6 @@
 import {
-  toMetaReviewError as toMetaReviewErrorV11
-} from "../../v11/shared/metaReview/metaReviewCommandRuntime.js";
+  toMetaReviewErrorV11
+} from "../../v11/application/metaReview/emitMetaReviewV11.js";
 import {
   clearLiveMetaReviewSnapshot,
   hasCanonicalSubmitForActiveMetaReviewRound,
@@ -42,11 +42,11 @@ export {
   parseMetaReviewRunnerOutput
 } from "../../v11/shared/metaReview/liveRun/metaReviewLiveRunner.js";
 export {
-  getMetaReviewLastReport,
-  getMetaReviewStatus,
-  submitMetaReviewResult,
-  toMetaReviewError
-} from "../../v11/shared/metaReview/metaReviewCommandRuntime.js";
+  getMetaReviewLastReportV11 as getMetaReviewLastReport,
+  getMetaReviewStatusV11 as getMetaReviewStatus,
+  submitMetaReviewResultV11 as submitMetaReviewResult,
+  toMetaReviewErrorV11 as toMetaReviewError
+} from "../../v11/application/metaReview/emitMetaReviewV11.js";
 export {
   clearLiveMetaReviewSnapshot,
   hasCanonicalSubmitForActiveMetaReviewRound,

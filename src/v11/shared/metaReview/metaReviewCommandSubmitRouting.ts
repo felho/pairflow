@@ -1,7 +1,3 @@
-import {
-  emitTmuxDeliveryNotification,
-  resolveDeliveryMessageRef
-} from "../../../core/runtime/tmuxDelivery.js";
 import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import {
   executeImplementerHandoffDelivery
@@ -55,16 +51,10 @@ function buildMetaReviewGateRecoveryDependencies(
     resolved.appendProtocolEnvelope = dependencies.appendProtocolEnvelope;
   }
   if (dependencies.readFile !== undefined) {
-    resolved.readFile =
-      dependencies.readFile as NonNullable<
-        RecoverMetaReviewGateFromSnapshotDependencies["readFile"]
-      >;
+    resolved.readFile = dependencies.readFile;
   }
   if (dependencies.writeFile !== undefined) {
-    resolved.writeFile =
-      dependencies.writeFile as NonNullable<
-        RecoverMetaReviewGateFromSnapshotDependencies["writeFile"]
-      >;
+    resolved.writeFile = dependencies.writeFile;
   }
   return resolved;
 }
@@ -90,9 +80,17 @@ async function emitSubmitAutoReworkDelivery(input: {
     return;
   }
 
-  const emitDelivery =
-    input.dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification;
-  const messageRef = resolveDeliveryMessageRef({
+  if (
+    input.dependencies.emitDeliveryNotification === undefined
+    || input.dependencies.buildDeliveryMessageRef === undefined
+  ) {
+    throw new MetaReviewError(
+      "META_REVIEW_UNKNOWN_ERROR",
+      "meta-review submit auto-rework delivery capabilities are unavailable."
+    );
+  }
+
+  const messageRef = input.dependencies.buildDeliveryMessageRef({
     bubbleId: input.resolved.bubbleId,
     sessionsPath: input.resolved.bubblePaths.sessionsPath,
     envelope: input.routed.gateEnvelope
@@ -106,7 +104,7 @@ async function emitSubmitAutoReworkDelivery(input: {
       envelope: input.routed.gateEnvelope,
       messageRef
     },
-    emitDelivery
+    emitDelivery: input.dependencies.emitDeliveryNotification
   });
 }
 

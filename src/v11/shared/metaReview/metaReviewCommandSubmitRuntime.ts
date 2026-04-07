@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { readFile, writeFile } from "node:fs/promises";
 
 import {
   resolveBubbleById
@@ -55,6 +54,30 @@ import type {
   MetaReviewSubmitResult
 } from "./metaReviewCommandContract.js";
 
+function resolveMetaReviewArtifactReadPort(
+  dependencies: MetaReviewCommandDependencies
+): NonNullable<MetaReviewCommandDependencies["readFile"]> {
+  if (dependencies.readFile !== undefined) {
+    return dependencies.readFile;
+  }
+  throw new MetaReviewError(
+    "META_REVIEW_UNKNOWN_ERROR",
+    "meta-review artifact read capability is unavailable."
+  );
+}
+
+function resolveMetaReviewArtifactWritePort(
+  dependencies: MetaReviewCommandDependencies
+): NonNullable<MetaReviewCommandDependencies["writeFile"]> {
+  if (dependencies.writeFile !== undefined) {
+    return dependencies.writeFile;
+  }
+  throw new MetaReviewError(
+    "META_REVIEW_UNKNOWN_ERROR",
+    "meta-review artifact write capability is unavailable."
+  );
+}
+
 export async function submitMetaReviewResult(
   input: MetaReviewSubmitInput,
   dependencies: MetaReviewCommandDependencies = {}
@@ -64,8 +87,8 @@ export async function submitMetaReviewResult(
   const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
   const readRuntimeSessions =
     dependencies.readRuntimeSessionsRegistry ?? readRuntimeSessionsRegistry;
-  const readFileFn = dependencies.readFile ?? readFile;
-  const writeFileFn = dependencies.writeFile ?? writeFile;
+  const readFileFn = resolveMetaReviewArtifactReadPort(dependencies);
+  const writeFileFn = resolveMetaReviewArtifactWritePort(dependencies);
   const randomUuidFn = dependencies.randomUUID ?? randomUUID;
   const now = dependencies.now ?? new Date();
 

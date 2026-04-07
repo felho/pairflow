@@ -520,7 +520,7 @@ describe("meta-review run", () => {
       }
     );
 
-    const result = await runMetaReview(
+    await runMetaReview(
       {
         bubbleId: bubble.bubbleId,
         repoPath
@@ -1776,7 +1776,7 @@ describe("meta-review submit", () => {
             repoPath,
             worktreePath: bubble.paths.worktreePath
           }),
-        emitTmuxDeliveryNotification: async (deliveryInput) => {
+        emitDeliveryNotification: async (deliveryInput) => {
           deliveryCalls.push({
             recipient: deliveryInput.envelope.recipient,
             ...(deliveryInput.messageRef !== undefined
@@ -4584,7 +4584,7 @@ describe("meta-review reads", () => {
     });
 
     const before = await readStateSnapshot(bubble.paths.statePath);
-    const result = await runMetaReview(
+    await runMetaReview(
       {
         bubbleId: bubble.bubbleId,
         repoPath

@@ -6,9 +6,9 @@ import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { parseBubbleMetaReviewCommandOptions } from "../../../src/cli/commands/bubble/metaReview.js";
+import { submitMetaReviewResultV11 as submitMetaReviewResult } from "../../../src/v11/application/metaReview/emitMetaReviewV11.js";
 import { buildMetaReviewExecutionContext } from "../../../src/v11/shared/metaReview/metaReviewExecutionContext.js";
 import { MetaReviewError } from "../../../src/v11/shared/metaReview/metaReviewError.js";
-import { submitMetaReviewResult } from "../../../src/v11/shared/metaReview/metaReviewCommandRuntime.js";
 import { metaReviewExecutionContextToRunningContext } from "../../../src/v11/shared/state/executionContext.js";
 import { readStateSnapshot, writeStateSnapshot } from "../../../src/v11/infrastructure/state/stateStore.js";
 import { parseRequiredSubmitReportJson } from "../../../src/v11/application/metaReview/metaReviewCliOptionValueReader.js";

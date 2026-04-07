@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `5d1b036c`.
+Last updated from `main` at `35745032`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `0 fail / 26 warn`
+- Dependency report at this checkpoint: `0 fail / 12 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -106,6 +106,12 @@ contracts, not thin wrappers.
   - `validated (local)` merge dependency and error classification relocation
   - `validated (local)` watchdog store ownership inversion
   - `validated (local)` reviewVerification artifact boundary split
+  - `9f567b68` doc contract gate artifact IO split
+  - `941e731c` metaReviewGate findings read decoupling
+  - `aaef4704` metaReview artifact capability decoupling
+  - `44e82564` stale metaReview live-run import drop
+  - `35745032` explicit metaReviewGate recovered artifact writer
+  - `validated (local)` metaReview command-runtime capability cleanup
 
 ## Wave Ledger
 
@@ -179,6 +185,11 @@ contracts, not thin wrappers.
 | W56 | `watchdog` store ownership inversion | `validated` | worker + orchestrator validation | Pane-activity and trace stores moved under infrastructure ownership, shared status/watchdog retained only boundary-neutral types/path helpers, core compat bridges provide default read/write wiring, and the dependency baseline dropped to `0 fail / 26 warn` |
 | W57 | `reviewVerification` artifact boundary split | `validated` | worker + orchestrator validation | Review-verification schema/validation stayed shared, artifact IO moved behind an explicit shared port + infrastructure owner with core compat defaults, and the visible reviewer warning frontier now excludes `reviewVerification` |
 | W58 | `reviewer` testEvidence runtime/artifact split | `validated` | worker + orchestrator validation | Shared reviewer test-evidence schema/path helpers stayed pure, runtime and artifact IO moved behind an explicit shared port plus infrastructure owner, core keeps only the compat bridge, and the dependency baseline dropped to `0 fail / 25 warn` |
+| W59 | `docContractGates` artifact IO split | `completed` | orchestrator | The shared doc-contract gate cluster no longer owns artifact IO; a dedicated shared port plus infrastructure/core compat owner replaced direct shared filesystem ownership, dropping the visible warning frontier to `0 fail / 24 warn` |
+| W60 | `metaReviewGate` findings read decoupling | `completed` | orchestrator | Findings artifact read types now route through local shared capability contracts instead of direct `node:fs/promises` coupling, shrinking the metaReviewGate warning cluster and lowering the baseline to `0 fail / 19 warn` |
+| W61 | `metaReview` artifact capability decoupling | `completed` | orchestrator | Shared metaReview command/live-run read-write capability types now route through a canonical shared artifact IO contract, removing direct fs type-coupling from the command and live-run surfaces and lowering the baseline to `0 fail / 16 warn` |
+| W62 | `metaReviewGate` explicit artifact writer | `completed` | orchestrator | Recovered artifact writes no longer fall back to implicit `fs.writeFile`; the helper requires an explicit writer capability and the dependency baseline is now `0 fail / 12 warn` |
+| W63 | `metaReview` command-runtime capability cleanup | `validated` | orchestrator | Shared metaReview command read/submit runtime no longer owns default fs/tmux wiring; local shared delivery capability types plus application/core edge defaults removed the command-runtime ownership warnings and lowered the baseline to `0 fail / 8 warn` |
 
 ## Parallelization Rules
 
@@ -207,17 +218,17 @@ contracts, not thin wrappers.
 
 ## Warning Frontier Snapshot
 
-Current ownership-warning frontier after W58 reviewer testEvidence runtime/artifact split:
+Current ownership-warning frontier after W63 metaReview command-runtime capability cleanup:
 
-- `metaReviewGate`: 14
+- `metaReviewGate`: 5
 - `askHuman`: 0 in the visible report after W47
-- `metaReview`: 12
+- `metaReview`: 2
 - `kickoff`: 0
 - `merge`: 0
 - `metrics`: the shared event builder is now clean; only the core legacy bridge plus the infrastructure store remain
 - `reviewer`: 0
 - `watchdog`: 0
-- singleton residuals: `approval`, `gates`, `other`
+- singleton residuals: `reply`
 
 Current bounded next-wave decisions:
 
@@ -230,13 +241,18 @@ Current bounded next-wave decisions:
 - `kickoff`:
   - the task-file input warning is now closed; any follow-up would be architecture hardening only, not dependency warning cleanup
 - `metaReview`:
-  - next good batches are `liveRun` infra cut or command runtime rehome
+  - next good batches are live-run filesystem boundary tightening and approval-rollback artifact delete inversion
 - `metaReviewGate`:
-  - next good batches are recovery shell relocation or findings artifact read boundary split
+  - next good batches are tmux/runtime dependency tightening around apply/notify/pane-binding or the remaining recovery helper filesystem ownership
 - `askHuman`:
   - next slice only if needed: remaining shared contracts around flow/runtime forwarding, but the high-signal tmux-owned warning cluster is closed
 
 ## Current Next Decision
+
+- Run parallel explorer classification on the remaining `metaReviewGate` and `metaReview` warning clusters.
+- Prefer the next bounded batch between:
+  - `metaReviewGate` tmux/runtime owner cleanup (`ApplyContext` / `Notify` / `PaneBinding` / `Types`)
+  - `metaReview` live-run filesystem cleanup (`LiveRunRuntime` / `ApprovalRollback`)
 
 Current best next moves:
 
