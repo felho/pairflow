@@ -1,6 +1,6 @@
 # Dependency Cleanup Wave Plan V1
 
-Last updated from `main` at `1f0a593e`.
+Last updated from `main` at `f4c51857`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ contracts, not thin wrappers.
 
 ## Baseline
 
-- Dependency report at this checkpoint: `319 fail / 70 warn`
+- Dependency report at this checkpoint: `311 fail / 69 warn`
 - Recent completed batches:
   - `f996d399` shared bubble path/id helpers
   - `250b3cf6` start + merge port contracts
@@ -57,7 +57,10 @@ contracts, not thin wrappers.
   - `ec15f86f` askHuman notification/flow compat cleanup
   - `333507c4` watchdog contract ports cleanup
   - `1f0a593e` askHuman routing/workspace compat cleanup
-  - watchdog shared runtime compat cleanup (pending commit in current worktree)
+  - `64b389ac` watchdog shared runtime compat cleanup
+  - `c2dfe90d` askHuman command shell moved into application
+  - `3a8c1099` watchdog pane sampling through ports
+  - `f4c51857` reply runtime compat dependency resolution
 
 ## Wave Ledger
 
@@ -82,8 +85,10 @@ contracts, not thin wrappers.
 | W7 | `askHuman` notification/flow compat cleanup | `completed` | orchestrator | Notification, flow-contract, and execution/finalization dependency contracts now route through explicit core compat bridges; remaining askHuman issues are routing/workspace seams plus small shared->application wrappers |
 | W8 | `watchdog` contract ports cleanup | `completed` | orchestrator | Application contract now routes delivery/notification/state capability types through shared ports; shared watchdog runtime still needs a follow-up wave |
 | W9 | `askHuman` routing/workspace compat cleanup | `completed` | orchestrator | AskHuman is reduced to two tiny shared->application wrapper files |
-| W10 | `watchdog` shared runtime compat cleanup | `in_progress` | orchestrator | Shared watchdog runtime now routes through compat bridges; commit pending in current worktree |
-| W11 | shared runtime wiring clusters (`askHuman`, `reply`) | `pending` | orchestrator | Next frontier after the watchdog compat batch lands and the small askHuman wrapper cleanup finishes |
+| W10 | `watchdog` shared runtime compat cleanup | `completed` | orchestrator | Shared watchdog runtime now routes through compat bridges; cluster no longer appears in the dependency findings |
+| W11 | `askHuman` shared shell relocation | `completed` | orchestrator | Shared orchestration/default wiring shells moved into `application`; the remaining askHuman findings disappeared from the dependency report |
+| W12 | `reply` runtime compat dependency resolution | `completed` | orchestrator | Reply runtime now resolves transcript/state/bubble lookup/delivery defaults through explicit compat dependency resolution instead of direct application -> infrastructure imports |
+| W13 | residual shared runtime clusters (`askHuman` routing, watchdog core compat, others) | `pending` | orchestrator | Next frontier after reply cleanup; choose the next smallest file-disjoint shared/runtime cluster |
 
 ## Parallelization Rules
 
@@ -114,6 +119,6 @@ contracts, not thin wrappers.
 
 Current best next moves:
 
-1. close the pending watchdog shared-runtime compat commit,
-2. remove the last two askHuman shared->application wrapper files,
-3. then choose the next file-disjoint shared runtime cluster in `reply`.
+1. close the isolated `ProtocolEnvelopeDraft` type cleanup if it stays green,
+2. remeasure the dependency frontier from the new `311 fail / 69 warn` baseline,
+3. pick the next smallest file-disjoint residual cluster from shared/runtime wiring.
