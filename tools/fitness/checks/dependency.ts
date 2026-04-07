@@ -732,28 +732,42 @@ function detectAntiCircumventionViolations(input: {
 
 const ownershipSignalMatchers: readonly {
   signal: string;
-  matcher: RegExp;
+  matches: (sourceText: string) => boolean;
 }[] = [
   {
     signal: "filesystem-persistence",
-    matcher: /\bfrom\s+["']node:fs(?:\/promises)?["']|\bfrom\s+["']fs(?:\/promises)?["']/u
+    matches: (sourceText) =>
+      /\bfrom\s+["']node:fs(?:\/promises)?["']|\bfrom\s+["']fs(?:\/promises)?["']/u.test(
+        sourceText
+      )
   },
   {
     signal: "child-process-execution",
-    matcher: /\bfrom\s+["']node:child_process["']|\bfrom\s+["']child_process["']/u
+    matches: (sourceText) =>
+      /\bfrom\s+["']node:child_process["']|\bfrom\s+["']child_process["']/u.test(
+        sourceText
+      )
   },
   {
     signal: "state-persistence",
-    matcher: /\bwriteStateSnapshot\s*\(/u
+    matches: (sourceText) =>
+      /\bfrom\s+["'][^"']*(?:core\/state\/stateStore|v11\/infrastructure\/state\/stateStore)[^"']*["']/u.test(
+        sourceText
+      ) && /\bwriteStateSnapshot\s*\(/u.test(sourceText)
   },
   {
     signal: "transcript-persistence",
-    matcher: /\bappendProtocolEnvelope\s*\(/u
+    matches: (sourceText) =>
+      /\bfrom\s+["'][^"']*(?:core\/protocol\/transcriptStore|v11\/infrastructure\/artifact\/transcript)[^"']*["']/u.test(
+        sourceText
+      ) && /\bappendProtocolEnvelope\s*\(/u.test(sourceText)
   },
   {
     signal: "tmux-runtime",
-    matcher:
-      /\bfrom\s+["'][^"']*(?:core\/runtime\/tmux|v11\/infrastructure\/channel\/tmux)[^"']*["']|\b(?:emitTmuxDeliveryNotification|resolveDeliveryMessageRef|respawnTmuxPaneCommand|runInTmuxPane|runTmuxAttach|checkSession)\s*\(/u
+    matches: (sourceText) =>
+      /\bfrom\s+["'][^"']*(?:core\/runtime\/tmux|v11\/infrastructure\/channel\/tmux)[^"']*["']|\b(?:emitTmuxDeliveryNotification|resolveDeliveryMessageRef|respawnTmuxPaneCommand|runInTmuxPane|runTmuxAttach|checkSession)\s*\(/u.test(
+        sourceText
+      )
   }
 ] as const;
 
@@ -773,7 +787,7 @@ function detectOwnershipSignalViolations(input: {
 
     const sourceText = input.sourceByPath.get(filePath) ?? "";
     const signals = ownershipSignalMatchers
-      .filter(({ matcher }) => matcher.test(sourceText))
+      .filter(({ matches }) => matches(sourceText))
       .map(({ signal }) => signal);
     if (signals.length === 0) {
       continue;

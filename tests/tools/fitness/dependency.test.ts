@@ -402,6 +402,7 @@ describe("dependency fitness check", () => {
       repoRoot,
       "src/v11/shared/ports/transcript.ts",
       [
+        "import { appendProtocolEnvelope } from '../../../core/protocol/transcriptStore.js';",
         "export const append = async (): Promise<void> => {",
         "  await appendProtocolEnvelope({});",
         "};",
@@ -430,6 +431,46 @@ describe("dependency fitness check", () => {
         detail.includes("ownership-signal warning: shared-ports module shows strong infrastructure signals (transcript-persistence)")
       )
     ).toBe(true);
+  });
+
+  it("does not warn on injected transcript/state capability names without store imports", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/reply/replyMutationExecution.ts",
+      [
+        "export async function execute(input: {",
+        "  appendProtocolEnvelope: (value: unknown) => Promise<void>;",
+        "  writeStateSnapshot: (value: unknown) => Promise<void>;",
+        "}): Promise<void> {",
+        "  await input.appendProtocolEnvelope({});",
+        "  await input.writeStateSnapshot({});",
+        "}",
+        ""
+        ].join("\n")
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+      currentMilestone: undefined
+    });
+
+    expect(report.status).toBe("pass");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("ownership-signal warning")
+      )
+    ).toBe(false);
   });
 
   it("does not warn on generic tmux wording under shared", async () => {

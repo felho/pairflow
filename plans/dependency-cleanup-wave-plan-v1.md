@@ -196,6 +196,7 @@ contracts, not thin wrappers.
 | W66 | `metaReviewGate` apply capability cleanup | `validated` | orchestrator | Shared apply context no longer owns implicit artifact-read/tmux/notify defaults; the `application/core` gate facades now inject those defaults, removing the apply-context and type-coupling warnings and lowering the baseline to `0 fail / 3 warn` |
 | W67 | `metaReviewGate` notify owner move | `validated` | orchestrator | The tmux-backed notify runtime moved out of `shared/metaReviewGate` into the application edge, shared command runtime/api stopped exporting the runtime notify function, and the dependency baseline is now `0 fail / 2 warn` |
 | W68 | `metaReviewGate` pane-binding owner move | `validated` | orchestrator | The tmux-backed pane-binding runtime moved out of `shared/metaReviewGate` into the application edge, shared apply now depends on an injected pane-binding resolver, and the dependency baseline is now `0 fail / 1 warn` |
+| W69 | dependency ownership-signal precision fix | `validated` | orchestrator | The dependency checker now requires concrete state/transcript store import evidence before emitting state/transcript ownership warnings, which removes the false-positive on injected shared mutation helpers and closes the dependency baseline at `pass` |
 
 ## Parallelization Rules
 
@@ -224,7 +225,7 @@ contracts, not thin wrappers.
 
 ## Warning Frontier Snapshot
 
-Current ownership-warning frontier after W68 metaReviewGate pane-binding owner move:
+Current ownership-warning frontier after W69 dependency ownership-signal precision fix:
 
 - `metaReviewGate`: 0
 - `askHuman`: 0 in the visible report after W47
@@ -234,7 +235,7 @@ Current ownership-warning frontier after W68 metaReviewGate pane-binding owner m
 - `metrics`: the shared event builder is now clean; only the core legacy bridge plus the infrastructure store remain
 - `reviewer`: 0
 - `watchdog`: 0
-- singleton residuals: `reply`
+- singleton residuals: none on the dependency check
 
 Current bounded next-wave decisions:
 
@@ -250,14 +251,15 @@ Current bounded next-wave decisions:
   - no remaining dependency-warning backlog; any follow-up here would now be architecture hardening only
 - `metaReviewGate`:
   - no remaining dependency-warning backlog
+- `reply`:
+  - no remaining dependency-warning backlog after the ownership-signal precision fix; any follow-up here would now be architectural hardening only
 - `askHuman`:
   - next slice only if needed: remaining shared contracts around flow/runtime forwarding, but the high-signal tmux-owned warning cluster is closed
 
 ## Current Next Decision
 
 - Run parallel explorer classification on the remaining `metaReviewGate` and `reply` warning clusters.
-- Prefer the next bounded batch between:
-  - `reply` state/transcript ownership split (`replyMutationExecution`)
+- Prefer the next bounded batch from the next failing checker family (`boundary`, `transition`, `error`, `complexity`, `contract_timeout_policy`) rather than dependency.
 
 Current best next moves:
 
