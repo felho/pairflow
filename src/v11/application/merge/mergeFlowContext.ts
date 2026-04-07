@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 
-import type { LoadedStateSnapshot } from "../../infrastructure/state/stateStore.js";
+import type { LoadedStateSnapshot } from "../../shared/ports/stateSnapshots.js";
 import {
   assertCleanRepoWorkingTree,
   assertMergeBranchEligibility,
