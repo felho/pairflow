@@ -9,8 +9,24 @@ import { finalizeConvergedFlow } from "../../application/converged/convergedFina
 import { prepareConvergedPolicy } from "../../application/converged/convergedPolicyPreparation.js";
 import { prepareConvergedRouting } from "../../application/converged/convergedRoutingPreparation.js";
 import { prepareConvergedValidation } from "../../application/converged/convergedValidationPreparation.js";
+import {
+  applyMetaReviewGateOnConvergence,
+  recoverMetaReviewGateFromSnapshot
+} from "../metaReviewGate/metaReviewGateCommandApi.js";
+import { appendProtocolEnvelope } from "../../infrastructure/artifact/transcript/transcriptStore.js";
 import { assessPairflowCommandPath } from "../../infrastructure/executor/command/pairflowCommand.js";
+import { emitBubbleNotification } from "../../infrastructure/channel/notifications.js";
+import {
+  emitTmuxDeliveryNotification,
+  resolveDeliveryMessageRef
+} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
 import { emitBubbleLifecycleEventBestEffort } from "../../../v11/shared/metrics/bubbleEvents.js";
+import type { EmitBubbleNotificationPort } from "../ports/notifications.js";
+import type { AppendProtocolEnvelopePort } from "../ports/transcript.js";
+import type {
+  EmitTmuxDeliveryNotificationPort,
+  ResolveDeliveryMessageRefPort
+} from "../ports/tmuxDelivery.js";
 import type {
   RunConvergedFlowDependencies,
   RunConvergedFlowInput
@@ -120,6 +136,72 @@ export interface BuildDefaultConvergedFlowDependenciesInput {
     RunConvergedFlowDependencies["emitTmuxDeliveryNotification"];
   emitBubbleNotification?:
     RunConvergedFlowDependencies["emitBubbleNotification"];
+}
+
+export interface ResolvedConvergedExecutionDependencies {
+  appendProtocolEnvelope: AppendProtocolEnvelopePort;
+  applyMetaReviewGateOnConvergence:
+    NonNullable<RunConvergedFlowDependencies["applyMetaReviewGateOnConvergence"]>;
+  recoverMetaReviewGateFromSnapshot:
+    NonNullable<RunConvergedFlowDependencies["recoverMetaReviewGateFromSnapshot"]>;
+  emitTmuxDeliveryNotification: EmitTmuxDeliveryNotificationPort;
+  emitBubbleNotification: EmitBubbleNotificationPort;
+  resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
+}
+
+export interface BuildDefaultConvergedExecutionDependenciesInput {
+  appendProtocolEnvelope?: AppendProtocolEnvelopePort | undefined;
+  applyMetaReviewGateOnConvergence?:
+    RunConvergedFlowDependencies["applyMetaReviewGateOnConvergence"];
+  recoverMetaReviewGateFromSnapshot?:
+    RunConvergedFlowDependencies["recoverMetaReviewGateFromSnapshot"];
+  emitTmuxDeliveryNotification?:
+    RunConvergedFlowDependencies["emitTmuxDeliveryNotification"];
+  emitBubbleNotification?:
+    RunConvergedFlowDependencies["emitBubbleNotification"];
+  resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort | undefined;
+}
+
+export function buildDefaultConvergedExecutionDependencies(
+  input: BuildDefaultConvergedExecutionDependenciesInput = {}
+): ResolvedConvergedExecutionDependencies {
+  return {
+    appendProtocolEnvelope:
+      input.appendProtocolEnvelope ?? appendProtocolEnvelope,
+    applyMetaReviewGateOnConvergence:
+      input.applyMetaReviewGateOnConvergence ??
+      applyMetaReviewGateOnConvergence,
+    recoverMetaReviewGateFromSnapshot:
+      input.recoverMetaReviewGateFromSnapshot ??
+      recoverMetaReviewGateFromSnapshot,
+    emitTmuxDeliveryNotification:
+      input.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification,
+    emitBubbleNotification:
+      input.emitBubbleNotification ?? emitBubbleNotification,
+    resolveDeliveryMessageRef:
+      input.resolveDeliveryMessageRef ?? resolveDeliveryMessageRef
+  };
+}
+
+export interface ResolvedConvergedGateDeliveryDependencies {
+  emitTmuxDeliveryNotification: EmitTmuxDeliveryNotificationPort;
+  resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
+}
+
+export interface BuildDefaultConvergedGateDeliveryDependenciesInput {
+  emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort | undefined;
+  resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort | undefined;
+}
+
+export function buildDefaultConvergedGateDeliveryDependencies(
+  input: BuildDefaultConvergedGateDeliveryDependenciesInput = {}
+): ResolvedConvergedGateDeliveryDependencies {
+  return {
+    emitTmuxDeliveryNotification:
+      input.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification,
+    resolveDeliveryMessageRef:
+      input.resolveDeliveryMessageRef ?? resolveDeliveryMessageRef
+  };
 }
 
 export function buildDefaultConvergedFlowDependencies(

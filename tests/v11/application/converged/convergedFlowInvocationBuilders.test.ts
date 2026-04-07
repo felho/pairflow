@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildConvergedCommandFlowInvocation,
+  buildDefaultConvergedExecutionDependencies,
+  buildDefaultConvergedGateDeliveryDependencies,
   buildDefaultConvergedFlowDependencies,
   buildConvergedFlowDependencies,
   buildConvergedFlowInput
@@ -232,6 +234,20 @@ describe("convergedFlowInvocationBuilders", () => {
     expect("emitTmuxDeliveryNotification" in dependencies).toBe(false);
     expect("applyMetaReviewGateOnConvergence" in dependencies).toBe(false);
     expect("recoverMetaReviewGateFromSnapshot" in dependencies).toBe(false);
+  });
+
+  it("builds default execution and gate-delivery dependencies", () => {
+    const executionDependencies = buildDefaultConvergedExecutionDependencies();
+    const gateDeliveryDependencies = buildDefaultConvergedGateDeliveryDependencies();
+
+    expect(executionDependencies.appendProtocolEnvelope).toBeTypeOf("function");
+    expect(executionDependencies.emitTmuxDeliveryNotification).toBeTypeOf("function");
+    expect(executionDependencies.emitBubbleNotification).toBeTypeOf("function");
+    expect(executionDependencies.resolveDeliveryMessageRef).toBeTypeOf("function");
+    expect(executionDependencies.applyMetaReviewGateOnConvergence).toBeTypeOf("function");
+    expect(executionDependencies.recoverMetaReviewGateFromSnapshot).toBeTypeOf("function");
+    expect(gateDeliveryDependencies.emitTmuxDeliveryNotification).toBeTypeOf("function");
+    expect(gateDeliveryDependencies.resolveDeliveryMessageRef).toBeTypeOf("function");
   });
 
   it("builds command flow invocation and forwards only defined optionals", () => {

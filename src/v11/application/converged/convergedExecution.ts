@@ -1,19 +1,15 @@
 import { join } from "node:path";
 
-import { appendProtocolEnvelope } from "../../../v11/infrastructure/artifact/transcript/transcriptStore.js";
-import { emitBubbleNotification } from "../../infrastructure/channel/notifications.js";
 import {
-  emitTmuxDeliveryNotification,
-  resolveDeliveryMessageRef,
-} from "../../infrastructure/channel/tmux/tmuxDelivery.js";
-import {
-  applyMetaReviewGateOnConvergence,
-  recoverMetaReviewGateFromSnapshot
-} from "../../shared/metaReviewGate/metaReviewGateCommandApi.js";
+  buildDefaultConvergedExecutionDependencies
+} from "../../shared/converged/convergedFlowInvocationBuilders.js";
+import type {
+  ResolvedConvergedExecutionDependencies
+} from "../../shared/converged/convergedFlowInvocationBuilders.js";
 import type {
   ConvergedStructuredFinding
 } from "../../shared/converged/convergedCommandTypes.js";
-import type { ResolvedBubbleWorkspace } from "../../infrastructure/executor/workspace/workspaceResolution.js";
+import type { ResolvedBubbleWorkspace } from "../../shared/ports/workspaceResolution.js";
 import type { AgentName, BubbleStateSnapshot } from "../../../types/bubble.js";
 import {
   executeGateDelivery,
@@ -34,51 +30,47 @@ export interface ExecuteConvergedExecutionInput {
 }
 
 export interface ExecuteConvergedExecutionDependencies {
-  appendProtocolEnvelope?: typeof appendProtocolEnvelope;
-  applyMetaReviewGateOnConvergence?: typeof applyMetaReviewGateOnConvergence;
-  recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshot;
-  emitTmuxDeliveryNotification?: typeof emitTmuxDeliveryNotification;
-  emitBubbleNotification?: typeof emitBubbleNotification;
-  resolveDeliveryMessageRef?: typeof resolveDeliveryMessageRef;
+  appendProtocolEnvelope?: ResolvedConvergedExecutionDependencies["appendProtocolEnvelope"];
+  applyMetaReviewGateOnConvergence?: ResolvedConvergedExecutionDependencies["applyMetaReviewGateOnConvergence"];
+  recoverMetaReviewGateFromSnapshot?: ResolvedConvergedExecutionDependencies["recoverMetaReviewGateFromSnapshot"];
+  emitTmuxDeliveryNotification?: ResolvedConvergedExecutionDependencies["emitTmuxDeliveryNotification"];
+  emitBubbleNotification?: ResolvedConvergedExecutionDependencies["emitBubbleNotification"];
+  resolveDeliveryMessageRef?: ResolvedConvergedExecutionDependencies["resolveDeliveryMessageRef"];
 }
 
 export interface ExecuteConvergedExecutionResult {
-  convergence: Awaited<ReturnType<typeof appendProtocolEnvelope>>;
-  gateResult: Awaited<ReturnType<typeof applyMetaReviewGateOnConvergence>>;
+  convergence: Awaited<ReturnType<ResolvedConvergedExecutionDependencies["appendProtocolEnvelope"]>>;
+  gateResult: Awaited<ReturnType<ResolvedConvergedExecutionDependencies["applyMetaReviewGateOnConvergence"]>>;
   delivery: ConvergedDeliveryResult;
 }
 
 interface ResolvedExecutionDependencies {
-  appendEnvelope: typeof appendProtocolEnvelope;
-  applyGate: typeof applyMetaReviewGateOnConvergence;
-  recoverGate: typeof recoverMetaReviewGateFromSnapshot;
-  emitDelivery: typeof emitTmuxDeliveryNotification;
-  emitNotification: typeof emitBubbleNotification;
-  resolveMessageRef: typeof resolveDeliveryMessageRef;
+  appendEnvelope: ResolvedConvergedExecutionDependencies["appendProtocolEnvelope"];
+  applyGate: ResolvedConvergedExecutionDependencies["applyMetaReviewGateOnConvergence"];
+  recoverGate: ResolvedConvergedExecutionDependencies["recoverMetaReviewGateFromSnapshot"];
+  emitDelivery: ResolvedConvergedExecutionDependencies["emitTmuxDeliveryNotification"];
+  emitNotification: ResolvedConvergedExecutionDependencies["emitBubbleNotification"];
+  resolveMessageRef: ResolvedConvergedExecutionDependencies["resolveDeliveryMessageRef"];
 }
 
 function resolveExecutionDependencies(
   dependencies: ExecuteConvergedExecutionDependencies
 ): ResolvedExecutionDependencies {
+  const resolved = buildDefaultConvergedExecutionDependencies(dependencies);
   return {
-    appendEnvelope: dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope,
-    applyGate:
-      dependencies.applyMetaReviewGateOnConvergence ?? applyMetaReviewGateOnConvergence,
-    recoverGate:
-      dependencies.recoverMetaReviewGateFromSnapshot ?? recoverMetaReviewGateFromSnapshot,
-    emitDelivery:
-      dependencies.emitTmuxDeliveryNotification ?? emitTmuxDeliveryNotification,
-    emitNotification:
-      dependencies.emitBubbleNotification ?? emitBubbleNotification,
-    resolveMessageRef:
-      dependencies.resolveDeliveryMessageRef ?? resolveDeliveryMessageRef
+    appendEnvelope: resolved.appendProtocolEnvelope,
+    applyGate: resolved.applyMetaReviewGateOnConvergence,
+    recoverGate: resolved.recoverMetaReviewGateFromSnapshot,
+    emitDelivery: resolved.emitTmuxDeliveryNotification,
+    emitNotification: resolved.emitBubbleNotification,
+    resolveMessageRef: resolved.resolveDeliveryMessageRef
   };
 }
 
 async function appendConvergenceEnvelope(
   input: ExecuteConvergedExecutionInput,
-  appendEnvelope: typeof appendProtocolEnvelope
-): Promise<Awaited<ReturnType<typeof appendProtocolEnvelope>>> {
+  appendEnvelope: ResolvedExecutionDependencies["appendEnvelope"]
+): Promise<Awaited<ReturnType<ResolvedExecutionDependencies["appendEnvelope"]>>> {
   const lockPath = join(input.resolved.bubblePaths.locksDir, `${input.resolved.bubbleId}.lock`);
   const advisoryFindingsOpenTotal = input.findings?.length ?? 0;
   const metadata: Record<string, unknown> = {
@@ -114,9 +106,9 @@ async function appendConvergenceEnvelope(
 
 async function applyMetaReviewGateWithRecovery(
   input: ExecuteConvergedExecutionInput,
-  applyGate: typeof applyMetaReviewGateOnConvergence,
-  recoverGate: typeof recoverMetaReviewGateFromSnapshot
-): Promise<Awaited<ReturnType<typeof applyMetaReviewGateOnConvergence>>> {
+  applyGate: ResolvedExecutionDependencies["applyGate"],
+  recoverGate: ResolvedExecutionDependencies["recoverGate"]
+): Promise<Awaited<ReturnType<ResolvedExecutionDependencies["applyGate"]>>> {
   try {
     return await applyGate({
       bubbleId: input.resolved.bubbleId,
@@ -142,8 +134,6 @@ async function applyMetaReviewGateWithRecovery(
     }
   }
 }
-
-
 export async function executeConvergedExecution(
   input: ExecuteConvergedExecutionInput,
   dependencies: ExecuteConvergedExecutionDependencies = {}
