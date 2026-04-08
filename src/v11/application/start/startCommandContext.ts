@@ -8,7 +8,7 @@ import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleIn
 import {
   readReviewerBriefArtifact,
   readReviewerFocusArtifact
-} from "../../../core/reviewer/reviewerBrief.js";
+} from "../reviewer/reviewerArtifactDefaults.js";
 import type { ReviewerFocusExtractionResult } from "../../shared/reviewer/reviewerBrief.js";
 import {
   reviewerSeverityOntologyFullMarkdown,

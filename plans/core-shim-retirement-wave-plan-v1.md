@@ -332,6 +332,7 @@ validation, run `pnpm build` first.
 | W6 | dependency policy alignment for shared ports | policy | validated | Dependency fitness now explicitly allows `shared -> shared/ports` capability-contract imports while keeping `shared-ports -> infrastructure` and anti-circumvention rules intact; full fitness returned to PASS after the shared-safe batch |
 | W7 | shared type-only shim retirement batch | easy | validated | Shared actor/meta-review/meta-review-gate type-only imports now target canonical `shared/ports` contracts instead of `core` source types; warn-only coverage moved from `294 -> 279` total and `15 -> 12` retired-shim warnings while fitness and metaReviewGate regressions stayed green |
 | W8 | final shared type-only cleanup | easy | validated | `shared/merge/mergeRoutingEligibility.ts` now targets the canonical git port type instead of the `core/workspace/git` shim; warn-only coverage moved from `279 -> 273` total while the retired-shim subset stayed at `12` |
+| W9 | reviewer default-wiring consolidation | medium | validated | Reviewer brief and reviewer test-evidence default wiring moved out of pass/start/converged leaf helpers into dedicated application-level reviewer defaults modules; warn-only coverage moved from `273 -> 270` total and `12 -> 9` retired-shim warnings while pass/start/converged regressions, typecheck, and fitness all stayed green |
 
 ## Current Frontier
 

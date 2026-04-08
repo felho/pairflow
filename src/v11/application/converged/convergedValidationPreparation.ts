@@ -20,7 +20,7 @@ import {
 import type { ReviewerTestReasonCode } from "../../../v11/shared/reviewer/testEvidence.js";
 import {
   resolveReviewerTestExecutionDirective
-} from "../../../core/reviewer/testEvidence.js";
+} from "../reviewer/reviewerTestEvidenceDefaults.js";
 import type {
   BubbleRoundGateState,
   BubbleSpecLockState

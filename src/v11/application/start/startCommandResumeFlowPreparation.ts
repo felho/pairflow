@@ -5,7 +5,7 @@ import {
 } from "../../shared/reviewer/testEvidence.js";
 import {
   resolveReviewerTestExecutionDirective
-} from "../../../core/reviewer/testEvidence.js";
+} from "../reviewer/reviewerTestEvidenceDefaults.js";
 import { resolveResumeKickoffMessages } from "./startCommandResumePrompts.js";
 import type { ResolvedStartBubbleDependencies } from "./startCommandOrchestration.js";
 import type { StartExecutionContext } from "./startCommandContext.js";

@@ -11,7 +11,7 @@ import {
 import {
   readReviewerBriefArtifact,
   readReviewerFocusArtifact
-} from "../../../core/reviewer/reviewerBrief.js";
+} from "../reviewer/reviewerArtifactDefaults.js";
 import type { RefreshReviewerContextPort } from "../../../v11/shared/ports/reviewerContext.js";
 import type { ReadReviewerFocusArtifactPort } from "../../../v11/shared/ports/reviewerArtifacts.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
