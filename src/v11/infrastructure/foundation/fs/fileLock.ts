@@ -9,16 +9,52 @@ export interface WithFileLockOptions {
   staleAfterMs?: number;
 }
 
+interface FileLockErrorContext {
+  lockPath: string;
+  reason?: string;
+  staleAfterMs?: number | undefined;
+  timeoutMs?: number | undefined;
+}
+
 export class FileLockTimeoutError extends Error {
   public readonly lockPath: string;
   public readonly timeoutMs: number;
+  public readonly context: FileLockErrorContext | undefined;
 
-  public constructor(lockPath: string, timeoutMs: number) {
+  public constructor(
+    lockPath: string,
+    timeoutMs: number,
+    context?: FileLockErrorContext
+  ) {
     super(`Could not acquire file lock within timeout: ${lockPath}`);
     this.name = "FileLockTimeoutError";
     this.lockPath = lockPath;
     this.timeoutMs = timeoutMs;
+    this.context = context;
   }
+}
+
+function toFileLockTimeoutError(input: {
+  lockPath: string;
+  timeoutMs: number;
+  reason: string;
+  staleAfterMs?: number | undefined;
+}): FileLockTimeoutError {
+  return new FileLockTimeoutError(input.lockPath, input.timeoutMs, {
+    lockPath: input.lockPath,
+    reason: input.reason,
+    ...(input.staleAfterMs !== undefined ? { staleAfterMs: input.staleAfterMs } : {}),
+    timeoutMs: input.timeoutMs
+  });
+}
+
+function toFileLockRangeError(input: {
+  message: string;
+  context: FileLockErrorContext;
+}): RangeError & { context: FileLockErrorContext } {
+  return Object.assign(new RangeError(input.message), {
+    context: input.context
+  });
 }
 
 function delay(ms: number): Promise<void> {
@@ -266,6 +302,46 @@ async function tryRecoverStaleLock(
   }
 }
 
+async function handleExistingLock(input: {
+  lockPath: string;
+  startedAt: number;
+  staleAfterMs?: number;
+  timeoutMs: number;
+}): Promise<"retry" | "wait"> {
+  if (Date.now() - input.startedAt >= input.timeoutMs) {
+    throw toFileLockTimeoutError({
+      lockPath: input.lockPath,
+      timeoutMs: input.timeoutMs,
+      reason: "initial_lock_timeout",
+      ...(input.staleAfterMs !== undefined
+        ? { staleAfterMs: input.staleAfterMs }
+        : {})
+    });
+  }
+
+  if (input.staleAfterMs !== undefined) {
+    const recovered = await tryRecoverStaleLock(
+      input.lockPath,
+      input.staleAfterMs
+    );
+    if (recovered) {
+      if (Date.now() - input.startedAt >= input.timeoutMs) {
+        throw toFileLockTimeoutError({
+          lockPath: input.lockPath,
+          timeoutMs: input.timeoutMs,
+          reason: "post_recovery_lock_timeout",
+          ...(input.staleAfterMs !== undefined
+            ? { staleAfterMs: input.staleAfterMs }
+            : {})
+        });
+      }
+      return "retry";
+    }
+  }
+
+  return "wait";
+}
+
 export async function withFileLock<T>(
   options: WithFileLockOptions,
   task: () => Promise<T>
@@ -278,9 +354,15 @@ export async function withFileLock<T>(
   const pollMs = options.pollMs ?? 25;
   let staleAfterMs = options.staleAfterMs;
   if (staleAfterMs !== undefined && staleAfterMs <= 0) {
-    throw new RangeError(
-      `staleAfterMs must be > 0 when provided: ${options.lockPath}`
-    );
+    throw toFileLockRangeError({
+      message: `staleAfterMs must be > 0 when provided: ${options.lockPath}`,
+      context: {
+        lockPath: options.lockPath,
+        reason: "invalid_stale_after_ms",
+        staleAfterMs,
+        timeoutMs: options.timeoutMs
+      }
+    });
   }
 
   if (staleAfterMs !== undefined && staleAfterMs > options.timeoutMs) {
@@ -303,24 +385,15 @@ export async function withFileLock<T>(
       if (!hasErrnoCode(error) || error.code !== "EEXIST") {
         throw error;
       }
-
-      if (Date.now() - startedAt >= options.timeoutMs) {
-        throw new FileLockTimeoutError(options.lockPath, options.timeoutMs);
+      const nextAction = await handleExistingLock({
+        lockPath: options.lockPath,
+        startedAt,
+        ...(staleAfterMs !== undefined ? { staleAfterMs } : {}),
+        timeoutMs: options.timeoutMs
+      });
+      if (nextAction === "retry") {
+        continue;
       }
-
-      if (staleAfterMs !== undefined) {
-        const recovered = await tryRecoverStaleLock(
-          options.lockPath,
-          staleAfterMs
-        );
-        if (recovered) {
-          if (Date.now() - startedAt >= options.timeoutMs) {
-            throw new FileLockTimeoutError(options.lockPath, options.timeoutMs);
-          }
-          continue;
-        }
-      }
-
       await delay(pollMs);
       continue;
     }
@@ -328,7 +401,12 @@ export async function withFileLock<T>(
     if (Date.now() - startedAt >= options.timeoutMs) {
       await lockHandle.close().catch(() => undefined);
       await rm(options.lockPath, { force: true }).catch(() => undefined);
-      throw new FileLockTimeoutError(options.lockPath, options.timeoutMs);
+      throw toFileLockTimeoutError({
+        lockPath: options.lockPath,
+        timeoutMs: options.timeoutMs,
+        reason: "lock_timed_out_after_open",
+        ...(staleAfterMs !== undefined ? { staleAfterMs } : {})
+      });
     }
 
     try {
