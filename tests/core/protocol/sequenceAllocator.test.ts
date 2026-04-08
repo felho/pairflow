@@ -49,9 +49,19 @@ describe("allocateNextProtocolSequence", () => {
   });
 
   it("rejects invalid id format", () => {
-    expect(() =>
-      allocateNextProtocolSequence([buildEnvelope("custom-id")])
-    ).toThrow(TranscriptSequenceError);
+    try {
+      allocateNextProtocolSequence([buildEnvelope("custom-id")]);
+      throw new Error("Expected TranscriptSequenceError");
+    } catch (error) {
+      expect(error).toBeInstanceOf(TranscriptSequenceError);
+      expect(error).toMatchObject({
+        context: {
+          source: "parse_envelope_id",
+          reason: "invalid_id_format",
+          envelopeId: "custom-id"
+        }
+      });
+    }
   });
 
   it("rejects sequence gaps", () => {
@@ -64,12 +74,23 @@ describe("allocateNextProtocolSequence", () => {
   });
 
   it("rejects duplicate sequence numbers", () => {
-    expect(() =>
+    try {
       allocateNextProtocolSequence([
         buildEnvelope("msg_20260221_001"),
         buildEnvelope("msg_20260222_001")
-      ], new Date("2026-02-21T12:00:00.000Z"), { strictAudit: true })
-    ).toThrow(/Duplicate envelope sequence/u);
+      ], new Date("2026-02-21T12:00:00.000Z"), { strictAudit: true });
+      throw new Error("Expected TranscriptSequenceError");
+    } catch (error) {
+      expect(error).toBeInstanceOf(TranscriptSequenceError);
+      expect((error as Error).message).toContain("Duplicate envelope sequence");
+      expect(error).toMatchObject({
+        context: {
+          source: "strict_audit_duplicate",
+          reason: "duplicate_sequence",
+          sequence: 1
+        }
+      });
+    }
   });
 
   it("uses fast-path allocation from last envelope by default", () => {

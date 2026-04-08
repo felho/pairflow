@@ -11,33 +11,76 @@ export interface ProtocolSequenceAllocationOptions {
   strictAudit?: boolean;
 }
 
+export interface TranscriptSequenceErrorContext {
+  source:
+    | "parse_envelope_id"
+    | "allocate_fast_path"
+    | "strict_audit_duplicate"
+    | "strict_audit_gap";
+  reason:
+    | "invalid_id_format"
+    | "invalid_sequence"
+    | "unexpected_empty_tail"
+    | "duplicate_sequence"
+    | "sequence_gap";
+  envelopeId?: string | undefined;
+  sequence?: number | undefined;
+}
+
 export class TranscriptSequenceError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly context: TranscriptSequenceErrorContext | undefined;
+
+  public constructor(
+    input:
+      | string
+      | {
+        message: string;
+        context?: TranscriptSequenceErrorContext | undefined;
+      }
+  ) {
+    const normalized =
+      typeof input === "string" ? { message: input, context: undefined } : input;
+    super(normalized.message);
     this.name = "TranscriptSequenceError";
+    this.context = normalized.context;
   }
 }
 
 function parseSequenceFromEnvelopeId(id: string): number {
   const match = messageIdPattern.exec(id);
   if (match === null) {
-    throw new TranscriptSequenceError(
-      `Invalid envelope id format in transcript: ${id}`
-    );
+    throw new TranscriptSequenceError({
+      message: `Invalid envelope id format in transcript: ${id}`,
+      context: {
+        source: "parse_envelope_id",
+        reason: "invalid_id_format",
+        envelopeId: id
+      }
+    });
   }
 
   const sequenceText = match[2];
   if (sequenceText === undefined) {
-    throw new TranscriptSequenceError(
-      `Invalid envelope id format in transcript: ${id}`
-    );
+    throw new TranscriptSequenceError({
+      message: `Invalid envelope id format in transcript: ${id}`,
+      context: {
+        source: "parse_envelope_id",
+        reason: "invalid_id_format",
+        envelopeId: id
+      }
+    });
   }
 
   const sequence = Number.parseInt(sequenceText, 10);
   if (!Number.isSafeInteger(sequence) || sequence <= 0) {
-    throw new TranscriptSequenceError(
-      `Invalid envelope sequence in transcript id: ${id}`
-    );
+    throw new TranscriptSequenceError({
+      message: `Invalid envelope sequence in transcript id: ${id}`,
+      context: {
+        source: "parse_envelope_id",
+        reason: "invalid_sequence",
+        envelopeId: id
+      }
+    });
   }
 
   return sequence;
@@ -71,7 +114,13 @@ export function allocateNextProtocolSequence(
   if (!options.strictAudit) {
     const lastEnvelope = envelopes[envelopes.length - 1];
     if (lastEnvelope === undefined) {
-      throw new TranscriptSequenceError("Transcript envelope list is unexpectedly empty");
+      throw new TranscriptSequenceError({
+        message: "Transcript envelope list is unexpectedly empty",
+        context: {
+          source: "allocate_fast_path",
+          reason: "unexpected_empty_tail"
+        }
+      });
     }
     const nextSequence = parseSequenceFromEnvelopeId(lastEnvelope.id) + 1;
     return {
@@ -86,9 +135,14 @@ export function allocateNextProtocolSequence(
   for (const envelope of envelopes) {
     const sequence = parseSequenceFromEnvelopeId(envelope.id);
     if (seenSequences.has(sequence)) {
-      throw new TranscriptSequenceError(
-        `Duplicate envelope sequence in transcript: ${sequence}`
-      );
+      throw new TranscriptSequenceError({
+        message: `Duplicate envelope sequence in transcript: ${sequence}`,
+        context: {
+          source: "strict_audit_duplicate",
+          reason: "duplicate_sequence",
+          sequence
+        }
+      });
     }
     seenSequences.add(sequence);
     if (sequence > maxSequence) {
@@ -98,9 +152,14 @@ export function allocateNextProtocolSequence(
 
   for (let sequence = 1; sequence <= maxSequence; sequence += 1) {
     if (!seenSequences.has(sequence)) {
-      throw new TranscriptSequenceError(
-        `Transcript sequence gap detected before next allocation: missing ${sequence}`
-      );
+      throw new TranscriptSequenceError({
+        message: `Transcript sequence gap detected before next allocation: missing ${sequence}`,
+        context: {
+          source: "strict_audit_gap",
+          reason: "sequence_gap",
+          sequence
+        }
+      });
     }
   }
 
