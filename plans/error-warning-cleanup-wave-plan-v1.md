@@ -54,6 +54,7 @@ Az `error` fitness check jelenleg hard-fail helyett `warn` módban fut, de a bac
    - `converged`
    - `workspace-resolution`
    - `ui-repo-scope`
+   - `worktree-manager`
    - `reviewer-artifact`
    - `docContractGateArtifacts`
    - státusz: pending
@@ -74,4 +75,5 @@ Az `error` fitness check jelenleg hard-fail helyett `warn` módban fut, de a bac
 - Wave 3 commit: `72a13e34` `refactor(error): add open and metrics error context`
 - Wave 4 singleton: `workspaceResolution.ts` warning cleanup ready for commit
 - Wave 5 singleton: `repoScope.ts` warning cleanup ready for commit
-- Aktuális warning baseline: `error` check `126 -> 106 -> 97 -> 92 -> 87 -> 82`
+- Wave 6 singleton: `worktreeManager.ts` warning cleanup ready for commit
+- Aktuális warning baseline: `error` check `126 -> 106 -> 97 -> 92 -> 87 -> 82 -> 77`

@@ -34,25 +34,66 @@ export type {
   WorktreeCleanupResult
 } from "../../shared/ports/worktreeWorkspace.js";
 
+interface WorkspaceErrorContext {
+  baseBranch?: string | undefined;
+  baseRef?: string | undefined;
+  bubbleBranch?: string | undefined;
+  entry?: string | undefined;
+  localOverlayMode?: LocalOverlayConfig["mode"] | undefined;
+  path?: string | undefined;
+  reason?: string | undefined;
+  repoPath?: string | undefined;
+  worktreePath?: string | undefined;
+}
+
+interface WorkspaceErrorOptions extends ErrorOptions {
+  context?: WorkspaceErrorContext | undefined;
+}
+
 export class WorkspaceError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly context: WorkspaceErrorContext | undefined;
+
+  public constructor(message: string, options?: WorkspaceErrorOptions) {
+    super(message, options);
     this.name = "WorkspaceError";
+    this.context = options?.context;
   }
 }
 
 export class WorkspaceBootstrapError extends WorkspaceError {
-  public constructor(message: string) {
-    super(message);
+  public constructor(message: string, options?: WorkspaceErrorOptions) {
+    super(message, options);
     this.name = "WorkspaceBootstrapError";
   }
 }
 
 export class WorkspaceCleanupError extends WorkspaceError {
-  public constructor(message: string) {
-    super(message);
+  public constructor(message: string, options?: WorkspaceErrorOptions) {
+    super(message, options);
     this.name = "WorkspaceCleanupError";
   }
+}
+
+function toWorkspaceBootstrapError(input: {
+  message: string;
+  context: WorkspaceErrorContext;
+  cause?: unknown;
+}): WorkspaceBootstrapError {
+  return new WorkspaceBootstrapError(input.message, {
+    context: input.context,
+    ...(input.cause !== undefined ? { cause: input.cause } : {})
+  });
+}
+
+function toWorkspaceCleanupError(input: {
+  message: string;
+  context: WorkspaceErrorContext;
+  cause?: unknown;
+}): WorkspaceCleanupError {
+  return new WorkspaceCleanupError(input.message, {
+    context: input.context,
+    ...(input.cause !== undefined ? { cause: input.cause } : {})
+  });
 }
 
 async function assertGitRepositoryForBootstrap(repoPath: string): Promise<void> {
@@ -60,7 +101,14 @@ async function assertGitRepositoryForBootstrap(repoPath: string): Promise<void> 
     await assertGitRepository(repoPath);
   } catch (error) {
     if (error instanceof GitRepositoryError) {
-      throw new WorkspaceBootstrapError(error.message);
+      throw toWorkspaceBootstrapError({
+        message: error.message,
+        context: {
+          reason: "invalid_git_repository",
+          repoPath
+        },
+        cause: error
+      });
     }
     throw error;
   }
@@ -71,7 +119,14 @@ async function assertGitRepositoryForCleanup(repoPath: string): Promise<void> {
     await assertGitRepository(repoPath);
   } catch (error) {
     if (error instanceof GitRepositoryError) {
-      throw new WorkspaceCleanupError(error.message);
+      throw toWorkspaceCleanupError({
+        message: error.message,
+        context: {
+          reason: "invalid_git_repository",
+          repoPath
+        },
+        cause: error
+      });
     }
     throw error;
   }
@@ -90,20 +145,37 @@ async function resolveBaseRef(repoPath: string, baseBranch: string): Promise<str
 
   const tagRef = `refs/tags/${baseBranch}`;
   if (await refExists(repoPath, tagRef)) {
-    throw new WorkspaceBootstrapError(
-      `Base ref '${baseBranch}' resolves to tag '${tagRef}'. Tags are not supported for --base; use a branch name.`
-    );
+    throw toWorkspaceBootstrapError({
+      message: `Base ref '${baseBranch}' resolves to tag '${tagRef}'. Tags are not supported for --base; use a branch name.`,
+      context: {
+        baseBranch,
+        baseRef: tagRef,
+        reason: "base_ref_is_tag",
+        repoPath
+      }
+    });
   }
 
-  throw new WorkspaceBootstrapError(
-    `Base branch not found as local or origin remote ref: ${baseBranch}`
-  );
+  throw toWorkspaceBootstrapError({
+    message: `Base branch not found as local or origin remote ref: ${baseBranch}`,
+    context: {
+      baseBranch,
+      reason: "base_branch_not_found",
+      repoPath
+    }
+  });
 }
 
 async function assertPathDoesNotExist(path: string): Promise<void> {
   try {
     await stat(path);
-    throw new WorkspaceBootstrapError(`Path already exists: ${path}`);
+    throw toWorkspaceBootstrapError({
+      message: `Path already exists: ${path}`,
+      context: {
+        path,
+        reason: "path_already_exists"
+      }
+    });
   } catch (error) {
     const typedError = error as NodeJS.ErrnoException;
     if (typedError.code !== "ENOENT") {
@@ -132,27 +204,45 @@ function resolveLocalOverlayConfig(
 
 function assertLocalOverlayEntry(entry: string): void {
   if (entry.trim().length === 0) {
-    throw new WorkspaceBootstrapError("Local overlay entry cannot be empty.");
+    throw toWorkspaceBootstrapError({
+      message: "Local overlay entry cannot be empty.",
+      context: {
+        entry,
+        reason: "empty_local_overlay_entry"
+      }
+    });
   }
 
   if (isAbsolute(entry)) {
-    throw new WorkspaceBootstrapError(
-      `Local overlay entry must be a relative path: ${entry}`
-    );
+    throw toWorkspaceBootstrapError({
+      message: `Local overlay entry must be a relative path: ${entry}`,
+      context: {
+        entry,
+        reason: "absolute_local_overlay_entry"
+      }
+    });
   }
 
   const normalized = entry.replaceAll("\\", "/");
   if (normalized.includes("//")) {
-    throw new WorkspaceBootstrapError(
-      `Local overlay entry must be normalized: ${entry}`
-    );
+    throw toWorkspaceBootstrapError({
+      message: `Local overlay entry must be normalized: ${entry}`,
+      context: {
+        entry,
+        reason: "non_normalized_local_overlay_entry"
+      }
+    });
   }
 
   const segments = normalized.split("/");
   if (segments.some((segment) => segment === "." || segment === ".." || segment.length === 0)) {
-    throw new WorkspaceBootstrapError(
-      `Local overlay entry cannot contain '.'/'..' segments: ${entry}`
-    );
+    throw toWorkspaceBootstrapError({
+      message: `Local overlay entry cannot contain '.'/'..' segments: ${entry}`,
+      context: {
+        entry,
+        reason: "invalid_local_overlay_segments"
+      }
+    });
   }
 }
 
@@ -238,9 +328,15 @@ export const bootstrapWorktreeWorkspace: BootstrapWorktreeWorkspacePort = async 
   await assertGitRepositoryForBootstrap(repoPath);
 
   if (await branchExists(repoPath, input.bubbleBranch)) {
-    throw new WorkspaceBootstrapError(
-      `Bubble branch already exists: ${input.bubbleBranch}`
-    );
+    throw toWorkspaceBootstrapError({
+      message: `Bubble branch already exists: ${input.bubbleBranch}`,
+      context: {
+        bubbleBranch: input.bubbleBranch,
+        reason: "bubble_branch_exists",
+        repoPath,
+        worktreePath
+      }
+    });
   }
 
   const baseRef = await resolveBaseRef(repoPath, input.baseBranch);
