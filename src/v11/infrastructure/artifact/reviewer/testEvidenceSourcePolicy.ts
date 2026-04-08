@@ -40,6 +40,7 @@ const maxRefSourceChars = 60_000;
 const sourcePolicyFallbackMarker = "source_policy_fallback";
 const evidencePolicyDirPrefix = ".pairflow/evidence/";
 const forcedFallbackErrorMessage = "forced source policy fallback";
+const forcedFallbackReasonCode = "TEST_EVIDENCE_SOURCE_POLICY_FORCED_FALLBACK";
 const forcedFallbackContextMarker = "forced_fallback";
 
 function isPathInside(parentPath: string, childPath: string): boolean {
@@ -318,7 +319,10 @@ export async function loadEvidenceSources(
 
   try {
     if (input.forceSourcePolicyFallback === true) {
-      throw new Error(forcedFallbackErrorMessage);
+      const context = { fallback_context: forcedFallbackContextMarker };
+      throw new Error(
+        `${forcedFallbackReasonCode}: ${forcedFallbackErrorMessage} ${JSON.stringify(context)}`
+      );
     }
 
     const canonicalWorktreePath = await realpath(input.worktreePath);
@@ -338,7 +342,8 @@ export async function loadEvidenceSources(
     };
   } catch (error: unknown) {
     const fallbackContext =
-      error instanceof Error && error.message === forcedFallbackErrorMessage
+      error instanceof Error &&
+      error.message.includes(forcedFallbackReasonCode)
         ? forcedFallbackContextMarker
         : formatFallbackContext(error);
 
