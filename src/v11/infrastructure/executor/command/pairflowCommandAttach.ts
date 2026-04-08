@@ -6,7 +6,10 @@ import { SchemaValidationError } from "../../../shared/validation/primitives.js"
 import { DEFAULT_ATTACH_LAUNCHER } from "../../../../config/defaults.js";
 import { loadPairflowGlobalConfig } from "../../../../config/pairflowConfig.js";
 import type { AttachLauncher } from "../../../../types/bubble.js";
-import { BubbleLookupError, resolveBubbleById } from "../../../../core/bubble/bubbleLookup.js";
+import {
+  BubbleLookupError,
+  resolveBubbleById
+} from "../workspace/bubbleLookup.js";
 import { buildBubbleTmuxSessionName } from "../../../shared/bubble/tmuxSessionName.js";
 import {
   AttachBubbleError,

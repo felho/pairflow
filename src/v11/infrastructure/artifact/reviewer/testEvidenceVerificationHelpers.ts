@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { runGit } from "../../../../core/workspace/git.js";
+import { runGit } from "../../workspace/git.js";
 import type {
   ReviewerTestCommandEvidence,
   ReviewerTestCommandStatus,

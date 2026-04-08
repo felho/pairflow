@@ -1,6 +1,6 @@
 import type { PairflowGlobalConfig } from "../../../../config/pairflowConfig.js";
 import type { AttachLauncher } from "../../../../types/bubble.js";
-import type { resolveBubbleById } from "../../../../core/bubble/bubbleLookup.js";
+import type { ResolveBubbleByIdPort } from "../../../shared/ports/bubbleLookup.js";
 
 export type ExplicitAttachLauncher = Exclude<AttachLauncher, "auto">;
 export type GuiAttachLauncher = Exclude<ExplicitAttachLauncher, "copy">;
@@ -57,7 +57,7 @@ export type AttachBubbleReasonCode =
 
 export interface AttachBubbleDependencies {
   executeAttachCommand?: AttachCommandExecutor;
-  resolveBubbleById?: typeof resolveBubbleById;
+  resolveBubbleById?: ResolveBubbleByIdPort;
   checkTmuxSessionExists?: TmuxSessionChecker;
   writeYamlFile?: (path: string, content: string) => Promise<void>;
   checkLauncherAvailability?: LauncherAvailabilityChecker;

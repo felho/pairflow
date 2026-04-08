@@ -320,11 +320,13 @@ validation, run `pnpm build` first.
 | W0 | inventory and initial tagging | mixed | planned | Build the first residual table from the current warn-only coverage output |
 | W1 | inventory and initial tagging | mixed | completed | Initial coverage run shows `323` residual imports; `320` target thin or near-thin `core` bridges, so the backlog is dominated by consumer rewrites rather than retained `core` behavior |
 | W2 | easy rewrite batch 1 | easy | validated | First safe rewrites landed only where the consumer layer stayed valid: `emitOpenV11` now imports `shellQuote` from `shared/foundation`, and `eventsStore` now imports `fileLock` from the canonical `infrastructure/foundation` owner; coverage moved from `323 -> 321` total and `17 -> 15` retired-shim warnings |
-| W3 | easy rewrite batch 2 | easy | planned | Continue thin-shim removals, then rerun classification |
-| W4 | approval dependency bridge | medium | planned | Rewrite `approval` contract/default wiring away from `core` shims |
-| W5 | status and inbox bridge cleanup | medium | planned | Resolve read-side contract leakage without broad redesign |
-| W6 | hard residual review | hard | planned | Decide `ports`, retained bridge, or owner-move outcome |
-| W7 | boundary test re-hardening | mixed | planned | Return coverage test to fail-only |
+| W3 | easy rewrite batch 2 | easy | validated | Infrastructure-side `pairflowCommandAttach` now uses the canonical `bubbleLookup` owner and port type instead of the `core` shim; coverage moved from `321 -> 319` total with no new dependency regressions |
+| W4 | easy rewrite batch 3 | easy | validated | `testEvidenceVerificationHelpers` now uses the canonical infrastructure `runGit` owner instead of the `core/workspace/git` shim; coverage moved from `319 -> 318` total while the retired-shim subset stayed at `15` |
+| W5 | easy rewrite batch 4 | easy | planned | Continue only `shared -> shared`, `infrastructure -> infrastructure`, or `application -> shared` rewrites; do not cross into direct `application -> infrastructure` rewires |
+| W6 | approval dependency bridge | medium | planned | Rewrite `approval` contract/default wiring away from `core` shims |
+| W7 | status and inbox bridge cleanup | medium | planned | Resolve read-side contract leakage without broad redesign |
+| W8 | hard residual review | hard | planned | Decide `ports`, retained bridge, or owner-move outcome |
+| W9 | boundary test re-hardening | mixed | planned | Return coverage test to fail-only |
 
 ## Stop Conditions
 
