@@ -3,13 +3,6 @@ import type {
   MetaReviewSubmissionPayload,
   ProtocolEnvelope
 } from "../../../types/protocol.js";
-import type { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import type { readRuntimeSessionsRegistry } from "../../../core/runtime/sessionsRegistry.js";
-import type {
-  readStateSnapshot,
-  writeStateSnapshot
-} from "../../../core/state/stateStore.js";
 import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateTypes.js";
 import type { recoverMetaReviewGateFromSnapshot } from "../metaReviewGate/metaReviewGateRecovery.js";
 import type {
@@ -21,6 +14,13 @@ import type {
   MetaReviewArtifactWritePort
 } from "./metaReviewArtifactIo.js";
 import type { MetaReviewResult } from "./metaReviewTypes.js";
+import type { AppendProtocolEnvelopePort } from "../ports/transcript.js";
+import type { ResolveBubbleByIdPort } from "../ports/bubbleLookup.js";
+import type { ReadRuntimeSessionsRegistryPort } from "../ports/runtimeSessions.js";
+import type {
+  ReadStateSnapshotPort,
+  WriteStateSnapshotPort
+} from "../ports/stateSnapshots.js";
 
 export type {
   MetaReviewDepth,
@@ -50,11 +50,11 @@ export interface MetaReviewSubmitInput extends MetaReviewReadInput {
 }
 
 export interface MetaReviewCommandDependencies {
-  resolveBubbleById?: typeof resolveBubbleById;
-  readStateSnapshot?: typeof readStateSnapshot;
-  writeStateSnapshot?: typeof writeStateSnapshot;
-  appendProtocolEnvelope?: typeof appendProtocolEnvelope;
-  readRuntimeSessionsRegistry?: typeof readRuntimeSessionsRegistry;
+  resolveBubbleById?: ResolveBubbleByIdPort;
+  readStateSnapshot?: ReadStateSnapshotPort;
+  writeStateSnapshot?: WriteStateSnapshotPort;
+  appendProtocolEnvelope?: AppendProtocolEnvelopePort;
+  readRuntimeSessionsRegistry?: ReadRuntimeSessionsRegistryPort;
   emitDeliveryNotification?: MetaReviewDeliveryEmitter;
   buildDeliveryMessageRef?: MetaReviewDeliveryMessageRefBuilder;
   readFile?: MetaReviewArtifactReadPort;

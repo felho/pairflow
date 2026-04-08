@@ -1,5 +1,5 @@
-import type { readTranscriptEnvelopes } from "../../../core/protocol/transcriptStore.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
+import type { ReadTranscriptEnvelopesPort } from "../ports/transcript.js";
 
 const metaReviewRunFailedSummaryPrefix = "META_REVIEW_GATE_RUN_FAILED:";
 const metaReviewGateRunFailedReasonCode = "META_REVIEW_GATE_RUN_FAILED";
@@ -86,7 +86,7 @@ export async function readApprovalTranscriptContext(
   transcriptPath: string,
   round: number,
   dependencies: {
-    readTranscriptEnvelopes: typeof readTranscriptEnvelopes;
+    readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
   }
 ): Promise<ApprovalTranscriptContext> {
   const transcript = await dependencies.readTranscriptEnvelopes(transcriptPath, {
