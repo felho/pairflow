@@ -12,7 +12,7 @@ owners:
 
 ## Objective
 
-Last updated from `main` at `69fa43fc`.
+Last updated from `main` at `26d0a749`.
 
 A fitness hard-fail backlog az `error` check lezárása után egyetlen checkerre szűkült:
 
@@ -39,12 +39,13 @@ Legutóbbi teljes fitness report:
 
 Jelenlegi `complexity` summary:
 
-1. `65` budget violation
+1. `56` budget violation
 2. a legnagyobb klaszterek:
-   - `src/v11/infrastructure/ui/**`
    - `src/v11/shared/state/stateSchema.ts`
-   - `src/v11/shared/metaReview/**`
    - `src/v11/infrastructure/artifact/**`
+   - `src/v11/shared/gates/docContractGates.ts`
+   - `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`
+   - `src/v11/infrastructure/state/stateStore.ts`
    - `src/v11/application/attach/emitAttachV11.ts`
 
 ## Working Strategy
@@ -125,9 +126,11 @@ Goal:
 
 Initial targets:
 
-1. `src/v11/shared/metaReview/metaReviewCommandSubmitRuntime.ts`
-2. `src/v11/shared/metaReview/metaReviewCanonicalization.ts`
+1. `src/v11/application/create/createReviewerFocus.ts`
+2. `src/v11/infrastructure/artifact/reviewer/testEvidenceRuntime.ts`
 3. `src/v11/shared/gates/docContractGates.ts`
+4. `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`
+5. `src/v11/infrastructure/artifact/validation/passValidationEvidence.ts`
 
 ### Wave 4: Heavyweight Infrastructure / State Monoliths
 
@@ -160,7 +163,7 @@ Minden bounded batch után:
 - [x] Wave 1 completed
 - [x] Wave 2 started
 - [x] Wave 2 completed
-- [ ] Wave 3 started
+- [x] Wave 3 started
 - [ ] Wave 3 completed
 - [ ] Wave 4 started
 - [ ] Wave 4 completed
@@ -176,3 +179,13 @@ Minden bounded batch után:
    - `c515b72d` `refactor(complexity): split meta review freshness helpers`
    - `b4e4af90` `refactor(complexity): split meta-review gate parity helpers`
    - `d3608b6b` `refactor(complexity): split ui repo scope resolution`
+5. Wave 3 eddig lezárt commitok a jelenlegi `main`-en:
+   - `99beddcf` `refactor(complexity): split list bubbles context`
+   - `24e689e3` `refactor(v11): shrink ui server orchestration`
+   - `69a4ff3c` `refactor(v11): extract reviewer focus frontmatter helper`
+   - `9b353f83` `refactor(complexity): extract reviewer evidence source policy`
+   - `26d0a749` `fix(reviewer): correct source policy diagnostics type`
+6. Következő párhuzamos batch-ek:
+   - `passValidationEvidence` recovery-marker extract
+   - `docContractGates` reviewer-warning evaluation helper extract
+   - `tmuxDelivery` delivery-message helper extract
