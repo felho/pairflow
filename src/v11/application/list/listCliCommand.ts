@@ -105,6 +105,9 @@ export async function runBubbleListCommand(
       cwd
     });
   } catch (error) {
-    asBubbleListError(error);
+    asBubbleListError(error, {
+      repoPathProvided: options.repo !== undefined,
+      cwdProvided: cwd.length > 0
+    });
   }
 }

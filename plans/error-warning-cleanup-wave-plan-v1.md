@@ -87,4 +87,5 @@ Az `error` fitness check jelenleg hard-fail helyett `warn` módban fut, de a bac
 - Wave 13 bounded batch: `routerHttp.ts` + `routerRequest.ts` warning cleanup ready for commit
 - Wave 14 singleton: `repoResolution.ts` warning cleanup ready for commit
 - Wave 15 bounded batch: `docContractGateArtifacts.ts` + `docContractGateArtifactNormalization.ts` warning cleanup ready for commit
-- Aktuális warning baseline: `error` check `126 -> 106 -> 97 -> 92 -> 87 -> 82 -> 77 -> 73 -> 69 -> 65 -> 63 -> 61 -> 59 -> 55 -> 54 -> 52`
+- Wave 16 singleton: `listCommandApi.ts` warning cleanup ready for commit
+- Aktuális warning baseline: `error` check `126 -> 106 -> 97 -> 92 -> 87 -> 82 -> 77 -> 73 -> 69 -> 65 -> 63 -> 61 -> 59 -> 55 -> 54 -> 52 -> 51`

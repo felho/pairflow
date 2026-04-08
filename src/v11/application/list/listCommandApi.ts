@@ -30,10 +30,35 @@ export type {
   BubbleListView
 } from "./listCommandContract.js";
 
+export interface BubbleListErrorContext {
+  source: "repo_resolution" | "unexpected_error";
+  repoPathProvided: boolean;
+  cwdProvided: boolean;
+  causeName?: string | undefined;
+}
+
+export interface BubbleListErrorInput {
+  message: string;
+  cause?: unknown;
+  context?: BubbleListErrorContext | undefined;
+}
+
+export interface BubbleListErrorNormalizationContext {
+  repoPathProvided: boolean;
+  cwdProvided: boolean;
+}
+
 export class BubbleListError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly context: BubbleListErrorContext | undefined;
+
+  public constructor(input: string | BubbleListErrorInput) {
+    const normalized =
+      typeof input === "string"
+        ? { message: input, cause: undefined, context: undefined }
+        : input;
+    super(normalized.message, { cause: normalized.cause });
     this.name = "BubbleListError";
+    this.context = normalized.context;
   }
 }
 
@@ -279,12 +304,26 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
   };
 }
 
-export function asBubbleListError(error: unknown): never {
+export function asBubbleListError(
+  error: unknown,
+  context: BubbleListErrorNormalizationContext
+): never {
   if (error instanceof BubbleListError) {
     throw error;
   }
   if (error instanceof Error) {
-    throw new BubbleListError(error.message);
+    throw new BubbleListError({
+      message: error.message,
+      cause: error,
+      context: {
+        source: error instanceof RepoResolutionError
+          ? "repo_resolution"
+          : "unexpected_error",
+        repoPathProvided: context.repoPathProvided,
+        cwdProvided: context.cwdProvided,
+        causeName: error.name
+      }
+    });
   }
   throw error;
 }
