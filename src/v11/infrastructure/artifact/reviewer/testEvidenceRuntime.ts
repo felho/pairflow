@@ -70,6 +70,7 @@ const sourcePolicyFallbackMarker = "source_policy_fallback";
 const evidencePolicyDirPrefix = ".pairflow/evidence/";
 const forcedFallbackErrorMessage = "forced source policy fallback";
 const forcedFallbackContextMarker = "forced_fallback";
+const TEST_EVIDENCE_SOURCE_POLICY_FALLBACK_FORCED = forcedFallbackErrorMessage;
 const commandBoundaryCharClass = "\\p{L}\\p{N}_:/.@\\-";
 const commandAliasFamiliesSeed: readonly CommandAliasFamily[] = [
   {
@@ -441,9 +442,7 @@ async function loadEvidenceSources(input: {
 
   try {
     if (input.forceSourcePolicyFallback === true) {
-      throw new Error(
-        `TEST_EVIDENCE_SOURCE_POLICY_FALLBACK_FORCED: context forceSourcePolicyFallback=true; ${forcedFallbackErrorMessage}`
-      );
+      throw new Error(TEST_EVIDENCE_SOURCE_POLICY_FALLBACK_FORCED);
     }
 
     const canonicalWorktreePath = await realpath(input.worktreePath);
