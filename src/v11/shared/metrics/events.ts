@@ -39,13 +39,24 @@ export interface CreateMetricsEventInput {
   now?: Date;
 }
 
+export interface MetricsEventValidationErrorContext {
+  source: "event_validation";
+  reason: "non_record_payload" | "invalid_event_fields";
+  invalidFields?: string[] | undefined;
+}
+
 export class MetricsEventValidationError extends Error {
   public readonly errors: string[];
+  public readonly context: MetricsEventValidationErrorContext | undefined;
 
-  public constructor(errors: string[]) {
+  public constructor(
+    errors: string[],
+    context?: MetricsEventValidationErrorContext
+  ) {
     super(`Invalid metrics event: ${errors.join(" ")}`);
     this.name = "MetricsEventValidationError";
     this.errors = errors;
+    this.context = context;
   }
 }
 
@@ -113,9 +124,14 @@ export function createMetricsEvent(
 
 export function assertValidMetricsEvent(event: unknown): PairflowMetricsEvent {
   if (!isRecord(event)) {
-    throw new MetricsEventValidationError([
-      "Event payload must be an object."
-    ]);
+    throw new MetricsEventValidationError(
+      ["Event payload must be an object."],
+      {
+        source: "event_validation",
+        reason: "non_record_payload",
+        invalidFields: ["event"]
+      }
+    );
   }
 
   const errors: string[] = [];
@@ -160,7 +176,11 @@ export function assertValidMetricsEvent(event: unknown): PairflowMetricsEvent {
   }
 
   if (errors.length > 0) {
-    throw new MetricsEventValidationError(errors);
+    throw new MetricsEventValidationError(errors, {
+      source: "event_validation",
+      reason: "invalid_event_fields",
+      invalidFields: [...errors]
+    });
   }
 
   return event as unknown as PairflowMetricsEvent;

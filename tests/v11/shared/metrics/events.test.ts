@@ -12,6 +12,7 @@ import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  assertValidMetricsEvent,
   createMetricsEvent,
   MetricsEventValidationError,
   resolveMetricsShardPath
@@ -264,5 +265,41 @@ describe("metrics events writer", () => {
         metadata: {}
       })
     ).toThrow(MetricsEventValidationError);
+
+    try {
+      createMetricsEvent({
+        repo_path: "relative/repo",
+        bubble_instance_id: "",
+        bubble_id: "",
+        event_type: "",
+        round: 0,
+        actor_role: "invalid" as never,
+        metadata: null as never
+      });
+      throw new Error("Expected MetricsEventValidationError");
+    } catch (error) {
+      expect(error).toBeInstanceOf(MetricsEventValidationError);
+      expect(error).toMatchObject({
+        context: {
+          source: "event_validation",
+          reason: "invalid_event_fields"
+        }
+      });
+    }
+  });
+
+  it("attaches non-record context to raw validation failures", () => {
+    try {
+      assertValidMetricsEvent(null);
+    } catch (error) {
+      expect(error).toBeInstanceOf(MetricsEventValidationError);
+      expect(error).toMatchObject({
+        context: {
+          source: "event_validation",
+          reason: "non_record_payload",
+          invalidFields: ["event"]
+        }
+      });
+    }
   });
 });
