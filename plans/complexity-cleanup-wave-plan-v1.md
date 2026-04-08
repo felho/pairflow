@@ -12,7 +12,7 @@ owners:
 
 ## Objective
 
-Last updated from `main` at `6b553a99`.
+Last updated from `main` at `1c07fad9`.
 
 A fitness hard-fail backlog az `error` check lezárása után egyetlen checkerre szűkült:
 
@@ -224,8 +224,9 @@ Minden bounded batch után:
    - `c66910de` `refactor(complexity): split archive snapshot support`
    - `60f23f14` `refactor(complexity): split doc contract gate support`
    - `e70b59cf` `refactor(complexity): split transcript store support`
-   - `pending` `refactor(complexity): split ui repo scope state`
-   - `pending` `refactor(complexity): split ui router request surfaces`
+   - `492ccfba` `refactor(complexity): split ui repo scope state`
+   - `5218ec96` `refactor(complexity): split ui server helpers`
+   - `1c07fad9` `refactor(complexity): split ui events log`
 6. Következő párhuzamos batch-ek:
    - `stateSchema` focused validator slice
    - `convergence/policy` validator slice
