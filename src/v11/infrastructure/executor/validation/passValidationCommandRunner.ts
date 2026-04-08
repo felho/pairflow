@@ -83,69 +83,38 @@ async function appendStreamToHandle(
   }
 }
 
-export async function runPassValidationCommand(
-  input: RunPassValidationCommandInput,
-  dependencies: RunPassValidationCommandDependencies = {}
-): Promise<{
+async function preparePassValidationLogFile(input: {
+  kind: PassValidationCommandId
   command: string
-  exitCode: number
-  logPath: string
-  durationMs: number
-}> {
-  const mkdirFn = dependencies.mkdir ?? mkdir
-  const openFn = dependencies.open ?? open
-  const spawnFn = dependencies.spawn ?? spawn
-  const now = dependencies.now ?? (() => Date.now())
+  worktreePath: string
+  mkdirFn: typeof mkdir
+  openFn: typeof open
+  relativeLogPath: string
+}): Promise<FileHandle> {
+  const absoluteLogPath = join(input.worktreePath, input.relativeLogPath)
+  await input.mkdirFn(join(input.worktreePath, ".pairflow", "evidence"), {
+    recursive: true
+  })
+  const fileHandle = await input.openFn(absoluteLogPath, "w")
+  await fileHandle.writeFile(
+    [
+      `# pairflow pass validation`,
+      `kind=${input.kind}`,
+      `command=${input.command}`,
+      `cwd=${input.worktreePath}`,
+      ""
+    ].join("\n")
+  )
+  return fileHandle
+}
 
-  const relativeLogPath = buildLogPath(input.kind)
-  const absoluteLogPath = join(input.worktreePath, relativeLogPath)
-
-  let fileHandle: FileHandle | undefined
-  try {
-    await mkdirFn(join(input.worktreePath, ".pairflow", "evidence"), {
-      recursive: true
-    })
-    fileHandle = await openFn(absoluteLogPath, "w")
-    await fileHandle.writeFile(
-      [
-        `# pairflow pass validation`,
-        `kind=${input.kind}`,
-        `command=${input.command}`,
-        `cwd=${input.worktreePath}`,
-        ""
-      ].join("\n")
-    )
-  } catch (error) {
-    await fileHandle?.close().catch(() => undefined)
-    throw new PassValidationRunnerExecutionError({
-      kind: input.kind,
-      stage: "pre_header",
-      logPath: relativeLogPath,
-      cause: error
-    })
-  }
-
-  const startedAt = now()
-
-  let child: ReturnType<typeof spawnFn>
-  try {
-    child = spawnFn("bash", ["-lc", input.command], {
-      cwd: input.worktreePath,
-      stdio: ["ignore", "pipe", "pipe"]
-    })
-  } catch (error) {
-    await fileHandle.close().catch(() => undefined)
-    throw new PassValidationRunnerExecutionError({
-      kind: input.kind,
-      stage: "spawn",
-      logPath: relativeLogPath,
-      cause: error
-    })
-  }
-
-  const settle = new Promise<
-    | { exitCode: number }
-    | { error: PassValidationRunnerExecutionError }
+function createPassValidationSettlement(
+  input: RunPassValidationCommandInput,
+  child: ReturnType<typeof spawn>,
+  relativeLogPath: string
+): Promise<{ exitCode: number } | { error: PassValidationRunnerExecutionError }> {
+  return new Promise<
+    { exitCode: number } | { error: PassValidationRunnerExecutionError }
   >((resolvePromise) => {
     let settled = false
     const resolveOnce = (
@@ -177,6 +146,67 @@ export async function runPassValidationCommand(
       })
     })
   })
+}
+
+export async function runPassValidationCommand(
+  input: RunPassValidationCommandInput,
+  dependencies: RunPassValidationCommandDependencies = {}
+): Promise<{
+  command: string
+  exitCode: number
+  logPath: string
+  durationMs: number
+}> {
+  const mkdirFn = dependencies.mkdir ?? mkdir
+  const openFn = dependencies.open ?? open
+  const spawnFn = dependencies.spawn ?? spawn
+  const now = dependencies.now ?? (() => Date.now())
+
+  const relativeLogPath = buildLogPath(input.kind)
+
+  let fileHandle: FileHandle | undefined
+  try {
+    fileHandle = await preparePassValidationLogFile({
+      kind: input.kind,
+      command: input.command,
+      worktreePath: input.worktreePath,
+      mkdirFn,
+      openFn,
+      relativeLogPath
+    })
+  } catch (error) {
+    await fileHandle?.close().catch(() => undefined)
+    throw new PassValidationRunnerExecutionError({
+      kind: input.kind,
+      stage: "pre_header",
+      logPath: relativeLogPath,
+      cause: error
+    })
+  }
+
+  const startedAt = now()
+
+  let child: ReturnType<typeof spawnFn>
+  try {
+    child = spawnFn("bash", ["-lc", input.command], {
+      cwd: input.worktreePath,
+      stdio: ["ignore", "pipe", "pipe"]
+    })
+  } catch (error) {
+    await fileHandle.close().catch(() => undefined)
+    throw new PassValidationRunnerExecutionError({
+      kind: input.kind,
+      stage: "spawn",
+      logPath: relativeLogPath,
+      cause: error
+    })
+  }
+
+  const settle = createPassValidationSettlement(
+    input,
+    child,
+    relativeLogPath
+  )
 
   try {
     const stdout = child.stdout
