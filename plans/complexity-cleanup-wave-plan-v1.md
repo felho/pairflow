@@ -12,7 +12,7 @@ owners:
 
 ## Objective
 
-Last updated from `main` at `54fcc761`.
+Last updated from `main` at `6b553a99`.
 
 A fitness hard-fail backlog az `error` check lezárása után egyetlen checkerre szűkült:
 
@@ -39,15 +39,16 @@ Legutóbbi teljes fitness report:
 
 Jelenlegi `complexity` summary:
 
-1. `31` budget violation
+1. `23` budget violation
 2. a legnagyobb klaszterek:
    - `src/v11/shared/state/stateSchema.ts`
    - `src/v11/infrastructure/ui/router.ts`
    - `src/v11/domain/convergence/policy.ts`
-   - `src/v11/shared/protocol/validators.ts`
+   - `src/v11/shared/gates/docContractReviewerGateEvaluation.ts`
    - `src/v11/shared/metaReview/metaReviewCommandSubmitRuntime.ts`
    - `src/v11/infrastructure/artifact/reviewer/testEvidenceRuntime.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`
+   - `src/v11/infrastructure/artifact/validation/passValidationEvidenceReuse.ts`
 
 ## Working Strategy
 
@@ -204,9 +205,11 @@ Minden bounded batch után:
    - `8b0da57e` `refactor(complexity): split metrics read event parsing`
    - `74ff6ed3` `refactor(complexity): split meta review canonical report helpers`
    - `54fcc761` `refactor(complexity): split metrics report aggregation handlers`
+   - `57c0dba1` `refactor(complexity): split review verification validation`
+   - `6b553a99` `refactor(complexity): split protocol payload validators`
 6. Következő párhuzamos batch-ek:
    - `stateSchema` focused validator slice
-   - `protocol/validators` findings slice
-   - `metaReviewCanonicalization` report-json slice
+   - `ui/router` request and handler split
    - `convergence/policy` validator slice
-   - `metrics/report` aggregation slice
+   - `docContractReviewerGateEvaluation` reviewer finding slice
+   - `metaReviewCommandSubmitRuntime` submit-routing slice
