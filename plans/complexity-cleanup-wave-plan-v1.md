@@ -221,7 +221,8 @@ Minden bounded batch után:
    - `7c9f3bfd` `refactor(complexity): split worktree manager helpers`
    - `6e6cff14` `refactor(complexity): split actor protocol emitters`
    - `6c59020c` `refactor(complexity): split archive index support`
-   - `pending` `refactor(complexity): split archive snapshot support`
+   - `c66910de` `refactor(complexity): split archive snapshot support`
+   - `pending` `refactor(complexity): split doc contract gate support`
    - `pending` `refactor(complexity): split ui router request surfaces`
 6. Következő párhuzamos batch-ek:
    - `stateSchema` focused validator slice
