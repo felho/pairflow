@@ -52,7 +52,7 @@ function ensurePendingIntent(
 
   if (pendingIntent.status !== "pending") {
     throw new Error(
-      `Invalid pending_rework_intent status: expected pending, found ${pendingIntent.status}.`
+      `REWORK_INTENT_PENDING_STATUS_INVALID: context expected_status=pending actual_status=${pendingIntent.status}; pending_rework_intent must remain pending before apply.`
     );
   }
 

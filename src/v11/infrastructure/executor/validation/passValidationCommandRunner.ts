@@ -6,12 +6,12 @@ import type { PassValidationCommandId } from "../../artifact/validation/passVali
 
 export class PassValidationRunnerExecutionError extends Error {
   public readonly kind: PassValidationCommandId
-  public readonly stage: "pre_header" | "spawn"
+  public readonly stage: "pre_header" | "spawn" | "settle" | "stdout" | "stderr"
   public readonly logPath: string
 
   public constructor(input: {
     kind: PassValidationCommandId
-    stage: "pre_header" | "spawn"
+    stage: "pre_header" | "spawn" | "settle" | "stdout" | "stderr"
     logPath: string
     cause: unknown
   }) {
@@ -63,6 +63,15 @@ function toError(value: unknown): Error {
     return value
   }
   return new Error(String(value))
+}
+
+function toPassValidationStageError(input: {
+  kind: PassValidationCommandId
+  stage: "settle" | "stdout" | "stderr"
+  logPath: string
+  cause: unknown
+}): PassValidationRunnerExecutionError {
+  return new PassValidationRunnerExecutionError(input)
 }
 
 async function appendStreamToHandle(
@@ -193,13 +202,31 @@ export async function runPassValidationCommand(
       settle
     ])
     if ("error" in settleResult) {
-      throw settleResult.error
+      throw new PassValidationRunnerExecutionError({
+        kind: input.kind,
+        stage:
+          settleResult.error instanceof PassValidationRunnerExecutionError
+            ? settleResult.error.stage
+            : "settle",
+        logPath: relativeLogPath,
+        cause: settleResult.error
+      })
     }
     if (!stdoutResult.ok) {
-      throw stdoutResult.error
+      throw toPassValidationStageError({
+        kind: input.kind,
+        stage: "stdout",
+        logPath: relativeLogPath,
+        cause: stdoutResult.error
+      })
     }
     if (!stderrResult.ok) {
-      throw stderrResult.error
+      throw toPassValidationStageError({
+        kind: input.kind,
+        stage: "stderr",
+        logPath: relativeLogPath,
+        cause: stderrResult.error
+      })
     }
     const exitCode = settleResult.exitCode
     const durationMs = Math.max(0, now() - startedAt)

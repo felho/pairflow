@@ -9,7 +9,9 @@ export function buildBubbleTmuxSessionName(bubbleId: string): string {
   const sessionPrefix = "pf-";
   const normalized = normalizeSessionComponent(bubbleId.trim());
   if (normalized.length === 0) {
-    throw new Error("Bubble id cannot be empty for tmux session naming.");
+    throw new Error(
+      "TMUX_SESSION_NAME_BUBBLE_ID_REQUIRED: context bubble_id=empty; bubble id cannot be empty for tmux session naming."
+    );
   }
 
   const directName = `${sessionPrefix}${normalized}`;

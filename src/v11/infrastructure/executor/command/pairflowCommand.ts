@@ -13,7 +13,9 @@ export type {
 function requireWorktreePath(worktreePath: string): string {
   const trimmed = worktreePath.trim();
   if (trimmed.length === 0) {
-    throw new Error("Worktree path is required to resolve Pairflow command path.");
+    throw new Error(
+      "PAIRFLOW_COMMAND_WORKTREE_REQUIRED: context operation_id=resolve_pairflow_command_path worktree_path=empty."
+    );
   }
   return resolve(trimmed);
 }

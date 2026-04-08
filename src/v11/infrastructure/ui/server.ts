@@ -130,7 +130,7 @@ async function resolveAssetsDir(input: {
     const indexPath = join(resolvedPath, "index.html");
     if (!(await pathExists(indexPath))) {
       throw new Error(
-        `UI assets directory is missing index.html: ${resolvedPath}`
+        `UI_ASSETS_INDEX_MISSING: context assets_dir=${resolvedPath}; expected index.html in explicit UI assets directory.`
       );
     }
     return resolvedPath;

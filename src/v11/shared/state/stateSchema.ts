@@ -1164,7 +1164,7 @@ export function validateBubbleStateSnapshot(
                         : toMetaReviewExecutionContext(executionContext);
                     if (normalizedExecutionContext === null) {
                       throw new Error(
-                        "Validated RUNNING meta-review state lost meta-review execution_context during normalization."
+                        "STATE_SCHEMA_META_REVIEW_EXECUTION_CONTEXT_REQUIRED: context state=RUNNING meta_review_authority=active normalization_step=execution_context; validated meta-review state lost execution_context during normalization."
                       );
                     }
                     return normalizedExecutionContext;

@@ -4,7 +4,9 @@ import type { ProtocolEnvelope } from "../../../types/protocol.js";
 export function parseEnvelopeLine(line: string): ProtocolEnvelope {
   const trimmed = line.trim();
   if (trimmed.length === 0) {
-    throw new Error("Cannot parse an empty NDJSON line");
+    throw new Error(
+      "PROTOCOL_ENVELOPE_LINE_EMPTY: context line_format=ndjson; Cannot parse an empty NDJSON line."
+    );
   }
 
   const parsed = JSON.parse(trimmed) as unknown;
