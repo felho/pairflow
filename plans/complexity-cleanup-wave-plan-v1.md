@@ -220,7 +220,8 @@ Minden bounded batch után:
    - `98949467` `refactor(complexity): split meta-review autonomous snapshot support`
    - `7c9f3bfd` `refactor(complexity): split worktree manager helpers`
    - `6e6cff14` `refactor(complexity): split actor protocol emitters`
-   - `pending` `refactor(complexity): split archive index document and persistence`
+   - `6c59020c` `refactor(complexity): split archive index support`
+   - `pending` `refactor(complexity): split archive snapshot support`
    - `pending` `refactor(complexity): split ui router request surfaces`
 6. Következő párhuzamos batch-ek:
    - `stateSchema` focused validator slice
