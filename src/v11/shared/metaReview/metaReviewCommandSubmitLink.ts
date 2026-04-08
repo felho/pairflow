@@ -31,10 +31,15 @@ export function resolveSubmitCanonicalRunId(input: {
   );
 
   if (metaReviewRunId.status === "invalid" || findingsRunId.status === "invalid") {
-    throw new MetaReviewError(
-      "META_REVIEW_SCHEMA_INVALID",
-      "meta-review submit report_json run-link fields must be non-empty strings when provided"
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID",
+      message:
+        "meta-review submit report_json run-link fields must be non-empty strings when provided",
+      context: {
+        source: "resolve_submit_canonical_run_id",
+        reason: "invalid_run_link_field"
+      }
+    });
   }
 
   if (
@@ -42,10 +47,15 @@ export function resolveSubmitCanonicalRunId(input: {
     findingsRunId.status === "valid" &&
     metaReviewRunId.value !== findingsRunId.value
   ) {
-    throw new MetaReviewError(
-      "META_REVIEW_SCHEMA_INVALID",
-      "meta-review submit report_json run-link fields must match when both are provided"
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID",
+      message:
+        "meta-review submit report_json run-link fields must match when both are provided",
+      context: {
+        source: "resolve_submit_canonical_run_id",
+        reason: "mismatched_run_link_fields"
+      }
+    });
   }
 
   const providedRunId =
@@ -56,10 +66,15 @@ export function resolveSubmitCanonicalRunId(input: {
         : null;
 
   if (input.recommendation === "rework" && providedRunId === null) {
-    throw new MetaReviewError(
-      "META_REVIEW_SCHEMA_INVALID",
-      "meta-review submit recommendation=rework requires explicit report_json meta_review_run_id/findings_run_id linkage"
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID",
+      message:
+        "meta-review submit recommendation=rework requires explicit report_json meta_review_run_id/findings_run_id linkage",
+      context: {
+        source: "resolve_submit_canonical_run_id",
+        reason: "missing_rework_run_link"
+      }
+    });
   }
 
   return providedRunId ?? input.generatedRunId;

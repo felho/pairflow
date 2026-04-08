@@ -95,4 +95,5 @@ Az `error` fitness check jelenleg hard-fail helyett `warn` módban fut, de a bac
 - Wave 21 singleton: `validation/primitives.ts` warning cleanup ready for commit
 - Wave 22 bounded batch: `metaReviewCommandReadArtifacts.ts` warning cleanup ready for commit
 - Wave 23 bounded batch: `metaReviewCommandSubmitAuthority.ts` warning cleanup ready for commit
-- Aktuális warning baseline: `error` check `126 -> 106 -> 97 -> 92 -> 87 -> 82 -> 77 -> 73 -> 69 -> 65 -> 63 -> 61 -> 59 -> 55 -> 54 -> 52 -> 51 -> 50 -> 49 -> 47 -> 41 -> 40 -> 38 -> 36`
+- Wave 24 bounded batch: `metaReviewCommandSubmitLink.ts` warning cleanup ready for commit
+- Aktuális warning baseline: `error` check `126 -> 106 -> 97 -> 92 -> 87 -> 82 -> 77 -> 73 -> 69 -> 65 -> 63 -> 61 -> 59 -> 55 -> 54 -> 52 -> 51 -> 50 -> 49 -> 47 -> 41 -> 40 -> 38 -> 36 -> 33`
