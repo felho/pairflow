@@ -77,7 +77,13 @@ async function listBubbleIds(repoPath: string): Promise<string[]> {
     .sort((a, b) => a.localeCompare(b));
 }
 
-export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleListView> {
+async function resolveListBubblesContext(input: BubbleListInput): Promise<{
+  repoPath: string;
+  bubbleIds: string[];
+  sessions: Awaited<ReturnType<typeof readRuntimeSessionsRegistry>>;
+  normalizedRepoPath: string;
+  now: Date;
+}> {
   let repoPath: string;
   try {
     repoPath = await resolveRepoPath(input);
@@ -95,77 +101,83 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
   });
   const normalizedRepoPath = await normalizeRepoPath(repoPath);
   const now = input.now ?? new Date();
+  return {
+    repoPath,
+    bubbleIds,
+    sessions,
+    normalizedRepoPath,
+    now
+  };
+}
 
-  const bubbles: BubbleListEntry[] = [];
-  const byState = createZeroCounts();
-  let runtimeRegistered = 0;
-  let staleForNonRuntimeStates = 0;
-  let staleForInvalidStates = 0;
+async function buildBubbleListEntry(input: {
+  repoPath: string;
+  normalizedRepoPath: string;
+  bubbleId: string;
+  sessions: Awaited<ReturnType<typeof readRuntimeSessionsRegistry>>;
+  now: Date;
+}): Promise<{
+  entry: BubbleListEntry;
+  hasRuntimeSession: boolean;
+  invalidState: boolean;
+  nonRuntimeState: boolean;
+}> {
+  const bubblePaths = getBubblePaths(input.repoPath, input.bubbleId);
+  const [bubbleToml, stateLoaded, paneActivityRead] = await Promise.all([
+    readFile(bubblePaths.bubbleTomlPath, "utf8"),
+    inspectStateSnapshot(bubblePaths.statePath),
+    readWatchdogPaneActivity({
+      runtimeDir: bubblePaths.runtimeDir,
+      bubbleId: input.bubbleId
+    })
+  ]);
 
-  for (const bubbleId of bubbleIds) {
-    const bubblePaths = getBubblePaths(repoPath, bubbleId);
-
-    const [bubbleToml, stateLoaded, paneActivityRead] = await Promise.all([
-      readFile(bubblePaths.bubbleTomlPath, "utf8"),
-      inspectStateSnapshot(bubblePaths.statePath),
-      readWatchdogPaneActivity({
-        runtimeDir: bubblePaths.runtimeDir,
-        bubbleId
-      })
-    ]);
-
-    const config = parseBubbleConfigToml(bubbleToml);
-    if (config.id !== bubbleId) {
-      throw new BubbleListError(
-        `Bubble config id mismatch: expected ${bubbleId}, found ${config.id}`
-      );
-    }
-
-    const normalizedConfigRepoPath = await normalizeRepoPath(
-      resolve(config.repo_path)
+  const config = parseBubbleConfigToml(bubbleToml);
+  if (config.id !== input.bubbleId) {
+    throw new BubbleListError(
+      `Bubble config id mismatch: expected ${input.bubbleId}, found ${config.id}`
     );
-    if (normalizedConfigRepoPath !== normalizedRepoPath) {
-      throw new BubbleListError(
-        `Bubble ${bubbleId} belongs to different repository path: ${config.repo_path}`
-      );
-    }
+  }
 
-    const runtimeSession = sessions[bubbleId] ?? null;
-    if (runtimeSession !== null) {
-      if (stateLoaded.stateValidation !== null) {
-        staleForInvalidStates += 1;
-      } else if (runtimeSessionExpectedStates.has(stateLoaded.state.state)) {
-        runtimeRegistered += 1;
-      } else {
-        staleForNonRuntimeStates += 1;
-      }
-    }
+  const normalizedConfigRepoPath = await normalizeRepoPath(resolve(config.repo_path));
+  if (normalizedConfigRepoPath !== input.normalizedRepoPath) {
+    throw new BubbleListError(
+      `Bubble ${input.bubbleId} belongs to different repository path: ${config.repo_path}`
+    );
+  }
 
-    const activeRuntimeDelivery = resolveActiveMetaReviewRuntimeDelivery({
-      executionContext: stateLoaded.state.meta_review?.execution_context,
-      runtimeDelivery: stateLoaded.state.meta_review?.runtime_delivery
-    });
-    const watchdog =
-      stateLoaded.stateValidation === null
-        ? computeWatchdogStatus(
-            stateLoaded.state,
-            config.watchdog_timeout_minutes,
-            now
-          )
-        : {
-            monitored: false,
-            monitoredAgent: stateLoaded.state.active_agent,
-            timeoutMinutes: config.watchdog_timeout_minutes,
-            referenceTimestamp:
-              stateLoaded.state.last_command_at ?? stateLoaded.state.active_since,
-            deadlineTimestamp: null,
-            remainingSeconds: null,
-            expired: false
-          };
-    byState[stateLoaded.state.state] += 1;
-    bubbles.push({
-      bubbleId,
-      repoPath,
+  const runtimeSession = input.sessions[input.bubbleId] ?? null;
+  const invalidState = runtimeSession !== null && stateLoaded.stateValidation !== null;
+  const nonRuntimeState =
+    runtimeSession !== null &&
+    stateLoaded.stateValidation === null &&
+    !runtimeSessionExpectedStates.has(stateLoaded.state.state);
+  const activeRuntimeDelivery = resolveActiveMetaReviewRuntimeDelivery({
+    executionContext: stateLoaded.state.meta_review?.execution_context,
+    runtimeDelivery: stateLoaded.state.meta_review?.runtime_delivery
+  });
+  const watchdog =
+    stateLoaded.stateValidation === null
+      ? computeWatchdogStatus(
+          stateLoaded.state,
+          config.watchdog_timeout_minutes,
+          input.now
+        )
+      : {
+          monitored: false,
+          monitoredAgent: stateLoaded.state.active_agent,
+          timeoutMinutes: config.watchdog_timeout_minutes,
+          referenceTimestamp:
+            stateLoaded.state.last_command_at ?? stateLoaded.state.active_since,
+          deadlineTimestamp: null,
+          remainingSeconds: null,
+          expired: false
+        };
+
+  return {
+    entry: {
+      bubbleId: input.bubbleId,
+      repoPath: input.repoPath,
       worktreePath: bubblePaths.worktreePath,
       state: stateLoaded.state.state,
       round: stateLoaded.state.round,
@@ -181,13 +193,11 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
         stateValidation: stateLoaded.stateValidation,
         watchdog,
         paneActivityRead,
-        now
+        now: input.now
       }),
       metaReview: {
         actor: "meta-reviewer",
-        authorityActive: isMetaReviewExecutionContextActiveState(
-          stateLoaded.state
-        ),
+        authorityActive: isMetaReviewExecutionContextActiveState(stateLoaded.state),
         latestRecommendation:
           stateLoaded.state.meta_review?.last_autonomous_recommendation ?? null,
         latestStatus: stateLoaded.state.meta_review?.last_autonomous_status ?? null,
@@ -208,7 +218,47 @@ export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleLi
                 observedForRound: activeRuntimeDelivery.observed_for_round
               }
       }
+    },
+    hasRuntimeSession: runtimeSession !== null,
+    invalidState,
+    nonRuntimeState
+  };
+}
+
+export async function listBubbles(input: BubbleListInput = {}): Promise<BubbleListView> {
+  const {
+    repoPath,
+    bubbleIds,
+    sessions,
+    normalizedRepoPath,
+    now
+  } = await resolveListBubblesContext(input);
+
+  const bubbles: BubbleListEntry[] = [];
+  const byState = createZeroCounts();
+  let runtimeRegistered = 0;
+  let staleForNonRuntimeStates = 0;
+  let staleForInvalidStates = 0;
+
+  for (const bubbleId of bubbleIds) {
+    const built = await buildBubbleListEntry({
+      repoPath,
+      normalizedRepoPath,
+      bubbleId,
+      sessions,
+      now
     });
+    if (built.hasRuntimeSession) {
+      if (built.invalidState) {
+        staleForInvalidStates += 1;
+      } else if (runtimeSessionExpectedStates.has(built.entry.state)) {
+        runtimeRegistered += 1;
+      } else if (built.nonRuntimeState) {
+        staleForNonRuntimeStates += 1;
+      }
+    }
+    byState[built.entry.state] += 1;
+    bubbles.push(built.entry);
   }
 
   const bubbleIdSet = new Set(bubbleIds);

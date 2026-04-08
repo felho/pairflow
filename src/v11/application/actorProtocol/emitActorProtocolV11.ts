@@ -273,13 +273,13 @@ export const metaReviewerActorProtocolV11 = {
   emit: emitMetaReviewerActorProtocolV11
 } as const;
 
-export async function emitActorProtocolFromWorkspaceV11(
+async function emitActorProtocolViaAuthorityWrappers(
   resolvedInput: ResolvedActorEmitInputV11
-): Promise<ActorEmitResultV11> {
+): Promise<ActorEmitResultV11 | null> {
   const { input, authoritativeContext: context } = resolvedInput;
   if (
-    context.expected_role === "implementer"
-    && (input.kind === "pass" || input.kind === "human_question")
+    context.expected_role === "implementer" &&
+    (input.kind === "pass" || input.kind === "human_question")
   ) {
     return implementerPilotActorProtocolV11.emit({
       input,
@@ -287,8 +287,8 @@ export async function emitActorProtocolFromWorkspaceV11(
     });
   }
   if (
-    context.expected_role === "reviewer"
-    && (input.kind === "pass" || input.kind === "convergence")
+    context.expected_role === "reviewer" &&
+    (input.kind === "pass" || input.kind === "convergence")
   ) {
     return reviewerActorProtocolV11.emit({
       input,
@@ -296,29 +296,21 @@ export async function emitActorProtocolFromWorkspaceV11(
     });
   }
   if (
-    context.expected_role === "meta_reviewer"
-    && input.kind === "meta_review_result"
+    context.expected_role === "meta_reviewer" &&
+    input.kind === "meta_review_result"
   ) {
     return metaReviewerActorProtocolV11.emit({
       input,
       authoritativeContext: context
     });
   }
+  return null;
+}
 
-  assertActorEmitContextMatches({
-    context,
-    handoffId: input.handoff_id,
-    ...(input.expected_role !== undefined
-      ? { expectedRole: input.expected_role }
-      : {}),
-    ...(input.expected_round !== undefined
-      ? { expectedRound: input.expected_round }
-      : {}),
-    ...(input.expected_state_fingerprint !== undefined
-      ? { expectedStateFingerprint: input.expected_state_fingerprint }
-      : {})
-  });
-
+async function emitActorProtocolViaFallbackRouting(
+  resolvedInput: ResolvedActorEmitInputV11
+): Promise<ActorEmitResultV11> {
+  const { input, authoritativeContext: context } = resolvedInput;
   if (context.expected_role === "meta_reviewer") {
     throw new ActorEmitContextError(
       "ACTOR_EMIT_CONTEXT_INVALID",
@@ -379,4 +371,29 @@ export async function emitActorProtocolFromWorkspaceV11(
     "ACTOR_EMIT_CONTEXT_INVALID",
     "ACTOR_EMIT_CONTEXT_INVALID: unsupported actor emit kind."
   );
+}
+
+export async function emitActorProtocolFromWorkspaceV11(
+  resolvedInput: ResolvedActorEmitInputV11
+): Promise<ActorEmitResultV11> {
+  const { input, authoritativeContext: context } = resolvedInput;
+  assertActorEmitContextMatches({
+    context,
+    handoffId: input.handoff_id,
+    ...(input.expected_role !== undefined
+      ? { expectedRole: input.expected_role }
+      : {}),
+    ...(input.expected_round !== undefined
+      ? { expectedRound: input.expected_round }
+      : {}),
+    ...(input.expected_state_fingerprint !== undefined
+      ? { expectedStateFingerprint: input.expected_state_fingerprint }
+      : {})
+  });
+
+  const routedResult = await emitActorProtocolViaAuthorityWrappers(resolvedInput);
+  if (routedResult !== null) {
+    return routedResult;
+  }
+  return emitActorProtocolViaFallbackRouting(resolvedInput);
 }
