@@ -31,10 +31,30 @@ export interface PrepareConvergedPolicyResult {
   convergencePolicyDiagnostics: string[];
 }
 
+export interface PrepareConvergedPolicyDependencyErrorContext {
+  source: "prepare_converged_policy";
+  missingDependency: "readTranscriptEnvelopes";
+  transcriptPath: string;
+}
+
 export class PrepareConvergedPolicyDependencyError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly context:
+    | PrepareConvergedPolicyDependencyErrorContext
+    | undefined;
+
+  public constructor(
+    input:
+      | string
+      | {
+        message: string;
+        context?: PrepareConvergedPolicyDependencyErrorContext | undefined;
+      }
+  ) {
+    const normalized =
+      typeof input === "string" ? { message: input, context: undefined } : input;
+    super(normalized.message);
     this.name = "PrepareConvergedPolicyDependencyError";
+    this.context = normalized.context;
   }
 }
 
@@ -47,9 +67,14 @@ export async function prepareConvergedPolicy(
     dependencies.validateConvergencePolicy ?? validateConvergencePolicy;
 
   if (readTranscript === undefined) {
-    throw new PrepareConvergedPolicyDependencyError(
-      "prepareConvergedPolicy requires readTranscriptEnvelopes dependency."
-    );
+    throw new PrepareConvergedPolicyDependencyError({
+      message: "prepareConvergedPolicy requires readTranscriptEnvelopes dependency.",
+      context: {
+        source: "prepare_converged_policy",
+        missingDependency: "readTranscriptEnvelopes",
+        transcriptPath: input.transcriptPath
+      }
+    });
   }
 
   const transcript = await readTranscript(input.transcriptPath, {

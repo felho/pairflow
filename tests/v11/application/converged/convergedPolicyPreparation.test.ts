@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { prepareConvergedPolicy } from "../../../../src/v11/application/converged/convergedPolicyPreparation.js";
+import {
+  prepareConvergedPolicy,
+  type PrepareConvergedPolicyDependencyError
+} from "../../../../src/v11/application/converged/convergedPolicyPreparation.js";
 
 describe("prepareConvergedPolicy", () => {
   it("reads transcript with tolerant options and forwards policy input", async () => {
@@ -79,5 +82,26 @@ describe("prepareConvergedPolicy", () => {
       diagnostics: ["POLICY_DIAG_A"]
     });
     expect(result.convergencePolicyDiagnostics).toEqual(["POLICY_DIAG_A"]);
+  });
+
+  it("attaches context when transcript dependency is missing", async () => {
+    await expect(
+      prepareConvergedPolicy({
+        transcriptPath: "/tmp/missing-transcript.ndjson",
+        currentRound: 1,
+        reviewer: "claude",
+        implementer: "codex",
+        reviewArtifactType: "document",
+        roundRoleHistory: [] as never,
+        severityGateRound: 1
+      })
+    ).rejects.toMatchObject({
+      name: "PrepareConvergedPolicyDependencyError",
+      context: {
+        source: "prepare_converged_policy",
+        missingDependency: "readTranscriptEnvelopes",
+        transcriptPath: "/tmp/missing-transcript.ndjson"
+      }
+    } satisfies Partial<PrepareConvergedPolicyDependencyError>);
   });
 });
