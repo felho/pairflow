@@ -20,6 +20,53 @@ export function isRoundLocalMetaReviewSnapshotOutsideCurrentRound(input: {
   );
 }
 
+function hasCurrentRound(input: {
+  currentRound: number;
+}): boolean {
+  return isInteger(input.currentRound) && input.currentRound > 0;
+}
+
+function hasMissingSnapshotRound(input: {
+  snapshotRound: number | null;
+  snapshotRoundIdentity: MetaReviewSnapshotRoundIdentity;
+}): boolean {
+  return input.snapshotRoundIdentity === "missing" && input.snapshotRound === null;
+}
+
+function hasUnknownProjectionFreshness(input: {
+  currentRound: number;
+  snapshotRound: number | null;
+  snapshotRoundIdentity: MetaReviewSnapshotRoundIdentity;
+}): boolean {
+  return (
+    input.snapshotRoundIdentity === "missing" ||
+    !hasCurrentRound(input) ||
+    (input.snapshotRoundIdentity === "present" && input.snapshotRound === null)
+  );
+}
+
+function isStaleProjectionFreshness(input: {
+  currentRound: number;
+  snapshotRound: number | null;
+}): boolean {
+  return (
+    input.snapshotRound !== null &&
+    hasCurrentRound(input) &&
+    input.snapshotRound < input.currentRound
+  );
+}
+
+function isAheadProjectionFreshness(input: {
+  currentRound: number;
+  snapshotRound: number | null;
+}): boolean {
+  return (
+    input.snapshotRound !== null &&
+    hasCurrentRound(input) &&
+    input.snapshotRound > input.currentRound
+  );
+}
+
 export function resolveMetaReviewProjectionFreshness(input: {
   hasSnapshot: boolean;
   currentRound: number;
@@ -33,36 +80,16 @@ export function resolveMetaReviewProjectionFreshness(input: {
   if (input.snapshotRoundIdentity === "unavailable") {
     return "unknown";
   }
-  if (
-    input.snapshotRoundIdentity === "missing" &&
-    input.snapshotRound === null &&
-    isInteger(input.currentRound) &&
-    input.currentRound > 0
-  ) {
+  if (hasMissingSnapshotRound(input) && hasCurrentRound(input)) {
     return "round_missing";
   }
-  if (
-    input.snapshotRoundIdentity === "missing" ||
-    !isInteger(input.currentRound) ||
-    input.currentRound < 1 ||
-    (input.snapshotRoundIdentity === "present" && input.snapshotRound === null)
-  ) {
+  if (hasUnknownProjectionFreshness(input)) {
     return "unknown";
   }
-  if (
-    input.snapshotRound !== null &&
-    isInteger(input.currentRound) &&
-    input.currentRound > 0 &&
-    input.snapshotRound < input.currentRound
-  ) {
+  if (isStaleProjectionFreshness(input)) {
     return "stale";
   }
-  if (
-    input.snapshotRound !== null &&
-    isInteger(input.currentRound) &&
-    input.currentRound > 0 &&
-    input.snapshotRound > input.currentRound
-  ) {
+  if (isAheadProjectionFreshness(input)) {
     return "ahead";
   }
   if ((input.diagnostics ?? []).length > 0) {
