@@ -12,7 +12,7 @@ owners:
 
 ## Objective
 
-Last updated from `main` at `74ff6ed3`.
+Last updated from `main` at `54fcc761`.
 
 A fitness hard-fail backlog az `error` check lezárása után egyetlen checkerre szűkült:
 
@@ -203,8 +203,10 @@ Minden bounded batch után:
    - `873f3098` `refactor(complexity): split archive report context loader`
    - `8b0da57e` `refactor(complexity): split metrics read event parsing`
    - `74ff6ed3` `refactor(complexity): split meta review canonical report helpers`
+   - `54fcc761` `refactor(complexity): split metrics report aggregation handlers`
 6. Következő párhuzamos batch-ek:
    - `stateSchema` focused validator slice
    - `protocol/validators` findings slice
    - `metaReviewCanonicalization` report-json slice
    - `convergence/policy` validator slice
+   - `metrics/report` aggregation slice
