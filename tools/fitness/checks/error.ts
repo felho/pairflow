@@ -199,6 +199,9 @@ function isStructuredErrorName(name: string): boolean {
   if (/^to[A-Za-z0-9_]*Error$/u.test(name)) {
     return true;
   }
+  if (/^[a-z][A-Za-z0-9_]*To[A-Za-z0-9_]*Error$/u.test(name)) {
+    return true;
+  }
   if (/^[A-Z][A-Za-z0-9_]*Error$/u.test(name)) {
     return true;
   }
@@ -482,7 +485,10 @@ function hasAstContextEvidence(
 function usesStructuredErrorWrapper(expression: ts.Expression): boolean {
   if (ts.isCallExpression(expression)) {
     const name = getCallExpressionName(expression.expression);
-    return name !== null && isStructuredErrorName(name);
+    return name !== null && (
+      isStructuredErrorName(name) ||
+      name === "errorFactory"
+    );
   }
   if (ts.isNewExpression(expression)) {
     const name = getCallExpressionName(expression.expression);

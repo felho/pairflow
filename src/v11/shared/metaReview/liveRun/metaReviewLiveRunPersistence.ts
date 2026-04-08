@@ -12,6 +12,9 @@ import type {
   MetaReviewRunStatus
 } from "../../../../types/bubble.js";
 import {
+  MetaReviewError
+} from "../metaReviewError.js";
+import {
   stateWriteConflictToMetaReviewError
 } from "./metaReviewLiveRunErrors.js";
 import type {
@@ -69,7 +72,11 @@ export async function persistMetaReviewStateSnapshot(input: {
     });
   } catch (error) {
     if (error instanceof StateStoreConflictError) {
-      throw stateWriteConflictToMetaReviewError(error);
+      const normalizedError = stateWriteConflictToMetaReviewError(error);
+      throw new MetaReviewError(
+        normalizedError.reasonCode,
+        `${normalizedError.reasonCode}: context state_path=${input.statePath}; ${normalizedError.message}`
+      );
     }
     throw error;
   }

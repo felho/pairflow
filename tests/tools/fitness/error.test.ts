@@ -332,4 +332,96 @@ describe("error fitness check", () => {
 
     expect(report.status).toBe("pass");
   });
+
+  it("warns when throw delegates through errorFactory callback", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/error-factory-wrapper.ts",
+      [
+        "export function requireValue(",
+        "  value: string,",
+        "  errorFactory: (message: string) => Error",
+        "): string {",
+        "  if (value.trim().length === 0) {",
+        "    throw errorFactory('value cannot be empty');",
+        "  }",
+        "  return value.trim();",
+        "}"
+      ].join("\n")
+    );
+
+    const report = await buildErrorCheckReport({
+      check: {
+        id: "error",
+        metric: "error code and context completeness",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture/observability",
+        scope: ["src/v11/shared/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only"
+    });
+
+    expect(report.status).toBe("warn");
+    expect(
+      report.details?.some(
+        (detail) =>
+          detail.includes("[warn]") &&
+          (
+            detail.includes("missing stable error code") ||
+            detail.includes("missing required error context")
+          )
+      )
+    ).toBe(true);
+  });
+
+  it("warns when throw delegates through *To*Error conversion helper", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/error-middle-to-helper.ts",
+      [
+        "class SampleError extends Error {",
+        "  public constructor(reasonCode: string, message: string) {",
+        "    super(message);",
+        "    this.name = 'SampleError';",
+        "    void reasonCode;",
+        "  }",
+        "}",
+        "function stateWriteConflictToSampleError(error: unknown): SampleError {",
+        "  const reason = error instanceof Error ? error.message : String(error);",
+        "  return new SampleError('ERR_SAMPLE', reason);",
+        "}",
+        "export function run(error: unknown): never {",
+        "  throw stateWriteConflictToSampleError(error);",
+        "}"
+      ].join("\n")
+    );
+
+    const report = await buildErrorCheckReport({
+      check: {
+        id: "error",
+        metric: "error code and context completeness",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture/observability",
+        scope: ["src/v11/shared/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only"
+    });
+
+    expect(report.status).toBe("warn");
+    expect(
+      report.details?.some(
+        (detail) =>
+          detail.includes("[warn]") &&
+          detail.includes("missing required error context")
+      )
+    ).toBe(true);
+  });
 });
