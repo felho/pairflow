@@ -48,10 +48,10 @@ Az `error` fitness check jelenleg hard-fail helyett `warn` módban fut, de a bac
    - státusz: completed
 
 7. maradék singletonok
-   - `attach`
-   - `list`
-   - `actorProtocol`
-   - `converged`
+    - `attach`
+    - `list`
+    - `actorProtocol`
+    - `converged`
    - `workspace-resolution`
    - `ui-repo-scope`
    - `worktree-manager`
@@ -80,4 +80,5 @@ Az `error` fitness check jelenleg hard-fail helyett `warn` módban fut, de a bac
 - Wave 6 singleton: `worktreeManager.ts` warning cleanup ready for commit
 - Wave 7 singleton: `passValidationCommandRunner.ts` warning cleanup ready for commit
 - Wave 8 singleton: `fileLock.ts` warning cleanup ready for commit
-- Aktuális warning baseline: `error` check `126 -> 106 -> 97 -> 92 -> 87 -> 82 -> 77 -> 73 -> 69`
+- Wave 9 singleton: `attach` warning cleanup ready for commit
+- Aktuális warning baseline: `error` check `126 -> 106 -> 97 -> 92 -> 87 -> 82 -> 77 -> 73 -> 69 -> 65`

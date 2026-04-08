@@ -131,6 +131,12 @@ export async function attachBubble(
     throw new AttachBubbleError(
       `Tmux session "${tmuxSessionName}" does not exist. Start the bubble runtime first.`,
       {
+        context: {
+          bubbleId: resolved.bubbleId,
+          reason: "tmux_session_missing",
+          repoPath: resolved.repoPath,
+          tmuxSessionName
+        },
         reasonCode: "TMUX_SESSION_MISSING"
       }
     );
@@ -146,7 +152,14 @@ export async function attachBubble(
       } else {
         const reason = error instanceof Error ? error.message : String(error);
         throw new AttachBubbleError(
-          `Failed to load global Pairflow config for '${resolved.bubbleId}': ${reason}`
+          `Failed to load global Pairflow config for '${resolved.bubbleId}': ${reason}`,
+          {
+            context: {
+              bubbleId: resolved.bubbleId,
+              reason: "load_global_config_failed",
+              repoPath: resolved.repoPath
+            }
+          }
         );
       }
     }
@@ -187,10 +200,18 @@ export function asAttachBubbleError(error: unknown): never {
     throw error;
   }
   if (error instanceof BubbleLookupError) {
-    throw new AttachBubbleError(error.message);
+    throw new AttachBubbleError(error.message, {
+      context: {
+        reason: "bubble_lookup_error"
+      }
+    });
   }
   if (error instanceof Error) {
-    throw new AttachBubbleError(error.message);
+    throw new AttachBubbleError(error.message, {
+      context: {
+        reason: "unexpected_attach_error"
+      }
+    });
   }
   throw error;
 }

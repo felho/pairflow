@@ -68,7 +68,16 @@ export type AttachBubbleV11Input = AttachBubbleInput;
 export type AttachBubbleV11Result = AttachBubbleResult;
 export type AttachBubbleV11Dependencies = AttachBubbleDependencies;
 
+export interface AttachBubbleErrorContext {
+  bubbleId?: string;
+  cwd?: string;
+  reason?: string;
+  repoPath?: string;
+  tmuxSessionName?: string;
+}
+
 interface AttachBubbleErrorOptions {
+  context?: AttachBubbleErrorContext;
   launcher?: ExplicitAttachLauncher;
   failureClass?: AttachLauncherFailureClass;
   reasonCode?: AttachBubbleReasonCode;
@@ -82,10 +91,14 @@ export class AttachBubbleError extends Error {
   public readonly reasonCode?: AttachBubbleReasonCode;
   public readonly stdoutExcerpt?: string;
   public readonly stderrExcerpt?: string;
+  public readonly context?: AttachBubbleErrorContext;
 
   public constructor(message: string, options: AttachBubbleErrorOptions = {}) {
     super(message);
     this.name = "AttachBubbleError";
+    if (options.context !== undefined) {
+      this.context = options.context;
+    }
     if (options.launcher !== undefined) {
       this.launcher = options.launcher;
     }
