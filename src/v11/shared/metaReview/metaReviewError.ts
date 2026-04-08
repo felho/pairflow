@@ -13,15 +13,39 @@ export type MetaReviewErrorReasonCode =
   | "META_REVIEW_IO_ERROR"
   | "META_REVIEW_UNKNOWN_ERROR";
 
+export interface MetaReviewErrorContext {
+  source?: string | undefined;
+  reportRef?: string | undefined;
+  bubbleDir?: string | undefined;
+  artifactsDir?: string | undefined;
+  reason?: string | undefined;
+}
+
+export interface MetaReviewErrorInput {
+  reasonCode: MetaReviewErrorReasonCode;
+  message: string;
+  context?: MetaReviewErrorContext | undefined;
+}
+
 export class MetaReviewError extends Error {
   public readonly reasonCode: MetaReviewErrorReasonCode;
+  public readonly context: MetaReviewErrorContext | undefined;
 
   public constructor(
-    reasonCode: MetaReviewErrorReasonCode,
-    message: string
+    reasonCode: MetaReviewErrorReasonCode | MetaReviewErrorInput,
+    message?: string
   ) {
-    super(message);
+    const normalized =
+      typeof reasonCode === "string"
+        ? {
+          reasonCode,
+          message: message ?? "",
+          context: undefined
+        }
+        : reasonCode;
+    super(normalized.message);
     this.name = "MetaReviewError";
-    this.reasonCode = reasonCode;
+    this.reasonCode = normalized.reasonCode;
+    this.context = normalized.context;
   }
 }

@@ -49,10 +49,18 @@ export function resolveReportArtifactPath(input: {
     input.reportRef.includes("\\") ||
     input.reportRef.includes("\0")
   ) {
-    throw new MetaReviewError(
-      "META_REVIEW_SCHEMA_INVALID",
-      "Invalid meta-review report_ref; expected a safe artifacts/* reference."
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID",
+      message:
+        "Invalid meta-review report_ref; expected a safe artifacts/* reference.",
+      context: {
+        source: "resolve_report_artifact_path",
+        reason: "unsafe_report_ref",
+        reportRef: input.reportRef,
+        bubbleDir: input.bubbleDir,
+        artifactsDir: input.artifactsDir
+      }
+    });
   }
 
   const resolvedReportPath = resolve(input.bubbleDir, input.reportRef);
@@ -62,10 +70,18 @@ export function resolveReportArtifactPath(input: {
     relativeToArtifacts.startsWith("..") ||
     isAbsolute(relativeToArtifacts)
   ) {
-    throw new MetaReviewError(
-      "META_REVIEW_SCHEMA_INVALID",
-      "Invalid meta-review report_ref; resolved path escapes artifacts directory."
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID",
+      message:
+        "Invalid meta-review report_ref; resolved path escapes artifacts directory.",
+      context: {
+        source: "resolve_report_artifact_path",
+        reason: "artifacts_escape",
+        reportRef: input.reportRef,
+        bubbleDir: input.bubbleDir,
+        artifactsDir: input.artifactsDir
+      }
+    });
   }
 
   return resolvedReportPath;
