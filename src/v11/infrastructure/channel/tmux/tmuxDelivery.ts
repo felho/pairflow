@@ -249,6 +249,58 @@ function createDeliveryFailureResult(input: {
   };
 }
 
+async function attemptTmuxDelivery(input: {
+  runner: TmuxRunner;
+  targetPane: string;
+  envelopeId: string;
+  message: string;
+  initialDelayMs?: number;
+  deliveryAttempts?: number;
+  sessionName: string;
+  targetPaneIndex: number;
+  deliveryTargetReasonCode?: DeliveryTargetReasonCode;
+}): Promise<EmitTmuxDeliveryNotificationResult | undefined> {
+  try {
+    if ((input.initialDelayMs ?? 0) > 0) {
+      await sleep(input.initialDelayMs as number);
+    }
+    await maybeAcceptClaudeTrustPrompt(input.runner, input.targetPane).catch(() => undefined);
+    // Delivery is best-effort, but an explicit tmux write/submit failure should
+    // still map to `tmux_send_failed` instead of degrading into unconfirmed.
+    await sendAndSubmitTmuxPaneMessage(input.runner, input.targetPane, input.message, {
+      requireSuccess: true
+    });
+    const confirmed = await confirmTmuxPaneMarkerSubmission({
+      runner: input.runner,
+      targetPane: input.targetPane,
+      marker: input.envelopeId,
+      ...(input.deliveryAttempts !== undefined ? { attempts: input.deliveryAttempts } : {})
+    });
+    if (confirmed) {
+      return undefined;
+    }
+    return createDeliveryFailureResult({
+      reason: "delivery_unconfirmed",
+      message: input.message,
+      sessionName: input.sessionName,
+      targetPaneIndex: input.targetPaneIndex,
+      ...(input.deliveryTargetReasonCode !== undefined
+        ? { deliveryTargetReasonCode: input.deliveryTargetReasonCode }
+        : {})
+    });
+  } catch {
+    return createDeliveryFailureResult({
+      reason: "tmux_send_failed",
+      message: input.message,
+      sessionName: input.sessionName,
+      targetPaneIndex: input.targetPaneIndex,
+      ...(input.deliveryTargetReasonCode !== undefined
+        ? { deliveryTargetReasonCode: input.deliveryTargetReasonCode }
+        : {})
+    });
+  }
+}
+
 export async function emitTmuxDeliveryNotification(
   input: EmitTmuxDeliveryNotificationInput
 ): Promise<EmitTmuxDeliveryNotificationResult> {
@@ -328,46 +380,21 @@ export async function emitTmuxDeliveryNotification(
   const targetPane = `${sessionName}:0.${targetPaneIndex}`;
   const message = buildMessage(worktreePath);
   const runner = input.runner ?? runTmux;
-
-  try {
-    if ((input.initialDelayMs ?? 0) > 0) {
-      await sleep(input.initialDelayMs as number);
-    }
-    await maybeAcceptClaudeTrustPrompt(runner, targetPane).catch(() => undefined);
-    // Delivery is best-effort, but an explicit tmux write/submit failure should
-    // still map to `tmux_send_failed` instead of degrading into unconfirmed.
-    await sendAndSubmitTmuxPaneMessage(runner, targetPane, message, {
-      requireSuccess: true
-    });
-    const confirmed = await confirmTmuxPaneMarkerSubmission({
-      runner,
-      targetPane,
-      marker: input.envelope.id,
-      ...(input.deliveryAttempts !== undefined
-        ? { attempts: input.deliveryAttempts }
-        : {})
-    });
-    if (!confirmed) {
-      return createDeliveryFailureResult({
-        reason: "delivery_unconfirmed",
-        message,
-        sessionName,
-        targetPaneIndex,
-        ...(targetResolution.deliveryTargetReasonCode !== undefined
-          ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
-          : {})
-      });
-    }
-  } catch {
-    return createDeliveryFailureResult({
-      reason: "tmux_send_failed",
-      message,
-      sessionName,
-      targetPaneIndex,
-      ...(targetResolution.deliveryTargetReasonCode !== undefined
-        ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
-        : {})
-    });
+  const deliveryFailure = await attemptTmuxDelivery({
+    runner,
+    targetPane,
+    envelopeId: input.envelope.id,
+    message,
+    sessionName,
+    targetPaneIndex,
+    ...(input.initialDelayMs !== undefined ? { initialDelayMs: input.initialDelayMs } : {}),
+    ...(input.deliveryAttempts !== undefined ? { deliveryAttempts: input.deliveryAttempts } : {}),
+    ...(targetResolution.deliveryTargetReasonCode !== undefined
+      ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
+      : {})
+  });
+  if (deliveryFailure !== undefined) {
+    return deliveryFailure;
   }
 
   return {
