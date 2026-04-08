@@ -10,7 +10,10 @@ import type {
   AppendMetricsEventPort,
   AppendMetricsEventResult
 } from "../../../shared/metrics/eventsStorePort.js";
-import { FileLockTimeoutError, withFileLock } from "../../../../core/util/fileLock.js";
+import {
+  FileLockTimeoutError,
+  withFileLock
+} from "../../foundation/fs/fileLock.js";
 
 const defaultLockTimeoutMs = 5_000;
 const defaultStaleLockRecoveryAfterMs = 1_000;

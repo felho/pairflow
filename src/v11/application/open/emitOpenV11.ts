@@ -8,7 +8,7 @@ import {
   BubbleLookupError,
   resolveBubbleById
 } from "../../../core/bubble/bubbleLookup.js";
-import { shellQuote } from "../../../core/util/shellQuote.js";
+import { shellQuote } from "../../shared/foundation/shellQuote.js";
 
 const worktreePathPlaceholder = "{{worktree_path}}";
 const defaultOpenCommandTemplate = `cursor ${worktreePathPlaceholder}`;
