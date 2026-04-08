@@ -1,5 +1,5 @@
-import type { AppendProtocolEnvelopeResult } from "../../../core/protocol/transcriptStore.js";
-import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
+import type { AppendProtocolEnvelopeResult } from "../ports/transcript.js";
+import type { LoadedStateSnapshot } from "../ports/stateSnapshots.js";
 import type { AskHumanRoutingContext } from "./askHumanRoutingContext.js";
 
 export interface BuildAskHumanExecutionStepInput {

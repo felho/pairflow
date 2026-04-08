@@ -1,15 +1,15 @@
-import type { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
+import type { AppendProtocolEnvelopePort } from "../ports/transcript.js";
 import type { applyStateTransition } from "../../domain/state/machine.js";
-import type { writeStateSnapshot } from "../../../core/state/stateStore.js";
+import type { WriteStateSnapshotPort } from "../ports/stateSnapshots.js";
 
 export interface ResolveAskHumanExecutionDependenciesInput {
-  appendProtocolEnvelope?: typeof appendProtocolEnvelope | undefined;
-  writeStateSnapshot?: typeof writeStateSnapshot | undefined;
+  appendProtocolEnvelope?: AppendProtocolEnvelopePort | undefined;
+  writeStateSnapshot?: WriteStateSnapshotPort | undefined;
   applyStateTransition?: typeof applyStateTransition | undefined;
 }
 
 export interface ResolvedAskHumanExecutionDependencies {
-  appendEnvelope: typeof appendProtocolEnvelope;
-  writeSnapshot: typeof writeStateSnapshot;
+  appendEnvelope: AppendProtocolEnvelopePort;
+  writeSnapshot: WriteStateSnapshotPort;
   applyTransition: typeof applyStateTransition;
 }
