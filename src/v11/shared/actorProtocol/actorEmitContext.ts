@@ -11,16 +11,39 @@ export type ActorEmitContextErrorReasonCode =
   | "ACTOR_EMIT_COMPAT_ADAPTER_INVALID"
   | "ACTOR_EMIT_CONTEXT_INVALID";
 
+export interface ActorEmitContextErrorContext {
+  route?: string | undefined;
+  expectedAuthority?: string | undefined;
+  receivedKind?: string | undefined;
+}
+
+export interface ActorEmitContextErrorInput {
+  reasonCode: ActorEmitContextErrorReasonCode;
+  message: string;
+  context?: ActorEmitContextErrorContext | undefined;
+}
+
 export class ActorEmitContextError extends Error {
   public readonly reasonCode: ActorEmitContextErrorReasonCode;
+  public readonly context: ActorEmitContextErrorContext | undefined;
 
   public constructor(
-    reasonCode: ActorEmitContextErrorReasonCode,
-    message: string
+    reasonCode: ActorEmitContextErrorReasonCode | ActorEmitContextErrorInput,
+    message?: string,
+    context?: ActorEmitContextErrorContext
   ) {
-    super(message);
+    const normalized =
+      typeof reasonCode === "string"
+        ? {
+          reasonCode,
+          message: message ?? "",
+          context
+        }
+        : reasonCode;
+    super(normalized.message);
     this.name = "ActorEmitContextError";
-    this.reasonCode = reasonCode;
+    this.reasonCode = normalized.reasonCode;
+    this.context = normalized.context;
   }
 }
 

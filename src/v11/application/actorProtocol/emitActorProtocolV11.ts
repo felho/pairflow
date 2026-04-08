@@ -361,16 +361,25 @@ async function emitActorProtocolViaFallbackRouting(
   }
 
   if (input.kind === "meta_review_result") {
-    throw new ActorEmitContextError(
-      "ACTOR_EMIT_CONTEXT_INVALID",
-      "ACTOR_EMIT_CONTEXT_INVALID: meta-reviewer wrapper requires meta_reviewer authority."
-    );
+    throw new ActorEmitContextError({
+      reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+      message:
+        "ACTOR_EMIT_CONTEXT_INVALID: meta-reviewer wrapper requires meta_reviewer authority.",
+      context: {
+        route: "emitActorProtocolViaAuthorityWrappers",
+        expectedAuthority: "meta_reviewer",
+        receivedKind: String(input.kind)
+      }
+    });
   }
 
-  throw new ActorEmitContextError(
-    "ACTOR_EMIT_CONTEXT_INVALID",
-    "ACTOR_EMIT_CONTEXT_INVALID: unsupported actor emit kind."
-  );
+  throw new ActorEmitContextError({
+    reasonCode: "ACTOR_EMIT_CONTEXT_INVALID",
+    message: "ACTOR_EMIT_CONTEXT_INVALID: unsupported actor emit kind.",
+    context: {
+      route: "emitActorProtocolViaAuthorityWrappers"
+    }
+  });
 }
 
 export async function emitActorProtocolFromWorkspaceV11(
