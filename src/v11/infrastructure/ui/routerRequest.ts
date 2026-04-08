@@ -31,7 +31,15 @@ function parseBubbleRoute(pathname: string): {
   }
   const bubbleId = decodeURIComponent(segments[2] ?? "");
   if (bubbleId.length === 0) {
-    throw new UiApiHttpError(badRequest("Bubble id cannot be empty."));
+    throw new UiApiHttpError({
+      apiError: badRequest("Bubble id cannot be empty."),
+      context: {
+        source: "router_request",
+        reason: "empty_bubble_id",
+        errorCode: "bad_request",
+        pathname
+      }
+    });
   }
   return {
     bubbleId,
@@ -92,9 +100,16 @@ export async function handleApiRequest(
 
   if (pathname === "/api/bubbles") {
     if (method !== "GET") {
-      throw new UiApiHttpError(
-        badRequest(`Unsupported method for ${pathname}: ${method}`)
-      );
+      throw new UiApiHttpError({
+        apiError: badRequest(`Unsupported method for ${pathname}: ${method}`),
+        context: {
+          source: "router_request",
+          reason: "unsupported_collection_method",
+          errorCode: "bad_request",
+          method,
+          pathname
+        }
+      });
     }
     const response = await handleBubbleListRequest({
       environment: input.environment,
@@ -106,7 +121,16 @@ export async function handleApiRequest(
 
   const bubbleRoute = parseBubbleRoute(pathname);
   if (bubbleRoute === null) {
-    throw new UiApiHttpError(notFound(`Unknown API route: ${method} ${pathname}`));
+    throw new UiApiHttpError({
+      apiError: notFound(`Unknown API route: ${method} ${pathname}`),
+      context: {
+        source: "router_request",
+        reason: "unknown_api_route",
+        errorCode: "not_found",
+        method,
+        pathname
+      }
+    });
   }
 
   if (
@@ -139,7 +163,14 @@ export async function handleApiRequest(
     return true;
   }
 
-  throw new UiApiHttpError(
-    badRequest(`Unsupported method for ${pathname}: ${method}`)
-  );
+  throw new UiApiHttpError({
+    apiError: badRequest(`Unsupported method for ${pathname}: ${method}`),
+    context: {
+      source: "router_request",
+      reason: "unsupported_bubble_route_method",
+      errorCode: "bad_request",
+      method,
+      pathname
+    }
+  });
 }

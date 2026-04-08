@@ -10,12 +10,39 @@ const maxJsonBodyBytes = 1_000_000;
 
 export class UiApiHttpError extends Error {
   public readonly apiError: UiApiError;
+  public readonly context: UiApiHttpErrorContext | undefined;
 
-  public constructor(apiError: UiApiError) {
-    super(apiError.body.error.message);
+  public constructor(input: UiApiError | UiApiHttpErrorInput) {
+    const normalized =
+      "apiError" in input
+        ? input
+        : {
+          apiError: input,
+          context: undefined
+        };
+    super(normalized.apiError.body.error.message);
     this.name = "UiApiHttpError";
-    this.apiError = apiError;
+    this.apiError = normalized.apiError;
+    this.context = normalized.context;
   }
+}
+
+export interface UiApiHttpErrorContext {
+  source: "router_http" | "router_request";
+  reason:
+    | "http_error"
+    | "empty_bubble_id"
+    | "unsupported_collection_method"
+    | "unknown_api_route"
+    | "unsupported_bubble_route_method";
+  errorCode: string;
+  method?: string | undefined;
+  pathname?: string | undefined;
+}
+
+export interface UiApiHttpErrorInput {
+  apiError: UiApiError;
+  context?: UiApiHttpErrorContext | undefined;
 }
 
 export function sendJson(
@@ -101,8 +128,18 @@ export function internalError(
   };
 }
 
-export function throwApiError(error: UiApiError): never {
-  throw new UiApiHttpError(error);
+export function throwApiError(
+  error: UiApiError,
+  context: UiApiHttpErrorContext = {
+    source: "router_http",
+    reason: "http_error",
+    errorCode: error.body.error.code
+  }
+): never {
+  throw new UiApiHttpError({
+    apiError: error,
+    context
+  });
 }
 
 export function asErrorMessage(error: unknown): string {
