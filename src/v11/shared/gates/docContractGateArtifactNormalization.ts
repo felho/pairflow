@@ -170,9 +170,14 @@ function normalizeSpecLockState(raw: unknown): BubbleSpecLockState {
 
 export function normalizeDocContractGateArtifact(raw: unknown): DocContractGateArtifact {
   if (!isRecord(raw)) {
-    throw new DocContractGateArtifactError(
-      "DOC_CONTRACT_GATE_ARTIFACT_INVALID: Doc contract gate artifact must be an object."
-    );
+    throw new DocContractGateArtifactError({
+      message:
+        "DOC_CONTRACT_GATE_ARTIFACT_INVALID: Doc contract gate artifact must be an object.",
+      context: {
+        source: "artifact_normalization",
+        reason: "invalid_shape"
+      }
+    });
   }
 
   const taskWarnings = Array.isArray(raw.task_warnings)

@@ -34,9 +34,14 @@ export const readDocContractGateArtifact: ReadDocContractGateArtifactPort = asyn
   try {
     parsed = JSON.parse(raw);
   } catch (error) {
-    throw new DocContractGateArtifactError(
-      `Invalid JSON in doc contract gate artifact: ${error instanceof Error ? error.message : String(error)}`
-    );
+    throw new DocContractGateArtifactError({
+      message: `Invalid JSON in doc contract gate artifact: ${error instanceof Error ? error.message : String(error)}`,
+      context: {
+        source: "artifact_read",
+        reason: "invalid_json",
+        artifactPath
+      }
+    });
   }
 
   return normalizeDocContractGateArtifact(parsed);
