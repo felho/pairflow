@@ -1,14 +1,16 @@
 import type { ProtocolEnvelopeDraft } from "../../../types/protocol.js";
-import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import type {
-  readStateSnapshot,
-  writeStateSnapshot
-} from "../../../core/state/stateStore.js";
-import type { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
 import type {
   EmitTmuxDeliveryNotificationInput,
   EmitTmuxDeliveryNotificationResult
 } from "../delivery/tmuxDeliveryContract.js";
+import type {
+  ResolveBubbleByIdPort
+} from "../ports/bubbleLookup.js";
+import type {
+  ReadStateSnapshotPort,
+  WriteStateSnapshotPort
+} from "../ports/stateSnapshots.js";
+import type { AppendProtocolEnvelopePort } from "../ports/transcript.js";
 
 export type KickoffReadFile = (
   path: string,
@@ -34,24 +36,24 @@ export type KickoffEmitDelivery = (
 ) => Promise<EmitTmuxDeliveryNotificationResult>;
 
 export interface KickoffDependencyOverrides {
-  resolveBubbleById?: typeof resolveBubbleById;
-  readStateSnapshot?: typeof readStateSnapshot;
-  writeStateSnapshot?: typeof writeStateSnapshot;
+  resolveBubbleById?: ResolveBubbleByIdPort;
+  readStateSnapshot?: ReadStateSnapshotPort;
+  writeStateSnapshot?: WriteStateSnapshotPort;
   readFile?: KickoffReadFile;
   statFile?: KickoffStatFile;
   writeFile?: KickoffWriteFile;
-  appendProtocolEnvelope?: typeof appendProtocolEnvelope;
+  appendProtocolEnvelope?: AppendProtocolEnvelopePort;
   emitTmuxDeliveryNotification?: KickoffEmitDelivery;
 }
 
 export interface ResolvedKickoffDependencies {
-  resolveBubble: typeof resolveBubbleById;
-  readState: typeof readStateSnapshot;
-  writeState: typeof writeStateSnapshot;
+  resolveBubble: ResolveBubbleByIdPort;
+  readState: ReadStateSnapshotPort;
+  writeState: WriteStateSnapshotPort;
   readFileFn: KickoffReadFile;
   statFileFn: KickoffStatFile;
   writeFileFn: KickoffWriteFile;
-  appendEnvelope: typeof appendProtocolEnvelope;
+  appendEnvelope: AppendProtocolEnvelopePort;
   emitDelivery: KickoffEmitDelivery;
 }
 
