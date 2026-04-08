@@ -207,9 +207,13 @@ Minden bounded batch után:
    - `54fcc761` `refactor(complexity): split metrics report aggregation handlers`
    - `57c0dba1` `refactor(complexity): split review verification validation`
    - `6b553a99` `refactor(complexity): split protocol payload validators`
+   - `pending` `refactor(complexity): split ui router request surfaces`
 6. Következő párhuzamos batch-ek:
    - `stateSchema` focused validator slice
-   - `ui/router` request and handler split
    - `convergence/policy` validator slice
    - `docContractReviewerGateEvaluation` reviewer finding slice
    - `metaReviewCommandSubmitRuntime` submit-routing slice
+7. Aktuális állapot:
+   - a `complexity` hard-fail check most `pass`
+   - a `ui/router` monolit request/handler blokk szét lett bontva `routerActions`, `routerContracts`, `routerDependencies`, `routerEvents`, `routerHttp`, `routerRequest`, `routerStaticAssets` fájlakra
+   - a következő blocker már nem complexity, hanem a megmaradt `dependency` és `error` hard-fail
