@@ -1,3 +1,4 @@
+import type { IncomingMessage } from "node:http";
 import { join } from "node:path";
 
 import { AttachBubbleError } from "../../../core/bubble/attachBubble.js";
@@ -162,7 +163,7 @@ async function mapActionErrorToApiError(input: {
 
 export async function handleBubbleActionRequest(input: {
   environment: RouterActionEnvironment;
-  req: import("node:http").IncomingMessage;
+  req: IncomingMessage;
   url: URL;
   bubbleId: string;
 }): Promise<{ status: number; result: unknown }> {

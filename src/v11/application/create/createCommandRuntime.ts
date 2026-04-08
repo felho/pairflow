@@ -33,6 +33,14 @@ export class BubbleCreateError extends Error {
   }
 }
 
+function toBubbleCreateError(input: {
+  message: string;
+  context: Record<string, unknown>;
+}): BubbleCreateError {
+  void input.context;
+  return new BubbleCreateError(input.message);
+}
+
 export interface CreateBubbleConfigInput {
   id: string;
   bubbleInstanceId: string;
@@ -54,9 +62,11 @@ export interface CreateBubbleConfigInput {
 
 export function validateBubbleId(id: string): void {
   if (!/^[a-z][a-z0-9_-]{2,39}$/u.test(id)) {
-    throw new BubbleCreateError(
-      "Invalid bubble id. Maximum length is 40 characters. Use 3-40 chars, starting with a lowercase letter, then lowercase letters, digits, '_' or '-'."
-    );
+    throw toBubbleCreateError({
+      message:
+        "Invalid bubble id. Maximum length is 40 characters. Use 3-40 chars, starting with a lowercase letter, then lowercase letters, digits, '_' or '-'.",
+      context: { id }
+    });
   }
 }
 
@@ -69,19 +79,22 @@ export async function ensureRepoPathIsGitRepo(
   } catch (error) {
     const typedError = error as NodeJS.ErrnoException;
     if (typedError.code === "ENOENT") {
-      throw new BubbleCreateError(
-        `Repository path does not exist: ${repoPath}`
-      );
+      throw toBubbleCreateError({
+        message: `Repository path does not exist: ${repoPath}`,
+        context: { repoPath, reason: "ENOENT" }
+      });
     }
     if (typedError.code === "ENOTDIR") {
-      throw new BubbleCreateError(
-        `Repository path is not a directory: ${repoPath}`
-      );
+      throw toBubbleCreateError({
+        message: `Repository path is not a directory: ${repoPath}`,
+        context: { repoPath, reason: "ENOTDIR" }
+      });
     }
     if (error instanceof GitRepositoryError) {
-      throw new BubbleCreateError(
-        `Repository path does not look like a git repository: ${repoPath}`
-      );
+      throw toBubbleCreateError({
+        message: `Repository path does not look like a git repository: ${repoPath}`,
+        context: { repoPath, reason: "GitRepositoryError" }
+      });
     }
     throw error;
   }
@@ -95,31 +108,42 @@ export async function resolveTaskInput(input: {
   const hasTaskText = isNonEmptyString(input.task);
   const hasTaskFile = isNonEmptyString(input.taskFile);
   if (hasTaskText && hasTaskFile) {
-    throw new BubbleCreateError(
-      "Provide either task text or task file path, not both."
-    );
+    throw toBubbleCreateError({
+      message: "Provide either task text or task file path, not both.",
+      context: { task: input.task, taskFile: input.taskFile, cwd: input.cwd }
+    });
   }
   if (!hasTaskText && !hasTaskFile) {
-    throw new BubbleCreateError(
-      "Provide task text or task file path."
-    );
+    throw toBubbleCreateError({
+      message: "Provide task text or task file path.",
+      context: { task: input.task, taskFile: input.taskFile, cwd: input.cwd }
+    });
   }
 
   if (hasTaskFile) {
     const candidatePath = resolve(input.cwd, input.taskFile as string);
     const taskStats = await stat(candidatePath).catch((error: NodeJS.ErrnoException) => {
       if (error.code === "ENOENT") {
-        throw new BubbleCreateError(`Task file does not exist: ${candidatePath}`);
+        throw toBubbleCreateError({
+          message: `Task file does not exist: ${candidatePath}`,
+          context: { candidatePath, cwd: input.cwd, taskFile: input.taskFile }
+        });
       }
       throw error;
     });
     if (!taskStats.isFile()) {
-      throw new BubbleCreateError(`Task path is not a file: ${candidatePath}`);
+      throw toBubbleCreateError({
+        message: `Task path is not a file: ${candidatePath}`,
+        context: { candidatePath, cwd: input.cwd, taskFile: input.taskFile }
+      });
     }
 
     const content = await readFile(candidatePath, "utf8");
     if (content.trim().length === 0) {
-      throw new BubbleCreateError(`Task file is empty: ${candidatePath}`);
+      throw toBubbleCreateError({
+        message: `Task file is empty: ${candidatePath}`,
+        context: { candidatePath, cwd: input.cwd, taskFile: input.taskFile }
+      });
     }
 
     return {
@@ -131,7 +155,10 @@ export async function resolveTaskInput(input: {
 
   const taskText = (input.task as string).trim();
   if (taskText.length === 0) {
-    throw new BubbleCreateError("Task cannot be empty.");
+    throw toBubbleCreateError({
+      message: "Task cannot be empty.",
+      context: { task: input.task, cwd: input.cwd }
+    });
   }
 
   return {
@@ -149,15 +176,23 @@ export async function resolveReviewerBriefInput(input: {
   const hasReviewerBriefText = isNonEmptyString(input.reviewerBrief);
   const hasReviewerBriefFile = isNonEmptyString(input.reviewerBriefFile);
   if (hasReviewerBriefText && hasReviewerBriefFile) {
-    throw new BubbleCreateError(
-      "Provide either reviewer brief text or reviewer brief file path, not both."
-    );
+    throw toBubbleCreateError({
+      message:
+        "Provide either reviewer brief text or reviewer brief file path, not both.",
+      context: {
+        reviewerBrief: input.reviewerBrief,
+        reviewerBriefFile: input.reviewerBriefFile,
+        cwd: input.cwd
+      }
+    });
   }
 
   if (input.accuracyCritical && !hasReviewerBriefText && !hasReviewerBriefFile) {
-    throw new BubbleCreateError(
-      "accuracy-critical bubbles require reviewer brief input (--reviewer-brief or --reviewer-brief-file)."
-    );
+    throw toBubbleCreateError({
+      message:
+        "accuracy-critical bubbles require reviewer brief input (--reviewer-brief or --reviewer-brief-file).",
+      context: { accuracyCritical: input.accuracyCritical, cwd: input.cwd }
+    });
   }
 
   if (!hasReviewerBriefText && !hasReviewerBriefFile) {
@@ -168,21 +203,38 @@ export async function resolveReviewerBriefInput(input: {
     const candidatePath = resolve(input.cwd, input.reviewerBriefFile as string);
     const briefStats = await stat(candidatePath).catch((error: NodeJS.ErrnoException) => {
       if (error.code === "ENOENT") {
-        throw new BubbleCreateError(
-          `Reviewer brief file does not exist: ${candidatePath}`
-        );
+        throw toBubbleCreateError({
+          message: `Reviewer brief file does not exist: ${candidatePath}`,
+          context: {
+            candidatePath,
+            cwd: input.cwd,
+            reviewerBriefFile: input.reviewerBriefFile
+          }
+        });
       }
       throw error;
     });
     if (!briefStats.isFile()) {
-      throw new BubbleCreateError(
-        `Reviewer brief path is not a file: ${candidatePath}`
-      );
+      throw toBubbleCreateError({
+        message: `Reviewer brief path is not a file: ${candidatePath}`,
+        context: {
+          candidatePath,
+          cwd: input.cwd,
+          reviewerBriefFile: input.reviewerBriefFile
+        }
+      });
     }
 
     const content = await readFile(candidatePath, "utf8");
     if (content.trim().length === 0) {
-      throw new BubbleCreateError(`Reviewer brief file is empty: ${candidatePath}`);
+      throw toBubbleCreateError({
+        message: `Reviewer brief file is empty: ${candidatePath}`,
+        context: {
+          candidatePath,
+          cwd: input.cwd,
+          reviewerBriefFile: input.reviewerBriefFile
+        }
+      });
     }
 
     return {
@@ -194,7 +246,10 @@ export async function resolveReviewerBriefInput(input: {
 
   const reviewerBriefText = (input.reviewerBrief as string).trim();
   if (reviewerBriefText.length === 0) {
-    throw new BubbleCreateError("Reviewer brief cannot be empty.");
+    throw toBubbleCreateError({
+      message: "Reviewer brief cannot be empty.",
+      context: { reviewerBrief: input.reviewerBrief, cwd: input.cwd }
+    });
   }
 
   return {
@@ -262,7 +317,10 @@ export function resolveCreateReviewArtifactType(
     return assertCreateReviewArtifactType(value);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    throw new BubbleCreateError(reason);
+    throw toBubbleCreateError({
+      message: reason,
+      context: { value }
+    });
   }
 }
 
@@ -293,7 +351,10 @@ export function buildIdeationPlaceholderTaskContent(bubbleId: string): string {
 export async function ensureBubbleDoesNotExist(bubbleDir: string): Promise<void> {
   try {
     await stat(bubbleDir);
-    throw new BubbleCreateError(`Bubble already exists: ${bubbleDir}`);
+    throw toBubbleCreateError({
+      message: `Bubble already exists: ${bubbleDir}`,
+      context: { bubbleDir }
+    });
   } catch (error) {
     const typedError = error as NodeJS.ErrnoException;
     if (typedError.code !== "ENOENT") {

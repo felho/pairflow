@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 
 import type {
   CreateUiRouterInput,
-  UiRouterDependencies
+  UiRouterEnvironment
 } from "./routerContracts.js";
 import { UiApiHttpError, badRequest, notFound, sendJson } from "./routerHttp.js";
 import { handleUiEvents } from "./routerEvents.js";
@@ -11,12 +11,6 @@ import {
   handleBubbleListRequest,
   handleBubbleResourceRequest
 } from "./routerActions.js";
-
-export interface UiRouterEnvironment {
-  input: CreateUiRouterInput;
-  dependencies: UiRouterDependencies;
-  routerCwd: string;
-}
 
 interface HandleApiRequestInput {
   environment: UiRouterEnvironment;

@@ -66,6 +66,12 @@ export interface UiRouter {
   handleRequest(req: IncomingMessage, res: ServerResponse): Promise<boolean>;
 }
 
+export interface UiRouterEnvironment {
+  input: CreateUiRouterInput;
+  dependencies: UiRouterDependencies;
+  routerCwd: string;
+}
+
 export interface BubbleActionContext {
   bubbleId: string;
   repoPath: string;

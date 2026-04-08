@@ -34,15 +34,33 @@ export interface UpsertDeletedArchiveIndexEntryResult {
   entry: ArchiveIndexEntry;
 }
 
+interface ArchiveIndexErrorContext {
+  archiveIndexPath?: string | undefined;
+  archivePath?: string | undefined;
+  bubbleId?: string | undefined;
+  bubbleInstanceId?: string | undefined;
+  entryIndex?: number | undefined;
+  field?: string | undefined;
+  lockPath?: string | undefined;
+  reason?: string | undefined;
+}
+
+interface ArchiveIndexErrorOptions extends ErrorOptions {
+  context?: ArchiveIndexErrorContext | undefined;
+}
+
 export class ArchiveIndexError extends Error {
-  public constructor(message: string, options?: ErrorOptions) {
+  public readonly context?: ArchiveIndexErrorContext | undefined;
+
+  public constructor(message: string, options?: ArchiveIndexErrorOptions) {
     super(message, options);
     this.name = "ArchiveIndexError";
+    this.context = options?.context;
   }
 }
 
 export class ArchiveIndexLockError extends ArchiveIndexError {
-  public constructor(message: string, options?: ErrorOptions) {
+  public constructor(message: string, options?: ArchiveIndexErrorOptions) {
     super(message, options);
     this.name = "ArchiveIndexLockError";
   }
@@ -63,7 +81,14 @@ function requireEntryString(
   const candidate = value[field];
   if (!isNonEmptyString(candidate)) {
     throw new ArchiveIndexError(
-      `archive index entry ${index} ${field} must be a non-empty string.`
+      `archive index entry ${index} ${field} must be a non-empty string.`,
+      {
+        context: {
+          entryIndex: index,
+          field,
+          reason: "missing_non_empty_string"
+        }
+      }
     );
   }
   return candidate;
@@ -79,7 +104,14 @@ function assertTimestampOrNull(
   }
   if (!isNonEmptyString(value) || !isIsoTimestamp(value)) {
     throw new ArchiveIndexError(
-      `archive index entry ${index} ${field} must be null or an ISO-8601 UTC timestamp.`
+      `archive index entry ${index} ${field} must be null or an ISO-8601 UTC timestamp.`,
+      {
+        context: {
+          entryIndex: index,
+          field,
+          reason: "invalid_timestamp"
+        }
+      }
     );
   }
   return value;
@@ -91,26 +123,52 @@ function parseArchiveIndex(raw: string): ArchiveIndexDocument {
     parsed = JSON.parse(raw) as unknown;
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    throw new ArchiveIndexError(`Invalid archive index JSON: ${reason}`);
+    throw new ArchiveIndexError(`Invalid archive index JSON: ${reason}`, {
+      context: {
+        reason: "invalid_json"
+      }
+    });
   }
 
   if (!isRecord(parsed)) {
-    throw new ArchiveIndexError("Archive index must be a JSON object.");
+    throw new ArchiveIndexError("Archive index must be a JSON object.", {
+      context: {
+        reason: "not_a_json_object"
+      }
+    });
   }
 
   if (parsed.schema_version !== archiveSchemaVersion) {
     throw new ArchiveIndexError(
-      `Unsupported archive index schema_version: ${String(parsed.schema_version)}.`
+      `Unsupported archive index schema_version: ${String(parsed.schema_version)}.`,
+      {
+        context: {
+          reason: "unsupported_schema_version",
+          archiveIndexPath: "archive-index.json"
+        }
+      }
     );
   }
 
   if (!Array.isArray(parsed.entries)) {
-    throw new ArchiveIndexError("Archive index entries must be an array.");
+    throw new ArchiveIndexError("Archive index entries must be an array.", {
+      context: {
+        reason: "entries_not_array"
+      }
+    });
   }
 
   const entries = parsed.entries.map((value, index): ArchiveIndexEntry => {
     if (!isRecord(value)) {
-      throw new ArchiveIndexError(`archive index entry ${index} must be an object.`);
+      throw new ArchiveIndexError(
+        `archive index entry ${index} must be an object.`,
+        {
+          context: {
+            entryIndex: index,
+            reason: "entry_not_object"
+          }
+        }
+      );
     }
 
     const bubbleInstanceId = requireEntryString(value, "bubble_instance_id", index);
@@ -122,13 +180,27 @@ function parseArchiveIndex(raw: string): ArchiveIndexDocument {
 
     if (!isArchiveStatus(value.status)) {
       throw new ArchiveIndexError(
-        `archive index entry ${index} status must be one of: ${archiveStatuses.join("|")}.`
+        `archive index entry ${index} status must be one of: ${archiveStatuses.join("|")}.`,
+        {
+          context: {
+            entryIndex: index,
+            field: "status",
+            reason: "invalid_status"
+          }
+        }
       );
     }
 
     if (!isIsoTimestamp(updatedAt)) {
       throw new ArchiveIndexError(
-        `archive index entry ${index} updated_at must be an ISO-8601 UTC timestamp.`
+        `archive index entry ${index} updated_at must be an ISO-8601 UTC timestamp.`,
+        {
+          context: {
+            entryIndex: index,
+            field: "updated_at",
+            reason: "invalid_timestamp"
+          }
+        }
       );
     }
 
@@ -230,7 +302,12 @@ function normalizeCreatedAt(value: string | null | undefined): string | null {
     return null;
   }
   if (!isIsoTimestamp(value)) {
-    throw new ArchiveIndexError("createdAt must be an ISO-8601 UTC timestamp.");
+    throw new ArchiveIndexError("createdAt must be an ISO-8601 UTC timestamp.", {
+      context: {
+        field: "createdAt",
+        reason: "invalid_timestamp"
+      }
+    });
   }
   return value;
 }
@@ -298,7 +375,13 @@ export async function upsertDeletedArchiveIndexEntry(
   } catch (error) {
     if (error instanceof FileLockTimeoutError) {
       throw new ArchiveIndexLockError(
-        `Could not acquire archive index lock: ${lockPath}`
+        `Could not acquire archive index lock: ${lockPath}`,
+        {
+          context: {
+            lockPath,
+            reason: "lock_timeout"
+          }
+        }
       );
     }
     if (error instanceof ArchiveIndexError) {
@@ -308,6 +391,14 @@ export async function upsertDeletedArchiveIndexEntry(
     throw new ArchiveIndexError(
       `Failed to update archive index for bubble ${input.bubbleId} (${input.bubbleInstanceId}): ${reason}`,
       {
+        context: {
+          archiveIndexPath: archivePaths.archiveIndexPath,
+          archivePath,
+          bubbleId: input.bubbleId,
+          bubbleInstanceId: input.bubbleInstanceId,
+          lockPath,
+          reason: "update_failed"
+        },
         cause: error
       }
     );
