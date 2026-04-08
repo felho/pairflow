@@ -1,4 +1,3 @@
-import type { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
 import type {
   MetaReviewArtifactReadPort,
   MetaReviewArtifactWritePort
@@ -9,6 +8,7 @@ import type {
   ReadStateSnapshotPort,
   WriteStateSnapshotPort
 } from "../ports/stateSnapshots.js";
+import type { SetMetaReviewerPaneBindingPort } from "../ports/runtimeSessions.js";
 import type {
   AppendProtocolEnvelopePort,
   ReadTranscriptEnvelopesPort
@@ -58,7 +58,7 @@ export type NotifyMetaReviewerSubmissionRequest = (
 ) => Promise<MetaReviewRuntimeDeliveryObservation>;
 
 export interface ResolveMetaReviewerPaneWarningInput {
-  setMetaReviewerPane: typeof setMetaReviewerPaneBinding;
+  setMetaReviewerPane: SetMetaReviewerPaneBindingPort;
   notifySubmissionRequest: NotifyMetaReviewerSubmissionRequest;
   runTmuxRunner: MetaReviewGateTmuxRunner;
   sessionsPath: string;
@@ -95,7 +95,7 @@ export interface ApplyMetaReviewGateOnConvergenceDependencies {
   readStateSnapshot?: ReadStateSnapshotPort;
   writeStateSnapshot?: WriteStateSnapshotPort;
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
-  setMetaReviewerPaneBinding?: typeof setMetaReviewerPaneBinding;
+  setMetaReviewerPaneBinding?: SetMetaReviewerPaneBindingPort;
   notifyMetaReviewerSubmissionRequest?: NotifyMetaReviewerSubmissionRequest;
   resolveMetaReviewerPaneWarning?: ResolveMetaReviewerPaneWarning;
   runTmux?: MetaReviewGateTmuxRunner;
@@ -118,7 +118,7 @@ export interface RecoverMetaReviewGateFromSnapshotDependencies {
   writeStateSnapshot?: WriteStateSnapshotPort;
   appendProtocolEnvelope?: AppendProtocolEnvelopePort;
   readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
-  setMetaReviewerPaneBinding?: typeof setMetaReviewerPaneBinding;
+  setMetaReviewerPaneBinding?: SetMetaReviewerPaneBindingPort;
   readFile?: MetaReviewArtifactReadPort;
   writeFile?: MetaReviewArtifactWritePort;
   sleepForRetryMs?: (delayMs: number) => Promise<void>;

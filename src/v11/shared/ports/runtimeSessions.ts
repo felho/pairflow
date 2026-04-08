@@ -52,6 +52,20 @@ export interface RemoveRuntimeSessionsResult {
   missingBubbleIds: string[];
 }
 
+export interface SetMetaReviewerPaneBindingInput {
+  sessionsPath: string;
+  bubbleId: string;
+  active: boolean;
+  now?: Date;
+  lockTimeoutMs?: number;
+}
+
+export interface SetMetaReviewerPaneBindingResult {
+  updated: boolean;
+  reason?: "no_runtime_session" | "shared_runtime_pane";
+  record?: RuntimeSessionRecord;
+}
+
 export type ReadRuntimeSessionsRegistryPort = (
   sessionsPath: string,
   options?: ReadRuntimeSessionsOptions
@@ -68,3 +82,7 @@ export type RemoveRuntimeSessionPort = (
 export type RemoveRuntimeSessionsPort = (
   input: RemoveRuntimeSessionsInput
 ) => Promise<RemoveRuntimeSessionsResult>;
+
+export type SetMetaReviewerPaneBindingPort = (
+  input: SetMetaReviewerPaneBindingInput
+) => Promise<SetMetaReviewerPaneBindingResult>;

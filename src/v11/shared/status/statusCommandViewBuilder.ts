@@ -1,6 +1,6 @@
 import { computeWatchdogStatus, type WatchdogStatus } from "../watchdog/watchdogStatus.js";
 import { type ReviewVerificationState } from "../../../v11/shared/reviewer/reviewVerification.js";
-import type { StateValidationDiagnostics } from "../../../core/state/stateStore.js";
+import type { StateValidationDiagnostics } from "../ports/stateSnapshots.js";
 import type { ReadWatchdogPaneActivityResult } from "../watchdog/watchdogPaneActivityStore.js";
 import type {
   BubbleFailingGate,

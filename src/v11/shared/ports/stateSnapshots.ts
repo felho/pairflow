@@ -2,6 +2,12 @@ import type {
   BubbleLifecycleState,
   BubbleStateSnapshot
 } from "../../../types/bubble.js";
+import type { ValidationError } from "../validation/primitives.js";
+
+export interface StateValidationDiagnostics {
+  message: string;
+  errors: ValidationError[];
+}
 
 export interface LoadedStateSnapshot {
   state: BubbleStateSnapshot;
