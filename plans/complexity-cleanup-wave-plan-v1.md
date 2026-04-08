@@ -12,7 +12,7 @@ owners:
 
 ## Objective
 
-Last updated from `main` at `61b657e1`.
+Last updated from `main` at `74ff6ed3`.
 
 A fitness hard-fail backlog az `error` check lezárása után egyetlen checkerre szűkült:
 
@@ -39,15 +39,15 @@ Legutóbbi teljes fitness report:
 
 Jelenlegi `complexity` summary:
 
-1. `37` budget violation
+1. `31` budget violation
 2. a legnagyobb klaszterek:
    - `src/v11/shared/state/stateSchema.ts`
    - `src/v11/infrastructure/ui/router.ts`
    - `src/v11/domain/convergence/policy.ts`
    - `src/v11/shared/protocol/validators.ts`
-   - `src/v11/shared/reviewer/reviewVerificationValidation.ts`
    - `src/v11/shared/metaReview/metaReviewCommandSubmitRuntime.ts`
-   - `src/v11/shared/metaReview/metaReviewCanonicalization.ts`
+   - `src/v11/infrastructure/artifact/reviewer/testEvidenceRuntime.ts`
+   - `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`
 
 ## Working Strategy
 
@@ -200,6 +200,9 @@ Minden bounded batch után:
    - `4f934787` `refactor(complexity): split status view projections`
    - `5c659643` `refactor(complexity): finish watchdog status split`
    - `6e1c9889` `fix(status): align status view projection types`
+   - `873f3098` `refactor(complexity): split archive report context loader`
+   - `8b0da57e` `refactor(complexity): split metrics read event parsing`
+   - `74ff6ed3` `refactor(complexity): split meta review canonical report helpers`
 6. Következő párhuzamos batch-ek:
    - `stateSchema` focused validator slice
    - `protocol/validators` findings slice
