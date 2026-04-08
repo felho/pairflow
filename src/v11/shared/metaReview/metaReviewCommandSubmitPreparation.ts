@@ -1,0 +1,254 @@
+import { randomUUID } from "node:crypto";
+
+import {
+  resolveBubbleById
+} from "../../../core/bubble/bubbleLookup.js";
+import {
+  readRuntimeSessionsRegistry
+} from "../../../core/runtime/sessionsRegistry.js";
+import {
+  readStateSnapshot
+} from "../../../core/state/stateStore.js";
+import {
+  isInteger,
+  isNonEmptyString,
+  isRecord
+} from "../validation/primitives.js";
+import { MetaReviewError } from "./metaReviewError.js";
+import {
+  normalizeOptionalText,
+  resolveCanonicalMetaReviewReportJson
+} from "./metaReviewCanonicalization.js";
+import {
+  assertApproveRecommendationConsistentWithReviewerSnapshot,
+  readLatestApproveReviewerSnapshot
+} from "./metaReviewRuntimeParity.js";
+import {
+  assertActiveMetaReviewExecutionContext,
+  assertMetaReviewSubmitterAuthority
+} from "./metaReviewCommandSubmitAuthority.js";
+import {
+  assertRunPayloadInvariants,
+  mapRecommendationToStatus,
+  normalizeRequiredSubmitText
+} from "./metaReviewCommandSubmitValidation.js";
+import {
+  assertSummaryStructuredParity,
+} from "./metaReviewCommandSubmitParity.js";
+import {
+  resolveSubmitCanonicalRunId
+} from "./metaReviewCommandSubmitLink.js";
+import type {
+  MetaReviewCommandDependencies,
+  MetaReviewSubmitInput
+} from "./metaReviewCommandContract.js";
+
+export interface PreparedMetaReviewSubmitContext {
+  resolved: Awaited<ReturnType<typeof resolveBubbleById>>;
+  loadedState: Awaited<ReturnType<typeof readStateSnapshot>>;
+  readFileFn: NonNullable<MetaReviewCommandDependencies["readFile"]>;
+  writeFileFn: NonNullable<MetaReviewCommandDependencies["writeFile"]>;
+  recommendation: MetaReviewSubmitInput["recommendation"];
+  status: ReturnType<typeof mapRecommendationToStatus>;
+  summary: string;
+  reworkTargetMessage: string | null;
+  reportJson: Record<string, unknown>;
+  generatedRunId: string;
+  runId: string;
+  canonicalReportJson: Record<string, unknown>;
+  latestReviewerSnapshot: Awaited<
+    ReturnType<typeof readLatestApproveReviewerSnapshot>
+  >;
+  executionContext: ReturnType<typeof assertActiveMetaReviewExecutionContext>;
+  now: Date;
+}
+
+function resolveMetaReviewArtifactReadPort(
+  dependencies: MetaReviewCommandDependencies
+): NonNullable<MetaReviewCommandDependencies["readFile"]> {
+  if (dependencies.readFile !== undefined) {
+    return dependencies.readFile;
+  }
+  throw new MetaReviewError(
+    "META_REVIEW_UNKNOWN_ERROR",
+    "meta-review artifact read capability is unavailable."
+  );
+}
+
+function resolveMetaReviewArtifactWritePort(
+  dependencies: MetaReviewCommandDependencies
+): NonNullable<MetaReviewCommandDependencies["writeFile"]> {
+  if (dependencies.writeFile !== undefined) {
+    return dependencies.writeFile;
+  }
+  throw new MetaReviewError(
+    "META_REVIEW_UNKNOWN_ERROR",
+    "meta-review artifact write capability is unavailable."
+  );
+}
+
+function resolveValidatedSubmitShape(input: {
+  submitInput: MetaReviewSubmitInput;
+  loadedState: Awaited<ReturnType<typeof readStateSnapshot>>;
+  now: Date;
+  randomUuidFn: () => string;
+}): {
+  recommendation: MetaReviewSubmitInput["recommendation"];
+  status: ReturnType<typeof mapRecommendationToStatus>;
+  summary: string;
+  reworkTargetMessage: string | null;
+  reportJson: Record<string, unknown>;
+  generatedRunId: string;
+  updatedAt: string;
+} {
+  if (!isInteger(input.submitInput.round) || input.submitInput.round < 1) {
+    throw new MetaReviewError(
+      "META_REVIEW_SCHEMA_INVALID",
+      "meta-review submit round must be a positive integer"
+    );
+  }
+
+  if (input.submitInput.round !== input.loadedState.state.round) {
+    throw new MetaReviewError(
+      "META_REVIEW_ROUND_MISMATCH",
+      `meta-review submit round mismatch (active: ${input.loadedState.state.round}, received: ${input.submitInput.round}).`
+    );
+  }
+
+  if (
+    input.submitInput.recommendation !== "approve" &&
+    input.submitInput.recommendation !== "rework" &&
+    input.submitInput.recommendation !== "inconclusive"
+  ) {
+    throw new MetaReviewError(
+      "META_REVIEW_SCHEMA_INVALID",
+      "meta-review submit recommendation must be one of: approve, rework, inconclusive"
+    );
+  }
+
+  if (
+    input.submitInput.report_json === undefined ||
+    !isRecord(input.submitInput.report_json)
+  ) {
+    throw new MetaReviewError(
+      "META_REVIEW_SCHEMA_INVALID",
+      "meta-review submit report_json is required and must be an object"
+    );
+  }
+
+  const reportJson = input.submitInput.report_json;
+  const updatedAt = input.now.toISOString();
+  const runIdRaw = input.randomUuidFn();
+  if (!isNonEmptyString(runIdRaw)) {
+    throw new MetaReviewError(
+      "META_REVIEW_SCHEMA_INVALID",
+      "meta-review submit run_id must be a non-empty string"
+    );
+  }
+
+  const recommendation = input.submitInput.recommendation;
+  const status = mapRecommendationToStatus(recommendation);
+  const summary = normalizeRequiredSubmitText(input.submitInput.summary, "summary");
+  const reworkTargetMessage = normalizeOptionalText(
+    input.submitInput.rework_target_message ?? undefined
+  );
+  assertRunPayloadInvariants({
+    recommendation,
+    status,
+    reworkTargetMessage
+  });
+  assertSummaryStructuredParity({
+    recommendation,
+    summary,
+    reportJson
+  });
+
+  return {
+    recommendation,
+    status,
+    summary,
+    reworkTargetMessage,
+    reportJson,
+    generatedRunId: runIdRaw.trim(),
+    updatedAt
+  };
+}
+
+export async function prepareMetaReviewSubmitContext(input: {
+  submitInput: MetaReviewSubmitInput;
+  dependencies: MetaReviewCommandDependencies;
+  now: Date;
+}): Promise<PreparedMetaReviewSubmitContext> {
+  const resolveBubble = input.dependencies.resolveBubbleById ?? resolveBubbleById;
+  const readState = input.dependencies.readStateSnapshot ?? readStateSnapshot;
+  const readRuntimeSessions =
+    input.dependencies.readRuntimeSessionsRegistry ?? readRuntimeSessionsRegistry;
+  const readFileFn = resolveMetaReviewArtifactReadPort(input.dependencies);
+  const writeFileFn = resolveMetaReviewArtifactWritePort(input.dependencies);
+  const randomUuidFn = input.dependencies.randomUUID ?? randomUUID;
+
+  const resolved = await resolveBubble({
+    bubbleId: input.submitInput.bubbleId,
+    ...(input.submitInput.repoPath !== undefined
+      ? { repoPath: input.submitInput.repoPath }
+      : {}),
+    ...(input.submitInput.cwd !== undefined ? { cwd: input.submitInput.cwd } : {})
+  });
+
+  const loadedState = await readState(resolved.bubblePaths.statePath);
+  await assertMetaReviewSubmitterAuthority({
+    bubbleId: resolved.bubbleId,
+    sessionsPath: resolved.bubblePaths.sessionsPath,
+    readRuntimeSessions,
+    state: loadedState.state
+  });
+
+  const validated = resolveValidatedSubmitShape({
+    submitInput: input.submitInput,
+    loadedState,
+    now: input.now,
+    randomUuidFn
+  });
+
+  const runId = resolveSubmitCanonicalRunId({
+    recommendation: validated.recommendation,
+    reportJson: validated.reportJson,
+    generatedRunId: validated.generatedRunId
+  });
+  const canonicalReportJson = resolveCanonicalMetaReviewReportJson({
+    recommendation: validated.recommendation,
+    reportJson: validated.reportJson,
+    runId
+  });
+  const latestReviewerSnapshot = await readLatestApproveReviewerSnapshot({
+    recommendation: validated.recommendation,
+    transcriptPath: resolved.bubblePaths.transcriptPath,
+    round: input.submitInput.round
+  });
+  assertApproveRecommendationConsistentWithReviewerSnapshot({
+    latestSnapshot: latestReviewerSnapshot,
+    summary: validated.summary,
+    reportJson: canonicalReportJson
+  });
+  const executionContext = assertActiveMetaReviewExecutionContext(
+    loadedState.state
+  );
+
+  return {
+    resolved,
+    loadedState,
+    readFileFn,
+    writeFileFn,
+    recommendation: validated.recommendation,
+    status: validated.status,
+    summary: validated.summary,
+    reworkTargetMessage: validated.reworkTargetMessage,
+    reportJson: validated.reportJson,
+    generatedRunId: validated.generatedRunId,
+    runId,
+    canonicalReportJson,
+    latestReviewerSnapshot,
+    executionContext,
+    now: input.now
+  };
+}
