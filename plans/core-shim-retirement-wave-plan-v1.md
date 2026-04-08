@@ -368,6 +368,54 @@ Current medium clusters:
    - `src/v11/infrastructure/ui/routerContracts.ts`
    - `src/v11/infrastructure/ui/routerDependencies.ts`
    - shape: current UI boundary still depends on `core` command surfaces; direct retarget to `application` opens `infrastructure -> application` violations, so this needs a dedicated interface/boundary decision
+
+### Next Medium Batch Candidate: Reviewer Evidence / Reviewer Brief
+
+Goal:
+
+- retire the remaining reviewer evidence / reviewer brief `core` bridges without
+  opening `application -> infrastructure` violations,
+- keep `emitPassFromWorkspace` and `startBubble` behavior stable,
+- avoid scattering default implementation wiring across multiple helper files.
+
+Primary files:
+
+- `src/v11/application/pass/reviewerDeliveryHelpers.ts`
+- `src/v11/application/pass/reviewerTestDirectiveResolver.ts`
+- `src/v11/application/start/startCommandContext.ts`
+- `src/v11/application/start/startCommandResumeFlowPreparation.ts`
+
+Supporting contracts already present:
+
+- `src/v11/shared/ports/reviewerArtifacts.ts`
+- `src/v11/shared/ports/reviewerContext.ts`
+- `src/v11/shared/ports/reviewerTestEvidenceArtifacts.ts`
+- `src/v11/shared/ports/tmuxDelivery.ts`
+
+Observed constraint:
+
+- the helper-level `core` imports are not the real problem by themselves,
+- the real problem is that default implementations still live inside
+  `application` helpers,
+- moving those defaults directly to canonical `infrastructure` owners would
+  trigger forbidden `application -> infrastructure` edges.
+
+Planned implementation shape:
+
+1. lift reviewer artifact / reviewer test evidence / delivery message-ref
+   defaults out of the leaf helpers,
+2. thread those capabilities through explicit dependency contracts,
+3. resolve defaults at the narrowest allowed outer boundary that already owns
+   runtime wiring,
+4. only then remove the retired `core` helper imports from the leaf helpers.
+
+Non-goals for the batch:
+
+- do not redesign the whole pass/start orchestration surface,
+- do not change runtime semantics of reviewer refresh or reviewer directive
+  fallback,
+- do not mix the UI router or `createBubble` retained bridge into the same
+  batch.
 | W7 | converged reviewer shim retirement | medium | validated | `convergedValidation*` stopped importing the retired `core/reviewer/summaryVerifierConsistencyGate` shim and now uses the canonical shared reviewer surface; warn-only coverage moved from `294 -> 263` total and the retired-shim subset dropped from `15 -> 8` |
 | W8 | easy frontier reassessment | mixed | validated | The obvious easy frontier is now materially exhausted; attempted `infrastructure/ui` rewrite to direct `v11/application` facades opened `infrastructure -> application` dependency failures, so the UI router cluster is explicitly reclassified out of the easy wave |
 | W9 | approval dependency bridge | medium | planned | Rewrite `approval` contract/default wiring away from `core` shims |
