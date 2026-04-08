@@ -33,7 +33,7 @@ export function normalizeApprovalAdvisoryFindings(
     const title = typeof finding.title === "string" ? finding.title.trim() : "";
     if ((severity !== "P2" && severity !== "P3") || title.length === 0) {
       throw new Error(
-        `${convergedAdvisoryMetadataRequiredReasonCode}: advisory findings payload must include non-empty title and severity=P2|P3.`
+        `${convergedAdvisoryMetadataRequiredReasonCode}: context advisory_findings payload must include non-empty title and severity=P2|P3.`
       );
     }
     const refs = Array.isArray(finding.refs)
@@ -69,7 +69,7 @@ export function assertAdvisorySplitMetadataWhenRequired(input: {
   ) {
     if (!hasApproveFindingsSplitMetadata(input.parityMetadata)) {
       throw new Error(
-        `${convergedAdvisoryMetadataRequiredReasonCode}: recommendation=approve requires findings_claimed_open_total, findings_blocking_open_total, and findings_advisory_open_total.`
+        `${convergedAdvisoryMetadataRequiredReasonCode}: context route=${input.route}; recommendation=approve requires findings_claimed_open_total, findings_blocking_open_total, and findings_advisory_open_total.`
       );
     }
     const claimed = input.parityMetadata.findings_claimed_open_total;
@@ -77,18 +77,18 @@ export function assertAdvisorySplitMetadataWhenRequired(input: {
     const advisory = input.parityMetadata.findings_advisory_open_total;
     if (blocking > 0) {
       throw new Error(
-        `${metaReviewApproveBlockingFindingsPresentReasonCode}: recommendation=approve requires findings_blocking_open_total=0 (found ${blocking}).`
+        `${metaReviewApproveBlockingFindingsPresentReasonCode}: context route=${input.route}; recommendation=approve requires findings_blocking_open_total=0 (found ${blocking}).`
       );
     }
     if (claimed !== blocking + advisory) {
       throw new Error(
-        `${metaReviewFindingsParityGuardReasonCode}: findings_claimed_open_total (${claimed}) must equal findings_blocking_open_total + findings_advisory_open_total (${blocking + advisory}).`
+        `${metaReviewFindingsParityGuardReasonCode}: context route=${input.route}; findings_claimed_open_total (${claimed}) must equal findings_blocking_open_total + findings_advisory_open_total (${blocking + advisory}).`
       );
     }
     const artifact = input.parityMetadata.findings_artifact_open_total;
     if (typeof artifact === "number" && artifact !== claimed) {
       throw new Error(
-        `${metaReviewFindingsParityGuardReasonCode}: findings_artifact_open_total (${artifact}) must equal findings_claimed_open_total (${claimed}).`
+        `${metaReviewFindingsParityGuardReasonCode}: context route=${input.route}; findings_artifact_open_total (${artifact}) must equal findings_claimed_open_total (${claimed}).`
       );
     }
   }
@@ -100,7 +100,7 @@ export function assertAdvisorySplitMetadataWhenRequired(input: {
   });
   if (advisoryContractInvariant.advisorySplitRequiredButMissing) {
     throw new Error(
-      `${convergedAdvisoryMetadataRequiredReasonCode}: findings_blocking_open_total and findings_advisory_open_total are required on advisory_v1 approval routing path.`
+      `${convergedAdvisoryMetadataRequiredReasonCode}: context route=${input.route}; findings_blocking_open_total and findings_advisory_open_total are required on advisory_v1 approval routing path.`
     );
   }
 }

@@ -156,13 +156,13 @@ export async function rethrowAfterMetaReviewerPaneDeactivation(input: {
     );
   }
 
-  throw input.error;
+  throw toMetaReviewGateError(input.error);
 }
 
-function buildMissingTopLevelExecutionContextError(): MetaReviewGateError {
+function toMissingTopLevelExecutionContextError(): MetaReviewGateError {
   return new MetaReviewGateError(
     "META_REVIEW_GATE_TRANSITION_INVALID",
-    "META_REVIEW_GATE_TRANSITION_INVALID: meta-review gate recovery requires a valid top-level execution_context; nested meta_review.execution_context aliases are not accepted.",
+    "META_REVIEW_GATE_TRANSITION_INVALID: context execution_context_scope=top_level; meta-review gate recovery requires a valid top-level execution_context; nested meta_review.execution_context aliases are not accepted.",
     {
       stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
     }
@@ -175,7 +175,7 @@ export function requireRecoverableMetaReviewExecutionContext(
   const topLevelExecutionContext = loaded.state.execution_context ?? null;
   const executionContextResult = validateActiveMetaReviewExecutionContext(loaded.state);
   if (topLevelExecutionContext === null) {
-    throw buildMissingTopLevelExecutionContextError();
+    throw toMissingTopLevelExecutionContextError();
   }
 
   if (executionContextResult.ok) {
