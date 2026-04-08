@@ -157,7 +157,7 @@ export function appendSourcePolicyDiagnostics(input: {
 
 export function buildEvidenceDiagnostics(
   decision: EvidenceSourcePolicyDecision
-): ReviewerTestEvidenceArtifact["diagnostics"] {
+): NonNullable<ReviewerTestEvidenceArtifact["diagnostics"]> {
   return {
     source_policy: {
       allowed_ref_paths: [...decision.allowed_ref_paths],
