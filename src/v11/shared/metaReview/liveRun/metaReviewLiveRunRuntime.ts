@@ -1,15 +1,9 @@
-import { randomUUID } from "node:crypto";
-
-import { resolveBubbleById } from "../../../../core/bubble/bubbleLookup.js";
-import {
-  isMetaReviewExecutionContextActiveState
-} from "../metaReviewExecutionContext.js";
+import { resolveMetaReviewLiveRunPorts } from "./metaReviewLiveRunPorts.js";
 import {
   refreshMetaReviewApprovalRequest
 } from "./metaReviewLiveRunApprovalRefresh.js";
 import {
   CANONICAL_META_REVIEW_REPORT_REF,
-  normalizeOptionalText,
   resolveCanonicalMetaReviewReportJson
 } from "./metaReviewLiveRunReport.js";
 import {
@@ -21,173 +15,66 @@ import {
   buildNextMetaReviewStateSnapshot,
   persistMetaReviewStateSnapshot
 } from "./metaReviewLiveRunPersistence.js";
-import {
-  assertRunPayloadInvariants,
-  formatRunnerFailure,
-  mapRecommendationToStatus
-} from "./metaReviewLiveRunErrors.js";
-import { appendProtocolEnvelope } from "../../../../core/protocol/transcriptStore.js";
-import {
-  readStateSnapshot,
-  writeStateSnapshot
-} from "../../../../core/state/stateStore.js";
-import { MetaReviewError } from "../metaReviewError.js";
-import type {
-  MetaReviewRecommendation,
-  MetaReviewRunStatus
-} from "../../../../types/bubble.js";
 import type {
   MetaReviewDependencies,
-  MetaReviewLiveRunnerOutput,
   MetaReviewResult,
   MetaReviewRunInput,
-  MetaReviewRunWarning
 } from "./metaReviewLiveRunContract.js";
-
-function unavailableLiveRunner(): Promise<MetaReviewLiveRunnerOutput> {
-  return Promise.reject(new Error("Meta-review runner adapter is unavailable."));
-}
-
-function resolveMetaReviewArtifactReadPort(
-  dependencies: MetaReviewDependencies
-): NonNullable<MetaReviewDependencies["readFile"]> {
-  if (dependencies.readFile !== undefined) {
-    return dependencies.readFile;
-  }
-  throw new MetaReviewError(
-    "META_REVIEW_UNKNOWN_ERROR",
-    "meta-review live-run artifact read capability is unavailable."
-  );
-}
-
-function resolveMetaReviewArtifactWritePort(
-  dependencies: MetaReviewDependencies
-): NonNullable<MetaReviewDependencies["writeFile"]> {
-  if (dependencies.writeFile !== undefined) {
-    return dependencies.writeFile;
-  }
-  throw new MetaReviewError(
-    "META_REVIEW_UNKNOWN_ERROR",
-    "meta-review live-run artifact write capability is unavailable."
-  );
-}
+import { executeMetaReviewLiveRun } from "./metaReviewLiveRunExecution.js";
 
 export async function runMetaReview(
   input: MetaReviewRunInput,
   dependencies: MetaReviewDependencies = {}
 ): Promise<MetaReviewResult> {
-  const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
-  const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
-  const writeState = dependencies.writeStateSnapshot ?? writeStateSnapshot;
-  const appendEnvelope = dependencies.appendProtocolEnvelope ?? appendProtocolEnvelope;
-  const runLiveReview = dependencies.runLiveReview ?? unavailableLiveRunner;
-  const readFileFn = resolveMetaReviewArtifactReadPort(dependencies);
-  const writeFileFn = resolveMetaReviewArtifactWritePort(dependencies);
-  const now = dependencies.now ?? new Date();
-  const makeUuid = dependencies.randomUUID ?? randomUUID;
+  const ports = resolveMetaReviewLiveRunPorts(dependencies);
 
-  const resolved = await resolveBubble({
+  const resolved = await ports.resolveBubble({
     bubbleId: input.bubbleId,
     ...(input.repoPath !== undefined ? { repoPath: input.repoPath } : {}),
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {})
   });
 
-  const loadedState = await readState(resolved.bubblePaths.statePath);
-  if (
-    isMetaReviewExecutionContextActiveState(loadedState.state)
-    && dependencies.allowMetaReviewRunningState !== true
-  ) {
-    throw new MetaReviewError(
-      "META_REVIEW_STATE_INVALID",
-      "meta-review run is disabled while the active submit channel is reserved for an in-flight meta-review authority window"
-    );
-  }
-  const runId = makeUuid();
-  const updatedAt = now.toISOString();
-  const depth = input.depth ?? "standard";
-
-  let recommendation: MetaReviewRecommendation;
-  let status: MetaReviewRunStatus;
-  let summary: string | null;
-  let reportJson: Record<string, unknown> | undefined;
-  let reworkTargetMessage: string | null;
-  const warnings: MetaReviewRunWarning[] = [];
-
-  try {
-    const output = await runLiveReview({
-      bubbleId: resolved.bubbleId,
-      repoPath: resolved.repoPath,
-      worktreePath: resolved.bubblePaths.worktreePath,
-      transcriptPath: resolved.bubblePaths.transcriptPath,
-      reviewerAgent: resolved.bubbleConfig.agents.reviewer,
-      depth,
-      state: loadedState.state,
-      runId,
-      now
-    });
-
-    recommendation = output.recommendation;
-    status = mapRecommendationToStatus(recommendation);
-    summary = normalizeOptionalText(output.summary);
-    reworkTargetMessage = normalizeOptionalText(
-      output.rework_target_message ?? undefined
-    );
-    reportJson = output.report_json;
-  } catch (error) {
-    const failure = formatRunnerFailure(error);
-    recommendation = "inconclusive";
-    status = "error";
-    summary = failure.summary;
-    reworkTargetMessage = null;
-
-    warnings.push({
-      reason_code: "META_REVIEW_RUNNER_ERROR",
-      message: failure.warningMessage
-    });
-  }
-
-  const canonicalReportJson = resolveCanonicalMetaReviewReportJson({
-    recommendation,
-    ...(reportJson !== undefined ? { reportJson } : {}),
-    runId
+  const execution = await executeMetaReviewLiveRun({
+    depth: input.depth ?? "standard",
+    resolved,
+    ports,
   });
-
-  assertRunPayloadInvariants({
-    recommendation,
-    status,
-    reworkTargetMessage
+  const canonicalReportJson = resolveCanonicalMetaReviewReportJson({
+    recommendation: execution.recommendation,
+    ...(execution.reportJson !== undefined ? { reportJson: execution.reportJson } : {}),
+    runId: execution.runId
   });
 
   const nextState = buildNextMetaReviewStateSnapshot({
-    loadedState,
-    runId,
-    status,
-    recommendation,
-    summary,
-    reworkTargetMessage,
-    updatedAt,
+    loadedState: execution.loadedState,
+    runId: execution.runId,
+    status: execution.status,
+    recommendation: execution.recommendation,
+    summary: execution.summary,
+    reworkTargetMessage: execution.reworkTargetMessage,
+    updatedAt: execution.updatedAt,
     reportRef: CANONICAL_META_REVIEW_REPORT_REF
   });
 
   const written = await persistMetaReviewStateSnapshot({
     statePath: resolved.bubblePaths.statePath,
-    loadedState,
+    loadedState: execution.loadedState,
     nextState,
-    writeStateFn: writeState
+    writeStateFn: ports.writeState
   });
 
   const reportPayload = buildMetaReviewLastJsonArtifactPayload({
     bubbleId: resolved.bubbleId,
-    runId,
+    runId: execution.runId,
     round: written.state.round,
-    generatedAt: updatedAt,
-    depth,
-    status,
-    recommendation,
-    summary,
+    generatedAt: execution.updatedAt,
+    depth: execution.depth,
+    status: execution.status,
+    recommendation: execution.recommendation,
+    summary: execution.summary,
     reportRef: CANONICAL_META_REVIEW_REPORT_REF,
-    reworkTargetMessage,
-    warnings,
+    reworkTargetMessage: execution.reworkTargetMessage,
+    warnings: execution.warnings,
     canonicalReportJson
   });
 
@@ -195,11 +82,11 @@ export async function runMetaReview(
     await persistMetaReviewLastJsonArtifact({
       artifactPath: resolved.bubblePaths.metaReviewLastJsonArtifactPath,
       reportPayload,
-      readFileFn,
-      writeFileFn
+      readFileFn: ports.readFileFn,
+      writeFileFn: ports.writeFileFn
     });
   if (writeWarning !== null) {
-    warnings.push(writeWarning);
+    execution.warnings.push(writeWarning);
   }
 
   await refreshMetaReviewApprovalRequest({
@@ -208,18 +95,18 @@ export async function runMetaReview(
     statePath: resolved.bubblePaths.statePath,
     state: written.state.state,
     round: written.state.round,
-    recommendation,
-    summary,
+    recommendation: execution.recommendation,
+    summary: execution.summary,
     canonicalReportJson,
     transcriptPath: resolved.bubblePaths.transcriptPath,
     inboxPath: resolved.bubblePaths.inboxPath,
     lockPath: `${resolved.bubblePaths.locksDir}/${resolved.bubbleId}.lock`,
-    loadedState,
+    loadedState: execution.loadedState,
     written,
-    now,
-    appendEnvelope,
-    writeFileFn,
-    writeStateFn: writeState,
+    now: ports.now,
+    appendEnvelope: ports.appendEnvelope,
+    writeFileFn: ports.writeFileFn,
+    writeStateFn: ports.writeState,
     ...(dependencies.removeFile !== undefined
       ? { removeFileFn: dependencies.removeFile }
       : {})
@@ -227,14 +114,14 @@ export async function runMetaReview(
 
   return buildMetaReviewRunResult({
     bubbleId: resolved.bubbleId,
-    runId,
-    status,
-    recommendation,
-    summary,
+    runId: execution.runId,
+    status: execution.status,
+    recommendation: execution.recommendation,
+    summary: execution.summary,
     reportRef: CANONICAL_META_REVIEW_REPORT_REF,
-    reworkTargetMessage,
-    updatedAt,
-    warnings,
+    reworkTargetMessage: execution.reworkTargetMessage,
+    updatedAt: execution.updatedAt,
+    warnings: execution.warnings,
     canonicalReportJson
   });
 }
