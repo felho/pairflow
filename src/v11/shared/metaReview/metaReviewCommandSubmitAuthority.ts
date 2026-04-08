@@ -14,10 +14,14 @@ export function assertActiveMetaReviewExecutionContext(
   if (executionContextResult.ok) {
     return executionContextResult.value;
   }
-  throw new MetaReviewError(
-    "META_REVIEW_STATE_INVALID",
-    `meta-review canonical execution context is invalid (${executionContextResult.errors.map((error) => `${error.path}: ${error.message}`).join("; ")}).`
-  );
+  throw new MetaReviewError({
+    reasonCode: "META_REVIEW_STATE_INVALID",
+    message: `meta-review canonical execution context is invalid (${executionContextResult.errors.map((error) => `${error.path}: ${error.message}`).join("; ")}).`,
+    context: {
+      source: "assert_active_meta_review_execution_context",
+      reason: "invalid_execution_context"
+    }
+  });
 }
 
 export async function assertMetaReviewSubmitterAuthority(input: {
@@ -38,10 +42,16 @@ export async function assertMetaReviewSubmitterAuthority(input: {
     input.state.active_since !== null;
 
   if (hasAnyActiveOwnership && !hasCompleteActiveOwnership) {
-    throw new MetaReviewError(
-      "META_REVIEW_STATE_INVALID",
-      "meta-review submit rejected: active ownership fields are partially populated."
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_STATE_INVALID",
+      message:
+        "meta-review submit rejected: active ownership fields are partially populated.",
+      context: {
+        source: "assert_meta_review_submitter_authority",
+        reason: "partial_active_ownership",
+        bubbleId: input.bubbleId
+      }
+    });
   }
 
   if (!hasAnyActiveOwnership) {
@@ -53,18 +63,28 @@ export async function assertMetaReviewSubmitterAuthority(input: {
   }
 
   if (input.state.active_role !== "meta_reviewer") {
-    throw new MetaReviewError(
-      "META_REVIEW_SENDER_MISMATCH",
-      `meta-review submit rejected: active role mismatch (expected meta_reviewer, found ${String(input.state.active_role)}).`
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SENDER_MISMATCH",
+      message: `meta-review submit rejected: active role mismatch (expected meta_reviewer, found ${String(input.state.active_role)}).`,
+      context: {
+        source: "assert_meta_review_submitter_authority",
+        reason: "active_role_mismatch",
+        bubbleId: input.bubbleId
+      }
+    });
   }
 
   if (input.state.active_agent !== metaReviewerSubmitterAgent) {
     const activeAgent = input.state.active_agent ?? "null";
-    throw new MetaReviewError(
-      "META_REVIEW_SENDER_MISMATCH",
-      `meta-review submit rejected: active meta-review ownership is missing or stale (active_agent=${activeAgent}; expected active_agent=${metaReviewerSubmitterAgent}).`
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SENDER_MISMATCH",
+      message: `meta-review submit rejected: active meta-review ownership is missing or stale (active_agent=${activeAgent}; expected active_agent=${metaReviewerSubmitterAgent}).`,
+      context: {
+        source: "assert_meta_review_submitter_authority",
+        reason: "active_agent_mismatch",
+        bubbleId: input.bubbleId
+      }
+    });
   }
 
   const sessions = await input.readRuntimeSessions(input.sessionsPath, {
