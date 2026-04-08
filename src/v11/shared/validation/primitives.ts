@@ -15,13 +15,39 @@ export interface ValidationFail {
 
 export type ValidationResult<T> = ValidationOk<T> | ValidationFail;
 
+export interface SchemaValidationErrorContext {
+  source: "assert_validation";
+  errorCount: number;
+  firstErrorPath?: string | undefined;
+}
+
+export interface SchemaValidationErrorInput {
+  message: string;
+  errors: ValidationError[];
+  context?: SchemaValidationErrorContext | undefined;
+}
+
 export class SchemaValidationError extends Error {
   public readonly errors: ValidationError[];
+  public readonly context: SchemaValidationErrorContext | undefined;
 
-  public constructor(message: string, errors: ValidationError[]) {
-    super(message);
+  public constructor(
+    message: string | SchemaValidationErrorInput,
+    errors?: ValidationError[],
+    context?: SchemaValidationErrorContext
+  ) {
+    const normalized =
+      typeof message === "string"
+        ? {
+          message,
+          errors: errors ?? [],
+          context
+        }
+        : message;
+    super(normalized.message);
     this.name = "SchemaValidationError";
-    this.errors = errors;
+    this.errors = normalized.errors;
+    this.context = normalized.context;
   }
 }
 
@@ -121,5 +147,13 @@ export function assertValidation<T>(
     return result.value;
   }
 
-  throw new SchemaValidationError(message, result.errors);
+  throw new SchemaValidationError({
+    message,
+    errors: result.errors,
+    context: {
+      source: "assert_validation",
+      errorCount: result.errors.length,
+      firstErrorPath: result.errors[0]?.path
+    }
+  });
 }

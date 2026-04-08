@@ -37,6 +37,13 @@ describe("v11 validation primitives", () => {
     } catch (error) {
       expect(error).toBeInstanceOf(SchemaValidationError);
       expect((error as SchemaValidationError).message).toBe("bad payload");
+      expect(error).toMatchObject({
+        context: {
+          source: "assert_validation",
+          errorCount: 1,
+          firstErrorPath: "payload"
+        }
+      });
     }
   });
 

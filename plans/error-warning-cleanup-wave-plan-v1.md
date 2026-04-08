@@ -92,4 +92,5 @@ Az `error` fitness check jelenleg hard-fail helyett `warn` módban fut, de a bac
 - Wave 18 singleton: `convergedPolicyPreparation.ts` warning cleanup ready for commit
 - Wave 19 singleton: `metrics/events.ts` warning cleanup ready for commit
 - Wave 20 singleton: `sequenceAllocator.ts` warning cleanup ready for commit
-- Aktuális warning baseline: `error` check `126 -> 106 -> 97 -> 92 -> 87 -> 82 -> 77 -> 73 -> 69 -> 65 -> 63 -> 61 -> 59 -> 55 -> 54 -> 52 -> 51 -> 50 -> 49 -> 47 -> 41`
+- Wave 21 singleton: `validation/primitives.ts` warning cleanup ready for commit
+- Aktuális warning baseline: `error` check `126 -> 106 -> 97 -> 92 -> 87 -> 82 -> 77 -> 73 -> 69 -> 65 -> 63 -> 61 -> 59 -> 55 -> 54 -> 52 -> 51 -> 50 -> 49 -> 47 -> 41 -> 40`
