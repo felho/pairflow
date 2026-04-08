@@ -71,6 +71,6 @@ export async function waitForMetaReviewPaneOutput(input: {
   }
 
   throw new Error(
-    `meta-review pane output timed out after ${input.timeoutMs}ms while waiting for run ${input.beginMarker}.`
+    `META_REVIEW_PANE_OUTPUT_TIMEOUT: context operation_id=meta_review_live_runner_pane timeout_ms=${input.timeoutMs} begin_marker=${input.beginMarker}.`
   );
 }

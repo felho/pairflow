@@ -40,7 +40,9 @@ async function readAndParseMetaReviewOutputFile(outputPath: string): Promise<
 > {
   const rawOutput = await readFile(outputPath, "utf8");
   if (!isNonEmptyString(rawOutput)) {
-    throw new Error("meta-review runner produced empty output.");
+    throw new Error(
+      `META_REVIEW_RUNNER_EMPTY_OUTPUT: context output_path=${outputPath}`
+    );
   }
   return parseMetaReviewRunnerOutput(rawOutput.trim());
 }
@@ -82,7 +84,7 @@ export async function runCodexAgentLiveReview(
       const stderrTail = truncateForErrorOutput(commandResult.stderr, 1200);
       const stdoutTail = truncateForErrorOutput(commandResult.stdout, 1200);
       throw new Error(
-        `meta-review runner command failed (exit ${commandResult.exitCode}). stderr=${JSON.stringify(stderrTail)} stdout=${JSON.stringify(stdoutTail)}`
+        `META_REVIEW_RUNNER_COMMAND_FAILED: context exit_code=${commandResult.exitCode}; stderr=${JSON.stringify(stderrTail)}; stdout=${JSON.stringify(stdoutTail)}`
       );
     }
 

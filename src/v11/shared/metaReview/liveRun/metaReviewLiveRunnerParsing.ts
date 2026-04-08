@@ -69,12 +69,16 @@ export function parseMetaReviewRunnerOutput(
       parsed = JSON.parse(normalizeJsonControlCharactersInStrings(raw));
     } catch {
       const reason = error instanceof Error ? error.message : String(error);
-      throw new Error(`meta-review runner output is not valid JSON: ${reason}`);
+      throw new Error(
+        `META_REVIEW_RUNNER_OUTPUT_INVALID_JSON: context parser=json; reason=${reason}`
+      );
     }
   }
 
   if (!isRecord(parsed)) {
-    throw new Error("meta-review runner output must be a JSON object.");
+    throw new Error(
+      `META_REVIEW_RUNNER_OUTPUT_OBJECT_REQUIRED: context parsed_type=${typeof parsed}`
+    );
   }
 
   const recommendationRaw = parsed.recommendation;
@@ -84,14 +88,16 @@ export function parseMetaReviewRunnerOutput(
     recommendationRaw !== "inconclusive"
   ) {
     throw new Error(
-      "meta-review runner output.recommendation must be one of: approve, rework, inconclusive."
+      `META_REVIEW_RUNNER_RECOMMENDATION_INVALID: context recommendation=${String(recommendationRaw)}`
     );
   }
   const recommendation = recommendationRaw;
 
   const summaryRaw = parsed.summary;
   if (!isNonEmptyString(summaryRaw)) {
-    throw new Error("meta-review runner output.summary must be a non-empty string.");
+    throw new Error(
+      `META_REVIEW_RUNNER_SUMMARY_INVALID: context summary_type=${typeof summaryRaw}`
+    );
   }
   const summary = summaryRaw.trim();
 
@@ -103,13 +109,13 @@ export function parseMetaReviewRunnerOutput(
     reworkTargetMessage = reworkRaw.trim();
   } else {
     throw new Error(
-      "meta-review runner output.rework_target_message must be string|null."
+      `META_REVIEW_RUNNER_REWORK_TARGET_INVALID: context rework_target_type=${typeof reworkRaw}`
     );
   }
 
   if (recommendation === "rework" && !isNonEmptyString(reworkTargetMessage)) {
     throw new Error(
-      "meta-review runner output.rework_target_message is required when recommendation=rework."
+      "META_REVIEW_RUNNER_REWORK_TARGET_REQUIRED: context recommendation=rework"
     );
   }
   if (recommendation !== "rework") {

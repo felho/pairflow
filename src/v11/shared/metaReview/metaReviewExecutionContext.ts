@@ -67,7 +67,9 @@ export function buildMetaReviewExecutionContext(input: {
   }
   const metaReviewExecutionContext = toMetaReviewExecutionContext(executionContext);
   if (metaReviewExecutionContext === null) {
-    throw new Error("Failed to build meta-review execution context.");
+    throw new Error(
+      `META_REVIEW_EXECUTION_CONTEXT_BUILD_FAILED: context bubble_id=${input.bubbleId}; round=${input.round}; attempt=${input.attempt}`
+    );
   }
   return metaReviewExecutionContext;
 }

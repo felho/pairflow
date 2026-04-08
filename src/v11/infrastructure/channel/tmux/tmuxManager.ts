@@ -84,7 +84,7 @@ function parseTmuxPaneId(stdout: string, command: string[]): string {
   const paneId = stdout.trim();
   if (!/^%[0-9]+$/u.test(paneId)) {
     throw new Error(
-      `tmux did not return a pane id for command: tmux ${command.join(" ")} (stdout=${JSON.stringify(stdout)})`
+      `TMUX_PANE_ID_PARSE_FAILED: context operation_id=tmux_parse_pane_id command=${JSON.stringify(command)} stdout=${JSON.stringify(stdout)}.`
     );
   }
   return paneId;
@@ -410,7 +410,7 @@ export const terminateBubbleTmuxSession: TerminateBubbleTmuxSessionPort = async 
 
   if (sessionName === undefined) {
     throw new Error(
-      "terminateBubbleTmuxSession requires either sessionName or bubbleId."
+      "TMUX_TERMINATE_SESSION_INPUT_REQUIRED: context operation_id=terminate_bubble_tmux_session requires sessionName or bubbleId."
     );
   }
 

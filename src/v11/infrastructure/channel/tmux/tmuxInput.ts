@@ -45,7 +45,9 @@ export async function sendAndSubmitTmuxPaneMessage(
   );
   if (writeResult.exitCode !== 0) {
     if (options.requireSuccess) {
-      throw new Error(`tmux message write failed for pane ${targetPane}`);
+      throw new Error(
+        `TMUX_MESSAGE_WRITE_FAILED: context operation_id=tmux_input_send target_pane=${targetPane}.`
+      );
     }
     return;
   }
@@ -58,7 +60,9 @@ export async function sendAndSubmitTmuxPaneMessage(
     allowFailure: true
   });
   if (submitResult.exitCode !== 0 && options.requireSuccess) {
-    throw new Error(`tmux message submit failed for pane ${targetPane}`);
+    throw new Error(
+      `TMUX_MESSAGE_SUBMIT_FAILED: context operation_id=tmux_input_submit target_pane=${targetPane}.`
+    );
   }
 }
 
