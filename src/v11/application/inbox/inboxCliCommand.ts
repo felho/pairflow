@@ -119,6 +119,10 @@ export async function runBubbleInboxCommand(
       cwd
     });
   } catch (error) {
-    asBubbleInboxError(error);
+    asBubbleInboxError(error, {
+      bubbleId: options.id,
+      repoPathProvided: options.repo !== undefined,
+      cwdProvided: cwd.length > 0
+    });
   }
 }

@@ -37,10 +37,37 @@ export interface BubbleInboxView {
   items: PendingInboxItem[];
 }
 
+export interface BubbleInboxErrorContext {
+  source: "bubble_lookup" | "unexpected_error";
+  bubbleId?: string | undefined;
+  repoPathProvided: boolean;
+  cwdProvided: boolean;
+  causeName?: string | undefined;
+}
+
+export interface BubbleInboxErrorInput {
+  message: string;
+  cause?: unknown;
+  context?: BubbleInboxErrorContext | undefined;
+}
+
+export interface BubbleInboxErrorNormalizationContext {
+  bubbleId: string;
+  repoPathProvided: boolean;
+  cwdProvided: boolean;
+}
+
 export class BubbleInboxError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly context: BubbleInboxErrorContext | undefined;
+
+  public constructor(input: string | BubbleInboxErrorInput) {
+    const normalized =
+      typeof input === "string"
+        ? { message: input, cause: undefined, context: undefined }
+        : input;
+    super(normalized.message, { cause: normalized.cause });
     this.name = "BubbleInboxError";
+    this.context = normalized.context;
   }
 }
 
@@ -131,15 +158,38 @@ export async function getBubbleInbox(
   };
 }
 
-export function asBubbleInboxError(error: unknown): never {
+export function asBubbleInboxError(
+  error: unknown,
+  context: BubbleInboxErrorNormalizationContext
+): never {
   if (error instanceof BubbleInboxError) {
     throw error;
   }
   if (error instanceof BubbleLookupError) {
-    throw new BubbleInboxError(error.message);
+    throw new BubbleInboxError({
+      message: error.message,
+      cause: error,
+      context: {
+        source: "bubble_lookup",
+        bubbleId: context.bubbleId,
+        repoPathProvided: context.repoPathProvided,
+        cwdProvided: context.cwdProvided,
+        causeName: error.name
+      }
+    });
   }
   if (error instanceof Error) {
-    throw new BubbleInboxError(error.message);
+    throw new BubbleInboxError({
+      message: error.message,
+      cause: error,
+      context: {
+        source: "unexpected_error",
+        bubbleId: context.bubbleId,
+        repoPathProvided: context.repoPathProvided,
+        cwdProvided: context.cwdProvided,
+        causeName: error.name
+      }
+    });
   }
   throw error;
 }
