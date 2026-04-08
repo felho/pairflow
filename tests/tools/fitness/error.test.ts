@@ -378,6 +378,56 @@ describe("error fitness check", () => {
     ).toBe(true);
   });
 
+  it("passes when throw delegates through PairflowCreateCommandError callback", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/types/commandErrorTypes.d.ts",
+      [
+        "type PairflowCommandErrorContext = Record<string, unknown>;",
+        "interface PairflowCommandErrorDetails {",
+        "  message: string;",
+        "  reasonCode?: string;",
+        "  context?: PairflowCommandErrorContext;",
+        "  cause?: unknown;",
+        "}",
+        "type PairflowCommandErrorInput = string | PairflowCommandErrorDetails;",
+        "type PairflowCreateCommandError = (input: PairflowCommandErrorInput) => Error;"
+      ].join("\n")
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/error-factory-structured.ts",
+      [
+        "export function requireValue(",
+        "  value: string,",
+        "  errorFactory: PairflowCreateCommandError",
+        "): string {",
+        "  if (value.trim().length === 0) {",
+        "    throw errorFactory('value cannot be empty');",
+        "  }",
+        "  return value.trim();",
+        "}"
+      ].join("\n")
+    );
+
+    const report = await buildErrorCheckReport({
+      check: {
+        id: "error",
+        metric: "error code and context completeness",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture/observability",
+        scope: ["src/v11/shared/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only"
+    });
+
+    expect(report.status).toBe("pass");
+  });
+
   it("warns when throw delegates through *To*Error conversion helper", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(

@@ -12,6 +12,11 @@ class SyntheticNormalizationError extends Error {
   }
 }
 
+const createSyntheticNormalizationError: PairflowCreateCommandError = (input) =>
+  new SyntheticNormalizationError(
+    typeof input === "string" ? input : input.message
+  );
+
 describe("v11 string normalization", () => {
   it("trims, drops empties, and de-duplicates while preserving order", () => {
     expect(
@@ -24,7 +29,7 @@ describe("v11 string normalization", () => {
       requireNonEmptyString(
         "  ready  ",
         "Summary",
-        (message) => new SyntheticNormalizationError(message)
+        createSyntheticNormalizationError
       )
     ).toBe("ready");
 
@@ -32,7 +37,7 @@ describe("v11 string normalization", () => {
       requireNonEmptyString(
         "   ",
         "Summary",
-        (message) => new SyntheticNormalizationError(message)
+        createSyntheticNormalizationError
       )
     ).toThrow("Summary cannot be empty.");
   });

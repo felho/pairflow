@@ -26,6 +26,7 @@ interface ThrowSite {
 interface SourceAnalysisContext {
   sourceFile: ts.SourceFile;
   variableDeclarations: Map<string, ts.VariableDeclaration[]>;
+  parameterDeclarations: Map<string, ts.ParameterDeclaration[]>;
 }
 
 const bareRethrowPattern = /^\s*throw\s+[A-Za-z_$][\w$]*\s*;?\s*$/u;
@@ -129,6 +130,7 @@ function unwrapExpression(expression: ts.Expression): ts.Expression {
 function createSourceAnalysisContext(filePath: string, fileContent: string): SourceAnalysisContext {
   const sourceFile = ts.createSourceFile(filePath, fileContent, ts.ScriptTarget.Latest, true);
   const variableDeclarations = new Map<string, ts.VariableDeclaration[]>();
+  const parameterDeclarations = new Map<string, ts.ParameterDeclaration[]>();
   const visit = (node: ts.Node): void => {
     if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
       const existing = variableDeclarations.get(node.name.text);
@@ -138,10 +140,18 @@ function createSourceAnalysisContext(filePath: string, fileContent: string): Sou
         variableDeclarations.set(node.name.text, [node]);
       }
     }
+    if (ts.isParameter(node) && ts.isIdentifier(node.name)) {
+      const existing = parameterDeclarations.get(node.name.text);
+      if (existing) {
+        existing.push(node);
+      } else {
+        parameterDeclarations.set(node.name.text, [node]);
+      }
+    }
     ts.forEachChild(node, visit);
   };
   visit(sourceFile);
-  return { sourceFile, variableDeclarations };
+  return { sourceFile, variableDeclarations, parameterDeclarations };
 }
 
 function resolveVariableInitializer(
@@ -166,6 +176,40 @@ function resolveVariableInitializer(
     }
   }
   return undefined;
+}
+
+function resolveParameterDeclaration(
+  name: string,
+  beforePosition: number,
+  context: SourceAnalysisContext
+): ts.ParameterDeclaration | undefined {
+  const declarations = context.parameterDeclarations.get(name);
+  if (!declarations || declarations.length === 0) {
+    return undefined;
+  }
+  for (let index = declarations.length - 1; index >= 0; index -= 1) {
+    const declaration = declarations[index];
+    if (!declaration) {
+      continue;
+    }
+    if (declaration.getStart(context.sourceFile) >= beforePosition) {
+      continue;
+    }
+    return declaration;
+  }
+  return undefined;
+}
+
+function isPairflowCreateCommandErrorCallback(
+  name: string,
+  beforePosition: number,
+  context: SourceAnalysisContext
+): boolean {
+  const declaration = resolveParameterDeclaration(name, beforePosition, context);
+  if (!declaration?.type) {
+    return false;
+  }
+  return declaration.type.getText(context.sourceFile) === "PairflowCreateCommandError";
 }
 
 function getCallExpressionName(expression: ts.LeftHandSideExpression): string | null {
@@ -497,12 +541,23 @@ function usesStructuredErrorWrapper(expression: ts.Expression): boolean {
   return false;
 }
 
-function hasStructuredContextArgument(expression: ts.Expression): boolean {
+function hasStructuredContextArgument(
+  expression: ts.Expression,
+  context: SourceAnalysisContext,
+  beforePosition: number
+): boolean {
   if (ts.isCallExpression(expression)) {
     const calleeName = getCallExpressionName(expression.expression);
     // Helper wrappers like toTransitionError()/toConflictError() delegate
     // contextualization inside dedicated conversion helpers.
     if (calleeName !== null && /^to[A-Za-z0-9_]*Error$/u.test(calleeName)) {
+      return true;
+    }
+    if (
+      calleeName !== null &&
+      calleeName === "errorFactory" &&
+      isPairflowCreateCommandErrorCallback(calleeName, beforePosition, context)
+    ) {
       return true;
     }
   }
@@ -600,7 +655,11 @@ function collectThrowSites(
         expression,
         throwStart: node.getStart(context.sourceFile),
         usesStructuredErrorWrapper: usesStructuredErrorWrapper(expression),
-        hasStructuredContextArgument: hasStructuredContextArgument(expression)
+        hasStructuredContextArgument: hasStructuredContextArgument(
+          expression,
+          context,
+          node.getStart(context.sourceFile)
+        )
       });
     }
 

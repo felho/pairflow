@@ -6,10 +6,10 @@ export function normalizeStringList(values: readonly string[]): string[] {
   ];
 }
 
-export function requireNonEmptyString<TError extends Error>(
+export function requireNonEmptyString(
   value: string,
   fieldName: string,
-  errorFactory: (message: string) => TError
+  errorFactory: PairflowCreateCommandError
 ): string {
   const normalized = value.trim();
   if (normalized.length === 0) {
