@@ -9,32 +9,12 @@ import {
   sendAndSubmitTmuxPaneMessage,
   submitTmuxPaneInput
 } from "./tmuxInput.js";
-import { buildReviewerAgentSelectionGuidance } from "../../../shared/reviewer/reviewerGuidance.js";
-import { buildReviewerSeverityOntologyReminder } from "../../../shared/reviewer/reviewerSeverityOntology.js";
+import type { ReviewerTestExecutionDirective } from "../../../../v11/shared/reviewer/testEvidence.js";
+import type { ReviewerFocusExtractionResult } from "../../../../v11/shared/reviewer/reviewerBrief.js";
 import {
-  buildReviewerPassOutputContractGuidance,
-  buildReviewerScoutExpansionWorkflowGuidance
-} from "../../../shared/reviewer/reviewerScoutExpansionGuidance.js";
-import {
-  buildReviewerFindingsPassInstruction,
-  buildReviewerRoundCommandGateProjection,
-  type ReviewerCommandGateProjectionVariant
-} from "../../../shared/reviewer/reviewerCommandGateGuidance.js";
-import {
-  buildReviewerDecisionMatrixReminder,
-  formatReviewerTestExecutionDirective,
-  type ReviewerTestExecutionDirective
-} from "../../../../v11/shared/reviewer/testEvidence.js";
-import {
-  formatReviewerBriefDeliveryReminder,
-  formatReviewerFocusDeliveryReminder,
-  type ReviewerFocusExtractionResult
-} from "../../../../v11/shared/reviewer/reviewerBrief.js";
-import { buildPairflowCommandGuidance } from "../../executor/command/pairflowCommand.js";
-import {
-  buildMetaReviewSubmitApproveParityNote,
-  buildMetaReviewSubmitCommandTemplate
-} from "../../../shared/metaReview/metaReviewSubmitGuidance.js";
+  buildTmuxDeliveryMessage,
+  type DeliveryMessageRecipientRole
+} from "./tmuxDeliveryMessageBuilder.js";
 import type { BubbleConfig } from "../../../../types/bubble.js";
 import type { AgentName } from "../../../../types/bubble.js";
 import {
@@ -87,13 +67,6 @@ export interface EmitTmuxDeliveryNotificationResult {
   reason?: TmuxDeliveryFailureReason;
   deliveryTargetReasonCode?: DeliveryTargetReasonCode;
 }
-
-type DeliveryMessageRecipientRole =
-  | ProtocolParticipant
-  | "implementer"
-  | "reviewer"
-  | "meta-reviewer"
-  | "status";
 
 function normalizePaneIndex(value: unknown): number | undefined {
   return typeof value === "number" && Number.isInteger(value) && value >= 0
@@ -152,6 +125,11 @@ interface EnvelopeTargetPaneResolution {
   deliveryTargetReasonCode?: DeliveryTargetReasonCode;
 }
 
+interface DeliverySessionContext {
+  sessionName?: string;
+  worktreePath?: string;
+}
+
 function resolveEnvelopeTargetPane(
   envelope: ProtocolEnvelope,
   bubbleConfig: BubbleConfig
@@ -196,159 +174,6 @@ function resolveEnvelopeTargetPane(
   };
 }
 
-function resolvePayloadActor(envelope: ProtocolEnvelope): string | null {
-  const metadata = envelope.payload.metadata;
-  if (typeof metadata !== "object" || metadata === null) {
-    return null;
-  }
-  const actor = (metadata as { actor?: unknown }).actor;
-  return typeof actor === "string" && actor.trim().length > 0 ? actor : null;
-}
-
-function resolveImplementerReworkOrigin(
-  envelope: ProtocolEnvelope
-): "meta_review_auto_rework" | "unknown" {
-  const actorLabel = resolvePayloadActor(envelope);
-  if (
-    actorLabel === "meta-reviewer" ||
-    actorLabel === "meta-review-gate"
-  ) {
-    return "meta_review_auto_rework";
-  }
-  return "unknown";
-}
-
-function buildImplementerReworkActionText(input: {
-  docsOnly: boolean;
-  origin: "meta_review_auto_rework" | "unknown";
-}): string {
-  const intro =
-    input.origin === "meta_review_auto_rework"
-      ? "Meta-review auto-rework received."
-      : "Rework received.";
-  return input.docsOnly
-    ? `${intro} Continue implementation now and address the requested changes, then hand off with canonical actor emit (\`pairflow agent emit --kind pass ...\`) directly. Primary artifact rule (docs-only): apply the rework on the referenced source task/document file directly, not only in a new standalone review note. Docs-only scope: keep summary and refs consistent; skip-claim means no \`.pairflow/evidence/*.log\` refs in that PASS.`
-    : `${intro} Continue implementation now and address the requested changes, then hand off with canonical actor emit (\`pairflow agent emit --kind pass ...\`) directly. Include available \`.pairflow/evidence/*.log\` refs on PASS.`;
-}
-
-function buildDeliveryMessage(
-  envelope: ProtocolEnvelope,
-  messageRef: string,
-  bubbleConfig: BubbleConfig,
-  worktreePath?: string,
-  reviewerTestDirective?: ReviewerTestExecutionDirective,
-  reviewerBrief?: string,
-  reviewerFocus?: ReviewerFocusExtractionResult,
-  recipientRoleOverride?: DeliveryMessageRecipientRole
-): string {
-  const recipientRole =
-    recipientRoleOverride
-    ?? resolveRecipientRoleFromRecipient(envelope.recipient, bubbleConfig);
-  const actorLabel = resolvePayloadActor(envelope);
-  const worktreeHint =
-    worktreePath === undefined
-      ? "Run pairflow commands from the bubble worktree root."
-      : `Run pairflow commands from worktree: ${worktreePath}. ${buildPairflowCommandGuidance(worktreePath, bubbleConfig.pairflow_command_profile)}`;
-
-  let action = "Continue protocol from this event.";
-  if (recipientRole === "implementer") {
-    const docsOnly = bubbleConfig.review_artifact_type === "document";
-    if (envelope.type === "PASS") {
-      action = docsOnly
-        ? "Reviewer feedback received. Implement fixes, then hand off with canonical actor emit (`pairflow agent emit --kind pass ...`) directly (no confirmation prompt). Primary artifact rule (docs-only): when the task references an existing source document/task file, refine that file directly (in-place) as the main output. Do not replace primary artifact refinement with a new standalone review/synthesis document unless the task explicitly requests creating a new file path. Docs-only scope: choose one mode and keep it consistent in the same PASS. Mode A (skip-claim): summary says runtime checks were intentionally not executed -> attach no `.pairflow/evidence/*.log` refs. Mode B (checks executed): attach refs only for commands actually run and do not claim checks were intentionally not executed."
-        : "Reviewer feedback received. Implement fixes, then hand off with canonical actor emit (`pairflow agent emit --kind pass ...`) directly (no confirmation prompt). If `.pairflow/evidence/*.log` files exist, include them as `--ref` (lint/typecheck/test). If only a subset ran, attach refs for that subset and state what was intentionally not executed.";
-    } else if (envelope.type === "HUMAN_REPLY") {
-      action = docsOnly
-        ? "Human response received. Continue implementation using this input, then hand off with canonical actor emit (`pairflow agent emit --kind pass ...`) directly. Primary artifact rule (docs-only): refine the referenced source task/document file directly, not only a new standalone review note. Docs-only scope: keep summary and refs consistent; skip-claim means no `.pairflow/evidence/*.log` refs in that PASS."
-        : "Human response received. Continue implementation using this input, then hand off with canonical actor emit (`pairflow agent emit --kind pass ...`) directly. Include available `.pairflow/evidence/*.log` refs on PASS.";
-    } else if (envelope.type === "APPROVAL_DECISION") {
-      if (envelope.payload.decision === "rework") {
-        action = buildImplementerReworkActionText({
-          docsOnly,
-          origin: resolveImplementerReworkOrigin(envelope)
-        });
-      } else {
-        action =
-          "Human approved this bubble. Wait for commit/merge flow and do not continue new implementation in this round.";
-      }
-    } else if (envelope.type === "APPROVAL_REQUEST") {
-      action =
-        actorLabel === "meta-reviewer"
-          ? "Meta-reviewer requested human gate decision. Stop coding and wait for human decision (`bubble approve` or `bubble request-rework`). Do not run canonical pass emit now."
-          : "Bubble is READY_FOR_HUMAN_APPROVAL. Stop coding and wait for human decision (`bubble approve` or `bubble request-rework`). Do not run canonical pass emit now.";
-    }
-  } else if (recipientRole === "reviewer") {
-    if (envelope.type === "PASS") {
-      const useFullReviewerPolicyContext = bubbleConfig.reviewer_context_mode === "fresh";
-      const testDirective =
-        reviewerTestDirective === undefined
-          ? [
-              "Run required checks before final judgment. Reason: reviewer test verification directive was unavailable.",
-              ...(useFullReviewerPolicyContext
-                ? [buildReviewerDecisionMatrixReminder()]
-                : [])
-            ].join(" ")
-          : formatReviewerTestExecutionDirective(reviewerTestDirective);
-      const projectionVariant: ReviewerCommandGateProjectionVariant =
-        Array.isArray(envelope.payload.findings) && envelope.payload.findings.length > 0
-          ? "findings"
-          : "clean";
-      const convergenceInstruction = buildReviewerRoundCommandGateProjection({
-        round: envelope.round,
-        variant: projectionVariant
-      });
-      const findingsDetailInstruction =
-        envelope.round <= 1
-          ? "In round 1, use canonical pass emit (`pairflow agent emit --kind pass ...`) and declare findings explicitly (`--finding` when findings exist, `--no-findings` only when truly clean)."
-          : buildReviewerFindingsPassInstruction(
-            bubbleConfig.review_artifact_type
-          );
-      const reviewerFocusReminder =
-        reviewerFocus === undefined
-          ? ""
-          : formatReviewerFocusDeliveryReminder(reviewerFocus);
-      action = [
-        "Implementer handoff received. Run a fresh review now.",
-        buildReviewerAgentSelectionGuidance(bubbleConfig.review_artifact_type),
-        buildReviewerSeverityOntologyReminder({
-          includeFullOntology: useFullReviewerPolicyContext
-        }),
-        testDirective,
-        buildReviewerScoutExpansionWorkflowGuidance(),
-        buildReviewerPassOutputContractGuidance(),
-        convergenceInstruction,
-        findingsDetailInstruction,
-        reviewerBrief !== undefined
-          ? formatReviewerBriefDeliveryReminder(reviewerBrief)
-          : "",
-        reviewerFocusReminder,
-        "Execute pairflow commands directly (no confirmation prompt)."
-      ]
-        .filter((part) => part.trim().length > 0)
-        .join(" ");
-    } else if (envelope.type === "HUMAN_REPLY") {
-      action =
-        "Human response received. Continue review workflow from this update.";
-    } else if (envelope.type === "APPROVAL_REQUEST") {
-      action =
-        actorLabel === "meta-reviewer"
-          ? "Meta-reviewer requested human gate decision. Wait for human decision (`bubble approve` or `bubble request-rework`). Do not run canonical pass emit now."
-          : "Bubble is READY_FOR_HUMAN_APPROVAL. Review is complete; wait for human decision (`bubble approve` or `bubble request-rework`). Do not run canonical pass emit now.";
-    }
-  } else if (recipientRole === "meta-reviewer") {
-    action =
-      `Meta-review task received. Produce autonomous meta-review output and return only through structured submit with required report-json parity fields: \`${buildMetaReviewSubmitCommandTemplate()}\`. ${buildMetaReviewSubmitApproveParityNote()}`;
-  } else if (
-    recipientRole === "human" ||
-    recipientRole === "orchestrator" ||
-    recipientRole === "status"
-  ) {
-    action = "Check inbox/status and continue human orchestration flow.";
-  }
-
-  // Prefix as shell comment so if a pane is in plain bash fallback, this line remains harmless.
-  return `# [pairflow] r${envelope.round} ${envelope.type} ${envelope.sender}->${envelope.recipient} msg=${envelope.id} ref=${messageRef}. Action: ${action} ${worktreeHint}`;
-}
 
 export function buildTranscriptFallbackRef(
   bubbleId: string,
@@ -386,9 +211,64 @@ function sleep(ms: number): Promise<void> {
   });
 }
 
+async function readDeliverySessionContext(input: {
+  bubbleId: string;
+  sessionsPath: string;
+  readSessions: typeof readRuntimeSessionsRegistry;
+}): Promise<DeliverySessionContext | undefined> {
+  const sessions = await input.readSessions(input.sessionsPath, {
+    allowMissing: true
+  });
+  const record = sessions[input.bubbleId];
+  return {
+    ...(record?.tmuxSessionName !== undefined
+      ? { sessionName: record.tmuxSessionName }
+      : {}),
+    ...(record?.worktreePath !== undefined
+      ? { worktreePath: record.worktreePath }
+      : {})
+  };
+}
+
+function createDeliveryFailureResult(input: {
+  reason: TmuxDeliveryFailureReason;
+  message: string;
+  deliveryTargetReasonCode?: DeliveryTargetReasonCode;
+  sessionName?: string;
+  targetPaneIndex?: number;
+}): EmitTmuxDeliveryNotificationResult {
+  return {
+    delivered: false,
+    ...(input.sessionName !== undefined ? { sessionName: input.sessionName } : {}),
+    ...(input.targetPaneIndex !== undefined ? { targetPaneIndex: input.targetPaneIndex } : {}),
+    message: input.message,
+    reason: input.reason,
+    ...(input.deliveryTargetReasonCode !== undefined
+      ? { deliveryTargetReasonCode: input.deliveryTargetReasonCode }
+      : {})
+  };
+}
+
 export async function emitTmuxDeliveryNotification(
   input: EmitTmuxDeliveryNotificationInput
 ): Promise<EmitTmuxDeliveryNotificationResult> {
+  const buildMessage = (worktreePath: string | undefined): string =>
+    buildTmuxDeliveryMessage({
+      envelope: input.envelope,
+      messageRef,
+      bubbleConfig: input.bubbleConfig,
+      ...(worktreePath !== undefined ? { worktreePath } : {}),
+      ...(input.reviewerTestDirective !== undefined
+        ? { reviewerTestDirective: input.reviewerTestDirective }
+        : {}),
+      ...(input.reviewerBrief !== undefined
+        ? { reviewerBrief: input.reviewerBrief }
+        : {}),
+      ...(input.reviewerFocus !== undefined
+        ? { reviewerFocus: input.reviewerFocus }
+        : {}),
+      recipientRole: targetResolution.recipientRole
+    });
   const messageRef =
     input.messageRef ??
     resolveDeliveryMessageRef({
@@ -405,86 +285,48 @@ export async function emitTmuxDeliveryNotification(
   let sessionName: string | undefined;
   let worktreePath: string | undefined;
   try {
-    const sessions = await readSessions(input.sessionsPath, {
-      allowMissing: true
+    const sessionContext = await readDeliverySessionContext({
+      bubbleId: input.bubbleId,
+      sessionsPath: input.sessionsPath,
+      readSessions
     });
-    const record = sessions[input.bubbleId];
-    sessionName = record?.tmuxSessionName;
-    worktreePath = record?.worktreePath;
+    sessionName = sessionContext?.sessionName;
+    worktreePath = sessionContext?.worktreePath;
   } catch {
-    const message = buildDeliveryMessage(
-      input.envelope,
-      messageRef,
-      input.bubbleConfig,
-      undefined,
-      input.reviewerTestDirective,
-      input.reviewerBrief,
-      input.reviewerFocus,
-      targetResolution.recipientRole
-    );
-    return {
-      delivered: false,
-      message,
+    const message = buildMessage(undefined);
+    return createDeliveryFailureResult({
       reason: "registry_read_failed",
+      message,
       deliveryTargetReasonCode: "DELIVERY_TARGET_REGISTRY_READ_FAILED"
-    };
+    });
   }
 
   if (sessionName === undefined) {
-    const message = buildDeliveryMessage(
-      input.envelope,
-      messageRef,
-      input.bubbleConfig,
-      undefined,
-      input.reviewerTestDirective,
-      input.reviewerBrief,
-      input.reviewerFocus,
-      targetResolution.recipientRole
-    );
-    return {
-      delivered: false,
-      message,
+    const message = buildMessage(undefined);
+    return createDeliveryFailureResult({
       reason: "no_runtime_session",
+      message,
       ...(targetResolution.deliveryTargetReasonCode !== undefined
         ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
         : {})
-    };
+    });
   }
 
   const targetPaneIndex = targetResolution.targetPaneIndex;
   if (targetPaneIndex === undefined) {
-    const message = buildDeliveryMessage(
-      input.envelope,
-      messageRef,
-      input.bubbleConfig,
-      worktreePath,
-      input.reviewerTestDirective,
-      input.reviewerBrief,
-      input.reviewerFocus,
-      targetResolution.recipientRole
-    );
-    return {
-      delivered: false,
-      sessionName,
-      message,
+    const message = buildMessage(worktreePath);
+    return createDeliveryFailureResult({
       reason: "unsupported_recipient",
+      message,
+      sessionName,
       ...(targetResolution.deliveryTargetReasonCode !== undefined
         ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
         : {})
-    };
+    });
   }
 
   const targetPane = `${sessionName}:0.${targetPaneIndex}`;
-  const message = buildDeliveryMessage(
-    input.envelope,
-    messageRef,
-    input.bubbleConfig,
-    worktreePath,
-    input.reviewerTestDirective,
-    input.reviewerBrief,
-    input.reviewerFocus,
-    targetResolution.recipientRole
-  );
+  const message = buildMessage(worktreePath);
   const runner = input.runner ?? runTmux;
 
   try {
@@ -506,28 +348,26 @@ export async function emitTmuxDeliveryNotification(
         : {})
     });
     if (!confirmed) {
-      return {
-        delivered: false,
+      return createDeliveryFailureResult({
+        reason: "delivery_unconfirmed",
+        message,
         sessionName,
         targetPaneIndex,
-        message,
-        reason: "delivery_unconfirmed",
         ...(targetResolution.deliveryTargetReasonCode !== undefined
           ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
           : {})
-      };
+      });
     }
   } catch {
-    return {
-      delivered: false,
+    return createDeliveryFailureResult({
+      reason: "tmux_send_failed",
+      message,
       sessionName,
       targetPaneIndex,
-      message,
-      reason: "tmux_send_failed",
       ...(targetResolution.deliveryTargetReasonCode !== undefined
         ? { deliveryTargetReasonCode: targetResolution.deliveryTargetReasonCode }
         : {})
-    };
+    });
   }
 
   return {
