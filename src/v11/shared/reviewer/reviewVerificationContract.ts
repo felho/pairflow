@@ -61,15 +61,26 @@ export interface ReviewVerificationArtifactStatus {
   artifact?: ReviewVerificationArtifact;
 }
 
+export interface ReviewVerificationErrorContext {
+  inputRef?: string;
+  path?: string;
+  reason?: string;
+  schema?: string;
+  worktreePath?: string;
+}
+
 export class ReviewVerificationError extends Error {
   public readonly code: string;
+  public readonly context: ReviewVerificationErrorContext | undefined;
 
   public constructor(
     code: string,
-    message: string
+    message: string,
+    context?: ReviewVerificationErrorContext
   ) {
     super(message);
     this.name = "ReviewVerificationError";
     this.code = code;
+    this.context = context;
   }
 }

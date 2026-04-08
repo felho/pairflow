@@ -31,7 +31,12 @@ export async function resolveReviewVerificationInputFromRefs(input: {
   if (matchedRef === undefined) {
     throw new ReviewVerificationError(
       "review_verification_ref_missing",
-      `Accuracy-critical reviewer PASS requires a --ref to ${REVIEW_VERIFICATION_INPUT_FILENAME}.`
+      `Accuracy-critical reviewer PASS requires a --ref to ${REVIEW_VERIFICATION_INPUT_FILENAME}.`,
+      {
+        inputRef: REVIEW_VERIFICATION_INPUT_FILENAME,
+        reason: "review_verification_ref_missing",
+        worktreePath: input.worktreePath
+      }
     );
   }
 
@@ -43,7 +48,13 @@ export async function resolveReviewVerificationInputFromRefs(input: {
       const reason = error.code ?? "unknown";
       throw new ReviewVerificationError(
         "review_verification_ref_unreadable",
-        `Failed to read review verification input (${resolvedPath}): ${reason}.`
+        `Failed to read review verification input (${resolvedPath}): ${reason}.`,
+        {
+          inputRef: getRefBasename(matchedRef),
+          path: resolvedPath,
+          reason: "review_verification_ref_unreadable",
+          worktreePath: input.worktreePath
+        }
       );
     }
   );
@@ -55,7 +66,13 @@ export async function resolveReviewVerificationInputFromRefs(input: {
     const reason = error instanceof Error ? error.message : String(error);
     throw new ReviewVerificationError(
       "review_verification_json_invalid",
-      `Invalid JSON in ${REVIEW_VERIFICATION_INPUT_FILENAME}: ${reason}`
+      `Invalid JSON in ${REVIEW_VERIFICATION_INPUT_FILENAME}: ${reason}`,
+      {
+        inputRef: getRefBasename(matchedRef),
+        path: resolvedPath,
+        reason: "review_verification_json_invalid",
+        worktreePath: input.worktreePath
+      }
     );
   }
 
@@ -70,7 +87,14 @@ export async function resolveReviewVerificationInputFromRefs(input: {
       .join(" ");
     throw new ReviewVerificationError(
       "review_verification_schema_invalid",
-      `Invalid ${REVIEW_VERIFICATION_SCHEMA} payload: ${detail}`
+      `Invalid ${REVIEW_VERIFICATION_SCHEMA} payload: ${detail}`,
+      {
+        inputRef: getRefBasename(matchedRef),
+        path: resolvedPath,
+        reason: "review_verification_schema_invalid",
+        schema: REVIEW_VERIFICATION_SCHEMA,
+        worktreePath: input.worktreePath
+      }
     );
   }
 
