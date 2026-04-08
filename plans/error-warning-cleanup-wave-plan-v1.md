@@ -104,4 +104,5 @@ Az `error` fitness check jelenleg hard-fail helyett `warn` módban fut, de a bac
 - Wave 30 bounded batch: `metaReviewCommandSubmitRouting.ts` warning cleanup ready for commit
 - Wave 31 bounded batch: `metaReviewCommandSubmitValidation.ts` warning cleanup ready for commit
 - Wave 32 bounded batch: `metaReviewCommandSubmitPreparation.ts` warning cleanup ready for commit
-- Aktuális warning baseline: `error` check `126 -> 106 -> 97 -> 92 -> 87 -> 82 -> 77 -> 73 -> 69 -> 65 -> 63 -> 61 -> 59 -> 55 -> 54 -> 52 -> 51 -> 50 -> 49 -> 47 -> 41 -> 40 -> 38 -> 36 -> 33 -> 30 -> 28 -> 26 -> 23 -> 19 -> 17 -> 12 -> 7`
+- Wave 33 bounded batch: `metaReviewCommandSubmitParity.ts` warning cleanup ready for commit
+- Aktuális warning baseline: `error` check `126 -> 106 -> 97 -> 92 -> 87 -> 82 -> 77 -> 73 -> 69 -> 65 -> 63 -> 61 -> 59 -> 55 -> 54 -> 52 -> 51 -> 50 -> 49 -> 47 -> 41 -> 40 -> 38 -> 36 -> 33 -> 30 -> 28 -> 26 -> 23 -> 19 -> 17 -> 12 -> 7 -> 1`

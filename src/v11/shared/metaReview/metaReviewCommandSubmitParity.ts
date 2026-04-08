@@ -23,30 +23,52 @@ function requireStructuredMetaReviewClaim(
 } {
   const parsed = resolveStructuredMetaReviewClaimFromReportJson({ reportJson });
   if ("reason" in parsed) {
-    throw new MetaReviewError("META_REVIEW_SCHEMA_INVALID", parsed.reason);
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID",
+      message: parsed.reason,
+      context: {
+        source: "meta_review_command_submit_parity",
+        reason: "structured_claim_parsing_failed"
+      }
+    });
   }
   if (parsed.claim === undefined) {
-    throw new MetaReviewError(
-      "META_REVIEW_SCHEMA_INVALID",
-      "meta-review submit report_json requires findings_claim_state and findings_claim_source fields"
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID",
+      message:
+        "meta-review submit report_json requires findings_claim_state and findings_claim_source fields",
+      context: {
+        source: "meta_review_command_submit_parity",
+        reason: "structured_claim_fields_missing"
+      }
+    });
   }
   return parsed.claim;
 }
 
 function requireStructuredFindingsCount(reportJson: Record<string, unknown>): number {
   if (!Object.hasOwn(reportJson, "findings_count")) {
-    throw new MetaReviewError(
-      "META_REVIEW_SCHEMA_INVALID",
-      "meta-review submit report_json.findings_count is required and must be a non-negative integer"
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID",
+      message:
+        "meta-review submit report_json.findings_count is required and must be a non-negative integer",
+      context: {
+        source: "meta_review_command_submit_parity",
+        reason: "findings_count_missing"
+      }
+    });
   }
   const explicitCount = reportJson.findings_count;
   if (!isInteger(explicitCount) || explicitCount < 0) {
-    throw new MetaReviewError(
-      "META_REVIEW_SCHEMA_INVALID",
-      "meta-review submit report_json.findings_count is required and must be a non-negative integer"
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID",
+      message:
+        "meta-review submit report_json.findings_count is required and must be a non-negative integer",
+      context: {
+        source: "meta_review_command_submit_parity",
+        reason: "findings_count_invalid"
+      }
+    });
   }
   return explicitCount;
 }
@@ -68,10 +90,14 @@ export function assertSummaryStructuredParity(input: {
     (structuredClaim.state === "open_findings" && structuredCount === 0) ||
     (structuredClaim.state === "clean" && structuredCount > 0)
   ) {
-    throw new MetaReviewError(
-      "META_REVIEW_SCHEMA_INVALID",
-      "meta-review submit structured claim/count tuple is inconsistent"
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID",
+      message: "meta-review submit structured claim/count tuple is inconsistent",
+      context: {
+        source: "meta_review_command_submit_parity",
+        reason: "structured_claim_count_tuple_inconsistent"
+      }
+    });
   }
   const summaryPositiveAssertion =
     evaluatePositiveSummaryFindingsAssertion(input.summary);
@@ -81,10 +107,15 @@ export function assertSummaryStructuredParity(input: {
     structuredClaim.state === "open_findings" || structuredCount > 0;
 
   if (summaryPositiveAssertion.hasPositiveAssertion && structuredCount === 0) {
-    throw new MetaReviewError(
-      "META_REVIEW_SUMMARY_STRUCTURED_MISMATCH",
-      "meta-review submit summary claims open findings while report_json.findings_count is 0"
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SUMMARY_STRUCTURED_MISMATCH",
+      message:
+        "meta-review submit summary claims open findings while report_json.findings_count is 0",
+      context: {
+        source: "meta_review_command_submit_parity",
+        reason: "summary_open_findings_conflicts_with_zero_count"
+      }
+    });
   }
 
   if (
@@ -107,9 +138,14 @@ export function assertSummaryStructuredParity(input: {
     ) {
       return;
     }
-    throw new MetaReviewError(
-      "META_REVIEW_SUMMARY_STRUCTURED_MISMATCH",
-      "meta-review submit summary claims no findings while structured report_json claims open findings"
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SUMMARY_STRUCTURED_MISMATCH",
+      message:
+        "meta-review submit summary claims no findings while structured report_json claims open findings",
+      context: {
+        source: "meta_review_command_submit_parity",
+        reason: "summary_no_findings_conflicts_with_open_findings"
+      }
+    });
   }
 }
