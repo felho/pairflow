@@ -646,7 +646,17 @@ function collectErrorViolations(filePath: string, fileContent: string): ErrorVio
 }
 
 function summarizeErrorViolations(violations: readonly ErrorViolation[]): string[] {
-  return violations.slice(0, 50).map((violation) => {
+  const prioritized = [...violations].sort((left, right) => {
+    if (left.severity !== right.severity) {
+      return left.severity === "fail" ? -1 : 1;
+    }
+    if (left.path !== right.path) {
+      return left.path.localeCompare(right.path);
+    }
+    return left.line - right.line;
+  });
+
+  return prioritized.slice(0, 50).map((violation) => {
     const label =
       violation.kind === "missing_code"
         ? "missing stable error code near throw"
