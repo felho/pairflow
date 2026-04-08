@@ -55,6 +55,7 @@ Az `error` fitness check jelenleg hard-fail helyett `warn` módban fut, de a bac
    - `workspace-resolution`
    - `ui-repo-scope`
    - `worktree-manager`
+   - `pass-validation-runner`
    - `reviewer-artifact`
    - `docContractGateArtifacts`
    - státusz: pending
@@ -76,4 +77,5 @@ Az `error` fitness check jelenleg hard-fail helyett `warn` módban fut, de a bac
 - Wave 4 singleton: `workspaceResolution.ts` warning cleanup ready for commit
 - Wave 5 singleton: `repoScope.ts` warning cleanup ready for commit
 - Wave 6 singleton: `worktreeManager.ts` warning cleanup ready for commit
-- Aktuális warning baseline: `error` check `126 -> 106 -> 97 -> 92 -> 87 -> 82 -> 77`
+- Wave 7 singleton: `passValidationCommandRunner.ts` warning cleanup ready for commit
+- Aktuális warning baseline: `error` check `126 -> 106 -> 97 -> 92 -> 87 -> 82 -> 77 -> 73`

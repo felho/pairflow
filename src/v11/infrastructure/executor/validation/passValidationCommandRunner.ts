@@ -4,16 +4,24 @@ import { join } from "node:path"
 
 import type { PassValidationCommandId } from "../../artifact/validation/passValidationEvidence.js"
 
+interface PassValidationRunnerErrorContext {
+  command?: string
+  reason?: string
+  worktreePath?: string
+}
+
 export class PassValidationRunnerExecutionError extends Error {
   public readonly kind: PassValidationCommandId
   public readonly stage: "pre_header" | "spawn" | "settle" | "stdout" | "stderr"
   public readonly logPath: string
+  public readonly context: PassValidationRunnerErrorContext | undefined
 
   public constructor(input: {
     kind: PassValidationCommandId
     stage: "pre_header" | "spawn" | "settle" | "stdout" | "stderr"
     logPath: string
     cause: unknown
+    context?: PassValidationRunnerErrorContext
   }) {
     const causeMessage =
       input.cause instanceof Error && input.cause.message.trim().length > 0
@@ -27,6 +35,7 @@ export class PassValidationRunnerExecutionError extends Error {
     this.kind = input.kind
     this.stage = input.stage
     this.logPath = input.logPath
+    this.context = input.context
   }
 }
 
@@ -70,6 +79,7 @@ function toPassValidationStageError(input: {
   stage: "settle" | "stdout" | "stderr"
   logPath: string
   cause: unknown
+  context: PassValidationRunnerErrorContext
 }): PassValidationRunnerExecutionError {
   return new PassValidationRunnerExecutionError(input)
 }
@@ -136,7 +146,12 @@ function createPassValidationSettlement(
           kind: input.kind,
           stage: "spawn",
           logPath: relativeLogPath,
-          cause: error
+          cause: error,
+          context: {
+            command: input.command,
+            reason: "spawn_event_error",
+            worktreePath: input.worktreePath
+          }
         })
       })
     })
@@ -146,6 +161,103 @@ function createPassValidationSettlement(
       })
     })
   })
+}
+
+async function executePassValidationChild(input: {
+  child: ReturnType<typeof spawn>
+  fileHandle: FileHandle
+  runInput: RunPassValidationCommandInput
+  relativeLogPath: string
+  startedAt: number
+  now: () => number
+  settle: Promise<
+    { exitCode: number } | { error: PassValidationRunnerExecutionError }
+  >
+}): Promise<{
+  command: string
+  exitCode: number
+  logPath: string
+  durationMs: number
+}> {
+  const stdout = input.child.stdout
+  const stderr = input.child.stderr
+  if (stdout === null || stderr === null) {
+    throw new PassValidationRunnerExecutionError({
+      kind: input.runInput.kind,
+      stage: "spawn",
+      logPath: input.relativeLogPath,
+      cause: new Error("spawned process did not expose pipe streams"),
+      context: {
+        command: input.runInput.command,
+        reason: "missing_pipe_streams",
+        worktreePath: input.runInput.worktreePath
+      }
+    })
+  }
+  const appendChunk = createSerializedAppender(input.fileHandle)
+  const [stdoutResult, stderrResult, settleResult] = await Promise.all([
+    appendStreamToHandle(stdout, appendChunk).then(
+      () => ({ ok: true as const }),
+      (error) => ({ ok: false as const, error: toError(error) })
+    ),
+    appendStreamToHandle(stderr, appendChunk).then(
+      () => ({ ok: true as const }),
+      (error) => ({ ok: false as const, error: toError(error) })
+    ),
+    input.settle
+  ])
+  if ("error" in settleResult) {
+    throw new PassValidationRunnerExecutionError({
+      kind: input.runInput.kind,
+      stage:
+        settleResult.error instanceof PassValidationRunnerExecutionError
+          ? settleResult.error.stage
+          : "settle",
+      logPath: input.relativeLogPath,
+      cause: settleResult.error,
+      context: {
+        command: input.runInput.command,
+        reason: "settlement_failed",
+        worktreePath: input.runInput.worktreePath
+      }
+    })
+  }
+  if (!stdoutResult.ok) {
+    throw toPassValidationStageError({
+      kind: input.runInput.kind,
+      stage: "stdout",
+      logPath: input.relativeLogPath,
+      cause: stdoutResult.error,
+      context: {
+        command: input.runInput.command,
+        reason: "stdout_capture_failed",
+        worktreePath: input.runInput.worktreePath
+      }
+    })
+  }
+  if (!stderrResult.ok) {
+    throw toPassValidationStageError({
+      kind: input.runInput.kind,
+      stage: "stderr",
+      logPath: input.relativeLogPath,
+      cause: stderrResult.error,
+      context: {
+        command: input.runInput.command,
+        reason: "stderr_capture_failed",
+        worktreePath: input.runInput.worktreePath
+      }
+    })
+  }
+  const exitCode = settleResult.exitCode
+  const durationMs = Math.max(0, input.now() - input.startedAt)
+  await input.fileHandle.writeFile(`\nexit_code=${exitCode}\nduration_ms=${durationMs}\n`)
+  await input.fileHandle.close()
+  return {
+    command: input.runInput.command,
+    exitCode,
+    logPath: input.relativeLogPath,
+    durationMs
+  }
 }
 
 export async function runPassValidationCommand(
@@ -180,7 +292,12 @@ export async function runPassValidationCommand(
       kind: input.kind,
       stage: "pre_header",
       logPath: relativeLogPath,
-      cause: error
+      cause: error,
+      context: {
+        command: input.command,
+        reason: "prepare_log_file_failed",
+        worktreePath: input.worktreePath
+      }
     })
   }
 
@@ -198,7 +315,12 @@ export async function runPassValidationCommand(
       kind: input.kind,
       stage: "spawn",
       logPath: relativeLogPath,
-      cause: error
+      cause: error,
+      context: {
+        command: input.command,
+        reason: "spawn_call_failed",
+        worktreePath: input.worktreePath
+      }
     })
   }
 
@@ -209,65 +331,15 @@ export async function runPassValidationCommand(
   )
 
   try {
-    const stdout = child.stdout
-    const stderr = child.stderr
-    if (stdout === null || stderr === null) {
-      throw new PassValidationRunnerExecutionError({
-        kind: input.kind,
-        stage: "spawn",
-        logPath: relativeLogPath,
-        cause: new Error("spawned process did not expose pipe streams")
-      })
-    }
-    const appendChunk = createSerializedAppender(fileHandle)
-    const [stdoutResult, stderrResult, settleResult] = await Promise.all([
-      appendStreamToHandle(stdout, appendChunk).then(
-        () => ({ ok: true as const }),
-        (error) => ({ ok: false as const, error: toError(error) })
-      ),
-      appendStreamToHandle(stderr, appendChunk).then(
-        () => ({ ok: true as const }),
-        (error) => ({ ok: false as const, error: toError(error) })
-      ),
+    return await executePassValidationChild({
+      child,
+      fileHandle,
+      runInput: input,
+      relativeLogPath,
+      startedAt,
+      now,
       settle
-    ])
-    if ("error" in settleResult) {
-      throw new PassValidationRunnerExecutionError({
-        kind: input.kind,
-        stage:
-          settleResult.error instanceof PassValidationRunnerExecutionError
-            ? settleResult.error.stage
-            : "settle",
-        logPath: relativeLogPath,
-        cause: settleResult.error
-      })
-    }
-    if (!stdoutResult.ok) {
-      throw toPassValidationStageError({
-        kind: input.kind,
-        stage: "stdout",
-        logPath: relativeLogPath,
-        cause: stdoutResult.error
-      })
-    }
-    if (!stderrResult.ok) {
-      throw toPassValidationStageError({
-        kind: input.kind,
-        stage: "stderr",
-        logPath: relativeLogPath,
-        cause: stderrResult.error
-      })
-    }
-    const exitCode = settleResult.exitCode
-    const durationMs = Math.max(0, now() - startedAt)
-    await fileHandle.writeFile(`\nexit_code=${exitCode}\nduration_ms=${durationMs}\n`)
-    await fileHandle.close()
-    return {
-      command: input.command,
-      exitCode,
-      logPath: relativeLogPath,
-      durationMs
-    }
+    })
   } catch (error) {
     child.kill("SIGTERM")
     await fileHandle.close().catch(() => undefined)
