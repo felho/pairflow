@@ -51,14 +51,42 @@ export type OpenBubbleV11Input = OpenBubbleInput;
 export type OpenBubbleV11Result = OpenBubbleResult;
 export type OpenBubbleV11Dependencies = OpenBubbleDependencies;
 
+interface OpenBubbleErrorContext {
+  bubbleId?: string | undefined;
+  command?: string | undefined;
+  commandTemplate?: string | undefined;
+  cwd?: string | undefined;
+  exitCode?: number | undefined;
+  reason?: string | undefined;
+  worktreePath?: string | undefined;
+}
+
+interface OpenBubbleErrorOptions extends ErrorOptions {
+  context?: OpenBubbleErrorContext | undefined;
+}
+
 export class OpenBubbleError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly context: OpenBubbleErrorContext | undefined;
+
+  public constructor(message: string, options?: OpenBubbleErrorOptions) {
+    super(message, options);
     this.name = "OpenBubbleError";
+    this.context = options?.context;
   }
 }
 
 export { OpenBubbleError as OpenBubbleErrorV11 };
+
+function toOpenBubbleError(input: {
+  message: string;
+  context: OpenBubbleErrorContext;
+  cause?: unknown;
+}): OpenBubbleError {
+  return new OpenBubbleError(input.message, {
+    context: input.context,
+    ...(input.cause !== undefined ? { cause: input.cause } : {})
+  });
+}
 
 function renderOpenCommand(
   commandTemplate: string,
@@ -66,7 +94,13 @@ function renderOpenCommand(
 ): string {
   const template = commandTemplate.trim();
   if (template.length === 0) {
-    throw new OpenBubbleError("open_command cannot be empty.");
+    throw toOpenBubbleError({
+      message: "open_command cannot be empty.",
+      context: {
+        commandTemplate,
+        reason: "empty_open_command"
+      }
+    });
   }
 
   const quotedWorktreePath = shellQuote(worktreePath);
@@ -115,9 +149,14 @@ async function assertWorktreeExistsDefault(worktreePath: string): Promise<void> 
   await access(worktreePath, fsConstants.F_OK).catch(
     (error: NodeJS.ErrnoException) => {
       if (error.code === "ENOENT") {
-        throw new OpenBubbleError(
-          `Bubble worktree does not exist yet: ${worktreePath}. Start the bubble before opening it.`
-        );
+        throw toOpenBubbleError({
+          message: `Bubble worktree does not exist yet: ${worktreePath}. Start the bubble before opening it.`,
+          context: {
+            worktreePath,
+            reason: "worktree_missing"
+          },
+          cause: error
+        });
       }
       throw error;
     }
@@ -140,15 +179,25 @@ async function resolveOpenCommandTemplate(input: {
     }
   } catch (error) {
     if (error instanceof SchemaValidationError) {
-      throw new OpenBubbleError(
-        `Invalid global Pairflow config while opening bubble '${input.bubbleId}': ${error.message}`
-      );
+      throw toOpenBubbleError({
+        message: `Invalid global Pairflow config while opening bubble '${input.bubbleId}': ${error.message}`,
+        context: {
+          bubbleId: input.bubbleId,
+          reason: "invalid_global_config"
+        },
+        cause: error
+      });
     }
 
     const reason = error instanceof Error ? error.message : String(error);
-    throw new OpenBubbleError(
-      `Failed to load global Pairflow config while opening bubble '${input.bubbleId}': ${reason}`
-    );
+    throw toOpenBubbleError({
+      message: `Failed to load global Pairflow config while opening bubble '${input.bubbleId}': ${reason}`,
+      context: {
+        bubbleId: input.bubbleId,
+        reason: "load_global_config_failed"
+      },
+      cause: error
+    });
   }
 
   return defaultOpenCommandTemplate;
@@ -187,11 +236,20 @@ export async function openBubble(
 
   if (executed.exitCode !== 0) {
     const details = executed.stderr.trim() || executed.stdout.trim();
-    throw new OpenBubbleError(
-      details.length > 0
-        ? `Open command failed with exit code ${executed.exitCode}: ${details}`
-        : `Open command failed with exit code ${executed.exitCode}.`
-    );
+    throw toOpenBubbleError({
+      message:
+        details.length > 0
+          ? `Open command failed with exit code ${executed.exitCode}: ${details}`
+          : `Open command failed with exit code ${executed.exitCode}.`,
+      context: {
+        bubbleId: resolved.bubbleId,
+        command,
+        cwd: resolved.repoPath,
+        exitCode: executed.exitCode,
+        reason: "open_command_failed",
+        worktreePath
+      }
+    });
   }
 
   return {
@@ -208,10 +266,22 @@ export function asOpenBubbleError(error: unknown): never {
     throw error;
   }
   if (error instanceof BubbleLookupError) {
-    throw new OpenBubbleError(error.message);
+    throw toOpenBubbleError({
+      message: error.message,
+      context: {
+        reason: "bubble_lookup_error"
+      },
+      cause: error
+    });
   }
   if (error instanceof Error) {
-    throw new OpenBubbleError(error.message);
+    throw toOpenBubbleError({
+      message: error.message,
+      context: {
+        reason: "unexpected_open_error"
+      },
+      cause: error
+    });
   }
   throw error;
 }

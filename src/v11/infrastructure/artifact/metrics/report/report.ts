@@ -8,16 +8,47 @@ import { MetricsReportDateRangeError, selectMetricsShards } from "./selectShards
 
 export { MetricsReportDateRangeError } from "./selectShards.js";
 
+interface MetricsReportErrorContext {
+  from?: string | undefined;
+  label?: string | undefined;
+  reason?: string | undefined;
+  to?: string | undefined;
+}
+
+interface MetricsReportErrorOptions extends ErrorOptions {
+  context?: MetricsReportErrorContext | undefined;
+}
+
 export class MetricsReportError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly context: MetricsReportErrorContext | undefined;
+
+  public constructor(message: string, options?: MetricsReportErrorOptions) {
+    super(message, options);
     this.name = "MetricsReportError";
+    this.context = options?.context;
   }
+}
+
+function toMetricsReportError(input: {
+  message: string;
+  context: MetricsReportErrorContext;
+  cause?: unknown;
+}): MetricsReportError {
+  return new MetricsReportError(input.message, {
+    context: input.context,
+    ...(input.cause !== undefined ? { cause: input.cause } : {})
+  });
 }
 
 function assertValidDate(value: Date, label: string): void {
   if (Number.isNaN(value.getTime())) {
-    throw new MetricsReportError(`${label} date is invalid.`);
+    throw toMetricsReportError({
+      message: `${label} date is invalid.`,
+      context: {
+        label,
+        reason: "invalid_date"
+      }
+    });
   }
 }
 
@@ -27,7 +58,14 @@ export async function generateMetricsReport(
   assertValidDate(input.from, "from");
   assertValidDate(input.to, "to");
   if (input.from.getTime() > input.to.getTime()) {
-    throw new MetricsReportError("from date must be <= to date.");
+    throw toMetricsReportError({
+      message: "from date must be <= to date.",
+      context: {
+        from: input.from.toISOString(),
+        reason: "invalid_date_range",
+        to: input.to.toISOString()
+      }
+    });
   }
 
   const shardSelection = await selectMetricsShards({
@@ -38,7 +76,15 @@ export async function generateMetricsReport(
       : {})
   }).catch((error: unknown) => {
     if (error instanceof MetricsReportDateRangeError) {
-      throw new MetricsReportError(error.message);
+      throw toMetricsReportError({
+        message: error.message,
+        context: {
+          from: input.from.toISOString(),
+          reason: "select_shards_date_range_error",
+          to: input.to.toISOString()
+        },
+        cause: error
+      });
     }
     throw error;
   });

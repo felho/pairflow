@@ -14,16 +14,50 @@ export interface MetricsShardSelection {
   shardPaths: string[];
 }
 
+interface MetricsReportDateRangeErrorContext {
+  from?: string | undefined;
+  label?: string | undefined;
+  reason?: string | undefined;
+  to?: string | undefined;
+}
+
+interface MetricsReportDateRangeErrorOptions extends ErrorOptions {
+  context?: MetricsReportDateRangeErrorContext | undefined;
+}
+
 export class MetricsReportDateRangeError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly context: MetricsReportDateRangeErrorContext | undefined;
+
+  public constructor(
+    message: string,
+    options?: MetricsReportDateRangeErrorOptions
+  ) {
+    super(message, options);
     this.name = "MetricsReportDateRangeError";
+    this.context = options?.context;
   }
+}
+
+function toMetricsReportDateRangeError(input: {
+  message: string;
+  context: MetricsReportDateRangeErrorContext;
+  cause?: unknown;
+}): MetricsReportDateRangeError {
+  return new MetricsReportDateRangeError(input.message, {
+    context: input.context,
+    ...(input.cause !== undefined ? { cause: input.cause } : {})
+  });
 }
 
 function assertValidDate(value: Date, label: string): void {
   if (Number.isNaN(value.getTime())) {
-    throw new MetricsReportDateRangeError(`${label} date is invalid.`);
+    throw toMetricsReportDateRangeError({
+      message: `${label} date is invalid.`,
+      context: {
+        label,
+        reason: "invalid_date"
+      }
+    });
   }
 }
 
@@ -37,7 +71,14 @@ export async function selectMetricsShards(
   assertValidDate(input.from, "from");
   assertValidDate(input.to, "to");
   if (input.from.getTime() > input.to.getTime()) {
-    throw new MetricsReportDateRangeError("from date must be <= to date.");
+    throw toMetricsReportDateRangeError({
+      message: "from date must be <= to date.",
+      context: {
+        from: input.from.toISOString(),
+        reason: "invalid_date_range",
+        to: input.to.toISOString()
+      }
+    });
   }
 
   const metricsRootPath = resolveMetricsEventsRoot(input.rootPath);

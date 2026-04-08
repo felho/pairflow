@@ -9,6 +9,10 @@ import {
 } from "../../foundation/fs/fileLock.js";
 import { isIsoTimestamp } from "../../../shared/validation/primitives.js";
 import { normalizeRepoPath } from "./repoResolution.js";
+import {
+  normalizeRegistryEntries,
+  uniqueSortedRegistryEntries
+} from "./repoRegistryEntries.js";
 import type {
   RegisterRepoInRegistryPort,
   RegisterRepoInput,
@@ -138,6 +142,64 @@ function requireNonEmptyString(value: unknown, fieldName: string): string {
   return trimmed;
 }
 
+function parseRegistryEntry(value: unknown, index: number): RepoRegistryEntry {
+  if (!isRecord(value)) {
+    throw toRepoRegistryError({
+      message: `Repo registry entry at index ${index} must be an object.`,
+      context: {
+        entryIndex: index,
+        reason: "entry_not_object"
+      }
+    });
+  }
+
+  const repoPath = requireNonEmptyString(
+    value.repoPath,
+    `repo registry entry ${index} repoPath`
+  );
+  const addedAt = requireNonEmptyString(
+    value.addedAt,
+    `repo registry entry ${index} addedAt`
+  );
+  if (!isIsoTimestamp(addedAt)) {
+    throw toRepoRegistryError({
+      message: `repo registry entry ${index} addedAt must be an ISO-8601 UTC timestamp.`,
+      context: {
+        entryIndex: index,
+        fieldName: "addedAt",
+        reason: "invalid_timestamp"
+      }
+    });
+  }
+  const labelRaw = value.label;
+  if (labelRaw !== undefined && typeof labelRaw !== "string") {
+    throw toRepoRegistryError({
+      message: `repo registry entry ${index} label must be a string when provided.`,
+      context: {
+        entryIndex: index,
+        fieldName: "label",
+        reason: "invalid_label_type"
+      }
+    });
+  }
+  const label = labelRaw?.trim();
+  if (labelRaw !== undefined && label !== undefined && label.length === 0) {
+    throw toRepoRegistryError({
+      message: `repo registry entry ${index} label cannot be empty when provided.`,
+      context: {
+        entryIndex: index,
+        fieldName: "label",
+        reason: "empty_label"
+      }
+    });
+  }
+  return {
+    repoPath,
+    addedAt,
+    ...(label !== undefined ? { label } : {})
+  };
+}
+
 function parseRegistryDocument(raw: string): RepoRegistryDocument {
   if (raw.trim().length === 0) {
     return {
@@ -201,62 +263,9 @@ function parseRegistryDocument(raw: string): RepoRegistryDocument {
     });
   }
 
-  const repos: RepoRegistryEntry[] = reposRaw.map((value, index) => {
-    if (!isRecord(value)) {
-      throw toRepoRegistryError({
-        message: `Repo registry entry at index ${index} must be an object.`,
-        context: {
-          entryIndex: index,
-          reason: "entry_not_object"
-        }
-      });
-    }
-    const repoPath = requireNonEmptyString(
-      value.repoPath,
-      `repo registry entry ${index} repoPath`
-    );
-    const addedAt = requireNonEmptyString(
-      value.addedAt,
-      `repo registry entry ${index} addedAt`
-    );
-    if (!isIsoTimestamp(addedAt)) {
-      throw toRepoRegistryError({
-        message: `repo registry entry ${index} addedAt must be an ISO-8601 UTC timestamp.`,
-        context: {
-          entryIndex: index,
-          fieldName: "addedAt",
-          reason: "invalid_timestamp"
-        }
-      });
-    }
-    const labelRaw = value.label;
-    if (labelRaw !== undefined && typeof labelRaw !== "string") {
-      throw toRepoRegistryError({
-        message: `repo registry entry ${index} label must be a string when provided.`,
-        context: {
-          entryIndex: index,
-          fieldName: "label",
-          reason: "invalid_label_type"
-        }
-      });
-    }
-    const label = labelRaw?.trim();
-    if (labelRaw !== undefined && label !== undefined && label.length === 0) {
-      throw toRepoRegistryError({
-        message: `repo registry entry ${index} label cannot be empty when provided.`,
-        context: {
-          entryIndex: index,
-          fieldName: "label",
-          reason: "empty_label"
-        }
-      });
-    }
-    return {
-      repoPath,
-      addedAt,
-      ...(label !== undefined ? { label } : {})
-    };
-  });
+  const repos: RepoRegistryEntry[] = reposRaw.map((value, index) =>
+    parseRegistryEntry(value, index)
+  );
 
   return {
     version: versionRaw,
@@ -276,49 +285,6 @@ function serializeRegistry(entries: RepoRegistryEntry[]): string {
     null,
     2
   )}\n`;
-}
-
-async function normalizeEntries(
-  entries: RepoRegistryEntry[],
-  reportNormalizationWarning: (message: string) => void
-): Promise<RepoRegistryEntry[]> {
-  const normalizedByPath = new Map<string, RepoRegistryEntry>();
-  const warnedPaths = new Set<string>();
-  for (const entry of entries) {
-    const normalizedPath = await normalizeRepoPath(resolve(entry.repoPath));
-    const existing = normalizedByPath.get(normalizedPath);
-    if (existing !== undefined) {
-      if (existing.label !== entry.label && !warnedPaths.has(normalizedPath)) {
-        reportNormalizationWarning(
-          `Pairflow warning: deduplicating repo registry aliases with conflicting labels for ${normalizedPath} (${existing.label ?? "<none>"} vs ${entry.label ?? "<none>"}).\n`
-        );
-        warnedPaths.add(normalizedPath);
-      }
-      continue;
-    }
-
-    normalizedByPath.set(normalizedPath, {
-      repoPath: normalizedPath,
-      addedAt: entry.addedAt,
-      ...(entry.label !== undefined ? { label: entry.label } : {})
-    });
-  }
-  return [...normalizedByPath.values()].sort((left, right) =>
-    left.repoPath.localeCompare(right.repoPath)
-  );
-}
-
-function uniqueSortedEntries(entries: RepoRegistryEntry[]): RepoRegistryEntry[] {
-  const seen = new Set<string>();
-  const deduped: RepoRegistryEntry[] = [];
-  for (const entry of entries) {
-    if (seen.has(entry.repoPath)) {
-      continue;
-    }
-    seen.add(entry.repoPath);
-    deduped.push(entry);
-  }
-  return deduped.sort((left, right) => left.repoPath.localeCompare(right.repoPath));
 }
 
 function normalizeLabel(
@@ -439,8 +405,8 @@ export async function readRepoRegistry(
     });
   const entries =
     input.normalizePaths ?? false
-      ? await normalizeEntries(parsed.repos, reportNormalizationWarning)
-      : uniqueSortedEntries(parsed.repos);
+      ? await normalizeRegistryEntries(parsed.repos, reportNormalizationWarning)
+      : uniqueSortedRegistryEntries(parsed.repos);
   return {
     registryPath,
     entries

@@ -37,13 +37,17 @@ Az `error` fitness check jelenleg hard-fail helyett `warn` módban fut, de a bac
 
 4. `open` warning klaszter
    - cél: `OpenBubbleError` throw site-ok kontextusosítása
+   - státusz: completed
+
+5. `metrics` warning klaszter
+   - cél: report/select-shards artifact warningok context payloadjai
+   - státusz: completed
+
+6. `transcript` warning klaszter
+   - cél: transcript artifact/runtime warningok context payloadjai
    - státusz: pending
 
-5. `metrics + transcript` warning klaszter
-   - cél: artifact/runtime warningok context payloadjai
-   - státusz: pending
-
-6. maradék singletonok
+7. maradék singletonok
    - `attach`
    - `list`
    - `actorProtocol`
@@ -64,4 +68,5 @@ Az `error` fitness check jelenleg hard-fail helyett `warn` módban fut, de a bac
 # Előrehaladás
 
 - Wave 1 commit: `11f1ec1f` `refactor(error): add context to create and archive warnings`
-- Aktuális warning baseline: `error` check `126 -> 106`
+- Wave 2 commit: `b952b576` `refactor(error): add registry error context`
+- Aktuális warning baseline: `error` check `126 -> 106 -> 97`
