@@ -13,10 +13,22 @@ export type {
   ResolveRepoPathPort
 } from "../../../shared/ports/repoResolution.js";
 
+export interface RepoResolutionErrorContext {
+  source: "cwd_probe";
+  requestedCwd: string;
+}
+
 export class RepoResolutionError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly context: RepoResolutionErrorContext | undefined;
+
+  public constructor(
+    input: string | { message: string; context?: RepoResolutionErrorContext }
+  ) {
+    const normalized =
+      typeof input === "string" ? { message: input, context: undefined } : input;
+    super(normalized.message);
     this.name = "RepoResolutionError";
+    this.context = normalized.context;
   }
 }
 
@@ -51,7 +63,11 @@ export const resolveRepoPath: ResolveRepoPathPort = async (
     return normalizeRepoPath(resolve(cwd, raw, ".."));
   }
 
-  throw new RepoResolutionError(
-    `Could not resolve repository root from cwd: ${requestedCwd}`
-  );
+  throw new RepoResolutionError({
+    message: `Could not resolve repository root from cwd: ${requestedCwd}`,
+    context: {
+      source: "cwd_probe",
+      requestedCwd
+    }
+  });
 };
