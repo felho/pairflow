@@ -210,6 +210,42 @@ describe("dependency fitness check", () => {
     ).toBe(false);
   });
 
+  it("passes on shared to shared ports imports", async () => {
+    const repoRoot = await createTempRoot();
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/ports/transcript.ts",
+      "export type AppendTranscriptPort = (path: string) => Promise<void>;\n"
+    );
+    await writeRepoFile(
+      repoRoot,
+      "src/v11/shared/metaReview/metaReviewCommandContract.ts",
+      "import type { AppendTranscriptPort } from '../ports/transcript.js';\nexport interface Deps { appendTranscript?: AppendTranscriptPort; }\n"
+    );
+
+    const report = await buildDependencyCheckReport({
+      check: {
+        id: "dependency",
+        metric: "cycle and forbidden import direction detection",
+        mode: "report-only",
+        exception_lifecycle_mode: undefined,
+        owner: "architecture",
+        scope: ["src/v11/**"],
+        exceptions: []
+      },
+      repoRoot,
+      fallbackMode: "report-only",
+      currentMilestone: undefined
+    });
+
+    expect(report.status).toBe("pass");
+    expect(
+      report.details?.some((detail) =>
+        detail.includes("forbidden layer import shared -> shared-ports")
+      )
+    ).toBe(false);
+  });
+
   it("fails on shared ports to infrastructure import", async () => {
     const repoRoot = await createTempRoot();
     await writeRepoFile(

@@ -58,7 +58,7 @@ type DependencyLayer =
 const layerImportAllowlist: Record<DependencyLayer, readonly DependencyLayer[]> = {
   domain: ["domain", "shared"],
   application: ["application", "domain", "shared", "shared-ports"],
-  shared: ["domain", "shared"],
+  shared: ["domain", "shared", "shared-ports"],
   "shared-ports": ["domain", "shared", "shared-ports"],
   infrastructure: ["domain", "shared", "shared-ports", "infrastructure"],
   "legacy-compat": ["application", "shared", "shared-ports", "legacy-compat"]

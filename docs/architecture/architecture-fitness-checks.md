@@ -243,6 +243,7 @@ The codebase now treats `ports` as a real architectural concept, not a fitness-o
 Canonical policy:
 
 - application may depend on `src/v11/shared/ports/**`
+- shared command/helper contracts may depend on `src/v11/shared/ports/**`
 - infrastructure owns implementations
 - ports must define typed capability contracts
 - ports must not be pass-through wrappers
@@ -255,10 +256,11 @@ Once the ports model is wired into fitness, the dependency check should enforce 
 
 1. `application -> infrastructure` is forbidden
 2. `application -> shared/ports` is allowed
-3. `shared/ports -> infrastructure` is forbidden
-4. `shared/ports` must not be pass-through adapter camouflage
-5. infrastructure implementations may depend on `shared/ports` contracts
-6. plain `shared/**` must not absorb obvious infrastructure ownership just to satisfy layer rules
+3. `shared -> shared/ports` is allowed for capability contracts and typed dependency surfaces
+4. `shared/ports -> infrastructure` is forbidden
+5. `shared/ports` must not be pass-through adapter camouflage
+6. infrastructure implementations may depend on `shared/ports` contracts
+7. plain `shared/**` must not absorb obvious infrastructure ownership just to satisfy layer rules
 
 ## Triage Matrix
 

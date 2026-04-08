@@ -141,6 +141,12 @@ Expected action:
 - validate the command/feature cluster,
 - only then consider retiring the shim.
 
+Note:
+
+- `shared -> shared/ports` typed capability imports are legitimate in this repo
+  when the consumer is expressing a dependency contract rather than embedding
+  infrastructure behavior.
+
 ### C. Hard Retained Dependency
 
 Definition:
@@ -322,6 +328,8 @@ validation, run `pnpm build` first.
 | W2 | easy rewrite batch 1 | easy | validated | First safe rewrites landed only where the consumer layer stayed valid: `emitOpenV11` now imports `shellQuote` from `shared/foundation`, and `eventsStore` now imports `fileLock` from the canonical `infrastructure/foundation` owner; coverage moved from `323 -> 321` total and `17 -> 15` retired-shim warnings |
 | W3 | easy rewrite batch 2 | easy | validated | Infrastructure-side `pairflowCommandAttach` now uses the canonical `bubbleLookup` owner and port type instead of the `core` shim; coverage moved from `321 -> 319` total with no new dependency regressions |
 | W4 | easy rewrite batch 3 | easy | validated | `testEvidenceVerificationHelpers` now uses the canonical infrastructure `runGit` owner instead of the `core/workspace/git` shim; coverage moved from `319 -> 318` total while the retired-shim subset stayed at `15` |
+| W5 | shared-safe shim retirement batch | easy | validated | Shared contract/type surfaces were retargeted away from thin `core` bridges into canonical `shared/ports` and sibling shared contracts; warn-only coverage moved from `318 -> 294` total while the retired-shim subset stayed at `15` |
+| W6 | dependency policy alignment for shared ports | policy | validated | Dependency fitness now explicitly allows `shared -> shared/ports` capability-contract imports while keeping `shared-ports -> infrastructure` and anti-circumvention rules intact; full fitness returned to PASS after the shared-safe batch |
 | W5 | easy rewrite batch 4 | easy | planned | Continue only `shared -> shared`, `infrastructure -> infrastructure`, or `application -> shared` rewrites; do not cross into direct `application -> infrastructure` rewires |
 | W6 | approval dependency bridge | medium | planned | Rewrite `approval` contract/default wiring away from `core` shims |
 | W7 | status and inbox bridge cleanup | medium | planned | Resolve read-side contract leakage without broad redesign |
