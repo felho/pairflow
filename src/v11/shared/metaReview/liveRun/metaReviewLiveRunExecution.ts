@@ -39,10 +39,16 @@ function assertMetaReviewRunningStateAllowed(
     isMetaReviewExecutionContextActiveState(loadedState.state) &&
     allowMetaReviewRunningState !== true
   ) {
-    throw new MetaReviewError(
-      "META_REVIEW_STATE_INVALID",
-      "meta-review run is disabled while the active submit channel is reserved for an in-flight meta-review authority window"
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_STATE_INVALID",
+      message:
+        "meta-review run is disabled while the active submit channel is reserved for an in-flight meta-review authority window",
+      context: {
+        source: "meta_review_live_run_execution",
+        bubbleId: loadedState.state.bubble_id,
+        reason: "active_submit_channel_reserved"
+      }
+    });
   }
 }
 

@@ -34,15 +34,21 @@ import type {
 } from "./metaReviewCommandContract.js";
 
 function resolveMetaReviewArtifactReadPort(
+  input: MetaReviewReadInput,
   dependencies: MetaReviewCommandDependencies
 ): NonNullable<MetaReviewCommandDependencies["readFile"]> {
   if (dependencies.readFile !== undefined) {
     return dependencies.readFile;
   }
-  throw new MetaReviewError(
-    "META_REVIEW_UNKNOWN_ERROR",
-    "meta-review artifact read capability is unavailable."
-  );
+  throw new MetaReviewError({
+    reasonCode: "META_REVIEW_UNKNOWN_ERROR",
+    message: "meta-review artifact read capability is unavailable.",
+    context: {
+      source: "meta_review_command_read_runtime",
+      bubbleId: input.bubbleId,
+      reason: "artifact_read_capability_unavailable"
+    }
+  });
 }
 
 export async function getMetaReviewStatus(
@@ -51,7 +57,7 @@ export async function getMetaReviewStatus(
 ): Promise<MetaReviewStatusView> {
   const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
   const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
-  const readFileFn = resolveMetaReviewArtifactReadPort(dependencies);
+  const readFileFn = resolveMetaReviewArtifactReadPort(input, dependencies);
 
   const resolved = await resolveBubble({
     bubbleId: input.bubbleId,
@@ -119,7 +125,7 @@ export async function getMetaReviewLastReport(
 ): Promise<MetaReviewLastReportView> {
   const resolveBubble = dependencies.resolveBubbleById ?? resolveBubbleById;
   const readState = dependencies.readStateSnapshot ?? readStateSnapshot;
-  const readFileFn = resolveMetaReviewArtifactReadPort(dependencies);
+  const readFileFn = resolveMetaReviewArtifactReadPort(input, dependencies);
 
   const resolved = await resolveBubble({
     bubbleId: input.bubbleId,
