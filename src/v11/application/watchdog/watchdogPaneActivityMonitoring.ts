@@ -1,5 +1,3 @@
-import type { readWatchdogPaneActivity } from "../../../core/watchdog/watchdogPaneActivityStore.js";
-import type { writeWatchdogPaneActivity } from "../../../core/watchdog/watchdogPaneActivityStore.js";
 import type {
   BubbleWatchdogDependencies
 } from "./watchdogCommandContract.js";
@@ -11,8 +9,10 @@ import {
   type PaneActivitySampleResult
 } from "./watchdogPaneActivitySampler.js";
 import type {
+  ReadWatchdogPaneActivityPort,
   ReadWatchdogPaneActivityResult,
-  WatchdogPaneActivityRecord
+  WatchdogPaneActivityRecord,
+  WriteWatchdogPaneActivityPort
 } from "../../shared/ports/watchdogPaneActivity.js";
 
 export interface WatchdogPaneActivityState {
@@ -122,8 +122,8 @@ function buildFailedSampleRecord(input: {
 export async function maybeMonitorWatchdogPaneActivity(input: {
   context: WatchdogRuntimeContext;
   monitored: boolean;
-  readPaneActivity: typeof readWatchdogPaneActivity;
-  writePaneActivity: typeof writeWatchdogPaneActivity;
+  readPaneActivity: ReadWatchdogPaneActivityPort;
+  writePaneActivity: WriteWatchdogPaneActivityPort;
   samplePaneActivity: typeof sampleWatchdogPaneActivity;
   readRuntimeSessionsRegistry: BubbleWatchdogDependencies["readRuntimeSessionsRegistry"];
   runTmux: BubbleWatchdogDependencies["runTmux"];
