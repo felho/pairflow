@@ -1,16 +1,16 @@
-import type { appendProtocolEnvelope } from "../../../core/protocol/transcriptStore.js";
-import type {
-  writeStateSnapshot,
-  WriteStateSnapshotOptions
-} from "../../../core/state/stateStore.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import { buildAskHumanEnvelope } from "./askHumanExecutionArtifacts.js";
 import type { ExecuteAskHumanExecutionInput } from "./askHumanFlowContract.js";
+import type { AppendProtocolEnvelopeInput } from "../ports/transcript.js";
+import type {
+  WriteStateSnapshotOptions,
+  WriteStateSnapshotPort
+} from "../ports/stateSnapshots.js";
 
 export function buildAskHumanAppendEnvelopeInput(
   input: ExecuteAskHumanExecutionInput,
   lockPath: string
-): Parameters<typeof appendProtocolEnvelope>[0] {
+): AppendProtocolEnvelopeInput {
   return {
     transcriptPath: input.routing.resolved.bubblePaths.transcriptPath,
     mirrorPaths: [input.routing.resolved.bubblePaths.inboxPath],
@@ -21,7 +21,7 @@ export function buildAskHumanAppendEnvelopeInput(
 }
 
 export interface AskHumanWriteSnapshotCallInput {
-  statePath: Parameters<typeof writeStateSnapshot>[0];
+  statePath: Parameters<WriteStateSnapshotPort>[0];
   state: BubbleStateSnapshot;
   options: WriteStateSnapshotOptions;
 }

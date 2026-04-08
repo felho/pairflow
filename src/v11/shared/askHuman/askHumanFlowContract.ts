@@ -1,11 +1,11 @@
 import type {
-  appendProtocolEnvelope,
-  AppendProtocolEnvelopeResult
-} from "../../../core/protocol/transcriptStore.js";
+  AppendProtocolEnvelopeResult,
+  AppendProtocolEnvelopePort
+} from "../ports/transcript.js";
 import type {
-  writeStateSnapshot,
-  LoadedStateSnapshot
-} from "../../../core/state/stateStore.js";
+  LoadedStateSnapshot,
+  WriteStateSnapshotPort
+} from "../ports/stateSnapshots.js";
 import type { applyStateTransition } from "../../domain/state/machine.js";
 import type {
   AskHumanDeliveryTargetReasonCode,
@@ -37,8 +37,8 @@ export interface ExecuteAskHumanExecutionResult {
 }
 
 export interface ExecuteAskHumanExecutionDependencies {
-  appendProtocolEnvelope?: typeof appendProtocolEnvelope;
-  writeStateSnapshot?: typeof writeStateSnapshot;
+  appendProtocolEnvelope?: AppendProtocolEnvelopePort;
+  writeStateSnapshot?: WriteStateSnapshotPort;
   applyStateTransition?: typeof applyStateTransition;
 }
 
@@ -86,8 +86,8 @@ export interface RunAskHumanFlowDependencies {
     input: FinalizeAskHumanFlowInput,
     dependencies?: FinalizeAskHumanFlowDependencies
   ) => Promise<RunAskHumanFlowResult>;
-  appendProtocolEnvelope?: typeof appendProtocolEnvelope;
-  writeStateSnapshot?: typeof writeStateSnapshot;
+  appendProtocolEnvelope?: AppendProtocolEnvelopePort;
+  writeStateSnapshot?: WriteStateSnapshotPort;
   applyStateTransition?: typeof applyStateTransition;
   emitTmuxDeliveryNotification?: EmitAskHumanTmuxDeliveryNotificationPort;
   emitBubbleNotification?: EmitAskHumanBubbleNotificationPort;

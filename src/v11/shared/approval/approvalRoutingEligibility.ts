@@ -3,11 +3,11 @@ import {
   deliveryTargetRoleMetadataKey,
   type ApprovalDecision
 } from "../../../types/protocol.js";
-import type { readTranscriptEnvelopes } from "../../../core/protocol/transcriptStore.js";
 import {
   hasParityInconsistencyMetadata,
   readApprovalTranscriptContext
 } from "./approvalTranscriptContext.js";
+import type { ReadTranscriptEnvelopesPort } from "../ports/transcript.js";
 export {
   hasParityInconsistencyMetadata,
   readApprovalTranscriptContext,
@@ -38,7 +38,7 @@ export interface ResolveApprovalDecisionMetadataInput {
   round: number;
   overrideNonApprove?: boolean | undefined;
   overrideReason?: string | undefined;
-  readTranscriptEnvelopes: typeof readTranscriptEnvelopes;
+  readTranscriptEnvelopes: ReadTranscriptEnvelopesPort;
   createError: PairflowCreateCommandError;
 }
 
