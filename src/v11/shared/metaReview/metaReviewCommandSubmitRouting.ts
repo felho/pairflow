@@ -65,10 +65,15 @@ export function assertSubmitRecommendationRouteable(
   if (recommendation !== "inconclusive") {
     return;
   }
-  throw new MetaReviewError(
-    "META_REVIEW_GATE_RUN_FAILED",
-    "meta-review submit recorded a canonical snapshot but recommendation=inconclusive is not routeable in the normal submit handoff. Use recovery only as fallback."
-  );
+  throw new MetaReviewError({
+    reasonCode: "META_REVIEW_GATE_RUN_FAILED",
+    message:
+      "meta-review submit recorded a canonical snapshot but recommendation=inconclusive is not routeable in the normal submit handoff. Use recovery only as fallback.",
+    context: {
+      source: "meta_review_command_submit_routing",
+      reason: "inconclusive_submit_not_routeable"
+    }
+  });
 }
 
 async function emitSubmitAutoReworkDelivery(input: {
@@ -84,10 +89,15 @@ async function emitSubmitAutoReworkDelivery(input: {
     input.dependencies.emitDeliveryNotification === undefined
     || input.dependencies.buildDeliveryMessageRef === undefined
   ) {
-    throw new MetaReviewError(
-      "META_REVIEW_UNKNOWN_ERROR",
-      "meta-review submit auto-rework delivery capabilities are unavailable."
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_UNKNOWN_ERROR",
+      message: "meta-review submit auto-rework delivery capabilities are unavailable.",
+      context: {
+        source: "meta_review_command_submit_routing",
+        bubbleId: input.resolved.bubbleId,
+        reason: "auto_rework_delivery_capabilities_unavailable"
+      }
+    });
   }
 
   const messageRef = input.dependencies.buildDeliveryMessageRef({
