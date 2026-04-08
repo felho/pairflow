@@ -16,11 +16,38 @@ interface ResolvedRepositoryPaths {
   currentBranch?: string;
 }
 
+interface WorkspaceResolutionErrorContext {
+  branchName?: string | undefined;
+  candidateCount?: number | undefined;
+  cwd?: string | undefined;
+  reason?: string | undefined;
+  repoPath?: string | undefined;
+  worktreePath?: string | undefined;
+}
+
+interface WorkspaceResolutionErrorOptions extends ErrorOptions {
+  context?: WorkspaceResolutionErrorContext | undefined;
+}
+
 export class WorkspaceResolutionError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly context: WorkspaceResolutionErrorContext | undefined;
+
+  public constructor(message: string, options?: WorkspaceResolutionErrorOptions) {
+    super(message, options);
     this.name = "WorkspaceResolutionError";
+    this.context = options?.context;
   }
+}
+
+function toWorkspaceResolutionError(input: {
+  message: string;
+  context: WorkspaceResolutionErrorContext;
+  cause?: unknown;
+}): WorkspaceResolutionError {
+  return new WorkspaceResolutionError(input.message, {
+    context: input.context,
+    ...(input.cause !== undefined ? { cause: input.cause } : {})
+  });
 }
 
 function isPathInside(parentPath: string, childPath: string): boolean {
@@ -38,16 +65,24 @@ async function resolveRepositoryPaths(cwd: string): Promise<ResolvedRepositoryPa
     allowFailure: true
   });
   if (commonDirResult.exitCode !== 0) {
-    throw new WorkspaceResolutionError(
-      `Current directory is not inside a git repository: ${cwd}`
-    );
+    throw toWorkspaceResolutionError({
+      message: `Current directory is not inside a git repository: ${cwd}`,
+      context: {
+        cwd,
+        reason: "not_in_git_repository"
+      }
+    });
   }
 
   const commonDirRaw = commonDirResult.stdout.trim();
   if (commonDirRaw.length === 0) {
-    throw new WorkspaceResolutionError(
-      `Could not resolve git common dir from cwd: ${cwd}`
-    );
+    throw toWorkspaceResolutionError({
+      message: `Could not resolve git common dir from cwd: ${cwd}`,
+      context: {
+        cwd,
+        reason: "empty_git_common_dir"
+      }
+    });
   }
 
   const commonDirPath = resolve(cwd, commonDirRaw);
@@ -58,16 +93,24 @@ async function resolveRepositoryPaths(cwd: string): Promise<ResolvedRepositoryPa
     allowFailure: true
   });
   if (topLevelResult.exitCode !== 0) {
-    throw new WorkspaceResolutionError(
-      `Could not resolve git worktree root from cwd: ${cwd}`
-    );
+    throw toWorkspaceResolutionError({
+      message: `Could not resolve git worktree root from cwd: ${cwd}`,
+      context: {
+        cwd,
+        reason: "missing_git_toplevel"
+      }
+    });
   }
 
   const topLevelRaw = topLevelResult.stdout.trim();
   if (topLevelRaw.length === 0) {
-    throw new WorkspaceResolutionError(
-      `Git top-level path is empty for cwd: ${cwd}`
-    );
+    throw toWorkspaceResolutionError({
+      message: `Git top-level path is empty for cwd: ${cwd}`,
+      context: {
+        cwd,
+        reason: "empty_git_toplevel"
+      }
+    });
   }
 
   const worktreePath = resolve(cwd, topLevelRaw);
@@ -167,6 +210,53 @@ async function listBubbleConfigs(repoPath: string): Promise<Array<{ config: Bubb
   return result;
 }
 
+function resolveMatchingBubbleConfig(input: {
+  currentBranch: string | undefined;
+  matches: Array<{ config: BubbleConfig; paths: BubblePaths }>;
+  repoPath: string;
+  worktreePath: string;
+}): { config: BubbleConfig; paths: BubblePaths } {
+  if (input.matches.length === 0) {
+    throw toWorkspaceResolutionError({
+      message: `No bubble config found for worktree path: ${input.worktreePath}`,
+      context: {
+        branchName: input.currentBranch,
+        repoPath: input.repoPath,
+        reason: "no_matching_bubble_config",
+        worktreePath: input.worktreePath
+      }
+    });
+  }
+
+  if (input.matches.length > 1) {
+    throw toWorkspaceResolutionError({
+      message: `Multiple bubble configs matched worktree path ${input.worktreePath}; resolution is ambiguous`,
+      context: {
+        branchName: input.currentBranch,
+        candidateCount: input.matches.length,
+        repoPath: input.repoPath,
+        reason: "ambiguous_bubble_config_match",
+        worktreePath: input.worktreePath
+      }
+    });
+  }
+
+  const match = input.matches[0];
+  if (match === undefined) {
+    throw toWorkspaceResolutionError({
+      message: `No bubble config found for worktree path: ${input.worktreePath}`,
+      context: {
+        branchName: input.currentBranch,
+        repoPath: input.repoPath,
+        reason: "missing_single_match",
+        worktreePath: input.worktreePath
+      }
+    });
+  }
+
+  return match;
+}
+
 export async function resolveBubbleFromWorkspaceCwd(
   cwdInput: string = process.cwd()
 ): Promise<ResolvedBubbleWorkspace> {
@@ -197,9 +287,13 @@ export async function resolveBubbleFromWorkspaceCwd(
     if (firstError instanceof Error) {
       throw firstError;
     }
-    throw new WorkspaceResolutionError(
-      `Could not resolve bubble workspace from cwd: ${resolve(cwdInput)}`
-    );
+    throw toWorkspaceResolutionError({
+      message: `Could not resolve bubble workspace from cwd: ${resolve(cwdInput)}`,
+      context: {
+        cwd: resolve(cwdInput),
+        reason: "workspace_resolution_failed"
+      }
+    });
   }
 
   const normalizedRepoPath = await normalizePath(repoPath);
@@ -242,24 +336,12 @@ export async function resolveBubbleFromWorkspaceCwd(
     }
   }
 
-  if (matches.length === 0) {
-    throw new WorkspaceResolutionError(
-      `No bubble config found for worktree path: ${worktreePath}`
-    );
-  }
-
-  if (matches.length > 1) {
-    throw new WorkspaceResolutionError(
-      `Multiple bubble configs matched worktree path ${worktreePath}; resolution is ambiguous`
-    );
-  }
-
-  const match = matches[0];
-  if (match === undefined) {
-    throw new WorkspaceResolutionError(
-      `No bubble config found for worktree path: ${worktreePath}`
-    );
-  }
+  const match = resolveMatchingBubbleConfig({
+    currentBranch,
+    matches,
+    repoPath,
+    worktreePath
+  });
 
   return {
     bubbleId: match.config.id,
