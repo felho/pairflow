@@ -4,11 +4,13 @@ import { readRuntimeSessionsRegistry } from "../../executor/sessionRuntime/runti
 import { runTmux, runtimePaneIndices, type TmuxRunner } from "./tmuxManager.js";
 import {
   checkTmuxPaneMarkerStatus,
-  confirmTmuxPaneMarkerSubmission,
-  maybeAcceptClaudeTrustPrompt,
-  sendAndSubmitTmuxPaneMessage,
   submitTmuxPaneInput
 } from "./tmuxInput.js";
+import {
+  attemptTmuxDelivery,
+  createDeliveryFailureResult,
+  readDeliverySessionContext
+} from "./tmuxDeliveryRuntime.js";
 import type { ReviewerTestExecutionDirective } from "../../../../v11/shared/reviewer/testEvidence.js";
 import type { ReviewerFocusExtractionResult } from "../../../../v11/shared/reviewer/reviewerBrief.js";
 import {
@@ -125,11 +127,6 @@ interface EnvelopeTargetPaneResolution {
   deliveryTargetReasonCode?: DeliveryTargetReasonCode;
 }
 
-interface DeliverySessionContext {
-  sessionName?: string;
-  worktreePath?: string;
-}
-
 function resolveEnvelopeTargetPane(
   envelope: ProtocolEnvelope,
   bubbleConfig: BubbleConfig
@@ -203,102 +200,6 @@ export function resolveDeliveryMessageRef(input: ResolveDeliveryMessageRefInput)
     input.envelope.refs[0] ??
     buildTranscriptFallbackRef(input.bubbleId, input.sessionsPath, input.envelope.id)
   );
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolvePromise) => {
-    setTimeout(resolvePromise, ms);
-  });
-}
-
-async function readDeliverySessionContext(input: {
-  bubbleId: string;
-  sessionsPath: string;
-  readSessions: typeof readRuntimeSessionsRegistry;
-}): Promise<DeliverySessionContext | undefined> {
-  const sessions = await input.readSessions(input.sessionsPath, {
-    allowMissing: true
-  });
-  const record = sessions[input.bubbleId];
-  return {
-    ...(record?.tmuxSessionName !== undefined
-      ? { sessionName: record.tmuxSessionName }
-      : {}),
-    ...(record?.worktreePath !== undefined
-      ? { worktreePath: record.worktreePath }
-      : {})
-  };
-}
-
-function createDeliveryFailureResult(input: {
-  reason: TmuxDeliveryFailureReason;
-  message: string;
-  deliveryTargetReasonCode?: DeliveryTargetReasonCode;
-  sessionName?: string;
-  targetPaneIndex?: number;
-}): EmitTmuxDeliveryNotificationResult {
-  return {
-    delivered: false,
-    ...(input.sessionName !== undefined ? { sessionName: input.sessionName } : {}),
-    ...(input.targetPaneIndex !== undefined ? { targetPaneIndex: input.targetPaneIndex } : {}),
-    message: input.message,
-    reason: input.reason,
-    ...(input.deliveryTargetReasonCode !== undefined
-      ? { deliveryTargetReasonCode: input.deliveryTargetReasonCode }
-      : {})
-  };
-}
-
-async function attemptTmuxDelivery(input: {
-  runner: TmuxRunner;
-  targetPane: string;
-  envelopeId: string;
-  message: string;
-  initialDelayMs?: number;
-  deliveryAttempts?: number;
-  sessionName: string;
-  targetPaneIndex: number;
-  deliveryTargetReasonCode?: DeliveryTargetReasonCode;
-}): Promise<EmitTmuxDeliveryNotificationResult | undefined> {
-  try {
-    if ((input.initialDelayMs ?? 0) > 0) {
-      await sleep(input.initialDelayMs as number);
-    }
-    await maybeAcceptClaudeTrustPrompt(input.runner, input.targetPane).catch(() => undefined);
-    // Delivery is best-effort, but an explicit tmux write/submit failure should
-    // still map to `tmux_send_failed` instead of degrading into unconfirmed.
-    await sendAndSubmitTmuxPaneMessage(input.runner, input.targetPane, input.message, {
-      requireSuccess: true
-    });
-    const confirmed = await confirmTmuxPaneMarkerSubmission({
-      runner: input.runner,
-      targetPane: input.targetPane,
-      marker: input.envelopeId,
-      ...(input.deliveryAttempts !== undefined ? { attempts: input.deliveryAttempts } : {})
-    });
-    if (confirmed) {
-      return undefined;
-    }
-    return createDeliveryFailureResult({
-      reason: "delivery_unconfirmed",
-      message: input.message,
-      sessionName: input.sessionName,
-      targetPaneIndex: input.targetPaneIndex,
-      ...(input.deliveryTargetReasonCode !== undefined
-        ? { deliveryTargetReasonCode: input.deliveryTargetReasonCode }
-        : {})
-    });
-  } catch {
-    return createDeliveryFailureResult({
-      reason: "tmux_send_failed",
-      message: input.message,
-      sessionName: input.sessionName,
-      targetPaneIndex: input.targetPaneIndex,
-      ...(input.deliveryTargetReasonCode !== undefined
-        ? { deliveryTargetReasonCode: input.deliveryTargetReasonCode }
-        : {})
-    });
-  }
 }
 
 export async function emitTmuxDeliveryNotification(
