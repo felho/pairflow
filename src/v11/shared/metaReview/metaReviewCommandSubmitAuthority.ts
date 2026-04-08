@@ -24,13 +24,49 @@ export function assertActiveMetaReviewExecutionContext(
   });
 }
 
+export function assertMetaReviewExecutionWindowActive(input: {
+  bubbleId: string;
+  executionContext: ReturnType<typeof assertActiveMetaReviewExecutionContext>;
+  now: Date;
+}): void {
+  const startedAtMs = Date.parse(input.executionContext.started_at);
+  const deadlineAtMs = Date.parse(input.executionContext.deadline_at);
+  const nowMs = input.now.getTime();
+
+  if (
+    Number.isNaN(startedAtMs) ||
+    Number.isNaN(deadlineAtMs) ||
+    nowMs < startedAtMs ||
+    nowMs > deadlineAtMs
+  ) {
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_STATE_INVALID",
+      message:
+        "meta-review submit rejected: canonical execution window is no longer active.",
+      context: {
+        source: "assert_meta_review_execution_window_active",
+        reason: "execution_window_inactive",
+        bubbleId: input.bubbleId
+      }
+    });
+  }
+}
+
 export async function assertMetaReviewSubmitterAuthority(input: {
   bubbleId: string;
   sessionsPath: string;
   readRuntimeSessions: NonNullable<MetaReviewCommandDependencies["readRuntimeSessionsRegistry"]>;
   state: BubbleStateSnapshot;
+  now?: Date;
 }): Promise<void> {
-  assertActiveMetaReviewExecutionContext(input.state);
+  const executionContext = assertActiveMetaReviewExecutionContext(input.state);
+  if (input.now !== undefined) {
+    assertMetaReviewExecutionWindowActive({
+      bubbleId: input.bubbleId,
+      executionContext,
+      now: input.now
+    });
+  }
 
   const hasAnyActiveOwnership =
     input.state.active_agent !== null ||

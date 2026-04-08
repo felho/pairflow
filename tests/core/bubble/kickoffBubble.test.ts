@@ -388,7 +388,7 @@ describe("kickoffBubble", () => {
             hasFailedConfigWrite = true;
             throw new Error("synthetic config write failure");
           }
-          return writeFile(path, data as string, options);
+          return writeFile(path, data, options);
         }
       }
     );

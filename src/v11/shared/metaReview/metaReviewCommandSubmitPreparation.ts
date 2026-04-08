@@ -25,6 +25,7 @@ import {
 } from "./metaReviewRuntimeParity.js";
 import {
   assertActiveMetaReviewExecutionContext,
+  assertMetaReviewExecutionWindowActive,
   assertMetaReviewSubmitterAuthority
 } from "./metaReviewCommandSubmitAuthority.js";
 import {
@@ -249,7 +250,8 @@ export async function prepareMetaReviewSubmitContext(input: {
     bubbleId: resolved.bubbleId,
     sessionsPath: resolved.bubblePaths.sessionsPath,
     readRuntimeSessions,
-    state: loadedState.state
+    state: loadedState.state,
+    ...(input.dependencies.now !== undefined ? { now: input.now } : {})
   });
 
   const validated = resolveValidatedSubmitShape({
@@ -282,6 +284,13 @@ export async function prepareMetaReviewSubmitContext(input: {
   const executionContext = assertActiveMetaReviewExecutionContext(
     loadedState.state
   );
+  if (input.dependencies.now !== undefined) {
+    assertMetaReviewExecutionWindowActive({
+      bubbleId: resolved.bubbleId,
+      executionContext,
+      now: input.now
+    });
+  }
 
   return {
     resolved,

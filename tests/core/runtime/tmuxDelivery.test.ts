@@ -705,14 +705,12 @@ describe("emitTmuxDeliveryNotification", () => {
       readSessionsRegistry: () => Promise.resolve(createRegistry())
     });
 
-    expect(result).toEqual({
-      delivered: true,
-      sessionName: "pf-b_delivery_01",
-      targetPaneIndex: 2,
-      message: expect.stringContaining(
-        "Implementer handoff received. Run a fresh review now."
-      )
-    });
+    expect(result.delivered).toBe(true);
+    expect(result.sessionName).toBe("pf-b_delivery_01");
+    expect(result.targetPaneIndex).toBe(2);
+    expect(result.message).toContain(
+      "Implementer handoff received. Run a fresh review now."
+    );
     expect(result).not.toHaveProperty("reason");
     expect(Object.keys(result).sort()).toEqual([
       "delivered",
@@ -756,15 +754,13 @@ describe("emitTmuxDeliveryNotification", () => {
       deliveryAttempts: 1
     });
 
-    expect(result).toEqual({
-      delivered: false,
-      sessionName: "pf-b_delivery_01",
-      targetPaneIndex: 2,
-      message: expect.stringContaining(
-        "Implementer handoff received. Run a fresh review now."
-      ),
-      reason: "delivery_unconfirmed"
-    });
+    expect(result.delivered).toBe(false);
+    expect(result.sessionName).toBe("pf-b_delivery_01");
+    expect(result.targetPaneIndex).toBe(2);
+    expect(result.message).toContain(
+      "Implementer handoff received. Run a fresh review now."
+    );
+    expect(result.reason).toBe("delivery_unconfirmed");
   });
 
   it("renders docs-only skip directive reason without extra tmux formatting changes", async () => {
