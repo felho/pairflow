@@ -213,7 +213,8 @@ Minden bounded batch után:
    - `6d845cf2` `refactor(complexity): split watchdog pane activity monitoring`
    - `3570e356` `refactor(complexity): split metrics report aggregate support`
    - `71292a44` `refactor(complexity): split pass validation recovery marker support`
-   - `pending` `refactor(complexity): split delete bubble finalization`
+   - `a705e664` `refactor(complexity): split delete bubble finalization`
+   - `pending` `refactor(complexity): split attach bubble gui launchers`
    - `pending` `refactor(complexity): split ui router request surfaces`
 6. Következő párhuzamos batch-ek:
    - `stateSchema` focused validator slice
