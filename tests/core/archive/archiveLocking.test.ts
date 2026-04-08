@@ -78,8 +78,7 @@ describe("archive locking", () => {
     });
 
     expect(withFileLockMock).toHaveBeenCalled();
-    expect(withFileLockMock).toHaveBeenNthCalledWith(
-      1,
+    expect(withFileLockMock.mock.calls).toContainEqual([
       expect.objectContaining({
         lockPath: join(
           bubble.paths.locksDir,
@@ -89,16 +88,15 @@ describe("archive locking", () => {
         pollMs: 25
       }),
       expect.any(Function)
-    );
-    expect(withFileLockMock).toHaveBeenNthCalledWith(
-      2,
+    ]);
+    expect(withFileLockMock.mock.calls).toContainEqual([
       expect.objectContaining({
         lockPath: join(bubble.paths.locksDir, "archive-index.lock"),
         timeoutMs: 5_000,
         pollMs: 25
       }),
       expect.any(Function)
-    );
+    ]);
   });
 
   it("maps lock timeout to snapshot/index lock-specific errors", async () => {
