@@ -215,6 +215,7 @@ Minden bounded batch után:
    - `71292a44` `refactor(complexity): split pass validation recovery marker support`
    - `a705e664` `refactor(complexity): split delete bubble finalization`
    - `a4699fcf` `refactor(complexity): split attach bubble gui launchers`
+   - `pending` `refactor(complexity): split pairflow attach gui launchers`
    - `pending` `refactor(complexity): split ui router request surfaces`
 6. Következő párhuzamos batch-ek:
    - `stateSchema` focused validator slice
