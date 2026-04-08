@@ -134,6 +134,8 @@ export interface MetaReviewGateResult {
 }
 
 export interface MetaReviewGateErrorDiagnostics {
+  bubbleId?: string;
+  round?: number;
   rollbackReasonCode?: string;
   rollbackOutcome?: "not_attempted" | "applied" | "failed";
   rollbackTargetState?: BubbleStateSnapshot["state"];

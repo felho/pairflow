@@ -99,6 +99,11 @@ export async function reconcileObservedGateResult(input: {
 
   throw new MetaReviewGateError(
     "META_REVIEW_GATE_TRANSITION_INVALID",
-    `META_REVIEW_GATE_TRANSITION_INVALID: runtime delivery observation saw progressed state=${input.observedState.state.state} without a matching gate envelope in the transcript.`
+    `META_REVIEW_GATE_TRANSITION_INVALID: runtime delivery observation saw progressed state=${input.observedState.state.state} without a matching gate envelope in the transcript.`,
+    {
+      bubbleId: input.context.resolved.bubbleId,
+      round,
+      stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
+    }
   );
 }

@@ -48,10 +48,13 @@ export async function initializeApplyMetaReviewGateExecutionContext(
   const setMetaReviewerPane =
     dependencies.setMetaReviewerPaneBinding ?? setMetaReviewerPaneBinding;
   const notifySubmissionRequest =
-    requireApplyNotifySubmissionRequest(dependencies);
-  const resolvePaneWarning = requireApplyPaneWarningResolver(dependencies);
-  const runTmuxRunner = requireApplyTmuxRunner(dependencies);
-  const readFileFn = requireApplyArtifactReadPort(dependencies);
+    requireApplyNotifySubmissionRequest(dependencies, input.bubbleId);
+  const resolvePaneWarning = requireApplyPaneWarningResolver(
+    dependencies,
+    input.bubbleId
+  );
+  const runTmuxRunner = requireApplyTmuxRunner(dependencies, input.bubbleId);
+  const readFileFn = requireApplyArtifactReadPort(dependencies, input.bubbleId);
   const now = input.now ?? new Date();
   const nowIso = now.toISOString();
   const refs = input.refs ?? [];
@@ -95,52 +98,67 @@ export async function initializeApplyMetaReviewGateExecutionContext(
 }
 
 function requireApplyPaneWarningResolver(
-  dependencies: ApplyMetaReviewGateOnConvergenceDependencies
+  dependencies: ApplyMetaReviewGateOnConvergenceDependencies,
+  bubbleId: string
 ): NonNullable<ApplyMetaReviewGateOnConvergenceDependencies["resolveMetaReviewerPaneWarning"]> {
   if (dependencies.resolveMetaReviewerPaneWarning !== undefined) {
     return dependencies.resolveMetaReviewerPaneWarning;
   }
   return buildMissingApplyCapabilityError(
+    bubbleId,
     "meta-review gate pane-binding capability is unavailable."
   );
 }
 
 function requireApplyNotifySubmissionRequest(
-  dependencies: ApplyMetaReviewGateOnConvergenceDependencies
+  dependencies: ApplyMetaReviewGateOnConvergenceDependencies,
+  bubbleId: string
 ): NotifyMetaReviewerSubmissionRequest {
   if (dependencies.notifyMetaReviewerSubmissionRequest !== undefined) {
     return dependencies.notifyMetaReviewerSubmissionRequest;
   }
   return buildMissingApplyCapabilityError(
+    bubbleId,
     "meta-review gate notify capability is unavailable."
   );
 }
 
 function requireApplyTmuxRunner(
-  dependencies: ApplyMetaReviewGateOnConvergenceDependencies
+  dependencies: ApplyMetaReviewGateOnConvergenceDependencies,
+  bubbleId: string
 ): NonNullable<ApplyMetaReviewGateOnConvergenceDependencies["runTmux"]> {
   if (dependencies.runTmux !== undefined) {
     return dependencies.runTmux;
   }
   return buildMissingApplyCapabilityError(
+    bubbleId,
     "meta-review gate tmux capability is unavailable."
   );
 }
 
 function requireApplyArtifactReadPort(
-  dependencies: ApplyMetaReviewGateOnConvergenceDependencies
+  dependencies: ApplyMetaReviewGateOnConvergenceDependencies,
+  bubbleId: string
 ): MetaReviewArtifactReadPort {
   if (dependencies.readFile !== undefined) {
     return dependencies.readFile;
   }
   return buildMissingApplyCapabilityError(
+    bubbleId,
     "meta-review gate artifact read capability is unavailable."
   );
 }
 
-function buildMissingApplyCapabilityError(message: string): never {
+function buildMissingApplyCapabilityError(
+  bubbleId: string,
+  message: string
+): never {
   throw new MetaReviewGateError(
     "META_REVIEW_GATE_TRANSITION_INVALID",
-    `META_REVIEW_GATE_TRANSITION_INVALID: ${message}`
+    `META_REVIEW_GATE_TRANSITION_INVALID: ${message}`,
+    {
+      bubbleId,
+      stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
+    }
   );
 }
