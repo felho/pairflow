@@ -24,24 +24,35 @@ const watchdogNonAgentMonitoredStates = new Set<BubbleLifecycleState>([
   "READY_FOR_HUMAN_APPROVAL"
 ]);
 
+function isWatchdogMonitoredState(input: {
+  state: BubbleStateSnapshot;
+  recoveredExecutionContext: ReturnType<typeof metaReviewExecutionContextToRunningContext>;
+}): boolean {
+  const ideationRoundPending =
+    input.state.state === "RUNNING" && input.state.round === 0;
+  const trackedState = watchdogTrackedStates.has(input.state.state);
+  const excludesActiveAgent = watchdogNonAgentMonitoredStates.has(input.state.state);
+
+  return (
+    !ideationRoundPending &&
+    trackedState &&
+    !excludesActiveAgent &&
+    (input.state.active_agent !== null || input.recoveredExecutionContext !== null)
+  );
+}
+
 export function computeWatchdogStatus(
   state: BubbleStateSnapshot,
   watchdogTimeoutMinutes: number,
   now: Date = new Date()
 ): WatchdogStatus {
-  const ideationRoundPending = state.state === "RUNNING" && state.round === 0;
-  const trackedState = watchdogTrackedStates.has(state.state);
   const recoveredExecutionContext = metaReviewExecutionContextToRunningContext(
     state.meta_review?.execution_context
   );
-  const monitored =
-    !ideationRoundPending &&
-    trackedState &&
-    !watchdogNonAgentMonitoredStates.has(state.state) &&
-    (
-      state.active_agent !== null ||
-      recoveredExecutionContext !== null
-    );
+  const monitored = isWatchdogMonitoredState({
+    state,
+    recoveredExecutionContext
+  });
   const timing = resolveWatchdogStatusTiming({
     state,
     watchdogTimeoutMinutes,
