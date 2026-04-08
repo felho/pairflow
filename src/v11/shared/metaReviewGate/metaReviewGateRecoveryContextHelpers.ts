@@ -63,7 +63,10 @@ function requireRecoveryArtifactReadPort(
   }
   throw new MetaReviewGateError(
     "META_REVIEW_GATE_TRANSITION_INVALID",
-    "META_REVIEW_GATE_TRANSITION_INVALID: meta-review gate recovery artifact read capability is unavailable."
+    "META_REVIEW_GATE_TRANSITION_INVALID: meta-review gate recovery artifact read capability is unavailable.",
+    {
+      stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
+    }
   );
 }
 
@@ -75,7 +78,10 @@ function requireRecoveryArtifactWritePort(
   }
   throw new MetaReviewGateError(
     "META_REVIEW_GATE_TRANSITION_INVALID",
-    "META_REVIEW_GATE_TRANSITION_INVALID: meta-review gate recovery artifact write capability is unavailable."
+    "META_REVIEW_GATE_TRANSITION_INVALID: meta-review gate recovery artifact write capability is unavailable.",
+    {
+      stageReasonCode: "META_REVIEW_GATE_TRANSITION_INVALID"
+    }
   );
 }
 
@@ -158,10 +164,15 @@ export async function rethrowAfterMetaReviewerPaneDeactivation(input: {
   }
 
   if (input.error instanceof SchemaValidationError) {
-    throw new SchemaValidationError(
-      `META_REVIEW_GATE_SCHEMA_VALIDATION: recovery_init=${input.failureContext}; ${input.error.message}`,
-      input.error.errors
-    );
+    throw new SchemaValidationError({
+      message: `META_REVIEW_GATE_SCHEMA_VALIDATION: recovery_init=${input.failureContext}; ${input.error.message}`,
+      errors: input.error.errors,
+      context: {
+        source: "assert_validation",
+        errorCount: input.error.errors.length,
+        firstErrorPath: input.error.errors[0]?.path
+      }
+    });
   }
 
   throw toMetaReviewGateError(input.error);
