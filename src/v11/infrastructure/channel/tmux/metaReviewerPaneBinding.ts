@@ -24,11 +24,21 @@ export interface SetMetaReviewerPaneBindingResult {
 
 function requireNonEmptyString(value: unknown, fieldName: string): string {
   if (typeof value !== "string") {
-    throw new RuntimeSessionsRegistryError(`${fieldName} must be a string.`);
+    throw new RuntimeSessionsRegistryError(`${fieldName} must be a string.`, {
+      context: {
+        fieldName,
+        reason: "field_not_string"
+      }
+    });
   }
   const trimmed = value.trim();
   if (trimmed.length === 0) {
-    throw new RuntimeSessionsRegistryError(`${fieldName} cannot be empty.`);
+    throw new RuntimeSessionsRegistryError(`${fieldName} cannot be empty.`, {
+      context: {
+        fieldName,
+        reason: "field_empty"
+      }
+    });
   }
   return trimmed;
 }
