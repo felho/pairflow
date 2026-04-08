@@ -1,7 +1,5 @@
-import { basename, dirname, join } from "node:path";
-
 import { readRuntimeSessionsRegistry } from "../../executor/sessionRuntime/runtimeSessionsRegistry.js";
-import { runTmux, runtimePaneIndices, type TmuxRunner } from "./tmuxManager.js";
+import { runTmux, type TmuxRunner } from "./tmuxManager.js";
 import {
   checkTmuxPaneMarkerStatus,
   submitTmuxPaneInput
@@ -15,16 +13,16 @@ import type { ReviewerTestExecutionDirective } from "../../../../v11/shared/revi
 import type { ReviewerFocusExtractionResult } from "../../../../v11/shared/reviewer/reviewerBrief.js";
 import {
   buildTmuxDeliveryMessage,
-  type DeliveryMessageRecipientRole
 } from "./tmuxDeliveryMessageBuilder.js";
+import { resolveDeliveryMessageRef } from "./tmuxDeliveryRefs.js";
+import {
+  resolveEnvelopeTargetPane,
+  resolveTargetPaneIndex
+} from "./tmuxDeliveryTargeting.js";
 import type { BubbleConfig } from "../../../../types/bubble.js";
 import type { AgentName } from "../../../../types/bubble.js";
-import {
-  parseDeliveryTargetRoleMetadata,
-  type DeliveryTargetRole,
-  type ProtocolEnvelope,
-  type ProtocolParticipant
-} from "../../../../types/protocol.js";
+import type { ProtocolEnvelope } from "../../../../types/protocol.js";
+import type { EmitTmuxDeliveryNotificationResult } from "../../../shared/delivery/tmuxDeliveryContract.js";
 
 export interface EmitTmuxDeliveryNotificationInput {
   bubbleId: string;
@@ -41,170 +39,28 @@ export interface EmitTmuxDeliveryNotificationInput {
   readSessionsRegistry?: typeof readRuntimeSessionsRegistry;
 }
 
-export interface ResolveDeliveryMessageRefInput {
-  bubbleId: string;
-  sessionsPath: string;
-  envelope: ProtocolEnvelope;
-  messageRef?: string;
-}
-
-export type TmuxDeliveryFailureReason =
-  | "no_runtime_session"
-  | "unsupported_recipient"
-  | "registry_read_failed"
-  | "delivery_unconfirmed"
-  | "tmux_send_failed";
-
-export type DeliveryTargetReasonCode =
-  | "DELIVERY_TARGET_ROLE_ABSENT"
-  | "DELIVERY_TARGET_ROLE_INVALID"
-  | "DELIVERY_TARGET_ROLE_UNMAPPED"
-  | "DELIVERY_TARGET_REGISTRY_READ_FAILED";
-
-export interface EmitTmuxDeliveryNotificationResult {
-  delivered: boolean;
-  sessionName?: string;
-  targetPaneIndex?: number;
-  message: string;
-  reason?: TmuxDeliveryFailureReason;
-  deliveryTargetReasonCode?: DeliveryTargetReasonCode;
-}
-
-function normalizePaneIndex(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isInteger(value) && value >= 0
-    ? value
-    : undefined;
-}
-
-function resolveTargetPaneIndex(
-  recipient: ProtocolParticipant | "meta-reviewer",
-  bubbleConfig: BubbleConfig
-): number | undefined {
-  if (recipient === bubbleConfig.agents.implementer) {
-    return normalizePaneIndex(runtimePaneIndices.implementer);
-  }
-  if (recipient === bubbleConfig.agents.reviewer) {
-    return normalizePaneIndex(runtimePaneIndices.reviewer);
-  }
-  if (recipient === "meta-reviewer") {
-    return normalizePaneIndex(runtimePaneIndices.metaReviewer);
-  }
-  if (recipient === "human" || recipient === "orchestrator") {
-    return normalizePaneIndex(runtimePaneIndices.status);
-  }
-  return undefined;
-}
-
-function resolveRecipientRoleFromRecipient(
-  recipient: ProtocolParticipant | "meta-reviewer",
-  bubbleConfig: BubbleConfig
-): DeliveryMessageRecipientRole {
-  if (recipient === bubbleConfig.agents.implementer) {
-    return "implementer";
-  }
-  if (recipient === bubbleConfig.agents.reviewer) {
-    return "reviewer";
-  }
-  return recipient;
-}
-
-function resolvePaneIndexByDeliveryTargetRole(role: DeliveryTargetRole): number | undefined {
-  if (role === "implementer") {
-    return normalizePaneIndex(runtimePaneIndices.implementer);
-  }
-  if (role === "reviewer") {
-    return normalizePaneIndex(runtimePaneIndices.reviewer);
-  }
-  if (role === "meta_reviewer") {
-    return normalizePaneIndex(runtimePaneIndices.metaReviewer);
-  }
-  return normalizePaneIndex(runtimePaneIndices.status);
-}
-
-interface EnvelopeTargetPaneResolution {
-  targetPaneIndex: number | undefined;
-  recipientRole: DeliveryMessageRecipientRole;
-  deliveryTargetReasonCode?: DeliveryTargetReasonCode;
-}
-
-function resolveEnvelopeTargetPane(
-  envelope: ProtocolEnvelope,
-  bubbleConfig: BubbleConfig
-): EnvelopeTargetPaneResolution {
-  const fallbackPane = resolveTargetPaneIndex(envelope.recipient, bubbleConfig);
-  const fallbackRecipientRole = resolveRecipientRoleFromRecipient(
-    envelope.recipient,
-    bubbleConfig
-  );
-  const parsed = parseDeliveryTargetRoleMetadata(envelope.payload.metadata);
-  if (parsed.status === "absent") {
-    return {
-      targetPaneIndex: fallbackPane,
-      recipientRole: fallbackRecipientRole,
-      deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_ABSENT"
-    };
-  }
-  if (parsed.status === "invalid") {
-    return {
-      targetPaneIndex: fallbackPane,
-      recipientRole: fallbackRecipientRole,
-      deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_INVALID"
-    };
-  }
-  const explicitPane = resolvePaneIndexByDeliveryTargetRole(parsed.role);
-  if (explicitPane === undefined) {
-    return {
-      targetPaneIndex: fallbackPane,
-      recipientRole: fallbackRecipientRole,
-      deliveryTargetReasonCode: "DELIVERY_TARGET_ROLE_UNMAPPED"
-    };
-  }
-  if (parsed.role === "meta_reviewer") {
-    return {
-      targetPaneIndex: explicitPane,
-      recipientRole: "meta-reviewer"
-    };
-  }
-  return {
-    targetPaneIndex: explicitPane,
-    recipientRole: parsed.role
-  };
-}
-
-
-export function buildTranscriptFallbackRef(
-  bubbleId: string,
-  sessionsPath: string,
-  messageId: string
-): string {
-  const pairflowDir = resolvePairflowDirFromSessionsPath(sessionsPath);
-  const transcriptPath = join(pairflowDir, "bubbles", bubbleId, "transcript.ndjson");
-  return `${transcriptPath}#${messageId}`;
-}
-
-function resolvePairflowDirFromSessionsPath(sessionsPath: string): string {
-  const match = /^(.*[\\/]\.pairflow)(?:[\\/]|$)/u.exec(sessionsPath);
-  if (match?.[1] !== undefined) {
-    return match[1];
-  }
-  const runtimeDir = dirname(sessionsPath);
-  if (basename(runtimeDir) === "runtime") {
-    return join(dirname(runtimeDir), ".pairflow");
-  }
-  return join(runtimeDir, ".pairflow");
-}
-
-export function resolveDeliveryMessageRef(input: ResolveDeliveryMessageRefInput): string {
-  return (
-    input.messageRef ??
-    input.envelope.refs[0] ??
-    buildTranscriptFallbackRef(input.bubbleId, input.sessionsPath, input.envelope.id)
-  );
-}
+export type {
+  DeliveryTargetReasonCode,
+  EmitTmuxDeliveryNotificationResult,
+  ResolveDeliveryMessageRefInput,
+  TmuxDeliveryFailureReason
+} from "../../../shared/delivery/tmuxDeliveryContract.js";
+export { buildTranscriptFallbackRef, resolveDeliveryMessageRef } from "./tmuxDeliveryRefs.js";
 
 export async function emitTmuxDeliveryNotification(
   input: EmitTmuxDeliveryNotificationInput
 ): Promise<EmitTmuxDeliveryNotificationResult> {
+  const messageRef =
+    input.messageRef ??
+    resolveDeliveryMessageRef({
+      bubbleId: input.bubbleId,
+      sessionsPath: input.sessionsPath,
+      envelope: input.envelope
+    });
+  const targetResolution = resolveEnvelopeTargetPane(
+    input.envelope,
+    input.bubbleConfig
+  );
   const buildMessage = (worktreePath: string | undefined): string =>
     buildTmuxDeliveryMessage({
       envelope: input.envelope,
@@ -222,18 +78,7 @@ export async function emitTmuxDeliveryNotification(
         : {}),
       recipientRole: targetResolution.recipientRole
     });
-  const messageRef =
-    input.messageRef ??
-    resolveDeliveryMessageRef({
-      bubbleId: input.bubbleId,
-      sessionsPath: input.sessionsPath,
-      envelope: input.envelope
-    });
   const readSessions = input.readSessionsRegistry ?? readRuntimeSessionsRegistry;
-  const targetResolution = resolveEnvelopeTargetPane(
-    input.envelope,
-    input.bubbleConfig
-  );
 
   let sessionName: string | undefined;
   let worktreePath: string | undefined;
