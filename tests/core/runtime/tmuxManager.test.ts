@@ -209,8 +209,9 @@ describe("launchBubbleTmuxSession", () => {
       "pf-b_start_01",
       "client-resized"
     ]);
+    expect(calls[14]?.args?.[4]).toContain("run-shell '");
     expect(calls[14]?.args?.[4]).toContain(
-      "WINDOW_HEIGHT=$(tmux display-message -p -t pf-b_start_01:0 '#{window_height}'"
+      "WINDOW_HEIGHT=$(tmux display-message -p -t pf-b_start_01:0"
     );
     expect(calls[14]?.args?.[4]).toContain("REMAIN=$((WINDOW_HEIGHT - 17))");
     // Hook script escapes $VAR → \$VAR so tmux's double-quote parser
@@ -224,6 +225,7 @@ describe("launchBubbleTmuxSession", () => {
       "pf-b_start_01",
       "window-resized"
     ]);
+    expect(calls[15]?.args?.[4]).toContain("run-shell '");
   });
 
   it("sends kickoff message to implementer pane when provided", async () => {

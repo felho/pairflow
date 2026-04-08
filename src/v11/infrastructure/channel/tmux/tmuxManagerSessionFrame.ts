@@ -67,6 +67,11 @@ function buildResizeLayoutScript(input: {
   ].join("; ");
 }
 
+function toTmuxRunShellCommand(script: string): string {
+  const escaped = script.replaceAll("'", "'\\''");
+  return `run-shell '${escaped}'`;
+}
+
 export async function applyBubbleTmuxSessionFrameSetup(
   input: ApplyBubbleTmuxSessionFrameSetupInput
 ): Promise<void> {
@@ -116,20 +121,21 @@ export async function applyBubbleTmuxSessionFrameHooks(
     statusPaneHeight: input.statusPaneHeight,
     tmuxPaneSeparators: input.tmuxPaneSeparators
   });
+  const resizeLayoutHookCommand = toTmuxRunShellCommand(resizeLayoutScript);
 
   await input.runner([
     "set-hook",
     "-t",
     input.sessionName,
     "client-resized",
-    resizeLayoutScript
+    resizeLayoutHookCommand
   ]);
   await input.runner([
     "set-hook",
     "-t",
     input.sessionName,
     "window-resized",
-    resizeLayoutScript
+    resizeLayoutHookCommand
   ]);
   await input.runner(["run-shell", resizeLayoutScript]);
 }
