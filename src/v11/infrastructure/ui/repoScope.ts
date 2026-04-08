@@ -31,11 +31,37 @@ export interface UiRepoScope {
   refreshFromRegistry?(this: void): Promise<UiRepoScopeRefreshResult>;
 }
 
+interface UiRepoScopeErrorContext {
+  cwd?: string | undefined;
+  reason?: string | undefined;
+  repoCount?: number | undefined;
+  repoParam?: string | undefined;
+  resolvedRepoPath?: string | undefined;
+}
+
+interface UiRepoScopeErrorOptions extends ErrorOptions {
+  context?: UiRepoScopeErrorContext | undefined;
+}
+
 export class UiRepoScopeError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly context: UiRepoScopeErrorContext | undefined;
+
+  public constructor(message: string, options?: UiRepoScopeErrorOptions) {
+    super(message, options);
     this.name = "UiRepoScopeError";
+    this.context = options?.context;
   }
+}
+
+function toUiRepoScopeError(input: {
+  message: string;
+  context: UiRepoScopeErrorContext;
+  cause?: unknown;
+}): UiRepoScopeError {
+  return new UiRepoScopeError(input.message, {
+    context: input.context,
+    ...(input.cause !== undefined ? { cause: input.cause } : {})
+  });
 }
 
 function uniqueSorted(values: string[]): string[] {
@@ -394,33 +420,65 @@ export async function resolveScopedRepoPath(
   input: ResolveScopedRepoInput
 ): Promise<string> {
   const repoCount = input.scope.repos.length;
+  const cwd = resolve(input.cwd ?? process.cwd());
 
   if (input.repoParam === undefined || input.repoParam.trim().length === 0) {
     if (repoCount === 0) {
-      throw new UiRepoScopeError(
-        "UI scope has no repositories. Add one with `pairflow repo add <path>`."
-      );
+      throw toUiRepoScopeError({
+        message: "UI scope has no repositories. Add one with `pairflow repo add <path>`.",
+        context: {
+          cwd,
+          reason: "empty_ui_scope",
+          repoCount
+        }
+      });
     }
     if (repoCount === 1) {
       const first = input.scope.repos[0];
       if (first === undefined) {
-        throw new UiRepoScopeError("Resolved scope unexpectedly has no repos.");
+        throw toUiRepoScopeError({
+          message: "Resolved scope unexpectedly has no repos.",
+          context: {
+            cwd,
+            reason: "missing_single_scope_repo",
+            repoCount
+          }
+        });
       }
       return first;
     }
     if (input.requireExplicitWhenMultiRepo ?? true) {
-      throw new UiRepoScopeError(
-        "Query parameter `repo` is required when UI scope contains multiple repositories."
-      );
+      throw toUiRepoScopeError({
+        message: "Query parameter `repo` is required when UI scope contains multiple repositories.",
+        context: {
+          cwd,
+          reason: "missing_repo_param_for_multi_repo_scope",
+          repoCount
+        }
+      });
     }
-    throw new UiRepoScopeError("Missing `repo` query parameter.");
+    throw toUiRepoScopeError({
+      message: "Missing `repo` query parameter.",
+      context: {
+        cwd,
+        reason: "missing_repo_param",
+        repoCount
+      }
+    });
   }
 
-  const normalized = await normalizeRepoPath(
-    resolve(input.cwd ?? process.cwd(), input.repoParam)
-  );
+  const normalized = await normalizeRepoPath(resolve(cwd, input.repoParam));
   if (!(await input.scope.has(normalized))) {
-    throw new UiRepoScopeError(`Repository is out of UI scope: ${normalized}`);
+    throw toUiRepoScopeError({
+      message: `Repository is out of UI scope: ${normalized}`,
+      context: {
+        cwd,
+        reason: "repo_out_of_scope",
+        repoCount,
+        repoParam: input.repoParam,
+        resolvedRepoPath: normalized
+      }
+    });
   }
   return normalized;
 }
