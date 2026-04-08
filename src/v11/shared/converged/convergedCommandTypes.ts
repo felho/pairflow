@@ -12,6 +12,9 @@ import type {
   recoverMetaReviewGateFromSnapshot
 } from "../metaReviewGate/metaReviewGateCommandApi.js";
 import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateCommandContract.js";
+import type {
+  ResolveReviewerTestExecutionDirectivePort
+} from "../ports/reviewerTestEvidenceArtifacts.js";
 
 export const convergedStructuredFindingSeverities = ["P2", "P3"] as const;
 export type ConvergedStructuredFindingSeverity =
@@ -51,6 +54,8 @@ export interface EmitConvergedDependencies {
   emitBubbleNotification?: EmitBubbleNotification;
   applyMetaReviewGateOnConvergence?: typeof applyMetaReviewGateOnConvergence;
   recoverMetaReviewGateFromSnapshot?: typeof recoverMetaReviewGateFromSnapshot;
+  resolveReviewerTestExecutionDirective?:
+    ResolveReviewerTestExecutionDirectivePort;
 }
 
 export interface EmitConvergedResult {

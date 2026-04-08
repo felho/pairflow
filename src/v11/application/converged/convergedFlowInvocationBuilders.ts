@@ -34,6 +34,9 @@ import type {
   ResolveDeliveryMessageRefPort
 } from "../../shared/ports/tmuxDelivery.js";
 import type {
+  ResolveReviewerTestExecutionDirectivePort
+} from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
+import type {
   RunConvergedFlowDependencies,
   RunConvergedFlowInput
 } from "./runConvergedFlow.js";
@@ -93,6 +96,8 @@ export interface BuildConvergedFlowDependenciesInput {
   executeConvergedExecution:
     RunConvergedFlowDependencies["executeConvergedExecution"];
   finalizeConvergedFlow: RunConvergedFlowDependencies["finalizeConvergedFlow"];
+  resolveReviewerTestExecutionDirective?:
+    ResolveReviewerTestExecutionDirectivePort | undefined;
   applyMetaReviewGateOnConvergence?:
     RunConvergedFlowDependencies["applyMetaReviewGateOnConvergence"];
   recoverMetaReviewGateFromSnapshot?:
@@ -115,7 +120,20 @@ export function buildConvergedFlowDependencies(
           ? { readTranscriptEnvelopes: input.readTranscriptEnvelopes }
           : { readTranscriptEnvelopes })
       }),
-    prepareConvergedValidation: input.prepareConvergedValidation,
+    prepareConvergedValidation: (validationInput, dependencies) =>
+      input.prepareConvergedValidation(validationInput, {
+        ...(dependencies?.resolveReviewerTestExecutionDirective !== undefined
+          ? {
+              resolveReviewerTestExecutionDirective:
+                dependencies.resolveReviewerTestExecutionDirective
+            }
+          : input.resolveReviewerTestExecutionDirective !== undefined
+            ? {
+                resolveReviewerTestExecutionDirective:
+                  input.resolveReviewerTestExecutionDirective
+              }
+            : {})
+      }),
     executeConvergedExecution: input.executeConvergedExecution,
     finalizeConvergedFlow: input.finalizeConvergedFlow,
     ...(input.applyMetaReviewGateOnConvergence !== undefined
@@ -149,6 +167,8 @@ export interface BuildDefaultConvergedFlowDependenciesInput {
   emitBubbleNotification?:
     RunConvergedFlowDependencies["emitBubbleNotification"];
   readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
+  resolveReviewerTestExecutionDirective?:
+    ResolveReviewerTestExecutionDirectivePort | undefined;
 }
 
 export interface ResolvedConvergedExecutionDependencies {
@@ -226,6 +246,8 @@ export function buildDefaultConvergedFlowDependencies(
     prepareConvergedValidation,
     executeConvergedExecution,
     finalizeConvergedFlow,
+    resolveReviewerTestExecutionDirective:
+      input.resolveReviewerTestExecutionDirective,
     applyMetaReviewGateOnConvergence: input.applyMetaReviewGateOnConvergence,
     recoverMetaReviewGateFromSnapshot: input.recoverMetaReviewGateFromSnapshot,
     emitTmuxDeliveryNotification: input.emitTmuxDeliveryNotification,

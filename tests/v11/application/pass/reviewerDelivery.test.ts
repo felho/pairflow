@@ -10,6 +10,13 @@ import {
   executePassDelivery,
   type PassDeliveryDependencies
 } from "../../../../src/v11/application/pass/reviewerDelivery.js";
+import {
+  readReviewerBriefArtifact,
+  readReviewerFocusArtifact
+} from "../../../../src/core/reviewer/reviewerBrief.js";
+import {
+  resolveDeliveryMessageRef
+} from "../../../../src/core/runtime/tmuxDelivery.js";
 
 function createBubbleConfig(
   reviewerContextMode: BubbleConfig["reviewer_context_mode"] = "persistent"
@@ -98,6 +105,13 @@ describe("executePassDelivery", () => {
         message: "ok"
       };
     };
+    const reviewerDeliveryDependencies: PassDeliveryDependencies = {
+      refreshReviewerContext,
+      emitTmuxDeliveryNotification,
+      readReviewerBriefArtifact,
+      readReviewerFocusArtifact,
+      resolveDeliveryMessageRef
+    };
 
     const result = await executePassDelivery(
       {
@@ -110,10 +124,7 @@ describe("executePassDelivery", () => {
         senderRole: "implementer",
         recipientRole: "reviewer"
       },
-      {
-        refreshReviewerContext,
-        emitTmuxDeliveryNotification
-      }
+      reviewerDeliveryDependencies
     );
 
     expect(refreshCalls).toHaveLength(1);
@@ -163,6 +174,12 @@ describe("executePassDelivery", () => {
         message: "second attempt confirmed"
       };
     };
+    const reviewerDeliveryDependencies: PassDeliveryDependencies = {
+      emitTmuxDeliveryNotification,
+      readReviewerBriefArtifact,
+      readReviewerFocusArtifact,
+      resolveDeliveryMessageRef
+    };
 
     const result = await executePassDelivery(
       {
@@ -175,9 +192,7 @@ describe("executePassDelivery", () => {
         senderRole: "implementer",
         recipientRole: "reviewer"
       },
-      {
-        emitTmuxDeliveryNotification
-      }
+      reviewerDeliveryDependencies
     );
 
     expect(calls).toHaveLength(2);
@@ -221,6 +236,13 @@ describe("executePassDelivery", () => {
         refreshed: true
       };
     };
+    const reviewerDeliveryDependencies: PassDeliveryDependencies = {
+      emitTmuxDeliveryNotification,
+      refreshReviewerContext,
+      readReviewerBriefArtifact,
+      readReviewerFocusArtifact,
+      resolveDeliveryMessageRef
+    };
 
     const result = await executePassDelivery(
       {
@@ -233,10 +255,7 @@ describe("executePassDelivery", () => {
         senderRole: "reviewer",
         recipientRole: "implementer"
       },
-      {
-        emitTmuxDeliveryNotification,
-        refreshReviewerContext
-      }
+      reviewerDeliveryDependencies
     );
 
     expect(refreshCalls).toHaveLength(0);

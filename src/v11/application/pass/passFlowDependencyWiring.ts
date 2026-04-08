@@ -106,6 +106,42 @@ export function createNormalPassFlowDependencies(
     ...(runtimeDependencies.refreshReviewerContext !== undefined
       ? { refreshReviewerContext: runtimeDependencies.refreshReviewerContext }
       : {}),
+    ...(runtimeDependencies.readReviewerBriefArtifact !== undefined
+      ? {
+          readReviewerBriefArtifact:
+            runtimeDependencies.readReviewerBriefArtifact
+        }
+      : {}),
+    ...(runtimeDependencies.readReviewerFocusArtifact !== undefined
+      ? {
+          readReviewerFocusArtifact:
+            runtimeDependencies.readReviewerFocusArtifact
+        }
+      : {}),
+    ...(runtimeDependencies.resolveDeliveryMessageRef !== undefined
+      ? {
+          resolveDeliveryMessageRef:
+            runtimeDependencies.resolveDeliveryMessageRef
+        }
+      : {}),
+    ...(runtimeDependencies.verifyImplementerTestEvidence !== undefined
+      ? {
+          verifyImplementerTestEvidence:
+            runtimeDependencies.verifyImplementerTestEvidence
+        }
+      : {}),
+    ...(runtimeDependencies.writeReviewerTestEvidenceArtifact !== undefined
+      ? {
+          writeReviewerTestEvidenceArtifact:
+            runtimeDependencies.writeReviewerTestEvidenceArtifact
+        }
+      : {}),
+    ...(runtimeDependencies.resolveReviewerTestExecutionDirectiveFromArtifact !== undefined
+      ? {
+          resolveReviewerTestExecutionDirectiveFromArtifact:
+            runtimeDependencies.resolveReviewerTestExecutionDirectiveFromArtifact
+        }
+      : {}),
     finalizeNormalPass,
     emitBubbleLifecycleEventBestEffort,
     buildPassLifecycleMetricMetadata,

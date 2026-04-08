@@ -41,7 +41,12 @@ export async function startBubble(
 
   let context: StartExecutionContext;
   try {
-    context = await loadStartExecutionContext(input);
+    context = await loadStartExecutionContext(input, {
+      readReviewerBriefArtifact:
+        deps.readReviewerBriefArtifact,
+      readReviewerFocusArtifact:
+        deps.readReviewerFocusArtifact
+    });
   } catch (error) {
     if (error instanceof StartBubbleError) {
       throw error;

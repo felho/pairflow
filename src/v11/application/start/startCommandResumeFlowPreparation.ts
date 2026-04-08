@@ -3,9 +3,6 @@ import {
   formatReviewerTestExecutionDirective,
   resolveReviewerTestEvidenceArtifactPath,
 } from "../../shared/reviewer/testEvidence.js";
-import {
-  resolveReviewerTestExecutionDirective
-} from "../reviewer/reviewerTestEvidenceDefaults.js";
 import { resolveResumeKickoffMessages } from "./startCommandResumePrompts.js";
 import type { ResolvedStartBubbleDependencies } from "./startCommandOrchestration.js";
 import type { StartExecutionContext } from "./startCommandContext.js";
@@ -40,7 +37,7 @@ export async function prepareResumeLaunchInput(input: {
       input.context.resolved.bubbleConfig.agents.reviewer;
 
   const reviewerTestDirectiveLine = shouldInjectReviewerDirective
-    ? await resolveReviewerTestExecutionDirective({
+    ? await input.deps.resolveReviewerTestExecutionDirective({
         artifactPath: resolveReviewerTestEvidenceArtifactPath(
           input.context.resolved.bubblePaths.artifactsDir
         ),

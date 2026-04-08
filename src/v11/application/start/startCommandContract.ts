@@ -11,6 +11,13 @@ import type {
   RemoveRuntimeSessionPort
 } from "../../shared/ports/runtimeSessions.js";
 import type { WriteStateSnapshotPort } from "../../shared/ports/stateSnapshots.js";
+import type {
+  ReadReviewerBriefArtifactPort,
+  ReadReviewerFocusArtifactPort
+} from "../../shared/ports/reviewerArtifacts.js";
+import type {
+  ResolveReviewerTestExecutionDirectivePort
+} from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
 import type { buildResumeTranscriptSummary } from "./startCommandResumeSummary.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 
@@ -47,4 +54,7 @@ export interface StartBubbleDependencies {
   removeRuntimeSession?: RemoveRuntimeSessionPort;
   writeStateSnapshot?: WriteStateSnapshotPort;
   buildResumeTranscriptSummary?: typeof buildResumeTranscriptSummary;
+  readReviewerBriefArtifact?: ReadReviewerBriefArtifactPort;
+  readReviewerFocusArtifact?: ReadReviewerFocusArtifactPort;
+  resolveReviewerTestExecutionDirective?: ResolveReviewerTestExecutionDirectivePort;
 }

@@ -1,17 +1,34 @@
 import {
   emitTmuxDeliveryNotification as defaultEmitTmuxDeliveryNotification,
+  resolveDeliveryMessageRef as defaultResolveDeliveryMessageRef,
   type EmitTmuxDeliveryNotificationResult
 } from "../../../core/runtime/tmuxDelivery.js";
 import {
   refreshReviewerContext as defaultRefreshReviewerContext
 } from "../../../core/runtime/reviewerContext.js";
+import {
+  readReviewerBriefArtifact as defaultReadReviewerBriefArtifact,
+  readReviewerFocusArtifact as defaultReadReviewerFocusArtifact
+} from "../reviewer/reviewerArtifactDefaults.js";
 import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type {
   EmitTmuxDeliveryNotificationPort
 } from "../../../v11/shared/ports/tmuxDelivery.js";
+import type {
+  ReadReviewerBriefArtifactPort,
+  ReadReviewerFocusArtifactPort
+} from "../../../v11/shared/ports/reviewerArtifacts.js";
+import type {
+  ResolveDeliveryMessageRefPort
+} from "../../../v11/shared/ports/tmuxDelivery.js";
 import type { RefreshReviewerContextPort } from "../../../v11/shared/ports/reviewerContext.js";
+import type {
+  ResolveReviewerTestExecutionDirectiveFromArtifactPort,
+  VerifyImplementerTestEvidencePort,
+  WriteReviewerTestEvidenceArtifactPort
+} from "../../../v11/shared/ports/reviewerTestEvidenceArtifacts.js";
 import {
   buildPassDeliveryInput,
   loadReviewerStartupPrompt,
@@ -23,6 +40,13 @@ import { executeImplementerHandoffDelivery } from "../../shared/delivery/impleme
 export interface PassDeliveryDependencies {
   emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
   refreshReviewerContext?: RefreshReviewerContextPort;
+  readReviewerBriefArtifact?: ReadReviewerBriefArtifactPort;
+  readReviewerFocusArtifact?: ReadReviewerFocusArtifactPort;
+  resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
+  verifyImplementerTestEvidence?: VerifyImplementerTestEvidencePort;
+  writeReviewerTestEvidenceArtifact?: WriteReviewerTestEvidenceArtifactPort;
+  resolveReviewerTestExecutionDirectiveFromArtifact?:
+    ResolveReviewerTestExecutionDirectiveFromArtifactPort;
 }
 
 export interface ExecutePassDeliveryInput {
@@ -49,12 +73,16 @@ export async function executePassDelivery(
   const emitDelivery =
     dependencies.emitTmuxDeliveryNotification
     ?? defaultEmitTmuxDeliveryNotification;
+  const resolveMessageRef =
+    dependencies.resolveDeliveryMessageRef
+    ?? defaultResolveDeliveryMessageRef;
   if (input.recipientRole === "implementer") {
     const deliveryInput = buildPassDeliveryInput({
       executeInput: input,
       reviewerBriefText: undefined,
       reviewerFocus: undefined,
-      initialDelayMs: undefined
+      initialDelayMs: undefined,
+      resolveDeliveryMessageRef: resolveMessageRef
     });
     return executeImplementerHandoffDelivery({
       deliveryInput,
@@ -68,7 +96,13 @@ export async function executePassDelivery(
     reviewerStartupPrompt
   } = await loadReviewerStartupPrompt({
     reviewerBriefArtifactPath: input.reviewerBriefArtifactPath,
-    reviewerFocusArtifactPath: input.reviewerFocusArtifactPath
+    reviewerFocusArtifactPath: input.reviewerFocusArtifactPath,
+    readReviewerBriefArtifact:
+      dependencies.readReviewerBriefArtifact
+      ?? defaultReadReviewerBriefArtifact,
+    readReviewerFocusArtifact:
+      dependencies.readReviewerFocusArtifact
+      ?? defaultReadReviewerFocusArtifact
   });
 
   const refreshReviewer =
@@ -83,7 +117,8 @@ export async function executePassDelivery(
     executeInput: input,
     reviewerBriefText,
     reviewerFocus,
-    initialDelayMs: deliveryInitialDelayMs
+    initialDelayMs: deliveryInitialDelayMs,
+    resolveDeliveryMessageRef: resolveMessageRef
   });
   let deliveryResult = await emitDelivery(deliveryInput).catch(() => undefined);
   let deliveryRetried = false;

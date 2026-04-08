@@ -15,12 +15,12 @@ import {
 } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import { readReviewVerificationArtifactStatus } from "../../../core/reviewer/reviewVerificationArtifacts.js";
 import {
+  resolveReviewerTestExecutionDirective as defaultResolveReviewerTestExecutionDirective
+} from "../reviewer/reviewerTestEvidenceDefaults.js";
+import {
   resolveReviewerTestEvidenceArtifactPath
 } from "../../../v11/shared/reviewer/testEvidence.js";
 import type { ReviewerTestReasonCode } from "../../../v11/shared/reviewer/testEvidence.js";
-import {
-  resolveReviewerTestExecutionDirective
-} from "../reviewer/reviewerTestEvidenceDefaults.js";
 import type {
   BubbleRoundGateState,
   BubbleSpecLockState
@@ -80,6 +80,9 @@ function normalizeReviewerDirective(input: {
 function resolveValidationDependencies(
   dependencies: PrepareConvergedValidationDependencies
 ): ResolvedValidationDependencies {
+  const resolveReviewerTestExecutionDirective =
+    dependencies.resolveReviewerTestExecutionDirective
+    ?? defaultResolveReviewerTestExecutionDirective;
   return {
     isDocGateScopeActive:
       dependencies.isDocContractGateScopeActive ?? isDocContractGateScopeActive,
@@ -92,15 +95,13 @@ function resolveValidationDependencies(
     resolveTestEvidenceArtifactPath:
       dependencies.resolveReviewerTestEvidenceArtifactPath
       ?? resolveReviewerTestEvidenceArtifactPath,
-    resolveReviewerDirective:
-      (async ({ artifactPath, worktreePath }) =>
-        normalizeReviewerDirective(
-          await (dependencies.resolveReviewerTestExecutionDirective
-            ?? resolveReviewerTestExecutionDirective)({
-            artifactPath,
-            worktreePath
-          })
-        )) as ResolvedValidationDependencies["resolveReviewerDirective"],
+    resolveReviewerDirective: (async ({ artifactPath, worktreePath }) =>
+      normalizeReviewerDirective(
+        await resolveReviewerTestExecutionDirective({
+          artifactPath,
+          worktreePath
+        })
+      )) as ResolvedValidationDependencies["resolveReviewerDirective"],
     evaluateSummaryVerifierGate:
       dependencies.evaluateSummaryVerifierConsistencyGate
       ?? evaluateSummaryVerifierConsistencyGate,

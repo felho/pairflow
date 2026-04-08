@@ -131,6 +131,13 @@ export interface BuildNormalPassFlowDependenciesInput<TResult> {
     ExecuteNormalPassDeliveryDependencies["executePassDelivery"];
   emitTmuxDeliveryNotification?: PassDeliveryDependencies["emitTmuxDeliveryNotification"];
   refreshReviewerContext?: PassDeliveryDependencies["refreshReviewerContext"];
+  readReviewerBriefArtifact?: PassDeliveryDependencies["readReviewerBriefArtifact"];
+  readReviewerFocusArtifact?: PassDeliveryDependencies["readReviewerFocusArtifact"];
+  resolveDeliveryMessageRef?: PassDeliveryDependencies["resolveDeliveryMessageRef"];
+  verifyImplementerTestEvidence?: PassDeliveryDependencies["verifyImplementerTestEvidence"];
+  writeReviewerTestEvidenceArtifact?: PassDeliveryDependencies["writeReviewerTestEvidenceArtifact"];
+  resolveReviewerTestExecutionDirectiveFromArtifact?:
+    PassDeliveryDependencies["resolveReviewerTestExecutionDirectiveFromArtifact"];
   finalizeNormalPass: (
     input: FinalizeNormalPassInput,
     dependencies: FinalizeNormalPassDependencies<TResult>
@@ -196,6 +203,33 @@ export function buildNormalPassFlowDependencies<TResult>(
           : {}),
         ...(input.refreshReviewerContext !== undefined
           ? { refreshReviewerContext: input.refreshReviewerContext }
+          : {}),
+        ...(input.readReviewerBriefArtifact !== undefined
+          ? { readReviewerBriefArtifact: input.readReviewerBriefArtifact }
+          : {}),
+        ...(input.readReviewerFocusArtifact !== undefined
+          ? { readReviewerFocusArtifact: input.readReviewerFocusArtifact }
+          : {}),
+        ...(input.resolveDeliveryMessageRef !== undefined
+          ? { resolveDeliveryMessageRef: input.resolveDeliveryMessageRef }
+          : {}),
+        ...(input.verifyImplementerTestEvidence !== undefined
+          ? {
+              verifyImplementerTestEvidence:
+                input.verifyImplementerTestEvidence
+            }
+          : {}),
+        ...(input.writeReviewerTestEvidenceArtifact !== undefined
+          ? {
+              writeReviewerTestEvidenceArtifact:
+                input.writeReviewerTestEvidenceArtifact
+            }
+          : {}),
+        ...(input.resolveReviewerTestExecutionDirectiveFromArtifact !== undefined
+          ? {
+              resolveReviewerTestExecutionDirectiveFromArtifact:
+                input.resolveReviewerTestExecutionDirectiveFromArtifact
+            }
           : {})
       }),
     finalizeNormalPass: (finalizeInput) =>

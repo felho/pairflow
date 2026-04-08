@@ -24,6 +24,17 @@ import { emitActorProtocolFromWorkspaceV11 } from "../../../v11/application/acto
 import {
   resolveActorEmitContextByBubbleId
 } from "../../../v11/shared/actorProtocol/actorEmitContext.js";
+import {
+  readReviewerBriefArtifact,
+  readReviewerFocusArtifact
+} from "../../../v11/infrastructure/artifact/reviewer/reviewerBriefArtifacts.js";
+import {
+  resolveReviewerTestExecutionDirective,
+  resolveReviewerTestExecutionDirectiveFromArtifact,
+  verifyImplementerTestEvidence,
+  writeReviewerTestEvidenceArtifact
+} from "../../../v11/infrastructure/artifact/reviewer/testEvidenceRuntime.js";
+import { resolveDeliveryMessageRef } from "../../../v11/infrastructure/channel/tmux/tmuxDelivery.js";
 import { CliFindingParseError, parseCliFinding } from "./shared/findingParser.js";
 
 export interface AgentEmitHelpCommandOptions {
@@ -387,8 +398,24 @@ export async function runAgentEmitCommand(
     bubbleId: parsed.input.bubble_id,
     repoPath: parsed.input.repo
   });
-  return emitActorProtocolFromWorkspaceV11({
-    input: parsed.input,
-    authoritativeContext
-  });
+  const dependencies = {
+    pass: {
+      readReviewerBriefArtifact,
+      readReviewerFocusArtifact,
+      resolveDeliveryMessageRef,
+      verifyImplementerTestEvidence,
+      writeReviewerTestEvidenceArtifact,
+      resolveReviewerTestExecutionDirectiveFromArtifact
+    },
+    convergence: {
+      resolveReviewerTestExecutionDirective
+    }
+  } as const;
+  return emitActorProtocolFromWorkspaceV11(
+    {
+      input: parsed.input,
+      authoritativeContext
+    },
+    dependencies
+  );
 }

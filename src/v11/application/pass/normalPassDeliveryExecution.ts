@@ -2,8 +2,20 @@ import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
 import type {
+  ReadReviewerBriefArtifactPort,
+  ReadReviewerFocusArtifactPort
+} from "../../../v11/shared/ports/reviewerArtifacts.js";
+import type {
+  ResolveReviewerTestExecutionDirectiveFromArtifactPort,
+  VerifyImplementerTestEvidencePort,
+  WriteReviewerTestEvidenceArtifactPort
+} from "../../../v11/shared/ports/reviewerTestEvidenceArtifacts.js";
+import type {
   EmitTmuxDeliveryNotificationPort,
   EmitTmuxDeliveryNotificationResult
+} from "../../../v11/shared/ports/tmuxDelivery.js";
+import type {
+  ResolveDeliveryMessageRefPort
 } from "../../../v11/shared/ports/tmuxDelivery.js";
 import type { RefreshReviewerContextPort } from "../../../v11/shared/ports/reviewerContext.js";
 
@@ -33,6 +45,11 @@ export interface ExecuteNormalPassDeliveryDependencies {
     repoPath: string;
     artifactsDir: string;
     now: Date;
+  }, dependencies?: {
+    verifyImplementerTestEvidence?: VerifyImplementerTestEvidencePort;
+    writeReviewerTestEvidenceArtifact?: WriteReviewerTestEvidenceArtifactPort;
+    resolveReviewerTestExecutionDirectiveFromArtifact?:
+      ResolveReviewerTestExecutionDirectiveFromArtifactPort;
   }) => Promise<ReviewerTestExecutionDirective | undefined>;
   executePassDelivery: (
     input: {
@@ -49,13 +66,23 @@ export interface ExecuteNormalPassDeliveryDependencies {
     dependencies?: {
       emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
       refreshReviewerContext?: RefreshReviewerContextPort;
+      readReviewerBriefArtifact?: ReadReviewerBriefArtifactPort;
+      readReviewerFocusArtifact?: ReadReviewerFocusArtifactPort;
+      resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
     }
   ) => Promise<{
     result: EmitTmuxDeliveryNotificationResult | undefined;
     retried: boolean;
   }>;
+  verifyImplementerTestEvidence?: VerifyImplementerTestEvidencePort;
+  writeReviewerTestEvidenceArtifact?: WriteReviewerTestEvidenceArtifactPort;
+  resolveReviewerTestExecutionDirectiveFromArtifact?:
+    ResolveReviewerTestExecutionDirectiveFromArtifactPort;
   emitTmuxDeliveryNotification?: EmitTmuxDeliveryNotificationPort;
   refreshReviewerContext?: RefreshReviewerContextPort;
+  readReviewerBriefArtifact?: ReadReviewerBriefArtifactPort;
+  readReviewerFocusArtifact?: ReadReviewerFocusArtifactPort;
+  resolveDeliveryMessageRef?: ResolveDeliveryMessageRefPort;
 }
 
 export interface ExecuteNormalPassDeliveryResult {
@@ -79,6 +106,25 @@ export async function executeNormalPassDelivery(
       repoPath: input.repoPath,
       artifactsDir: input.artifactsDir,
       now: input.now
+    }, {
+      ...(dependencies.verifyImplementerTestEvidence !== undefined
+        ? {
+            verifyImplementerTestEvidence:
+              dependencies.verifyImplementerTestEvidence
+          }
+        : {}),
+      ...(dependencies.writeReviewerTestEvidenceArtifact !== undefined
+        ? {
+            writeReviewerTestEvidenceArtifact:
+              dependencies.writeReviewerTestEvidenceArtifact
+          }
+        : {}),
+      ...(dependencies.resolveReviewerTestExecutionDirectiveFromArtifact !== undefined
+        ? {
+            resolveReviewerTestExecutionDirectiveFromArtifact:
+              dependencies.resolveReviewerTestExecutionDirectiveFromArtifact
+          }
+        : {})
     });
 
   const delivery = await dependencies.executePassDelivery(
@@ -101,6 +147,15 @@ export async function executeNormalPassDelivery(
         : {}),
       ...(dependencies.refreshReviewerContext !== undefined
         ? { refreshReviewerContext: dependencies.refreshReviewerContext }
+        : {}),
+      ...(dependencies.readReviewerBriefArtifact !== undefined
+        ? { readReviewerBriefArtifact: dependencies.readReviewerBriefArtifact }
+        : {}),
+      ...(dependencies.readReviewerFocusArtifact !== undefined
+        ? { readReviewerFocusArtifact: dependencies.readReviewerFocusArtifact }
+        : {}),
+      ...(dependencies.resolveDeliveryMessageRef !== undefined
+        ? { resolveDeliveryMessageRef: dependencies.resolveDeliveryMessageRef }
         : {})
     }
   );

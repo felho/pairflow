@@ -1,19 +1,20 @@
-import {
-  resolveDeliveryMessageRef,
-  type EmitTmuxDeliveryNotificationInput,
-  type EmitTmuxDeliveryNotificationResult
-} from "../../../core/runtime/tmuxDelivery.js";
+import type {
+  EmitTmuxDeliveryNotificationInput,
+  EmitTmuxDeliveryNotificationResult
+} from "../../../v11/shared/ports/tmuxDelivery.js";
 import {
   formatReviewerBriefPrompt,
   formatReviewerFocusBridgeBlock,
   type ReviewerFocusExtractionResult
 } from "../../../v11/shared/reviewer/reviewerBrief.js";
-import {
-  readReviewerBriefArtifact,
-  readReviewerFocusArtifact
-} from "../reviewer/reviewerArtifactDefaults.js";
 import type { RefreshReviewerContextPort } from "../../../v11/shared/ports/reviewerContext.js";
-import type { ReadReviewerFocusArtifactPort } from "../../../v11/shared/ports/reviewerArtifacts.js";
+import type {
+  ReadReviewerBriefArtifactPort,
+  ReadReviewerFocusArtifactPort
+} from "../../../v11/shared/ports/reviewerArtifacts.js";
+import type {
+  ResolveDeliveryMessageRefPort
+} from "../../../v11/shared/ports/tmuxDelivery.js";
 import type { BubbleConfig } from "../../../types/bubble.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewer/testEvidence.js";
@@ -21,15 +22,17 @@ import type { ReviewerTestExecutionDirective } from "../../../v11/shared/reviewe
 export async function loadReviewerStartupPrompt(input: {
   reviewerBriefArtifactPath: string;
   reviewerFocusArtifactPath: string;
+  readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
+  readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
 }): Promise<{
   reviewerBriefText: string | undefined;
   reviewerFocus: Awaited<ReturnType<ReadReviewerFocusArtifactPort>> | undefined;
   reviewerStartupPrompt: string | undefined;
 }> {
-  const reviewerBriefText = await readReviewerBriefArtifact(
+  const reviewerBriefText = await input.readReviewerBriefArtifact(
     input.reviewerBriefArtifactPath
   ).catch(() => undefined);
-  const reviewerFocus = await readReviewerFocusArtifact(
+  const reviewerFocus = await input.readReviewerFocusArtifact(
     input.reviewerFocusArtifactPath
   ).catch(() => undefined);
   const reviewerStartupContextBlocks: string[] = [];
@@ -103,6 +106,7 @@ export function buildPassDeliveryInput(input: {
   reviewerBriefText: string | undefined;
   reviewerFocus: Awaited<ReturnType<ReadReviewerFocusArtifactPort>> | undefined;
   initialDelayMs: number | undefined;
+  resolveDeliveryMessageRef: ResolveDeliveryMessageRefPort;
 }): EmitTmuxDeliveryNotificationInput {
   const reviewerFocusForDelivery: ReviewerFocusExtractionResult | undefined = (
     input.executeInput.senderRole === "implementer"
@@ -116,7 +120,7 @@ export function buildPassDeliveryInput(input: {
     bubbleConfig: input.executeInput.bubbleConfig,
     sessionsPath: input.executeInput.sessionsPath,
     envelope: input.executeInput.envelope,
-    messageRef: resolveDeliveryMessageRef({
+    messageRef: input.resolveDeliveryMessageRef({
       bubbleId: input.executeInput.bubbleId,
       sessionsPath: input.executeInput.sessionsPath,
       envelope: input.executeInput.envelope

@@ -18,6 +18,13 @@ import type {
   StartBubbleResult
 } from "./startCommandContract.js";
 import { createStartBubbleError } from "./startCommandRuntime.js";
+import type {
+  ReadReviewerBriefArtifactPort,
+  ReadReviewerFocusArtifactPort
+} from "../../shared/ports/reviewerArtifacts.js";
+import type {
+  ResolveReviewerTestExecutionDirectivePort
+} from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
 
 export type StartBubbleMode = "fresh" | "resume";
 
@@ -43,6 +50,9 @@ export interface ResolvedStartBubbleDependencies {
   writeState: NonNullable<StartBubbleDependencies["writeStateSnapshot"]>;
   buildResumeSummary:
     NonNullable<StartBubbleDependencies["buildResumeTranscriptSummary"]>;
+  readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
+  readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
+  resolveReviewerTestExecutionDirective: ResolveReviewerTestExecutionDirectivePort;
 }
 
 export interface ResolveStartBubbleDependenciesInput {
@@ -73,7 +83,44 @@ export function resolveStartBubbleDependencies(
     removeSession: dependencies.removeRuntimeSession ?? removeRuntimeSession,
     writeState: dependencies.writeStateSnapshot ?? writeStateSnapshot,
     buildResumeSummary:
-      dependencies.buildResumeTranscriptSummary ?? buildResumeTranscriptSummary
+      dependencies.buildResumeTranscriptSummary ?? buildResumeTranscriptSummary,
+    readReviewerBriefArtifact:
+      dependencies.readReviewerBriefArtifact
+      ?? (() => {
+        throw createStartBubbleError({
+          reasonCode: "START_DEPENDENCY_MISSING",
+          message: "start requires a reviewer brief artifact reader dependency.",
+          context: {
+            dependency: "readReviewerBriefArtifact",
+            stage: "resolve_start_dependencies"
+          }
+        });
+      }),
+    readReviewerFocusArtifact:
+      dependencies.readReviewerFocusArtifact
+      ?? (() => {
+        throw createStartBubbleError({
+          reasonCode: "START_DEPENDENCY_MISSING",
+          message: "start requires a reviewer focus artifact reader dependency.",
+          context: {
+            dependency: "readReviewerFocusArtifact",
+            stage: "resolve_start_dependencies"
+          }
+        });
+      }),
+    resolveReviewerTestExecutionDirective:
+      dependencies.resolveReviewerTestExecutionDirective
+      ?? (() => {
+        throw createStartBubbleError({
+          reasonCode: "START_DEPENDENCY_MISSING",
+          message:
+            "start requires a reviewer test-evidence directive resolver dependency.",
+          context: {
+            dependency: "resolveReviewerTestExecutionDirective",
+            stage: "resolve_start_dependencies"
+          }
+        });
+      })
   };
 }
 

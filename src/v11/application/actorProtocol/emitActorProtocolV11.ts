@@ -23,6 +23,8 @@ import type { EmitAskHumanV11Result } from "../askHuman/emitAskHumanV11.js";
 import type { EmitConvergedV11Result } from "../converged/emitConvergedV11.js";
 import type { MetaReviewSubmitResultV11 } from "../metaReview/emitMetaReviewV11.js";
 import type { EmitPassV11Result } from "../pass/emitPassV11.js";
+import type { EmitPassDependencies } from "../pass/passCommandContract.js";
+import type { EmitConvergedDependencies } from "../../shared/converged/convergedCommandTypes.js";
 
 export type ActorEmitResultV11 =
   | {
@@ -47,6 +49,11 @@ export interface ResolvedActorEmitInputV11 {
   authoritativeContext: ActorEmitContextSnapshot;
 }
 
+export interface ActorProtocolDependencies {
+  pass?: EmitPassDependencies;
+  convergence?: EmitConvergedDependencies;
+}
+
 interface ResolvedImplementerPilotActorEmitInputV11 {
   input: PassActorEmitInput | HumanQuestionActorEmitInput;
   authoritativeContext: ActorEmitContextSnapshot;
@@ -64,6 +71,8 @@ interface ResolvedMetaReviewerActorEmitInputV11 {
 
 export async function emitImplementerPilotActorProtocolV11(
   resolvedInput: ResolvedImplementerPilotActorEmitInputV11
+  ,
+  dependencies: ActorProtocolDependencies = {}
 ): Promise<Extract<
   ActorEmitResultV11,
   { kind: "pass" } | { kind: "human_question" }
@@ -83,7 +92,10 @@ export async function emitImplementerPilotActorProtocolV11(
   if (input.kind === "pass") {
     return emitPassActorResultV11({
       actorInput: input,
-      authoritativeContext: context
+      authoritativeContext: context,
+      ...(dependencies.pass !== undefined
+        ? { dependencies: dependencies.pass }
+        : {})
     });
   }
 
@@ -118,6 +130,8 @@ function requireReviewerAuthority(
 
 export async function emitReviewerActorProtocolV11(
   resolvedInput: ResolvedReviewerActorEmitInputV11
+  ,
+  dependencies: ActorProtocolDependencies = {}
 ): Promise<Extract<
   ActorEmitResultV11,
   { kind: "pass" } | { kind: "convergence" }
@@ -132,7 +146,10 @@ export async function emitReviewerActorProtocolV11(
     requireReviewerAuthority(context);
     return emitPassActorResultV11({
       actorInput: input,
-      authoritativeContext: context
+      authoritativeContext: context,
+      ...(dependencies.pass !== undefined
+        ? { dependencies: dependencies.pass }
+        : {})
     });
   }
 
@@ -140,7 +157,10 @@ export async function emitReviewerActorProtocolV11(
   return emitConvergenceActorResultV11({
     actorInput: input,
     authoritativeContext: context,
-    expectedReviewer
+    expectedReviewer,
+    ...(dependencies.convergence !== undefined
+      ? { dependencies: dependencies.convergence }
+      : {})
   });
 }
 
@@ -173,6 +193,8 @@ function requireMetaReviewerAuthority(
 
 export async function emitMetaReviewerActorProtocolV11(
   resolvedInput: ResolvedMetaReviewerActorEmitInputV11
+  ,
+  dependencies: ActorProtocolDependencies = {}
 ): Promise<Extract<
   ActorEmitResultV11,
   { kind: "meta_review_result" }
@@ -195,6 +217,8 @@ export const metaReviewerActorProtocolV11 = {
 
 async function emitActorProtocolViaAuthorityWrappers(
   resolvedInput: ResolvedActorEmitInputV11
+  ,
+  dependencies: ActorProtocolDependencies = {}
 ): Promise<ActorEmitResultV11 | null> {
   const { input, authoritativeContext: context } = resolvedInput;
   if (
@@ -204,7 +228,7 @@ async function emitActorProtocolViaAuthorityWrappers(
     return implementerPilotActorProtocolV11.emit({
       input,
       authoritativeContext: context
-    });
+    }, dependencies);
   }
   if (
     context.expected_role === "reviewer" &&
@@ -213,7 +237,7 @@ async function emitActorProtocolViaAuthorityWrappers(
     return reviewerActorProtocolV11.emit({
       input,
       authoritativeContext: context
-    });
+    }, dependencies);
   }
   if (
     context.expected_role === "meta_reviewer" &&
@@ -222,13 +246,15 @@ async function emitActorProtocolViaAuthorityWrappers(
     return metaReviewerActorProtocolV11.emit({
       input,
       authoritativeContext: context
-    });
+    }, dependencies);
   }
   return null;
 }
 
 async function emitActorProtocolViaFallbackRouting(
   resolvedInput: ResolvedActorEmitInputV11
+  ,
+  dependencies: ActorProtocolDependencies = {}
 ): Promise<ActorEmitResultV11> {
   const { input, authoritativeContext: context } = resolvedInput;
   if (context.expected_role === "meta_reviewer") {
@@ -241,7 +267,10 @@ async function emitActorProtocolViaFallbackRouting(
   if (input.kind === "pass") {
     return emitPassActorResultV11({
       actorInput: input,
-      authoritativeContext: context
+      authoritativeContext: context,
+      ...(dependencies.pass !== undefined
+        ? { dependencies: dependencies.pass }
+        : {})
     });
   }
 
@@ -282,16 +311,20 @@ async function emitActorProtocolViaFallbackRouting(
 }
 
 export async function emitActorProtocolFromWorkspaceV11(
-  resolvedInput: ResolvedActorEmitInputV11
+  resolvedInput: ResolvedActorEmitInputV11,
+  dependencies: ActorProtocolDependencies = {}
 ): Promise<ActorEmitResultV11> {
   assertActorEmitInputMatchesContext({
     actorInput: resolvedInput.input,
     authoritativeContext: resolvedInput.authoritativeContext
   });
 
-  const routedResult = await emitActorProtocolViaAuthorityWrappers(resolvedInput);
+  const routedResult = await emitActorProtocolViaAuthorityWrappers(
+    resolvedInput,
+    dependencies
+  );
   if (routedResult !== null) {
     return routedResult;
   }
-  return emitActorProtocolViaFallbackRouting(resolvedInput);
+  return emitActorProtocolViaFallbackRouting(resolvedInput, dependencies);
 }

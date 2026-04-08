@@ -211,6 +211,13 @@ export async function runConvergedGatePipeline(input: {
             summary: flowInput.summary,
             nowIso,
             createError: flowInput.createError
+          }, {
+            ...(dependencies.resolveReviewerTestExecutionDirective !== undefined
+              ? {
+                  resolveReviewerTestExecutionDirective:
+                    dependencies.resolveReviewerTestExecutionDirective
+                }
+              : {})
           });
 
           return {

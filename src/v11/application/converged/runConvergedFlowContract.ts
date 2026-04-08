@@ -5,6 +5,7 @@ import type { ConvergencePolicyResult } from "../../../v11/domain/convergence/po
 import type { EmitBubbleNotificationPort } from "../../shared/ports/notifications.js";
 import type { PairflowCommandPathAssessment } from "../../shared/ports/pairflowCommand.js";
 import type { EmitTmuxDeliveryNotificationPort } from "../../shared/ports/tmuxDelivery.js";
+import type { ResolveReviewerTestExecutionDirectivePort } from "../../shared/ports/reviewerTestEvidenceArtifacts.js";
 import type { SummaryVerifierConsistencyGateDecisionRecord } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import type { ConvergedStructuredFinding } from "../../shared/converged/convergedCommandTypes.js";
 import type {
@@ -91,6 +92,8 @@ interface ExecuteConvergedExecutionResult {
 
 export interface RunConvergedFlowDependencies
   extends ExecuteConvergedExecutionDependencies {
+  resolveReviewerTestExecutionDirective?:
+    ResolveReviewerTestExecutionDirectivePort;
   prepareConvergedRouting: (input: {
     cwd?: string;
     now: Date;
@@ -116,6 +119,8 @@ export interface RunConvergedFlowDependencies
     summary: string;
     nowIso: string;
     createError: PairflowCreateCommandError;
+  }, dependencies?: {
+    resolveReviewerTestExecutionDirective?: ResolveReviewerTestExecutionDirectivePort;
   }) => Promise<PrepareConvergedValidationResult>;
   executeConvergedExecution: (
     input: {

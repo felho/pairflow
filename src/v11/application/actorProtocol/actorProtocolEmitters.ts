@@ -12,6 +12,8 @@ import {
 import type {
   ActorEmitContextSnapshot
 } from "../../shared/actorProtocol/actorEmitContext.js";
+import type { EmitPassDependencies } from "../pass/passCommandContract.js";
+import type { EmitConvergedDependencies } from "../../shared/converged/convergedCommandTypes.js";
 import {
   emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace
 } from "../askHuman/emitAskHumanV11.js";
@@ -70,6 +72,7 @@ export function assertActorEmitInputMatchesContext(input: {
 export async function emitPassActorResultV11(input: {
   actorInput: PassActorEmitInput;
   authoritativeContext: ActorEmitContextSnapshot;
+  dependencies?: EmitPassDependencies;
 }): Promise<Extract<ActorEmitResultV11, { kind: "pass" }>> {
   const { actorInput, authoritativeContext: context } = input;
   return {
@@ -82,7 +85,7 @@ export async function emitPassActorResultV11(input: {
       ...(actorInput.no_findings ? { noFindings: true } : {}),
       authoritativeContext: context,
       cwd: context.worktree_path
-    })
+    }, input.dependencies)
   };
 }
 
@@ -106,6 +109,7 @@ export async function emitConvergenceActorResultV11(input: {
   actorInput: ConvergenceActorEmitInput;
   authoritativeContext: ActorEmitContextSnapshot;
   expectedReviewer?: AgentName | undefined;
+  dependencies?: EmitConvergedDependencies;
 }): Promise<Extract<ActorEmitResultV11, { kind: "convergence" }>> {
   const {
     actorInput,
@@ -124,7 +128,7 @@ export async function emitConvergenceActorResultV11(input: {
         actorInput.expected_state_fingerprint ?? context.expected_state_fingerprint,
       expectedRound: actorInput.expected_round ?? context.expected_round,
       ...(expectedReviewer !== undefined ? { expectedReviewer } : {})
-    })
+    }, input.dependencies)
   };
 }
 

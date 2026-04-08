@@ -5,16 +5,16 @@ import { readStateSnapshot } from "../../../core/state/stateStore.js";
 import { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import { buildBubbleTmuxSessionName } from "../../shared/bubble/tmuxSessionName.js";
 import { ensureBubbleInstanceIdForMutation } from "../../../core/bubble/bubbleInstanceId.js";
-import {
-  readReviewerBriefArtifact,
-  readReviewerFocusArtifact
-} from "../reviewer/reviewerArtifactDefaults.js";
 import type { ReviewerFocusExtractionResult } from "../../shared/reviewer/reviewerBrief.js";
 import {
   reviewerSeverityOntologyFullMarkdown,
   reviewerSeverityOntologySourceDoc
 } from "../../shared/reviewer/reviewerSeverityOntology.generated.js";
 import type { StartBubbleInput } from "./startCommandContract.js";
+import type {
+  ReadReviewerBriefArtifactPort,
+  ReadReviewerFocusArtifactPort
+} from "../../shared/ports/reviewerArtifacts.js";
 import { resolveStartBubbleMode } from "./startCommandOrchestration.js";
 import { createStartBubbleError } from "./startCommandRuntime.js";
 
@@ -96,7 +96,11 @@ export interface StartExecutionContext {
 }
 
 export async function loadStartExecutionContext(
-  input: StartBubbleInput
+  input: StartBubbleInput,
+  dependencies: {
+    readReviewerBriefArtifact: ReadReviewerBriefArtifactPort;
+    readReviewerFocusArtifact: ReadReviewerFocusArtifactPort;
+  }
 ): Promise<StartExecutionContext> {
   const resolved = await resolveBubbleById({
     bubbleId: input.bubbleId,
@@ -114,10 +118,10 @@ export async function loadStartExecutionContext(
   });
   resolved.bubbleConfig = bubbleIdentity.bubbleConfig;
 
-  const reviewerBriefText = await readReviewerBriefArtifact(
+  const reviewerBriefText = await dependencies.readReviewerBriefArtifact(
     resolved.bubblePaths.reviewerBriefArtifactPath
   ).catch(() => undefined);
-  const reviewerFocus = await readReviewerFocusArtifact(
+  const reviewerFocus = await dependencies.readReviewerFocusArtifact(
     resolved.bubblePaths.reviewerFocusArtifactPath
   ).catch(() => undefined);
   const policySnapshotPathAbs = await ensureReviewerPolicySnapshot(
