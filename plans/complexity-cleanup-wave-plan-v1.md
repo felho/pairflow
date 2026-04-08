@@ -217,7 +217,8 @@ Minden bounded batch után:
    - `a4699fcf` `refactor(complexity): split attach bubble gui launchers`
    - `521e6729` `refactor(complexity): split pairflow attach gui launchers`
    - `e1371fb4` `refactor(complexity): split convergence policy validation support`
-   - `pending` `refactor(complexity): split meta-review autonomous snapshot support`
+   - `98949467` `refactor(complexity): split meta-review autonomous snapshot support`
+   - `pending` `refactor(complexity): split worktree manager helpers`
    - `pending` `refactor(complexity): split ui router request surfaces`
 6. Következő párhuzamos batch-ek:
    - `stateSchema` focused validator slice
