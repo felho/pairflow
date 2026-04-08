@@ -179,16 +179,16 @@ async function readGitFingerprint(worktreePath: string): Promise<{
   }
 }
 
-export async function evaluatePassValidationEvidenceReuse(input: {
-  artifact: PassValidationEvidenceArtifact
+async function evaluateRecoveryMarkerReuse(input: {
   bubbleId: string
   repoPath: string
   worktreePath: string
   requiredCommandSetId: string | null
-  requiredCommands: PassValidationCommandSpec[]
-  expectedSchemaVersion: number
-}): Promise<PassValidationReuseDecision> {
-  const artifactSchemaVersion = (input.artifact as { schema_version?: unknown }).schema_version
+}):
+  Promise<
+    | { recoveryMarkerState: "missing" }
+    | { mismatch: PassValidationReuseDecision }
+  > {
   const recoveryMarker = await readPassValidationRecoveryMarker(
     input.repoPath,
     input.bubbleId,
@@ -197,29 +197,46 @@ export async function evaluatePassValidationEvidenceReuse(input: {
 
   if (recoveryMarker.state === "recovery_uncertain") {
     return {
-      reusable: false,
-      reason_code: "pass_validation_evidence_recovery_uncertain",
-      detail: recoveryMarker.detail,
-      metadata: {
-        recovery_marker_state: recoveryMarker.state,
-        required_command_set_id: input.requiredCommandSetId
+      mismatch: {
+        reusable: false,
+        reason_code: "pass_validation_evidence_recovery_uncertain",
+        detail: recoveryMarker.detail,
+        metadata: {
+          recovery_marker_state: recoveryMarker.state,
+          required_command_set_id: input.requiredCommandSetId
+        }
       }
     }
   }
 
   if (recoveryMarker.state === "valid") {
-    return createPassValidationMismatchDecision({
-      detail: `PASS validation reuse denied because recovery marker exists at ${recoveryMarker.marker_path}.`,
-      requiredCommandSetId: input.requiredCommandSetId,
-      recoveryMarkerState: recoveryMarker.state
-    })
+    return {
+      mismatch: createPassValidationMismatchDecision({
+        detail: `PASS validation reuse denied because recovery marker exists at ${recoveryMarker.marker_path}.`,
+        requiredCommandSetId: input.requiredCommandSetId,
+        recoveryMarkerState: recoveryMarker.state
+      })
+    }
   }
 
+  return {
+    recoveryMarkerState: recoveryMarker.state
+  }
+}
+
+function evaluateArtifactReuseEligibility(input: {
+  artifact: PassValidationEvidenceArtifact
+  expectedSchemaVersion: number
+  bubbleId: string
+  requiredCommandSetId: string | null
+  recoveryMarkerState: ReadPassValidationRecoveryMarkerResult["state"]
+}): PassValidationReuseDecision | undefined {
+  const artifactSchemaVersion = (input.artifact as { schema_version?: unknown }).schema_version
   if (artifactSchemaVersion !== input.expectedSchemaVersion) {
     return createPassValidationMismatchDecision({
       detail: `PASS validation artifact schema mismatch: expected ${input.expectedSchemaVersion}, found ${String(artifactSchemaVersion)}.`,
       requiredCommandSetId: input.requiredCommandSetId,
-      recoveryMarkerState: recoveryMarker.state
+      recoveryMarkerState: input.recoveryMarkerState
     })
   }
 
@@ -227,7 +244,7 @@ export async function evaluatePassValidationEvidenceReuse(input: {
     return createPassValidationMismatchDecision({
       detail: `PASS validation artifact bubble mismatch: expected ${input.bubbleId}, found ${input.artifact.bubble_id}.`,
       requiredCommandSetId: input.requiredCommandSetId,
-      recoveryMarkerState: recoveryMarker.state
+      recoveryMarkerState: input.recoveryMarkerState
     })
   }
 
@@ -235,7 +252,7 @@ export async function evaluatePassValidationEvidenceReuse(input: {
     return createPassValidationMismatchDecision({
       detail: "PASS validation artifact generated_at timestamp is invalid.",
       requiredCommandSetId: input.requiredCommandSetId,
-      recoveryMarkerState: recoveryMarker.state
+      recoveryMarkerState: input.recoveryMarkerState
     })
   }
 
@@ -243,7 +260,7 @@ export async function evaluatePassValidationEvidenceReuse(input: {
     return createPassValidationMismatchDecision({
       detail: `PASS validation artifact required command set mismatch: expected ${input.requiredCommandSetId ?? "null"}, found ${input.artifact.required_command_set_id ?? "null"}.`,
       requiredCommandSetId: input.requiredCommandSetId,
-      recoveryMarkerState: recoveryMarker.state
+      recoveryMarkerState: input.recoveryMarkerState
     })
   }
 
@@ -251,7 +268,7 @@ export async function evaluatePassValidationEvidenceReuse(input: {
     return createPassValidationMismatchDecision({
       detail: "PASS validation artifact is not trusted for reuse.",
       requiredCommandSetId: input.requiredCommandSetId,
-      recoveryMarkerState: recoveryMarker.state
+      recoveryMarkerState: input.recoveryMarkerState
     })
   }
 
@@ -260,10 +277,17 @@ export async function evaluatePassValidationEvidenceReuse(input: {
       detail:
         "PASS validation artifact is missing fingerprint fields required for trusted reuse.",
       requiredCommandSetId: input.requiredCommandSetId,
-      recoveryMarkerState: recoveryMarker.state
+      recoveryMarkerState: input.recoveryMarkerState
     })
   }
+}
 
+async function evaluateCurrentFingerprintReuse(input: {
+  artifact: PassValidationEvidenceArtifact
+  worktreePath: string
+  requiredCommandSetId: string | null
+  recoveryMarkerState: ReadPassValidationRecoveryMarkerResult["state"]
+}): Promise<PassValidationReuseDecision | undefined> {
   const currentFingerprint = await readGitFingerprint(input.worktreePath)
   if (currentFingerprint.headSha === null || currentFingerprint.gitStatusHash === null) {
     return createPassValidationMismatchDecision({
@@ -277,7 +301,7 @@ export async function evaluatePassValidationEvidenceReuse(input: {
           : {})
       }),
       requiredCommandSetId: input.requiredCommandSetId,
-      recoveryMarkerState: recoveryMarker.state
+      recoveryMarkerState: input.recoveryMarkerState
     })
   }
 
@@ -288,10 +312,18 @@ export async function evaluatePassValidationEvidenceReuse(input: {
     return createPassValidationMismatchDecision({
       detail: "PASS validation artifact fingerprint no longer matches the current worktree state.",
       requiredCommandSetId: input.requiredCommandSetId,
-      recoveryMarkerState: recoveryMarker.state
+      recoveryMarkerState: input.recoveryMarkerState
     })
   }
+}
 
+async function evaluateRequiredCommandReuse(input: {
+  artifact: PassValidationEvidenceArtifact
+  requiredCommands: PassValidationCommandSpec[]
+  worktreePath: string
+  requiredCommandSetId: string | null
+  recoveryMarkerState: ReadPassValidationRecoveryMarkerResult["state"]
+}): Promise<PassValidationReuseDecision | undefined> {
   for (const requiredCommand of input.requiredCommands) {
     const resolved = resolvePassValidationArtifactCommand({
       artifact: input.artifact,
@@ -301,7 +333,7 @@ export async function evaluatePassValidationEvidenceReuse(input: {
       return createPassValidationMismatchDecision({
         detail: resolved.error,
         requiredCommandSetId: input.requiredCommandSetId,
-        recoveryMarkerState: recoveryMarker.state
+        recoveryMarkerState: input.recoveryMarkerState
       })
     }
 
@@ -310,7 +342,7 @@ export async function evaluatePassValidationEvidenceReuse(input: {
       return createPassValidationMismatchDecision({
         detail: `Canonical PASS validation artifact command mismatch for '${requiredCommand.kind}'.`,
         requiredCommandSetId: input.requiredCommandSetId,
-        recoveryMarkerState: recoveryMarker.state
+        recoveryMarkerState: input.recoveryMarkerState
       })
     }
 
@@ -318,7 +350,7 @@ export async function evaluatePassValidationEvidenceReuse(input: {
       return createPassValidationMismatchDecision({
         detail: `Canonical PASS validation artifact recorded an invalid exit code for '${requiredCommand.kind}'.`,
         requiredCommandSetId: input.requiredCommandSetId,
-        recoveryMarkerState: recoveryMarker.state
+        recoveryMarkerState: input.recoveryMarkerState
       })
     }
 
@@ -326,7 +358,7 @@ export async function evaluatePassValidationEvidenceReuse(input: {
       return createPassValidationMismatchDecision({
         detail: `Canonical PASS validation artifact recorded non-zero exit for '${requiredCommand.kind}'.`,
         requiredCommandSetId: input.requiredCommandSetId,
-        recoveryMarkerState: recoveryMarker.state
+        recoveryMarkerState: input.recoveryMarkerState
       })
     }
 
@@ -334,16 +366,68 @@ export async function evaluatePassValidationEvidenceReuse(input: {
       return createPassValidationMismatchDecision({
         detail: `Canonical PASS validation artifact recorded an untrusted log path for '${requiredCommand.kind}'.`,
         requiredCommandSetId: input.requiredCommandSetId,
-        recoveryMarkerState: recoveryMarker.state
+        recoveryMarkerState: input.recoveryMarkerState
       })
     }
+  }
+}
+
+export async function evaluatePassValidationEvidenceReuse(input: {
+  artifact: PassValidationEvidenceArtifact
+  bubbleId: string
+  repoPath: string
+  worktreePath: string
+  requiredCommandSetId: string | null
+  requiredCommands: PassValidationCommandSpec[]
+  expectedSchemaVersion: number
+}): Promise<PassValidationReuseDecision> {
+  const recovery = await evaluateRecoveryMarkerReuse({
+    bubbleId: input.bubbleId,
+    repoPath: input.repoPath,
+    worktreePath: input.worktreePath,
+    requiredCommandSetId: input.requiredCommandSetId
+  })
+  if ("mismatch" in recovery) {
+    return recovery.mismatch
+  }
+
+  const artifactMismatch = evaluateArtifactReuseEligibility({
+    artifact: input.artifact,
+    expectedSchemaVersion: input.expectedSchemaVersion,
+    bubbleId: input.bubbleId,
+    requiredCommandSetId: input.requiredCommandSetId,
+    recoveryMarkerState: recovery.recoveryMarkerState
+  })
+  if (artifactMismatch !== undefined) {
+    return artifactMismatch
+  }
+
+  const fingerprintMismatch = await evaluateCurrentFingerprintReuse({
+    artifact: input.artifact,
+    worktreePath: input.worktreePath,
+    requiredCommandSetId: input.requiredCommandSetId,
+    recoveryMarkerState: recovery.recoveryMarkerState
+  })
+  if (fingerprintMismatch !== undefined) {
+    return fingerprintMismatch
+  }
+
+  const commandMismatch = await evaluateRequiredCommandReuse({
+    artifact: input.artifact,
+    requiredCommands: input.requiredCommands,
+    worktreePath: input.worktreePath,
+    requiredCommandSetId: input.requiredCommandSetId,
+    recoveryMarkerState: recovery.recoveryMarkerState
+  })
+  if (commandMismatch !== undefined) {
+    return commandMismatch
   }
 
   return {
     reusable: true,
     detail: "Canonical PASS validation artifact remains eligible for trusted reuse.",
     metadata: {
-      recovery_marker_state: recoveryMarker.state,
+      recovery_marker_state: recovery.recoveryMarkerState,
       required_command_set_id: input.requiredCommandSetId
     }
   }
