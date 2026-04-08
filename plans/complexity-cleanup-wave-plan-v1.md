@@ -12,7 +12,7 @@ owners:
 
 ## Objective
 
-Last updated from `main` at `26d0a749`.
+Last updated from `main` at `26faa8db`.
 
 A fitness hard-fail backlog az `error` check lezárása után egyetlen checkerre szűkült:
 
@@ -39,13 +39,14 @@ Legutóbbi teljes fitness report:
 
 Jelenlegi `complexity` summary:
 
-1. `56` budget violation
+1. `52` budget violation
 2. a legnagyobb klaszterek:
    - `src/v11/shared/state/stateSchema.ts`
    - `src/v11/infrastructure/artifact/**`
    - `src/v11/shared/gates/docContractGates.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`
-   - `src/v11/infrastructure/state/stateStore.ts`
+   - `src/v11/infrastructure/artifact/validation/passValidationEvidence.ts`
+   - `src/v11/infrastructure/artifact/reviewer/testEvidenceRuntime.ts`
    - `src/v11/application/attach/emitAttachV11.ts`
 
 ## Working Strategy
@@ -185,7 +186,10 @@ Minden bounded batch után:
    - `69a4ff3c` `refactor(v11): extract reviewer focus frontmatter helper`
    - `9b353f83` `refactor(complexity): extract reviewer evidence source policy`
    - `26d0a749` `fix(reviewer): correct source policy diagnostics type`
+   - `00b32f4b` `refactor(complexity): split reviewer gate finding evaluation`
+   - `aa36d237` `refactor(complexity): split tmux delivery message builder`
+   - `26faa8db` `refactor(complexity): split state snapshot inspection`
 6. Következő párhuzamos batch-ek:
    - `passValidationEvidence` recovery-marker extract
-   - `docContractGates` reviewer-warning evaluation helper extract
-   - `tmuxDelivery` delivery-message helper extract
+   - `testEvidenceRuntime` command-match / evidence-classification extract
+   - `tmuxDelivery` emit runtime branch split
