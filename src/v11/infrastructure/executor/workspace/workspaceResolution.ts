@@ -1,62 +1,25 @@
-import { readdir, readFile, realpath } from "node:fs/promises";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 
-import { parseBubbleConfigToml } from "../../../../config/bubbleConfig.js";
-import { getBubblePaths, type BubblePaths } from "../../artifact/bubble/paths.js";
 import { runGit } from "../../workspace/git.js";
 import { listPairflowWorkspaceCandidateCwds } from "./commandWorkspaceFallback.js";
-import type { BubbleConfig } from "../../../../types/bubble.js";
 import type { ResolvedBubbleWorkspace } from "../../../shared/ports/workspaceResolution.js";
+import {
+  doesCandidateMatchWorkspace,
+  extractBubbleIdFromBranch,
+  listBubbleConfigs,
+  loadBubbleConfigById,
+  normalizePath,
+  resolveMatchingBubbleConfig,
+  toWorkspaceResolutionError
+} from "./workspaceResolutionSupport.js";
 
 export type { ResolvedBubbleWorkspace } from "../../../shared/ports/workspaceResolution.js";
+export { WorkspaceResolutionError } from "./workspaceResolutionSupport.js";
 
 interface ResolvedRepositoryPaths {
   repoPath: string;
   worktreePath: string;
   currentBranch?: string;
-}
-
-interface WorkspaceResolutionErrorContext {
-  branchName?: string | undefined;
-  candidateCount?: number | undefined;
-  cwd?: string | undefined;
-  reason?: string | undefined;
-  repoPath?: string | undefined;
-  worktreePath?: string | undefined;
-}
-
-interface WorkspaceResolutionErrorOptions extends ErrorOptions {
-  context?: WorkspaceResolutionErrorContext | undefined;
-}
-
-export class WorkspaceResolutionError extends Error {
-  public readonly context: WorkspaceResolutionErrorContext | undefined;
-
-  public constructor(message: string, options?: WorkspaceResolutionErrorOptions) {
-    super(message, options);
-    this.name = "WorkspaceResolutionError";
-    this.context = options?.context;
-  }
-}
-
-function toWorkspaceResolutionError(input: {
-  message: string;
-  context: WorkspaceResolutionErrorContext;
-  cause?: unknown;
-}): WorkspaceResolutionError {
-  return new WorkspaceResolutionError(input.message, {
-    context: input.context,
-    ...(input.cause !== undefined ? { cause: input.cause } : {})
-  });
-}
-
-function isPathInside(parentPath: string, childPath: string): boolean {
-  const rel = relative(parentPath, childPath);
-  return rel === "" || (!rel.startsWith("..") && rel !== "..");
-}
-
-async function normalizePath(path: string): Promise<string> {
-  return realpath(path).catch(() => resolve(path));
 }
 
 async function resolveRepositoryPaths(cwd: string): Promise<ResolvedRepositoryPaths> {
@@ -128,135 +91,6 @@ async function resolveRepositoryPaths(cwd: string): Promise<ResolvedRepositoryPa
   };
 }
 
-function extractBubbleIdFromBranch(branchName: string | undefined): string | undefined {
-  if (branchName === undefined || branchName === "HEAD") {
-    return undefined;
-  }
-
-  const prefixes = ["bubble/", "pf/"];
-  for (const prefix of prefixes) {
-    if (branchName.startsWith(prefix)) {
-      const bubbleId = branchName.slice(prefix.length).trim();
-      return bubbleId.length > 0 ? bubbleId : undefined;
-    }
-  }
-
-  return undefined;
-}
-
-async function loadBubbleConfigById(
-  repoPath: string,
-  bubbleId: string
-): Promise<{ config: BubbleConfig; paths: BubblePaths } | undefined> {
-  const bubbleTomlPath = join(repoPath, ".pairflow", "bubbles", bubbleId, "bubble.toml");
-
-  const raw = await readFile(bubbleTomlPath, "utf8").catch((error: NodeJS.ErrnoException) => {
-    if (error.code === "ENOENT") {
-      return undefined;
-    }
-    throw error;
-  });
-  if (raw === undefined) {
-    return undefined;
-  }
-
-  const config = parseBubbleConfigToml(raw);
-  return {
-    config,
-    paths: getBubblePaths(config.repo_path, config.id)
-  };
-}
-
-async function doesCandidateMatchWorkspace(
-  candidate: { config: BubbleConfig; paths: BubblePaths },
-  normalizedRepoPath: string,
-  normalizedWorktreePath: string
-): Promise<boolean> {
-  const configRepoPath = resolve(candidate.config.repo_path);
-  const normalizedConfigRepoPath = await normalizePath(configRepoPath);
-  if (normalizedConfigRepoPath !== normalizedRepoPath) {
-    return false;
-  }
-
-  const expectedWorktreePath = resolve(candidate.paths.worktreePath);
-  const normalizedExpectedWorktreePath = await normalizePath(expectedWorktreePath);
-  return isPathInside(normalizedExpectedWorktreePath, normalizedWorktreePath);
-}
-
-async function listBubbleConfigs(repoPath: string): Promise<Array<{ config: BubbleConfig; paths: BubblePaths }>> {
-  const bubblesRoot = join(repoPath, ".pairflow", "bubbles");
-  const entries = await readdir(bubblesRoot, { withFileTypes: true }).catch(
-    (error: NodeJS.ErrnoException) => {
-      if (error.code === "ENOENT") {
-        return [];
-      }
-      throw error;
-    }
-  );
-
-  const result: Array<{ config: BubbleConfig; paths: BubblePaths }> = [];
-
-  for (const entry of entries) {
-    if (!entry.isDirectory()) {
-      continue;
-    }
-
-    const loaded = await loadBubbleConfigById(repoPath, entry.name);
-    if (loaded !== undefined) {
-      result.push(loaded);
-    }
-  }
-
-  return result;
-}
-
-function resolveMatchingBubbleConfig(input: {
-  currentBranch: string | undefined;
-  matches: Array<{ config: BubbleConfig; paths: BubblePaths }>;
-  repoPath: string;
-  worktreePath: string;
-}): { config: BubbleConfig; paths: BubblePaths } {
-  if (input.matches.length === 0) {
-    throw toWorkspaceResolutionError({
-      message: `No bubble config found for worktree path: ${input.worktreePath}`,
-      context: {
-        branchName: input.currentBranch,
-        repoPath: input.repoPath,
-        reason: "no_matching_bubble_config",
-        worktreePath: input.worktreePath
-      }
-    });
-  }
-
-  if (input.matches.length > 1) {
-    throw toWorkspaceResolutionError({
-      message: `Multiple bubble configs matched worktree path ${input.worktreePath}; resolution is ambiguous`,
-      context: {
-        branchName: input.currentBranch,
-        candidateCount: input.matches.length,
-        repoPath: input.repoPath,
-        reason: "ambiguous_bubble_config_match",
-        worktreePath: input.worktreePath
-      }
-    });
-  }
-
-  const match = input.matches[0];
-  if (match === undefined) {
-    throw toWorkspaceResolutionError({
-      message: `No bubble config found for worktree path: ${input.worktreePath}`,
-      context: {
-        branchName: input.currentBranch,
-        repoPath: input.repoPath,
-        reason: "missing_single_match",
-        worktreePath: input.worktreePath
-      }
-    });
-  }
-
-  return match;
-}
-
 export async function resolveBubbleFromWorkspaceCwd(
   cwdInput: string = process.cwd()
 ): Promise<ResolvedBubbleWorkspace> {
@@ -322,7 +156,7 @@ export async function resolveBubbleFromWorkspaceCwd(
   }
 
   const bubbleConfigs = await listBubbleConfigs(repoPath);
-  const matches: Array<{ config: BubbleConfig; paths: BubblePaths }> = [];
+  const matches: typeof bubbleConfigs = [];
 
   for (const candidate of bubbleConfigs) {
     if (
