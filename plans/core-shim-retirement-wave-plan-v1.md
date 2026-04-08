@@ -330,11 +330,12 @@ validation, run `pnpm build` first.
 | W4 | easy rewrite batch 3 | easy | validated | `testEvidenceVerificationHelpers` now uses the canonical infrastructure `runGit` owner instead of the `core/workspace/git` shim; coverage moved from `319 -> 318` total while the retired-shim subset stayed at `15` |
 | W5 | shared-safe shim retirement batch | easy | validated | Shared contract/type surfaces were retargeted away from thin `core` bridges into canonical `shared/ports` and sibling shared contracts; warn-only coverage moved from `318 -> 294` total while the retired-shim subset stayed at `15` |
 | W6 | dependency policy alignment for shared ports | policy | validated | Dependency fitness now explicitly allows `shared -> shared/ports` capability-contract imports while keeping `shared-ports -> infrastructure` and anti-circumvention rules intact; full fitness returned to PASS after the shared-safe batch |
+| W7 | shared type-only shim retirement batch | easy | validated | Shared actor/meta-review/meta-review-gate type-only imports now target canonical `shared/ports` contracts instead of `core` source types; warn-only coverage moved from `294 -> 279` total and `15 -> 12` retired-shim warnings while fitness and metaReviewGate regressions stayed green |
 | W7 | converged reviewer shim retirement | medium | validated | `convergedValidation*` stopped importing the retired `core/reviewer/summaryVerifierConsistencyGate` shim and now uses the canonical shared reviewer surface; warn-only coverage moved from `294 -> 263` total and the retired-shim subset dropped from `15 -> 8` |
-| W8 | easy rewrite batch 4 | easy | planned | Continue only `shared -> shared`, `infrastructure -> infrastructure`, or `application -> shared` rewrites; do not cross into direct `application -> infrastructure` rewires |
+| W8 | easy frontier reassessment | mixed | validated | The obvious easy frontier is now materially exhausted; attempted `infrastructure/ui` rewrite to direct `v11/application` facades opened `infrastructure -> application` dependency failures, so the UI router cluster is explicitly reclassified out of the easy wave |
 | W9 | approval dependency bridge | medium | planned | Rewrite `approval` contract/default wiring away from `core` shims |
-| W10 | status and inbox bridge cleanup | medium | planned | Resolve read-side contract leakage without broad redesign |
-| W11 | hard residual review | hard | planned | Decide `ports`, retained bridge, or owner-move outcome |
+| W10 | reviewer evidence / brief bridge cleanup | medium | planned | Retire the `core/reviewer/testEvidence` and `core/reviewer/reviewerBrief` bridges via explicit dependency/default wiring, not path-only rewrites |
+| W11 | metrics and create owner cleanup | hard | planned | Decide `shared/metrics/bubbleEvents` and `createBubble` end-state before removing the remaining retained bridges |
 | W12 | boundary test re-hardening | mixed | planned | Return coverage test to fail-only |
 
 ## Stop Conditions
@@ -385,3 +386,30 @@ Current effective residual baseline after the first medium cleanup:
 
 - total direct residual imports: `263`
 - retired-shim subset: `8`
+
+Current remaining retired-shim frontier:
+
+- `src/v11/application/converged/convergedValidationPreparation.ts`
+  - `src/core/reviewer/testEvidence.ts`
+- `src/v11/application/create/createCommandApi.ts`
+  - `src/core/bubble/createBubble.ts`
+- `src/v11/application/delete/deleteBubbleSupport.ts`
+  - `src/core/util/pathExists.ts`
+- `src/v11/application/pass/reviewerDeliveryHelpers.ts`
+  - `src/core/reviewer/reviewerBrief.ts`
+- `src/v11/application/pass/reviewerTestDirectiveResolver.ts`
+  - `src/core/reviewer/testEvidence.ts`
+- `src/v11/application/start/startCommandContext.ts`
+  - `src/core/reviewer/reviewerBrief.ts`
+- `src/v11/application/start/startCommandResumeFlowPreparation.ts`
+  - `src/core/reviewer/testEvidence.ts`
+- `src/v11/shared/metrics/bubbleEvents.ts`
+  - `src/core/metrics/events.ts`
+
+Wave note:
+
+- these are no longer thin rewrite candidates,
+- the next productive waves should center on:
+  - reviewer evidence / reviewer brief dependency-default cleanup,
+  - approval dependency-resolution cleanup,
+  - explicit hard-decision handling for `createBubble` and `metrics/events`.

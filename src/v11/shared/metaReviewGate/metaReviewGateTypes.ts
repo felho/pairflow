@@ -1,18 +1,18 @@
-import type {
-  appendProtocolEnvelope,
-  readTranscriptEnvelopes
-} from "../../../core/protocol/transcriptStore.js";
-import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
 import type { setMetaReviewerPaneBinding } from "../../../core/runtime/sessionsRegistry.js";
-import type {
-  readStateSnapshot,
-  writeStateSnapshot
-} from "../../../core/state/stateStore.js";
 import type {
   MetaReviewArtifactReadPort,
   MetaReviewArtifactWritePort
 } from "../metaReview/metaReviewArtifactIo.js";
 import type { MetaReviewGateTmuxRunner } from "./metaReviewGateTmuxCapabilities.js";
+import type { ResolveBubbleByIdPort } from "../ports/bubbleLookup.js";
+import type {
+  ReadStateSnapshotPort,
+  WriteStateSnapshotPort
+} from "../ports/stateSnapshots.js";
+import type {
+  AppendProtocolEnvelopePort,
+  ReadTranscriptEnvelopesPort
+} from "../ports/transcript.js";
 import type { BubbleStateSnapshot } from "../../../types/bubble.js";
 import type { PairflowCommandProfile } from "../../../types/bubble.js";
 import type {
@@ -91,10 +91,10 @@ export interface ApplyMetaReviewGateOnConvergenceInput {
 }
 
 export interface ApplyMetaReviewGateOnConvergenceDependencies {
-  resolveBubbleById?: typeof resolveBubbleById;
-  readStateSnapshot?: typeof readStateSnapshot;
-  writeStateSnapshot?: typeof writeStateSnapshot;
-  appendProtocolEnvelope?: typeof appendProtocolEnvelope;
+  resolveBubbleById?: ResolveBubbleByIdPort;
+  readStateSnapshot?: ReadStateSnapshotPort;
+  writeStateSnapshot?: WriteStateSnapshotPort;
+  appendProtocolEnvelope?: AppendProtocolEnvelopePort;
   setMetaReviewerPaneBinding?: typeof setMetaReviewerPaneBinding;
   notifyMetaReviewerSubmissionRequest?: NotifyMetaReviewerSubmissionRequest;
   resolveMetaReviewerPaneWarning?: ResolveMetaReviewerPaneWarning;
@@ -113,11 +113,11 @@ export interface RecoverMetaReviewGateFromSnapshotInput {
 }
 
 export interface RecoverMetaReviewGateFromSnapshotDependencies {
-  resolveBubbleById?: typeof resolveBubbleById;
-  readStateSnapshot?: typeof readStateSnapshot;
-  writeStateSnapshot?: typeof writeStateSnapshot;
-  appendProtocolEnvelope?: typeof appendProtocolEnvelope;
-  readTranscriptEnvelopes?: typeof readTranscriptEnvelopes;
+  resolveBubbleById?: ResolveBubbleByIdPort;
+  readStateSnapshot?: ReadStateSnapshotPort;
+  writeStateSnapshot?: WriteStateSnapshotPort;
+  appendProtocolEnvelope?: AppendProtocolEnvelopePort;
+  readTranscriptEnvelopes?: ReadTranscriptEnvelopesPort;
   setMetaReviewerPaneBinding?: typeof setMetaReviewerPaneBinding;
   readFile?: MetaReviewArtifactReadPort;
   writeFile?: MetaReviewArtifactWritePort;

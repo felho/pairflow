@@ -10,8 +10,8 @@ import type {
   MetaReviewDepth,
   MetaReviewRunWarning
 } from "./metaReviewLiveRunContract.js";
-import type { LoadedStateSnapshot } from "../../../../core/state/stateStore.js";
 import type { ResolvedMetaReviewLiveRunPorts } from "./metaReviewLiveRunPorts.js";
+import type { LoadedStateSnapshot } from "../../ports/stateSnapshots.js";
 import type {
   MetaReviewRecommendation,
   MetaReviewRunStatus

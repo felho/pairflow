@@ -1,4 +1,4 @@
-import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
+import type { ResolveBubbleByIdPort } from "../ports/bubbleLookup.js";
 import {
   executeImplementerHandoffDelivery
 } from "../delivery/implementerHandoffDelivery.js";
@@ -22,7 +22,7 @@ import type {
 } from "../metaReviewGate/metaReviewGateRecovery.js";
 
 type RecoverMetaReviewGateFromSnapshotFn = typeof recoverMetaReviewGateFromSnapshot;
-type ResolvedBubble = Awaited<ReturnType<typeof resolveBubbleById>>;
+type ResolvedBubble = Awaited<ReturnType<ResolveBubbleByIdPort>>;
 
 async function resolveMetaReviewGateRecoveryExecutor(
   dependencies: MetaReviewCommandDependencies

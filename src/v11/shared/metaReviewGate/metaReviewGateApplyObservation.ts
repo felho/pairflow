@@ -1,4 +1,4 @@
-import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
+import type { LoadedStateSnapshot } from "../ports/stateSnapshots.js";
 import { isMetaReviewExecutionContextActiveState } from "../metaReview/metaReviewExecutionContext.js";
 import { readTranscriptEnvelopes } from "../../../core/protocol/transcriptStore.js";
 import type { ProtocolEnvelope } from "../../../types/protocol.js";

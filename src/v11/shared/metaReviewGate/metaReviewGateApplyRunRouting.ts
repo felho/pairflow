@@ -1,4 +1,4 @@
-import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
+import type { LoadedStateSnapshot } from "../ports/stateSnapshots.js";
 
 import { appendMetaReviewKickoffEnvelope, persistMetaReviewRunFailedRoute } from "./metaReviewGateApplyHelpers.js";
 import type { MetaReviewGateResult } from "./metaReviewGateTypes.js";

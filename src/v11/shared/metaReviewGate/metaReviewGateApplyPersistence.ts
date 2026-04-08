@@ -1,5 +1,5 @@
-import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
 import { StateStoreConflictError } from "../../../core/state/stateStore.js";
+import type { LoadedStateSnapshot } from "../ports/stateSnapshots.js";
 import { isMetaReviewExecutionContextActiveState } from "../metaReview/metaReviewExecutionContext.js";
 import { resolveActiveMetaReviewRuntimeDelivery } from "../metaReview/metaReviewSnapshot.js";
 import type { BubbleMetaReviewRuntimeDeliveryState } from "../../../types/bubble.js";

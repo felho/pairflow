@@ -1,5 +1,5 @@
 import * as coreStateStore from "../../../core/state/stateStore.js";
-import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
+import type { LoadedStateSnapshot } from "../ports/stateSnapshots.js";
 import {
   isMetaReviewExecutionContextActiveState
 } from "./metaReviewExecutionContext.js";

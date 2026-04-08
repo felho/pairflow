@@ -1,4 +1,4 @@
-import type { LoadedStateSnapshot } from "../../../core/state/stateStore.js";
+import type { LoadedStateSnapshot } from "../ports/stateSnapshots.js";
 import type { BubbleMetaReviewRuntimeDeliveryState } from "../../../types/bubble.js";
 import {
   stageMetaReviewRunningState,

@@ -1,18 +1,18 @@
 import type {
-  appendProtocolEnvelope,
-  readTranscriptEnvelopes
-} from "../../../core/protocol/transcriptStore.js";
-import type { resolveBubbleById } from "../../../core/bubble/bubbleLookup.js";
-import type {
-  readStateSnapshot,
-  writeStateSnapshot,
-  LoadedStateSnapshot
-} from "../../../core/state/stateStore.js";
-import type {
   BubbleStateSnapshot,
   MetaReviewRecommendation
 } from "../../../types/bubble.js";
 import type { FindingsParityMetadata } from "../../../types/protocol.js";
+import type { ResolveBubbleByIdPort } from "../ports/bubbleLookup.js";
+import type {
+  LoadedStateSnapshot,
+  ReadStateSnapshotPort,
+  WriteStateSnapshotPort
+} from "../ports/stateSnapshots.js";
+import type {
+  AppendProtocolEnvelopePort,
+  ReadTranscriptEnvelopesPort
+} from "../ports/transcript.js";
 import type {
   MetaReviewArtifactReadPort,
   MetaReviewArtifactWritePort
@@ -47,16 +47,16 @@ export {
 } from "./metaReviewGateRecoveryRunResolution.js";
 
 export interface RecoverMetaReviewExecutionContext {
-  resolved: Awaited<ReturnType<typeof resolveBubbleById>>;
+  resolved: Awaited<ReturnType<ResolveBubbleByIdPort>>;
   now: Date;
   nowIso: string;
   refs: string[];
   lockPath: string;
   loaded: LoadedStateSnapshot;
-  appendEnvelope: typeof appendProtocolEnvelope;
-  readTranscript: typeof readTranscriptEnvelopes;
-  writeState: typeof writeStateSnapshot;
-  readState: typeof readStateSnapshot;
+  appendEnvelope: AppendProtocolEnvelopePort;
+  readTranscript: ReadTranscriptEnvelopesPort;
+  writeState: WriteStateSnapshotPort;
+  readState: ReadStateSnapshotPort;
   readFileFn: MetaReviewArtifactReadPort;
   writeFileFn: MetaReviewArtifactWritePort;
   sleepForRetryMs?: (delayMs: number) => Promise<void>;
