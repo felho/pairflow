@@ -61,9 +61,9 @@ function buildResizeLayoutScript(input: {
     "if [ $ROW -lt 1 ]; then ROW=1; fi",
     "ROW_LAST=$((REMAIN - (ROW * 2)))",
     "if [ $ROW_LAST -lt 1 ]; then ROW_LAST=1; fi",
-    `tmux resize-pane -t ${input.implementerPaneId} -y \\$ROW 2>/dev/null || true`,
-    `tmux resize-pane -t ${input.reviewerPaneId} -y \\$ROW 2>/dev/null || true`,
-    `tmux resize-pane -t ${input.metaReviewerPaneId} -y \\$ROW_LAST 2>/dev/null || true`
+    `tmux resize-pane -t ${input.implementerPaneId} -y $ROW 2>/dev/null || true`,
+    `tmux resize-pane -t ${input.reviewerPaneId} -y $ROW 2>/dev/null || true`,
+    `tmux resize-pane -t ${input.metaReviewerPaneId} -y $ROW_LAST 2>/dev/null || true`
   ].join("; ");
 }
 
