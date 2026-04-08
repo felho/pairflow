@@ -330,11 +330,12 @@ validation, run `pnpm build` first.
 | W4 | easy rewrite batch 3 | easy | validated | `testEvidenceVerificationHelpers` now uses the canonical infrastructure `runGit` owner instead of the `core/workspace/git` shim; coverage moved from `319 -> 318` total while the retired-shim subset stayed at `15` |
 | W5 | shared-safe shim retirement batch | easy | validated | Shared contract/type surfaces were retargeted away from thin `core` bridges into canonical `shared/ports` and sibling shared contracts; warn-only coverage moved from `318 -> 294` total while the retired-shim subset stayed at `15` |
 | W6 | dependency policy alignment for shared ports | policy | validated | Dependency fitness now explicitly allows `shared -> shared/ports` capability-contract imports while keeping `shared-ports -> infrastructure` and anti-circumvention rules intact; full fitness returned to PASS after the shared-safe batch |
-| W5 | easy rewrite batch 4 | easy | planned | Continue only `shared -> shared`, `infrastructure -> infrastructure`, or `application -> shared` rewrites; do not cross into direct `application -> infrastructure` rewires |
-| W6 | approval dependency bridge | medium | planned | Rewrite `approval` contract/default wiring away from `core` shims |
-| W7 | status and inbox bridge cleanup | medium | planned | Resolve read-side contract leakage without broad redesign |
-| W8 | hard residual review | hard | planned | Decide `ports`, retained bridge, or owner-move outcome |
-| W9 | boundary test re-hardening | mixed | planned | Return coverage test to fail-only |
+| W7 | converged reviewer shim retirement | medium | validated | `convergedValidation*` stopped importing the retired `core/reviewer/summaryVerifierConsistencyGate` shim and now uses the canonical shared reviewer surface; warn-only coverage moved from `294 -> 263` total and the retired-shim subset dropped from `15 -> 8` |
+| W8 | easy rewrite batch 4 | easy | planned | Continue only `shared -> shared`, `infrastructure -> infrastructure`, or `application -> shared` rewrites; do not cross into direct `application -> infrastructure` rewires |
+| W9 | approval dependency bridge | medium | planned | Rewrite `approval` contract/default wiring away from `core` shims |
+| W10 | status and inbox bridge cleanup | medium | planned | Resolve read-side contract leakage without broad redesign |
+| W11 | hard residual review | hard | planned | Decide `ports`, retained bridge, or owner-move outcome |
+| W12 | boundary test re-hardening | mixed | planned | Return coverage test to fail-only |
 
 ## Stop Conditions
 
@@ -379,3 +380,8 @@ Wave 1 lesson from the first batch:
 - and defer `application -> infrastructure` candidates to the `medium` wave
   unless an existing `shared/ports/**` or `shared/**` canonical boundary
   already exists.
+
+Current effective residual baseline after the first medium cleanup:
+
+- total direct residual imports: `263`
+- retired-shim subset: `8`

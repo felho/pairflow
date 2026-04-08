@@ -4,11 +4,9 @@ import {
 } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import type {
   evaluateSummaryVerifierConsistencyGate,
-  resolveSummaryVerifierConsistencyGateArtifactPath
-} from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
-import type {
+  resolveSummaryVerifierConsistencyGateArtifactPath,
   writeSummaryVerifierConsistencyGateArtifact
-} from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
+} from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import type {
   ReadReviewVerificationArtifactStatusPort
 } from "../../../v11/shared/ports/reviewVerificationArtifacts.js";

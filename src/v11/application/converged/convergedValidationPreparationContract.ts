@@ -11,11 +11,9 @@ import type {
 import type {
   evaluateSummaryVerifierConsistencyGate,
   resolveSummaryVerifierConsistencyGateArtifactPath,
+  writeSummaryVerifierConsistencyGateArtifact,
   SummaryVerifierConsistencyGateDecisionRecord
 } from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
-import type {
-  writeSummaryVerifierConsistencyGateArtifact
-} from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
 import type { resolveReviewerTestEvidenceArtifactPath } from "../../../v11/shared/reviewer/testEvidence.js";
 import type {
   ResolveReviewerTestExecutionDirectivePort

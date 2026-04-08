@@ -10,11 +10,9 @@ import {
 } from "../../../core/gates/docContractGateArtifacts.js";
 import {
   evaluateSummaryVerifierConsistencyGate,
-  resolveSummaryVerifierConsistencyGateArtifactPath
-} from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
-import {
+  resolveSummaryVerifierConsistencyGateArtifactPath,
   writeSummaryVerifierConsistencyGateArtifact
-} from "../../../core/reviewer/summaryVerifierConsistencyGate.js";
+} from "../../../v11/shared/reviewer/summaryVerifierConsistencyGate.js";
 import { readReviewVerificationArtifactStatus } from "../../../core/reviewer/reviewVerificationArtifacts.js";
 import {
   resolveReviewerTestEvidenceArtifactPath
