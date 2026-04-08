@@ -8,24 +8,18 @@ import {
   isFindingLayer,
   isFindingPriority,
   isFindingTiming,
-  resolveFindingPriority,
   type Finding,
   type FindingLayer,
   type FindingPriority,
   type FindingTiming
 } from "../../../types/findings.js";
 import { isNonEmptyString, isRecord } from "../validation/primitives.js";
+import {
+  evaluateReviewerFinding,
+  type GateFindingEvaluation
+} from "./docContractReviewerGateEvaluation.js";
 
 export const docContractGateArtifactSchemaVersion = 1 as const;
-
-export interface GateFindingEvaluation {
-  finding_key: string;
-  priority: FindingPriority;
-  effective_priority: FindingPriority;
-  timing: FindingTiming;
-  effective_timing: FindingTiming;
-  layer?: FindingLayer;
-}
 
 export interface DocContractGateArtifact {
   schema_version: typeof docContractGateArtifactSchemaVersion;
@@ -267,29 +261,6 @@ export function evaluateTaskContractWarnings(taskContent: string): BubbleFailing
   ];
 }
 
-function normalizeEvidenceRefs(finding: Finding): string[] {
-  const refs: string[] = [];
-  if (Array.isArray(finding.refs)) {
-    for (const ref of finding.refs) {
-      if (isNonEmptyString(ref)) {
-        refs.push(ref.trim());
-      }
-    }
-  }
-
-  const evidence = finding.evidence;
-  if (isNonEmptyString(evidence)) {
-    refs.push(evidence.trim());
-  } else if (Array.isArray(evidence)) {
-    for (const value of evidence) {
-      if (isNonEmptyString(value)) {
-        refs.push(value.trim());
-      }
-    }
-  }
-  return refs;
-}
-
 function dedupeWarnings(warnings: BubbleFailingGate[]): BubbleFailingGate[] {
   const seen = new Set<string>();
   const deduped: BubbleFailingGate[] = [];
@@ -341,140 +312,16 @@ export function evaluateReviewerGateWarnings(
   let roundGateViolated = false;
 
   input.findings.forEach((finding, index) => {
-    const findingKey = `r${input.round}:f${index + 1}`;
-    const priority = resolveFindingPriority(finding) ?? "P2";
-    const timing = isFindingTiming(finding.timing) ? finding.timing : "later-hardening";
-    const layer = isFindingLayer(finding.layer) ? finding.layer : undefined;
-    const evidenceRefs = normalizeEvidenceRefs(finding);
-    const hasPriority = resolveFindingPriority(finding) !== undefined;
-    const hasTiming = isFindingTiming(finding.timing);
-    const hasLayer = isFindingLayer(finding.layer);
-    const hasEvidence = evidenceRefs.length > 0;
-    const declaredBlockerPriority = priority === "P0" || priority === "P1";
-    const shouldEmitBlockerEvidenceWarning = declaredBlockerPriority && !hasEvidence;
-    const shouldDowngradeBlockerLayer =
-      declaredBlockerPriority && timing === "required-now" && layer !== "L1";
-    let effectivePriority = priority;
-    const effectivePriorityReasons: Array<"blocker-evidence" | "blocker-layer"> = [];
-
-    const missingRequiredFields: string[] = [];
-    if (!hasPriority) {
-      missingRequiredFields.push("priority");
-    }
-    if (!hasTiming) {
-      missingRequiredFields.push("timing");
-    }
-    if (!hasLayer) {
-      missingRequiredFields.push("layer");
-    }
-    if (!hasEvidence && !shouldEmitBlockerEvidenceWarning) {
-      missingRequiredFields.push("evidence");
-    }
-    if (missingRequiredFields.length > 0) {
-      warnings.push(
-        createGateWarning({
-          gateId: "review_schema.minimum_fields",
-          reasonCode: "REVIEW_SCHEMA_WARNING",
-          message:
-            shouldDowngradeBlockerLayer
-              ? `Finding ${findingKey} missing required fields: ${missingRequiredFields.join(", ")}; required-now ${priority} is treated as non-blocking when layer is not L1.`
-              : `Finding ${findingKey} missing required fields: ${missingRequiredFields.join(", ")}.`,
-          priority,
-          timing,
-          layer,
-          evidenceRefs,
-          ...(shouldDowngradeBlockerLayer ? { effectivePriority: "P2" as const } : {})
-        })
-      );
-    }
-
-    if (shouldEmitBlockerEvidenceWarning) {
-      effectivePriority = "P2";
-      effectivePriorityReasons.push("blocker-evidence");
-      warnings.push(
-        createGateWarning({
-          gateId: "review_schema.blocker_evidence",
-          reasonCode: "BLOCKER_EVIDENCE_WARNING",
-          message: `Finding ${findingKey} declares ${priority} without blocker-grade evidence; downgraded to effective P2.`,
-          priority,
-          timing,
-          layer,
-          effectivePriority: "P2"
-        })
-      );
-    }
-    if (shouldDowngradeBlockerLayer) {
-      effectivePriority = "P2";
-      effectivePriorityReasons.push("blocker-layer");
-      if (missingRequiredFields.length === 0) {
-        warnings.push(
-          createGateWarning({
-            gateId: "review_schema.blocker_layer",
-            reasonCode: "REVIEW_SCHEMA_WARNING",
-            message:
-              layer === undefined
-                ? `Finding ${findingKey} required-now ${priority} is missing layer L1 and is treated as non-blocking (effective P2).`
-                : `Finding ${findingKey} required-now ${priority} uses layer=${layer}; only L1 is blocker-eligible, treated as non-blocking (effective P2).`,
-            priority,
-            timing,
-            layer,
-            evidenceRefs,
-            effectivePriority: "P2"
-          })
-        );
-      }
-    }
-
-    let effectiveTiming = timing;
-    if (
-      roundGateApplies
-      && timing === "required-now"
-      && (effectivePriority === "P2" || effectivePriority === "P3")
-    ) {
-      effectiveTiming = "later-hardening";
-      roundGateViolated = true;
-      warnings.push(
-        createGateWarning({
-          gateId: "review_round.autodemote",
-          reasonCode: "ROUND_GATE_AUTODEMOTE",
-          message:
-            effectivePriorityReasons.length === 0
-              ? `Finding ${findingKey} auto-demoted from required-now to later-hardening after round ${input.roundGateAppliesAfter}.`
-              : `Finding ${findingKey} auto-demoted from required-now to later-hardening after round ${input.roundGateAppliesAfter}; effective non-blocker was already established by ${effectivePriorityReasons.join(" + ")}.`,
-          priority,
-          timing,
-          layer,
-          evidenceRefs,
-          effectivePriority
-        })
-      );
-    }
-
-    const normalizedFinding: Finding = {
-      ...finding,
-      priority,
-      ...(finding.severity !== undefined ? { severity: priority } : {})
-    };
-    if (hasTiming || finding.timing !== undefined || effectiveTiming !== timing) {
-      normalizedFinding.timing = effectiveTiming;
-    }
-    if (!hasLayer && finding.layer !== undefined) {
-      delete normalizedFinding.layer;
-    }
-    if (effectivePriority !== priority) {
-      normalizedFinding.effective_priority = effectivePriority;
-    } else {
-      delete normalizedFinding.effective_priority;
-    }
-    normalizedFindings.push(normalizedFinding);
-    findingEvaluations.push({
-      finding_key: findingKey,
-      priority,
-      effective_priority: effectivePriority,
-      timing,
-      effective_timing: effectiveTiming,
-      ...(layer !== undefined ? { layer } : {})
+    const evaluated = evaluateReviewerFinding({
+      round: input.round,
+      finding,
+      index,
+      roundGateAppliesAfter: input.roundGateAppliesAfter
     });
+    warnings.push(...evaluated.warnings);
+    findingEvaluations.push(evaluated.findingEvaluation);
+    normalizedFindings.push(evaluated.normalizedFinding);
+    roundGateViolated = roundGateViolated || evaluated.roundGateViolated;
   });
 
   if (roundGateApplies && roundGateViolated) {
