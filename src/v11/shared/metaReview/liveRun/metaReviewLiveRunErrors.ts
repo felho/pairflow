@@ -30,40 +30,58 @@ export function assertRunPayloadInvariants(input: {
     input.recommendation === "rework" &&
     !isNonEmptyString(input.reworkTargetMessage)
   ) {
-    throw new MetaReviewError(
-      "META_REVIEW_REWORK_MESSAGE_INVALID",
-      "meta-review run requires a non-empty rework target message when recommendation is rework"
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_REWORK_MESSAGE_INVALID",
+      message:
+        "meta-review run requires a non-empty rework target message when recommendation is rework",
+      context: {
+        source: "meta_review_live_run_errors",
+        reason: "rework_target_message_missing_for_rework"
+      }
+    });
   }
   if (
     input.recommendation !== "rework" &&
     input.reworkTargetMessage !== null &&
     !isNonEmptyString(input.reworkTargetMessage)
   ) {
-    throw new MetaReviewError(
-      "META_REVIEW_REWORK_MESSAGE_INVALID",
-      "meta-review run advisory rework target message must be non-empty when provided"
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_REWORK_MESSAGE_INVALID",
+      message:
+        "meta-review run advisory rework target message must be non-empty when provided",
+      context: {
+        source: "meta_review_live_run_errors",
+        reason: "advisory_rework_target_message_invalid"
+      }
+    });
   }
 
   if (
     (input.recommendation === "rework" || input.recommendation === "approve") &&
     input.status !== "success"
   ) {
-    throw new MetaReviewError(
-      "META_REVIEW_SCHEMA_INVALID_COMBINATION",
-      "invalid meta-review status/recommendation combination"
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID_COMBINATION",
+      message: "invalid meta-review status/recommendation combination",
+      context: {
+        source: "meta_review_live_run_errors",
+        reason: "success_recommendation_without_success_status"
+      }
+    });
   }
 
   if (
     (input.status === "error" || input.status === "inconclusive") &&
     input.recommendation !== "inconclusive"
   ) {
-    throw new MetaReviewError(
-      "META_REVIEW_SCHEMA_INVALID_COMBINATION",
-      "invalid meta-review status/recommendation combination"
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID_COMBINATION",
+      message: "invalid meta-review status/recommendation combination",
+      context: {
+        source: "meta_review_live_run_errors",
+        reason: "non_inconclusive_recommendation_with_error_status"
+      }
+    });
   }
 }
 
