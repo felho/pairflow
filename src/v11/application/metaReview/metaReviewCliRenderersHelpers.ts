@@ -41,7 +41,7 @@ export function formatMetaReviewProjectionFreshness(
   }
   const unreachable: never = freshness;
   throw new Error(
-    `META_REVIEW_PROJECTION_FRESHNESS_UNEXPECTED: ${String(unreachable)}`
+    `META_REVIEW_PROJECTION_FRESHNESS_UNEXPECTED: Unexpected freshness variant. context: command_name=meta-review freshness=${String(unreachable)}.`
   );
 }
 

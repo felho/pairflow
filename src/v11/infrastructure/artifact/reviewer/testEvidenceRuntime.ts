@@ -441,7 +441,9 @@ async function loadEvidenceSources(input: {
 
   try {
     if (input.forceSourcePolicyFallback === true) {
-      throw new Error(forcedFallbackErrorMessage);
+      throw new Error(
+        `TEST_EVIDENCE_SOURCE_POLICY_FALLBACK_FORCED: context forceSourcePolicyFallback=true; ${forcedFallbackErrorMessage}`
+      );
     }
 
     const canonicalWorktreePath = await realpath(input.worktreePath);

@@ -1,4 +1,5 @@
 import type { ReviewerFocusExtractionResult } from "../../../v11/shared/reviewer/reviewerBrief.js";
+import { toCreateCommandReasonCodeError } from "./createCliOptionValidationHelpers.js";
 
 const reviewerFocusHeadingMatch = "reviewer focus";
 
@@ -66,7 +67,10 @@ function stripMatchingQuotes(value: string): string {
 function parseInlineFrontmatterList(value: string): string[] {
   const trimmed = value.trim();
   if (!trimmed.startsWith("[") || !trimmed.endsWith("]")) {
-    throw new Error("Inline list must be wrapped in [ ... ].");
+    throw toCreateCommandReasonCodeError(
+      "Reviewer focus inline list must be wrapped in [ ... ].",
+      "CREATE_REVIEWER_FOCUS_INLINE_LIST_WRAPPER_REQUIRED"
+    );
   }
   const inner = trimmed.slice(1, -1).trim();
   if (inner.length === 0) {
@@ -104,7 +108,10 @@ function parseInlineFrontmatterList(value: string): string[] {
     current += char;
   }
   if (activeQuote !== null) {
-    throw new Error("Inline list has unclosed quote.");
+    throw toCreateCommandReasonCodeError(
+      "Reviewer focus inline list has unclosed quote.",
+      "CREATE_REVIEWER_FOCUS_INLINE_LIST_UNCLOSED_QUOTE"
+    );
   }
   tokens.push(current);
 

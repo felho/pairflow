@@ -125,18 +125,6 @@ function parseArchiveManifest(raw: string): ArchiveManifest {
   };
 }
 
-function asArchivePathCollisionError(input: {
-  archivePath: string;
-  expectedBubbleInstanceId: string;
-  expectedRepoPath: string;
-  foundBubbleInstanceId: string;
-  foundRepoPath: string;
-}): ArchivePathCollisionError {
-  return new ArchivePathCollisionError(
-    `archive-path-collision: archive instance path ${input.archivePath} belongs to bubble_instance_id=${input.foundBubbleInstanceId}, repo_path=${input.foundRepoPath}; expected bubble_instance_id=${input.expectedBubbleInstanceId}, repo_path=${input.expectedRepoPath}`
-  );
-}
-
 async function loadAndValidateExistingManifest(input: {
   archivePath: string;
   bubbleInstanceId: string;
@@ -150,13 +138,9 @@ async function loadAndValidateExistingManifest(input: {
     manifest.bubble_instance_id !== input.bubbleInstanceId ||
     manifest.repo_path !== input.normalizedRepoPath
   ) {
-    throw asArchivePathCollisionError({
-      archivePath: input.archivePath,
-      expectedBubbleInstanceId: input.bubbleInstanceId,
-      expectedRepoPath: input.normalizedRepoPath,
-      foundBubbleInstanceId: manifest.bubble_instance_id,
-      foundRepoPath: manifest.repo_path
-    });
+    throw new ArchivePathCollisionError(
+      `ARCHIVE_PATH_COLLISION: context archivePath=${input.archivePath}; archive instance path belongs to bubble_instance_id=${manifest.bubble_instance_id}, repo_path=${manifest.repo_path}; expected bubble_instance_id=${input.bubbleInstanceId}, repo_path=${input.normalizedRepoPath}`
+    );
   }
 
   return manifest;
