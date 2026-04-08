@@ -1,38 +1,19 @@
 import type { FSWatcher } from "node:fs";
 import type {
-  UiBubbleRemovedEvent,
-  UiBubbleUpdatedEvent,
-  UiBubbleSummary,
   UiEvent,
-  UiRepoRemovedEvent,
-  UiRepoSummary,
-  UiRepoUpdatedEvent,
   UiSnapshotEvent
 } from "../../../types/ui.js";
 import type { UiEventsSubscriptionInput } from "./eventsTypes.js";
-import {
-  createFilter,
-  eventMatchesFilter,
-  type UiEventFilter
-} from "./eventsFilter.js";
 import {
   normalizeRepoPathForQueue
 } from "./eventsFingerprint.js";
 import type { RepoDiff, RepoSnapshot } from "./eventsState.js";
 import {
-  buildUiEventsSnapshot
-} from "./eventsSnapshot.js";
-import {
   scanUiEventsAll,
   refreshUiEventsWatchers,
   scanUiEventsRepo
 } from "./eventsScan.js";
-
-interface UiEventsListener {
-  id: number;
-  filter: UiEventFilter;
-  callback: (event: UiEvent) => void;
-}
+import { UiEventsEventLog } from "./eventsLog.js";
 
 export interface UiEventsBrokerOptions {
   repos: string[];
@@ -63,9 +44,7 @@ class UiEventsBrokerImpl implements UiEventsBroker {
   private readonly historyLimit: number;
   private repos: string[];
   private readonly snapshots = new Map<string, RepoSnapshot>();
-  private readonly listeners = new Map<number, UiEventsListener>();
   private readonly watchers = new Map<string, FSWatcher>();
-  private readonly history: UiEvent[] = [];
   private readonly repoOperationQueues = new Map<string, Promise<void>>();
   private readonly repoOperationInFlight = new Map<
     string,
@@ -74,8 +53,7 @@ class UiEventsBrokerImpl implements UiEventsBroker {
       promise: Promise<boolean>;
     }
   >();
-  private nextListenerId = 1;
-  private nextEventId = 1;
+  private readonly eventLog: UiEventsEventLog;
   private pollTimer: NodeJS.Timeout | null = null;
   private debounceTimer: NodeJS.Timeout | null = null;
   private scanInFlight = false;
@@ -90,6 +68,7 @@ class UiEventsBrokerImpl implements UiEventsBroker {
     this.pollIntervalMs = input.pollIntervalMs ?? defaultPollIntervalMs;
     this.debounceMs = input.debounceMs ?? defaultDebounceMs;
     this.historyLimit = input.historyLimit ?? defaultHistoryLimit;
+    this.eventLog = new UiEventsEventLog(this.historyLimit);
   }
 
   public async addRepo(repoPath: string): Promise<boolean> {
@@ -157,39 +136,11 @@ class UiEventsBrokerImpl implements UiEventsBroker {
     input: UiEventsSubscriptionInput,
     callback: (event: UiEvent) => void
   ): () => void {
-    const id = this.nextListenerId;
-    this.nextListenerId += 1;
-
-    const filter = createFilter(input);
-    const listener: UiEventsListener = {
-      id,
-      filter,
-      callback
-    };
-    this.listeners.set(id, listener);
-
-    const lastEventId = input.lastEventId ?? 0;
-    for (const event of this.history) {
-      if (event.id <= lastEventId) {
-        continue;
-      }
-      if (!eventMatchesFilter(event, filter)) {
-        continue;
-      }
-      callback(event);
-    }
-
-    return () => {
-      this.listeners.delete(id);
-    };
+    return this.eventLog.subscribe(input, callback);
   }
 
   public getSnapshot(input: UiEventsSubscriptionInput = {}): UiSnapshotEvent {
-    return buildUiEventsSnapshot({
-      snapshots: this.snapshots,
-      nextEventId: this.nextEventId,
-      subscription: input
-    });
+    return this.eventLog.getSnapshot(this.snapshots, input);
   }
 
   public async close(): Promise<void> {
@@ -207,7 +158,7 @@ class UiEventsBrokerImpl implements UiEventsBroker {
       watcher.close();
     }
     this.watchers.clear();
-    this.listeners.clear();
+    this.eventLog.clearListeners();
     if (this.scanInFlight) {
       await new Promise<void>((resolve) => {
         this.closeWaiters.push(resolve);
@@ -232,7 +183,7 @@ class UiEventsBrokerImpl implements UiEventsBroker {
     );
     const diff = await this.scanRepo(normalized, true);
     await this.refreshWatchers();
-    this.notify(this.nextRepoEvent(normalized, diff.repo));
+    this.notify(this.eventLog.nextRepoEvent(normalized, diff.repo));
     for (const event of diff.changed) {
       this.notify(event);
     }
@@ -280,24 +231,14 @@ class UiEventsBrokerImpl implements UiEventsBroker {
 
     await this.refreshWatchers();
     for (const bubbleId of removedBubbleIds) {
-      this.notify(this.nextBubbleRemovedEvent(normalized, bubbleId));
+      this.notify(this.eventLog.nextBubbleRemovedEvent(normalized, bubbleId));
     }
-    this.notify(this.nextRepoRemovedEvent(normalized));
+    this.notify(this.eventLog.nextRepoRemovedEvent(normalized));
     return true;
   }
 
   private notify(event: UiEvent): void {
-    this.history.push(event);
-    if (this.history.length > this.historyLimit) {
-      this.history.splice(0, this.history.length - this.historyLimit);
-    }
-
-    for (const listener of this.listeners.values()) {
-      if (!eventMatchesFilter(event, listener.filter)) {
-        continue;
-      }
-      listener.callback(event);
-    }
+    this.eventLog.notify(event);
   }
 
   private scheduleScan(): void {
@@ -329,10 +270,10 @@ class UiEventsBrokerImpl implements UiEventsBroker {
         emitEvents,
         snapshots: this.snapshots,
         nextBubbleUpdatedEvent: (repoPath, bubble) =>
-          this.nextBubbleUpdatedEvent(repoPath, bubble),
+          this.eventLog.nextBubbleUpdatedEvent(repoPath, bubble),
         nextBubbleRemovedEvent: (repoPath, bubbleId) =>
-          this.nextBubbleRemovedEvent(repoPath, bubbleId),
-        nextRepoEvent: (repoPath, repo) => this.nextRepoEvent(repoPath, repo),
+          this.eventLog.nextBubbleRemovedEvent(repoPath, bubbleId),
+        nextRepoEvent: (repoPath, repo) => this.eventLog.nextRepoEvent(repoPath, repo),
         refreshWatchers: () => this.refreshWatchers(),
         notify: (event) => this.notify(event)
       });
@@ -349,69 +290,15 @@ class UiEventsBrokerImpl implements UiEventsBroker {
     }
   }
 
-  private nextBubbleUpdatedEvent(
-    repoPath: string,
-    bubble: UiBubbleSummary
-  ): UiBubbleUpdatedEvent {
-    const id = this.nextEventId;
-    this.nextEventId += 1;
-    return {
-      id,
-      ts: new Date().toISOString(),
-      type: "bubble.updated",
-      repoPath,
-      bubbleId: bubble.bubbleId,
-      bubble
-    };
-  }
-
-  private nextBubbleRemovedEvent(
-    repoPath: string,
-    bubbleId: string
-  ): UiBubbleRemovedEvent {
-    const id = this.nextEventId;
-    this.nextEventId += 1;
-    return {
-      id,
-      ts: new Date().toISOString(),
-      type: "bubble.removed",
-      repoPath,
-      bubbleId
-    };
-  }
-
-  private nextRepoEvent(repoPath: string, repo: UiRepoSummary): UiRepoUpdatedEvent {
-    const id = this.nextEventId;
-    this.nextEventId += 1;
-    return {
-      id,
-      ts: new Date().toISOString(),
-      type: "repo.updated",
-      repoPath,
-      repo
-    };
-  }
-
-  private nextRepoRemovedEvent(repoPath: string): UiRepoRemovedEvent {
-    const id = this.nextEventId;
-    this.nextEventId += 1;
-    return {
-      id,
-      ts: new Date().toISOString(),
-      type: "repo.removed",
-      repoPath
-    };
-  }
-
   private async scanRepo(repoPath: string, emitEvents: boolean): Promise<RepoDiff> {
     return scanUiEventsRepo({
       repoPath,
       emitEvents,
       snapshots: this.snapshots,
       nextBubbleUpdatedEvent: (repo, bubble) =>
-        this.nextBubbleUpdatedEvent(repo, bubble),
+        this.eventLog.nextBubbleUpdatedEvent(repo, bubble),
       nextBubbleRemovedEvent: (repo, bubbleId) =>
-        this.nextBubbleRemovedEvent(repo, bubbleId)
+        this.eventLog.nextBubbleRemovedEvent(repo, bubbleId)
     });
   }
 
