@@ -25,21 +25,25 @@ Az `error` fitness check jelenleg hard-fail helyett `warn` módban fut, de a bac
 
 1. `create` warning klaszter
    - cél: `BubbleCreateError` hívások kapjanak explicit context payloadot
-   - státusz: in_progress
+   - státusz: completed
 
 2. `archive` warning klaszter
    - cél: `ArchiveIndexError` / `ArchiveSnapshotError` hívások kapjanak explicit context payloadot
-   - státusz: in_progress
+   - státusz: completed
 
-3. `open` warning klaszter
+3. `registry` warning klaszter
+   - cél: `RepoRegistryError` / `RuntimeSessionsRegistryError` hívások kapjanak explicit context payloadot
+   - státusz: completed
+
+4. `open` warning klaszter
    - cél: `OpenBubbleError` throw site-ok kontextusosítása
    - státusz: pending
 
-4. `metrics + transcript` warning klaszter
+5. `metrics + transcript` warning klaszter
    - cél: artifact/runtime warningok context payloadjai
    - státusz: pending
 
-5. maradék singletonok
+6. maradék singletonok
    - `attach`
    - `list`
    - `actorProtocol`
@@ -56,3 +60,8 @@ Az `error` fitness check jelenleg hard-fail helyett `warn` módban fut, de a bac
   - célzott vitest
   - célzott eslint
   - `pnpm typecheck`
+
+# Előrehaladás
+
+- Wave 1 commit: `11f1ec1f` `refactor(error): add context to create and archive warnings`
+- Aktuális warning baseline: `error` check `126 -> 106`

@@ -48,18 +48,61 @@ export interface UpsertRuntimeSessionInput {
   lockTimeoutMs?: number;
 }
 
+interface RuntimeSessionsRegistryErrorContext {
+  bubbleId?: string | undefined;
+  fieldName?: string | undefined;
+  lockPath?: string | undefined;
+  reason?: string | undefined;
+  sessionsPath?: string | undefined;
+}
+
+interface RuntimeSessionsRegistryErrorOptions extends ErrorOptions {
+  context?: RuntimeSessionsRegistryErrorContext | undefined;
+}
+
 export class RuntimeSessionsRegistryError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly context: RuntimeSessionsRegistryErrorContext | undefined;
+
+  public constructor(
+    message: string,
+    options?: RuntimeSessionsRegistryErrorOptions
+  ) {
+    super(message, options);
     this.name = "RuntimeSessionsRegistryError";
+    this.context = options?.context;
   }
 }
 
 export class RuntimeSessionsRegistryLockError extends RuntimeSessionsRegistryError {
-  public constructor(message: string) {
-    super(message);
+  public constructor(
+    message: string,
+    options?: RuntimeSessionsRegistryErrorOptions
+  ) {
+    super(message, options);
     this.name = "RuntimeSessionsRegistryLockError";
   }
+}
+
+function toRuntimeSessionsRegistryError(input: {
+  message: string;
+  context: RuntimeSessionsRegistryErrorContext;
+  cause?: unknown;
+}): RuntimeSessionsRegistryError {
+  return new RuntimeSessionsRegistryError(input.message, {
+    context: input.context,
+    ...(input.cause !== undefined ? { cause: input.cause } : {})
+  });
+}
+
+function toRuntimeSessionsRegistryLockError(input: {
+  message: string;
+  context: RuntimeSessionsRegistryErrorContext;
+  cause?: unknown;
+}): RuntimeSessionsRegistryLockError {
+  return new RuntimeSessionsRegistryLockError(input.message, {
+    context: input.context,
+    ...(input.cause !== undefined ? { cause: input.cause } : {})
+  });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -68,11 +111,23 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function requireNonEmptyString(value: unknown, fieldName: string): string {
   if (typeof value !== "string") {
-    throw new RuntimeSessionsRegistryError(`${fieldName} must be a string.`);
+    throw toRuntimeSessionsRegistryError({
+      message: `${fieldName} must be a string.`,
+      context: {
+        fieldName,
+        reason: "field_not_string"
+      }
+    });
   }
   const trimmed = value.trim();
   if (trimmed.length === 0) {
-    throw new RuntimeSessionsRegistryError(`${fieldName} cannot be empty.`);
+    throw toRuntimeSessionsRegistryError({
+      message: `${fieldName} cannot be empty.`,
+      context: {
+        fieldName,
+        reason: "field_empty"
+      }
+    });
   }
   return trimmed;
 }
@@ -85,18 +140,28 @@ function parseMetaReviewerPaneBinding(
     return undefined;
   }
   if (!isRecord(value)) {
-    throw new RuntimeSessionsRegistryError(
-      `Invalid runtime meta-reviewer pane binding for bubble ${bubbleId}.`
-    );
+    throw toRuntimeSessionsRegistryError({
+      message: `Invalid runtime meta-reviewer pane binding for bubble ${bubbleId}.`,
+      context: {
+        bubbleId,
+        fieldName: "metaReviewerPane",
+        reason: "binding_not_object"
+      }
+    });
   }
   const role = requireNonEmptyString(
     value.role,
     "runtime session metaReviewerPane.role"
   );
   if (role !== "meta-reviewer") {
-    throw new RuntimeSessionsRegistryError(
-      `runtime session metaReviewerPane.role must be "meta-reviewer" (found ${role}).`
-    );
+    throw toRuntimeSessionsRegistryError({
+      message: `runtime session metaReviewerPane.role must be "meta-reviewer" (found ${role}).`,
+      context: {
+        bubbleId,
+        fieldName: "metaReviewerPane.role",
+        reason: "invalid_role"
+      }
+    });
   }
   const paneIndexValue = value.paneIndex;
   if (
@@ -104,15 +169,25 @@ function parseMetaReviewerPaneBinding(
     !Number.isInteger(paneIndexValue) ||
     paneIndexValue < 0
   ) {
-    throw new RuntimeSessionsRegistryError(
-      "runtime session metaReviewerPane.paneIndex must be a non-negative integer."
-    );
+    throw toRuntimeSessionsRegistryError({
+      message: "runtime session metaReviewerPane.paneIndex must be a non-negative integer.",
+      context: {
+        bubbleId,
+        fieldName: "metaReviewerPane.paneIndex",
+        reason: "invalid_pane_index"
+      }
+    });
   }
   const activeValue = value.active;
   if (typeof activeValue !== "boolean") {
-    throw new RuntimeSessionsRegistryError(
-      "runtime session metaReviewerPane.active must be a boolean."
-    );
+    throw toRuntimeSessionsRegistryError({
+      message: "runtime session metaReviewerPane.active must be a boolean.",
+      context: {
+        bubbleId,
+        fieldName: "metaReviewerPane.active",
+        reason: "invalid_active_type"
+      }
+    });
   }
   const updatedAt = requireNonEmptyString(
     value.updatedAt,
@@ -131,9 +206,13 @@ function parseSessionRecord(
   value: unknown
 ): RuntimeSessionRecord {
   if (!isRecord(value)) {
-    throw new RuntimeSessionsRegistryError(
-      `Invalid runtime session record for bubble ${bubbleIdFromKey}.`
-    );
+    throw toRuntimeSessionsRegistryError({
+      message: `Invalid runtime session record for bubble ${bubbleIdFromKey}.`,
+      context: {
+        bubbleId: bubbleIdFromKey,
+        reason: "record_not_object"
+      }
+    });
   }
 
   const bubbleId = requireNonEmptyString(value.bubbleId, "runtime session bubbleId");
@@ -153,9 +232,14 @@ function parseSessionRecord(
   );
 
   if (bubbleId !== bubbleIdFromKey) {
-    throw new RuntimeSessionsRegistryError(
-      `Runtime session key mismatch: expected ${bubbleIdFromKey}, found ${bubbleId}.`
-    );
+    throw toRuntimeSessionsRegistryError({
+      message: `Runtime session key mismatch: expected ${bubbleIdFromKey}, found ${bubbleId}.`,
+      context: {
+        bubbleId: bubbleIdFromKey,
+        fieldName: "bubbleId",
+        reason: "key_mismatch"
+      }
+    });
   }
 
   return {
@@ -178,15 +262,22 @@ function parseRegistry(raw: string): RuntimeSessionsRegistry {
     parsed = JSON.parse(raw);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new RuntimeSessionsRegistryError(
-      `Invalid runtime sessions JSON: ${message}`
-    );
+    throw toRuntimeSessionsRegistryError({
+      message: `Invalid runtime sessions JSON: ${message}`,
+      context: {
+        reason: "invalid_json"
+      },
+      cause: error
+    });
   }
 
   if (!isRecord(parsed)) {
-    throw new RuntimeSessionsRegistryError(
-      "Runtime sessions registry must be a JSON object."
-    );
+    throw toRuntimeSessionsRegistryError({
+      message: "Runtime sessions registry must be a JSON object.",
+      context: {
+        reason: "not_a_json_object"
+      }
+    });
   }
 
   const registry: RuntimeSessionsRegistry = {};
@@ -259,9 +350,15 @@ export async function withRuntimeSessionsRegistryLock<T>(
     );
   } catch (error) {
     if (error instanceof FileLockTimeoutError) {
-      throw new RuntimeSessionsRegistryLockError(
-        `Could not acquire runtime sessions lock: ${lockPath}`
-      );
+      throw toRuntimeSessionsRegistryLockError({
+        message: `Could not acquire runtime sessions lock: ${lockPath}`,
+        context: {
+          lockPath,
+          sessionsPath,
+          reason: "lock_timeout"
+        },
+        cause: error
+      });
     }
     throw error;
   }

@@ -58,18 +58,57 @@ export interface RemoveRepoResult {
   removedEntry?: RepoRegistryEntry | undefined;
 }
 
+interface RepoRegistryErrorContext {
+  entryIndex?: number | undefined;
+  fieldName?: string | undefined;
+  lockPath?: string | undefined;
+  registryPath?: string | undefined;
+  reason?: string | undefined;
+  repoPath?: string | undefined;
+  version?: number | undefined;
+}
+
+interface RepoRegistryErrorOptions extends ErrorOptions {
+  context?: RepoRegistryErrorContext | undefined;
+}
+
 export class RepoRegistryError extends Error {
-  public constructor(message: string) {
-    super(message);
+  public readonly context: RepoRegistryErrorContext | undefined;
+
+  public constructor(message: string, options?: RepoRegistryErrorOptions) {
+    super(message, options);
     this.name = "RepoRegistryError";
+    this.context = options?.context;
   }
 }
 
 export class RepoRegistryLockError extends RepoRegistryError {
-  public constructor(message: string) {
-    super(message);
+  public constructor(message: string, options?: RepoRegistryErrorOptions) {
+    super(message, options);
     this.name = "RepoRegistryLockError";
   }
+}
+
+function toRepoRegistryError(input: {
+  message: string;
+  context: RepoRegistryErrorContext;
+  cause?: unknown;
+}): RepoRegistryError {
+  return new RepoRegistryError(input.message, {
+    context: input.context,
+    ...(input.cause !== undefined ? { cause: input.cause } : {})
+  });
+}
+
+function toRepoRegistryLockError(input: {
+  message: string;
+  context: RepoRegistryErrorContext;
+  cause?: unknown;
+}): RepoRegistryLockError {
+  return new RepoRegistryLockError(input.message, {
+    context: input.context,
+    ...(input.cause !== undefined ? { cause: input.cause } : {})
+  });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -78,11 +117,23 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function requireNonEmptyString(value: unknown, fieldName: string): string {
   if (typeof value !== "string") {
-    throw new RepoRegistryError(`${fieldName} must be a string.`);
+    throw toRepoRegistryError({
+      message: `${fieldName} must be a string.`,
+      context: {
+        fieldName,
+        reason: "field_not_string"
+      }
+    });
   }
   const trimmed = value.trim();
   if (trimmed.length === 0) {
-    throw new RepoRegistryError(`${fieldName} cannot be empty.`);
+    throw toRepoRegistryError({
+      message: `${fieldName} cannot be empty.`,
+      context: {
+        fieldName,
+        reason: "field_empty"
+      }
+    });
   }
   return trimmed;
 }
@@ -100,33 +151,65 @@ function parseRegistryDocument(raw: string): RepoRegistryDocument {
     parsed = JSON.parse(raw) as unknown;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new RepoRegistryError(`Invalid repo registry JSON: ${message}`);
+    throw toRepoRegistryError({
+      message: `Invalid repo registry JSON: ${message}`,
+      context: {
+        reason: "invalid_json"
+      },
+      cause: error
+    });
   }
 
   if (!isRecord(parsed)) {
-    throw new RepoRegistryError("Repo registry must be a JSON object.");
+    throw toRepoRegistryError({
+      message: "Repo registry must be a JSON object.",
+      context: {
+        reason: "not_a_json_object"
+      }
+    });
   }
 
   const versionRaw = parsed.version;
   if (typeof versionRaw !== "number" || !Number.isInteger(versionRaw)) {
-    throw new RepoRegistryError("Repo registry `version` must be an integer.");
+    throw toRepoRegistryError({
+      message: "Repo registry `version` must be an integer.",
+      context: {
+        fieldName: "version",
+        reason: "invalid_version_type"
+      }
+    });
   }
   if (versionRaw !== registryVersion) {
-    throw new RepoRegistryError(
-      `Unsupported repo registry version: ${versionRaw}.`
-    );
+    throw toRepoRegistryError({
+      message: `Unsupported repo registry version: ${versionRaw}.`,
+      context: {
+        fieldName: "version",
+        reason: "unsupported_version",
+        version: versionRaw
+      }
+    });
   }
 
   const reposRaw = parsed.repos;
   if (!Array.isArray(reposRaw)) {
-    throw new RepoRegistryError("Repo registry `repos` must be an array.");
+    throw toRepoRegistryError({
+      message: "Repo registry `repos` must be an array.",
+      context: {
+        fieldName: "repos",
+        reason: "repos_not_array"
+      }
+    });
   }
 
   const repos: RepoRegistryEntry[] = reposRaw.map((value, index) => {
     if (!isRecord(value)) {
-      throw new RepoRegistryError(
-        `Repo registry entry at index ${index} must be an object.`
-      );
+      throw toRepoRegistryError({
+        message: `Repo registry entry at index ${index} must be an object.`,
+        context: {
+          entryIndex: index,
+          reason: "entry_not_object"
+        }
+      });
     }
     const repoPath = requireNonEmptyString(
       value.repoPath,
@@ -137,21 +220,36 @@ function parseRegistryDocument(raw: string): RepoRegistryDocument {
       `repo registry entry ${index} addedAt`
     );
     if (!isIsoTimestamp(addedAt)) {
-      throw new RepoRegistryError(
-        `repo registry entry ${index} addedAt must be an ISO-8601 UTC timestamp.`
-      );
+      throw toRepoRegistryError({
+        message: `repo registry entry ${index} addedAt must be an ISO-8601 UTC timestamp.`,
+        context: {
+          entryIndex: index,
+          fieldName: "addedAt",
+          reason: "invalid_timestamp"
+        }
+      });
     }
     const labelRaw = value.label;
     if (labelRaw !== undefined && typeof labelRaw !== "string") {
-      throw new RepoRegistryError(
-        `repo registry entry ${index} label must be a string when provided.`
-      );
+      throw toRepoRegistryError({
+        message: `repo registry entry ${index} label must be a string when provided.`,
+        context: {
+          entryIndex: index,
+          fieldName: "label",
+          reason: "invalid_label_type"
+        }
+      });
     }
     const label = labelRaw?.trim();
     if (labelRaw !== undefined && label !== undefined && label.length === 0) {
-      throw new RepoRegistryError(
-        `repo registry entry ${index} label cannot be empty when provided.`
-      );
+      throw toRepoRegistryError({
+        message: `repo registry entry ${index} label cannot be empty when provided.`,
+        context: {
+          entryIndex: index,
+          fieldName: "label",
+          reason: "empty_label"
+        }
+      });
     }
     return {
       repoPath,
@@ -231,7 +329,13 @@ function normalizeLabel(
   }
   const trimmed = label.trim();
   if (trimmed.length === 0) {
-    throw new RepoRegistryError("label cannot be empty.");
+    throw toRepoRegistryError({
+      message: "label cannot be empty.",
+      context: {
+        fieldName: "label",
+        reason: "empty_label"
+      }
+    });
   }
   return trimmed;
 }
@@ -274,9 +378,15 @@ async function withRegistryLock<T>(
     );
   } catch (error) {
     if (error instanceof FileLockTimeoutError) {
-      throw new RepoRegistryLockError(
-        `Could not acquire repo registry lock: ${lockPath}`
-      );
+      throw toRepoRegistryLockError({
+        message: `Could not acquire repo registry lock: ${lockPath}`,
+        context: {
+          lockPath,
+          registryPath,
+          reason: "lock_timeout"
+        },
+        cause: error
+      });
     }
     throw error;
   }
@@ -309,7 +419,14 @@ export async function readRepoRegistry(
       };
     }
     if (typedError.code === "ENOENT") {
-      throw new RepoRegistryError(`Repo registry file does not exist: ${registryPath}`);
+      throw toRepoRegistryError({
+        message: `Repo registry file does not exist: ${registryPath}`,
+        context: {
+          registryPath,
+          reason: "registry_missing"
+        },
+        cause: error
+      });
     }
     throw error;
   }
