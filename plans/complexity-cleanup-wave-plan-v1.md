@@ -39,7 +39,7 @@ Legutóbbi teljes fitness report:
 
 Jelenlegi `complexity` summary:
 
-1. `49` budget violation
+1. `48` budget violation
 2. a legnagyobb klaszterek:
    - `src/v11/shared/state/stateSchema.ts`
    - `src/v11/infrastructure/artifact/**`
@@ -191,8 +191,9 @@ Minden bounded batch után:
    - `26faa8db` `refactor(complexity): split state snapshot inspection`
    - `5b952dcb` `refactor(complexity): split reviewer test evidence verification helpers`
    - `7b13690a` `refactor(complexity): split tmux delivery attempt runtime`
+   - `35b39900` `refactor(complexity): split doc contract gate artifact normalization`
 6. Következő párhuzamos batch-ek:
    - `passValidationEvidence` recovery-marker extract
    - `testEvidenceRuntime` evidence-classification extract
-   - `docContractGates` artifact normalization extract
    - `emitAttachV11` attach event / side-effect branch split
+   - `reviewVerification` file-ownership slice
