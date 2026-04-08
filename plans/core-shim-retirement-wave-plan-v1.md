@@ -331,6 +331,43 @@ validation, run `pnpm build` first.
 | W5 | shared-safe shim retirement batch | easy | validated | Shared contract/type surfaces were retargeted away from thin `core` bridges into canonical `shared/ports` and sibling shared contracts; warn-only coverage moved from `318 -> 294` total while the retired-shim subset stayed at `15` |
 | W6 | dependency policy alignment for shared ports | policy | validated | Dependency fitness now explicitly allows `shared -> shared/ports` capability-contract imports while keeping `shared-ports -> infrastructure` and anti-circumvention rules intact; full fitness returned to PASS after the shared-safe batch |
 | W7 | shared type-only shim retirement batch | easy | validated | Shared actor/meta-review/meta-review-gate type-only imports now target canonical `shared/ports` contracts instead of `core` source types; warn-only coverage moved from `294 -> 279` total and `15 -> 12` retired-shim warnings while fitness and metaReviewGate regressions stayed green |
+| W8 | final shared type-only cleanup | easy | validated | `shared/merge/mergeRoutingEligibility.ts` now targets the canonical git port type instead of the `core/workspace/git` shim; warn-only coverage moved from `279 -> 273` total while the retired-shim subset stayed at `12` |
+
+## Current Frontier
+
+Validated current baseline after `W7`:
+
+- total direct residual imports: `279`
+- retired-shim subset: `12`
+- fitness: PASS
+
+Practical conclusion:
+
+- the broad easy wave is now close to exhaustion,
+- the remaining retired-shim residuals are no longer simple path rewrites,
+- the next useful work should be handled as explicit medium boundary batches.
+
+Current medium clusters:
+
+1. reviewer evidence / reviewer brief
+   - `src/v11/application/pass/reviewerDeliveryHelpers.ts`
+   - `src/v11/application/pass/reviewerTestDirectiveResolver.ts`
+   - `src/v11/application/start/startCommandContext.ts`
+   - `src/v11/application/start/startCommandResumeFlowPreparation.ts`
+   - shape: existing port types already exist, but default implementation wiring still hangs off retired `core` bridges
+
+2. retained create bridge
+   - `src/v11/application/create/createCommandApi.ts`
+   - shape: compatibility facade still routes through retained `core/bubble/createBubble.ts`
+
+3. metrics bridge
+   - `src/v11/shared/metrics/bubbleEvents.ts`
+   - shape: shared helper still depends on the retained metrics shim that mixes shared event building and infrastructure store resolution
+
+4. UI router bridge
+   - `src/v11/infrastructure/ui/routerContracts.ts`
+   - `src/v11/infrastructure/ui/routerDependencies.ts`
+   - shape: current UI boundary still depends on `core` command surfaces; direct retarget to `application` opens `infrastructure -> application` violations, so this needs a dedicated interface/boundary decision
 | W7 | converged reviewer shim retirement | medium | validated | `convergedValidation*` stopped importing the retired `core/reviewer/summaryVerifierConsistencyGate` shim and now uses the canonical shared reviewer surface; warn-only coverage moved from `294 -> 263` total and the retired-shim subset dropped from `15 -> 8` |
 | W8 | easy frontier reassessment | mixed | validated | The obvious easy frontier is now materially exhausted; attempted `infrastructure/ui` rewrite to direct `v11/application` facades opened `infrastructure -> application` dependency failures, so the UI router cluster is explicitly reclassified out of the easy wave |
 | W9 | approval dependency bridge | medium | planned | Rewrite `approval` contract/default wiring away from `core` shims |
