@@ -2,7 +2,6 @@ import { resolveActiveMetaReviewRuntimeDelivery } from "../metaReview/metaReview
 import { isMetaReviewExecutionContextActiveState } from "../metaReview/metaReviewExecutionContext.js";
 import type {
   BubbleExecutionContext,
-  BubbleStateSnapshot,
   MetaReviewRuntimeDeliveryStatus,
   MetaReviewRecommendation,
   MetaReviewRunStatus
@@ -10,6 +9,7 @@ import type {
 import type { ProtocolEnvelope } from "../../../types/protocol.js";
 import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateTypes.js";
 import type { ReadWatchdogPaneActivityResult } from "../watchdog/watchdogPaneActivityStore.js";
+import type { BubbleStatusState } from "./statusCommandTypes.js";
 
 const metaReviewHumanGateRoutes = new Set<
   Exclude<MetaReviewGateRoute, "meta_review_running" | "auto_rework">
@@ -156,7 +156,7 @@ export function buildStatusPaneActivityView(
 }
 
 export function buildStatusMetaReviewView(
-  state: BubbleStateSnapshot,
+  state: BubbleStatusState,
   transcript: ProtocolEnvelope[]
 ) : {
   actor: "meta-reviewer";

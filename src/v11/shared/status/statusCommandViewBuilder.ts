@@ -4,16 +4,11 @@ import type { StateValidationDiagnostics } from "../../../core/state/stateStore.
 import type { ReadWatchdogPaneActivityResult } from "../watchdog/watchdogPaneActivityStore.js";
 import type {
   BubbleFailingGate,
-  BubbleExecutionContext,
   BubbleLifecycleState,
   BubbleRoundGateState,
-  BubbleSpecLockState,
-  MetaReviewRecommendation,
-  MetaReviewRunStatus,
-  MetaReviewRuntimeDeliveryStatus
+  BubbleSpecLockState
 } from "../../../types/bubble.js";
 import type { ProtocolEnvelope, ProtocolMessageType } from "../../../types/protocol.js";
-import type { MetaReviewGateRoute } from "../metaReviewGate/metaReviewGateTypes.js";
 import type {
   BubbleStatusState,
   ResolvedBubbleStatusContext,
@@ -23,7 +18,10 @@ import { toStatusCommandPathView } from "./statusCommandInternals.js";
 import {
   buildStatusExecutionContextView,
   buildStatusMetaReviewView,
-  buildStatusPaneActivityView
+  buildStatusPaneActivityView,
+  type StatusExecutionContextView,
+  type StatusMetaReviewView,
+  type StatusPaneActivityView
 } from "./statusCommandViewProjection.js";
 
 export interface BubbleStatusView {
@@ -37,26 +35,8 @@ export interface BubbleStatusView {
   activeRole: string | null;
   activeSince: string | null;
   lastCommandAt: string | null;
-  paneActivity: {
-    readStatus: ReadWatchdogPaneActivityResult["status"];
-    lastChangedAt: string | null;
-    sampledAt: string | null;
-    sinceLastChangedSeconds: number | null;
-    sinceSampledSeconds: number | null;
-    lastSampleStatus: "sampled" | "no_session" | "pane_unreadable" | null;
-    lastSampleError: string | null;
-    sessionName: string | null;
-    targetPane: string | null;
-  };
-  executionContext: {
-    activeRole: BubbleExecutionContext["active_role"];
-    awaitedOutputType: BubbleExecutionContext["awaited_output_type"];
-    handoffId: string;
-    round: number;
-    startedAt: string;
-    deadlineAt: string;
-    attempt: number;
-  } | null;
+  paneActivity: StatusPaneActivityView;
+  executionContext: StatusExecutionContextView | null;
   watchdog: WatchdogStatus;
   pendingInboxItems: {
     humanQuestions: number;
@@ -69,26 +49,7 @@ export interface BubbleStatusView {
     lastMessageTs: string | null;
     lastMessageId: string | null;
   };
-  metaReview: {
-    actor: "meta-reviewer";
-    authorityActive: boolean;
-    latestRecommendation: MetaReviewRecommendation | null;
-    latestStatus: MetaReviewRunStatus | null;
-    latestSummary: string | null;
-    latestReportRef: string | null;
-    latestUpdatedAt: string | null;
-    latestRoute: MetaReviewGateRoute | null;
-    latestRouteReasonCode: string | null;
-    latestRouteObservedAt: string | null;
-    runtimeDelivery: {
-      status: MetaReviewRuntimeDeliveryStatus;
-      reasonCode: string | null;
-      message: string;
-      observedAt: string;
-      observedForHandoffId: string | null;
-      observedForRound: number | null;
-    } | null;
-  };
+  metaReview: StatusMetaReviewView;
   commandPath: {
     status: "worktree_local" | "external" | "stale" | "missing" | "unknown";
     reasonCode?:
