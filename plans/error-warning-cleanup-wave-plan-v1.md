@@ -45,7 +45,7 @@ Az `error` fitness check jelenleg hard-fail helyett `warn` módban fut, de a bac
 
 6. `transcript` warning klaszter
    - cél: transcript artifact/runtime warningok context payloadjai
-   - státusz: pending
+   - státusz: completed
 
 7. maradék singletonok
    - `attach`
@@ -69,4 +69,5 @@ Az `error` fitness check jelenleg hard-fail helyett `warn` módban fut, de a bac
 
 - Wave 1 commit: `11f1ec1f` `refactor(error): add context to create and archive warnings`
 - Wave 2 commit: `b952b576` `refactor(error): add registry error context`
-- Aktuális warning baseline: `error` check `126 -> 106 -> 97`
+- Wave 3 commit: `72a13e34` `refactor(error): add open and metrics error context`
+- Aktuális warning baseline: `error` check `126 -> 106 -> 97 -> 92`
