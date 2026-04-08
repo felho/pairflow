@@ -64,27 +64,39 @@ export interface PreparedMetaReviewSubmitContext {
 }
 
 function resolveMetaReviewArtifactReadPort(
+  bubbleId: string,
   dependencies: MetaReviewCommandDependencies
 ): NonNullable<MetaReviewCommandDependencies["readFile"]> {
   if (dependencies.readFile !== undefined) {
     return dependencies.readFile;
   }
-  throw new MetaReviewError(
-    "META_REVIEW_UNKNOWN_ERROR",
-    "meta-review artifact read capability is unavailable."
-  );
+  throw new MetaReviewError({
+    reasonCode: "META_REVIEW_UNKNOWN_ERROR",
+    message: "meta-review artifact read capability is unavailable.",
+    context: {
+      source: "meta_review_command_submit_preparation",
+      bubbleId,
+      reason: "artifact_read_capability_unavailable"
+    }
+  });
 }
 
 function resolveMetaReviewArtifactWritePort(
+  bubbleId: string,
   dependencies: MetaReviewCommandDependencies
 ): NonNullable<MetaReviewCommandDependencies["writeFile"]> {
   if (dependencies.writeFile !== undefined) {
     return dependencies.writeFile;
   }
-  throw new MetaReviewError(
-    "META_REVIEW_UNKNOWN_ERROR",
-    "meta-review artifact write capability is unavailable."
-  );
+  throw new MetaReviewError({
+    reasonCode: "META_REVIEW_UNKNOWN_ERROR",
+    message: "meta-review artifact write capability is unavailable.",
+    context: {
+      source: "meta_review_command_submit_preparation",
+      bubbleId,
+      reason: "artifact_write_capability_unavailable"
+    }
+  });
 }
 
 function resolveValidatedSubmitShape(input: {
@@ -102,17 +114,29 @@ function resolveValidatedSubmitShape(input: {
   updatedAt: string;
 } {
   if (!isInteger(input.submitInput.round) || input.submitInput.round < 1) {
-    throw new MetaReviewError(
-      "META_REVIEW_SCHEMA_INVALID",
-      "meta-review submit round must be a positive integer"
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID",
+      message: "meta-review submit round must be a positive integer",
+      context: {
+        source: "meta_review_command_submit_preparation",
+        bubbleId: input.submitInput.bubbleId,
+        round: input.submitInput.round,
+        reason: "round_must_be_positive_integer"
+      }
+    });
   }
 
   if (input.submitInput.round !== input.loadedState.state.round) {
-    throw new MetaReviewError(
-      "META_REVIEW_ROUND_MISMATCH",
-      `meta-review submit round mismatch (active: ${input.loadedState.state.round}, received: ${input.submitInput.round}).`
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_ROUND_MISMATCH",
+      message: `meta-review submit round mismatch (active: ${input.loadedState.state.round}, received: ${input.submitInput.round}).`,
+      context: {
+        source: "meta_review_command_submit_preparation",
+        bubbleId: input.submitInput.bubbleId,
+        round: input.submitInput.round,
+        reason: "submit_round_mismatch"
+      }
+    });
   }
 
   if (
@@ -120,30 +144,49 @@ function resolveValidatedSubmitShape(input: {
     input.submitInput.recommendation !== "rework" &&
     input.submitInput.recommendation !== "inconclusive"
   ) {
-    throw new MetaReviewError(
-      "META_REVIEW_SCHEMA_INVALID",
-      "meta-review submit recommendation must be one of: approve, rework, inconclusive"
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID",
+      message:
+        "meta-review submit recommendation must be one of: approve, rework, inconclusive",
+      context: {
+        source: "meta_review_command_submit_preparation",
+        bubbleId: input.submitInput.bubbleId,
+        round: input.submitInput.round,
+        reason: "recommendation_not_in_allowed_set"
+      }
+    });
   }
 
   if (
     input.submitInput.report_json === undefined ||
     !isRecord(input.submitInput.report_json)
   ) {
-    throw new MetaReviewError(
-      "META_REVIEW_SCHEMA_INVALID",
-      "meta-review submit report_json is required and must be an object"
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID",
+      message: "meta-review submit report_json is required and must be an object",
+      context: {
+        source: "meta_review_command_submit_preparation",
+        bubbleId: input.submitInput.bubbleId,
+        round: input.submitInput.round,
+        reason: "report_json_missing_or_invalid"
+      }
+    });
   }
 
   const reportJson = input.submitInput.report_json;
   const updatedAt = input.now.toISOString();
   const runIdRaw = input.randomUuidFn();
   if (!isNonEmptyString(runIdRaw)) {
-    throw new MetaReviewError(
-      "META_REVIEW_SCHEMA_INVALID",
-      "meta-review submit run_id must be a non-empty string"
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_SCHEMA_INVALID",
+      message: "meta-review submit run_id must be a non-empty string",
+      context: {
+        source: "meta_review_command_submit_preparation",
+        bubbleId: input.submitInput.bubbleId,
+        round: input.submitInput.round,
+        reason: "generated_run_id_empty"
+      }
+    });
   }
 
   const recommendation = input.submitInput.recommendation;
@@ -183,8 +226,14 @@ export async function prepareMetaReviewSubmitContext(input: {
   const readState = input.dependencies.readStateSnapshot ?? readStateSnapshot;
   const readRuntimeSessions =
     input.dependencies.readRuntimeSessionsRegistry ?? readRuntimeSessionsRegistry;
-  const readFileFn = resolveMetaReviewArtifactReadPort(input.dependencies);
-  const writeFileFn = resolveMetaReviewArtifactWritePort(input.dependencies);
+  const readFileFn = resolveMetaReviewArtifactReadPort(
+    input.submitInput.bubbleId,
+    input.dependencies
+  );
+  const writeFileFn = resolveMetaReviewArtifactWritePort(
+    input.submitInput.bubbleId,
+    input.dependencies
+  );
   const randomUuidFn = input.dependencies.randomUUID ?? randomUUID;
 
   const resolved = await resolveBubble({
