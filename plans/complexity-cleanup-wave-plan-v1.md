@@ -39,15 +39,15 @@ Legutóbbi teljes fitness report:
 
 Jelenlegi `complexity` summary:
 
-1. `44` budget violation
+1. `43` budget violation
 2. a legnagyobb klaszterek:
    - `src/v11/shared/state/stateSchema.ts`
    - `src/v11/infrastructure/artifact/**`
    - `src/v11/shared/gates/docContractGates.ts`
    - `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`
-   - `src/v11/infrastructure/artifact/validation/passValidationEvidence.ts`
    - `src/v11/infrastructure/artifact/reviewer/testEvidenceRuntime.ts`
-   - `src/v11/application/attach/emitAttachV11.ts`
+   - `src/v11/infrastructure/artifact/validation/passValidationEvidence.ts`
+   - `src/v11/shared/reviewer/reviewVerificationValidation.ts`
 
 ## Working Strategy
 
@@ -195,7 +195,8 @@ Minden bounded batch után:
    - `df1a2806` `refactor(complexity): split pass validation evidence helpers`
    - `a8da9b5a` `refactor(complexity): split pass validation reuse checks`
    - `2501f03d` `refactor(complexity): split review verification validation`
+   - `b11f4bf9` `refactor(complexity): split attach launcher runtime`
 6. Következő párhuzamos batch-ek:
-   - `emitAttachV11` attach event / side-effect branch split
    - `stateSchema` focused validator slice
    - `protocol/validators` findings slice
+   - `testEvidenceSourcePolicy` stable-code follow-up
