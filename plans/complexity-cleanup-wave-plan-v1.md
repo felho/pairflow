@@ -210,7 +210,8 @@ Minden bounded batch után:
    - `5ed40f2a` `refactor(complexity): split repo registry document helpers`
    - `4d7225a7` `refactor(complexity): split runtime sessions registry helpers`
    - `f8bbf6be` `refactor(complexity): split tmux delivery runtime helpers`
-   - `pending` `refactor(complexity): split watchdog pane activity monitoring`
+   - `6d845cf2` `refactor(complexity): split watchdog pane activity monitoring`
+   - `pending` `refactor(complexity): split metrics report aggregate support`
    - `pending` `refactor(complexity): split ui router request surfaces`
 6. Következő párhuzamos batch-ek:
    - `stateSchema` focused validator slice
