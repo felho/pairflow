@@ -1,7 +1,6 @@
 import type { BubbleLifecycleState, BubbleStateSnapshot } from "../../../types/bubble.js";
-import { SchemaValidationError } from "../validation/primitives.js";
 import { metaReviewExecutionContextToRunningContext } from "../state/executionContext.js";
-import { validateActiveMetaReviewExecutionContext } from "../metaReview/metaReviewExecutionContext.js";
+import { resolveWatchdogStatusTiming } from "./watchdogStatusTiming.js";
 
 export interface WatchdogStatus {
   monitored: boolean;
@@ -35,100 +34,28 @@ export function computeWatchdogStatus(
   const recoveredExecutionContext = metaReviewExecutionContextToRunningContext(
     state.meta_review?.execution_context
   );
-  const watchdogValidationState =
-    state.execution_context == null &&
-    recoveredExecutionContext !== null
-      ? {
-          ...state,
-          execution_context: recoveredExecutionContext
-        }
-      : state;
-  const metaReviewExecutionContextResult =
-    validateActiveMetaReviewExecutionContext(watchdogValidationState);
-  const metaReviewAuthorityMonitored = metaReviewExecutionContextResult.ok;
   const monitored =
     !ideationRoundPending &&
     trackedState &&
     !watchdogNonAgentMonitoredStates.has(state.state) &&
     (
       state.active_agent !== null ||
-      metaReviewAuthorityMonitored
+      recoveredExecutionContext !== null
     );
-  let referenceTimestamp =
-    watchdogValidationState.execution_context?.started_at ??
-    state.last_command_at ??
-    state.active_since;
-  let deadlineTimestamp: string | null =
-    watchdogValidationState.execution_context?.deadline_at ?? null;
-  if (
-    state.execution_context == null &&
-    metaReviewExecutionContextResult.ok
-  ) {
-    referenceTimestamp = metaReviewExecutionContextResult.value.started_at;
-    deadlineTimestamp = metaReviewExecutionContextResult.value.deadline_at;
-  } else if (
-    state.active_role === "meta_reviewer" &&
-    state.execution_context == null &&
-    !metaReviewExecutionContextResult.ok
-  ) {
-    throw new SchemaValidationError(
-      "Invalid meta-review execution context",
-      metaReviewExecutionContextResult.errors
-    );
-  }
-
-  if (!monitored || referenceTimestamp === null) {
-    return {
-      monitored,
-      monitoredAgent: state.active_agent,
-      timeoutMinutes: watchdogTimeoutMinutes,
-      referenceTimestamp,
-      deadlineTimestamp,
-      remainingSeconds: null,
-      expired: false
-    };
-  }
-
-  const reference = new Date(referenceTimestamp);
-  const referenceMs = reference.getTime();
-  if (Number.isNaN(referenceMs)) {
-    return {
-      monitored,
-      monitoredAgent: state.active_agent,
-      timeoutMinutes: watchdogTimeoutMinutes,
-      referenceTimestamp,
-      deadlineTimestamp: null,
-      remainingSeconds: null,
-      expired: false
-    };
-  }
-
-  const deadlineMs =
-    deadlineTimestamp === null
-      ? referenceMs + watchdogTimeoutMinutes * 60_000
-      : Date.parse(deadlineTimestamp);
-  if (Number.isNaN(deadlineMs)) {
-    return {
-      monitored,
-      monitoredAgent: state.active_agent,
-      timeoutMinutes: watchdogTimeoutMinutes,
-      referenceTimestamp,
-      deadlineTimestamp,
-      remainingSeconds: null,
-      expired: false
-    };
-  }
-  const remainingMs = deadlineMs - now.getTime();
-  const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1_000));
+  const timing = resolveWatchdogStatusTiming({
+    state,
+    watchdogTimeoutMinutes,
+    now,
+    monitored
+  });
 
   return {
     monitored,
     monitoredAgent: state.active_agent,
     timeoutMinutes: watchdogTimeoutMinutes,
-    referenceTimestamp,
-    deadlineTimestamp:
-      deadlineTimestamp ?? new Date(deadlineMs).toISOString(),
-    remainingSeconds,
-    expired: remainingMs <= 0
+    referenceTimestamp: timing.referenceTimestamp,
+    deadlineTimestamp: timing.deadlineTimestamp,
+    remainingSeconds: timing.remainingSeconds,
+    expired: timing.expired
   };
 }
