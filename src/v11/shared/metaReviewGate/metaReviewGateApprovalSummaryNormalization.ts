@@ -23,6 +23,54 @@ const approvalSummaryNormalizedReasonCode =
 const approvalSummaryConsistencyStatusMetadataKey =
   "approval_summary_consistency_status";
 
+function isConsistentApproveAdvisoryOnlyRoute(input: {
+  route: string;
+  recommendation: MetaReviewRecommendation | undefined;
+  parityMetadata: FindingsParityMetadata | null | undefined;
+}): boolean {
+  return hasConsistentApproveAdvisoryOnlySplit({
+    route: input.route,
+    recommendation: input.recommendation,
+    parityMetadata: input.parityMetadata
+  });
+}
+
+function shouldSkipAdvisoryCountMismatchNormalization(input: {
+  route: string;
+  recommendation: MetaReviewRecommendation | undefined;
+  parityMetadata: FindingsParityMetadata | null | undefined;
+  advisoryCountListMismatch: boolean;
+}): boolean {
+  return (
+    input.advisoryCountListMismatch &&
+    isConsistentApproveAdvisoryOnlyRoute({
+      route: input.route,
+      recommendation: input.recommendation,
+      parityMetadata: input.parityMetadata
+    })
+  );
+}
+
+function shouldSuppressNoFindingsDefense(input: {
+  route: string;
+  recommendation: MetaReviewRecommendation | undefined;
+  parityMetadata: FindingsParityMetadata | null | undefined;
+  noFindingsAssertion: ReturnType<typeof evaluateNoFindingsSummaryFindingsAssertion>;
+  hasAdvisoryOpenFindings: boolean;
+  summary: string;
+}): boolean {
+  return (
+    input.noFindingsAssertion.hasNoFindingsAssertion &&
+    input.hasAdvisoryOpenFindings &&
+    isConsistentApproveAdvisoryOnlyRoute({
+      route: input.route,
+      recommendation: input.recommendation,
+      parityMetadata: input.parityMetadata
+    }) &&
+    !hasGlobalNoFindingsSummaryAssertion(input.summary)
+  );
+}
+
 export function resolveApprovalRequestSummaryConsistency(input: {
   summary: string;
   route: string;
@@ -46,11 +94,12 @@ export function resolveApprovalRequestSummaryConsistency(input: {
     advisoryFindings: input.advisoryFindings
   });
   const skipAdvisoryCountListMismatchNormalization =
-    advisoryContractInvariant.advisoryCountListMismatch &&
-    hasConsistentApproveAdvisoryOnlySplit({
+    shouldSkipAdvisoryCountMismatchNormalization({
       route: input.route,
       recommendation: input.recommendation,
-      parityMetadata: input.parityMetadata
+      parityMetadata: input.parityMetadata,
+      advisoryCountListMismatch:
+        advisoryContractInvariant.advisoryCountListMismatch
     });
   if (
     advisoryContractInvariant.advisoryCountListMismatch
@@ -74,14 +123,14 @@ export function resolveApprovalRequestSummaryConsistency(input: {
     (advisoryContractInvariant.advisoryFindingsOpenTotal ?? 0) > 0
     || advisoryContractInvariant.advisoryFindingsListCount > 0;
   const suppressNoFindingsDefenseForScopedBlockingSummary =
-    noFindingsAssertion.hasNoFindingsAssertion
-    && hasAdvisoryOpenFindings
-    && hasConsistentApproveAdvisoryOnlySplit({
+    shouldSuppressNoFindingsDefense({
       route: input.route,
       recommendation: input.recommendation,
-      parityMetadata: input.parityMetadata
-    })
-    && !hasGlobalNoFindingsSummaryAssertion(input.summary);
+      parityMetadata: input.parityMetadata,
+      noFindingsAssertion,
+      hasAdvisoryOpenFindings,
+      summary: input.summary
+    });
   if (
     noFindingsAssertion.hasNoFindingsAssertion
     && hasAdvisoryOpenFindings

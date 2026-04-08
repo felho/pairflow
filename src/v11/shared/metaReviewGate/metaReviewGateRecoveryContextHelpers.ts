@@ -26,6 +26,7 @@ import {
 } from "../metaReview/metaReviewExecutionContext.js";
 import type { BubbleExecutionContext } from "../../../types/bubble.js";
 import { metaReviewGatePaneDeactivationUnavoidableReasonCode } from "./metaReviewGateShared.js";
+import { SchemaValidationError } from "../validation/primitives.js";
 
 export interface ResolvedRecoveryContextDependencies {
   resolveBubble: typeof resolveBubbleById;
@@ -153,6 +154,13 @@ export async function rethrowAfterMetaReviewerPaneDeactivation(input: {
         ...root.diagnostics,
         stageReasonCode: metaReviewGatePaneDeactivationUnavoidableReasonCode
       }
+    );
+  }
+
+  if (input.error instanceof SchemaValidationError) {
+    throw new SchemaValidationError(
+      `META_REVIEW_GATE_SCHEMA_VALIDATION: recovery_init=${input.failureContext}; ${input.error.message}`,
+      input.error.errors
     );
   }
 
