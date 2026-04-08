@@ -1,23 +1,6 @@
 import type { AgentName } from "../../../types/bubble.js";
-import type { EmitAskHumanV11Result } from "../askHuman/emitAskHumanV11.js";
-import {
-  emitAskHumanFromWorkspaceV11 as emitAskHumanFromWorkspace
-} from "../askHuman/emitAskHumanV11.js";
-import type { EmitConvergedV11Result } from "../converged/emitConvergedV11.js";
-import {
-  emitConvergedFromWorkspaceV11 as emitConvergedFromWorkspace
-} from "../converged/emitConvergedV11.js";
-import type { MetaReviewSubmitResultV11 } from "../metaReview/emitMetaReviewV11.js";
-import {
-  submitMetaReviewResultV11 as submitMetaReviewResult
-} from "../metaReview/emitMetaReviewV11.js";
-import type { EmitPassV11Result } from "../pass/emitPassV11.js";
-import {
-  emitPassFromWorkspaceV11 as emitPassFromWorkspace
-} from "../pass/emitPassV11.js";
 import {
   ActorEmitContextError,
-  assertActorEmitContextMatches
 } from "../../shared/actorProtocol/actorEmitContext.js";
 import type {
   ActorEmitContextSnapshot
@@ -29,6 +12,17 @@ import type {
   MetaReviewResultActorEmitInput,
   PassActorEmitInput
 } from "../../../types/protocol.js";
+import {
+  assertActorEmitInputMatchesContext,
+  emitConvergenceActorResultV11,
+  emitHumanQuestionActorResultV11,
+  emitMetaReviewActorResultV11,
+  emitPassActorResultV11
+} from "./actorProtocolEmitters.js";
+import type { EmitAskHumanV11Result } from "../askHuman/emitAskHumanV11.js";
+import type { EmitConvergedV11Result } from "../converged/emitConvergedV11.js";
+import type { MetaReviewSubmitResultV11 } from "../metaReview/emitMetaReviewV11.js";
+import type { EmitPassV11Result } from "../pass/emitPassV11.js";
 
 export type ActorEmitResultV11 =
   | {
@@ -75,18 +69,9 @@ export async function emitImplementerPilotActorProtocolV11(
   { kind: "pass" } | { kind: "human_question" }
 >> {
   const { input, authoritativeContext: context } = resolvedInput;
-  assertActorEmitContextMatches({
-    context,
-    handoffId: input.handoff_id,
-    ...(input.expected_role !== undefined
-      ? { expectedRole: input.expected_role }
-      : {}),
-    ...(input.expected_round !== undefined
-      ? { expectedRound: input.expected_round }
-      : {}),
-    ...(input.expected_state_fingerprint !== undefined
-      ? { expectedStateFingerprint: input.expected_state_fingerprint }
-      : {})
+  assertActorEmitInputMatchesContext({
+    actorInput: input,
+    authoritativeContext: context
   });
   if (context.expected_role !== "implementer") {
     throw new ActorEmitContextError(
@@ -96,29 +81,16 @@ export async function emitImplementerPilotActorProtocolV11(
   }
 
   if (input.kind === "pass") {
-    return {
-      kind: "pass",
-      pass: await emitPassFromWorkspace({
-        summary: input.summary,
-        ...(input.refs !== undefined ? { refs: input.refs } : {}),
-        ...(input.intent !== undefined ? { intent: input.intent } : {}),
-        ...(input.findings !== undefined ? { findings: input.findings } : {}),
-        ...(input.no_findings ? { noFindings: true } : {}),
-        authoritativeContext: context,
-        cwd: context.worktree_path
-      })
-    };
+    return emitPassActorResultV11({
+      actorInput: input,
+      authoritativeContext: context
+    });
   }
 
-  return {
-    kind: "human_question",
-    human_question: await emitAskHumanFromWorkspace({
-      question: input.question,
-      ...(input.refs !== undefined ? { refs: input.refs } : {}),
-      authoritativeContext: context,
-      cwd: context.worktree_path
-    })
-  };
+  return emitHumanQuestionActorResultV11({
+    actorInput: input,
+    authoritativeContext: context
+  });
 }
 
 export const implementerPilotActorProtocolV11 = {
@@ -151,51 +123,25 @@ export async function emitReviewerActorProtocolV11(
   { kind: "pass" } | { kind: "convergence" }
 >> {
   const { input, authoritativeContext: context } = resolvedInput;
-  assertActorEmitContextMatches({
-    context,
-    handoffId: input.handoff_id,
-    ...(input.expected_role !== undefined
-      ? { expectedRole: input.expected_role }
-      : {}),
-    ...(input.expected_round !== undefined
-      ? { expectedRound: input.expected_round }
-      : {}),
-    ...(input.expected_state_fingerprint !== undefined
-      ? { expectedStateFingerprint: input.expected_state_fingerprint }
-      : {})
+  assertActorEmitInputMatchesContext({
+    actorInput: input,
+    authoritativeContext: context
   });
 
   if (input.kind === "pass") {
     requireReviewerAuthority(context);
-    return {
-      kind: "pass",
-      pass: await emitPassFromWorkspace({
-        summary: input.summary,
-        ...(input.refs !== undefined ? { refs: input.refs } : {}),
-        ...(input.intent !== undefined ? { intent: input.intent } : {}),
-        ...(input.findings !== undefined ? { findings: input.findings } : {}),
-        ...(input.no_findings ? { noFindings: true } : {}),
-        authoritativeContext: context,
-        cwd: context.worktree_path
-      })
-    };
+    return emitPassActorResultV11({
+      actorInput: input,
+      authoritativeContext: context
+    });
   }
 
   const expectedReviewer = requireReviewerAuthority(context);
-  return {
-    kind: "convergence",
-    convergence: await emitConvergedFromWorkspace({
-      summary: input.summary,
-      ...(input.refs !== undefined ? { refs: input.refs } : {}),
-      ...(input.findings !== undefined ? { findings: input.findings } : {}),
-      authoritativeContext: context,
-      cwd: context.worktree_path,
-      expectedStateFingerprint:
-        input.expected_state_fingerprint ?? context.expected_state_fingerprint,
-      expectedRound: input.expected_round ?? context.expected_round,
-      expectedReviewer
-    })
-  };
+  return emitConvergenceActorResultV11({
+    actorInput: input,
+    authoritativeContext: context,
+    expectedReviewer
+  });
 }
 
 export const reviewerActorProtocolV11 = {
@@ -232,41 +178,15 @@ export async function emitMetaReviewerActorProtocolV11(
   { kind: "meta_review_result" }
 >> {
   const { input, authoritativeContext: context } = resolvedInput;
-  assertActorEmitContextMatches({
-    context,
-    handoffId: input.handoff_id,
-    ...(input.expected_role !== undefined
-      ? { expectedRole: input.expected_role }
-      : {}),
-    ...(input.expected_round !== undefined
-      ? { expectedRound: input.expected_round }
-      : {}),
-    ...(input.expected_state_fingerprint !== undefined
-      ? { expectedStateFingerprint: input.expected_state_fingerprint }
-      : {})
+  assertActorEmitInputMatchesContext({
+    actorInput: input,
+    authoritativeContext: context
   });
   requireMetaReviewerAuthority(context);
-
-  return {
-    kind: "meta_review_result",
-    meta_review_result: await submitMetaReviewResult({
-      bubbleId: input.bubble_id,
-      repoPath: input.repo,
-      cwd: context.worktree_path,
-      round: input.round,
-      recommendation: input.recommendation,
-      summary: input.summary,
-      ...(input.rework_target_message !== undefined
-        ? { rework_target_message: input.rework_target_message }
-        : {}),
-      report_json: input.report_json,
-      ...(input.refs !== undefined ? { refs: input.refs } : {}),
-      expectedHandoffId: context.handoff_id,
-      expectedRole: context.expected_role,
-      expectedRound: context.expected_round,
-      expectedStateFingerprint: context.expected_state_fingerprint
-    })
-  };
+  return emitMetaReviewActorResultV11({
+    actorInput: input,
+    authoritativeContext: context
+  });
 }
 
 export const metaReviewerActorProtocolV11 = {
@@ -319,45 +239,24 @@ async function emitActorProtocolViaFallbackRouting(
   }
 
   if (input.kind === "pass") {
-    return {
-      kind: "pass",
-      pass: await emitPassFromWorkspace({
-        summary: input.summary,
-        ...(input.refs !== undefined ? { refs: input.refs } : {}),
-        ...(input.intent !== undefined ? { intent: input.intent } : {}),
-        ...(input.findings !== undefined ? { findings: input.findings } : {}),
-        ...(input.no_findings ? { noFindings: true } : {}),
-        authoritativeContext: context,
-        cwd: context.worktree_path
-      })
-    };
+    return emitPassActorResultV11({
+      actorInput: input,
+      authoritativeContext: context
+    });
   }
 
   if (input.kind === "human_question") {
-    return {
-      kind: "human_question",
-      human_question: await emitAskHumanFromWorkspace({
-        question: input.question,
-        ...(input.refs !== undefined ? { refs: input.refs } : {}),
-        authoritativeContext: context,
-        cwd: context.worktree_path
-      })
-    };
+    return emitHumanQuestionActorResultV11({
+      actorInput: input,
+      authoritativeContext: context
+    });
   }
 
   if (input.kind === "convergence") {
-    return {
-      kind: "convergence",
-      convergence: await emitConvergedFromWorkspace({
-        summary: input.summary,
-        ...(input.refs !== undefined ? { refs: input.refs } : {}),
-        ...(input.findings !== undefined ? { findings: input.findings } : {}),
-        authoritativeContext: context,
-        cwd: context.worktree_path,
-        expectedStateFingerprint: context.expected_state_fingerprint,
-        expectedRound: context.expected_round
-      })
-    };
+    return emitConvergenceActorResultV11({
+      actorInput: input,
+      authoritativeContext: context
+    });
   }
 
   if (input.kind === "meta_review_result") {
@@ -385,19 +284,9 @@ async function emitActorProtocolViaFallbackRouting(
 export async function emitActorProtocolFromWorkspaceV11(
   resolvedInput: ResolvedActorEmitInputV11
 ): Promise<ActorEmitResultV11> {
-  const { input, authoritativeContext: context } = resolvedInput;
-  assertActorEmitContextMatches({
-    context,
-    handoffId: input.handoff_id,
-    ...(input.expected_role !== undefined
-      ? { expectedRole: input.expected_role }
-      : {}),
-    ...(input.expected_round !== undefined
-      ? { expectedRound: input.expected_round }
-      : {}),
-    ...(input.expected_state_fingerprint !== undefined
-      ? { expectedStateFingerprint: input.expected_state_fingerprint }
-      : {})
+  assertActorEmitInputMatchesContext({
+    actorInput: resolvedInput.input,
+    authoritativeContext: resolvedInput.authoritativeContext
   });
 
   const routedResult = await emitActorProtocolViaAuthorityWrappers(resolvedInput);
