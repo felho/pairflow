@@ -99,4 +99,5 @@ Az `error` fitness check jelenleg hard-fail helyett `warn` módban fut, de a bac
 - Wave 25 bounded batch: `metaReviewGateRecoveryContextHelpers.ts` warning cleanup ready for commit
 - Wave 26 bounded batch: `metaReviewGateApplyContext.ts` + `metaReviewGateApplyObservation.ts` warning cleanup ready for commit
 - Wave 27 bounded batch: `metaReviewCommandReadRuntime.ts` + `liveRun/metaReviewLiveRunExecution.ts` warning cleanup ready for commit
-- Aktuális warning baseline: `error` check `126 -> 106 -> 97 -> 92 -> 87 -> 82 -> 77 -> 73 -> 69 -> 65 -> 63 -> 61 -> 59 -> 55 -> 54 -> 52 -> 51 -> 50 -> 49 -> 47 -> 41 -> 40 -> 38 -> 36 -> 33 -> 30 -> 28 -> 26`
+- Wave 28 bounded batch: `liveRun/metaReviewLiveRunPorts.ts` + `liveRun/metaReviewLiveRunApprovalRollback.ts` warning cleanup ready for commit
+- Aktuális warning baseline: `error` check `126 -> 106 -> 97 -> 92 -> 87 -> 82 -> 77 -> 73 -> 69 -> 65 -> 63 -> 61 -> 59 -> 55 -> 54 -> 52 -> 51 -> 50 -> 49 -> 47 -> 41 -> 40 -> 38 -> 36 -> 33 -> 30 -> 28 -> 26 -> 23`

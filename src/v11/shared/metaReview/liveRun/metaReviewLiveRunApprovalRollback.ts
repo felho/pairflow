@@ -89,10 +89,15 @@ export async function resolveApprovalRefreshRollbackContext(input: {
   if (rollbackReasonCode === "META_REVIEW_GATE_REFRESH_APPROVAL_ROLLBACK_APPLIED") {
     try {
       if (input.removeFileFn === undefined) {
-        throw new MetaReviewError(
-          "META_REVIEW_UNKNOWN_ERROR",
-          "meta-review artifact delete capability is unavailable."
-        );
+        throw new MetaReviewError({
+          reasonCode: "META_REVIEW_UNKNOWN_ERROR",
+          message: "meta-review artifact delete capability is unavailable.",
+          context: {
+            source: "meta_review_live_run_approval_rollback",
+            statePath: input.statePath,
+            reason: "artifact_delete_capability_unavailable"
+          }
+        });
       }
       await restoreRollingArtifactBackup(
         input.artifactBackup,

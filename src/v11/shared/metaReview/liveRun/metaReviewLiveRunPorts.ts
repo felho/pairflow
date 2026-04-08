@@ -27,18 +27,26 @@ export function resolveMetaReviewLiveRunPorts(
 ): ResolvedMetaReviewLiveRunPorts {
   const readFileFn = dependencies.readFile;
   if (readFileFn === undefined) {
-    throw new MetaReviewError(
-      "META_REVIEW_UNKNOWN_ERROR",
-      "meta-review live-run artifact read capability is unavailable."
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_UNKNOWN_ERROR",
+      message: "meta-review live-run artifact read capability is unavailable.",
+      context: {
+        source: "meta_review_live_run_ports",
+        reason: "artifact_read_capability_unavailable"
+      }
+    });
   }
 
   const writeFileFn = dependencies.writeFile;
   if (writeFileFn === undefined) {
-    throw new MetaReviewError(
-      "META_REVIEW_UNKNOWN_ERROR",
-      "meta-review live-run artifact write capability is unavailable."
-    );
+    throw new MetaReviewError({
+      reasonCode: "META_REVIEW_UNKNOWN_ERROR",
+      message: "meta-review live-run artifact write capability is unavailable.",
+      context: {
+        source: "meta_review_live_run_ports",
+        reason: "artifact_write_capability_unavailable"
+      }
+    });
   }
 
   return {

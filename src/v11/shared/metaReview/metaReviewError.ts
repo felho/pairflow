@@ -16,6 +16,7 @@ export type MetaReviewErrorReasonCode =
 export interface MetaReviewErrorContext {
   source?: string | undefined;
   bubbleId?: string | undefined;
+  statePath?: string | undefined;
   reportRef?: string | undefined;
   bubbleDir?: string | undefined;
   artifactsDir?: string | undefined;
