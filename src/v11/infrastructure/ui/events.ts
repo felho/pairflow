@@ -1,49 +1,32 @@
-import { realpathSync, watch, type FSWatcher } from "node:fs";
-import { readdir, stat } from "node:fs/promises";
-import { join, resolve } from "node:path";
-
-import { getBubblePaths } from "../artifact/bubble/paths.js";
-import {
-  listBubbles,
-  type BubbleListEntry,
-  type BubbleListView
-} from "../../../core/bubble/listBubbles.js";
+import type { FSWatcher } from "node:fs";
 import type {
   UiBubbleRemovedEvent,
-  UiBubbleSummary,
   UiBubbleUpdatedEvent,
+  UiBubbleSummary,
   UiEvent,
   UiRepoRemovedEvent,
   UiRepoSummary,
   UiRepoUpdatedEvent,
   UiSnapshotEvent
 } from "../../../types/ui.js";
+import type { UiEventsSubscriptionInput } from "./eventsTypes.js";
 import {
-  presentBubbleSummaryFromListEntry,
-  presentRepoSummary
-} from "./presenters/bubblePresenter.js";
-import { pathExists } from "../foundation/fs/pathExists.js";
-
-interface BubbleFingerprintSnapshot {
-  summary: UiBubbleSummary;
-  fingerprint: string;
-}
-
-interface RepoSnapshot {
-  repo: UiRepoSummary;
-  bubbles: Map<string, BubbleFingerprintSnapshot>;
-}
-
-interface UiEventFilter {
-  repos?: Set<string> | undefined;
-  bubbleId?: string | undefined;
-}
-
-export interface UiEventsSubscriptionInput {
-  repos?: string[] | undefined;
-  bubbleId?: string | undefined;
-  lastEventId?: number | undefined;
-}
+  createFilter,
+  eventMatchesFilter,
+  type UiEventFilter
+} from "./eventsFilter.js";
+import {
+  normalizeRepoPathForQueue
+} from "./eventsFingerprint.js";
+import type { RepoDiff, RepoSnapshot } from "./eventsState.js";
+import {
+  buildUiEventsSnapshot
+} from "./eventsSnapshot.js";
+import {
+  scanUiEventsAll,
+  refreshUiEventsWatchers,
+  scanUiEventsRepo
+} from "./eventsScan.js";
 
 interface UiEventsListener {
   id: number;
@@ -70,137 +53,9 @@ export interface UiEventsBroker {
   close(): Promise<void>;
 }
 
-interface RepoDiff {
-  repoPath: string;
-  repo: UiRepoSummary;
-  changed: UiBubbleUpdatedEvent[];
-  removed: UiBubbleRemovedEvent[];
-  repoChanged: boolean;
-  snapshot: RepoSnapshot;
-}
-
 const defaultPollIntervalMs = 2_000;
 const defaultDebounceMs = 150;
 const defaultHistoryLimit = 512;
-
-function normalizeRepoPathForQueue(repoPath: string): string {
-  const resolvedRepoPath = resolve(repoPath);
-  try {
-    return realpathSync(resolvedRepoPath);
-  } catch {
-    return resolvedRepoPath;
-  }
-}
-
-async function listBubbleIds(repoPath: string): Promise<string[]> {
-  const bubblesDir = join(repoPath, ".pairflow", "bubbles");
-  const entries = await readdir(bubblesDir, {
-    withFileTypes: true
-  }).catch((error: NodeJS.ErrnoException) => {
-    if (error.code === "ENOENT") {
-      return [];
-    }
-    throw error;
-  });
-  return entries
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort((left, right) => left.localeCompare(right));
-}
-
-async function fileFingerprint(path: string): Promise<string> {
-  const info = await stat(path).catch((error: NodeJS.ErrnoException) => {
-    if (error.code === "ENOENT") {
-      return undefined;
-    }
-    throw error;
-  });
-  if (info === undefined) {
-    return "missing";
-  }
-  return `${info.mtimeMs}:${info.size}`;
-}
-
-async function bubbleFingerprint(
-  repoPath: string,
-  entry: BubbleListEntry
-): Promise<string> {
-  const paths = getBubblePaths(repoPath, entry.bubbleId);
-  const [stateSig, inboxSig, transcriptSig] = await Promise.all([
-    fileFingerprint(paths.statePath),
-    fileFingerprint(paths.inboxPath),
-    fileFingerprint(paths.transcriptPath)
-  ]);
-
-  const runtimeSig =
-    entry.runtimeSession === null
-      ? "none"
-      : [
-          entry.runtimeSession.updatedAt,
-          entry.runtimeSession.tmuxSessionName
-        ].join(":");
-  const attentionSig =
-    entry.attention === null
-      ? "none"
-      : [
-          entry.attention.code,
-          entry.attention.severity,
-          entry.attention.label,
-          entry.attention.detail ?? ""
-        ].join(":");
-
-  return [
-    stateSig,
-    inboxSig,
-    transcriptSig,
-    runtimeSig,
-    attentionSig,
-    entry.state,
-    String(entry.round)
-  ].join("|");
-}
-
-function sameRepoSummary(left: UiRepoSummary, right: UiRepoSummary): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
-}
-
-function createFilter(input: UiEventsSubscriptionInput = {}): UiEventFilter {
-  return {
-    ...(input.repos !== undefined ? { repos: new Set(input.repos) } : {}),
-    ...(input.bubbleId !== undefined ? { bubbleId: input.bubbleId } : {})
-  };
-}
-
-function eventMatchesFilter(event: UiEvent, filter: UiEventFilter): boolean {
-  if (event.type === "snapshot") {
-    if (
-      filter.repos !== undefined &&
-      !event.repos.some((repo) => filter.repos?.has(repo.repoPath) ?? false)
-    ) {
-      return false;
-    }
-    if (
-      filter.bubbleId !== undefined &&
-      !event.bubbles.some((bubble) => bubble.bubbleId === filter.bubbleId)
-    ) {
-      return false;
-    }
-    return true;
-  }
-
-  if (filter.repos !== undefined && !filter.repos.has(event.repoPath)) {
-    return false;
-  }
-
-  if (filter.bubbleId !== undefined) {
-    if (event.type === "bubble.updated" || event.type === "bubble.removed") {
-      return event.bubbleId === filter.bubbleId;
-    }
-    return false;
-  }
-
-  return true;
-}
 
 class UiEventsBrokerImpl implements UiEventsBroker {
   private readonly pollIntervalMs: number;
@@ -330,48 +185,11 @@ class UiEventsBrokerImpl implements UiEventsBroker {
   }
 
   public getSnapshot(input: UiEventsSubscriptionInput = {}): UiSnapshotEvent {
-    const filter = createFilter(input);
-    const repos: UiRepoSummary[] = [];
-    const bubbles: UiBubbleSummary[] = [];
-
-    for (const snapshot of this.snapshots.values()) {
-      if (
-        filter.repos !== undefined &&
-        !filter.repos.has(snapshot.repo.repoPath)
-      ) {
-        continue;
-      }
-      repos.push(snapshot.repo);
-
-      for (const entry of snapshot.bubbles.values()) {
-        if (
-          filter.bubbleId !== undefined &&
-          entry.summary.bubbleId !== filter.bubbleId
-        ) {
-          continue;
-        }
-        bubbles.push(entry.summary);
-      }
-    }
-
-    repos.sort((left, right) => left.repoPath.localeCompare(right.repoPath));
-    bubbles.sort((left, right) => {
-      const byRepo = left.repoPath.localeCompare(right.repoPath);
-      if (byRepo !== 0) {
-        return byRepo;
-      }
-      return left.bubbleId.localeCompare(right.bubbleId);
+    return buildUiEventsSnapshot({
+      snapshots: this.snapshots,
+      nextEventId: this.nextEventId,
+      subscription: input
     });
-
-    const id = Math.max(0, this.nextEventId - 1);
-    const ts = new Date().toISOString();
-    return {
-      id,
-      ts,
-      type: "snapshot",
-      repos,
-      bubbles
-    };
   }
 
   public async close(): Promise<void> {
@@ -506,25 +324,18 @@ class UiEventsBrokerImpl implements UiEventsBroker {
 
     this.scanInFlight = true;
     try {
-      const diffs: RepoDiff[] = [];
-      for (const repoPath of this.repos) {
-        diffs.push(await this.scanRepo(repoPath, emitEvents));
-      }
-
-      await this.refreshWatchers();
-      if (emitEvents) {
-        for (const diff of diffs) {
-          for (const event of diff.changed) {
-            this.notify(event);
-          }
-          for (const event of diff.removed) {
-            this.notify(event);
-          }
-          if (diff.repoChanged) {
-            this.notify(this.nextRepoEvent(diff.repoPath, diff.repo));
-          }
-        }
-      }
+      await scanUiEventsAll({
+        repos: this.repos,
+        emitEvents,
+        snapshots: this.snapshots,
+        nextBubbleUpdatedEvent: (repoPath, bubble) =>
+          this.nextBubbleUpdatedEvent(repoPath, bubble),
+        nextBubbleRemovedEvent: (repoPath, bubbleId) =>
+          this.nextBubbleRemovedEvent(repoPath, bubbleId),
+        nextRepoEvent: (repoPath, repo) => this.nextRepoEvent(repoPath, repo),
+        refreshWatchers: () => this.refreshWatchers(),
+        notify: (event) => this.notify(event)
+      });
     } finally {
       this.scanInFlight = false;
       while (this.closeWaiters.length > 0) {
@@ -593,106 +404,23 @@ class UiEventsBrokerImpl implements UiEventsBroker {
   }
 
   private async scanRepo(repoPath: string, emitEvents: boolean): Promise<RepoDiff> {
-    const view: BubbleListView = await listBubbles({
-      repoPath
-    });
-    const previous = this.snapshots.get(repoPath);
-    const repoSummary = presentRepoSummary(view);
-
-    const nextBubbles = new Map<string, BubbleFingerprintSnapshot>();
-    const changed: UiBubbleUpdatedEvent[] = [];
-    const removed: UiBubbleRemovedEvent[] = [];
-
-    for (const bubble of view.bubbles) {
-      const summary = presentBubbleSummaryFromListEntry(bubble);
-      const fingerprint = await bubbleFingerprint(repoPath, bubble);
-      nextBubbles.set(summary.bubbleId, {
-        summary,
-        fingerprint
-      });
-
-      if (!emitEvents) {
-        continue;
-      }
-      const previousBubble = previous?.bubbles.get(summary.bubbleId);
-      if (
-        previousBubble === undefined ||
-        previousBubble.fingerprint !== fingerprint
-      ) {
-        changed.push(this.nextBubbleUpdatedEvent(repoPath, summary));
-      }
-    }
-
-    if (emitEvents && previous !== undefined) {
-      for (const bubbleId of previous.bubbles.keys()) {
-        if (nextBubbles.has(bubbleId)) {
-          continue;
-        }
-        removed.push(this.nextBubbleRemovedEvent(repoPath, bubbleId));
-      }
-    }
-
-    const repoChanged =
-      previous === undefined ? false : !sameRepoSummary(previous.repo, repoSummary);
-    const snapshot: RepoSnapshot = {
-      repo: repoSummary,
-      bubbles: nextBubbles
-    };
-    this.snapshots.set(repoPath, snapshot);
-
-    return {
+    return scanUiEventsRepo({
       repoPath,
-      repo: repoSummary,
-      changed,
-      removed,
-      repoChanged,
-      snapshot
-    };
+      emitEvents,
+      snapshots: this.snapshots,
+      nextBubbleUpdatedEvent: (repo, bubble) =>
+        this.nextBubbleUpdatedEvent(repo, bubble),
+      nextBubbleRemovedEvent: (repo, bubbleId) =>
+        this.nextBubbleRemovedEvent(repo, bubbleId)
+    });
   }
 
   private async refreshWatchers(): Promise<void> {
-    const targets = new Set<string>();
-
-    for (const repoPath of this.repos) {
-      targets.add(join(repoPath, ".pairflow"));
-      targets.add(join(repoPath, ".pairflow", "bubbles"));
-      targets.add(join(repoPath, ".pairflow", "runtime"));
-      targets.add(join(repoPath, ".pairflow", "runtime", "sessions.json"));
-
-      const bubbleIds = await listBubbleIds(repoPath);
-      for (const bubbleId of bubbleIds) {
-        const paths = getBubblePaths(repoPath, bubbleId);
-        targets.add(paths.bubbleDir);
-        targets.add(paths.statePath);
-        targets.add(paths.inboxPath);
-        targets.add(paths.transcriptPath);
-      }
-    }
-
-    for (const [path, watcher] of this.watchers.entries()) {
-      if (targets.has(path)) {
-        continue;
-      }
-      watcher.close();
-      this.watchers.delete(path);
-    }
-
-    for (const target of targets) {
-      if (this.watchers.has(target)) {
-        continue;
-      }
-      if (!(await pathExists(target))) {
-        continue;
-      }
-      const watcher = watch(target, () => {
-        this.scheduleScan();
-      });
-      watcher.on("error", () => {
-        watcher.close();
-        this.watchers.delete(target);
-      });
-      this.watchers.set(target, watcher);
-    }
+    await refreshUiEventsWatchers({
+      repos: this.repos,
+      watchers: this.watchers,
+      scheduleScan: () => this.scheduleScan()
+    });
   }
 }
 
