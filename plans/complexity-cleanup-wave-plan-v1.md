@@ -39,15 +39,15 @@ Legutóbbi teljes fitness report:
 
 Jelenlegi `complexity` summary:
 
-1. `43` budget violation
+1. `37` budget violation
 2. a legnagyobb klaszterek:
    - `src/v11/shared/state/stateSchema.ts`
-   - `src/v11/infrastructure/artifact/**`
-   - `src/v11/shared/gates/docContractGates.ts`
-   - `src/v11/infrastructure/channel/tmux/tmuxDelivery.ts`
-   - `src/v11/infrastructure/artifact/reviewer/testEvidenceRuntime.ts`
-   - `src/v11/infrastructure/artifact/validation/passValidationEvidence.ts`
+   - `src/v11/infrastructure/ui/router.ts`
+   - `src/v11/domain/convergence/policy.ts`
+   - `src/v11/shared/protocol/validators.ts`
    - `src/v11/shared/reviewer/reviewVerificationValidation.ts`
+   - `src/v11/shared/metaReview/metaReviewCommandSubmitRuntime.ts`
+   - `src/v11/shared/metaReview/metaReviewCanonicalization.ts`
 
 ## Working Strategy
 
@@ -196,7 +196,12 @@ Minden bounded batch után:
    - `a8da9b5a` `refactor(complexity): split pass validation reuse checks`
    - `2501f03d` `refactor(complexity): split review verification validation`
    - `b11f4bf9` `refactor(complexity): split attach launcher runtime`
+   - `ce3cd85f` `refactor(complexity): split watchdog status timing`
+   - `4f934787` `refactor(complexity): split status view projections`
+   - `5c659643` `refactor(complexity): finish watchdog status split`
+   - `6e1c9889` `fix(status): align status view projection types`
 6. Következő párhuzamos batch-ek:
    - `stateSchema` focused validator slice
    - `protocol/validators` findings slice
-   - `testEvidenceSourcePolicy` stable-code follow-up
+   - `metaReviewCanonicalization` report-json slice
+   - `convergence/policy` validator slice
