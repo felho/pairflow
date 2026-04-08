@@ -1,72 +1,69 @@
 import { isNonEmptyString, isRecord } from "../../validation/primitives.js";
 import type { MetaReviewReviewerVerdict } from "./metaReviewLiveRunContract.js";
 
-export function parseMetaReviewRunnerOutput(
-  raw: string
-): MetaReviewReviewerVerdict {
-  const normalizeJsonControlCharactersInStrings = (input: string): string => {
-    let output = "";
-    let inString = false;
-    let escaped = false;
+function normalizeJsonControlCharactersInStrings(input: string): string {
+  let output = "";
+  let inString = false;
+  let escaped = false;
 
-    for (const char of input) {
-      if (!inString) {
-        if (char === "\"") {
-          inString = true;
-        }
-        output += char;
-        continue;
-      }
-
-      if (escaped) {
-        output += char;
-        escaped = false;
-        continue;
-      }
-
-      if (char === "\\") {
-        output += char;
-        escaped = true;
-        continue;
-      }
-
+  for (const char of input) {
+    if (!inString) {
       if (char === "\"") {
-        output += char;
-        inString = false;
-        continue;
+        inString = true;
       }
-
-      if (char === "\n") {
-        output += "\\n";
-        continue;
-      }
-      if (char === "\r") {
-        output += "\\r";
-        continue;
-      }
-      if (char === "\t") {
-        output += "\\t";
-        continue;
-      }
-
-      const codePoint = char.charCodeAt(0);
-      if (codePoint >= 0x00 && codePoint < 0x20) {
-        output += `\\u${codePoint.toString(16).padStart(4, "0")}`;
-        continue;
-      }
-
       output += char;
+      continue;
     }
 
-    return output;
-  };
+    if (escaped) {
+      output += char;
+      escaped = false;
+      continue;
+    }
 
-  let parsed: unknown;
+    if (char === "\\") {
+      output += char;
+      escaped = true;
+      continue;
+    }
+
+    if (char === "\"") {
+      output += char;
+      inString = false;
+      continue;
+    }
+
+    if (char === "\n") {
+      output += "\\n";
+      continue;
+    }
+    if (char === "\r") {
+      output += "\\r";
+      continue;
+    }
+    if (char === "\t") {
+      output += "\\t";
+      continue;
+    }
+
+    const codePoint = char.charCodeAt(0);
+    if (codePoint >= 0x00 && codePoint < 0x20) {
+      output += `\\u${codePoint.toString(16).padStart(4, "0")}`;
+      continue;
+    }
+
+    output += char;
+  }
+
+  return output;
+}
+
+function parseMetaReviewRunnerJson(raw: string): unknown {
   try {
-    parsed = JSON.parse(raw);
+    return JSON.parse(raw);
   } catch (error) {
     try {
-      parsed = JSON.parse(normalizeJsonControlCharactersInStrings(raw));
+      return JSON.parse(normalizeJsonControlCharactersInStrings(raw));
     } catch {
       const reason = error instanceof Error ? error.message : String(error);
       throw new Error(
@@ -75,6 +72,9 @@ export function parseMetaReviewRunnerOutput(
     }
   }
 
+}
+
+function normalizeMetaReviewRunnerVerdict(parsed: unknown): MetaReviewReviewerVerdict {
   if (!isRecord(parsed)) {
     throw new Error(
       `META_REVIEW_RUNNER_OUTPUT_OBJECT_REQUIRED: context parsed_type=${typeof parsed}`
@@ -127,6 +127,13 @@ export function parseMetaReviewRunnerOutput(
     summary,
     rework_target_message: reworkTargetMessage
   };
+}
+
+export function parseMetaReviewRunnerOutput(
+  raw: string
+): MetaReviewReviewerVerdict {
+  const parsed = parseMetaReviewRunnerJson(raw);
+  return normalizeMetaReviewRunnerVerdict(parsed);
 }
 
 export function extractMetaReviewDelimitedBlock(input: {

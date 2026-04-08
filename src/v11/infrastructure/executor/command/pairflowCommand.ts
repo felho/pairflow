@@ -135,6 +135,167 @@ function resolveExternalEntrypointConsistency(input: {
   return "unknown";
 }
 
+interface PairflowCommandPathResolutionContext {
+  profile: PairflowCommandProfile;
+  localEntrypoint: string;
+  activeEntrypoint: string | null;
+  localEntrypointExists: boolean;
+  canonicalLocalEntrypoint: string | null;
+  canonicalActiveEntrypoint: string | null;
+  pinnedCommand: string;
+  externalPairflowAvailable: boolean;
+}
+
+function resolvePairflowCommandPathResolutionContext(input: {
+  worktreePath: string;
+  profile: PairflowCommandProfile;
+  activeEntrypoint?: string | undefined;
+  localEntrypointExists?: boolean | undefined;
+  externalPairflowAvailable?: boolean | undefined;
+}): PairflowCommandPathResolutionContext {
+  const localEntrypoint = resolveWorktreePairflowEntrypoint(input.worktreePath);
+  const activeEntrypoint =
+    input.activeEntrypoint === undefined || input.activeEntrypoint.trim().length === 0
+      ? null
+      : resolve(input.activeEntrypoint.trim());
+  const localEntrypointExists =
+    input.localEntrypointExists ?? existsSync(localEntrypoint);
+  const canonicalLocalEntrypoint = localEntrypointExists
+    ? canonicalizeExistingPath(localEntrypoint)
+    : localEntrypoint;
+  const canonicalActiveEntrypoint = canonicalizeExistingPath(activeEntrypoint);
+
+  return {
+    profile: input.profile,
+    localEntrypoint,
+    activeEntrypoint,
+    localEntrypointExists,
+    canonicalLocalEntrypoint,
+    canonicalActiveEntrypoint,
+    pinnedCommand: buildPinnedPairflowCommand(input.worktreePath, input.profile),
+    externalPairflowAvailable:
+      input.externalPairflowAvailable ?? isExternalPairflowAvailable(input.worktreePath)
+  };
+}
+
+function buildExternalPairflowCommandAssessment(
+  input: PairflowCommandPathResolutionContext
+): PairflowCommandPathAssessment {
+  const entrypointConsistency = resolveExternalEntrypointConsistency({
+    localEntrypointExists: input.localEntrypointExists,
+    canonicalLocalEntrypoint: input.canonicalLocalEntrypoint,
+    canonicalActiveEntrypoint: input.canonicalActiveEntrypoint
+  });
+  if (!input.externalPairflowAvailable) {
+    const activeEntryDetail =
+      input.canonicalActiveEntrypoint !== null
+        ? ` Active entrypoint was resolved as ${input.activeEntrypoint}, but external profile requires PATH-resolved \`pairflow\` executable availability.`
+        : "";
+    return {
+      status: "missing",
+      reasonCode: "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE",
+      profile: input.profile,
+      localEntrypoint: input.localEntrypoint,
+      activeEntrypoint: input.activeEntrypoint,
+      localEntrypointExists: input.localEntrypointExists,
+      externalPairflowAvailable: input.externalPairflowAvailable,
+      pinnedCommand: input.pinnedCommand,
+      entrypointConsistency,
+      message:
+        `PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE: no PATH-resolved \`pairflow\` command available for external profile.${activeEntryDetail}`
+    };
+  }
+
+  const activeEntryDetail =
+    input.canonicalActiveEntrypoint !== null
+      ? ` active entrypoint: ${input.activeEntrypoint}.`
+      : "";
+  const localEntryDetail =
+    entrypointConsistency === "inconsistent"
+      ? ` Worktree-local entrypoint ${input.localEntrypoint} differs from the active entrypoint, but external profile authority remains the PATH-resolved \`pairflow\` tool.`
+      : "";
+  return {
+    status: "external",
+    profile: input.profile,
+    localEntrypoint: input.localEntrypoint,
+    activeEntrypoint: input.activeEntrypoint,
+    localEntrypointExists: input.localEntrypointExists,
+    externalPairflowAvailable: input.externalPairflowAvailable,
+    pinnedCommand: input.pinnedCommand,
+    entrypointConsistency,
+    message:
+      `external Pairflow command profile active (PATH-resolved \`pairflow\` available).${activeEntryDetail}${localEntryDetail}`
+  };
+}
+
+function buildSelfHostPairflowCommandAssessment(
+  input: PairflowCommandPathResolutionContext
+): PairflowCommandPathAssessment {
+  if (
+    input.localEntrypointExists &&
+    input.canonicalActiveEntrypoint !== null &&
+    input.canonicalActiveEntrypoint === input.canonicalLocalEntrypoint
+  ) {
+    return {
+      status: "worktree_local",
+      profile: input.profile,
+      localEntrypoint: input.localEntrypoint,
+      activeEntrypoint: input.activeEntrypoint,
+      localEntrypointExists: input.localEntrypointExists,
+      externalPairflowAvailable: input.externalPairflowAvailable,
+      pinnedCommand: input.pinnedCommand,
+      entrypointConsistency: "consistent",
+      message: `worktree-local Pairflow entrypoint active (${input.localEntrypoint})`
+    };
+  }
+
+  if (!input.localEntrypointExists) {
+    return {
+      status: "stale",
+      reasonCode: "PAIRFLOW_COMMAND_PATH_STALE",
+      profile: input.profile,
+      localEntrypoint: input.localEntrypoint,
+      activeEntrypoint: input.activeEntrypoint,
+      localEntrypointExists: input.localEntrypointExists,
+      externalPairflowAvailable: input.externalPairflowAvailable,
+      pinnedCommand: input.pinnedCommand,
+      entrypointConsistency:
+        input.canonicalActiveEntrypoint !== null ? "inconsistent" : "unknown",
+      message: `PAIRFLOW_COMMAND_PATH_STALE: worktree-local Pairflow entrypoint missing at ${input.localEntrypoint}.`
+    };
+  }
+
+  if (input.canonicalActiveEntrypoint === null) {
+    return {
+      status: "unknown",
+      reasonCode: "PAIRFLOW_COMMAND_PATH_UNRESOLVED",
+      profile: input.profile,
+      localEntrypoint: input.localEntrypoint,
+      activeEntrypoint: input.activeEntrypoint,
+      localEntrypointExists: input.localEntrypointExists,
+      externalPairflowAvailable: input.externalPairflowAvailable,
+      pinnedCommand: input.pinnedCommand,
+      entrypointConsistency: "unknown",
+      message:
+        "PAIRFLOW_COMMAND_PATH_UNRESOLVED: active Pairflow entrypoint could not be resolved under self_host profile."
+    };
+  }
+
+  return {
+    status: "stale",
+    reasonCode: "PAIRFLOW_COMMAND_PATH_STALE",
+    profile: input.profile,
+    localEntrypoint: input.localEntrypoint,
+    activeEntrypoint: input.activeEntrypoint,
+    localEntrypointExists: input.localEntrypointExists,
+    externalPairflowAvailable: input.externalPairflowAvailable,
+    pinnedCommand: input.pinnedCommand,
+    entrypointConsistency: "inconsistent",
+    message:
+      `PAIRFLOW_COMMAND_PATH_STALE: active Pairflow entrypoint ${input.activeEntrypoint ?? "unknown"} does not match worktree-local ${input.localEntrypoint}.`
+  };
+}
+
 export function buildPinnedPairflowCommand(
   worktreePath: string,
   profile: PairflowCommandProfile = "external"
@@ -153,129 +314,17 @@ export function assessPairflowCommandPath(input: {
   externalPairflowAvailable?: boolean | undefined;
 }): PairflowCommandPathAssessment {
   const profile = input.profile ?? "external";
-  const localEntrypoint = resolveWorktreePairflowEntrypoint(input.worktreePath);
-  const activeEntrypoint =
-    input.activeEntrypoint === undefined || input.activeEntrypoint.trim().length === 0
-      ? null
-      : resolve(input.activeEntrypoint.trim());
-  const localEntrypointExists =
-    input.localEntrypointExists ?? existsSync(localEntrypoint);
-  const canonicalLocalEntrypoint = localEntrypointExists
-    ? canonicalizeExistingPath(localEntrypoint)
-    : localEntrypoint;
-  const canonicalActiveEntrypoint = canonicalizeExistingPath(activeEntrypoint);
-  const pinnedCommand = buildPinnedPairflowCommand(input.worktreePath, profile);
-  const externalPairflowAvailable =
-    input.externalPairflowAvailable ?? isExternalPairflowAvailable(input.worktreePath);
-
-  if (profile === "external") {
-    const entrypointConsistency = resolveExternalEntrypointConsistency({
-      localEntrypointExists,
-      canonicalLocalEntrypoint,
-      canonicalActiveEntrypoint
-    });
-    if (!externalPairflowAvailable) {
-      const activeEntryDetail =
-        canonicalActiveEntrypoint !== null
-          ? ` Active entrypoint was resolved as ${activeEntrypoint}, but external profile requires PATH-resolved \`pairflow\` executable availability.`
-          : "";
-      return {
-        status: "missing",
-        reasonCode: "PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE",
-        profile,
-        localEntrypoint,
-        activeEntrypoint,
-        localEntrypointExists,
-        externalPairflowAvailable,
-        pinnedCommand,
-        entrypointConsistency,
-        message:
-          `PAIRFLOW_COMMAND_EXTERNAL_UNAVAILABLE: no PATH-resolved \`pairflow\` command available for external profile.${activeEntryDetail}`
-      };
-    }
-    const activeEntryDetail =
-      canonicalActiveEntrypoint !== null
-        ? ` active entrypoint: ${activeEntrypoint}.`
-        : "";
-    const localEntryDetail =
-      entrypointConsistency === "inconsistent"
-        ? ` Worktree-local entrypoint ${localEntrypoint} differs from the active entrypoint, but external profile authority remains the PATH-resolved \`pairflow\` tool.`
-        : "";
-    return {
-      status: "external",
-      profile,
-      localEntrypoint,
-      activeEntrypoint,
-      localEntrypointExists,
-      externalPairflowAvailable,
-      pinnedCommand,
-      entrypointConsistency,
-      message:
-        `external Pairflow command profile active (PATH-resolved \`pairflow\` available).${activeEntryDetail}${localEntryDetail}`
-    };
-  }
-
-  if (
-    localEntrypointExists &&
-    canonicalActiveEntrypoint !== null &&
-    canonicalActiveEntrypoint === canonicalLocalEntrypoint
-  ) {
-    return {
-      status: "worktree_local",
-      profile,
-      localEntrypoint,
-      activeEntrypoint,
-      localEntrypointExists,
-      externalPairflowAvailable,
-      pinnedCommand,
-      entrypointConsistency: "consistent",
-      message: `worktree-local Pairflow entrypoint active (${localEntrypoint})`
-    };
-  }
-
-  if (!localEntrypointExists) {
-    return {
-      status: "stale",
-      reasonCode: "PAIRFLOW_COMMAND_PATH_STALE",
-      profile,
-      localEntrypoint,
-      activeEntrypoint,
-      localEntrypointExists,
-      externalPairflowAvailable,
-      pinnedCommand,
-      entrypointConsistency: "inconsistent",
-      message: `PAIRFLOW_COMMAND_PATH_STALE: worktree-local Pairflow entrypoint missing at ${localEntrypoint}.`
-    };
-  }
-
-  if (canonicalActiveEntrypoint === null) {
-    return {
-      status: "unknown",
-      reasonCode: "PAIRFLOW_COMMAND_PATH_UNRESOLVED",
-      profile,
-      localEntrypoint,
-      activeEntrypoint,
-      localEntrypointExists,
-      externalPairflowAvailable,
-      pinnedCommand,
-      entrypointConsistency: "unknown",
-      message:
-        "PAIRFLOW_COMMAND_PATH_UNRESOLVED: active Pairflow entrypoint could not be resolved under self_host profile."
-    };
-  }
-
-  return {
-    status: "stale",
-    reasonCode: "PAIRFLOW_COMMAND_PATH_STALE",
+  const context = resolvePairflowCommandPathResolutionContext({
+    worktreePath: input.worktreePath,
     profile,
-    localEntrypoint,
-    activeEntrypoint,
-    localEntrypointExists,
-    externalPairflowAvailable,
-    pinnedCommand,
-    entrypointConsistency: "inconsistent",
-    message: `PAIRFLOW_COMMAND_PATH_STALE: active Pairflow entrypoint ${activeEntrypoint ?? "unknown"} does not match worktree-local ${localEntrypoint}.`
-  };
+    activeEntrypoint: input.activeEntrypoint,
+    localEntrypointExists: input.localEntrypointExists,
+    externalPairflowAvailable: input.externalPairflowAvailable
+  });
+
+  return profile === "external"
+    ? buildExternalPairflowCommandAssessment(context)
+    : buildSelfHostPairflowCommandAssessment(context);
 }
 
 export function buildPairflowCommandBootstrap(
