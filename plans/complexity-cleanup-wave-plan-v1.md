@@ -223,7 +223,8 @@ Minden bounded batch után:
    - `6c59020c` `refactor(complexity): split archive index support`
    - `c66910de` `refactor(complexity): split archive snapshot support`
    - `60f23f14` `refactor(complexity): split doc contract gate support`
-   - `pending` `refactor(complexity): split transcript store support`
+   - `e70b59cf` `refactor(complexity): split transcript store support`
+   - `pending` `refactor(complexity): split ui repo scope state`
    - `pending` `refactor(complexity): split ui router request surfaces`
 6. Következő párhuzamos batch-ek:
    - `stateSchema` focused validator slice
