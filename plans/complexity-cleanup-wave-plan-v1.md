@@ -39,7 +39,7 @@ Legutóbbi teljes fitness report:
 
 Jelenlegi `complexity` summary:
 
-1. `69` budget violation
+1. `65` budget violation
 2. a legnagyobb klaszterek:
    - `src/v11/infrastructure/ui/**`
    - `src/v11/shared/state/stateSchema.ts`
@@ -158,8 +158,8 @@ Minden bounded batch után:
 - [x] Error hard-fail backlog lezárva; `complexity` maradt az egyetlen hard-fail checker
 - [x] Wave 1 started
 - [x] Wave 1 completed
-- [ ] Wave 2 started
-- [ ] Wave 2 completed
+- [x] Wave 2 started
+- [x] Wave 2 completed
 - [ ] Wave 3 started
 - [ ] Wave 3 completed
 - [ ] Wave 4 started
@@ -172,3 +172,7 @@ Minden bounded batch után:
 3. Wave 1 lezárt commitok a jelenlegi `main`-en:
    - `806c9fc2` `refactor(complexity): extract pass validation runner settlement`
    - `02a93a06` `refactor(v11): split meta-review runner parsing helpers`
+4. Wave 2 lezárt commitok a jelenlegi `main`-en:
+   - `c515b72d` `refactor(complexity): split meta review freshness helpers`
+   - `b4e4af90` `refactor(complexity): split meta-review gate parity helpers`
+   - `d3608b6b` `refactor(complexity): split ui repo scope resolution`
